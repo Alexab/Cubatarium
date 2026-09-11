@@ -235,12 +235,14 @@ int main()
   // MeshWorkAdmission: floors propose, Finalize caps under backlog.
   {
     MeshWorkAdmissionInput normal{};
+    normal.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     normal.pending_gpu = 4;
     const auto a0 = ComputeMeshWorkAdmission(normal);
     Expect(a0.mode == MeshWorkAdmission::Mode::Normal, "pending<12 → Normal");
     Expect(FinalizeSchedule(16, a0) == 16, "Normal Finalize passthrough schedule");
 
     MeshWorkAdmissionInput warm{};
+    warm.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     warm.pending_gpu = 14;
     warm.visual_holes = false;
     const auto a1 = ComputeMeshWorkAdmission(warm);
@@ -249,6 +251,7 @@ int main()
     Expect(a1.gpu_apply_max >= 16, "Warm GPU boost");
 
     MeshWorkAdmissionInput hole{};
+    hole.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     hole.pending_gpu = 14;
     hole.pending_gpu_queued = 10;
     hole.visual_holes = true;
@@ -271,6 +274,7 @@ int main()
     Expect(a2i.first_mesh_schedule >= 4, "HoleDrain idle first_mesh headroom");
 
     MeshWorkAdmissionInput warm_hole{};
+    warm_hole.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     warm_hole.pending_gpu = 18;
     warm_hole.visual_holes = true;
     warm_hole.moving = true;
@@ -282,6 +286,7 @@ int main()
            "schedule covers first_mesh quota");
 
     MeshWorkAdmissionInput deep{};
+    deep.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     deep.pending_gpu = 30;
     deep.visual_holes = true;
     const auto a4 = ComputeMeshWorkAdmission(deep);
@@ -331,6 +336,7 @@ int main()
 
     // F1: enqueue_gpu_budget tracks ring − kicked.
     MeshWorkAdmissionInput ring{};
+    ring.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     ring.pending_gpu = 14;
     ring.pending_gpu_kicked = 3;
     ring.visual_holes = true;
@@ -360,6 +366,7 @@ int main()
 
     // G0: holes + queued ≥ ring → HoleDrain even when pending cooled below 12.
     MeshWorkAdmissionInput refill{};
+    refill.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     refill.pending_gpu = 10;
     refill.pending_gpu_queued = 8;
     refill.visual_holes = true;
@@ -371,6 +378,7 @@ int main()
     Expect(FinalizeSchedule(20, a10) <= 7, "G0 latch caps FOV floor sch=20");
 
     MeshWorkAdmissionInput warm_pend{};
+    warm_pend.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     warm_pend.pending_gpu = 10;
     warm_pend.pending_gpu_queued = 3;
     warm_pend.visual_holes = true;
@@ -382,6 +390,7 @@ int main()
     Expect(FinalizeSchedule(12, a10b) <= 7, "G0 warm-pending caps sch=12");
 
     MeshWorkAdmissionInput refill_exit{};
+    refill_exit.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     refill_exit.pending_gpu = 6;
     refill_exit.pending_gpu_queued = 8;
     refill_exit.visual_holes = false;
@@ -400,6 +409,7 @@ int main()
 
     // I: unfinished_visual≥8 counts as holes for G0 latch (160240 thrash).
     MeshWorkAdmissionInput uv_holes{};
+    uv_holes.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     uv_holes.pending_gpu = 10;
     uv_holes.pending_gpu_queued = 3;
     uv_holes.visual_holes = false;
@@ -414,6 +424,7 @@ int main()
 
     // Queued refill without visual holes → Warm (not Normal/sch=12).
     MeshWorkAdmissionInput q_warm{};
+    q_warm.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     q_warm.pending_gpu = 10;
     q_warm.pending_gpu_queued = 8;
     q_warm.visual_holes = false;
@@ -426,6 +437,7 @@ int main()
 
     // J0: holes + cooled pending still HoleDrain (no FOV Normal refill).
     MeshWorkAdmissionInput cool_holes_j0{};
+    cool_holes_j0.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     cool_holes_j0.pending_gpu = 1;
     cool_holes_j0.pending_gpu_queued = 0;
     cool_holes_j0.pending_gpu_kicked = 1;
@@ -440,6 +452,7 @@ int main()
 
     // J1: miss backlog HoleDrain prefers Finish wall budget.
     MeshWorkAdmissionInput finish_bias{};
+    finish_bias.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     finish_bias.pending_gpu = 16;
     finish_bias.pending_gpu_queued = 8;
     finish_bias.pending_gpu_kicked = 8;
@@ -460,6 +473,7 @@ int main()
 
     // K3/M3: cooled pending + rim outside FirstMesh class (mh 5–6) → +1 remesh.
     MeshWorkAdmissionInput rim_stale{};
+    rim_stale.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     rim_stale.pending_gpu = 6;
     rim_stale.pending_gpu_queued = 0;
     rim_stale.pending_gpu_kicked = 6;
@@ -510,6 +524,17 @@ int main()
     const auto a18s = ComputeMeshWorkAdmission(a18u);
     Expect(a18s.remesh_schedule == 0, "Era18: unfinished storm remesh=0");
     Expect(a18s.first_mesh_schedule >= 6, "Era18: unfinished storm FirstMesh≥6");
+  }
+
+  {
+    MeshWorkAdmissionInput empty_first_mesh{};
+    empty_first_mesh.visual_holes = true;
+    empty_first_mesh.moving = true;
+    empty_first_mesh.pending_gpu = 14;
+    empty_first_mesh.pending_gpu_queued = 10;
+    const auto admission = ComputeMeshWorkAdmission(empty_first_mesh);
+    Expect(admission.mode == MeshWorkAdmission::Mode::WarmBacklog,
+           "empty FirstMesh queue uses starvation carve-out, unlike quota fixtures");
   }
 
   if (failures != 0)

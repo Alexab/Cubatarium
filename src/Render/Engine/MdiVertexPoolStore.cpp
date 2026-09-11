@@ -254,21 +254,24 @@ void UMdiVertexPoolStore::PollCullGpuTimestampRing()
     LastCullGpuExecMs_ = -1.0;
     return;
   }
-  const int read_idx =
-      (CullGpuTimeRing_.WriteIdx + GpuTimestampQueryRing::kSlots - 1) %
-      GpuTimestampQueryRing::kSlots;
-  GLuint available = 0;
-  glGetQueryObjectuiv(CullGpuTimeRing_.Queries[read_idx],
-                      GL_QUERY_RESULT_AVAILABLE, &available);
-  if (!available)
+  for (int read_idx = 0; read_idx < GpuTimestampQueryRing::kSlots; ++read_idx)
   {
-    LastCullGpuExecMs_ = -1.0;
-    return;
+    if (!CullGpuTimeRing_.Pending[read_idx]) continue;
+    GLuint available = 0;
+    glGetQueryObjectuiv(CullGpuTimeRing_.Queries[read_idx],
+                        GL_QUERY_RESULT_AVAILABLE, &available);
+    if (!available) continue;
+    GLuint64 elapsed_ns = 0;
+    glGetQueryObjectui64v(CullGpuTimeRing_.Queries[read_idx], GL_QUERY_RESULT,
+                          &elapsed_ns);
+    const size_t pass = static_cast<size_t>(CullGpuTimeRing_.PassIds[read_idx]);
+    if (pass < 4 && CullGpuTimeRing_.FrameIds[read_idx] > ReadyCullGpuSequence_[pass])
+    {
+      ReadyCullGpuMs_[pass] = static_cast<double>(elapsed_ns) / 1.0e6;
+      ReadyCullGpuSequence_[pass] = CullGpuTimeRing_.FrameIds[read_idx];
+    }
+    CullGpuTimeRing_.Pending[read_idx] = false;
   }
-  GLuint64 elapsed_ns = 0;
-  glGetQueryObjectui64v(CullGpuTimeRing_.Queries[read_idx], GL_QUERY_RESULT,
-                        &elapsed_ns);
-  LastCullGpuExecMs_ = static_cast<double>(elapsed_ns) / 1.0e6;
 #endif
 }
 
@@ -946,21 +949,35 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   glUseProgram(CullProgram);
   const uint32_t n = ubo.batchCount;
   InitCullGpuTimingIfNeeded();
-  const int gpu_slot = CullGpuTimeRing_.WriteIdx;
-  if (CullGpuTimingAvailable_)
+  PollCullGpuTimestampRing(); // Read older submissions, not the just-ended one.
+  const size_t timing_pass = static_cast<size_t>(cache.passId);
+  if (timing_pass < 4)
+  {
+    LastCullGpuExecMs_ = ReadyCullGpuMs_[timing_pass];
+    ReadyCullGpuMs_[timing_pass] = -1.0;
+  }
+  int gpu_slot = -1;
+  for (int offset = 0; offset < GpuTimestampQueryRing::kSlots; ++offset)
+  {
+    const int candidate = (CullGpuTimeRing_.WriteIdx + offset) % GpuTimestampQueryRing::kSlots;
+    if (!CullGpuTimeRing_.Pending[candidate]) { gpu_slot = candidate; break; }
+  }
+  const bool record_timing = CullGpuTimingAvailable_ && gpu_slot >= 0;
+  if (record_timing)
   {
     glBeginQuery(GL_TIME_ELAPSED, CullGpuTimeRing_.Queries[gpu_slot]);
   }
   const auto submit_t0 = std::chrono::steady_clock::now();
   glDispatchCompute((n + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
-  if (CullGpuTimingAvailable_)
+  if (record_timing)
   {
     glEndQuery(GL_TIME_ELAPSED);
-    CullGpuTimeRing_.FrameIds[gpu_slot] = cache.batchTableRevision;
+    CullGpuTimeRing_.FrameIds[gpu_slot] = CullGpuTimeRing_.NextSubmission++;
+    CullGpuTimeRing_.PassIds[gpu_slot] = cache.passId;
+    CullGpuTimeRing_.Pending[gpu_slot] = true;
     CullGpuTimeRing_.WriteIdx =
         (gpu_slot + 1) % GpuTimestampQueryRing::kSlots;
-    PollCullGpuTimestampRing();
   }
   glUseProgram(0);
   LastCullSubmitCpuMs_ = std::chrono::duration<double, std::milli>(

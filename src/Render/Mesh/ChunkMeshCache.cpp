@@ -1599,7 +1599,7 @@ void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
 {
   CaptureStore.SetNeighborVisualDrawableFn(CacheNeighborVisuallyDrawable, this);
   const uint64_t rev = MeshRevisions.Current(chunk_coord);
-  if (CaptureStore.TryGet(chunk_coord, rev))
+  if (CaptureStore.TryGet(world, chunk_coord, rev))
   {
     return;
   }
@@ -1928,7 +1928,7 @@ int UChunkMeshCache::PruneGhostDirty(UBlockWorld &world, int cap)
   }
   int n = 0;
   auto prune_coord = [&](glm::ivec3 coord) {
-    return ShouldPruneGhostDirtyCoord(!world.GetChunkManager().HasChunk(coord));
+    return ShouldPruneGhostDirtyCoord(world.GetChunkManager().HasChunk(coord));
   };
   for (auto it = Dirty.begin(); it != Dirty.end() && n < cap;)
   {
@@ -3310,7 +3310,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
                                                uint64_t source_revision)
 {
   SnapshotAcquireResult out;
-  if (auto hit = CaptureStore.TryGet(coord, source_revision))
+  if (auto hit = CaptureStore.TryGet(world, coord, source_revision))
   {
     ++LastMeshCaptureStoreHitN;
     if (!Dirty.IsFirstMesh(coord) && HasDrawableGreedyMesh(coord))
@@ -3350,7 +3350,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     if (PendingCaptureSet_.count(coord) > 0)
     {
       DrainCaptureWorkerCommits(world, &registry);
-      if (auto drained_hit = CaptureStore.TryGet(coord, source_revision))
+      if (auto drained_hit = CaptureStore.TryGet(world, coord, source_revision))
       {
         ++LastMeshCaptureStoreHitN;
         out.kind = SnapshotAcquireKind::Ready;
@@ -3421,7 +3421,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
   --CaptureRefreshBudgetLeft;
   if (CaptureAndCommitOnMain(world, &registry, coord, source_revision))
   {
-    if (auto hit = CaptureStore.TryGet(coord, source_revision))
+    if (auto hit = CaptureStore.TryGet(world, coord, source_revision))
     {
       out.kind = SnapshotAcquireKind::Ready;
       out.snapshot = std::move(*hit);
@@ -3499,7 +3499,7 @@ int UChunkMeshCache::RetryPendingCaptures(UBlockWorld &world,
     {
       continue;
     }
-    auto hit = CaptureStore.TryGet(coord, capture_revision);
+    auto hit = CaptureStore.TryGet(world, coord, capture_revision);
     if (!hit)
     {
       PendingCaptureReady_.erase(coord);
@@ -3520,8 +3520,12 @@ int UChunkMeshCache::RetryPendingCaptures(UBlockWorld &world,
                               std::chrono::high_resolution_clock::now() -
                               snap_t0)
                               .count();
-    ActiveMeshSourceRevision[coord] = snapshot.sourceRevision;
-    AsyncBuilder->Enqueue(std::move(snapshot), registry);
+    const uint64_t submitted_revision = snapshot.sourceRevision;
+    if (!AsyncBuilder->Enqueue(std::move(snapshot), registry))
+    {
+      continue; // Keep Dirty and PendingCaptureReady for retry.
+    }
+    ActiveMeshSourceRevision[coord] = submitted_revision;
     ScheduledThisFrame_.insert(coord);
     if (Dirty.IsFirstMesh(coord))
     {
@@ -3920,6 +3924,15 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   auto revision_ok = [&](PendingGpuApply &pending,
                          bool &out_drop) -> bool {
     out_drop = false;
+    if (!pending.snapshot.InputsStillValid(world) ||
+        pending.inputCatalog != registry.GetDefinitionsCatalogSnapshot())
+    {
+      fail_ticket(pending);
+      ++MeshApplyStaleCount;
+      CaptureStore.Invalidate(pending.coord);
+      out_drop = true;
+      return false;
+    }
     const uint64_t expected_revision = MeshRevisions.Current(pending.coord);
     const auto revisionIt = ActiveMeshSourceRevision.find(pending.coord);
     const bool has_active = revisionIt != ActiveMeshSourceRevision.end();
@@ -4290,6 +4303,26 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                                       UBlockRegistry &registry,
                                       MeshBuildResult &&result)
 {
+  bool inputs_valid = result.InputStampsValid &&
+      result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
+  for (const auto &stamp : result.InputStamps)
+    inputs_valid = inputs_valid &&
+        stamp.Matches(world.GetChunkManager().GetChunk(stamp.coord));
+  if (!inputs_valid)
+  {
+    ++MeshApplyStaleCount;
+    CaptureStore.Invalidate(result.coord);
+    const auto active = ActiveMeshSourceRevision.find(result.coord);
+    if (active != ActiveMeshSourceRevision.end() &&
+        active->second == result.sourceRevision)
+      ActiveMeshSourceRevision.erase(active);
+    if (world.GetChunkManager().HasChunk(result.coord))
+    {
+      if (HasDrawableGreedyMesh(result.coord)) Dirty.MarkDirty(result.coord);
+      else Dirty.MarkDirtyPriority(result.coord);
+    }
+    return;
+  }
   auto abandon_fm_watch = [&]()
   {
     // Orphan hygiene: drop watch without counting as GPU finish match.
@@ -4390,6 +4423,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       pending.coord = result.coord;
       pending.sourceRevision = result.sourceRevision;
       pending.snapshot = std::move(*result.PendingSnapshot);
+      pending.resultCredit = std::move(result.ResultCredit);
+      pending.inputCatalog = std::move(result.InputCatalog);
       pending.crossCenters = std::move(result.crossCenters);
       result.PendingSnapshot.reset();
       result.GpuExtractPending = false;
@@ -5638,8 +5673,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                 std::chrono::high_resolution_clock::now() -
                                 snap_t0)
                                 .count();
-      ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
-      AsyncBuilder->Enqueue(std::move(snapshot), registry);
+      const uint64_t submitted_revision = snapshot.sourceRevision;
+      if (!AsyncBuilder->Enqueue(std::move(snapshot), registry))
+      {
+        ++LastMeshDirtyScheduleSkipN;
+        return std::next(it);
+      }
+      ActiveMeshSourceRevision[*it] = submitted_revision;
       ScheduledThisFrame_.insert(*it);
       if (Dirty.IsFirstMesh(*it))
       {
@@ -6167,8 +6207,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                 std::chrono::high_resolution_clock::now() -
                                 snap_t0)
                                 .count();
-      ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
-      AsyncBuilder->Enqueue(std::move(snapshot), registry);
+      const uint64_t submitted_revision = snapshot.sourceRevision;
+      if (!AsyncBuilder->Enqueue(std::move(snapshot), registry))
+      {
+        ++LastMeshDirtyScheduleSkipN;
+        ++it;
+        continue;
+      }
+      ActiveMeshSourceRevision[*it] = submitted_revision;
       ScheduledThisFrame_.insert(*it);
       if (Dirty.IsFirstMesh(*it))
       {

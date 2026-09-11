@@ -32,6 +32,50 @@ int main()
     return 1;
   }
 
+  // Exercise the production capture/cache path, not just stamp equality.
+  // Keep sourceRevision fixed: input revisions must independently reject reuse.
+  cutum::UBlockWorld capturedWorld;
+  capturedWorld.GetChunkManager().EnsureChunk(coord);
+  store.CaptureAndStore(capturedWorld, coord, rev);
+  if (!store.TryGet(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: unchanged capture must be reusable\n";
+    return 1;
+  }
+  const glm::ivec3 neighbor(1, 0, 0);
+  capturedWorld.GetChunkManager().EnsureChunk(neighbor);
+  if (store.TryGet(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: absent neighbor becoming resident must invalidate\n";
+    return 1;
+  }
+  store.CaptureAndStore(capturedWorld, coord, rev);
+  auto *neighborChunk = capturedWorld.GetChunkManager().GetChunk(neighbor);
+  neighborChunk->SetLightLocal({0, 0, 0}, 7, 2);
+  if (store.TryGet(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: changed halo light must invalidate cached capture\n";
+    return 1;
+  }
+  store.CaptureAndStore(capturedWorld, coord, rev);
+  neighborChunk->ResetForReuse(neighbor);
+  if (store.TryGet(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: recycled neighbor must invalidate cached capture\n";
+    return 1;
+  }
+
+  store.CaptureAndStore(capturedWorld, coord, rev);
+  capturedWorld.GetChunkManager().GetChunk(coord)->SetBlockLocal(
+      {1, 1, 1}, static_cast<cutum::BlockId>(1));
+  auto refreshed = store.RefreshIncrementalShell(capturedWorld, coord, rev, 1);
+  if (!refreshed || !refreshed->InputsStillValid(capturedWorld) ||
+      refreshed->GetBlockLocal({1, 1, 1}) != static_cast<cutum::BlockId>(1))
+  {
+    std::cerr << "FAIL: shell refresh must recapture stale interior inputs\n";
+    return 1;
+  }
+
   if (UMeshCaptureWorker::kWorkerCaptureEnabled)
   {
     UMeshCaptureWorker worker(1);

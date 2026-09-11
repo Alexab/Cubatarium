@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Jobs/JobThreadPool.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
@@ -18,6 +19,7 @@ namespace cutum
 
 class UBlockRegistry;
 class IUChunkMesher;
+struct BlockDefinitionCatalog;
 
 struct MeshBuildResult
 {
@@ -30,6 +32,10 @@ struct MeshBuildResult
   /// P5: worker deferred eligible opaque extract to main (GL) thread.
   bool GpuExtractPending{false};
   std::unique_ptr<ChunkMeshSnapshot> PendingSnapshot;
+  std::unique_ptr<UPipelineCreditGuard> ResultCredit;
+  std::array<ChunkInputStamp, 7> InputStamps{};
+  bool InputStampsValid{false};
+  std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
 };
 
 class UAsyncMeshBuilder
@@ -40,7 +46,7 @@ public:
   void SetMesher(IUChunkMesher *mesher) { Mesher = mesher; }
   IUChunkMesher *GetMesher() const { return Mesher; }
 
-  void Enqueue(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
+  [[nodiscard]] bool Enqueue(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
   bool IsInFlight(glm::ivec3 coord) const;
   int GetInFlightCount() const;
@@ -76,7 +82,7 @@ public:
   {
     return Completed.DiscardedOverflow();
   }
-  void SetCompletedCapacity(std::size_t cap) { Completed.SetCapacity(cap); }
+  void SetCompletedCapacity(std::size_t cap);
   /// Coords whose Completed mesh was dropped by overflow; remesh via Dirty.
   std::vector<glm::ivec3> TakeOverflowCoords();
   /// Coords discarded for stale epoch / jobId mismatch; remesh via Dirty.
@@ -89,7 +95,6 @@ private:
   IUChunkMesher *Mesher{nullptr};
   // Completed before Pool — pool joins first while completed queue stays valid (M08).
   UCompletedJobQueue<MeshBuildResult> Completed;
-  UJobThreadPool Pool;
   mutable std::mutex InFlightMutex;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> InFlight;
   std::atomic<uint64_t> NextJobId{1};
@@ -101,6 +106,8 @@ private:
   std::vector<glm::ivec3> OverflowCoords;
   mutable std::mutex DiscardedMutex;
   std::vector<glm::ivec3> DiscardedCoords;
+  // Destroy first: callbacks access all the members above until workers join.
+  UJobThreadPool Pool;
 };
 
 } // namespace cutum

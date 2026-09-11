@@ -430,6 +430,15 @@ inline bool ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
   return true;
 }
 
+/// A historical prepared flag cannot suppress consumers while current work or
+/// presentation debt remains. Keep the existing GPU storage; drain CPU work.
+inline bool ShouldDrainPreparedEnterWarmup(bool spawn_prepared, bool live_work,
+                                          bool visibility_ready,
+                                          bool underfeet_present)
+{
+  return !spawn_prepared || live_work || !visibility_ready || !underfeet_present;
+}
+
 /// Era29 I-E5: soft enter_app budget ms (KEEP Era20 ~100; allow ≤200).
 inline int EnterVisualWarmupAppUpdateSoftMs()
 {

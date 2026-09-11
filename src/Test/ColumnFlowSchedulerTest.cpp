@@ -121,6 +121,14 @@ int main()
     Expect(p.kind == ColumnWorkKind::FirstMesh, "FirstMesh after upgrade");
   }
 
+  {
+    UColumnFlowScheduler repeated;
+    for (int n = 0; n < 10000; ++n)
+      repeated.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 100);
+    Expect(repeated.LiveCount() == 1 && repeated.HeapCount() == 1,
+           "identical demand cannot grow tombstone heap");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

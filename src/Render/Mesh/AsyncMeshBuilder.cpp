@@ -27,18 +27,21 @@ std::size_t ResolveMeshWorkerCount(std::size_t thread_count)
 
 std::size_t EstimateMeshResultBytes(const MeshBuildResult &result)
 {
-  std::size_t bytes = 0;
+  std::size_t bytes = sizeof(MeshBuildResult);
   for (const GreedyMeshBatch &batch : result.batches)
   {
-    bytes += batch.vertices.size() * sizeof(GreedyMeshVertex);
-    bytes += batch.indices.size() * sizeof(uint32_t);
+    bytes += batch.vertices.capacity() * sizeof(GreedyMeshVertex);
+    bytes += batch.indices.capacity() * sizeof(uint32_t);
   }
   if (result.PendingSnapshot)
   {
-    bytes += kEstimatedChunkSnapshotBytes;
+    bytes += sizeof(ChunkMeshSnapshot);
   }
-  return std::min(bytes > 0 ? bytes : kEstimatedMeshResultBytesMax / 4,
-                  kEstimatedMeshResultBytesMax);
+  for (const auto &entry : result.crossCenters)
+  {
+    bytes += entry.second.capacity() * sizeof(CrossInstanceGpu);
+  }
+  return bytes + result.batches.capacity() * sizeof(GreedyMeshBatch);
 }
 } // namespace
 
@@ -83,15 +86,18 @@ int MaxSolidLocalYSnapshot(const ChunkMeshSnapshot &snapshot,
 
 } // namespace
 
-void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
+bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
                                 UBlockRegistry &registry)
 {
   const glm::ivec3 coord = snapshot.coord;
   if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
-          kEstimatedChunkSnapshotBytes))
+          sizeof(ChunkMeshSnapshot)))
   {
-    return;
+    return false;
   }
+  // std::function is copyable; the last queued/running closure owns the lease.
+  auto snapshot_credit = std::make_shared<UPipelineCreditGuard>(
+      PipelineCreditKind::Snapshot, sizeof(ChunkMeshSnapshot), true);
   const uint64_t submitEpoch = Epoch.load(std::memory_order_acquire);
   const uint64_t jobId =
       NextJobId.fetch_add(1, std::memory_order_relaxed);
@@ -106,7 +112,8 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
 
   if (!Pool.TryEnqueue(
           [this, snapshot = std::move(snapshot), registryPtr = &registry,
-           catalogKeep = std::move(catalogKeep), jobId, submitEpoch]() mutable
+           catalogKeep = std::move(catalogKeep), jobId, submitEpoch,
+           snapshot_credit = std::move(snapshot_credit)]() mutable
           {
         (void)catalogKeep;
         MeshBuildResult result;
@@ -114,6 +121,9 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         result.sourceRevision = snapshot.sourceRevision;
         result.jobId = jobId;
         result.submitEpoch = submitEpoch;
+        result.InputStamps = snapshot.inputStamps;
+        result.InputStampsValid = snapshot.inputStampsValid;
+        result.InputCatalog = catalogKeep;
 
         auto *gpu_mesher = Mesher;
         const bool defer_gpu =
@@ -159,14 +169,24 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         }
         const std::size_t result_bytes = EstimateMeshResultBytes(result);
         auto &pipe_adm = UPipelineAdmission::Get();
-        pipe_adm.TryAcquireResultBytes(result_bytes);
-        pipe_adm.ReleaseSnapshotBytes(kEstimatedChunkSnapshotBytes);
+        if (!pipe_adm.TryAcquireResultBytes(result_bytes))
+        {
+          {
+            std::lock_guard<std::mutex> lock(InFlightMutex);
+            const auto it = InFlight.find(result.coord);
+            if (it != InFlight.end() && it->second == jobId)
+              InFlight.erase(it);
+          }
+          std::lock_guard<std::mutex> lock(OverflowMutex);
+          OverflowCoords.push_back(result.coord); // Unconditional demand retry.
+          return;
+        }
+        result.ResultCredit = std::make_unique<UPipelineCreditGuard>(
+            PipelineCreditKind::Result, result_bytes, true);
 
         MeshBuildResult dropped;
         if (Completed.PushDropOldest(std::move(result), &dropped))
         {
-          UPipelineAdmission::Get().ReleaseResultBytes(
-              EstimateMeshResultBytes(dropped));
           {
             std::lock_guard<std::mutex> lock(InFlightMutex);
             const auto it = InFlight.find(dropped.coord);
@@ -188,8 +208,23 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         InFlight.erase(it);
       }
     }
-    UPipelineAdmission::Get().ReleaseSnapshotBytes(kEstimatedChunkSnapshotBytes);
-    return;
+    return false;
+  }
+  return true;
+}
+
+void UAsyncMeshBuilder::SetCompletedCapacity(std::size_t cap)
+{
+  for (auto &dropped : Completed.SetCapacity(cap))
+  {
+    {
+      std::lock_guard<std::mutex> lock(InFlightMutex);
+      const auto it = InFlight.find(dropped.coord);
+      if (it != InFlight.end() && it->second == dropped.jobId)
+        InFlight.erase(it);
+    }
+    std::lock_guard<std::mutex> lock(OverflowMutex);
+    OverflowCoords.push_back(dropped.coord);
   }
 }
 
@@ -204,17 +239,14 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
 
   std::vector<glm::ivec3> discarded_now;
   discarded_now.reserve(drained.size());
-  auto &admission = UPipelineAdmission::Get();
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     for (MeshBuildResult &result : drained)
     {
-      const std::size_t result_bytes = EstimateMeshResultBytes(result);
       if (result.submitEpoch != current_epoch)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
         DiscardedLateEpoch.fetch_add(1, std::memory_order_relaxed);
-        admission.ReleaseResultBytes(result_bytes);
         const auto it = InFlight.find(result.coord);
         if (it != InFlight.end() && it->second == result.jobId)
         {
@@ -228,12 +260,10 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
         DiscardedLateJobMismatch.fetch_add(1, std::memory_order_relaxed);
-        admission.ReleaseResultBytes(result_bytes);
         discarded_now.push_back(result.coord);
         continue;
       }
       InFlight.erase(it);
-      admission.ReleaseResultBytes(result_bytes);
       accepted.push_back(std::move(result));
     }
   }
@@ -328,7 +358,6 @@ void UAsyncMeshBuilder::CancelPending()
   const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
   for (MeshBuildResult &result : Completed.DrainAll())
   {
-    UPipelineAdmission::Get().ReleaseResultBytes(EstimateMeshResultBytes(result));
     if (result.submitEpoch != current_epoch)
     {
       DiscardedLate.fetch_add(1, std::memory_order_relaxed);

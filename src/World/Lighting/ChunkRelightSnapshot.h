@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/BlockTypes.h"
@@ -69,6 +70,9 @@ struct RelightComputeResult
   uint64_t submitEpoch{0};
   WorkToken work_token{};
   DependencyStamp dependency_stamp{};
+  std::vector<ChunkInputStamp> read_set;
+  RelightJobSpec retry_spec;
+  std::shared_ptr<const BlockDefinitionCatalog> input_catalog;
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
   bool finalize_pending_gate{true};
@@ -124,6 +128,7 @@ private:
   RelightJobSpec Spec;
   WorkToken CapturedWorkToken{};
   DependencyStamp CapturedDepStamp{};
+  std::vector<ChunkInputStamp> ReadSet;
   int CapturedFullChunks{0};
   int CapturedNeighborLightChunks{0};
 };

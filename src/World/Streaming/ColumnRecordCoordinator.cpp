@@ -80,13 +80,15 @@ ColumnJobStage UColumnRecordCoordinator::SyncFromWorldTruth(
   const ColumnJobStage pending_stage = PendingStageFromTruth(truth);
   if (pending_stage != ColumnJobStage::Absent)
   {
+    const bool progressed = rec.pending.token == 0 ||
+                            rec.pending.stage != pending_stage;
     if (rec.pending.token == 0)
     {
       rec.pending.token = rec.inflight_job != 0 ? rec.inflight_job : 1;
       rec.debt.created_at_ms = NowMs();
     }
     rec.pending.stage = pending_stage;
-    TouchDebtProgress(rec);
+    if (progressed) TouchDebtProgress(rec);
   }
   else if (rec.inflight_job == 0)
   {

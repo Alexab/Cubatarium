@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
@@ -30,6 +31,9 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, kShellCells> shellLight{};
   std::array<uint8_t, kShellCells> shellNeighborState{};
   uint64_t sourceRevision{0};
+  std::array<ChunkInputStamp, 7> inputStamps{};
+  bool inputStampsValid{false};
+  bool InputsStillValid(const UBlockWorld &world) const;
 
   /// Optional: when false for a neighbor chunk coord, shell treats that
   /// neighbor as Air (Era39 SoftDefer-hidden seam). Nullptr ⇒ all drawable.

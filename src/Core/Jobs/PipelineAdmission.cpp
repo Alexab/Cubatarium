@@ -15,7 +15,7 @@ bool TryAcquire(std::atomic<std::size_t> &pending, std::size_t cap,
     return true;
   }
   std::size_t cur = pending.load(std::memory_order_relaxed);
-  while (cur + bytes <= cap)
+  while (cur <= cap && bytes <= cap - cur)
   {
     if (pending.compare_exchange_weak(cur, cur + bytes, std::memory_order_acq_rel,
                                      std::memory_order_relaxed))

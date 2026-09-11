@@ -34,10 +34,7 @@ void CollectColumnChunkCoords(const UBlockWorld &world, int world_x, int world_z
       for (int cy = base.y; cy <= top.y; ++cy)
       {
         const glm::ivec3 coord(base.x + dx, cy, base.z + dz);
-        if (world.GetChunkManager().HasChunk(coord))
-        {
-          out.insert(coord);
-        }
+        out.insert(coord); // Record absence, too: a later load changes inputs.
       }
     }
   }
@@ -54,10 +51,7 @@ void CollectCenterColumnChunkCoords(const UBlockWorld &world, int world_x,
   for (int cy = base.y; cy <= top.y; ++cy)
   {
     const glm::ivec3 coord(base.x, cy, base.z);
-    if (world.GetChunkManager().HasChunk(coord))
-    {
-      out.insert(coord);
-    }
+    out.insert(coord);
   }
 }
 
@@ -632,6 +626,7 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
   for (const glm::ivec3 &coord : coords)
   {
     const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+    snapshot.ReadSet.push_back(ChunkInputStamp::Capture(coord, chunk));
     if (!chunk)
     {
       continue;
@@ -647,6 +642,8 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
         continue;
       }
       const UChunk *neighbor = world.GetChunkManager().GetChunk(neighbor_coord);
+      snapshot.ReadSet.push_back(ChunkInputStamp::Capture(
+          neighbor_coord, neighbor, spec.column_center_only));
       if (!neighbor)
       {
         continue;
@@ -709,6 +706,8 @@ RelightComputeResult
 UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
 {
   RelightComputeResult result;
+  result.read_set = ReadSet;
+  result.retry_spec = Spec;
   result.job_id = Spec.job_id;
   result.source_block_positions = Spec.block_positions;
   result.finalize_pending_gate = Spec.finalize_pending_gate;

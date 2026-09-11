@@ -794,6 +794,8 @@ private:
     glm::ivec3 coord{0};
     uint64_t sourceRevision{0};
     ChunkMeshSnapshot snapshot;
+    std::unique_ptr<UPipelineCreditGuard> resultCredit;
+    std::shared_ptr<const BlockDefinitionCatalog> inputCatalog;
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
     Phase phase{Phase::Queued};
     bool transparent{false};

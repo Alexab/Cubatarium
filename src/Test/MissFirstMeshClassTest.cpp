@@ -943,6 +943,17 @@ int main()
     Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
            "SOTA: enter ready is ring+lit+mesh+vis (no cruise extra gate)");
     using cutum::ShouldResetRenderStateForGpuWarmup;
+    using cutum::ShouldDrainPreparedEnterWarmup;
+    Expect(!ShouldDrainPreparedEnterWarmup(true, false, true, true),
+           "prepared and currently ready skips redundant CPU drain");
+    Expect(ShouldDrainPreparedEnterWarmup(true, true, true, true),
+           "prepared must consume outstanding async completions");
+    Expect(ShouldDrainPreparedEnterWarmup(true, false, false, true),
+           "prepared cannot suppress visibility debt recovery");
+    Expect(ShouldDrainPreparedEnterWarmup(true, false, true, false),
+           "prepared cannot suppress missing underfeet recovery");
+    Expect(ShouldDrainPreparedEnterWarmup(false, false, true, true),
+           "unprepared world still runs normal warmup");
     using cutum::ShouldWarmupGreedyGpuDuringEnter;
     Expect(!ShouldResetRenderStateForGpuWarmup(true),
            "Era51: skip GPU reset when coop prepared spawn");

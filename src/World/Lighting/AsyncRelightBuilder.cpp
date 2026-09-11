@@ -63,6 +63,7 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                  result.work_token = snapshot.GetWorkToken();
                  result.work_token.world_epoch = submit_epoch;
                  result.dependency_stamp = snapshot.GetDependencyStamp();
+                 result.input_catalog = catalogKeep;
                  RelightComputeResult dropped;
                  if (Completed.PushDropOldest(std::move(result), &dropped))
                  {
@@ -121,6 +122,7 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
                  result.work_token = snapshot.GetWorkToken();
                  result.work_token.world_epoch = submit_epoch;
                  result.dependency_stamp = snapshot.GetDependencyStamp();
+                 result.input_catalog = catalogKeep;
                  RelightComputeResult dropped;
                  if (Completed.PushDropOldest(std::move(result), &dropped))
                  {

@@ -22,7 +22,7 @@ public:
   void BumpWorldEpoch();
   uint64_t WorldEpoch() const { return WorldEpoch_; }
 
-  std::optional<ChunkMeshSnapshot> TryGet(glm::ivec3 coord,
+  std::optional<ChunkMeshSnapshot> TryGet(const UBlockWorld &world, glm::ivec3 coord,
                                           uint64_t source_revision) const;
 
   /// Store capture result. Rejects when `world_epoch` != current epoch (M08).

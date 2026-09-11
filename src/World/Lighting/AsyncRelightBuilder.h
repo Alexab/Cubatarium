@@ -26,6 +26,8 @@ public:
   std::vector<RelightComputeResult> DrainCompleted(int max_per_frame);
   bool HasPendingWork() const;
   int GetInFlightCount() const;
+  std::size_t GetQueuedJobCount() const { return Pool.GetPendingJobCount(); }
+  std::size_t GetRunningJobCount() const { return Pool.GetActiveJobCount(); }
   int GetWorkerCount() const { return WorkerCount; }
   int GetMaxPipelineDepth() const
   {
@@ -50,7 +52,11 @@ public:
   {
     return Completed.DiscardedOverflow();
   }
-  void SetCompletedCapacity(std::size_t cap) { Completed.SetCapacity(cap); }
+  void SetCompletedCapacity(std::size_t cap)
+  {
+    for (auto &dropped : Completed.SetCapacity(cap))
+      NoteCompletedOverflow(std::move(dropped));
+  }
   /// Source block positions from Completed overflow drops (re-enqueue relight).
   std::vector<glm::ivec3> TakeOverflowSourcePositions();
 
@@ -68,7 +74,6 @@ private:
   int WorkerCount{1};
   // Completed must outlive Pool (destroy order = reverse declaration).
   UCompletedJobQueue<RelightComputeResult> Completed;
-  UJobThreadPool Pool;
   mutable std::mutex InFlightMutex;
   std::unordered_map<uint64_t, uint64_t> InFlight;
   std::atomic<uint64_t> NextJobId{1};
@@ -80,6 +85,8 @@ private:
   std::vector<glm::ivec3> OverflowSources;
   int LastCaptureFullN{0};
   int LastCaptureNeighborLightN{0};
+  // Join before destroying any state captured by callbacks.
+  UJobThreadPool Pool;
 };
 
 } // namespace cutum

@@ -317,6 +317,7 @@ set(SOURCES
     src/Render/Engine/CreatureDrawPass.cpp
     src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp
+    src/Render/Engine/GreedyGpuPublication.cpp
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/GreedyVertexPoolLifetime.cpp
     src/Render/Engine/CrossGpuBackend.cpp
@@ -2559,7 +2560,37 @@ add_custom_target(m4_ownership_lint
     COMMENT "M4 mesh ownership lint")
 
 # CTest registry (M01 / A14): unit/streaming/policy gates must run, not only build.
+add_executable(job_admission_lifetime_test
+  src/Test/JobAdmissionLifetimeTest.cpp
+  src/Core/Jobs/JobThreadPool.cpp src/Core/Jobs/JobThreadBudget.cpp
+  src/Core/Jobs/PipelineAdmission.cpp)
+target_include_directories(job_admission_lifetime_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(job_admission_lifetime_test PRIVATE Threads::Threads)
+add_executable(chunk_input_stamp_test src/Test/ChunkInputStampTest.cpp
+  src/World/Chunks/Chunk.cpp src/World/Math/FluidCellState.cpp)
+target_include_directories(chunk_input_stamp_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_input_stamp_test PRIVATE glm::glm)
+if(NOT ANDROID AND NOT CUBATARIUM_GLES)
+  add_executable(greedy_vertex_pool_production_test
+    src/Test/GreedyVertexPoolProductionTest.cpp
+    src/Test/GreedyVertexPoolDriverTest.cpp
+    src/Render/Engine/GreedyVertexPool.cpp
+    src/Render/Engine/GreedyGpuPublication.cpp)
+  target_include_directories(greedy_vertex_pool_production_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(greedy_vertex_pool_production_test PRIVATE
+    glm::glm GLEW::GLEW OpenGL::GL glog::glog glfw)
+  add_test(NAME greedy_vertex_pool_driver_test
+    COMMAND $<TARGET_FILE:greedy_vertex_pool_production_test> --driver)
+  set_tests_properties(greedy_vertex_pool_driver_test PROPERTIES
+    LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 30)
+  if(WIN32)
+    target_compile_definitions(greedy_vertex_pool_production_test PRIVATE GLEW_STATIC)
+  endif()
+endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
+  job_admission_lifetime_test
+  chunk_input_stamp_test
+  greedy_vertex_pool_production_test
   column_flow_scheduler_test
   column_scheduler_audit_repro
   streaming_render_ready_invariants_test
@@ -2567,6 +2598,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   mesh_gpu_store_mdi_test
   greedy_vertex_pool_lifetime_test
   capture_token_validation_test
+  decor_mesh_integration_test
   mesh_neighbor_policy_test
   mesh_light_stale_policy_test
   column_emerge_bump_test

@@ -99,6 +99,17 @@ static void RebuildAndCull(cutum::UChunkMeshCache &cache, cutum::UBlockWorld &wo
                            cutum::UBlockRegistry &registry,
                            const glm::vec3 &camera_pos)
 {
+  cache.MarkAllDirtyFromWorld(world, true);
+  const auto resident_count = cache.GetDirtyCount();
+  Expect(resident_count > 0, "fixture must enqueue resident chunks");
+  const glm::ivec3 absent_chunk(100, 100, 100);
+  Expect(!world.GetChunkManager().HasChunk(absent_chunk), "ghost fixture must be absent");
+  cache.MarkDirty(absent_chunk);
+  const auto stats = cache.RebuildDirtyChunksWithStats(world, registry, 10000, 10000);
+  Expect(cache.GetLastMeshDirtyPruneN() == 1, "prune only the absent chunk");
+  Expect(static_cast<size_t>(stats.SyncRebuilt) == resident_count,
+         "resident dirty chunks must survive pruning and rebuild");
+  Expect(cache.GetGreedyCacheSize() > 0, "sync rebuild must publish resident chunks");
   cache.RebuildAll(world, registry);
   const glm::mat4 view = glm::lookAt(camera_pos, camera_pos + glm::vec3(0.0f, 0.0f, -1.0f),
                                      glm::vec3(0.0f, 1.0f, 0.0f));
@@ -140,6 +151,12 @@ static void TestCrossGrassVisibleWithFrustum(cutum::UBlockWorld &world,
 
   const std::vector<cutum::CrossInstanceBatch> &cross_batches =
       cache.GetCrossBatches();
+  if (cross_batches.empty())
+  {
+    std::cerr << "decor diagnostics: greedy_cache=" << cache.GetGreedyCacheSize()
+              << " vertices=" << cache.GetGreedyVertexCount()
+              << " dirty=" << cache.GetDirtyCount() << '\n';
+  }
   Expect(!cross_batches.empty(), "cross batches should not be empty");
   Expect(CountCrossInstances(cross_batches) >= 4,
          "cross grass instances should be present with frustum culling");

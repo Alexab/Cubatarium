@@ -58,6 +58,11 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
     }
     // Prefer full-focus scan if either request asked for it.
     refreshed.scan_full_focus = old.scan_full_focus || item.scan_full_focus;
+    if (refreshed.priority == old.priority && refreshed.cy == old.cy &&
+        refreshed.scan_full_focus == old.scan_full_focus)
+    {
+      return; // Identical demand must not produce unbounded heap tombstones.
+    }
     ++superseded_n_;
     PushLive(refreshed);
     return;

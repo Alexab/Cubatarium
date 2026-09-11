@@ -46,9 +46,8 @@ inline DependencyStamp BuildRelightDependencyStamp(
 
 inline uint64_t ChunkIncarnationAt(const UBlockWorld &world, glm::ivec3 coord)
 {
-  (void)world;
-  (void)coord;
-  return 0;
+  const auto *chunk = world.GetChunkManager().GetChunk(coord);
+  return chunk ? chunk->GetIncarnation() : 0;
 }
 
 /// Reject async results when live world diverged from capture-time stamp.

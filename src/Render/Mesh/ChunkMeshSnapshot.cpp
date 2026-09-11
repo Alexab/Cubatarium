@@ -65,6 +65,14 @@ int ShellFlatIndex(int face, int cell)
 
 } // namespace
 
+bool ChunkMeshSnapshot::InputsStillValid(const UBlockWorld &world) const
+{
+  if (!inputStampsValid) return false;
+  for (const auto &stamp : inputStamps)
+    if (!stamp.Matches(world.GetChunkManager().GetChunk(stamp.coord))) return false;
+  return true;
+}
+
 ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     const UBlockWorld &world, glm::ivec3 chunkCoord, uint64_t sourceRevision,
     NeighborVisualDrawableFn neighbor_drawable, void *neighbor_drawable_ctx)
@@ -73,11 +81,13 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.coord = chunkCoord;
   snapshot.sourceRevision = sourceRevision;
   const UChunk *chunk = world.GetChunkManager().GetChunk(chunkCoord);
+  snapshot.inputStamps[0] = ChunkInputStamp::Capture(chunkCoord, chunk);
   if (!chunk)
   {
     return snapshot;
   }
   snapshot.blocks = chunk->GetData();
+  snapshot.inputStampsValid = true;
   snapshot.fluid_packed = chunk->GetFluidData();
   snapshot.light_packed = chunk->GetLightData();
 
@@ -92,6 +102,8 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       const UChunk *neighbor_chunk =
           world.GetChunkManager().GetChunk(neighbor_coord);
       const bool neighbor_loaded = neighbor_chunk != nullptr;
+      snapshot.inputStamps[face + 1] =
+          ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk);
       bool neighbor_visually_drawable = neighbor_loaded;
       if (neighbor_loaded && neighbor_drawable)
       {

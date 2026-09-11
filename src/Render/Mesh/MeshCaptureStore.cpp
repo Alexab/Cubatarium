@@ -28,7 +28,7 @@ void UMeshCaptureStore::BumpWorldEpoch()
 }
 
 std::optional<ChunkMeshSnapshot>
-UMeshCaptureStore::TryGet(glm::ivec3 coord, uint64_t source_revision) const
+UMeshCaptureStore::TryGet(const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision) const
 {
   const auto it = Store_.find(coord);
   if (it == Store_.end())
@@ -43,6 +43,7 @@ UMeshCaptureStore::TryGet(glm::ivec3 coord, uint64_t source_revision) const
   {
     return std::nullopt;
   }
+  if (!it->second.data.InputsStillValid(world)) return std::nullopt;
   return it->second.data;
 }
 
@@ -88,7 +89,7 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::TakeOrRefresh(
     const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision,
     int &refresh_budget)
 {
-  if (auto hit = TryGet(coord, source_revision))
+  if (auto hit = TryGet(world, coord, source_revision))
   {
     ++LastStoreHitN_;
     return hit;
@@ -108,7 +109,8 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
 {
   auto it = Store_.find(coord);
   if (it == Store_.end() || it->second.sourceRevision != source_revision ||
-      it->second.worldEpoch != WorldEpoch_ || face_mask == 0)
+      it->second.worldEpoch != WorldEpoch_ || face_mask == 0 ||
+      !it->second.data.InputsStillValid(world))
   {
     int budget = 1;
     return TakeOrRefresh(world, coord, source_revision, budget);

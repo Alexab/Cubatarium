@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+#include <map>
 
 typedef unsigned int GLuint;
 typedef int GLsizei;
@@ -28,10 +29,10 @@ class UGreedyVertexPool
 {
 public:
   GreedyGpuPoolAllocation Allocate(const GreedyMeshBatch &batch);
-  /// Return a prior allocation to the free-list (does not shrink GL buffers).
+  /// Retire an allocation until its last submitted draw completes.
   void Free(const GreedyGpuPoolAllocation &alloc);
-  /// Grow GPU buffers once per pass before batch uploads (avoids mid-pass orphan).
-  /// Returns false if request was clamped by MaxCapacity (partial/no grow).
+  /// Reserve and reset an empty arena; refuses while allocations remain live.
+  /// Returns false on capacity refusal or outstanding retired allocations.
   bool Reserve(size_t vertex_bytes, size_t index_bytes);
   /// Grow to at least these sizes without resetting used counters.
   bool EnsureMinCapacity(size_t vertex_bytes, size_t index_bytes);
@@ -119,7 +120,10 @@ private:
   std::vector<RetiredSlot> RetiredList;
   std::vector<GreedyGpuPoolFreeSlot> PendingRetireList;
   void *UploadFence{nullptr};
-  void *LastDrawFence{nullptr};
+  std::map<uint64_t, void *> DrawFences;
+  uint64_t CompletedDrawFenceToken_{0};
+  size_t LiveAllocationCount{0};
+  uint64_t StorageReadyAfterToken_{0};
   uint64_t LastDrawFenceToken_{0};
   uint64_t ActiveDrawFenceToken_{0};
   uint64_t NextFenceToken_{1};

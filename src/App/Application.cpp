@@ -1957,6 +1957,13 @@ void UApplication::Update(double dt)
         {
           const bool coop_prepared =
               World->IsSpawnAreaPreparedByCooperativeLoad();
+          const bool drain_cpu = ShouldDrainPreparedEnterWarmup(
+              coop_prepared,
+              World->HasPendingAsyncRelightWork() ||
+                  World->GetPendingTerrainRelightFifoCount() > 0 ||
+                  World->NeedsEnterGameMeshWarmup(),
+              World->IsEnterVisibilityReady(),
+              World->IsEnterUnderfeetPresentReady());
           if (frame == 0)
           {
             // Era51: coop PrepareView already warmed spawn — avoid GPU wipe.
@@ -1965,15 +1972,15 @@ void UApplication::Update(double dt)
               Geometry->ResetWorldRenderState();
               LogWorldLoadDiag("gpu_warmup_reset", *World);
             }
-            // SOTA: coop already drained ColumnFlow to Presentable — GPU upload
-            // only. Do not re-arm gate or run a second mesh/relight drain.
-            if (!World->IsEnterLitGateActive() && !coop_prepared)
+            // Prepared preserves GPU storage, but does not prove current
+            // completion queues and presentation debt have been drained.
+            if (!World->IsEnterLitGateActive() && drain_cpu)
             {
               UEnterLitDiagnostics::BeginSession();
               World->BeginEnterLitGate();
             }
           }
-          if (!coop_prepared && World->IsEnterLitGateActive())
+          if (drain_cpu && World->IsEnterLitGateActive())
           {
             // Era46/47: shared enter drain frame — time-sliced per tick.
             const auto t0 = std::chrono::high_resolution_clock::now();
@@ -1992,7 +1999,7 @@ void UApplication::Update(double dt)
                                     std::to_string(drain_frame_ms));
             }
           }
-          else if (!coop_prepared &&
+          else if (drain_cpu &&
                    ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
                        coop_prepared))
           {
@@ -2002,7 +2009,7 @@ void UApplication::Update(double dt)
             }
             World->TickEnterStreamingWarmup(gate_iterations);
           }
-          if (!coop_prepared)
+          if (drain_cpu)
           {
             const auto t0 = std::chrono::high_resolution_clock::now();
             World->TickEnterFovLitPass(

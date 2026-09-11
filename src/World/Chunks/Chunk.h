@@ -4,6 +4,7 @@
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include <array>
+#include <atomic>
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -49,10 +50,18 @@ public:
   {
     return LightData;
   }
-  std::array<uint8_t, CHUNK_VOLUME> &GetLightDataMutable() { return LightData; }
+  // Legacy bulk writers invalidate conservatively on acquiring mutable access.
+  // Read-only callers must use GetLightData().
+  std::array<uint8_t, CHUNK_VOLUME> &GetLightDataMutable()
+  {
+    ++LightFieldRevision;
+    return LightData;
+  }
 
   /// FZ2.7-B1: bumped on any light-field mutation (Apply merge, relight seed).
   uint64_t GetLightFieldRevision() const { return LightFieldRevision; }
+  uint64_t GetIncarnation() const { return Incarnation; }
+  uint64_t GetContentRevision() const { return ContentRevision; }
   void BumpLightFieldRevision() { ++LightFieldRevision; }
 
   static int LocalIndex(glm::ivec3 local);
@@ -63,6 +72,9 @@ private:
   std::array<uint8_t, CHUNK_VOLUME> FluidData{};
   std::array<uint8_t, CHUNK_VOLUME> LightData{};
   uint64_t LightFieldRevision{0};
+  inline static std::atomic<uint64_t> NextIncarnation{1};
+  uint64_t Incarnation{NextIncarnation.fetch_add(1, std::memory_order_relaxed)};
+  uint64_t ContentRevision{0};
   bool Dirty{true};
   /// Count of non-air blocks; IsAirOnly() when zero (avoids 4096-voxel scans).
   int NonAirCount{0};

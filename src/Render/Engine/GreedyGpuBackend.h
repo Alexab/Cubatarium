@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <vector>
+#include <unordered_set>
+#include "World/Chunks/ChunkManager.h"
 
 typedef unsigned int GLuint;
 typedef int GLsizei;
@@ -77,6 +79,8 @@ enum class GreedyGpuPassId : uint8_t
 struct GreedyGpuPassCache
 {
   std::vector<GreedyGpuBatch> batches;
+  std::unordered_set<glm::ivec3, IVec3Hash> PendingGeometryDirty;
+  uint64_t publicationVersion{0};
   GreedyGpuPassId passId{GreedyGpuPassId::Unknown};
   /// Bumped when RebuildIndirectCmdTable uploads cull/draw SSBO tables.
   uint64_t batchTableRevision{0};
@@ -110,9 +114,21 @@ struct GreedyGpuPassCache
 };
 
 /// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).
+struct GreedyGpuUploadInput
+{
+  GreedyBatchRef ref;
+  const GreedyMeshBatch *batch{nullptr};
+};
+
 class UGreedyGpuBackend
 {
 public:
+  // Production transaction, independent of world/cache lookup and runtime
+  // tuning. Used by RefreshPassRefs and fault-injection tests alike.
+  bool PublishPassInputs(GreedyGpuPassCache &cache,
+      const std::vector<GreedyGpuUploadInput> &inputs,
+      const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
+      uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision);
   void RefreshPass(GreedyGpuPassCache &cache,
                    const std::vector<GreedyMeshBatch> &batches,
                    uint64_t mesh_revision, uint64_t cull_revision,

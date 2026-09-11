@@ -360,6 +360,11 @@ def analyze_info(path: Path):
         "settles": settles[-8:],
         "bad_live_soft_vis_debt": bad,
         "soft_force_with_debt": soft_force_debt,
+        "forced_incomplete_settle": [
+            s for s in settles
+            if s["reason"].startswith("force_")
+            and ("no_uf" in s["reason"] or s["visibility_debt"] > 0)
+        ],
         "empty_batch_event_n": len(EMPTY_BATCH_RE.findall(text)),
     }
 
@@ -646,6 +651,11 @@ def evaluate_product(
     latch = perf.get("enter_settle_soft_force_with_debt_max")
     catch_up_armed = latch is not None and float(latch) > 0
     if info:
+        if info.get("forced_incomplete_settle"):
+            fails.append(
+                "forced_incomplete_settle="
+                + ",".join(s["reason"] for s in info["forced_incomplete_settle"])
+            )
         if info.get("soft_force_with_debt"):
             if catch_up_armed:
                 pass

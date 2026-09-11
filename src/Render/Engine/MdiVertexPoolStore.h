@@ -104,10 +104,15 @@ private:
     GLuint Queries[kSlots]{};
     int WriteIdx{0};
     uint64_t FrameIds[kSlots]{};
+    bool Pending[kSlots]{};
+    GreedyGpuPassId PassIds[kSlots]{};
+    uint64_t NextSubmission{1};
     bool Initialized{false};
   };
   GpuTimestampQueryRing CullGpuTimeRing_{};
   double LastCullGpuExecMs_{-1.0};
+  double ReadyCullGpuMs_[4]{-1.0, -1.0, -1.0, -1.0};
+  uint64_t ReadyCullGpuSequence_[4]{};
 
   void InitCullGpuTimingIfNeeded();
   void BeginCullGpuTimestamp();

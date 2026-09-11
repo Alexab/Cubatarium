@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import AnalyzePhase57Scorecard as s
+from unittest.mock import Mock
 
 
 def test_missing_logs_are_invalid_not_pass():
@@ -101,6 +102,21 @@ def test_stale_storm_is_product_fail_not_wall_greenwash():
     assert any("mesh_apply_stale" in f for f in fails)
 
 
+def test_forced_enter_cannot_pass_after_debt_clears():
+    for debt in (0, 80):
+        log = Mock()
+        log.read_text.return_value = (
+            f"settle_reason=force_ingame_no_uf elapsed_ms=150111 "
+            f"ring_ready=1 visibility_debt={debt} underfeet=0\n"
+        )
+        info = s.analyze_info(log)
+        fails = s.evaluate_product(info, {"focus_missing_frac": 0})
+        assert any("forced_incomplete_settle" in f for f in fails)
+        verdict = s.build_verdict(invalid=[], fidelity_fails=[],
+                                  product_fails=fails, hard_corr=[], hard_perf=[])
+        assert verdict["verdict"] == s.VERDICT_CORRECTNESS
+
+
 if __name__ == "__main__":
     test_missing_logs_are_invalid_not_pass()
     test_empty_evaluate_lists_do_not_imply_pass_without_validation()
@@ -109,4 +125,5 @@ if __name__ == "__main__":
     test_insufficient_cruise_is_invalid()
     test_pass_when_complete_and_clean()
     test_stale_storm_is_product_fail_not_wall_greenwash()
+    test_forced_enter_cannot_pass_after_debt_clears()
     print("OK test_AnalyzePhase57Scorecard")

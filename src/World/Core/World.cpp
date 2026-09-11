@@ -5,6 +5,8 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "World/Core/World.h"
+#include "App/Platform/Log.h"
+#include <cstdlib>
 #include <climits>
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
@@ -4354,6 +4356,16 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     return 0;
   }
   int relight_apply_cap = max_per_frame;
+  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  if (audit_relight)
+  {
+    CubatariumLogInfo("RelightAudit",
+        "drain cap=" + std::to_string(max_per_frame) +
+        " inflight=" + std::to_string(AsyncRelight->GetInFlightCount()) +
+        " queued=" + std::to_string(AsyncRelight->GetQueuedJobCount()) +
+        " running=" + std::to_string(AsyncRelight->GetRunningJobCount()) +
+        " completed=" + std::to_string(AsyncRelight->GetCompletedSize()));
+  }
   const auto t0 = std::chrono::high_resolution_clock::now();
   int applied = 0;
   if (Persistence)
@@ -4461,8 +4473,15 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
   bool stopped_by_time = false;
   bool stopped_by_cap = false;
-  while (applied < relight_apply_cap)
+  int examined = 0;
+  while (examined < relight_apply_cap)
   {
+    if (examined > 0 && std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - t0).count() >= slice_ms)
+    {
+      stopped_by_time = true;
+      break;
+    }
     const auto drain_t0 = std::chrono::high_resolution_clock::now();
     std::vector<RelightComputeResult> batch =
         AsyncRelight->DrainCompleted(/*max_per_frame=*/1);
@@ -4474,30 +4493,49 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       break;
     }
     RelightComputeResult &result = batch.front();
+    ++examined; // Rejected work consumes drain budget as well.
     bool reject_stale = false;
+    const ChunkInputStamp *stale_input = nullptr;
     if (result.work_token.world_epoch != 0 &&
         result.work_token.world_epoch != AsyncRelight->SubmitEpoch())
     {
       reject_stale = true;
     }
-    if (!reject_stale && result.work_token.coord != glm::ivec3(0) &&
-        BlockRegistry != nullptr)
+    if (!reject_stale && BlockRegistry != nullptr)
     {
-      const DependencyStamp current = BuildRelightDependencyStamp(
-          BlockWorld, result.work_token.coord, *BlockRegistry);
-      if (!CaptureDependencyStillValid(result.dependency_stamp, current))
-      {
+      if (result.input_catalog != BlockRegistry->GetDefinitionsCatalogSnapshot())
         reject_stale = true;
-      }
+      for (const auto &stamp : result.read_set)
+        if (!stamp.Matches(BlockWorld.GetChunkManager().GetChunk(stamp.coord)))
+        {
+          reject_stale = true;
+          stale_input = &stamp;
+          break;
+        }
     }
     if (reject_stale)
     {
-      for (const glm::ivec3 &pos : result.source_block_positions)
+      if (audit_relight)
       {
-        AsyncRelightColumnsInFlight.erase(
-            glm::ivec2(UChunkManager::WorldToChunk(pos).x,
-                       UChunkManager::WorldToChunk(pos).z));
+        std::string reason = "epoch_or_catalog";
+        if (stale_input)
+        {
+          const auto now = ChunkInputStamp::Capture(stale_input->coord,
+              BlockWorld.GetChunkManager().GetChunk(stale_input->coord));
+          reason = "input=(" + std::to_string(stale_input->coord.x) + "," +
+              std::to_string(stale_input->coord.y) + "," +
+              std::to_string(stale_input->coord.z) + ") incarnation=" +
+              std::to_string(stale_input->incarnation) + "->" + std::to_string(now.incarnation) +
+              " content=" + std::to_string(stale_input->content) + "->" + std::to_string(now.content) +
+              " light=" + std::to_string(stale_input->light) + "->" + std::to_string(now.light);
+        }
+        CubatariumLogInfo("RelightAudit", "retry job=" +
+            std::to_string(result.job_id) + " " + reason);
       }
+      // Preserve exact Y band / light domains / finalization semantics, not a
+      // generic terrain request. InFlight stays occupied by the replacement.
+      result.retry_spec.job_id = ++NextAsyncRelightJobId;
+      AsyncRelight->EnqueueJob(BlockWorld, std::move(result.retry_spec), *BlockRegistry);
       continue;
     }
     ++applied;

@@ -6,6 +6,21 @@
 
 ## Цель и способ работы
 
+### Коррекция после review `cc7063ff` (2026-09-10)
+
+Продолжаем от `cc7063ff`, сохраняя исправления A02/A03/A05/A06/A13; полный откат к `891844d5` не требуется. Старый статус ниже — исторический, а не приёмка текущего кода.
+
+| Очередь | Контракт и связь с аудитом | Обязательная проверка |
+|---|---|---|
+| R1 | A09/A11: никакой потери demand при отказе enqueue; кредиты живут вместе с payload; join до разрушения callback state | Переполнение очереди, cancel queued job, result отказ, destruction; actual job pool |
+| R2 | A01: хранить незавершённые поколения fence, unknown/failed не разрешает reuse; growth сохраняет live storage | Production allocator с подменёнными GL-вызовами: delayed/failed fences, growth, tiny cap |
+| R3 | A01/A04: транзакционный GPU refresh; retain-until-replace; точные добавления/удаления batch keys | Замена/удаление material batch, allocation failure, неизменность старой публикации |
+| R4 | A07/A09: stale relight сохраняет demand, origin не sentinel, validation читает полный read set; настоящие incarnation | Изменение блока/света/соседа, unload/reload, origin, повторная постановка |
+| R5 | A12/A14: пересобирать тесты до запуска, исправлять контрактные несоответствия без ослабления gates; delayed GPU timing | Полный CTest, scorecard; GPU measurement unavailable не равен zero |
+| R6 | M10–M16 исходного плана | Профилирование и последующая миграция owner/deadline/modules после R1–R5, не замена correctness эвристиками |
+
+R1–R5 — ближайший implementation checkpoint. Для каждого шага ниже записывать реально выполненные проверки и ограничения. Production-allocator mock проверяет используемый код, но не заменяет реальный GL scene/oracle и manual A/B. До GL replay нельзя объявлять мигание/FPS/streaming решёнными; G1–G4 остаются открытыми до своих критериев. Обязательная приёмка: три cold и три warm прогона на одинаковом manifest, без изменения мира пользователя, fidelity/скорости/render distance.
+
 Система должна выдавать правильное изображение непрерывно при движении, редактировании и асинхронном обновлении мира; укладывать работы main thread в измеренный бюджет; доводить нужные колонки до видимости без бесконечного repair. Меньшая очередь или более высокий FPS при пропавшей геометрии не считается улучшением.
 
 Работать небольшими коммитами в текущей отдельной ветке, не переписывая `perf_opt19`. Один коммит — один контракт и регрессия на него. Не объединять allocator fix, новый scheduler и изменение render distance в один A/B-кандидат. После каждой группы сохранять исходные logs, config/route/build hashes и verdict. Не менять пользовательские миры: воспроизведение на отдельном тестовом мире/копии с явно заданным seed.
@@ -230,7 +245,7 @@ G4: продуктовая приёмка и сокращение legacy paths
 
 Начать следует с M00/M01 и первых отдельных regression fixes M02–M04. Крупный coordinator refactor не является предпосылкой для исправления найденных локальных ошибок.
 
-## Что уже выполнено, а что ещё нет
+## Исторический статус до исправлений review
 
 Честный статус после пролёта 174657 и remediation gap audit (2026-09-10):
 
@@ -252,3 +267,45 @@ G4: продуктовая приёмка и сокращение legacy paths
 - **M16:** оптимизации **не внедрялись**.
 
 См. также F0 JSONL поля: `mesh_apply_superseded*`, `mesh_apply_drop_no_active*`, `pool_retired_*`, `enter_lit_gate_active` / `gate_elapsed_ms` / TTF proxies, `column_job_*`.
+
+## Исполнение корректировки R1–R6 — 2026-09-11
+
+### Дополнение: интеграционный дефект удаления demand
+
+`PruneGhostDirty` передавал `!HasChunk` в политику, принимающую `has_chunk` и самостоятельно инвертирующую его. Ошибка присутствует в базе `cc7063ff`: загруженные dirty chunks удалялись, отсутствующие сохранялись. Исправлен вызов. Decor integration теперь проверяет production-путь с resident и absent chunk: удаляется только absent, все resident перестраиваются; затем проверяются cross grass и stone geometry через `RebuildAll` и frustum culling. После исправления тест проходит без ослабления ожиданий. Он добавлен в CTest и обязательный список Windows CI (теперь 16 streaming + 1 driver test); прежние записи о 16/16 и падении decor ниже описывают предыдущую контрольную точку.
+
+Следующий world replay должен включать это исправление вместе с prepared-warmup drain: предыдущий smoke не проверял ни одно из них. Сначала проверяется сохранение demand и выход из прогрева без forced gate, затем streaming correctness и лишь после этого сравнение FPS. Не компенсировать потерю demand увеличением бюджетов или ослаблением visibility gates.
+
+**Результат smoke2:** выполнен на свежем build, прогрев без forced exit, debt=0/underfeet=1, но полёт всё ещё CORRECTNESS_FAIL; подробности в `SMOKE_CHECKPOINT_2026-09-11.md`. Приоритет следующего шага уточнён: M09 — конфликты relight и stale mesh retry (120 записей relight retry и 132 stale mesh apply); M10/M12–M14 — стоимость streaming phase и emerge, общий deadline и capture. Не переходить к FPS acceptance до исправления visible black/missing. Регрессии теперь 17/17 PASS, включая настоящий вызов ghost-prune в decor integration.
+
+Текущая база — `cc7063ff7bcfb3d408185fb23e456e41fb80184a`, ветка `codex/world-streaming-audit-fix`. Продолжение поверх неё; откат к `891844d5` не выполнялся. Этот раздел заменяет исторический статус выше, но не отменяет критерии G0–G4.
+
+| Шаг | Внесённое изменение | Фактическая проверка / незакрытая часть |
+|---|---|---|
+| R1 | Mesh enqueue возвращает отказ; dirty demand сохраняется. Snapshot/result credits принадлежат payload через RAII, отказ result budget возвращает demand. Worker pool разрушается раньше состояния callbacks. Legacy void enqueue снова lossless | Production job pool: queue cap, cancel/release, lossless legacy, overflow-safe credits. Полного ASan/TSan world-switch replay нет; legacy очереди пока НЕ ограничены глобальным бюджетом |
+| R2 | Хранятся pending поколения draw fences; failed/null не разрешают reuse. Reserve не сбрасывает живую арену, growth копирует старое storage, handles обновляются; render-thread wait неблокирующий | Production allocator с управляемыми GL fences; отдельный реальный GL 4.3 тест: 128 кадров draw/replace и pixel oracle, AMD Radeon(TM) Graphics, 0 ошибок. Это НЕ world/culling oracle |
+| R3 | GPU command table публикуется транзакционно; удаляются исчезнувшие material batches; OOM оставляет старую геометрию, revisions и dirty retry | Тест вызывает настоящий `PublishPassInputs`: удаление batch, OOM, retry без нового dirty события, сохранение cull state при неизменных входах |
+| R4 | Настоящие incarnation/content/light revisions; mesh center+halo stamps и catalog validation в cache/CPU apply/deferred GPU apply. Relight хранит read set и точный retry spec, origin не sentinel; stale demand пересоздаётся | Stamp tests и настоящий capture cache: origin, mutation, neighbor load, halo light, reuse. Relight integration/random completion и starvation под частыми edits ещё нужны |
+| R5 | Исправлены fixtures readiness с явным FM demand (без ослабления assertions); отдельный zero-demand case. GPU timer ring читает только готовые старые queries и не перезаписывает pending slots | Все 16 зарегистрированных CTest прошли после сборки targets; scorecard regression script PASS. Из них 15 streaming и 1 real-driver. Полный renderer timing/culling replay ещё не выполнен |
+
+Лог CTest: `build/desktop-msvc/audit-ctest-20260911.log`. Команды: `ctest --test-dir build/desktop-msvc -C Release --output-on-failure` и `python tools/test_AnalyzePhase57Scorecard.py`. Список зарегистрированных тестов не равен всем существующим test executables проекта.
+
+Дополнительно: `RefreshIncrementalShell` теперь проверяет stamps перед частичным обновлением; регрессия подтверждает полный recapture изменившегося interior при прежнем sourceRevision. Windows CI проверяет наличие executable И регистрацию всех 15 streaming tests, отвергает пустой набор и сохраняет CTest logs. `check_include_rules.py` проходит. Запуск CI на сервере ещё не выполнялся.
+
+### Следующий порядок работ и условия перехода
+
+1. **R6.1 / M00–M01:** изолированный world smoke, затем одинаковые manifest/route/config и 3 cold + 3 warm A/B. GL smoke не измеряет FPS мира. Сохранить executable hash, исходные JSONL/INFO и verdict; не использовать старые логи как доказательство текущего build.
+2. **R6.2 / M09:** закрыть visual-residency dependency halo (сейчас stamps покрывают voxel/light/incarnation, но не все внешние visual callbacks), immutable catalog reads и relight retry progress. Добавить adversarial completion/unload/reload/world-switch tests, счётчики причин reject/retry и возраста demand. Coalesce/serialise конфликтующие lighting regions только после измерения stale storm.
+3. **R6.3 / M10–M13:** snapshot admission ДО capture/allocation; один worker budget, bounded queues с явным отказом/повтором для каждого producer, end-to-end byte credits и общий frame deadline. Сейчас result budget считается после compute; временные allocations и удвоение GPU storage при growth не покрыты строгим общим cap.
+4. **R6.4 / M11:** перевести shadow coordinator в authoritative owner отдельной проверяемой миграцией. Удалять старые repair paths только при доказанной parity. Не считать fake GPU handles/зеркальные counters состоянием публикации.
+5. **R6.5 / M14–M16:** устранить синхронные HUD readbacks, сделать cull/reference scene oracle, затем профилировать staging command table, линейный free-list и growth/copy. При малом pool cap whole-pass transaction может откладываться бесконечно: нужен progress-safe chunk-granular publish/eviction policy, а не освобождение старого mesh до успешной замены. После доказательства корректности — module boundaries и измеренные оптимизации.
+
+G1–G4 остаются открытыми. Внесённые исправления закрывают конкретные воспроизводимые нарушения контрактов, но не являются заявлением об устранении мигания, чёрных чанков и просадок FPS во всех сценариях.
+
+### World smoke и дополнительная коррекция
+
+См. [SMOKE_CHECKPOINT_2026-09-11.md](SMOKE_CHECKPOINT_2026-09-11.md): 45-секундный пролёт завершился, но получил CORRECTNESS_FAIL; прогрев вышел через `force_ingame_no_uf` после 150 секунд с visibility debt 80. Гипотезу о достаточности R1–R5 этот результат не подтверждает.
+
+В следующую коррекцию включены: возврат evicted completions владельцам при shrink очереди; явный scorecard failure для forced enter без underfeet; opt-in relight queue/dependency diagnostics; замена безусловного `coop_prepared` bypass в GPU-warmup на проверку текущих async work/mesh/visibility/underfeet. Подготовленный spawn сохраняет GPU storage, но не выключает потребителей готовых результатов при оставшейся задолженности. Проверить повторным world run до любого заявления о закрытии progress failure.
+
+Расширенная проверка существующих targets: `completed_job_queue_test` прошёл; `decor_mesh_integration_test` собран, но упал на `cross batches should not be empty`. Причина и принадлежность регрессии пока не установлены; этот тест не входит в зелёный набор 16 CTest и не должен теряться в итоговом статусе.

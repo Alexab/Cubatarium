@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -29,6 +30,8 @@ public:
   UJobThreadPool(const UJobThreadPool &) = delete;
   UJobThreadPool &operator=(const UJobThreadPool &) = delete;
 
+  /// Lossless legacy submission; no queue cap. New bounded producers must
+  /// handle TryEnqueue(false) without discarding their demand.
   void Enqueue(std::function<void()> job);
   /// Returns false if the pending queue is at MaxPendingJobs (job not queued).
   bool TryEnqueue(std::function<void()> job);
@@ -64,15 +67,17 @@ private:
 template <typename T> class UCompletedJobQueue
 {
 public:
-  void SetCapacity(std::size_t cap)
+  // Return every evicted result so its owner can retire its token and retry.
+  std::vector<T> SetCapacity(std::size_t cap)
   {
     std::lock_guard<std::mutex> lock(Mutex);
     if (cap == Cap)
     {
-      return;
+      return {};
     }
     // Drain to linear vector, then rebuild ring at new capacity.
     std::vector<T> kept;
+    std::vector<T> dropped;
     kept.reserve(Count);
     for (std::size_t i = 0; i < Count; ++i)
     {
@@ -88,6 +93,9 @@ public:
       const std::size_t keep_n =
           (kept.size() > Cap) ? Cap : kept.size();
       const std::size_t drop_n = kept.size() - keep_n;
+      dropped.reserve(drop_n);
+      for (std::size_t i = 0; i < drop_n; ++i)
+        dropped.push_back(std::move(kept[i]));
       // Keep newest keep_n entries when shrinking.
       for (std::size_t i = drop_n; i < kept.size(); ++i)
       {
@@ -103,6 +111,7 @@ public:
       Items = std::move(kept);
       Count = Items.size();
     }
+    return dropped;
   }
 
   std::size_t Capacity() const
