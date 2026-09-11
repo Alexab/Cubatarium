@@ -1401,6 +1401,16 @@ target_include_directories(relight_install_planner_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(relight_install_planner_test glm::glm)
 
+add_executable(relight_result_install_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/World/Lighting/LightUtil.cpp
+    src/World/Lighting/ChunkRelightSnapshot.cpp
+    src/Test/RelightResultInstallTest.cpp)
+target_include_directories(relight_result_install_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(relight_result_install_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(relight_result_install_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(mark_relit_integration_test
     src/Test/MarkRelitIntegrationTest.cpp)
 target_include_directories(mark_relit_integration_test PRIVATE
@@ -2599,6 +2609,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   greedy_vertex_pool_lifetime_test
   capture_token_validation_test
   decor_mesh_integration_test
+  relight_result_install_test
   mesh_neighbor_policy_test
   mesh_light_stale_policy_test
   column_emerge_bump_test

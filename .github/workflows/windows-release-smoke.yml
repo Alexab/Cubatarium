@@ -127,6 +127,7 @@ jobs:
             "greedy_vertex_pool_lifetime_test",
             "capture_token_validation_test",
             "decor_mesh_integration_test",
+            "relight_result_install_test",
             "mesh_neighbor_policy_test",
             "mesh_light_stale_policy_test",
             "column_emerge_bump_test",

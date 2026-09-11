@@ -60,3 +60,22 @@
 Следующий этап: приоритет M09/M10/M12–M14 — измерить конфликтующие relight read/write regions и stale mesh retries; разобрать стоимость emerge и общего streaming phase без диагностического логирования. Сначала обеспечить demand/retry progress и покрытие black chunks, затем ограничивать работу общим deadline и переносить capture с main thread. Не отключать validation и не публиковать stale mesh ради FPS. Повторить без teleport на фиксированном маршруте; только после correctness gates переходить к 3 cold/3 warm A/B.
 
 Контрольная точка тестов после исправления ghost prune: **17/17 CTest PASS**, scorecard regression PASS, include rules PASS (40 legacy allowlist), `git diff --check` без ошибок whitespace. Windows CI не запускался. G1–G4 остаются открытыми.
+
+## Smoke3 после исправления установки света и overflow recovery
+
+База `893fb9bf`, ветка `cursor_audit_impl`, незакоммиченные доработки. SHA256 Release executable `09A097AE5C9E71E705869FECEF688901AB23B1A89251FF0146969B4B5A5372F3`. PID 4776, запуск 18:49:54, самостоятельное завершение. Та же изолированная копия World_164; config/world_data hashes остались прежними. Команда: `--flight-sim --world World_164 --seconds 45 --idle 8 --fly --hold-forward` с абсолютными report/perf-out. Без `--teleport-cruise` и без `CUBATARIUM_RELIGHT_AUDIT`.
+
+Изменения этого build:
+
+- `DrainAsyncRelightResults` устанавливает рассчитанный skylight, не заменяя его повторным vertical seed. Боковой свет сохраняется; установка одного домена сохраняет другой, no-op не меняет light revision. Регрессия использует настоящий Capture/Compute и сцену с навесом.
+- Overflow mesh replacement не отбрасывается при dirty_admit_budget=0; orphan ownership снимается, demand возвращается в очередь. Decor regression воспроизвёл отказ до исправления и подтвердил eventual replacement после освобождения result budget.
+
+Фактический результат: 1301 игровых кадров, 45 секунд, `(-3,3) → (-14,3)`, 11 чанков. Прогрев: 8224.47 ms, combined debt 0, visibility debt 0, underfeet 1, ring ready 1; forced enter отсутствует. **CORRECTNESS_FAIL**: focus_missing_frac≈0.737 и visible_black_focus median 78 по scorecard. Manifest/парного baseline нет, отсутствие fidelity flags само по себе не делает прогон приёмочным.
+
+Анализатор: fly wall median 70.6836 ms, streaming phase median 62.01675 ms, mesh emerge median 28.6665 ms, effective holes rate 0.7. Медианы по всем period samples отдельно: relight_apply_light 0.05 ms, relight_apply 0.13 ms, mesh_emerge_prep 18.88 ms; крупнейший измеренный prep segment — `prep_schedule_policy_ms` 17.60 ms (max 27.56). Эти выборки отличаются от cruise-only scorecard; не смешивать их. Mesh stale delta median 1/max 5, накопленный mesh_apply_stale max 35. Visible black остаётся открытой проблемой; это telemetry proxy, визуальный oracle ещё нужен.
+
+Прямое сравнение FPS с smoke2 недопустимо: без teleport стартовый участок изменился, диагностика отключена. Новая точка профиля задаёт следующий приоритет M14: разделить стоимость внутри schedule_policy и убрать ненужные дорогие проверки готовности spawn вне enter gate; затем общий deadline. В частности, вызов `ShouldSuppressRelightSeamDirtyForEnterGate` сейчас eagerly вычисляет `IsSpawnMeshRingReady()` даже при неактивном enter gate. Его отдельный вклад пока не измерен — 17.60 ms относится ко всему сегменту, не к этому вызову.
+
+Артефакты в `build/audit-runtime-20260911/`: `smoke3-report.json`, `smoke3-analysis.json`, `smoke3-verdict.json`, `smoke3-perf.jsonl`, `logs/perf_20260911-184958_4776.jsonl`, `logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20260911-184954.4776`. Анализаторы возвратили 1 и 2 соответственно; scorecard запущен с явным `--teleport false`.
+
+Release сборка завершена, **18/18 CTest PASS** после финальной пересборки; scorecard regression/include audit PASS. G1–G4 не закрыты. Эти доработки не являются заявлением об устранении всех чёрных чанков или о достижении FPS SLA.

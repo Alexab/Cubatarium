@@ -44,7 +44,7 @@
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/LightChangeSet.h"
-#include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "World/Lighting/RelightResultInstall.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/LightingPipelineFactory.h"
@@ -4547,30 +4547,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
-        const auto light_before = chunk->GetLightData();
-        if (result.include_skylight &&
-            ApplyGpuSkylightSeedToChunk(*chunk, *BlockRegistry))
+        if (InstallComputedLight(*chunk, chunk_data.light_packed,
+                                 result.include_skylight,
+                                 result.include_block_light))
         {
-          if (result.include_block_light &&
-              !BlockLightUnchanged(light_before, chunk_data.light_packed))
-          {
-            MergeBlockLightKeepingGpuSky(*chunk, chunk_data.light_packed);
-          }
-          else
-          {
-            ++PhysicsTelemetryData.RelightLightSkipN;
-          }
-          if (!PrimaryLightUnchanged(light_before, chunk->GetLightData()))
-          {
-            chunk->BumpLightFieldRevision();
-            light_changes.Add(chunk_data.coord);
-          }
-        }
-        else if (!PrimaryLightUnchanged(chunk->GetLightData(),
-                                        chunk_data.light_packed))
-        {
-          chunk->GetLightDataMutable() = chunk_data.light_packed;
-          chunk->BumpLightFieldRevision();
           light_changes.Add(chunk_data.coord);
         }
         else

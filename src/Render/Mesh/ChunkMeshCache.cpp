@@ -5290,11 +5290,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
     {
-      // Remesh overflow requeue gated; FirstMesh holes always re-enter Dirty.
-      if (!HasDrawableGreedyMesh(coord) || TryConsumeDirtyAdmit())
+      // This is already admitted demand, not a new edit. An exhausted ingress
+      // quota must not lose a replacement just because the old mesh is lit.
+      // Drop only orphan ownership; a newer CPU/GPU job still owns its result.
+      if (!AsyncBuilder->IsInFlight(coord) && !IsPendingGpuApply(coord) &&
+          GpuExtractInFlight.count(coord) == 0)
       {
-        MarkDirtyPriority(coord);
+        ActiveMeshSourceRevision.erase(coord);
+        RemeshAfterApply.erase(coord);
       }
+      MarkDirtyPriority(coord);
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
     {
