@@ -175,7 +175,7 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q6 ColumnRecord cutover | ShadowCompare default; no synthetic `gpu_handle=1`; `DecideFirstMeshEnqueue` + FirstMeshOwner stage flag (rollback=ShadowCompare). Real GPU handle export + Relight/Seam/Eviction stages open |
 | Q7 admission reserve-before-allocate | **R2** — CaptureAndStore fail → nullopt; RefreshIncrementalShell rejects !inputStampsValid as Ready; main CaptureAndCommitOnMain still without admission |
 | Q8 frame deadline / async cull stats | partial — `UFrameDeadline` + `frame_deadline_test`; producers must not hard-Exhausted FirstMesh |
-| Q9 F5 acceptance flight | 090306 + known-bad flights in FLIGHT_F5. **Next: manual product_anchor** on current Release exe |
+| Q9 F5 acceptance flight | **product_anchor PASS: 192015** (tag `product_anchor_20260912`). Full G0/G1 product gates vs 141350 still open (stale/VB/holes). Known-bad: 131523/162400/175610 |
 | Q10 domain boundaries | include allowlist burn-down note + reverse-rule comment; domain CMake libs open |
 
 G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
@@ -185,9 +185,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | **product_anchor F5** + GL pixel oracle; 175610/162400/131523 known-bad |
-| G2 | Не закрыт | Full catalog-only mesher + ColumnRecord residency owner beyond FirstMesh flag |
+| G1 | Не закрыт | Anchor 192015 restores drawable; GL pixel oracle + VB/holes vs 141350 still open |
+| G2 | Не закрыт | Full catalog-only mesher + ColumnRecord Relight/Seam/Eviction owners |
 | G3 | Не закрыт | Frame deadline soft; не все producers defer by RemainingMs |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **manual product_anchor F5** vs 090306 (`bin/Cubatarium.exe`); on PASS tag `product_anchor_YYYYMMDD` and fill FLIGHT_F5 Anchor column. Then Relight/Seam cutover stages.
+Следующий шаг: F5 regressions vs **192015** `product_anchor_20260912`; deepen catalog-only GreedyMesher + Relight/Seam cutover.
