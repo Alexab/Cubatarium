@@ -446,6 +446,29 @@ int main()
            "Era39: drawable neighbor not hidden");
     Expect(!IsSoftDeferHiddenNeighbor(false, false, true),
            "Era39: unloaded → Unknown path, not SoftDefer-hidden");
+    using cutum::ShouldSkipSoftDeferSeamRemeshUnderEnterQuiesce;
+    using cutum::ShouldMarkDirtyForSoftDeferSeamRemesh;
+    using cutum::ShouldAllowSoftDeferSeamRemeshCadence;
+    Expect(ShouldSkipSoftDeferSeamRemeshUnderEnterQuiesce(true, true),
+           "162400: skip SoftDefer seam under enter+quiesce");
+    Expect(!ShouldSkipSoftDeferSeamRemeshUnderEnterQuiesce(true, false),
+           "162400: allow seam under enter without quiesce");
+    Expect(!ShouldSkipSoftDeferSeamRemeshUnderEnterQuiesce(false, true),
+           "162400: allow seam when gate off");
+    Expect(ShouldMarkDirtyForSoftDeferSeamRemesh(false, false, false),
+           "162400: MarkDirty when neighbor idle");
+    Expect(!ShouldMarkDirtyForSoftDeferSeamRemesh(true, false, false),
+           "162400: no MarkDirty if already dirty");
+    Expect(!ShouldMarkDirtyForSoftDeferSeamRemesh(false, true, false),
+           "162400: no MarkDirty if pending GPU");
+    Expect(!ShouldMarkDirtyForSoftDeferSeamRemesh(false, false, true),
+           "162400: no MarkDirty if inflight");
+    Expect(ShouldAllowSoftDeferSeamRemeshCadence(10, 0),
+           "162400: first seam remesh allowed");
+    Expect(ShouldAllowSoftDeferSeamRemeshCadence(10, 6),
+           "162400: seam remesh after min gap");
+    Expect(!ShouldAllowSoftDeferSeamRemeshCadence(10, 8),
+           "162400: seam remesh damped within gap");
   }
 
   // --- 162400/Q3: schedule shed / soft-exit correctness guards ---

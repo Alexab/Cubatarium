@@ -1159,9 +1159,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
     // Era39 P2: remesh drawable face-neighbors when SoftDefer-hidden enters/leaves.
     // Lit drawable seam → RemeshQ (MarkDirty), not FirstMeshQ.
+    // 162400: skip under enter lit quiesce; invalidate-only if already busy;
+    // cadence-damp same-nb remesh across SoftDefer empty oscillation.
     const auto softdefer_own_t0 = std::chrono::high_resolution_clock::now();
     {
+      const bool skip_seam_quiesce = ShouldSkipSoftDeferSeamRemeshUnderEnterQuiesce(
+          world.IsEnterLitGateActive(),
+          world.IsEnterLitQuiesceLatched() || mesh_service.IsEnterLitQuiesce());
+      if (!skip_seam_quiesce)
+      {
       int seamed = 0;
+      const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
       auto remesh_drawable_faces = [&](glm::ivec3 hidden, bool now_hidden,
                                        bool prev_hidden)
       {
@@ -1180,12 +1188,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             continue;
           }
-          if (!mesh_service.TryConsumeDirtyAdmit())
+          const auto last_it = SoftDeferSeamRemeshEpoch.find(nb);
+          const uint64_t last_epoch =
+              last_it == SoftDeferSeamRemeshEpoch.end() ? 0 : last_it->second;
+          if (!ShouldAllowSoftDeferSeamRemeshCadence(frame_epoch, last_epoch))
           {
             continue;
           }
+          const bool already_dirty =
+              mesh_service.GetCache().IsChunkMeshDirty(nb);
+          const bool pending_gpu = mesh_service.IsPendingGpuApply(nb);
+          const bool inflight = mesh_service.HasInflightMeshBuild(nb);
           mesh_service.GetCache().InvalidateMeshCapture(nb);
-          mesh_service.MarkDirty(nb);
+          if (ShouldMarkDirtyForSoftDeferSeamRemesh(already_dirty, pending_gpu,
+                                                    inflight))
+          {
+            if (!mesh_service.TryConsumeDirtyAdmit())
+            {
+              continue;
+            }
+            mesh_service.MarkDirty(nb);
+          }
+          SoftDeferSeamRemeshEpoch[nb] = frame_epoch;
           ++seamed;
         }
       };
@@ -1202,6 +1226,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
         remesh_drawable_faces(coord, /*now_hidden=*/false,
                               /*prev_hidden=*/true);
+      }
       }
       SoftDeferEmptyPrevSeen = seen_empty;
     }
