@@ -2,6 +2,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/SoftDeferFramePolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/ScheduleShedPolicy.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
@@ -445,6 +446,41 @@ int main()
            "Era39: drawable neighbor not hidden");
     Expect(!IsSoftDeferHiddenNeighbor(false, false, true),
            "Era39: unloaded → Unknown path, not SoftDefer-hidden");
+  }
+
+  // --- 162400/Q3: schedule shed / soft-exit correctness guards ---
+  {
+    using cutum::AllowScheduleShed;
+    using cutum::AllowScheduleSoftExit;
+    // Baseline calm cruise: no holes, no enter, no UV protect → shed OK.
+    Expect(AllowScheduleShed(false, false, false, false, false, false, false),
+           "162400: calm idle may shed");
+    Expect(AllowScheduleSoftExit(false, false, false, false, false, false,
+                                 false),
+           "162400: calm soft-exit mirrors shed");
+    Expect(!AllowScheduleShed(false, false, false, true, false, false, false),
+           "162400: refuse shed under visual_holes");
+    Expect(!AllowScheduleSoftExit(false, false, false, true, false, false,
+                                  false),
+           "162400: refuse soft-exit under visual_holes");
+    Expect(!AllowScheduleShed(false, false, true, false, false, false, false),
+           "162400: refuse shed while EnterLitGate active");
+    Expect(!AllowScheduleSoftExit(false, false, true, false, false, false,
+                                  false),
+           "162400: refuse soft-exit while EnterLitGate active");
+    Expect(!AllowScheduleShed(false, true, false, false, false, false, false),
+           "162400: refuse shed while enter_warmup_active");
+    Expect(!AllowScheduleShed(false, false, false, false, true, false, false),
+           "162400: refuse shed under unfinished_protect");
+    Expect(!AllowScheduleShed(false, false, false, false, false, true, false),
+           "162400: refuse shed under near_miss_protect");
+    Expect(!AllowScheduleShed(false, false, false, false, false, false, true),
+           "162400: refuse shed under stale_storm_protect");
+    Expect(!AllowScheduleShed(true, false, false, false, false, false, false),
+           "162400: refuse shed under missing_underfeet");
+    Expect(!AllowScheduleSoftExit(false, false, false, false, true, false,
+                                  true),
+           "162400: soft-exit refuses unfinished+stale_storm");
   }
 
   // --- Era28 Visual Stage Gate ---
@@ -974,6 +1010,7 @@ int main()
     using cutum::EnterWarmupStatusPrefersMeshOverFifo;
     using cutum::RemeshAfterLitApplyDecision;
     using cutum::ShouldSuppressRelightSeamDirtyForEnterGate;
+    using cutum::SpawnRingReadyForSeamSuppress;
     cutum::EnterLitSample sample{};
     sample.fifo_n = 10;
     sample.inflight = 5;
@@ -1011,6 +1048,13 @@ int main()
            "Era45 B5: enter gate !ring ⇒ no suppress");
     Expect(ShouldSuppressRelightSeamDirtyForEnterGate(true, true, true),
            "Era45 B5: ring ready ⇒ keep base suppress");
+    Expect(SpawnRingReadyForSeamSuppress(false, false),
+           "enter gate off: ring treated ready without query");
+    Expect(ShouldSuppressRelightSeamDirtyForEnterGate(
+               false, SpawnRingReadyForSeamSuppress(false, false), true),
+           "enter gate off: base suppress applies without ring query");
+    Expect(!SpawnRingReadyForSeamSuppress(true, false),
+           "enter gate on: ring not ready when queried false");
     using cutum::ColumnHasRemeshOwner;
     using cutum::ShouldEnqueueRemeshSeamAfterLit;
     Expect(ColumnHasRemeshOwner(false, true, false, false),

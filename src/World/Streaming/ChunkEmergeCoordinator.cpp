@@ -10,6 +10,7 @@
 #include "World/Streaming/InputFirstPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/EmptyBacklogPolicy.h"
+#include "World/Streaming/ScheduleShedPolicy.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "glog/logging.h"
@@ -179,6 +180,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   double prep_softdefer_pre_ms = 0.0;
   double prep_dirty_thrash_ms = 0.0;
   double prep_schedule_policy_ms = 0.0;
+  double prep_spawn_ring_query_ms = 0.0;
+  double prep_drop_remesh_ms = 0.0;
   double prep_post_admit_drain_ms = 0.0;
   double prep_hole_force_ms = 0.0;
   UBlockRegistry &registry = world.GetBlockRegistry();
@@ -1983,6 +1986,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Phase5 finishing: StreamSimple / deadline / idle-CPU — skip non-critical
   // schedule_policy walks (CancelAsync, DropRemesh, full focus/FIFO scans).
   // Never shed under visual_holes / underfeet / enter / unfinished_hard / mh≤2.
+  // R3: UnfinishedVisual is published in UpdateStreaming before TickMeshEmerge
+  // (WorldViewBinding order), so telem_unfinished is same-frame SoT here.
+  // Additionally refuse shed while mesh-apply stale is storming this frame —
+  // after force_ingame, idle shed must not starve remesh of SoftDefer seams.
+  static uint64_t s_prev_mesh_apply_stale = 0;
+  const uint64_t mesh_apply_stale_now =
+      mesh_service.GetMeshApplyStaleCount();
+  const uint64_t mesh_apply_stale_delta =
+      mesh_apply_stale_now >= s_prev_mesh_apply_stale
+          ? mesh_apply_stale_now - s_prev_mesh_apply_stale
+          : 0;
+  s_prev_mesh_apply_stale = mesh_apply_stale_now;
+  const bool stale_storm_protect = mesh_apply_stale_delta >= 32;
   const bool stream_simple_policy = URuntimeTuning::Get().StreamSimple;
   const bool schedule_shed_uv1 = URuntimeTuning::Get().ScheduleShedUv1;
   const bool refresh_deadline_hit =
@@ -2005,14 +2021,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool near_miss_protect =
       (have_nearest_missing && nearest_miss_h <= 2) ||
       (missing_visible_mesh && telem_miss_h >= 0 && telem_miss_h <= 2);
-  // Phase5.1: visual_holes no longer forever-blocks shed/soft-exit — hole_force
-  // / mh≤2 MarkDirty still run after schedule. Keep underfeet/enter/mh≤2.
-  const bool allow_schedule_shed =
-      !missing_underfeet && !enter_warmup_active && !unfinished_protect &&
-      !near_miss_protect;
-  // Mid-body deadline bailout when full schedule else is already running.
-  const bool allow_schedule_soft_exit =
-      !missing_underfeet && !enter_warmup_active && !near_miss_protect;
+  // 162400/Q3: restore visual_holes + EnterLitGate on shed/soft-exit. Phase5.1
+  // dropped holes from the guard; UV floor=1 + ScheduleShedUv1 + idle_cpu then
+  // shed while holes/stale storm starved DropRemesh (prep_schedule≈0).
+  // hole_force / mh≤2 MarkDirty still run after schedule when not shed.
+  const bool enter_lit_gate_for_shed = world.IsEnterLitGateActive();
+  const bool allow_schedule_shed = AllowScheduleShed(
+      missing_underfeet, enter_warmup_active, enter_lit_gate_for_shed,
+      visual_holes, unfinished_protect, near_miss_protect, stale_storm_protect);
+  // Mid-body deadline bailout must mirror shed guards (else soft-exit skips
+  // CancelAsync/DropRemesh under holes while allow_schedule_shed is false).
+  const bool allow_schedule_soft_exit = AllowScheduleSoftExit(
+      missing_underfeet, enter_warmup_active, enter_lit_gate_for_shed,
+      visual_holes, unfinished_protect, near_miss_protect, stale_storm_protect);
   const bool policy_deadline = refresh_deadline_hit || emerge_prep_over;
   // Idle-CPU invariant: stream_loads==0 must not run O(N) schedule walks.
   // unfinished_soft_ok documents rim UV≤1 idle shed (covered by !unfinished_hard).
@@ -2098,10 +2119,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool base_suppress =
       idle_remesh_debt || idle_focus_dirty_debt ||
       suppress_seam_for_sticky_catchup || suppress_seam_standing_churn;
-  world.SetSuppressRelightSeamDirty(
-      ShouldSuppressRelightSeamDirtyForEnterGate(
-          world.IsEnterLitGateActive(), world.IsSpawnMeshRingReady(),
-          base_suppress));
+  {
+    const bool enter_lit_gate_active = world.IsEnterLitGateActive();
+    bool spawn_ring_ready_if_queried = true;
+    if (enter_lit_gate_active)
+    {
+      const auto spawn_ring_t0 = std::chrono::high_resolution_clock::now();
+      spawn_ring_ready_if_queried = world.IsSpawnMeshRingReady();
+      prep_spawn_ring_query_ms = prep_ms_since(spawn_ring_t0);
+    }
+    world.SetSuppressRelightSeamDirty(ShouldSuppressRelightSeamDirtyForEnterGate(
+        enter_lit_gate_active,
+        SpawnRingReadyForSeamSuppress(enter_lit_gate_active,
+                                      spawn_ring_ready_if_queried),
+        base_suppress));
+  }
   // Always scan full focus for sync hole-fill when holes exist. Cap rebuild
   // count via sync_cap (cruise tiny, idle larger) — radius=2 while "moving"
   // missed stop holes when residual speed kept moving=true.
@@ -2329,6 +2361,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Drop Dirty outside eye shell even when wall is hot (stop wall 80–200).
   // CheapRemesh C6 / Phase5 S3: one coalesced DropRemesh pass.
   {
+    const auto drop_remesh_t0 = std::chrono::high_resolution_clock::now();
     if (idle_focus_dirty_debt)
     {
       request_drop_remesh(/*keep_h=*/1, /*keep_cy=*/2, /*remesh_only=*/false,
@@ -2368,6 +2401,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // Phase 5.7R7: banked DropRemesh skipped on non-cadence cruise frames.
       want_drop_remesh = false;
     }
+    prep_drop_remesh_ms = prep_ms_since(drop_remesh_t0);
   }
   if ((idle_remesh_debt || idle_focus_dirty_debt) && last_frame_ms <= 55.0)
   {
@@ -3750,6 +3784,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.PrepSoftdeferPreMs = prep_softdefer_pre_ms;
     pt.PrepDirtyThrashMs = prep_dirty_thrash_ms;
     pt.PrepSchedulePolicyMs = prep_schedule_policy_ms;
+    pt.PrepSpawnRingQueryMs = prep_spawn_ring_query_ms;
+    pt.PrepDropRemeshMs = prep_drop_remesh_ms;
     pt.PrepPostAdmitDrainMs = prep_post_admit_drain_ms;
     pt.PrepHoleForceMs = prep_hole_force_ms;
     pt.PrepDeadlineHit = prep_deadline_hit;
