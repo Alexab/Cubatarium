@@ -1445,10 +1445,40 @@ target_include_directories(column_desired_stage_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(cruise_sot_phase_test
-    src/Test/CruiseSoTPhaseTest.cpp)
+    src/Test/CruiseSoTPhaseTest.cpp
+    src/World/Streaming/ColumnRecordCoordinator.cpp)
 target_include_directories(cruise_sot_phase_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(cruise_sot_phase_test glm::glm)
+target_link_libraries(cruise_sot_phase_test PRIVATE glm::glm glog::glog)
+
+add_executable(visible_black_attribution_test
+    src/Test/VisibleBlackAttributionTest.cpp)
+target_include_directories(visible_black_attribution_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(draw_oracle_gate_test
+    src/Test/DrawOracleGateTest.cpp)
+target_include_directories(draw_oracle_gate_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(block_catalog_queries_test
+    src/Test/BlockCatalogQueriesTest.cpp)
+target_include_directories(block_catalog_queries_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(block_catalog_queries_test PRIVATE glm::glm)
+
+add_executable(normal_shutdown_test
+    src/Test/NormalShutdownTest.cpp
+    src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
+    src/Core/Jobs/JobThreadBudget.cpp)
+target_include_directories(normal_shutdown_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(frame_deadline_test
+    src/Test/FrameDeadlineTest.cpp)
+target_include_directories(frame_deadline_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(column_emerge_bump_test
     src/Test/ColumnEmergeBumpTest.cpp)
@@ -2612,6 +2642,11 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   job_admission_lifetime_test
   chunk_input_stamp_test
   inputs_still_valid_visual_test
+  visible_black_attribution_test
+  draw_oracle_gate_test
+  block_catalog_queries_test
+  normal_shutdown_test
+  frame_deadline_test
   greedy_vertex_pool_production_test
   column_flow_scheduler_test
   column_scheduler_audit_repro
@@ -2620,6 +2655,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   mesh_gpu_store_mdi_test
   greedy_vertex_pool_lifetime_test
   capture_token_validation_test
+  cruise_sot_phase_test
   decor_mesh_integration_test
   relight_result_install_test
   mesh_neighbor_policy_test
