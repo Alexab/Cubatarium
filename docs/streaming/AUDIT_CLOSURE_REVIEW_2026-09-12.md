@@ -169,12 +169,13 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q1 CI gates | done |
 | Q2 renderer oracle / attribution | done — attribution + census mismatch + normal_shutdown_test; GL pixel oracle remains `greedy_vertex_pool_*` / driver (G1 open) |
 | Q3 schedule cost split | done |
-| Q4 visual boundary stamps | R1 apply-fn landed then S1–S4 SoftDefer/shed **CLOSED-AS-FAILED** (175610). Strategy A: geom-only stamp until Q4 cutover; catalog-only Compute still open |
+| Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
+| Q4 visual boundary stamps | Strategy A geom-only stamp confirmed; `MeshInputs`/`LightInputs` types; AsyncMeshBuilder batch flags from pinned catalog. Full GreedyMesher registry-free Compute still open |
 | Q5 tiny-cap publication progress | done for chunk-granular retain + `publication_progress_unit_n`; eviction policy polish open |
-| Q6 ColumnRecord cutover | partial — unlocked after product_anchor (Strategy A); residency export open |
+| Q6 ColumnRecord cutover | ShadowCompare default; no synthetic `gpu_handle=1`; `DecideFirstMeshEnqueue` + FirstMeshOwner stage flag (rollback=ShadowCompare). Real GPU handle export + Relight/Seam/Eviction stages open |
 | Q7 admission reserve-before-allocate | **R2** — CaptureAndStore fail → nullopt; RefreshIncrementalShell rejects !inputStampsValid as Ready; main CaptureAndCommitOnMain still without admission |
-| Q8 frame deadline / async cull stats | partial — `UFrameDeadline` telemetry only; producers must not hard-Exhausted FirstMesh |
-| Q9 F5 acceptance flight | 090306 + 131523/162400/175610 known-bad in FLIGHT_F5. **Next: Strategy A product_anchor** then Q2b→Q4→Q6 |
+| Q8 frame deadline / async cull stats | partial — `UFrameDeadline` + `frame_deadline_test`; producers must not hard-Exhausted FirstMesh |
+| Q9 F5 acceptance flight | 090306 + known-bad flights in FLIGHT_F5. **Next: manual product_anchor** on current Release exe |
 | Q10 domain boundaries | include allowlist burn-down note + reverse-rule comment; domain CMake libs open |
 
 G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
@@ -184,9 +185,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | **175610** + 162400/131523 stale/publish; smoke3/090306 black/missing; pixel oracle открыт |
-| G2 | Не закрыт | Catalog-only compute + ColumnRecord residency owner не завершены |
+| G1 | Не закрыт | **product_anchor F5** + GL pixel oracle; 175610/162400/131523 known-bad |
+| G2 | Не закрыт | Full catalog-only mesher + ColumnRecord residency owner beyond FirstMesh flag |
 | G3 | Не закрыт | Frame deadline soft; не все producers defer by RemainingMs |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **Strategy A** — revert S1+S2, geom-only stamp, manual product_anchor vs 090306; затем unlock Q2b→Q4→Q6 (не SoftDefer/shed surgery). 175610/162400/131523 — known-bad.
+Следующий шаг: **manual product_anchor F5** vs 090306 (`bin/Cubatarium.exe`); on PASS tag `product_anchor_YYYYMMDD` and fill FLIGHT_F5 Anchor column. Then Relight/Seam cutover stages.

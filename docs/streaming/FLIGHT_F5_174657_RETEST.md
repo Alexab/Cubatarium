@@ -48,8 +48,9 @@ python tools/AnalyzePhase57Scorecard.py --report <report.json> --perf bin/logs/p
 ## Status
 
 - **175610 FAIL (post S1–S4):** worse than 162400 — stale med ~75k (≈100% `mesh_apply_stale_visual`), `discarded_late=116`, `job_rr=0`, `gpu_kick=0`, unfinished 9→41, enter `soft_clean` ~93s. Wall↓ is not acceptance. **S1–S4 SoftDefer/shed path CLOSED-AS-FAILED.**
-- **Strategy A:** revert S1+S2; keep S3/S4 telem; geom-only stamp (visual out of InputsStillValid); restore drawable anchor class 090306; then unlock Q2b→Q4→Q6.
-- **131523 / 162400:** known-bad / post-R1 partial references only.
+- **Strategy A landed (code):** P0 docs; P1 revert S1+S2 + geom-only stamp (`InputsStillValid` ignores SoftDefer visual); M-Q2b DrawOracle/SmallOracleWorld unit gate; M-Q4 MeshInputs + catalog-pinned mesh batch flags; M-Q6 no synthetic `gpu_handle=1`, ShadowCompare→FirstMeshOwner cutover flag (default ShadowCompare).
+- **P2 product_anchor:** Release `bin/Cubatarium.exe` rebuilt after P1+Q2b/Q4/Q6. **Manual F5 vs 090306 required** before `git tag product_anchor_YYYYMMDD`. Fill **Anchor** column below on PASS.
+- **131523 / 162400 / 175610:** known-bad references only.
 
 ```text
 python tools/AnalyzeEnterLit.py bin/logs/enter_lit_<NEW>.jsonl --fail-if-no-settle
