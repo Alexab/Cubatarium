@@ -174,7 +174,7 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q6 ColumnRecord cutover | partial — no synthetic `gpu_handle=1`; provisional `mesh_rev` owner token; residency export open |
 | Q7 admission reserve-before-allocate | **R2** — CaptureAndStore fail → nullopt; RefreshIncrementalShell rejects !inputStampsValid as Ready; main CaptureAndCommitOnMain still without admission |
 | Q8 frame deadline / async cull stats | partial — `UFrameDeadline` telemetry only; producers must not hard-Exhausted FirstMesh |
-| Q9 F5 acceptance flight | 090306 + 131523 known-bad + **162400 post-R1 partial** in FLIGHT_F5 (stale~38k, prep≈0, job_rr≈0; INFO live_blockers / JSONL gate_end gap). Next: S1 shed under holes+EnterLitGate, S2 SoftDefer seam damp, S3 enter telem, then reflight |
+| Q9 F5 acceptance flight | 090306 + 131523 known-bad + 162400 post-R1 partial in FLIGHT_F5. **S1–S4 landed**; awaiting New reflight on rebuild |
 | Q10 domain boundaries | include allowlist burn-down note + reverse-rule comment; domain CMake libs open |
 
 G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
@@ -189,4 +189,4 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | G3 | Не закрыт | Frame deadline soft; не все producers defer by RemainingMs |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **S1–S4** (shed/soft-exit под visual_holes+EnterLitGate; SoftDefer seam damp; enter settle telem; stale counter split), затем manual F5 reflight vs 090306 (не ослаблять black/missing gates). 131523 — known-bad; 162400 — post-R1 partial reference.
+Следующий шаг: **manual F5 reflight** vs 090306 on S1–S4 rebuild (`bin/Cubatarium.exe`); не ослаблять black/missing gates. 131523 — known-bad; 162400 — post-R1 partial reference.

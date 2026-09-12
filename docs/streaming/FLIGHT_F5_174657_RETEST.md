@@ -45,11 +45,13 @@ python tools/AnalyzePhase57Scorecard.py --report <report.json> --perf bin/logs/p
 
 ## Status
 
-- **Code/tooling:** F0–F4 landed; Q0–Q10 follow-on; **R1–R3 landed** (apply NeighborDrawableFn, CaptureAndStore nullopt on admission fail, shed refuses stale-storm delta≥32).
+- **Code/tooling:** F0–F4 landed; Q0–Q10 follow-on; **R1–R3 landed**; **S1–S4 landed** (shed/soft-exit under visual_holes+EnterLitGate; SoftDefer seam damp; enter settle telem gate_end; stale visual/rev split). Release rebuild synced to `bin/Cubatarium.exe` (2026-09-12 ~17:26).
 - **131523:** known-bad reference (Q4 apply asymmetry). Do **not** treat as post-fix acceptance.
-- **162400:** post-R1 partial — enter INFO=`live_blockers` (~13–18ms), but cruise still red: stale med ~38k / delta ~202, `prep_schedule_policy_ms`≈0.014, `column_job_render_ready_n`≈0, empty_backlog/UV med 35. Root class: Phase5.1 idle shed under visual_holes + SoftDefer seam MarkDirty thrash; enter_lit JSONL false FAIL (`gate_end` missing after `EndSession`). Next: S1–S4 code fixes then reflight (fill **New**).
+- **162400:** post-R1 partial reference (stale~38k, prep≈0, job_rr≈0; INFO live_blockers / JSONL gap).
+- **Next manual (S5):** same route as 090306/162400 on this rebuild; fill **New** column below. After flight also check `mesh_apply_stale_visual` vs `mesh_apply_stale_rev`.
 
 ```text
+python tools/AnalyzeEnterLit.py bin/logs/enter_lit_<NEW>.jsonl --fail-if-no-settle
 python tools/CompareFlightF5.py --perf bin/logs/perf_<NEW>.jsonl --enter-lit bin/logs/enter_lit_<NEW>.jsonl
 ```
 
