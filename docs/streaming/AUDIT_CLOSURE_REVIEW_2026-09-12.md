@@ -172,7 +172,10 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
 | Q4 visual boundary stamps | Strategy A geom-only stamp confirmed; `MeshInputs`/`LightInputs` types; AsyncMeshBuilder batch flags from pinned catalog. Full GreedyMesher registry-free Compute still open |
 | Q5 tiny-cap publication progress | done for chunk-granular retain + `publication_progress_unit_n`; eviction policy polish open |
-| Q6 ColumnRecord cutover | ShadowCompare default; no synthetic `gpu_handle=1`; FirstMeshOwner + **RelightOwner** Decide*Enqueue (rollback=ShadowCompare). Seam/Eviction + real GPU handle export open |
+| Q6 ColumnRecord cutover | ShadowCompare default; FirstMeshOwner + RelightOwner + **SeamOwner** Decide*Enqueue (rollback=ShadowCompare). EvictionOwner + real GPU handle export open |
+| Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
+| Q8 frame deadline / async cull stats | **landed** delayed CullStats SubData + `UFrameDeadline` phase wall; producers still must not hard-Exhausted FirstMesh |
+| Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **194409** post-anchor reflight no drawable regress (stale 29, job_rr~6). Full G0/G1 vs 141350 still open |
 | Q7 admission reserve-before-allocate | **R2** — CaptureAndStore fail → nullopt; RefreshIncrementalShell rejects !inputStampsValid as Ready; main CaptureAndCommitOnMain still without admission |
 | Q8 frame deadline / async cull stats | partial — `UFrameDeadline` + `frame_deadline_test`; producers must not hard-Exhausted FirstMesh |
 | Q9 F5 acceptance flight | **product_anchor PASS: 192015** (tag `product_anchor_20260912`). Full G0/G1 product gates vs 141350 still open (stale/VB/holes). Known-bad: 131523/162400/175610 |

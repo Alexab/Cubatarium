@@ -285,6 +285,18 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
       return;
     }
   }
+  else if (item.kind == ColumnWorkKind::RemeshSeam)
+  {
+    const ColumnJobStage record_stage = GetColumnJobStage(item.column);
+    const bool record_want =
+        record_stage != ColumnJobStage::Meshing &&
+        record_stage != ColumnJobStage::GpuPending;
+    if (!UColumnRecordCoordinator::DecideSeamEnqueue(true, record_want,
+                                                     item.column))
+    {
+      return;
+    }
+  }
   const int64_t key = CooldownKey(item.column, item.kind);
   const auto it = last_dispatch_frame_.find(key);
   if (it != last_dispatch_frame_.end() &&

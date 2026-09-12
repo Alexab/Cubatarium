@@ -66,6 +66,10 @@ public:
   /// contract; authoritative when stage >= RelightOwner.
   static bool DecideRelightEnqueue(bool legacy_want, bool record_want,
                                    glm::ivec2 column = {});
+
+  /// RemeshSeam enqueue decision; authoritative when stage >= SeamOwner.
+  static bool DecideSeamEnqueue(bool legacy_want, bool record_want,
+                                glm::ivec2 column = {});
 };
 
 } // namespace cutum

@@ -212,4 +212,24 @@ bool UColumnRecordCoordinator::DecideRelightEnqueue(bool legacy_want,
   return legacy_want;
 }
 
+bool UColumnRecordCoordinator::DecideSeamEnqueue(bool legacy_want,
+                                                 bool record_want,
+                                                 glm::ivec2 column)
+{
+  const ColumnCutoverStage stage = GetCutoverStage();
+  if (stage >= ColumnCutoverStage::SeamOwner)
+  {
+    return record_want;
+  }
+  if (legacy_want != record_want)
+  {
+    LogShadowMismatch(column,
+                      legacy_want ? ColumnJobStage::Meshing
+                                  : ColumnJobStage::Absent,
+                      record_want ? ColumnJobStage::Meshing
+                                  : ColumnJobStage::Absent);
+  }
+  return legacy_want;
+}
+
 } // namespace cutum

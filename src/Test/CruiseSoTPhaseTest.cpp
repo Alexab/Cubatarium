@@ -113,6 +113,18 @@ int main()
          "RelightOwner: record decides (enqueue)");
   UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
 
+  UColumnRecordCoordinator::ResetShadowMismatchCount();
+  Expect(UColumnRecordCoordinator::DecideSeamEnqueue(true, false),
+         "shadow Seam: legacy owns");
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 1,
+         "Seam shadow mismatch counted");
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::SeamOwner);
+  Expect(!UColumnRecordCoordinator::DecideSeamEnqueue(true, false),
+         "SeamOwner: record decides (no enqueue)");
+  Expect(UColumnRecordCoordinator::DecideSeamEnqueue(false, true),
+         "SeamOwner: record decides (enqueue)");
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

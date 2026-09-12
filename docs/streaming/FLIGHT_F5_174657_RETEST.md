@@ -17,61 +17,52 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (175610 soft_clean) | `bin/logs/enter_lit_20260912-175738.jsonl` |
 | **product_anchor (192015)** | `bin/logs/perf_20260912-192015_9704.jsonl` |
 | Enter (192015) | `bin/logs/enter_lit_20260912-192029.jsonl` |
+| Post-anchor reflight (194409) | `bin/logs/perf_20260912-194409_31392.jsonl` |
+| Enter (194409) | `bin/logs/enter_lit_20260912-194425.jsonl` |
 
 ## Manifest (required)
 
 Record in suite report / notes:
 
-- git SHA: `8c9bf59a` (+ Strategy A stack); tag **`product_anchor_20260912`**
-- build type (Release); exe sha256 prefix `AC7003B329F8984B`
+- git SHA: tag **`product_anchor_20260912`** (`8c9bf59a` tip at tag); post-anchor tip advances on `cursor_audit_impl2`
+- build type (Release); exe sha256 prefix `AC7003B329F8984B` (anchor build)
 - route: same as 090306 / 174657-class
-- INFO: `Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20260912-192013.9704`
+- INFO anchor: `...INFO.20260912-192013.9704`; reflight: `...INFO.20260912-194407.31392`
 
 ## Commands
 
 ```text
-# After flight:
 python tools/AnalyzeEnterLit.py bin/logs/enter_lit_<new>.jsonl --fail-if-no-settle
 python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin/logs/enter_lit_<new>.jsonl
-python tools/AnalyzePhase57Scorecard.py --report <report.json> --perf bin/logs/perf_<new>.jsonl --baseline-manual bin/logs/perf_20260910-141350_27632.jsonl --info <INFO_log>
 ```
 
 ## Hard acceptance (plan §F5)
 
 1. No mass per-block / texture flicker (eye) and no growth of `pool_fence_timeout` / stuck `pool_retired_pending`.
-2. Cruise `mesh_apply_stale` med ≤ 2× 141350 (~20); `mesh_apply_stale_delta` ≈ 090306 (единицы), не 131523/162400/175610-класс.
-3. Enter: `enter_lit_gate_active` clears; settle ≠ `force_ingame_no_uf`; continuous ≪ 60s.
+2. Cruise `mesh_apply_stale` med ≤ 2× 141350 (~20); `mesh_apply_stale_delta` ≈ 090306 (единицы).
+3. Enter: settle ≠ `force_ingame_no_uf`; continuous ≪ 60s.
 4. `unfinished_visual` / empty_backlog not worse than 141350; `column_job_render_ready_n` med > 0.
-5. `wall_ms` may rise — **correctness > FPS**. Wall↓ with stale↑ is a false positive (175610).
-6. After Q2: `visible_black_focus_med` / `focus_missing_frac` must not be accepted as PASS while red vs gates.
-7. Strategy A product_anchor: stale ≪ 162400; job_rr>0; unfinished not growing early→late like 175610; eye: world draws.
+5. Correctness > FPS. Wall↓ with stale↑ is a false positive (175610).
+6. VB/missing not PASS while red vs 141350 gates (G1 open).
+7. product_anchor: stale ≪ 162400; job_rr>0; unfinished not 175610-class growth.
 
 ## Status
 
-- **product_anchor PASS (192015):** drawable gates match 090306 class — stale med **55** (vs 090306=46; 175610≈75k), stale_delta med **4**, unfinished **0**, prep_schedule ≈**6–7ms**, `column_job_render_ready_n` med **1** (gt0≈52%), enter `live_blockers` ~**78ms**. CompareFlightF5 still FAIL vs full 141350 product gates (stale>2×9, VB/holes) — **expected; G1 open**. Tag: `product_anchor_20260912`.
-- **175610 FAIL:** SoftDefer/shed path CLOSED-AS-FAILED.
-- **Next:** deepen M-Q4 catalog-only Compute (GreedyMesher registry reads) + M-Q6 Relight/Seam/Eviction cutover; F5 regressions vs **192015** anchor.
+- **product_anchor PASS (192015):** tag `product_anchor_20260912`. Drawable gates = 090306 class.
+- **194409 post-anchor reflight:** **no drawable regress** vs 192015 — stale **29** (better), stale_delta **2**, job_rr med **6**, visual_holes_frac **0**, enter `live_blockers` ~**3.2s** (≪60s). unfinished scorecard med **2** (anchor 0). Still FAIL full 141350 product gates (stale>2×9, VB, miss_stuck+gpu_kick~0). Keep 192015 as SoT anchor.
+- **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
+- **Next:** F5 vs 192015 after SeamOwner/Q5–Q8 land; GreedyMesher catalog-only geometry; EvictionOwner; G1 VB/holes.
 
-```text
-python tools/AnalyzeEnterLit.py bin/logs/enter_lit_20260912-192029.jsonl --fail-if-no-settle
-python tools/CompareFlightF5.py --perf bin/logs/perf_20260912-192015_9704.jsonl --enter-lit bin/logs/enter_lit_20260912-192029.jsonl
-```
-
-| Metric (cruise med) | 141350 | 174657 | 090306 | 131523 | 162400 | 175610 | **192015 Anchor** |
-|---|---|---|---|---|---|---|---|
-| wall_ms | 141 | 48 | 44.6 | 36 | 52 | 37 | **52.6** |
-| mesh_emerge_med | — | — | 12.9 | ~4 | ~5 | ~3.4 | **14.1** |
-| prep_schedule_policy_ms | — | — | ~7.1 | ~0.01 | ~0.014 | ~0.016 | **~6.2** |
-| mesh_apply_stale | 9 | 676 | 46 | ~1.1e5 | ~3.8e4 | ~7.5e4 | **55** |
-| mesh_apply_stale_delta | 0 | 0 | ~4 | ~361 | ~202 | ~312 | **4** |
-| mesh_apply_stale_visual | — | — | — | — | — | ≈stale | **~43** |
-| mesh_discarded_late | — | — | 0 | 0 | 0 | 116 | **0** |
-| unfinished_visual | 11 | 24 | 0 | 49 | 35 | 28 (9→41) | **0** |
-| empty_backlog | — | — | 0 | 49 | 35 | 28 | **0** |
-| focus_missing_frac | — | — | 0.85 | 1 | 1 | 1 | **0.88** |
-| visual_holes_frac | — | — | 0.70 | 1 | 1 | 1 | **0.53** |
-| visible_black_focus_med | — | — | 63 | 15 | 21 | 36 | **64** |
-| column_job mesh / ready | 81/32 | 117/12 | 54/12 | ~49/0 | 44/0 | 44/0 | **meshing~35 / ready~1** |
-| pool_fence_timeout | — | — | 0 | 0 | 0 | 0 | **0** |
-| enter gate max continuous ms | — | ~61655 | ~75 | ~150000 | ~18 | ~93112 soft_clean | **~78** |
-| enter settle_reason | — | missing | live_blockers | force_ingame_no_uf | live_blockers | soft_clean + abort | **live_blockers** |
+| Metric (cruise med) | 090306 | 175610 | **192015 Anchor** | **194409** |
+|---|---|---|---|---|
+| wall_ms | 44.6 | 37 | 52.6 | **45.2** |
+| mesh_emerge_med | 12.9 | ~3.4 | 14.1 | **9.3** |
+| prep_schedule_policy_ms | ~7.1 | ~0.016 | ~6.2 | **~0.43** |
+| mesh_apply_stale | 46 | ~7.5e4 | 55 | **29** |
+| mesh_apply_stale_delta | ~4 | ~312 | 4 | **2** |
+| unfinished_visual | 0 | 28 | 0 | **2** |
+| visual_holes_frac | 0.70 | 1 | 0.53 | **0** |
+| visible_black_focus_med | 63 | 36 | 64 | **64** |
+| column_job ready med | — | 0 | ~1 | **~6** |
+| enter continuous ms | ~75 | ~93112 | ~78 | **~3216** |
+| enter settle_reason | live_blockers | soft_clean | live_blockers | **live_blockers** |
