@@ -225,39 +225,6 @@ inline bool ShouldRemeshDrawableForHiddenNeighborSeam(bool has_drawable,
   return neighbor_hidden_now != neighbor_hidden_prev;
 }
 
-/// 162400: under EnterLitGate + lit quiesce, seam remesh MarkDirty feeds
-/// visual-stamp thrash; RAA already SkipEnterLitQuiesce — match that class.
-inline bool ShouldSkipSoftDeferSeamRemeshUnderEnterQuiesce(bool enter_lit_gate,
-                                                          bool enter_lit_quiesce)
-{
-  return enter_lit_gate && enter_lit_quiesce;
-}
-
-/// 162400: if neighbor already Dirty/inflight/pending GPU, invalidate capture
-/// only — do not MarkDirty again (avoids RemeshObsoleteTracked storm).
-inline bool ShouldMarkDirtyForSoftDeferSeamRemesh(bool already_dirty,
-                                                  bool pending_gpu,
-                                                  bool inflight)
-{
-  return !already_dirty && !pending_gpu && !inflight;
-}
-
-/// 162400: damp SoftDefer empty enter/leave oscillation remeshing the same nb.
-inline bool ShouldAllowSoftDeferSeamRemeshCadence(uint64_t frame_epoch,
-                                                  uint64_t last_seamed_epoch,
-                                                  uint64_t min_gap_frames = 4)
-{
-  if (last_seamed_epoch == 0)
-  {
-    return true;
-  }
-  if (frame_epoch < last_seamed_epoch)
-  {
-    return true;
-  }
-  return (frame_epoch - last_seamed_epoch) >= min_gap_frames;
-}
-
 /// Phase 5.7.1 / 5.7R / 5.7R2: late DiscardedCoords must not Dirty-storm a
 /// lit-stable drawable. SoftDeferHeld silent only while young (age < sla);
 /// aged Held escapes to requeue. FullyDark drawable must requeue.

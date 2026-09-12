@@ -88,8 +88,6 @@ private:
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> SoftDeferUnderfeetMarkEpoch;
   /// Era39: previous-frame SoftDefer empty set (hidden-neighbor seam).
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyPrevSeen;
-  /// 162400: last StreamingFrameEpoch a SoftDefer seam remeshed this nb.
-  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> SoftDeferSeamRemeshEpoch;
   /// Era34 P1: rotate SoftDefer empty ownership when cap saturates.
   int SoftDeferEmptyScanOffset{0};
   /// Stable SoftDefer policy POD; Set*Fn installed once against this.
