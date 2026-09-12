@@ -502,6 +502,8 @@ struct PhysicsTelemetry
   int ColumnJobMeshingN{0};
   int ColumnJobGpuPendingN{0};
   int ColumnJobRenderReadyN{0};
+  /// Q6 shadow parity: cumulative ColumnRecord vs legacy Decide* mismatches.
+  int ColumnRecordShadowMismatchN{0};
   int PendingLightCount{0};
   int FocusChunkX{0};
   int FocusChunkZ{0};

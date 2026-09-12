@@ -54,6 +54,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ColumnEmergeBump.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Mesh/WorldMeshDirtyPolicy.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -1773,6 +1774,14 @@ void UWorld::SampleColumnEmergeStageTelemetry()
   PhysicsTelemetryData.ColumnJobMeshingN = job_mesh;
   PhysicsTelemetryData.ColumnJobGpuPendingN = job_gpu;
   PhysicsTelemetryData.ColumnJobRenderReadyN = job_ready;
+  {
+    const uint64_t shadow_n =
+        UColumnRecordCoordinator::ShadowMismatchCount();
+    PhysicsTelemetryData.ColumnRecordShadowMismatchN =
+        shadow_n > static_cast<uint64_t>(INT_MAX)
+            ? INT_MAX
+            : static_cast<int>(shadow_n);
+  }
 }
 
 ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const

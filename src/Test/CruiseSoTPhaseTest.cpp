@@ -137,6 +137,16 @@ int main()
          "EvictionOwner: record decides (unload)");
   UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
 
+  // Q6 parity telem contract: cumulative counter is the SoT for
+  // column_record_shadow_mismatch_n in perf JSONL.
+  UColumnRecordCoordinator::ResetShadowMismatchCount();
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 0,
+         "shadow counter reset for perf telem");
+  (void)UColumnRecordCoordinator::DecideFirstMeshEnqueue(true, false);
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 1,
+         "shadow mismatch feeds ColumnRecordShadowMismatchN");
+  UColumnRecordCoordinator::ResetShadowMismatchCount();
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";
