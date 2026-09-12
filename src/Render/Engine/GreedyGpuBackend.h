@@ -155,6 +155,13 @@ private:
   void FillBatchCull(GreedyGpuBatch &dst, const GreedyBatchRef &ref);
 };
 
+/// Q5: whole-pass pool OOM retained predecessor mesh (UploadBatch / publish abort).
+void NotePublicationOverloadRetain();
+uint64_t ConsumePublicationOverloadRetainN();
+/// Q5: one successful chunk/batch publish under tiny-cap (progress unit).
+void NotePublicationProgressUnit();
+uint64_t ConsumePublicationProgressUnitN();
+
 } // namespace cutum
 
 #endif

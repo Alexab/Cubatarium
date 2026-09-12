@@ -125,6 +125,9 @@ private:
   bool CullInitAttempted{false};
   bool CullProgramIsSphere{false};
   bool CullStatsReadbackEnabled_{false};
+  bool CullStatsPendingRead_{false};
+  bool StagedCullStatsValid_{false};
+  uint64_t StagedCullStatsVisible_{0};
 
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};
@@ -135,6 +138,8 @@ private:
 
 /// Period consume of CullStatsSsbo GetBufferSubData count (sync readback).
 uint64_t ConsumeGpuCullStatsReadbackCount();
+/// Q8: sync SubData reads gated to stats-on + delayed sample path.
+uint64_t ConsumeCullStatsSyncReadN();
 /// Arm one upcoming ApplyGpuCompactCull to SubData CullStats (period/HUD).
 void RequestCullStatsReadbackOnce();
 

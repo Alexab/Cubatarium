@@ -1733,6 +1733,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_discarded_late_delta\":" << n.mesh_discarded_late_delta
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
           << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
+          << ",\"mesh_apply_stale_visual\":" << n.mesh_apply_stale_visual
+          << ",\"mesh_apply_stale_rev\":" << n.mesh_apply_stale_rev
           << ",\"mesh_apply_superseded\":" << n.mesh_apply_superseded
           << ",\"mesh_apply_superseded_delta\":"
           << n.mesh_apply_superseded_delta

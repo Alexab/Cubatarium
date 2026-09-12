@@ -32,6 +32,7 @@
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/IUMeshGpuStore.h"
+#include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Backend/RenderBackendCaps.h"
@@ -1879,6 +1880,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     if (mdi)
     {
       ScopedPhase cull_phase(&cull_ms);
+      // Q8: HUD arms delayed CullStats readback; cruise stays CPU AABB fallback.
       mdi->SetCullStatsReadbackEnabled(ShowPerformance);
       // Phase 5.3.4 / audit M06: CullInputKey-gated skip + light-cruise + reuse.
       float move_spd = 0.0f;
@@ -2038,6 +2040,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         GreedyGpuOpaque.VertexPool.ConsumeReserveBumpN() +
         GreedyGpuCutout.VertexPool.ConsumeReserveBumpN() +
         GreedyGpuTransparent.VertexPool.ConsumeReserveBumpN();
+    phys.PublicationOverloadRetainN = ConsumePublicationOverloadRetainN();
+    phys.CullStatsSyncReadN = ConsumeCullStatsSyncReadN();
     phys.PoolRetiredPendingN = static_cast<int>(
         GreedyGpuOpaque.VertexPool.RetiredSlotCount() +
         GreedyGpuOpaque.VertexPool.PendingRetireCount() +

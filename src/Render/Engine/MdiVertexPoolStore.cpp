@@ -19,6 +19,7 @@ namespace
 {
 
 uint64_t gCullStatsReadback = 0;
+uint64_t gCullStatsSyncReadN = 0;
 std::atomic<bool> gCullStatsReadbackOnce{false};
 
 enum class GpuCullMode
@@ -984,18 +985,29 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
                              std::chrono::steady_clock::now() - submit_t0)
                              .count();
 
-  // P1b: SubData only when HUD/period armed — default cruise stays sync-free.
-  const bool do_stats_readback =
+  // Q8: sync SubData only when stats armed AND a delayed sample is available.
+  const bool stats_enabled =
       CullStatsReadbackEnabled_ ||
       gCullStatsReadbackOnce.exchange(false, std::memory_order_relaxed);
-  if (do_stats_readback && CullStatsSsbo != 0)
+  if (stats_enabled && CullStatsPendingRead_ && CullStatsSsbo != 0)
   {
     uint32_t visible = 0;
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsSsbo);
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &visible);
-    ++gCullStatsReadback;
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    LastCullOpaqueOn_ = visible;
+    ++gCullStatsReadback;
+    ++gCullStatsSyncReadN;
+    StagedCullStatsVisible_ = visible;
+    StagedCullStatsValid_ = true;
+    CullStatsPendingRead_ = false;
+  }
+  if (stats_enabled)
+  {
+    CullStatsPendingRead_ = true;
+  }
+  if (stats_enabled && StagedCullStatsValid_)
+  {
+    LastCullOpaqueOn_ = StagedCullStatsVisible_;
   }
   else
   {
@@ -1090,6 +1102,13 @@ uint64_t ConsumeGpuCullStatsReadbackCount()
 {
   const uint64_t v = gCullStatsReadback;
   gCullStatsReadback = 0;
+  return v;
+}
+
+uint64_t ConsumeCullStatsSyncReadN()
+{
+  const uint64_t v = gCullStatsSyncReadN;
+  gCullStatsSyncReadN = 0;
   return v;
 }
 

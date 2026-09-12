@@ -1,12 +1,18 @@
 #include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/GlIncludes.h"
+#include <atomic>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace cutum
 {
 namespace
 {
+
+std::atomic<uint64_t> gPublicationOverloadRetainN{0};
+std::atomic<uint64_t> gPublicationProgressUnitN{0};
+
 struct GpuBatchKey
 {
   glm::ivec3 coord{0};
@@ -119,6 +125,9 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
   }
   if (prior.vertexCount > 0)
   {
+    // Q5: tiny-cap OOM retains predecessor mesh; progress counted via
+    // NotePublicationProgressUnit when sibling chunks still publish.
+    NotePublicationOverloadRetain();
     // Retain metadata too: an allocation failure cannot change its material.
     gpu = previous;
     gpu.vbo = pool.VertexBuffer();
@@ -142,13 +151,17 @@ bool UGreedyGpuBackend::PublishPassInputs(
         GpuBatchKey{cache.batches[n].chunkCoord, cache.batches[n].batchIndex},
         n);
 
-  // Stage the entire command table, but upload only missing/dirty geometry.
-  // No old allocation is released until every replacement has succeeded.
+  // Stage the command table. Prefer whole-pass atomicity, but under tiny-cap
+  // OOM publish successful chunks (progress unit) and retain predecessors for
+  // the rest so demand can converge without silent whole-pass retry loops.
   std::vector<GreedyGpuBatch> staged;
   std::vector<size_t> fresh;
   std::vector<bool> retained(cache.batches.size(), false);
   staged.reserve(inputs.size());
   bool changed = cache.sortRevision != sort_revision;
+  bool any_fresh = false;
+  bool any_fail = false;
+  std::unordered_set<glm::ivec3, IVec3Hash> published_ok;
   auto sync_handles = [&]()
   {
     cache.poolVbo = cache.VertexPool.VertexBuffer();
@@ -188,22 +201,48 @@ bool UGreedyGpuBackend::PublishPassInputs(
     UploadBatch(gpu, *batch, cache.VertexPool);
     if (!gpu.pooled)
     {
-      for (const size_t n : fresh)
-        ReleasePooledBatch(staged[n], cache.VertexPool);
-      sync_handles(); // Partial buffer growth preserves old bytes, changes IDs.
-      return false;   // Retain old publication and dirty demand.
+      any_fail = true;
+      NotePublicationOverloadRetain();
+      // Chunk-granular: keep prior draw for this key when present.
+      if (found != resident.end() && cache.batches[found->second].pooled)
+      {
+        retained[found->second] = true;
+        staged.push_back(cache.batches[found->second]);
+      }
+      continue;
     }
+    any_fresh = true;
+    NotePublicationProgressUnit();
+    published_ok.insert(ref.chunkCoord);
     FillBatchCull(gpu, ref);
     fresh.push_back(staged.size());
     staged.push_back(gpu);
     changed = true;
   }
+
+  if (any_fail && !any_fresh)
+  {
+    // Zero progress: keep prior publication + accumulated dirty demand.
+    for (const size_t n : fresh)
+      ReleasePooledBatch(staged[n], cache.VertexPool);
+    sync_handles();
+    return false;
+  }
+
   changed = changed || staged.size() != cache.batches.size();
   for (size_t n = 0; n < cache.batches.size(); ++n)
     if (!retained[n])
       ReleasePooledBatch(cache.batches[n], cache.VertexPool);
   cache.batches = std::move(staged);
-  cache.PendingGeometryDirty.clear();
+  if (any_fail)
+  {
+    for (const auto &coord : published_ok)
+      cache.PendingGeometryDirty.erase(coord);
+  }
+  else
+  {
+    cache.PendingGeometryDirty.clear();
+  }
   cache.usesVertexPool = !cache.batches.empty();
   sync_handles();
   cache.meshRevision = mesh_revision;
@@ -218,5 +257,25 @@ bool UGreedyGpuBackend::PublishPassInputs(
   }
   cache.VertexPool.SignalUploadComplete();
   return true;
+}
+
+void NotePublicationOverloadRetain()
+{
+  gPublicationOverloadRetainN.fetch_add(1, std::memory_order_relaxed);
+}
+
+void NotePublicationProgressUnit()
+{
+  gPublicationProgressUnitN.fetch_add(1, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePublicationOverloadRetainN()
+{
+  return gPublicationOverloadRetainN.exchange(0, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePublicationProgressUnitN()
+{
+  return gPublicationProgressUnitN.exchange(0, std::memory_order_relaxed);
 }
 } // namespace cutum
