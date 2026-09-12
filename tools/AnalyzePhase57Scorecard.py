@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import statistics as st
 import sys
@@ -24,7 +25,27 @@ SETTLE_RE = re.compile(
 )
 EMPTY_BATCH_RE = re.compile(r"empty_batch_event")
 
-# Manual SoT 093857 cruise / stand class (baked fallback if baseline file missing).
+SCHEMA_VERSION = 1
+
+REQUIRED_PERIOD_FIELDS = frozenset(
+    {
+        "wall_ms",
+        "movement_speed",
+        "unfinished_visual",
+        "visual_holes",
+        "visible_black_focus_n",
+        "mesh_apply_stale",
+    }
+)
+
+FOCUS_MISSING_ALIASES = ("focus_missing_mesh", "focus_missing")
+
+NUMERIC_PERIOD_FIELDS = REQUIRED_PERIOD_FIELDS
+
+# Fraction of rows that must have a field present to compute frac metrics.
+FRAC_MIN_COVERAGE = 1.0
+
+# Manual SoT 093857 cruise / stand class (diagnostic only with --allow-baked-baseline).
 MANUAL_093857 = {
     "focus_missing_frac": 1.0,
     "phase_abort_heavy_frac": 1.0,
@@ -110,11 +131,75 @@ def frac(rows, pred):
     return sum(1 for r in rows if pred(r)) / len(rows)
 
 
-def g(r, *keys, default=0):
+def g(r, *keys, default=None):
     for k in keys:
         if k in r and r[k] is not None:
             return r[k]
     return default
+
+
+def finite_number(v):
+    """Return float if finite, else None (reject NaN/Inf and non-numeric)."""
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(f):
+        return None
+    return f
+
+
+def _period_has_focus_missing(row: dict) -> bool:
+    return any(k in row and row[k] is not None for k in FOCUS_MISSING_ALIASES)
+
+
+def validate_period_schema(periods: list) -> list[str]:
+    """Fail-closed Q0 schema: every period row must carry required fields."""
+    errors: list[str] = []
+    if not periods:
+        errors.append("schema:empty_periods")
+        return errors
+    for i, row in enumerate(periods):
+        for field in REQUIRED_PERIOD_FIELDS:
+            if field not in row or row[field] is None:
+                errors.append(f"schema:period[{i}].{field}_missing")
+            elif field in NUMERIC_PERIOD_FIELDS:
+                if finite_number(row[field]) is None:
+                    errors.append(f"schema:period[{i}].{field}_non_finite")
+        if not _period_has_focus_missing(row):
+            errors.append(f"schema:period[{i}].focus_missing_missing")
+        else:
+            for alias in FOCUS_MISSING_ALIASES:
+                if alias in row and row[alias] is not None:
+                    if finite_number(row[alias]) is None:
+                        errors.append(f"schema:period[{i}].{alias}_non_finite")
+    return errors
+
+
+def frac_gt_zero(rows, *keys, min_coverage: float = FRAC_MIN_COVERAGE):
+    """Fraction of rows where int(field) > 0; skip missing/invalid rows."""
+    if not rows:
+        return None
+    n_pos = 0
+    n_valid = 0
+    for r in rows:
+        v = g(r, *keys)
+        if v is None:
+            continue
+        try:
+            iv = int(v)
+        except (TypeError, ValueError):
+            continue
+        n_valid += 1
+        if iv > 0:
+            n_pos += 1
+    if n_valid == 0:
+        return None
+    if n_valid / len(rows) < min_coverage:
+        return None
+    return n_pos / len(rows)
 
 
 def latch_timing(periods):
@@ -146,8 +231,9 @@ def latch_timing(periods):
     }
 
 
-def analyze_perf(path: Path):
-    periods = load_periods(path)
+def analyze_perf_periods(periods: list) -> dict:
+    schema_errors = validate_period_schema(periods)
+    schema_ok = len(schema_errors) == 0
     cr = cruise(periods)
     use = cr if len(cr) >= 3 else periods
     tail = stand_tail(periods)
@@ -155,10 +241,10 @@ def analyze_perf(path: Path):
 
     def series(key, rows=None):
         rows = use if rows is None else rows
-        return [g(r, key) for r in rows]
+        return [finite_number(g(r, key)) for r in rows]
 
     def series_max(key, rows=None):
-        xs = [float(x) for x in series(key, rows) if x is not None]
+        xs = [x for x in series(key, rows) if x is not None]
         return max(xs) if xs else None
 
     def series_delta_med(key, rows=None):
@@ -167,10 +253,9 @@ def analyze_perf(path: Path):
         prev = None
         deltas = []
         for r in rows:
-            v = g(r, key)
-            if v is None:
+            fv = finite_number(g(r, key))
+            if fv is None:
                 continue
-            fv = float(v)
             if prev is not None:
                 deltas.append(max(0.0, fv - prev))
             prev = fv
@@ -182,10 +267,9 @@ def analyze_perf(path: Path):
         total = 0.0
         n = 0
         for r in rows:
-            v = g(r, key)
-            if v is None:
+            fv = finite_number(g(r, key))
+            if fv is None:
                 continue
-            fv = float(v)
             if prev is not None:
                 total += max(0.0, fv - prev)
                 n += 1
@@ -198,17 +282,13 @@ def analyze_perf(path: Path):
         prev_cruise = False
         deltas = []
         for r in periods:
-            try:
-                spd = float(r.get("movement_speed") or 0)
-            except (TypeError, ValueError):
-                spd = 0.0
-            is_cruise = spd > 2.0
-            v = g(r, key)
-            if v is None:
+            spd = finite_number(r.get("movement_speed"))
+            is_cruise = spd is not None and spd > 2.0
+            fv = finite_number(g(r, key))
+            if fv is None:
                 prev = None
                 prev_cruise = False
                 continue
-            fv = float(v)
             if prev is not None and is_cruise and prev_cruise:
                 deltas.append(max(0.0, fv - prev))
             prev = fv
@@ -221,17 +301,13 @@ def analyze_perf(path: Path):
         total = 0.0
         n = 0
         for r in periods:
-            try:
-                spd = float(r.get("movement_speed") or 0)
-            except (TypeError, ValueError):
-                spd = 0.0
-            is_cruise = spd > 2.0
-            v = g(r, key)
-            if v is None:
+            spd = finite_number(r.get("movement_speed"))
+            is_cruise = spd is not None and spd > 2.0
+            fv = finite_number(g(r, key))
+            if fv is None:
                 prev = None
                 prev_cruise = False
                 continue
-            fv = float(v)
             if prev is not None and is_cruise and prev_cruise:
                 total += max(0.0, fv - prev)
                 n += 1
@@ -241,19 +317,25 @@ def analyze_perf(path: Path):
 
     focus_key = "focus_missing_mesh"
     abort_key = "phase_abort_heavy"
+    optional_frac_coverage = 0.5 if schema_ok else FRAC_MIN_COVERAGE
     return {
+        "schema_version": SCHEMA_VERSION,
+        "schema_ok": schema_ok,
+        "schema_errors": schema_errors,
         "periods": len(periods),
         "cruise_n": len(cr),
         "use_n": len(use),
         "stand_tail_n": len(tail),
-        "focus_missing_frac": frac(
-            use, lambda r: int(g(r, focus_key, "focus_missing") or 0) > 0
+        "focus_missing_frac": (
+            None
+            if not schema_ok
+            else frac_gt_zero(use, focus_key, "focus_missing")
         ),
-        "phase_abort_heavy_frac": frac(
-            use, lambda r: int(g(r, abort_key) or 0) > 0
+        "phase_abort_heavy_frac": frac_gt_zero(
+            use, abort_key, min_coverage=optional_frac_coverage
         ),
-        "visual_holes_frac": frac(
-            use, lambda r: int(g(r, "visual_holes") or 0) > 0
+        "visual_holes_frac": (
+            None if not schema_ok else frac_gt_zero(use, "visual_holes")
         ),
         "empty_backlog_max": series_max("empty_backlog_n"),
         "empty_backlog_med": median(series("empty_backlog_n")),
@@ -331,6 +413,10 @@ def analyze_perf(path: Path):
         "vb_stalled_max": series_max("visible_black_stalled_n"),
         "opaque_cull_med": median(series("scene_opaque_cull_ms")),
     }
+
+
+def analyze_perf(path: Path):
+    return analyze_perf_periods(load_periods(path))
 
 
 def analyze_info(path: Path):
@@ -523,6 +609,15 @@ REQUIRED_MANIFEST_KEYS = (
     "frame_count",
 )
 
+KNOWN_GATE_KEYS = frozenset(
+    {
+        "wall_ms_fly_le_16_6",
+        "scene_ms_le_5",
+        "stream_phase_ms_le_5",
+        "visual_holes_rate_le_0_10",
+    }
+)
+
 
 def validate_run_inputs(
     report: dict,
@@ -531,7 +626,7 @@ def validate_run_inputs(
     *,
     require_info: bool = True,
     require_perf: bool = True,
-    require_manifest: bool = False,
+    require_manifest: bool = True,
 ) -> list[str]:
     """Missing/unknown inputs are INVALID, never treated as zero/PASS."""
     invalid: list[str] = []
@@ -549,6 +644,11 @@ def validate_run_inputs(
         if cruise_n is not None and int(cruise_n) < MIN_CRUISE_PERIODS:
             # Insufficient cruise is invalid for product acceptance, not a green pass.
             invalid.append(f"perf.cruise_n={cruise_n}<{MIN_CRUISE_PERIODS}")
+        if perf.get("schema_ok") is False:
+            invalid.append("perf.schema_invalid")
+        for err in perf.get("schema_errors") or []:
+            if err not in invalid:
+                invalid.append(err)
     # Report-only periods without analyzed perf must not greenwash fidelity.
     if perf is None and report.get("periods") is not None:
         invalid.append("report.periods_without_perf")
@@ -557,6 +657,13 @@ def validate_run_inputs(
         for key in REQUIRED_MANIFEST_KEYS:
             if key not in manifest or manifest.get(key) in (None, ""):
                 invalid.append(f"manifest.{key}_missing")
+        teleport = manifest.get("teleport_cruise", manifest.get("teleport"))
+        if teleport in (None, ""):
+            invalid.append("manifest.teleport_cruise_missing")
+    gates = report.get("gates") or {}
+    for key in KNOWN_GATE_KEYS:
+        if key in gates and gates[key] is None:
+            invalid.append(f"hard_gate:{key}=null")
     return invalid
 
 
@@ -575,7 +682,10 @@ def evaluate_hard_gates(gates: dict | None) -> tuple[list[str], list[str]]:
         "visual_holes_rate_le_0_10",
     }
     for k, v in gates.items():
-        if v is True or v is None:
+        if v is True:
+            continue
+        if v is None:
+            # Null known gates are collected by validate_run_inputs (INVALID).
             continue
         if v is False:
             if k in corr_keys:
@@ -647,7 +757,7 @@ def evaluate_product(
         return fails
     if perf is None:
         return fails
-    base = baseline if baseline is not None else MANUAL_093857
+    base = baseline if baseline is not None else {}
     latch = perf.get("enter_settle_soft_force_with_debt_max")
     catch_up_armed = latch is not None and float(latch) > 0
     if info:
@@ -850,9 +960,14 @@ def main():
         help="Allow diagnostic --expect-product-red (never use in acceptance CI)",
     )
     ap.add_argument(
-        "--require-manifest",
+        "--allow-missing-manifest",
         action="store_true",
-        help="Require report.manifest fields (git_sha, build_type, route, ...)",
+        help="Diagnostic only: do not require report.manifest (acceptance default: required)",
+    )
+    ap.add_argument(
+        "--allow-baked-baseline",
+        action="store_true",
+        help="Diagnostic only: use baked MANUAL_093857 when --baseline-manual file missing",
     )
     ap.add_argument(
         "--json-out",
@@ -904,7 +1019,15 @@ def main():
             perf = analyze_perf(p)
             print(f"perf: {p.name} periods={perf['periods']} cruise={perf['cruise_n']}")
             for k, v in perf.items():
-                if k in ("periods", "cruise_n", "use_n", "stand_tail_n"):
+                if k in (
+                    "periods",
+                    "cruise_n",
+                    "use_n",
+                    "stand_tail_n",
+                    "schema_version",
+                    "schema_ok",
+                    "schema_errors",
+                ):
                     continue
                 print(f"  {k}={fmt(v)}")
         else:
@@ -931,17 +1054,28 @@ def main():
         else:
             print(f"info missing: {args.info}")
 
-    baseline = dict(MANUAL_093857)
-    baseline_label = "baked_093857"
+    baseline = None
+    baseline_label = "none"
     if args.baseline_manual:
         bp = Path(args.baseline_manual)
         if bp.exists():
             baseline = analyze_perf(bp)
             baseline_label = bp.name
+        elif args.allow_baked_baseline:
+            baseline = dict(MANUAL_093857)
+            baseline_label = "baked_093857"
+            print(
+                f"baseline-manual missing: {bp} (using baked 093857)",
+                file=sys.stderr,
+            )
         else:
-            print(f"baseline-manual missing: {bp} (using baked 093857)", file=sys.stderr)
+            print(
+                f"baseline-manual missing: {bp} "
+                "(no comparative baseline; pass --allow-baked-baseline for diagnostic)",
+                file=sys.stderr,
+            )
 
-    if perf:
+    if perf and baseline is not None:
         print_delta(perf, baseline, baseline_label)
 
     print_control_checklist(perf, info, report)
@@ -961,7 +1095,7 @@ def main():
         info,
         require_info=require_info,
         require_perf=True,
-        require_manifest=args.require_manifest,
+        require_manifest=not args.allow_missing_manifest,
     )
     hard_corr, hard_perf = evaluate_hard_gates(gates)
 

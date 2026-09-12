@@ -2,7 +2,7 @@ name: Windows release smoke
 
 on:
   push:
-    branches: [main, master, thread_chunks, 'codex/**', 'perf/**', 'feature/**']
+    branches: [main, master, thread_chunks, cursor_audit_impl, 'codex/**', 'perf/**', 'feature/**']
     paths:
       - "CMakeLists.txt"
       - ".github/workflows/windows-release-smoke.yml"
@@ -111,6 +111,8 @@ jobs:
         shell: pwsh
         run: ./build/desktop-msvc/Release/world_mesh_service_test.exe
 
+      # CPU streaming label only. PASS here does NOT claim GPU/GL acceptance —
+      # greedy_vertex_pool_lifetime_test is mock CPU; real driver is gpu label below.
       - name: Streaming / mesh policy CTest suite
         shell: pwsh
         run: |
@@ -149,8 +151,25 @@ jobs:
           ctest --test-dir build/desktop-msvc -C Release -L streaming --no-tests=error --output-on-failure
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # Hosted Windows runners need not expose GL 4.3. The real-driver fixture
-      # remains a separate gpu label; CPU success must not imply GPU acceptance.
+      # Hosted Windows runners need not expose GL 4.3. SKIP (exit 0) on the gpu
+      # step below is not PASS — it explicitly declines GPU acceptance.
+      - name: GPU greedy vertex pool driver (optional)
+        shell: pwsh
+        env:
+          CUBATARIUM_RUN_GPU_TESTS: ${{ vars.CUBATARIUM_RUN_GPU_TESTS }}
+        run: |
+          if ($env:CUBATARIUM_RUN_GPU_TESTS -ne '1') {
+            Write-Host 'SKIP: greedy_vertex_pool_driver_test — GPU acceptance not claimed (set CUBATARIUM_RUN_GPU_TESTS=1 on a GL-capable runner).'
+            exit 0
+          }
+          $exe = "./build/desktop-msvc/Release/greedy_vertex_pool_production_test.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "GPU driver fixture exe missing: $exe"
+            exit 1
+          }
+          ctest --test-dir build/desktop-msvc -C Release -R greedy_vertex_pool_driver_test --no-tests=error --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Upload streaming test evidence
         if: always()
         uses: actions/upload-artifact@v4
