@@ -849,6 +849,8 @@ private:
   bool TryCommitCompletedCapture(const UBlockWorld &world,
                                  const UBlockRegistry *registry,
                                  UMeshCaptureWorker::CompletedCapture &&done);
+  /// Main-thread capture+commit. Q7: reserves snapshot credits first; false if
+  /// admission exhausted or band/deps fail (no allocate-then-drop).
   bool CaptureAndCommitOnMain(const UBlockWorld &world,
                               const UBlockRegistry *registry,
                               glm::ivec3 coord, uint64_t source_revision);

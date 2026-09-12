@@ -175,10 +175,10 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q6 ColumnRecord cutover | ShadowCompare default; FirstMesh/Relight/Seam/**EvictionOwner** Decide* (rollback=ShadowCompare). Real `QueryLiveGpuResidencyToken` → `published_gpu_handle` (no mesh_rev/synthetic 1). Default stage still ShadowCompare |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
 | Q8 frame deadline / async cull stats | **landed** delayed CullStats SubData + `UFrameDeadline` phase wall; producers still must not hard-Exhausted FirstMesh |
-| Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **194409** post-anchor reflight no drawable regress (stale 29, job_rr~6). Full G0/G1 vs 141350 still open |
-| Q7 admission reserve-before-allocate | **R2** — CaptureAndStore fail → nullopt; RefreshIncrementalShell rejects !inputStampsValid as Ready; main CaptureAndCommitOnMain still without admission |
+| Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **194409** / **201118** post-anchor reflights no drawable regress vs 192015 (201118: stale 23, job_rr~24, enter~76ms). Full G0/G1 vs 141350 still open |
+| Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + **CaptureAndCommitOnMain** reserve snapshot credits before allocate; fail → nullopt/false. RefreshIncrementalShell rejects !inputStampsValid as Ready |
 | Q8 frame deadline / async cull stats | partial — `UFrameDeadline` + `frame_deadline_test`; producers must not hard-Exhausted FirstMesh |
-| Q9 F5 acceptance flight | **product_anchor PASS: 192015** (tag `product_anchor_20260912`). Full G0/G1 product gates vs 141350 still open (stale/VB/holes). Known-bad: 131523/162400/175610 |
+| Q9 F5 acceptance flight | **product_anchor PASS: 192015** (tag `product_anchor_20260912`); **201118** drawable PASS vs anchor. Full G0/G1 product gates vs 141350 still open (stale/VB/holes). Known-bad: 131523/162400/175610 |
 | Q10 domain boundaries | include allowlist burn-down note + reverse-rule comment; domain CMake libs open |
 
 G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
@@ -193,4 +193,4 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | G3 | Не закрыт | Frame deadline soft; не все producers defer by RemainingMs |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: F5 regressions vs **192015** `product_anchor_20260912`; enable cutover stages only after parity; G1 VB/holes.
+Следующий шаг: Q8 producers defer by RemainingMs; enable cutover only after shadow parity; G1 VB/holes (201118 holes 0.65 / VB 67 still open vs 141350).

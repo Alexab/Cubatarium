@@ -19,6 +19,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (192015) | `bin/logs/enter_lit_20260912-192029.jsonl` |
 | Post-anchor reflight (194409) | `bin/logs/perf_20260912-194409_31392.jsonl` |
 | Enter (194409) | `bin/logs/enter_lit_20260912-194425.jsonl` |
+| Post-Eviction/catalog (201118) | `bin/logs/perf_20260912-201118_28700.jsonl` |
+| Enter (201118) | `bin/logs/enter_lit_20260912-201135.jsonl` |
 
 ## Manifest (required)
 
@@ -27,7 +29,7 @@ Record in suite report / notes:
 - git SHA: tag **`product_anchor_20260912`** (`8c9bf59a` tip at tag); post-anchor tip advances on `cursor_audit_impl2`
 - build type (Release); exe sha256 prefix `AC7003B329F8984B` (anchor build)
 - route: same as 090306 / 174657-class
-- INFO anchor: `...INFO.20260912-192013.9704`; reflight: `...INFO.20260912-194407.31392`
+- INFO anchor: `...INFO.20260912-192013.9704`; reflight: `...INFO.20260912-194407.31392`; post-cutover: `...INFO.20260912-201115.28700`
 
 ## Commands
 
@@ -50,19 +52,20 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 
 - **product_anchor PASS (192015):** tag `product_anchor_20260912`. Drawable gates = 090306 class.
 - **194409 post-anchor reflight:** **no drawable regress** vs 192015 — stale **29** (better), stale_delta **2**, job_rr med **6**, visual_holes_frac **0**, enter `live_blockers` ~**3.2s** (≪60s). unfinished scorecard med **2** (anchor 0). Still FAIL full 141350 product gates (stale>2×9, VB, miss_stuck+gpu_kick~0). Keep 192015 as SoT anchor.
+- **201118 post-EvictionOwner/catalog mesher:** **drawable PASS vs 192015** — stale **23** (better), stale_delta **4**, unfinished **0**, job_rr med **~24**, enter `live_blockers` ~**76ms**, discarded_late **0**, pool_fence_timeout **0**. holes_frac **0.65** (≈anchor 0.53; worse than 194409’s 0 — note, not mass-missing). Still FAIL full 141350 product gates (stale>2×9, VB, holes, miss_stuck+gpu_kick~0). Default cutover remains **ShadowCompare**.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
-- **Next:** F5 vs 192015 after EvictionOwner + catalog mesher land; enable cutover only after shadow parity; G1 VB/holes.
+- **Next:** Q7 main-capture admission; enable cutover only after shadow parity; G1 VB/holes.
 
-| Metric (cruise med) | 090306 | 175610 | **192015 Anchor** | **194409** |
-|---|---|---|---|---|
-| wall_ms | 44.6 | 37 | 52.6 | **45.2** |
-| mesh_emerge_med | 12.9 | ~3.4 | 14.1 | **9.3** |
-| prep_schedule_policy_ms | ~7.1 | ~0.016 | ~6.2 | **~0.43** |
-| mesh_apply_stale | 46 | ~7.5e4 | 55 | **29** |
-| mesh_apply_stale_delta | ~4 | ~312 | 4 | **2** |
-| unfinished_visual | 0 | 28 | 0 | **2** |
-| visual_holes_frac | 0.70 | 1 | 0.53 | **0** |
-| visible_black_focus_med | 63 | 36 | 64 | **64** |
-| column_job ready med | — | 0 | ~1 | **~6** |
-| enter continuous ms | ~75 | ~93112 | ~78 | **~3216** |
-| enter settle_reason | live_blockers | soft_clean | live_blockers | **live_blockers** |
+| Metric (cruise med) | 090306 | 175610 | **192015 Anchor** | **194409** | **201118** |
+|---|---|---|---|---|---|
+| wall_ms | 44.6 | 37 | 52.6 | **45.2** | **46.5** |
+| mesh_emerge_med | 12.9 | ~3.4 | 14.1 | **9.3** | **14.6** |
+| prep_schedule_policy_ms | ~7.1 | ~0.016 | ~6.2 | **~0.43** | — |
+| mesh_apply_stale | 46 | ~7.5e4 | 55 | **29** | **23** |
+| mesh_apply_stale_delta | ~4 | ~312 | 4 | **2** | **4** |
+| unfinished_visual | 0 | 28 | 0 | **2** | **0** |
+| visual_holes_frac | 0.70 | 1 | 0.53 | **0** | **0.65** |
+| visible_black_focus_med | 63 | 36 | 64 | **64** | **67** |
+| column_job ready med | — | 0 | ~1 | **~6** | **~24** |
+| enter continuous ms | ~75 | ~93112 | ~78 | **~3216** | **~76** |
+| enter settle_reason | live_blockers | soft_clean | live_blockers | **live_blockers** | **live_blockers** |

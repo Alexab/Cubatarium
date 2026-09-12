@@ -1,4 +1,5 @@
 #include "Render/Mesh/MeshCaptureStore.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Core/BlockWorld.h"
 #include <iostream>
@@ -8,6 +9,7 @@ int main()
   using cutum::ChunkInputStamp;
   using cutum::ChunkMeshSnapshot;
   using cutum::UMeshCaptureStore;
+  using cutum::UPipelineAdmission;
 
   UMeshCaptureStore store;
   const glm::ivec3 coord(1, 2, 3);
@@ -43,6 +45,24 @@ int main()
     std::cerr << "FAIL: hard defer on miss when budget==0\n";
     return 1;
   }
+
+  // Q7: CaptureAndStore refuses when snapshot credit is exhausted (same gate
+  // as CaptureAndCommitOnMain on the mesh cache main path).
+  auto &admission = UPipelineAdmission::Get();
+  admission.SetSnapshotCap(0);
+  if (store.CaptureAndStore(world, coord, rev).has_value())
+  {
+    std::cerr << "FAIL: CaptureAndStore must nullopt when snapshot cap=0\n";
+    admission.SetSnapshotCap(96 * 1024 * 1024);
+    return 1;
+  }
+  admission.SetSnapshotCap(96 * 1024 * 1024);
+  if (admission.SnapshotPendingBytes() != 0)
+  {
+    std::cerr << "FAIL: rejected capture must not leave pending snapshot bytes\n";
+    return 1;
+  }
+
   std::cout << "capture_incremental_test: PASS\n";
   return 0;
 }

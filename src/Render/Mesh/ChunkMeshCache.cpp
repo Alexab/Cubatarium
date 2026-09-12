@@ -1,5 +1,6 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "Render/Camera/Frustum.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
@@ -3187,6 +3188,16 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
                                              glm::ivec3 coord,
                                              uint64_t source_revision)
 {
+  // Q7: same reserve-before-allocate as CaptureAndStore — never allocate band
+  // when snapshot credits are exhausted.
+  if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
+          kEstimatedChunkSnapshotBytes))
+  {
+    return false;
+  }
+  UPipelineCreditGuard credit(PipelineCreditKind::Snapshot,
+                              kEstimatedChunkSnapshotBytes, true);
+
   WorkToken work_token = MakeCaptureWorkToken(coord);
   work_token.chunk_incarnation = ChunkIncarnationAt(world, coord);
   const MeshCaptureToken token{work_token.world_epoch, source_revision,
