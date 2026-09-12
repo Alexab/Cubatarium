@@ -1147,6 +1147,9 @@ int main()
     Expect(std::string(EnterWarmupRingBlockerLabel(false, 5, true, false)) ==
                "gpu",
            "Era46: ring_blocker gpu when no dirty");
+    Expect(std::string(EnterWarmupRingBlockerLabel(false, 0, false, false,
+                                                   true)) == "visual",
+           "162400: ring_blocker visual_warmup when others clear");
   }
 
   // --- Era47 enter lit quiesce / PreferKick-only / admission ---

@@ -413,6 +413,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     if (!EnterGameForceInGameLogged)
     {
       EnterGameForceInGameLogged = true;
+      World.SetLastEnterSettleReason("soft_clean");
       LOG(INFO) << "[EnterWarmup] settle_reason=soft_clean elapsed_ms="
                 << EnterGameGpuWarmupElapsedMs
                 << " combined_debt=" << combined_debt
@@ -434,6 +435,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       EnterGameForceInGameLogged = true;
       if (ShouldAllowEnterSoftForceSettle(underfeet_present_cap))
       {
+        World.SetLastEnterSettleReason("soft_force");
         LOG(WARNING) << "[EnterWarmup] settle_reason=soft_force soft_exit_cap elapsed_ms="
                      << EnterGameGpuWarmupElapsedMs << " ring_ready="
                      << (ring_ready ? 1 : 0) << " mesh_dirty="
@@ -452,6 +454,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       else
       {
         // Phase 5.7R5: wall exit without soft_force+UF=0 product event.
+        World.SetLastEnterSettleReason("force_ingame_no_uf");
         LOG(WARNING) << "[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms="
                      << EnterGameGpuWarmupElapsedMs << " ring_ready="
                      << (ring_ready ? 1 : 0) << " visibility_debt="
@@ -488,6 +491,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   if (!EnterGameForceInGameLogged)
   {
     EnterGameForceInGameLogged = true;
+    World.SetLastEnterSettleReason("live_blockers");
     LOG(INFO) << "[EnterWarmup] settle_reason=live_blockers elapsed_ms="
               << EnterGameGpuWarmupElapsedMs
               << " combined_debt=" << combined_debt
@@ -500,6 +504,13 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   if (World.IsEnterLitGateActive())
   {
     World.EndEnterLitGate();
+    // 162400: sample after gate clears so enter_lit JSONL gets gate_end=1 and
+    // settle_reason before EndSession closes the file (AnalyzeEnterLit SoT).
+    EnterLitSample gate_end_sample{};
+    UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs,
+                                 gate_end_sample);
+    UEnterLitDiagnostics::MaybeLog(gate_end_sample, /*frame_index=*/0,
+                                   /*every_n_frames=*/1);
     UEnterLitDiagnostics::EndSession();
   }
   CurrentStage = Stage::EnterGameFinalize;

@@ -318,7 +318,7 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.mark_relit_raa_total = phys.MarkRelitRemeshAfterApplyN;
   out.ring_blocker = EnterWarmupRingBlockerLabel(
       out.mesh_dirty, out.mesh_gpu_pending_near, out.mesh_async_pending,
-      out.mesh_missing_greedy);
+      out.mesh_missing_greedy, out.mesh_visual_warmup);
   out.raa_commit_mark_dirty_n = mesh.GetCache().GetRaaCommitMarkDirtyCount();
   out.markdirty_to_raa_n = mesh.GetCache().GetMarkDirtyToRaaCount();
   out.gpu_kick_n = mesh.GetLastGpuKickN();

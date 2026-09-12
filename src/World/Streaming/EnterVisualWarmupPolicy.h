@@ -1299,6 +1299,18 @@ inline bool EnterWarmupStatusPrefersMeshOverFifo(const EnterLitSample &sample,
          status.rfind("Finishing terrain", 0) == 0;
 }
 
+/// When enter gate is off, treat spawn ring as ready without querying
+/// IsSpawnMeshRingReady() (schedule short-circuit).
+inline bool SpawnRingReadyForSeamSuppress(bool enter_lit_gate_active,
+                                          bool spawn_ring_ready_if_queried)
+{
+  if (!enter_lit_gate_active)
+  {
+    return true;
+  }
+  return spawn_ring_ready_if_queried;
+}
+
 /// Era45 B5: allow seam MarkDirty on enter until spawn ring ready.
 inline bool ShouldSuppressRelightSeamDirtyForEnterGate(
     bool enter_lit_gate_active, bool spawn_mesh_ring_ready, bool base_suppress)
@@ -1451,11 +1463,12 @@ inline bool ShouldEnqueueRemeshSeamAfterLit(bool had_mesh, bool enter_quiesce,
   return !any_drawable;
 }
 
-/// Era46 C: ring blocker label for heartbeat (mesh gate honesty).
+/// Era46 C / 162400: ring blocker label for heartbeat (mesh gate honesty).
 inline const char *EnterWarmupRingBlockerLabel(bool mesh_dirty,
                                                int gpu_pending_near,
                                                bool async_pending,
-                                               bool missing_greedy)
+                                               bool missing_greedy,
+                                               bool visual_warmup = false)
 {
   if (mesh_dirty)
   {
@@ -1472,6 +1485,10 @@ inline const char *EnterWarmupRingBlockerLabel(bool mesh_dirty,
   if (missing_greedy)
   {
     return "missing";
+  }
+  if (visual_warmup)
+  {
+    return "visual";
   }
   return "none";
 }
