@@ -36,8 +36,10 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -930,13 +932,66 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::ofstream report(report_path);
       if (report)
       {
+        const auto json_escape = [](const std::string &s) -> std::string {
+          std::string out;
+          out.reserve(s.size() + 8);
+          for (const char c : s)
+          {
+            if (c == '\\' || c == '"')
+            {
+              out.push_back('\\');
+            }
+            out.push_back(c);
+          }
+          return out;
+        };
+        const char *git_sha = std::getenv("CUBATARIUM_GIT_SHA");
+        const std::string git_sha_str =
+            (git_sha && git_sha[0] != '\0') ? git_sha : "unknown";
+#if defined(NDEBUG)
+        const char *build_type = "Release";
+#else
+        const char *build_type = "Debug";
+#endif
+        const bool teleport_cruise = options.TeleportToCruiseStart;
+        const auto run_started = std::chrono::system_clock::now();
+        const auto run_t = std::chrono::system_clock::to_time_t(run_started);
+        std::tm run_tm{};
+#if defined(_WIN32)
+        localtime_s(&run_tm, &run_t);
+#else
+        localtime_r(&run_t, &run_tm);
+#endif
+        std::ostringstream run_id;
+        run_id << world_name << '_'
+               << std::put_time(&run_tm, "%Y%m%dT%H%M%S");
+        std::string perf_jsonl = perf_path;
+        for (char &c : perf_jsonl)
+        {
+          if (c == '\\')
+          {
+            c = '/';
+          }
+        }
         report << "{\n"
                << "  \"exit_code\": " << exit_code << ",\n"
                << "  \"loading_seen\": " << (loading_seen ? "true" : "false")
                << ",\n"
                << "  \"ingame_frames\": " << ingame_frames_seen << ",\n"
                << "  \"ingame_seconds_requested\": " << in_game_seconds << ",\n"
-               << "  \"world\": \"" << world_name << "\",\n"
+               << "  \"world\": \"" << json_escape(world_name) << "\",\n"
+               << "  \"teleport_cruise\": "
+               << (teleport_cruise ? "true" : "false") << ",\n"
+               << "  \"manifest\": {\n"
+               << "    \"git_sha\": \"" << json_escape(git_sha_str) << "\",\n"
+               << "    \"build_type\": \"" << build_type << "\",\n"
+               << "    \"route\": \"flight-sim\",\n"
+               << "    \"config_hash\": \"\",\n"
+               << "    \"frame_count\": " << ingame_frames_seen << ",\n"
+               << "    \"teleport_cruise\": "
+               << (teleport_cruise ? "true" : "false") << ",\n"
+               << "    \"run_id\": \"" << json_escape(run_id.str()) << "\"\n"
+               << "  },\n"
                << "  \"autopilot_armed\": "
                << (autopilot_armed ? "true" : "false") << ",\n"
                << "  \"autopilot_flying\": "
@@ -949,19 +1004,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"end_focus\": [" << end_focus_cx << ", " << end_focus_cz
                << "],\n"
                << "  \"chunks_traveled_cheb\": " << chunks_traveled << ",\n"
-               << "  \"perf_jsonl\": \""
-               << [&]() {
-                    std::string p = perf_path;
-                    for (char &c : p)
-                    {
-                      if (c == '\\')
-                      {
-                        c = '/';
-                      }
-                    }
-                    return p;
-                  }()
-               << "\",\n"
+               << "  \"perf_jsonl\": \"" << json_escape(perf_jsonl) << "\",\n"
                << "  \"analyze\": \"run tools/flight_sim_analyze.py on perf\"\n"
                << "}\n";
       }
