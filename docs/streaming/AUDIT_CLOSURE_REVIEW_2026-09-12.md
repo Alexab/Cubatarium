@@ -161,14 +161,32 @@ Reserve-before-allocation для snapshot и conservative result capacity, RAII 
 
 Domain build targets, forward/reverse include rules и план удаления каждого allowlist exception. Diagnostics read-only; renderer не создаёт lighting work. Binary greedy/LOD/fast-first/refine и другие техники — только по оставшемуся профилю, отдельные сравнения с parity и fallback. Переписывание API/движка не обязательная часть аудита.
 
+## Implementation progress 2026-09-12
+
+| Item | Статус |
+|---|---|
+| Q0 schema / fail-closed verdict | done |
+| Q1 CI gates | done |
+| Q2 renderer oracle / attribution | done — attribution + census mismatch + normal_shutdown_test; GL pixel oracle remains `greedy_vertex_pool_*` / driver (G1 open) |
+| Q3 schedule cost split | done |
+| Q4 visual boundary stamps | **fixed apply asymmetry (R1)** — `revision_ok` passes CaptureStore NeighborDrawableFn; SoftDefer visual=0 no longer perpetual stale. Catalog-only mesher/relight Compute still open |
+| Q5 tiny-cap publication progress | done for chunk-granular retain + `publication_progress_unit_n`; eviction policy polish open |
+| Q6 ColumnRecord cutover | partial — no synthetic `gpu_handle=1`; provisional `mesh_rev` owner token; residency export open |
+| Q7 admission reserve-before-allocate | **R2** — CaptureAndStore fail → nullopt; RefreshIncrementalShell rejects !inputStampsValid as Ready; main CaptureAndCommitOnMain still without admission |
+| Q8 frame deadline / async cull stats | partial — `UFrameDeadline` telemetry only; producers must not hard-Exhausted FirstMesh |
+| Q9 F5 acceptance flight | 090306 + 131523 known-bad + **162400 post-R1 partial** in FLIGHT_F5 (stale~38k, prep≈0, job_rr≈0; INFO live_blockers / JSONL gate_end gap). Next: S1 shed under holes+EnterLitGate, S2 SoftDefer seam damp, S3 enter telem, then reflight |
+| Q10 domain boundaries | include allowlist burn-down note + reverse-rule comment; domain CMake libs open |
+
+G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
+
 ## Статус gates и следующий коммит
 
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
-| G0 | Не закрыт | C01, неполный manifest, CI push filter, нет валидного парного baseline |
-| G1 | Не закрыт | Smoke3 CORRECTNESS_FAIL; mixed-pass/cull/world pixel oracle отсутствует |
-| G2 | Не закрыт | Visual dependency/catalog gaps и shadow owner; нет полного adversarial lifecycle suite |
-| G3 | Не закрыт | Нет reserve-before-allocation/global deadline; 70.68 ms диагностический fly median не SLA и не A/B |
-| G4 | Не закрыт | Domain cutover/build boundaries не завершены; оптимизации нельзя принимать вместо предыдущих gates |
+| G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
+| G1 | Не закрыт | 131523 + **162400** stale/publish regress (SoftDefer+shed); smoke3/090306 black/missing; pixel oracle открыт |
+| G2 | Не закрыт | Catalog-only compute + ColumnRecord residency owner не завершены |
+| G3 | Не закрыт | Frame deadline soft; не все producers defer by RemainingMs |
+| G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий implementation commit: **Q0, fail-closed schema regression и parser**, затем Q1. Q2 и Q3 — следующие проверяемые шаги; не начинать с общей перенастройки streaming budgets. В этой сверке production-код дополнительно не исправлялся: изменены только статус и план. Новые проблемы C01/C02 не скрыты под ранее зелёными tests.
+Следующий шаг: **S1–S4** (shed/soft-exit под visual_holes+EnterLitGate; SoftDefer seam damp; enter settle telem; stale counter split), затем manual F5 reflight vs 090306 (не ослаблять black/missing gates). 131523 — known-bad; 162400 — post-R1 partial reference.
