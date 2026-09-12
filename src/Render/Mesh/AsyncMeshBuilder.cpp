@@ -1,4 +1,5 @@
 #include "Render/Mesh/AsyncMeshBuilder.h"
+#include "Blocks/BlockCatalogQueries.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "Core/Jobs/PipelineAdmission.h"
@@ -90,6 +91,7 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
                                 UBlockRegistry &registry)
 {
   const glm::ivec3 coord = snapshot.coord;
+  // Q7: snapshot credit reserved before worker enqueue (JobAdmissionLifetimeTest).
   if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
           sizeof(ChunkMeshSnapshot)))
   {
@@ -115,7 +117,6 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
            catalogKeep = std::move(catalogKeep), jobId, submitEpoch,
            snapshot_credit = std::move(snapshot_credit)]() mutable
           {
-        (void)catalogKeep;
         MeshBuildResult result;
         result.coord = snapshot.coord;
         result.sourceRevision = snapshot.sourceRevision;
@@ -124,6 +125,7 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         result.InputStamps = snapshot.inputStamps;
         result.InputStampsValid = snapshot.inputStampsValid;
         result.InputCatalog = catalogKeep;
+        const BlockDefinitionCatalog *pinned = catalogKeep.get();
 
         auto *gpu_mesher = Mesher;
         const bool defer_gpu =
@@ -141,6 +143,8 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         else
         {
           std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
+          // Geometry still uses registry maps; material flags come from the
+          // pinned catalog so Reload cannot flip Transparent/Cutout mid-job.
           const auto quads =
               Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr)
                      : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr);
@@ -148,9 +152,9 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
           {
             GreedyMeshBatch &batch = byBlockId[q.Id];
             batch.blockId = q.Id;
-            batch.Transparent = registryPtr->IsTransparent(q.Id);
+            batch.Transparent = CatalogIsTransparent(pinned, q.Id);
             batch.AlphaCutout =
-                registryPtr->GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
+                CatalogGetRenderStyle(pinned, q.Id) == BlockRenderStyle::Cutout;
             const size_t base_vertex = batch.vertices.size();
             AppendGreedyQuad(q, snapshot.coord, batch.vertices, batch.indices);
             for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
