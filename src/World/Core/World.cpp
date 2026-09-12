@@ -86,6 +86,7 @@
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Streaming/VisibleBlackAttribution.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
@@ -3399,21 +3400,32 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
                                          bool ticketed_consume_scan,
                                          int vb_stable_frames) const
 {
+  const VisibleBlackFocusCounts counts = CountVisibleBlackFocusMeshes(
+      focus_ground_chunk, radius_chunks, ticketed_consume_scan,
+      vb_stable_frames);
   if (out_no_ticket)
   {
-    *out_no_ticket = 0;
+    *out_no_ticket = counts.no_ticket;
   }
   if (out_progress)
   {
-    *out_progress = 0;
+    *out_progress = counts.progress;
   }
   if (out_stalled)
   {
-    *out_stalled = 0;
+    *out_stalled = counts.stalled;
   }
+  return counts.focus_n;
+}
+
+VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
+    glm::ivec3 focus_ground_chunk, int radius_chunks,
+    bool ticketed_consume_scan, int vb_stable_frames) const
+{
+  VisibleBlackFocusCounts counts{};
   if (!MeshService || radius_chunks < 0)
   {
-    return 0;
+    return counts;
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
@@ -3454,15 +3466,12 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
   const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
-  int visible_black = 0;
-  int no_ticket = 0;
-  int progress_n = 0;
-  int stalled_n = 0;
   auto count_column =
       [&](glm::ivec2 key)
   {
     bool is_black = false;
     bool column_fully_dark = false;
+    bool column_stale_dark = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(key.x, cy, key.y);
@@ -3472,13 +3481,15 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
       }
       const bool fully_dark =
           MeshService->GetCache().ChunkHasFullyDarkFace(coord);
-      if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld) || fully_dark)
+      if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
       {
+        column_stale_dark = true;
         is_black = true;
       }
       if (fully_dark)
       {
         column_fully_dark = true;
+        is_black = true;
       }
       if (is_black && column_fully_dark)
       {
@@ -3489,7 +3500,7 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
     {
       return;
     }
-    ++visible_black;
+    ++counts.focus_n;
     const bool contains = GetColumnFlowExecutor().HasRepairTicket(key);
     const bool progress = ColumnHasRepairProgress(key);
     const bool sticky = IsColumnStickyRemesh(key);
@@ -3498,15 +3509,36 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
         contains || progress || sticky, column_fully_dark, pending_replace);
     if (counts_progress)
     {
-      ++progress_n;
+      ++counts.progress;
     }
     if (contains && !progress && !sticky)
     {
-      ++stalled_n;
+      ++counts.stalled;
     }
     if (!contains && !progress && !sticky)
     {
-      ++no_ticket;
+      ++counts.no_ticket;
+    }
+    const bool stale_dark_attr = column_stale_dark && !column_fully_dark;
+    switch (ClassifyVisibleBlackColumn(stale_dark_attr, column_fully_dark,
+                                       contains, progress, sticky,
+                                       pending_replace))
+    {
+    case VisibleBlackCause::StaleDarkWithLitField:
+      ++counts.stale_lit;
+      break;
+    case VisibleBlackCause::FullyDarkPendingRepair:
+      ++counts.fully_dark_repair;
+      break;
+    case VisibleBlackCause::FullyDarkNoTicket:
+      ++counts.fully_dark_no_ticket;
+      break;
+    case VisibleBlackCause::FullyDarkStalledTicket:
+      ++counts.fully_dark_stalled;
+      break;
+    case VisibleBlackCause::LegalDarkNoRepair:
+      ++counts.legal_dark;
+      break;
     }
   };
   std::unordered_set<uint64_t> counted_cols;
@@ -3556,19 +3588,7 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
       }
     }
   }
-  if (out_no_ticket)
-  {
-    *out_no_ticket = no_ticket;
-  }
-  if (out_progress)
-  {
-    *out_progress = progress_n;
-  }
-  if (out_stalled)
-  {
-    *out_stalled = stalled_n;
-  }
-  return visible_black;
+  return counts;
 }
 
 bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const

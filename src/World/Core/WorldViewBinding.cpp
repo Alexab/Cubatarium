@@ -28,6 +28,7 @@
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Core/RuntimeTuning.h"
+#include "Core/FrameDeadline.h"
 
 #include <chrono>
 #include <optional>
@@ -916,6 +917,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepSoftdeferPreMs = 0.0;
   PhysicsTelemetryData.PrepDirtyThrashMs = 0.0;
   PhysicsTelemetryData.PrepSchedulePolicyMs = 0.0;
+  PhysicsTelemetryData.PrepSpawnRingQueryMs = 0.0;
+  PhysicsTelemetryData.PrepDropRemeshMs = 0.0;
   PhysicsTelemetryData.PrepPostAdmitDrainMs = 0.0;
   PhysicsTelemetryData.PrepHoleForceMs = 0.0;
   PhysicsTelemetryData.PrepRefreshDeadlineHit = 0;
@@ -1046,6 +1049,8 @@ void UWorld::TickWorldStreamingPhase()
   {
     phase_budget = std::max(phase_budget, 24.0f);
   }
+  // Q8: publish the same phase wall as the shared frame deadline.
+  cutum::UFrameDeadline::Get().BeginFrame(static_cast<double>(phase_budget));
   float reserved =
       miss_carve_out ? std::max(0.0f, tune.MissReservedMs) : 0.0f;
   // Reserved cannot exceed phase wall (MissReserved default 8 vs phase 5).

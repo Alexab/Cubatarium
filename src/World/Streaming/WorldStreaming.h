@@ -191,6 +191,11 @@ private:
     int last_visible_black_no_ticket{0};
     int last_visible_black_progress{0};
     int last_visible_black_stalled{0};
+    int last_visible_black_stale_lit{0};
+    int last_visible_black_fully_dark_repair{0};
+    int last_visible_black_fully_dark_no_ticket{0};
+    int last_visible_black_fully_dark_stalled{0};
+    int last_visible_black_legal_dark{0};
     int vb_focus_stable_frames{0};
     int facing_sample_cd{0};
     int last_ahead{0};

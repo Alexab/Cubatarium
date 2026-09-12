@@ -34,6 +34,7 @@
 #include "World/Streaming/WorldBorderPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterSessionPhase.h"
+#include "World/Streaming/VisibleBlackAttribution.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
@@ -1169,13 +1170,15 @@ public:
   /// out_progress = VB ∧ (Contains ∨ Progress ∨ Sticky).
   /// out_stalled = VB ∧ Contains ∧ ¬Progress ∧ ¬Sticky (queued, no mesh/light work yet).
   /// ticketed_consume_scan: skip columns without ticket/progress/sticky (FZ2.5-Perf3).
+  VisibleBlackFocusCounts CountVisibleBlackFocusMeshes(
+      glm::ivec3 focus_ground_chunk, int radius_chunks,
+      bool ticketed_consume_scan = false, int vb_stable_frames = 0) const;
+  /// Legacy wrapper — fills optional out params from CountVisibleBlackFocusMeshes.
   int CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                   int radius_chunks,
-                                   int *out_no_ticket = nullptr,
-                                   int *out_progress = nullptr,
-                                   int *out_stalled = nullptr,
-                                   bool ticketed_consume_scan = false,
-                                   int vb_stable_frames = 0) const;
+                                   int radius_chunks, int *out_no_ticket,
+                                   int *out_progress, int *out_stalled,
+                                   bool ticketed_consume_scan,
+                                   int vb_stable_frames) const;
   /// Era17: Dirty / Inflight|Queued|Kicked / PendingLight for a column.
   bool ColumnHasRepairProgress(glm::ivec2 ground_xz) const;
   /// FZ2.6-P1: do not re-ticket until GPU mesh applied for column.
