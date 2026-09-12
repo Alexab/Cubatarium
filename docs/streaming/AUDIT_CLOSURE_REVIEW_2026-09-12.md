@@ -174,10 +174,10 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q5 tiny-cap publication progress | done for chunk-granular retain + `publication_progress_unit_n`; eviction policy polish open |
 | Q6 ColumnRecord cutover | ShadowCompare default; FirstMesh/Relight/Seam/**EvictionOwner** Decide* (rollback=ShadowCompare). Real `QueryLiveGpuResidencyToken` → `published_gpu_handle` (no mesh_rev/synthetic 1). Default stage still ShadowCompare |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
-| Q8 frame deadline / async cull stats | **landed** delayed CullStats SubData + `UFrameDeadline` phase wall; producers still must not hard-Exhausted FirstMesh |
+| Q8 frame deadline / async cull stats | **R2** — delayed CullStats + `UFrameDeadline` phase wall; `ShouldDeferProducer` soft-stops Relight/Seam drains when Exhausted; **FirstMesh never hard-killed** |
 | Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **194409** / **201118** post-anchor reflights no drawable regress vs 192015 (201118: stale 23, job_rr~24, enter~76ms). Full G0/G1 vs 141350 still open |
 | Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + **CaptureAndCommitOnMain** reserve snapshot credits before allocate; fail → nullopt/false. RefreshIncrementalShell rejects !inputStampsValid as Ready |
-| Q8 frame deadline / async cull stats | partial — `UFrameDeadline` + `frame_deadline_test`; producers must not hard-Exhausted FirstMesh |
+| Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + producer soft-defer (non-FM); `frame_deadline_test` covers FirstMesh floor |
 | Q9 F5 acceptance flight | **product_anchor PASS: 192015** (tag `product_anchor_20260912`); **201118** drawable PASS vs anchor. Full G0/G1 product gates vs 141350 still open (stale/VB/holes). Known-bad: 131523/162400/175610 |
 | Q10 domain boundaries | include allowlist burn-down note + reverse-rule comment; domain CMake libs open |
 
@@ -190,7 +190,7 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
 | G1 | Не закрыт | Anchor 192015 restores drawable; GL pixel oracle + VB/holes vs 141350 still open |
 | G2 | Не закрыт | EvictionOwner + catalog face style landed; full registry-free GPU extract + enabling cutover stages still open |
-| G3 | Не закрыт | Frame deadline soft; не все producers defer by RemainingMs |
+| G3 | Частично | ColumnFlow DrainBudget/RemeshSeam soft-defer by Exhausted; FirstMesh floor; apply/upload still local budgets |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: Q8 producers defer by RemainingMs; enable cutover only after shadow parity; G1 VB/holes (201118 holes 0.65 / VB 67 still open vs 141350).
+Следующий шаг: enable cutover only after shadow parity; G1 VB/holes (201118 holes 0.65 / VB 67); Q9 paired acceptance flights.

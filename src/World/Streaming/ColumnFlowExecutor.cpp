@@ -4,6 +4,7 @@
 #include "World/Streaming/ColumnTicketMap.h"
 #include "World/Streaming/ColumnEmergeState.h"
 
+#include "Core/FrameDeadline.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -337,6 +338,11 @@ bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
 
 void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
 {
+  // Q8: soft deadline — RemeshSeam is not FirstMesh critical progress.
+  if (UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/false))
+  {
+    return;
+  }
   // One AdvanceColumn(RemeshSeam) == SyncIdle(1); budget N needs a single SyncIdle(N)
   // because Enqueue dedupes (column,kind) and cannot queue N identical seams.
   if (max_columns > 0)
@@ -467,6 +473,14 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   ColumnWorkItem work{};
   while (drained < n && scheduler_.DrainOne(work))
   {
+    // Q8: soft deadline — defer Relight/Seam/Promote when frame budget is
+    // exhausted; re-queue and stop. FirstMesh keeps a progress floor.
+    const bool critical = work.kind == ColumnWorkKind::FirstMesh;
+    if (UFrameDeadline::ShouldDeferProducer(critical))
+    {
+      scheduler_.Enqueue(work);
+      break;
+    }
     AdvanceColumn(world, work, focus_ground_horiz, focus_radius, admit_batch);
     ++drained;
   }

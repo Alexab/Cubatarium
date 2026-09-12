@@ -35,6 +35,17 @@ int main()
 
   deadline.BeginFrame(0.0);
   Expect(!deadline.Exhausted(), "zero budget means unlimited");
+  Expect(!cutum::UFrameDeadline::ShouldDeferProducer(false),
+         "unlimited: non-critical not deferred");
+  Expect(!cutum::UFrameDeadline::ShouldDeferProducer(true),
+         "unlimited: FirstMesh not deferred");
+
+  deadline.BeginFrame(1.0);
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  Expect(cutum::UFrameDeadline::ShouldDeferProducer(false),
+         "exhausted: non-critical deferred");
+  Expect(!cutum::UFrameDeadline::ShouldDeferProducer(true),
+         "exhausted: FirstMesh never hard-killed");
 
   if (gFails != 0)
   {
