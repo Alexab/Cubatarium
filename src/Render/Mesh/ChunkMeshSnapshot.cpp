@@ -65,11 +65,24 @@ int ShellFlatIndex(int face, int cell)
 
 } // namespace
 
-bool ChunkMeshSnapshot::InputsStillValid(const UBlockWorld &world) const
+bool ChunkMeshSnapshot::InputsStillValid(
+    const UBlockWorld &world, NeighborVisualDrawableFn /*neighbor_drawable*/,
+    void * /*neighbor_drawable_ctx*/) const
 {
-  if (!inputStampsValid) return false;
+  // Geom/light/catalog identity only. NeighborDrawableFn may be passed for
+  // call-site symmetry with Capture, but must never affect stamp validity
+  // (Strategy A Phase1 — SoftDefer visual flip must not remesh).
+  if (!inputStampsValid)
+  {
+    return false;
+  }
   for (const auto &stamp : inputStamps)
-    if (!stamp.Matches(world.GetChunkManager().GetChunk(stamp.coord))) return false;
+  {
+    if (!stamp.Matches(world.GetChunkManager().GetChunk(stamp.coord)))
+    {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -102,7 +115,8 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       const UChunk *neighbor_chunk =
           world.GetChunkManager().GetChunk(neighbor_coord);
       const bool neighbor_loaded = neighbor_chunk != nullptr;
-      snapshot.inputStamps[face + 1] =
+      // Stamp = geom/light only. Drawable fn affects shell occlusion preview.
+      snapshot.inputStamps[static_cast<size_t>(face + 1)] =
           ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk);
       bool neighbor_visually_drawable = neighbor_loaded;
       if (neighbor_loaded && neighbor_drawable)

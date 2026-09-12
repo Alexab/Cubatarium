@@ -1011,6 +1011,7 @@ target_link_libraries(capture_worker_integration_test glm::glm)
 
 add_executable(capture_incremental_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Core/Jobs/PipelineAdmission.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureStore.cpp
     src/Test/CaptureIncrementalTest.cpp)
@@ -1023,6 +1024,7 @@ add_executable(capture_token_validation_test
     src/Core/Jobs/JobThreadPool.cpp
     src/App/Platform/WorkerJobKind.cpp
     src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureStore.cpp
     src/Render/Mesh/MeshCaptureWorker.cpp
@@ -2580,6 +2582,15 @@ add_executable(chunk_input_stamp_test src/Test/ChunkInputStampTest.cpp
   src/World/Chunks/Chunk.cpp src/World/Math/FluidCellState.cpp)
 target_include_directories(chunk_input_stamp_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_input_stamp_test PRIVATE glm::glm)
+
+add_executable(inputs_still_valid_visual_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Test/InputsStillValidVisualTest.cpp)
+target_include_directories(inputs_still_valid_visual_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(inputs_still_valid_visual_test PRIVATE glm::glm
+    nlohmann_json::nlohmann_json)
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   add_executable(greedy_vertex_pool_production_test
     src/Test/GreedyVertexPoolProductionTest.cpp
@@ -2600,6 +2611,7 @@ endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
   job_admission_lifetime_test
   chunk_input_stamp_test
+  inputs_still_valid_visual_test
   greedy_vertex_pool_production_test
   column_flow_scheduler_test
   column_scheduler_audit_repro

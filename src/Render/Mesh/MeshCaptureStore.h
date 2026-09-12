@@ -33,8 +33,11 @@ public:
   void Commit(glm::ivec3 coord, uint64_t source_revision,
               uint64_t world_epoch, ChunkMeshSnapshot snapshot);
 
-  ChunkMeshSnapshot CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
-                                    uint64_t source_revision);
+  /// Capture + commit. Returns nullopt when snapshot admission credit is
+  /// exhausted (Q7/R2) — never a fake empty Ready snapshot.
+  std::optional<ChunkMeshSnapshot> CaptureAndStore(const UBlockWorld &world,
+                                                   glm::ivec3 coord,
+                                                   uint64_t source_revision);
 
   std::optional<ChunkMeshSnapshot> TakeOrRefresh(
       const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision,

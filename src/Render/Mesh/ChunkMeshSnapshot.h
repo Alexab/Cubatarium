@@ -33,11 +33,18 @@ struct ChunkMeshSnapshot
   uint64_t sourceRevision{0};
   std::array<ChunkInputStamp, 7> inputStamps{};
   bool inputStampsValid{false};
-  bool InputsStillValid(const UBlockWorld &world) const;
 
   /// Optional: when false for a neighbor chunk coord, shell treats that
   /// neighbor as Air (Era39 SoftDefer-hidden seam). Nullptr ⇒ all drawable.
+  /// Affects Capture shell only — never InputsStillValid / stamp equality.
   using NeighborVisualDrawableFn = bool (*)(void *ctx, glm::ivec3 neighbor_chunk);
+
+  /// Geom/light stamp check. Optional drawable args are ignored (API symmetry
+  /// with Capture call sites); SoftDefer visual flips do not invalidate.
+  bool InputsStillValid(
+      const UBlockWorld &world,
+      NeighborVisualDrawableFn neighbor_drawable = nullptr,
+      void *neighbor_drawable_ctx = nullptr) const;
 
   static ChunkMeshSnapshot Capture(const UBlockWorld &world,
                                    glm::ivec3 chunkCoord,

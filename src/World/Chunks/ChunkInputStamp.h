@@ -5,6 +5,9 @@ namespace cutum
 {
 // Captured under the same ownership as voxel/light reads. Absence is explicit
 // (incarnation zero), so unload/reload and newly resident neighbors invalidate.
+// Strategy A Phase1–Q4a: MeshGeomStamp = incarnation/content/light only.
+// Neighbor visual residency may affect shell Capture for occlusion preview but
+// MUST NOT enter stamp equality / InputsStillValid (SoftDefer 0↔1 thrash).
 struct ChunkInputStamp
 {
   glm::ivec3 coord{0};

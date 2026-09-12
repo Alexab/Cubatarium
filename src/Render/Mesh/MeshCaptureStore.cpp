@@ -1,5 +1,6 @@
 #include "Render/Mesh/MeshCaptureStore.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
@@ -43,7 +44,11 @@ UMeshCaptureStore::TryGet(const UBlockWorld &world, glm::ivec3 coord, uint64_t s
   {
     return std::nullopt;
   }
-  if (!it->second.data.InputsStillValid(world)) return std::nullopt;
+  if (!it->second.data.InputsStillValid(world, NeighborDrawableFn_,
+                                        NeighborDrawableCtx_))
+  {
+    return std::nullopt;
+  }
   return it->second.data;
 }
 
@@ -75,13 +80,22 @@ void UMeshCaptureStore::Commit(glm::ivec3 coord, uint64_t source_revision,
                   nullptr);
 }
 
-ChunkMeshSnapshot UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world,
-                                                     glm::ivec3 coord,
-                                                     uint64_t source_revision)
+std::optional<ChunkMeshSnapshot>
+UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
+                                   uint64_t source_revision)
 {
+  // Q7/R2: reserve snapshot credit before Capture; fail ⇒ nullopt (not empty).
+  if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
+          kEstimatedChunkSnapshotBytes))
+  {
+    return std::nullopt;
+  }
+  UPipelineCreditGuard credit(PipelineCreditKind::Snapshot,
+                              kEstimatedChunkSnapshotBytes, true);
   ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
       world, coord, source_revision, NeighborDrawableFn_, NeighborDrawableCtx_);
   Commit(coord, source_revision, WorldEpoch_, std::move(snap));
+  // Credit gates capture construction rate; resident Store_ owns the bytes.
   return Store_[coord].data;
 }
 
@@ -110,7 +124,8 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
   auto it = Store_.find(coord);
   if (it == Store_.end() || it->second.sourceRevision != source_revision ||
       it->second.worldEpoch != WorldEpoch_ || face_mask == 0 ||
-      !it->second.data.InputsStillValid(world))
+      !it->second.data.InputsStillValid(world, NeighborDrawableFn_,
+                                         NeighborDrawableCtx_))
   {
     int budget = 1;
     return TakeOrRefresh(world, coord, source_revision, budget);
@@ -136,6 +151,9 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
       neighbor_visually_drawable =
           NeighborDrawableFn_(NeighborDrawableCtx_, neighbor_coord);
     }
+    // Geom stamp only; drawable affects shell cells below, not stamp.
+    snap.inputStamps[static_cast<size_t>(face + 1)] =
+        ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk);
     for (int u = 0; u < CHUNK_SIZE; ++u)
     {
       for (int v = 0; v < CHUNK_SIZE; ++v)

@@ -1,5 +1,6 @@
 #include "Render/Mesh/MeshCaptureStore.h"
 #include "Render/Mesh/MeshCaptureWorker.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "World/Core/BlockWorld.h"
 #include <iostream>
 
@@ -36,7 +37,11 @@ int main()
   // Keep sourceRevision fixed: input revisions must independently reject reuse.
   cutum::UBlockWorld capturedWorld;
   capturedWorld.GetChunkManager().EnsureChunk(coord);
-  store.CaptureAndStore(capturedWorld, coord, rev);
+  if (!store.CaptureAndStore(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: CaptureAndStore must succeed with open admission\n";
+    return 1;
+  }
   if (!store.TryGet(capturedWorld, coord, rev))
   {
     std::cerr << "FAIL: unchanged capture must be reusable\n";
@@ -49,7 +54,21 @@ int main()
     std::cerr << "FAIL: absent neighbor becoming resident must invalidate\n";
     return 1;
   }
-  store.CaptureAndStore(capturedWorld, coord, rev);
+  struct VisualCtx
+  {
+    bool drawable{true};
+  };
+  VisualCtx visual_ctx;
+  auto neighbor_drawable = +[](void *ctx, glm::ivec3) -> bool
+  {
+    return static_cast<VisualCtx *>(ctx)->drawable;
+  };
+  store.SetNeighborVisualDrawableFn(neighbor_drawable, &visual_ctx);
+  if (!store.CaptureAndStore(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: CaptureAndStore after neighbor load\n";
+    return 1;
+  }
   auto *neighborChunk = capturedWorld.GetChunkManager().GetChunk(neighbor);
   neighborChunk->SetLightLocal({0, 0, 0}, 7, 2);
   if (store.TryGet(capturedWorld, coord, rev))
@@ -57,7 +76,11 @@ int main()
     std::cerr << "FAIL: changed halo light must invalidate cached capture\n";
     return 1;
   }
-  store.CaptureAndStore(capturedWorld, coord, rev);
+  if (!store.CaptureAndStore(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: CaptureAndStore after light change\n";
+    return 1;
+  }
   neighborChunk->ResetForReuse(neighbor);
   if (store.TryGet(capturedWorld, coord, rev))
   {
@@ -65,16 +88,41 @@ int main()
     return 1;
   }
 
-  store.CaptureAndStore(capturedWorld, coord, rev);
+  if (!store.CaptureAndStore(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: CaptureAndStore after neighbor recycle\n";
+    return 1;
+  }
+  // Strategy A Phase1: SoftDefer visual flip must NOT invalidate geom stamp.
+  visual_ctx.drawable = false;
+  if (!store.TryGet(capturedWorld, coord, rev))
+  {
+    std::cerr << "FAIL: neighbor visual drawable flip must keep geom stamp valid\n";
+    return 1;
+  }
+  visual_ctx.drawable = true;
   capturedWorld.GetChunkManager().GetChunk(coord)->SetBlockLocal(
       {1, 1, 1}, static_cast<cutum::BlockId>(1));
   auto refreshed = store.RefreshIncrementalShell(capturedWorld, coord, rev, 1);
-  if (!refreshed || !refreshed->InputsStillValid(capturedWorld) ||
+  if (!refreshed ||
+      !refreshed->InputsStillValid(capturedWorld, neighbor_drawable,
+                                   &visual_ctx) ||
       refreshed->GetBlockLocal({1, 1, 1}) != static_cast<cutum::BlockId>(1))
   {
     std::cerr << "FAIL: shell refresh must recapture stale interior inputs\n";
     return 1;
   }
+
+  // R2: exhausted snapshot admission must not yield empty Ready.
+  cutum::UPipelineAdmission::Get().SetSnapshotCap(0);
+  store.Invalidate(coord);
+  int budget = 1;
+  if (store.TakeOrRefresh(capturedWorld, coord, rev, budget))
+  {
+    std::cerr << "FAIL: admission fail must nullopt TakeOrRefresh\n";
+    return 1;
+  }
+  cutum::UPipelineAdmission::Get().SetSnapshotCap(96 * 1024 * 1024);
 
   if (UMeshCaptureWorker::kWorkerCaptureEnabled)
   {
