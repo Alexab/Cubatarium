@@ -1,6 +1,8 @@
 #include "World/Diagnostics/FramePerfMonitor.h"
 
 #include "App/Core.h"
+#include "Core/FrameDeadline.h"
+#include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
@@ -100,6 +102,8 @@ struct Session
   double AccumPrepSoftdeferPreMs{0.0};
   double AccumPrepDirtyThrashMs{0.0};
   double AccumPrepSchedulePolicyMs{0.0};
+  double AccumPrepSpawnRingQueryMs{0.0};
+  double AccumPrepDropRemeshMs{0.0};
   double AccumPrepPostAdmitDrainMs{0.0};
   double AccumPrepHoleForceMs{0.0};
   double MaxPrepRefreshPressureMs{0.0};
@@ -385,6 +389,8 @@ struct FrameNumbers
   double prep_softdefer_pre_ms{0.0};
   double prep_dirty_thrash_ms{0.0};
   double prep_schedule_policy_ms{0.0};
+  double prep_spawn_ring_query_ms{0.0};
+  double prep_drop_remesh_ms{0.0};
   double prep_post_admit_drain_ms{0.0};
   double prep_hole_force_ms{0.0};
   int prep_refresh_deadline_hit{0};
@@ -489,6 +495,12 @@ struct FrameNumbers
   int visible_black_no_ticket_n{0};
   int visible_black_progress_n{0};
   int visible_black_stalled_n{0};
+  int visible_black_stale_lit_n{0};
+  int visible_black_fully_dark_repair_n{0};
+  int visible_black_fully_dark_no_ticket_n{0};
+  int visible_black_fully_dark_stalled_n{0};
+  int visible_black_legal_dark_n{0};
+  int visible_black_census_mismatch{0};
   int focus_not_render_ready{0};
   int focus_pressure{0};
   int focus_dirty_chunks{0};
@@ -499,6 +511,8 @@ struct FrameNumbers
   uint64_t mesh_discarded_late_job_mismatch{0};
   uint64_t mesh_apply_stale{0};
   uint64_t mesh_apply_stale_delta{0};
+  uint64_t mesh_apply_stale_visual{0};
+  uint64_t mesh_apply_stale_rev{0};
   uint64_t mesh_apply_superseded{0};
   uint64_t mesh_apply_superseded_delta{0};
   uint64_t mesh_apply_drop_no_active{0};
@@ -697,6 +711,9 @@ struct FrameNumbers
   uint64_t gpu_mask_readback{0};
   uint64_t gpu_transparent_sort_readback{0};
   uint64_t gpu_cull_stats_readback{0};
+  uint64_t cull_stats_sync_read_n{0};
+  double frame_deadline_remaining_ms{0.0};
+  uint64_t publication_progress_unit_n{0};
   double gpu_cull_cpu_ms{0.0};
   double gpu_cull_submit_cpu_ms{0.0};
   double gpu_cull_exec_ms{-1.0};
@@ -964,6 +981,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_softdefer_pre_ms = phys.PrepSoftdeferPreMs;
   n.prep_dirty_thrash_ms = phys.PrepDirtyThrashMs;
   n.prep_schedule_policy_ms = phys.PrepSchedulePolicyMs;
+  n.prep_spawn_ring_query_ms = phys.PrepSpawnRingQueryMs;
+  n.prep_drop_remesh_ms = phys.PrepDropRemeshMs;
   n.prep_post_admit_drain_ms = phys.PrepPostAdmitDrainMs;
   n.prep_hole_force_ms = phys.PrepHoleForceMs;
   n.prep_refresh_deadline_hit = phys.PrepRefreshDeadlineHit;
@@ -1076,6 +1095,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.visible_black_no_ticket_n = phys.VisibleBlackNoTicketN;
   n.visible_black_progress_n = phys.VisibleBlackProgressN;
   n.visible_black_stalled_n = phys.VisibleBlackStalledN;
+  n.visible_black_stale_lit_n = phys.VisibleBlackStaleLitN;
+  n.visible_black_fully_dark_repair_n = phys.VisibleBlackFullyDarkRepairN;
+  n.visible_black_fully_dark_no_ticket_n = phys.VisibleBlackFullyDarkNoTicketN;
+  n.visible_black_fully_dark_stalled_n = phys.VisibleBlackFullyDarkStalledN;
+  n.visible_black_legal_dark_n = phys.VisibleBlackLegalDarkN;
+  n.visible_black_census_mismatch = phys.VisibleBlackCensusMismatch;
   n.focus_not_render_ready = phys.FocusNotRenderReady;
   n.focus_pressure = phys.FocusPressure;
   n.focus_dirty_chunks = phys.FocusDirtyChunks;
@@ -1085,6 +1110,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_discarded_late_epoch = phys.MeshDiscardedLateEpoch;
   n.mesh_discarded_late_job_mismatch = phys.MeshDiscardedLateJobMismatch;
   n.mesh_apply_stale = phys.MeshApplyStale;
+  n.mesh_apply_stale_visual = phys.MeshApplyStaleVisual;
+  n.mesh_apply_stale_rev = phys.MeshApplyStaleRev;
   n.mesh_apply_superseded = phys.MeshApplySuperseded;
   n.mesh_apply_drop_no_active = phys.MeshApplyDropNoActive;
   n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
@@ -1294,6 +1321,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.gpu_mask_readback = UGpuGreedyMesher::ConsumeMaskReadbackCount();
   n.gpu_transparent_sort_readback = ConsumeGpuTransparentSortReadbackCount();
   n.gpu_cull_stats_readback = ConsumeGpuCullStatsReadbackCount();
+  n.cull_stats_sync_read_n = phys.CullStatsSyncReadN;
+  n.frame_deadline_remaining_ms = UFrameDeadline::Get().RemainingMs();
+  n.publication_progress_unit_n = ConsumePublicationProgressUnitN();
   n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
   n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
   n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
@@ -1563,6 +1593,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_softdefer_pre_ms\":" << n.prep_softdefer_pre_ms
           << ",\"prep_dirty_thrash_ms\":" << n.prep_dirty_thrash_ms
           << ",\"prep_schedule_policy_ms\":" << n.prep_schedule_policy_ms
+          << ",\"prep_spawn_ring_query_ms\":" << n.prep_spawn_ring_query_ms
+          << ",\"prep_drop_remesh_ms\":" << n.prep_drop_remesh_ms
           << ",\"prep_post_admit_drain_ms\":" << n.prep_post_admit_drain_ms
           << ",\"prep_hole_force_ms\":" << n.prep_hole_force_ms
           << ",\"prep_refresh_deadline_hit\":" << n.prep_refresh_deadline_hit
@@ -1679,6 +1711,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"visible_black_no_ticket_n\":" << n.visible_black_no_ticket_n
           << ",\"visible_black_progress_n\":" << n.visible_black_progress_n
           << ",\"visible_black_stalled_n\":" << n.visible_black_stalled_n
+          << ",\"visible_black_stale_lit_n\":" << n.visible_black_stale_lit_n
+          << ",\"visible_black_fully_dark_repair_n\":"
+          << n.visible_black_fully_dark_repair_n
+          << ",\"visible_black_fully_dark_no_ticket_n\":"
+          << n.visible_black_fully_dark_no_ticket_n
+          << ",\"visible_black_fully_dark_stalled_n\":"
+          << n.visible_black_fully_dark_stalled_n
+          << ",\"visible_black_legal_dark_n\":" << n.visible_black_legal_dark_n
+          << ",\"visible_black_census_mismatch\":"
+          << n.visible_black_census_mismatch
           << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
           << ",\"focus_pressure\":" << n.focus_pressure
           << ",\"focus_dirty_chunks\":" << n.focus_dirty_chunks
@@ -1924,6 +1966,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_transparent_sort_readback\":"
           << n.gpu_transparent_sort_readback
           << ",\"gpu_cull_stats_readback\":" << n.gpu_cull_stats_readback
+          << ",\"cull_stats_sync_read_n\":" << n.cull_stats_sync_read_n
+          << ",\"frame_deadline_remaining_ms\":"
+          << n.frame_deadline_remaining_ms
+          << ",\"publication_progress_unit_n\":"
+          << n.publication_progress_unit_n
           << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
           << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
           << ",\"gpu_light_readback\":" << n.gpu_light_readback
@@ -1953,6 +2000,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"visible_black_no_ticket_n\":" << n.visible_black_no_ticket_n
           << ",\"visible_black_progress_n\":" << n.visible_black_progress_n
           << ",\"visible_black_stalled_n\":" << n.visible_black_stalled_n
+          << ",\"visible_black_stale_lit_n\":" << n.visible_black_stale_lit_n
+          << ",\"visible_black_fully_dark_repair_n\":"
+          << n.visible_black_fully_dark_repair_n
+          << ",\"visible_black_fully_dark_no_ticket_n\":"
+          << n.visible_black_fully_dark_no_ticket_n
+          << ",\"visible_black_fully_dark_stalled_n\":"
+          << n.visible_black_fully_dark_stalled_n
+          << ",\"visible_black_legal_dark_n\":" << n.visible_black_legal_dark_n
+          << ",\"visible_black_census_mismatch\":"
+          << n.visible_black_census_mismatch
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms
@@ -2069,6 +2126,8 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumPrepSoftdeferPreMs += n.prep_softdefer_pre_ms;
   s.AccumPrepDirtyThrashMs += n.prep_dirty_thrash_ms;
   s.AccumPrepSchedulePolicyMs += n.prep_schedule_policy_ms;
+  s.AccumPrepSpawnRingQueryMs += n.prep_spawn_ring_query_ms;
+  s.AccumPrepDropRemeshMs += n.prep_drop_remesh_ms;
   s.AccumPrepPostAdmitDrainMs += n.prep_post_admit_drain_ms;
   s.AccumPrepHoleForceMs += n.prep_hole_force_ms;
   s.MaxPrepRefreshPressureMs =
@@ -2156,6 +2215,8 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.prep_softdefer_pre_ms = s.AccumPrepSoftdeferPreMs * inv;
   avg.prep_dirty_thrash_ms = s.AccumPrepDirtyThrashMs * inv;
   avg.prep_schedule_policy_ms = s.AccumPrepSchedulePolicyMs * inv;
+  avg.prep_spawn_ring_query_ms = s.AccumPrepSpawnRingQueryMs * inv;
+  avg.prep_drop_remesh_ms = s.AccumPrepDropRemeshMs * inv;
   avg.prep_post_admit_drain_ms = s.AccumPrepPostAdmitDrainMs * inv;
   avg.prep_hole_force_ms = s.AccumPrepHoleForceMs * inv;
   avg.max_wall_ms = s.MaxWallMs;
@@ -2230,6 +2291,8 @@ void ResetAccum(Session &s)
   s.AccumPrepSoftdeferPreMs = 0.0;
   s.AccumPrepDirtyThrashMs = 0.0;
   s.AccumPrepSchedulePolicyMs = 0.0;
+  s.AccumPrepSpawnRingQueryMs = 0.0;
+  s.AccumPrepDropRemeshMs = 0.0;
   s.AccumPrepPostAdmitDrainMs = 0.0;
   s.AccumPrepHoleForceMs = 0.0;
   s.MaxPrepRefreshPressureMs = 0.0;

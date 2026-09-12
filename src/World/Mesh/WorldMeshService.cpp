@@ -892,6 +892,16 @@ uint64_t UWorldMeshService::GetMeshApplyStaleCount() const
   return Cache.GetMeshApplyStaleCount();
 }
 
+uint64_t UWorldMeshService::GetMeshApplyStaleVisualCount() const
+{
+  return Cache.GetMeshApplyStaleVisualCount();
+}
+
+uint64_t UWorldMeshService::GetMeshApplyStaleRevCount() const
+{
+  return Cache.GetMeshApplyStaleRevCount();
+}
+
 uint64_t UWorldMeshService::GetMeshApplySupersededCount() const
 {
   return Cache.GetMeshApplySupersededCount();

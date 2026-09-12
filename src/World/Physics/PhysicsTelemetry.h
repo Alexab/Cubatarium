@@ -42,6 +42,10 @@ struct PhysicsTelemetry
   uint64_t MeshDiscardedLateJobMismatch{0};
   /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
   uint64_t MeshApplyStale{0};
+  /// 162400: InputsStillValid / catalog / stamp mismatch subset of MeshApplyStale.
+  uint64_t MeshApplyStaleVisual{0};
+  /// 162400: RemeshObsoleteTracked subset of MeshApplyStale.
+  uint64_t MeshApplyStaleRev{0};
   /// DiscardOlderKeepActive — older async keep Active for newer in-flight.
   uint64_t MeshApplySuperseded{0};
   /// DropNoActive — apply with no Active tracking.
@@ -373,6 +377,10 @@ struct PhysicsTelemetry
   double PrepSoftdeferPreMs{0.0};
   double PrepDirtyThrashMs{0.0};
   double PrepSchedulePolicyMs{0.0};
+  /// Nested inside PrepSchedulePolicyMs: spawn ring query for enter seam suppress.
+  double PrepSpawnRingQueryMs{0.0};
+  /// Nested inside PrepSchedulePolicyMs: coalesced DropRemesh pass.
+  double PrepDropRemeshMs{0.0};
   double PrepPostAdmitDrainMs{0.0};
   double PrepHoleForceMs{0.0};
   /// Phase5 S2/S3b: stream deadline cuts (Refresh / TickMeshEmerge prep).
@@ -553,6 +561,18 @@ struct PhysicsTelemetry
   int VisibleBlackProgressN{0};
   /// Era17: VB with Contains but no Dirty/Inflight/PendingLight (queued stall).
   int VisibleBlackStalledN{0};
+  /// Q2: VB attribution — stale dark mesh with lit field (not fully-dark column).
+  int VisibleBlackStaleLitN{0};
+  /// Q2: fully-dark column with ticket / progress / sticky repair activity.
+  int VisibleBlackFullyDarkRepairN{0};
+  /// Q2: fully-dark column without ticket (includes pending-light preview).
+  int VisibleBlackFullyDarkNoTicketN{0};
+  /// Q2: fully-dark column with ticket but no progress / sticky yet.
+  int VisibleBlackFullyDarkStalledN{0};
+  /// Q2: fully-dark column with no repair path (candidate legal cave).
+  int VisibleBlackLegalDarkN{0};
+  /// Q2: UnfinishedVisual==0 but VisibleBlackFocusN>0 at publish (census mismatch).
+  int VisibleBlackCensusMismatch{0};
   /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
   /// Not pending+dirty pressure — see FocusPressure.
   int FocusNotRenderReady{0};
@@ -716,6 +736,10 @@ struct PhysicsTelemetry
   uint64_t PoolRetiredReclaimedN{0};
   uint64_t PoolFenceTimeoutN{0};
   uint64_t PoolReserveBumpN{0};
+  /// Q5: greedy whole-pass publish retained predecessor due to pool OOM.
+  uint64_t PublicationOverloadRetainN{0};
+  /// Q8: sync glGetBufferSubData reads of CullStatsSsbo (HUD/period only).
+  uint64_t CullStatsSyncReadN{0};
   /// S1 transparent: 1 when sortRevision changed on PrepareTransparent refresh.
   int TransparentSortRevChanged{0};
   /// S1: upload_full invocations for transparent pass this frame.

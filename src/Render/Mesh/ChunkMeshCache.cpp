@@ -3329,6 +3329,11 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
         if (auto refreshed = CaptureStore.RefreshIncrementalShell(
                 world, coord, source_revision, face_mask))
         {
+          if (!refreshed->inputStampsValid)
+          {
+            out.kind = SnapshotAcquireKind::Deferred;
+            return out;
+          }
           out.kind = SnapshotAcquireKind::Ready;
           out.snapshot = std::move(*refreshed);
           return out;
@@ -3924,11 +3929,14 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   auto revision_ok = [&](PendingGpuApply &pending,
                          bool &out_drop) -> bool {
     out_drop = false;
-    if (!pending.snapshot.InputsStillValid(world) ||
+    if (!pending.snapshot.InputsStillValid(
+            world, CaptureStore.GetNeighborDrawableFn(),
+            CaptureStore.GetNeighborDrawableCtx()) ||
         pending.inputCatalog != registry.GetDefinitionsCatalogSnapshot())
     {
       fail_ticket(pending);
       ++MeshApplyStaleCount;
+      ++MeshApplyStaleVisualCount;
       CaptureStore.Invalidate(pending.coord);
       out_drop = true;
       return false;
@@ -3962,6 +3970,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     {
       fail_ticket(pending);
       ++MeshApplyStaleCount;
+      ++MeshApplyStaleRevCount;
       if (!HasDrawableGreedyMesh(pending.coord) &&
           !Dirty.Contains(pending.coord))
       {
@@ -4311,6 +4320,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (!inputs_valid)
   {
     ++MeshApplyStaleCount;
+    ++MeshApplyStaleVisualCount;
     CaptureStore.Invalidate(result.coord);
     const auto active = ActiveMeshSourceRevision.find(result.coord);
     if (active != ActiveMeshSourceRevision.end() &&
@@ -4367,6 +4377,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     // Tracked rev is obsolete vs Current — remesh WITHOUT bumping revision.
     // Remesh class only (TD-ARCH-029); MarkDirtyPriority for holes only.
     ++MeshApplyStaleCount;
+    ++MeshApplyStaleRevCount;
     if (!HasDrawableGreedyMesh(result.coord) && !Dirty.Contains(result.coord))
     {
       Dirty.MarkDirtyPriority(result.coord);

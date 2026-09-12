@@ -229,6 +229,11 @@ public:
   uint64_t GetMeshDiscardedLateEpochCount() const;
   uint64_t GetMeshDiscardedLateJobMismatchCount() const;
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
+  uint64_t GetMeshApplyStaleVisualCount() const
+  {
+    return MeshApplyStaleVisualCount;
+  }
+  uint64_t GetMeshApplyStaleRevCount() const { return MeshApplyStaleRevCount; }
   /// Older apply discarded while Active tracks a newer revision (not remesh).
   uint64_t GetMeshApplySupersededCount() const
   {
@@ -963,6 +968,10 @@ private:
   double LastMeshImmediateMs{0.0};
   int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};
+  /// 162400: InputsStillValid / catalog / stamp mismatch drops.
+  uint64_t MeshApplyStaleVisualCount{0};
+  /// 162400: RemeshObsoleteTracked (Current moved under Active).
+  uint64_t MeshApplyStaleRevCount{0};
   uint64_t MeshApplySupersededCount{0};
   uint64_t MeshApplyDropNoActiveCount{0};
   uint64_t MeshReplaceHoleAvoided{0};

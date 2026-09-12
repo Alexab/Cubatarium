@@ -1202,9 +1202,7 @@ void UWorldStreaming::RefreshStreamingPressure(
 
 
 
-    int no_ticket = 0;
-    int progress_n = 0;
-    int stalled_n = 0;
+    VisibleBlackFocusCounts vb_counts{};
     const bool do_full_scan =
         rp.visible_black_sample_cd <= 0 ||
         (!diet_cruise_cadence_final && rp.vb_focus_stable_frames < 4);
@@ -1215,9 +1213,10 @@ void UWorldStreaming::RefreshStreamingPressure(
     {
       const auto vb_raw_t0 = std::chrono::high_resolution_clock::now();
       const int prev_raw = rp.vb_pending_raw;
-      const int raw_vb = world.CountVisibleBlackFocusMeshes(
-          focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n,
-          ticketed_consume_scan, rp.vb_focus_stable_frames);
+      vb_counts = world.CountVisibleBlackFocusMeshes(
+          focus_ground, focus_radius, ticketed_consume_scan,
+          rp.vb_focus_stable_frames);
+      const int raw_vb = vb_counts.focus_n;
       pt.PrepRefreshVbRawMs += lap_ms(vb_raw_t0);
       world.PhysicsTelemetryData.VisibleBlackFocusRawN = raw_vb;
       if (prev_raw > 0 && raw_vb == prev_raw)
@@ -1228,9 +1227,15 @@ void UWorldStreaming::RefreshStreamingPressure(
       {
         rp.vb_focus_stable_frames = 0;
       }
-      rp.last_visible_black_no_ticket = no_ticket;
-      rp.last_visible_black_progress = progress_n;
-      rp.last_visible_black_stalled = stalled_n;
+      rp.last_visible_black_no_ticket = vb_counts.no_ticket;
+      rp.last_visible_black_progress = vb_counts.progress;
+      rp.last_visible_black_stalled = vb_counts.stalled;
+      rp.last_visible_black_stale_lit = vb_counts.stale_lit;
+      rp.last_visible_black_fully_dark_repair = vb_counts.fully_dark_repair;
+      rp.last_visible_black_fully_dark_no_ticket =
+          vb_counts.fully_dark_no_ticket;
+      rp.last_visible_black_fully_dark_stalled = vb_counts.fully_dark_stalled;
+      rp.last_visible_black_legal_dark = vb_counts.legal_dark;
       if (std::abs(raw_vb - rp.vb_published) > 3)
       {
         rp.vb_published = raw_vb;
@@ -1295,6 +1300,18 @@ void UWorldStreaming::RefreshStreamingPressure(
         rp.last_visible_black_progress;
     world.PhysicsTelemetryData.VisibleBlackStalledN =
         rp.last_visible_black_stalled;
+    world.PhysicsTelemetryData.VisibleBlackStaleLitN =
+        rp.last_visible_black_stale_lit;
+    world.PhysicsTelemetryData.VisibleBlackFullyDarkRepairN =
+        rp.last_visible_black_fully_dark_repair;
+    world.PhysicsTelemetryData.VisibleBlackFullyDarkNoTicketN =
+        rp.last_visible_black_fully_dark_no_ticket;
+    world.PhysicsTelemetryData.VisibleBlackFullyDarkStalledN =
+        rp.last_visible_black_fully_dark_stalled;
+    world.PhysicsTelemetryData.VisibleBlackLegalDarkN =
+        rp.last_visible_black_legal_dark;
+    world.PhysicsTelemetryData.VisibleBlackCensusMismatch =
+        (unfinished_visual == 0 && rp.vb_published > 0) ? 1 : 0;
     {
       UWorld::FocusRingVisualSample ring_update =
           world.GetFocusRingVisualSample();
@@ -1934,6 +1951,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshDiscardedLateJobMismatchCount();
     world.PhysicsTelemetryData.MeshApplyStale =
         world.GetMeshService().GetMeshApplyStaleCount();
+    world.PhysicsTelemetryData.MeshApplyStaleVisual =
+        world.GetMeshService().GetMeshApplyStaleVisualCount();
+    world.PhysicsTelemetryData.MeshApplyStaleRev =
+        world.GetMeshService().GetMeshApplyStaleRevCount();
     world.PhysicsTelemetryData.MeshApplySuperseded =
         world.GetMeshService().GetMeshApplySupersededCount();
     world.PhysicsTelemetryData.MeshApplyDropNoActive =
