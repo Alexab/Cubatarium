@@ -19,6 +19,7 @@ class UPipelineAdmission
 public:
   static UPipelineAdmission &Get();
 
+  /// Q7/M12: reserve-before-enqueue; callers must not allocate payload first.
   bool TryAcquireSnapshotBytes(std::size_t bytes);
   void ReleaseSnapshotBytes(std::size_t bytes);
   bool TryAcquireResultBytes(std::size_t bytes);

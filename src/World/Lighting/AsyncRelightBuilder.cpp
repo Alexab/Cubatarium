@@ -56,14 +56,15 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                 catalogKeep = std::move(catalogKeep), job_id,
                 submit_epoch]() mutable
                {
-                 (void)catalogKeep;
+                 // Catalog pin proves immutable input identity for install checks;
+                 // Compute still needs registry physics maps (catalog-only flood = follow-on).
                  RelightComputeResult result = snapshot.Compute(*registryPtr);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
                  result.work_token = snapshot.GetWorkToken();
                  result.work_token.world_epoch = submit_epoch;
                  result.dependency_stamp = snapshot.GetDependencyStamp();
-                 result.input_catalog = catalogKeep;
+                 result.input_catalog = std::move(catalogKeep);
                  RelightComputeResult dropped;
                  if (Completed.PushDropOldest(std::move(result), &dropped))
                  {
@@ -115,14 +116,13 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
                 catalogKeep = std::move(catalogKeep), job_id,
                 submit_epoch]() mutable
                {
-                 (void)catalogKeep;
                  RelightComputeResult result = snapshot.Compute(*registry);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
                  result.work_token = snapshot.GetWorkToken();
                  result.work_token.world_epoch = submit_epoch;
                  result.dependency_stamp = snapshot.GetDependencyStamp();
-                 result.input_catalog = catalogKeep;
+                 result.input_catalog = std::move(catalogKeep);
                  RelightComputeResult dropped;
                  if (Completed.PushDropOldest(std::move(result), &dropped))
                  {
