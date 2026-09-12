@@ -58,6 +58,17 @@ int main()
   Expect(inputs.material_catalog_revision != rev_b,
          "apply would see catalog revision mismatch vs reload");
 
+  // Q4 mesher face-policy helpers: style/transparent from pinned catalog.
+  cutum::BlockDefinition cutout{};
+  cutout.Render.Style = cutum::BlockRenderStyle::Cutout;
+  cutout.Render.Transparent = true;
+  catalog_a->ById[11] = cutout;
+  Expect(cutum::CatalogGetRenderStyle(catalog_a.get(), 11) ==
+             cutum::BlockRenderStyle::Cutout,
+         "pinned catalog RenderStyle for mesher faces");
+  Expect(CatalogIsTransparent(catalog_a.get(), 11),
+         "pinned catalog Transparent for mesher faces");
+
   if (gFails != 0)
   {
     std::cerr << gFails << " test(s) failed\n";

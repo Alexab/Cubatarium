@@ -1,5 +1,6 @@
 #include "Render/Mesh/GreedyMesher.h"
 
+#include "Blocks/BlockCatalogQueries.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 
@@ -184,10 +185,8 @@ bool CellHasRenderableFluid(IUChunkMeshReader &reader, UBlockRegistry &registry,
 }
 
 bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
-
-                       BlockId face_id, glm::ivec3 block_pos,
-
-                       glm::ivec3 neighbor_offset)
+                       const BlockDefinitionCatalog *catalog, BlockId face_id,
+                       glm::ivec3 block_pos, glm::ivec3 neighbor_offset)
 
 {
 
@@ -205,7 +204,9 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
   const BlockId neighbor = reader.GetBlock(neighbor_pos);
 
-  const BlockRenderStyle face_style = registry.GetRenderStyle(face_id);
+  const BlockRenderStyle face_style =
+      catalog ? CatalogGetRenderStyle(catalog, face_id)
+              : registry.GetRenderStyle(face_id);
 
   if (neighbor == BLOCK_AIR)
 
@@ -218,7 +219,10 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
   {
 
-    if (registry.GetRenderStyle(neighbor) == BlockRenderStyle::Cutout)
+    const BlockRenderStyle neighbor_style =
+        catalog ? CatalogGetRenderStyle(catalog, neighbor)
+                : registry.GetRenderStyle(neighbor);
+    if (neighbor_style == BlockRenderStyle::Cutout)
 
     {
 
@@ -239,9 +243,13 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
     return registry.IsLiquid(neighbor) && neighbor == face_id;
   }
 
-  const bool face_transparent = registry.IsTransparent(face_id);
+  const bool face_transparent =
+      catalog ? CatalogIsTransparent(catalog, face_id)
+              : registry.IsTransparent(face_id);
 
-  const bool neighbor_transparent = registry.IsTransparent(neighbor);
+  const bool neighbor_transparent =
+      catalog ? CatalogIsTransparent(catalog, neighbor)
+              : registry.IsTransparent(neighbor);
 
   if (face_transparent && neighbor_transparent)
   {
@@ -254,8 +262,8 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   }
 
   const BlockRenderStyle neighbor_render_style =
-
-      registry.GetRenderStyle(neighbor);
+      catalog ? CatalogGetRenderStyle(catalog, neighbor)
+              : registry.GetRenderStyle(neighbor);
 
   if (face_style == BlockRenderStyle::Fluid && !neighbor_transparent)
 
@@ -328,15 +336,18 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 }
 
 bool WaterloggedNeighborHidesFace(IUChunkMeshReader &reader,
-                                  UBlockRegistry &registry, BlockId fluid_id,
-                                  glm::ivec3 block_pos, glm::ivec3 neighbor_offset)
+                                  UBlockRegistry &registry,
+                                  const BlockDefinitionCatalog *catalog,
+                                  BlockId fluid_id, glm::ivec3 block_pos,
+                                  glm::ivec3 neighbor_offset)
 {
   const glm::ivec3 neighbor_pos = block_pos + neighbor_offset;
   if (!CellHasRenderableFluid(reader, registry, neighbor_pos))
   {
     return false;
   }
-  return NeighborHidesFace(reader, registry, fluid_id, block_pos, neighbor_offset);
+  return NeighborHidesFace(reader, registry, catalog, fluid_id, block_pos,
+                           neighbor_offset);
 }
 
 uint8_t FaceLightPacked(IUChunkMeshReader &reader, glm::ivec3 block_pos,
@@ -373,6 +384,7 @@ uint8_t FaceLightPacked(IUChunkMeshReader &reader, glm::ivec3 block_pos,
 
 void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
                                UBlockRegistry &registry,
+                               const BlockDefinitionCatalog *catalog,
                                std::vector<GreedyQuad> &quads, int max_mesh_y)
 {
   const UBlockDefinitionStorage *definitions = registry.GetDefinitions();
@@ -436,7 +448,7 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
 
             glm::ivec3 neighbor_offset(0);
             neighbor_offset[axis] = sign;
-            if (WaterloggedNeighborHidesFace(reader, registry, fluid_id,
+            if (WaterloggedNeighborHidesFace(reader, registry, catalog, fluid_id,
                                                world_pos, neighbor_offset))
             {
               continue;
@@ -513,7 +525,8 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
   }
 }
 
-int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
+int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry,
+                  const BlockDefinitionCatalog *catalog)
 
 {
 
@@ -535,9 +548,10 @@ int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
         const glm::ivec3 local(x, y, z);
         const BlockId id = reader.GetBlockLocal(local);
 
-        if (id != BLOCK_AIR &&
-
-            registry.GetRenderStyle(id) != BlockRenderStyle::Cross)
+        const BlockRenderStyle style =
+            catalog ? CatalogGetRenderStyle(catalog, id)
+                    : registry.GetRenderStyle(id);
+        if (id != BLOCK_AIR && style != BlockRenderStyle::Cross)
 
         {
 
@@ -561,8 +575,8 @@ int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry)
 }
 
 std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
-
-                                           UBlockRegistry &registry)
+                                           UBlockRegistry &registry,
+                                           const BlockDefinitionCatalog *catalog)
 
 {
 
@@ -572,7 +586,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
   const glm::ivec3 chunk_coord = reader.ChunkCoord();
 
-  const int max_mesh_y = MaxMeshLocalY(reader, registry);
+  const int max_mesh_y = MaxMeshLocalY(reader, registry, catalog);
 
   BlockId mask[CHUNK_SIZE][CHUNK_SIZE];
 
@@ -638,7 +652,10 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
               continue;
             }
 
-            if (registry.GetRenderStyle(id) == BlockRenderStyle::Cross)
+            const BlockRenderStyle id_style =
+                catalog ? CatalogGetRenderStyle(catalog, id)
+                        : registry.GetRenderStyle(id);
+            if (id_style == BlockRenderStyle::Cross)
 
             {
 
@@ -649,7 +666,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
 
             neighbor_offset[axis] = sign;
 
-            if (NeighborHidesFace(reader, registry, id, world_pos,
+            if (NeighborHidesFace(reader, registry, catalog, id, world_pos,
 
                                   neighbor_offset))
 
@@ -771,18 +788,16 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
     }
   }
 
-  AppendWaterloggedFluidQuads(reader, registry, quads, max_mesh_y);
+  AppendWaterloggedFluidQuads(reader, registry, catalog, quads, max_mesh_y);
 
   return quads;
 }
 
 } // namespace
 
-std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
-
-                                                      glm::ivec3 chunk_coord,
-
-                                                      UBlockRegistry &registry)
+std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(
+    const UBlockWorld &world, glm::ivec3 chunk_coord, UBlockRegistry &registry,
+    const BlockDefinitionCatalog *catalog)
 
 {
 
@@ -797,20 +812,20 @@ std::vector<GreedyQuad> UGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
 
   UBlockWorldChunkReader reader(world, chunk_coord, chunk);
 
-  return BuildChunkMeshImpl(reader, registry);
+  return BuildChunkMeshImpl(reader, registry, catalog);
 }
 
 std::vector<GreedyQuad>
 
 UGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-
-                              UBlockRegistry &registry)
+                              UBlockRegistry &registry,
+                              const BlockDefinitionCatalog *catalog)
 
 {
 
   USnapshotChunkReader reader(snapshot);
 
-  return BuildChunkMeshImpl(reader, registry);
+  return BuildChunkMeshImpl(reader, registry, catalog);
 }
 
 } // namespace cutum

@@ -595,6 +595,31 @@ bool UChunkMeshCache::ChunkHasLiveGpuDraw(glm::ivec3 chunk_coord) const
   return pipe && pipe->HasGpuMesh(chunk_coord);
 }
 
+uint64_t UChunkMeshCache::QueryLiveGpuResidencyToken(glm::ivec3 chunk_coord) const
+{
+  if (!ChunkHasLiveGpuDraw(chunk_coord))
+  {
+    return 0;
+  }
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end() || it->second.GpuSlotIndex < 0)
+  {
+    return 0;
+  }
+  const UGpuMeshPipeline *pipe = GetGpuMeshPipeline();
+  const GpuMeshSlot *slot =
+      pipe ? pipe->GetAllocator().GetSlot(chunk_coord) : nullptr;
+  const uint32_t quads =
+      slot ? slot->QuadCount
+           : static_cast<uint32_t>(it->second.GpuQuadCount);
+  if (quads == 0)
+  {
+    return 0;
+  }
+  return (static_cast<uint64_t>(quads) << 32) |
+         static_cast<uint32_t>(it->second.GpuSlotIndex);
+}
+
 void UChunkMeshCache::ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord)
 {
   auto it = GreedyCache.find(chunk_coord);

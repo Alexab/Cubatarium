@@ -18,12 +18,14 @@ public:
 
   const char *BackendName() const override { return "android_gpu_hybrid"; }
 
-  std::vector<GreedyQuad> BuildChunkMesh(const UBlockWorld &world,
-                                         glm::ivec3 chunk_coord,
-                                         UBlockRegistry &registry) override;
+  std::vector<GreedyQuad>
+  BuildChunkMesh(const UBlockWorld &world, glm::ivec3 chunk_coord,
+                 UBlockRegistry &registry,
+                 const BlockDefinitionCatalog *catalog = nullptr) override;
 
-  std::vector<GreedyQuad> BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-                                         UBlockRegistry &registry) override;
+  std::vector<GreedyQuad>
+  BuildChunkMesh(const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+                 const BlockDefinitionCatalog *catalog = nullptr) override;
 
   bool CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
                           UBlockRegistry &registry) const override;

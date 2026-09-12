@@ -25,11 +25,12 @@ public:
 
   std::vector<GreedyQuad>
   BuildChunkMesh(const UBlockWorld &world, glm::ivec3 chunk_coord,
-                 UBlockRegistry &registry) override;
+                 UBlockRegistry &registry,
+                 const BlockDefinitionCatalog *catalog = nullptr) override;
 
   std::vector<GreedyQuad>
-  BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-                 UBlockRegistry &registry) override;
+  BuildChunkMesh(const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+                 const BlockDefinitionCatalog *catalog = nullptr) override;
 
   uint64_t GetComputeDispatchCount() const { return ComputeDispatches; }
 

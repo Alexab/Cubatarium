@@ -51,7 +51,7 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **product_anchor PASS (192015):** tag `product_anchor_20260912`. Drawable gates = 090306 class.
 - **194409 post-anchor reflight:** **no drawable regress** vs 192015 — stale **29** (better), stale_delta **2**, job_rr med **6**, visual_holes_frac **0**, enter `live_blockers` ~**3.2s** (≪60s). unfinished scorecard med **2** (anchor 0). Still FAIL full 141350 product gates (stale>2×9, VB, miss_stuck+gpu_kick~0). Keep 192015 as SoT anchor.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
-- **Next:** F5 vs 192015 after SeamOwner/Q5–Q8 land; GreedyMesher catalog-only geometry; EvictionOwner; G1 VB/holes.
+- **Next:** F5 vs 192015 after EvictionOwner + catalog mesher land; enable cutover only after shadow parity; G1 VB/holes.
 
 | Metric (cruise med) | 090306 | 175610 | **192015 Anchor** | **194409** |
 |---|---|---|---|---|

@@ -170,9 +170,9 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q2 renderer oracle / attribution | done — attribution + census mismatch + normal_shutdown_test; GL pixel oracle remains `greedy_vertex_pool_*` / driver (G1 open) |
 | Q3 schedule cost split | done |
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
-| Q4 visual boundary stamps | Strategy A geom-only stamp confirmed; `MeshInputs`/`LightInputs` types; AsyncMeshBuilder batch flags from pinned catalog. Full GreedyMesher registry-free Compute still open |
+| Q4 visual boundary stamps | Strategy A geom-only stamp confirmed; `MeshInputs`/`LightInputs` types; AsyncMeshBuilder + **GreedyMesher** Transparent/Cutout from pinned catalog (liquid/movement still registry). GPU extract path still registry-backed |
 | Q5 tiny-cap publication progress | done for chunk-granular retain + `publication_progress_unit_n`; eviction policy polish open |
-| Q6 ColumnRecord cutover | ShadowCompare default; FirstMeshOwner + RelightOwner + **SeamOwner** Decide*Enqueue (rollback=ShadowCompare). EvictionOwner + real GPU handle export open |
+| Q6 ColumnRecord cutover | ShadowCompare default; FirstMesh/Relight/Seam/**EvictionOwner** Decide* (rollback=ShadowCompare). Real `QueryLiveGpuResidencyToken` → `published_gpu_handle` (no mesh_rev/synthetic 1). Default stage still ShadowCompare |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
 | Q8 frame deadline / async cull stats | **landed** delayed CullStats SubData + `UFrameDeadline` phase wall; producers still must not hard-Exhausted FirstMesh |
 | Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **194409** post-anchor reflight no drawable regress (stale 29, job_rr~6). Full G0/G1 vs 141350 still open |
@@ -189,8 +189,8 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
 | G1 | Не закрыт | Anchor 192015 restores drawable; GL pixel oracle + VB/holes vs 141350 still open |
-| G2 | Не закрыт | Full catalog-only mesher + ColumnRecord Relight/Seam/Eviction owners |
+| G2 | Не закрыт | EvictionOwner + catalog face style landed; full registry-free GPU extract + enabling cutover stages still open |
 | G3 | Не закрыт | Frame deadline soft; не все producers defer by RemainingMs |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: F5 regressions vs **192015** `product_anchor_20260912`; deepen catalog-only GreedyMesher + Relight/Seam cutover.
+Следующий шаг: F5 regressions vs **192015** `product_anchor_20260912`; enable cutover stages only after parity; G1 VB/holes.

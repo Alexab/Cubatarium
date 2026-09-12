@@ -141,19 +141,18 @@ void UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   truth.meshing = meshing;
   truth.gpu_pending = gpu_pending;
   truth.render_ready = render_ready;
-  // Q6: provisional publication owner token from mesh_rev (never fabricate 1).
-  // Full residency cutover still owns the real GPU allocation id later.
+  // Q6: real published GPU residency token (slot+quads); never fabricate 1.
+  // mesh_rev feeds published.mesh_version only (SyncFromWorldTruth), not handle.
   if (render_ready)
   {
-    if (const ColumnRecord *existing = world.GetColumnRecords().Find(column))
+    for (int cy = 0; cy <= max_cy; ++cy)
     {
-      if (existing->mesh_rev != 0)
+      const uint64_t token = mesh.GetCache().QueryLiveGpuResidencyToken(
+          glm::ivec3(column.x, cy, column.y));
+      if (token != 0)
       {
-        truth.published_gpu_handle = existing->mesh_rev;
-      }
-      else if (existing->published.gpu_handle != 0)
-      {
-        truth.published_gpu_handle = existing->published.gpu_handle;
+        truth.published_gpu_handle = token;
+        break;
       }
     }
   }

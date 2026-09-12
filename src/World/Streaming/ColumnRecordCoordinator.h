@@ -70,6 +70,11 @@ public:
   /// RemeshSeam enqueue decision; authoritative when stage >= SeamOwner.
   static bool DecideSeamEnqueue(bool legacy_want, bool record_want,
                                 glm::ivec2 column = {});
+
+  /// Column unload decision; authoritative when stage >= EvictionOwner.
+  /// Not an Enqueue gate — Streamer unload callback must honor this.
+  static bool DecideEvict(bool legacy_want, bool record_want,
+                          glm::ivec2 column = {});
 };
 
 } // namespace cutum

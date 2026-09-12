@@ -232,4 +232,22 @@ bool UColumnRecordCoordinator::DecideSeamEnqueue(bool legacy_want,
   return legacy_want;
 }
 
+bool UColumnRecordCoordinator::DecideEvict(bool legacy_want, bool record_want,
+                                           glm::ivec2 column)
+{
+  const ColumnCutoverStage stage = GetCutoverStage();
+  if (stage >= ColumnCutoverStage::EvictionOwner)
+  {
+    return record_want;
+  }
+  if (legacy_want != record_want)
+  {
+    // Eviction has no ColumnJobStage twin; reuse Absent vs Gen as parity markers.
+    LogShadowMismatch(column,
+                      legacy_want ? ColumnJobStage::Gen : ColumnJobStage::Absent,
+                      record_want ? ColumnJobStage::Gen : ColumnJobStage::Absent);
+  }
+  return legacy_want;
+}
+
 } // namespace cutum

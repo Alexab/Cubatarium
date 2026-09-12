@@ -354,7 +354,8 @@ uint64_t UGpuGreedyMesher::ConsumeMaskReadbackCount()
 std::vector<GreedyQuad>
 UGpuGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
                                  glm::ivec3 chunk_coord,
-                                 UBlockRegistry &registry)
+                                 UBlockRegistry &registry,
+                                 const BlockDefinitionCatalog *catalog)
 {
   const ChunkMeshSnapshot snap =
       ChunkMeshSnapshot::Capture(world, chunk_coord, /*rev*/ 0);
@@ -363,19 +364,20 @@ UGpuGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
   {
     return gpu;
   }
-  return Cpu.BuildChunkMesh(world, chunk_coord, registry);
+  return Cpu.BuildChunkMesh(world, chunk_coord, registry, catalog);
 }
 
 std::vector<GreedyQuad>
 UGpuGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-                                 UBlockRegistry &registry)
+                                 UBlockRegistry &registry,
+                                 const BlockDefinitionCatalog *catalog)
 {
   auto gpu = TryComputeExtract(snapshot, registry);
   if (!gpu.empty())
   {
     return gpu;
   }
-  return Cpu.BuildChunkMesh(snapshot, registry);
+  return Cpu.BuildChunkMesh(snapshot, registry, catalog);
 }
 
 } // namespace cutum

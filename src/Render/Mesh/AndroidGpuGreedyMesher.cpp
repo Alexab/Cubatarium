@@ -201,16 +201,18 @@ UAndroidGpuGreedyMesher::~UAndroidGpuGreedyMesher() = default;
 std::vector<GreedyQuad>
 UAndroidGpuGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
                                         glm::ivec3 chunk_coord,
-                                        UBlockRegistry &registry)
+                                        UBlockRegistry &registry,
+                                        const BlockDefinitionCatalog *catalog)
 {
-  return Cpu.BuildChunkMesh(world, chunk_coord, registry);
+  return Cpu.BuildChunkMesh(world, chunk_coord, registry, catalog);
 }
 
 std::vector<GreedyQuad>
 UAndroidGpuGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-                                        UBlockRegistry &registry)
+                                        UBlockRegistry &registry,
+                                        const BlockDefinitionCatalog *catalog)
 {
-  return Cpu.BuildChunkMesh(snapshot, registry);
+  return Cpu.BuildChunkMesh(snapshot, registry, catalog);
 }
 
 bool UAndroidGpuGreedyMesher::CanDeferGpuExtract(

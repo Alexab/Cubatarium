@@ -1,6 +1,7 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnJobGraph.h"
+#include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/UnderfeetTelemetryPolicy.h"
 #include "World/Streaming/FrameStreamingBudget.h"
@@ -3638,10 +3639,19 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         }
       });
   Streamer->SetUnloadColumnCallback(
-      [this, &world](glm::ivec3 ground, int max_cy)
+      [this, &world](glm::ivec3 ground, int max_cy) -> bool
       {
-        world.ClearPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z));
-        world.ClearColumnEmergeState(glm::ivec2(ground.x, ground.z));
+        const glm::ivec2 col(ground.x, ground.z);
+        // Record retains unload while active pending token exists (keep-until-
+        // replace). ShadowCompare still honors legacy (always unload).
+        const ColumnRecord *rec = world.GetColumnRecords().Find(col);
+        const bool record_want = !rec || !ColumnHasActivePending(*rec);
+        if (!UColumnRecordCoordinator::DecideEvict(true, record_want, col))
+        {
+          return false;
+        }
+        world.ClearPendingLightBeforeMesh(col);
+        world.ClearColumnEmergeState(col); // erases ColumnRecord
         world.GetMeshService().RemoveColumn(ground, max_cy);
         for (int cy = 0; cy <= max_cy; ++cy)
         {
@@ -3652,6 +3662,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           ChunkScheduler->Invalidate(ground);
         }
+        return true;
       });
   Streamer->SetAsyncGeneration(procedural.AsyncChunkGeneration);
   Streamer->SetAsyncCallbacks(

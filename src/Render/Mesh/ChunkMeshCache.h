@@ -71,6 +71,9 @@ public:
   {
     return ChunkHasLiveGpuDraw(chunk_coord);
   }
+  /// Non-zero when chunk has a live GPU draw slot; packs (quads<<32)|slotIndex.
+  /// Never returns a synthetic sentinel (e.g. 1).
+  uint64_t QueryLiveGpuResidencyToken(glm::ivec3 chunk_coord) const;
   /// Fluid column cache invalidation — call on fluid voxel changes only, not
   /// on every mesh remesh.
   void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);

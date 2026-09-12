@@ -143,11 +143,12 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         else
         {
           std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
-          // Geometry still uses registry maps; material flags come from the
-          // pinned catalog so Reload cannot flip Transparent/Cutout mid-job.
+          // Q4: face Transparent/Cutout decisions use pinned catalog inside
+          // GreedyMesher; liquid/movement still via registry.
           const auto quads =
-              Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr)
-                     : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr);
+              Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr, pinned)
+                     : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr,
+                                                    pinned);
           for (const GreedyQuad &q : quads)
           {
             GreedyMeshBatch &batch = byBlockId[q.Id];

@@ -659,7 +659,11 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
 
     if (OnUnloadColumn)
     {
-      OnUnloadColumn(ground, maxCy);
+      // Q6 EvictionOwner: callback may refuse (pending retain / DecideEvict).
+      if (!OnUnloadColumn(ground, maxCy))
+      {
+        continue;
+      }
     }
 
     for (int cy = 0; cy <= maxCy; ++cy)

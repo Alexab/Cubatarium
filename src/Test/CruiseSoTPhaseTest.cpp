@@ -125,6 +125,18 @@ int main()
          "SeamOwner: record decides (enqueue)");
   UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
 
+  UColumnRecordCoordinator::ResetShadowMismatchCount();
+  Expect(UColumnRecordCoordinator::DecideEvict(true, false),
+         "shadow Evict: legacy owns");
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 1,
+         "Evict shadow mismatch counted");
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::EvictionOwner);
+  Expect(!UColumnRecordCoordinator::DecideEvict(true, false),
+         "EvictionOwner: record decides (no unload)");
+  Expect(UColumnRecordCoordinator::DecideEvict(false, true),
+         "EvictionOwner: record decides (unload)");
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

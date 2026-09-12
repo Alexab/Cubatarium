@@ -61,7 +61,8 @@ public:
   using SaveChunkFn = std::function<void(glm::ivec3)>;
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
-  using UnloadColumnFn = std::function<void(glm::ivec3 ground, int max_cy)>;
+  /// Return false to refuse unload this frame (chunks stay loaded).
+  using UnloadColumnFn = std::function<bool(glm::ivec3 ground, int max_cy)>;
   using GenerateColumnFn = std::function<void(int x, int z)>;
   using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
