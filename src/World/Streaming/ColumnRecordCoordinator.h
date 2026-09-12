@@ -57,10 +57,15 @@ public:
                                 ColumnJobStage record_stage);
 
   /// FirstMesh enqueue decision. In ShadowCompare: returns legacy_want and
-  /// logs when record_want differs (no dual job). In FirstMeshOwner: record_want
-  /// is authoritative.
+  /// logs when record_want differs (no dual job). In FirstMeshOwner+: record_want
+  /// is authoritative for FirstMesh.
   static bool DecideFirstMeshEnqueue(bool legacy_want, bool record_want,
                                      glm::ivec2 column = {});
+
+  /// Relight enqueue decision (RelightThenMesh / PromoteRelight). Same shadow
+  /// contract; authoritative when stage >= RelightOwner.
+  static bool DecideRelightEnqueue(bool legacy_want, bool record_want,
+                                   glm::ivec2 column = {});
 };
 
 } // namespace cutum

@@ -1467,6 +1467,12 @@ target_include_directories(block_catalog_queries_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(block_catalog_queries_test PRIVATE glm::glm)
 
+add_executable(mesh_inputs_catalog_test
+    src/Test/MeshInputsCatalogTest.cpp)
+target_include_directories(mesh_inputs_catalog_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_inputs_catalog_test PRIVATE glm::glm)
+
 add_executable(normal_shutdown_test
     src/Test/NormalShutdownTest.cpp
     src/Core/Jobs/JobThreadPool.cpp
@@ -2645,6 +2651,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   visible_black_attribution_test
   draw_oracle_gate_test
   block_catalog_queries_test
+  mesh_inputs_catalog_test
   normal_shutdown_test
   frame_deadline_test
   greedy_vertex_pool_production_test

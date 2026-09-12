@@ -101,6 +101,18 @@ int main()
              ColumnCutoverStage::ShadowCompare,
          "rollback to ShadowCompare");
 
+  UColumnRecordCoordinator::ResetShadowMismatchCount();
+  Expect(UColumnRecordCoordinator::DecideRelightEnqueue(true, false),
+         "shadow Relight: legacy owns");
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 1,
+         "Relight shadow mismatch counted");
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::RelightOwner);
+  Expect(!UColumnRecordCoordinator::DecideRelightEnqueue(true, false),
+         "RelightOwner: record decides (no enqueue)");
+  Expect(UColumnRecordCoordinator::DecideRelightEnqueue(false, true),
+         "RelightOwner: record decides (enqueue)");
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

@@ -273,6 +273,18 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
       return;
     }
   }
+  else if (item.kind == ColumnWorkKind::RelightThenMesh ||
+           item.kind == ColumnWorkKind::PromoteRelight)
+  {
+    const ColumnJobStage record_stage = GetColumnJobStage(item.column);
+    const bool record_want = record_stage != ColumnJobStage::PendingLight &&
+                             record_stage != ColumnJobStage::RenderReady;
+    if (!UColumnRecordCoordinator::DecideRelightEnqueue(true, record_want,
+                                                        item.column))
+    {
+      return;
+    }
+  }
   const int64_t key = CooldownKey(item.column, item.kind);
   const auto it = last_dispatch_frame_.find(key);
   if (it != last_dispatch_frame_.end() &&
