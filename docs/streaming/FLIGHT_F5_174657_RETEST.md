@@ -13,6 +13,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (131523) | `bin/logs/enter_lit_20260912-132402.jsonl` |
 | Post-R1 partial (162400) | `bin/logs/perf_20260912-162400_17536.jsonl` |
 | Enter (162400) | `bin/logs/enter_lit_20260912-162609.jsonl` |
+| Post-S1–S4 FAIL (175610) | `bin/logs/perf_20260912-175610_19976.jsonl` |
+| Enter (175610 soft_clean) | `bin/logs/enter_lit_20260912-175738.jsonl` |
 
 ## Manifest (required)
 
@@ -22,7 +24,7 @@ Record in suite report / notes:
 - build type (Release)
 - GPU / driver
 - seed / world / route notes matching 174657
-- **Next acceptance flight:** Q0 schema-valid perf/INFO (no missing-field→0), plus Q2 attribution fields (`visible_black_*`, pending token, published allocation, pass/bounds version) in period samples
+- **Next acceptance flight:** Strategy A `product_anchor` vs 090306 (drawable gates); then Q2b/Q4/Q6 cutover
 
 ## Commands
 
@@ -36,38 +38,39 @@ python tools/AnalyzePhase57Scorecard.py --report <report.json> --perf bin/logs/p
 ## Hard acceptance (plan §F5)
 
 1. No mass per-block / texture flicker (eye) and no growth of `pool_fence_timeout` / stuck `pool_retired_pending`.
-2. Cruise `mesh_apply_stale` med ≤ 2× 141350 (~20); `mesh_apply_stale_delta` ≈ 090306 (единицы), не 131523-класс (~361).
-3. Enter: `enter_lit_gate_active` clears; settle ≠ `force_ingame_no_uf`; continuous ≪ 60s. Cross-check INFO `settle_reason=` with enter_lit `gate_end` (162400: INFO `live_blockers` but JSONL missing `gate_end` — telem gap).
+2. Cruise `mesh_apply_stale` med ≤ 2× 141350 (~20); `mesh_apply_stale_delta` ≈ 090306 (единицы), не 131523/162400/175610-класс.
+3. Enter: `enter_lit_gate_active` clears; settle ≠ `force_ingame_no_uf`; continuous ≪ 60s.
 4. `unfinished_visual` / empty_backlog not worse than 141350; `column_job_render_ready_n` med > 0.
-5. `wall_ms` may rise vs 174657/131523 — **correctness > FPS**.
-6. After Q2: `visible_black_focus_med` / `focus_missing_frac` must not be accepted as PASS while red vs gates — attribution fields required; unfinished_visual=0 is **not** proof of no black.
-7. After 162400 class: `prep_schedule_policy_ms` must not stay ≈0 while `visual_holes=1`; period0 `mesh_apply_stale_delta` must not be 10^4-class SoftDefer/shed storm.
+5. `wall_ms` may rise — **correctness > FPS**. Wall↓ with stale↑ is a false positive (175610).
+6. After Q2: `visible_black_focus_med` / `focus_missing_frac` must not be accepted as PASS while red vs gates.
+7. Strategy A product_anchor: stale ≪ 162400; job_rr>0; unfinished not growing early→late like 175610; eye: world draws.
 
 ## Status
 
-- **Code/tooling:** F0–F4 landed; Q0–Q10 follow-on; **R1–R3 landed**; **S1–S4 landed** (shed/soft-exit under visual_holes+EnterLitGate; SoftDefer seam damp; enter settle telem gate_end; stale visual/rev split). Release rebuild synced to `bin/Cubatarium.exe` (2026-09-12 ~17:26).
-- **131523:** known-bad reference (Q4 apply asymmetry). Do **not** treat as post-fix acceptance.
-- **162400:** post-R1 partial reference (stale~38k, prep≈0, job_rr≈0; INFO live_blockers / JSONL gap).
-- **Next manual (S5):** same route as 090306/162400 on this rebuild; fill **New** column below. After flight also check `mesh_apply_stale_visual` vs `mesh_apply_stale_rev`.
+- **175610 FAIL (post S1–S4):** worse than 162400 — stale med ~75k (≈100% `mesh_apply_stale_visual`), `discarded_late=116`, `job_rr=0`, `gpu_kick=0`, unfinished 9→41, enter `soft_clean` ~93s. Wall↓ is not acceptance. **S1–S4 SoftDefer/shed path CLOSED-AS-FAILED.**
+- **Strategy A:** revert S1+S2; keep S3/S4 telem; geom-only stamp (visual out of InputsStillValid); restore drawable anchor class 090306; then unlock Q2b→Q4→Q6.
+- **131523 / 162400:** known-bad / post-R1 partial references only.
 
 ```text
 python tools/AnalyzeEnterLit.py bin/logs/enter_lit_<NEW>.jsonl --fail-if-no-settle
 python tools/CompareFlightF5.py --perf bin/logs/perf_<NEW>.jsonl --enter-lit bin/logs/enter_lit_<NEW>.jsonl
 ```
 
-| Metric (cruise med) | 141350 | 174657 | 090306 | 131523 | 162400 | New |
-|---|---|---|---|---|---|---|
-| wall_ms | 141 | 48 | 44.6 | 36 | 52 | |
-| mesh_emerge_med | — | — | 12.9 | ~4 | ~5 | |
-| prep_schedule_policy_ms | — | — | ~7.1 | ~0.01 | **~0.014** | |
-| mesh_apply_stale | 9 | 676 | 46 | ~1.1e5 | **~3.8e4** | |
-| mesh_apply_stale_delta | 0 | 0 | ~4 | ~361 | **~202** | |
-| unfinished_visual | 11 | 24 | 0 | 49 | **35** | |
-| empty_backlog | — | — | 0 | 49 | **35** | |
-| focus_missing_frac | — | — | 0.85 | 1 | 1 | |
-| visual_holes_frac | — | — | 0.70 | 1 | 1 | |
-| visible_black_focus_med | — | — | 63 | 15 | 21 | |
-| column_job mesh / ready | 81/32 | 117/12 | 54/12 | ~49 / **0** | 44 / **0** | |
-| pool_fence_timeout | — | — | 0 | 0 | 0 | |
-| enter gate max continuous ms | — | ~61655 | ~75 | ~150000 | ~18 (INFO) | |
-| enter settle_reason | — | missing | live_blockers | force_ingame_no_uf | INFO live_blockers; JSONL gap | |
+| Metric (cruise med) | 141350 | 174657 | 090306 | 131523 | 162400 | 175610 | Anchor |
+|---|---|---|---|---|---|---|---|
+| wall_ms | 141 | 48 | 44.6 | 36 | 52 | **37** | |
+| mesh_emerge_med | — | — | 12.9 | ~4 | ~5 | ~3.4 | |
+| prep_schedule_policy_ms | — | — | ~7.1 | ~0.01 | ~0.014 | ~0.016 | |
+| mesh_apply_stale | 9 | 676 | 46 | ~1.1e5 | ~3.8e4 | **~7.5e4** | |
+| mesh_apply_stale_delta | 0 | 0 | ~4 | ~361 | ~202 | **~312** | |
+| mesh_apply_stale_visual | — | — | — | — | — | **≈stale** | |
+| mesh_discarded_late | — | — | 0 | 0 | 0 | **116** | |
+| unfinished_visual | 11 | 24 | 0 | 49 | 35 | **28 (9→41)** | |
+| empty_backlog | — | — | 0 | 49 | 35 | **28** | |
+| focus_missing_frac | — | — | 0.85 | 1 | 1 | 1 | |
+| visual_holes_frac | — | — | 0.70 | 1 | 1 | 1 | |
+| visible_black_focus_med | — | — | 63 | 15 | 21 | **36** | |
+| column_job mesh / ready | 81/32 | 117/12 | 54/12 | ~49/0 | 44/0 | **44/0** | |
+| pool_fence_timeout | — | — | 0 | 0 | 0 | 0 | |
+| enter gate max continuous ms | — | ~61655 | ~75 | ~150000 | ~18 | **~93112 soft_clean** | |
+| enter settle_reason | — | missing | live_blockers | force_ingame_no_uf | live_blockers | **soft_clean + abort** | |
