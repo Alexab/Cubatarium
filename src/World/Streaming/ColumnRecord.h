@@ -17,6 +17,8 @@ struct ColumnPublishedState
   /// Opaque residency token; 0 = none. Render maps to real GPU handle.
   uint64_t gpu_handle{0};
   uint32_t bounds_version{0};
+  /// 1 when render_ready mirrored without a real GPU handle (shadow cutover).
+  bool shadow_synthetic{false};
 };
 
 /// In-flight pipeline work (may coexist with published).

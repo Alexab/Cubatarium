@@ -1,5 +1,6 @@
 #include "World/Chunks/BlockQuery.h"
 #include "World/Streaming/ColumnRecord.h"
+#include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/ColumnTicketMap.h"
 #include "World/Streaming/WorldBorderPolicy.h"
 
@@ -68,6 +69,37 @@ int main()
   Expect(rec->desired == ColumnDesiredStage::FirstMesh, "desired mirrored");
   store.Erase(glm::ivec2(1, 2));
   Expect(store.Find(glm::ivec2(1, 2)) == nullptr, "erase clears");
+
+  ColumnRecord shadow_rec{};
+  shadow_rec.mesh_rev = 3;
+  shadow_rec.content_rev = 2;
+  ColumnWorldTruth truth{};
+  truth.has_chunk = true;
+  truth.render_ready = true;
+  UColumnRecordCoordinator::SyncFromWorldTruth(shadow_rec, truth);
+  Expect(shadow_rec.published.gpu_handle == 0, "no synthetic gpu_handle=1");
+  Expect(shadow_rec.published.shadow_synthetic, "render_ready shadow flagged");
+  truth.published_gpu_handle = 42;
+  UColumnRecordCoordinator::SyncFromWorldTruth(shadow_rec, truth);
+  Expect(shadow_rec.published.gpu_handle == 42, "real gpu handle wired");
+  Expect(!shadow_rec.published.shadow_synthetic, "real handle clears shadow");
+
+  UColumnRecordCoordinator::ResetShadowMismatchCount();
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
+  Expect(UColumnRecordCoordinator::DecideFirstMeshEnqueue(true, false),
+         "shadow: legacy owns enqueue");
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 1,
+         "shadow mismatch counted");
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::FirstMeshOwner);
+  Expect(!UColumnRecordCoordinator::DecideFirstMeshEnqueue(true, false),
+         "FirstMeshOwner: record decides (no enqueue)");
+  Expect(UColumnRecordCoordinator::DecideFirstMeshEnqueue(false, true),
+         "FirstMeshOwner: record decides (enqueue)");
+  // Rollback contract: flip stage → legacy.
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
+  Expect(UColumnRecordCoordinator::GetCutoverStage() ==
+             ColumnCutoverStage::ShadowCompare,
+         "rollback to ShadowCompare");
 
   if (gFails != 0)
   {

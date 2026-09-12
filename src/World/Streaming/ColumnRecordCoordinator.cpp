@@ -9,6 +9,10 @@ namespace cutum
 
 namespace
 {
+std::atomic<uint8_t> g_cutover_stage{
+    static_cast<uint8_t>(ColumnCutoverStage::ShadowCompare)};
+std::atomic<uint64_t> g_shadow_mismatch_n{0};
+
 uint64_t NowMs()
 {
   return static_cast<uint64_t>(
@@ -54,6 +58,27 @@ void ClearPending(ColumnRecord &rec)
 
 } // namespace
 
+ColumnCutoverStage UColumnRecordCoordinator::GetCutoverStage()
+{
+  return static_cast<ColumnCutoverStage>(
+      g_cutover_stage.load(std::memory_order_relaxed));
+}
+
+void UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage stage)
+{
+  g_cutover_stage.store(static_cast<uint8_t>(stage), std::memory_order_relaxed);
+}
+
+uint64_t UColumnRecordCoordinator::ShadowMismatchCount()
+{
+  return g_shadow_mismatch_n.load(std::memory_order_relaxed);
+}
+
+void UColumnRecordCoordinator::ResetShadowMismatchCount()
+{
+  g_shadow_mismatch_n.store(0, std::memory_order_relaxed);
+}
+
 ColumnJobStage UColumnRecordCoordinator::SyncFromWorldTruth(
     ColumnRecord &rec, const ColumnWorldTruth &truth)
 {
@@ -66,15 +91,24 @@ ColumnJobStage UColumnRecordCoordinator::SyncFromWorldTruth(
     return ColumnJobStage::Absent;
   }
 
+  // Authoritative GPU/publication owner remains legacy maps until Q6 cutover.
   if (truth.render_ready)
   {
     rec.published.mesh_version = std::max(rec.published.mesh_version, rec.mesh_rev);
-    if (rec.published.gpu_handle == 0)
+    if (truth.published_gpu_handle != 0)
     {
-      rec.published.gpu_handle = 1;
+      rec.published.gpu_handle = truth.published_gpu_handle;
+      rec.published.shadow_synthetic = false;
+    }
+    else
+    {
+      rec.published.gpu_handle = 0;
+      rec.published.shadow_synthetic = true;
     }
     rec.published.bounds_version =
         std::max(rec.published.bounds_version, rec.content_rev);
+    // Useful progress: published drawable advances debt clock.
+    TouchDebtProgress(rec);
   }
 
   const ColumnJobStage pending_stage = PendingStageFromTruth(truth);
@@ -82,9 +116,9 @@ ColumnJobStage UColumnRecordCoordinator::SyncFromWorldTruth(
   {
     const bool progressed = rec.pending.token == 0 ||
                             rec.pending.stage != pending_stage;
-    if (rec.pending.token == 0)
+    if (rec.pending.token == 0 && rec.inflight_job != 0)
     {
-      rec.pending.token = rec.inflight_job != 0 ? rec.inflight_job : 1;
+      rec.pending.token = rec.inflight_job;
       rec.debt.created_at_ms = NowMs();
     }
     rec.pending.stage = pending_stage;
@@ -131,9 +165,31 @@ void UColumnRecordCoordinator::LogShadowMismatch(glm::ivec2 column,
   {
     return;
   }
+  g_shadow_mismatch_n.fetch_add(1, std::memory_order_relaxed);
   VLOG(1) << "ColumnRecord shadow mismatch col=(" << column.x << "," << column.y
           << ") legacy=" << ColumnJobStageName(legacy_stage) << " record="
           << ColumnJobStageName(record_stage);
+}
+
+bool UColumnRecordCoordinator::DecideFirstMeshEnqueue(bool legacy_want,
+                                                      bool record_want,
+                                                      glm::ivec2 column)
+{
+  const ColumnCutoverStage stage = GetCutoverStage();
+  if (stage >= ColumnCutoverStage::FirstMeshOwner)
+  {
+    return record_want;
+  }
+  // ShadowCompare: never dual-enqueue; legacy owns; log parity gaps.
+  if (legacy_want != record_want)
+  {
+    LogShadowMismatch(column,
+                      legacy_want ? ColumnJobStage::Meshing
+                                  : ColumnJobStage::Absent,
+                      record_want ? ColumnJobStage::Meshing
+                                  : ColumnJobStage::Absent);
+  }
+  return legacy_want;
 }
 
 } // namespace cutum

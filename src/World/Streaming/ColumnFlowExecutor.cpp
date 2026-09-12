@@ -141,6 +141,22 @@ void UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   truth.meshing = meshing;
   truth.gpu_pending = gpu_pending;
   truth.render_ready = render_ready;
+  // Q6: provisional publication owner token from mesh_rev (never fabricate 1).
+  // Full residency cutover still owns the real GPU allocation id later.
+  if (render_ready)
+  {
+    if (const ColumnRecord *existing = world.GetColumnRecords().Find(column))
+    {
+      if (existing->mesh_rev != 0)
+      {
+        truth.published_gpu_handle = existing->mesh_rev;
+      }
+      else if (existing->published.gpu_handle != 0)
+      {
+        truth.published_gpu_handle = existing->published.gpu_handle;
+      }
+    }
+  }
 
   ColumnRecord &rec = world.GetColumnRecords().GetOrCreate(column);
   const ColumnJobStage from_record =
@@ -243,6 +259,20 @@ void UColumnFlowExecutor::FlushPromoteRequest()
 
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
 {
+  if (item.kind == ColumnWorkKind::FirstMesh)
+  {
+    // Q6: ShadowCompare keeps legacy enqueue; FirstMeshOwner uses record stage.
+    const ColumnJobStage record_stage = GetColumnJobStage(item.column);
+    const bool record_want =
+        record_stage != ColumnJobStage::RenderReady &&
+        record_stage != ColumnJobStage::Meshing &&
+        record_stage != ColumnJobStage::GpuPending;
+    if (!UColumnRecordCoordinator::DecideFirstMeshEnqueue(true, record_want,
+                                                          item.column))
+    {
+      return;
+    }
+  }
   const int64_t key = CooldownKey(item.column, item.kind);
   const auto it = last_dispatch_frame_.find(key);
   if (it != last_dispatch_frame_.end() &&
