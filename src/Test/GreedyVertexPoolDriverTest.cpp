@@ -111,6 +111,17 @@ int RunGreedyPoolDriverTest()
     if (glGetError() != GL_NO_ERROR)
       ++failures;
   }
+  // G1: negative pixel sample — cleared FB without draw must read dark
+  // (FalseNegCull stand-in until world object-id masks exist).
+  if (linked)
+  {
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    unsigned char dark[4]{255, 255, 255, 255};
+    glReadPixels(32, 32, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, dark);
+    if (dark[0] > 10 || dark[1] > 10 || dark[2] > 10)
+      ++failures;
+  }
   pool.Destroy();
   glDeleteVertexArrays(1, &vao);
   glDeleteProgram(program);

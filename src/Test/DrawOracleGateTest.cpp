@@ -95,6 +95,16 @@ int main()
     Expect(ClassifyCoord(ProbeFromCensus(true, true, true, true, true,
                                          false)) == DrawClass::CorrectLit,
            "ProbeFromCensus happy path");
+
+    const auto hist = cutum::AccumulateDrawOracleFromVbCensus(
+        /*unfinished*/ 2, /*stale*/ 3, /*repair*/ 4, /*no_ticket*/ 1,
+        /*stalled*/ 1, /*legal*/ 5);
+    Expect(hist.missing_resident_n == 2, "unfinished → MissingResident");
+    Expect(hist.stale_vertex_light_n == 3, "stale → StaleVertexLight");
+    Expect(hist.legal_dark_n == 5, "legal cave → LegalDark");
+    Expect(hist.correct_lit_proxy_n == 6, "fully-dark repair paths → CorrectLit proxy");
+    Expect(hist.false_neg_cull_n == 0, "CPU census has no FalseNegCull");
+    Expect(hist.fault_n == 2 + 3, "faults = missing + stale");
   }
 
   // Fault injection: MissingResident must fail when expect is CorrectLit.

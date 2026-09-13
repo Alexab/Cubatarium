@@ -207,4 +207,67 @@ inline DrawClass DrawClassFromVisibleBlackCensus(VisibleBlackCause cause,
                                        legal));
 }
 
+/// Aggregated DrawClass histogram from focus census (CPU stand-in for G1).
+/// VB columns are treated as published+commanded; FalseNegCull stays 0 until
+/// GL pixel/object-id fills `pixel_or_object_hit=false` cases.
+struct DrawOracleCensusCounts
+{
+  int missing_resident_n{0};
+  int missing_command_n{0};
+  int false_neg_cull_n{0};
+  int stale_vertex_light_n{0};
+  int legal_dark_n{0};
+  int correct_lit_proxy_n{0};
+  int fault_n{0};
+};
+
+inline DrawOracleCensusCounts AccumulateDrawOracleFromVbCensus(
+    int unfinished_visual, int stale_lit_n, int fully_dark_repair_n,
+    int fully_dark_no_ticket_n, int fully_dark_stalled_n, int legal_dark_n)
+{
+  DrawOracleCensusCounts out;
+  out.missing_resident_n = unfinished_visual > 0 ? unfinished_visual : 0;
+  auto bump = [&](VisibleBlackCause cause, int n)
+  {
+    if (n <= 0)
+    {
+      return;
+    }
+    // VB census columns already have drawable mesh → has_gpu + in_commands.
+    const DrawClass c =
+        DrawClassFromVisibleBlackCensus(cause, true, true, true);
+    switch (c)
+    {
+    case DrawClass::MissingResident:
+      out.missing_resident_n += n;
+      break;
+    case DrawClass::MissingCommand:
+      out.missing_command_n += n;
+      break;
+    case DrawClass::FalseNegCull:
+      out.false_neg_cull_n += n;
+      break;
+    case DrawClass::StaleVertexLight:
+      out.stale_vertex_light_n += n;
+      break;
+    case DrawClass::LegalDark:
+      out.legal_dark_n += n;
+      break;
+    case DrawClass::CorrectLit:
+      out.correct_lit_proxy_n += n;
+      break;
+    case DrawClass::Irrelevant:
+      break;
+    }
+  };
+  bump(VisibleBlackCause::StaleDarkWithLitField, stale_lit_n);
+  bump(VisibleBlackCause::FullyDarkPendingRepair, fully_dark_repair_n);
+  bump(VisibleBlackCause::FullyDarkNoTicket, fully_dark_no_ticket_n);
+  bump(VisibleBlackCause::FullyDarkStalledTicket, fully_dark_stalled_n);
+  bump(VisibleBlackCause::LegalDarkNoRepair, legal_dark_n);
+  out.fault_n = out.missing_resident_n + out.missing_command_n +
+                out.false_neg_cull_n + out.stale_vertex_light_n;
+  return out;
+}
+
 } // namespace cutum

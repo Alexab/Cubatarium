@@ -1317,6 +1317,27 @@ void UWorldStreaming::RefreshStreamingPressure(
             ? 1
             : 0;
     {
+      const cutum::DrawOracleCensusCounts oracle =
+          cutum::AccumulateDrawOracleFromVbCensus(
+              unfinished_visual, rp.last_visible_black_stale_lit,
+              rp.last_visible_black_fully_dark_repair,
+              rp.last_visible_black_fully_dark_no_ticket,
+              rp.last_visible_black_fully_dark_stalled,
+              rp.last_visible_black_legal_dark);
+      world.PhysicsTelemetryData.DrawOracleMissingResidentN =
+          oracle.missing_resident_n;
+      world.PhysicsTelemetryData.DrawOracleMissingCommandN =
+          oracle.missing_command_n;
+      world.PhysicsTelemetryData.DrawOracleFalseNegCullN =
+          oracle.false_neg_cull_n;
+      world.PhysicsTelemetryData.DrawOracleStaleVertexLightN =
+          oracle.stale_vertex_light_n;
+      world.PhysicsTelemetryData.DrawOracleLegalDarkN = oracle.legal_dark_n;
+      world.PhysicsTelemetryData.DrawOracleCorrectLitProxyN =
+          oracle.correct_lit_proxy_n;
+      world.PhysicsTelemetryData.DrawOracleFaultN = oracle.fault_n;
+    }
+    {
       UWorld::FocusRingVisualSample ring_update =
           world.GetFocusRingVisualSample();
       ring_update.frame_epoch = world.GetStreamingFrameEpoch();

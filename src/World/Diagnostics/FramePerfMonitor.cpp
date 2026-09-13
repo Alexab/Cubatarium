@@ -503,6 +503,13 @@ struct FrameNumbers
   int visible_black_fully_dark_stalled_n{0};
   int visible_black_legal_dark_n{0};
   int visible_black_census_mismatch{0};
+  int draw_oracle_missing_resident_n{0};
+  int draw_oracle_missing_command_n{0};
+  int draw_oracle_false_neg_cull_n{0};
+  int draw_oracle_stale_vertex_light_n{0};
+  int draw_oracle_legal_dark_n{0};
+  int draw_oracle_correct_lit_proxy_n{0};
+  int draw_oracle_fault_n{0};
   int focus_not_render_ready{0};
   int focus_pressure{0};
   int focus_dirty_chunks{0};
@@ -1106,6 +1113,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.visible_black_fully_dark_stalled_n = phys.VisibleBlackFullyDarkStalledN;
   n.visible_black_legal_dark_n = phys.VisibleBlackLegalDarkN;
   n.visible_black_census_mismatch = phys.VisibleBlackCensusMismatch;
+  n.draw_oracle_missing_resident_n = phys.DrawOracleMissingResidentN;
+  n.draw_oracle_missing_command_n = phys.DrawOracleMissingCommandN;
+  n.draw_oracle_false_neg_cull_n = phys.DrawOracleFalseNegCullN;
+  n.draw_oracle_stale_vertex_light_n = phys.DrawOracleStaleVertexLightN;
+  n.draw_oracle_legal_dark_n = phys.DrawOracleLegalDarkN;
+  n.draw_oracle_correct_lit_proxy_n = phys.DrawOracleCorrectLitProxyN;
+  n.draw_oracle_fault_n = phys.DrawOracleFaultN;
   n.focus_not_render_ready = phys.FocusNotRenderReady;
   n.focus_pressure = phys.FocusPressure;
   n.focus_dirty_chunks = phys.FocusDirtyChunks;
@@ -1730,6 +1744,18 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"visible_black_legal_dark_n\":" << n.visible_black_legal_dark_n
           << ",\"visible_black_census_mismatch\":"
           << n.visible_black_census_mismatch
+          << ",\"draw_oracle_missing_resident_n\":"
+          << n.draw_oracle_missing_resident_n
+          << ",\"draw_oracle_missing_command_n\":"
+          << n.draw_oracle_missing_command_n
+          << ",\"draw_oracle_false_neg_cull_n\":"
+          << n.draw_oracle_false_neg_cull_n
+          << ",\"draw_oracle_stale_vertex_light_n\":"
+          << n.draw_oracle_stale_vertex_light_n
+          << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
+          << ",\"draw_oracle_correct_lit_proxy_n\":"
+          << n.draw_oracle_correct_lit_proxy_n
+          << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
           << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
           << ",\"focus_pressure\":" << n.focus_pressure
           << ",\"focus_dirty_chunks\":" << n.focus_dirty_chunks
@@ -2021,6 +2047,18 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"visible_black_legal_dark_n\":" << n.visible_black_legal_dark_n
           << ",\"visible_black_census_mismatch\":"
           << n.visible_black_census_mismatch
+          << ",\"draw_oracle_missing_resident_n\":"
+          << n.draw_oracle_missing_resident_n
+          << ",\"draw_oracle_missing_command_n\":"
+          << n.draw_oracle_missing_command_n
+          << ",\"draw_oracle_false_neg_cull_n\":"
+          << n.draw_oracle_false_neg_cull_n
+          << ",\"draw_oracle_stale_vertex_light_n\":"
+          << n.draw_oracle_stale_vertex_light_n
+          << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
+          << ",\"draw_oracle_correct_lit_proxy_n\":"
+          << n.draw_oracle_correct_lit_proxy_n
+          << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms

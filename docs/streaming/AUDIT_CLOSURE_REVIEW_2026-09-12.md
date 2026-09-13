@@ -169,7 +169,7 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q1 CI gates | done |
 | Q2 renderer oracle / attribution | done — attribution + census mismatch + normal_shutdown_test; GL pixel oracle remains `greedy_vertex_pool_*` / driver (G1 open) |
 | Q3 schedule cost split | done |
-| Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`) + **census→DrawOracle adapters** (`ProbeFromCensus` / `DrawClassFromVisibleBlackCensus`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1) |
+| Q2 renderer oracle / attribution | done — attribution + census + DrawOracle CPU gate + **production DrawOracle census histogram** (`draw_oracle_*_n` in perf JSONL). GL pixel smoke: `greedy_vertex_pool_* --driver` (pos+neg readPixels); world object-id masks still open (G1) |
 | Q4 visual boundary stamps | Strategy A geom-only stamp; MeshInputs; WorkerCompute + **main-thread Kick/occupancy/emit** prefer pinned `inputCatalog` (registry fallback) |
 | Q6 ColumnRecord cutover | **EvictionOwner default** — ladder F5-proven through **162247** (mismatch **0**) |
 | Q7 admission reserve-before-allocate | CaptureAndStore + CaptureAndCommitOnMain + **worker capture enqueue** snapshot reserve |
@@ -185,9 +185,9 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | **Частично закрыт** | Q9 3+3 drawable PASS; schema/manifest already fail-closed. Product VB/missing vs 141350 still out of G0 scope |
-| G1 | Не закрыт | VB med ~67–78 still red vs 141350; GL pixel/object-id oracle residual |
+| G1 | Не закрыт | VB med ~67–78 still red vs 141350; DrawOracle census histogram now in JSONL; world object-id/pixel masks open |
 | G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through Q9 batch |
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **Q8 cull async** + **Q2b census→DrawOracle CPU adapters**; G1 GL pixel oracle / VB vs 141350 без ослабления gates.
+Следующий шаг: **G1** — разбор `draw_oracle_*` на F5 (LegalDark vs StaleVertexLight vs MissingResident); world object-id masks; без ослабления VB≥40 / holes / enter.

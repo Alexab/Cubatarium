@@ -577,6 +577,14 @@ struct PhysicsTelemetry
   int VisibleBlackLegalDarkN{0};
   /// Q2: UnfinishedVisual==0 but VisibleBlackFocusN>0 at publish (census mismatch).
   int VisibleBlackCensusMismatch{0};
+  /// G1/Q2b: DrawOracle class histogram from focus census (CPU stand-in).
+  int DrawOracleMissingResidentN{0};
+  int DrawOracleMissingCommandN{0};
+  int DrawOracleFalseNegCullN{0};
+  int DrawOracleStaleVertexLightN{0};
+  int DrawOracleLegalDarkN{0};
+  int DrawOracleCorrectLitProxyN{0};
+  int DrawOracleFaultN{0};
   /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
   /// Not pending+dirty pressure — see FocusPressure.
   int FocusNotRenderReady{0};
