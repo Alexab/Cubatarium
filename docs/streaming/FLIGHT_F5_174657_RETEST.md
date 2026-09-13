@@ -49,6 +49,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (163717) | `bin/logs/enter_lit_20260913-163733.jsonl` |
 | Q9 cold#2 (164153) | `bin/logs/perf_20260913-164153_40080.jsonl` |
 | Enter (164153) | `bin/logs/enter_lit_20260913-164205.jsonl` |
+| Q9 cold#3 + edits (164735) | `bin/logs/perf_20260913-164735_20040.jsonl` |
+| Enter (164735) | `bin/logs/enter_lit_20260913-164751.jsonl` |
 
 ## Manifest (required)
 
@@ -95,18 +97,18 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **162247 post-Q4main+Q7 batch (`7a1f8c70`):** **drawable PASS vs 192015** — stale **29**, unfinished **0**, holes **0**, job_rr **~14.5**, enter ~**71ms**, wall **34.8**, VB **~63**. `stage_disagree` med **~4**. `shadow_mismatch_n` **0**. Batch (main-thread catalog Kick + worker capture reserve) holds drawable; VB best recent vs 141350 still red on missing/VB gates.
 - **163717 Q9 cold#1 / post-Q8 (`9ab070e0`):** **drawable PASS vs 192015** — stale **55.5** (≈anchor), unfinished **0**, holes **0**, job_rr **~8**, enter ~**2.64s**, wall **50.4**, VB **~67**. `shadow_mismatch_n` **0**. `frame_deadline_remaining_ms` cruise med **0** (Q8 soft deadline active). Product vs 141350 still FAIL (missing/VB). **Q9 freeze build = `9ab070e0`** — do not rebuild mid-batch.
 - **164153 Q9 cold#2:** **drawable PASS** — stale **46.5**, unfinished **0**, holes **0**, enter ~**75ms**, wall **42.9**, VB **~71**, mismatch **0**.
+- **164735 Q9 cold#3 (+edits at end):** **drawable PASS** — unfinished **0**, holes **0**, mismatch **0**, enter ~**3.0s**, wall **37.5**, VB **~70**. stale **115** and `drop_no_active` **17** elevated vs cruise-only (edit stress / `phase_abort_heavy`); not 175610-class. New process PID → counts as **cold**, not warm.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
-- **Next:** Q9 cold **#3**, then warm **×3** — same exe, no rebuild.
+- **Next:** **warm ×3** — same exe, **do not close** the game between the three; repeat route (edits optional once in the series).
 
-| Metric (cruise med) | **192015** | **163717** | **164153** |
+| Metric (cruise med) | **163717** | **164153** | **164735** |
 |---|---|---|---|
-| wall_ms | 52.6 | **50.4** | **42.9** |
-| mesh_apply_stale | 55 | **55.5** | **46.5** |
+| wall_ms | 50.4 | **42.9** | **37.5** |
+| mesh_apply_stale | 55.5 | **46.5** | **115** (edits) |
 | unfinished_visual | 0 | **0** | **0** |
-| visual_holes_frac | 0.53 | **0** | **0** |
-| visible_black_focus_med | 64 | **~67** | **~71** |
-| enter continuous ms | ~78 | **~2644** | **~75** |
-| shadow_mismatch_n | — | **0** | **0** |
+| visual_holes | 0 | **0** | **0** |
+| enter continuous ms | ~2644 | **~75** | **~3028** |
+| shadow_mismatch_n | 0 | **0** | **0** |
 
 ## Q9 batch procedure (G0)
 
@@ -116,7 +118,7 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 |---|---|---|
 | cold 1 | **done** | `perf_20260913-163717_34068.jsonl` |
 | cold 2 | **done** | `perf_20260913-164153_40080.jsonl` |
-| cold 3 | pending | |
+| cold 3 | **done** (+edits) | `perf_20260913-164735_20040.jsonl` |
 | warm 1 | pending | |
 | warm 2 | pending | |
 | warm 3 | pending | |
