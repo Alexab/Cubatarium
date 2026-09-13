@@ -173,11 +173,14 @@ int main()
   ready_rec.resident = true;
   ready_rec.published.mesh_version = 1;
   ready_rec.published.gpu_handle = 7;
-  Expect(!UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(ready_rec),
-         "published RenderReady rejects FirstMesh want");
+  Expect(UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(ready_rec),
+         "RenderReady may still want FirstMesh (SoftDefer repair)");
+  Expect(UColumnRecordCoordinator::RecordWantsRelightEnqueue(ready_rec),
+         "RenderReady may still want Relight");
   Expect(UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(gen_rec),
          "Gen still wants FirstMesh");
-
+  Expect(!UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(pending_mesh),
+         "Meshing pending still rejects FirstMesh");
   // Stage shadow disagree is a per-pass gauge, not the Decide* counter.
   UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(0);
   Expect(UColumnRecordCoordinator::ShadowStageDisagreeFocusN() == 0,

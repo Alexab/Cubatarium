@@ -10,7 +10,7 @@ namespace cutum
 namespace
 {
 std::atomic<uint8_t> g_cutover_stage{
-    static_cast<uint8_t>(ColumnCutoverStage::ShadowCompare)};
+    static_cast<uint8_t>(ColumnCutoverStage::FirstMeshOwner)};
 std::atomic<uint64_t> g_shadow_mismatch_n{0};
 std::atomic<int> g_shadow_stage_disagree_focus_n{0};
 
@@ -171,18 +171,20 @@ ColumnJobStage UColumnRecordCoordinator::DeriveJobStageFromRecord(
 bool UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(
     const ColumnRecord &rec)
 {
+  // Keep-until-replace only: refuse while Meshing/GpuPending is already tracked.
+  // RenderReady may still want FirstMesh (SoftDefer empty / hole repair on a
+  // published predecessor) — matches legacy SLA and FirstMeshOwner cutover.
   const ColumnJobStage stage = DeriveJobStageFromRecord(rec);
-  return stage != ColumnJobStage::RenderReady &&
-         stage != ColumnJobStage::Meshing &&
+  return stage != ColumnJobStage::Meshing &&
          stage != ColumnJobStage::GpuPending;
 }
 
 bool UColumnRecordCoordinator::RecordWantsRelightEnqueue(
     const ColumnRecord &rec)
 {
+  // Refuse while PendingLight already in flight; RenderReady may still relight.
   const ColumnJobStage stage = DeriveJobStageFromRecord(rec);
-  return stage != ColumnJobStage::PendingLight &&
-         stage != ColumnJobStage::RenderReady;
+  return stage != ColumnJobStage::PendingLight;
 }
 
 bool UColumnRecordCoordinator::RecordWantsSeamEnqueue(const ColumnRecord &rec)

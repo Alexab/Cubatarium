@@ -55,7 +55,8 @@ public:
   /// Derive scheduler stage from record (published + pending independent).
   static ColumnJobStage DeriveJobStageFromRecord(const ColumnRecord &rec);
 
-  /// Record-side enqueue wants from ColumnRecord SoT (not legacy job-stage map).
+  /// Record-side enqueue wants: keep-until-replace only (reject in-flight
+  /// Meshing/GpuPending/PendingLight). RenderReady may still want FirstMesh/Relight.
   static bool RecordWantsFirstMeshEnqueue(const ColumnRecord &rec);
   static bool RecordWantsRelightEnqueue(const ColumnRecord &rec);
   static bool RecordWantsSeamEnqueue(const ColumnRecord &rec);
