@@ -100,12 +100,18 @@ int main()
         /*unfinished*/ 2, /*stale*/ 3, /*repair*/ 4, /*no_ticket*/ 1,
         /*stalled*/ 1, /*legal*/ 5);
     Expect(hist.missing_resident_n == 2, "unfinished → MissingResident");
-    Expect(hist.stale_vertex_light_n == 3, "stale → StaleVertexLight");
+    Expect(hist.stale_vertex_light_n == 3 + 6,
+           "stale + FullyDark* → StaleVertexLight");
     Expect(hist.legal_dark_n == 5, "legal cave → LegalDark");
-    Expect(hist.correct_lit_proxy_n == 6, "fully-dark repair paths → CorrectLit proxy");
+    Expect(hist.correct_lit_proxy_n == 0,
+           "FullyDark* is not CorrectLit proxy (Q2b)");
     Expect(hist.fully_dark_debt_n == 6, "fully_dark_debt sums repair buckets");
     Expect(hist.false_neg_cull_n == 0, "CPU census has no FalseNegCull");
-    Expect(hist.fault_n == 2 + 3, "faults = missing + stale");
+    Expect(hist.fault_n == 2 + 3 + 6, "faults = missing + stale + FullyDark");
+    Expect(DrawClassFromVisibleBlackCensus(
+               VisibleBlackCause::FullyDarkPendingRepair, true, true, true) ==
+               DrawClass::StaleVertexLight,
+           "FullyDarkPendingRepair → StaleVertexLight");
   }
 
   // Fault injection: MissingResident must fail when expect is CorrectLit.

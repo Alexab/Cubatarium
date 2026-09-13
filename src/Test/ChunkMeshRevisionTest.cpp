@@ -115,8 +115,8 @@ int main()
          "P4: no GPU slot to keep");
   Expect(ShouldRouteRemeshToFirstMeshQueue(false, false),
          "Closeout C: missing → FirstMeshQ");
-  Expect(ShouldRouteRemeshToFirstMeshQueue(true, true),
-         "Closeout C: FullyDark drawable → FirstMeshQ");
+  Expect(!ShouldRouteRemeshToFirstMeshQueue(true, true),
+         "Q2b: FullyDark drawable → RemeshQ (not FirstMeshQ)");
   Expect(!ShouldRouteRemeshToFirstMeshQueue(true, false),
          "Closeout C: lit drawable → RemeshQ");
 

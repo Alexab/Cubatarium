@@ -49,6 +49,8 @@ struct MeshWorkAdmissionInput
   int column_loaded_no_mesh_n{0};
   /// FZ2.7-P13 R1: repairable dark faces (mesh dark, field lit).
   int dark_face_stale_near_n{0};
+  /// Q2b: FullyDark pending-repair census (VB) — Remesh floor under HoleDrain.
+  int visible_black_fully_dark_repair_n{0};
   /// SRBR-P1: ticketed VB stand remesh protect (no stale required).
   int visible_black_focus_n{0};
   int visible_black_no_ticket_n{0};
@@ -193,13 +195,23 @@ inline bool ShouldStealRemeshToFirstMesh(bool holes, int unfinished, int dirty_f
   return dirty_fm * 2 < no_mesh;
 }
 
-/// FZ2.7-P13 R1: drawable FullyDark / stale faces need Remesh floor even under
-/// FM steal (manual 154246: remesh_cap sticky=1, dark_face_stale~3200).
+/// FZ2.7-P13 R1 / Q2b: drawable FullyDark or stale faces need Remesh floor even
+/// under FM steal (201330: repair debt high while remesh_cap starved).
 inline bool ShouldProtectLitSettleRemesh(bool holes, int dark_face_stale_near,
                                          int remesh_queue_n,
-                                         int stale_thresh = 200)
+                                         int stale_thresh = 200,
+                                         int fully_dark_repair_n = 0,
+                                         int fully_dark_thresh = 20)
 {
-  return holes && dark_face_stale_near > stale_thresh && remesh_queue_n > 0;
+  if (!holes || remesh_queue_n <= 0)
+  {
+    return false;
+  }
+  if (dark_face_stale_near > stale_thresh)
+  {
+    return true;
+  }
+  return fully_dark_repair_n >= fully_dark_thresh;
 }
 
 /// FZ2.7-P17: on long stand with sticky VB + stale plateau, keep remesh
@@ -788,7 +800,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   // FZ2.7-P13 R2: keep Remesh floor under stale lit-settle even if A2 stole.
   // FM schedule boost from steal is retained; only remesh is restored.
   const bool protect_lit = ShouldProtectLitSettleRemesh(
-      holes, in.dark_face_stale_near_n, in.remesh_queue_n);
+      holes, in.dark_face_stale_near_n, in.remesh_queue_n, 200,
+      in.visible_black_fully_dark_repair_n, 20);
   // SRBR-P1: ticketed VB stand also needs remesh floor (stale often 0 after P17).
   const bool protect_ticketed_vb =
       !consume_mode &&

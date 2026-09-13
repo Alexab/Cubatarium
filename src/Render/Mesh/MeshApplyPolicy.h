@@ -116,11 +116,14 @@ inline bool ShouldKeepLitPackedUntilBind(bool had_lit_drawable, int horiz,
                                           has_replacement_bound);
 }
 
-/// Closeout C dual-Q: lit drawable remesh → RemeshQ; missing/FullyDark → FM.
+/// Q2b/G1 dual-Q: FirstMeshQ = MissingResident only. Published FullyDark is
+/// StaleVertexLight remesh (RemeshQ). Closeout C routed FullyDark→FM and mixed
+/// classes under HoleDrain (201330: dirty_fm~129 vs remesh~32, schedule_ok=1).
 inline bool ShouldRouteRemeshToFirstMeshQueue(bool has_drawable,
                                              bool fully_dark_drawable)
 {
-  return !has_drawable || fully_dark_drawable;
+  (void)fully_dark_drawable;
+  return !has_drawable;
 }
 
 /// Era21 I-M6: under FOV miss, SoftDefer Capture is blocked only by a live

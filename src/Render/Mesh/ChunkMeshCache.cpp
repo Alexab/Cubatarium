@@ -2320,7 +2320,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
       PreferKickPendingGpuQueued(chunkCoord);
       return;
     }
-    // Era50: FullyDark under enter drain → Dirty (not RAA PreferKick loop).
+    // Era50 / Q2b: FullyDark under enter drain → RemeshQ (not RAA PreferKick loop).
     if (ChunkHasFullyDarkFace(chunkCoord) && HasDrawableGreedyMesh(chunkCoord) &&
         !EnterLitQuiesce)
     {
@@ -2559,12 +2559,16 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
         PreferKickPendingGpuQueued(chunkCoord);
         return;
       }
-      // Era50: FullyDark remesh under enter drain must enter Dirty (async→GPU).
-      // RAA park + EnterGpuQuiesceDrain PreferKick-only = remesh no-op loop.
+      // Era50 / Q2b: FullyDark remesh under enter drain → RemeshQ (StaleVertexLight),
+      // not FirstMeshQ. Demote if Closeout C parked it in FM.
       if (ChunkHasFullyDarkFace(chunkCoord) && !EnterLitQuiesce)
       {
         const bool existed_dark = Dirty.Contains(chunkCoord);
-        Dirty.MarkDirtyPriority(chunkCoord);
+        if (Dirty.IsFirstMesh(chunkCoord))
+        {
+          Dirty.Erase(chunkCoord);
+        }
+        Dirty.MarkDirty(chunkCoord);
         if (!existed_dark)
         {
           BumpChunkMeshRevision(chunkCoord);
@@ -2589,8 +2593,22 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     }
   }
   // Re-prioritize / re-queue: bump only when newly entering Dirty.
+  // Q2b: MissingResident → FirstMeshQ; published FullyDark → RemeshQ.
   const bool existed = Dirty.Contains(chunkCoord);
-  Dirty.MarkDirtyPriority(chunkCoord);
+  const bool has_drawable = HasDrawableGreedyMesh(chunkCoord);
+  const bool fully_dark = ChunkHasFullyDarkFace(chunkCoord);
+  if (ShouldRouteRemeshToFirstMeshQueue(has_drawable, fully_dark))
+  {
+    Dirty.MarkDirtyPriority(chunkCoord);
+  }
+  else
+  {
+    if (Dirty.IsFirstMesh(chunkCoord))
+    {
+      Dirty.Erase(chunkCoord);
+    }
+    Dirty.MarkDirty(chunkCoord);
+  }
   if (!existed)
   {
     BumpChunkMeshRevision(chunkCoord);

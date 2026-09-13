@@ -185,9 +185,9 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | **Частично закрыт** | Q9 3+3 drawable PASS; schema/manifest already fail-closed. Product VB/missing vs 141350 still out of G0 scope |
-| G1 | Не закрыт | **195525:** wall/cap OK; miss_stuck regress. Next: keep FullyDark remesh under hole-starve + hitch clamp only wall>80 |
+| G1 | Не закрыт | **Q2b contract:** FullyDark→StaleVertexLight+RemeshQ (не FM/CorrectLit). Stop heuristic floors; next F5 checks dirty_fm↓ remesh↑ fault_n≈VB |
 | G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through Q9 batch |
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **один F5** на новом exe — смотреть `visible_black_fully_dark_*`, `draw_oracle_fully_dark_debt_n`, `relight_apply_n`; ожидание: stalled↓ после void Note+critical Relight. Без ослабления VB≥40.
+Следующий шаг: **F5 на Q2b dual-Q** — `draw_oracle_fault_n` ≈ stale+FullyDark debt; `dirty_fm_n` не раздут FullyDark; `dirty_remesh_n`/`remesh_schedule` несут VB repair; без новых Capture/MarkRelit floors.

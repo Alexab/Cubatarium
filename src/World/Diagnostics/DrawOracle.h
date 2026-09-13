@@ -195,13 +195,19 @@ inline DrawOracleProbe ProbeFromCensus(bool desired_visible,
 
 /// Map VisibleBlackCause + residency into DrawClass for census→oracle bridge.
 /// Published VB columns (unfinished==0) are never MissingResident.
+/// FullyDark* is StaleVertexLight (G1 fault): published dark mesh needing remesh,
+/// not CorrectLit and not LegalDark (AUDIT Q2 / inv.6).
 inline DrawClass DrawClassFromVisibleBlackCensus(VisibleBlackCause cause,
                                                  bool has_published_gpu,
                                                  bool in_pass_commands,
                                                  bool cpu_hit)
 {
   const bool legal = cause == VisibleBlackCause::LegalDarkNoRepair;
-  const bool light_ok = cause != VisibleBlackCause::StaleDarkWithLitField;
+  const bool light_ok =
+      cause != VisibleBlackCause::StaleDarkWithLitField &&
+      cause != VisibleBlackCause::FullyDarkPendingRepair &&
+      cause != VisibleBlackCause::FullyDarkNoTicket &&
+      cause != VisibleBlackCause::FullyDarkStalledTicket;
   return ClassifyCoord(ProbeFromCensus(/*desired*/ true, has_published_gpu,
                                        in_pass_commands, cpu_hit, light_ok,
                                        legal));
@@ -271,6 +277,7 @@ inline DrawOracleCensusCounts AccumulateDrawOracleFromVbCensus(
   bump(VisibleBlackCause::FullyDarkNoTicket, fully_dark_no_ticket_n);
   bump(VisibleBlackCause::FullyDarkStalledTicket, fully_dark_stalled_n);
   bump(VisibleBlackCause::LegalDarkNoRepair, legal_dark_n);
+  // FullyDark* → StaleVertexLight; keep fully_dark_debt as explicit G1 side-band.
   out.fault_n = out.missing_resident_n + out.missing_command_n +
                 out.false_neg_cull_n + out.stale_vertex_light_n;
   return out;

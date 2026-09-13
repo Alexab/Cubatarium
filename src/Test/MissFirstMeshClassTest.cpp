@@ -2308,6 +2308,10 @@ int main()
            "P13 R1: !holes → no protect");
     Expect(!ShouldProtectLitSettleRemesh(true, 3200, 0),
            "P13 R1: empty RemeshQ → no protect");
+    Expect(ShouldProtectLitSettleRemesh(true, 0, 10, 200, 40, 20),
+           "Q2b: FullyDark repair debt arms remesh protect");
+    Expect(!ShouldProtectLitSettleRemesh(true, 0, 10, 200, 10, 20),
+           "Q2b: FullyDark repair below thresh skips");
 
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;

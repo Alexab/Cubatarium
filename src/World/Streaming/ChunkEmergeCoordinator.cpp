@@ -2589,6 +2589,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         world.GetPhysicsTelemetry().ColumnLoadedNoMeshN;
     ain.dark_face_stale_near_n =
         world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+    ain.visible_black_fully_dark_repair_n =
+        world.GetPhysicsTelemetry().VisibleBlackFullyDarkRepairN;
     ain.visible_black_focus_n =
         world.GetPhysicsTelemetry().VisibleBlackFocusN;
     ain.visible_black_no_ticket_n =
@@ -5219,6 +5221,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         world.GetPhysicsTelemetry().ColumnLoadedNoMeshN;
     ain.dark_face_stale_near_n =
         world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+    ain.visible_black_fully_dark_repair_n =
+        world.GetPhysicsTelemetry().VisibleBlackFullyDarkRepairN;
     ain.visible_black_focus_n =
         world.GetPhysicsTelemetry().VisibleBlackFocusN;
     ain.visible_black_no_ticket_n =
