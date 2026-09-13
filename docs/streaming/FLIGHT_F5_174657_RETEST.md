@@ -45,6 +45,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (133707) | `bin/logs/enter_lit_20260913-133721.jsonl` |
 | Post-Q4main+Q7 batch (162247) | `bin/logs/perf_20260913-162247_18156.jsonl` |
 | Enter (162247) | `bin/logs/enter_lit_20260913-162301.jsonl` |
+| Q9 cold#1 / post-Q8 (163717) | `bin/logs/perf_20260913-163717_34068.jsonl` |
+| Enter (163717) | `bin/logs/enter_lit_20260913-163733.jsonl` |
 
 ## Manifest (required)
 
@@ -53,7 +55,7 @@ Record in suite report / notes:
 - git SHA: tag **`product_anchor_20260912`** (`8c9bf59a` tip at tag); post-anchor tip advances on `cursor_audit_impl2`
 - build type (Release); exe sha256 prefix `AC7003B329F8984B` (anchor build)
 - route: same as 090306 / 174657-class
-- INFO … post-Q4 GPU-extract catalog: `...INFO.20260913-133705.37796`; post-Q4main+Q7 batch: `...INFO.20260913-162245.18156`
+- INFO … post-Q4main+Q7 batch: `...INFO.20260913-162245.18156`; Q9 cold#1 / post-Q8: `...INFO.20260913-163715.34068`
 
 ## Commands
 
@@ -89,25 +91,35 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **133156 post-EvictionOwner (`9c841c72`):** **drawable PASS vs 192015** — stale **16**, unfinished **0**, holes **0**, job_rr **~8**, enter ~**68ms**, wall **49.1**, VB **~70**. `stage_disagree` med **~2**. `shadow_mismatch_n` **0**. Q6 cutover ladder F5-proven (FirstMesh→Relight→Seam→Eviction). Product vs 141350 still FAIL (missing/VB).
 - **133707 post-Q4 worker GPU-extract catalog (`911dec6e`):** **drawable PASS vs 192015** — stale **29**, unfinished **0**, holes **0**, job_rr **~7**, enter ~**2.65s**, wall **44.4**, VB **~80**. `stage_disagree` med **0**. `shadow_mismatch_n` **0**. Product vs 141350 still FAIL (missing/VB; miss_stuck).
 - **162247 post-Q4main+Q7 batch (`7a1f8c70`):** **drawable PASS vs 192015** — stale **29**, unfinished **0**, holes **0**, job_rr **~14.5**, enter ~**71ms**, wall **34.8**, VB **~63**. `stage_disagree` med **~4**. `shadow_mismatch_n` **0**. Batch (main-thread catalog Kick + worker capture reserve) holds drawable; VB best recent vs 141350 still red on missing/VB gates.
+- **163717 Q9 cold#1 / post-Q8 (`9ab070e0`):** **drawable PASS vs 192015** — stale **55.5** (≈anchor), unfinished **0**, holes **0**, job_rr **~8**, enter ~**2.64s**, wall **50.4**, VB **~67**. `shadow_mismatch_n` **0**. `frame_deadline_remaining_ms` cruise med **0** (Q8 soft deadline active). Product vs 141350 still FAIL (missing/VB). **Q9 freeze build = `9ab070e0`** — do not rebuild mid-batch.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
-- **Next:** Q9 **3 cold + 3 warm** on one exe (this tip + Q8 soft deadline on capture/apply/gpu-kick). No more micro-F5. Use `tools/q9_acceptance_suite.py`. Include stop/reverse/edits/unload when possible.
+- **Next:** finish Q9 on **same exe** — cold **2–3** + warm **1–3** (5 more). Then aggregate with `q9_acceptance_suite.py`. No code/threshold changes until the six are done.
 
-| Metric (cruise med) | **192015** | **133707** | **162247** |
+| Metric (cruise med) | **192015** | **162247** | **163717** |
 |---|---|---|---|
-| wall_ms | 52.6 | **44.4** | **34.8** |
-| mesh_apply_stale | 55 | **29** | **29** |
+| wall_ms | 52.6 | **34.8** | **50.4** |
+| mesh_apply_stale | 55 | **29** | **55.5** |
 | unfinished_visual | 0 | **0** | **0** |
 | visual_holes_frac | 0.53 | **0** | **0** |
-| visible_black_focus_med | 64 | **~80** | **~63** |
-| column_job ready med | ~1 | **~7** | **~14.5** |
-| enter continuous ms | ~78 | **~2650** | **~71** |
+| visible_black_focus_med | 64 | **~63** | **~67** |
+| column_job ready med | ~1 | **~14.5** | **~8** |
+| enter continuous ms | ~78 | **~71** | **~2644** |
 | shadow_mismatch_n | — | **0** | **0** |
 
 ## Q9 batch procedure (G0)
 
-Same build for all six flights. Do **not** change code/thresholds between them.
+**Frozen tip:** `9ab070e0`. Same `bin/Cubatarium.exe` for all six. Do **not** rebuild or change thresholds.
 
-1. Cold ×3: full restart → same route as 162247/174657-class → stop after cruise.
+| Slot | Status | Perf |
+|---|---|---|
+| cold 1 | **done** | `perf_20260913-163717_34068.jsonl` |
+| cold 2 | pending | |
+| cold 3 | pending | |
+| warm 1 | pending | |
+| warm 2 | pending | |
+| warm 3 | pending | |
+
+1. Cold ×3: full restart → same route as 163717/174657-class → stop after cruise.
 2. Warm ×3: reload/continue without cold restart if possible, same route.
 3. Prefer covering once across the six: reverse, small edits, unload/reload, normal shutdown.
 4. Aggregate:
@@ -115,7 +127,7 @@ Same build for all six flights. Do **not** change code/thresholds between them.
 ```text
 python tools/q9_acceptance_suite.py --cold 3 --warm 3 --seed <seed> --route 174657-class \
   --out bin/suite_reports/q9_<stamp>.json \
-  --flight bin/logs/perf_c1.jsonl:bin/logs/enter_c1.jsonl \
-  ... (6 pairs)
+  --flight bin/logs/perf_20260913-163717_34068.jsonl:bin/logs/enter_lit_20260913-163733.jsonl \
+  --flight ... (5 more pairs)
 ```
 

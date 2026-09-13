@@ -174,7 +174,7 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q6 ColumnRecord cutover | **EvictionOwner default** — ladder F5-proven through **162247** (mismatch **0**) |
 | Q7 admission reserve-before-allocate | CaptureAndStore + CaptureAndCommitOnMain + **worker capture enqueue** snapshot reserve |
 | Q8 frame deadline | ColumnFlow Relight/Seam + **capture drain / async apply / GPU kick** soft-defer (`UFrameDeadline`; hole/deep critical). Async cull HUD sync still open |
-| Q9 F5 acceptance | **162247** drawable PASS. Harness ready — need **3 cold + 3 warm** |
+| Q9 F5 acceptance | **Q9 in progress** on freeze `9ab070e0`: cold#1 **163717** PASS. Need cold 2–3 + warm 1–3 |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
 | Q10 domain boundaries | include allowlist burn-down note; domain CMake libs open |
 
@@ -184,10 +184,10 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
-| G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | 162247 holes 0; VB med **~63** still red vs 141350 |
-| G2 | Частично | Q4/Q6/Q7 F5-proven through **162247** |
+| G0 | Частично | Q9 freeze `9ab070e0`; cold#1 **163717** logged — 5 flights remain |
+| G1 | Не закрыт | 163717 holes 0; VB med **~67** still red vs 141350 |
+| G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through **163717** |
 | G3 | Частично | Q8 soft deadline on column + capture/apply/gpu-kick; upload/cull residual |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **Q9 3 cold + 3 warm** на билде с Q8 soft deadline (после этой сборки). Без микро-F5.
+Следующий шаг: **ещё 5 пролётов Q9** на том же `Cubatarium.exe` (`9ab070e0`) — без rebuild. Потом `q9_acceptance_suite.py`.
