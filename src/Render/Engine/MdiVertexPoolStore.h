@@ -78,7 +78,7 @@ public:
   double LastCullGpuExecMs() const;
   bool CullGpuTimingAvailable() const { return CullGpuTimingAvailable_; }
 
-  /// Enable rare CullStatsSsbo GetBufferSubData (default off — hot path free).
+  /// Enable async CullStats HUD samples (fence + staging; no blocking SubData).
   void SetCullStatsReadbackEnabled(bool enabled)
   {
     CullStatsReadbackEnabled_ = enabled;
@@ -125,9 +125,25 @@ private:
   bool CullInitAttempted{false};
   bool CullProgramIsSphere{false};
   bool CullStatsReadbackEnabled_{false};
-  bool CullStatsPendingRead_{false};
   bool StagedCullStatsValid_{false};
   uint64_t StagedCullStatsVisible_{0};
+
+  /// Q8: delayed CullStats samples — copy SSBO→staging + fence; poll timeout=0.
+  struct CullStatsAsyncRing
+  {
+    static constexpr int kSlots = 4;
+    GLuint Staging[kSlots]{};
+    void *Fence[kSlots]{};
+    bool Pending[kSlots]{};
+    int WriteIdx{0};
+    bool Initialized{false};
+  };
+  CullStatsAsyncRing CullStatsAsync_{};
+
+  void EnsureCullStatsAsyncRing();
+  void DestroyCullStatsAsyncRing();
+  void PollCullStatsAsyncRing();
+  void ArmCullStatsAsyncSample();
 
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};
@@ -136,11 +152,11 @@ private:
   void *MappedPtr{nullptr};
 };
 
-/// Period consume of CullStatsSsbo GetBufferSubData count (sync readback).
+/// Period consume of completed CullStats readbacks (async or legacy).
 uint64_t ConsumeGpuCullStatsReadbackCount();
-/// Q8: sync SubData reads gated to stats-on + delayed sample path.
+/// Q8: blocking SubData / ClientWaitSync count (should stay ~0 on HUD path).
 uint64_t ConsumeCullStatsSyncReadN();
-/// Arm one upcoming ApplyGpuCompactCull to SubData CullStats (period/HUD).
+/// Arm one upcoming ApplyGpuCompactCull for an async CullStats sample.
 void RequestCullStatsReadbackOnce();
 
 } // namespace cutum

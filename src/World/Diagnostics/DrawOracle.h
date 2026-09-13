@@ -1,5 +1,7 @@
 #pragma once
 
+#include "World/Streaming/VisibleBlackAttribution.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -163,6 +165,46 @@ inline OracleGateResult OracleGate(const std::vector<SmallOracleExpected> &scene
 inline bool LegalDarkDemandConverges(int enqueue_attempts, int max_allowed)
 {
   return enqueue_attempts >= 0 && enqueue_attempts <= max_allowed;
+}
+
+/// Census mismatch (WorldStreaming): unfinished_visual==0 && VB focus > 0.
+inline bool CensusMismatchRequiresOracle(int unfinished_visual,
+                                         int visible_black_focus_n)
+{
+  return unfinished_visual == 0 && visible_black_focus_n > 0;
+}
+
+/// CPU census → DrawOracleProbe. When GL pixel is unavailable, pass
+/// `cpu_frustum_or_command_hit` as the pixel stand-in (resident+command path).
+inline DrawOracleProbe ProbeFromCensus(bool desired_visible,
+                                       bool has_published_gpu,
+                                       bool in_pass_commands,
+                                       bool cpu_frustum_or_command_hit,
+                                       bool light_revision_ok,
+                                       bool cave_legal_dark)
+{
+  DrawOracleProbe p;
+  p.desired_visible = desired_visible;
+  p.has_published_gpu = has_published_gpu;
+  p.in_pass_commands = in_pass_commands;
+  p.pixel_or_object_hit = cpu_frustum_or_command_hit;
+  p.light_revision_ok = light_revision_ok;
+  p.cave_legal_dark = cave_legal_dark;
+  return p;
+}
+
+/// Map VisibleBlackCause + residency into DrawClass for census→oracle bridge.
+/// Published VB columns (unfinished==0) are never MissingResident.
+inline DrawClass DrawClassFromVisibleBlackCensus(VisibleBlackCause cause,
+                                                 bool has_published_gpu,
+                                                 bool in_pass_commands,
+                                                 bool cpu_hit)
+{
+  const bool legal = cause == VisibleBlackCause::LegalDarkNoRepair;
+  const bool light_ok = cause != VisibleBlackCause::StaleDarkWithLitField;
+  return ClassifyCoord(ProbeFromCensus(/*desired*/ true, has_published_gpu,
+                                       in_pass_commands, cpu_hit, light_ok,
+                                       legal));
 }
 
 } // namespace cutum

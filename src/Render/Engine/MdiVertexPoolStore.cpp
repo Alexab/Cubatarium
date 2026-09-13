@@ -209,6 +209,7 @@ UMdiVertexPoolStore::~UMdiVertexPoolStore()
     glDeleteBuffers(1, &CullStatsSsbo);
     CullStatsSsbo = 0;
   }
+  DestroyCullStatsAsyncRing();
   if (CullGpuTimeRing_.Initialized)
   {
     glDeleteQueries(GpuTimestampQueryRing::kSlots, CullGpuTimeRing_.Queries);
@@ -241,6 +242,143 @@ void UMdiVertexPoolStore::EndCullGpuTimestamp(const uint64_t frame_id)
 {
   (void)frame_id;
   PollCullGpuTimestampRing();
+}
+
+void UMdiVertexPoolStore::EnsureCullStatsAsyncRing()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return;
+#else
+  if (CullStatsAsync_.Initialized)
+  {
+    return;
+  }
+  glGenBuffers(CullStatsAsyncRing::kSlots, CullStatsAsync_.Staging);
+  for (int i = 0; i < CullStatsAsyncRing::kSlots; ++i)
+  {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsAsync_.Staging[i]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t), nullptr,
+                 GL_DYNAMIC_READ);
+    CullStatsAsync_.Fence[i] = nullptr;
+    CullStatsAsync_.Pending[i] = false;
+  }
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  CullStatsAsync_.WriteIdx = 0;
+  CullStatsAsync_.Initialized = true;
+#endif
+}
+
+void UMdiVertexPoolStore::DestroyCullStatsAsyncRing()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (!CullStatsAsync_.Initialized)
+  {
+    return;
+  }
+  for (int i = 0; i < CullStatsAsyncRing::kSlots; ++i)
+  {
+    if (CullStatsAsync_.Fence[i])
+    {
+      glDeleteSync(static_cast<GLsync>(CullStatsAsync_.Fence[i]));
+      CullStatsAsync_.Fence[i] = nullptr;
+    }
+    CullStatsAsync_.Pending[i] = false;
+  }
+  glDeleteBuffers(CullStatsAsyncRing::kSlots, CullStatsAsync_.Staging);
+  for (int i = 0; i < CullStatsAsyncRing::kSlots; ++i)
+  {
+    CullStatsAsync_.Staging[i] = 0;
+  }
+  CullStatsAsync_.Initialized = false;
+#endif
+}
+
+void UMdiVertexPoolStore::PollCullStatsAsyncRing()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return;
+#else
+  if (!CullStatsAsync_.Initialized)
+  {
+    return;
+  }
+  for (int i = 0; i < CullStatsAsyncRing::kSlots; ++i)
+  {
+    if (!CullStatsAsync_.Pending[i])
+    {
+      continue;
+    }
+    auto *fence = static_cast<GLsync>(CullStatsAsync_.Fence[i]);
+    if (!fence)
+    {
+      CullStatsAsync_.Pending[i] = false;
+      continue;
+    }
+    // Non-blocking: never ClientWait with timeout>0 on HUD path.
+    const GLenum r = glClientWaitSync(fence, 0, 0);
+    if (r == GL_TIMEOUT_EXPIRED)
+    {
+      continue;
+    }
+    if (r == GL_ALREADY_SIGNALED || r == GL_CONDITION_SATISFIED)
+    {
+      uint32_t visible = 0;
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsAsync_.Staging[i]);
+      glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t),
+                         &visible);
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+      ++gCullStatsReadback;
+      // Not a sync stall: fence already signaled before SubData.
+      StagedCullStatsVisible_ = visible;
+      StagedCullStatsValid_ = true;
+    }
+    glDeleteSync(fence);
+    CullStatsAsync_.Fence[i] = nullptr;
+    CullStatsAsync_.Pending[i] = false;
+  }
+#endif
+}
+
+void UMdiVertexPoolStore::ArmCullStatsAsyncSample()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return;
+#else
+  if (CullStatsSsbo == 0)
+  {
+    return;
+  }
+  EnsureCullStatsAsyncRing();
+  if (!CullStatsAsync_.Initialized)
+  {
+    return;
+  }
+  int slot = -1;
+  for (int offset = 0; offset < CullStatsAsyncRing::kSlots; ++offset)
+  {
+    const int candidate =
+        (CullStatsAsync_.WriteIdx + offset) % CullStatsAsyncRing::kSlots;
+    if (!CullStatsAsync_.Pending[candidate])
+    {
+      slot = candidate;
+      break;
+    }
+  }
+  if (slot < 0)
+  {
+    // Ring full — drop sample; HUD keeps last staged / CPU AABB.
+    return;
+  }
+  glBindBuffer(GL_COPY_READ_BUFFER, CullStatsSsbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, CullStatsAsync_.Staging[slot]);
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
+                      sizeof(uint32_t));
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  CullStatsAsync_.Fence[slot] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  CullStatsAsync_.Pending[slot] = CullStatsAsync_.Fence[slot] != nullptr;
+  CullStatsAsync_.WriteIdx = (slot + 1) % CullStatsAsyncRing::kSlots;
+#endif
 }
 
 void UMdiVertexPoolStore::PollCullGpuTimestampRing()
@@ -985,25 +1123,14 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
                              std::chrono::steady_clock::now() - submit_t0)
                              .count();
 
-  // Q8: sync SubData only when stats armed AND a delayed sample is available.
+  // Q8: HUD/perf uses fence-delayed staging copy — no blocking SubData wait.
+  PollCullStatsAsyncRing();
   const bool stats_enabled =
       CullStatsReadbackEnabled_ ||
       gCullStatsReadbackOnce.exchange(false, std::memory_order_relaxed);
-  if (stats_enabled && CullStatsPendingRead_ && CullStatsSsbo != 0)
-  {
-    uint32_t visible = 0;
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsSsbo);
-    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &visible);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    ++gCullStatsReadback;
-    ++gCullStatsSyncReadN;
-    StagedCullStatsVisible_ = visible;
-    StagedCullStatsValid_ = true;
-    CullStatsPendingRead_ = false;
-  }
   if (stats_enabled)
   {
-    CullStatsPendingRead_ = true;
+    ArmCullStatsAsyncSample();
   }
   if (stats_enabled && StagedCullStatsValid_)
   {

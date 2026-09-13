@@ -69,6 +69,34 @@ int main()
   Expect(LegalDarkDemandConverges(2, 2), "bounded repair converges");
   Expect(!LegalDarkDemandConverges(3, 2), "unbounded repair fails gate");
 
+  // Q2b: census → DrawOracle adapters (CPU; GL pixel remains driver path).
+  {
+    using cutum::CensusMismatchRequiresOracle;
+    using cutum::DrawClassFromVisibleBlackCensus;
+    using cutum::ProbeFromCensus;
+    Expect(CensusMismatchRequiresOracle(0, 63),
+           "census mismatch when unfinished=0 and VB>0");
+    Expect(!CensusMismatchRequiresOracle(1, 63),
+           "no oracle alarm while unfinished>0");
+    Expect(!CensusMismatchRequiresOracle(0, 0), "no mismatch when VB=0");
+
+    const auto legal = DrawClassFromVisibleBlackCensus(
+        VisibleBlackCause::LegalDarkNoRepair, true, true, true);
+    Expect(legal == DrawClass::LegalDark,
+           "census LegalDark maps to DrawClass::LegalDark");
+    const auto stale = DrawClassFromVisibleBlackCensus(
+        VisibleBlackCause::StaleDarkWithLitField, true, true, true);
+    Expect(stale == DrawClass::StaleVertexLight,
+           "census stale-dark maps to StaleVertexLight");
+    const auto missing = DrawClassFromVisibleBlackCensus(
+        VisibleBlackCause::FullyDarkNoTicket, false, false, false);
+    Expect(missing == DrawClass::MissingResident,
+           "no GPU → MissingResident even from VB cause");
+    Expect(ClassifyCoord(ProbeFromCensus(true, true, true, true, true,
+                                         false)) == DrawClass::CorrectLit,
+           "ProbeFromCensus happy path");
+  }
+
   // Fault injection: MissingResident must fail when expect is CorrectLit.
   {
     auto broken = scene;

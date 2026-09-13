@@ -169,25 +169,25 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q1 CI gates | done |
 | Q2 renderer oracle / attribution | done — attribution + census mismatch + normal_shutdown_test; GL pixel oracle remains `greedy_vertex_pool_*` / driver (G1 open) |
 | Q3 schedule cost split | done |
-| Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
+| Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`) + **census→DrawOracle adapters** (`ProbeFromCensus` / `DrawClassFromVisibleBlackCensus`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1) |
 | Q4 visual boundary stamps | Strategy A geom-only stamp; MeshInputs; WorkerCompute + **main-thread Kick/occupancy/emit** prefer pinned `inputCatalog` (registry fallback) |
 | Q6 ColumnRecord cutover | **EvictionOwner default** — ladder F5-proven through **162247** (mismatch **0**) |
 | Q7 admission reserve-before-allocate | CaptureAndStore + CaptureAndCommitOnMain + **worker capture enqueue** snapshot reserve |
-| Q8 frame deadline | ColumnFlow Relight/Seam + **capture drain / async apply / GPU kick** soft-defer (`UFrameDeadline`; hole/deep critical). Async cull HUD sync still open |
-| Q9 F5 acceptance | **Q9 cold×3 done** on `9ab070e0` (163717/164153/164735). Need **warm ×3** |
+| Q8 frame deadline | ColumnFlow Relight/Seam + **capture drain / async apply / GPU kick** soft-defer (`UFrameDeadline`; hole/deep critical). **Cull HUD async** — fence + staging ring; `cull_stats_sync_read_n` stays 0 on HUD path |
+| Q9 F5 acceptance | **done** on freeze `9ab070e0`: cold 163717/164153/164735 + warm multi-lap **171111** (6× round-trip). Suite `bin/suite_reports/q9_20260913_final.json` → `all_drawable_ok=true` |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
-| Q10 domain boundaries | include allowlist burn-down note; domain CMake libs open |
+| Q10 domain boundaries | include allowlist burn-down note; domain CMake libs open (deferred until G1/G2) |
 
-G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
+G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаются открытыми (см. матрицу).
 
 ## Статус gates и следующий коммит
 
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
-| G0 | Частично | Q9 cold×3 done; **warm ×3** remain (same exe, no close) |
-| G1 | Не закрыт | 163717 holes 0; VB med **~67** still red vs 141350 |
-| G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through **163717** |
-| G3 | Частично | Q8 soft deadline on column + capture/apply/gpu-kick; upload/cull residual |
+| G0 | **Частично закрыт** | Q9 3+3 drawable PASS; schema/manifest already fail-closed. Product VB/missing vs 141350 still out of G0 scope |
+| G1 | Не закрыт | VB med ~67–78 still red vs 141350; GL pixel/object-id oracle residual |
+| G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through Q9 batch |
+| G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **ещё 5 пролётов Q9** на том же `Cubatarium.exe` (`9ab070e0`) — без rebuild. Потом `q9_acceptance_suite.py`.
+Следующий шаг: **Q8 cull async** + **Q2b census→DrawOracle CPU adapters**; G1 GL pixel oracle / VB vs 141350 без ослабления gates.

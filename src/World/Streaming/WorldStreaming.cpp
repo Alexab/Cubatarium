@@ -14,6 +14,7 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Diagnostics/DrawOracle.h"
 #include "World/Diagnostics/Profile.h"
 #include "World/Diagnostics/ScopedPhase.h"
 #include "World/Core/RuntimeTuning.h"
@@ -1312,7 +1313,9 @@ void UWorldStreaming::RefreshStreamingPressure(
     world.PhysicsTelemetryData.VisibleBlackLegalDarkN =
         rp.last_visible_black_legal_dark;
     world.PhysicsTelemetryData.VisibleBlackCensusMismatch =
-        (unfinished_visual == 0 && rp.vb_published > 0) ? 1 : 0;
+        cutum::CensusMismatchRequiresOracle(unfinished_visual, rp.vb_published)
+            ? 1
+            : 0;
     {
       UWorld::FocusRingVisualSample ring_update =
           world.GetFocusRingVisualSample();
