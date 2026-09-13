@@ -10,7 +10,7 @@ namespace cutum
 namespace
 {
 std::atomic<uint8_t> g_cutover_stage{
-    static_cast<uint8_t>(ColumnCutoverStage::SeamOwner)};
+    static_cast<uint8_t>(ColumnCutoverStage::EvictionOwner)};
 std::atomic<uint64_t> g_shadow_mismatch_n{0};
 std::atomic<int> g_shadow_stage_disagree_focus_n{0};
 

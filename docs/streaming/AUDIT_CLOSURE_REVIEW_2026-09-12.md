@@ -171,8 +171,8 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q3 schedule cost split | done |
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
 | Q4 visual boundary stamps | Strategy A geom-only stamp; MeshInputs types; WorkerCompute **pinned catalog for faces+liquid+movement+cross** (GPU extract eligibility still registry residual) |
-| Q6 ColumnRecord cutover | **SeamOwner default** after **130708** Relight F5 PASS (mismatch **0**). Rollback: RelightOwner. Eviction still ShadowCompare |
-| Q9 F5 acceptance flight | **130708** drawable PASS (stale 24, holes 0, enter~67ms, VB~75.5). Need post-SeamOwner F5 |
+| Q6 ColumnRecord cutover | **EvictionOwner default** after **131728** Seam F5 PASS (mismatch **0**). Full FirstMesh→Relight→Seam→Eviction ladder. Rollback: SeamOwner |
+| Q9 F5 acceptance flight | **131728** drawable PASS (stale 25, holes 0, enter~2.15s, VB~74). Need post-EvictionOwner F5 |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
 | Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + soft-defer Relight/Seam; **FirstMesh never hard-killed** |
 | Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + CaptureAndCommitOnMain snapshot reserve |
@@ -186,9 +186,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | 130708 holes 0; VB med **~75.5** still red vs 141350 |
-| G2 | Частично | FirstMesh+Relight proven (**130708** Decide mismatch **0**); SeamOwner default ON — F5 required; Eviction ShadowCompare |
+| G1 | Не закрыт | 131728 holes 0; VB med **~74** still red vs 141350 |
+| G2 | Частично | Q6 ladder complete in code (EvictionOwner default); F5 after Eviction required; Decide mismatch **0** on 130708/131728 |
 | G3 | Частично | ColumnFlow DrainBudget/RemeshSeam soft-defer by Exhausted; FirstMesh floor; apply/upload still local budgets |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: manual F5 after SeamOwner; then EvictionOwner; Q4 GPU-extract catalog residual; Q9 3+3.
+Следующий шаг: manual F5 after EvictionOwner; then Q4 GPU-extract catalog residual; Q9 3 cold+3 warm.

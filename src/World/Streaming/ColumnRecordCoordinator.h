@@ -31,7 +31,7 @@ enum class ColumnCutoverStage : uint8_t
   FirstMeshOwner = 1, ///< RecordCoordinator sole FirstMesh Enqueue/Cancel owner.
   RelightOwner = 2, ///< + RelightThenMesh / PromoteRelight sole owner.
   SeamOwner = 3, ///< + RemeshSeam sole owner.
-  EvictionOwner = 4,
+  EvictionOwner = 4, ///< + unload refuse while active pending (keep-until-replace).
 };
 
 /// M11: scheduling-state coordinator (shadow-friendly; no duplicate jobs).
@@ -39,7 +39,7 @@ class UColumnRecordCoordinator
 {
 public:
   static ColumnCutoverStage GetCutoverStage();
-  /// Rollback: set RelightOwner / FirstMeshOwner / ShadowCompare as needed.
+  /// Rollback: set SeamOwner / RelightOwner / FirstMeshOwner / ShadowCompare.
   static void SetCutoverStage(ColumnCutoverStage stage);
 
   static uint64_t ShadowMismatchCount();
