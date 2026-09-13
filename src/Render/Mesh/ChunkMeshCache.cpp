@@ -1,5 +1,6 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/FrameDeadline.h"
 #include "Core/Jobs/PipelineAdmission.h"
 #include "Render/Camera/Frustum.h"
 #include "Render/Engine/DistanceFog.h"
@@ -3250,6 +3251,11 @@ void UChunkMeshCache::DrainCaptureWorkerCommits(const UBlockWorld &world,
   {
     return;
   }
+  // Q8: soft shared deadline — capture commit is not FirstMesh floor work.
+  if (UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/false))
+  {
+    return;
+  }
   for (auto done : CaptureWorker->DrainCompleted(max_per_frame))
   {
     const glm::ivec3 coord = done.token.coord;
@@ -4219,6 +4225,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   while (kicked < kick_cap && processed < max_count && budget_left() &&
          pipeline->HasFreeReadbackSlot())
   {
+    // Q8: after Finish pass, soft-defer new GPU kicks when frame budget is
+    // exhausted. Hole/deep modes keep kicking (critical hole progress).
+    if (UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/
+                                            hole_finish_bias))
+    {
+      break;
+    }
     if (budget_ms > 0.0 && elapsed_ms() >= budget_ms * kick_cut)
     {
       break; // Finish-only remainder — avoid Kick counter-sync storm
@@ -6543,6 +6556,14 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
     {
       MarkDirtyPriority(coord);
     }
+  }
+  // Q8: soft shared deadline on apply. Hole/deep keep applying (visual floor).
+  const bool apply_critical =
+      WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
+      WorkAdmission.mode == MeshWorkAdmission::Mode::DeepBacklog;
+  if (UFrameDeadline::ShouldDeferProducer(apply_critical))
+  {
+    return;
   }
   for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {

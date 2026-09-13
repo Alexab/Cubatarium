@@ -171,13 +171,11 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q3 schedule cost split | done |
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
 | Q4 visual boundary stamps | Strategy A geom-only stamp; MeshInputs; WorkerCompute + **main-thread Kick/occupancy/emit** prefer pinned `inputCatalog` (registry fallback) |
-| Q6 ColumnRecord cutover | **EvictionOwner default** — ladder F5-proven through **133707** (mismatch **0**) |
-| Q7 admission | CaptureAndStore + CaptureAndCommitOnMain + **worker capture enqueue** snapshot reserve |
-| Q9 F5 acceptance | Harness `tools/q9_acceptance_suite.py` landed; need **3 cold + 3 warm** batch (not per-step F5) |
+| Q6 ColumnRecord cutover | **EvictionOwner default** — ladder F5-proven through **162247** (mismatch **0**) |
+| Q7 admission reserve-before-allocate | CaptureAndStore + CaptureAndCommitOnMain + **worker capture enqueue** snapshot reserve |
+| Q8 frame deadline | ColumnFlow Relight/Seam + **capture drain / async apply / GPU kick** soft-defer (`UFrameDeadline`; hole/deep critical). Async cull HUD sync still open |
+| Q9 F5 acceptance | **162247** drawable PASS. Harness ready — need **3 cold + 3 warm** |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
-| Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + soft-defer Relight/Seam; **FirstMesh never hard-killed** |
-| Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + CaptureAndCommitOnMain snapshot reserve |
-| Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **095318** drawable PASS (stale 24, holes 0.06, enter~99ms, VB 73). Full G0/G1 vs 141350 open |
 | Q10 domain boundaries | include allowlist burn-down note; domain CMake libs open |
 
 G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
@@ -187,9 +185,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | 133707 holes 0; VB med **~80** still red vs 141350 |
-| G2 | Частично | Q6 F5-proven; Q4 catalog pin worker+main-thread Kick/occupancy |
-| G3 | Частично | ColumnFlow soft-defer Relight/Seam; Q7 worker-capture reserve; apply/upload local budgets remain |
+| G1 | Не закрыт | 162247 holes 0; VB med **~63** still red vs 141350 |
+| G2 | Частично | Q4/Q6/Q7 F5-proven through **162247** |
+| G3 | Частично | Q8 soft deadline on column + capture/apply/gpu-kick; upload/cull residual |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **один** F5 после batched Q4-main+Q7; затем Q9 = 3 cold + 3 warm на одном билде (`tools/q9_acceptance_suite.py`). Без микро-F5 на каждый кусок.
+Следующий шаг: **Q9 3 cold + 3 warm** на билде с Q8 soft deadline (после этой сборки). Без микро-F5.
