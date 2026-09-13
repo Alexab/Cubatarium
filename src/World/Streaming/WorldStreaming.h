@@ -196,6 +196,10 @@ private:
     int last_visible_black_fully_dark_no_ticket{0};
     int last_visible_black_fully_dark_stalled{0};
     int last_visible_black_legal_dark{0};
+    int oldest_missing_resident_age_frames{0};
+    int oldest_stale_vertex_light_age_frames{0};
+    int prev_oracle_missing_resident_n{0};
+    int prev_oracle_stale_vertex_light_n{0};
     int vb_focus_stable_frames{0};
     int facing_sample_cd{0};
     int last_ahead{0};

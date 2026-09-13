@@ -513,6 +513,9 @@ struct FrameNumbers
   int draw_oracle_correct_lit_proxy_n{0};
   int draw_oracle_fully_dark_debt_n{0};
   int draw_oracle_fault_n{0};
+  int oldest_missing_resident_age_frames{0};
+  int oldest_stale_vertex_light_age_frames{0};
+  int debt_age_grew_with_schedule_n{0};
   int focus_not_render_ready{0};
   int focus_pressure{0};
   int focus_dirty_chunks{0};
@@ -1129,6 +1132,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.draw_oracle_correct_lit_proxy_n = phys.DrawOracleCorrectLitProxyN;
   n.draw_oracle_fully_dark_debt_n = phys.DrawOracleFullyDarkDebtN;
   n.draw_oracle_fault_n = phys.DrawOracleFaultN;
+  n.oldest_missing_resident_age_frames = phys.OldestMissingResidentAgeFrames;
+  n.oldest_stale_vertex_light_age_frames = phys.OldestStaleVertexLightAgeFrames;
+  n.debt_age_grew_with_schedule_n = phys.DebtAgeGrewWithScheduleN;
   n.focus_not_render_ready = phys.FocusNotRenderReady;
   n.focus_pressure = phys.FocusPressure;
   n.focus_dirty_chunks = phys.FocusDirtyChunks;
@@ -1775,6 +1781,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"draw_oracle_fully_dark_debt_n\":"
           << n.draw_oracle_fully_dark_debt_n
           << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
+          << ",\"oldest_missing_resident_age_frames\":"
+          << n.oldest_missing_resident_age_frames
+          << ",\"oldest_stale_vertex_light_age_frames\":"
+          << n.oldest_stale_vertex_light_age_frames
+          << ",\"debt_age_grew_with_schedule_n\":"
+          << n.debt_age_grew_with_schedule_n
           << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
           << ",\"focus_pressure\":" << n.focus_pressure
           << ",\"focus_dirty_chunks\":" << n.focus_dirty_chunks
@@ -2083,6 +2095,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"draw_oracle_fully_dark_debt_n\":"
           << n.draw_oracle_fully_dark_debt_n
           << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
+          << ",\"oldest_missing_resident_age_frames\":"
+          << n.oldest_missing_resident_age_frames
+          << ",\"oldest_stale_vertex_light_age_frames\":"
+          << n.oldest_stale_vertex_light_age_frames
+          << ",\"debt_age_grew_with_schedule_n\":"
+          << n.debt_age_grew_with_schedule_n
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms

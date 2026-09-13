@@ -283,4 +283,33 @@ inline DrawOracleCensusCounts AccumulateDrawOracleFromVbCensus(
   return out;
 }
 
+/// G1-P3 / A10: oldest-debt age (frames). Resets when class debt clears or
+/// shrinks (Missing→drawable / lit publish / LegalDark reclass). Note/Capture
+/// alone must not zero age while debt_n is unchanged/nondecreasing.
+inline int AdvanceOldestDebtAgeFrames(int prev_age, bool debt_present,
+                                      int prev_debt_n = -1, int debt_n = -1,
+                                      int lit_publish_or_clear_n = 0)
+{
+  if (!debt_present || debt_n == 0)
+  {
+    return 0;
+  }
+  if (lit_publish_or_clear_n > 0)
+  {
+    return 1;
+  }
+  if (prev_debt_n >= 0 && debt_n >= 0 && debt_n < prev_debt_n)
+  {
+    return 1; // oldest (or some) debt cleared — restart for remaining
+  }
+  return prev_age < 0 ? 1 : prev_age + 1;
+}
+
+/// Watchdog: age grew while schedule_ok>0 without debt clear (no publish progress).
+inline bool ShouldCountDebtAgeGrewWithSchedule(int prev_age, int new_age,
+                                               int schedule_ok_n)
+{
+  return new_age > prev_age && schedule_ok_n > 0;
+}
+
 } // namespace cutum

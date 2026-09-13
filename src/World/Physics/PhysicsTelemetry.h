@@ -590,6 +590,10 @@ struct PhysicsTelemetry
   int DrawOracleCorrectLitProxyN{0};
   int DrawOracleFullyDarkDebtN{0};
   int DrawOracleFaultN{0};
+  /// G1-P3 / A10: frames since MissingResident / StaleVertexLight debt last cleared.
+  int OldestMissingResidentAgeFrames{0};
+  int OldestStaleVertexLightAgeFrames{0};
+  int DebtAgeGrewWithScheduleN{0};
   /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
   /// Not pending+dirty pressure — see FocusPressure.
   int FocusNotRenderReady{0};

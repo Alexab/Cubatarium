@@ -1338,6 +1338,42 @@ void UWorldStreaming::RefreshStreamingPressure(
       world.PhysicsTelemetryData.DrawOracleFullyDarkDebtN =
           oracle.fully_dark_debt_n;
       world.PhysicsTelemetryData.DrawOracleFaultN = oracle.fault_n;
+
+      const int prev_miss_age = rp.oldest_missing_resident_age_frames;
+      const int prev_stale_age = rp.oldest_stale_vertex_light_age_frames;
+      const int lit_clear_n =
+          world.GetMeshService().GetLastGpuFinishN();
+      rp.oldest_missing_resident_age_frames = cutum::AdvanceOldestDebtAgeFrames(
+          prev_miss_age, oracle.missing_resident_n > 0,
+          rp.prev_oracle_missing_resident_n, oracle.missing_resident_n,
+          lit_clear_n);
+      rp.oldest_stale_vertex_light_age_frames =
+          cutum::AdvanceOldestDebtAgeFrames(
+              prev_stale_age, oracle.stale_vertex_light_n > 0,
+              rp.prev_oracle_stale_vertex_light_n, oracle.stale_vertex_light_n,
+              lit_clear_n);
+      rp.prev_oracle_missing_resident_n = oracle.missing_resident_n;
+      rp.prev_oracle_stale_vertex_light_n = oracle.stale_vertex_light_n;
+      world.PhysicsTelemetryData.OldestMissingResidentAgeFrames =
+          rp.oldest_missing_resident_age_frames;
+      world.PhysicsTelemetryData.OldestStaleVertexLightAgeFrames =
+          rp.oldest_stale_vertex_light_age_frames;
+      const int schedule_ok =
+          world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+      int grew = 0;
+      if (cutum::ShouldCountDebtAgeGrewWithSchedule(
+              prev_miss_age, rp.oldest_missing_resident_age_frames,
+              schedule_ok))
+      {
+        ++grew;
+      }
+      if (cutum::ShouldCountDebtAgeGrewWithSchedule(
+              prev_stale_age, rp.oldest_stale_vertex_light_age_frames,
+              schedule_ok))
+      {
+        ++grew;
+      }
+      world.PhysicsTelemetryData.DebtAgeGrewWithScheduleN = grew;
     }
     {
       UWorld::FocusRingVisualSample ring_update =

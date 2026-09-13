@@ -117,6 +117,7 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **210134 post-dual-Q (`18e0f1bd`):** classification/routing **PASS** — `fault_n`/`stale_vertex_light` **~76**, CorrectLit proxy **0**, `dirty_fm` **~20**, `dirty_remesh` **~120**. Progress **FAIL** — `schedule_ok` **1**, `skip_snapshot` **~139**, `gpu_kick~0`, VB/repair **~76/69**, wall **~110**, enter ~**7.4s**, unfinished med **~2**. Tactical thrash era `5bf32dda`…`033472e5` — do not extend floors. Next: A11 RemeshQ snapshot slice + kick quota; no-teleport `--replay-manual` gates. Progress reports: `bin/suite_reports/g1_progress/`.
 - **G1-P1 RemeshQ snapshot slice (215648):** under StaleVertexLight debt reserve remesh snapshot before FM walk. Mid cruise: `ok_remesh` med **1**, `skip_snapshot` med **0** (was ~135), `dirty_fm` **21**, `dirty_remesh` **~58**, repair **20**, unfinished **2**. Score: `bin/suite_reports/g1_progress/g1_p1_score.json`.
 - **G1-P2 Kick quota (222021):** Queued+debt force ≥1 kick past kick_cut/deadline. Starved queued frames **0.94→0.38**, kick nz **9→16**. Score: `bin/suite_reports/g1_progress/g1_p2_score.json`.
+- **G1-P3 debt age (225316):** `oldest_stale_vertex_light_age_frames` med **5**, resets **28** (not mono-stuck). Score: `bin/suite_reports/g1_progress/g1_p3_score.json`.
 - **Q2b dual-Q contract:** FullyDark → `StaleVertexLight` + RemeshQ; FM = MissingResident only. No new Capture/Apply floors.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
 

@@ -112,6 +112,26 @@ int main()
                VisibleBlackCause::FullyDarkPendingRepair, true, true, true) ==
                DrawClass::StaleVertexLight,
            "FullyDarkPendingRepair → StaleVertexLight");
+
+    using cutum::AdvanceOldestDebtAgeFrames;
+    using cutum::ShouldCountDebtAgeGrewWithSchedule;
+    Expect(AdvanceOldestDebtAgeFrames(0, true) == 1, "G1-P3: first debt frame");
+    Expect(AdvanceOldestDebtAgeFrames(5, true) == 6, "G1-P3: age bumps");
+    Expect(AdvanceOldestDebtAgeFrames(9, false) == 0,
+           "G1-P3: clear resets age (publish/LegalDark)");
+    Expect(AdvanceOldestDebtAgeFrames(0, false) == 0, "G1-P3: calm stays 0");
+    Expect(AdvanceOldestDebtAgeFrames(12, true, 40, 30) == 1,
+           "G1-P3: debt_n shrink restarts oldest age");
+    Expect(AdvanceOldestDebtAgeFrames(12, true, 40, 40, 1) == 1,
+           "G1-P3: lit publish restarts age");
+    Expect(AdvanceOldestDebtAgeFrames(12, true, 40, 45) == 13,
+           "G1-P3: debt growth keeps bumping");
+    Expect(ShouldCountDebtAgeGrewWithSchedule(3, 4, 1),
+           "G1-P3: age↑ + schedule_ok ⇒ watchdog");
+    Expect(!ShouldCountDebtAgeGrewWithSchedule(3, 4, 0),
+           "G1-P3: age↑ without schedule_ok ⇒ no watchdog");
+    Expect(!ShouldCountDebtAgeGrewWithSchedule(4, 0, 2),
+           "G1-P3: age reset ⇒ no grew");
   }
 
   // Fault injection: MissingResident must fail when expect is CorrectLit.
