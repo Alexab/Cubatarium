@@ -3836,6 +3836,8 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
                                            double gpu_budget_ms)
 {
   LastGpuKickN = 0;
+  LastGpuKickDebtForcedN = 0;
+  LastGpuKickDeferReason_.clear();
   LastGpuFinishN = 0;
   LastGpuFinishNotReadyN = 0;
   int done = 0;
@@ -3908,6 +3910,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   {
     return 0;
   }
+  LastGpuKickDeferReason_.clear();
 
   const auto t0 = std::chrono::high_resolution_clock::now();
   auto elapsed_ms = [&]() {
@@ -4223,6 +4226,29 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                  : 0.55);
   const double kick_cut =
       DynamicKickCutBiasForFmWatch(watch_rim_n, base_kick_cut);
+  int queued_n = 0;
+  for (const auto &pending : PendingGpuApplies)
+  {
+    if (pending.phase == PendingGpuApply::Phase::Queued)
+    {
+      ++queued_n;
+    }
+  }
+  const int kick_debt_proxy =
+      WorkAdmission.protect_lit_settle_remesh
+          ? 20
+          : std::max(VisibleBlackFocusPressure_,
+                     VisibleBlackNoTicketPressure_);
+  const bool force_kick_debt = ShouldForceGpuKickUnderQueuedDebt(
+      queued_n,
+      StarveRemeshForHoles || ColumnLoadedNoMeshPressure_ > 0 ||
+          VisibleBlackFocusPressure_ >= 20,
+      kick_debt_proxy);
+  if (force_kick_debt)
+  {
+    kick_cap = std::max(kick_cap, 1);
+  }
+  int debt_forced_kicks = 0;
   auto find_prefer_queued = [&]() {
     auto missing_it = std::find_if(
         PendingGpuApplies.begin(), PendingGpuApplies.end(),
@@ -4245,14 +4271,31 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   {
     // Q8: after Finish pass, soft-defer new GPU kicks when frame budget is
     // exhausted. Hole/deep modes keep kicking (critical hole progress).
+    // G1-P2: Queued+debt also critical — one kick past deadline/cut.
+    const bool debt_kick_quota =
+        force_kick_debt && kicked == 0 && find_prefer_queued() != PendingGpuApplies.end();
     if (UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/
-                                            hole_finish_bias))
+                                            hole_finish_bias || debt_kick_quota))
     {
-      break;
+      if (!debt_kick_quota)
+      {
+        if (force_kick_debt && kicked == 0)
+        {
+          LastGpuKickDeferReason_ = "frame_deadline";
+        }
+        break;
+      }
     }
     if (budget_ms > 0.0 && elapsed_ms() >= budget_ms * kick_cut)
     {
-      break; // Finish-only remainder — avoid Kick counter-sync storm
+      if (!debt_kick_quota)
+      {
+        if (force_kick_debt && kicked == 0)
+        {
+          LastGpuKickDeferReason_ = "kick_cut";
+        }
+        break; // Finish-only remainder — avoid Kick counter-sync storm
+      }
     }
     auto queued_it = find_prefer_queued();
     if (queued_it == PendingGpuApplies.end())
@@ -4302,6 +4345,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       PendingGpuApplies.push_front(std::move(pending));
       TouchPendingGpuIndex();
       GpuExtractInFlight.insert(PendingGpuApplies.front().coord);
+      if (force_kick_debt && kicked == 0)
+      {
+        LastGpuKickDeferReason_ = "no_staging_slot";
+      }
       break;
     }
     if (!pipeline->KickComputePasses(pending.snapshot, registry, pending.coord,
@@ -4321,7 +4368,18 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     TouchPendingGpuIndex();
     GpuExtractInFlight.insert(kicked_coord);
     ++kicked;
+    if (debt_kick_quota)
+    {
+      ++debt_forced_kicks;
+    }
   }
+  if (force_kick_debt && kicked == 0 && queued_n > 0 &&
+      LastGpuKickDeferReason_.empty())
+  {
+    LastGpuKickDeferReason_ = pipeline->HasFreeReadbackSlot() ? "no_kick"
+                                                              : "no_readback";
+  }
+  LastGpuKickDebtForcedN += debt_forced_kicks;
 
   // J1: second Finish pass with Kick-cut remainder (fences ready mid-Kick).
   if (hole_finish_bias && finished < finish_cap && processed < max_count &&
@@ -5046,6 +5104,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   if (!skip_gpu_consume)
   {
     LastGpuKickN = 0;
+    LastGpuKickDebtForcedN = 0;
+    LastGpuKickDeferReason_.clear();
     LastGpuFinishN = 0;
     LastGpuFinishNotReadyN = 0;
   }

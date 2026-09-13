@@ -2325,6 +2325,16 @@ int main()
     Expect(!ShouldReserveRemeshSnapshotSlice(false, 120, 76),
            "G1-P1: no holes → no slice");
 
+    using cutum::ShouldForceGpuKickUnderQueuedDebt;
+    Expect(ShouldForceGpuKickUnderQueuedDebt(2, true, 0),
+           "G1-P2: Queued+focus miss ⇒ force kick");
+    Expect(ShouldForceGpuKickUnderQueuedDebt(1, false, 20),
+           "G1-P2: Queued+stale debt ⇒ force kick");
+    Expect(!ShouldForceGpuKickUnderQueuedDebt(0, true, 76),
+           "G1-P2: no Queued ⇒ no force kick");
+    Expect(!ShouldForceGpuKickUnderQueuedDebt(2, false, 19),
+           "G1-P2: Queued without debt ⇒ no force");
+
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;
     in.pending_gpu_queued = 0;

@@ -2008,6 +2008,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
     world.PhysicsTelemetryData.GpuKickN =
         world.GetMeshService().GetLastGpuKickN();
+    world.PhysicsTelemetryData.GpuKickDebtForcedN =
+        world.GetMeshService().GetLastGpuKickDebtForcedN();
+    world.PhysicsTelemetryData.GpuKickDeferReason =
+        world.GetMeshService().GetLastGpuKickDeferReason();
     world.PhysicsTelemetryData.GpuFinishN =
         world.GetMeshService().GetLastGpuFinishN();
     world.PhysicsTelemetryData.GpuFinishNotReadyN =
@@ -3426,6 +3430,10 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetPendingGpuKickedCount());
   world.PhysicsTelemetryData.GpuKickN =
       world.GetMeshService().GetLastGpuKickN();
+  world.PhysicsTelemetryData.GpuKickDebtForcedN =
+      world.GetMeshService().GetLastGpuKickDebtForcedN();
+  world.PhysicsTelemetryData.GpuKickDeferReason =
+      world.GetMeshService().GetLastGpuKickDeferReason();
   world.PhysicsTelemetryData.GpuFinishN =
       world.GetMeshService().GetLastGpuFinishN();
   world.PhysicsTelemetryData.GpuFinishNotReadyN =

@@ -216,6 +216,8 @@ public:
   size_t GetPendingGpuQueuedCount() const;
   size_t GetPendingGpuKickedCount() const;
   int GetLastGpuKickN() const;
+  int GetLastGpuKickDebtForcedN() const;
+  const std::string &GetLastGpuKickDeferReason() const;
   int GetLastGpuFinishN() const;
   int GetLastGpuFinishNotReadyN() const;
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,

@@ -536,6 +536,8 @@ struct FrameNumbers
   int pending_gpu_queued_n{0};
   int pending_gpu_kicked_n{0};
   int gpu_kick_n{0};
+  int gpu_kick_debt_forced_n{0};
+  std::string gpu_kick_defer_reason;
   int gpu_finish_n{0};
   int gpu_finish_not_ready_n{0};
   int mesh_schedule_final{0};
@@ -1145,6 +1147,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.pending_gpu_queued_n = phys.PendingGpuQueuedN;
   n.pending_gpu_kicked_n = phys.PendingGpuKickedN;
   n.gpu_kick_n = phys.GpuKickN;
+  n.gpu_kick_debt_forced_n = phys.GpuKickDebtForcedN;
+  n.gpu_kick_defer_reason = phys.GpuKickDeferReason;
   n.gpu_finish_n = phys.GpuFinishN;
   n.gpu_finish_not_ready_n = phys.GpuFinishNotReadyN;
   n.mesh_schedule_final = phys.MeshScheduleFinal;
@@ -1796,6 +1800,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
           << ",\"pending_gpu_kicked_n\":" << n.pending_gpu_kicked_n
           << ",\"gpu_kick_n\":" << n.gpu_kick_n
+          << ",\"gpu_kick_debt_forced_n\":" << n.gpu_kick_debt_forced_n
+          << ",\"gpu_kick_defer_reason\":\"" << n.gpu_kick_defer_reason << "\""
           << ",\"gpu_finish_n\":" << n.gpu_finish_n
           << ",\"gpu_finish_not_ready_n\":" << n.gpu_finish_not_ready_n
           << ",\"mesh_schedule_final\":" << n.mesh_schedule_final

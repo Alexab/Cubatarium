@@ -64,6 +64,8 @@ struct PhysicsTelemetry
   int MeshAdmissionMode{0};
   /// Kicks issued in last RebuildDirtyChunksWithStats tick.
   int GpuKickN{0};
+  int GpuKickDebtForcedN{0};
+  std::string GpuKickDeferReason;
   /// Successful Finish+Commit in last rebuild tick.
   int GpuFinishN{0};
   /// NotReady Finish polls in last rebuild tick.

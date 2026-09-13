@@ -26,6 +26,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -276,6 +277,11 @@ public:
   size_t GetPendingGpuQueuedCount() const;
   size_t GetPendingGpuKickedCount() const;
   int GetLastGpuKickN() const { return LastGpuKickN; }
+  int GetLastGpuKickDebtForcedN() const { return LastGpuKickDebtForcedN; }
+  const std::string &GetLastGpuKickDeferReason() const
+  {
+    return LastGpuKickDeferReason_;
+  }
   int GetLastGpuFinishN() const { return LastGpuFinishN; }
   int GetLastGpuFinishNotReadyN() const { return LastGpuFinishNotReadyN; }
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
@@ -1035,6 +1041,8 @@ private:
   size_t GreedyVertexCountTotal{0};
   MeshRebuildTickStats LastRebuildTickStats{};
   int LastGpuKickN{0};
+  int LastGpuKickDebtForcedN{0};
+  std::string LastGpuKickDeferReason_;
   int LastGpuFinishN{0};
   int LastGpuFinishNotReadyN{0};
   std::unordered_map<glm::ivec3, FluidSurfaceColumnSlice, IVec3Hash>

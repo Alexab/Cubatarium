@@ -942,6 +942,16 @@ int UWorldMeshService::GetLastGpuKickN() const
   return Cache.GetLastGpuKickN();
 }
 
+int UWorldMeshService::GetLastGpuKickDebtForcedN() const
+{
+  return Cache.GetLastGpuKickDebtForcedN();
+}
+
+const std::string &UWorldMeshService::GetLastGpuKickDeferReason() const
+{
+  return Cache.GetLastGpuKickDeferReason();
+}
+
 int UWorldMeshService::GetLastGpuFinishN() const
 {
   return Cache.GetLastGpuFinishN();
