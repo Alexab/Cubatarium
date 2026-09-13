@@ -626,6 +626,7 @@ struct FrameNumbers
   uint64_t relight_apply_plateau_boost_n{0};
   int mark_relit_skip_already_dirty_n{0};
   int mark_relit_skip_already_raa_n{0};
+  int mark_relit_prefer_kick_n{0};
   int mark_relit_skip_inflight_n{0};
   int mark_relit_skip_enter_lit_quiesce_n{0};
   int mark_relit_schedule_n{0};
@@ -1247,6 +1248,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_apply_plateau_boost_n = phys.RelightApplyPlateauBoostN;
   n.mark_relit_skip_already_dirty_n = phys.MarkRelitSkipAlreadyDirtyN;
   n.mark_relit_skip_already_raa_n = phys.MarkRelitSkipAlreadyRaaN;
+  n.mark_relit_prefer_kick_n =
+      static_cast<int>(phys.MarkRelitPreferKickN);
   n.mark_relit_skip_inflight_n = phys.MarkRelitSkipInflightN;
   n.mark_relit_skip_enter_lit_quiesce_n = phys.MarkRelitSkipEnterLitQuiesceN;
   n.mark_relit_schedule_n = phys.MarkRelitScheduleN;
@@ -1899,6 +1902,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mark_relit_skip_already_dirty_n
           << ",\"mark_relit_skip_already_raa_n\":"
           << n.mark_relit_skip_already_raa_n
+          << ",\"mark_relit_prefer_kick_n\":" << n.mark_relit_prefer_kick_n
           << ",\"mark_relit_skip_inflight_n\":" << n.mark_relit_skip_inflight_n
           << ",\"mark_relit_skip_enter_lit_quiesce_n\":"
           << n.mark_relit_skip_enter_lit_quiesce_n

@@ -805,6 +805,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.RelightApplyFinalN = 0;
   PhysicsTelemetryData.MarkRelitSkipAlreadyDirtyN = 0;
   PhysicsTelemetryData.MarkRelitSkipAlreadyRaaN = 0;
+  PhysicsTelemetryData.MarkRelitPreferKickN = 0;
   PhysicsTelemetryData.MarkRelitSkipInflightN = 0;
   PhysicsTelemetryData.MarkRelitSkipEnterLitQuiesceN = 0;
   PhysicsTelemetryData.MarkRelitScheduleN = 0;

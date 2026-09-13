@@ -57,6 +57,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (190148) | `bin/logs/enter_lit_20260913-190205.jsonl` |
 | G1 FullyDark still_stale (193536) | `bin/logs/perf_20260913-193536_28828.jsonl` |
 | Enter (193536) | `bin/logs/enter_lit_20260913-193554.jsonl` |
+| G1 Dirty bump + hitch cap (195525) | `bin/logs/perf_20260913-195525_33476.jsonl` |
+| Enter (195525) | `bin/logs/enter_lit_20260913-195555.jsonl` |
 
 ## Manifest (required)
 
@@ -107,16 +109,17 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **180850 post-G1 void-Note (`5bf32dda`):** **drawable PASS** (holes/unf/mismatch **0**) — stale **21–26**, wall **~41**, enter ~**99ms**, VB med **~57–68**. **`fully_dark_stalled` med 0** (was 13–20) — Note PL worked. Debt moved to **`fully_dark_repair` ~38** / `draw_oracle_fully_dark_debt_n` ~47. `cull_stats_sync_read_n` **0**. Product vs 141350 still FAIL (`focus_missing_frac` + VB≥40). Capture bg med **1**, relight_apply med **1** → next: repair-debt Capture/Apply floor.
 - **190148 post-repair Capture/Apply floor (`183c9fad`):** holes/unf **0** (holes_frac~0.06 one period). Throughput on repair≥20: capture_bg med **2.5**, apply med **2** (floor landed). But VB **worse** (med ~62 / scorecard **77**), repair **~54**, stalled **~9**, stale **~59**, `drop_no_active` **18**, miss_stuck+gpu_kick~0. MarkRelit invoked but **`mark_relit_schedule_n=0`** — slim path skipped FullyDark remesh (GPU dark not in still_stale). Enter ~**3.1s**.
 - **193536 post-FullyDark still_stale (`fc6762ab`):** enter ~**49ms**, holes/unf **0**, `drop_no_active` **0**, miss_stuck **gone**. schedule>0 on **40/101** frames (was ~0). VB still **~70–71**, repair **41**, stall **8**. Capture often **8** → wall med **~113** (scorecard cruise ~46). When schedule=0: **skip_already_dirty** (bump blocked before consume_mode). Product FAIL: fm_frac **0.53**, VB≥40.
+- **195525 post-Dirty bump + hitch Capture (`b76c771c`):** wall med **~39** (was ~114), `capture_bg_cap` med **3** (clamp landed). VB **~65** (slight↓). stall med **0**. But **miss_stuck** back (med **226**, product FAIL + gpu_kick~0), `fm_dirty_drain` med **0** (was 2), remesh_starve/outside_focus↑, apply med **1**. Root: StarveRemeshForHoles dropped matching-rev FullyDark remesh. Enter ~**3.7s**.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
 
-| Metric | **190148** | **193536** |
+| Metric | **193536** | **195525** |
 |---|---|---|
-| enter ms | ~3147 | **~49** |
-| VB / repair / stall | 62 / 54 / 9 | **70 / 41 / 8** |
-| mark_relit_schedule (max) | 0 | **10** (med 0) |
-| drop_no_active | 18 | **0** |
-| capture_bg med | 1.5 | **8** |
-| wall med (all rows) | 34 | **113** |
+| wall med (cruise) | ~114 | **~39** |
+| capture_bg_cap med | 8 | **3** |
+| VB / repair / stall | 71 / 45 / 16 | **65 / 57 / 0** |
+| fm_dirty_drain med | 2 | **0** |
+| miss_stuck med | 5.5 | **226** |
+| enter ms | ~49 | **~3747** |
 
 ## Q9 batch procedure (G0)
 

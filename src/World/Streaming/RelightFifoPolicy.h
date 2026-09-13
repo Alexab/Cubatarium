@@ -1074,6 +1074,24 @@ inline bool ShouldSkipDeferRemeshForLitRingFullyDark(
   return fully_dark && horiz >= 0 && horiz <= ring;
 }
 
+/// G1: under StarveRemeshForHoles, keep remesh that still clears VB.
+/// Matching-rev FullyDark was pruned as non-stale (195525: remesh_starve↑,
+/// repair~57, gpu_kick~0) while holes pressure protected FirstMesh only.
+inline bool ShouldKeepRemeshUnderHoleStarve(int horiz, int keep_horiz,
+                                           int lit_horiz, bool stale_dark,
+                                           bool fully_dark)
+{
+  if (horiz < 0)
+  {
+    return false;
+  }
+  if (horiz <= keep_horiz)
+  {
+    return true;
+  }
+  return horiz <= lit_horiz && (stale_dark || fully_dark);
+}
+
 /// FZ2-R1: skip defer only under active VB heal pressure (enter or no_ticket).
 inline bool ShouldSkipDeferRemeshUnderVbHealPressure(
     int horiz, bool fully_dark, bool enter_fov_lit, int vb_no_ticket_n,

@@ -748,6 +748,17 @@ int main()
          "FZ2.5-P1: steady VB>25 finalize lit ring");
   Expect(ShouldSkipDeferRemeshForLitRingFullyDark(2, true),
          "FlickerZero: lit-ring FullyDark skip defer (legacy)");
+  {
+    using cutum::ShouldKeepRemeshUnderHoleStarve;
+    Expect(ShouldKeepRemeshUnderHoleStarve(1, 2, 8, false, false),
+           "G1: keep_horiz remesh kept under hole starve");
+    Expect(ShouldKeepRemeshUnderHoleStarve(5, 2, 8, false, true),
+           "G1: lit-ring FullyDark kept under hole starve");
+    Expect(ShouldKeepRemeshUnderHoleStarve(5, 2, 8, true, false),
+           "G1: lit-ring stale-dark kept under hole starve");
+    Expect(!ShouldKeepRemeshUnderHoleStarve(9, 2, 8, true, true),
+           "G1: beyond lit ring not kept for hole-starve remesh");
+  }
   Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0),
          "FZ2: steady no_ticket=0 → defer allowed");
   Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, true, 0),
