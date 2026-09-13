@@ -185,9 +185,9 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | **Частично закрыт** | Q9 3+3 drawable PASS; schema/manifest already fail-closed. Product VB/missing vs 141350 still out of G0 scope |
-| G1 | Не закрыт | **Q2b contract:** FullyDark→StaleVertexLight+RemeshQ (не FM/CorrectLit). Stop heuristic floors; next F5 checks dirty_fm↓ remesh↑ fault_n≈VB |
+| G1 | Не закрыт | **210134 post-dual-Q (`18e0f1bd`):** classification PASS (`fault_n≈76`, `dirty_fm~20`, `dirty_remesh~120`, CorrectLit proxy 0). Progress FAIL: `schedule_ok=1`, `skip_snapshot~139`, `gpu_kick~0`, VB~76. Next: RemeshQ snapshot slice + kick quota (A11); no Capture/MarkRelit floors. No-teleport autofly loop. |
 | G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through Q9 batch |
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **F5 на Q2b dual-Q** — `draw_oracle_fault_n` ≈ stale+FullyDark debt; `dirty_fm_n` не раздут FullyDark; `dirty_remesh_n`/`remesh_schedule` несут VB repair; без новых Capture/MarkRelit floors.
+Следующий шаг: **G1-P1** RemeshQ snapshot slice under StaleVertexLight debt (A11) → unit → no-teleport `--replay-manual` autofly vs 210134 → commit. Запрет SoftDefer/Capture/Apply floors.

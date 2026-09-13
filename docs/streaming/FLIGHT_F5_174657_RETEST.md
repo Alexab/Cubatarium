@@ -59,6 +59,10 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (193536) | `bin/logs/enter_lit_20260913-193554.jsonl` |
 | G1 Dirty bump + hitch cap (195525) | `bin/logs/perf_20260913-195525_33476.jsonl` |
 | Enter (195525) | `bin/logs/enter_lit_20260913-195555.jsonl` |
+| G1 pre-dual-Q thrash (201330) | `bin/logs/perf_20260913-201330_10884.jsonl` |
+| Enter (201330) | `bin/logs/enter_lit_20260913-201356.jsonl` |
+| **G1 dual-Q baseline (210134)** | `bin/logs/perf_20260913-210134_42156.jsonl` |
+| Enter (210134) | `bin/logs/enter_lit_20260913-210239.jsonl` |
 
 ## Manifest (required)
 
@@ -110,17 +114,17 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **190148 post-repair Capture/Apply floor (`183c9fad`):** holes/unf **0** (holes_frac~0.06 one period). Throughput on repair≥20: capture_bg med **2.5**, apply med **2** (floor landed). But VB **worse** (med ~62 / scorecard **77**), repair **~54**, stalled **~9**, stale **~59**, `drop_no_active` **18**, miss_stuck+gpu_kick~0. MarkRelit invoked but **`mark_relit_schedule_n=0`** — slim path skipped FullyDark remesh (GPU dark not in still_stale). Enter ~**3.1s**.
 - **193536 post-FullyDark still_stale (`fc6762ab`):** enter ~**49ms**, holes/unf **0**, `drop_no_active` **0**, miss_stuck **gone**. schedule>0 on **40/101** frames (was ~0). VB still **~70–71**, repair **41**, stall **8**. Capture often **8** → wall med **~113** (scorecard cruise ~46). When schedule=0: **skip_already_dirty** (bump blocked before consume_mode). Product FAIL: fm_frac **0.53**, VB≥40.
 - **201330 post-hole-starve keep (`033472e5`):** remesh_starve **0**, schedule med **2**, apply **3**, enter ~**96ms**. But VB **77**, repair **70**, dirty_fm **~129**, schedule_ok **1**, miss_stuck **403**, gpu_kick~0 — thrash. Root: FullyDark mixed into FirstMeshQ + CorrectLit oracle mask.
-- **Q2b dual-Q contract (this tip):** FullyDark → `StaleVertexLight` + RemeshQ; FM = MissingResident only; remesh protect on FullyDark repair≥20. No new Capture/Apply floors.
+- **210134 post-dual-Q (`18e0f1bd`):** classification/routing **PASS** — `fault_n`/`stale_vertex_light` **~76**, CorrectLit proxy **0**, `dirty_fm` **~20**, `dirty_remesh` **~120**. Progress **FAIL** — `schedule_ok` **1**, `skip_snapshot` **~139**, `gpu_kick~0`, VB/repair **~76/69**, wall **~110**, enter ~**7.4s**, unfinished med **~2**. Tactical thrash era `5bf32dda`…`033472e5` — do not extend floors. Next: A11 RemeshQ snapshot slice + kick quota; no-teleport `--replay-manual` gates. Progress reports: `bin/suite_reports/g1_progress/`.
+- **Q2b dual-Q contract:** FullyDark → `StaleVertexLight` + RemeshQ; FM = MissingResident only. No new Capture/Apply floors.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
 
-| Metric | **193536** | **195525** |
+| Metric | **201330** | **210134** |
 |---|---|---|
-| wall med (cruise) | ~114 | **~39** |
-| capture_bg_cap med | 8 | **3** |
-| VB / repair / stall | 71 / 45 / 16 | **65 / 57 / 0** |
-| fm_dirty_drain med | 2 | **0** |
-| miss_stuck med | 5.5 | **226** |
-| enter ms | ~49 | **~3747** |
+| fault_n / CorrectLit proxy | 0 / 77 | **76 / 0** |
+| dirty_fm / dirty_remesh | 129 / 33 | **20 / 120** |
+| schedule_ok / skip_snapshot | 1 / low | **1 / ~139** |
+| VB / repair | 77 / 70 | **76 / 69** |
+| gpu_kick nz | low | **~0** |
 
 ## Q9 batch procedure (G0)
 
