@@ -583,7 +583,8 @@ UGpuMeshPipeline::MapQuadsFromPbo(int pbo_index, uint32_t quad_count,
 bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
                                          UBlockRegistry &registry,
                                          glm::ivec3 coord, int slot_idx,
-                                         GpuApplyTicket &out_ticket)
+                                         GpuApplyTicket &out_ticket,
+                                         const BlockDefinitionCatalog *catalog)
 {
   out_ticket = {};
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
@@ -591,10 +592,13 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   (void)registry;
   (void)coord;
   (void)slot_idx;
+  (void)catalog;
   return false;
 #else
-  if (!SnapshotIsGpuExtractEligible(snapshot, registry) ||
-      EmitState.PackedEmitProgram == 0)
+  const bool eligible =
+      catalog ? SnapshotIsGpuExtractEligible(snapshot, catalog)
+              : SnapshotIsGpuExtractEligible(snapshot, registry);
+  if (!eligible || EmitState.PackedEmitProgram == 0)
   {
     return false;
   }
@@ -606,7 +610,14 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   }
 
   std::vector<uint8_t> occ;
-  BuildPaddedOccupancy(snapshot, registry, occ);
+  if (catalog)
+  {
+    BuildPaddedOccupancy(snapshot, catalog, occ);
+  }
+  else
+  {
+    BuildPaddedOccupancy(snapshot, registry, occ);
+  }
   std::vector<uint32_t> occ_words;
   occ_words.assign((occ.size() + 3) / 4, 0);
   for (size_t i = 0; i < occ.size(); ++i)

@@ -42,11 +42,13 @@ public:
 
   /// P5: main-thread GPU extract → batches. Default: not supported.
   /// When `deferred_no_gpu_readback`, CPU reference extract (no mask readback).
+  /// When catalog is non-null, eligibility/occupancy use the pinned catalog (Q4).
   virtual bool TryExtractOpaqueToBatches(
       const ChunkMeshSnapshot & /*snapshot*/, UBlockRegistry & /*registry*/,
       glm::ivec3 /*coord*/, std::vector<GreedyMeshBatch> & /*out_batches*/,
       bool /*deferred_no_gpu_readback*/ = false,
-      bool /*greedy_merge_rects*/ = false)
+      bool /*greedy_merge_rects*/ = false,
+      const BlockDefinitionCatalog * /*catalog*/ = nullptr)
   {
     return false;
   }

@@ -123,6 +123,30 @@ inline void BuildOccupancy(const ChunkMeshSnapshot &snap,
   }
 }
 
+/// Q4: occupancy from pinned catalog (main-thread GPU extract).
+inline void BuildOccupancy(const ChunkMeshSnapshot &snap,
+                           const BlockDefinitionCatalog *catalog,
+                           std::array<uint8_t, CHUNK_VOLUME> &occ)
+{
+  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  {
+    const BlockId id = snap.blocks[static_cast<size_t>(i)];
+    if (!IsGpuFaceExtractEligible(catalog, id))
+    {
+      occ[static_cast<size_t>(i)] = 0u;
+    }
+    else if (CatalogIsTransparent(catalog, id) ||
+             CatalogGetRenderStyle(catalog, id) == BlockRenderStyle::Cutout)
+    {
+      occ[static_cast<size_t>(i)] = 3u;
+    }
+    else
+    {
+      occ[static_cast<size_t>(i)] = 1u;
+    }
+  }
+}
+
 /// Padded (CHUNK_SIZE+2)^3 occupancy including one-block shell for GPU extract.
 inline constexpr int kGpuOccPad = CHUNK_SIZE + 2;
 inline constexpr int kGpuOccPadVolume = kGpuOccPad * kGpuOccPad * kGpuOccPad;
@@ -153,6 +177,44 @@ inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
         }
         else if (registry.IsTransparent(id) ||
                  registry.GetRenderStyle(id) == BlockRenderStyle::Cutout)
+        {
+          occ[static_cast<size_t>(pi)] = 3u;
+        }
+        else
+        {
+          occ[static_cast<size_t>(pi)] = 1u;
+        }
+      }
+    }
+  }
+}
+
+inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
+                                 const BlockDefinitionCatalog *catalog,
+                                 std::vector<uint8_t> &occ)
+{
+  occ.assign(static_cast<size_t>(kGpuOccPadVolume), 0);
+  const int pad = kGpuOccPad;
+  for (int y = -1; y <= CHUNK_SIZE; ++y)
+  {
+    for (int z = -1; z <= CHUNK_SIZE; ++z)
+    {
+      for (int x = -1; x <= CHUNK_SIZE; ++x)
+      {
+        const glm::ivec3 world = snap.ChunkOrigin() + glm::ivec3(x, y, z);
+        const int pi = ((y + 1) * pad + (z + 1)) * pad + (x + 1);
+        if (ShouldSkipFaceForNeighbor(snap.GetNeighborLoadState(world)))
+        {
+          occ[static_cast<size_t>(pi)] = 2u;
+          continue;
+        }
+        const BlockId id = snap.GetBlock(world);
+        if (!IsGpuFaceExtractEligible(catalog, id))
+        {
+          occ[static_cast<size_t>(pi)] = 0u;
+        }
+        else if (CatalogIsTransparent(catalog, id) ||
+                 CatalogGetRenderStyle(catalog, id) == BlockRenderStyle::Cutout)
         {
           occ[static_cast<size_t>(pi)] = 3u;
         }

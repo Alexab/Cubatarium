@@ -289,10 +289,14 @@ bool UGpuGreedyMesher::CanDeferGpuExtract(
 bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
     const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
     glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches,
-    bool deferred_no_gpu_readback, bool greedy_merge_rects)
+    bool deferred_no_gpu_readback, bool greedy_merge_rects,
+    const BlockDefinitionCatalog *catalog)
 {
   out_batches.clear();
-  if (!SnapshotIsGpuExtractEligible(snapshot, registry))
+  const bool eligible =
+      catalog ? SnapshotIsGpuExtractEligible(snapshot, catalog)
+              : SnapshotIsGpuExtractEligible(snapshot, registry);
+  if (!eligible)
   {
     return false;
   }
@@ -300,7 +304,7 @@ bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
   if (!deferred_no_gpu_readback)
   {
     if (TryGpuOpaqueEmitToBatches(State->Emit, snapshot, registry, coord,
-                                   out_batches))
+                                   out_batches, catalog))
     {
       ++ComputeDispatches;
       ++gMeshVboDispatches;

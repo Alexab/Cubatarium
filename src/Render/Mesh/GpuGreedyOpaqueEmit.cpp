@@ -350,7 +350,8 @@ bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state)
 bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
                                const ChunkMeshSnapshot &snapshot,
                                UBlockRegistry &registry, glm::ivec3 coord,
-                               std::vector<GreedyMeshBatch> &out_batches)
+                               std::vector<GreedyMeshBatch> &out_batches,
+                               const BlockDefinitionCatalog *catalog)
 {
   out_batches.clear();
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
@@ -358,6 +359,7 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   (void)snapshot;
   (void)registry;
   (void)coord;
+  (void)catalog;
   return false;
 #else
 #if defined(_WIN32)
@@ -366,14 +368,23 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
     return false;
   }
 #endif
-  if (!SnapshotIsGpuExtractEligible(snapshot, registry) ||
-      !EnsureGpuOpaqueEmit(state))
+  const bool eligible =
+      catalog ? SnapshotIsGpuExtractEligible(snapshot, catalog)
+              : SnapshotIsGpuExtractEligible(snapshot, registry);
+  if (!eligible || !EnsureGpuOpaqueEmit(state))
   {
     return false;
   }
 
   std::vector<uint8_t> occ;
-  BuildPaddedOccupancy(snapshot, registry, occ);
+  if (catalog)
+  {
+    BuildPaddedOccupancy(snapshot, catalog, occ);
+  }
+  else
+  {
+    BuildPaddedOccupancy(snapshot, registry, occ);
+  }
   std::vector<uint32_t> occ_words;
   PackBytes(occ.data(), occ.size(), occ_words);
 

@@ -39,11 +39,11 @@ public:
   /// Mask SSBO GetBufferSubData count (D1: should stay 0 on hot path).
   static uint64_t ConsumeMaskReadbackCount();
 
-  bool TryExtractOpaqueToBatches(const ChunkMeshSnapshot &snapshot,
-                                 UBlockRegistry &registry, glm::ivec3 coord,
-                                 std::vector<GreedyMeshBatch> &out_batches,
-                                 bool deferred_no_gpu_readback,
-                                 bool greedy_merge_rects = false) override;
+  bool TryExtractOpaqueToBatches(
+      const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+      glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches,
+      bool deferred_no_gpu_readback, bool greedy_merge_rects = false,
+      const BlockDefinitionCatalog *catalog = nullptr) override;
 
   bool CanDeferGpuExtract(
       const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,

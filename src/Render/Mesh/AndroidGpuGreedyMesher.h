@@ -31,11 +31,11 @@ public:
       const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
       const BlockDefinitionCatalog *catalog = nullptr) const override;
 
-  bool TryExtractOpaqueToBatches(const ChunkMeshSnapshot &snapshot,
-                                 UBlockRegistry &registry, glm::ivec3 coord,
-                                 std::vector<GreedyMeshBatch> &out_batches,
-                                 bool deferred_no_gpu_readback = false,
-                                 bool greedy_merge_rects = false) override;
+  bool TryExtractOpaqueToBatches(
+      const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+      glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches,
+      bool deferred_no_gpu_readback = false, bool greedy_merge_rects = false,
+      const BlockDefinitionCatalog *catalog = nullptr) override;
 
 private:
   UCpuGreedyMesher Cpu;

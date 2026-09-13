@@ -11,6 +11,8 @@
 namespace cutum
 {
 
+struct BlockDefinitionCatalog;
+
 /// Max greedy rects written by compute; Rects SSBO / per-slot hold size.
 inline constexpr uint32_t kMaxGpuRects = 16384u;
 inline constexpr GLsizeiptr kGpuRectsSsboBytes =
@@ -40,10 +42,12 @@ struct GpuGreedyEmitState;
 bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state);
 
 /// GPF1: mask → greedy-rect → vertex/index emit on GPU (desktop GL only).
+/// When catalog is non-null, eligibility/occupancy use the pinned catalog (Q4).
 bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
                                const ChunkMeshSnapshot &snapshot,
                                UBlockRegistry &registry, glm::ivec3 coord,
-                               std::vector<GreedyMeshBatch> &out_batches);
+                               std::vector<GreedyMeshBatch> &out_batches,
+                               const BlockDefinitionCatalog *catalog = nullptr);
 
 uint64_t ConsumeGpuOpaqueEmitCount();
 

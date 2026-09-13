@@ -16,6 +16,8 @@
 namespace cutum
 {
 
+struct BlockDefinitionCatalog;
+
 /// Full GPU mesh pipeline: snapshot upload → mask → greedy → packed emit → SSBO slot.
 /// Replaces the CPU vertex readback path in GPF1 for eligible chunks.
 /// Non-eligible chunks and cross instances continue through the CPU path.
@@ -54,7 +56,8 @@ public:
   };
   bool KickComputePasses(const ChunkMeshSnapshot &snapshot,
                          UBlockRegistry &registry, glm::ivec3 coord,
-                         int slot_idx, GpuApplyTicket &out_ticket);
+                         int slot_idx, GpuApplyTicket &out_ticket,
+                         const BlockDefinitionCatalog *catalog = nullptr);
   enum class GpuFinishStatus : uint8_t
   {
     Ready = 0,

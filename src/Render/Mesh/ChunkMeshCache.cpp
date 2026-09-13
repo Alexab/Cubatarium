@@ -1648,6 +1648,14 @@ void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
     {
       deps.content_revision = rev;
     }
+    // Q7: reserve snapshot credit before band allocate / worker enqueue.
+    if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
+            kEstimatedChunkSnapshotBytes))
+    {
+      return;
+    }
+    UPipelineCreditGuard credit(PipelineCreditKind::Snapshot,
+                                kEstimatedChunkSnapshotBytes, true);
     auto band = world.ReadChunkBandForCapture(
         chunk_coord, token, CaptureStore.GetNeighborDrawableFn(),
         CaptureStore.GetNeighborDrawableCtx());
@@ -3441,6 +3449,15 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
                                  work_token.generation};
     DependencyStamp deps =
         BuildMeshCaptureDependencyStamp(world, coord, source_revision, registry);
+    // Q7: reserve before band allocate / worker enqueue.
+    if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
+            kEstimatedChunkSnapshotBytes))
+    {
+      out.kind = SnapshotAcquireKind::Deferred;
+      return out;
+    }
+    UPipelineCreditGuard credit(PipelineCreditKind::Snapshot,
+                                kEstimatedChunkSnapshotBytes, true);
     auto band = world.ReadChunkBandForCapture(
         coord, token, CaptureStore.GetNeighborDrawableFn(),
         CaptureStore.GetNeighborDrawableCtx());
@@ -4224,10 +4241,24 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
 
     bool has_transparent = false;
+    const BlockDefinitionCatalog *pinned = pending.inputCatalog.get();
     for (BlockId id : pending.snapshot.blocks)
     {
-      if (id != 0 && (registry.IsTransparent(id) ||
-                      registry.GetRenderStyle(id) == BlockRenderStyle::Cutout))
+      if (id == 0)
+      {
+        continue;
+      }
+      if (pinned)
+      {
+        if (CatalogIsTransparent(pinned, id) ||
+            CatalogGetRenderStyle(pinned, id) == BlockRenderStyle::Cutout)
+        {
+          has_transparent = true;
+          break;
+        }
+      }
+      else if (registry.IsTransparent(id) ||
+               registry.GetRenderStyle(id) == BlockRenderStyle::Cutout)
       {
         has_transparent = true;
         break;
@@ -4243,7 +4274,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       break;
     }
     if (!pipeline->KickComputePasses(pending.snapshot, registry, pending.coord,
-                                     slot_idx, pending.ticket))
+                                     slot_idx, pending.ticket, pinned))
     {
       pipeline->GetAllocator().FreeSlotByIndex(slot_idx);
       ActiveMeshSourceRevision.erase(pending.coord);
@@ -4507,22 +4538,27 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Legacy GPF1 readback path (fallback).
   if (result.GpuExtractPending && result.PendingSnapshot && MesherBackend)
   {
+    const BlockDefinitionCatalog *pinned = result.InputCatalog.get();
     bool extracted = MesherBackend->TryExtractOpaqueToBatches(
         *result.PendingSnapshot, registry, result.coord, result.batches,
         /*deferred_no_gpu_readback=*/false,
-        /*greedy_merge_rects=*/false);
+        /*greedy_merge_rects=*/false, pinned);
     if (!extracted)
     {
       std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
-      const auto quads =
-          MesherBackend->BuildChunkMesh(*result.PendingSnapshot, registry);
+      const auto quads = MesherBackend->BuildChunkMesh(
+          *result.PendingSnapshot, registry, pinned);
       for (const GreedyQuad &q : quads)
       {
         GreedyMeshBatch &batch = byBlockId[q.Id];
         batch.blockId = q.Id;
-        batch.Transparent = registry.IsTransparent(q.Id);
+        batch.Transparent =
+            pinned ? CatalogIsTransparent(pinned, q.Id)
+                   : registry.IsTransparent(q.Id);
         batch.AlphaCutout =
-            registry.GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
+            (pinned ? CatalogGetRenderStyle(pinned, q.Id)
+                    : registry.GetRenderStyle(q.Id)) ==
+            BlockRenderStyle::Cutout;
         const size_t base_vertex = batch.vertices.size();
         AppendGreedyQuad(q, result.coord, batch.vertices, batch.indices);
         for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
