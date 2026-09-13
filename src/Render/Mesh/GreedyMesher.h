@@ -30,8 +30,8 @@ struct GreedyQuad
 class UGreedyMesher
 {
 public:
-  /// Optional `catalog`: when non-null, Transparent/RenderStyle face decisions
-  /// read the pinned catalog (Q4). Liquid/movement stay on `registry`.
+  /// Optional `catalog`: when non-null, ALL face/liquid/movement decisions
+  /// read the pinned catalog (Q4 WorkerCompute). Registry is fallback only.
   static std::vector<GreedyQuad> BuildChunkMesh(
       const UBlockWorld &world, glm::ivec3 chunkCoord, UBlockRegistry &registry,
       const BlockDefinitionCatalog *catalog = nullptr);

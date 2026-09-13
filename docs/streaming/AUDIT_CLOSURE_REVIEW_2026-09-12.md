@@ -170,9 +170,9 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q2 renderer oracle / attribution | done — attribution + census mismatch + normal_shutdown_test; GL pixel oracle remains `greedy_vertex_pool_*` / driver (G1 open) |
 | Q3 schedule cost split | done |
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
-| Q4 visual boundary stamps | Strategy A geom-only stamp confirmed; `MeshInputs`/`LightInputs` types; AsyncMeshBuilder + **GreedyMesher** Transparent/Cutout from pinned catalog (liquid/movement still registry). GPU extract path still registry-backed |
-| Q5 tiny-cap publication progress | done for chunk-granular retain + `publication_progress_unit_n`; eviction policy polish open |
-| Q6 ColumnRecord cutover | ShadowCompare default; Decide* from ColumnRecord; keep-until-replace: no legacy re-feed while `pending` active; AdvanceColumn stamps pending. 095318 mismatch ~2.6k pre-fix — remeasure |
+| Q4 visual boundary stamps | Strategy A geom-only stamp; MeshInputs types; WorkerCompute **pinned catalog for faces+liquid+movement+cross** (GPU extract eligibility still registry residual) |
+| Q6 ColumnRecord cutover | ShadowCompare default; keep-until-replace Enqueue. **100100**: mismatch ~251 flat (cruise delta≈0) — FirstMesh cutover *candidate* after Q4 F5 |
+| Q9 F5 acceptance flight | **100100** drawable PASS (stale 36.5, holes 0, enter~2.8s, VB 70). Full G0/G1 open |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
 | Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + soft-defer Relight/Seam; **FirstMesh never hard-killed** |
 | Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + CaptureAndCommitOnMain snapshot reserve |
@@ -186,9 +186,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | 095318 holes 0.06 better; VB med **73** still red vs 141350; GL pixel oracle open |
-| G2 | Не закрыт | 095318 Decide mismatch ~2.6k — need keep-until-replace Enqueue parity before enabling owners |
+| G1 | Не закрыт | 100100 holes 0; VB med **70** still red vs 141350 |
+| G2 | Частично | 100100 Decide cruise plateau (~251 total, late delta 0); FirstMeshOwner not enabled yet |
 | G3 | Частично | ColumnFlow DrainBudget/RemeshSeam soft-defer by Exhausted; FirstMesh floor; apply/upload still local budgets |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: keep-until-replace Enqueue (no legacy re-feed while record pending) + F5 remeasure; then Q4 catalog-only / FirstMesh cutover if Decide mismatch small. Cutover stays **ShadowCompare**.
+Следующий шаг: F5 after Q4 catalog liquid/movement pin; then enable FirstMeshOwner if drawable holds; Relight/Seam/Eviction cutover; Q9 3+3. Default remains ShadowCompare until FirstMesh flip.

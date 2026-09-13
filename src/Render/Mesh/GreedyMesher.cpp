@@ -168,15 +168,46 @@ private:
   const ChunkMeshSnapshot &Snapshot;
 };
 
+bool MeshIsLiquid(UBlockRegistry &registry, const BlockDefinitionCatalog *catalog,
+                  BlockId id)
+{
+  if (catalog)
+  {
+    return CatalogIsLiquid(catalog, id);
+  }
+  return registry.IsLiquid(id);
+}
+
+bool MeshBlocksMovement(UBlockRegistry &registry,
+                        const BlockDefinitionCatalog *catalog, BlockId id)
+{
+  if (catalog)
+  {
+    return CatalogBlocksMovement(catalog, id);
+  }
+  return registry.BlocksMovement(id);
+}
+
+bool MeshIsFluidPermeable(UBlockRegistry &registry,
+                          const BlockDefinitionCatalog *catalog, BlockId id)
+{
+  if (catalog)
+  {
+    return CatalogIsFluidPermeable(catalog, id);
+  }
+  return registry.IsFluidPermeable(id);
+}
+
 bool CellHasRenderableFluid(IUChunkMeshReader &reader, UBlockRegistry &registry,
+                            const BlockDefinitionCatalog *catalog,
                             glm::ivec3 world_pos)
 {
   const BlockId id = reader.GetBlock(world_pos);
-  if (registry.IsLiquid(id))
+  if (MeshIsLiquid(registry, catalog, id))
   {
     return true;
   }
-  if (registry.IsFluidPermeable(id) &&
+  if (MeshIsFluidPermeable(registry, catalog, id) &&
       FluidCellHasActiveFluid(PackFluidCellState(reader.GetFluid(world_pos))))
   {
     return true;
@@ -196,7 +227,7 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
           reader.GetNeighborLoadState(neighbor_pos)))
   {
     // Liquid sides toward unloaded neighbors must still emit (missing faces).
-    if (!registry.IsLiquid(face_id))
+    if (!MeshIsLiquid(registry, catalog, face_id))
     {
       return true;
     }
@@ -230,7 +261,7 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
     }
   }
 
-  if (neighbor == face_id && !registry.BlocksMovement(face_id))
+  if (neighbor == face_id && !MeshBlocksMovement(registry, catalog, face_id))
 
   {
 
@@ -238,9 +269,9 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   }
 
   if (face_style == BlockRenderStyle::Fluid &&
-      CellHasRenderableFluid(reader, registry, neighbor_pos))
+      CellHasRenderableFluid(reader, registry, catalog, neighbor_pos))
   {
-    return registry.IsLiquid(neighbor) && neighbor == face_id;
+    return MeshIsLiquid(registry, catalog, neighbor) && neighbor == face_id;
   }
 
   const bool face_transparent =
@@ -254,7 +285,7 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   if (face_transparent && neighbor_transparent)
   {
     if (face_style == BlockRenderStyle::Fluid &&
-        registry.IsFluidPermeable(neighbor))
+        MeshIsFluidPermeable(registry, catalog, neighbor))
     {
       return false;
     }
@@ -281,7 +312,7 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
   if (!face_transparent && neighbor_transparent &&
 
-      registry.BlocksMovement(neighbor))
+      MeshBlocksMovement(registry, catalog, neighbor))
 
   {
 
@@ -302,11 +333,13 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
     const bool beyond_open =
 
-        (beyond == BLOCK_AIR || !registry.BlocksMovement(beyond));
+        (beyond == BLOCK_AIR ||
+         !MeshBlocksMovement(registry, catalog, beyond));
 
     const bool before_solid =
 
-        (before != BLOCK_AIR && registry.BlocksMovement(before));
+        (before != BLOCK_AIR &&
+         MeshBlocksMovement(registry, catalog, before));
 
     if (beyond_open && before_solid)
 
@@ -325,7 +358,7 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
     return false;
   }
 
-  if (registry.BlocksMovement(neighbor))
+  if (MeshBlocksMovement(registry, catalog, neighbor))
 
   {
 
@@ -342,7 +375,7 @@ bool WaterloggedNeighborHidesFace(IUChunkMeshReader &reader,
                                   glm::ivec3 neighbor_offset)
 {
   const glm::ivec3 neighbor_pos = block_pos + neighbor_offset;
-  if (!CellHasRenderableFluid(reader, registry, neighbor_pos))
+  if (!CellHasRenderableFluid(reader, registry, catalog, neighbor_pos))
   {
     return false;
   }
@@ -428,7 +461,7 @@ void AppendWaterloggedFluidQuads(IUChunkMeshReader &reader,
                                        chunk_coord.y * CHUNK_SIZE + local.y,
                                        chunk_coord.z * CHUNK_SIZE + local.z);
             const BlockId id = reader.GetBlockLocal(local);
-            if (!registry.IsFluidPermeable(id))
+            if (!MeshIsFluidPermeable(registry, catalog, id))
             {
               continue;
             }
@@ -557,7 +590,7 @@ int MaxMeshLocalY(IUChunkMeshReader &reader, UBlockRegistry &registry,
 
           max_y = std::max(max_y, y);
         }
-        else if (registry.IsFluidPermeable(id))
+        else if (MeshIsFluidPermeable(registry, catalog, id))
         {
           const glm::ivec3 world_pos(chunk_coord.x * CHUNK_SIZE + local.x,
                                      chunk_coord.y * CHUNK_SIZE + local.y,
@@ -679,7 +712,7 @@ std::vector<GreedyQuad> BuildChunkMeshImpl(IUChunkMeshReader &reader,
             light_mask[v][u] = FaceLightPacked(reader, world_pos, neighbor_offset);
 
             fluid_mask[v][u] =
-                registry.IsLiquid(id)
+                MeshIsLiquid(registry, catalog, id)
                     ? static_cast<uint8_t>(1)
                     : PackFluidCellState(reader.GetFluid(world_pos));
           }

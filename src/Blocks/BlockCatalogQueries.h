@@ -55,6 +55,54 @@ inline int CatalogGetLightEmission(const BlockDefinitionCatalog *catalog,
   return 0;
 }
 
+inline bool CatalogIsLiquid(const BlockDefinitionCatalog *catalog, BlockId id)
+{
+  if (const BlockDefinition *def = FindCatalogDefinition(catalog, id))
+  {
+    return def->Physics.IsLiquid;
+  }
+  return false;
+}
+
+inline bool CatalogBlocksMovement(const BlockDefinitionCatalog *catalog,
+                                  BlockId id)
+{
+  if (id == BLOCK_AIR)
+  {
+    return false;
+  }
+  if (const BlockDefinition *def = FindCatalogDefinition(catalog, id))
+  {
+    return def->Physics.Movement.Occupancy >= 1.0f;
+  }
+  // Unknown id: treat as solid (same fail-closed default as opaque mesh).
+  return true;
+}
+
+inline bool CatalogIsFluidPermeable(const BlockDefinitionCatalog *catalog,
+                                    BlockId id)
+{
+  if (id == BLOCK_AIR)
+  {
+    return false;
+  }
+  const BlockDefinition *def = FindCatalogDefinition(catalog, id);
+  if (!def || def->Physics.IsLiquid)
+  {
+    return false;
+  }
+  if (def->Physics.FluidPermeable.has_value())
+  {
+    return def->Physics.FluidPermeable.value();
+  }
+  if (def->Physics.Movement.Occupancy >= 1.0f)
+  {
+    return false;
+  }
+  return def->Render.Style == BlockRenderStyle::Cross ||
+         def->Render.Style == BlockRenderStyle::Cutout;
+}
+
 } // namespace cutum
 
 #endif // BLOCKCATALOGQUERIES_H

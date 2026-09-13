@@ -29,6 +29,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (091748) | `bin/logs/enter_lit_20260913-091804.jsonl` |
 | Post-RecordWants (095318) | `bin/logs/perf_20260913-095318_39488.jsonl` |
 | Enter (095318) | `bin/logs/enter_lit_20260913-095332.jsonl` |
+| Post-keep-until-replace (100100) | `bin/logs/perf_20260913-100100_38604.jsonl` |
+| Enter (100100) | `bin/logs/enter_lit_20260913-100115.jsonl` |
 
 ## Manifest (required)
 
@@ -37,7 +39,7 @@ Record in suite report / notes:
 - git SHA: tag **`product_anchor_20260912`** (`8c9bf59a` tip at tag); post-anchor tip advances on `cursor_audit_impl2`
 - build type (Release); exe sha256 prefix `AC7003B329F8984B` (anchor build)
 - route: same as 090306 / 174657-class
-- INFO anchor: `...INFO.20260912-192013.9704`; reflight: `...INFO.20260912-194407.31392`; post-cutover: `...INFO.20260912-201115.28700`; post-Q8: `...INFO.20260912-203304.7532`; post-shadow-field: `...INFO.20260912-211853.30432`; post-Decide-split: `...INFO.20260913-091746.40588`; post-RecordWants: `...INFO.20260913-095316.39488`
+- INFO anchor: `...INFO.20260912-192013.9704`; … post-RecordWants: `...INFO.20260913-095316.39488`; post-keep-until-replace: `...INFO.20260913-100058.38604`
 
 ## Commands
 
@@ -64,19 +66,19 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **203306 post-Q8 soft-defer:** **drawable PASS vs 192015** — stale **29**, unfinished **0**, job_rr med **~22**, holes_frac **0.24** (better than anchor 0.53 and 201118 0.65), VB med **76** (slightly up), enter `live_blockers` ~**2.9s** (≪60s), wall **34.5**. Still FAIL full 141350 (stale>2×9, VB, miss_stuck+gpu_kick~0). holes gate not in FAIL list this run.
 - **211857 post-shadow-field reflight:** **drawable PASS vs 192015** — stale **31**, unfinished **0**, job_rr med **~40**, holes_frac **0.37**, enter INFO ~**135ms**. VB med **92** (G1). `shadow_mismatch_n` **~10k** — Sync spam (fixed in `26e8475b`).
 - **091748 post-Decide telem split (pre parity fix):** **drawable PASS vs 192015** — stale **36**, unfinished **0**, job_rr **~31**, holes **0.21**, VB **57**, wall **42**, enter ~**3.1s**. `stage_disagree` med **~11**. `shadow_mismatch_n` still **~5k**.
-- **095318 post-RecordWants (`73d3403b`):** **drawable PASS vs 192015** — stale **24**, unfinished **0**, job_rr **~18**, holes **0.06**, enter ~**99ms**, wall **40.6**. VB med **73** (slightly up; G1). `stage_disagree` med **~12**. `shadow_mismatch_n` cruise med **~2.6k** / max **3606** — still climbing (legacy re-feed while record already has active pending Meshing). **Not cutover-ready.** Still FAIL full 141350 (missing/VB).
+- **095318 post-RecordWants (`73d3403b`):** **drawable PASS** — stale **24**, holes **0.06**, enter ~**99ms**, mismatch **~2.6k** climbing.
+- **100100 post-keep-until-replace (`b533fea1`):** **drawable PASS vs 192015** — stale **36.5**, unfinished **0**, holes **0**, job_rr **~10**, enter ~**2.8s**, wall **38.5**, VB **70**. `stage_disagree` med **~2** (late cruise **0**). `shadow_mismatch_n` cruise med **~251**, **plateau at 252** (deltas≈0 in late cruise) — ~10× better than 095318. Remaining ~250 from enter/warmup (RenderReady vs FirstMesh policy). Steady cruise Decide parity OK for cutover *candidate*; still FAIL full 141350 (missing/VB).
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
-- **Next:** suppress legacy re-feed when ColumnRecord has active pending (keep-until-replace); remeasure Decide mismatch; then Q4 catalog-only worker / FirstMesh cutover if parity small. Cutover stays **ShadowCompare**.
+- **Next:** Q4 catalog-only WorkerCompute (liquid/movement/cross pinned); then FirstMeshOwner cutover if F5 holds; Q9 paired acceptance. Cutover default stays **ShadowCompare** until FirstMesh stage flip.
 
-| Metric (cruise med) | 090306 | 175610 | **192015** | **203306** | **211857** | **091748** | **095318** |
-|---|---|---|---|---|---|---|---|
-| wall_ms | 44.6 | 37 | 52.6 | **34.5** | **74.0** | **42.0** | **40.6** |
-| mesh_emerge_med | 12.9 | ~3.4 | 14.1 | **8.3** | **28.4** | **6.9** | **5.2** |
-| mesh_apply_stale | 46 | ~7.5e4 | 55 | **29** | **31** | **36** | **24** |
-| unfinished_visual | 0 | 28 | 0 | **0** | **0** | **0** | **0** |
-| visual_holes_frac | 0.70 | 1 | 0.53 | **0.24** | **0.37** | **0.21** | **0.06** |
-| visible_black_focus_med | 63 | 36 | 64 | **76** | **92** | **57** | **73** |
-| column_job ready med | — | 0 | ~1 | **~22** | **~40** | **~31** | **~18** |
-| enter continuous ms | ~75 | ~93112 | ~78 | **~2905** | **~135** | **~3130** | **~99** |
-| shadow_mismatch_n | — | — | — | — | **~10k Sync** | **~5k** | **~2.6k** |
-| stage_disagree_n | — | — | — | — | — | **~11** | **~12** |
+| Metric (cruise med) | **192015** | **095318** | **100100** |
+|---|---|---|---|
+| wall_ms | 52.6 | **40.6** | **38.5** |
+| mesh_apply_stale | 55 | **24** | **36.5** |
+| unfinished_visual | 0 | **0** | **0** |
+| visual_holes_frac | 0.53 | **0.06** | **0** |
+| visible_black_focus_med | 64 | **73** | **70** |
+| column_job ready med | ~1 | **~18** | **~10** |
+| enter continuous ms | ~78 | **~99** | **~2786** |
+| shadow_mismatch_n | — | **~2.6k↑** | **~251 flat** |
+| stage_disagree_n | — | **~12** | **~2** |

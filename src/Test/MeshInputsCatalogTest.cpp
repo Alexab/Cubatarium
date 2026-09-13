@@ -68,6 +68,18 @@ int main()
          "pinned catalog RenderStyle for mesher faces");
   Expect(CatalogIsTransparent(catalog_a.get(), 11),
          "pinned catalog Transparent for mesher faces");
+  cutum::BlockDefinition water{};
+  water.Physics.IsLiquid = true;
+  water.Physics.Movement.Occupancy = 0.0f;
+  catalog_a->ById[12] = water;
+  Expect(cutum::CatalogIsLiquid(catalog_a.get(), 12), "pinned CatalogIsLiquid");
+  Expect(!cutum::CatalogBlocksMovement(catalog_a.get(), 12),
+         "liquid does not block movement");
+  cutum::BlockDefinition stone{};
+  stone.Physics.Movement.Occupancy = 1.0f;
+  catalog_a->ById[13] = stone;
+  Expect(cutum::CatalogBlocksMovement(catalog_a.get(), 13),
+         "solid blocks movement from catalog");
 
   if (gFails != 0)
   {

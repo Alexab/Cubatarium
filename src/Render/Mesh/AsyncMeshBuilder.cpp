@@ -138,13 +138,13 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
           result.PendingSnapshot =
               std::make_unique<ChunkMeshSnapshot>(std::move(snapshot));
           CollectCrossInstancesFromSnapshot(*result.PendingSnapshot, *registryPtr,
-                                            result.crossCenters);
+                                            pinned, result.crossCenters);
         }
         else
         {
           std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
-          // Q4: face Transparent/Cutout decisions use pinned catalog inside
-          // GreedyMesher; liquid/movement still via registry.
+          // Q4: WorkerCompute uses pinned catalog for faces/liquid/movement/cross.
+          // GPU extract eligibility still samples registry (main-thread residual).
           const auto quads =
               Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr, pinned)
                      : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr,
@@ -163,7 +163,7 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
               ApplyVertexLight(batch.vertices[i], q.LightPacked);
             }
           }
-          CollectCrossInstancesFromSnapshot(snapshot, *registryPtr,
+          CollectCrossInstancesFromSnapshot(snapshot, *registryPtr, pinned,
                                             result.crossCenters);
           result.batches.reserve(byBlockId.size());
           for (auto &entry : byBlockId)
