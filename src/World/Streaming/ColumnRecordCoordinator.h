@@ -55,6 +55,12 @@ public:
   /// Derive scheduler stage from record (published + pending independent).
   static ColumnJobStage DeriveJobStageFromRecord(const ColumnRecord &rec);
 
+  /// Record-side enqueue wants from ColumnRecord SoT (not legacy job-stage map).
+  static bool RecordWantsFirstMeshEnqueue(const ColumnRecord &rec);
+  static bool RecordWantsRelightEnqueue(const ColumnRecord &rec);
+  static bool RecordWantsSeamEnqueue(const ColumnRecord &rec);
+  static bool RecordWantsEvict(const ColumnRecord &rec);
+
   /// Decide*-path shadow mismatch (cutover SoT). Does NOT count Sync stage diffs.
   static void LogShadowMismatch(glm::ivec2 column, ColumnJobStage legacy_stage,
                                 ColumnJobStage record_stage);
@@ -62,22 +68,27 @@ public:
   /// FirstMesh enqueue decision. In ShadowCompare: returns legacy_want and
   /// logs when record_want differs (no dual job). In FirstMeshOwner+: record_want
   /// is authoritative for FirstMesh.
+  /// count_mismatch: log only on new ticket attempts (skip priority refresh).
   static bool DecideFirstMeshEnqueue(bool legacy_want, bool record_want,
-                                     glm::ivec2 column = {});
+                                     glm::ivec2 column = {},
+                                     bool count_mismatch = true);
 
   /// Relight enqueue decision (RelightThenMesh / PromoteRelight). Same shadow
   /// contract; authoritative when stage >= RelightOwner.
   static bool DecideRelightEnqueue(bool legacy_want, bool record_want,
-                                   glm::ivec2 column = {});
+                                   glm::ivec2 column = {},
+                                   bool count_mismatch = true);
 
   /// RemeshSeam enqueue decision; authoritative when stage >= SeamOwner.
   static bool DecideSeamEnqueue(bool legacy_want, bool record_want,
-                                glm::ivec2 column = {});
+                                glm::ivec2 column = {},
+                                bool count_mismatch = true);
 
   /// Column unload decision; authoritative when stage >= EvictionOwner.
   /// Not an Enqueue gate — Streamer unload callback must honor this.
   static bool DecideEvict(bool legacy_want, bool record_want,
-                          glm::ivec2 column = {});
+                          glm::ivec2 column = {},
+                          bool count_mismatch = true);
 };
 
 } // namespace cutum

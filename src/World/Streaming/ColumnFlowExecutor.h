@@ -103,6 +103,8 @@ public:
   bool SyncColumnJobStageFromWorld(UWorld &world, glm::ivec2 column);
   void SyncFocusRingColumnJobStages(UWorld &world, glm::ivec3 focus_ground,
                                     int focus_radius);
+  /// Q6: bind world for Decide* record_want during Enqueue (frame-scoped).
+  void BindDecideWorld(UWorld *world) { decide_world_ = world; }
   /// Focus-ring census for JSONL (PendingLight / Meshing / GpuPending / RenderReady).
   void CountFocusRingJobStages(glm::ivec3 focus_ground, int focus_radius,
                                int &out_pending_light, int &out_meshing,
@@ -133,6 +135,7 @@ private:
   bool capture_pin_hold_{false};
   glm::ivec2 capture_pin_col_{0};
   int capture_pin_age_{0};
+  UWorld *decide_world_{nullptr};
   std::unordered_map<int64_t, ColumnJobStage> column_job_stage_{};
 
   static int64_t ColumnKey(glm::ivec2 column)

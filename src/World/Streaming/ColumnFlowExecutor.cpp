@@ -264,18 +264,52 @@ void UColumnFlowExecutor::FlushPromoteRequest()
   promote_enqueued_ = true;
 }
 
+namespace
+{
+const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
+{
+  if (const ColumnRecord *rec = world.GetColumnRecords().Find(column))
+  {
+    return *rec;
+  }
+  thread_local ColumnRecord scratch{};
+  scratch = {};
+  scratch.resident = world.GetBlockWorld().GetChunkManager().HasChunk(
+      glm::ivec3(column.x, 0, column.y));
+  return scratch;
+}
+} // namespace
+
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
 {
+  const bool new_ticket = !scheduler_.Contains(item.column, item.kind);
+  const bool legacy_want = true;
+  bool record_want = legacy_want;
+  if (decide_world_ != nullptr)
+  {
+    const ColumnRecord &rec = RecordForDecide(*decide_world_, item.column);
+    switch (item.kind)
+    {
+    case ColumnWorkKind::FirstMesh:
+      record_want =
+          UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(rec);
+      break;
+    case ColumnWorkKind::RelightThenMesh:
+    case ColumnWorkKind::PromoteRelight:
+      record_want = UColumnRecordCoordinator::RecordWantsRelightEnqueue(rec);
+      break;
+    case ColumnWorkKind::RemeshSeam:
+      record_want = UColumnRecordCoordinator::RecordWantsSeamEnqueue(rec);
+      break;
+    default:
+      break;
+    }
+  }
   if (item.kind == ColumnWorkKind::FirstMesh)
   {
-    // Q6: ShadowCompare keeps legacy enqueue; FirstMeshOwner uses record stage.
-    const ColumnJobStage record_stage = GetColumnJobStage(item.column);
-    const bool record_want =
-        record_stage != ColumnJobStage::RenderReady &&
-        record_stage != ColumnJobStage::Meshing &&
-        record_stage != ColumnJobStage::GpuPending;
-    if (!UColumnRecordCoordinator::DecideFirstMeshEnqueue(true, record_want,
-                                                          item.column))
+    // Q6: ShadowCompare keeps legacy enqueue; FirstMeshOwner uses record want.
+    if (!UColumnRecordCoordinator::DecideFirstMeshEnqueue(
+            legacy_want, record_want, item.column, new_ticket))
     {
       return;
     }
@@ -283,23 +317,16 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
   else if (item.kind == ColumnWorkKind::RelightThenMesh ||
            item.kind == ColumnWorkKind::PromoteRelight)
   {
-    const ColumnJobStage record_stage = GetColumnJobStage(item.column);
-    const bool record_want = record_stage != ColumnJobStage::PendingLight &&
-                             record_stage != ColumnJobStage::RenderReady;
-    if (!UColumnRecordCoordinator::DecideRelightEnqueue(true, record_want,
-                                                        item.column))
+    if (!UColumnRecordCoordinator::DecideRelightEnqueue(
+            legacy_want, record_want, item.column, new_ticket))
     {
       return;
     }
   }
   else if (item.kind == ColumnWorkKind::RemeshSeam)
   {
-    const ColumnJobStage record_stage = GetColumnJobStage(item.column);
-    const bool record_want =
-        record_stage != ColumnJobStage::Meshing &&
-        record_stage != ColumnJobStage::GpuPending;
-    if (!UColumnRecordCoordinator::DecideSeamEnqueue(true, record_want,
-                                                     item.column))
+    if (!UColumnRecordCoordinator::DecideSeamEnqueue(
+            legacy_want, record_want, item.column, new_ticket))
     {
       return;
     }
@@ -474,6 +501,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
                                      glm::ivec3 focus_ground_horiz,
                                      int focus_radius, int admit_batch)
 {
+  BindDecideWorld(&world);
   FlushPromoteRequest();
   ++frame_counter_;
   int drained = 0;
@@ -510,6 +538,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                       int admit_n, double /*last_frame_ms*/,
                                       int pending_async, bool prep_over_budget)
 {
+  BindDecideWorld(&world);
   ++frame_counter_;
   const glm::ivec2 focus(focus_ground_horiz.x, focus_ground_horiz.z);
   std::vector<glm::ivec2> pending_cols;

@@ -147,6 +147,23 @@ int main()
          "shadow mismatch feeds ColumnRecordShadowMismatchN");
   UColumnRecordCoordinator::ResetShadowMismatchCount();
 
+  // Record wants derive from ColumnRecord SoT, not legacy job-stage map.
+  ColumnRecord meshing_rec{};
+  meshing_rec.resident = true;
+  meshing_rec.pending.token = 1;
+  meshing_rec.pending.stage = ColumnJobStage::Meshing;
+  Expect(!UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(meshing_rec),
+         "record rejects FirstMesh while Meshing pending");
+  ColumnRecord gen_rec{};
+  gen_rec.resident = true;
+  Expect(UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(gen_rec),
+         "record accepts FirstMesh for Gen column");
+  Expect(UColumnRecordCoordinator::DecideFirstMeshEnqueue(true, false, {}, false)
+             == true,
+         "refresh-only mismatch does not block legacy enqueue");
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 0,
+         "count_mismatch=false skips Decide telem");
+
   // Stage shadow disagree is a per-pass gauge, not the Decide* counter.
   UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(0);
   Expect(UColumnRecordCoordinator::ShadowStageDisagreeFocusN() == 0,

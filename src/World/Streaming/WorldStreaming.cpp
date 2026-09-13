@@ -3645,7 +3645,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         // Record retains unload while active pending token exists (keep-until-
         // replace). ShadowCompare still honors legacy (always unload).
         const ColumnRecord *rec = world.GetColumnRecords().Find(col);
-        const bool record_want = !rec || !ColumnHasActivePending(*rec);
+        const ColumnRecord empty{};
+        const bool record_want =
+            UColumnRecordCoordinator::RecordWantsEvict(rec ? *rec : empty);
         if (!UColumnRecordCoordinator::DecideEvict(true, record_want, col))
         {
           return false;
@@ -3788,6 +3790,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   {
     return;
   }
+  GetColumnFlowExecutor().BindDecideWorld(&world);
   if (kI18WitnessComfortEnabled && WitnessColumnGrace.frames_left > 0)
   {
     --WitnessColumnGrace.frames_left;

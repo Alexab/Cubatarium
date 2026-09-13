@@ -168,6 +168,35 @@ ColumnJobStage UColumnRecordCoordinator::DeriveJobStageFromRecord(
   return ColumnJobStage::Gen;
 }
 
+bool UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(
+    const ColumnRecord &rec)
+{
+  const ColumnJobStage stage = DeriveJobStageFromRecord(rec);
+  return stage != ColumnJobStage::RenderReady &&
+         stage != ColumnJobStage::Meshing &&
+         stage != ColumnJobStage::GpuPending;
+}
+
+bool UColumnRecordCoordinator::RecordWantsRelightEnqueue(
+    const ColumnRecord &rec)
+{
+  const ColumnJobStage stage = DeriveJobStageFromRecord(rec);
+  return stage != ColumnJobStage::PendingLight &&
+         stage != ColumnJobStage::RenderReady;
+}
+
+bool UColumnRecordCoordinator::RecordWantsSeamEnqueue(const ColumnRecord &rec)
+{
+  const ColumnJobStage stage = DeriveJobStageFromRecord(rec);
+  return stage != ColumnJobStage::Meshing &&
+         stage != ColumnJobStage::GpuPending;
+}
+
+bool UColumnRecordCoordinator::RecordWantsEvict(const ColumnRecord &rec)
+{
+  return !ColumnHasActivePending(rec);
+}
+
 void UColumnRecordCoordinator::LogShadowMismatch(glm::ivec2 column,
                                                ColumnJobStage legacy_stage,
                                                ColumnJobStage record_stage)
@@ -185,7 +214,8 @@ void UColumnRecordCoordinator::LogShadowMismatch(glm::ivec2 column,
 
 bool UColumnRecordCoordinator::DecideFirstMeshEnqueue(bool legacy_want,
                                                       bool record_want,
-                                                      glm::ivec2 column)
+                                                      glm::ivec2 column,
+                                                      bool count_mismatch)
 {
   const ColumnCutoverStage stage = GetCutoverStage();
   if (stage >= ColumnCutoverStage::FirstMeshOwner)
@@ -193,7 +223,7 @@ bool UColumnRecordCoordinator::DecideFirstMeshEnqueue(bool legacy_want,
     return record_want;
   }
   // ShadowCompare: never dual-enqueue; legacy owns; log parity gaps.
-  if (legacy_want != record_want)
+  if (count_mismatch && legacy_want != record_want)
   {
     LogShadowMismatch(column,
                       legacy_want ? ColumnJobStage::Meshing
@@ -206,14 +236,15 @@ bool UColumnRecordCoordinator::DecideFirstMeshEnqueue(bool legacy_want,
 
 bool UColumnRecordCoordinator::DecideRelightEnqueue(bool legacy_want,
                                                     bool record_want,
-                                                    glm::ivec2 column)
+                                                    glm::ivec2 column,
+                                                    bool count_mismatch)
 {
   const ColumnCutoverStage stage = GetCutoverStage();
   if (stage >= ColumnCutoverStage::RelightOwner)
   {
     return record_want;
   }
-  if (legacy_want != record_want)
+  if (count_mismatch && legacy_want != record_want)
   {
     LogShadowMismatch(column,
                       legacy_want ? ColumnJobStage::PendingLight
@@ -226,14 +257,15 @@ bool UColumnRecordCoordinator::DecideRelightEnqueue(bool legacy_want,
 
 bool UColumnRecordCoordinator::DecideSeamEnqueue(bool legacy_want,
                                                  bool record_want,
-                                                 glm::ivec2 column)
+                                                 glm::ivec2 column,
+                                                 bool count_mismatch)
 {
   const ColumnCutoverStage stage = GetCutoverStage();
   if (stage >= ColumnCutoverStage::SeamOwner)
   {
     return record_want;
   }
-  if (legacy_want != record_want)
+  if (count_mismatch && legacy_want != record_want)
   {
     LogShadowMismatch(column,
                       legacy_want ? ColumnJobStage::Meshing
@@ -245,14 +277,15 @@ bool UColumnRecordCoordinator::DecideSeamEnqueue(bool legacy_want,
 }
 
 bool UColumnRecordCoordinator::DecideEvict(bool legacy_want, bool record_want,
-                                           glm::ivec2 column)
+                                           glm::ivec2 column,
+                                           bool count_mismatch)
 {
   const ColumnCutoverStage stage = GetCutoverStage();
   if (stage >= ColumnCutoverStage::EvictionOwner)
   {
     return record_want;
   }
-  if (legacy_want != record_want)
+  if (count_mismatch && legacy_want != record_want)
   {
     // Eviction has no ColumnJobStage twin; reuse Absent vs Gen as parity markers.
     LogShadowMismatch(column,
