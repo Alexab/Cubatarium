@@ -3146,6 +3146,9 @@ int main()
            "B2d: min_cap=3 cheap+backlog");
     Expect(RelightThroughputMinApplyCap(true, 3.0, 16.0, 0, 0, 10, 96, 30) == 2,
            "B2d: min_cap=2 cheap no backlog");
+    Expect(RelightThroughputMinApplyCap(true, 3.0, 16.0, 0, 0, 10, 96, 30, false,
+                                        true, /*fully_dark_repair*/ 38) == 3,
+           "G1: FullyDarkPendingRepair>=20 restores min_cap=3");
     Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 3.0, true, 0, 2.5, 0.1, 0, 70,
                                  96, 55) >= 3,
            "B2d: earned cap >=3 for 2.6ms unit+backlog");

@@ -185,7 +185,7 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | **Частично закрыт** | Q9 3+3 drawable PASS; schema/manifest already fail-closed. Product VB/missing vs 141350 still out of G0 scope |
-| G1 | Не закрыт | VB med ~64–73: **~80% FullyDarkPendingRepair + Stalled** (LegalDark≈0, StaleLit≈0). `draw_oracle_*` histogram now in JSONL. Closing G1 = converge repair/light, not reclassify LegalDark. World object-id masks still open |
+| G1 | Не закрыт | **180850:** stalled **0** (Note OK); VB still **~57–68** as FullyDarkRepair. Next: repair-debt Capture/Apply floor (`5bf32dda`+). World object-id masks open |
 | G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through Q9 batch |
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |

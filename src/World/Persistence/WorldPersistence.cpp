@@ -1154,6 +1154,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       bg_cap = std::max(bg_cap, 3);
     }
+    // G1: moving cruise with FullyDarkPendingRepair debt — raise Capture so
+    // Apply has completed work (stall→repair left consume on but bg stayed 1).
+    if (consume_mode && moving &&
+        telem.VisibleBlackFullyDarkRepairN >= 20)
+    {
+      bg_cap = std::max(bg_cap, 2);
+    }
     const int fifo_soft_cap = tune.RelightFifoSoftCap;
     const bool fifo_starve =
         telem.RelightFifoN >= 50 ||

@@ -51,6 +51,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (164153) | `bin/logs/enter_lit_20260913-164205.jsonl` |
 | Q9 cold#3 + edits (164735) | `bin/logs/perf_20260913-164735_20040.jsonl` |
 | Enter (164735) | `bin/logs/enter_lit_20260913-164751.jsonl` |
+| G1 void-Note (180850) | `bin/logs/perf_20260913-180850_25384.jsonl` |
+| Enter (180850) | `bin/logs/enter_lit_20260913-180923.jsonl` |
 
 ## Manifest (required)
 
@@ -98,17 +100,18 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **163717 Q9 cold#1 / post-Q8 (`9ab070e0`):** **drawable PASS vs 192015** — stale **55.5** (≈anchor), unfinished **0**, holes **0**, job_rr **~8**, enter ~**2.64s**, wall **50.4**, VB **~67**. `shadow_mismatch_n` **0**. `frame_deadline_remaining_ms` cruise med **0** (Q8 soft deadline active). Product vs 141350 still FAIL (missing/VB). **Q9 freeze build = `9ab070e0`** — do not rebuild mid-batch.
 - **164153 Q9 cold#2:** **drawable PASS** — stale **46.5**, unfinished **0**, holes **0**, enter ~**75ms**, wall **42.9**, VB **~71**, mismatch **0**.
 - **164735 Q9 cold#3 (+edits at end):** **drawable PASS** — unfinished **0**, holes **0**, mismatch **0**, enter ~**3.0s**, wall **37.5**, VB **~70**. stale **115** and `drop_no_active` **17** elevated vs cruise-only (edit stress / `phase_abort_heavy`); not 175610-class. New process PID → counts as **cold**, not warm.
+- **180850 post-G1 void-Note (`5bf32dda`):** **drawable PASS** (holes/unf/mismatch **0**) — stale **21–26**, wall **~41**, enter ~**99ms**, VB med **~57–68**. **`fully_dark_stalled` med 0** (was 13–20) — Note PL worked. Debt moved to **`fully_dark_repair` ~38** / `draw_oracle_fully_dark_debt_n` ~47. `cull_stats_sync_read_n` **0**. Product vs 141350 still FAIL (`focus_missing_frac` + VB≥40). Capture bg med **1**, relight_apply med **1** → next: repair-debt Capture/Apply floor.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
-- **Next:** **warm ×3** — same exe, **do not close** the game between the three; repeat route (edits optional once in the series).
 
-| Metric (cruise med) | **163717** | **164153** | **164735** |
+| Metric (cruise med) | **163717** | **171111** | **180850** |
 |---|---|---|---|
-| wall_ms | 50.4 | **42.9** | **37.5** |
-| mesh_apply_stale | 55.5 | **46.5** | **115** (edits) |
-| unfinished_visual | 0 | **0** | **0** |
-| visual_holes | 0 | **0** | **0** |
-| enter continuous ms | ~2644 | **~75** | **~3028** |
-| shadow_mismatch_n | 0 | **0** | **0** |
+| wall_ms | 50.4 | ~47–64 | **~41** |
+| mesh_apply_stale | 55.5 | 107–133 | **21** |
+| unfinished / holes | 0 / 0 | 0 / 0 | **0 / 0** |
+| VB focus | 64 | 73 | **57** |
+| VB fully_dark_repair | 54 | 41 | **38** |
+| VB fully_dark_stalled | 13 | 20 | **0** |
+| enter continuous ms | ~2644 | ~100 | **~99** |
 
 ## Q9 batch procedure (G0)
 

@@ -4481,17 +4481,27 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   {
     slice_ms = std::max(slice_ms, 6.0);
   }
+  // G1: widen slice before earned_cap so cheap/backlog math sees repair debt.
+  if (PhysicsTelemetryData.VisibleBlackFullyDarkRepairN >= 20)
+  {
+    slice_ms = std::max(slice_ms, 6.0);
+  }
   const int earned_cap_base = EarnedRelightApplyCap(
       relight_apply_cap, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
       light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
       PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
-      PhysicsTelemetryData.PendingLightN, consume_mode, moving);
+      PhysicsTelemetryData.PendingLightN, consume_mode, moving,
+      PhysicsTelemetryData.VisibleBlackFullyDarkRepairN);
   int earned_cap =
       (PhysicsTelemetryData.DirtyFmN == 0 &&
        PhysicsTelemetryData.ColumnLoadedNoMeshN > 0)
           ? std::max(earned_cap_base, 2)
           : earned_cap_base;
   if (vb_focus_n >= 20 && PhysicsTelemetryData.DarkFaceStaleNearN >= 40)
+  {
+    earned_cap = std::max(earned_cap, 3);
+  }
+  if (PhysicsTelemetryData.VisibleBlackFullyDarkRepairN >= 20)
   {
     earned_cap = std::max(earned_cap, 3);
   }

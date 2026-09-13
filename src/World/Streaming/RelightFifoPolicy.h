@@ -503,17 +503,19 @@ inline bool RelightThroughputHasBacklog(int ready_at_start, int fifo_n,
 }
 
 /// FZ2.7-B2d: min applies before stop (apply_util≥0.15 ⇒ med≥3 when cheap+backlog).
+/// G1: FullyDarkPendingRepair ≥20 restores the stalled-ticket floor after Note-PL
+/// converted stall→repair (else cruise stays at apply_med=1 while VB≥40).
 inline int RelightThroughputMinApplyCap(
     bool throughput_mode, double cap_unit_ms, double slice_ms,
     int visible_black_stalled_n, int ready_at_start, int fifo_n,
     int fifo_soft_cap, int pending_light_n, bool consume_mode = false,
-    bool moving = true)
+    bool moving = true, int visible_black_fully_dark_repair_n = 0)
 {
   if (!throughput_mode)
   {
     return 1;
   }
-  if (visible_black_stalled_n > 0)
+  if (visible_black_stalled_n > 0 || visible_black_fully_dark_repair_n >= 20)
   {
     return 3;
   }
@@ -579,7 +581,8 @@ inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
                                  double last_install_unit_ms = 0.0,
                                  int ready_at_start = 0, int fifo_n = 0,
                                  int fifo_soft_cap = 0, int pending_light_n = 0,
-                                 bool consume_mode = false, bool moving = true)
+                                 bool consume_mode = false, bool moving = true,
+                                 int visible_black_fully_dark_repair_n = 0)
 {
   if (!throughput_mode)
   {
@@ -590,7 +593,7 @@ inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
   const int min_cap = RelightThroughputMinApplyCap(
       throughput_mode, cap_unit, slice_ms, visible_black_stalled_n,
       ready_at_start, fifo_n, fifo_soft_cap, pending_light_n, consume_mode,
-      moving);
+      moving, visible_black_fully_dark_repair_n);
   const int time_cap =
       (cap_unit > 0.1)
           ? std::max(1, static_cast<int>(slice_ms / cap_unit))
