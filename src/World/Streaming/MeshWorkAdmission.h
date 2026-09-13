@@ -214,6 +214,15 @@ inline bool ShouldProtectLitSettleRemesh(bool holes, int dark_face_stale_near,
   return fully_dark_repair_n >= fully_dark_thresh;
 }
 
+/// G1-P1 / A11: under holes + RemeshQ + StaleVertexLight/FullyDark debt, reserve
+/// snapshot budget for remesh schedules before FirstMesh walk burns the slice.
+inline bool ShouldReserveRemeshSnapshotSlice(bool holes, int remesh_q_n,
+                                             int stale_or_fully_dark_debt,
+                                             int debt_thresh = 20)
+{
+  return holes && remesh_q_n > 0 && stale_or_fully_dark_debt >= debt_thresh;
+}
+
 /// FZ2.7-P17: on long stand with sticky VB + stale plateau, keep remesh
 /// protect (floor) but signal callers to prefer column-owned heal over
 /// full-ring Dirty thrash. True when idle long enough that eye-black is stuck.

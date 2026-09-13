@@ -252,6 +252,8 @@ struct PhysicsTelemetry
   int MeshDirtyDrainN{0};
   double MeshDirtyScheduleMs{0.0};
   int MeshDirtyScheduleOkN{0};
+  int MeshDirtyScheduleOkFmN{0};
+  int MeshDirtyScheduleOkRemeshN{0};
   int MeshDirtyScheduleSkipN{0};
   /// FZ2.7-P9: Dirty schedule skip breakdown (locked ≈ inflight/gpu).
   int MeshDirtyScheduleSkipPipelineN{0};

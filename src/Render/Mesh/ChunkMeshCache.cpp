@@ -4942,6 +4942,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyDrainN = 0;
   LastMeshDirtyScheduleMs = 0.0;
   LastMeshDirtyScheduleOkN = 0;
+  LastMeshDirtyScheduleOkFmN = 0;
+  LastMeshDirtyScheduleOkRemeshN = 0;
   LastMeshDirtyScheduleSkipN = 0;
   LastMeshDirtyScheduleSkipPipelineN = 0;
   LastMeshDirtyScheduleSkipSnapshotN = 0;
@@ -5805,6 +5807,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (Dirty.IsFirstMesh(*it))
       {
         NoteFmDirtyGpuScheduled(*it);
+        ++LastMeshDirtyScheduleOkFmN;
+      }
+      else
+      {
+        ++LastMeshDirtyScheduleOkRemeshN;
       }
       NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
@@ -5950,6 +5957,67 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       remesh_cap = 2;
     }
+    // G1-P1 / A11: under StaleVertexLight/FullyDark debt, spend remesh_schedule
+    // snapshot attempts before FirstMesh walk burns MeshSnapshotBudgetMs.
+    const int remesh_debt_proxy =
+        WorkAdmission.protect_lit_settle_remesh
+            ? 20
+            : std::max(VisibleBlackFocusPressure_,
+                       VisibleBlackNoTicketPressure_);
+    // Debt itself is HoleDrain-class pressure: do not wait for holes telem after
+    // SoftDefer/holes cleared while RemeshQ+StaleVertexLight remain (P1b).
+    const bool remesh_snap_holes =
+        StarveRemeshForHoles ||
+        sched_adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
+        sched_adm.mode == MeshWorkAdmission::Mode::DeepBacklog ||
+        remesh_debt_proxy >= 20;
+    const bool reserve_remesh_snap = ShouldReserveRemeshSnapshotSlice(
+        remesh_snap_holes, static_cast<int>(Dirty.GetRemeshCount()),
+        remesh_debt_proxy);
+    auto schedule_remesh_snapshot_slice = [&]() {
+      if (!reserve_remesh_snap || remesh_cap <= 0 ||
+          Dirty.GetRemeshCount() == 0)
+      {
+        return;
+      }
+      for (auto it = Dirty.begin();
+           it != Dirty.end() && scheduled < max_schedule_per_frame &&
+           remesh_scheduled < remesh_cap;)
+      {
+        if (Dirty.IsFirstMesh(*it))
+        {
+          ++it;
+          continue;
+        }
+        if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
+        {
+          break;
+        }
+        if (AsyncBuilder->GetInFlightCount() >= max_pipeline)
+        {
+          break;
+        }
+        const int scheduled_before = scheduled;
+        auto next = try_schedule(it, false, false, false);
+        if (next == Dirty.end())
+        {
+          break;
+        }
+        if (scheduled > scheduled_before)
+        {
+          ++remesh_scheduled;
+        }
+        it = next;
+      }
+    };
+    schedule_remesh_snapshot_slice();
+    // Under remesh snapshot debt: do not burn remaining budget on FirstMesh
+    // Deferred thrash (210134 skip_snapshot≃139). Keep a thin FM trickle.
+    if (reserve_remesh_snap && remesh_scheduled > 0 &&
+        LastMeshSnapshotMs >= kSnapshotBudgetMs * 0.45)
+    {
+      first_mesh_cap = std::min(first_mesh_cap, 1);
+    }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
       int outer_soft_defer_skips = 0;
@@ -6067,9 +6135,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int remesh_scanned = 0;
     const int remesh_scan_cap =
         DirtyRemeshScanCap(max_schedule_per_frame);
+    // G1-P1: remesh snapshot slice already spent — skip remesh suffix walk that
+    // would thrash FirstMesh prefix and inflate skip_snapshot.
+    const bool remesh_slice_done =
+        reserve_remesh_snap && remesh_scheduled >= remesh_cap &&
+        LastMeshSnapshotMs >= kSnapshotBudgetMs * 0.5;
     for (auto it = Dirty.begin();
-         it != Dirty.end() && scheduled < max_schedule_per_frame;)
+         !remesh_slice_done && it != Dirty.end() &&
+         scheduled < max_schedule_per_frame;)
     {
+      if (reserve_remesh_snap && Dirty.IsFirstMesh(*it))
+      {
+        ++it;
+        continue;
+      }
       if (++remesh_scanned > remesh_scan_cap && scheduled > 0 &&
           !StarveRemeshForHoles && !focus_missing_for_schedule)
       {
@@ -6133,8 +6212,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         continue;
       }
       // D1c: when drain-first left schedule=1 under miss, never spend it on remesh.
-      if (focus_missing_for_schedule && max_schedule_per_frame <= 1 &&
-          HasDrawableGreedyMesh(*it))
+      // G1-P1: remesh snapshot slice under debt may use that slot.
+      if (!reserve_remesh_snap && focus_missing_for_schedule &&
+          max_schedule_per_frame <= 1 && HasDrawableGreedyMesh(*it))
       {
         // ColdWall S0c: remesh starve under miss — erase Dirty (not leave-in).
         it = Dirty.RemoveAt(it);
@@ -6341,6 +6421,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (Dirty.IsFirstMesh(*it))
       {
         NoteFmDirtyGpuScheduled(*it);
+        ++LastMeshDirtyScheduleOkFmN;
       }
       NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
@@ -6349,6 +6430,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (count_as_remesh)
       {
         ++remesh_scheduled;
+        ++LastMeshDirtyScheduleOkRemeshN;
       }
       if (schedule_overflow)
       {

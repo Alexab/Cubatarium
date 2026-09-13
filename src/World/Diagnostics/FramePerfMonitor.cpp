@@ -288,6 +288,8 @@ struct FrameNumbers
   int mesh_dirty_drain_n{0};
   double mesh_dirty_schedule_ms{0.0};
   int mesh_dirty_schedule_ok_n{0};
+  int mesh_dirty_schedule_ok_fm_n{0};
+  int mesh_dirty_schedule_ok_remesh_n{0};
   int mesh_dirty_schedule_skip_n{0};
   int mesh_dirty_schedule_skip_pipeline_n{0};
   int mesh_dirty_schedule_skip_snapshot_n{0};
@@ -886,6 +888,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_drain_n = phys.MeshDirtyDrainN;
   n.mesh_dirty_schedule_ms = phys.MeshDirtyScheduleMs;
   n.mesh_dirty_schedule_ok_n = phys.MeshDirtyScheduleOkN;
+  n.mesh_dirty_schedule_ok_fm_n = phys.MeshDirtyScheduleOkFmN;
+  n.mesh_dirty_schedule_ok_remesh_n = phys.MeshDirtyScheduleOkRemeshN;
   n.mesh_dirty_schedule_skip_n = phys.MeshDirtyScheduleSkipN;
   n.mesh_dirty_schedule_skip_pipeline_n = phys.MeshDirtyScheduleSkipPipelineN;
   n.mesh_dirty_schedule_skip_snapshot_n = phys.MeshDirtyScheduleSkipSnapshotN;
@@ -1498,6 +1502,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_dirty_drain_n\":" << n.mesh_dirty_drain_n
           << ",\"mesh_dirty_schedule_ms\":" << n.mesh_dirty_schedule_ms
           << ",\"mesh_dirty_schedule_ok_n\":" << n.mesh_dirty_schedule_ok_n
+          << ",\"mesh_dirty_schedule_ok_fm_n\":"
+          << n.mesh_dirty_schedule_ok_fm_n
+          << ",\"mesh_dirty_schedule_ok_remesh_n\":"
+          << n.mesh_dirty_schedule_ok_remesh_n
           << ",\"mesh_dirty_schedule_skip_n\":" << n.mesh_dirty_schedule_skip_n
           << ",\"mesh_dirty_schedule_skip_pipeline_n\":"
           << n.mesh_dirty_schedule_skip_pipeline_n

@@ -964,6 +964,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshDirtyDrainN = 0;
   PhysicsTelemetryData.MeshDirtyScheduleMs = 0.0;
   PhysicsTelemetryData.MeshDirtyScheduleOkN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleOkFmN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleOkRemeshN = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipN = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipPipelineN = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipSnapshotN = 0;
@@ -1155,6 +1157,10 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshDirtyScheduleMs();
   PhysicsTelemetryData.MeshDirtyScheduleOkN =
       GetMeshService().GetLastMeshDirtyScheduleOkN();
+  PhysicsTelemetryData.MeshDirtyScheduleOkFmN =
+      GetMeshService().GetLastMeshDirtyScheduleOkFmN();
+  PhysicsTelemetryData.MeshDirtyScheduleOkRemeshN =
+      GetMeshService().GetLastMeshDirtyScheduleOkRemeshN();
   PhysicsTelemetryData.MeshDirtyScheduleSkipN =
       GetMeshService().GetLastMeshDirtyScheduleSkipN();
   PhysicsTelemetryData.MeshDirtyScheduleSkipPipelineN =

@@ -144,6 +144,14 @@ public:
   int GetLastMeshDirtyDrainN() const { return LastMeshDirtyDrainN; }
   double GetLastMeshDirtyScheduleMs() const { return LastMeshDirtyScheduleMs; }
   int GetLastMeshDirtyScheduleOkN() const { return LastMeshDirtyScheduleOkN; }
+  int GetLastMeshDirtyScheduleOkFmN() const
+  {
+    return LastMeshDirtyScheduleOkFmN;
+  }
+  int GetLastMeshDirtyScheduleOkRemeshN() const
+  {
+    return LastMeshDirtyScheduleOkRemeshN;
+  }
   int GetLastMeshDirtyScheduleSkipN() const
   {
     return LastMeshDirtyScheduleSkipN;
@@ -919,6 +927,8 @@ private:
   int LastMeshDirtyDrainN{0};
   double LastMeshDirtyScheduleMs{0.0};
   int LastMeshDirtyScheduleOkN{0};
+  int LastMeshDirtyScheduleOkFmN{0};
+  int LastMeshDirtyScheduleOkRemeshN{0};
   int LastMeshDirtyScheduleSkipN{0};
   int LastMeshDirtyScheduleSkipPipelineN{0};
   int LastMeshDirtyScheduleSkipSnapshotN{0};

@@ -2313,6 +2313,18 @@ int main()
     Expect(!ShouldProtectLitSettleRemesh(true, 0, 10, 200, 10, 20),
            "Q2b: FullyDark repair below thresh skips");
 
+    using cutum::ShouldReserveRemeshSnapshotSlice;
+    Expect(ShouldReserveRemeshSnapshotSlice(true, 120, 76),
+           "G1-P1: holes+RemeshQ+debt≥20 ⇒ remesh snapshot slice");
+    Expect(ShouldReserveRemeshSnapshotSlice(true, 1, 20),
+           "G1-P1: debt at thresh still reserves slice");
+    Expect(!ShouldReserveRemeshSnapshotSlice(true, 120, 19),
+           "G1-P1: debt below thresh → no slice");
+    Expect(!ShouldReserveRemeshSnapshotSlice(true, 0, 76),
+           "G1-P1: empty RemeshQ → no slice");
+    Expect(!ShouldReserveRemeshSnapshotSlice(false, 120, 76),
+           "G1-P1: no holes → no slice");
+
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;
     in.pending_gpu_queued = 0;

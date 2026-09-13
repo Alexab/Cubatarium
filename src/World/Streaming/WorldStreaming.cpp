@@ -3473,6 +3473,10 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastMeshDirtyScheduleMs();
   world.PhysicsTelemetryData.MeshDirtyScheduleOkN =
       world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+  world.PhysicsTelemetryData.MeshDirtyScheduleOkFmN =
+      world.GetMeshService().GetLastMeshDirtyScheduleOkFmN();
+  world.PhysicsTelemetryData.MeshDirtyScheduleOkRemeshN =
+      world.GetMeshService().GetLastMeshDirtyScheduleOkRemeshN();
   world.PhysicsTelemetryData.MeshDirtyScheduleSkipN =
       world.GetMeshService().GetLastMeshDirtyScheduleSkipN();
   world.PhysicsTelemetryData.MeshDirtyGpuMs =

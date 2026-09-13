@@ -1021,6 +1021,16 @@ int UWorldMeshService::GetLastMeshDirtyScheduleOkN() const
   return Cache.GetLastMeshDirtyScheduleOkN();
 }
 
+int UWorldMeshService::GetLastMeshDirtyScheduleOkFmN() const
+{
+  return Cache.GetLastMeshDirtyScheduleOkFmN();
+}
+
+int UWorldMeshService::GetLastMeshDirtyScheduleOkRemeshN() const
+{
+  return Cache.GetLastMeshDirtyScheduleOkRemeshN();
+}
+
 int UWorldMeshService::GetLastFirstMeshScheduleEffectiveCap() const
 {
   return Cache.GetLastFirstMeshScheduleEffectiveCap();
