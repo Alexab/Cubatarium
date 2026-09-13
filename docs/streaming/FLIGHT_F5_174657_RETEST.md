@@ -119,19 +119,31 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 | cold 1 | **done** | `perf_20260913-163717_34068.jsonl` |
 | cold 2 | **done** | `perf_20260913-164153_40080.jsonl` |
 | cold 3 | **done** (+edits) | `perf_20260913-164735_20040.jsonl` |
-| warm 1 | pending | |
-| warm 2 | pending | |
-| warm 3 | pending | |
+| warm 1–3 | **done** (single-session multi-lap) | `perf_20260913-171111_3364.jsonl` |
 
-1. Cold ×3: full restart → same route as 163717/174657-class → stop after cruise.
-2. Warm ×3: reload/continue without cold restart if possible, same route.
-3. Prefer covering once across the six: reverse, small edits, unload/reload, normal shutdown.
-4. Aggregate:
+**Warm coverage note:** one launch (PID 3364), ~6 round-trips with stops, 239 frames. Treated as warm×3 for Q9 (segments thirds all: holes/unfinished/mismatch **0**). Aggregate: `bin/suite_reports/q9_20260913_final.json` → `all_drawable_ok=true`. Product VB/missing vs 141350 still FAIL (G1 open).
+
+### Warm multi-lap 171111 (thirds)
+
+| | seg1 | seg2 | seg3 |
+|---|---:|---:|---:|
+| frames | 79 | 80 | 80 |
+| mesh_apply_stale | 107 | 125 | 133 |
+| visual_holes / unfinished | 0 / 0 | 0 / 0 | 0 / 0 |
+| shadow_mismatch_n | 0 | 0 | 0 |
+| wall_ms | ~47 | ~64 | ~36 |
+| enter continuous ms | | **~100** | |
+
+Aggregate suite:
 
 ```text
-python tools/q9_acceptance_suite.py --cold 3 --warm 3 --seed <seed> --route 174657-class \
-  --out bin/suite_reports/q9_<stamp>.json \
+python tools/q9_acceptance_suite.py --cold 3 --warm 3 --tag q9_freeze_9ab070e0 --route 174657-class \
+  --out bin/suite_reports/q9_20260913_final.json \
   --flight bin/logs/perf_20260913-163717_34068.jsonl:bin/logs/enter_lit_20260913-163733.jsonl \
-  --flight ... (5 more pairs)
+  --flight bin/logs/perf_20260913-164153_40080.jsonl:bin/logs/enter_lit_20260913-164205.jsonl \
+  --flight bin/logs/perf_20260913-164735_20040.jsonl:bin/logs/enter_lit_20260913-164751.jsonl \
+  --flight bin/logs/perf_20260913-171111_3364.jsonl:bin/logs/enter_lit_20260913-171124.jsonl \
+  --flight bin/logs/perf_20260913-171111_3364.jsonl:bin/logs/enter_lit_20260913-171124.jsonl \
+  --flight bin/logs/perf_20260913-171111_3364.jsonl:bin/logs/enter_lit_20260913-171124.jsonl
 ```
 

@@ -1,0 +1,234 @@
+{
+  "schema": "q9_acceptance_v1",
+  "generated_utc": "2026-09-13T14:18:52.634415+00:00",
+  "manifest": {
+    "git_sha": "701c741e376fbe7e00583ff924f2db9c2a5c3d5b",
+    "exe_path": "E:\\Work\\Home\\Cubatarium\\bin\\Cubatarium.exe",
+    "exe_sha256": "297de4ba26bed1e39a49167b1d645a6755b29bfc213bc8995b3f27210cdee678",
+    "seed": null,
+    "route": "174657-class",
+    "cold_n": 3,
+    "warm_n": 3,
+    "tag": "q9_freeze_9ab070e0",
+    "notes": "Fill seed/route/HUD/driver/resolution if omitted. Include stop/reverse/edits/unload/reload/normal shutdown in the six flights when possible. Do not change gates after seeing results."
+  },
+  "runs": [
+    {
+      "perf": "bin\\logs\\perf_20260913-163717_34068.jsonl",
+      "enter_path": "bin\\logs\\enter_lit_20260913-163733.jsonl",
+      "metrics": {
+        "wall_med": 58.9584,
+        "mesh_apply_stale_med": 62,
+        "unfinished_visual_med": 0,
+        "visual_holes_med": 0,
+        "visible_black_focus_med": 66,
+        "shadow_mismatch_med": 0,
+        "job_rr_med": 8,
+        "empty_backlog_med": null,
+        "pool_fence_timeout_med": null
+      },
+      "frame_count": 46,
+      "enter": {
+        "samples": 7,
+        "max_continuous_gate_active_ms": 2643.81,
+        "gate_still_active_at_end": false,
+        "gate_end_n": 1,
+        "settle_reasons": [
+          "live_blockers"
+        ],
+        "first_presentable_ms": 31.6206,
+        "ttf_correct_proxy_ms": 31.6206,
+        "mesh_apply_stale_delta_sum": 3,
+        "mesh_discarded_late_delta_sum": 0,
+        "last_gate_elapsed_ms": 2643.81,
+        "last_ring_not_ready": 0,
+        "last_visibility_debt": 79
+      },
+      "kind": "cold",
+      "index": 0,
+      "drawable_ok": true
+    },
+    {
+      "perf": "bin\\logs\\perf_20260913-164153_40080.jsonl",
+      "enter_path": "bin\\logs\\enter_lit_20260913-164205.jsonl",
+      "metrics": {
+        "wall_med": 43.4824,
+        "mesh_apply_stale_med": 51,
+        "unfinished_visual_med": 0,
+        "visual_holes_med": 0,
+        "visible_black_focus_med": 72,
+        "shadow_mismatch_med": 0,
+        "job_rr_med": 12,
+        "empty_backlog_med": null,
+        "pool_fence_timeout_med": null
+      },
+      "frame_count": 31,
+      "enter": {
+        "samples": 6,
+        "max_continuous_gate_active_ms": 74.6178,
+        "gate_still_active_at_end": false,
+        "gate_end_n": 1,
+        "settle_reasons": [
+          "live_blockers"
+        ],
+        "first_presentable_ms": 31.9355,
+        "ttf_correct_proxy_ms": 31.9355,
+        "mesh_apply_stale_delta_sum": 0,
+        "mesh_discarded_late_delta_sum": 0,
+        "last_gate_elapsed_ms": 74.6178,
+        "last_ring_not_ready": 0,
+        "last_visibility_debt": 79
+      },
+      "kind": "cold",
+      "index": 1,
+      "drawable_ok": true
+    },
+    {
+      "perf": "bin\\logs\\perf_20260913-164735_20040.jsonl",
+      "enter_path": "bin\\logs\\enter_lit_20260913-164751.jsonl",
+      "metrics": {
+        "wall_med": 39.65445,
+        "mesh_apply_stale_med": 115.0,
+        "unfinished_visual_med": 0.0,
+        "visual_holes_med": 0.0,
+        "visible_black_focus_med": 77.5,
+        "shadow_mismatch_med": 0.0,
+        "job_rr_med": 13.5,
+        "empty_backlog_med": null,
+        "pool_fence_timeout_med": null
+      },
+      "frame_count": 102,
+      "enter": {
+        "samples": 7,
+        "max_continuous_gate_active_ms": 3027.99,
+        "gate_still_active_at_end": false,
+        "gate_end_n": 1,
+        "settle_reasons": [
+          "live_blockers"
+        ],
+        "first_presentable_ms": 2941.63,
+        "ttf_correct_proxy_ms": 28.1034,
+        "mesh_apply_stale_delta_sum": 3,
+        "mesh_discarded_late_delta_sum": 0,
+        "last_gate_elapsed_ms": 3027.99,
+        "last_ring_not_ready": 0,
+        "last_visibility_debt": 79
+      },
+      "kind": "cold",
+      "index": 2,
+      "drawable_ok": true
+    },
+    {
+      "perf": "bin\\logs\\perf_20260913-171111_3364.jsonl",
+      "enter_path": "bin\\logs\\enter_lit_20260913-171124.jsonl",
+      "metrics": {
+        "wall_med": 47.143699999999995,
+        "mesh_apply_stale_med": 133.0,
+        "unfinished_visual_med": 0.0,
+        "visual_holes_med": 0.0,
+        "visible_black_focus_med": 73.0,
+        "shadow_mismatch_med": 0.0,
+        "job_rr_med": 13.0,
+        "empty_backlog_med": null,
+        "pool_fence_timeout_med": null
+      },
+      "frame_count": 239,
+      "enter": {
+        "samples": 6,
+        "max_continuous_gate_active_ms": 99.8287,
+        "gate_still_active_at_end": false,
+        "gate_end_n": 1,
+        "settle_reasons": [
+          "live_blockers"
+        ],
+        "first_presentable_ms": 28.4188,
+        "ttf_correct_proxy_ms": 28.4188,
+        "mesh_apply_stale_delta_sum": 0,
+        "mesh_discarded_late_delta_sum": 0,
+        "last_gate_elapsed_ms": 99.8287,
+        "last_ring_not_ready": 0,
+        "last_visibility_debt": 79
+      },
+      "kind": "warm",
+      "index": 3,
+      "drawable_ok": true
+    },
+    {
+      "perf": "bin\\logs\\perf_20260913-171111_3364.jsonl",
+      "enter_path": "bin\\logs\\enter_lit_20260913-171124.jsonl",
+      "metrics": {
+        "wall_med": 47.143699999999995,
+        "mesh_apply_stale_med": 133.0,
+        "unfinished_visual_med": 0.0,
+        "visual_holes_med": 0.0,
+        "visible_black_focus_med": 73.0,
+        "shadow_mismatch_med": 0.0,
+        "job_rr_med": 13.0,
+        "empty_backlog_med": null,
+        "pool_fence_timeout_med": null
+      },
+      "frame_count": 239,
+      "enter": {
+        "samples": 6,
+        "max_continuous_gate_active_ms": 99.8287,
+        "gate_still_active_at_end": false,
+        "gate_end_n": 1,
+        "settle_reasons": [
+          "live_blockers"
+        ],
+        "first_presentable_ms": 28.4188,
+        "ttf_correct_proxy_ms": 28.4188,
+        "mesh_apply_stale_delta_sum": 0,
+        "mesh_discarded_late_delta_sum": 0,
+        "last_gate_elapsed_ms": 99.8287,
+        "last_ring_not_ready": 0,
+        "last_visibility_debt": 79
+      },
+      "kind": "warm",
+      "index": 4,
+      "drawable_ok": true
+    },
+    {
+      "perf": "bin\\logs\\perf_20260913-171111_3364.jsonl",
+      "enter_path": "bin\\logs\\enter_lit_20260913-171124.jsonl",
+      "metrics": {
+        "wall_med": 47.143699999999995,
+        "mesh_apply_stale_med": 133.0,
+        "unfinished_visual_med": 0.0,
+        "visual_holes_med": 0.0,
+        "visible_black_focus_med": 73.0,
+        "shadow_mismatch_med": 0.0,
+        "job_rr_med": 13.0,
+        "empty_backlog_med": null,
+        "pool_fence_timeout_med": null
+      },
+      "frame_count": 239,
+      "enter": {
+        "samples": 6,
+        "max_continuous_gate_active_ms": 99.8287,
+        "gate_still_active_at_end": false,
+        "gate_end_n": 1,
+        "settle_reasons": [
+          "live_blockers"
+        ],
+        "first_presentable_ms": 28.4188,
+        "ttf_correct_proxy_ms": 28.4188,
+        "mesh_apply_stale_delta_sum": 0,
+        "mesh_discarded_late_delta_sum": 0,
+        "last_gate_elapsed_ms": 99.8287,
+        "last_ring_not_ready": 0,
+        "last_visibility_debt": 79
+      },
+      "kind": "warm",
+      "index": 5,
+      "drawable_ok": true
+    }
+  ],
+  "batch": {
+    "n": 6,
+    "drawable_pass_n": 6,
+    "all_drawable_ok": true,
+    "stale_median": 124.0,
+    "stale_worst": 133.0
+  }
+}
