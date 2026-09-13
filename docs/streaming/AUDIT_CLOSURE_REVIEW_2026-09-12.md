@@ -171,8 +171,8 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q3 schedule cost split | done |
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
 | Q4 visual boundary stamps | Strategy A geom-only stamp; MeshInputs types; WorkerCompute **pinned catalog for faces+liquid+movement+cross** (GPU extract eligibility still registry residual) |
-| Q6 ColumnRecord cutover | **FirstMeshOwner default** (rollback ShadowCompare). Keep-until-replace `RecordWants*` (Meshing/GpuPending/PendingLight only). **111618** pre-cutover: mismatch ~434 flat |
-| Q9 F5 acceptance flight | **111618** drawable PASS (stale 29.5, holes 0, enter~95ms, VB 80). Full G0/G1 open; need post-FirstMeshOwner F5 |
+| Q6 ColumnRecord cutover | **RelightOwner default** after **124958** FirstMesh F5 PASS (mismatch ~16). Rollback: FirstMeshOwner / ShadowCompare. Seam/Eviction still ShadowCompare |
+| Q9 F5 acceptance flight | **124958** drawable PASS (stale 37.5, holes 0, enter~2.6s, VB~71). Need post-RelightOwner F5 |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
 | Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + soft-defer Relight/Seam; **FirstMesh never hard-killed** |
 | Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + CaptureAndCommitOnMain snapshot reserve |
@@ -186,9 +186,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | 111618 holes 0; VB med **80** still red vs 141350 |
-| G2 | Частично | FirstMeshOwner default ON; F5 after rebuild required; Relight/Seam still ShadowCompare |
+| G1 | Не закрыт | 124958 holes 0; VB med **~71** still red vs 141350 |
+| G2 | Частично | FirstMeshOwner proven on **124958**; RelightOwner default ON — F5 required; Seam/Eviction ShadowCompare |
 | G3 | Частично | ColumnFlow DrainBudget/RemeshSeam soft-defer by Exhausted; FirstMesh floor; apply/upload still local budgets |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: manual F5 after FirstMeshOwner default; then Relight/Seam/Eviction owners; Q9 3+3; Q4 GPU-extract catalog residual.
+Следующий шаг: manual F5 after RelightOwner; then SeamOwner → EvictionOwner; Q4 GPU-extract catalog residual; Q9 3+3.
