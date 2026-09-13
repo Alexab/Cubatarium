@@ -3454,8 +3454,8 @@ int main()
     using cutum::ShouldBumpDirtyHeadForVisualHole;
     Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, true),
            "P6: consume FullyDark dirty bumps when light rev ahead");
-    Expect(!ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, false),
-           "P7: consume FullyDark matching revs does not bump");
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, false),
+           "G1: consume FullyDark matching revs bumps dirty head");
     Expect(ShouldBumpDirtyHeadForVisualHole(true, false, false, 9, true, false),
            "P6: consume missing mesh bumps even far");
     Expect(!ShouldBumpDirtyHeadForVisualHole(true, false, true, 2, true),

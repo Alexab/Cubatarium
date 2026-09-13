@@ -1272,6 +1272,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   }
   band_cy = EffectiveRelightCaptureBandCy(band_cy, moving && !enter_fov_lit,
                                           visual_holes);
+  // G1: hitch + FullyDark repair — do not keep Capture at 8 (193536 wall~113
+  // with capture_bg=8 while gpu_kick~0 / Dirty backlog). Prefer Apply/mesh.
+  {
+    const auto &telem_hitch = world.GetPhysicsTelemetry();
+    if (!enter_fov_lit && frame_ms_so_far > 50.0 &&
+        telem_hitch.VisibleBlackFullyDarkRepairN >= 20)
+    {
+      bg_cap = std::min(bg_cap, 3);
+    }
+  }
   {
     auto &telem = world.GetPhysicsTelemetryMutable();
     telem.CaptureBgCapN = bg_cap;

@@ -185,7 +185,7 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | **Частично закрыт** | Q9 3+3 drawable PASS; schema/manifest already fail-closed. Product VB/missing vs 141350 still out of G0 scope |
-| G1 | Не закрыт | **190148:** Capture/Apply floor OK on repair≥20, but MarkRelit slim skipped FullyDark remesh (`schedule_n=0`). Fix: GPU dark → still_stale under slim. VB still red vs 141350 |
+| G1 | Не закрыт | **post-193536:** consume bumps FullyDark already-Dirty; hitch Capture≤3 when repair≥20; PreferKick on FullyDark skip_dirty. Rebuild done — next F5 |
 | G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through Q9 batch |
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |

@@ -198,7 +198,8 @@ inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
 }
 
 /// FZ2.7: already-Dirty missing mesh / FullyDark-with-light-delta bump Q head.
-/// FullyDark + matching revs must not bump (162715 remesh blink).
+/// G1: consume_mode must bump FullyDark even when light revs match (193536:
+/// skip_already_dirty with schedule=0 while PL erased).
 inline bool ShouldBumpDirtyHeadForVisualHole(bool is_dirty, bool fully_dark,
                                              bool has_drawable, int focus_horiz,
                                              bool consume_mode,
@@ -213,13 +214,13 @@ inline bool ShouldBumpDirtyHeadForVisualHole(bool is_dirty, bool fully_dark,
   {
     return false;
   }
-  if (has_drawable && fully_dark && !light_rev_ahead)
-  {
-    return false;
-  }
   if (consume_mode)
   {
     return true;
+  }
+  if (has_drawable && fully_dark && !light_rev_ahead)
+  {
+    return false;
   }
   return focus_horiz >= 0 && focus_horiz <= ring;
 }
@@ -291,6 +292,12 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
+        // G1: already-Dirty FullyDark not bumped (cruise matching revs) —
+        // still PreferKick so pending GPU publish is not starved.
+        if (chunk.fully_dark && chunk.has_drawable)
+        {
+          AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
+        }
       }
       else if (chunk.inflight)
       {
@@ -377,6 +384,10 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
+        if (chunk.fully_dark && chunk.has_drawable)
+        {
+          AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
+        }
       }
       else if (chunk.inflight)
       {

@@ -55,6 +55,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (180850) | `bin/logs/enter_lit_20260913-180923.jsonl` |
 | G1 repair floor (190148) | `bin/logs/perf_20260913-190148_10420.jsonl` |
 | Enter (190148) | `bin/logs/enter_lit_20260913-190205.jsonl` |
+| G1 FullyDark still_stale (193536) | `bin/logs/perf_20260913-193536_28828.jsonl` |
+| Enter (193536) | `bin/logs/enter_lit_20260913-193554.jsonl` |
 
 ## Manifest (required)
 
@@ -104,15 +106,17 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **164735 Q9 cold#3 (+edits at end):** **drawable PASS** — unfinished **0**, holes **0**, mismatch **0**, enter ~**3.0s**, wall **37.5**, VB **~70**. stale **115** and `drop_no_active` **17** elevated vs cruise-only (edit stress / `phase_abort_heavy`); not 175610-class. New process PID → counts as **cold**, not warm.
 - **180850 post-G1 void-Note (`5bf32dda`):** **drawable PASS** (holes/unf/mismatch **0**) — stale **21–26**, wall **~41**, enter ~**99ms**, VB med **~57–68**. **`fully_dark_stalled` med 0** (was 13–20) — Note PL worked. Debt moved to **`fully_dark_repair` ~38** / `draw_oracle_fully_dark_debt_n` ~47. `cull_stats_sync_read_n` **0**. Product vs 141350 still FAIL (`focus_missing_frac` + VB≥40). Capture bg med **1**, relight_apply med **1** → next: repair-debt Capture/Apply floor.
 - **190148 post-repair Capture/Apply floor (`183c9fad`):** holes/unf **0** (holes_frac~0.06 one period). Throughput on repair≥20: capture_bg med **2.5**, apply med **2** (floor landed). But VB **worse** (med ~62 / scorecard **77**), repair **~54**, stalled **~9**, stale **~59**, `drop_no_active` **18**, miss_stuck+gpu_kick~0. MarkRelit invoked but **`mark_relit_schedule_n=0`** — slim path skipped FullyDark remesh (GPU dark not in still_stale). Enter ~**3.1s**.
+- **193536 post-FullyDark still_stale (`fc6762ab`):** enter ~**49ms**, holes/unf **0**, `drop_no_active` **0**, miss_stuck **gone**. schedule>0 on **40/101** frames (was ~0). VB still **~70–71**, repair **41**, stall **8**. Capture often **8** → wall med **~113** (scorecard cruise ~46). When schedule=0: **skip_already_dirty** (bump blocked before consume_mode). Product FAIL: fm_frac **0.53**, VB≥40.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
 
-| Metric (cruise med) | **180850** | **190148** |
+| Metric | **190148** | **193536** |
 |---|---|---|
-| wall_ms | ~41 | **~34** |
-| mesh_apply_stale | 21 | **59** |
-| VB / repair / stall | 57 / 38 / 0 | **62 / 54 / 9** |
-| capture_bg / apply (repair≥20) | 1 / 1 | **2.5 / 2** |
-| enter continuous ms | ~99 | **~3147** |
+| enter ms | ~3147 | **~49** |
+| VB / repair / stall | 62 / 54 / 9 | **70 / 41 / 8** |
+| mark_relit_schedule (max) | 0 | **10** (med 0) |
+| drop_no_active | 18 | **0** |
+| capture_bg med | 1.5 | **8** |
+| wall med (all rows) | 34 | **113** |
 
 ## Q9 batch procedure (G0)
 
