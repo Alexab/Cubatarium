@@ -1781,6 +1781,8 @@ void UWorld::SampleColumnEmergeStageTelemetry()
         shadow_n > static_cast<uint64_t>(INT_MAX)
             ? INT_MAX
             : static_cast<int>(shadow_n);
+    PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
+        UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
   }
 }
 

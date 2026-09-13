@@ -44,6 +44,9 @@ public:
 
   static uint64_t ShadowMismatchCount();
   static void ResetShadowMismatchCount();
+  /// Last focus-ring sync: columns where legacy Derive ≠ record Derive (gauge).
+  static int ShadowStageDisagreeFocusN();
+  static void SetShadowStageDisagreeFocusN(int n);
 
   /// Dual-write published/pending/resident from world scan; returns record stage.
   static ColumnJobStage SyncFromWorldTruth(ColumnRecord &rec,
@@ -52,7 +55,7 @@ public:
   /// Derive scheduler stage from record (published + pending independent).
   static ColumnJobStage DeriveJobStageFromRecord(const ColumnRecord &rec);
 
-  /// Shadow mode: log when legacy monolithic derive disagrees with record path.
+  /// Decide*-path shadow mismatch (cutover SoT). Does NOT count Sync stage diffs.
   static void LogShadowMismatch(glm::ivec2 column, ColumnJobStage legacy_stage,
                                 ColumnJobStage record_stage);
 

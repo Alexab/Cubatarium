@@ -85,7 +85,7 @@ void UColumnFlowExecutor::SetColumnJobStage(glm::ivec2 column,
   column_job_stage_[ColumnKey(column)] = stage;
 }
 
-void UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
+bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
                                                       glm::ivec2 column)
 {
   const glm::ivec3 ground(column.x, 0, column.y);
@@ -97,7 +97,7 @@ void UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   if (!has_chunk)
   {
     SetColumnJobStage(column, ColumnJobStage::Absent);
-    return;
+    return false;
   }
 
   UWorldMeshService &mesh = world.GetMeshService();
@@ -163,22 +163,29 @@ void UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
       UColumnRecordCoordinator::SyncFromWorldTruth(rec, truth);
   const ColumnJobStage legacy = DeriveColumnJobStage(
       has_chunk, pending_light, lit_ready, meshing, gpu_pending, render_ready);
-  UColumnRecordCoordinator::LogShadowMismatch(column, legacy, from_record);
+  // Stage diffs counted once per SyncFocusRing (gauge). Do not LogShadowMismatch
+  // here — that exploded to ~10k+/flight (211857) and is not Decide* cutover SoT.
   SetColumnJobStage(column, from_record);
+  return from_record != legacy;
 }
 
 void UColumnFlowExecutor::SyncFocusRingColumnJobStages(UWorld &world,
                                                        glm::ivec3 focus_ground,
                                                        int focus_radius)
 {
+  int stage_disagree = 0;
   for (int dz = -focus_radius; dz <= focus_radius; ++dz)
   {
     for (int dx = -focus_radius; dx <= focus_radius; ++dx)
     {
-      SyncColumnJobStageFromWorld(
-          world, glm::ivec2(focus_ground.x + dx, focus_ground.z + dz));
+      if (SyncColumnJobStageFromWorld(
+              world, glm::ivec2(focus_ground.x + dx, focus_ground.z + dz)))
+      {
+        ++stage_disagree;
+      }
     }
   }
+  UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(stage_disagree);
 }
 
 void UColumnFlowExecutor::CountFocusRingJobStages(

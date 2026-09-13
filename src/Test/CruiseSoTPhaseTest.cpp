@@ -138,7 +138,7 @@ int main()
   UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
 
   // Q6 parity telem contract: cumulative counter is the SoT for
-  // column_record_shadow_mismatch_n in perf JSONL.
+  // column_record_shadow_mismatch_n in perf JSONL (Decide* only).
   UColumnRecordCoordinator::ResetShadowMismatchCount();
   Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 0,
          "shadow counter reset for perf telem");
@@ -146,6 +146,17 @@ int main()
   Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 1,
          "shadow mismatch feeds ColumnRecordShadowMismatchN");
   UColumnRecordCoordinator::ResetShadowMismatchCount();
+
+  // Stage shadow disagree is a per-pass gauge, not the Decide* counter.
+  UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(0);
+  Expect(UColumnRecordCoordinator::ShadowStageDisagreeFocusN() == 0,
+         "stage disagree gauge reset");
+  UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(42);
+  Expect(UColumnRecordCoordinator::ShadowStageDisagreeFocusN() == 42,
+         "stage disagree gauge set");
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 0,
+         "stage gauge does not touch Decide mismatch");
+  UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(0);
 
   if (gFails != 0)
   {

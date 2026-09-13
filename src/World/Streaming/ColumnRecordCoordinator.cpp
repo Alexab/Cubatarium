@@ -12,6 +12,7 @@ namespace
 std::atomic<uint8_t> g_cutover_stage{
     static_cast<uint8_t>(ColumnCutoverStage::ShadowCompare)};
 std::atomic<uint64_t> g_shadow_mismatch_n{0};
+std::atomic<int> g_shadow_stage_disagree_focus_n{0};
 
 uint64_t NowMs()
 {
@@ -77,6 +78,16 @@ uint64_t UColumnRecordCoordinator::ShadowMismatchCount()
 void UColumnRecordCoordinator::ResetShadowMismatchCount()
 {
   g_shadow_mismatch_n.store(0, std::memory_order_relaxed);
+}
+
+int UColumnRecordCoordinator::ShadowStageDisagreeFocusN()
+{
+  return g_shadow_stage_disagree_focus_n.load(std::memory_order_relaxed);
+}
+
+void UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(int n)
+{
+  g_shadow_stage_disagree_focus_n.store(n, std::memory_order_relaxed);
 }
 
 ColumnJobStage UColumnRecordCoordinator::SyncFromWorldTruth(
@@ -165,10 +176,11 @@ void UColumnRecordCoordinator::LogShadowMismatch(glm::ivec2 column,
   {
     return;
   }
+  // Decide* enqueue/evict parity only — Sync stage diffs use the focus gauge.
   g_shadow_mismatch_n.fetch_add(1, std::memory_order_relaxed);
-  VLOG(1) << "ColumnRecord shadow mismatch col=(" << column.x << "," << column.y
-          << ") legacy=" << ColumnJobStageName(legacy_stage) << " record="
-          << ColumnJobStageName(record_stage);
+  VLOG(1) << "ColumnRecord decide shadow mismatch col=(" << column.x << ","
+          << column.y << ") legacy=" << ColumnJobStageName(legacy_stage)
+          << " record=" << ColumnJobStageName(record_stage);
 }
 
 bool UColumnRecordCoordinator::DecideFirstMeshEnqueue(bool legacy_want,

@@ -464,6 +464,7 @@ struct FrameNumbers
   int column_job_gpu_pending_n{0};
   int column_job_render_ready_n{0};
   int column_record_shadow_mismatch_n{0};
+  int column_record_shadow_stage_disagree_n{0};
   int pending_light{0};
   int stream_pressure{0};
   int pending_light_focus{0};
@@ -1059,6 +1060,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_job_gpu_pending_n = phys.ColumnJobGpuPendingN;
   n.column_job_render_ready_n = phys.ColumnJobRenderReadyN;
   n.column_record_shadow_mismatch_n = phys.ColumnRecordShadowMismatchN;
+  n.column_record_shadow_stage_disagree_n =
+      phys.ColumnRecordShadowStageDisagreeN;
   n.pending_light = phys.PendingLightCount;
   n.stream_pressure = phys.StreamPressure;
   n.pending_light_focus = phys.PendingLightFocus;
@@ -1679,6 +1682,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"column_job_render_ready_n\":" << n.column_job_render_ready_n
           << ",\"column_record_shadow_mismatch_n\":"
           << n.column_record_shadow_mismatch_n
+          << ",\"column_record_shadow_stage_disagree_n\":"
+          << n.column_record_shadow_stage_disagree_n
           << ",\"pending_light\":" << n.pending_light
           << ",\"stream_pressure\":" << n.stream_pressure
           << ",\"pending_light_focus\":" << n.pending_light_focus

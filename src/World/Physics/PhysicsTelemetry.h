@@ -502,8 +502,10 @@ struct PhysicsTelemetry
   int ColumnJobMeshingN{0};
   int ColumnJobGpuPendingN{0};
   int ColumnJobRenderReadyN{0};
-  /// Q6 shadow parity: cumulative ColumnRecord vs legacy Decide* mismatches.
+  /// Q6 Decide* shadow parity (cumulative) — cutover SoT, not Sync stage spam.
   int ColumnRecordShadowMismatchN{0};
+  /// Q6 last focus-ring sync: columns with legacy≠record stage (gauge 0..ring).
+  int ColumnRecordShadowStageDisagreeN{0};
   int PendingLightCount{0};
   int FocusChunkX{0};
   int FocusChunkZ{0};

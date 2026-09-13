@@ -172,13 +172,13 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
 | Q4 visual boundary stamps | Strategy A geom-only stamp confirmed; `MeshInputs`/`LightInputs` types; AsyncMeshBuilder + **GreedyMesher** Transparent/Cutout from pinned catalog (liquid/movement still registry). GPU extract path still registry-backed |
 | Q5 tiny-cap publication progress | done for chunk-granular retain + `publication_progress_unit_n`; eviction policy polish open |
-| Q6 ColumnRecord cutover | ShadowCompare default; FirstMesh/Relight/Seam/**EvictionOwner** Decide*. Real GPU residency token. Perf emits `column_record_shadow_mismatch_n` for parity before enabling owners |
+| Q6 ColumnRecord cutover | ShadowCompare default; FirstMesh/Relight/Seam/**EvictionOwner** Decide*. Real GPU residency token. Perf: `column_record_shadow_mismatch_n` = **Decide* only** (cutover SoT); `column_record_shadow_stage_disagree_n` = Sync focus-ring gauge. 211857 showed ~10k polluted mismatch when Sync called `LogShadowMismatch` |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
 | Q8 frame deadline / async cull stats | **R2** — delayed CullStats + `UFrameDeadline` phase wall; `ShouldDeferProducer` soft-stops Relight/Seam drains when Exhausted; **FirstMesh never hard-killed** |
-| Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **194409** / **201118** / **203306** post-anchor reflights drawable PASS vs 192015 (203306: stale 29, holes 0.24, job_rr~22, enter~2.9s). Full G0/G1 vs 141350 still open |
+| Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **194409** / **201118** / **203306** / **211857** drawable PASS vs 192015 (211857: stale 31, holes 0.37, job_rr~40, enter~135ms INFO; VB 92 / wall 74 worse). Full G0/G1 vs 141350 still open |
 | Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + **CaptureAndCommitOnMain** reserve snapshot credits before allocate; fail → nullopt/false. RefreshIncrementalShell rejects !inputStampsValid as Ready |
 | Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + producer soft-defer (non-FM); `frame_deadline_test` covers FirstMesh floor |
-| Q9 F5 acceptance flight | **product_anchor PASS: 192015** (tag `product_anchor_20260912`); **201118** drawable PASS vs anchor. Full G0/G1 product gates vs 141350 still open (stale/VB/holes). Known-bad: 131523/162400/175610 |
+| Q9 F5 acceptance flight | **product_anchor PASS: 192015** (tag `product_anchor_20260912`); **211857** drawable PASS vs anchor. Full G0/G1 product gates vs 141350 still open (stale/VB/holes). Known-bad: 131523/162400/175610 |
 | Q10 domain boundaries | include allowlist burn-down note + reverse-rule comment; domain CMake libs open |
 
 G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
@@ -188,9 +188,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | 203306 holes improved (0.24); VB med 76 still red vs 141350; GL pixel oracle open |
-| G2 | Не закрыт | Owners landed in ShadowCompare; cutover needs shadow_mismatch telem + parity |
+| G1 | Не закрыт | 211857 holes 0.37; VB med **92** worse vs 192015/141350; GL pixel oracle open |
+| G2 | Не закрыт | Owners in ShadowCompare; 211857 mismatch telem polluted — need Decide-only SoT before enabling cutover stages |
 | G3 | Частично | ColumnFlow DrainBudget/RemeshSeam soft-defer by Exhausted; FirstMesh floor; apply/upload still local budgets |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: F5 with `column_record_shadow_mismatch_n` for cutover parity; G1 VB (203306 med 76); Q9 paired acceptance.
+Следующий шаг: finish Decide* vs Sync stage shadow telem split + F5 remeasure; G1 VB; Q9 paired acceptance. Cutover stays **ShadowCompare**.
