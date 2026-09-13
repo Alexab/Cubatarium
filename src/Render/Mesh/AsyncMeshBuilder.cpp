@@ -128,9 +128,10 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         const BlockDefinitionCatalog *pinned = catalogKeep.get();
 
         auto *gpu_mesher = Mesher;
+        // Q4: WorkerCompute GPU-extract eligibility from pinned catalog.
         const bool defer_gpu =
             gpu_mesher &&
-            gpu_mesher->CanDeferGpuExtract(snapshot, *registryPtr);
+            gpu_mesher->CanDeferGpuExtract(snapshot, *registryPtr, pinned);
         if (defer_gpu)
         {
           // GPF1: defer opaque-solid chunks to main-thread GPU emit.
@@ -143,8 +144,8 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         else
         {
           std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
-          // Q4: WorkerCompute uses pinned catalog for faces/liquid/movement/cross.
-          // GPU extract eligibility still samples registry (main-thread residual).
+          // Q4: WorkerCompute uses pinned catalog for faces/liquid/movement/cross
+          // and GPU-extract eligibility (above).
           const auto quads =
               Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr, pinned)
                      : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr,

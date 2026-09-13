@@ -1,4 +1,5 @@
 #include "Blocks/BlockCatalogQueries.h"
+#include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Streaming/MeshInputs.h"
 
@@ -80,6 +81,20 @@ int main()
   catalog_a->ById[13] = stone;
   Expect(cutum::CatalogBlocksMovement(catalog_a.get(), 13),
          "solid blocks movement from catalog");
+
+  // Q4: GPU extract eligibility from pinned catalog (worker defer path).
+  cutum::ChunkMeshSnapshot snap{};
+  snap.blocks.fill(0);
+  snap.blocks[0] = 13; // stone
+  Expect(cutum::SnapshotIsGpuExtractEligible(snap, catalog_a.get()),
+         "stone-only snapshot GPU-extract eligible via catalog");
+  snap.blocks[1] = 12; // liquid
+  Expect(!cutum::SnapshotIsGpuExtractEligible(snap, catalog_a.get()),
+         "liquid in snapshot blocks GPU-extract eligibility");
+  Expect(cutum::IsGpuFaceExtractEligible(catalog_a.get(), 13),
+         "stone eligible via catalog");
+  Expect(!cutum::IsGpuFaceExtractEligible(catalog_a.get(), 12),
+         "liquid not GPU-extract eligible via catalog");
 
   if (gFails != 0)
   {

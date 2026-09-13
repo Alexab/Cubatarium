@@ -39,6 +39,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (130708) | `bin/logs/enter_lit_20260913-130721.jsonl` |
 | Post-SeamOwner (131728) | `bin/logs/perf_20260913-131728_42144.jsonl` |
 | Enter (131728) | `bin/logs/enter_lit_20260913-131742.jsonl` |
+| Post-EvictionOwner (133156) | `bin/logs/perf_20260913-133156_23136.jsonl` |
+| Enter (133156) | `bin/logs/enter_lit_20260913-133214.jsonl` |
 
 ## Manifest (required)
 
@@ -47,7 +49,7 @@ Record in suite report / notes:
 - git SHA: tag **`product_anchor_20260912`** (`8c9bf59a` tip at tag); post-anchor tip advances on `cursor_audit_impl2`
 - build type (Release); exe sha256 prefix `AC7003B329F8984B` (anchor build)
 - route: same as 090306 / 174657-class
-- INFO anchor: `...INFO.20260912-192013.9704`; … post-RecordWants: `...INFO.20260913-095316.39488`; post-keep-until-replace: `...INFO.20260913-100058.38604`; post-Q4 catalog: `...INFO.20260913-111615.40168`; post-FirstMeshOwner: `...INFO.20260913-124956.42260`; post-RelightOwner: `...INFO.20260913-130706.41652`; post-SeamOwner: `...INFO.20260913-131726.42144`
+- INFO anchor: `...INFO.20260912-192013.9704`; … post-RecordWants: `...INFO.20260913-095316.39488`; post-keep-until-replace: `...INFO.20260913-100058.38604`; post-Q4 catalog: `...INFO.20260913-111615.40168`; post-FirstMeshOwner: `...INFO.20260913-124956.42260`; post-RelightOwner: `...INFO.20260913-130706.41652`; post-SeamOwner: `...INFO.20260913-131726.42144`; post-EvictionOwner: `...INFO.20260913-133153.23136`
 
 ## Commands
 
@@ -80,17 +82,18 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **124958 post-FirstMeshOwner (`eba245d9`):** **drawable PASS vs 192015** — stale **37.5**, unfinished **0**, holes **0**, job_rr **~10**, enter ~**2.6s**, wall **32.7**, VB **~71**. `stage_disagree` med **~3–6**. `shadow_mismatch_n` cruise med **~16** (max **34**) — **~25× better than 111618**; residual = Relight/Seam/Evict still ShadowCompare. Product vs 141350 still FAIL (missing/VB); `miss_stuck`+gpu_kick not in FAIL list this run.
 - **130708 post-RelightOwner (`9bc41087`):** **drawable PASS vs 192015** — stale **24**, unfinished **0**, holes **0**, job_rr **~18**, enter ~**67ms**, wall **36.4**, VB **~75.5**. `stage_disagree` med **~11**. `shadow_mismatch_n` **0** (full cruise) — Decide parity clean under RelightOwner; Seam/Evict ShadowCompare not producing Decide gaps. Product vs 141350 still FAIL (missing/VB; `miss_stuck`+gpu_kick~0).
 - **131728 post-SeamOwner (`d7373dab`):** **drawable PASS vs 192015** — stale **25**, unfinished **0**, holes **0**, job_rr **~7.5**, enter ~**2.15s**, wall **34.8**, VB **~74**. `stage_disagree` med **~1**. `shadow_mismatch_n` **0**. SeamOwner holds drawable; Eviction still ShadowCompare. Product vs 141350 still FAIL (missing/VB).
+- **133156 post-EvictionOwner (`9c841c72`):** **drawable PASS vs 192015** — stale **16**, unfinished **0**, holes **0**, job_rr **~8**, enter ~**68ms**, wall **49.1**, VB **~70**. `stage_disagree` med **~2**. `shadow_mismatch_n` **0**. Q6 cutover ladder F5-proven (FirstMesh→Relight→Seam→Eviction). Product vs 141350 still FAIL (missing/VB).
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
-- **Next:** EvictionOwner default ON — need F5 after rebuild; then Q4 GPU-extract catalog residual; Q9 3+3. Rollback Eviction: `SetCutoverStage(SeamOwner)`.
+- **Next:** Q4 WorkerCompute GPU-extract eligibility pinned to catalog; then Q9 3 cold+3 warm. Q6 rollback: `SetCutoverStage(SeamOwner)` / lower.
 
-| Metric (cruise med) | **192015** | **130708** | **131728** |
+| Metric (cruise med) | **192015** | **131728** | **133156** |
 |---|---|---|---|
-| wall_ms | 52.6 | **36.4** | **34.8** |
-| mesh_apply_stale | 55 | **24** | **25** |
+| wall_ms | 52.6 | **34.8** | **49.1** |
+| mesh_apply_stale | 55 | **25** | **16** |
 | unfinished_visual | 0 | **0** | **0** |
 | visual_holes_frac | 0.53 | **0** | **0** |
-| visible_black_focus_med | 64 | **~75.5** | **~74** |
-| column_job ready med | ~1 | **~18** | **~7.5** |
-| enter continuous ms | ~78 | **~67** | **~2153** |
+| visible_black_focus_med | 64 | **~74** | **~70** |
+| column_job ready med | ~1 | **~7.5** | **~8** |
+| enter continuous ms | ~78 | **~2153** | **~68** |
 | shadow_mismatch_n | — | **0** | **0** |
-| stage_disagree_n | — | **~11** | **~1** |
+| stage_disagree_n | — | **~1** | **~2** |

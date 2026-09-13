@@ -45,8 +45,9 @@ public:
                                  bool deferred_no_gpu_readback,
                                  bool greedy_merge_rects = false) override;
 
-  bool CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
-                          UBlockRegistry &registry) const override;
+  bool CanDeferGpuExtract(
+      const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+      const BlockDefinitionCatalog *catalog = nullptr) const override;
 
 private:
   bool EnsureCompute();

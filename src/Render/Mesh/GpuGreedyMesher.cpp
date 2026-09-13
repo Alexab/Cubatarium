@@ -271,12 +271,17 @@ UGpuGreedyMesher::TryComputeExtract(const ChunkMeshSnapshot &snapshot,
 #endif
 }
 
-bool UGpuGreedyMesher::CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
-                                          UBlockRegistry &registry) const
+bool UGpuGreedyMesher::CanDeferGpuExtract(
+    const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+    const BlockDefinitionCatalog *catalog) const
 {
   if (GetActiveRenderBackendCaps().Platform != RenderPlatformKind::Desktop)
   {
     return false;
+  }
+  if (catalog)
+  {
+    return SnapshotIsGpuExtractEligible(snapshot, catalog);
   }
   return SnapshotIsGpuExtractEligible(snapshot, registry);
 }

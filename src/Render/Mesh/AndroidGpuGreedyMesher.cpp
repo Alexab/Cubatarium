@@ -216,12 +216,17 @@ UAndroidGpuGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
 }
 
 bool UAndroidGpuGreedyMesher::CanDeferGpuExtract(
-    const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry) const
+    const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+    const BlockDefinitionCatalog *catalog) const
 {
   const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
   if (!caps.AllowAndroidGpu)
   {
     return false;
+  }
+  if (catalog)
+  {
+    return SnapshotIsGpuExtractEligible(snapshot, catalog);
   }
   return SnapshotIsGpuExtractEligible(snapshot, registry);
 }

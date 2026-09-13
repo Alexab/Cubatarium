@@ -31,8 +31,11 @@ public:
                  const BlockDefinitionCatalog *catalog = nullptr) = 0;
 
   /// P5: worker may defer opaque extract to the main GL thread.
-  virtual bool CanDeferGpuExtract(const ChunkMeshSnapshot & /*snapshot*/,
-                                  UBlockRegistry & /*registry*/) const
+  /// When catalog is non-null (Q4 WorkerCompute), eligibility uses the pinned
+  /// catalog only; registry remains fallback for main-thread callers.
+  virtual bool CanDeferGpuExtract(
+      const ChunkMeshSnapshot & /*snapshot*/, UBlockRegistry & /*registry*/,
+      const BlockDefinitionCatalog * /*catalog*/ = nullptr) const
   {
     return false;
   }

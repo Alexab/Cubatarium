@@ -27,8 +27,9 @@ public:
   BuildChunkMesh(const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
                  const BlockDefinitionCatalog *catalog = nullptr) override;
 
-  bool CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
-                          UBlockRegistry &registry) const override;
+  bool CanDeferGpuExtract(
+      const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+      const BlockDefinitionCatalog *catalog = nullptr) const override;
 
   bool TryExtractOpaqueToBatches(const ChunkMeshSnapshot &snapshot,
                                  UBlockRegistry &registry, glm::ivec3 coord,

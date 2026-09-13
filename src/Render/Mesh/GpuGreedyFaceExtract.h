@@ -3,6 +3,7 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
+#include "Blocks/BlockCatalogQueries.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Lighting/LightUtil.h"
 #include <array>
@@ -33,11 +34,35 @@ inline bool IsGpuFaceExtractEligible(UBlockRegistry &registry, BlockId id)
   return registry.IsSolid(id);
 }
 
+/// Q4 WorkerCompute: same eligibility from pinned catalog (no live registry).
+inline bool IsGpuFaceExtractEligible(const BlockDefinitionCatalog *catalog,
+                                     BlockId id)
+{
+  if (id == 0 || !catalog)
+  {
+    return false;
+  }
+  const BlockRenderStyle style = CatalogGetRenderStyle(catalog, id);
+  if (style == BlockRenderStyle::Fluid || style == BlockRenderStyle::Cross)
+  {
+    return false;
+  }
+  // IsSolid ≡ BlocksMovement on the registry path.
+  return CatalogBlocksMovement(catalog, id);
+}
+
 /// Legacy alias kept for callers that need the strict opaque-only check.
 inline bool IsOpaqueSolidForGpuExtract(UBlockRegistry &registry, BlockId id)
 {
   return IsGpuFaceExtractEligible(registry, id) &&
          !registry.IsTransparent(id);
+}
+
+inline bool IsOpaqueSolidForGpuExtract(const BlockDefinitionCatalog *catalog,
+                                       BlockId id)
+{
+  return IsGpuFaceExtractEligible(catalog, id) &&
+         !CatalogIsTransparent(catalog, id);
 }
 
 inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
@@ -50,6 +75,27 @@ inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
       continue;
     }
     if (!IsGpuFaceExtractEligible(registry, id))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
+                                         const BlockDefinitionCatalog *catalog)
+{
+  if (!catalog)
+  {
+    return false;
+  }
+  for (BlockId id : snap.blocks)
+  {
+    if (id == 0)
+    {
+      continue;
+    }
+    if (!IsGpuFaceExtractEligible(catalog, id))
     {
       return false;
     }

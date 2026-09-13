@@ -170,9 +170,9 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q2 renderer oracle / attribution | done — attribution + census mismatch + normal_shutdown_test; GL pixel oracle remains `greedy_vertex_pool_*` / driver (G1 open) |
 | Q3 schedule cost split | done |
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
-| Q4 visual boundary stamps | Strategy A geom-only stamp; MeshInputs types; WorkerCompute **pinned catalog for faces+liquid+movement+cross** (GPU extract eligibility still registry residual) |
-| Q6 ColumnRecord cutover | **EvictionOwner default** after **131728** Seam F5 PASS (mismatch **0**). Full FirstMesh→Relight→Seam→Eviction ladder. Rollback: SeamOwner |
-| Q9 F5 acceptance flight | **131728** drawable PASS (stale 25, holes 0, enter~2.15s, VB~74). Need post-EvictionOwner F5 |
+| Q4 visual boundary stamps | Strategy A geom-only stamp; MeshInputs types; WorkerCompute **pinned catalog for faces+liquid+movement+cross+GPU-extract eligibility** (main-thread occupancy/extract may still use registry) |
+| Q6 ColumnRecord cutover | **EvictionOwner default** — ladder F5-proven on **133156** (mismatch **0**, stale **16**). Rollback: SeamOwner |
+| Q9 F5 acceptance flight | **133156** drawable PASS (stale 16, holes 0, enter~68ms, VB~70). Q9 3+3 still open |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
 | Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + soft-defer Relight/Seam; **FirstMesh never hard-killed** |
 | Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + CaptureAndCommitOnMain snapshot reserve |
@@ -186,9 +186,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | 131728 holes 0; VB med **~74** still red vs 141350 |
-| G2 | Частично | Q6 ladder complete in code (EvictionOwner default); F5 after Eviction required; Decide mismatch **0** on 130708/131728 |
+| G1 | Не закрыт | 133156 holes 0; VB med **~70** still red vs 141350 |
+| G2 | Частично | Q6 ladder F5-proven (**133156**); WorkerCompute catalog pin includes GPU-extract eligibility |
 | G3 | Частично | ColumnFlow DrainBudget/RemeshSeam soft-defer by Exhausted; FirstMesh floor; apply/upload still local budgets |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: manual F5 after EvictionOwner; then Q4 GPU-extract catalog residual; Q9 3 cold+3 warm.
+Следующий шаг: F5 after Q4 GPU-extract catalog pin; then Q9 3 cold+3 warm (G0).
