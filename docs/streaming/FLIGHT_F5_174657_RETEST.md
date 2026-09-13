@@ -53,6 +53,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | Enter (164735) | `bin/logs/enter_lit_20260913-164751.jsonl` |
 | G1 void-Note (180850) | `bin/logs/perf_20260913-180850_25384.jsonl` |
 | Enter (180850) | `bin/logs/enter_lit_20260913-180923.jsonl` |
+| G1 repair floor (190148) | `bin/logs/perf_20260913-190148_10420.jsonl` |
+| Enter (190148) | `bin/logs/enter_lit_20260913-190205.jsonl` |
 
 ## Manifest (required)
 
@@ -101,17 +103,16 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **164153 Q9 cold#2:** **drawable PASS** — stale **46.5**, unfinished **0**, holes **0**, enter ~**75ms**, wall **42.9**, VB **~71**, mismatch **0**.
 - **164735 Q9 cold#3 (+edits at end):** **drawable PASS** — unfinished **0**, holes **0**, mismatch **0**, enter ~**3.0s**, wall **37.5**, VB **~70**. stale **115** and `drop_no_active` **17** elevated vs cruise-only (edit stress / `phase_abort_heavy`); not 175610-class. New process PID → counts as **cold**, not warm.
 - **180850 post-G1 void-Note (`5bf32dda`):** **drawable PASS** (holes/unf/mismatch **0**) — stale **21–26**, wall **~41**, enter ~**99ms**, VB med **~57–68**. **`fully_dark_stalled` med 0** (was 13–20) — Note PL worked. Debt moved to **`fully_dark_repair` ~38** / `draw_oracle_fully_dark_debt_n` ~47. `cull_stats_sync_read_n` **0**. Product vs 141350 still FAIL (`focus_missing_frac` + VB≥40). Capture bg med **1**, relight_apply med **1** → next: repair-debt Capture/Apply floor.
+- **190148 post-repair Capture/Apply floor (`183c9fad`):** holes/unf **0** (holes_frac~0.06 one period). Throughput on repair≥20: capture_bg med **2.5**, apply med **2** (floor landed). But VB **worse** (med ~62 / scorecard **77**), repair **~54**, stalled **~9**, stale **~59**, `drop_no_active` **18**, miss_stuck+gpu_kick~0. MarkRelit invoked but **`mark_relit_schedule_n=0`** — slim path skipped FullyDark remesh (GPU dark not in still_stale). Enter ~**3.1s**.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
 
-| Metric (cruise med) | **163717** | **171111** | **180850** |
-|---|---|---|---|
-| wall_ms | 50.4 | ~47–64 | **~41** |
-| mesh_apply_stale | 55.5 | 107–133 | **21** |
-| unfinished / holes | 0 / 0 | 0 / 0 | **0 / 0** |
-| VB focus | 64 | 73 | **57** |
-| VB fully_dark_repair | 54 | 41 | **38** |
-| VB fully_dark_stalled | 13 | 20 | **0** |
-| enter continuous ms | ~2644 | ~100 | **~99** |
+| Metric (cruise med) | **180850** | **190148** |
+|---|---|---|
+| wall_ms | ~41 | **~34** |
+| mesh_apply_stale | 21 | **59** |
+| VB / repair / stall | 57 / 38 / 0 | **62 / 54 / 9** |
+| capture_bg / apply (repair≥20) | 1 / 1 | **2.5 / 2** |
+| enter continuous ms | ~99 | **~3147** |
 
 ## Q9 batch procedure (G0)
 

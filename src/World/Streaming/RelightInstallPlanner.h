@@ -176,8 +176,9 @@ inline bool ChunkLightRevAhead(const ColumnChunkSnapshot &chunk)
   return IsMeshLightStale(chunk.meshed_light_rev, chunk.light_field_rev);
 }
 
-/// FZ2.7-P7: do not remesh FullyDark when light rev matches (GPU-sky noop).
-/// Missing mesh still needs FirstMesh. GPU dark-face still_stale is not a delta.
+/// FZ2.7-P7: do not remesh FullyDark when light rev matches (GPU-sky noop)
+/// **unless** still_stale (GPU dark-face) or force_stale_ticket.
+/// Missing mesh still needs FirstMesh.
 inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
                                              bool force_stale_ticket)
 {
@@ -189,7 +190,11 @@ inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
   {
     return true;
   }
-  return force_stale_ticket && chunk.fully_dark;
+  if (chunk.fully_dark && (force_stale_ticket || chunk.still_stale))
+  {
+    return true;
+  }
+  return false;
 }
 
 /// FZ2.7: already-Dirty missing mesh / FullyDark-with-light-delta bump Q head.

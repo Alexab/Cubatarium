@@ -3474,7 +3474,13 @@ int main()
     dark.meshed_light_rev = 3;
     dark.light_field_rev = 3;
     Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
-           "P7: FullyDark matching revs skip remesh");
+           "P7: FullyDark matching revs skip remesh when not still_stale");
+    dark.still_stale = true;
+    Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
+           "G1: FullyDark GPU still_stale remeshes even if revs match");
+    dark.still_stale = false;
+    Expect(ShouldRemeshAfterLitApplyForHole(dark, true),
+           "G1: force_stale_ticket remeshes FullyDark");
     dark.light_field_rev = 4;
     Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
            "P7: light rev ahead remeshes FullyDark");
