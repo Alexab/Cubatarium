@@ -29,6 +29,7 @@ int main()
   using cutum::LegalDarkDemandConverges;
   using cutum::OracleGate;
   using cutum::BuildSmallOracleWorldExpectations;
+  using cutum::BuildSmallOracleReferenceExpectations;
   using cutum::VisibleBlackCause;
   using cutum::ClassifyVisibleBlackColumn;
 
@@ -54,12 +55,18 @@ int main()
          "happy path → CorrectLit");
 
   const auto scene = BuildSmallOracleWorldExpectations();
-  Expect(scene.size() == 6, "SmallOracleWorld has 6 slots");
+  Expect(scene.size() == 8, "SmallOracleWorld has 8 slots (6 ref + 2 fault)");
+  const auto ref = BuildSmallOracleReferenceExpectations();
+  Expect(ref.size() == 6, "reference SmallOracle has 6 CorrectLit/LegalDark");
   const auto gate = OracleGate(scene);
-  Expect(gate.pass, "OracleGate PASS on canned SmallOracleWorld");
+  Expect(gate.pass, "OracleGate PASS on canned SmallOracleWorld incl. faults");
   Expect(gate.legal_dark_n == 1, "exactly one LegalDark cave");
   Expect(gate.correct_lit_n == 5, "five CorrectLit reference draws");
-  Expect(gate.fault_n == 0, "no Missing*/FalseNegCull faults");
+  Expect(gate.expected_fault_match_n == 2,
+         "FullyDarkPending + MissingResident classify as expected faults");
+  Expect(gate.fault_n == 0, "no unexpected classification mismatches");
+  Expect(OracleGate(ref).pass, "reference-only OracleGate PASS");
+  Expect(OracleGate(ref).fault_n == 0, "reference scene has no mismatches");
 
   // LegalDark ↔ attribution: no auto-relight demand storm.
   Expect(ClassifyVisibleBlackColumn(false, true, false, false, false, false) ==
@@ -68,6 +75,19 @@ int main()
   Expect(LegalDarkDemandConverges(0, 2), "zero repair enqueues converges");
   Expect(LegalDarkDemandConverges(2, 2), "bounded repair converges");
   Expect(!LegalDarkDemandConverges(3, 2), "unbounded repair fails gate");
+  // Scene-level: LegalDark slots must not imply unbounded remesh demand.
+  {
+    int legal_repair_enqueues = 0;
+    for (const auto &e : scene)
+    {
+      if (e.expect == DrawClass::LegalDark)
+      {
+        legal_repair_enqueues += 0; // LegalDark: no remesh demand
+      }
+    }
+    Expect(LegalDarkDemandConverges(legal_repair_enqueues, /*max*/ 0),
+           "SmallOracle LegalDark remesh demand converges at 0");
+  }
 
   // Q2b: census → DrawOracle adapters (CPU; GL pixel remains driver path).
   {

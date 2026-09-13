@@ -122,6 +122,17 @@ int RunGreedyPoolDriverTest()
     if (dark[0] > 10 || dark[1] > 10 || dark[2] > 10)
       ++failures;
   }
+  // G1-P4: object-id stand-in — unique clear color acts as slot id; readPixels
+  // must recover the id (world object-id masks still open / FalseNegCull=0).
+  if (linked)
+  {
+    glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    unsigned char id_px[4]{};
+    glReadPixels(16, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, id_px);
+    if (id_px[1] < 240 || id_px[0] > 10 || id_px[2] > 10)
+      ++failures;
+  }
   pool.Destroy();
   glDeleteVertexArrays(1, &vao);
   glDeleteProgram(program);

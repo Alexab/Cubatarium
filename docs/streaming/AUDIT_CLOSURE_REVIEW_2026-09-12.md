@@ -185,7 +185,7 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | **Частично закрыт** | Q9 3+3 drawable PASS; schema/manifest already fail-closed. Product VB/missing vs 141350 still out of G0 scope |
-| G1 | Не закрыт | **210134 post-dual-Q (`18e0f1bd`):** classification PASS (`fault_n≈76`, `dirty_fm~20`, `dirty_remesh~120`, CorrectLit proxy 0). Progress FAIL: `schedule_ok=1`, `skip_snapshot~139`, `gpu_kick~0`, VB~76. Next: RemeshQ snapshot slice + kick quota (A11); no Capture/MarkRelit floors. No-teleport autofly loop. |
+| G1 | Не закрыт | **210134 post-dual-Q (`18e0f1bd`):** classification PASS (`fault_n≈76`, `dirty_fm~20`, `dirty_remesh~120`, CorrectLit proxy 0). Progress FAIL: `schedule_ok=1`, `skip_snapshot~139`, `gpu_kick~0`, VB~76. Next: RemeshQ snapshot slice + kick quota (A11); no Capture/MarkRelit floors. No-teleport autofly loop. **Q2b SmallOracle:** fixture covers OpaqueLit/LegalDark/FullyDarkPending/MissingResident; GL object-id stand-in via `greedy_vertex_pool_* --driver` readPixels. **FalseNegCull remains 0** in world census until full object-id world path. |
 | G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through Q9 batch |
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |

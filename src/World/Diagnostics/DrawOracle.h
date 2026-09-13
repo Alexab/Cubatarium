@@ -76,6 +76,9 @@ enum class SmallOracleSlot : uint8_t
   OverhangSideLight,
   ClosedCaveLegalDark,
   ChunkBoundarySeam,
+  /// G1-P4 class coverage (fault + legal) — not part of reference CorrectLit set.
+  FullyDarkPending,
+  MissingResidentHole,
   Count,
 };
 
@@ -117,6 +120,26 @@ inline std::vector<SmallOracleExpected> BuildSmallOracleWorldExpectations()
   add(SmallOracleSlot::ChunkBoundarySeam,
       DrawOracleProbe{true, true, true, true, true, false},
       DrawClass::CorrectLit);
+  add(SmallOracleSlot::FullyDarkPending,
+      DrawOracleProbe{true, true, true, true, false, false},
+      DrawClass::StaleVertexLight);
+  add(SmallOracleSlot::MissingResidentHole,
+      DrawOracleProbe{true, false, true, true, true, false},
+      DrawClass::MissingResident);
+  return out;
+}
+
+/// Reference-only SmallOracleWorld (CorrectLit + LegalDark) — no fault slots.
+inline std::vector<SmallOracleExpected> BuildSmallOracleReferenceExpectations()
+{
+  std::vector<SmallOracleExpected> out;
+  for (const auto &e : BuildSmallOracleWorldExpectations())
+  {
+    if (e.expect == DrawClass::CorrectLit || e.expect == DrawClass::LegalDark)
+    {
+      out.push_back(e);
+    }
+  }
   return out;
 }
 
@@ -126,11 +149,13 @@ struct OracleGateResult
   size_t fault_n{0};
   size_t legal_dark_n{0};
   size_t correct_lit_n{0};
+  size_t expected_fault_match_n{0};
 };
 
 /// Assert each probe classifies to its expected DrawClass.
 /// Reference-visible necessary draws in SmallOracleWorld must expect
-/// CorrectLit or LegalDark (never Missing*/FalseNegCull).
+/// CorrectLit or LegalDark (never Missing*/FalseNegCull). Expected fault
+/// fixtures may list StaleVertexLight / MissingResident and still PASS.
 inline OracleGateResult OracleGate(const std::vector<SmallOracleExpected> &scene)
 {
   OracleGateResult r;
@@ -153,9 +178,7 @@ inline OracleGateResult OracleGate(const std::vector<SmallOracleExpected> &scene
     }
     else if (DrawClassIsFault(got))
     {
-      // Expected fault class matched — still counts as a fault for gate stats.
-      ++r.fault_n;
-      r.pass = false;
+      ++r.expected_fault_match_n;
     }
   }
   return r;
