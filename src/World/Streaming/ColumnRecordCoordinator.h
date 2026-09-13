@@ -30,7 +30,7 @@ enum class ColumnCutoverStage : uint8_t
   ShadowCompare = 0, ///< Log mismatch; legacy still owns enqueue.
   FirstMeshOwner = 1, ///< RecordCoordinator sole FirstMesh Enqueue/Cancel owner.
   RelightOwner = 2, ///< + RelightThenMesh / PromoteRelight sole owner.
-  SeamOwner = 3,
+  SeamOwner = 3, ///< + RemeshSeam sole owner.
   EvictionOwner = 4,
 };
 
@@ -39,7 +39,7 @@ class UColumnRecordCoordinator
 {
 public:
   static ColumnCutoverStage GetCutoverStage();
-  /// Rollback: set FirstMeshOwner (or ShadowCompare) to restore prior ownership.
+  /// Rollback: set RelightOwner / FirstMeshOwner / ShadowCompare as needed.
   static void SetCutoverStage(ColumnCutoverStage stage);
 
   static uint64_t ShadowMismatchCount();
