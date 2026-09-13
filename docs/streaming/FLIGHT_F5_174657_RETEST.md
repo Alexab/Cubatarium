@@ -27,6 +27,8 @@ Repeat the same route/seed/HUD profile as `perf_20260910-174657_26996` after F0�
 | INFO (211857) | `bin/logs/...INFO.20260912-211853.30432` (no enter_lit JSONL; settle in INFO) |
 | Post-Decide split (091748) | `bin/logs/perf_20260913-091748_40588.jsonl` |
 | Enter (091748) | `bin/logs/enter_lit_20260913-091804.jsonl` |
+| Post-RecordWants (095318) | `bin/logs/perf_20260913-095318_39488.jsonl` |
+| Enter (095318) | `bin/logs/enter_lit_20260913-095332.jsonl` |
 
 ## Manifest (required)
 
@@ -35,7 +37,7 @@ Record in suite report / notes:
 - git SHA: tag **`product_anchor_20260912`** (`8c9bf59a` tip at tag); post-anchor tip advances on `cursor_audit_impl2`
 - build type (Release); exe sha256 prefix `AC7003B329F8984B` (anchor build)
 - route: same as 090306 / 174657-class
-- INFO anchor: `...INFO.20260912-192013.9704`; reflight: `...INFO.20260912-194407.31392`; post-cutover: `...INFO.20260912-201115.28700`; post-Q8: `...INFO.20260912-203304.7532`; post-shadow-field: `...INFO.20260912-211853.30432`; post-Decide-split: `...INFO.20260913-091746.40588`
+- INFO anchor: `...INFO.20260912-192013.9704`; reflight: `...INFO.20260912-194407.31392`; post-cutover: `...INFO.20260912-201115.28700`; post-Q8: `...INFO.20260912-203304.7532`; post-shadow-field: `...INFO.20260912-211853.30432`; post-Decide-split: `...INFO.20260913-091746.40588`; post-RecordWants: `...INFO.20260913-095316.39488`
 
 ## Commands
 
@@ -61,19 +63,20 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **201118 post-EvictionOwner/catalog mesher:** **drawable PASS vs 192015** — stale **23** (better), stale_delta **4**, unfinished **0**, job_rr med **~24**, enter `live_blockers` ~**76ms**, discarded_late **0**, pool_fence_timeout **0**. holes_frac **0.65** (≈anchor 0.53; worse than 194409’s 0 — note, not mass-missing). Still FAIL full 141350 product gates (stale>2×9, VB, holes, miss_stuck+gpu_kick~0). Default cutover remains **ShadowCompare**.
 - **203306 post-Q8 soft-defer:** **drawable PASS vs 192015** — stale **29**, unfinished **0**, job_rr med **~22**, holes_frac **0.24** (better than anchor 0.53 and 201118 0.65), VB med **76** (slightly up), enter `live_blockers` ~**2.9s** (≪60s), wall **34.5**. Still FAIL full 141350 (stale>2×9, VB, miss_stuck+gpu_kick~0). holes gate not in FAIL list this run.
 - **211857 post-shadow-field reflight:** **drawable PASS vs 192015** — stale **31**, unfinished **0**, job_rr med **~40**, holes_frac **0.37**, enter INFO ~**135ms**. VB med **92** (G1). `shadow_mismatch_n` **~10k** — Sync spam (fixed in `26e8475b`).
-- **091748 post-Decide telem split (pre parity fix):** **drawable PASS vs 192015** — stale **36**, unfinished **0**, job_rr **~31**, holes **0.21**, VB **57**, wall **42**, enter ~**3.1s**. `stage_disagree` med **~11** (gauge OK). `shadow_mismatch_n` still **~5k** — Decide used legacy job map + refresh spam (fixed post-091748). Still FAIL full 141350 (missing/VB).
+- **091748 post-Decide telem split (pre parity fix):** **drawable PASS vs 192015** — stale **36**, unfinished **0**, job_rr **~31**, holes **0.21**, VB **57**, wall **42**, enter ~**3.1s**. `stage_disagree` med **~11**. `shadow_mismatch_n` still **~5k**.
+- **095318 post-RecordWants (`73d3403b`):** **drawable PASS vs 192015** — stale **24**, unfinished **0**, job_rr **~18**, holes **0.06**, enter ~**99ms**, wall **40.6**. VB med **73** (slightly up; G1). `stage_disagree` med **~12**. `shadow_mismatch_n` cruise med **~2.6k** / max **3606** — still climbing (legacy re-feed while record already has active pending Meshing). **Not cutover-ready.** Still FAIL full 141350 (missing/VB).
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
-- **Next:** remeasure Decide mismatch after RecordWants + new-ticket-only telem; G1 VB; Q4 catalog-only worker; Q9 paired acceptance. Cutover stays **ShadowCompare** until Decide parity honest.
+- **Next:** suppress legacy re-feed when ColumnRecord has active pending (keep-until-replace); remeasure Decide mismatch; then Q4 catalog-only worker / FirstMesh cutover if parity small. Cutover stays **ShadowCompare**.
 
-| Metric (cruise med) | 090306 | 175610 | **192015 Anchor** | **194409** | **203306** | **211857** | **091748** |
+| Metric (cruise med) | 090306 | 175610 | **192015** | **203306** | **211857** | **091748** | **095318** |
 |---|---|---|---|---|---|---|---|
-| wall_ms | 44.6 | 37 | 52.6 | **45.2** | **34.5** | **74.0** | **42.0** |
-| mesh_emerge_med | 12.9 | ~3.4 | 14.1 | **9.3** | **8.3** | **28.4** | **6.9** |
-| mesh_apply_stale | 46 | ~7.5e4 | 55 | **29** | **29** | **31** | **36** |
-| unfinished_visual | 0 | 28 | 0 | **2** | **0** | **0** | **0** |
-| visual_holes_frac | 0.70 | 1 | 0.53 | **0** | **0.24** | **0.37** | **0.21** |
-| visible_black_focus_med | 63 | 36 | 64 | **64** | **76** | **92** | **57** |
-| column_job ready med | — | 0 | ~1 | **~6** | **~22** | **~40** | **~31** |
-| enter continuous ms | ~75 | ~93112 | ~78 | **~3216** | **~2905** | **~135** | **~3130** |
-| shadow_mismatch_n | — | — | — | — | — | **~10k Sync** | **~5k Decide** |
-| stage_disagree_n | — | — | — | — | — | — | **~11** |
+| wall_ms | 44.6 | 37 | 52.6 | **34.5** | **74.0** | **42.0** | **40.6** |
+| mesh_emerge_med | 12.9 | ~3.4 | 14.1 | **8.3** | **28.4** | **6.9** | **5.2** |
+| mesh_apply_stale | 46 | ~7.5e4 | 55 | **29** | **31** | **36** | **24** |
+| unfinished_visual | 0 | 28 | 0 | **0** | **0** | **0** | **0** |
+| visual_holes_frac | 0.70 | 1 | 0.53 | **0.24** | **0.37** | **0.21** | **0.06** |
+| visible_black_focus_med | 63 | 36 | 64 | **76** | **92** | **57** | **73** |
+| column_job ready med | — | 0 | ~1 | **~22** | **~40** | **~31** | **~18** |
+| enter continuous ms | ~75 | ~93112 | ~78 | **~2905** | **~135** | **~3130** | **~99** |
+| shadow_mismatch_n | — | — | — | — | **~10k Sync** | **~5k** | **~2.6k** |
+| stage_disagree_n | — | — | — | — | — | **~11** | **~12** |

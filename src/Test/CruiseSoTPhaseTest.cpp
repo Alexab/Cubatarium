@@ -164,6 +164,20 @@ int main()
   Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 0,
          "count_mismatch=false skips Decide telem");
 
+  // Keep-until-replace: active Meshing pending ⇒ RecordWants FirstMesh false.
+  ColumnRecord pending_mesh = meshing_rec;
+  Expect(ColumnHasActivePending(pending_mesh), "meshing rec has pending token");
+  Expect(!UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(pending_mesh),
+         "active Meshing pending rejects FirstMesh want");
+  ColumnRecord ready_rec{};
+  ready_rec.resident = true;
+  ready_rec.published.mesh_version = 1;
+  ready_rec.published.gpu_handle = 7;
+  Expect(!UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(ready_rec),
+         "published RenderReady rejects FirstMesh want");
+  Expect(UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(gen_rec),
+         "Gen still wants FirstMesh");
+
   // Stage shadow disagree is a per-pass gauge, not the Decide* counter.
   UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(0);
   Expect(UColumnRecordCoordinator::ShadowStageDisagreeFocusN() == 0,

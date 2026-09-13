@@ -283,8 +283,8 @@ const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
 {
   const bool new_ticket = !scheduler_.Contains(item.column, item.kind);
-  const bool legacy_want = true;
-  bool record_want = legacy_want;
+  bool legacy_want = true;
+  bool record_want = true;
   if (decide_world_ != nullptr)
   {
     const ColumnRecord &rec = RecordForDecide(*decide_world_, item.column);
@@ -303,6 +303,13 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
       break;
     default:
       break;
+    }
+    // Keep-until-replace (plan M11): active pending on record means legacy
+    // must not re-feed the same producer class. Aligns ShadowCompare with
+    // FirstMeshOwner semantics and stops Decide mismatch spam (095318).
+    if (!record_want && ColumnHasActivePending(rec))
+    {
+      legacy_want = false;
     }
   }
   if (item.kind == ColumnWorkKind::FirstMesh)
@@ -421,6 +428,20 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
     auto &rec = world.GetColumnRecords().GetOrCreate(work.column);
     rec.desired = desired;
     rec.inflight_job = frame_counter_ == 0 ? 1 : frame_counter_;
+    // Q6: stamp pending immediately so RecordWants* / Decide* see in-flight
+    // before the next SyncFocusRing (stops legacy re-feed mismatch spam).
+    rec.pending.token = rec.inflight_job;
+    switch (work.kind)
+    {
+    case ColumnWorkKind::RelightThenMesh:
+    case ColumnWorkKind::PromoteRelight:
+      rec.pending.stage = ColumnJobStage::PendingLight;
+      break;
+    case ColumnWorkKind::FirstMesh:
+    case ColumnWorkKind::RemeshSeam:
+      rec.pending.stage = ColumnJobStage::Meshing;
+      break;
+    }
   }
   const glm::ivec2 *only =
       work.scan_full_focus ? nullptr : &work.column;

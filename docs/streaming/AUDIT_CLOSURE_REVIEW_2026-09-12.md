@@ -172,14 +172,12 @@ Domain build targets, forward/reverse include rules и план удаления
 | Q2 renderer oracle / attribution | done — attribution + census + DrawOracle/SmallOracleWorld CPU gate (`draw_oracle_gate_test`). GL pixel/object-id remains `greedy_vertex_pool_* --driver` (G1 evidence still needs product_anchor F5) |
 | Q4 visual boundary stamps | Strategy A geom-only stamp confirmed; `MeshInputs`/`LightInputs` types; AsyncMeshBuilder + **GreedyMesher** Transparent/Cutout from pinned catalog (liquid/movement still registry). GPU extract path still registry-backed |
 | Q5 tiny-cap publication progress | done for chunk-granular retain + `publication_progress_unit_n`; eviction policy polish open |
-| Q6 ColumnRecord cutover | ShadowCompare default; Decide* uses **ColumnRecord** `RecordWants*` (not legacy job map); mismatch counted on **new ticket only**. Telem: `column_record_shadow_mismatch_n` = Decide* SoT; `column_record_shadow_stage_disagree_n` = Sync gauge. 091748 pre-fix still ~5k Decide mismatch — remeasure after parity fix |
+| Q6 ColumnRecord cutover | ShadowCompare default; Decide* from ColumnRecord; keep-until-replace: no legacy re-feed while `pending` active; AdvanceColumn stamps pending. 095318 mismatch ~2.6k pre-fix — remeasure |
 | Q5 tiny-cap publication progress | **landed** chunk-granular retain + `publication_progress_unit_n` |
-| Q8 frame deadline / async cull stats | **R2** — delayed CullStats + `UFrameDeadline` phase wall; `ShouldDeferProducer` soft-stops Relight/Seam drains when Exhausted; **FirstMesh never hard-killed** |
-| Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **194409** / **201118** / **203306** / **211857** drawable PASS vs 192015 (211857: stale 31, holes 0.37, job_rr~40, enter~135ms INFO; VB 92 / wall 74 worse). Full G0/G1 vs 141350 still open |
-| Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + **CaptureAndCommitOnMain** reserve snapshot credits before allocate; fail → nullopt/false. RefreshIncrementalShell rejects !inputStampsValid as Ready |
-| Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + producer soft-defer (non-FM); `frame_deadline_test` covers FirstMesh floor |
-| Q9 F5 acceptance flight | **product_anchor PASS: 192015** (tag `product_anchor_20260912`); **211857** drawable PASS vs anchor. Full G0/G1 product gates vs 141350 still open (stale/VB/holes). Known-bad: 131523/162400/175610 |
-| Q10 domain boundaries | include allowlist burn-down note + reverse-rule comment; domain CMake libs open |
+| Q8 frame deadline / async cull stats | **R2** — `UFrameDeadline` + soft-defer Relight/Seam; **FirstMesh never hard-killed** |
+| Q7 admission reserve-before-allocate | **R3** — CaptureAndStore + CaptureAndCommitOnMain snapshot reserve |
+| Q9 F5 acceptance flight | **product_anchor PASS: 192015**; **095318** drawable PASS (stale 24, holes 0.06, enter~99ms, VB 73). Full G0/G1 vs 141350 open |
+| Q10 domain boundaries | include allowlist burn-down note; domain CMake libs open |
 
 G0–G4 остаются **не закрытыми** (см. матрицу gates ниже).
 
@@ -188,9 +186,9 @@ G0–G4 остаются **не закрытыми** (см. матрицу gates
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | Не закрыт | Manifest/CI улучшены (Q0/Q1); парный world acceptance flight ещё нужен |
-| G1 | Не закрыт | 211857 holes 0.37; VB med **92** worse vs 192015/141350; GL pixel oracle open |
-| G2 | Не закрыт | Owners in ShadowCompare; 211857 mismatch telem polluted — need Decide-only SoT before enabling cutover stages |
+| G1 | Не закрыт | 095318 holes 0.06 better; VB med **73** still red vs 141350; GL pixel oracle open |
+| G2 | Не закрыт | 095318 Decide mismatch ~2.6k — need keep-until-replace Enqueue parity before enabling owners |
 | G3 | Частично | ColumnFlow DrainBudget/RemeshSeam soft-defer by Exhausted; FirstMesh floor; apply/upload still local budgets |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: finish Decide* vs Sync stage shadow telem split + F5 remeasure; G1 VB; Q9 paired acceptance. Cutover stays **ShadowCompare**.
+Следующий шаг: keep-until-replace Enqueue (no legacy re-feed while record pending) + F5 remeasure; then Q4 catalog-only / FirstMesh cutover if Decide mismatch small. Cutover stays **ShadowCompare**.
