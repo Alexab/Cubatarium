@@ -531,7 +531,16 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   {
     // Q8: soft deadline — defer Relight/Seam/Promote when frame budget is
     // exhausted; re-queue and stop. FirstMesh keeps a progress floor.
-    const bool critical = work.kind == ColumnWorkKind::FirstMesh;
+    // G1: when unfinished=0 but FullyDark stalled/census mismatch, RelightThenMesh
+    // is critical too (else tickets sit in heap → FullyDarkStalledTicket).
+    const auto &pt = world.GetPhysicsTelemetry();
+    const bool relight_critical =
+        work.kind == ColumnWorkKind::RelightThenMesh &&
+        pt.FocusNotRenderReady == 0 &&
+        (pt.VisibleBlackFullyDarkStalledN > 0 ||
+         pt.VisibleBlackCensusMismatch != 0);
+    const bool critical =
+        work.kind == ColumnWorkKind::FirstMesh || relight_critical;
     if (UFrameDeadline::ShouldDeferProducer(critical))
     {
       scheduler_.Enqueue(work);
@@ -947,28 +956,16 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     if (!void_dark_cols.empty())
     {
       EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
-      // Era23 I-V5: Note+FIFO on void enqueue under void pressure (void_n>T /
-      // miss dual-queue). VB-heal remesh tickets still Dispatch→RecoverUnlit Note.
-      const bool ocean_heal_note = IsOceanHealPressure(
-          missing_visible_mesh, void_n, visible_black_n);
-      if (void_pressure || ocean_heal_note)
+      // G1: Note+FIFO for every void ticket (collect already ≤void_cap ~2–4).
+      // Previously only under void_pressure with note_cap=2 → FullyDarkStalled
+      // while RelightThenMesh sat in the heap without PendingLight progress.
+      for (const glm::ivec2 &col : void_dark_cols)
       {
-        const int note_cap =
-            ocean_heal_note ? OceanHealVoidRelightNoteMinPerFrame() : 2;
-        int note_n = 0;
-        for (const glm::ivec2 &col : void_dark_cols)
+        if (world.IsPendingLightBeforeMesh(col))
         {
-          if (note_n >= note_cap)
-          {
-            break;
-          }
-          if (world.IsPendingLightBeforeMesh(col))
-          {
-            continue;
-          }
-          world.EnqueueVoidDarkColumnRelightNote(col);
-          ++note_n;
+          continue;
         }
+        world.EnqueueVoidDarkColumnRelightNote(col);
       }
     }
   }
@@ -1023,6 +1020,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     if (!void_dark_cols.empty())
     {
       EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
+      for (const glm::ivec2 &col : void_dark_cols)
+      {
+        if (world.IsPendingLightBeforeMesh(col))
+        {
+          continue;
+        }
+        world.EnqueueVoidDarkColumnRelightNote(col);
+      }
     }
   }
   if (cooldown_ok && allow_stale_wave_base && !stale_dark_cols.empty() &&

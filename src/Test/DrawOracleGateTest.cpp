@@ -103,6 +103,7 @@ int main()
     Expect(hist.stale_vertex_light_n == 3, "stale → StaleVertexLight");
     Expect(hist.legal_dark_n == 5, "legal cave → LegalDark");
     Expect(hist.correct_lit_proxy_n == 6, "fully-dark repair paths → CorrectLit proxy");
+    Expect(hist.fully_dark_debt_n == 6, "fully_dark_debt sums repair buckets");
     Expect(hist.false_neg_cull_n == 0, "CPU census has no FalseNegCull");
     Expect(hist.fault_n == 2 + 3, "faults = missing + stale");
   }

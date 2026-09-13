@@ -584,6 +584,7 @@ struct PhysicsTelemetry
   int DrawOracleStaleVertexLightN{0};
   int DrawOracleLegalDarkN{0};
   int DrawOracleCorrectLitProxyN{0};
+  int DrawOracleFullyDarkDebtN{0};
   int DrawOracleFaultN{0};
   /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
   /// Not pending+dirty pressure — see FocusPressure.

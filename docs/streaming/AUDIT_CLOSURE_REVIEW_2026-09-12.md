@@ -190,4 +190,4 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: **G1** — разбор `draw_oracle_*` на F5 (LegalDark vs StaleVertexLight vs MissingResident); world object-id masks; без ослабления VB≥40 / holes / enter.
+Следующий шаг: **один F5** на новом exe — смотреть `visible_black_fully_dark_*`, `draw_oracle_fully_dark_debt_n`, `relight_apply_n`; ожидание: stalled↓ после void Note+critical Relight. Без ослабления VB≥40.

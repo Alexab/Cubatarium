@@ -509,6 +509,7 @@ struct FrameNumbers
   int draw_oracle_stale_vertex_light_n{0};
   int draw_oracle_legal_dark_n{0};
   int draw_oracle_correct_lit_proxy_n{0};
+  int draw_oracle_fully_dark_debt_n{0};
   int draw_oracle_fault_n{0};
   int focus_not_render_ready{0};
   int focus_pressure{0};
@@ -1119,6 +1120,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.draw_oracle_stale_vertex_light_n = phys.DrawOracleStaleVertexLightN;
   n.draw_oracle_legal_dark_n = phys.DrawOracleLegalDarkN;
   n.draw_oracle_correct_lit_proxy_n = phys.DrawOracleCorrectLitProxyN;
+  n.draw_oracle_fully_dark_debt_n = phys.DrawOracleFullyDarkDebtN;
   n.draw_oracle_fault_n = phys.DrawOracleFaultN;
   n.focus_not_render_ready = phys.FocusNotRenderReady;
   n.focus_pressure = phys.FocusPressure;
@@ -1755,6 +1757,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
           << ",\"draw_oracle_correct_lit_proxy_n\":"
           << n.draw_oracle_correct_lit_proxy_n
+          << ",\"draw_oracle_fully_dark_debt_n\":"
+          << n.draw_oracle_fully_dark_debt_n
           << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
           << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
           << ",\"focus_pressure\":" << n.focus_pressure
@@ -2058,6 +2062,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
           << ",\"draw_oracle_correct_lit_proxy_n\":"
           << n.draw_oracle_correct_lit_proxy_n
+          << ",\"draw_oracle_fully_dark_debt_n\":"
+          << n.draw_oracle_fully_dark_debt_n
           << ",\"draw_oracle_fault_n\":" << n.draw_oracle_fault_n
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms

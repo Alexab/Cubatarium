@@ -218,6 +218,8 @@ struct DrawOracleCensusCounts
   int stale_vertex_light_n{0};
   int legal_dark_n{0};
   int correct_lit_proxy_n{0};
+  /// FullyDark* VB columns (published dark pending/stalled repair) — G1 debt.
+  int fully_dark_debt_n{0};
   int fault_n{0};
 };
 
@@ -227,6 +229,10 @@ inline DrawOracleCensusCounts AccumulateDrawOracleFromVbCensus(
 {
   DrawOracleCensusCounts out;
   out.missing_resident_n = unfinished_visual > 0 ? unfinished_visual : 0;
+  out.fully_dark_debt_n =
+      (fully_dark_repair_n > 0 ? fully_dark_repair_n : 0) +
+      (fully_dark_no_ticket_n > 0 ? fully_dark_no_ticket_n : 0) +
+      (fully_dark_stalled_n > 0 ? fully_dark_stalled_n : 0);
   auto bump = [&](VisibleBlackCause cause, int n)
   {
     if (n <= 0)

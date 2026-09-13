@@ -1335,6 +1335,8 @@ void UWorldStreaming::RefreshStreamingPressure(
       world.PhysicsTelemetryData.DrawOracleLegalDarkN = oracle.legal_dark_n;
       world.PhysicsTelemetryData.DrawOracleCorrectLitProxyN =
           oracle.correct_lit_proxy_n;
+      world.PhysicsTelemetryData.DrawOracleFullyDarkDebtN =
+          oracle.fully_dark_debt_n;
       world.PhysicsTelemetryData.DrawOracleFaultN = oracle.fault_n;
     }
     {
