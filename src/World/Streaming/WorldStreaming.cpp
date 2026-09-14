@@ -1336,6 +1336,7 @@ void UWorldStreaming::RefreshStreamingPressure(
           oracle.false_neg_cull_n;
       world.PhysicsTelemetryData.DrawOracleStaleVertexLightN =
           oracle.stale_vertex_light_n;
+      world.PhysicsTelemetryData.DrawOracleStaleVlRevN = oracle.stale_vl_rev_n;
       world.PhysicsTelemetryData.DrawOracleLegalDarkN = oracle.legal_dark_n;
       world.PhysicsTelemetryData.DrawOracleCorrectLitProxyN =
           oracle.correct_lit_proxy_n;

@@ -527,7 +527,9 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
     const bool relight_critical =
         work.kind == ColumnWorkKind::RelightThenMesh &&
         pt.FocusNotRenderReady == 0 &&
-        (pt.VisibleBlackFullyDarkStalledN > 0 ||
+        ((pt.VisibleBlackFullyDarkStalledN > 0 &&
+          (pt.VisibleBlackStaleLitN > 0 || pt.PendingLightFocus > 0 ||
+           pt.FocusPendingDark > 0)) ||
          pt.VisibleBlackCensusMismatch != 0);
     const bool critical =
         work.kind == ColumnWorkKind::FirstMesh || relight_critical;

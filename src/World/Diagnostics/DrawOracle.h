@@ -230,8 +230,9 @@ inline DrawOracleProbe ProbeFromCensus(bool desired_visible,
 
 /// Map VisibleBlackCause + residency into DrawClass for census→oracle bridge.
 /// Published VB columns (unfinished==0) are never MissingResident.
-/// FullyDark* is StaleVertexLight (G1 fault): published dark mesh needing remesh,
-/// not CorrectLit and not LegalDark (AUDIT Q2 / inv.6).
+/// FullyDark* still maps to StaleVertexLight here (legacy bridge); prefer
+/// `stale_vl_rev_n` vs `fully_dark_debt_n` / JSONL `fully_dark_census_n` for
+/// N04 attribution (source=cpu_census, not pixels).
 inline DrawClass DrawClassFromVisibleBlackCensus(VisibleBlackCause cause,
                                                  bool has_published_gpu,
                                                  bool in_pass_commands,
@@ -261,6 +262,9 @@ struct DrawOracleCensusCounts
   int correct_lit_proxy_n{0};
   /// FullyDark* VB columns (published dark pending/stalled repair) — G1 debt.
   int fully_dark_debt_n{0};
+  /// Revision-mismatch stale only (VisibleBlackCause::StaleDarkWithLitField).
+  /// Distinct from stale_vertex_light_n which still folds FullyDark* (N04 census).
+  int stale_vl_rev_n{0};
   int fault_n{0};
 };
 
@@ -288,6 +292,8 @@ inline DrawOracleCensusCounts AccumulateDrawOracleFromVbCensus(
       (fully_dark_repair_n > 0 ? fully_dark_repair_n : 0) +
       (fully_dark_no_ticket_n > 0 ? fully_dark_no_ticket_n : 0) +
       (fully_dark_stalled_n > 0 ? fully_dark_stalled_n : 0);
+  // Revision-only stale census (not FullyDark folded into StaleVL).
+  out.stale_vl_rev_n = stale_lit_n > 0 ? stale_lit_n : 0;
   auto bump = [&](VisibleBlackCause cause, int n)
   {
     if (n <= 0)
@@ -335,17 +341,17 @@ inline DrawOracleCensusCounts AccumulateDrawOracleFromVbCensus(
 /// G1-P3 / A10: oldest-debt age (frames). Resets when class debt clears or
 /// shrinks (Missing→drawable / lit publish / LegalDark reclass). Note/Capture
 /// alone must not zero age while debt_n is unchanged/nondecreasing.
+/// Advance oldest-debt age for a census class (N05).
+/// Do not reset age solely because an unrelated GPU finish ran — only when debt
+/// clears or the debt count shrinks (some oldest entry may have cleared).
 inline int AdvanceOldestDebtAgeFrames(int prev_age, bool debt_present,
                                       int prev_debt_n = -1, int debt_n = -1,
                                       int lit_publish_or_clear_n = 0)
 {
+  (void)lit_publish_or_clear_n;
   if (!debt_present || debt_n == 0)
   {
     return 0;
-  }
-  if (lit_publish_or_clear_n > 0)
-  {
-    return 1;
   }
   if (prev_debt_n >= 0 && debt_n >= 0 && debt_n < prev_debt_n)
   {

@@ -516,6 +516,8 @@ struct FrameNumbers
   int draw_oracle_missing_command_n{0};
   int draw_oracle_false_neg_cull_n{0};
   int draw_oracle_stale_vertex_light_n{0};
+  int stale_vl_rev_n{0};
+  int fully_dark_census_n{0};
   int draw_oracle_legal_dark_n{0};
   int draw_oracle_correct_lit_proxy_n{0};
   int draw_oracle_fully_dark_debt_n{0};
@@ -1142,6 +1144,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.draw_oracle_missing_command_n = phys.DrawOracleMissingCommandN;
   n.draw_oracle_false_neg_cull_n = phys.DrawOracleFalseNegCullN;
   n.draw_oracle_stale_vertex_light_n = phys.DrawOracleStaleVertexLightN;
+  n.stale_vl_rev_n = phys.DrawOracleStaleVlRevN;
+  n.fully_dark_census_n = phys.DrawOracleFullyDarkDebtN;
   n.draw_oracle_legal_dark_n = phys.DrawOracleLegalDarkN;
   n.draw_oracle_correct_lit_proxy_n = phys.DrawOracleCorrectLitProxyN;
   n.draw_oracle_fully_dark_debt_n = phys.DrawOracleFullyDarkDebtN;
@@ -1796,6 +1800,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.draw_oracle_false_neg_cull_n
           << ",\"draw_oracle_stale_vertex_light_n\":"
           << n.draw_oracle_stale_vertex_light_n
+          << ",\"stale_vl_rev_n\":" << n.stale_vl_rev_n
+          << ",\"fully_dark_census_n\":" << n.fully_dark_census_n
           << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
           << ",\"draw_oracle_correct_lit_proxy_n\":"
           << n.draw_oracle_correct_lit_proxy_n
@@ -2112,6 +2118,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.draw_oracle_false_neg_cull_n
           << ",\"draw_oracle_stale_vertex_light_n\":"
           << n.draw_oracle_stale_vertex_light_n
+          << ",\"stale_vl_rev_n\":" << n.stale_vl_rev_n
+          << ",\"fully_dark_census_n\":" << n.fully_dark_census_n
           << ",\"draw_oracle_legal_dark_n\":" << n.draw_oracle_legal_dark_n
           << ",\"draw_oracle_correct_lit_proxy_n\":"
           << n.draw_oracle_correct_lit_proxy_n

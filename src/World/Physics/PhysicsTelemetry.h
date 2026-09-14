@@ -599,6 +599,8 @@ struct PhysicsTelemetry
   int DrawOracleMissingCommandN{0};
   int DrawOracleFalseNegCullN{0};
   int DrawOracleStaleVertexLightN{0};
+  /// Revision-mismatch stale only (N04 split; source=cpu_census).
+  int DrawOracleStaleVlRevN{0};
   int DrawOracleLegalDarkN{0};
   int DrawOracleCorrectLitProxyN{0};
   int DrawOracleFullyDarkDebtN{0};

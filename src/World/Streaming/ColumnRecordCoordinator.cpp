@@ -105,6 +105,8 @@ ColumnJobStage UColumnRecordCoordinator::SyncFromWorldTruth(
   // Authoritative GPU/publication owner remains legacy maps until Q6 cutover.
   if (truth.render_ready)
   {
+    const uint32_t prev_mesh = rec.published.mesh_version;
+    const uint64_t prev_gpu = rec.published.gpu_handle;
     rec.published.mesh_version = std::max(rec.published.mesh_version, rec.mesh_rev);
     if (truth.published_gpu_handle != 0)
     {
@@ -118,8 +120,12 @@ ColumnJobStage UColumnRecordCoordinator::SyncFromWorldTruth(
     }
     rec.published.bounds_version =
         std::max(rec.published.bounds_version, rec.content_rev);
-    // Useful progress: published drawable advances debt clock.
-    TouchDebtProgress(rec);
+    // N05: touch debt only when published identity actually changes.
+    if (rec.published.mesh_version != prev_mesh ||
+        rec.published.gpu_handle != prev_gpu)
+    {
+      TouchDebtProgress(rec);
+    }
   }
 
   const ColumnJobStage pending_stage = PendingStageFromTruth(truth);

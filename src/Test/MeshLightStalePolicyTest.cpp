@@ -23,9 +23,12 @@ int main()
   Expect(IsMeshLightStale(1, 3), "meshed behind light");
   Expect(!IsMeshLightStale(0, 0), "zero revisions");
 
-  Expect(IsMeshLightStaleGpu(true, true, 2, 2), "GPU dark face conservative");
+  Expect(!IsMeshLightStaleGpu(true, true, 2, 2),
+         "GPU dark face alone is not StaleVL (N04)");
   Expect(!IsMeshLightStaleGpu(false, true, 1, 2), "not gpu resident");
   Expect(IsMeshLightStaleGpu(true, false, 1, 2), "GPU revision stale");
+  Expect(IsMeshLightStaleGpu(true, true, 1, 2),
+         "GPU revision stale even with dark face");
 
   if (failures != 0)
   {
