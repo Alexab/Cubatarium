@@ -24,13 +24,15 @@
     "scenario": "product-174657",
     "FaceYawDeg": 180,
     "FacePitchDeg": 0,
-    "IdleBeforeFlySec": 20,
-    "FlyPhaseSec": 120,
+    "IdleBeforeFlySec": 15,
+    "FlyPhaseSec": 45,
     "StopPhaseSec": 30,
     "HoldForward": true,
     "HoldSpace": true,
     "TeleportCruise": false,
     "Resume": true,
+    "PinLocusWorld": [120.0, 57.3, 56.0],
+    "PinFocusChunk": [7, 3],
     "phase_id": "product_174657_proxy"
   },
   "cli": "python tools/flight_sim_run.py --world World_164 --scenario product-174657"

@@ -727,13 +727,15 @@ def main() -> int:
     if args.scenario == "product-174657":
         # G1 product gate proxy: west 174657-class (yaw 180), not north replay-manual.
         # See bin/suite_reports/g1_a10_relight/autofly_vs_manual_diff.md
+        # Pin resume locus to spawn-near (7,3) — drifted saves start mid-west and
+        # under-stress (fog_rd collapse → false VB PASS). Match manual 080455
+        # distance (~10 chunks west), not fly-heavy 120s to ocean.
         args.replay_manual = True
-        args.replay_manual_fly_heavy = True
+        args.replay_manual_fly_heavy = False
         if args.yaw is None:
             args.yaw = 180.0
         if not (args.phase_id or "").strip():
             args.phase_id = "product_174657_proxy"
-        # Always resume west corridor; never honor accidental --teleport-cruise.
         if args.teleport_cruise:
             print(
                 "WARN: product-174657 forces --no-teleport-cruise "
@@ -741,10 +743,37 @@ def main() -> int:
                 flush=True,
             )
             args.teleport_cruise = False
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 15.0
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 45.0
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 30.0
         args.seconds = max(
             args.seconds,
-            20.0 + 120.0 + 30.0 + 5.0,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
         )
+        # Focus (7,3) ≈ world (120, y, 56); keep save y if present.
+        users = BIN / "worlds" / "World_164" / "users.json"
+        if users.is_file():
+            try:
+                data = json.loads(users.read_text(encoding="utf-8"))
+                user = data.get("Username") or data
+                prev = user.get("position")
+                y = float(prev[1]) if isinstance(prev, list) and len(prev) >= 2 else 57.3
+                user["position"] = [120.0, y, 56.0]
+                user["yaw"] = 180.0
+                user["pitch"] = 0.0
+                users.write_text(
+                    json.dumps(data, indent=4) + "\n", encoding="utf-8"
+                )
+                print(
+                    f"INFO: product-174657 pinned World_164 locus to "
+                    f"[120, {y}, 56] yaw180 (focus~7,3)",
+                    flush=True,
+                )
+            except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+                print(f"WARN: product-174657 locus pin failed: {exc}", flush=True)
 
     if args.replay_manual_fly_heavy:
         args.replay_manual = True
@@ -763,7 +792,11 @@ def main() -> int:
         # Default north (+Z) smoke; product-174657 sets yaw 180 (west) before this.
         if args.yaw is None:
             args.yaw = 90.0
-        if args.replay_manual_fly_heavy:
+        if args.scenario == "product-174657":
+            # Timings already set above (idle15/fly45/stop30); do not bump to
+            # north smoke 45/90/90 or fly-heavy 20/120/30.
+            pass
+        elif args.replay_manual_fly_heavy:
             args.idle_sec = max(args.idle_sec, 20.0)
             args.fly_phase_sec = max(args.fly_phase_sec, 120.0)
             args.stop_phase_sec = max(args.stop_phase_sec, 30.0)
