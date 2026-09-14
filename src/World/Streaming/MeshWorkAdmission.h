@@ -59,6 +59,8 @@ struct MeshWorkAdmissionInput
   int miss_witness_age_frames{0};
   /// Phase 5.3.3: EmptyBacklogN for HoleDrain FirstMesh drip clamp.
   int empty_backlog_n{0};
+  /// Dual-lane: round-robin token when schedule_cap==1 (0=FM, 1=Remesh).
+  int dual_lane_rr_token{0};
 };
 
 /// Near-focus miss that blocks view / needs urgent HoleDrain (horiz≤2 or underfeet).
@@ -127,6 +129,10 @@ struct MeshWorkAdmission
   bool steal_remesh_to_fm{false};
   /// FZ2.7-P13 R1: lit-settle remesh floor armed (stale dark faces).
   bool protect_lit_settle_remesh{false};
+  /// Dual-lane starve telem: 0=None, 1=Cap1YieldFm, 2=Cap1YieldRemesh, 3=NoDemand.
+  int dual_lane_starve_reason{0};
+  /// Dual-lane: next round-robin token for Cap1 (persist into next frame input).
+  int dual_lane_rr_token_next{0};
   Mode mode{Mode::Normal};
   /// FP-A4: this frame used Warm carve-out from HoleDrain FM starvation.
   bool admission_carve_out{false};
@@ -221,6 +227,159 @@ inline bool ShouldReserveRemeshSnapshotSlice(bool holes, int remesh_q_n,
                                              int debt_thresh = 20)
 {
   return holes && remesh_q_n > 0 && stale_or_fully_dark_debt >= debt_thresh;
+}
+
+/// Dual-lane schedule split (A10/A11): FirstMesh + RemeshLit lane quotas from one
+/// admission decision. Order is fixed (remesh snapshot before FM); focus miss must
+/// never flip order. Quotas ≠ Capture/Apply/MarkRelit floors.
+enum class DualLaneStarveReason : uint8_t
+{
+  None = 0,
+  Cap1YieldFm = 1,
+  Cap1YieldRemesh = 2,
+  NoDemand = 3,
+};
+
+struct DualLaneScheduleInput
+{
+  int schedule_cap{0};
+  int fm_q{0};
+  int remesh_q{0};
+  bool focus_missing_or_holes{false};
+  bool remesh_lit_demand{false};
+  bool fm_demand{false};
+  int protect_remesh_floor{0};
+  bool steal_remesh_to_fm{false};
+  int prior_first_mesh_schedule{0};
+  int prior_remesh_schedule{0};
+  int rr_token{0}; // 0=FM, 1=Remesh
+  bool miss_pressure{false}; // prefer remainder to FM when both lanes hot
+};
+
+struct DualLaneSchedule
+{
+  int first_mesh_schedule{0};
+  int remesh_schedule{0};
+  bool remesh_snapshot_before_fm{true};
+  DualLaneStarveReason starve_reason{DualLaneStarveReason::None};
+  int next_rr_token{0};
+};
+
+inline DualLaneSchedule
+ComputeDualLaneSchedule(const DualLaneScheduleInput &in)
+{
+  DualLaneSchedule out;
+  out.remesh_snapshot_before_fm = true;
+  out.next_rr_token = in.rr_token;
+
+  bool fm_d = in.fm_demand;
+  bool rm_d = in.remesh_lit_demand;
+  if (in.protect_remesh_floor > 0 && in.remesh_q > 0)
+  {
+    rm_d = true;
+  }
+  if (in.steal_remesh_to_fm && in.protect_remesh_floor == 0)
+  {
+    rm_d = false;
+  }
+
+  const int cap = std::max(0, in.schedule_cap);
+  if (cap == 0)
+  {
+    out.starve_reason = DualLaneStarveReason::NoDemand;
+    return out;
+  }
+
+  if (fm_d && rm_d && cap >= 2)
+  {
+    int fm = std::max(1, in.prior_first_mesh_schedule);
+    int rm = std::max({1, in.protect_remesh_floor, in.prior_remesh_schedule});
+    if (fm + rm > cap)
+    {
+      // Never drop below 1/1; shrink the larger lane first.
+      while (fm + rm > cap && (fm > 1 || rm > 1))
+      {
+        if (fm > rm && fm > 1)
+        {
+          --fm;
+        }
+        else if (rm > 1)
+        {
+          --rm;
+        }
+        else if (fm > 1)
+        {
+          --fm;
+        }
+        else
+        {
+          break;
+        }
+      }
+      if (fm + rm > cap)
+      {
+        // cap==2 with 1+1 is the only remaining legal split.
+        fm = 1;
+        rm = 1;
+      }
+    }
+    else
+    {
+      int rem = cap - fm - rm;
+      while (rem > 0)
+      {
+        if (in.miss_pressure || in.focus_missing_or_holes)
+        {
+          ++fm;
+        }
+        else
+        {
+          ++rm;
+        }
+        --rem;
+      }
+    }
+    out.first_mesh_schedule = fm;
+    out.remesh_schedule = rm;
+    out.starve_reason = DualLaneStarveReason::None;
+    return out;
+  }
+
+  if (fm_d && rm_d && cap == 1)
+  {
+    if (in.rr_token == 0)
+    {
+      out.first_mesh_schedule = 1;
+      out.remesh_schedule = 0;
+      out.starve_reason = DualLaneStarveReason::Cap1YieldRemesh;
+      out.next_rr_token = 1;
+    }
+    else
+    {
+      out.first_mesh_schedule = 0;
+      out.remesh_schedule = std::max(1, in.protect_remesh_floor);
+      out.starve_reason = DualLaneStarveReason::Cap1YieldFm;
+      out.next_rr_token = 0;
+    }
+    return out;
+  }
+
+  if (fm_d && !rm_d)
+  {
+    out.first_mesh_schedule = cap;
+    out.remesh_schedule = 0;
+    out.starve_reason = DualLaneStarveReason::None;
+    return out;
+  }
+  if (rm_d && !fm_d)
+  {
+    out.first_mesh_schedule = 0;
+    out.remesh_schedule = std::max(cap, in.protect_remesh_floor);
+    out.starve_reason = DualLaneStarveReason::None;
+    return out;
+  }
+  out.starve_reason = DualLaneStarveReason::NoDemand;
+  return out;
 }
 
 /// G1-P3b: after a debt-forced kick under focus miss, run a same-tick Finish
@@ -981,6 +1140,54 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     out.first_mesh_schedule = std::min(out.first_mesh_schedule, 4);
   }
+
+  // Dual-lane: enforce FM+RemeshLit minima after mode/debt floors; never flip
+  // remesh-snapshot-before-FM order (focus miss must not reorder).
+  {
+    const int stale_fd_debt =
+        std::max(in.dark_face_stale_near_n, in.visible_black_fully_dark_repair_n);
+    const bool holes_or_miss =
+        holes || in.missing_underfeet ||
+        IsNearFocusMissUrgent(in.visual_holes, in.missing_underfeet,
+                              in.nearest_miss_horiz);
+    DualLaneScheduleInput din{};
+    din.schedule_cap = std::max(out.max_schedule,
+                                out.first_mesh_schedule + out.remesh_schedule);
+    din.fm_q = in.dirty_fm_n;
+    din.remesh_q = in.remesh_queue_n;
+    din.focus_missing_or_holes = holes_or_miss;
+    din.fm_demand = in.dirty_fm_n > 0 && holes_or_miss;
+    din.remesh_lit_demand =
+        in.remesh_queue_n > 0 &&
+        (out.protect_lit_settle_remesh || stale_fd_debt >= 20);
+    din.protect_remesh_floor = out.protect_lit_settle_remesh ? 2 : 0;
+    din.steal_remesh_to_fm = out.steal_remesh_to_fm;
+    din.prior_first_mesh_schedule = out.first_mesh_schedule;
+    din.prior_remesh_schedule = out.remesh_schedule;
+    din.rr_token = in.dual_lane_rr_token;
+    din.miss_pressure = holes_or_miss;
+    // Only reshape when at least one lane has demand under non-Normal pressure.
+    if ((din.fm_demand || din.remesh_lit_demand) &&
+        out.mode != MeshWorkAdmission::Mode::Normal)
+    {
+      const DualLaneSchedule lane = ComputeDualLaneSchedule(din);
+      out.first_mesh_schedule = lane.first_mesh_schedule;
+      out.remesh_schedule = lane.remesh_schedule;
+      out.dual_lane_starve_reason =
+          static_cast<int>(lane.starve_reason);
+      out.dual_lane_rr_token_next = lane.next_rr_token;
+      const int need =
+          out.first_mesh_schedule + out.remesh_schedule;
+      out.max_schedule = std::max(out.max_schedule, need);
+    }
+    else
+    {
+      out.dual_lane_rr_token_next = in.dual_lane_rr_token;
+      out.dual_lane_starve_reason =
+          static_cast<int>(DualLaneStarveReason::None);
+    }
+  }
+
   out.stop_vb_drain_frames_report = stop_vb_drain_frames;
   out.stop_vb_budget_active =
       (!in.moving &&

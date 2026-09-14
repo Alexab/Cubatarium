@@ -2343,6 +2343,95 @@ int main()
     Expect(ShouldReserveRemeshSnapshotSlice(true, 12, 76),
            "dual-lane: focus miss still reserves remesh snapshot when debt");
 
+    using cutum::ComputeDualLaneSchedule;
+    using cutum::DualLaneScheduleInput;
+    using cutum::DualLaneStarveReason;
+    {
+      DualLaneScheduleInput both{};
+      both.schedule_cap = 4;
+      both.fm_q = 12;
+      both.remesh_q = 40;
+      both.focus_missing_or_holes = true;
+      both.fm_demand = true;
+      both.remesh_lit_demand = true;
+      both.prior_first_mesh_schedule = 2;
+      both.prior_remesh_schedule = 1;
+      both.miss_pressure = true;
+      const auto a = ComputeDualLaneSchedule(both);
+      Expect(a.first_mesh_schedule >= 1 && a.remesh_schedule >= 1,
+             "dual-lane: FM+RemeshLit cap≥2 ⇒ both ≥1");
+      Expect(a.remesh_snapshot_before_fm,
+             "dual-lane: focus miss does not flip remesh-before-FM");
+      Expect(a.first_mesh_schedule + a.remesh_schedule == 4,
+             "dual-lane: FM+Remesh fills cap");
+    }
+    {
+      DualLaneScheduleInput fm_only{};
+      fm_only.schedule_cap = 3;
+      fm_only.fm_demand = true;
+      fm_only.remesh_lit_demand = false;
+      const auto a = ComputeDualLaneSchedule(fm_only);
+      Expect(a.first_mesh_schedule == 3 && a.remesh_schedule == 0,
+             "dual-lane: FM-only ⇒ remesh min 0");
+    }
+    {
+      DualLaneScheduleInput rm_only{};
+      rm_only.schedule_cap = 3;
+      rm_only.fm_demand = false;
+      rm_only.remesh_lit_demand = true;
+      rm_only.remesh_q = 10;
+      const auto a = ComputeDualLaneSchedule(rm_only);
+      Expect(a.first_mesh_schedule == 0 && a.remesh_schedule == 3,
+             "dual-lane: RemeshLit-only ⇒ fm min 0");
+    }
+    {
+      DualLaneScheduleInput c1{};
+      c1.schedule_cap = 1;
+      c1.fm_demand = true;
+      c1.remesh_lit_demand = true;
+      c1.remesh_q = 5;
+      c1.rr_token = 0;
+      const auto a0 = ComputeDualLaneSchedule(c1);
+      Expect(a0.first_mesh_schedule == 1 && a0.remesh_schedule == 0,
+             "dual-lane: cap==1 token0 ⇒ FM");
+      Expect(a0.starve_reason == DualLaneStarveReason::Cap1YieldRemesh,
+             "dual-lane: cap==1 token0 starve remesh");
+      Expect(a0.next_rr_token == 1, "dual-lane: cap==1 advances token");
+      c1.rr_token = a0.next_rr_token;
+      const auto a1 = ComputeDualLaneSchedule(c1);
+      Expect(a1.first_mesh_schedule == 0 && a1.remesh_schedule >= 1,
+             "dual-lane: cap==1 token1 ⇒ Remesh");
+      Expect(a1.starve_reason == DualLaneStarveReason::Cap1YieldFm,
+             "dual-lane: cap==1 token1 starve FM");
+      Expect(a1.next_rr_token == 0, "dual-lane: cap==1 toggles back");
+    }
+    {
+      DualLaneScheduleInput steal_prot{};
+      steal_prot.schedule_cap = 4;
+      steal_prot.fm_demand = true;
+      steal_prot.remesh_lit_demand = true;
+      steal_prot.remesh_q = 20;
+      steal_prot.steal_remesh_to_fm = true;
+      steal_prot.protect_remesh_floor = 2;
+      steal_prot.prior_first_mesh_schedule = 2;
+      steal_prot.prior_remesh_schedule = 0;
+      const auto a = ComputeDualLaneSchedule(steal_prot);
+      Expect(a.remesh_schedule >= 1,
+             "dual-lane: steal+protect_floor>0 ⇒ remesh not zeroed");
+    }
+    {
+      DualLaneScheduleInput steal_bare{};
+      steal_bare.schedule_cap = 4;
+      steal_bare.fm_demand = true;
+      steal_bare.remesh_lit_demand = true;
+      steal_bare.remesh_q = 20;
+      steal_bare.steal_remesh_to_fm = true;
+      steal_bare.protect_remesh_floor = 0;
+      const auto a = ComputeDualLaneSchedule(steal_bare);
+      Expect(a.remesh_schedule == 0 && a.first_mesh_schedule == 4,
+             "dual-lane: steal+protect0 ⇒ remesh 0, FM gets cap");
+    }
+
     using cutum::ShouldRunSecondGpuFinishPass;
     Expect(ShouldRunSecondGpuFinishPass(true, false, 0, false),
            "G1-P3b: hole_finish_bias alone ⇒ second Finish");
