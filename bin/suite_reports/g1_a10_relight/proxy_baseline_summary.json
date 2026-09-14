@@ -1,0 +1,23 @@
+{
+  "scenario": "product-174657",
+  "tip": "feb43173",
+  "adequacy": "west_corridor_ok_early_vb_fail_class",
+  "e1_branch": "E2",
+  "cold": {
+    "perf": "perf_20260914-094214_17884.jsonl",
+    "report": "proxy_baseline_cold.json",
+    "vb_med": 20,
+    "fly_vb_max": 115,
+    "focus": [[7, 3], [-5, 3]],
+    "pass": false
+  },
+  "warm": {
+    "perf": "perf_20260914-094516_38780.jsonl",
+    "report": "proxy_baseline_warm.json",
+    "vb_med": 14.5,
+    "fly_vb_max": 116,
+    "focus": [[7, 3], [-7, 3]],
+    "pass": false
+  },
+  "note": "Full-run VB med under 40 is heal after early west spike; do not CLOSE G1 on med alone. Manual 080455 remains gate of record."
+}
