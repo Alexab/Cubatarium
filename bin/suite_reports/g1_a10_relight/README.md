@@ -6,7 +6,30 @@ Product gate proxy: `--scenario product-174657` (west yaw 180, no-teleport).
 - Route: `tools/manual_flight_world164_product_174657.json`
 - North `--replay-manual` yaw 90 = smoke only (see `g1_progress/`)
 
-Expect proxy baseline FAIL vs 141350 (VB/missing) until RelightReplace sole-owner lands.
+## Dual-lane schedule (A10/A11) — 2026-09-14
+
+Contract: fixed remesh-snapshot→FirstMesh order (no focus-miss reorder);
+`ComputeDualLaneSchedule` lane quotas; telem `schedule_lane_starve_reason`.
+Second Finish kept.
+
+| Run | StaleVL fly med | VB fly med | unlit max | dirty_remesh | adequacy |
+|---|---:|---:|---:|---:|---|
+| Anchor cold `125123` | 80 | 80.5 | 10 | 52 | PASS |
+| P3 cold `133817` | 94.5 | 94 | 25 | 74.5 | PASS |
+| S1 cold | 83 | 84 | 14 | 51 | PASS |
+| S3 cold | 84.5 | 84.5 | 12 | 54.5 | PASS |
+| Anchor warm `125331` | 83.5 | 83.5 | 19 | 57 | PASS |
+| S3 warm r2 | 75 | 75 | 16 | 50 | PASS |
+
+Reports: `dual_lane_s1_cold.json`, `dual_lane_s3_cold.json`,
+`dual_lane_s3_warm.json` (=r2), `dual_lane_s3_gates.json`.
+
+**Manual eye (operator):** west `(7,3)→(−3,3)` eye-level; compare to
+`122212` (good) / `134914` (P3 black regress). Pass if StaleVL/VB/unlit and
+subjective black chunks ≤ `122212` class. Do **not** claim G1 product CLOSED
+vs 141350 from this alone.
+
+## Prior evidence
 
 Latest west manual evidence (E3 FAIL/freeze, not CLOSED):
 
@@ -14,23 +37,8 @@ Latest west manual evidence (E3 FAIL/freeze, not CLOSED):
   - corridor `(7,3)→(-3,3)`, VB all/fly med `78/78.5`, `focus_missing` med `1`,
     `miss_stuck` max `311`, StaleVL ~`77`, `gpu_kick` fly med `0`,
     `gpu_kick_post_drain_n` max `1` (does not clear stuck)
+- P3 regress: `134914` / enter `134941` (black chunks returned)
 - prior: `perf_20260914-100645_45256.jsonl` + `enter_lit_20260914-100713.jsonl`
-  - VB all/fly med `51/76`, `miss_stuck` max `616`
 
-proxy_v2 (2026-09-14) fail-closed but **not miss-class**:
-
-- cold `112755` / visible `113011`: `focus_missing=0`, `miss_stuck=0`,
-  `fog_rd≈2`, VB fly med `20.5` / `13.5`
-- root cause: `hold_space` climb Y `~76→300` (manual stays `~50→58`)
-
-proxy_v3: `hold_space=False`, `--min-alt-above-sea 0`, `--cruise-eye-y 56`
-(land-eye floor without Space climb), pin eye Y ~56, altitude + west-travel
-adequacy gates.
-
-Cold `125123` (**adequacy PASS**): focus `(7,3)→(2,3)`, VB fly med `80.5`,
-`focus_missing` med `1`, `miss_stuck` tail max `158`, fog_rd `4`,
-player_y `50→60` (Δ+10), `gpu_kick` fly med `1`, `gpu_kick_post_drain` max `1`.
-Stuck spawn without cruise-eye (`124719`) rejected via `focus_not_west`.
-
-Post-drain kick is exercised under miss-class; product G1 still OPEN (VB/stuck
-FAIL vs 141350). Next: drain/consume under miss (no floors), then west manual eye.
+proxy_v3: `hold_space=False`, `--min-alt-above-sea 0`, `--cruise-eye-y 56`.
+Product G1 still OPEN (VB/stuck FAIL vs 141350).
