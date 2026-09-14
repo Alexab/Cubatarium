@@ -152,9 +152,10 @@ bool UGreedyGpuBackend::PublishPassInputs(
         GpuBatchKey{cache.batches[n].chunkCoord, cache.batches[n].batchIndex},
         n);
 
-  // Transaction unit is chunk+pass (audit N01): stage all uploads for a coord
+  // Transaction unit is chunk+pass (audit N01 v2): stage all uploads for a coord
   // and commit only when every batch succeeds. Neighbors progress independently.
-  // Partial OOM keeps PendingGeometryDirty and all predecessors for that coord.
+  // Partial OOM keeps PendingGeometryDirty and all predecessors for that coord;
+  // pass mesh/cull/sort revisions advance only when every upload coord commits.
   std::vector<GreedyGpuBatch> staged;
   std::vector<size_t> fresh;
   std::vector<bool> retained(cache.batches.size(), false);
@@ -281,9 +282,25 @@ bool UGreedyGpuBackend::PublishPassInputs(
     cache.PendingGeometryDirty.erase(coord);
   cache.usesVertexPool = !cache.batches.empty();
   sync_handles();
-  cache.meshRevision = mesh_revision;
-  cache.cullRevision = cull_revision;
-  cache.sortRevision = sort_revision;
+  // N01 v2: do not advance pass revisions while any group failed or any upload
+  // coord remains unpublished — otherwise consumers treat a mixed pass as done.
+  bool all_upload_coords_published = true;
+  for (const auto &coord : upload_order)
+  {
+    if (published_ok.count(coord) == 0)
+    {
+      all_upload_coords_published = false;
+      break;
+    }
+  }
+  const bool advance_pass_revisions =
+      !any_fail && all_upload_coords_published;
+  if (advance_pass_revisions)
+  {
+    cache.meshRevision = mesh_revision;
+    cache.cullRevision = cull_revision;
+    cache.sortRevision = sort_revision;
+  }
   if (changed)
   {
     cache.IndirectCullReady = false;

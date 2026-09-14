@@ -228,6 +228,9 @@ int main(int argc, char **argv)
     check(a_id == 9 && b_id == 9,
           "N01 partial OOM keeps full old A/B (no mixed versions)");
     check(cache2.batches.size() == 2, "N01 still two predecessor batches");
+    check(cache2.meshRevision == 1 && cache2.cullRevision == 1 &&
+              cache2.sortRevision == 1,
+          "N01 v2 partial OOM does not advance pass revisions");
 
     // Neighbor chunk can publish while primary stays dirty.
     cutum::GreedyBatchRef rn{};
