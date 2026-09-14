@@ -31,6 +31,14 @@ MANUAL_100645_PROXY_CLASS = {
     "focus_west_delta_cx_min": 3.0,
 }
 
+# Dual-lane upper stop-line (wall-diet / n01-rework). Adequacy alone is not merge-green.
+DUAL_LANE_STOP_LINE = {
+    "vb_fly_med_max": 84.5,
+    "stale_vl_fly_med_max": 84.5,
+    "unlit_max_cold": 15.0,
+    "unlit_max_warm": 19.0,
+}
+
 
 def newest_perf(after_ts: float) -> Path | None:
     logs = BIN / "logs"
@@ -203,6 +211,86 @@ def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
     metrics["adequacy_pass"] = len(fails) == 0
     metrics["adequacy_fails"] = fails
     return metrics
+
+
+def compute_dual_lane_stop_line(
+    perf_path: Path, *, warm: bool = False
+) -> dict:
+    """Upper-bound regress vs dual-lane S1/S3 class (not adequacy)."""
+    try:
+        rows = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") == "period":
+                rows.append(row)
+        fly = []
+        for row in rows:
+            try:
+                if float(row.get("movement_speed") or 0) > 2.0:
+                    fly.append(row)
+            except (TypeError, ValueError):
+                continue
+        use = fly if fly else rows
+
+        def values(key: str) -> list[float]:
+            out: list[float] = []
+            for row in use:
+                try:
+                    val = row.get(key)
+                    if val is not None:
+                        out.append(float(val))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        def median(xs: list[float]) -> float | None:
+            if not xs:
+                return None
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            if len(xs) % 2:
+                return xs[mid]
+            return (xs[mid - 1] + xs[mid]) / 2.0
+
+        vb_xs = values("visible_black_focus_n")
+        # Prefer draw-oracle stale VL; fall back to dark_face_stale_near proxy.
+        stale_xs = values("draw_oracle_stale_vertex_light_n")
+        if not stale_xs:
+            stale_xs = values("dark_face_stale_near_n")
+        unlit_xs = values("chunk_meshed_unlit")
+        metrics = {
+            "vb_fly_med": median(vb_xs),
+            "stale_vl_fly_med": median(stale_xs),
+            "unlit_max": max(unlit_xs) if unlit_xs else None,
+            "warm": bool(warm),
+        }
+        fails: list[str] = []
+        vb_med = metrics["vb_fly_med"]
+        if vb_med is None or float(vb_med) > DUAL_LANE_STOP_LINE["vb_fly_med_max"]:
+            fails.append("vb_fly_med_above_dual_lane")
+        stale_med = metrics["stale_vl_fly_med"]
+        if stale_med is None or float(stale_med) > DUAL_LANE_STOP_LINE[
+            "stale_vl_fly_med_max"
+        ]:
+            fails.append("stale_vl_fly_med_above_dual_lane")
+        unlit_cap = (
+            DUAL_LANE_STOP_LINE["unlit_max_warm"]
+            if warm
+            else DUAL_LANE_STOP_LINE["unlit_max_cold"]
+        )
+        unlit_max = metrics["unlit_max"]
+        if unlit_max is None or float(unlit_max) > unlit_cap:
+            fails.append("unlit_max_above_dual_lane")
+        metrics["dual_lane_stop_line_pass"] = len(fails) == 0
+        metrics["dual_lane_stop_line_fails"] = fails
+        return metrics
+    except Exception as exc:  # pragma: no cover
+        return {
+            "dual_lane_stop_line_pass": False,
+            "dual_lane_stop_line_fails": [f"stop_line_analyze_failed:{exc}"],
+        }
 
 
 def kill_cubatarium_orphans() -> int:
@@ -895,6 +983,28 @@ def main() -> int:
         # Pin resume locus to spawn-near (7,3) — drifted saves start mid-west and
         # under-stress (fog_rd collapse → false VB PASS). Match manual 080455
         # distance (~10 chunks west), not fly-heavy 120s to ocean.
+        if not args.visible:
+            import os
+
+            if os.environ.get("CUBA_FLIGHT_REQUIRE_VISIBLE", "").strip() in (
+                "1",
+                "true",
+                "TRUE",
+                "yes",
+                "YES",
+            ):
+                print(
+                    "FAIL: product-174657 requires --visible "
+                    "(CUBA_FLIGHT_REQUIRE_VISIBLE=1)",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return 2
+            print(
+                "WARN: product-174657 without --visible uses hidden GLFW; "
+                "operator cannot eye the flight. Pass --visible for honest gates.",
+                flush=True,
+            )
         args.replay_manual = True
         args.replay_manual_fly_heavy = False
         if args.yaw is None:
@@ -1682,6 +1792,15 @@ def main() -> int:
                 if args.scenario == "product-174657" and perf and Path(perf).is_file():
                     adequacy = compute_product_174657_proxy_adequacy(Path(perf))
                     result["proxy_adequacy"] = adequacy
+                    warm = "warm" in report_path.stem.lower()
+                    stop_line = compute_dual_lane_stop_line(Path(perf), warm=warm)
+                    result["dual_lane_stop_line"] = stop_line
+                    result["dual_lane_stop_line_pass"] = stop_line.get(
+                        "dual_lane_stop_line_pass"
+                    )
+                    result["dual_lane_stop_line_fails"] = stop_line.get(
+                        "dual_lane_stop_line_fails"
+                    )
                     report_path.write_text(
                         json.dumps(result, indent=2) + "\n", encoding="utf-8"
                     )
@@ -1689,6 +1808,16 @@ def main() -> int:
                         "product-174657 adequacy: "
                         + ("PASS" if adequacy.get("adequacy_pass") else "FAIL")
                         + f" {adequacy}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 dual-lane stop-line: "
+                        + (
+                            "PASS"
+                            if stop_line.get("dual_lane_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {stop_line}",
                         flush=True,
                     )
                 metrics_summary = {
@@ -1735,6 +1864,13 @@ def main() -> int:
                 }
                 if result.get("proxy_adequacy") is not None:
                     metrics_summary["proxy_adequacy"] = result["proxy_adequacy"]
+                if result.get("dual_lane_stop_line") is not None:
+                    metrics_summary["dual_lane_stop_line"] = result[
+                        "dual_lane_stop_line"
+                    ]
+                    metrics_summary["dual_lane_stop_line_pass"] = result.get(
+                        "dual_lane_stop_line_pass"
+                    )
                 if args.update_best and not hang_killed:
                     if args.fly_stop:
                         best_path = BIN / "flight_sim_gate_report_stop_best.json"
@@ -1776,6 +1912,13 @@ def main() -> int:
                 if not metrics_summary["proxy_adequacy"].get("adequacy_pass", False):
                     print(
                         "flight-sim adequacy FAIL for product-174657 proxy",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("dual_lane_stop_line_pass", True):
+                    print(
+                        "flight-sim dual-lane stop-line FAIL for product-174657 "
+                        "(adequacy alone is not merge-green)",
                         file=sys.stderr,
                     )
                     last_rc = 2
