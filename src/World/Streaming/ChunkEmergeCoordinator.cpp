@@ -2106,15 +2106,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool base_suppress =
       idle_remesh_debt || idle_focus_dirty_debt ||
       suppress_seam_for_sticky_catchup || suppress_seam_standing_churn;
-  // Audit D3.3: do not eager-call IsSpawnMeshRingReady when enter gate is off.
+  // D3.3 / S3: cache spawn-ring readiness. Never assume true off-enter (B3
+  // blink). Do not full-query every cruise frame (~25 ms).
   const bool enter_gate_active = world.IsEnterLitGateActive();
-  bool spawn_ring_ready = true;
-  if (enter_gate_active)
+  static bool s_ring_cache_valid = false;
+  static bool s_ring_cached_ready = true;
+  static bool s_ring_enter_was_active = false;
+  static glm::ivec3 s_ring_cache_focus{0};
+  const glm::ivec3 ring_focus = focus_ground;
+  const bool enter_edge = enter_gate_active != s_ring_enter_was_active;
+  bool need_ring_query = enter_gate_active || enter_edge || !s_ring_cache_valid ||
+                         ring_focus.x != s_ring_cache_focus.x ||
+                         ring_focus.z != s_ring_cache_focus.z;
+  bool spawn_ring_ready = s_ring_cached_ready;
+  prep_spawn_ring_ms = 0.0;
+  if (need_ring_query)
   {
     const auto ring_t0 = std::chrono::high_resolution_clock::now();
     spawn_ring_ready = world.IsSpawnMeshRingReady();
     prep_spawn_ring_ms = prep_ms_since(ring_t0);
+    s_ring_cached_ready = spawn_ring_ready;
+    s_ring_cache_valid = true;
+    s_ring_cache_focus = ring_focus;
   }
+  s_ring_enter_was_active = enter_gate_active;
   world.SetSuppressRelightSeamDirty(ShouldSuppressRelightSeamDirtyForEnterGate(
       enter_gate_active, spawn_ring_ready, base_suppress));
   world.GetPhysicsTelemetryMutable().PrepSpawnRingQueryMs = prep_spawn_ring_ms;

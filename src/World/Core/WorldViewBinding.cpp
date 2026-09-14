@@ -1032,6 +1032,17 @@ void UWorld::TickWorldStreamingPhase()
           std::max(PhysicsTelemetryData.IngressDebtLevel, latch);
     }
   }
+  const auto &tune = URuntimeTuning::Get();
+  // Cruise SoT: StreamingPhaseBudgetMs (default 5). Enter/lit gate keeps a
+  // higher effective phase so FirstMesh/visibility can settle (kill-switch
+  // quality — raise still via JSON; auto floor during enter only).
+  float phase_budget = tune.StreamingPhaseBudgetMs;
+  if (IsEnterLitGateActive() || IsEnterSessionActive())
+  {
+    phase_budget = std::max(phase_budget, 24.0f);
+  }
+  // N03: BeginFrame before streaming so stream/async share the same deadline.
+  cutum::UFrameDeadline::Get().BeginFrame(static_cast<double>(phase_budget));
   const glm::ivec3 hole_focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   GetMeshService().BeginHoleQueryFrame(hole_focus);
@@ -1055,17 +1066,6 @@ void UWorld::TickWorldStreamingPhase()
        PhysicsTelemetryData.MissHoriz <= 2) ||
       PhysicsTelemetryData.FocusStickyRemesh > 0 ||
       PhysicsTelemetryData.UnderfeetHasMesh == 0;
-  const auto &tune = URuntimeTuning::Get();
-  // Cruise SoT: StreamingPhaseBudgetMs (default 5). Enter/lit gate keeps a
-  // higher effective phase so FirstMesh/visibility can settle (kill-switch
-  // quality — raise still via JSON; auto floor during enter only).
-  float phase_budget = tune.StreamingPhaseBudgetMs;
-  if (IsEnterLitGateActive() || IsEnterSessionActive())
-  {
-    phase_budget = std::max(phase_budget, 24.0f);
-  }
-  // Q8: publish the same phase wall as the shared frame deadline.
-  cutum::UFrameDeadline::Get().BeginFrame(static_cast<double>(phase_budget));
   float reserved =
       miss_carve_out ? std::max(0.0f, tune.MissReservedMs) : 0.0f;
   // Reserved cannot exceed phase wall (MissReserved default 8 vs phase 5).
