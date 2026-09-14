@@ -397,8 +397,9 @@ def main() -> int:
             "fz-ne-frontier-stand",
             "fz-frontier-stand-resume",
             "fz-inring-cruise",
+            "product-174657",
         ],
-        help="named scenario (... / fz-ne-frontier-stand / fz-inring-cruise)",
+        help="named scenario (... / product-174657 west G1 proxy / fz-inring-cruise)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -723,6 +724,28 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
+    if args.scenario == "product-174657":
+        # G1 product gate proxy: west 174657-class (yaw 180), not north replay-manual.
+        # See bin/suite_reports/g1_a10_relight/autofly_vs_manual_diff.md
+        args.replay_manual = True
+        args.replay_manual_fly_heavy = True
+        if args.yaw is None:
+            args.yaw = 180.0
+        if not (args.phase_id or "").strip():
+            args.phase_id = "product_174657_proxy"
+        # Always resume west corridor; never honor accidental --teleport-cruise.
+        if args.teleport_cruise:
+            print(
+                "WARN: product-174657 forces --no-teleport-cruise "
+                "(west 174657-class resume proxy)",
+                flush=True,
+            )
+            args.teleport_cruise = False
+        args.seconds = max(
+            args.seconds,
+            20.0 + 120.0 + 30.0 + 5.0,
+        )
+
     if args.replay_manual_fly_heavy:
         args.replay_manual = True
 
@@ -737,7 +760,7 @@ def main() -> int:
         args.hold_space = True
         if args.pitch is None:
             args.pitch = 0.0
-        # Land-corridor heading (manual SoT / land-cruise); exe default 180 is west ocean.
+        # Default north (+Z) smoke; product-174657 sets yaw 180 (west) before this.
         if args.yaw is None:
             args.yaw = 90.0
         if args.replay_manual_fly_heavy:
@@ -1142,6 +1165,11 @@ def main() -> int:
         raise SystemExit(
             "FAIL: teleport_cruise=true forbidden for mesh-* phase-id "
             f"({phase_id!r}); use no-teleport replay-manual harness"
+        )
+    if args.scenario == "product-174657" and args.teleport_cruise:
+        raise SystemExit(
+            "FAIL: teleport_cruise=true forbidden for product-174657 "
+            "(west 174657-class resume proxy; use --no-teleport-cruise)"
         )
 
     # Phase 5.5 / 5.6 / 5.7: no-teleport gate; land-stand is teleport smoke only.

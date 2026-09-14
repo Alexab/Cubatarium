@@ -1,0 +1,37 @@
+{
+  "world": "World_164",
+  "notes": "G1 product gate proxy matching west 174657-class / manual 080455. Not north --replay-manual yaw 90.",
+  "route_class": "174657-class",
+  "settle": {
+    "focus_chunk": [7, 3],
+    "behavior": "resume near-spawn; idle then fly west"
+  },
+  "cruise": {
+    "direction": "west (-X / decreasing focus_cx)",
+    "yaw_deg_for_sim": 180,
+    "pitch_deg_for_sim": 0,
+    "expected_path_focus_chunks": [
+      [7, 3],
+      [6, 3],
+      [4, 3],
+      [2, 3],
+      [-1, 3],
+      [-3, 3]
+    ],
+    "symptoms_class": "VB>=40, focus_missing high, fog_pull_in_rd stays ~4 (vs north RD collapse)"
+  },
+  "flight_sim_defaults": {
+    "scenario": "product-174657",
+    "FaceYawDeg": 180,
+    "FacePitchDeg": 0,
+    "IdleBeforeFlySec": 20,
+    "FlyPhaseSec": 120,
+    "StopPhaseSec": 30,
+    "HoldForward": true,
+    "HoldSpace": true,
+    "TeleportCruise": false,
+    "Resume": true,
+    "phase_id": "product_174657_proxy"
+  },
+  "cli": "python tools/flight_sim_run.py --world World_164 --scenario product-174657"
+}
