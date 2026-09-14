@@ -5,6 +5,7 @@
 #include "World/Streaming/ColumnVisualSnapshot.h"
 
 #include <chrono>
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <unordered_map>
 
@@ -110,19 +111,45 @@ public:
                                int &out_pending_light, int &out_meshing,
                                int &out_gpu_pending, int &out_render_ready) const;
 
+  /// Structural cooldown identity (audit N06) — exposed for model tests.
+  struct CooldownKey
+  {
+    int32_t x{0};
+    int32_t z{0};
+    ColumnWorkKind kind{ColumnWorkKind::FirstMesh};
+    bool operator==(const CooldownKey &o) const
+    {
+      return x == o.x && z == o.z && kind == o.kind;
+    }
+  };
+  struct CooldownKeyHash
+  {
+    size_t operator()(const CooldownKey &k) const noexcept
+    {
+      size_t h = static_cast<size_t>(static_cast<uint32_t>(k.x));
+      h ^= static_cast<size_t>(static_cast<uint32_t>(k.z)) + 0x9e3779b9 +
+           (h << 6) + (h >> 2);
+      h ^= static_cast<size_t>(k.kind) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      return h;
+    }
+  };
+  static CooldownKey MakeCooldownKey(glm::ivec2 column, ColumnWorkKind kind)
+  {
+    return CooldownKey{column.x, column.y, kind};
+  }
+
 private:
   void AdvanceColumn(UWorld &world, const ColumnWorkItem &work,
                      glm::ivec3 focus_ground_horiz, int focus_radius,
                      int admit_batch);
   void FlushPromoteRequest();
-  static int64_t CooldownKey(glm::ivec2 column, ColumnWorkKind kind);
 
   UColumnFlowScheduler scheduler_;
   /// Rate-limit stale-dark NoteColumnRepair waves (manual 092627 thrash).
   std::chrono::steady_clock::time_point LastStaleRepairWave{};
   int frame_counter_{0};
   /// column+kind → frame when last Dispatched (cooldown 3 frames).
-  std::unordered_map<int64_t, int> last_dispatch_frame_;
+  std::unordered_map<CooldownKey, int, CooldownKeyHash> last_dispatch_frame_;
   static constexpr int kEnqueueCooldownFrames = 3;
   /// One PromoteRelight enqueue per streaming+emerge frame (max priority).
   bool promote_pending_{false};

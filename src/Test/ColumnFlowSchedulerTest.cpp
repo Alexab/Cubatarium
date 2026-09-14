@@ -1,8 +1,11 @@
 #include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <unordered_map>
 
 namespace
 {
@@ -127,6 +130,29 @@ int main()
       repeated.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 100);
     Expect(repeated.LiveCount() == 1 && repeated.HeapCount() == 1,
            "identical demand cannot grow tombstone heap");
+  }
+
+  // N06: structural cooldown keys must not collide on negative Z / adjacent X.
+  {
+    using cutum::UColumnFlowExecutor;
+    using K = UColumnFlowExecutor::CooldownKey;
+    const auto k = ColumnWorkKind::FirstMesh;
+    Expect(!(UColumnFlowExecutor::MakeCooldownKey({-1, -1}, k) ==
+             UColumnFlowExecutor::MakeCooldownKey({-2, -1}, k)),
+           "N06: (-1,-1) != (-2,-1)");
+    Expect(!(UColumnFlowExecutor::MakeCooldownKey({0, -1}, k) ==
+             UColumnFlowExecutor::MakeCooldownKey({255, -1}, k)),
+           "N06: (0,-1) != (255,-1)");
+    Expect(!(UColumnFlowExecutor::MakeCooldownKey({1, 2}, ColumnWorkKind::FirstMesh) ==
+             UColumnFlowExecutor::MakeCooldownKey({1, 2}, ColumnWorkKind::RemeshSeam)),
+           "N06: kind distinguishes same column");
+    Expect(UColumnFlowExecutor::MakeCooldownKey({INT32_MIN, INT32_MAX}, k) ==
+               UColumnFlowExecutor::MakeCooldownKey({INT32_MIN, INT32_MAX}, k),
+           "N06: int32 edges self-equal");
+    std::unordered_map<K, int, UColumnFlowExecutor::CooldownKeyHash> map;
+    map[UColumnFlowExecutor::MakeCooldownKey({-1, -1}, k)] = 1;
+    map[UColumnFlowExecutor::MakeCooldownKey({-2, -1}, k)] = 2;
+    Expect(map.size() == 2, "N06: map stores both negative-Z neighbors");
   }
 
   if (gFails != 0)

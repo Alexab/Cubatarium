@@ -338,7 +338,7 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
       return;
     }
   }
-  const int64_t key = CooldownKey(item.column, item.kind);
+  const auto key = MakeCooldownKey(item.column, item.kind);
   const auto it = last_dispatch_frame_.find(key);
   if (it != last_dispatch_frame_.end() &&
       frame_counter_ - it->second < kEnqueueCooldownFrames)
@@ -348,16 +348,6 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
   scheduler_.Enqueue(item);
   // Era17: do NOT arm last_dispatch at Enqueue — HasRepairTicket is Contains
   // only. last_dispatch_frame_ remains enqueue cooldown after Dispatch.
-}
-
-int64_t UColumnFlowExecutor::CooldownKey(glm::ivec2 column,
-                                         ColumnWorkKind kind)
-{
-  // Full-width Z (M02/A05): do not truncate to 16 bits.
-  const uint64_t ux = static_cast<uint32_t>(column.x);
-  const uint64_t uz = static_cast<uint32_t>(column.y);
-  return static_cast<int64_t>((ux << 32) | (uz << 8) |
-                              (static_cast<uint64_t>(kind) & 0xffu));
 }
 
 void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,
@@ -396,7 +386,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
                                    glm::ivec3 focus_ground_horiz,
                                    int focus_radius, int admit_batch)
 {
-  last_dispatch_frame_[CooldownKey(work.column, work.kind)] = frame_counter_;
+  last_dispatch_frame_[MakeCooldownKey(work.column, work.kind)] = frame_counter_;
   ColumnEmergeState requested = ColumnEmergeState::Meshing;
   switch (work.kind)
   {
@@ -498,7 +488,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
       // Era17: noop Remesh must not leave enqueue cooldown (re-derive next tick).
       if (world.RemeshColumnSeamTicket(*only) <= 0)
       {
-        last_dispatch_frame_.erase(CooldownKey(work.column, work.kind));
+        last_dispatch_frame_.erase(MakeCooldownKey(work.column, work.kind));
       }
     }
     else
