@@ -33,6 +33,7 @@
     "Resume": true,
     "PinLocusWorld": [120.0, 57.3, 56.0],
     "PinFocusChunk": [7, 3],
+    "FogPullInEnabled": false,
     "phase_id": "product_174657_proxy"
   },
   "cli": "python tools/flight_sim_run.py --world World_164 --scenario product-174657"

@@ -774,6 +774,28 @@ def main() -> int:
                 )
             except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
                 print(f"WARN: product-174657 locus pin failed: {exc}", flush=True)
+        # Fog pull-in collapses RD and masks west VB/missing (manual keeps fog~3–4).
+        # Temporarily disable for this scenario; restore after the run.
+        cfg_path = BIN / "config.json"
+        args._product174657_cfg_restore = None  # type: ignore[attr-defined]
+        if cfg_path.is_file():
+            try:
+                cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+                render = cfg.setdefault("render", {})
+                prev_fog = render.get("fog_pull_in_enabled", True)
+                args._product174657_cfg_restore = (cfg_path, prev_fog)  # type: ignore[attr-defined]
+                if prev_fog is not False:
+                    render["fog_pull_in_enabled"] = False
+                    cfg_path.write_text(
+                        json.dumps(cfg, indent=4) + "\n", encoding="utf-8"
+                    )
+                    print(
+                        "INFO: product-174657 set render.fog_pull_in_enabled=false "
+                        f"(was {prev_fog})",
+                        flush=True,
+                    )
+            except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+                print(f"WARN: product-174657 fog pin failed: {exc}", flush=True)
 
     if args.replay_manual_fly_heavy:
         args.replay_manual = True
@@ -1562,6 +1584,20 @@ def main() -> int:
         agg_path = base_report.with_name(f"{base_report.stem}_agg{base_report.suffix}")
         write_repeat_aggregate(run_reports, agg_path)
         print(f"wrote aggregate: {agg_path}", flush=True)
+
+    restore = getattr(args, "_product174657_cfg_restore", None)
+    if restore:
+        cfg_path, prev_fog = restore
+        try:
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+            cfg.setdefault("render", {})["fog_pull_in_enabled"] = prev_fog
+            cfg_path.write_text(json.dumps(cfg, indent=4) + "\n", encoding="utf-8")
+            print(
+                f"INFO: product-174657 restored render.fog_pull_in_enabled={prev_fog}",
+                flush=True,
+            )
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            print(f"WARN: product-174657 fog restore failed: {exc}", flush=True)
 
     return last_rc
 
