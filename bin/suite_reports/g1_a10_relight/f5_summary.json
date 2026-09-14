@@ -1,0 +1,62 @@
+{
+  "cold": {
+    "perf": "perf_20260914-095434_42148.jsonl",
+    "path": [
+      [
+        7,
+        3
+      ],
+      [
+        -2,
+        3
+      ]
+    ],
+    "early_vb_med": 109.0,
+    "early_vb_max": 117,
+    "early_fog_med": 4.0,
+    "fly_n": 35,
+    "vb_med": 25.0,
+    "fly_vb_max": 117.0,
+    "pass": false,
+    "focus": [
+      [
+        7,
+        3
+      ],
+      [
+        -3,
+        3
+      ]
+    ]
+  },
+  "warm": {
+    "perf": "perf_20260914-095703_43468.jsonl",
+    "path": [
+      [
+        7,
+        3
+      ],
+      [
+        -8,
+        3
+      ]
+    ],
+    "early_vb_med": 92.0,
+    "early_vb_max": 117,
+    "early_fog_med": 4.0,
+    "fly_n": 54,
+    "vb_med": 14.0,
+    "fly_vb_max": 117.0,
+    "pass": false,
+    "focus": [
+      [
+        7,
+        3
+      ],
+      [
+        -8,
+        3
+      ]
+    ]
+  }
+}
