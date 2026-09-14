@@ -15,12 +15,18 @@ struct Frustum
   static Frustum FromViewProjection(const glm::mat4 &m)
   {
     Frustum f;
-    f.planes[0] = m[3] + m[0];
-    f.planes[1] = m[3] - m[0];
-    f.planes[2] = m[3] + m[1];
-    f.planes[3] = m[3] - m[1];
-    f.planes[4] = m[3] + m[2];
-    f.planes[5] = m[3] - m[2];
+    // GLM mat4[] returns columns; clip planes come from rows of P*V
+    // (Giesen: row3 ± row0/1/2). Audit N02.
+    const glm::vec4 row0(m[0][0], m[1][0], m[2][0], m[3][0]);
+    const glm::vec4 row1(m[0][1], m[1][1], m[2][1], m[3][1]);
+    const glm::vec4 row2(m[0][2], m[1][2], m[2][2], m[3][2]);
+    const glm::vec4 row3(m[0][3], m[1][3], m[2][3], m[3][3]);
+    f.planes[0] = row3 + row0;
+    f.planes[1] = row3 - row0;
+    f.planes[2] = row3 + row1;
+    f.planes[3] = row3 - row1;
+    f.planes[4] = row3 + row2;
+    f.planes[5] = row3 - row2;
     for (glm::vec4 &p : f.planes)
     {
       const float len = glm::length(glm::vec3(p));

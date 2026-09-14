@@ -1497,6 +1497,12 @@ add_executable(visual_ready_for_ring_policy_test
 target_include_directories(visual_ready_for_ring_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(frustum_clip_test
+    src/Test/FrustumClipTest.cpp)
+target_include_directories(frustum_clip_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(frustum_clip_test glm::glm)
+
 add_executable(column_flow_scheduler_test
     src/Test/ColumnFlowSchedulerTest.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp)
@@ -2656,6 +2662,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   frame_deadline_test
   greedy_vertex_pool_production_test
   column_flow_scheduler_test
+  frustum_clip_test
   column_scheduler_audit_repro
   streaming_render_ready_invariants_test
   miss_first_mesh_class_test
