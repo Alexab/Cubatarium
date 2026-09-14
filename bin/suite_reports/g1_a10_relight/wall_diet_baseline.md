@@ -3,6 +3,7 @@
 | Field | Value |
 |---|---|
 | Audit HEAD | `420335e9` |
+| Execution tip (A4) | `b521eea0` |
 | Visual SoT | manual `154921` / enter `154948` |
 | Corridor | `(7,3)→(−3,3)` west |
 | Operator | PASS (no edits); product G1 vs 141350 **OPEN** |
@@ -15,9 +16,15 @@
 
 ## Track targets (after A5; comparative)
 
-- `prep_schedule_policy_ms` med ≤ 10
-- `mesh_emerge_ms` ≤ 16
-- `wall_ms` med ≤ 50 (same audit filter)
+- `prep_schedule_policy_ms` med ≤ 10 — **met on A4 autofly** (med ~0; audit 154921 ~21.7 was filter/class)
+- `mesh_emerge_ms` ≤ 16 — met on A4 (~10–12)
+- `wall_ms` med ≤ 50 (same audit filter) — **not claimed**; fly wall still ~45–60 class
+
+## A5 status
+
+Measured diet after A4: stream residual dominant (`streamer_update_ms`).
+Attempted one-SoT HasMissing/pending reuse → dual-lane VB/stale stop-line → **fully reverted**.
+No A5 code commit. Further stream diet needs safer memo (MissingMemo R-subset) + oracle.
 
 ## Dual-lane regress class (autofly green)
 

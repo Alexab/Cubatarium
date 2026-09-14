@@ -39,3 +39,28 @@ not a dual-lane FPS regression. Do **not** claim G1 product CLOSED vs 141350.
 
 proxy_v3: `hold_space=False`, `--min-alt-above-sea 0`, `--cruise-eye-y 56`.
 Product G1 still OPEN (VB/stuck FAIL vs 141350).
+
+## Wall-diet track (audit-first after 154921) — 2026-09-14
+
+Plan: `.cursor/plans/west_cruise_wall_diet.plan.md`. Tip at freeze: `b521eea0`.
+Gate: `product-174657` no-teleport west (not land-cruise / not yaw 90).
+
+| Step | Commit | Cold report | Note |
+|---|---|---|---|
+| A0a | `ce453505` | — | Q9/Phase57 fail-closed; CI `cursor_audit_impl*` |
+| A0b | `0e9c3642` | `wall_diet_a0_cold.json` | K3/M3 remesh demand |
+| A1 | `58f65ffe` | `wall_diet_a1_cold.json` | atomic chunk-pass publish |
+| A2 | `4d638637` | `wall_diet_a2_cold.json` | frustum row extraction |
+| A3 | `f122ea11` | `wall_diet_a3_cold.json` | structural CooldownKey |
+| A4 | `b521eea0` | `wall_diet_a4_{cold,warm}.json` | prep_sched_* + lazy spawn ring |
+| A5 | *(reverted)* | — | stream SoT diet stop-lined (VB/stale); no land |
+| A6 | docs + `wall_diet_a6_*` | closeout | ctest streaming 26/26 |
+
+Baseline: [wall_diet_baseline.md](wall_diet_baseline.md). Audit:
+`docs/streaming/CURRENT_STATE_AUDIT_2026-09-14.md`.
+
+A4 evidence: `prep_schedule_policy_ms` med already ~0 on autofly; dominant residual is
+`streamer_update_ms` / `async_io_ms`. Aggressive missing/pending SoT reuse in
+`UpdateStreaming`/`TickAsync` raised VB/stale above dual-lane class → reverted.
+
+Do **not** claim G1 CLOSED / Q9 complete / oracle done.

@@ -179,3 +179,15 @@ python tools/q9_acceptance_suite.py --cold 3 --warm 3 --tag q9_freeze_9ab070e0 -
   --flight bin/logs/perf_20260913-171111_3364.jsonl:bin/logs/enter_lit_20260913-171124.jsonl
 ```
 
+
+## Wall-diet track freeze (2026-09-14)
+
+Audit-first after manual `154921`: plan `.cursor/plans/west_cruise_wall_diet.plan.md`.
+Tip `b521eea0`. Autofly SoT: `product-174657` (World_164, yaw 180, no-teleport).
+
+Landed: N08/N12/N07 (A0), N01 (A1), N02 (A2), N06 (A3), D3 trace + lazy spawn (A4).
+A5 measured stream SoT diet **reverted** (VB/stale stop-line). Closeout reports:
+`bin/suite_reports/g1_a10_relight/wall_diet_a6_*.json`.
+
+Do **not** claim `product_g1_vs_141350=CLOSED`, Q9 complete, or oracle done.
+Manual west eye remains operator SoT vs `154921` corridor.

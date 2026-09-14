@@ -191,3 +191,15 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
 Следующий шаг: perf track **stream + mesh_emerge wall** (отдельно от schedule order); edit smoke; S5 `ok_fm≈0` consumer только если нужен product miss; object-id FBO (E4). Floors / SoftDefer-for-holes / FM-first revert запрещены.
+
+## Wall-diet (2026-09-14) — статус относительно этого обзора
+
+После dual-lane manual `154921` выполнен audit-first трек A0–A4 на tip `b521eea0`
+(см. `bin/suite_reports/g1_a10_relight/README.md` § Wall-diet):
+
+- P1 correctness: N01 publish, N02 frustum rows, N06 cooldown key, N07 K3/M3 demand,
+  N08/N12 Q9+Phase57 fail-closed + CI glob — **закрыты или fail-closed**.
+- D3: `prep_sched_*` / stream residual telem + lazy `IsSpawnMeshRingReady` — **landed**.
+- A5 wall diet по stream census — **не landed** (stop-line VB/stale; откат).
+- G1 product vs 141350 / Q9 acceptance suite / oracle — **по-прежнему OPEN**.
+
