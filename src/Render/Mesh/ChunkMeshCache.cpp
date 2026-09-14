@@ -5028,8 +5028,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyGpuN = 0;
   LastMeshDirtySyncMs = 0.0;
   LastMeshDirtySyncN = 0;
-  LastMeshGpuKickMs = 0.0;
-  LastMeshGpuFinishMs = 0.0;
+  // Keep last kick/finish ms across skip_gpu_consume frames (audit N03/D3).
+  if (!skip_gpu_consume)
+  {
+    LastMeshGpuKickMs = 0.0;
+    LastMeshGpuFinishMs = 0.0;
+  }
   LastMeshAsyncDrainMs = 0.0;
   LastMeshCaptureStoreHitN = 0;
   LastMeshCaptureStoreMissN = 0;

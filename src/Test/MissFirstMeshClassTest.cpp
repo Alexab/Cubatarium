@@ -1022,6 +1022,10 @@ int main()
            "Era45 B5: enter gate !ring ⇒ no suppress");
     Expect(ShouldSuppressRelightSeamDirtyForEnterGate(true, true, true),
            "Era45 B5: ring ready ⇒ keep base suppress");
+    Expect(ShouldSuppressRelightSeamDirtyForEnterGate(false, false, true),
+           "D3.3: enter inactive ⇒ base_suppress only (ring unused)");
+    Expect(!ShouldSuppressRelightSeamDirtyForEnterGate(false, false, false),
+           "D3.3: enter inactive + !base ⇒ no suppress");
     using cutum::ColumnHasRemeshOwner;
     using cutum::ShouldEnqueueRemeshSeamAfterLit;
     Expect(ColumnHasRemeshOwner(false, true, false, false),

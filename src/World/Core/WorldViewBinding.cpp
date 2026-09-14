@@ -920,13 +920,17 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepSchedulePolicyMs = 0.0;
   PhysicsTelemetryData.PrepSpawnRingQueryMs = 0.0;
   PhysicsTelemetryData.PrepDropRemeshMs = 0.0;
+  PhysicsTelemetryData.PrepCancelAsyncMs = 0.0;
   PhysicsTelemetryData.PrepPostAdmitDrainMs = 0.0;
   PhysicsTelemetryData.PrepHoleForceMs = 0.0;
+  PhysicsTelemetryData.PrepSchedOtherMs = 0.0;
   PhysicsTelemetryData.PrepRefreshDeadlineHit = 0;
   PhysicsTelemetryData.PrepDeadlineHit = 0;
   PhysicsTelemetryData.PrepFindNearestN = 0;
   PhysicsTelemetryData.PrepDrainIdleN = 0;
   PhysicsTelemetryData.PrepDropRemeshN = 0;
+  PhysicsTelemetryData.PrepCancelAsyncN = 0;
+  PhysicsTelemetryData.PrepHeavyWalkN = 0;
   PhysicsTelemetryData.FocusDirtyReconcileDelta = 0;
   PhysicsTelemetryData.RimWitnessLatched = 0;
   PhysicsTelemetryData.RimHolePressure = 0;
@@ -1031,9 +1035,16 @@ void UWorld::TickWorldStreamingPhase()
   const glm::ivec3 hole_focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   GetMeshService().BeginHoleQueryFrame(hole_focus);
+  const auto t_stream0 = std::chrono::high_resolution_clock::now();
   UpdateStreaming();
+  const auto t_stream1 = std::chrono::high_resolution_clock::now();
   TickAsyncChunkSystems();
   const auto t_after_stream = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.StreamerUpdateMs =
+      std::chrono::duration<double, std::milli>(t_stream1 - t_stream0).count();
+  PhysicsTelemetryData.AsyncIoMs =
+      std::chrono::duration<double, std::milli>(t_after_stream - t_stream1)
+          .count();
   // Cruise wall P2: real phase time-slice with miss reserved ms.
   // Stream spends general_budget; emerge gets reserved + remain(general).
   const double stream_elapsed_ms =

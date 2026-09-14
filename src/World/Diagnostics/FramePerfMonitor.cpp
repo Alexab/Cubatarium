@@ -104,8 +104,10 @@ struct Session
   double AccumPrepSchedulePolicyMs{0.0};
   double AccumPrepSpawnRingQueryMs{0.0};
   double AccumPrepDropRemeshMs{0.0};
+  double AccumPrepCancelAsyncMs{0.0};
   double AccumPrepPostAdmitDrainMs{0.0};
   double AccumPrepHoleForceMs{0.0};
+  double AccumPrepSchedOtherMs{0.0};
   double MaxPrepRefreshPressureMs{0.0};
   double MaxPrepRefreshGapMs{0.0};
   double MaxPrepRefreshFacingMs{0.0};
@@ -394,13 +396,17 @@ struct FrameNumbers
   double prep_schedule_policy_ms{0.0};
   double prep_spawn_ring_query_ms{0.0};
   double prep_drop_remesh_ms{0.0};
+  double prep_cancel_async_ms{0.0};
   double prep_post_admit_drain_ms{0.0};
   double prep_hole_force_ms{0.0};
+  double prep_sched_other_ms{0.0};
   int prep_refresh_deadline_hit{0};
   int prep_deadline_hit{0};
   int prep_find_nearest_n{0};
   int prep_drain_idle_n{0};
   int prep_drop_remesh_n{0};
+  int prep_cancel_async_n{0};
+  int prep_heavy_walk_n{0};
   int focus_dirty_reconcile_delta{0};
   int rim_witness_latched{0};
   int rim_hole_pressure{0};
@@ -1007,13 +1013,17 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_schedule_policy_ms = phys.PrepSchedulePolicyMs;
   n.prep_spawn_ring_query_ms = phys.PrepSpawnRingQueryMs;
   n.prep_drop_remesh_ms = phys.PrepDropRemeshMs;
+  n.prep_cancel_async_ms = phys.PrepCancelAsyncMs;
   n.prep_post_admit_drain_ms = phys.PrepPostAdmitDrainMs;
   n.prep_hole_force_ms = phys.PrepHoleForceMs;
+  n.prep_sched_other_ms = phys.PrepSchedOtherMs;
   n.prep_refresh_deadline_hit = phys.PrepRefreshDeadlineHit;
   n.prep_deadline_hit = phys.PrepDeadlineHit;
   n.prep_find_nearest_n = phys.PrepFindNearestN;
   n.prep_drain_idle_n = phys.PrepDrainIdleN;
   n.prep_drop_remesh_n = phys.PrepDropRemeshN;
+  n.prep_cancel_async_n = phys.PrepCancelAsyncN;
+  n.prep_heavy_walk_n = phys.PrepHeavyWalkN;
   n.focus_dirty_reconcile_delta = phys.FocusDirtyReconcileDelta;
   n.rim_witness_latched = phys.RimWitnessLatched;
   n.rim_hole_pressure = phys.RimHolePressure;
@@ -1644,13 +1654,17 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_schedule_policy_ms\":" << n.prep_schedule_policy_ms
           << ",\"prep_spawn_ring_query_ms\":" << n.prep_spawn_ring_query_ms
           << ",\"prep_drop_remesh_ms\":" << n.prep_drop_remesh_ms
+          << ",\"prep_cancel_async_ms\":" << n.prep_cancel_async_ms
           << ",\"prep_post_admit_drain_ms\":" << n.prep_post_admit_drain_ms
           << ",\"prep_hole_force_ms\":" << n.prep_hole_force_ms
+          << ",\"prep_sched_other_ms\":" << n.prep_sched_other_ms
           << ",\"prep_refresh_deadline_hit\":" << n.prep_refresh_deadline_hit
           << ",\"prep_deadline_hit\":" << n.prep_deadline_hit
           << ",\"prep_find_nearest_n\":" << n.prep_find_nearest_n
           << ",\"prep_drain_idle_n\":" << n.prep_drain_idle_n
           << ",\"prep_drop_remesh_n\":" << n.prep_drop_remesh_n
+          << ",\"prep_cancel_async_n\":" << n.prep_cancel_async_n
+          << ",\"prep_heavy_walk_n\":" << n.prep_heavy_walk_n
           << ",\"focus_dirty_reconcile_delta\":" << n.focus_dirty_reconcile_delta
           << ",\"rim_witness_latched\":" << n.rim_witness_latched
           << ",\"rim_hole_pressure\":" << n.rim_hole_pressure
@@ -2228,8 +2242,10 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumPrepSchedulePolicyMs += n.prep_schedule_policy_ms;
   s.AccumPrepSpawnRingQueryMs += n.prep_spawn_ring_query_ms;
   s.AccumPrepDropRemeshMs += n.prep_drop_remesh_ms;
+  s.AccumPrepCancelAsyncMs += n.prep_cancel_async_ms;
   s.AccumPrepPostAdmitDrainMs += n.prep_post_admit_drain_ms;
   s.AccumPrepHoleForceMs += n.prep_hole_force_ms;
+  s.AccumPrepSchedOtherMs += n.prep_sched_other_ms;
   s.MaxPrepRefreshPressureMs =
       (std::max)(s.MaxPrepRefreshPressureMs, n.prep_refresh_pressure_ms);
   s.MaxPrepRefreshGapMs =
@@ -2317,8 +2333,10 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.prep_schedule_policy_ms = s.AccumPrepSchedulePolicyMs * inv;
   avg.prep_spawn_ring_query_ms = s.AccumPrepSpawnRingQueryMs * inv;
   avg.prep_drop_remesh_ms = s.AccumPrepDropRemeshMs * inv;
+  avg.prep_cancel_async_ms = s.AccumPrepCancelAsyncMs * inv;
   avg.prep_post_admit_drain_ms = s.AccumPrepPostAdmitDrainMs * inv;
   avg.prep_hole_force_ms = s.AccumPrepHoleForceMs * inv;
+  avg.prep_sched_other_ms = s.AccumPrepSchedOtherMs * inv;
   avg.max_wall_ms = s.MaxWallMs;
   avg.max_stream_ms = s.MaxStreamMs;
   avg.max_mesh_emerge_ms = s.MaxMeshEmergeMs;
@@ -2393,8 +2411,10 @@ void ResetAccum(Session &s)
   s.AccumPrepSchedulePolicyMs = 0.0;
   s.AccumPrepSpawnRingQueryMs = 0.0;
   s.AccumPrepDropRemeshMs = 0.0;
+  s.AccumPrepCancelAsyncMs = 0.0;
   s.AccumPrepPostAdmitDrainMs = 0.0;
   s.AccumPrepHoleForceMs = 0.0;
+  s.AccumPrepSchedOtherMs = 0.0;
   s.MaxPrepRefreshPressureMs = 0.0;
   s.MaxPrepRefreshGapMs = 0.0;
   s.MaxPrepRefreshFacingMs = 0.0;

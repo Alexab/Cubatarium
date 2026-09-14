@@ -181,6 +181,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   double prep_schedule_policy_ms = 0.0;
   double prep_post_admit_drain_ms = 0.0;
   double prep_hole_force_ms = 0.0;
+  double prep_cancel_async_ms = 0.0;
+  double prep_spawn_ring_ms = 0.0;
+  int prep_heavy_walk_n = 0;
+  int prep_cancel_async_n = 0;
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
   // Count any Immediate this tick (including early idle paths).
@@ -2082,6 +2086,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool run_schedule_heavy = ShouldCadenceScheduleHeavyWalk(
       moving, ScheduleOkPrior, HeavyCadenceFrame, /*cadence=*/4,
       force_heavy_walk);
+  if (run_schedule_heavy)
+  {
+    prep_heavy_walk_n = 1;
+  }
   // While sticky remesh drains after pending→0, suppress seam MarkDirty even
   // before sticky hits 0 — otherwise remesh thrash pins async≈42 and nr climbs
   // (P0_hole_promote stop). Full idle_remesh_debt with sticky raised wall/sticky
@@ -2098,10 +2106,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool base_suppress =
       idle_remesh_debt || idle_focus_dirty_debt ||
       suppress_seam_for_sticky_catchup || suppress_seam_standing_churn;
-  world.SetSuppressRelightSeamDirty(
-      ShouldSuppressRelightSeamDirtyForEnterGate(
-          world.IsEnterLitGateActive(), world.IsSpawnMeshRingReady(),
-          base_suppress));
+  // Audit D3.3: do not eager-call IsSpawnMeshRingReady when enter gate is off.
+  const bool enter_gate_active = world.IsEnterLitGateActive();
+  bool spawn_ring_ready = true;
+  if (enter_gate_active)
+  {
+    const auto ring_t0 = std::chrono::high_resolution_clock::now();
+    spawn_ring_ready = world.IsSpawnMeshRingReady();
+    prep_spawn_ring_ms = prep_ms_since(ring_t0);
+  }
+  world.SetSuppressRelightSeamDirty(ShouldSuppressRelightSeamDirtyForEnterGate(
+      enter_gate_active, spawn_ring_ready, base_suppress));
+  world.GetPhysicsTelemetryMutable().PrepSpawnRingQueryMs = prep_spawn_ring_ms;
   // Always scan full focus for sync hole-fill when holes exist. Cap rebuild
   // count via sync_cap (cruise tiny, idle larger) — radius=2 while "moving"
   // missed stop holes when residual speed kept moving=true.
@@ -2119,7 +2135,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     else if (!flushed_for_holes && pending_async >= 20)
     {
+      const auto cancel_t0 = std::chrono::high_resolution_clock::now();
       mesh_service.CancelAsyncInFlightKeepDirty();
+      prep_cancel_async_ms += prep_ms_since(cancel_t0);
+      ++prep_cancel_async_n;
       flushed_for_holes = true;
     }
   }
@@ -3754,12 +3773,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.PrepSoftdeferPreMs = prep_softdefer_pre_ms;
     pt.PrepDirtyThrashMs = prep_dirty_thrash_ms;
     pt.PrepSchedulePolicyMs = prep_schedule_policy_ms;
+    pt.PrepDropRemeshMs = prep_drop_dirty_ms;
+    pt.PrepCancelAsyncMs = prep_cancel_async_ms;
     pt.PrepPostAdmitDrainMs = prep_post_admit_drain_ms;
     pt.PrepHoleForceMs = prep_hole_force_ms;
+    pt.PrepSchedOtherMs = std::max(
+        0.0, prep_schedule_policy_ms - prep_spawn_ring_ms - prep_drop_dirty_ms -
+                 prep_cancel_async_ms);
     pt.PrepDeadlineHit = prep_deadline_hit;
     pt.PrepFindNearestN = prep_find_nearest_n;
     pt.PrepDrainIdleN = prep_drain_idle_n;
     pt.PrepDropRemeshN = prep_drop_remesh_n;
+    pt.PrepCancelAsyncN = prep_cancel_async_n;
+    pt.PrepHeavyWalkN = prep_heavy_walk_n;
     // SoftdeferEmptyScanMs / SoftdeferEmptyOwnMs written during SoftDefer block.
     // A1: pending/softdefer_setup/dirty_count/black_sticky already inside
     // prep_unfinished_ms — do not double-count. IsolatedMiss / ColumnFlowDrain

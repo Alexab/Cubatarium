@@ -391,8 +391,12 @@ struct PhysicsTelemetry
   double PrepSpawnRingQueryMs{0.0};
   /// Nested inside PrepSchedulePolicyMs: coalesced DropRemesh pass.
   double PrepDropRemeshMs{0.0};
+  /// Nested inside PrepSchedulePolicyMs: CancelAsyncInFlightKeepDirty flush.
+  double PrepCancelAsyncMs{0.0};
   double PrepPostAdmitDrainMs{0.0};
   double PrepHoleForceMs{0.0};
+  /// Residual of PrepSchedulePolicyMs after attributed nested substages.
+  double PrepSchedOtherMs{0.0};
   /// Phase5 S2/S3b: stream deadline cuts (Refresh / TickMeshEmerge prep).
   int PrepRefreshDeadlineHit{0};
   int PrepDeadlineHit{0};
@@ -400,6 +404,9 @@ struct PhysicsTelemetry
   int PrepFindNearestN{0};
   int PrepDrainIdleN{0};
   int PrepDropRemeshN{0};
+  int PrepCancelAsyncN{0};
+  /// 1 when cadence/force ran schedule heavy walks this frame.
+  int PrepHeavyWalkN{0};
   /// Scene draw sub-timers (inside scene_ms / DrawCubeGeometry).
   double SceneFilterReadyMs{0.0};
   double SceneOpaqueSortMs{0.0};
