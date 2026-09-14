@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import statistics
 import subprocess
 import sys
@@ -109,17 +110,41 @@ def analyze_one(perf: Path, enter: Path | None) -> dict:
     return report
 
 
+# Upper bound for mesh_apply_stale median (product_anchor 192015 class).
+# Unbounded stale must not greenwash acceptance (audit N08).
+_Q9_STALE_MED_MAX = 64.0
+
+
 def drawable_ok(run: dict) -> bool:
+    """Fail-closed drawable acceptance for one flight analysis."""
+    if run.get("diagnostic") or run.get("acceptance") is False:
+        return False
+    if run.get("error") or run.get("enter_error"):
+        return False
     m = run.get("metrics") or {}
     stale = m.get("mesh_apply_stale_med")
     unf = m.get("unfinished_visual_med")
     holes = m.get("visual_holes_med")
-    if stale is None:
+    # Required metrics: missing/null is not PASS.
+    if stale is None or unf is None or holes is None:
         return False
-    # vs product_anchor 192015 class: stale not mass, unfinished not growing, holes 0
-    if unf is not None and unf > 5:
+    try:
+        stale_f = float(stale)
+        unf_f = float(unf)
+        holes_f = float(holes)
+    except (TypeError, ValueError):
         return False
-    if holes is not None and holes > 2:
+    if not (math.isfinite(stale_f) and math.isfinite(unf_f) and math.isfinite(holes_f)):
+        return False
+    if stale_f < 0 or stale_f > _Q9_STALE_MED_MAX:
+        return False
+    # vs product_anchor 192015 class: stale not mass, unfinished not growing, holes low
+    if unf_f > 5:
+        return False
+    if holes_f > 2:
+        return False
+    enter = run.get("enter") or {}
+    if enter.get("pool_timeout") or enter.get("error"):
         return False
     return True
 

@@ -2,7 +2,7 @@ name: Windows release smoke
 
 on:
   push:
-    branches: [main, master, thread_chunks, cursor_audit_impl, 'codex/**', 'perf/**', 'feature/**']
+    branches: [main, master, thread_chunks, 'cursor_audit_impl*', 'codex/**', 'perf/**', 'feature/**']
     paths:
       - "CMakeLists.txt"
       - ".github/workflows/windows-release-smoke.yml"

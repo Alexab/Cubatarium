@@ -69,10 +69,38 @@ def test_hard_gate_false_enters_verdict():
     assert result["verdict"] == s.VERDICT_CORRECTNESS
 
 
-def test_null_hard_gate_evaluate_empty():
+def test_null_hard_gate_evaluate_skips_null():
     corr, perf = s.evaluate_hard_gates({"visual_holes_rate_le_0_10": None})
     assert corr == []
     assert perf == []
+
+
+def test_empty_hard_gates_not_silent_ok():
+    corr, perf = s.evaluate_hard_gates({})
+    assert "hard_gates_empty" in corr
+    assert perf == []
+
+
+def test_negative_wall_ms_is_schema_invalid():
+    periods = [_full_period(wall_ms=-1.0)]
+    errors = s.validate_period_schema(periods)
+    assert any("wall_ms_negative" in e for e in errors)
+
+
+def test_interval_uniqueness_rejects_duplicates():
+    errs = s.check_interval_uniqueness(
+        [
+            {"run_id": "a", "interval": "cruise"},
+            {"run_id": "a", "interval": "cruise"},
+        ]
+    )
+    assert any("interval_duplicate" in e for e in errs)
+
+
+def test_teleport_cli_manifest_mismatch():
+    assert "teleport_cli_manifest_mismatch" in s.teleports_consistent(False, True)
+    assert s.teleports_consistent(False, False) == []
+    assert s.teleports_consistent(None, True) == []
 
 
 def test_null_hard_gate_is_invalid():
@@ -219,7 +247,11 @@ if __name__ == "__main__":
     test_missing_logs_are_invalid_not_pass()
     test_empty_evaluate_lists_do_not_imply_pass_without_validation()
     test_hard_gate_false_enters_verdict()
-    test_null_hard_gate_evaluate_empty()
+    test_null_hard_gate_evaluate_skips_null()
+    test_empty_hard_gates_not_silent_ok()
+    test_negative_wall_ms_is_schema_invalid()
+    test_interval_uniqueness_rejects_duplicates()
+    test_teleport_cli_manifest_mismatch()
     test_null_hard_gate_is_invalid()
     test_manifest_required_fields()
     test_manifest_required_by_default()

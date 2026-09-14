@@ -166,8 +166,11 @@ def validate_period_schema(periods: list) -> list[str]:
             if field not in row or row[field] is None:
                 errors.append(f"schema:period[{i}].{field}_missing")
             elif field in NUMERIC_PERIOD_FIELDS:
-                if finite_number(row[field]) is None:
+                fn = finite_number(row[field])
+                if fn is None:
                     errors.append(f"schema:period[{i}].{field}_non_finite")
+                elif field == "wall_ms" and fn < 0:
+                    errors.append(f"schema:period[{i}].wall_ms_negative")
         if not _period_has_focus_missing(row):
             errors.append(f"schema:period[{i}].focus_missing_missing")
         else:
@@ -596,6 +599,7 @@ VERDICT_PASS = "PASS"
 VERDICT_INVALID = "INVALID_RUN"
 VERDICT_CORRECTNESS = "CORRECTNESS_FAIL"
 VERDICT_PERFORMANCE = "PERFORMANCE_FAIL"
+VERDICT_DIAGNOSTIC = "DIAGNOSTIC"
 
 # Minimum cruise samples before product metrics are considered comparable.
 MIN_CRUISE_PERIODS = 3
@@ -661,10 +665,57 @@ def validate_run_inputs(
         if teleport in (None, ""):
             invalid.append("manifest.teleport_cruise_missing")
     gates = report.get("gates") or {}
-    for key in KNOWN_GATE_KEYS:
-        if key in gates and gates[key] is None:
-            invalid.append(f"hard_gate:{key}=null")
+    # Acceptance path: every known hard gate must be a real bool (audit N08).
+    if require_manifest:
+        if not gates:
+            invalid.append("hard_gates_missing")
+        for key in KNOWN_GATE_KEYS:
+            if key not in gates:
+                invalid.append(f"hard_gate:{key}_missing")
+            elif gates[key] is None:
+                invalid.append(f"hard_gate:{key}=null")
+            elif not isinstance(gates[key], bool):
+                invalid.append(f"hard_gate:{key}_non_bool")
+    else:
+        for key in KNOWN_GATE_KEYS:
+            if key in gates and gates[key] is None:
+                invalid.append(f"hard_gate:{key}=null")
+            elif key in gates and not isinstance(gates[key], bool):
+                invalid.append(f"hard_gate:{key}_non_bool")
     return invalid
+
+
+def check_interval_uniqueness(intervals: list) -> list[str]:
+    """Reject duplicate/overlapping (run_id, interval) acceptance samples."""
+    errors: list[str] = []
+    seen: set[tuple] = set()
+    for i, it in enumerate(intervals or []):
+        if not isinstance(it, dict):
+            errors.append(f"interval[{i}]_non_object")
+            continue
+        run_id = it.get("run_id")
+        interval = it.get("interval")
+        if run_id in (None, "") or interval in (None, ""):
+            errors.append(f"interval[{i}]_identity_missing")
+            continue
+        key = (str(run_id), str(interval))
+        if key in seen:
+            errors.append(f"interval_duplicate:{key[0]}:{key[1]}")
+        seen.add(key)
+    return errors
+
+
+def teleports_consistent(cli_teleport: bool | None, manifest_teleport) -> list[str]:
+    """CLI --teleport must match manifest when both are known."""
+    if cli_teleport is None or manifest_teleport in (None, ""):
+        return []
+    try:
+        man = bool(manifest_teleport)
+    except (TypeError, ValueError):
+        return ["teleport_manifest_non_bool"]
+    if man != bool(cli_teleport):
+        return ["teleport_cli_manifest_mismatch"]
+    return []
 
 
 def evaluate_hard_gates(gates: dict | None) -> tuple[list[str], list[str]]:
@@ -672,6 +723,8 @@ def evaluate_hard_gates(gates: dict | None) -> tuple[list[str], list[str]]:
     correctness: list[str] = []
     performance: list[str] = []
     if not gates:
+        # Empty gates must not imply PASS; callers also mark INVALID via validate.
+        correctness.append("hard_gates_empty")
         return correctness, performance
     perf_keys = {
         "wall_ms_fly_le_16_6",
@@ -695,6 +748,8 @@ def evaluate_hard_gates(gates: dict | None) -> tuple[list[str], list[str]]:
             else:
                 # Unknown hard gate failure is correctness until classified.
                 correctness.append(f"hard_gate:{k}=false")
+        elif not isinstance(v, bool):
+            correctness.append(f"hard_gate:{k}_non_bool")
     return correctness, performance
 
 
@@ -1089,15 +1144,28 @@ def main():
         teleport = bool(report.get("teleport_cruise")) if "teleport_cruise" in report else None
 
     require_info = not args.allow_missing_info
+    require_manifest = not args.allow_missing_manifest
     invalid = validate_run_inputs(
         report,
         perf,
         info,
         require_info=require_info,
         require_perf=True,
-        require_manifest=not args.allow_missing_manifest,
+        require_manifest=require_manifest,
     )
+    manifest = report.get("manifest") or {}
+    invalid.extend(
+        teleports_consistent(
+            teleport, manifest.get("teleport_cruise", manifest.get("teleport"))
+        )
+    )
+    if report.get("acceptance_intervals") is not None:
+        invalid.extend(check_interval_uniqueness(report.get("acceptance_intervals")))
+    seen_inv: set[str] = set()
+    invalid = [x for x in invalid if not (x in seen_inv or seen_inv.add(x))]
     hard_corr, hard_perf = evaluate_hard_gates(gates)
+    if "hard_gates_missing" in invalid:
+        hard_corr = [x for x in hard_corr if x != "hard_gates_empty"]
 
     # When invalid, still collect fidelity/product for diagnostics, but verdict
     # is INVALID_RUN regardless of empty fail lists.
@@ -1120,7 +1188,7 @@ def main():
         hard_perf=hard_perf,
     )
 
-    # Diagnostic override must not greenwash acceptance CI.
+    # Diagnostic override must never be acceptance PASS (audit N08).
     allow_red = args.expect_product_red and args.allow_expect_product_red
     if allow_red and result["verdict"] in (
         VERDICT_CORRECTNESS,
@@ -1128,7 +1196,7 @@ def main():
     ):
         if not result["invalid"] and not result["fidelity_fails"] and not hard_corr:
             result = dict(result)
-            result["verdict"] = VERDICT_PASS
+            result["verdict"] = VERDICT_DIAGNOSTIC
             result["diagnostic_expect_product_red"] = True
 
     print("=== fidelity ===")
@@ -1179,6 +1247,8 @@ def main():
         return 2
     if result["verdict"] == VERDICT_PERFORMANCE:
         return 1
+    if result["verdict"] == VERDICT_DIAGNOSTIC:
+        return 4
     return 0
 
 
