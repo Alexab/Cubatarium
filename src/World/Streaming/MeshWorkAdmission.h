@@ -357,7 +357,9 @@ ComputeDualLaneSchedule(const DualLaneScheduleInput &in)
     else
     {
       out.first_mesh_schedule = 0;
-      out.remesh_schedule = std::max(1, in.protect_remesh_floor);
+      // Cap is hard: protect_remesh_floor must not expand schedule beyond cap.
+      out.remesh_schedule =
+          std::min(cap, std::max(1, in.protect_remesh_floor));
       out.starve_reason = DualLaneStarveReason::Cap1YieldFm;
       out.next_rr_token = 0;
     }
@@ -374,7 +376,8 @@ ComputeDualLaneSchedule(const DualLaneScheduleInput &in)
   if (rm_d && !fm_d)
   {
     out.first_mesh_schedule = 0;
-    out.remesh_schedule = std::max(cap, in.protect_remesh_floor);
+    // Cap is hard: protect floor cannot expand remesh beyond schedule_cap.
+    out.remesh_schedule = std::min(cap, std::max(cap, in.protect_remesh_floor));
     out.starve_reason = DualLaneStarveReason::None;
     return out;
   }
@@ -1111,8 +1114,11 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   // remesh for stale/UV without stealing FirstMesh slots.
   // Era20: FirstMesh class owns cy≤3 OR mh≤4; remesh band is mh 5–6.
   // M3: cooled band pending≤12 (was ≤8; med pending~11 skipped the band).
+  // Demand contract (audit N07): +1 only when RemeshQ has real demand — otherwise
+  // steal already zeroed remesh and dual-lane must not invent remesh slots.
   if (!miss_tops && holes && in.pending_gpu <= 12 &&
-      in.nearest_miss_horiz >= 5 && in.nearest_miss_horiz <= 6 &&
+      in.remesh_queue_n > 0 && in.nearest_miss_horiz >= 5 &&
+      in.nearest_miss_horiz <= 6 &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {

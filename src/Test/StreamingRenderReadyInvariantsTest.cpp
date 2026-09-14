@@ -472,8 +472,11 @@ int main()
            "M2 pending=12 gets Finish budget frac 0.85");
 
     // K3/M3: cooled pending + rim outside FirstMesh class (mh 5–6) → +1 remesh.
+    // Demand contract: remesh_queue_n>0 required (steal zeros remesh when empty).
     MeshWorkAdmissionInput rim_stale{};
     rim_stale.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
+    rim_stale.remesh_queue_n = 8;
+    rim_stale.dark_face_stale_near_n = 80; // remesh_lit_demand for dual-lane
     rim_stale.pending_gpu = 6;
     rim_stale.pending_gpu_queued = 0;
     rim_stale.pending_gpu_kicked = 6;
@@ -492,6 +495,13 @@ int main()
                a17.first_mesh_schedule + a17.remesh_schedule,
            "K3 max_schedule covers FM+remesh");
 
+    // Empty RemeshQ: steal path zeros remesh; K3 must not invent remesh demand.
+    MeshWorkAdmissionInput rim_no_rq = rim_stale;
+    rim_no_rq.remesh_queue_n = 0;
+    const auto a17z = ComputeMeshWorkAdmission(rim_no_rq);
+    Expect(a17z.remesh_schedule == 0,
+           "K3: remesh_queue_n==0 + rim ⇒ remesh_schedule==0 (steal/demand)");
+
     // M3: remesh band still fires at pending=12 (widened from ≤8).
     MeshWorkAdmissionInput rim_stale12 = rim_stale;
     rim_stale12.pending_gpu = 12;
@@ -505,12 +515,16 @@ int main()
     MeshWorkAdmissionInput tops_miss = rim_stale;
     tops_miss.nearest_miss_cy = 0;
     tops_miss.nearest_miss_horiz = 1;
+    tops_miss.remesh_queue_n = 0;
+    tops_miss.dark_face_stale_near_n = 0;
     const auto a18 = ComputeMeshWorkAdmission(tops_miss);
     Expect(a18.remesh_schedule == 0, "Era17: miss cy0 remesh_schedule=0");
 
     MeshWorkAdmissionInput tops_cy3 = rim_stale;
     tops_cy3.nearest_miss_cy = 3;
     tops_cy3.nearest_miss_horiz = 4;
+    tops_cy3.remesh_queue_n = 0;
+    tops_cy3.dark_face_stale_near_n = 0;
     const auto a20 = ComputeMeshWorkAdmission(tops_cy3);
     Expect(a20.remesh_schedule == 0, "Era20: miss cy3/mh4 remesh_schedule=0");
     Expect(a20.first_mesh_schedule >= 6, "Era20: FirstMesh class FM≥6");

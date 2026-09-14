@@ -2420,6 +2420,18 @@ int main()
              "dual-lane: steal+protect_floor>0 ⇒ remesh not zeroed");
     }
     {
+      DualLaneScheduleInput protect_over_cap{};
+      protect_over_cap.schedule_cap = 1;
+      protect_over_cap.fm_demand = false;
+      protect_over_cap.remesh_lit_demand = true;
+      protect_over_cap.remesh_q = 5;
+      protect_over_cap.protect_remesh_floor = 2;
+      const auto a = ComputeDualLaneSchedule(protect_over_cap);
+      Expect(a.remesh_schedule <= protect_over_cap.schedule_cap,
+             "dual-lane: protect_remesh_floor must not expand past cap");
+      Expect(a.remesh_schedule == 1, "dual-lane: remesh-only cap=1 ⇒ remesh=1");
+    }
+    {
       DualLaneScheduleInput steal_bare{};
       steal_bare.schedule_cap = 4;
       steal_bare.fm_demand = true;
