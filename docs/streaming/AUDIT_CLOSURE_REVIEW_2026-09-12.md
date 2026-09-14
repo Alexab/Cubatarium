@@ -185,9 +185,9 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | Gate | Статус | Блокирующее доказательство/проверка |
 |---|---|---|
 | G0 | **Частично закрыт** | Q9 3+3 drawable PASS; schema/manifest already fail-closed. Product VB/missing vs 141350 still out of G0 scope |
-| G1 | Progress PASS / product PASS (P5) | dual-Q + RemeshQ snapshot (P1) + kick quota (P2) + debt age (P3) + SmallOracle (P4). P5 cold/warm no-teleport: VB med **21** (<40), focus_missing **0**, unfinished ≤1, drawable suite OK (`g1_p5_summary.json`). Cold `230002` / warm `230452`. FalseNegCull still 0 until world object-id. |
+| G1 | Progress PASS / **product NOT closed** | dual-Q + RemeshQ snapshot (P1) + kick quota (P2) + debt age (P3) + SmallOracle (P4). Progress baseline `210134`. North autofly P5 cold/warm `230002`/`230452` (yaw **90**, VB med **21**) is **not** 174657-class. West manual FAIL `080455`/`080523`: VB med **75**, `focus_missing≈0.94`. FalseNegCull still 0 until world object-id. |
 | G2 | Частично | Q4/Q6/Q7/Q8 F5-proven through Q9 batch |
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: monitor sole-owner remesh if VB plateaus with age↑ under live schedule+kick; FalseNegCull world object-id still open. Floors запрещены.
+Следующий шаг: E0b–E0d product-174657 west autofly proxy → RelightReplace sole-owner (A10); FalseNegCull world object-id still open. Floors запрещены. North `--replay-manual` yaw90 ≠ gate of record.
