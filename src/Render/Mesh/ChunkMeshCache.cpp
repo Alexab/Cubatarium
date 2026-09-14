@@ -6084,22 +6084,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         it = next;
       }
     };
-    // G1-P3: under live focus miss, FM spends snapshot before RemeshQ debt
-    // slice (proxy_v3 miss_stuck with ok_fm=0 / ok_remesh=1).
-    const bool defer_remesh_snap_for_fm =
-        ShouldDeferRemeshSnapshotForFocusMiss(
-            focus_missing_for_schedule,
-            static_cast<int>(Dirty.GetFirstMeshCount()));
-    if (!defer_remesh_snap_for_fm)
+    // G1-P1 / A11: fixed order — remesh snapshot under debt, then FirstMesh.
+    // Miss must not reorder (P3 FM-first defer removed: visual regress 134914).
+    schedule_remesh_snapshot_slice();
+    // Under remesh snapshot debt: do not burn remaining budget on FirstMesh
+    // Deferred thrash (210134 skip_snapshot≃139). Keep a thin FM trickle.
+    // (S3 dual-lane replaces this ad-hoc clamp with lane remainder split.)
+    if (reserve_remesh_snap && remesh_scheduled > 0 &&
+        LastMeshSnapshotMs >= kSnapshotBudgetMs * 0.45)
     {
-      schedule_remesh_snapshot_slice();
-      // Under remesh snapshot debt: do not burn remaining budget on FirstMesh
-      // Deferred thrash (210134 skip_snapshot≃139). Keep a thin FM trickle.
-      if (reserve_remesh_snap && remesh_scheduled > 0 &&
-          LastMeshSnapshotMs >= kSnapshotBudgetMs * 0.45)
-      {
-        first_mesh_cap = std::min(first_mesh_cap, 1);
-      }
+      first_mesh_cap = std::min(first_mesh_cap, 1);
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
@@ -6141,10 +6135,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         it = next;
       }
-    }
-    if (defer_remesh_snap_for_fm)
-    {
-      schedule_remesh_snapshot_slice();
     }
 
     // Pass 1b: reserved rear-hemisphere focus slots so MeshForwardBias cannot

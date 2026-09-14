@@ -2338,13 +2338,10 @@ int main()
     Expect(!ShouldReserveRemeshSnapshotSlice(false, 120, 76),
            "G1-P1: no holes → no slice");
 
-    using cutum::ShouldDeferRemeshSnapshotForFocusMiss;
-    Expect(ShouldDeferRemeshSnapshotForFocusMiss(true, 12),
-           "G1-P3: focus miss + FirstMeshQ ⇒ defer remesh snapshot");
-    Expect(!ShouldDeferRemeshSnapshotForFocusMiss(true, 0),
-           "G1-P3: empty FirstMeshQ ⇒ keep remesh-first");
-    Expect(!ShouldDeferRemeshSnapshotForFocusMiss(false, 12),
-           "G1-P3: no focus miss ⇒ keep remesh-first");
+    // Dual-lane / A11: focus miss must NOT flip remesh-snapshot-before-FM order
+    // (P3 ShouldDeferRemeshSnapshotForFocusMiss removed — regress 134914).
+    Expect(ShouldReserveRemeshSnapshotSlice(true, 12, 76),
+           "dual-lane: focus miss still reserves remesh snapshot when debt");
 
     using cutum::ShouldRunSecondGpuFinishPass;
     Expect(ShouldRunSecondGpuFinishPass(true, false, 0, false),

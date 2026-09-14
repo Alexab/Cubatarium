@@ -223,14 +223,6 @@ inline bool ShouldReserveRemeshSnapshotSlice(bool holes, int remesh_q_n,
   return holes && remesh_q_n > 0 && stale_or_fully_dark_debt >= debt_thresh;
 }
 
-/// G1-P3: live focus miss must spend snapshot on FirstMeshQ before RemeshQ
-/// debt slice (proxy_v3: dirty_fm≈25 with schedule_ok_fm=0 / ok_remesh=1).
-inline bool ShouldDeferRemeshSnapshotForFocusMiss(bool focus_missing_mesh,
-                                                  int first_mesh_q_n)
-{
-  return focus_missing_mesh && first_mesh_q_n > 0;
-}
-
 /// G1-P3b: after a debt-forced kick under focus miss, run a same-tick Finish
 /// pass even when HoleDrain backlog <12 (proxy: pending_kicked=1–2).
 inline bool ShouldRunSecondGpuFinishPass(bool hole_finish_bias,
