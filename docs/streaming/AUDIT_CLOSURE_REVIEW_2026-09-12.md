@@ -190,4 +190,4 @@ G0–G4: G0 drawable acceptance закрыт suite-ом; G1–G4 остаютс�
 | G3 | Частично | Q8 soft deadline + cull HUD async landed; upload residual only |
 | G4 | Не закрыт | Domain CMake/include reverse burn-down не завершён |
 
-Следующий шаг: product drain under miss-class (`proxy_v3` already PASS) — kick fires but stuck/VB remain; затем west manual eye; object-id FBO (E4). Floors запрещены.
+Следующий шаг: FirstMesh schedule under miss (`zero_fm_cap` / `ok_fm≈0` on proxy_v3+P3); затем west manual eye; object-id FBO (E4). Floors запрещены.

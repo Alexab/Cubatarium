@@ -2338,6 +2338,26 @@ int main()
     Expect(!ShouldReserveRemeshSnapshotSlice(false, 120, 76),
            "G1-P1: no holes → no slice");
 
+    using cutum::ShouldDeferRemeshSnapshotForFocusMiss;
+    Expect(ShouldDeferRemeshSnapshotForFocusMiss(true, 12),
+           "G1-P3: focus miss + FirstMeshQ ⇒ defer remesh snapshot");
+    Expect(!ShouldDeferRemeshSnapshotForFocusMiss(true, 0),
+           "G1-P3: empty FirstMeshQ ⇒ keep remesh-first");
+    Expect(!ShouldDeferRemeshSnapshotForFocusMiss(false, 12),
+           "G1-P3: no focus miss ⇒ keep remesh-first");
+
+    using cutum::ShouldRunSecondGpuFinishPass;
+    Expect(ShouldRunSecondGpuFinishPass(true, false, 0, false),
+           "G1-P3b: hole_finish_bias alone ⇒ second Finish");
+    Expect(ShouldRunSecondGpuFinishPass(false, true, 1, true),
+           "G1-P3b: debt kick + focus miss ⇒ second Finish");
+    Expect(!ShouldRunSecondGpuFinishPass(false, true, 0, true),
+           "G1-P3b: no kick this tick ⇒ no second Finish");
+    Expect(!ShouldRunSecondGpuFinishPass(false, true, 1, false),
+           "G1-P3b: calm focus ⇒ no second Finish");
+    Expect(!ShouldRunSecondGpuFinishPass(false, false, 1, true),
+           "G1-P3b: no debt force ⇒ no second Finish");
+
     using cutum::ShouldForceGpuKickUnderQueuedDebt;
     Expect(ShouldForceGpuKickUnderQueuedDebt(2, true, 0),
            "G1-P2: Queued+focus miss ⇒ force kick");

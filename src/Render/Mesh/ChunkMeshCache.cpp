@@ -4389,8 +4389,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   LastGpuKickDebtForcedN += debt_forced_kicks;
 
   // J1: second Finish pass with Kick-cut remainder (fences ready mid-Kick).
-  if (hole_finish_bias && finished < finish_cap && processed < max_count &&
-      budget_left())
+  // G1-P3b: also after debt-forced kick under focus miss when backlog <12.
+  const bool focus_miss_or_holes_finish =
+      StarveRemeshForHoles || ColumnLoadedNoMeshPressure_ > 0 ||
+      VisibleBlackFocusPressure_ >= 20;
+  if (ShouldRunSecondGpuFinishPass(hole_finish_bias, force_kick_debt, kicked,
+                                   focus_miss_or_holes_finish) &&
+      finished < finish_cap && processed < max_count && budget_left())
   {
     for (size_t i = 0; i < PendingGpuApplies.size() && finished < finish_cap &&
                        finish_attempts < finish_cap * 2 &&
@@ -6079,13 +6084,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         it = next;
       }
     };
-    schedule_remesh_snapshot_slice();
-    // Under remesh snapshot debt: do not burn remaining budget on FirstMesh
-    // Deferred thrash (210134 skip_snapshot≃139). Keep a thin FM trickle.
-    if (reserve_remesh_snap && remesh_scheduled > 0 &&
-        LastMeshSnapshotMs >= kSnapshotBudgetMs * 0.45)
+    // G1-P3: under live focus miss, FM spends snapshot before RemeshQ debt
+    // slice (proxy_v3 miss_stuck with ok_fm=0 / ok_remesh=1).
+    const bool defer_remesh_snap_for_fm =
+        ShouldDeferRemeshSnapshotForFocusMiss(
+            focus_missing_for_schedule,
+            static_cast<int>(Dirty.GetFirstMeshCount()));
+    if (!defer_remesh_snap_for_fm)
     {
-      first_mesh_cap = std::min(first_mesh_cap, 1);
+      schedule_remesh_snapshot_slice();
+      // Under remesh snapshot debt: do not burn remaining budget on FirstMesh
+      // Deferred thrash (210134 skip_snapshot≃139). Keep a thin FM trickle.
+      if (reserve_remesh_snap && remesh_scheduled > 0 &&
+          LastMeshSnapshotMs >= kSnapshotBudgetMs * 0.45)
+      {
+        first_mesh_cap = std::min(first_mesh_cap, 1);
+      }
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
@@ -6127,6 +6141,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         it = next;
       }
+    }
+    if (defer_remesh_snap_for_fm)
+    {
+      schedule_remesh_snapshot_slice();
     }
 
     // Pass 1b: reserved rear-hemisphere focus slots so MeshForwardBias cannot
