@@ -93,12 +93,17 @@ int main()
   {
     using cutum::CensusMismatchRequiresOracle;
     using cutum::DrawClassFromVisibleBlackCensus;
+    using cutum::EstimateObjectIdMissesFromCensusMismatch;
     using cutum::ProbeFromCensus;
     Expect(CensusMismatchRequiresOracle(0, 63),
            "census mismatch when unfinished=0 and VB>0");
     Expect(!CensusMismatchRequiresOracle(1, 63),
            "no oracle alarm while unfinished>0");
     Expect(!CensusMismatchRequiresOracle(0, 0), "no mismatch when VB=0");
+    Expect(EstimateObjectIdMissesFromCensusMismatch(0, 63) == 1,
+           "E4: mismatch contributes one FalseNegCull sample");
+    Expect(EstimateObjectIdMissesFromCensusMismatch(1, 63) == 0,
+           "E4: unfinished visual is not FalseNegCull");
 
     const auto legal = DrawClassFromVisibleBlackCensus(
         VisibleBlackCause::LegalDarkNoRepair, true, true, true);

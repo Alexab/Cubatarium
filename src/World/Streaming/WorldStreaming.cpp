@@ -1324,9 +1324,10 @@ void UWorldStreaming::RefreshStreamingPressure(
               rp.last_visible_black_fully_dark_no_ticket,
               rp.last_visible_black_fully_dark_stalled,
               rp.last_visible_black_legal_dark);
-      // E4: world object-id FBO mask not wired yet — pass 0. When masks exist,
-      // feed miss count here so FalseNegCull telem becomes non-zero.
-      cutum::ApplyObjectIdMissesToCensus(oracle, /*object_id_miss_n=*/0);
+      const int object_id_miss_n =
+          cutum::EstimateObjectIdMissesFromCensusMismatch(unfinished_visual,
+                                                          rp.vb_published);
+      cutum::ApplyObjectIdMissesToCensus(oracle, object_id_miss_n);
       world.PhysicsTelemetryData.DrawOracleMissingResidentN =
           oracle.missing_resident_n;
       world.PhysicsTelemetryData.DrawOracleMissingCommandN =

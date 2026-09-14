@@ -197,6 +197,18 @@ inline bool CensusMismatchRequiresOracle(int unfinished_visual,
   return unfinished_visual == 0 && visible_black_focus_n > 0;
 }
 
+/// World-path stand-in until dedicated object-id FBO sampling lands.
+/// When the CPU census says "no missing resident" but visible-black focus is
+/// still present, count one FalseNegCull sample so product telemetry no longer
+/// hard-codes the class to zero.
+inline int EstimateObjectIdMissesFromCensusMismatch(int unfinished_visual,
+                                                    int visible_black_focus_n)
+{
+  return CensusMismatchRequiresOracle(unfinished_visual, visible_black_focus_n)
+             ? 1
+             : 0;
+}
+
 /// CPU census → DrawOracleProbe. When GL pixel is unavailable, pass
 /// `cpu_frustum_or_command_hit` as the pixel stand-in (resident+command path).
 inline DrawOracleProbe ProbeFromCensus(bool desired_visible,
@@ -253,8 +265,8 @@ struct DrawOracleCensusCounts
 };
 
 /// E4: fold world object-id / pixel misses into census (FalseNegCull).
-/// Production mask generation still open; call sites may pass 0 until FBO
-/// object-id is wired. Keeps fault accounting ready for non-zero samples.
+/// Call sites may use an interim world-path estimate until dedicated FBO
+/// object-id sampling is wired.
 inline void ApplyObjectIdMissesToCensus(DrawOracleCensusCounts &out,
                                         int object_id_miss_n)
 {
