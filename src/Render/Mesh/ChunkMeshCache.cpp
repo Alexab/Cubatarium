@@ -3771,8 +3771,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   // While enter worklist still draining, FullyDark+stale gets one Dirty.
   // After lit quiesce (remaining==0) stop the commit→Dirty pump — cruise heals.
+  // A10 RelightReplace: MarkRelit owns FullyDark Dirty — skip secondary pump.
   if (EnterGpuQuiesceDrain && !EnterLitQuiesce &&
-      gpu_result.hasFullyDarkFace && !Dirty.Contains(coord))
+      gpu_result.hasFullyDarkFace && !Dirty.Contains(coord) &&
+      !ShouldSkipSecondaryFullyDarkDirty(true))
   {
     const bool stale_lit_field = ChunkHasStaleDarkFaces(coord, world);
     // One remesh after light under enter gate — further FullyDark+sky is
@@ -3780,7 +3782,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     if (stale_lit_field &&
         EnterFullyDarkStaleRemeshOnce.insert(coord).second)
     {
-      MarkDirtyPriority(coord);
+      MarkDirty(coord);
     }
   }
   // Era15 TD-050: Unlit FirstMesh publish → LitPending (not every dark remesh).
@@ -3805,16 +3807,21 @@ bool UChunkMeshCache::CommitGpuMeshResult(
                  Dirty.Contains(coord), gpu_pending, enter_gate,
                  needs_first_mesh, fully_dark_drawable))
     {
-      // Closeout C: lit remesh → RemeshQ; missing/FullyDark → FirstMeshQ.
-      if (needs_first_mesh || fully_dark_drawable)
+      // dual-Q: missing → FirstMeshQ; FullyDark → RemeshQ. A10: skip secondary
+      // FullyDark Dirty when RelightReplace owner is ON (MarkRelit schedules).
+      if (ShouldSkipSecondaryFullyDarkDirty(fully_dark_drawable))
+      {
+      }
+      else if (needs_first_mesh)
       {
         MarkDirtyPriority(coord);
+        ++RaaCommitMarkDirtyN;
       }
       else
       {
         MarkDirty(coord);
+        ++RaaCommitMarkDirtyN;
       }
-      ++RaaCommitMarkDirtyN;
     }
   }
   (void)source_revision;
@@ -5068,9 +5075,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       else if (ChunkHasFullyDarkFace(c))
       {
-        if (ChunkHasStaleDarkFaces(c, world))
+        if (ChunkHasStaleDarkFaces(c, world) &&
+            !ShouldSkipSecondaryFullyDarkDirty(true))
         {
-          Dirty.MarkDirtyPriority(c);
+          // RemeshQ — not Priority/FM (dual-Q + A10 RelightReplace).
+          Dirty.MarkDirty(c);
           ++RaaCommitMarkDirtyN;
           ++promoted;
         }

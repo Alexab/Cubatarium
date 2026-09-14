@@ -3222,6 +3222,12 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
     StickyRemeshAfterLight.erase(ground_xz);
     return 0;
   }
+  // A10 RelightReplace: MarkRelit owns FullyDark/stale_dark Dirty — skip seam pump.
+  if (IsRelightReplaceDirtyOwnerEnabled())
+  {
+    StickyRemeshAfterLight.erase(ground_xz);
+    return 0;
+  }
   // Era17 P1: VisibleBlack stale in focus ring always MarkDirty (heal-until).
   // Far/calm skip removed for stale_dark — churn capped by Collect repair_cap.
   const glm::ivec3 focus =

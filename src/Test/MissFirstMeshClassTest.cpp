@@ -1032,6 +1032,19 @@ int main()
            "cruise: undrawn hole may RemeshSeam");
     Expect(!ShouldEnqueueRemeshSeamAfterLit(true, false, false, true),
            "cruise: owned ⇒ no RemeshSeam");
+    using cutum::IsRelightReplaceDirtyOwnerEnabled;
+    using cutum::SetRelightReplaceDirtyOwnerEnabled;
+    using cutum::ShouldSkipSecondaryFullyDarkDirty;
+    Expect(IsRelightReplaceDirtyOwnerEnabled(),
+           "A10: RelightReplace Dirty owner default ON");
+    Expect(ShouldSkipSecondaryFullyDarkDirty(true),
+           "A10: skip secondary FullyDark Dirty when owner ON");
+    Expect(!ShouldSkipSecondaryFullyDarkDirty(false),
+           "A10: missing/undrawn still allowed");
+    SetRelightReplaceDirtyOwnerEnabled(false);
+    Expect(!ShouldSkipSecondaryFullyDarkDirty(true),
+           "A10: rollback OFF allows secondary FullyDark Dirty");
+    SetRelightReplaceDirtyOwnerEnabled(true);
     using cutum::ClampCaptureMovingBgCapWithHoles;
     using cutum::EffectiveRelightCaptureBandCy;
     Expect(ClampCaptureMovingBgCapWithHoles(8, true, true, 2) == 2,

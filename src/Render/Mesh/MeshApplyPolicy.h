@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 
 namespace cutum
@@ -124,6 +125,28 @@ inline bool ShouldRouteRemeshToFirstMeshQueue(bool has_drawable,
 {
   (void)fully_dark_drawable;
   return !has_drawable;
+}
+
+/// A10 RelightReplace Dirty sole-owner for published FullyDark / StaleVertexLight.
+/// When ON: secondary enter/RAA/seam Dirty pumps must not MarkDirty FullyDark —
+/// MarkRelit → RemeshQ is the sole producer. Rollback: Set(false).
+inline std::atomic<bool> &RelightReplaceDirtyOwnerFlag()
+{
+  static std::atomic<bool> enabled{true};
+  return enabled;
+}
+inline bool IsRelightReplaceDirtyOwnerEnabled()
+{
+  return RelightReplaceDirtyOwnerFlag().load(std::memory_order_relaxed);
+}
+inline void SetRelightReplaceDirtyOwnerEnabled(bool on)
+{
+  RelightReplaceDirtyOwnerFlag().store(on, std::memory_order_relaxed);
+}
+/// Skip secondary FullyDark Dirty when RelightReplace owner is ON.
+inline bool ShouldSkipSecondaryFullyDarkDirty(bool fully_dark_drawable)
+{
+  return IsRelightReplaceDirtyOwnerEnabled() && fully_dark_drawable;
 }
 
 /// Era21 I-M6: under FOV miss, SoftDefer Capture is blocked only by a live
