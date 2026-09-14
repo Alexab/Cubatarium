@@ -1,7 +1,7 @@
 {
   "scenario": "product-174657",
   "tip": "feb43173",
-  "adequacy": "west_corridor_ok_early_vb_fail_class",
+  "adequacy": "proxy_v2_fail_closed_on_miss_stuck_gap",
   "e1_branch": "E2",
   "cold": {
     "perf": "perf_20260914-094214_17884.jsonl",
@@ -19,5 +19,25 @@
     "focus": [[7, 3], [-7, 3]],
     "pass": false
   },
-  "note": "Full-run VB med under 40 is heal after early west spike; do not CLOSE G1 on med alone. Manual 080455 remains gate of record."
+  "proxy_v2": {
+    "cold": {
+      "perf": "perf_20260914-112755_41808.jsonl",
+      "phase": "proxy_v2_cold",
+      "focus_missing_mesh_med": 0.0,
+      "miss_stuck_run_frames_tail_max": 0.0,
+      "fog_pull_in_rd_fly_med": 2.0,
+      "visible_black_focus_fly_med": 20.5,
+      "adequacy_pass": false
+    },
+    "visible_cold": {
+      "perf": "perf_20260914-113011_41604.jsonl",
+      "phase": "proxy_v2_visible_cold",
+      "focus_missing_mesh_med": 0.0,
+      "miss_stuck_run_frames_tail_max": 0.0,
+      "fog_pull_in_rd_fly_med": 2.0,
+      "visible_black_focus_fly_med": 13.5,
+      "adequacy_pass": false
+    }
+  },
+  "note": "Full-run VB med under 40 is heal after early west spike; do not CLOSE G1 on med alone. proxy_v2 now fail-closes on miss/stuck adequacy but still does not reproduce manual 100645."
 }
