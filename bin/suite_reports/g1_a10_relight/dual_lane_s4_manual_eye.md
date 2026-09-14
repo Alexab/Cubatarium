@@ -1,20 +1,24 @@
-# Dual-lane S4 — west manual eye checklist
+# Dual-lane S4 — west manual eye
 
-Autofly gates (S1/S3) are green vs `125123`/`133817`/`125331`. Product G1 remains OPEN.
+Autofly gates (S1/S3) green. Product G1 remains OPEN.
 
-## Operator flight
+## Result — PASS (2026-09-14)
 
-1. Build tip with dual-lane (`b84c735e` or later on `cursor_audit_impl4`).
-2. World_164, eye-level west `(7,3)→(−3,3)` — same corridor as `122212` / `134914`.
-3. No Space climb; stay Y ~50–60.
-4. Record `perf_*.jsonl` + enter_lit; note subjective black FullyDark/StaleVL chunks.
-
-## Pass vs fail
-
-| Compare | Pass |
+| Field | Value |
 |---|---|
-| vs `122212` | StaleVL/VB/unlit max ≤ that class; no new black-chunk feel |
-| vs `134914` | Must be clearly better (not P3 regress class) |
-| G1 CLOSED | **Do not claim** without separate PASS vs 141350 |
+| Perf | `bin/logs/perf_20260914-154921_33492.jsonl` |
+| Enter | `bin/logs/enter_lit_20260914-154948.jsonl` |
+| Corridor | `(7,3)→(−3,3)`, Y ~48–70 |
+| Operator | visually correct; edits not tried |
+| vs `122212` | VB 77 / StaleVL 75 / unlit cruise max 13 — class OK |
+| vs `134914` | clearly better (closes black-chunk regress) |
+| Wall | med ~71 ms (~14 FPS); stream~31 + emerge~28 |
+| G1 CLOSED | **not claimed** (enter `live_blockers`, vs 141350 still open) |
 
-Paste perf path + medians into `FLIGHT_F5_174657_RETEST.md` when done.
+Scorecard: [dual_lane_s4_manual_154921.json](dual_lane_s4_manual_154921.json)
+
+## Do not
+
+- Revert dual-lane / reintroduce FM-first order toggle for FPS
+- SoftDefer/floors «от дыр»
+- Weaken `visible_black≥40` / focus_missing / holes / enter gates

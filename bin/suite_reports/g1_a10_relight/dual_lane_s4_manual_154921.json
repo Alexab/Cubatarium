@@ -1,0 +1,37 @@
+{
+  "flight": "154921",
+  "enter": "154948",
+  "perf_jsonl": "bin/logs/perf_20260914-154921_33492.jsonl",
+  "enter_lit": "bin/logs/enter_lit_20260914-154948.jsonl",
+  "corridor": "(7,3)->(-3,3)",
+  "operator_visual": "PASS",
+  "edits_tried": false,
+  "dual_lane_visual_vs_134914": "PASS",
+  "class_vs_122212": "PASS",
+  "product_g1_vs_141350": "OPEN",
+  "mid_corridor": {
+    "visible_black_focus_med": 77,
+    "stale_vertex_light_med": 75,
+    "dirty_remesh_med": 50,
+    "ok_remesh_med": 2,
+    "ok_fm_med": 0,
+    "miss_stuck_med_max": [93, 384],
+    "unlit_cruise_max": 13,
+    "unfinished_med": 5,
+    "wall_ms_med": 71.1,
+    "fps_approx_med": 14.1,
+    "stream_ms_med": 31.2,
+    "mesh_emerge_ms_med": 28.0,
+    "scene_ms_med": 5.5
+  },
+  "anchors": {
+    "122212": {"VB": 78.5, "StaleVL": 77, "wall_ms_med": 78.4, "unlit_max": 11},
+    "134914": {"VB": 84, "StaleVL": 87, "wall_ms_med": 64.8, "unlit_max": 39}
+  },
+  "enter_settle": {
+    "settle_reason": "live_blockers",
+    "visibility_debt": 80,
+    "void_near": 1457
+  },
+  "next": "perf track stream+mesh_emerge wall; no schedule-order revert"
+}
