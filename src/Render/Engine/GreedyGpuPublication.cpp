@@ -4,6 +4,7 @@
 #include <atomic>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace cutum
 {
@@ -151,9 +152,9 @@ bool UGreedyGpuBackend::PublishPassInputs(
         GpuBatchKey{cache.batches[n].chunkCoord, cache.batches[n].batchIndex},
         n);
 
-  // Stage the command table. Prefer whole-pass atomicity, but under tiny-cap
-  // OOM publish successful chunks (progress unit) and retain predecessors for
-  // the rest so demand can converge without silent whole-pass retry loops.
+  // Transaction unit is chunk+pass (audit N01): stage all uploads for a coord
+  // and commit only when every batch succeeds. Neighbors progress independently.
+  // Partial OOM keeps PendingGeometryDirty and all predecessors for that coord.
   std::vector<GreedyGpuBatch> staged;
   std::vector<size_t> fresh;
   std::vector<bool> retained(cache.batches.size(), false);
@@ -162,6 +163,11 @@ bool UGreedyGpuBackend::PublishPassInputs(
   bool any_fresh = false;
   bool any_fail = false;
   std::unordered_set<glm::ivec3, IVec3Hash> published_ok;
+  std::unordered_map<glm::ivec3, std::vector<const GreedyGpuUploadInput *>,
+                     IVec3Hash>
+      uploads_by_coord;
+  std::vector<glm::ivec3> upload_order;
+
   auto sync_handles = [&]()
   {
     cache.poolVbo = cache.VertexPool.VertexBuffer();
@@ -197,27 +203,62 @@ bool UGreedyGpuBackend::PublishPassInputs(
       }
       continue;
     }
-    GreedyGpuBatch gpu;
-    UploadBatch(gpu, *batch, cache.VertexPool);
-    if (!gpu.pooled)
+    auto &group = uploads_by_coord[ref.chunkCoord];
+    if (group.empty())
+      upload_order.push_back(ref.chunkCoord);
+    group.push_back(&input);
+  }
+
+  for (const auto &coord : upload_order)
+  {
+    const auto &group = uploads_by_coord[coord];
+    std::vector<GreedyGpuBatch> group_fresh;
+    group_fresh.reserve(group.size());
+    bool group_ok = true;
+    for (const auto *input : group)
     {
-      any_fail = true;
-      NotePublicationOverloadRetain();
-      // Chunk-granular: keep prior draw for this key when present.
-      if (found != resident.end() && cache.batches[found->second].pooled)
+      GreedyGpuBatch gpu;
+      UploadBatch(gpu, *input->batch, cache.VertexPool);
+      if (!gpu.pooled)
       {
-        retained[found->second] = true;
-        staged.push_back(cache.batches[found->second]);
+        group_ok = false;
+        any_fail = true;
+        NotePublicationOverloadRetain();
+        break;
+      }
+      FillBatchCull(gpu, input->ref);
+      group_fresh.push_back(std::move(gpu));
+    }
+    if (!group_ok)
+    {
+      for (auto &gpu : group_fresh)
+        ReleasePooledBatch(gpu, cache.VertexPool);
+      // Keep the full predecessor image for this coord.
+      for (size_t n = 0; n < cache.batches.size(); ++n)
+      {
+        if (cache.batches[n].chunkCoord == coord && cache.batches[n].pooled)
+        {
+          retained[n] = true;
+          staged.push_back(cache.batches[n]);
+        }
       }
       continue;
     }
     any_fresh = true;
     NotePublicationProgressUnit();
-    published_ok.insert(ref.chunkCoord);
-    FillBatchCull(gpu, ref);
-    fresh.push_back(staged.size());
-    staged.push_back(gpu);
-    changed = true;
+    published_ok.insert(coord);
+    // Successful replace: do not retain old batches for this coord.
+    for (size_t n = 0; n < cache.batches.size(); ++n)
+    {
+      if (cache.batches[n].chunkCoord == coord)
+        retained[n] = false;
+    }
+    for (auto &gpu : group_fresh)
+    {
+      fresh.push_back(staged.size());
+      staged.push_back(std::move(gpu));
+      changed = true;
+    }
   }
 
   if (any_fail && !any_fresh)
@@ -234,15 +275,10 @@ bool UGreedyGpuBackend::PublishPassInputs(
     if (!retained[n])
       ReleasePooledBatch(cache.batches[n], cache.VertexPool);
   cache.batches = std::move(staged);
-  if (any_fail)
-  {
-    for (const auto &coord : published_ok)
-      cache.PendingGeometryDirty.erase(coord);
-  }
-  else
-  {
-    cache.PendingGeometryDirty.clear();
-  }
+  // Clear dirty only for chunk groups fully published this call. Never wipe
+  // unrelated pending demand (neighbor progress must not clear a failed peer).
+  for (const auto &coord : published_ok)
+    cache.PendingGeometryDirty.erase(coord);
   cache.usesVertexPool = !cache.batches.empty();
   sync_handles();
   cache.meshRevision = mesh_revision;

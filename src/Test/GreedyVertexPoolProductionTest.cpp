@@ -188,5 +188,68 @@ int main(int argc, char **argv)
             cache.publicationVersion == stable_version,
         "unchanged table retains cull state");
   cache.VertexPool.Destroy();
+
+  // N01: multi-batch partial OOM must keep dirty and full old A/B (no mixed versions).
+  {
+    cutum::UGreedyGpuBackend backend2;
+    cutum::GreedyGpuPassCache cache2;
+    cutum::GreedyBatchRef ra{}, rb{};
+    ra.chunkCoord = rb.chunkCoord = {4, 0, 5};
+    ra.batchIndex = 0;
+    rb.batchIndex = 1;
+    cutum::GreedyMeshBatch ba = batch;
+    cutum::GreedyMeshBatch bb = batch;
+    ba.blockId = static_cast<cutum::BlockId>(9);
+    bb.blockId = static_cast<cutum::BlockId>(9);
+    check(backend2.PublishPassInputs(cache2, {{ra, &ba}, {rb, &bb}}, {}, 1, 1,
+                                     1),
+          "N01 initial A/B publication");
+    check(cache2.batches.size() == 2, "N01 two resident batches");
+    auto small_a = ba;
+    auto big_b = bb;
+    small_a.blockId = static_cast<cutum::BlockId>(18);
+    small_a.vertices.resize(4);
+    big_b.blockId = static_cast<cutum::BlockId>(19);
+    big_b.vertices.resize(120);
+    cache2.VertexPool.SetMaxCapacityBytes(cache2.VertexPool.CapacityBytes());
+    (void)backend2.PublishPassInputs(cache2, {{ra, &small_a}, {rb, &big_b}},
+                                     {ra.chunkCoord}, 2, 2, 1);
+    check(cache2.PendingGeometryDirty.count(ra.chunkCoord) == 1,
+          "N01 partial OOM keeps chunk dirty");
+    uint16_t a_id = 0;
+    uint16_t b_id = 0;
+    for (const auto &g : cache2.batches)
+    {
+      if (g.chunkCoord == ra.chunkCoord && g.batchIndex == 0)
+        a_id = g.blockId;
+      if (g.chunkCoord == ra.chunkCoord && g.batchIndex == 1)
+        b_id = g.blockId;
+    }
+    check(a_id == 9 && b_id == 9,
+          "N01 partial OOM keeps full old A/B (no mixed versions)");
+    check(cache2.batches.size() == 2, "N01 still two predecessor batches");
+
+    // Neighbor chunk can publish while primary stays dirty.
+    cutum::GreedyBatchRef rn{};
+    rn.chunkCoord = {9, 0, 5};
+    rn.batchIndex = 0;
+    cutum::GreedyMeshBatch bn = batch;
+    bn.blockId = static_cast<cutum::BlockId>(7);
+    for (auto &f : fences)
+      f.second = GL_ALREADY_SIGNALED;
+    cache2.VertexPool.BeginUploadFrame();
+    cache2.VertexPool.SetMaxCapacityBytes(0);
+    check(backend2.PublishPassInputs(cache2, {{rn, &bn}}, {rn.chunkCoord}, 3, 3,
+                                     1),
+          "N01 neighbor publishes independently");
+    check(cache2.PendingGeometryDirty.count(ra.chunkCoord) == 1,
+          "N01 primary dirty survives neighbor publish");
+    bool neighbor_ok = false;
+    for (const auto &g : cache2.batches)
+      if (g.chunkCoord == rn.chunkCoord && g.blockId == 7)
+        neighbor_ok = true;
+    check(neighbor_ok, "N01 neighbor batch resident");
+    cache2.VertexPool.Destroy();
+  }
   return failures ? 1 : 0;
 }
