@@ -31,6 +31,8 @@ Plan: `g1_a10_continuation` E0b. Tip at study: `d80ec866` / docs tip after E0.
 
 ## Verdict
 
-**Root cause #1: yaw/corridor mismatch.** P5 PASS does not close G1 product — north corridor under-stresses streaming (`fog_pull_in_rd` collapses to 1). West manual keeps higher RD pressure and shows VB/missing FAIL class matching 174657 / 141350 product gates.
+**Root cause #1 (historical P5): yaw/corridor mismatch.** North `--replay-manual` yaw 90 under-stresses streaming. West manual keeps higher RD pressure and shows VB/missing FAIL class matching 174657 / 141350 product gates.
 
-**Adequacy fix:** scenario `product-174657` = resume World_164, no-teleport, **yaw 180**, west focus progress. Legacy `--replay-manual` yaw 90 remains north smoke only.
+**Root cause #1b (proxy_v2 west, 2026-09-14):** even with yaw **180**, `product-174657` inherited `replay_manual` **`hold_space=True`**. Autofly eye climbs **Y ~76→300** while manual **122212/100645** stays **~50→58**; `fog_rd` collapses (~2 vs 4), `focus_missing`/`miss_stuck` stay **0**. Ocean-cruise already documented HoldSpace blindness — west product proxy needed the same fix.
+
+**Adequacy fix:** scenario `product-174657` = resume World_164, no-teleport, **yaw 180**, west focus, **`hold_space=False`**, `min-alt-above-sea=0`, eye Y pinned ~56, altitude gate in `proxy_adequacy`. Legacy `--replay-manual` yaw 90 remains north smoke only (may still hold-space).

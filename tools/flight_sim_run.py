@@ -23,6 +23,12 @@ MANUAL_100645_PROXY_CLASS = {
     "miss_stuck_run_frames_tail_max_min": 100.0,
     "fog_pull_in_rd_fly_med_min": 3.0,
     "visible_black_focus_fly_med_min": 40.0,
+    # Manual 122212/100645 eye stays ~50–58; hold-space proxy climbed to ~300.
+    "player_y_late_med_min": 45.0,
+    "player_y_late_med_max": 70.0,
+    "player_y_delta_abs_max": 25.0,
+    # Manual west (7,3)→(−3,3); stuck spawn fails product class.
+    "focus_west_delta_cx_min": 3.0,
 }
 
 
@@ -112,6 +118,31 @@ def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
             "adequacy_fails": [f"adequacy_analyze_failed:{exc}"],
         }
 
+    ys = values("player_y", use)
+    y_early = None
+    y_late = None
+    y_delta = None
+    if ys:
+        n = len(ys)
+        early_n = max(1, n // 10)
+
+        def _med_list(xs: list[float]) -> float:
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            if len(xs) % 2:
+                return xs[mid]
+            return (xs[mid - 1] + xs[mid]) / 2.0
+
+        y_early = _med_list(ys[:early_n])
+        y_late = _med_list(ys[-early_n:])
+        y_delta = y_late - y_early
+
+    # Prefer all periods for path (movement_speed often 0 even while traveling).
+    fcx_all = values("focus_cx", rows)
+    focus_west_delta = None
+    if len(fcx_all) >= 2:
+        focus_west_delta = float(fcx_all[0]) - float(fcx_all[-1])
+
     metrics = {
         "early_vb_med": median("visible_black_focus_n", use[: min(5, len(use))]),
         "focus_missing_mesh_med": median("focus_missing_mesh", use),
@@ -120,6 +151,11 @@ def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
         "visible_black_focus_fly_med": median("visible_black_focus_n", use),
         "gpu_kick_fly_med": median("gpu_kick_n", tail if tail else use),
         "ok_remesh_fly_med": median("mesh_dirty_schedule_ok_remesh_n", use),
+        "player_y_early_med": y_early,
+        "player_y_late_med": y_late,
+        "player_y_delta": y_delta,
+        "focus_west_delta_cx": focus_west_delta,
+        "gpu_kick_post_drain_fly_max": max_value("gpu_kick_post_drain_n", use),
     }
     fails: list[str] = []
     if (
@@ -146,6 +182,24 @@ def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
         < MANUAL_100645_PROXY_CLASS["visible_black_focus_fly_med_min"]
     ):
         fails.append("vb_too_low_for_product_class")
+    if (
+        y_late is None
+        or float(y_late) < MANUAL_100645_PROXY_CLASS["player_y_late_med_min"]
+        or float(y_late) > MANUAL_100645_PROXY_CLASS["player_y_late_med_max"]
+    ):
+        fails.append("altitude_out_of_corridor")
+    if (
+        y_delta is not None
+        and abs(float(y_delta))
+        > MANUAL_100645_PROXY_CLASS["player_y_delta_abs_max"]
+    ):
+        fails.append("altitude_climb")
+    if (
+        focus_west_delta is None
+        or float(focus_west_delta)
+        < MANUAL_100645_PROXY_CLASS["focus_west_delta_cx_min"]
+    ):
+        fails.append("focus_not_west")
     metrics["adequacy_pass"] = len(fails) == 0
     metrics["adequacy_fails"] = fails
     return metrics
@@ -846,7 +900,7 @@ def main() -> int:
         if args.yaw is None:
             args.yaw = 180.0
         if not (args.phase_id or "").strip():
-            args.phase_id = "product_174657_proxy_v2"
+            args.phase_id = "product_174657_proxy_v3"
         if args.teleport_cruise:
             print(
                 "WARN: product-174657 forces --no-teleport-cruise "
@@ -864,14 +918,13 @@ def main() -> int:
             args.seconds,
             args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
         )
-        # Focus (7,3) ≈ world (120, y, 56); keep save y if present.
+        # Focus (7,3) ≈ world (120, y, 56); pin eye Y to manual 122212/100645 (~56).
         users = BIN / "worlds" / "World_164" / "users.json"
         if users.is_file():
             try:
                 data = json.loads(users.read_text(encoding="utf-8"))
                 user = data.get("Username") or data
-                prev = user.get("position")
-                y = float(prev[1]) if isinstance(prev, list) and len(prev) >= 2 else 57.3
+                y = 56.0
                 user["position"] = [120.0, y, 56.0]
                 user["yaw"] = 180.0
                 user["pitch"] = 0.0
@@ -926,7 +979,20 @@ def main() -> int:
         if args.yaw is None:
             args.yaw = 90.0
         if args.scenario == "product-174657":
-            # Timings already set above (idle15/fly45/stop30); do not bump to
+            # Eye-level west parity with manual 122212/100645.
+            # HoldSpace climb made autofly Y ~76→300 and collapsed fog_rd/miss
+            # class (same lesson as ocean-cruise HoldSpace blindness).
+            # Without Space, free-move at y≈50 sticks in terrain (cold 124719:
+            # focus stayed (7,3)). CruiseEyeY unlocks land-eye floor
+            # (terrain+12 once) without continuous Space climb.
+            args.hold_space = False
+            if args.min_alt_above_sea is None:
+                args.min_alt_above_sea = 0.0
+            if args.cruise_eye_y is None:
+                args.cruise_eye_y = 56.0
+            if args.pitch is None:
+                args.pitch = 0.0
+            # Timings already set above (idle15/fly38/stop20); do not bump to
             # north smoke 45/90/90 or fly-heavy 20/120/30.
             pass
         elif args.replay_manual_fly_heavy:
