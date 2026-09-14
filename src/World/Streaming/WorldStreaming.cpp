@@ -1317,13 +1317,16 @@ void UWorldStreaming::RefreshStreamingPressure(
             ? 1
             : 0;
     {
-      const cutum::DrawOracleCensusCounts oracle =
+      cutum::DrawOracleCensusCounts oracle =
           cutum::AccumulateDrawOracleFromVbCensus(
               unfinished_visual, rp.last_visible_black_stale_lit,
               rp.last_visible_black_fully_dark_repair,
               rp.last_visible_black_fully_dark_no_ticket,
               rp.last_visible_black_fully_dark_stalled,
               rp.last_visible_black_legal_dark);
+      // E4: world object-id FBO mask not wired yet — pass 0. When masks exist,
+      // feed miss count here so FalseNegCull telem becomes non-zero.
+      cutum::ApplyObjectIdMissesToCensus(oracle, /*object_id_miss_n=*/0);
       world.PhysicsTelemetryData.DrawOracleMissingResidentN =
           oracle.missing_resident_n;
       world.PhysicsTelemetryData.DrawOracleMissingCommandN =

@@ -128,6 +128,16 @@ int main()
     Expect(hist.fully_dark_debt_n == 6, "fully_dark_debt sums repair buckets");
     Expect(hist.false_neg_cull_n == 0, "CPU census has no FalseNegCull");
     Expect(hist.fault_n == 2 + 3 + 6, "faults = missing + stale + FullyDark");
+    {
+      auto with_oid = hist;
+      cutum::ApplyObjectIdMissesToCensus(with_oid, 3);
+      Expect(with_oid.false_neg_cull_n == 3,
+             "E4: object-id misses → FalseNegCull");
+      Expect(with_oid.fault_n == hist.fault_n + 3,
+             "E4: object-id misses bump fault_n");
+      cutum::ApplyObjectIdMissesToCensus(with_oid, 0);
+      Expect(with_oid.false_neg_cull_n == 3, "E4: zero miss is no-op");
+    }
     Expect(DrawClassFromVisibleBlackCensus(
                VisibleBlackCause::FullyDarkPendingRepair, true, true, true) ==
                DrawClass::StaleVertexLight,

@@ -252,6 +252,20 @@ struct DrawOracleCensusCounts
   int fault_n{0};
 };
 
+/// E4: fold world object-id / pixel misses into census (FalseNegCull).
+/// Production mask generation still open; call sites may pass 0 until FBO
+/// object-id is wired. Keeps fault accounting ready for non-zero samples.
+inline void ApplyObjectIdMissesToCensus(DrawOracleCensusCounts &out,
+                                        int object_id_miss_n)
+{
+  if (object_id_miss_n <= 0)
+  {
+    return;
+  }
+  out.false_neg_cull_n += object_id_miss_n;
+  out.fault_n += object_id_miss_n;
+}
+
 inline DrawOracleCensusCounts AccumulateDrawOracleFromVbCensus(
     int unfinished_visual, int stale_lit_n, int fully_dark_repair_n,
     int fully_dark_no_ticket_n, int fully_dark_stalled_n, int legal_dark_n)
