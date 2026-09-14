@@ -25,8 +25,8 @@
     "FaceYawDeg": 180,
     "FacePitchDeg": 0,
     "IdleBeforeFlySec": 15,
-    "FlyPhaseSec": 45,
-    "StopPhaseSec": 30,
+    "FlyPhaseSec": 38,
+    "StopPhaseSec": 20,
     "HoldForward": true,
     "HoldSpace": true,
     "TeleportCruise": false,
@@ -34,7 +34,7 @@
     "PinLocusWorld": [120.0, 57.3, 56.0],
     "PinFocusChunk": [7, 3],
     "FogPullInEnabled": false,
-    "phase_id": "product_174657_proxy"
+    "phase_id": "product_174657_proxy_v2"
   },
   "cli": "python tools/flight_sim_run.py --world World_164 --scenario product-174657"
 }

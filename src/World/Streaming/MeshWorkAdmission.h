@@ -240,6 +240,31 @@ inline bool ShouldForceGpuKickUnderQueuedDebt(int pending_queued_n,
   return stale_or_fully_dark_debt >= debt_thresh;
 }
 
+/// G1-N2: after DrainAsyncMeshResults, remesh work that just reached Queued
+/// must get a same-frame kick under focus miss or stale/FullyDark debt.
+inline bool ShouldForceGpuKickPostDrain(int pending_queued_n,
+                                        bool focus_missing_mesh,
+                                        int stale_vertex_light_n,
+                                        int fully_dark_debt_n,
+                                        int remesh_schedule_ok_n,
+                                        int debt_thresh = 20)
+{
+  if (pending_queued_n < 1)
+  {
+    return false;
+  }
+  if (focus_missing_mesh)
+  {
+    return true;
+  }
+  const int debt = stale_vertex_light_n + fully_dark_debt_n;
+  if (debt >= debt_thresh)
+  {
+    return true;
+  }
+  return remesh_schedule_ok_n > 0 && debt >= 1;
+}
+
 /// FZ2.7-P17: on long stand with sticky VB + stale plateau, keep remesh
 /// protect (floor) but signal callers to prefer column-owned heal over
 /// full-ring Dirty thrash. True when idle long enough that eye-black is stuck.

@@ -13,9 +13,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
 EXE = BIN / "Cubatarium.exe"
+DEBUG_EXE = ROOT / "build" / "desktop-msvc" / "Debug" / "Cubatarium.exe"
 ANALYZE = Path(__file__).with_name("flight_sim_analyze.py")
 DIAG = Path(__file__).with_name("flight_sim_diag.py")
 PHASE_HISTORY = BIN / "flight_sim_phase_history.jsonl"
+
+MANUAL_100645_PROXY_CLASS = {
+    "focus_missing_mesh_med_min": 1.0,
+    "miss_stuck_run_frames_tail_max_min": 100.0,
+    "fog_pull_in_rd_fly_med_min": 3.0,
+    "visible_black_focus_fly_med_min": 40.0,
+}
 
 
 def newest_perf(after_ts: float) -> Path | None:
@@ -32,6 +40,19 @@ def newest_perf(after_ts: float) -> Path | None:
     return max(cands, key=lambda p: p.stat().st_mtime)
 
 
+def resolve_exe() -> Path:
+    """Prefer the freshest local desktop build when available."""
+    if DEBUG_EXE.is_file():
+        if not EXE.is_file():
+            return DEBUG_EXE
+        try:
+            if DEBUG_EXE.stat().st_mtime >= EXE.stat().st_mtime:
+                return DEBUG_EXE
+        except OSError:
+            return DEBUG_EXE
+    return EXE
+
+
 def load_best(path: Path) -> dict | None:
     if not path.is_file():
         return None
@@ -39,6 +60,95 @@ def load_best(path: Path) -> dict | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
+
+
+def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
+    """Return whether product-174657 reproduces the west miss/stuck class."""
+    try:
+        rows = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") == "period":
+                rows.append(row)
+        fly = []
+        for row in rows:
+            try:
+                if float(row.get("movement_speed") or 0) > 2.0:
+                    fly.append(row)
+            except (TypeError, ValueError):
+                continue
+        use = fly if fly else rows
+        tail = use[-max(1, len(use) // 3) :] if use else []
+
+        def values(key: str, subset: list[dict]) -> list[float]:
+            out: list[float] = []
+            for row in subset:
+                try:
+                    val = row.get(key)
+                    if val is not None:
+                        out.append(float(val))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        def median(key: str, subset: list[dict]) -> float | None:
+            xs = values(key, subset)
+            if not xs:
+                return None
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            if len(xs) % 2:
+                return xs[mid]
+            return (xs[mid - 1] + xs[mid]) / 2.0
+
+        def max_value(key: str, subset: list[dict]) -> float | None:
+            xs = values(key, subset)
+            return max(xs) if xs else None
+    except Exception as exc:  # pragma: no cover - best-effort reporting
+        return {
+            "adequacy_pass": False,
+            "adequacy_fails": [f"adequacy_analyze_failed:{exc}"],
+        }
+
+    metrics = {
+        "early_vb_med": median("visible_black_focus_n", use[: min(5, len(use))]),
+        "focus_missing_mesh_med": median("focus_missing_mesh", use),
+        "miss_stuck_run_frames_tail_max": max_value("miss_stuck_run_frames", tail),
+        "fog_pull_in_rd_fly_med": median("fog_pull_in_rd", use),
+        "visible_black_focus_fly_med": median("visible_black_focus_n", use),
+        "gpu_kick_fly_med": median("gpu_kick_n", tail if tail else use),
+        "ok_remesh_fly_med": median("mesh_dirty_schedule_ok_remesh_n", use),
+    }
+    fails: list[str] = []
+    if (
+        metrics["focus_missing_mesh_med"] is None
+        or float(metrics["focus_missing_mesh_med"])
+        < MANUAL_100645_PROXY_CLASS["focus_missing_mesh_med_min"]
+    ):
+        fails.append("focus_missing_too_low")
+    if (
+        metrics["miss_stuck_run_frames_tail_max"] is None
+        or float(metrics["miss_stuck_run_frames_tail_max"])
+        < MANUAL_100645_PROXY_CLASS["miss_stuck_run_frames_tail_max_min"]
+    ):
+        fails.append("miss_stuck_too_low")
+    if (
+        metrics["fog_pull_in_rd_fly_med"] is None
+        or float(metrics["fog_pull_in_rd_fly_med"])
+        < MANUAL_100645_PROXY_CLASS["fog_pull_in_rd_fly_med_min"]
+    ):
+        fails.append("fog_rd_collapsed")
+    if (
+        metrics["visible_black_focus_fly_med"] is None
+        or float(metrics["visible_black_focus_fly_med"])
+        < MANUAL_100645_PROXY_CLASS["visible_black_focus_fly_med_min"]
+    ):
+        fails.append("vb_too_low_for_product_class")
+    metrics["adequacy_pass"] = len(fails) == 0
+    metrics["adequacy_fails"] = fails
+    return metrics
 
 
 def kill_cubatarium_orphans() -> int:
@@ -56,12 +166,13 @@ def kill_cubatarium_orphans() -> int:
 
 def exe_writable(timeout_sec: float = 5.0) -> bool:
     """True if bin/Cubatarium.exe can be replaced (not locked)."""
-    if not EXE.is_file():
+    exe = resolve_exe()
+    if not exe.is_file():
         return True
     deadline = time.time() + timeout_sec
     while time.time() < deadline:
         try:
-            with open(EXE, "ab"):
+            with open(exe, "ab"):
                 return True
         except OSError:
             time.sleep(0.25)
@@ -735,7 +846,7 @@ def main() -> int:
         if args.yaw is None:
             args.yaw = 180.0
         if not (args.phase_id or "").strip():
-            args.phase_id = "product_174657_proxy"
+            args.phase_id = "product_174657_proxy_v2"
         if args.teleport_cruise:
             print(
                 "WARN: product-174657 forces --no-teleport-cruise "
@@ -746,9 +857,9 @@ def main() -> int:
         if "--idle-sec" not in sys.argv:
             args.idle_sec = 15.0
         if "--fly-phase-sec" not in sys.argv:
-            args.fly_phase_sec = 45.0
+            args.fly_phase_sec = 38.0
         if "--stop-phase-sec" not in sys.argv:
-            args.stop_phase_sec = 30.0
+            args.stop_phase_sec = 20.0
         args.seconds = max(
             args.seconds,
             args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
@@ -1326,7 +1437,7 @@ def main() -> int:
             kill_cubatarium_orphans()
 
         sim_cmd = [
-            str(EXE),
+            str(resolve_exe()),
             "--flight-sim",
             "--world",
             args.world,
@@ -1502,6 +1613,18 @@ def main() -> int:
             run_reports.append(report_path)
             try:
                 result = json.loads(report_path.read_text(encoding="utf-8"))
+                if args.scenario == "product-174657" and perf and Path(perf).is_file():
+                    adequacy = compute_product_174657_proxy_adequacy(Path(perf))
+                    result["proxy_adequacy"] = adequacy
+                    report_path.write_text(
+                        json.dumps(result, indent=2) + "\n", encoding="utf-8"
+                    )
+                    print(
+                        "product-174657 adequacy: "
+                        + ("PASS" if adequacy.get("adequacy_pass") else "FAIL")
+                        + f" {adequacy}",
+                        flush=True,
+                    )
                 metrics_summary = {
                     "pass": result.get("pass"),
                     "hang_killed": result.get("hang_killed"),
@@ -1544,6 +1667,8 @@ def main() -> int:
                         )
                     },
                 }
+                if result.get("proxy_adequacy") is not None:
+                    metrics_summary["proxy_adequacy"] = result["proxy_adequacy"]
                 if args.update_best and not hang_killed:
                     if args.fly_stop:
                         best_path = BIN / "flight_sim_gate_report_stop_best.json"
@@ -1579,6 +1704,15 @@ def main() -> int:
             last_rc = rc
         else:
             last_rc = ana
+            if args.scenario == "product-174657" and metrics_summary.get(
+                "proxy_adequacy"
+            ):
+                if not metrics_summary["proxy_adequacy"].get("adequacy_pass", False):
+                    print(
+                        "flight-sim adequacy FAIL for product-174657 proxy",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
 
     if repeats > 1 and run_reports:
         agg_path = base_report.with_name(f"{base_report.stem}_agg{base_report.suffix}")

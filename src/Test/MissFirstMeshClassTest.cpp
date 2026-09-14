@@ -2348,6 +2348,18 @@ int main()
     Expect(!ShouldForceGpuKickUnderQueuedDebt(2, false, 19),
            "G1-P2: Queued without debt ⇒ no force");
 
+    using cutum::ShouldForceGpuKickPostDrain;
+    Expect(ShouldForceGpuKickPostDrain(2, true, 0, 0, 0),
+           "G1-N2: post-drain queued+focus miss ⇒ force kick");
+    Expect(ShouldForceGpuKickPostDrain(1, false, 30, 0, 0),
+           "G1-N2: post-drain queued+stale debt ⇒ force kick");
+    Expect(ShouldForceGpuKickPostDrain(2, false, 0, 1, 1),
+           "G1-N2: post-drain remesh scheduled + small debt ⇒ force kick");
+    Expect(!ShouldForceGpuKickPostDrain(0, true, 76, 0, 2),
+           "G1-N2: no Queued after drain ⇒ no force kick");
+    Expect(!ShouldForceGpuKickPostDrain(2, false, 0, 0, 0),
+           "G1-N2: queued calm ⇒ no force");
+
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;
     in.pending_gpu_queued = 0;

@@ -66,6 +66,10 @@ struct PhysicsTelemetry
   int GpuKickN{0};
   int GpuKickDebtForcedN{0};
   std::string GpuKickDeferReason;
+  /// Same-frame extra consume after DrainAsyncMeshResults repaired Queued timing.
+  int GpuKickPostDrainN{0};
+  /// Focus miss + debt but Queued still empty after DrainAsyncMeshResults.
+  int GpuKickSkipNoQueuedN{0};
   /// Successful Finish+Commit in last rebuild tick.
   int GpuFinishN{0};
   /// NotReady Finish polls in last rebuild tick.

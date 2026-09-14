@@ -5028,6 +5028,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const UnderfeetReservation uf_res = EvaluateUnderfeetReservation(
       underfeet_need, !(missing_underfeet || underfeet_undrawn),
       world.GetPhysicsTelemetry().UnderfeetPendingLight);
+  world.GetPhysicsTelemetryMutable().GpuKickPostDrainN = 0;
+  world.GetPhysicsTelemetryMutable().GpuKickSkipNoQueuedN = 0;
   const bool rim_only_visible_miss =
       missing_visible_mesh && nearest_miss_h >= 3 && !visual_holes &&
       !missing_underfeet;
@@ -5504,6 +5506,38 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
                                        post_drain);
+    {
+      const auto &pt = world.GetPhysicsTelemetry();
+      const int queued_after_drain =
+          static_cast<int>(mesh_service.GetPendingGpuQueuedCount());
+      const int stale_vl = pt.DrawOracleStaleVertexLightN;
+      const int fully_dark_debt = pt.DrawOracleFullyDarkDebtN;
+      const bool focus_miss = pt.FocusMissingMesh > 0;
+      const int remesh_ok = mesh_service.GetLastMeshDirtyScheduleOkRemeshN();
+      if (cutum::ShouldForceGpuKickPostDrain(
+              queued_after_drain, focus_miss, stale_vl, fully_dark_debt,
+              remesh_ok))
+      {
+        const MeshWorkAdmission &adm2 = mesh_service.GetMeshWorkAdmission();
+        const int extra_drain = std::max(1, FinalizeDrain(mesh_drain, adm2));
+        const int extra_gpu = std::max(2, std::min(4, queued_after_drain));
+        const double extra_budget =
+            std::max(4.0, mesh_service.GetMeshEmergeTotalBudgetMs() * 0.12);
+        const int post_done = mesh_service.ConsumeGpuApplyBacklog(
+            world.GetBlockWorld(), registry, extra_drain, extra_gpu,
+            extra_budget);
+        tick_stats.Completed += post_done;
+        if (post_done > 0)
+        {
+          world.GetPhysicsTelemetryMutable().GpuKickPostDrainN += 1;
+        }
+      }
+      else if (focus_miss && (stale_vl + fully_dark_debt) >= 20 &&
+               queued_after_drain == 0)
+      {
+        world.GetPhysicsTelemetryMutable().GpuKickSkipNoQueuedN += 1;
+      }
+    }
     if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0 ||
         (!moving && pending_focus_count > 0))
     {
