@@ -464,9 +464,41 @@ Build tree может быть очищен обычной процедурой 
 
 ## Execution status (wall-diet track, 2026-09-14)
 
-Plan: `.cursor/plans/west_cruise_wall_diet.plan.md`. Branch tip at freeze: `b521eea0`
+Plan: `.cursor/plans/west_cruise_wall_diet.plan.md`. Branch tip at freeze: `7a25581b`
 (execution on `cursor_audit2_impl`; audit snapshot HEAD was `420335e9`).
 
-Closed or fail-closed in track: N01, N02, N06, N07, N08, N12 + D3 substages/lazy spawn.
-A5 stream census diet deferred (stop-line). Product G1 / oracle / Q9 acceptance still OPEN.
-Reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
+### Wall-diet land vs reopen (bisect 200927→205626)
+
+| ID | Status | Note |
+|---|---|---|
+| N02 row frustum | **KEEP** | B1 revert = disaster (chunk holes/black) |
+| N06 structural CooldownKey | **KEEP** | landed A3 |
+| N01 atomic publish (A1 `58f65ffe`) | **REOPEN** | B4 eye FAIL (holes/texture swap/blink); do not return as-is → N01 v2 |
+| D3.3 lazy spawn (assume ready off-enter) | **REOPEN→cache** | B3: lazy caused rare blink; eager costs ~25 ms → spawn-ring cache |
+| N04 / sticky mid black | **OPEN** | Manual `205626`: mid stalled FullyDark≈staleVL; measure-first |
+| N03 BeginFrame-before-stream | **OPEN** | Still after `UpdateStreaming` |
+| N05 per-key debt age | **OPEN** | Aggregate oldest reset risk remains |
+| N07/N08/N12 fail-closed pieces | landed A0 | — |
+| A5 stream census diet | **deferred** | stop-line VB/stale |
+| Product G1 / pixel oracle / Q9 acceptance | **OPEN** | — |
+
+Follow-on plan: `.cursor/plans/n01_rework_mid-black.plan.md`.
+Interim eye-safe WT (pre-N01-v2): A2+A3 ON, A1 OFF, eager ring, A4 telem ON.
+Bisect reports: `bin/suite_reports/g1_a10_relight/bisect_b*_result.md`, `bisect_b3b_205626_result.md`.
+Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
+
+### Follow-on land (n01_rework_mid-black, same day)
+
+| Step | Status |
+|---|---|
+| S0 docs / reopen N01 | done |
+| S0b `--visible` + dual-lane stop-line | done (`tools/flight_sim_run.py`) |
+| S1 N01 v2 group-commit + no rev on partial | done |
+| S2a `stale_vl_rev_n` / `fully_dark_census_n` | done |
+| S2b dark-face≠StaleVL; debt age; relight_critical gate | done |
+| S3 spawn-ring cache | done |
+| S4 BeginFrame before stream | done (diet still deferred) |
+
+Operator west eye still required for B4 class + `205626` mid stalled.
+
+**Autofly caveat:** wall-diet used `product-174657` **without** `--visible` (hidden GLFW). Merge used `adequacy_pass` (requires high VB), not dual-lane upper stop-line or operator eye — so tip visual FAIL was not caught until manual.
