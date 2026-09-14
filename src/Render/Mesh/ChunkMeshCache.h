@@ -508,6 +508,12 @@ public:
   {
     return LastFirstMeshScheduleEffectiveCap_;
   }
+  int GetLastScheduleLaneFmN() const { return LastScheduleLaneFmN_; }
+  int GetLastScheduleLaneRemeshN() const { return LastScheduleLaneRemeshN_; }
+  int GetLastScheduleLaneStarveReason() const
+  {
+    return LastScheduleLaneStarveReason_;
+  }
   void SetEnterUnderfeetExitBlocked(bool v) { EnterUnderfeetExitBlocked_ = v; }
   void SetFz2DeferGated(bool v) { Fz2DeferGated_ = v; }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
@@ -1159,6 +1165,9 @@ private:
   void AgeFmDirtyGpuWatchFrames();
   bool TryConsumeFmDirtyGpuWatch(glm::ivec3 coord);
   int LastFirstMeshScheduleEffectiveCap_{0};
+  int LastScheduleLaneFmN_{0};
+  int LastScheduleLaneRemeshN_{0};
+  int LastScheduleLaneStarveReason_{0};
   bool EnterUnderfeetExitBlocked_{false};
   bool Fz2DeferGated_{true};
   std::deque<glm::ivec3> RemeshDeferredRing_;

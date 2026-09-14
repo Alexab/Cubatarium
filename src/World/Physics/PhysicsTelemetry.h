@@ -300,6 +300,8 @@ struct PhysicsTelemetry
   int FirstMeshScheduleEffectiveCap{0};
   int FmDirtyEnqueueReserveN{0};
   int RemeshScheduleCap{0};
+  /// Dual-lane Cap1 starve telem (0=None,1=Cap1YieldFm,2=Cap1YieldRemesh,3=NoDemand).
+  int ScheduleLaneStarveReason{0};
   /// FZ2.7-P13 R5: lit-settle remesh protect armed this frame (0/1).
   int RemeshProtectLitSettleN{0};
   /// Per-frame TrimFarRelightFifo drops (not cumulative RelightFifoDropped).

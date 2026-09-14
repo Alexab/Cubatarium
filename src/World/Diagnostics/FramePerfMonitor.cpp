@@ -327,6 +327,7 @@ struct FrameNumbers
   int first_mesh_schedule_effective_cap{0};
   int fm_dirty_enqueue_reserve_n{0};
   int remesh_schedule_cap{0};
+  int schedule_lane_starve_reason{0};
   int remesh_protect_lit_settle_n{0};
   int relight_trim_far_n{0};
   float player_x{0.0f};
@@ -936,6 +937,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.first_mesh_schedule_effective_cap = phys.FirstMeshScheduleEffectiveCap;
   n.fm_dirty_enqueue_reserve_n = phys.FmDirtyEnqueueReserveN;
   n.remesh_schedule_cap = phys.RemeshScheduleCap;
+  n.schedule_lane_starve_reason = phys.ScheduleLaneStarveReason;
   n.remesh_protect_lit_settle_n = phys.RemeshProtectLitSettleN;
   n.relight_trim_far_n = phys.RelightTrimFarN;
   n.player_x = phys.PlayerX;
@@ -1567,6 +1569,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.first_mesh_schedule_effective_cap
           << ",\"fm_dirty_enqueue_reserve_n\":" << n.fm_dirty_enqueue_reserve_n
           << ",\"remesh_schedule_cap\":" << n.remesh_schedule_cap
+          << ",\"schedule_lane_starve_reason\":" << n.schedule_lane_starve_reason
           << ",\"remesh_protect_lit_settle_n\":" << n.remesh_protect_lit_settle_n
           << ",\"relight_trim_far_n\":" << n.relight_trim_far_n
           << ",\"player_x\":" << n.player_x << ",\"player_y\":" << n.player_y

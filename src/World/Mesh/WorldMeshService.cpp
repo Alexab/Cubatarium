@@ -1046,6 +1046,11 @@ int UWorldMeshService::GetLastFirstMeshScheduleEffectiveCap() const
   return Cache.GetLastFirstMeshScheduleEffectiveCap();
 }
 
+int UWorldMeshService::GetLastScheduleLaneStarveReason() const
+{
+  return Cache.GetLastScheduleLaneStarveReason();
+}
+
 int UWorldMeshService::GetLastMeshDirtyScheduleSkipN() const
 {
   return Cache.GetLastMeshDirtyScheduleSkipN();

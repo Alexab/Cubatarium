@@ -2568,6 +2568,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.pending_light_near = pending_focus_count;
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
+    ain.dual_lane_rr_token = DualLaneRrToken_;
     ain.ring_depth = UGpuMeshPipeline::kReadbackRing;
     // Era20: miss cy/horiz into early admit (was Finalize-only) so SoftDefer/
     // PreferKick see FirstMesh class for 214034 cy=3/mh=4 witnesses.
@@ -2628,6 +2629,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         early_adm.remesh_schedule = std::min(early_adm.remesh_schedule, 1);
       }
+      DualLaneRrToken_ = early_adm.dual_lane_rr_token_next;
       mesh_service.SetMeshWorkAdmission(early_adm);
     }
     prep_admission_ms = prep_ms_since(admission_t0);
@@ -5193,6 +5195,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.pending_light_near = pending_focus_count;
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
+    ain.dual_lane_rr_token = DualLaneRrToken_;
     ain.ring_depth = UGpuMeshPipeline::kReadbackRing;
     // K3: rim mh for remesh band when pending cooled.
     if (found_nearest_missing)
@@ -5251,6 +5254,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       bin.protect_lit_settle_remesh = adm.protect_lit_settle_remesh;
       ApplyRemeshAdmitBackpressure(adm, bin);
     }
+    DualLaneRrToken_ = adm.dual_lane_rr_token_next;
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);
     mesh_drain = FinalizeDrain(mesh_drain, adm);
@@ -5676,6 +5680,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   world.GetPhysicsTelemetryMutable().FirstMeshScheduleEffectiveCap =
       mesh_service.GetLastFirstMeshScheduleEffectiveCap();
+  world.GetPhysicsTelemetryMutable().ScheduleLaneStarveReason =
+      mesh_service.GetLastScheduleLaneStarveReason();
 
 #ifndef NDEBUG
   ++gMeshTelemetryTick;

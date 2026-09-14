@@ -992,6 +992,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.FirstMeshScheduleEffectiveCap = 0;
   PhysicsTelemetryData.FmDirtyEnqueueReserveN = 0;
   PhysicsTelemetryData.RemeshScheduleCap = 0;
+  PhysicsTelemetryData.ScheduleLaneStarveReason = 0;
   PhysicsTelemetryData.RemeshProtectLitSettleN = 0;
   PhysicsTelemetryData.RelightTrimFarN = 0;
   PhysicsTelemetryData.RelightFifoDropN = 0;

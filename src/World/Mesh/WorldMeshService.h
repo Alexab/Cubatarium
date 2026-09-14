@@ -238,6 +238,7 @@ public:
   int GetLastMeshDirtyScheduleOkFmN() const;
   int GetLastMeshDirtyScheduleOkRemeshN() const;
   int GetLastFirstMeshScheduleEffectiveCap() const;
+  int GetLastScheduleLaneStarveReason() const;
   int GetLastMeshDirtyScheduleSkipN() const;
   int GetLastMeshDirtyScheduleSkipPipelineN() const;
   int GetLastMeshDirtyScheduleSkipSnapshotN() const;

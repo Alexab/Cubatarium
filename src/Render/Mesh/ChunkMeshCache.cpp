@@ -6086,15 +6086,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     };
     // G1-P1 / A11: fixed order — remesh snapshot under debt, then FirstMesh.
     // Miss must not reorder (P3 FM-first defer removed: visual regress 134914).
+    // Dual-lane admission owns FM/Remesh caps — no ad-hoc first_mesh_cap=min(1).
     schedule_remesh_snapshot_slice();
-    // Under remesh snapshot debt: do not burn remaining budget on FirstMesh
-    // Deferred thrash (210134 skip_snapshot≃139). Keep a thin FM trickle.
-    // (S3 dual-lane replaces this ad-hoc clamp with lane remainder split.)
-    if (reserve_remesh_snap && remesh_scheduled > 0 &&
-        LastMeshSnapshotMs >= kSnapshotBudgetMs * 0.45)
-    {
-      first_mesh_cap = std::min(first_mesh_cap, 1);
-    }
+    LastScheduleLaneFmN_ = first_mesh_cap;
+    LastScheduleLaneRemeshN_ = remesh_cap;
+    LastScheduleLaneStarveReason_ = sched_adm.dual_lane_starve_reason;
     if (MeshFocusValid && first_mesh_cap > 0)
     {
       int outer_soft_defer_skips = 0;
