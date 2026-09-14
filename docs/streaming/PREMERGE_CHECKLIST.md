@@ -35,6 +35,20 @@ python tools/flight_sim_phase_gate.py --phase-id CB --report bin/phase_<id>.json
 - T0 (2026-07-26): `cb_pack` GO; `t0_premerge`/`t0_premerge2` F2 GO with spike
   variance only — accept `cb_pack` as merge reference.
 
+## 2b. G1 product proxy (174657-class)
+
+Gate of record for G1 product / A10 remesh work is **west** resume corridor, not
+north `--replay-manual` yaw 90:
+
+```powershell
+python tools/flight_sim_run.py --world World_164 --scenario product-174657
+```
+
+- Diff evidence: `bin/suite_reports/g1_a10_relight/autofly_vs_manual_diff.md`
+- CLOSED still requires manual eye within 2× of proxy (do not claim CLOSED on
+  autofly alone while west manual blinks).
+- Legacy `--replay-manual` (yaw 90 north) = smoke only.
+
 ## 2a. Timeline + run_outcome (P0 harness)
 
 После каждой фазы A0–D / E1–E5:

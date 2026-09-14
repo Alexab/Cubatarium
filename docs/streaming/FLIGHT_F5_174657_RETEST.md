@@ -119,7 +119,7 @@ python tools/CompareFlightF5.py --perf bin/logs/perf_<new>.jsonl --enter-lit bin
 - **G1-P2 Kick quota (222021):** Queued+debt force ≥1 kick past kick_cut/deadline. Starved queued frames **0.94→0.38**, kick nz **9→16**. Score: `bin/suite_reports/g1_progress/g1_p2_score.json`.
 - **G1-P3 debt age (225316):** `oldest_stale_vertex_light_age_frames` med **5**, resets **28** (not mono-stuck). Score: `bin/suite_reports/g1_progress/g1_p3_score.json`.
 - **G1-P5 north autofly (230002 cold / 230452 warm):** VB med **21**, focus_missing **0**, unfinished ≤1, q9 drawable OK both. **Not** 174657-class / product gate of record — `--replay-manual` default yaw **90** (north `(7,3)→(7,37)`), not west yaw **180**. Scores: `g1_p5_summary.json`, `g1_p5_product_score.json`.
-- **G1 manual west FAIL (080455 / enter 080523):** no-teleport west `(7,3)→(−3,3)`; VB med **75**, `focus_missing≈0.94`, `miss_stuck` max **573**; progress telem (`ok_remesh`/`schedule_ok`/`kick`) live. G1 product **NOT closed**.
+- **G1 manual west FAIL (080455 / enter 080523):** no-teleport west `(7,3)→(−3,3)`; VB med **75**, `focus_missing≈0.94`, `miss_stuck` max **573**; progress telem (`ok_remesh`/`schedule_ok`/`kick`) live. G1 product **NOT closed**. Diff matrix: `bin/suite_reports/g1_a10_relight/autofly_vs_manual_diff.md` (root: north yaw90 vs west yaw180).
 - **Q2b dual-Q contract:** FullyDark → `StaleVertexLight` + RemeshQ; FM = MissingResident only. No new Capture/Apply floors.
 - **175610 FAIL:** SoftDefer/shed CLOSED-AS-FAILED.
 
