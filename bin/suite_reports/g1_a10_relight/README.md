@@ -141,11 +141,12 @@ Plan: post-N01 eye thrash → T2 mid black (do not edit plan SoT during quiet ex
 | P1-b | accept light-stale apply; Priority only undrawn holes |
 | P2 | accept geom-stale when drawable; blink=holes-only; mid stale≤8 (=102527 thrash class) |
 | Autofly `173946` | eye_proxy **PASS** (mid stale=7, Δ=0, blink=0, incomplete=0); adequacy PASS |
-| T2 / N04 | **REOPEN** — `202118`/`204501`: legal_dark≈VB, stalled≈0 without heal; plan `n04_legal_dark_greenwash_fix` |
-| Manual `204501` | operator **FAIL**; eye Δ=3; incomplete=0 KEEP |
+| T2 / N04 | **H1–H5 landed** — `213719`: legal_dark=0, stalled~64, VB~97, eye PASS; dual-lane OPEN; operator west vs `204501` |
+| Manual `204501` | operator **FAIL** SoT; eye Δ=3; incomplete=0 KEEP |
 
 Reports: `post_n01_p0_af_*`, `post_n01_p1*_af_*`, `post_n01_p2_final_af_{cold,score}.json`,
-`post_n01_p3l_t2_af_{cold,score}.json`, `n01_manual_204501.json`.
+`post_n01_p3l_t2_af_{cold,score}.json`, `n01_manual_204501.json`,
+`n04_heal_h5_af_{cold,score}.json`.
 Self-test: `102527` eye_proxy PASS under thrash class; `095545`/`121131` still FAIL.
 Scorecard: `mid_stalled_gate` FAILS on `legal_dark_masks_stalled` when legal_dark≥50% of VB≥40.
 
