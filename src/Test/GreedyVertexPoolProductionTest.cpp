@@ -1,10 +1,22 @@
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/GreedyVertexPool.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/ChunkMeshCache.h"
 #include <cstring>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
+
+// Production test binary does not link ChunkMeshCache.cpp; PublishPassInputs
+// only calls Append when mesh_cache != nullptr (RefreshPassRefs path).
+namespace cutum
+{
+void UChunkMeshCache::AppendGreedyPassBatchRefs(
+    glm::ivec3, bool, std::vector<GreedyBatchRef> &) const
+{
+}
+} // namespace cutum
 
 namespace
 {
@@ -277,27 +289,114 @@ int main(int argc, char **argv)
             "N01 primary dirty survives untouched-only publish");
     }
 
-    // Dirty coord with partial batch upload must retain full predecessor set.
-    cutum::GreedyBatchRef rp{};
-    rp.chunkCoord = ra.chunkCoord;
-    rp.batchIndex = 0;
-    cutum::GreedyMeshBatch partial_a = small_a;
-    partial_a.vertices.resize(4);
-    (void)backend2.PublishPassInputs(cache2, {{rp, &partial_a}}, {ra.chunkCoord},
-                                     4, 4, 1);
-    check(cache2.PendingGeometryDirty.count(ra.chunkCoord) == 1,
-          "N01 v2.1 partial dirty upload keeps coord dirty");
-    uint16_t a_after = 0;
-    uint16_t b_after = 0;
-    for (const auto &g : cache2.batches)
+    // U6: incomplete without expand — cache pass needs {0,1}, inputs only {0}.
     {
-      if (g.chunkCoord == ra.chunkCoord && g.batchIndex == 0)
-        a_after = g.blockId;
-      if (g.chunkCoord == ra.chunkCoord && g.batchIndex == 1)
-        b_after = g.blockId;
+      (void)cutum::ConsumePublicationIncompleteMaterialN();
+      (void)cutum::ConsumePublicationOomRetainN();
+      cutum::GreedyBatchRef rp{};
+      rp.chunkCoord = ra.chunkCoord;
+      rp.batchIndex = 0;
+      cutum::GreedyMeshBatch partial_a = small_a;
+      partial_a.vertices.resize(4);
+      const std::unordered_set<uint16_t> need_both{0, 1};
+      (void)backend2.PublishPassInputs(cache2, {{rp, &partial_a}},
+                                       {ra.chunkCoord}, 4, 4, 1, nullptr,
+                                       &need_both);
+      check(cache2.PendingGeometryDirty.count(ra.chunkCoord) == 1,
+            "U6 incomplete keeps coord dirty");
+      check(cutum::ConsumePublicationIncompleteMaterialN() >= 1,
+            "U6 incomplete_material increments");
+      uint16_t a_after = 0;
+      uint16_t b_after = 0;
+      for (const auto &g : cache2.batches)
+      {
+        if (g.chunkCoord == ra.chunkCoord && g.batchIndex == 0)
+          a_after = g.blockId;
+        if (g.chunkCoord == ra.chunkCoord && g.batchIndex == 1)
+          b_after = g.blockId;
+      }
+      check(a_after == 9 && b_after == 9,
+            "U6 incomplete retains full A/B predecessors");
     }
-    check(a_after == 9 && b_after == 9,
-          "N01 v2.1 partial dirty upload retains full A/B predecessors");
+
+    // U1: expand-equivalent full inputs {0,1} clear dirty when both OK.
+    {
+      for (auto &f : fences)
+        f.second = GL_ALREADY_SIGNALED;
+      cache2.VertexPool.BeginUploadFrame();
+      cache2.VertexPool.SetMaxCapacityBytes(0);
+      cutum::GreedyMeshBatch new_a = ba;
+      cutum::GreedyMeshBatch new_b = bb;
+      new_a.blockId = static_cast<cutum::BlockId>(21);
+      new_b.blockId = static_cast<cutum::BlockId>(22);
+      new_a.vertices.resize(4);
+      new_b.vertices.resize(4);
+      const std::unordered_set<uint16_t> need_both{0, 1};
+      check(backend2.PublishPassInputs(cache2, {{ra, &new_a}, {rb, &new_b}},
+                                       {ra.chunkCoord}, 5, 5, 1, nullptr,
+                                       &need_both),
+            "U1 full-cache inputs publish");
+      check(cache2.PendingGeometryDirty.count(ra.chunkCoord) == 0,
+            "U1 dirty clears when both batches OK");
+    }
+
+    // U2: material remove — cache pass {0} only; resident had {0,1}.
+    {
+      for (auto &f : fences)
+        f.second = GL_ALREADY_SIGNALED;
+      cache2.VertexPool.BeginUploadFrame();
+      cutum::GreedyMeshBatch only0 = ba;
+      only0.blockId = static_cast<cutum::BlockId>(30);
+      only0.vertices.resize(4);
+      const std::unordered_set<uint16_t> need_zero{0};
+      check(backend2.PublishPassInputs(cache2, {{ra, &only0}}, {ra.chunkCoord},
+                                       6, 6, 1, nullptr, &need_zero),
+            "U2 material-remove publishes");
+      size_t ra_n = 0;
+      bool ra0_ok = false;
+      bool ra1_gone = true;
+      for (const auto &g : cache2.batches)
+      {
+        if (g.chunkCoord != ra.chunkCoord)
+          continue;
+        ++ra_n;
+        if (g.batchIndex == 0 && g.blockId == 30)
+          ra0_ok = true;
+        if (g.batchIndex == 1)
+          ra1_gone = false;
+      }
+      check(ra_n == 1 && ra0_ok && ra1_gone,
+            "U2 commits only batch0; ghost batch1 gone");
+      check(cache2.PendingGeometryDirty.empty(), "U2 dirty clears");
+      check(cache2.meshRevision == 6, "U2 meshRev advances when only dirty");
+    }
+
+    // U3: OOM retain increments oom counter (tiny-cap on replacement).
+    {
+      cutum::UGreedyGpuBackend backend3;
+      cutum::GreedyGpuPassCache cache3;
+      cutum::GreedyBatchRef xa{}, xb{};
+      xa.chunkCoord = xb.chunkCoord = {7, 0, 7};
+      xa.batchIndex = 0;
+      xb.batchIndex = 1;
+      cutum::GreedyMeshBatch xa_b = batch;
+      cutum::GreedyMeshBatch xb_b = batch;
+      check(backend3.PublishPassInputs(cache3, {{xa, &xa_b}, {xb, &xb_b}}, {},
+                                       1, 1, 1),
+            "U3 seed A/B");
+      auto big = xa_b;
+      big.vertices.resize(200);
+      cache3.VertexPool.SetMaxCapacityBytes(cache3.VertexPool.CapacityBytes());
+      (void)cutum::ConsumePublicationOomRetainN();
+      (void)backend3.PublishPassInputs(cache3, {{xa, &big}, {xb, &xb_b}},
+                                       {xa.chunkCoord}, 2, 2, 1);
+      check(cache3.PendingGeometryDirty.count(xa.chunkCoord) == 1,
+            "U3 OOM keeps dirty");
+      check(cache3.meshRevision == 1, "U3 meshRev flat on OOM");
+      check(cutum::ConsumePublicationOomRetainN() >= 1, "U3 oom_retain++");
+      cache3.VertexPool.Destroy();
+    }
+
     cache2.VertexPool.Destroy();
   }
   return failures ? 1 : 0;

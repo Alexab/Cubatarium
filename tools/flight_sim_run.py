@@ -48,6 +48,8 @@ EYE_PROXY_STOP_LINE = {
     "mesh_apply_stale_visual_delta_med_max": 1.5,
     "effective_holes_blink_rate_max": 0.05,
     "transparent_cmd_reorder_mid_med_max": 1.0,
+    # N01 retain-storm: incomplete material mid med ≪ 134038 baseline (~40).
+    "publication_incomplete_material_mid_med_max": 5.0,
 }
 
 
@@ -417,11 +419,15 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         holes_xs = values("near_focus_holes")
         visual_holes_xs = values("visual_holes")
         reorder_xs = values("transparent_cmd_reorder_n")
+        incomplete_xs = values("publication_incomplete_material_n")
+        oom_xs = values("publication_oom_retain_n")
         stale_med = median(stale_xs)
         holes_med = median(holes_xs)
         visual_holes_med = median(visual_holes_xs)
         delta_med = median(deltas)
         reorder_med = median(reorder_xs)
+        incomplete_med = median(incomplete_xs)
+        oom_med = median(oom_xs)
 
         # Alias *_fly_* = mid values for one release (readers / old reports).
         metrics = {
@@ -436,6 +442,8 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "transparent_cmd_reorder_fly_med": reorder_med,
             "near_focus_holes_mid_med": holes_med,
             "visual_holes_mid_med": visual_holes_med,
+            "publication_incomplete_material_mid_med": incomplete_med,
+            "publication_oom_retain_mid_med": oom_med,
             "rows_used": len(use),
         }
         fails: list[str] = []
@@ -453,6 +461,10 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "transparent_cmd_reorder_mid_med_max"
         ]:
             fails.append("transparent_cmd_reorder_mid_med_above_eye_proxy")
+        if incomplete_med is not None and float(incomplete_med) > EYE_PROXY_STOP_LINE[
+            "publication_incomplete_material_mid_med_max"
+        ]:
+            fails.append("incomplete_material_mid_med_above_eye_proxy")
         # Holes telem = missing mesh only; thrash with holes==0 is still a defect.
         if (
             (holes_med is None or float(holes_med) == 0.0)

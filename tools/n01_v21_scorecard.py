@@ -113,6 +113,15 @@ def build_scorecard(perf_path: Path, *, label: str, operator_visual: str | None)
             "unlit_max": max(unlit) if unlit else None,
             "mesh_apply_stale_visual_med": med(stale_vis),
             "mesh_apply_stale_visual_delta_med": med(stale_deltas),
+            "publication_incomplete_material_med": med(
+                collect("publication_incomplete_material_n", mid_focus)
+            ),
+            "publication_oom_retain_med": med(
+                collect("publication_oom_retain_n", mid_focus)
+            ),
+            "publication_overload_retain_med": med(
+                collect("publication_overload_retain_n", mid_focus)
+            ),
             "rows_mid": len(mid),
             "rows_mid_focus": len(mid_focus),
         },
