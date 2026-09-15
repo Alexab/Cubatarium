@@ -2041,6 +2041,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         GreedyGpuCutout.VertexPool.ConsumeReserveBumpN() +
         GreedyGpuTransparent.VertexPool.ConsumeReserveBumpN();
     phys.PublicationOverloadRetainN = ConsumePublicationOverloadRetainN();
+    phys.PubVerChangedWithoutFreshN = ConsumePubVerChangedWithoutFreshN();
+    phys.PassMeshRevLagMax = ConsumePassMeshRevLagMax();
     phys.CullStatsSyncReadN = ConsumeCullStatsSyncReadN();
     phys.PoolRetiredPendingN = static_cast<int>(
         GreedyGpuOpaque.VertexPool.RetiredSlotCount() +

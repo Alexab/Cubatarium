@@ -743,6 +743,9 @@ struct FrameNumbers
   uint64_t cull_stats_sync_read_n{0};
   double frame_deadline_remaining_ms{0.0};
   uint64_t publication_progress_unit_n{0};
+  uint64_t publication_overload_retain_n{0};
+  uint64_t pubver_changed_without_fresh_n{0};
+  uint64_t pass_mesh_rev_lag_max{0};
   double gpu_cull_cpu_ms{0.0};
   double gpu_cull_submit_cpu_ms{0.0};
   double gpu_cull_exec_ms{-1.0};
@@ -1382,6 +1385,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.cull_stats_sync_read_n = phys.CullStatsSyncReadN;
   n.frame_deadline_remaining_ms = UFrameDeadline::Get().RemainingMs();
   n.publication_progress_unit_n = ConsumePublicationProgressUnitN();
+  n.publication_overload_retain_n = phys.PublicationOverloadRetainN;
+  n.pubver_changed_without_fresh_n = phys.PubVerChangedWithoutFreshN;
+  n.pass_mesh_rev_lag_max = phys.PassMeshRevLagMax;
   n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
   n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
   n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
@@ -2071,6 +2077,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.frame_deadline_remaining_ms
           << ",\"publication_progress_unit_n\":"
           << n.publication_progress_unit_n
+          << ",\"publication_overload_retain_n\":"
+          << n.publication_overload_retain_n
+          << ",\"pubver_changed_without_fresh_n\":"
+          << n.pubver_changed_without_fresh_n
+          << ",\"pass_mesh_rev_lag_max\":" << n.pass_mesh_rev_lag_max
           << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
           << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
           << ",\"gpu_light_readback\":" << n.gpu_light_readback

@@ -161,6 +161,12 @@ uint64_t ConsumePublicationOverloadRetainN();
 /// Q5: one successful chunk/batch publish under tiny-cap (progress unit).
 void NotePublicationProgressUnit();
 uint64_t ConsumePublicationProgressUnitN();
+/// N01 autopsy: publication table changed without any_fresh (untouched/sort churn).
+void NotePubVerChangedWithoutFresh();
+uint64_t ConsumePubVerChangedWithoutFreshN();
+/// Max pass meshRevision lag (arg − cache.meshRevision) observed this frame.
+void NotePassMeshRevLag(uint64_t lag);
+uint64_t ConsumePassMeshRevLagMax();
 
 } // namespace cutum
 

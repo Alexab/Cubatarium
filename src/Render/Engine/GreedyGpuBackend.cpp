@@ -168,6 +168,8 @@ void UGreedyGpuBackend::RefreshPassRefs(
     if (previous != cache.publicationVersion) NoteCmdReorder();
     NoteOrderOnlyFail(TransparentOrderOnlyFailReason::Ok);
   }
+  if (mesh_revision > cache.meshRevision)
+    NotePassMeshRevLag(mesh_revision - cache.meshRevision);
 }
 
 void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
