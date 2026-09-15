@@ -128,3 +128,22 @@ Cold autofly post-fix `145051` (`n01_retain_af_cold.json`):
 `pass_mesh_rev_lag_max` mid still ~459 (not zero — other dirty classes remain);
 eye_proxy still FAIL on stale_visual mid≈19.5 / blink; dual-lane FAIL (VB/stale/stalled).
 G1 **OPEN**. Manual west eye still required.
+
+## Post-N01 eye thrash (stamp → T2) — SoT `160234` / autofly `173946`
+
+Plan: post-N01 eye thrash → T2 mid black (do not edit plan SoT during quiet exec).
+
+| Anchor | Role |
+|---|---|
+| Manual `160234` | N01 retain closed (incomplete/oom mid=0); residual Δstale=3 eye FAIL; stalled~54 |
+| P0 | reason split `mesh_apply_stale_{geom,light,catalog,stamp_invalid}` — light dominant mid |
+| P1-b | accept light-stale apply; Priority only undrawn holes |
+| P2 | accept geom-stale when drawable; blink=holes-only; mid stale≤8 (=102527 thrash class) |
+| Autofly `173946` | eye_proxy **PASS** (mid stale=7, Δ=0, blink=0, incomplete=0); adequacy PASS |
+| T2 / N04 | **still FREEZE** until P3 ticket remesh (mid stalled≪5) |
+
+Reports: `post_n01_p0_af_*`, `post_n01_p1*_af_*`, `post_n01_p2_final_af_{cold,score}.json`.
+Self-test: `102527` eye_proxy PASS under thrash class; `095545`/`121131` still FAIL.
+
+**Merge:** adequacy ∧ dual_lane (stalled≤5 after P3) ∧ eye_proxy ∧ operator west eye.
+Do **not** claim G1 CLOSED. T2 MarkRelit retune stays frozen until P3 green.

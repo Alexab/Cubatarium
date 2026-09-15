@@ -475,7 +475,7 @@ Plan: `.cursor/plans/west_cruise_wall_diet.plan.md`. Branch tip at freeze: `7a25
 | N06 structural CooldownKey | **KEEP** | landed A3 |
 | N01 atomic publish (A1 `58f65ffe`) | **REOPEN→epoch-split→narrow any_fresh→full-cache dirty publish** | `134038` retain storm SoT (incomplete on frustum refs); expand + `cache⊆upload` |
 | D3.3 lazy spawn (assume ready off-enter) | **cache+ring_dirty** | S3 cache; invalidate on `NeedsSpawnRingCatchUp` |
-| N04 / sticky mid black | **REOPEN→ticket remesh; T2 FREEZE** | stalled 54→23.5 still ≫5; freeze MarkRelit retune until thrash ≤102527 |
+| N04 / sticky mid black | **REOPEN→ticket remesh; T2 FREEZE** | thrash ≤102527 class on autofly `173946` (eye_proxy PASS); T2 still FREEZE until mid stalled≤5 |
 | N03 BeginFrame-before-stream | **done** | S4 landed |
 | N05 per-key debt age | **PARTIAL** | class-level age; per-key deferred |
 | N07/N08/N12 fail-closed pieces | N08 **eye_proxy mid-corridor** | fly-only stale med=2 missed mid=17 on autofly `095545` |
@@ -496,7 +496,7 @@ Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
 | S0b `--visible` + dual-lane stop-line | done; mid stalled≤5 gate |
 | S1 N01 v2 group-commit | done; epoch-split → **narrow: pubVer only on any_fresh** (C1 landed) |
 | S2a `stale_vl_rev_n` / `fully_dark_census_n` | done |
-| S2b / T2 mid FullyDark | landed early (order violate); **FREEZE** until eye thrash ≤102527 |
+| S2b / T2 mid FullyDark | thrash class met (`173946`); **FREEZE** until P3 ticket remesh mid stalled≤5 |
 | S3 spawn-ring cache | done + ring_dirty invalidate |
 | S4 BeginFrame before stream | done (diet deferred) |
 | T0 eye_proxy stop-line | done → **mid-corridor + swap-without-holes** (N08) |
@@ -508,19 +508,22 @@ Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
 | Manual `102527` | v2.1 thrash SoT | 8 (Δmed 3) | 54 | 0 | B4 swap/blink/per-block |
 | Manual `121131` | **post-epoch regress** | **21.5** | 23.5 | 0 | worse thrash; T2 partial |
 | Manual `134038` | **retain-storm SoT** | ~8.5 | — | 0 | overload retain mid≈40; meshRev lag≈535; C1 OK |
+| Manual `160234` | **N01 retain closed** | 3.5 (Δ=3) | ~54 | 0 | incomplete=0; eye Δ FAIL → post-N01 thrash track |
+| Autofly `173946` | **post-N01 P2 thrash** | 7 (Δ=0) | ~62–116 | 0 | eye_proxy PASS (mid≤8 class); T2 still OPEN |
 
 Scorecards: `n01_thrash_manual_102527.json`, `n01_thrash_manual_121131.json`,
-`n01_thrash_postfix_cold_score.json`. Post-fix autofly after epoch-split was
-**missing** until thrash_autopsy track.
+`n01_thrash_postfix_cold_score.json`, `n01_retain_manual_160234.json`,
+`post_n01_p2_final_af_score.json`.
 
 **N01 full-cache dirty publish:** `RefreshPassRefs` expands dirty uploads from
 full `GreedyCache` pass set; incomplete = `cache⊆upload` (not `resident⊆upload`);
 telem split `publication_incomplete_material_n` / `publication_oom_retain_n`.
-C1 KEEP; T2 freeze; eye_proxy incomplete mid≤5. G1 remains **OPEN**.
+C1 KEEP; post-N01 P0/P1/P2 thrash cut (light+geom accept, holes blink); T2 still
+FREEZE until mid stalled≤5. eye_proxy incomplete mid≤5. G1 remains **OPEN**.
 
 **Merge signals (N08):** `adequacy_pass` ∧ `dual_lane_stop_line_pass` ∧
 `eye_proxy_stop_line_pass` (mid-corridor `focus_cx∈[2,5]`, not fly-only;
-includes incomplete_material mid≤5) ∧
+stale mid≤8 thrash class, Δ≤1.5, holes blink, incomplete_material mid≤5) ∧
 operator west eye. Adequacy alone is not merge-green. `near_focus_holes≈0` is
 **not** proof of no per-block defects (missing-mesh telem only).
 G1 / pixel oracle / Q9 remain **OPEN**.
