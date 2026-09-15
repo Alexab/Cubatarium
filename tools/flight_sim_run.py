@@ -40,13 +40,14 @@ DUAL_LANE_STOP_LINE = {
     "mid_fully_dark_stalled_med_max": 5.0,
 }
 
-# Eye-proxy thrash stop-line (N08). Catches B4 swap/blink that VB/stalled miss.
-# Four merge signals: adequacy / dual-lane / eye_proxy / operator eye.
+# Eye-proxy thrash stop-line (N08). Mid-corridor SoT (same band as dual-lane stalled).
+# Fly-only med greenwashed autofly 095545 (fly stale=2, mid=17). Four merge signals:
+# adequacy / dual-lane / eye_proxy / operator eye. Adequacy alone is not merge-green.
 EYE_PROXY_STOP_LINE = {
-    "mesh_apply_stale_visual_fly_med_max": 6.0,
+    "mesh_apply_stale_visual_mid_med_max": 6.0,
     "mesh_apply_stale_visual_delta_med_max": 1.5,
     "effective_holes_blink_rate_max": 0.05,
-    "transparent_cmd_reorder_fly_med_max": 1.0,
+    "transparent_cmd_reorder_mid_med_max": 1.0,
 }
 
 
@@ -330,7 +331,7 @@ def compute_dual_lane_stop_line(
 
 
 def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
-    """B4 thrash proxies (stale-visual churn / holes blink / reorder). Not adequacy."""
+    """B4 thrash proxies on mid-corridor (not fly-only). Not adequacy / not pixels."""
     try:
         rows: list[dict] = []
         for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -339,6 +340,18 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             row = json.loads(line)
             if row.get("kind") == "period":
                 rows.append(row)
+
+        mid_third = (
+            rows[len(rows) // 3 : (2 * len(rows)) // 3] if len(rows) >= 3 else rows
+        )
+        mid_focus: list[dict] = []
+        for row in mid_third:
+            try:
+                cx = float(row.get("focus_cx") or 0)
+            except (TypeError, ValueError):
+                continue
+            if 2.0 <= cx <= 5.0:
+                mid_focus.append(row)
         fly: list[dict] = []
         for row in rows:
             try:
@@ -346,11 +359,20 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
                     fly.append(row)
             except (TypeError, ValueError):
                 continue
-        use = fly if fly else rows
 
-        def values(key: str, subset: list[dict] | None = None) -> list[float]:
+        if mid_focus:
+            use = mid_focus
+            segment = "mid_corridor"
+        elif mid_third:
+            use = mid_third
+            segment = "mid_third"
+        else:
+            use = fly if fly else rows
+            segment = "fly_fallback"
+
+        def values(key: str) -> list[float]:
             out: list[float] = []
-            for row in subset if subset is not None else use:
+            for row in use:
                 try:
                     val = row.get(key)
                     if val is not None:
@@ -371,11 +393,10 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         stale_xs = values("mesh_apply_stale_visual")
         if not stale_xs:
             stale_xs = values("mesh_apply_stale")
-        deltas: list[float] = []
-        for i in range(1, len(stale_xs)):
-            deltas.append(abs(stale_xs[i] - stale_xs[i - 1]))
+        deltas: list[float] = [
+            abs(stale_xs[i] - stale_xs[i - 1]) for i in range(1, len(stale_xs))
+        ]
 
-        # effective_holes blink: unfinished_visual ∪ near_focus_holes / visual_holes
         hole_flags: list[float] = []
         for row in use:
             unfinished = float(row.get("unfinished_visual") or 0) > 0
@@ -388,34 +409,59 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             if hole_flags[i] != hole_flags[i - 1]:
                 blink_transitions += 1
         blink_rate = (
-            blink_transitions / max(1, len(hole_flags) - 1) if len(hole_flags) >= 2 else 0.0
+            blink_transitions / max(1, len(hole_flags) - 1)
+            if len(hole_flags) >= 2
+            else 0.0
         )
 
+        holes_xs = values("near_focus_holes")
+        visual_holes_xs = values("visual_holes")
         reorder_xs = values("transparent_cmd_reorder_n")
+        stale_med = median(stale_xs)
+        holes_med = median(holes_xs)
+        visual_holes_med = median(visual_holes_xs)
+        delta_med = median(deltas)
+        reorder_med = median(reorder_xs)
+
+        # Alias *_fly_* = mid values for one release (readers / old reports).
         metrics = {
-            "mesh_apply_stale_visual_fly_med": median(stale_xs),
-            "mesh_apply_stale_visual_delta_med": median(deltas),
+            "source": "period_jsonl",
+            "perf_path": str(perf_path),
+            "eye_proxy_segment": segment,
+            "mesh_apply_stale_visual_mid_med": stale_med,
+            "mesh_apply_stale_visual_fly_med": stale_med,
+            "mesh_apply_stale_visual_delta_med": delta_med,
             "effective_holes_blink_rate": blink_rate,
-            "transparent_cmd_reorder_fly_med": median(reorder_xs),
+            "transparent_cmd_reorder_mid_med": reorder_med,
+            "transparent_cmd_reorder_fly_med": reorder_med,
+            "near_focus_holes_mid_med": holes_med,
+            "visual_holes_mid_med": visual_holes_med,
+            "rows_used": len(use),
         }
         fails: list[str] = []
-        stale_med = metrics["mesh_apply_stale_visual_fly_med"]
         if stale_med is None or float(stale_med) > EYE_PROXY_STOP_LINE[
-            "mesh_apply_stale_visual_fly_med_max"
+            "mesh_apply_stale_visual_mid_med_max"
         ]:
-            fails.append("mesh_apply_stale_visual_fly_med_above_eye_proxy")
-        delta_med = metrics["mesh_apply_stale_visual_delta_med"]
+            fails.append("mesh_apply_stale_visual_mid_med_above_eye_proxy")
         if delta_med is None or float(delta_med) > EYE_PROXY_STOP_LINE[
             "mesh_apply_stale_visual_delta_med_max"
         ]:
             fails.append("mesh_apply_stale_visual_delta_med_above_eye_proxy")
         if float(blink_rate) > EYE_PROXY_STOP_LINE["effective_holes_blink_rate_max"]:
             fails.append("effective_holes_blink_rate_above_eye_proxy")
-        reorder_med = metrics["transparent_cmd_reorder_fly_med"]
         if reorder_med is not None and float(reorder_med) > EYE_PROXY_STOP_LINE[
-            "transparent_cmd_reorder_fly_med_max"
+            "transparent_cmd_reorder_mid_med_max"
         ]:
-            fails.append("transparent_cmd_reorder_fly_med_above_eye_proxy")
+            fails.append("transparent_cmd_reorder_mid_med_above_eye_proxy")
+        # Holes telem = missing mesh only; thrash with holes==0 is still a defect.
+        if (
+            (holes_med is None or float(holes_med) == 0.0)
+            and (visual_holes_med is None or float(visual_holes_med) == 0.0)
+            and stale_med is not None
+            and float(stale_med)
+            > EYE_PROXY_STOP_LINE["mesh_apply_stale_visual_mid_med_max"]
+        ):
+            fails.append("stale_visual_without_hole_counters")
         metrics["eye_proxy_stop_line_pass"] = len(fails) == 0
         metrics["eye_proxy_stop_line_fails"] = fails
         return metrics
