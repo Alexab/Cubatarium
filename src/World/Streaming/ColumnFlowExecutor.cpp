@@ -15,6 +15,7 @@
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/VisualStagePolicy.h"
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 

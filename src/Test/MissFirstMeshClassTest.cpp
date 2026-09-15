@@ -3190,14 +3190,23 @@ int main()
   // FZ2.5-P0b: force MarkRelit for stalled ticketed stale
   {
     using cutum::ShouldForceMarkRelitForTicketedStale;
+    using cutum::ShouldRemeshTicketedFullyDarkStalled;
     Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, true, 2),
            "FZ25-P0b: force stale ticket on lit ring");
     Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, false, 2),
            "N04 T2: equal-rev FullyDark ticket still forces MarkRelit");
     Expect(!ShouldForceMarkRelitForTicketedStale(true, true, true, true, 5),
            "FZ25-P0b: rim outside lit ring");
-    Expect(!ShouldForceMarkRelitForTicketedStale(true, false, true, false, 2),
-           "N04 T2: no ticket → no force");
+    Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, false, 2),
+           "N04 T2: consume FullyDark forces after ticket drain");
+    Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, false, 2),
+           "N04 T2: no consume → no force");
+    Expect(ShouldRemeshTicketedFullyDarkStalled(true, false, true, 2),
+           "N04 T2: ticketed FullyDark no progress → remesh");
+    Expect(!ShouldRemeshTicketedFullyDarkStalled(true, true, true, 2),
+           "N04 T2: progress present → no stalled remesh");
+    Expect(!ShouldRemeshTicketedFullyDarkStalled(false, false, true, 2),
+           "N04 T2: no ticket → no stalled remesh");
   }
 
   // FZ2.6: budget reality + consumer backpressure + mesh drain split

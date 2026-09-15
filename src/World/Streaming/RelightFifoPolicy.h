@@ -705,17 +705,33 @@ inline bool ShouldForceMarkRelitOnUnchangedLight(
   return false;
 }
 
-/// FZ2.5-P0b / N04 T2: stalled RelightThenMesh ticket on FullyDark lit ring —
-/// force MarkRelit remesh even when equal-rev (still_stale=false). Ticket ∧
-/// FullyDark ∧ ring is the gate; do not require revision mismatch (102527 class).
+/// FZ2.5-P0b / N04 T2: stalled RelightThenMesh on FullyDark lit ring —
+/// force MarkRelit remesh even when equal-rev (still_stale=false).
+/// consume_mode ∧ FullyDark ∧ ring is the gate; do not require revision
+/// mismatch (102527 class). has_repair_ticket is optional: Flow ticket is
+/// often already drained by the time MarkRelit runs after RelightThenMesh Apply
+/// (173946: path_primary_consume>0, schedule_n=0, stalled≫5).
 inline bool ShouldForceMarkRelitForTicketedStale(
     bool consume_mode, bool has_repair_ticket, bool fully_dark,
     bool still_stale, int horiz,
     int ring = kVisualStageLitDrawableHoriz)
 {
   (void)still_stale;
-  return consume_mode && has_repair_ticket && fully_dark && horiz >= 0 &&
-         horiz <= ring;
+  (void)has_repair_ticket;
+  return consume_mode && fully_dark && horiz >= 0 && horiz <= ring;
+}
+
+/// N04 T2: remesh ticketed FullyDark when Flow ticket exists but ColumnHasRepairProgress
+/// is false (SoftDefer≠progress). Cap at call site; MarkDirty not Priority.
+inline bool ShouldRemeshTicketedFullyDarkStalled(bool has_repair_ticket,
+                                                bool has_repair_progress,
+                                                bool fully_dark_drawable,
+                                                int horiz,
+                                                int ring =
+                                                    kVisualStageLitDrawableHoriz)
+{
+  return has_repair_ticket && !has_repair_progress && fully_dark_drawable &&
+         horiz >= 0 && horiz <= ring;
 }
 
 /// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.

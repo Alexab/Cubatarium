@@ -92,8 +92,10 @@ int main()
          "C09 equal-rev FullyDark ticket forces");
   Expect(!ShouldForceMarkRelitForTicketedStale(true, true, true, true, 5),
          "C09 rim outside ring");
-  Expect(!ShouldForceMarkRelitForTicketedStale(true, false, true, false, 1),
-         "C09 no ticket no force");
+  Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, false, 1),
+         "C09 consume FullyDark forces even after ticket drain");
+  Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, false, 1),
+         "C09 no consume no force");
 
   // C13 stale revision
   Expect(IsMeshLightStale(1, 2), "C13 stale revision");
@@ -144,8 +146,11 @@ int main()
     in.relit_chunks.clear();
     in.relit_chunks.push_back(ch);
     const auto plan_noop = PlanColumnInstall(in);
-    Expect(plan_noop.mark_dirty_priority.empty(),
-           "P7: matching light rev does not bump FullyDark remesh");
+    // G1/N04 T2: consume_mode bumps already-Dirty FullyDark even when revs match
+    // (193536/173946: skip_already_dirty with schedule=0 while PL erased).
+    Expect(!plan_noop.mark_dirty_priority.empty(),
+           "N04 T2: consume matching-rev FullyDark still bumps Dirty head");
+    Expect(plan_noop.schedule_n >= 1, "N04 T2: consume equal-rev schedules");
   }
 
   Expect(ShouldConsumeTicketedVbDebt(0, 81, 0), "consume VB debt");

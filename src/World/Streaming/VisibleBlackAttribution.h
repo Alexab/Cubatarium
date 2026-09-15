@@ -27,16 +27,24 @@ struct VisibleBlackFocusCounts
 };
 
 /// Classify why a focus column counts as visible-black.
+/// equal_rev_legal_dark: FullyDark drawable with matching light revs — LegalDark
+/// even if a RelightThenMesh ticket remains (remesh cannot heal; N04 T2).
 inline VisibleBlackCause ClassifyVisibleBlackColumn(bool stale_dark,
                                                     bool fully_dark,
                                                     bool has_ticket,
                                                     bool has_progress,
                                                     bool sticky,
-                                                    bool pending_replace)
+                                                    bool pending_replace,
+                                                    bool equal_rev_legal_dark =
+                                                        false)
 {
   if (!fully_dark)
   {
     return VisibleBlackCause::StaleDarkWithLitField;
+  }
+  if (equal_rev_legal_dark && !pending_replace)
+  {
+    return VisibleBlackCause::LegalDarkNoRepair;
   }
   if (has_ticket && !has_progress && !sticky)
   {

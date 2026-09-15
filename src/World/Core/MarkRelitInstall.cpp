@@ -65,8 +65,16 @@ ColumnChunkSnapshot BuildLitApplyChunkSnapshot(
   {
     snap.still_stale =
         IsMeshLightStale(snap.meshed_light_rev, snap.light_field_rev);
-    // N04: equal-rev FullyDark is census debt, not automatic StaleVL remesh
-    // demand. RelightThenMesh critical path still sees FullyDarkStalledN.
+    // N04 T2 unfreeze: slim/primary_only used rev-only stale and skipped GPU
+    // dark-face → noop Apply cleared PendingLight without MarkDirty while
+    // FullyDark VB stalled (173946: schedule_n=0). Equal-rev FullyDark still
+    // demands remesh via GPU dark-face; force_stale_ticket covers consume path.
+    if (!snap.still_stale && snap.fully_dark)
+    {
+      snap.still_stale = IsMeshLightStaleGpu(
+          probe.gpu_resident, probe.gpu_has_dark_face, snap.meshed_light_rev,
+          snap.light_field_rev);
+    }
   }
   else if (snap.fully_dark)
   {
