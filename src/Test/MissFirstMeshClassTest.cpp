@@ -3194,13 +3194,15 @@ int main()
     Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, true, 2),
            "FZ25-P0b: force stale ticket on lit ring");
     Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, false, 2),
-           "N04 T2: equal-rev FullyDark ticket still forces MarkRelit");
+           "N04: ticket + FullyDark forces even equal-rev");
     Expect(!ShouldForceMarkRelitForTicketedStale(true, true, true, true, 5),
            "FZ25-P0b: rim outside lit ring");
-    Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, false, 2),
-           "N04 T2: consume FullyDark forces after ticket drain");
+    Expect(!ShouldForceMarkRelitForTicketedStale(true, false, true, false, 2),
+           "N04 H3: no ticket and not still_stale → no force");
+    Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, true, 2),
+           "N04 H3: after ticket drain, still_stale FullyDark still forces");
     Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, false, 2),
-           "N04 T2: no consume → no force");
+           "N04: no consume → no force");
     Expect(ShouldRemeshTicketedFullyDarkStalled(true, false, true, 2),
            "N04 T2: ticketed FullyDark no progress → remesh");
     Expect(!ShouldRemeshTicketedFullyDarkStalled(true, true, true, 2),

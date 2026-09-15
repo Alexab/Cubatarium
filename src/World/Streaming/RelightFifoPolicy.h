@@ -705,20 +705,19 @@ inline bool ShouldForceMarkRelitOnUnchangedLight(
   return false;
 }
 
-/// FZ2.5-P0b / N04 T2: stalled RelightThenMesh on FullyDark lit ring —
-/// force MarkRelit remesh even when equal-rev (still_stale=false).
-/// consume_mode ∧ FullyDark ∧ ring is the gate; do not require revision
-/// mismatch (102527 class). has_repair_ticket is optional: Flow ticket is
-/// often already drained by the time MarkRelit runs after RelightThenMesh Apply
-/// (173946: path_primary_consume>0, schedule_n=0, stalled≫5).
+/// FZ2.5-P0b / N04 H3: stalled RelightThenMesh on FullyDark lit ring —
+/// force MarkRelit when ticket still owed **or** GPU/dark still_stale after
+/// drain. Do not force all equal-rev FullyDark consume (LegalDark caves).
 inline bool ShouldForceMarkRelitForTicketedStale(
     bool consume_mode, bool has_repair_ticket, bool fully_dark,
     bool still_stale, int horiz,
     int ring = kVisualStageLitDrawableHoriz)
 {
-  (void)still_stale;
-  (void)has_repair_ticket;
-  return consume_mode && fully_dark && horiz >= 0 && horiz <= ring;
+  if (!consume_mode || !fully_dark || horiz < 0 || horiz > ring)
+  {
+    return false;
+  }
+  return has_repair_ticket || still_stale;
 }
 
 /// N04 T2: remesh ticketed FullyDark when Flow ticket exists but ColumnHasRepairProgress

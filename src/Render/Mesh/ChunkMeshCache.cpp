@@ -4095,6 +4095,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     if (accept_input_stale &&
         stale_reason == MeshApplyStaleInputReason::Light)
       ++MeshApplyStaleLightAcceptedCount;
+    if (accept_input_stale &&
+        (stale_reason == MeshApplyStaleInputReason::Light ||
+         stale_reason == MeshApplyStaleInputReason::Geom))
+    {
+      pending.accepted_input_stale = true;
+    }
     const uint64_t expected_revision = MeshRevisions.Current(pending.coord);
     const auto revisionIt = ActiveMeshSourceRevision.find(pending.coord);
     const bool has_active = revisionIt != ActiveMeshSourceRevision.end();
@@ -4196,6 +4202,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         ++processed;
         ++finished;
         ++stats.Completed;
+        if (pending.accepted_input_stale &&
+            HasDrawableGreedyMesh(pending.coord) &&
+            !Dirty.Contains(pending.coord))
+        {
+          Dirty.MarkDirty(pending.coord);
+          ++MeshApplyStaleAcceptedRefreshCount;
+        }
         if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
             IsRimIngressWatchCoord(pending.coord, MeshFocusGroundChunk))
         {
@@ -4266,6 +4279,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       ++processed;
       ++finished;
       ++stats.Completed;
+      if (pending.accepted_input_stale &&
+          HasDrawableGreedyMesh(pending.coord) &&
+          !Dirty.Contains(pending.coord))
+      {
+        Dirty.MarkDirty(pending.coord);
+        ++MeshApplyStaleAcceptedRefreshCount;
+      }
       if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
           IsRimIngressWatchCoord(pending.coord, MeshFocusGroundChunk))
       {
@@ -4519,6 +4539,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         ++processed;
         ++finished;
         ++stats.Completed;
+        if (pending.accepted_input_stale &&
+            HasDrawableGreedyMesh(pending.coord) &&
+            !Dirty.Contains(pending.coord))
+        {
+          Dirty.MarkDirty(pending.coord);
+          ++MeshApplyStaleAcceptedRefreshCount;
+        }
         if (FmDirtyGpuWatchAge_.erase(pending.coord) > 0)
         {
           ++FmDirtyToGpuFinishMatchN_;
@@ -4597,6 +4624,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   if (accept_input_stale && stale_reason == MeshApplyStaleInputReason::Light)
     ++MeshApplyStaleLightAcceptedCount;
+  const bool refresh_after_accept_stale =
+      accept_input_stale &&
+      (stale_reason == MeshApplyStaleInputReason::Light ||
+       stale_reason == MeshApplyStaleInputReason::Geom);
   auto abandon_fm_watch = [&]()
   {
     // Orphan hygiene: drop watch without counting as GPU finish match.
@@ -4701,6 +4732,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       pending.resultCredit = std::move(result.ResultCredit);
       pending.inputCatalog = std::move(result.InputCatalog);
       pending.crossCenters = std::move(result.crossCenters);
+      pending.accepted_input_stale = refresh_after_accept_stale;
       result.PendingSnapshot.reset();
       result.GpuExtractPending = false;
       if (MeshFocusValid)
@@ -5064,6 +5096,13 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       }
       ++RaaCommitMarkDirtyN;
     }
+  }
+  // N04 H4: keep light/geom accept; queue ordinary Dirty refresh after commit.
+  if (refresh_after_accept_stale && HasDrawableGreedyMesh(result.coord) &&
+      !Dirty.Contains(result.coord))
+  {
+    Dirty.MarkDirty(result.coord);
+    ++MeshApplyStaleAcceptedRefreshCount;
   }
   TryConsumeFmDirtyGpuWatch(result.coord);
 }

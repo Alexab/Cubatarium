@@ -265,6 +265,10 @@ public:
   {
     return MeshApplyStaleLightAcceptedCount;
   }
+  uint64_t GetMeshApplyStaleAcceptedRefreshCount() const
+  {
+    return MeshApplyStaleAcceptedRefreshCount;
+  }
   uint64_t GetMeshApplyStaleRevCount() const { return MeshApplyStaleRevCount; }
   /// Older apply discarded while Active tracks a newer revision (not remesh).
   uint64_t GetMeshApplySupersededCount() const
@@ -851,6 +855,8 @@ private:
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
     Phase phase{Phase::Queued};
     bool transparent{false};
+    /// N04 H4: accepted light/geom-stale input — refresh Dirty after commit.
+    bool accepted_input_stale{false};
     UGpuMeshPipeline::GpuApplyTicket ticket{};
   };
   void EnsureGpuPipeline();
@@ -1028,6 +1034,8 @@ private:
   uint64_t MeshApplyStaleStampInvalidCount{0};
   /// Light-stale accepted on live drawable (not Visual thrash).
   uint64_t MeshApplyStaleLightAcceptedCount{0};
+  /// N04 H4: Dirty refresh queued after accepting light/geom stale drawable.
+  uint64_t MeshApplyStaleAcceptedRefreshCount{0};
   /// 162400: RemeshObsoleteTracked (Current moved under Active).
   uint64_t MeshApplyStaleRevCount{0};
   uint64_t MeshApplySupersededCount{0};

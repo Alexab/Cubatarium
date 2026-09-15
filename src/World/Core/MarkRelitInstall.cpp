@@ -65,10 +65,8 @@ ColumnChunkSnapshot BuildLitApplyChunkSnapshot(
   {
     snap.still_stale =
         IsMeshLightStale(snap.meshed_light_rev, snap.light_field_rev);
-    // N04 T2 unfreeze: slim/primary_only used rev-only stale and skipped GPU
-    // dark-face → noop Apply cleared PendingLight without MarkDirty while
-    // FullyDark VB stalled (173946: schedule_n=0). Equal-rev FullyDark still
-    // demands remesh via GPU dark-face; force_stale_ticket covers consume path.
+    // N04 H3: GPU dark-face still_stale only feeds force via planner when
+    // ticket drained; equal-rev alone is not automatic remesh demand.
     if (!snap.still_stale && snap.fully_dark)
     {
       snap.still_stale = IsMeshLightStaleGpu(
@@ -404,6 +402,41 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
       const auto plan_t0 = Clock::now();
       LitApplyPlan plan = PlanColumnInstall(in);
+      // N04 H2: ticketed FullyDark with SoftDefer≠progress → MarkDirty (not Priority).
+      {
+        const bool repair_progress = ColumnHasRepairProgress(key);
+        bool fully_dark_drawable = false;
+        for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+        {
+          if (snap.fully_dark && snap.has_drawable)
+          {
+            fully_dark_drawable = true;
+            break;
+          }
+        }
+        if (ShouldRemeshTicketedFullyDarkStalled(in.has_repair_ticket,
+                                                repair_progress,
+                                                fully_dark_drawable,
+                                                focus_horiz))
+        {
+          constexpr int kStalledRemeshCap = 4;
+          int remesh_n = 0;
+          for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+          {
+            if (remesh_n >= kStalledRemeshCap)
+            {
+              break;
+            }
+            if (!snap.fully_dark || !snap.has_drawable || snap.is_dirty)
+            {
+              continue;
+            }
+            AppendUniqueCoord(plan.mark_dirty, snap.coord);
+            ++plan.schedule_n;
+            ++remesh_n;
+          }
+        }
+      }
       PhysicsTelemetryData.MarkRelitPlanMs += ElapsedMs(plan_t0, Clock::now());
       const bool focus_no_mesh_debt =
           PhysicsTelemetryData.ColumnLoadedNoMeshN > 0 ||

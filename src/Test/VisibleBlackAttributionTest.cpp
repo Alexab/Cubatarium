@@ -58,10 +58,11 @@ int main()
               ClassifyVisibleBlackColumn(false, true, true, false, false,
                                          false),
               "fully dark stalled ticket");
-  ExpectCause(VisibleBlackCause::LegalDarkNoRepair,
-              ClassifyVisibleBlackColumn(false, true, true, false, false, false,
-                                         /*equal_rev_legal_dark=*/true),
-              "N04 T2: equal-rev FullyDark ticket → LegalDark not stalled");
+  // N04 H1: equal-rev must NOT reclassify ticketed FullyDark as LegalDark.
+  ExpectCause(VisibleBlackCause::FullyDarkStalledTicket,
+              ClassifyVisibleBlackColumn(false, true, true, false, false,
+                                         false),
+              "ticketed FullyDark stays stalled (no equal-rev LegalDark)");
   ExpectCause(VisibleBlackCause::FullyDarkNoTicket,
               ClassifyVisibleBlackColumn(false, true, false, false, false, true),
               "fully dark pending-light no ticket");

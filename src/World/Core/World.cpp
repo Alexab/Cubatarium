@@ -3522,38 +3522,13 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     const bool progress = ColumnHasRepairProgress(key);
     const bool sticky = IsColumnStickyRemesh(key);
     const bool pending_replace = IsPendingLightBeforeMesh(key);
-    // N04 T2: equal-rev FullyDark drawable → LegalDark (not stalled ticket).
-    bool equal_rev_legal_dark = false;
-    if (column_fully_dark && !pending_replace)
-    {
-      equal_rev_legal_dark = true;
-      for (int cy = cy0; cy <= cy1; ++cy)
-      {
-        const glm::ivec3 coord(key.x, cy, key.y);
-        if (!MeshService->HasDrawableGreedyMesh(coord) ||
-            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-        {
-          continue;
-        }
-        const uint64_t meshed =
-            MeshService->GetCache().GetMeshedLightRevision(coord);
-        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-        const uint64_t field =
-            chunk ? chunk->GetLightFieldRevision() : meshed;
-        if (IsMeshLightStale(meshed, field))
-        {
-          equal_rev_legal_dark = false;
-          break;
-        }
-      }
-    }
     const bool counts_progress = ShouldCountVisibleBlackProgress(
         contains || progress || sticky, column_fully_dark, pending_replace);
     if (counts_progress)
     {
       ++counts.progress;
     }
-    if (contains && !progress && !sticky && !equal_rev_legal_dark)
+    if (contains && !progress && !sticky)
     {
       ++counts.stalled;
     }
@@ -3564,7 +3539,7 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     const bool stale_dark_attr = column_stale_dark && !column_fully_dark;
     switch (ClassifyVisibleBlackColumn(stale_dark_attr, column_fully_dark,
                                        contains, progress, sticky,
-                                       pending_replace, equal_rev_legal_dark))
+                                       pending_replace))
     {
     case VisibleBlackCause::StaleDarkWithLitField:
       ++counts.stale_lit;

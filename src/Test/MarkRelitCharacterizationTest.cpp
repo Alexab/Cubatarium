@@ -89,11 +89,13 @@ int main()
   Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, true, 2),
          "C09 force stale ticket");
   Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, false, 2),
-         "C09 equal-rev FullyDark ticket forces");
+         "C09 ticket FullyDark forces equal-rev");
   Expect(!ShouldForceMarkRelitForTicketedStale(true, true, true, true, 5),
          "C09 rim outside ring");
-  Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, false, 1),
-         "C09 consume FullyDark forces even after ticket drain");
+  Expect(!ShouldForceMarkRelitForTicketedStale(true, false, true, false, 1),
+         "C09 H3: drain without still_stale → no force");
+  Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, true, 1),
+         "C09 H3: drain with still_stale → force");
   Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, false, 1),
          "C09 no consume no force");
 
