@@ -37,6 +37,16 @@ DUAL_LANE_STOP_LINE = {
     "stale_vl_fly_med_max": 84.5,
     "unlit_max_cold": 15.0,
     "unlit_max_warm": 19.0,
+    "mid_fully_dark_stalled_med_max": 5.0,
+}
+
+# Eye-proxy thrash stop-line (N08). Catches B4 swap/blink that VB/stalled miss.
+# Four merge signals: adequacy / dual-lane / eye_proxy / operator eye.
+EYE_PROXY_STOP_LINE = {
+    "mesh_apply_stale_visual_fly_med_max": 6.0,
+    "mesh_apply_stale_visual_delta_med_max": 1.5,
+    "effective_holes_blink_rate_max": 0.05,
+    "transparent_cmd_reorder_fly_med_max": 1.0,
 }
 
 
@@ -260,10 +270,31 @@ def compute_dual_lane_stop_line(
         if not stale_xs:
             stale_xs = values("dark_face_stale_near_n")
         unlit_xs = values("chunk_meshed_unlit")
+        mid_third = use[len(use) // 3 : (2 * len(use) // 3)] if len(use) >= 3 else use
+        mid_focus = [
+            r
+            for r in mid_third
+            if r.get("focus_cx") is not None and 2.0 <= float(r["focus_cx"]) <= 5.0
+        ]
+        mid_subset = mid_focus if mid_focus else mid_third
+
+        def mid_values(key: str) -> list[float]:
+            out: list[float] = []
+            for row in mid_subset:
+                try:
+                    val = row.get(key)
+                    if val is not None:
+                        out.append(float(val))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        stalled_xs = mid_values("visible_black_fully_dark_stalled_n")
         metrics = {
             "vb_fly_med": median(vb_xs),
             "stale_vl_fly_med": median(stale_xs),
             "unlit_max": max(unlit_xs) if unlit_xs else None,
+            "mid_fully_dark_stalled_med": median(stalled_xs),
             "warm": bool(warm),
         }
         fails: list[str] = []
@@ -283,6 +314,11 @@ def compute_dual_lane_stop_line(
         unlit_max = metrics["unlit_max"]
         if unlit_max is None or float(unlit_max) > unlit_cap:
             fails.append("unlit_max_above_dual_lane")
+        stalled_med = metrics["mid_fully_dark_stalled_med"]
+        if stalled_med is None or float(stalled_med) > DUAL_LANE_STOP_LINE[
+            "mid_fully_dark_stalled_med_max"
+        ]:
+            fails.append("mid_fully_dark_stalled_above_stop_line")
         metrics["dual_lane_stop_line_pass"] = len(fails) == 0
         metrics["dual_lane_stop_line_fails"] = fails
         return metrics
@@ -290,6 +326,103 @@ def compute_dual_lane_stop_line(
         return {
             "dual_lane_stop_line_pass": False,
             "dual_lane_stop_line_fails": [f"stop_line_analyze_failed:{exc}"],
+        }
+
+
+def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
+    """B4 thrash proxies (stale-visual churn / holes blink / reorder). Not adequacy."""
+    try:
+        rows: list[dict] = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") == "period":
+                rows.append(row)
+        fly: list[dict] = []
+        for row in rows:
+            try:
+                if float(row.get("movement_speed") or 0) > 2.0:
+                    fly.append(row)
+            except (TypeError, ValueError):
+                continue
+        use = fly if fly else rows
+
+        def values(key: str, subset: list[dict] | None = None) -> list[float]:
+            out: list[float] = []
+            for row in subset if subset is not None else use:
+                try:
+                    val = row.get(key)
+                    if val is not None:
+                        out.append(float(val))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        def median(xs: list[float]) -> float | None:
+            if not xs:
+                return None
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            if len(xs) % 2:
+                return xs[mid]
+            return (xs[mid - 1] + xs[mid]) / 2.0
+
+        stale_xs = values("mesh_apply_stale_visual")
+        if not stale_xs:
+            stale_xs = values("mesh_apply_stale")
+        deltas: list[float] = []
+        for i in range(1, len(stale_xs)):
+            deltas.append(abs(stale_xs[i] - stale_xs[i - 1]))
+
+        # effective_holes blink: unfinished_visual ∪ near_focus_holes / visual_holes
+        hole_flags: list[float] = []
+        for row in use:
+            unfinished = float(row.get("unfinished_visual") or 0) > 0
+            holes = float(row.get("near_focus_holes") or 0) > 0 or float(
+                row.get("visual_holes") or 0
+            ) > 0
+            hole_flags.append(1.0 if (unfinished or holes) else 0.0)
+        blink_transitions = 0
+        for i in range(1, len(hole_flags)):
+            if hole_flags[i] != hole_flags[i - 1]:
+                blink_transitions += 1
+        blink_rate = (
+            blink_transitions / max(1, len(hole_flags) - 1) if len(hole_flags) >= 2 else 0.0
+        )
+
+        reorder_xs = values("transparent_cmd_reorder_n")
+        metrics = {
+            "mesh_apply_stale_visual_fly_med": median(stale_xs),
+            "mesh_apply_stale_visual_delta_med": median(deltas),
+            "effective_holes_blink_rate": blink_rate,
+            "transparent_cmd_reorder_fly_med": median(reorder_xs),
+        }
+        fails: list[str] = []
+        stale_med = metrics["mesh_apply_stale_visual_fly_med"]
+        if stale_med is None or float(stale_med) > EYE_PROXY_STOP_LINE[
+            "mesh_apply_stale_visual_fly_med_max"
+        ]:
+            fails.append("mesh_apply_stale_visual_fly_med_above_eye_proxy")
+        delta_med = metrics["mesh_apply_stale_visual_delta_med"]
+        if delta_med is None or float(delta_med) > EYE_PROXY_STOP_LINE[
+            "mesh_apply_stale_visual_delta_med_max"
+        ]:
+            fails.append("mesh_apply_stale_visual_delta_med_above_eye_proxy")
+        if float(blink_rate) > EYE_PROXY_STOP_LINE["effective_holes_blink_rate_max"]:
+            fails.append("effective_holes_blink_rate_above_eye_proxy")
+        reorder_med = metrics["transparent_cmd_reorder_fly_med"]
+        if reorder_med is not None and float(reorder_med) > EYE_PROXY_STOP_LINE[
+            "transparent_cmd_reorder_fly_med_max"
+        ]:
+            fails.append("transparent_cmd_reorder_fly_med_above_eye_proxy")
+        metrics["eye_proxy_stop_line_pass"] = len(fails) == 0
+        metrics["eye_proxy_stop_line_fails"] = fails
+        return metrics
+    except Exception as exc:  # pragma: no cover
+        return {
+            "eye_proxy_stop_line_pass": False,
+            "eye_proxy_stop_line_fails": [f"eye_proxy_analyze_failed:{exc}"],
         }
 
 
@@ -1801,6 +1934,14 @@ def main() -> int:
                     result["dual_lane_stop_line_fails"] = stop_line.get(
                         "dual_lane_stop_line_fails"
                     )
+                    eye_proxy = compute_eye_proxy_stop_line(Path(perf))
+                    result["eye_proxy_stop_line"] = eye_proxy
+                    result["eye_proxy_stop_line_pass"] = eye_proxy.get(
+                        "eye_proxy_stop_line_pass"
+                    )
+                    result["eye_proxy_stop_line_fails"] = eye_proxy.get(
+                        "eye_proxy_stop_line_fails"
+                    )
                     report_path.write_text(
                         json.dumps(result, indent=2) + "\n", encoding="utf-8"
                     )
@@ -1818,6 +1959,16 @@ def main() -> int:
                             else "FAIL"
                         )
                         + f" {stop_line}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 eye-proxy stop-line: "
+                        + (
+                            "PASS"
+                            if eye_proxy.get("eye_proxy_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {eye_proxy}",
                         flush=True,
                     )
                 metrics_summary = {
@@ -1871,6 +2022,13 @@ def main() -> int:
                     metrics_summary["dual_lane_stop_line_pass"] = result.get(
                         "dual_lane_stop_line_pass"
                     )
+                if result.get("eye_proxy_stop_line") is not None:
+                    metrics_summary["eye_proxy_stop_line"] = result[
+                        "eye_proxy_stop_line"
+                    ]
+                    metrics_summary["eye_proxy_stop_line_pass"] = result.get(
+                        "eye_proxy_stop_line_pass"
+                    )
                 if args.update_best and not hang_killed:
                     if args.fly_stop:
                         best_path = BIN / "flight_sim_gate_report_stop_best.json"
@@ -1919,6 +2077,13 @@ def main() -> int:
                     print(
                         "flight-sim dual-lane stop-line FAIL for product-174657 "
                         "(adequacy alone is not merge-green)",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("eye_proxy_stop_line_pass", True):
+                    print(
+                        "flight-sim eye-proxy stop-line FAIL for product-174657 "
+                        "(stale-visual thrash / holes blink; adequacy alone is not merge-green)",
                         file=sys.stderr,
                     )
                     last_rc = 2

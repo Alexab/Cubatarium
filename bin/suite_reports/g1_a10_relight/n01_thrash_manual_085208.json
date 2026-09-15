@@ -1,0 +1,75 @@
+{
+  "label": "manual_085208",
+  "perf_jsonl": "bin\\logs\\perf_20260915-085208_27820.jsonl",
+  "periods": 21,
+  "operator_visual": "FAIL",
+  "mid_corridor": {
+    "focus_cx_band": "[2,5]",
+    "visible_black_focus_med": 88.0,
+    "stale_vertex_light_med": 89.0,
+    "stale_vl_rev_med": 0.0,
+    "fully_dark_census_med": 89.0,
+    "fully_dark_stalled_med": 47.0,
+    "near_focus_holes_med": 0.0,
+    "unlit_max": 50.0,
+    "mesh_apply_stale_visual_med": 12.0,
+    "mesh_apply_stale_visual_delta_med": 1.0,
+    "rows_mid": 7,
+    "rows_mid_focus": 5
+  },
+  "proxy_adequacy": {
+    "early_vb_med": 98.0,
+    "focus_missing_mesh_med": 1.0,
+    "miss_stuck_run_frames_tail_max": 820.0,
+    "fog_pull_in_rd_fly_med": 4.0,
+    "visible_black_focus_fly_med": 86.5,
+    "gpu_kick_fly_med": 0.0,
+    "ok_remesh_fly_med": 2.0,
+    "player_y_early_med": 47.0,
+    "player_y_late_med": 55.0,
+    "player_y_delta": 8.0,
+    "focus_west_delta_cx": 10.0,
+    "gpu_kick_post_drain_fly_max": 1.0,
+    "adequacy_pass": true,
+    "adequacy_fails": []
+  },
+  "dual_lane_stop_line_cold": {
+    "vb_fly_med": 86.5,
+    "stale_vl_fly_med": 84.5,
+    "unlit_max": 39.0,
+    "mid_fully_dark_stalled_med": 49.5,
+    "warm": false,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "vb_fly_med_above_dual_lane",
+      "unlit_max_above_dual_lane",
+      "mid_fully_dark_stalled_above_stop_line"
+    ]
+  },
+  "dual_lane_stop_line_warm": {
+    "vb_fly_med": 86.5,
+    "stale_vl_fly_med": 84.5,
+    "unlit_max": 39.0,
+    "mid_fully_dark_stalled_med": 49.5,
+    "warm": true,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "vb_fly_med_above_dual_lane",
+      "unlit_max_above_dual_lane",
+      "mid_fully_dark_stalled_above_stop_line"
+    ]
+  },
+  "eye_proxy_stop_line": {
+    "mesh_apply_stale_visual_fly_med": 14.5,
+    "mesh_apply_stale_visual_delta_med": 1.0,
+    "effective_holes_blink_rate": 0.4666666666666667,
+    "transparent_cmd_reorder_fly_med": 1.0,
+    "eye_proxy_stop_line_pass": false,
+    "eye_proxy_stop_line_fails": [
+      "mesh_apply_stale_visual_fly_med_above_eye_proxy",
+      "effective_holes_blink_rate_above_eye_proxy"
+    ]
+  },
+  "mid_stalled_gate_pass": false,
+  "merge_green": false
+}
