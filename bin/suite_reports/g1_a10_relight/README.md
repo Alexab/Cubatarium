@@ -119,7 +119,7 @@ Plan: N01 retain storm (incomplete guard on frustum-filtered refs).
 | Fix | Dirty `RefreshPassRefs` expands upload inputs to full `GreedyCache` pass materials; incomplete predicate = `cache⊆upload` (not `resident⊆upload`) |
 | Telem | `publication_incomplete_material_n` / `publication_oom_retain_n`; overload = sum |
 | KEEP | C1 any_fresh pubVer; N08 mid-corridor; G1 **OPEN** |
-| T2 | **unfreeze** on autofly `202118` (mid stalled=0; equal-rev LegalDark) |
+| T2 / N04 | **REOPEN** — P3 equal-rev→LegalDark was census greenwash; SoT manual `204501` |
 
 Acceptance: incomplete mid ≪40 (eye_proxy ≤5); lag↓; manual west per-block/wrong tex better than `134038`.
 T2 mid stalled≤5 — **not** this track.
@@ -141,11 +141,13 @@ Plan: post-N01 eye thrash → T2 mid black (do not edit plan SoT during quiet ex
 | P1-b | accept light-stale apply; Priority only undrawn holes |
 | P2 | accept geom-stale when drawable; blink=holes-only; mid stale≤8 (=102527 thrash class) |
 | Autofly `173946` | eye_proxy **PASS** (mid stale=7, Δ=0, blink=0, incomplete=0); adequacy PASS |
-| T2 / N04 | **unfreeze** — autofly `202118` mid stalled=0; equal-rev → LegalDark; eye_proxy PASS |
+| T2 / N04 | **REOPEN** — `202118`/`204501`: legal_dark≈VB, stalled≈0 without heal; plan `n04_legal_dark_greenwash_fix` |
+| Manual `204501` | operator **FAIL**; eye Δ=3; incomplete=0 KEEP |
 
 Reports: `post_n01_p0_af_*`, `post_n01_p1*_af_*`, `post_n01_p2_final_af_{cold,score}.json`,
-`post_n01_p3l_t2_af_{cold,score}.json`.
+`post_n01_p3l_t2_af_{cold,score}.json`, `n01_manual_204501.json`.
 Self-test: `102527` eye_proxy PASS under thrash class; `095545`/`121131` still FAIL.
+Scorecard: `mid_stalled_gate` FAILS on `legal_dark_masks_stalled` when legal_dark≥50% of VB≥40.
 
-**Merge:** adequacy ∧ dual_lane (stalled≤5 ✓ on `202118`; VB still red) ∧ eye_proxy ∧ operator west eye.
-Do **not** claim G1 CLOSED.
+**Merge:** adequacy ∧ dual_lane ∧ eye_proxy ∧ mid_stalled (honest) ∧ operator west eye.
+Do **not** claim G1/T2 CLOSED on LegalDark reclass.

@@ -76,6 +76,7 @@ def build_scorecard(perf_path: Path, *, label: str, operator_visual: str | None)
     if not stale:
         stale = collect("stale_vertex_light_n", mid)
     stalled = collect("visible_black_fully_dark_stalled_n", mid)
+    legal_dark = collect("visible_black_legal_dark_n", mid)
     stale_rev = collect("stale_vl_rev_n", mid)
     census = collect("fully_dark_census_n", mid)
     unlit = collect("chunk_meshed_unlit", periods)
@@ -93,7 +94,24 @@ def build_scorecard(perf_path: Path, *, label: str, operator_visual: str | None)
     eye_proxy = compute_eye_proxy_stop_line(perf_path)
 
     mid_stalled_med = med(stalled)
+    mid_vb_med = med(vb)
+    mid_legal_dark_med = med(legal_dark)
+    stalled_gate_fails: list[str] = []
     stalled_gate = mid_stalled_med is not None and mid_stalled_med <= 5.0
+    if mid_stalled_med is None:
+        stalled_gate = False
+        stalled_gate_fails.append("mid_stalled_med_missing")
+    elif mid_stalled_med > 5.0:
+        stalled_gate_fails.append("mid_fully_dark_stalled_above_stop_line")
+    # N04 H0: equal-rev→LegalDark must not greenwash mid_stalled when VB stays high.
+    if (
+        mid_vb_med is not None
+        and mid_legal_dark_med is not None
+        and mid_vb_med >= 40.0
+        and mid_legal_dark_med >= 0.5 * mid_vb_med
+    ):
+        stalled_gate = False
+        stalled_gate_fails.append("legal_dark_masks_stalled")
 
     return {
         "label": label,
@@ -104,7 +122,8 @@ def build_scorecard(perf_path: Path, *, label: str, operator_visual: str | None)
         "operator_visual": operator_visual,
         "mid_corridor": {
             "focus_cx_band": "[2,5]",
-            "visible_black_focus_med": med(vb),
+            "visible_black_focus_med": mid_vb_med,
+            "visible_black_legal_dark_med": mid_legal_dark_med,
             "stale_vertex_light_med": med(stale),
             "stale_vl_rev_med": med(stale_rev),
             "fully_dark_census_med": med(census),
@@ -142,6 +161,7 @@ def build_scorecard(perf_path: Path, *, label: str, operator_visual: str | None)
         "dual_lane_stop_line_warm": stop_warm,
         "eye_proxy_stop_line": eye_proxy,
         "mid_stalled_gate_pass": stalled_gate,
+        "mid_stalled_gate_fails": stalled_gate_fails,
         # Four signals: adequacy / dual-lane / eye_proxy / operator eye (manual).
         "merge_green": bool(
             adequacy.get("adequacy_pass")
