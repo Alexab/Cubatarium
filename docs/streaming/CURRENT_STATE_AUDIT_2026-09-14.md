@@ -473,16 +473,17 @@ Plan: `.cursor/plans/west_cruise_wall_diet.plan.md`. Branch tip at freeze: `7a25
 |---|---|---|
 | N02 row frustum | **KEEP** | B1 revert = disaster (chunk holes/black) |
 | N06 structural CooldownKey | **KEEP** | landed A3 |
-| N01 atomic publish (A1 `58f65ffe`) | **REOPEN→epoch-split** | Manual `102527` B4 thrash after v2.1 pubVer gated with dirty-empty |
+| N01 atomic publish (A1 `58f65ffe`) | **REOPEN→epoch-split→narrow any_fresh** | `102527` thrash; `121131` worse after pubVer-on-any-changed; C1 = bump only `any_fresh` |
 | D3.3 lazy spawn (assume ready off-enter) | **cache+ring_dirty** | S3 cache; invalidate on `NeedsSpawnRingCatchUp` |
-| N04 / sticky mid black | **REOPEN→ticket remesh** | `102527`: stalled≈54, stale_vl_rev=0; force MarkRelit on ticketed FullyDark |
+| N04 / sticky mid black | **REOPEN→ticket remesh; T2 FREEZE** | stalled 54→23.5 still ≫5; freeze MarkRelit retune until thrash ≤102527 |
 | N03 BeginFrame-before-stream | **done** | S4 landed |
 | N05 per-key debt age | **PARTIAL** | class-level age; per-key deferred |
-| N07/N08/N12 fail-closed pieces | landed A0; N08 **eye_proxy** | four-signal merge |
+| N07/N08/N12 fail-closed pieces | N08 **eye_proxy mid-corridor** | fly-only stale med=2 missed mid=17 on autofly `095545` |
 | A5 stream census diet | **deferred** | stop-line VB/stale |
 | Product G1 / pixel oracle / Q9 acceptance | **OPEN** | — |
 
-Follow-on plan: `.cursor/plans/n01_rework_mid-black.plan.md`.
+Follow-on plan: `.cursor/plans/n01_rework_mid-black.plan.md` /
+`thrash_autopsy_autofly` (121131 autopsy).
 Interim eye-safe WT (pre-N01-v2): A2+A3 ON, A1 OFF, eager ring, A4 telem ON.
 Bisect reports: `bin/suite_reports/g1_a10_relight/bisect_b*_result.md`, `bisect_b3b_205626_result.md`.
 Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
@@ -493,18 +494,26 @@ Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
 |---|---|
 | S0 docs / reopen N01 | done |
 | S0b `--visible` + dual-lane stop-line | done; mid stalled≤5 gate |
-| S1 N01 v2 group-commit | done; **epoch-split**: pubVer on geometry change; meshRev dirty-empty |
+| S1 N01 v2 group-commit | done; epoch-split → **narrow: pubVer only on any_fresh** (C1 landed) |
 | S2a `stale_vl_rev_n` / `fully_dark_census_n` | done |
-| S2b / T2 mid FullyDark | ticketed force MarkRelit without still_stale; relight_critical on stalled |
+| S2b / T2 mid FullyDark | landed early (order violate); **FREEZE** until eye thrash ≤102527 |
 | S3 spawn-ring cache | done + ring_dirty invalidate |
 | S4 BeginFrame before stream | done (diet deferred) |
-| T0 eye_proxy stop-line | done (`mesh_apply_stale_visual` med/Δ, holes blink, reorder) |
+| T0 eye_proxy stop-line | done → **mid-corridor + swap-without-holes** (N08) |
 
-Manual `085208` (2026-09-15): eye FAIL; VB≈87, stalled≈48.  
-Manual `102527` (2026-09-15): eye FAIL thrash worse; VB≈90, stalled≈54, stale_vl_rev=0;
-`mesh_apply_stale_visual` Δmed≈3. Scorecards: `n01_thrash_manual_102527.json`,
-`n01_v21_manual_085208.json`.
+| Flight | Role | mid stale_visual | mid stalled | holes | note |
+|---|---|---:|---:|---:|---|
+| Autofly `095545` | pre-epoch postfix | 17 (fly med **2**) | 104.5 | 0 | adequacy PASS; fly eye_proxy blind |
+| Manual `085208` | post-N01-v2 | — | ≈48 | 0 | eye FAIL |
+| Manual `102527` | v2.1 thrash SoT | 8 (Δmed 3) | 54 | 0 | B4 swap/blink/per-block |
+| Manual `121131` | **post-epoch regress** | **21.5** | 23.5 | 0 | worse thrash; T2 partial |
+
+Scorecards: `n01_thrash_manual_102527.json`, `n01_thrash_manual_121131.json`,
+`n01_thrash_postfix_cold_score.json`. Post-fix autofly after epoch-split was
+**missing** until thrash_autopsy track.
 
 **Merge signals (N08):** `adequacy_pass` ∧ `dual_lane_stop_line_pass` ∧
-`eye_proxy_stop_line_pass` ∧ operator west eye. Adequacy alone is not merge-green.
+`eye_proxy_stop_line_pass` (mid-corridor `focus_cx∈[2,5]`, not fly-only) ∧
+operator west eye. Adequacy alone is not merge-green. `near_focus_holes≈0` is
+**not** proof of no per-block defects (missing-mesh telem only).
 G1 / pixel oracle / Q9 remain **OPEN**.

@@ -83,21 +83,27 @@ Plan: `.cursor/plans/n01_rework_mid-black.plan.md`.
 | Confirm `205626` | A1 OFF+eager: only sticky mid blacks (stalled) |
 | Manual `085208` | post-N01 v2 eye FAIL (B4 + sticky mid worse); v2.1 baseline |
 | Manual `102527` | post-v2.1 eye FAIL thrash (swap/blink/per-block); holes counters≈0 |
+| Manual `121131` | **post-epoch thrash regress** (stale mid 21.5 vs 102527=8); per-block/wrong tex |
+| Autofly `095545` | pre-epoch postfix; fly stale_med=2 **missed** mid=17 (N08 gap) |
 
 Reports: `bisect_b1_result.md`, `bisect_b2_result.md`, `bisect_b3_result.md`,
-`bisect_b4_result.md`, `bisect_b3b_205626_result.md`.
+`bisect_b4_result.md`, `bisect_b3b_205626_result.md`,
+`n01_thrash_manual_{102527,121131}.json`, `thrash_autopsy_121131.md`.
 
 **Interim eye-safe (pre N01 v2):** A2+A3 ON, A1 OFF, eager spawn ring, A4 telem ON.
 
-**N01 epoch-split (after `102527`):** `publicationVersion++` on any geometry change;
-mesh/cull/sort only when `PendingGeometryDirty.empty()`. Group-commit KEEP.
-Ticketed FullyDark force MarkRelit without equal-rev `still_stale`; relight_critical
-on `FullyDarkStalledN` alone.
+**N01 epoch-split → narrow any_fresh (C1):** group-commit KEEP; mesh/cull/sort only when
+`PendingGeometryDirty.empty()`; `publicationVersion++` **only on `any_fresh`**
+(not untouched reshuffle). Autopsy: [thrash_autopsy_121131.md](thrash_autopsy_121131.md).
+T2 mid MarkRelit **frozen** until thrash ≤102527.
 
 Scorecard: `python tools/n01_v21_scorecard.py bin/logs/perf_*.jsonl -o ...`
-(includes eye_proxy).
+(includes eye_proxy). Self-test: `python tools/test_eye_proxy_stop_line.py`.
 
 **Four merge signals (N08):** `--visible` + `adequacy_pass` + dual-lane
-(VB/StaleVL≤84.5, unlit, mid stalled≤5) + **eye_proxy** (stale_visual med≤6,
-Δmed≤1.5, holes blink≤0.05, reorder≤1) + manual west eye.
-Do **not** merge on adequacy alone. G1 / pixel oracle / Q9 remain **OPEN**.
+(VB/StaleVL≤84.5, unlit, mid stalled≤5) + **eye_proxy mid-corridor**
+(`focus_cx∈[2,5]`: stale_visual med≤6, Δmed≤1.5, holes blink≤0.05, reorder≤1,
+plus `stale_visual_without_hole_counters` when holes=0 but stale mid>6)
++ manual west eye.
+Do **not** merge on adequacy alone. Do **not** treat `near_focus_holes=0` as
+no per-block defects. G1 / pixel oracle / Q9 remain **OPEN**.
