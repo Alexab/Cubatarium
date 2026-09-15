@@ -103,7 +103,28 @@ Scorecard: `python tools/n01_v21_scorecard.py bin/logs/perf_*.jsonl -o ...`
 **Four merge signals (N08):** `--visible` + `adequacy_pass` + dual-lane
 (VB/StaleVL≤84.5, unlit, mid stalled≤5) + **eye_proxy mid-corridor**
 (`focus_cx∈[2,5]`: stale_visual med≤6, Δmed≤1.5, holes blink≤0.05, reorder≤1,
+`publication_incomplete_material` mid med≤5,
 plus `stale_visual_without_hole_counters` when holes=0 but stale mid>6)
 + manual west eye.
 Do **not** merge on adequacy alone. Do **not** treat `near_focus_holes=0` as
 no per-block defects. G1 / pixel oracle / Q9 remain **OPEN**.
+
+## N01 retain-storm (full-cache dirty publish) — SoT `134038`
+
+Plan: N01 retain storm (incomplete guard on frustum-filtered refs).
+
+| Anchor | Role |
+|---|---|
+| Manual `134038` | retain storm SoT (`publication_overload_retain_n` mid≈40, `pass_mesh_rev_lag_max`≈535); C1 OK (`pubver_changed_without_fresh`=0) |
+| Fix | Dirty `RefreshPassRefs` expands upload inputs to full `GreedyCache` pass materials; incomplete predicate = `cache⊆upload` (not `resident⊆upload`) |
+| Telem | `publication_incomplete_material_n` / `publication_oom_retain_n`; overload = sum |
+| KEEP | C1 any_fresh pubVer; T2 MarkRelit **freeze**; N08 mid-corridor; G1 **OPEN** |
+
+Acceptance: incomplete mid ≪40 (eye_proxy ≤5); lag↓; manual west per-block/wrong tex better than `134038`.
+T2 mid stalled≤5 — **not** this track.
+
+Cold autofly post-fix `145051` (`n01_retain_af_cold.json`):
+`publication_incomplete_material_mid_med=0`, `oom_mid=0` (gate PASS);
+`pass_mesh_rev_lag_max` mid still ~459 (not zero — other dirty classes remain);
+eye_proxy still FAIL on stale_visual mid≈19.5 / blink; dual-lane FAIL (VB/stale/stalled).
+G1 **OPEN**. Manual west eye still required.

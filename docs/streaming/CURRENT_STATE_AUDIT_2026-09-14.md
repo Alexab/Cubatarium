@@ -473,7 +473,7 @@ Plan: `.cursor/plans/west_cruise_wall_diet.plan.md`. Branch tip at freeze: `7a25
 |---|---|---|
 | N02 row frustum | **KEEP** | B1 revert = disaster (chunk holes/black) |
 | N06 structural CooldownKey | **KEEP** | landed A3 |
-| N01 atomic publish (A1 `58f65ffe`) | **REOPEN→epoch-split→narrow any_fresh** | `102527` thrash; `121131` worse after pubVer-on-any-changed; C1 = bump only `any_fresh` |
+| N01 atomic publish (A1 `58f65ffe`) | **REOPEN→epoch-split→narrow any_fresh→full-cache dirty publish** | `134038` retain storm SoT (incomplete on frustum refs); expand + `cache⊆upload` |
 | D3.3 lazy spawn (assume ready off-enter) | **cache+ring_dirty** | S3 cache; invalidate on `NeedsSpawnRingCatchUp` |
 | N04 / sticky mid black | **REOPEN→ticket remesh; T2 FREEZE** | stalled 54→23.5 still ≫5; freeze MarkRelit retune until thrash ≤102527 |
 | N03 BeginFrame-before-stream | **done** | S4 landed |
@@ -507,13 +507,20 @@ Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
 | Manual `085208` | post-N01-v2 | — | ≈48 | 0 | eye FAIL |
 | Manual `102527` | v2.1 thrash SoT | 8 (Δmed 3) | 54 | 0 | B4 swap/blink/per-block |
 | Manual `121131` | **post-epoch regress** | **21.5** | 23.5 | 0 | worse thrash; T2 partial |
+| Manual `134038` | **retain-storm SoT** | ~8.5 | — | 0 | overload retain mid≈40; meshRev lag≈535; C1 OK |
 
 Scorecards: `n01_thrash_manual_102527.json`, `n01_thrash_manual_121131.json`,
 `n01_thrash_postfix_cold_score.json`. Post-fix autofly after epoch-split was
 **missing** until thrash_autopsy track.
 
+**N01 full-cache dirty publish:** `RefreshPassRefs` expands dirty uploads from
+full `GreedyCache` pass set; incomplete = `cache⊆upload` (not `resident⊆upload`);
+telem split `publication_incomplete_material_n` / `publication_oom_retain_n`.
+C1 KEEP; T2 freeze; eye_proxy incomplete mid≤5. G1 remains **OPEN**.
+
 **Merge signals (N08):** `adequacy_pass` ∧ `dual_lane_stop_line_pass` ∧
-`eye_proxy_stop_line_pass` (mid-corridor `focus_cx∈[2,5]`, not fly-only) ∧
+`eye_proxy_stop_line_pass` (mid-corridor `focus_cx∈[2,5]`, not fly-only;
+includes incomplete_material mid≤5) ∧
 operator west eye. Adequacy alone is not merge-green. `near_focus_holes≈0` is
 **not** proof of no per-block defects (missing-mesh telem only).
 G1 / pixel oracle / Q9 remain **OPEN**.
