@@ -88,8 +88,12 @@ int main()
   // C09 force stale ticket
   Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, true, 2),
          "C09 force stale ticket");
+  Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, false, 2),
+         "C09 equal-rev FullyDark ticket forces");
   Expect(!ShouldForceMarkRelitForTicketedStale(true, true, true, true, 5),
          "C09 rim outside ring");
+  Expect(!ShouldForceMarkRelitForTicketedStale(true, false, true, false, 1),
+         "C09 no ticket no force");
 
   // C13 stale revision
   Expect(IsMeshLightStale(1, 2), "C13 stale revision");

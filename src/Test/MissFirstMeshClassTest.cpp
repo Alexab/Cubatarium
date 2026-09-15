@@ -3192,8 +3192,12 @@ int main()
     using cutum::ShouldForceMarkRelitForTicketedStale;
     Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, true, 2),
            "FZ25-P0b: force stale ticket on lit ring");
+    Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, false, 2),
+           "N04 T2: equal-rev FullyDark ticket still forces MarkRelit");
     Expect(!ShouldForceMarkRelitForTicketedStale(true, true, true, true, 5),
            "FZ25-P0b: rim outside lit ring");
+    Expect(!ShouldForceMarkRelitForTicketedStale(true, false, true, false, 2),
+           "N04 T2: no ticket → no force");
   }
 
   // FZ2.6: budget reality + consumer backpressure + mesh drain split

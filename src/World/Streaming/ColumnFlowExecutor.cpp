@@ -521,16 +521,14 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   {
     // Q8: soft deadline — defer Relight/Seam/Promote when frame budget is
     // exhausted; re-queue and stop. FirstMesh keeps a progress floor.
-    // G1: when unfinished=0 but FullyDark stalled/census mismatch, RelightThenMesh
-    // is critical too (else tickets sit in heap → FullyDarkStalledTicket).
+    // G1/N04: FullyDarkStalledTicket already means repair ticket ∧ ¬progress.
+    // Drain RelightThenMesh as critical without requiring StaleLit / pending_light
+    // / stale_vl_rev (equal-rev census debt has those at 0 — 102527 class).
     const auto &pt = world.GetPhysicsTelemetry();
     const bool relight_critical =
         work.kind == ColumnWorkKind::RelightThenMesh &&
         pt.FocusNotRenderReady == 0 &&
-        ((pt.VisibleBlackFullyDarkStalledN > 0 &&
-          (pt.VisibleBlackStaleLitN > 0 || pt.PendingLightFocus > 0 ||
-           pt.FocusPendingDark > 0)) ||
-         pt.VisibleBlackCensusMismatch != 0);
+        pt.VisibleBlackFullyDarkStalledN > 0;
     const bool critical =
         work.kind == ColumnWorkKind::FirstMesh || relight_critical;
     if (UFrameDeadline::ShouldDeferProducer(critical))

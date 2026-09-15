@@ -2115,6 +2115,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   static glm::ivec3 s_ring_cache_focus{0};
   const glm::ivec3 ring_focus = focus_ground;
   const bool enter_edge = enter_gate_active != s_ring_enter_was_active;
+  const bool ring_dirty = world.NeedsSpawnRingCatchUp();
+  if (ring_dirty)
+    s_ring_cache_valid = false;
   bool need_ring_query = enter_gate_active || enter_edge || !s_ring_cache_valid ||
                          ring_focus.x != s_ring_cache_focus.x ||
                          ring_focus.z != s_ring_cache_focus.z;

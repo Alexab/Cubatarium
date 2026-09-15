@@ -13,18 +13,21 @@ inline bool IsMeshLightStale(uint64_t meshed_light_revision,
   return meshed_light_revision < light_field_revision;
 }
 
-/// GPU-resident: light revision mismatch only (audit N04).
-/// Dark faces with equal revisions are census potential-dark, not StaleVL demand.
+/// GPU-resident stale: revision mismatch, or equal-rev dark face (conservative).
+/// Near SoT callers (horiz<=2) use IsMeshLightStale directly instead.
 inline bool IsMeshLightStaleGpu(bool gpu_resident, bool gpu_has_dark_face,
                                 uint64_t meshed_light_revision,
                                 uint64_t light_field_revision)
 {
-  (void)gpu_has_dark_face;
   if (!gpu_resident)
   {
     return false;
   }
-  return IsMeshLightStale(meshed_light_revision, light_field_revision);
+  if (IsMeshLightStale(meshed_light_revision, light_field_revision))
+  {
+    return true;
+  }
+  return gpu_has_dark_face;
 }
 
 } // namespace cutum

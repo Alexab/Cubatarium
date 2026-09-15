@@ -705,14 +705,17 @@ inline bool ShouldForceMarkRelitOnUnchangedLight(
   return false;
 }
 
-/// FZ2.5-P0b: stalled ticket on lit ring — force MarkRelit schedule path.
+/// FZ2.5-P0b / N04 T2: stalled RelightThenMesh ticket on FullyDark lit ring —
+/// force MarkRelit remesh even when equal-rev (still_stale=false). Ticket ∧
+/// FullyDark ∧ ring is the gate; do not require revision mismatch (102527 class).
 inline bool ShouldForceMarkRelitForTicketedStale(
     bool consume_mode, bool has_repair_ticket, bool fully_dark,
     bool still_stale, int horiz,
     int ring = kVisualStageLitDrawableHoriz)
 {
-  return consume_mode && has_repair_ticket && fully_dark && still_stale &&
-         horiz >= 0 && horiz <= ring;
+  (void)still_stale;
+  return consume_mode && has_repair_ticket && fully_dark && horiz >= 0 &&
+         horiz <= ring;
 }
 
 /// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.
