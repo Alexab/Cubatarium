@@ -216,8 +216,36 @@ bool UGreedyGpuBackend::PublishPassInputs(
     std::vector<GreedyGpuBatch> group_fresh;
     group_fresh.reserve(group.size());
     bool group_ok = true;
+    const bool coord_dirty = cache.PendingGeometryDirty.count(coord) > 0;
+    std::unordered_set<uint16_t> resident_batch_indices;
+    if (coord_dirty)
+    {
+      for (const auto &batch : cache.batches)
+      {
+        if (batch.chunkCoord == coord && batch.pooled)
+          resident_batch_indices.insert(batch.batchIndex);
+      }
+    }
+    std::unordered_set<uint16_t> upload_batch_indices;
+    for (const auto *input : group)
+      upload_batch_indices.insert(input->ref.batchIndex);
+    if (coord_dirty && !resident_batch_indices.empty())
+    {
+      for (const uint16_t idx : resident_batch_indices)
+      {
+        if (upload_batch_indices.count(idx) == 0)
+        {
+          group_ok = false;
+          any_fail = true;
+          NotePublicationOverloadRetain();
+          break;
+        }
+      }
+    }
     for (const auto *input : group)
     {
+      if (!group_ok)
+        break;
       GreedyGpuBatch gpu;
       UploadBatch(gpu, *input->batch, cache.VertexPool);
       if (!gpu.pooled)
@@ -271,6 +299,25 @@ bool UGreedyGpuBackend::PublishPassInputs(
     return false;
   }
 
+  // N01 v2.1: coords with no inputs in this call keep their resident batches.
+  // Otherwise neighbor progress frees still-dirty peers (mixed pass / holes).
+  std::unordered_set<glm::ivec3, IVec3Hash> input_coords;
+  for (const auto &input : inputs)
+  {
+    if (!input.batch || input.batch->vertices.empty() ||
+        input.batch->indices.empty())
+      continue;
+    input_coords.insert(input.ref.chunkCoord);
+  }
+  for (size_t n = 0; n < cache.batches.size(); ++n)
+  {
+    const auto &batch = cache.batches[n];
+    if (input_coords.count(batch.chunkCoord) > 0)
+      continue;
+    staged.push_back(batch);
+    changed = true;
+  }
+
   changed = changed || staged.size() != cache.batches.size();
   for (size_t n = 0; n < cache.batches.size(); ++n)
     if (!retained[n])
@@ -282,8 +329,10 @@ bool UGreedyGpuBackend::PublishPassInputs(
     cache.PendingGeometryDirty.erase(coord);
   cache.usesVertexPool = !cache.batches.empty();
   sync_handles();
-  // N01 v2: do not advance pass revisions while any group failed or any upload
-  // coord remains unpublished — otherwise consumers treat a mixed pass as done.
+  // N01 v2 / epoch-split: do not advance pass revisions while any group failed,
+  // any upload coord remains unpublished, or PendingGeometryDirty remains —
+  // otherwise consumers treat a mixed pass as done. publicationVersion still
+  // advances on geometry change (see below).
   bool all_upload_coords_published = true;
   for (const auto &coord : upload_order)
   {
@@ -294,7 +343,8 @@ bool UGreedyGpuBackend::PublishPassInputs(
     }
   }
   const bool advance_pass_revisions =
-      !any_fail && all_upload_coords_published;
+      !any_fail && all_upload_coords_published &&
+      cache.PendingGeometryDirty.empty();
   if (advance_pass_revisions)
   {
     cache.meshRevision = mesh_revision;
@@ -306,6 +356,9 @@ bool UGreedyGpuBackend::PublishPassInputs(
     cache.IndirectCullReady = false;
     cache.GpuCompactActive = false;
     cache.CompactVisCpuSynced = false;
+    // N01 epoch-split: draw-table identity advances whenever geometry changed,
+    // even if pass revisions stay gated on dirty-empty (RefreshPassRefs /
+    // NoteCmdReorder key off publicationVersion).
     ++cache.publicationVersion;
   }
   cache.VertexPool.SignalUploadComplete();

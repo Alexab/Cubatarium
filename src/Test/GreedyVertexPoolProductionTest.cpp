@@ -242,16 +242,43 @@ int main(int argc, char **argv)
       f.second = GL_ALREADY_SIGNALED;
     cache2.VertexPool.BeginUploadFrame();
     cache2.VertexPool.SetMaxCapacityBytes(0);
+    const uint64_t rev_before_neighbor = cache2.meshRevision;
+    const uint64_t pub_ver_before_neighbor = cache2.publicationVersion;
     check(backend2.PublishPassInputs(cache2, {{rn, &bn}}, {rn.chunkCoord}, 3, 3,
                                      1),
           "N01 neighbor publishes independently");
     check(cache2.PendingGeometryDirty.count(ra.chunkCoord) == 1,
           "N01 primary dirty survives neighbor publish");
+    check(cache2.meshRevision == rev_before_neighbor &&
+              cache2.publicationVersion == pub_ver_before_neighbor + 1,
+          "N01 epoch-split: leftover dirty blocks meshRev; pubVer bumps on geometry");
     bool neighbor_ok = false;
     for (const auto &g : cache2.batches)
       if (g.chunkCoord == rn.chunkCoord && g.blockId == 7)
         neighbor_ok = true;
     check(neighbor_ok, "N01 neighbor batch resident");
+
+    // Dirty coord with partial batch upload must retain full predecessor set.
+    cutum::GreedyBatchRef rp{};
+    rp.chunkCoord = ra.chunkCoord;
+    rp.batchIndex = 0;
+    cutum::GreedyMeshBatch partial_a = small_a;
+    partial_a.vertices.resize(4);
+    (void)backend2.PublishPassInputs(cache2, {{rp, &partial_a}}, {ra.chunkCoord},
+                                     4, 4, 1);
+    check(cache2.PendingGeometryDirty.count(ra.chunkCoord) == 1,
+          "N01 v2.1 partial dirty upload keeps coord dirty");
+    uint16_t a_after = 0;
+    uint16_t b_after = 0;
+    for (const auto &g : cache2.batches)
+    {
+      if (g.chunkCoord == ra.chunkCoord && g.batchIndex == 0)
+        a_after = g.blockId;
+      if (g.chunkCoord == ra.chunkCoord && g.batchIndex == 1)
+        b_after = g.blockId;
+    }
+    check(a_after == 9 && b_after == 9,
+          "N01 v2.1 partial dirty upload retains full A/B predecessors");
     cache2.VertexPool.Destroy();
   }
   return failures ? 1 : 0;
