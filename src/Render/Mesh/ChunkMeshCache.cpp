@@ -4051,8 +4051,22 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     pipeline->ReleaseReadbackSlot(pending.ticket);
     pending.ticket = {};
     ActiveMeshSourceRevision.erase(pending.coord);
-    Dirty.MarkDirtyPriority(pending.coord);
   };
+
+  // P1-a/b: holes → Priority; drawable+Light → no Dirty (MarkRelit owner);
+  // drawable+Geom/Catalog → MarkDirty (not Priority FM storm).
+  auto requeue_after_stale_input =
+      [&](glm::ivec3 coord, MeshApplyStaleInputReason reason) {
+        const bool drawable = HasDrawableGreedyMesh(coord);
+        if (reason == MeshApplyStaleInputReason::Light && drawable)
+          return;
+        if (!drawable)
+        {
+          Dirty.MarkDirtyPriority(coord);
+          return;
+        }
+        Dirty.MarkDirty(coord);
+      };
 
   auto revision_ok = [&](PendingGpuApply &pending,
                          bool &out_drop) -> bool {
@@ -4063,14 +4077,21 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         ChunkMeshSnapshot::ClassifyStaleInput(
             pending.snapshot.inputStampsValid, catalog_ok,
             pending.snapshot.inputStamps, world);
-    if (stale_reason != MeshApplyStaleInputReason::Ok)
+    // P1-b2: light-only mismatch — commit capture (old light baked);
+    // MarkRelit/RemeshQ owns refresh. Avoids Visual thrash (drawable or first).
+    const bool accept_light_stale =
+        stale_reason == MeshApplyStaleInputReason::Light;
+    if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_light_stale)
     {
       fail_ticket(pending);
       note_stale_visual(stale_reason);
       CaptureStore.Invalidate(pending.coord);
+      requeue_after_stale_input(pending.coord, stale_reason);
       out_drop = true;
       return false;
     }
+    if (accept_light_stale)
+      ++MeshApplyStaleLightAcceptedCount;
     const uint64_t expected_revision = MeshRevisions.Current(pending.coord);
     const auto revisionIt = ActiveMeshSourceRevision.find(pending.coord);
     const bool has_active = revisionIt != ActiveMeshSourceRevision.end();
@@ -4528,7 +4549,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const MeshApplyStaleInputReason stale_reason =
       ChunkMeshSnapshot::ClassifyStaleInput(result.InputStampsValid, catalog_ok,
                                            result.InputStamps, world);
-  if (stale_reason != MeshApplyStaleInputReason::Ok)
+  const bool accept_light_stale =
+      stale_reason == MeshApplyStaleInputReason::Light;
+  if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_light_stale)
   {
     ++MeshApplyStaleCount;
     ++MeshApplyStaleVisualCount;
@@ -4556,11 +4579,19 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       ActiveMeshSourceRevision.erase(active);
     if (world.GetChunkManager().HasChunk(result.coord))
     {
-      if (HasDrawableGreedyMesh(result.coord)) Dirty.MarkDirty(result.coord);
-      else Dirty.MarkDirtyPriority(result.coord);
+      const bool drawable = HasDrawableGreedyMesh(result.coord);
+      if (!(stale_reason == MeshApplyStaleInputReason::Light && drawable))
+      {
+        if (drawable)
+          Dirty.MarkDirty(result.coord);
+        else
+          Dirty.MarkDirtyPriority(result.coord);
+      }
     }
     return;
   }
+  if (accept_light_stale)
+    ++MeshApplyStaleLightAcceptedCount;
   auto abandon_fm_watch = [&]()
   {
     // Orphan hygiene: drop watch without counting as GPU finish match.

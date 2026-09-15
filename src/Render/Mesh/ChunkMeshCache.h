@@ -261,6 +261,10 @@ public:
   {
     return MeshApplyStaleStampInvalidCount;
   }
+  uint64_t GetMeshApplyStaleLightAcceptedCount() const
+  {
+    return MeshApplyStaleLightAcceptedCount;
+  }
   uint64_t GetMeshApplyStaleRevCount() const { return MeshApplyStaleRevCount; }
   /// Older apply discarded while Active tracks a newer revision (not remesh).
   uint64_t GetMeshApplySupersededCount() const
@@ -1022,6 +1026,8 @@ private:
   uint64_t MeshApplyStaleLightCount{0};
   uint64_t MeshApplyStaleCatalogCount{0};
   uint64_t MeshApplyStaleStampInvalidCount{0};
+  /// Light-stale accepted on live drawable (not Visual thrash).
+  uint64_t MeshApplyStaleLightAcceptedCount{0};
   /// 162400: RemeshObsoleteTracked (Current moved under Active).
   uint64_t MeshApplyStaleRevCount{0};
   uint64_t MeshApplySupersededCount{0};
