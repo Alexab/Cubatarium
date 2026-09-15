@@ -81,16 +81,23 @@ Plan: `.cursor/plans/n01_rework_mid-black.plan.md`.
 | Bisect B3 `204326` | eager ring — blinks gone; water end blacks |
 | Bisect B4 `205048` | A1 ON again = full FAIL |
 | Confirm `205626` | A1 OFF+eager: only sticky mid blacks (stalled) |
+| Manual `085208` | post-N01 v2 eye FAIL (B4 + sticky mid worse); v2.1 baseline |
+| Manual `102527` | post-v2.1 eye FAIL thrash (swap/blink/per-block); holes counters≈0 |
 
 Reports: `bisect_b1_result.md`, `bisect_b2_result.md`, `bisect_b3_result.md`,
 `bisect_b4_result.md`, `bisect_b3b_205626_result.md`.
 
 **Interim eye-safe (pre N01 v2):** A2+A3 ON, A1 OFF, eager spawn ring, A4 telem ON.
 
-**Landed on follow-on track (`n01_rework_mid-black`):** N01 v2 (group-commit + no
-revision on partial), `--visible`/dual-lane stop-line in `flight_sim_run.py`,
-N04 metric split + dark-face≠StaleVL demand, spawn-ring cache, BeginFrame-before-stream.
-Operator must still west-eye mid blacks (`205626` class) and B4 regress.
+**N01 epoch-split (after `102527`):** `publicationVersion++` on any geometry change;
+mesh/cull/sort only when `PendingGeometryDirty.empty()`. Group-commit KEEP.
+Ticketed FullyDark force MarkRelit without equal-rev `still_stale`; relight_critical
+on `FullyDarkStalledN` alone.
 
-**Honest gates going forward:** `--visible` + `adequacy_pass` **and** dual-lane
-stop-line (VB/StaleVL≤84.5, unlit_max≤15c/19w) + manual west eye on publish/light/ring.
+Scorecard: `python tools/n01_v21_scorecard.py bin/logs/perf_*.jsonl -o ...`
+(includes eye_proxy).
+
+**Four merge signals (N08):** `--visible` + `adequacy_pass` + dual-lane
+(VB/StaleVL≤84.5, unlit, mid stalled≤5) + **eye_proxy** (stale_visual med≤6,
+Δmed≤1.5, holes blink≤0.05, reorder≤1) + manual west eye.
+Do **not** merge on adequacy alone. G1 / pixel oracle / Q9 remain **OPEN**.
