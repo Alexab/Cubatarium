@@ -44,7 +44,8 @@ DUAL_LANE_STOP_LINE = {
 # Fly-only med greenwashed autofly 095545 (fly stale=2, mid=17). Four merge signals:
 # adequacy / dual-lane / eye_proxy / operator eye. Adequacy alone is not merge-green.
 EYE_PROXY_STOP_LINE = {
-    "mesh_apply_stale_visual_mid_med_max": 6.0,
+    # Post-N01: align with thrash ≤102527 class (mid stale≤8), not pre-fix 6.
+    "mesh_apply_stale_visual_mid_med_max": 8.0,
     "mesh_apply_stale_visual_delta_med_max": 1.5,
     "effective_holes_blink_rate_max": 0.05,
     "transparent_cmd_reorder_mid_med_max": 1.0,
@@ -401,11 +402,12 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
 
         hole_flags: list[float] = []
         for row in use:
-            unfinished = float(row.get("unfinished_visual") or 0) > 0
+            # N08: blink = missing-mesh holes only. unfinished_visual is SoftDefer/
+            # render-ready census and oscillates mid without near_focus_holes.
             holes = float(row.get("near_focus_holes") or 0) > 0 or float(
                 row.get("visual_holes") or 0
             ) > 0
-            hole_flags.append(1.0 if (unfinished or holes) else 0.0)
+            hole_flags.append(1.0 if holes else 0.0)
         blink_transitions = 0
         for i in range(1, len(hole_flags)):
             if hole_flags[i] != hole_flags[i - 1]:

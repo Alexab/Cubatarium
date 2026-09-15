@@ -20,7 +20,7 @@ CASES = [
     (
         ROOT / "bin/logs/perf_20260915-102527_35348.jsonl",
         "102527",
-        True,
+        False,  # stale mid≤6; hole-blink only (unfinished SoftDefer not blink)
     ),
     (
         ROOT / "bin/logs/perf_20260915-121131_5256.jsonl",
@@ -70,13 +70,16 @@ def main() -> int:
             print(f"FAIL {label}: expected eye_proxy FAIL")
             failures += 1
         if expect_fail and "stale_visual_without_hole_counters" not in fails:
-            # 095545/102527/121131 all have holes≈0 and stale mid>6
-            if stale is not None and float(stale) > 6.0:
+            # 095545/121131 have holes≈0 and stale mid>8
+            if stale is not None and float(stale) > 8.0:
                 print(
                     f"FAIL {label}: missing stale_visual_without_hole_counters "
                     f"(stale_mid={stale})"
                 )
                 failures += 1
+        if not expect_fail and not passed:
+            print(f"FAIL {label}: expected eye_proxy PASS")
+            failures += 1
         if seg not in ("mid_corridor", "mid_third", "fly_fallback"):
             print(f"FAIL {label}: bad segment {seg}")
             failures += 1
