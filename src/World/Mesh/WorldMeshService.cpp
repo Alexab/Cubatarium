@@ -897,6 +897,26 @@ uint64_t UWorldMeshService::GetMeshApplyStaleVisualCount() const
   return Cache.GetMeshApplyStaleVisualCount();
 }
 
+uint64_t UWorldMeshService::GetMeshApplyStaleGeomCount() const
+{
+  return Cache.GetMeshApplyStaleGeomCount();
+}
+
+uint64_t UWorldMeshService::GetMeshApplyStaleLightCount() const
+{
+  return Cache.GetMeshApplyStaleLightCount();
+}
+
+uint64_t UWorldMeshService::GetMeshApplyStaleCatalogCount() const
+{
+  return Cache.GetMeshApplyStaleCatalogCount();
+}
+
+uint64_t UWorldMeshService::GetMeshApplyStaleStampInvalidCount() const
+{
+  return Cache.GetMeshApplyStaleStampInvalidCount();
+}
+
 uint64_t UWorldMeshService::GetMeshApplyStaleRevCount() const
 {
   return Cache.GetMeshApplyStaleRevCount();

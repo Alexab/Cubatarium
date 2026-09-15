@@ -4014,6 +4014,28 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   double local_gpu_kick_ms = 0.0;
   const auto finish_pass_t0 = std::chrono::high_resolution_clock::now();
 
+  auto note_stale_visual = [&](MeshApplyStaleInputReason reason) {
+    ++MeshApplyStaleCount;
+    ++MeshApplyStaleVisualCount;
+    switch (reason)
+    {
+    case MeshApplyStaleInputReason::StampInvalid:
+      ++MeshApplyStaleStampInvalidCount;
+      break;
+    case MeshApplyStaleInputReason::Catalog:
+      ++MeshApplyStaleCatalogCount;
+      break;
+    case MeshApplyStaleInputReason::Geom:
+      ++MeshApplyStaleGeomCount;
+      break;
+    case MeshApplyStaleInputReason::Light:
+      ++MeshApplyStaleLightCount;
+      break;
+    case MeshApplyStaleInputReason::Ok:
+      break;
+    }
+  };
+
   auto fail_ticket = [&](PendingGpuApply &pending) {
     if (pending.ticket.valid && pending.ticket.slotIndex >= 0)
     {
@@ -4035,14 +4057,16 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   auto revision_ok = [&](PendingGpuApply &pending,
                          bool &out_drop) -> bool {
     out_drop = false;
-    if (!pending.snapshot.InputsStillValid(
-            world, CaptureStore.GetNeighborDrawableFn(),
-            CaptureStore.GetNeighborDrawableCtx()) ||
-        pending.inputCatalog != registry.GetDefinitionsCatalogSnapshot())
+    const bool catalog_ok =
+        pending.inputCatalog == registry.GetDefinitionsCatalogSnapshot();
+    const MeshApplyStaleInputReason stale_reason =
+        ChunkMeshSnapshot::ClassifyStaleInput(
+            pending.snapshot.inputStampsValid, catalog_ok,
+            pending.snapshot.inputStamps, world);
+    if (stale_reason != MeshApplyStaleInputReason::Ok)
     {
       fail_ticket(pending);
-      ++MeshApplyStaleCount;
-      ++MeshApplyStaleVisualCount;
+      note_stale_visual(stale_reason);
       CaptureStore.Invalidate(pending.coord);
       out_drop = true;
       return false;
@@ -4499,15 +4523,32 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                                       UBlockRegistry &registry,
                                       MeshBuildResult &&result)
 {
-  bool inputs_valid = result.InputStampsValid &&
+  const bool catalog_ok =
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
-  for (const auto &stamp : result.InputStamps)
-    inputs_valid = inputs_valid &&
-        stamp.Matches(world.GetChunkManager().GetChunk(stamp.coord));
-  if (!inputs_valid)
+  const MeshApplyStaleInputReason stale_reason =
+      ChunkMeshSnapshot::ClassifyStaleInput(result.InputStampsValid, catalog_ok,
+                                           result.InputStamps, world);
+  if (stale_reason != MeshApplyStaleInputReason::Ok)
   {
     ++MeshApplyStaleCount;
     ++MeshApplyStaleVisualCount;
+    switch (stale_reason)
+    {
+    case MeshApplyStaleInputReason::StampInvalid:
+      ++MeshApplyStaleStampInvalidCount;
+      break;
+    case MeshApplyStaleInputReason::Catalog:
+      ++MeshApplyStaleCatalogCount;
+      break;
+    case MeshApplyStaleInputReason::Geom:
+      ++MeshApplyStaleGeomCount;
+      break;
+    case MeshApplyStaleInputReason::Light:
+      ++MeshApplyStaleLightCount;
+      break;
+    case MeshApplyStaleInputReason::Ok:
+      break;
+    }
     CaptureStore.Invalidate(result.coord);
     const auto active = ActiveMeshSourceRevision.find(result.coord);
     if (active != ActiveMeshSourceRevision.end() &&

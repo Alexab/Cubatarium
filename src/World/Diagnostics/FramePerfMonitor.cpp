@@ -123,6 +123,10 @@ struct Session
   int SpikesWrittenThisPeriod{0};
   int FrameCount{0};
   uint64_t MeshApplyStaleAtPeriodStart{0};
+  uint64_t MeshApplyStaleGeomAtPeriodStart{0};
+  uint64_t MeshApplyStaleLightAtPeriodStart{0};
+  uint64_t MeshApplyStaleCatalogAtPeriodStart{0};
+  uint64_t MeshApplyStaleStampInvalidAtPeriodStart{0};
   uint64_t MeshApplySupersededAtPeriodStart{0};
   uint64_t MeshApplyDropNoActiveAtPeriodStart{0};
   uint64_t MeshDiscardedLateAtPeriodStart{0};
@@ -536,6 +540,14 @@ struct FrameNumbers
   uint64_t mesh_apply_stale{0};
   uint64_t mesh_apply_stale_delta{0};
   uint64_t mesh_apply_stale_visual{0};
+  uint64_t mesh_apply_stale_geom{0};
+  uint64_t mesh_apply_stale_light{0};
+  uint64_t mesh_apply_stale_catalog{0};
+  uint64_t mesh_apply_stale_stamp_invalid{0};
+  uint64_t mesh_apply_stale_geom_delta{0};
+  uint64_t mesh_apply_stale_light_delta{0};
+  uint64_t mesh_apply_stale_catalog_delta{0};
+  uint64_t mesh_apply_stale_stamp_invalid_delta{0};
   uint64_t mesh_apply_stale_rev{0};
   uint64_t mesh_apply_superseded{0};
   uint64_t mesh_apply_superseded_delta{0};
@@ -1168,6 +1180,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_discarded_late_job_mismatch = phys.MeshDiscardedLateJobMismatch;
   n.mesh_apply_stale = phys.MeshApplyStale;
   n.mesh_apply_stale_visual = phys.MeshApplyStaleVisual;
+  n.mesh_apply_stale_geom = phys.MeshApplyStaleGeom;
+  n.mesh_apply_stale_light = phys.MeshApplyStaleLight;
+  n.mesh_apply_stale_catalog = phys.MeshApplyStaleCatalog;
+  n.mesh_apply_stale_stamp_invalid = phys.MeshApplyStaleStampInvalid;
   n.mesh_apply_stale_rev = phys.MeshApplyStaleRev;
   n.mesh_apply_superseded = phys.MeshApplySuperseded;
   n.mesh_apply_drop_no_active = phys.MeshApplyDropNoActive;
@@ -1837,6 +1853,18 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
           << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
           << ",\"mesh_apply_stale_visual\":" << n.mesh_apply_stale_visual
+          << ",\"mesh_apply_stale_geom\":" << n.mesh_apply_stale_geom
+          << ",\"mesh_apply_stale_light\":" << n.mesh_apply_stale_light
+          << ",\"mesh_apply_stale_catalog\":" << n.mesh_apply_stale_catalog
+          << ",\"mesh_apply_stale_stamp_invalid\":"
+          << n.mesh_apply_stale_stamp_invalid
+          << ",\"mesh_apply_stale_geom_delta\":" << n.mesh_apply_stale_geom_delta
+          << ",\"mesh_apply_stale_light_delta\":"
+          << n.mesh_apply_stale_light_delta
+          << ",\"mesh_apply_stale_catalog_delta\":"
+          << n.mesh_apply_stale_catalog_delta
+          << ",\"mesh_apply_stale_stamp_invalid_delta\":"
+          << n.mesh_apply_stale_stamp_invalid_delta
           << ",\"mesh_apply_stale_rev\":" << n.mesh_apply_stale_rev
           << ",\"mesh_apply_superseded\":" << n.mesh_apply_superseded
           << ",\"mesh_apply_superseded_delta\":"
@@ -2547,6 +2575,24 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
       n.mesh_apply_stale >= s.MeshApplyStaleAtPeriodStart
           ? n.mesh_apply_stale - s.MeshApplyStaleAtPeriodStart
           : 0;
+  period.mesh_apply_stale_geom_delta =
+      n.mesh_apply_stale_geom >= s.MeshApplyStaleGeomAtPeriodStart
+          ? n.mesh_apply_stale_geom - s.MeshApplyStaleGeomAtPeriodStart
+          : 0;
+  period.mesh_apply_stale_light_delta =
+      n.mesh_apply_stale_light >= s.MeshApplyStaleLightAtPeriodStart
+          ? n.mesh_apply_stale_light - s.MeshApplyStaleLightAtPeriodStart
+          : 0;
+  period.mesh_apply_stale_catalog_delta =
+      n.mesh_apply_stale_catalog >= s.MeshApplyStaleCatalogAtPeriodStart
+          ? n.mesh_apply_stale_catalog - s.MeshApplyStaleCatalogAtPeriodStart
+          : 0;
+  period.mesh_apply_stale_stamp_invalid_delta =
+      n.mesh_apply_stale_stamp_invalid >=
+              s.MeshApplyStaleStampInvalidAtPeriodStart
+          ? n.mesh_apply_stale_stamp_invalid -
+                s.MeshApplyStaleStampInvalidAtPeriodStart
+          : 0;
   period.mesh_apply_superseded_delta =
       n.mesh_apply_superseded >= s.MeshApplySupersededAtPeriodStart
           ? n.mesh_apply_superseded - s.MeshApplySupersededAtPeriodStart
@@ -2602,6 +2648,10 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
   s.LastPeriodUnfinishedVisual = period_unfinished;
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
+  s.MeshApplyStaleGeomAtPeriodStart = n.mesh_apply_stale_geom;
+  s.MeshApplyStaleLightAtPeriodStart = n.mesh_apply_stale_light;
+  s.MeshApplyStaleCatalogAtPeriodStart = n.mesh_apply_stale_catalog;
+  s.MeshApplyStaleStampInvalidAtPeriodStart = n.mesh_apply_stale_stamp_invalid;
   s.MeshApplySupersededAtPeriodStart = n.mesh_apply_superseded;
   s.MeshApplyDropNoActiveAtPeriodStart = n.mesh_apply_drop_no_active;
   s.PoolRetiredReclaimedAtPeriodStart = n.pool_retired_reclaimed_n;

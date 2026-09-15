@@ -44,6 +44,11 @@ struct PhysicsTelemetry
   uint64_t MeshApplyStale{0};
   /// 162400: InputsStillValid / catalog / stamp mismatch subset of MeshApplyStale.
   uint64_t MeshApplyStaleVisual{0};
+  /// Post-N01: reason split (sum == MeshApplyStaleVisual).
+  uint64_t MeshApplyStaleGeom{0};
+  uint64_t MeshApplyStaleLight{0};
+  uint64_t MeshApplyStaleCatalog{0};
+  uint64_t MeshApplyStaleStampInvalid{0};
   /// 162400: RemeshObsoleteTracked subset of MeshApplyStale.
   uint64_t MeshApplyStaleRev{0};
   /// DiscardOlderKeepActive — older async keep Active for newer in-flight.

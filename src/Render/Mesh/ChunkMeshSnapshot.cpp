@@ -86,6 +86,37 @@ bool ChunkMeshSnapshot::InputsStillValid(
   return true;
 }
 
+MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
+    bool input_stamps_valid, bool catalog_match,
+    const std::array<ChunkInputStamp, 7> &stamps, const UBlockWorld &world)
+{
+  if (!input_stamps_valid)
+    return MeshApplyStaleInputReason::StampInvalid;
+  if (!catalog_match)
+    return MeshApplyStaleInputReason::Catalog;
+  bool any_geom = false;
+  bool any_light = false;
+  for (const auto &stamp : stamps)
+  {
+    const UChunk *chunk = world.GetChunkManager().GetChunk(stamp.coord);
+    const ChunkInputStamp current =
+        ChunkInputStamp::Capture(stamp.coord, chunk, stamp.readsLight);
+    if (stamp.incarnation != current.incarnation ||
+        stamp.content != current.content)
+    {
+      any_geom = true;
+      continue;
+    }
+    if (stamp.readsLight && stamp.light != current.light)
+      any_light = true;
+  }
+  if (any_geom)
+    return MeshApplyStaleInputReason::Geom;
+  if (any_light)
+    return MeshApplyStaleInputReason::Light;
+  return MeshApplyStaleInputReason::Ok;
+}
+
 ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     const UBlockWorld &world, glm::ivec3 chunkCoord, uint64_t sourceRevision,
     NeighborVisualDrawableFn neighbor_drawable, void *neighbor_drawable_ctx)

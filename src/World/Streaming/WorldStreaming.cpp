@@ -2021,6 +2021,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshApplyStaleCount();
     world.PhysicsTelemetryData.MeshApplyStaleVisual =
         world.GetMeshService().GetMeshApplyStaleVisualCount();
+    world.PhysicsTelemetryData.MeshApplyStaleGeom =
+        world.GetMeshService().GetMeshApplyStaleGeomCount();
+    world.PhysicsTelemetryData.MeshApplyStaleLight =
+        world.GetMeshService().GetMeshApplyStaleLightCount();
+    world.PhysicsTelemetryData.MeshApplyStaleCatalog =
+        world.GetMeshService().GetMeshApplyStaleCatalogCount();
+    world.PhysicsTelemetryData.MeshApplyStaleStampInvalid =
+        world.GetMeshService().GetMeshApplyStaleStampInvalidCount();
     world.PhysicsTelemetryData.MeshApplyStaleRev =
         world.GetMeshService().GetMeshApplyStaleRevCount();
     world.PhysicsTelemetryData.MeshApplySuperseded =

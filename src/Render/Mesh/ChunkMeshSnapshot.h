@@ -7,12 +7,24 @@
 #include "World/Math/FluidCellState.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
 #include <array>
+#include <cstdint>
 #include <glm/glm.hpp>
 
 namespace cutum
 {
 
 class UBlockWorld;
+
+/// Why mesh apply was dropped as "stale visual" (legacy name): stamp/catalog
+/// mismatch mid-flight — not SoftDefer drawable flip.
+enum class MeshApplyStaleInputReason : uint8_t
+{
+  Ok = 0,
+  StampInvalid = 1,
+  Catalog = 2,
+  Geom = 3,
+  Light = 4,
+};
 
 /// Read-only voxel view for background meshing (center chunk + one-block
 /// shell). Shell faces are dense arrays (6 * CHUNK_SIZE^2), not hash maps.
@@ -45,6 +57,12 @@ struct ChunkMeshSnapshot
       const UBlockWorld &world,
       NeighborVisualDrawableFn neighbor_drawable = nullptr,
       void *neighbor_drawable_ctx = nullptr) const;
+
+  /// Post-N01 thrash autopsy: why InputsStillValid/catalog failed.
+  /// Geom wins over Light if both halo stamps mismatch.
+  static MeshApplyStaleInputReason ClassifyStaleInput(
+      bool input_stamps_valid, bool catalog_match,
+      const std::array<ChunkInputStamp, 7> &stamps, const UBlockWorld &world);
 
   static ChunkMeshSnapshot Capture(const UBlockWorld &world,
                                    glm::ivec3 chunkCoord,

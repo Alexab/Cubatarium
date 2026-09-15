@@ -245,6 +245,22 @@ public:
   {
     return MeshApplyStaleVisualCount;
   }
+  uint64_t GetMeshApplyStaleGeomCount() const
+  {
+    return MeshApplyStaleGeomCount;
+  }
+  uint64_t GetMeshApplyStaleLightCount() const
+  {
+    return MeshApplyStaleLightCount;
+  }
+  uint64_t GetMeshApplyStaleCatalogCount() const
+  {
+    return MeshApplyStaleCatalogCount;
+  }
+  uint64_t GetMeshApplyStaleStampInvalidCount() const
+  {
+    return MeshApplyStaleStampInvalidCount;
+  }
   uint64_t GetMeshApplyStaleRevCount() const { return MeshApplyStaleRevCount; }
   /// Older apply discarded while Active tracks a newer revision (not remesh).
   uint64_t GetMeshApplySupersededCount() const
@@ -1001,6 +1017,11 @@ private:
   uint64_t MeshApplyStaleCount{0};
   /// 162400: InputsStillValid / catalog / stamp mismatch drops.
   uint64_t MeshApplyStaleVisualCount{0};
+  /// Post-N01: reason split (sum == MeshApplyStaleVisualCount).
+  uint64_t MeshApplyStaleGeomCount{0};
+  uint64_t MeshApplyStaleLightCount{0};
+  uint64_t MeshApplyStaleCatalogCount{0};
+  uint64_t MeshApplyStaleStampInvalidCount{0};
   /// 162400: RemeshObsoleteTracked (Current moved under Active).
   uint64_t MeshApplyStaleRevCount{0};
   uint64_t MeshApplySupersededCount{0};

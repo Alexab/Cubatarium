@@ -59,6 +59,30 @@ int main()
   neighbor_chunk->SetBlockLocal({0, 0, 0}, static_cast<cutum::BlockId>(1));
   Expect(!snap.InputsStillValid(world, DrawableAlwaysFalse, nullptr),
          "neighbor content edit invalidates geom stamp");
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(true, true, snap.inputStamps,
+                                               world) ==
+             cutum::MeshApplyStaleInputReason::Geom,
+         "content edit classifies as Geom");
+
+  // Fresh capture after content edit, then light-only bump → Light.
+  ChunkMeshSnapshot snap2 =
+      ChunkMeshSnapshot::Capture(world, center, /*sourceRevision=*/2,
+                                 DrawableAlwaysTrue, nullptr);
+  Expect(snap2.InputsStillValid(world), "snap2 valid after content settle");
+  neighbor_chunk->BumpLightFieldRevision();
+  Expect(!snap2.InputsStillValid(world), "light bump invalidates stamp");
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(true, true, snap2.inputStamps,
+                                               world) ==
+             cutum::MeshApplyStaleInputReason::Light,
+         "light bump classifies as Light");
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(false, true, snap2.inputStamps,
+                                               world) ==
+             cutum::MeshApplyStaleInputReason::StampInvalid,
+         "invalid flag classifies StampInvalid");
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(true, false, snap2.inputStamps,
+                                               world) ==
+             cutum::MeshApplyStaleInputReason::Catalog,
+         "catalog mismatch classifies Catalog");
 
   if (gFails != 0)
   {

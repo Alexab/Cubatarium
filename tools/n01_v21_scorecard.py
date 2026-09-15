@@ -122,6 +122,18 @@ def build_scorecard(perf_path: Path, *, label: str, operator_visual: str | None)
             "publication_overload_retain_med": med(
                 collect("publication_overload_retain_n", mid_focus)
             ),
+            "mesh_apply_stale_geom_delta_med": med(
+                collect("mesh_apply_stale_geom_delta", mid_focus)
+            ),
+            "mesh_apply_stale_light_delta_med": med(
+                collect("mesh_apply_stale_light_delta", mid_focus)
+            ),
+            "mesh_apply_stale_catalog_delta_med": med(
+                collect("mesh_apply_stale_catalog_delta", mid_focus)
+            ),
+            "mesh_apply_stale_stamp_invalid_delta_med": med(
+                collect("mesh_apply_stale_stamp_invalid_delta", mid_focus)
+            ),
             "rows_mid": len(mid),
             "rows_mid_focus": len(mid_focus),
         },
