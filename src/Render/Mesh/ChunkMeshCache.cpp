@@ -857,6 +857,25 @@ void UChunkMeshCache::NoteGeometryDirty(glm::ivec3 chunk_coord)
   GeometryDirtyChunks.insert(chunk_coord);
 }
 
+void UChunkMeshCache::AppendGreedyPassBatchRefs(
+    glm::ivec3 coord, bool transparent_pass,
+    std::vector<GreedyBatchRef> &out) const
+{
+  const auto it = GreedyCache.find(coord);
+  if (it == GreedyCache.end())
+    return;
+  const std::vector<GreedyMeshBatch> &batches = it->second.batches;
+  for (size_t i = 0; i < batches.size(); ++i)
+  {
+    const GreedyMeshBatch &batch = batches[i];
+    if (batch.vertices.empty() || batch.indices.empty())
+      continue;
+    if (batch.Transparent != transparent_pass)
+      continue;
+    out.push_back(GreedyBatchRef{coord, static_cast<uint16_t>(i), batch.blockId});
+  }
+}
+
 void UChunkMeshCache::BeginGpuPassDirtyFrame() const
 {
   GpuPassDirtyFrame = GeometryDirtyChunks;

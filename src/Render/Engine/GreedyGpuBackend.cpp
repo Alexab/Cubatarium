@@ -156,12 +156,56 @@ void UGreedyGpuBackend::RefreshPassRefs(
         dirty.insert(ref.chunkCoord);
   std::vector<GreedyGpuUploadInput> inputs;
   inputs.reserve(refs.size());
+  struct SeenKey
+  {
+    glm::ivec3 coord{0};
+    uint16_t batchIndex{0};
+    bool operator==(const SeenKey &o) const
+    {
+      return coord == o.coord && batchIndex == o.batchIndex;
+    }
+  };
+  struct SeenKeyHash
+  {
+    size_t operator()(const SeenKey &k) const noexcept
+    {
+      size_t h = IVec3Hash{}(k.coord);
+      h ^= static_cast<size_t>(k.batchIndex) + 0x9e3779b9 + (h << 6) +
+           (h >> 2);
+      return h;
+    }
+  };
+  std::unordered_set<SeenKey, SeenKeyHash> seen_keys;
   for (const auto &ref : refs)
+  {
     inputs.push_back({ref, meshCache.TryGetGreedyBatch(ref)});
+    seen_keys.insert({ref.chunkCoord, ref.batchIndex});
+  }
+  // N01: dirty publish expands to full GreedyCache pass materials (not frustum).
+  std::unordered_set<glm::ivec3, IVec3Hash> dirty_union = dirty;
+  dirty_union.insert(cache.PendingGeometryDirty.begin(),
+                     cache.PendingGeometryDirty.end());
+  const bool transparent_pass = cache.passId == GreedyGpuPassId::Transparent;
+  if (cache.passId != GreedyGpuPassId::Unknown)
+  {
+    for (const auto &coord : dirty_union)
+    {
+      std::vector<GreedyBatchRef> tmp_refs;
+      meshCache.AppendGreedyPassBatchRefs(coord, transparent_pass, tmp_refs);
+      for (const auto &ref : tmp_refs)
+      {
+        if (seen_keys.count({ref.chunkCoord, ref.batchIndex}) > 0)
+          continue;
+        inputs.push_back({ref, meshCache.TryGetGreedyBatch(ref)});
+        seen_keys.insert({ref.chunkCoord, ref.batchIndex});
+        dirty.insert(coord);
+      }
+    }
+  }
   ApplyPoolBudget(cache.VertexPool);
   const auto previous = cache.publicationVersion;
   if (!PublishPassInputs(cache, inputs, dirty, mesh_revision, cull_revision,
-                         sort_revision))
+                         sort_revision, &meshCache))
     NoteOrderOnlyFail(TransparentOrderOnlyFailReason::PoolNotOk);
   else
   {

@@ -786,6 +786,10 @@ public:
     }
     return &batches[ref.batchIndex];
   }
+  /// N01: all non-empty greedy batches for coord matching pass (Transparent
+  /// flag). Does NOT apply frustum — publish-only helper.
+  void AppendGreedyPassBatchRefs(glm::ivec3 coord, bool transparent_pass,
+                                 std::vector<GreedyBatchRef> &out) const;
   const std::vector<CrossInstanceBatch> &GetCrossBatches() const
   {
     return CrossBatches;
