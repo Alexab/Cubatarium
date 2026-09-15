@@ -251,12 +251,31 @@ int main(int argc, char **argv)
           "N01 primary dirty survives neighbor publish");
     check(cache2.meshRevision == rev_before_neighbor &&
               cache2.publicationVersion == pub_ver_before_neighbor + 1,
-          "N01 epoch-split: leftover dirty blocks meshRev; pubVer bumps on geometry");
+          "N01 epoch-split: leftover dirty blocks meshRev; pubVer bumps on any_fresh");
     bool neighbor_ok = false;
     for (const auto &g : cache2.batches)
       if (g.chunkCoord == rn.chunkCoord && g.blockId == 7)
         neighbor_ok = true;
     check(neighbor_ok, "N01 neighbor batch resident");
+
+    // Untouched-coord reshuffle alone must not bump publicationVersion.
+    {
+      const uint64_t pub_before = cache2.publicationVersion;
+      const uint64_t rev_before = cache2.meshRevision;
+      for (auto &f : fences)
+        f.second = GL_ALREADY_SIGNALED;
+      cache2.VertexPool.BeginUploadFrame();
+      cache2.VertexPool.SetMaxCapacityBytes(0);
+      // Neighbor not dirty → fast-path reuse; primary stays dirty but has no
+      // inputs → untouched retain. any_fresh=false ⇒ no pubVer bump.
+      check(backend2.PublishPassInputs(cache2, {{rn, &bn}}, {}, 3, 3, 1),
+            "N01 untouched-only publish returns ok");
+      check(cache2.publicationVersion == pub_before &&
+                cache2.meshRevision == rev_before,
+            "N01 narrow: untouched-only does not bump pubVer or meshRev");
+      check(cache2.PendingGeometryDirty.count(ra.chunkCoord) == 1,
+            "N01 primary dirty survives untouched-only publish");
+    }
 
     // Dirty coord with partial batch upload must retain full predecessor set.
     cutum::GreedyBatchRef rp{};

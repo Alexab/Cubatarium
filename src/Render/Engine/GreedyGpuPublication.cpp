@@ -13,6 +13,8 @@ namespace
 
 std::atomic<uint64_t> gPublicationOverloadRetainN{0};
 std::atomic<uint64_t> gPublicationProgressUnitN{0};
+std::atomic<uint64_t> gPubVerChangedWithoutFreshN{0};
+std::atomic<uint64_t> gPassMeshRevLagMax{0};
 
 struct GpuBatchKey
 {
@@ -356,10 +358,13 @@ bool UGreedyGpuBackend::PublishPassInputs(
     cache.IndirectCullReady = false;
     cache.GpuCompactActive = false;
     cache.CompactVisCpuSynced = false;
-    // N01 epoch-split: draw-table identity advances whenever geometry changed,
-    // even if pass revisions stay gated on dirty-empty (RefreshPassRefs /
-    // NoteCmdReorder key off publicationVersion).
-    ++cache.publicationVersion;
+    // N01 narrow epoch-split: draw-table identity advances only on successful
+    // group commit (any_fresh). Untouched-coord reshuffle alone must not bump
+    // publicationVersion (121131 thrash class).
+    if (any_fresh)
+      ++cache.publicationVersion;
+    else
+      NotePubVerChangedWithoutFresh();
   }
   cache.VertexPool.SignalUploadComplete();
   return true;
@@ -383,5 +388,30 @@ uint64_t ConsumePublicationOverloadRetainN()
 uint64_t ConsumePublicationProgressUnitN()
 {
   return gPublicationProgressUnitN.exchange(0, std::memory_order_relaxed);
+}
+
+void NotePubVerChangedWithoutFresh()
+{
+  gPubVerChangedWithoutFreshN.fetch_add(1, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePubVerChangedWithoutFreshN()
+{
+  return gPubVerChangedWithoutFreshN.exchange(0, std::memory_order_relaxed);
+}
+
+void NotePassMeshRevLag(uint64_t lag)
+{
+  uint64_t prev = gPassMeshRevLagMax.load(std::memory_order_relaxed);
+  while (lag > prev &&
+         !gPassMeshRevLagMax.compare_exchange_weak(prev, lag,
+                                                   std::memory_order_relaxed))
+  {
+  }
+}
+
+uint64_t ConsumePassMeshRevLagMax()
+{
+  return gPassMeshRevLagMax.exchange(0, std::memory_order_relaxed);
 }
 } // namespace cutum
