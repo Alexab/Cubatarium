@@ -4077,11 +4077,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         ChunkMeshSnapshot::ClassifyStaleInput(
             pending.snapshot.inputStampsValid, catalog_ok,
             pending.snapshot.inputStamps, world);
-    // P1-b2: light-only mismatch — commit capture (old light baked);
-    // MarkRelit/RemeshQ owns refresh. Avoids Visual thrash (drawable or first).
-    const bool accept_light_stale =
-        stale_reason == MeshApplyStaleInputReason::Light;
-    if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_light_stale)
+    // P1-b2/P2: light-only always commit; geom+drawable commit (avoid remesh
+    // unfinished blink mid-cruise). Holes (!drawable) still fail+Priority.
+    const bool accept_input_stale =
+        stale_reason == MeshApplyStaleInputReason::Light ||
+        (stale_reason == MeshApplyStaleInputReason::Geom &&
+         HasDrawableGreedyMesh(pending.coord));
+    if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_input_stale)
     {
       fail_ticket(pending);
       note_stale_visual(stale_reason);
@@ -4090,7 +4092,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       out_drop = true;
       return false;
     }
-    if (accept_light_stale)
+    if (accept_input_stale &&
+        stale_reason == MeshApplyStaleInputReason::Light)
       ++MeshApplyStaleLightAcceptedCount;
     const uint64_t expected_revision = MeshRevisions.Current(pending.coord);
     const auto revisionIt = ActiveMeshSourceRevision.find(pending.coord);
@@ -4549,9 +4552,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const MeshApplyStaleInputReason stale_reason =
       ChunkMeshSnapshot::ClassifyStaleInput(result.InputStampsValid, catalog_ok,
                                            result.InputStamps, world);
-  const bool accept_light_stale =
-      stale_reason == MeshApplyStaleInputReason::Light;
-  if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_light_stale)
+  const bool accept_input_stale =
+      stale_reason == MeshApplyStaleInputReason::Light ||
+      (stale_reason == MeshApplyStaleInputReason::Geom &&
+       HasDrawableGreedyMesh(result.coord));
+  if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_input_stale)
   {
     ++MeshApplyStaleCount;
     ++MeshApplyStaleVisualCount;
@@ -4590,7 +4595,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     return;
   }
-  if (accept_light_stale)
+  if (accept_input_stale && stale_reason == MeshApplyStaleInputReason::Light)
     ++MeshApplyStaleLightAcceptedCount;
   auto abandon_fm_watch = [&]()
   {
