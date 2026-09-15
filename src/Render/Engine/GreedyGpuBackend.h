@@ -125,10 +125,16 @@ class UGreedyGpuBackend
 public:
   // Production transaction, independent of world/cache lookup and runtime
   // tuning. Used by RefreshPassRefs and fault-injection tests alike.
+  // mesh_cache: when non-null, incomplete check uses full GreedyCache pass set
+  // (N01). cache_pass_indices_override: test hook simulating Append result when
+  // mesh_cache is null (single dirty-coord cases).
   bool PublishPassInputs(GreedyGpuPassCache &cache,
       const std::vector<GreedyGpuUploadInput> &inputs,
       const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
-      uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision);
+      uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision,
+      const UChunkMeshCache *mesh_cache = nullptr,
+      const std::unordered_set<uint16_t> *cache_pass_indices_override =
+          nullptr);
   void RefreshPass(GreedyGpuPassCache &cache,
                    const std::vector<GreedyMeshBatch> &batches,
                    uint64_t mesh_revision, uint64_t cull_revision,
@@ -158,6 +164,12 @@ private:
 /// Q5: whole-pass pool OOM retained predecessor mesh (UploadBatch / publish abort).
 void NotePublicationOverloadRetain();
 uint64_t ConsumePublicationOverloadRetainN();
+/// N01: dirty publish missing a current GreedyCache material for the pass.
+void NotePublicationIncompleteMaterial();
+uint64_t ConsumePublicationIncompleteMaterialN();
+/// N01: pool OOM retain path (UploadBatch / group abort).
+void NotePublicationOomRetain();
+uint64_t ConsumePublicationOomRetainN();
 /// Q5: one successful chunk/batch publish under tiny-cap (progress unit).
 void NotePublicationProgressUnit();
 uint64_t ConsumePublicationProgressUnitN();

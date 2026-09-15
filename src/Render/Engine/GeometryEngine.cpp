@@ -2040,7 +2040,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         GreedyGpuOpaque.VertexPool.ConsumeReserveBumpN() +
         GreedyGpuCutout.VertexPool.ConsumeReserveBumpN() +
         GreedyGpuTransparent.VertexPool.ConsumeReserveBumpN();
-    phys.PublicationOverloadRetainN = ConsumePublicationOverloadRetainN();
+    phys.PublicationIncompleteMaterialN =
+        ConsumePublicationIncompleteMaterialN();
+    phys.PublicationOomRetainN = ConsumePublicationOomRetainN();
+    phys.PublicationOverloadRetainN =
+        phys.PublicationIncompleteMaterialN + phys.PublicationOomRetainN;
     phys.PubVerChangedWithoutFreshN = ConsumePubVerChangedWithoutFreshN();
     phys.PassMeshRevLagMax = ConsumePassMeshRevLagMax();
     phys.CullStatsSyncReadN = ConsumeCullStatsSyncReadN();

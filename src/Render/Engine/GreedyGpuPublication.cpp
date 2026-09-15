@@ -1,6 +1,7 @@
 #include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/ChunkMeshCache.h"
 #include <atomic>
 #include <unordered_map>
 #include <unordered_set>
@@ -11,7 +12,8 @@ namespace cutum
 namespace
 {
 
-std::atomic<uint64_t> gPublicationOverloadRetainN{0};
+std::atomic<uint64_t> gPublicationIncompleteMaterialN{0};
+std::atomic<uint64_t> gPublicationOomRetainN{0};
 std::atomic<uint64_t> gPublicationProgressUnitN{0};
 std::atomic<uint64_t> gPubVerChangedWithoutFreshN{0};
 std::atomic<uint64_t> gPassMeshRevLagMax{0};
@@ -130,7 +132,7 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
   {
     // Q5: tiny-cap OOM retains predecessor mesh; progress counted via
     // NotePublicationProgressUnit when sibling chunks still publish.
-    NotePublicationOverloadRetain();
+    NotePublicationOomRetain();
     // Retain metadata too: an allocation failure cannot change its material.
     gpu = previous;
     gpu.vbo = pool.VertexBuffer();
@@ -145,7 +147,9 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
 bool UGreedyGpuBackend::PublishPassInputs(
     GreedyGpuPassCache &cache, const std::vector<GreedyGpuUploadInput> &inputs,
     const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
-    uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision)
+    uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision,
+    const UChunkMeshCache *mesh_cache,
+    const std::unordered_set<uint16_t> *cache_pass_indices_override)
 {
   cache.PendingGeometryDirty.insert(dirty.begin(), dirty.end());
   std::unordered_map<GpuBatchKey, size_t, GpuBatchKeyHash> resident;
@@ -183,6 +187,8 @@ bool UGreedyGpuBackend::PublishPassInputs(
       }
   };
 
+  const bool transparent_pass = cache.passId == GreedyGpuPassId::Transparent;
+
   for (const auto &input : inputs)
   {
     const auto &ref = input.ref;
@@ -219,28 +225,40 @@ bool UGreedyGpuBackend::PublishPassInputs(
     group_fresh.reserve(group.size());
     bool group_ok = true;
     const bool coord_dirty = cache.PendingGeometryDirty.count(coord) > 0;
-    std::unordered_set<uint16_t> resident_batch_indices;
-    if (coord_dirty)
-    {
-      for (const auto &batch : cache.batches)
-      {
-        if (batch.chunkCoord == coord && batch.pooled)
-          resident_batch_indices.insert(batch.batchIndex);
-      }
-    }
     std::unordered_set<uint16_t> upload_batch_indices;
     for (const auto *input : group)
       upload_batch_indices.insert(input->ref.batchIndex);
-    if (coord_dirty && !resident_batch_indices.empty())
+    // N01: require cache pass materials ⊆ upload (not resident ⊆ upload).
+    // Material remove: resident extras drop on successful group commit.
+    if (coord_dirty)
     {
-      for (const uint16_t idx : resident_batch_indices)
+      std::unordered_set<uint16_t> cache_pass_indices;
+      bool have_cache_set = false;
+      if (mesh_cache != nullptr && cache.passId != GreedyGpuPassId::Unknown)
       {
-        if (upload_batch_indices.count(idx) == 0)
+        std::vector<GreedyBatchRef> cache_refs;
+        mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
+                                              cache_refs);
+        for (const auto &cref : cache_refs)
+          cache_pass_indices.insert(cref.batchIndex);
+        have_cache_set = true;
+      }
+      else if (cache_pass_indices_override != nullptr)
+      {
+        cache_pass_indices = *cache_pass_indices_override;
+        have_cache_set = true;
+      }
+      if (have_cache_set)
+      {
+        for (const uint16_t idx : cache_pass_indices)
         {
-          group_ok = false;
-          any_fail = true;
-          NotePublicationOverloadRetain();
-          break;
+          if (upload_batch_indices.count(idx) == 0)
+          {
+            group_ok = false;
+            any_fail = true;
+            NotePublicationIncompleteMaterial();
+            break;
+          }
         }
       }
     }
@@ -254,7 +272,7 @@ bool UGreedyGpuBackend::PublishPassInputs(
       {
         group_ok = false;
         any_fail = true;
-        NotePublicationOverloadRetain();
+        NotePublicationOomRetain();
         break;
       }
       FillBatchCull(gpu, input->ref);
@@ -370,9 +388,21 @@ bool UGreedyGpuBackend::PublishPassInputs(
   return true;
 }
 
+void NotePublicationIncompleteMaterial()
+{
+  gPublicationIncompleteMaterialN.fetch_add(1, std::memory_order_relaxed);
+}
+
+void NotePublicationOomRetain()
+{
+  gPublicationOomRetainN.fetch_add(1, std::memory_order_relaxed);
+}
+
 void NotePublicationOverloadRetain()
 {
-  gPublicationOverloadRetainN.fetch_add(1, std::memory_order_relaxed);
+  // Deprecated alias: prefer IncompleteMaterial / OomRetain. Kept for any
+  // residual callers; counts as incomplete (legacy single-bucket).
+  NotePublicationIncompleteMaterial();
 }
 
 void NotePublicationProgressUnit()
@@ -380,9 +410,21 @@ void NotePublicationProgressUnit()
   gPublicationProgressUnitN.fetch_add(1, std::memory_order_relaxed);
 }
 
+uint64_t ConsumePublicationIncompleteMaterialN()
+{
+  return gPublicationIncompleteMaterialN.exchange(0, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePublicationOomRetainN()
+{
+  return gPublicationOomRetainN.exchange(0, std::memory_order_relaxed);
+}
+
 uint64_t ConsumePublicationOverloadRetainN()
 {
-  return gPublicationOverloadRetainN.exchange(0, std::memory_order_relaxed);
+  // Compat: overload = incomplete + oom. Prefer split Consume* + sum at site.
+  return ConsumePublicationIncompleteMaterialN() +
+         ConsumePublicationOomRetainN();
 }
 
 uint64_t ConsumePublicationProgressUnitN()

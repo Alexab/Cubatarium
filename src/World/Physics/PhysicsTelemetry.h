@@ -774,6 +774,10 @@ struct PhysicsTelemetry
   uint64_t PoolReserveBumpN{0};
   /// Q5: greedy whole-pass publish retained predecessor due to pool OOM.
   uint64_t PublicationOverloadRetainN{0};
+  /// N01: incomplete material set on dirty publish (frustum/filtered refs class).
+  uint64_t PublicationIncompleteMaterialN{0};
+  /// N01: pool OOM retain (UploadBatch / group).
+  uint64_t PublicationOomRetainN{0};
   /// N01 autopsy: publish table changed without any_fresh group commit.
   uint64_t PubVerChangedWithoutFreshN{0};
   /// N01 autopsy: max (mesh_revision_arg − cache.meshRevision) this frame.

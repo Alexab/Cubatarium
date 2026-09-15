@@ -744,6 +744,8 @@ struct FrameNumbers
   double frame_deadline_remaining_ms{0.0};
   uint64_t publication_progress_unit_n{0};
   uint64_t publication_overload_retain_n{0};
+  uint64_t publication_incomplete_material_n{0};
+  uint64_t publication_oom_retain_n{0};
   uint64_t pubver_changed_without_fresh_n{0};
   uint64_t pass_mesh_rev_lag_max{0};
   double gpu_cull_cpu_ms{0.0};
@@ -1385,6 +1387,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.cull_stats_sync_read_n = phys.CullStatsSyncReadN;
   n.frame_deadline_remaining_ms = UFrameDeadline::Get().RemainingMs();
   n.publication_progress_unit_n = ConsumePublicationProgressUnitN();
+  n.publication_incomplete_material_n = phys.PublicationIncompleteMaterialN;
+  n.publication_oom_retain_n = phys.PublicationOomRetainN;
   n.publication_overload_retain_n = phys.PublicationOverloadRetainN;
   n.pubver_changed_without_fresh_n = phys.PubVerChangedWithoutFreshN;
   n.pass_mesh_rev_lag_max = phys.PassMeshRevLagMax;
@@ -2079,6 +2083,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.publication_progress_unit_n
           << ",\"publication_overload_retain_n\":"
           << n.publication_overload_retain_n
+          << ",\"publication_incomplete_material_n\":"
+          << n.publication_incomplete_material_n
+          << ",\"publication_oom_retain_n\":" << n.publication_oom_retain_n
           << ",\"pubver_changed_without_fresh_n\":"
           << n.pubver_changed_without_fresh_n
           << ",\"pass_mesh_rev_lag_max\":" << n.pass_mesh_rev_lag_max
