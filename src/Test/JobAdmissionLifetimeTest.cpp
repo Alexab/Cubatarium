@@ -60,6 +60,14 @@ int main()
     UPipelineCreditGuard rejected(PipelineCreditKind::Result, 1, false);
   }
   check(admission.ResultPendingBytes() == 0, "no unowned credit release");
+  // S6: work-slot envelope — denial must not leave dangling slots.
+  admission.SetWorkSlotCap(1);
+  check(admission.TryAcquireWorkSlot(), "work slot acquire");
+  check(!admission.TryAcquireWorkSlot(), "work slot denial at cap");
+  admission.ReleaseWorkSlot();
+  check(admission.WorkSlotsInUse() == 0, "work slot released");
+  check(admission.TryAcquireWorkSlot(), "work slot reacquire after release");
+  admission.ReleaseWorkSlot();
   UCompletedJobQueue<int> completed;
   completed.SetCapacity(3);
   completed.Push(10);

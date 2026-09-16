@@ -5194,8 +5194,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         missing_underfeet, underfeet_apply_nh,
         world.GetPhysicsTelemetry().UnderfeetPendingLight, consume_gpu);
     double consume_budget =
-        std::max(6.0, mesh_service.GetMeshEmergeTotalBudgetMs() *
-                          early_adm.gpu_budget_frac);
+        mesh_service.GetMeshEmergeTotalBudgetMs() * early_adm.gpu_budget_frac;
+    // S7 single ledger: no independent 6ms floor — clamp to emerge leftover.
+    if (consume_budget < 1.0)
+      consume_budget = 1.0;
     // I18-P5: idle vertex-pool upload diet — cap GPU finish when stream calm.
     if (!moving && !visual_holes && !missing_underfeet &&
         world.GetPhysicsTelemetry().StreamPressure == 0 &&

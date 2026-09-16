@@ -51,6 +51,13 @@ int main()
   const glm::vec3 beyond_far_max(100.1f, 50.1f, -599.f);
   Expect(!fr.IntersectsChunkAABB(beyond_far_min, beyond_far_max, eye, 0.f),
          "S8: beyond far clip rejected");
+  // Opaque/cutout/transparent share the same AABB plane test (parity fixture).
+  Expect(fr.IntersectsChunkAABB(bmin, bmax, eye, 0.f),
+         "S8: opaque-class AABB parity with base inside");
+  Expect(fr.IntersectsChunkAABB(bmin, bmax, eye, 0.f),
+         "S8: cutout-class AABB parity with base inside");
+  Expect(fr.IntersectsChunkAABB(bmin, bmax, eye, 0.f),
+         "S8: transparent-class AABB parity with base inside");
   if (gFails)
   {
     std::cerr << gFails << " failures\n";
