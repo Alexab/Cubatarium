@@ -371,6 +371,8 @@ void UMdiVertexPoolStore::ArmCullStatsAsyncSample()
   }
   glBindBuffer(GL_COPY_READ_BUFFER, CullStatsSsbo);
   glBindBuffer(GL_COPY_WRITE_BUFFER, CullStatsAsync_.Staging[slot]);
+  // Audit R11: shader SSBO writes must be visible to buffer copy.
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
   glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
                       sizeof(uint32_t));
   glBindBuffer(GL_COPY_READ_BUFFER, 0);
