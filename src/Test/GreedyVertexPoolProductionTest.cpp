@@ -8,13 +8,35 @@
 #include <unordered_set>
 #include <vector>
 
-// Production test binary does not link ChunkMeshCache.cpp; PublishPassInputs
-// only calls Append when mesh_cache != nullptr (RefreshPassRefs path).
+// Production test binary does not link ChunkMeshCache.cpp. Provide the same
+// Append algorithm via a test-local GreedyCache map (audit S2 live Append).
+#include "Render/Engine/GreedyPassBatchRefs.h"
+#include "World/Chunks/ChunkManager.h"
 namespace cutum
 {
-void UChunkMeshCache::AppendGreedyPassBatchRefs(
-    glm::ivec3, bool, std::vector<GreedyBatchRef> &) const
+namespace
 {
+std::unordered_map<glm::ivec3, std::vector<GreedyMeshBatch>, IVec3Hash>
+    g_test_greedy_batches;
+}
+
+void SetTestGreedyPassBatches(
+    glm::ivec3 coord, const std::vector<GreedyMeshBatch> &batches)
+{
+  g_test_greedy_batches[coord] = batches;
+}
+
+void ClearTestGreedyPassBatches() { g_test_greedy_batches.clear(); }
+
+void UChunkMeshCache::AppendGreedyPassBatchRefs(
+    glm::ivec3 coord, bool transparent_pass,
+    std::vector<GreedyBatchRef> &out) const
+{
+  const auto it = g_test_greedy_batches.find(coord);
+  if (it == g_test_greedy_batches.end())
+    return;
+  AppendGreedyPassBatchRefsFromBatches(coord, transparent_pass, it->second,
+                                       out);
 }
 } // namespace cutum
 

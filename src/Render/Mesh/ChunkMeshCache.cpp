@@ -1,4 +1,5 @@
 #include "Render/Mesh/ChunkMeshCache.h"
+#include "Render/Engine/GreedyPassBatchRefs.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/FrameDeadline.h"
 #include "Core/Jobs/PipelineAdmission.h"
@@ -864,16 +865,8 @@ void UChunkMeshCache::AppendGreedyPassBatchRefs(
   const auto it = GreedyCache.find(coord);
   if (it == GreedyCache.end())
     return;
-  const std::vector<GreedyMeshBatch> &batches = it->second.batches;
-  for (size_t i = 0; i < batches.size(); ++i)
-  {
-    const GreedyMeshBatch &batch = batches[i];
-    if (batch.vertices.empty() || batch.indices.empty())
-      continue;
-    if (batch.Transparent != transparent_pass)
-      continue;
-    out.push_back(GreedyBatchRef{coord, static_cast<uint16_t>(i), batch.blockId});
-  }
+  AppendGreedyPassBatchRefsFromBatches(coord, transparent_pass,
+                                       it->second.batches, out);
 }
 
 void UChunkMeshCache::BeginGpuPassDirtyFrame() const

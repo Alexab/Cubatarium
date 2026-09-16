@@ -151,6 +151,116 @@ bool UGreedyGpuBackend::PublishPassInputs(
     const UChunkMeshCache *mesh_cache,
     const std::unordered_set<uint16_t> *cache_pass_indices_override)
 {
+  PublicationDelta delta;
+  delta.kind = PublicationDeltaKind::Replace;
+  delta.targetBackend = 0;
+  delta.sourceMeshRevision = mesh_revision;
+  delta.sourceCullRevision = cull_revision;
+  delta.sourceSortRevision = sort_revision;
+  delta.replaceInputs = &inputs;
+  delta.replaceDirty = &dirty;
+  delta.meshCache = mesh_cache;
+  delta.cachePassIndicesOverride = cache_pass_indices_override;
+  // Production: empty single-coord still commits as Replace (complete payload).
+  // Remove is reserved for explicit RepresentationSwitch/RemoveCoord paths.
+  return ApplyPublicationDelta(cache, delta);
+}
+
+void NotePublicationIncompleteMaterial()
+{
+  gPublicationIncompleteMaterialN.fetch_add(1, std::memory_order_relaxed);
+}
+
+void NotePublicationOomRetain()
+{
+  gPublicationOomRetainN.fetch_add(1, std::memory_order_relaxed);
+}
+
+void NotePublicationOverloadRetain()
+{
+  // Deprecated alias: prefer IncompleteMaterial / OomRetain. Kept for any
+  // residual callers; counts as incomplete (legacy single-bucket).
+  NotePublicationIncompleteMaterial();
+}
+
+void NotePublicationProgressUnit()
+{
+  gPublicationProgressUnitN.fetch_add(1, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePublicationIncompleteMaterialN()
+{
+  return gPublicationIncompleteMaterialN.exchange(0, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePublicationOomRetainN()
+{
+  return gPublicationOomRetainN.exchange(0, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePublicationOverloadRetainN()
+{
+  // Compat: overload = incomplete + oom. Prefer split Consume* + sum at site.
+  return ConsumePublicationIncompleteMaterialN() +
+         ConsumePublicationOomRetainN();
+}
+
+uint64_t ConsumePublicationProgressUnitN()
+{
+  return gPublicationProgressUnitN.exchange(0, std::memory_order_relaxed);
+}
+
+void NotePubVerChangedWithoutFresh()
+{
+  gPubVerChangedWithoutFreshN.fetch_add(1, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePubVerChangedWithoutFreshN()
+{
+  return gPubVerChangedWithoutFreshN.exchange(0, std::memory_order_relaxed);
+}
+
+void NotePassMeshRevLag(uint64_t lag)
+{
+  uint64_t prev = gPassMeshRevLagMax.load(std::memory_order_relaxed);
+  while (lag > prev &&
+         !gPassMeshRevLagMax.compare_exchange_weak(prev, lag,
+                                                   std::memory_order_relaxed))
+  {
+  }
+}
+
+uint64_t ConsumePassMeshRevLagMax()
+{
+  return gPassMeshRevLagMax.exchange(0, std::memory_order_relaxed);
+}
+
+void UGreedyGpuBackend::RemoveCoord(GreedyGpuPassCache &cache,
+                                    glm::ivec3 coord)
+{
+  PublicationDelta delta;
+  delta.kind = PublicationDeltaKind::RepresentationSwitch;
+  delta.coord = coord;
+  delta.targetBackend = 1; // packed sole resident
+  (void)ApplyPublicationDelta(cache, delta);
+}
+
+bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
+                                              const PublicationDelta &delta)
+{
+  if (delta.kind == PublicationDeltaKind::Replace)
+  {
+    if (!delta.replaceInputs || !delta.replaceDirty)
+      return false;
+    const std::vector<GreedyGpuUploadInput> &inputs = *delta.replaceInputs;
+    const std::unordered_set<glm::ivec3, IVec3Hash> &dirty = *delta.replaceDirty;
+    const uint64_t mesh_revision = delta.sourceMeshRevision;
+    const uint64_t cull_revision = delta.sourceCullRevision;
+    const uint64_t sort_revision = delta.sourceSortRevision;
+    const UChunkMeshCache *mesh_cache = delta.meshCache;
+    const std::unordered_set<uint16_t> *cache_pass_indices_override =
+        delta.cachePassIndicesOverride;
+
   cache.PendingGeometryDirty.insert(dirty.begin(), dirty.end());
   std::unordered_map<GpuBatchKey, size_t, GpuBatchKeyHash> resident;
   for (size_t n = 0; n < cache.batches.size(); ++n)
@@ -342,13 +452,15 @@ bool UGreedyGpuBackend::PublishPassInputs(
                                             cache_refs);
       for (const auto &cref : cache_refs)
         out.insert(cref.batchIndex);
-      return true;
+      LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
+  return true;
     }
     if (cache_pass_indices_override != nullptr)
     {
       // Test hook: single-dirty override applies to each dirty coord in the call.
       out = *cache_pass_indices_override;
-      return true;
+      LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
+  return true;
     }
     return false;
   };
@@ -445,95 +557,13 @@ bool UGreedyGpuBackend::PublishPassInputs(
       NotePubVerChangedWithoutFresh();
   }
   cache.VertexPool.SignalUploadComplete();
+  LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
   return true;
-}
 
-void NotePublicationIncompleteMaterial()
-{
-  gPublicationIncompleteMaterialN.fetch_add(1, std::memory_order_relaxed);
-}
-
-void NotePublicationOomRetain()
-{
-  gPublicationOomRetainN.fetch_add(1, std::memory_order_relaxed);
-}
-
-void NotePublicationOverloadRetain()
-{
-  // Deprecated alias: prefer IncompleteMaterial / OomRetain. Kept for any
-  // residual callers; counts as incomplete (legacy single-bucket).
-  NotePublicationIncompleteMaterial();
-}
-
-void NotePublicationProgressUnit()
-{
-  gPublicationProgressUnitN.fetch_add(1, std::memory_order_relaxed);
-}
-
-uint64_t ConsumePublicationIncompleteMaterialN()
-{
-  return gPublicationIncompleteMaterialN.exchange(0, std::memory_order_relaxed);
-}
-
-uint64_t ConsumePublicationOomRetainN()
-{
-  return gPublicationOomRetainN.exchange(0, std::memory_order_relaxed);
-}
-
-uint64_t ConsumePublicationOverloadRetainN()
-{
-  // Compat: overload = incomplete + oom. Prefer split Consume* + sum at site.
-  return ConsumePublicationIncompleteMaterialN() +
-         ConsumePublicationOomRetainN();
-}
-
-uint64_t ConsumePublicationProgressUnitN()
-{
-  return gPublicationProgressUnitN.exchange(0, std::memory_order_relaxed);
-}
-
-void NotePubVerChangedWithoutFresh()
-{
-  gPubVerChangedWithoutFreshN.fetch_add(1, std::memory_order_relaxed);
-}
-
-uint64_t ConsumePubVerChangedWithoutFreshN()
-{
-  return gPubVerChangedWithoutFreshN.exchange(0, std::memory_order_relaxed);
-}
-
-void NotePassMeshRevLag(uint64_t lag)
-{
-  uint64_t prev = gPassMeshRevLagMax.load(std::memory_order_relaxed);
-  while (lag > prev &&
-         !gPassMeshRevLagMax.compare_exchange_weak(prev, lag,
-                                                   std::memory_order_relaxed))
-  {
   }
-}
-
-uint64_t ConsumePassMeshRevLagMax()
-{
-  return gPassMeshRevLagMax.exchange(0, std::memory_order_relaxed);
-}
-
-void UGreedyGpuBackend::RemoveCoord(GreedyGpuPassCache &cache,
-                                    glm::ivec3 coord)
-{
-  PublicationDelta delta;
-  delta.kind = PublicationDeltaKind::RepresentationSwitch;
-  delta.coord = coord;
-  delta.targetBackend = 1; // packed sole resident
-  (void)ApplyPublicationDelta(cache, delta);
-}
-
-bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
-                                              const PublicationDelta &delta)
-{
   if (delta.kind != PublicationDeltaKind::Remove &&
       delta.kind != PublicationDeltaKind::RepresentationSwitch)
   {
-    // Non-empty Replace stays on PublishPassInputs (complete pass payload).
     return false;
   }
   if (cache.batches.empty())

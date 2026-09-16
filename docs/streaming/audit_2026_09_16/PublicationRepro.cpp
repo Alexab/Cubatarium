@@ -4,6 +4,7 @@
 #define main ExistingProductionSuiteMain
 #include "../../../src/Test/GreedyVertexPoolProductionTest.cpp"
 #undef main
+#include "Render/Engine/GreedyPassBatchRefs.h"
 int RunGreedyPoolDriverTest() { return 77; }
 
 int main()
@@ -74,14 +75,31 @@ int main()
     cutum::GreedyGpuPassCache cache;
     backend.PublishPassInputs(cache, {{ar, &a}}, {}, 1, 1, 1);
     const std::unordered_set<uint16_t> empty_pass;
-    // Authoritative replacement with zero batches (remove last material).
     backend.PublishPassInputs(cache, {}, {ar.chunkCoord}, 2, 2, 1, nullptr, &empty_pass);
     const bool stuck = !cache.batches.empty() &&
                        cache.PendingGeometryDirty.count(ar.chunkCoord) != 0 &&
                        cache.meshRevision == 1;
-    std::cout << "empty_replacement_retains_ghost_and_dirty=" << stuck << '\n';
+    const bool replace_kind =
+        backend.LastAppliedDeltaKind() == cutum::PublicationDeltaKind::Replace;
+    std::cout << "empty_replacement_retains_ghost_and_dirty=" << stuck
+              << " empty_via_replace_kind=" << replace_kind << '\n';
     violations += stuck;
+    violations += !replace_kind;
     cache.VertexPool.Destroy();
+  }
+  {
+    cutum::GreedyMeshBatch live_batch = a;
+    live_batch.Transparent = false;
+    std::vector<cutum::GreedyBatchRef> refs;
+    cutum::AppendGreedyPassBatchRefsFromBatches(ar.chunkCoord, false,
+                                                {live_batch}, refs);
+    const bool live_ok = refs.size() == 1 && refs[0].chunkCoord == ar.chunkCoord;
+    std::vector<cutum::GreedyBatchRef> empty_refs;
+    cutum::AppendGreedyPassBatchRefsFromBatches(ar.chunkCoord, false, {},
+                                                empty_refs);
+    std::cout << "live_append_helper_ok=" << (live_ok && empty_refs.empty())
+              << '\n';
+    violations += !(live_ok && empty_refs.empty());
   }
   {
     cutum::GreedyGpuPassCache cache;
@@ -95,7 +113,6 @@ int main()
     cache.VertexPool.Destroy();
   }
   {
-    // RepresentationSwitch: MDI table cleared via ApplyPublicationDelta.
     cutum::GreedyGpuPassCache cache;
     backend.PublishPassInputs(cache, {{ar, &a}}, {}, 1, 1, 1);
     const bool had = !cache.batches.empty();
@@ -114,6 +131,24 @@ int main()
     std::cout << "representation_switch_clears_mdi="
               << (had && applied && !ghost && kind_ok) << '\n';
     violations += !(had && applied && !ghost && kind_ok);
+    cache.VertexPool.Destroy();
+  }
+  {
+    cutum::GreedyGpuPassCache cache;
+    backend.PublishPassInputs(cache, {{ar, &a}}, {}, 1, 1, 1);
+    cutum::PublicationDelta rm;
+    rm.kind = cutum::PublicationDeltaKind::Remove;
+    rm.coord = ar.chunkCoord;
+    const bool applied = backend.ApplyPublicationDelta(cache, rm);
+    bool ghost = false;
+    for (const auto &draw : cache.batches)
+      if (draw.chunkCoord == ar.chunkCoord)
+        ghost = true;
+    const bool kind_ok =
+        backend.LastAppliedDeltaKind() == cutum::PublicationDeltaKind::Remove;
+    std::cout << "explicit_remove_clears_mdi="
+              << (applied && !ghost && kind_ok) << '\n';
+    violations += !(applied && !ghost && kind_ok);
     cache.VertexPool.Destroy();
   }
   std::cout << "correctness_violations=" << violations << '\n';

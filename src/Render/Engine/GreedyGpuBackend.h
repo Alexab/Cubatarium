@@ -84,12 +84,29 @@ enum class PublicationDeltaKind : uint8_t
   RepresentationSwitch = 3,
 };
 
+/// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).
+struct GreedyGpuUploadInput
+{
+  GreedyBatchRef ref;
+  const GreedyMeshBatch *batch{nullptr};
+};
+
 struct PublicationDelta
 {
   PublicationDeltaKind kind{PublicationDeltaKind::Replace};
   glm::ivec3 coord{0};
   /// 0 = CPU MDI/pool table, 1 = packed GPU slot.
   uint8_t targetBackend{0};
+  /// Source stamp for Replace (pass revisions at commit).
+  uint64_t sourceMeshRevision{0};
+  uint64_t sourceCullRevision{0};
+  uint64_t sourceSortRevision{0};
+  /// Replace payload (non-owning; valid for ApplyPublicationDelta duration).
+  /// Empty inputs + dirty + empty pass set = authoritative empty Replace.
+  const std::vector<GreedyGpuUploadInput> *replaceInputs{nullptr};
+  const std::unordered_set<glm::ivec3, IVec3Hash> *replaceDirty{nullptr};
+  const UChunkMeshCache *meshCache{nullptr};
+  const std::unordered_set<uint16_t> *cachePassIndicesOverride{nullptr};
 };
 
 struct GreedyGpuPassCache
@@ -129,13 +146,6 @@ struct GreedyGpuPassCache
   int FailOpenProbeTick{0};
 };
 
-/// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).
-struct GreedyGpuUploadInput
-{
-  GreedyBatchRef ref;
-  const GreedyMeshBatch *batch{nullptr};
-};
-
 class UGreedyGpuBackend
 {
 public:
@@ -144,6 +154,7 @@ public:
   // mesh_cache: when non-null, incomplete check uses full GreedyCache pass set
   // (N01). cache_pass_indices_override: test hook simulating Append result when
   // mesh_cache is null (single dirty-coord cases).
+  // Adapter: builds PublicationDelta::Replace and commits via ApplyPublicationDelta.
   bool PublishPassInputs(GreedyGpuPassCache &cache,
       const std::vector<GreedyGpuUploadInput> &inputs,
       const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
@@ -163,8 +174,7 @@ public:
   void DestroyPass(GreedyGpuPassCache &cache);
   void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,
                   GreedyGpuPassCache &transparent);
-  /// Audit S2: single remove/RepresentationSwitch commit path for MDI table.
-  /// Replace (non-empty / empty) remains PublishPassInputs.
+  /// Audit S2: single commit path for Replace / Remove / RepresentationSwitch.
   bool ApplyPublicationDelta(GreedyGpuPassCache &cache,
                              const PublicationDelta &delta);
   /// Audit S2 RepresentationSwitch: drop MDI/pool batches for a coord (packed
