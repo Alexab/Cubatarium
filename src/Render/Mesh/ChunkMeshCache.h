@@ -868,7 +868,9 @@ private:
       const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
       uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
       std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
-      bool accepted_input_stale = false);
+      bool accepted_input_stale = false,
+      uint64_t source_light_revision = 0,
+      bool has_source_light_revision = false);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);

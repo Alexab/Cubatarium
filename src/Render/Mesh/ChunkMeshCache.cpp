@@ -3722,7 +3722,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
     uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
-    bool accepted_input_stale)
+    bool accepted_input_stale, uint64_t source_light_revision,
+    bool has_source_light_revision)
 {
   (void)registry;
   (void)source_revision;
@@ -3791,7 +3792,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   chunkMesh.GpuTransparent = gpu_result.transparent;
   chunkMesh.GpuHasDarkFace = gpu_result.hasFullyDarkFace;
   chunkMesh.GpuBlockRanges = std::move(gpu_result.blockRanges);
-  if (const UChunk *chunk = world.GetChunkManager().GetChunk(coord))
+  if (has_source_light_revision)
+  {
+    chunkMesh.MeshedLightRevision = source_light_revision;
+  }
+  else if (const UChunk *chunk = world.GetChunkManager().GetChunk(coord))
   {
     chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
   }
@@ -4221,7 +4226,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       if (CommitGpuMeshResult(world, registry, pending.coord,
                               pending.sourceRevision, std::move(gpu_result),
                               std::move(pending.crossCenters),
-                              pending.accepted_input_stale))
+                              pending.accepted_input_stale,
+                              pending.snapshot.inputStampsValid
+                                  ? pending.snapshot.inputStamps[0].light
+                                  : 0ull,
+                              pending.snapshot.inputStampsValid))
       {
         ++processed;
         ++finished;
@@ -4299,7 +4308,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     if (CommitGpuMeshResult(world, registry, pending.coord,
                             pending.sourceRevision, std::move(gpu_result),
                             std::move(pending.crossCenters),
-                            pending.accepted_input_stale))
+                            pending.accepted_input_stale,
+                            pending.snapshot.inputStampsValid
+                                ? pending.snapshot.inputStamps[0].light
+                                : 0ull,
+                            pending.snapshot.inputStampsValid))
     {
       ++processed;
       ++finished;
@@ -4560,7 +4573,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       if (CommitGpuMeshResult(world, registry, pending.coord,
                               pending.sourceRevision, std::move(gpu_result),
                               std::move(pending.crossCenters),
-                              pending.accepted_input_stale))
+                              pending.accepted_input_stale,
+                              pending.snapshot.inputStampsValid
+                                  ? pending.snapshot.inputStamps[0].light
+                                  : 0ull,
+                              pending.snapshot.inputStampsValid))
       {
         ++processed;
         ++finished;
@@ -4959,7 +4976,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Write-first: CPU drawable before FreeChunk (ShouldPublishCpuBatchesBeforeFreeGpu).
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
-  if (const UChunk *chunk = world.GetChunkManager().GetChunk(result.coord))
+  // Audit R05: MeshedLightRevision = bake source stamp, not current world light.
+  if (result.InputStampsValid)
+  {
+    chunkMesh.MeshedLightRevision = result.InputStamps[0].light;
+  }
+  else if (const UChunk *chunk = world.GetChunkManager().GetChunk(result.coord))
   {
     chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
   }
@@ -5211,11 +5233,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtySyncMs = 0.0;
   LastMeshDirtySyncN = 0;
   // Keep last kick/finish ms across skip_gpu_consume frames (audit N03/D3).
-  if (!skip_gpu_consume)
-  {
-    LastMeshGpuKickMs = 0.0;
-    LastMeshGpuFinishMs = 0.0;
-  }
+  // Audit R09: timers must not accumulate across frames when coordinator
+  // rebuilds with skip_gpu_consume=true — reset every Rebuild entry.
+  LastMeshGpuKickMs = 0.0;
+  LastMeshGpuFinishMs = 0.0;
   LastMeshAsyncDrainMs = 0.0;
   LastMeshCaptureStoreHitN = 0;
   LastMeshCaptureStoreMissN = 0;
@@ -6730,8 +6751,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const MeshWorkAdmission &adm = WorkAdmission;
         const size_t pending_n = PendingGpuApplies.size();
         double gpu_budget =
-            std::min(remain, std::max(4.0, MeshEmergeTotalBudgetMs *
-                                               adm.gpu_budget_frac * 0.7));
+            std::min(remain, MeshEmergeTotalBudgetMs * adm.gpu_budget_frac * 0.7);
         int gpu_max =
             std::max(2, std::max(max_drain_per_frame, max_schedule_per_frame) / 2);
         if (!PendingCaptureReady_.empty() ||
