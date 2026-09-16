@@ -3261,9 +3261,7 @@ int UWorld::RemeshTicketedFullyDarkStalledNearFocus(
       MeshService->MarkDirty(coord);
       ++dirty_n;
       ++PhysicsTelemetryData.MarkRelitScheduleN;
-    }
-    if (dirty_n > 0)
-    {
+      // Audit R07: Meshing only when THIS column gained Dirty (not cumulative).
       SetColumnEmergeState(glm::ivec3(e.key.x, 0, e.key.y),
                            ColumnEmergeState::Meshing);
     }

@@ -157,8 +157,8 @@ int main()
     Expect(AdvanceOldestDebtAgeFrames(0, false) == 0, "G1-P3: calm stays 0");
     Expect(AdvanceOldestDebtAgeFrames(12, true, 40, 30) == 1,
            "G1-P3: debt_n shrink restarts oldest age");
-    Expect(AdvanceOldestDebtAgeFrames(12, true, 40, 40, 1) == 1,
-           "G1-P3: lit publish restarts age");
+    Expect(AdvanceOldestDebtAgeFrames(12, true, 40, 40, 1) == 13,
+           "G1-P3: lit publish alone does not restart age (N05/R07)");
     Expect(AdvanceOldestDebtAgeFrames(12, true, 40, 45) == 13,
            "G1-P3: debt growth keeps bumping");
     Expect(ShouldCountDebtAgeGrewWithSchedule(3, 4, 1),
