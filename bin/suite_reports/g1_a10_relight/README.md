@@ -192,3 +192,5 @@ caps or wrong-tex gates on misnamed `pass_mdi_stale_*`.
 - Gate of record: `--scenario product-174657` no-teleport; autofly ≠ product CLOSED.
 - West autofly: continuous land-eye (`terrain+12`) + fly **55s** → `west_route_coverage=COVERED`
   (`audit16_west55_{cold,warm}`); dual-lane/stalled still FAIL (G1 OPEN); operator eye still UNTESTED.
+- Audit tails H0–P5: land-eye ceil (`6c071537`), `PublicationDelta`, work-slots/credits, west-sea
+  NearLoad floor, oracle/frustum fixtures; cold×3/warm×3 under `audit16_tails_*`.
