@@ -85,13 +85,35 @@ int main()
   }
   {
     cutum::GreedyGpuPassCache cache;
-    backend.PublishPassInputs(cache, {{ar, &a}, {br, &b}}, {}, 1, 1, 1);
+    backend.PublishPassInputs(cache, {{ar, &a}, {br, &b}}, {}, 1, 1, 2);
     const auto epoch = cache.publicationVersion;
     backend.PublishPassInputs(cache, {{br, &b}, {ar, &a}}, {}, 1, 1, 2);
     const bool same_epoch = cache.batches[0].chunkCoord == br.chunkCoord &&
                             cache.publicationVersion == epoch;
     std::cout << "reordered_table_keeps_publication_epoch=" << same_epoch << '\n';
     violations += same_epoch;
+    cache.VertexPool.Destroy();
+  }
+  {
+    // RepresentationSwitch: MDI table cleared via ApplyPublicationDelta.
+    cutum::GreedyGpuPassCache cache;
+    backend.PublishPassInputs(cache, {{ar, &a}}, {}, 1, 1, 1);
+    const bool had = !cache.batches.empty();
+    cutum::PublicationDelta sw;
+    sw.kind = cutum::PublicationDeltaKind::RepresentationSwitch;
+    sw.coord = ar.chunkCoord;
+    sw.targetBackend = 1;
+    const bool applied = backend.ApplyPublicationDelta(cache, sw);
+    bool ghost = false;
+    for (const auto &draw : cache.batches)
+      if (draw.chunkCoord == ar.chunkCoord)
+        ghost = true;
+    const bool kind_ok =
+        backend.LastAppliedDeltaKind() ==
+        cutum::PublicationDeltaKind::RepresentationSwitch;
+    std::cout << "representation_switch_clears_mdi="
+              << (had && applied && !ghost && kind_ok) << '\n';
+    violations += !(had && applied && !ghost && kind_ok);
     cache.VertexPool.Destroy();
   }
   std::cout << "correctness_violations=" << violations << '\n';

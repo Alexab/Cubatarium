@@ -516,4 +516,70 @@ uint64_t ConsumePassMeshRevLagMax()
 {
   return gPassMeshRevLagMax.exchange(0, std::memory_order_relaxed);
 }
+
+void UGreedyGpuBackend::RemoveCoord(GreedyGpuPassCache &cache,
+                                    glm::ivec3 coord)
+{
+  PublicationDelta delta;
+  delta.kind = PublicationDeltaKind::RepresentationSwitch;
+  delta.coord = coord;
+  delta.targetBackend = 1; // packed sole resident
+  (void)ApplyPublicationDelta(cache, delta);
+}
+
+bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
+                                              const PublicationDelta &delta)
+{
+  if (delta.kind != PublicationDeltaKind::Remove &&
+      delta.kind != PublicationDeltaKind::RepresentationSwitch)
+  {
+    // Non-empty Replace stays on PublishPassInputs (complete pass payload).
+    return false;
+  }
+  if (cache.batches.empty())
+  {
+    cache.PendingGeometryDirty.erase(delta.coord);
+    LastAppliedDeltaKind_ = delta.kind;
+    return false;
+  }
+  std::vector<GreedyGpuBatch> kept;
+  kept.reserve(cache.batches.size());
+  bool removed = false;
+  for (GreedyGpuBatch &batch : cache.batches)
+  {
+    if (batch.chunkCoord == delta.coord)
+    {
+      ReleasePooledBatch(batch, cache.VertexPool);
+      DestroyBatchBuffers(batch);
+      removed = true;
+      continue;
+    }
+    kept.push_back(std::move(batch));
+  }
+  if (!removed)
+  {
+    cache.PendingGeometryDirty.erase(delta.coord);
+    return false;
+  }
+  cache.batches = std::move(kept);
+  cache.PendingGeometryDirty.erase(delta.coord);
+  cache.usesVertexPool = !cache.batches.empty();
+  cache.IndirectCullReady = false;
+  cache.GpuCompactActive = false;
+  cache.CompactVisCpuSynced = false;
+  ++cache.publicationVersion;
+  cache.poolVbo = cache.VertexPool.VertexBuffer();
+  cache.poolEbo = cache.VertexPool.IndexBuffer();
+  for (auto &gpu : cache.batches)
+  {
+    if (gpu.pooled)
+    {
+      gpu.vbo = cache.poolVbo;
+      gpu.ebo = cache.poolEbo;
+    }
+  }
+  LastAppliedDeltaKind_ = delta.kind;
+  return true;
+}
+
 } // namespace cutum

@@ -76,6 +76,22 @@ enum class GreedyGpuPassId : uint8_t
   Transparent = 3,
 };
 
+/// Audit S2 typed publication operations (R02/R03/R04).
+enum class PublicationDeltaKind : uint8_t
+{
+  Replace = 1,
+  Remove = 2,
+  RepresentationSwitch = 3,
+};
+
+struct PublicationDelta
+{
+  PublicationDeltaKind kind{PublicationDeltaKind::Replace};
+  glm::ivec3 coord{0};
+  /// 0 = CPU MDI/pool table, 1 = packed GPU slot.
+  uint8_t targetBackend{0};
+};
+
 struct GreedyGpuPassCache
 {
   std::vector<GreedyGpuBatch> batches;
@@ -147,9 +163,19 @@ public:
   void DestroyPass(GreedyGpuPassCache &cache);
   void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,
                   GreedyGpuPassCache &transparent);
+  /// Audit S2: single remove/RepresentationSwitch commit path for MDI table.
+  /// Replace (non-empty / empty) remains PublishPassInputs.
+  bool ApplyPublicationDelta(GreedyGpuPassCache &cache,
+                             const PublicationDelta &delta);
   /// Audit S2 RepresentationSwitch: drop MDI/pool batches for a coord (packed
   /// becomes the sole resident representation).
   void RemoveCoord(GreedyGpuPassCache &cache, glm::ivec3 coord);
+
+  /// Last successful ApplyPublicationDelta kind (tests / diagnostics).
+  PublicationDeltaKind LastAppliedDeltaKind() const
+  {
+    return LastAppliedDeltaKind_;
+  }
 
   /// Bind/unbind telem sink for the next RefreshPassRefs calls (nullptr clears).
   static void BindRefreshTelem(GreedyGpuRefreshTelem *telem);
@@ -162,6 +188,8 @@ private:
   void DestroyBatchBuffers(GreedyGpuBatch &batch);
   void ReleasePooledBatch(GreedyGpuBatch &batch, UGreedyVertexPool &pool);
   void FillBatchCull(GreedyGpuBatch &dst, const GreedyBatchRef &ref);
+
+  PublicationDeltaKind LastAppliedDeltaKind_{PublicationDeltaKind::Replace};
 };
 
 /// Q5: whole-pass pool OOM retained predecessor mesh (UploadBatch / publish abort).
