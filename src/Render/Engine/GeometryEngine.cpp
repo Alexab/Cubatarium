@@ -2103,9 +2103,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         continue;
       }
       bool found = false;
-      for (const GreedyBatchRef &r : opaque_draw)
+      // Audit R03: exclude packed when MDI resident table still owns the coord,
+      // not merely when this frame's CPU opaque_draw refs omit it.
+      for (const GreedyGpuBatch &gpu : GreedyGpuOpaque.batches)
       {
-        if (r.chunkCoord == pref.chunkCoord)
+        if (gpu.chunkCoord == pref.chunkCoord)
         {
           found = true;
           break;
@@ -2113,8 +2115,20 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       }
       if (!found)
       {
+        for (const GreedyBatchRef &r : opaque_draw)
+        {
+          if (r.chunkCoord == pref.chunkCoord)
+          {
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found)
+      {
         packed_opaque_draw.push_back(pref);
-        // N04 autopsy: packed-only while MDI opaque_draw missed same coord.
+        // Misnamed legacy counter: packed drawn while absent from MDI resident
+        // and CPU opaque_draw (not proof of stale GPU dual-draw).
         if (WorldInstance)
         {
           ++WorldInstance->GetPhysicsTelemetryMutable()
