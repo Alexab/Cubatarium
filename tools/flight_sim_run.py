@@ -51,7 +51,13 @@ EYE_PROXY_STOP_LINE = {
     "transparent_cmd_reorder_mid_med_max": 1.0,
     # N01 retain-storm: incomplete material mid med ≪ 134038 baseline (~40).
     "publication_incomplete_material_mid_med_max": 5.0,
+    # Audit 2026-09-16 R10: absolute hole count is a gate (blink alone is not enough).
+    "near_focus_holes_mid_med_max": 0.0,
+    "visual_holes_mid_med_max": 0.0,
 }
+
+# Manual west (7,3)→(−3,3). Autofly that stops at cx≈2 is UNTESTED, not PASS coverage.
+WEST_COVERAGE_FOCUS_CX_MAX = -3.0
 
 
 def newest_perf(after_ts: float) -> Path | None:
@@ -333,6 +339,48 @@ def compute_dual_lane_stop_line(
         }
 
 
+def compute_west_route_coverage(perf_path: Path) -> dict:
+    """Full-west product coverage: min focus_cx must reach ≤−3. Else UNTESTED."""
+    try:
+        focus_cx: list[float] = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") != "period":
+                continue
+            try:
+                if row.get("focus_cx") is not None:
+                    focus_cx.append(float(row["focus_cx"]))
+            except (TypeError, ValueError):
+                continue
+        if not focus_cx:
+            return {
+                "west_route_coverage": "UNTESTED",
+                "focus_cx_min": None,
+                "focus_cx_max": None,
+                "west_route_coverage_reason": "no_period_focus_cx",
+            }
+        cx_min = min(focus_cx)
+        cx_max = max(focus_cx)
+        covered = cx_min <= WEST_COVERAGE_FOCUS_CX_MAX
+        return {
+            "west_route_coverage": "COVERED" if covered else "UNTESTED",
+            "focus_cx_min": cx_min,
+            "focus_cx_max": cx_max,
+            "west_route_coverage_reason": (
+                "reached_cx_le_minus3" if covered else "did_not_reach_cx_minus3"
+            ),
+        }
+    except Exception as exc:  # pragma: no cover
+        return {
+            "west_route_coverage": "UNTESTED",
+            "focus_cx_min": None,
+            "focus_cx_max": None,
+            "west_route_coverage_reason": f"west_coverage_analyze_failed:{exc}",
+        }
+
+
 def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
     """B4 thrash proxies on mid-corridor (not fly-only). Not adequacy / not pixels."""
     try:
@@ -363,15 +411,26 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             except (TypeError, ValueError):
                 continue
 
+        # Audit R10: do not silently PASS on mid_third/stop fallback as product coverage.
+        coverage_status = "COVERED"
         if mid_focus:
             use = mid_focus
             segment = "mid_corridor"
+            moving = [
+                r
+                for r in use
+                if float(r.get("movement_speed") or 0) > 2.0
+            ]
+            if len(use) > 0 and len(moving) * 2 < len(use):
+                coverage_status = "UNTESTED"
         elif mid_third:
             use = mid_third
             segment = "mid_third"
+            coverage_status = "UNTESTED"
         else:
             use = fly if fly else rows
             segment = "fly_fallback"
+            coverage_status = "UNTESTED"
 
         def values(key: str) -> list[float]:
             out: list[float] = []
@@ -383,6 +442,9 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
                 except (TypeError, ValueError):
                     continue
             return out
+
+        def field_present(key: str) -> bool:
+            return any(key in row and row.get(key) is not None for row in use)
 
         def median(xs: list[float]) -> float | None:
             if not xs:
@@ -430,12 +492,14 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         reorder_med = median(reorder_xs)
         incomplete_med = median(incomplete_xs)
         oom_med = median(oom_xs)
+        west = compute_west_route_coverage(perf_path)
 
         # Alias *_fly_* = mid values for one release (readers / old reports).
         metrics = {
             "source": "period_jsonl",
             "perf_path": str(perf_path),
             "eye_proxy_segment": segment,
+            "eye_proxy_coverage": coverage_status,
             "mesh_apply_stale_visual_mid_med": stale_med,
             "mesh_apply_stale_visual_fly_med": stale_med,
             "mesh_apply_stale_visual_delta_med": delta_med,
@@ -447,8 +511,16 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "publication_incomplete_material_mid_med": incomplete_med,
             "publication_oom_retain_mid_med": oom_med,
             "rows_used": len(use),
+            **west,
         }
         fails: list[str] = []
+        # Fail-closed: missing required fields are UNTESTED, never PASS.
+        if not field_present("near_focus_holes") and not field_present("visual_holes"):
+            fails.append("missing_holes_fields_untested")
+        if not field_present("publication_incomplete_material_n"):
+            fails.append("missing_publication_incomplete_field_untested")
+        if not stale_xs:
+            fails.append("missing_stale_visual_field_untested")
         if stale_med is None or float(stale_med) > EYE_PROXY_STOP_LINE[
             "mesh_apply_stale_visual_mid_med_max"
         ]:
@@ -467,6 +539,15 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "publication_incomplete_material_mid_med_max"
         ]:
             fails.append("incomplete_material_mid_med_above_eye_proxy")
+        # Absolute hole counts: persistent holes must FAIL even when blink_rate=0.
+        if holes_med is not None and float(holes_med) > EYE_PROXY_STOP_LINE[
+            "near_focus_holes_mid_med_max"
+        ]:
+            fails.append("near_focus_holes_mid_med_above_eye_proxy")
+        if visual_holes_med is not None and float(visual_holes_med) > EYE_PROXY_STOP_LINE[
+            "visual_holes_mid_med_max"
+        ]:
+            fails.append("visual_holes_mid_med_above_eye_proxy")
         # Holes telem = missing mesh only; thrash with holes==0 is still a defect.
         if (
             (holes_med is None or float(holes_med) == 0.0)
@@ -476,6 +557,9 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             > EYE_PROXY_STOP_LINE["mesh_apply_stale_visual_mid_med_max"]
         ):
             fails.append("stale_visual_without_hole_counters")
+        # Silent mid_third/fly_fallback must not look like a covered mid-corridor PASS.
+        if segment in ("mid_third", "fly_fallback"):
+            fails.append("eye_proxy_segment_coverage_untested")
         metrics["eye_proxy_stop_line_pass"] = len(fails) == 0
         metrics["eye_proxy_stop_line_fails"] = fails
         return metrics
@@ -483,6 +567,8 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         return {
             "eye_proxy_stop_line_pass": False,
             "eye_proxy_stop_line_fails": [f"eye_proxy_analyze_failed:{exc}"],
+            "eye_proxy_coverage": "UNTESTED",
+            "west_route_coverage": "UNTESTED",
         }
 
 
@@ -2002,6 +2088,8 @@ def main() -> int:
                     result["eye_proxy_stop_line_fails"] = eye_proxy.get(
                         "eye_proxy_stop_line_fails"
                     )
+                    west = compute_west_route_coverage(Path(perf))
+                    result["west_route_coverage"] = west
                     report_path.write_text(
                         json.dumps(result, indent=2) + "\n", encoding="utf-8"
                     )
@@ -2029,6 +2117,12 @@ def main() -> int:
                             else "FAIL"
                         )
                         + f" {eye_proxy}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 west-route coverage: "
+                        + str(west.get("west_route_coverage"))
+                        + f" {west}",
                         flush=True,
                     )
                 metrics_summary = {

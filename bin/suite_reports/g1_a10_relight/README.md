@@ -179,3 +179,14 @@ Do **not** claim G1 / T2 CLOSED. Autopsy instrumentation+fixes landed; product s
 
 **Merge:** adequacy ∧ dual_lane ∧ eye_proxy ∧ mid_stalled (honest) ∧ operator west eye.
 Do **not** claim G1/T2 CLOSED on LegalDark reclass or lag-only.
+
+## Audit 2026-09-16 track (commit `7a658525`) — N04 repair FROZEN
+
+Plan: system ownership/publication contracts (S0–S9), **not** more N04 census-remesh
+caps or wrong-tex gates on misnamed `pass_mdi_stale_*`.
+
+- KEEP: LegalDark rollback, N01 incomplete=0, I3t hold-prior (temporary), frustum/cooldown.
+- FREEZE: N04 autopsy I3a-style FullyDark remesh heuristics; use audit R01–R12 / S0–S9.
+- Eye-proxy: absolute holes + missing fields fail-closed; west route to `cx≤−3` or `UNTESTED`.
+- `operator_visual=None` → merge_green **false** (UNTESTED).
+- Gate of record: `--scenario product-174657` no-teleport; autofly ≠ product CLOSED.

@@ -31,14 +31,14 @@ CASES = [
 
 
 def _write_synthetic_incomplete(path: Path, incomplete_med: float) -> None:
-    """Three mid-corridor rows so incomplete gate can trip independently."""
+    """Moving mid-corridor rows so incomplete gate can trip independently."""
     rows = []
     for i in range(9):
         rows.append(
             {
                 "kind": "period",
                 "focus_cx": 3.0,
-                "movement_speed": 0.0,
+                "movement_speed": 6.0,
                 "mesh_apply_stale_visual": 1.0,
                 "near_focus_holes": 0,
                 "visual_holes": 0,
@@ -47,6 +47,20 @@ def _write_synthetic_incomplete(path: Path, incomplete_med: float) -> None:
                 "publication_oom_retain_n": 0,
             }
         )
+    # West coverage metadata for scorecard (not required for incomplete gate).
+    rows.append(
+        {
+            "kind": "period",
+            "focus_cx": -3.0,
+            "movement_speed": 6.0,
+            "mesh_apply_stale_visual": 1.0,
+            "near_focus_holes": 0,
+            "visual_holes": 0,
+            "transparent_cmd_reorder_n": 0,
+            "publication_incomplete_material_n": incomplete_med,
+            "publication_oom_retain_n": 0,
+        }
+    )
     path.write_text(
         "\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8"
     )

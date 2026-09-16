@@ -2649,6 +2649,21 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   if(WIN32)
     target_compile_definitions(greedy_vertex_pool_production_test PRIVATE GLEW_STATIC)
   endif()
+  # Audit 2026-09-16 publication ownership counterexamples (R01–R04).
+  # WILL_FAIL until S1 (R01) + S2 (empty/reorder) land; still executes as stop-criterion.
+  add_executable(publication_audit
+    docs/streaming/audit_2026_09_16/PublicationRepro.cpp
+    src/Render/Engine/GreedyVertexPool.cpp
+    src/Render/Engine/GreedyGpuPublication.cpp)
+  target_include_directories(publication_audit PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(publication_audit PRIVATE
+    glm::glm GLEW::GLEW OpenGL::GL glog::glog glfw)
+  if(WIN32)
+    target_compile_definitions(publication_audit PRIVATE GLEW_STATIC)
+  endif()
+  add_test(NAME publication_audit COMMAND $<TARGET_FILE:publication_audit>)
+  set_tests_properties(publication_audit PROPERTIES
+    LABELS "unit;streaming;audit" TIMEOUT 30)
 endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
   job_admission_lifetime_test

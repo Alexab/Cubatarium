@@ -163,12 +163,20 @@ def build_scorecard(perf_path: Path, *, label: str, operator_visual: str | None)
         "mid_stalled_gate_pass": stalled_gate,
         "mid_stalled_gate_fails": stalled_gate_fails,
         # Four signals: adequacy / dual-lane / eye_proxy / operator eye (manual).
+        # Audit R10: operator_visual=None is UNTESTED, never merge-green TRUE.
         "merge_green": bool(
             adequacy.get("adequacy_pass")
             and stop_cold.get("dual_lane_stop_line_pass")
             and eye_proxy.get("eye_proxy_stop_line_pass")
             and stalled_gate
-            and (operator_visual is None or operator_visual == "PASS")
+            and operator_visual == "PASS"
+            and eye_proxy.get("west_route_coverage") == "COVERED"
+        ),
+        "west_route_coverage": eye_proxy.get("west_route_coverage"),
+        "operator_visual_status": (
+            "PASS"
+            if operator_visual == "PASS"
+            else ("FAIL" if operator_visual == "FAIL" else "UNTESTED")
         ),
     }
 
