@@ -55,7 +55,8 @@ UMeshCaptureStore::TryGet(const UBlockWorld &world, glm::ivec3 coord, uint64_t s
 bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
                                   uint64_t world_epoch,
                                   ChunkMeshSnapshot snapshot,
-                                  const DependencyStamp *captured_deps)
+                                  const DependencyStamp *captured_deps,
+                                  std::unique_ptr<UPipelineCreditGuard> credit)
 {
   if (world_epoch == 0 || world_epoch != WorldEpoch_)
   {
@@ -69,15 +70,17 @@ bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
     entry.deps = *captured_deps;
   }
   entry.data = std::move(snapshot);
+  entry.credit = std::move(credit);
   Store_[coord] = std::move(entry);
   return true;
 }
 
 void UMeshCaptureStore::Commit(glm::ivec3 coord, uint64_t source_revision,
-                               uint64_t world_epoch, ChunkMeshSnapshot snapshot)
+                               uint64_t world_epoch, ChunkMeshSnapshot snapshot,
+                               std::unique_ptr<UPipelineCreditGuard> credit)
 {
   (void)TryCommit(coord, source_revision, world_epoch, std::move(snapshot),
-                  nullptr);
+                  nullptr, std::move(credit));
 }
 
 std::optional<ChunkMeshSnapshot>
@@ -85,17 +88,18 @@ UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
                                    uint64_t source_revision)
 {
   // Q7/R2: reserve snapshot credit before Capture; fail ⇒ nullopt (not empty).
+  // Audit R12: credit lives with Store_ entry until Invalidate/BumpWorldEpoch.
   if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
           kEstimatedChunkSnapshotBytes))
   {
     return std::nullopt;
   }
-  UPipelineCreditGuard credit(PipelineCreditKind::Snapshot,
-                              kEstimatedChunkSnapshotBytes, true);
+  auto credit = std::make_unique<UPipelineCreditGuard>(
+      PipelineCreditKind::Snapshot, kEstimatedChunkSnapshotBytes, true);
   ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
       world, coord, source_revision, NeighborDrawableFn_, NeighborDrawableCtx_);
-  Commit(coord, source_revision, WorldEpoch_, std::move(snap));
-  // Credit gates capture construction rate; resident Store_ owns the bytes.
+  Commit(coord, source_revision, WorldEpoch_, std::move(snap),
+         std::move(credit));
   return Store_[coord].data;
 }
 

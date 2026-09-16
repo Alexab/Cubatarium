@@ -3,7 +3,9 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Streaming/WorkToken.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <unordered_map>
 #include <glm/glm.hpp>
@@ -26,12 +28,15 @@ public:
                                           uint64_t source_revision) const;
 
   /// Store capture result. Rejects when `world_epoch` != current epoch (M08).
+  /// Optional credit lives until entry eviction (audit R12).
   bool TryCommit(glm::ivec3 coord, uint64_t source_revision,
                  uint64_t world_epoch, ChunkMeshSnapshot snapshot,
-                 const DependencyStamp *expected_deps = nullptr);
+                 const DependencyStamp *expected_deps = nullptr,
+                 std::unique_ptr<UPipelineCreditGuard> credit = nullptr);
 
   void Commit(glm::ivec3 coord, uint64_t source_revision,
-              uint64_t world_epoch, ChunkMeshSnapshot snapshot);
+              uint64_t world_epoch, ChunkMeshSnapshot snapshot,
+              std::unique_ptr<UPipelineCreditGuard> credit = nullptr);
 
   /// Capture + commit. Returns nullopt when snapshot admission credit is
   /// exhausted (Q7/R2) — never a fake empty Ready snapshot.
@@ -77,6 +82,7 @@ private:
     uint64_t sourceRevision{0};
     DependencyStamp deps{};
     ChunkMeshSnapshot data;
+    std::unique_ptr<UPipelineCreditGuard> credit;
   };
   uint64_t WorldEpoch_{1};
   std::unordered_map<glm::ivec3, Entry, IVec3Hash> Store_;
