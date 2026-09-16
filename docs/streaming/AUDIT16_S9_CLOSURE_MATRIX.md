@@ -3,6 +3,15 @@
 Source audit: commit `7a658525` / `docs/streaming/CURRENT_STATE_AUDIT_2026-09-16.md`.
 Tails plan: H0–P5 on `cursor_audit2_impl` (land-eye, PublicationDelta, credits/work-slots,
 rim NearLoad, oracle/frustum, acceptance evidence).
+Full cutover: E0–E9 on `cursor_audit3_impl` (single Replace writer, overlay, sole-owner,
+S6–S8 completeness, rim field, S9 CLOSED).
+
+### Full-cutover E0 baseline (`audit16_full_e0_cold`)
+
+Cold `product-174657` no-teleport: west **COVERED** (`focus_cx_min=-10`), Y early→late
+**55.5→59**, eye_proxy PASS, incomplete=0, adequacy PASS, dual-lane FAIL (G1 OPEN),
+`merge_green=false` (`operator_visual` UNTESTED). CTest publication_audit / frustum /
+oracle / GateRepro green. Perf: `bin/logs/perf_20260916-220411_28252.jsonl`.
 
 ## Absolute gates (must be green)
 
