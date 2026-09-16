@@ -2114,12 +2114,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   static bool s_ring_enter_was_active = false;
   static glm::ivec3 s_ring_cache_focus{0};
   static uint64_t s_ring_world_epoch = 0;
+  static int s_ring_unfinished = -1;
+  static int s_ring_not_ready = -1;
   const glm::ivec3 ring_focus = focus_ground;
   const uint64_t ring_world_epoch =
       mesh_service.GetCache().GetCaptureStore().WorldEpoch();
+  const int ring_unfinished =
+      world.GetPhysicsTelemetry().UnfinishedVisual;
+  const int ring_not_ready =
+      world.GetPhysicsTelemetry().PostLoadRingNotReady;
   const bool enter_edge = enter_gate_active != s_ring_enter_was_active;
   const bool ring_dirty = world.NeedsSpawnRingCatchUp();
-  if (ring_dirty || ring_world_epoch != s_ring_world_epoch)
+  // Dependency epoch proxy: unfinished / ring-not-ready change invalidates
+  // readiness projection (audit R08 incremental key).
+  if (ring_dirty || ring_world_epoch != s_ring_world_epoch ||
+      ring_unfinished != s_ring_unfinished ||
+      ring_not_ready != s_ring_not_ready)
     s_ring_cache_valid = false;
   bool need_ring_query = enter_gate_active || enter_edge || !s_ring_cache_valid ||
                          ring_focus.x != s_ring_cache_focus.x ||
@@ -2136,6 +2146,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     s_ring_cache_valid = true;
     s_ring_cache_focus = ring_focus;
     s_ring_world_epoch = ring_world_epoch;
+    s_ring_unfinished = ring_unfinished;
+    s_ring_not_ready = ring_not_ready;
   }
   s_ring_enter_was_active = enter_gate_active;
   world.SetSuppressRelightSeamDirty(ShouldSuppressRelightSeamDirtyForEnterGate(
@@ -2178,9 +2190,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   else if (moving &&
            (visual_holes || missing_underfeet || underfeet_undrawn ||
-            pending_dirty > 200 || pending_focus_count > 30))
+            pending_dirty > 200 || pending_focus_count > 30 ||
+            world.GetPhysicsTelemetry().PostLoadRingNotReady > 0))
   {
-    if ((underfeet_undrawn || missing_underfeet) && pending_dirty <= 450)
+    if ((underfeet_undrawn || missing_underfeet ||
+         world.GetPhysicsTelemetry().PostLoadRingNotReady > 0) &&
+        pending_dirty <= 450)
     {
       mesh_service.SetMaxOutsideFocusMeshPerFrame(1);
     }

@@ -22,6 +22,7 @@ public:
   {
     BudgetMs_ = budget_ms > 0.0 ? budget_ms : 0.0;
     Start_ = std::chrono::steady_clock::now();
+    CriticalUnitsThisFrame_ = 0;
   }
 
   double BudgetMs() const { return BudgetMs_; }
@@ -45,15 +46,32 @@ public:
   bool Exhausted() const { return RemainingMs() <= 0.0; }
 
   /// Soft defer for Relight/Seam/non-critical drains. Pass
-  /// `critical_progress=true` for FirstMesh so Exhausted never hard-kills FM.
+  /// `critical_progress=true` for FirstMesh — allows a bounded overrun of one
+  /// critical unit after Exhausted (audit R08), not infinite bypass.
   static bool ShouldDeferProducer(bool critical_progress)
   {
-    return !critical_progress && Get().Exhausted();
+    auto &dl = Get();
+    if (!dl.Exhausted())
+    {
+      return false;
+    }
+    if (!critical_progress)
+    {
+      return true;
+    }
+    // One non-preemptible critical unit after budget exhaust.
+    if (dl.CriticalUnitsThisFrame_ >= 1)
+    {
+      return true;
+    }
+    ++dl.CriticalUnitsThisFrame_;
+    return false;
   }
 
 private:
   double BudgetMs_{0.0};
   std::chrono::steady_clock::time_point Start_{};
+  int CriticalUnitsThisFrame_{0};
 };
 
 } // namespace cutum

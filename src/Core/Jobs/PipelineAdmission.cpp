@@ -92,6 +92,16 @@ std::size_t UPipelineAdmission::GpuPendingBytes() const
   return GpuPending.load(std::memory_order_relaxed);
 }
 
+bool UPipelineAdmission::TryAcquireWorkSlot()
+{
+  return TryAcquire(WorkSlotsPending, WorkSlotCap, 1);
+}
+
+void UPipelineAdmission::ReleaseWorkSlot()
+{
+  Release(WorkSlotsPending, 1);
+}
+
 UPipelineCreditGuard::UPipelineCreditGuard(const PipelineCreditKind kind,
                                            const std::size_t bytes,
                                            const bool acquired)

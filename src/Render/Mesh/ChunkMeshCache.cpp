@@ -3272,8 +3272,10 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
       return false;
     }
   }
+  // Audit R12: move credit into Store entry (lifetime until eviction).
+  auto owned = std::make_unique<UPipelineCreditGuard>(std::move(credit));
   return CaptureStore.TryCommit(coord, source_revision, work_token.world_epoch,
-                              std::move(*band), &deps);
+                                std::move(*band), &deps, std::move(owned));
 }
 
 void UChunkMeshCache::DrainCaptureWorkerCommits(const UBlockWorld &world,

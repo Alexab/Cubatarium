@@ -35,13 +35,25 @@ public:
   void SetResultCap(std::size_t cap) { ResultCap = cap; }
   void SetGpuCap(std::size_t cap) { GpuCap = cap; }
 
+  /// Audit R12: shared concurrency envelope for mesh+relight+gen workers.
+  /// Separate from byte caps; I/O and GPU byte slots remain independent.
+  bool TryAcquireWorkSlot();
+  void ReleaseWorkSlot();
+  void SetWorkSlotCap(std::size_t cap) { WorkSlotCap = cap; }
+  std::size_t WorkSlotsInUse() const
+  {
+    return WorkSlotsPending.load(std::memory_order_relaxed);
+  }
+
 private:
   std::atomic<std::size_t> SnapshotPending{0};
   std::atomic<std::size_t> ResultPending{0};
   std::atomic<std::size_t> GpuPending{0};
+  std::atomic<std::size_t> WorkSlotsPending{0};
   std::size_t SnapshotCap{96 * 1024 * 1024};
   std::size_t ResultCap{128 * 1024 * 1024};
   std::size_t GpuCap{256 * 1024 * 1024};
+  std::size_t WorkSlotCap{8};
 };
 
 enum class PipelineCreditKind : uint8_t

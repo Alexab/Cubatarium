@@ -91,6 +91,16 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
                                 UBlockRegistry &registry)
 {
   const glm::ivec3 coord = snapshot.coord;
+  // Audit R12: shared mesh/relight/gen concurrency envelope.
+  if (!UPipelineAdmission::Get().TryAcquireWorkSlot())
+  {
+    return false;
+  }
+  struct WorkSlotGuard
+  {
+    ~WorkSlotGuard() { UPipelineAdmission::Get().ReleaseWorkSlot(); }
+  };
+  auto work_slot = std::make_shared<WorkSlotGuard>();
   // Q7: snapshot credit reserved before worker enqueue (JobAdmissionLifetimeTest).
   if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
           sizeof(ChunkMeshSnapshot)))
@@ -115,8 +125,10 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
   if (!Pool.TryEnqueue(
           [this, snapshot = std::move(snapshot), registryPtr = &registry,
            catalogKeep = std::move(catalogKeep), jobId, submitEpoch,
-           snapshot_credit = std::move(snapshot_credit)]() mutable
+           snapshot_credit = std::move(snapshot_credit),
+           work_slot = std::move(work_slot)]() mutable
           {
+        (void)work_slot;
         MeshBuildResult result;
         result.coord = snapshot.coord;
         result.sourceRevision = snapshot.sourceRevision;
