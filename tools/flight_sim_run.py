@@ -1378,7 +1378,8 @@ def main() -> int:
             # class (same lesson as ocean-cruise HoldSpace blindness).
             # Without Space, free-move at y≈50 sticks in terrain (cold 124719:
             # focus stayed (7,3)). CruiseEyeY unlocks land-eye floor
-            # (terrain+12, continuous along route) without Space climb.
+            # (terrain+12 each frame, floor=CruiseEyeY, ceil=CruiseEyeY+16)
+            # without Space climb or Y ratchet into altitude-blind.
             args.hold_space = False
             if args.min_alt_above_sea is None:
                 args.min_alt_above_sea = 0.0
