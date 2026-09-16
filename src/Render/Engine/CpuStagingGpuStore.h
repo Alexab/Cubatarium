@@ -43,6 +43,11 @@ public:
     Backend.DestroyAll(opaque, cutout, transparent);
   }
 
+  void RemoveCoord(GreedyGpuPassCache &cache, glm::ivec3 coord) override
+  {
+    Backend.RemoveCoord(cache, coord);
+  }
+
   UGreedyGpuBackend &GetBackend() { return Backend; }
   const UGreedyGpuBackend &GetBackend() const { return Backend; }
 

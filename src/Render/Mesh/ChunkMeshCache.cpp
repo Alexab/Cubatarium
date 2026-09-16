@@ -3803,6 +3803,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   chunkMesh.batches.clear();
   chunkMesh.crossCenters = std::move(cross_centers);
   GreedyVertexCountByChunk[coord] = 0;
+  // RepresentationSwitch: packed is sole draw for this coord — drop MDI/pool.
+  if (OnPackedRepresentationSwitch)
+  {
+    OnPackedRepresentationSwitch(coord);
+  }
   NoteGeometryDirty(coord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;

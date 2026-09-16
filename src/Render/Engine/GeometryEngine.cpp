@@ -245,6 +245,17 @@ IUMeshGpuStore &UGeometryEngine::MeshStore()
 bool UGeometryEngine::InitEngine()
 {
   EnsureRenderBackendsBound();
+  if (WorldInstance && !PackedRepresentationSwitchBound_)
+  {
+    WorldInstance->GetMeshService().GetCache().SetOnPackedRepresentationSwitchFn(
+        [this](glm::ivec3 coord)
+        {
+          MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
+          MeshStore().RemoveCoord(GreedyGpuCutout, coord);
+          MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
+        });
+    PackedRepresentationSwitchBound_ = true;
+  }
 
   // Initialize UShaderManager
   shaderManager = std::make_shared<UShaderManager>();
@@ -1716,6 +1727,17 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     const glm::vec3 &cameraPos, const std::map<size_t, UTextureCube> &textures,
     uint64_t meshRevision, uint64_t cullRevision)
 {
+  if (WorldInstance && !PackedRepresentationSwitchBound_)
+  {
+    WorldInstance->GetMeshService().GetCache().SetOnPackedRepresentationSwitchFn(
+        [this](glm::ivec3 coord)
+        {
+          MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
+          MeshStore().RemoveCoord(GreedyGpuCutout, coord);
+          MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
+        });
+    PackedRepresentationSwitchBound_ = true;
+  }
   IUMeshGpuStore &store = MeshStore();
   const bool mdi_indirect_cull = store.SupportsMultiDrawIndirect();
 
@@ -2127,12 +2149,12 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       if (!found)
       {
         packed_opaque_draw.push_back(pref);
-        // Misnamed legacy counter: packed drawn while absent from MDI resident
-        // and CPU opaque_draw (not proof of stale GPU dual-draw).
+        // Renamed meaning (audit S3): packed drawn while absent from MDI resident
+        // and CPU opaque_draw — not proof of stale dual-draw.
         if (WorldInstance)
         {
           ++WorldInstance->GetPhysicsTelemetryMutable()
-                .PassMdiStaleGpuResidentN;
+                .PassPackedWithoutMdiResidentN;
         }
       }
     }

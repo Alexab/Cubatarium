@@ -25,7 +25,7 @@
     "FaceYawDeg": 180,
     "FacePitchDeg": 0,
     "IdleBeforeFlySec": 15,
-    "FlyPhaseSec": 38,
+    "FlyPhaseSec": 90,
     "StopPhaseSec": 20,
     "HoldForward": true,
     "HoldSpace": true,

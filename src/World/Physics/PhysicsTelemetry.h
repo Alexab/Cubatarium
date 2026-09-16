@@ -803,7 +803,9 @@ struct PhysicsTelemetry
   /// N01 autopsy: max (mesh_revision_arg − cache.meshRevision) this frame.
   uint64_t PassMeshRevLagMax{0};
   /// N04 autopsy: packed leftovers drawn while MDI missed same coord (dual-draw).
-  int PassMdiStaleGpuResidentN{0};
+  /// Packed draw while coord absent from MDI resident + CPU opaque_draw.
+  /// Formerly misnamed PassMdiStaleGpuResidentN (audit S3).
+  int PassPackedWithoutMdiResidentN{0};
   /// Q8: sync glGetBufferSubData reads of CullStatsSsbo (HUD/period only).
   uint64_t CullStatsSyncReadN{0};
   /// S1 transparent: 1 when sortRevision changed on PrepareTransparent refresh.

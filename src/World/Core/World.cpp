@@ -3257,16 +3257,14 @@ int UWorld::RemeshTicketedFullyDarkStalledNearFocus(
       {
         continue;
       }
-      // Not Priority — drawable remesh stays on RemeshQ (holes KEEP Priority).
-      MeshService->MarkDirty(coord);
+      // Audit S5: FullyDark census is diagnostic only — do not MarkDirty/Meshing
+      // from census. Demand must come from dependency mismatch / coverage owner.
       ++dirty_n;
       ++PhysicsTelemetryData.MarkRelitScheduleN;
-      // Audit R07: Meshing only when THIS column gained Dirty (not cumulative).
-      SetColumnEmergeState(glm::ivec3(e.key.x, 0, e.key.y),
-                           ColumnEmergeState::Meshing);
     }
   }
-  return dirty_n;
+  // Report sampled count; zero remesh demand from this path.
+  return 0;
 }
 
 void UWorld::NoteColumnRepairNeeded(glm::ivec2 ground_xz)

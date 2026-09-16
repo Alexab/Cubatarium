@@ -50,6 +50,7 @@ public:
   virtual void DestroyPass(GreedyGpuPassCache &cache) = 0;
   virtual void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,
                           GreedyGpuPassCache &transparent) = 0;
+  virtual void RemoveCoord(GreedyGpuPassCache &cache, glm::ivec3 coord) = 0;
 
   virtual void *MapBucket(MeshGpuBucketHandle /*handle*/, size_t /*bytes*/)
   {

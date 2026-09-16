@@ -907,7 +907,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.SceneDepthCaptureMs = 0.0;
   PhysicsTelemetryData.SceneTransparentMs = 0.0;
   PhysicsTelemetryData.TransparentSortRevChanged = 0;
-  PhysicsTelemetryData.PassMdiStaleGpuResidentN = 0;
+  PhysicsTelemetryData.PassPackedWithoutMdiResidentN = 0;
   PhysicsTelemetryData.TransparentUploadFullN = 0;
   PhysicsTelemetryData.TransparentCmdReorderN = 0;
   PhysicsTelemetryData.TransparentOrderOnlyFailReason = 0;

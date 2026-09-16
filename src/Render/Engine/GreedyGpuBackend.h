@@ -147,6 +147,9 @@ public:
   void DestroyPass(GreedyGpuPassCache &cache);
   void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,
                   GreedyGpuPassCache &transparent);
+  /// Audit S2 RepresentationSwitch: drop MDI/pool batches for a coord (packed
+  /// becomes the sole resident representation).
+  void RemoveCoord(GreedyGpuPassCache &cache, glm::ivec3 coord);
 
   /// Bind/unbind telem sink for the next RefreshPassRefs calls (nullptr clears).
   static void BindRefreshTelem(GreedyGpuRefreshTelem *telem);

@@ -1300,7 +1300,9 @@ def main() -> int:
         if "--idle-sec" not in sys.argv:
             args.idle_sec = 15.0
         if "--fly-phase-sec" not in sys.argv:
-            args.fly_phase_sec = 38.0
+            # 38s only reached cx≈2; manual west needs (7,3)→(−3,3) ≈10 chunks.
+            # At ~5 chunks/38s need ≥76s; use 90s with margin for low FPS.
+            args.fly_phase_sec = 90.0
         if "--stop-phase-sec" not in sys.argv:
             args.stop_phase_sec = 20.0
         args.seconds = max(

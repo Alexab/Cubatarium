@@ -358,6 +358,7 @@ private:
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();
   void EnsureRenderBackendsBound();
+  bool PackedRepresentationSwitchBound_{false};
   void DrawGreedyOpaqueBatches(
       const UChunkMeshCache &cache,
       const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,

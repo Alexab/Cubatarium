@@ -135,6 +135,8 @@ private:
     GLuint Staging[kSlots]{};
     void *Fence[kSlots]{};
     bool Pending[kSlots]{};
+    uint64_t FrameIds[kSlots]{};
+    GreedyGpuPassId PassIds[kSlots]{};
     int WriteIdx{0};
     bool Initialized{false};
   };
@@ -143,7 +145,7 @@ private:
   void EnsureCullStatsAsyncRing();
   void DestroyCullStatsAsyncRing();
   void PollCullStatsAsyncRing();
-  void ArmCullStatsAsyncSample();
+  void ArmCullStatsAsyncSample(GreedyGpuPassId pass_id);
 
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};

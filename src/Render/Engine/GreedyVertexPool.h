@@ -53,6 +53,12 @@ public:
   size_t FreeSlotCount() const { return FreeList.size(); }
   size_t RetiredSlotCount() const { return RetiredList.size(); }
   size_t PendingRetireCount() const { return PendingRetireList.size(); }
+  uint64_t ConsumeDoubleFreeN()
+  {
+    const uint64_t v = DoubleFreeN_;
+    DoubleFreeN_ = 0;
+    return v;
+  }
   /// Soft ceiling for vertex+index combined (0 = unbounded grow).
   void SetMaxCapacityBytes(size_t max_bytes) { MaxCapacityBytes = max_bytes; }
   size_t GetMaxCapacityBytes() const { return MaxCapacityBytes; }
@@ -123,6 +129,9 @@ private:
   std::map<uint64_t, void *> DrawFences;
   uint64_t CompletedDrawFenceToken_{0};
   size_t LiveAllocationCount{0};
+  /// Audit S1: live (vbo,ebo) offsets — Free of unknown key is double-free.
+  std::vector<std::pair<size_t, size_t>> LiveOffsetKeys_;
+  uint64_t DoubleFreeN_{0};
   uint64_t StorageReadyAfterToken_{0};
   uint64_t LastDrawFenceToken_{0};
   uint64_t ActiveDrawFenceToken_{0};

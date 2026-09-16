@@ -641,6 +641,11 @@ public:
   {
     OnLitDrawableCommitted = std::move(fn);
   }
+  /// Audit S2: packed bind must drop MDI/pool resident for the same coord.
+  void SetOnPackedRepresentationSwitchFn(std::function<void(glm::ivec3)> fn)
+  {
+    OnPackedRepresentationSwitch = std::move(fn);
+  }
   /// When true, skip outside-focus dirty trickle (near holes / pending light).
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
   /// When true, skip remesh (already has greedy) until holes clear.
@@ -1172,6 +1177,7 @@ private:
   std::function<void(glm::ivec3)> OnLitPendingNeeded;
   std::function<void(glm::ivec3)> OnSoftDeferHeld;
   std::function<void(glm::ivec3)> OnLitDrawableCommitted;
+  std::function<void(glm::ivec3)> OnPackedRepresentationSwitch;
   // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
   mutable uint64_t HoleQueryEpoch{0};
   struct MissingQueryMemo

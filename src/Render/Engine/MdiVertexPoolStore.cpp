@@ -339,7 +339,7 @@ void UMdiVertexPoolStore::PollCullStatsAsyncRing()
 #endif
 }
 
-void UMdiVertexPoolStore::ArmCullStatsAsyncSample()
+void UMdiVertexPoolStore::ArmCullStatsAsyncSample(GreedyGpuPassId pass_id)
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   return;
@@ -379,6 +379,8 @@ void UMdiVertexPoolStore::ArmCullStatsAsyncSample()
   glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
   CullStatsAsync_.Fence[slot] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
   CullStatsAsync_.Pending[slot] = CullStatsAsync_.Fence[slot] != nullptr;
+  CullStatsAsync_.PassIds[slot] = pass_id;
+  CullStatsAsync_.FrameIds[slot] = CullGpuTimeRing_.NextSubmission;
   CullStatsAsync_.WriteIdx = (slot + 1) % CullStatsAsyncRing::kSlots;
 #endif
 }
@@ -1132,7 +1134,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
       gCullStatsReadbackOnce.exchange(false, std::memory_order_relaxed);
   if (stats_enabled)
   {
-    ArmCullStatsAsyncSample();
+    ArmCullStatsAsyncSample(cache.passId);
   }
   if (stats_enabled && StagedCullStatsValid_)
   {

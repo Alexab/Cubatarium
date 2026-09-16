@@ -264,6 +264,52 @@ void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
   cache.GpuCompactActive = false;
 }
 
+void UGreedyGpuBackend::RemoveCoord(GreedyGpuPassCache &cache,
+                                    glm::ivec3 coord)
+{
+  if (cache.batches.empty())
+  {
+    cache.PendingGeometryDirty.erase(coord);
+    return;
+  }
+  std::vector<GreedyGpuBatch> kept;
+  kept.reserve(cache.batches.size());
+  bool removed = false;
+  for (GreedyGpuBatch &batch : cache.batches)
+  {
+    if (batch.chunkCoord == coord)
+    {
+      ReleasePooledBatch(batch, cache.VertexPool);
+      DestroyBatchBuffers(batch);
+      removed = true;
+      continue;
+    }
+    kept.push_back(std::move(batch));
+  }
+  if (!removed)
+  {
+    cache.PendingGeometryDirty.erase(coord);
+    return;
+  }
+  cache.batches = std::move(kept);
+  cache.PendingGeometryDirty.erase(coord);
+  cache.usesVertexPool = !cache.batches.empty();
+  cache.IndirectCullReady = false;
+  cache.GpuCompactActive = false;
+  cache.CompactVisCpuSynced = false;
+  ++cache.publicationVersion;
+  cache.poolVbo = cache.VertexPool.VertexBuffer();
+  cache.poolEbo = cache.VertexPool.IndexBuffer();
+  for (auto &gpu : cache.batches)
+  {
+    if (gpu.pooled)
+    {
+      gpu.vbo = cache.poolVbo;
+      gpu.ebo = cache.poolEbo;
+    }
+  }
+}
+
 void UGreedyGpuBackend::DestroyAll(GreedyGpuPassCache &opaque,
                                    GreedyGpuPassCache &cutout,
                                    GreedyGpuPassCache &transparent)

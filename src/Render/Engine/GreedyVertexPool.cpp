@@ -247,6 +247,24 @@ void UGreedyVertexPool::Free(const GreedyGpuPoolAllocation &alloc)
   if (alloc.vertexCount == 0 || alloc.indexCount == 0)
     return;
   PollRetiredFences();
+  const auto key =
+      std::make_pair(alloc.vertexByteOffset, alloc.indexByteOffset);
+  bool found_live = false;
+  for (size_t i = 0; i < LiveOffsetKeys_.size(); ++i)
+  {
+    if (LiveOffsetKeys_[i] == key)
+    {
+      LiveOffsetKeys_[i] = LiveOffsetKeys_.back();
+      LiveOffsetKeys_.pop_back();
+      found_live = true;
+      break;
+    }
+  }
+  if (!found_live)
+  {
+    ++DoubleFreeN_;
+    return;
+  }
   GreedyGpuPoolFreeSlot slot;
   slot.vertexByteOffset = alloc.vertexByteOffset;
   slot.indexByteOffset = alloc.indexByteOffset;
@@ -370,6 +388,8 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
   ++LiveAllocationCount;
+  LiveOffsetKeys_.push_back(
+      {alloc.vertexByteOffset, alloc.indexByteOffset});
   return alloc;
 }
 void UGreedyVertexPool::SignalDrawComplete()
@@ -403,6 +423,8 @@ void UGreedyVertexPool::Destroy()
   DrawFences.clear();
   CompletedDrawFenceToken_ = 0;
   LiveAllocationCount = 0;
+  LiveOffsetKeys_.clear();
+  DoubleFreeN_ = 0;
   RetiredList.clear();
   PendingRetireList.clear();
   LastDrawFenceToken_ = 0;

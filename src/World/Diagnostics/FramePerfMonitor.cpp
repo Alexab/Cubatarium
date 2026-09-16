@@ -778,7 +778,8 @@ struct FrameNumbers
   uint64_t publication_oom_retain_n{0};
   uint64_t pubver_changed_without_fresh_n{0};
   uint64_t pass_mesh_rev_lag_max{0};
-  int pass_mdi_stale_gpu_resident_n{0};
+  int pass_packed_without_mdi_resident_n{0};
+  int pass_mdi_stale_gpu_resident_n{0}; // compat alias of packed_without_mdi
   double gpu_cull_cpu_ms{0.0};
   double gpu_cull_submit_cpu_ms{0.0};
   double gpu_cull_exec_ms{-1.0};
@@ -1439,7 +1440,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.publication_overload_retain_n = phys.PublicationOverloadRetainN;
   n.pubver_changed_without_fresh_n = phys.PubVerChangedWithoutFreshN;
   n.pass_mesh_rev_lag_max = phys.PassMeshRevLagMax;
-  n.pass_mdi_stale_gpu_resident_n = phys.PassMdiStaleGpuResidentN;
+  n.pass_packed_without_mdi_resident_n = phys.PassPackedWithoutMdiResidentN;
+  // Compat alias for older scorecards / N04 docs.
+  n.pass_mdi_stale_gpu_resident_n = n.pass_packed_without_mdi_resident_n;
   n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
   n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
   n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
@@ -2174,6 +2177,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pubver_changed_without_fresh_n\":"
           << n.pubver_changed_without_fresh_n
           << ",\"pass_mesh_rev_lag_max\":" << n.pass_mesh_rev_lag_max
+          << ",\"pass_packed_without_mdi_resident_n\":"
+          << n.pass_packed_without_mdi_resident_n
           << ",\"pass_mdi_stale_gpu_resident_n\":"
           << n.pass_mdi_stale_gpu_resident_n
           << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
