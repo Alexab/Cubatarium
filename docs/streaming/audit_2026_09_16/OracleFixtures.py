@@ -42,6 +42,15 @@ def main() -> int:
                                  "mesh_apply_stale_visual": 0}] * 12, False),
             ("last_block_delete_incomplete",
              _rows(publication_incomplete_material_n=40), False),
+            ("checkerboard_holes",
+             _rows(near_focus_holes=1, visual_holes=1,
+                   mesh_apply_stale_visual=2), False),
+            ("liquid_boundary_holes",
+             _rows(near_focus_holes=2, visual_holes=2,
+                   mesh_apply_stale_visual=0), False),
+            ("temporal_fixed_camera_ok",
+             _rows(movement_speed=6.0, focus_cx=3.0,
+                   mesh_apply_stale_visual=1), True),
         ]
         for label, rows, expect_pass in cases:
             path = Path(tmp) / f"{label}.jsonl"

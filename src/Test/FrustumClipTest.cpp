@@ -38,6 +38,19 @@ int main()
   const glm::vec3 out_max(1001.f, 50.1f, 80.1f);
   Expect(!fr.IntersectsChunkAABB(out_min, out_max, eye, 0.f),
          "N02: far lateral AABB rejected without distance bypass");
+  // Audit S8 cull parity fixtures: near / far plane boundaries.
+  const glm::vec3 near_min(99.9f, 49.9f, 99.7f);
+  const glm::vec3 near_max(100.1f, 50.1f, 99.85f);
+  Expect(fr.IntersectsChunkAABB(near_min, near_max, eye, 0.f),
+         "S8: near-plane AABB inside clip accepted");
+  const glm::vec3 far_min(99.9f, 49.9f, -399.f);
+  const glm::vec3 far_max(100.1f, 50.1f, -398.f);
+  Expect(fr.IntersectsChunkAABB(far_min, far_max, eye, 0.f),
+         "S8: far-plane AABB inside clip accepted");
+  const glm::vec3 beyond_far_min(99.9f, 49.9f, -600.f);
+  const glm::vec3 beyond_far_max(100.1f, 50.1f, -599.f);
+  Expect(!fr.IntersectsChunkAABB(beyond_far_min, beyond_far_max, eye, 0.f),
+         "S8: beyond far clip rejected");
   if (gFails)
   {
     std::cerr << gFails << " failures\n";
