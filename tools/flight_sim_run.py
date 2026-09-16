@@ -395,8 +395,10 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         mid_third = (
             rows[len(rows) // 3 : (2 * len(rows)) // 3] if len(rows) >= 3 else rows
         )
+        # Product mid-corridor is spatial focus_cx∈[2,5], not temporal mid_third.
+        # Full-west fly (7→≤−3) shifts temporal mid past that band — search all periods.
         mid_focus: list[dict] = []
-        for row in mid_third:
+        for row in rows:
             try:
                 cx = float(row.get("focus_cx") or 0)
             except (TypeError, ValueError):
@@ -1300,9 +1302,10 @@ def main() -> int:
         if "--idle-sec" not in sys.argv:
             args.idle_sec = 15.0
         if "--fly-phase-sec" not in sys.argv:
-            # 38s only reached cx≈2; manual west needs (7,3)→(−3,3) ≈10 chunks.
-            # At ~5 chunks/38s need ≥76s; use 90s with margin for low FPS.
-            args.fly_phase_sec = 90.0
+            # Sticky land-eye used to pin Y and stick at cx≈2. With continuous
+            # terrain+12 follow, ~5–6 blk/s covers (7,3)→(−3,3) in ~35s.
+            # 55s leaves margin without overshooting to cx≈−20 (dilutes VB class).
+            args.fly_phase_sec = 55.0
         if "--stop-phase-sec" not in sys.argv:
             args.stop_phase_sec = 20.0
         args.seconds = max(
@@ -1375,7 +1378,7 @@ def main() -> int:
             # class (same lesson as ocean-cruise HoldSpace blindness).
             # Without Space, free-move at y≈50 sticks in terrain (cold 124719:
             # focus stayed (7,3)). CruiseEyeY unlocks land-eye floor
-            # (terrain+12 once) without continuous Space climb.
+            # (terrain+12, continuous along route) without Space climb.
             args.hold_space = False
             if args.min_alt_above_sea is None:
                 args.min_alt_above_sea = 0.0

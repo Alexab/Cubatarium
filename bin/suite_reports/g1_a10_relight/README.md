@@ -190,3 +190,5 @@ caps or wrong-tex gates on misnamed `pass_mdi_stale_*`.
 - Eye-proxy: absolute holes + missing fields fail-closed; west route to `cx≤−3` or `UNTESTED`.
 - `operator_visual=None` → merge_green **false** (UNTESTED).
 - Gate of record: `--scenario product-174657` no-teleport; autofly ≠ product CLOSED.
+- West autofly: continuous land-eye (`terrain+12`) + fly **55s** → `west_route_coverage=COVERED`
+  (`audit16_west55_{cold,warm}`); dual-lane/stalled still FAIL (G1 OPEN); operator eye still UNTESTED.

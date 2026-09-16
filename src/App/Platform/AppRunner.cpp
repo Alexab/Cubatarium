@@ -640,28 +640,19 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
-    // Land cruise: resolve eye from terrain once column is loaded
-    // (FindHighestSolidY + 12 for dark_stale stress; was +20 with stale=0).
-    // Fallback CruiseEyeY until solid ready.
-    float land_eye_y = options.CruiseEyeY;
-    bool land_eye_from_terrain = false;
-
+    // Land cruise: follow column top + 12 along the route (was sticky-once,
+    // which pinned Y at spawn and stuck product-174657 west at focus_cx≈2).
+    // Fallback CruiseEyeY until the current column is solid-ready.
     auto resolve_land_eye_y = [&](UWorld &w, const glm::vec3 &pos) -> float {
       if (options.CruiseEyeY <= 0.0f)
       {
         return 0.0f;
       }
-      if (land_eye_from_terrain)
-      {
-        return land_eye_y;
-      }
       const int wx = static_cast<int>(std::floor(pos.x));
       const int wz = static_cast<int>(std::floor(pos.z));
       if (const auto top = w.FindHighestSolidY(wx, wz))
       {
-        land_eye_y = static_cast<float>(*top) + 12.0f;
-        land_eye_from_terrain = true;
-        return land_eye_y;
+        return static_cast<float>(*top) + 12.0f;
       }
       return options.CruiseEyeY;
     };
