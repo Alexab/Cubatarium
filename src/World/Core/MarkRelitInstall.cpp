@@ -413,7 +413,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
       const auto plan_t0 = Clock::now();
       LitApplyPlan plan = PlanColumnInstall(in);
-      // N04 H2: ticketed FullyDark with SoftDefer≠progress → MarkDirty (not Priority).
+      // N04 H2: ticketed FullyDark remesh Dirty — GATED (audit S5 sole-owner).
+      // Census remesh FREEZE; MarkRelit RelightReplace remains Dirty owner.
+      constexpr bool kEnableH2FullyDarkDirty = false;
+      if (kEnableH2FullyDarkDirty)
       {
         const bool repair_progress = ColumnHasRepairProgress(key);
         bool fully_dark_drawable = false;
