@@ -51,6 +51,11 @@ def main() -> int:
             ("temporal_fixed_camera_ok",
              _rows(movement_speed=6.0, focus_cx=3.0,
                    mesh_apply_stale_visual=1), True),
+            # Synthetic wrong-tex / skip-command disagreement must not PASS.
+            ("wrong_tex_disagreement",
+             _rows(near_focus_holes=50, visual_holes=50,
+                   mesh_apply_stale_visual=8,
+                   transparent_cmd_reorder_n=12), False),
         ]
         for label, rows, expect_pass in cases:
             path = Path(tmp) / f"{label}.jsonl"
