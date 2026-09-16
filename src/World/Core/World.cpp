@@ -3176,6 +3176,101 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
   return static_cast<int>(out.size());
 }
 
+int UWorld::RemeshTicketedFullyDarkStalledNearFocus(
+    glm::ivec3 focus_ground_horiz, int radius_chunks, int max_dirty)
+{
+  if (!MeshService || radius_chunks < 0 || max_dirty <= 0)
+  {
+    return 0;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  struct Entry
+  {
+    int dist;
+    glm::ivec2 key;
+  };
+  std::vector<Entry> entries;
+  entries.reserve(32);
+  auto &flow = GetColumnFlowExecutor();
+  for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+  {
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      const int dist = std::max(std::abs(dx), std::abs(dz));
+      if (dist > radius_chunks)
+      {
+        continue;
+      }
+      const glm::ivec2 key(focus_ground_horiz.x + dx, focus_ground_horiz.z + dz);
+      if (IsColumnStickyRemesh(key))
+      {
+        continue;
+      }
+      const bool has_ticket = flow.HasRepairTicket(key);
+      const bool progress = ColumnHasRepairProgress(key);
+      bool fully_dark_drawable = false;
+      for (int cy = 0; cy <= max_cy; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
+            MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          fully_dark_drawable = true;
+          break;
+        }
+      }
+      if (!ShouldRemeshTicketedFullyDarkStalled(has_ticket, progress,
+                                               fully_dark_drawable, dist,
+                                               radius_chunks))
+      {
+        continue;
+      }
+      entries.push_back({dist, key});
+    }
+  }
+  std::sort(entries.begin(), entries.end(),
+            [](const Entry &a, const Entry &b) { return a.dist < b.dist; });
+  int dirty_n = 0;
+  for (const Entry &e : entries)
+  {
+    if (dirty_n >= max_dirty)
+    {
+      break;
+    }
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      if (dirty_n >= max_dirty)
+      {
+        break;
+      }
+      const glm::ivec3 coord(e.key.x, cy, e.key.y);
+      if (!MeshService->HasDrawableGreedyMesh(coord) ||
+          !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        continue;
+      }
+      if (MeshService->IsChunkMeshDirty(coord) ||
+          MeshService->HasInflightMeshBuild(coord) ||
+          MeshService->IsPendingGpuApply(coord) ||
+          MeshService->IsRemeshAfterApplyPending(coord))
+      {
+        continue;
+      }
+      // Not Priority — drawable remesh stays on RemeshQ (holes KEEP Priority).
+      MeshService->MarkDirty(coord);
+      ++dirty_n;
+      ++PhysicsTelemetryData.MarkRelitScheduleN;
+    }
+    if (dirty_n > 0)
+    {
+      SetColumnEmergeState(glm::ivec3(e.key.x, 0, e.key.y),
+                           ColumnEmergeState::Meshing);
+    }
+  }
+  return dirty_n;
+}
+
 void UWorld::NoteColumnRepairNeeded(glm::ivec2 ground_xz)
 {
   StickyRemeshAfterLight.insert(ground_xz);

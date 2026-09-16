@@ -1157,6 +1157,11 @@ public:
                                    int radius_chunks,
                                    std::vector<glm::ivec2> &out,
                                    int max_cols) const;
+  /// N04 autopsy I3a: ticketed FullyDark stalled (Contains ∧ ¬Progress) on mid
+  /// ring → MarkDirty (not Priority). Cap max_dirty chunks; returns dirty count.
+  int RemeshTicketedFullyDarkStalledNearFocus(glm::ivec3 focus_ground_horiz,
+                                             int radius_chunks,
+                                             int max_dirty);
   /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).
   std::string FormatPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
                                              int radius_chunks,
