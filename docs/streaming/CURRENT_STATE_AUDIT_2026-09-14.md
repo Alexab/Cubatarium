@@ -475,7 +475,7 @@ Plan: `.cursor/plans/west_cruise_wall_diet.plan.md`. Branch tip at freeze: `7a25
 | N06 structural CooldownKey | **KEEP** | landed A3 |
 | N01 atomic publish (A1 `58f65ffe`) | **REOPEN→epoch-split→narrow any_fresh→full-cache dirty publish** | `134038` retain storm SoT (incomplete on frustum refs); expand + `cache⊆upload` |
 | D3.3 lazy spawn (assume ready off-enter) | **cache+ring_dirty** | S3 cache; invalidate on `NeedsSpawnRingCatchUp` |
-| N04 / sticky mid black | **REOPEN (autopsy I2)** | SoT `074859`; I1 `111708`: **A** (hit≈0) + **T2/T1a** (lag/mdi_stale); plan `n04_stalled_remesh_autopsy` |
+| N04 / sticky mid black | **REOPEN (autopsy I4)** | I3a Flow remesh + I3t hold-prior landed; control `120154` dual-lane FAIL; G1 OPEN; operator west vs `074859` |
 | N03 BeginFrame-before-stream | **done** | S4 landed |
 | N05 per-key debt age | **PARTIAL** | class-level age; per-key deferred |
 | N07/N08/N12 fail-closed pieces | N08 **eye_proxy mid-corridor** | fly-only stale med=2 missed mid=17 on autofly `095545` |
@@ -496,7 +496,7 @@ Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
 | S0b `--visible` + dual-lane stop-line | done; mid stalled≤5 gate |
 | S1 N01 v2 group-commit | done; epoch-split → **narrow: pubVer only on any_fresh** (C1 landed) |
 | S2a `stale_vl_rev_n` / `fully_dark_census_n` | done |
-| S2b / T2 mid FullyDark | **autopsy I2** — **A** → I3a Flow remesh; **T2/T1a** → I3t hold-prior; `.cursor/plans/n04_stalled_remesh_autopsy.plan.md` |
+| S2b / T2 mid FullyDark | **autopsy I4** — I3a+I3t landed; lanes not product-closed; `.cursor/plans/n04_stalled_remesh_autopsy.plan.md` |
 | S3 spawn-ring cache | done + ring_dirty invalidate |
 | S4 BeginFrame before stream | done (diet deferred) |
 | T0 eye_proxy stop-line | done → **mid-corridor + swap-without-holes** (N08) |
@@ -515,20 +515,25 @@ Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
 | Autofly `213719` | **N04 H1–H5 heal** | 8 (Δ=0) | **~63–70** | 0 | legal_dark=0; eye PASS; VB~97; stalled honest FAIL; G1 OPEN |
 | Manual `074859` | **N04 autopsy SoT** | 3 (Δ=1) | **~51** | 0 | operator FAIL; schedule≈0; lag≈413; incomplete=0; wrong-tex blink |
 | Autofly `111708` | **N04 I1 counters** | 10 (Δ=0) | **~73–112** | 0 | hit_stalled≈0; h2_fire≈0; lag≈600; mdi_stale≈128; light_acceptedΔ>0 |
+| Autofly `114041` | **N04 I3a** | 7 (Δ=0) | **~71–101** | 0 | Flow MarkDirty stalled; eye PASS; legal_dark=0 |
+| Autofly `115808` | **N04 I3t** | 7 (Δ=0) | **~61–107** | 0 | hold-prior; incomplete=0; mdi_stale≈111 |
+| Autofly `120154` | **N04 I4 control** | 11 (Δ=0) | **~71–90** | 0 | adequacy PASS; eye soft FAIL; dual-lane FAIL; G1 OPEN |
 
 Scorecards: `n01_thrash_manual_102527.json`, `n01_thrash_manual_121131.json`,
 `n01_thrash_postfix_cold_score.json`, `n01_retain_manual_160234.json`,
 `post_n01_p2_final_af_score.json`, `post_n01_p3l_t2_af_score.json`,
 `n01_manual_204501.json`, `n04_heal_h5_af_{cold,score}.json`,
-`n04_manual_074859.json`, `n04_autopsy_i1_af_{cold,score}.json`.
+`n04_manual_074859.json`, `n04_autopsy_i1_af_{cold,score}.json`,
+`n04_autopsy_i3a_af_{cold,score}.json`, `n04_autopsy_i3t_af_{cold,score}.json`,
+`n04_autopsy_i4_af_{cold,score}.json`.
 
 **N01 full-cache dirty publish:** `RefreshPassRefs` expands dirty uploads from
 full `GreedyCache` pass set; incomplete = `cache⊆upload` (not `resident⊆upload`);
 telem split `publication_incomplete_material_n` / `publication_oom_retain_n`.
 C1 KEEP; post-N01 P0–P2 thrash cut KEEP; LegalDark greenwash reverted (H1).
-**Autopsy SoT `074859` / I2 (`111708`):** (1) mid-blacks — **A** (MarkRelit miss stalled; hit≈0) → I3a;
-(2) wrong-tex — **T2/T1a** (lag≫64 + mdi_stale_gpu + light accept; incomplete=0) → I3t hold-prior.
-G1 remains **OPEN**. Operator west required for both lanes.
+**Autopsy SoT `074859` / I4:** (1) blacks — **A**→I3a Flow `MarkDirty` stalled mid;
+(2) wrong-tex — **T2/T1a**→I3t hold prior on accepted-stale. Lanes landed; dual-lane/eye
+not merge-green; G1 **OPEN**. Operator west vs `074859` for blacks + texture-swap.
 
 **Merge signals (N08):** `adequacy_pass` ∧ `dual_lane_stop_line_pass` ∧
 `eye_proxy_stop_line_pass` (mid-corridor `focus_cx∈[2,5]`, not fly-only;

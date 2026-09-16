@@ -145,11 +145,15 @@ Plan: post-N01 eye thrash → T2 mid black (do not edit plan SoT during quiet ex
 | Manual `204501` | greenwash SoT (pre-H1); eye Δ=3 |
 | Manual `074859` | operator **FAIL**; eye Δ=1 PASS; blacks+wrong-tex; incomplete=0 KEEP |
 | Autofly `111708` | **I1 counters** — hit_stalled≈0; h2_fire≈0; lag med≈600; mdi_stale_gpu≈128; light_acceptedΔ>0 |
+| Autofly `114041` | **I3a** Flow stalled remesh — eye PASS (stale=7); stalled fly med≈71; legal_dark=0 |
+| Autofly `115808` | **I3t** hold-prior — eye PASS; incomplete=0; mdi_stale≈111 (↓ vs I1); lag still ≫64 |
+| Autofly `120154` | **I4 control** — adequacy PASS; eye soft FAIL (stale=11); dual-lane FAIL; G1 **OPEN** |
 
 Reports: `post_n01_p0_af_*`, `post_n01_p1*_af_*`, `post_n01_p2_final_af_{cold,score}.json`,
 `post_n01_p3l_t2_af_{cold,score}.json`, `n01_manual_204501.json`,
 `n04_heal_h5_af_{cold,score}.json`, `n04_manual_074859.json`,
-`n04_autopsy_i1_af_{cold,score}.json`.
+`n04_autopsy_i1_af_{cold,score}.json`, `n04_autopsy_i3a_af_{cold,score}.json`,
+`n04_autopsy_i3t_af_{cold,score}.json`, `n04_autopsy_i4_af_{cold,score}.json`.
 Self-test: `102527` eye_proxy PASS under thrash class; `095545`/`121131` still FAIL.
 Scorecard: `mid_stalled_gate` FAILS on `legal_dark_masks_stalled` when legal_dark≥50% of VB≥40.
 Plan: `.cursor/plans/n04_stalled_remesh_autopsy.plan.md`.
@@ -161,9 +165,17 @@ Plan: `.cursor/plans/n04_stalled_remesh_autopsy.plan.md`.
 | Blacks | stalled≫0 ∧ `hit_stalled`≈0 ∧ `h2_fire`≈0 (H2 mostly `fail_progress`) | **A** — MarkRelit does not visit stalled | **I3a** Flow/census `MarkDirty` |
 | Wrong-tex | lag≫64 ∧ `pass_mdi_stale_gpu_resident`≫0 ∧ light_acceptedΔ>0 (geom_accepted=0; incomplete=0) | **T2/T1a** — dual MDI+packed / accept-stale publish | **I3t** hold prior draw |
 
+### N04 autopsy I4 closeout
+
+| Lane | Landed | Autofly note | Residual |
+|---|---|---|---|
+| Blacks (A→I3a) | Flow `RemeshTicketedFullyDarkStalledNearFocus` MarkDirty cap≤4 | stalled fly med ~61–71 (vs I1 ~73); legal_dark=0 | mid stalled ≫5; VB dual-lane FAIL |
+| Wrong-tex (T2/T1a→I3t) | hold prior draw on accepted-stale (`ShouldHoldPriorDrawOnAcceptedStale`) | incomplete=0 KEEP; I3t eye PASS; mdi_stale↓ vs I1 | lag≫64; formal wrong-tex gate still soft (mdi_stale>0); pass-only follow-on |
+
 Wrong-tex gate FAIL if mid `pass_mesh_rev_lag_max_med > 64` **and**
 (`mesh_apply_stale_geom_accepted_delta_sum > 0` **or** `pass_mdi_stale_gpu_resident_mid_med > 0`).
-G1 / T2 remain **OPEN**.
+**Operator west** vs SoT `074859`: check mid **blacks** and **texture-swap** blink.
+Do **not** claim G1 / T2 CLOSED. Autopsy instrumentation+fixes landed; product still OPEN.
 
 **Merge:** adequacy ∧ dual_lane ∧ eye_proxy ∧ mid_stalled (honest) ∧ operator west eye.
 Do **not** claim G1/T2 CLOSED on LegalDark reclass or lag-only.
