@@ -265,6 +265,10 @@ public:
   {
     return MeshApplyStaleLightAcceptedCount;
   }
+  uint64_t GetMeshApplyStaleGeomAcceptedCount() const
+  {
+    return MeshApplyStaleGeomAcceptedCount;
+  }
   uint64_t GetMeshApplyStaleAcceptedRefreshCount() const
   {
     return MeshApplyStaleAcceptedRefreshCount;
@@ -1034,6 +1038,8 @@ private:
   uint64_t MeshApplyStaleStampInvalidCount{0};
   /// Light-stale accepted on live drawable (not Visual thrash).
   uint64_t MeshApplyStaleLightAcceptedCount{0};
+  /// Geom-stale accepted on live drawable (N04 autopsy wrong-tex).
+  uint64_t MeshApplyStaleGeomAcceptedCount{0};
   /// N04 H4: Dirty refresh queued after accepting light/geom stale drawable.
   uint64_t MeshApplyStaleAcceptedRefreshCount{0};
   /// 162400: RemeshObsoleteTracked (Current moved under Active).

@@ -127,6 +127,9 @@ struct Session
   uint64_t MeshApplyStaleLightAtPeriodStart{0};
   uint64_t MeshApplyStaleCatalogAtPeriodStart{0};
   uint64_t MeshApplyStaleStampInvalidAtPeriodStart{0};
+  uint64_t MeshApplyStaleGeomAcceptedAtPeriodStart{0};
+  uint64_t MeshApplyStaleLightAcceptedAtPeriodStart{0};
+  uint64_t MeshApplyStaleAcceptedRefreshAtPeriodStart{0};
   uint64_t MeshApplySupersededAtPeriodStart{0};
   uint64_t MeshApplyDropNoActiveAtPeriodStart{0};
   uint64_t MeshDiscardedLateAtPeriodStart{0};
@@ -549,6 +552,12 @@ struct FrameNumbers
   uint64_t mesh_apply_stale_catalog_delta{0};
   uint64_t mesh_apply_stale_stamp_invalid_delta{0};
   uint64_t mesh_apply_stale_rev{0};
+  uint64_t mesh_apply_stale_geom_accepted{0};
+  uint64_t mesh_apply_stale_light_accepted{0};
+  uint64_t mesh_apply_stale_accepted_refresh{0};
+  uint64_t mesh_apply_stale_geom_accepted_delta{0};
+  uint64_t mesh_apply_stale_light_accepted_delta{0};
+  uint64_t mesh_apply_stale_accepted_refresh_delta{0};
   uint64_t mesh_apply_superseded{0};
   uint64_t mesh_apply_superseded_delta{0};
   uint64_t mesh_apply_drop_no_active{0};
@@ -660,6 +669,15 @@ struct FrameNumbers
   int mark_relit_skip_inflight_n{0};
   int mark_relit_skip_enter_lit_quiesce_n{0};
   int mark_relit_schedule_n{0};
+  int mark_relit_h2_attempt_n{0};
+  int mark_relit_h2_fire_n{0};
+  int mark_relit_h2_fail_no_ticket_n{0};
+  int mark_relit_h2_fail_progress_n{0};
+  int mark_relit_hit_stalled_n{0};
+  int mark_relit_force_stale_n{0};
+  int stalled_sample_n{0};
+  int stalled_sample_has_ticket_n{0};
+  int stalled_sample_pending_light_n{0};
   int mark_relit_enqueue_first_mesh_n{0};
   int mark_relit_invoked_n{0};
   int mark_missing_primary_n{0};
@@ -760,6 +778,7 @@ struct FrameNumbers
   uint64_t publication_oom_retain_n{0};
   uint64_t pubver_changed_without_fresh_n{0};
   uint64_t pass_mesh_rev_lag_max{0};
+  int pass_mdi_stale_gpu_resident_n{0};
   double gpu_cull_cpu_ms{0.0};
   double gpu_cull_submit_cpu_ms{0.0};
   double gpu_cull_exec_ms{-1.0};
@@ -1185,6 +1204,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_apply_stale_catalog = phys.MeshApplyStaleCatalog;
   n.mesh_apply_stale_stamp_invalid = phys.MeshApplyStaleStampInvalid;
   n.mesh_apply_stale_rev = phys.MeshApplyStaleRev;
+  n.mesh_apply_stale_geom_accepted = phys.MeshApplyStaleGeomAccepted;
+  n.mesh_apply_stale_light_accepted = phys.MeshApplyStaleLightAccepted;
+  n.mesh_apply_stale_accepted_refresh = phys.MeshApplyStaleAcceptedRefresh;
   n.mesh_apply_superseded = phys.MeshApplySuperseded;
   n.mesh_apply_drop_no_active = phys.MeshApplyDropNoActive;
   n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
@@ -1308,6 +1330,15 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mark_relit_skip_inflight_n = phys.MarkRelitSkipInflightN;
   n.mark_relit_skip_enter_lit_quiesce_n = phys.MarkRelitSkipEnterLitQuiesceN;
   n.mark_relit_schedule_n = phys.MarkRelitScheduleN;
+  n.mark_relit_h2_attempt_n = phys.MarkRelitH2AttemptN;
+  n.mark_relit_h2_fire_n = phys.MarkRelitH2FireN;
+  n.mark_relit_h2_fail_no_ticket_n = phys.MarkRelitH2FailNoTicketN;
+  n.mark_relit_h2_fail_progress_n = phys.MarkRelitH2FailProgressN;
+  n.mark_relit_hit_stalled_n = phys.MarkRelitHitStalledN;
+  n.mark_relit_force_stale_n = phys.MarkRelitForceStaleN;
+  n.stalled_sample_n = phys.StalledSampleN;
+  n.stalled_sample_has_ticket_n = phys.StalledSampleHasTicketN;
+  n.stalled_sample_pending_light_n = phys.StalledSamplePendingLightN;
   n.mark_relit_enqueue_first_mesh_n = phys.MarkRelitEnqueueFirstMeshN;
   n.mark_relit_invoked_n = phys.MarkRelitInvokedN;
   n.mark_missing_primary_n = phys.MarkMissingPrimaryN;
@@ -1408,6 +1439,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.publication_overload_retain_n = phys.PublicationOverloadRetainN;
   n.pubver_changed_without_fresh_n = phys.PubVerChangedWithoutFreshN;
   n.pass_mesh_rev_lag_max = phys.PassMeshRevLagMax;
+  n.pass_mdi_stale_gpu_resident_n = phys.PassMdiStaleGpuResidentN;
   n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
   n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
   n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
@@ -1866,6 +1898,18 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_apply_stale_stamp_invalid_delta\":"
           << n.mesh_apply_stale_stamp_invalid_delta
           << ",\"mesh_apply_stale_rev\":" << n.mesh_apply_stale_rev
+          << ",\"mesh_apply_stale_geom_accepted\":"
+          << n.mesh_apply_stale_geom_accepted
+          << ",\"mesh_apply_stale_light_accepted\":"
+          << n.mesh_apply_stale_light_accepted
+          << ",\"mesh_apply_stale_accepted_refresh\":"
+          << n.mesh_apply_stale_accepted_refresh
+          << ",\"mesh_apply_stale_geom_accepted_delta\":"
+          << n.mesh_apply_stale_geom_accepted_delta
+          << ",\"mesh_apply_stale_light_accepted_delta\":"
+          << n.mesh_apply_stale_light_accepted_delta
+          << ",\"mesh_apply_stale_accepted_refresh_delta\":"
+          << n.mesh_apply_stale_accepted_refresh_delta
           << ",\"mesh_apply_superseded\":" << n.mesh_apply_superseded
           << ",\"mesh_apply_superseded_delta\":"
           << n.mesh_apply_superseded_delta
@@ -2000,6 +2044,19 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mark_relit_skip_enter_lit_quiesce_n\":"
           << n.mark_relit_skip_enter_lit_quiesce_n
           << ",\"mark_relit_schedule_n\":" << n.mark_relit_schedule_n
+          << ",\"mark_relit_h2_attempt_n\":" << n.mark_relit_h2_attempt_n
+          << ",\"mark_relit_h2_fire_n\":" << n.mark_relit_h2_fire_n
+          << ",\"mark_relit_h2_fail_no_ticket_n\":"
+          << n.mark_relit_h2_fail_no_ticket_n
+          << ",\"mark_relit_h2_fail_progress_n\":"
+          << n.mark_relit_h2_fail_progress_n
+          << ",\"mark_relit_hit_stalled_n\":" << n.mark_relit_hit_stalled_n
+          << ",\"mark_relit_force_stale_n\":" << n.mark_relit_force_stale_n
+          << ",\"stalled_sample_n\":" << n.stalled_sample_n
+          << ",\"stalled_sample_has_ticket_n\":"
+          << n.stalled_sample_has_ticket_n
+          << ",\"stalled_sample_pending_light_n\":"
+          << n.stalled_sample_pending_light_n
           << ",\"mark_relit_enqueue_first_mesh_n\":"
           << n.mark_relit_enqueue_first_mesh_n
           << ",\"mark_relit_invoked_n\":" << n.mark_relit_invoked_n
@@ -2117,6 +2174,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pubver_changed_without_fresh_n\":"
           << n.pubver_changed_without_fresh_n
           << ",\"pass_mesh_rev_lag_max\":" << n.pass_mesh_rev_lag_max
+          << ",\"pass_mdi_stale_gpu_resident_n\":"
+          << n.pass_mdi_stale_gpu_resident_n
           << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
           << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
           << ",\"gpu_light_readback\":" << n.gpu_light_readback
@@ -2593,6 +2652,24 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
           ? n.mesh_apply_stale_stamp_invalid -
                 s.MeshApplyStaleStampInvalidAtPeriodStart
           : 0;
+  period.mesh_apply_stale_geom_accepted_delta =
+      n.mesh_apply_stale_geom_accepted >=
+              s.MeshApplyStaleGeomAcceptedAtPeriodStart
+          ? n.mesh_apply_stale_geom_accepted -
+                s.MeshApplyStaleGeomAcceptedAtPeriodStart
+          : 0;
+  period.mesh_apply_stale_light_accepted_delta =
+      n.mesh_apply_stale_light_accepted >=
+              s.MeshApplyStaleLightAcceptedAtPeriodStart
+          ? n.mesh_apply_stale_light_accepted -
+                s.MeshApplyStaleLightAcceptedAtPeriodStart
+          : 0;
+  period.mesh_apply_stale_accepted_refresh_delta =
+      n.mesh_apply_stale_accepted_refresh >=
+              s.MeshApplyStaleAcceptedRefreshAtPeriodStart
+          ? n.mesh_apply_stale_accepted_refresh -
+                s.MeshApplyStaleAcceptedRefreshAtPeriodStart
+          : 0;
   period.mesh_apply_superseded_delta =
       n.mesh_apply_superseded >= s.MeshApplySupersededAtPeriodStart
           ? n.mesh_apply_superseded - s.MeshApplySupersededAtPeriodStart
@@ -2652,6 +2729,10 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   s.MeshApplyStaleLightAtPeriodStart = n.mesh_apply_stale_light;
   s.MeshApplyStaleCatalogAtPeriodStart = n.mesh_apply_stale_catalog;
   s.MeshApplyStaleStampInvalidAtPeriodStart = n.mesh_apply_stale_stamp_invalid;
+  s.MeshApplyStaleGeomAcceptedAtPeriodStart = n.mesh_apply_stale_geom_accepted;
+  s.MeshApplyStaleLightAcceptedAtPeriodStart = n.mesh_apply_stale_light_accepted;
+  s.MeshApplyStaleAcceptedRefreshAtPeriodStart =
+      n.mesh_apply_stale_accepted_refresh;
   s.MeshApplySupersededAtPeriodStart = n.mesh_apply_superseded;
   s.MeshApplyDropNoActiveAtPeriodStart = n.mesh_apply_drop_no_active;
   s.PoolRetiredReclaimedAtPeriodStart = n.pool_retired_reclaimed_n;

@@ -51,6 +51,10 @@ struct PhysicsTelemetry
   uint64_t MeshApplyStaleStampInvalid{0};
   /// 162400: RemeshObsoleteTracked subset of MeshApplyStale.
   uint64_t MeshApplyStaleRev{0};
+  /// N04 autopsy: accepted stale input commits (cumulative).
+  uint64_t MeshApplyStaleGeomAccepted{0};
+  uint64_t MeshApplyStaleLightAccepted{0};
+  uint64_t MeshApplyStaleAcceptedRefresh{0};
   /// DiscardOlderKeepActive — older async keep Active for newer in-flight.
   uint64_t MeshApplySuperseded{0};
   /// DropNoActive — apply with no Active tracking.
@@ -687,6 +691,17 @@ struct PhysicsTelemetry
   int MarkRelitSkipInflightN{0};
   int MarkRelitSkipEnterLitQuiesceN{0};
   int MarkRelitScheduleN{0};
+  /// N04 autopsy I1: H2 ShouldRemeshTicketedFullyDarkStalled predicates.
+  int MarkRelitH2AttemptN{0};
+  int MarkRelitH2FireN{0};
+  int MarkRelitH2FailNoTicketN{0};
+  int MarkRelitH2FailProgressN{0};
+  int MarkRelitHitStalledN{0};
+  int MarkRelitForceStaleN{0};
+  /// N04 autopsy: sample of FullyDark stalled columns (≤8) ticket/PendingLight.
+  int StalledSampleN{0};
+  int StalledSampleHasTicketN{0};
+  int StalledSamplePendingLightN{0};
   /// FZ2.7-P12 A1: ColumnFlow FirstMesh enqueue from LitApply plan.
   int MarkRelitEnqueueFirstMeshN{0};
   /// FZ2.7-P9: MarkRelitChunksForMesh entered (vs schedule Dirty count).
@@ -787,6 +802,8 @@ struct PhysicsTelemetry
   uint64_t PubVerChangedWithoutFreshN{0};
   /// N01 autopsy: max (mesh_revision_arg − cache.meshRevision) this frame.
   uint64_t PassMeshRevLagMax{0};
+  /// N04 autopsy: packed leftovers drawn while MDI missed same coord (dual-draw).
+  int PassMdiStaleGpuResidentN{0};
   /// Q8: sync glGetBufferSubData reads of CullStatsSsbo (HUD/period only).
   uint64_t CullStatsSyncReadN{0};
   /// S1 transparent: 1 when sortRevision changed on PrepareTransparent refresh.

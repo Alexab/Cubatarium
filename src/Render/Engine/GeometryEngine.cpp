@@ -2114,6 +2114,12 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       if (!found)
       {
         packed_opaque_draw.push_back(pref);
+        // N04 autopsy: packed-only while MDI opaque_draw missed same coord.
+        if (WorldInstance)
+        {
+          ++WorldInstance->GetPhysicsTelemetryMutable()
+                .PassMdiStaleGpuResidentN;
+        }
       }
     }
     packed_to_draw = &packed_opaque_draw;

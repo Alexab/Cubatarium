@@ -1238,6 +1238,11 @@ void UWorldStreaming::RefreshStreamingPressure(
           vb_counts.fully_dark_no_ticket;
       rp.last_visible_black_fully_dark_stalled = vb_counts.fully_dark_stalled;
       rp.last_visible_black_legal_dark = vb_counts.legal_dark;
+      world.PhysicsTelemetryData.StalledSampleN = vb_counts.stalled_sample_n;
+      world.PhysicsTelemetryData.StalledSampleHasTicketN =
+          vb_counts.stalled_sample_has_ticket_n;
+      world.PhysicsTelemetryData.StalledSamplePendingLightN =
+          vb_counts.stalled_sample_pending_light_n;
       if (std::abs(raw_vb - rp.vb_published) > 3)
       {
         rp.vb_published = raw_vb;
@@ -2031,6 +2036,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshApplyStaleStampInvalidCount();
     world.PhysicsTelemetryData.MeshApplyStaleRev =
         world.GetMeshService().GetMeshApplyStaleRevCount();
+    world.PhysicsTelemetryData.MeshApplyStaleGeomAccepted =
+        world.GetMeshService().GetCache().GetMeshApplyStaleGeomAcceptedCount();
+    world.PhysicsTelemetryData.MeshApplyStaleLightAccepted =
+        world.GetMeshService().GetCache().GetMeshApplyStaleLightAcceptedCount();
+    world.PhysicsTelemetryData.MeshApplyStaleAcceptedRefresh =
+        world.GetMeshService().GetCache().GetMeshApplyStaleAcceptedRefreshCount();
     world.PhysicsTelemetryData.MeshApplySuperseded =
         world.GetMeshService().GetMeshApplySupersededCount();
     world.PhysicsTelemetryData.MeshApplyDropNoActive =

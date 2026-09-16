@@ -399,6 +399,17 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       in.force_stale_ticket = ShouldForceMarkRelitForTicketedStale(
           consume_mode, in.has_repair_ticket, any_fully_dark, any_still_stale,
           focus_horiz);
+      if (in.force_stale_ticket)
+      {
+        ++PhysicsTelemetryData.MarkRelitForceStaleN;
+      }
+      {
+        const bool repair_progress = ColumnHasRepairProgress(key);
+        if (in.has_repair_ticket && !repair_progress && any_fully_dark)
+        {
+          ++PhysicsTelemetryData.MarkRelitHitStalledN;
+        }
+      }
 
       const auto plan_t0 = Clock::now();
       LitApplyPlan plan = PlanColumnInstall(in);
@@ -414,11 +425,21 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             break;
           }
         }
+        ++PhysicsTelemetryData.MarkRelitH2AttemptN;
+        if (!in.has_repair_ticket)
+        {
+          ++PhysicsTelemetryData.MarkRelitH2FailNoTicketN;
+        }
+        else if (repair_progress)
+        {
+          ++PhysicsTelemetryData.MarkRelitH2FailProgressN;
+        }
         if (ShouldRemeshTicketedFullyDarkStalled(in.has_repair_ticket,
                                                 repair_progress,
                                                 fully_dark_drawable,
                                                 focus_horiz))
         {
+          ++PhysicsTelemetryData.MarkRelitH2FireN;
           constexpr int kStalledRemeshCap = 4;
           int remesh_n = 0;
           for (const ColumnChunkSnapshot &snap : in.relit_chunks)

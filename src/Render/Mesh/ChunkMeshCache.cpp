@@ -4096,6 +4096,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         stale_reason == MeshApplyStaleInputReason::Light)
       ++MeshApplyStaleLightAcceptedCount;
     if (accept_input_stale &&
+        stale_reason == MeshApplyStaleInputReason::Geom)
+      ++MeshApplyStaleGeomAcceptedCount;
+    if (accept_input_stale &&
         (stale_reason == MeshApplyStaleInputReason::Light ||
          stale_reason == MeshApplyStaleInputReason::Geom))
     {
@@ -4624,6 +4627,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   if (accept_input_stale && stale_reason == MeshApplyStaleInputReason::Light)
     ++MeshApplyStaleLightAcceptedCount;
+  if (accept_input_stale && stale_reason == MeshApplyStaleInputReason::Geom)
+    ++MeshApplyStaleGeomAcceptedCount;
   const bool refresh_after_accept_stale =
       accept_input_stale &&
       (stale_reason == MeshApplyStaleInputReason::Light ||

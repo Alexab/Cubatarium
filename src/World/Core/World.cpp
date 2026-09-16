@@ -3552,6 +3552,19 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       break;
     case VisibleBlackCause::FullyDarkStalledTicket:
       ++counts.fully_dark_stalled;
+      // N04 autopsy I1: sample ≤8 FullyDark stalled for ticket/PendingLight.
+      if (counts.stalled_sample_n < 8)
+      {
+        ++counts.stalled_sample_n;
+        if (contains)
+        {
+          ++counts.stalled_sample_has_ticket_n;
+        }
+        if (pending_replace)
+        {
+          ++counts.stalled_sample_pending_light_n;
+        }
+      }
       break;
     case VisibleBlackCause::LegalDarkNoRepair:
       ++counts.legal_dark;

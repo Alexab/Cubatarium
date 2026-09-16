@@ -809,6 +809,15 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MarkRelitSkipInflightN = 0;
   PhysicsTelemetryData.MarkRelitSkipEnterLitQuiesceN = 0;
   PhysicsTelemetryData.MarkRelitScheduleN = 0;
+  PhysicsTelemetryData.MarkRelitH2AttemptN = 0;
+  PhysicsTelemetryData.MarkRelitH2FireN = 0;
+  PhysicsTelemetryData.MarkRelitH2FailNoTicketN = 0;
+  PhysicsTelemetryData.MarkRelitH2FailProgressN = 0;
+  PhysicsTelemetryData.MarkRelitHitStalledN = 0;
+  PhysicsTelemetryData.MarkRelitForceStaleN = 0;
+  PhysicsTelemetryData.StalledSampleN = 0;
+  PhysicsTelemetryData.StalledSampleHasTicketN = 0;
+  PhysicsTelemetryData.StalledSamplePendingLightN = 0;
   PhysicsTelemetryData.MarkRelitEnqueueFirstMeshN = 0;
   PhysicsTelemetryData.FmDirtyEnqueueN = 0;
   PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN = 0;
@@ -898,6 +907,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.SceneDepthCaptureMs = 0.0;
   PhysicsTelemetryData.SceneTransparentMs = 0.0;
   PhysicsTelemetryData.TransparentSortRevChanged = 0;
+  PhysicsTelemetryData.PassMdiStaleGpuResidentN = 0;
   PhysicsTelemetryData.TransparentUploadFullN = 0;
   PhysicsTelemetryData.TransparentCmdReorderN = 0;
   PhysicsTelemetryData.TransparentOrderOnlyFailReason = 0;

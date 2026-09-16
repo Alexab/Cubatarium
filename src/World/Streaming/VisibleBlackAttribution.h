@@ -24,6 +24,10 @@ struct VisibleBlackFocusCounts
   int fully_dark_no_ticket{0};
   int fully_dark_stalled{0};
   int legal_dark{0};
+  /// N04 autopsy: sample ≤8 FullyDark stalled columns.
+  int stalled_sample_n{0};
+  int stalled_sample_has_ticket_n{0};
+  int stalled_sample_pending_light_n{0};
 };
 
 /// Classify why a focus column counts as visible-black.
