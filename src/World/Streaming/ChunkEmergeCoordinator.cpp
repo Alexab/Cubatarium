@@ -2113,13 +2113,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   static bool s_ring_cached_ready = true;
   static bool s_ring_enter_was_active = false;
   static glm::ivec3 s_ring_cache_focus{0};
+  static uint64_t s_ring_world_epoch = 0;
   const glm::ivec3 ring_focus = focus_ground;
+  const uint64_t ring_world_epoch =
+      mesh_service.GetCache().GetCaptureStore().WorldEpoch();
   const bool enter_edge = enter_gate_active != s_ring_enter_was_active;
   const bool ring_dirty = world.NeedsSpawnRingCatchUp();
-  if (ring_dirty)
+  if (ring_dirty || ring_world_epoch != s_ring_world_epoch)
     s_ring_cache_valid = false;
   bool need_ring_query = enter_gate_active || enter_edge || !s_ring_cache_valid ||
                          ring_focus.x != s_ring_cache_focus.x ||
+                         ring_focus.y != s_ring_cache_focus.y ||
                          ring_focus.z != s_ring_cache_focus.z;
   bool spawn_ring_ready = s_ring_cached_ready;
   prep_spawn_ring_ms = 0.0;
@@ -2131,6 +2135,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     s_ring_cached_ready = spawn_ring_ready;
     s_ring_cache_valid = true;
     s_ring_cache_focus = ring_focus;
+    s_ring_world_epoch = ring_world_epoch;
   }
   s_ring_enter_was_active = enter_gate_active;
   world.SetSuppressRelightSeamDirty(ShouldSuppressRelightSeamDirtyForEnterGate(
@@ -5549,7 +5554,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int second_n = std::min(4, watches);
         tick_stats.Completed += mesh_service.ConsumeGpuApplyBacklog(
             world.GetBlockWorld(), registry, second_drain, second_n,
-            std::max(4.0, mesh_service.GetMeshEmergeTotalBudgetMs() * 0.15));
+            mesh_service.GetMeshEmergeTotalBudgetMs() * 0.15);
       }
     }
     mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
@@ -5570,7 +5575,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int extra_drain = std::max(1, FinalizeDrain(mesh_drain, adm2));
         const int extra_gpu = std::max(2, std::min(4, queued_after_drain));
         const double extra_budget =
-            std::max(4.0, mesh_service.GetMeshEmergeTotalBudgetMs() * 0.12);
+            mesh_service.GetMeshEmergeTotalBudgetMs() * 0.12;
         const int post_done = mesh_service.ConsumeGpuApplyBacklog(
             world.GetBlockWorld(), registry, extra_drain, extra_gpu,
             extra_budget);
