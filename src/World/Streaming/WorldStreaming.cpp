@@ -4509,15 +4509,37 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       {
         // Moving used to force NearLoadRadius=-1 (full VisualRD scan). On hole
         // frames that alone was ~150ms streamer_update (CB spike_holes).
+        // Audit P3: west-sea rim — underfeet/holes clamp must not leave
+        // LitDrawable ring (R=4) unscanned when near water / unfinished.
+        const int sea_lvl = world.GetProceduralSettings().SeaLevel;
+        const glm::ivec3 eye_block = glm::ivec3(glm::floor(eye));
+        const bool near_water_load =
+            eye.y < static_cast<float>(sea_lvl) + 12.0f ||
+            world.HasNearbyFluidSurface(eye_block, 24);
+        const bool rim_debt =
+            world.PhysicsTelemetryData.PostLoadRingNotReady > 0 ||
+            world.PhysicsTelemetryData.UnfinishedVisual > 0 ||
+            world.PhysicsTelemetryData.ColumnLoadedNoMeshN > 0;
+        const int lit_floor = kVisualStageLitDrawableHoriz;
         if (underfeet_need)
         {
+          int clamped = 2;
+          if (near_water_load || rim_debt)
+          {
+            clamped = std::max(clamped, lit_floor);
+          }
           Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
-              frontier_moving, true, /*clamped=*/2, focus_radius));
+              frontier_moving, true, clamped, focus_radius));
         }
         else if (visual_holes || frame_ms > kBadFrameMs)
         {
+          int clamped = std::min(focus_radius, 3);
+          if (near_water_load || rim_debt)
+          {
+            clamped = std::max(clamped, lit_floor);
+          }
           Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
-              frontier_moving, true, std::min(focus_radius, 3), focus_radius));
+              frontier_moving, true, clamped, focus_radius));
         }
         else
         {

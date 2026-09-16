@@ -3372,11 +3372,14 @@ bool UWorld::NeedsSpawnRingCatchUp() const
   {
     // Cruise: prior-frame telemetry already clear ⇒ skip CountPostLoadRingNotReady
     // for several frames (Refresh used to pay this every frame via setup_probe).
+    // Audit P3: while moving, never cadence-skip — west-sea rim debt grows
+    // between samples and leaves black columns at LitDrawable edge.
     constexpr uint64_t kCatchUpRecheckFrames = 8;
+    const bool cruise_moving = PhysicsTelemetryData.MovementSpeed > 2.0f;
     const bool telemetry_clear =
         PhysicsTelemetryData.PostLoadRingNotReady <= 0 &&
         PhysicsTelemetryData.UnfinishedVisual <= 0;
-    if (telemetry_clear && !CachedNeedsSpawnRingCatchUp &&
+    if (!cruise_moving && telemetry_clear && !CachedNeedsSpawnRingCatchUp &&
         SpawnCatchUpSampleEpoch != UINT64_MAX)
     {
       const uint64_t age = StreamingFrameEpoch - SpawnCatchUpSampleEpoch;
