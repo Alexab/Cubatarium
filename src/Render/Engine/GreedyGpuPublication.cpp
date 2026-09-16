@@ -321,21 +321,81 @@ bool UGreedyGpuBackend::PublishPassInputs(
 
   // N01 v2.1: coords with no inputs in this call keep their resident batches.
   // Otherwise neighbor progress frees still-dirty peers (mixed pass / holes).
-  std::unordered_set<glm::ivec3, IVec3Hash> input_coords;
+  // Audit R01: retained[n] must stay true so ReleasePooledBatch does not Free
+  // ranges still referenced by the published draw table.
+  // Audit R02: dirty + authoritative empty pass set = empty Replace / Remove.
+  std::unordered_set<glm::ivec3, IVec3Hash> handled_coords;
   for (const auto &input : inputs)
   {
     if (!input.batch || input.batch->vertices.empty() ||
         input.batch->indices.empty())
       continue;
-    input_coords.insert(input.ref.chunkCoord);
+    handled_coords.insert(input.ref.chunkCoord);
+  }
+  auto resolve_cache_pass_indices =
+      [&](const glm::ivec3 &coord, std::unordered_set<uint16_t> &out) -> bool
+  {
+    if (mesh_cache != nullptr && cache.passId != GreedyGpuPassId::Unknown)
+    {
+      std::vector<GreedyBatchRef> cache_refs;
+      mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
+                                            cache_refs);
+      for (const auto &cref : cache_refs)
+        out.insert(cref.batchIndex);
+      return true;
+    }
+    if (cache_pass_indices_override != nullptr)
+    {
+      // Test hook: single-dirty override applies to each dirty coord in the call.
+      out = *cache_pass_indices_override;
+      return true;
+    }
+    return false;
+  };
+  for (const auto &coord : dirty)
+  {
+    if (handled_coords.count(coord) > 0 || uploads_by_coord.count(coord) > 0)
+      continue;
+    std::unordered_set<uint16_t> cache_pass_indices;
+    if (!resolve_cache_pass_indices(coord, cache_pass_indices))
+      continue;
+    if (!cache_pass_indices.empty())
+      continue;
+    // Authoritative empty payload: drop resident batches for this coord.
+    for (size_t n = 0; n < cache.batches.size(); ++n)
+    {
+      if (cache.batches[n].chunkCoord == coord)
+        retained[n] = false;
+    }
+    handled_coords.insert(coord);
+    published_ok.insert(coord);
+    any_fresh = true;
+    changed = true;
+    NotePublicationProgressUnit();
   }
   for (size_t n = 0; n < cache.batches.size(); ++n)
   {
     const auto &batch = cache.batches[n];
-    if (input_coords.count(batch.chunkCoord) > 0)
+    if (handled_coords.count(batch.chunkCoord) > 0)
       continue;
+    retained[n] = true;
     staged.push_back(batch);
     changed = true;
+  }
+
+  // Detect resident-table membership/order change before swap (R04).
+  bool table_identity_changed = staged.size() != cache.batches.size();
+  if (!table_identity_changed)
+  {
+    for (size_t i = 0; i < staged.size(); ++i)
+    {
+      if (staged[i].chunkCoord != cache.batches[i].chunkCoord ||
+          staged[i].batchIndex != cache.batches[i].batchIndex)
+      {
+        table_identity_changed = true;
+        break;
+      }
+    }
   }
 
   changed = changed || staged.size() != cache.batches.size();
@@ -376,10 +436,10 @@ bool UGreedyGpuBackend::PublishPassInputs(
     cache.IndirectCullReady = false;
     cache.GpuCompactActive = false;
     cache.CompactVisCpuSynced = false;
-    // N01 narrow epoch-split: draw-table identity advances only on successful
-    // group commit (any_fresh). Untouched-coord reshuffle alone must not bump
-    // publicationVersion (121131 thrash class).
-    if (any_fresh)
+    // R04: bump on fresh upload OR resident table membership/order change.
+    // Untouched-only retention with identical table identity does not bump
+    // (keeps 121131 thrash class closed).
+    if (any_fresh || table_identity_changed)
       ++cache.publicationVersion;
     else
       NotePubVerChangedWithoutFresh();
