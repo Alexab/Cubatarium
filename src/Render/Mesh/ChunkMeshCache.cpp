@@ -3718,7 +3718,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
     bool accepted_input_stale, uint64_t source_light_revision,
-    bool has_source_light_revision)
+    bool has_source_light_revision, BoundaryOverlayState boundary_overlay)
 {
   (void)registry;
   (void)source_revision;
@@ -3791,10 +3791,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     chunkMesh.MeshedLightRevision = source_light_revision;
   }
-  else if (const UChunk *chunk = world.GetChunkManager().GetChunk(coord))
-  {
-    chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
-  }
+  // S4 fail-closed: do not stamp current world light over a bake without
+  // source provenance (hold prior MeshedLightRevision).
+  chunkMesh.BoundaryOverlay = boundary_overlay;
   chunkMesh.batches.clear();
   chunkMesh.crossCenters = std::move(cross_centers);
   GreedyVertexCountByChunk[coord] = 0;
@@ -3815,8 +3814,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   // While enter worklist still draining, FullyDark+stale gets one Dirty.
   // After lit quiesce (remaining==0) stop the commit→Dirty pump — cruise heals.
-  // A10 RelightReplace: MarkRelit owns FullyDark Dirty — skip secondary pump.
-  if (EnterGpuQuiesceDrain && !EnterLitQuiesce &&
+  // A10 RelightReplace + S5: MarkRelit owns FullyDark Dirty — enter pump OFF.
+  if (false && EnterGpuQuiesceDrain && !EnterLitQuiesce &&
       gpu_result.hasFullyDarkFace && !Dirty.Contains(coord) &&
       !ShouldSkipSecondaryFullyDarkDirty(true))
   {
@@ -4230,7 +4229,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                               pending.snapshot.inputStampsValid
                                   ? pending.snapshot.inputStamps[0].light
                                   : 0ull,
-                              pending.snapshot.inputStampsValid))
+                              pending.snapshot.inputStampsValid,
+                              pending.snapshot.boundaryOverlay))
       {
         ++processed;
         ++finished;
@@ -4306,13 +4306,14 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     gpu_result.transparent = pending.transparent;
     ActiveMeshSourceRevision.erase(pending.coord);
     if (CommitGpuMeshResult(world, registry, pending.coord,
-                            pending.sourceRevision, std::move(gpu_result),
-                            std::move(pending.crossCenters),
-                            pending.accepted_input_stale,
-                            pending.snapshot.inputStampsValid
-                                ? pending.snapshot.inputStamps[0].light
-                                : 0ull,
-                            pending.snapshot.inputStampsValid))
+                              pending.sourceRevision, std::move(gpu_result),
+                              std::move(pending.crossCenters),
+                              pending.accepted_input_stale,
+                              pending.snapshot.inputStampsValid
+                                  ? pending.snapshot.inputStamps[0].light
+                                  : 0ull,
+                              pending.snapshot.inputStampsValid,
+                              pending.snapshot.boundaryOverlay))
     {
       ++processed;
       ++finished;
@@ -4577,7 +4578,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                               pending.snapshot.inputStampsValid
                                   ? pending.snapshot.inputStamps[0].light
                                   : 0ull,
-                              pending.snapshot.inputStampsValid))
+                              pending.snapshot.inputStampsValid,
+                              pending.snapshot.boundaryOverlay))
       {
         ++processed;
         ++finished;
@@ -4981,10 +4983,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     chunkMesh.MeshedLightRevision = result.InputStamps[0].light;
   }
-  else if (const UChunk *chunk = world.GetChunkManager().GetChunk(result.coord))
-  {
-    chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
-  }
+  // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
   const bool intentional_empty =
       new_vertex_count == 0 && !defer_until_lit &&
       SoftDeferHeld.count(result.coord) == 0;

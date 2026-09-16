@@ -84,6 +84,36 @@ int main()
              cutum::MeshApplyStaleInputReason::Catalog,
          "catalog mismatch classifies Catalog");
 
+  // S4 overlay: missing neighbor face activates overlay; drawable flip does not
+  // thrash permanent stamps; overlay clears when neighbor present.
+  {
+    UBlockWorld world2;
+    const glm::ivec3 c(2, 0, 2);
+    world2.GetChunkManager().EnsureChunk(c);
+    ChunkMeshSnapshot alone =
+        ChunkMeshSnapshot::Capture(world2, c, 1, nullptr, nullptr);
+    Expect(alone.boundaryOverlay.active ||
+               alone.boundaryOverlay.missingNeighborFaces != 0,
+           "unloaded neighbors activate overlay mask");
+    const uint64_t ov0 = alone.boundaryOverlay.version;
+    Expect(alone.InputsStillValid(world2, DrawableAlwaysFalse, nullptr),
+           "overlay world still stamp-valid on drawable flip");
+    world2.GetChunkManager().EnsureChunk(c + glm::ivec3(1, 0, 0));
+    world2.GetChunkManager().EnsureChunk(c + glm::ivec3(-1, 0, 0));
+    world2.GetChunkManager().EnsureChunk(c + glm::ivec3(0, 1, 0));
+    world2.GetChunkManager().EnsureChunk(c + glm::ivec3(0, -1, 0));
+    world2.GetChunkManager().EnsureChunk(c + glm::ivec3(0, 0, 1));
+    world2.GetChunkManager().EnsureChunk(c + glm::ivec3(0, 0, -1));
+    ChunkMeshSnapshot full =
+        ChunkMeshSnapshot::Capture(world2, c, 2, DrawableAlwaysTrue, nullptr);
+    Expect(!full.boundaryOverlay.active &&
+               full.boundaryOverlay.missingNeighborFaces == 0,
+           "all neighbors loaded clears overlay");
+    Expect(full.boundaryOverlay.version != ov0 || !alone.boundaryOverlay.active,
+           "overlay version advances or was inactive");
+    (void)ov0;
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " test(s) failed\n";

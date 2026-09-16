@@ -19,4 +19,6 @@ drawable flip.
 
 - `InputsStillValidVisualTest` Strategy A remains KEEP.
 - Seam gaps while neighbor missing are overlay/coverage issues, not stamp churn.
-- Follow-on: explicit overlay payload + version (not required to close R01–R05).
+- Follow-on: explicit overlay payload + version — **landed** as
+  `BoundaryOverlayState` on `ChunkMeshSnapshot` / `ChunkGreedyMesh`
+  (full-cutover E3).

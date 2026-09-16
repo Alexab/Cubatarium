@@ -6,6 +6,7 @@
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
+#include "Render/Mesh/BoundaryOverlay.h"
 #include <array>
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -45,6 +46,8 @@ struct ChunkMeshSnapshot
   uint64_t sourceRevision{0};
   std::array<ChunkInputStamp, 7> inputStamps{};
   bool inputStampsValid{false};
+  /// S4: versioned neighbor-missing overlay (not part of stamp equality).
+  BoundaryOverlayState boundaryOverlay{};
 
   /// Optional: when false for a neighbor chunk coord, shell treats that
   /// neighbor as Air (Era39 SoftDefer-hidden seam). Nullptr ⇒ all drawable.

@@ -1,4 +1,5 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "Render/Mesh/BoundaryOverlay.h"
 #include "Render/Mesh/MeshCaptureToken.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
@@ -136,6 +137,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.light_packed = chunk->GetLightData();
 
   const glm::ivec3 origin = snapshot.ChunkOrigin();
+  uint8_t missing_faces = 0;
   for (int axis = 0; axis < 3; ++axis)
   {
     for (int sign = -1; sign <= 1; sign += 2)
@@ -195,8 +197,12 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
               PackFluidCellState(world.GetFluidState(worldPos));
         }
       }
+      // S4 overlay: unloaded neighbor face => temporary closing demand.
+      if (!neighbor_loaded)
+        missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
     }
   }
+  BoundaryOverlaySetMissingFaces(snapshot.boundaryOverlay, missing_faces);
   return snapshot;
 }
 

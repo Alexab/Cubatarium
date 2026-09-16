@@ -3,6 +3,7 @@
 #include "App/Settings/RenderSettings.h"
 #include "Render/Camera/CullInputKey.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
+#include "Render/Mesh/BoundaryOverlay.h"
 #include "Render/Mesh/MeshCaptureWorker.h"
 #include "Render/Mesh/ChunkDirtySet.h"
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
@@ -846,6 +847,8 @@ private:
     bool GpuTransparent{false};
     bool GpuHasDarkFace{false};
     uint64_t MeshedLightRevision{0};
+    /// S4 versioned neighbor-missing overlay (independent of stamp).
+    BoundaryOverlayState BoundaryOverlay{};
     std::vector<GpuBlockDrawRange> GpuBlockRanges;
   };
   struct PendingGpuApply
@@ -875,7 +878,8 @@ private:
       std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
       bool accepted_input_stale = false,
       uint64_t source_light_revision = 0,
-      bool has_source_light_revision = false);
+      bool has_source_light_revision = false,
+      BoundaryOverlayState boundary_overlay = {});
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);
