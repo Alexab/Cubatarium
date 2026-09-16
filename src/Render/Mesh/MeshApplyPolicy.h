@@ -149,6 +149,14 @@ inline bool ShouldSkipSecondaryFullyDarkDirty(bool fully_dark_drawable)
   return IsRelightReplaceDirtyOwnerEnabled() && fully_dark_drawable;
 }
 
+/// N04 autopsy I3t: accepted light/geom-stale must not become sole live image
+/// while prior drawable exists — hold prior draw and Dirty-refresh instead.
+inline bool ShouldHoldPriorDrawOnAcceptedStale(bool accepted_input_stale,
+                                              bool had_prior_drawable)
+{
+  return accepted_input_stale && had_prior_drawable;
+}
+
 /// Era21 I-M6: under FOV miss, SoftDefer Capture is blocked only by a live
 /// FirstMesh ticket — Relight/Remesh alone must not starve rim FirstMesh.
 inline bool SoftDeferCaptureBlockedByRepairTicket(bool missing_visible_mesh,

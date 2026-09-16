@@ -3211,6 +3211,17 @@ int main()
            "N04 T2: no ticket → no stalled remesh");
   }
 
+  // N04 autopsy I3t: hold prior draw across accepted-stale publish
+  {
+    using cutum::ShouldHoldPriorDrawOnAcceptedStale;
+    Expect(ShouldHoldPriorDrawOnAcceptedStale(true, true),
+           "N04 I3t: accepted stale + prior drawable → hold");
+    Expect(!ShouldHoldPriorDrawOnAcceptedStale(true, false),
+           "N04 I3t: accepted stale hole may publish");
+    Expect(!ShouldHoldPriorDrawOnAcceptedStale(false, true),
+           "N04 I3t: fresh input publishes normally");
+  }
+
   // FZ2.6: budget reality + consumer backpressure + mesh drain split
   {
     using cutum::ApplyBinding;

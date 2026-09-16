@@ -3721,9 +3721,11 @@ bool UChunkMeshCache::TryConsumeFmDirtyGpuWatch(glm::ivec3 coord)
 bool UChunkMeshCache::CommitGpuMeshResult(
     const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
     uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
-    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers)
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
+    bool accepted_input_stale)
 {
   (void)registry;
+  (void)source_revision;
   if (!world.GetChunkManager().HasChunk(coord))
   {
     if (GpuPipeline && gpu_result.slotIndex >= 0)
@@ -3731,6 +3733,24 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
     }
     return false;
+  }
+  // N04 I3t: accepted stale on prior drawable — keep prior sole live image;
+  // queue ordinary Dirty refresh (do not Bind wrong bake / clear batches).
+  const bool had_prior_drawable =
+      HasDrawableGreedyMesh(coord) || ChunkHasLiveGpuDraw(coord);
+  if (ShouldHoldPriorDrawOnAcceptedStale(accepted_input_stale,
+                                         had_prior_drawable))
+  {
+    if (GpuPipeline && gpu_result.slotIndex >= 0)
+    {
+      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+    }
+    if (!Dirty.Contains(coord))
+    {
+      Dirty.MarkDirty(coord);
+      ++MeshApplyStaleAcceptedRefreshCount;
+    }
+    return true;
   }
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
   const bool had_mesh = HasDrawableGreedyMesh(coord);
@@ -4200,7 +4220,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       ActiveMeshSourceRevision.erase(pending.coord);
       if (CommitGpuMeshResult(world, registry, pending.coord,
                               pending.sourceRevision, std::move(gpu_result),
-                              std::move(pending.crossCenters)))
+                              std::move(pending.crossCenters),
+                              pending.accepted_input_stale))
       {
         ++processed;
         ++finished;
@@ -4277,7 +4298,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     ActiveMeshSourceRevision.erase(pending.coord);
     if (CommitGpuMeshResult(world, registry, pending.coord,
                             pending.sourceRevision, std::move(gpu_result),
-                            std::move(pending.crossCenters)))
+                            std::move(pending.crossCenters),
+                            pending.accepted_input_stale))
     {
       ++processed;
       ++finished;
@@ -4537,7 +4559,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       ActiveMeshSourceRevision.erase(pending.coord);
       if (CommitGpuMeshResult(world, registry, pending.coord,
                               pending.sourceRevision, std::move(gpu_result),
-                              std::move(pending.crossCenters)))
+                              std::move(pending.crossCenters),
+                              pending.accepted_input_stale))
       {
         ++processed;
         ++finished;
@@ -4691,6 +4714,25 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     CrossBatchesDirty = true;
     abandon_fm_watch();
     return;
+  }
+
+  // N04 I3t: accepted light/geom stale on prior drawable — hold prior sole live
+  // image; Dirty-refresh (H4) without publishing wrong bake / dual MDI+packed.
+  {
+    const bool had_prior =
+        HasDrawableGreedyMesh(result.coord) || ChunkHasLiveGpuDraw(result.coord);
+    if (ShouldHoldPriorDrawOnAcceptedStale(refresh_after_accept_stale, had_prior))
+    {
+      ActiveMeshSourceRevision.erase(revisionIt);
+      GpuExtractInFlight.erase(result.coord);
+      if (!Dirty.Contains(result.coord))
+      {
+        Dirty.MarkDirty(result.coord);
+        ++MeshApplyStaleAcceptedRefreshCount;
+      }
+      abandon_fm_watch();
+      return;
+    }
   }
 
   // GPU packed-quad path: defer GL compute out of ApplyMeshResult so async
