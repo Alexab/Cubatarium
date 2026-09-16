@@ -475,7 +475,7 @@ Plan: `.cursor/plans/west_cruise_wall_diet.plan.md`. Branch tip at freeze: `7a25
 | N06 structural CooldownKey | **KEEP** | landed A3 |
 | N01 atomic publish (A1 `58f65ffe`) | **REOPEN→epoch-split→narrow any_fresh→full-cache dirty publish** | `134038` retain storm SoT (incomplete on frustum refs); expand + `cache⊆upload` |
 | D3.3 lazy spawn (assume ready off-enter) | **cache+ring_dirty** | S3 cache; invalidate on `NeedsSpawnRingCatchUp` |
-| N04 / sticky mid black | **REOPEN (T2 heal)** | H1–H4: no LegalDark greenwash; remesh/force/accept-refresh; SoT `204501`; autofly `213719` eye KEEP, stalled honest |
+| N04 / sticky mid black | **REOPEN (autopsy)** | SoT manual `074859`: stalled~51, schedule≈0 (H2 miss); wrong-tex lag≈413 (incomplete=0); plan `n04_stalled_remesh_autopsy` |
 | N03 BeginFrame-before-stream | **done** | S4 landed |
 | N05 per-key debt age | **PARTIAL** | class-level age; per-key deferred |
 | N07/N08/N12 fail-closed pieces | N08 **eye_proxy mid-corridor** | fly-only stale med=2 missed mid=17 on autofly `095545` |
@@ -496,7 +496,7 @@ Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
 | S0b `--visible` + dual-lane stop-line | done; mid stalled≤5 gate |
 | S1 N01 v2 group-commit | done; epoch-split → **narrow: pubVer only on any_fresh** (C1 landed) |
 | S2a `stale_vl_rev_n` / `fully_dark_census_n` | done |
-| S2b / T2 mid FullyDark | **in progress** — H1–H4 landed (`5dc1eb4b`); H5 autofly `213719` eye PASS, legal_dark=0, stalled~64, VB~97; dual-lane/G1 OPEN; operator vs `204501` pending |
+| S2b / T2 mid FullyDark | **autopsy** — SoT `074859`: blacks (H2 Apply miss) + wrong-tex (lag/accept); `.cursor/plans/n04_stalled_remesh_autopsy.plan.md` |
 | S3 spawn-ring cache | done + ring_dirty invalidate |
 | S4 BeginFrame before stream | done (diet deferred) |
 | T0 eye_proxy stop-line | done → **mid-corridor + swap-without-holes** (N08) |
@@ -513,19 +513,21 @@ Wall-diet reports: `bin/suite_reports/g1_a10_relight/wall_diet_*.json`.
 | Autofly `202118` | **post-N01 P3 T2** | 5 (Δ=0) | **0** | 0 | equal-rev→LegalDark greenwash; VB~150; mid_stalled_gate must FAIL (`legal_dark_masks_stalled`) |
 | Manual `204501` | **N04 greenwash SoT** | 8 (Δ=3) | ~0–1 | 0 | operator FAIL; legal_dark~84; incomplete=0 KEEP |
 | Autofly `213719` | **N04 H1–H5 heal** | 8 (Δ=0) | **~63–70** | 0 | legal_dark=0; eye PASS; VB~97; stalled honest FAIL; G1 OPEN |
+| Manual `074859` | **N04 autopsy SoT** | 3 (Δ=1) | **~51** | 0 | operator FAIL; schedule≈0; lag≈413; incomplete=0; wrong-tex blink |
 
 Scorecards: `n01_thrash_manual_102527.json`, `n01_thrash_manual_121131.json`,
 `n01_thrash_postfix_cold_score.json`, `n01_retain_manual_160234.json`,
 `post_n01_p2_final_af_score.json`, `post_n01_p3l_t2_af_score.json`,
-`n01_manual_204501.json`, `n04_heal_h5_af_{cold,score}.json`.
+`n01_manual_204501.json`, `n04_heal_h5_af_{cold,score}.json`,
+`n04_manual_074859.json`.
 
 **N01 full-cache dirty publish:** `RefreshPassRefs` expands dirty uploads from
 full `GreedyCache` pass set; incomplete = `cache⊆upload` (not `resident⊆upload`);
 telem split `publication_incomplete_material_n` / `publication_oom_retain_n`.
-C1 KEEP; post-N01 P0–P2 thrash cut KEEP; **P3 LegalDark greenwash reverted (H1)**;
-H2–H4 remesh/force/accept-refresh landed; H5 autofly eye KEEP, stalled debt visible.
-eye_proxy incomplete mid≤5. G1 remains **OPEN** (VB/stalled above dual-lane).
-Operator west retest still required vs `204501`.
+C1 KEEP; post-N01 P0–P2 thrash cut KEEP; LegalDark greenwash reverted (H1).
+**Autopsy SoT `074859`:** (1) mid-blacks — H2 on Apply after ticket drain, bands≪stalled;
+(2) wrong-tex — not classic incomplete (0); `pass_mesh_rev_lag_max`≈413 + accept geom/light.
+G1 remains **OPEN**. Operator west required for both lanes.
 
 **Merge signals (N08):** `adequacy_pass` ∧ `dual_lane_stop_line_pass` ∧
 `eye_proxy_stop_line_pass` (mid-corridor `focus_cx∈[2,5]`, not fly-only;
