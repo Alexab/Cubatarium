@@ -30,6 +30,23 @@ Source audit: commit `7a658525` / `docs/streaming/CURRENT_STATE_AUDIT_2026-09-16
 - Proposed SLA profile (not measured achievement): 16.7 ms or 33.3 ms frame;
   streaming slice ~5 ms; edit→visible p95≤100 / max≤250.
 
+### Cold autofly after S0–S8 (`175401`)
+
+Report: `bin/suite_reports/g1_a10_relight/audit16_s0_s9_af_cold.json`  
+Score: `bin/suite_reports/g1_a10_relight/audit16_s0_s9_af_score.json`
+
+| Signal | Result |
+|---|---|
+| incomplete mid | **0** KEEP |
+| eye_proxy | PASS (stale mid 4, blink 0, Δ 0) |
+| west_route_coverage | **UNTESTED** (cx_min=2, not ≤−3) |
+| dual-lane / mid stalled | FAIL (VB~98, stalled~69) — G1 OPEN honest |
+| merge_green | **false** (`operator_visual` UNTESTED) |
+| operator west eye | **UNTESTED** (manual required) |
+
+Full west route lengthening, cold×3/warm×3 soak, and operator eye remain follow-on
+before product CLOSED. Absolute ownership/gates above are landed in code+CTest.
+
 ## KEEP
 
 N01 incomplete=0 class, LegalDark rollback, frustum N02, cooldown N06,
