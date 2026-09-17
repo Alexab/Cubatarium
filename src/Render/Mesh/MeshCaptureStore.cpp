@@ -1,4 +1,5 @@
 #include "Render/Mesh/MeshCaptureStore.h"
+#include "Render/Mesh/BoundaryOverlay.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
 #include "Core/Jobs/PipelineAdmission.h"
 #include "World/Chunks/ChunkManager.h"
@@ -136,6 +137,7 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
   }
   ChunkMeshSnapshot snap = it->second.data;
   const glm::ivec3 origin = snap.ChunkOrigin();
+  uint8_t missing_faces = snap.boundaryOverlay.missingNeighborFaces;
   for (int face = 0; face < 6; ++face)
   {
     if ((face_mask & (1u << face)) == 0)
@@ -155,7 +157,7 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
       neighbor_visually_drawable =
           NeighborDrawableFn_(NeighborDrawableCtx_, neighbor_coord);
     }
-    // Geom stamp only; drawable affects shell cells below, not stamp.
+    // Geom stamp only; drawable affects overlay mask, not stamp equality.
     snap.inputStamps[static_cast<size_t>(face + 1)] =
         ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk);
     for (int u = 0; u < CHUNK_SIZE; ++u)
@@ -181,12 +183,10 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
         {
           raw = world.GetBlock(worldPos);
         }
-        snap.shellBlocks[static_cast<size_t>(flat)] =
-            ShellBlockForNeighborOcclusion(raw, neighbor_visually_drawable);
+        snap.shellBlocks[static_cast<size_t>(flat)] = raw;
         snap.shellNeighborState[static_cast<size_t>(flat)] =
             static_cast<uint8_t>(ClassifyShellCell(
-                neighbor_loaded, snap.shellBlocks[static_cast<size_t>(flat)],
-                neighbor_visually_drawable));
+                neighbor_loaded, raw, neighbor_visually_drawable));
         if (neighbor_chunk)
         {
           snap.shellLight[static_cast<size_t>(flat)] =
@@ -197,7 +197,12 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
             PackFluidCellState(world.GetFluidState(worldPos));
       }
     }
+    if (!neighbor_loaded || !neighbor_visually_drawable)
+      missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
+    else
+      missing_faces = static_cast<uint8_t>(missing_faces & ~(1u << face));
   }
+  BoundaryOverlaySetMissingFaces(snap.boundaryOverlay, missing_faces);
   Commit(coord, source_revision, WorldEpoch_, snap);
   ++LastStoreHitN_;
   return snap;

@@ -85,7 +85,7 @@ int main()
          "catalog mismatch classifies Catalog");
 
   // S4 overlay: missing neighbor face activates overlay; drawable flip does not
-  // thrash permanent stamps; overlay clears when neighbor present.
+  // thrash permanent stamps; overlay clears when neighbor present+drawable.
   {
     UBlockWorld world2;
     const glm::ivec3 c(2, 0, 2);
@@ -98,6 +98,11 @@ int main()
     const uint64_t ov0 = alone.boundaryOverlay.version;
     Expect(alone.InputsStillValid(world2, DrawableAlwaysFalse, nullptr),
            "overlay world still stamp-valid on drawable flip");
+    // Raw shell preserved under overlay (not AIR-scrubbed by drawable).
+    Expect(alone.GetNeighborLoadState(alone.ChunkOrigin() +
+                                      glm::ivec3(-1, 0, 0)) ==
+               cutum::NeighborLoadState::Air,
+           "overlay face load-state is Air (force emit closing)");
     world2.GetChunkManager().EnsureChunk(c + glm::ivec3(1, 0, 0));
     world2.GetChunkManager().EnsureChunk(c + glm::ivec3(-1, 0, 0));
     world2.GetChunkManager().EnsureChunk(c + glm::ivec3(0, 1, 0));
@@ -111,6 +116,12 @@ int main()
            "all neighbors loaded clears overlay");
     Expect(full.boundaryOverlay.version != ov0 || !alone.boundaryOverlay.active,
            "overlay version advances or was inactive");
+    ChunkMeshSnapshot undraw =
+        ChunkMeshSnapshot::Capture(world2, c, 3, DrawableAlwaysFalse, nullptr);
+    Expect(undraw.boundaryOverlay.active,
+           "loaded but not drawable keeps overlay active");
+    Expect(undraw.InputsStillValid(world2, DrawableAlwaysTrue, nullptr),
+           "overlay clear keeps permanent stamp valid");
     (void)ov0;
   }
 

@@ -180,13 +180,10 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
           {
             raw = world.GetBlock(worldPos);
           }
-          snapshot.shellBlocks[static_cast<size_t>(flat)] =
-              ShellBlockForNeighborOcclusion(raw, neighbor_visually_drawable);
+          snapshot.shellBlocks[static_cast<size_t>(flat)] = raw;
           snapshot.shellNeighborState[static_cast<size_t>(flat)] =
               static_cast<uint8_t>(ClassifyShellCell(
-                  neighbor_loaded,
-                  snapshot.shellBlocks[static_cast<size_t>(flat)],
-                  neighbor_visually_drawable));
+                  neighbor_loaded, raw, neighbor_visually_drawable));
           if (neighbor_chunk)
           {
             snapshot.shellLight[static_cast<size_t>(flat)] =
@@ -197,8 +194,9 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
               PackFluidCellState(world.GetFluidState(worldPos));
         }
       }
-      // S4 overlay: unloaded neighbor face => temporary closing demand.
-      if (!neighbor_loaded)
+      // S4 overlay: missing published coverage (unloaded OR not drawable).
+      // Shell keeps raw voxels; mesher emits closing via overlay-aware load/GetBlock.
+      if (!neighbor_loaded || !neighbor_visually_drawable)
         missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
     }
   }
@@ -217,6 +215,13 @@ BlockId ChunkMeshSnapshot::GetBlock(glm::ivec3 worldPos) const
   int cell = 0;
   if (TryShellIndex(local, face, cell))
   {
+    // Overlay closing: treat missing published coverage as open air for hide.
+    if (boundaryOverlay.active &&
+        (boundaryOverlay.missingNeighborFaces &
+         static_cast<uint8_t>(1u << face)) != 0)
+    {
+      return BLOCK_AIR;
+    }
     return shellBlocks[static_cast<size_t>(ShellFlatIndex(face, cell))];
   }
   return BLOCK_AIR;
@@ -296,6 +301,13 @@ NeighborLoadState ChunkMeshSnapshot::GetNeighborLoadState(
   int cell = 0;
   if (TryShellIndex(local, face, cell))
   {
+    // Overlay force-emit path: Air (not Unknown) so solids emit closing faces.
+    if (boundaryOverlay.active &&
+        (boundaryOverlay.missingNeighborFaces &
+         static_cast<uint8_t>(1u << face)) != 0)
+    {
+      return NeighborLoadState::Air;
+    }
     return static_cast<NeighborLoadState>(
         shellNeighborState[static_cast<size_t>(ShellFlatIndex(face, cell))]);
   }
