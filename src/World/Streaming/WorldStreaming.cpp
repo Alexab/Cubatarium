@@ -2552,9 +2552,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 4 : 3);
   }
   // P0 frontier ingress via FocusIngressPolicy (dedicated floor, not F2 caps).
-  // Rim FirstMesh SLA: missing mesh (pending optional) → prefer admit over
-  // Capture/promote thrash (manual 131234 / land_fix miss_stuck).
-  const bool rim_first_mesh_sla = missing_focus_mesh;
+  // Rim FirstMesh SLA: missing mesh OR clnm/ring debt → prefer admit over
+  // Capture/promote thrash (manual 131234 / land_fix miss_stuck / audit16 R1).
+  // Note: FocusIngressPolicy has a separate rim_first_mesh_sla (miss&&pendf>4)
+  // for admit floors — this flag is Streaming bg_budget + FM pri SoT.
+  const bool rim_first_mesh_sla =
+      missing_focus_mesh ||
+      world.PhysicsTelemetryData.ColumnLoadedNoMeshN >= 1 ||
+      world.PhysicsTelemetryData.PostLoadRingNotReady > 0;
   const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
       moving_now, missing_focus_mesh, pending_light_focus_n, mesh_async_n,
       frame_ms, world.PhysicsTelemetryData.UnfinishedVisual,
