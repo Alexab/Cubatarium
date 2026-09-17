@@ -2664,6 +2664,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.visible_black_stalled_n =
         world.GetPhysicsTelemetry().VisibleBlackStalledN;
     ain.miss_witness_age_frames = MissWitnessAgeFrames;
+    ain.softdefer_empty_owned_n =
+        world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN;
     ain.empty_backlog_n = EmptyBacklogN(world.GetPhysicsTelemetry());
     if (have_nearest_missing)
     {
@@ -4550,11 +4552,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
 
       // Era23 I-M9: FirstMesh-class PreferKick every miss-frame (age SLA backup).
+      // Miss Ownership SLA P3: SoftDeferEmpty/clnm sticky PreferKick outside class.
       {
         const bool miss_fm_class = IsMissFirstMeshClass(
             missing_visible_mesh, isolated_hole.y, nh);
+        const bool coverage_sticky_owned =
+            world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN > 0 ||
+            world.GetPhysicsTelemetry().ColumnLoadedNoMeshN > 0;
         if (ShouldPreferKickMissWitnessEarly(missing_visible_mesh,
-                                             miss_fm_class))
+                                             miss_fm_class,
+                                             coverage_sticky_owned))
         {
           if (!(tops_hp || tops_firstmesh_class))
           {
@@ -5321,6 +5328,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.visible_black_stalled_n =
         world.GetPhysicsTelemetry().VisibleBlackStalledN;
     ain.miss_witness_age_frames = MissWitnessAgeFrames;
+    ain.softdefer_empty_owned_n =
+        world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN;
     ain.empty_backlog_n = EmptyBacklogN(world.GetPhysicsTelemetry());
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {
@@ -5418,11 +5427,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
         adm.mode == MeshWorkAdmission::Mode::DeepBacklog)
     {
-      // Audit16 R1: HoleDrain must not zero outside FirstMesh under rim debt
-      // (clnm/ring) — that starved west-sea coverage while mode3_share≈0.8.
+      // Audit16 R1 / Miss Ownership SLA P2: HoleDrain must not zero outside
+      // FirstMesh under coverage debt (clnm/ring/miss/SoftDeferEmpty).
       const auto &pt_rim = world.GetPhysicsTelemetry();
       const bool rim_mesh_debt =
-          pt_rim.ColumnLoadedNoMeshN > 0 || pt_rim.PostLoadRingNotReady > 0;
+          pt_rim.ColumnLoadedNoMeshN > 0 || pt_rim.PostLoadRingNotReady > 0 ||
+          pt_rim.FocusMissingMesh > 0 || pt_rim.SoftDeferEmptyOwnedN > 0;
       mesh_service.SetMaxOutsideFocusMeshPerFrame(rim_mesh_debt ? 1 : 0);
       // F3: prune remesh Dirty flood every HoleDrain frame (keep_h=1; 2 when deep RemeshQ).
       if (pending_dirty > 200 &&

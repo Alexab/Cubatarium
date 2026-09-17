@@ -181,10 +181,14 @@ inline bool ShouldNotePendingLightOnVoidEnqueue(bool fully_dark_or_no_sky)
 
 /// Era23 I-M9: PreferKick miss witness every miss-frame in FirstMesh class
 /// (do not wait age≥2 periods).
+/// Miss Ownership SLA P3: coverage sticky (SoftDeferEmpty owned / clnm) also
+/// PreferKick even outside mh/cy FirstMesh class (ocean rim sticky).
 inline bool ShouldPreferKickMissWitnessEarly(bool missing_visible_mesh,
-                                             bool miss_first_mesh_class)
+                                             bool miss_first_mesh_class,
+                                             bool coverage_sticky_owned = false)
 {
-  return missing_visible_mesh && miss_first_mesh_class;
+  return missing_visible_mesh &&
+         (miss_first_mesh_class || coverage_sticky_owned);
 }
 
 /// FZ2.7-P16 U1 / SRBR-P0.2: underfeet/near nh≤2 FirstMesh pin — cruise and

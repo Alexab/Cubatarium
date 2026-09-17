@@ -1205,8 +1205,8 @@ inline bool ShouldRetargetRelightWitness(bool era27_retarget,
 
 /// FP-D3: hard-block Site B Capture retarget while witness pin is active.
 /// miss_horiz_zero_no_drawable: underfeet undrawn miss may retarget to heal.
-/// R4.6.2: pin_age >= hard expire allows retarget even if pinned_still
-/// (hard_expire must match AntiFlicker kIngressCaptureHardExpireFrames).
+/// Miss Ownership SLA P1: hard expire no longer unblocks pinned_still
+/// (pin-until-drawable; PreferKick without hop).
 inline bool ShouldBlockWitnessCaptureRetarget(bool capture_pin_valid,
                                               bool pinned_still,
                                               bool hold_witness_pin,
@@ -1217,11 +1217,9 @@ inline bool ShouldBlockWitnessCaptureRetarget(bool capture_pin_valid,
                                               int pin_age_frames = 0,
                                               int hard_expire_frames = 48)
 {
+  (void)pin_age_frames;
+  (void)hard_expire_frames;
   if (miss_horiz_zero_no_drawable)
-  {
-    return false;
-  }
-  if (hard_expire_frames > 0 && pin_age_frames >= hard_expire_frames)
   {
     return false;
   }
@@ -1375,8 +1373,8 @@ inline bool ShouldKickMissWitnessOnMeshingSla(ColumnJobStage stage,
 }
 
 /// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.
-/// R4.6.2: hard expire wins over pinned_still (must match AntiFlicker
-/// kIngressCaptureHardExpireFrames = 48).
+/// Miss Ownership SLA P1: pinned_still holds past hard expire (pin-until-drawable).
+/// miss_witness_kick remains the escape hatch.
 inline bool ShouldExtendWitnessPinHold(int pin_age, bool pinned_still,
                                        int hold_frames =
                                            RelightWitnessPinHoldFrames,
@@ -1385,11 +1383,8 @@ inline bool ShouldExtendWitnessPinHold(int pin_age, bool pinned_still,
                                        bool miss_witness_kick = false,
                                        int hard_expire_frames = 48)
 {
+  (void)hard_expire_frames;
   if (miss_witness_kick)
-  {
-    return false;
-  }
-  if (hard_expire_frames > 0 && pin_age >= hard_expire_frames)
   {
     return false;
   }
@@ -1400,7 +1395,7 @@ inline bool ShouldExtendWitnessPinHold(int pin_age, bool pinned_still,
   // I10-B3: rim miss witness stickiness while VB no_ticket debt rises.
   if (miss_horiz >= 0 && miss_horiz <= 4 && vb_no_ticket_rising)
   {
-    return true;
+    return pin_age < std::max(hold_frames, 48);
   }
   return pin_age < hold_frames;
 }

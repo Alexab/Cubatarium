@@ -211,6 +211,8 @@ int main()
          "Era23 I-M9: miss + FirstMesh class → PreferKick every frame");
   Expect(!ShouldPreferKickMissWitnessEarly(true, false),
          "Era23 I-M9: miss outside class → age SLA only");
+  Expect(ShouldPreferKickMissWitnessEarly(true, false, true),
+         "MissOwn P3: coverage sticky PreferKick outside class");
   Expect(!ShouldPreferKickMissWitnessEarly(false, true),
          "Era23 I-M9: no miss → no early PreferKick");
 
@@ -372,8 +374,8 @@ int main()
          "Era27 I-A1: !pin_valid ⇒ retarget");
   Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 3, 8, false, true),
          "Era27 I-A1: pin live + still empty ⇒ hold");
-  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 8, 8, false, true),
-         "Era27 I-A1: pin_age ≥ T ⇒ retarget");
+  Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 8, 8, false, true),
+         "MissOwn P1: pin_age ≥ T + still empty ⇒ hold (pin-until-drawable)");
   Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, true, true),
          "CheapRemesh C4: better_horiz alone does not hop while age<T");
   Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false),
@@ -385,6 +387,15 @@ int main()
   Expect(ShouldRetargetSoftDeferCaptureWitness(true, 1, 8, false, false, false,
                                                4, 2, 3),
          "I13-A1: frontier advance bypasses heal cooldown");
+  {
+    using cutum::ShouldHoldMissOwnerUntilDrawable;
+    Expect(ShouldHoldMissOwnerUntilDrawable(true, false, false),
+           "MissOwn P1: valid undrawn pin holds");
+    Expect(!ShouldHoldMissOwnerUntilDrawable(true, true, false),
+           "MissOwn P1: drawable pin may hop");
+    Expect(!ShouldHoldMissOwnerUntilDrawable(true, false, true),
+           "MissOwn P1: visual_holes may hop");
+  }
   Expect(!SoftDeferEmptyAgeShouldReset(true, false),
          "Era27 I-A2: still empty no progress ⇒ sticky age");
   Expect(SoftDeferEmptyAgeShouldReset(false, false),
@@ -2309,6 +2320,10 @@ int main()
            "P12 A2: unfinished storm + fm/no_mesh<0.5 → steal");
     Expect(!ShouldStealRemeshToFirstMesh(true, 20, 16, 68),
            "P12 A2: unfinished≤30 no steal");
+    Expect(ShouldStealRemeshToFirstMesh(true, 20, 16, 68, true),
+           "MissOwn P3: coverage sticky steals without unfinished>30");
+    Expect(!ShouldStealRemeshToFirstMesh(true, 20, 40, 68, true),
+           "MissOwn P3: sticky but fm not starved vs no_mesh");
     Expect(!ShouldTrimPendingLightUnderHoles(true, 68, 60),
            "P12 B1: holes+unf → no PL trim");
     Expect(ShouldTrimPendingLightUnderHoles(false, 68, 60),
@@ -2321,10 +2336,12 @@ int main()
            "P12 C2: Δhoriz≥2 allowed");
     Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 41),
            "P12 C5: moving+unf>40 damps retarget");
-    Expect(ShouldRetargetSoftDeferCaptureWitness(true, 48, 24, false, true),
-           "P12 C1: hard expire age≥48");
+    Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 48, 24, false, true),
+           "MissOwn P1: hard expire age≥48 still holds while pinned_still");
     Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 10, 24, false, true),
            "P12 C1: pin live age<T holds");
+    Expect(ShouldRetargetSoftDeferCaptureWitness(true, 48, 24, false, false),
+           "MissOwn P1: hard expire hops when pin healed");
 
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;
@@ -2981,15 +2998,15 @@ int main()
     using cutum::ShouldKickMissWitnessPin;
     Expect(ShouldExtendWitnessPinHold(47, true),
            "FP-A3: pinned_still extends hold before hard expire");
-    Expect(!ShouldExtendWitnessPinHold(48, true),
-           "R4.6.2: hard expire wins over pinned_still");
+    Expect(ShouldExtendWitnessPinHold(48, true),
+           "MissOwn P1: pinned_still holds past hard expire");
     Expect(!ShouldExtendWitnessPinHold(200, false), "FP-A3: age-only release");
     Expect(ShouldExtendWitnessPinHold(20, false, RelightWitnessPinHoldFrames, 3,
                                       true),
            "I10-B3: vb rising extends hold before hard expire");
     Expect(!ShouldExtendWitnessPinHold(200, false, RelightWitnessPinHoldFrames, 3,
                                        true),
-           "R4.6.2: vb rising does not beat hard expire");
+           "MissOwn P1: vb rising age release when !pinned_still");
     Expect(ShouldKickMissWitnessPin(200, 0, 150, false),
            "I18-P2: stuck miss kicks pin on stand");
     Expect(!ShouldKickMissWitnessPin(200, 0, 150, true),
@@ -3160,8 +3177,8 @@ int main()
            "FP-D3: block witness retarget when pin+hold");
     Expect(!ShouldBlockWitnessCaptureRetarget(true, true, true, true),
            "arch: underfeet miss allows retarget");
-    Expect(!ShouldBlockWitnessCaptureRetarget(true, true, true, false, false, 48),
-           "R4.6.2: hard expire unblocks pinned_still retarget");
+    Expect(ShouldBlockWitnessCaptureRetarget(true, true, true, false, false, 48),
+           "MissOwn P1: hard expire still blocks pinned_still retarget");
     Expect(ShouldBlockWitnessCaptureRetarget(true, true, true, false, false, 47),
            "R4.6.2: before hard expire pinned_still still blocks");
     using cutum::ShouldConsumeTicketedVbDebtHigh;
@@ -3521,6 +3538,17 @@ int main()
            "I15-B1: exit when VB cleared");
     Expect(ShouldHoldHoleDrainForStopVbPlateau(false, 93, 0),
            "I15-B4: stand VB plateau holds HoleDrain");
+    {
+      using cutum::ShouldHoldHoleDrainForCoverageSticky;
+      Expect(ShouldHoldHoleDrainForCoverageSticky(true, 0, 0),
+             "MissOwn P2: focus_missing holds HoleDrain");
+      Expect(ShouldHoldHoleDrainForCoverageSticky(false, 5, 0),
+             "MissOwn P2: clnm>0 holds HoleDrain");
+      Expect(ShouldHoldHoleDrainForCoverageSticky(false, 0, 1),
+             "MissOwn P2: SoftDeferEmptyOwned holds HoleDrain");
+      Expect(!ShouldHoldHoleDrainForCoverageSticky(false, 0, 0),
+             "MissOwn P2: clear coverage may exit");
+    }
     Expect(ShouldConsumeTicketedVbStopDrain(false, 20, 6),
            "I15-B2: stop drain at focus 20 when vb_nt>=5");
     Expect(ShouldConsumeTicketedVbStopDrain(false, 45, 0),

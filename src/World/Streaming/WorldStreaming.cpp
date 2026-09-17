@@ -2878,6 +2878,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         {
           better_horiz = false;
         }
+        // Miss Ownership SLA P1: pin-until-drawable — no better_horiz hop.
+        if (ShouldHoldMissOwnerUntilDrawable(SoftDeferCapturePinValid,
+                                             pin_drawable, visual_holes_cap))
+        {
+          better_horiz = false;
+        }
         int pin_T =
             ocean_heal
                 ? OceanCaptureWitnessPinFrames()
@@ -3032,6 +3038,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
               SoftDeferCapturePinMaxAge, pin_T,
               land_frontier || (stuck_n && pinned_still));
           did_retarget = (cand_xz != focus_xz);
+          ++world.PhysicsTelemetryData.MissOwnerHopN;
+          world.PhysicsTelemetryData.MissOwnerStableFrames = 0;
         }
         else
         {
@@ -3039,6 +3047,30 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           repair_cy = SoftDeferCapturePinCy;
           repair_horiz = SoftDeferCapturePinHoriz;
           ++SoftDeferCapturePinAge;
+          if (SoftDeferCapturePinValid && !pin_drawable)
+          {
+            world.PhysicsTelemetryData.MissOwnerStableFrames =
+                SoftDeferCapturePinAge;
+          }
+          // P1: aged undrawn pin — PreferKick/Dirty without hop (was hard-expire
+          // retarget path).
+          if (SoftDeferCapturePinValid && !pin_drawable &&
+              SoftDeferCapturePinAge >= kIngressCaptureHardExpireFrames &&
+              world.PhysicsTelemetryData.FocusMissingMesh > 0)
+          {
+            const glm::ivec3 pin_hole(
+                SoftDeferCapturePinCx,
+                SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
+                SoftDeferCapturePinCz);
+            auto &ms = world.GetMeshService();
+            if (ms.IsPendingGpuQueued(pin_hole) ||
+                ms.IsPendingGpuApply(pin_hole) ||
+                ms.IsPendingGpuKickedOrDispatched(pin_hole))
+            {
+              ms.PreferKickPendingGpuQueued(pin_hole);
+            }
+            ms.MarkDirtyPriority(pin_hole);
+          }
         }
       }
       // Era21 I-M6: under miss only FirstMesh Contains blocks Capture —

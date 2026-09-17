@@ -21,11 +21,21 @@ inline bool ShouldAllowFrontierWitnessAdvance(int cand_horiz, int pin_horiz)
   return cand_horiz >= 0 && pin_horiz >= 0 && cand_horiz < pin_horiz;
 }
 
+/// Miss Ownership SLA P1: pin-until-drawable — hold undrawn witness (no hop).
+/// visual_holes may still retarget for emergency FOV heal.
+inline bool ShouldHoldMissOwnerUntilDrawable(bool pin_valid, bool pin_drawable,
+                                             bool visual_holes)
+{
+  return pin_valid && !pin_drawable && !visual_holes;
+}
+
 /// Era27 I-A1: retarget Capture witness only when pin invalid/expired, or
 /// pinned column no longer SoftDefer-empty/miss. CheapRemesh C4: sticky —
 /// better_horiz alone must not hop while pin age < SLA (hold_nh2 still wins
 /// via ShouldRetargetRelightWitness).
 /// I13-A2: healed pin requires cooldown unless visual_holes.
+/// Miss Ownership SLA P1: pinned_still wins over hard expire / pin_T
+/// (pin-until-drawable). PreferKick aged pin without hop (WorldStreaming).
 inline bool ShouldRetargetSoftDeferCaptureWitness(
     bool pin_valid, int pin_age_frames, int pin_T,
     bool new_witness_better_horiz, bool pinned_still_empty_or_miss,
@@ -38,6 +48,11 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
   {
     return true;
   }
+  // P1: undrawn/empty pin holds past hard expire and pin_T.
+  if (pinned_still_empty_or_miss)
+  {
+    return false;
+  }
   if (pin_age_frames >= kIngressCaptureHardExpireFrames)
   {
     return true;
@@ -46,19 +61,15 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
   {
     return true;
   }
-  if (!pinned_still_empty_or_miss)
+  if (visual_holes)
   {
-    if (visual_holes)
-    {
-      return true;
-    }
-    if (ShouldAllowFrontierWitnessAdvance(cand_horiz, pin_horiz))
-    {
-      return true;
-    }
-    return pin_age_frames >= healed_pin_cooldown_frames;
+    return true;
   }
-  return false;
+  if (ShouldAllowFrontierWitnessAdvance(cand_horiz, pin_horiz))
+  {
+    return true;
+  }
+  return pin_age_frames >= healed_pin_cooldown_frames;
 }
 
 /// I14b-C: damp better_horiz retarget while drawable GPU apply in flight — not block.

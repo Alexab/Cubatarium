@@ -133,6 +133,10 @@ struct PhysicsTelemetry
   int SoftDeferWitnessHoriz{0};
   /// FZ2.7-P12 C0: SoftDefer Capture pin age (frames).
   int SoftDeferCapturePinAge{0};
+  /// Miss Ownership SLA P1: consecutive hold frames on same undrawn witness.
+  int MissOwnerStableFrames{0};
+  /// Miss Ownership SLA P1: Capture witness hop count (session).
+  int MissOwnerHopN{0};
   /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
   int SoftDeferCaptureBudget{0};
   /// Era19 FrameStreamingBudget soft ms SoT (bad-frame threshold).

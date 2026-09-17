@@ -613,6 +613,8 @@ struct FrameNumbers
   int backpressure_level{0};
   int softdefer_witness_horiz{0};
   int softdefer_capture_pin_age{0};
+  int miss_owner_stable_frames{0};
+  int miss_owner_hop_n{0};
   int softdefer_capture_budget{0};
   int frame_budget_ms{0};
   int capture_over_budget{0};
@@ -1254,6 +1256,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.backpressure_level = phys.BackpressureLevel;
   n.softdefer_witness_horiz = phys.SoftDeferWitnessHoriz;
   n.softdefer_capture_pin_age = phys.SoftDeferCapturePinAge;
+  n.miss_owner_stable_frames = phys.MissOwnerStableFrames;
+  n.miss_owner_hop_n = phys.MissOwnerHopN;
   n.softdefer_capture_budget = phys.SoftDeferCaptureBudget;
   n.frame_budget_ms = phys.FrameBudgetMs;
   n.capture_over_budget = phys.CaptureOverBudget;
@@ -1978,6 +1982,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"backpressure_level\":" << n.backpressure_level
           << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz
           << ",\"softdefer_capture_pin_age\":" << n.softdefer_capture_pin_age
+          << ",\"miss_owner_stable_frames\":" << n.miss_owner_stable_frames
+          << ",\"miss_owner_hop_n\":" << n.miss_owner_hop_n
           << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget
           << ",\"frame_budget_ms\":" << n.frame_budget_ms
           << ",\"capture_over_budget\":" << n.capture_over_budget

@@ -87,6 +87,28 @@ Adaptive expand `dirty&lt;48` / PhysMs&lt;28 (shrink stays `dirty&gt;64`); prune
 Verdict: repair **partial** — wall directionally better than P0/P1 regress AF;
 plan absolute wall/clnm gates and manual sea rim still **OPEN**. Not merge_green.
 
+### Follow-on 2026-09-17: Miss Ownership SLA (post manual 182042)
+
+Coverage lag + sticky water miss after rim repair. Code: pin-until-drawable
+(overrides hard-expire hop); HoleDrain exit-guard under coverage sticky;
+PreferKick/steal Remesh→FM under sticky; MaxOutside≥1 when miss/SoftDeferEmpty;
+telem `miss_owner_*`.
+
+| Signal | Result |
+|---|---|
+| unit pin-until-drawable + HoleDrain sticky + PreferKick/steal | PASS (`miss_first_mesh_class_test`) |
+| AF cold adequacy / west COVERED | PASS / COVERED (`miss_own_sla_cold`) |
+| AF warm adequacy / eye-proxy | PASS / PASS (`miss_own_sla_warm`) |
+| AF dual-lane mid stalled | **OPEN** (cold ~62.5 / warm ~54) — accepted separate epic |
+| AF cold wall med / clnm max | ~78 / **46** (late-half med 18; drains to 0) |
+| AF warm wall med / clnm max | ~86 / **36** (late10 drains) |
+| AF HoleDrain share | cold mode3≈166/200; warm mode3≈200 — exit-guard holds |
+| miss_owner_hop_n (AF) | end ~18 (telem live) |
+| manual west sea fog-ON vs 182042 | **UNTESTED** (operator required) |
+
+Verdict: SLA **landed + AF adequacy PASS**; clnm spike / sticky miss / dual-lane
+still **OPEN**. Manual sea rim remains gate for CLOSED.
+
 ## KEEP
 
 N01 incomplete=0, LegalDark rollback, frustum N02, cooldown N06,
@@ -112,12 +134,16 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 - Rim regress repair AF: `rim_regress_fix_v3_{cold,warm}` /
   `perf_20260917-175628_21412.jsonl` / `perf_20260917-175915_32016.jsonl`
   (v1/v2 AF discarded — shrink@96 / missing per-frame keep freeze)
+- Manual post-repair lag/sticky: `perf_20260917-182042_43968.jsonl`
+- Miss Ownership SLA AF: `miss_own_sla_{cold,warm}` /
+  `perf_20260917-200256_35528.jsonl` / `perf_20260917-200602_3496.jsonl`
 
 ## Remaining blockers for true CLOSED
 
-1. Manual `operator_visual=PASS` on west mid **and** sea rim (post rim-regress-repair).
+1. Manual `operator_visual=PASS` on west mid **and** sea rim (post MissOwn SLA;
+   confirm fog thrash=0 + no sticky black water vs 182042).
 2. Wall-clock continuous soak 10–15 min (free-list/dirty/age non-linear).
 3. Dual-lane mid stalled ≤5 — **OPEN-with-cause** for merge (mid FullyDark stall ~53–57; separate epic; do not reopen N04 remesh caps). Optionally close later with a dedicated lane fix.
 4. Optional: drop I3t after more Replace field soak (**KEEP** until then).
 5. Stop-segment rim plateau ≤2 (follow-on after R1; acceptance after operator).
-6. Rim regress repair: AF warm wall med still &gt;82 vs plan; cold clnm spikes; need manual fog-ON confirm thrash=0 + side-black gone.
+6. Rim regress / MissOwn: AF clnm spikes still >35 early; warm wall med still &gt;82 vs older plan; need manual fog-ON confirm.

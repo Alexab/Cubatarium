@@ -57,6 +57,8 @@ struct MeshWorkAdmissionInput
   int visible_black_stalled_n{0};
   /// I11-C1: miss witness age for HoleDrain exit guard.
   int miss_witness_age_frames{0};
+  /// Miss Ownership SLA P2: SoftDeferEmptyOwnedN for HoleDrain exit-guard.
+  int softdefer_empty_owned_n{0};
   /// Phase 5.3.3: EmptyBacklogN for HoleDrain FirstMesh drip clamp.
   int empty_backlog_n{0};
   /// Dual-lane: round-robin token when schedule_cap==1 (0=FM, 1=Remesh).
@@ -191,10 +193,20 @@ inline size_t MeshWorkQueuedApprox(const MeshWorkAdmissionInput &in)
 }
 
 /// FZ2.7-P12 A2: unfinished storm + FM starved vs no_mesh → full Remesh steal.
+/// Miss Ownership SLA P3: coverage sticky steals without unfinished>30 gate.
 inline bool ShouldStealRemeshToFirstMesh(bool holes, int unfinished, int dirty_fm,
-                                         int no_mesh)
+                                         int no_mesh,
+                                         bool coverage_sticky = false)
 {
-  if (!holes || unfinished <= 30 || no_mesh <= 0)
+  if (!holes || no_mesh <= 0)
+  {
+    return false;
+  }
+  if (coverage_sticky && dirty_fm * 2 < no_mesh)
+  {
+    return true;
+  }
+  if (unfinished <= 30)
   {
     return false;
   }
@@ -485,6 +497,15 @@ inline bool ShouldHoldHoleDrainForStopVbPlateau(bool moving, int vb_focus_n,
   return vb_no_ticket_n > 0 || vb_focus_n >= 20;
 }
 
+/// Miss Ownership SLA P2: do not exit HoleDrain while coverage demand sticky.
+inline bool ShouldHoldHoleDrainForCoverageSticky(bool focus_missing,
+                                                 int column_loaded_no_mesh_n,
+                                                 int softdefer_empty_owned_n)
+{
+  return focus_missing || column_loaded_no_mesh_n > 0 ||
+         softdefer_empty_owned_n > 0;
+}
+
 /// SRBR-P1: remesh floor under ticketed VB stand (no stale required; P17 cured).
 inline bool ShouldProtectRemeshUnderTicketedVbStand(bool moving,
                                                    int visible_black_focus_n,
@@ -751,9 +772,12 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   const bool stop_vb_hold = ShouldHoldHoleDrainForStopVbPlateau(
       in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n);
+  const bool coverage_sticky = ShouldHoldHoleDrainForCoverageSticky(
+      in.visual_holes || in.missing_underfeet, in.column_loaded_no_mesh_n,
+      in.softdefer_empty_owned_n);
   if (hole_drain_fm_fed_frames >= 8 &&
       mode == MeshWorkAdmission::Mode::HoleDrain && !holes &&
-      in.unfinished_visual == 0 && !stop_vb_hold)
+      in.unfinished_visual == 0 && !stop_vb_hold && !coverage_sticky)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_fm_fed_frames = 0;
@@ -782,7 +806,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       mode == MeshWorkAdmission::Mode::HoleDrain &&
       (hole_drain_schedule_starved_frames >= 8 ||
        !(in.nearest_miss_horiz <= 2 && in.missing_underfeet)) &&
-      !stop_vb_hold)
+      !stop_vb_hold && !coverage_sticky)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_empty_fm_frames = 0;
@@ -801,6 +825,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   if (hole_drain_rim_fed_frames >= 8 &&
       mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_hold &&
+      !coverage_sticky &&
       (!in.rim_hole_pressure || in.unfinished_visual <= 0))
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
@@ -818,7 +843,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     hole_drain_pressure_stale_frames = 0;
   }
   if (hole_drain_pressure_stale_frames >= 12 &&
-      mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_hold)
+      mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_hold &&
+      !coverage_sticky)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_pressure_stale_frames = 0;
@@ -850,7 +876,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   prev_miss_witness_age = in.miss_witness_age_frames;
   if (hole_drain_clnm_drain_frames >= 6 &&
       mode == MeshWorkAdmission::Mode::HoleDrain &&
-      in.nearest_miss_horiz > 2 && miss_witness_age_rising < 4 && !stop_vb_hold)
+      in.nearest_miss_horiz > 2 && miss_witness_age_rising < 4 &&
+      !stop_vb_hold && !coverage_sticky)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_clnm_drain_frames = 0;
@@ -987,9 +1014,12 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       in.pending_gpu >= 12;
   const int no_mesh =
       in.no_mesh_n > 0 ? in.no_mesh_n : in.unfinished_visual;
+  const bool coverage_sticky_steal = ShouldHoldHoleDrainForCoverageSticky(
+      in.visual_holes || in.missing_underfeet, in.column_loaded_no_mesh_n,
+      in.softdefer_empty_owned_n);
   const bool steal_fm =
       ShouldStealRemeshToFirstMesh(holes, in.unfinished_visual, in.dirty_fm_n,
-                                   no_mesh);
+                                   no_mesh, coverage_sticky_steal);
   if ((miss_tops || unfinished_storm || steal_fm) &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
