@@ -2184,47 +2184,55 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // FirstMesh (MaxOutside=0 starved rim behind sticky miss).
   // ColdSupply S2: under Dirty soft pressure prefer focus±LitDrawable — do not
   // open outside 8–12 while PL debt / holes (manual 142000 emerge≈53 dirty≈149).
+  // Audit16 R1: ColumnLoadedNoMesh / PostLoadRingNotReady must never leave
+  // MaxOutside=0 (dirty>450 + PL previously zeroed rim FirstMesh).
+  int outside_focus_mesh = 4;
   if (idle_recovery || idle_remesh_debt)
   {
-    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+    outside_focus_mesh = 0;
   }
   else if (moving &&
            (visual_holes || missing_underfeet || underfeet_undrawn ||
             pending_dirty > 200 || pending_focus_count > 30 ||
-            world.GetPhysicsTelemetry().PostLoadRingNotReady > 0))
+            world.GetPhysicsTelemetry().PostLoadRingNotReady > 0 ||
+            world.GetPhysicsTelemetry().ColumnLoadedNoMeshN > 0))
   {
     if ((underfeet_undrawn || missing_underfeet ||
-         world.GetPhysicsTelemetry().PostLoadRingNotReady > 0) &&
+         world.GetPhysicsTelemetry().PostLoadRingNotReady > 0 ||
+         world.GetPhysicsTelemetry().ColumnLoadedNoMeshN > 0) &&
         pending_dirty <= 450)
     {
-      mesh_service.SetMaxOutsideFocusMeshPerFrame(1);
+      outside_focus_mesh = 1;
     }
     else if (visual_holes && pending_dirty <= 200 && pending_focus_count <= 30)
     {
-      mesh_service.SetMaxOutsideFocusMeshPerFrame(1);
+      outside_focus_mesh = 1;
     }
     else
     {
-      mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+      outside_focus_mesh = 0;
     }
   }
   else if (!moving && focus_not_render_ready > 15 && last_frame_ms <= 28.0)
   {
-    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+    outside_focus_mesh = 0;
   }
   else if (!visual_holes && !missing_underfeet && pending_focus_count == 0 &&
            pending_dirty > 200 && last_frame_ms <= 28.0)
   {
-    mesh_service.SetMaxOutsideFocusMeshPerFrame(pending_dirty > 400 ? 12 : 8);
+    outside_focus_mesh = pending_dirty > 400 ? 12 : 8;
   }
   else if (visual_holes || missing_underfeet)
   {
-    mesh_service.SetMaxOutsideFocusMeshPerFrame(2);
+    outside_focus_mesh = 2;
   }
-  else
+  if (!idle_recovery && !idle_remesh_debt &&
+      (world.GetPhysicsTelemetry().ColumnLoadedNoMeshN > 0 ||
+       world.GetPhysicsTelemetry().PostLoadRingNotReady > 0))
   {
-    mesh_service.SetMaxOutsideFocusMeshPerFrame(4);
+    outside_focus_mesh = std::max(outside_focus_mesh, 1);
   }
+  mesh_service.SetMaxOutsideFocusMeshPerFrame(outside_focus_mesh);
   // Schedule ring: pending_underfeet alone must NOT clamp to r=1 — that latched
   // MaxHorizontalDist during flight while PendingLight stayed high and carved
   // transverse "roads" of missing GreedyCache (columns loaded, mesh starved).
@@ -5398,7 +5406,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
         adm.mode == MeshWorkAdmission::Mode::DeepBacklog)
     {
-      mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+      // Audit16 R1: HoleDrain must not zero outside FirstMesh under rim debt
+      // (clnm/ring) — that starved west-sea coverage while mode3_share≈0.8.
+      const auto &pt_rim = world.GetPhysicsTelemetry();
+      const bool rim_mesh_debt =
+          pt_rim.ColumnLoadedNoMeshN > 0 || pt_rim.PostLoadRingNotReady > 0;
+      mesh_service.SetMaxOutsideFocusMeshPerFrame(rim_mesh_debt ? 1 : 0);
       // F3: prune remesh Dirty flood every HoleDrain frame (keep_h=1; 2 when deep RemeshQ).
       if (pending_dirty > 200 &&
           (visual_holes || missing_visible_mesh || missing_underfeet))
