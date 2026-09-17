@@ -73,9 +73,21 @@ I3t hold-prior (temporary).
 N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*`
 (compat alias only; stop-lines use `pass_packed_without_mdi_resident_n`).
 
+## Gap-closure B0 baseline (2026-09-17)
+
+Cold `audit16_gap_b0_cold` (`perf_20260917-104913_9248.jsonl`):
+west COVERED (−9), Y **55.5→56.5**, incomplete=0, eye_proxy PASS,
+adequacy PASS, dual-lane FAIL (`mid_fully_dark_stalled_med` **49**).
+CTest `publication_audit|inputs_still_valid|frustum_clip|job_admission` PASS.
+
+West rim (`cx≤−3`, `y∈[54,68]`): moving med clnm/ring/unf **31/34/31**;
+stop med clnm/unf **35/35** (max 50). Manual 101527 anchor: wm **15/22**, stop max **32**.
+Product CLOSED still **OPEN** — R1 rim FirstMesh next.
+
 ## Remaining for true CLOSED
 
 1. Manual `operator_visual=PASS` on west mid **and** sea rim.
 2. Wall-clock soak 10–15 min (free-list/dirty/age non-linear).
 3. Dual-lane mid stalled ≤5 or documented OPEN-with-cause accepted for merge.
 4. Optional: drop I3t after more Replace field soak.
+5. Gap-closure R1→S9 (see plan audit_gaps_closure).

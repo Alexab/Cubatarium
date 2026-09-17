@@ -1,0 +1,38 @@
+{
+  "label": "audit16_gap_b0_cold",
+  "perf_jsonl": "bin/logs/perf_20260917-104913_9248.jsonl",
+  "report": "bin/suite_reports/g1_a10_relight/audit16_gap_b0_cold.json",
+  "ctest": {
+    "publication_audit": "PASS",
+    "inputs_still_valid_visual_test": "PASS",
+    "frustum_clip_test": "PASS",
+    "job_admission_lifetime_test": "PASS"
+  },
+  "west_route_coverage": "COVERED",
+  "focus_cx_min": -9.0,
+  "player_y_early_med": 55.5,
+  "player_y_late_med": 56.5,
+  "eye_proxy_stop_line_pass": true,
+  "adequacy_pass": true,
+  "dual_lane_stop_line_pass": false,
+  "mid_fully_dark_stalled_med": 49.0,
+  "publication_incomplete_material_mid_med": 0.0,
+  "merge_green": false,
+  "west_rim_y54_68": {
+    "moving_n": 10,
+    "stop_n": 10,
+    "moving_clnm_med": 31,
+    "moving_ring_med": 34,
+    "moving_unf_med": 31,
+    "stop_clnm_med": 35,
+    "stop_unf_med": 35,
+    "stop_clnm_max": 50,
+    "stop_unf_max": 50,
+    "note": "worse than manual 101527 (wm clnm/ring ~15/22); R1 target"
+  },
+  "manual_101527_west_rim_anchor": {
+    "moving_clnm_med": 15,
+    "moving_ring_med": 22,
+    "stop_clnm_max": 32
+  }
+}
