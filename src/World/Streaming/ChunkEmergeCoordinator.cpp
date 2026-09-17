@@ -2842,6 +2842,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     auto &exec = GetColumnFlowExecutor();
     exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                  ColumnWorkKind::FirstMesh, 80);
+    // Audit16 R1: also ticket SoftDefer empty-stuck witness so rim holes get
+    // a FirstMesh column job when focus xz already has mesh.
+    const auto &pt_cu = world.GetPhysicsTelemetry();
+    if (pt_cu.SoftDeferEmptyStuckN > 0 &&
+        (pt_cu.SoftDeferEmptyStuckCx != focus_ground_horiz.x ||
+         pt_cu.SoftDeferEmptyStuckCz != focus_ground_horiz.z))
+    {
+      exec.Enqueue(glm::ivec2(pt_cu.SoftDeferEmptyStuckCx,
+                              pt_cu.SoftDeferEmptyStuckCz),
+                   ColumnWorkKind::FirstMesh, 85);
+    }
     note_column_flow_drain(4, 4);
     // ColPipe P1: no RemeshSeam on spawn catch-up (FirstMesh owns hole).
   }
