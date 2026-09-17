@@ -190,7 +190,21 @@ int main()
          "stage disagree gauge set");
   Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 0,
          "stage gauge does not touch Decide mismatch");
+  // Audit16 S5 sole-owner gauge: EvictionOwner Decide* must not bump mismatch
+  // (legacy disagree is ShadowCompare-only). Zero under Owner ≠ dual-identity
+  // proof — AF still watches column_record_shadow_* JSONL.
+  UColumnRecordCoordinator::ResetShadowMismatchCount();
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::EvictionOwner);
+  Expect(UColumnRecordCoordinator::DecideFirstMeshEnqueue(true, false) == false,
+         "EvictionOwner: record owns FirstMesh deny");
+  Expect(UColumnRecordCoordinator::DecideRelightEnqueue(true, false) == false,
+         "EvictionOwner: record owns Relight deny");
+  Expect(UColumnRecordCoordinator::DecideEvict(false, true) == true,
+         "EvictionOwner: record owns Evict allow");
+  Expect(UColumnRecordCoordinator::ShadowMismatchCount() == 0,
+         "sole-owner gauge: Owner Decide* mismatch≡0");
   UColumnRecordCoordinator::SetShadowStageDisagreeFocusN(0);
+  UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
 
   if (gFails != 0)
   {
