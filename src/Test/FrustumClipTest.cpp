@@ -51,13 +51,28 @@ int main()
   const glm::vec3 beyond_far_max(100.1f, 50.1f, -599.f);
   Expect(!fr.IntersectsChunkAABB(beyond_far_min, beyond_far_max, eye, 0.f),
          "S8: beyond far clip rejected");
-  // Opaque/cutout/transparent share the same AABB plane test (parity fixture).
-  Expect(fr.IntersectsChunkAABB(bmin, bmax, eye, 0.f),
-         "S8: opaque-class AABB parity with base inside");
-  Expect(fr.IntersectsChunkAABB(bmin, bmax, eye, 0.f),
-         "S8: cutout-class AABB parity with base inside");
-  Expect(fr.IntersectsChunkAABB(bmin, bmax, eye, 0.f),
-         "S8: transparent-class AABB parity with base inside");
+  // Real CPU cull parity: different AABB sizes / near-far placements (not
+  // three identical Expects on the same box).
+  const glm::vec3 tall_min(99.5f, 40.f, 70.f);
+  const glm::vec3 tall_max(100.5f, 60.f, 90.f);
+  Expect(fr.IntersectsChunkAABB(tall_min, tall_max, eye, 0.f),
+         "S8: tall vertical AABB inside accepted");
+  const glm::vec3 skim_min(99.9f, 49.9f, 99.05f);
+  const glm::vec3 skim_max(100.1f, 50.1f, 99.2f);
+  Expect(fr.IntersectsChunkAABB(skim_min, skim_max, eye, 0.f),
+         "S8: near-skim AABB inside accepted");
+  const glm::vec3 behind_min(99.9f, 49.9f, 101.f);
+  const glm::vec3 behind_max(100.1f, 50.1f, 102.f);
+  Expect(!fr.IntersectsChunkAABB(behind_min, behind_max, eye, 0.f),
+         "S8: behind-camera AABB rejected");
+  const glm::mat4 tight_proj =
+      glm::perspective(glm::radians(40.f), 1.6f, 1.0f, 80.f);
+  const cutum::Frustum tight =
+      cutum::Frustum::FromViewProjection(tight_proj * view);
+  Expect(!tight.IntersectsChunkAABB(far_min, far_max, eye, 0.f),
+         "S8: far AABB rejected under tight far plane");
+  Expect(tight.IntersectsChunkAABB(bmin, bmax, eye, 0.f),
+         "S8: mid AABB still accepted under tight proj");
   if (gFails)
   {
     std::cerr << gFails << " failures\n";
