@@ -68,6 +68,36 @@ int main()
   check(admission.WorkSlotsInUse() == 0, "work slot released");
   check(admission.TryAcquireWorkSlot(), "work slot reacquire after release");
   admission.ReleaseWorkSlot();
+  // Audit16 S6 stress: fill snapshot+result+slots to cap; deny; cancel→0.
+  {
+    admission.SetSnapshotCap(128);
+    admission.SetResultCap(64);
+    admission.SetWorkSlotCap(4);
+    check(admission.TryAcquireSnapshotBytes(128), "stress snapshot fill");
+    check(!admission.TryAcquireSnapshotBytes(1), "stress snapshot deny at cap");
+    check(admission.SnapshotPendingBytes() == 128, "stress snapshot pending==cap");
+    check(admission.TryAcquireResultBytes(64), "stress result fill");
+    check(!admission.TryAcquireResultBytes(1), "stress result deny at cap");
+    check(admission.ResultPendingBytes() == 64, "stress result pending==cap");
+    int slots = 0;
+    while (admission.TryAcquireWorkSlot())
+      ++slots;
+    check(slots == 4, "stress work slots filled to cap");
+    check(!admission.TryAcquireWorkSlot(), "stress work slot deny");
+    check(admission.WorkSlotsInUse() == 4, "stress slots in use==cap");
+    // Dual-lane style: release one FM-like and one remesh-like credit cycle.
+    admission.ReleaseWorkSlot();
+    check(admission.TryAcquireWorkSlot(), "stress FM credit cycle");
+    admission.ReleaseWorkSlot();
+    check(admission.TryAcquireWorkSlot(), "stress remesh credit cycle");
+    while (admission.WorkSlotsInUse() > 0)
+      admission.ReleaseWorkSlot();
+    admission.ReleaseSnapshotBytes(128);
+    admission.ReleaseResultBytes(64);
+    check(admission.SnapshotPendingBytes() == 0, "stress snapshot credits→0");
+    check(admission.ResultPendingBytes() == 0, "stress result credits→0");
+    check(admission.WorkSlotsInUse() == 0, "stress work slots→0");
+  }
   UCompletedJobQueue<int> completed;
   completed.SetCapacity(3);
   completed.Push(10);
