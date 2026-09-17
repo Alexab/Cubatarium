@@ -3,6 +3,7 @@
 Source audit: commit `7a658525` / `docs/streaming/CURRENT_STATE_AUDIT_2026-09-16.md`.
 Tails plan: H0–P5 on `cursor_audit2_impl`.
 Full cutover: E0–E9 on `cursor_audit3_impl`.
+Gap-closure: B0→R1→S5→S2→S4→S6–S8→S9 on `cursor_audit3_impl` (2026-09-17).
 
 ## Absolute gates (must be green)
 
@@ -13,25 +14,27 @@ Full cutover: E0–E9 on `cursor_audit3_impl`.
 | reorder bumps table identity | S2 | code + CTest |
 | packed excluded when MDI resident | S2 GeometryEngine | code |
 | RepresentationSwitch clears MDI | S2 `ApplyPublicationDelta` | code + CTest |
-| **Single Replace writer** | S2 `PublishPassInputs`→`ApplyPublicationDelta` | code + CTest (`25488bfe`) |
+| **Single Replace writer** | S2 `PublishPassInputs`→`ApplyPublicationDelta` | code + CTest |
+| **RefreshPassRefs resident filter** | gap S2 | code + CTest |
 | eye-proxy absolute holes + missing fields | S0 | GateRepro |
 | `operator_visual=None` ↛ merge_green | S0 scorecard | code |
 | west route `cx≤−3` or UNTESTED | S0 | COVERED (autofly) |
 | per-frame GPU kick/finish timers | S3 | code |
 | oracle wrong-tex / checkerboard / liquid / temporal | S3 | OracleFixtures |
 | source light stamp on publish | S4 | code (fail-closed) |
-| **versioned boundary overlay** | S4 `BoundaryOverlayState` | code + CTest |
+| **versioned boundary overlay → mesher** | S4 | code + CTest (raw shell + overlay emit) |
 | per-column stalled remesh bookkeeping | S5 | code |
 | draw-oracle age not reset on unrelated lit | S5 | CTest |
-| **H2 FullyDark Dirty gated OFF** | S5 | code (`kEnableH2FullyDarkDirty=false`) |
+| **H2 FullyDark Dirty deleted** | S5 | code (block removed) |
 | enter FullyDark Dirty pump OFF | S5 | code |
+| Flow FullyDark census demand removed | S5 | code (stub returns 0) |
 | snapshot credit lifetime with Store | S6 | hot-path + CaptureAndStore |
-| shared work-slot concurrency | S6 | `TryAcquireWorkSlot` + lifetime test |
+| shared work-slot concurrency + stress | S6 | `job_admission_lifetime_test` stress |
 | spawn-ring cache world epoch + focus.y + unf/nr deps | S7 | code |
 | bounded critical overrun (not infinite) | S7 | `FrameDeadline` |
-| no independent 4ms/6ms GPU floors | S7 | emerge consume uses ledger |
+| no independent 4ms/6ms GPU floors | S7 | frac-only / miss_reserved (no `max(6.0)`) |
 | cull stats buffer-update barrier | S8 | code |
-| frustum near/far AABB fixtures | S8 | `frustum_clip_test` |
+| frustum near/far AABB fixtures | S8 | `frustum_clip_test` real cases |
 
 ## Product acceptance
 
@@ -39,29 +42,21 @@ Full cutover: E0–E9 on `cursor_audit3_impl`.
 - Autofly adequacy ≠ CLOSED.
 - SLA 16.7/33.3 ms — proposed profile **not chosen**; not a gate.
 
-### Full-cutover E0 baseline
-
-Cold `audit16_full_e0_cold`: west COVERED (−10), Y **55.5→59**, eye_proxy PASS,
-incomplete=0, adequacy PASS, dual-lane FAIL, `merge_green=false`.
-
-### E1 Replace writer
-
-Commit `25488bfe`. Cold `audit16_full_e1_cold`: west COVERED (−8), Y **55.5→56**,
-incomplete=0, eye_proxy PASS. I3t hold-prior **still temporary** (not dropped).
-
-### E3–E8 cutover AF
-
-Cold `audit16_full_e3e8_cold` (`perf_20260916-230258_39472.jsonl`):
-west COVERED (−11), Y **55.5→59**, incomplete=0, eye_proxy PASS, adequacy PASS,
-dual-lane FAIL (`mid_fully_dark_stalled_med` **47**, improved vs E0 **57**).
+### Gap-closure B0→S9 verdict: **OPEN-with-blockers**
 
 | Signal | Result |
 |---|---|
-| dual-lane / mid stalled | FAIL OK (G1 OPEN) |
+| absolute CTest gates | PASS |
+| west COVERED + incomplete=0 + eye_proxy | PASS (cold×3 + warm×3) |
+| west rim moving clnm (R1) | improved B0 **31→9** (vs manual ~15) |
+| stop rim plateau ≤2 | **OPEN** (still elevated on stop) |
+| dual-lane mid stalled ≤5 | **OPEN** (cold ~53, warm ~54–64) |
+| operator west mid+sea rim | **UNTESTED** (manual required) |
+| continuous 10–15 min soak | **OPEN** (serial AF ~15 min wall ≠ free-list soak) |
+| I3t hold-prior | temporary KEEP (`RetainedPrior` not Completed) |
 | merge_green | **false** |
-| operator west eye | **UNTESTED** (manual required; rim blacks may remain) |
-| 10–15 min soak | not wall-clocked (cold AF ~95s only) |
-| product CLOSED | **OPEN** — needs operator PASS + soak + dual-lane policy |
+
+`merge_green` requires PASS ∧ west COVERED ∧ absolute ∧ policy ∧ operator — not claimed.
 
 ## KEEP
 
@@ -73,33 +68,20 @@ I3t hold-prior (temporary).
 N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*`
 (compat alias only; stop-lines use `pass_packed_without_mdi_resident_n`).
 
-## Gap-closure B0 baseline (2026-09-17)
+## Evidence pointers
 
-Cold `audit16_gap_b0_cold` (`perf_20260917-104913_9248.jsonl`):
-west COVERED (−9), Y **55.5→56.5**, incomplete=0, eye_proxy PASS,
-adequacy PASS, dual-lane FAIL (`mid_fully_dark_stalled_med` **49**).
-CTest `publication_audit|inputs_still_valid|frustum_clip|job_admission` PASS.
+- B0: `audit16_gap_b0_cold` / `perf_20260917-104913_9248.jsonl`
+- R1b: `audit16_gap_r1b_cold` / `perf_20260917-110204_11552.jsonl`
+- S5: `audit16_gap_s5_cold` / `perf_20260917-110838_6128.jsonl`
+- S2: `audit16_gap_s2_cold` / `perf_20260917-112534_33872.jsonl`
+- S4: `audit16_gap_s4_cold` / `perf_20260917-113029_31984.jsonl`
+- S6–S8: `audit16_gap_s68_cold` / `perf_20260917-113520_43140.jsonl`
+- S9: `audit16_gap_s9_c{1,2,3}_cold` + `audit16_gap_s9_w{1,2,3}_warm`
 
-West rim (`cx≤−3`, `y∈[54,68]`): moving med clnm/ring/unf **31/34/31**;
-stop med clnm/unf **35/35** (max 50). Manual 101527 anchor: wm **15/22**, stop max **32**.
-Product CLOSED still **OPEN** — R1 rim FirstMesh next.
-
-### Gap-closure R1 (2026-09-17)
-
-Commits: MaxOutside floor under clnm/ring (+ HoleDrain preserve),
-`rim_first_mesh_sla` OR clnm/ring, MarkDirty→FirstMeshQ presentable,
-catch-up SoftDefer witness enqueue.
-
-Cold `audit16_gap_r1b_cold` (`perf_20260917-110204_11552.jsonl`):
-west COVERED (−5), incomplete=0, eye_proxy PASS, adequacy PASS,
-dual-lane FAIL (expected OPEN). West rim moving clnm/ring/unf **9/10/9**
-(vs B0 **31/34/31**, vs manual **15/22**). Stop med **13** max **24**
-(vs B0 **35/50**) — plateau ≤2 still OPEN for S9/operator.
-
-## Remaining for true CLOSED
+## Remaining blockers for true CLOSED
 
 1. Manual `operator_visual=PASS` on west mid **and** sea rim.
-2. Wall-clock soak 10–15 min (free-list/dirty/age non-linear).
-3. Dual-lane mid stalled ≤5 or documented OPEN-with-cause accepted for merge.
+2. Wall-clock continuous soak 10–15 min (free-list/dirty/age non-linear).
+3. Dual-lane mid stalled ≤5 **or** explicit OPEN-with-cause accepted for merge.
 4. Optional: drop I3t after more Replace field soak.
-5. Gap-closure R1→S9 (see plan audit_gaps_closure).
+5. Stop-segment rim plateau ≤2 (follow-on after R1).
