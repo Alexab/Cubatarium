@@ -1054,6 +1054,8 @@ private:
   uint64_t MeshApplyStaleGeomAcceptedCount{0};
   /// N04 H4: Dirty refresh queued after accepting light/geom stale drawable.
   uint64_t MeshApplyStaleAcceptedRefreshCount{0};
+  /// I3t: last ApplyMeshResult held prior draw (not a Completed publish).
+  bool LastApplyWasRetainedPrior_{false};
   /// 162400: RemeshObsoleteTracked (Current moved under Active).
   uint64_t MeshApplyStaleRevCount{0};
   uint64_t MeshApplySupersededCount{0};

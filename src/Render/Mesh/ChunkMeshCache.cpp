@@ -3767,7 +3767,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       Dirty.MarkDirty(coord);
       ++MeshApplyStaleAcceptedRefreshCount;
     }
-    return true;
+    // RetainedPrior: not a published Completed — callers must not ++Completed.
+    return false;
   }
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
   const bool had_mesh = HasDrawableGreedyMesh(coord);
@@ -3934,7 +3935,11 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
                                    drain_t0)
                                    .count();
       ++done;
-      ++stats.Completed;
+      // I3t RetainedPrior is not a published Completed.
+      if (!LastApplyWasRetainedPrior_)
+      {
+        ++stats.Completed;
+      }
     }
   }
   if (Render.GpuPackedMeshing && !PendingGpuApplies.empty() && gpu_max > 0)
@@ -4640,6 +4645,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                                       UBlockRegistry &registry,
                                       MeshBuildResult &&result)
 {
+  LastApplyWasRetainedPrior_ = false;
   const bool catalog_ok =
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
   const MeshApplyStaleInputReason stale_reason =
@@ -4771,6 +4777,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         ++MeshApplyStaleAcceptedRefreshCount;
       }
       abandon_fm_watch();
+      LastApplyWasRetainedPrior_ = true;
       return;
     }
   }
@@ -5749,7 +5756,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         ApplyMeshResult(world, registry, std::move(result));
         mesh_data_changed = true;
-        ++stats.Completed;
+        if (!LastApplyWasRetainedPrior_)
+        {
+          ++stats.Completed;
+        }
         ++drained;
       }
       LastMeshDirtyDrainN += drained;

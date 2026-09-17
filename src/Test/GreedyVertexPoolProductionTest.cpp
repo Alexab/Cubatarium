@@ -8,8 +8,9 @@
 #include <unordered_set>
 #include <vector>
 
-// Production test binary does not link ChunkMeshCache.cpp. Provide the same
-// Append algorithm via a test-local GreedyCache map (audit S2 live Append).
+// Production test binary does not link ChunkMeshCache.cpp. Exercise the same
+// production helper AppendGreedyPassBatchRefsFromBatches that live Append uses
+// (audit S2 — no divergent stub algorithm).
 #include "Render/Engine/GreedyPassBatchRefs.h"
 #include "World/Chunks/ChunkManager.h"
 namespace cutum
@@ -32,6 +33,7 @@ void UChunkMeshCache::AppendGreedyPassBatchRefs(
     glm::ivec3 coord, bool transparent_pass,
     std::vector<GreedyBatchRef> &out) const
 {
+  // Mirrors ChunkMeshCache.cpp production body: GreedyCache lookup → helper.
   const auto it = g_test_greedy_batches.find(coord);
   if (it == g_test_greedy_batches.end())
     return;

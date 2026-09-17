@@ -176,12 +176,17 @@ void UGreedyGpuBackend::RefreshPassRefs(
     }
   };
   std::unordered_set<SeenKey, SeenKeyHash> seen_keys;
+  // Audit16 S2: refs are visibility filter only — skip frustum-only guesses
+  // without a resident CPU GreedyCache batch (empty Replace/Remove via delta).
   for (const auto &ref : refs)
   {
-    inputs.push_back({ref, meshCache.TryGetGreedyBatch(ref)});
+    const GreedyMeshBatch *batch = meshCache.TryGetGreedyBatch(ref);
+    if (!batch)
+      continue;
+    inputs.push_back({ref, batch});
     seen_keys.insert({ref.chunkCoord, ref.batchIndex});
   }
-  // N01: dirty publish expands to full GreedyCache pass materials (not frustum).
+  // Dirty expand: Append only resident GreedyCache keys ∩ dirty (not discovery).
   std::unordered_set<glm::ivec3, IVec3Hash> dirty_union = dirty;
   dirty_union.insert(cache.PendingGeometryDirty.begin(),
                      cache.PendingGeometryDirty.end());
@@ -190,13 +195,18 @@ void UGreedyGpuBackend::RefreshPassRefs(
   {
     for (const auto &coord : dirty_union)
     {
+      if (!meshCache.HasGreedyMesh(coord))
+        continue;
       std::vector<GreedyBatchRef> tmp_refs;
       meshCache.AppendGreedyPassBatchRefs(coord, transparent_pass, tmp_refs);
       for (const auto &ref : tmp_refs)
       {
         if (seen_keys.count({ref.chunkCoord, ref.batchIndex}) > 0)
           continue;
-        inputs.push_back({ref, meshCache.TryGetGreedyBatch(ref)});
+        const GreedyMeshBatch *batch = meshCache.TryGetGreedyBatch(ref);
+        if (!batch)
+          continue;
+        inputs.push_back({ref, batch});
         seen_keys.insert({ref.chunkCoord, ref.batchIndex});
         dirty.insert(coord);
       }
