@@ -2355,6 +2355,27 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     }
   }
   SoftDeferHeld.erase(chunkCoord);
+  // Audit16 R1 Gap C: missing drawable in LitDrawable ∪ presentable cy band
+  // must enter FirstMeshQ (MarkDirty alone → RemeshQ and Pass1 never schedules).
+  if (MeshFocusValid && !HasDrawableGreedyMesh(chunkCoord))
+  {
+    const int horiz =
+        std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
+                 std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
+    if (horiz <= kVisualStageLitDrawableHoriz)
+    {
+      const int pref_cy =
+          MeshVerticalPriorityValid ? MeshVerticalPreferredCy
+                                    : MeshFocusGroundChunk.y;
+      // Approximate EnterSpawnPresentableCyRange without sea SoT on cache:
+      // player±1 expanded one cy down (sea band).
+      if (chunkCoord.y >= pref_cy - 2 && chunkCoord.y <= pref_cy + 1)
+      {
+        MarkDirtyPriority(chunkCoord);
+        return;
+      }
+    }
+  }
   if (StarveRemeshForHoles && MeshFocusValid && !HasGreedyMesh(chunkCoord))
   {
     const int horiz =
