@@ -84,6 +84,18 @@ West rim (`cx≤−3`, `y∈[54,68]`): moving med clnm/ring/unf **31/34/31**;
 stop med clnm/unf **35/35** (max 50). Manual 101527 anchor: wm **15/22**, stop max **32**.
 Product CLOSED still **OPEN** — R1 rim FirstMesh next.
 
+### Gap-closure R1 (2026-09-17)
+
+Commits: MaxOutside floor under clnm/ring (+ HoleDrain preserve),
+`rim_first_mesh_sla` OR clnm/ring, MarkDirty→FirstMeshQ presentable,
+catch-up SoftDefer witness enqueue.
+
+Cold `audit16_gap_r1b_cold` (`perf_20260917-110204_11552.jsonl`):
+west COVERED (−5), incomplete=0, eye_proxy PASS, adequacy PASS,
+dual-lane FAIL (expected OPEN). West rim moving clnm/ring/unf **9/10/9**
+(vs B0 **31/34/31**, vs manual **15/22**). Stop med **13** max **24**
+(vs B0 **35/50**) — plateau ≤2 still OPEN for S9/operator.
+
 ## Remaining for true CLOSED
 
 1. Manual `operator_visual=PASS` on west mid **and** sea rim.

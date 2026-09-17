@@ -1,0 +1,24 @@
+{
+  "label": "audit16_gap_r1b_cold",
+  "perf_jsonl": "bin/logs/perf_20260917-110204_11552.jsonl",
+  "report": "bin/suite_reports/g1_a10_relight/audit16_gap_r1b_cold.json",
+  "prior_r1a": "bin/logs/perf_20260917-105650_27484.jsonl",
+  "west_route_coverage": "COVERED",
+  "focus_cx_min": -5.0,
+  "eye_proxy_stop_line_pass": true,
+  "adequacy_pass": true,
+  "dual_lane_stop_line_pass": false,
+  "publication_incomplete_material_mid_med": 0.0,
+  "west_rim_y54_68": {
+    "moving_clnm_med": 9,
+    "moving_ring_med": 10,
+    "moving_unf_med": 9,
+    "stop_clnm_med": 13,
+    "stop_unf_med": 13,
+    "stop_clnm_max": 24,
+    "vs_b0_moving_clnm": "31→9",
+    "vs_manual_101527_moving_clnm": "15→9",
+    "stop_plateau_le2": false,
+    "note": "R1 KEEP on moving med ↓; stop plateau still OPEN for S9 operator"
+  }
+}
