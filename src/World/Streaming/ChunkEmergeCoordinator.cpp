@@ -4910,7 +4910,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           rim_chain_stall_frames = 0;
         }
         // I18-A3c: consumer-starved rim ingress FM schedule floor.
-        if (moving && nh >= 2 && nh <= 3 &&
+        // Align with RimIngressFmScheduleFloor (nh≤LitDrawable=4).
+        if (moving && nh >= 2 && nh <= kVisualStageLitDrawableHoriz &&
             IsFmConsumerStarved(chain_telem.DirtyFmN,
                                 chain_telem.MeshDirtyScheduleOkN))
         {

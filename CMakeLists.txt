@@ -1381,7 +1381,8 @@ target_include_directories(mesh_neighbor_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(miss_first_mesh_class_test
-    src/Test/MissFirstMeshClassTest.cpp)
+    src/Test/MissFirstMeshClassTest.cpp
+    src/World/Streaming/MemoryBudgetController.cpp)
 target_include_directories(miss_first_mesh_class_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(miss_first_mesh_class_test glm::glm)

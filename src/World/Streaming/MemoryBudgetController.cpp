@@ -57,12 +57,26 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
 
   if (green_expand)
   {
-    d.keep_margin =
-        std::min(tuning.MaxKeepPrefetchMargin,
-                 std::max(sample.baseline_keep_margin, sample.baseline_keep_margin + 1));
-    d.max_effective_rd =
-        std::min(tuning.MemoryExpandMaxRd,
-                 std::max(sample.visual_rd, sample.visual_rd + 1));
+    // Green expands Keep residency only — never mesh/Visual RD.
+    // Raising max_effective_rd to visual_rd+1 fought Adaptive shrink
+    // (manual 120407: fog_pull_in_rd thrash 4↔5 with fog_hole_debt≡0).
+    // When Adaptive demoted below altitude base, freeze keep_margin at
+    // baseline — Keep+1 while Visual stuck at 4 loaded unmeshed ring
+    // (manual 153347 side-black / wall).
+    const bool demoted = sample.baseline_visual_rd > 0 &&
+                         sample.visual_rd < sample.baseline_visual_rd;
+    if (!demoted)
+    {
+      d.keep_margin = std::min(
+          tuning.MaxKeepPrefetchMargin,
+          std::max(sample.baseline_keep_margin,
+                   sample.baseline_keep_margin + 1));
+    }
+    else
+    {
+      d.keep_margin = sample.baseline_keep_margin;
+    }
+    d.max_effective_rd = sample.visual_rd;
     d.allow_keep_prewarm = true;
   }
   else if (d.memory_pressure >= 2)

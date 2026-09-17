@@ -3964,6 +3964,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       effectiveFogStartRatio = render.DistanceFogStartRatio;
     }
 
+    // Altitude/config base before Adaptive — Keep freeze + Adaptive ceiling.
+    const int rd_base = effectiveRenderDistance;
+
     // Optional adaptive RD under streaming pressure (hysteresis).
     PhysMsEma = PhysMsEma <= 0.0
                     ? world.GetPhysicsTelemetry().PhysicsStepMs
@@ -3975,13 +3978,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       {
         AdaptiveEffectiveRd = effectiveRenderDistance;
       }
-      // Memory Green may raise RD ceiling one step above altitude/base RD.
-      int rd_ceiling = effectiveRenderDistance;
-      if (LastMemoryDecision.memory_pressure == 0 &&
-          LastMemoryDecision.max_effective_rd > rd_ceiling)
-      {
-        rd_ceiling = LastMemoryDecision.max_effective_rd;
-      }
+      // Adaptive owns mesh RD ceiling (altitude/base). Memory Green must not
+      // raise it — that re-expanded after dirty shrink (manual 120407 thrash).
+      // Shrink @64 (overload demote). Expand @48 / PhysMs<28 with gap so
+      // cruise dirty~70 holds demoted RD without Memory mesh+1 fight; Keep
+      // freeze (baseline_visual_rd) stops Keep≫Visual wall/side-black.
+      // Do NOT raise shrink to 96 — that kept Visual=5 under dirty~70 and
+      // blew AF wall/clnm (rim_regress_fix_cold 173732).
+      const int rd_ceiling = rd_base;
       const size_t dirty = meshService.GetDirtyCount();
       const int gen_backlog_total =
           ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
@@ -3998,7 +4002,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         {
           next = std::max(kAdaptiveRdMin, AdaptiveEffectiveRd - 1);
         }
-        else if (dirty < 24 && PhysMsEma < 20.0)
+        else if (AdaptiveEffectiveRd < rd_ceiling && dirty < 48 &&
+                 PhysMsEma < 28.0)
         {
           next = std::min(rd_ceiling, AdaptiveEffectiveRd + 1);
         }
@@ -4031,6 +4036,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       sample.dirty_chunks = world.PhysicsTelemetryData.FocusDirtyChunks;
       sample.baseline_keep_margin = URuntimeTuning::Get().KeepPrefetchMargin;
       sample.visual_rd = effectiveRenderDistance;
+      sample.baseline_visual_rd = rd_base;
       sample.relight_fifo_n = world.PhysicsTelemetryData.RelightFifoN;
       sample.relight_completed_n =
           static_cast<int>(world.GetRelightCompletedSize());
@@ -4060,23 +4066,25 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                                  URuntimeTuning::Get(), decision);
       LastMemoryDecision = decision;
       world.PhysicsTelemetryData.MemoryPressure = decision.memory_pressure;
-      Streamer->SetKeepPrefetchMargin(decision.keep_margin);
+      int keep_margin_apply = decision.keep_margin;
+      // Every frame (not only MemoryBudget eval @20f): while Adaptive is below
+      // altitude base, never run Keep Green+1 — stale LastDecision otherwise
+      // left margin=3 → keep_cols=225 at Visual=4 (AF v1/v2).
+      if (AdaptiveEffectiveRd >= 0 && AdaptiveEffectiveRd < rd_base)
+      {
+        keep_margin_apply =
+            std::min(keep_margin_apply, sample.baseline_keep_margin);
+      }
+      Streamer->SetKeepPrefetchMargin(keep_margin_apply);
       if (!decision.allow_keep_prewarm)
       {
         Streamer->SetMaxKeepPrefetchOpsPerFrame(0);
       }
+      // MemoryBudget may shrink mesh RD under pressure; never expand it
+      // (Green keep-only — Apply expand fought Adaptive, thrash 4↔5).
       if (decision.max_effective_rd < effectiveRenderDistance)
       {
         ++world.PhysicsTelemetryData.KeepRingShrinkN;
-        effectiveRenderDistance = decision.max_effective_rd;
-        if (AdaptiveEffectiveRd >= 0)
-        {
-          AdaptiveEffectiveRd = effectiveRenderDistance;
-        }
-      }
-      else if (decision.max_effective_rd > effectiveRenderDistance &&
-               decision.memory_pressure == 0)
-      {
         effectiveRenderDistance = decision.max_effective_rd;
         if (AdaptiveEffectiveRd >= 0)
         {
@@ -4208,8 +4216,6 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // Phase B: expand/shrink/severe-wall from RuntimeTuning (not SoT predicates).
     {
       const URuntimeTuning &fog_tune = URuntimeTuning::Get();
-      const double kFogPullInExpandSec =
-          static_cast<double>(fog_tune.FogPullInExpandSec);
       const double kFogPullInShrinkSec =
           static_cast<double>(fog_tune.FogPullInShrinkSec);
       const double kFogPullInSevereWallMs =
@@ -4272,13 +4278,24 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         int target = effectiveRenderDistance;
         int target_margin = render.DistanceFogEndMarginBlocks;
         float target_start = effectiveFogStartRatio;
-        if (hole_debt)
+        if (!hole_debt)
+        {
+          // Passthrough: fog mirrors Visual immediately — no rate-limit expand
+          // that lagged Adaptive shrink/restore (manual 120407 thrash 4↔5).
+          FogPullInRd = effectiveRenderDistance;
+          FogPullInMarginHeld = render.DistanceFogEndMarginBlocks;
+          FogPullInStartRatioHeld = effectiveFogStartRatio;
+          fog_rd = FogPullInRd;
+          fog_margin = FogPullInMarginHeld;
+          fog_start_ratio = FogPullInStartRatioHeld;
+        }
+        else
         {
           // Cover incomplete outer ring before decor/trees pop in clear mid-range.
-          const int unfinished_eff = std::max(unfinished, hole_debt_now ? unfinished : 1);
-          int pull =
-              1 + std::min(2, unfinished_eff / 3) +
-              (phys.VisualHoles > 0 ? 1 : 0);
+          const int unfinished_eff =
+              std::max(unfinished, hole_debt_now ? unfinished : 1);
+          int pull = 1 + std::min(2, unfinished_eff / 3) +
+                     (phys.VisualHoles > 0 ? 1 : 0);
           if (near_water_unfinished)
           {
             pull += 1;
@@ -4296,79 +4313,58 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           {
             target_margin += 8 + std::min(24, unfinished_ahead * 3);
           }
-        }
-        // Wall alone must NOT shrink fog (cruise wall med≈80 → flicker). Only
-        // reinforce while already in hole latch with real missing mesh, or on
-        // severe hitch (skip when miss=0 — manual 130338 opaque plateau).
-        if (hole_debt && phys.FocusMissingMesh > 0 &&
-            (phys.StreamPressure >= 2 || wall_ms > kFogPullInSevereWallMs))
-        {
-          target = std::min(target, target - 1);
-          target_margin += 8;
-          target_start = std::min(target_start, 0.40f);
-        }
-        const int fog_rd_max = std::max(1, effectiveRenderDistance);
-        const int fog_rd_min =
-            std::min(fog_rd_max, std::max(1, render.FogRdMin));
-        target = std::clamp(target, fog_rd_min, fog_rd_max);
-        const auto now = std::chrono::steady_clock::now();
-        const double since =
-            FogPullInLastAdjust.time_since_epoch().count() == 0
-                ? kFogPullInExpandSec
-                : std::chrono::duration<double>(now - FogPullInLastAdjust)
-                      .count();
-        const double since_shrink =
-            FogPullInLastShrink.time_since_epoch().count() == 0
-                ? kFogPullInShrinkSec
-                : std::chrono::duration<double>(now - FogPullInLastShrink)
-                      .count();
-        if (target < FogPullInRd)
-        {
-          // Rate-limit shrink; severe missing/unfinished may step immediately.
-          // gpu_pending alone is not urgent (213546: apply queue ≠ fog hole).
-          const bool urgent =
-              phys.VisualHoles > 0 || unfinished >= 3 ||
-              (hole_debt_now && gpu_pending >= 8);
-          if (urgent || since_shrink >= kFogPullInShrinkSec)
+          // Wall alone must NOT shrink fog (cruise wall med≈80 → flicker). Only
+          // reinforce while already in hole latch with real missing mesh, or on
+          // severe hitch (skip when miss=0 — manual 130338 opaque plateau).
+          if (phys.FocusMissingMesh > 0 &&
+              (phys.StreamPressure >= 2 || wall_ms > kFogPullInSevereWallMs))
           {
-            FogPullInRd = urgent ? target : std::max(target, FogPullInRd - 1);
-            FogPullInLastAdjust = now;
-            FogPullInLastShrink = now;
+            target = std::min(target, target - 1);
+            target_margin += 8;
+            target_start = std::min(target_start, 0.40f);
           }
+          const int fog_rd_max = std::max(1, effectiveRenderDistance);
+          const int fog_rd_min =
+              std::min(fog_rd_max, std::max(1, render.FogRdMin));
+          target = std::clamp(target, fog_rd_min, fog_rd_max);
+          const auto now = std::chrono::steady_clock::now();
+          const double since_shrink =
+              FogPullInLastShrink.time_since_epoch().count() == 0
+                  ? kFogPullInShrinkSec
+                  : std::chrono::duration<double>(now - FogPullInLastShrink)
+                        .count();
+          if (target < FogPullInRd)
+          {
+            // Rate-limit shrink; severe missing/unfinished may step immediately.
+            // gpu_pending alone is not urgent (213546: apply queue ≠ fog hole).
+            const bool urgent = phys.VisualHoles > 0 || unfinished >= 3 ||
+                                (hole_debt_now && gpu_pending >= 8);
+            if (urgent || since_shrink >= kFogPullInShrinkSec)
+            {
+              FogPullInRd =
+                  urgent ? target : std::max(target, FogPullInRd - 1);
+              FogPullInLastAdjust = now;
+              FogPullInLastShrink = now;
+            }
+          }
+          // Fog never wider than Visual (also clamps after Adaptive shrink).
+          FogPullInRd = std::min(FogPullInRd, effectiveRenderDistance);
+          fog_rd = FogPullInRd;
+          // Margin / start_ratio: snap tighter immediately under hole_debt.
+          if (target_margin > FogPullInMarginHeld)
+          {
+            FogPullInMarginHeld = target_margin;
+          }
+          if (target_start < FogPullInStartRatioHeld)
+          {
+            FogPullInStartRatioHeld = target_start;
+          }
+          fog_margin = FogPullInMarginHeld;
+          fog_start_ratio = FogPullInStartRatioHeld;
         }
-        else if (target > FogPullInRd && since >= kFogPullInExpandSec &&
-                 !hole_debt)
-        {
-          const int step = (since >= kFogPullInExpandSec * 2.0) ? 2 : 1;
-          FogPullInRd = std::min(FogPullInRd + step, target);
-          FogPullInLastAdjust = now;
-        }
+        // Hard clamp every frame: fog RD ≤ Visual RD.
+        FogPullInRd = std::min(FogPullInRd, effectiveRenderDistance);
         fog_rd = FogPullInRd;
-        // Margin / start_ratio: snap tighter immediately, release only when
-        // hole latch expired (matches RD expand gate).
-        if (target_margin > FogPullInMarginHeld)
-        {
-          FogPullInMarginHeld = target_margin;
-        }
-        else if (!hole_debt && since >= kFogPullInExpandSec)
-        {
-          FogPullInMarginHeld =
-              FogPullInMarginHeld -
-              std::max(1, (FogPullInMarginHeld - target_margin + 1) / 2);
-          FogPullInMarginHeld = std::max(target_margin, FogPullInMarginHeld);
-        }
-        if (target_start < FogPullInStartRatioHeld)
-        {
-          FogPullInStartRatioHeld = target_start;
-        }
-        else if (!hole_debt && since >= kFogPullInExpandSec)
-        {
-          FogPullInStartRatioHeld =
-              FogPullInStartRatioHeld +
-              0.5f * (target_start - FogPullInStartRatioHeld);
-        }
-        fog_margin = FogPullInMarginHeld;
-        fog_start_ratio = FogPullInStartRatioHeld;
       }
       else
       {

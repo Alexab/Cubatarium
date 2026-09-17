@@ -113,6 +113,8 @@ inline bool ShouldHideUncomputedFullyDarkInRing(
 
 /// FirstMesh Dirty prune must keep the LitDrawable ring (and not the nh≤2
 /// shell). 183918 keep_h=2 dropped cruise-frontier FM → opaque 882→472.
+/// Do not expand keep to full focus under rim debt — that amplified Dirty/wall
+/// when focus>lit (rim regress repair after P1; manual 153347).
 inline int FirstMeshPruneKeepHoriz(int focus_radius,
                                    int lit_ring = kVisualStageLitDrawableHoriz)
 {

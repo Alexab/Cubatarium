@@ -4,6 +4,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/MemoryBudgetController.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
@@ -1648,6 +1649,51 @@ int main()
     }
     Expect(FirstMeshPruneKeepHoriz(5) >= 4,
            "never prune FirstMesh inside LitDrawable ring");
+    Expect(FirstMeshPruneKeepHoriz(5, 4) == 4,
+           "prune keep = min(lit, focus)");
+    {
+      using cutum::MemoryBudgetSample;
+      using cutum::UMemoryBudgetController;
+      using cutum::URuntimeTuning;
+      URuntimeTuning tune{};
+      tune.MemoryBudgetMb = 1536;
+      tune.MemorySoftMb = 1152;
+      tune.MemoryExpandKeepMb = 768;
+      tune.MemoryGreenMaxWallMs = 28.0f;
+      tune.MaxKeepPrefetchMargin = 4;
+      tune.MemoryExpandMaxRd = 6;
+      MemoryBudgetSample green{};
+      green.private_mb = 400.0;
+      green.visual_holes = 0;
+      green.pending_light_focus = 0;
+      green.last_wall_ms = 10.0;
+      green.baseline_keep_margin = 2;
+      green.visual_rd = 5;
+      green.baseline_visual_rd = 5;
+      const auto g = UMemoryBudgetController::Evaluate(green, tune);
+      Expect(g.memory_pressure == 0, "green sample pressure 0");
+      Expect(g.max_effective_rd == 5,
+             "Green expands keep not mesh RD");
+      Expect(g.keep_margin == 3, "Green keep_margin baseline+1 at base RD");
+      Expect(g.allow_keep_prewarm, "Green allows keep prewarm");
+      MemoryBudgetSample demoted = green;
+      demoted.visual_rd = 4;
+      demoted.baseline_visual_rd = 5;
+      const auto dm = UMemoryBudgetController::Evaluate(demoted, tune);
+      Expect(dm.max_effective_rd == 4, "demoted Green max_rd = visual");
+      Expect(dm.keep_margin == 2,
+             "demoted Green freezes keep_margin at baseline");
+      Expect(dm.allow_keep_prewarm, "demoted Green still allows prewarm");
+      MemoryBudgetSample soft{};
+      soft.private_mb = 1200.0;
+      soft.visual_rd = 5;
+      soft.baseline_keep_margin = 2;
+      const auto s = UMemoryBudgetController::Evaluate(soft, tune);
+      Expect(s.memory_pressure >= 1, "soft sample pressure ≥1");
+      Expect(s.max_effective_rd == 5,
+             "pressure max_effective_rd stays visual_rd");
+      Expect(!s.allow_keep_prewarm, "pressure disables keep prewarm");
+    }
     Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
                EnterVisualItemState::Done,
            "OpenSky≠Done: terminal_ready only for lit/true-dark");
