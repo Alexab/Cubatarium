@@ -413,54 +413,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
       const auto plan_t0 = Clock::now();
       LitApplyPlan plan = PlanColumnInstall(in);
-      // N04 H2: ticketed FullyDark remesh Dirty — GATED (audit S5 sole-owner).
+      // Audit16 S5: H2 ticketed FullyDark remesh Dirty deleted (sole-owner).
       // Census remesh FREEZE; MarkRelit RelightReplace remains Dirty owner.
-      constexpr bool kEnableH2FullyDarkDirty = false;
-      if (kEnableH2FullyDarkDirty)
-      {
-        const bool repair_progress = ColumnHasRepairProgress(key);
-        bool fully_dark_drawable = false;
-        for (const ColumnChunkSnapshot &snap : in.relit_chunks)
-        {
-          if (snap.fully_dark && snap.has_drawable)
-          {
-            fully_dark_drawable = true;
-            break;
-          }
-        }
-        ++PhysicsTelemetryData.MarkRelitH2AttemptN;
-        if (!in.has_repair_ticket)
-        {
-          ++PhysicsTelemetryData.MarkRelitH2FailNoTicketN;
-        }
-        else if (repair_progress)
-        {
-          ++PhysicsTelemetryData.MarkRelitH2FailProgressN;
-        }
-        if (ShouldRemeshTicketedFullyDarkStalled(in.has_repair_ticket,
-                                                repair_progress,
-                                                fully_dark_drawable,
-                                                focus_horiz))
-        {
-          ++PhysicsTelemetryData.MarkRelitH2FireN;
-          constexpr int kStalledRemeshCap = 4;
-          int remesh_n = 0;
-          for (const ColumnChunkSnapshot &snap : in.relit_chunks)
-          {
-            if (remesh_n >= kStalledRemeshCap)
-            {
-              break;
-            }
-            if (!snap.fully_dark || !snap.has_drawable || snap.is_dirty)
-            {
-              continue;
-            }
-            AppendUniqueCoord(plan.mark_dirty, snap.coord);
-            ++plan.schedule_n;
-            ++remesh_n;
-          }
-        }
-      }
       PhysicsTelemetryData.MarkRelitPlanMs += ElapsedMs(plan_t0, Clock::now());
       const bool focus_no_mesh_debt =
           PhysicsTelemetryData.ColumnLoadedNoMeshN > 0 ||
