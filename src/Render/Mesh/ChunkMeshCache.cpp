@@ -3949,7 +3949,7 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
     double budget = gpu_budget_ms;
     if (budget <= 0.0)
     {
-      budget = std::max(6.0, MeshEmergeTotalBudgetMs * adm.gpu_budget_frac);
+      budget = MeshEmergeTotalBudgetMs * adm.gpu_budget_frac;
     }
     if ((adm.mode == MeshWorkAdmission::Mode::Normal || EnterGpuQuiesceDrain) &&
         PendingGpuApplies.size() >= 24)
@@ -5772,7 +5772,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const MeshWorkAdmission &adm = WorkAdmission;
       const size_t pending_n = PendingGpuApplies.size();
       double gpu_budget =
-          std::max(6.0, MeshEmergeTotalBudgetMs * adm.gpu_budget_frac);
+          MeshEmergeTotalBudgetMs * adm.gpu_budget_frac;
       int gpu_max =
           std::max(3, std::max(max_drain_per_frame, max_schedule_per_frame));
       gpu_max = std::max(gpu_max, adm.gpu_apply_max);

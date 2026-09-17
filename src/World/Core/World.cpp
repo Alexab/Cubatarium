@@ -4509,12 +4509,13 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       ready_at_start);
   if (vb_no_ticket_n >= 20 && moving)
   {
-    slice_ms = std::max(slice_ms, 6.0);
+    // Audit16 S7: no independent 6ms floor — widen via throughput slice policy.
+    slice_ms = std::max(slice_ms, miss_reserved_ms > 0.0 ? miss_reserved_ms : slice_ms);
   }
   // G1: widen slice before earned_cap so cheap/backlog math sees repair debt.
   if (PhysicsTelemetryData.VisibleBlackFullyDarkRepairN >= 20)
   {
-    slice_ms = std::max(slice_ms, 6.0);
+    slice_ms = std::max(slice_ms, miss_reserved_ms > 0.0 ? miss_reserved_ms : slice_ms);
   }
   const int earned_cap_base = EarnedRelightApplyCap(
       relight_apply_cap, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
