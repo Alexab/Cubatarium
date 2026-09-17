@@ -959,13 +959,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
         world.EnqueueVoidDarkColumnRelightNote(col);
       }
     }
-    // N04 autopsy I3a: MarkRelit primary bands miss stalled (hit≈0) — remesh
-    // ticketed FullyDark stalled from Flow census (MarkDirty, not Priority).
-    {
-      constexpr int kStalledRemeshCap = 4;
-      world.RemeshTicketedFullyDarkStalledNearFocus(
-          focus_ground_horiz, kVisualStageLitDrawableHoriz, kStalledRemeshCap);
-    }
+    // Audit16 S5: Flow FullyDark census remesh demand removed (N04 FREEZE).
   }
 
   // Classic sticky/stale wave (thresholds + Sticky Note) when not in VB heal.
