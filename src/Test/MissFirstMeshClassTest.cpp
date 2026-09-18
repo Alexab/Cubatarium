@@ -2484,9 +2484,9 @@ int main()
       Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(true, true, true,
                                                                  false),
              "FullyDark P2: no GPU → no fake progress");
-      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(false, true, true,
-                                                                 true),
-             "FullyDark P2: no force_stale → no PreferKick override");
+      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(false, true, true,
+                                                                true),
+             "lit-drain: PreferKick FD drawable+GPU without force_stale");
     }
 
     using cutum::ComputeDualLaneSchedule;

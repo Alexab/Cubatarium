@@ -722,12 +722,16 @@ inline bool ShouldForceMarkRelitForTicketedStale(
 
 /// FullyDark FM fairness P2: PreferKick/RAA over plain remesh Dirty when
 /// ticketed FullyDark already has PendingGpu/RAA (sole MarkRelit owner).
+/// LitDrawable drain: also PreferKick when FD drawable has GPU/RAA pending
+/// even without force_stale (avoids Dirty thrash while Apply drains).
 /// NEVER arms N04 census remesh / MarkDirty×K from stalled count.
 inline bool ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
-    bool force_stale_ticket, bool fully_dark, bool has_drawable,
+    bool /*force_stale_ticket*/, bool fully_dark, bool has_drawable,
     bool pending_gpu_or_raa)
 {
-  return force_stale_ticket && fully_dark && has_drawable && pending_gpu_or_raa;
+  // LitDrawable drain: PreferKick whenever FD drawable already has GPU/RAA —
+  // force_stale no longer required (Dirty thrash under Apply drain).
+  return fully_dark && has_drawable && pending_gpu_or_raa;
 }
 
 /// N04 T2: remesh ticketed FullyDark when Flow ticket exists but ColumnHasRepairProgress

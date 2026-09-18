@@ -630,6 +630,12 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = holes ? 1 : 2;
     out.promote_relight = light_debt ? 4 : (holes ? 2 : 0);
+    // LitDrawable drain: PL/FD repair debt → more PromoteRelight under backlog.
+    if (in.pending_light_near >= 16 ||
+        in.visible_black_fully_dark_repair_n >= 20)
+    {
+      out.promote_relight = std::max(out.promote_relight, 6);
+    }
     // G2/H: moving holes FirstMesh headroom (was 2; G2→3; H→4 for rim miss_horiz).
     out.first_mesh_schedule = holes ? 4 : 1;
     out.remesh_schedule = holes ? 0 : 1;
@@ -651,6 +657,12 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = 1;
     out.promote_relight = light_debt ? 4 : 2;
+    // LitDrawable drain: raise PromoteRelight under PL≥16 / FD repair census.
+    if (in.pending_light_near >= 16 ||
+        in.visible_black_fully_dark_repair_n >= 20)
+    {
+      out.promote_relight = std::max(out.promote_relight, 6);
+    }
     // H/Era14: moving HoleDrain first_mesh 4→6 (best ARCH_D3_LAND near-GO p2c).
     out.first_mesh_schedule = 6;
     out.remesh_schedule = 1;
@@ -700,7 +712,7 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.admit_batch = 2;
     out.allow_neighbor_dirty = true;
     out.starve_remesh_horiz = 2;
-    out.promote_relight = in.pending_light_near >= 16 ? 2 : 0;
+    out.promote_relight = in.pending_light_near >= 16 ? 4 : 0;
     out.first_mesh_schedule = holes ? 2 : 3;
     out.remesh_schedule = 3;
     break;
