@@ -9,7 +9,7 @@ Gap-closure: B0→R1→S5→S2→S4→S6–S8→S9 on `cursor_audit3_impl` (2026
 
 | Gate | Owner step | Status |
 |---|---|---|
-| live/free allocation overlap = 0 | S1 `publication_audit` | code + CTest |
+| live/free allocation overlap = 0 | S1 `publication_audit` | **PASS** (generation ledger `28dfc64f`) |
 | empty Replace / Remove last material | S2 | code + CTest |
 | reorder bumps table identity | S2 | code + CTest |
 | packed excluded when MDI resident | S2 GeometryEngine | code |
@@ -273,3 +273,12 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 | generation Free ledger (allocationId+generation) | PASS (`28dfc64f`; `generation_ledger_rejects_stale_free=1`) |
 | AF cold/warm after generation | PASS / COVERED / PASS (`s1_p1_gen_{cold,warm}`; dual-lane OPEN) |
 | S1 absolute gate live/free overlap | **CLOSED** for this roadmap (full S2 typed Replace still OPEN) |
+
+### Follow-on 2026-09-18: LitDrawable relight drain (no N04)
+
+| Signal | Result |
+|---|---|
+| Apply floor PL≥16 cruise | PASS (`8d5c0df3`; AF `lit_drain_p0_cold` hard PASS; wall fly ~65) |
+| PreferKick + promote_relight under HoleDrain | PASS (`lit_drain_p1_{cold,warm}` hard PASS; dual-lane OPEN) |
+| N04 census remesh Dirty | **KEEP FREEZE** (not reopened) |
+| mid vs manual 204102 clnm/unlit | follow in operator / later matrix note |
