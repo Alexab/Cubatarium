@@ -282,3 +282,12 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 | PreferKick + promote_relight under HoleDrain | PASS (`lit_drain_p1_{cold,warm}` hard PASS; dual-lane OPEN) |
 | N04 census remesh Dirty | **KEEP FREEZE** (not reopened) |
 | mid vs manual 204102 clnm/unlit | follow in operator / later matrix note |
+
+### Follow-on 2026-09-18: underwater water walls (R06)
+
+| Signal | Result |
+|---|---|
+| fluid hide via shellBlocks under overlay AIR | PASS (`a68e04b4`; `FluidMeshFacesTest` water\|water !drawable → 0 walls) |
+| AF `water_seam_p0_cold` | PASS / COVERED / PASS |
+| sea-band seam remesh on first drawable | PASS (`water_seam_p1_{cold,warm}` hard PASS; sea-cy gate) |
+| operator underwater dive walls=0 | **UNTESTED** (R10 SoT; AF ≠ pixels) |
