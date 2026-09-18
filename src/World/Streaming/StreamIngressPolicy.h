@@ -225,6 +225,26 @@ inline bool ShouldShedPrefetchLateralForLitDebt(bool clamp_ingress_debt,
   return clamp_ingress_debt && !hard_defer_prefetch;
 }
 
+/// R08-lite / prior-lit: under lit-convergence ingress clamp, cap streamer
+/// MaxLoadOps so load+emerge do not stack on FIFO/FM debt. Underfeet KEEP
+/// (caller must skip this when underfeet_need / incomplete camera column).
+/// Cap=4 (not 2): AF stream_diet_p0_cold with cap=2 regressed eye blink.
+inline int LitConvergenceDebtLoadOpsCap()
+{
+  return 4;
+}
+
+inline int CapStreamerLoadOpsForLitConvergenceDebt(int load_ops,
+                                                   bool clamp_ingress_debt,
+                                                   bool underfeet_keep)
+{
+  if (!clamp_ingress_debt || underfeet_keep)
+  {
+    return load_ops;
+  }
+  return std::min(load_ops, LitConvergenceDebtLoadOpsCap());
+}
+
 /// Rim ahead converge P1: defer PrefetchAhead while FM consumer is hard-starved
 /// (schedule_ok==0) under RimIngress demand — not every under-floor tick
 /// (AF cold: soft <floor + sticky HoleDrain zeroed Prefetch/stream_loads).

@@ -4675,7 +4675,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         // stack. Red also clamps MaxLoadOps via pressure caps below.
         int load_ops = world.MaxLoadOpsPerFrame;
         if (frame_ms <= 20.0 && moving_fast && pressure.allow_fly_load_boost &&
-            !visual_holes && !underfeet_need)
+            !visual_holes && !underfeet_need && !clamp_lit_debt)
         {
           load_ops = procedural.MaxLoadOpsPerFrameBoost;
         }
@@ -4690,6 +4690,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         // (UE load-ahead — do not clamp to underfeet-only).
         load_ops =
             FrontierNearLoadOpsFloor(frontier_moving, true, load_ops);
+        // R08-lite: after frontier floor, cap under lit debt (underfeet KEEP).
+        load_ops = CapStreamerLoadOpsForLitConvergenceDebt(
+            load_ops, clamp_lit_debt,
+            underfeet_need || incomplete_camera_column);
         load_ops = ApplyPressureCap(load_ops, pressure.max_load_ops_cap);
         Streamer->SetMaxLoadOpsPerFrame(std::max(1, load_ops));
       }
