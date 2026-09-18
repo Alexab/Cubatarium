@@ -5182,11 +5182,10 @@ void UWorld::TickAsyncChunkSystems()
     drain_budget = std::max(drain_budget, moving ? 12 : 20);
     ++PhysicsTelemetryData.RelightApplyPlateauBoostN;
   }
-  // RateMatch R0: high-PL cruise floors Apply at 4 (pace DynamicCapture≤2),
-  // not Enter×64 + double Drain (manual 190534 hitch apply_n=12 / wall≈1s).
+  // RateMatch R0 / lit-drain: high-PL cruise floors Apply at 4 when PL≥16
+  // (thresh was >30; vb≤50 gate removed so mid LitDrawable PL debt still drains).
   const bool high_pl_cruise =
-      ShouldUseHighPlCruiseApplyFloor(moving, pending_light_focus_n) &&
-      vb_focus_n <= 50;
+      ShouldUseHighPlCruiseApplyFloor(moving, pending_light_focus_n);
   const int ready_for_floor =
       AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
   drain_budget = CruiseRelightApplyBudget(

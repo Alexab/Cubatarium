@@ -334,13 +334,13 @@ inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz,
   return miss_horiz <= kVisualStageNearFovHoriz;
 }
 
-/// Cold cruise high PL: use Apply floor matching Capture rate (not Enter×64).
-/// Thresh 30 matches TickAsyncChunkSystems pending_light_focus_n > 30.
+/// Cruise PL debt after ring clamp: Apply floor when pending_light≥16
+/// (was >30 Enter thresh — left PL∈[16,30] undrained under prior-lit hold).
 inline bool ShouldUseHighPlCruiseApplyFloor(bool moving,
                                             int pending_light_focus_n,
-                                            int enter_pl_thresh = 30)
+                                            int enter_pl_thresh = 16)
 {
-  return moving && pending_light_focus_n > enter_pl_thresh;
+  return moving && pending_light_focus_n >= enter_pl_thresh;
 }
 
 /// Floor so Apply can keep pace with DynamicCaptureMovingBgCap (≤2).

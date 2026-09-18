@@ -3028,10 +3028,12 @@ int main()
     using cutum::ShouldUseHighPlCruiseApplyFloor;
     using cutum::HighPlCruiseApplyFloorN;
     using cutum::ShouldStopRelightApplySlice;
+    Expect(ShouldUseHighPlCruiseApplyFloor(true, 16),
+           "R0: moving+PL>=16 → high-PL Apply floor");
     Expect(ShouldUseHighPlCruiseApplyFloor(true, 31),
-           "R0: moving+PL>30 → high-PL Apply floor");
-    Expect(!ShouldUseHighPlCruiseApplyFloor(true, 30),
-           "R0: PL==30 does not trigger");
+           "R0: moving+PL>30 still triggers Apply floor");
+    Expect(!ShouldUseHighPlCruiseApplyFloor(true, 15),
+           "R0: PL==15 does not trigger");
     Expect(!ShouldUseHighPlCruiseApplyFloor(false, 100),
            "R0: idle never uses high-PL floor");
     Expect(HighPlCruiseApplyFloorN() == 4, "R0: floor N=4");
