@@ -291,3 +291,12 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 | AF `water_seam_p0_cold` | PASS / COVERED / PASS |
 | sea-band seam remesh on first drawable | PASS (`water_seam_p1_{cold,warm}` hard PASS; sea-cy gate) |
 | operator underwater dive walls=0 | **UNTESTED** (R10 SoT; AF ≠ pixels) |
+
+### Follow-on 2026-09-18: R09 frame GPU timers (S3 telem slice)
+
+| Signal | Result |
+|---|---|
+| per-frame kick/finish reset ownership | PASS (`7554fa58`; reset in `ConsumeGpuApplyBacklog`; Rebuild preserves when `skip_gpu_consume`) |
+| AF `r09_timer_p0_cold` | PASS / COVERED / PASS (dual-lane OPEN ok); wall fly med ~50; mesh_gpu_kick/finish med tiny (not multi-second accumulate) |
+| aggregation note | kick/finish/async_drain are **per-frame Consume ownership**; do not sum across Rebuild skip frames or treat last-frame ms as wall-stage proof (audit R09) |
+| geometric oracle / eye-proxy fail-closed | **OUT OF SCOPE** this epic (S3§4–7) |
