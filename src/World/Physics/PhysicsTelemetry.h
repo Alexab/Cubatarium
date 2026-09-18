@@ -61,6 +61,8 @@ struct PhysicsTelemetry
   uint64_t MeshApplyDropNoActive{0};
   /// Era15 TD-049: CPU replace published before FreeChunk when GPU-only drawable.
   uint64_t MeshReplaceHoleAvoided{0};
+  /// Prior-lit hold: dark commit retained prior (not Completed publish).
+  uint64_t PriorLitHoldN{0};
   /// Deferred GPU mesh applies waiting for ProcessPendingGpuMeshes.
   int PendingGpuAppliesN{0};
   /// Queued phase only (not yet Kick).

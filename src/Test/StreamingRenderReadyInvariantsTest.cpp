@@ -98,6 +98,11 @@ int main()
   // so place Immediate must commit (manual 184035 undrawn).
   Expect(!ShouldRejectDarkMeshCommit(true, false, /*had_lit_mesh=*/false),
          "empty SoftDefer placeholder Immediate dark commit allowed");
+  using cutum::ShouldRetainPriorLitOverUnlitCandidate;
+  Expect(ShouldRetainPriorLitOverUnlitCandidate(true, false, true),
+         "invariants: retain prior lit over dark");
+  Expect(!ShouldRetainPriorLitOverUnlitCandidate(false, false, true),
+         "invariants: no prior → no retain");
   Expect(!ShouldMarkDirtyAfterDarkSoftDeferReject(/*remesh_after=*/false,
                                                   /*had_mesh=*/true),
          "Era32: SoftDefer reject + had_mesh → no Dirty storm");

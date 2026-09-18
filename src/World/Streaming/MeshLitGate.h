@@ -48,6 +48,31 @@ inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
   return !may_mesh_outside_focus;
 }
 
+/// Prior-lit hold: never let an unlit/FullyDark candidate become sole image
+/// when a lit CPU or live lit GPU predecessor exists (zero-in-frame / R05).
+inline bool ShouldRetainPriorLitOverUnlitCandidate(bool had_lit_mesh,
+                                                  bool had_live_lit_gpu,
+                                                  bool candidate_dark_or_unlit)
+{
+  if (!candidate_dark_or_unlit)
+  {
+    return false;
+  }
+  return had_lit_mesh || had_live_lit_gpu;
+}
+
+/// SoftDefer intentional empty must not erase / replace live lit GPU.
+inline bool ShouldAvoidEmptyPublishOverPriorLit(bool had_live_lit_gpu,
+                                               bool had_lit_mesh,
+                                               bool had_gpu_resident)
+{
+  if (had_live_lit_gpu)
+  {
+    return true;
+  }
+  return had_gpu_resident && had_lit_mesh;
+}
+
 /// Reject committing a mesh that has fully-dark faces when light is still
 /// pending, or when it would replace an already-lit mesh (dig/async race).
 /// Also reject dark over a live lit GPU SSBO (PendingReplace / SoftDefer empty
@@ -66,7 +91,8 @@ inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
   {
     return true;
   }
-  return had_lit_mesh || had_live_lit_gpu;
+  return ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
+                                               true);
 }
 
 /// After keeping lit SSBO under dark CPU replace: do not PreferKick a pending

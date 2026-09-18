@@ -937,6 +937,11 @@ uint64_t UWorldMeshService::GetMeshReplaceHoleAvoidedCount() const
   return Cache.GetMeshReplaceHoleAvoidedCount();
 }
 
+uint64_t UWorldMeshService::GetPriorLitHoldCount() const
+{
+  return Cache.GetPriorLitHoldCount();
+}
+
 uint64_t UWorldMeshService::GetSoftDeferEmptyPublishAvoidedCount() const
 {
   return Cache.GetSoftDeferEmptyPublishAvoidedCount();

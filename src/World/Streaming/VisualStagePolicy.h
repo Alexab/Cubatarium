@@ -62,19 +62,19 @@ inline bool ShouldPublishMeshToDraw(bool lit_drawable, bool keep_prior_gpu_live,
 
 /// Era32 I-L1 / Phase 5.7R5: hide fully-dark drawable in LitDrawable ring until
 /// lit binds. pending_replace_lit ignored historically (black-plug flicker).
-/// Phase 5.7R5: under Relight starve keep published/GPU until lit bind
-/// (170947: far drawable → near hole while fifo~40 Apply~0).
+/// Prior-lit hold: Relight starve may keep only a *prior lit* GPU (anti remesh
+/// hole). First FullyDark plug still hides (zero-in-frame / manual 183457).
 inline bool ShouldHideFullyDarkUntilLitInRing(
     int horiz, bool fully_dark, bool pending_replace_lit,
     int ring = kVisualStageLitDrawableHoriz, bool relight_starve = false,
-    bool has_published_or_live_gpu = false)
+    bool prior_lit_gpu_keep = false)
 {
   (void)pending_replace_lit;
   if (horiz > ring || !fully_dark)
   {
     return false;
   }
-  if (relight_starve && has_published_or_live_gpu)
+  if (relight_starve && prior_lit_gpu_keep)
   {
     return false;
   }

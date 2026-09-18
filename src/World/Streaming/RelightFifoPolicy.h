@@ -919,14 +919,19 @@ inline int ClampCaptureBgAfterSimKill(int bg_cap, bool sim_hot, int completed_n,
   return bg_cap < 1 ? bg_cap : 1;
 }
 
-/// Keep live GPU draw even if FullyDark face flag is set. CheapRemesh C5:
-/// repair ticket optional — already-published LitDrawable slot stays opaque
-/// (anti blink hide↔show). Horiz still gated to LitDrawable ring.
+/// Keep live GPU draw when it is still lit (prior-lit hold). FullyDark live
+/// plugs hide in LitDrawable ring (zero-in-frame) — do not keep black opaque.
+/// Horiz still gated to protect / LitDrawable ring.
 inline bool ShouldKeepLiveGpuOpaqueDespiteFullyDark(
     bool has_live_gpu_draw, int horiz, bool has_repair_progress,
-    int keep_horiz = RelightFifoTrimProtectHoriz())
+    int keep_horiz = RelightFifoTrimProtectHoriz(),
+    bool live_gpu_fully_dark = false)
 {
   (void)has_repair_progress;
+  if (live_gpu_fully_dark)
+  {
+    return false;
+  }
   return has_live_gpu_draw && horiz >= 0 && horiz <= keep_horiz;
 }
 
@@ -946,7 +951,10 @@ inline bool ShouldHideFullyDarkOverLiveGpu(
   {
     return false;
   }
-  if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(has_live_gpu_draw, horiz, false))
+  // fully_dark=true ⇒ live GPU is the unlit plug — do not keep opaque.
+  if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(has_live_gpu_draw, horiz, false,
+                                              RelightFifoTrimProtectHoriz(),
+                                              /*live_gpu_fully_dark=*/true))
   {
     return false;
   }

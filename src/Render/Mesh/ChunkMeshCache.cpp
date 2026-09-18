@@ -3785,6 +3785,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     {
       GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
     }
+    if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
+                                              true))
+    {
+      ++PriorLitHoldN;
+    }
     const bool remesh_after = RemeshAfterApply.erase(coord) > 0;
     if (!had_mesh && OnLitPendingNeeded)
     {
@@ -4913,6 +4918,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                                  had_lit_mesh, had_live_lit_gpu))
   {
     // Keep prior lit mesh (or hole). MarkRelit owns requeue when SoftDefer+had_mesh.
+    if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
+                                              true))
+    {
+      ++PriorLitHoldN;
+    }
     const bool remesh_after = RemeshAfterApply.erase(result.coord) > 0;
     if (ShouldMarkDirtyAfterDarkSoftDeferReject(remesh_after, had_mesh))
     {
@@ -4947,6 +4957,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     if (EnterLitQuiesce && !defer_until_lit)
     {
+      if (ShouldAvoidEmptyPublishOverPriorLit(had_live_lit_gpu, had_lit_mesh,
+                                             had_gpu_resident))
+      {
+        NoteSoftDeferEmptyPublishAvoided(result.coord);
+        ++MeshReplaceHoleAvoided;
+        ++PriorLitHoldN;
+        return;
+      }
       SoftDeferHeld.erase(result.coord);
       // fall through — publish intentional empty after SoftDefer lift
     }
@@ -4966,6 +4984,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     // (HasMeshSatisfyingColumnReady). SoftDefer still ON → one Dirty (SRBR-P0.2).
     if (EnterLitQuiesce && !defer_until_lit)
     {
+      if (ShouldAvoidEmptyPublishOverPriorLit(had_live_lit_gpu, had_lit_mesh,
+                                             had_gpu_resident))
+      {
+        NoteSoftDeferEmptyPublishAvoided(result.coord);
+        ++MeshReplaceHoleAvoided;
+        ++PriorLitHoldN;
+        return;
+      }
       SoftDeferHeld.erase(result.coord);
       RemeshAfterApply.erase(result.coord);
       // fall through to publish / intentional empty
@@ -7118,6 +7144,11 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
                                    had_lit_mesh, had_live_lit_gpu))
     {
       // SoftDefer+had_mesh: wait MarkRelit (no Dirty thrash — manual 195432).
+      if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
+                                                true))
+      {
+        ++PriorLitHoldN;
+      }
       if (ShouldMarkDirtyAfterDarkSoftDeferReject(/*remesh_after_apply=*/false,
                                                  had_mesh))
       {
@@ -7147,6 +7178,14 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     {
       if (EnterLitQuiesce && !defer_until_lit)
       {
+        if (ShouldAvoidEmptyPublishOverPriorLit(had_live_lit_gpu, had_lit_mesh,
+                                               had_gpu_resident))
+        {
+          NoteSoftDeferEmptyPublishAvoided(chunkCoord);
+          ++MeshReplaceHoleAvoided;
+          ++PriorLitHoldN;
+          return;
+        }
         SoftDeferHeld.erase(chunkCoord);
         // fall through — publish intentional empty after SoftDefer lift
       }
@@ -7163,6 +7202,14 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     {
       if (EnterLitQuiesce && !defer_until_lit)
       {
+        if (ShouldAvoidEmptyPublishOverPriorLit(had_live_lit_gpu, had_lit_mesh,
+                                               had_gpu_resident))
+        {
+          NoteSoftDeferEmptyPublishAvoided(chunkCoord);
+          ++MeshReplaceHoleAvoided;
+          ++PriorLitHoldN;
+          return;
+        }
         SoftDeferHeld.erase(chunkCoord);
         RemeshAfterApply.erase(chunkCoord);
         // fall through to publish intentional empty

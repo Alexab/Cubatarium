@@ -1918,8 +1918,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     return memo(true);
   }
-  // ColdFix P3 / CheapRemesh C5: LitDrawable keep live GPU opaque while
-  // FullyDark — repair ticket optional (anti blink hide↔show).
+  // ColdFix P3: keep live lit GPU opaque. FullyDark live plugs do not keep
+  // (prior-lit hold / zero-in-frame) — fall through to Satisfying hide.
   if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord))
   {
     const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
@@ -1927,8 +1927,11 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     const int horiz =
         std::max(std::abs(chunk_coord.x - focus_chunk.x),
                  std::abs(chunk_coord.z - focus_chunk.z));
-    if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, horiz,
-                                                /*has_repair_progress=*/false))
+    const bool live_fd =
+        MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord);
+    if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(
+            true, horiz, /*has_repair_progress=*/false,
+            RelightFifoTrimProtectHoriz(), live_fd))
     {
       return memo(true);
     }
@@ -1950,25 +1953,17 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     {
       return memo(true);
     }
-    // LitRing: FullyDark in LitDrawable/underfeet → hole until lit drawable.
-    // Cave true-dark only via OpenSky settle.
+    // LitRing: FullyDark in LitDrawable → hole until lit or true-dark.
+    // Prior-lit hold: no Unlit FD Satisfying publish (183457).
     const bool fully_dark =
         MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord) &&
         !MeshService->ChunkHasLitDrawableFace(chunk_coord);
     if (fully_dark)
     {
-      if (!ShouldHideFullyDarkOverLiveGpu(
-              MeshService->GetCache().HasLiveGpuDraw(chunk_coord), horiz, true))
-      {
-        return memo(true);
-      }
-      const bool relight_starve = RelightHideStarveActive(
-          PhysicsTelemetryData.RelightFifoN,
-          PhysicsTelemetryData.RelightApplyNPrev);
-      // Satisfying path ⇒ published mesh; keep under Relight starve.
-      if (ShouldHideFullyDarkUntilLitInRing(
-              horiz, true, pending, kVisualStageLitDrawableHoriz, relight_starve,
-              /*has_published_or_live_gpu=*/true))
+      const bool lit_drawable = false;
+      const bool keep_prior_lit_gpu = false;
+      if (!ShouldPublishMeshToDraw(lit_drawable, keep_prior_lit_gpu,
+                                   /*unlit_preview=*/false))
       {
         const bool stale =
             MeshService->ChunkHasStaleDarkFaces(chunk_coord, BlockWorld);

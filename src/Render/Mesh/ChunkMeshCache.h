@@ -290,6 +290,7 @@ public:
   {
     return MeshReplaceHoleAvoided;
   }
+  uint64_t GetPriorLitHoldCount() const { return PriorLitHoldN; }
   /// Era46: RAA commit → MarkDirty vs PreferKick telemetry.
   uint64_t GetRaaCommitMarkDirtyCount() const { return RaaCommitMarkDirtyN; }
   uint64_t GetMarkDirtyToRaaCount() const { return MarkDirtyToRaaN; }
@@ -1061,6 +1062,8 @@ private:
   uint64_t MeshApplySupersededCount{0};
   uint64_t MeshApplyDropNoActiveCount{0};
   uint64_t MeshReplaceHoleAvoided{0};
+  /// Prior-lit hold: dark/unlit commit rejected because lit prior exists (R05).
+  uint64_t PriorLitHoldN{0};
   /// Era46: RemeshAfterApply erase → MarkDirtyPriority (not PreferKick).
   uint64_t RaaCommitMarkDirtyN{0};
   /// Era46: MarkDirty*/Active → RemeshAfterApply insert.
