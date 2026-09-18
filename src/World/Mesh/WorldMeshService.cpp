@@ -85,6 +85,12 @@ void UWorldMeshService::SetOnLitDrawableCommittedFn(
   Cache.SetOnLitDrawableCommittedFn(std::move(fn));
 }
 
+void UWorldMeshService::SetOnFirstDrawableCoverageFn(
+    std::function<void(glm::ivec3)> fn)
+{
+  Cache.SetOnFirstDrawableCoverageFn(std::move(fn));
+}
+
 void UWorldMeshService::SetOnMeshColumnDirtyFn(
     std::function<void(glm::ivec3)> fn)
 {

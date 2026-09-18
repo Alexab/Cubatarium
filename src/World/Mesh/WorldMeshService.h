@@ -62,6 +62,7 @@ public:
   void SetOnLitPendingNeededFn(std::function<void(glm::ivec3)> fn);
   void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn);
   void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn);
+  void SetOnFirstDrawableCoverageFn(std::function<void(glm::ivec3)> fn);
   /// Cruise wall P3: MarkDirty / MarkDirtyPriority notify unfinished cache.
   void SetOnMeshColumnDirtyFn(std::function<void(glm::ivec3)> fn);
   /// P1: debug ownership — log MarkDirtyPriority outside ColumnFlow Contains.

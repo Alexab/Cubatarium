@@ -524,6 +524,40 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
           }
         });
+    // R06: when coverage publishes, remesh face-neighbors in sea band so
+    // overlay water walls rebuild without stamp thrash (drawable ∉ stamp).
+    mesh_service.SetOnFirstDrawableCoverageFn(
+        [this](glm::ivec3 chunk_coord)
+        {
+          UWorld *world_ptr = SoftDeferPolicy.world;
+          if (!world_ptr)
+          {
+            return;
+          }
+          UWorld &world_ref = *world_ptr;
+          const ProceduralSettings &settings = world_ref.GetProceduralSettings();
+          const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
+          // Only sea-band columns — avoid remesh thrash / eye blink inland.
+          if (std::abs(chunk_coord.y - sea_cy) > 2)
+          {
+            return;
+          }
+          UWorldMeshService &mesh = world_ref.GetMeshService();
+          const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+          const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+          static const glm::ivec3 kFaceNb[4] = {
+              {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+          for (const glm::ivec3 &d : kFaceNb)
+          {
+            const glm::ivec3 n = chunk_coord + d;
+            if (!mesh.HasDrawableGreedyMesh(n))
+            {
+              continue;
+            }
+            mesh.MarkTerrainChunkMeshDirtySeamed(
+                glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, true);
+          }
+        });
     mesh_service.SetOnMeshColumnDirtyFn(
         [this](glm::ivec3 chunk_coord)
         {

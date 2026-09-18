@@ -643,6 +643,12 @@ public:
   {
     OnLitDrawableCommitted = std::move(fn);
   }
+  /// R06 seam: first published drawable coverage → remesh face neighbors
+  /// (clears overlay water walls without stamp thrash).
+  void SetOnFirstDrawableCoverageFn(std::function<void(glm::ivec3)> fn)
+  {
+    OnFirstDrawableCoverage = std::move(fn);
+  }
   /// Audit S2: packed bind must drop MDI/pool resident for the same coord.
   void SetOnPackedRepresentationSwitchFn(std::function<void(glm::ivec3)> fn)
   {
@@ -1186,6 +1192,7 @@ private:
   std::function<void(glm::ivec3)> OnLitPendingNeeded;
   std::function<void(glm::ivec3)> OnSoftDeferHeld;
   std::function<void(glm::ivec3)> OnLitDrawableCommitted;
+  std::function<void(glm::ivec3)> OnFirstDrawableCoverage;
   std::function<void(glm::ivec3)> OnPackedRepresentationSwitch;
   // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
   mutable uint64_t HoleQueryEpoch{0};

@@ -3834,6 +3834,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
+  // R06: first drawable coverage clears neighbor overlay — remesh seam peers.
+  if (!had_mesh && OnFirstDrawableCoverage)
+  {
+    OnFirstDrawableCoverage(coord);
+  }
   // Era49: lit GPU outcome clears StickyRemesh work-set (ready ≠ schedule).
   if (!gpu_result.hasFullyDarkFace && OnLitDrawableCommitted)
   {
@@ -5179,6 +5184,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
+  if (!had_mesh && OnFirstDrawableCoverage)
+  {
+    OnFirstDrawableCoverage(result.coord);
+  }
   // Era49: lit CPU mesh outcome clears StickyRemesh work-set.
   if (!new_dark && OnLitDrawableCommitted)
   {
