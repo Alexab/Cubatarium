@@ -3917,6 +3917,10 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
                                            int max_drain, int gpu_max,
                                            double gpu_budget_ms)
 {
+  // R09: per-frame kick/finish ownership starts here (before Rebuild).
+  LastMeshGpuKickMs = 0.0;
+  LastMeshGpuFinishMs = 0.0;
+  LastMeshAsyncDrainMs = 0.0;
   LastGpuKickN = 0;
   LastGpuKickDebtForcedN = 0;
   LastGpuKickDeferReason_.clear();
@@ -5294,12 +5298,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyGpuN = 0;
   LastMeshDirtySyncMs = 0.0;
   LastMeshDirtySyncN = 0;
-  // Keep last kick/finish ms across skip_gpu_consume frames (audit N03/D3).
-  // Audit R09: timers must not accumulate across frames when coordinator
-  // rebuilds with skip_gpu_consume=true — reset every Rebuild entry.
-  LastMeshGpuKickMs = 0.0;
-  LastMeshGpuFinishMs = 0.0;
-  LastMeshAsyncDrainMs = 0.0;
+  // F0 drain-first: ConsumeGpuApplyBacklog owns Kick/Finish before Rebuild.
+  // R09: when skip_gpu_consume, preserve Consume's per-frame kick/finish ms —
+  // do not wipe them at Rebuild entry (was accumulating across frames when
+  // reset lived only on the !skip path, then moved to always-reset wrongly).
+  if (!skip_gpu_consume)
+  {
+    LastMeshGpuKickMs = 0.0;
+    LastMeshGpuFinishMs = 0.0;
+    LastMeshAsyncDrainMs = 0.0;
+  }
   LastMeshCaptureStoreHitN = 0;
   LastMeshCaptureStoreMissN = 0;
   LastMeshPendingCaptureN_ = 0;
