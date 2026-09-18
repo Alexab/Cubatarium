@@ -160,6 +160,30 @@ v2 hard-starve + ceiling+2; v3 drop dirty_fm-only drip.
 Verdict: epic **landed + AF adequacy PASS**; mid streamer diet partial on AF;
 ahead-black / fog thrash remain operator gates. AF ≠ CLOSED. Not merge_green.
 
+### Follow-on 2026-09-18: FullyDark FM fairness (post manual 152744)
+
+Manual [`perf_20260918-152744_59252.jsonl`](bin/logs/perf_20260918-152744_59252.jsonl):
+ticketed FullyDark / stale VL (`ok_fm=0`, `skip_snapshot~68`, stalled~55) while rim-ahead
+streamer KEEP. Code: `ShouldStopRemeshSnapshotForFmResidual` (frac **0.65** after AF
+calibrate); `ShouldYieldRemeshSlotToFmUnderProtect`; PreferKick-over-Dirty on
+ticketed FullyDark with PendingGpu/RAA (no N04 census Dirty).
+
+AF: v1 frac0.5 discarded (mid wall~181); **v2** frac0.65 gate-of-record.
+
+| Signal | Result |
+|---|---|
+| unit P0–P2 predicates | PASS (`miss_first_mesh_class_test`) |
+| AF cold adequacy / west / eye | PASS / COVERED / PASS (`fd_fm_fair_v2_cold`) |
+| AF warm adequacy / west / eye | PASS / COVERED / PASS (`fd_fm_fair_v2_warm`) |
+| AF dual-lane | **OPEN** (cold stalled ~62 / warm ~56) |
+| mid `ok_fm` / `skip_snapshot` | **1** / **0** (vs manual 0 / ~68) |
+| AF cold wall med / mid | **~88** / **~84** |
+| AF warm wall med / mid | **~82** / **~82** |
+| manual fog-ON vs 152744 | **UNTESTED** (operator required) |
+
+Verdict: FM snapshot fairness **landed**; ticketed FullyDark image convergence still
+OPEN (stalled~56–66). AF ≠ CLOSED. Not merge_green.
+
 ## KEEP
 
 N01 incomplete=0, LegalDark rollback, frustum N02, cooldown N06,
@@ -195,15 +219,18 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 - Rim ahead converge AF (gate of record **v3**): `rim_ahead_converge_v3_{cold,warm}` /
   `perf_20260918-140920_57732.jsonl` / `perf_20260918-141223_59232.jsonl`
   (v1/v2 discarded — soft Prefetch defer / dirty_fm drip)
+- Manual post-rim FullyDark unlit: `perf_20260918-152744_59252.jsonl`
+- FullyDark FM fairness AF (**v2**): `fd_fm_fair_v2_{cold,warm}` /
+  `perf_20260918-174932_43608.jsonl` / `perf_20260918-175226_63736.jsonl`
+  (v1 frac0.5 discarded — mid wall~181)
 
 ## Remaining blockers for true CLOSED
 
-1. Manual `operator_visual=PASS` on west mid **and** sea rim vs **103803**
-   (fog thrash=0; brief ahead black gone; mid dip ≪ peak~289; hop ≤16).
+1. Manual `operator_visual=PASS` on west mid **and** sea rim vs **152744**
+   (fog thrash=0; unlit/FullyDark blacks↓; wall mid class; hop ≤16).
 2. Wall-clock continuous soak 10–15 min (free-list/dirty/age non-linear).
-3. Dual-lane mid stalled ≤5 — **OPEN-with-cause** for merge (mid FullyDark stall ~53–61; separate epic; do not reopen N04 remesh caps). Optionally close later with a dedicated lane fix.
+3. Dual-lane mid stalled ≤5 — **OPEN-with-cause** for merge (mid FullyDark stall ~56–66 after FM fairness; separate epic; do not reopen N04 remesh caps).
 4. Optional: drop I3t after more Replace field soak (**KEEP** until then).
 5. Stop-segment rim plateau ≤2 (follow-on after R1; acceptance after operator).
-6. MissOwn VB / rim ahead: AF late VB still ~190–200; warm mid wall/streamer elevated —
-   coverage sticky narrow + MaxOutside drip landed but image/mid-FPS convergence OPEN.
+6. Ticketed FullyDark image convergence still OPEN despite `ok_fm≥1` / `skip_snapshot=0`.
 7. AF cold eye-proxy stale_visual Δ (rim_ahead v3) — follow-up, not greenwash.

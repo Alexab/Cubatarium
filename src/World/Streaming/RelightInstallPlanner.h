@@ -311,6 +311,18 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
     {
       continue;
     }
+    // FullyDark FM fairness P2: PreferKick existing GPU/RAA instead of new Dirty.
+    if (ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+            in.force_stale_ticket, chunk.fully_dark, chunk.has_drawable,
+            chunk.gpu_pending || chunk.raa_pending))
+    {
+      AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
+      if (chunk.raa_pending)
+      {
+        AppendUniqueCoord(plan.request_raa, chunk.coord);
+      }
+      continue;
+    }
     if (needs_remesh)
     {
       AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
@@ -434,6 +446,18 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
         ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket);
     if (!needs_remesh && chunk.has_drawable)
     {
+      continue;
+    }
+    // FullyDark FM fairness P2: PreferKick existing GPU/RAA instead of new Dirty.
+    if (ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+            in.force_stale_ticket, chunk.fully_dark, chunk.has_drawable,
+            chunk.gpu_pending || chunk.raa_pending))
+    {
+      AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
+      if (chunk.raa_pending)
+      {
+        AppendUniqueCoord(plan.request_raa, chunk.coord);
+      }
       continue;
     }
     if (in.priority_mesh && needs_remesh)

@@ -6291,6 +6291,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         return;
       }
+      // FullyDark FM fairness P0: leave snapshot residual for Pass1 FM when
+      // FirstMesh queue is starved (same Capture owner; no N04 caps).
+      const int dirty_fm_n = static_cast<int>(Dirty.GetFirstMeshCount());
+      const bool fm_starved =
+          IsFmConsumerStarved(dirty_fm_n, LastMeshDirtyScheduleOkFmN);
+      const double slice_budget_anchor = LastMeshSnapshotMs;
       for (auto it = Dirty.begin();
            it != Dirty.end() && scheduled < max_schedule_per_frame &&
            remesh_scheduled < remesh_cap;)
@@ -6301,6 +6307,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           continue;
         }
         if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
+        {
+          break;
+        }
+        const double remesh_slice_ms =
+            std::max(0.0, LastMeshSnapshotMs - slice_budget_anchor);
+        if (ShouldStopRemeshSnapshotForFmResidual(
+                fm_starved, dirty_fm_n, remesh_scheduled, remesh_cap,
+                remesh_slice_ms, kSnapshotBudgetMs))
         {
           break;
         }

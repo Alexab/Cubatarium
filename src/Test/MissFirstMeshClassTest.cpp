@@ -2439,6 +2439,37 @@ int main()
     Expect(ShouldReserveRemeshSnapshotSlice(true, 12, 76),
            "dual-lane: focus miss still reserves remesh snapshot when debt");
 
+    {
+      using cutum::ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark;
+      using cutum::ShouldStopRemeshSnapshotForFmResidual;
+      using cutum::ShouldYieldRemeshSlotToFmUnderProtect;
+      Expect(!ShouldStopRemeshSnapshotForFmResidual(false, 40, 1, 2, 3.0, 6.0),
+             "FullyDark P0: not starved → no stop");
+      Expect(!ShouldStopRemeshSnapshotForFmResidual(true, 40, 0, 2, 3.0, 6.0),
+             "FullyDark P0: allow first remesh");
+      Expect(!ShouldStopRemeshSnapshotForFmResidual(true, 40, 1, 2, 3.0, 6.0),
+             "FullyDark P0: under 65% budget continue");
+      Expect(ShouldStopRemeshSnapshotForFmResidual(true, 40, 1, 2, 4.0, 6.0),
+             "FullyDark P0: 65% budget stop");
+      Expect(ShouldStopRemeshSnapshotForFmResidual(true, 40, 2, 2, 1.0, 6.0),
+             "FullyDark P0: remesh_cap hit");
+      Expect(ShouldYieldRemeshSlotToFmUnderProtect(true, 40, 0, 2, 0),
+             "FullyDark P1: yield remesh to FM when starved");
+      Expect(!ShouldYieldRemeshSlotToFmUnderProtect(true, 40, 4, 2, 1),
+             "FullyDark P1: FM progressing → no yield");
+      Expect(!ShouldYieldRemeshSlotToFmUnderProtect(false, 40, 0, 2, 0),
+             "FullyDark P1: no protect → no yield");
+      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(true, true, true,
+                                                                true),
+             "FullyDark P2: PreferKick when GPU/RAA pending");
+      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(true, true, true,
+                                                                 false),
+             "FullyDark P2: no GPU → no fake progress");
+      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(false, true, true,
+                                                                 true),
+             "FullyDark P2: no force_stale → no PreferKick override");
+    }
+
     using cutum::ComputeDualLaneSchedule;
     using cutum::DualLaneScheduleInput;
     using cutum::DualLaneStarveReason;

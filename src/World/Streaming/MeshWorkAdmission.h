@@ -262,6 +262,56 @@ inline bool ShouldReserveRemeshSnapshotSlice(bool holes, int remesh_q_n,
   return holes && remesh_q_n > 0 && stale_or_fully_dark_debt >= debt_thresh;
 }
 
+/// FullyDark FM fairness P0: when FM queue is starved, remesh snapshot must not
+/// consume the whole MeshSnapshotBudget (leave residual for Pass1 FM).
+/// Does NOT disable remesh slice; does NOT change admission remesh caps / N04.
+inline bool ShouldStopRemeshSnapshotForFmResidual(
+    bool fm_consumer_starved, int dirty_fm_n, int remesh_scheduled,
+    int remesh_cap, double remesh_slice_ms, double snapshot_budget_ms,
+    double remesh_budget_frac = 0.65)
+{
+  if (!fm_consumer_starved || dirty_fm_n <= 0 || snapshot_budget_ms <= 0.0)
+  {
+    return false;
+  }
+  if (remesh_scheduled <= 0)
+  {
+    return false; // allow at least one remesh attempt when cap>0
+  }
+  if (remesh_cap > 0 && remesh_scheduled >= remesh_cap)
+  {
+    return true;
+  }
+  return remesh_slice_ms >= snapshot_budget_ms * remesh_budget_frac;
+}
+
+/// FullyDark FM fairness P1: under protect remesh floor, never publish
+/// remesh-only schedule while FM consumer is starved. Same admission owner.
+inline bool ShouldYieldRemeshSlotToFmUnderProtect(bool protect_lit_settle,
+                                                  int dirty_fm_n,
+                                                  int prior_schedule_ok_n,
+                                                  int remesh_schedule,
+                                                  int first_mesh_schedule)
+{
+  if (!protect_lit_settle || dirty_fm_n <= 0)
+  {
+    return false;
+  }
+  if (!IsFmConsumerStarved(dirty_fm_n, prior_schedule_ok_n))
+  {
+    return false;
+  }
+  if (first_mesh_schedule <= 0 && remesh_schedule >= 2)
+  {
+    return true;
+  }
+  if (first_mesh_schedule < 1 && remesh_schedule >= 1)
+  {
+    return true;
+  }
+  return false;
+}
+
 /// Dual-lane schedule split (A10/A11): FirstMesh + RemeshLit lane quotas from one
 /// admission decision. Order is fixed (remesh snapshot before FM); focus miss must
 /// never flip order. Quotas ≠ Capture/Apply/MarkRelit floors.
@@ -1100,6 +1150,24 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     out.protect_lit_settle_remesh = true;
     out.remesh_schedule = std::max(out.remesh_schedule, 2);
+    out.max_schedule =
+        std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
+  }
+  // FullyDark FM fairness P1: under protect, keep FM residual when prior ok_fm
+  // was starved (same admission owner; remesh floor stays ≥1 if remesh_q>0).
+  if (ShouldYieldRemeshSlotToFmUnderProtect(
+          out.protect_lit_settle_remesh, in.dirty_fm_n, in.mesh_schedule_ok_n,
+          out.remesh_schedule, out.first_mesh_schedule))
+  {
+    if (in.remesh_queue_n > 0)
+    {
+      out.remesh_schedule = std::max(1, out.remesh_schedule - 1);
+    }
+    else
+    {
+      out.remesh_schedule = 0;
+    }
+    out.first_mesh_schedule = std::max(out.first_mesh_schedule, 1);
     out.max_schedule =
         std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
   }
