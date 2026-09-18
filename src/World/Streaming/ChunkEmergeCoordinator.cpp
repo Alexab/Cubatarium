@@ -5450,7 +5450,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                         pt_rim.DirtyFmN);
       const bool rim_cruise_drip = ShouldDripOutsideFocusMeshOnRimCruise(
           moving, miss_h_rim, pt_rim.RimHolePressure > 0, stream_or_prefetch,
-          dirty_fm_rim);
+          dirty_fm_rim, pt_rim.MeshDirtyScheduleOkN);
       mesh_service.SetMaxOutsideFocusMeshPerFrame(
           (rim_mesh_debt || rim_cruise_drip) ? 1 : 0);
       // F3: prune remesh Dirty flood every HoleDrain frame (keep_h=1; 2 when deep RemeshQ).

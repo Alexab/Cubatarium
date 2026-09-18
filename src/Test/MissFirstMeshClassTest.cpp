@@ -1,4 +1,5 @@
 #include "World/Streaming/MeshWorkAdmission.h"
+#include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/SoftDeferFramePolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
@@ -517,9 +518,27 @@ int main()
          "Phase5.7R6: Apply idle alone is NOT starve");
   Expect(!RelightHideStarveActive(0, 2), "Phase5.7R6: healthy Apply not starve");
   Expect(!ShouldHideFullyDarkUntilLitInRing(3, true, false, 4, true, true),
-         "Phase5.7R6: fifo starve+published keeps FullyDark");
+         "prior-lit hold: starve+prior_lit keeps published lit path");
+  Expect(ShouldHideFullyDarkUntilLitInRing(3, true, false, 4, true, false),
+         "prior-lit hold: starve alone still hides first FullyDark plug");
   Expect(ShouldHideFullyDarkUntilLitInRing(3, true, false, 4, false, true),
          "Phase5.7R6: without fifo starve still hide FullyDark in ring");
+  using cutum::ShouldRetainPriorLitOverUnlitCandidate;
+  Expect(ShouldRetainPriorLitOverUnlitCandidate(true, false, true),
+         "prior-lit: retain over dark when had lit mesh");
+  Expect(ShouldRetainPriorLitOverUnlitCandidate(false, true, true),
+         "prior-lit: retain over dark when live lit GPU");
+  Expect(!ShouldRetainPriorLitOverUnlitCandidate(false, false, true),
+         "prior-lit: no retain without prior (cave first mesh)");
+  Expect(!ShouldRetainPriorLitOverUnlitCandidate(true, true, false),
+         "prior-lit: lit candidate not retained-as-unlit");
+  using cutum::ShouldAvoidEmptyPublishOverPriorLit;
+  Expect(ShouldAvoidEmptyPublishOverPriorLit(true, false, true),
+         "prior-lit: avoid empty over live lit GPU");
+  Expect(ShouldAvoidEmptyPublishOverPriorLit(false, true, true),
+         "prior-lit: avoid empty over lit mesh+gpu resident");
+  Expect(!ShouldAvoidEmptyPublishOverPriorLit(false, false, true),
+         "prior-lit: empty OK when no lit prior");
   using cutum::ShouldCarveFocusLitCompletion;
   Expect(ShouldCarveFocusLitCompletion(0, true, 2, false),
          "Phase5.7R6: carve focus miss when fifo drained");
@@ -3628,6 +3647,10 @@ int main()
              "Rim ahead P0: rim_hole drip");
       Expect(ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 2, 0),
              "Rim ahead P0: prefetch drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 2, 0, 0),
+             "prior-lit ring: no prefetch drip when schedule_ok=0");
+      Expect(ShouldDripOutsideFocusMeshOnRimCruise(true, 3, true, 2, 0, 0),
+             "prior-lit ring: rim_hole still drips under starve");
       Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 0, 4),
              "Rim ahead P0: dirty_fm alone no drip");
       Expect(!ShouldHoldHoleDrainForCoverageSticky(0, 0, 0),
@@ -3648,6 +3671,25 @@ int main()
              "Rim ahead P2: cruise ceiling capped by VisualRD");
       Expect(CruiseNearLoadRadiusCeiling(10, 6, 4) == 8,
              "Rim ahead P2: cruise ceiling follows focus+2");
+      using cutum::ShouldClampIngressForLitConvergenceDebt;
+      using cutum::ShouldShedPrefetchLateralForLitDebt;
+      Expect(ShouldClampIngressForLitConvergenceDebt(true, 3, 4, 0, 0, 4),
+             "prior-lit ring: hard FM starve clamps ingress");
+      Expect(!ShouldClampIngressForLitConvergenceDebt(true, 3, 4, 2, 0, 4),
+             "prior-lit ring: soft under-floor alone no clamp (AF v2)");
+      Expect(ShouldClampIngressForLitConvergenceDebt(true, 3, 0, 4, 16, 0),
+             "prior-lit ring: relight FIFO BP clamps ingress");
+      Expect(!ShouldClampIngressForLitConvergenceDebt(true, 3, 4, 4, 0, 4),
+             "prior-lit ring: healthy schedule no clamp");
+      Expect(!ShouldClampIngressForLitConvergenceDebt(false, 3, 4, 0, 20, 4),
+             "prior-lit ring: not HoleDrain no clamp");
+      // Soft debt shed: hard defer false + clamp from relight BP
+      Expect(ShouldShedPrefetchLateralForLitDebt(true, false),
+             "prior-lit ring: soft debt sheds lateral only");
+      Expect(!ShouldShedPrefetchLateralForLitDebt(true, true),
+             "prior-lit ring: hard defer is full Prefetch kill");
+      Expect(!ShouldShedPrefetchLateralForLitDebt(false, false),
+             "prior-lit ring: no debt no lateral shed");
     }
     Expect(ShouldConsumeTicketedVbStopDrain(false, 20, 6),
            "I15-B2: stop drain at focus 20 when vb_nt>=5");
@@ -3751,11 +3793,12 @@ int main()
     Expect(IsWitnessSwapGraceActive(grace, {1, 2}), "I18-D1: grace active");
   }
 
-  // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)
+  // CheapRemesh C5 / prior-lit: keep live *lit* GPU; FullyDark plugs hide.
   {
     using cutum::ShouldKeepLiveGpuOpaqueDespiteFullyDark;
+    using cutum::RelightFifoTrimProtectHoriz;
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, true),
-           "C5: underfeet+live → keep opaque");
+           "C5: underfeet+live lit → keep opaque");
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 3, true),
            "C5: LitDrawable nh=3 → keep");
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 4, true),
@@ -3767,14 +3810,18 @@ int main()
     Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 9, true),
            "P7: beyond protect ring → no keep");
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, false),
-           "C5: no repair progress still keep when live GPU");
+           "C5: no repair progress still keep when live lit GPU");
     Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(false, 0, true),
            "C5: no live GPU → no keep");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(
+               true, 4, true, RelightFifoTrimProtectHoriz(),
+               /*live_gpu_fully_dark=*/true),
+           "prior-lit: FullyDark live plug not kept opaque");
     using cutum::ShouldHideFullyDarkOverLiveGpu;
-    Expect(!ShouldHideFullyDarkOverLiveGpu(true, 4, true),
-           "P4: live GPU nh=4 not hidden");
-    Expect(!ShouldHideFullyDarkOverLiveGpu(true, 8, true),
-           "P7: live GPU nh=8 not hidden");
+    Expect(ShouldHideFullyDarkOverLiveGpu(true, 4, true),
+           "prior-lit: FullyDark live GPU hidden in ring");
+    Expect(ShouldHideFullyDarkOverLiveGpu(true, 8, true),
+           "prior-lit: FullyDark live GPU hidden in protect");
     Expect(ShouldHideFullyDarkOverLiveGpu(true, 9, true),
            "P7: beyond protect may hide FullyDark");
     Expect(ShouldHideFullyDarkOverLiveGpu(false, 2, true),

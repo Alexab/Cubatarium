@@ -138,6 +138,8 @@ public:
   /// Era25 I-F5: under frontier_pressure, prefer view-forward load-ahead
   /// (widen PrefetchAhead beyond NearLoad clamp; stronger view bias).
   void SetFrontierLoadAhead(bool enabled) { FrontierLoadAhead = enabled; }
+  /// Prior-lit ring: skip PrefetchAhead ±1 lateral under soft FM/relight debt.
+  void SetShedPrefetchLateral(bool enabled) { ShedPrefetchLateral = enabled; }
   void SetRingGateEnabled(bool enabled) { RingGateEnabled = enabled; }
   void SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_chunks,
                               bool urgent);
@@ -223,6 +225,7 @@ private:
   int CollisionUrgentRadius{0};
   glm::vec3 ViewForwardXz{0.0f, 0.0f, 1.0f};
   bool FrontierLoadAhead{false};
+  bool ShedPrefetchLateral{false};
   ChunkLoadPriorityParams PriorityParams;
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;

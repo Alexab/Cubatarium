@@ -2051,6 +2051,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshApplyDropNoActiveCount();
     world.PhysicsTelemetryData.MeshReplaceHoleAvoided =
         world.GetMeshService().GetMeshReplaceHoleAvoidedCount();
+    world.PhysicsTelemetryData.PriorLitHoldN =
+        world.GetMeshService().GetPriorLitHoldCount();
     world.PhysicsTelemetryData.RaaCommitMarkDirtyN =
         world.GetMeshService().GetCache().GetRaaCommitMarkDirtyCount();
     world.PhysicsTelemetryData.MarkDirtyToRaaN =
@@ -4079,7 +4081,26 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         else if (AdaptiveEffectiveRd < rd_ceiling && dirty < 48 &&
                  PhysMsEma < 28.0)
         {
-          next = std::min(rd_ceiling, AdaptiveEffectiveRd + 1);
+          // Prior-lit ring: no VisualRD expand under FM/relight debt.
+          const int miss_h_ad = world.PhysicsTelemetryData.MissHoriz;
+          const int dirty_fm_ad = world.PhysicsTelemetryData.DirtyFmN;
+          const int schedule_ok_ad =
+              world.PhysicsTelemetryData.MeshDirtyScheduleOkN;
+          const int adm_ad = world.PhysicsTelemetryData.MeshAdmissionMode;
+          const bool hole_drain_or_deep_ad =
+              adm_ad ==
+                  static_cast<int>(MeshWorkAdmission::Mode::HoleDrain) ||
+              adm_ad ==
+                  static_cast<int>(MeshWorkAdmission::Mode::DeepBacklog);
+          const int fm_floor_ad =
+              RimIngressFmScheduleFloor(true, miss_h_ad, dirty_fm_ad);
+          const bool clamp_rd = ShouldClampIngressForLitConvergenceDebt(
+              hole_drain_or_deep_ad, miss_h_ad, dirty_fm_ad, schedule_ok_ad,
+              world.PhysicsTelemetryData.RelightFifoN, fm_floor_ad);
+          if (!clamp_rd)
+          {
+            next = std::min(rd_ceiling, AdaptiveEffectiveRd + 1);
+          }
         }
         if (next != AdaptiveEffectiveRd)
         {
@@ -4614,6 +4635,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const bool defer_prefetch_fm = ShouldDeferPrefetchAheadForFmStarve(
             hole_drain_or_deep, miss_h_load, dirty_fm_load, schedule_ok_load,
             fm_floor_load);
+        const bool clamp_lit_debt = ShouldClampIngressForLitConvergenceDebt(
+            hole_drain_or_deep, miss_h_load, dirty_fm_load, schedule_ok_load,
+            world.PhysicsTelemetryData.RelightFifoN, fm_floor_load);
         if (underfeet_need)
         {
           int clamped = 2;
@@ -4634,8 +4658,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
               frontier_moving, true, clamped, focus_radius));
         }
-        else if (defer_prefetch_fm &&
-                 (near_water_load || rim_debt || rim_hole_load))
+        else if ((defer_prefetch_fm || clamp_lit_debt) &&
+                 (near_water_load || rim_debt || rim_hole_load ||
+                  clamp_lit_debt))
         {
           Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
               frontier_moving, true, lit_floor, focus_radius));
@@ -4735,6 +4760,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         ShouldDeferPrefetchAheadForFmStarve(hole_drain_or_deep_pf, miss_h_pf,
                                             dirty_fm_pf, schedule_ok_pf,
                                             fm_floor_pf);
+    const bool clamp_lit_debt_pf = ShouldClampIngressForLitConvergenceDebt(
+        hole_drain_or_deep_pf, miss_h_pf, dirty_fm_pf, schedule_ok_pf,
+        world.PhysicsTelemetryData.RelightFifoN, fm_floor_pf);
+    Streamer->SetShedPrefetchLateral(ShouldShedPrefetchLateralForLitDebt(
+        clamp_lit_debt_pf, defer_prefetch_fm));
     if (frame_ms <= 20.0 && pressure.allow_prefetch && ingress_debt_prefetch_ok &&
         !defer_prefetch_fm &&
         (((!visual_holes && !underfeet_need) || frontier_prefetch)))
@@ -4743,6 +4773,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                               procedural.MovementPrefetchThreshold,
                               &prefetch_visual_ops);
     }
+    Streamer->SetShedPrefetchLateral(false);
     int prefetch_keep_ops = 0;
     // Idle in a hole pocket: keep-shell used to wait until holes cleared, so
     // standing at 100 FPS never requested the missing ring.

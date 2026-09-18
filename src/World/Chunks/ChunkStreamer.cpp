@@ -905,7 +905,7 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
     const int cz = feet_ground.z +
                    static_cast<int>(std::round(az / static_cast<float>(CHUNK_SIZE)));
     try_queue(cx, cz);
-    if (step >= 2 && glm::length(right) > 0.01f)
+    if (step >= 2 && glm::length(right) > 0.01f && !ShedPrefetchLateral)
     {
       const float side = static_cast<float>(CHUNK_SIZE);
       const int cx_l =

@@ -162,11 +162,14 @@ inline int RimIngressFmScheduleFloor(bool moving, int miss_horiz, int dirty_fm_n
 /// NEVER arms coverage sticky; NEVER uses bare FocusMissing alone.
 /// dirty_fm alone omitted — AF v1/v2 showed permanent outside drip under
 /// HoleDrain raised mid wall without helping west coverage.
+/// Prior-lit ring: do not drip from stream/prefetch alone when schedule_ok==0
+/// (FM starved — ring clamp / manual 183457 lateral black).
 inline bool ShouldDripOutsideFocusMeshOnRimCruise(bool moving,
                                                    int nearest_miss_horiz,
                                                    bool rim_hole_pressure,
                                                    int stream_or_prefetch_ops,
-                                                   int /*dirty_fm_n*/)
+                                                   int /*dirty_fm_n*/,
+                                                   int schedule_ok_n = 1)
 {
   if (!moving)
   {
@@ -180,11 +183,46 @@ inline bool ShouldDripOutsideFocusMeshOnRimCruise(bool moving,
   {
     return true;
   }
-  if (stream_or_prefetch_ops > 0)
+  if (stream_or_prefetch_ops > 0 && schedule_ok_n > 0)
   {
     return true;
   }
   return false;
+}
+
+/// Prior-lit ring P1: clamp NearLoad/Prefetch/Adaptive while FM+relight cannot
+/// converge LitDrawable. Hard FM starve (schedule_ok==0) or relight FIFO BP.
+/// Soft under-floor omitted after AF v1 eye-proxy staleΔ regress.
+/// No FullyDark census / Dirty — ingress only.
+inline bool ShouldClampIngressForLitConvergenceDebt(
+    bool hole_drain_or_deep, int miss_horiz, int dirty_fm_n, int schedule_ok_n,
+    int relight_fifo_n, int fm_floor, int relight_bp = 16)
+{
+  (void)fm_floor;
+  if (!hole_drain_or_deep)
+  {
+    return false;
+  }
+  if (miss_horiz < 0 || miss_horiz > 4)
+  {
+    return false;
+  }
+  if (dirty_fm_n > 0 && schedule_ok_n <= 0)
+  {
+    return true;
+  }
+  if (relight_fifo_n >= relight_bp)
+  {
+    return true;
+  }
+  return false;
+}
+
+/// Soft debt: shed Prefetch lateral ±1 but keep center corridor (not full defer).
+inline bool ShouldShedPrefetchLateralForLitDebt(bool clamp_ingress_debt,
+                                                bool hard_defer_prefetch)
+{
+  return clamp_ingress_debt && !hard_defer_prefetch;
 }
 
 /// Rim ahead converge P1: defer PrefetchAhead while FM consumer is hard-starved
