@@ -164,6 +164,57 @@ inline bool ShouldSuppressFmAdmissionCarveOut(int unfinished_visual,
   return mesh_schedule_ok_n >= first_mesh_floor;
 }
 
+/// R08-lite: single HoleDrain→Warm emergency arm ledger (not dual remain
+/// writers). Prefer long FM-starvation arm; else short rim consumer drip.
+inline int ArmHoleDrainEmergencyCarveOutFrames(
+    int current_remain, bool holes_moving, bool fm_queue_empty,
+    bool schedule_starved, bool suppress_carve, bool rim_hole_pressure,
+    bool fm_consumer_starved, bool moving, int nearest_miss_horiz)
+{
+  if (holes_moving && fm_queue_empty && schedule_starved && !suppress_carve &&
+      !rim_hole_pressure)
+  {
+    return 90;
+  }
+  if (fm_consumer_starved && moving && nearest_miss_horiz >= 2 &&
+      nearest_miss_horiz <= 3 && current_remain < 4)
+  {
+    return 4;
+  }
+  return current_remain;
+}
+
+/// Apply the one Warm carve-out under HoleDrain (remain / reenter / stop-VB).
+inline bool TryApplyHoleDrainWarmCarveOut(bool mode_is_hole_drain,
+                                          int &admission_carve_remain,
+                                          int &hole_drain_reenter_cd,
+                                          bool stop_vb_block_carve,
+                                          bool rim_hole_pressure,
+                                          bool holes_moving,
+                                          bool missing_underfeet,
+                                          bool stop_vb_exit_armed)
+{
+  if (!mode_is_hole_drain || stop_vb_block_carve)
+  {
+    return false;
+  }
+  if (admission_carve_remain > 0 && !rim_hole_pressure)
+  {
+    --admission_carve_remain;
+    hole_drain_reenter_cd = 20;
+    return true;
+  }
+  if (hole_drain_reenter_cd > 0)
+  {
+    --hole_drain_reenter_cd;
+    if (holes_moving && !missing_underfeet && !rim_hole_pressure)
+    {
+      return true;
+    }
+  }
+  return stop_vb_exit_armed;
+}
+
 /// FM consumer starved: dirty queue has work but schedule under floor.
 inline bool IsFmConsumerStarved(int dirty_fm_n, int mesh_schedule_ok_n,
                                 int first_mesh_floor = 4)
@@ -827,22 +878,15 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool fm_starved = in.dirty_fm_n == 0;
   const bool fm_consumer_starved =
       IsFmConsumerStarved(in.dirty_fm_n, in.mesh_schedule_ok_n);
-  // I18-A3b: rim consumer-starved carve-out (nh 2–3 cruise).
-  if (fm_consumer_starved && in.moving && in.nearest_miss_horiz >= 2 &&
-      in.nearest_miss_horiz <= 3 && admission_carve_remain < 4)
-  {
-    admission_carve_remain = 4;
-  }
   const bool schedule_starved = in.mesh_schedule_ok_n == 0;
   const bool suppress_carve = ShouldSuppressFmAdmissionCarveOut(
       in.unfinished_visual, in.column_loaded_no_mesh_n,
       in.mesh_schedule_ok_n, in.dirty_fm_n);
-  // I8-A1: carve only when FM queue empty — consumer-starved must stay HoleDrain.
-  if (holes_moving && fm_starved && schedule_starved && !suppress_carve &&
-      !in.rim_hole_pressure)
-  {
-    admission_carve_remain = 90;
-  }
+  // R08-lite: one emergency arm ledger (FM starve OR rim consumer drip).
+  admission_carve_remain = ArmHoleDrainEmergencyCarveOutFrames(
+      admission_carve_remain, holes_moving, fm_starved, schedule_starved,
+      suppress_carve, in.rim_hole_pressure, fm_consumer_starved, in.moving,
+      in.nearest_miss_horiz);
   // HoleDrain exit: FM queue fed and schedule at floor — leave HoleDrain.
   static int hole_drain_fm_fed_frames = 0;
   if (in.dirty_fm_n > 0 &&
@@ -973,24 +1017,6 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool stop_vb_block_carve =
       !consume_mode && !in.moving && in.visible_black_focus_n > 20 &&
       in.visible_black_no_ticket_n > 0;
-  if (admission_carve_remain > 0 && mode == MeshWorkAdmission::Mode::HoleDrain &&
-      !stop_vb_block_carve && !in.rim_hole_pressure)
-  {
-    mode = MeshWorkAdmission::Mode::WarmBacklog;
-    --admission_carve_remain;
-    out.admission_carve_out = true;
-    hole_drain_reenter_cd = 20;
-  }
-  else if (hole_drain_reenter_cd > 0)
-  {
-    --hole_drain_reenter_cd;
-    if (holes_moving && !in.missing_underfeet && !in.rim_hole_pressure &&
-        mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_block_carve)
-    {
-      mode = MeshWorkAdmission::Mode::WarmBacklog;
-      out.admission_carve_out = true;
-    }
-  }
   // FP-E2: stop-phase VB drain — after 30s stand with VB orphans, exit HoleDrain.
   static int stop_vb_drain_frames = 0;
   if (!in.moving &&
@@ -1002,12 +1028,17 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     stop_vb_drain_frames = 0;
   }
-  if (!in.moving && stop_vb_drain_frames > 1800 &&
+  const bool stop_vb_exit_armed =
+      !in.moving && stop_vb_drain_frames > 1800 &&
       in.visible_black_focus_n > 0 &&
       mode == MeshWorkAdmission::Mode::HoleDrain &&
       ShouldExitStopVbHoleDrain(stop_vb_drain_frames,
                                 in.visible_black_no_ticket_n,
-                                in.visible_black_focus_n, consume_mode))
+                                in.visible_black_focus_n, consume_mode);
+  if (TryApplyHoleDrainWarmCarveOut(
+          mode == MeshWorkAdmission::Mode::HoleDrain, admission_carve_remain,
+          hole_drain_reenter_cd, stop_vb_block_carve, in.rim_hole_pressure,
+          holes_moving, in.missing_underfeet, stop_vb_exit_armed))
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     out.admission_carve_out = true;
