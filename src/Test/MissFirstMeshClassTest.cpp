@@ -3580,6 +3580,44 @@ int main()
       Expect(ShouldHoldHoleDrainForCoverageSticky(0, 0, 1),
              "MissOwn VB P0: PostLoadRingNotReady holds HoleDrain");
     }
+    {
+      using cutum::CruiseNearLoadRadiusCeiling;
+      using cutum::ShouldDeferPrefetchAheadForFmStarve;
+      using cutum::ShouldDripOutsideFocusMeshOnRimCruise;
+      using cutum::ShouldHoldHoleDrainForCoverageSticky;
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(false, 3, true, 1, 1),
+             "Rim ahead P0: idle no drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 1, true, 1, 1),
+             "Rim ahead P0: nh<2 no drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 5, true, 1, 1),
+             "Rim ahead P0: nh>4 no drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 0, 0),
+             "Rim ahead P0: no pressure no drip");
+      Expect(ShouldDripOutsideFocusMeshOnRimCruise(true, 3, true, 0, 0),
+             "Rim ahead P0: rim_hole drip");
+      Expect(ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 2, 0),
+             "Rim ahead P0: prefetch drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 0, 4),
+             "Rim ahead P0: dirty_fm alone no drip");
+      Expect(!ShouldHoldHoleDrainForCoverageSticky(0, 0, 0),
+             "Rim ahead P3: drip ≠ coverage sticky");
+      Expect(ShouldDeferPrefetchAheadForFmStarve(true, 3, 4, 0, 4),
+             "Rim ahead P1: hard-starved defer");
+      Expect(!ShouldDeferPrefetchAheadForFmStarve(true, 3, 4, 2, 4),
+             "Rim ahead P1: partial schedule keeps Prefetch");
+      Expect(!ShouldDeferPrefetchAheadForFmStarve(true, 3, 4, 4, 4),
+             "Rim ahead P1: fed ok");
+      Expect(!ShouldDeferPrefetchAheadForFmStarve(true, 3, 0, 0, 0),
+             "Rim ahead P1: no floor");
+      Expect(!ShouldDeferPrefetchAheadForFmStarve(false, 3, 4, 0, 4),
+             "Rim ahead P1: not HoleDrain");
+      Expect(CruiseNearLoadRadiusCeiling(8, 4, 4) == 6,
+             "Rim ahead P2: cruise ceiling focus/lit+2");
+      Expect(CruiseNearLoadRadiusCeiling(3, 4, 4) == 3,
+             "Rim ahead P2: cruise ceiling capped by VisualRD");
+      Expect(CruiseNearLoadRadiusCeiling(10, 6, 4) == 8,
+             "Rim ahead P2: cruise ceiling follows focus+2");
+    }
     Expect(ShouldConsumeTicketedVbStopDrain(false, 20, 6),
            "I15-B2: stop drain at focus 20 when vb_nt>=5");
     Expect(ShouldConsumeTicketedVbStopDrain(false, 45, 0),

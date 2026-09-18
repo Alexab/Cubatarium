@@ -29,6 +29,7 @@
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/StreamIngressPolicy.h"
+#include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
 #include "App/Settings/RenderSettings.h"
@@ -4585,6 +4586,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         // frames that alone was ~150ms streamer_update (CB spike_holes).
         // Audit P3: west-sea rim — underfeet/holes clamp must not leave
         // LitDrawable ring (R=4) unscanned when near water / unfinished.
+        // Rim ahead P1/P2: couple NearLoad to FM starve; cruise ceiling vs -1.
         const int sea_lvl = world.GetProceduralSettings().SeaLevel;
         const glm::ivec3 eye_block = glm::ivec3(glm::floor(eye));
         const bool near_water_load =
@@ -4594,7 +4596,24 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
             world.PhysicsTelemetryData.PostLoadRingNotReady > 0 ||
             world.PhysicsTelemetryData.UnfinishedVisual > 0 ||
             world.PhysicsTelemetryData.ColumnLoadedNoMeshN > 0;
+        const bool rim_hole_load =
+            world.PhysicsTelemetryData.RimHolePressure > 0;
         const int lit_floor = kVisualStageLitDrawableHoriz;
+        const int miss_h_load = world.PhysicsTelemetryData.MissHoriz;
+        const int dirty_fm_load = world.PhysicsTelemetryData.DirtyFmN;
+        const int schedule_ok_load =
+            world.PhysicsTelemetryData.MeshDirtyScheduleOkN;
+        const int adm_mode = world.PhysicsTelemetryData.MeshAdmissionMode;
+        const bool hole_drain_or_deep =
+            adm_mode ==
+                static_cast<int>(MeshWorkAdmission::Mode::HoleDrain) ||
+            adm_mode ==
+                static_cast<int>(MeshWorkAdmission::Mode::DeepBacklog);
+        const int fm_floor_load = RimIngressFmScheduleFloor(
+            true, miss_h_load, dirty_fm_load);
+        const bool defer_prefetch_fm = ShouldDeferPrefetchAheadForFmStarve(
+            hole_drain_or_deep, miss_h_load, dirty_fm_load, schedule_ok_load,
+            fm_floor_load);
         if (underfeet_need)
         {
           int clamped = 2;
@@ -4615,9 +4634,17 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
               frontier_moving, true, clamped, focus_radius));
         }
+        else if (defer_prefetch_fm &&
+                 (near_water_load || rim_debt || rim_hole_load))
+        {
+          Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
+              frontier_moving, true, lit_floor, focus_radius));
+        }
         else
         {
-          Streamer->SetNearLoadRadius(-1);
+          const int cruise_near = CruiseNearLoadRadiusCeiling(
+              Streamer->GetVisualRenderDistance(), focus_radius, lit_floor);
+          Streamer->SetNearLoadRadius(cruise_near);
         }
         // Hitch / Yellow+: keep fill alive but drop boost so load+mesh do not
         // stack. Red also clamps MaxLoadOps via pressure caps below.
@@ -4690,7 +4717,26 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool ingress_debt_prefetch_ok =
         world.PhysicsTelemetryData.IngressDebtLevel !=
         static_cast<int>(IngressDebtLevel::ShedFar);
+    // Rim ahead P1: defer PrefetchAhead while rim FM consumer is starved.
+    const int miss_h_pf = world.PhysicsTelemetryData.MissHoriz;
+    const int dirty_fm_pf = world.PhysicsTelemetryData.DirtyFmN;
+    const int schedule_ok_pf =
+        world.PhysicsTelemetryData.MeshDirtyScheduleOkN;
+    const int adm_mode_pf = world.PhysicsTelemetryData.MeshAdmissionMode;
+    const bool hole_drain_or_deep_pf =
+        adm_mode_pf ==
+            static_cast<int>(MeshWorkAdmission::Mode::HoleDrain) ||
+        adm_mode_pf ==
+            static_cast<int>(MeshWorkAdmission::Mode::DeepBacklog);
+    const int fm_floor_pf =
+        RimIngressFmScheduleFloor(moving_fast || moving_any, miss_h_pf,
+                                  dirty_fm_pf);
+    const bool defer_prefetch_fm =
+        ShouldDeferPrefetchAheadForFmStarve(hole_drain_or_deep_pf, miss_h_pf,
+                                            dirty_fm_pf, schedule_ok_pf,
+                                            fm_floor_pf);
     if (frame_ms <= 20.0 && pressure.allow_prefetch && ingress_debt_prefetch_ok &&
+        !defer_prefetch_fm &&
         (((!visual_holes && !underfeet_need) || frontier_prefetch)))
     {
       Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,

@@ -5433,11 +5433,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         adm.mode == MeshWorkAdmission::Mode::DeepBacklog)
     {
       // MissOwn VB P0: MaxOutside under real coverage debt only (not bare miss).
+      // Rim ahead P0: also drip when rim cruise feeds load/FM before sticky debt.
       const auto &pt_rim = world.GetPhysicsTelemetry();
       const bool rim_mesh_debt =
           pt_rim.ColumnLoadedNoMeshN > 0 || pt_rim.PostLoadRingNotReady > 0 ||
           pt_rim.SoftDeferEmptyOwnedN > 0;
-      mesh_service.SetMaxOutsideFocusMeshPerFrame(rim_mesh_debt ? 1 : 0);
+      const int miss_h_rim = found_nearest_missing
+                                 ? std::max(std::abs(isolated_hole.x -
+                                                     focus_ground_horiz.x),
+                                            std::abs(isolated_hole.z -
+                                                     focus_ground_horiz.z))
+                                 : pt_rim.MissHoriz;
+      const int stream_or_prefetch =
+          pt_rim.PrefetchVisualOps + pt_rim.StreamLoads;
+      const int dirty_fm_rim = std::max(mesh_service.GetLastDirtyFmN(),
+                                        pt_rim.DirtyFmN);
+      const bool rim_cruise_drip = ShouldDripOutsideFocusMeshOnRimCruise(
+          moving, miss_h_rim, pt_rim.RimHolePressure > 0, stream_or_prefetch,
+          dirty_fm_rim);
+      mesh_service.SetMaxOutsideFocusMeshPerFrame(
+          (rim_mesh_debt || rim_cruise_drip) ? 1 : 0);
       // F3: prune remesh Dirty flood every HoleDrain frame (keep_h=1; 2 when deep RemeshQ).
       if (pending_dirty > 200 &&
           (visual_holes || missing_visible_mesh || missing_underfeet))

@@ -74,4 +74,17 @@ inline int FrontierNearLoadRadius(bool frontier_pressure, bool moving,
   return clamped_radius < focus_radius ? focus_radius : clamped_radius;
 }
 
+/// Rim ahead converge P2: healthy cruise NearLoad ceiling — avoid NearLoad=-1
+/// full VisualRD² scan (manual 103803 mid wall). Keep +2 beyond focus/lit so
+/// Update can still discover load-ahead ring (Prefetch is not the sole feeder).
+inline int CruiseNearLoadRadiusCeiling(int visual_rd, int focus_radius,
+                                       int lit_floor)
+{
+  const int rd = std::max(1, visual_rd);
+  const int floor_r = std::max(0, lit_floor);
+  const int focus_r = std::max(0, focus_radius);
+  const int band = std::max(focus_r, floor_r) + 2;
+  return std::min(rd, band);
+}
+
 } // namespace cutum

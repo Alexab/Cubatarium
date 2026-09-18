@@ -133,6 +133,33 @@ aged-pin PreferKick rate-limit 12f; rim_mesh_debt without bare FocusMissing.
 Verdict: repair **partial** — wall/clnm directionally better on AF; late VB + hop +
 mode3 share still OPEN. Operator west sea fog-ON required. Not merge_green.
 
+### Follow-on 2026-09-18: Rim/ahead mesh converge (post manual 103803)
+
+Manual [`perf_20260918-103803_56880.jsonl`](bin/logs/perf_20260918-103803_56880.jsonl)
+on MissOwn VB [`26f5f035`](26f5f035): brief ahead-ring black + mid FPS dip.
+Code: `ShouldDripOutsideFocusMeshOnRimCruise` (rim_hole|prefetch; not bare dirty_fm /
+FocusMissing) under HoleDrain MaxOutside override; `ShouldDeferPrefetchAheadForFmStarve`
+hard-starve (`schedule_ok==0`); cruise `NearLoad` ceiling `min(RD, max(focus,lit)+2)`
+instead of `-1`; sticky exits unchanged.
+
+AF calibrate: v1 soft `<floor` Prefetch defer discarded (stream_loads=0, west UNTESTED);
+v2 hard-starve + ceiling+2; v3 drop dirty_fm-only drip.
+
+| Signal | Result |
+|---|---|
+| unit P0–P3 predicates | PASS (`miss_first_mesh_class_test`) |
+| AF cold adequacy / west | PASS / COVERED (`rim_ahead_converge_v3_cold`) |
+| AF warm adequacy / west / eye | PASS / COVERED / PASS (`rim_ahead_converge_v3_warm`) |
+| AF cold eye-proxy | **FAIL** (stale_visual Δ med=2) — honest OPEN |
+| AF dual-lane | **OPEN** (cold stalled ~54 / warm ~61) |
+| AF cold wall med / mid wall | **~78** / ~126 (vs missown_vb cold ~74 / ~94) |
+| AF warm wall med / mid wall | **~91** / ~219 (streamer mid still elevated) |
+| AF cold clnm max / late med | 25 / 14 (≪182042 class 33; warm late **0**) |
+| manual fog-ON vs 103803 | **UNTESTED** (operator required) |
+
+Verdict: epic **landed + AF adequacy PASS**; mid streamer diet partial on AF;
+ahead-black / fog thrash remain operator gates. AF ≠ CLOSED. Not merge_green.
+
 ## KEEP
 
 N01 incomplete=0, LegalDark rollback, frustum N02, cooldown N06,
@@ -164,14 +191,19 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 - Manual MissOwn VB regress: `perf_20260917-204032_17972.jsonl`
 - MissOwn VB repair AF: `missown_vb_fix_{cold,warm}` /
   `perf_20260917-220441_11912.jsonl` / `perf_20260917-220725_40068.jsonl`
+- Manual post-MissOwn rim/ahead: `perf_20260918-103803_56880.jsonl`
+- Rim ahead converge AF (gate of record **v3**): `rim_ahead_converge_v3_{cold,warm}` /
+  `perf_20260918-140920_57732.jsonl` / `perf_20260918-141223_59232.jsonl`
+  (v1/v2 discarded — soft Prefetch defer / dirty_fm drip)
 
 ## Remaining blockers for true CLOSED
 
-1. Manual `operator_visual=PASS` on west mid **and** sea rim vs **204032**
-   (fog thrash=0; late VB ≪198; side/ahead black close; hop storm gone).
+1. Manual `operator_visual=PASS` on west mid **and** sea rim vs **103803**
+   (fog thrash=0; brief ahead black gone; mid dip ≪ peak~289; hop ≤16).
 2. Wall-clock continuous soak 10–15 min (free-list/dirty/age non-linear).
-3. Dual-lane mid stalled ≤5 — **OPEN-with-cause** for merge (mid FullyDark stall ~53–57; separate epic; do not reopen N04 remesh caps). Optionally close later with a dedicated lane fix.
+3. Dual-lane mid stalled ≤5 — **OPEN-with-cause** for merge (mid FullyDark stall ~53–61; separate epic; do not reopen N04 remesh caps). Optionally close later with a dedicated lane fix.
 4. Optional: drop I3t after more Replace field soak (**KEEP** until then).
 5. Stop-segment rim plateau ≤2 (follow-on after R1; acceptance after operator).
-6. MissOwn VB: AF late VB still ~200; hop end still elevated; mode3 share high —
-   coverage sticky narrow landed but image convergence OPEN.
+6. MissOwn VB / rim ahead: AF late VB still ~190–200; warm mid wall/streamer elevated —
+   coverage sticky narrow + MaxOutside drip landed but image/mid-FPS convergence OPEN.
+7. AF cold eye-proxy stale_visual Δ (rim_ahead v3) — follow-up, not greenwash.

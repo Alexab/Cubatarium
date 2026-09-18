@@ -157,6 +157,58 @@ inline int RimIngressFmScheduleFloor(bool moving, int miss_horiz, int dirty_fm_n
   return std::min(4, std::max(1, dirty_fm_n));
 }
 
+/// Rim ahead converge P0: allow MaxOutside≥1 under HoleDrain when load-ahead
+/// is feeding the rim but sticky coverage debt is still 0 (brief ahead black).
+/// NEVER arms coverage sticky; NEVER uses bare FocusMissing alone.
+/// dirty_fm alone omitted — AF v1/v2 showed permanent outside drip under
+/// HoleDrain raised mid wall without helping west coverage.
+inline bool ShouldDripOutsideFocusMeshOnRimCruise(bool moving,
+                                                   int nearest_miss_horiz,
+                                                   bool rim_hole_pressure,
+                                                   int stream_or_prefetch_ops,
+                                                   int /*dirty_fm_n*/)
+{
+  if (!moving)
+  {
+    return false;
+  }
+  if (nearest_miss_horiz < 2 || nearest_miss_horiz > 4)
+  {
+    return false;
+  }
+  if (rim_hole_pressure)
+  {
+    return true;
+  }
+  if (stream_or_prefetch_ops > 0)
+  {
+    return true;
+  }
+  return false;
+}
+
+/// Rim ahead converge P1: defer PrefetchAhead while FM consumer is hard-starved
+/// (schedule_ok==0) under RimIngress demand — not every under-floor tick
+/// (AF cold: soft <floor + sticky HoleDrain zeroed Prefetch/stream_loads).
+inline bool ShouldDeferPrefetchAheadForFmStarve(bool hole_drain_or_deep,
+                                                int miss_horiz, int dirty_fm_n,
+                                                int schedule_ok_n, int fm_floor)
+{
+  if (!hole_drain_or_deep)
+  {
+    return false;
+  }
+  if (miss_horiz < 0 || miss_horiz > 4)
+  {
+    return false;
+  }
+  if (fm_floor <= 0 || dirty_fm_n <= 0)
+  {
+    return false;
+  }
+  return schedule_ok_n <= 0;
+}
+
 /// I18-A2: chain stall kick threshold (frames). Hotfix: restore 8f default.
 inline int RimChainStallKickFrames(bool schedule_starved)
 {
