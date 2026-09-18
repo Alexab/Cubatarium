@@ -184,6 +184,29 @@ AF: v1 frac0.5 discarded (mid wall~181); **v2** frac0.65 gate-of-record.
 Verdict: FM snapshot fairness **landed**; ticketed FullyDark image convergence still
 OPEN (stalled~56–66). AF ≠ CLOSED. Not merge_green.
 
+### Follow-on 2026-09-18: Prior-lit hold + ring clamp (post manual 183457)
+
+Manual [`perf_20260918-183457_51304.jsonl`](bin/logs/perf_20260918-183457_51304.jsonl):
+FPS ok; left-of-course black = LitDrawable FullyDark / rim miss (`dark_face_cz=4`).
+Code: `ShouldRetainPriorLitOverUnlitCandidate` + hide first FD in ring; SoftDefer empty
+avoid over lit; `ShouldClampIngressForLitConvergenceDebt` (hard FM starve / relight BP)
+clamps NearLoad, sheds Prefetch lateral, blocks Adaptive expand, drip only on rim_hole
+when `schedule_ok==0`. No N04 census Dirty.
+
+AF: v1 soft under-floor clamp discarded (eye staleΔ); **v2** hard+BP gate-of-record.
+
+| Signal | Result |
+|---|---|
+| unit prior-lit + ingress predicates | PASS |
+| AF cold adequacy / west / eye | PASS / COVERED / PASS (`prior_lit_ring_v2_cold`) |
+| AF warm adequacy / west / eye | PASS / COVERED / PASS (`prior_lit_ring_v2_warm`) |
+| AF dual-lane | **OPEN** (cold stalled ~64 / warm ~61) |
+| commits | `c340efc2` prior-lit hold; `b17cc0dd` ring clamp |
+| manual fog-ON left-black vs 183457 | **UNTESTED** (operator required) |
+
+Verdict: zero-in-frame contract **landed on AF**; operator left-black gate OPEN.
+AF ≠ CLOSED. Not merge_green.
+
 ## KEEP
 
 N01 incomplete=0, LegalDark rollback, frustum N02, cooldown N06,
@@ -223,14 +246,18 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 - FullyDark FM fairness AF (**v2**): `fd_fm_fair_v2_{cold,warm}` /
   `perf_20260918-174932_43608.jsonl` / `perf_20260918-175226_63736.jsonl`
   (v1 frac0.5 discarded — mid wall~181)
+- Manual post-FM left FullyDark: `perf_20260918-183457_51304.jsonl`
+- Prior-lit hold + ring clamp AF (**v2**): `prior_lit_ring_v2_{cold,warm}` /
+  `perf_20260918-200939_43228.jsonl` / `perf_20260918-201222_47336.jsonl`
+  (v1 soft under-floor discarded — eye staleΔ)
 
 ## Remaining blockers for true CLOSED
 
-1. Manual `operator_visual=PASS` on west mid **and** sea rim vs **152744**
-   (fog thrash=0; unlit/FullyDark blacks↓; wall mid class; hop ≤16).
+1. Manual `operator_visual=PASS` on west mid **and** sea rim vs **183457**
+   (fog thrash=0; left LitDrawable black=0; wall mid class; hop KEEP).
 2. Wall-clock continuous soak 10–15 min (free-list/dirty/age non-linear).
-3. Dual-lane mid stalled ≤5 — **OPEN-with-cause** for merge (mid FullyDark stall ~56–66 after FM fairness; separate epic; do not reopen N04 remesh caps).
+3. Dual-lane mid stalled ≤5 — **OPEN-with-cause** for merge (mid FullyDark stall ~61–65 after prior-lit/ring; separate epic; do not reopen N04 remesh caps).
 4. Optional: drop I3t after more Replace field soak (**KEEP** until then).
 5. Stop-segment rim plateau ≤2 (follow-on after R1; acceptance after operator).
-6. Ticketed FullyDark image convergence still OPEN despite `ok_fm≥1` / `skip_snapshot=0`.
+6. Ticketed FullyDark census/stalled still elevated on AF despite hide/hold — image gate is operator left-black.
 7. AF cold eye-proxy stale_visual Δ (rim_ahead v3) — follow-up, not greenwash.
