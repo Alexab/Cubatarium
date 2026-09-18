@@ -270,3 +270,6 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 | AF cold adequacy / west / eye | PASS / COVERED / PASS (`s1_p0_own_cold`; exit 2 dual-lane OPEN ok) |
 | S0 eye-proxy **negative** controls (null→PASS guards) | **FOLLOW-UP** (not blocking this roadmap; GateRepro / scorecard note) |
 | continuous free-list soak 10–15 min | **UNTESTED** (same as blocker #2) |
+| generation Free ledger (allocationId+generation) | PASS (`28dfc64f`; `generation_ledger_rejects_stale_free=1`) |
+| AF cold/warm after generation | PASS / COVERED / PASS (`s1_p1_gen_{cold,warm}`; dual-lane OPEN) |
+| S1 absolute gate live/free overlap | **CLOSED** for this roadmap (full S2 typed Replace still OPEN) |
