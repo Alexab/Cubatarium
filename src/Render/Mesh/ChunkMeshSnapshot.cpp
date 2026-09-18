@@ -227,6 +227,22 @@ BlockId ChunkMeshSnapshot::GetBlock(glm::ivec3 worldPos) const
   return BLOCK_AIR;
 }
 
+BlockId ChunkMeshSnapshot::GetBlockIgnoringOverlay(glm::ivec3 worldPos) const
+{
+  const glm::ivec3 local = worldPos - ChunkOrigin();
+  if (InChunkLocal(local))
+  {
+    return GetBlockLocal(local);
+  }
+  int face = 0;
+  int cell = 0;
+  if (TryShellIndex(local, face, cell))
+  {
+    return shellBlocks[static_cast<size_t>(ShellFlatIndex(face, cell))];
+  }
+  return BLOCK_AIR;
+}
+
 BlockId ChunkMeshSnapshot::GetBlockLocal(glm::ivec3 local) const
 {
   return blocks[local.x + CHUNK_SIZE * local.y +

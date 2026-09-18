@@ -356,6 +356,48 @@ int main()
   Expect(stack_internal_top == 0,
          "stacked water hides internal horizontal face");
 
+  // R06 overlay: water|water across chunk seam with !drawable neighbor must not
+  // emit vertical walls (GetBlock=AIR but shellFluid remains).
+  {
+    cutum::UBlockWorld seam_world;
+    seam_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    seam_world.GetChunkManager().EnsureChunk(left_chunk);
+    seam_world.GetChunkManager().EnsureChunk(right_chunk);
+    // Edge cells on the shared X face (local x=15 left, x=0 right).
+    for (int y = 4; y < 8; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        const glm::ivec3 left_pos(15, y, z);
+        const glm::ivec3 right_pos(16, y, z);
+        seam_world.SetBlock(left_pos, kWater);
+        seam_world.SetFluidState(left_pos, cutum::FluidCellState::Source());
+        seam_world.SetBlock(right_pos, kWater);
+        seam_world.SetFluidState(right_pos, cutum::FluidCellState::Source());
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot overlay_snap = cutum::ChunkMeshSnapshot::Capture(
+        seam_world, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
+    Expect(overlay_snap.boundaryOverlay.active,
+           "overlay active when neighbors not drawable");
+    const std::vector<cutum::GreedyQuad> overlay_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(overlay_snap, registry);
+    int wall_faces = 0;
+    for (const cutum::GreedyQuad &quad : overlay_quads)
+    {
+      if (quad.Id == kWater && quad.axis == 0 && quad.faceSign > 0 &&
+          quad.slice == 15)
+      {
+        ++wall_faces;
+      }
+    }
+    Expect(wall_faces == 0,
+           "water|water + !drawable overlay hides vertical seam walls");
+  }
+
   std::cout << "fluid_mesh_faces_test: OK" << std::endl;
   return 0;
 }

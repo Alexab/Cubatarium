@@ -135,6 +135,11 @@ public:
     return Snapshot.GetBlock(world_pos);
   }
 
+  BlockId GetBlockIgnoringOverlay(glm::ivec3 world_pos) const override
+  {
+    return Snapshot.GetBlockIgnoringOverlay(world_pos);
+  }
+
   uint8_t GetLightPackedLocal(glm::ivec3 local) const override
   {
     return Snapshot.GetLightPackedLocal(local);
@@ -240,9 +245,25 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
               : registry.GetRenderStyle(face_id);
 
   if (neighbor == BLOCK_AIR)
-
   {
-
+    // R06 overlay: GetBlock forced AIR while shellBlocks/shellFluid stay
+    // voxel-true. Source water often packs fluid=0 (Level/Kind unset), so also
+    // check raw shell block id for same-kind liquid hide.
+    if (MeshIsLiquid(registry, catalog, face_id) ||
+        face_style == BlockRenderStyle::Fluid)
+    {
+      if (FluidCellHasActiveFluid(
+              PackFluidCellState(reader.GetFluid(neighbor_pos))))
+      {
+        return true;
+      }
+      const BlockId raw =
+          reader.GetBlockIgnoringOverlay(neighbor_pos);
+      if (raw == face_id || MeshIsLiquid(registry, catalog, raw))
+      {
+        return true;
+      }
+    }
     return false;
   }
 

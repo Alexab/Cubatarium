@@ -75,6 +75,8 @@ struct ChunkMeshSnapshot
                                    void *neighbor_drawable_ctx = nullptr);
 
   BlockId GetBlock(glm::ivec3 worldPos) const;
+  /// Same as GetBlock but never forces AIR under boundary overlay (R06).
+  BlockId GetBlockIgnoringOverlay(glm::ivec3 worldPos) const;
   BlockId GetBlockLocal(glm::ivec3 local) const;
   uint8_t GetLightPackedLocal(glm::ivec3 local) const;
   uint8_t GetLightPacked(glm::ivec3 worldPos) const;
