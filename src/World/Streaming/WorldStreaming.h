@@ -159,6 +159,10 @@ private:
   int SoftDeferCapturePinAge{0};
   /// Pin length; Era29 enter sets EnterSpawnCapturePinFrames(), else Era27 T=8.
   int SoftDeferCapturePinMaxAge{8};
+  /// MissOwn VB P2: consecutive frames pin has been drawable (flicker damp).
+  int SoftDeferCapturePinDrawableRun{0};
+  /// MissOwn VB P3: last frame age when PreferKick/Dirty fired on aged pin.
+  int SoftDeferCaptureLastAgedKickAge{-1};
   /// I18-D1: hold prior column drawable briefly on witness column swap.
   WitnessSwapGrace WitnessColumnGrace{};
   /// R4.5.1: same-frame camera-column complete (UpdateStreaming → Refresh).

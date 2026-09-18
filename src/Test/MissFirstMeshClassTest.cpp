@@ -389,12 +389,30 @@ int main()
          "I13-A1: frontier advance bypasses heal cooldown");
   {
     using cutum::ShouldHoldMissOwnerUntilDrawable;
+    using cutum::ShouldTreatPinAsStillMissingForHop;
     Expect(ShouldHoldMissOwnerUntilDrawable(true, false, false),
            "MissOwn P1: valid undrawn pin holds");
     Expect(!ShouldHoldMissOwnerUntilDrawable(true, true, false),
            "MissOwn P1: drawable pin may hop");
+    Expect(ShouldHoldMissOwnerUntilDrawable(true, false, false),
+           "MissOwn VB P2: visual_holes no longer unlocks undrawn hold");
     Expect(!ShouldHoldMissOwnerUntilDrawable(true, false, true),
-           "MissOwn P1: visual_holes may hop");
+           "MissOwn VB P2: emergency hop (nh≤1) may unlock");
+    Expect(ShouldTreatPinAsStillMissingForHop(false, 0),
+           "MissOwn VB P2: undrawn treated as still missing");
+    Expect(ShouldTreatPinAsStillMissingForHop(true, 3),
+           "MissOwn VB P2: brief drawable still missing for hop");
+    Expect(!ShouldTreatPinAsStillMissingForHop(true, 8),
+           "MissOwn VB P2: stable drawable may hop");
+    using cutum::ShouldKickAgedUndrawnPin;
+    Expect(ShouldKickAgedUndrawnPin(48, 48, -1),
+           "MissOwn VB P3: first aged kick at expire");
+    Expect(!ShouldKickAgedUndrawnPin(49, 48, 48),
+           "MissOwn VB P3: no kick until period elapses");
+    Expect(!ShouldKickAgedUndrawnPin(59, 48, 48),
+           "MissOwn VB P3: still inside period");
+    Expect(ShouldKickAgedUndrawnPin(60, 48, 48),
+           "MissOwn VB P3: kick again after period");
   }
   Expect(!SoftDeferEmptyAgeShouldReset(true, false),
          "Era27 I-A2: still empty no progress ⇒ sticky age");
@@ -2324,6 +2342,17 @@ int main()
            "MissOwn P3: coverage sticky steals without unfinished>30");
     Expect(!ShouldStealRemeshToFirstMesh(true, 20, 40, 68, true),
            "MissOwn P3: sticky but fm not starved vs no_mesh");
+    Expect(!ShouldStealRemeshToFirstMesh(true, 20, 16, 68, true, true),
+           "MissOwn VB P1: optional protect_vb arg blocks steal predicate");
+    {
+      using cutum::ShouldKeepRemeshProtectUnderVbStall;
+      Expect(ShouldKeepRemeshProtectUnderVbStall(false, 0),
+             "MissOwn VB P1: !consume keeps protect");
+      Expect(!ShouldKeepRemeshProtectUnderVbStall(true, 10),
+             "MissOwn VB P1: consume + low stall drops protect");
+      Expect(ShouldKeepRemeshProtectUnderVbStall(true, 40),
+             "MissOwn VB P1: consume + high stall keeps protect");
+    }
     Expect(!ShouldTrimPendingLightUnderHoles(true, 68, 60),
            "P12 B1: holes+unf → no PL trim");
     Expect(ShouldTrimPendingLightUnderHoles(false, 68, 60),
@@ -3540,14 +3569,16 @@ int main()
            "I15-B4: stand VB plateau holds HoleDrain");
     {
       using cutum::ShouldHoldHoleDrainForCoverageSticky;
-      Expect(ShouldHoldHoleDrainForCoverageSticky(true, 0, 0),
-             "MissOwn P2: focus_missing holds HoleDrain");
-      Expect(ShouldHoldHoleDrainForCoverageSticky(false, 5, 0),
-             "MissOwn P2: clnm>0 holds HoleDrain");
-      Expect(ShouldHoldHoleDrainForCoverageSticky(false, 0, 1),
-             "MissOwn P2: SoftDeferEmptyOwned holds HoleDrain");
-      Expect(!ShouldHoldHoleDrainForCoverageSticky(false, 0, 0),
-             "MissOwn P2: clear coverage may exit");
+      Expect(!ShouldHoldHoleDrainForCoverageSticky(0, 0, 0),
+             "MissOwn VB P0: bare clear coverage may exit");
+      Expect(!ShouldHoldHoleDrainForCoverageSticky(0, 0),
+             "MissOwn VB P0: bare miss (no args) does not hold HoleDrain");
+      Expect(ShouldHoldHoleDrainForCoverageSticky(5, 0, 0),
+             "MissOwn VB P0: clnm>0 holds HoleDrain");
+      Expect(ShouldHoldHoleDrainForCoverageSticky(0, 1, 0),
+             "MissOwn VB P0: SoftDeferEmptyOwned holds HoleDrain");
+      Expect(ShouldHoldHoleDrainForCoverageSticky(0, 0, 1),
+             "MissOwn VB P0: PostLoadRingNotReady holds HoleDrain");
     }
     Expect(ShouldConsumeTicketedVbStopDrain(false, 20, 6),
            "I15-B2: stop drain at focus 20 when vb_nt>=5");

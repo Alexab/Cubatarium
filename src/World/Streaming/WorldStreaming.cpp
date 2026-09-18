@@ -215,6 +215,8 @@ void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
     SoftDeferCapturePinCy = focus.y;
     SoftDeferCapturePinHoriz = 0;
     SoftDeferCapturePinAge = 0;
+    SoftDeferCapturePinDrawableRun = 0;
+    SoftDeferCaptureLastAgedKickAge = -1;
     SoftDeferCapturePinMaxAge = EnterSpawnCapturePinFrames();
   }
 }
@@ -2672,6 +2674,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const int dirty_fm_site_a = world.GetMeshService().GetLastDirtyFmN();
         const bool fm_schedule_starved_site_a =
             dirty_fm_site_a > 0 && schedule_ok_site_a < 2;
+        const bool emergency_hop_site_a =
+            world.PhysicsTelemetryData.MissHoriz >= 0 &&
+            world.PhysicsTelemetryData.MissHoriz <= 1 &&
+            world.PhysicsTelemetryData.FocusMissingMesh > 0;
+        const bool hold_miss_owner_site_a = ShouldHoldMissOwnerUntilDrawable(
+            SoftDeferCapturePinValid, site_a_pin_drawable, emergency_hop_site_a);
+        const bool miss_horiz_zero_site_a =
+            world.PhysicsTelemetryData.MissHoriz == 0 &&
+            world.PhysicsTelemetryData.FocusMissingMesh > 0;
+        const bool block_witness_site_a = ShouldBlockWitnessCaptureRetarget(
+            SoftDeferCapturePinValid, !site_a_pin_drawable || hold_miss_owner_site_a,
+            hold_miss_owner_site_a, miss_horiz_zero_site_a);
         const bool block_pin_sla_site_a = ShouldBlockWitnessRetargetForPinSla(
             site_a_pin_age, site_a_pin_horiz, visual_holes_site_a, moving_now);
         const bool block_gpu_site_a =
@@ -2679,7 +2693,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                 site_a_pin_pending_gpu, site_a_pin_horiz, visual_holes_site_a,
                 world.PhysicsTelemetryData.MissHoriz, fm_schedule_starved_site_a,
                 site_a_pin_drawable);
-        if (!block_pin_sla_site_a && !block_gpu_site_a)
+        if (!hold_miss_owner_site_a && !block_witness_site_a &&
+            !block_pin_sla_site_a && !block_gpu_site_a)
         {
           if (kI18WitnessComfortEnabled ||
               (kI18UnderfeetGraceEnabled &&
@@ -2711,6 +2726,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         SoftDeferCapturePinCz = witness_xz.y;
         SoftDeferCapturePinHoriz = world.PhysicsTelemetryData.MissHoriz;
         SoftDeferCapturePinAge = 0;
+        SoftDeferCapturePinDrawableRun = 0;
+        SoftDeferCaptureLastAgedKickAge = -1;
         SoftDeferCapturePinMaxAge =
             LandFrontierCaptureWitnessPinFrames(void_n_budget);
       }
@@ -2826,6 +2843,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           {
             pinned_still = true;
           }
+          // MissOwn VB P2: brief drawable blink still counts as missing for hop.
+          if (pin_drawable)
+          {
+            ++SoftDeferCapturePinDrawableRun;
+          }
+          else
+          {
+            SoftDeferCapturePinDrawableRun = 0;
+          }
+          if (ShouldTreatPinAsStillMissingForHop(
+                  pin_drawable, SoftDeferCapturePinDrawableRun))
+          {
+            pinned_still = pinned_still || missing_focus_mesh;
+          }
         }
         if (pin_is_stuck)
         {
@@ -2878,9 +2909,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         {
           better_horiz = false;
         }
-        // Miss Ownership SLA P1: pin-until-drawable — no better_horiz hop.
+        // Miss Ownership SLA / VB P2: pin-until-drawable — emergency only nh≤1.
+        const bool emergency_hop =
+            world.PhysicsTelemetryData.MissHoriz >= 0 &&
+            world.PhysicsTelemetryData.MissHoriz <= 1 && missing_focus_mesh;
         if (ShouldHoldMissOwnerUntilDrawable(SoftDeferCapturePinValid,
-                                             pin_drawable, visual_holes_cap))
+                                             pin_drawable, emergency_hop))
         {
           better_horiz = false;
         }
@@ -3034,6 +3068,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           SoftDeferCapturePinCy = cand_cy;
           SoftDeferCapturePinHoriz = cand_horiz;
           SoftDeferCapturePinAge = 0;
+          SoftDeferCapturePinDrawableRun = 0;
+          SoftDeferCaptureLastAgedKickAge = -1;
           SoftDeferCapturePinMaxAge = SoftDeferCapturePinMaxAgeAfterRetarget(
               SoftDeferCapturePinMaxAge, pin_T,
               land_frontier || (stuck_n && pinned_still));
@@ -3052,11 +3088,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.PhysicsTelemetryData.MissOwnerStableFrames =
                 SoftDeferCapturePinAge;
           }
-          // P1: aged undrawn pin — PreferKick/Dirty without hop (was hard-expire
-          // retarget path).
+          // P1/P3: aged undrawn pin — PreferKick/Dirty without hop, rate-limited.
           if (SoftDeferCapturePinValid && !pin_drawable &&
               SoftDeferCapturePinAge >= kIngressCaptureHardExpireFrames &&
-              world.PhysicsTelemetryData.FocusMissingMesh > 0)
+              world.PhysicsTelemetryData.FocusMissingMesh > 0 &&
+              ShouldKickAgedUndrawnPin(SoftDeferCapturePinAge,
+                                       kIngressCaptureHardExpireFrames,
+                                       SoftDeferCaptureLastAgedKickAge))
           {
             const glm::ivec3 pin_hole(
                 SoftDeferCapturePinCx,
@@ -3070,6 +3108,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
               ms.PreferKickPendingGpuQueued(pin_hole);
             }
             ms.MarkDirtyPriority(pin_hole);
+            SoftDeferCaptureLastAgedKickAge = SoftDeferCapturePinAge;
           }
         }
       }
@@ -3118,6 +3157,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       SoftDeferCapturePinValid = false;
       SoftDeferCapturePinAge = 0;
+      SoftDeferCapturePinDrawableRun = 0;
+      SoftDeferCaptureLastAgedKickAge = -1;
     }
     world.PhysicsTelemetryData.SoftDeferCapturePinAge = SoftDeferCapturePinAge;
     // Era22 P2 / Era23 I-V4 / Era26 I-O2: Capture FirstMesh KEEP under miss;

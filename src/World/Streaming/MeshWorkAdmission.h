@@ -59,6 +59,8 @@ struct MeshWorkAdmissionInput
   int miss_witness_age_frames{0};
   /// Miss Ownership SLA P2: SoftDeferEmptyOwnedN for HoleDrain exit-guard.
   int softdefer_empty_owned_n{0};
+  /// MissOwn VB regress: PostLoadRingNotReady for coverage sticky (not bare miss).
+  int post_load_ring_not_ready{0};
   /// Phase 5.3.3: EmptyBacklogN for HoleDrain FirstMesh drip clamp.
   int empty_backlog_n{0};
   /// Dual-lane: round-robin token when schedule_cap==1 (0=FM, 1=Remesh).
@@ -194,10 +196,16 @@ inline size_t MeshWorkQueuedApprox(const MeshWorkAdmissionInput &in)
 
 /// FZ2.7-P12 A2: unfinished storm + FM starved vs no_mesh → full Remesh steal.
 /// Miss Ownership SLA P3: coverage sticky steals without unfinished>30 gate.
+/// protect_vb_or_lit reserved for callers that want to skip steal entirely.
 inline bool ShouldStealRemeshToFirstMesh(bool holes, int unfinished, int dirty_fm,
                                          int no_mesh,
-                                         bool coverage_sticky = false)
+                                         bool coverage_sticky = false,
+                                         bool protect_vb_or_lit = false)
 {
+  if (protect_vb_or_lit)
+  {
+    return false;
+  }
   if (!holes || no_mesh <= 0)
   {
     return false;
@@ -211,6 +219,19 @@ inline bool ShouldStealRemeshToFirstMesh(bool holes, int unfinished, int dirty_f
     return false;
   }
   return dirty_fm * 2 < no_mesh;
+}
+
+/// MissOwn VB P1: keep ticketed VB remesh protect even in consume_mode when
+/// stalled census is high (lane fairness; not N04 Dirty).
+inline bool ShouldKeepRemeshProtectUnderVbStall(bool consume_mode,
+                                                int visible_black_stalled_n,
+                                                int stalled_thresh = 40)
+{
+  if (!consume_mode)
+  {
+    return true;
+  }
+  return visible_black_stalled_n >= stalled_thresh;
 }
 
 /// FZ2.7-P13 R1 / Q2b: drawable FullyDark or stale faces need Remesh floor even
@@ -497,13 +518,14 @@ inline bool ShouldHoldHoleDrainForStopVbPlateau(bool moving, int vb_focus_n,
   return vb_no_ticket_n > 0 || vb_focus_n >= 20;
 }
 
-/// Miss Ownership SLA P2: do not exit HoleDrain while coverage demand sticky.
-inline bool ShouldHoldHoleDrainForCoverageSticky(bool focus_missing,
-                                                 int column_loaded_no_mesh_n,
-                                                 int softdefer_empty_owned_n)
+/// MissOwn VB regress P0: HoleDrain sticky only on real coverage debt
+/// (clnm / SoftDeferEmpty / PostLoadRingNotReady) — not bare focus_missing.
+inline bool ShouldHoldHoleDrainForCoverageSticky(int column_loaded_no_mesh_n,
+                                                 int softdefer_empty_owned_n,
+                                                 int post_load_ring_not_ready = 0)
 {
-  return focus_missing || column_loaded_no_mesh_n > 0 ||
-         softdefer_empty_owned_n > 0;
+  return column_loaded_no_mesh_n > 0 || softdefer_empty_owned_n > 0 ||
+         post_load_ring_not_ready > 0;
 }
 
 /// SRBR-P1: remesh floor under ticketed VB stand (no stale required; P17 cured).
@@ -773,8 +795,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool stop_vb_hold = ShouldHoldHoleDrainForStopVbPlateau(
       in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n);
   const bool coverage_sticky = ShouldHoldHoleDrainForCoverageSticky(
-      in.visual_holes || in.missing_underfeet, in.column_loaded_no_mesh_n,
-      in.softdefer_empty_owned_n);
+      in.column_loaded_no_mesh_n, in.softdefer_empty_owned_n,
+      in.post_load_ring_not_ready);
   if (hole_drain_fm_fed_frames >= 8 &&
       mode == MeshWorkAdmission::Mode::HoleDrain && !holes &&
       in.unfinished_visual == 0 && !stop_vb_hold && !coverage_sticky)
@@ -1015,8 +1037,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const int no_mesh =
       in.no_mesh_n > 0 ? in.no_mesh_n : in.unfinished_visual;
   const bool coverage_sticky_steal = ShouldHoldHoleDrainForCoverageSticky(
-      in.visual_holes || in.missing_underfeet, in.column_loaded_no_mesh_n,
-      in.softdefer_empty_owned_n);
+      in.column_loaded_no_mesh_n, in.softdefer_empty_owned_n,
+      in.post_load_ring_not_ready);
   const bool steal_fm =
       ShouldStealRemeshToFirstMesh(holes, in.unfinished_visual, in.dirty_fm_n,
                                    no_mesh, coverage_sticky_steal);
@@ -1056,17 +1078,19 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   // FZ2.7-P13 R2: keep Remesh floor under stale lit-settle even if A2 stole.
   // FM schedule boost from steal is retained; only remesh is restored.
+  // MissOwn VB P1: keep ticketed VB protect even in consume_mode when stalled high.
   const bool protect_lit = ShouldProtectLitSettleRemesh(
       holes, in.dark_face_stale_near_n, in.remesh_queue_n, 200,
       in.visible_black_fully_dark_repair_n, 20);
-  // SRBR-P1: ticketed VB stand also needs remesh floor (stale often 0 after P17).
+  const bool keep_vb_protect = ShouldKeepRemeshProtectUnderVbStall(
+      consume_mode, in.visible_black_stalled_n);
   const bool protect_ticketed_vb =
-      !consume_mode &&
+      keep_vb_protect &&
       ShouldProtectRemeshUnderTicketedVbStand(
           in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
           in.remesh_queue_n);
   const bool protect_ticketed_vb_cruise =
-      !consume_mode &&
+      keep_vb_protect &&
       ShouldProtectRemeshUnderTicketedVbCruise(
           in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
           in.remesh_queue_n);

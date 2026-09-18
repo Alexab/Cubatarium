@@ -109,6 +109,30 @@ telem `miss_owner_*`.
 Verdict: SLA **landed + AF adequacy PASS**; clnm spike / sticky miss / dual-lane
 still **OPEN**. Manual sea rim remains gate for CLOSED.
 
+### Follow-on 2026-09-17: MissOwn VB regress repair (post manual 204032)
+
+Manual [`perf_20260917-204032_17972.jsonl`](bin/logs/perf_20260917-204032_17972.jsonl):
+clnm fixed vs 182042 but late VB~198, mode3×143, hop→31, wall~118.
+Code: HoleDrain sticky = clnm|SDE|PLRNR only (not bare miss); remesh protect
+under VB stall even in consume_mode; Site A+B pin-until-drawable + flicker damp;
+aged-pin PreferKick rate-limit 12f; rim_mesh_debt without bare FocusMissing.
+
+| Signal | Result |
+|---|---|
+| unit P0–P3 predicates | PASS (`miss_first_mesh_class_test`) |
+| AF cold adequacy / west / eye | PASS / COVERED / PASS (`missown_vb_fix_cold`) |
+| AF warm adequacy / west / eye | PASS / COVERED / PASS (`missown_vb_fix_warm`) |
+| AF dual-lane | **OPEN** (cold mid stalled ~57 / warm ~53.5) |
+| AF cold wall med | **~73** (better vs 204032 ~118; vs miss_own_sla ~78) |
+| AF warm wall med | **~100** |
+| AF cold clnm max / late max | 34 / 34 (warm late max **7** — anti-182042 clnm OK) |
+| AF late VB | still high (~206) — operator gate |
+| miss_owner_hop end | cold ~27 / warm ~47 — hop damp partial |
+| manual fog-ON vs 204032 | **UNTESTED** |
+
+Verdict: repair **partial** — wall/clnm directionally better on AF; late VB + hop +
+mode3 share still OPEN. Operator west sea fog-ON required. Not merge_green.
+
 ## KEEP
 
 N01 incomplete=0, LegalDark rollback, frustum N02, cooldown N06,
@@ -137,13 +161,17 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 - Manual post-repair lag/sticky: `perf_20260917-182042_43968.jsonl`
 - Miss Ownership SLA AF: `miss_own_sla_{cold,warm}` /
   `perf_20260917-200256_35528.jsonl` / `perf_20260917-200602_3496.jsonl`
+- Manual MissOwn VB regress: `perf_20260917-204032_17972.jsonl`
+- MissOwn VB repair AF: `missown_vb_fix_{cold,warm}` /
+  `perf_20260917-220441_11912.jsonl` / `perf_20260917-220725_40068.jsonl`
 
 ## Remaining blockers for true CLOSED
 
-1. Manual `operator_visual=PASS` on west mid **and** sea rim (post MissOwn SLA;
-   confirm fog thrash=0 + no sticky black water vs 182042).
+1. Manual `operator_visual=PASS` on west mid **and** sea rim vs **204032**
+   (fog thrash=0; late VB ≪198; side/ahead black close; hop storm gone).
 2. Wall-clock continuous soak 10–15 min (free-list/dirty/age non-linear).
 3. Dual-lane mid stalled ≤5 — **OPEN-with-cause** for merge (mid FullyDark stall ~53–57; separate epic; do not reopen N04 remesh caps). Optionally close later with a dedicated lane fix.
 4. Optional: drop I3t after more Replace field soak (**KEEP** until then).
 5. Stop-segment rim plateau ≤2 (follow-on after R1; acceptance after operator).
-6. Rim regress / MissOwn: AF clnm spikes still >35 early; warm wall med still &gt;82 vs older plan; need manual fog-ON confirm.
+6. MissOwn VB: AF late VB still ~200; hop end still elevated; mode3 share high —
+   coverage sticky narrow landed but image convergence OPEN.

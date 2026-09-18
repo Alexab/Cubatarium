@@ -21,12 +21,43 @@ inline bool ShouldAllowFrontierWitnessAdvance(int cand_horiz, int pin_horiz)
   return cand_horiz >= 0 && pin_horiz >= 0 && cand_horiz < pin_horiz;
 }
 
-/// Miss Ownership SLA P1: pin-until-drawable — hold undrawn witness (no hop).
-/// visual_holes may still retarget for emergency FOV heal.
-inline bool ShouldHoldMissOwnerUntilDrawable(bool pin_valid, bool pin_drawable,
-                                             bool visual_holes)
+/// MissOwn VB P3: PreferKick/Dirty on aged undrawn pin at most once per N frames.
+constexpr int kAgedPinKickPeriodFrames = 12;
+inline bool ShouldKickAgedUndrawnPin(int pin_age_frames, int hard_expire_frames,
+                                     int last_kick_age_frames,
+                                     int period_frames = kAgedPinKickPeriodFrames)
 {
-  return pin_valid && !pin_drawable && !visual_holes;
+  if (pin_age_frames < hard_expire_frames || period_frames <= 0)
+  {
+    return false;
+  }
+  if (last_kick_age_frames < 0)
+  {
+    return true;
+  }
+  return (pin_age_frames - last_kick_age_frames) >= period_frames;
+}
+
+/// MissOwn VB P2: pin-until-drawable — hold undrawn witness (no hop).
+/// Emergency hop only for underfeet carve (nh≤1), not general visual_holes.
+inline bool ShouldHoldMissOwnerUntilDrawable(bool pin_valid, bool pin_drawable,
+                                             bool allow_emergency_hop = false)
+{
+  return pin_valid && !pin_drawable && !allow_emergency_hop;
+}
+
+/// MissOwn VB P2: brief drawable blink must not unlock hop (flicker damp).
+/// Treat pin as still-missing until drawable is stable for grace frames.
+constexpr int kMissOwnerDrawableStableFrames = 8;
+inline bool ShouldTreatPinAsStillMissingForHop(
+    bool pin_drawable, int consecutive_drawable_frames,
+    int min_stable_drawable_frames = kMissOwnerDrawableStableFrames)
+{
+  if (!pin_drawable)
+  {
+    return true;
+  }
+  return consecutive_drawable_frames < min_stable_drawable_frames;
 }
 
 /// Era27 I-A1: retarget Capture witness only when pin invalid/expired, or

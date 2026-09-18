@@ -2666,6 +2666,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.miss_witness_age_frames = MissWitnessAgeFrames;
     ain.softdefer_empty_owned_n =
         world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN;
+    ain.post_load_ring_not_ready =
+        world.GetPhysicsTelemetry().PostLoadRingNotReady;
     ain.empty_backlog_n = EmptyBacklogN(world.GetPhysicsTelemetry());
     if (have_nearest_missing)
     {
@@ -4558,7 +4560,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             missing_visible_mesh, isolated_hole.y, nh);
         const bool coverage_sticky_owned =
             world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN > 0 ||
-            world.GetPhysicsTelemetry().ColumnLoadedNoMeshN > 0;
+            world.GetPhysicsTelemetry().ColumnLoadedNoMeshN > 0 ||
+            world.GetPhysicsTelemetry().PostLoadRingNotReady > 0;
         if (ShouldPreferKickMissWitnessEarly(missing_visible_mesh,
                                              miss_fm_class,
                                              coverage_sticky_owned))
@@ -5330,6 +5333,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.miss_witness_age_frames = MissWitnessAgeFrames;
     ain.softdefer_empty_owned_n =
         world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN;
+    ain.post_load_ring_not_ready =
+        world.GetPhysicsTelemetry().PostLoadRingNotReady;
     ain.empty_backlog_n = EmptyBacklogN(world.GetPhysicsTelemetry());
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {
@@ -5427,12 +5432,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
         adm.mode == MeshWorkAdmission::Mode::DeepBacklog)
     {
-      // Audit16 R1 / Miss Ownership SLA P2: HoleDrain must not zero outside
-      // FirstMesh under coverage debt (clnm/ring/miss/SoftDeferEmpty).
+      // MissOwn VB P0: MaxOutside under real coverage debt only (not bare miss).
       const auto &pt_rim = world.GetPhysicsTelemetry();
       const bool rim_mesh_debt =
           pt_rim.ColumnLoadedNoMeshN > 0 || pt_rim.PostLoadRingNotReady > 0 ||
-          pt_rim.FocusMissingMesh > 0 || pt_rim.SoftDeferEmptyOwnedN > 0;
+          pt_rim.SoftDeferEmptyOwnedN > 0;
       mesh_service.SetMaxOutsideFocusMeshPerFrame(rim_mesh_debt ? 1 : 0);
       // F3: prune remesh Dirty flood every HoleDrain frame (keep_h=1; 2 when deep RemeshQ).
       if (pending_dirty > 200 &&
