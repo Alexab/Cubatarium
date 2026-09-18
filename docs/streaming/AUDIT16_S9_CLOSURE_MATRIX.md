@@ -261,3 +261,12 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 5. Stop-segment rim plateau ≤2 (follow-on after R1; acceptance after operator).
 6. Ticketed FullyDark census/stalled still elevated on AF despite hide/hold — image gate is operator left-black.
 7. AF cold eye-proxy stale_visual Δ (rim_ahead v3) — follow-up, not greenwash.
+
+### Follow-on 2026-09-18: S1 ownership roadmap (S0-lite)
+
+| Signal | Result |
+|---|---|
+| `publication_audit` R01 retain / Live∩Free | PASS (`correctness_violations=0`; CURRENT retain @`GreedyGpuPublication` ~432) |
+| AF cold adequacy / west / eye | PASS / COVERED / PASS (`s1_p0_own_cold`; exit 2 dual-lane OPEN ok) |
+| S0 eye-proxy **negative** controls (null→PASS guards) | **FOLLOW-UP** (not blocking this roadmap; GateRepro / scorecard note) |
+| continuous free-list soak 10–15 min | **UNTESTED** (same as blocker #2) |
