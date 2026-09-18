@@ -47,6 +47,8 @@ void UGreedyGpuBackend::DestroyBatchBuffers(GreedyGpuBatch &batch)
     batch.pooled = false;
     batch.vboByteOffset = 0;
     batch.eboByteOffset = 0;
+    batch.poolAllocationId = 0;
+    batch.poolGeneration = 0;
     return;
   }
   if (batch.ebo != 0)
@@ -73,6 +75,8 @@ void UGreedyGpuBackend::ReleasePooledBatch(GreedyGpuBatch &batch,
     alloc.indexByteOffset = batch.eboByteOffset;
     alloc.vertexCount = batch.vertexCount;
     alloc.indexCount = batch.indexCount;
+    alloc.allocationId = batch.poolAllocationId;
+    alloc.generation = batch.poolGeneration;
     pool.Free(alloc);
   }
   DestroyBatchBuffers(batch);
@@ -101,12 +105,16 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
     prior.vertexCount = gpu.vertexCount;
     prior.indexCount = gpu.indexCount;
     prior.indexCountGl = gpu.indexCountGl;
+    prior.allocationId = gpu.poolAllocationId;
+    prior.generation = gpu.poolGeneration;
   }
 
   gpu.blockId = batch.blockId;
   gpu.pooled = false;
   gpu.vboByteOffset = 0;
   gpu.eboByteOffset = 0;
+  gpu.poolAllocationId = 0;
+  gpu.poolGeneration = 0;
   gpu.drawInstanceCount = 1;
   if (!batch.vertices.empty() && !batch.indices.empty())
   {
@@ -116,6 +124,8 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
       gpu.pooled = true;
       gpu.vboByteOffset = alloc.vertexByteOffset;
       gpu.eboByteOffset = alloc.indexByteOffset;
+      gpu.poolAllocationId = alloc.allocationId;
+      gpu.poolGeneration = alloc.generation;
       gpu.vertexCount = alloc.vertexCount;
       gpu.indexCount = alloc.indexCount;
       gpu.indexCountGl = alloc.indexCountGl;

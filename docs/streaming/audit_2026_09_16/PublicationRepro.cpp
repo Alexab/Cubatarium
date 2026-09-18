@@ -151,6 +151,38 @@ int main()
     violations += !(applied && !ghost && kind_ok);
     cache.VertexPool.Destroy();
   }
+  {
+    // R01 generation ledger: stale Free (wrong generation) must not drop live.
+    cutum::UGreedyVertexPool pool;
+    cutum::GreedyMeshBatch batch;
+    batch.vertices.resize(4);
+    batch.indices = {0, 1, 2};
+    std::memset(batch.vertices.data(), 0x11,
+                batch.vertices.size() * sizeof(cutum::GreedyMeshVertex));
+    auto live = pool.Allocate(batch);
+    cutum::GreedyGpuPoolAllocation stale = live;
+    stale.generation = live.generation + 1;
+    pool.Free(stale);
+    const bool stale_counted = pool.ConsumeDoubleFreeN() == 1;
+    const bool still_live = pool.DebugLiveFreeRetiredDisjoint();
+    // Live must still own the range — Free with matching handle succeeds.
+    pool.Free(live);
+    const bool freed_ok = pool.ConsumeDoubleFreeN() == 0;
+    const bool disjoint_after = pool.DebugLiveFreeRetiredDisjoint();
+    // Reuse bumps generation; old handle Free is rejected.
+    auto reused = pool.Allocate(batch);
+    pool.Free(live);
+    const bool old_handle_rejected = pool.ConsumeDoubleFreeN() == 1;
+    pool.Free(reused);
+    const bool model_ok =
+        stale_counted && still_live && freed_ok && disjoint_after &&
+        old_handle_rejected && pool.DebugLiveFreeRetiredDisjoint() &&
+        reused.generation > live.generation &&
+        reused.allocationId != live.allocationId;
+    std::cout << "generation_ledger_rejects_stale_free=" << model_ok << '\n';
+    violations += !model_ok;
+    pool.Destroy();
+  }
   std::cout << "correctness_violations=" << violations << '\n';
   return violations ? 1 : 0;
 }

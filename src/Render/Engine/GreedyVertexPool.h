@@ -21,6 +21,10 @@ struct GreedyGpuPoolAllocation
   size_t vertexCount{0};
   size_t indexCount{0};
   GLsizei indexCountGl{0};
+  /// Monotone id assigned at Allocate; Free must match live handle exactly.
+  uint64_t allocationId{0};
+  /// Bumps when a physical range is reused from the free-list (R01 ledger).
+  uint32_t generation{0};
 };
 
 /// Cross-batch vertex/index arena for greedy mesh uploads (TD-CS-016).
@@ -59,6 +63,8 @@ public:
     DoubleFreeN_ = 0;
     return v;
   }
+  /// Debug/test: Live offsets must not appear in Free or Retired slots.
+  bool DebugLiveFreeRetiredDisjoint() const;
   /// Soft ceiling for vertex+index combined (0 = unbounded grow).
   void SetMaxCapacityBytes(size_t max_bytes) { MaxCapacityBytes = max_bytes; }
   size_t GetMaxCapacityBytes() const { return MaxCapacityBytes; }
@@ -129,8 +135,18 @@ private:
   std::map<uint64_t, void *> DrawFences;
   uint64_t CompletedDrawFenceToken_{0};
   size_t LiveAllocationCount{0};
-  /// Audit S1: live (vbo,ebo) offsets — Free of unknown key is double-free.
-  std::vector<std::pair<size_t, size_t>> LiveOffsetKeys_;
+  /// Audit S1/R01: live handles — Free requires matching id+generation+offsets.
+  struct LiveHandle
+  {
+    size_t vertexByteOffset{0};
+    size_t indexByteOffset{0};
+    uint64_t allocationId{0};
+    uint32_t generation{0};
+  };
+  std::vector<LiveHandle> LiveHandles_;
+  /// Per physical (v,i) offset pair: last issued generation (reuse bumps).
+  std::map<std::pair<size_t, size_t>, uint32_t> OffsetGeneration_;
+  uint64_t NextAllocationId_{1};
   uint64_t DoubleFreeN_{0};
   uint64_t StorageReadyAfterToken_{0};
   uint64_t LastDrawFenceToken_{0};

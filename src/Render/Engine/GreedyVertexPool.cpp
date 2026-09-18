@@ -217,6 +217,9 @@ bool UGreedyVertexPool::Reserve(size_t vertex_bytes, size_t index_bytes)
   VertexUsedBytes = 0;
   IndexUsedBytes = 0;
   FreeList.clear();
+  LiveHandles_.clear();
+  OffsetGeneration_.clear();
+  NextAllocationId_ = 1;
   return true;
 }
 bool UGreedyVertexPool::EnsureMinCapacity(size_t vertex_bytes,
@@ -247,15 +250,17 @@ void UGreedyVertexPool::Free(const GreedyGpuPoolAllocation &alloc)
   if (alloc.vertexCount == 0 || alloc.indexCount == 0)
     return;
   PollRetiredFences();
-  const auto key =
-      std::make_pair(alloc.vertexByteOffset, alloc.indexByteOffset);
   bool found_live = false;
-  for (size_t i = 0; i < LiveOffsetKeys_.size(); ++i)
+  for (size_t i = 0; i < LiveHandles_.size(); ++i)
   {
-    if (LiveOffsetKeys_[i] == key)
+    const LiveHandle &h = LiveHandles_[i];
+    if (h.vertexByteOffset == alloc.vertexByteOffset &&
+        h.indexByteOffset == alloc.indexByteOffset &&
+        h.allocationId == alloc.allocationId &&
+        h.generation == alloc.generation)
     {
-      LiveOffsetKeys_[i] = LiveOffsetKeys_.back();
-      LiveOffsetKeys_.pop_back();
+      LiveHandles_[i] = LiveHandles_.back();
+      LiveHandles_.pop_back();
       found_live = true;
       break;
     }
@@ -280,6 +285,35 @@ void UGreedyVertexPool::Free(const GreedyGpuPoolAllocation &alloc)
   else
     RetiredList.push_back({slot, LastDrawFenceToken_});
 #endif
+}
+
+bool UGreedyVertexPool::DebugLiveFreeRetiredDisjoint() const
+{
+  auto overlaps = [](size_t v, size_t i, size_t ov, size_t oi) {
+    return v == ov && i == oi;
+  };
+  for (const LiveHandle &h : LiveHandles_)
+  {
+    for (const GreedyGpuPoolFreeSlot &slot : FreeList)
+    {
+      if (overlaps(h.vertexByteOffset, h.indexByteOffset, slot.vertexByteOffset,
+                   slot.indexByteOffset))
+        return false;
+    }
+    for (const RetiredSlot &r : RetiredList)
+    {
+      if (overlaps(h.vertexByteOffset, h.indexByteOffset, r.slot.vertexByteOffset,
+                   r.slot.indexByteOffset))
+        return false;
+    }
+    for (const GreedyGpuPoolFreeSlot &slot : PendingRetireList)
+    {
+      if (overlaps(h.vertexByteOffset, h.indexByteOffset, slot.vertexByteOffset,
+                   slot.indexByteOffset))
+        return false;
+    }
+  }
+  return true;
 }
 GreedyGpuPoolAllocation
 UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
@@ -387,9 +421,18 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
 #endif
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
+  alloc.allocationId = NextAllocationId_++;
+  {
+    const auto key =
+        std::make_pair(alloc.vertexByteOffset, alloc.indexByteOffset);
+    uint32_t &gen = OffsetGeneration_[key];
+    ++gen;
+    alloc.generation = gen;
+  }
   ++LiveAllocationCount;
-  LiveOffsetKeys_.push_back(
-      {alloc.vertexByteOffset, alloc.indexByteOffset});
+  LiveHandles_.push_back(LiveHandle{alloc.vertexByteOffset,
+                                    alloc.indexByteOffset, alloc.allocationId,
+                                    alloc.generation});
   return alloc;
 }
 void UGreedyVertexPool::SignalDrawComplete()
@@ -423,7 +466,9 @@ void UGreedyVertexPool::Destroy()
   DrawFences.clear();
   CompletedDrawFenceToken_ = 0;
   LiveAllocationCount = 0;
-  LiveOffsetKeys_.clear();
+  LiveHandles_.clear();
+  OffsetGeneration_.clear();
+  NextAllocationId_ = 1;
   DoubleFreeN_ = 0;
   RetiredList.clear();
   PendingRetireList.clear();
