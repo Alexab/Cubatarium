@@ -300,3 +300,14 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 | AF `r09_timer_p0_cold` | PASS / COVERED / PASS (dual-lane OPEN ok); wall fly med ~50; mesh_gpu_kick/finish med tiny (not multi-second accumulate) |
 | aggregation note | kick/finish/async_drain are **per-frame Consume ownership**; do not sum across Rebuild skip frames or treat last-frame ms as wall-stage proof (audit R09) |
 | geometric oracle / eye-proxy fail-closed | **OUT OF SCOPE** this epic (S3§4–7) |
+
+### Follow-on 2026-09-18: streamer diet (R08-lite)
+
+| Signal | Result |
+|---|---|
+| MaxLoadOps cap under lit-convergence debt | PASS (`2d6eeadc`; no fly boost + cap=4 after frontier floor; underfeet KEEP) |
+| AF `stream_diet_p0_{cold,warm}` | PASS / COVERED / PASS; wall fly ~66–72 (class ≤~70–80 KEEP vs soft ≫90) |
+| one HoleDrain→Warm emergency carve-out ledger | PASS (`ArmHoleDrainEmergencyCarveOutFrames` + `TryApplyHoleDrainWarmCarveOut`) |
+| AF `stream_diet_p1_{cold,warm}` | PASS / COVERED / PASS (cold eye flake once then PASS; dual-lane OPEN) |
+| full R08 unified spend ledger | **OUT OF SCOPE** (explicit; one carve-out only) |
+| roadmap E1–E5 absolute for this cut | **CLOSED** for coded gates; operator dive / soak / dual-lane still OPEN blockers |
