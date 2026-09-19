@@ -1,5 +1,6 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/FrameDeadline.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/TerrainColumnUtil.h"
@@ -16,7 +17,7 @@ namespace cutum
 namespace
 {
 
-constexpr int kCollisionSyncSubColumnsPerFrame = 32;
+constexpr int kCollisionSyncSubColumnsPerFrame = kStreamerEnsureSyncSubColumns;
 constexpr int kTerrainSubColumnsPerChunk = CHUNK_SIZE * CHUNK_SIZE;
 
 bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
@@ -488,9 +489,23 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
            IsTerrainChunkCompleteCached(chunkCoord);
   }
 
+  // H1 SoT 185830: never sync-advance full 256 subcols on the main Update path
+  // (was wall_ms ~5s on shore). Prefer async when available; else budgeted
+  // slice (same as collision sync) so FrameDeadline can preempt next Ensure.
+  if (!forceSync && AsyncGeneration && OnRequestAsyncChunk)
+  {
+    OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+    note_queued();
+    return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
+           IsTerrainChunkCompleteCached(chunkCoord);
+  }
+  if (!forceSync && UFrameDeadline::Get().Exhausted())
+  {
+    return false;
+  }
+
   const bool onlyEmptyColumns = existing != nullptr && !clearedPartialDiskLoad;
-  const int sub_column_budget =
-      forceSync ? kCollisionSyncSubColumnsPerFrame : kTerrainSubColumnsPerChunk;
+  const int sub_column_budget = kCollisionSyncSubColumnsPerFrame;
   return AdvanceTerrainColumnGeneration(chunkCoord, sub_column_budget,
                                         onlyEmptyColumns);
 }
@@ -741,25 +756,20 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   // Soft stop after any completed op; hard stop at 2× even with loadOps==0 so a
   // single EnsureChunkLoaded cannot stack forever (CB streamer≈83 on holes).
   // Allow one cold attempt between soft and hard when still loadOps==0.
+  // H1 SoT 185830: also honor FrameDeadline (UpdateStreaming BeginFrame budget).
   const double load_budget_ms = MaxLoadOpsPerFrame <= 2 ? 4.0 : 8.0;
   const double load_hard_ms = load_budget_ms * 2.0;
   int loadOps = 0;
   for (const glm::ivec3 &coord : toLoad)
   {
     ++LastFrameStats.loadCandidates;
-    if (loadOps >= MaxLoadOpsPerFrame)
-    {
-      break;
-    }
     const double elapsed_ms =
         std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - update_t0)
             .count();
-    if (elapsed_ms >= load_budget_ms && loadOps > 0)
-    {
-      break;
-    }
-    if (elapsed_ms >= load_hard_ms)
+    if (StreamerLoadLoopShouldBreak(UFrameDeadline::Get().Exhausted(), loadOps,
+                                    MaxLoadOpsPerFrame, elapsed_ms,
+                                    load_budget_ms, load_hard_ms))
     {
       break;
     }

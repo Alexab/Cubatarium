@@ -1,5 +1,6 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "Core/FrameDeadline.h"
 #include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/FocusIngressPolicy.h"
@@ -3476,6 +3477,8 @@ void UWorldStreaming::QuiesceBackgroundWork(
   DeferredPhysicsSeedQueue.clear();
   DeferredShoreSealQueue.clear();
   DeferredIntraChunkSealNeeded.clear();
+  PendingStreamerMeshDirty.clear();
+  PendingStreamerMeshDirtySet.clear();
   PauseChunkGeneration(async_io_timeout);
   if (world.Persistence)
   {
@@ -3553,6 +3556,28 @@ void UWorldStreaming::ResumeStreamerAfterQuiesce()
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
   CUBA_ZONE("TickMeshEmerge");
+  // H1: drain deferred streamer remesh before emerge so Dirty is visible to
+  // admit, but budgeted so one emerge tick cannot replay a MarkDirty flood.
+  {
+    constexpr int kMaxStreamerDirtyDrain = 8;
+    int drained = 0;
+    const ProceduralSettings &settings = world.GetProceduralSettings();
+    const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+    const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+    while (!PendingStreamerMeshDirty.empty() && drained < kMaxStreamerDirtyDrain)
+    {
+      if (UFrameDeadline::Get().Exhausted())
+      {
+        break;
+      }
+      const glm::ivec3 ground = PendingStreamerMeshDirty.front();
+      PendingStreamerMeshDirty.pop_front();
+      PendingStreamerMeshDirtySet.erase(ground);
+      world.MarkTerrainChunkMeshDirtySeamed(ground, remesh_min_y, remesh_max_y,
+                                            true);
+      ++drained;
+    }
+  }
   EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
   // MeshWorkAdmission SoT lands in LastBudget at end of TickMeshEmerge.
   // finish_telemetry in TickAsyncChunkSystems runs *before* emerge — write
@@ -3764,16 +3789,15 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                 std::chrono::high_resolution_clock::now() - t0)
                 .count();
       },
-      [&world](glm::ivec3 coord)
+      [&world, this](glm::ivec3 coord)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
-        // Sea-band neighbor remesh must run even under PendingLight — soft-defer
-        // now allows sea cy, and skipping left blank water seams along flight.
-        const ProceduralSettings &settings = world.GetProceduralSettings();
-        const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
-        const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
-        world.MarkTerrainChunkMeshDirtySeamed(ground, remesh_min_y, remesh_max_y,
-                                              true);
+        // H1 SoT 185830: do not MarkDirtySeamed inside Streamer::Update —
+        // complete scans + seamed remesh stacked into multi-second walls.
+        if (PendingStreamerMeshDirtySet.insert(ground).second)
+        {
+          PendingStreamerMeshDirty.push_back(ground);
+        }
       },
       [this, &world](int x, int z)
       {

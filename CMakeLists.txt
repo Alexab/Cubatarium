@@ -1487,6 +1487,17 @@ add_executable(frame_deadline_test
 target_include_directories(frame_deadline_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(streamer_deadline_policy_test
+    src/Test/StreamerDeadlinePolicyTest.cpp)
+target_include_directories(streamer_deadline_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(streamer_deadline_policy_test PRIVATE glm::glm)
+
+add_executable(sticky_overlay_remesh_policy_test
+    src/Test/StickyOverlayRemeshPolicyTest.cpp)
+target_include_directories(sticky_overlay_remesh_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(column_emerge_bump_test
     src/Test/ColumnEmergeBumpTest.cpp)
 target_include_directories(column_emerge_bump_test PRIVATE
@@ -2676,6 +2687,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   mesh_inputs_catalog_test
   normal_shutdown_test
   frame_deadline_test
+  streamer_deadline_policy_test
   greedy_vertex_pool_production_test
   column_flow_scheduler_test
   frustum_clip_test

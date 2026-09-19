@@ -19,6 +19,35 @@ namespace cutum
 class UBlockRegistry;
 class UBlockWorld;
 
+/// H1 SoT 185830: EnsureChunkLoaded never advances a full 256-subcol column in
+/// one Sync Update slice — budget matches collision sync.
+inline constexpr int kStreamerEnsureSyncSubColumns = 32;
+
+/// Load-loop stop before EnsureChunkLoaded (unit-tested with FrameDeadline).
+inline bool StreamerLoadLoopShouldBreak(bool frame_deadline_exhausted,
+                                        int load_ops, int max_load_ops,
+                                        double elapsed_ms, double soft_ms,
+                                        double hard_ms)
+{
+  if (frame_deadline_exhausted)
+  {
+    return true;
+  }
+  if (load_ops >= max_load_ops)
+  {
+    return true;
+  }
+  if (elapsed_ms >= soft_ms && load_ops > 0)
+  {
+    return true;
+  }
+  if (elapsed_ms >= hard_ms)
+  {
+    return true;
+  }
+  return false;
+}
+
 struct StreamingFrameStats
 {
   void Reset()
