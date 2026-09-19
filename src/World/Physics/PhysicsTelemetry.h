@@ -191,7 +191,13 @@ struct PhysicsTelemetry
   double CommitApplyMs{0.0};
   double CommitSealMs{0.0};
   /// Breakdown inside StreamMs (UpdateStreaming + TickAsyncChunkSystems).
+  /// StreamerUpdateMs = ChunkStreamer::Update load loop only (core).
   double StreamerUpdateMs{0.0};
+  double StreamerUnloadMs{0.0};
+  double StreamerKeepShellMs{0.0};
+  double StreamerPrefetchAheadMs{0.0};
+  /// Full UpdateStreaming wall (WorldViewBinding); not an overwrite of core.
+  double UpdateStreamingMs{0.0};
   double AsyncIoMs{0.0};
   double RelightDrainMs{0.0};
   /// P2: Capture (DrainRelightQueues) vs Apply (DrainAsyncRelightResults).

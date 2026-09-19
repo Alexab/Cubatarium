@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
+#include <deque>
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
@@ -181,9 +182,14 @@ public:
   void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
   bool IsCollisionReady(glm::ivec3 feetBlockPos, int radiusChunks) const;
 
-  /// Full streaming pass after Movement: load/unload with per-frame budget.
+  /// Full streaming pass after Movement: load (unload is separate pass).
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               const PlayerCapsule &cap);
+  /// SoT 210431: unload pass timed separately from Update (FrameDeadline).
+  void UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
+                  const PlayerCapsule &cap);
+  /// Drain deferred save+unload queue (mode U-D) on calm frames.
+  void DrainDeferredUnloadSaves(int max_ops);
   void PrefetchAhead(glm::ivec3 feet_chunk, glm::vec3 view_forward_xz,
                      float movement_speed, float speed_threshold,
                      int *out_ops = nullptr);
@@ -267,6 +273,14 @@ private:
   mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
   glm::ivec3 LoadPriorityCenter{0};
   StreamingFrameStats LastFrameStats;
+  /// Amortized unload scan cursor into last columns snapshot.
+  std::vector<glm::ivec3> UnloadColumnSnapshot;
+  size_t UnloadScanCursor{0};
+  /// Amortized keep-shell annulus cursor (packed cx,cz relative scan index).
+  int KeepShellScanIndex{0};
+  /// U-D: save+unload deferred when Exhausted mid-pass.
+  std::deque<glm::ivec3> DeferredUnloadSaves;
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredUnloadSaveSet;
 };
 
 } // namespace cutum

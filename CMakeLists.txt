@@ -1493,6 +1493,11 @@ target_include_directories(streamer_deadline_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(streamer_deadline_policy_test PRIVATE glm::glm)
 
+add_executable(streamer_amortize_policy_test
+    src/Test/StreamerAmortizePolicyTest.cpp)
+target_include_directories(streamer_amortize_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(sticky_overlay_remesh_policy_test
     src/Test/StickyOverlayRemeshPolicyTest.cpp)
 target_include_directories(sticky_overlay_remesh_policy_test PRIVATE
@@ -2688,6 +2693,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   normal_shutdown_test
   frame_deadline_test
   streamer_deadline_policy_test
+  streamer_amortize_policy_test
   sticky_overlay_remesh_policy_test
   greedy_vertex_pool_production_test
   column_flow_scheduler_test

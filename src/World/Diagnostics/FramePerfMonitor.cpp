@@ -268,6 +268,10 @@ struct FrameNumbers
   double commit_seal_ms{0.0};
   double commit_physics_ms{0.0};
   double streamer_update_ms{0.0};
+  double streamer_unload_ms{0.0};
+  double streamer_keep_shell_ms{0.0};
+  double streamer_prefetch_ahead_ms{0.0};
+  double update_streaming_ms{0.0};
   double async_io_ms{0.0};
   double relight_drain_ms{0.0};
   double relight_capture_ms{0.0};
@@ -917,6 +921,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.commit_seal_ms = phys.CommitSealMs;
   n.commit_physics_ms = phys.CommitPhysicsMs;
   n.streamer_update_ms = phys.StreamerUpdateMs;
+  n.streamer_unload_ms = phys.StreamerUnloadMs;
+  n.streamer_keep_shell_ms = phys.StreamerKeepShellMs;
+  n.streamer_prefetch_ahead_ms = phys.StreamerPrefetchAheadMs;
+  n.update_streaming_ms = phys.UpdateStreamingMs;
   n.async_io_ms = phys.AsyncIoMs;
   n.relight_drain_ms = phys.RelightDrainMs;
   n.relight_capture_ms = phys.RelightCaptureMs;
@@ -1572,6 +1580,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"commit_seal_ms\":" << n.commit_seal_ms
           << ",\"commit_physics_ms\":" << n.commit_physics_ms
           << ",\"streamer_update_ms\":" << n.streamer_update_ms
+          << ",\"streamer_core_ms\":" << n.streamer_update_ms
+          << ",\"streamer_unload_ms\":" << n.streamer_unload_ms
+          << ",\"streamer_keep_shell_ms\":" << n.streamer_keep_shell_ms
+          << ",\"streamer_prefetch_ahead_ms\":" << n.streamer_prefetch_ahead_ms
+          << ",\"update_streaming_ms\":" << n.update_streaming_ms
           << ",\"async_io_ms\":" << n.async_io_ms
           << ",\"relight_drain_ms\":" << n.relight_drain_ms
           << ",\"relight_capture_ms\":" << n.relight_capture_ms

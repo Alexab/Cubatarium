@@ -5,8 +5,10 @@
 #include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/CollisionReadiness.h"
+#include "World/Streaming/StreamerAmortizePolicy.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -604,6 +606,11 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
   {
     return;
   }
+  const int mode = URuntimeTuning::Get().UnloadAmortizeMode;
+  if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+  {
+    return;
+  }
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = KeepRenderDistance + UnloadMargin;
   const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
@@ -615,30 +622,53 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
   const int keep_cy_min = std::max(0, player_cy_min - 1);
   const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
 
-  std::unordered_set<glm::ivec3, IVec3Hash> columnsInMemory;
-  columnsInMemory.reserve(256);
-  World.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
-      {
-        const glm::ivec3 coord = chunk.GetCoord();
-        columnsInMemory.insert(glm::ivec3(coord.x, 0, coord.z));
-      });
+  const bool use_cursor = UnloadModeUsesScanCursor(mode);
+  if (!use_cursor || UnloadColumnSnapshot.empty() ||
+      UnloadScanCursor >= UnloadColumnSnapshot.size())
+  {
+    UnloadColumnSnapshot.clear();
+    UnloadColumnSnapshot.reserve(256);
+    World.GetChunkManager().ForEachChunk(
+        [&](const UChunk &chunk)
+        {
+          const glm::ivec3 coord = chunk.GetCoord();
+          UnloadColumnSnapshot.push_back(glm::ivec3(coord.x, 0, coord.z));
+        });
+    // Unique columns (ForEach yields every cy slice).
+    std::sort(UnloadColumnSnapshot.begin(), UnloadColumnSnapshot.end(),
+              [](const glm::ivec3 &a, const glm::ivec3 &b)
+              {
+                if (a.x != b.x)
+                {
+                  return a.x < b.x;
+                }
+                return a.z < b.z;
+              });
+    UnloadColumnSnapshot.erase(
+        std::unique(UnloadColumnSnapshot.begin(), UnloadColumnSnapshot.end()),
+        UnloadColumnSnapshot.end());
+    UnloadScanCursor = 0;
+  }
 
   int unloadOps = 0;
   const int unload_limit = EffectiveUnloadOpsPerFrame;
+  const size_t scan_budget =
+      use_cursor ? static_cast<size_t>(kUnloadScanBudgetPerFrame)
+                 : UnloadColumnSnapshot.size();
+  size_t scanned = 0;
   std::unordered_set<glm::ivec3, IVec3Hash> savedColumns;
-  for (const glm::ivec3 &ground : columnsInMemory)
-  {
-    if (unloadOps >= unload_limit)
-    {
-      break;
-    }
 
+  auto try_unload_column = [&](const glm::ivec3 &ground) -> bool
+  {
+    if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+    {
+      return false;
+    }
     const int dx = std::abs(ground.x - feetChunk.x);
     const int dz = std::abs(ground.z - feetChunk.z);
     if (std::max(dx, dz) <= limit)
     {
-      continue;
+      return true; // scanned ok, not a candidate
     }
 
     bool keepColumn = false;
@@ -657,7 +687,17 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     }
     if (keepColumn)
     {
-      continue;
+      return true;
+    }
+
+    if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+    {
+      if (UnloadModeDefersSave(mode) &&
+          DeferredUnloadSaveSet.insert(ground).second)
+      {
+        DeferredUnloadSaves.push_back(ground);
+      }
+      return false;
     }
 
     if (OnSaveChunk && savedColumns.insert(ground).second)
@@ -668,10 +708,9 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
 
     if (OnUnloadColumn)
     {
-      // Q6 EvictionOwner: callback may refuse (pending retain / DecideEvict).
       if (!OnUnloadColumn(ground, maxCy))
       {
-        continue;
+        return true;
       }
     }
 
@@ -692,7 +731,98 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     }
     ProcedurallyGenerated.erase(ground);
     InvalidateTerrainCompleteCache(ground);
+    DeferredUnloadSaveSet.erase(ground);
     ++unloadOps;
+    return true;
+  };
+
+  while (unloadOps < unload_limit && scanned < scan_budget &&
+         UnloadScanCursor < UnloadColumnSnapshot.size())
+  {
+    if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+    {
+      break;
+    }
+    const glm::ivec3 ground = UnloadColumnSnapshot[UnloadScanCursor++];
+    ++scanned;
+    if (!try_unload_column(ground))
+    {
+      break;
+    }
+  }
+}
+
+void UChunkStreamer::UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
+                                const PlayerCapsule &cap)
+{
+  if (!Enabled)
+  {
+    return;
+  }
+  const glm::ivec3 feetBlockPos =
+      WorldPosToBlock(glm::vec3(eyePos.x, cap.feetY(eyePos) + 0.01f, eyePos.z));
+  const glm::ivec3 loadCenter =
+      glm::ivec3(UChunkManager::WorldToChunk(feetBlockPos).x, 0,
+                 UChunkManager::WorldToChunk(feetBlockPos).z);
+  (void)cameraBlockPos;
+  if (MaxLoadOpsPerFrame > 2 && EffectiveUnloadOpsPerFrame > 0)
+  {
+    UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
+  }
+}
+
+void UChunkStreamer::DrainDeferredUnloadSaves(int max_ops)
+{
+  if (max_ops <= 0 || DeferredUnloadSaves.empty())
+  {
+    return;
+  }
+  if (UFrameDeadline::Get().Exhausted())
+  {
+    return;
+  }
+  const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  int ops = 0;
+  while (ops < max_ops && !DeferredUnloadSaves.empty())
+  {
+    if (UFrameDeadline::Get().Exhausted())
+    {
+      break;
+    }
+    const glm::ivec3 ground = DeferredUnloadSaves.front();
+    DeferredUnloadSaves.pop_front();
+    DeferredUnloadSaveSet.erase(ground);
+    if (OnSaveChunk)
+    {
+      OnSaveChunk(ground);
+      ++LastFrameStats.savesThisFrame;
+    }
+    if (OnUnloadColumn)
+    {
+      if (!OnUnloadColumn(ground, maxCy))
+      {
+        ++ops;
+        continue;
+      }
+    }
+    for (int cy = 0; cy <= maxCy; ++cy)
+    {
+      const glm::ivec3 slice(ground.x, cy, ground.z);
+      if (!World.GetChunkManager().HasChunk(slice))
+      {
+        continue;
+      }
+      World.GetChunkManager().RemoveChunk(slice);
+      if (OnUnloadChunk && !OnUnloadColumn)
+      {
+        OnUnloadChunk(slice);
+      }
+      LastFrameStats.unloadedCoords.push_back(slice);
+      ++LastFrameStats.unloadsThisFrame;
+    }
+    ProcedurallyGenerated.erase(ground);
+    InvalidateTerrainCompleteCache(ground);
+    ++ops;
   }
 }
 
@@ -799,12 +929,7 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     }
   }
 
-  // Skip unload on hitch budgets — ForEachChunk+save stacks with load scan.
-  // Also skip when EffectiveUnloadOpsPerFrame==0 (UnloadDistantChunks early-out).
-  if (MaxLoadOpsPerFrame > 2 && EffectiveUnloadOpsPerFrame > 0)
-  {
-    UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
-  }
+  // Unload moved to UnloadPass (timed separately under FrameDeadline).
 }
 
 void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
@@ -950,70 +1075,118 @@ void UChunkStreamer::PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
     }
     return;
   }
+  const int mode = URuntimeTuning::Get().KeepShellAmortizeMode;
+  if (KeepModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+  {
+    if (out_ops)
+    {
+      *out_ops = 0;
+    }
+    return;
+  }
 
   const glm::ivec3 feet_ground(feet_chunk.x, 0, feet_chunk.z);
   LoadPriorityCenter = feet_ground;
 
-  std::vector<glm::ivec3> candidates;
-  candidates.reserve(static_cast<size_t>(
-      std::max(0, (2 * KeepRenderDistance + 1) * (2 * KeepRenderDistance + 1) -
-                      (2 * VisualRenderDistance + 1) *
-                          (2 * VisualRenderDistance + 1))));
-  for (int cx = feet_ground.x - KeepRenderDistance;
-       cx <= feet_ground.x + KeepRenderDistance; ++cx)
+  const int keep_rd = KeepRenderDistance;
+  const int vis_rd = VisualRenderDistance;
+  const int side = 2 * keep_rd + 1;
+  const int total_cells = side * side;
+  const bool use_cursor = KeepModeUsesScanCursor(mode);
+  const bool cheap = KeepModeUsesCheapFilter(mode);
+  const int scan_budget =
+      use_cursor ? kKeepShellScanBudgetPerFrame : total_cells;
+
+  std::vector<glm::ivec3> shortlist;
+  shortlist.reserve(static_cast<size_t>(max_ops * 4));
+
+  int scanned = 0;
+  int idx = KeepShellScanIndex;
+  while (scanned < scan_budget &&
+         (cheap ? static_cast<int>(shortlist.size()) < max_ops * 3
+                : queued < max_ops))
   {
-    for (int cz = feet_ground.z - KeepRenderDistance;
-         cz <= feet_ground.z + KeepRenderDistance; ++cz)
+    if (KeepModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
     {
-      const int dist = std::max(std::abs(cx - feet_ground.x),
-                                std::abs(cz - feet_ground.z));
-      if (dist <= VisualRenderDistance || dist > KeepRenderDistance)
-      {
-        continue;
-      }
-      const glm::ivec3 coord(cx, 0, cz);
+      break;
+    }
+    const int local = idx % total_cells;
+    ++idx;
+    ++scanned;
+    const int lx = (local % side) - keep_rd;
+    const int lz = (local / side) - keep_rd;
+    const int dist = std::max(std::abs(lx), std::abs(lz));
+    if (dist <= vis_rd || dist > keep_rd)
+    {
+      continue;
+    }
+    const glm::ivec3 coord(feet_ground.x + lx, 0, feet_ground.z + lz);
+    if (OnIsChunkCommitted && OnIsChunkCommitted(coord))
+    {
+      continue;
+    }
+    if (OnIsColumnPending && OnIsColumnPending(coord))
+    {
+      continue;
+    }
+    // V5 visual SLA: do not expand keep shell onto unfinished FOV columns
+    // (OnIsColumnPendingLight = !IsColumnVisualReadyForRing).
+    if (OnIsColumnPendingLight && OnIsColumnPendingLight(coord))
+    {
+      continue;
+    }
+    if (!cheap)
+    {
       if (ProcedurallyGenerated.count(coord) &&
           IsTerrainChunkCompleteCached(coord))
       {
         continue;
       }
-      if (OnIsChunkCommitted && OnIsChunkCommitted(coord))
+      if (!RingPrerequisitesMet(coord))
       {
         continue;
       }
-      if (OnIsColumnPending && OnIsColumnPending(coord))
-      {
-        continue;
-      }
-      // V5 visual SLA: do not expand keep shell onto unfinished FOV columns
-      // (OnIsColumnPendingLight = !IsColumnVisualReadyForRing).
-      if (OnIsColumnPendingLight && OnIsColumnPendingLight(coord))
-      {
-        continue;
-      }
-      candidates.push_back(coord);
-    }
-  }
-
-  std::sort(candidates.begin(), candidates.end(),
-            [this](const glm::ivec3 &a, const glm::ivec3 &b)
-            { return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b); });
-
-  for (const glm::ivec3 &coord : candidates)
-  {
-    if (queued >= max_ops)
-    {
-      break;
-    }
-    if (!RingPrerequisitesMet(coord))
-    {
+      const int prio =
+          ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
+      OnRequestAsyncChunk(coord, prio);
+      ++queued;
       continue;
     }
-    const int prio =
-        ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
-    OnRequestAsyncChunk(coord, prio);
-    ++queued;
+    shortlist.push_back(coord);
   }
+  KeepShellScanIndex = idx % std::max(1, total_cells);
+
+  if (cheap)
+  {
+    std::sort(shortlist.begin(), shortlist.end(),
+              [this](const glm::ivec3 &a, const glm::ivec3 &b)
+              { return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b); });
+    for (const glm::ivec3 &coord : shortlist)
+    {
+      if (queued >= max_ops)
+      {
+        break;
+      }
+      if (KeepModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
+      {
+        break;
+      }
+      if (ProcedurallyGenerated.count(coord) &&
+          IsTerrainChunkCompleteCached(coord))
+      {
+        continue;
+      }
+      if (!RingPrerequisitesMet(coord))
+      {
+        continue;
+      }
+      const int prio =
+          ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
+      OnRequestAsyncChunk(coord, prio);
+      ++queued;
+    }
+  }
+
   if (out_ops)
   {
     *out_ops = queued;

@@ -18,6 +18,8 @@
 #include "World/Diagnostics/Profile.h"
 #include "World/Diagnostics/ScopedPhase.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Streaming/StreamerAmortizePolicy.h"
+#include "Core/FrameDeadline.h"
 #include "World/Lighting/LightingSeedBackendFactory.h"
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
@@ -4522,7 +4524,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // 1149→124). Era20 survived the same telem by luck of unload timing.
     const bool moving_for_unload =
         lastMovementSpeed >= procedural.MovementPrefetchThreshold;
-    if (moving_for_unload || frame_ms > 16.0 || dirty_for_unload > 64)
+    const int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
+    const bool unload_stop_skip =
+        unload_mode >= kUnloadAmortizeUC &&
+        ShouldSkipUnloadOnStopFrame(
+            moving_for_unload, frame_ms, UFrameDeadline::Get().Exhausted(),
+            static_cast<int>(dirty_for_unload));
+    if (moving_for_unload || frame_ms > 16.0 || dirty_for_unload > 64 ||
+        unload_stop_skip)
     {
       unload_ops = 0;
     }
@@ -4729,6 +4738,21 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
               std::chrono::high_resolution_clock::now() - update_t0)
               .count();
     }
+    // SoT 210431: unload timed separately from load core (FrameDeadline).
+    {
+      const auto unload_t0 = std::chrono::high_resolution_clock::now();
+      Streamer->UnloadPass(WorldPosToBlock(eye), eye, cap);
+      if (unload_mode >= kUnloadAmortizeUD && !moving_for_unload &&
+          frame_ms <= 12.0 && !UFrameDeadline::Get().Exhausted())
+      {
+        Streamer->DrainDeferredUnloadSaves(
+            std::max(1, world.MaxUnloadOpsPerFrame));
+      }
+      world.PhysicsTelemetryData.StreamerUnloadMs +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - unload_t0)
+              .count();
+    }
 
     const auto prefetch_t0 = std::chrono::high_resolution_clock::now();
     int prefetch_visual_ops = 0;
@@ -4783,10 +4807,22 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                               &prefetch_visual_ops);
     }
     Streamer->SetShedPrefetchLateral(false);
+    world.PhysicsTelemetryData.StreamerPrefetchAheadMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - prefetch_t0)
+            .count();
     int prefetch_keep_ops = 0;
     // Idle in a hole pocket: keep-shell used to wait until holes cleared, so
     // standing at 100 FPS never requested the missing ring.
-    if (keep_gate.allow &&
+    const int keep_mode = URuntimeTuning::Get().KeepShellAmortizeMode;
+    const bool idle_underwater =
+        !moving_fast &&
+        eye.y < static_cast<float>(procedural.SeaLevel) + 2.0f;
+    const bool keep_skip = ShouldSkipKeepShell(
+        UFrameDeadline::Get().Exhausted(), frame_ms, idle_underwater,
+        keep_mode);
+    const auto keep_t0 = std::chrono::high_resolution_clock::now();
+    if (!keep_skip && keep_gate.allow &&
         ((!near_focus_holes && !underfeet_need) ||
          (!moving_fast && frame_ms <= 16.0 && near_focus_holes)))
     {
@@ -4798,6 +4834,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       Streamer->PrefetchKeepShell(feet_chunk, idle_hole_budget,
                                   &prefetch_keep_ops);
     }
+    world.PhysicsTelemetryData.StreamerKeepShellMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - keep_t0)
+            .count();
     const bool spawn_catch_up = world.NeedsSpawnRingCatchUp();
     const bool underfeet_miss_sla =
         world.PhysicsTelemetryData.FocusMissingMesh != 0 &&

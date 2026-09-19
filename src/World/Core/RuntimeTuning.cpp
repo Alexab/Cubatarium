@@ -2,6 +2,7 @@
 
 #include "World/Physics/FluidTuning.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -455,6 +456,16 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   if (j.contains("schedule_shed_uv1"))
   {
     t.ScheduleShedUv1 = j.value("schedule_shed_uv1", t.ScheduleShedUv1);
+  }
+  if (j.contains("unload_amortize_mode"))
+  {
+    t.UnloadAmortizeMode =
+        std::clamp(j.value("unload_amortize_mode", t.UnloadAmortizeMode), 0, 4);
+  }
+  if (j.contains("keep_shell_amortize_mode"))
+  {
+    t.KeepShellAmortizeMode = std::clamp(
+        j.value("keep_shell_amortize_mode", t.KeepShellAmortizeMode), 0, 4);
   }
   last_path = path;
   last_mtime = mtime;

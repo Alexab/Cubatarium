@@ -161,6 +161,11 @@ struct URuntimeTuning
   /// Env CUBA_SCHEDULE_SHED_UV1=0|1 or streaming_tune.json "schedule_shed_uv1".
   bool ScheduleShedUv1{true};
 
+  /// SoT 210431: unload amortize mode 0..4 (U0..U-D). Bake-off sets default.
+  int UnloadAmortizeMode{0};
+  /// SoT 210431: keep-shell amortize mode 0..4 (K0..K-D). Bake-off sets default.
+  int KeepShellAmortizeMode{0};
+
   static URuntimeTuning &Get();
   static void ResetToDefaults();
   /// Apply low|med|high preset (keeps other knobs unless tier sets them).

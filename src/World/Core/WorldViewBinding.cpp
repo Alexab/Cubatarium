@@ -772,6 +772,10 @@ void UWorld::TickWorldStreamingPhase()
 
   PhysicsTelemetryData.StreamMs = 0.0;
   PhysicsTelemetryData.StreamerUpdateMs = 0.0;
+  PhysicsTelemetryData.StreamerUnloadMs = 0.0;
+  PhysicsTelemetryData.StreamerKeepShellMs = 0.0;
+  PhysicsTelemetryData.StreamerPrefetchAheadMs = 0.0;
+  PhysicsTelemetryData.UpdateStreamingMs = 0.0;
   PhysicsTelemetryData.AsyncIoMs = 0.0;
   PhysicsTelemetryData.RelightDrainMsPrev = PhysicsTelemetryData.RelightDrainMs;
   PhysicsTelemetryData.RelightApplyMsPrev = PhysicsTelemetryData.RelightApplyMs;
@@ -1062,7 +1066,9 @@ void UWorld::TickWorldStreamingPhase()
   const auto t_stream1 = std::chrono::high_resolution_clock::now();
   TickAsyncChunkSystems();
   const auto t_after_stream = std::chrono::high_resolution_clock::now();
-  PhysicsTelemetryData.StreamerUpdateMs =
+  // T0 SoT 210431: do NOT overwrite StreamerUpdateMs (core load) with full
+  // UpdateStreaming — that hid unload/keep costs. Phase wall is separate.
+  PhysicsTelemetryData.UpdateStreamingMs =
       std::chrono::duration<double, std::milli>(t_stream1 - t_stream0).count();
   PhysicsTelemetryData.AsyncIoMs =
       std::chrono::duration<double, std::milli>(t_after_stream - t_stream1)

@@ -61,6 +61,9 @@ struct FlightSimOptions
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};
   double StopPhaseSec{35.0};
+  /// After fly, before stop: pitch down / no altitude clamp (underwater hang).
+  double DivePhaseSec{0.0};
+  float DivePitchDeg{-30.0f};
   /// Standing break scenario: idle then break solid under look every ~1s.
   bool BreakStandMode{false};
   double BreakPhaseSec{20.0};

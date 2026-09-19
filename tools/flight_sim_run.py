@@ -752,6 +752,18 @@ def main() -> int:
     )
     ap.add_argument("--fly-phase-sec", type=float, default=50.0)
     ap.add_argument("--stop-phase-sec", type=float, default=50.0)
+    ap.add_argument(
+        "--dive-phase-sec",
+        type=float,
+        default=0.0,
+        help="after fly, before stop: pitch-down underwater (AppRunner --dive-phase)",
+    )
+    ap.add_argument(
+        "--dive-pitch",
+        type=float,
+        default=-30.0,
+        help="pitch degrees during dive phase (default -30)",
+    )
     ap.add_argument("--idle-sec", type=float, default=8.0)
     ap.add_argument(
         "--warmup-sec",
@@ -932,8 +944,9 @@ def main() -> int:
             "fz-frontier-stand-resume",
             "fz-inring-cruise",
             "product-174657",
+            "product-174657-dive",
         ],
-        help="named scenario (... / product-174657 west G1 proxy / fz-inring-cruise)",
+        help="named scenario (... / product-174657 west G1 / product-174657-dive underwater stop)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -1258,12 +1271,14 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
-    if args.scenario == "product-174657":
+    if args.scenario in ("product-174657", "product-174657-dive"):
         # G1 product gate proxy: west 174657-class (yaw 180), not north replay-manual.
         # See bin/suite_reports/g1_a10_relight/autofly_vs_manual_diff.md
         # Pin resume locus to spawn-near (7,3) — drifted saves start mid-west and
         # under-stress (fog_rd collapse → false VB PASS). Match manual 080455
         # distance (~10 chunks west), not fly-heavy 120s to ocean.
+        # product-174657-dive: same base + dive phase + underwater stop (SoT 210431).
+        dive_scenario = args.scenario == "product-174657-dive"
         if not args.visible:
             import os
 
@@ -1275,14 +1290,14 @@ def main() -> int:
                 "YES",
             ):
                 print(
-                    "FAIL: product-174657 requires --visible "
+                    f"FAIL: {args.scenario} requires --visible "
                     "(CUBA_FLIGHT_REQUIRE_VISIBLE=1)",
                     file=sys.stderr,
                     flush=True,
                 )
                 return 2
             print(
-                "WARN: product-174657 without --visible uses hidden GLFW; "
+                f"WARN: {args.scenario} without --visible uses hidden GLFW; "
                 "operator cannot eye the flight. Pass --visible for honest gates.",
                 flush=True,
             )
@@ -1291,10 +1306,12 @@ def main() -> int:
         if args.yaw is None:
             args.yaw = 180.0
         if not (args.phase_id or "").strip():
-            args.phase_id = "product_174657_proxy_v3"
+            args.phase_id = (
+                "product_174657_dive_v1" if dive_scenario else "product_174657_proxy_v3"
+            )
         if args.teleport_cruise:
             print(
-                "WARN: product-174657 forces --no-teleport-cruise "
+                f"WARN: {args.scenario} forces --no-teleport-cruise "
                 "(west 174657-class resume proxy)",
                 flush=True,
             )
@@ -1302,15 +1319,20 @@ def main() -> int:
         if "--idle-sec" not in sys.argv:
             args.idle_sec = 15.0
         if "--fly-phase-sec" not in sys.argv:
-            # Sticky land-eye used to pin Y and stick at cx≈2. With continuous
-            # terrain+12 follow, ~5–6 blk/s covers (7,3)→(−3,3) in ~35s.
-            # 55s leaves margin without overshooting to cx≈−20 (dilutes VB class).
             args.fly_phase_sec = 55.0
         if "--stop-phase-sec" not in sys.argv:
-            args.stop_phase_sec = 20.0
+            args.stop_phase_sec = 12.0 if dive_scenario else 20.0
+        if dive_scenario and "--dive-phase-sec" not in sys.argv:
+            args.dive_phase_sec = 12.0
+        if dive_scenario and "--dive-pitch" not in sys.argv:
+            args.dive_pitch = -30.0
         args.seconds = max(
             args.seconds,
-            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+            args.idle_sec
+            + args.fly_phase_sec
+            + args.dive_phase_sec
+            + args.stop_phase_sec
+            + 5.0,
         )
         # Focus (7,3) ≈ world (120, y, 56); pin eye Y to manual 122212/100645 (~56).
         users = BIN / "worlds" / "World_164" / "users.json"
@@ -1326,12 +1348,12 @@ def main() -> int:
                     json.dumps(data, indent=4) + "\n", encoding="utf-8"
                 )
                 print(
-                    f"INFO: product-174657 pinned World_164 locus to "
+                    f"INFO: {args.scenario} pinned World_164 locus to "
                     f"[120, {y}, 56] yaw180 (focus~7,3)",
                     flush=True,
                 )
             except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
-                print(f"WARN: product-174657 locus pin failed: {exc}", flush=True)
+                print(f"WARN: {args.scenario} locus pin failed: {exc}", flush=True)
         # Fog pull-in collapses RD and masks west VB/missing (manual keeps fog~3–4).
         # Temporarily disable for this scenario; restore after the run.
         cfg_path = BIN / "config.json"
@@ -1348,12 +1370,12 @@ def main() -> int:
                         json.dumps(cfg, indent=4) + "\n", encoding="utf-8"
                     )
                     print(
-                        "INFO: product-174657 set render.fog_pull_in_enabled=false "
+                        f"INFO: {args.scenario} set render.fog_pull_in_enabled=false "
                         f"(was {prev_fog})",
                         flush=True,
                     )
             except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
-                print(f"WARN: product-174657 fog pin failed: {exc}", flush=True)
+                print(f"WARN: {args.scenario} fog pin failed: {exc}", flush=True)
 
     if args.replay_manual_fly_heavy:
         args.replay_manual = True
@@ -1372,7 +1394,7 @@ def main() -> int:
         # Default north (+Z) smoke; product-174657 sets yaw 180 (west) before this.
         if args.yaw is None:
             args.yaw = 90.0
-        if args.scenario == "product-174657":
+        if args.scenario in ("product-174657", "product-174657-dive"):
             # Eye-level west parity with manual 122212/100645.
             # HoldSpace climb made autofly Y ~76→300 and collapsed fog_rd/miss
             # class (same lesson as ocean-cruise HoldSpace blindness).
@@ -1380,6 +1402,8 @@ def main() -> int:
             # focus stayed (7,3)). CruiseEyeY unlocks land-eye floor
             # (terrain+12 each frame, floor=CruiseEyeY, ceil=CruiseEyeY+16)
             # without Space climb or Y ratchet into altitude-blind.
+            # Dive scenario: CruiseEyeY still used during fly; AppRunner disables
+            # clamp during --dive-phase so pitch-down can reach underwater stop.
             args.hold_space = False
             if args.min_alt_above_sea is None:
                 args.min_alt_above_sea = 0.0
@@ -1387,7 +1411,7 @@ def main() -> int:
                 args.cruise_eye_y = 56.0
             if args.pitch is None:
                 args.pitch = 0.0
-            # Timings already set above (idle15/fly38/stop20); do not bump to
+            # Timings already set above (idle15/fly55/stop…); do not bump to
             # north smoke 45/90/90 or fly-heavy 20/120/30.
             pass
         elif args.replay_manual_fly_heavy:
@@ -1872,7 +1896,13 @@ def main() -> int:
         return 2
 
     if args.fly_stop:
-        min_sec = args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0
+        min_sec = (
+            args.idle_sec
+            + args.fly_phase_sec
+            + args.dive_phase_sec
+            + args.stop_phase_sec
+            + 5.0
+        )
         if args.seconds < min_sec:
             args.seconds = min_sec
 
@@ -1933,6 +1963,9 @@ def main() -> int:
             sim_cmd.append("--fly-stop")
             sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
             sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
+            if args.dive_phase_sec > 0.0:
+                sim_cmd.extend(["--dive-phase", str(args.dive_phase_sec)])
+                sim_cmd.extend(["--dive-pitch", str(args.dive_pitch)])
         sim_cmd.extend(["--idle", str(args.idle_sec)])
         if args.sprint:
             sim_cmd.append("--sprint")
@@ -2074,7 +2107,7 @@ def main() -> int:
             run_reports.append(report_path)
             try:
                 result = json.loads(report_path.read_text(encoding="utf-8"))
-                if args.scenario == "product-174657" and perf and Path(perf).is_file():
+                if args.scenario in ("product-174657", "product-174657-dive") and perf and Path(perf).is_file():
                     adequacy = compute_product_174657_proxy_adequacy(Path(perf))
                     result["proxy_adequacy"] = adequacy
                     warm = "warm" in report_path.stem.lower()
@@ -2094,6 +2127,43 @@ def main() -> int:
                     result["eye_proxy_stop_line_fails"] = eye_proxy.get(
                         "eye_proxy_stop_line_fails"
                     )
+                    if args.scenario == "product-174657-dive":
+                        try:
+                            import importlib.util
+
+                            an_path = Path(__file__).resolve().parent / (
+                                "analyze_stop_hang_dive.py"
+                            )
+                            spec = importlib.util.spec_from_file_location(
+                                "analyze_stop_hang_dive", an_path
+                            )
+                            mod = importlib.util.module_from_spec(spec)
+                            assert spec and spec.loader
+                            spec.loader.exec_module(mod)
+                            dive_an = mod.analyze_one(
+                                Path(perf),
+                                sea=62.0,
+                                report=result,
+                                label=args.scenario,
+                            )
+                            result["dive_stop_hang"] = dive_an
+                            result["dive_stop_hang_untested"] = dive_an["coverage"][
+                                "untested"
+                            ]
+                            result["dive_stop_hang_score"] = dive_an["score"]
+                            print(
+                                "product-174657-dive stop-hang: "
+                                f"untested={dive_an['coverage']['untested']} "
+                                f"score={dive_an['score']:.1f} "
+                                f"stop_n={dive_an['segments']['stop_uw']['n']} "
+                                f"wall={dive_an['segments']['stop_uw']['max_wall_ms']:.1f}",
+                                flush=True,
+                            )
+                        except Exception as exc:  # noqa: BLE001
+                            print(
+                                f"WARN: dive stop-hang analyze failed: {exc}",
+                                flush=True,
+                            )
                     west = compute_west_route_coverage(Path(perf))
                     result["west_route_coverage"] = west
                     report_path.write_text(
@@ -2189,6 +2259,14 @@ def main() -> int:
                     metrics_summary["eye_proxy_stop_line_pass"] = result.get(
                         "eye_proxy_stop_line_pass"
                     )
+                if result.get("dive_stop_hang") is not None:
+                    metrics_summary["dive_stop_hang"] = result["dive_stop_hang"]
+                    metrics_summary["dive_stop_hang_untested"] = result.get(
+                        "dive_stop_hang_untested"
+                    )
+                    metrics_summary["dive_stop_hang_score"] = result.get(
+                        "dive_stop_hang_score"
+                    )
                 if args.update_best and not hang_killed:
                     if args.fly_stop:
                         best_path = BIN / "flight_sim_gate_report_stop_best.json"
@@ -2224,26 +2302,35 @@ def main() -> int:
             last_rc = rc
         else:
             last_rc = ana
-            if args.scenario == "product-174657" and metrics_summary.get(
+            if args.scenario in ("product-174657", "product-174657-dive") and metrics_summary.get(
                 "proxy_adequacy"
             ):
                 if not metrics_summary["proxy_adequacy"].get("adequacy_pass", False):
                     print(
-                        "flight-sim adequacy FAIL for product-174657 proxy",
+                        f"flight-sim adequacy FAIL for {args.scenario} proxy",
                         file=sys.stderr,
                     )
                     last_rc = 2
                 elif not metrics_summary.get("dual_lane_stop_line_pass", True):
                     print(
-                        "flight-sim dual-lane stop-line FAIL for product-174657 "
+                        f"flight-sim dual-lane stop-line FAIL for {args.scenario} "
                         "(adequacy alone is not merge-green)",
                         file=sys.stderr,
                     )
                     last_rc = 2
                 elif not metrics_summary.get("eye_proxy_stop_line_pass", True):
                     print(
-                        "flight-sim eye-proxy stop-line FAIL for product-174657 "
+                        f"flight-sim eye-proxy stop-line FAIL for {args.scenario} "
                         "(stale-visual thrash / holes blink; adequacy alone is not merge-green)",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif args.scenario == "product-174657-dive" and metrics_summary.get(
+                    "dive_stop_hang_untested", False
+                ):
+                    print(
+                        "flight-sim dive-stop UNTESTED "
+                        "(need underwater stop_uw coverage)",
                         file=sys.stderr,
                     )
                     last_rc = 2

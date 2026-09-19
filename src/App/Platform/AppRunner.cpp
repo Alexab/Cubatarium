@@ -530,7 +530,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   if (options.FlyStopMode)
   {
     in_game_seconds = options.IdleBeforeFlySec + options.FlyPhaseSec +
-                      options.StopPhaseSec;
+                      options.DivePhaseSec + options.StopPhaseSec;
   }
   if (options.BreakStandMode)
   {
@@ -634,6 +634,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     bool autopilot_armed = false;
     bool autopilot_flying = false;
     bool fly_stop_released = false;
+    bool dive_engaged = false;
     double last_break_request_sec = -1.0e9;
     int break_requests = 0;
     int ingame_frames_seen = 0;
@@ -763,6 +764,22 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 {
                   camera->SetFreeMove(true);
                 }
+                const double fly_end =
+                    options.IdleBeforeFlySec +
+                    (options.FlyStopMode ? options.FlyPhaseSec
+                                         : in_game_seconds);
+                const double dive_end = fly_end + options.DivePhaseSec;
+                const bool in_dive =
+                    options.FlyStopMode && options.DivePhaseSec > 0.0 &&
+                    ingame_sec >= fly_end && ingame_sec < dive_end;
+                if (in_dive && !dive_engaged)
+                {
+                  dive_engaged = true;
+                  window.SetAutopilotKey(KeyCode::Key_Space, false);
+                  std::cout << "flight-sim: dive phase pitch="
+                            << options.DivePitchDeg << " at t=" << ingame_sec
+                            << "s" << std::endl;
+                }
                 float yaw = options.FaceYawDeg;
                 if (options.YawSweepMode &&
                     ingame_sec >= options.IdleBeforeFlySec)
@@ -774,11 +791,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   static const float kYaws[4] = {0.f, 90.f, 180.f, 270.f};
                   yaw = kYaws[step & 3];
                 }
-                camera->SetOrientation(yaw, options.FacePitchDeg);
+                const float pitch =
+                    in_dive ? options.DivePitchDeg : options.FacePitchDeg;
+                camera->SetOrientation(yaw, pitch);
                 // Keep cruise altitude (manual holds Space / levels pitch).
                 // Set every frame (not lift-only) so rising canopy does not
                 // ratchet Y into altitude-blind void_near collapse.
-                if (!options.BreakStandMode && !options.YawSweepMode &&
+                // Dive: do NOT clamp Y — allow underwater stop (SoT 210431).
+                if (!options.BreakStandMode && !options.YawSweepMode && !in_dive &&
                     (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f ||
                      options.CruiseEyeY > 0.0f))
                 {
@@ -817,11 +837,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 else if (options.HoldForward &&
                          ingame_sec >= options.IdleBeforeFlySec)
                 {
-                  const double fly_end =
-                      options.IdleBeforeFlySec +
-                      (options.FlyStopMode ? options.FlyPhaseSec
-                                           : in_game_seconds);
-                  if (options.FlyStopMode && ingame_sec >= fly_end)
+                  // Stop begins after dive (or after fly when DivePhaseSec=0).
+                  const double move_end =
+                      options.FlyStopMode ? dive_end : in_game_seconds;
+                  if (options.FlyStopMode && ingame_sec >= move_end)
                   {
                     if (!fly_stop_released)
                     {
