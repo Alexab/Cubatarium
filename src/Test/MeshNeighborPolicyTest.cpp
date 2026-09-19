@@ -99,6 +99,25 @@ int main()
       return Fail("underwater remesh still flood-class");
     }
   }
+  if (cutum::SeaSeamPeerFaceTowardPublisher(1, 0) != 0 ||
+      cutum::SeaSeamPeerFaceTowardPublisher(-1, 0) != 1 ||
+      cutum::SeaSeamPeerFaceTowardPublisher(0, 1) != 4 ||
+      cutum::SeaSeamPeerFaceTowardPublisher(0, -1) != 5)
+  {
+    return Fail("peer face toward publisher mapping");
+  }
+  if (cutum::PeerNeedsSeaSeamRemesh(false, 0xff, 0))
+  {
+    return Fail("inactive overlay must not remesh");
+  }
+  if (!cutum::PeerNeedsSeaSeamRemesh(true, 1u << 0, 0))
+  {
+    return Fail("active overlay face bit must remesh");
+  }
+  if (cutum::PeerNeedsSeaSeamRemesh(true, 1u << 1, 0))
+  {
+    return Fail("wrong face bit must not remesh");
+  }
   {
     int min_y = 0;
     int max_y = 0;

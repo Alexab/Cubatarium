@@ -284,6 +284,9 @@ public:
   /// True only when cache has GPU quads or non-empty CPU batches (not empty
   /// placeholder entries that SoftDefer treated as "has mesh").
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// R06 R2: sticky BoundaryOverlay on last-applied greedy mesh.
+  bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
+  bool HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord, int face) const;
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
   size_t GetSoftDeferHeldCount() const;
   /// Era24: SoftDeferHeld membership for Hide⇒Ticket ownership.

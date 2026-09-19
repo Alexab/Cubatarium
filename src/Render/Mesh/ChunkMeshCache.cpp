@@ -705,6 +705,36 @@ bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
   return false;
 }
 
+bool UChunkMeshCache::HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  return it->second.BoundaryOverlay.active;
+}
+
+bool UChunkMeshCache::HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord,
+                                                   int face) const
+{
+  if (face < 0 || face > 5)
+  {
+    return false;
+  }
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  const BoundaryOverlayState &ov = it->second.BoundaryOverlay;
+  if (!ov.active)
+  {
+    return false;
+  }
+  return (ov.missingNeighborFaces & static_cast<uint8_t>(1u << face)) != 0;
+}
+
 bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
 {
   if (HasDrawableGreedyMesh(chunk_coord))

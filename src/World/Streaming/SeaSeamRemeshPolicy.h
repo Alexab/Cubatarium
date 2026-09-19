@@ -64,4 +64,39 @@ inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
   return std::max(0, cy1 - cy0 + 1);
 }
 
+/// Shell face index on peer looking back at publisher (ChunkMeshSnapshot faces).
+/// peer = publisher + delta; axis*2+(sign>0). Returns -1 if not a face-nb.
+inline int SeaSeamPeerFaceTowardPublisher(int delta_x, int delta_z)
+{
+  if (delta_x == 1 && delta_z == 0)
+  {
+    return 0; // peer +X of publisher → peer -X face
+  }
+  if (delta_x == -1 && delta_z == 0)
+  {
+    return 1; // peer -X → peer +X
+  }
+  if (delta_x == 0 && delta_z == 1)
+  {
+    return 4; // peer +Z → peer -Z
+  }
+  if (delta_x == 0 && delta_z == -1)
+  {
+    return 5; // peer -Z → peer +Z
+  }
+  return -1;
+}
+
+/// R2: remesh peer only while sticky overlay still owes that seam face.
+inline bool PeerNeedsSeaSeamRemesh(bool overlay_active, uint8_t missing_faces,
+                                  int face_toward_publisher)
+{
+  if (!overlay_active || face_toward_publisher < 0 || face_toward_publisher > 5)
+  {
+    return false;
+  }
+  return (missing_faces &
+          static_cast<uint8_t>(1u << face_toward_publisher)) != 0;
+}
+
 } // namespace cutum

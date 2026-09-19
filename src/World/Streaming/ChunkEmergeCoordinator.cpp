@@ -526,11 +526,67 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
           }
         });
-    // R06: first-drawable sea remesh hook. R1 bisect (161124): body no-op —
-    // remesh-on-coverage suspected Dirty/FullyDark flood; hide KEEP.
-    // Overlay-only remesh restored in R2 after AF confirms blacks ↓.
+    // R06: when coverage publishes, remesh face-neighbors in sea band that
+    // still carry sticky BoundaryOverlay toward the publisher (R2 overlay-only;
+    // no 3x3; underwater Y = publisher_cy; coalesce one dirty/col/frame).
     mesh_service.SetOnFirstDrawableCoverageFn(
-        [](glm::ivec3 chunk_coord) { (void)chunk_coord; });
+        [this](glm::ivec3 chunk_coord)
+        {
+          UWorld *world_ptr = SoftDeferPolicy.world;
+          if (!world_ptr)
+          {
+            return;
+          }
+          UWorld &world_ref = *world_ptr;
+          const ProceduralSettings &settings = world_ref.GetProceduralSettings();
+          const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
+          const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();
+          const bool underwater_or_near_water =
+              static_cast<float>(focus_block.y) <
+                  static_cast<float>(settings.SeaLevel) + 2.0f ||
+              world_ref.HasNearbyFluidSurface(focus_block, 24);
+          if (!ShouldRemeshSeaSeamOnFirstDrawable(chunk_coord.y, sea_cy,
+                                                 underwater_or_near_water))
+          {
+            return;
+          }
+          UWorldMeshService &mesh = world_ref.GetMeshService();
+          int remesh_min_y = 0;
+          int remesh_max_y = 0;
+          SeaSeamRemeshYRangeForPublisher(
+              settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight, chunk_coord.y,
+              underwater_or_near_water, remesh_min_y, remesh_max_y);
+          static const glm::ivec3 kFaceNb[4] = {
+              {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+          for (const glm::ivec3 &d : kFaceNb)
+          {
+            const glm::ivec3 n = chunk_coord + d;
+            if (!mesh.HasDrawableGreedyMesh(n))
+            {
+              continue;
+            }
+            if (!ShouldRemeshSeaSeamOnFirstDrawable(n.y, sea_cy,
+                                                   underwater_or_near_water))
+            {
+              continue;
+            }
+            const int face_toward =
+                SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+            if (!mesh.HasActiveBoundaryOverlayFace(n, face_toward))
+            {
+              continue;
+            }
+            const uint64_t col_key =
+                (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 32) |
+                static_cast<uint32_t>(n.z);
+            if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
+            {
+              continue;
+            }
+            mesh.MarkTerrainChunkMeshDirtySeamed(
+                glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, false);
+          }
+        });
     mesh_service.SetOnMeshColumnDirtyFn(
         [this](glm::ivec3 chunk_coord)
         {

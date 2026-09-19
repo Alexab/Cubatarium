@@ -1267,6 +1267,17 @@ bool UWorldMeshService::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
   return Cache.HasDrawableGreedyMesh(chunk_coord);
 }
 
+bool UWorldMeshService::HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const
+{
+  return Cache.HasActiveBoundaryOverlay(chunk_coord);
+}
+
+bool UWorldMeshService::HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord,
+                                                     int face) const
+{
+  return Cache.HasActiveBoundaryOverlayFace(chunk_coord, face);
+}
+
 bool UWorldMeshService::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
 {
   return Cache.HasMeshSatisfyingColumnReady(chunk_coord);

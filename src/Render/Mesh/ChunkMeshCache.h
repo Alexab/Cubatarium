@@ -324,6 +324,10 @@ public:
   /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
   /// (manual 215919: place-block remesh instantly fills "invisible" chunk).
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// R06 R2: last-applied BoundaryOverlay still active (sticky closing faces).
+  bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
+  /// True if overlay missing-face bit for shell face 0..5 is set.
+  bool HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord, int face) const;
   /// Drawable OR intentional GPU 0-quad commit (occluded). SoftDefer empty
   /// (HasGreedy, !GpuResident) stays false — rim hole SoT (manual 101824).
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
