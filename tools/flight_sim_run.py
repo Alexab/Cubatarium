@@ -2258,10 +2258,22 @@ def main() -> int:
         cfg_path, prev_fog = restore
         try:
             cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-            cfg.setdefault("render", {})["fog_pull_in_enabled"] = prev_fog
+            # F1 SoT 185830: AF pins fog OFF for dual-lane; never leave operator
+            # config fog OFF after the run (W1 latch needs fog ON). Exception:
+            # explicit prev False + Performance/Fast quality profile.
+            preset = str(
+                cfg.get("render", {}).get("performance_preset", "")
+            ).lower()
+            keep_off = (
+                prev_fog is False
+                and preset in ("performance", "fast")
+            )
+            restore_fog = False if keep_off else True
+            cfg.setdefault("render", {})["fog_pull_in_enabled"] = restore_fog
             cfg_path.write_text(json.dumps(cfg, indent=4) + "\n", encoding="utf-8")
             print(
-                f"INFO: product-174657 restored render.fog_pull_in_enabled={prev_fog}",
+                f"INFO: product-174657 restored render.fog_pull_in_enabled="
+                f"{restore_fog} (prev={prev_fog}, preset={preset or 'n/a'})",
                 flush=True,
             )
         except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
