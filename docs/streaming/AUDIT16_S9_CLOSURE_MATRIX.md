@@ -500,3 +500,5 @@ Operator after H1+W1: blacks↑, empty/flicker in flight, walls remain, 0-FPS ha
 
 Hang max still OPEN (Frontier follow-up). Walls OPEN (need non-Dirty heal). merge_green false.
 
+AF cold after rollback (`perf_20260919-201718_28016`): eye PASS / west COVERED; `streamer_update_ms` med 2.6 / **max 74** (was max ~6.5s with prefer-async); stale_visual mid **1** (was 7); fog restore True. dual-lane OPEN ok.
+
