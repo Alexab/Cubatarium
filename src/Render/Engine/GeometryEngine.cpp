@@ -2114,6 +2114,32 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     return std::max(std::abs(coord.x - cam_chunk.x),
                     std::abs(coord.z - cam_chunk.z)) <= kPackedNearHoriz;
   };
+  auto mdi_resident_owns = [&](const glm::ivec3 &coord) -> bool
+  {
+    for (const GreedyGpuBatch &gpu : GreedyGpuOpaque.batches)
+    {
+      if (gpu.chunkCoord == coord)
+      {
+        return true;
+      }
+    }
+    for (const GreedyGpuBatch &gpu : GreedyGpuCutout.batches)
+    {
+      if (gpu.chunkCoord == coord)
+      {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto note_dual_if_packed_and_mdi = [&](const glm::ivec3 &coord)
+  {
+    if (!WorldInstance || !mdi_resident_owns(coord))
+    {
+      return;
+    }
+    ++WorldInstance->GetPhysicsTelemetryMutable().PassDualBackendSameCoordN;
+  };
   if (mdi && store.SupportsMultiDrawIndirect() && !opaque_draw.empty() &&
       !packed_opaque_refs.empty())
   {
@@ -2127,13 +2153,9 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       bool found = false;
       // Audit R03: exclude packed when MDI resident table still owns the coord,
       // not merely when this frame's CPU opaque_draw refs omit it.
-      for (const GreedyGpuBatch &gpu : GreedyGpuOpaque.batches)
+      if (mdi_resident_owns(pref.chunkCoord))
       {
-        if (gpu.chunkCoord == pref.chunkCoord)
-        {
-          found = true;
-          break;
-        }
+        found = true;
       }
       if (!found)
       {
@@ -2162,15 +2184,27 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   }
   else if (!packed_opaque_refs.empty())
   {
+    // Same exclusion as MDI path — empty opaque_draw must not dual-draw packed
+    // against leftover GreedyGpuOpaque.batches (audit R03 hole).
     packed_opaque_draw.reserve(packed_opaque_refs.size());
     for (const GpuPackedChunkRef &pref : packed_opaque_refs)
     {
-      if (packed_near(pref.chunkCoord))
+      if (!packed_near(pref.chunkCoord))
       {
-        packed_opaque_draw.push_back(pref);
+        continue;
       }
+      if (mdi_resident_owns(pref.chunkCoord))
+      {
+        continue;
+      }
+      packed_opaque_draw.push_back(pref);
     }
     packed_to_draw = &packed_opaque_draw;
+  }
+  // Honest dual-draw: any packed we still schedule while MDI resident owns it.
+  for (const GpuPackedChunkRef &pref : *packed_to_draw)
+  {
+    note_dual_if_packed_and_mdi(pref.chunkCoord);
   }
   size_t packed_opaque_drawn = 0;
   double packed_ms = 0.0;

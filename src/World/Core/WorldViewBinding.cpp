@@ -908,6 +908,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.SceneTransparentMs = 0.0;
   PhysicsTelemetryData.TransparentSortRevChanged = 0;
   PhysicsTelemetryData.PassPackedWithoutMdiResidentN = 0;
+  PhysicsTelemetryData.PassDualBackendSameCoordN = 0;
   PhysicsTelemetryData.TransparentUploadFullN = 0;
   PhysicsTelemetryData.TransparentCmdReorderN = 0;
   PhysicsTelemetryData.TransparentOrderOnlyFailReason = 0;

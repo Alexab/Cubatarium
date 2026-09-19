@@ -812,6 +812,9 @@ struct PhysicsTelemetry
   /// Packed draw while coord absent from MDI resident + CPU opaque_draw.
   /// Formerly misnamed PassMdiStaleGpuResidentN (audit S3).
   int PassPackedWithoutMdiResidentN{0};
+  /// Audit R03 honest: packed about to draw while MDI resident still owns coord
+  /// (true dual-backend same surface). Not an alias of PassPackedWithoutMdi*.
+  int PassDualBackendSameCoordN{0};
   /// Q8: sync glGetBufferSubData reads of CullStatsSsbo (HUD/period only).
   uint64_t CullStatsSyncReadN{0};
   /// S1 transparent: 1 when sortRevision changed on PrepareTransparent refresh.

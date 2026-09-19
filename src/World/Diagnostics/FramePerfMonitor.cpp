@@ -782,6 +782,7 @@ struct FrameNumbers
   uint64_t pass_mesh_rev_lag_max{0};
   int pass_packed_without_mdi_resident_n{0};
   int pass_mdi_stale_gpu_resident_n{0}; // compat alias of packed_without_mdi
+  int pass_dual_backend_same_coord_n{0};
   double gpu_cull_cpu_ms{0.0};
   double gpu_cull_submit_cpu_ms{0.0};
   double gpu_cull_exec_ms{-1.0};
@@ -1447,6 +1448,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.pass_packed_without_mdi_resident_n = phys.PassPackedWithoutMdiResidentN;
   // Compat alias for older scorecards / N04 docs.
   n.pass_mdi_stale_gpu_resident_n = n.pass_packed_without_mdi_resident_n;
+  n.pass_dual_backend_same_coord_n = phys.PassDualBackendSameCoordN;
   n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
   n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
   n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
@@ -2187,6 +2189,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.pass_packed_without_mdi_resident_n
           << ",\"pass_mdi_stale_gpu_resident_n\":"
           << n.pass_mdi_stale_gpu_resident_n
+          << ",\"pass_dual_backend_same_coord_n\":"
+          << n.pass_dual_backend_same_coord_n
           << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
           << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
           << ",\"gpu_light_readback\":" << n.gpu_light_readback

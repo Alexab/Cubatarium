@@ -136,6 +136,24 @@ int main()
   {
     cutum::GreedyGpuPassCache cache;
     backend.PublishPassInputs(cache, {{ar, &a}}, {}, 1, 1, 1);
+    const bool had2 = !cache.batches.empty();
+    backend.RemoveCoord(cache, ar.chunkCoord);
+    bool ghost2 = false;
+    for (const auto &draw : cache.batches)
+      if (draw.chunkCoord == ar.chunkCoord)
+        ghost2 = true;
+    const bool remove_coord_ok =
+        had2 && !ghost2 &&
+        backend.LastAppliedDeltaKind() ==
+            cutum::PublicationDeltaKind::RepresentationSwitch;
+    std::cout << "remove_coord_representation_switch_clears_mdi="
+              << remove_coord_ok << '\n';
+    violations += !remove_coord_ok;
+    cache.VertexPool.Destroy();
+  }
+  {
+    cutum::GreedyGpuPassCache cache;
+    backend.PublishPassInputs(cache, {{ar, &a}}, {}, 1, 1, 1);
     cutum::PublicationDelta rm;
     rm.kind = cutum::PublicationDeltaKind::Remove;
     rm.coord = ar.chunkCoord;
