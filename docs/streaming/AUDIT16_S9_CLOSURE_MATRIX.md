@@ -502,3 +502,77 @@ Hang max still OPEN (Frontier follow-up). Walls OPEN (need non-Dirty heal). merg
 
 AF cold after rollback (`perf_20260919-201718_28016`): eye PASS / west COVERED; `streamer_update_ms` med 2.6 / **max 74** (was max ~6.5s with prefer-async); stale_visual mid **1** (was 7); fog restore True. dual-lane OPEN ok.
 
+
+### Follow-on 2026-09-19: stop unload + keep-shell under FrameDeadline (SoT 210431)
+
+Manual SoT: `bin/logs/perf_20260919-210431_66120.jsonl` (post H1/W1 rollback `73af7321`).
+
+| Fact | Value |
+|---|---|
+| Hang | periods 20–23, `spd=0`, `cx=-4`, `y=48–54`; `max_wall` 0.7–1.5s |
+| Loads | `stream_loads=0`, `stream_load_candidates=0` |
+| Telem lie | `streamer_update_ms` was full `UpdateStreaming` wall (WorldViewBinding overwrite) |
+| Vs 185830 | max wall ~5.5s → ~1.5s (budget 32 helped); stop hang still OPEN |
+
+**Root (T0 AF dive):** hang = `UnloadDistantChunks` ForEach+sync save on stop under water; keep-shell secondary. PrefetchAhead already no-op on stop.
+
+#### AF-DIVE harness
+
+| Item | Path |
+|---|---|
+| Scenario | `product-174657-dive` (`tools/flight_sim_run.py`) — west + `--dive-phase` + underwater stop |
+| Analyze | `tools/analyze_stop_hang_dive.py` |
+| Bake-off driver | `tools/bakeoff_stop_hang_dive.py` |
+| Baseline | `bin/suite_reports/stop_hang_dive/stop_hang_baseline.json` (U0K0; unload_max **4201.9** ms) |
+
+Coverage fail / no underwater stop → `UNTESTED` (not PASS).
+
+#### Unload bake-off (keep=K0)
+
+| Mode | Algorithm | Best score (×2 cold) | stop wall max | unload max | note |
+|---|---|---|---|---|---|
+| U0 | baseline telem | 1432 / 1453 | 109 / 180 | ≈0 | hang intermittent vs baseline spike |
+| **U-A (1)** | Exhausted early-out | **1338** / 1381 | **77** / 156 | ≈0 | **winner** |
+| U-B (2) | + scan cursor | 1420 / 1611 | 143 / 302 | ≈0 | |
+| U-C (3) | + tighter stop gate | 1358 / 1498 | 113 / 277 | ≈0 | |
+| U-D (4) | + defer save | 1589 / 1602 | 237 / 313 | ≈0 | both FAIL AF wall target |
+
+Default `UnloadAmortizeMode=1` (U-A). Losers remain in enum for regress.
+
+Stop-line note: when hang reproduces, T0 proves unload dominates (`streamer_unload_ms`); on calm cold runs unload_max≈0 and wall is elsewhere (fluid_map class) — still keep U-A Exhausted gates.
+
+#### Keep-shell bake-off (unload=U-A)
+
+| Mode | Algorithm | Best score | stop wall | keep max | note |
+|---|---|---|---|---|---|
+| K0 | baseline | 1383 / 1465 | 122 / 148 | ≈0 | |
+| K-A (1) | Exhausted / frame gate | 1343 / 1515 | 118 / 302 | ≈0 | |
+| **K-B (2)** | + cheap filter shortlist | **1328** / 1456 | **123** / 235 | ≈0 | **winner** |
+| K-C (3) | + annulus cursor | 1436 / 1463 | 134 / 231 | ≈0 | one unload spike 78 |
+| K-D (4) | + disable idle UW | 1345 / 1422 | 140 / 209 | ≈0 | |
+
+Default `KeepShellAmortizeMode=2` (K-B).
+
+#### Code SHA / gates
+
+| Step | SHA | Result |
+|---|---|---|
+| T0 telem + AF-DIVE harness + U/K modes | `1621440d` | unit `StreamerAmortizePolicyTest` PASS; dive coverage PASS; baseline unload spike honesty |
+| U winner default U-A + K winner default K-B | (this commit) | bake-off tables above |
+
+| Gate | Status |
+|---|---|
+| Stop unload hang (SoT class) | **mitigated coded** — Exhausted+amortize; AF dive wall often &lt;200 when hang does not fire; operator retest UNTESTED |
+| Keep-shell stop cost | **mitigated coded** K-B |
+| Walls underwater | **OPEN** (separate non-Dirty track) |
+| dual-lane / merge_green | **OPEN** / **false** |
+
+One-liners:
+
+```text
+python tools/flight_sim_run.py --scenario product-174657-dive --report bin/suite_reports/stop_hang_dive/manual.json
+python tools/analyze_stop_hang_dive.py <perf.jsonl> --report <report.json> --out bin/suite_reports/stop_hang_dive/out.json
+python tools/bakeoff_stop_hang_dive.py --phase u --keep-fixed 0 --repeats 2
+python tools/bakeoff_stop_hang_dive.py --phase k --unload-fixed 1 --repeats 2
+```
+
