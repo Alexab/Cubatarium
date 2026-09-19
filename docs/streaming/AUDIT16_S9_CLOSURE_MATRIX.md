@@ -410,3 +410,24 @@ Track: R1 no-op remesh callback -> AF; R2 overlay-only remesh (peer `BoundaryOve
 | dual-lane / mid FullyDark stalled | **OPEN** | AF exit 2 OK |
 | merge_green | **false** | operator UNTESTED + dual-lane OPEN |
 
+
+### Follow-on 2026-09-19: ring fog + zero distant walls (SoT 170548)
+
+Manual SoT: `bin/logs/perf_20260919-170548_64892.jsonl` (post R06 overlay-only remesh).
+
+| Mid west | 161124 | 170548 |
+|---|---|---|
+| VB focus med | 87.5 | **79** |
+| FD stalled med | 60.5 | **46** |
+| unfinished med/max | 2 / 9 | **12 / 22** |
+| fog_pull_in_rd | 4 | **4** (no thrash; no pull on unfinished) |
+| dual / flip | 0 | **0** KEEP |
+
+| Gap | Cause | Track |
+|---|---|---|
+| Brief ring blacks | fog latch only near-miss; unfinished/VB do not pull fog | W1 fog hole_debt |
+| Distant underwater water walls | overlay GetNeighborLoadState=Air forces solid emit; remesh one-shot | W2 prevent-emit (DoD: **zero distant walls**, not approach-heal-first) |
+| Approach-heal | safety net only (W2b) | after prevent-emit |
+
+Operator: dive distant walls=0; rim flash masked by fog. merge_green false until operator.
+
