@@ -566,6 +566,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            // E2 residual: remesh peer only if peer also in sea/subsea band.
+            if (!ShouldRemeshSeaSeamOnFirstDrawable(n.y, sea_cy,
+                                                   underwater_or_near_water))
+            {
+              continue;
+            }
             const uint64_t col_key =
                 (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 32) |
                 static_cast<uint32_t>(n.z);

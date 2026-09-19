@@ -32,7 +32,7 @@ inline int SeaSeamRemeshMaxYSurface(int sea_level, int chunk_size,
   return std::min(max_height, sea_level + chunk_size * 2);
 }
 
-/// Underwater/near_water: only publisher_cy +/- 1 (not sea-4*CHUNK flood).
+/// Underwater/near_water: peer same publisher_cy only (E2 residual after E0).
 inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
                                            int max_height, int publisher_cy,
                                            bool underwater_or_near_water,
@@ -40,10 +40,9 @@ inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
 {
   if (underwater_or_near_water)
   {
-    const int cy0 = publisher_cy - 1;
-    const int cy1 = publisher_cy + 1;
-    out_min_y = std::max(0, cy0 * chunk_size);
-    out_max_y = std::min(max_height, (cy1 + 1) * chunk_size - 1);
+    out_min_y = std::max(0, publisher_cy * chunk_size);
+    out_max_y =
+        std::min(max_height, (publisher_cy + 1) * chunk_size - 1);
     return;
   }
   out_min_y = SeaSeamRemeshMinYSurface(sea_level, chunk_size);

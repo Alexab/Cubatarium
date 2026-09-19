@@ -77,24 +77,23 @@ int main()
   {
     return Fail("surface remesh min y");
   }
-  // E0: underwater Y is publisher_cy +/- 1, not sea-4*CHUNK flood.
+  // E0/E2: underwater Y is publisher_cy only (not sea-4*CHUNK flood).
   {
     int min_y = 0;
     int max_y = 0;
     const int publisher_cy = 1;
     cutum::SeaSeamRemeshYRangeForPublisher(62, 16, 256, publisher_cy, true,
                                            min_y, max_y);
-    if (min_y != 0 || max_y != 3 * 16 - 1)
+    if (min_y != 16 || max_y != 31)
     {
-      return Fail("underwater remesh Y = publisher_cy +/- 1");
+      return Fail("underwater remesh Y = publisher_cy only");
     }
     const int per_col = cutum::SeaSeamRemeshChunksPerPeerColumn(
         62, 16, 256, publisher_cy, true);
-    if (per_col != 3)
+    if (per_col != 1)
     {
-      return Fail("underwater dirty chunks/column must be 3 (cy+/-1)");
+      return Fail("underwater dirty chunks/column must be 1 (same cy)");
     }
-    // Old flood was ~5+ cy * 9 seamed; keep well under that.
     if (per_col * 4 >= 9 * 5)
     {
       return Fail("underwater remesh still flood-class");
