@@ -17,6 +17,7 @@ std::atomic<uint64_t> gPublicationOomRetainN{0};
 std::atomic<uint64_t> gPublicationProgressUnitN{0};
 std::atomic<uint64_t> gPubVerChangedWithoutFreshN{0};
 std::atomic<uint64_t> gPassMeshRevLagMax{0};
+std::atomic<uint64_t> gPublicationMaterialBlockIdFlipN{0};
 
 struct GpuBatchKey
 {
@@ -198,6 +199,11 @@ void NotePublicationProgressUnit()
   gPublicationProgressUnitN.fetch_add(1, std::memory_order_relaxed);
 }
 
+void NotePublicationMaterialBlockIdFlip()
+{
+  gPublicationMaterialBlockIdFlipN.fetch_add(1, std::memory_order_relaxed);
+}
+
 uint64_t ConsumePublicationIncompleteMaterialN()
 {
   return gPublicationIncompleteMaterialN.exchange(0, std::memory_order_relaxed);
@@ -218,6 +224,11 @@ uint64_t ConsumePublicationOverloadRetainN()
 uint64_t ConsumePublicationProgressUnitN()
 {
   return gPublicationProgressUnitN.exchange(0, std::memory_order_relaxed);
+}
+
+uint64_t ConsumePublicationMaterialBlockIdFlipN()
+{
+  return gPublicationMaterialBlockIdFlipN.exchange(0, std::memory_order_relaxed);
 }
 
 void NotePubVerChangedWithoutFresh()
@@ -417,6 +428,23 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     NotePublicationProgressUnit();
     published_ok.insert(coord);
     // Successful replace: do not retain old batches for this coord.
+    // Honest wrong-tex thrash: same (coord,batch) geom size but blockId flip.
+    for (const auto &gpu : group_fresh)
+    {
+      const auto found =
+          resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
+      if (found == resident.end())
+      {
+        continue;
+      }
+      const GreedyGpuBatch &prior = cache.batches[found->second];
+      if (prior.blockId != gpu.blockId &&
+          prior.vertexCount == gpu.vertexCount &&
+          prior.indexCount == gpu.indexCount)
+      {
+        NotePublicationMaterialBlockIdFlip();
+      }
+    }
     for (size_t n = 0; n < cache.batches.size(); ++n)
     {
       if (cache.batches[n].chunkCoord == coord)

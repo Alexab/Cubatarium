@@ -216,6 +216,9 @@ uint64_t ConsumePublicationOomRetainN();
 /// Q5: one successful chunk/batch publish under tiny-cap (progress unit).
 void NotePublicationProgressUnit();
 uint64_t ConsumePublicationProgressUnitN();
+/// Honest wrong-tex thrash: Replace same geom size, different blockId (not mdi_stale).
+void NotePublicationMaterialBlockIdFlip();
+uint64_t ConsumePublicationMaterialBlockIdFlipN();
 /// N01 autopsy: publication table changed without any_fresh (untouched/sort churn).
 void NotePubVerChangedWithoutFresh();
 uint64_t ConsumePubVerChangedWithoutFreshN();

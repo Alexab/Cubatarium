@@ -2077,6 +2077,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     phys.PublicationIncompleteMaterialN =
         ConsumePublicationIncompleteMaterialN();
     phys.PublicationOomRetainN = ConsumePublicationOomRetainN();
+    phys.PublicationMaterialBlockIdFlipN = static_cast<int>(
+        ConsumePublicationMaterialBlockIdFlipN());
     phys.PublicationOverloadRetainN =
         phys.PublicationIncompleteMaterialN + phys.PublicationOomRetainN;
     phys.PubVerChangedWithoutFreshN = ConsumePubVerChangedWithoutFreshN();

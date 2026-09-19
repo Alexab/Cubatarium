@@ -3357,6 +3357,7 @@ int main()
 
   // N04 autopsy I3t: hold prior draw across accepted-stale publish
   {
+    using cutum::HadVisualPriorForI3tHold;
     using cutum::ShouldHoldPriorDrawOnAcceptedStale;
     Expect(ShouldHoldPriorDrawOnAcceptedStale(true, true),
            "N04 I3t: accepted stale + prior drawable → hold");
@@ -3364,6 +3365,16 @@ int main()
            "N04 I3t: accepted stale hole may publish");
     Expect(!ShouldHoldPriorDrawOnAcceptedStale(false, true),
            "N04 I3t: fresh input publishes normally");
+    // E1/111235: empty-spoof QuadCount=0 still has visual prior via HasGpuMesh.
+    Expect(HadVisualPriorForI3tHold(false, true, true),
+           "I3t visual prior: GpuResident+HasGpuMesh without drawable");
+    Expect(!HadVisualPriorForI3tHold(false, true, false),
+           "I3t visual prior: resident flag alone insufficient");
+    Expect(HadVisualPriorForI3tHold(true, false, false),
+           "I3t visual prior: drawable greedy counts");
+    Expect(ShouldHoldPriorDrawOnAcceptedStale(
+               true, HadVisualPriorForI3tHold(false, true, true)),
+           "I3t hold uses visual prior under empty spoof");
   }
 
   // FZ2.6: budget reality + consumer backpressure + mesh drain split

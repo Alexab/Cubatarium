@@ -815,6 +815,8 @@ struct PhysicsTelemetry
   /// Audit R03 honest: packed about to draw while MDI resident still owns coord
   /// (true dual-backend same surface). Not an alias of PassPackedWithoutMdi*.
   int PassDualBackendSameCoordN{0};
+  /// Honest wrong-tex: Replace same geom size with different blockId this frame.
+  int PublicationMaterialBlockIdFlipN{0};
   /// Q8: sync glGetBufferSubData reads of CullStatsSsbo (HUD/period only).
   uint64_t CullStatsSyncReadN{0};
   /// S1 transparent: 1 when sortRevision changed on PrepareTransparent refresh.
