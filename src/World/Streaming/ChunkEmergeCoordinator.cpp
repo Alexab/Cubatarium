@@ -20,6 +20,7 @@
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/StreamIngressPolicy.h"
+#include "World/Streaming/SeaSeamRemeshPolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
@@ -537,14 +538,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           UWorld &world_ref = *world_ptr;
           const ProceduralSettings &settings = world_ref.GetProceduralSettings();
           const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
-          // Only sea-band columns — avoid remesh thrash / eye blink inland.
-          if (std::abs(chunk_coord.y - sea_cy) > 2)
+          const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();
+          const bool underwater_or_near_water =
+              static_cast<float>(focus_block.y) <
+                  static_cast<float>(settings.SeaLevel) + 2.0f ||
+              world_ref.HasNearbyFluidSurface(focus_block, 24);
+          if (!ShouldRemeshSeaSeamOnFirstDrawable(chunk_coord.y, sea_cy,
+                                                 underwater_or_near_water))
           {
             return;
           }
           UWorldMeshService &mesh = world_ref.GetMeshService();
-          const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
-          const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+          const int remesh_min_y = SeaSeamRemeshMinY(
+              settings.SeaLevel, CHUNK_SIZE, underwater_or_near_water);
+          const int remesh_max_y = SeaSeamRemeshMaxY(
+              settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight);
           static const glm::ivec3 kFaceNb[4] = {
               {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
           for (const glm::ivec3 &d : kFaceNb)
