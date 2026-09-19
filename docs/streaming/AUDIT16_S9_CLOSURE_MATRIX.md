@@ -371,7 +371,7 @@ ADR stamp KEEP (drawable ∉ `InputsStillValid`).
 |---|---|---|
 | R01 generation Free / incomplete·oom | **KEEP** | 100828 + AF ≡0 |
 | R02/R03 dual-backend same-coord | **CLOSED** coded | `pass_dual_backend_same_coord_n` mid≡0; operator west tex **UNTESTED** |
-| R06 overlay water walls | **REOPEN** | coded CLOSED premature; manual 161124 blacks+walls; SoftDeferHeld≡0 |
+| R06 overlay water walls | **OPEN** coded partial | overlay-only remesh 6a07c8d7; operator dive UNTESTED |
 | R04 pubver_without_fresh | soft only | AF max≤2 early; not oracle |
 | dual-lane / mid FullyDark stalled | **OPEN** | AF exit 2 OK; not merge-green |
 | S2 full writers+generations / S3 geometric oracle | **OPEN** | audit debt; out of this cut |
@@ -390,7 +390,23 @@ Manual SoT: `bin/logs/perf_20260919-161124_66972.jsonl` (tex OK: dual_backend≡
 | `dirty_remesh_n` | med~66 max~86 |
 | VB focus / FullyDark stalled | med~55 max~206 / med~46 max~166 |
 | Hypothesis | first-drawable sea remesh (`d4e2f085`+) -> Dirty remesh backlog -> FullyDark stalled blacks; hide KEEP; SoftDefer-for-holes ban KEEP |
-| R06 overlay water walls | **REOPEN** (vs premature coded CLOSED) |
+| R06 overlay water walls | **OPEN** coded partial (see results below) |
 
 Track: R1 no-op remesh callback -> AF; R2 overlay-only remesh (peer `BoundaryOverlay.active`); R3 matrix honesty.
+
+
+### Follow-on 2026-09-19: R06 remesh Dirty bisect results
+
+| Step | SHA | AF | Mid VB med (vs 161124 87.5) | Mid FD stalled med (vs 60.5) | Note |
+|---|---|---|---|---|---|
+| R1 no-op remesh | `54ddfd83` | cold exit 2; adequacy+eye PASS | **62** | **44** | confirms remesh→Dirty/blacks; SoftDeferHeld≡0 |
+| R2 overlay-only | `6a07c8d7` | warm exit 2; adequacy+eye PASS (cold eye flake once) | **76** | **51** | peer remesh iff `BoundaryOverlay` face bit; dual/flip≡0; fog≡4 |
+
+| Gate | Status | Cause / note |
+|---|---|---|
+| R06 overlay water walls | **OPEN** coded partial | overlay-only remesh landed; operator dive **UNTESTED**; AF ≠ pixels |
+| remesh-on-coverage flood | **mitigated** | R1 proved; R2 narrower than pre-bisect; VB/FD still better than 161124, not as low as R1 no-op |
+| SoftDefer-for-holes / SoftDeferHeld | **KEEP** | held≡0 on SoT; not the black mechanism |
+| dual-lane / mid FullyDark stalled | **OPEN** | AF exit 2 OK |
+| merge_green | **false** | operator UNTESTED + dual-lane OPEN |
 
