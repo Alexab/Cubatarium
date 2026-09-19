@@ -311,3 +311,14 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 | AF `stream_diet_p1_{cold,warm}` | PASS / COVERED / PASS (cold eye flake once then PASS; dual-lane OPEN) |
 | full R08 unified spend ledger | **OUT OF SCOPE** (explicit; one carve-out only) |
 | roadmap E1–E5 absolute for this cut | **CLOSED** for coded gates; operator dive / soak / dual-lane still OPEN blockers |
+
+### Follow-on 2026-09-19: wrong-tex S2 residual (manual 100828)
+
+| Signal | Result |
+|---|---|
+| `pass_dual_backend_same_coord_n` (honest R03) | PASS med/max **0/0** on `wrong_tex_p0/p1/p2` AF |
+| packed exclusion when `opaque_draw` empty | PASS (`894f633f`; MDI-resident skip) |
+| RepresentationSwitch before packed resident | PASS (`774d2132`; early bind + RemoveCoord order) |
+| AF `wrong_tex_p0/p1/p2` | PASS / COVERED / PASS; wall fly ~23–25 (≤100828 class); fog thrash=0; incomplete/oom=0 |
+| operator west wrong-tex blink=0 | **UNTESTED** (R10 SoT; coded dual-draw CLOSED) |
+| full S2 + geometric oracle | **OPEN** follow-up (audit) |
