@@ -371,7 +371,7 @@ ADR stamp KEEP (drawable ∉ `InputsStillValid`).
 |---|---|---|
 | R01 generation Free / incomplete·oom | **KEEP** | 100828 + AF ≡0 |
 | R02/R03 dual-backend same-coord | **CLOSED** coded | `pass_dual_backend_same_coord_n` mid≡0; operator west tex **UNTESTED** |
-| R06 overlay water walls | **OPEN** coded partial | overlay-only remesh 6a07c8d7; operator dive UNTESTED |
+| R06 overlay water walls | **OPEN** prevent-emit coded | `fda799c6`; operator distant walls=0 UNTESTED |
 | R04 pubver_without_fresh | soft only | AF max≤2 early; not oracle |
 | dual-lane / mid FullyDark stalled | **OPEN** | AF exit 2 OK; not merge-green |
 | S2 full writers+generations / S3 geometric oracle | **OPEN** | audit debt; out of this cut |
@@ -430,4 +430,23 @@ Manual SoT: `bin/logs/perf_20260919-170548_64892.jsonl` (post R06 overlay-only r
 | Approach-heal | safety net only (W2b) | after prevent-emit |
 
 Operator: dive distant walls=0; rim flash masked by fog. merge_green false until operator.
+
+
+### Follow-on 2026-09-19: ring fog + walls results
+
+| Step | SHA | Result |
+|---|---|---|
+| W0 SoT 170548 | `8617d8aa` | docs |
+| W1 fog unfinished/VB latch + `prior_lit_hold_n` JSONL | `fda799c6` | coded; product-174657 AF forces fog OFF so fog med not AF-gated; unit PASS |
+| W2 prevent-emit overlay→Unknown + fluid hide + coalesce xz,cy | `fda799c6` | unit solid/fluid walls=0; InputsStillValid Unknown |
+| W2b approach-heal sticky overlay | `fda799c6` | safety net cap≤4 |
+
+AF cold `ring_fog_w1w2`: eye PASS / west COVERED; dual/flip≡0; mid VB **34.5** (was 79 on 170548) — adequacy FAIL `vb_too_low_for_product_class` (inverted: lower VB is the win). Warm similar exit 2.
+
+| Gate | Status |
+|---|---|
+| Ring fog mask (manual fog ON) | **coded** — operator rim flash UNTESTED |
+| Distant underwater walls | **coded prevent-emit** — operator dive distant=0 **UNTESTED** |
+| R06 walls | **OPEN** until operator dive |
+| merge_green | **false** |
 
