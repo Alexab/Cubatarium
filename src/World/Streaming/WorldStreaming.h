@@ -126,10 +126,6 @@ private:
   std::deque<glm::ivec3> DeferredShoreSealQueue;
   /// Columns that still need IntraChunk seal (never sync on commit — CB hitch).
   std::unordered_set<glm::ivec3, IVec3Hash> DeferredIntraChunkSealNeeded;
-  /// H1 SoT 185830: streamer-complete MarkDirtySeamed deferred out of Update;
-  /// drained budgeted in TickMeshEmerge (avoid MarkDirty flood in streamer).
-  std::deque<glm::ivec3> PendingStreamerMeshDirty;
-  std::unordered_set<glm::ivec3, IVec3Hash> PendingStreamerMeshDirtySet;
   /// Sync GenerateColumn path: one CoarseHeightCache per ground chunk.
   glm::ivec3 SyncCoarseCacheGround{INT32_MAX, 0, INT32_MAX};
   int AdaptiveEffectiveRd{-1};

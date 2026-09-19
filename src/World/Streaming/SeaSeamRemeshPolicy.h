@@ -99,8 +99,9 @@ inline bool PeerNeedsSeaSeamRemesh(bool overlay_active, uint8_t missing_faces,
           static_cast<uint8_t>(1u << face_toward_publisher)) != 0;
 }
 
-/// W1 SoT 185830: sticky overlay peer remesh fires when any active overlay
-/// (not only face-toward), even outside narrow sea-band.
+/// Policy helper only: production first-drawable remesh stays face-toward +
+/// sea-band (R2). Broaden-to-any-active-overlay was tried (W1 185830) and
+/// regressed blacks/flicker — do not wire into CEC without a non-Dirty path.
 inline bool ShouldRemeshStickyOverlayPeer(bool peer_drawable,
                                           bool peer_has_active_overlay,
                                           bool peer_face_toward_active,
@@ -110,11 +111,16 @@ inline bool ShouldRemeshStickyOverlayPeer(bool peer_drawable,
   {
     return false;
   }
-  if (peer_has_active_overlay || peer_face_toward_active)
+  // Production gate equivalent: face-toward OR (legacy) sea-band without sticky.
+  if (peer_face_toward_active)
   {
     return true;
   }
-  return peer_in_sea_band;
+  if (peer_has_active_overlay && peer_in_sea_band)
+  {
+    return true;
+  }
+  return false;
 }
 
 } // namespace cutum

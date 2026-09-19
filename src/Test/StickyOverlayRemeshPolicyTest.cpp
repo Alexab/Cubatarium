@@ -22,14 +22,15 @@ int main()
 {
   using cutum::ShouldRemeshStickyOverlayPeer;
 
-  Expect(ShouldRemeshStickyOverlayPeer(true, true, false, false),
-         "any active overlay remeshes outside sea-band");
+  // After 185830 regress: any-active outside band must NOT remesh (blacks).
+  Expect(!ShouldRemeshStickyOverlayPeer(true, true, false, false),
+         "any-active outside sea-band: no remesh (regress KEEP)");
   Expect(ShouldRemeshStickyOverlayPeer(true, false, true, false),
-         "face-toward overlay remeshes outside sea-band");
+         "face-toward remeshes outside sea-band");
   Expect(!ShouldRemeshStickyOverlayPeer(true, false, false, false),
          "no overlay and outside band: skip");
-  Expect(ShouldRemeshStickyOverlayPeer(true, false, false, true),
-         "sea-band peer without sticky still remeshes (legacy)");
+  Expect(ShouldRemeshStickyOverlayPeer(true, true, false, true),
+         "active overlay in sea-band: remesh");
   Expect(!ShouldRemeshStickyOverlayPeer(false, true, true, true),
          "non-drawable peer: skip");
 

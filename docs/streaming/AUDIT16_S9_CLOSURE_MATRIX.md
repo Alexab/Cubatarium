@@ -484,3 +484,19 @@ AF cold `s185830_h1w1f1_af_cold` (`perf_20260919-192746_18136.jsonl`): exit 2 du
 | Rim fog latch | **coded** fog ON + AF restore — operator rim flash UNTESTED |
 | merge_green | **false** |
 
+
+### Follow-on 2026-09-19: H1/W1 regress rollback
+
+Operator after H1+W1: blacks↑, empty/flicker in flight, walls remain, 0-FPS hang unchanged.
+
+| Cause | Action |
+|---|---|
+| W1 broaden sticky remesh | **reverted** to R2 face-toward + sea-band (remesh→FullyDark class) |
+| H1 prefer-async fallthrough | **reverted** — left empty columns |
+| H1 defer MarkDirty drain≤8 | **reverted** — empty/flicker while Exhausted |
+| H1 FrameDeadline load break + sync budget 32 | **KEEP** |
+| Apply BoundaryOverlay stamp + F1 fog restore | **KEEP** |
+| prevent-emit Unknown | **KEEP** |
+
+Hang max still OPEN (Frontier follow-up). Walls OPEN (need non-Dirty heal). merge_green false.
+

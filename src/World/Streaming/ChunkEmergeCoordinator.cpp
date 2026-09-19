@@ -526,10 +526,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
           }
         });
-    // R06 / W1 SoT 185830: when coverage publishes, remesh face-neighbors that
-    // still carry sticky BoundaryOverlay (any active overlay, not only the
-    // face toward publisher). Publisher sea-band gate is soft: near sea/fluid
-    // OR a sticky overlay peer. Cap admits ≤8; coalesce (xz,cy).
+    // R06: when coverage publishes, remesh face-neighbors in sea band that
+    // still carry sticky BoundaryOverlay toward the publisher (R2 overlay-only;
+    // no 3x3; underwater Y = publisher_cy; coalesce one dirty/col/frame).
+    // Regression 185830 H1/W1: do NOT broaden to any-active-overlay outside
+    // sea-band — remesh flood → FullyDark/blacks + flicker (R1 class).
     mesh_service.SetOnFirstDrawableCoverageFn(
         [this](glm::ivec3 chunk_coord)
         {
@@ -546,60 +547,39 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               static_cast<float>(focus_block.y) <
                   static_cast<float>(settings.SeaLevel) + 2.0f ||
               world_ref.HasNearbyFluidSurface(focus_block, 24);
-          UWorldMeshService &mesh = world_ref.GetMeshService();
-          static const glm::ivec3 kFaceNb[4] = {
-              {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
-          const bool publisher_in_band = ShouldRemeshSeaSeamOnFirstDrawable(
-              chunk_coord.y, sea_cy, underwater_or_near_water);
-          bool sticky_peer = false;
-          if (!publisher_in_band)
+          if (!ShouldRemeshSeaSeamOnFirstDrawable(chunk_coord.y, sea_cy,
+                                                 underwater_or_near_water))
           {
-            for (const glm::ivec3 &d : kFaceNb)
-            {
-              const glm::ivec3 n = chunk_coord + d;
-              if (mesh.HasDrawableGreedyMesh(n) &&
-                  mesh.HasActiveBoundaryOverlay(n))
-              {
-                sticky_peer = true;
-                break;
-              }
-            }
-            if (!sticky_peer)
-            {
-              return;
-            }
+            return;
           }
+          UWorldMeshService &mesh = world_ref.GetMeshService();
           int remesh_min_y = 0;
           int remesh_max_y = 0;
           SeaSeamRemeshYRangeForPublisher(
               settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight, chunk_coord.y,
               underwater_or_near_water, remesh_min_y, remesh_max_y);
-          constexpr int kMaxStickyOverlayRemeshAdmits = 8;
-          int admits = 0;
+          static const glm::ivec3 kFaceNb[4] = {
+              {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
           for (const glm::ivec3 &d : kFaceNb)
           {
-            if (admits >= kMaxStickyOverlayRemeshAdmits)
-            {
-              break;
-            }
             const glm::ivec3 n = chunk_coord + d;
             if (!mesh.HasDrawableGreedyMesh(n))
             {
               continue;
             }
-            const int face_toward =
-                SeaSeamPeerFaceTowardPublisher(d.x, d.z);
-            const bool peer_face =
-                face_toward >= 0 &&
-                mesh.HasActiveBoundaryOverlayFace(n, face_toward);
-            const bool peer_in_band = ShouldRemeshSeaSeamOnFirstDrawable(
-                n.y, sea_cy, underwater_or_near_water);
-            if (!ShouldRemeshStickyOverlayPeer(
-                    true, mesh.HasActiveBoundaryOverlay(n), peer_face,
-                    peer_in_band))
+            if (!ShouldRemeshSeaSeamOnFirstDrawable(n.y, sea_cy,
+                                                   underwater_or_near_water))
             {
               continue;
             }
+            const int face_toward =
+                SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+            if (!mesh.HasActiveBoundaryOverlayFace(n, face_toward))
+            {
+              continue;
+            }
+            // Coalesce per peer chunk (xz + cy) so underwater same-column
+            // different-cy publishers do not drop remesh.
             const uint64_t col_key =
                 (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 42) |
                 (static_cast<uint64_t>(static_cast<uint32_t>(n.z)) << 10) |
@@ -611,7 +591,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             mesh.MarkTerrainChunkMeshDirtySeamed(
                 glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, false);
-            ++admits;
           }
         });
     mesh_service.SetOnMeshColumnDirtyFn(

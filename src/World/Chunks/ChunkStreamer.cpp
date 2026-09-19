@@ -489,16 +489,10 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
            IsTerrainChunkCompleteCached(chunkCoord);
   }
 
-  // H1 SoT 185830: never sync-advance full 256 subcols on the main Update path
-  // (was wall_ms ~5s on shore). Prefer async when available; else budgeted
-  // slice (same as collision sync) so FrameDeadline can preempt next Ensure.
-  if (!forceSync && AsyncGeneration && OnRequestAsyncChunk)
-  {
-    OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
-    note_queued();
-    return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
-           IsTerrainChunkCompleteCached(chunkCoord);
-  }
+  // H1 SoT 185830 (narrowed after regress): never sync-advance full 256 on
+  // Update. Keep budgeted slice — do NOT force async-only here (that left
+  // empty/flicker columns while gen lagged). FrameDeadline still preempts
+  // the load loop before the next Ensure.
   if (!forceSync && UFrameDeadline::Get().Exhausted())
   {
     return false;
