@@ -3753,22 +3753,31 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   // N04 I3t: accepted stale on prior drawable — keep prior sole live image;
   // queue ordinary Dirty refresh (do not Bind wrong bake / clear batches).
-  const bool had_prior_drawable =
-      HasDrawableGreedyMesh(coord) || ChunkHasLiveGpuDraw(coord);
-  if (ShouldHoldPriorDrawOnAcceptedStale(accepted_input_stale,
-                                         had_prior_drawable))
+  // E1/111235: visual prior includes GpuResident+HasGpuMesh after empty spoof
+  // (GpuQuadCount may be 0 while SSBO still allocated).
   {
-    if (GpuPipeline && gpu_result.slotIndex >= 0)
+    const auto git = GreedyCache.find(coord);
+    const bool gpu_resident =
+        git != GreedyCache.end() && git->second.GpuResident;
+    const bool pipe_has_mesh =
+        GpuPipeline != nullptr && GpuPipeline->HasGpuMesh(coord);
+    const bool had_prior_drawable = HadVisualPriorForI3tHold(
+        HasDrawableGreedyMesh(coord), gpu_resident, pipe_has_mesh);
+    if (ShouldHoldPriorDrawOnAcceptedStale(accepted_input_stale,
+                                           had_prior_drawable))
     {
-      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+      if (GpuPipeline && gpu_result.slotIndex >= 0)
+      {
+        GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+      }
+      if (!Dirty.Contains(coord))
+      {
+        Dirty.MarkDirty(coord);
+        ++MeshApplyStaleAcceptedRefreshCount;
+      }
+      // RetainedPrior: not a published Completed — callers must not ++Completed.
+      return false;
     }
-    if (!Dirty.Contains(coord))
-    {
-      Dirty.MarkDirty(coord);
-      ++MeshApplyStaleAcceptedRefreshCount;
-    }
-    // RetainedPrior: not a published Completed — callers must not ++Completed.
-    return false;
   }
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
   const bool had_mesh = HasDrawableGreedyMesh(coord);
@@ -5126,6 +5135,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     // I-R1 keep-until-bind: intentional empty CPU still satisfies column
     // (spawn ring) — publish 0-quad residency without FreeChunk.
+    // Visual prior for I3t uses HadVisualPriorForI3tHold(HasGpuMesh), not
+    // QuadCount spoof retention (that raised holes blink on AF).
     if (intentional_empty)
     {
       chunkMesh.GpuResident = true;
