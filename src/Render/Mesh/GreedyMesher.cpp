@@ -217,6 +217,22 @@ bool CellHasRenderableFluid(IUChunkMeshReader &reader, UBlockRegistry &registry,
   {
     return true;
   }
+  // R06 residual: overlay forces GetBlock=AIR while shellBlocks/shellFluid
+  // keep water / waterlogged occupancy for hide decisions.
+  if (id == BLOCK_AIR)
+  {
+    const BlockId raw = reader.GetBlockIgnoringOverlay(world_pos);
+    if (raw != BLOCK_AIR && MeshIsLiquid(registry, catalog, raw))
+    {
+      return true;
+    }
+    if (raw != BLOCK_AIR && MeshIsFluidPermeable(registry, catalog, raw) &&
+        FluidCellHasActiveFluid(
+            PackFluidCellState(reader.GetFluid(world_pos))))
+    {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -248,7 +264,7 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   {
     // R06 overlay: GetBlock forced AIR while shellBlocks/shellFluid stay
     // voxel-true. Source water often packs fluid=0 (Level/Kind unset), so also
-    // check raw shell block id for same-kind liquid hide.
+    // check raw shell block id; shellFluid active covers waterlogged permeable.
     if (MeshIsLiquid(registry, catalog, face_id) ||
         face_style == BlockRenderStyle::Fluid)
     {
