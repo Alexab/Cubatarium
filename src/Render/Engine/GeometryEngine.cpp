@@ -233,6 +233,18 @@ void UGeometryEngine::EnsureRenderBackendsBound()
     auto &mesh = WorldInstance->GetMeshService();
     mesh.SetCullBackend(RenderBackends.Cull.get());
     mesh.SetMesherBackend(RenderBackends.Mesher.get());
+    // R03: bind before first packed CommitGpuMeshResult (not only first draw).
+    if (!PackedRepresentationSwitchBound_ && RenderBackends.Store)
+    {
+      mesh.GetCache().SetOnPackedRepresentationSwitchFn(
+          [this](glm::ivec3 coord)
+          {
+            MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
+            MeshStore().RemoveCoord(GreedyGpuCutout, coord);
+            MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
+          });
+      PackedRepresentationSwitchBound_ = true;
+    }
   }
 }
 

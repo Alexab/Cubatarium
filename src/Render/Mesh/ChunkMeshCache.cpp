@@ -3821,14 +3821,14 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   // S4 fail-closed: do not stamp current world light over a bake without
   // source provenance (hold prior MeshedLightRevision).
   chunkMesh.BoundaryOverlay = boundary_overlay;
-  chunkMesh.batches.clear();
-  chunkMesh.crossCenters = std::move(cross_centers);
-  GreedyVertexCountByChunk[coord] = 0;
-  // RepresentationSwitch: packed is sole draw for this coord — drop MDI/pool.
+  // R03: drop MDI/pool resident BEFORE packed becomes the sole draw source.
   if (OnPackedRepresentationSwitch)
   {
     OnPackedRepresentationSwitch(coord);
   }
+  chunkMesh.batches.clear();
+  chunkMesh.crossCenters = std::move(cross_centers);
+  GreedyVertexCountByChunk[coord] = 0;
   NoteGeometryDirty(coord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
