@@ -323,6 +323,19 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 | operator west wrong-tex blink=0 | **UNTESTED** (R10 SoT; coded dual-draw CLOSED) |
 | full S2 + geometric oracle | **OPEN** follow-up (audit) |
 
+### Follow-on 2026-09-19: regress after manual 111235
+
+Anchor: `bin/logs/perf_20260919-111235_15716.jsonl` (FPS↑ wall~19.9; tex swap late; empty/black blink; walls residual).
+
+| Signal | Result |
+|---|---|
+| E0 R06 remesh coalesce (no 3×3 / deep Y) | PASS (`8fb745fe`; AF `regress_e0_remesh_*` hard PASS; dirty_remesh max↓ vs prior AF) |
+| E1 material blockId-flip attribution | PASS (`dc28ef03`; `publication_material_block_id_flip_n`) |
+| E1 I3t visual prior (empty spoof) | PASS (`e212df2f`; AF `regress_tex_p1_*` hard PASS after cold flake) |
+| AF `regress_tex_p2_cold` KEEP | PASS / COVERED / PASS |
+| operator west wrong-tex blink=0 | **UNTESTED** (R10; coded path CLOSED, dual≡0 + flip mid≡0 on AF) |
+| operator dive walls=0 | **UNTESTED** (follow E2) |
+
 ### Follow-on 2026-09-19: underwater water walls after 100828 (R06 field)
 
 Anchor manual: `bin/logs/perf_20260919-100828_41648.jsonl` (dive y≈47 walls FAIL R10).  
