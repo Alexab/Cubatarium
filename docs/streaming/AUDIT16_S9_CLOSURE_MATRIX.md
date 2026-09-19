@@ -322,3 +322,32 @@ N04 census FullyDark remesh caps / wrong-tex gates on misnamed `pass_mdi_stale_*
 | AF `wrong_tex_p0/p1/p2` | PASS / COVERED / PASS; wall fly ~23–25 (≤100828 class); fog thrash=0; incomplete/oom=0 |
 | operator west wrong-tex blink=0 | **UNTESTED** (R10 SoT; coded dual-draw CLOSED) |
 | full S2 + geometric oracle | **OPEN** follow-up (audit) |
+
+### Follow-on 2026-09-19: underwater water walls after 100828 (R06 field)
+
+Anchor manual: `bin/logs/perf_20260919-100828_41648.jsonl` (dive y≈47 walls FAIL R10).  
+ADR stamp KEEP (drawable ∉ `InputsStillValid`).
+
+| Signal | Result |
+|---|---|
+| subsea remesh when underwater/near fluid | PASS (`db007ca3`; `SeaSeamRemeshPolicy` band 2→4, deeper Y; stamp unchanged) |
+| AF `water_walls_p0_cold` | PASS / COVERED / PASS; wall fly ~23.2; fog≡4; dual_backend mid 0; incomplete/oom≡0; dual-lane OPEN |
+| overlay hide residual + deep/waterlogged units | PASS (`b5fead65`; `CellHasRenderableFluid` overlay-aware; `FluidMeshFacesTest`) |
+| AF `water_walls_p1_{cold,warm}` | PASS / COVERED / PASS (cold eye flake once then PASS); wall fly ~23–24 |
+| AF `water_walls_p2_cold` KEEP | PASS / COVERED / PASS; wall fly ~24.8; fog thrash=0 |
+| operator dive walls=0 | **UNTESTED** (R10 SoT; AF ≠ pixels; coded remesh+hide CLOSED) |
+| N04 FullyDark remesh Dirty | **KEEP FREEZE** |
+
+### Follow-on 2026-09-19: AUDIT16 matrix cut vs 100828 (E3)
+
+| Gate | Status | Cause / note |
+|---|---|---|
+| R01 generation Free / incomplete·oom | **KEEP** | 100828 + AF ≡0 |
+| R02/R03 dual-backend same-coord | **CLOSED** coded | `pass_dual_backend_same_coord_n` mid≡0; operator west tex **UNTESTED** |
+| R06 overlay water walls | **CLOSED** coded | remesh+hide; operator dive **UNTESTED** |
+| R04 pubver_without_fresh | soft only | AF max≤2 early; not oracle |
+| dual-lane / mid FullyDark stalled | **OPEN** | AF exit 2 OK; not merge-green |
+| S2 full writers+generations / S3 geometric oracle | **OPEN** | audit debt; out of this cut |
+| soak / R08 full ledger / S5 demand | **OPEN** | audit debt |
+| fog thrash / MissOwn / prior-lit / ring / N04 / ADR stamp | **KEEP** | no reopen |
+| merge_green | **false** | operator UNTESTED + dual-lane OPEN |
