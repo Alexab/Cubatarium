@@ -2688,6 +2688,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   normal_shutdown_test
   frame_deadline_test
   streamer_deadline_policy_test
+  sticky_overlay_remesh_policy_test
   greedy_vertex_pool_production_test
   column_flow_scheduler_test
   frustum_clip_test

@@ -36,6 +36,9 @@ struct MeshBuildResult
   std::array<ChunkInputStamp, 7> InputStamps{};
   bool InputStampsValid{false};
   std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
+  /// W1: sticky overlay from capture — ApplyMeshResult must stamp CPU path too
+  /// (CommitGpu already got it via pending.snapshot).
+  BoundaryOverlayState BoundaryOverlay{};
 };
 
 class UAsyncMeshBuilder

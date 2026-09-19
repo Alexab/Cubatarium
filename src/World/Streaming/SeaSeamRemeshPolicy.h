@@ -99,4 +99,22 @@ inline bool PeerNeedsSeaSeamRemesh(bool overlay_active, uint8_t missing_faces,
           static_cast<uint8_t>(1u << face_toward_publisher)) != 0;
 }
 
+/// W1 SoT 185830: sticky overlay peer remesh fires when any active overlay
+/// (not only face-toward), even outside narrow sea-band.
+inline bool ShouldRemeshStickyOverlayPeer(bool peer_drawable,
+                                          bool peer_has_active_overlay,
+                                          bool peer_face_toward_active,
+                                          bool peer_in_sea_band)
+{
+  if (!peer_drawable)
+  {
+    return false;
+  }
+  if (peer_has_active_overlay || peer_face_toward_active)
+  {
+    return true;
+  }
+  return peer_in_sea_band;
+}
+
 } // namespace cutum

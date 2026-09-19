@@ -137,6 +137,7 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         result.InputStamps = snapshot.inputStamps;
         result.InputStampsValid = snapshot.inputStampsValid;
         result.InputCatalog = catalogKeep;
+        result.BoundaryOverlay = snapshot.boundaryOverlay;
         const BlockDefinitionCatalog *pinned = catalogKeep.get();
 
         auto *gpu_mesher = Mesher;

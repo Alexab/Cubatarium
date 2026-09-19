@@ -5080,6 +5080,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Write-first: CPU drawable before FreeChunk (ShouldPublishCpuBatchesBeforeFreeGpu).
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
+  // W1 SoT 185830: sync BoundaryOverlay on CPU Apply (heal gates were blind).
+  chunkMesh.BoundaryOverlay = result.BoundaryOverlay;
   // Audit R05: MeshedLightRevision = bake source stamp, not current world light.
   if (result.InputStampsValid)
   {
