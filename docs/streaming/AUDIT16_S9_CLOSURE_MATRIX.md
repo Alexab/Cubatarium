@@ -371,10 +371,26 @@ ADR stamp KEEP (drawable ∉ `InputsStillValid`).
 |---|---|---|
 | R01 generation Free / incomplete·oom | **KEEP** | 100828 + AF ≡0 |
 | R02/R03 dual-backend same-coord | **CLOSED** coded | `pass_dual_backend_same_coord_n` mid≡0; operator west tex **UNTESTED** |
-| R06 overlay water walls | **CLOSED** coded | remesh+hide; operator dive **UNTESTED** |
+| R06 overlay water walls | **REOPEN** | coded CLOSED premature; manual 161124 blacks+walls; SoftDeferHeld≡0 |
 | R04 pubver_without_fresh | soft only | AF max≤2 early; not oracle |
 | dual-lane / mid FullyDark stalled | **OPEN** | AF exit 2 OK; not merge-green |
 | S2 full writers+generations / S3 geometric oracle | **OPEN** | audit debt; out of this cut |
 | soak / R08 full ledger / S5 demand | **OPEN** | audit debt |
 | fog thrash / MissOwn / prior-lit / ring / N04 / ADR stamp | **KEEP** | no reopen |
 | merge_green | **false** | operator UNTESTED + dual-lane OPEN |
+
+### Follow-on 2026-09-19: R06 remesh Dirty bisect (manual 161124)
+
+Start HEAD: `60202710`. Black-clean anchor (pre remesh-on-coverage risk): `27beca1c`.
+Manual SoT: `bin/logs/perf_20260919-161124_66972.jsonl` (tex OK: dual_backend≡0 / block_id_flip≡0; blacks + water/black walls remain).
+
+| Signal | 161124 fact |
+|---|---|
+| `softdefer_held_n` / empty_* | **≡0** — SoftDefer erase **not** the active black mechanism |
+| `dirty_remesh_n` | med~66 max~86 |
+| VB focus / FullyDark stalled | med~55 max~206 / med~46 max~166 |
+| Hypothesis | first-drawable sea remesh (`d4e2f085`+) -> Dirty remesh backlog -> FullyDark stalled blacks; hide KEEP; SoftDefer-for-holes ban KEEP |
+| R06 overlay water walls | **REOPEN** (vs premature coded CLOSED) |
+
+Track: R1 no-op remesh callback -> AF; R2 overlay-only remesh (peer `BoundaryOverlay.active`); R3 matrix honesty.
+
