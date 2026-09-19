@@ -465,3 +465,22 @@ Note: `dirty_dropped`≈14630 is cumulative counter (not per-period spike alone)
 
 Track: H1 streamer deadline → W1 sticky overlay remesh → F1 fog ON + AF restore hygiene.
 
+
+### Follow-on 2026-09-19: H1/W1/F1 results (SoT 185830)
+
+| Step | SHA | Result |
+|---|---|---|
+| H0 SoT evidence | `ba09c573` | docs |
+| H1 StreamerUpdate deadline + no sync 256 + defer Dirty | `0eb9ea3e` | unit PASS; AF cold eye PASS / west COVERED |
+| W1 sticky overlay peer remesh + Apply BoundaryOverlay | `3a1450a4` | unit PASS; fluid walls=0 KEEP |
+| F1 fog ON + AF restore hygiene | `187f88ce` | operator config fog true; AF restore True (preset=quality) |
+
+AF cold `s185830_h1w1f1_af_cold` (`perf_20260919-192746_18136.jsonl`): exit 2 dual-lane OPEN OK; eye PASS; west COVERED; wall med ~26 ms; `streamer_update_ms` med ~4.4 ms but **max ~6.5 s** still on one period (cx=-12) — hang **mitigated med / OPEN max** (stop-line >1s → Frontier async-only follow-up, not landed this track). dual/flip≡0. Fog after AF: **true**.
+
+| Gate | Status |
+|---|---|
+| Shore hang (manual) | **OPEN** — H1 coded; AF med OK; AF max streamer still multi-second; shore retest UNTESTED |
+| Distant walls | **coded** sticky remesh — operator dive distant=0 **UNTESTED** |
+| Rim fog latch | **coded** fog ON + AF restore — operator rim flash UNTESTED |
+| merge_green | **false** |
+
