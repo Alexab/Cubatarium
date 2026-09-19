@@ -94,6 +94,8 @@ private:
   /// Stable SoftDefer policy POD; Set*Fn installed once against this.
   SoftDeferFramePolicy SoftDeferPolicy{};
   bool SoftDeferCallbacksInstalled{false};
+  /// R06 E0: one sea-seam remesh dirty per peer column per emerge tick.
+  std::unordered_set<uint64_t> SeaSeamRemeshCoalesceCols;
   /// Prior-frame FM enqueue / schedule baselines (was function-static).
   int FmEnqueuePrior{0};
   int ScheduleOkPrior{0};

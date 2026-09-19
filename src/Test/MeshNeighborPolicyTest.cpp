@@ -73,13 +73,42 @@ int main()
   {
     return Fail("underwater gate remeshes subsea cy");
   }
-  if (cutum::SeaSeamRemeshMinY(62, 16, false) != 62 - 16)
+  if (cutum::SeaSeamRemeshMinYSurface(62, 16) != 62 - 16)
   {
     return Fail("surface remesh min y");
   }
-  if (cutum::SeaSeamRemeshMinY(62, 16, true) != 0)
+  // E0: underwater Y is publisher_cy +/- 1, not sea-4*CHUNK flood.
   {
-    return Fail("underwater remesh min y deeper (clamped >=0)");
+    int min_y = 0;
+    int max_y = 0;
+    const int publisher_cy = 1;
+    cutum::SeaSeamRemeshYRangeForPublisher(62, 16, 256, publisher_cy, true,
+                                           min_y, max_y);
+    if (min_y != 0 || max_y != 3 * 16 - 1)
+    {
+      return Fail("underwater remesh Y = publisher_cy +/- 1");
+    }
+    const int per_col = cutum::SeaSeamRemeshChunksPerPeerColumn(
+        62, 16, 256, publisher_cy, true);
+    if (per_col != 3)
+    {
+      return Fail("underwater dirty chunks/column must be 3 (cy+/-1)");
+    }
+    // Old flood was ~5+ cy * 9 seamed; keep well under that.
+    if (per_col * 4 >= 9 * 5)
+    {
+      return Fail("underwater remesh still flood-class");
+    }
+  }
+  {
+    int min_y = 0;
+    int max_y = 0;
+    cutum::SeaSeamRemeshYRangeForPublisher(62, 16, 256, sea_cy, false, min_y,
+                                           max_y);
+    if (min_y != 62 - 16)
+    {
+      return Fail("inland surface min y KEEP");
+    }
   }
   std::cout << "mesh_neighbor_policy_test OK" << std::endl;
   return 0;

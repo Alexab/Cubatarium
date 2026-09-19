@@ -150,6 +150,7 @@ void UChunkEmergeCoordinator::BeginFrame(const ProceduralSettings &procedural,
   LastBudget =
       ComputeBudget(procedural, movement_speed, default_load_ops, last_frame_ms);
   GetColumnFlowExecutor().BeginFrame();
+  SeaSeamRemeshCoalesceCols.clear();
 }
 
 void UChunkEmergeCoordinator::TickMeshEmerge(
@@ -527,6 +528,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         });
     // R06: when coverage publishes, remesh face-neighbors in sea band so
     // overlay water walls rebuild without stamp thrash (drawable ∉ stamp).
+    // E0/111235: no 3x3 seamed expand; underwater Y = publisher_cy +/- 1;
+    // coalesce one dirty per peer column per frame.
     mesh_service.SetOnFirstDrawableCoverageFn(
         [this](glm::ivec3 chunk_coord)
         {
@@ -549,10 +552,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             return;
           }
           UWorldMeshService &mesh = world_ref.GetMeshService();
-          const int remesh_min_y = SeaSeamRemeshMinY(
-              settings.SeaLevel, CHUNK_SIZE, underwater_or_near_water);
-          const int remesh_max_y = SeaSeamRemeshMaxY(
-              settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight);
+          int remesh_min_y = 0;
+          int remesh_max_y = 0;
+          SeaSeamRemeshYRangeForPublisher(
+              settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight, chunk_coord.y,
+              underwater_or_near_water, remesh_min_y, remesh_max_y);
           static const glm::ivec3 kFaceNb[4] = {
               {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
           for (const glm::ivec3 &d : kFaceNb)
@@ -562,8 +566,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            const uint64_t col_key =
+                (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 32) |
+                static_cast<uint32_t>(n.z);
+            if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
+            {
+              continue;
+            }
+            // Face-nb already selected; do not expand another 3x3.
             mesh.MarkTerrainChunkMeshDirtySeamed(
-                glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, true);
+                glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, false);
           }
         });
     mesh_service.SetOnMeshColumnDirtyFn(

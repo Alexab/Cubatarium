@@ -2,6 +2,7 @@
 // BUDGET_MS: 0.0
 // R06 field: when first drawable coverage publishes, remesh sea/subsea seams.
 // Drawable stays out of InputsStillValid stamp (ADR Strategy A).
+// E0 (111235): no 3x3 seamed expand; underwater Y = publisher_cy +/- 1 only.
 
 #include <algorithm>
 #include <cmath>
@@ -19,16 +20,49 @@ inline bool ShouldRemeshSeaSeamOnFirstDrawable(int chunk_cy, int sea_cy,
   return std::abs(chunk_cy - sea_cy) <= band;
 }
 
-inline int SeaSeamRemeshMinY(int sea_level, int chunk_size,
-                             bool underwater_or_near_water)
+/// Inland surface: sea_level - CHUNK .. sea+2*CHUNK.
+inline int SeaSeamRemeshMinYSurface(int sea_level, int chunk_size)
 {
-  const int depth = underwater_or_near_water ? chunk_size * 4 : chunk_size;
-  return std::max(0, sea_level - depth);
+  return std::max(0, sea_level - chunk_size);
 }
 
-inline int SeaSeamRemeshMaxY(int sea_level, int chunk_size, int max_height)
+inline int SeaSeamRemeshMaxYSurface(int sea_level, int chunk_size,
+                                   int max_height)
 {
   return std::min(max_height, sea_level + chunk_size * 2);
+}
+
+/// Underwater/near_water: only publisher_cy +/- 1 (not sea-4*CHUNK flood).
+inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
+                                           int max_height, int publisher_cy,
+                                           bool underwater_or_near_water,
+                                           int &out_min_y, int &out_max_y)
+{
+  if (underwater_or_near_water)
+  {
+    const int cy0 = publisher_cy - 1;
+    const int cy1 = publisher_cy + 1;
+    out_min_y = std::max(0, cy0 * chunk_size);
+    out_max_y = std::min(max_height, (cy1 + 1) * chunk_size - 1);
+    return;
+  }
+  out_min_y = SeaSeamRemeshMinYSurface(sea_level, chunk_size);
+  out_max_y = SeaSeamRemeshMaxYSurface(sea_level, chunk_size, max_height);
+}
+
+/// Chunks dirtied per peer column when include_horizontal_neighbors=false.
+inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
+                                           int max_height, int publisher_cy,
+                                           bool underwater_or_near_water)
+{
+  int min_y = 0;
+  int max_y = 0;
+  SeaSeamRemeshYRangeForPublisher(sea_level, chunk_size, max_height,
+                                 publisher_cy, underwater_or_near_water, min_y,
+                                 max_y);
+  const int cy0 = min_y / chunk_size;
+  const int cy1 = max_y / chunk_size;
+  return std::max(0, cy1 - cy0 + 1);
 }
 
 } // namespace cutum
