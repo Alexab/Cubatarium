@@ -576,9 +576,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            // Coalesce per peer chunk (xz + cy) so underwater same-column
+            // different-cy publishers do not drop remesh.
             const uint64_t col_key =
-                (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 32) |
-                static_cast<uint32_t>(n.z);
+                (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 42) |
+                (static_cast<uint64_t>(static_cast<uint32_t>(n.z)) << 10) |
+                (static_cast<uint64_t>(static_cast<uint16_t>(n.y + 512)) &
+                 0x3FFull);
             if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
             {
               continue;
@@ -1268,6 +1272,80 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                               /*prev_hidden=*/true);
       }
       SoftDeferEmptyPrevSeen = seen_empty;
+    }
+
+    // W2b: approach-heal sticky BoundaryOverlay when face-neighbor already
+    // drawable (safety net after prevent-emit; no SoftDefer-for-holes).
+    {
+      const ProceduralSettings &settings = world.GetProceduralSettings();
+      const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
+      const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+      const bool underwater_or_near_water =
+          static_cast<float>(focus_block.y) <
+              static_cast<float>(settings.SeaLevel) + 2.0f ||
+          world.HasNearbyFluidSurface(focus_block, 24);
+      int healed = 0;
+      static const glm::ivec3 kFaceHeal[4] = {
+          {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+      const glm::ivec3 focus_g = focus_ground_horiz;
+      const int scan_r = std::min(focus_radius, 4);
+      for (int dz = -scan_r; dz <= scan_r && healed < 4; ++dz)
+      {
+        for (int dx = -scan_r; dx <= scan_r && healed < 4; ++dx)
+        {
+          for (int cy = sea_cy - 4; cy <= sea_cy + 2 && healed < 4; ++cy)
+          {
+            const glm::ivec3 peer(focus_g.x + dx, cy, focus_g.z + dz);
+            if (!ShouldRemeshSeaSeamOnFirstDrawable(peer.y, sea_cy,
+                                                   underwater_or_near_water))
+            {
+              continue;
+            }
+            if (!mesh_service.HasDrawableGreedyMesh(peer) ||
+                !mesh_service.HasActiveBoundaryOverlay(peer))
+            {
+              continue;
+            }
+            bool needs = false;
+            for (const glm::ivec3 &d : kFaceHeal)
+            {
+              const int face = SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+              if (!mesh_service.HasActiveBoundaryOverlayFace(peer, face))
+              {
+                continue;
+              }
+              const glm::ivec3 nb = peer + d;
+              if (mesh_service.HasDrawableGreedyMesh(nb))
+              {
+                needs = true;
+                break;
+              }
+            }
+            if (!needs)
+            {
+              continue;
+            }
+            const uint64_t col_key =
+                (static_cast<uint64_t>(static_cast<uint32_t>(peer.x)) << 42) |
+                (static_cast<uint64_t>(static_cast<uint32_t>(peer.z)) << 10) |
+                (static_cast<uint64_t>(static_cast<uint16_t>(peer.y + 512)) &
+                 0x3FFull);
+            if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
+            {
+              continue;
+            }
+            if (!mesh_service.TryConsumeDirtyAdmit())
+            {
+              continue;
+            }
+            const int ymin = peer.y * CHUNK_SIZE;
+            const int ymax = ymin + CHUNK_SIZE - 1;
+            mesh_service.MarkTerrainChunkMeshDirtySeamed(
+                glm::ivec3(peer.x, 0, peer.z), ymin, ymax, false);
+            ++healed;
+          }
+        }
+      }
     }
 
     if (SoftDeferEmptyShouldApplyOwnership(UndrawnForceCd <= 0))

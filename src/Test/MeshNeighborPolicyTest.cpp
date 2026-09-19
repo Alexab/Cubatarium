@@ -1,5 +1,6 @@
 #include "Render/Mesh/MeshNeighborPolicy.h"
 #include "World/Streaming/SeaSeamRemeshPolicy.h"
+#include "World/Streaming/FogPullInPolicy.h"
 #include <iostream>
 
 static int Fail(const char *msg)
@@ -117,6 +118,22 @@ int main()
   if (cutum::PeerNeedsSeaSeamRemesh(true, 1u << 1, 0))
   {
     return Fail("wrong face bit must not remesh");
+  }
+  if (!cutum::ShouldLatchFogHoleDebtUnfinishedOrVb(1, 0) ||
+      !cutum::ShouldLatchFogHoleDebtUnfinishedOrVb(0, 1) ||
+      cutum::ShouldLatchFogHoleDebtUnfinishedOrVb(0, 0))
+  {
+    return Fail("fog unfinished/VB latch");
+  }
+  if (!cutum::ShouldLatchFogHoleDebtNow(1, 1, 0, 0) ||
+      !cutum::ShouldLatchFogHoleDebtNow(0, 9, 3, 0))
+  {
+    return Fail("fog hole_debt_now near-miss or unfinished");
+  }
+  if (!cutum::ShouldClearFogHoleDebtLatch(0, 0, 0, 0) ||
+      cutum::ShouldClearFogHoleDebtLatch(0, 0, 2, 0))
+  {
+    return Fail("fog clear latch only when unfinished/VB gone");
   }
   {
     int min_y = 0;

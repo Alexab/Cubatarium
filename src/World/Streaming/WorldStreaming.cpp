@@ -24,6 +24,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/FogPullInPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
@@ -4342,18 +4343,21 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
-        // Latch on near visual holes only — rim miss (nh≥3) must not refresh
-        // hold forever while standing (152933: fog_hole_debt≈97%, nh=4–5).
-        const bool hole_debt_now =
-            (phys.FocusMissingMesh > 0 && phys.MissHoriz <= 2);
+        // Latch on near visual holes OR unfinished/VB rim debt (170548 W1) —
+        // unfinished alone must keep fog pulled so brief ring blacks stay masked
+        // when FocusMissingMesh already cleared.
+        const bool hole_debt_now = ShouldLatchFogHoleDebtNow(
+            phys.FocusMissingMesh, phys.MissHoriz, unfinished,
+            phys.VisibleBlackFullyDarkStalledN);
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
         }
-        else if (phys.FocusMissingMesh == 0 && phys.VisualHoles == 0)
+        else if (ShouldClearFogHoleDebtLatch(
+                     phys.FocusMissingMesh, phys.VisualHoles, unfinished,
+                     phys.VisibleBlackFullyDarkStalledN))
         {
-          // GO: fog_hole_debt→0 on stand when miss=0 (clear latch, do not
-          // wait 30/decay while SoftDeferHeld keeps unfinished>0).
+          // Clear only when miss/holes AND unfinished/VB stalled are gone.
           FogPullInHoleHoldFrames = 0;
         }
         else if (FogPullInHoleHoldFrames > 0)

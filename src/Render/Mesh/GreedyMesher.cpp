@@ -247,10 +247,22 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   if (ShouldSkipFaceForNeighbor(
           reader.GetNeighborLoadState(neighbor_pos)))
   {
-    // Liquid sides toward unloaded neighbors must still emit (missing faces).
+    // Liquid sides toward true unloaded void must still emit (missing faces).
+    // Overlay-missing (shell present, GetBlock forced AIR) must hide fluid
+    // sheets too — otherwise distant underwater walls (170548 W2).
     if (!MeshIsLiquid(registry, catalog, face_id))
     {
       return true;
+    }
+    if (reader.GetBlock(neighbor_pos) == BLOCK_AIR)
+    {
+      const BlockId raw = reader.GetBlockIgnoringOverlay(neighbor_pos);
+      if (raw != BLOCK_AIR ||
+          FluidCellHasActiveFluid(
+              PackFluidCellState(reader.GetFluid(neighbor_pos))))
+      {
+        return true;
+      }
     }
   }
 

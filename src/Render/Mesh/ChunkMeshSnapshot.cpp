@@ -317,12 +317,15 @@ NeighborLoadState ChunkMeshSnapshot::GetNeighborLoadState(
   int cell = 0;
   if (TryShellIndex(local, face, cell))
   {
-    // Overlay force-emit path: Air (not Unknown) so solids emit closing faces.
+    // Overlay missing-neighbor: Unknown (not Air) so solids do not emit
+    // distant closing walls into undrawable seams (170548 W2 prevent-emit).
+    // Liquid void emit is gated separately in NeighborHidesFace (true unloaded
+    // still emits; overlay shell with content hides).
     if (boundaryOverlay.active &&
         (boundaryOverlay.missingNeighborFaces &
          static_cast<uint8_t>(1u << face)) != 0)
     {
-      return NeighborLoadState::Air;
+      return NeighborLoadState::Unknown;
     }
     return static_cast<NeighborLoadState>(
         shellNeighborState[static_cast<size_t>(ShellFlatIndex(face, cell))]);

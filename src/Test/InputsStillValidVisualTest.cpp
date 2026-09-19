@@ -101,8 +101,8 @@ int main()
     // Raw shell preserved under overlay (not AIR-scrubbed by drawable).
     Expect(alone.GetNeighborLoadState(alone.ChunkOrigin() +
                                       glm::ivec3(-1, 0, 0)) ==
-               cutum::NeighborLoadState::Air,
-           "overlay face load-state is Air (force emit closing)");
+               cutum::NeighborLoadState::Unknown,
+           "overlay face load-state is Unknown (prevent-emit closing walls)");
     world2.GetChunkManager().EnsureChunk(c + glm::ivec3(1, 0, 0));
     world2.GetChunkManager().EnsureChunk(c + glm::ivec3(-1, 0, 0));
     world2.GetChunkManager().EnsureChunk(c + glm::ivec3(0, 1, 0));

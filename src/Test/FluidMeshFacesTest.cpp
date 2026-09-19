@@ -481,6 +481,47 @@ int main()
            "water|waterlogged + !drawable overlay hides vertical walls");
   }
 
+  // W2 prevent-emit: solid next to !drawable water must not emit closing wall.
+  {
+    cutum::UBlockWorld solid_seam;
+    solid_seam.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    solid_seam.GetChunkManager().EnsureChunk(left_chunk);
+    solid_seam.GetChunkManager().EnsureChunk(right_chunk);
+    const cutum::BlockId kStone = 8;
+    for (int y = 4; y < 8; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        solid_seam.SetBlock(glm::ivec3(15, y, z), kStone);
+        solid_seam.SetBlock(glm::ivec3(16, y, z), kWater);
+        solid_seam.SetFluidState(glm::ivec3(16, y, z),
+                                 cutum::FluidCellState::Source());
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot solid_snap = cutum::ChunkMeshSnapshot::Capture(
+        solid_seam, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
+    Expect(solid_snap.boundaryOverlay.active, "solid|water overlay active");
+    Expect(solid_snap.GetNeighborLoadState(glm::ivec3(16, 5, 5)) ==
+               cutum::NeighborLoadState::Unknown,
+           "overlay solid seam load-state Unknown");
+    const std::vector<cutum::GreedyQuad> solid_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(solid_snap, registry);
+    int solid_walls = 0;
+    for (const cutum::GreedyQuad &quad : solid_quads)
+    {
+      if (quad.Id == kStone && quad.axis == 0 && quad.faceSign > 0 &&
+          quad.slice == 15)
+      {
+        ++solid_walls;
+      }
+    }
+    Expect(solid_walls == 0,
+           "solid|!drawable water overlay hides distant closing walls");
+  }
+
   std::cout << "fluid_mesh_faces_test: OK" << std::endl;
   return 0;
 }
