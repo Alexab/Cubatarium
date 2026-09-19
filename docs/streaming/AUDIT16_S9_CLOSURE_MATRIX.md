@@ -450,3 +450,18 @@ AF cold `ring_fog_w1w2`: eye PASS / west COVERED; dual/flip≡0; mid VB **34.5**
 | R06 walls | **OPEN** until operator dive |
 | merge_green | **false** |
 
+
+### Follow-on 2026-09-19: SoT 185830 hang + walls + fog-off
+
+Manual: `bin/logs/perf_20260919-185830_34388.jsonl` (post prevent-emit `fda799c6`).
+
+| Symptom | Evidence | Root |
+|---|---|---|
+| Shore FPS freeze | periods 26-28: wall 5497/231/952 ms; `streamer_update_ms` ~5.5-6.4s; `mesh_emerge` ~3ms | sync EnsureChunkLoaded / full-column gen without FrameDeadline preempt; MarkDirty on complete |
+| Distant water walls | eye FAIL | sticky baked quads; remesh peers too narrow |
+| Rim black | VB mid 45 (better than 170548 79); `fog_hole_debt`≡0 | `bin/config.json` `fog_pull_in_enabled=false` — W1 latch dead; AF can leave fog OFF |
+
+Note: `dirty_dropped`≈14630 is cumulative counter (not per-period spike alone).
+
+Track: H1 streamer deadline → W1 sticky overlay remesh → F1 fog ON + AF restore hygiene.
+
