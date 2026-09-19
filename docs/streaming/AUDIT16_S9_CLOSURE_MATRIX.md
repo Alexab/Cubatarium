@@ -336,6 +336,20 @@ Anchor: `bin/logs/perf_20260919-111235_15716.jsonl` (FPS↑ wall~19.9; tex swap 
 | operator west wrong-tex blink=0 | **UNTESTED** (R10; coded path CLOSED, dual≡0 + flip mid≡0 on AF) |
 | operator dive walls=0 | **UNTESTED** (follow E2) |
 
+### Follow-on 2026-09-19: E2 walls + E3 matrix vs 111235
+
+| Gate | Status | Cause / note |
+|---|---|---|
+| E0 remesh coalesce / empty blink coded | **CLOSED** coded | `8fb745fe`; operator empty blink **UNTESTED** |
+| E1 wrong-tex load race coded | **CLOSED** coded | flip counter + I3t visual prior; operator tex **UNTESTED** |
+| E2 peer sea-band same-cy remesh | PASS (`fix` after `8fb745fe`; AF `regress_walls_p0` hard PASS after eye flake) |
+| operator dive walls=0 | **UNTESTED** (R10) |
+| dual-lane / mid FullyDark stalled | **OPEN** | AF exit 2 OK |
+| S2 full / S3 oracle / soak / R08 | **OPEN** | audit debt |
+| R01 incomplete·oom / fog / MissOwn / N04 / ADR stamp | **KEEP** | no reopen |
+| merge_green | **false** | operator UNTESTED + dual-lane OPEN |
+| 111235 vs plan 100828 | product gates not fully CLOSED; FPS KEEP; remesh flood addressed |
+
 ### Follow-on 2026-09-19: underwater water walls after 100828 (R06 field)
 
 Anchor manual: `bin/logs/perf_20260919-100828_41648.jsonl` (dive y≈47 walls FAIL R10).  
