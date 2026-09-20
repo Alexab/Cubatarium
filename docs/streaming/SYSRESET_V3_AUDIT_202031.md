@@ -36,3 +36,9 @@ Prep max~11 — not root. PreferKick≡0 → Dirty flood amplifies B.
 FaceDebt owning + Accept (geom/material Dirty only) + BecameKnown on load +
 emerge ledger + mid-Kick gate + PreferKick bounded + PriorLit count converge.
 No SoftDefer-for-holes / remesh floors / fog VB latch / FullyDark peer remesh.
+
+## AF close status
+
+See [SYSRESET_V3_AF_EVIDENCE.md](SYSRESET_V3_AF_EVIDENCE.md).  
+PARTIAL: prior_lit + kick + cold VB/eye PASS; unfinished max / emerge / spikes / PreferKick≡0 OPEN.
+merge_green false (operator UNTESTED).
