@@ -1002,16 +1002,6 @@ uint64_t UChunkMeshCache::GetMeshedLightRevision(glm::ivec3 chunk_coord) const
   return it->second.MeshedLightRevision;
 }
 
-MeshPublishRevs UChunkMeshCache::GetMeshPublishRevs(glm::ivec3 chunk_coord) const
-{
-  const auto it = GreedyCache.find(chunk_coord);
-  if (it == GreedyCache.end())
-  {
-    return {};
-  }
-  return it->second.PublishRevs;
-}
-
 void UChunkMeshCache::FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
                                             LitApplyMeshProbe &out) const
 {

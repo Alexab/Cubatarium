@@ -434,8 +434,17 @@ public:
                               const UBlockWorld &world) const;
   /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
   uint64_t GetMeshedLightRevision(glm::ivec3 chunk_coord) const;
-  /// Sysreset v2: Accept-gate revs for GPU publish writer.
-  MeshPublishRevs GetMeshPublishRevs(glm::ivec3 chunk_coord) const;
+  /// Sysreset v2: Accept-gate revs for GPU publish writer (inline — lightweight
+  /// link units compile GreedyGpuPublication without ChunkMeshCache.cpp).
+  MeshPublishRevs GetMeshPublishRevs(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    if (it == GreedyCache.end())
+    {
+      return {};
+    }
+    return it->second.PublishRevs;
+  }
 
   /// FZ2.7-B1b: single-pass mesh state for MarkRelit snapshot (one GreedyCache lookup).
   struct LitApplyMeshProbe
