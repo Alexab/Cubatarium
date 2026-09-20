@@ -91,6 +91,16 @@ void UWorldMeshService::SetOnFirstDrawableCoverageFn(
   Cache.SetOnFirstDrawableCoverageFn(std::move(fn));
 }
 
+void UWorldMeshService::SetOnFaceDebtFn(std::function<void(glm::ivec3)> fn)
+{
+  Cache.SetOnFaceDebtFn(std::move(fn));
+}
+
+void UWorldMeshService::SetOnFaceDebtDirtyFn(std::function<void(glm::ivec3)> fn)
+{
+  Cache.SetOnFaceDebtDirtyFn(std::move(fn));
+}
+
 void UWorldMeshService::SetOnMeshColumnDirtyFn(
     std::function<void(glm::ivec3)> fn)
 {

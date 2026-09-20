@@ -486,6 +486,8 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         }
         any_fresh = false;
         published_ok.erase(coord);
+        // Sysreset v3: material Retain → FaceDebt + capped Dirty (real mismatch).
+        mesh_cache->NoteFaceDebt(coord, /*schedule_dirty=*/true);
         continue;
       }
     }

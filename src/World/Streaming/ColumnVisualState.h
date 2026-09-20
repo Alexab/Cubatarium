@@ -61,4 +61,39 @@ inline bool ColumnVisualForbidsTicketWithoutFifo(ColumnVisualState state,
   return !has_pl_or_fifo;
 }
 
+/// Sysreset v3: Ready requires no outstanding face-debt (seam x-ray).
+inline bool ColumnVisualReadyRequiresNoFaceDebt(ColumnVisualState state,
+                                                uint8_t face_debt_mask)
+{
+  if (face_debt_mask != 0)
+  {
+    return false;
+  }
+  return state == ColumnVisualState::Ready ||
+         state == ColumnVisualState::PublishedEmpty;
+}
+
+inline bool ColumnHasFaceDebt(uint8_t face_debt_mask)
+{
+  return face_debt_mask != 0;
+}
+
+inline uint8_t NoteFaceDebtMask(uint8_t current, int face /*0..5*/)
+{
+  if (face < 0 || face > 5)
+  {
+    return current;
+  }
+  return static_cast<uint8_t>(current | (1u << face));
+}
+
+inline uint8_t ClearFaceDebtMask(uint8_t current, int face /*0..5*/)
+{
+  if (face < 0 || face > 5)
+  {
+    return current;
+  }
+  return static_cast<uint8_t>(current & ~static_cast<uint8_t>(1u << face));
+}
+
 } // namespace cutum

@@ -66,6 +66,10 @@ struct ColumnRecord
   int publish_progress_frames{0};
   /// PreferKick-without-Dirty stall counter while NeedRelight.
   int prefer_kick_stall_frames{0};
+  /// Sysreset v3: sticky/overlay face debt (bit per face 0..5). X-ray until remesh.
+  uint8_t face_debt_mask{0};
+  /// Frames face debt has been outstanding (stall escape / telemetry).
+  int face_debt_frames{0};
 };
 
 inline uint64_t PackColumnKey(glm::ivec2 xz)
@@ -133,6 +137,45 @@ public:
   {
     ColumnRecord &rec = GetOrCreate(xz);
     ++rec.prefer_kick_stall_frames;
+  }
+
+  void NoteFaceDebt(glm::ivec2 xz, int face = -1)
+  {
+    ColumnRecord &rec = GetOrCreate(xz);
+    if (face >= 0)
+    {
+      rec.face_debt_mask = NoteFaceDebtMask(rec.face_debt_mask, face);
+    }
+    else if (rec.face_debt_mask == 0)
+    {
+      // Unknown face: mark all horizontal bits as owed (seam coalesce).
+      rec.face_debt_mask = 0x3Fu;
+    }
+    if (rec.face_debt_frames < 255)
+    {
+      ++rec.face_debt_frames;
+    }
+    if (rec.visual == ColumnVisualState::Ready)
+    {
+      rec.visual = ColumnVisualState::NeedRemesh;
+    }
+  }
+
+  void ClearFaceDebt(glm::ivec2 xz, int face = -1)
+  {
+    ColumnRecord &rec = GetOrCreate(xz);
+    if (face >= 0)
+    {
+      rec.face_debt_mask = ClearFaceDebtMask(rec.face_debt_mask, face);
+    }
+    else
+    {
+      rec.face_debt_mask = 0;
+    }
+    if (rec.face_debt_mask == 0)
+    {
+      rec.face_debt_frames = 0;
+    }
   }
 
   void Erase(glm::ivec2 xz) { Records.erase(PackColumnKey(xz)); }

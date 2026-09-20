@@ -100,6 +100,9 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
   {
     mesh->PreferKickPendingGpuQueued(coord);
     ++PhysicsTelemetryData.MarkRelitPreferKickN;
+  }
+  if (plan.note_prefer_kick_stall)
+  {
     GetColumnRecords().NotePreferKickStall(column);
   }
   for (const glm::ivec3 &coord : plan.request_raa)

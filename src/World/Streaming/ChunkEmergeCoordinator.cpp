@@ -22,6 +22,7 @@
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/SeaSeamRemeshPolicy.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
+#include "Core/FrameDeadline.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
@@ -510,6 +511,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.ClearStickyRemeshAfterLightColumn(col);
+          world_ref.GetColumnRecords().ClearFaceDebt(col);
           world_ref.NoteUnfinishedColumnDirty(col);
           if (!world_ref.IsPendingLightBeforeMesh(col))
           {
@@ -527,11 +529,38 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
           }
         });
+    mesh_service.SetOnFaceDebtFn(
+        [this](glm::ivec3 chunk_coord)
+        {
+          UWorld *world_ptr = SoftDeferPolicy.world;
+          if (!world_ptr)
+          {
+            return;
+          }
+          UWorld &world_ref = *world_ptr;
+          const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+          // FaceDebt census only — Dirty admission stays at mismatch writers
+          // (material / PublishedEmpty), not light-accepted Retain.
+          world_ref.GetColumnRecords().NoteFaceDebt(col);
+          world_ref.NoteUnfinishedColumnDirty(col);
+        });
+    mesh_service.SetOnFaceDebtDirtyFn(
+        [this](glm::ivec3 chunk_coord)
+        {
+          UWorld *world_ptr = SoftDeferPolicy.world;
+          if (!world_ptr)
+          {
+            return;
+          }
+          // Cap: material/geom mismatch schedules one Dirty (not flood).
+          world_ptr->GetMeshService().MarkDirty(chunk_coord);
+        });
     // R06: when coverage publishes, remesh face-neighbors in sea band that
     // still carry sticky BoundaryOverlay toward the publisher (R2 overlay-only;
     // no 3x3; underwater Y = publisher_cy; coalesce one dirty/col/frame).
     // Regression 185830 H1/W1: do NOT broaden to any-active-overlay outside
     // sea-band — remesh flood → FullyDark/blacks + flicker (R1 class).
+    // Sysreset v3: also FaceDebt remesh for overlay peers in focus ring (cap).
     mesh_service.SetOnFirstDrawableCoverageFn(
         [this](glm::ivec3 chunk_coord)
         {
@@ -541,27 +570,71 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             return;
           }
           UWorld &world_ref = *world_ptr;
+          // Publisher known → clear own face debt bit for this column.
+          world_ref.GetColumnRecords().ClearFaceDebt(
+              glm::ivec2(chunk_coord.x, chunk_coord.z));
           const ProceduralSettings &settings = world_ref.GetProceduralSettings();
           const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
           const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();
+          const glm::ivec3 focus_g =
+              UChunkManager::WorldToChunk(focus_block);
           // SoT 090834: near-fluid from air must not open underwater subsea_band.
           const SeaSeamEyeContext seam_eye = ClassifySeaSeamEyeContext(
               static_cast<float>(focus_block.y),
               static_cast<float>(settings.SeaLevel),
               world_ref.HasNearbyFluidSurface(focus_block, 24));
+          UWorldMeshService &mesh = world_ref.GetMeshService();
+          static const glm::ivec3 kFaceNb[4] = {
+              {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+          int face_debt_remesh_n = 0;
+          constexpr int kFaceDebtRemeshCap = 2;
+          for (const glm::ivec3 &d : kFaceNb)
+          {
+            if (face_debt_remesh_n >= kFaceDebtRemeshCap)
+            {
+              break;
+            }
+            const glm::ivec3 n = chunk_coord + d;
+            const int horiz =
+                std::max(std::abs(n.x - focus_g.x), std::abs(n.z - focus_g.z));
+            if (horiz > 4)
+            {
+              continue;
+            }
+            const int face_toward =
+                SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+            const bool face_overlay =
+                mesh.HasActiveBoundaryOverlayFace(n, face_toward);
+            if (!ShouldCoalesceNeighborBecameKnownSeam(
+                    /*neighbor_now_known=*/true, face_overlay,
+                    /*already_coalesced=*/false))
+            {
+              continue;
+            }
+            const uint64_t col_key =
+                (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 42) |
+                (static_cast<uint64_t>(static_cast<uint32_t>(n.z)) << 10) |
+                (static_cast<uint64_t>(static_cast<uint16_t>(n.y + 512)) &
+                 0x3FFull);
+            if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
+            {
+              continue;
+            }
+            world_ref.GetColumnRecords().NoteFaceDebt(
+                glm::ivec2(n.x, n.z), face_toward);
+            mesh.MarkDirtyPriority(n);
+            ++face_debt_remesh_n;
+          }
           if (!ShouldRemeshSeaSeamOnFirstDrawable(chunk_coord.y, sea_cy,
                                                  seam_eye))
           {
             return;
           }
-          UWorldMeshService &mesh = world_ref.GetMeshService();
           int remesh_min_y = 0;
           int remesh_max_y = 0;
           SeaSeamRemeshYRangeForPublisher(
               settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight, chunk_coord.y,
               seam_eye, remesh_min_y, remesh_max_y);
-          static const glm::ivec3 kFaceNb[4] = {
-              {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
           for (const glm::ivec3 &d : kFaceNb)
           {
             const glm::ivec3 n = chunk_coord + d;
@@ -580,8 +653,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const bool peer_dark =
                 mesh.GetCache().ChunkHasFullyDarkFace(n) ||
                 mesh.ChunkHasStaleDarkFaces(n, world_ref.GetBlockWorld());
-            // NeighborBecameKnown: publisher just became drawable → peer with
-            // overlay face-toward owes one coalesced seam remesh (cap 1/col).
             const bool became_known = ShouldCoalesceNeighborBecameKnownSeam(
                 /*neighbor_now_known=*/true, face_overlay,
                 /*already_coalesced=*/false);
@@ -594,8 +665,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
-            // Coalesce per peer chunk (xz + cy) so underwater same-column
-            // different-cy publishers do not drop remesh.
             const uint64_t col_key =
                 (static_cast<uint64_t>(static_cast<uint32_t>(n.x)) << 42) |
                 (static_cast<uint64_t>(static_cast<uint32_t>(n.z)) << 10) |
@@ -5411,6 +5480,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   int gpu_consume_done = 0;
   {
+    // Sysreset v3: one telem reset for all Consume calls this emerge frame.
+    mesh_service.GetCache().ResetGpuConsumeTelemForFrame();
     const MeshWorkAdmission &early_adm = mesh_service.GetMeshWorkAdmission();
     const int consume_drain = FinalizeDrain(mesh_drain, early_adm);
     const int relight_fifo_n = world.GetPhysicsTelemetry().RelightFifoN;
@@ -5440,7 +5511,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         mesh_service.GetCache().GetFmDirtyGpuWatchCount() > 4)
     {
       consume_gpu = std::max(consume_gpu, 4);
-      consume_budget = std::max(consume_budget, 6.0);
+      // Sysreset v3: no independent 6ms floor over emerge_cap — clamp to leftover.
+      const double left = UFrameDeadline::Get().RemainingMs();
+      consume_budget =
+          std::min(std::max(consume_budget, 2.0), std::max(1.0, left * 0.5));
     }
     // R4.5.2 / R4.6.2 / Phase 5.3.2: PreferKick near-miss; allow under abort
     // when SoftDefer stuck / empty backlog (rate-limited with stuck escapes).
@@ -5454,7 +5528,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (pending_gpu_n > 0 || mesh_service.GetPendingGpuQueuedCount() > 0))
     {
       consume_gpu = std::max(consume_gpu, 4);
-      consume_budget = std::max(consume_budget, 6.0);
+      const double left = UFrameDeadline::Get().RemainingMs();
+      consume_budget =
+          std::min(std::max(consume_budget, 2.0), std::max(1.0, left * 0.5));
       const glm::ivec3 hole =
           found_nearest_missing ? isolated_hole : focus_ground_horiz;
       if (mesh_service.IsPendingGpuQueued(hole) ||

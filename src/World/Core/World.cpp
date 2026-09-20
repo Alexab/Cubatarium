@@ -2288,6 +2288,7 @@ uint64_t PackUnfinishedColKey(int x, int z)
 
 /// Cheap unfinished probe for ring cache: terrain complete columns that are not
 /// visually render-ready (SoT: IsColumnRenderReady — Phase 1 unify).
+/// Sysreset v3: face_debt also counts unfinished (seam x-ray while draw_ok).
 bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
                                  int dx, int dz)
 {
@@ -2297,7 +2298,16 @@ bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
   {
     return false;
   }
-  return !world.IsColumnRenderReady(ground);
+  if (!world.IsColumnRenderReady(ground))
+  {
+    return true;
+  }
+  if (const ColumnRecord *rec =
+          world.GetColumnRecords().Find(glm::ivec2(ground.x, ground.z)))
+  {
+    return ColumnHasFaceDebt(rec->face_debt_mask);
+  }
+  return false;
 }
 } // namespace
 

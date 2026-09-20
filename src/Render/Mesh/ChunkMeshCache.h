@@ -317,6 +317,18 @@ public:
     return LastGpuKickDeferReason_;
   }
   int GetLastGpuFinishN() const { return LastGpuFinishN; }
+  /// Sysreset v3: zero kick/finish telem once per emerge frame before Consume.
+  void ResetGpuConsumeTelemForFrame()
+  {
+    LastMeshGpuKickMs = 0.0;
+    LastMeshGpuFinishMs = 0.0;
+    LastMeshAsyncDrainMs = 0.0;
+    LastGpuKickN = 0;
+    LastGpuKickDebtForcedN = 0;
+    LastGpuKickDeferReason_.clear();
+    LastGpuFinishN = 0;
+    LastGpuFinishNotReadyN = 0;
+  }
   int GetLastGpuFinishNotReadyN() const { return LastGpuFinishNotReadyN; }
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                                int radius_chunks) const;
@@ -667,6 +679,28 @@ public:
   void SetOnFirstDrawableCoverageFn(std::function<void(glm::ivec3)> fn)
   {
     OnFirstDrawableCoverage = std::move(fn);
+  }
+  /// Sysreset v3: Accept Retain / PublishedEmpty → FaceDebt on column.
+  void SetOnFaceDebtFn(std::function<void(glm::ivec3)> fn)
+  {
+    OnFaceDebt = std::move(fn);
+  }
+  /// Optional Dirty schedule for geom/material mismatch (not light Retain).
+  void SetOnFaceDebtDirtyFn(std::function<void(glm::ivec3)> fn)
+  {
+    OnFaceDebtDirty = std::move(fn);
+  }
+  void NoteFaceDebt(glm::ivec3 chunk_coord,
+                     bool schedule_dirty = false) const
+  {
+    if (OnFaceDebt)
+    {
+      OnFaceDebt(chunk_coord);
+    }
+    if (schedule_dirty && OnFaceDebtDirty)
+    {
+      OnFaceDebtDirty(chunk_coord);
+    }
   }
   /// Audit S2: packed bind must drop MDI/pool resident for the same coord.
   void SetOnPackedRepresentationSwitchFn(std::function<void(glm::ivec3)> fn)
@@ -1222,6 +1256,8 @@ private:
   std::function<void(glm::ivec3)> OnSoftDeferHeld;
   std::function<void(glm::ivec3)> OnLitDrawableCommitted;
   std::function<void(glm::ivec3)> OnFirstDrawableCoverage;
+  mutable std::function<void(glm::ivec3)> OnFaceDebt;
+  mutable std::function<void(glm::ivec3)> OnFaceDebtDirty;
   std::function<void(glm::ivec3)> OnPackedRepresentationSwitch;
   // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
   mutable uint64_t HoleQueryEpoch{0};

@@ -88,6 +88,7 @@ struct LitApplyPlan
   std::vector<glm::ivec3> mark_dirty_priority;
   std::vector<glm::ivec3> prefer_kick_gpu;
   std::vector<glm::ivec3> request_raa;
+  bool note_prefer_kick_stall{false};
   bool enqueue_first_mesh{false};
   glm::ivec2 first_mesh_column{0};
   ColumnEmergeState fsm_after{ColumnEmergeState::LitReady};
@@ -270,8 +271,8 @@ inline void ScheduleNeedRelightDirty(LitApplyPlan &plan,
   ++plan.schedule_n;
 }
 
-/// FD+drawable → NeedRelight; PreferKick only with publish progress; else Dirty.
-/// Stall escape: PreferKick without progress ≥8 frames → force Dirty once.
+/// FD+drawable → PreferKick only with publish progress; Dirty on stall≥8 or
+/// first NeedRelight entry (!is_dirty). Avoid Dirty flood every MarkRelit.
 inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
                                       const ColumnChunkSnapshot &chunk,
                                       bool pending_gpu_or_raa,
@@ -291,13 +292,14 @@ inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
   }
   if (ShouldForceDirtyAfterPreferKickStall(
           fd_drawable, pending_gpu_or_raa, chunk.has_publish_progress,
-          chunk.prefer_kick_stall_frames))
+          chunk.prefer_kick_stall_frames) ||
+      !chunk.is_dirty)
   {
     ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
     return true;
   }
-  // No progress yet: schedule Dirty (owning NeedRelight producer).
-  ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
+  // Already Dirty, waiting for publish progress — advance stall clock.
+  plan.note_prefer_kick_stall = true;
   return true;
 }
 

@@ -2158,6 +2158,11 @@ void UChunkMeshCache::NoteSoftDeferEmptyPublishAvoided(glm::ivec3 coord)
 int UChunkMeshCache::NotePriorLitHold(glm::ivec3 coord)
 {
   int &age = PriorLitHoldAge[coord];
+  // Sysreset v3: count active holds (new coord), not every frame spam.
+  if (age == 0)
+  {
+    ++PriorLitHoldN;
+  }
   ++age;
   if (age > PriorLitHoldAgeMax)
   {
@@ -2168,7 +2173,10 @@ int UChunkMeshCache::NotePriorLitHold(glm::ivec3 coord)
 
 void UChunkMeshCache::ClearPriorLitHoldAge(glm::ivec3 coord)
 {
-  PriorLitHoldAge.erase(coord);
+  if (PriorLitHoldAge.erase(coord) > 0 && PriorLitHoldN > 0)
+  {
+    --PriorLitHoldN;
+  }
 }
 
 int UChunkMeshCache::GetPriorLitHoldAge(glm::ivec3 coord) const
@@ -3825,12 +3833,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       {
         GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
       }
-      if (!Dirty.Contains(coord))
-      {
-        Dirty.MarkDirty(coord);
-      }
-      // Always count hold (even when Dirty already set) — silent holds hid
-      // SoftDefer-empty debt on SoT 100303.
+      // Sysreset v3: light-accepted drawable Retain — FaceDebt, no Dirty flood.
+      NoteFaceDebt(coord);
       ++MeshApplyStaleAcceptedRefreshCount;
       // RetainedPrior: not a published Completed — callers must not ++Completed.
       return false;
@@ -3855,13 +3859,13 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
                                               true, prior_lit_age))
     {
-      ++PriorLitHoldN;
       NotePriorLitHold(coord);
     }
     else if (ShouldPublishedEmptyAfterPriorLitExpire(
                  had_lit_mesh, had_live_lit_gpu, true, prior_lit_age))
     {
       ClearPriorLitHoldAge(coord);
+      NoteFaceDebt(coord);
       MarkDirtyPriority(coord);
     }
     else
@@ -3996,15 +4000,9 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
                                            int max_drain, int gpu_max,
                                            double gpu_budget_ms)
 {
-  // R09: per-frame kick/finish ownership starts here (before Rebuild).
-  LastMeshGpuKickMs = 0.0;
-  LastMeshGpuFinishMs = 0.0;
-  LastMeshAsyncDrainMs = 0.0;
-  LastGpuKickN = 0;
-  LastGpuKickDebtForcedN = 0;
+  // Sysreset v3: accumulate kick/finish across Consume calls in one frame.
+  // Emerge coordinator zeros telem once before the first Consume.
   LastGpuKickDeferReason_.clear();
-  LastGpuFinishN = 0;
-  LastGpuFinishNotReadyN = 0;
   int done = 0;
   MeshRebuildTickStats stats{};
   if (AsyncBuilder)
@@ -4358,7 +4356,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
             HasDrawableGreedyMesh(pending.coord) &&
             !Dirty.Contains(pending.coord))
         {
-          Dirty.MarkDirty(pending.coord);
+          // Sysreset v3: Accept Retain → FaceDebt, not Dirty flood.
+          NoteFaceDebt(pending.coord);
           ++MeshApplyStaleAcceptedRefreshCount;
         }
         if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
@@ -4441,7 +4440,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           HasDrawableGreedyMesh(pending.coord) &&
           !Dirty.Contains(pending.coord))
       {
-        Dirty.MarkDirty(pending.coord);
+        // Sysreset v3: Accept Retain → FaceDebt, not Dirty flood.
+        NoteFaceDebt(pending.coord);
         ++MeshApplyStaleAcceptedRefreshCount;
       }
       if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
@@ -4521,15 +4521,24 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   while (kicked < kick_cap && processed < max_count && budget_left() &&
          pipeline->HasFreeReadbackSlot())
   {
-    // Q8: after Finish pass, soft-defer new GPU kicks when frame budget is
-    // exhausted. Hole/deep modes keep kicking (critical hole progress).
-    // G1-P2: Queued+debt also critical — one kick past deadline/cut.
+    // Sysreset v3 mid-Kick gate: only missing-drawable may bypass deadline.
+    auto queued_peek = find_prefer_queued();
+    const bool critical_missing =
+        queued_peek != PendingGpuApplies.end() &&
+        !HasDrawableGreedyMesh(queued_peek->coord);
     const bool debt_kick_quota =
-        force_kick_debt && kicked == 0 && find_prefer_queued() != PendingGpuApplies.end();
-    if (UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/
-                                            hole_finish_bias || debt_kick_quota))
+        force_kick_debt && kicked == 0 && critical_missing;
+    // Cost-class: do not start Kick if remaining budget < ~2ms unless critical.
+    constexpr double kKickCostClassMs = 2.0;
+    if (!critical_missing && budget_ms > 0.0 &&
+        (budget_ms - elapsed_ms()) < kKickCostClassMs)
     {
-      if (!debt_kick_quota)
+      break;
+    }
+    if (UFrameDeadline::ShouldDeferProducer(
+            /*critical_progress=*/debt_kick_quota || critical_missing))
+    {
+      if (!(debt_kick_quota || critical_missing))
       {
         if (force_kick_debt && kicked == 0)
         {
@@ -4707,7 +4716,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
             HasDrawableGreedyMesh(pending.coord) &&
             !Dirty.Contains(pending.coord))
         {
-          Dirty.MarkDirty(pending.coord);
+          // Sysreset v3: Accept Retain → FaceDebt, not Dirty flood.
+          NoteFaceDebt(pending.coord);
           ++MeshApplyStaleAcceptedRefreshCount;
         }
         if (FmDirtyGpuWatchAge_.erase(pending.coord) > 0)
@@ -4876,10 +4886,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     {
       ActiveMeshSourceRevision.erase(revisionIt);
       GpuExtractInFlight.erase(result.coord);
-      if (!Dirty.Contains(result.coord))
-      {
-        Dirty.MarkDirty(result.coord);
-      }
+      // Sysreset v3: Retain drawable without Dirty flood.
+      NoteFaceDebt(result.coord);
       ++MeshApplyStaleAcceptedRefreshCount;
       abandon_fm_watch();
       LastApplyWasRetainedPrior_ = true;
@@ -5023,8 +5031,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
                                               true, prior_lit_age))
     {
-      ++PriorLitHoldN;
-      NotePriorLitHold(result.coord);
+            NotePriorLitHold(result.coord);
     }
     else
     {
@@ -5071,8 +5078,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       {
         NoteSoftDeferEmptyPublishAvoided(result.coord);
         ++MeshReplaceHoleAvoided;
-        ++PriorLitHoldN;
-        NotePriorLitHold(result.coord);
+                NotePriorLitHold(result.coord);
         return;
       }
       SoftDeferHeld.erase(result.coord);
@@ -5100,8 +5106,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       {
         NoteSoftDeferEmptyPublishAvoided(result.coord);
         ++MeshReplaceHoleAvoided;
-        ++PriorLitHoldN;
-        NotePriorLitHold(result.coord);
+                NotePriorLitHold(result.coord);
         return;
       }
       SoftDeferHeld.erase(result.coord);
@@ -7291,14 +7296,14 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
                                                 true, prior_lit_age))
       {
-        ++PriorLitHoldN;
-        NotePriorLitHold(chunkCoord);
+                NotePriorLitHold(chunkCoord);
       }
       else if (ShouldPublishedEmptyAfterPriorLitExpire(
                    had_lit_mesh, had_live_lit_gpu, new_dark, prior_lit_age))
       {
-        // Sysreset v2: expire → PublishedEmpty + requeue, not dark Replace.
+        // Sysreset v3: expire → PublishedEmpty + FaceDebt, not dark Replace.
         ClearPriorLitHoldAge(chunkCoord);
+        NoteFaceDebt(chunkCoord);
         MarkDirtyPriority(chunkCoord);
       }
       else
@@ -7341,8 +7346,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         {
           NoteSoftDeferEmptyPublishAvoided(chunkCoord);
           ++MeshReplaceHoleAvoided;
-          ++PriorLitHoldN;
-          NotePriorLitHold(chunkCoord);
+                    NotePriorLitHold(chunkCoord);
           return;
         }
         SoftDeferHeld.erase(chunkCoord);
@@ -7367,8 +7371,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         {
           NoteSoftDeferEmptyPublishAvoided(chunkCoord);
           ++MeshReplaceHoleAvoided;
-          ++PriorLitHoldN;
-          NotePriorLitHold(chunkCoord);
+                    NotePriorLitHold(chunkCoord);
           return;
         }
         SoftDeferHeld.erase(chunkCoord);

@@ -2508,6 +2508,25 @@ int main()
              "ColumnVisual: no PreferKick outside Publishing");
     }
 
+    using cutum::ClearFaceDebtMask;
+    using cutum::ColumnHasFaceDebt;
+    using cutum::ColumnVisualReadyRequiresNoFaceDebt;
+    using cutum::NoteFaceDebtMask;
+    {
+      uint8_t mask = 0;
+      Expect(!ColumnHasFaceDebt(mask), "FaceDebt: empty mask");
+      mask = NoteFaceDebtMask(mask, 0);
+      Expect(ColumnHasFaceDebt(mask), "FaceDebt: bit0 set");
+      Expect(!ColumnVisualReadyRequiresNoFaceDebt(
+                  cutum::ColumnVisualState::Ready, mask),
+             "FaceDebt: Ready blocked while debt");
+      mask = ClearFaceDebtMask(mask, 0);
+      Expect(!ColumnHasFaceDebt(mask), "FaceDebt: cleared");
+      Expect(ColumnVisualReadyRequiresNoFaceDebt(
+                 cutum::ColumnVisualState::Ready, mask),
+             "FaceDebt: Ready ok without debt");
+    }
+
     using cutum::ComputeDualLaneSchedule;
     using cutum::DualLaneScheduleInput;
     using cutum::DualLaneStarveReason;
