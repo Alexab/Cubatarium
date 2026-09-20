@@ -50,11 +50,29 @@ inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
 
 /// Prior-lit hold: never let an unlit/FullyDark candidate become sole image
 /// when a lit CPU or live lit GPU predecessor exists (zero-in-frame / R05).
+/// Sysreset I3t: after converge_deadline_frames expire hold → allow publish
+/// or PublishedEmpty (no infinite prior_lit plateau).
+inline constexpr int kPriorLitConvergeDeadlineFrames = 90;
+
+inline bool ShouldExpirePriorLitHold(int hold_age_frames,
+                                     int converge_deadline_frames =
+                                         kPriorLitConvergeDeadlineFrames)
+{
+  return hold_age_frames >= converge_deadline_frames;
+}
+
 inline bool ShouldRetainPriorLitOverUnlitCandidate(bool had_lit_mesh,
                                                   bool had_live_lit_gpu,
-                                                  bool candidate_dark_or_unlit)
+                                                  bool candidate_dark_or_unlit,
+                                                  int hold_age_frames = 0,
+                                                  int converge_deadline_frames =
+                                                      kPriorLitConvergeDeadlineFrames)
 {
   if (!candidate_dark_or_unlit)
+  {
+    return false;
+  }
+  if (ShouldExpirePriorLitHold(hold_age_frames, converge_deadline_frames))
   {
     return false;
   }
@@ -62,10 +80,18 @@ inline bool ShouldRetainPriorLitOverUnlitCandidate(bool had_lit_mesh,
 }
 
 /// SoftDefer intentional empty must not erase / replace live lit GPU.
+/// Sysreset: expire prior-lit empty-avoid after converge deadline.
 inline bool ShouldAvoidEmptyPublishOverPriorLit(bool had_live_lit_gpu,
                                                bool had_lit_mesh,
-                                               bool had_gpu_resident)
+                                               bool had_gpu_resident,
+                                               int hold_age_frames = 0,
+                                               int converge_deadline_frames =
+                                                   kPriorLitConvergeDeadlineFrames)
 {
+  if (ShouldExpirePriorLitHold(hold_age_frames, converge_deadline_frames))
+  {
+    return false;
+  }
   if (had_live_lit_gpu)
   {
     return true;
@@ -81,7 +107,8 @@ inline bool ShouldAvoidEmptyPublishOverPriorLit(bool had_live_lit_gpu,
 inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
                                        bool defer_until_lit,
                                        bool had_lit_mesh,
-                                       bool had_live_lit_gpu = false)
+                                       bool had_live_lit_gpu = false,
+                                       int hold_age_frames = 0)
 {
   if (!new_has_dark_face)
   {
@@ -92,7 +119,7 @@ inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
     return true;
   }
   return ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
-                                               true);
+                                               true, hold_age_frames);
 }
 
 /// After keeping lit SSBO under dark CPU replace: do not PreferKick a pending

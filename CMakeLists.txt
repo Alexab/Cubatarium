@@ -1380,6 +1380,11 @@ add_executable(mesh_neighbor_policy_test
 target_include_directories(mesh_neighbor_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(mesh_publish_contract_test
+    src/Test/MeshPublishContractTest.cpp)
+target_include_directories(mesh_publish_contract_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(miss_first_mesh_class_test
     src/Test/MissFirstMeshClassTest.cpp
     src/World/Streaming/MemoryBudgetController.cpp)
@@ -2701,6 +2706,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   column_scheduler_audit_repro
   streaming_render_ready_invariants_test
   miss_first_mesh_class_test
+  mesh_publish_contract_test
   mesh_gpu_store_mdi_test
   greedy_vertex_pool_lifetime_test
   capture_token_validation_test

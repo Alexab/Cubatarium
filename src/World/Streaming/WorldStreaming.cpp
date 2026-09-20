@@ -2058,6 +2058,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshReplaceHoleAvoidedCount();
     world.PhysicsTelemetryData.PriorLitHoldN =
         world.GetMeshService().GetPriorLitHoldCount();
+    world.PhysicsTelemetryData.PriorLitHoldAgeMax =
+        world.GetMeshService().GetPriorLitHoldAgeMax();
     world.PhysicsTelemetryData.RaaCommitMarkDirtyN =
         world.GetMeshService().GetCache().GetRaaCommitMarkDirtyCount();
     world.PhysicsTelemetryData.MarkDirtyToRaaN =

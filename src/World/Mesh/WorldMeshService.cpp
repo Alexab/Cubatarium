@@ -948,6 +948,11 @@ uint64_t UWorldMeshService::GetPriorLitHoldCount() const
   return Cache.GetPriorLitHoldCount();
 }
 
+int UWorldMeshService::GetPriorLitHoldAgeMax() const
+{
+  return Cache.GetPriorLitHoldAgeMax();
+}
+
 uint64_t UWorldMeshService::GetSoftDeferEmptyPublishAvoidedCount() const
 {
   return Cache.GetSoftDeferEmptyPublishAvoidedCount();

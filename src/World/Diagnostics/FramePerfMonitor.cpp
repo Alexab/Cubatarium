@@ -507,6 +507,7 @@ struct FrameNumbers
   float fog_pull_in_start_ratio{0.0f};
   int fog_hole_debt{0};
   uint64_t prior_lit_hold_n{0};
+  int prior_lit_hold_age_max{0};
   int near_focus_holes{0};
   int visual_holes{0};
   int unfinished_visual{0};
@@ -1172,6 +1173,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.fog_pull_in_start_ratio = phys.FogPullInStartRatio;
   n.fog_hole_debt = phys.FogHoleDebt;
   n.prior_lit_hold_n = phys.PriorLitHoldN;
+  n.prior_lit_hold_age_max = phys.PriorLitHoldAgeMax;
   n.near_focus_holes = phys.NearFocusHoles;
   n.visual_holes = phys.VisualHoles;
   n.unfinished_visual = phys.UnfinishedVisual;
@@ -1855,6 +1857,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"fog_pull_in_start_ratio\":" << n.fog_pull_in_start_ratio
           << ",\"fog_hole_debt\":" << n.fog_hole_debt
           << ",\"prior_lit_hold_n\":" << n.prior_lit_hold_n
+          << ",\"prior_lit_hold_age_max\":" << n.prior_lit_hold_age_max
           << ",\"near_focus_holes\":" << n.near_focus_holes
           << ",\"visual_holes\":" << n.visual_holes
           << ",\"unfinished_visual\":" << n.unfinished_visual

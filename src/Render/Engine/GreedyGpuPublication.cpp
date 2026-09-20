@@ -2,6 +2,7 @@
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/ChunkMeshCache.h"
+#include "Render/Mesh/MeshPublishContract.h"
 #include <atomic>
 #include <unordered_map>
 #include <unordered_set>
@@ -110,6 +111,10 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
     prior.generation = gpu.poolGeneration;
   }
 
+  // MeshPublishContract: Replace only after new alloc succeeds; OOM → Retain.
+  const bool had_prior_live = prior.vertexCount > 0;
+  const bool new_drawable = !batch.vertices.empty() && !batch.indices.empty();
+
   gpu.blockId = batch.blockId;
   gpu.pooled = false;
   gpu.vboByteOffset = 0;
@@ -117,11 +122,13 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
   gpu.poolAllocationId = 0;
   gpu.poolGeneration = 0;
   gpu.drawInstanceCount = 1;
-  if (!batch.vertices.empty() && !batch.indices.empty())
+  if (new_drawable)
   {
     const GreedyGpuPoolAllocation alloc = pool.Allocate(batch);
     if (alloc.vertexCount > 0 && alloc.indexCount > 0)
     {
+      (void)DecideMeshPublishAction(/*accept=*/true, /*new_drawable=*/true,
+                                    had_prior_live);
       gpu.pooled = true;
       gpu.vboByteOffset = alloc.vertexByteOffset;
       gpu.eboByteOffset = alloc.indexByteOffset;
@@ -132,7 +139,10 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
       gpu.indexCountGl = alloc.indexCountGl;
       gpu.vbo = pool.VertexBuffer();
       gpu.ebo = pool.IndexBuffer();
-      if (prior.vertexCount > 0)
+      // New slot is live; prior is no longer live → Free is Live∩Free-safe.
+      if (had_prior_live &&
+          MeshPublishLiveFreeDisjoint(/*is_live_draw=*/false,
+                                      /*freeing_slot=*/true))
       {
         pool.Free(prior);
       }
@@ -141,6 +151,8 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
   }
   if (prior.vertexCount > 0)
   {
+    (void)DecideMeshPublishAction(/*accept=*/false, new_drawable,
+                                  had_prior_live);
     // Q5: tiny-cap OOM retains predecessor mesh; progress counted via
     // NotePublicationProgressUnit when sibling chunks still publish.
     NotePublicationOomRetain();

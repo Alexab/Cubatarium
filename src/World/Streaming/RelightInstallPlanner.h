@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Streaming/ColumnEmergeState.h"
+#include "World/Streaming/ColumnVisualState.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/MeshLightStalePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
@@ -292,8 +293,7 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
-        // G1: already-Dirty FullyDark not bumped (cruise matching revs) —
-        // still PreferKick so pending GPU publish is not starved.
+        // PreferKick pending GPU while already Dirty (drain, not sole-owner spin).
         if (chunk.fully_dark && chunk.has_drawable)
         {
           AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
@@ -311,7 +311,8 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
     {
       continue;
     }
-    // FullyDark FM fairness P2: PreferKick existing GPU/RAA instead of new Dirty.
+    // FullyDark FM fairness P2 (sysreset): PreferKick only with publish progress.
+    // Default has_publish_progress=false → ColumnVisualState NeedRemesh via Dirty.
     if (ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
             in.force_stale_ticket, chunk.fully_dark, chunk.has_drawable,
             chunk.gpu_pending || chunk.raa_pending))
@@ -323,6 +324,9 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       }
       continue;
     }
+    // NeedRelight|NeedRemesh: schedule Dirty (co-publish light+mesh).
+    (void)ColumnVisualStateForFullyDarkDrawable(chunk.fully_dark,
+                                                chunk.has_drawable);
     if (needs_remesh)
     {
       AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
@@ -448,7 +452,8 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
     {
       continue;
     }
-    // FullyDark FM fairness P2: PreferKick existing GPU/RAA instead of new Dirty.
+    // FullyDark FM fairness P2 (sysreset): PreferKick only with publish progress.
+    // Default has_publish_progress=false → ColumnVisualState NeedRemesh via Dirty.
     if (ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
             in.force_stale_ticket, chunk.fully_dark, chunk.has_drawable,
             chunk.gpu_pending || chunk.raa_pending))
@@ -460,6 +465,9 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       }
       continue;
     }
+    // NeedRelight|NeedRemesh: schedule Dirty (co-publish light+mesh).
+    (void)ColumnVisualStateForFullyDarkDrawable(chunk.fully_dark,
+                                                chunk.has_drawable);
     if (in.priority_mesh && needs_remesh)
     {
       AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);

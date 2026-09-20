@@ -190,24 +190,20 @@ inline bool ShouldRemeshStickyOverlayPeer(bool peer_drawable,
   return false;
 }
 
-/// SoT 111310: sea-surface FullyDark/void heal — surface_band only (never
-/// open subsea_band for Inland). AirNearFluid + Underwater: sticky face OR
-/// FullyDark/void. Inland stays sticky-only (anti W1 flood).
+/// SoT 111310 neutralize (sysreset): sea-surface peer remesh is sticky-face
+/// only. FullyDark/void peer heal removed — KEEP prevent-emit distant walls.
 inline bool ShouldRemeshSeaSurfaceDarkPeer(SeaSeamEyeContext ctx,
                                           bool peer_drawable,
                                           bool peer_in_surface_band,
                                           bool peer_face_toward_overlay,
-                                          bool peer_fully_dark_or_void)
+                                          bool /*peer_fully_dark_or_void*/)
 {
   if (!peer_drawable || !peer_in_surface_band)
   {
     return false;
   }
-  if (ctx == SeaSeamEyeContext::Inland)
-  {
-    return peer_face_toward_overlay;
-  }
-  return peer_face_toward_overlay || peer_fully_dark_or_void;
+  (void)ctx;
+  return peer_face_toward_overlay;
 }
 
 /// Compat alias — SoT 111310 first name.

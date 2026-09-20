@@ -65,6 +65,8 @@ struct PhysicsTelemetry
   uint64_t MeshReplaceHoleAvoided{0};
   /// Prior-lit hold: dark commit retained prior (not Completed publish).
   uint64_t PriorLitHoldN{0};
+  /// Sysreset I3t: max PriorLit hold age observed (frames).
+  int PriorLitHoldAgeMax{0};
   /// Deferred GPU mesh applies waiting for ProcessPendingGpuMeshes.
   int PendingGpuAppliesN{0};
   /// Queued phase only (not yet Kick).

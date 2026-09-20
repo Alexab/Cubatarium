@@ -97,16 +97,16 @@ int main()
     {
       return Fail("air-near-fluid still remeshes surface cy");
     }
-    // SoT 111310: sea-surface FullyDark/void peer heal (surface_band only).
-    if (!cutum::ShouldRemeshSeaSurfaceDarkPeer(
+    // SoT 111310 neutralize: sea-surface peer remesh is sticky-face only.
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
             SeaSeamEyeContext::AirNearFluid, true, true, false, true))
     {
-      return Fail("air-near-fluid FullyDark peer must remesh");
+      return Fail("sysreset: FullyDark peer without sticky must not remesh");
     }
-    if (!cutum::ShouldRemeshSeaSurfaceDarkPeer(
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
             SeaSeamEyeContext::Underwater, true, true, false, true))
     {
-      return Fail("underwater FullyDark peer in surface_band must remesh");
+      return Fail("sysreset: underwater FullyDark without sticky must not remesh");
     }
     if (!cutum::ShouldRemeshSeaSurfaceDarkPeer(
             SeaSeamEyeContext::AirNearFluid, true, true, true, false))
@@ -124,9 +124,9 @@ int main()
       return Fail("inland must not use dark heal broaden");
     }
     if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
-            SeaSeamEyeContext::AirNearFluid, true, false, false, true))
+            SeaSeamEyeContext::AirNearFluid, true, false, true, true))
     {
-      return Fail("dark heal stays in surface_band");
+      return Fail("sticky remesh stays in surface_band");
     }
     int min_y = 0;
     int max_y = 0;
@@ -200,21 +200,30 @@ int main()
   {
     return Fail("fog rim miss must latch hole_debt");
   }
-  if (!cutum::ShouldLatchFogHoleDebtVbFocus(42) ||
+  if (cutum::ShouldLatchFogHoleDebtVbFocus(42) ||
       cutum::ShouldLatchFogHoleDebtVbFocus(5))
   {
-    return Fail("fog VB focus latch thresh");
+    return Fail("sysreset: VB focus must not latch fog as heal");
   }
-  if (cutum::ShouldClearFogHoleDebtLatch(0, 0, 0, 0, 20) ||
+  if (!cutum::ShouldClearFogHoleDebtLatch(0, 0, 0, 0, 20) ||
       !cutum::ShouldClearFogHoleDebtLatch(0, 0, 0, 0, 3))
   {
-    return Fail("fog clear requires VB drained");
+    return Fail("sysreset: fog clear ignores VB census thresh");
   }
   if (cutum::ShouldDecayFogHoleDebtHold(1, 30) ||
       !cutum::ShouldDecayFogHoleDebtHold(0, 30) ||
       cutum::ShouldDecayFogHoleDebtHold(0, 0))
   {
     return Fail("fog hold decay only when miss cleared");
+  }
+  if (!cutum::NeighborShellAirRequiresLoadedChunk(
+          cutum::NeighborLoadState::Air, true) ||
+      cutum::NeighborShellAirRequiresLoadedChunk(
+          cutum::NeighborLoadState::Air, false) ||
+      !cutum::NeighborShellAirRequiresLoadedChunk(
+          cutum::NeighborLoadState::Unknown, false))
+  {
+    return Fail("Air shell requires loaded chunk; Unknown ok unloaded");
   }
   if (!cutum::ShouldClearFogHoleDebtLatch(0, 0, 0, 0) ||
       cutum::ShouldClearFogHoleDebtLatch(0, 0, 2, 0))

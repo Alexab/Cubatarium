@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 
@@ -144,9 +145,21 @@ inline void SetRelightReplaceDirtyOwnerEnabled(bool on)
   RelightReplaceDirtyOwnerFlag().store(on, std::memory_order_relaxed);
 }
 /// Skip secondary FullyDark Dirty when RelightReplace owner is ON.
-inline bool ShouldSkipSecondaryFullyDarkDirty(bool fully_dark_drawable)
+/// Optional mark_relit_progress_frames: <0 (default) = legacy always-skip when
+/// owner ON (ChunkMeshCache RAA). ≥0 = World seam pump — skip only while
+/// MarkRelit chain has progress (avoid sole-owner deadlock when MarkRelit≡0).
+inline bool ShouldSkipSecondaryFullyDarkDirty(bool fully_dark_drawable,
+                                              int mark_relit_progress_frames = -1)
 {
-  return IsRelightReplaceDirtyOwnerEnabled() && fully_dark_drawable;
+  if (!IsRelightReplaceDirtyOwnerEnabled() || !fully_dark_drawable)
+  {
+    return false;
+  }
+  if (mark_relit_progress_frames < 0)
+  {
+    return true;
+  }
+  return mark_relit_progress_frames > 0;
 }
 
 /// N04 autopsy I3t: accepted light/geom-stale must not become sole live image

@@ -601,6 +601,28 @@ Track: E0 honesty → T1 air-near-fluid gate → T2 flip any blockId → T3 I3t 
 | AF product cold `perf_20260920-092358_61512` | eye PASS / west COVERED; dual≡0; unload max~0; wall max~146; stale mid med **0.5** |
 | AF dive cold `perf_20260920-092557_51556` | stop_uw wall **59**; unload≈0; coverage PASS; score 1660 (hang KEEP) |
 | Operator tex / air-flicker | **coded** — retest UNTESTED |
+
+---
+
+## Sysreset 2026-09-20 (SoT 143831)
+
+Plan: freeze → neutralize PreferKick/R06/I3t/fog → MeshPublishContract + ColumnVisualState.
+Doc: [REGRESS_143831_SYSTEMIC_PLAN.md](REGRESS_143831_SYSTEMIC_PLAN.md),
+[SYSRESET_OPERATOR_AF_GATES.md](SYSRESET_OPERATOR_AF_GATES.md).
+
+| Gate | Status |
+|---|---|
+| PreferKick without publish progress | **CLOSED** coded (Dirty path) |
+| R06 peer FullyDark remesh | **CLOSED** coded (sticky-face only; prevent-emit KEEP) |
+| I3t PriorLit converge TTL | **CLOSED** coded (`prior_lit_hold_age_max`, deadline 90) |
+| Fog VB≥15 heal latch | **CLOSED** coded (hysteresis miss/unfinished only) |
+| MeshPublishContract Live∩Free | **CLOSED** coded + CTest |
+| ColumnVisualState co-publish | **CLOSED** coded |
+| Neighbor Air≠unloaded | **CLOSED** audit + `NeighborShellAirRequiresLoadedChunk` |
+| AF fog-ON honesty | **coded** (`CUBA_FLIGHT_FOG_ON=1`) |
+| operator wrong-tex / dive walls / blacks | AF gates in SYSRESET_OPERATOR_AF_GATES; manual SoT when AF COVERED |
+| merge_green | AF scorecard vs 143831 |
+
 | Walls distant / dual-lane / merge_green | **OPEN** / OPEN / **false** |
 
 KEEP: unload/keep amortize, prevent-emit, no broad remesh, no SoftDefer-for-holes.

@@ -26,6 +26,18 @@ inline bool ShouldSkipFaceForNeighbor(NeighborLoadState state)
          state == NeighborLoadState::LitDark;
 }
 
+/// Sysreset phase4: unloaded neighbor must never be classified as Air (would
+/// emit sticky closing walls). Air is only for loaded empty shell cells.
+inline bool NeighborShellAirRequiresLoadedChunk(NeighborLoadState state,
+                                                bool neighbor_chunk_loaded)
+{
+  if (state != NeighborLoadState::Air)
+  {
+    return true;
+  }
+  return neighbor_chunk_loaded;
+}
+
 /// Era39 + M09: neighbor_visually_drawable=false (SoftDefer / lit-gate hide)
 /// distinguishes Unlit (solid hidden) from Air (empty / air shell).
 inline NeighborLoadState ClassifyShellCell(bool neighbor_chunk_loaded,

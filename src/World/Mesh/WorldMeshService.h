@@ -217,6 +217,7 @@ public:
   uint64_t GetMeshApplyDropNoActiveCount() const;
   uint64_t GetMeshReplaceHoleAvoidedCount() const;
   uint64_t GetPriorLitHoldCount() const;
+  int GetPriorLitHoldAgeMax() const;
   uint64_t GetSoftDeferEmptyPublishAvoidedCount() const;
   size_t GetPendingGpuAppliesCount() const;
   size_t GetPendingGpuQueuedCount() const;

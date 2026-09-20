@@ -2155,6 +2155,28 @@ void UChunkMeshCache::NoteSoftDeferEmptyPublishAvoided(glm::ivec3 coord)
   SoftDeferEmptyAvoidFrames[coord] = 0;
 }
 
+int UChunkMeshCache::NotePriorLitHold(glm::ivec3 coord)
+{
+  int &age = PriorLitHoldAge[coord];
+  ++age;
+  if (age > PriorLitHoldAgeMax)
+  {
+    PriorLitHoldAgeMax = age;
+  }
+  return age;
+}
+
+void UChunkMeshCache::ClearPriorLitHoldAge(glm::ivec3 coord)
+{
+  PriorLitHoldAge.erase(coord);
+}
+
+int UChunkMeshCache::GetPriorLitHoldAge(glm::ivec3 coord) const
+{
+  const auto it = PriorLitHoldAge.find(coord);
+  return it == PriorLitHoldAge.end() ? 0 : it->second;
+}
+
 void UChunkMeshCache::AgeSoftDeferEmptyAvoidFrames()
 {
   for (auto it = SoftDeferEmptyAvoidFrames.begin();
@@ -3819,9 +3841,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(coord);
   const bool had_live_lit_gpu =
       ChunkHasLiveGpuDraw(coord) && !ChunkHasFullyDarkFace(coord);
+  const int prior_lit_age = GetPriorLitHoldAge(coord);
   if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace,
                                  defer_until_lit && had_mesh, had_lit_mesh,
-                                 had_live_lit_gpu))
+                                 had_live_lit_gpu, prior_lit_age))
   {
     // Free staging only — FreeChunk(coord) would drop the live lit mesh that
     // ProcessSnapshot used to overwrite in-place (opaque collapse 213543).
@@ -3830,9 +3853,14 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
     }
     if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
-                                              true))
+                                              true, prior_lit_age))
     {
       ++PriorLitHoldN;
+      NotePriorLitHold(coord);
+    }
+    else
+    {
+      ClearPriorLitHoldAge(coord);
     }
     const bool remesh_after = RemeshAfterApply.erase(coord) > 0;
     if (!had_mesh && OnLitPendingNeeded)
@@ -3852,6 +3880,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     // Publish staging over any prior live slot (Bind frees the old index).
     GpuPipeline->GetAllocator().BindCommittedSlot(coord, gpu_result.slotIndex);
   }
+  ClearPriorLitHoldAge(coord);
   chunkMesh.GpuResident = true;
   chunkMesh.GpuSlotIndex = gpu_result.slotIndex;
   chunkMesh.GpuQuadCount = gpu_result.quadCount;
@@ -4979,14 +5008,21 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const bool had_live_lit_gpu =
       ChunkHasLiveGpuDraw(result.coord) && !ChunkHasFullyDarkFace(result.coord);
   const bool new_dark = BatchesHaveFullyDarkFace(result.batches);
+  const int prior_lit_age = GetPriorLitHoldAge(result.coord);
   if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
-                                 had_lit_mesh, had_live_lit_gpu))
+                                 had_lit_mesh, had_live_lit_gpu,
+                                 prior_lit_age))
   {
     // Keep prior lit mesh (or hole). MarkRelit owns requeue when SoftDefer+had_mesh.
     if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
-                                              true))
+                                              true, prior_lit_age))
     {
       ++PriorLitHoldN;
+      NotePriorLitHold(result.coord);
+    }
+    else
+    {
+      ClearPriorLitHoldAge(result.coord);
     }
     const bool remesh_after = RemeshAfterApply.erase(result.coord) > 0;
     if (ShouldMarkDirtyAfterDarkSoftDeferReject(remesh_after, had_mesh))
@@ -4996,6 +5032,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     return;
   }
 
+  ClearPriorLitHoldAge(result.coord);
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
   // Era15 TD-ARCH-049 MeshResidency: publish CPU batches before FreeChunk so
   // HasDrawable never drops when GPU was the sole drawable source. Freeing
@@ -5023,11 +5060,13 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     if (EnterLitQuiesce && !defer_until_lit)
     {
       if (ShouldAvoidEmptyPublishOverPriorLit(had_live_lit_gpu, had_lit_mesh,
-                                             had_gpu_resident))
+                                             had_gpu_resident,
+                                             GetPriorLitHoldAge(result.coord)))
       {
         NoteSoftDeferEmptyPublishAvoided(result.coord);
         ++MeshReplaceHoleAvoided;
         ++PriorLitHoldN;
+        NotePriorLitHold(result.coord);
         return;
       }
       SoftDeferHeld.erase(result.coord);
@@ -5050,11 +5089,13 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     if (EnterLitQuiesce && !defer_until_lit)
     {
       if (ShouldAvoidEmptyPublishOverPriorLit(had_live_lit_gpu, had_lit_mesh,
-                                             had_gpu_resident))
+                                             had_gpu_resident,
+                                             GetPriorLitHoldAge(result.coord)))
       {
         NoteSoftDeferEmptyPublishAvoided(result.coord);
         ++MeshReplaceHoleAvoided;
         ++PriorLitHoldN;
+        NotePriorLitHold(result.coord);
         return;
       }
       SoftDeferHeld.erase(result.coord);
@@ -7215,16 +7256,23 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     const bool had_live_lit_gpu =
         ChunkHasLiveGpuDraw(chunkCoord) && !ChunkHasFullyDarkFace(chunkCoord);
     const bool new_dark = BatchesHaveFullyDarkFace(new_batches);
+    const int prior_lit_age = GetPriorLitHoldAge(chunkCoord);
     // First mesh (!had_mesh): never SoftDefer-reject dark place — otherwise
     // side-wall / far-focus edits stay invisible until Capture clears the gate.
     if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
-                                   had_lit_mesh, had_live_lit_gpu))
+                                   had_lit_mesh, had_live_lit_gpu,
+                                   prior_lit_age))
     {
       // SoftDefer+had_mesh: wait MarkRelit (no Dirty thrash — manual 195432).
       if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
-                                                true))
+                                                true, prior_lit_age))
       {
         ++PriorLitHoldN;
+        NotePriorLitHold(chunkCoord);
+      }
+      else
+      {
+        ClearPriorLitHoldAge(chunkCoord);
       }
       if (ShouldMarkDirtyAfterDarkSoftDeferReject(/*remesh_after_apply=*/false,
                                                  had_mesh))
@@ -7233,6 +7281,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       }
       return;
     }
+    ClearPriorLitHoldAge(chunkCoord);
     const int max_local_y = MaxSolidLocalY(*chunk, registry);
     ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
     // Era15 TD-ARCH-049: publish CPU batches before FreeChunk (MeshResidency).
@@ -7256,11 +7305,13 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       if (EnterLitQuiesce && !defer_until_lit)
       {
         if (ShouldAvoidEmptyPublishOverPriorLit(had_live_lit_gpu, had_lit_mesh,
-                                               had_gpu_resident))
+                                               had_gpu_resident,
+                                               GetPriorLitHoldAge(chunkCoord)))
         {
           NoteSoftDeferEmptyPublishAvoided(chunkCoord);
           ++MeshReplaceHoleAvoided;
           ++PriorLitHoldN;
+          NotePriorLitHold(chunkCoord);
           return;
         }
         SoftDeferHeld.erase(chunkCoord);
@@ -7280,11 +7331,13 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       if (EnterLitQuiesce && !defer_until_lit)
       {
         if (ShouldAvoidEmptyPublishOverPriorLit(had_live_lit_gpu, had_lit_mesh,
-                                               had_gpu_resident))
+                                               had_gpu_resident,
+                                               GetPriorLitHoldAge(chunkCoord)))
         {
           NoteSoftDeferEmptyPublishAvoided(chunkCoord);
           ++MeshReplaceHoleAvoided;
           ++PriorLitHoldN;
+          NotePriorLitHold(chunkCoord);
           return;
         }
         SoftDeferHeld.erase(chunkCoord);

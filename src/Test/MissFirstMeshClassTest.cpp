@@ -1091,7 +1091,11 @@ int main()
     Expect(IsRelightReplaceDirtyOwnerEnabled(),
            "A10: RelightReplace Dirty owner default ON");
     Expect(ShouldSkipSecondaryFullyDarkDirty(true),
-           "A10: skip secondary FullyDark Dirty when owner ON");
+           "A10: skip secondary FullyDark Dirty when owner ON (legacy)");
+    Expect(ShouldSkipSecondaryFullyDarkDirty(true, /*progress=*/1),
+           "A10: seam skip when MarkRelit has progress");
+    Expect(!ShouldSkipSecondaryFullyDarkDirty(true, /*progress=*/0),
+           "sysreset: seam allows Dirty when MarkRelit≡0");
     Expect(!ShouldSkipSecondaryFullyDarkDirty(false),
            "A10: missing/undrawn still allowed");
     SetRelightReplaceDirtyOwnerEnabled(false);
@@ -2466,6 +2470,7 @@ int main()
       using cutum::ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark;
       using cutum::ShouldStopRemeshSnapshotForFmResidual;
       using cutum::ShouldYieldRemeshSlotToFmUnderProtect;
+      using cutum::ColumnVisualAllowsPreferKick;
       Expect(!ShouldStopRemeshSnapshotForFmResidual(false, 40, 1, 2, 3.0, 6.0),
              "FullyDark P0: not starved → no stop");
       Expect(!ShouldStopRemeshSnapshotForFmResidual(true, 40, 0, 2, 3.0, 6.0),
@@ -2491,6 +2496,12 @@ int main()
       Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(false, true, true,
                                                                 true),
              "lit-drain: PreferKick FD drawable+GPU without force_stale");
+      Expect(ColumnVisualAllowsPreferKick(
+                 cutum::ColumnVisualState::Publishing, true),
+             "ColumnVisual: PreferKick while Publishing+progress");
+      Expect(!ColumnVisualAllowsPreferKick(
+                  cutum::ColumnVisualState::NeedRemesh, true),
+             "ColumnVisual: no PreferKick outside Publishing");
     }
 
     using cutum::ComputeDualLaneSchedule;

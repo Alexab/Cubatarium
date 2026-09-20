@@ -293,6 +293,7 @@ public:
     return MeshReplaceHoleAvoided;
   }
   uint64_t GetPriorLitHoldCount() const { return PriorLitHoldN; }
+  int GetPriorLitHoldAgeMax() const { return PriorLitHoldAgeMax; }
   /// Era46: RAA commit → MarkDirty vs PreferKick telemetry.
   uint64_t GetRaaCommitMarkDirtyCount() const { return RaaCommitMarkDirtyN; }
   uint64_t GetMarkDirtyToRaaCount() const { return MarkDirtyToRaaN; }
@@ -1078,6 +1079,12 @@ private:
   uint64_t MeshReplaceHoleAvoided{0};
   /// Prior-lit hold: dark/unlit commit rejected because lit prior exists (R05).
   uint64_t PriorLitHoldN{0};
+  /// Sysreset I3t: max age (frames) of any PriorLit hold this session.
+  int PriorLitHoldAgeMax{0};
+  std::unordered_map<glm::ivec3, int, IVec3Hash> PriorLitHoldAge;
+  int NotePriorLitHold(glm::ivec3 coord);
+  void ClearPriorLitHoldAge(glm::ivec3 coord);
+  int GetPriorLitHoldAge(glm::ivec3 coord) const;
   /// Era46: RemeshAfterApply erase → MarkDirtyPriority (not PreferKick).
   uint64_t RaaCommitMarkDirtyN{0};
   /// Era46: MarkDirty*/Active → RemeshAfterApply insert.

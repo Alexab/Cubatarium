@@ -726,17 +726,14 @@ inline bool ShouldForceMarkRelitForTicketedStale(
   return consume_mode && still_stale;
 }
 
-/// FullyDark FM fairness P2: PreferKick/RAA over plain remesh Dirty when
-/// ticketed FullyDark already has PendingGpu/RAA (sole MarkRelit owner).
-/// LitDrawable drain: also PreferKick when FD drawable has GPU/RAA pending
-/// even without force_stale (avoids Dirty thrash while Apply drains).
-/// NEVER arms N04 census remesh / MarkDirty×K from stalled count.
+/// FullyDark FM fairness P2 (sysreset): PreferKick pending GPU/RAA is legal.
+/// Forbidden: PreferKick as sole path while secondary Dirty is skipped and
+/// MarkRelit has no publish progress (see ShouldSkipSecondaryFullyDarkDirty).
+/// Skip-already-dirty PreferKick carve-outs were removed from the planner.
 inline bool ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
     bool /*force_stale_ticket*/, bool fully_dark, bool has_drawable,
-    bool pending_gpu_or_raa)
+    bool pending_gpu_or_raa, bool /*has_publish_progress*/ = false)
 {
-  // LitDrawable drain: PreferKick whenever FD drawable already has GPU/RAA —
-  // force_stale no longer required (Dirty thrash under Apply drain).
   return fully_dark && has_drawable && pending_gpu_or_raa;
 }
 
