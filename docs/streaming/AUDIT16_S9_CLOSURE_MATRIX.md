@@ -604,26 +604,28 @@ Track: E0 honesty → T1 air-near-fluid gate → T2 flip any blockId → T3 I3t 
 
 ---
 
-## Sysreset 2026-09-20 (SoT 143831)
+## Sysreset 2026-09-20 (SoT 143831) — RETRACTED overclaim
 
 Plan: freeze → neutralize PreferKick/R06/I3t/fog → MeshPublishContract + ColumnVisualState.
 Doc: [REGRESS_143831_SYSTEMIC_PLAN.md](REGRESS_143831_SYSTEMIC_PLAN.md),
-[SYSRESET_OPERATOR_AF_GATES.md](SYSRESET_OPERATOR_AF_GATES.md).
+[SYSRESET_OPERATOR_AF_GATES.md](SYSRESET_OPERATOR_AF_GATES.md),
+[SYSRESET_V2_AUDIT_191112.md](SYSRESET_V2_AUDIT_191112.md).
 
 | Gate | Status |
 |---|---|
-| PreferKick without publish progress | **CLOSED** coded (Dirty path) |
-| R06 peer FullyDark remesh | **CLOSED** coded (sticky-face only; prevent-emit KEEP) |
-| I3t PriorLit converge TTL | **CLOSED** coded (`prior_lit_hold_age_max`, deadline 90) |
-| Fog VB≥15 heal latch | **CLOSED** coded (hysteresis miss/unfinished only) |
+| PreferKick without publish progress | **RETRACTED OPEN** — PreferKick still FD+pending; FSM not wired |
+| R06 peer FullyDark remesh | **CLOSED** sticky-face only; walls OPEN (liquid void root) |
+| I3t PriorLit converge TTL | **PARTIAL** — TTL can release bad Replace (flip) |
+| Fog VB≥15 heal latch | **CLOSED** coded |
 | MeshPublishContract Live∩Free | **CLOSED** coded + CTest |
-| ColumnVisualState co-publish | **CLOSED** coded |
-| Neighbor Air≠unloaded | **CLOSED** audit + `NeighborShellAirRequiresLoadedChunk` |
+| MeshPublish Accept rev triple | **OPEN** — not wired in writer |
+| ColumnVisualState co-publish | **OPEN** — void helpers only |
+| Neighbor Air≠unloaded | **PARTIAL** solids; liquid void-emit OPEN |
 | AF fog-ON honesty | **coded** (`CUBA_FLIGHT_FOG_ON=1`) |
-| operator wrong-tex / dive walls / blacks | AF gates in SYSRESET_OPERATOR_AF_GATES; manual SoT when AF COVERED |
-| merge_green | AF scorecard vs 143831 |
+| operator wrong-tex / dive walls / blacks | **OPEN** SoT 191112 |
+| merge_green | **false** |
 
-| Walls distant / dual-lane / merge_green | **OPEN** / OPEN / **false** |
+Follow-on: **Sysreset v2** (owning FSM + Accept gate + Unknown liquid + BecameKnown).
 
-KEEP: unload/keep amortize, prevent-emit, no broad remesh, no SoftDefer-for-holes.
+KEEP: unload/keep amortize, prevent-emit solids, no SoftDefer-for-holes.
 

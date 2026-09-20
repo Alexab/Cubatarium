@@ -81,3 +81,9 @@ AF west COVERED on successful runs; dual-lane still OPEN (VB high under fog ON
 honesty). Units: `miss_first_mesh_class_test`, `mesh_neighbor_policy_test`,
 `mesh_publish_contract_test` PASS. Operator gates:
 [SYSRESET_OPERATOR_AF_GATES.md](SYSRESET_OPERATOR_AF_GATES.md).
+
+## Retract + follow-on
+
+Manual SoT `191112` shows blacks/flip/walls still OPEN. PreferKick/FSM/Accept
+were overclaimed CLOSED — see [SYSRESET_V2_AUDIT_191112.md](SYSRESET_V2_AUDIT_191112.md).
+Sysreset v2 owns the remaining converge path.
