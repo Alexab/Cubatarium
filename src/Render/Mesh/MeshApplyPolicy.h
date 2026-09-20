@@ -157,17 +157,26 @@ inline bool ShouldHoldPriorDrawOnAcceptedStale(bool accepted_input_stale,
   return accepted_input_stale && had_prior_drawable;
 }
 
-/// E1/111235: visual prior for I3t — allocator/HasGpuMesh counts even when
-/// GpuQuadCount was spoofed to 0 (intentional-empty keep-until-bind).
+/// SoT 090834 T3: overlay/fluid accepted geom — treat resident OR pipeline mesh
+/// as prior even when GpuQuadCount was spoofed (empty keep-until-bind).
 inline bool HadVisualPriorForI3tHold(bool has_drawable_greedy,
                                     bool gpu_resident_flag,
-                                    bool pipeline_has_gpu_mesh)
+                                    bool pipeline_has_gpu_mesh,
+                                    bool overlay_or_fluid_force = false)
 {
   if (has_drawable_greedy)
   {
     return true;
   }
-  return gpu_resident_flag && pipeline_has_gpu_mesh;
+  if (gpu_resident_flag && pipeline_has_gpu_mesh)
+  {
+    return true;
+  }
+  if (overlay_or_fluid_force && (gpu_resident_flag || pipeline_has_gpu_mesh))
+  {
+    return true;
+  }
+  return false;
 }
 
 /// Era21 I-M6: under FOV miss, SoftDefer Capture is blocked only by a live

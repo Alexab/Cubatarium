@@ -3785,14 +3785,20 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   // queue ordinary Dirty refresh (do not Bind wrong bake / clear batches).
   // E1/111235: visual prior includes GpuResident+HasGpuMesh after empty spoof
   // (GpuQuadCount may be 0 while SSBO still allocated).
+  // SoT 090834 T3: overlay/fluid force weaker prior heuristics.
   {
     const auto git = GreedyCache.find(coord);
     const bool gpu_resident =
         git != GreedyCache.end() && git->second.GpuResident;
     const bool pipe_has_mesh =
         GpuPipeline != nullptr && GpuPipeline->HasGpuMesh(coord);
+    const bool overlay_or_fluid =
+        HasActiveBoundaryOverlay(coord) || gpu_result.transparent ||
+        (git != GreedyCache.end() && git->second.GpuTransparent) ||
+        boundary_overlay.active;
     const bool had_prior_drawable = HadVisualPriorForI3tHold(
-        HasDrawableGreedyMesh(coord), gpu_resident, pipe_has_mesh);
+        HasDrawableGreedyMesh(coord), gpu_resident, pipe_has_mesh,
+        overlay_or_fluid);
     if (ShouldHoldPriorDrawOnAcceptedStale(accepted_input_stale,
                                            had_prior_drawable))
     {
@@ -4817,9 +4823,20 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
 
   // N04 I3t: accepted light/geom stale on prior drawable — hold prior sole live
   // image; Dirty-refresh (H4) without publishing wrong bake / dual MDI+packed.
+  // SoT 090834 T3: overlay/fluid expands weak prior heuristics.
   {
-    const bool had_prior =
-        HasDrawableGreedyMesh(result.coord) || ChunkHasLiveGpuDraw(result.coord);
+    const auto git = GreedyCache.find(result.coord);
+    const bool gpu_resident =
+        git != GreedyCache.end() && git->second.GpuResident;
+    const bool pipe_has_mesh =
+        GpuPipeline != nullptr && GpuPipeline->HasGpuMesh(result.coord);
+    const bool overlay_or_fluid =
+        HasActiveBoundaryOverlay(result.coord) ||
+        (git != GreedyCache.end() && git->second.GpuTransparent) ||
+        result.BoundaryOverlay.active;
+    const bool had_prior = HadVisualPriorForI3tHold(
+        HasDrawableGreedyMesh(result.coord), gpu_resident, pipe_has_mesh,
+        overlay_or_fluid);
     if (ShouldHoldPriorDrawOnAcceptedStale(refresh_after_accept_stale, had_prior))
     {
       ActiveMeshSourceRevision.erase(revisionIt);

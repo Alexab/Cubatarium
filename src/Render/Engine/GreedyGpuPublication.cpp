@@ -428,7 +428,8 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     NotePublicationProgressUnit();
     published_ok.insert(coord);
     // Successful replace: do not retain old batches for this coord.
-    // Honest wrong-tex thrash: same (coord,batch) geom size but blockId flip.
+    // Honest wrong-tex thrash: any blockId flip on successful Replace
+    // (SoT 090834 — same-size gate hid operator-visible swaps).
     for (const auto &gpu : group_fresh)
     {
       const auto found =
@@ -438,9 +439,7 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         continue;
       }
       const GreedyGpuBatch &prior = cache.batches[found->second];
-      if (prior.blockId != gpu.blockId &&
-          prior.vertexCount == gpu.vertexCount &&
-          prior.indexCount == gpu.indexCount)
+      if (prior.blockId != gpu.blockId)
       {
         NotePublicationMaterialBlockIdFlip();
       }

@@ -61,6 +61,7 @@ int main()
     return Fail("loaded drawable solid -> Loaded");
   }
   // R06: surface band keeps |cy-sea|<=2 inland; underwater widens to 4.
+  // SoT 090834: air-near-fluid must NOT open subsea_band.
   const int sea_cy = 3;
   if (!cutum::ShouldRemeshSeaSeamOnFirstDrawable(sea_cy, sea_cy, false))
   {
@@ -73,6 +74,38 @@ int main()
   if (!cutum::ShouldRemeshSeaSeamOnFirstDrawable(sea_cy - 3, sea_cy, true))
   {
     return Fail("underwater gate remeshes subsea cy");
+  }
+  {
+    using cutum::SeaSeamEyeContext;
+    if (cutum::ClassifySeaSeamEyeContext(70.0f, 62.0f, true) !=
+        SeaSeamEyeContext::AirNearFluid)
+    {
+      return Fail("eye above sea + near fluid -> AirNearFluid");
+    }
+    if (cutum::ClassifySeaSeamEyeContext(50.0f, 62.0f, false) !=
+        SeaSeamEyeContext::Underwater)
+    {
+      return Fail("eye below sea+2 -> Underwater");
+    }
+    if (cutum::ShouldRemeshSeaSeamOnFirstDrawable(
+            sea_cy - 3, sea_cy, SeaSeamEyeContext::AirNearFluid))
+    {
+      return Fail("air-near-fluid must not remesh subsea cy");
+    }
+    if (!cutum::ShouldRemeshSeaSeamOnFirstDrawable(
+            sea_cy, sea_cy, SeaSeamEyeContext::AirNearFluid))
+    {
+      return Fail("air-near-fluid still remeshes surface cy");
+    }
+    int min_y = 0;
+    int max_y = 0;
+    cutum::SeaSeamRemeshYRangeForPublisher(
+        62, 16, 256, /*publisher_cy=*/1, SeaSeamEyeContext::AirNearFluid, min_y,
+        max_y);
+    if (min_y != 62 - 16)
+    {
+      return Fail("air-near-fluid Y range is surface (not publisher_cy)");
+    }
   }
   if (cutum::SeaSeamRemeshMinYSurface(62, 16) != 62 - 16)
   {

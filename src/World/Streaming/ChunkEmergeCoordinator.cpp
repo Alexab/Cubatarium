@@ -543,12 +543,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const ProceduralSettings &settings = world_ref.GetProceduralSettings();
           const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
           const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();
-          const bool underwater_or_near_water =
-              static_cast<float>(focus_block.y) <
-                  static_cast<float>(settings.SeaLevel) + 2.0f ||
-              world_ref.HasNearbyFluidSurface(focus_block, 24);
+          // SoT 090834: near-fluid from air must not open underwater subsea_band.
+          const SeaSeamEyeContext seam_eye = ClassifySeaSeamEyeContext(
+              static_cast<float>(focus_block.y),
+              static_cast<float>(settings.SeaLevel),
+              world_ref.HasNearbyFluidSurface(focus_block, 24));
           if (!ShouldRemeshSeaSeamOnFirstDrawable(chunk_coord.y, sea_cy,
-                                                 underwater_or_near_water))
+                                                 seam_eye))
           {
             return;
           }
@@ -557,7 +558,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           int remesh_max_y = 0;
           SeaSeamRemeshYRangeForPublisher(
               settings.SeaLevel, CHUNK_SIZE, settings.MaxHeight, chunk_coord.y,
-              underwater_or_near_water, remesh_min_y, remesh_max_y);
+              seam_eye, remesh_min_y, remesh_max_y);
           static const glm::ivec3 kFaceNb[4] = {
               {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
           for (const glm::ivec3 &d : kFaceNb)
@@ -567,8 +568,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
-            if (!ShouldRemeshSeaSeamOnFirstDrawable(n.y, sea_cy,
-                                                   underwater_or_near_water))
+            if (!ShouldRemeshSeaSeamOnFirstDrawable(n.y, sea_cy, seam_eye))
             {
               continue;
             }
@@ -1282,10 +1282,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const ProceduralSettings &settings = world.GetProceduralSettings();
       const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-      const bool underwater_or_near_water =
-          static_cast<float>(focus_block.y) <
-              static_cast<float>(settings.SeaLevel) + 2.0f ||
-          world.HasNearbyFluidSurface(focus_block, 24);
+      const SeaSeamEyeContext seam_eye = ClassifySeaSeamEyeContext(
+          static_cast<float>(focus_block.y),
+          static_cast<float>(settings.SeaLevel),
+          world.HasNearbyFluidSurface(focus_block, 24));
       int healed = 0;
       static const glm::ivec3 kFaceHeal[4] = {
           {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
@@ -1298,8 +1298,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           for (int cy = sea_cy - 4; cy <= sea_cy + 2 && healed < 4; ++cy)
           {
             const glm::ivec3 peer(focus_g.x + dx, cy, focus_g.z + dz);
-            if (!ShouldRemeshSeaSeamOnFirstDrawable(peer.y, sea_cy,
-                                                   underwater_or_near_water))
+            if (!ShouldRemeshSeaSeamOnFirstDrawable(peer.y, sea_cy, seam_eye))
             {
               continue;
             }

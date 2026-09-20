@@ -576,3 +576,32 @@ python tools/bakeoff_stop_hang_dive.py --phase u --keep-fixed 0 --repeats 2
 python tools/bakeoff_stop_hang_dive.py --phase k --unload-fixed 1 --repeats 2
 ```
 
+### Follow-on 2026-09-20: operator 090834 — hang win + tex/flicker OPEN
+
+Manual: `bin/logs/perf_20260920-090834_65008.jsonl` (post U-A/K-B amortize).
+
+| Signal | Fact | Verdict |
+|---|---|---|
+| Hang / FPS | `streamer_unload_ms`≈0; `max_wall` med~41 / max~179 | **KEEP win** (vs 210431 0.7–1.5s) |
+| dual / flip | both ≡0 | counters **insufficient** for operator wrong-tex |
+| Flicker proxy | `mesh_apply_stale_geom` 0→24; `accepted_refresh` med~8 | remesh churn on drawable |
+| SoftDeferHeld | ≡0 | not the mechanism |
+
+**Root:** `HasNearbyFluidSurface` from air opened underwater `subsea_band=4` sea-seam remesh → stale-geom refresh flicker; flip telem same-size-gated.
+
+Track: E0 honesty → T1 air-near-fluid gate → T2 flip any blockId → T3 I3t overlay/fluid force prior.
+
+#### Results (T1/T2/T3)
+
+| Step | Result |
+|---|---|
+| T1 `SeaSeamEyeContext` AirNearFluid vs Underwater | unit `mesh_neighbor_policy_test` PASS; CEC first-drawable + W2b heal use classify |
+| T2 flip any `blockId` change | coded; AF product flip max **1** (was always 0 under same-size gate) |
+| T3 I3t overlay/fluid prior force | unit `miss_first_mesh_class_test` PASS |
+| AF product cold `perf_20260920-092358_61512` | eye PASS / west COVERED; dual≡0; unload max~0; wall max~146; stale mid med **0.5** |
+| AF dive cold `perf_20260920-092557_51556` | stop_uw wall **59**; unload≈0; coverage PASS; score 1660 (hang KEEP) |
+| Operator tex / air-flicker | **coded** — retest UNTESTED |
+| Walls distant / dual-lane / merge_green | **OPEN** / OPEN / **false** |
+
+KEEP: unload/keep amortize, prevent-emit, no broad remesh, no SoftDefer-for-holes.
+

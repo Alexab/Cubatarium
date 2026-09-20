@@ -3370,11 +3370,16 @@ int main()
            "I3t visual prior: GpuResident+HasGpuMesh without drawable");
     Expect(!HadVisualPriorForI3tHold(false, true, false),
            "I3t visual prior: resident flag alone insufficient");
+    Expect(HadVisualPriorForI3tHold(false, true, false, true),
+           "SoT 090834 T3: overlay/fluid force accepts resident alone");
     Expect(HadVisualPriorForI3tHold(true, false, false),
            "I3t visual prior: drawable greedy counts");
     Expect(ShouldHoldPriorDrawOnAcceptedStale(
                true, HadVisualPriorForI3tHold(false, true, true)),
            "I3t hold uses visual prior under empty spoof");
+    Expect(ShouldHoldPriorDrawOnAcceptedStale(
+               true, HadVisualPriorForI3tHold(false, true, false, true)),
+           "SoT 090834 T3: overlay force → hold prior");
   }
 
   // FZ2.6: budget reality + consumer backpressure + mesh drain split

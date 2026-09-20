@@ -3,6 +3,7 @@
 // R06 field: when first drawable coverage publishes, remesh sea/subsea seams.
 // Drawable stays out of InputsStillValid stamp (ADR Strategy A).
 // E0 (111235): no 3x3 seamed expand; underwater Y = publisher_cy +/- 1 only.
+// SoT 090834: air-near-fluid must NOT use underwater subsea_band (flicker).
 
 #include <algorithm>
 #include <cmath>
@@ -10,17 +11,62 @@
 namespace cutum
 {
 
-/// Surface band |cy-sea|<=2 inland; underwater/near_water widens to subsea_band.
+/// Eye context for sea-seam remesh width (SoT 090834 air-view flicker).
+enum class SeaSeamEyeContext : int
+{
+  Inland = 0,
+  /// Eye above sea but near fluid — surface band only (not subsea_band=4).
+  AirNearFluid = 1,
+  /// Eye below sea+2 — full underwater publisher_cy slice + subsea band.
+  Underwater = 2,
+};
+
+inline SeaSeamEyeContext ClassifySeaSeamEyeContext(float eye_y, float sea_level,
+                                                   bool near_fluid_surface)
+{
+  if (eye_y < sea_level + 2.0f)
+  {
+    return SeaSeamEyeContext::Underwater;
+  }
+  if (near_fluid_surface)
+  {
+    return SeaSeamEyeContext::AirNearFluid;
+  }
+  return SeaSeamEyeContext::Inland;
+}
+
+/// True only for eye below sea — widens band / publisher_cy Y range.
+inline bool SeaSeamEyeUsesUnderwaterBand(SeaSeamEyeContext ctx)
+{
+  return ctx == SeaSeamEyeContext::Underwater;
+}
+
+/// Surface band |cy-sea|<=2; underwater widens to subsea_band.
+/// AirNearFluid uses surface_band (not subsea) — SoT 090834.
 inline bool ShouldRemeshSeaSeamOnFirstDrawable(int chunk_cy, int sea_cy,
-                                              bool underwater_or_near_water,
+                                              SeaSeamEyeContext ctx,
                                               int surface_band = 2,
                                               int subsea_band = 4)
 {
-  const int band = underwater_or_near_water ? subsea_band : surface_band;
+  const int band =
+      SeaSeamEyeUsesUnderwaterBand(ctx) ? subsea_band : surface_band;
   return std::abs(chunk_cy - sea_cy) <= band;
 }
 
-/// Inland surface: sea_level - CHUNK .. sea+2*CHUNK.
+/// Compat: true = Underwater (wide), false = Inland (surface). Prefer enum API.
+inline bool ShouldRemeshSeaSeamOnFirstDrawable(int chunk_cy, int sea_cy,
+                                              bool underwater_wide,
+                                              int surface_band = 2,
+                                              int subsea_band = 4)
+{
+  return ShouldRemeshSeaSeamOnFirstDrawable(
+      chunk_cy, sea_cy,
+      underwater_wide ? SeaSeamEyeContext::Underwater
+                      : SeaSeamEyeContext::Inland,
+      surface_band, subsea_band);
+}
+
+/// Inland / air-near-fluid surface: sea_level - CHUNK .. sea+2*CHUNK.
 inline int SeaSeamRemeshMinYSurface(int sea_level, int chunk_size)
 {
   return std::max(0, sea_level - chunk_size);
@@ -32,13 +78,13 @@ inline int SeaSeamRemeshMaxYSurface(int sea_level, int chunk_size,
   return std::min(max_height, sea_level + chunk_size * 2);
 }
 
-/// Underwater/near_water: peer same publisher_cy only (E2 residual after E0).
+/// Underwater only: peer same publisher_cy. AirNearFluid/Inland: surface range.
 inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
                                            int max_height, int publisher_cy,
-                                           bool underwater_or_near_water,
+                                           SeaSeamEyeContext ctx,
                                            int &out_min_y, int &out_max_y)
 {
-  if (underwater_or_near_water)
+  if (SeaSeamEyeUsesUnderwaterBand(ctx))
   {
     out_min_y = std::max(0, publisher_cy * chunk_size);
     out_max_y =
@@ -49,19 +95,40 @@ inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
   out_max_y = SeaSeamRemeshMaxYSurface(sea_level, chunk_size, max_height);
 }
 
+inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
+                                           int max_height, int publisher_cy,
+                                           bool underwater_wide,
+                                           int &out_min_y, int &out_max_y)
+{
+  SeaSeamRemeshYRangeForPublisher(
+      sea_level, chunk_size, max_height, publisher_cy,
+      underwater_wide ? SeaSeamEyeContext::Underwater
+                      : SeaSeamEyeContext::Inland,
+      out_min_y, out_max_y);
+}
+
 /// Chunks dirtied per peer column when include_horizontal_neighbors=false.
 inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
                                            int max_height, int publisher_cy,
-                                           bool underwater_or_near_water)
+                                           SeaSeamEyeContext ctx)
 {
   int min_y = 0;
   int max_y = 0;
   SeaSeamRemeshYRangeForPublisher(sea_level, chunk_size, max_height,
-                                 publisher_cy, underwater_or_near_water, min_y,
-                                 max_y);
+                                 publisher_cy, ctx, min_y, max_y);
   const int cy0 = min_y / chunk_size;
   const int cy1 = max_y / chunk_size;
   return std::max(0, cy1 - cy0 + 1);
+}
+
+inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
+                                           int max_height, int publisher_cy,
+                                           bool underwater_wide)
+{
+  return SeaSeamRemeshChunksPerPeerColumn(
+      sea_level, chunk_size, max_height, publisher_cy,
+      underwater_wide ? SeaSeamEyeContext::Underwater
+                      : SeaSeamEyeContext::Inland);
 }
 
 /// Shell face index on peer looking back at publisher (ChunkMeshSnapshot faces).
