@@ -627,5 +627,28 @@ Doc: [REGRESS_143831_SYSTEMIC_PLAN.md](REGRESS_143831_SYSTEMIC_PLAN.md),
 
 Follow-on: **Sysreset v2** (owning FSM + Accept gate + Unknown liquid + BecameKnown).
 
+## Sysreset v2 2026-09-20 (SoT 191112 → AF 195643/195847/200105)
+
+| Gate | Status |
+|---|---|
+| PreferKick with publish progress | **CLOSED** coded — PreferKick only +progress; Dirty owns NeedRelight |
+| MeshPublish Accept material_stamp | **CLOSED** coded — flip Retain on stamp mismatch |
+| PriorLit expire → PublishedEmpty | **CLOSED** coded — no silent dark Replace |
+| Liquid Unknown always-hide | **CLOSED** coded + unit |
+| RebuildChunk overlay snapshot | **CLOSED** coded |
+| NeighborBecameKnown coalesce | **CLOSED** coded |
+| Transparent order-only pubver | **CLOSED** coded — mid reorder med 0–0.5 |
+| AF fog-ON cold dual-lane | **PASS** VB fly med **35**, mid_fd_stalled **0** (`195643`) |
+| AF fog-ON dive dual-lane | **PASS** VB **30**, void_near med **244** ≤500 (`195847`) |
+| AF fog-ON warm dual-lane + eye | **PASS** VB **24**, eye-proxy PASS (`200105`) |
+| flip cold | **KEEP ≡0** |
+| dual | **KEEP ≡0** |
+| unfinished max ≤4 | **OPEN** cold max 13 |
+| prior_lit_hold count | **PARTIAL** age capped 90; count still high |
+| merge_green | **false** (blink cold / unfinished) |
+
+Scorecards: `bin/suite_reports/g1_a10_relight/sysreset_v2_*_score.json`.
+Audit: [SYSRESET_V2_AUDIT_191112.md](SYSRESET_V2_AUDIT_191112.md).
+
 KEEP: unload/keep amortize, prevent-emit solids, no SoftDefer-for-holes.
 
