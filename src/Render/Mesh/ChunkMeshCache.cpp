@@ -3833,8 +3833,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       {
         GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
       }
-      // Sysreset v3: light-accepted drawable Retain — FaceDebt, no Dirty flood.
-      NoteFaceDebt(coord);
+      // Sysreset v3 D4: light-accepted drawable Retain — no Dirty, no FaceDebt.
       ++MeshApplyStaleAcceptedRefreshCount;
       // RetainedPrior: not a published Completed — callers must not ++Completed.
       return false;
@@ -4356,8 +4355,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
             HasDrawableGreedyMesh(pending.coord) &&
             !Dirty.Contains(pending.coord))
         {
-          // Sysreset v3: Accept Retain → FaceDebt, not Dirty flood.
-          NoteFaceDebt(pending.coord);
+          // Sysreset v3 D4: light/geom Accept Retain — no Dirty, no FaceDebt
+          // (FaceDebt+Dirty only geom/material mismatch / PublishedEmpty).
           ++MeshApplyStaleAcceptedRefreshCount;
         }
         if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
@@ -4440,8 +4439,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           HasDrawableGreedyMesh(pending.coord) &&
           !Dirty.Contains(pending.coord))
       {
-        // Sysreset v3: Accept Retain → FaceDebt, not Dirty flood.
-        NoteFaceDebt(pending.coord);
+        // Sysreset v3 D4: light/geom Accept Retain — no Dirty, no FaceDebt.
         ++MeshApplyStaleAcceptedRefreshCount;
       }
       if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
@@ -4716,8 +4714,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
             HasDrawableGreedyMesh(pending.coord) &&
             !Dirty.Contains(pending.coord))
         {
-          // Sysreset v3: Accept Retain → FaceDebt, not Dirty flood.
-          NoteFaceDebt(pending.coord);
+          // Sysreset v3 D4: light/geom Accept Retain — no Dirty, no FaceDebt
+          // (FaceDebt+Dirty only geom/material mismatch / PublishedEmpty).
           ++MeshApplyStaleAcceptedRefreshCount;
         }
         if (FmDirtyGpuWatchAge_.erase(pending.coord) > 0)
@@ -4886,8 +4884,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     {
       ActiveMeshSourceRevision.erase(revisionIt);
       GpuExtractInFlight.erase(result.coord);
-      // Sysreset v3: Retain drawable without Dirty flood.
-      NoteFaceDebt(result.coord);
+      // Sysreset v3 D4: I3t light Accept Retain — no Dirty, no FaceDebt.
       ++MeshApplyStaleAcceptedRefreshCount;
       abandon_fm_watch();
       LastApplyWasRetainedPrior_ = true;
