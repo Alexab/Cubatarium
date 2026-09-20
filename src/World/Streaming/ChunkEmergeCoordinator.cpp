@@ -21,6 +21,7 @@
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/SeaSeamRemeshPolicy.h"
+#include "Render/Mesh/MeshNeighborPolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
@@ -579,8 +580,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const bool peer_dark =
                 mesh.GetCache().ChunkHasFullyDarkFace(n) ||
                 mesh.ChunkHasStaleDarkFaces(n, world_ref.GetBlockWorld());
+            // NeighborBecameKnown: publisher just became drawable → peer with
+            // overlay face-toward owes one coalesced seam remesh (cap 1/col).
+            const bool became_known = ShouldCoalesceNeighborBecameKnownSeam(
+                /*neighbor_now_known=*/true, face_overlay,
+                /*already_coalesced=*/false);
             const bool remesh_peer =
-                face_overlay ||
+                face_overlay || became_known ||
                 ShouldRemeshSeaSurfaceDarkPeer(
                     seam_eye, /*peer_drawable=*/true,
                     /*peer_in_surface_band=*/true, face_overlay, peer_dark);

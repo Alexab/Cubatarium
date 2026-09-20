@@ -15,6 +15,22 @@ int main()
   {
     return Fail("Unknown must skip face");
   }
+  if (!cutum::NeighborUnknownAlwaysHidesFace(cutum::NeighborLoadState::Unknown))
+  {
+    return Fail("Unknown always hides (incl. liquid)");
+  }
+  if (cutum::NeighborUnknownAlwaysHidesFace(cutum::NeighborLoadState::Air))
+  {
+    return Fail("Air is not Unknown hide");
+  }
+  if (!cutum::ShouldCoalesceNeighborBecameKnownSeam(true, true, false))
+  {
+    return Fail("BecameKnown coalesces once");
+  }
+  if (cutum::ShouldCoalesceNeighborBecameKnownSeam(true, true, true))
+  {
+    return Fail("BecameKnown already coalesced");
+  }
   if (cutum::ShouldSkipFaceForNeighbor(cutum::NeighborLoadState::Air))
   {
     return Fail("Air must not skip face");

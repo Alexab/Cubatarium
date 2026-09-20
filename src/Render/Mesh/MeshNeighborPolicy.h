@@ -20,6 +20,25 @@ enum class NeighborLoadState : uint8_t
   LitDark = 4,
 };
 
+/// Sysreset v2: Unknown (unloaded) always hides — including liquid void-emit.
+inline bool NeighborUnknownAlwaysHidesFace(NeighborLoadState state)
+{
+  return state == NeighborLoadState::Unknown;
+}
+
+/// NeighborBecameKnown: coalesce seam remesh 1/column/frame when a face-neighbor
+/// flips to loaded/drawable (not FullyDark flood).
+inline bool ShouldCoalesceNeighborBecameKnownSeam(
+    bool neighbor_now_known, bool self_has_overlay_face_toward,
+    bool already_coalesced_this_frame)
+{
+  if (!neighbor_now_known || already_coalesced_this_frame)
+  {
+    return false;
+  }
+  return self_has_overlay_face_toward;
+}
+
 inline bool ShouldSkipFaceForNeighbor(NeighborLoadState state)
 {
   return state == NeighborLoadState::Unknown ||
