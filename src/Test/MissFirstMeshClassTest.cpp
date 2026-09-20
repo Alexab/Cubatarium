@@ -1091,11 +1091,7 @@ int main()
     Expect(IsRelightReplaceDirtyOwnerEnabled(),
            "A10: RelightReplace Dirty owner default ON");
     Expect(ShouldSkipSecondaryFullyDarkDirty(true),
-           "A10: skip secondary FullyDark Dirty when owner ON (legacy)");
-    Expect(ShouldSkipSecondaryFullyDarkDirty(true, /*progress=*/1),
-           "A10: seam skip when MarkRelit has progress");
-    Expect(!ShouldSkipSecondaryFullyDarkDirty(true, /*progress=*/0),
-           "sysreset: seam allows Dirty when MarkRelit≡0");
+           "A10: skip secondary FullyDark Dirty when owner ON");
     Expect(!ShouldSkipSecondaryFullyDarkDirty(false),
            "A10: missing/undrawn still allowed");
     SetRelightReplaceDirtyOwnerEnabled(false);

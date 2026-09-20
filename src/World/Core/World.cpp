@@ -3232,10 +3232,8 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
     StickyRemeshAfterLight.erase(ground_xz);
     return 0;
   }
-  // A10 RelightReplace: skip seam only while MarkRelit chain has progress.
-  // Sole-owner skip with MarkRelit≡0 deadlocks FullyDark (SoT 143831).
-  if (ShouldSkipSecondaryFullyDarkDirty(
-          true, PhysicsTelemetryData.MarkRelitChainProgressFrames))
+  // A10 RelightReplace: MarkRelit owns FullyDark/stale_dark Dirty — skip seam pump.
+  if (IsRelightReplaceDirtyOwnerEnabled())
   {
     StickyRemeshAfterLight.erase(ground_xz);
     return 0;
