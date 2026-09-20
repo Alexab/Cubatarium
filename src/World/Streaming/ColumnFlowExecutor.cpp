@@ -3,6 +3,7 @@
 #include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/ColumnTicketMap.h"
 #include "World/Streaming/ColumnEmergeState.h"
+#include "World/Streaming/ColumnVisualState.h"
 
 #include "Core/FrameDeadline.h"
 #include "Render/Camera/Camera.h"
@@ -996,6 +997,20 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       if (HasRepairTicket(col) || world.ColumnHasRepairProgress(col))
       {
         continue;
+      }
+      {
+        const ColumnRecord *rec = world.GetColumnRecords().Find(col);
+        const bool has_pl_or_fifo =
+            world.IsPendingLightBeforeMesh(col) ||
+            (rec && rec->publish_progress_frames > 0);
+        if (rec &&
+            ColumnVisualForbidsTicketWithoutFifo(
+                rec->visual, /*has_repair_ticket=*/true, has_pl_or_fifo))
+        {
+          // NeedRelight/NeedRemesh without PL/fifo: schedule Dirty via Note.
+          world.NoteColumnRepairNeeded(col);
+          continue;
+        }
       }
       if (world.IsColumnDiskLightComplete(col) &&
           !world.IsColumnLitReady(glm::ivec3(col.x, 0, col.y)))

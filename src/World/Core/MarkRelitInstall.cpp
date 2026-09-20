@@ -5,6 +5,8 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnRecord.h"
+#include "World/Streaming/ColumnVisualState.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/MeshLightStalePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
@@ -93,10 +95,12 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     return;
   }
   UWorldMeshService *const mesh = MeshService.get();
+  ColumnRecord &col_rec = GetColumnRecords().GetOrCreate(column);
   for (const glm::ivec3 &coord : plan.prefer_kick_gpu)
   {
     mesh->PreferKickPendingGpuQueued(coord);
     ++PhysicsTelemetryData.MarkRelitPreferKickN;
+    GetColumnRecords().NotePreferKickStall(column);
   }
   for (const glm::ivec3 &coord : plan.request_raa)
   {
@@ -120,6 +124,14 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     }
     PhysicsTelemetryData.MarkRelitMarkDirtyMs +=
         ElapsedMs(dirty_t0, Clock::now());
+    // Real publish progress: MarkRelit → Dirty chain (not GPU queued alone).
+    GetColumnRecords().NotePublishProgress(column);
+    if (col_rec.visual == ColumnVisualState::NeedRelight ||
+        col_rec.visual == ColumnVisualState::NeedRemesh ||
+        col_rec.visual == ColumnVisualState::Ready)
+    {
+      col_rec.visual = ColumnVisualState::Publishing;
+    }
   }
   PhysicsTelemetryData.MarkRelitSkipAlreadyDirtyN += plan.skip_already_dirty_n;
   PhysicsTelemetryData.MarkRelitSkipInflightN += plan.skip_inflight_n;
@@ -143,6 +155,13 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     if (Persistence && plan.persistence_light_complete)
     {
       Persistence->SetColumnLightComplete(column, true);
+    }
+    if (plan.fsm_after == ColumnEmergeState::LitReady &&
+        col_rec.visual == ColumnVisualState::Publishing)
+    {
+      col_rec.visual = ColumnVisualState::Ready;
+      col_rec.publish_progress_frames = 0;
+      col_rec.prefer_kick_stall_frames = 0;
     }
   }
   if (plan.enqueue_first_mesh)
@@ -336,6 +355,22 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         }
         ColumnChunkSnapshot snap = BuildLitApplyChunkSnapshot(
             MeshService.get(), BlockWorld, coord, revision_stale);
+        if (const ColumnRecord *rec = GetColumnRecords().Find(key))
+        {
+          snap.has_publish_progress = rec->publish_progress_frames > 0;
+          snap.prefer_kick_stall_frames = rec->prefer_kick_stall_frames;
+          snap.visual = rec->visual;
+        }
+        if (snap.fully_dark && snap.has_drawable)
+        {
+          ColumnRecord &rec = GetColumnRecords().GetOrCreate(key);
+          if (rec.visual == ColumnVisualState::Ready ||
+              rec.visual == ColumnVisualState::PublishedEmpty)
+          {
+            rec.visual = ColumnVisualState::NeedRelight;
+          }
+          snap.visual = rec.visual;
+        }
         in.relit_chunks.push_back(snap);
         if (snap.has_drawable)
         {

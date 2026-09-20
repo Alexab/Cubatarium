@@ -3,6 +3,7 @@
 #include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnJobGraph.h"
+#include "World/Streaming/ColumnVisualState.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -58,6 +59,13 @@ struct ColumnRecord
   ColumnPublishedState published{};
   ColumnPendingState pending{};
   ColumnDebtState debt{};
+  /// Sysreset v2: owning visual FSM (mesh+light co-publish).
+  ColumnVisualState visual{ColumnVisualState::Ready};
+  /// Frames with real publish progress (lit rev advance / MarkRelit→Dirty).
+  /// Not "GPU queued". PreferKick requires this > 0 while Publishing.
+  int publish_progress_frames{0};
+  /// PreferKick-without-Dirty stall counter while NeedRelight.
+  int prefer_kick_stall_frames{0};
 };
 
 inline uint64_t PackColumnKey(glm::ivec2 xz)
@@ -99,6 +107,32 @@ public:
   void SetDesired(glm::ivec2 xz, ColumnDesiredStage stage)
   {
     GetOrCreate(xz).desired = stage;
+  }
+
+  void SetVisual(glm::ivec2 xz, ColumnVisualState state)
+  {
+    GetOrCreate(xz).visual = state;
+  }
+
+  void NotePublishProgress(glm::ivec2 xz)
+  {
+    ColumnRecord &rec = GetOrCreate(xz);
+    if (rec.publish_progress_frames < 8)
+    {
+      ++rec.publish_progress_frames;
+    }
+    rec.prefer_kick_stall_frames = 0;
+    if (rec.visual == ColumnVisualState::NeedRelight ||
+        rec.visual == ColumnVisualState::NeedRemesh)
+    {
+      rec.visual = ColumnVisualState::Publishing;
+    }
+  }
+
+  void NotePreferKickStall(glm::ivec2 xz)
+  {
+    ColumnRecord &rec = GetOrCreate(xz);
+    ++rec.prefer_kick_stall_frames;
   }
 
   void Erase(glm::ivec2 xz) { Records.erase(PackColumnKey(xz)); }

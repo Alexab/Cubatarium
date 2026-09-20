@@ -2464,6 +2464,7 @@ int main()
 
     {
       using cutum::ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark;
+      using cutum::ShouldForceDirtyAfterPreferKickStall;
       using cutum::ShouldStopRemeshSnapshotForFmResidual;
       using cutum::ShouldYieldRemeshSlotToFmUnderProtect;
       using cutum::ColumnVisualAllowsPreferKick;
@@ -2483,15 +2484,22 @@ int main()
              "FullyDark P1: FM progressing → no yield");
       Expect(!ShouldYieldRemeshSlotToFmUnderProtect(false, 40, 0, 2, 0),
              "FullyDark P1: no protect → no yield");
-      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(true, true, true,
-                                                                true),
-             "FullyDark P2: PreferKick when GPU/RAA pending");
-      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(true, true, true,
-                                                                 false),
-             "FullyDark P2: no GPU → no fake progress");
-      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(false, true, true,
-                                                                true),
-             "lit-drain: PreferKick FD drawable+GPU without force_stale");
+      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                  true, true, true, true, false),
+             "FullyDark P2: PreferKick needs publish progress");
+      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                 true, true, true, true, true),
+             "FullyDark P2: PreferKick when GPU+progress");
+      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                  true, true, true, false, true),
+             "FullyDark P2: no GPU → no PreferKick");
+      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                 false, true, true, true, true),
+             "lit-drain: PreferKick FD drawable+GPU+progress");
+      Expect(ShouldForceDirtyAfterPreferKickStall(true, true, false, 8),
+             "stall escape: force Dirty after PreferKick without progress");
+      Expect(!ShouldForceDirtyAfterPreferKickStall(true, true, true, 8),
+             "stall escape: progress present → no force");
       Expect(ColumnVisualAllowsPreferKick(
                  cutum::ColumnVisualState::Publishing, true),
              "ColumnVisual: PreferKick while Publishing+progress");

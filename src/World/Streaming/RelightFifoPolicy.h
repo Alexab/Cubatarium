@@ -726,15 +726,31 @@ inline bool ShouldForceMarkRelitForTicketedStale(
   return consume_mode && still_stale;
 }
 
-/// FullyDark FM fairness P2 (sysreset): PreferKick pending GPU/RAA is legal.
-/// Forbidden: PreferKick as sole path while secondary Dirty is skipped and
-/// MarkRelit has no publish progress (see ShouldSkipSecondaryFullyDarkDirty).
-/// Skip-already-dirty PreferKick carve-outs were removed from the planner.
+/// PreferKick is legal only while Publishing and Apply made real progress
+/// (lit bytes / meshed_rev / MarkRelit→Dirty — not "GPU queued").
 inline bool ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
     bool /*force_stale_ticket*/, bool fully_dark, bool has_drawable,
-    bool pending_gpu_or_raa, bool /*has_publish_progress*/ = false)
+    bool pending_gpu_or_raa, bool has_publish_progress = false)
 {
-  return fully_dark && has_drawable && pending_gpu_or_raa;
+  if (!(fully_dark && has_drawable && pending_gpu_or_raa))
+  {
+    return false;
+  }
+  return has_publish_progress;
+}
+
+/// NeedRelight ∧ PreferKick without progress for N frames → force Dirty once.
+inline bool ShouldForceDirtyAfterPreferKickStall(bool fully_dark_drawable,
+                                                 bool pending_gpu_or_raa,
+                                                 bool has_publish_progress,
+                                                 int stall_frames,
+                                                 int stall_limit = 8)
+{
+  if (!fully_dark_drawable || !pending_gpu_or_raa || has_publish_progress)
+  {
+    return false;
+  }
+  return stall_frames >= stall_limit;
 }
 
 /// N04 T2: remesh ticketed FullyDark when Flow ticket exists but ColumnHasRepairProgress

@@ -45,6 +45,9 @@ struct ColumnChunkSnapshot
   bool fully_dark{false};
   bool soft_defer{false};
   bool still_stale{false};
+  bool has_publish_progress{false};
+  int prefer_kick_stall_frames{0};
+  ColumnVisualState visual{ColumnVisualState::Ready};
   uint64_t meshed_light_rev{0};
   uint64_t light_field_rev{0};
 };
@@ -252,6 +255,52 @@ inline void AppendUniqueCoord(std::vector<glm::ivec3> &vec,
   vec.push_back(coord);
 }
 
+inline void ScheduleNeedRelightDirty(LitApplyPlan &plan,
+                                     const ColumnChunkSnapshot &chunk,
+                                     bool priority)
+{
+  if (priority)
+  {
+    AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
+  }
+  else
+  {
+    AppendUniqueCoord(plan.mark_dirty, chunk.coord);
+  }
+  ++plan.schedule_n;
+}
+
+/// FD+drawable → NeedRelight; PreferKick only with publish progress; else Dirty.
+/// Stall escape: PreferKick without progress ≥8 frames → force Dirty once.
+inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
+                                      const ColumnChunkSnapshot &chunk,
+                                      bool pending_gpu_or_raa,
+                                      bool force_stale_ticket)
+{
+  const bool fd_drawable = chunk.fully_dark && chunk.has_drawable;
+  if (!fd_drawable || !pending_gpu_or_raa)
+  {
+    return false;
+  }
+  if (ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+          force_stale_ticket, chunk.fully_dark, chunk.has_drawable,
+          pending_gpu_or_raa, chunk.has_publish_progress))
+  {
+    AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
+    return true;
+  }
+  if (ShouldForceDirtyAfterPreferKickStall(
+          fd_drawable, pending_gpu_or_raa, chunk.has_publish_progress,
+          chunk.prefer_kick_stall_frames))
+  {
+    ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
+    return true;
+  }
+  // No progress yet: schedule Dirty (owning NeedRelight producer).
+  ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
+  return true;
+}
+
 inline void ForceFirstMeshFromSkipDirty(LitApplyPlan &plan,
                                         const LitApplyColumnInput &in,
                                         const glm::ivec3 &coord)
@@ -293,11 +342,8 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
-        // PreferKick pending GPU while already Dirty (drain, not sole-owner spin).
-        if (chunk.fully_dark && chunk.has_drawable)
-        {
-          AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
-        }
+        // Sysreset v2: no PreferKick carve-out on skip_already_dirty.
+        // PreferKick only via TryPreferKickOrForceDirty with publish progress.
       }
       else if (chunk.inflight)
       {
@@ -311,14 +357,12 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
     {
       continue;
     }
-    // FullyDark FM fairness P2 (sysreset): PreferKick only with publish progress.
-    // Default has_publish_progress=false → ColumnVisualState NeedRemesh via Dirty.
-    if (ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
-            in.force_stale_ticket, chunk.fully_dark, chunk.has_drawable,
-            chunk.gpu_pending || chunk.raa_pending))
+    if (TryPreferKickOrForceDirty(plan, chunk,
+                                  chunk.gpu_pending || chunk.raa_pending,
+                                  in.force_stale_ticket))
     {
-      AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
-      if (chunk.raa_pending)
+      if (chunk.raa_pending && !plan.prefer_kick_gpu.empty() &&
+          plan.prefer_kick_gpu.back() == chunk.coord)
       {
         AppendUniqueCoord(plan.request_raa, chunk.coord);
       }
@@ -400,10 +444,7 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
-        if (chunk.fully_dark && chunk.has_drawable)
-        {
-          AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
-        }
+        // Sysreset v2: no PreferKick carve-out on skip_already_dirty.
       }
       else if (chunk.inflight)
       {
@@ -421,7 +462,12 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
     {
       if (decision == RemeshAfterLitApplyDecision::PreferKickGpu)
       {
-        AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
+        if (!TryPreferKickOrForceDirty(plan, chunk,
+                                       chunk.gpu_pending || chunk.raa_pending,
+                                       in.force_stale_ticket))
+        {
+          ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
+        }
       }
       else if (decision == RemeshAfterLitApplyDecision::SkipAlreadyDirty)
       {
@@ -452,14 +498,12 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
     {
       continue;
     }
-    // FullyDark FM fairness P2 (sysreset): PreferKick only with publish progress.
-    // Default has_publish_progress=false → ColumnVisualState NeedRemesh via Dirty.
-    if (ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
-            in.force_stale_ticket, chunk.fully_dark, chunk.has_drawable,
-            chunk.gpu_pending || chunk.raa_pending))
+    if (TryPreferKickOrForceDirty(plan, chunk,
+                                  chunk.gpu_pending || chunk.raa_pending,
+                                  in.force_stale_ticket))
     {
-      AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
-      if (chunk.raa_pending)
+      if (chunk.raa_pending && !plan.prefer_kick_gpu.empty() &&
+          plan.prefer_kick_gpu.back() == chunk.coord)
       {
         AppendUniqueCoord(plan.request_raa, chunk.coord);
       }
