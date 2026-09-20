@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -1355,16 +1356,34 @@ def main() -> int:
             except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
                 print(f"WARN: {args.scenario} locus pin failed: {exc}", flush=True)
         # Fog pull-in collapses RD and masks west VB/missing (manual keeps fog~3–4).
-        # Temporarily disable for this scenario; restore after the run.
+        # Default AF pin OFF for dual-lane; sysreset / honest latch needs fog ON
+        # (CUBA_FLIGHT_FOG_ON=1).
         cfg_path = BIN / "config.json"
         args._product174657_cfg_restore = None  # type: ignore[attr-defined]
+        force_fog_on = os.environ.get("CUBA_FLIGHT_FOG_ON", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
         if cfg_path.is_file():
             try:
                 cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
                 render = cfg.setdefault("render", {})
                 prev_fog = render.get("fog_pull_in_enabled", True)
                 args._product174657_cfg_restore = (cfg_path, prev_fog)  # type: ignore[attr-defined]
-                if prev_fog is not False:
+                if force_fog_on:
+                    if prev_fog is not True:
+                        render["fog_pull_in_enabled"] = True
+                        cfg_path.write_text(
+                            json.dumps(cfg, indent=4) + "\n", encoding="utf-8"
+                        )
+                    print(
+                        f"INFO: {args.scenario} CUBA_FLIGHT_FOG_ON=1 → "
+                        f"fog_pull_in_enabled=true (was {prev_fog})",
+                        flush=True,
+                    )
+                elif prev_fog is not False:
                     render["fog_pull_in_enabled"] = False
                     cfg_path.write_text(
                         json.dumps(cfg, indent=4) + "\n", encoding="utf-8"

@@ -166,6 +166,10 @@ struct URuntimeTuning
   /// SoT 210431: keep-shell amortize mode 0..4 (K0..K-D). Bake-off winner = K-B (2).
   int KeepShellAmortizeMode{2};
 
+  /// A10 RelightReplace: MarkRelit sole Dirty owner for published FullyDark.
+  /// Default true (legacy). Sysreset bisect: CUBA_RELIGHT_REPLACE_OWNER=0.
+  bool RelightReplaceDirtyOwner{true};
+
   static URuntimeTuning &Get();
   static void ResetToDefaults();
   /// Apply low|med|high preset (keeps other knobs unless tier sets them).

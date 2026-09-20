@@ -1,5 +1,6 @@
 #include "World/Core/RuntimeTuning.h"
 
+#include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Physics/FluidTuning.h"
 
 #include <algorithm>
@@ -493,6 +494,9 @@ void URuntimeTuning::ApplyEnvOverrides()
   };
   apply_bool_env("CUBA_STREAM_SIMPLE", t.StreamSimple);
   apply_bool_env("CUBA_SCHEDULE_SHED_UV1", t.ScheduleShedUv1);
+  apply_bool_env("CUBA_RELIGHT_REPLACE_OWNER", t.RelightReplaceDirtyOwner);
+  // Keep MeshApplyPolicy atomic in sync with tuning (AF bisect / streaming_tune).
+  SetRelightReplaceDirtyOwnerEnabled(t.RelightReplaceDirtyOwner);
 }
 
 } // namespace cutum
