@@ -68,3 +68,16 @@ not a hard OFF of A10.
 
 Keep: R06 sticky-only, I3t PriorLit TTL, fog no-VB-heal, MeshPublishContract,
 ColumnVisualState, `CUBA_FLIGHT_FOG_ON`.
+
+## Final landed commits (2026-09-20)
+
+| SHA | What |
+|---|---|
+| `aac4ec8e` | docs freeze + bisect env (`CUBA_RELIGHT_*`, fog ON flag) |
+| `4c90c12f` | R06 sticky-only, I3t TTL, fog no VB heal, MeshPublishContract, ColumnVisualState |
+| `79b7aea0` | restore RelightReplace seam skip (progress-gate Dirty flood reverted) |
+
+AF west COVERED on successful runs; dual-lane still OPEN (VB high under fog ON
+honesty). Units: `miss_first_mesh_class_test`, `mesh_neighbor_policy_test`,
+`mesh_publish_contract_test` PASS. Operator gates:
+[SYSRESET_OPERATOR_AF_GATES.md](SYSRESET_OPERATOR_AF_GATES.md).
