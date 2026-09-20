@@ -1,0 +1,100 @@
+{
+  "label": "sysreset_p4_dive_cold",
+  "perf_jsonl": "build\\desktop-msvc\\Debug\\logs\\perf_20260920-164529_66704.jsonl",
+  "periods": 40,
+  "operator_visual": null,
+  "mid_corridor": {
+    "focus_cx_band": "[2,5]",
+    "visible_black_focus_med": 93.0,
+    "visible_black_legal_dark_med": 3.0,
+    "stale_vertex_light_med": 91.0,
+    "stale_vl_rev_med": 0.0,
+    "fully_dark_census_med": 91.0,
+    "fully_dark_stalled_med": 25.0,
+    "near_focus_holes_med": 0.0,
+    "unlit_max": 47.0,
+    "mesh_apply_stale_visual_med": 0.0,
+    "mesh_apply_stale_visual_delta_med": 0.0,
+    "publication_incomplete_material_med": 0.0,
+    "publication_oom_retain_med": 0.0,
+    "publication_overload_retain_med": 0.0,
+    "mesh_apply_stale_geom_delta_med": 0.0,
+    "mesh_apply_stale_light_delta_med": 0.0,
+    "mesh_apply_stale_catalog_delta_med": 0.0,
+    "mesh_apply_stale_stamp_invalid_delta_med": 0.0,
+    "rows_mid": 13,
+    "rows_mid_focus": 13
+  },
+  "proxy_adequacy": {
+    "early_vb_med": 110.0,
+    "focus_missing_mesh_med": 1.0,
+    "miss_stuck_run_frames_tail_max": 108.0,
+    "fog_pull_in_rd_fly_med": 3.0,
+    "visible_black_focus_fly_med": 93.0,
+    "gpu_kick_fly_med": 0.0,
+    "ok_remesh_fly_med": 1.0,
+    "player_y_early_med": 59.0,
+    "player_y_late_med": 53.0,
+    "player_y_delta": -6.0,
+    "focus_west_delta_cx": 5.0,
+    "gpu_kick_post_drain_fly_max": 0.0,
+    "adequacy_pass": true,
+    "adequacy_fails": []
+  },
+  "dual_lane_stop_line_cold": {
+    "vb_fly_med": 93.0,
+    "stale_vl_fly_med": 84.0,
+    "unlit_max": 47.0,
+    "mid_fully_dark_stalled_med": 25.0,
+    "warm": false,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "vb_fly_med_above_dual_lane",
+      "unlit_max_above_dual_lane",
+      "mid_fully_dark_stalled_above_stop_line"
+    ]
+  },
+  "dual_lane_stop_line_warm": {
+    "vb_fly_med": 93.0,
+    "stale_vl_fly_med": 84.0,
+    "unlit_max": 47.0,
+    "mid_fully_dark_stalled_med": 25.0,
+    "warm": true,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "vb_fly_med_above_dual_lane",
+      "unlit_max_above_dual_lane",
+      "mid_fully_dark_stalled_above_stop_line"
+    ]
+  },
+  "eye_proxy_stop_line": {
+    "source": "period_jsonl",
+    "perf_path": "build\\desktop-msvc\\Debug\\logs\\perf_20260920-164529_66704.jsonl",
+    "eye_proxy_segment": "mid_corridor",
+    "eye_proxy_coverage": "UNTESTED",
+    "mesh_apply_stale_visual_mid_med": 0.0,
+    "mesh_apply_stale_visual_fly_med": 0.0,
+    "mesh_apply_stale_visual_delta_med": 0.0,
+    "effective_holes_blink_rate": 0.0,
+    "transparent_cmd_reorder_mid_med": 0.5,
+    "transparent_cmd_reorder_fly_med": 0.5,
+    "near_focus_holes_mid_med": 0.0,
+    "visual_holes_mid_med": 0.0,
+    "publication_incomplete_material_mid_med": 0.0,
+    "publication_oom_retain_mid_med": 0.0,
+    "rows_used": 6,
+    "west_route_coverage": "COVERED",
+    "focus_cx_min": -3.0,
+    "focus_cx_max": 2.0,
+    "west_route_coverage_reason": "reached_cx_le_minus3",
+    "eye_proxy_stop_line_pass": true,
+    "eye_proxy_stop_line_fails": []
+  },
+  "mid_stalled_gate_pass": false,
+  "mid_stalled_gate_fails": [
+    "mid_fully_dark_stalled_above_stop_line"
+  ],
+  "merge_green": false,
+  "west_route_coverage": "COVERED",
+  "operator_visual_status": "UNTESTED"
+}
