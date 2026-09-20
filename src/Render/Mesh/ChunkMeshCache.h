@@ -274,6 +274,8 @@ public:
   {
     return MeshApplyStaleAcceptedRefreshCount;
   }
+  /// SoT 100303: accepted-stale empty-spoof holds skipped (first-fill publish).
+  uint64_t GetI3tHoldEmptySpoofCount() const { return I3tHoldEmptySpoofN; }
   uint64_t GetMeshApplyStaleRevCount() const { return MeshApplyStaleRevCount; }
   /// Older apply discarded while Active tracks a newer revision (not remesh).
   uint64_t GetMeshApplySupersededCount() const
@@ -1065,6 +1067,8 @@ private:
   uint64_t MeshApplyStaleGeomAcceptedCount{0};
   /// N04 H4: Dirty refresh queued after accepting light/geom stale drawable.
   uint64_t MeshApplyStaleAcceptedRefreshCount{0};
+  /// SoT 100303: accepted-stale would have held empty spoof — publish instead.
+  uint64_t I3tHoldEmptySpoofN{0};
   /// I3t: last ApplyMeshResult held prior draw (not a Completed publish).
   bool LastApplyWasRetainedPrior_{false};
   /// 162400: RemeshObsoleteTracked (Current moved under Active).

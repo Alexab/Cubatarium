@@ -97,6 +97,37 @@ int main()
     {
       return Fail("air-near-fluid still remeshes surface cy");
     }
+    // SoT 111310: sea-surface FullyDark/void peer heal (surface_band only).
+    if (!cutum::ShouldRemeshSeaSurfaceDarkPeer(
+            SeaSeamEyeContext::AirNearFluid, true, true, false, true))
+    {
+      return Fail("air-near-fluid FullyDark peer must remesh");
+    }
+    if (!cutum::ShouldRemeshSeaSurfaceDarkPeer(
+            SeaSeamEyeContext::Underwater, true, true, false, true))
+    {
+      return Fail("underwater FullyDark peer in surface_band must remesh");
+    }
+    if (!cutum::ShouldRemeshSeaSurfaceDarkPeer(
+            SeaSeamEyeContext::AirNearFluid, true, true, true, false))
+    {
+      return Fail("air-near-fluid sticky face peer must remesh");
+    }
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
+            SeaSeamEyeContext::AirNearFluid, true, true, false, false))
+    {
+      return Fail("air-near-fluid non-dark non-sticky must not remesh");
+    }
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
+            SeaSeamEyeContext::Inland, true, true, false, true))
+    {
+      return Fail("inland must not use dark heal broaden");
+    }
+    if (cutum::ShouldRemeshSeaSurfaceDarkPeer(
+            SeaSeamEyeContext::AirNearFluid, true, false, false, true))
+    {
+      return Fail("dark heal stays in surface_band");
+    }
     int min_y = 0;
     int max_y = 0;
     cutum::SeaSeamRemeshYRangeForPublisher(
@@ -162,6 +193,28 @@ int main()
       !cutum::ShouldLatchFogHoleDebtNow(0, 9, 3, 0))
   {
     return Fail("fog hole_debt_now near-miss or unfinished");
+  }
+  // SoT 115048: rim miss (horiz>2) must still latch fog.
+  if (!cutum::ShouldLatchFogHoleDebtNearMiss(1, 5) ||
+      !cutum::ShouldLatchFogHoleDebtNow(1, 5, 0, 0))
+  {
+    return Fail("fog rim miss must latch hole_debt");
+  }
+  if (!cutum::ShouldLatchFogHoleDebtVbFocus(42) ||
+      cutum::ShouldLatchFogHoleDebtVbFocus(5))
+  {
+    return Fail("fog VB focus latch thresh");
+  }
+  if (cutum::ShouldClearFogHoleDebtLatch(0, 0, 0, 0, 20) ||
+      !cutum::ShouldClearFogHoleDebtLatch(0, 0, 0, 0, 3))
+  {
+    return Fail("fog clear requires VB drained");
+  }
+  if (cutum::ShouldDecayFogHoleDebtHold(1, 30) ||
+      !cutum::ShouldDecayFogHoleDebtHold(0, 30) ||
+      cutum::ShouldDecayFogHoleDebtHold(0, 0))
+  {
+    return Fail("fog hold decay only when miss cleared");
   }
   if (!cutum::ShouldClearFogHoleDebtLatch(0, 0, 0, 0) ||
       cutum::ShouldClearFogHoleDebtLatch(0, 0, 2, 0))

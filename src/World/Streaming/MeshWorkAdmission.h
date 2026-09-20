@@ -287,21 +287,27 @@ inline bool ShouldKeepRemeshProtectUnderVbStall(bool consume_mode,
 
 /// FZ2.7-P13 R1 / Q2b: drawable FullyDark or stale faces need Remesh floor even
 /// under FM steal (201330: repair debt high while remesh_cap starved).
+/// SoT 111310: FullyDark plug debt arms protect even when SoftDefer holes=0
+/// (stop-tail remesh_cap=0 with dirty_remesh≫0).
 inline bool ShouldProtectLitSettleRemesh(bool holes, int dark_face_stale_near,
                                          int remesh_queue_n,
                                          int stale_thresh = 200,
                                          int fully_dark_repair_n = 0,
-                                         int fully_dark_thresh = 20)
+                                         int fully_dark_thresh = 8)
 {
-  if (!holes || remesh_queue_n <= 0)
+  if (remesh_queue_n <= 0)
   {
     return false;
   }
-  if (dark_face_stale_near > stale_thresh)
+  if (fully_dark_repair_n >= fully_dark_thresh)
   {
     return true;
   }
-  return fully_dark_repair_n >= fully_dark_thresh;
+  if (!holes)
+  {
+    return false;
+  }
+  return dark_face_stale_near > stale_thresh;
 }
 
 /// G1-P1 / A11: under holes + RemeshQ + StaleVertexLight/FullyDark debt, reserve
@@ -1174,7 +1180,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   // MissOwn VB P1: keep ticketed VB protect even in consume_mode when stalled high.
   const bool protect_lit = ShouldProtectLitSettleRemesh(
       holes, in.dark_face_stale_near_n, in.remesh_queue_n, 200,
-      in.visible_black_fully_dark_repair_n, 20);
+      in.visible_black_fully_dark_repair_n, 8);
   const bool keep_vb_protect = ShouldKeepRemeshProtectUnderVbStall(
       consume_mode, in.visible_black_stalled_n);
   const bool protect_ticketed_vb =
@@ -1192,7 +1198,12 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
     out.protect_lit_settle_remesh = true;
-    out.remesh_schedule = std::max(out.remesh_schedule, 2);
+    // SoT 111310: FullyDark plug debt — remesh floor scales with repair census
+    // (cap=2 left VB plateau with ok_remesh=2 but age climbing).
+    const int fd_repair = in.visible_black_fully_dark_repair_n;
+    const int fd_floor =
+        fd_repair >= 8 ? std::min(8, 2 + fd_repair / 2) : 2;
+    out.remesh_schedule = std::max(out.remesh_schedule, fd_floor);
     out.max_schedule =
         std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
   }

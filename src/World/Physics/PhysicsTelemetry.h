@@ -55,6 +55,8 @@ struct PhysicsTelemetry
   uint64_t MeshApplyStaleGeomAccepted{0};
   uint64_t MeshApplyStaleLightAccepted{0};
   uint64_t MeshApplyStaleAcceptedRefresh{0};
+  /// SoT 100303: I3t empty-spoof hold skipped (first-fill publish).
+  uint64_t I3tHoldEmptySpoofN{0};
   /// DiscardOlderKeepActive — older async keep Active for newer in-flight.
   uint64_t MeshApplySuperseded{0};
   /// DropNoActive — apply with no Active tracking.

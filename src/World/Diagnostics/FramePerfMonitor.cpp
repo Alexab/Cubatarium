@@ -130,6 +130,7 @@ struct Session
   uint64_t MeshApplyStaleGeomAcceptedAtPeriodStart{0};
   uint64_t MeshApplyStaleLightAcceptedAtPeriodStart{0};
   uint64_t MeshApplyStaleAcceptedRefreshAtPeriodStart{0};
+  uint64_t I3tHoldEmptySpoofAtPeriodStart{0};
   uint64_t MeshApplySupersededAtPeriodStart{0};
   uint64_t MeshApplyDropNoActiveAtPeriodStart{0};
   uint64_t MeshDiscardedLateAtPeriodStart{0};
@@ -560,9 +561,11 @@ struct FrameNumbers
   uint64_t mesh_apply_stale_geom_accepted{0};
   uint64_t mesh_apply_stale_light_accepted{0};
   uint64_t mesh_apply_stale_accepted_refresh{0};
+  uint64_t i3t_hold_empty_spoof_n{0};
   uint64_t mesh_apply_stale_geom_accepted_delta{0};
   uint64_t mesh_apply_stale_light_accepted_delta{0};
   uint64_t mesh_apply_stale_accepted_refresh_delta{0};
+  uint64_t i3t_hold_empty_spoof_delta{0};
   uint64_t mesh_apply_superseded{0};
   uint64_t mesh_apply_superseded_delta{0};
   uint64_t mesh_apply_drop_no_active{0};
@@ -1222,6 +1225,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_apply_stale_geom_accepted = phys.MeshApplyStaleGeomAccepted;
   n.mesh_apply_stale_light_accepted = phys.MeshApplyStaleLightAccepted;
   n.mesh_apply_stale_accepted_refresh = phys.MeshApplyStaleAcceptedRefresh;
+  n.i3t_hold_empty_spoof_n = phys.I3tHoldEmptySpoofN;
   n.mesh_apply_superseded = phys.MeshApplySuperseded;
   n.mesh_apply_drop_no_active = phys.MeshApplyDropNoActive;
   n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
@@ -1931,12 +1935,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mesh_apply_stale_light_accepted
           << ",\"mesh_apply_stale_accepted_refresh\":"
           << n.mesh_apply_stale_accepted_refresh
+          << ",\"i3t_hold_empty_spoof_n\":" << n.i3t_hold_empty_spoof_n
           << ",\"mesh_apply_stale_geom_accepted_delta\":"
           << n.mesh_apply_stale_geom_accepted_delta
           << ",\"mesh_apply_stale_light_accepted_delta\":"
           << n.mesh_apply_stale_light_accepted_delta
           << ",\"mesh_apply_stale_accepted_refresh_delta\":"
           << n.mesh_apply_stale_accepted_refresh_delta
+          << ",\"i3t_hold_empty_spoof_delta\":" << n.i3t_hold_empty_spoof_delta
           << ",\"mesh_apply_superseded\":" << n.mesh_apply_superseded
           << ",\"mesh_apply_superseded_delta\":"
           << n.mesh_apply_superseded_delta
@@ -2705,6 +2711,10 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
           ? n.mesh_apply_stale_accepted_refresh -
                 s.MeshApplyStaleAcceptedRefreshAtPeriodStart
           : 0;
+  period.i3t_hold_empty_spoof_delta =
+      n.i3t_hold_empty_spoof_n >= s.I3tHoldEmptySpoofAtPeriodStart
+          ? n.i3t_hold_empty_spoof_n - s.I3tHoldEmptySpoofAtPeriodStart
+          : 0;
   period.mesh_apply_superseded_delta =
       n.mesh_apply_superseded >= s.MeshApplySupersededAtPeriodStart
           ? n.mesh_apply_superseded - s.MeshApplySupersededAtPeriodStart
@@ -2768,6 +2778,7 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   s.MeshApplyStaleLightAcceptedAtPeriodStart = n.mesh_apply_stale_light_accepted;
   s.MeshApplyStaleAcceptedRefreshAtPeriodStart =
       n.mesh_apply_stale_accepted_refresh;
+  s.I3tHoldEmptySpoofAtPeriodStart = n.i3t_hold_empty_spoof_n;
   s.MeshApplySupersededAtPeriodStart = n.mesh_apply_superseded;
   s.MeshApplyDropNoActiveAtPeriodStart = n.mesh_apply_drop_no_active;
   s.PoolRetiredReclaimedAtPeriodStart = n.pool_retired_reclaimed_n;

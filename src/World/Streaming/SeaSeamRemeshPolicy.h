@@ -190,4 +190,36 @@ inline bool ShouldRemeshStickyOverlayPeer(bool peer_drawable,
   return false;
 }
 
+/// SoT 111310: sea-surface FullyDark/void heal — surface_band only (never
+/// open subsea_band for Inland). AirNearFluid + Underwater: sticky face OR
+/// FullyDark/void. Inland stays sticky-only (anti W1 flood).
+inline bool ShouldRemeshSeaSurfaceDarkPeer(SeaSeamEyeContext ctx,
+                                          bool peer_drawable,
+                                          bool peer_in_surface_band,
+                                          bool peer_face_toward_overlay,
+                                          bool peer_fully_dark_or_void)
+{
+  if (!peer_drawable || !peer_in_surface_band)
+  {
+    return false;
+  }
+  if (ctx == SeaSeamEyeContext::Inland)
+  {
+    return peer_face_toward_overlay;
+  }
+  return peer_face_toward_overlay || peer_fully_dark_or_void;
+}
+
+/// Compat alias — SoT 111310 first name.
+inline bool ShouldRemeshAirNearFluidDarkPeer(SeaSeamEyeContext ctx,
+                                            bool peer_drawable,
+                                            bool peer_in_surface_band,
+                                            bool peer_face_toward_overlay,
+                                            bool peer_fully_dark_or_void)
+{
+  return ShouldRemeshSeaSurfaceDarkPeer(ctx, peer_drawable, peer_in_surface_band,
+                                        peer_face_toward_overlay,
+                                        peer_fully_dark_or_void);
+}
+
 } // namespace cutum

@@ -1192,8 +1192,15 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             Persistence->EnqueueTerrainColumnRelight(
                 ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
                 remesh_min, remesh_max);
-            // Do NOT MarkDirty here — SoftDefer rejects light=0 remesh of an
-            // already-built mesh; MarkRelit remeshes when lit (pending path).
+            // SoT 141300: sky already in field + FullyDark bake — remesh now.
+            // Note-only left fifo≡0 / MarkRelit≡0 while stall/repair plateaued.
+            // Still skip MarkDirty when !any_sky (SoftDefer rejects light=0).
+            if (ShouldRemeshFullyDarkWhenSkyPresent(fully_dark, any_sky))
+            {
+              MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                  ground, remesh_min, remesh_max,
+                  /*include_horizontal_neighbors=*/true);
+            }
             ++repaired;
             continue;
           }

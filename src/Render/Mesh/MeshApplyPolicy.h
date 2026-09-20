@@ -157,12 +157,12 @@ inline bool ShouldHoldPriorDrawOnAcceptedStale(bool accepted_input_stale,
   return accepted_input_stale && had_prior_drawable;
 }
 
-/// SoT 090834 T3: overlay/fluid accepted geom — treat resident OR pipeline mesh
-/// as prior even when GpuQuadCount was spoofed (empty keep-until-bind).
+/// Visual prior for I3t: drawable, or resident+pipeline (empty-spoof SSBO still
+/// allocated). SoT 100303: overlay/fluid must NOT force resident-alone prior —
+/// that held empty spoofs and left SoftDefer holes.
 inline bool HadVisualPriorForI3tHold(bool has_drawable_greedy,
                                     bool gpu_resident_flag,
-                                    bool pipeline_has_gpu_mesh,
-                                    bool overlay_or_fluid_force = false)
+                                    bool pipeline_has_gpu_mesh)
 {
   if (has_drawable_greedy)
   {
@@ -172,11 +172,35 @@ inline bool HadVisualPriorForI3tHold(bool has_drawable_greedy,
   {
     return true;
   }
-  if (overlay_or_fluid_force && (gpu_resident_flag || pipeline_has_gpu_mesh))
-  {
-    return true;
-  }
   return false;
+}
+
+/// SoT 100303: never I3t-hold without a drawable greedy — first-fill must
+/// publish. Weak resident/pipe prior alone is diagnostic-only (empty spoof).
+inline bool ShouldI3tHoldPriorOnAcceptedStale(bool accepted_input_stale,
+                                             bool has_drawable_greedy,
+                                             bool gpu_resident_flag,
+                                             bool pipeline_has_gpu_mesh)
+{
+  if (!has_drawable_greedy)
+  {
+    return false;
+  }
+  return ShouldHoldPriorDrawOnAcceptedStale(
+      accepted_input_stale,
+      HadVisualPriorForI3tHold(has_drawable_greedy, gpu_resident_flag,
+                               pipeline_has_gpu_mesh));
+}
+
+/// Accepted-stale would have held an empty spoof (no drawable) — publish
+/// instead; count for SoftDefer-empty autopsy.
+inline bool IsI3tEmptySpoofHoldSkipped(bool accepted_input_stale,
+                                       bool has_drawable_greedy,
+                                       bool gpu_resident_flag,
+                                       bool pipeline_has_gpu_mesh)
+{
+  return accepted_input_stale && !has_drawable_greedy &&
+         (gpu_resident_flag || pipeline_has_gpu_mesh);
 }
 
 /// Era21 I-M6: under FOV miss, SoftDefer Capture is blocked only by a live

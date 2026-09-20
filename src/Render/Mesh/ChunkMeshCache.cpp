@@ -3783,24 +3783,21 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   // N04 I3t: accepted stale on prior drawable — keep prior sole live image;
   // queue ordinary Dirty refresh (do not Bind wrong bake / clear batches).
-  // E1/111235: visual prior includes GpuResident+HasGpuMesh after empty spoof
-  // (GpuQuadCount may be 0 while SSBO still allocated).
-  // SoT 090834 T3: overlay/fluid force weaker prior heuristics.
+  // SoT 100303: never hold without drawable (empty spoof → SoftDefer hole).
   {
+    const bool has_drawable = HasDrawableGreedyMesh(coord);
     const auto git = GreedyCache.find(coord);
     const bool gpu_resident =
         git != GreedyCache.end() && git->second.GpuResident;
     const bool pipe_has_mesh =
         GpuPipeline != nullptr && GpuPipeline->HasGpuMesh(coord);
-    const bool overlay_or_fluid =
-        HasActiveBoundaryOverlay(coord) || gpu_result.transparent ||
-        (git != GreedyCache.end() && git->second.GpuTransparent) ||
-        boundary_overlay.active;
-    const bool had_prior_drawable = HadVisualPriorForI3tHold(
-        HasDrawableGreedyMesh(coord), gpu_resident, pipe_has_mesh,
-        overlay_or_fluid);
-    if (ShouldHoldPriorDrawOnAcceptedStale(accepted_input_stale,
-                                           had_prior_drawable))
+    if (IsI3tEmptySpoofHoldSkipped(accepted_input_stale, has_drawable,
+                                   gpu_resident, pipe_has_mesh))
+    {
+      ++I3tHoldEmptySpoofN;
+    }
+    if (ShouldI3tHoldPriorOnAcceptedStale(accepted_input_stale, has_drawable,
+                                          gpu_resident, pipe_has_mesh))
     {
       if (GpuPipeline && gpu_result.slotIndex >= 0)
       {
@@ -3809,8 +3806,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       if (!Dirty.Contains(coord))
       {
         Dirty.MarkDirty(coord);
-        ++MeshApplyStaleAcceptedRefreshCount;
       }
+      // Always count hold (even when Dirty already set) — silent holds hid
+      // SoftDefer-empty debt on SoT 100303.
+      ++MeshApplyStaleAcceptedRefreshCount;
       // RetainedPrior: not a published Completed — callers must not ++Completed.
       return false;
     }
@@ -4823,29 +4822,30 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
 
   // N04 I3t: accepted light/geom stale on prior drawable — hold prior sole live
   // image; Dirty-refresh (H4) without publishing wrong bake / dual MDI+packed.
-  // SoT 090834 T3: overlay/fluid expands weak prior heuristics.
+  // SoT 100303: never hold without drawable (empty spoof → SoftDefer hole).
   {
+    const bool has_drawable = HasDrawableGreedyMesh(result.coord);
     const auto git = GreedyCache.find(result.coord);
     const bool gpu_resident =
         git != GreedyCache.end() && git->second.GpuResident;
     const bool pipe_has_mesh =
         GpuPipeline != nullptr && GpuPipeline->HasGpuMesh(result.coord);
-    const bool overlay_or_fluid =
-        HasActiveBoundaryOverlay(result.coord) ||
-        (git != GreedyCache.end() && git->second.GpuTransparent) ||
-        result.BoundaryOverlay.active;
-    const bool had_prior = HadVisualPriorForI3tHold(
-        HasDrawableGreedyMesh(result.coord), gpu_resident, pipe_has_mesh,
-        overlay_or_fluid);
-    if (ShouldHoldPriorDrawOnAcceptedStale(refresh_after_accept_stale, had_prior))
+    if (IsI3tEmptySpoofHoldSkipped(refresh_after_accept_stale, has_drawable,
+                                   gpu_resident, pipe_has_mesh))
+    {
+      ++I3tHoldEmptySpoofN;
+    }
+    if (ShouldI3tHoldPriorOnAcceptedStale(refresh_after_accept_stale,
+                                          has_drawable, gpu_resident,
+                                          pipe_has_mesh))
     {
       ActiveMeshSourceRevision.erase(revisionIt);
       GpuExtractInFlight.erase(result.coord);
       if (!Dirty.Contains(result.coord))
       {
         Dirty.MarkDirty(result.coord);
-        ++MeshApplyStaleAcceptedRefreshCount;
       }
+      ++MeshApplyStaleAcceptedRefreshCount;
       abandon_fm_watch();
       LastApplyWasRetainedPrior_ = true;
       return;
@@ -5184,8 +5184,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     // I-R1 keep-until-bind: intentional empty CPU still satisfies column
     // (spawn ring) — publish 0-quad residency without FreeChunk.
-    // Visual prior for I3t uses HadVisualPriorForI3tHold(HasGpuMesh), not
-    // QuadCount spoof retention (that raised holes blink on AF).
+    // SoT 100303: I3t hold requires HasDrawableGreedy — empty spoof alone
+    // must not block first-fill publish.
     if (intentional_empty)
     {
       chunkMesh.GpuResident = true;

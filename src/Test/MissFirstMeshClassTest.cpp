@@ -2433,13 +2433,17 @@ int main()
     Expect(!ShouldProtectLitSettleRemesh(true, 100, 23),
            "P13 R1: stale≤200 → no protect");
     Expect(!ShouldProtectLitSettleRemesh(false, 3200, 23),
-           "P13 R1: !holes → no protect");
+           "P13 R1: !holes + no FullyDark debt → no protect");
     Expect(!ShouldProtectLitSettleRemesh(true, 3200, 0),
            "P13 R1: empty RemeshQ → no protect");
-    Expect(ShouldProtectLitSettleRemesh(true, 0, 10, 200, 40, 20),
+    Expect(ShouldProtectLitSettleRemesh(true, 0, 10, 200, 40, 8),
            "Q2b: FullyDark repair debt arms remesh protect");
-    Expect(!ShouldProtectLitSettleRemesh(true, 0, 10, 200, 10, 20),
+    Expect(!ShouldProtectLitSettleRemesh(true, 0, 10, 200, 5, 8),
            "Q2b: FullyDark repair below thresh skips");
+    Expect(ShouldProtectLitSettleRemesh(false, 0, 65, 200, 14, 8),
+           "SoT 111310: FullyDark plugs protect remesh without SoftDefer holes");
+    Expect(!ShouldProtectLitSettleRemesh(false, 0, 65, 200, 3, 8),
+           "SoT 111310: low FullyDark repair without holes → no protect");
 
     using cutum::ShouldReserveRemeshSnapshotSlice;
     Expect(ShouldReserveRemeshSnapshotSlice(true, 120, 76),
@@ -3345,20 +3349,33 @@ int main()
            "N04 H3: no ticket and not still_stale → no force");
     Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, true, 2),
            "N04 H3: after ticket drain, still_stale FullyDark still forces");
+    Expect(ShouldForceMarkRelitForTicketedStale(false, true, true, false, 2),
+           "SoT 115048: ticketed FullyDark forces without consume");
     Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, false, 2),
-           "N04: no consume → no force");
+           "N04: no consume no ticket → no force");
+    Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, true, 2),
+           "SoT 115048: still_stale alone still needs consume");
     Expect(ShouldRemeshTicketedFullyDarkStalled(true, false, true, 2),
            "N04 T2: ticketed FullyDark no progress → remesh");
     Expect(!ShouldRemeshTicketedFullyDarkStalled(true, true, true, 2),
            "N04 T2: progress present → no stalled remesh");
     Expect(!ShouldRemeshTicketedFullyDarkStalled(false, false, true, 2),
            "N04 T2: no ticket → no stalled remesh");
+    using cutum::ShouldRemeshFullyDarkWhenSkyPresent;
+    Expect(ShouldRemeshFullyDarkWhenSkyPresent(true, true),
+           "SoT 141300: FullyDark + sky → remesh");
+    Expect(!ShouldRemeshFullyDarkWhenSkyPresent(true, false),
+           "SoT 141300: FullyDark without sky → Note-only");
+    Expect(!ShouldRemeshFullyDarkWhenSkyPresent(false, true),
+           "SoT 141300: not FullyDark → no sky remesh carve");
   }
 
   // N04 autopsy I3t: hold prior draw across accepted-stale publish
   {
     using cutum::HadVisualPriorForI3tHold;
+    using cutum::IsI3tEmptySpoofHoldSkipped;
     using cutum::ShouldHoldPriorDrawOnAcceptedStale;
+    using cutum::ShouldI3tHoldPriorOnAcceptedStale;
     Expect(ShouldHoldPriorDrawOnAcceptedStale(true, true),
            "N04 I3t: accepted stale + prior drawable → hold");
     Expect(!ShouldHoldPriorDrawOnAcceptedStale(true, false),
@@ -3370,16 +3387,21 @@ int main()
            "I3t visual prior: GpuResident+HasGpuMesh without drawable");
     Expect(!HadVisualPriorForI3tHold(false, true, false),
            "I3t visual prior: resident flag alone insufficient");
-    Expect(HadVisualPriorForI3tHold(false, true, false, true),
-           "SoT 090834 T3: overlay/fluid force accepts resident alone");
     Expect(HadVisualPriorForI3tHold(true, false, false),
            "I3t visual prior: drawable greedy counts");
-    Expect(ShouldHoldPriorDrawOnAcceptedStale(
-               true, HadVisualPriorForI3tHold(false, true, true)),
-           "I3t hold uses visual prior under empty spoof");
-    Expect(ShouldHoldPriorDrawOnAcceptedStale(
-               true, HadVisualPriorForI3tHold(false, true, false, true)),
-           "SoT 090834 T3: overlay force → hold prior");
+    // SoT 100303: hard-gate — no hold without drawable (first-fill publishes).
+    Expect(!ShouldI3tHoldPriorOnAcceptedStale(true, false, true, true),
+           "SoT 100303: empty spoof + resident+pipe must publish");
+    Expect(!ShouldI3tHoldPriorOnAcceptedStale(true, false, true, false),
+           "SoT 100303: resident alone never holds");
+    Expect(ShouldI3tHoldPriorOnAcceptedStale(true, true, false, false),
+           "SoT 100303: drawable + accepted stale → hold");
+    Expect(IsI3tEmptySpoofHoldSkipped(true, false, true, false),
+           "SoT 100303: empty spoof skip counted when resident alone");
+    Expect(IsI3tEmptySpoofHoldSkipped(true, false, false, true),
+           "SoT 100303: empty spoof skip counted when pipe alone");
+    Expect(!IsI3tEmptySpoofHoldSkipped(true, true, true, true),
+           "SoT 100303: drawable is not empty-spoof skip");
   }
 
   // FZ2.6: budget reality + consumer backpressure + mesh drain split

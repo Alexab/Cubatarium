@@ -96,8 +96,10 @@ int main()
          "C09 H3: drain without still_stale → no force");
   Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, true, 1),
          "C09 H3: drain with still_stale → force");
+  Expect(ShouldForceMarkRelitForTicketedStale(false, true, true, false, 1),
+         "C09 SoT 115048: ticket forces without consume");
   Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, false, 1),
-         "C09 no consume no force");
+         "C09 no consume no ticket → no force");
 
   // C13 stale revision
   Expect(IsMeshLightStale(1, 2), "C13 stale revision");

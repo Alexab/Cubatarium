@@ -2048,6 +2048,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetCache().GetMeshApplyStaleLightAcceptedCount();
     world.PhysicsTelemetryData.MeshApplyStaleAcceptedRefresh =
         world.GetMeshService().GetCache().GetMeshApplyStaleAcceptedRefreshCount();
+    world.PhysicsTelemetryData.I3tHoldEmptySpoofN =
+        world.GetMeshService().GetCache().GetI3tHoldEmptySpoofCount();
     world.PhysicsTelemetryData.MeshApplySuperseded =
         world.GetMeshService().GetMeshApplySupersededCount();
     world.PhysicsTelemetryData.MeshApplyDropNoActive =
@@ -4351,23 +4353,26 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         // when FocusMissingMesh already cleared.
         const bool hole_debt_now = ShouldLatchFogHoleDebtNow(
             phys.FocusMissingMesh, phys.MissHoriz, unfinished,
-            phys.VisibleBlackFullyDarkStalledN);
+            phys.VisibleBlackFullyDarkStalledN, phys.VisibleBlackFocusN);
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
         }
         else if (ShouldClearFogHoleDebtLatch(
                      phys.FocusMissingMesh, phys.VisualHoles, unfinished,
-                     phys.VisibleBlackFullyDarkStalledN))
+                     phys.VisibleBlackFullyDarkStalledN,
+                     phys.VisibleBlackFocusN))
         {
           // Clear only when miss/holes AND unfinished/VB stalled are gone.
           FogPullInHoleHoldFrames = 0;
         }
-        else if (FogPullInHoleHoldFrames > 0)
+        else if (ShouldDecayFogHoleDebtHold(phys.FocusMissingMesh,
+                                            FogPullInHoleHoldFrames))
         {
           FogPullInHoleHoldFrames =
               std::max(0, FogPullInHoleHoldFrames - kFogHoleDecayPerFrame);
         }
+        // else: miss still >0 — hold frames steady (SoT 115048 fog thrash).
         const bool hole_debt = FogPullInHoleHoldFrames > 0;
         world.PhysicsTelemetryData.FogHoleDebt = hole_debt ? 1 : 0;
         const int sea = world.GetProceduralSettings().SeaLevel;

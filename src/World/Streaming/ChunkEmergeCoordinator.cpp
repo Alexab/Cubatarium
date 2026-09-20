@@ -574,7 +574,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             const int face_toward =
                 SeaSeamPeerFaceTowardPublisher(d.x, d.z);
-            if (!mesh.HasActiveBoundaryOverlayFace(n, face_toward))
+            const bool face_overlay =
+                mesh.HasActiveBoundaryOverlayFace(n, face_toward);
+            const bool peer_dark =
+                mesh.GetCache().ChunkHasFullyDarkFace(n) ||
+                mesh.ChunkHasStaleDarkFaces(n, world_ref.GetBlockWorld());
+            const bool remesh_peer =
+                face_overlay ||
+                ShouldRemeshSeaSurfaceDarkPeer(
+                    seam_eye, /*peer_drawable=*/true,
+                    /*peer_in_surface_band=*/true, face_overlay, peer_dark);
+            if (!remesh_peer)
             {
               continue;
             }
@@ -1278,6 +1288,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
     // W2b: approach-heal sticky BoundaryOverlay when face-neighbor already
     // drawable (safety net after prevent-emit; no SoftDefer-for-holes).
+    // SoT 111310: AirNearFluid/Underwater also heal FullyDark/void in surface_band.
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
       const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
@@ -1287,27 +1298,39 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           static_cast<float>(settings.SeaLevel),
           world.HasNearbyFluidSurface(focus_block, 24));
       int healed = 0;
+      // Cap 8 under sea-surface dark debt so stop-tail FullyDark clears faster
+      // (SoT 111310: 4/frame left stall=2 progress=0 for many periods).
+      const int heal_cap =
+          (seam_eye == SeaSeamEyeContext::AirNearFluid ||
+           seam_eye == SeaSeamEyeContext::Underwater)
+              ? 8
+              : 4;
       static const glm::ivec3 kFaceHeal[4] = {
           {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
       const glm::ivec3 focus_g = focus_ground_horiz;
       const int scan_r = std::min(focus_radius, 4);
-      for (int dz = -scan_r; dz <= scan_r && healed < 4; ++dz)
+      for (int dz = -scan_r; dz <= scan_r && healed < heal_cap; ++dz)
       {
-        for (int dx = -scan_r; dx <= scan_r && healed < 4; ++dx)
+        for (int dx = -scan_r; dx <= scan_r && healed < heal_cap; ++dx)
         {
-          for (int cy = sea_cy - 4; cy <= sea_cy + 2 && healed < 4; ++cy)
+          for (int cy = sea_cy - 4; cy <= sea_cy + 2 && healed < heal_cap; ++cy)
           {
             const glm::ivec3 peer(focus_g.x + dx, cy, focus_g.z + dz);
-            if (!ShouldRemeshSeaSeamOnFirstDrawable(peer.y, sea_cy, seam_eye))
+            // Dark heal always gated to surface_band (|cy-sea|<=2), even when
+            // eye is Underwater (subsea_band must not flood via this path).
+            const bool in_surface_band =
+                ShouldRemeshSeaSeamOnFirstDrawable(
+                    peer.y, sea_cy, SeaSeamEyeContext::AirNearFluid);
+            if (!in_surface_band &&
+                !ShouldRemeshSeaSeamOnFirstDrawable(peer.y, sea_cy, seam_eye))
             {
               continue;
             }
-            if (!mesh_service.HasDrawableGreedyMesh(peer) ||
-                !mesh_service.HasActiveBoundaryOverlay(peer))
+            if (!mesh_service.HasDrawableGreedyMesh(peer))
             {
               continue;
             }
-            bool needs = false;
+            bool face_toward_with_drawable_nb = false;
             for (const glm::ivec3 &d : kFaceHeal)
             {
               const int face = SeaSeamPeerFaceTowardPublisher(d.x, d.z);
@@ -1315,12 +1338,31 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               {
                 continue;
               }
-              const glm::ivec3 nb = peer + d;
-              if (mesh_service.HasDrawableGreedyMesh(nb))
+              if (mesh_service.HasDrawableGreedyMesh(peer + d))
               {
-                needs = true;
+                face_toward_with_drawable_nb = true;
                 break;
               }
+            }
+            const bool peer_dark =
+                mesh_service.GetCache().ChunkHasFullyDarkFace(peer) ||
+                mesh_service.ChunkHasStaleDarkFaces(peer, world.GetBlockWorld());
+            bool needs = false;
+            if (in_surface_band &&
+                (seam_eye == SeaSeamEyeContext::AirNearFluid ||
+                 seam_eye == SeaSeamEyeContext::Underwater))
+            {
+              needs = ShouldRemeshSeaSurfaceDarkPeer(
+                  seam_eye, /*peer_drawable=*/true,
+                  /*peer_in_surface_band=*/true, face_toward_with_drawable_nb,
+                  peer_dark);
+            }
+            else
+            {
+              needs = mesh_service.HasActiveBoundaryOverlay(peer) &&
+                      face_toward_with_drawable_nb &&
+                      ShouldRemeshSeaSeamOnFirstDrawable(peer.y, sea_cy,
+                                                         seam_eye);
             }
             if (!needs)
             {
@@ -1333,6 +1375,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                  0x3FFull);
             if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
             {
+              continue;
+            }
+            // FullyDark with pending GPU/RAA: PreferKick (no PL re-Note — SoT
+            // 111310 v3 PL flood without fifo regressed stop-tail).
+            if (peer_dark &&
+                (mesh_service.IsPendingGpuApply(peer) ||
+                 mesh_service.IsRemeshAfterApplyPending(peer)))
+            {
+              mesh_service.PreferKickPendingGpuQueued(peer);
+              ++healed;
               continue;
             }
             if (!mesh_service.TryConsumeDirtyAdmit())

@@ -708,16 +708,22 @@ inline bool ShouldForceMarkRelitOnUnchangedLight(
 /// FZ2.5-P0b / N04 H3: stalled RelightThenMesh on FullyDark lit ring —
 /// force MarkRelit when ticket still owed **or** GPU/dark still_stale after
 /// drain. Do not force all equal-rev FullyDark consume (LegalDark caves).
+/// SoT 115048: ticketed FullyDark forces even outside consume_mode (stop
+/// plateau repair=42 with force_stale≡0 while MarkRelit still invoked).
 inline bool ShouldForceMarkRelitForTicketedStale(
     bool consume_mode, bool has_repair_ticket, bool fully_dark,
     bool still_stale, int horiz,
     int ring = kVisualStageLitDrawableHoriz)
 {
-  if (!consume_mode || !fully_dark || horiz < 0 || horiz > ring)
+  if (!fully_dark || horiz < 0 || horiz > ring)
   {
     return false;
   }
-  return has_repair_ticket || still_stale;
+  if (has_repair_ticket)
+  {
+    return true;
+  }
+  return consume_mode && still_stale;
 }
 
 /// FullyDark FM fairness P2: PreferKick/RAA over plain remesh Dirty when
@@ -745,6 +751,15 @@ inline bool ShouldRemeshTicketedFullyDarkStalled(bool has_repair_ticket,
 {
   return has_repair_ticket && !has_repair_progress && fully_dark_drawable &&
          horiz >= 0 && horiz <= ring;
+}
+
+/// SoT 141300: FullyDark drawable with sky already in chunk field — Note+FIFO
+/// alone left MarkRelit≡0 / fifo≡0 on stand (repair=37 stall=15). Remesh with
+/// sky present can bake lit faces without waiting for a dead Capture cycle.
+/// Without sky, keep Note-only (light=0 remesh SoftDefer-rejects).
+inline bool ShouldRemeshFullyDarkWhenSkyPresent(bool fully_dark, bool any_sky)
+{
+  return fully_dark && any_sky;
 }
 
 /// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.
