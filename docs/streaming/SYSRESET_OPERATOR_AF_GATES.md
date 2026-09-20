@@ -1,41 +1,42 @@
-# Sysreset operator + AF gates (SoT 143831)
+# Sysreset operator + AF gates (v3 vs SoT 202031)
 
-Controls vs `bin/logs/perf_20260920-143831_55228.jsonl`.
+Controls vs manual `bin/logs/perf_20260920-202031_6988.jsonl` and v2 AF baselines.
+Doc: [SYSRESET_V3_AUDIT_202031.md](SYSRESET_V3_AUDIT_202031.md).
 
 ## AF suite (fog ON)
 
 ```bash
 set CUBA_FLIGHT_FOG_ON=1
 python -X utf8 tools/flight_sim_run.py --world World_164 --scenario product-174657
+python -X utf8 tools/flight_sim_run.py --world World_164 --scenario product-174657 --warmup-sec 20
 python -X utf8 tools/flight_sim_run.py --world World_164 --scenario product-174657-dive
 python -X utf8 tools/n01_v21_scorecard.py <perf.jsonl> -o bin/suite_reports/g1_a10_relight/<label>_score.json --label <label>
 ```
 
-Bisect RelightReplace OFF: `CUBA_RELIGHT_REPLACE_OWNER=0`.
+## Scorecard gates (v3)
 
-## Scorecard gates (phase 1+)
-
-| Gate | 143831 bad | Pass |
+| Gate | 202031 / v2 bad | Pass |
 |---|---|---|
-| west_route_coverage | — | COVERED (cx≤−3) |
-| VB fly med\|max | 45\|52 | med≤35, max≤45 |
+| west_route_coverage | COVERED | COVERED (cx≤−3) |
+| VB fly med | 42 / ≤35 AF | ≤35 |
+| mid_fd_stalled | 19 manual | ≤5 |
 | unfinished_visual max | 12 | ≤4 |
-| column_loaded_no_mesh max | 12 | ≤4 |
-| prior_lit_hold fly med | 531 | ≤400 or Δ↓ vs phase baseline |
-| prior_lit_hold_age_max | — | finite; converges (not mono plateau) |
-| stale_accepted_refresh max | 5 | ≤2 |
+| prior_lit_hold fly med | ~599 | ≤400 or Δ↓≥20% vs 202031 |
+| prior_lit_hold_age_max | 90 | ≤90 KEEP |
 | flip / dual | 0\|0 | KEEP 0\|0 |
-| fog_rd thrash % | ~7 | ≤10; no margin 28↔132 |
-| dark_face_void fly med (dive) | 826 | ≤500 |
-| MarkRelit invoked when repair≥8 | often 0 | >0 on stand slice |
+| dive void_near med | ≤500 v2 | ≤500 |
+| mesh_emerge_ms max | 90–137 | ≤40 |
+| mesh_gpu_kick_ms max (kick_n>0) | ~114 | ≤20 |
+| spikes max | 5 | ≤2 |
+| transparent_cmd_reorder mid | 0–0.5 | ≤0.5 |
+| cold blink | 0.14 | ≤0.3 or non-blocking if warm+dive PASS |
 
-## Operator SoT (manual)
+## Operator SoT
 
 | Class | Check |
 |---|---|
-| wrong-tex | no blink on west rim under fog ON |
-| holes | unfinished+nlm drain; no SoftDefer-empty spoof |
-| dive walls | no distant underwater closing walls |
-| blacks | VB/FD repair drains; MarkRelit>0 when repair≥8 |
+| x-ray faces | single-block wall holes drain; unfinished≤4 |
+| hitch | no control stutter from emerge/kick spikes |
+| wrong-tex / walls / blacks | KEEP v2 improvements |
 
-Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_*`.
+Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_v3_*`.

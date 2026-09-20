@@ -652,3 +652,19 @@ Audit: [SYSRESET_V2_AUDIT_191112.md](SYSRESET_V2_AUDIT_191112.md).
 
 KEEP: unload/keep amortize, prevent-emit solids, no SoftDefer-for-holes.
 
+## Sysreset v3 2026-09-20 (SoT 202031)
+
+Manual x-ray + hitch. Doc: [SYSRESET_V3_AUDIT_202031.md](SYSRESET_V3_AUDIT_202031.md).
+
+| Gate | Status |
+|---|---|
+| FaceDebt owning unfinished | **OPEN** implementing |
+| BecameKnown on load (not only sea first-drawable) | **OPEN** |
+| Accept light-stale no Dirty flood | **OPEN** |
+| PriorLit hold count | **OPEN** (~599) |
+| Emerge ledger + mid-Kick gate | **OPEN** |
+| operator x-ray / hitch | **OPEN** SoT 202031 |
+| merge_green | **false** |
+
+Retract: distant walls / x-ray not fully CLOSED — single-face seam debt remains.
+
