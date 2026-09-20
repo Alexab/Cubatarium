@@ -13,6 +13,7 @@
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/MeshCaptureStore.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
+#include "Render/Mesh/MeshPublishContract.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
@@ -433,6 +434,8 @@ public:
                               const UBlockWorld &world) const;
   /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
   uint64_t GetMeshedLightRevision(glm::ivec3 chunk_coord) const;
+  /// Sysreset v2: Accept-gate revs for GPU publish writer.
+  MeshPublishRevs GetMeshPublishRevs(glm::ivec3 chunk_coord) const;
 
   /// FZ2.7-B1b: single-pass mesh state for MarkRelit snapshot (one GreedyCache lookup).
   struct LitApplyMeshProbe
@@ -861,6 +864,8 @@ private:
     bool GpuTransparent{false};
     bool GpuHasDarkFace{false};
     uint64_t MeshedLightRevision{0};
+    /// Sysreset v2: Accept gate stamps (geom/light/material).
+    MeshPublishRevs PublishRevs{};
     /// S4 versioned neighbor-missing overlay (independent of stamp).
     BoundaryOverlayState BoundaryOverlay{};
     std::vector<GpuBlockDrawRange> GpuBlockRanges;

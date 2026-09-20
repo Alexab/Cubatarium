@@ -1002,6 +1002,16 @@ uint64_t UChunkMeshCache::GetMeshedLightRevision(glm::ivec3 chunk_coord) const
   return it->second.MeshedLightRevision;
 }
 
+MeshPublishRevs UChunkMeshCache::GetMeshPublishRevs(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return {};
+  }
+  return it->second.PublishRevs;
+}
+
 void UChunkMeshCache::FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
                                             LitApplyMeshProbe &out) const
 {
@@ -3858,6 +3868,12 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       ++PriorLitHoldN;
       NotePriorLitHold(coord);
     }
+    else if (ShouldPublishedEmptyAfterPriorLitExpire(
+                 had_lit_mesh, had_live_lit_gpu, true, prior_lit_age))
+    {
+      ClearPriorLitHoldAge(coord);
+      MarkDirtyPriority(coord);
+    }
     else
     {
       ClearPriorLitHoldAge(coord);
@@ -5144,6 +5160,18 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (result.InputStampsValid)
   {
     chunkMesh.MeshedLightRevision = result.InputStamps[0].light;
+  }
+  {
+    std::vector<uint16_t> ids;
+    ids.reserve(chunkMesh.batches.size());
+    for (const auto &b : chunkMesh.batches)
+    {
+      ids.push_back(static_cast<uint16_t>(b.blockId));
+    }
+    chunkMesh.PublishRevs.geom_rev = result.sourceRevision;
+    chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
+    chunkMesh.PublishRevs.material_stamp =
+        MeshPublishMaterialStamp(ids.data(), ids.size());
   }
   // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
   const bool intentional_empty =
@@ -7218,10 +7246,16 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   {
     Cache.erase(chunkCoord);
     std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
+    // Sysreset v2: sync rebuild must see BoundaryOverlay (heal sticky faces).
+    const uint64_t sync_rev =
+        static_cast<uint64_t>(chunk->GetContentRevision()) ^
+        (static_cast<uint64_t>(chunk->GetLightFieldRevision()) << 1);
+    const ChunkMeshSnapshot sync_snap = ChunkMeshSnapshot::Capture(
+        world, chunkCoord, sync_rev, CacheNeighborVisuallyDrawable, this);
     const auto quads =
         MesherBackend
-            ? MesherBackend->BuildChunkMesh(world, chunkCoord, registry)
-            : UGreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
+            ? MesherBackend->BuildChunkMesh(sync_snap, registry)
+            : UGreedyMesher::BuildChunkMesh(sync_snap, registry);
     for (const GreedyQuad &q : quads)
     {
       GreedyMeshBatch &batch = byBlockId[q.Id];
@@ -7269,6 +7303,13 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       {
         ++PriorLitHoldN;
         NotePriorLitHold(chunkCoord);
+      }
+      else if (ShouldPublishedEmptyAfterPriorLitExpire(
+                   had_lit_mesh, had_live_lit_gpu, new_dark, prior_lit_age))
+      {
+        // Sysreset v2: expire → PublishedEmpty + requeue, not dark Replace.
+        ClearPriorLitHoldAge(chunkCoord);
+        MarkDirtyPriority(chunkCoord);
       }
       else
       {
@@ -7373,6 +7414,20 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       }
     }
     chunkMesh.batches = std::move(new_batches);
+    {
+      std::vector<uint16_t> ids;
+      ids.reserve(chunkMesh.batches.size());
+      for (const auto &b : chunkMesh.batches)
+      {
+        ids.push_back(static_cast<uint16_t>(b.blockId));
+      }
+      chunkMesh.PublishRevs.geom_rev = sync_rev;
+      chunkMesh.PublishRevs.light_rev = chunk->GetLightFieldRevision();
+      chunkMesh.PublishRevs.material_stamp =
+          MeshPublishMaterialStamp(ids.data(), ids.size());
+      chunkMesh.BoundaryOverlay = sync_snap.boundaryOverlay;
+      chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
+    }
     const bool intentional_empty =
         new_vertex_count == 0 && !defer_until_lit &&
         SoftDeferHeld.count(chunkCoord) == 0;

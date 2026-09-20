@@ -104,12 +104,15 @@ inline bool ShouldAvoidEmptyPublishOverPriorLit(bool had_live_lit_gpu,
 /// Also reject dark over a live lit GPU SSBO (PendingReplace / SoftDefer empty
 /// with GpuResident lit — had_lit_mesh alone can miss that case).
 /// Cave / far UnlitFirstMesh first-mesh with light=0 is allowed (no lit predecessor).
+/// Sysreset v2: PriorLit TTL expire must NOT allow silent dark Replace — call
+/// site clears to PublishedEmpty + requeues MarkRelit instead.
 inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
                                        bool defer_until_lit,
                                        bool had_lit_mesh,
                                        bool had_live_lit_gpu = false,
                                        int hold_age_frames = 0)
 {
+  (void)hold_age_frames;
   if (!new_has_dark_face)
   {
     return false;
@@ -118,8 +121,23 @@ inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
   {
     return true;
   }
-  return ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
-                                               true, hold_age_frames);
+  return had_lit_mesh || had_live_lit_gpu;
+}
+
+/// After PriorLit TTL expire: clear sole image (PublishedEmpty) rather than
+/// accepting a dark wrong-material Replace.
+inline bool ShouldPublishedEmptyAfterPriorLitExpire(bool had_lit_mesh,
+                                                    bool had_live_lit_gpu,
+                                                    bool candidate_dark,
+                                                    int hold_age_frames,
+                                                    int converge_deadline_frames =
+                                                        kPriorLitConvergeDeadlineFrames)
+{
+  if (!candidate_dark || !(had_lit_mesh || had_live_lit_gpu))
+  {
+    return false;
+  }
+  return ShouldExpirePriorLitHold(hold_age_frames, converge_deadline_frames);
 }
 
 /// After keeping lit SSBO under dark CPU replace: do not PreferKick a pending

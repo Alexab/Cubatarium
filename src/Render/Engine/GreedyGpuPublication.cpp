@@ -439,6 +439,56 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     any_fresh = true;
     NotePublicationProgressUnit();
     published_ok.insert(coord);
+    // Sysreset v2 Accept: blockId flip only when (geom,light,material) match.
+    if (mesh_cache != nullptr)
+    {
+      const MeshPublishRevs expected = mesh_cache->GetMeshPublishRevs(coord);
+      std::vector<uint16_t> got_ids;
+      got_ids.reserve(group_fresh.size());
+      for (const auto &gpu : group_fresh)
+      {
+        got_ids.push_back(static_cast<uint16_t>(gpu.blockId));
+      }
+      MeshPublishRevs got{};
+      got.geom_rev = mesh_revision;
+      got.light_rev = expected.light_rev;
+      got.material_stamp =
+          MeshPublishMaterialStamp(got_ids.data(), got_ids.size());
+      bool material_flip = false;
+      for (const auto &gpu : group_fresh)
+      {
+        const auto found =
+            resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
+        if (found == resident.end())
+        {
+          continue;
+        }
+        if (cache.batches[found->second].blockId != gpu.blockId)
+        {
+          material_flip = true;
+          break;
+        }
+      }
+      if (material_flip &&
+          !ShouldAcceptMaterialBlockIdFlip(got, expected, /*gpu_ready=*/true,
+                                           true))
+      {
+        // Retain prior + keep dirty for remesh — do not commit flip.
+        for (auto &gpu : group_fresh)
+          ReleasePooledBatch(gpu, cache.VertexPool);
+        for (size_t n = 0; n < cache.batches.size(); ++n)
+        {
+          if (cache.batches[n].chunkCoord == coord && cache.batches[n].pooled)
+          {
+            retained[n] = true;
+            staged.push_back(cache.batches[n]);
+          }
+        }
+        any_fresh = false;
+        published_ok.erase(coord);
+        continue;
+      }
+    }
     // Successful replace: do not retain old batches for this coord.
     // Honest wrong-tex thrash: any blockId flip on successful Replace
     // (SoT 090834 — same-size gate hid operator-visible swaps).
@@ -546,6 +596,7 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
 
   // Detect resident-table membership/order change before swap (R04).
   bool table_identity_changed = staged.size() != cache.batches.size();
+  bool membership_only_reorder = false;
   if (!table_identity_changed)
   {
     for (size_t i = 0; i < staged.size(); ++i)
@@ -557,6 +608,18 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         break;
       }
     }
+  }
+  if (table_identity_changed && staged.size() == cache.batches.size() &&
+      !any_fresh)
+  {
+    // Same (coord,batchIndex) multiset, different order — camera sort thrash.
+    std::unordered_map<GpuBatchKey, int, GpuBatchKeyHash> prior_counts;
+    std::unordered_map<GpuBatchKey, int, GpuBatchKeyHash> staged_counts;
+    for (const auto &b : cache.batches)
+      ++prior_counts[GpuBatchKey{b.chunkCoord, b.batchIndex}];
+    for (const auto &b : staged)
+      ++staged_counts[GpuBatchKey{b.chunkCoord, b.batchIndex}];
+    membership_only_reorder = prior_counts == staged_counts;
   }
 
   changed = changed || staged.size() != cache.batches.size();
@@ -592,15 +655,19 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     cache.cullRevision = cull_revision;
     cache.sortRevision = sort_revision;
   }
+  else if (cache.sortRevision != sort_revision && !any_fresh &&
+           membership_only_reorder)
+  {
+    // Sysreset v2: order-only camera sort updates sort epoch without pubver.
+    cache.sortRevision = sort_revision;
+  }
   if (changed)
   {
     cache.IndirectCullReady = false;
     cache.GpuCompactActive = false;
     cache.CompactVisCpuSynced = false;
-    // R04: bump on fresh upload OR resident table membership/order change.
-    // Untouched-only retention with identical table identity does not bump
-    // (keeps 121131 thrash class closed).
-    if (any_fresh || table_identity_changed)
+    // R04: bump on fresh upload OR real membership change — not order-only.
+    if (any_fresh || (table_identity_changed && !membership_only_reorder))
       ++cache.publicationVersion;
     else
       NotePubVerChangedWithoutFresh();

@@ -28,6 +28,8 @@ int main()
   using cutum::MeshPublishRevs;
   using cutum::ShouldAcceptMeshPublish;
   using cutum::ShouldExpirePriorLitHold;
+  using cutum::ShouldPublishedEmptyAfterPriorLitExpire;
+  using cutum::ShouldRejectDarkMeshCommit;
   using cutum::ShouldRetainPriorLitOverUnlitCandidate;
   using cutum::ColumnVisualAllowsPreferKick;
   using cutum::ColumnVisualState;
@@ -67,7 +69,13 @@ int main()
   Expect(ShouldRetainPriorLitOverUnlitCandidate(true, false, true, 0),
          "retain young prior-lit");
   Expect(!ShouldRetainPriorLitOverUnlitCandidate(true, false, true, 90),
-         "expire prior-lit → allow publish");
+         "expire prior-lit hold latch");
+  Expect(ShouldRejectDarkMeshCommit(true, false, true, false, 90),
+         "expire still rejects dark Replace over prior");
+  Expect(ShouldPublishedEmptyAfterPriorLitExpire(true, false, true, 90),
+         "expire → PublishedEmpty path");
+  Expect(!ShouldPublishedEmptyAfterPriorLitExpire(true, false, true, 10),
+         "young hold → not PublishedEmpty yet");
 
   if (gFails != 0)
   {

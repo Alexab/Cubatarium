@@ -37,6 +37,43 @@ inline bool ShouldAcceptMeshPublish(const MeshPublishRevs &got,
   return gpu_ready && MeshPublishRevsMatch(got, expected);
 }
 
+/// FNV-1a material stamp over batch blockIds (+ optional atlas generation).
+inline uint64_t MeshPublishMaterialStamp(const uint16_t *block_ids, size_t n,
+                                         uint64_t atlas_gen = 0)
+{
+  uint64_t h = 14695981039346656037ull;
+  h ^= atlas_gen;
+  h *= 1099511628211ull;
+  for (size_t i = 0; i < n; ++i)
+  {
+    h ^= static_cast<uint64_t>(block_ids[i]);
+    h *= 1099511628211ull;
+  }
+  return h;
+}
+
+/// Wrong-tex gate: blockId flip on Replace is Accept only when material stamp
+/// matches the CPU bake (stale upload Retain). Empty expected → first publish OK.
+inline bool ShouldAcceptMaterialBlockIdFlip(const MeshPublishRevs &got,
+                                            const MeshPublishRevs &expected,
+                                            bool gpu_ready,
+                                            bool block_id_changed)
+{
+  if (!block_id_changed)
+  {
+    return true;
+  }
+  if (!gpu_ready)
+  {
+    return false;
+  }
+  if (expected.material_stamp == 0)
+  {
+    return true;
+  }
+  return got.material_stamp == expected.material_stamp;
+}
+
 /// Empty intentional publish is PublishedEmpty (not a silent Retain forever).
 inline MeshPublishAction DecideMeshPublishAction(bool accept,
                                                  bool new_drawable,
