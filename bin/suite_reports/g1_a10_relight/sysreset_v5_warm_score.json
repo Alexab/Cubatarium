@@ -1,0 +1,96 @@
+{
+  "label": "sysreset_v5_warm",
+  "perf_jsonl": "bin\\logs\\perf_20260921-131404_24492.jsonl",
+  "periods": 45,
+  "operator_visual": null,
+  "mid_corridor": {
+    "focus_cx_band": "[2,5]",
+    "visible_black_focus_med": 26.0,
+    "visible_black_legal_dark_med": 0.0,
+    "stale_vertex_light_med": 22.0,
+    "stale_vl_rev_med": 0.0,
+    "fully_dark_census_med": 22.0,
+    "fully_dark_stalled_med": 1.0,
+    "near_focus_holes_med": 0.0,
+    "unlit_max": 4.0,
+    "mesh_apply_stale_visual_med": 1.0,
+    "mesh_apply_stale_visual_delta_med": 0.0,
+    "publication_incomplete_material_med": 0.0,
+    "publication_oom_retain_med": 0.0,
+    "publication_overload_retain_med": 0.0,
+    "mesh_apply_stale_geom_delta_med": 0.0,
+    "mesh_apply_stale_light_delta_med": 0.0,
+    "mesh_apply_stale_catalog_delta_med": 0.0,
+    "mesh_apply_stale_stamp_invalid_delta_med": 0.0,
+    "rows_mid": 15,
+    "rows_mid_focus": 2
+  },
+  "proxy_adequacy": {
+    "early_vb_med": 44.0,
+    "focus_missing_mesh_med": 1.0,
+    "miss_stuck_run_frames_tail_max": 374.0,
+    "fog_pull_in_rd_fly_med": 3.0,
+    "visible_black_focus_fly_med": 26.0,
+    "gpu_kick_fly_med": 2.0,
+    "ok_remesh_fly_med": 2.0,
+    "player_y_early_med": 55.5,
+    "player_y_late_med": 59.0,
+    "player_y_delta": 3.5,
+    "focus_west_delta_cx": 19.0,
+    "gpu_kick_post_drain_fly_max": 1.0,
+    "adequacy_pass": false,
+    "adequacy_fails": [
+      "vb_too_low_for_product_class"
+    ]
+  },
+  "dual_lane_stop_line_cold": {
+    "vb_fly_med": 26.0,
+    "stale_vl_fly_med": 24.0,
+    "unlit_max": 4.0,
+    "mid_fully_dark_stalled_med": 9.0,
+    "warm": false,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "mid_fully_dark_stalled_above_stop_line"
+    ]
+  },
+  "dual_lane_stop_line_warm": {
+    "vb_fly_med": 26.0,
+    "stale_vl_fly_med": 24.0,
+    "unlit_max": 4.0,
+    "mid_fully_dark_stalled_med": 9.0,
+    "warm": true,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "mid_fully_dark_stalled_above_stop_line"
+    ]
+  },
+  "eye_proxy_stop_line": {
+    "source": "period_jsonl",
+    "perf_path": "bin\\logs\\perf_20260921-131404_24492.jsonl",
+    "eye_proxy_segment": "mid_corridor",
+    "eye_proxy_coverage": "COVERED",
+    "mesh_apply_stale_visual_mid_med": 0.0,
+    "mesh_apply_stale_visual_fly_med": 0.0,
+    "mesh_apply_stale_visual_delta_med": 0.0,
+    "effective_holes_blink_rate": 0.0,
+    "transparent_cmd_reorder_mid_med": 0.0,
+    "transparent_cmd_reorder_fly_med": 0.0,
+    "near_focus_holes_mid_med": 0.0,
+    "visual_holes_mid_med": 0.0,
+    "publication_incomplete_material_mid_med": 0.0,
+    "publication_oom_retain_mid_med": 0.0,
+    "rows_used": 7,
+    "west_route_coverage": "COVERED",
+    "focus_cx_min": -12.0,
+    "focus_cx_max": 7.0,
+    "west_route_coverage_reason": "reached_cx_le_minus3",
+    "eye_proxy_stop_line_pass": true,
+    "eye_proxy_stop_line_fails": []
+  },
+  "mid_stalled_gate_pass": true,
+  "mid_stalled_gate_fails": [],
+  "merge_green": false,
+  "west_route_coverage": "COVERED",
+  "operator_visual_status": "UNTESTED"
+}

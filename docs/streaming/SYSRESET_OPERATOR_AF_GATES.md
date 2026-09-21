@@ -47,3 +47,4 @@ no PreferKick without pending; hitch C untouched; no FaceDebt on light Accept.
 | hitch C | opaque cull skip / transparent resort KEEP |
 
 Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_v5_*`.
+Evidence: [SYSRESET_V5_AF_EVIDENCE.md](SYSRESET_V5_AF_EVIDENCE.md).
