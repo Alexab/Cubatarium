@@ -153,6 +153,7 @@ void UChunkEmergeCoordinator::BeginFrame(const ProceduralSettings &procedural,
       ComputeBudget(procedural, movement_speed, default_load_ops, last_frame_ms);
   GetColumnFlowExecutor().BeginFrame();
   SeaSeamRemeshCoalesceCols.clear();
+  FaceDebtAlreadyKnownRemeshN = 0;
 }
 
 void UChunkEmergeCoordinator::TickMeshEmerge(
@@ -567,6 +568,58 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
           world_ref.NoteUnfinishedColumnDirty(col);
+          // Sysreset v5: already-drawable face-neighbor → remesh debt holder
+          // now (BecameKnown misses peers that were known before overlay bake).
+          constexpr int kFaceDebtAlreadyKnownCap = 4;
+          if (FaceDebtAlreadyKnownRemeshN >= kFaceDebtAlreadyKnownCap)
+          {
+            return;
+          }
+          UWorldMeshService &mesh = world_ref.GetMeshService();
+          const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();
+          const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
+          const int holder_horiz = std::max(
+              std::abs(chunk_coord.x - focus_g.x),
+              std::abs(chunk_coord.z - focus_g.z));
+          if (holder_horiz > 4)
+          {
+            return;
+          }
+          static const glm::ivec3 kFaceDelta[6] = {
+              {-1, 0, 0}, {1, 0, 0}, {0, -1, 0},
+              {0, 1, 0},  {0, 0, -1}, {0, 0, 1}};
+          bool any_peer_drawable = false;
+          for (int face = 0; face < 6; ++face)
+          {
+            if ((mask & static_cast<uint8_t>(1u << face)) == 0)
+            {
+              continue;
+            }
+            const glm::ivec3 peer = chunk_coord + kFaceDelta[face];
+            if (mesh.HasDrawableGreedyMesh(peer))
+            {
+              any_peer_drawable = true;
+              break;
+            }
+          }
+          if (!any_peer_drawable)
+          {
+            return;
+          }
+          const uint64_t col_key =
+              (static_cast<uint64_t>(static_cast<uint32_t>(chunk_coord.x))
+               << 42) |
+              (static_cast<uint64_t>(static_cast<uint32_t>(chunk_coord.z))
+               << 10) |
+              (static_cast<uint64_t>(
+                   static_cast<uint16_t>(chunk_coord.y + 512)) &
+               0x3FFull);
+          if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
+          {
+            return;
+          }
+          mesh.MarkDirtyPriority(chunk_coord);
+          ++FaceDebtAlreadyKnownRemeshN;
         });
     mesh_service.SetOnGpuPipelineProgressFn(
         [this](glm::ivec3 chunk_coord)

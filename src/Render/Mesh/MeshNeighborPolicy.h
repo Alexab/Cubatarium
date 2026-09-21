@@ -40,6 +40,16 @@ inline bool ShouldCoalesceNeighborBecameKnownSeam(
   return self_has_overlay_face_toward || self_has_face_debt_toward;
 }
 
+/// Sysreset v5: FaceDebt holder remeshes when a face-peer is already drawable
+/// (BecameKnown FirstDrawable will not fire again for that peer).
+inline bool ShouldRemeshFaceDebtHolderWhenPeerDrawable(
+    bool has_face_debt_bit, bool peer_drawable, bool focus_in_ring,
+    bool already_coalesced, int remesh_n, int remesh_cap = 4)
+{
+  return has_face_debt_bit && peer_drawable && focus_in_ring &&
+         !already_coalesced && remesh_n < remesh_cap;
+}
+
 inline bool ShouldSkipFaceForNeighbor(NeighborLoadState state)
 {
   return state == NeighborLoadState::Unknown ||

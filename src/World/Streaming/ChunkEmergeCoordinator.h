@@ -96,6 +96,8 @@ private:
   bool SoftDeferCallbacksInstalled{false};
   /// R06 E0: one sea-seam remesh dirty per peer column per emerge tick.
   std::unordered_set<uint64_t> SeaSeamRemeshCoalesceCols;
+  /// Sysreset v5: FaceDebt already-known peer remesh cap (shared with BecameKnown).
+  int FaceDebtAlreadyKnownRemeshN{0};
   /// Prior-frame FM enqueue / schedule baselines (was function-static).
   int FmEnqueuePrior{0};
   int ScheduleOkPrior{0};

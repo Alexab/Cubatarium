@@ -264,6 +264,21 @@ int main()
       return Fail("inland surface min y KEEP");
     }
   }
+  if (!cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, true, true, false,
+                                                        0, 4))
+  {
+    return Fail("FaceDebt already-known remesh");
+  }
+  if (cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, false, true, false,
+                                                       0, 4))
+  {
+    return Fail("FaceDebt SoftDefer peer no remesh");
+  }
+  if (cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, true, true, false,
+                                                       4, 4))
+  {
+    return Fail("FaceDebt remesh at cap");
+  }
   std::cout << "mesh_neighbor_policy_test OK" << std::endl;
   return 0;
 }
