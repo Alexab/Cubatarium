@@ -54,4 +54,4 @@ no FaceDebt on light Accept (v3 D4); FaceDebt SoftDefer peer skip + cap2.
 | hitch C | opaque cull skip / transparent resort KEEP |
 
 Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_v6_*`.
-Evidence: [SYSRESET_V6_AF_EVIDENCE.md](SYSRESET_V6_AF_EVIDENCE.md) (after AF).
+Evidence: [SYSRESET_V6_AF_EVIDENCE.md](SYSRESET_V6_AF_EVIDENCE.md).
