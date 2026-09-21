@@ -568,9 +568,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
           world_ref.NoteUnfinishedColumnDirty(col);
-          // Sysreset v5: already-drawable face-neighbor → remesh debt holder
+          // Sysreset v5/v6: already-drawable face-neighbor → remesh debt holder
           // now (BecameKnown misses peers that were known before overlay bake).
-          constexpr int kFaceDebtAlreadyKnownCap = 4;
+          // SoftDefer peer → FaceDebt census only (no Dirty); cap 2/frame.
+          constexpr int kFaceDebtAlreadyKnownCap = 2;
           if (FaceDebtAlreadyKnownRemeshN >= kFaceDebtAlreadyKnownCap)
           {
             return;
@@ -588,7 +589,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           static const glm::ivec3 kFaceDelta[6] = {
               {-1, 0, 0}, {1, 0, 0}, {0, -1, 0},
               {0, 1, 0},  {0, 0, -1}, {0, 0, 1}};
-          bool any_peer_drawable = false;
+          bool any_peer_ok = false;
           for (int face = 0; face < 6; ++face)
           {
             if ((mask & static_cast<uint8_t>(1u << face)) == 0)
@@ -596,13 +597,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               continue;
             }
             const glm::ivec3 peer = chunk_coord + kFaceDelta[face];
-            if (mesh.HasDrawableGreedyMesh(peer))
+            const bool peer_drawable = mesh.HasDrawableGreedyMesh(peer);
+            const bool peer_softdefer = mesh.IsSoftDeferHeld(peer);
+            if (ShouldRemeshFaceDebtHolderWhenPeerDrawable(
+                    /*has_face_debt_bit=*/true, peer_drawable,
+                    /*focus_in_ring=*/true, /*already_coalesced=*/false,
+                    /*remesh_n=*/0, kFaceDebtAlreadyKnownCap, peer_softdefer))
             {
-              any_peer_drawable = true;
+              any_peer_ok = true;
               break;
             }
           }
-          if (!any_peer_drawable)
+          if (!any_peer_ok)
           {
             return;
           }

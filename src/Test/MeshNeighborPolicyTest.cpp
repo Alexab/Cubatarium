@@ -265,17 +265,22 @@ int main()
     }
   }
   if (!cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, true, true, false,
-                                                        0, 4))
+                                                        0, 2))
   {
     return Fail("FaceDebt already-known remesh");
   }
   if (cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, false, true, false,
-                                                       0, 4))
+                                                       0, 2))
   {
     return Fail("FaceDebt SoftDefer peer no remesh");
   }
+  if (cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(
+          true, true, true, false, 0, 2, /*peer_softdefer_empty=*/true))
+  {
+    return Fail("FaceDebt SoftDeferEmpty peer no remesh");
+  }
   if (cutum::ShouldRemeshFaceDebtHolderWhenPeerDrawable(true, true, true, false,
-                                                       4, 4))
+                                                       2, 2))
   {
     return Fail("FaceDebt remesh at cap");
   }
