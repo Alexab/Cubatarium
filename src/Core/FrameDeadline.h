@@ -45,6 +45,19 @@ public:
 
   bool Exhausted() const { return RemainingMs() <= 0.0; }
 
+  /// Ownership HitchBudget: defer secondary scans (SoftDefer disk, thrash)
+  /// when leftover under min_remaining_ms. Critical FirstMesh uses
+  /// ShouldDeferProducer instead.
+  static bool ShouldDeferSecondaryScan(double min_remaining_ms = 2.0)
+  {
+    auto &dl = Get();
+    if (dl.Exhausted())
+    {
+      return true;
+    }
+    return dl.RemainingMs() < min_remaining_ms;
+  }
+
   /// Soft defer for Relight/Seam/non-critical drains. Pass
   /// `critical_progress=true` for FirstMesh — allows a bounded overrun of one
   /// critical unit after Exhausted (audit R08), not infinite bypass.

@@ -568,64 +568,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
           world_ref.NoteUnfinishedColumnDirty(col);
-          // Sysreset v5/v6: already-drawable face-neighbor → remesh debt holder
-          // now (BecameKnown misses peers that were known before overlay bake).
-          // SoftDefer peer → FaceDebt census only (no Dirty); cap 2/frame.
-          constexpr int kFaceDebtAlreadyKnownCap = 2;
-          if (FaceDebtAlreadyKnownRemeshN >= kFaceDebtAlreadyKnownCap)
-          {
-            return;
-          }
-          UWorldMeshService &mesh = world_ref.GetMeshService();
-          const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();
-          const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
-          const int holder_horiz = std::max(
-              std::abs(chunk_coord.x - focus_g.x),
-              std::abs(chunk_coord.z - focus_g.z));
-          if (holder_horiz > 4)
-          {
-            return;
-          }
-          static const glm::ivec3 kFaceDelta[6] = {
-              {-1, 0, 0}, {1, 0, 0}, {0, -1, 0},
-              {0, 1, 0},  {0, 0, -1}, {0, 0, 1}};
-          bool any_peer_ok = false;
-          for (int face = 0; face < 6; ++face)
-          {
-            if ((mask & static_cast<uint8_t>(1u << face)) == 0)
-            {
-              continue;
-            }
-            const glm::ivec3 peer = chunk_coord + kFaceDelta[face];
-            const bool peer_drawable = mesh.HasDrawableGreedyMesh(peer);
-            const bool peer_softdefer = mesh.IsSoftDeferHeld(peer);
-            if (ShouldRemeshFaceDebtHolderWhenPeerDrawable(
-                    /*has_face_debt_bit=*/true, peer_drawable,
-                    /*focus_in_ring=*/true, /*already_coalesced=*/false,
-                    /*remesh_n=*/0, kFaceDebtAlreadyKnownCap, peer_softdefer))
-            {
-              any_peer_ok = true;
-              break;
-            }
-          }
-          if (!any_peer_ok)
-          {
-            return;
-          }
-          const uint64_t col_key =
-              (static_cast<uint64_t>(static_cast<uint32_t>(chunk_coord.x))
-               << 42) |
-              (static_cast<uint64_t>(static_cast<uint32_t>(chunk_coord.z))
-               << 10) |
-              (static_cast<uint64_t>(
-                   static_cast<uint16_t>(chunk_coord.y + 512)) &
-               0x3FFull);
-          if (!SeaSeamRemeshCoalesceCols.insert(col_key).second)
-          {
-            return;
-          }
-          mesh.MarkDirtyPriority(chunk_coord);
-          ++FaceDebtAlreadyKnownRemeshN;
+          // Ownership SeamDebt: FaceDebt = census only (unfinished).
+          // Heal = BecameKnown coalesce after peer drawable∧!SoftDefer —
+          // no MarkDirtyPriority from mask (v5 remesh flood / 161139).
         });
     mesh_service.SetOnGpuPipelineProgressFn(
         [this](glm::ivec3 chunk_coord)
@@ -1253,6 +1198,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         owned_all_ticketed &&
         (SoftDeferRimScanCd > 0 ||
          (cruise_fast_path && !visual_holes));
+    // Ownership HitchBudget: SoftDefer disk scan under FrameDeadline leftover
+    // (SoT 161139 early wall/gui hitch — do not burn frame on full-disk probe).
+    const bool softdefer_deadline_skip =
+        !near_miss_urgent && UFrameDeadline::ShouldDeferSecondaryScan(2.0);
     if (skip_softdefer_disk_scan)
     {
       --SoftDeferRimScanCd;
@@ -1268,7 +1217,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     prep_softdefer_pre_ms = prep_ms_since(prep_t);
     const auto softdefer_scan_t0 = std::chrono::high_resolution_clock::now();
-    if (!skip_softdefer_disk_scan && !note_prep_deadline_skip())
+    if (!skip_softdefer_disk_scan && !softdefer_deadline_skip &&
+        !note_prep_deadline_skip())
     {
     for (int idx = 0; idx < cells; ++idx)
     {

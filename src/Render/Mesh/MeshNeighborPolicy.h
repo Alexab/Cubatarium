@@ -40,9 +40,9 @@ inline bool ShouldCoalesceNeighborBecameKnownSeam(
   return self_has_overlay_face_toward || self_has_face_debt_toward;
 }
 
-/// Sysreset v5/v6: FaceDebt holder remeshes when a face-peer is already
-/// drawable (BecameKnown FirstDrawable will not fire again for that peer).
-/// SoftDefer peer → census only (no Dirty); default cap 2 (was 4).
+/// Sysreset v5/v6 / Ownership SeamDebt: FaceDebt holder may remesh when peer
+/// is drawable∧!SoftDefer (BecameKnown will not fire). Call sites that Dirty
+/// from FaceDebt mask are removed — policy kept for BecameKnown coalesce.
 inline bool ShouldRemeshFaceDebtHolderWhenPeerDrawable(
     bool has_face_debt_bit, bool peer_drawable, bool focus_in_ring,
     bool already_coalesced, int remesh_n, int remesh_cap = 2,
