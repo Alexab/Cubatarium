@@ -2484,9 +2484,9 @@ int main()
              "FullyDark P1: FM progressing → no yield");
       Expect(!ShouldYieldRemeshSlotToFmUnderProtect(false, 40, 0, 2, 0),
              "FullyDark P1: no protect → no yield");
-      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
-                 true, true, true, true, false),
-             "FullyDark P2: PreferKick when pending GPU (no Dirty progress)");
+      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                  true, true, true, true, false),
+             "FullyDark P2: no PreferKick without Dirty progress (v3)");
       Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
                  true, true, true, true, true),
              "FullyDark P2: PreferKick when GPU+progress");
@@ -2495,7 +2495,7 @@ int main()
              "FullyDark P2: no GPU → no PreferKick");
       Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
                  false, true, true, true, true),
-             "lit-drain: PreferKick FD drawable+pending GPU");
+             "lit-drain: PreferKick FD drawable+pending+progress");
       Expect(ShouldForceDirtyAfterPreferKickStall(true, true, false, 8),
              "stall escape: force Dirty after PreferKick without progress");
       Expect(!ShouldForceDirtyAfterPreferKickStall(true, true, true, 8),

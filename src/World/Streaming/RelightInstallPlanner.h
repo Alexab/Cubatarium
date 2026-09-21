@@ -362,7 +362,8 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
-        // Sysreset v4: PreferKick when pending GPU even if already Dirty.
+        // Ownership LightConverge: PreferKick only with progress∧pending;
+        // else ForceDirtyStuck / stall (no PreferKick-spin without bake).
         (void)TryPreferKickOrForceDirty(plan, chunk,
                                         chunk.gpu_pending || chunk.raa_pending,
                                         in.force_stale_ticket);
@@ -466,7 +467,8 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
-        // Sysreset v4: PreferKick when pending GPU even if already Dirty.
+        // Ownership LightConverge: PreferKick only with progress∧pending;
+        // else ForceDirtyStuck / stall (no PreferKick-spin without bake).
         (void)TryPreferKickOrForceDirty(plan, chunk,
                                         chunk.gpu_pending || chunk.raa_pending,
                                         in.force_stale_ticket);

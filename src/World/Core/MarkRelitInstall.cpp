@@ -101,17 +101,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     mesh->PreferKickPendingGpuQueued(coord);
     ++PhysicsTelemetryData.MarkRelitPreferKickN;
   }
-  if (!plan.prefer_kick_gpu.empty())
-  {
-    // Sysreset v4: PreferKick is real pipeline progress (breaks Dirty-only gate).
-    GetColumnRecords().NotePublishProgress(column);
-    if (col_rec.visual == ColumnVisualState::NeedRelight ||
-        col_rec.visual == ColumnVisualState::NeedRemesh ||
-        col_rec.visual == ColumnVisualState::Ready)
-    {
-      col_rec.visual = ColumnVisualState::Publishing;
-    }
-  }
+  // Ownership LightConverge: PreferKick does NOT NotePublishProgress /
+  // Publishing (v3 honesty / dd7871ab). Progress only after Dirty admit below.
   if (plan.note_prefer_kick_stall)
   {
     GetColumnRecords().NotePreferKickStall(column);

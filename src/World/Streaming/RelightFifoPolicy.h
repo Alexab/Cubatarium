@@ -726,13 +726,15 @@ inline bool ShouldForceMarkRelitForTicketedStale(
   return consume_mode && still_stale;
 }
 
-/// PreferKick when FD+drawable already have pending GPU/RAA (pipeline progress).
-/// Does not require Dirty→NotePublishProgress first (v4 chicken-egg break).
+/// PreferKick when FD+drawable have pending GPU/RAA **and** real publish
+/// progress (v3 / dd7871ab black-clean). Progress = Dirty admit / lit publish,
+/// not PreferKick alone (v4 chicken-egg regress).
 inline bool ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
     bool /*force_stale_ticket*/, bool fully_dark, bool has_drawable,
-    bool pending_gpu_or_raa, bool /*has_publish_progress*/ = false)
+    bool pending_gpu_or_raa, bool has_publish_progress = false)
 {
-  return fully_dark && has_drawable && pending_gpu_or_raa;
+  return fully_dark && has_drawable && pending_gpu_or_raa &&
+         has_publish_progress;
 }
 
 /// NeedRelight ∧ PreferKick without progress for N frames → force Dirty once.
