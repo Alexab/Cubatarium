@@ -41,3 +41,4 @@ python -X utf8 tools/n01_v21_scorecard.py <perf.jsonl> -o bin/suite_reports/g1_a
 | hitch C | opaque cull / transparent under deadline; no control stutter |
 
 Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_v4_*`.
+Evidence: [SYSRESET_V4_AF_EVIDENCE.md](SYSRESET_V4_AF_EVIDENCE.md).
