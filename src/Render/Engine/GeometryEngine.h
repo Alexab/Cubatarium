@@ -354,6 +354,8 @@ private:
   uint64_t CachedTransparentCmdOn{0};
   uint64_t CachedTransparentCmdOnPrev{0};
   bool CachedTransparentCmdOnValid{false};
+  /// Sysreset v4 hitch C: prior-frame transparent_cmd_reorder_n for resort skip.
+  int CachedTransparentPrevCmdReorderN{0};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();

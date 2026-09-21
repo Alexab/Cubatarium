@@ -229,4 +229,32 @@ inline bool ShouldProbeFailOpenAabb(int tick, bool gpu_compact_active,
   return (tick % period) == 0;
 }
 
+/// Sysreset v4 hitch C: defer full opaque GPU compact cull when frame leftover
+/// is below cost-class and a prior compact mask can be reused. Never defer on
+/// underfeet miss / VB edge (must refresh visibility).
+inline bool ShouldDeferOpaqueCompactCullForDeadline(
+    double remaining_ms, bool gpu_compact_active, bool focus_missing,
+    bool vb_edge, int miss_horiz = 0, double cost_class_ms = 8.0)
+{
+  if (OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge)
+  {
+    return false;
+  }
+  if (!gpu_compact_active)
+  {
+    return false;
+  }
+  return remaining_ms < cost_class_ms;
+}
+
+/// Sysreset v4 hitch C: skip transparent full resort when mesh/ref set is
+/// stable and the previous frame did not need a command reorder.
+inline bool ShouldSkipTransparentFullResort(bool mesh_and_refs_stable,
+                                            bool has_cached_sorted_refs,
+                                            int prev_cmd_reorder_n)
+{
+  return mesh_and_refs_stable && has_cached_sorted_refs &&
+         prev_cmd_reorder_n == 0;
+}
+
 } // namespace cutum

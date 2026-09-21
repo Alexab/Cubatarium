@@ -1,6 +1,7 @@
 
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Camera/GpuPassRefreshPolicy.h"
+#include "Core/FrameDeadline.h"
 #include "Render/Effects/InfluenceFxSystem.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/GpuMeshSlotAllocator.h"
@@ -1977,7 +1978,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
           draw_set_stable, CachedOpaqueCullInputKey, opaque_cull_key,
           GreedyGpuOpaque.IndirectCullReady, GreedyGpuOpaque.GpuCompactActive,
           focus_missing, vb_edge, miss_horiz);
-      const bool do_skip = stable_skip || light_cruise_skip || compact_reuse;
+      const bool do_skip = stable_skip || light_cruise_skip || compact_reuse ||
+                           ShouldDeferOpaqueCompactCullForDeadline(
+                               UFrameDeadline::Get().RemainingMs(),
+                               GreedyGpuOpaque.GpuCompactActive, focus_missing,
+                               vb_edge, miss_horiz);
       if (!do_skip)
       {
         // Phase 5.7R7.2: cruise spd>1.5 → probe period 10; underfeet/VB force.
@@ -2396,12 +2401,17 @@ void UGeometryEngine::PrepareTransparent(
   }
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
   const uint64_t refFingerprint = TransparentRefListFingerprint(filtered);
-  const bool sort_inputs_unchanged =
-      sortRevision == CachedTransparentSortRevision &&
+  const bool mesh_and_refs_stable =
       ctx.meshRevision == CachedTransparentMeshRevision &&
-      refFingerprint == CachedTransparentRefFingerprint &&
+      refFingerprint == CachedTransparentRefFingerprint;
+  const bool sort_inputs_unchanged =
+      sortRevision == CachedTransparentSortRevision && mesh_and_refs_stable &&
       !CachedTransparentSortedRefs.empty();
-  if (sort_inputs_unchanged && !CachedTransparentSortedRefs.empty())
+  const bool skip_full_resort = ShouldSkipTransparentFullResort(
+      mesh_and_refs_stable, !CachedTransparentSortedRefs.empty(),
+      CachedTransparentPrevCmdReorderN);
+  if ((sort_inputs_unchanged || skip_full_resort) &&
+      !CachedTransparentSortedRefs.empty())
   {
     filtered = CachedTransparentSortedRefs;
   }
@@ -2445,6 +2455,7 @@ void UGeometryEngine::PrepareTransparent(
     phys.TransparentOrderOnlyFailReason = refresh_telem.OrderOnlyFailReason;
     phys.TransparentBatchN =
         static_cast<int>(GreedyGpuTransparent.batches.size());
+    CachedTransparentPrevCmdReorderN = refresh_telem.CmdReorderN;
   }
   if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
   {
