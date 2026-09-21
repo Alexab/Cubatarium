@@ -2500,6 +2500,15 @@ int main()
              "stall escape: force Dirty after PreferKick without progress");
       Expect(!ShouldForceDirtyAfterPreferKickStall(true, true, true, 8),
              "stall escape: progress present → no force");
+      using cutum::ShouldForceDirtyWhenStuckDirtyNoPending;
+      Expect(ShouldForceDirtyWhenStuckDirtyNoPending(true, true, false, 8),
+             "v5: dirty∧!pending∧stall≥8 → ForceDirty");
+      Expect(!ShouldForceDirtyWhenStuckDirtyNoPending(true, true, true, 8),
+             "v5: pending GPU → no ForceDirty-no-pending");
+      Expect(!ShouldForceDirtyWhenStuckDirtyNoPending(true, true, false, 7),
+             "v5: stall under 8 → no ForceDirty");
+      Expect(!ShouldForceDirtyWhenStuckDirtyNoPending(true, false, false, 8),
+             "v5: not dirty → no ForceDirty-no-pending");
       Expect(ColumnVisualAllowsPreferKick(
                  cutum::ColumnVisualState::Publishing, true),
              "ColumnVisual: PreferKick while Publishing+progress");

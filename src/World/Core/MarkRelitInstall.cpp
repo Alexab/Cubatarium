@@ -126,10 +126,12 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     const auto dirty_t0 = Clock::now();
     const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
     const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
+    int dirty_admitted_n = 0;
     auto admit_dirty = [&](const glm::ivec3 &coord, bool priority) {
       const int horiz = std::max(std::abs(coord.x - focus_g.x),
                                  std::abs(coord.z - focus_g.z));
-      // Focus ring always competes for admit; hinterland drops when dry.
+      // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
+      // enqueues (PreferKick≡0 cannot own pending GPU alone).
       if (!mesh->TryConsumeDirtyAdmit())
       {
         if (horiz > 4)
@@ -137,9 +139,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           ++PhysicsTelemetryData.DirtyDropped;
           return;
         }
-        // Focus: still drop if admit exhausted (PreferKick owns pending GPU).
-        ++PhysicsTelemetryData.DirtyDropped;
-        return;
+        // Focus bypass: still MarkDirty* without consuming admit.
       }
       if (priority)
       {
@@ -152,6 +152,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         mesh->MarkDirty(coord);
       }
       ++PhysicsTelemetryData.MarkRelitScheduleN;
+      ++dirty_admitted_n;
     };
     for (const glm::ivec3 &coord : plan.mark_dirty_priority)
     {
@@ -163,13 +164,16 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     }
     PhysicsTelemetryData.MarkRelitMarkDirtyMs +=
         ElapsedMs(dirty_t0, Clock::now());
-    // Real publish progress: MarkRelit → Dirty chain (not GPU queued alone).
-    GetColumnRecords().NotePublishProgress(column);
-    if (col_rec.visual == ColumnVisualState::NeedRelight ||
-        col_rec.visual == ColumnVisualState::NeedRemesh ||
-        col_rec.visual == ColumnVisualState::Ready)
+    // Progress honesty: only when ≥1 Dirty actually admitted.
+    if (dirty_admitted_n > 0)
     {
-      col_rec.visual = ColumnVisualState::Publishing;
+      GetColumnRecords().NotePublishProgress(column);
+      if (col_rec.visual == ColumnVisualState::NeedRelight ||
+          col_rec.visual == ColumnVisualState::NeedRemesh ||
+          col_rec.visual == ColumnVisualState::Ready)
+      {
+        col_rec.visual = ColumnVisualState::Publishing;
+      }
     }
   }
   PhysicsTelemetryData.MarkRelitSkipAlreadyDirtyN += plan.skip_already_dirty_n;

@@ -305,6 +305,14 @@ inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
     plan.note_prefer_kick_stall = true;
     return true;
   }
+  // Sysreset v5: dirty∧!pending∧stall≥8 → ForceDirty (not stall-only).
+  if (ShouldForceDirtyWhenStuckDirtyNoPending(
+          fd_drawable, chunk.is_dirty, pending_gpu_or_raa,
+          chunk.prefer_kick_stall_frames))
+  {
+    ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
+    return true;
+  }
   if (chunk.is_dirty)
   {
     plan.note_prefer_kick_stall = true;

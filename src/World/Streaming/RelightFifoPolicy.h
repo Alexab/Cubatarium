@@ -749,6 +749,18 @@ inline bool ShouldForceDirtyAfterPreferKickStall(bool fully_dark_drawable,
   return stall_frames >= stall_limit;
 }
 
+/// Sysreset v5: Dirty bit set but no GPU pending after stall → re-ForceDirty
+/// (escape stall-only path that left PreferKick≡0 / blacks).
+inline bool ShouldForceDirtyWhenStuckDirtyNoPending(bool fully_dark_drawable,
+                                                    bool is_dirty,
+                                                    bool pending_gpu_or_raa,
+                                                    int stall_frames,
+                                                    int stall_limit = 8)
+{
+  return fully_dark_drawable && is_dirty && !pending_gpu_or_raa &&
+         stall_frames >= stall_limit;
+}
+
 /// N04 T2: remesh ticketed FullyDark when Flow ticket exists but ColumnHasRepairProgress
 /// is false (SoftDefer≠progress). Cap at call site; MarkDirty not Priority.
 inline bool ShouldRemeshTicketedFullyDarkStalled(bool has_repair_ticket,
