@@ -1,7 +1,7 @@
-# Sysreset operator + AF gates (v3 vs SoT 202031)
+# Sysreset operator + AF gates (v4 vs SoT 101105)
 
-Controls vs manual `bin/logs/perf_20260920-202031_6988.jsonl` and v2 AF baselines.
-Doc: [SYSRESET_V3_AUDIT_202031.md](SYSRESET_V3_AUDIT_202031.md).
+Controls vs manual `bin/logs/perf_20260921-101105_14028.jsonl`.
+Docs: [SYSRESET_V4_AUDIT_101105.md](SYSRESET_V4_AUDIT_101105.md), prior v3 gates still KEEP where noted.
 
 ## AF suite (fog ON)
 
@@ -13,30 +13,31 @@ python -X utf8 tools/flight_sim_run.py --world World_164 --scenario product-1746
 python -X utf8 tools/n01_v21_scorecard.py <perf.jsonl> -o bin/suite_reports/g1_a10_relight/<label>_score.json --label <label>
 ```
 
-## Scorecard gates (v3)
+## Scorecard gates (v4)
 
-| Gate | 202031 / v2 bad | Pass |
+| Gate | 101105 bad | Pass |
 |---|---|---|
 | west_route_coverage | COVERED | COVERED (cx≤−3) |
-| VB fly med | 42 / ≤35 AF | ≤35 |
-| mid_fd_stalled | 19 manual | ≤5 |
-| unfinished_visual max | 12 | ≤4 |
-| prior_lit_hold fly med | ~599 | ≤400 or Δ↓≥20% vs 202031 |
-| prior_lit_hold_age_max | 90 | ≤90 KEEP |
+| VB fly med | 44.5 | ≤35 |
+| mid_fd_stalled | 11–19 | ≤5 |
+| unfinished_visual max | 63 | ≤4 |
+| PreferKick stand/fly | ≡0 | >0 when pending GPU |
+| dirty_fm med | ~85 | ≪90 / Δ↓≥30% |
+| prior_lit_hold fly med | ~8 | ≤400 KEEP |
 | flip / dual | 0\|0 | KEEP 0\|0 |
-| dive void_near med | ≤500 v2 | ≤500 |
-| mesh_emerge_ms max | 90–137 | ≤40 |
-| mesh_gpu_kick_ms max (kick_n>0) | ~114 | ≤20 |
-| spikes max | 5 | ≤2 |
-| transparent_cmd_reorder mid | 0–0.5 | ≤0.5 |
-| cold blink | 0.14 | ≤0.3 or non-blocking if warm+dive PASS |
+| mesh_gpu_kick_ms max | ≪1 | ≤20 KEEP |
+| mesh_emerge fly max | ~5 | ≤40 |
+| render_total fly max | 79–200 | ≤80 |
+| spikes max | 2 | ≤2 |
+| transparent_cmd_reorder mid | 0–1 | ≤0.5 |
+| operator sky-through | OPEN | CLOSED |
 
 ## Operator SoT
 
 | Class | Check |
 |---|---|
-| x-ray faces | single-block wall holes drain; unfinished≤4 |
-| hitch | no control stutter from emerge/kick spikes |
-| wrong-tex / walls / blacks | KEEP v2 improvements |
+| sky-through faces | SoftDefer→overlay→Unknown seams remesh; unfinished≤4 |
+| FullyDark / VB | PreferKick drain; mid_fd≤5; VB≤35 |
+| hitch C | opaque cull / transparent under deadline; no control stutter |
 
-Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_v3_*`.
+Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_v4_*`.
