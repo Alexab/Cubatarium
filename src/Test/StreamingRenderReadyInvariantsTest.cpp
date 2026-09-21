@@ -98,6 +98,17 @@ int main()
   // so place Immediate must commit (manual 184035 undrawn).
   Expect(!ShouldRejectDarkMeshCommit(true, false, /*had_lit_mesh=*/false),
          "empty SoftDefer placeholder Immediate dark commit allowed");
+  using cutum::ShouldRejectDarkOnGeomStaleAccept;
+  Expect(ShouldRejectDarkOnGeomStaleAccept(true, true, true, false),
+         "v6: geom-stale dark over prior lit rejected");
+  Expect(ShouldRejectDarkOnGeomStaleAccept(true, true, false, true),
+         "v6: geom-stale dark over live lit GPU rejected");
+  Expect(!ShouldRejectDarkOnGeomStaleAccept(true, true, false, false),
+         "v6: geom-stale dark first mesh allowed (no prior lit)");
+  Expect(!ShouldRejectDarkOnGeomStaleAccept(true, false, true, false),
+         "v6: light Accept not gated by geom-stale helper");
+  Expect(!ShouldRejectDarkOnGeomStaleAccept(false, true, true, false),
+         "v6: non-dark geom-stale Accept OK");
   using cutum::ShouldRetainPriorLitOverUnlitCandidate;
   Expect(ShouldRetainPriorLitOverUnlitCandidate(true, false, true),
          "invariants: retain prior lit over dark");

@@ -3799,7 +3799,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
     bool accepted_input_stale, uint64_t source_light_revision,
-    bool has_source_light_revision, BoundaryOverlayState boundary_overlay)
+    bool has_source_light_revision, BoundaryOverlayState boundary_overlay,
+    bool accepted_geom_stale)
 {
   (void)registry;
   (void)source_revision;
@@ -3811,11 +3812,42 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
     return false;
   }
+  const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
+  const bool had_mesh = HasDrawableGreedyMesh(coord);
+  const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(coord);
+  const bool had_live_lit_gpu =
+      ChunkHasLiveGpuDraw(coord) && !ChunkHasFullyDarkFace(coord);
+  const int prior_lit_age = GetPriorLitHoldAge(coord);
+  // Sysreset v6: geom-stale Accept must not Retain dark over prior lit.
+  if (ShouldRejectDarkOnGeomStaleAccept(gpu_result.hasFullyDarkFace,
+                                        accepted_geom_stale, had_lit_mesh,
+                                        had_live_lit_gpu))
+  {
+    if (GpuPipeline && gpu_result.slotIndex >= 0)
+    {
+      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+    }
+    if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
+                                              true, prior_lit_age))
+    {
+      NotePriorLitHold(coord);
+    }
+    // One light-fresh remesh (not silent D4 hold of dark stale bake).
+    if (!Dirty.Contains(coord))
+    {
+      MarkDirtyPriority(coord);
+    }
+    else
+    {
+      RemeshAfterApply.insert(coord);
+    }
+    return false;
+  }
   // N04 I3t: accepted stale on prior drawable — keep prior sole live image;
   // queue ordinary Dirty refresh (do not Bind wrong bake / clear batches).
   // SoT 100303: never hold without drawable (empty spoof → SoftDefer hole).
   {
-    const bool has_drawable = HasDrawableGreedyMesh(coord);
+    const bool has_drawable = had_mesh;
     const auto git = GreedyCache.find(coord);
     const bool gpu_resident =
         git != GreedyCache.end() && git->second.GpuResident;
@@ -3839,12 +3871,6 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       return false;
     }
   }
-  const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
-  const bool had_mesh = HasDrawableGreedyMesh(coord);
-  const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(coord);
-  const bool had_live_lit_gpu =
-      ChunkHasLiveGpuDraw(coord) && !ChunkHasFullyDarkFace(coord);
-  const int prior_lit_age = GetPriorLitHoldAge(coord);
   if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace,
                                  defer_until_lit && had_mesh, had_lit_mesh,
                                  had_live_lit_gpu, prior_lit_age))
@@ -4248,6 +4274,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
          stale_reason == MeshApplyStaleInputReason::Geom))
     {
       pending.accepted_input_stale = true;
+      pending.accepted_geom_stale =
+          stale_reason == MeshApplyStaleInputReason::Geom;
     }
     const uint64_t expected_revision = MeshRevisions.Current(pending.coord);
     const auto revisionIt = ActiveMeshSourceRevision.find(pending.coord);
@@ -4351,7 +4379,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                   ? pending.snapshot.inputStamps[0].light
                                   : 0ull,
                               pending.snapshot.inputStampsValid,
-                              pending.snapshot.boundaryOverlay))
+                              pending.snapshot.boundaryOverlay,
+                              pending.accepted_geom_stale))
       {
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
@@ -4436,7 +4465,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                   ? pending.snapshot.inputStamps[0].light
                                   : 0ull,
                               pending.snapshot.inputStampsValid,
-                              pending.snapshot.boundaryOverlay))
+                              pending.snapshot.boundaryOverlay,
+                              pending.accepted_geom_stale))
     {
       NoteGpuPipelineProgress(pending.coord);
       ++processed;
@@ -4713,7 +4743,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                   ? pending.snapshot.inputStamps[0].light
                                   : 0ull,
                               pending.snapshot.inputStampsValid,
-                              pending.snapshot.boundaryOverlay))
+                              pending.snapshot.boundaryOverlay,
+                              pending.accepted_geom_stale))
       {
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
@@ -4877,6 +4908,40 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // SoT 100303: never hold without drawable (empty spoof → SoftDefer hole).
   {
     const bool has_drawable = HasDrawableGreedyMesh(result.coord);
+    const bool had_lit_mesh =
+        has_drawable && !ChunkHasFullyDarkFace(result.coord);
+    const bool had_live_lit_gpu =
+        ChunkHasLiveGpuDraw(result.coord) && !ChunkHasFullyDarkFace(result.coord);
+    const bool accepted_geom_stale =
+        refresh_after_accept_stale &&
+        stale_reason == MeshApplyStaleInputReason::Geom;
+    // Sysreset v6: CPU geom-stale dark over prior lit → reject + one light-fresh.
+    // GPU packed path checks dark at CommitGpuMeshResult (hasFullyDarkFace).
+    if (!result.GpuExtractPending &&
+        ShouldRejectDarkOnGeomStaleAccept(BatchesHaveFullyDarkFace(result.batches),
+                                          accepted_geom_stale, had_lit_mesh,
+                                          had_live_lit_gpu))
+    {
+      ActiveMeshSourceRevision.erase(revisionIt);
+      GpuExtractInFlight.erase(result.coord);
+      if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
+                                                true,
+                                                GetPriorLitHoldAge(result.coord)))
+      {
+        NotePriorLitHold(result.coord);
+      }
+      if (!Dirty.Contains(result.coord))
+      {
+        MarkDirtyPriority(result.coord);
+      }
+      else
+      {
+        RemeshAfterApply.insert(result.coord);
+      }
+      abandon_fm_watch();
+      LastApplyWasRetainedPrior_ = true;
+      return;
+    }
     const auto git = GreedyCache.find(result.coord);
     const bool gpu_resident =
         git != GreedyCache.end() && git->second.GpuResident;
@@ -4946,6 +5011,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       pending.inputCatalog = std::move(result.InputCatalog);
       pending.crossCenters = std::move(result.crossCenters);
       pending.accepted_input_stale = refresh_after_accept_stale;
+      pending.accepted_geom_stale =
+          refresh_after_accept_stale &&
+          stale_reason == MeshApplyStaleInputReason::Geom;
       result.PendingSnapshot.reset();
       result.GpuExtractPending = false;
       if (MeshFocusValid)

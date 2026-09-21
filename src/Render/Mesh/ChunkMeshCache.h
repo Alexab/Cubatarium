@@ -963,6 +963,8 @@ private:
     bool transparent{false};
     /// N04 H4: accepted light/geom-stale input — refresh Dirty after commit.
     bool accepted_input_stale{false};
+    /// Sysreset v6: geom-stale Accept (not light) — dark reject + light-fresh.
+    bool accepted_geom_stale{false};
     UGpuMeshPipeline::GpuApplyTicket ticket{};
   };
   void EnsureGpuPipeline();
@@ -973,7 +975,8 @@ private:
       bool accepted_input_stale = false,
       uint64_t source_light_revision = 0,
       bool has_source_light_revision = false,
-      BoundaryOverlayState boundary_overlay = {});
+      BoundaryOverlayState boundary_overlay = {},
+      bool accepted_geom_stale = false);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);

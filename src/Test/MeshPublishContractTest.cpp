@@ -76,6 +76,11 @@ int main()
          "expire → PublishedEmpty path");
   Expect(!ShouldPublishedEmptyAfterPriorLitExpire(true, false, true, 10),
          "young hold → not PublishedEmpty yet");
+  using cutum::ShouldRejectDarkOnGeomStaleAccept;
+  Expect(ShouldRejectDarkOnGeomStaleAccept(true, true, true),
+         "v6 geom-stale dark reject over lit");
+  Expect(!ShouldRejectDarkOnGeomStaleAccept(false, true, true),
+         "v6 non-dark geom-stale ok");
 
   if (gFails != 0)
   {

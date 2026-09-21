@@ -124,6 +124,21 @@ inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
   return had_lit_mesh || had_live_lit_gpu;
 }
 
+/// Sysreset v6: geom-stale Accept Retain must not keep a dark bake over prior
+/// lit (SoT 145008 black block faces). Caller: prior lit KEEP + one light-fresh
+/// RemeshAfterApply / DirtyPriority. Light Accept (non-geom) stays v3 D4.
+inline bool ShouldRejectDarkOnGeomStaleAccept(bool new_has_dark_face,
+                                             bool accepted_geom_stale,
+                                             bool had_lit_mesh,
+                                             bool had_live_lit_gpu = false)
+{
+  if (!new_has_dark_face || !accepted_geom_stale)
+  {
+    return false;
+  }
+  return had_lit_mesh || had_live_lit_gpu;
+}
+
 /// After PriorLit TTL expire: clear sole image (PublishedEmpty) rather than
 /// accepting a dark wrong-material Replace.
 inline bool ShouldPublishedEmptyAfterPriorLitExpire(bool had_lit_mesh,
