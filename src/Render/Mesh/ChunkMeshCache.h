@@ -702,6 +702,38 @@ public:
       OnFaceDebtDirty(chunk_coord);
     }
   }
+  /// Sysreset v4: overlay missingNeighborFaces → per-face FaceDebt (sky seam).
+  void SetOnFaceDebtMaskFn(std::function<void(glm::ivec3, uint8_t)> fn)
+  {
+    OnFaceDebtMask = std::move(fn);
+  }
+  void NoteFaceDebtOverlayMask(glm::ivec3 chunk_coord, uint8_t mask) const
+  {
+    if (mask == 0)
+    {
+      return;
+    }
+    if (OnFaceDebtMask)
+    {
+      OnFaceDebtMask(chunk_coord, mask);
+    }
+    else if (OnFaceDebt)
+    {
+      OnFaceDebt(chunk_coord);
+    }
+  }
+  /// Sysreset v4: Kick/Finish counts as publish progress for PreferKick gate.
+  void SetOnGpuPipelineProgressFn(std::function<void(glm::ivec3)> fn)
+  {
+    OnGpuPipelineProgress = std::move(fn);
+  }
+  void NoteGpuPipelineProgress(glm::ivec3 chunk_coord) const
+  {
+    if (OnGpuPipelineProgress)
+    {
+      OnGpuPipelineProgress(chunk_coord);
+    }
+  }
   /// Audit S2: packed bind must drop MDI/pool resident for the same coord.
   void SetOnPackedRepresentationSwitchFn(std::function<void(glm::ivec3)> fn)
   {
@@ -1258,6 +1290,8 @@ private:
   std::function<void(glm::ivec3)> OnFirstDrawableCoverage;
   mutable std::function<void(glm::ivec3)> OnFaceDebt;
   mutable std::function<void(glm::ivec3)> OnFaceDebtDirty;
+  mutable std::function<void(glm::ivec3, uint8_t)> OnFaceDebtMask;
+  mutable std::function<void(glm::ivec3)> OnGpuPipelineProgress;
   std::function<void(glm::ivec3)> OnPackedRepresentationSwitch;
   // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
   mutable uint64_t HoleQueryEpoch{0};

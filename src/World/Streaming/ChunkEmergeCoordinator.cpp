@@ -555,12 +555,44 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // Cap: material/geom mismatch schedules one Dirty (not flood).
           world_ptr->GetMeshService().MarkDirty(chunk_coord);
         });
+    mesh_service.SetOnFaceDebtMaskFn(
+        [this](glm::ivec3 chunk_coord, uint8_t mask)
+        {
+          UWorld *world_ptr = SoftDeferPolicy.world;
+          if (!world_ptr || mask == 0)
+          {
+            return;
+          }
+          UWorld &world_ref = *world_ptr;
+          const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+          world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
+          world_ref.NoteUnfinishedColumnDirty(col);
+        });
+    mesh_service.SetOnGpuPipelineProgressFn(
+        [this](glm::ivec3 chunk_coord)
+        {
+          UWorld *world_ptr = SoftDeferPolicy.world;
+          if (!world_ptr)
+          {
+            return;
+          }
+          UWorld &world_ref = *world_ptr;
+          const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+          world_ref.GetColumnRecords().NotePublishProgress(col);
+          ColumnRecord &rec = world_ref.GetColumnRecords().GetOrCreate(col);
+          if (rec.visual == ColumnVisualState::NeedRelight ||
+              rec.visual == ColumnVisualState::NeedRemesh ||
+              rec.visual == ColumnVisualState::Ready)
+          {
+            rec.visual = ColumnVisualState::Publishing;
+          }
+        });
     // R06: when coverage publishes, remesh face-neighbors in sea band that
     // still carry sticky BoundaryOverlay toward the publisher (R2 overlay-only;
     // no 3x3; underwater Y = publisher_cy; coalesce one dirty/col/frame).
     // Regression 185830 H1/W1: do NOT broaden to any-active-overlay outside
     // sea-band — remesh flood → FullyDark/blacks + flicker (R1 class).
-    // Sysreset v3: also FaceDebt remesh for overlay peers in focus ring (cap).
+    // Sysreset v4: FaceDebt|overlay remesh in focus ring (cap 4).
     mesh_service.SetOnFirstDrawableCoverageFn(
         [this](glm::ivec3 chunk_coord)
         {
@@ -587,7 +619,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           static const glm::ivec3 kFaceNb[4] = {
               {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
           int face_debt_remesh_n = 0;
-          constexpr int kFaceDebtRemeshCap = 2;
+          constexpr int kFaceDebtRemeshCap = 4;
           for (const glm::ivec3 &d : kFaceNb)
           {
             if (face_debt_remesh_n >= kFaceDebtRemeshCap)
@@ -605,9 +637,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 SeaSeamPeerFaceTowardPublisher(d.x, d.z);
             const bool face_overlay =
                 mesh.HasActiveBoundaryOverlayFace(n, face_toward);
+            const bool face_debt =
+                world_ref.GetColumnRecords().HasFaceDebtFace(
+                    glm::ivec2(n.x, n.z), face_toward);
             if (!ShouldCoalesceNeighborBecameKnownSeam(
                     /*neighbor_now_known=*/true, face_overlay,
-                    /*already_coalesced=*/false))
+                    /*already_coalesced=*/false, face_debt))
             {
               continue;
             }

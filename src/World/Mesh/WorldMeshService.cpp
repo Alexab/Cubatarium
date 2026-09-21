@@ -101,6 +101,18 @@ void UWorldMeshService::SetOnFaceDebtDirtyFn(std::function<void(glm::ivec3)> fn)
   Cache.SetOnFaceDebtDirtyFn(std::move(fn));
 }
 
+void UWorldMeshService::SetOnFaceDebtMaskFn(
+    std::function<void(glm::ivec3, uint8_t)> fn)
+{
+  Cache.SetOnFaceDebtMaskFn(std::move(fn));
+}
+
+void UWorldMeshService::SetOnGpuPipelineProgressFn(
+    std::function<void(glm::ivec3)> fn)
+{
+  Cache.SetOnGpuPipelineProgressFn(std::move(fn));
+}
+
 void UWorldMeshService::SetOnMeshColumnDirtyFn(
     std::function<void(glm::ivec3)> fn)
 {

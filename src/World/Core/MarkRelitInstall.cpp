@@ -101,6 +101,17 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     mesh->PreferKickPendingGpuQueued(coord);
     ++PhysicsTelemetryData.MarkRelitPreferKickN;
   }
+  if (!plan.prefer_kick_gpu.empty())
+  {
+    // Sysreset v4: PreferKick is real pipeline progress (breaks Dirty-only gate).
+    GetColumnRecords().NotePublishProgress(column);
+    if (col_rec.visual == ColumnVisualState::NeedRelight ||
+        col_rec.visual == ColumnVisualState::NeedRemesh ||
+        col_rec.visual == ColumnVisualState::Ready)
+    {
+      col_rec.visual = ColumnVisualState::Publishing;
+    }
+  }
   if (plan.note_prefer_kick_stall)
   {
     GetColumnRecords().NotePreferKickStall(column);
@@ -113,17 +124,42 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
   if (!plan.mark_dirty_priority.empty() || !plan.mark_dirty.empty())
   {
     const auto dirty_t0 = Clock::now();
+    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
+    auto admit_dirty = [&](const glm::ivec3 &coord, bool priority) {
+      const int horiz = std::max(std::abs(coord.x - focus_g.x),
+                                 std::abs(coord.z - focus_g.z));
+      // Focus ring always competes for admit; hinterland drops when dry.
+      if (!mesh->TryConsumeDirtyAdmit())
+      {
+        if (horiz > 4)
+        {
+          ++PhysicsTelemetryData.DirtyDropped;
+          return;
+        }
+        // Focus: still drop if admit exhausted (PreferKick owns pending GPU).
+        ++PhysicsTelemetryData.DirtyDropped;
+        return;
+      }
+      if (priority)
+      {
+        mesh->MarkDirtyPriority(coord);
+        ++PhysicsTelemetryData.FmDirtyEnqueueN;
+        ++PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN;
+      }
+      else
+      {
+        mesh->MarkDirty(coord);
+      }
+      ++PhysicsTelemetryData.MarkRelitScheduleN;
+    };
     for (const glm::ivec3 &coord : plan.mark_dirty_priority)
     {
-      mesh->MarkDirtyPriority(coord);
-      ++PhysicsTelemetryData.MarkRelitScheduleN;
-      ++PhysicsTelemetryData.FmDirtyEnqueueN;
-      ++PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN;
+      admit_dirty(coord, /*priority=*/true);
     }
     for (const glm::ivec3 &coord : plan.mark_dirty)
     {
-      mesh->MarkDirty(coord);
-      ++PhysicsTelemetryData.MarkRelitScheduleN;
+      admit_dirty(coord, /*priority=*/false);
     }
     PhysicsTelemetryData.MarkRelitMarkDirtyMs +=
         ElapsedMs(dirty_t0, Clock::now());

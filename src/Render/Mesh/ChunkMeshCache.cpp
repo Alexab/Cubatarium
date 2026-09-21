@@ -3903,6 +3903,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   // S4 fail-closed: do not stamp current world light over a bake without
   // source provenance (hold prior MeshedLightRevision).
   chunkMesh.BoundaryOverlay = boundary_overlay;
+  // Sysreset v4: overlay Missing → FaceDebt (sky-through until BecameKnown).
+  if (boundary_overlay.active && boundary_overlay.missingNeighborFaces != 0)
+  {
+    NoteFaceDebtOverlayMask(coord, boundary_overlay.missingNeighborFaces);
+  }
   // R03: drop MDI/pool resident BEFORE packed becomes the sole draw source.
   if (OnPackedRepresentationSwitch)
   {
@@ -4348,6 +4353,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                               pending.snapshot.inputStampsValid,
                               pending.snapshot.boundaryOverlay))
       {
+        NoteGpuPipelineProgress(pending.coord);
         ++processed;
         ++finished;
         ++stats.Completed;
@@ -4432,6 +4438,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                               pending.snapshot.inputStampsValid,
                               pending.snapshot.boundaryOverlay))
     {
+      NoteGpuPipelineProgress(pending.coord);
       ++processed;
       ++finished;
       ++stats.Completed;
@@ -4626,6 +4633,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     PendingGpuApplies.push_back(std::move(pending));
     TouchPendingGpuIndex();
     GpuExtractInFlight.insert(kicked_coord);
+    NoteGpuPipelineProgress(kicked_coord);
     ++kicked;
     if (debt_kick_quota)
     {
@@ -4707,6 +4715,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                               pending.snapshot.inputStampsValid,
                               pending.snapshot.boundaryOverlay))
       {
+        NoteGpuPipelineProgress(pending.coord);
         ++processed;
         ++finished;
         ++stats.Completed;
@@ -5148,6 +5157,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   chunkMesh.crossCenters = std::move(result.crossCenters);
   // W1 SoT 185830: sync BoundaryOverlay on CPU Apply (heal gates were blind).
   chunkMesh.BoundaryOverlay = result.BoundaryOverlay;
+  if (result.BoundaryOverlay.active &&
+      result.BoundaryOverlay.missingNeighborFaces != 0)
+  {
+    NoteFaceDebtOverlayMask(result.coord,
+                            result.BoundaryOverlay.missingNeighborFaces);
+  }
   // Audit R05: MeshedLightRevision = bake source stamp, not current world light.
   if (result.InputStampsValid)
   {

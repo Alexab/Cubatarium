@@ -2484,9 +2484,9 @@ int main()
              "FullyDark P1: FM progressing → no yield");
       Expect(!ShouldYieldRemeshSlotToFmUnderProtect(false, 40, 0, 2, 0),
              "FullyDark P1: no protect → no yield");
-      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
-                  true, true, true, true, false),
-             "FullyDark P2: PreferKick needs publish progress");
+      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                 true, true, true, true, false),
+             "FullyDark P2: PreferKick when pending GPU (no Dirty progress)");
       Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
                  true, true, true, true, true),
              "FullyDark P2: PreferKick when GPU+progress");
@@ -2495,7 +2495,7 @@ int main()
              "FullyDark P2: no GPU → no PreferKick");
       Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
                  false, true, true, true, true),
-             "lit-drain: PreferKick FD drawable+GPU+progress");
+             "lit-drain: PreferKick FD drawable+pending GPU");
       Expect(ShouldForceDirtyAfterPreferKickStall(true, true, false, 8),
              "stall escape: force Dirty after PreferKick without progress");
       Expect(!ShouldForceDirtyAfterPreferKickStall(true, true, true, 8),
@@ -4287,6 +4287,22 @@ int main()
     Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key_moved, true,
                                          true, false, false, 100, 100, 0),
            "audit M06: compact reuse invalidates on camera translation");
+    using cutum::ShouldDeferOpaqueCompactCullForDeadline;
+    using cutum::ShouldSkipTransparentFullResort;
+    Expect(ShouldDeferOpaqueCompactCullForDeadline(4.0, true, false, false, 2),
+           "v4 hitch C: defer cull when leftover < cost-class");
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(12.0, true, false, false, 2),
+           "v4 hitch C: run cull when leftover healthy");
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, true, true, false, 0),
+           "v4 hitch C: never defer underfeet miss");
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, false, false, false, 2),
+           "v4 hitch C: no prior mask → must run");
+    Expect(ShouldSkipTransparentFullResort(true, true, 0),
+           "v4 hitch C: skip transparent resort when stable + reorder0");
+    Expect(!ShouldSkipTransparentFullResort(true, true, 3),
+           "v4 hitch C: resort when prior reorder>0");
+    Expect(!ShouldSkipTransparentFullResort(false, true, 0),
+           "v4 hitch C: resort when mesh/refs changed");
     using cutum::OpaqueCullCmdOnStable;
     Expect(OpaqueCullCmdOnStable(100, 100), "5.7R3: cmd equal stable");
     Expect(OpaqueCullCmdOnStable(102, 100), "5.7R3: cmd +2% stable");

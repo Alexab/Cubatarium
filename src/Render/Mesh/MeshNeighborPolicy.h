@@ -27,16 +27,17 @@ inline bool NeighborUnknownAlwaysHidesFace(NeighborLoadState state)
 }
 
 /// NeighborBecameKnown: coalesce seam remesh 1/column/frame when a face-neighbor
-/// flips to loaded/drawable (not FullyDark flood).
+/// flips to loaded/drawable (overlay Missing and/or FaceDebt toward publisher).
 inline bool ShouldCoalesceNeighborBecameKnownSeam(
     bool neighbor_now_known, bool self_has_overlay_face_toward,
-    bool already_coalesced_this_frame)
+    bool already_coalesced_this_frame,
+    bool self_has_face_debt_toward = false)
 {
   if (!neighbor_now_known || already_coalesced_this_frame)
   {
     return false;
   }
-  return self_has_overlay_face_toward;
+  return self_has_overlay_face_toward || self_has_face_debt_toward;
 }
 
 inline bool ShouldSkipFaceForNeighbor(NeighborLoadState state)

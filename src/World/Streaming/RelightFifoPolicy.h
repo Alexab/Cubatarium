@@ -726,17 +726,13 @@ inline bool ShouldForceMarkRelitForTicketedStale(
   return consume_mode && still_stale;
 }
 
-/// PreferKick is legal only while Publishing and Apply made real progress
-/// (lit bytes / meshed_rev / MarkRelit→Dirty — not "GPU queued").
+/// PreferKick when FD+drawable already have pending GPU/RAA (pipeline progress).
+/// Does not require Dirty→NotePublishProgress first (v4 chicken-egg break).
 inline bool ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
     bool /*force_stale_ticket*/, bool fully_dark, bool has_drawable,
-    bool pending_gpu_or_raa, bool has_publish_progress = false)
+    bool pending_gpu_or_raa, bool /*has_publish_progress*/ = false)
 {
-  if (!(fully_dark && has_drawable && pending_gpu_or_raa))
-  {
-    return false;
-  }
-  return has_publish_progress;
+  return fully_dark && has_drawable && pending_gpu_or_raa;
 }
 
 /// NeedRelight ∧ PreferKick without progress for N frames → force Dirty once.

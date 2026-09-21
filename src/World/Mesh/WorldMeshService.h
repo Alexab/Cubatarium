@@ -65,6 +65,8 @@ public:
   void SetOnFirstDrawableCoverageFn(std::function<void(glm::ivec3)> fn);
   void SetOnFaceDebtFn(std::function<void(glm::ivec3)> fn);
   void SetOnFaceDebtDirtyFn(std::function<void(glm::ivec3)> fn);
+  void SetOnFaceDebtMaskFn(std::function<void(glm::ivec3, uint8_t)> fn);
+  void SetOnGpuPipelineProgressFn(std::function<void(glm::ivec3)> fn);
   /// Cruise wall P3: MarkDirty / MarkDirtyPriority notify unfinished cache.
   void SetOnMeshColumnDirtyFn(std::function<void(glm::ivec3)> fn);
   /// P1: debug ownership — log MarkDirtyPriority outside ColumnFlow Contains.

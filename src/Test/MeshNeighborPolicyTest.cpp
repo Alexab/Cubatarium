@@ -27,6 +27,14 @@ int main()
   {
     return Fail("BecameKnown coalesces once");
   }
+  if (!cutum::ShouldCoalesceNeighborBecameKnownSeam(true, false, false, true))
+  {
+    return Fail("BecameKnown FaceDebt alone coalesces");
+  }
+  if (cutum::ShouldCoalesceNeighborBecameKnownSeam(true, false, false, false))
+  {
+    return Fail("BecameKnown no overlay/debt");
+  }
   if (cutum::ShouldCoalesceNeighborBecameKnownSeam(true, true, true))
   {
     return Fail("BecameKnown already coalesced");

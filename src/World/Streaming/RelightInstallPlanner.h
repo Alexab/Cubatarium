@@ -271,15 +271,15 @@ inline void ScheduleNeedRelightDirty(LitApplyPlan &plan,
   ++plan.schedule_n;
 }
 
-/// FD+drawable → PreferKick only with publish progress; Dirty on stall≥8 or
-/// first NeedRelight entry (!is_dirty). Avoid Dirty flood every MarkRelit.
+/// FD+drawable → PreferKick when pending GPU/RAA; Dirty on stall≥8 or
+/// first NeedRelight entry (!is_dirty ∧ !pending). Avoid Dirty flood every MarkRelit.
 inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
                                       const ColumnChunkSnapshot &chunk,
                                       bool pending_gpu_or_raa,
                                       bool force_stale_ticket)
 {
   const bool fd_drawable = chunk.fully_dark && chunk.has_drawable;
-  if (!fd_drawable || !pending_gpu_or_raa)
+  if (!fd_drawable)
   {
     return false;
   }
@@ -290,17 +290,27 @@ inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
     AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
     return true;
   }
-  if (ShouldForceDirtyAfterPreferKickStall(
-          fd_drawable, pending_gpu_or_raa, chunk.has_publish_progress,
-          chunk.prefer_kick_stall_frames) ||
-      !chunk.is_dirty)
+  if (!pending_gpu_or_raa &&
+      (ShouldForceDirtyAfterPreferKickStall(
+           fd_drawable, pending_gpu_or_raa, chunk.has_publish_progress,
+           chunk.prefer_kick_stall_frames) ||
+       !chunk.is_dirty))
   {
     ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
     return true;
   }
-  // Already Dirty, waiting for publish progress — advance stall clock.
-  plan.note_prefer_kick_stall = true;
-  return true;
+  if (chunk.is_dirty && pending_gpu_or_raa)
+  {
+    // Waiting for Kick with Dirty already queued — stall clock only.
+    plan.note_prefer_kick_stall = true;
+    return true;
+  }
+  if (chunk.is_dirty)
+  {
+    plan.note_prefer_kick_stall = true;
+    return true;
+  }
+  return false;
 }
 
 inline void ForceFirstMeshFromSkipDirty(LitApplyPlan &plan,
@@ -344,8 +354,10 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
-        // Sysreset v2: no PreferKick carve-out on skip_already_dirty.
-        // PreferKick only via TryPreferKickOrForceDirty with publish progress.
+        // Sysreset v4: PreferKick when pending GPU even if already Dirty.
+        (void)TryPreferKickOrForceDirty(plan, chunk,
+                                        chunk.gpu_pending || chunk.raa_pending,
+                                        in.force_stale_ticket);
       }
       else if (chunk.inflight)
       {
@@ -446,7 +458,10 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
-        // Sysreset v2: no PreferKick carve-out on skip_already_dirty.
+        // Sysreset v4: PreferKick when pending GPU even if already Dirty.
+        (void)TryPreferKickOrForceDirty(plan, chunk,
+                                        chunk.gpu_pending || chunk.raa_pending,
+                                        in.force_stale_ticket);
       }
       else if (chunk.inflight)
       {

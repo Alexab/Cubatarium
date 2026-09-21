@@ -144,7 +144,9 @@ public:
     ColumnRecord &rec = GetOrCreate(xz);
     if (face >= 0)
     {
-      rec.face_debt_mask = NoteFaceDebtMask(rec.face_debt_mask, face);
+      // Free fn in ColumnVisualState.h — not the store ApplyFaceDebtMask.
+      rec.face_debt_mask =
+          ::cutum::NoteFaceDebtMask(rec.face_debt_mask, face);
     }
     else if (rec.face_debt_mask == 0)
     {
@@ -159,6 +161,35 @@ public:
     {
       rec.visual = ColumnVisualState::NeedRemesh;
     }
+  }
+
+  void ApplyFaceDebtMask(glm::ivec2 xz, uint8_t mask)
+  {
+    if (mask == 0)
+    {
+      return;
+    }
+    ColumnRecord &rec = GetOrCreate(xz);
+    rec.face_debt_mask =
+        static_cast<uint8_t>(rec.face_debt_mask | mask);
+    if (rec.face_debt_frames < 255)
+    {
+      ++rec.face_debt_frames;
+    }
+    if (rec.visual == ColumnVisualState::Ready)
+    {
+      rec.visual = ColumnVisualState::NeedRemesh;
+    }
+  }
+
+  bool HasFaceDebtFace(glm::ivec2 xz, int face) const
+  {
+    const ColumnRecord *rec = Find(xz);
+    if (!rec || face < 0 || face > 5)
+    {
+      return false;
+    }
+    return (rec->face_debt_mask & static_cast<uint8_t>(1u << face)) != 0;
   }
 
   void ClearFaceDebt(glm::ivec2 xz, int face = -1)
