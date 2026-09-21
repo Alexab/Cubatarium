@@ -194,9 +194,10 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
               PackFluidCellState(world.GetFluidState(worldPos));
         }
       }
-      // S4 overlay: missing published coverage (unloaded OR not drawable).
-      // Shell keeps raw voxels; mesher emits closing via overlay-aware load/GetBlock.
-      if (!neighbor_loaded || !neighbor_visually_drawable)
+      // Ownership SeamVisibility: overlay Missing only for true unload.
+      // SoftDefer / !drawable → ClassifyShellCell Unlit (emit faces); do NOT
+      // force Unknown via overlay (sky-through SoT 161139).
+      if (!neighbor_loaded)
         missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
     }
   }
@@ -317,10 +318,9 @@ NeighborLoadState ChunkMeshSnapshot::GetNeighborLoadState(
   int cell = 0;
   if (TryShellIndex(local, face, cell))
   {
-    // Overlay missing-neighbor: Unknown (not Air) so solids do not emit
-    // distant closing walls into undrawable seams (170548 W2 prevent-emit).
-    // Liquid void emit is gated separately in NeighborHidesFace (true unloaded
-    // still emits; overlay shell with content hides).
+    // Overlay missing-neighbor: Unknown only for true unload (Missing bit set
+    // only when neighbor chunk absent — SoftDefer uses Unlit shell state).
+    // Liquid void emit is gated separately in NeighborHidesFace.
     if (boundaryOverlay.active &&
         (boundaryOverlay.missingNeighborFaces &
          static_cast<uint8_t>(1u << face)) != 0)

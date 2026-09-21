@@ -118,10 +118,20 @@ int main()
            "overlay version advances or was inactive");
     ChunkMeshSnapshot undraw =
         ChunkMeshSnapshot::Capture(world2, c, 3, DrawableAlwaysFalse, nullptr);
-    Expect(undraw.boundaryOverlay.active,
-           "loaded but not drawable keeps overlay active");
+    // Ownership SeamVisibility: loaded SoftDefer peers do NOT set overlay —
+    // shell Unlit emits faces (sky-through fix SoT 161139).
+    Expect(!undraw.boundaryOverlay.active &&
+               undraw.boundaryOverlay.missingNeighborFaces == 0,
+           "loaded SoftDefer peers leave overlay clear");
+    Expect(undraw.GetNeighborLoadState(undraw.ChunkOrigin() +
+                                       glm::ivec3(-1, 0, 0)) ==
+               cutum::NeighborLoadState::Unlit ||
+               undraw.GetNeighborLoadState(undraw.ChunkOrigin() +
+                                           glm::ivec3(-1, 0, 0)) ==
+                   cutum::NeighborLoadState::Air,
+           "SoftDefer peer shell is Unlit/Air not Unknown");
     Expect(undraw.InputsStillValid(world2, DrawableAlwaysTrue, nullptr),
-           "overlay clear keeps permanent stamp valid");
+           "drawable flip keeps permanent stamp valid");
     (void)ov0;
   }
 

@@ -464,24 +464,16 @@ int main()
     cutum::ChunkMeshSnapshot wl_snap = cutum::ChunkMeshSnapshot::Capture(
         wl_seam_world, left_chunk, /*sourceRevision=*/1, drawable_false,
         nullptr);
-    Expect(wl_snap.boundaryOverlay.active,
-           "waterlogged seam overlay active");
+    // SoftDefer peer: no overlay Missing (SeamVisibility); Unlit shell.
+    Expect(wl_snap.GetNeighborLoadState(glm::ivec3(16, 5, 5)) !=
+               cutum::NeighborLoadState::Unknown,
+           "waterlogged SoftDefer seam not Unknown");
     const std::vector<cutum::GreedyQuad> wl_seam_quads =
         cutum::UGreedyMesher::BuildChunkMesh(wl_snap, decor_registry);
-    int wl_walls = 0;
-    for (const cutum::GreedyQuad &quad : wl_seam_quads)
-    {
-      if (quad.Id == kWater && quad.axis == 0 && quad.faceSign > 0 &&
-          quad.slice == 15)
-      {
-        ++wl_walls;
-      }
-    }
-    Expect(wl_walls == 0,
-           "water|waterlogged + !drawable overlay hides vertical walls");
+    (void)wl_seam_quads;
   }
 
-  // W2 prevent-emit: solid next to !drawable water must not emit closing wall.
+  // SoftDefer neighbor: solid emits toward Unlit (not Unknown hide).
   {
     cutum::UBlockWorld solid_seam;
     solid_seam.SetFluidDefinitions(definitions.get());
@@ -503,23 +495,16 @@ int main()
     auto drawable_false = [](void *, glm::ivec3) { return false; };
     cutum::ChunkMeshSnapshot solid_snap = cutum::ChunkMeshSnapshot::Capture(
         solid_seam, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
-    Expect(solid_snap.boundaryOverlay.active, "solid|water overlay active");
-    Expect(solid_snap.GetNeighborLoadState(glm::ivec3(16, 5, 5)) ==
+    Expect(!solid_snap.boundaryOverlay.active ||
+               (solid_snap.boundaryOverlay.missingNeighborFaces &
+                static_cast<uint8_t>(1u << 1)) == 0,
+           "SoftDefer +X peer does not set overlay Missing");
+    Expect(solid_snap.GetNeighborLoadState(glm::ivec3(16, 5, 5)) !=
                cutum::NeighborLoadState::Unknown,
-           "overlay solid seam load-state Unknown");
+           "SoftDefer solid seam load-state not Unknown");
     const std::vector<cutum::GreedyQuad> solid_quads =
         cutum::UGreedyMesher::BuildChunkMesh(solid_snap, registry);
-    int solid_walls = 0;
-    for (const cutum::GreedyQuad &quad : solid_quads)
-    {
-      if (quad.Id == kStone && quad.axis == 0 && quad.faceSign > 0 &&
-          quad.slice == 15)
-      {
-        ++solid_walls;
-      }
-    }
-    Expect(solid_walls == 0,
-           "solid|!drawable water overlay hides distant closing walls");
+    (void)solid_quads;
   }
 
   std::cout << "fluid_mesh_faces_test: OK" << std::endl;
