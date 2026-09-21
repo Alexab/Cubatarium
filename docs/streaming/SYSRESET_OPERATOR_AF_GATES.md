@@ -1,9 +1,12 @@
-# Sysreset operator + AF gates (v5 vs SoT 112357 / 101105)
+# Sysreset operator + AF gates (v6 vs SoT 145008)
 
-Controls vs manual `bin/logs/perf_20260921-112357_29496.jsonl` (v4 regress) and
-`bin/logs/perf_20260921-101105_14028.jsonl` (pre-v4 SoT).
-Docs: [SYSRESET_V5_AUDIT_112357.md](SYSRESET_V5_AUDIT_112357.md),
-[SYSRESET_V4_AF_EVIDENCE.md](SYSRESET_V4_AF_EVIDENCE.md).
+Controls vs manual `bin/logs/perf_20260921-145008_25236.jsonl` (v5 remesh regress).
+Prior baselines: `112357` (v4), `101105` (pre-v4).
+Docs: [SYSRESET_V6_AUDIT_145008.md](SYSRESET_V6_AUDIT_145008.md),
+[SYSRESET_V5_AF_EVIDENCE.md](SYSRESET_V5_AF_EVIDENCE.md).
+
+**Warning: AF ≠ manual.** v5 AF cold VB fly 22 while manual 145008 stayed ~45.
+Do not claim CLOSED on AF-only VB wins.
 
 ## AF suite (fog ON)
 
@@ -15,36 +18,40 @@ python -X utf8 tools/flight_sim_run.py --world World_164 --scenario product-1746
 python -X utf8 tools/n01_v21_scorecard.py <perf.jsonl> -o bin/suite_reports/g1_a10_relight/<label>_score.json --label <label>
 ```
 
-## Scorecard gates (v5)
+## Scorecard gates (v6 vs 145008)
 
-| Gate | 112357 bad | Pass |
+| Gate | 145008 bad | Pass |
 |---|---|---|
 | west_route_coverage | COVERED | COVERED (cx≤−3) |
-| VB stalled fly med | 12.5 | ≤7.5 (≤101105) |
-| VB fly med | 44.5 | ≤44.5 and trending ↓ |
-| unfinished max | 79 | ≪79 / toward ≤48 |
-| PreferKick / FD ForceDirty | PreferKick≡0 | PreferKick>0 when pending **or** ForceDirty path live |
-| dirty_fm | 57 | not above 112357 without kick blow-up |
-| prior_lit_hold fly med | ~8 | ≤400 KEEP |
+| mesh_apply_stale_visual mid med | 8 / eye Δ 1 | **≤1** mid med |
+| dark_face_stale_near fly max | **498** | ≪498 (Δ↓≥50%) |
+| VB fly med | 45 | ≤45 and trending ↓ (not AF-only CLOSED) |
+| VB stalled fly med | 6 | ≤6 / toward ≤7.5 |
+| unfinished max | 64–70 | ≤70 trending ↓ |
+| dirty_fm | — | not above 145008 fly without kick blow-up |
+| PreferKick / FD ForceDirty | PreferKick≡0 | ForceDirty path live / PreferKick when pending |
+| prior_lit_hold fly med | — | ≤400 KEEP |
 | flip / dual | 0\|0 | KEEP 0\|0 |
-| mesh_gpu_kick_ms max | ≪2 | ≤20 KEEP |
-| mesh_emerge fly max | ~5–7 | ≤40 KEEP |
-| render_total / cull skip | hitch C KEEP | KEEP |
+| mesh_gpu_kick_ms max | — | ≤20 KEEP |
+| mesh_emerge fly max | — | ≤40 KEEP |
+| render_total / cull skip | hitch C | KEEP |
 | eye-proxy | PASS | PASS |
-| operator sky / blacks | OPEN | CLOSED (manual eye) |
+| operator blacks+sky+dark faces | OPEN | CLOSED only after **manual** eye |
 
 ## Anti-regress KEEP
 
-Focus admit bypass (not drop focus); no SoftDefer-for-holes; Unknown always-hide;
-no PreferKick without pending; hitch C untouched; no FaceDebt on light Accept.
+Focus admit bypass MarkRelit; FD ForceDirty-no-pending; no SoftDefer-for-holes;
+Unknown always-hide; no PreferKick without pending; hitch C untouched;
+no FaceDebt on light Accept (v3 D4); FaceDebt SoftDefer peer skip + cap2.
 
 ## Operator SoT
 
 | Class | Check |
 |---|---|
-| black FullyDark | focus Dirty + FD ForceDirty; VB stalled ≤7.5 |
-| sky-through faces | FaceDebt→Dirty already-known peer; unfinished↓ |
+| black FullyDark chunks | VB fly ≤45 trend ↓; stalled ≤6 |
+| sky-through faces | unfinished ≤70 trend ↓; holes≈0 |
+| **black block faces** | stale_visual≤1; dark_face_stale_near ≪498 |
 | hitch C | opaque cull skip / transparent resort KEEP |
 
-Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_v5_*`.
-Evidence: [SYSRESET_V5_AF_EVIDENCE.md](SYSRESET_V5_AF_EVIDENCE.md).
+Artifacts: `bin/suite_reports/g1_a10_relight/sysreset_v6_*`.
+Evidence: [SYSRESET_V6_AF_EVIDENCE.md](SYSRESET_V6_AF_EVIDENCE.md) (after AF).
