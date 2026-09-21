@@ -39,4 +39,4 @@ v3 PreferKick∧progress; v5 focus admit + ForceDirtyStuck; SoftDefer≠Unknown;
 no FaceDebt Dirty from mask; hitch C; D4; v6 dark reject; AF≠manual honesty.
 
 Artifacts: `bin/suite_reports/g1_a10_relight/ownership_*`.
-Evidence: [OWNERSHIP_CUTOVER_AF_EVIDENCE.md](OWNERSHIP_CUTOVER_AF_EVIDENCE.md) (after AF).
+Evidence: [OWNERSHIP_CUTOVER_AF_EVIDENCE.md](OWNERSHIP_CUTOVER_AF_EVIDENCE.md).
