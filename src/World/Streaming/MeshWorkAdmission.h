@@ -692,6 +692,8 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
         in.visible_black_fully_dark_repair_n >= 20)
     {
       out.promote_relight = std::max(out.promote_relight, 6);
+      // A21 residual R2: keep DirtyAdmit headroom while FD repair census high.
+      out.dirty_admit_budget = std::max(out.dirty_admit_budget, 4);
     }
     // G2/H: moving holes FirstMesh headroom (was 2; G2→3; H→4 for rim miss_horiz).
     out.first_mesh_schedule = holes ? 4 : 1;
@@ -719,6 +721,8 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
         in.visible_black_fully_dark_repair_n >= 20)
     {
       out.promote_relight = std::max(out.promote_relight, 6);
+      // A21 residual R2: keep DirtyAdmit headroom while FD repair census high.
+      out.dirty_admit_budget = std::max(out.dirty_admit_budget, 4);
     }
     // H/Era14: moving HoleDrain first_mesh 4→6 (best ARCH_D3_LAND near-GO p2c).
     out.first_mesh_schedule = 6;

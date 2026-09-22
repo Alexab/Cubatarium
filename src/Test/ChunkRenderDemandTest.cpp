@@ -91,6 +91,34 @@ int main()
       plan.prefer_kick_gpu.empty() && plan.note_prefer_kick_stall;
   Expect(!stall_only, "not stall-only at age100");
 
+  // Residual R2: equal-rev FullyDark with repair ticket must PreferKick/Dirty,
+  // not silent continue (PlanPrimaryConsume early-out regression).
+  {
+    using cutum::LitApplyColumnInput;
+    using cutum::PlanPrimaryConsume;
+    LitApplyColumnInput in{};
+    in.column = {1, 3};
+    in.is_primary = true;
+    in.consume_mode = true;
+    in.has_repair_ticket = true;
+    in.column_settled = false;
+    in.focus_horiz = 2;
+    ColumnChunkSnapshot fd{};
+    fd.coord = c;
+    fd.fully_dark = true;
+    fd.has_drawable = true;
+    fd.is_dirty = true;
+    fd.gpu_pending = false;
+    fd.meshed_light_rev = 7;
+    fd.light_field_rev = 7; // equal-rev → NeedsRemesh false
+    fd.prefer_kick_stall_frames = 100;
+    in.relit_chunks.push_back(fd);
+    LitApplyPlan p2 = PlanPrimaryConsume(in);
+    Expect(p2.note_prefer_kick_stall || !p2.prefer_kick_gpu.empty() ||
+               !p2.mark_dirty.empty() || !p2.mark_dirty_priority.empty(),
+           "equal-rev FD with repair stays live");
+  }
+
   // Under stall_limit: stall note only.
   LitApplyPlan plan_early;
   chunk.prefer_kick_stall_frames = 3;

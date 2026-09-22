@@ -389,6 +389,17 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
         ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket);
     if (!needs_remesh && chunk.has_drawable)
     {
+      // A21 residual R2: equal-rev FullyDark used to `continue` here and never
+      // PreferKick — prefer_kick_n stayed 0 while VB debt persisted. Legal cave
+      // (settled, no dirty/ticket) may skip; repair-owned FD must stay live.
+      if (chunk.fully_dark &&
+          (chunk.is_dirty || in.has_repair_ticket || in.has_fm_ticket ||
+           in.force_stale_ticket || !in.column_settled))
+      {
+        (void)TryPreferKickOrForceDirty(plan, chunk,
+                                        chunk.gpu_pending || chunk.raa_pending,
+                                        in.force_stale_ticket);
+      }
       continue;
     }
     if (TryPreferKickOrForceDirty(plan, chunk,
@@ -534,6 +545,17 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
         ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket);
     if (!needs_remesh && chunk.has_drawable)
     {
+      // A21 residual R2: equal-rev FullyDark used to `continue` here and never
+      // PreferKick — prefer_kick_n stayed 0 while VB debt persisted. Legal cave
+      // (settled, no dirty/ticket) may skip; repair-owned FD must stay live.
+      if (chunk.fully_dark &&
+          (chunk.is_dirty || in.has_repair_ticket || in.has_fm_ticket ||
+           in.force_stale_ticket || !in.column_settled))
+      {
+        (void)TryPreferKickOrForceDirty(plan, chunk,
+                                        chunk.gpu_pending || chunk.raa_pending,
+                                        in.force_stale_ticket);
+      }
       continue;
     }
     if (TryPreferKickOrForceDirty(plan, chunk,

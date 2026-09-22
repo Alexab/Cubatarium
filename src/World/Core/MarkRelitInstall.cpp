@@ -155,11 +155,20 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         }
         const DemandResult dr =
             demand.NoteDemand(coord, desired_geom, desired_light);
-        if (dr == DemandResult::AlreadySatisfied)
+        // A21 residual R2: FullyDark drawable is never "satisfied" by equal revs
+        // alone — vertices may still be dark while light_field_rev matches.
+        UChunkMeshCache::LitApplyMeshProbe dark_probe{};
+        mesh->FillLitApplyMeshProbe(coord, dark_probe);
+        const bool fully_dark_drawable =
+            dark_probe.has_drawable &&
+            (dark_probe.fully_dark || dark_probe.gpu_has_dark_face ||
+             mesh->GetCache().ChunkHasFullyDarkFace(coord));
+        if (dr == DemandResult::AlreadySatisfied && !fully_dark_drawable)
         {
           ++PhysicsTelemetryData.DemandAlreadySatisfiedSkipN;
           return;
         }
+        // fully_dark_drawable: fall through to DirtyAdmit / MarkDirty.
       }
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
       // enqueues (PreferKick≡0 cannot own pending GPU alone).
