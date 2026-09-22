@@ -205,8 +205,8 @@ inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
 }
 
 /// FZ2.7: already-Dirty missing mesh / FullyDark-with-light-delta bump Q head.
-/// G1: consume_mode must bump FullyDark even when light revs match (193536:
-/// skip_already_dirty with schedule=0 while PL erased).
+/// G1: consume_mode bumps FullyDark holes — except A21 P4 valid dark (revs
+/// match / !light_rev_ahead): equal-rev FullyDark is not a remesh trigger.
 inline bool ShouldBumpDirtyHeadForVisualHole(bool is_dirty, bool fully_dark,
                                              bool has_drawable, int focus_horiz,
                                              bool consume_mode,
@@ -221,13 +221,14 @@ inline bool ShouldBumpDirtyHeadForVisualHole(bool is_dirty, bool fully_dark,
   {
     return false;
   }
-  if (consume_mode)
-  {
-    return true;
-  }
+  // Valid FullyDark (matching light rev): observational dark, not demand.
   if (has_drawable && fully_dark && !light_rev_ahead)
   {
     return false;
+  }
+  if (consume_mode)
+  {
+    return true;
   }
   return focus_horiz >= 0 && focus_horiz <= ring;
 }
@@ -275,6 +276,9 @@ inline void ScheduleNeedRelightDirty(LitApplyPlan &plan,
 
 /// FD+drawable → PreferKick when pending GPU/RAA; Dirty on stall≥8 or
 /// first NeedRelight entry (!is_dirty ∧ !pending). Avoid Dirty flood every MarkRelit.
+/// A21-04 P2.3: ShouldForceDirtyAfterPreferKickStall requires pending — never
+/// gate it under !pending (was a dead path). dirty∧pending∧no-progress∧stall≥limit
+/// → PreferKick the pending job (not eternal note_prefer_kick_stall alone).
 inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
                                       const ColumnChunkSnapshot &chunk,
                                       bool pending_gpu_or_raa,
@@ -292,21 +296,24 @@ inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
     AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
     return true;
   }
-  if (!pending_gpu_or_raa &&
-      (ShouldForceDirtyAfterPreferKickStall(
-           fd_drawable, pending_gpu_or_raa, chunk.has_publish_progress,
-           chunk.prefer_kick_stall_frames) ||
-       !chunk.is_dirty))
-  {
-    ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
-    return true;
-  }
+  // Pending ownership: stall escape PreferKicks the live GPU/RAA job.
   if (chunk.is_dirty && pending_gpu_or_raa)
   {
-    // A21-04: dirty+pending+no-progress must not eternal-stall. PreferKick the
-    // pending job so stage can advance; still note stall for telemetry.
-    AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
+    if (ShouldForceDirtyAfterPreferKickStall(
+            fd_drawable, pending_gpu_or_raa, chunk.has_publish_progress,
+            chunk.prefer_kick_stall_frames))
+    {
+      AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
+      return true;
+    }
+    // Under stall_limit: wait for Kick; tick stall clock only.
     plan.note_prefer_kick_stall = true;
+    return true;
+  }
+  // !pending: first NeedRelight entry (!is_dirty) → Dirty once.
+  if (!pending_gpu_or_raa && !chunk.is_dirty)
+  {
+    ScheduleNeedRelightDirty(plan, chunk, /*priority=*/true);
     return true;
   }
   // Sysreset v5: dirty∧!pending∧stall≥8 → ForceDirty (not stall-only).

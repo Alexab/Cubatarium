@@ -436,6 +436,9 @@ public:
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;
   /// True if any non-bottom greedy vertex has sky or block light > 0.
   bool ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const;
+  /// A21 P4: observational dark-face census (not sole remesh / LightValidity).
+  /// Zero sky+block is legal; remesh from rev mismatch or explicit invalid.
+  /// −Y bottoms are ignored (normally unlit).
   static bool BatchesHaveFullyDarkFace(
       const std::vector<GreedyMeshBatch> &batches);
   static bool BatchesHaveLitDrawableFace(
