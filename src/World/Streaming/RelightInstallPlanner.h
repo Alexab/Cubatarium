@@ -200,6 +200,12 @@ inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
   {
     return true;
   }
+  // A21 residual: equal-rev FullyDark with Dirty = repair demand (not LegalDark).
+  // Legal cave never sits is_dirty; remesh so MarkDirty/PreferKick paths run.
+  if (chunk.fully_dark && chunk.is_dirty)
+  {
+    return true;
+  }
   (void)chunk.still_stale; // census-only; LightValidity ≠ dark vertices
   return false;
 }

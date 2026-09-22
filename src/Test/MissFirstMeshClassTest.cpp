@@ -3968,8 +3968,8 @@ int main()
     using cutum::ShouldBumpDirtyHeadForVisualHole;
     Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, true),
            "P6: consume FullyDark dirty bumps when light rev ahead");
-    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, false),
-           "G1: consume FullyDark matching revs bumps dirty head");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, false),
+           "A21: equal-rev FullyDark (!light_rev_ahead) does not bump at helper");
     Expect(ShouldBumpDirtyHeadForVisualHole(true, false, false, 9, true, false),
            "P6: consume missing mesh bumps even far");
     Expect(!ShouldBumpDirtyHeadForVisualHole(true, false, true, 2, true),
@@ -3993,6 +3993,10 @@ int main()
     Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
            "A21-07: FullyDark still_stale census alone does not remesh");
     dark.still_stale = false;
+    dark.is_dirty = true;
+    Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
+           "A21 residual: equal-rev FullyDark+Dirty remeshes (repair demand)");
+    dark.is_dirty = false;
     Expect(ShouldRemeshAfterLitApplyForHole(dark, true),
            "G1: force_stale_ticket remeshes FullyDark");
     dark.light_field_rev = 4;

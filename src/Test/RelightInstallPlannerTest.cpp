@@ -59,15 +59,33 @@ int main()
   Expect(!plan_stale.mark_dirty_priority.empty(),
          "P6: dirty FullyDark with light delta still priority");
 
-  // Already dirty + matching revs → skip remesh (P7 GPU-sky noop).
+  // Already dirty + matching revs → residual remesh (Dirty FullyDark = repair).
   mesh.ClearCalls();
   mesh.Mut(coord).meshed_light_rev = 3;
   mesh.Mut(coord).light_field_rev = 3;
   in.relit_chunks.clear();
   in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
+  const auto plan_dirty_fd = PlanColumnInstall(in);
+  Expect(!plan_dirty_fd.mark_dirty_priority.empty() ||
+             !plan_dirty_fd.mark_dirty.empty() ||
+             !plan_dirty_fd.prefer_kick_gpu.empty(),
+         "A21 residual: dirty FullyDark equal-rev still schedules repair");
+
+  // Settled equal-rev FullyDark (!dirty, column settled) → skip remesh (LegalDark).
+  mesh.ClearCalls();
+  mesh.Mut(coord).is_dirty = false;
+  mesh.Mut(coord).meshed_light_rev = 3;
+  mesh.Mut(coord).light_field_rev = 3;
+  in.column_settled = true;
+  in.has_repair_ticket = false;
+  in.has_fm_ticket = false;
+  in.force_stale_ticket = false;
+  in.relit_chunks.clear();
+  in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
   const auto plan_noop = PlanColumnInstall(in);
-  Expect(plan_noop.mark_dirty.empty() && plan_noop.mark_dirty_priority.empty(),
-         "P7: skip remesh when FullyDark light rev matches");
+  Expect(plan_noop.mark_dirty.empty() && plan_noop.mark_dirty_priority.empty() &&
+             plan_noop.prefer_kick_gpu.empty(),
+         "P7: settled equal-rev FullyDark skips remesh");
 
   // P12 A1: skip_already_dirty on a hole → FirstMesh, not remesh skip.
   {
