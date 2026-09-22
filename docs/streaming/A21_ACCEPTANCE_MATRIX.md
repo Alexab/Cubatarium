@@ -1,47 +1,29 @@
-# A21 acceptance matrix (DoD §4) — residual update 2026-09-22
+# A21/A22 acceptance matrix — honesty freeze 2026-09-22
 
-## Residual R0–R5 landing
+## Residual R0–R5 vs ENGINE plan
 
-| Step | Status | Notes |
+Residual scaffolding **landed**; ENGINE_REMEDIATION P0–P8 gates **not CLOSED**.  
+Manual `133440` eye FAIL (blacks). See `A22_MANUAL_133440.md`.
+
+| Phase | Residual claim | Actual |
 |---|---|---|
-| R0 evidence 114954 | DONE | `A21_RESIDUAL_BLACK_114954.md`, end-gate tool |
-| R1 classify | DONE | LegalDark requires light revs match |
-| R2 admit/PreferKick | DONE | equal-rev FD no longer silent-continue; DirtyAdmit reserve; AF cold `124620` |
-| R3 cutover | DONE | `ChunkDemandCutoverEnabled` default ON; `CUBA_DEMAND_CUTOVER=0` rollback |
-| R4 provenance | DONE | meshed light stamped on publish candidate |
-| R5 eye/DoD | DONE (honest) | scorecards + eye matrix; `operator_visual=UNTESTED`; end-gate FAIL |
+| P0 | PARTIAL | PARTIAL — no 5×A/B soak |
+| P1 | local fixes | PARTIAL — no e2e visual |
+| P2 | cutover ON | PARTIAL — shadow dual-path remains |
+| P3 | provenance | PARTIAL — validator self-check |
+| P4 | LightValidity | PARTIAL/Deferred |
+| P5 | DirtyAdmit reserve | PARTIAL — MaxCriticalUnitMs=0 |
+| P6 | fluid identity | PARTIAL — sync full scan |
+| P7 | Evaluate wired | **OFF** |
+| P8 / DoD | R5 honest | UNTESTED eye; end-gate FAIL |
 
-## AF after residual
+## A22 status
 
-| Metric | 114954 manual | R2 cold `124620` | R5 warm `125120` |
-|---|---:|---:|---:|
-| mid VB | 59 | 49 | 48 |
-| mid FD stalled | 16 | **3** | **0** |
-| tail admit_end | 0 | **4** | **4** |
-| tail VB / debt | 47 | ≈87 | **83** |
-| prefer_kick_n | 0 | 0 | 0 (Dirty path) |
-| end_gate | FAIL | FAIL | FAIL |
-| input adequacy | n/a | PASS | PASS |
-| dual-lane | n/a | PASS (cold) | PASS (warm) |
-| merge_green | false | false | false |
-
-## Visual (§4.1)
-
-| Gate | Status |
+| Step | Status |
 |---|---|
-| Operator eye | **UNTESTED** — see `A21_OPERATOR_EYE_MATRIX.md` |
-| Material / reference mesher | UNTESTED |
-| Scenarios AF proxy | PARTIAL (adequacy PASS; eye-proxy FAIL) |
+| S0 evidence + visible baseline | IN PROGRESS |
+| S1–S8 | PENDING |
+| `operator_visual` | **UNTESTED** |
+| `merge_green` | **false** |
 
-## Perf / convergence (§4.2)
-
-| Gate | Status |
-|---|---|
-| End-of-flight black gate | FAIL (`tools/a21_residual_end_gate.py`) |
-| TTR / soak / 60 FPS | UNTESTED |
-| Stop orphan pending | PARTIAL — job_trace tail still `admitted` / rev=0 |
-
-## Honesty
-
-`operator_visual=UNTESTED` ⇒ `merge_green=false`. AF ≠ CLOSED.  
-Mid stalled and DirtyAdmit headroom improved; residual black census at cruise end remains open.
+AF adequacy ≠ CLOSED. Visible `--visible` flights required per A22 Loop.

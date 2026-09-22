@@ -1315,8 +1315,6 @@ def main() -> int:
         # product-174657-dive: same base + dive phase + underwater stop (SoT 210431).
         dive_scenario = args.scenario == "product-174657-dive"
         if not args.visible:
-            import os
-
             if os.environ.get("CUBA_FLIGHT_REQUIRE_VISIBLE", "").strip() in (
                 "1",
                 "true",
