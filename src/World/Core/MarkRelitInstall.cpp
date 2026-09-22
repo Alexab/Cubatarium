@@ -232,11 +232,24 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
             span.published_rev = probe.meshed_light_rev;
           }
         }
-        UJobStageTrace::Note(span);
-        if (kChunkDemandShadow)
+        // A25 R1: stamp demand-store desired/published when known (job_trace honesty).
+        // PreferKick counter is NOT the heal DoD — see A25_REMEDIATION_RETURN.md.
         {
-          UChunkRenderDemandStore::Get().NoteStageProgress(
-              coord, JobStage::Admitted, 0, span.stage_ms);
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          if (const ChunkRenderDemandRecord *drec = demand.Find(coord))
+          {
+            if (drec->desired_light_rev != 0)
+            {
+              span.desired_rev = drec->desired_light_rev;
+            }
+            if (drec->published_light_rev != 0)
+            {
+              span.published_rev = drec->published_light_rev;
+            }
+          }
+          UJobStageTrace::Note(span);
+          demand.NoteStageProgress(coord, JobStage::Admitted,
+                                   /*attempt_id=*/0, span.stage_ms);
         }
       }
     };

@@ -224,7 +224,7 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n)
   int n = 0;
   while (n < max_n && it != Records_.end())
   {
-    const ChunkRenderDemandRecord &rec = it->second;
+    ChunkRenderDemandRecord &rec = it->second;
     ++stats.checked;
     if (rec.desired_geom_rev != rec.published_geom_rev ||
         rec.desired_light_rev != rec.published_light_rev)
@@ -240,6 +240,9 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n)
         rec.last_progress_ms <= 0.0)
     {
       ++stats.orphan_active;
+      // A25 R1: orphan = diagnosable cancel, not eternal active.
+      rec.has_active_attempt = false;
+      rec.active_stage = JobStage::Cancelled;
     }
     if (rec.retained_awaiting_successor)
     {
@@ -254,6 +257,32 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n)
     ReconcileCursor_ = 0;
   }
   return stats;
+}
+
+int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n)
+{
+  if (max_n <= 0 || Records_.empty())
+  {
+    return 0;
+  }
+  int cancelled = 0;
+  for (auto &kv : Records_)
+  {
+    if (cancelled >= max_n)
+    {
+      break;
+    }
+    ChunkRenderDemandRecord &rec = kv.second;
+    if (rec.has_active_attempt &&
+        rec.active_stage == JobStage::Created &&
+        rec.last_progress_ms <= 0.0)
+    {
+      rec.has_active_attempt = false;
+      rec.active_stage = JobStage::Cancelled;
+      ++cancelled;
+    }
+  }
+  return cancelled;
 }
 
 void UChunkRenderDemandStore::Clear()

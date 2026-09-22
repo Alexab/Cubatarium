@@ -100,6 +100,20 @@ inline bool TryInstallFluidColumnSummary(const FluidColumnSummary &candidate,
   return true;
 }
 
+/// A25 R5: prefer incomplete/aged tile or worker rebuild over sync height×16×16
+/// GetBlock on the main thread when the column is tall or budget is exhausted.
+inline bool ShouldDeferFluidFullColumnScan(int height,
+                                           bool has_usable_incomplete,
+                                           bool main_thread_budget_exhausted,
+                                           int tall_height = 48)
+{
+  if (has_usable_incomplete)
+  {
+    return true;
+  }
+  return main_thread_budget_exhausted && height >= tall_height;
+}
+
 } // namespace cutum
 
 #endif

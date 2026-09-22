@@ -667,6 +667,23 @@ inline bool ShouldProtectRemeshUnderTicketedVbCruise(bool moving,
          vb_no_ticket_n <= no_ticket_soft;
 }
 
+/// A25 R4: cap DirtyAdmit growth under FD repair when drops already thrashing.
+inline int CapDirtyAdmitUnderThrash(int dirty_admit_budget, int fd_repair_n,
+                                    int dirty_dropped_recent = 0,
+                                    int dropped_soft_cap = 800)
+{
+  int budget = dirty_admit_budget;
+  if (fd_repair_n >= 20)
+  {
+    budget = std::max(budget, 4);
+  }
+  if (dirty_dropped_recent > dropped_soft_cap)
+  {
+    budget = std::min(budget, 4);
+  }
+  return budget;
+}
+
 inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
                                      MeshWorkAdmission::Mode mode,
                                      const MeshWorkAdmissionInput &in,
@@ -693,7 +710,10 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     {
       out.promote_relight = std::max(out.promote_relight, 6);
       // A21 residual R2: keep DirtyAdmit headroom while FD repair census high.
-      out.dirty_admit_budget = std::max(out.dirty_admit_budget, 4);
+      // A25 R4: CapDirtyAdmitUnderThrash when drops already exceed soft gate.
+      out.dirty_admit_budget = CapDirtyAdmitUnderThrash(
+          std::max(out.dirty_admit_budget, 4),
+          in.visible_black_fully_dark_repair_n);
     }
     // G2/H: moving holes FirstMesh headroom (was 2; G2→3; H→4 for rim miss_horiz).
     out.first_mesh_schedule = holes ? 4 : 1;
@@ -722,7 +742,10 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     {
       out.promote_relight = std::max(out.promote_relight, 6);
       // A21 residual R2: keep DirtyAdmit headroom while FD repair census high.
-      out.dirty_admit_budget = std::max(out.dirty_admit_budget, 4);
+      // A25 R4: CapDirtyAdmitUnderThrash when drops already exceed soft gate.
+      out.dirty_admit_budget = CapDirtyAdmitUnderThrash(
+          std::max(out.dirty_admit_budget, 4),
+          in.visible_black_fully_dark_repair_n);
     }
     // H/Era14: moving HoleDrain first_mesh 4→6 (best ARCH_D3_LAND near-GO p2c).
     out.first_mesh_schedule = 6;

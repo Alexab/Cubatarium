@@ -110,7 +110,12 @@ public:
     int retained_awaiting{0};
   };
   /// Level check desired vs published; bounded scan for maintenance.
+  /// Also cancels orphan actives (Created + no progress) — A25 R1 liveness.
   ReconcileStats ReconcileMaintenance(int max_n);
+
+  /// Cancel orphan active attempts: Created with no progress timestamp.
+  /// Returns number cancelled. Does not touch RetainedAwaitingSuccessor.
+  int CancelOrphanActiveAttempts(int max_n);
 
   uint64_t AlreadySatisfiedSkipN() const { return AlreadySatisfiedSkipN_; }
   uint64_t CoalesceN() const { return CoalesceN_; }

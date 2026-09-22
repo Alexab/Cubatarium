@@ -74,6 +74,53 @@ int main()
   const auto recon = store.ReconcileMaintenance(8);
   Expect(recon.checked >= 1, "reconcile scanned");
 
+  // A25 R1: orphan Created+no-progress is cancelled by ReconcileMaintenance.
+  {
+    store.Clear();
+    const glm::ivec3 orphan{9, 0, 9};
+    Expect(store.NoteDemand(orphan, 1, 2) == DemandResult::NewDemand,
+           "orphan NewDemand");
+    ChunkRenderDemandRecord *orec = store.Find(orphan);
+    Expect(orec && orec->has_active_attempt, "orphan has active");
+    Expect(orec && orec->last_progress_ms <= 0.0, "orphan no progress");
+    const auto r2 = store.ReconcileMaintenance(16);
+    Expect(r2.orphan_active >= 1, "orphan counted");
+    orec = store.Find(orphan);
+    Expect(orec && !orec->has_active_attempt, "orphan cancelled");
+  }
+
+  // A25 R1: unload/reload — CancelledSuperseded then new desire.
+  {
+    store.Clear();
+    const glm::ivec3 u{4, 1, 4};
+    store.NoteDemand(u, 10, 11);
+    store.NoteInstallResult(u, InstallResult::CancelledSuperseded);
+    Expect(store.NoteDemand(u, 12, 13) == DemandResult::NewDemand,
+           "reload NewDemand after cancel");
+  }
+
+  // A24 FREEZE helpers (never RemoveChunk pending FD; cooldown not flood).
+  {
+    using cutum::ShouldCooldownForceEqualRevPendingFullyDark;
+    using cutum::ShouldDropPendingFullyDarkMesh;
+    using cutum::ShouldHealFullyDarkWithRelightOnly;
+    using cutum::ShouldHealFullyDarkWithRemesh;
+    Expect(!ShouldDropPendingFullyDarkMesh(true, true, true),
+           "A24 R1: never drop pending FD mesh");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(
+               true, true, false, 1, /*frames=*/10, /*cooldown=*/45),
+           "A24 R3: cooldown not yet");
+    Expect(ShouldCooldownForceEqualRevPendingFullyDark(
+               true, true, false, 1, /*frames=*/45, /*cooldown=*/45),
+           "A24 R3: cooldown fires at 45f");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(
+               true, true, /*any_light_rev_ahead=*/true, 1, 100, 45),
+           "A24 R3: no force when light rev ahead");
+    Expect(ShouldHealFullyDarkWithRemesh(true, false), "sky → remesh heal");
+    Expect(ShouldHealFullyDarkWithRelightOnly(true, false, false),
+           "void → relight-only");
+  }
+
   // A21-04: dirty+pending+no-progress+stall≥limit → PreferKick, not stall-only.
   ColumnChunkSnapshot chunk;
   chunk.coord = c;

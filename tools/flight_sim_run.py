@@ -33,12 +33,20 @@ MANUAL_100645_PROXY_CLASS = {
 }
 
 # Dual-lane upper stop-line (wall-diet / n01-rework). Adequacy alone is not merge-green.
+# A25: mid_fully_dark_stalled is DIAGNOSTIC only — never sole product PASS / merge_green.
 DUAL_LANE_STOP_LINE = {
     "vb_fly_med_max": 84.5,
     "stale_vl_fly_med_max": 84.5,
     "unlit_max_cold": 15.0,
     "unlit_max_warm": 19.0,
     "mid_fully_dark_stalled_med_max": 5.0,
+}
+
+# A24/A25 safety stop-lines (holes-first; dirty_dropped thrash). Not merge_green alone.
+A24_SAFETY_STOP_LINE = {
+    "near_focus_holes_periods_gt0_max": 0,
+    "dirty_dropped_per_period_max": 800.0,
+    "mid_fully_dark_stalled_med_max": 0.0,  # diagnostic companion
 }
 
 # Eye-proxy thrash stop-line (N08). Mid-corridor SoT (same band as dual-lane stalled).
@@ -366,11 +374,103 @@ def compute_dual_lane_stop_line(
             fails.append("mid_fully_dark_stalled_above_stop_line")
         metrics["dual_lane_stop_line_pass"] = len(fails) == 0
         metrics["dual_lane_stop_line_fails"] = fails
+        # Honesty: mid stall alone never implies product CLOSED.
+        metrics["mid_stalled_is_diagnostic_only"] = True
         return metrics
     except Exception as exc:  # pragma: no cover
         return {
             "dual_lane_stop_line_pass": False,
             "dual_lane_stop_line_fails": [f"stop_line_analyze_failed:{exc}"],
+            "mid_stalled_is_diagnostic_only": True,
+        }
+
+
+def compute_a24_safety_stop_line(perf_path: Path) -> dict:
+    """A24/A25: holes + DirtyAdmit thrash stop-lines (before end-debt cosmetics)."""
+    try:
+        rows: list[dict] = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") == "period":
+                rows.append(row)
+        fly = [
+            r
+            for r in rows
+            if float(r.get("movement_speed") or 0) > 2.0
+        ]
+        use = fly if fly else rows
+        west = [
+            r
+            for r in use
+            if r.get("focus_cx") is not None
+            and float(r["focus_cx"]) <= 6.0
+            and float(r["focus_cx"]) >= -6.0
+        ]
+        corridor = west if west else use
+
+        def vals(key: str, subset: list[dict]) -> list[float]:
+            out: list[float] = []
+            for row in subset:
+                try:
+                    v = row.get(key)
+                    if v is not None:
+                        out.append(float(v))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        def median(xs: list[float]) -> float | None:
+            if not xs:
+                return None
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            return xs[mid] if len(xs) % 2 else (xs[mid - 1] + xs[mid]) / 2.0
+
+        holes_xs = vals("near_focus_holes", corridor)
+        if not holes_xs:
+            holes_xs = vals("visual_holes", corridor)
+        dropped_xs = vals("dirty_dropped", corridor)
+        mid_third = (
+            corridor[len(corridor) // 3 : (2 * len(corridor) // 3)]
+            if len(corridor) >= 3
+            else corridor
+        )
+        stalled_xs = vals("visible_black_fully_dark_stalled_n", mid_third)
+        holes_gt0 = sum(1 for h in holes_xs if h > 0)
+        n_periods = max(1, len(corridor))
+        dropped_per = (
+            (sum(dropped_xs) / float(n_periods)) if dropped_xs else None
+        )
+        metrics = {
+            "near_focus_holes_periods_gt0": holes_gt0,
+            "dirty_dropped_per_period": dropped_per,
+            "mid_fully_dark_stalled_med": median(stalled_xs),
+            "ring_readiness_must_stay_off": True,
+            "prefer_kick_not_sole_heal_dod": True,
+            "operator_visual_required_for_merge_green": True,
+        }
+        fails: list[str] = []
+        if holes_gt0 > A24_SAFETY_STOP_LINE["near_focus_holes_periods_gt0_max"]:
+            fails.append("near_focus_holes_periods_gt0")
+        if dropped_per is None or float(dropped_per) > A24_SAFETY_STOP_LINE[
+            "dirty_dropped_per_period_max"
+        ]:
+            fails.append("dirty_dropped_per_period_above_800")
+        stalled_med = metrics["mid_fully_dark_stalled_med"]
+        if stalled_med is not None and float(stalled_med) > A24_SAFETY_STOP_LINE[
+            "mid_fully_dark_stalled_med_max"
+        ]:
+            # Diagnostic companion — recorded but does not alone fail A24 safety.
+            metrics["mid_stalled_diagnostic_warn"] = True
+        metrics["a24_safety_stop_line_pass"] = len(fails) == 0
+        metrics["a24_safety_stop_line_fails"] = fails
+        return metrics
+    except Exception as exc:  # pragma: no cover
+        return {
+            "a24_safety_stop_line_pass": False,
+            "a24_safety_stop_line_fails": [f"a24_safety_analyze_failed:{exc}"],
         }
 
 
@@ -2195,6 +2295,14 @@ def main() -> int:
                     result["eye_proxy_stop_line_fails"] = eye_proxy.get(
                         "eye_proxy_stop_line_fails"
                     )
+                    a24_safety = compute_a24_safety_stop_line(Path(perf))
+                    result["a24_safety_stop_line"] = a24_safety
+                    result["a24_safety_stop_line_pass"] = a24_safety.get(
+                        "a24_safety_stop_line_pass"
+                    )
+                    result["a24_safety_stop_line_fails"] = a24_safety.get(
+                        "a24_safety_stop_line_fails"
+                    )
                     if args.scenario == "product-174657-dive":
                         try:
                             import importlib.util
@@ -2264,6 +2372,16 @@ def main() -> int:
                         flush=True,
                     )
                     print(
+                        "product-174657 A24 safety stop-line: "
+                        + (
+                            "PASS"
+                            if a24_safety.get("a24_safety_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {a24_safety}",
+                        flush=True,
+                    )
+                    print(
                         "product-174657 west-route coverage: "
                         + str(west.get("west_route_coverage"))
                         + f" {west}",
@@ -2326,6 +2444,13 @@ def main() -> int:
                     ]
                     metrics_summary["eye_proxy_stop_line_pass"] = result.get(
                         "eye_proxy_stop_line_pass"
+                    )
+                if result.get("a24_safety_stop_line") is not None:
+                    metrics_summary["a24_safety_stop_line"] = result[
+                        "a24_safety_stop_line"
+                    ]
+                    metrics_summary["a24_safety_stop_line_pass"] = result.get(
+                        "a24_safety_stop_line_pass"
                     )
                 if result.get("dive_stop_hang") is not None:
                     metrics_summary["dive_stop_hang"] = result["dive_stop_hang"]
@@ -2390,6 +2515,14 @@ def main() -> int:
                     print(
                         f"flight-sim eye-proxy stop-line FAIL for {args.scenario} "
                         "(stale-visual thrash / holes blink; adequacy alone is not merge-green)",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("a24_safety_stop_line_pass", True):
+                    print(
+                        f"flight-sim A24 safety stop-line FAIL for {args.scenario} "
+                        "(holes / dirty_dropped; mid-stall diagnostic only; "
+                        "operator_visual still required for merge_green)",
                         file=sys.stderr,
                     )
                     last_rc = 2

@@ -1,6 +1,7 @@
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Core/FrameDeadline.h"
 #include "Render/Mesh/FluidColumnSummary.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "World/Chunks/ChunkManager.h"
@@ -144,6 +145,14 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
         return true;
       }
     }
+  }
+  // A25 R5: under main-thread budget pressure, do not start height×16×16 GetBlock
+  // (audit spike class fluid_map_cpu ~100–197ms). Prefer miss over hitch.
+  if (ShouldDeferFluidFullColumnScan(
+          height, /*has_usable_incomplete=*/false,
+          UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/false)))
+  {
+    return false;
   }
   std::vector<uint8_t> flags(static_cast<size_t>(height * n * n), 0);
   uint64_t scan_fluid_id_hash = 14695981039346656037ull;

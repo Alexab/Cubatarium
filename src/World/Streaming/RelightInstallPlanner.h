@@ -283,6 +283,8 @@ inline void ScheduleNeedRelightDirty(LitApplyPlan &plan,
 /// A21-04 P2.3: ShouldForceDirtyAfterPreferKickStall requires pending — never
 /// gate it under !pending (was a dead path). dirty∧pending∧no-progress∧stall≥limit
 /// → PreferKick the pending job (not eternal note_prefer_kick_stall alone).
+/// A25 heal-owner honesty: prefer_kick_n≡0 in AF is a telemetry/wiring gap, not
+/// proof of zero heal. Product DoD = Dirty/Invalidate/Relight → Published spans.
 inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
                                       const ColumnChunkSnapshot &chunk,
                                       bool pending_gpu_or_raa,

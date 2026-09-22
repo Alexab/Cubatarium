@@ -3,6 +3,7 @@
 #include "World/Lighting/LightReferenceCompare.h"
 #include "World/Streaming/ColumnVisualState.h"
 #include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/MeshWorkAdmission.h"
 
 #include <cstdio>
 
@@ -129,6 +130,32 @@ int main()
   Expect(CountLightFieldMismatches(light_a, light_b, 4) == 1, "light ref one miss");
   Expect(ShouldRejectStaleHaloLight(5, 5, 1, 2), "stale halo reject");
   Expect(!ShouldRejectStaleHaloLight(5, 5, 2, 2), "fresh halo ok");
+
+  // A25 R3: reference fill helper + order-epoch stale draw rejection.
+  {
+    using cutum::FillReferenceSkyBlockLight;
+    using cutum::PublicationEpochs;
+    uint8_t ref[8] = {};
+    FillReferenceSkyBlockLight(ref, 2, 15, 0, 0, 0, 12);
+    Expect(ref[0] != 0, "reference packed light written");
+    PublicationEpochs draw_o{};
+    PublicationEpochs live_o{};
+    live_o.transparent_order_key = 5;
+    draw_o.transparent_order_key = 2;
+    ArtifactManifest okm{};
+    okm.light_valid = true;
+    Expect(ValidatePublicationCandidate(okm, okm, draw_o, live_o) ==
+               PublicationValidation::OrderEpochStale,
+           "A25 P3: stale order key rejected");
+  }
+
+  // A25 R4: CapDirtyAdmitUnderThrash
+  {
+    using cutum::CapDirtyAdmitUnderThrash;
+    Expect(CapDirtyAdmitUnderThrash(1, 25) == 4, "FD repair raises to 4");
+    Expect(CapDirtyAdmitUnderThrash(8, 25, /*dropped=*/900) == 4,
+           "thrash caps at 4");
+  }
 
   if (gFails != 0)
   {
