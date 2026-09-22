@@ -1,44 +1,47 @@
-# A21 acceptance matrix (DoD §4)
+# A21 acceptance matrix (DoD §4) — residual update 2026-09-22
 
-## Phase landing (code + docs)
+## Residual R0–R5 landing
 
-| Phase | Landed | Notes |
+| Step | Status | Notes |
 |---|---|---|
-| P0 | YES | run manifest, schema v2, job trace, input adequacy, repro, fixtures |
-| P1 | YES | cull/shell/credit/material/fluid identity + PreferKick |
-| P2 | YES | demand store, coalesce, FaceDebt peer_gen, reconcile, cutover **flag OFF** |
-| P3 | YES | ArtifactManifest + shared validator + publication epochs |
-| P4 | YES | LightValidity, BC doc, SeamCoverageManifest, light reference compare helpers |
-| P5 | YES | op inventory, work slots shared, critical unit cost gate |
-| P6 | YES | versioned fluid summary, incomplete-tile age, map scroll strips |
-| P7 | YES | RingReadinessBudget Evaluate wired; flag **OFF**; fog≠hole-close |
-| P8 | PROFILE-GATED | options documented; no default-path opts without before/after AF |
+| R0 evidence 114954 | DONE | `A21_RESIDUAL_BLACK_114954.md`, end-gate tool |
+| R1 classify | DONE | LegalDark requires light revs match |
+| R2 admit/PreferKick | DONE | equal-rev FD no longer silent-continue; DirtyAdmit reserve; AF cold `124620` |
+| R3 cutover | DONE | `ChunkDemandCutoverEnabled` default ON; `CUBA_DEMAND_CUTOVER=0` rollback |
+| R4 provenance | DONE | meshed light stamped on publish candidate |
+| R5 eye/DoD | DONE (honest) | scorecards + eye matrix; `operator_visual=UNTESTED`; end-gate FAIL |
+
+## AF after residual
+
+| Metric | 114954 manual | R2 cold `124620` | R5 warm `125120` |
+|---|---:|---:|---:|
+| mid VB | 59 | 49 | 48 |
+| mid FD stalled | 16 | **3** | **0** |
+| tail admit_end | 0 | **4** | **4** |
+| tail VB / debt | 47 | ≈87 | **83** |
+| prefer_kick_n | 0 | 0 | 0 (Dirty path) |
+| end_gate | FAIL | FAIL | FAIL |
+| input adequacy | n/a | PASS | PASS |
+| dual-lane | n/a | PASS (cold) | PASS (warm) |
+| merge_green | false | false | false |
 
 ## Visual (§4.1)
 
-| Gate | Criterion | Status |
-|---|---|---|
-| Material ID | 0 wrong IDs in agreed area | UNTESTED (needs ID buffer) |
-| Opaque surface | no unexplained disappearance | UNTESTED (needs reference mesher) |
-| Light vs reference | cave zero OK; stale halo reject | PARTIAL (helpers + LightValidity); full world ref UNTESTED |
-| Debug buffers | chunk/artifact/material/depth/light gen | PARTIAL |
-| Scenarios | cold/warm, 180° turn, stop, dive, edits… | AF proxy PARTIAL |
-| Operator eye | manual west cruise | UNTESTED |
-
-PASS proxy never replaces PASS visual gate.
+| Gate | Status |
+|---|---|
+| Operator eye | **UNTESTED** — see `A21_OPERATOR_EYE_MATRIX.md` |
+| Material / reference mesher | UNTESTED |
+| Scenarios AF proxy | PARTIAL (adequacy PASS; eye-proxy FAIL) |
 
 ## Perf / convergence (§4.2)
 
-| Gate | Criterion | Status |
-|---|---|---|
-| 60 FPS profile | P95≤16.7, P99≤33.3 steady; >100ms only load/reset | UNTESTED (product profile) |
-| TTR SLA hypothesis | 95%≤1s, max≤3s on reference scene after P0 | UNTESTED hypothesis |
-| Soak | ≥15 min + ≥5 cold/warm replays | UNTESTED |
-| Memory | credit owns payload until last consumer | PARTIAL (P1 snapshot credit) |
-| Stop | no orphan pending / infinite Retain | UNTESTED |
+| Gate | Status |
+|---|---|
+| End-of-flight black gate | FAIL (`tools/a21_residual_end_gate.py`) |
+| TTR / soak / 60 FPS | UNTESTED |
+| Stop orphan pending | PARTIAL — job_trace tail still `admitted` / rev=0 |
 
 ## Honesty
 
-`operator_visual=UNTESTED` ⇒ `merge_green=false`. AF ≠ CLOSED.
-Any driver/backend, manual picture, or missing reference remains UNTESTED.
-Cutover / RingReadiness / P8 second-order opts stay flag-gated until evidence.
+`operator_visual=UNTESTED` ⇒ `merge_green=false`. AF ≠ CLOSED.  
+Mid stalled and DirtyAdmit headroom improved; residual black census at cruise end remains open.
