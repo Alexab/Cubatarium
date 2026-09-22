@@ -53,9 +53,11 @@ int main()
   chunk.prefer_kick_stall_frames = 100;
   LitApplyPlan plan;
   TryPreferKickOrForceDirty(plan, chunk, true, true);
+  // A21-04 P2.3: stall≥limit PreferKicks pending — must not be stall-only.
   bool stalled = plan.mark_dirty.empty() && plan.mark_dirty_priority.empty()
                  && plan.prefer_kick_gpu.empty() && plan.note_prefer_kick_stall;
-  std::cout << "pending_no_progress_age100_only_notes_stall=" << stalled << '\n';
+  std::cout << "pending_no_progress_age100_only_notes_stall=" << stalled
+            << " prefer_kick=" << plan.prefer_kick_gpu.size() << '\n';
   violations += stalled;
 
   // Pass-aligned material stamps (A21-05): expected matches THIS PASS only.

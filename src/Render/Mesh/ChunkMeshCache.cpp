@@ -18,6 +18,7 @@
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
@@ -919,6 +920,9 @@ void UChunkMeshCache::ConsumeGeometryDirtyChunks(
 bool UChunkMeshCache::BatchesHaveFullyDarkFace(
     const std::vector<GreedyMeshBatch> &batches)
 {
+  // A21 P4: observational dark-face census only. Do NOT use as sole remesh
+  // / LightValidity trigger — zero sky+block is legal in caves. Remesh demand
+  // comes from light revision mismatch or explicit invalid (MeshLightStalePolicy).
   // Bottom faces (−Y, faceIndex 5) are normally light=0 (air/solid below has
   // no skylight). Counting them made SoftDefer/reject/sticky treat every
   // outdoor mesh as "dark" and drowned sticky side/top bake in diagnostics.
@@ -3868,6 +3872,21 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       // Sysreset v3 D4: light-accepted drawable Retain — no Dirty, no FaceDebt.
       ++MeshApplyStaleAcceptedRefreshCount;
       // RetainedPrior: not a published Completed — callers must not ++Completed.
+      // A21 P2.6: Retain must keep successor demand (geom/light desire).
+      if (kChunkDemandShadow)
+      {
+        uint64_t succ_geom = 0;
+        uint64_t succ_light = 0;
+        if (const UChunk *ch = world.GetChunkManager().GetChunk(coord))
+        {
+          succ_geom = ch->GetContentRevision();
+          succ_light = ch->GetLightFieldRevision();
+        }
+        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        demand.NoteInstallResult(coord,
+                                 InstallResult::RetainedAwaitingSuccessor);
+        (void)demand.NoteDemand(coord, succ_geom, succ_light);
+      }
       return false;
     }
   }
@@ -4962,6 +4981,21 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       ++MeshApplyStaleAcceptedRefreshCount;
       abandon_fm_watch();
       LastApplyWasRetainedPrior_ = true;
+      // A21 P2.6: Retain must keep successor demand (geom/light desire).
+      if (kChunkDemandShadow)
+      {
+        uint64_t succ_geom = 0;
+        uint64_t succ_light = 0;
+        if (const UChunk *ch = world.GetChunkManager().GetChunk(result.coord))
+        {
+          succ_geom = ch->GetContentRevision();
+          succ_light = ch->GetLightFieldRevision();
+        }
+        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        demand.NoteInstallResult(result.coord,
+                                 InstallResult::RetainedAwaitingSuccessor);
+        (void)demand.NoteDemand(result.coord, succ_geom, succ_light);
+      }
       return;
     }
   }

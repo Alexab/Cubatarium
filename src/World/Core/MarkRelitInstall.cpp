@@ -5,6 +5,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnRecord.h"
 #include "World/Streaming/ColumnVisualState.h"
@@ -122,6 +123,44 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     auto admit_dirty = [&](const glm::ivec3 &coord, bool priority) {
       const int horiz = std::max(std::abs(coord.x - focus_g.x),
                                  std::abs(coord.z - focus_g.z));
+      // A21 P2.1/P2.2: shadow demand — skip MarkDirty when published meets desire.
+      if (kChunkDemandShadow)
+      {
+        uint64_t desired_geom = 0;
+        uint64_t desired_light = 0;
+        if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+        {
+          desired_geom = ch->GetContentRevision();
+          desired_light = ch->GetLightFieldRevision();
+        }
+        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        ChunkRenderDemandRecord &rec = demand.GetOrCreate(coord);
+        const MeshPublishRevs pub = mesh->GetCache().GetMeshPublishRevs(coord);
+        if (pub.geom_rev != 0)
+        {
+          rec.published_geom_rev = pub.geom_rev;
+        }
+        if (pub.light_rev != 0)
+        {
+          rec.published_light_rev = pub.light_rev;
+        }
+        else
+        {
+          UChunkMeshCache::LitApplyMeshProbe probe{};
+          mesh->FillLitApplyMeshProbe(coord, probe);
+          if (probe.meshed_light_rev != 0)
+          {
+            rec.published_light_rev = probe.meshed_light_rev;
+          }
+        }
+        const DemandResult dr =
+            demand.NoteDemand(coord, desired_geom, desired_light);
+        if (dr == DemandResult::AlreadySatisfied)
+        {
+          ++PhysicsTelemetryData.DemandAlreadySatisfiedSkipN;
+          return;
+        }
+      }
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
       // enqueues (PreferKick≡0 cannot own pending GPU alone).
       if (!mesh->TryConsumeDirtyAdmit())
@@ -154,6 +193,11 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         span.queue_reason = priority ? 1 : 0;
         span.stage_ms = ElapsedMs(dirty_t0, Clock::now());
         UJobStageTrace::Note(span);
+        if (kChunkDemandShadow)
+        {
+          UChunkRenderDemandStore::Get().NoteStageProgress(
+              coord, JobStage::Admitted, 0, span.stage_ms);
+        }
       }
     };
     for (const glm::ivec3 &coord : plan.mark_dirty_priority)
@@ -615,6 +659,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         ElapsedMs(orphan_t0, Clock::now());
   }
   PhysicsTelemetryData.MarkRelitTotalMs += ElapsedMs(total_t0, Clock::now());
+  if (kChunkDemandShadow)
+  {
+    const auto recon =
+        UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/32);
+    PhysicsTelemetryData.DemandReconcileMismatchN +=
+        recon.mismatch_desired_vs_published;
+    PhysicsTelemetryData.DemandShadowMismatchN =
+        UChunkRenderDemandStore::Get().ShadowMismatchN();
+  }
 }
 
 } // namespace cutum

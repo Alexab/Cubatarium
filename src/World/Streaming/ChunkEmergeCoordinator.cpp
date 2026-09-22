@@ -21,6 +21,7 @@
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/SeaSeamRemeshPolicy.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
 #include "Core/FrameDeadline.h"
 #include "World/Streaming/CyOrderPolicy.h"
@@ -512,7 +513,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.ClearStickyRemeshAfterLightColumn(col);
+          // A21 P2.4: shadow per-chunk face debt — clear publisher only.
+          // TODO(A21 cutover): remove column ClearFaceDebt; Ready aggregates slices.
           world_ref.GetColumnRecords().ClearFaceDebt(col);
+          if (kChunkDemandShadow)
+          {
+            UChunkRenderDemandStore::Get().NoteFaceDebtSatisfied(chunk_coord,
+                                                                /*face_mask=*/0x3Fu);
+          }
           world_ref.NoteUnfinishedColumnDirty(col);
           if (!world_ref.IsPendingLightBeforeMesh(col))
           {
@@ -607,8 +615,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           UWorld &world_ref = *world_ptr;
           // Publisher known → clear own face debt bit for this column.
+          // A21 P2.4: also note publisher chunkXYZ only in demand store (shadow).
+          // TODO(A21 cutover): remove column ClearFaceDebt; do not clear all Y debt.
           world_ref.GetColumnRecords().ClearFaceDebt(
               glm::ivec2(chunk_coord.x, chunk_coord.z));
+          if (kChunkDemandShadow)
+          {
+            UChunkRenderDemandStore::Get().NoteFaceDebtSatisfied(chunk_coord,
+                                                                /*face_mask=*/0x3Fu);
+          }
           const ProceduralSettings &settings = world_ref.GetProceduralSettings();
           const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
           const glm::ivec3 focus_block = world_ref.GetPreferredLoadFocusBlock();

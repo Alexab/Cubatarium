@@ -304,6 +304,7 @@ set(SOURCES
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
     src/World/Diagnostics/FramePerfMonitor.cpp
     src/World/Diagnostics/JobStageTrace.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp
     src/World/Diagnostics/EnterLitDiagnostics.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
@@ -1409,6 +1410,14 @@ add_executable(relight_install_planner_test
 target_include_directories(relight_install_planner_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(relight_install_planner_test glm::glm)
+
+add_executable(chunk_render_demand_test
+    src/Test/ChunkRenderDemandTest.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp
+    src/World/Diagnostics/JobStageTrace.cpp)
+target_include_directories(chunk_render_demand_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_render_demand_test glm::glm)
 
 add_executable(relight_result_install_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -2688,7 +2697,7 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   set_tests_properties(publication_audit PROPERTIES
     LABELS "unit;streaming;audit" TIMEOUT 30)
 
-  # A21 P0.5: CurrentContractRepro — expects 6 violations until P1/P2 land.
+  # A21: CurrentContractRepro — remaining audit counters after P1/P2.
   add_executable(current_contract_repro
     docs/streaming/audit_2026_09_21/CurrentContractRepro.cpp
     src/World/Core/BlockWorld.cpp
@@ -2741,6 +2750,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   column_emerge_bump_test
   frame_streaming_budget_test
   idle_recovery_policy_test
+  chunk_render_demand_test
 )
 foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
   if(TARGET ${_t})

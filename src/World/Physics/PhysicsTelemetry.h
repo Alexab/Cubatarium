@@ -762,6 +762,10 @@ struct PhysicsTelemetry
   uint64_t DirtyScheduleSkipInflightN{0};
   uint64_t DirtyDropped{0};
   uint64_t PendingLightDropped{0};
+  /// A21 P2: ChunkRenderDemand AlreadySatisfied skips (no false Dirty progress).
+  uint64_t DemandAlreadySatisfiedSkipN{0};
+  uint64_t DemandReconcileMismatchN{0};
+  uint64_t DemandShadowMismatchN{0};
   /// FZ2.7-P12 B0: PendingLight trim source breakdown (per-frame).
   int PendingLightTrimEmergeN{0};
   int PendingLightTrimMemoryN{0};
