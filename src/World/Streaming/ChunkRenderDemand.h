@@ -11,9 +11,9 @@
 namespace cutum
 {
 
-/// A21 P2: shadow per-chunk demand owner. When true, NoteDemand may skip
-/// redundant Dirty admits; store observes installs without replacing planners.
-inline constexpr bool kChunkDemandShadow = true;
+/// A21 P2: when true, NoteDemand may skip redundant Dirty admits as shadow
+/// observer. A22 S2: sole writer — shadow dual-path OFF (cutover ON).
+inline constexpr bool kChunkDemandShadow = false;
 
 /// A21 P2.7 cutover: when true, column ClearFaceDebt is forbidden (sole writer =
 /// per-chunk demand store). Default ON after residual R3 AF evidence path.
