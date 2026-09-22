@@ -42,3 +42,23 @@ End-gate: `bin/suite_reports/g1_a10_relight/a21_residual_114954_end_gate.json`
 ## Plan mapping
 
 R1 classify → H3 telemetry; R2 admit+kick → H1/H2/H3; R3 cutover → H4; R4 provenance; R5 eye/DoD.
+
+## Post-R2 AF cold (`perf_20260922-124620_1120.jsonl`)
+
+- mid FD stalled 16 → **3**; DirtyAdmit tail **4** (was 0).
+- input adequacy PASS; dual-lane PASS; eye-proxy FAIL (holes blink).
+- end_gate still FAIL (tail VB≈87); `prefer_kick_n` stays 0 (schedules MarkDirty, not PreferKick GPU list).
+- `operator_visual=UNTESTED`; `merge_green=false`.
+
+## Post-R3/R4 AF warm (`perf_20260922-125120_2288.jsonl`) — R5 scorecard
+
+| period | VB | debt−legal | admit_end | dirty_dropped | prefer_kick | fm_enqueue |
+|---:|---:|---:|---:|---:|---:|---:|
+| 42 | 83 | 83 | 4 | 29351 | 0 | 2 |
+| 43 | 83 | 83 | 4 | 29351 | 0 | 0 |
+| 44 | 83 | 83 | 4 | 29351 | 0 | 0 |
+
+- mid FD stalled **0**; DirtyAdmit tail **4** (H1 partial: no longer admit=0).
+- input adequacy PASS; dual-lane **warm PASS**; eye-proxy FAIL; end_gate FAIL.
+- job_trace tail still `stage=admitted` with rev=0 — no stop convergence to 0 orphans.
+- Eye matrix: `A21_OPERATOR_EYE_MATRIX.md`. **CLOSED withheld** until operator eye.
