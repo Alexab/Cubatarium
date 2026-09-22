@@ -24,9 +24,14 @@ Protocol: `CUBA_FLIGHT_FOG_ON=1`, World_164, `product-174657` (+warm/dive), **`-
 - Warm `141239`: end debt **33** (S0 was 8); prefer_kick still 0.
 - **Plan delta:** H-Light partial — removing MarkDirty hurt drain. Restore MarkDirty+sky (iter2).
 
-### S1.2 MarkDirty restored + keep pending + force_stale
-- Cold `141650` visible: adequacy PASS; mid FD stalled med **1** (score mid_corridor); dual-lane mid stalled 21 FAIL; end debt **60**; prefer_kick=0; dirty_dropped grew without enqueue.
-- Fluid still dominant spikes (15).
-- **Plan delta:** PendingLight keep alone insufficient; escalate to S2 sole demand writer + S5 fluid. Max 2 S1 iters used.
+## S2–S6 combo visible (`142304` cold / `142532` warm)
 
----
+- Shadow OFF + fluid stamp-hit + critical 4ms + live publish expected.
+- Warm: mid FD stalled **0**; VB fly med 43; end debt **45**; eye-proxy blink FAIL; prefer_kick=0.
+- Cold: end debt **100** (worse) — force_stale/Dirty flood under cold pressure.
+- **Plan delta:** mid-stall heal works on warm; end convergence + PreferKick still open. S7 RingReadiness **stays OFF**. S8 eye UNTESTED.
+
+## S7 / S8 honesty
+
+- S7: not enabled (`RingReadinessBudgetEnabled=false`) — end-gate not green.
+- S8: `operator_visual=UNTESTED`, `merge_green=false` until human west-cruise eye.

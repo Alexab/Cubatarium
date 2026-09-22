@@ -1,29 +1,18 @@
-# A21/A22 acceptance matrix — honesty freeze 2026-09-22
+# A21/A22 acceptance — status after S0–S6 code land
 
-## Residual R0–R5 vs ENGINE plan
+Date: 2026-09-22  
+Branch: `cursor_audit7_impl`
 
-Residual scaffolding **landed**; ENGINE_REMEDIATION P0–P8 gates **not CLOSED**.  
-Manual `133440` eye FAIL (blacks). See `A22_MANUAL_133440.md`.
-
-| Phase | Residual claim | Actual |
+| Step | Status | Notes |
 |---|---|---|
-| P0 | PARTIAL | PARTIAL — no 5×A/B soak |
-| P1 | local fixes | PARTIAL — no e2e visual |
-| P2 | cutover ON | PARTIAL — shadow dual-path remains |
-| P3 | provenance | PARTIAL — validator self-check |
-| P4 | LightValidity | PARTIAL/Deferred |
-| P5 | DirtyAdmit reserve | PARTIAL — MaxCriticalUnitMs=0 |
-| P6 | fluid identity | PARTIAL — sync full scan |
-| P7 | Evaluate wired | **OFF** |
-| P8 / DoD | R5 honest | UNTESTED eye; end-gate FAIL |
+| S0 evidence + visible baseline | DONE | `A22_MANUAL_133440.md`, flight log; debt 8 |
+| S1 PendingLight heal | DONE (partial) | mid stall ↓; end-gate FAIL; 2 iters |
+| S2 sole demand writer | DONE | `kChunkDemandShadow=false` |
+| S3 publish validator | DONE | expected from live revs |
+| S4 LightValidity ADR | DONE | `A22_ADR_LIGHT_SEAM.md`; seam extract follow-up |
+| S5 fluid stamp-hit | DONE | cache before GetBlock scan |
+| S6 critical unit 4ms | DONE | `MaxCriticalUnitMs` default 4 |
+| S7 RingReadiness | **DEFERRED** | end-gate not green — flag stays OFF |
+| S8 operator eye | **UNTESTED** | merge_green=false |
 
-## A22 status
-
-| Step | Status |
-|---|---|
-| S0 evidence + visible baseline | IN PROGRESS |
-| S1–S8 | PENDING |
-| `operator_visual` | **UNTESTED** |
-| `merge_green` | **false** |
-
-AF adequacy ≠ CLOSED. Visible `--visible` flights required per A22 Loop.
+`operator_visual=UNTESTED` ⇒ `merge_green=false`. Visible AF Loop continues.

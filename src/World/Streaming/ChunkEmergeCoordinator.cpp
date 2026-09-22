@@ -528,11 +528,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           if (!world_ref.IsPendingLightBeforeMesh(col))
           {
             const glm::ivec3 ground(col.x, 0, col.y);
-            if (world_ref.IsColumnLitReady(ground) ||
-                world_ref.GetColumnEmergeState(ground) ==
-                    ColumnEmergeState::Meshing ||
-                world_ref.GetColumnEmergeState(ground) ==
-                    ColumnEmergeState::LitReady)
+            // A22 S2: one Y-slice lit commit must not Ready the column while
+            // another loaded slice is still FullyDark (multi-Y aggregate).
+            bool sibling_fully_dark = false;
+            {
+              UWorldMeshService &mesh = world_ref.GetMeshService();
+              const int max_y = world_ref.GetProceduralSettings().MaxHeight;
+              const int cy1 = max_y > 0 ? (max_y - 1) / CHUNK_SIZE : 0;
+              for (int cy = 0; cy <= cy1; ++cy)
+              {
+                const glm::ivec3 sib(col.x, cy, col.y);
+                if (mesh.HasGreedyMesh(sib) &&
+                    mesh.GetCache().ChunkHasFullyDarkFace(sib))
+                {
+                  sibling_fully_dark = true;
+                  break;
+                }
+              }
+            }
+            if (!sibling_fully_dark &&
+                (world_ref.IsColumnLitReady(ground) ||
+                 world_ref.GetColumnEmergeState(ground) ==
+                     ColumnEmergeState::Meshing ||
+                 world_ref.GetColumnEmergeState(ground) ==
+                     ColumnEmergeState::LitReady))
             {
               world_ref.SetColumnEmergeState(ground,
                                              ColumnEmergeState::RenderReady);
