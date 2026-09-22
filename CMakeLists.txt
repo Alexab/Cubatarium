@@ -2708,8 +2708,7 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   add_test(NAME current_contract_repro COMMAND $<TARGET_FILE:current_contract_repro>)
   set_tests_properties(current_contract_repro PROPERTIES
     LABELS "unit;streaming;audit;a21"
-    TIMEOUT 60
-    WILL_FAIL TRUE) # baseline: exit 1 with 6 violations until P1/P2
+    TIMEOUT 60)
 endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
   job_admission_lifetime_test

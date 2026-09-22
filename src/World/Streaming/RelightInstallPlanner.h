@@ -301,7 +301,9 @@ inline bool TryPreferKickOrForceDirty(LitApplyPlan &plan,
   }
   if (chunk.is_dirty && pending_gpu_or_raa)
   {
-    // Waiting for Kick with Dirty already queued — stall clock only.
+    // A21-04: dirty+pending+no-progress must not eternal-stall. PreferKick the
+    // pending job so stage can advance; still note stall for telemetry.
+    AppendUniqueCoord(plan.prefer_kick_gpu, chunk.coord);
     plan.note_prefer_kick_stall = true;
     return true;
   }
