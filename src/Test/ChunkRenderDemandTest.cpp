@@ -64,11 +64,12 @@ int main()
   Expect(rec && (rec->face_debt_mask & 0x01u) == 0, "matching peer clears face0");
   Expect(rec && (rec->face_debt_mask & 0x02u) != 0, "face1 kept");
 
-  // Cutover: column FaceDebt clear forbidden while flag ON.
+  // Cutover: column FaceDebt clear forbidden while flag ON (default ON).
   ChunkDemandCutoverEnabled() = true;
   Expect(!ChunkDemandAllowsColumnFaceDebtClear(), "cutover blocks column clear");
   ChunkDemandCutoverEnabled() = false;
   Expect(ChunkDemandAllowsColumnFaceDebtClear(), "rollback restores column clear");
+  ChunkDemandCutoverEnabled() = true; // restore default for process
 
   const auto recon = store.ReconcileMaintenance(8);
   Expect(recon.checked >= 1, "reconcile scanned");

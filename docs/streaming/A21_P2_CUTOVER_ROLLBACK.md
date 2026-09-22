@@ -10,13 +10,13 @@
 ## Cutover protocol
 
 1. Shadow green on cold+warm+dive AF (input adequacy).
-2. Enable `ChunkDemandCutoverEnabled() = true` for one AF trio.
+2. Default: `ChunkDemandCutoverEnabled() = true` (or env `CUBA_DEMAND_CUTOVER` unset/nonzero).
 3. Gate: no orphan pending / infinite Retain; Ready only from slice aggregate.
-4. Evidence note + deletion of dual column clears behind the same flag.
+4. Evidence note + column ClearFaceDebt skipped when cutover ON.
 
 ## Rollback
 
-1. Set `ChunkDemandCutoverEnabled() = false` immediately.
+1. Set `CUBA_DEMAND_CUTOVER=0` or `ChunkDemandCutoverEnabled() = false` immediately.
 2. Do **not** leave cutover ON while re-enabling column clears (dual-path ban).
 3. Keep demand store + fixtures; do not delete shadow diagnostics.
 

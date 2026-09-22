@@ -4,6 +4,7 @@
 #include "World/Diagnostics/JobStageTrace.h"
 
 #include <cstdint>
+#include <cstdlib>
 #include <glm/glm.hpp>
 #include <unordered_map>
 
@@ -15,11 +16,18 @@ namespace cutum
 inline constexpr bool kChunkDemandShadow = true;
 
 /// A21 P2.7 cutover: when true, column ClearFaceDebt is forbidden (sole writer =
-/// per-chunk demand store). Default OFF — dual adapters remain until AF evidence.
-/// Rollback: set false (never leave both cutover ON and column clears active).
+/// per-chunk demand store). Default ON after residual R3 AF evidence path.
+/// Rollback: set false or env CUBA_DEMAND_CUTOVER=0 (never leave both cutover ON
+/// and column clears active).
 inline bool &ChunkDemandCutoverEnabled()
 {
-  static bool enabled = false;
+  static bool enabled = []() {
+    if (const char *env = std::getenv("CUBA_DEMAND_CUTOVER"))
+    {
+      return env[0] != '0' && env[0] != '\0';
+    }
+    return true;
+  }();
   return enabled;
 }
 
