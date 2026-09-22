@@ -713,14 +713,32 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
   }
   cache.VertexPool.SignalUploadComplete();
   LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
-  // A21 P3: production calls shared validator (epochs from this pass cache).
+  // A21 P3/R4: production calls shared validator with real light provenance.
   {
     ArtifactManifest got{};
     ArtifactManifest expected{};
     got.source_geom_rev = cache.meshRevision;
-    got.source_light_rev = cache.meshRevision; // stub until light stamped here
     got.artifact_generation = cache.publicationVersion;
     got.light_valid = true;
+    uint64_t light_rev = 0;
+    if (mesh_cache != nullptr && !published_ok.empty())
+    {
+      const glm::ivec3 sample = *published_ok.begin();
+      light_rev = mesh_cache->GetMeshedLightRevision(sample);
+      const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(sample);
+      if (light_rev == 0)
+      {
+        light_rev = pub.light_rev;
+      }
+      got.source_geom_rev =
+          pub.geom_rev != 0 ? pub.geom_rev : cache.meshRevision;
+      // Reject path: stale halo when publish revs disagree with meshed light.
+      if (pub.light_rev != 0 && light_rev != 0 && pub.light_rev != light_rev)
+      {
+        got.light_valid = false;
+      }
+    }
+    got.source_light_rev = light_rev != 0 ? light_rev : cache.meshRevision;
     expected = got;
     PublicationEpochs live{};
     live.artifact_generation = cache.publicationVersion;
