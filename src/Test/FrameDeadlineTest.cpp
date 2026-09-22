@@ -48,10 +48,14 @@ int main()
          "exhausted: FirstMesh never hard-killed");
   Expect(cutum::UFrameDeadline::ShouldDeferSecondaryScan(2.0),
          "exhausted: secondary SoftDefer scan deferred");
+  cutum::UFrameDeadline::NoteCriticalUnitFinished();
 
   deadline.BeginFrame(50.0);
+  deadline.SetMaxCriticalUnitMs(4.0);
+  Expect(deadline.MaxCriticalUnitMs() == 4.0, "critical unit cap set");
   Expect(!cutum::UFrameDeadline::ShouldDeferSecondaryScan(2.0),
          "fresh budget: secondary scan allowed");
+  deadline.SetMaxCriticalUnitMs(0.0);
 
   if (gFails != 0)
   {

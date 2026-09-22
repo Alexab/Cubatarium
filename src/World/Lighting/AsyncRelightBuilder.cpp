@@ -2,10 +2,13 @@
 
 #include "Blocks/BlockRegistry.h"
 #include "Core/Jobs/JobThreadBudget.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Streaming/DependencyStampBuilder.h"
 #include <algorithm>
+#include <atomic>
+#include <memory>
 #include <mutex>
 #include <thread>
 
@@ -112,10 +115,33 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
 
+  // A21 P5: share work-slot envelope with mesh workers. If denied, still
+  // enqueue (do not drop light demand) under a limited bypass counter —
+  // separate relight pool cutover is follow-on.
+  struct WorkSlotGuard
+  {
+    bool held{false};
+    ~WorkSlotGuard()
+    {
+      if (held)
+      {
+        UPipelineAdmission::Get().ReleaseWorkSlot();
+      }
+    }
+  };
+  auto work_slot = std::make_shared<WorkSlotGuard>();
+  work_slot->held = UPipelineAdmission::Get().TryAcquireWorkSlot();
+  if (!work_slot->held)
+  {
+    static std::atomic<uint64_t> gRelightWorkSlotBypassN{0};
+    gRelightWorkSlotBypassN.fetch_add(1, std::memory_order_relaxed);
+  }
+
   Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
-                catalogKeep = std::move(catalogKeep), job_id,
-                submit_epoch]() mutable
+                catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
+                work_slot = std::move(work_slot)]() mutable
                {
+                 (void)work_slot;
                  RelightComputeResult result = snapshot.Compute(*registry);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;

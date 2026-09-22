@@ -12,4 +12,6 @@
 | Retirement | Vertex pool fence | allocation generation |
 
 Critical unit after deadline must be measured-bounded quantum (`FrameDeadline`).
-Work slots: extend beyond AsyncMeshBuilder alone.
+Optional `SetMaxCriticalUnitMs` + `NoteCriticalUnitFinished` cost gate (default 0 = uncapped legacy).
+Work slots: `AsyncMeshBuilder` + `AsyncRelightBuilder::EnqueueJob` share `TryAcquireWorkSlot`;
+relight bypasses with a limited counter when the shared envelope is full (do not drop demand).
