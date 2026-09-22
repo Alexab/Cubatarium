@@ -31,14 +31,16 @@ struct VisibleBlackFocusCounts
 };
 
 /// Classify why a focus column counts as visible-black.
-/// LegalDarkNoRepair only when FullyDark with no ticket/progress/sticky and
-/// no pending light→mesh replace (true cave / no repair demand).
+/// LegalDarkNoRepair: FullyDark + matching light revs + no ticket/progress/sticky
+/// and no pending light→mesh replace (true cave / no repair demand).
+/// Equal-rev is required: mismatched revs ⇒ debt (FullyDarkNoTicket), not LegalDark.
 inline VisibleBlackCause ClassifyVisibleBlackColumn(bool stale_dark,
                                                     bool fully_dark,
                                                     bool has_ticket,
                                                     bool has_progress,
                                                     bool sticky,
-                                                    bool pending_replace)
+                                                    bool pending_replace,
+                                                    bool light_revs_match = true)
 {
   if (!fully_dark)
   {
@@ -52,11 +54,23 @@ inline VisibleBlackCause ClassifyVisibleBlackColumn(bool stale_dark,
   {
     return VisibleBlackCause::FullyDarkPendingRepair;
   }
-  if (!pending_replace)
+  // A21 residual R1: without matching revs this is repair debt, not legal cave.
+  if (!pending_replace && light_revs_match)
   {
     return VisibleBlackCause::LegalDarkNoRepair;
   }
   return VisibleBlackCause::FullyDarkNoTicket;
+}
+
+/// Helper: observational equal-rev FullyDark with no repair owner.
+inline bool IsEqualRevLegalDark(bool fully_dark, bool has_ticket,
+                                bool has_progress, bool sticky,
+                                bool pending_replace, bool light_revs_match)
+{
+  return ClassifyVisibleBlackColumn(false, fully_dark, has_ticket, has_progress,
+                                    sticky, pending_replace,
+                                    light_revs_match) ==
+         VisibleBlackCause::LegalDarkNoRepair;
 }
 
 } // namespace cutum

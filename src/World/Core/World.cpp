@@ -3547,6 +3547,33 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     const bool progress = ColumnHasRepairProgress(key);
     const bool sticky = IsColumnStickyRemesh(key);
     const bool pending_replace = IsPendingLightBeforeMesh(key);
+    // A21 residual R1: LegalDark needs matching meshed vs field light revs.
+    bool light_revs_match = true;
+    if (column_fully_dark)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (!MeshService->HasDrawableGreedyMesh(coord) ||
+            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          continue;
+        }
+        UChunkMeshCache::LitApplyMeshProbe probe{};
+        MeshService->FillLitApplyMeshProbe(coord, probe);
+        uint64_t field_rev = 0;
+        if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+        {
+          field_rev = ch->GetLightFieldRevision();
+        }
+        if (probe.meshed_light_rev != 0 && field_rev != 0 &&
+            probe.meshed_light_rev != field_rev)
+        {
+          light_revs_match = false;
+          break;
+        }
+      }
+    }
     const bool counts_progress = ShouldCountVisibleBlackProgress(
         contains || progress || sticky, column_fully_dark, pending_replace);
     if (counts_progress)
@@ -3564,7 +3591,7 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     const bool stale_dark_attr = column_stale_dark && !column_fully_dark;
     switch (ClassifyVisibleBlackColumn(stale_dark_attr, column_fully_dark,
                                        contains, progress, sticky,
-                                       pending_replace))
+                                       pending_replace, light_revs_match))
     {
     case VisibleBlackCause::StaleDarkWithLitField:
       ++counts.stale_lit;

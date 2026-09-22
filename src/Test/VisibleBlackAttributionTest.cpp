@@ -32,6 +32,7 @@ void ExpectCause(cutum::VisibleBlackCause expected, cutum::VisibleBlackCause act
 int main()
 {
   using cutum::ClassifyVisibleBlackColumn;
+  using cutum::IsEqualRevLegalDark;
   using cutum::VisibleBlackCause;
 
   // Q2 follow-up: full GL pixel oracle for visible-black columns lives in
@@ -70,6 +71,17 @@ int main()
               ClassifyVisibleBlackColumn(false, true, false, false, false,
                                          false),
               "fully dark legal cave");
+  // A21 residual R1: equal-rev required for LegalDark.
+  ExpectCause(VisibleBlackCause::FullyDarkNoTicket,
+              ClassifyVisibleBlackColumn(false, true, false, false, false,
+                                         false, /*light_revs_match=*/false),
+              "mismatched revs FullyDark is debt not LegalDark");
+  Expect(IsEqualRevLegalDark(true, false, false, false, false, true),
+         "helper legal dark");
+  Expect(!IsEqualRevLegalDark(true, false, false, false, false, false),
+         "helper rejects mismatch");
+  Expect(!IsEqualRevLegalDark(true, true, false, false, false, true),
+         "helper rejects ticketed");
 
   // Census mismatch semantics (WorldStreaming publish): flag=1 when
   // unfinished_visual==0 && visible_black_focus_n>0 on the same frame.
