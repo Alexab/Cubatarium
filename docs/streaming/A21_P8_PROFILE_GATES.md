@@ -9,4 +9,9 @@ Only after corrected baseline profile. Each requires before/after on same AF wor
 | transparent ordering | hierarchical resort region | WBOIT not drop-in for water |
 | steady-state cost | LOD/HLOD subsystem | boundary contracts; not stale-visibility substitute |
 
-Drop shadow adapters after cutover. KEEP diagnostic fixtures.
+## Cutover hygiene
+
+- Drop shadow adapters **only after** `ChunkDemandCutoverEnabled` AF evidence.
+- KEEP diagnostic snapshots + regression fixtures (`CurrentContractRepro`, demand tests).
+- No second-order option enters default path without measured win on the same AF workload.
+- GLES path must remain correct when desktop opts (mapping/ring) are enabled.

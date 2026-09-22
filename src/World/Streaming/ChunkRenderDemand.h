@@ -14,6 +14,21 @@ namespace cutum
 /// redundant Dirty admits; store observes installs without replacing planners.
 inline constexpr bool kChunkDemandShadow = true;
 
+/// A21 P2.7 cutover: when true, column ClearFaceDebt is forbidden (sole writer =
+/// per-chunk demand store). Default OFF — dual adapters remain until AF evidence.
+/// Rollback: set false (never leave both cutover ON and column clears active).
+inline bool &ChunkDemandCutoverEnabled()
+{
+  static bool enabled = false;
+  return enabled;
+}
+
+/// True while legacy column FaceDebt clear is still allowed (shadow / pre-cutover).
+inline bool ChunkDemandAllowsColumnFaceDebtClear()
+{
+  return !ChunkDemandCutoverEnabled();
+}
+
 enum class DemandResult : uint8_t
 {
   NewDemand = 0,
@@ -70,9 +85,14 @@ public:
                          uint64_t published_geom_rev = 0,
                          uint64_t published_light_rev = 0);
 
-  /// Shadow face debt: clear bits for this publisher chunk only.
-  void NoteFaceDebt(glm::ivec3 chunk_xyz, uint8_t face_mask);
-  void NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz, uint8_t face_mask);
+  /// Face debt keyed by chunkXYZ/face; optional peer coverage generation (P2.4).
+  /// peer_gen != 0 stores required peer generation on newly set faces.
+  void NoteFaceDebt(glm::ivec3 chunk_xyz, uint8_t face_mask,
+                    uint64_t peer_gen = 0);
+  /// Clear face bits for this publisher only. When peer_gen != 0, a face clears
+  /// only if waiting_peer_gen[face] is 0 or matches peer_gen.
+  void NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz, uint8_t face_mask,
+                             uint64_t peer_gen = 0);
 
   struct ReconcileStats
   {

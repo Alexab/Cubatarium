@@ -147,19 +147,34 @@ void UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
 }
 
 void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
-                                          uint8_t face_mask)
+                                          uint8_t face_mask,
+                                          uint64_t peer_gen)
 {
   if (face_mask == 0)
   {
     face_mask = 0x3Fu;
   }
   ChunkRenderDemandRecord &rec = GetOrCreate(chunk_xyz);
+  const uint8_t newly =
+      static_cast<uint8_t>(face_mask &
+                           static_cast<uint8_t>(~rec.face_debt_mask));
   rec.face_debt_mask =
       static_cast<uint8_t>(rec.face_debt_mask | face_mask);
+  if (peer_gen != 0)
+  {
+    for (int f = 0; f < 6; ++f)
+    {
+      if ((newly & static_cast<uint8_t>(1u << f)) != 0)
+      {
+        rec.waiting_peer_gen[f] = peer_gen;
+      }
+    }
+  }
 }
 
 void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
-                                                   uint8_t face_mask)
+                                                   uint8_t face_mask,
+                                                   uint64_t peer_gen)
 {
   ChunkRenderDemandRecord *rec = Find(chunk_xyz);
   if (!rec)
@@ -168,14 +183,27 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
   }
   if (face_mask == 0)
   {
-    rec->face_debt_mask = 0;
+    face_mask = 0x3Fu;
   }
-  else
+  uint8_t clear_mask = 0;
+  for (int f = 0; f < 6; ++f)
   {
-    rec->face_debt_mask =
-        static_cast<uint8_t>(rec->face_debt_mask &
-                             static_cast<uint8_t>(~face_mask));
+    const uint8_t bit = static_cast<uint8_t>(1u << f);
+    if ((face_mask & bit) == 0)
+    {
+      continue;
+    }
+    if (peer_gen != 0 && rec->waiting_peer_gen[f] != 0 &&
+        rec->waiting_peer_gen[f] != peer_gen)
+    {
+      continue; // stale peer commit — keep debt
+    }
+    clear_mask = static_cast<uint8_t>(clear_mask | bit);
+    rec->waiting_peer_gen[f] = 0;
   }
+  rec->face_debt_mask =
+      static_cast<uint8_t>(rec->face_debt_mask &
+                           static_cast<uint8_t>(~clear_mask));
 }
 
 UChunkRenderDemandStore::ReconcileStats

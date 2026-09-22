@@ -34,6 +34,7 @@
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/RingReadinessBudget.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
@@ -1323,6 +1324,22 @@ void UWorldStreaming::RefreshStreamingPressure(
         rp.last_visible_black_fully_dark_stalled;
     world.PhysicsTelemetryData.VisibleBlackLegalDarkN =
         rp.last_visible_black_legal_dark;
+    // A21 P7: refresh RingReadinessBudget outputs each frame (flag-gated readers).
+    {
+      RingReadinessInputs rin{};
+      rin.unfinished_visual = unfinished_visual;
+      rin.fully_dark_stalled = rp.last_visible_black_fully_dark_stalled;
+      rin.miss_horiz = miss_horiz;
+      rin.dirty_fm = focus_dirty_chunks;
+      rin.wall_ms = world.GetWallFrameDelta() * 1000.0;
+      rin.moving = diet_cruise_cadence_final;
+      rin.baseline_lit = kVisualStageLitDrawableHoriz;
+      rin.focus_radius = focus_radius;
+      rin.prev_effective_lit_ring =
+          RingReadinessLastOutputs().effective_lit_ring;
+      rin.frames_in_mode = RingReadinessLastOutputs().frames_in_mode;
+      RingReadinessLastOutputs() = EvaluateRingReadinessBudget(rin);
+    }
     world.PhysicsTelemetryData.VisibleBlackCensusMismatch =
         cutum::CensusMismatchRequiresOracle(unfinished_visual, rp.vb_published)
             ? 1

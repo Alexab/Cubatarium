@@ -513,10 +513,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.ClearStickyRemeshAfterLightColumn(col);
-          // A21 P2.4: shadow per-chunk face debt — clear publisher only.
-          // TODO(A21 cutover): remove column ClearFaceDebt; Ready aggregates slices.
-          world_ref.GetColumnRecords().ClearFaceDebt(col);
-          if (kChunkDemandShadow)
+          // A21 P2.4/P2.7: per-chunk face debt clears publisher only.
+          // Cutover ON → no column ClearFaceDebt (dual-path ban / rollback OFF).
+          if (ChunkDemandAllowsColumnFaceDebtClear())
+          {
+            world_ref.GetColumnRecords().ClearFaceDebt(col);
+          }
+          if (kChunkDemandShadow || ChunkDemandCutoverEnabled())
           {
             UChunkRenderDemandStore::Get().NoteFaceDebtSatisfied(chunk_coord,
                                                                 /*face_mask=*/0x3Fu);
@@ -614,12 +617,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             return;
           }
           UWorld &world_ref = *world_ptr;
-          // Publisher known → clear own face debt bit for this column.
-          // A21 P2.4: also note publisher chunkXYZ only in demand store (shadow).
-          // TODO(A21 cutover): remove column ClearFaceDebt; do not clear all Y debt.
-          world_ref.GetColumnRecords().ClearFaceDebt(
-              glm::ivec2(chunk_coord.x, chunk_coord.z));
-          if (kChunkDemandShadow)
+          // Publisher known → clear own face debt for this chunkXYZ (P2.4).
+          // Cutover ON → skip column ClearFaceDebt (would wipe other Y-slices).
+          if (ChunkDemandAllowsColumnFaceDebtClear())
+          {
+            world_ref.GetColumnRecords().ClearFaceDebt(
+                glm::ivec2(chunk_coord.x, chunk_coord.z));
+          }
+          if (kChunkDemandShadow || ChunkDemandCutoverEnabled())
           {
             UChunkRenderDemandStore::Get().NoteFaceDebtSatisfied(chunk_coord,
                                                                 /*face_mask=*/0x3Fu);

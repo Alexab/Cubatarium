@@ -28,12 +28,13 @@ coverage, readiness, and drawable residency.
    to fake seam coverage. Fluid remains its own subsystem (P6); seam contract
    must not treat water quads as permanent opaque face closure.
 
-### Interim (P2)
+### Interim (P2) → cutover (P2.7)
 
-- Shadow `NoteFaceDebtSatisfied(chunkXYZ, face_mask)` clears debt for the
-  **publisher chunk only**.
-- Legacy `ClearFaceDebt(column)` remains until cutover (TODO), and must not be
-  read as proof that other Y-slices are debt-free.
+- Shadow `NoteFaceDebtSatisfied(chunkXYZ, face_mask[, peer_gen])` clears debt for
+  the **publisher chunk only**, matching peer generation when set.
+- Legacy `ClearFaceDebt(column)` remains **only while**
+  `ChunkDemandCutoverEnabled() == false`. Cutover ON forbids column clears
+  (see `A21_P2_CUTOVER_ROLLBACK.md`). Dual-path (both writers) is banned.
 
 ## Related
 

@@ -1386,6 +1386,7 @@ add_executable(mesh_publish_contract_test
     src/Test/MeshPublishContractTest.cpp)
 target_include_directories(mesh_publish_contract_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_publish_contract_test glm::glm)
 
 add_executable(miss_first_mesh_class_test
     src/Test/MissFirstMeshClassTest.cpp

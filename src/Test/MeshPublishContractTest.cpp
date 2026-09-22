@@ -1,4 +1,6 @@
 #include "Render/Mesh/MeshPublishContract.h"
+#include "Render/Mesh/SeamCoverageManifest.h"
+#include "World/Lighting/LightReferenceCompare.h"
 #include "World/Streaming/ColumnVisualState.h"
 #include "World/Streaming/MeshLitGate.h"
 
@@ -110,6 +112,23 @@ int main()
   Expect(ValidatePublicationCandidate(m, m, draw, live) ==
              PublicationValidation::TableEpochStale,
          "stale resident table rejected");
+
+  using cutum::SeamCoverageManifest;
+  using cutum::SeamCoveragePeerSatisfied;
+  SeamCoverageManifest seam{};
+  seam.peer_coverage_gen[0] = 7;
+  Expect(!SeamCoveragePeerSatisfied(seam, 0, 3), "seam peer too old");
+  Expect(SeamCoveragePeerSatisfied(seam, 0, 7), "seam peer ok");
+  Expect(SeamCoveragePeerSatisfied(seam, 1, 0), "unused face ok");
+
+  using cutum::CountLightFieldMismatches;
+  using cutum::ShouldRejectStaleHaloLight;
+  const uint8_t light_a[4] = {1, 2, 3, 4};
+  const uint8_t light_b[4] = {1, 2, 3, 9};
+  Expect(CountLightFieldMismatches(light_a, light_a, 4) == 0, "light ref match");
+  Expect(CountLightFieldMismatches(light_a, light_b, 4) == 1, "light ref one miss");
+  Expect(ShouldRejectStaleHaloLight(5, 5, 1, 2), "stale halo reject");
+  Expect(!ShouldRejectStaleHaloLight(5, 5, 2, 2), "fresh halo ok");
 
   if (gFails != 0)
   {

@@ -21,6 +21,8 @@ void Expect(bool cond, const char *msg)
 
 int main()
 {
+  using cutum::ChunkDemandAllowsColumnFaceDebtClear;
+  using cutum::ChunkDemandCutoverEnabled;
   using cutum::ChunkRenderDemandRecord;
   using cutum::ColumnChunkSnapshot;
   using cutum::DemandResult;
@@ -54,10 +56,19 @@ int main()
   Expect(rec && rec->retained_awaiting_successor, "retain flag set");
   Expect(rec && rec->desired_light_rev == 9, "successor light desire");
 
-  store.NoteFaceDebt(c, 0x03u);
-  store.NoteFaceDebtSatisfied(c, 0x01u);
-  Expect(rec && (rec->face_debt_mask & 0x01u) == 0, "face0 cleared");
+  store.NoteFaceDebt(c, 0x03u, /*peer_gen=*/42);
+  store.NoteFaceDebtSatisfied(c, 0x01u, /*peer_gen=*/99);
+  Expect(rec && (rec->face_debt_mask & 0x01u) != 0,
+         "stale peer_gen keeps face0 debt");
+  store.NoteFaceDebtSatisfied(c, 0x01u, /*peer_gen=*/42);
+  Expect(rec && (rec->face_debt_mask & 0x01u) == 0, "matching peer clears face0");
   Expect(rec && (rec->face_debt_mask & 0x02u) != 0, "face1 kept");
+
+  // Cutover: column FaceDebt clear forbidden while flag ON.
+  ChunkDemandCutoverEnabled() = true;
+  Expect(!ChunkDemandAllowsColumnFaceDebtClear(), "cutover blocks column clear");
+  ChunkDemandCutoverEnabled() = false;
+  Expect(ChunkDemandAllowsColumnFaceDebtClear(), "rollback restores column clear");
 
   const auto recon = store.ReconcileMaintenance(8);
   Expect(recon.checked >= 1, "reconcile scanned");

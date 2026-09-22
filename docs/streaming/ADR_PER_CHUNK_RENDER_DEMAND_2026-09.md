@@ -44,9 +44,11 @@ real progress; PreferKick / stall counters alone are not.
 
 ### Shadow → cutover
 
-P2 lands the store in **shadow**: observe admit/install, coalesce AlreadySatisfied
-skips, count mismatches. Cutover removes duplicate column progress setters and
-makes this record the sole writer of demand.
+P2 lands the store in **shadow** (`kChunkDemandShadow`): observe admit/install,
+coalesce AlreadySatisfied skips, count mismatches. Cutover is gated by
+`ChunkDemandCutoverEnabled()` (default OFF): when ON, column FaceDebt clears are
+forbidden and the per-chunk record is the sole FaceDebt writer. Rollback =
+disable the flag; never silent dual-path. See `A21_P2_CUTOVER_ROLLBACK.md`.
 
 ## Related
 
