@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <cstddef>
 
 namespace cutum
 {
@@ -126,6 +127,56 @@ private:
   int CriticalUnitExceededN_{0};
   double LastCriticalUnitMs_{0.0};
 };
+
+/// A26 N4: resumable main-thread unit cursor — preserves progress across frames.
+struct ResumableWorkCursor
+{
+  uint64_t manifest_generation{0};
+  size_t index{0};
+  size_t total{0};
+  bool active{false};
+};
+
+inline bool ShouldResumeWorkCursor(const ResumableWorkCursor &c,
+                                   uint64_t live_manifest_generation)
+{
+  return c.active && c.manifest_generation == live_manifest_generation &&
+         c.index < c.total;
+}
+
+inline void AdvanceWorkCursor(ResumableWorkCursor &c, size_t n)
+{
+  if (!c.active)
+  {
+    return;
+  }
+  if (c.index + n >= c.total)
+  {
+    c.index = c.total;
+    c.active = false;
+    return;
+  }
+  c.index += n;
+}
+
+/// A26 N4: unified admission pool budgets (snapshots / GPU / retirement).
+struct UnifiedAdmissionPools
+{
+  int snapshot_slots{8};
+  int queued_output_slots{16};
+  int gpu_inflight_slots{8};
+  int retirement_slots{8};
+};
+
+inline bool CanAdmitUnifiedWork(const UnifiedAdmissionPools &pools,
+                                int snapshot_used, int queued_used,
+                                int gpu_used, int retirement_used)
+{
+  return snapshot_used < pools.snapshot_slots &&
+         queued_used < pools.queued_output_slots &&
+         gpu_used < pools.gpu_inflight_slots &&
+         retirement_used < pools.retirement_slots;
+}
 
 } // namespace cutum
 

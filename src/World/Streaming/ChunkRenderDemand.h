@@ -93,6 +93,11 @@ public:
                          uint64_t published_geom_rev = 0,
                          uint64_t published_light_rev = 0);
 
+  /// A26 N1: sole path to refresh published_* without InstallResult (shadow sync).
+  /// Does not clear active/retain flags — use NoteInstallResult for lifecycle.
+  void NotePublishedRevs(glm::ivec3 coord, uint64_t published_geom_rev,
+                         uint64_t published_light_rev);
+
   /// Face debt keyed by chunkXYZ/face; optional peer coverage generation (P2.4).
   /// peer_gen != 0 stores required peer generation on newly set faces.
   void NoteFaceDebt(glm::ivec3 chunk_xyz, uint8_t face_mask,
@@ -116,6 +121,13 @@ public:
   /// Cancel orphan active attempts: Created with no progress timestamp.
   /// Returns number cancelled. Does not touch RetainedAwaitingSuccessor.
   int CancelOrphanActiveAttempts(int max_n);
+
+  /// A26 N1: count records where desired != published and not Retain/active.
+  int CountUnsatisfiedDemands() const;
+
+  /// A26 N1: after stop (no new demand), every record is Published-satisfied,
+  /// cancelled, or retained-with-successor desire. Orphan actives count as fail.
+  bool StopConverged() const;
 
   uint64_t AlreadySatisfiedSkipN() const { return AlreadySatisfiedSkipN_; }
   uint64_t CoalesceN() const { return CoalesceN_; }

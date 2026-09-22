@@ -143,4 +143,45 @@ inline bool MeshPublishLiveFreeDisjoint(bool is_live_draw, bool freeing_slot)
   return !(is_live_draw && freeing_slot);
 }
 
+/// A26 N2: deferred retirement — free only when generation matches fence gen
+/// and slot is not live. Stale free of a newer generation is rejected.
+inline bool ShouldDeferMeshRetirement(uint64_t free_generation,
+                                       uint64_t live_generation,
+                                       uint64_t fence_completed_generation,
+                                       bool still_live_draw)
+{
+  if (still_live_draw)
+  {
+    return true; // keep until not live
+  }
+  if (free_generation == 0)
+  {
+    return false;
+  }
+  // Fence must have completed at least this generation before free.
+  if (fence_completed_generation < free_generation)
+  {
+    return true;
+  }
+  // Never free a generation still referenced as live artifact gen.
+  return free_generation == live_generation;
+}
+
+/// A26 N2: reject stale draw when draw epochs lag live (order-only / table).
+inline bool ShouldRejectStaleDrawCommands(const PublicationEpochs &draw,
+                                          const PublicationEpochs &live)
+{
+  if (live.resident_table_revision != 0 &&
+      draw.resident_table_revision < live.resident_table_revision)
+  {
+    return true;
+  }
+  if (live.transparent_order_key != 0 &&
+      draw.transparent_order_key < live.transparent_order_key)
+  {
+    return true;
+  }
+  return false;
+}
+
 } // namespace cutum

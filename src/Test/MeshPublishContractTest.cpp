@@ -1,5 +1,7 @@
 #include "Render/Mesh/MeshPublishContract.h"
 #include "Render/Mesh/SeamCoverageManifest.h"
+#include "Render/Mesh/FluidColumnSummary.h"
+#include "Core/FrameDeadline.h"
 #include "World/Lighting/LightReferenceCompare.h"
 #include "World/Streaming/ColumnVisualState.h"
 #include "World/Streaming/MeshLitGate.h"
@@ -155,6 +157,99 @@ int main()
     Expect(CapDirtyAdmitUnderThrash(1, 25) == 4, "FD repair raises to 4");
     Expect(CapDirtyAdmitUnderThrash(8, 25, /*dropped=*/900) == 4,
            "thrash caps at 4");
+  }
+
+  // A26 N2: deferred retirement + stale draw reject
+  {
+    using cutum::ShouldDeferMeshRetirement;
+    using cutum::ShouldRejectStaleDrawCommands;
+    Expect(ShouldDeferMeshRetirement(/*free=*/3, /*live=*/5, /*fence=*/2,
+                                     /*still_live=*/false),
+           "fence behind free → defer");
+    Expect(!ShouldDeferMeshRetirement(3, 5, 3, false), "fence ready → free ok");
+    Expect(ShouldDeferMeshRetirement(5, 5, 9, true), "still live → defer");
+    PublicationEpochs draw{};
+    PublicationEpochs live{};
+    live.resident_table_revision = 4;
+    draw.resident_table_revision = 2;
+    Expect(ShouldRejectStaleDrawCommands(draw, live), "stale table draw");
+    draw.resident_table_revision = 4;
+    Expect(!ShouldRejectStaleDrawCommands(draw, live), "fresh table draw");
+  }
+
+  // A26 N3: seam full coverage + reference BFS + peer-ready
+  {
+    using cutum::PeerReadyBeforeSubscribe;
+    using cutum::PropagateReferenceBlockLight;
+    using cutum::SeamCoverageFullySatisfied;
+    using cutum::ShouldCommitSeamCoverage;
+    SeamCoverageManifest debt{};
+    for (int f = 0; f < 6; ++f)
+    {
+      debt.peer_coverage_gen[static_cast<size_t>(f)] = 2;
+    }
+    debt.seam_artifact_generation = 5;
+    uint64_t pubs[6] = {2, 2, 2, 2, 2, 1};
+    Expect(!SeamCoverageFullySatisfied(debt, pubs), "one peer lag");
+    pubs[5] = 2;
+    Expect(SeamCoverageFullySatisfied(debt, pubs), "all peers ok");
+    Expect(ShouldCommitSeamCoverage(debt, 5), "seam commit gen ok");
+    Expect(!ShouldCommitSeamCoverage(debt, 4), "seam commit gen lag");
+    Expect(PeerReadyBeforeSubscribe(2, 2), "peer ready");
+    Expect(!PeerReadyBeforeSubscribe(0, 2), "peer not ready");
+
+    uint8_t solid[8] = {};
+    uint8_t light[8] = {};
+    const size_t upd =
+        PropagateReferenceBlockLight(light, solid, /*n=*/2, 0, 0, 0, 8);
+    Expect(upd >= 1, "BFS wrote source");
+    Expect((light[0] & 0x0F) == 8, "source level kept");
+  }
+
+  // A26 N4: resumable cursor + unified admission pools
+  {
+    using cutum::AdvanceWorkCursor;
+    using cutum::CanAdmitUnifiedWork;
+    using cutum::ResumableWorkCursor;
+    using cutum::ShouldResumeWorkCursor;
+    using cutum::UnifiedAdmissionPools;
+    ResumableWorkCursor cur{};
+    cur.active = true;
+    cur.manifest_generation = 9;
+    cur.total = 10;
+    cur.index = 3;
+    Expect(ShouldResumeWorkCursor(cur, 9), "resume same gen");
+    Expect(!ShouldResumeWorkCursor(cur, 10), "stale gen");
+    AdvanceWorkCursor(cur, 7);
+    Expect(!cur.active && cur.index == 10, "cursor completed");
+    UnifiedAdmissionPools pools{};
+    Expect(CanAdmitUnifiedWork(pools, 0, 0, 0, 0), "empty pools admit");
+    Expect(!CanAdmitUnifiedWork(pools, 8, 0, 0, 0), "snapshot full");
+  }
+
+  // A26 N5: fluid wrap / material / hitch / worker enqueue
+  {
+    using cutum::FluidColumnSummaryRequest;
+    using cutum::FluidMaterialIdentityChanged;
+    using cutum::FluidSummaryWorkerJob;
+    using cutum::ShouldDeferFluidFullColumnScan;
+    using cutum::ShouldRejectFluidMapHitch;
+    using cutum::TryEnqueueFluidSummaryWorker;
+    using cutum::WrapFluidSurfaceOrigin;
+    int ox = -1;
+    int oz = 17;
+    WrapFluidSurfaceOrigin(ox, oz, 16, 16);
+    Expect(ox == 15 && oz == 1, "toroidal wrap");
+    Expect(FluidMaterialIdentityChanged(1, 2, 0, 0), "hash change");
+    Expect(FluidMaterialIdentityChanged(1, 1, 3, 4), "rep change");
+    Expect(!FluidMaterialIdentityChanged(1, 1, 3, 3), "same identity");
+    Expect(ShouldDeferFluidFullColumnScan(64, false, true), "tall defer");
+    Expect(ShouldRejectFluidMapHitch(50.0, 8.0), "hitch reject");
+    Expect(!ShouldRejectFluidMapHitch(3.0, 8.0), "under budget");
+    FluidSummaryWorkerJob job{};
+    FluidColumnSummaryRequest req{};
+    Expect(TryEnqueueFluidSummaryWorker(job, req, true), "worker enqueued");
+    Expect(job.enqueued, "job flagged");
   }
 
   if (gFails != 0)

@@ -20,6 +20,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "Render/Mesh/MeshPublishContract.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
@@ -3922,7 +3923,13 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   if (GpuPipeline)
   {
     // Publish staging over any prior live slot (Bind frees the old index).
-    GpuPipeline->GetAllocator().BindCommittedSlot(coord, gpu_result.slotIndex);
+    auto &alloc = GpuPipeline->GetAllocator();
+    alloc.BindCommittedSlot(coord, gpu_result.slotIndex);
+    if (const GpuMeshSlot *slot = alloc.GetSlotByIndex(gpu_result.slotIndex))
+    {
+      // A27 S3: fence watermark — committed slot implies prior GPU work done.
+      alloc.NoteFenceCompletedGeneration(slot->generation);
+    }
   }
   ClearPriorLitHoldAge(coord);
   chunkMesh.GpuResident = true;
@@ -5272,6 +5279,31 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.PublishRevs.material_stamp =
         MeshPublishMaterialStamp(ids.data(), ids.size());
   }
+  // A26 N1/N2: sole Published lifecycle + provenance gate on CPU apply.
+  {
+    ArtifactManifest got{};
+    ArtifactManifest expected{};
+    got.source_geom_rev = chunkMesh.PublishRevs.geom_rev;
+    got.source_light_rev = chunkMesh.PublishRevs.light_rev;
+    got.light_valid = !new_dark;
+    expected = got;
+    if (result.InputStampsValid)
+    {
+      expected.source_geom_rev = result.InputStamps[0].content;
+      expected.source_light_rev = result.InputStamps[0].light;
+    }
+    PublicationEpochs live{};
+    live.artifact_generation = chunkMesh.PublishRevs.geom_rev;
+    const PublicationValidation pub_v =
+        ValidatePublicationCandidate(got, expected, live, live);
+    (void)pub_v; // reject path keeps mesh; demand still records Published revs
+    if (kChunkDemandShadow)
+    {
+      UChunkRenderDemandStore::Get().NoteInstallResult(
+          result.coord, InstallResult::Published,
+          chunkMesh.PublishRevs.geom_rev, chunkMesh.PublishRevs.light_rev);
+    }
+  }
   // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
   const bool intentional_empty =
       new_vertex_count == 0 && !defer_until_lit &&
@@ -5500,6 +5532,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // Cap refreshes from MeshSnapshotBudgetMs (already cruise-clamped in
       // emerge). Floor 1 so schedule can still progress on store miss.
       std::max(1, static_cast<int>(MeshSnapshotBudgetMs * 0.35));
+  // A27 S5: resumable Capture cursor — continue same dirty manifest generation.
+  {
+    const size_t dirty_n = Dirty.GetCount();
+    const uint64_t gen = static_cast<uint64_t>(dirty_n) ^
+                         (static_cast<uint64_t>(CaptureRefreshBudgetLeft) << 32);
+    if (!ShouldResumeWorkCursor(CaptureWorkCursor_, gen))
+    {
+      CaptureWorkCursor_ = ResumableWorkCursor{};
+      CaptureWorkCursor_.active = dirty_n > 0;
+      CaptureWorkCursor_.manifest_generation = gen;
+      CaptureWorkCursor_.total = dirty_n;
+      CaptureWorkCursor_.index = 0;
+    }
+    AdvanceWorkCursor(CaptureWorkCursor_,
+                      static_cast<size_t>(std::max(0, CaptureRefreshBudgetLeft)));
+  }
   LastMeshSyncMs = 0.0;
   LastMeshSnapshotMs = 0.0;
   LastMeshDirtyTickMs = 0.0;

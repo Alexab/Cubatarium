@@ -114,6 +114,63 @@ inline bool ShouldDeferFluidFullColumnScan(int height,
   return main_thread_budget_exhausted && height >= tall_height;
 }
 
+/// A26 N5: toroidal / tiled surface origin — wrap column xz into map extent.
+inline void WrapFluidSurfaceOrigin(int &ox, int &oz, int map_w, int map_h)
+{
+  if (map_w <= 0 || map_h <= 0)
+  {
+    return;
+  }
+  ox %= map_w;
+  if (ox < 0)
+  {
+    ox += map_w;
+  }
+  oz %= map_h;
+  if (oz < 0)
+  {
+    oz += map_h;
+  }
+}
+
+/// A26 N5: water→lava identity change invalidates occupancy-only pack reuse.
+inline bool FluidMaterialIdentityChanged(uint64_t prev_fluid_id_hash,
+                                         uint64_t next_fluid_id_hash,
+                                         BlockId prev_rep, BlockId next_rep)
+{
+  if (prev_fluid_id_hash != next_fluid_id_hash)
+  {
+    return true;
+  }
+  return prev_rep != next_rep;
+}
+
+/// A26 N5: enqueue worker rebuild when sync scan deferred (stub API).
+struct FluidSummaryWorkerJob
+{
+  FluidColumnSummaryRequest req{};
+  bool enqueued{false};
+};
+
+inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
+                                         const FluidColumnSummaryRequest &req,
+                                         bool defer_sync_scan)
+{
+  if (!defer_sync_scan)
+  {
+    return false;
+  }
+  job.req = req;
+  job.enqueued = true;
+  return true;
+}
+
+/// A26 N5: hitch gate — reject sync fluid_map work that would burn tens/hundreds ms.
+inline bool ShouldRejectFluidMapHitch(double estimated_ms, double budget_ms = 8.0)
+{
+  return estimated_ms > budget_ms;
+}
+
 } // namespace cutum
 
 #endif

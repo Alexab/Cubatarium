@@ -1,5 +1,6 @@
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/RelightInstallPlanner.h"
+#include "Render/Mesh/SeamCoverageManifest.h"
 
 #include <cstdio>
 
@@ -174,6 +175,99 @@ int main()
          "early stall acted");
   Expect(plan_early.prefer_kick_gpu.empty(), "no PreferKick under limit");
   Expect(plan_early.note_prefer_kick_stall, "note stall under limit");
+
+  // A26 N1: randomized event suite — reorder/cancel/unload/reload, 2 Y, 6 peers,
+  // peer-ready-before-subscribe, stop→Published, zero orphan / infinite Retain.
+  {
+    using cutum::PeerReadyBeforeSubscribe;
+    store.Clear();
+    ChunkDemandCutoverEnabled() = true;
+    const glm::ivec3 centers[2] = {{10, 0, 10}, {10, 1, 10}};
+    const int dx[6] = {1, -1, 0, 0, 0, 0};
+    const int dy[6] = {0, 0, 1, -1, 0, 0};
+    const int dz[6] = {0, 0, 0, 0, 1, -1};
+    unsigned seed = 0xA261u;
+    auto rnd = [&seed]() -> unsigned {
+      seed = seed * 1664525u + 1013904223u;
+      return seed;
+    };
+    for (int iter = 0; iter < 48; ++iter)
+    {
+      const unsigned op = rnd() % 6u;
+      const glm::ivec3 c0 = centers[rnd() % 2u];
+      if (op == 0)
+      {
+        (void)store.NoteDemand(c0, 100 + (rnd() % 5u), 200 + (rnd() % 5u));
+      }
+      else if (op == 1)
+      {
+        store.NoteInstallResult(c0, InstallResult::CancelledSuperseded);
+      }
+      else if (op == 2)
+      {
+        store.NoteInstallResult(c0, InstallResult::RetainedAwaitingSuccessor);
+        (void)store.NoteDemand(c0, 300 + (rnd() % 3u), 400 + (rnd() % 3u));
+      }
+      else if (op == 3)
+      {
+        const uint64_t g = 100 + (rnd() % 5u);
+        const uint64_t l = 200 + (rnd() % 5u);
+        store.NotePublishedRevs(c0, g, l);
+        store.NoteInstallResult(c0, InstallResult::Published, g, l);
+      }
+      else if (op == 4)
+      {
+        const int f = static_cast<int>(rnd() % 6u);
+        const glm::ivec3 peer{c0.x + dx[f], c0.y + dy[f], c0.z + dz[f]};
+        const uint64_t need = 10 + (rnd() % 4u);
+        store.NoteFaceDebt(c0, static_cast<uint8_t>(1u << f), need);
+        const uint64_t pub = (rnd() & 1u) ? need : 0;
+        Expect(PeerReadyBeforeSubscribe(pub, need) == (pub != 0),
+               "peer-ready-before-subscribe");
+        if (pub != 0)
+        {
+          store.NoteFaceDebtSatisfied(c0, static_cast<uint8_t>(1u << f), need);
+        }
+      }
+      else
+      {
+        (void)store.ReconcileMaintenance(32);
+      }
+    }
+    // Drain: publish every remaining desire, cancel orphans.
+    for (const glm::ivec3 &c0 : centers)
+    {
+      for (int f = 0; f < 6; ++f)
+      {
+        const glm::ivec3 peer{c0.x + dx[f], c0.y + dy[f], c0.z + dz[f]};
+        (void)peer;
+      }
+      if (ChunkRenderDemandRecord *r = store.Find(c0))
+      {
+        if (r->desired_geom_rev != 0 || r->desired_light_rev != 0)
+        {
+          store.NoteInstallResult(c0, InstallResult::Published,
+                                  r->desired_geom_rev, r->desired_light_rev);
+        }
+      }
+    }
+    (void)store.ReconcileMaintenance(64);
+    Expect(store.StopConverged(), "N1 stop converged after drain");
+    Expect(store.CountUnsatisfiedDemands() == 0, "N1 zero unsatisfied");
+  }
+
+  // A26 N1: infinite Retain without successor desire fails StopConverged.
+  {
+    store.Clear();
+    const glm::ivec3 bad{7, 0, 7};
+    store.NoteDemand(bad, 1, 1);
+    store.NoteInstallResult(bad, InstallResult::Published, 1, 1);
+    store.NoteInstallResult(bad, InstallResult::RetainedAwaitingSuccessor);
+    Expect(!store.StopConverged(), "infinite Retain fails stop");
+    store.NoteDemand(bad, 2, 2);
+    (void)store.ReconcileMaintenance(8); // cancel orphan Created from successor
+    Expect(store.StopConverged(), "Retain+successor desire ok");
+  }
 
   if (gFails != 0)
   {

@@ -107,6 +107,21 @@ void UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
   }
 }
 
+void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
+                                                uint64_t published_geom_rev,
+                                                uint64_t published_light_rev)
+{
+  ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  if (published_geom_rev > 0)
+  {
+    rec.published_geom_rev = published_geom_rev;
+  }
+  if (published_light_rev > 0)
+  {
+    rec.published_light_rev = published_light_rev;
+  }
+}
+
 void UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
                                                InstallResult result,
                                                uint64_t published_geom_rev,
@@ -283,6 +298,66 @@ int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n)
     }
   }
   return cancelled;
+}
+
+int UChunkRenderDemandStore::CountUnsatisfiedDemands() const
+{
+  int n = 0;
+  for (const auto &kv : Records_)
+  {
+    const ChunkRenderDemandRecord &rec = kv.second;
+    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0)
+    {
+      continue;
+    }
+    const bool satisfied =
+        !rec.retained_awaiting_successor &&
+        rec.published_geom_rev == rec.desired_geom_rev &&
+        rec.published_light_rev == rec.desired_light_rev;
+    if (!satisfied)
+    {
+      ++n;
+    }
+  }
+  return n;
+}
+
+bool UChunkRenderDemandStore::StopConverged() const
+{
+  for (const auto &kv : Records_)
+  {
+    const ChunkRenderDemandRecord &rec = kv.second;
+    if (rec.has_active_attempt &&
+        rec.active_stage == JobStage::Created &&
+        rec.last_progress_ms <= 0.0)
+    {
+      return false; // orphan
+    }
+    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0)
+    {
+      continue;
+    }
+    if (rec.retained_awaiting_successor)
+    {
+      // Retain is ok only while a newer desire exists (successor demand).
+      if (rec.desired_geom_rev == rec.published_geom_rev &&
+          rec.desired_light_rev == rec.published_light_rev)
+      {
+        return false; // infinite Retain without successor desire
+      }
+      continue;
+    }
+    if (rec.published_geom_rev != rec.desired_geom_rev ||
+        rec.published_light_rev != rec.desired_light_rev)
+    {
+      if (rec.has_active_attempt)
+      {
+        continue; // in-flight ok until progress stalls
+      }
+      return false;
+    }
+  }
+  return true;
 }
 
 void UChunkRenderDemandStore::Clear()

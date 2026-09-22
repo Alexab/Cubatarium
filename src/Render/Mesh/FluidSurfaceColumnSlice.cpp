@@ -148,12 +148,33 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   }
   // A25 R5: under main-thread budget pressure, do not start height×16×16 GetBlock
   // (audit spike class fluid_map_cpu ~100–197ms). Prefer miss over hitch.
-  if (ShouldDeferFluidFullColumnScan(
-          height, /*has_usable_incomplete=*/false,
-          UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/false)))
+  // A27 S5: hitch estimate + worker enqueue when deferring.
   {
-    return false;
+    const double est_ms =
+        static_cast<double>(height) * static_cast<double>(n * n) * 0.0004;
+    const bool defer = ShouldDeferFluidFullColumnScan(
+                           height, /*has_usable_incomplete=*/false,
+                           UFrameDeadline::ShouldDeferProducer(
+                               /*critical_progress=*/false)) ||
+                       ShouldRejectFluidMapHitch(est_ms, 8.0);
+    if (defer)
+    {
+      FluidSummaryWorkerJob job{};
+      FluidColumnSummaryRequest req{};
+      req.world_epoch = gFluidPackWorldEpoch;
+      req.content_rev = content_rev;
+      req.catalog_rev = catalog_rev;
+      req.y_min = y_min;
+      req.height = height;
+      (void)TryEnqueueFluidSummaryWorker(job, req, true);
+      return false;
+    }
   }
+  int ox = origin.x;
+  int oz = origin.z;
+  WrapFluidSurfaceOrigin(ox, oz, /*map_w=*/n * 1024, /*map_h=*/n * 1024);
+  (void)ox;
+  (void)oz;
   std::vector<uint8_t> flags(static_cast<size_t>(height * n * n), 0);
   uint64_t scan_fluid_id_hash = 14695981039346656037ull;
   BlockId scan_representative = BLOCK_AIR;
@@ -208,8 +229,10 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       cit->second.height == height && cit->second.y_min == y_min &&
       cit->second.content_rev == content_rev &&
       cit->second.catalog_rev == catalog_rev &&
-      cit->second.fluid_id_hash == scan_fluid_id_hash &&
-      cit->second.representative_fluid_id == scan_representative &&
+      !FluidMaterialIdentityChanged(cit->second.fluid_id_hash,
+                                    scan_fluid_id_hash,
+                                    cit->second.representative_fluid_id,
+                                    scan_representative) &&
       cit->second.has_slice && incomplete_ok(cit->second))
   {
     slice = cit->second.slice;

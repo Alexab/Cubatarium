@@ -767,7 +767,14 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     live.resident_table_revision = cache.resident_table_revision;
     live.transparent_order_key = cache.transparent_order_key;
     live.cull_key_generation = cache.cullRevision;
-    (void)ValidatePublicationCandidate(got, expected, live, live);
+    const PublicationValidation pub_v =
+        ValidatePublicationCandidate(got, expected, live, live);
+    if (!PublicationCandidateAccepted(pub_v))
+    {
+      // A26 N2: do not treat failed provenance as silent success — retain
+      // already-applied GPU state but record reject for telemetry/tests.
+      NotePubVerChangedWithoutFresh();
+    }
   }
   return true;
 

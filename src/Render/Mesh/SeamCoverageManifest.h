@@ -35,6 +35,47 @@ inline bool SeamCoveragePeerSatisfied(const SeamCoverageManifest &debt,
   return published_peer_gen != 0 && published_peer_gen >= need;
 }
 
+/// A26 N3: peer face must be published before subscriber may clear FaceDebt /
+/// treat seam as subscribed. published_peer_gen==0 means peer not ready.
+inline bool PeerReadyBeforeSubscribe(uint64_t published_peer_gen,
+                                     uint64_t required_peer_gen)
+{
+  if (required_peer_gen == 0)
+  {
+    return true;
+  }
+  return published_peer_gen != 0 && published_peer_gen >= required_peer_gen;
+}
+
+/// A26 N3: all six faces satisfied → seam debt closed (provisional may clear).
+inline bool SeamCoverageFullySatisfied(const SeamCoverageManifest &debt,
+                                       const uint64_t published_peer_gen[6])
+{
+  if (!published_peer_gen)
+  {
+    return false;
+  }
+  for (int f = 0; f < 6; ++f)
+  {
+    if (!SeamCoveragePeerSatisfied(debt, f, published_peer_gen[f]))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// A26 N3: commit seam result closes debt only when generations match.
+inline bool ShouldCommitSeamCoverage(const SeamCoverageManifest &debt,
+                                     uint64_t published_seam_gen)
+{
+  if (debt.seam_artifact_generation == 0)
+  {
+    return published_seam_gen != 0;
+  }
+  return published_seam_gen >= debt.seam_artifact_generation;
+}
+
 } // namespace cutum
 
 #endif

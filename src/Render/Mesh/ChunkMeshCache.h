@@ -1076,6 +1076,8 @@ private:
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
   UMeshCaptureStore CaptureStore;
   int CaptureRefreshBudgetLeft{4};
+  /// A27 S5: resumable Capture/dirty scan cursor across frames.
+  ResumableWorkCursor CaptureWorkCursor_{};
   bool GpuPipelineInitAttempted{false};
   std::deque<PendingGpuApply> PendingGpuApplies;
   mutable std::unordered_map<glm::ivec3, PendingGpuApply::Phase, IVec3Hash>

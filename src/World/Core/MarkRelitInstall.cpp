@@ -134,25 +134,19 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           desired_light = ch->GetLightFieldRevision();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-        ChunkRenderDemandRecord &rec = demand.GetOrCreate(coord);
         const MeshPublishRevs pub = mesh->GetCache().GetMeshPublishRevs(coord);
-        if (pub.geom_rev != 0)
-        {
-          rec.published_geom_rev = pub.geom_rev;
-        }
-        if (pub.light_rev != 0)
-        {
-          rec.published_light_rev = pub.light_rev;
-        }
-        else
+        uint64_t pub_geom = pub.geom_rev;
+        uint64_t pub_light = pub.light_rev;
+        if (pub_light == 0)
         {
           UChunkMeshCache::LitApplyMeshProbe probe{};
           mesh->FillLitApplyMeshProbe(coord, probe);
           if (probe.meshed_light_rev != 0)
           {
-            rec.published_light_rev = probe.meshed_light_rev;
+            pub_light = probe.meshed_light_rev;
           }
         }
+        demand.NotePublishedRevs(coord, pub_geom, pub_light);
         const DemandResult dr =
             demand.NoteDemand(coord, desired_geom, desired_light);
         // A21 residual R2: FullyDark drawable is never "satisfied" by equal revs

@@ -19,3 +19,7 @@ Status: **operator_visual=UNTESTED** ⇒ `merge_green=false`
 ## Current cycle result
 
 Eye not executed in this automation cycle. Matrix remains UNTESTED. AF gates and honesty docs are landed for when the operator runs the protocol.
+
+## A26 N6 note
+
+Successor honesty doc: [`A26_N6_ACCEPTANCE.md`](A26_N6_ACCEPTANCE.md). `merge_green` remains false.

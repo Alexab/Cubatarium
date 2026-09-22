@@ -9,7 +9,8 @@ Cutover: `ChunkDemandCutoverEnabled()` default true; rollback `CUBA_DEMAND_CUTOV
 |---|---|---|
 | `UChunkRenderDemandStore::NoteDemand` | MarkRelit / mesh admit | coalesce / AlreadySatisfied |
 | `NoteStageProgress` | MarkRelitInstall (always, A25) | Admit→…; not PreferKick DoD |
-| `NoteInstallResult` | publish path | Published / Retain / Cancel |
+| `NoteInstallResult` | ChunkMeshCache apply / publish path | Published / Retain / Cancel |
+| `NotePublishedRevs` | MarkRelitInstall shadow sync (A26) | sole published_* refresh without lifecycle |
 | `NoteFaceDebt` / `NoteFaceDebtSatisfied` | EmergeCoordinator | peer_gen aware |
 | multi-Y RenderReady | ChunkEmergeCoordinator | sibling FullyDark blocks Ready |
 
@@ -19,6 +20,7 @@ Cutover: `ChunkDemandCutoverEnabled()` default true; rollback `CUBA_DEMAND_CUTOV
 |---|---|
 | `ColumnRecords.ClearFaceDebt` | gated by `ChunkDemandAllowsColumnFaceDebtClear()` |
 | Dual shadow Dirty admits | `kChunkDemandShadow=false` |
+| Direct `rec.published_* =` outside store APIs | **removed** (A26 N1) |
 
 ## Heal-owner honesty
 

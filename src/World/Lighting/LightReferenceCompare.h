@@ -73,6 +73,99 @@ inline void FillReferenceSkyBlockLight(uint8_t *out, int n, int sky_level,
   }
 }
 
+/// A26 N3: slow BFS block-light propagation on an NxNxN packed sky/block field.
+/// `solid` is occupancy (1=occlude). Writes packed (sky<<4)|block into `out`.
+/// Finite steps: at most n*n*n*6 relaxations (no endless relight).
+inline size_t PropagateReferenceBlockLight(uint8_t *out, const uint8_t *solid,
+                                           int n, int src_x, int src_y,
+                                           int src_z, int src_level)
+{
+  if (!out || !solid || n <= 0 || src_level <= 0)
+  {
+    return 0;
+  }
+  const size_t cells = static_cast<size_t>(n) * static_cast<size_t>(n) *
+                       static_cast<size_t>(n);
+  for (size_t i = 0; i < cells; ++i)
+  {
+    const uint8_t sky = static_cast<uint8_t>(out[i] >> 4);
+    out[i] = static_cast<uint8_t>(sky << 4); // clear block channel
+  }
+  if (src_x < 0 || src_x >= n || src_y < 0 || src_y >= n || src_z < 0 ||
+      src_z >= n)
+  {
+    return 0;
+  }
+  auto idx = [n](int x, int y, int z) -> size_t {
+    return static_cast<size_t>((y * n + z) * n + x);
+  };
+  auto set_block = [&](size_t i, int level) {
+    const uint8_t sky = static_cast<uint8_t>(out[i] >> 4);
+    const int cur = out[i] & 0x0F;
+    if (level > cur)
+    {
+      out[i] = static_cast<uint8_t>((sky << 4) |
+                                    std::max(0, std::min(15, level)));
+    }
+  };
+  set_block(idx(src_x, src_y, src_z), src_level);
+  size_t updates = 1;
+  const int max_passes = n * n * n;
+  for (int pass = 0; pass < max_passes; ++pass)
+  {
+    bool changed = false;
+    for (int y = 0; y < n; ++y)
+    {
+      for (int z = 0; z < n; ++z)
+      {
+        for (int x = 0; x < n; ++x)
+        {
+          const size_t i = idx(x, y, z);
+          if (solid[i] != 0)
+          {
+            continue;
+          }
+          const int level = out[i] & 0x0F;
+          if (level <= 1)
+          {
+            continue;
+          }
+          const int next = level - 1;
+          const int nbs[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+                                 {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+          for (const auto &d : nbs)
+          {
+            const int nx = x + d[0];
+            const int ny = y + d[1];
+            const int nz = z + d[2];
+            if (nx < 0 || nx >= n || ny < 0 || ny >= n || nz < 0 || nz >= n)
+            {
+              continue;
+            }
+            const size_t ni = idx(nx, ny, nz);
+            if (solid[ni] != 0)
+            {
+              continue;
+            }
+            const int before = out[ni] & 0x0F;
+            set_block(ni, next);
+            if ((out[ni] & 0x0F) != before)
+            {
+              changed = true;
+              ++updates;
+            }
+          }
+        }
+      }
+    }
+    if (!changed)
+    {
+      break;
+    }
+  }
+  return updates;
+}
+
 } // namespace cutum
 
 #endif

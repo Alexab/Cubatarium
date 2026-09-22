@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/FrameDeadline.h"
 #include "World/Streaming/ColumnTicketMap.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/StreamIngressPolicy.h"
@@ -684,6 +685,23 @@ inline int CapDirtyAdmitUnderThrash(int dirty_admit_budget, int fd_repair_n,
   return budget;
 }
 
+/// A27 S5: clamp admit when unified snapshot/GPU/retirement pools are saturated.
+inline void ApplyUnifiedAdmissionPools(MeshWorkAdmission &out,
+                                       const MeshWorkAdmissionInput &in,
+                                       int snapshot_used = 0,
+                                       int retirement_used = 0)
+{
+  UnifiedAdmissionPools pools{};
+  const int queued =
+      static_cast<int>(in.pending_gpu_queued + in.pending_gpu);
+  const int gpu = static_cast<int>(in.pending_gpu_kicked);
+  if (!CanAdmitUnifiedWork(pools, snapshot_used, queued, gpu, retirement_used))
+  {
+    out.dirty_admit_budget = std::min(out.dirty_admit_budget, 1);
+    out.max_schedule = std::min(out.max_schedule, 1);
+  }
+}
+
 inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
                                      MeshWorkAdmission::Mode mode,
                                      const MeshWorkAdmissionInput &in,
@@ -830,6 +848,7 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.max_schedule =
         std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
   }
+  ApplyUnifiedAdmissionPools(out, in);
 }
 
 inline MeshWorkAdmission::Mode

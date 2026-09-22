@@ -23,6 +23,7 @@
 #include "World/Streaming/SeaSeamRemeshPolicy.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
+#include "Render/Mesh/SeamCoverageManifest.h"
 #include "Core/FrameDeadline.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
@@ -521,10 +522,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           if (kChunkDemandShadow || ChunkDemandCutoverEnabled())
           {
-            UChunkRenderDemandStore::Get().NoteFaceDebtSatisfied(chunk_coord,
-                                                                /*face_mask=*/0x3Fu);
+            // A27 S4: publisher lit ⇒ peer ready for subscribe; clear own debt.
+            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord);
+            const uint64_t pub_gen =
+                pub ? (pub->published_geom_rev != 0 ? pub->published_geom_rev
+                                                     : pub->desired_geom_rev)
+                    : 1ull;
+            if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
+            {
+              demand.NoteFaceDebtSatisfied(chunk_coord, /*face_mask=*/0x3Fu,
+                                           pub_gen);
+            }
           }
-          world_ref.NoteUnfinishedColumnDirty(col);
           if (!world_ref.IsPendingLightBeforeMesh(col))
           {
             const glm::ivec3 ground(col.x, 0, col.y);
@@ -647,8 +657,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           if (kChunkDemandShadow || ChunkDemandCutoverEnabled())
           {
-            UChunkRenderDemandStore::Get().NoteFaceDebtSatisfied(chunk_coord,
-                                                                /*face_mask=*/0x3Fu);
+            // A27 S4: first coverage publish — peer ready before FaceDebt clear.
+            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord);
+            const uint64_t pub_gen =
+                pub ? (pub->published_geom_rev != 0 ? pub->published_geom_rev
+                                                     : pub->desired_geom_rev)
+                    : 1ull;
+            if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
+            {
+              demand.NoteFaceDebtSatisfied(chunk_coord, /*face_mask=*/0x3Fu,
+                                           pub_gen);
+            }
           }
           const ProceduralSettings &settings = world_ref.GetProceduralSettings();
           const int sea_cy = settings.SeaLevel / CHUNK_SIZE;
@@ -685,6 +705,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const bool face_debt =
                 world_ref.GetColumnRecords().HasFaceDebtFace(
                     glm::ivec2(n.x, n.z), face_toward);
+            // A27 S4: peer (publisher) must be ready before neighbor subscribe.
+            const ChunkRenderDemandRecord *pub_rec =
+                UChunkRenderDemandStore::Get().Find(chunk_coord);
+            const uint64_t peer_pub =
+                pub_rec && pub_rec->published_geom_rev != 0
+                    ? pub_rec->published_geom_rev
+                    : 1ull;
+            if (!PeerReadyBeforeSubscribe(peer_pub, /*required=*/1))
+            {
+              continue;
+            }
             if (!ShouldCoalesceNeighborBecameKnownSeam(
                     /*neighbor_now_known=*/true, face_overlay,
                     /*already_coalesced=*/false, face_debt))
