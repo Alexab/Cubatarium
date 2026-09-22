@@ -1,14 +1,26 @@
 #ifndef RING_READINESS_BUDGET_H
 #define RING_READINESS_BUDGET_H
 
+#include "World/Streaming/VisualStagePolicy.h"
+
 #include <algorithm>
 #include <cmath>
 
 namespace cutum
 {
 
+/// A21 P7: feature flag — when false, EffectiveLitRing() returns baseline 4.
+/// Default OFF: Evaluate is pure; do not make RingReadiness sole owner yet.
+inline bool &RingReadinessBudgetEnabled()
+{
+  static bool enabled = false;
+  return enabled;
+}
+
 /// A21 P7: late quality/admission controller (Evaluate only).
 /// Wire behind feature flag; do not shrink SLA denominator by excluding rings.
+/// Fog may coordinate quality transition but must NOT close holes/materials
+/// inside the tested area (fog ≠ hole-close).
 struct RingReadinessInputs
 {
   int unfinished_visual{0};
@@ -23,23 +35,30 @@ struct RingReadinessInputs
   bool moving{false};
   int baseline_lit{4};
   int focus_radius{4};
+  /// Hysteresis: previous frame effective ring + frames in current mode.
+  int prev_effective_lit_ring{4};
+  int frames_in_mode{0};
 };
 
 struct RingReadinessOutputs
 {
-  int effective_lit_ring{4};
+  int effective_lit_ring{4};       // clamped [2..4]
   int effective_protect_ring{8};
   int dirty_admit_cap{8};
   int mesh_drain_cap{8};
-  float fog_pull_hint{0.0f};
+  int near_load_ceiling{0};
+  int ingress_shed_hint{0};
+  float fog_pull_hint{0.0f}; // quality transition only — not hole-close
   bool degrade_active{false};
+  int frames_in_mode{0};
+  int min_frames_before_expand{30};
 };
 
 inline RingReadinessOutputs EvaluateRingReadinessBudget(
     const RingReadinessInputs &in)
 {
   RingReadinessOutputs out;
-  const int baseline = std::max(2, in.baseline_lit);
+  const int baseline = std::clamp(in.baseline_lit, 2, 4);
   int lit = baseline;
   const bool debt =
       in.unfinished_visual > 8 || in.fully_dark_stalled > 4 || in.miss_horiz > 0;
@@ -62,15 +81,43 @@ inline RingReadinessOutputs EvaluateRingReadinessBudget(
   {
     lit = std::max(lit, 2);
   }
+  lit = std::clamp(lit, 2, 4);
+
+  // Hysteresis: expand only after min frames in degrade; shrink immediately.
+  const int prev = std::clamp(in.prev_effective_lit_ring, 2, 4);
+  if (lit > prev && in.frames_in_mode < out.min_frames_before_expand)
+  {
+    lit = prev;
+  }
+  out.frames_in_mode =
+      (lit == prev) ? in.frames_in_mode + 1 : 0;
 
   out.effective_lit_ring = lit;
   out.effective_protect_ring = lit + 4;
   out.dirty_admit_cap = out.degrade_active ? 4 : 8;
   out.mesh_drain_cap = out.degrade_active ? 4 : 8;
+  out.near_load_ceiling = lit;
+  out.ingress_shed_hint = out.degrade_active ? 1 : 0;
   out.fog_pull_hint = out.degrade_active ? 0.15f : 0.0f;
-  // Fog may coordinate quality transition but must NOT close holes/materials
-  // inside the tested area (A21 P7.3).
   return out;
+}
+
+/// Last Evaluate outputs for flag-gated readers (updated by streaming tick).
+inline RingReadinessOutputs &RingReadinessLastOutputs()
+{
+  static RingReadinessOutputs last{};
+  return last;
+}
+
+/// Read site helper: baseline lit ring unless flag ON.
+inline int EffectiveLitRingOrBaseline(
+    int baseline = kVisualStageLitDrawableHoriz)
+{
+  if (!RingReadinessBudgetEnabled())
+  {
+    return baseline;
+  }
+  return RingReadinessLastOutputs().effective_lit_ring;
 }
 
 } // namespace cutum

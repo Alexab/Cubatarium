@@ -2137,7 +2137,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     const ColumnSoTDecision sot = ClassifyStickyStaleDarkSoT(
         has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus,
         has_real_repair_ticket, fully_dark_drawable,
-        kVisualStageLitDrawableHoriz);
+        // A21 P7: EffectiveLitRing behind flag (default OFF → baseline 4).
+        EffectiveLitRingOrBaseline(kVisualStageLitDrawableHoriz));
     if (sot.kind == ColumnSoTKind::StickyRemesh)
     {
       out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
