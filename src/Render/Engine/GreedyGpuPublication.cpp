@@ -739,7 +739,29 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
       }
     }
     got.source_light_rev = light_rev != 0 ? light_rev : cache.meshRevision;
+    // A22 S3: expected from live meshed/publish revs — not a copy of got
+    // (self-check was a tautology).
     expected = got;
+    if (mesh_cache != nullptr && !published_ok.empty())
+    {
+      const glm::ivec3 sample = *published_ok.begin();
+      const MeshPublishRevs live_pub = mesh_cache->GetMeshPublishRevs(sample);
+      uint64_t live_light = mesh_cache->GetMeshedLightRevision(sample);
+      if (live_light == 0)
+      {
+        live_light = live_pub.light_rev;
+      }
+      expected.source_light_rev =
+          live_light != 0 ? live_light : cache.meshRevision;
+      expected.source_geom_rev =
+          live_pub.geom_rev != 0 ? live_pub.geom_rev : cache.meshRevision;
+      expected.light_valid = true;
+      if (live_pub.light_rev != 0 && live_light != 0 &&
+          live_pub.light_rev != live_light)
+      {
+        expected.light_valid = false;
+      }
+    }
     PublicationEpochs live{};
     live.artifact_generation = cache.publicationVersion;
     live.resident_table_revision = cache.resident_table_revision;

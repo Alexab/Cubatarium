@@ -115,6 +115,36 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
                           groundChunkCoord.z * CHUNK_SIZE);
   const uint64_t content_rev = ContentRevOf(world, groundChunkCoord);
   const uint64_t catalog_rev = CatalogRevOf(registry);
+  auto &cache = FluidPackReuseCache();
+  // A22 S5: stamp hit before height×16×16 GetBlock (manual/AF fluid spikes).
+  {
+    const auto cit0 = cache.find(groundChunkCoord);
+    if (cit0 != cache.end() && cit0->second.has_slice &&
+        cit0->second.height == height && cit0->second.y_min == y_min &&
+        cit0->second.content_rev == content_rev &&
+        cit0->second.catalog_rev == catalog_rev &&
+        cit0->second.world_epoch == gFluidPackWorldEpoch &&
+        !cit0->second.incomplete)
+    {
+      slice = cit0->second.slice;
+      ++gFluidPackCacheHits;
+      return true;
+    }
+    if (cit0 != cache.end() && cit0->second.incomplete &&
+        cit0->second.world_epoch == gFluidPackWorldEpoch &&
+        cit0->second.height == height && cit0->second.y_min == y_min &&
+        cit0->second.content_rev == content_rev &&
+        cit0->second.catalog_rev == catalog_rev)
+    {
+      const uint64_t age = SteadyNowMs() - cit0->second.stored_steady_ms;
+      if (age <= kIncompleteTileMaxAgeMs && cit0->second.has_slice)
+      {
+        slice = cit0->second.slice;
+        ++gFluidPackCacheHits;
+        return true;
+      }
+    }
+  }
   std::vector<uint8_t> flags(static_cast<size_t>(height * n * n), 0);
   uint64_t scan_fluid_id_hash = 14695981039346656037ull;
   BlockId scan_representative = BLOCK_AIR;
@@ -144,12 +174,11 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   }
   if (!any_fluid)
   {
-    FluidPackReuseCache().erase(groundChunkCoord);
+    cache.erase(groundChunkCoord);
     return true; // empty slice already initialized by caller
   }
 
   const uint64_t pack_hash = HashFluidFlags(flags);
-  auto &cache = FluidPackReuseCache();
   const auto cit = cache.find(groundChunkCoord);
   // Full-slice hit requires occupancy + fluid identity + world/catalog stamps.
   // Occupancy-only match must not reuse water→lava FluidId payloads.

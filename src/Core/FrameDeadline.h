@@ -119,7 +119,7 @@ public:
 
 private:
   double BudgetMs_{0.0};
-  double MaxCriticalUnitMs_{0.0}; // 0 = no cost cap documented for callers
+  double MaxCriticalUnitMs_{4.0}; // A22 S6: default 4ms critical unit cap
   std::chrono::steady_clock::time_point Start_{};
   std::chrono::steady_clock::time_point CriticalUnitStart_{};
   int CriticalUnitsThisFrame_{0};
