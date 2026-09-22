@@ -54,6 +54,8 @@ public:
 private:
   FrameBudget LastBudget{};
   int DualLaneRrToken_{0};
+  /// A28 T1: DirtyDropped watermark for CapDirtyAdmitUnderThrash recent rate.
+  uint64_t LastDirtyDroppedForAdmit_{0};
   int UndrawnForceCd{0};
   int StuckSmokeCd{0};
   int FocusScanCd{0};

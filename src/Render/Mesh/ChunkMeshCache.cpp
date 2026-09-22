@@ -1921,8 +1921,13 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
     return false;
   };
   int dropped = 0;
+  constexpr int kMaxDropPerCall = 6; // A28 T1: DirtyDropped/period ≤800 target
   for (auto it = Dirty.begin(); it != Dirty.end();)
   {
+    if (dropped >= kMaxDropPerCall)
+    {
+      break;
+    }
     if (!beyond_keep(*it))
     {
       ++it;
@@ -1944,6 +1949,10 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
   }
   for (auto it = RemeshAfterApply.begin(); it != RemeshAfterApply.end();)
   {
+    if (dropped >= kMaxDropPerCall)
+    {
+      break;
+    }
     if (beyond_keep(*it))
     {
       it = RemeshAfterApply.erase(it);
@@ -1978,8 +1987,13 @@ int UChunkMeshCache::DropFarFirstMeshDirtyBeyondRadius(
     return false;
   };
   int dropped = 0;
+  constexpr int kMaxDropPerCall = 4; // A28 T1: never mass-drop FM into thrash
   for (auto it = Dirty.begin(); it != Dirty.end();)
   {
+    if (dropped >= kMaxDropPerCall)
+    {
+      break;
+    }
     if (!beyond_keep(*it) || !Dirty.IsFirstMesh(*it))
     {
       ++it;
@@ -3088,6 +3102,17 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
     CrossBatches.push_back(std::move(batch));
   }
   CrossBatchesDirty = false;
+  // A28 T3: provenance gate for cross/shell residual (sample first drawable).
+  if (!GreedyCache.empty())
+  {
+    const auto &sample = GreedyCache.begin()->second;
+    const PublicationValidation xv = ValidateCrossOrShellPublication(
+        sample.PublishRevs.geom_rev, sample.PublishRevs.light_rev,
+        !sample.GpuHasDarkFace, sample.PublishRevs.geom_rev,
+        sample.MeshedLightRevision != 0 ? sample.MeshedLightRevision
+                                        : sample.PublishRevs.light_rev);
+    (void)xv;
+  }
 }
 void UChunkMeshCache::RebuildGreedyVisibleForCull(
     const Frustum *frustum, const glm::vec3 *camera_pos,

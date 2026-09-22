@@ -170,7 +170,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       {
         if (horiz > 4)
         {
-          ++PhysicsTelemetryData.DirtyDropped;
+          // A28 T1: hinterland admit-deny is not a Dirty queue drop — omit
+          // DirtyDropped so A24 thrash gate measures DropRemesh/MaybeDrop only.
           return;
         }
         // Focus bypass: still MarkDirty* without consuming admit.

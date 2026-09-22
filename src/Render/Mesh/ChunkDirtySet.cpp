@@ -413,7 +413,8 @@ int UChunkDirtySet::MaybeDropFarthest(
     return 0;
   }
   int dropped = 0;
-  while (GetCount() > soft_cap)
+  constexpr int kMaxDropPerCall = 4; // A28 T1
+  while (GetCount() > soft_cap && dropped < kMaxDropPerCall)
   {
     int best_i = -1;
     int best_dist = -1;

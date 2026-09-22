@@ -716,6 +716,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            // A28 T4: temporary seam coverage commit only when gen satisfied.
+            {
+              SeamCoverageManifest seam_debt{};
+              seam_debt.seam_artifact_generation = peer_pub;
+              if (!ShouldCommitSeamCoverage(seam_debt, peer_pub))
+              {
+                continue;
+              }
+            }
             if (!ShouldCoalesceNeighborBecameKnownSeam(
                     /*neighbor_now_known=*/true, face_overlay,
                     /*already_coalesced=*/false, face_debt))
@@ -2229,7 +2238,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       phys.DirtyDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
     const bool skip_thrash_second = note_prep_deadline_skip();
-    if (!skip_thrash_second && pressure >= 1 && pending_dirty > 360 &&
+    // A28 T1: second thrash pass only under Red pressure (was Yellow).
+    if (!skip_thrash_second && pressure >= 2 && pending_dirty > 360 &&
         !visual_holes && !missing_underfeet)
     {
       const int dropped = mesh_service.MaybeDropFarthestDirty(
@@ -3054,6 +3064,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.post_load_ring_not_ready =
         world.GetPhysicsTelemetry().PostLoadRingNotReady;
     ain.empty_backlog_n = EmptyBacklogN(world.GetPhysicsTelemetry());
+    {
+      const uint64_t dropped_now = world.GetPhysicsTelemetry().DirtyDropped;
+      ain.dirty_dropped_recent = static_cast<int>(std::min<uint64_t>(
+          100000ull, dropped_now - LastDirtyDroppedForAdmit_));
+      // Watermark advances at finalize only.
+    }
     if (have_nearest_missing)
     {
       ain.nearest_miss_horiz = std::max(
@@ -4565,7 +4581,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     // Near miss: drop hinterland FirstMesh Dirty only — never inside the
     // LitDrawable ring (183918 keep_h=2 starved cruise frontier / opaque).
-    if (near_miss_urgent && pending_dirty_early > 96)
+    // A28 T1: under near-focus holes, never DropFarFirstMesh (creates holes).
+    if (near_miss_urgent && pending_dirty_early > 96 &&
+        !visual_holes && world.GetPhysicsTelemetry().FocusMissingMesh <= 0)
     {
       const int fm_keep_h = FirstMeshPruneKeepHoriz(focus_radius);
       world.GetPhysicsTelemetryMutable().DirtyDropped +=
@@ -5728,6 +5746,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.post_load_ring_not_ready =
         world.GetPhysicsTelemetry().PostLoadRingNotReady;
     ain.empty_backlog_n = EmptyBacklogN(world.GetPhysicsTelemetry());
+    {
+      const uint64_t dropped_now = world.GetPhysicsTelemetry().DirtyDropped;
+      ain.dirty_dropped_recent = static_cast<int>(std::min<uint64_t>(
+          100000ull, dropped_now - LastDirtyDroppedForAdmit_));
+      LastDirtyDroppedForAdmit_ = dropped_now;
+    }
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {
       const auto &tune = URuntimeTuning::Get();

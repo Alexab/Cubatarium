@@ -184,4 +184,21 @@ inline bool ShouldRejectStaleDrawCommands(const PublicationEpochs &draw,
   return false;
 }
 
+/// A28 T3: shell/cross residual publish sites share ArtifactManifest validation.
+inline PublicationValidation ValidateCrossOrShellPublication(
+    uint64_t got_geom_rev, uint64_t got_light_rev, bool light_valid,
+    uint64_t expected_geom_rev, uint64_t expected_light_rev,
+    const PublicationEpochs &draw = {}, const PublicationEpochs &live = {})
+{
+  ArtifactManifest got{};
+  ArtifactManifest expected{};
+  got.source_geom_rev = got_geom_rev;
+  got.source_light_rev = got_light_rev;
+  got.light_valid = light_valid;
+  expected.source_geom_rev = expected_geom_rev;
+  expected.source_light_rev = expected_light_rev;
+  expected.light_valid = true;
+  return ValidatePublicationCandidate(got, expected, draw, live);
+}
+
 } // namespace cutum

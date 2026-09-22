@@ -66,6 +66,8 @@ struct MeshWorkAdmissionInput
   int empty_backlog_n{0};
   /// Dual-lane: round-robin token when schedule_cap==1 (0=FM, 1=Remesh).
   int dual_lane_rr_token{0};
+  /// A28 T1: recent DirtyDropped (period/frame) for CapDirtyAdmitUnderThrash.
+  int dirty_dropped_recent{0};
 };
 
 /// Near-focus miss that blocks view / needs urgent HoleDrain (horiz≤2 or underfeet).
@@ -674,31 +676,49 @@ inline int CapDirtyAdmitUnderThrash(int dirty_admit_budget, int fd_repair_n,
                                     int dropped_soft_cap = 800)
 {
   int budget = dirty_admit_budget;
-  if (fd_repair_n >= 20)
-  {
-    budget = std::max(budget, 4);
-  }
+  // A28 T1: thrash cap wins over FD raise — admit flood caused dirty_dropped≫800.
   if (dirty_dropped_recent > dropped_soft_cap)
   {
-    budget = std::min(budget, 4);
+    budget = std::min(budget, 2);
+  }
+  else if (fd_repair_n >= 20)
+  {
+    budget = std::max(budget, 4);
   }
   return budget;
 }
 
-/// A27 S5: clamp admit when unified snapshot/GPU/retirement pools are saturated.
+/// A28 T1: under pool saturation, prefer Finish over remesh flood — never starve
+/// FirstMesh/hole admit (A27 clamp-to-1 caused DirtyDropped thrash).
 inline void ApplyUnifiedAdmissionPools(MeshWorkAdmission &out,
                                        const MeshWorkAdmissionInput &in,
                                        int snapshot_used = 0,
                                        int retirement_used = 0)
 {
   UnifiedAdmissionPools pools{};
-  const int queued =
-      static_cast<int>(in.pending_gpu_queued + in.pending_gpu);
+  // Queued = not-yet-kicked only; kicked occupies GPU slots separately.
+  const int queued = static_cast<int>(in.pending_gpu_queued);
   const int gpu = static_cast<int>(in.pending_gpu_kicked);
-  if (!CanAdmitUnifiedWork(pools, snapshot_used, queued, gpu, retirement_used))
+  if (CanAdmitUnifiedWork(pools, snapshot_used, queued, gpu, retirement_used))
   {
-    out.dirty_admit_budget = std::min(out.dirty_admit_budget, 1);
-    out.max_schedule = std::min(out.max_schedule, 1);
+    return;
+  }
+  const bool holes = in.visual_holes || in.missing_underfeet ||
+                     in.column_loaded_no_mesh_n > 0 || in.dirty_fm_n > 0;
+  // Remesh / hinterland admit softens; FirstMesh floor stays when holes.
+  out.remesh_schedule = std::min(out.remesh_schedule, holes ? 1 : 0);
+  out.allow_neighbor_dirty = false;
+  if (holes)
+  {
+    out.dirty_admit_budget = std::max(out.dirty_admit_budget, 2);
+    out.first_mesh_schedule = std::max(out.first_mesh_schedule, 2);
+    out.max_schedule =
+        std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
+  }
+  else
+  {
+    out.dirty_admit_budget = std::min(out.dirty_admit_budget, 2);
+    out.max_schedule = std::min(out.max_schedule, 2);
   }
 }
 
@@ -731,7 +751,7 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
       // A25 R4: CapDirtyAdmitUnderThrash when drops already exceed soft gate.
       out.dirty_admit_budget = CapDirtyAdmitUnderThrash(
           std::max(out.dirty_admit_budget, 4),
-          in.visible_black_fully_dark_repair_n);
+          in.visible_black_fully_dark_repair_n, in.dirty_dropped_recent);
     }
     // G2/H: moving holes FirstMesh headroom (was 2; G2→3; H→4 for rim miss_horiz).
     out.first_mesh_schedule = holes ? 4 : 1;
@@ -763,7 +783,7 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
       // A25 R4: CapDirtyAdmitUnderThrash when drops already exceed soft gate.
       out.dirty_admit_budget = CapDirtyAdmitUnderThrash(
           std::max(out.dirty_admit_budget, 4),
-          in.visible_black_fully_dark_repair_n);
+          in.visible_black_fully_dark_repair_n, in.dirty_dropped_recent);
     }
     // H/Era14: moving HoleDrain first_mesh 4→6 (best ARCH_D3_LAND near-GO p2c).
     out.first_mesh_schedule = 6;

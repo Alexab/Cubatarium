@@ -432,6 +432,35 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
         if not holes_xs:
             holes_xs = vals("visual_holes", corridor)
         dropped_xs = vals("dirty_dropped", corridor)
+        # dirty_dropped in period rows is a lifetime cumulative counter.
+        # Gate uses per-period delta (consecutive samples in full period stream).
+        all_dropped = vals("dirty_dropped", use if use else rows)
+        dropped_deltas: list[float] = []
+        if len(all_dropped) >= 2:
+            for i in range(1, len(all_dropped)):
+                d = all_dropped[i] - all_dropped[i - 1]
+                if d >= 0:
+                    dropped_deltas.append(d)
+        # Align corridor to deltas via focus_cx membership of use/rows order.
+        corridor_deltas: list[float] = []
+        src_for_delta = use if use else rows
+        if dropped_deltas and len(src_for_delta) == len(all_dropped):
+            for i in range(1, len(src_for_delta)):
+                row = src_for_delta[i]
+                in_corridor = False
+                if row.get("focus_cx") is not None:
+                    try:
+                        cx = float(row["focus_cx"])
+                        in_corridor = -6.0 <= cx <= 6.0
+                    except (TypeError, ValueError):
+                        in_corridor = False
+                if not west:
+                    # No west corridor filter — all fly/use deltas count.
+                    in_corridor = True
+                if in_corridor:
+                    corridor_deltas.append(dropped_deltas[i - 1])
+        if not corridor_deltas:
+            corridor_deltas = dropped_deltas
         mid_third = (
             corridor[len(corridor) // 3 : (2 * len(corridor) // 3)]
             if len(corridor) >= 3
@@ -439,13 +468,16 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
         )
         stalled_xs = vals("visible_black_fully_dark_stalled_n", mid_third)
         holes_gt0 = sum(1 for h in holes_xs if h > 0)
-        n_periods = max(1, len(corridor))
-        dropped_per = (
-            (sum(dropped_xs) / float(n_periods)) if dropped_xs else None
-        )
+        dropped_per = median(corridor_deltas) if corridor_deltas else None
         metrics = {
             "near_focus_holes_periods_gt0": holes_gt0,
             "dirty_dropped_per_period": dropped_per,
+            "dirty_dropped_per_period_mean": (
+                (sum(corridor_deltas) / float(len(corridor_deltas)))
+                if corridor_deltas
+                else None
+            ),
+            "dirty_dropped_metric": "period_delta_median",
             "mid_fully_dark_stalled_med": median(stalled_xs),
             "ring_readiness_must_stay_off": True,
             "prefer_kick_not_sole_heal_dod": True,

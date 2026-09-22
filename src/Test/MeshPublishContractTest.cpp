@@ -155,8 +155,10 @@ int main()
   {
     using cutum::CapDirtyAdmitUnderThrash;
     Expect(CapDirtyAdmitUnderThrash(1, 25) == 4, "FD repair raises to 4");
-    Expect(CapDirtyAdmitUnderThrash(8, 25, /*dropped=*/900) == 4,
-           "thrash caps at 4");
+    Expect(CapDirtyAdmitUnderThrash(8, 25, /*dropped=*/900) == 2,
+           "thrash caps at 2 over FD raise");
+    Expect(CapDirtyAdmitUnderThrash(8, 0, /*dropped=*/900) == 2,
+           "thrash alone caps at 2");
   }
 
   // A26 N2: deferred retirement + stale draw reject
@@ -229,6 +231,8 @@ int main()
 
   // A26 N5: fluid wrap / material / hitch / worker enqueue
   {
+    using cutum::DrainOneFluidSummaryWorker;
+    using cutum::FluidColumnSummary;
     using cutum::FluidColumnSummaryRequest;
     using cutum::FluidMaterialIdentityChanged;
     using cutum::FluidSummaryWorkerJob;
@@ -248,8 +252,13 @@ int main()
     Expect(!ShouldRejectFluidMapHitch(3.0, 8.0), "under budget");
     FluidSummaryWorkerJob job{};
     FluidColumnSummaryRequest req{};
+    req.y_min = 3;
+    req.height = 16;
     Expect(TryEnqueueFluidSummaryWorker(job, req, true), "worker enqueued");
     Expect(job.enqueued, "job flagged");
+    FluidColumnSummary drained{};
+    Expect(DrainOneFluidSummaryWorker(drained), "worker drained");
+    Expect(drained.y_min == 3 && drained.height == 16, "drain copies req");
   }
 
   if (gFails != 0)

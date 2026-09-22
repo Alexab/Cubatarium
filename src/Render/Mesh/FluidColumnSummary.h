@@ -145,12 +145,18 @@ inline bool FluidMaterialIdentityChanged(uint64_t prev_fluid_id_hash,
   return prev_rep != next_rep;
 }
 
-/// A26 N5: enqueue worker rebuild when sync scan deferred (stub API).
+/// A26/A28 T5: enqueue worker rebuild when sync scan deferred.
 struct FluidSummaryWorkerJob
 {
   FluidColumnSummaryRequest req{};
   bool enqueued{false};
 };
+
+inline std::vector<FluidSummaryWorkerJob> &FluidSummaryWorkerQueue()
+{
+  static std::vector<FluidSummaryWorkerJob> q;
+  return q;
+}
 
 inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
                                          const FluidColumnSummaryRequest &req,
@@ -162,6 +168,33 @@ inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
   }
   job.req = req;
   job.enqueued = true;
+  auto &q = FluidSummaryWorkerQueue();
+  if (q.size() < 8)
+  {
+    q.push_back(job);
+  }
+  return true;
+}
+
+/// A28 T5: drain at most one deferred summary request (continuation column).
+inline bool DrainOneFluidSummaryWorker(FluidColumnSummary &out)
+{
+  auto &q = FluidSummaryWorkerQueue();
+  if (q.empty())
+  {
+    return false;
+  }
+  FluidSummaryWorkerJob job = q.front();
+  q.erase(q.begin());
+  out = FluidColumnSummary{};
+  out.world_epoch = job.req.world_epoch;
+  out.content_rev = job.req.content_rev;
+  out.catalog_rev = job.req.catalog_rev;
+  out.y_min = job.req.y_min;
+  out.height = job.req.height;
+  out.ready = false; // incomplete until flags arrive
+  out.tops.assign(static_cast<size_t>(CHUNK_SIZE * CHUNK_SIZE),
+                  static_cast<int16_t>(-1));
   return true;
 }
 

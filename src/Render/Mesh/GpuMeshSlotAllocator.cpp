@@ -118,13 +118,10 @@ void UGpuMeshSlotAllocator::BindCommittedSlot(glm::ivec3 chunk_coord,
       return;
     }
     const int old_idx = it->second;
-    GpuMeshSlot &old = Slots[static_cast<size_t>(old_idx)];
-    old.still_live_draw = false;
-    // A27 S3: defer free of prior live until fence watermark catches generation.
-    // live_generation=0: old is no longer the live draw after unbind.
-    (void)TryFreeSlotByIndex(old_idx, FenceCompletedGeneration_,
-                             /*live_generation=*/0);
     ChunkToSlot.erase(it);
+    Slots[static_cast<size_t>(old_idx)].still_live_draw = false;
+    // A28: immediate free after unbind (defer API kept for staging rejects).
+    FreeSlotByIndex(old_idx);
   }
   GpuMeshSlot &slot = Slots[static_cast<size_t>(slot_index)];
   slot.ChunkCoord = chunk_coord;

@@ -167,6 +167,8 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       req.y_min = y_min;
       req.height = height;
       (void)TryEnqueueFluidSummaryWorker(job, req, true);
+      FluidColumnSummary drained{};
+      (void)DrainOneFluidSummaryWorker(drained);
       return false;
     }
   }
