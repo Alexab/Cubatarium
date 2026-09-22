@@ -97,8 +97,12 @@ def load_best(path: Path) -> dict | None:
         return None
 
 
-def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
-    """Return whether product-174657 reproduces the west miss/stuck class."""
+def compute_product_174657_input_adequacy(perf_path: Path) -> dict:
+    """A21 P0.4: product acceptance adequacy from *inputs* (route/load), not symptoms.
+
+    Symptom reproduction (miss_stuck/VB floors) is returned as diagnostic_only and
+    must not drive product acceptance or merge_green.
+    """
     try:
         rows = []
         for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -115,7 +119,6 @@ def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
             except (TypeError, ValueError):
                 continue
         use = fly if fly else rows
-        tail = use[-max(1, len(use) // 3) :] if use else []
 
         def values(key: str, subset: list[dict]) -> list[float]:
             out: list[float] = []
@@ -141,16 +144,15 @@ def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
         def max_value(key: str, subset: list[dict]) -> float | None:
             xs = values(key, subset)
             return max(xs) if xs else None
-    except Exception as exc:  # pragma: no cover - best-effort reporting
+    except Exception as exc:  # pragma: no cover
         return {
             "adequacy_pass": False,
             "adequacy_fails": [f"adequacy_analyze_failed:{exc}"],
+            "adequacy_mode": "input",
         }
 
     ys = values("player_y", use)
-    y_early = None
-    y_late = None
-    y_delta = None
+    y_early = y_late = y_delta = None
     if ys:
         n = len(ys)
         early_n = max(1, n // 10)
@@ -166,51 +168,38 @@ def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
         y_late = _med_list(ys[-early_n:])
         y_delta = y_late - y_early
 
-    # Prefer all periods for path (movement_speed often 0 even while traveling).
     fcx_all = values("focus_cx", rows)
     focus_west_delta = None
     if len(fcx_all) >= 2:
         focus_west_delta = float(fcx_all[0]) - float(fcx_all[-1])
 
+    speeds = values("movement_speed", use)
+    duration_periods = len(rows)
+    requested = max_value("dirty_admitted_n", use) or max_value(
+        "mesh_dirty_schedule_ok_remesh_n", use
+    )
+
     metrics = {
-        "early_vb_med": median("visible_black_focus_n", use[: min(5, len(use))]),
-        "focus_missing_mesh_med": median("focus_missing_mesh", use),
-        "miss_stuck_run_frames_tail_max": max_value("miss_stuck_run_frames", tail),
-        "fog_pull_in_rd_fly_med": median("fog_pull_in_rd", use),
-        "visible_black_focus_fly_med": median("visible_black_focus_n", use),
-        "gpu_kick_fly_med": median("gpu_kick_n", tail if tail else use),
-        "ok_remesh_fly_med": median("mesh_dirty_schedule_ok_remesh_n", use),
+        "adequacy_mode": "input",
+        "periods_n": duration_periods,
+        "fly_periods_n": len(fly),
+        "movement_speed_fly_med": median("movement_speed", use),
         "player_y_early_med": y_early,
         "player_y_late_med": y_late,
         "player_y_delta": y_delta,
         "focus_west_delta_cx": focus_west_delta,
-        "gpu_kick_post_drain_fly_max": max_value("gpu_kick_post_drain_n", use),
+        "requested_chunks_proxy_max": requested,
+        "cache_mode": "warm" if any(
+            (r.get("warmup") or r.get("warm")) for r in rows
+        )
+        else "cold_or_unspecified",
     }
     fails: list[str] = []
-    if (
-        metrics["focus_missing_mesh_med"] is None
-        or float(metrics["focus_missing_mesh_med"])
-        < MANUAL_100645_PROXY_CLASS["focus_missing_mesh_med_min"]
-    ):
-        fails.append("focus_missing_too_low")
-    if (
-        metrics["miss_stuck_run_frames_tail_max"] is None
-        or float(metrics["miss_stuck_run_frames_tail_max"])
-        < MANUAL_100645_PROXY_CLASS["miss_stuck_run_frames_tail_max_min"]
-    ):
-        fails.append("miss_stuck_too_low")
-    if (
-        metrics["fog_pull_in_rd_fly_med"] is None
-        or float(metrics["fog_pull_in_rd_fly_med"])
-        < MANUAL_100645_PROXY_CLASS["fog_pull_in_rd_fly_med_min"]
-    ):
-        fails.append("fog_rd_collapsed")
-    if (
-        metrics["visible_black_focus_fly_med"] is None
-        or float(metrics["visible_black_focus_fly_med"])
-        < MANUAL_100645_PROXY_CLASS["visible_black_focus_fly_med_min"]
-    ):
-        fails.append("vb_too_low_for_product_class")
+    # Input gates: route westward, altitude corridor, enough fly samples, motion.
+    if duration_periods < 5:
+        fails.append("route_too_short")
+    if len(fly) < 3 and (not speeds or max(speeds) <= 2.0):
+        fails.append("insufficient_motion_coverage")
     if (
         y_late is None
         or float(y_late) < MANUAL_100645_PROXY_CLASS["player_y_late_med_min"]
@@ -231,7 +220,52 @@ def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
         fails.append("focus_not_west")
     metrics["adequacy_pass"] = len(fails) == 0
     metrics["adequacy_fails"] = fails
+
+    # Diagnostic-only symptom class (legacy proxy); never required for pass.
+    tail = use[-max(1, len(use) // 3) :] if use else []
+    symptom = {
+        "focus_missing_mesh_med": median("focus_missing_mesh", use),
+        "miss_stuck_run_frames_tail_max": max_value("miss_stuck_run_frames", tail),
+        "fog_pull_in_rd_fly_med": median("fog_pull_in_rd", use),
+        "visible_black_focus_fly_med": median("visible_black_focus_n", use),
+    }
+    symptom_fails: list[str] = []
+    if (
+        symptom["focus_missing_mesh_med"] is None
+        or float(symptom["focus_missing_mesh_med"])
+        < MANUAL_100645_PROXY_CLASS["focus_missing_mesh_med_min"]
+    ):
+        symptom_fails.append("focus_missing_too_low")
+    if (
+        symptom["miss_stuck_run_frames_tail_max"] is None
+        or float(symptom["miss_stuck_run_frames_tail_max"])
+        < MANUAL_100645_PROXY_CLASS["miss_stuck_run_frames_tail_max_min"]
+    ):
+        symptom_fails.append("miss_stuck_too_low")
+    if (
+        symptom["fog_pull_in_rd_fly_med"] is None
+        or float(symptom["fog_pull_in_rd_fly_med"])
+        < MANUAL_100645_PROXY_CLASS["fog_pull_in_rd_fly_med_min"]
+    ):
+        symptom_fails.append("fog_rd_collapsed")
+    if (
+        symptom["visible_black_focus_fly_med"] is None
+        or float(symptom["visible_black_focus_fly_med"])
+        < MANUAL_100645_PROXY_CLASS["visible_black_focus_fly_med_min"]
+    ):
+        symptom_fails.append("vb_too_low_for_product_class")
+    metrics["symptom_reproduction"] = {
+        **symptom,
+        "symptom_pass": len(symptom_fails) == 0,
+        "symptom_fails": symptom_fails,
+        "role": "diagnostic_only",
+    }
     return metrics
+
+
+def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
+    """Backward-compatible name: now input-based product adequacy (A21 P0.4)."""
+    return compute_product_174657_input_adequacy(perf_path)
 
 
 def compute_dual_lane_stop_line(
@@ -2115,6 +2149,23 @@ def main() -> int:
                 _ann = json.loads(report_path.read_text(encoding="utf-8"))
                 _ann["teleport_cruise"] = bool(args.teleport_cruise)
                 _ann["process_timeout_s"] = float(process_timeout)
+                # A21 P0.1: bind report to binary/world/route identity.
+                try:
+                    from a21_run_manifest import build_run_manifest
+
+                    cold_warm = "warm" if float(getattr(args, "warmup_sec", 0) or 0) > 0 else "cold"
+                    _ann["run_manifest"] = build_run_manifest(
+                        exe=resolve_exe(),
+                        world=getattr(args, "world", None),
+                        scenario=getattr(args, "scenario", None),
+                        cold_warm=cold_warm,
+                        extra={
+                            "perf_jsonl": str(perf) if perf else None,
+                            "schema_perf": "perf_jsonl.v2",
+                        },
+                    )
+                except Exception as _manifest_exc:  # noqa: BLE001
+                    _ann["run_manifest_error"] = str(_manifest_exc)
                 report_path.write_text(
                     json.dumps(_ann, indent=2) + "\n", encoding="utf-8"
                 )

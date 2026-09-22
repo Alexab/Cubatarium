@@ -1,4 +1,5 @@
 #include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Diagnostics/JobStageTrace.h"
 
 #include "App/Core.h"
 #include "Core/FrameDeadline.h"
@@ -186,6 +187,18 @@ void OpenSessionLocked(Session &s)
   s.Opened = s.Jsonl.is_open();
   if (s.Opened)
   {
+    // A21 P0.2: versioned schema — frame timings vs period aggregates are
+    // distinct kinds. Do not compute P99 from period means.
+    s.Jsonl
+        << "{\"kind\":\"schema\",\"schema\":\"perf_jsonl.v2\","
+           "\"aggregation\":{\"period\":\"mean_over_interval\","
+           "\"spike\":\"single_frame\",\"blink\":\"event\","
+           "\"shutdown\":\"session_avg\",\"job_trace\":\"ring_span\"},"
+           "\"units\":{\"*_ms\":\"milliseconds\",\"*_n\":\"count\","
+           "\"census\":\"point_in_time\"},"
+           "\"note\":\"period.wall_ms is interval mean; use spike/frame "
+           "for per-frame percentiles\"}\n";
+    s.Jsonl.flush();
     LOG(INFO) << "[Perf] session file=" << s.Path;
   }
   else
@@ -2807,6 +2820,35 @@ void UFramePerfMonitor::Shutdown()
     const FrameNumbers avg = AverageFromSession(s, last);
     WriteJsonl(s, avg, "shutdown", /*flush=*/true);
     LogLine(avg, "shutdown", s.FrameCount, s.MaxWallMs);
+    // A21 P0.3: dump newest job-stage spans for emergency correlation.
+    if (s.Jsonl.is_open())
+    {
+      struct DumpCtx
+      {
+        std::ofstream *out;
+      };
+      DumpCtx ctx{&s.Jsonl};
+      UJobStageTrace::ForEachNewest(
+          64,
+          [](const JobStageSpan &sp, void *p) {
+            auto *c = static_cast<DumpCtx *>(p);
+            (*c->out) << "{\"kind\":\"job_trace\""
+                      << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
+                      << ",\"cz\":" << sp.cz
+                      << ",\"incarnation\":" << sp.incarnation
+                      << ",\"attempt_id\":" << sp.attempt_id
+                      << ",\"desired_rev\":" << sp.desired_rev
+                      << ",\"source_rev\":" << sp.source_rev
+                      << ",\"published_rev\":" << sp.published_rev
+                      << ",\"stage\":\"" << UJobStageTrace::StageName(sp.stage)
+                      << "\""
+                      << ",\"queue_reason\":" << static_cast<int>(sp.queue_reason)
+                      << ",\"created_ms\":" << sp.created_ms
+                      << ",\"stage_ms\":" << sp.stage_ms << "}\n";
+          },
+          &ctx);
+      s.Jsonl.flush();
+    }
     ResetAccum(s);
   }
   if (s.Jsonl.is_open())

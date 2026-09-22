@@ -157,12 +157,15 @@ def build_scorecard(perf_path: Path, *, label: str, operator_visual: str | None)
             "rows_mid_focus": len(mid_focus),
         },
         "proxy_adequacy": adequacy,
+        "input_adequacy": adequacy,
+        "symptom_reproduction": adequacy.get("symptom_reproduction"),
         "dual_lane_stop_line_cold": stop_cold,
         "dual_lane_stop_line_warm": stop_warm,
         "eye_proxy_stop_line": eye_proxy,
         "mid_stalled_gate_pass": stalled_gate,
         "mid_stalled_gate_fails": stalled_gate_fails,
-        # Four signals: adequacy / dual-lane / eye_proxy / operator eye (manual).
+        # Product merge: input adequacy (not symptom VB/miss floors) + dual-lane
+        # + eye_proxy + operator eye. Symptom gate is diagnostic-only (A21 P0.4).
         # Audit R10: operator_visual=None is UNTESTED, never merge-green TRUE.
         "merge_green": bool(
             adequacy.get("adequacy_pass")

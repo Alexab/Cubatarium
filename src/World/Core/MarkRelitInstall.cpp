@@ -1,6 +1,7 @@
 #include "World/Core/World.h"
 
 #include "World/Chunks/Chunk.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
@@ -144,6 +145,16 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       }
       ++PhysicsTelemetryData.MarkRelitScheduleN;
       ++dirty_admitted_n;
+      {
+        JobStageSpan span{};
+        span.cx = coord.x;
+        span.cy = coord.y;
+        span.cz = coord.z;
+        span.stage = JobStage::Admitted;
+        span.queue_reason = priority ? 1 : 0;
+        span.stage_ms = ElapsedMs(dirty_t0, Clock::now());
+        UJobStageTrace::Note(span);
+      }
     };
     for (const glm::ivec3 &coord : plan.mark_dirty_priority)
     {
