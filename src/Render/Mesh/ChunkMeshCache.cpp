@@ -3517,6 +3517,19 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
             out.kind = SnapshotAcquireKind::Deferred;
             return out;
           }
+          // A29 U3: shell residual publish shares ArtifactManifest gate.
+          {
+            const PublicationValidation xv = ValidateCrossOrShellPublication(
+                refreshed->sourceRevision,
+                refreshed->inputStampsValid ? refreshed->sourceRevision : 0ull,
+                refreshed->inputStampsValid, source_revision,
+                refreshed->inputStampsValid ? refreshed->sourceRevision : 0ull);
+            if (xv != PublicationValidation::Ok)
+            {
+              out.kind = SnapshotAcquireKind::Deferred;
+              return out;
+            }
+          }
           out.kind = SnapshotAcquireKind::Ready;
           out.snapshot = std::move(*refreshed);
           return out;
@@ -6555,9 +6568,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       int empty_kicked = 0;
       // FZ2.7-P12 A3: PreferKick SoftDeferHeld / empty placeholders in protect
       // ring (no UWorld telem — Cache only has UBlockWorld).
+      // A29 U1: under focus miss, kick more SoftDefer empties per frame.
+      const int empty_kick_cap =
+          focus_missing_for_schedule ? 8 : kMaxEmptyStuckKick;
       for (const glm::ivec3 &stuck : SoftDeferHeld)
       {
-        if (empty_kicked >= kMaxEmptyStuckKick)
+        if (empty_kicked >= empty_kick_cap)
         {
           break;
         }
@@ -6597,20 +6613,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             ++empty_kicked;
           }
         }
-        else if (StarveRemeshForHoles)
+        else if (StarveRemeshForHoles || focus_missing_for_schedule)
         {
           MaybeMarkDirtyAfterSoftDeferEmptyAvoid(stuck);
           ++empty_kicked;
         }
       }
     }
-    // P4: under holes, prefer GPU Finish for focus-missing but keep 1 remesh
-    // slot so lit settle is not deferred indefinitely (manual 222059 flicker).
-    if ((StarveRemeshForHoles || focus_missing_for_schedule) &&
-        CountPendingGpuAppliesInHorizontalRadius(MeshFocusGroundChunk,
-                                                 MeshFocusRadiusChunks) > 4)
+    // P4 / A29 U1: under focus miss, zero remesh schedule — VB remesh snapshot
+    // was burning MeshSnapshotBudgetMs before FirstMesh closed holes (AF fm~300).
+    if (StarveRemeshForHoles || focus_missing_for_schedule)
     {
-      remesh_cap = 2;
+      remesh_cap = 0;
+      first_mesh_cap = std::max(first_mesh_cap, 12);
+      LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
     }
     // G1-P1 / A11: under StaleVertexLight/FullyDark debt, spend remesh_schedule
     // snapshot attempts before FirstMesh walk burns MeshSnapshotBudgetMs.
@@ -6622,13 +6638,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     // Debt itself is HoleDrain-class pressure: do not wait for holes telem after
     // SoftDefer/holes cleared while RemeshQ+StaleVertexLight remain (P1b).
     const bool remesh_snap_holes =
-        StarveRemeshForHoles ||
-        sched_adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
-        sched_adm.mode == MeshWorkAdmission::Mode::DeepBacklog ||
-        remesh_debt_proxy >= 20;
-    const bool reserve_remesh_snap = ShouldReserveRemeshSnapshotSlice(
-        remesh_snap_holes, static_cast<int>(Dirty.GetRemeshCount()),
-        remesh_debt_proxy);
+        !focus_missing_for_schedule &&
+        (StarveRemeshForHoles ||
+         sched_adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
+         sched_adm.mode == MeshWorkAdmission::Mode::DeepBacklog ||
+         remesh_debt_proxy >= 20);
+    const bool reserve_remesh_snap =
+        !focus_missing_for_schedule &&
+        ShouldReserveRemeshSnapshotSlice(
+            remesh_snap_holes, static_cast<int>(Dirty.GetRemeshCount()),
+            remesh_debt_proxy);
     auto schedule_remesh_snapshot_slice = [&]() {
       if (!reserve_remesh_snap || remesh_cap <= 0 ||
           Dirty.GetRemeshCount() == 0)
@@ -6680,12 +6699,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
     };
     // G1-P1 / A11: fixed order — remesh snapshot under debt, then FirstMesh.
-    // Miss must not reorder (P3 FM-first defer removed: visual regress 134914).
+    // A29 U1: under focus miss remesh_cap=0 / reserve_remesh_snap=false, so
+    // remesh slice is a no-op and FirstMesh gets the full MeshSnapshotBudgetMs.
     // Dual-lane admission owns FM/Remesh caps — no ad-hoc first_mesh_cap=min(1).
     schedule_remesh_snapshot_slice();
     LastScheduleLaneFmN_ = first_mesh_cap;
     LastScheduleLaneRemeshN_ = remesh_cap;
     LastScheduleLaneStarveReason_ = sched_adm.dual_lane_starve_reason;
+    if (MeshFocusValid && first_mesh_cap > 0 && focus_missing_for_schedule)
+    {
+      Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, 1);
+    }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
       int outer_soft_defer_skips = 0;

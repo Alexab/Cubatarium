@@ -1382,11 +1382,23 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     }
   }
   // Phase 5.3.3 FirstMeshDripCap: prefer continuous 3–4 over burst 6 after starve.
+  // A29 U1: large coverage backlog (clnm/dirty_fm) needs burst FM, not drip.
   if ((mode == MeshWorkAdmission::Mode::HoleDrain ||
        mode == MeshWorkAdmission::Mode::DeepBacklog) &&
       in.empty_backlog_n > 8)
   {
-    out.first_mesh_schedule = std::min(out.first_mesh_schedule, 4);
+    if (in.column_loaded_no_mesh_n >= 24 || in.dirty_fm_n >= 64)
+    {
+      const int burst =
+          (in.column_loaded_no_mesh_n >= 64 || in.dirty_fm_n >= 128) ? 16 : 12;
+      out.first_mesh_schedule = std::max(out.first_mesh_schedule, burst);
+      out.max_schedule = std::max(out.max_schedule, burst);
+      out.remesh_schedule = 0;
+    }
+    else
+    {
+      out.first_mesh_schedule = std::min(out.first_mesh_schedule, 4);
+    }
   }
 
   // Dual-lane: enforce FM+RemeshLit minima after mode/debt floors; never flip

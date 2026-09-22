@@ -337,12 +337,22 @@ inline int ComputeFirstMeshScheduleEffectiveCap(int first_mesh_cap_base,
   {
     return first_mesh_cap_base;
   }
-  int reserved_cap = std::max(first_mesh_floor, fm_q - reserve_n);
+  // A29 U1: reserve must stay frame-delta sized. Callers sometimes pass
+  // DirtyFmN as enqueue_prior (≈ full queue), which collapses
+  // min(base, fm_q-reserve) to the floor (~4) while dirty_fm stays 200–300.
+  const int capped_reserve =
+      std::min(reserve_n, std::max(first_mesh_floor, first_mesh_cap_base));
+  int reserved_cap = std::max(first_mesh_floor, fm_q - capped_reserve);
   // I10-D3: soften consumer-starved clamp — keep schedule_ok+1 throughput.
   if (fm_consumer_starved && schedule_ok_n >= 0)
   {
     reserved_cap =
         std::max(reserved_cap, std::min(schedule_ok_n + 1, fm_q));
+  }
+  // A29 U1: when starved with a large FM queue, never shrink below base.
+  if (fm_consumer_starved && fm_q >= 32)
+  {
+    return std::max(first_mesh_cap_base, first_mesh_floor);
   }
   return std::min(first_mesh_cap_base, reserved_cap);
 }

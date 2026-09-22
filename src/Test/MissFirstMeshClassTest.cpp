@@ -3217,6 +3217,11 @@ int main()
            "arch: effective_cap after reserve");
     Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2, 4, true, 1) >= 2,
            "I10-D3: consumer-starved soften keeps schedule_ok+1");
+    // A29 U1: queue-sized reserve must not collapse cap to floor.
+    Expect(ComputeFirstMeshScheduleEffectiveCap(6, 300, 297) == 6,
+           "A29: huge reserve capped → keep base");
+    Expect(ComputeFirstMeshScheduleEffectiveCap(6, 300, 297, 4, true, 3) == 6,
+           "A29: starved large queue keeps base");
     using cutum::ShouldRenewMovingNearMissFirstMesh;
     Expect(ShouldRenewMovingNearMissFirstMesh(true, true, 1, true),
            "I8-D1: moving nh=1 renew FirstMesh");

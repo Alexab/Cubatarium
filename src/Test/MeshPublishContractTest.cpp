@@ -259,6 +259,18 @@ int main()
     FluidColumnSummary drained{};
     Expect(DrainOneFluidSummaryWorker(drained), "worker drained");
     Expect(drained.y_min == 3 && drained.height == 16, "drain copies req");
+    // A29 U3: drain with flags fills ready summary.
+    {
+      std::vector<uint8_t> flags(static_cast<size_t>(16 * 16 * 16), 0);
+      flags[static_cast<size_t>((8 * 16 + 0) * 16 + 0)] = 1;
+      FluidSummaryWorkerJob filled{};
+      Expect(TryEnqueueFluidSummaryWorker(filled, req, true, flags.data(),
+                                          flags.size(), 42ull, 7),
+             "flagged worker enqueued");
+      FluidColumnSummary built{};
+      Expect(DrainOneFluidSummaryWorker(built), "flagged drain");
+      Expect(built.ready && built.tops[0] == 8, "worker filled tops");
+    }
   }
 
   if (gFails != 0)

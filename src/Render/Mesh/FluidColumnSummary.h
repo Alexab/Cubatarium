@@ -145,10 +145,13 @@ inline bool FluidMaterialIdentityChanged(uint64_t prev_fluid_id_hash,
   return prev_rep != next_rep;
 }
 
-/// A26/A28 T5: enqueue worker rebuild when sync scan deferred.
+/// A26/A28/A29 T5: enqueue worker rebuild when sync scan deferred.
 struct FluidSummaryWorkerJob
 {
   FluidColumnSummaryRequest req{};
+  std::vector<uint8_t> flags;
+  uint64_t fluid_id_hash{0};
+  BlockId representative_fluid_id{BLOCK_AIR};
   bool enqueued{false};
 };
 
@@ -160,13 +163,24 @@ inline std::vector<FluidSummaryWorkerJob> &FluidSummaryWorkerQueue()
 
 inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
                                          const FluidColumnSummaryRequest &req,
-                                         bool defer_sync_scan)
+                                         bool defer_sync_scan,
+                                         const uint8_t *flags = nullptr,
+                                         size_t flag_bytes = 0,
+                                         uint64_t fluid_id_hash = 0,
+                                         BlockId representative = BLOCK_AIR)
 {
   if (!defer_sync_scan)
   {
     return false;
   }
   job.req = req;
+  job.fluid_id_hash = fluid_id_hash;
+  job.representative_fluid_id = representative;
+  job.flags.clear();
+  if (flags && flag_bytes > 0)
+  {
+    job.flags.assign(flags, flags + flag_bytes);
+  }
   job.enqueued = true;
   auto &q = FluidSummaryWorkerQueue();
   if (q.size() < 8)
@@ -176,7 +190,7 @@ inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
   return true;
 }
 
-/// A28 T5: drain at most one deferred summary request (continuation column).
+/// A29 U3: drain one deferred summary — fill from flags when present.
 inline bool DrainOneFluidSummaryWorker(FluidColumnSummary &out)
 {
   auto &q = FluidSummaryWorkerQueue();
@@ -184,8 +198,14 @@ inline bool DrainOneFluidSummaryWorker(FluidColumnSummary &out)
   {
     return false;
   }
-  FluidSummaryWorkerJob job = q.front();
+  FluidSummaryWorkerJob job = std::move(q.front());
   q.erase(q.begin());
+  if (!job.flags.empty())
+  {
+    return TryBuildFluidColumnSummarySync(
+        job.flags.data(), job.req, job.fluid_id_hash,
+        job.representative_fluid_id, out);
+  }
   out = FluidColumnSummary{};
   out.world_epoch = job.req.world_epoch;
   out.content_rev = job.req.content_rev;

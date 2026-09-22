@@ -202,6 +202,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   int column_flow_admit_batch = 1;
   int idle_seam_budget_this_frame = 0;
   // Phase 5.3.2: ≤2 SoftDefer PreferKick / stuck FirstMesh escapes per frame.
+  // A29 U1: raise under SoftDefer empty ownership storm (AF SoftDeferOwned~50).
   int stuck_escape_fm_budget = 2;
   auto note_column_flow_drain = [&](int drain_n, int admit_batch)
   {
@@ -1968,9 +1969,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         SoftDeferEmptyAgeFrames.count(stuck) > 0 ? SoftDeferEmptyAgeFrames[stuck]
                                                  : soft_age_max;
     const bool drawable = mesh_service.HasDrawableGreedyMesh(stuck);
+    // A29 U1: under near FocusMissing, invalidate Owned-without-GPU earlier.
+    const int invalidate_sla =
+        (world.GetPhysicsTelemetry().FocusMissingMesh > 0 &&
+         nearest_miss_h >= 0 && nearest_miss_h <= 2)
+            ? (nearest_miss_h <= 1 ? 4 : 8)
+            : 15;
     // Phase 5.5.2: invalidate Owned-without-GPU so escape can remesh.
     if (SoftDeferEmptyInvalidateOwnedWithoutProgress(owned, gpu_queued, age,
-                                                     drawable))
+                                                     drawable, invalidate_sla))
     {
       SoftDeferEmptyOwned.erase(stuck);
       SoftDeferEmptyAgeFrames.erase(stuck);
@@ -2011,10 +2018,34 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     --stuck_escape_fm_budget;
     return true;
   };
-  if (missing_visible_mesh && soft_stuck_n > 0 &&
+  if ((missing_visible_mesh ||
+       world.GetPhysicsTelemetry().FocusMissingMesh > 0) &&
+      soft_stuck_n > 0 &&
       (!moving || unf_stuck > 30 ||
-       (soft_stuck_h >= 1 && soft_stuck_h <= 5 && soft_age_max >= 30)))
+       (soft_stuck_h >= 1 && soft_stuck_h <= 5 && soft_age_max >= 30) ||
+       soft_stuck_n >= 8 ||
+       world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN >= 8))
   {
+    if (world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN >= 8 ||
+        soft_stuck_n >= 8)
+    {
+      stuck_escape_fm_budget = std::max(stuck_escape_fm_budget, 8);
+    }
+    if (world.GetPhysicsTelemetry().SoftDeferEmptyOwnedN >= 16 ||
+        soft_stuck_n >= 32)
+    {
+      stuck_escape_fm_budget = std::max(stuck_escape_fm_budget, 16);
+    }
+    // A29 U1: underfeet/near miss — pin focus column even if SoftDefer owned.
+    if (nearest_miss_h <= 1 && stuck_escape_fm_budget > 0)
+    {
+      const glm::ivec3 pin = have_nearest_missing ? nearest_missing_hole
+                                                  : focus_ground_horiz;
+      if (!mesh_service.HasDrawableGreedyMesh(pin))
+      {
+        try_stuck_escape_fm(pin, 126);
+      }
+    }
     const bool stop_tail_stuck =
         MissWitnessAgeFrames > 240 && world.GetTimeSinceMotionSec() > 4.0 &&
         pending_focus_count <= 2;
@@ -2326,7 +2357,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetStarveOutsideFocusMesh(false);
   {
     const int unf = world.GetPhysicsTelemetry().UnfinishedVisual;
-    if (visual_holes && unf > 30)
+    if ((visual_holes && unf > 30) ||
+        world.GetPhysicsTelemetry().FocusMissingMesh > 0)
     {
       mesh_service.SetStarveRemeshForHoles(true);
     }
@@ -2372,7 +2404,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     const double cap = world.GetPhysicsTelemetry().EmergeBudgetCapMs;
     const bool protect_near = ShouldProtectNearEmergeFromPhaseClamp(
-        missing_underfeet, nearest_miss_h,
+        missing_underfeet ||
+            (world.GetPhysicsTelemetry().FocusMissingMesh > 0 &&
+             nearest_miss_h <= 2),
+        nearest_miss_h,
         world.GetPhysicsTelemetry().UnderfeetHasMesh != 0);
     mesh_service.SetMeshEmergeTotalBudgetMs(static_cast<float>(
         ApplyPhaseEmergeClamp(
@@ -2674,6 +2709,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ? std::min(StopIdleEmergeMs + 4.0, 48.0)
           : (idle_focus_dirty_debt ? 28.0 : 6.0);
   mesh_service.SetMeshSnapshotBudgetMs(snapshot_budget);
+  // A29 U1: coverage backlog — give FirstMesh more snapshot ms under miss.
+  if (world.GetPhysicsTelemetry().FocusMissingMesh > 0 &&
+      world.GetPhysicsTelemetry().ColumnLoadedNoMeshN >= 24)
+  {
+    mesh_service.SetMeshSnapshotBudgetMs(std::max(snapshot_budget, 12.0));
+  }
   // Healed idle (miss=0, no pending/holes): default idle emerge 60ms ate wall.
   // Keep 60 only while recovering holes/light. Sticky remesh is async — do not
   // hold the 60ms SyncRebuild band just because black_sticky>0 (I4e: sticky=8
@@ -2695,6 +2736,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   const double adaptive_moving_emerge =
       std::clamp(0.12 * WallEmaMs, 8.0, 20.0);
+  // A29 U1: under FocusMissing + coverage backlog, modest emerge floor (24ms
+  // regress raised holes 2→6 — keep 16).
+  double moving_emerge = adaptive_moving_emerge;
+  if (moving && world.GetPhysicsTelemetry().FocusMissingMesh > 0 &&
+      world.GetPhysicsTelemetry().ColumnLoadedNoMeshN >= 24)
+  {
+    moving_emerge = std::max(moving_emerge, 16.0);
+  }
   // Era51 F1a: adaptive stop-phase emerge budget with decay.
   // Industry standard (Cubyz): 12ms/frame hard cap.  Previous blanket 60ms
   // when visual_holes=1 caused stop_wall_med ~110ms.  Now: start at 20ms on
@@ -2730,7 +2779,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         std::min(snapshot_budget, 4.0));
   }
   mesh_service.SetMeshEmergeTotalBudgetMs(
-      moving ? adaptive_moving_emerge : stop_emerge);
+      moving ? moving_emerge : stop_emerge);
+  if (moving && world.GetPhysicsTelemetry().FocusMissingMesh > 0 &&
+      world.GetPhysicsTelemetry().ColumnLoadedNoMeshN >= 24)
+  {
+    mesh_service.SetMeshSnapshotBudgetMs(12.0);
+  }
   clamp_emerge_to_phase();
   if (prep_deadline_overrun() && allow_schedule_soft_exit)
   {
@@ -3681,15 +3735,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         have_nearest_missing = true;
       }
     }
-    if (have_hole && !mesh_service.HasInflightMeshBuild(hole))
+    if (have_hole)
     {
       const int hole_horiz =
           std::max(std::abs(hole.x - focus_ground_horiz.x),
                    std::abs(hole.z - focus_ground_horiz.z));
-      // ColPipe P4: no underfeet Immediate — DirtyPriority + FirstMesh + lease.
-      if (!mesh_service.HasMeshSatisfyingColumnReady(hole) &&
-          !mesh_service.IsPendingGpuApply(hole) &&
-          !mesh_service.HasInflightMeshBuild(hole))
+      (void)hole_horiz;
+      // A29 U1: always PreferKick / DirtyPriority the nearest miss column —
+      // schedule_ok≫0 with sticky miss (AF warm4) meant miss was off Dirty/GPU.
+      if (mesh_service.IsPendingGpuQueued(hole) ||
+          mesh_service.IsPendingGpuApply(hole) ||
+          mesh_service.IsPendingGpuKickedOrDispatched(hole))
+      {
+        mesh_service.PreferKickPendingGpuQueued(hole);
+      }
+      else if (!mesh_service.HasDrawableGreedyMesh(hole) &&
+               !mesh_service.HasInflightMeshBuild(hole))
       {
         mesh_service.MarkDirtyPriority(hole);
         GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
@@ -5829,7 +5890,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_service.SetStarveRemeshKeepHoriz(
           std::max(adm.starve_remesh_horiz, stale_keep));
     }
-    if ((visual_holes || missing_underfeet || missing_visible_mesh) &&
+    if ((visual_holes || missing_underfeet || missing_visible_mesh ||
+         world.GetPhysicsTelemetry().FocusMissingMesh > 0) &&
         adm.mode != MeshWorkAdmission::Mode::Normal)
     {
       mesh_service.SetStarveRemeshForHoles(true);
@@ -5978,6 +6040,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     LastBudget.MaxMeshSchedule = mesh_schedule;
     LastBudget.MaxMeshDrain = mesh_drain;
+  }
+  // A29 U1: after AbortDrip crush, restore burst schedule under coverage backlog
+  // so Cache min(mesh_schedule, adm.max) is not stuck at drip≈2–4.
+  {
+    const auto &pt_cov = world.GetPhysicsTelemetry();
+    if (pt_cov.FocusMissingMesh > 0 &&
+        (pt_cov.ColumnLoadedNoMeshN >= 24 ||
+         mesh_service.GetLastDirtyFmN() >= 64 ||
+         pt_cov.SoftDeferEmptyStuckN >= 32))
+    {
+      const int burst =
+          pt_cov.SoftDeferEmptyStuckN >= 32 ||
+                  pt_cov.ColumnLoadedNoMeshN >= 64
+              ? 16
+              : 12;
+      mesh_schedule = std::max(mesh_schedule, burst);
+      mesh_drain = std::max(mesh_drain, burst);
+      LastBudget.MaxMeshSchedule = mesh_schedule;
+      LastBudget.MaxMeshDrain = mesh_drain;
+    }
   }
   mesh_service.SetVisibleBlackNoTicketPressure(
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN);
