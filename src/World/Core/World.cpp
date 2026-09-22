@@ -79,6 +79,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/RingReadinessBudget.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/DependencyStampBuilder.h"
