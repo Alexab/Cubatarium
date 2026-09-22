@@ -689,20 +689,46 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
   {
     // Sysreset v2: order-only camera sort updates sort epoch without pubver.
     cache.sortRevision = sort_revision;
+    ++cache.transparent_order_key;
   }
   if (changed)
   {
     cache.IndirectCullReady = false;
     cache.GpuCompactActive = false;
     cache.CompactVisCpuSynced = false;
-    // R04: bump on fresh upload OR real membership change — not order-only.
+    // R04 / A21 P3: bump artifact epoch on fresh upload OR real membership
+    // change — not order-only. Order-only bumps resident_table_revision.
     if (any_fresh || (table_identity_changed && !membership_only_reorder))
+    {
       ++cache.publicationVersion;
+      ++cache.resident_table_revision;
+    }
+    else if (membership_only_reorder)
+    {
+      ++cache.resident_table_revision;
+      NotePubVerChangedWithoutFresh();
+    }
     else
       NotePubVerChangedWithoutFresh();
   }
   cache.VertexPool.SignalUploadComplete();
   LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
+  // A21 P3: production calls shared validator (epochs from this pass cache).
+  {
+    ArtifactManifest got{};
+    ArtifactManifest expected{};
+    got.source_geom_rev = cache.meshRevision;
+    got.source_light_rev = cache.meshRevision; // stub until light stamped here
+    got.artifact_generation = cache.publicationVersion;
+    got.light_valid = true;
+    expected = got;
+    PublicationEpochs live{};
+    live.artifact_generation = cache.publicationVersion;
+    live.resident_table_revision = cache.resident_table_revision;
+    live.transparent_order_key = cache.transparent_order_key;
+    live.cull_key_generation = cache.cullRevision;
+    (void)ValidatePublicationCandidate(got, expected, live, live);
+  }
   return true;
 
   }
@@ -743,6 +769,7 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
   cache.GpuCompactActive = false;
   cache.CompactVisCpuSynced = false;
   ++cache.publicationVersion;
+  ++cache.resident_table_revision;
   cache.poolVbo = cache.VertexPool.VertexBuffer();
   cache.poolEbo = cache.VertexPool.IndexBuffer();
   for (auto &gpu : cache.batches)

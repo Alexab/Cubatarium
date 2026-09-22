@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Render/Mesh/ArtifactManifest.h"
+
 #include <cstdint>
 
 namespace cutum
@@ -13,6 +15,50 @@ enum class MeshPublishAction : uint8_t
   Remove = 2,
   PublishedEmpty = 3,
 };
+
+/// A21 P3: common publication validator (CPU/GPU callers share this).
+enum class PublicationValidation : uint8_t
+{
+  Ok = 0,
+  SourceMismatch = 1,
+  LightInvalid = 2,
+  TableEpochStale = 3,
+  OrderEpochStale = 4,
+};
+
+/// Validate candidate against expected source provenance + live draw epochs.
+/// Partially stubbed: production may call with zeroed optional epochs until
+/// full manifest plumbing lands; SourceMatches + light_valid still gate.
+inline PublicationValidation ValidatePublicationCandidate(
+    const ArtifactManifest &got, const ArtifactManifest &expected,
+    const PublicationEpochs &draw_epochs = {},
+    const PublicationEpochs &live_epochs = {})
+{
+  if (expected.light_valid && !got.light_valid)
+  {
+    return PublicationValidation::LightInvalid;
+  }
+  if (!ArtifactManifestSourceMatches(got, expected))
+  {
+    return PublicationValidation::SourceMismatch;
+  }
+  if (live_epochs.resident_table_revision != 0 &&
+      draw_epochs.resident_table_revision < live_epochs.resident_table_revision)
+  {
+    return PublicationValidation::TableEpochStale;
+  }
+  if (live_epochs.transparent_order_key != 0 &&
+      draw_epochs.transparent_order_key < live_epochs.transparent_order_key)
+  {
+    return PublicationValidation::OrderEpochStale;
+  }
+  return PublicationValidation::Ok;
+}
+
+inline bool PublicationCandidateAccepted(PublicationValidation v)
+{
+  return v == PublicationValidation::Ok;
+}
 
 struct MeshPublishRevs
 {

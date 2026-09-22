@@ -82,6 +82,35 @@ int main()
   Expect(!ShouldRejectDarkOnGeomStaleAccept(false, true, true),
          "v6 non-dark geom-stale ok");
 
+  using cutum::ArtifactManifest;
+  using cutum::PublicationEpochs;
+  using cutum::PublicationValidation;
+  using cutum::ValidatePublicationCandidate;
+  ArtifactManifest m{};
+  m.world_epoch = 1;
+  m.content_rev = 2;
+  m.light_valid = true;
+  ArtifactManifest m2 = m;
+  Expect(ValidatePublicationCandidate(m, m2) == PublicationValidation::Ok,
+         "manifest match ok");
+  m2.content_rev = 9;
+  Expect(ValidatePublicationCandidate(m, m2) ==
+             PublicationValidation::SourceMismatch,
+         "manifest content mismatch");
+  m2 = m;
+  m.light_valid = false;
+  Expect(ValidatePublicationCandidate(m, m2) ==
+             PublicationValidation::LightInvalid,
+         "light_valid required");
+  PublicationEpochs draw{};
+  PublicationEpochs live{};
+  live.resident_table_revision = 3;
+  draw.resident_table_revision = 1;
+  m.light_valid = true;
+  Expect(ValidatePublicationCandidate(m, m, draw, live) ==
+             PublicationValidation::TableEpochStale,
+         "stale resident table rejected");
+
   if (gFails != 0)
   {
     std::fprintf(stderr, "%d MeshPublishContract / ColumnVisualState fails\n",

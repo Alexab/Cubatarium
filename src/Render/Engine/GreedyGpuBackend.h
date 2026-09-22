@@ -115,10 +115,15 @@ struct GreedyGpuPassCache
 {
   std::vector<GreedyGpuBatch> batches;
   std::unordered_set<glm::ivec3, IVec3Hash> PendingGeometryDirty;
+  /// Artifact epoch: geometry/material/light payload. Not bumped on order-only.
   uint64_t publicationVersion{0};
   GreedyGpuPassId passId{GreedyGpuPassId::Unknown};
   /// Bumped when RebuildIndirectCmdTable uploads cull/draw SSBO tables.
   uint64_t batchTableRevision{0};
+  /// A21 P3: MDI membership/order table epoch (order-only reorder bumps this).
+  uint64_t resident_table_revision{0};
+  /// A21 P3: transparent camera-sort / ref order key (independent of artifact).
+  uint64_t transparent_order_key{0};
   uint64_t meshRevision{0};
   uint64_t cullRevision{0};
   uint64_t sortRevision{0};

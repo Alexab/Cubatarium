@@ -235,6 +235,8 @@ void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
   cache.batches.clear();
   cache.PendingGeometryDirty.clear();
   cache.publicationVersion = 0;
+  cache.resident_table_revision = 0;
+  cache.transparent_order_key = 0;
   cache.meshRevision = 0;
   cache.cullRevision = 0;
   cache.sortRevision = 0;

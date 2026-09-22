@@ -102,14 +102,21 @@ int main()
     violations += !(live_ok && empty_refs.empty());
   }
   {
+    // A21 P3 / ADR: order-only keeps artifact publicationVersion, bumps
+    // resident_table_revision so MDI consumers can reject stale draws.
     cutum::GreedyGpuPassCache cache;
     backend.PublishPassInputs(cache, {{ar, &a}, {br, &b}}, {}, 1, 1, 2);
-    const auto epoch = cache.publicationVersion;
+    const auto artifact_epoch = cache.publicationVersion;
+    const auto table_rev = cache.resident_table_revision;
     backend.PublishPassInputs(cache, {{br, &b}, {ar, &a}}, {}, 1, 1, 2);
-    const bool same_epoch = cache.batches[0].chunkCoord == br.chunkCoord &&
-                            cache.publicationVersion == epoch;
-    std::cout << "reordered_table_keeps_publication_epoch=" << same_epoch << '\n';
-    violations += same_epoch;
+    const bool reordered = cache.batches[0].chunkCoord == br.chunkCoord;
+    const bool same_artifact = cache.publicationVersion == artifact_epoch;
+    const bool table_bumped = cache.resident_table_revision > table_rev;
+    const bool ok = reordered && same_artifact && table_bumped;
+    std::cout << "reordered_keeps_artifact_bumps_table=" << ok
+              << " same_artifact=" << same_artifact
+              << " table_bumped=" << table_bumped << '\n';
+    violations += !ok;
     cache.VertexPool.Destroy();
   }
   {
