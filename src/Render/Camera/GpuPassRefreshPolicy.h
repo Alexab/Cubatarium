@@ -231,11 +231,17 @@ inline bool ShouldProbeFailOpenAabb(int tick, bool gpu_compact_active,
 
 /// Sysreset v4 hitch C: defer full opaque GPU compact cull when frame leftover
 /// is below cost-class and a prior compact mask can be reused. Never defer on
-/// underfeet miss / VB edge (must refresh visibility).
+/// underfeet miss / VB edge (must refresh visibility). Requires a still-valid
+/// CullInputKey — deadline alone must not reuse a stale camera/frustum mask.
 inline bool ShouldDeferOpaqueCompactCullForDeadline(
     double remaining_ms, bool gpu_compact_active, bool focus_missing,
-    bool vb_edge, int miss_horiz = 0, double cost_class_ms = 8.0)
+    bool vb_edge, bool cull_key_allows_reuse, int miss_horiz = 0,
+    double cost_class_ms = 8.0)
 {
+  if (!cull_key_allows_reuse)
+  {
+    return false;
+  }
   if (OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge)
   {
     return false;
@@ -248,13 +254,15 @@ inline bool ShouldDeferOpaqueCompactCullForDeadline(
 }
 
 /// Sysreset v4 hitch C: skip transparent full resort when mesh/ref set is
-/// stable and the previous frame did not need a command reorder.
+/// stable, camera sort revision is unchanged, and the previous frame did not
+/// need a command reorder.
 inline bool ShouldSkipTransparentFullResort(bool mesh_and_refs_stable,
                                             bool has_cached_sorted_refs,
-                                            int prev_cmd_reorder_n)
+                                            int prev_cmd_reorder_n,
+                                            bool sort_revision_unchanged)
 {
   return mesh_and_refs_stable && has_cached_sorted_refs &&
-         prev_cmd_reorder_n == 0;
+         prev_cmd_reorder_n == 0 && sort_revision_unchanged;
 }
 
 } // namespace cutum

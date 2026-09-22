@@ -31,6 +31,10 @@ struct FluidPackCacheEntry
   uint64_t hash{0};
   int height{0};
   int y_min{0};
+  uint64_t content_rev{0};
+  uint64_t catalog_rev{0};
+  uint64_t fluid_id_hash{0};
+  BlockId representative_fluid_id{BLOCK_AIR};
   std::vector<int16_t> tops;
   FluidSurfaceColumnSlice slice;
   bool has_slice{false};
@@ -54,6 +58,22 @@ uint64_t HashFluidFlags(const std::vector<uint8_t> &flags)
   return h;
 }
 
+uint64_t CatalogRevOf(const UBlockRegistry &registry)
+{
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  return catalog ? static_cast<uint64_t>(reinterpret_cast<uintptr_t>(catalog.get()))
+                 : 0ull;
+}
+
+uint64_t ContentRevOf(const UBlockWorld &world, glm::ivec3 groundChunkCoord)
+{
+  if (const UChunk *chunk = world.GetChunkManager().GetChunk(groundChunkCoord))
+  {
+    return chunk->GetContentRevision();
+  }
+  return 0ull;
+}
+
 bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
                       glm::ivec3 groundChunkCoord, int scanHintY,
                       FluidSurfaceColumnSlice &slice)
@@ -74,7 +94,11 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   const int n = CHUNK_SIZE;
   const glm::ivec3 origin(groundChunkCoord.x * CHUNK_SIZE, 0,
                           groundChunkCoord.z * CHUNK_SIZE);
+  const uint64_t content_rev = ContentRevOf(world, groundChunkCoord);
+  const uint64_t catalog_rev = CatalogRevOf(registry);
   std::vector<uint8_t> flags(static_cast<size_t>(height * n * n), 0);
+  uint64_t scan_fluid_id_hash = 14695981039346656037ull;
+  BlockId scan_representative = BLOCK_AIR;
   bool any_fluid = false;
   for (int ly = 0; ly < height; ++ly)
   {
@@ -89,6 +113,12 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
         {
           flags[static_cast<size_t>((ly * n + lz) * n + lx)] = 1;
           any_fluid = true;
+          scan_fluid_id_hash ^= static_cast<uint64_t>(id);
+          scan_fluid_id_hash *= 1099511628211ull;
+          if (scan_representative == BLOCK_AIR)
+          {
+            scan_representative = id;
+          }
         }
       }
     }
@@ -102,8 +132,14 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   const uint64_t pack_hash = HashFluidFlags(flags);
   auto &cache = FluidPackReuseCache();
   const auto cit = cache.find(groundChunkCoord);
+  // Full-slice hit requires occupancy + fluid identity + world/catalog stamps.
+  // Occupancy-only match must not reuse water→lava FluidId payloads.
   if (cit != cache.end() && cit->second.hash == pack_hash &&
       cit->second.height == height && cit->second.y_min == y_min &&
+      cit->second.content_rev == content_rev &&
+      cit->second.catalog_rev == catalog_rev &&
+      cit->second.fluid_id_hash == scan_fluid_id_hash &&
+      cit->second.representative_fluid_id == scan_representative &&
       cit->second.has_slice)
   {
     slice = cit->second.slice;
@@ -115,7 +151,8 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   if (cit != cache.end() && cit->second.hash == pack_hash &&
       cit->second.height == height && cit->second.y_min == y_min)
   {
-    // P7: identical pack — reuse tops, skip GPU scan.
+    // P7: identical occupancy pack — reuse tops, skip GPU scan. FluidId cells
+    // are still re-read from the world below (identity may differ).
     tops = cit->second.tops;
   }
   else
@@ -128,6 +165,10 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
     entry.hash = pack_hash;
     entry.height = height;
     entry.y_min = y_min;
+    entry.content_rev = content_rev;
+    entry.catalog_rev = catalog_rev;
+    entry.fluid_id_hash = scan_fluid_id_hash;
+    entry.representative_fluid_id = scan_representative;
     entry.tops = tops;
     cache[groundChunkCoord] = std::move(entry);
   }
@@ -164,6 +205,12 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   stored.hash = pack_hash;
   stored.height = height;
   stored.y_min = y_min;
+  stored.content_rev = content_rev;
+  stored.catalog_rev = catalog_rev;
+  // Same identity domain as the hit check (scan-time fluid cells), not the
+  // 2D surface map — occupancy-matched water→lava must still miss.
+  stored.fluid_id_hash = scan_fluid_id_hash;
+  stored.representative_fluid_id = scan_representative;
   stored.tops = tops;
   stored.slice = slice;
   stored.has_slice = true;

@@ -440,9 +440,35 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     NotePublicationProgressUnit();
     published_ok.insert(coord);
     // Sysreset v2 Accept: blockId flip only when (geom,light,material) match.
+    // A21-05: expected material stamp is THIS PASS only (not full-chunk batches).
     if (mesh_cache != nullptr)
     {
-      const MeshPublishRevs expected = mesh_cache->GetMeshPublishRevs(coord);
+      const MeshPublishRevs publish_revs = mesh_cache->GetMeshPublishRevs(coord);
+      MeshPublishRevs expected{};
+      expected.geom_rev = publish_revs.geom_rev;
+      const uint64_t meshed_light = mesh_cache->GetMeshedLightRevision(coord);
+      expected.light_rev =
+          meshed_light != 0 ? meshed_light : publish_revs.light_rev;
+      {
+        std::vector<GreedyBatchRef> pass_refs;
+        mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
+                                              pass_refs);
+        std::vector<uint16_t> expected_ids;
+        expected_ids.reserve(pass_refs.size());
+        for (const auto &ref : pass_refs)
+        {
+          if (const GreedyMeshBatch *cpu = mesh_cache->TryGetGreedyBatch(ref))
+          {
+            expected_ids.push_back(static_cast<uint16_t>(cpu->blockId));
+          }
+          else
+          {
+            expected_ids.push_back(static_cast<uint16_t>(ref.blockId));
+          }
+        }
+        expected.material_stamp =
+            MeshPublishMaterialStamp(expected_ids.data(), expected_ids.size());
+      }
       std::vector<uint16_t> got_ids;
       got_ids.reserve(group_fresh.size());
       for (const auto &gpu : group_fresh)
@@ -484,8 +510,9 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
             staged.push_back(cache.batches[n]);
           }
         }
-        any_fresh = false;
         published_ok.erase(coord);
+        // Keep progress from other coords in this PublishPassInputs call.
+        any_fresh = !published_ok.empty();
         // Sysreset v3: material Retain → FaceDebt + capped Dirty (real mismatch).
         mesh_cache->NoteFaceDebt(coord, /*schedule_dirty=*/true);
         continue;

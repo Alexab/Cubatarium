@@ -197,13 +197,22 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
             PackFluidCellState(world.GetFluidState(worldPos));
       }
     }
-    if (!neighbor_loaded || !neighbor_visually_drawable)
+    // Same contract as full Capture: Missing only for true unload. SoftDefer /
+    // !drawable stays in ClassifyShellCell (Unlit), not overlay Missing.
+    if (!neighbor_loaded)
       missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
     else
       missing_faces = static_cast<uint8_t>(missing_faces & ~(1u << face));
   }
   BoundaryOverlaySetMissingFaces(snap.boundaryOverlay, missing_faces);
-  Commit(coord, source_revision, WorldEpoch_, snap);
+  // A21-09: preserve snapshot credit across IncrementalShell Commit replace.
+  std::unique_ptr<UPipelineCreditGuard> credit;
+  auto store_it = Store_.find(coord);
+  if (store_it != Store_.end() && store_it->second.credit)
+  {
+    credit = std::move(store_it->second.credit);
+  }
+  Commit(coord, source_revision, WorldEpoch_, snap, std::move(credit));
   ++LastStoreHitN_;
   return snap;
 }

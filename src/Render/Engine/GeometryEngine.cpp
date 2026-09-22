@@ -1982,7 +1982,10 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
                            ShouldDeferOpaqueCompactCullForDeadline(
                                UFrameDeadline::Get().RemainingMs(),
                                GreedyGpuOpaque.GpuCompactActive, focus_missing,
-                               vb_edge, miss_horiz);
+                               vb_edge,
+                               CullInputKeyAllowsCacheReuse(
+                                   CachedOpaqueCullInputKey, opaque_cull_key),
+                               miss_horiz);
       if (!do_skip)
       {
         // Phase 5.7R7.2: cruise spd>1.5 → probe period 10; underfeet/VB force.
@@ -2409,7 +2412,8 @@ void UGeometryEngine::PrepareTransparent(
       !CachedTransparentSortedRefs.empty();
   const bool skip_full_resort = ShouldSkipTransparentFullResort(
       mesh_and_refs_stable, !CachedTransparentSortedRefs.empty(),
-      CachedTransparentPrevCmdReorderN);
+      CachedTransparentPrevCmdReorderN,
+      sortRevision == CachedTransparentSortRevision);
   if ((sort_inputs_unchanged || skip_full_resort) &&
       !CachedTransparentSortedRefs.empty())
   {

@@ -4298,20 +4298,29 @@ int main()
            "audit M06: compact reuse invalidates on camera translation");
     using cutum::ShouldDeferOpaqueCompactCullForDeadline;
     using cutum::ShouldSkipTransparentFullResort;
-    Expect(ShouldDeferOpaqueCompactCullForDeadline(4.0, true, false, false, 2),
+    Expect(ShouldDeferOpaqueCompactCullForDeadline(4.0, true, false, false, true,
+                                                   2),
            "v4 hitch C: defer cull when leftover < cost-class");
-    Expect(!ShouldDeferOpaqueCompactCullForDeadline(12.0, true, false, false, 2),
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(12.0, true, false, false,
+                                                    true, 2),
            "v4 hitch C: run cull when leftover healthy");
-    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, true, true, false, 0),
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, true, true, false, true,
+                                                    0),
            "v4 hitch C: never defer underfeet miss");
-    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, false, false, false, 2),
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, false, false, false,
+                                                    true, 2),
            "v4 hitch C: no prior mask → must run");
-    Expect(ShouldSkipTransparentFullResort(true, true, 0),
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, true, false, false,
+                                                    false, 2),
+           "A21-01: never defer when cull key forbids reuse");
+    Expect(ShouldSkipTransparentFullResort(true, true, 0, true),
            "v4 hitch C: skip transparent resort when stable + reorder0");
-    Expect(!ShouldSkipTransparentFullResort(true, true, 3),
+    Expect(!ShouldSkipTransparentFullResort(true, true, 3, true),
            "v4 hitch C: resort when prior reorder>0");
-    Expect(!ShouldSkipTransparentFullResort(false, true, 0),
+    Expect(!ShouldSkipTransparentFullResort(false, true, 0, true),
            "v4 hitch C: resort when mesh/refs changed");
+    Expect(!ShouldSkipTransparentFullResort(true, true, 0, false),
+           "A21-01: resort when camera sort revision changed");
     using cutum::OpaqueCullCmdOnStable;
     Expect(OpaqueCullCmdOnStable(100, 100), "5.7R3: cmd equal stable");
     Expect(OpaqueCullCmdOnStable(102, 100), "5.7R3: cmd +2% stable");
