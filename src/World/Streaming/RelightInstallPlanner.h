@@ -181,10 +181,11 @@ inline bool ChunkLightRevAhead(const ColumnChunkSnapshot &chunk)
   return IsMeshLightStale(chunk.meshed_light_rev, chunk.light_field_rev);
 }
 
-/// FZ2.7-P7 / A21-07: do not remesh FullyDark when light rev matches (valid
-/// dark cave). `still_stale` (dark census) is observational — not a remesh
-/// trigger by itself. force_stale_ticket still forces remesh.
-/// Missing mesh still needs FirstMesh.
+/// FZ2.7-P7 / A21-07 / A22 S1: do not remesh FullyDark when light rev matches
+/// (valid dark cave OR bake waiting on PendingLight). `still_stale` (dark
+/// census) and `is_dirty` alone are not remesh triggers — equal-rev remesh is a
+/// no-op for vertex light (manual 133440). Remesh when light rev ahead, missing
+/// mesh, or force_stale_ticket.
 inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
                                              bool force_stale_ticket)
 {
@@ -200,12 +201,7 @@ inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
   {
     return true;
   }
-  // A21 residual: equal-rev FullyDark with Dirty = repair demand (not LegalDark).
-  // Legal cave never sits is_dirty; remesh so MarkDirty/PreferKick paths run.
-  if (chunk.fully_dark && chunk.is_dirty)
-  {
-    return true;
-  }
+  (void)chunk.is_dirty;
   (void)chunk.still_stale; // census-only; LightValidity ≠ dark vertices
   return false;
 }

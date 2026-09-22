@@ -1193,8 +1193,9 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             Persistence->EnqueueTerrainColumnRelight(
                 ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
                 remesh_min, remesh_max);
-            // SoT 141300: sky already in field + FullyDark bake — remesh now.
-            // Note-only left fifo≡0 / MarkRelit≡0 while stall/repair plateaued.
+            // A22 S1 iter2: restore MarkDirty when sky present (S1.1 no-Dirty
+            // regressed warm end debt 8→33). PendingLight is kept across MarkRelit
+            // while FullyDark remains; force_stale remeshes after lit apply.
             // Still skip MarkDirty when !any_sky (SoftDefer rejects light=0).
             if (ShouldRemeshFullyDarkWhenSkyPresent(fully_dark, any_sky))
             {

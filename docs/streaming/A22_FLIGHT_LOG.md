@@ -18,6 +18,15 @@ Protocol: `CUBA_FLIGHT_FOG_ON=1`, World_164, `product-174657` (+warm/dive), **`-
 
 ---
 
-## Tooling fix (prerequisite)
+## S1 visible (PendingLight keep + force_stale)
 
-- `tools/flight_sim_run.py`: removed nested `import os` under `if not args.visible` that caused `UnboundLocalError` when `--visible` (blocked A22 Loop).
+### S1.1 no-MarkDirty before relight — REGRESSED
+- Warm `141239`: end debt **33** (S0 was 8); prefer_kick still 0.
+- **Plan delta:** H-Light partial — removing MarkDirty hurt drain. Restore MarkDirty+sky (iter2).
+
+### S1.2 MarkDirty restored + keep pending + force_stale
+- Cold `141650` visible: adequacy PASS; mid FD stalled med **1** (score mid_corridor); dual-lane mid stalled 21 FAIL; end debt **60**; prefer_kick=0; dirty_dropped grew without enqueue.
+- Fluid still dominant spikes (15).
+- **Plan delta:** PendingLight keep alone insufficient; escalate to S2 sole demand writer + S5 fluid. Max 2 S1 iters used.
+
+---

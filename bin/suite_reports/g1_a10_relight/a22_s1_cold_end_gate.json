@@ -1,0 +1,13 @@
+{
+  "label": "a22_s1_cold",
+  "perf_jsonl": "bin\\logs\\perf_20260922-141133_29152.jsonl",
+  "periods": 0,
+  "end_gate": {
+    "end_gate_pass": false,
+    "end_gate_fails": [
+      "no_periods"
+    ],
+    "tail": []
+  },
+  "job_trace_tail": []
+}

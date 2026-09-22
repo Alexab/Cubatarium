@@ -532,6 +532,13 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       in.force_stale_ticket = ShouldForceMarkRelitForTicketedStale(
           consume_mode, in.has_repair_ticket, any_fully_dark, any_still_stale,
           focus_horiz);
+      // A22 S1: PendingLight-owned FullyDark → force remesh after lit apply so
+      // bake picks up post-relight field (equal-rev remesh alone was blocked).
+      if (!in.force_stale_ticket && any_fully_dark &&
+          PendingLightBeforeMesh.find(key) != PendingLightBeforeMesh.end())
+      {
+        in.force_stale_ticket = true;
+      }
       if (in.force_stale_ticket)
       {
         ++PhysicsTelemetryData.MarkRelitForceStaleN;
@@ -546,6 +553,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
       const auto plan_t0 = Clock::now();
       LitApplyPlan plan = PlanColumnInstall(in);
+      // A22 S1: FullyDark drawable still present → keep PendingLight until bake
+      // heals. PrimaryConsume used to erase pending every apply (133440 pending≡0).
+      if (any_fully_dark)
+      {
+        plan.erase_pending_light = false;
+      }
       // Audit16 S5: H2 ticketed FullyDark remesh Dirty deleted (sole-owner).
       // Census remesh FREEZE; MarkRelit RelightReplace remains Dirty owner.
       PhysicsTelemetryData.MarkRelitPlanMs += ElapsedMs(plan_t0, Clock::now());

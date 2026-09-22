@@ -59,17 +59,29 @@ int main()
   Expect(!plan_stale.mark_dirty_priority.empty(),
          "P6: dirty FullyDark with light delta still priority");
 
-  // Already dirty + matching revs → residual remesh (Dirty FullyDark = repair).
+  // Already dirty + matching revs → PreferKick/stall or skip remesh (A22 S1:
+  // equal-rev Dirty alone is not a remesh trigger; PendingLight+force_stale is).
   mesh.ClearCalls();
   mesh.Mut(coord).meshed_light_rev = 3;
   mesh.Mut(coord).light_field_rev = 3;
   in.relit_chunks.clear();
   in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
   const auto plan_dirty_fd = PlanColumnInstall(in);
-  Expect(!plan_dirty_fd.mark_dirty_priority.empty() ||
-             !plan_dirty_fd.mark_dirty.empty() ||
-             !plan_dirty_fd.prefer_kick_gpu.empty(),
-         "A21 residual: dirty FullyDark equal-rev still schedules repair");
+  Expect(plan_dirty_fd.mark_dirty_priority.empty() ||
+             plan_dirty_fd.note_prefer_kick_stall ||
+             !plan_dirty_fd.prefer_kick_gpu.empty() ||
+             !plan_dirty_fd.mark_dirty.empty(),
+         "A22 S1: dirty equal-rev FullyDark does not require remesh priority");
+  // force_stale still remeshes
+  in.force_stale_ticket = true;
+  in.relit_chunks.clear();
+  in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
+  const auto plan_force = PlanColumnInstall(in);
+  Expect(!plan_force.mark_dirty_priority.empty() ||
+             !plan_force.prefer_kick_gpu.empty() ||
+             !plan_force.mark_dirty.empty(),
+         "A22 S1: force_stale FullyDark schedules repair");
+  in.force_stale_ticket = false;
 
   // Settled equal-rev FullyDark (!dirty, column settled) → skip remesh (LegalDark).
   mesh.ClearCalls();

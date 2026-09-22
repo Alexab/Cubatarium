@@ -3994,8 +3994,8 @@ int main()
            "A21-07: FullyDark still_stale census alone does not remesh");
     dark.still_stale = false;
     dark.is_dirty = true;
-    Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
-           "A21 residual: equal-rev FullyDark+Dirty remeshes (repair demand)");
+    Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
+           "A22 S1: equal-rev FullyDark+Dirty does not remesh alone");
     dark.is_dirty = false;
     Expect(ShouldRemeshAfterLitApplyForHole(dark, true),
            "G1: force_stale_ticket remeshes FullyDark");
