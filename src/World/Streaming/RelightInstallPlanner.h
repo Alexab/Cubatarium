@@ -181,8 +181,9 @@ inline bool ChunkLightRevAhead(const ColumnChunkSnapshot &chunk)
   return IsMeshLightStale(chunk.meshed_light_rev, chunk.light_field_rev);
 }
 
-/// FZ2.7-P7: do not remesh FullyDark when light rev matches (GPU-sky noop)
-/// **unless** still_stale (GPU dark-face) or force_stale_ticket.
+/// FZ2.7-P7 / A21-07: do not remesh FullyDark when light rev matches (valid
+/// dark cave). `still_stale` (dark census) is observational — not a remesh
+/// trigger by itself. force_stale_ticket still forces remesh.
 /// Missing mesh still needs FirstMesh.
 inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
                                              bool force_stale_ticket)
@@ -195,10 +196,11 @@ inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
   {
     return true;
   }
-  if (chunk.fully_dark && (force_stale_ticket || chunk.still_stale))
+  if (chunk.fully_dark && force_stale_ticket)
   {
     return true;
   }
+  (void)chunk.still_stale; // census-only; LightValidity ≠ dark vertices
   return false;
 }
 
