@@ -2687,6 +2687,29 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   add_test(NAME publication_audit COMMAND $<TARGET_FILE:publication_audit>)
   set_tests_properties(publication_audit PROPERTIES
     LABELS "unit;streaming;audit" TIMEOUT 30)
+
+  # A21 P0.5: CurrentContractRepro — expects 6 violations until P1/P2 land.
+  add_executable(current_contract_repro
+    docs/streaming/audit_2026_09_21/CurrentContractRepro.cpp
+    src/World/Core/BlockWorld.cpp
+    src/World/Core/IUBlockWriter.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/Chunk.cpp
+    src/World/Chunks/ChunkBuffer.cpp
+    src/World/Math/GridMath.cpp
+    src/World/Math/FluidCellState.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureStore.cpp)
+  target_include_directories(current_contract_repro PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(current_contract_repro PRIVATE glm::glm)
+  add_test(NAME current_contract_repro COMMAND $<TARGET_FILE:current_contract_repro>)
+  set_tests_properties(current_contract_repro PROPERTIES
+    LABELS "unit;streaming;audit;a21"
+    TIMEOUT 60
+    WILL_FAIL TRUE) # baseline: exit 1 with 6 violations until P1/P2
 endif()
 set(CUBATARIUM_CTEST_UNIT_TARGETS
   job_admission_lifetime_test
