@@ -1071,11 +1071,11 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           }
         }
         const bool underfeet = r <= 1;
-        // Pending + dark greedy preview: hole beats black squares (async race /
-        // pre-pending bake). Drop slices; MarkRelit rebuilds when lit.
+        // A24 R1: do not RemoveChunk pending FullyDark (hole-over-black).
+        // D2 keeps PL while FD — drop path caused mass near_focus_holes
+        // (manual 155529). Keep mesh/GPU; heal continues below.
         if (pending && has_mesh)
         {
-          bool dropped = false;
           for (int cy = cy0; cy <= cy1; ++cy)
           {
             const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -1083,22 +1083,21 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               continue;
             }
-            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+            if (!MeshService->GetCache().ChunkHasFullyDarkFace(coord))
             {
-              const bool had_gpu =
-                  MeshService->GetCache().HasLiveGpuDraw(coord);
+              continue;
+            }
+            const bool had_gpu =
+                MeshService->GetCache().HasLiveGpuDraw(coord);
+            if (ShouldDropPendingFullyDarkMesh(pending, /*fully_dark=*/true,
+                                               had_gpu))
+            {
               if (ShouldKeepGpuSlotUntilBindInRing(had_gpu, r, radius, false))
               {
                 continue;
               }
               MeshService->RemoveChunk(coord);
-              dropped = true;
             }
-          }
-          if (dropped)
-          {
-            ++repaired;
-            continue;
           }
         }
         // Focus ring: enqueue relight and unlock ring via LitReady. Keep
@@ -1204,27 +1203,28 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                 remesh_min, remesh_max);
             if (remesh_heal)
             {
-              // A23: one Dirty per column while not already owned — Invalidate
-              // without a MarkDirty storm (A22 force_stale flood class).
+              // A24 R2: always Invalidate so equal-rev Capture cannot no-op
+              // even when Dirty already owns the column; no seamed neighbors
+              // (A23 neighbors=true drove dirty_dropped ~3x vs A22).
+              for (int cy = cy0; cy <= cy1; ++cy)
+              {
+                const glm::ivec3 coord(ground.x, cy, ground.z);
+                if (MeshService->HasGreedyMesh(coord) &&
+                    (MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
+                     MeshService->GetCache().ChunkHasStaleDarkFaces(
+                         coord, BlockWorld)))
+                {
+                  MeshService->GetCache().InvalidateMeshCapture(coord);
+                }
+              }
               const bool already_owned =
                   MeshService->HasDirtyInColumnBand(key, remesh_min,
                                                     remesh_max);
               if (!already_owned)
               {
-                for (int cy = cy0; cy <= cy1; ++cy)
-                {
-                  const glm::ivec3 coord(ground.x, cy, ground.z);
-                  if (MeshService->HasGreedyMesh(coord) &&
-                      (MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
-                       MeshService->GetCache().ChunkHasStaleDarkFaces(
-                           coord, BlockWorld)))
-                  {
-                    MeshService->GetCache().InvalidateMeshCapture(coord);
-                  }
-                }
                 MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                     ground, remesh_min, remesh_max,
-                    /*include_horizontal_neighbors=*/true);
+                    /*include_horizontal_neighbors=*/false);
               }
             }
             ++repaired;
@@ -1233,23 +1233,23 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           // Stale-dark with sky, not FullyDark: Invalidate + Dirty (no PL).
           if (remesh_heal)
           {
+            for (int cy = cy0; cy <= cy1; ++cy)
+            {
+              const glm::ivec3 coord(ground.x, cy, ground.z);
+              if (MeshService->HasGreedyMesh(coord) &&
+                  MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
+                                                                BlockWorld))
+              {
+                MeshService->GetCache().InvalidateMeshCapture(coord);
+              }
+            }
             const bool already_owned =
                 MeshService->HasDirtyInColumnBand(key, remesh_min, remesh_max);
             if (!already_owned)
             {
-              for (int cy = cy0; cy <= cy1; ++cy)
-              {
-                const glm::ivec3 coord(ground.x, cy, ground.z);
-                if (MeshService->HasGreedyMesh(coord) &&
-                    MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
-                                                                  BlockWorld))
-                {
-                  MeshService->GetCache().InvalidateMeshCapture(coord);
-                }
-              }
               MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                   ground, remesh_min, remesh_max,
-                  /*include_horizontal_neighbors=*/true);
+                  /*include_horizontal_neighbors=*/false);
             }
             ++repaired;
           }

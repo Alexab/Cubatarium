@@ -801,6 +801,38 @@ inline bool ShouldHealFullyDarkWithRelightOnly(bool fully_dark, bool any_sky,
   return fully_dark && !any_sky && !stale_dark_faces;
 }
 
+/// A24 R1: never drop pending FullyDark mesh to "prefer holes over blacks".
+/// D2 keeps PendingLight while FD → RemoveChunk fired more often (manual
+/// 155529 near_focus_holes 12/20). Keep greedy/GPU; heal via Relight/Dirty.
+inline bool ShouldDropPendingFullyDarkMesh(bool /*pending*/,
+                                           bool /*fully_dark*/,
+                                           bool /*had_live_gpu*/)
+{
+  return false;
+}
+
+/// A24 R3: narrow equal-rev PL+FD force — not every MarkRelit (A22 flood),
+/// only after cooldown while still FullyDark on focus lit ring.
+inline bool ShouldCooldownForceEqualRevPendingFullyDark(
+    bool pending_light, bool any_fully_dark, bool any_light_rev_ahead,
+    int focus_horiz, int frames_since_last_force, int cooldown_frames = 45,
+    int ring = kVisualStageLitDrawableHoriz)
+{
+  if (!pending_light || !any_fully_dark || any_light_rev_ahead)
+  {
+    return false;
+  }
+  if (focus_horiz < 0 || focus_horiz > ring)
+  {
+    return false;
+  }
+  if (cooldown_frames < 1)
+  {
+    cooldown_frames = 1;
+  }
+  return frames_since_last_force >= cooldown_frames;
+}
+
 /// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.
 inline int ClampRelightDrainN(int budget, int ready_n)
 {

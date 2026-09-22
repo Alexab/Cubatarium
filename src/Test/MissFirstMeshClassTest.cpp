@@ -3427,6 +3427,24 @@ int main()
            "A23: FullyDark+stale → not Relight-only");
     Expect(!ShouldHealFullyDarkWithRelightOnly(false, false, false),
            "A23: not FullyDark → not Relight-only");
+    using cutum::ShouldDropPendingFullyDarkMesh;
+    Expect(!ShouldDropPendingFullyDarkMesh(true, true, false),
+           "A24 R1: never drop pending FullyDark without GPU");
+    Expect(!ShouldDropPendingFullyDarkMesh(true, true, true),
+           "A24 R1: never drop pending FullyDark with GPU");
+    Expect(!ShouldDropPendingFullyDarkMesh(false, true, false),
+           "A24 R1: helper stays false when not pending");
+    using cutum::ShouldCooldownForceEqualRevPendingFullyDark;
+    Expect(ShouldCooldownForceEqualRevPendingFullyDark(true, true, false, 2, 45),
+           "A24 R3: PL+FD equal-rev focus after cooldown → force");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(true, true, false, 2, 10),
+           "A24 R3: before cooldown → no force");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(true, true, true, 2, 45),
+           "A24 R3: light-rev ahead → planner remesh, no cooldown force");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(true, true, false, 9, 45),
+           "A24 R3: outside lit ring → no force");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(false, true, false, 2, 45),
+           "A24 R3: no PendingLight → no force");
   }
 
   // N04 autopsy I3t: hold prior draw across accepted-stale publish

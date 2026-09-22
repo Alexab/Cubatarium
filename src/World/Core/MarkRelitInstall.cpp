@@ -563,10 +563,46 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       in.force_stale_ticket = ShouldForceMarkRelitForTicketedStale(
           consume_mode, in.has_repair_ticket, any_fully_dark, any_still_stale,
           focus_horiz);
-      // A23 D1: rollback A22 force_stale flood on every PendingLight+FullyDark —
-      // that equal-rev Dirty thrash grew end debt 8→45..100. Ticketed stale
-      // force above remains; heal for equal-rev FD is Invalidate+1 Dirty or
-      // Relight-only via RecoverUnlitFocusMeshes bifurcate.
+      // A24 R3: narrow equal-rev PL+FD heal with cooldown (not A22 every-apply
+      // flood). Invalidate+Dirty path in RecoverUnlit is primary; this covers
+      // MarkRelit when light rev did not advance but FD remains.
+      {
+        bool any_light_ahead = false;
+        for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+        {
+          if (ChunkLightRevAhead(snap))
+          {
+            any_light_ahead = true;
+            break;
+          }
+        }
+        const bool pending_pl =
+            PendingLightBeforeMesh.find(key) != PendingLightBeforeMesh.end();
+        static std::unordered_map<uint64_t, int> equal_rev_force_age;
+        const uint64_t col_key =
+            (static_cast<uint64_t>(static_cast<uint32_t>(key.x)) << 32) |
+            static_cast<uint32_t>(key.y);
+        int &age = equal_rev_force_age[col_key];
+        ++age;
+        if (!in.force_stale_ticket &&
+            ShouldCooldownForceEqualRevPendingFullyDark(
+                pending_pl, any_fully_dark, any_light_ahead, focus_horiz, age))
+        {
+          in.force_stale_ticket = true;
+          age = 0;
+          for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+          {
+            if (snap.fully_dark && MeshService)
+            {
+              MeshService->GetCache().InvalidateMeshCapture(snap.coord);
+            }
+          }
+        }
+        if (!pending_pl || !any_fully_dark)
+        {
+          equal_rev_force_age.erase(col_key);
+        }
+      }
       if (in.force_stale_ticket)
       {
         ++PhysicsTelemetryData.MarkRelitForceStaleN;
