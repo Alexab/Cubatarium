@@ -448,7 +448,17 @@ public:
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                               const UBlockWorld &world) const;
   /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
-  uint64_t GetMeshedLightRevision(glm::ivec3 chunk_coord) const;
+  /// Inline like GetMeshPublishRevs — GreedyGpuPublication links without
+  /// ChunkMeshCache.cpp (publication_audit / greedy_vertex_pool_production_test).
+  uint64_t GetMeshedLightRevision(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    if (it == GreedyCache.end())
+    {
+      return 0;
+    }
+    return it->second.MeshedLightRevision;
+  }
   /// Sysreset v2: Accept-gate revs for GPU publish writer (inline — lightweight
   /// link units compile GreedyGpuPublication without ChunkMeshCache.cpp).
   MeshPublishRevs GetMeshPublishRevs(glm::ivec3 chunk_coord) const

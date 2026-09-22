@@ -996,16 +996,6 @@ bool UChunkMeshCache::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
   return false;
 }
 
-uint64_t UChunkMeshCache::GetMeshedLightRevision(glm::ivec3 chunk_coord) const
-{
-  const auto it = GreedyCache.find(chunk_coord);
-  if (it == GreedyCache.end())
-  {
-    return 0;
-  }
-  return it->second.MeshedLightRevision;
-}
-
 void UChunkMeshCache::FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
                                             LitApplyMeshProbe &out) const
 {
