@@ -1796,6 +1796,7 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp
     src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureStore.cpp
