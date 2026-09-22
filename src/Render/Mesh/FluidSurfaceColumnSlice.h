@@ -46,6 +46,7 @@ BuildFluidSurfaceColumnSlice(const UBlockWorld &world, UBlockRegistry &registry,
 uint64_t FluidSurfacePackCacheHits();
 void ResetFluidSurfacePackCacheHits();
 /// Test / session reset for per-chunk pack reuse map.
+/// Also bumps fluid pack world epoch so incomplete tiles cannot be reused.
 void ResetFluidSurfacePackReuseCache();
 
 } // namespace cutum

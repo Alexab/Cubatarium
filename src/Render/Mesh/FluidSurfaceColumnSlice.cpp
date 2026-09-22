@@ -1,6 +1,7 @@
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Render/Mesh/FluidColumnSummary.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
@@ -8,6 +9,7 @@
 #include "World/Core/FluidSurfaceScanTuning.h"
 #include "World/Math/GridMath.h"
 
+#include <chrono>
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
@@ -16,9 +18,22 @@ namespace cutum
 {
 
 uint64_t gFluidPackCacheHits = 0;
+uint64_t gFluidPackWorldEpoch = 1;
 
 namespace
 {
+
+uint64_t SteadyNowMs()
+{
+  using clock = std::chrono::steady_clock;
+  return static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          clock::now().time_since_epoch())
+          .count());
+}
+
+/// Incomplete tops-only entries older than this are rejected (A21 P6).
+constexpr uint64_t kIncompleteTileMaxAgeMs = 2000;
 
 bool IsFluidSurfaceBlock(BlockId id, const UBlockRegistry &registry)
 {
@@ -34,6 +49,10 @@ struct FluidPackCacheEntry
   uint64_t content_rev{0};
   uint64_t catalog_rev{0};
   uint64_t fluid_id_hash{0};
+  /// A21 P6: reject incomplete-tile reuse after world epoch bump / age.
+  uint64_t world_epoch{0};
+  uint64_t stored_steady_ms{0};
+  bool incomplete{false};
   BlockId representative_fluid_id{BLOCK_AIR};
   std::vector<int16_t> tops;
   FluidSurfaceColumnSlice slice;
@@ -134,13 +153,26 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   const auto cit = cache.find(groundChunkCoord);
   // Full-slice hit requires occupancy + fluid identity + world/catalog stamps.
   // Occupancy-only match must not reuse water→lava FluidId payloads.
+  // Incomplete tiles: reject after world epoch bump or age timeout.
+  auto incomplete_ok = [&](const FluidPackCacheEntry &e) -> bool {
+    if (!e.incomplete)
+    {
+      return true;
+    }
+    if (e.world_epoch != gFluidPackWorldEpoch)
+    {
+      return false;
+    }
+    const uint64_t age = SteadyNowMs() - e.stored_steady_ms;
+    return age <= kIncompleteTileMaxAgeMs;
+  };
   if (cit != cache.end() && cit->second.hash == pack_hash &&
       cit->second.height == height && cit->second.y_min == y_min &&
       cit->second.content_rev == content_rev &&
       cit->second.catalog_rev == catalog_rev &&
       cit->second.fluid_id_hash == scan_fluid_id_hash &&
       cit->second.representative_fluid_id == scan_representative &&
-      cit->second.has_slice)
+      cit->second.has_slice && incomplete_ok(cit->second))
   {
     slice = cit->second.slice;
     ++gFluidPackCacheHits;
@@ -149,9 +181,10 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
 
   std::vector<int16_t> tops;
   if (cit != cache.end() && cit->second.hash == pack_hash &&
-      cit->second.height == height && cit->second.y_min == y_min)
+      cit->second.height == height && cit->second.y_min == y_min &&
+      incomplete_ok(cit->second))
   {
-    // P7: identical occupancy pack — reuse tops, skip GPU scan. FluidId cells
+    // Identical occupancy pack — reuse tops, skip scan. FluidId cells
     // are still re-read from the world below (identity may differ).
     tops = cit->second.tops;
   }
@@ -170,6 +203,9 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
     entry.fluid_id_hash = scan_fluid_id_hash;
     entry.representative_fluid_id = scan_representative;
     entry.tops = tops;
+    entry.world_epoch = gFluidPackWorldEpoch;
+    entry.stored_steady_ms = SteadyNowMs();
+    entry.incomplete = true; // tops only until full slice written below
     cache[groundChunkCoord] = std::move(entry);
   }
 
@@ -214,6 +250,9 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   stored.tops = tops;
   stored.slice = slice;
   stored.has_slice = true;
+  stored.incomplete = false;
+  stored.world_epoch = gFluidPackWorldEpoch;
+  stored.stored_steady_ms = SteadyNowMs();
   return true;
 }
 
@@ -288,6 +327,11 @@ uint64_t FluidSurfacePackCacheHits() { return gFluidPackCacheHits; }
 
 void ResetFluidSurfacePackCacheHits() { gFluidPackCacheHits = 0; }
 
-void ResetFluidSurfacePackReuseCache() { FluidPackReuseCache().clear(); }
+void ResetFluidSurfacePackReuseCache()
+{
+  FluidPackReuseCache().clear();
+  // A21 P6: world switch / session reset invalidates incomplete-tile reuse.
+  ++gFluidPackWorldEpoch;
+}
 
 } // namespace cutum
