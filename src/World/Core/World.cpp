@@ -1157,6 +1157,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         // (manual 165953).
         bool bad_mesh = false;
         bool fully_dark = false;
+        bool stale_dark_faces = false;
         if (has_mesh)
         {
           for (int cy = cy0; cy <= cy1; ++cy)
@@ -1170,21 +1171,29 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               fully_dark = true;
               bad_mesh = true;
-              break;
             }
             if (MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
                                                               BlockWorld))
             {
+              stale_dark_faces = true;
               bad_mesh = true;
+            }
+            if (fully_dark && stale_dark_faces)
+            {
               break;
             }
           }
         }
         if (has_mesh && bad_mesh)
         {
-          // Void / no sky in chunk data: light debt gate before remesh so
-          // Streaming drain/idle_recovery see focus PendingLight.
-          if (!any_sky || fully_dark)
+          // A23 LightConverge bifurcate (sole heal owner for focus FullyDark):
+          //   sky|stale_dark → InvalidateMeshCapture + one priority Dirty
+          //   !sky && !stale → PendingLight + Relight only (no Dirty)
+          const bool remesh_heal =
+              ShouldHealFullyDarkWithRemesh(any_sky, stale_dark_faces);
+          const bool relight_only = ShouldHealFullyDarkWithRelightOnly(
+              fully_dark, any_sky, stale_dark_faces);
+          if (!any_sky || fully_dark || relight_only)
           {
             TryNotePendingLightBeforeMesh(ground, remesh_min, remesh_max);
             // Light path owns heal — do not leave StickyRemesh ghost (IDLE
@@ -1193,23 +1202,57 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             Persistence->EnqueueTerrainColumnRelight(
                 ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
                 remesh_min, remesh_max);
-            // A22 S1 iter2: restore MarkDirty when sky present (S1.1 no-Dirty
-            // regressed warm end debt 8→33). PendingLight is kept across MarkRelit
-            // while FullyDark remains; force_stale remeshes after lit apply.
-            // Still skip MarkDirty when !any_sky (SoftDefer rejects light=0).
-            if (ShouldRemeshFullyDarkWhenSkyPresent(fully_dark, any_sky))
+            if (remesh_heal)
             {
+              // A23: one Dirty per column while not already owned — Invalidate
+              // without a MarkDirty storm (A22 force_stale flood class).
+              const bool already_owned =
+                  MeshService->HasDirtyInColumnBand(key, remesh_min,
+                                                    remesh_max);
+              if (!already_owned)
+              {
+                for (int cy = cy0; cy <= cy1; ++cy)
+                {
+                  const glm::ivec3 coord(ground.x, cy, ground.z);
+                  if (MeshService->HasGreedyMesh(coord) &&
+                      (MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
+                       MeshService->GetCache().ChunkHasStaleDarkFaces(
+                           coord, BlockWorld)))
+                  {
+                    MeshService->GetCache().InvalidateMeshCapture(coord);
+                  }
+                }
+                MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                    ground, remesh_min, remesh_max,
+                    /*include_horizontal_neighbors=*/true);
+              }
+            }
+            ++repaired;
+            continue;
+          }
+          // Stale-dark with sky, not FullyDark: Invalidate + Dirty (no PL).
+          if (remesh_heal)
+          {
+            const bool already_owned =
+                MeshService->HasDirtyInColumnBand(key, remesh_min, remesh_max);
+            if (!already_owned)
+            {
+              for (int cy = cy0; cy <= cy1; ++cy)
+              {
+                const glm::ivec3 coord(ground.x, cy, ground.z);
+                if (MeshService->HasGreedyMesh(coord) &&
+                    MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
+                                                                  BlockWorld))
+                {
+                  MeshService->GetCache().InvalidateMeshCapture(coord);
+                }
+              }
               MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                   ground, remesh_min, remesh_max,
                   /*include_horizontal_neighbors=*/true);
             }
             ++repaired;
-            continue;
           }
-          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, remesh_min, remesh_max,
-              /*include_horizontal_neighbors=*/true);
-          ++repaired;
         }
       }
     }
@@ -4018,6 +4061,26 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       }
     }
     if (!has_mesh)
+    {
+      ++it;
+      continue;
+    }
+    // A23 D2 / A22 S1: do not clear PendingLight or promote Ready while any
+    // band slice is still FullyDark — equal-rev bake may still be healing via
+    // Invalidate+Dirty / Relight-only. Sole Ready owner is LitDrawableCommit
+    // with multi-Y sibling guard; this path must match.
+    bool any_fully_dark = false;
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (MeshService->HasGreedyMesh(coord) &&
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        any_fully_dark = true;
+        break;
+      }
+    }
+    if (any_fully_dark)
     {
       ++it;
       continue;

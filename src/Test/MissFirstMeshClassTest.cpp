@@ -3411,6 +3411,22 @@ int main()
            "SoT 141300: FullyDark without sky → Note-only");
     Expect(!ShouldRemeshFullyDarkWhenSkyPresent(false, true),
            "SoT 141300: not FullyDark → no sky remesh carve");
+    using cutum::ShouldHealFullyDarkWithRemesh;
+    using cutum::ShouldHealFullyDarkWithRelightOnly;
+    Expect(ShouldHealFullyDarkWithRemesh(true, false),
+           "A23: any_sky → remesh heal");
+    Expect(ShouldHealFullyDarkWithRemesh(false, true),
+           "A23: stale_dark_faces → remesh heal");
+    Expect(!ShouldHealFullyDarkWithRemesh(false, false),
+           "A23: void no-stale → not remesh");
+    Expect(ShouldHealFullyDarkWithRelightOnly(true, false, false),
+           "A23: FullyDark void → Relight-only");
+    Expect(!ShouldHealFullyDarkWithRelightOnly(true, true, false),
+           "A23: FullyDark+sky → not Relight-only");
+    Expect(!ShouldHealFullyDarkWithRelightOnly(true, false, true),
+           "A23: FullyDark+stale → not Relight-only");
+    Expect(!ShouldHealFullyDarkWithRelightOnly(false, false, false),
+           "A23: not FullyDark → not Relight-only");
   }
 
   // N04 autopsy I3t: hold prior draw across accepted-stale publish

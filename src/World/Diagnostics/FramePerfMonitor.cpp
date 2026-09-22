@@ -1852,6 +1852,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pending_light\":" << n.pending_light
           << ",\"stream_pressure\":" << n.stream_pressure
           << ",\"pending_light_focus\":" << n.pending_light_focus
+          << ",\"pending_light_focus_n\":" << n.pending_light_focus
           << ",\"focus_cx\":" << n.focus_cx << ",\"focus_cz\":" << n.focus_cz
           << ",\"underfeet_need\":" << n.underfeet_need
           << ",\"underfeet_draw_ok\":" << n.underfeet_draw_ok

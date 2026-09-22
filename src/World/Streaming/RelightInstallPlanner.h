@@ -181,11 +181,13 @@ inline bool ChunkLightRevAhead(const ColumnChunkSnapshot &chunk)
   return IsMeshLightStale(chunk.meshed_light_rev, chunk.light_field_rev);
 }
 
-/// FZ2.7-P7 / A21-07 / A22 S1: do not remesh FullyDark when light rev matches
+/// FZ2.7-P7 / A21-07 / A23: do not remesh FullyDark when light rev matches
 /// (valid dark cave OR bake waiting on PendingLight). `still_stale` (dark
 /// census) and `is_dirty` alone are not remesh triggers — equal-rev remesh is a
-/// no-op for vertex light (manual 133440). Remesh when light rev ahead, missing
-/// mesh, or force_stale_ticket.
+/// CaptureStore no-op for vertex light (manual 133440). Remesh when light rev
+/// ahead, missing mesh, or force_stale_ticket (ticketed stale only — A23
+/// removed A22 PendingLight+FD force flood; heal is Invalidate+Dirty or
+/// Relight-only via RecoverUnlitFocusMeshes).
 inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
                                              bool force_stale_ticket)
 {

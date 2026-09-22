@@ -39,7 +39,27 @@ int main()
     std::cerr << "FAIL: store hit must work with budget==0\n";
     return 1;
   }
+  // A23 D0: equal-rev hit returns the same committed bake (CaptureStore no-op
+  // for remesh-without-Invalidate — root cause of sticky FullyDark).
+  {
+    auto hit = store.TryGet(world, coord, rev);
+    if (!hit)
+    {
+      std::cerr << "FAIL: equal-rev TryGet must hit committed capture\n";
+      return 1;
+    }
+    if (hit->sourceRevision != rev)
+    {
+      std::cerr << "FAIL: equal-rev hit must keep same sourceRevision\n";
+      return 1;
+    }
+  }
   store.Invalidate(coord);
+  if (store.TryGet(world, coord, rev))
+  {
+    std::cerr << "FAIL: Invalidate must miss equal-rev TryGet\n";
+    return 1;
+  }
   if (store.TakeOrRefresh(world, coord, rev, budget))
   {
     std::cerr << "FAIL: hard defer on miss when budget==0\n";

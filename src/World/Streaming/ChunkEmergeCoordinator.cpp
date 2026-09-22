@@ -528,8 +528,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           if (!world_ref.IsPendingLightBeforeMesh(col))
           {
             const glm::ivec3 ground(col.x, 0, col.y);
-            // A22 S2: one Y-slice lit commit must not Ready the column while
-            // another loaded slice is still FullyDark (multi-Y aggregate).
+            // A22 S2 / A23 D2: sole RenderReady promotion site. One Y-slice lit
+            // commit must not Ready the column while another loaded slice is
+            // still FullyDark (multi-Y aggregate). GpuPipeline progress (~620)
+            // only flips visual→Publishing — never Ready.
             bool sibling_fully_dark = false;
             {
               UWorldMeshService &mesh = world_ref.GetMeshService();

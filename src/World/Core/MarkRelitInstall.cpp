@@ -181,6 +181,18 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         }
         // Focus bypass: still MarkDirty* without consuming admit.
       }
+      // A23 D0/D1: equal-rev CaptureStore hit re-bakes the same dark vertices —
+      // Invalidate so the next build re-reads GetLightData().
+      {
+        UChunkMeshCache::LitApplyMeshProbe dark_probe{};
+        mesh->FillLitApplyMeshProbe(coord, dark_probe);
+        if (dark_probe.has_drawable &&
+            (dark_probe.fully_dark || dark_probe.gpu_has_dark_face ||
+             mesh->GetCache().ChunkHasFullyDarkFace(coord)))
+        {
+          mesh->GetCache().InvalidateMeshCapture(coord);
+        }
+      }
       if (priority)
       {
         mesh->MarkDirtyPriority(coord);
@@ -201,6 +213,25 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         span.stage = JobStage::Admitted;
         span.queue_reason = priority ? 1 : 0;
         span.stage_ms = ElapsedMs(dirty_t0, Clock::now());
+        // A23 D0: always stamp desired/source revs on Admit (even when shadow OFF).
+        if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+        {
+          span.desired_rev = ch->GetLightFieldRevision();
+          span.source_rev = ch->GetContentRevision();
+        }
+        {
+          const MeshPublishRevs pub = mesh->GetCache().GetMeshPublishRevs(coord);
+          if (pub.light_rev != 0)
+          {
+            span.published_rev = pub.light_rev;
+          }
+          else
+          {
+            UChunkMeshCache::LitApplyMeshProbe probe{};
+            mesh->FillLitApplyMeshProbe(coord, probe);
+            span.published_rev = probe.meshed_light_rev;
+          }
+        }
         UJobStageTrace::Note(span);
         if (kChunkDemandShadow)
         {
@@ -532,13 +563,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       in.force_stale_ticket = ShouldForceMarkRelitForTicketedStale(
           consume_mode, in.has_repair_ticket, any_fully_dark, any_still_stale,
           focus_horiz);
-      // A22 S1: PendingLight-owned FullyDark → force remesh after lit apply so
-      // bake picks up post-relight field (equal-rev remesh alone was blocked).
-      if (!in.force_stale_ticket && any_fully_dark &&
-          PendingLightBeforeMesh.find(key) != PendingLightBeforeMesh.end())
-      {
-        in.force_stale_ticket = true;
-      }
+      // A23 D1: rollback A22 force_stale flood on every PendingLight+FullyDark —
+      // that equal-rev Dirty thrash grew end debt 8→45..100. Ticketed stale
+      // force above remains; heal for equal-rev FD is Invalidate+1 Dirty or
+      // Relight-only via RecoverUnlitFocusMeshes bifurcate.
       if (in.force_stale_ticket)
       {
         ++PhysicsTelemetryData.MarkRelitForceStaleN;

@@ -785,6 +785,22 @@ inline bool ShouldRemeshFullyDarkWhenSkyPresent(bool fully_dark, bool any_sky)
   return fully_dark && any_sky;
 }
 
+/// A23 LightConverge: focus FullyDark heal bifurcate — remesh only when the
+/// bake can read a non-zero / stale field (sky band or stale-dark faces).
+/// Equal-rev remesh without Invalidate is a CaptureStore no-op.
+inline bool ShouldHealFullyDarkWithRemesh(bool any_sky, bool stale_dark_faces)
+{
+  return any_sky || stale_dark_faces;
+}
+
+/// A23: void / no-sky FullyDark without stale-dark faces — Relight owns heal;
+/// Dirty is forbidden (SoftDefer rejects light=0 remesh).
+inline bool ShouldHealFullyDarkWithRelightOnly(bool fully_dark, bool any_sky,
+                                              bool stale_dark_faces)
+{
+  return fully_dark && !any_sky && !stale_dark_faces;
+}
+
 /// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.
 inline int ClampRelightDrainN(int budget, int ready_n)
 {
