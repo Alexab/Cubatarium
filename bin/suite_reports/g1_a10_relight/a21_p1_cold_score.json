@@ -1,0 +1,141 @@
+{
+  "label": "a21_p1_cold",
+  "perf_jsonl": "bin\\logs\\perf_20260922-092307_16060.jsonl",
+  "periods": 44,
+  "operator_visual": null,
+  "mid_corridor": {
+    "focus_cx_band": "[2,5]",
+    "visible_black_focus_med": 34.0,
+    "visible_black_legal_dark_med": 0.0,
+    "stale_vertex_light_med": 34.0,
+    "stale_vl_rev_med": 0.0,
+    "fully_dark_census_med": 34.0,
+    "fully_dark_stalled_med": 0.0,
+    "near_focus_holes_med": 1.0,
+    "unlit_max": 35.0,
+    "mesh_apply_stale_visual_med": 0.0,
+    "mesh_apply_stale_visual_delta_med": 0.0,
+    "publication_incomplete_material_med": 0.0,
+    "publication_oom_retain_med": 0.0,
+    "publication_overload_retain_med": 0.0,
+    "mesh_apply_stale_geom_delta_med": 0.0,
+    "mesh_apply_stale_light_delta_med": 0.0,
+    "mesh_apply_stale_catalog_delta_med": 0.0,
+    "mesh_apply_stale_stamp_invalid_delta_med": 0.0,
+    "rows_mid": 15,
+    "rows_mid_focus": 3
+  },
+  "proxy_adequacy": {
+    "adequacy_mode": "input",
+    "periods_n": 44,
+    "fly_periods_n": 28,
+    "movement_speed_fly_med": 5.09997,
+    "player_y_early_med": 55.5,
+    "player_y_late_med": 58.5,
+    "player_y_delta": 3.0,
+    "focus_west_delta_cx": 17.0,
+    "requested_chunks_proxy_max": 3.0,
+    "cache_mode": "cold_or_unspecified",
+    "adequacy_pass": true,
+    "adequacy_fails": [],
+    "symptom_reproduction": {
+      "focus_missing_mesh_med": 1.0,
+      "miss_stuck_run_frames_tail_max": 564.0,
+      "fog_pull_in_rd_fly_med": 3.0,
+      "visible_black_focus_fly_med": 34.5,
+      "symptom_pass": false,
+      "symptom_fails": [
+        "vb_too_low_for_product_class"
+      ],
+      "role": "diagnostic_only"
+    }
+  },
+  "input_adequacy": {
+    "adequacy_mode": "input",
+    "periods_n": 44,
+    "fly_periods_n": 28,
+    "movement_speed_fly_med": 5.09997,
+    "player_y_early_med": 55.5,
+    "player_y_late_med": 58.5,
+    "player_y_delta": 3.0,
+    "focus_west_delta_cx": 17.0,
+    "requested_chunks_proxy_max": 3.0,
+    "cache_mode": "cold_or_unspecified",
+    "adequacy_pass": true,
+    "adequacy_fails": [],
+    "symptom_reproduction": {
+      "focus_missing_mesh_med": 1.0,
+      "miss_stuck_run_frames_tail_max": 564.0,
+      "fog_pull_in_rd_fly_med": 3.0,
+      "visible_black_focus_fly_med": 34.5,
+      "symptom_pass": false,
+      "symptom_fails": [
+        "vb_too_low_for_product_class"
+      ],
+      "role": "diagnostic_only"
+    }
+  },
+  "symptom_reproduction": {
+    "focus_missing_mesh_med": 1.0,
+    "miss_stuck_run_frames_tail_max": 564.0,
+    "fog_pull_in_rd_fly_med": 3.0,
+    "visible_black_focus_fly_med": 34.5,
+    "symptom_pass": false,
+    "symptom_fails": [
+      "vb_too_low_for_product_class"
+    ],
+    "role": "diagnostic_only"
+  },
+  "dual_lane_stop_line_cold": {
+    "vb_fly_med": 34.5,
+    "stale_vl_fly_med": 35.0,
+    "unlit_max": 17.0,
+    "mid_fully_dark_stalled_med": 0.5,
+    "warm": false,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "unlit_max_above_dual_lane"
+    ]
+  },
+  "dual_lane_stop_line_warm": {
+    "vb_fly_med": 34.5,
+    "stale_vl_fly_med": 35.0,
+    "unlit_max": 17.0,
+    "mid_fully_dark_stalled_med": 0.5,
+    "warm": true,
+    "dual_lane_stop_line_pass": true,
+    "dual_lane_stop_line_fails": []
+  },
+  "eye_proxy_stop_line": {
+    "source": "period_jsonl",
+    "perf_path": "bin\\logs\\perf_20260922-092307_16060.jsonl",
+    "eye_proxy_segment": "mid_corridor",
+    "eye_proxy_coverage": "COVERED",
+    "mesh_apply_stale_visual_mid_med": 0.0,
+    "mesh_apply_stale_visual_fly_med": 0.0,
+    "mesh_apply_stale_visual_delta_med": 0.0,
+    "effective_holes_blink_rate": 0.16666666666666666,
+    "transparent_cmd_reorder_mid_med": 0.0,
+    "transparent_cmd_reorder_fly_med": 0.0,
+    "near_focus_holes_mid_med": 1.0,
+    "visual_holes_mid_med": 1.0,
+    "publication_incomplete_material_mid_med": 0.0,
+    "publication_oom_retain_mid_med": 0.0,
+    "rows_used": 7,
+    "west_route_coverage": "COVERED",
+    "focus_cx_min": -10.0,
+    "focus_cx_max": 7.0,
+    "west_route_coverage_reason": "reached_cx_le_minus3",
+    "eye_proxy_stop_line_pass": false,
+    "eye_proxy_stop_line_fails": [
+      "effective_holes_blink_rate_above_eye_proxy",
+      "near_focus_holes_mid_med_above_eye_proxy",
+      "visual_holes_mid_med_above_eye_proxy"
+    ]
+  },
+  "mid_stalled_gate_pass": true,
+  "mid_stalled_gate_fails": [],
+  "merge_green": false,
+  "west_route_coverage": "COVERED",
+  "operator_visual_status": "UNTESTED"
+}

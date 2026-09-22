@@ -3990,8 +3990,8 @@ int main()
     Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
            "P7: FullyDark matching revs skip remesh when not still_stale");
     dark.still_stale = true;
-    Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
-           "G1: FullyDark GPU still_stale remeshes even if revs match");
+    Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
+           "A21-07: FullyDark still_stale census alone does not remesh");
     dark.still_stale = false;
     Expect(ShouldRemeshAfterLitApplyForHole(dark, true),
            "G1: force_stale_ticket remeshes FullyDark");
