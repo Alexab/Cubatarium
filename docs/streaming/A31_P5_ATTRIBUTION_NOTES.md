@@ -24,8 +24,9 @@ visual defects before further recovery heuristics.
 4. Fix only the shown branch (see remediation plan PR8). Precision rebase remains
    deferred until far A/B proves it.
 
-## Current status (A32)
+## Current status (A33)
 
-Systemic ownership/publication/seam/fluid gaps addressed in code (PARTIAL).
-Pixel attribution and operator eye remain OPEN →
-[remediation_after_a31_open.plan.md](../../.cursor/plans/remediation_after_a31_open.plan.md).
+JobStageTrace writers cover Admit + Published/Retain/Reject (MeshCache + GPU).
+Cull/order miss writers and operator freeze-frame class assignment remain OPEN →
+[A33_CONFORMANCE_2026-09-23.md](A33_CONFORMANCE_2026-09-23.md),
+[remediation_after_a32_open.plan.md](../../.cursor/plans/remediation_after_a32_open.plan.md).
