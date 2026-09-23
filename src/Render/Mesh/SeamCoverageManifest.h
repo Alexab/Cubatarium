@@ -76,6 +76,26 @@ inline bool ShouldCommitSeamCoverage(const SeamCoverageManifest &debt,
   return published_seam_gen >= debt.seam_artifact_generation;
 }
 
+/// A30 V3: provisional seam extract — temporary coverage gen, not permanent mesh.
+inline SeamCoverageManifest MakeProvisionalSeamCoverage(glm::ivec3 chunk_xyz,
+                                                        uint64_t world_epoch,
+                                                        uint64_t peer_pub_gen)
+{
+  SeamCoverageManifest m{};
+  m.chunk_xyz = chunk_xyz;
+  m.world_epoch = world_epoch;
+  m.seam_artifact_generation = peer_pub_gen;
+  m.provisional = true;
+  if (peer_pub_gen != 0)
+  {
+    for (uint64_t &g : m.peer_coverage_gen)
+    {
+      g = peer_pub_gen;
+    }
+  }
+  return m;
+}
+
 } // namespace cutum
 
 #endif

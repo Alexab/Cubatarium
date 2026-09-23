@@ -197,6 +197,12 @@ int main()
     Expect(SeamCoverageFullySatisfied(debt, pubs), "all peers ok");
     Expect(ShouldCommitSeamCoverage(debt, 5), "seam commit gen ok");
     Expect(!ShouldCommitSeamCoverage(debt, 4), "seam commit gen lag");
+    using cutum::MakeProvisionalSeamCoverage;
+    const auto prov =
+        MakeProvisionalSeamCoverage(glm::ivec3(1, 2, 3), 9ull, 7ull);
+    Expect(prov.provisional && prov.seam_artifact_generation == 7,
+           "A30 provisional seam extract");
+    Expect(ShouldCommitSeamCoverage(prov, 7), "provisional commit ok");
     Expect(PeerReadyBeforeSubscribe(2, 2), "peer ready");
     Expect(!PeerReadyBeforeSubscribe(0, 2), "peer not ready");
 

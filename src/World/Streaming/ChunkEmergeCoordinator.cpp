@@ -717,10 +717,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
-            // A28 T4: temporary seam coverage commit only when gen satisfied.
+            // A28/A30: temporary seam coverage commit only when gen satisfied.
             {
-              SeamCoverageManifest seam_debt{};
-              seam_debt.seam_artifact_generation = peer_pub;
+              const SeamCoverageManifest seam_debt = MakeProvisionalSeamCoverage(
+                  chunk_coord, /*world_epoch=*/0, peer_pub);
               if (!ShouldCommitSeamCoverage(seam_debt, peer_pub))
               {
                 continue;

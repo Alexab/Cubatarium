@@ -148,7 +148,7 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   }
   // A25 R5: under main-thread budget pressure, do not start height×16×16 GetBlock
   // (audit spike class fluid_map_cpu ~100–197ms). Prefer miss over hitch.
-  // A27 S5: hitch estimate + worker enqueue when deferring.
+  // A27/A30: hitch estimate + worker enqueue; drain may fill later with flags.
   {
     const double est_ms =
         static_cast<double>(height) * static_cast<double>(n * n) * 0.0004;
@@ -167,8 +167,13 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       req.y_min = y_min;
       req.height = height;
       (void)TryEnqueueFluidSummaryWorker(job, req, true);
+      // Leave queue for a later frame; do not sync-drain empty stub as "done".
       FluidColumnSummary drained{};
-      (void)DrainOneFluidSummaryWorker(drained);
+      if (DrainOneFluidSummaryWorker(drained) && drained.ready)
+      {
+        // Worker fill from a prior flagged job — install path stays versioned.
+        (void)drained;
+      }
       return false;
     }
   }
