@@ -1614,6 +1614,32 @@ def main() -> int:
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
     if args.scenario in ("product-174657", "product-174657-dive", "product-174657-far"):
+        # A36 S0 / A31 Gate 1: acceptance AF requires clean tree (override for local
+        # experiments via CUBA_ALLOW_DIRTY_AF=1).
+        allow_dirty = os.environ.get("CUBA_ALLOW_DIRTY_AF", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        if not allow_dirty:
+            try:
+                from a21_run_manifest import _dirty_diff_hash
+
+                dirty = _dirty_diff_hash()
+                if dirty and dirty != "clean":
+                    print(
+                        f"FAIL: {args.scenario} requires dirty_diff_hash=clean "
+                        f"(got {dirty[:12]}…); commit/stash or set "
+                        "CUBA_ALLOW_DIRTY_AF=1",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    return 2
+            except Exception as exc:  # noqa: BLE001
+                print(
+                    f"WARN: could not verify dirty_diff_hash ({exc})",
+                    flush=True,
+                )
         # G1 product gate proxy: west 174657-class (yaw 180), not north replay-manual.
         # See bin/suite_reports/g1_a10_relight/autofly_vs_manual_diff.md
         # Pin resume locus to spawn-near (7,3) — drifted saves start mid-west and
@@ -2482,6 +2508,17 @@ def main() -> int:
                             "schema_perf": "perf_jsonl.v2",
                         },
                     )
+                    from a21_run_manifest import manifest_acceptance_ok
+
+                    _ann["manifest_acceptance"] = manifest_acceptance_ok(
+                        _ann["run_manifest"],
+                        for_acceptance=args.scenario
+                        in (
+                            "product-174657",
+                            "product-174657-dive",
+                            "product-174657-far",
+                        ),
+                    )
                 except Exception as _manifest_exc:  # noqa: BLE001
                     _ann["run_manifest_error"] = str(_manifest_exc)
                 report_path.write_text(
@@ -2752,6 +2789,13 @@ def main() -> int:
                     metrics_summary["enter_dirty_residual_stop_line_pass"] = (
                         result.get("enter_dirty_residual_stop_line_pass")
                     )
+                if result.get("manifest_acceptance") is not None:
+                    metrics_summary["manifest_acceptance"] = result[
+                        "manifest_acceptance"
+                    ]
+                    metrics_summary["manifest_acceptance_pass"] = result[
+                        "manifest_acceptance"
+                    ].get("manifest_acceptance_pass")
                 if result.get("a31_progress_snapshot") is not None:
                     metrics_summary["a31_progress_snapshot"] = result[
                         "a31_progress_snapshot"
@@ -2821,6 +2865,16 @@ def main() -> int:
                         f"flight-sim enter-dirty-residual stop-line FAIL for "
                         f"{args.scenario} "
                         f"{metrics_summary.get('enter_dirty_residual_stop_line')}",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("manifest_acceptance_pass", True) and (
+                    os.environ.get("CUBA_ALLOW_DIRTY_AF", "").strip().lower()
+                    not in ("1", "true", "yes")
+                ):
+                    print(
+                        f"flight-sim manifest acceptance FAIL for {args.scenario} "
+                        f"{metrics_summary.get('manifest_acceptance')}",
                         file=sys.stderr,
                     )
                     last_rc = 2

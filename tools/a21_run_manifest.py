@@ -55,8 +55,10 @@ def _dirty_diff_hash() -> str | None:
             cwd=ROOT,
             stderr=subprocess.DEVNULL,
         )
+        # Tracked-only porcelain (-uno): untracked bin/logs noise must not
+        # poison A31 Gate 1 clean-tree acceptance.
         status = subprocess.check_output(
-            ["git", "status", "--porcelain"],
+            ["git", "status", "--porcelain", "-uno"],
             cwd=ROOT,
             stderr=subprocess.DEVNULL,
         )

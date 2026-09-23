@@ -8,6 +8,7 @@
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Diagnostics/Profile.h"
 #include "World/Diagnostics/ScopedPhase.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "Blocks/BlockRegistry.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
@@ -2112,6 +2113,16 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
           phys.OpaqueCmdTotal > phys.OpaqueCmdOn
               ? phys.OpaqueCmdTotal - phys.OpaqueCmdOn
               : 0;
+      // A36 S1: one bounded cull span per frame when opaque cull excludes draws.
+      if (phys.ChunkMeshedCulled0 > 0)
+      {
+        const glm::ivec3 fc = UChunkManager::WorldToChunk(
+            glm::ivec3(static_cast<int>(std::floor(cameraPos.x)),
+                       static_cast<int>(std::floor(cameraPos.y)),
+                       static_cast<int>(std::floor(cameraPos.z))));
+        UJobStageTrace::NoteCullDecision(fc.x, fc.y, fc.z,
+                                         /*cull_decision=*/1);
+      }
       phys.GpuCullIndirect = 1.0;
       phys.CullSubmitCpuMs = mdi->LastCullSubmitCpuMs();
       if (mdi->CullGpuTimingAvailable())

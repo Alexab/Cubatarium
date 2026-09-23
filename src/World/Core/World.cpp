@@ -2499,6 +2499,36 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   return unfinished;
 }
 
+void UWorld::KickUnfinishedVisualRemesh(int max_n)
+{
+  if (max_n <= 0 || !MeshService)
+  {
+    return;
+  }
+  if (MeshService->GetDirtyCount() > 0)
+  {
+    return; // work already queued — not a starve case
+  }
+  const auto &keys = UnfinishedVisualCache.unfinished_keys;
+  if (keys.empty())
+  {
+    return;
+  }
+  int marked = 0;
+  for (uint64_t key : keys)
+  {
+    if (marked >= max_n)
+    {
+      break;
+    }
+    const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+    const int cz = static_cast<int>(static_cast<uint32_t>(key));
+    // Column unfinished → mark ground cy band (bounded).
+    MeshService->MarkDirtyPriority(glm::ivec3(cx, 0, cz));
+    ++marked;
+  }
+}
+
 void UWorld::InvalidateUnfinishedVisualCache() const
 {
   UnfinishedVisualCache.valid = false;

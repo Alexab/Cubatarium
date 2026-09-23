@@ -174,6 +174,19 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
                        ShouldRejectFluidMapHitch(est_ms, 8.0);
     if (defer)
     {
+      // A36 S5: if last-good exists, return it without height×16×16 flags scan.
+      const auto cit_lg = cache.find(groundChunkCoord);
+      if (cit_lg != cache.end() && cit_lg->second.has_slice &&
+          cit_lg->second.world_epoch == gFluidPackWorldEpoch)
+      {
+        slice = cit_lg->second.slice;
+        ++gFluidPackCacheHits;
+        if (out_deferred)
+        {
+          *out_deferred = true;
+        }
+        return false;
+      }
       std::vector<uint8_t> flags(static_cast<size_t>(height * n * n), 0);
       uint64_t scan_fluid_id_hash = 14695981039346656037ull;
       BlockId scan_representative = BLOCK_AIR;

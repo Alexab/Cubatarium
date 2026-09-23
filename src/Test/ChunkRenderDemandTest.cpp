@@ -64,6 +64,16 @@ int main()
   store.NoteFaceDebtSatisfied(c, 0x01u, /*peer_gen=*/42);
   Expect(rec && (rec->face_debt_mask & 0x01u) == 0, "matching peer clears face0");
   Expect(rec && (rec->face_debt_mask & 0x02u) != 0, "face1 kept");
+  // A36 S2: re-demand raises waiting_peer_gen (monotonic).
+  store.NoteFaceDebt(c, 0x02u, /*peer_gen=*/50);
+  Expect(rec && rec->waiting_peer_gen[1] == 50, "face1 waiting raised to 50");
+  store.NoteFaceDebt(c, 0x02u, /*peer_gen=*/60);
+  Expect(rec && rec->waiting_peer_gen[1] == 60, "face1 waiting raised to 60");
+  store.NoteFaceDebtSatisfied(c, 0x02u, /*peer_gen=*/0);
+  Expect(rec && (rec->face_debt_mask & 0x02u) != 0,
+         "peer_gen=0 must not clear waiting face");
+  store.NoteFaceDebtSatisfied(c, 0x02u, /*peer_gen=*/60);
+  Expect(rec && (rec->face_debt_mask & 0x02u) == 0, "matching 60 clears face1");
 
   // Cutover: column FaceDebt clear forbidden while flag ON (default ON).
   ChunkDemandCutoverEnabled() = true;

@@ -362,6 +362,18 @@ int main()
            "P1 legal dark wins");
   }
 
+  // A36 S3: PublicationCandidateAccepted is the sole commit gate helper.
+  {
+    using cutum::PublicationCandidateAccepted;
+    using cutum::PublicationValidation;
+    Expect(PublicationCandidateAccepted(PublicationValidation::Ok),
+           "Ok accepted");
+    Expect(!PublicationCandidateAccepted(PublicationValidation::SourceMismatch),
+           "SourceMismatch rejected");
+    Expect(!PublicationCandidateAccepted(PublicationValidation::LightInvalid),
+           "LightInvalid rejected");
+  }
+
   // A31 P3 / A35 R2: seam negatives — missing peer / one-of-six.
   {
     using cutum::SeamCoverageFullySatisfied;

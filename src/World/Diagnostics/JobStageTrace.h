@@ -59,6 +59,10 @@ public:
   static void ForEachNewest(size_t max_n,
                             void (*fn)(const JobStageSpan &, void *), void *ctx);
   static const char *StageName(JobStage s);
+  /// A36 S1: note cull exclusion for a tracked chunk (bounded ring).
+  static void NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,
+                               uint8_t cull_decision, uint64_t attempt_id = 0,
+                               uint64_t published_rev = 0);
 };
 
 } // namespace cutum

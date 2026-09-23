@@ -36,6 +36,23 @@ void UJobStageTrace::Note(const JobStageSpan &span)
   }
 }
 
+void UJobStageTrace::NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,
+                                      uint8_t cull_decision,
+                                      uint64_t attempt_id,
+                                      uint64_t published_rev)
+{
+  JobStageSpan span{};
+  span.cx = cx;
+  span.cy = cy;
+  span.cz = cz;
+  span.cull_decision = cull_decision;
+  span.attempt_id = attempt_id;
+  span.published_rev = published_rev;
+  span.stage = JobStage::Published;
+  span.outcome = cull_decision != 0 ? 1 : 0;
+  Note(span);
+}
+
 size_t UJobStageTrace::Size()
 {
   auto &r = GetRing();

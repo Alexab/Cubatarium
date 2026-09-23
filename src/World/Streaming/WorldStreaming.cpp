@@ -1606,6 +1606,11 @@ void UWorldStreaming::RefreshStreamingPressure(
     // SoT unfinished (held sample while cruise); not pending-proxy.
     world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
     world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
+    // A36 S6: unfinished starve with empty dirty → capped remesh re-admit.
+    if (unfinished_visual > 0)
+    {
+      world.KickUnfinishedVisualRemesh(4);
+    }
     // NearFocusHoles telemetry = missing mesh only (same as VisualHoles).
     // Pending-light → LightDebt; sticky/pending_dark → FocusDarkMesh /
     // FocusStickyRemesh / FocusPendingDark. OR-ing dark_preview here was
