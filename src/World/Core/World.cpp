@@ -1838,6 +1838,15 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
         UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
   }
+  // A32 S2: production StopConverged for fly-stop / idle plateau telemetry.
+  {
+    using clock = std::chrono::steady_clock;
+    static const auto t0 = clock::now();
+    const double now_ms =
+        std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    PhysicsTelemetryData.DemandStopConverged =
+        UChunkRenderDemandStore::Get().StopConverged(now_ms) ? 1 : 0;
+  }
 }
 
 ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const

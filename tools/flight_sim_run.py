@@ -589,6 +589,7 @@ def compute_west_route_coverage(perf_path: Path) -> dict:
 def compute_post_stop_convergence(result: dict) -> dict:
     """A31: post-stop gates from scorecard must participate in acceptance."""
     gates = result.get("gates") or {}
+    metrics = result.get("metrics") or {}
     required = (
         "post_stop_missing_zero",
         "post_stop_effective_holes_zero",
@@ -600,9 +601,16 @@ def compute_post_stop_convergence(result: dict) -> dict:
     for k in required:
         if gates.get(k) is not True:
             fails.append(k)
+    # A32 S2: when demand_stop_converged is present after stop, require true.
+    dsc = metrics.get("demand_stop_converged")
+    if dsc is None:
+        dsc = metrics.get("post_stop_demand_stop_converged")
+    if dsc is not None and not bool(dsc):
+        fails.append("demand_stop_converged")
     return {
         "post_stop_convergence_pass": len(fails) == 0,
         "post_stop_convergence_fails": fails,
+        "demand_stop_converged": dsc,
     }
 
 
@@ -624,6 +632,10 @@ def compute_a31_progress_snapshot(result: dict, a24: dict | None, west: dict | N
         "post_stop_convergence_fails": post.get("post_stop_convergence_fails"),
         "post_stop_missing_zero": gates.get("post_stop_missing_zero"),
         "post_stop_effective_holes_zero": gates.get("post_stop_effective_holes_zero"),
+        "demand_stop_converged": post.get("demand_stop_converged")
+        if post.get("demand_stop_converged") is not None
+        else metrics.get("demand_stop_converged")
+        or metrics.get("post_stop_demand_stop_converged"),
         "fluid_map_related": metrics.get("dominant_spike_class")
         or metrics.get("dominant_heavy_spike_class"),
         "spike_max_wall_holes": metrics.get("spike_max_wall_holes"),

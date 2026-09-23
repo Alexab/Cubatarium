@@ -877,6 +877,15 @@ def analyze(
     not_ready_stop = col(stop_tail, "focus_not_render_ready")
     pending_stop = col(stop_tail, "pending_light_focus")
     relight_stop = col(stop_tail, "relight_drain_ms")
+    # Presence-aware: only fail when field was emitted and false (A32 S2).
+    demand_stop_vals = [
+        float(r["demand_stop_converged"])
+        for r in stop_tail
+        if "demand_stop_converged" in r
+    ]
+    post_stop_demand_stop_converged = (
+        bool(demand_stop_vals[-1]) if demand_stop_vals else None
+    )
     post_stop_pending_med = median(pending_stop)
     post_stop_black_sticky_max = (
         max(black_sticky_stop) if black_sticky_stop else None
@@ -2162,6 +2171,8 @@ def analyze(
             "gates_total": len(gates),
             "post_stop_pending_med": post_stop_pending_med,
             "post_stop_black_sticky_max": post_stop_black_sticky_max,
+            "post_stop_demand_stop_converged": post_stop_demand_stop_converged,
+            "demand_stop_converged": post_stop_demand_stop_converged,
             "post_stop_visible_black_max": post_stop_visible_black_max,
             "post_stop_visible_black_no_ticket_max": post_stop_visible_black_no_ticket_max,
             "post_stop_visible_black_progress_min": post_stop_visible_black_progress_min,

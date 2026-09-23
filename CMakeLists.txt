@@ -2672,7 +2672,9 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     src/Test/GreedyVertexPoolProductionTest.cpp
     src/Test/GreedyVertexPoolDriverTest.cpp
     src/Render/Engine/GreedyVertexPool.cpp
-    src/Render/Engine/GreedyGpuPublication.cpp)
+    src/Render/Engine/GreedyGpuPublication.cpp
+    src/World/Diagnostics/JobStageTrace.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp)
   target_include_directories(greedy_vertex_pool_production_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
   target_link_libraries(greedy_vertex_pool_production_test PRIVATE
     glm::glm GLEW::GLEW OpenGL::GL glog::glog glfw)
@@ -2688,7 +2690,9 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   add_executable(publication_audit
     docs/streaming/audit_2026_09_16/PublicationRepro.cpp
     src/Render/Engine/GreedyVertexPool.cpp
-    src/Render/Engine/GreedyGpuPublication.cpp)
+    src/Render/Engine/GreedyGpuPublication.cpp
+    src/World/Diagnostics/JobStageTrace.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp)
   target_include_directories(publication_audit PRIVATE ${CMAKE_SOURCE_DIR}/src)
   target_link_libraries(publication_audit PRIVATE
     glm::glm GLEW::GLEW OpenGL::GL glog::glog glfw)

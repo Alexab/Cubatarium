@@ -523,7 +523,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
           {
-            // A27/A31: publisher lit ⇒ clear own debt only with real published gen.
+            // A27/A32: publisher lit ⇒ per-face clear only when peer-ready;
+            // also satisfy subscriber neighbors facing this publisher.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
             const MeshPublishRevs cache_pub =
                 world_ref.GetMeshService().GetCache().GetMeshPublishRevs(
@@ -538,8 +539,46 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
             {
-              demand.NoteFaceDebtSatisfied(chunk_coord, /*face_mask=*/0x3Fu,
-                                           pub_gen);
+              uint8_t clear_mask = 0;
+              if (const ChunkRenderDemandRecord *self =
+                      demand.Find(chunk_coord))
+              {
+                for (int f = 0; f < 6; ++f)
+                {
+                  const uint8_t bit = static_cast<uint8_t>(1u << f);
+                  if ((self->face_debt_mask & bit) == 0)
+                  {
+                    continue;
+                  }
+                  if (PeerReadyBeforeSubscribe(pub_gen,
+                                               self->waiting_peer_gen[f]))
+                  {
+                    clear_mask = static_cast<uint8_t>(clear_mask | bit);
+                  }
+                }
+              }
+              else
+              {
+                clear_mask = 0x3Fu;
+              }
+              if (clear_mask != 0)
+              {
+                demand.NoteFaceDebtSatisfied(chunk_coord, clear_mask, pub_gen);
+              }
+              static const glm::ivec3 kFaceNb[4] = {
+                  {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+              for (const glm::ivec3 &d : kFaceNb)
+              {
+                const glm::ivec3 n = chunk_coord + d;
+                const int face_toward =
+                    SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+                if (face_toward < 0 || face_toward > 5)
+                {
+                  continue;
+                }
+                demand.NoteFaceDebtSatisfied(
+                    n, static_cast<uint8_t>(1u << face_toward), pub_gen);
+              }
             }
           }
           if (!world_ref.IsPendingLightBeforeMesh(col))
@@ -592,6 +631,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // FaceDebt census only — Dirty admission stays at mismatch writers
           // (material / PublishedEmpty), not light-accepted Retain.
           world_ref.GetColumnRecords().NoteFaceDebt(col);
+          // A32 S4: dual-write per-chunk demand face debt.
+          if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
+          {
+            UChunkRenderDemandStore::Get().NoteFaceDebt(chunk_coord, 0x3Fu,
+                                                       /*peer_gen=*/0);
+          }
           world_ref.NoteUnfinishedColumnDirty(col);
         });
     mesh_service.SetOnFaceDebtDirtyFn(
@@ -616,6 +661,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
+          // A32 S4: dual-write per-chunk demand face debt mask.
+          if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
+          {
+            UChunkRenderDemandStore::Get().NoteFaceDebt(chunk_coord, mask,
+                                                       /*peer_gen=*/0);
+          }
           world_ref.NoteUnfinishedColumnDirty(col);
           // Ownership SeamDebt: FaceDebt = census only (unfinished).
           // Heal = BecameKnown coalesce after peer drawable∧!SoftDefer —
@@ -664,7 +715,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
           {
-            // A27/A31: first coverage publish — real published gen only.
+            // A27/A32: first coverage — per-face clear + subscriber satisfy.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
             const MeshPublishRevs cache_pub =
                 world_ref.GetMeshService().GetCache().GetMeshPublishRevs(
@@ -679,8 +730,46 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
             {
-              demand.NoteFaceDebtSatisfied(chunk_coord, /*face_mask=*/0x3Fu,
-                                           pub_gen);
+              uint8_t clear_mask = 0;
+              if (const ChunkRenderDemandRecord *self =
+                      demand.Find(chunk_coord))
+              {
+                for (int f = 0; f < 6; ++f)
+                {
+                  const uint8_t bit = static_cast<uint8_t>(1u << f);
+                  if ((self->face_debt_mask & bit) == 0)
+                  {
+                    continue;
+                  }
+                  if (PeerReadyBeforeSubscribe(pub_gen,
+                                               self->waiting_peer_gen[f]))
+                  {
+                    clear_mask = static_cast<uint8_t>(clear_mask | bit);
+                  }
+                }
+              }
+              else
+              {
+                clear_mask = 0x3Fu;
+              }
+              if (clear_mask != 0)
+              {
+                demand.NoteFaceDebtSatisfied(chunk_coord, clear_mask, pub_gen);
+              }
+              static const glm::ivec3 kSatNb[4] = {
+                  {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+              for (const glm::ivec3 &d : kSatNb)
+              {
+                const glm::ivec3 n = chunk_coord + d;
+                const int face_toward =
+                    SeaSeamPeerFaceTowardPublisher(d.x, d.z);
+                if (face_toward < 0 || face_toward > 5)
+                {
+                  continue;
+                }
+                demand.NoteFaceDebtSatisfied(
+                    n, static_cast<uint8_t>(1u << face_toward), pub_gen);
+              }
             }
           }
           const ProceduralSettings &settings = world_ref.GetProceduralSettings();
@@ -736,16 +825,40 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
-            // A31: per-face published gens + real world_epoch for seam gate.
+            // A32 S4: per-face debt + published gens (no broadcast to all 6).
             {
               const uint64_t world_epoch =
                   mesh.GetCache().GetCaptureStore().WorldEpoch();
-              const SeamCoverageManifest seam_debt = MakeProvisionalSeamCoverage(
-                  chunk_coord, world_epoch, peer_pub);
+              SeamCoverageManifest seam_debt{};
+              seam_debt.chunk_xyz = n;
+              seam_debt.world_epoch = world_epoch;
+              seam_debt.seam_artifact_generation = peer_pub;
+              seam_debt.provisional = true;
               uint64_t published_peer_gen[6]{};
+              // Face toward publisher requires peer_pub; other faces read
+              // that face's neighbor publish rev (0 = unused / satisfied).
+              static const glm::ivec3 kFaceDir[6] = {
+                  {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+                  {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
               for (int f = 0; f < 6; ++f)
               {
-                published_peer_gen[f] = peer_pub;
+                const glm::ivec3 peer = n + kFaceDir[f];
+                const MeshPublishRevs peer_revs =
+                    mesh.GetCache().GetMeshPublishRevs(peer);
+                published_peer_gen[f] = peer_revs.geom_rev;
+                if (peer_revs.geom_rev == 0)
+                {
+                  if (const ChunkRenderDemandRecord *prec = demand.Find(peer))
+                  {
+                    published_peer_gen[f] = prec->published_geom_rev;
+                  }
+                }
+              }
+              if (face_toward >= 0 && face_toward <= 5)
+              {
+                seam_debt.peer_coverage_gen[face_toward] = peer_pub;
+                // Publisher is the peer across face_toward — ensure slot.
+                published_peer_gen[face_toward] = peer_pub;
               }
               if (!SeamCoverageFullySatisfied(seam_debt, published_peer_gen) ||
                   !ShouldCommitSeamCoverage(seam_debt, peer_pub))

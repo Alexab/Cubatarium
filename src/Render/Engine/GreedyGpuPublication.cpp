@@ -3,6 +3,8 @@
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/MeshPublishContract.h"
+#include "World/Diagnostics/JobStageTrace.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include <atomic>
 #include <unordered_map>
 #include <unordered_set>
@@ -515,6 +517,25 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         any_fresh = !published_ok.empty();
         // Sysreset v3: material Retain → FaceDebt + capped Dirty (real mismatch).
         mesh_cache->NoteFaceDebt(coord, /*schedule_dirty=*/true);
+        if (kChunkDemandShadow())
+        {
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+          const MeshPublishRevs pub =
+              mesh_cache->GetMeshPublishRevs(coord);
+          demand.NoteInstallResult(coord,
+                                   InstallResult::RetainedAwaitingSuccessor,
+                                   pub.geom_rev, pub.light_rev, attempt_id);
+          JobStageSpan span{};
+          span.cx = coord.x;
+          span.cy = coord.y;
+          span.cz = coord.z;
+          span.stage = JobStage::Published;
+          span.outcome =
+              static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
+          span.attempt_id = attempt_id;
+          UJobStageTrace::Note(span);
+        }
         continue;
       }
     }
@@ -554,6 +575,25 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     for (const size_t n : fresh)
       ReleasePooledBatch(staged[n], cache.VertexPool);
     sync_handles();
+    if (kChunkDemandShadow() && mesh_cache != nullptr)
+    {
+      UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      for (const auto &coord : upload_order)
+      {
+        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+        const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+        demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
+                                 pub.geom_rev, pub.light_rev, attempt_id);
+        JobStageSpan span{};
+        span.cx = coord.x;
+        span.cy = coord.y;
+        span.cz = coord.z;
+        span.stage = JobStage::Published;
+        span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
+        span.attempt_id = attempt_id;
+        UJobStageTrace::Note(span);
+      }
+    }
     return false;
   }
 
@@ -715,6 +755,26 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         ReleasePooledBatch(staged[n], cache.VertexPool);
       sync_handles();
       NotePubVerChangedWithoutFresh();
+      if (kChunkDemandShadow() && mesh_cache != nullptr)
+      {
+        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        for (const auto &coord : published_ok)
+        {
+          const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+          const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+          demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
+                                   pub.geom_rev, pub.light_rev, attempt_id);
+          JobStageSpan span{};
+          span.cx = coord.x;
+          span.cy = coord.y;
+          span.cz = coord.z;
+          span.stage = JobStage::Published;
+          span.outcome =
+              static_cast<uint8_t>(InstallResult::RejectedRetryable);
+          span.attempt_id = attempt_id;
+          UJobStageTrace::Note(span);
+        }
+      }
       return false;
     }
   }
@@ -779,6 +839,27 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
   }
   cache.VertexPool.SignalUploadComplete();
   LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
+  if (kChunkDemandShadow() && mesh_cache != nullptr)
+  {
+    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    for (const auto &coord : published_ok)
+    {
+      const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+      const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+      demand.NoteInstallResult(coord, InstallResult::Published, pub.geom_rev,
+                               pub.light_rev, attempt_id);
+      JobStageSpan span{};
+      span.cx = coord.x;
+      span.cy = coord.y;
+      span.cz = coord.z;
+      span.stage = JobStage::Published;
+      span.outcome = static_cast<uint8_t>(InstallResult::Published);
+      span.attempt_id = attempt_id;
+      span.published_rev = pub.geom_rev;
+      span.published_light_rev = pub.light_rev;
+      UJobStageTrace::Note(span);
+    }
+  }
   return true;
 
   }

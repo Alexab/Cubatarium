@@ -185,4 +185,18 @@ private:
   uint64_t RetainSuccessorNoteN_{0};
 };
 
+/// Active attempt id from demand record when has_active_attempt; else 0.
+inline uint64_t DemandActiveAttemptId(const UChunkRenderDemandStore &store,
+                                      glm::ivec3 coord)
+{
+  if (const ChunkRenderDemandRecord *rec = store.Find(coord))
+  {
+    if (rec->has_active_attempt)
+    {
+      return rec->active_attempt_id;
+    }
+  }
+  return 0;
+}
+
 } // namespace cutum

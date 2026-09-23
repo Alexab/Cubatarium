@@ -162,9 +162,8 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       }
     }
   }
-  // A25 R5: under main-thread budget pressure, do not start height×16×16 GetBlock
-  // (audit spike class fluid_map_cpu ~100–197ms). Prefer miss over hitch.
-  // A31: enqueue + return pending/last-good — never sync-drain-and-discard.
+  // A25 R5 / A32 S5: under budget pressure defer slice build to worker, but
+  // capture flags snapshot (same layout as sync scan) so the job is not empty.
   {
     const double est_ms =
         static_cast<double>(height) * static_cast<double>(n * n) * 0.0004;
@@ -175,6 +174,31 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
                        ShouldRejectFluidMapHitch(est_ms, 8.0);
     if (defer)
     {
+      std::vector<uint8_t> flags(static_cast<size_t>(height * n * n), 0);
+      uint64_t scan_fluid_id_hash = 14695981039346656037ull;
+      BlockId scan_representative = BLOCK_AIR;
+      for (int ly = 0; ly < height; ++ly)
+      {
+        const int wy = y_min + ly;
+        for (int lz = 0; lz < n; ++lz)
+        {
+          for (int lx = 0; lx < n; ++lx)
+          {
+            const BlockId id =
+                world.GetBlock(glm::ivec3(origin.x + lx, wy, origin.z + lz));
+            if (IsFluidSurfaceBlock(id, registry))
+            {
+              flags[static_cast<size_t>((ly * n + lz) * n + lx)] = 1;
+              scan_fluid_id_hash ^= static_cast<uint64_t>(id);
+              scan_fluid_id_hash *= 1099511628211ull;
+              if (scan_representative == BLOCK_AIR)
+              {
+                scan_representative = id;
+              }
+            }
+          }
+        }
+      }
       FluidSummaryWorkerJob job{};
       job.ground_chunk = groundChunkCoord;
       FluidColumnSummaryRequest req{};
@@ -183,7 +207,9 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       req.catalog_rev = catalog_rev;
       req.y_min = y_min;
       req.height = height;
-      (void)TryEnqueueFluidSummaryWorker(job, req, true);
+      (void)TryEnqueueFluidSummaryWorker(job, req, true, flags.data(),
+                                         flags.size(), scan_fluid_id_hash,
+                                         scan_representative);
       // Prefer last-good complete/incomplete slice over sync 16×16 fallthrough.
       const auto cit = cache.find(groundChunkCoord);
       if (cit != cache.end() && cit->second.has_slice &&
@@ -453,6 +479,8 @@ int DrainFluidSummaryCompletionsIntoPackCache(int max_n)
         glm::ivec3 key = sum.ground_chunk;
         key.y = 0;
         FluidPackCacheEntry &entry = (*c->cache)[key];
+        // A32 S5: install via TryInstallFluidColumnSummary semantics already
+        // gated by DrainFluidSummaryCompletions (Installed vs StaleDiscarded).
         entry.content_rev = sum.content_rev;
         entry.catalog_rev = sum.catalog_rev;
         entry.y_min = sum.y_min;

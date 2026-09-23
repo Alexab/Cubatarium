@@ -20,6 +20,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "Render/Mesh/MeshPublishContract.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
@@ -3093,6 +3094,22 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
   {
     return;
   }
+  // A28 T3 / A32 S3: provenance gate BEFORE mutating CrossBatches.
+  if (!GreedyCache.empty())
+  {
+    const auto &sample = GreedyCache.begin()->second;
+    const PublicationValidation xv = ValidateCrossOrShellPublication(
+        sample.PublishRevs.geom_rev, sample.PublishRevs.light_rev,
+        !sample.GpuHasDarkFace, sample.PublishRevs.geom_rev,
+        sample.MeshedLightRevision != 0 ? sample.MeshedLightRevision
+                                        : sample.PublishRevs.light_rev);
+    if (!PublicationCandidateAccepted(xv))
+    {
+      // Reject: keep prior CrossBatches; mark dirty for retry.
+      CrossBatchesDirty = true;
+      return;
+    }
+  }
   CrossBatches.clear();
   CrossBatches.reserve(merged.size());
   for (auto &pair : merged)
@@ -3103,17 +3120,6 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
     CrossBatches.push_back(std::move(batch));
   }
   CrossBatchesDirty = false;
-  // A28 T3: provenance gate for cross/shell residual (sample first drawable).
-  if (!GreedyCache.empty())
-  {
-    const auto &sample = GreedyCache.begin()->second;
-    const PublicationValidation xv = ValidateCrossOrShellPublication(
-        sample.PublishRevs.geom_rev, sample.PublishRevs.light_rev,
-        !sample.GpuHasDarkFace, sample.PublishRevs.geom_rev,
-        sample.MeshedLightRevision != 0 ? sample.MeshedLightRevision
-                                        : sample.PublishRevs.light_rev);
-    (void)xv;
-  }
 }
 void UChunkMeshCache::RebuildGreedyVisibleForCull(
     const Frustum *frustum, const glm::vec3 *camera_pos,
@@ -3913,8 +3919,22 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           succ_light = ch->GetLightFieldRevision();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         demand.NoteInstallResult(coord,
-                                 InstallResult::RetainedAwaitingSuccessor);
+                                 InstallResult::RetainedAwaitingSuccessor,
+                                 /*published_geom_rev=*/0,
+                                 /*published_light_rev=*/0, attempt_id);
+        {
+          JobStageSpan span{};
+          span.cx = coord.x;
+          span.cy = coord.y;
+          span.cz = coord.z;
+          span.stage = JobStage::Published;
+          span.outcome =
+              static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
+          span.attempt_id = attempt_id;
+          UJobStageTrace::Note(span);
+        }
         (void)demand.NoteDemand(coord, succ_geom, succ_light);
       }
       return false;
@@ -3955,7 +3975,82 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     {
       MarkDirtyPriority(coord);
     }
+    if (kChunkDemandShadow())
+    {
+      UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+      const ChunkGreedyMesh *prior = nullptr;
+      const auto pit = GreedyCache.find(coord);
+      if (pit != GreedyCache.end())
+      {
+        prior = &pit->second;
+      }
+      demand.NoteInstallResult(
+          coord, InstallResult::RejectedRetryable,
+          prior ? prior->PublishRevs.geom_rev : 0ull,
+          prior ? prior->PublishRevs.light_rev : 0ull, attempt_id);
+      JobStageSpan span{};
+      span.cx = coord.x;
+      span.cy = coord.y;
+      span.cz = coord.z;
+      span.stage = JobStage::Published;
+      span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
+      span.attempt_id = attempt_id;
+      UJobStageTrace::Note(span);
+    }
     return false;
+  }
+
+  // A32 S3: validate BEFORE bind/resident mutate; reject keeps prior.
+  {
+    ArtifactManifest got{};
+    ArtifactManifest expected{};
+    got.source_geom_rev = source_revision;
+    uint64_t prior_light = 0;
+    uint64_t prior_geom = 0;
+    uint64_t prior_pub_light = 0;
+    const auto pit0 = GreedyCache.find(coord);
+    if (pit0 != GreedyCache.end())
+    {
+      prior_light = pit0->second.MeshedLightRevision;
+      prior_geom = pit0->second.PublishRevs.geom_rev;
+      prior_pub_light = pit0->second.PublishRevs.light_rev;
+    }
+    got.source_light_rev =
+        has_source_light_revision ? source_light_revision : prior_light;
+    got.light_valid = !gpu_result.hasFullyDarkFace;
+    expected = got;
+    expected.light_valid = true;
+    PublicationEpochs draw{};
+    draw.artifact_generation = source_revision;
+    PublicationEpochs live{};
+    live.artifact_generation = prior_geom;
+    const PublicationValidation pub_v =
+        ValidatePublicationCandidate(got, expected, draw, live);
+    if (!PublicationCandidateAccepted(pub_v))
+    {
+      if (GpuPipeline && gpu_result.slotIndex >= 0)
+      {
+        GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+      }
+      if (kChunkDemandShadow())
+      {
+        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+        demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
+                                 prior_geom, prior_pub_light, attempt_id);
+        JobStageSpan span{};
+        span.cx = coord.x;
+        span.cy = coord.y;
+        span.cz = coord.z;
+        span.stage = JobStage::Published;
+        span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
+        span.attempt_id = attempt_id;
+        UJobStageTrace::Note(span);
+      }
+      MarkDirtyPriority(coord);
+      return false;
+    }
   }
 
   ChunkGreedyMesh &chunkMesh = GreedyCache[coord];
@@ -3997,6 +4092,29 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   chunkMesh.batches.clear();
   chunkMesh.crossCenters = std::move(cross_centers);
   GreedyVertexCountByChunk[coord] = 0;
+  {
+    chunkMesh.PublishRevs.geom_rev = source_revision;
+    chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
+  }
+  if (kChunkDemandShadow())
+  {
+    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+    demand.NoteInstallResult(coord, InstallResult::Published,
+                             chunkMesh.PublishRevs.geom_rev,
+                             chunkMesh.PublishRevs.light_rev, attempt_id);
+    JobStageSpan span{};
+    span.cx = coord.x;
+    span.cy = coord.y;
+    span.cz = coord.z;
+    span.stage = JobStage::Published;
+    span.outcome = static_cast<uint8_t>(InstallResult::Published);
+    span.attempt_id = attempt_id;
+    span.published_rev = chunkMesh.PublishRevs.geom_rev;
+    span.published_light_rev = chunkMesh.PublishRevs.light_rev;
+    span.source_rev = source_revision;
+    UJobStageTrace::Note(span);
+  }
   NoteGeometryDirty(coord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
@@ -5028,8 +5146,23 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           succ_light = ch->GetLightFieldRevision();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        const uint64_t attempt_id =
+            DemandActiveAttemptId(demand, result.coord);
         demand.NoteInstallResult(result.coord,
-                                 InstallResult::RetainedAwaitingSuccessor);
+                                 InstallResult::RetainedAwaitingSuccessor,
+                                 /*published_geom_rev=*/0,
+                                 /*published_light_rev=*/0, attempt_id);
+        {
+          JobStageSpan span{};
+          span.cx = result.coord.x;
+          span.cy = result.coord.y;
+          span.cz = result.coord.z;
+          span.stage = JobStage::Published;
+          span.outcome =
+              static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
+          span.attempt_id = attempt_id;
+          UJobStageTrace::Note(span);
+        }
         (void)demand.NoteDemand(result.coord, succ_geom, succ_light);
       }
       return;
@@ -5319,9 +5452,21 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       }
       if (kChunkDemandShadow())
       {
-        UChunkRenderDemandStore::Get().NoteInstallResult(
+        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        const uint64_t attempt_id =
+            DemandActiveAttemptId(demand, result.coord);
+        demand.NoteInstallResult(
             result.coord, InstallResult::RejectedRetryable,
-            chunkMesh.PublishRevs.geom_rev, chunkMesh.PublishRevs.light_rev);
+            chunkMesh.PublishRevs.geom_rev, chunkMesh.PublishRevs.light_rev,
+            attempt_id);
+        JobStageSpan span{};
+        span.cx = result.coord.x;
+        span.cy = result.coord.y;
+        span.cz = result.coord.z;
+        span.stage = JobStage::Published;
+        span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
+        span.attempt_id = attempt_id;
+        UJobStageTrace::Note(span);
       }
       // Keep prior batches; ask for remesh/retry without publishing candidate.
       MarkDirtyPriority(result.coord);
@@ -5361,9 +5506,22 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // A26 N1 / A31: sole Published lifecycle after validation commit.
   if (kChunkDemandShadow())
   {
-    UChunkRenderDemandStore::Get().NoteInstallResult(
-        result.coord, InstallResult::Published,
-        chunkMesh.PublishRevs.geom_rev, chunkMesh.PublishRevs.light_rev);
+    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    const uint64_t attempt_id = DemandActiveAttemptId(demand, result.coord);
+    demand.NoteInstallResult(result.coord, InstallResult::Published,
+                             chunkMesh.PublishRevs.geom_rev,
+                             chunkMesh.PublishRevs.light_rev, attempt_id);
+    JobStageSpan span{};
+    span.cx = result.coord.x;
+    span.cy = result.coord.y;
+    span.cz = result.coord.z;
+    span.stage = JobStage::Published;
+    span.outcome = static_cast<uint8_t>(InstallResult::Published);
+    span.attempt_id = attempt_id;
+    span.published_rev = chunkMesh.PublishRevs.geom_rev;
+    span.published_light_rev = chunkMesh.PublishRevs.light_rev;
+    span.source_rev = result.sourceRevision;
+    UJobStageTrace::Note(span);
   }
   // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
   const bool intentional_empty =
@@ -7630,6 +7788,46 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       return;
       }
     }
+    // A32 S3: ValidatePublicationCandidate BEFORE assigning Immediate batches.
+    {
+      ArtifactManifest got{};
+      ArtifactManifest expected{};
+      got.source_geom_rev = sync_rev;
+      got.source_light_rev = chunk->GetLightFieldRevision();
+      got.light_valid = !new_dark;
+      expected = got;
+      expected.light_valid = true;
+      PublicationEpochs draw{};
+      draw.artifact_generation = sync_rev;
+      PublicationEpochs live{};
+      live.artifact_generation = chunkMesh.PublishRevs.geom_rev;
+      const PublicationValidation pub_v =
+          ValidatePublicationCandidate(got, expected, draw, live);
+      if (!PublicationCandidateAccepted(pub_v))
+      {
+        if (kChunkDemandShadow())
+        {
+          UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          const uint64_t attempt_id =
+              DemandActiveAttemptId(demand, chunkCoord);
+          demand.NoteInstallResult(
+              chunkCoord, InstallResult::RejectedRetryable,
+              chunkMesh.PublishRevs.geom_rev, chunkMesh.PublishRevs.light_rev,
+              attempt_id);
+          JobStageSpan span{};
+          span.cx = chunkCoord.x;
+          span.cy = chunkCoord.y;
+          span.cz = chunkCoord.z;
+          span.stage = JobStage::Published;
+          span.outcome =
+              static_cast<uint8_t>(InstallResult::RejectedRetryable);
+          span.attempt_id = attempt_id;
+          UJobStageTrace::Note(span);
+        }
+        MarkDirtyPriority(chunkCoord);
+        return;
+      }
+    }
     chunkMesh.batches = std::move(new_batches);
     {
       std::vector<uint16_t> ids;
@@ -7644,6 +7842,24 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
           MeshPublishMaterialStamp(ids.data(), ids.size());
       chunkMesh.BoundaryOverlay = sync_snap.boundaryOverlay;
       chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
+    }
+    if (kChunkDemandShadow())
+    {
+      UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      const uint64_t attempt_id = DemandActiveAttemptId(demand, chunkCoord);
+      demand.NoteInstallResult(chunkCoord, InstallResult::Published,
+                               chunkMesh.PublishRevs.geom_rev,
+                               chunkMesh.PublishRevs.light_rev, attempt_id);
+      JobStageSpan span{};
+      span.cx = chunkCoord.x;
+      span.cy = chunkCoord.y;
+      span.cz = chunkCoord.z;
+      span.stage = JobStage::Published;
+      span.outcome = static_cast<uint8_t>(InstallResult::Published);
+      span.attempt_id = attempt_id;
+      span.published_rev = chunkMesh.PublishRevs.geom_rev;
+      span.published_light_rev = chunkMesh.PublishRevs.light_rev;
+      UJobStageTrace::Note(span);
     }
     const bool intentional_empty =
         new_vertex_count == 0 && !defer_until_lit &&

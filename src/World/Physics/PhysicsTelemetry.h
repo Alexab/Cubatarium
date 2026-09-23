@@ -548,6 +548,8 @@ struct PhysicsTelemetry
   int ColumnRecordShadowMismatchN{0};
   /// Q6 last focus-ring sync: columns with legacy≠record stage (gauge 0..ring).
   int ColumnRecordShadowStageDisagreeN{0};
+  /// A32 S2: UChunkRenderDemandStore::StopConverged (1=true, 0=false).
+  int DemandStopConverged{0};
   int PendingLightCount{0};
   int FocusChunkX{0};
   int FocusChunkZ{0};

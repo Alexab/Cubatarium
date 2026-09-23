@@ -3,7 +3,11 @@
 
 #include "World/Chunks/Chunk.h"
 
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 namespace cutum
@@ -35,6 +39,13 @@ struct FluidColumnSummaryRequest
   uint64_t catalog_rev{0};
   int y_min{0};
   int height{0};
+};
+
+enum class FluidSummaryInstallOutcome : uint8_t
+{
+  Installed = 0,
+  StaleDiscarded,
+  Cancelled
 };
 
 inline bool FluidColumnSummaryVersionsMatch(const FluidColumnSummary &got,
@@ -157,10 +168,104 @@ struct FluidSummaryWorkerJob
   bool enqueued{false};
 };
 
+struct FluidSummaryCompletion
+{
+  FluidColumnSummary summary{};
+  FluidColumnSummaryRequest req{};
+};
+
+struct FluidSummaryQueues
+{
+  std::mutex mu;
+  std::condition_variable cv;
+  std::vector<FluidSummaryWorkerJob> pending;
+  std::vector<FluidSummaryCompletion> completed;
+  std::atomic<bool> stop{false};
+  std::atomic<bool> started{false};
+  std::thread worker;
+  std::atomic<uint64_t> installed_n{0};
+  std::atomic<uint64_t> stale_discarded_n{0};
+};
+
+inline FluidSummaryQueues &FluidSummaryQueuesState()
+{
+  static FluidSummaryQueues q;
+  return q;
+}
+
 inline std::vector<FluidSummaryWorkerJob> &FluidSummaryWorkerQueue()
 {
-  static std::vector<FluidSummaryWorkerJob> q;
-  return q;
+  return FluidSummaryQueuesState().pending;
+}
+
+inline uint64_t FluidSummaryInstalledN()
+{
+  return FluidSummaryQueuesState().installed_n.load(std::memory_order_relaxed);
+}
+
+inline uint64_t FluidSummaryStaleDiscardedN()
+{
+  return FluidSummaryQueuesState().stale_discarded_n.load(
+      std::memory_order_relaxed);
+}
+
+inline void FluidSummaryWorkerLoop()
+{
+  FluidSummaryQueues &qs = FluidSummaryQueuesState();
+  for (;;)
+  {
+    FluidSummaryWorkerJob job{};
+    {
+      std::unique_lock<std::mutex> lock(qs.mu);
+      qs.cv.wait(lock, [&] {
+        return qs.stop.load(std::memory_order_relaxed) || !qs.pending.empty();
+      });
+      if (qs.stop.load(std::memory_order_relaxed) && qs.pending.empty())
+      {
+        return;
+      }
+      job = std::move(qs.pending.front());
+      qs.pending.erase(qs.pending.begin());
+    }
+    FluidSummaryCompletion done{};
+    done.req = job.req;
+    if (!job.flags.empty())
+    {
+      (void)TryBuildFluidColumnSummarySync(
+          job.flags.data(), job.req, job.fluid_id_hash,
+          job.representative_fluid_id, done.summary);
+      done.summary.ground_chunk = job.ground_chunk;
+    }
+    else
+    {
+      done.summary = FluidColumnSummary{};
+      done.summary.world_epoch = job.req.world_epoch;
+      done.summary.content_rev = job.req.content_rev;
+      done.summary.catalog_rev = job.req.catalog_rev;
+      done.summary.y_min = job.req.y_min;
+      done.summary.height = job.req.height;
+      done.summary.ground_chunk = job.ground_chunk;
+      done.summary.ready = false;
+      done.summary.tops.assign(static_cast<size_t>(CHUNK_SIZE * CHUNK_SIZE),
+                               static_cast<int16_t>(-1));
+    }
+    {
+      std::lock_guard<std::mutex> lock(qs.mu);
+      qs.completed.push_back(std::move(done));
+    }
+  }
+}
+
+inline void EnsureFluidSummaryWorkerStarted()
+{
+  FluidSummaryQueues &qs = FluidSummaryQueuesState();
+  bool expected = false;
+  if (!qs.started.compare_exchange_strong(expected, true))
+  {
+    return;
+  }
+  qs.worker = std::thread(FluidSummaryWorkerLoop);
+  qs.worker.detach();
 }
 
 inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
@@ -183,28 +288,47 @@ inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
   {
     job.flags.assign(flags, flags + flag_bytes);
   }
-  auto &q = FluidSummaryWorkerQueue();
-  // A31: queue full is an explicit reject — never silent drop as success.
-  if (q.size() >= 8)
+  FluidSummaryQueues &qs = FluidSummaryQueuesState();
   {
-    job.enqueued = false;
-    return false;
+    std::lock_guard<std::mutex> lock(qs.mu);
+    // A31: queue full is an explicit reject — never silent drop as success.
+    if (qs.pending.size() >= 8)
+    {
+      job.enqueued = false;
+      return false;
+    }
+    job.enqueued = true;
+    qs.pending.push_back(job);
   }
-  job.enqueued = true;
-  q.push_back(job);
+  EnsureFluidSummaryWorkerStarted();
+  qs.cv.notify_one();
   return true;
 }
 
 /// A29 U3: drain one deferred summary — fill from flags when present.
+/// Prefers completion queue; falls back to inline pending process (tests).
 inline bool DrainOneFluidSummaryWorker(FluidColumnSummary &out)
 {
-  auto &q = FluidSummaryWorkerQueue();
-  if (q.empty())
+  FluidSummaryQueues &qs = FluidSummaryQueuesState();
   {
-    return false;
+    std::lock_guard<std::mutex> lock(qs.mu);
+    if (!qs.completed.empty())
+    {
+      out = std::move(qs.completed.front().summary);
+      qs.completed.erase(qs.completed.begin());
+      return true;
+    }
   }
-  FluidSummaryWorkerJob job = std::move(q.front());
-  q.erase(q.begin());
+  FluidSummaryWorkerJob job{};
+  {
+    std::lock_guard<std::mutex> lock(qs.mu);
+    if (qs.pending.empty())
+    {
+      return false;
+    }
+    job = std::move(qs.pending.front());
+    qs.pending.erase(qs.pending.begin());
+  }
   if (!job.flags.empty())
   {
     const bool ok = TryBuildFluidColumnSummarySync(
@@ -229,8 +353,8 @@ inline bool DrainOneFluidSummaryWorker(FluidColumnSummary &out)
   return true;
 }
 
-/// A31: drain ready completions (skips incomplete flagless stubs by re-queueing
-/// them at the end once). Returns number of ready results consumed.
+/// A31/A32: drain ready completions; install or StaleDiscarded — never silent
+/// drop of a ready result. Returns number of Installed outcomes.
 inline int DrainFluidSummaryCompletions(
     void (*on_ready)(const FluidColumnSummary &, void *), void *ctx,
     int max_n = 4)
@@ -239,41 +363,63 @@ inline int DrainFluidSummaryCompletions(
   {
     return 0;
   }
+  FluidSummaryQueues &qs = FluidSummaryQueuesState();
   int installed = 0;
-  int skipped = 0;
-  const int guard = static_cast<int>(FluidSummaryWorkerQueue().size()) + max_n;
-  for (int i = 0; i < guard && installed < max_n; ++i)
+  for (int i = 0; i < max_n; ++i)
   {
-    FluidColumnSummary drained{};
-    if (!DrainOneFluidSummaryWorker(drained))
+    FluidSummaryCompletion done{};
+    bool have = false;
+    {
+      std::lock_guard<std::mutex> lock(qs.mu);
+      if (!qs.completed.empty())
+      {
+        done = std::move(qs.completed.front());
+        qs.completed.erase(qs.completed.begin());
+        have = true;
+      }
+      else if (!qs.pending.empty())
+      {
+        FluidSummaryWorkerJob job = std::move(qs.pending.front());
+        qs.pending.erase(qs.pending.begin());
+        if (job.flags.empty())
+        {
+          // Incomplete: re-queue at end once — do not discard demand.
+          if (qs.pending.size() < 8)
+          {
+            job.enqueued = true;
+            qs.pending.push_back(std::move(job));
+          }
+          continue;
+        }
+        done.req = job.req;
+        (void)TryBuildFluidColumnSummarySync(
+            job.flags.data(), job.req, job.fluid_id_hash,
+            job.representative_fluid_id, done.summary);
+        done.summary.ground_chunk = job.ground_chunk;
+        have = true;
+      }
+    }
+    if (!have)
     {
       break;
     }
-    if (!drained.ready)
+    if (!done.summary.ready)
     {
-      // Re-queue incomplete so GetFluidSurfaceSlice does not discard demand.
-      FluidSummaryWorkerJob again{};
-      again.req.world_epoch = drained.world_epoch;
-      again.req.content_rev = drained.content_rev;
-      again.req.catalog_rev = drained.catalog_rev;
-      again.req.y_min = drained.y_min;
-      again.req.height = drained.height;
-      again.ground_chunk = drained.ground_chunk;
-      again.enqueued = true;
-      auto &q = FluidSummaryWorkerQueue();
-      if (q.size() < 8)
-      {
-        q.push_back(again);
-      }
-      ++skipped;
-      if (skipped > 8)
-      {
-        break;
-      }
       continue;
     }
-    on_ready(drained, ctx);
-    ++installed;
+    FluidColumnSummary live{};
+    if (TryInstallFluidColumnSummary(done.summary, done.req, live))
+    {
+      on_ready(live, ctx);
+      qs.installed_n.fetch_add(1, std::memory_order_relaxed);
+      ++installed;
+    }
+    else
+    {
+      // Ready but versions stale — explicit StaleDiscarded (not silent drop).
+      qs.stale_discarded_n.fetch_add(1, std::memory_order_relaxed);
+      (void)FluidSummaryInstallOutcome::StaleDiscarded;
+    }
   }
   return installed;
 }
