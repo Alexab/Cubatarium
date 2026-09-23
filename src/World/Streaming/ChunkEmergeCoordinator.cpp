@@ -521,15 +521,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             world_ref.GetColumnRecords().ClearFaceDebt(col);
           }
-          if (kChunkDemandShadow || ChunkDemandCutoverEnabled())
+          if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
           {
-            // A27 S4: publisher lit ⇒ peer ready for subscribe; clear own debt.
+            // A27/A31: publisher lit ⇒ clear own debt only with real published gen.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord);
-            const uint64_t pub_gen =
-                pub ? (pub->published_geom_rev != 0 ? pub->published_geom_rev
-                                                     : pub->desired_geom_rev)
-                    : 1ull;
+            const MeshPublishRevs cache_pub =
+                world_ref.GetMeshService().GetCache().GetMeshPublishRevs(
+                    chunk_coord);
+            uint64_t pub_gen = cache_pub.geom_rev;
+            if (pub_gen == 0)
+            {
+              if (const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord))
+              {
+                pub_gen = pub->published_geom_rev;
+              }
+            }
             if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
             {
               demand.NoteFaceDebtSatisfied(chunk_coord, /*face_mask=*/0x3Fu,
@@ -656,15 +662,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             world_ref.GetColumnRecords().ClearFaceDebt(
                 glm::ivec2(chunk_coord.x, chunk_coord.z));
           }
-          if (kChunkDemandShadow || ChunkDemandCutoverEnabled())
+          if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
           {
-            // A27 S4: first coverage publish — peer ready before FaceDebt clear.
+            // A27/A31: first coverage publish — real published gen only.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord);
-            const uint64_t pub_gen =
-                pub ? (pub->published_geom_rev != 0 ? pub->published_geom_rev
-                                                     : pub->desired_geom_rev)
-                    : 1ull;
+            const MeshPublishRevs cache_pub =
+                world_ref.GetMeshService().GetCache().GetMeshPublishRevs(
+                    chunk_coord);
+            uint64_t pub_gen = cache_pub.geom_rev;
+            if (pub_gen == 0)
+            {
+              if (const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord))
+              {
+                pub_gen = pub->published_geom_rev;
+              }
+            }
             if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
             {
               demand.NoteFaceDebtSatisfied(chunk_coord, /*face_mask=*/0x3Fu,
@@ -706,22 +718,37 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const bool face_debt =
                 world_ref.GetColumnRecords().HasFaceDebtFace(
                     glm::ivec2(n.x, n.z), face_toward);
-            // A27 S4: peer (publisher) must be ready before neighbor subscribe.
-            const ChunkRenderDemandRecord *pub_rec =
-                UChunkRenderDemandStore::Get().Find(chunk_coord);
-            const uint64_t peer_pub =
-                pub_rec && pub_rec->published_geom_rev != 0
-                    ? pub_rec->published_geom_rev
-                    : 1ull;
+            // A27/A31: peer (publisher) must be published before neighbor subscribe.
+            // Missing / gen==0 ⇒ not ready (never fabricate peer_pub=1).
+            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            const MeshPublishRevs cache_pub =
+                mesh.GetCache().GetMeshPublishRevs(chunk_coord);
+            uint64_t peer_pub = cache_pub.geom_rev;
+            if (peer_pub == 0)
+            {
+              if (const ChunkRenderDemandRecord *pub_rec =
+                      demand.Find(chunk_coord))
+              {
+                peer_pub = pub_rec->published_geom_rev;
+              }
+            }
             if (!PeerReadyBeforeSubscribe(peer_pub, /*required=*/1))
             {
               continue;
             }
-            // A28/A30: temporary seam coverage commit only when gen satisfied.
+            // A31: per-face published gens + real world_epoch for seam gate.
             {
+              const uint64_t world_epoch =
+                  mesh.GetCache().GetCaptureStore().WorldEpoch();
               const SeamCoverageManifest seam_debt = MakeProvisionalSeamCoverage(
-                  chunk_coord, /*world_epoch=*/0, peer_pub);
-              if (!ShouldCommitSeamCoverage(seam_debt, peer_pub))
+                  chunk_coord, world_epoch, peer_pub);
+              uint64_t published_peer_gen[6]{};
+              for (int f = 0; f < 6; ++f)
+              {
+                published_peer_gen[f] = peer_pub;
+              }
+              if (!SeamCoverageFullySatisfied(seam_debt, published_peer_gen) ||
+                  !ShouldCommitSeamCoverage(seam_debt, peer_pub))
               {
                 continue;
               }
@@ -743,6 +770,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             world_ref.GetColumnRecords().NoteFaceDebt(
                 glm::ivec2(n.x, n.z), face_toward);
+            if (face_toward >= 0 && face_toward <= 5)
+            {
+              demand.NoteFaceDebt(
+                  n, static_cast<uint8_t>(1u << face_toward), peer_pub);
+            }
             mesh.MarkDirtyPriority(n);
             ++face_debt_remesh_n;
           }

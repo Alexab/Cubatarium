@@ -124,7 +124,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       const int horiz = std::max(std::abs(coord.x - focus_g.x),
                                  std::abs(coord.z - focus_g.z));
       // A21 P2.1/P2.2: shadow demand — skip MarkDirty when published meets desire.
-      if (kChunkDemandShadow)
+      if (kChunkDemandShadow())
       {
         uint64_t desired_geom = 0;
         uint64_t desired_light = 0;
@@ -213,38 +213,49 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         {
           span.desired_rev = ch->GetLightFieldRevision();
           span.source_rev = ch->GetContentRevision();
+          span.desired_light_rev = ch->GetLightFieldRevision();
         }
         {
           const MeshPublishRevs pub = mesh->GetCache().GetMeshPublishRevs(coord);
           if (pub.light_rev != 0)
           {
             span.published_rev = pub.light_rev;
+            span.published_light_rev = pub.light_rev;
           }
           else
           {
             UChunkMeshCache::LitApplyMeshProbe probe{};
             mesh->FillLitApplyMeshProbe(coord, probe);
             span.published_rev = probe.meshed_light_rev;
+            span.published_light_rev = probe.meshed_light_rev;
           }
         }
-        // A25 R1: stamp demand-store desired/published when known (job_trace honesty).
-        // PreferKick counter is NOT the heal DoD — see A25_REMEDIATION_RETURN.md.
+        // A25 R1 / A31: stamp demand-store desired/published + active attempt.
         {
           UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          uint64_t attempt_id = 0;
           if (const ChunkRenderDemandRecord *drec = demand.Find(coord))
           {
+            attempt_id = drec->active_attempt_id;
+            span.world_epoch = drec->world_epoch;
+            span.desired_coverage_gen = drec->desired_coverage_gen;
+            span.published_coverage_gen = drec->published_coverage_gen;
+            span.face_mask = drec->face_debt_mask;
             if (drec->desired_light_rev != 0)
             {
               span.desired_rev = drec->desired_light_rev;
+              span.desired_light_rev = drec->desired_light_rev;
             }
             if (drec->published_light_rev != 0)
             {
               span.published_rev = drec->published_light_rev;
+              span.published_light_rev = drec->published_light_rev;
             }
           }
+          span.attempt_id = attempt_id;
           UJobStageTrace::Note(span);
-          demand.NoteStageProgress(coord, JobStage::Admitted,
-                                   /*attempt_id=*/0, span.stage_ms);
+          demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                   span.stage_ms);
         }
       }
     };
@@ -753,7 +764,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         ElapsedMs(orphan_t0, Clock::now());
   }
   PhysicsTelemetryData.MarkRelitTotalMs += ElapsedMs(total_t0, Clock::now());
-  if (kChunkDemandShadow)
+  if (kChunkDemandShadow())
   {
     const auto recon =
         UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/32);

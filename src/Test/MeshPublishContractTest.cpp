@@ -116,6 +116,36 @@ int main()
              PublicationValidation::TableEpochStale,
          "stale resident table rejected");
 
+  // A31-06: capture≠live between capture and commit must reject; draw==live
+  // epochs must not mask SourceMismatch.
+  {
+    ArtifactManifest captured{};
+    captured.world_epoch = 1;
+    captured.chunk_xyz = {2, 0, 3};
+    captured.incarnation = 7;
+    captured.content_rev = 10;
+    captured.source_geom_rev = 10;
+    captured.source_light_rev = 5;
+    captured.light_valid = true;
+    captured.material_catalog_rev = 1;
+    captured.neighbor_halo_rev = 42;
+    ArtifactManifest live_m = captured;
+    live_m.content_rev = 11;
+    live_m.source_geom_rev = 11;
+    PublicationEpochs draw_ep{};
+    draw_ep.resident_table_revision = 3;
+    draw_ep.transparent_order_key = 1;
+    PublicationEpochs live_ep = draw_ep;
+    Expect(ValidatePublicationCandidate(captured, live_m, draw_ep, live_ep) ==
+               PublicationValidation::SourceMismatch,
+           "A31-06 fault: capture≠live source must reject");
+    live_ep.resident_table_revision = 4;
+    ArtifactManifest same = captured;
+    Expect(ValidatePublicationCandidate(same, same, draw_ep, live_ep) ==
+               PublicationValidation::TableEpochStale,
+           "A31-06 fault: table epoch stale with matching source");
+  }
+
   using cutum::SeamCoverageManifest;
   using cutum::SeamCoveragePeerSatisfied;
   SeamCoverageManifest seam{};

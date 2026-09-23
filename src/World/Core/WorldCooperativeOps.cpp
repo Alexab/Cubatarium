@@ -4,9 +4,11 @@
 #include "App/Platform/Log.h"
 #include "glog/logging.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Core/Jobs/JobThreadPool.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "Blocks/BlockRegistry.h"
@@ -1121,6 +1123,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.MeshService->CancelAsyncMeshWork();
       world.BlockWorld.Clear();
       world.MeshService->GetCache().MarkAllDirty();
+      UChunkRenderDemandStore::Get().Clear();
+      ResetFluidSurfacePackReuseCache();
       world.ResetPhysicsRuntimeState();
       world.CancelAsyncRelightWork();
       world.ModifiedChunks.clear();

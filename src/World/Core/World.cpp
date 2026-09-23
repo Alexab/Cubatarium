@@ -74,6 +74,7 @@
 #include "World/Interaction/BlockPlacementService.h"
 #include "World/Raycast/BlockRaycast.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/MeshLightStalePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
@@ -81,6 +82,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/RingReadinessBudget.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
+#include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/DependencyStampBuilder.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
@@ -5785,6 +5787,8 @@ void UWorld::AbandonTerrainForWorldReplace()
   {
     MeshService->GetCache().MarkAllDirty();
   }
+  UChunkRenderDemandStore::Get().Clear();
+  ResetFluidSurfacePackReuseCache();
   ModifiedChunks.clear();
   BlockWorldReady = false;
   CachedBlockCount = 0;

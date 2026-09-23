@@ -19,6 +19,7 @@ struct FluidColumnSummary
   uint64_t fluid_id_hash{0};
   int y_min{0};
   int height{0};
+  glm::ivec3 ground_chunk{0};
   /// CHUNK_SIZE * CHUNK_SIZE tops; -1 = no fluid in column.
   std::vector<int16_t> tops;
   BlockId representative_fluid_id{BLOCK_AIR};
@@ -152,6 +153,7 @@ struct FluidSummaryWorkerJob
   std::vector<uint8_t> flags;
   uint64_t fluid_id_hash{0};
   BlockId representative_fluid_id{BLOCK_AIR};
+  glm::ivec3 ground_chunk{0};
   bool enqueued{false};
 };
 
@@ -181,12 +183,15 @@ inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
   {
     job.flags.assign(flags, flags + flag_bytes);
   }
-  job.enqueued = true;
   auto &q = FluidSummaryWorkerQueue();
-  if (q.size() < 8)
+  // A31: queue full is an explicit reject — never silent drop as success.
+  if (q.size() >= 8)
   {
-    q.push_back(job);
+    job.enqueued = false;
+    return false;
   }
+  job.enqueued = true;
+  q.push_back(job);
   return true;
 }
 
@@ -202,9 +207,14 @@ inline bool DrainOneFluidSummaryWorker(FluidColumnSummary &out)
   q.erase(q.begin());
   if (!job.flags.empty())
   {
-    return TryBuildFluidColumnSummarySync(
+    const bool ok = TryBuildFluidColumnSummarySync(
         job.flags.data(), job.req, job.fluid_id_hash,
         job.representative_fluid_id, out);
+    if (ok)
+    {
+      out.ground_chunk = job.ground_chunk;
+    }
+    return ok;
   }
   out = FluidColumnSummary{};
   out.world_epoch = job.req.world_epoch;
@@ -212,10 +222,60 @@ inline bool DrainOneFluidSummaryWorker(FluidColumnSummary &out)
   out.catalog_rev = job.req.catalog_rev;
   out.y_min = job.req.y_min;
   out.height = job.req.height;
+  out.ground_chunk = job.ground_chunk;
   out.ready = false; // incomplete until flags arrive
   out.tops.assign(static_cast<size_t>(CHUNK_SIZE * CHUNK_SIZE),
                   static_cast<int16_t>(-1));
   return true;
+}
+
+/// A31: drain ready completions (skips incomplete flagless stubs by re-queueing
+/// them at the end once). Returns number of ready results consumed.
+inline int DrainFluidSummaryCompletions(
+    void (*on_ready)(const FluidColumnSummary &, void *), void *ctx,
+    int max_n = 4)
+{
+  if (!on_ready || max_n <= 0)
+  {
+    return 0;
+  }
+  int installed = 0;
+  int skipped = 0;
+  const int guard = static_cast<int>(FluidSummaryWorkerQueue().size()) + max_n;
+  for (int i = 0; i < guard && installed < max_n; ++i)
+  {
+    FluidColumnSummary drained{};
+    if (!DrainOneFluidSummaryWorker(drained))
+    {
+      break;
+    }
+    if (!drained.ready)
+    {
+      // Re-queue incomplete so GetFluidSurfaceSlice does not discard demand.
+      FluidSummaryWorkerJob again{};
+      again.req.world_epoch = drained.world_epoch;
+      again.req.content_rev = drained.content_rev;
+      again.req.catalog_rev = drained.catalog_rev;
+      again.req.y_min = drained.y_min;
+      again.req.height = drained.height;
+      again.ground_chunk = drained.ground_chunk;
+      again.enqueued = true;
+      auto &q = FluidSummaryWorkerQueue();
+      if (q.size() < 8)
+      {
+        q.push_back(again);
+      }
+      ++skipped;
+      if (skipped > 8)
+      {
+        break;
+      }
+      continue;
+    }
+    on_ready(drained, ctx);
+    ++installed;
+  }
+  return installed;
 }
 
 /// A26 N5: hitch gate — reject sync fluid_map work that would burn tens/hundreds ms.

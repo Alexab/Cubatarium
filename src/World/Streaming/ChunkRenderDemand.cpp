@@ -6,6 +6,18 @@
 namespace cutum
 {
 
+namespace
+{
+bool StageIsMonotonic(JobStage prev, JobStage next)
+{
+  if (next == JobStage::Cancelled || next == JobStage::Retired)
+  {
+    return true;
+  }
+  return static_cast<uint8_t>(next) >= static_cast<uint8_t>(prev);
+}
+} // namespace
+
 UChunkRenderDemandStore &UChunkRenderDemandStore::Get()
 {
   static UChunkRenderDemandStore instance;
@@ -33,19 +45,46 @@ UChunkRenderDemandStore::GetOrCreate(glm::ivec3 coord)
   return rec;
 }
 
+bool UChunkRenderDemandStore::CoverageSatisfied(
+    const ChunkRenderDemandRecord &rec, uint64_t desired_coverage_gen)
+{
+  if (desired_coverage_gen == 0 && rec.desired_coverage_gen == 0)
+  {
+    return true;
+  }
+  const uint64_t need =
+      desired_coverage_gen != 0 ? desired_coverage_gen : rec.desired_coverage_gen;
+  return need == 0 || rec.published_coverage_gen >= need;
+}
+
+bool UChunkRenderDemandStore::PublishedMeetsDesired(
+    const ChunkRenderDemandRecord &rec)
+{
+  if (rec.retained_awaiting_successor)
+  {
+    return false;
+  }
+  if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0)
+  {
+    return true;
+  }
+  return rec.published_geom_rev == rec.desired_geom_rev &&
+         rec.published_light_rev == rec.desired_light_rev &&
+         CoverageSatisfied(rec, 0) && rec.face_debt_mask == 0;
+}
+
 DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
                                                 uint64_t desired_geom_rev,
                                                 uint64_t desired_light_rev,
-                                                uint64_t desired_coverage_gen)
+                                                uint64_t desired_coverage_gen,
+                                                double now_ms)
 {
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
-  // Explicit equality on published vs desired when both sides known.
   const bool satisfied =
       !rec.retained_awaiting_successor && desired_geom_rev > 0 &&
       desired_light_rev > 0 && rec.published_geom_rev == desired_geom_rev &&
       rec.published_light_rev == desired_light_rev &&
-      (desired_coverage_gen == 0 ||
-       desired_coverage_gen <= rec.desired_coverage_gen);
+      CoverageSatisfied(rec, desired_coverage_gen);
 
   if (satisfied)
   {
@@ -80,12 +119,16 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
     rec.active_attempt_id = NextAttemptId_++;
     rec.active_stage = JobStage::Created;
     rec.has_active_attempt = true;
+    if (now_ms > 0.0)
+    {
+      rec.attempt_created_ms = now_ms;
+    }
   }
   ++NewDemandN_;
   return DemandResult::NewDemand;
 }
 
-void UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
+bool UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
                                                 JobStage stage,
                                                 uint64_t attempt_id,
                                                 double now_ms)
@@ -93,11 +136,36 @@ void UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
   if (attempt_id != 0)
   {
-    rec.active_attempt_id = attempt_id;
+    if (rec.has_active_attempt && rec.active_attempt_id != 0 &&
+        attempt_id != rec.active_attempt_id)
+    {
+      return false; // foreign attempt — ignore
+    }
+    if (!rec.has_active_attempt)
+    {
+      rec.active_attempt_id = attempt_id;
+      if (now_ms > 0.0 && rec.attempt_created_ms <= 0.0)
+      {
+        rec.attempt_created_ms = now_ms;
+      }
+    }
+    else
+    {
+      rec.active_attempt_id = attempt_id;
+    }
   }
   else if (!rec.has_active_attempt)
   {
     rec.active_attempt_id = NextAttemptId_++;
+    if (now_ms > 0.0)
+    {
+      rec.attempt_created_ms = now_ms;
+    }
+  }
+  if (rec.has_active_attempt &&
+      !StageIsMonotonic(rec.active_stage, stage))
+  {
+    return false;
   }
   rec.has_active_attempt = true;
   rec.active_stage = stage;
@@ -105,6 +173,7 @@ void UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
   {
     rec.last_progress_ms = now_ms;
   }
+  return true;
 }
 
 void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
@@ -122,12 +191,19 @@ void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
   }
 }
 
-void UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
+bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
                                                InstallResult result,
                                                uint64_t published_geom_rev,
-                                               uint64_t published_light_rev)
+                                               uint64_t published_light_rev,
+                                               uint64_t attempt_id,
+                                               uint64_t published_coverage_gen)
 {
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  if (attempt_id != 0 && rec.has_active_attempt &&
+      rec.active_attempt_id != 0 && attempt_id != rec.active_attempt_id)
+  {
+    return false; // stale completion
+  }
   switch (result)
   {
   case InstallResult::Published:
@@ -138,6 +214,16 @@ void UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
     if (published_light_rev > 0)
     {
       rec.published_light_rev = published_light_rev;
+    }
+    if (published_coverage_gen > 0)
+    {
+      rec.published_coverage_gen = published_coverage_gen;
+    }
+    else if (rec.desired_coverage_gen > 0)
+    {
+      // Publish without explicit coverage still advances if debt clear.
+      rec.published_coverage_gen =
+          (std::max)(rec.published_coverage_gen, rec.desired_coverage_gen);
     }
     rec.retained_awaiting_successor = false;
     rec.has_active_attempt = false;
@@ -159,6 +245,7 @@ void UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
     rec.active_stage = JobStage::Cancelled;
     break;
   }
+  return true;
 }
 
 void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
@@ -170,18 +257,18 @@ void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
     face_mask = 0x3Fu;
   }
   ChunkRenderDemandRecord &rec = GetOrCreate(chunk_xyz);
-  const uint8_t newly =
-      static_cast<uint8_t>(face_mask &
-                           static_cast<uint8_t>(~rec.face_debt_mask));
   rec.face_debt_mask =
       static_cast<uint8_t>(rec.face_debt_mask | face_mask);
   if (peer_gen != 0)
   {
     for (int f = 0; f < 6; ++f)
     {
-      if ((newly & static_cast<uint8_t>(1u << f)) != 0)
+      if ((face_mask & static_cast<uint8_t>(1u << f)) != 0)
       {
-        rec.waiting_peer_gen[f] = peer_gen;
+        if (peer_gen > rec.waiting_peer_gen[f])
+        {
+          rec.waiting_peer_gen[f] = peer_gen;
+        }
       }
     }
   }
@@ -208,10 +295,15 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
     {
       continue;
     }
-    if (peer_gen != 0 && rec->waiting_peer_gen[f] != 0 &&
-        rec->waiting_peer_gen[f] != peer_gen)
+    const uint64_t waiting = rec->waiting_peer_gen[f];
+    // A31: peer_gen==0 must not clear a face that waits on a real generation.
+    if (waiting != 0 && peer_gen == 0)
     {
-      continue; // stale peer commit — keep debt
+      continue;
+    }
+    if (waiting != 0 && peer_gen < waiting)
+    {
+      continue; // stale / insufficient peer commit
     }
     clear_mask = static_cast<uint8_t>(clear_mask | bit);
     rec->waiting_peer_gen[f] = 0;
@@ -222,7 +314,7 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
 }
 
 UChunkRenderDemandStore::ReconcileStats
-UChunkRenderDemandStore::ReconcileMaintenance(int max_n)
+UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
 {
   ReconcileStats stats{};
   if (max_n <= 0 || Records_.empty())
@@ -242,7 +334,8 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n)
     ChunkRenderDemandRecord &rec = it->second;
     ++stats.checked;
     if (rec.desired_geom_rev != rec.published_geom_rev ||
-        rec.desired_light_rev != rec.published_light_rev)
+        rec.desired_light_rev != rec.published_light_rev ||
+        !CoverageSatisfied(rec, 0) || rec.face_debt_mask != 0)
     {
       if (!(rec.has_active_attempt || rec.retained_awaiting_successor ||
             rec.desired_geom_rev == 0))
@@ -254,10 +347,28 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n)
         rec.active_stage == JobStage::Created &&
         rec.last_progress_ms <= 0.0)
     {
-      ++stats.orphan_active;
-      // A25 R1: orphan = diagnosable cancel, not eternal active.
-      rec.has_active_attempt = false;
-      rec.active_stage = JobStage::Cancelled;
+      const double created = rec.attempt_created_ms;
+      const bool past_grace =
+          now_ms <= 0.0 || created <= 0.0 ||
+          (now_ms - created) >= kOrphanGraceMs;
+      if (past_grace)
+      {
+        ++stats.orphan_active;
+        // Re-admit desire: keep desire, clear orphan attempt so NoteDemand can
+        // mint a successor rather than silent cancel of obligation.
+        rec.has_active_attempt = false;
+        rec.active_stage = JobStage::Cancelled;
+        if (rec.desired_geom_rev != 0 || rec.desired_light_rev != 0)
+        {
+          rec.active_attempt_id = NextAttemptId_++;
+          rec.active_stage = JobStage::Created;
+          rec.has_active_attempt = true;
+          if (now_ms > 0.0)
+          {
+            rec.attempt_created_ms = now_ms;
+          }
+        }
+      }
     }
     if (rec.retained_awaiting_successor)
     {
@@ -274,7 +385,8 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n)
   return stats;
 }
 
-int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n)
+int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n,
+                                                       double now_ms)
 {
   if (max_n <= 0 || Records_.empty())
   {
@@ -292,6 +404,14 @@ int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n)
         rec.active_stage == JobStage::Created &&
         rec.last_progress_ms <= 0.0)
     {
+      const double created = rec.attempt_created_ms;
+      const bool past_grace =
+          now_ms <= 0.0 || created <= 0.0 ||
+          (now_ms - created) >= kOrphanGraceMs;
+      if (!past_grace)
+      {
+        continue;
+      }
       rec.has_active_attempt = false;
       rec.active_stage = JobStage::Cancelled;
       ++cancelled;
@@ -306,15 +426,12 @@ int UChunkRenderDemandStore::CountUnsatisfiedDemands() const
   for (const auto &kv : Records_)
   {
     const ChunkRenderDemandRecord &rec = kv.second;
-    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0)
+    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0 &&
+        rec.desired_coverage_gen == 0 && rec.face_debt_mask == 0)
     {
       continue;
     }
-    const bool satisfied =
-        !rec.retained_awaiting_successor &&
-        rec.published_geom_rev == rec.desired_geom_rev &&
-        rec.published_light_rev == rec.desired_light_rev;
-    if (!satisfied)
+    if (!PublishedMeetsDesired(rec))
     {
       ++n;
     }
@@ -322,7 +439,7 @@ int UChunkRenderDemandStore::CountUnsatisfiedDemands() const
   return n;
 }
 
-bool UChunkRenderDemandStore::StopConverged() const
+bool UChunkRenderDemandStore::StopConverged(double now_ms) const
 {
   for (const auto &kv : Records_)
   {
@@ -333,17 +450,30 @@ bool UChunkRenderDemandStore::StopConverged() const
     {
       return false; // orphan
     }
-    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0)
+    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0 &&
+        rec.desired_coverage_gen == 0 && rec.face_debt_mask == 0)
     {
       continue;
     }
+    if (rec.face_debt_mask != 0)
+    {
+      return false;
+    }
+    if (!CoverageSatisfied(rec, 0))
+    {
+      return false;
+    }
     if (rec.retained_awaiting_successor)
     {
-      // Retain is ok only while a newer desire exists (successor demand).
+      // Retain ok only with newer desire AND a live successor attempt.
       if (rec.desired_geom_rev == rec.published_geom_rev &&
           rec.desired_light_rev == rec.published_light_rev)
       {
         return false; // infinite Retain without successor desire
+      }
+      if (!rec.has_active_attempt)
+      {
+        return false; // desire raised but no live attempt
       }
       continue;
     }
@@ -352,7 +482,12 @@ bool UChunkRenderDemandStore::StopConverged() const
     {
       if (rec.has_active_attempt)
       {
-        continue; // in-flight ok until progress stalls
+        if (now_ms > 0.0 && rec.last_progress_ms > 0.0 &&
+            (now_ms - rec.last_progress_ms) > kStallFailMs)
+        {
+          return false; // stalled in-flight
+        }
+        continue; // in-flight ok until stall
       }
       return false;
     }

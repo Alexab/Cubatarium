@@ -5,6 +5,10 @@
 
 ## Документы
 
+- `A31_REAUDIT_2026-09-23.md` — повторная оценка HEAD после A30; актуальные статусы и findings.
+- `../../.cursor/plans/remediation_after_a30_open.plan.md` — подробный план исправлений, согласованный с A31.
+- `A30_CONFORMANCE_AUDIT_2026-09-22.md` — исторический итог цикла A30; детали реализации уточнены в A31.
+
 - `ROOT_CAUSE_2026-07.md` — почему фиксы не кончаются (Era 13 / manual_1752).
 - `ROOT_CAUSE_2026-08.md` — Era14 frame nest + wall-gated heal (manual_151212).
 - `ERA14_POSTMORTEM.md` — KEEP/DISCARD post-1f52bdd5 и V4 execution.

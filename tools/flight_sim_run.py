@@ -67,6 +67,9 @@ EYE_PROXY_STOP_LINE = {
 
 # Manual west (7,3)→(−3,3). Autofly that stops at cx≈2 is UNTESTED, not PASS coverage.
 WEST_COVERAGE_FOCUS_CX_MAX = -3.0
+# A31: west COVERED ≠ far-flight. Far checkpoints in world blocks (CHUNK_SIZE=16).
+FAR_DISTANCE_CHECKPOINTS_BLOCKS = (0, 1 << 13, 1 << 16, 1 << 19)
+CHUNK_SIZE_BLOCKS = 16
 
 
 def newest_perf(after_ts: float) -> Path | None:
@@ -428,10 +431,13 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             mid = len(xs) // 2
             return xs[mid] if len(xs) % 2 else (xs[mid - 1] + xs[mid]) / 2.0
 
+        # A31: whole-route mesh holes (telemetry near_focus_holes), not west-only.
+        whole_holes = vals("near_focus_holes", use if use else rows)
+        if not whole_holes:
+            whole_holes = vals("visual_holes", use if use else rows)
         holes_xs = vals("near_focus_holes", corridor)
         if not holes_xs:
             holes_xs = vals("visual_holes", corridor)
-        dropped_xs = vals("dirty_dropped", corridor)
         # dirty_dropped in period rows is a lifetime cumulative counter.
         # Gate uses per-period delta (consecutive samples in full period stream).
         all_dropped = vals("dirty_dropped", use if use else rows)
@@ -467,10 +473,18 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             else corridor
         )
         stalled_xs = vals("visible_black_fully_dark_stalled_n", mid_third)
-        holes_gt0 = sum(1 for h in holes_xs if h > 0)
+        holes_gt0_corridor = sum(1 for h in holes_xs if h > 0)
+        holes_gt0_whole = sum(1 for h in whole_holes if h > 0)
         dropped_per = median(corridor_deltas) if corridor_deltas else None
+        # Admission breakdown (diagnostic; dirty_dropped alone ≠ correctness).
+        def last_or_none(key: str) -> float | None:
+            xs = vals(key, use if use else rows)
+            return xs[-1] if xs else None
+
         metrics = {
-            "near_focus_holes_periods_gt0": holes_gt0,
+            "near_focus_holes_periods_gt0": holes_gt0_whole,
+            "near_focus_holes_periods_gt0_corridor": holes_gt0_corridor,
+            "near_focus_holes_scope": "whole_route_mesh_telemetry",
             "dirty_dropped_per_period": dropped_per,
             "dirty_dropped_per_period_mean": (
                 (sum(corridor_deltas) / float(len(corridor_deltas)))
@@ -478,13 +492,18 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
                 else None
             ),
             "dirty_dropped_metric": "period_delta_median",
+            "dirty_dropped_is_not_correctness": True,
+            "admit_denied_end": last_or_none("dirty_admit_denied"),
+            "admit_coalesced_end": last_or_none("dirty_admit_coalesced"),
+            "admit_admitted_end": last_or_none("dirty_admit_admitted"),
             "mid_fully_dark_stalled_med": median(stalled_xs),
             "ring_readiness_must_stay_off": True,
             "prefer_kick_not_sole_heal_dod": True,
             "operator_visual_required_for_merge_green": True,
         }
         fails: list[str] = []
-        if holes_gt0 > A24_SAFETY_STOP_LINE["near_focus_holes_periods_gt0_max"]:
+        # A31 primary: whole-route periods with mesh holes > 0.
+        if holes_gt0_whole > A24_SAFETY_STOP_LINE["near_focus_holes_periods_gt0_max"]:
             fails.append("near_focus_holes_periods_gt0")
         if dropped_per is None or float(dropped_per) > A24_SAFETY_STOP_LINE[
             "dirty_dropped_per_period_max"
@@ -507,7 +526,11 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
 
 
 def compute_west_route_coverage(perf_path: Path) -> dict:
-    """Full-west product coverage: min focus_cx must reach ≤−3. Else UNTESTED."""
+    """Full-west product coverage: min focus_cx must reach ≤−3. Else UNTESTED.
+
+    A31: COVERED is not a far-flight proof — also report world-block span and
+    whether any FAR_DISTANCE_CHECKPOINTS_BLOCKS threshold was reached.
+    """
     try:
         focus_cx: list[float] = []
         for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -527,10 +550,18 @@ def compute_west_route_coverage(perf_path: Path) -> dict:
                 "focus_cx_min": None,
                 "focus_cx_max": None,
                 "west_route_coverage_reason": "no_period_focus_cx",
+                "far_flight": False,
+                "far_distance_blocks": None,
+                "far_checkpoints_reached": [],
             }
         cx_min = min(focus_cx)
         cx_max = max(focus_cx)
         covered = cx_min <= WEST_COVERAGE_FOCUS_CX_MAX
+        span_chunks = abs(cx_max - cx_min)
+        distance_blocks = span_chunks * float(CHUNK_SIZE_BLOCKS)
+        reached = [c for c in FAR_DISTANCE_CHECKPOINTS_BLOCKS if distance_blocks >= c]
+        # Far only if we hit at least 2^13 blocks of focus travel.
+        far = distance_blocks >= float(FAR_DISTANCE_CHECKPOINTS_BLOCKS[1])
         return {
             "west_route_coverage": "COVERED" if covered else "UNTESTED",
             "focus_cx_min": cx_min,
@@ -538,6 +569,10 @@ def compute_west_route_coverage(perf_path: Path) -> dict:
             "west_route_coverage_reason": (
                 "reached_cx_le_minus3" if covered else "did_not_reach_cx_minus3"
             ),
+            "west_covered_is_not_far_flight": True,
+            "far_flight": far,
+            "far_distance_blocks": distance_blocks,
+            "far_checkpoints_reached": reached,
         }
     except Exception as exc:  # pragma: no cover
         return {
@@ -545,7 +580,70 @@ def compute_west_route_coverage(perf_path: Path) -> dict:
             "focus_cx_min": None,
             "focus_cx_max": None,
             "west_route_coverage_reason": f"west_coverage_analyze_failed:{exc}",
+            "far_flight": False,
+            "far_distance_blocks": None,
+            "far_checkpoints_reached": [],
         }
+
+
+def compute_post_stop_convergence(result: dict) -> dict:
+    """A31: post-stop gates from scorecard must participate in acceptance."""
+    gates = result.get("gates") or {}
+    required = (
+        "post_stop_missing_zero",
+        "post_stop_effective_holes_zero",
+        "post_stop_pending_falling",
+        "post_stop_not_ready_falling",
+        "post_stop_focus_dirty_falling",
+    )
+    fails: list[str] = []
+    for k in required:
+        if gates.get(k) is not True:
+            fails.append(k)
+    return {
+        "post_stop_convergence_pass": len(fails) == 0,
+        "post_stop_convergence_fails": fails,
+    }
+
+
+def compute_a31_progress_snapshot(result: dict, a24: dict | None, west: dict | None) -> dict:
+    """Compact progress fields for PR-to-PR comparison (A31)."""
+    metrics = result.get("metrics") or {}
+    gates = result.get("gates") or {}
+    a24 = a24 or result.get("a24_safety_stop_line") or {}
+    west = west or result.get("west_route_coverage") or {}
+    post = compute_post_stop_convergence(result)
+    return {
+        "near_focus_holes_periods_gt0": a24.get("near_focus_holes_periods_gt0"),
+        "visible_black_focus_n": metrics.get("visible_black_focus_n"),
+        "dirty_dropped_per_period": a24.get("dirty_dropped_per_period"),
+        "admit_denied_end": a24.get("admit_denied_end"),
+        "admit_coalesced_end": a24.get("admit_coalesced_end"),
+        "admit_admitted_end": a24.get("admit_admitted_end"),
+        "post_stop_convergence_pass": post.get("post_stop_convergence_pass"),
+        "post_stop_convergence_fails": post.get("post_stop_convergence_fails"),
+        "post_stop_missing_zero": gates.get("post_stop_missing_zero"),
+        "post_stop_effective_holes_zero": gates.get("post_stop_effective_holes_zero"),
+        "fluid_map_related": metrics.get("dominant_spike_class")
+        or metrics.get("dominant_heavy_spike_class"),
+        "spike_max_wall_holes": metrics.get("spike_max_wall_holes"),
+        "a24_safety_stop_line_pass": a24.get("a24_safety_stop_line_pass"),
+        "eye_proxy_stop_line_pass": result.get("eye_proxy_stop_line_pass"),
+        "eye_proxy_is_secondary_not_whole_route": True,
+        "dual_lane_stop_line_pass": result.get("dual_lane_stop_line_pass"),
+        "focus_cx_min": west.get("focus_cx_min")
+        if isinstance(west, dict)
+        else None,
+        "focus_cx_max": west.get("focus_cx_max")
+        if isinstance(west, dict)
+        else None,
+        "far_flight": west.get("far_flight") if isinstance(west, dict) else False,
+        "far_distance_blocks": west.get("far_distance_blocks")
+        if isinstance(west, dict)
+        else None,
+        "operator_visual": result.get("operator_visual", "UNTESTED"),
+        "operator_visual_is_not_pixel_oracle": True,
+    }
 
 
 def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
@@ -1112,8 +1210,9 @@ def main() -> int:
             "fz-inring-cruise",
             "product-174657",
             "product-174657-dive",
+            "product-174657-far",
         ],
-        help="named scenario (... / product-174657 west G1 / product-174657-dive underwater stop)",
+        help="named scenario (... / product-174657 west G1 / dive / far distance stress)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -1438,14 +1537,16 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
-    if args.scenario in ("product-174657", "product-174657-dive"):
+    if args.scenario in ("product-174657", "product-174657-dive", "product-174657-far"):
         # G1 product gate proxy: west 174657-class (yaw 180), not north replay-manual.
         # See bin/suite_reports/g1_a10_relight/autofly_vs_manual_diff.md
         # Pin resume locus to spawn-near (7,3) — drifted saves start mid-west and
         # under-stress (fog_rd collapse → false VB PASS). Match manual 080455
         # distance (~10 chunks west), not fly-heavy 120s to ocean.
         # product-174657-dive: same base + dive phase + underwater stop (SoT 210431).
+        # product-174657-far: A31 distance stress — longer fly, still no-teleport.
         dive_scenario = args.scenario == "product-174657-dive"
+        far_scenario = args.scenario == "product-174657-far"
         if not args.visible:
             if os.environ.get("CUBA_FLIGHT_REQUIRE_VISIBLE", "").strip() in (
                 "1",
@@ -1471,9 +1572,12 @@ def main() -> int:
         if args.yaw is None:
             args.yaw = 180.0
         if not (args.phase_id or "").strip():
-            args.phase_id = (
-                "product_174657_dive_v1" if dive_scenario else "product_174657_proxy_v3"
-            )
+            if dive_scenario:
+                args.phase_id = "product_174657_dive_v1"
+            elif far_scenario:
+                args.phase_id = "product_174657_far_v1"
+            else:
+                args.phase_id = "product_174657_proxy_v3"
         if args.teleport_cruise:
             print(
                 f"WARN: {args.scenario} forces --no-teleport-cruise "
@@ -1484,13 +1588,17 @@ def main() -> int:
         if "--idle-sec" not in sys.argv:
             args.idle_sec = 15.0
         if "--fly-phase-sec" not in sys.argv:
-            args.fly_phase_sec = 55.0
+            # Far: longer west cruise to stress distance (still no teleport).
+            args.fly_phase_sec = 180.0 if far_scenario else 55.0
         if "--stop-phase-sec" not in sys.argv:
             args.stop_phase_sec = 12.0 if dive_scenario else 20.0
         if dive_scenario and "--dive-phase-sec" not in sys.argv:
             args.dive_phase_sec = 12.0
         if dive_scenario and "--dive-pitch" not in sys.argv:
             args.dive_pitch = -30.0
+        if far_scenario:
+            # Keep longer fly from above; do not flip into generic fly-heavy bumps.
+            args.replay_manual_fly_heavy = False
         args.seconds = max(
             args.seconds,
             args.idle_sec
@@ -1577,7 +1685,11 @@ def main() -> int:
         # Default north (+Z) smoke; product-174657 sets yaw 180 (west) before this.
         if args.yaw is None:
             args.yaw = 90.0
-        if args.scenario in ("product-174657", "product-174657-dive"):
+        if args.scenario in (
+            "product-174657",
+            "product-174657-dive",
+            "product-174657-far",
+        ):
             # Eye-level west parity with manual 122212/100645.
             # HoldSpace climb made autofly Y ~76→300 and collapsed fog_rd/miss
             # class (same lesson as ocean-cruise HoldSpace blindness).
@@ -1594,7 +1706,7 @@ def main() -> int:
                 args.cruise_eye_y = 56.0
             if args.pitch is None:
                 args.pitch = 0.0
-            # Timings already set above (idle15/fly55/stop…); do not bump to
+            # Timings already set above (idle15/fly55|180/stop…); do not bump to
             # north smoke 45/90/90 or fly-heavy 20/120/30.
             pass
         elif args.replay_manual_fly_heavy:
@@ -2307,7 +2419,11 @@ def main() -> int:
             run_reports.append(report_path)
             try:
                 result = json.loads(report_path.read_text(encoding="utf-8"))
-                if args.scenario in ("product-174657", "product-174657-dive") and perf and Path(perf).is_file():
+                if args.scenario in (
+                    "product-174657",
+                    "product-174657-dive",
+                    "product-174657-far",
+                ) and perf and Path(perf).is_file():
                     adequacy = compute_product_174657_proxy_adequacy(Path(perf))
                     result["proxy_adequacy"] = adequacy
                     warm = "warm" in report_path.stem.lower()
@@ -2374,6 +2490,25 @@ def main() -> int:
                             )
                     west = compute_west_route_coverage(Path(perf))
                     result["west_route_coverage"] = west
+                    post_stop = compute_post_stop_convergence(result)
+                    result["post_stop_convergence"] = post_stop
+                    result["post_stop_convergence_pass"] = post_stop.get(
+                        "post_stop_convergence_pass"
+                    )
+                    result["a31_progress_snapshot"] = compute_a31_progress_snapshot(
+                        result, a24_safety, west
+                    )
+                    # Warm honesty: reject cold_or_unspecified for warm reports.
+                    pad = result.get("proxy_adequacy") or {}
+                    if warm and str(pad.get("cache_mode", "")).startswith("cold"):
+                        pad = dict(pad)
+                        pad["warm_protocol_fail"] = True
+                        pad["adequacy_pass"] = False
+                        fails = list(pad.get("adequacy_fails") or [])
+                        fails.append("warm_claimed_but_cache_mode_cold_or_unspecified")
+                        pad["adequacy_fails"] = fails
+                        result["proxy_adequacy"] = pad
+                        adequacy = pad
                     report_path.write_text(
                         json.dumps(result, indent=2) + "\n", encoding="utf-8"
                     )
@@ -2484,6 +2619,17 @@ def main() -> int:
                     metrics_summary["a24_safety_stop_line_pass"] = result.get(
                         "a24_safety_stop_line_pass"
                     )
+                if result.get("post_stop_convergence") is not None:
+                    metrics_summary["post_stop_convergence"] = result[
+                        "post_stop_convergence"
+                    ]
+                    metrics_summary["post_stop_convergence_pass"] = result.get(
+                        "post_stop_convergence_pass"
+                    )
+                if result.get("a31_progress_snapshot") is not None:
+                    metrics_summary["a31_progress_snapshot"] = result[
+                        "a31_progress_snapshot"
+                    ]
                 if result.get("dive_stop_hang") is not None:
                     metrics_summary["dive_stop_hang"] = result["dive_stop_hang"]
                     metrics_summary["dive_stop_hang_untested"] = result.get(
@@ -2527,7 +2673,11 @@ def main() -> int:
             last_rc = rc
         else:
             last_rc = ana
-            if args.scenario in ("product-174657", "product-174657-dive") and metrics_summary.get(
+            if args.scenario in (
+                "product-174657",
+                "product-174657-dive",
+                "product-174657-far",
+            ) and metrics_summary.get(
                 "proxy_adequacy"
             ):
                 if not metrics_summary["proxy_adequacy"].get("adequacy_pass", False):
@@ -2553,8 +2703,15 @@ def main() -> int:
                 elif not metrics_summary.get("a24_safety_stop_line_pass", True):
                     print(
                         f"flight-sim A24 safety stop-line FAIL for {args.scenario} "
-                        "(holes / dirty_dropped; mid-stall diagnostic only; "
+                        "(whole-route holes / dirty_dropped; mid-stall diagnostic only; "
                         "operator_visual still required for merge_green)",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("post_stop_convergence_pass", True):
+                    print(
+                        f"flight-sim post-stop convergence FAIL for {args.scenario} "
+                        f"{metrics_summary.get('post_stop_convergence')}",
                         file=sys.stderr,
                     )
                     last_rc = 2

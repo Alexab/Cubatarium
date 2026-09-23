@@ -2841,6 +2841,16 @@ void UFramePerfMonitor::Shutdown()
                       << ",\"desired_rev\":" << sp.desired_rev
                       << ",\"source_rev\":" << sp.source_rev
                       << ",\"published_rev\":" << sp.published_rev
+                      << ",\"world_epoch\":" << sp.world_epoch
+                      << ",\"desired_light_rev\":" << sp.desired_light_rev
+                      << ",\"published_light_rev\":" << sp.published_light_rev
+                      << ",\"desired_coverage_gen\":" << sp.desired_coverage_gen
+                      << ",\"published_coverage_gen\":"
+                      << sp.published_coverage_gen
+                      << ",\"face_mask\":" << static_cast<int>(sp.face_mask)
+                      << ",\"outcome\":" << static_cast<int>(sp.outcome)
+                      << ",\"cull_decision\":"
+                      << static_cast<int>(sp.cull_decision)
                       << ",\"stage\":\"" << UJobStageTrace::StageName(sp.stage)
                       << "\""
                       << ",\"queue_reason\":" << static_cast<int>(sp.queue_reason)

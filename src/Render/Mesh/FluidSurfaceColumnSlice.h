@@ -48,6 +48,10 @@ void ResetFluidSurfacePackCacheHits();
 /// Test / session reset for per-chunk pack reuse map.
 /// Also bumps fluid pack world epoch so incomplete tiles cannot be reused.
 void ResetFluidSurfacePackReuseCache();
+/// A31: erase one column from the pack reuse map (content edit / invalidate).
+void InvalidateFluidSurfacePackReuseEntry(glm::ivec3 groundChunkCoord);
+/// A31: drain ready fluid summary completions into the pack reuse cache.
+int DrainFluidSummaryCompletionsIntoPackCache(int max_n = 4);
 
 } // namespace cutum
 

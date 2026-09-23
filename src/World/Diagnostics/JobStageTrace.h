@@ -32,6 +32,14 @@ struct JobStageSpan
   uint64_t desired_rev{0};
   uint64_t source_rev{0};
   uint64_t published_rev{0};
+  uint64_t world_epoch{0};
+  uint64_t desired_light_rev{0};
+  uint64_t published_light_rev{0};
+  uint64_t desired_coverage_gen{0};
+  uint64_t published_coverage_gen{0};
+  uint8_t face_mask{0};
+  uint8_t outcome{0};
+  uint8_t cull_decision{0};
   JobStage stage{JobStage::Created};
   uint8_t queue_reason{0};
   double created_ms{0.0};

@@ -58,7 +58,7 @@ int main()
   Expect(rec && rec->desired_light_rev == 9, "successor light desire");
 
   store.NoteFaceDebt(c, 0x03u, /*peer_gen=*/42);
-  store.NoteFaceDebtSatisfied(c, 0x01u, /*peer_gen=*/99);
+  store.NoteFaceDebtSatisfied(c, 0x01u, /*peer_gen=*/41);
   Expect(rec && (rec->face_debt_mask & 0x01u) != 0,
          "stale peer_gen keeps face0 debt");
   store.NoteFaceDebtSatisfied(c, 0x01u, /*peer_gen=*/42);
@@ -75,7 +75,7 @@ int main()
   const auto recon = store.ReconcileMaintenance(8);
   Expect(recon.checked >= 1, "reconcile scanned");
 
-  // A25 R1: orphan Created+no-progress is cancelled by ReconcileMaintenance.
+  // A25/A31: orphan Created+no-progress is counted; A31 remints desire.
   {
     store.Clear();
     const glm::ivec3 orphan{9, 0, 9};
@@ -86,6 +86,9 @@ int main()
     Expect(orec && orec->last_progress_ms <= 0.0, "orphan no progress");
     const auto r2 = store.ReconcileMaintenance(16);
     Expect(r2.orphan_active >= 1, "orphan counted");
+    orec = store.Find(orphan);
+    Expect(orec && orec->has_active_attempt, "A31 remints orphan desire");
+    Expect(store.CancelOrphanActiveAttempts(16) >= 1, "orphan hard-cancelled");
     orec = store.Find(orphan);
     Expect(orec && !orec->has_active_attempt, "orphan cancelled");
   }
@@ -252,6 +255,12 @@ int main()
       }
     }
     (void)store.ReconcileMaintenance(64);
+    // A31: clear residual face debt + hard-cancel reminted Created orphans.
+    for (const glm::ivec3 &c0 : centers)
+    {
+      store.NoteFaceDebtSatisfied(c0, /*face_mask=*/0x3Fu, /*peer_gen=*/100);
+    }
+    (void)store.CancelOrphanActiveAttempts(64);
     Expect(store.StopConverged(), "N1 stop converged after drain");
     Expect(store.CountUnsatisfiedDemands() == 0, "N1 zero unsatisfied");
   }
@@ -265,7 +274,12 @@ int main()
     store.NoteInstallResult(bad, InstallResult::RetainedAwaitingSuccessor);
     Expect(!store.StopConverged(), "infinite Retain fails stop");
     store.NoteDemand(bad, 2, 2);
-    (void)store.ReconcileMaintenance(8); // cancel orphan Created from successor
+    if (ChunkRenderDemandRecord *r = store.Find(bad))
+    {
+      // Progress past Created so StopConverged accepts live successor.
+      store.NoteStageProgress(bad, cutum::JobStage::Admitted,
+                              r->active_attempt_id);
+    }
     Expect(store.StopConverged(), "Retain+successor desire ok");
   }
 

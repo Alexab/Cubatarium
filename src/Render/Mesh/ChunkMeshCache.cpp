@@ -360,6 +360,7 @@ void UChunkMeshCache::MarkAllDirty()
   GreedyVertexCountTotal = 0;
   FluidSurfaceCache.clear();
   FluidSurfaceDirty.clear();
+  ResetFluidSurfacePackReuseCache();
   Instances.clear();
   GreedyOpaqueCutoutRefs.clear();
   GreedyTransparentRefs.clear();
@@ -3902,7 +3903,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       ++MeshApplyStaleAcceptedRefreshCount;
       // RetainedPrior: not a published Completed — callers must not ++Completed.
       // A21 P2.6: Retain must keep successor demand (geom/light desire).
-      if (kChunkDemandShadow)
+      if (kChunkDemandShadow())
       {
         uint64_t succ_geom = 0;
         uint64_t succ_light = 0;
@@ -5017,7 +5018,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       abandon_fm_watch();
       LastApplyWasRetainedPrior_ = true;
       // A21 P2.6: Retain must keep successor demand (geom/light desire).
-      if (kChunkDemandShadow)
+      if (kChunkDemandShadow())
       {
         uint64_t succ_geom = 0;
         uint64_t succ_light = 0;
@@ -5287,6 +5288,46 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     GreedyVertexCountTotal -= oldIt->second;
   }
+  // A31-06: validate BEFORE assigning batches; reject keeps prior resident mesh.
+  {
+    ArtifactManifest got{};
+    ArtifactManifest expected{};
+    got.source_geom_rev = result.sourceRevision;
+    got.source_light_rev =
+        result.InputStampsValid ? result.InputStamps[0].light
+                                : chunkMesh.MeshedLightRevision;
+    got.light_valid = !new_dark;
+    expected = got;
+    if (result.InputStampsValid)
+    {
+      expected.source_geom_rev = result.InputStamps[0].content;
+      expected.source_light_rev = result.InputStamps[0].light;
+      expected.light_valid = true;
+    }
+    PublicationEpochs draw{};
+    draw.artifact_generation = result.sourceRevision;
+    PublicationEpochs live{};
+    live.artifact_generation = chunkMesh.PublishRevs.geom_rev;
+    const PublicationValidation pub_v =
+        ValidatePublicationCandidate(got, expected, draw, live);
+    if (!PublicationCandidateAccepted(pub_v))
+    {
+      // Restore prior vertex accounting (we subtracted above).
+      if (oldIt != GreedyVertexCountByChunk.end())
+      {
+        GreedyVertexCountTotal += oldIt->second;
+      }
+      if (kChunkDemandShadow())
+      {
+        UChunkRenderDemandStore::Get().NoteInstallResult(
+            result.coord, InstallResult::RejectedRetryable,
+            chunkMesh.PublishRevs.geom_rev, chunkMesh.PublishRevs.light_rev);
+      }
+      // Keep prior batches; ask for remesh/retry without publishing candidate.
+      MarkDirtyPriority(result.coord);
+      return;
+    }
+  }
   GreedyVertexCountByChunk[result.coord] = new_vertex_count;
   GreedyVertexCountTotal += new_vertex_count;
   // Write-first: CPU drawable before FreeChunk (ShouldPublishCpuBatchesBeforeFreeGpu).
@@ -5317,30 +5358,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.PublishRevs.material_stamp =
         MeshPublishMaterialStamp(ids.data(), ids.size());
   }
-  // A26 N1/N2: sole Published lifecycle + provenance gate on CPU apply.
+  // A26 N1 / A31: sole Published lifecycle after validation commit.
+  if (kChunkDemandShadow())
   {
-    ArtifactManifest got{};
-    ArtifactManifest expected{};
-    got.source_geom_rev = chunkMesh.PublishRevs.geom_rev;
-    got.source_light_rev = chunkMesh.PublishRevs.light_rev;
-    got.light_valid = !new_dark;
-    expected = got;
-    if (result.InputStampsValid)
-    {
-      expected.source_geom_rev = result.InputStamps[0].content;
-      expected.source_light_rev = result.InputStamps[0].light;
-    }
-    PublicationEpochs live{};
-    live.artifact_generation = chunkMesh.PublishRevs.geom_rev;
-    const PublicationValidation pub_v =
-        ValidatePublicationCandidate(got, expected, live, live);
-    (void)pub_v; // reject path keeps mesh; demand still records Published revs
-    if (kChunkDemandShadow)
-    {
-      UChunkRenderDemandStore::Get().NoteInstallResult(
-          result.coord, InstallResult::Published,
-          chunkMesh.PublishRevs.geom_rev, chunkMesh.PublishRevs.light_rev);
-    }
+    UChunkRenderDemandStore::Get().NoteInstallResult(
+        result.coord, InstallResult::Published,
+        chunkMesh.PublishRevs.geom_rev, chunkMesh.PublishRevs.light_rev);
   }
   // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
   const bool intentional_empty =
@@ -7751,6 +7774,8 @@ void UChunkMeshCache::InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord)
 {
   const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
   FluidSurfaceDirty.insert(ground);
+  FluidSurfaceCache.erase(ground);
+  InvalidateFluidSurfacePackReuseEntry(ground);
 }
 
 void UChunkMeshCache::InvalidateFluidSurfaceForColumn(glm::ivec3 ground_chunk_coord,
@@ -7768,7 +7793,10 @@ void UChunkMeshCache::InvalidateFluidSurfaceForColumn(glm::ivec3 ground_chunk_co
   {
     for (int cz = z0; cz <= z1; ++cz)
     {
-      FluidSurfaceDirty.insert(glm::ivec3(cx, 0, cz));
+      const glm::ivec3 ground(cx, 0, cz);
+      FluidSurfaceDirty.insert(ground);
+      FluidSurfaceCache.erase(ground);
+      InvalidateFluidSurfacePackReuseEntry(ground);
     }
   }
 }
@@ -7787,6 +7815,7 @@ const FluidSurfaceColumnSlice *UChunkMeshCache::GetFluidSurfaceSlice(
     const UBlockWorld &world, UBlockRegistry &registry,
     glm::ivec3 groundChunkCoord, int scanHintY)
 {
+  (void)DrainFluidSummaryCompletionsIntoPackCache(/*max_n=*/4);
   const auto dirtyIt = FluidSurfaceDirty.find(groundChunkCoord);
   const auto cacheIt = FluidSurfaceCache.find(groundChunkCoord);
   if (dirtyIt != FluidSurfaceDirty.end() || cacheIt == FluidSurfaceCache.end())

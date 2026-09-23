@@ -85,19 +85,34 @@ uint64_t CatalogRevOf(const UBlockRegistry &registry)
                  : 0ull;
 }
 
-uint64_t ContentRevOf(const UBlockWorld &world, glm::ivec3 groundChunkCoord)
+uint64_t ContentRevOf(const UBlockWorld &world, glm::ivec3 groundChunkCoord,
+                      int y_min, int y_max)
 {
-  if (const UChunk *chunk = world.GetChunkManager().GetChunk(groundChunkCoord))
+  // A31-02: stamp all Y slices in the scanned band (not only ground cy=0).
+  uint64_t h = 14695981039346656037ull;
+  const int cy0 = y_min / CHUNK_SIZE;
+  const int cy1 = y_max / CHUNK_SIZE;
+  for (int cy = cy0; cy <= cy1; ++cy)
   {
-    return chunk->GetContentRevision();
+    uint64_t rev = 0;
+    const glm::ivec3 c(groundChunkCoord.x, cy, groundChunkCoord.z);
+    if (const UChunk *chunk = world.GetChunkManager().GetChunk(c))
+    {
+      rev = chunk->GetContentRevision();
+    }
+    h ^= rev + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
   }
-  return 0ull;
+  return h;
 }
 
 bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
                       glm::ivec3 groundChunkCoord, int scanHintY,
-                      FluidSurfaceColumnSlice &slice)
+                      FluidSurfaceColumnSlice &slice, bool *out_deferred)
 {
+  if (out_deferred)
+  {
+    *out_deferred = false;
+  }
   if (!PreferGpuFluidColumnScan())
   {
     return false;
@@ -114,7 +129,8 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   const int n = CHUNK_SIZE;
   const glm::ivec3 origin(groundChunkCoord.x * CHUNK_SIZE, 0,
                           groundChunkCoord.z * CHUNK_SIZE);
-  const uint64_t content_rev = ContentRevOf(world, groundChunkCoord);
+  const uint64_t content_rev =
+      ContentRevOf(world, groundChunkCoord, y_min, y_max);
   const uint64_t catalog_rev = CatalogRevOf(registry);
   auto &cache = FluidPackReuseCache();
   // A22 S5: stamp hit before height×16×16 GetBlock (manual/AF fluid spikes).
@@ -148,7 +164,7 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   }
   // A25 R5: under main-thread budget pressure, do not start height×16×16 GetBlock
   // (audit spike class fluid_map_cpu ~100–197ms). Prefer miss over hitch.
-  // A27/A30: hitch estimate + worker enqueue; drain may fill later with flags.
+  // A31: enqueue + return pending/last-good — never sync-drain-and-discard.
   {
     const double est_ms =
         static_cast<double>(height) * static_cast<double>(n * n) * 0.0004;
@@ -160,6 +176,7 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
     if (defer)
     {
       FluidSummaryWorkerJob job{};
+      job.ground_chunk = groundChunkCoord;
       FluidColumnSummaryRequest req{};
       req.world_epoch = gFluidPackWorldEpoch;
       req.content_rev = content_rev;
@@ -167,12 +184,17 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       req.y_min = y_min;
       req.height = height;
       (void)TryEnqueueFluidSummaryWorker(job, req, true);
-      // Leave queue for a later frame; do not sync-drain empty stub as "done".
-      FluidColumnSummary drained{};
-      if (DrainOneFluidSummaryWorker(drained) && drained.ready)
+      // Prefer last-good complete/incomplete slice over sync 16×16 fallthrough.
+      const auto cit = cache.find(groundChunkCoord);
+      if (cit != cache.end() && cit->second.has_slice &&
+          cit->second.world_epoch == gFluidPackWorldEpoch)
       {
-        // Worker fill from a prior flagged job — install path stays versioned.
-        (void)drained;
+        slice = cit->second.slice;
+        ++gFluidPackCacheHits;
+      }
+      if (out_deferred)
+      {
+        *out_deferred = true;
       }
       return false;
     }
@@ -364,7 +386,14 @@ BuildFluidSurfaceColumnSlice(const UBlockWorld &world, UBlockRegistry &registry,
     }
   }
 
-  if (TryBuildSliceGpu(world, registry, groundChunkCoord, scanHintY, slice))
+  bool deferred = false;
+  if (TryBuildSliceGpu(world, registry, groundChunkCoord, scanHintY, slice,
+                       &deferred))
+  {
+    return slice;
+  }
+  // A31-02: deferred pending/last-good must NOT fall through to sync 16×16.
+  if (deferred)
   {
     return slice;
   }
@@ -400,6 +429,47 @@ void ResetFluidSurfacePackReuseCache()
   FluidPackReuseCache().clear();
   // A21 P6: world switch / session reset invalidates incomplete-tile reuse.
   ++gFluidPackWorldEpoch;
+}
+
+void InvalidateFluidSurfacePackReuseEntry(glm::ivec3 groundChunkCoord)
+{
+  if (groundChunkCoord.y != 0)
+  {
+    groundChunkCoord.y = 0;
+  }
+  FluidPackReuseCache().erase(groundChunkCoord);
+}
+
+int DrainFluidSummaryCompletionsIntoPackCache(int max_n)
+{
+  struct Ctx
+  {
+    std::unordered_map<glm::ivec3, FluidPackCacheEntry, IVec3Hash> *cache;
+  };
+  Ctx ctx{&FluidPackReuseCache()};
+  return DrainFluidSummaryCompletions(
+      [](const FluidColumnSummary &sum, void *p) {
+        auto *c = static_cast<Ctx *>(p);
+        glm::ivec3 key = sum.ground_chunk;
+        key.y = 0;
+        FluidPackCacheEntry &entry = (*c->cache)[key];
+        entry.content_rev = sum.content_rev;
+        entry.catalog_rev = sum.catalog_rev;
+        entry.y_min = sum.y_min;
+        entry.height = sum.height;
+        entry.fluid_id_hash = sum.fluid_id_hash;
+        entry.representative_fluid_id = sum.representative_fluid_id;
+        entry.tops = sum.tops;
+        entry.world_epoch = sum.world_epoch;
+        entry.stored_steady_ms = SteadyNowMs();
+        entry.incomplete = true;
+        // Tops-only until a full slice rebuild; keep prior slice if present.
+        if (!entry.has_slice)
+        {
+          entry.has_slice = false;
+        }
+      },
+      &ctx, max_n);
 }
 
 } // namespace cutum

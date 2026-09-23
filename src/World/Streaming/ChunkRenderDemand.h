@@ -11,9 +11,24 @@
 namespace cutum
 {
 
-/// A21 P2: when true, NoteDemand may skip redundant Dirty admits as shadow
-/// observer. A22 S2: sole writer — shadow dual-path OFF (cutover ON).
-inline constexpr bool kChunkDemandShadow = false;
+/// A31: demand lifecycle writers are production authority.
+/// Env CUBA_DEMAND_SHADOW=1 → observe-only (writers skipped at callsites).
+inline bool &ChunkDemandAuthorityEnabled()
+{
+  static bool enabled = []() {
+    if (const char *env = std::getenv("CUBA_DEMAND_SHADOW"))
+    {
+      // CUBA_DEMAND_SHADOW=1 → shadow/observe only (authority OFF).
+      return !(env[0] == '1' || env[0] == 't' || env[0] == 'T');
+    }
+    return true;
+  }();
+  return enabled;
+}
+
+/// Historical name: when true, NoteDemand/Install/Reconcile writers run.
+/// A31 default ON (was constexpr false). Prefer ChunkDemandAuthorityEnabled().
+inline bool kChunkDemandShadow() { return ChunkDemandAuthorityEnabled(); }
 
 /// A21 P2.7 cutover: when true, column ClearFaceDebt is forbidden (sole writer =
 /// per-chunk demand store). Default ON after residual R3 AF evidence path.
@@ -55,14 +70,18 @@ enum class InstallResult : uint8_t
 struct ChunkRenderDemandRecord
 {
   glm::ivec3 coord{};
+  uint64_t world_epoch{0};
+  uint64_t incarnation{0};
   uint64_t desired_geom_rev{0};
   uint64_t desired_light_rev{0};
   uint64_t desired_coverage_gen{0};
   uint64_t published_geom_rev{0};
   uint64_t published_light_rev{0};
+  uint64_t published_coverage_gen{0};
   uint64_t active_attempt_id{0};
   JobStage active_stage{JobStage::Created};
   double last_progress_ms{0.0};
+  double attempt_created_ms{0.0};
   bool has_active_attempt{false};
   bool retained_awaiting_successor{false};
   /// Optional peer coverage generation per face 0..5.
@@ -84,14 +103,19 @@ public:
   /// Raise or coalesce desire. AlreadySatisfied when published meets desired.
   DemandResult NoteDemand(glm::ivec3 coord, uint64_t desired_geom_rev,
                           uint64_t desired_light_rev,
-                          uint64_t desired_coverage_gen = 0);
+                          uint64_t desired_coverage_gen = 0,
+                          double now_ms = 0.0);
 
-  void NoteStageProgress(glm::ivec3 coord, JobStage stage,
+  /// Returns false if attempt_id mismatches active or stage regresses.
+  bool NoteStageProgress(glm::ivec3 coord, JobStage stage,
                          uint64_t attempt_id = 0, double now_ms = 0.0);
 
-  void NoteInstallResult(glm::ivec3 coord, InstallResult result,
+  /// Stale attempt_id (non-zero and != active) is ignored.
+  bool NoteInstallResult(glm::ivec3 coord, InstallResult result,
                          uint64_t published_geom_rev = 0,
-                         uint64_t published_light_rev = 0);
+                         uint64_t published_light_rev = 0,
+                         uint64_t attempt_id = 0,
+                         uint64_t published_coverage_gen = 0);
 
   /// A26 N1: sole path to refresh published_* without InstallResult (shadow sync).
   /// Does not clear active/retain flags — use NoteInstallResult for lifecycle.
@@ -99,11 +123,11 @@ public:
                          uint64_t published_light_rev);
 
   /// Face debt keyed by chunkXYZ/face; optional peer coverage generation (P2.4).
-  /// peer_gen != 0 stores required peer generation on newly set faces.
+  /// peer_gen bumps waiting_peer_gen[f] via max on all set bits (monotonic).
   void NoteFaceDebt(glm::ivec3 chunk_xyz, uint8_t face_mask,
                     uint64_t peer_gen = 0);
-  /// Clear face bits for this publisher only. When peer_gen != 0, a face clears
-  /// only if waiting_peer_gen[face] is 0 or matches peer_gen.
+  /// Clear face bits. peer_gen==0 never clears a face with waiting_peer_gen!=0.
+  /// Otherwise clear iff peer_gen >= waiting[f].
   void NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz, uint8_t face_mask,
                              uint64_t peer_gen = 0);
 
@@ -115,19 +139,19 @@ public:
     int retained_awaiting{0};
   };
   /// Level check desired vs published; bounded scan for maintenance.
-  /// Also cancels orphan actives (Created + no progress) — A25 R1 liveness.
-  ReconcileStats ReconcileMaintenance(int max_n);
+  /// Orphan Created only after grace (attempt_created_ms / last_progress).
+  ReconcileStats ReconcileMaintenance(int max_n, double now_ms = 0.0);
 
-  /// Cancel orphan active attempts: Created with no progress timestamp.
-  /// Returns number cancelled. Does not touch RetainedAwaitingSuccessor.
-  int CancelOrphanActiveAttempts(int max_n);
+  /// Cancel orphan active attempts: Created with no progress past grace.
+  int CancelOrphanActiveAttempts(int max_n, double now_ms = 0.0);
 
-  /// A26 N1: count records where desired != published and not Retain/active.
+  /// Count records where desired != published (incl. coverage/face) and not
+  /// Retain-with-live-successor / active.
   int CountUnsatisfiedDemands() const;
 
-  /// A26 N1: after stop (no new demand), every record is Published-satisfied,
-  /// cancelled, or retained-with-successor desire. Orphan actives count as fail.
-  bool StopConverged() const;
+  /// After stop: published meets desired (geom/light/coverage), no face debt,
+  /// Retain has live successor attempt, no orphan, no stall without progress.
+  bool StopConverged(double now_ms = 0.0) const;
 
   uint64_t AlreadySatisfiedSkipN() const { return AlreadySatisfiedSkipN_; }
   uint64_t CoalesceN() const { return CoalesceN_; }
@@ -139,8 +163,17 @@ public:
   void Clear();
   size_t Size() const { return Records_.size(); }
 
+  /// A31: orphan grace before Created+no-progress cancels (ms).
+  static constexpr double kOrphanGraceMs = 250.0;
+  /// Max age of active attempt without progress before StopConverged fails.
+  static constexpr double kStallFailMs = 30000.0;
+
 private:
   UChunkRenderDemandStore() = default;
+
+  static bool CoverageSatisfied(const ChunkRenderDemandRecord &rec,
+                                uint64_t desired_coverage_gen);
+  static bool PublishedMeetsDesired(const ChunkRenderDemandRecord &rec);
 
   std::unordered_map<glm::ivec3, ChunkRenderDemandRecord, IVec3Hash> Records_;
   uint64_t NextAttemptId_{1};

@@ -652,6 +652,72 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
   }
 
   changed = changed || staged.size() != cache.batches.size();
+  // A31-06: validate each published_ok BEFORE swapping resident batches.
+  {
+    PublicationEpochs draw{};
+    draw.artifact_generation = cache.publicationVersion;
+    draw.resident_table_revision = cache.resident_table_revision;
+    draw.cull_key_generation = cache.cullRevision;
+    draw.transparent_order_key = cache.transparent_order_key;
+    PublicationEpochs live{};
+    live.artifact_generation = cache.meshRevision;
+    live.resident_table_revision = cache.resident_table_revision;
+    live.cull_key_generation = cache.cullRevision;
+    live.transparent_order_key = cache.transparent_order_key;
+    bool pub_rejected = false;
+    for (const auto &coord : published_ok)
+    {
+      ArtifactManifest got{};
+      ArtifactManifest expected{};
+      got.light_valid = true;
+      uint64_t light_rev = 0;
+      if (mesh_cache != nullptr)
+      {
+        light_rev = mesh_cache->GetMeshedLightRevision(coord);
+        const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+        if (light_rev == 0)
+        {
+          light_rev = pub.light_rev;
+        }
+        got.source_geom_rev =
+            pub.geom_rev != 0 ? pub.geom_rev : cache.meshRevision;
+        got.source_light_rev = light_rev != 0 ? light_rev : cache.meshRevision;
+        got.light_valid = true;
+        if (pub.light_rev != 0 && light_rev != 0 && pub.light_rev != light_rev)
+        {
+          got.light_valid = false;
+        }
+        expected.source_geom_rev =
+            pub.geom_rev != 0 ? pub.geom_rev : cache.meshRevision;
+        expected.source_light_rev =
+            light_rev != 0 ? light_rev : cache.meshRevision;
+        // Keep expected.light_valid=true so got.light_valid=false rejects.
+        expected.light_valid = true;
+      }
+      else
+      {
+        got.source_geom_rev = cache.meshRevision;
+        got.source_light_rev = cache.meshRevision;
+        expected = got;
+      }
+      const PublicationValidation pub_v =
+          ValidatePublicationCandidate(got, expected, draw, live);
+      if (!PublicationCandidateAccepted(pub_v))
+      {
+        pub_rejected = true;
+        break;
+      }
+    }
+    if (pub_rejected)
+    {
+      // Same as fail-all: release fresh uploads, keep prior publication.
+      for (const size_t n : fresh)
+        ReleasePooledBatch(staged[n], cache.VertexPool);
+      sync_handles();
+      NotePubVerChangedWithoutFresh();
+      return false;
+    }
+  }
   for (size_t n = 0; n < cache.batches.size(); ++n)
     if (!retained[n])
       ReleasePooledBatch(cache.batches[n], cache.VertexPool);
@@ -713,69 +779,6 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
   }
   cache.VertexPool.SignalUploadComplete();
   LastAppliedDeltaKind_ = PublicationDeltaKind::Replace;
-  // A21 P3/R4: production calls shared validator with real light provenance.
-  {
-    ArtifactManifest got{};
-    ArtifactManifest expected{};
-    got.source_geom_rev = cache.meshRevision;
-    got.artifact_generation = cache.publicationVersion;
-    got.light_valid = true;
-    uint64_t light_rev = 0;
-    if (mesh_cache != nullptr && !published_ok.empty())
-    {
-      const glm::ivec3 sample = *published_ok.begin();
-      light_rev = mesh_cache->GetMeshedLightRevision(sample);
-      const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(sample);
-      if (light_rev == 0)
-      {
-        light_rev = pub.light_rev;
-      }
-      got.source_geom_rev =
-          pub.geom_rev != 0 ? pub.geom_rev : cache.meshRevision;
-      // Reject path: stale halo when publish revs disagree with meshed light.
-      if (pub.light_rev != 0 && light_rev != 0 && pub.light_rev != light_rev)
-      {
-        got.light_valid = false;
-      }
-    }
-    got.source_light_rev = light_rev != 0 ? light_rev : cache.meshRevision;
-    // A22 S3: expected from live meshed/publish revs — not a copy of got
-    // (self-check was a tautology).
-    expected = got;
-    if (mesh_cache != nullptr && !published_ok.empty())
-    {
-      const glm::ivec3 sample = *published_ok.begin();
-      const MeshPublishRevs live_pub = mesh_cache->GetMeshPublishRevs(sample);
-      uint64_t live_light = mesh_cache->GetMeshedLightRevision(sample);
-      if (live_light == 0)
-      {
-        live_light = live_pub.light_rev;
-      }
-      expected.source_light_rev =
-          live_light != 0 ? live_light : cache.meshRevision;
-      expected.source_geom_rev =
-          live_pub.geom_rev != 0 ? live_pub.geom_rev : cache.meshRevision;
-      expected.light_valid = true;
-      if (live_pub.light_rev != 0 && live_light != 0 &&
-          live_pub.light_rev != live_light)
-      {
-        expected.light_valid = false;
-      }
-    }
-    PublicationEpochs live{};
-    live.artifact_generation = cache.publicationVersion;
-    live.resident_table_revision = cache.resident_table_revision;
-    live.transparent_order_key = cache.transparent_order_key;
-    live.cull_key_generation = cache.cullRevision;
-    const PublicationValidation pub_v =
-        ValidatePublicationCandidate(got, expected, live, live);
-    if (!PublicationCandidateAccepted(pub_v))
-    {
-      // A26 N2: do not treat failed provenance as silent success — retain
-      // already-applied GPU state but record reject for telemetry/tests.
-      NotePubVerChangedWithoutFresh();
-    }
-  }
   return true;
 
   }

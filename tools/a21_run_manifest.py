@@ -129,10 +129,75 @@ def build_run_manifest(
         "cold_warm_mode": cold_warm,
         "fog_on": os.environ.get("CUBA_FLIGHT_FOG_ON") == "1",
         "teleport_cruise": False,
+        # A31 P0: completeness flags — empty optional env fields stay UNTESTED.
+        "manifest_required_empty": [],
+        "warm_protocol": None,
     }
+    required_keys = (
+        "git_sha",
+        "dirty_diff_hash",
+        "exe_hash",
+        "world",
+        "scenario",
+        "cold_warm_mode",
+    )
+    empty: list[str] = []
+    for k in required_keys:
+        if not manifest.get(k):
+            empty.append(k)
+    for k in (
+        "gl_capabilities",
+        "gpu_driver",
+        "resolution",
+        "light_distance_settings",
+        "world_seed_or_hash",
+    ):
+        if not manifest.get(k):
+            empty.append(k)
+    manifest["manifest_required_empty"] = empty
+    if cold_warm == "warm":
+        protocol = os.environ.get("CUBA_WARM_PROTOCOL", "warmup_sec")
+        manifest["warm_protocol"] = protocol
     if extra:
         manifest.update(extra)
+        # Recompute empty after extra merge for acceptance gates.
+        empty2: list[str] = []
+        for k in required_keys:
+            if not manifest.get(k):
+                empty2.append(k)
+        for k in (
+            "gl_capabilities",
+            "gpu_driver",
+            "resolution",
+            "light_distance_settings",
+            "world_seed_or_hash",
+        ):
+            if not manifest.get(k):
+                empty2.append(k)
+        manifest["manifest_required_empty"] = empty2
     return manifest
+
+
+def manifest_acceptance_ok(manifest: dict[str, Any], *, for_acceptance: bool) -> dict[str, Any]:
+    """A31: acceptance requires clean dirty hash and filled identity fields."""
+    fails: list[str] = []
+    empty = list(manifest.get("manifest_required_empty") or [])
+    # Soft env fields are UNTESTED, not hard fail unless for_acceptance and listed.
+    hard = {"git_sha", "exe_hash", "world", "scenario", "cold_warm_mode"}
+    for k in empty:
+        if k in hard:
+            fails.append(f"manifest_missing:{k}")
+    dirty = manifest.get("dirty_diff_hash")
+    if for_acceptance and dirty and dirty != "clean":
+        fails.append("dirty_diff_hash_not_clean")
+    if manifest.get("cold_warm_mode") == "warm":
+        if not manifest.get("warm_protocol"):
+            fails.append("warm_protocol_unspecified")
+    return {
+        "manifest_acceptance_pass": len(fails) == 0,
+        "manifest_acceptance_fails": fails,
+        "manifest_untested_fields": [k for k in empty if k not in hard],
+    }
 
 
 def main() -> int:

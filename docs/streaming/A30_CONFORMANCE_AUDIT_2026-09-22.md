@@ -1,5 +1,10 @@
 # A30 CONFORMANCE AUDIT — after A29 OPEN
 
+> Исторический итог цикла A30. Пост-коммитная повторная проверка `243e817d`
+> уточняет production-статус seam/fluid изменений и пересматривает общие статусы:
+> [`A31_REAUDIT_2026-09-23.md`](A31_REAUDIT_2026-09-23.md). Для следующей работы
+> используйте [обновлённый successor-план](../../.cursor/plans/remediation_after_a30_open.plan.md).
+
 Date: 2026-09-22  
 Parent: remediation_after_a29_open (V1–V5)  
 Canon: [`ENGINE_REMEDIATION_PLAN_2026-09-22.md`](ENGINE_REMEDIATION_PLAN_2026-09-22.md)  
