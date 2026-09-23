@@ -34,6 +34,7 @@ inline bool kChunkDemandShadow() { return ChunkDemandAuthorityEnabled(); }
 /// per-chunk demand store). Default ON after residual R3 AF evidence path.
 /// Rollback: set false or env CUBA_DEMAND_CUTOVER=0 (never leave both cutover ON
 /// and column clears active).
+/// A37 H2: cutover without authority is forbidden — cutover ⇒ authority ON.
 inline bool &ChunkDemandCutoverEnabled()
 {
   static bool enabled = []() {
@@ -43,6 +44,11 @@ inline bool &ChunkDemandCutoverEnabled()
     }
     return true;
   }();
+  // Sole-writer: cutover implies lifecycle authority.
+  if (enabled && !ChunkDemandAuthorityEnabled())
+  {
+    ChunkDemandAuthorityEnabled() = true;
+  }
   return enabled;
 }
 

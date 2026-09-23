@@ -20,6 +20,8 @@
 #include "glog/logging.h"
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -1549,7 +1551,18 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
   {
     return;
   }
+  // A37 H0: warm protocol stamp so AF adequacy cache_mode can be warm honestly.
+  const bool warm_stamp =
+      (std::strcmp(kind, "period") == 0) &&
+      []() {
+        if (const char *env = std::getenv("CUBA_FLIGHT_WARM"))
+        {
+          return env[0] == '1' || env[0] == 't' || env[0] == 'T';
+        }
+        return false;
+      }();
   s.Jsonl << "{\"kind\":\"" << kind << "\""
+          << (warm_stamp ? ",\"warm\":1" : "")
           << ",\"wall_ms\":" << n.wall_ms << ",\"sim_ms\":" << n.sim_ms
           << ",\"swap_wait_ms\":" << n.swap_wait_ms
           << ",\"unaccounted_ms\":" << n.unaccounted_ms

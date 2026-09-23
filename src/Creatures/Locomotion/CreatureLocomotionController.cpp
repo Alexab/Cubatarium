@@ -1,4 +1,5 @@
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
+#include "App/Platform/FlightSimHarness.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
@@ -51,19 +52,22 @@ bool UCreatureLocomotionController::IsSprinting(
 float UCreatureLocomotionController::ResolveHorizontalSpeed(
     const CreatureInput &input) const
 {
+  float speed = Caps.walkSpeed;
   if (Mode == CreatureMovementMode::Flying)
   {
-    return Caps.walkSpeed * Caps.flySpeedMultiplier;
+    speed = Caps.walkSpeed * Caps.flySpeedMultiplier;
   }
-  if (Caps.canCrouch && input.crouchHeld)
+  else if (Caps.canCrouch && input.crouchHeld)
   {
-    return Caps.walkSpeed * Caps.crouchSpeedMultiplier;
+    speed = Caps.walkSpeed * Caps.crouchSpeedMultiplier;
   }
-  if (IsSprinting(input))
+  else if (IsSprinting(input))
   {
-    return Caps.walkSpeed * Caps.sprintSpeedMultiplier;
+    speed = Caps.walkSpeed * Caps.sprintSpeedMultiplier;
   }
-  return Caps.walkSpeed;
+  // A37 H0: far AF distance stress — harness-only scale (default 1).
+  speed *= FlightSimMoveSpeedScale();
+  return speed;
 }
 
 void UCreatureLocomotionController::SetCapabilities(

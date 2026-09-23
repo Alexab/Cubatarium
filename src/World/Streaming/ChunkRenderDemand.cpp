@@ -64,13 +64,16 @@ bool UChunkRenderDemandStore::PublishedMeetsDesired(
   {
     return false;
   }
+  if (rec.face_debt_mask != 0 || !CoverageSatisfied(rec, 0))
+  {
+    return false;
+  }
   if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0)
   {
     return true;
   }
   return rec.published_geom_rev == rec.desired_geom_rev &&
-         rec.published_light_rev == rec.desired_light_rev &&
-         CoverageSatisfied(rec, 0) && rec.face_debt_mask == 0;
+         rec.published_light_rev == rec.desired_light_rev;
 }
 
 DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
@@ -133,6 +136,11 @@ bool UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
                                                 uint64_t attempt_id,
                                                 double now_ms)
 {
+  // A37 H2: ungated stage writes with authority OFF polluted StopConverged.
+  if (!ChunkDemandAuthorityEnabled())
+  {
+    return false;
+  }
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
   if (attempt_id != 0)
   {
@@ -215,15 +223,10 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
     {
       rec.published_light_rev = published_light_rev;
     }
+    // A37 H3: coverage advances only with explicit published_coverage_gen.
     if (published_coverage_gen > 0)
     {
       rec.published_coverage_gen = published_coverage_gen;
-    }
-    else if (rec.desired_coverage_gen > 0)
-    {
-      // Publish without explicit coverage still advances if debt clear.
-      rec.published_coverage_gen =
-          (std::max)(rec.published_coverage_gen, rec.desired_coverage_gen);
     }
     rec.retained_awaiting_successor = false;
     rec.has_active_attempt = false;

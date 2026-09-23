@@ -1606,10 +1606,11 @@ void UWorldStreaming::RefreshStreamingPressure(
     // SoT unfinished (held sample while cruise); not pending-proxy.
     world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
     world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
-    // A36 S6: unfinished starve with empty dirty → capped remesh re-admit.
+    // A37 H2: unfinished → owned NoteDemand+admit (Kick OFF by default).
     if (unfinished_visual > 0)
     {
-      world.KickUnfinishedVisualRemesh(4);
+      world.AdmitUnfinishedVisualDemand(8);
+      world.KickUnfinishedVisualRemesh(4); // no-op unless CUBA_KICK_UNFINISHED=1
     }
     // NearFocusHoles telemetry = missing mesh only (same as VisualHoles).
     // Pending-light → LightDebt; sticky/pending_dark → FocusDarkMesh /

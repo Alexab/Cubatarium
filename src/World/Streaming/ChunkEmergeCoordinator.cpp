@@ -559,7 +559,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               }
               else
               {
-                clear_mask = 0x3Fu;
+                // A37 H3: no record ⇒ do not fabricate clear of all faces.
+                clear_mask = 0;
               }
               if (clear_mask != 0)
               {
@@ -631,11 +632,27 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // FaceDebt census only — Dirty admission stays at mismatch writers
           // (material / PublishedEmpty), not light-accepted Retain.
           world_ref.GetColumnRecords().NoteFaceDebt(col);
-          // A32 S4: dual-write per-chunk demand face debt.
-          if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
+          // A37 H2: single authority gate (cutover ⇒ authority).
+          if (ChunkDemandAuthorityEnabled())
           {
-            UChunkRenderDemandStore::Get().NoteFaceDebt(chunk_coord, 0x3Fu,
-                                                       /*peer_gen=*/0);
+            // A37 H3: peer_gen≥1 so waiting faces are not "ready with 0".
+            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            demand.NoteFaceDebt(chunk_coord, 0x3Fu, /*peer_gen=*/1);
+            // Coverage desire with face debt; preserve existing geom/light desire.
+            uint64_t g = 1, l = 1;
+            if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
+            {
+              if (r->desired_geom_rev != 0)
+              {
+                g = r->desired_geom_rev;
+              }
+              if (r->desired_light_rev != 0)
+              {
+                l = r->desired_light_rev;
+              }
+            }
+            (void)demand.NoteDemand(chunk_coord, g, l,
+                                    /*desired_coverage_gen=*/1);
           }
           world_ref.NoteUnfinishedColumnDirty(col);
         });
@@ -661,11 +678,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
-          // A32 S4: dual-write per-chunk demand face debt mask.
-          if (kChunkDemandShadow() || ChunkDemandCutoverEnabled())
+          // A37 H2: single authority gate (cutover ⇒ authority).
+          if (ChunkDemandAuthorityEnabled())
           {
-            UChunkRenderDemandStore::Get().NoteFaceDebt(chunk_coord, mask,
-                                                       /*peer_gen=*/0);
+            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            demand.NoteFaceDebt(chunk_coord, mask, /*peer_gen=*/1);
+            uint64_t g = 1, l = 1;
+            if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
+            {
+              if (r->desired_geom_rev != 0)
+              {
+                g = r->desired_geom_rev;
+              }
+              if (r->desired_light_rev != 0)
+              {
+                l = r->desired_light_rev;
+              }
+            }
+            (void)demand.NoteDemand(chunk_coord, g, l,
+                                    /*desired_coverage_gen=*/1);
           }
           world_ref.NoteUnfinishedColumnDirty(col);
           // Ownership SeamDebt: FaceDebt = census only (unfinished).
@@ -750,7 +781,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               }
               else
               {
-                clear_mask = 0x3Fu;
+                // A37 H3: no record ⇒ do not fabricate clear of all faces.
+                clear_mask = 0;
               }
               if (clear_mask != 0)
               {

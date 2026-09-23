@@ -1220,8 +1220,10 @@ public:
   /// Focus columns that are loaded but not yet safe to render.
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;
-  /// A36 S6: when unfinished>0 but dirty queue empty, re-admit capped remesh
-  /// (attributed hinterland starve — not PreferKick / SoftDefer heal).
+  /// A37 H2: owned desire→admit for unfinished keys (replaces Kick as writer).
+  /// Returns number of NewDemand/MarkDirty admits this call.
+  int AdmitUnfinishedVisualDemand(int max_n = 8);
+  /// A36 S6 / A37 H6: symptom Kick — OFF unless CUBA_KICK_UNFINISHED=1.
   void KickUnfinishedVisualRemesh(int max_n = 4);
   /// Cruise wall P3: invalidate unfinished ring cache (focus shift / mesh events).
   void InvalidateUnfinishedVisualCache() const;

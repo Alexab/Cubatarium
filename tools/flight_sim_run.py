@@ -14,7 +14,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
 EXE = BIN / "Cubatarium.exe"
-DEBUG_EXE = ROOT / "build" / "desktop-msvc" / "Debug" / "Cubatarium.exe"
+# AF / product acceptance: Release (or RelWithDebInfo) only — RUNTIME_OUTPUT → bin/.
+# Debug lives under build/.../Debug with a separate worlds/ tree (no World_164) and
+# must never be selected for flight_sim (Creating world... / false cold).
+RELEASE_EXE = ROOT / "build" / "desktop-msvc" / "Release" / "Cubatarium.exe"
 ANALYZE = Path(__file__).with_name("flight_sim_analyze.py")
 DIAG = Path(__file__).with_name("flight_sim_diag.py")
 PHASE_HISTORY = BIN / "flight_sim_phase_history.jsonl"
@@ -87,15 +90,15 @@ def newest_perf(after_ts: float) -> Path | None:
 
 
 def resolve_exe() -> Path:
-    """Prefer the freshest local desktop build when available."""
-    if DEBUG_EXE.is_file():
-        if not EXE.is_file():
-            return DEBUG_EXE
-        try:
-            if DEBUG_EXE.stat().st_mtime >= EXE.stat().st_mtime:
-                return DEBUG_EXE
-        except OSError:
-            return DEBUG_EXE
+    """Release-only for AF: bin/Cubatarium.exe (Release RUNTIME_OUTPUT).
+
+    Never prefer Debug — ExeDir/worlds under Debug lacks World_164 and triggers
+    NeedsCreateWorldOnStartup → Creating world... (invalid product evidence).
+    """
+    if EXE.is_file():
+        return EXE
+    if RELEASE_EXE.is_file():
+        return RELEASE_EXE
     return EXE
 
 
@@ -1701,6 +1704,19 @@ def main() -> int:
         if far_scenario:
             # Keep longer fly from above; do not flip into generic fly-heavy bumps.
             args.replay_manual_fly_heavy = False
+            # A37 H0: ~5 blk/s × scale × fly_sec ≥ 8192. Default scale 12 → ~10800.
+            if "--fly-phase-sec" not in sys.argv:
+                args.fly_phase_sec = max(args.fly_phase_sec, 180.0)
+            far_scale = os.environ.get("CUBA_FLIGHT_MOVE_SPEED_SCALE", "").strip()
+            if not far_scale:
+                os.environ["CUBA_FLIGHT_MOVE_SPEED_SCALE"] = "12"
+            # Far runs need headroom beyond default 600s soft_force timeout.
+            if args.process_timeout <= 0.0:
+                args.process_timeout = 900.0
+            args.process_timeout = max(
+                float(args.process_timeout),
+                float(args.seconds) + 300.0,
+            )
         args.seconds = max(
             args.seconds,
             args.idle_sec
@@ -2289,7 +2305,11 @@ def main() -> int:
             return rc
 
     if not EXE.is_file():
-        print(f"FAIL: missing {EXE}", file=sys.stderr)
+        print(
+            f"FAIL: missing Release {EXE} (Debug AF forbidden; "
+            "cmake --build --config Release --target Cubatarium)",
+            file=sys.stderr,
+        )
         return 2
 
     if args.fly_stop:
@@ -2323,6 +2343,15 @@ def main() -> int:
         t0 = time.time()
         if not args.skip_preflight:
             kill_cubatarium_orphans()
+
+        # A37 H0: stamp warm periods before spawn so FramePerfMonitor sees env.
+        warm_protocol = os.environ.get("CUBA_WARM_PROTOCOL", "").strip()
+        if float(getattr(args, "warmup_sec", 0) or 0) > 0 and (
+            warm_protocol
+            or "warm" in str(getattr(args, "report", "")).lower()
+        ):
+            os.environ.setdefault("CUBA_WARM_PROTOCOL", warm_protocol or "warmup_sec_stamp")
+            os.environ["CUBA_FLIGHT_WARM"] = "1"
 
         sim_cmd = [
             str(resolve_exe()),
@@ -2497,7 +2526,26 @@ def main() -> int:
                 try:
                     from a21_run_manifest import build_run_manifest
 
-                    cold_warm = "warm" if float(getattr(args, "warmup_sec", 0) or 0) > 0 else "cold"
+                    # A37 H0: warm only when explicit protocol + CUBA_FLIGHT_WARM stamp.
+                    warm_env = os.environ.get("CUBA_FLIGHT_WARM", "").strip().lower() in (
+                        "1",
+                        "true",
+                        "t",
+                        "yes",
+                    )
+                    warm_claimed = (
+                        float(getattr(args, "warmup_sec", 0) or 0) > 0
+                        and (
+                            warm_env
+                            or os.environ.get("CUBA_WARM_PROTOCOL", "").strip() != ""
+                        )
+                    )
+                    if warm_claimed and not warm_env:
+                        os.environ["CUBA_FLIGHT_WARM"] = "1"
+                        warm_env = True
+                    cold_warm = "warm" if warm_claimed and warm_env else "cold"
+                    if warm_claimed:
+                        os.environ.setdefault("CUBA_WARM_PROTOCOL", "warmup_sec_stamp")
                     _ann["run_manifest"] = build_run_manifest(
                         exe=resolve_exe(),
                         world=getattr(args, "world", None),
@@ -2506,6 +2554,9 @@ def main() -> int:
                         extra={
                             "perf_jsonl": str(perf) if perf else None,
                             "schema_perf": "perf_jsonl.v2",
+                            "flight_move_speed_scale": os.environ.get(
+                                "CUBA_FLIGHT_MOVE_SPEED_SCALE", "1"
+                            ),
                         },
                     )
                     from a21_run_manifest import manifest_acceptance_ok

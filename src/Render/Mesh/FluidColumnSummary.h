@@ -415,27 +415,7 @@ inline int DrainFluidSummaryCompletions(
         qs.completed.erase(qs.completed.begin());
         have = true;
       }
-      else if (!qs.pending.empty())
-      {
-        FluidSummaryWorkerJob job = std::move(qs.pending.front());
-        qs.pending.erase(qs.pending.begin());
-        if (job.flags.empty())
-        {
-          // Incomplete: re-queue at end once — do not discard demand.
-          if (qs.pending.size() < 8)
-          {
-            job.enqueued = true;
-            qs.pending.push_back(std::move(job));
-          }
-          continue;
-        }
-        done.req = job.req;
-        (void)TryBuildFluidColumnSummarySync(
-            job.flags.data(), job.req, job.fluid_id_hash,
-            job.representative_fluid_id, done.summary);
-        done.summary.ground_chunk = job.ground_chunk;
-        have = true;
-      }
+      // A37 H5: never inline-build pending on drain/main — wait for worker.
     }
     if (!have)
     {

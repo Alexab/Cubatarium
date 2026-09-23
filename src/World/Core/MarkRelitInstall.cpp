@@ -149,8 +149,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         demand.NotePublishedRevs(coord, pub_geom, pub_light);
         const DemandResult dr =
             demand.NoteDemand(coord, desired_geom, desired_light);
-        // A21 residual R2: FullyDark drawable is never "satisfied" by equal revs
-        // alone — vertices may still be dark while light_field_rev matches.
+        // A21 residual R2 / A37 H4: FullyDark is light desire, not geometry miss.
         UChunkMeshCache::LitApplyMeshProbe dark_probe{};
         mesh->FillLitApplyMeshProbe(coord, dark_probe);
         const bool fully_dark_drawable =
@@ -162,7 +161,14 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           ++PhysicsTelemetryData.DemandAlreadySatisfiedSkipN;
           return;
         }
-        // fully_dark_drawable: fall through to DirtyAdmit / MarkDirty.
+        if (dr == DemandResult::AlreadySatisfied && fully_dark_drawable)
+        {
+          // Raise light desire above published so Relight/Dirty owns the debt.
+          const uint64_t light_need =
+              (std::max)(desired_light, pub_light) + 1ull;
+          (void)demand.NoteDemand(coord, desired_geom, light_need);
+          mesh->GetCache().InvalidateMeshCapture(coord);
+        }
       }
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
       // enqueues (PreferKick≡0 cannot own pending GPU alone).

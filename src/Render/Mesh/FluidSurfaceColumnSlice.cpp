@@ -10,6 +10,7 @@
 #include "World/Core/FluidSurfaceScanTuning.h"
 #include "World/Math/GridMath.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <unordered_map>
@@ -162,16 +163,13 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       }
     }
   }
-  // A25 R5 / A32 S5: under budget pressure defer slice build to worker, but
-  // capture flags snapshot (same layout as sync scan) so the job is not empty.
+  // A25 R5 / A37 H5: defer only under real main-thread budget pressure.
+  // Static hitch estimate alone must not force PreferGpu off the cold build
+  // path (flags+GPU); hitch reject lives on the sync fallthrough below.
   {
-    const double est_ms =
-        static_cast<double>(height) * static_cast<double>(n * n) * 0.0004;
     const bool defer = ShouldDeferFluidFullColumnScan(
-                           height, /*has_usable_incomplete=*/false,
-                           UFrameDeadline::ShouldDeferProducer(
-                               /*critical_progress=*/false)) ||
-                       ShouldRejectFluidMapHitch(est_ms, 8.0);
+        height, /*has_usable_incomplete=*/false,
+        UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/false));
     if (defer)
     {
       // A36 S5: if last-good exists, return it without height×16×16 flags scan.
@@ -187,31 +185,8 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
         }
         return false;
       }
-      std::vector<uint8_t> flags(static_cast<size_t>(height * n * n), 0);
-      uint64_t scan_fluid_id_hash = 14695981039346656037ull;
-      BlockId scan_representative = BLOCK_AIR;
-      for (int ly = 0; ly < height; ++ly)
-      {
-        const int wy = y_min + ly;
-        for (int lz = 0; lz < n; ++lz)
-        {
-          for (int lx = 0; lx < n; ++lx)
-          {
-            const BlockId id =
-                world.GetBlock(glm::ivec3(origin.x + lx, wy, origin.z + lz));
-            if (IsFluidSurfaceBlock(id, registry))
-            {
-              flags[static_cast<size_t>((ly * n + lz) * n + lx)] = 1;
-              scan_fluid_id_hash ^= static_cast<uint64_t>(id);
-              scan_fluid_id_hash *= 1099511628211ull;
-              if (scan_representative == BLOCK_AIR)
-              {
-                scan_representative = id;
-              }
-            }
-          }
-        }
-      }
+      // A37 H5: no main height×16×16 — enqueue demand; worker gets empty flags
+      // until a non-pressured PreferGpu frame rebuilds / install from completed.
       FluidSummaryWorkerJob job{};
       job.ground_chunk = groundChunkCoord;
       FluidColumnSummaryRequest req{};
@@ -220,17 +195,7 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       req.catalog_rev = catalog_rev;
       req.y_min = y_min;
       req.height = height;
-      (void)TryEnqueueFluidSummaryWorker(job, req, true, flags.data(),
-                                         flags.size(), scan_fluid_id_hash,
-                                         scan_representative);
-      // Prefer last-good complete/incomplete slice over sync 16×16 fallthrough.
-      const auto cit = cache.find(groundChunkCoord);
-      if (cit != cache.end() && cit->second.has_slice &&
-          cit->second.world_epoch == gFluidPackWorldEpoch)
-      {
-        slice = cit->second.slice;
-        ++gFluidPackCacheHits;
-      }
+      (void)TryEnqueueFluidSummaryWorker(job, req, true);
       if (out_deferred)
       {
         *out_deferred = true;
@@ -431,10 +396,23 @@ BuildFluidSurfaceColumnSlice(const UBlockWorld &world, UBlockRegistry &registry,
   {
     return slice;
   }
-  // A31-02: deferred pending/last-good must NOT fall through to sync 16×16.
+  // A31-02 / A37 H5: deferred pending/last-good must NOT fall through to sync.
   if (deferred)
   {
     return slice;
+  }
+  // A37 H5: under hitch pressure without GPU path — return empty, no sync 16×16.
+  {
+    const int scan_up = FluidSurfaceScanTuning::ScanUp;
+    const int scan_down = FluidSurfaceScanTuning::ScanDown;
+    const int height = (scanHintY + scan_up) - (scanHintY - scan_down) + 1;
+    const double est_ms =
+        static_cast<double>(std::max(height, 1)) * 256.0 * 0.0004;
+    if (UFrameDeadline::ShouldDeferProducer(/*critical_progress=*/false) ||
+        ShouldRejectFluidMapHitch(est_ms, 8.0))
+    {
+      return slice;
+    }
   }
 
   const glm::ivec3 origin(groundChunkCoord.x * CHUNK_SIZE, 0,

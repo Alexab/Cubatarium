@@ -1839,12 +1839,19 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
         UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
   }
-  // A32 S2: production StopConverged for fly-stop / idle plateau telemetry.
+  // A32/A37: production StopConverged + stop-plateau reconcile/orphan cancel.
   {
     using clock = std::chrono::steady_clock;
     static const auto t0 = clock::now();
     const double now_ms =
         std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    if (kChunkDemandShadow())
+    {
+      (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/48,
+                                                                now_ms);
+      (void)UChunkRenderDemandStore::Get().CancelOrphanActiveAttempts(
+          /*max_n=*/32, now_ms);
+    }
     PhysicsTelemetryData.DemandStopConverged =
         UChunkRenderDemandStore::Get().StopConverged(now_ms) ? 1 : 0;
   }
@@ -2499,8 +2506,75 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   return unfinished;
 }
 
+int UWorld::AdmitUnfinishedVisualDemand(int max_n)
+{
+  if (max_n <= 0 || !MeshService)
+  {
+    return 0;
+  }
+  const auto &keys = UnfinishedVisualCache.unfinished_keys;
+  if (keys.empty())
+  {
+    return 0;
+  }
+  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  int admitted = 0;
+  for (uint64_t key : keys)
+  {
+    if (admitted >= max_n)
+    {
+      break;
+    }
+    const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+    const int cz = static_cast<int>(static_cast<uint32_t>(key));
+    const glm::ivec3 coord(cx, 0, cz);
+    uint64_t desired_geom = 0;
+    uint64_t desired_light = 0;
+    if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+    {
+      desired_geom = ch->GetContentRevision();
+      desired_light = ch->GetLightFieldRevision();
+    }
+    if (desired_geom == 0 && desired_light == 0)
+    {
+      desired_geom = 1;
+    }
+    const MeshPublishRevs pub =
+        MeshService->GetCache().GetMeshPublishRevs(coord);
+    demand.NotePublishedRevs(coord, pub.geom_rev, pub.light_rev);
+    const DemandResult dr =
+        demand.NoteDemand(coord, desired_geom, desired_light);
+    if (dr == DemandResult::AlreadySatisfied)
+    {
+      continue;
+    }
+    (void)MeshService->TryConsumeDirtyAdmit();
+    MeshService->MarkDirtyPriority(coord);
+    uint64_t attempt_id = 0;
+    if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
+    {
+      attempt_id = rec->active_attempt_id;
+    }
+    demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
+    ++admitted;
+  }
+  return admitted;
+}
+
 void UWorld::KickUnfinishedVisualRemesh(int max_n)
 {
+  // A37 H6: symptom Kick off by default — use AdmitUnfinishedVisualDemand.
+  if (const char *env = std::getenv("CUBA_KICK_UNFINISHED"))
+  {
+    if (!(env[0] == '1' || env[0] == 't' || env[0] == 'T'))
+    {
+      return;
+    }
+  }
+  else
+  {
+    return;
+  }
   if (max_n <= 0 || !MeshService)
   {
     return;
@@ -2523,7 +2597,6 @@ void UWorld::KickUnfinishedVisualRemesh(int max_n)
     }
     const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
     const int cz = static_cast<int>(static_cast<uint32_t>(key));
-    // Column unfinished → mark ground cy band (bounded).
     MeshService->MarkDirtyPriority(glm::ivec3(cx, 0, cz));
     ++marked;
   }

@@ -168,6 +168,11 @@ void UCrossGpuBackend::RefreshPass(
   {
     return;
   }
+  // A37 H3: reject stale/backwards refresh (shared-validator residual for Cross).
+  if (cache.meshRevision != 0 && mesh_revision < cache.meshRevision)
+  {
+    return;
+  }
 
   size_t write_index = 0;
   for (const CrossInstanceBatch &batch : batches)

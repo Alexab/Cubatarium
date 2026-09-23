@@ -40,6 +40,7 @@ inline bool SeamCoveragePeerSatisfied(const SeamCoverageManifest &debt,
 inline bool PeerReadyBeforeSubscribe(uint64_t published_peer_gen,
                                      uint64_t required_peer_gen)
 {
+  // required==0 → no face debt documented (unused). Debt raisers must pass ≥1.
   if (required_peer_gen == 0)
   {
     return true;

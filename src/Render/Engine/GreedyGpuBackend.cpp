@@ -110,6 +110,11 @@ void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
   {
     return;
   }
+  // A37 H3: reject backwards mesh revision (legacy RefreshPass residual).
+  if (cache.meshRevision != 0 && mesh_revision < cache.meshRevision)
+  {
+    return;
+  }
 
   ApplyPoolBudget(cache.VertexPool);
   std::vector<GreedyGpuBatch> staged;

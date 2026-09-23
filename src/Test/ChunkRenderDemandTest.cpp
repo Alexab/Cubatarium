@@ -82,6 +82,43 @@ int main()
   Expect(ChunkDemandAllowsColumnFaceDebtClear(), "rollback restores column clear");
   ChunkDemandCutoverEnabled() = true; // restore default for process
 
+  // A37 H2: cutover ⇒ authority (cannot leave cutover ON with authority OFF).
+  {
+    using cutum::ChunkDemandAuthorityEnabled;
+    store.Clear();
+    const glm::ivec3 gate{2, 0, 2};
+    Expect(store.NoteDemand(gate, 1, 1) == DemandResult::NewDemand,
+           "gate NewDemand");
+    ChunkDemandAuthorityEnabled() = false;
+    ChunkDemandCutoverEnabled() = true;
+    Expect(ChunkDemandAuthorityEnabled(), "cutover forces authority ON");
+    const uint64_t aid =
+        store.Find(gate) ? store.Find(gate)->active_attempt_id : 0;
+    Expect(store.NoteStageProgress(gate, cutum::JobStage::Admitted, aid),
+           "stage ok under cutover⇒authority");
+    ChunkDemandAuthorityEnabled() = false;
+    Expect(!store.NoteStageProgress(gate, cutum::JobStage::Uploaded, aid),
+           "stage gated when authority OFF");
+    (void)ChunkDemandCutoverEnabled();
+    Expect(ChunkDemandAuthorityEnabled(), "re-read cutover re-enables authority");
+    ChunkDemandAuthorityEnabled() = true;
+  }
+
+  // A37 H3: Published without explicit coverage must not auto-advance.
+  {
+    store.Clear();
+    const glm::ivec3 cov{4, 0, 4};
+    Expect(store.NoteDemand(cov, 3, 3, /*desired_coverage_gen=*/9) ==
+               DemandResult::NewDemand,
+           "coverage desire NewDemand");
+    store.NoteInstallResult(cov, InstallResult::Published, 3, 3, /*attempt=*/0,
+                            /*published_coverage_gen=*/0);
+    const ChunkRenderDemandRecord *cr = store.Find(cov);
+    Expect(cr && cr->published_coverage_gen == 0,
+           "no auto-advance published coverage");
+    Expect(cr && cr->desired_coverage_gen == 9, "desired coverage retained");
+  }
+
   const auto recon = store.ReconcileMaintenance(8);
   Expect(recon.checked >= 1, "reconcile scanned");
 

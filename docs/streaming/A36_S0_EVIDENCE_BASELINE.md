@@ -17,10 +17,12 @@ HEAD: resolve with `git rev-parse --short HEAD` on **clean** tree (`dirty_diff_h
 | Run | Scenario | Flags |
 |---|---|---|
 | cold | `product-174657` | `--visible`, clean tree |
-| warm | `product-174657` | `--visible --warmup-sec 20` + `CUBA_WARM_PROTOCOL` |
-| far | `product-174657-far` | `--visible`; checkpoints 0 / 2^13 / 2^16 / 2^19 |
+| warm | `product-174657` | `--visible --warmup-sec 20` + `CUBA_WARM_PROTOCOL` + `CUBA_FLIGHT_WARM=1` (stamps period `warm`) |
+| far | `product-174657-far` | `--visible`; harness sets `CUBA_FLIGHT_MOVE_SPEED_SCALE=12` so travel ≥8192; checkpoints 0 / 2^13 / … |
 
 Binding: `flight_sim_run` fails product family when `dirty_diff_hash != clean` (unless `CUBA_ALLOW_DIRTY_AF=1`).
+
+A37: KickUnfinished OFF unless `CUBA_KICK_UNFINISHED=1`; unfinished uses `AdmitUnfinishedVisualDemand`.
 
 ## Baseline metrics to record
 
