@@ -9,6 +9,7 @@
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/FluidColumnSummary.h"
 #include "Core/Jobs/JobThreadPool.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "Blocks/BlockRegistry.h"
@@ -672,6 +673,8 @@ void UWorldCooperativeSession::CancelBackgroundWorkers()
     (void)ParallelGen->Completed.DrainAll();
     ParallelGen->InFlight = 0;
   }
+  // A35 R0 / A31 P4: join fluid summary worker on coop cancel / world switch.
+  (void)ShutdownFluidSummaryWorker(2000);
 }
 
 bool UWorldCooperativeSession::BlocksStreamingTick() const
@@ -1739,10 +1742,20 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           warmup_elapsed_ms >= kMeshWarmupMaxWallMs;
       if (MeshWarmupTicks >= kMeshWarmupMaxTicks || warmup_wall_timeout)
       {
+        const size_t dirty_residual = world.MeshService->GetDirtyCount();
         std::cerr << "MeshWarmup: timeout with pending dirty="
-                  << world.MeshService->GetDirtyCount()
+                  << dirty_residual
                   << " ticks=" << MeshWarmupTicks
                   << " wall_ms=" << warmup_elapsed_ms << std::endl;
+        if (dirty_residual > 0)
+        {
+          // A35 R0: timeout ≠ MeshWarmup done — stamp residual for AF binding.
+          world.GetPhysicsTelemetryMutable().MeshWarmupTimeoutDirtyResidual = 1;
+          world.GetPhysicsTelemetryMutable().EnterMeshDirtyResidualN =
+              static_cast<int>(
+                  std::min<size_t>(dirty_residual, static_cast<size_t>(INT_MAX)));
+          MeshWarmupTimedOutWithDirty = true;
+        }
         world.SetLightingRelightDeferred(false);
         world.SetLightingSkylightBulkComplete(false);
         if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
@@ -2181,30 +2194,61 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         // LitRing C: stall with underfeet → settle with FOV holes OK (finite load).
         // Phase5 S4: soft_exit_cap settles without underfeet (stuck missing mesh).
         // Phase 5.2.0: soft_clean_cap settles when debt=0 + underfeet @12s.
+        // A35 R0: soft settle blocked while MeshService dirty residual high
+        // (EnterLit mesh_dirty can false-clear hinterland).
+        const size_t mesh_service_dirty_n =
+            world.MeshService ? world.MeshService->GetDirtyCount() : 0;
+        // Telemetry stamp MeshWarmupTimedOutWithDirty stays for AF; soft settle
+        // blocks only while residual dirty is still above cap (drain can clear).
+        const bool dirty_residual_blocks_soft =
+            EnterMeshDirtyResidualBlocksSoftSettle(mesh_service_dirty_n);
+        if (dirty_residual_blocks_soft &&
+            (soft_exit_cap || soft_clean_cap) &&
+            world.GetPhysicsTelemetryMutable()
+                    .EnterSoftSettleBlockedDirtyResidual == 0)
+        {
+          world.GetPhysicsTelemetryMutable()
+              .EnterSoftSettleBlockedDirtyResidual = 1;
+          world.GetPhysicsTelemetryMutable().EnterMeshDirtyResidualN =
+              static_cast<int>(std::min<size_t>(
+                  mesh_service_dirty_n, static_cast<size_t>(INT_MAX)));
+          LOG(WARNING) << "[EnterWarmup] soft_settle_blocked_dirty_residual n="
+                       << mesh_service_dirty_n
+                       << " warmup_timeout_dirty="
+                       << (MeshWarmupTimedOutWithDirty ? 1 : 0)
+                       << " elapsed_ms=" << elapsed_ms;
+          CubatariumFlushLogs();
+        }
+        const bool soft_exit_ok =
+            soft_exit_cap && !dirty_residual_blocks_soft;
+        const bool soft_clean_ok =
+            soft_clean_cap && !dirty_residual_blocks_soft;
         const bool live_blockers_ok =
             ring_ready_for_exit && visibility_ready_for_exit &&
             mesh_blockers_clear;
         const bool load_settled =
             live_blockers_ok ||
             (StreamingWarmupAbortDrainMode && underfeet_present &&
-             underfeet_gpu_pending <= 0 && fov_debt <= 0) ||
+             underfeet_gpu_pending <= 0 && fov_debt <= 0 &&
+             !dirty_residual_blocks_soft) ||
             (lit_progress_stalled && underfeet_present &&
-             underfeet_gpu_pending <= 0) ||
+             underfeet_gpu_pending <= 0 && !dirty_residual_blocks_soft) ||
             (abort_underfeet_cap && underfeet_present &&
              underfeet_gpu_pending <= 0 &&
-             (fov_debt <= 0 || lit_progress_stalled)) ||
-            soft_clean_cap || soft_exit_cap;
+             (fov_debt <= 0 || lit_progress_stalled) &&
+             !dirty_residual_blocks_soft) ||
+            soft_clean_ok || soft_exit_ok;
         if (load_settled && !StreamingWarmupSettleLogged)
         {
           StreamingWarmupSettleLogged = true;
           const char *settle_reason = "live_blockers";
           if (!live_blockers_ok)
           {
-            if (soft_clean_cap)
+            if (soft_clean_ok)
             {
               settle_reason = "soft_clean";
             }
-            else if (soft_exit_cap)
+            else if (soft_exit_ok)
             {
               // Phase 5.7R5: soft_force settle_reason only with UF presentable.
               settle_reason = ShouldAllowEnterSoftForceSettle(underfeet_present)
@@ -2229,6 +2273,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                     << " elapsed_ms=" << elapsed_ms
                     << " combined_debt=" << combined_debt
                     << " needs_mesh=" << (mesh_blockers_clear ? 0 : 1)
+                    << " mesh_service_dirty=" << mesh_service_dirty_n
                     << " underfeet=" << (underfeet_present ? 1 : 0)
                     << " ring_ready=" << (ring_ready ? 1 : 0)
                     << " visibility_debt=" << visibility_debt;
@@ -2246,8 +2291,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           }
           CubatariumFlushLogs();
         }
-        if ((abort_underfeet_cap || lit_progress_stalled || soft_exit_cap ||
-             soft_clean_cap) &&
+        if ((abort_underfeet_cap || lit_progress_stalled || soft_exit_ok ||
+             soft_clean_ok) &&
             load_settled && !StreamingWarmupAbortCapLogged)
         {
           StreamingWarmupAbortCapLogged = true;
@@ -2255,8 +2300,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                        << elapsed_ms << " ring_ready=" << (ring_ready ? 1 : 0)
                        << " visibility_debt=" << visibility_debt
                        << " lit_stall=" << (lit_progress_stalled ? 1 : 0)
-                       << " soft_exit=" << (soft_exit_cap ? 1 : 0)
-                       << " soft_clean=" << (soft_clean_cap ? 1 : 0)
+                       << " soft_exit=" << (soft_exit_ok ? 1 : 0)
+                       << " soft_clean=" << (soft_clean_ok ? 1 : 0)
                        << " underfeet=" << (underfeet_present ? 1 : 0);
           CubatariumFlushLogs();
         }

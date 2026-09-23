@@ -588,6 +588,10 @@ struct FrameNumbers
   uint64_t mesh_discarded_late_delta{0};
   uint64_t mesh_completed_discarded_delta{0};
   uint64_t mesh_replace_hole_avoided{0};
+  uint64_t pub_reject_light_invalid{0};
+  uint64_t pub_reject_source_mismatch{0};
+  uint64_t pub_reject_other{0};
+  uint64_t pub_accept_first_publish{0};
   int pending_gpu_applies_n{0};
   int pending_gpu_queued_n{0};
   int pending_gpu_kicked_n{0};
@@ -653,6 +657,9 @@ struct FrameNumbers
   int softdefer_empty_owned_n{0};
   int softdefer_owned_no_gpu_n{0};
   int enter_settle_soft_force_with_debt{0};
+  int mesh_warmup_timeout_dirty_residual{0};
+  int enter_soft_settle_blocked_dirty_residual{0};
+  int enter_mesh_dirty_residual_n{0};
   int visibility_debt{0};
   int visibility_debt_hinterland{0};
   uint64_t softdefer_empty_publish_avoided{0};
@@ -1246,6 +1253,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_apply_superseded = phys.MeshApplySuperseded;
   n.mesh_apply_drop_no_active = phys.MeshApplyDropNoActive;
   n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
+  n.pub_reject_light_invalid = phys.PubRejectLightInvalid;
+  n.pub_reject_source_mismatch = phys.PubRejectSourceMismatch;
+  n.pub_reject_other = phys.PubRejectOther;
+  n.pub_accept_first_publish = phys.PubAcceptFirstPublish;
   n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
   n.pending_gpu_queued_n = phys.PendingGpuQueuedN;
   n.pending_gpu_kicked_n = phys.PendingGpuKickedN;
@@ -1306,6 +1317,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.softdefer_empty_owned_n = phys.SoftDeferEmptyOwnedN;
   n.softdefer_owned_no_gpu_n = phys.SoftDeferOwnedNoGpuN;
   n.enter_settle_soft_force_with_debt = phys.EnterSettleSoftForceWithDebt;
+  n.mesh_warmup_timeout_dirty_residual = phys.MeshWarmupTimeoutDirtyResidual;
+  n.enter_soft_settle_blocked_dirty_residual =
+      phys.EnterSoftSettleBlockedDirtyResidual;
+  n.enter_mesh_dirty_residual_n = phys.EnterMeshDirtyResidualN;
   n.visibility_debt = phys.VisibilityDebt;
   n.visibility_debt_hinterland = phys.VisibilityDebtHinterland;
   n.softdefer_empty_publish_avoided = phys.SoftDeferEmptyPublishAvoided;
@@ -1970,6 +1985,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_apply_drop_no_active_delta\":"
           << n.mesh_apply_drop_no_active_delta
           << ",\"mesh_replace_hole_avoided\":" << n.mesh_replace_hole_avoided
+          << ",\"pub_reject_light_invalid\":" << n.pub_reject_light_invalid
+          << ",\"pub_reject_source_mismatch\":" << n.pub_reject_source_mismatch
+          << ",\"pub_reject_other\":" << n.pub_reject_other
+          << ",\"pub_accept_first_publish\":" << n.pub_accept_first_publish
           << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
           << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
           << ",\"pending_gpu_kicked_n\":" << n.pending_gpu_kicked_n
@@ -2050,6 +2069,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"softdefer_owned_no_gpu_n\":" << n.softdefer_owned_no_gpu_n
           << ",\"enter_settle_soft_force_with_debt\":"
           << n.enter_settle_soft_force_with_debt
+          << ",\"mesh_warmup_timeout_dirty_residual\":"
+          << n.mesh_warmup_timeout_dirty_residual
+          << ",\"enter_soft_settle_blocked_dirty_residual\":"
+          << n.enter_soft_settle_blocked_dirty_residual
+          << ",\"enter_mesh_dirty_residual_n\":"
+          << n.enter_mesh_dirty_residual_n
           << ",\"visibility_debt\":" << n.visibility_debt
           << ",\"visibility_debt_hinterland\":" << n.visibility_debt_hinterland
           << ",\"softdefer_empty_publish_avoided\":"

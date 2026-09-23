@@ -83,6 +83,7 @@
 #include "World/Streaming/RingReadinessBudget.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/FluidColumnSummary.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/DependencyStampBuilder.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
@@ -5686,6 +5687,8 @@ void UWorld::PrepareForShutdownWithBudgets(
     BlockPhysicsService->ClearFluidQueue();
     phase_ms("clear_fluid_queue");
   }
+  (void)ShutdownFluidSummaryWorker(2000);
+  phase_ms("fluid_summary_worker");
   if (Streaming)
   {
     // Abandon before mesh WaitIdle so long populate cannot hang shutdown.

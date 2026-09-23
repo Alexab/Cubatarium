@@ -220,6 +220,10 @@ public:
   uint64_t GetMeshApplySupersededCount() const;
   uint64_t GetMeshApplyDropNoActiveCount() const;
   uint64_t GetMeshReplaceHoleAvoidedCount() const;
+  uint64_t GetPubRejectLightInvalidCount() const;
+  uint64_t GetPubRejectSourceMismatchCount() const;
+  uint64_t GetPubRejectOtherCount() const;
+  uint64_t GetPubAcceptFirstPublishCount() const;
   uint64_t GetPriorLitHoldCount() const;
   int GetPriorLitHoldAgeMax() const;
   uint64_t GetSoftDeferEmptyPublishAvoidedCount() const;

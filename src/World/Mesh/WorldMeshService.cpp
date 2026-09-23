@@ -965,6 +965,26 @@ uint64_t UWorldMeshService::GetMeshReplaceHoleAvoidedCount() const
   return Cache.GetMeshReplaceHoleAvoidedCount();
 }
 
+uint64_t UWorldMeshService::GetPubRejectLightInvalidCount() const
+{
+  return Cache.GetPubRejectLightInvalidCount();
+}
+
+uint64_t UWorldMeshService::GetPubRejectSourceMismatchCount() const
+{
+  return Cache.GetPubRejectSourceMismatchCount();
+}
+
+uint64_t UWorldMeshService::GetPubRejectOtherCount() const
+{
+  return Cache.GetPubRejectOtherCount();
+}
+
+uint64_t UWorldMeshService::GetPubAcceptFirstPublishCount() const
+{
+  return Cache.GetPubAcceptFirstPublishCount();
+}
+
 uint64_t UWorldMeshService::GetPriorLitHoldCount() const
 {
   return Cache.GetPriorLitHoldCount();

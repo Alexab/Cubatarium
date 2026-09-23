@@ -107,6 +107,38 @@ int main()
   Expect(ValidatePublicationCandidate(m, m2) ==
              PublicationValidation::LightInvalid,
          "light_valid required");
+  // A34: observational dark cleared → Ok (MeshLitGate owns lit→dark).
+  {
+    using cutum::ClearObservationalDarkFromLightValid;
+    ArtifactManifest dark_got = m;
+    ArtifactManifest dark_exp = m;
+    dark_got.light_valid = false;
+    dark_exp.light_valid = true;
+    Expect(ValidatePublicationCandidate(dark_got, dark_exp) ==
+               PublicationValidation::LightInvalid,
+           "pre-clear dark still LightInvalid");
+    ClearObservationalDarkFromLightValid(dark_got, dark_exp);
+    Expect(ValidatePublicationCandidate(dark_got, dark_exp) ==
+               PublicationValidation::Ok,
+           "A34 observational dark cleared accepts first publish");
+  }
+  // A34: provenance SourceMismatch still rejects after clear.
+  {
+    using cutum::ClearObservationalDarkFromLightValid;
+    ArtifactManifest g = m;
+    ArtifactManifest e = m;
+    g.light_valid = false;
+    e.source_geom_rev = 42;
+    g.source_geom_rev = 7;
+    ClearObservationalDarkFromLightValid(g, e);
+    Expect(ValidatePublicationCandidate(g, e) ==
+               PublicationValidation::SourceMismatch,
+           "A34 provenance SourceMismatch kept");
+  }
+  Expect(!ShouldRejectDarkMeshCommit(true, false, false, false, 0),
+         "A34 MeshLitGate: first dark without prior lit OK");
+  Expect(ShouldRejectDarkMeshCommit(true, false, true, false, 0),
+         "A34 MeshLitGate: dark over prior lit still rejects");
   PublicationEpochs draw{};
   PublicationEpochs live{};
   live.resident_table_revision = 3;
@@ -307,6 +339,65 @@ int main()
       Expect(DrainOneFluidSummaryWorker(built), "flagged drain");
       Expect(built.ready && built.tops[0] == 8, "worker filled tops");
     }
+  }
+
+    // A31 P1: mutually exclusive defect class.
+  {
+    using cutum::ChunkDefectClass;
+    using cutum::ClassifyChunkDefect;
+    Expect(ClassifyChunkDefect(true, false, false, false, false, false, false,
+                               false) == ChunkDefectClass::GeometryMissing,
+           "P1 geometry missing");
+    Expect(ClassifyChunkDefect(true, true, true, false, false, false, false,
+                               false) == ChunkDefectClass::GeometryCulled,
+           "P1 culled");
+    Expect(ClassifyChunkDefect(true, true, false, true, false, false, false,
+                               false) == ChunkDefectClass::LightStaleOrInvalid,
+           "P1 light");
+    Expect(ClassifyChunkDefect(true, true, false, false, true, false, false,
+                               false) == ChunkDefectClass::SeamPeerMissing,
+           "P1 seam");
+    Expect(ClassifyChunkDefect(true, true, false, false, false, false, false,
+                               true) == ChunkDefectClass::LegalDark,
+           "P1 legal dark wins");
+  }
+
+  // A31 P3 / A35 R2: seam negatives — missing peer / one-of-six.
+  {
+    using cutum::SeamCoverageFullySatisfied;
+    using cutum::SeamCoveragePeerSatisfied;
+    SeamCoverageManifest missing{};
+    for (int f = 0; f < 6; ++f)
+    {
+      missing.peer_coverage_gen[static_cast<size_t>(f)] = 4;
+    }
+    uint64_t pubs_missing[6] = {0, 0, 0, 0, 0, 0};
+    Expect(!SeamCoverageFullySatisfied(missing, pubs_missing),
+           "P3 missing peer gens must fail");
+    Expect(!SeamCoveragePeerSatisfied(missing, 0, 0),
+           "P3 face0 missing peer gen");
+    uint64_t pubs_one[6] = {4, 4, 4, 4, 4, 3};
+    Expect(!SeamCoverageFullySatisfied(missing, pubs_one),
+           "P3 one-of-six lag must fail");
+    pubs_one[5] = 4;
+    Expect(SeamCoverageFullySatisfied(missing, pubs_one),
+           "P3 all six peers ok");
+  }
+
+  // A35 R0/P4: fluid worker shutdown is joinable (no detach hang).
+  {
+    using cutum::EnsureFluidSummaryWorkerStarted;
+    using cutum::ShutdownFluidSummaryWorker;
+    using cutum::TryEnqueueFluidSummaryWorker;
+    using cutum::FluidSummaryWorkerJob;
+    using cutum::FluidColumnSummaryRequest;
+    EnsureFluidSummaryWorkerStarted();
+    FluidSummaryWorkerJob job{};
+    FluidColumnSummaryRequest req{};
+    req.height = 16;
+    (void)TryEnqueueFluidSummaryWorker(job, req, true);
+    Expect(ShutdownFluidSummaryWorker(2000), "fluid worker shutdown joins");
+    // Leave stopped — process exit must not destroy a joinable thread.
   }
 
   if (gFails != 0)

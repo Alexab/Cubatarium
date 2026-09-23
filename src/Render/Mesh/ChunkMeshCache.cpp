@@ -3095,19 +3095,24 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
     return;
   }
   // A28 T3 / A32 S3: provenance gate BEFORE mutating CrossBatches.
+  // A34/A35: do not map dark→LightInvalid; do not compare MeshedLightRevision vs
+  // PublishRevs.light_rev (observational lag → SourceMismatch storm).
   if (!GreedyCache.empty())
   {
     const auto &sample = GreedyCache.begin()->second;
-    const PublicationValidation xv = ValidateCrossOrShellPublication(
-        sample.PublishRevs.geom_rev, sample.PublishRevs.light_rev,
-        !sample.GpuHasDarkFace, sample.PublishRevs.geom_rev,
-        sample.MeshedLightRevision != 0 ? sample.MeshedLightRevision
-                                        : sample.PublishRevs.light_rev);
-    if (!PublicationCandidateAccepted(xv))
+    if (sample.PublishRevs.geom_rev != 0)
     {
-      // Reject: keep prior CrossBatches; mark dirty for retry.
-      CrossBatchesDirty = true;
-      return;
+      const PublicationValidation xv = ValidateCrossOrShellPublication(
+          sample.PublishRevs.geom_rev, sample.PublishRevs.light_rev,
+          /*light_valid=*/true, sample.PublishRevs.geom_rev,
+          sample.PublishRevs.light_rev);
+      if (!PublicationCandidateAccepted(xv))
+      {
+        NotePublicationRejectClass(xv, PubRejectLightInvalidN,
+                                   PubRejectSourceMismatchN, PubRejectOtherN);
+        CrossBatchesDirty = true;
+        return;
+      }
     }
   }
   CrossBatches.clear();
@@ -4002,6 +4007,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
 
   // A32 S3: validate BEFORE bind/resident mutate; reject keeps prior.
+  // A34: observational dark ≠ LightInvalid (MeshLitGate first-mesh OK).
   {
     ArtifactManifest got{};
     ArtifactManifest expected{};
@@ -4018,9 +4024,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
     got.source_light_rev =
         has_source_light_revision ? source_light_revision : prior_light;
-    got.light_valid = !gpu_result.hasFullyDarkFace;
     expected = got;
-    expected.light_valid = true;
+    ClearObservationalDarkFromLightValid(got, expected);
     PublicationEpochs draw{};
     draw.artifact_generation = source_revision;
     PublicationEpochs live{};
@@ -4029,6 +4034,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
         ValidatePublicationCandidate(got, expected, draw, live);
     if (!PublicationCandidateAccepted(pub_v))
     {
+      NotePublicationRejectClass(pub_v, PubRejectLightInvalidN,
+                                 PubRejectSourceMismatchN, PubRejectOtherN);
       if (GpuPipeline && gpu_result.slotIndex >= 0)
       {
         GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
@@ -4050,6 +4057,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       }
       MarkDirtyPriority(coord);
       return false;
+    }
+    if (prior_geom == 0)
+    {
+      ++PubAcceptFirstPublishN;
     }
   }
 
@@ -5422,21 +5433,24 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     GreedyVertexCountTotal -= oldIt->second;
   }
   // A31-06: validate BEFORE assigning batches; reject keeps prior resident mesh.
+  // A34: observational dark ≠ LightInvalid (MeshLitGate / SoftDefer own lit→dark).
+  // A35: do NOT compare sourceRevision vs InputStamps.content — that SourceMismatch
+  // storm MarkDirty forever (manual pub_reject_source_mismatch×10k).
   {
     ArtifactManifest got{};
     ArtifactManifest expected{};
-    got.source_geom_rev = result.sourceRevision;
-    got.source_light_rev =
-        result.InputStampsValid ? result.InputStamps[0].light
-                                : chunkMesh.MeshedLightRevision;
-    got.light_valid = !new_dark;
-    expected = got;
     if (result.InputStampsValid)
     {
-      expected.source_geom_rev = result.InputStamps[0].content;
-      expected.source_light_rev = result.InputStamps[0].light;
-      expected.light_valid = true;
+      got.source_geom_rev = result.InputStamps[0].content;
+      got.source_light_rev = result.InputStamps[0].light;
     }
+    else
+    {
+      got.source_geom_rev = result.sourceRevision;
+      got.source_light_rev = chunkMesh.MeshedLightRevision;
+    }
+    expected = got;
+    ClearObservationalDarkFromLightValid(got, expected);
     PublicationEpochs draw{};
     draw.artifact_generation = result.sourceRevision;
     PublicationEpochs live{};
@@ -5445,6 +5459,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         ValidatePublicationCandidate(got, expected, draw, live);
     if (!PublicationCandidateAccepted(pub_v))
     {
+      NotePublicationRejectClass(pub_v, PubRejectLightInvalidN,
+                                 PubRejectSourceMismatchN, PubRejectOtherN);
       // Restore prior vertex accounting (we subtracted above).
       if (oldIt != GreedyVertexCountByChunk.end())
       {
@@ -5471,6 +5487,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       // Keep prior batches; ask for remesh/retry without publishing candidate.
       MarkDirtyPriority(result.coord);
       return;
+    }
+    if (chunkMesh.PublishRevs.geom_rev == 0)
+    {
+      ++PubAcceptFirstPublishN;
     }
   }
   GreedyVertexCountByChunk[result.coord] = new_vertex_count;
@@ -7789,14 +7809,14 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       }
     }
     // A32 S3: ValidatePublicationCandidate BEFORE assigning Immediate batches.
+    // A34: observational dark ≠ LightInvalid.
     {
       ArtifactManifest got{};
       ArtifactManifest expected{};
       got.source_geom_rev = sync_rev;
       got.source_light_rev = chunk->GetLightFieldRevision();
-      got.light_valid = !new_dark;
       expected = got;
-      expected.light_valid = true;
+      ClearObservationalDarkFromLightValid(got, expected);
       PublicationEpochs draw{};
       draw.artifact_generation = sync_rev;
       PublicationEpochs live{};
@@ -7805,6 +7825,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
           ValidatePublicationCandidate(got, expected, draw, live);
       if (!PublicationCandidateAccepted(pub_v))
       {
+        NotePublicationRejectClass(pub_v, PubRejectLightInvalidN,
+                                   PubRejectSourceMismatchN, PubRejectOtherN);
         if (kChunkDemandShadow())
         {
           UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
@@ -7826,6 +7848,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         }
         MarkDirtyPriority(chunkCoord);
         return;
+      }
+      if (chunkMesh.PublishRevs.geom_rev == 0)
+      {
+        ++PubAcceptFirstPublishN;
       }
     }
     chunkMesh.batches = std::move(new_batches);

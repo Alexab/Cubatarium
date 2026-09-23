@@ -1147,6 +1147,15 @@ inline bool ShouldForceEnterLoadSoftCleanDebt(double elapsed_ms,
   return elapsed_ms >= static_cast<double>(CreateSpawnWarmupSoftWallMs());
 }
 
+/// A35 / A31 realign R0: soft_force / soft_clean must not PASS-enter while
+/// MeshService still holds a large dirty residual (EnterLit mesh_dirty=0 can
+/// false-clear when hinterland debt is ignored). Cap keeps finite load.
+inline bool EnterMeshDirtyResidualBlocksSoftSettle(size_t mesh_service_dirty_n,
+                                                   size_t residual_cap = 32)
+{
+  return mesh_service_dirty_n > residual_cap;
+}
+
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)
 /// covers full column (0..max_cy) so air chunks with trees/leaves above
 /// preferred_cy+2 are not permanently stuck as SoftDefer empty.

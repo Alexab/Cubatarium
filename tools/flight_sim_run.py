@@ -614,6 +614,64 @@ def compute_post_stop_convergence(result: dict) -> dict:
     }
 
 
+def compute_empty_world_stop_line(result: dict) -> dict:
+    """A34 P0: opaque_cmd_on_med==0 means empty terrain (creatures-only) — hard FAIL.
+
+    Binding stop-line for product-174657 family; must not close AF todos when empty.
+    opaque_on_min may be 0 early in the flight — diagnostic only, not a sole fail.
+    """
+    metrics = result.get("metrics") or {}
+    fails: list[str] = []
+    opaque_med = metrics.get("opaque_cmd_on_med")
+    opaque_min = metrics.get("opaque_on_min")
+    opaque_draw = metrics.get("opaque_draw_n_med")
+    if opaque_med is None:
+        opaque_med = metrics.get("opaque_cmd_on")
+    if opaque_med is not None and float(opaque_med) <= 0.0:
+        fails.append("opaque_cmd_on_med_eq_0")
+    if opaque_draw is not None and float(opaque_draw) <= 0.0:
+        fails.append("opaque_draw_n_med_eq_0")
+    # If analyzer omitted med but min is present and zero across all periods —
+    # treat as empty only when min is the sole opaque signal and == 0 with no med.
+    if opaque_med is None and opaque_min is not None and float(opaque_min) <= 0.0:
+        fails.append("opaque_on_min_eq_0_no_med")
+    return {
+        "empty_world_stop_line_pass": len(fails) == 0,
+        "empty_world_stop_line_fails": fails,
+        "opaque_cmd_on_med": opaque_med,
+        "opaque_on_min": opaque_min,
+        "opaque_draw_n_med": opaque_draw,
+        "ring_readiness_must_stay_off": True,
+    }
+
+
+def compute_enter_dirty_residual_stop_line(result: dict) -> dict:
+    """A35 R0/R1: MeshWarmup wall-timeout or soft settle with mesh_dirty residual.
+
+    EnterLit mesh_dirty=0 can false-clear while WorldLoad MeshService dirty≫0.
+    Binding FAIL when timeout stamp fires with residual>0.
+    """
+    metrics = result.get("metrics") or {}
+    fails: list[str] = []
+    timeout_dirty = metrics.get("mesh_warmup_timeout_dirty_residual")
+    blocked = metrics.get("enter_soft_settle_blocked_dirty_residual")
+    residual = metrics.get("enter_mesh_dirty_residual_n")
+    if timeout_dirty is not None and int(timeout_dirty) != 0:
+        fails.append("mesh_warmup_timeout_dirty_residual")
+    if residual is not None and float(residual) > 0 and (
+        (timeout_dirty is not None and int(timeout_dirty) != 0)
+        or (blocked is not None and int(blocked) != 0)
+    ):
+        fails.append("enter_wall_timeout_mesh_dirty_residual")
+    return {
+        "enter_dirty_residual_stop_line_pass": len(fails) == 0,
+        "enter_dirty_residual_stop_line_fails": fails,
+        "mesh_warmup_timeout_dirty_residual": timeout_dirty,
+        "enter_soft_settle_blocked_dirty_residual": blocked,
+        "enter_mesh_dirty_residual_n": residual,
+    }
+
+
 def compute_a31_progress_snapshot(result: dict, a24: dict | None, west: dict | None) -> dict:
     """Compact progress fields for PR-to-PR comparison (A31)."""
     metrics = result.get("metrics") or {}
@@ -655,6 +713,12 @@ def compute_a31_progress_snapshot(result: dict, a24: dict | None, west: dict | N
         else None,
         "operator_visual": result.get("operator_visual", "UNTESTED"),
         "operator_visual_is_not_pixel_oracle": True,
+        "empty_world_stop_line_pass": result.get("empty_world_stop_line_pass"),
+        "enter_dirty_residual_stop_line_pass": result.get(
+            "enter_dirty_residual_stop_line_pass"
+        ),
+        "opaque_cmd_on_med": metrics.get("opaque_cmd_on_med"),
+        "opaque_on_min": metrics.get("opaque_on_min"),
     }
 
 
@@ -2507,6 +2571,22 @@ def main() -> int:
                     result["post_stop_convergence_pass"] = post_stop.get(
                         "post_stop_convergence_pass"
                     )
+                    empty_world = compute_empty_world_stop_line(result)
+                    result["empty_world_stop_line"] = empty_world
+                    result["empty_world_stop_line_pass"] = empty_world.get(
+                        "empty_world_stop_line_pass"
+                    )
+                    result["empty_world_stop_line_fails"] = empty_world.get(
+                        "empty_world_stop_line_fails"
+                    )
+                    enter_dirty = compute_enter_dirty_residual_stop_line(result)
+                    result["enter_dirty_residual_stop_line"] = enter_dirty
+                    result["enter_dirty_residual_stop_line_pass"] = enter_dirty.get(
+                        "enter_dirty_residual_stop_line_pass"
+                    )
+                    result["enter_dirty_residual_stop_line_fails"] = enter_dirty.get(
+                        "enter_dirty_residual_stop_line_fails"
+                    )
                     result["a31_progress_snapshot"] = compute_a31_progress_snapshot(
                         result, a24_safety, west
                     )
@@ -2523,6 +2603,26 @@ def main() -> int:
                         adequacy = pad
                     report_path.write_text(
                         json.dumps(result, indent=2) + "\n", encoding="utf-8"
+                    )
+                    print(
+                        "product-174657 empty-world stop-line: "
+                        + (
+                            "PASS"
+                            if empty_world.get("empty_world_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {empty_world}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 enter-dirty-residual stop-line: "
+                        + (
+                            "PASS"
+                            if enter_dirty.get("enter_dirty_residual_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {enter_dirty}",
+                        flush=True,
                     )
                     print(
                         "product-174657 adequacy: "
@@ -2638,6 +2738,20 @@ def main() -> int:
                     metrics_summary["post_stop_convergence_pass"] = result.get(
                         "post_stop_convergence_pass"
                     )
+                if result.get("empty_world_stop_line") is not None:
+                    metrics_summary["empty_world_stop_line"] = result[
+                        "empty_world_stop_line"
+                    ]
+                    metrics_summary["empty_world_stop_line_pass"] = result.get(
+                        "empty_world_stop_line_pass"
+                    )
+                if result.get("enter_dirty_residual_stop_line") is not None:
+                    metrics_summary["enter_dirty_residual_stop_line"] = result[
+                        "enter_dirty_residual_stop_line"
+                    ]
+                    metrics_summary["enter_dirty_residual_stop_line_pass"] = (
+                        result.get("enter_dirty_residual_stop_line_pass")
+                    )
                 if result.get("a31_progress_snapshot") is not None:
                     metrics_summary["a31_progress_snapshot"] = result[
                         "a31_progress_snapshot"
@@ -2692,7 +2806,25 @@ def main() -> int:
             ) and metrics_summary.get(
                 "proxy_adequacy"
             ):
-                if not metrics_summary["proxy_adequacy"].get("adequacy_pass", False):
+                if not metrics_summary.get("empty_world_stop_line_pass", True):
+                    print(
+                        f"flight-sim empty-world stop-line FAIL for {args.scenario} "
+                        f"(opaque_cmd_on==0 / creatures-only; "
+                        f"{metrics_summary.get('empty_world_stop_line')})",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get(
+                    "enter_dirty_residual_stop_line_pass", True
+                ):
+                    print(
+                        f"flight-sim enter-dirty-residual stop-line FAIL for "
+                        f"{args.scenario} "
+                        f"{metrics_summary.get('enter_dirty_residual_stop_line')}",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary["proxy_adequacy"].get("adequacy_pass", False):
                     print(
                         f"flight-sim adequacy FAIL for {args.scenario} proxy",
                         file=sys.stderr,

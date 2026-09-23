@@ -693,6 +693,8 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
 
   changed = changed || staged.size() != cache.batches.size();
   // A31-06: validate each published_ok BEFORE swapping resident batches.
+  // A34: light_rev drift on first install must not fail-all; observational
+  // LightInvalid via dark faces removed — only real SourceMismatch rejects.
   {
     PublicationEpochs draw{};
     draw.artifact_generation = cache.publicationVersion;
@@ -709,7 +711,7 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     {
       ArtifactManifest got{};
       ArtifactManifest expected{};
-      got.light_valid = true;
+      ClearObservationalDarkFromLightValid(got, expected);
       uint64_t light_rev = 0;
       if (mesh_cache != nullptr)
       {
@@ -721,24 +723,35 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         }
         got.source_geom_rev =
             pub.geom_rev != 0 ? pub.geom_rev : cache.meshRevision;
-        got.source_light_rev = light_rev != 0 ? light_rev : cache.meshRevision;
-        got.light_valid = true;
-        if (pub.light_rev != 0 && light_rev != 0 && pub.light_rev != light_rev)
+        expected.source_geom_rev = got.source_geom_rev;
+        // First install in pack: accept (no prior published geom).
+        if (pub.geom_rev == 0)
         {
-          got.light_valid = false;
+          got.source_light_rev =
+              light_rev != 0 ? light_rev : cache.meshRevision;
+          expected.source_light_rev = got.source_light_rev;
         }
-        expected.source_geom_rev =
-            pub.geom_rev != 0 ? pub.geom_rev : cache.meshRevision;
-        expected.source_light_rev =
-            light_rev != 0 ? light_rev : cache.meshRevision;
-        // Keep expected.light_valid=true so got.light_valid=false rejects.
-        expected.light_valid = true;
+        else if (pub.light_rev != 0 && light_rev != 0 &&
+                 pub.light_rev != light_rev)
+        {
+          // Real provenance drift → SourceMismatch (not LightInvalid).
+          got.source_light_rev = light_rev;
+          expected.source_light_rev = pub.light_rev;
+        }
+        else
+        {
+          got.source_light_rev =
+              light_rev != 0 ? light_rev : cache.meshRevision;
+          expected.source_light_rev = got.source_light_rev;
+        }
+        ClearObservationalDarkFromLightValid(got, expected);
       }
       else
       {
         got.source_geom_rev = cache.meshRevision;
         got.source_light_rev = cache.meshRevision;
         expected = got;
+        ClearObservationalDarkFromLightValid(got, expected);
       }
       const PublicationValidation pub_v =
           ValidatePublicationCandidate(got, expected, draw, live);

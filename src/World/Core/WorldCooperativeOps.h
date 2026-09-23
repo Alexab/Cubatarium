@@ -137,6 +137,8 @@ private:
   bool StreamingWarmupAbortCapLogged{false};
   /// Phase 5.2.0: one-shot settle_reason log for load PrepareView.
   bool StreamingWarmupSettleLogged{false};
+  /// A35 R0: MeshWarmup wall/tick timeout left MeshService dirty residual.
+  bool MeshWarmupTimedOutWithDirty{false};
   /// LitRing C: best (lowest) FOV lit debt seen; stall abort when no progress.
   int StreamingWarmupBestFovDebt{INT_MAX};
   std::chrono::steady_clock::time_point StreamingWarmupLitProgressAt{};

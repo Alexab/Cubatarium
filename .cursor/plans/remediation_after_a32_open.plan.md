@@ -1,51 +1,50 @@
 ---
 name: remediation after A32 OPEN
-overview: "Successor after A32 S2–S5: code improved for demand/pub/seam/fluid; AF baseline, pixel attribution, eye/holes=0, and ArtifactManifest retirement still OPEN. Ring OFF."
+overview: "A35 realign: resume A31/A30 P0–P7. A34 empty-world ≠ Gate 8. Ring OFF. Successor = a31_realign / remediation_after_a30."
 todos:
-  - id: af-s0-complete
-    content: "Complete clean-SHA cold/warm/dive/far AF with a31_progress_snapshot on HEAD after S2–S5"
+  - id: r0-stabilize
+    content: "A35 R0 SourceMismatch+enter dirty residual+fluid join; clean SHA AF"
+    status: completed
+  - id: r1-conformance
+    content: "A34_CONFORMANCE Gate matrix honest; enter_dirty_residual stop-line"
+    status: completed
+  - id: p0-p1-evidence
+    content: "Clean visible AF + ClassifyChunkDefect / freeze class (Gate 1–3)"
     status: pending
-  - id: attribute-cull
-    content: "JobStageTrace cull/order writers + operator freeze-frame class (A31-03 Gate 3)"
+  - id: p2-p4-contracts
+    content: "StopConverged + seam negatives + fluid install hang-safe evidence"
     status: pending
-  - id: af-close-partials
-    content: "AF evidence to promote A31-01/02/05/06/07 PARTIAL→CLOSED"
+  - id: p5-p6-accept
+    content: "Attributed fix + holes=0/eye/post_stop; Ring OFF until then"
     status: pending
   - id: residual-p3
-    content: "Finish ArtifactManifest retirement (A30 V3 P3)"
-    status: pending
-  - id: eye-holes
-    content: "Operator eye PASS + whole-route holes=0; then Ring/profile"
+    content: "Finish ArtifactManifest retirement after P2.2 stable"
     status: pending
 isProject: false
 ---
 
-# Remediation after A32 — remaining OPEN
+# Remediation after A32 — realign to A31
 
 Date: 2026-09-23  
-Parent: [`docs/streaming/A33_CONFORMANCE_2026-09-23.md`](../../docs/streaming/A33_CONFORMANCE_2026-09-23.md)  
-Prior: A32 successor plan; A31 reaudit Gate 1–9
+Parent: [`docs/streaming/A34_CONFORMANCE_2026-09-23.md`](../../docs/streaming/A34_CONFORMANCE_2026-09-23.md)  
+Canonical work order: [`remediation_after_a30_open.plan.md`](remediation_after_a30_open.plan.md)
 
-## Landed in A32 successor
+## Binding stop-lines
 
-- S-commit A31 impl (`8f845eaf`); S2–S5 (`6d9c72d6`); A33 docs (`43ddf085`)
-- S0 AF baseline: `bin/suite_reports/a32_s0/` — all four FAIL with holes + `demand_stop_converged=false` + `fluid_map` spikes (defect reproduced)
-- S1 partial: JobStageTrace on publish/retain/reject (cull/freeze still open)
+- `opaque_cmd_on_med == 0` → FAIL (`empty_world_stop_line`)
+- MeshWarmup timeout with `mesh_dirty` residual → FAIL (`enter_dirty_residual_stop_line`)
+- No Ring ON until holes=0 + operator eye PASS
+- No SoftDefer/PreferKick heal, force_stale, pending-FD RemoveChunk
+- A32 S0 / A34 cold AF ≠ A31 Gate 8 PASS
 
-## Non-goals / stop-lines
+## Ordered remainders (A31 P0→P7)
 
-- No heal-loop / force_stale / pending-FD RemoveChunk / shell-light mirror
-- No Ring ON until holes=0 + eye PASS
-- No floating-origin rebase until far precision proof
-
-## Ordered remainders
-
-1. ~~S0 AF baseline~~ → **done** (FAIL honest); re-run with `--visible` when operator eye required.
-2. **Attribution** cull/order + freeze frames → one class per defect (esp. holes vs not-ready).
-3. Drive `demand_stop_converged` + post_stop + fluid hitch vs S0 A/B; CLOSE PARTIAL findings with evidence.
-4. ArtifactManifest **retirement** residual.
-5. Eye + whole-route holes=0 → only then Ring/profile.
-
-## Final of this successor
-
-Conformance vs ENGINE_REMEDIATION + next plan for any still-OPEN.
+1. P0 clean visible AF + full manifest (far checkpoints)
+2. P1 freeze + one `ChunkDefectClass` per white/partial sample
+3. P2 demand StopConverged + pre-pub (A34 dark carve-out kept)
+4. P3 seam AF negatives
+5. P4 fluid Installed + no main-thread height×16×16
+6. P5 attributed class fix only
+7. P6 holes=0 / eye / post_stop
+8. P7 Ring stays OFF
+9. R3 ArtifactManifest retirement after P2.2 stable

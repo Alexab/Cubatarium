@@ -63,6 +63,11 @@ struct PhysicsTelemetry
   uint64_t MeshApplyDropNoActive{0};
   /// Era15 TD-049: CPU replace published before FreeChunk when GPU-only drawable.
   uint64_t MeshReplaceHoleAvoided{0};
+  /// A34: ArtifactManifest reject / first-accept (empty-world hot-fix).
+  uint64_t PubRejectLightInvalid{0};
+  uint64_t PubRejectSourceMismatch{0};
+  uint64_t PubRejectOther{0};
+  uint64_t PubAcceptFirstPublish{0};
   /// Prior-lit hold: dark commit retained prior (not Completed publish).
   uint64_t PriorLitHoldN{0};
   /// Sysreset I3t: max PriorLit hold age observed (frames).
@@ -178,6 +183,12 @@ struct PhysicsTelemetry
   int SoftDeferOwnedNoGpuN{0};
   /// Phase 5.5.0b: sticky latch — soft_force settle with visibility_debt>0.
   int EnterSettleSoftForceWithDebt{0};
+  /// A35 R0: MeshWarmup wall/tick timeout exited while MeshService dirty>0.
+  int MeshWarmupTimeoutDirtyResidual{0};
+  /// A35 R0: soft settle blocked because MeshService dirty residual high.
+  int EnterSoftSettleBlockedDirtyResidual{0};
+  /// A35 R0: dirty count sampled at MeshWarmup timeout / soft-settle block.
+  int EnterMeshDirtyResidualN{0};
   /// Phase 5.6.1: sampled CountEnterVisibilityDebt for period FPM / latch timing.
   int VisibilityDebt{0};
   /// Phase 5.7.3: CountUnready outside R=4 (diagnose only; does not gate clear).

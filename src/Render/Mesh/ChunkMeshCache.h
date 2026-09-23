@@ -293,6 +293,20 @@ public:
   {
     return MeshReplaceHoleAvoided;
   }
+  /// A34: publication validator reject / first-accept counters.
+  uint64_t GetPubRejectLightInvalidCount() const
+  {
+    return PubRejectLightInvalidN;
+  }
+  uint64_t GetPubRejectSourceMismatchCount() const
+  {
+    return PubRejectSourceMismatchN;
+  }
+  uint64_t GetPubRejectOtherCount() const { return PubRejectOtherN; }
+  uint64_t GetPubAcceptFirstPublishCount() const
+  {
+    return PubAcceptFirstPublishN;
+  }
   uint64_t GetPriorLitHoldCount() const { return PriorLitHoldN; }
   int GetPriorLitHoldAgeMax() const { return PriorLitHoldAgeMax; }
   /// Era46: RAA commit → MarkDirty vs PreferKick telemetry.
@@ -1175,6 +1189,11 @@ private:
   uint64_t MeshApplySupersededCount{0};
   uint64_t MeshApplyDropNoActiveCount{0};
   uint64_t MeshReplaceHoleAvoided{0};
+  /// A34 empty-world hot-fix: ArtifactManifest reject class counts.
+  uint64_t PubRejectLightInvalidN{0};
+  uint64_t PubRejectSourceMismatchN{0};
+  uint64_t PubRejectOtherN{0};
+  uint64_t PubAcceptFirstPublishN{0};
   /// Prior-lit hold: dark/unlit commit rejected because lit prior exists (R05).
   uint64_t PriorLitHoldN{0};
   /// Sysreset I3t: max age (frames) of any PriorLit hold this session.

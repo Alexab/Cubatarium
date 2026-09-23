@@ -2073,6 +2073,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshApplyDropNoActiveCount();
     world.PhysicsTelemetryData.MeshReplaceHoleAvoided =
         world.GetMeshService().GetMeshReplaceHoleAvoidedCount();
+    world.PhysicsTelemetryData.PubRejectLightInvalid =
+        world.GetMeshService().GetPubRejectLightInvalidCount();
+    world.PhysicsTelemetryData.PubRejectSourceMismatch =
+        world.GetMeshService().GetPubRejectSourceMismatchCount();
+    world.PhysicsTelemetryData.PubRejectOther =
+        world.GetMeshService().GetPubRejectOtherCount();
+    world.PhysicsTelemetryData.PubAcceptFirstPublish =
+        world.GetMeshService().GetPubAcceptFirstPublishCount();
     world.PhysicsTelemetryData.PriorLitHoldN =
         world.GetMeshService().GetPriorLitHoldCount();
     world.PhysicsTelemetryData.PriorLitHoldAgeMax =

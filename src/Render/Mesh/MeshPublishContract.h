@@ -60,6 +60,36 @@ inline bool PublicationCandidateAccepted(PublicationValidation v)
   return v == PublicationValidation::Ok;
 }
 
+/// A34 empty-world: observational FullyDarkFace / dark vertices are MeshLitGate
+/// SoftDefer territory — never ArtifactManifest LightInvalid. Call after filling
+/// provenance revs so ValidatePublicationCandidate only sees SourceMismatch.
+inline void ClearObservationalDarkFromLightValid(ArtifactManifest &got,
+                                                 ArtifactManifest &expected)
+{
+  got.light_valid = true;
+  expected.light_valid = true;
+}
+
+/// Count reject class for telemetry (LightInvalid should stay ~0 after A34).
+inline void NotePublicationRejectClass(PublicationValidation v,
+                                       uint64_t &light_invalid_n,
+                                       uint64_t &source_mismatch_n,
+                                       uint64_t &other_n)
+{
+  switch (v)
+  {
+  case PublicationValidation::LightInvalid:
+    ++light_invalid_n;
+    break;
+  case PublicationValidation::SourceMismatch:
+    ++source_mismatch_n;
+    break;
+  default:
+    ++other_n;
+    break;
+  }
+}
+
 struct MeshPublishRevs
 {
   uint64_t geom_rev{0};
@@ -199,6 +229,60 @@ inline PublicationValidation ValidateCrossOrShellPublication(
   expected.source_light_rev = expected_light_rev;
   expected.light_valid = true;
   return ValidatePublicationCandidate(got, expected, draw, live);
+}
+
+/// A31 P1 / A35: mutually exclusive white/partial chunk defect class.
+/// Priority: legal dark → missing geometry → culled → light → seam → material → precision.
+enum class ChunkDefectClass : uint8_t
+{
+  GeometryMissing = 0,
+  GeometryCulled = 1,
+  LightStaleOrInvalid = 2,
+  SeamPeerMissing = 3,
+  MaterialOrPublishMismatch = 4,
+  CoordinatePrecision = 5,
+  LegalDark = 6,
+  Unknown = 7,
+};
+
+inline ChunkDefectClass ClassifyChunkDefect(bool has_voxel_input,
+                                            bool has_published_artifact,
+                                            bool cull_excluded,
+                                            bool light_mismatch,
+                                            bool seam_peer_debt,
+                                            bool material_mismatch,
+                                            bool precision_breaks_with_distance,
+                                            bool legal_dark_confirmed)
+{
+  if (legal_dark_confirmed)
+  {
+    return ChunkDefectClass::LegalDark;
+  }
+  if (has_voxel_input && !has_published_artifact)
+  {
+    return ChunkDefectClass::GeometryMissing;
+  }
+  if (has_published_artifact && cull_excluded)
+  {
+    return ChunkDefectClass::GeometryCulled;
+  }
+  if (light_mismatch)
+  {
+    return ChunkDefectClass::LightStaleOrInvalid;
+  }
+  if (seam_peer_debt)
+  {
+    return ChunkDefectClass::SeamPeerMissing;
+  }
+  if (material_mismatch)
+  {
+    return ChunkDefectClass::MaterialOrPublishMismatch;
+  }
+  if (precision_breaks_with_distance)
+  {
+    return ChunkDefectClass::CoordinatePrecision;
+  }
+  return ChunkDefectClass::Unknown;
 }
 
 } // namespace cutum

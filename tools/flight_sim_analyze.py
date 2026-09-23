@@ -438,6 +438,15 @@ def analyze(
     chunk_not_ready_med = median(col(steady, "chunk_not_ready"))
     opaque_on_vals = col(steady, "opaque_cmd_on")
     opaque_on_min = min(opaque_on_vals) if opaque_on_vals else None
+    mesh_warmup_timeout_dirty_residual = max_val(
+        col(steady, "mesh_warmup_timeout_dirty_residual")
+    )
+    enter_soft_settle_blocked_dirty_residual = max_val(
+        col(steady, "enter_soft_settle_blocked_dirty_residual")
+    )
+    enter_mesh_dirty_residual_n = max_val(
+        col(steady, "enter_mesh_dirty_residual_n")
+    )
     if (
         opaque_cmd_total_med is not None
         and opaque_cmd_on_med is not None
@@ -2296,6 +2305,11 @@ def analyze(
             "chunk_meshed_unlit_med": chunk_meshed_unlit_med,
             "chunk_not_ready_med": chunk_not_ready_med,
             "opaque_on_min": opaque_on_min,
+            "mesh_warmup_timeout_dirty_residual": mesh_warmup_timeout_dirty_residual,
+            "enter_soft_settle_blocked_dirty_residual": (
+                enter_soft_settle_blocked_dirty_residual
+            ),
+            "enter_mesh_dirty_residual_n": enter_mesh_dirty_residual_n,
             "blue_screen_suspect": blue_screen_suspect,
         },
         "gates": gates,

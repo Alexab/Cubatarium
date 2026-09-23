@@ -185,6 +185,16 @@ struct FluidSummaryQueues
   std::thread worker;
   std::atomic<uint64_t> installed_n{0};
   std::atomic<uint64_t> stale_discarded_n{0};
+
+  ~FluidSummaryQueues()
+  {
+    stop.store(true, std::memory_order_relaxed);
+    cv.notify_all();
+    if (worker.joinable())
+    {
+      worker.join();
+    }
+  }
 };
 
 inline FluidSummaryQueues &FluidSummaryQueuesState()
@@ -265,7 +275,7 @@ inline void EnsureFluidSummaryWorkerStarted()
     return;
   }
   qs.worker = std::thread(FluidSummaryWorkerLoop);
-  qs.worker.detach();
+  // A35: keep joinable for ShutdownFluidSummaryWorker (no detach).
 }
 
 inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
@@ -302,6 +312,34 @@ inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
   }
   EnsureFluidSummaryWorkerStarted();
   qs.cv.notify_one();
+  return true;
+}
+
+/// A35 R0 / A31 P4: hang-safe shutdown on world switch — stop, clear queue,
+/// join worker (joinable; no detach). Returns false if worker was not joinable.
+inline bool ShutdownFluidSummaryWorker(int /*timeout_ms*/ = 2000)
+{
+  FluidSummaryQueues &qs = FluidSummaryQueuesState();
+  if (!qs.started.load(std::memory_order_relaxed))
+  {
+    return true;
+  }
+  {
+    std::lock_guard<std::mutex> lock(qs.mu);
+    qs.pending.clear();
+  }
+  qs.stop.store(true, std::memory_order_relaxed);
+  qs.cv.notify_all();
+  if (qs.worker.joinable())
+  {
+    qs.worker.join();
+  }
+  qs.started.store(false, std::memory_order_relaxed);
+  qs.stop.store(false, std::memory_order_relaxed);
+  {
+    std::lock_guard<std::mutex> lock(qs.mu);
+    qs.completed.clear();
+  }
   return true;
 }
 
