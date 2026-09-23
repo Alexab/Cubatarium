@@ -26,14 +26,11 @@ Date: 2026-09-23
 Parent: [`docs/streaming/A33_CONFORMANCE_2026-09-23.md`](../../docs/streaming/A33_CONFORMANCE_2026-09-23.md)  
 Prior: A32 successor plan; A31 reaudit Gate 1–9
 
-## Landed in A32 successor (code)
+## Landed in A32 successor
 
-- S-commit A31 impl (`8f845eaf`)
-- S2: GPU/CommitGpu `NoteInstallResult` + attempt_id; production `StopConverged` → flight cascade
-- S3: Immediate / Cross / CommitGpuMeshResult validate-before-commit
-- S4: seam per-face peer gens + subscriber satisfy + FaceDebt dual-write
-- S5: fluid flags snapshot + background worker + install outcomes
-- S1 partial: JobStageTrace on publish/retain/reject
+- S-commit A31 impl (`8f845eaf`); S2–S5 (`6d9c72d6`); A33 docs (`43ddf085`)
+- S0 AF baseline: `bin/suite_reports/a32_s0/` — all four FAIL with holes + `demand_stop_converged=false` + `fluid_map` spikes (defect reproduced)
+- S1 partial: JobStageTrace on publish/retain/reject (cull/freeze still open)
 
 ## Non-goals / stop-lines
 
@@ -43,9 +40,9 @@ Prior: A32 successor plan; A31 reaudit Gate 1–9
 
 ## Ordered remainders
 
-1. Finish **S0 AF baseline** on clean HEAD (cold/warm/dive/far + snapshots).
-2. **Attribution** cull/order + freeze frames → one class per defect.
-3. AF evidence to CLOSE PARTIAL findings.
+1. ~~S0 AF baseline~~ → **done** (FAIL honest); re-run with `--visible` when operator eye required.
+2. **Attribution** cull/order + freeze frames → one class per defect (esp. holes vs not-ready).
+3. Drive `demand_stop_converged` + post_stop + fluid hitch vs S0 A/B; CLOSE PARTIAL findings with evidence.
 4. ArtifactManifest **retirement** residual.
 5. Eye + whole-route holes=0 → only then Ring/profile.
 
