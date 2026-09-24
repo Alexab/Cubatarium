@@ -322,11 +322,10 @@ int main()
     FluidColumnSummaryRequest req{};
     req.y_min = 3;
     req.height = 16;
-    Expect(TryEnqueueFluidSummaryWorker(job, req, true), "worker enqueued");
-    Expect(job.enqueued, "job flagged");
-    FluidColumnSummary drained{};
-    Expect(DrainOneFluidSummaryWorker(drained), "worker drained");
-    Expect(drained.y_min == 3 && drained.height == 16, "drain copies req");
+    // A39 P4: empty-flags enqueue is RejectedRetryable (never silent ready=false).
+    Expect(!TryEnqueueFluidSummaryWorker(job, req, true),
+           "empty-flags rejected");
+    Expect(!job.enqueued, "empty job not flagged");
     // A29 U3: drain with flags fills ready summary.
     {
       std::vector<uint8_t> flags(static_cast<size_t>(16 * 16 * 16), 0);
@@ -374,6 +373,23 @@ int main()
            "LightInvalid rejected");
   }
 
+  // A39 P5: Cross expected≠got fault-inject — SourceMismatch when live desire drifts.
+  {
+    using cutum::PublicationCandidateAccepted;
+    using cutum::PublicationValidation;
+    using cutum::ValidateCrossOrShellPublication;
+    const PublicationValidation mismatch = ValidateCrossOrShellPublication(
+        /*got_geom=*/10, /*got_light=*/5, /*light_valid=*/true,
+        /*expected_geom=*/11, /*expected_light=*/5);
+    Expect(mismatch == PublicationValidation::SourceMismatch,
+           "A39 Cross got≠expected SourceMismatch");
+    Expect(!PublicationCandidateAccepted(mismatch),
+           "A39 Cross mismatch rejected");
+    const PublicationValidation ok =
+        ValidateCrossOrShellPublication(10, 5, true, 10, 5);
+    Expect(PublicationCandidateAccepted(ok), "A39 Cross got==expected Ok");
+  }
+
   // A31 P3 / A35 R2: seam negatives — missing peer / one-of-six.
   {
     using cutum::SeamCoverageFullySatisfied;
@@ -407,7 +423,10 @@ int main()
     FluidSummaryWorkerJob job{};
     FluidColumnSummaryRequest req{};
     req.height = 16;
-    (void)TryEnqueueFluidSummaryWorker(job, req, true);
+    std::vector<uint8_t> flags(static_cast<size_t>(16 * 16 * 16), 0);
+    flags[0] = 1;
+    (void)TryEnqueueFluidSummaryWorker(job, req, true, flags.data(),
+                                       flags.size());
     Expect(ShutdownFluidSummaryWorker(2000), "fluid worker shutdown joins");
     // Leave stopped — process exit must not destroy a joinable thread.
   }

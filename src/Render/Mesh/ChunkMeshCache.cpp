@@ -3099,13 +3099,31 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
   // PublishRevs.light_rev (observational lag → SourceMismatch storm).
   if (!GreedyCache.empty())
   {
-    const auto &sample = GreedyCache.begin()->second;
+    const auto &sample_kv = *GreedyCache.begin();
+    const auto &sample = sample_kv.second;
     if (sample.PublishRevs.geom_rev != 0)
     {
+      uint64_t exp_g = sample.PublishRevs.geom_rev;
+      uint64_t exp_l = sample.PublishRevs.light_rev;
+      // A39 P5: expected = live demand desire when present (≠ tautology on got).
+      if (kChunkDemandShadow())
+      {
+        UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        if (const ChunkRenderDemandRecord *rec = demand.Find(sample_kv.first))
+        {
+          if (rec->desired_geom_rev != 0)
+          {
+            exp_g = rec->desired_geom_rev;
+          }
+          if (rec->desired_light_rev != 0)
+          {
+            exp_l = rec->desired_light_rev;
+          }
+        }
+      }
       const PublicationValidation xv = ValidateCrossOrShellPublication(
           sample.PublishRevs.geom_rev, sample.PublishRevs.light_rev,
-          /*light_valid=*/true, sample.PublishRevs.geom_rev,
-          sample.PublishRevs.light_rev);
+          /*light_valid=*/true, exp_g, exp_l);
       if (!PublicationCandidateAccepted(xv))
       {
         NotePublicationRejectClass(xv, PubRejectLightInvalidN,
@@ -8056,7 +8074,11 @@ void UChunkMeshCache::RebuildFluidSurfaceSlice(const UBlockWorld &world,
 {
   FluidSurfaceCache[groundChunkCoord] = BuildFluidSurfaceColumnSlice(
       world, registry, groundChunkCoord, scanHintY);
-  FluidSurfaceDirty.erase(groundChunkCoord);
+  // A39 P4: keep dirty while PreferGpu Pending incomplete — cold frame Install.
+  if (!IsFluidPackPendingPreferGpuRetry(groundChunkCoord))
+  {
+    FluidSurfaceDirty.erase(groundChunkCoord);
+  }
 }
 
 const FluidSurfaceColumnSlice *UChunkMeshCache::GetFluidSurfaceSlice(

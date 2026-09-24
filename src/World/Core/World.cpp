@@ -89,6 +89,9 @@
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/RelightInstallPlanner.h"
+#include "World/Streaming/MeshWorkAdmission.h"
+#include <algorithm>
+#include <vector>
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/VisibleBlackAttribution.h"
@@ -2519,15 +2522,41 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   {
     return 0;
   }
-  const auto &keys = UnfinishedVisualCache.unfinished_keys;
-  if (keys.empty())
+  const auto &raw_keys = UnfinishedVisualCache.unfinished_keys;
+  if (raw_keys.empty())
   {
     return 0;
   }
-  // A38 R1: backlog-bounded admit — scale with unfinished plateau (not Kick).
+  // A39 P2: focus-near first + CapDirtyAdmitUnderThrash (not Kick).
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
+  std::vector<uint64_t> keys(raw_keys.begin(), raw_keys.end());
+  std::sort(keys.begin(), keys.end(), [&](uint64_t a, uint64_t b) {
+    const int ax = static_cast<int>(static_cast<uint32_t>(a >> 32));
+    const int az = static_cast<int>(static_cast<uint32_t>(a));
+    const int bx = static_cast<int>(static_cast<uint32_t>(b >> 32));
+    const int bz = static_cast<int>(static_cast<uint32_t>(b));
+    const int da =
+        (std::max)(std::abs(ax - focus_g.x), std::abs(az - focus_g.z));
+    const int db =
+        (std::max)(std::abs(bx - focus_g.x), std::abs(bz - focus_g.z));
+    if (da != db)
+    {
+      return da < db;
+    }
+    return a < b;
+  });
+  static uint64_t s_last_dirty_dropped_watermark = 0;
+  const uint64_t dropped_now = GetPhysicsTelemetry().DirtyDropped;
+  const int dropped_recent = static_cast<int>(std::min<uint64_t>(
+      100000ull, dropped_now - s_last_dirty_dropped_watermark));
+  s_last_dirty_dropped_watermark = dropped_now;
   const int unfinished = static_cast<int>(keys.size());
-  const int budget =
+  const int base =
       (std::min)(64, (std::max)(max_n, (std::max)(8, unfinished / 2)));
+  const int budget = CapDirtyAdmitUnderThrash(
+      base, GetPhysicsTelemetry().VisibleBlackFullyDarkRepairN, dropped_recent,
+      /*dropped_soft_cap=*/800);
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
@@ -2540,13 +2569,49 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     }
     const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
     const int cz = static_cast<int>(static_cast<uint32_t>(key));
-    for (int cy = 0; cy <= cy1 && admitted < budget; ++cy)
+    const int col_horiz =
+        (std::max)(std::abs(cx - focus_g.x), std::abs(cz - focus_g.z));
+    const int y_cap = (col_horiz <= 2) ? 2 : 1;
+    // Rank Y by |cy-focus| then prefer unlit / missing mesh.
+    std::vector<int> ys;
+    ys.reserve(static_cast<size_t>(cy1 + 1));
+    for (int cy = 0; cy <= cy1; ++cy)
     {
+      const glm::ivec3 coord(cx, cy, cz);
+      if (!BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        continue;
+      }
+      ys.push_back(cy);
+    }
+    std::sort(ys.begin(), ys.end(), [&](int a, int b) {
+      return std::abs(a - focus_g.y) < std::abs(b - focus_g.y);
+    });
+    int y_taken = 0;
+    for (int cy : ys)
+    {
+      if (admitted >= budget || y_taken >= y_cap)
+      {
+        break;
+      }
       const glm::ivec3 coord(cx, cy, cz);
       const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
       if (!ch)
       {
         continue;
+      }
+      if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
+      {
+        if (rec->has_active_attempt)
+        {
+          const auto st = static_cast<uint8_t>(rec->active_stage);
+          if (st >= static_cast<uint8_t>(JobStage::Admitted) &&
+              st <= static_cast<uint8_t>(JobStage::Uploaded))
+          {
+            // A39 P2: wait for in-flight attempt — no re-Dirty flood.
+            continue;
+          }
+        }
       }
       uint64_t desired_geom = ch->GetContentRevision();
       uint64_t desired_light = ch->GetLightFieldRevision();
@@ -2567,39 +2632,55 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const MeshPublishRevs pub =
           MeshService->GetCache().GetMeshPublishRevs(coord);
       demand.NotePublishedRevs(coord, pub.geom_rev, pub.light_rev);
-      // A38 R2: meshed_unlit / FullyDark → raise light desire above published.
+      // A39 P1: desire stays at content light (reachable). RelightOnly owns
+      // FullyDark / mesh-behind — never invent content+1 / pub+1.
       UChunkMeshCache::LitApplyMeshProbe probe{};
       MeshService->FillLitApplyMeshProbe(coord, probe);
-      const bool meshed_unlit =
+      const bool fully_dark =
           probe.has_drawable &&
           (probe.fully_dark || probe.gpu_has_dark_face ||
-           MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
-           (probe.meshed_light_rev != 0 && desired_light != 0 &&
-            probe.meshed_light_rev != desired_light));
-      if (meshed_unlit)
-      {
-        const uint64_t light_need =
-            (std::max)(desired_light, pub.light_rev) + 1ull;
-        desired_light = light_need;
-        // Light ownership: invalidate capture so Relight/remesh re-bakes light;
-        // do not invent geom desire above content.
-        MeshService->GetCache().InvalidateMeshCapture(coord);
-      }
+           MeshService->GetCache().ChunkHasFullyDarkFace(coord));
+      const bool mesh_behind_light =
+          probe.has_drawable && probe.meshed_light_rev != 0 &&
+          desired_light != 0 && probe.meshed_light_rev < desired_light;
+      const bool relight_only = fully_dark || mesh_behind_light ||
+                                (probe.has_drawable &&
+                                 probe.meshed_light_rev != 0 &&
+                                 desired_light != 0 &&
+                                 probe.meshed_light_rev != desired_light);
       DemandResult dr =
           demand.NoteDemand(coord, desired_geom, desired_light,
                             desired_coverage);
+      if (relight_only)
+      {
+        MeshService->GetCache().InvalidateMeshCapture(coord);
+        if (Persistence)
+        {
+          Persistence->EnqueueTerrainColumnRelight(
+              cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
+              cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+        }
+        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+        if (attempt_id != 0)
+        {
+          demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
+        }
+        ++admitted;
+        ++y_taken;
+        continue;
+      }
       if (dr == DemandResult::AlreadySatisfied)
       {
-        // Mesh not ready despite published revs — Dirty without fake geom bump
-        // (desired_geom must stay ≤ content revision or Stop never converges).
         if (!MeshService->HasMeshSatisfyingColumnReady(coord))
         {
-          (void)MeshService->TryConsumeDirtyAdmit();
+          if (!MeshService->TryConsumeDirtyAdmit() && col_horiz > 4)
+          {
+            continue;
+          }
           MeshService->MarkDirtyPriority(coord);
           uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
           if (attempt_id == 0)
           {
-            // Mint attempt via light coalesce if needed.
             (void)demand.NoteDemand(coord, desired_geom,
                                     (std::max)(desired_light, uint64_t{1}),
                                     desired_coverage);
@@ -2610,12 +2691,14 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
           }
           ++admitted;
+          ++y_taken;
         }
         continue;
       }
-      (void)MeshService->TryConsumeDirtyAdmit();
-      // Unlit-with-mesh: prefer capture invalidate already done; still MarkDirty
-      // so builder re-reads light (Relight path owns desire via NoteDemand).
+      if (!MeshService->TryConsumeDirtyAdmit() && col_horiz > 4)
+      {
+        continue;
+      }
       MeshService->MarkDirtyPriority(coord);
       uint64_t attempt_id = 0;
       if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
@@ -2624,6 +2707,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
       demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
       ++admitted;
+      ++y_taken;
     }
   }
   return admitted;

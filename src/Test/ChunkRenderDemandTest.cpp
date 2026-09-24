@@ -75,6 +75,23 @@ int main()
   store.NoteFaceDebtSatisfied(c, 0x02u, /*peer_gen=*/60);
   Expect(rec && (rec->face_debt_mask & 0x02u) == 0, "matching 60 clears face1");
 
+  // A39 P3: UnknownPeer (mask + waiting==0) — peer_gen=0 must not clear;
+  // first real peer publication may clear.
+  {
+    store.Clear();
+    const glm::ivec3 u{9, 0, 9};
+    store.NoteFaceDebt(u, 0x01u, /*peer_gen=*/0);
+    const ChunkRenderDemandRecord *ur = store.Find(u);
+    Expect(ur && (ur->face_debt_mask & 0x01u) != 0, "UnknownPeer mask set");
+    Expect(ur && ur->waiting_peer_gen[0] == 0, "UnknownPeer waiting stays 0");
+    store.NoteFaceDebtSatisfied(u, 0x01u, /*peer_gen=*/0);
+    Expect(store.Find(u) && (store.Find(u)->face_debt_mask & 0x01u) != 0,
+           "UnknownPeer peer_gen=0 does not clear");
+    store.NoteFaceDebtSatisfied(u, 0x01u, /*peer_gen=*/7);
+    Expect(store.Find(u) && (store.Find(u)->face_debt_mask & 0x01u) == 0,
+           "UnknownPeer first real pub clears");
+  }
+
   // Cutover: column FaceDebt clear forbidden while flag ON (default ON).
   ChunkDemandCutoverEnabled() = true;
   Expect(!ChunkDemandAllowsColumnFaceDebtClear(), "cutover blocks column clear");

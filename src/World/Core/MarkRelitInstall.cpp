@@ -163,11 +163,17 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         }
         if (dr == DemandResult::AlreadySatisfied && fully_dark_drawable)
         {
-          // Raise light desire above published so Relight/Dirty owns the debt.
-          const uint64_t light_need =
-              (std::max)(desired_light, pub_light) + 1ull;
-          (void)demand.NoteDemand(coord, desired_geom, light_need);
+          // A39 P1: keep desire at content light (reachable). Relight owns
+          // equal-rev FullyDark — never invent content+1 / pub+1.
           mesh->GetCache().InvalidateMeshCapture(coord);
+          if (Persistence)
+          {
+            Persistence->EnqueueTerrainColumnRelight(
+                coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE, /*priority=*/true,
+                coord.y * CHUNK_SIZE, (coord.y + 1) * CHUNK_SIZE - 1);
+          }
+          ++PhysicsTelemetryData.MarkRelitScheduleN;
+          return;
         }
       }
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always

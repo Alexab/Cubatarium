@@ -45,7 +45,17 @@ enum class FluidSummaryInstallOutcome : uint8_t
 {
   Installed = 0,
   StaleDiscarded,
-  Cancelled
+  Cancelled,
+  RetryQueued
+};
+
+/// A39 P4: explicit enqueue outcomes (never silent-drop as success).
+enum class FluidSummaryEnqueueResult : uint8_t
+{
+  Enqueued = 0,
+  Coalesced,
+  RejectedRetryable,
+  NotDeferred
 };
 
 inline bool FluidColumnSummaryVersionsMatch(const FluidColumnSummary &got,
@@ -278,6 +288,56 @@ inline void EnsureFluidSummaryWorkerStarted()
   // A35: keep joinable for ShutdownFluidSummaryWorker (no detach).
 }
 
+inline FluidSummaryEnqueueResult
+EnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
+                          const FluidColumnSummaryRequest &req,
+                          bool defer_sync_scan, const uint8_t *flags = nullptr,
+                          size_t flag_bytes = 0, uint64_t fluid_id_hash = 0,
+                          BlockId representative = BLOCK_AIR)
+{
+  if (!defer_sync_scan)
+  {
+    return FluidSummaryEnqueueResult::NotDeferred;
+  }
+  if (!flags || flag_bytes == 0)
+  {
+    // A38/A39: empty-flags jobs never become ready — reject for retry.
+    job.enqueued = false;
+    return FluidSummaryEnqueueResult::RejectedRetryable;
+  }
+  job.req = req;
+  job.fluid_id_hash = fluid_id_hash;
+  job.representative_fluid_id = representative;
+  job.flags.assign(flags, flags + flag_bytes);
+  FluidSummaryQueues &qs = FluidSummaryQueuesState();
+  {
+    std::lock_guard<std::mutex> lock(qs.mu);
+    // Coalesce identical column+rev already pending.
+    for (const FluidSummaryWorkerJob &p : qs.pending)
+    {
+      if (p.ground_chunk == job.ground_chunk &&
+          p.req.world_epoch == req.world_epoch &&
+          p.req.content_rev == req.content_rev &&
+          p.req.catalog_rev == req.catalog_rev && p.req.y_min == req.y_min &&
+          p.req.height == req.height)
+      {
+        job.enqueued = true;
+        return FluidSummaryEnqueueResult::Coalesced;
+      }
+    }
+    if (qs.pending.size() >= 8)
+    {
+      job.enqueued = false;
+      return FluidSummaryEnqueueResult::RejectedRetryable;
+    }
+    job.enqueued = true;
+    qs.pending.push_back(job);
+  }
+  EnsureFluidSummaryWorkerStarted();
+  qs.cv.notify_one();
+  return FluidSummaryEnqueueResult::Enqueued;
+}
+
 inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
                                          const FluidColumnSummaryRequest &req,
                                          bool defer_sync_scan,
@@ -286,33 +346,11 @@ inline bool TryEnqueueFluidSummaryWorker(FluidSummaryWorkerJob &job,
                                          uint64_t fluid_id_hash = 0,
                                          BlockId representative = BLOCK_AIR)
 {
-  if (!defer_sync_scan)
-  {
-    return false;
-  }
-  job.req = req;
-  job.fluid_id_hash = fluid_id_hash;
-  job.representative_fluid_id = representative;
-  job.flags.clear();
-  if (flags && flag_bytes > 0)
-  {
-    job.flags.assign(flags, flags + flag_bytes);
-  }
-  FluidSummaryQueues &qs = FluidSummaryQueuesState();
-  {
-    std::lock_guard<std::mutex> lock(qs.mu);
-    // A31: queue full is an explicit reject — never silent drop as success.
-    if (qs.pending.size() >= 8)
-    {
-      job.enqueued = false;
-      return false;
-    }
-    job.enqueued = true;
-    qs.pending.push_back(job);
-  }
-  EnsureFluidSummaryWorkerStarted();
-  qs.cv.notify_one();
-  return true;
+  const FluidSummaryEnqueueResult r = EnqueueFluidSummaryWorker(
+      job, req, defer_sync_scan, flags, flag_bytes, fluid_id_hash,
+      representative);
+  return r == FluidSummaryEnqueueResult::Enqueued ||
+         r == FluidSummaryEnqueueResult::Coalesced;
 }
 
 /// A35 R0 / A31 P4: hang-safe shutdown on world switch — stop, clear queue,

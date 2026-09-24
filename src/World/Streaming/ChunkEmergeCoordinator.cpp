@@ -537,7 +537,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 pub_gen = pub->published_geom_rev;
               }
             }
-            if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
+            // A39 P3: waiting==0 (UnknownPeer) needs pub_gen!=0; never use
+            // PeerReadyBeforeSubscribe(pub, 0) which returns true.
+            auto face_peer_ready = [](uint64_t pub_gen, uint64_t waiting) {
+              if (waiting == 0)
+              {
+                return pub_gen != 0;
+              }
+              return PeerReadyBeforeSubscribe(pub_gen, waiting);
+            };
+            if (pub_gen != 0)
             {
               uint8_t clear_mask = 0;
               if (const ChunkRenderDemandRecord *self =
@@ -550,8 +559,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   {
                     continue;
                   }
-                  if (PeerReadyBeforeSubscribe(pub_gen,
-                                               self->waiting_peer_gen[f]))
+                  if (face_peer_ready(pub_gen, self->waiting_peer_gen[f]))
                   {
                     clear_mask = static_cast<uint8_t>(clear_mask | bit);
                   }
@@ -577,8 +585,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
-                demand.NoteFaceDebtSatisfied(
-                    n, static_cast<uint8_t>(1u << face_toward), pub_gen);
+                const ChunkRenderDemandRecord *nr = demand.Find(n);
+                if (!nr ||
+                    (nr->face_debt_mask &
+                     static_cast<uint8_t>(1u << face_toward)) == 0)
+                {
+                  continue;
+                }
+                if (face_peer_ready(pub_gen,
+                                    nr->waiting_peer_gen[face_toward]))
+                {
+                  demand.NoteFaceDebtSatisfied(
+                      n, static_cast<uint8_t>(1u << face_toward), pub_gen);
+                }
               }
             }
           }
@@ -660,11 +679,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             for (int f = 0; f < 6; ++f)
             {
               const uint8_t bit = static_cast<uint8_t>(1u << f);
-              uint64_t need = peer_cov_gen(chunk_coord + kFaceDir[f]);
-              if (need == 0)
-              {
-                need = 1; // wait for first non-zero peer publication
-              }
+              // A39 P3: UnknownPeer keeps waiting=0 (never fabricate need=1).
+              const uint64_t need =
+                  peer_cov_gen(chunk_coord + kFaceDir[f]);
               demand.NoteFaceDebt(chunk_coord, bit, need);
             }
             // Coverage desire with face debt; preserve existing geom/light desire.
@@ -738,10 +755,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 continue;
               }
               uint64_t need = peer_cov_gen(chunk_coord + kFaceDir[f]);
-              if (need == 0)
-              {
-                need = 1;
-              }
+              // A39 P3: UnknownPeer keeps waiting=0 (never fabricate need=1).
               demand.NoteFaceDebt(chunk_coord, bit, need);
             }
             uint64_t g = 1, l = 1;
@@ -824,7 +838,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               pub_gen = cache_pub.geom_rev;
             }
-            // Gate on real waiting gens when present (not sole required=1).
+            // A39 P3: waiting==0 (UnknownPeer) ready only when pub_gen!=0;
+            // never substitute required=1 via PeerReadyBeforeSubscribe(0)→true.
+            auto face_peer_ready = [](uint64_t pub_gen, uint64_t waiting) {
+              if (waiting == 0)
+              {
+                return pub_gen != 0;
+              }
+              return PeerReadyBeforeSubscribe(pub_gen, waiting);
+            };
             bool any_face_ready = false;
             if (const ChunkRenderDemandRecord *self =
                     demand.Find(chunk_coord))
@@ -836,20 +858,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
-                const uint64_t need = self->waiting_peer_gen[f] > 0
-                                         ? self->waiting_peer_gen[f]
-                                         : 1;
-                if (PeerReadyBeforeSubscribe(pub_gen, need))
+                if (face_peer_ready(pub_gen, self->waiting_peer_gen[f]))
                 {
                   any_face_ready = true;
                   break;
                 }
               }
             }
-            else if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
-            {
-              any_face_ready = true;
-            }
+            // No record ⇒ do not fabricate any_face_ready from required=1.
             if (any_face_ready)
             {
               uint8_t clear_mask = 0;
@@ -863,10 +879,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   {
                     continue;
                   }
-                  const uint64_t need = self->waiting_peer_gen[f] > 0
-                                           ? self->waiting_peer_gen[f]
-                                           : 1;
-                  if (PeerReadyBeforeSubscribe(pub_gen, need))
+                  if (face_peer_ready(pub_gen, self->waiting_peer_gen[f]))
                   {
                     clear_mask = static_cast<uint8_t>(clear_mask | bit);
                   }
@@ -892,15 +905,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
-                uint64_t need = 1;
-                if (const ChunkRenderDemandRecord *nr = demand.Find(n))
+                const ChunkRenderDemandRecord *nr = demand.Find(n);
+                if (!nr ||
+                    (nr->face_debt_mask &
+                     static_cast<uint8_t>(1u << face_toward)) == 0)
                 {
-                  if (nr->waiting_peer_gen[face_toward] > 0)
-                  {
-                    need = nr->waiting_peer_gen[face_toward];
-                  }
+                  continue;
                 }
-                if (PeerReadyBeforeSubscribe(pub_gen, need))
+                const uint64_t need = nr->waiting_peer_gen[face_toward];
+                if (face_peer_ready(pub_gen, need))
                 {
                   demand.NoteFaceDebtSatisfied(
                       n, static_cast<uint8_t>(1u << face_toward), pub_gen);

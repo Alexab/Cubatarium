@@ -306,6 +306,12 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
       continue;
     }
     const uint64_t waiting = rec->waiting_peer_gen[f];
+    // A39 P3 / A31-01: UnknownPeer (mask bit + waiting==0) — peer_gen==0
+    // must not clear; first real peer publication (peer_gen!=0) may clear.
+    if (waiting == 0 && peer_gen == 0)
+    {
+      continue;
+    }
     // A31: peer_gen==0 must not clear a face that waits on a real generation.
     if (waiting != 0 && peer_gen == 0)
     {

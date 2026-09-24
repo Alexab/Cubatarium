@@ -1675,7 +1675,9 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   {
     return;
   }
-  CrossGpuBackend.RefreshPass(CrossGpuPass, filtered_batches, meshRevision,
+  CrossGpuBackend.RefreshPass(CrossGpuPass, filtered_batches,
+                              /*candidate*/ meshRevision, cullRevision,
+                              /*expected live desire*/ meshRevision,
                               cullRevision);
   if (WorldInstance)
   {

@@ -59,6 +59,8 @@ struct FluidPackCacheEntry
   std::vector<int16_t> tops;
   FluidSurfaceColumnSlice slice;
   bool has_slice{false};
+  /// A39 P4: PreferGpu rebuild scheduled (keep FluidSurfaceDirty until Install).
+  bool prefer_gpu_retry{false};
 };
 
 std::unordered_map<glm::ivec3, FluidPackCacheEntry, IVec3Hash> &
@@ -185,9 +187,7 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
         }
         return false;
       }
-      // A38 R5: no empty-flags enqueue (worker ready=false forever). Prefer
-      // last-good above; otherwise mark incomplete Pending and return — PreferGpu
-      // cold path rebuilds flags on a non-pressured frame (Installed|Retry).
+      // A38 R5 / A39 P4: mark Pending + PreferGpu retry (keep dirty until Install).
       {
         FluidPackCacheEntry &pending = cache[groundChunkCoord];
         pending.world_epoch = gFluidPackWorldEpoch;
@@ -197,6 +197,7 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
         pending.height = height;
         pending.incomplete = true;
         pending.has_slice = false;
+        pending.prefer_gpu_retry = true;
         pending.stored_steady_ms = SteadyNowMs();
       }
       if (out_deferred)
@@ -348,6 +349,7 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   stored.slice = slice;
   stored.has_slice = true;
   stored.incomplete = false;
+  stored.prefer_gpu_retry = false;
   stored.world_epoch = gFluidPackWorldEpoch;
   stored.stored_steady_ms = SteadyNowMs();
   return true;
@@ -458,6 +460,19 @@ void InvalidateFluidSurfacePackReuseEntry(glm::ivec3 groundChunkCoord)
     groundChunkCoord.y = 0;
   }
   FluidPackReuseCache().erase(groundChunkCoord);
+}
+
+bool IsFluidPackPendingPreferGpuRetry(glm::ivec3 groundChunkCoord)
+{
+  if (groundChunkCoord.y != 0)
+  {
+    groundChunkCoord.y = 0;
+  }
+  const auto &cache = FluidPackReuseCache();
+  const auto it = cache.find(groundChunkCoord);
+  return it != cache.end() && it->second.incomplete &&
+         it->second.prefer_gpu_retry &&
+         it->second.world_epoch == gFluidPackWorldEpoch;
 }
 
 int DrainFluidSummaryCompletionsIntoPackCache(int max_n)
