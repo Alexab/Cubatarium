@@ -245,6 +245,13 @@ VisualObligation следует сделать derived state/policy для эт�
 - `AppRunner` держит заданный yaw постоянным; отдельного горизонтального obstacle-avoidance/route planner в этом пути нет. Для данного запроса оператор подтвердил, что имеется в виду физическая остановка/смещение при столкновении. GUI был запущен, однако артефакты содержат telemetry, не screenshots или pixel oracle.
 - Run artifacts (оставлены в рабочем дереве отдельно от production-коммита): [scale-1 report](../../bin/suite_reports/engine_refactor/baseline_nominal.json), [scale-1 perf](../../bin/logs/perf_20260924-202153_24360.jsonl), [scale-28 interrupted report](../../bin/suite_reports/engine_refactor/baseline_far.json), [scale-28 perf](../../bin/logs/perf_20260924-200557_24204.jsonl).
 
+## Исполнение: VisualObligation shadow, 2026-09-24
+
+- Коммит `131960ea` добавил opt-in `CUBA_VISUAL_OBLIGATION_SHADOW=1`: per-slice `(x,y,z)` classifier сравнивается с legacy draw decision, но не меняет его. В perf JSONL записываются кумулятивные `visual_obligation_shadow_sample_n` и `visual_obligation_shadow_mismatch_n`. Без env-флага draw path не делает дополнительных запросов.
+- Release-сборка прошла. Повторный GUI `product-174657` при scale `1`, без teleport, достиг 19 чанков / 304 блока. За 45 периодов зарегистрировано 304004 shadow samples и 0 draw mismatches; `holes_rate=0.837`, `fly_visible_black_max=48`, `dirty_med=486`, `wall_med/fly_med=13.39/14.60 ms`; post-stop convergence и near-hole gates остаются FAIL. Это поддерживает следующий приоритет: восстановление работы/публикации repair-demand, а не замена draw predicate сама по себе. Одного маршрута недостаточно для глобального cutover — следующий шаг ограничить его focus ring и перепроверить.
+- Артефакты: [shadow flight report](../../bin/suite_reports/engine_refactor/visual_shadow_nominal.json), [shadow perf log](../../bin/logs/perf_20260924-205429_28160.jsonl).
+- Отдельный кодовый аудит полёта: `AppRunner` держит постоянный yaw и отправляет W через `UCamera::DoMovement`; FreeMove доходит до `UWorld::ResolveMovement` с capsule collision. Это даёт physical stop/axis-slide, но не изменяет yaw/маршрут и не вызывает walking step-up animation. Текущий product route не был поставлен так, чтобы гарантированно задеть obstacle, поэтому collision response отдельно не считается подтверждённым этим полётом.
+
 ## Основные ссылки
 
 - [Sysreset v3 evidence на dd7871ab](SYSRESET_V3_AF_EVIDENCE.md)
