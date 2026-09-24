@@ -1124,6 +1124,8 @@ private:
   int CaptureRefreshBudgetLeft{4};
   /// A42b: reserved Capture refreshes for LightRepair remesh when FM spent budget.
   int LightRepairCaptureReserveLeft{0};
+  /// Keep one count-budget refresh for an active focus FirstMesh miss.
+  int FirstMeshCaptureReserveLeft{0};
   /// A27 S5: resumable Capture/dirty scan cursor across frames.
   ResumableWorkCursor CaptureWorkCursor_{};
   bool GpuPipelineInitAttempted{false};

@@ -3681,7 +3681,8 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     out.kind = SnapshotAcquireKind::PendingCapture;
     return out;
   }
-  // A42b: LightRepair remesh must not starve when FirstMesh spent Capture budget.
+  // A42b: LightRepair remesh has an independent reserve; a focus FirstMesh miss
+  // may also own one reserved count slot for this scheduling tick.
   // SoftDeferAllowsLightRepairRemesh: drawable + LightRepair / FD / StaleVL.
   const bool light_repair_remesh = SoftDeferAllowsLightRepairRemesh(
       /*soft_defer_active=*/true, HasDrawableGreedyMesh(coord),
@@ -3689,19 +3690,23 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
           ? VisualObligation::LightRepair
           : VisualObligation::None,
       ChunkHasFullyDarkFace(coord), ChunkHasStaleDarkFaces(coord, world));
-  if (CaptureRefreshBudgetLeft <= 0)
+  if (Dirty.IsFirstMesh(coord) && FirstMeshCaptureReserveLeft > 0)
   {
-    if (!light_repair_remesh || LightRepairCaptureReserveLeft <= 0)
-    {
-      out.kind = SnapshotAcquireKind::Deferred;
-      out.deferReason = SnapshotAcquireDeferReason::RefreshCountBudget;
-      return out;
-    }
+    --FirstMeshCaptureReserveLeft;
+  }
+  else if (CaptureRefreshBudgetLeft > 0)
+  {
+    --CaptureRefreshBudgetLeft;
+  }
+  else if (light_repair_remesh && LightRepairCaptureReserveLeft > 0)
+  {
     --LightRepairCaptureReserveLeft;
   }
   else
   {
-    --CaptureRefreshBudgetLeft;
+    out.kind = SnapshotAcquireKind::Deferred;
+    out.deferReason = SnapshotAcquireDeferReason::RefreshCountBudget;
+    return out;
   }
   SnapshotAcquireDeferReason defer_reason = SnapshotAcquireDeferReason::None;
   if (CaptureAndCommitOnMain(world, &registry, coord, source_revision,
@@ -5838,6 +5843,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   };
   MeshRebuildTickStats stats;
   LastMeshSnapshotDeferStats = {};
+  FirstMeshCaptureReserveLeft = 0;
   const auto note_snapshot_defer = [this](SnapshotAcquireDeferReason reason)
   {
     switch (reason)
@@ -7001,6 +7007,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
          Dirty.GetRemeshCount() > 0);
     const bool light_repair_only_under_miss =
         miss_or_holes_starve && remesh_cap > 0;
+    // The remesh slice runs before Pass 1. Keep its one residual count-budget
+    // refresh for an in-focus FirstMesh miss; otherwise cached remesh hits can
+    // still schedule while all live FirstMesh captures are count-deferred.
+    if (focus_missing_for_schedule && first_mesh_cap > 0 &&
+        Dirty.GetFirstMeshCount() > 0 && CaptureRefreshBudgetLeft > 0)
+    {
+      FirstMeshCaptureReserveLeft = 1;
+      --CaptureRefreshBudgetLeft;
+    }
     auto schedule_remesh_snapshot_slice = [&]() {
       if (!reserve_remesh_snap || remesh_cap <= 0 ||
           Dirty.GetRemeshCount() == 0)

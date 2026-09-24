@@ -120,6 +120,10 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
   {
     glfwDefaultWindowHints();
     glfwWindowHint(GLFW_VISIBLE, visible ? GLFW_TRUE : GLFW_FALSE);
+    if (visible)
+    {
+      glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
+    }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -195,6 +199,20 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
 
   // Input manager creation
   InputManager->Initialize(Window);
+
+  // Keep explicit flight-sim visibility reliable on Windows. The GLFW hint
+  // requests an initially visible window, but some launch paths create the
+  // context while the parent console is in the foreground. Re-show after GL
+  // initialization so the operator gets a real window to inspect.
+  if (visible)
+  {
+    glfwShowWindow(Window);
+    glfwFocusWindow(Window);
+    CubatariumLogInfo(
+        "Window", glfwGetWindowAttrib(Window, GLFW_VISIBLE) == GLFW_TRUE
+                      ? "Visible window shown"
+                      : "Visible window request did not take effect");
+  }
 
   IsInitialized = true;
   return true;
