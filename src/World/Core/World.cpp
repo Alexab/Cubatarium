@@ -4467,16 +4467,45 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       ++it;
       continue;
     }
-    bool has_mesh = false;
-    for (int cy = cy0; cy <= cy1; ++cy)
+    // PendingLight owns a recorded Y range. Do not satisfy it with a mesh
+    // from the camera's current vertical band, which may be unrelated.
+    const int ticket_min_y = std::max(0, it->second.min_y);
+    const int ticket_max_y = std::min(max_y, it->second.max_y);
+    if (ticket_max_y < ticket_min_y)
     {
-      if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
+      ++it;
+      continue;
+    }
+    const int ticket_cy0 = FloorDiv(ticket_min_y, CHUNK_SIZE);
+    const int ticket_cy1 = FloorDiv(ticket_max_y, CHUNK_SIZE);
+    bool has_terminal_slice = false;
+    bool all_resident_slices_accounted = true;
+    for (int cy = ticket_cy0; cy <= ticket_cy1; ++cy)
+    {
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (MeshService->HasGreedyMesh(coord))
       {
-        has_mesh = true;
+        has_terminal_slice = true;
+        continue;
+      }
+      if (MeshService->IsPendingGpuApply(coord) ||
+          MeshService->HasInflightMeshBuild(coord))
+      {
+        has_terminal_slice = true;
+        continue;
+      }
+      const UChunk *slice = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (slice && slice->IsAirOnly())
+      {
+        has_terminal_slice = true;
+      }
+      else if (slice)
+      {
+        all_resident_slices_accounted = false;
         break;
       }
     }
-    if (!has_mesh)
+    if (!has_terminal_slice || !all_resident_slices_accounted)
     {
       ++it;
       continue;
@@ -4489,7 +4518,7 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
     if (MeshService->HasDirtyInColumnBand(key, it->second.min_y, it->second.max_y))
     {
       bool only_gpu_inflight = true;
-      for (int cy = cy0; cy <= cy1; ++cy)
+      for (int cy = ticket_cy0; cy <= ticket_cy1; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
         if (!MeshService->IsChunkMeshDirty(coord))
