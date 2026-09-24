@@ -76,6 +76,8 @@ struct LitApplyColumnInput
   bool column_settled{false};
   bool sticky_owned{false};
   bool force_stale_ticket{false};
+  /// A41: one Dirty remesh for open_sky equal-rev FullyDark (LightRepair).
+  bool light_repair_once{false};
   LitApplyYBand lit_band{};
   LitApplyYBand dirty_band{};
   std::vector<ColumnChunkSnapshot> relit_chunks;
@@ -188,8 +190,11 @@ inline bool ChunkLightRevAhead(const ColumnChunkSnapshot &chunk)
 /// ahead, missing mesh, or force_stale_ticket (ticketed stale only — A23
 /// removed A22 PendingLight+FD force flood; heal is Invalidate+Dirty or
 /// Relight-only via RecoverUnlitFocusMeshes).
+/// ahead, missing mesh, force_stale_ticket, or A41 light_repair_once (open_sky
+/// equal-rev FullyDark — one remesh without inventing light+1).
 inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
-                                             bool force_stale_ticket)
+                                             bool force_stale_ticket,
+                                             bool light_repair_once = false)
 {
   if (!chunk.has_drawable)
   {
@@ -199,7 +204,7 @@ inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
   {
     return true;
   }
-  if (chunk.fully_dark && force_stale_ticket)
+  if (chunk.fully_dark && (force_stale_ticket || light_repair_once))
   {
     return true;
   }
@@ -364,7 +369,7 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
           ShouldBumpDirtyHeadForVisualHole(
               chunk.is_dirty, chunk.fully_dark, chunk.has_drawable,
               in.focus_horiz, in.consume_mode,
-              ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket)))
+              ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket, in.light_repair_once)))
       {
         AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
         ++plan.schedule_n;
@@ -392,7 +397,7 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       continue;
     }
     const bool needs_remesh =
-        ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket);
+        ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket, in.light_repair_once);
     if (!needs_remesh && chunk.has_drawable)
     {
       // A21 residual R2: equal-rev FullyDark used to `continue` here and never
@@ -480,7 +485,7 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
           ShouldBumpDirtyHeadForVisualHole(
               chunk.is_dirty, chunk.fully_dark, chunk.has_drawable,
               in.focus_horiz, in.consume_mode,
-              ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket)))
+              ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket, in.light_repair_once)))
       {
         AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
         ++plan.schedule_n;
@@ -548,7 +553,7 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       continue;
     }
     const bool needs_remesh =
-        ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket);
+        ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket, in.light_repair_once);
     if (!needs_remesh && chunk.has_drawable)
     {
       // A21 residual R2: equal-rev FullyDark used to `continue` here and never

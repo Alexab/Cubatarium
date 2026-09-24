@@ -1237,13 +1237,20 @@ inline bool ShouldSkipDeferRemeshUnderVbHealPressure(
   return enter_fov_lit || vb_no_ticket_n > no_ticket_thresh;
 }
 
-/// FZ2.4-P0a: tickets cleared but focus still dark+pending — stop feeding Note.
+/// A40: blanket plateau suppress removed — it froze Note while VB>0 without a
+/// terminal Relight outcome (black forever). True duplicates are already
+/// filtered by TryNote (IsPendingLight / InFlight). Args retained for call-site
+/// ABI + unit regress that suppress must stay OFF.
 inline bool ShouldSuppressPendingLightNote(
     int vb_no_ticket_n, int pending_light_focus_n, int visible_black_focus_n,
     int pl_thresh = 15, int vb_thresh = 40)
 {
-  return vb_no_ticket_n <= 0 && pending_light_focus_n >= pl_thresh &&
-         visible_black_focus_n > vb_thresh;
+  (void)vb_no_ticket_n;
+  (void)pending_light_focus_n;
+  (void)visible_black_focus_n;
+  (void)pl_thresh;
+  (void)vb_thresh;
+  return false;
 }
 
 /// FZ2-R1: PL leave-in RemoveAt carve-out — only under VB heal pressure.

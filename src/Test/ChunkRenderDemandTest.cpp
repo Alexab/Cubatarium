@@ -410,6 +410,31 @@ int main()
     Expect(store.StopConverged(), "Retain+successor desire ok");
   }
 
+  // A40 P3: stall > kStallFailMs → remint Created (keep desire, no Kick).
+  {
+    store.Clear();
+    const glm::ivec3 stalled{11, 0, 11};
+    Expect(store.NoteDemand(stalled, 5, 6) == DemandResult::NewDemand,
+           "stall NewDemand");
+    ChunkRenderDemandRecord *srec = store.Find(stalled);
+    Expect(srec != nullptr, "stall record");
+    const uint64_t aid = srec->active_attempt_id;
+    Expect(store.NoteStageProgress(stalled, cutum::JobStage::Admitted, aid,
+                                   /*now_ms=*/1000.0),
+           "stall Admitted");
+    srec = store.Find(stalled);
+    Expect(srec && srec->last_progress_ms == 1000.0, "progress stamped");
+    const auto rs =
+        store.ReconcileMaintenance(16, /*now_ms=*/1000.0 + 30001.0);
+    Expect(rs.stalled_reschedule >= 1, "A40 stall reschedule");
+    srec = store.Find(stalled);
+    Expect(srec && srec->has_active_attempt, "reminted active");
+    Expect(srec && srec->active_stage == cutum::JobStage::Created,
+           "reminted Created");
+    Expect(srec && srec->desired_geom_rev == 5 && srec->desired_light_rev == 6,
+           "desire kept");
+  }
+
   if (gFails != 0)
   {
     std::fprintf(stderr, "chunk_render_demand_test failures=%d\n", gFails);

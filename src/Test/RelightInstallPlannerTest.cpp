@@ -99,6 +99,26 @@ int main()
              plan_noop.prefer_kick_gpu.empty(),
          "P7: settled equal-rev FullyDark skips remesh");
 
+  // A41: light_repair_once schedules Dirty for open_sky equal-rev FD.
+  {
+    using cutum::ShouldRemeshAfterLitApplyForHole;
+    Expect(!ShouldRemeshAfterLitApplyForHole(in.relit_chunks.front(), false,
+                                             false),
+           "A41: equal-rev FD without repair flag → no remesh");
+    Expect(ShouldRemeshAfterLitApplyForHole(in.relit_chunks.front(), false,
+                                            true),
+           "A41: light_repair_once → remesh");
+    in.column_settled = false;
+    in.light_repair_once = true;
+    in.relit_chunks.clear();
+    in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
+    const auto plan_lr = PlanColumnInstall(in);
+    Expect(!plan_lr.mark_dirty_priority.empty() || !plan_lr.mark_dirty.empty() ||
+               !plan_lr.prefer_kick_gpu.empty(),
+           "A41: light_repair_once schedules repair");
+    in.light_repair_once = false;
+  }
+
   // P12 A1: skip_already_dirty on a hole → FirstMesh, not remesh skip.
   {
     FakeMeshServiceForLitApply hole;

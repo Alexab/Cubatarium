@@ -156,6 +156,8 @@ public:
     int mismatch_desired_vs_published{0};
     int orphan_active{0};
     int retained_awaiting{0};
+    /// A40: stalled in-flight reminted to Created (one attempt, no Kick).
+    int stalled_reschedule{0};
   };
   /// Level check desired vs published; bounded scan for maintenance.
   /// Orphan Created only after grace (attempt_created_ms / last_progress).

@@ -19,6 +19,7 @@
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/ChunkRenderDemand.h"
+#include "World/Streaming/VisualObligationPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "Render/Mesh/MeshPublishContract.h"
@@ -2074,6 +2075,12 @@ bool UChunkMeshCache::HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const
 
 void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
 {
+  // A41: SoftDeferOwned hide requires a ticket owner callback (Emerge mints
+  // FirstMesh). Without it, refuse Hold — do not park mesh with no repair.
+  if (!OnSoftDeferHeld)
+  {
+    return;
+  }
   const bool inserted = SoftDeferHeld.insert(chunk_coord).second;
   if (inserted)
   {
@@ -2081,7 +2088,7 @@ void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
   }
   // Era15 TD-050 / Era22 I-S2: Held must not park FirstMesh outside ColumnFlow.
   // Re-fire on insert; Requeue refreshes Contains while Held stays empty.
-  if (inserted && OnSoftDeferHeld)
+  if (inserted)
   {
     OnSoftDeferHeld(chunk_coord);
   }
@@ -3653,12 +3660,27 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     out.kind = SnapshotAcquireKind::PendingCapture;
     return out;
   }
+  // A42b: LightRepair remesh must not starve when FirstMesh spent Capture budget.
+  // SoftDeferAllowsLightRepairRemesh: drawable + LightRepair / FD / StaleVL.
+  const bool light_repair_remesh = SoftDeferAllowsLightRepairRemesh(
+      /*soft_defer_active=*/true, HasDrawableGreedyMesh(coord),
+      (IsLightRepairRemesh && IsLightRepairRemesh(coord))
+          ? VisualObligation::LightRepair
+          : VisualObligation::None,
+      ChunkHasFullyDarkFace(coord), ChunkHasStaleDarkFaces(coord, world));
   if (CaptureRefreshBudgetLeft <= 0)
   {
-    out.kind = SnapshotAcquireKind::Deferred;
-    return out;
+    if (!light_repair_remesh || LightRepairCaptureReserveLeft <= 0)
+    {
+      out.kind = SnapshotAcquireKind::Deferred;
+      return out;
+    }
+    --LightRepairCaptureReserveLeft;
   }
-  --CaptureRefreshBudgetLeft;
+  else
+  {
+    --CaptureRefreshBudgetLeft;
+  }
   if (CaptureAndCommitOnMain(world, &registry, coord, source_revision))
   {
     if (auto hit = CaptureStore.TryGet(world, coord, source_revision))
@@ -5793,6 +5815,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // Cap refreshes from MeshSnapshotBudgetMs (already cruise-clamped in
       // emerge). Floor 1 so schedule can still progress on store miss.
       std::max(1, static_cast<int>(MeshSnapshotBudgetMs * 0.35));
+  // A42b/d: reserve Capture slots for LightRepair remesh (Published owner).
+  // Under VB/StaleVL debt allow up to 4 so miss-floor remesh can drain.
+  {
+    const int lr_cap =
+        (VisibleBlackFocusPressure_ >= 12 || VisibleBlackNoTicketPressure_ >= 12)
+            ? 4
+            : 2;
+    LightRepairCaptureReserveLeft =
+        std::min(lr_cap, std::max(1, CaptureRefreshBudgetLeft));
+  }
+  CaptureRefreshBudgetLeft =
+      std::max(1, CaptureRefreshBudgetLeft - LightRepairCaptureReserveLeft);
   // A27 S5: resumable Capture cursor — continue same dirty manifest generation.
   {
     const size_t dirty_n = Dirty.GetCount();
@@ -6028,6 +6062,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           ++it;
           continue;
         }
+        // A42: LightRepair drawable remesh must stay Dirty under SoftDefer.
+        if (SoftDeferAllowsLightRepairRemesh(
+                /*soft_defer_active=*/true, has_drawable,
+                (IsLightRepairRemesh && IsLightRepairRemesh(*it))
+                    ? VisualObligation::LightRepair
+                    : VisualObligation::None,
+                ChunkHasFullyDarkFace(*it),
+                ChunkHasStaleDarkFaces(*it, world)))
+        {
+          ++it;
+          continue;
+        }
         bool in_focus = false;
         if (MeshFocusValid)
         {
@@ -6080,7 +6126,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           const bool miss_or_focus = StarveRemeshForHoles || in_focus;
           if (ShouldScheduleFirstMeshUnderSoftDefer(
                   has_drawable, miss_or_focus, horiz,
-                  RelightFifoTrimProtectHoriz()))
+                  RelightFifoTrimProtectHoriz()) ||
+              SoftDeferAllowsLightRepairRemesh(
+                  /*soft_defer_active=*/true, has_drawable,
+                  (IsLightRepairRemesh && IsLightRepairRemesh(*it))
+                      ? VisualObligation::LightRepair
+                      : VisualObligation::None,
+                  ChunkHasFullyDarkFace(*it),
+                  ChunkHasStaleDarkFaces(*it, world)))
           {
             ++it;
             continue;
@@ -6602,11 +6655,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const bool near_ring_first_mesh =
             !has_drawable && horiz <= RelightFifoTrimProtectHoriz();
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;
+        // A42: LightRepair drawable remesh fallthrough under SoftDefer+PL.
         if (near_ring_first_mesh || StarveRemeshForHoles ||
             (EnterUnderfeetExitBlocked_ && horiz >= 0 && horiz <= 1) ||
             ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus,
                                                   horiz,
-                                                  RelightFifoTrimProtectHoriz()))
+                                                  RelightFifoTrimProtectHoriz()) ||
+            SoftDeferAllowsLightRepairRemesh(
+                /*soft_defer_active=*/true, has_drawable,
+                (IsLightRepairRemesh && IsLightRepairRemesh(*it))
+                    ? VisualObligation::LightRepair
+                    : VisualObligation::None,
+                ChunkHasFullyDarkFace(*it),
+                ChunkHasStaleDarkFaces(*it, world)))
         {
           // fall through to Capture/Enqueue
         }
@@ -6845,11 +6906,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     // P4 / A29 U1: under focus miss, zero remesh schedule — VB remesh snapshot
     // was burning MeshSnapshotBudgetMs before FirstMesh closed holes (AF fm~300).
-    if (StarveRemeshForHoles || focus_missing_for_schedule)
+    // A42c: keep LightRepair Capture floor — remesh_cap=0 made A42b reserve
+    // unreachable (ok_remesh=0 while sticky miss/holes; blacks stay Published).
+    const bool miss_or_holes_starve =
+        StarveRemeshForHoles || focus_missing_for_schedule;
+    if (miss_or_holes_starve)
     {
       remesh_cap = 0;
       first_mesh_cap = std::max(first_mesh_cap, 12);
       LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
+      if (LightRepairCaptureReserveLeft > 0 && Dirty.GetRemeshCount() > 0)
+      {
+        remesh_cap = LightRepairCaptureReserveLeft;
+      }
     }
     // G1-P1 / A11: under StaleVertexLight/FullyDark debt, spend remesh_schedule
     // snapshot attempts before FirstMesh walk burns MeshSnapshotBudgetMs.
@@ -6866,11 +6935,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
          sched_adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
          sched_adm.mode == MeshWorkAdmission::Mode::DeepBacklog ||
          remesh_debt_proxy >= 20);
+    // A42c: under sticky miss, still run remesh snapshot slice for the LR floor.
     const bool reserve_remesh_snap =
-        !focus_missing_for_schedule &&
-        ShouldReserveRemeshSnapshotSlice(
-            remesh_snap_holes, static_cast<int>(Dirty.GetRemeshCount()),
-            remesh_debt_proxy);
+        (!focus_missing_for_schedule &&
+         ShouldReserveRemeshSnapshotSlice(
+             remesh_snap_holes, static_cast<int>(Dirty.GetRemeshCount()),
+             remesh_debt_proxy)) ||
+        (focus_missing_for_schedule && remesh_cap > 0 &&
+         Dirty.GetRemeshCount() > 0);
+    const bool light_repair_only_under_miss =
+        miss_or_holes_starve && remesh_cap > 0;
     auto schedule_remesh_snapshot_slice = [&]() {
       if (!reserve_remesh_snap || remesh_cap <= 0 ||
           Dirty.GetRemeshCount() == 0)
@@ -6888,6 +6962,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
            remesh_scheduled < remesh_cap;)
       {
         if (Dirty.IsFirstMesh(*it))
+        {
+          ++it;
+          continue;
+        }
+        // A42c: miss floor is LightRepair / FullyDark Published remesh only —
+        // do not reopen A29 U1 hinterland (stale-lit hinterland remesh).
+        if (light_repair_only_under_miss &&
+            !((IsLightRepairRemesh && IsLightRepairRemesh(*it)) ||
+              ChunkHasFullyDarkFace(*it) ||
+              ChunkHasStaleDarkFaces(*it, world)))
         {
           ++it;
           continue;
@@ -7137,6 +7221,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       // F2: remesh quota separate from FirstMesh under HoleDrain/Deep.
       const bool is_remesh = HasDrawableGreedyMesh(*it);
+      // A42c: miss floor is LightRepair / FullyDark Published remesh only.
+      if (is_remesh && light_repair_only_under_miss &&
+          !((IsLightRepairRemesh && IsLightRepairRemesh(*it)) ||
+            ChunkHasFullyDarkFace(*it) ||
+            ChunkHasStaleDarkFaces(*it, world)))
+      {
+        if (!skip_defer_lit_ring(*it))
+        {
+          DeferRemeshCoord(*it);
+        }
+        it = Dirty.RemoveAt(it);
+        continue;
+      }
       if (is_remesh && remesh_scheduled >= remesh_cap)
       {
         // Dual-queue: remesh suffix is contiguous after FirstMesh — stop walk.
@@ -7253,9 +7350,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;
         if (ShouldScheduleFirstMeshUnderSoftDefer(
                 has_drawable, miss_or_focus, horiz,
-                RelightFifoTrimProtectHoriz()))
+                RelightFifoTrimProtectHoriz()) ||
+            SoftDeferAllowsLightRepairRemesh(
+                /*soft_defer_active=*/true, has_drawable,
+                (IsLightRepairRemesh && IsLightRepairRemesh(*it))
+                    ? VisualObligation::LightRepair
+                    : VisualObligation::None,
+                ChunkHasFullyDarkFace(*it),
+                ChunkHasStaleDarkFaces(*it, world)))
         {
-          // Era22 I-S1: fall through to schedule FirstMesh.
+          // Era22 I-S1 / A42: fall through to schedule FirstMesh or LightRepair.
         }
         else
         {

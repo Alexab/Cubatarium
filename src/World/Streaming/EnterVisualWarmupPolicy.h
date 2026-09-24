@@ -90,10 +90,18 @@ inline bool EnterUnderfeetPresentReady(bool slice_ready, bool opaque_present)
 
 /// FullyDark column is enter-resolved only after bake outcome (lit or true-dark).
 /// OpenSky / RelightThenMesh alone is never settled.
+/// A40: legal_dark_settled (Relight terminal equal-rev) also settles draw/Ready
+/// even when OpenSky was not applied (true caves) and overrides pending once
+/// the terminal stamp is written (PendingLight clear may lag one frame).
 inline bool EnterFullyDarkColumnSettled(bool open_sky_applied, bool pending,
                                         bool lit_ready, bool stale_field,
-                                        bool has_lit_drawable)
+                                        bool has_lit_drawable,
+                                        bool legal_dark_settled = false)
 {
+  if (legal_dark_settled && lit_ready && !stale_field)
+  {
+    return true;
+  }
   if (pending || !lit_ready)
   {
     return false;
@@ -104,6 +112,15 @@ inline bool EnterFullyDarkColumnSettled(bool open_sky_applied, bool pending,
   }
   // true-dark: OpenSky/relight owned, light field 0 (not stale).
   return open_sky_applied && !stale_field;
+}
+
+/// A40: after Relight apply, PendingLight clears when every band slice is
+/// LitDrawable OR LegalDarkSettled — FD census alone must not block clear.
+inline bool ShouldClearPendingAfterRelightTerminal(bool lit_ready,
+                                                   bool all_slices_terminal,
+                                                   bool any_still_stale)
+{
+  return lit_ready && all_slices_terminal && !any_still_stale;
 }
 
 /// Worklist Done is enter SoT — snapshot debt must not outlive it (manual

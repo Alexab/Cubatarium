@@ -87,6 +87,7 @@
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/DependencyStampBuilder.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/VisualObligationPolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/MeshWorkAdmission.h"
@@ -1565,6 +1566,16 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
     }
   }
   SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+  // A40: new light debt invalidates prior LegalDark settlement stamp.
+  ColumnRecord &pl_rec = ColumnRecords.GetOrCreate(key);
+  pl_rec.legal_dark_settled = false;
+  pl_rec.visual_obligation = VisualObligation::LightRepair;
+  // A41: keep live LightRepair SLA across dup Note* (manual 132520: wipe
+  // attempt_id every Note left Dirty stuck with no remint clock).
+  if (pl_rec.visual_attempt_id == 0)
+  {
+    pl_rec.visual_deadline_ms = 0;
+  }
   auto [it, inserted] = PendingLightBeforeMesh.try_emplace(key);
   bool has_mesh = false;
   if (MeshService)
@@ -2034,8 +2045,9 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     {
       return memo(true);
     }
-    // LitRing: FullyDark in LitDrawable → hole until lit or true-dark.
-    // Prior-lit hold: no Unlit FD Satisfying publish (183457).
+    // A40 / A31-03: FullyDark classes are mutually exclusive —
+    // LightStale (repair owed) ≠ LegalDarkSettled (draw OK) ≠ GeometryMissing.
+    // FD census alone is never eternal hide without a live repair ticket.
     const bool fully_dark =
         MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord) &&
         !MeshService->ChunkHasLitDrawableFace(chunk_coord);
@@ -2051,11 +2063,25 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
         const bool lit_ready =
             IsColumnLitReady(glm::ivec3(col_xz.x, 0, col_xz.y));
         const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
+        const ColumnRecord *rec = ColumnRecords.Find(col_xz);
+        const bool legal_settled = rec && rec->legal_dark_settled;
+        const bool light_repair =
+            rec && rec->visual_obligation == VisualObligation::LightRepair;
         const bool true_dark = EnterFullyDarkColumnSettled(
-            open_sky, pending, lit_ready, stale, /*has_lit_drawable=*/false);
-        if (!true_dark)
+            open_sky, pending, lit_ready, stale, /*has_lit_drawable=*/false,
+            legal_settled);
+        if (!true_dark || light_repair)
         {
-          return memo(false);
+          const bool has_ticket =
+              GetColumnFlowExecutor().HasRepairTicket(col_xz) ||
+              IsColumnStickyRemesh(col_xz) || ColumnHasRepairProgress(col_xz) ||
+              pending || IsAsyncRelightColumnInFlight(col_xz) || light_repair;
+          // LightStale / LightRepair / open Relight-Dirty ticket → hide.
+          // Equal-rev FD without ticket → draw (LegalDark honesty).
+          if (stale || has_ticket || light_repair)
+          {
+            return memo(false);
+          }
         }
       }
     }
@@ -2615,9 +2641,20 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
       uint64_t desired_geom = ch->GetContentRevision();
       uint64_t desired_light = ch->GetLightFieldRevision();
+      const MeshPublishRevs pub_early =
+          MeshService->GetCache().GetMeshPublishRevs(coord);
+      // A41: do not invent geom=1 when published already has content rev.
       if (desired_geom == 0 && desired_light == 0)
       {
-        desired_geom = 1;
+        if (pub_early.geom_rev != 0)
+        {
+          desired_geom = pub_early.geom_rev;
+          desired_light = pub_early.light_rev != 0 ? pub_early.light_rev : 1;
+        }
+        else
+        {
+          desired_geom = 1;
+        }
       }
       uint64_t desired_coverage = 0;
       if (const ChunkRenderDemandRecord *existing = demand.Find(coord))
@@ -2643,6 +2680,15 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool mesh_behind_light =
           probe.has_drawable && probe.meshed_light_rev != 0 &&
           desired_light != 0 && probe.meshed_light_rev < desired_light;
+      const bool still_stale =
+          probe.has_drawable && probe.meshed_light_rev != 0 &&
+          desired_light != 0 && probe.meshed_light_rev < desired_light;
+      const bool open_sky =
+          EnterVisualGateCtrl.WasOpenSkyApplied(glm::ivec2(cx, cz));
+      const bool equal_rev_fd =
+          fully_dark && !still_stale && !mesh_behind_light &&
+          !(probe.has_drawable && probe.meshed_light_rev != 0 &&
+            desired_light != 0 && probe.meshed_light_rev != desired_light);
       const bool relight_only = fully_dark || mesh_behind_light ||
                                 (probe.has_drawable &&
                                  probe.meshed_light_rev != 0 &&
@@ -2654,6 +2700,46 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       if (relight_only)
       {
         MeshService->GetCache().InvalidateMeshCapture(coord);
+        // A41: open_sky equal-rev FD → LightRepair Dirty with SLA remint.
+        // Dirty-only does not block (skip_snapshot plateau); live Capture/GPU does.
+        if (NeedsOpenSkyEqualRevLightRepair(fully_dark, still_stale,
+                                            open_sky) ||
+            (fully_dark && open_sky && equal_rev_fd) ||
+            (fully_dark && open_sky && still_stale))
+        {
+          ColumnRecord &orec =
+              ColumnRecords.GetOrCreate(glm::ivec2(cx, cz));
+          orec.legal_dark_settled = false;
+          orec.visual_obligation = VisualObligation::LightRepair;
+          const bool live_pipeline = LightRepairHasLivePipeline(
+              MeshService->IsRemeshAfterApplyPending(coord),
+              MeshService->IsPendingGpuApply(coord),
+              MeshService->HasInflightMeshBuild(coord));
+          const double now_ms = VisualObligationNowMs();
+          if (ShouldRemintLightRepairDirty(
+                  /*obligation=*/true, live_pipeline, orec.visual_attempt_id,
+                  orec.visual_deadline_ms, now_ms))
+          {
+            if (MeshService->TryConsumeDirtyAdmit() || col_horiz <= 4)
+            {
+              MeshService->GetCache().InvalidateMeshCapture(coord);
+              MeshService->MarkDirtyPriority(coord);
+              static uint64_t next_admit_lr = 1;
+              orec.visual_attempt_id = next_admit_lr++;
+              orec.visual_deadline_ms = StampLightRepairDeadlineMs(now_ms);
+              const uint64_t attempt_id =
+                  DemandActiveAttemptId(demand, coord);
+              if (attempt_id != 0)
+              {
+                demand.NoteStageProgress(coord, JobStage::Admitted,
+                                         attempt_id);
+              }
+              ++admitted;
+              ++y_taken;
+              continue;
+            }
+          }
+        }
         if (Persistence)
         {
           Persistence->EnqueueTerrainColumnRelight(
@@ -4313,7 +4399,10 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       continue;
     }
     const glm::ivec3 ground(key.x, 0, key.y);
-    if (!IsColumnLitReady(ground))
+    const ColumnRecord *settled_rec = ColumnRecords.Find(key);
+    const bool legal_settled_early =
+        settled_rec && settled_rec->legal_dark_settled;
+    if (!IsColumnLitReady(ground) && !legal_settled_early)
     {
       ++it;
       continue;
@@ -4332,26 +4421,11 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       ++it;
       continue;
     }
-    // A23 D2 / A22 S1: do not clear PendingLight or promote Ready while any
-    // band slice is still FullyDark — equal-rev bake may still be healing via
-    // Invalidate+Dirty / Relight-only. Sole Ready owner is LitDrawableCommit
-    // with multi-Y sibling guard; this path must match.
-    bool any_fully_dark = false;
-    for (int cy = cy0; cy <= cy1; ++cy)
-    {
-      const glm::ivec3 coord(key.x, cy, key.y);
-      if (MeshService->HasGreedyMesh(coord) &&
-          MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-      {
-        any_fully_dark = true;
-        break;
-      }
-    }
-    if (any_fully_dark)
-    {
-      ++it;
-      continue;
-    }
+    // A40/A42e: PendingLight clears on terminal Relight outcome (LitDrawable /
+    // LitReady or LegalDarkSettled) — checked via IsColumnLitReady above.
+    // Observational FullyDark/StaleVL mesh must NOT pin PL: SoftDefer stays ON,
+    // ShouldRejectDarkMeshCommit rejects remesh, Capture stays dark (A42d
+    // ok_remesh>0 / VB stuck). LightRepair remesh heals after SoftDefer lifts.
     if (MeshService->HasDirtyInColumnBand(key, it->second.min_y, it->second.max_y))
     {
       bool only_gpu_inflight = true;
@@ -4378,7 +4452,8 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
     AsyncRelightColumnsInFlight.erase(key);
     it = PendingLightBeforeMesh.erase(it);
     StickyRemeshAfterLight.erase(key);
-    SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
+    // A41: ClearPending must not write RenderReady — sole Ready = LitDrawable.
+    SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
     ++cleared;
   }
   for (auto it = StickyRemeshAfterLight.begin();
@@ -4486,14 +4561,15 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
     {
       // Keep draining remesh, but sticky gate is for black/stale faces only.
       it = StickyRemeshAfterLight.erase(it);
-      SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
+      // A41: sticky clear → LitReady, not RenderReady (sole Ready = LitDrawable).
+      SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
       ++cleared;
       continue;
     }
     // Keep sticky only while stale-dark remesh debt remains. Void-edge faces
     // are Relight-owned — holding sticky forced RemeshSeam thrash (201621).
     it = StickyRemeshAfterLight.erase(it);
-    SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
+    SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
     ++cleared;
   }
   return cleared;
@@ -7167,8 +7243,10 @@ bool UWorld::IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const
   }
   const bool stale = ColumnFullyDarkLooksStaleWithLitField(col_chunk_xz);
   const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_chunk_xz);
+  const ColumnRecord *rec = ColumnRecords.Find(col_chunk_xz);
+  const bool legal_settled = rec && rec->legal_dark_settled;
   return EnterFullyDarkColumnSettled(open_sky, pending, lit_ready, stale,
-                                     /*has_lit_drawable=*/false);
+                                     /*has_lit_drawable=*/false, legal_settled);
 }
 
 int UWorld::CountEnterLitSnapshotDebt() const

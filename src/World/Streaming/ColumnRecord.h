@@ -4,6 +4,7 @@
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnVisualState.h"
+#include "World/Streaming/VisualObligationPolicy.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -70,6 +71,13 @@ struct ColumnRecord
   uint8_t face_debt_mask{0};
   /// Frames face debt has been outstanding (stall escape / telemetry).
   int face_debt_frames{0};
+  /// A40: Relight terminal equal-rev FullyDark (LegalDark) — PendingLight may
+  /// clear and draw may show; observational FD census alone is not a hole.
+  bool legal_dark_settled{false};
+  /// A41: exclusive visual SoT class (see VisualObligationPolicy.h).
+  VisualObligation visual_obligation{VisualObligation::None};
+  uint64_t visual_attempt_id{0};
+  double visual_deadline_ms{0};
 };
 
 inline uint64_t PackColumnKey(glm::ivec2 xz)

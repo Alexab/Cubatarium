@@ -392,6 +392,27 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
         }
       }
     }
+    // A40 P3: stall > SLA → remint one Created attempt (keep desire). Not Kick.
+    if (rec.has_active_attempt &&
+        (rec.published_geom_rev != rec.desired_geom_rev ||
+         rec.published_light_rev != rec.desired_light_rev ||
+         !CoverageSatisfied(rec, 0) || rec.face_debt_mask != 0) &&
+        now_ms > 0.0 && rec.last_progress_ms > 0.0 &&
+        (now_ms - rec.last_progress_ms) > kStallFailMs)
+    {
+      rec.has_active_attempt = false;
+      rec.active_stage = JobStage::Cancelled;
+      if (rec.desired_geom_rev != 0 || rec.desired_light_rev != 0 ||
+          rec.desired_coverage_gen != 0)
+      {
+        rec.active_attempt_id = NextAttemptId_++;
+        rec.active_stage = JobStage::Created;
+        rec.has_active_attempt = true;
+        rec.last_progress_ms = 0.0;
+        rec.attempt_created_ms = now_ms;
+        ++stats.stalled_reschedule;
+      }
+    }
     if (rec.retained_awaiting_successor)
     {
       ++stats.retained_awaiting;

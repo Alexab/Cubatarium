@@ -14,6 +14,7 @@
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/VisualObligationPolicy.h"
 
 #include "Render/Mesh/MeshCaptureWorker.h"
 
@@ -163,17 +164,49 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         }
         if (dr == DemandResult::AlreadySatisfied && fully_dark_drawable)
         {
-          // A39 P1: keep desire at content light (reachable). Relight owns
-          // equal-rev FullyDark — never invent content+1 / pub+1.
+          // A41: open_sky equal-rev FD → LightRepair Dirty once (never +1).
+          // Cave (!open_sky) → RelightOnly / LegalDark path (no Dirty invent).
+          const glm::ivec2 col_xz(coord.x, coord.z);
+          const bool open_sky =
+              EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
           mesh->GetCache().InvalidateMeshCapture(coord);
-          if (Persistence)
+          if (open_sky)
+          {
+            ColumnRecord &orec = GetColumnRecords().GetOrCreate(col_xz);
+            orec.legal_dark_settled = false;
+            orec.visual_obligation = VisualObligation::LightRepair;
+            const bool live_pipeline = LightRepairHasLivePipeline(
+                mesh->IsRemeshAfterApplyPending(coord),
+                mesh->IsPendingGpuApply(coord),
+                mesh->HasInflightMeshBuild(coord));
+            const double now_ms = VisualObligationNowMs();
+            if (ShouldRemintLightRepairDirty(
+                    /*obligation=*/true, live_pipeline, orec.visual_attempt_id,
+                    orec.visual_deadline_ms, now_ms))
+            {
+              static uint64_t next_lr_attempt = 1;
+              orec.visual_attempt_id = next_lr_attempt++;
+              orec.visual_deadline_ms = StampLightRepairDeadlineMs(now_ms);
+              // Fall through to MarkDirty below (do not return).
+            }
+            else
+            {
+              ++PhysicsTelemetryData.MarkRelitScheduleN;
+              return;
+            }
+          }
+          else if (Persistence)
           {
             Persistence->EnqueueTerrainColumnRelight(
                 coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE, /*priority=*/true,
                 coord.y * CHUNK_SIZE, (coord.y + 1) * CHUNK_SIZE - 1);
+            ++PhysicsTelemetryData.MarkRelitScheduleN;
+            return;
           }
-          ++PhysicsTelemetryData.MarkRelitScheduleN;
-          return;
+          else
+          {
+            return;
+          }
         }
       }
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
@@ -594,46 +627,122 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       in.force_stale_ticket = ShouldForceMarkRelitForTicketedStale(
           consume_mode, in.has_repair_ticket, any_fully_dark, any_still_stale,
           focus_horiz);
-      // A24 R3: narrow equal-rev PL+FD heal with cooldown (not A22 every-apply
-      // flood). Invalidate+Dirty path in RecoverUnlit is primary; this covers
-      // MarkRelit when light rev did not advance but FD remains.
+      // A41: Relight terminal — exclusive LegalDark vs LightRepair.
+      // - !open_sky equal-rev FD → LegalDark (stamp, clear PL, no Dirty)
+      // - open_sky equal-rev FD → LightRepair (keep PL, one Dirty, never +1)
+      // - still_stale → LightRepair (keep PL, Relight/Dirty via force_stale)
+      // REPLACE cooldown equal-rev force_stale (A24) — LightRepair owns remesh.
       {
-        bool any_light_ahead = false;
-        for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+        ColumnRecord &rec = GetColumnRecords().GetOrCreate(key);
+        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(key);
+        const bool lit_or_lighting =
+            IsColumnLitReady(ground) ||
+            GetColumnEmergeState(ground) == ColumnEmergeState::Lighting;
+        const bool equal_rev_fd = any_fully_dark && !any_still_stale;
+        in.light_repair_once = false;
+        if (equal_rev_fd && lit_or_lighting)
         {
-          if (ChunkLightRevAhead(snap))
+          if (IsLegalDarkEqualRevFullyDark(/*fully_dark=*/true,
+                                           /*still_stale=*/false, open_sky))
           {
-            any_light_ahead = true;
-            break;
+            rec.legal_dark_settled = true;
+            rec.visual_obligation = VisualObligation::LegalDark;
+            rec.visual_attempt_id = 0;
+            rec.visual_deadline_ms = 0;
+            in.column_settled = true;
           }
-        }
-        const bool pending_pl =
-            PendingLightBeforeMesh.find(key) != PendingLightBeforeMesh.end();
-        static std::unordered_map<uint64_t, int> equal_rev_force_age;
-        const uint64_t col_key =
-            (static_cast<uint64_t>(static_cast<uint32_t>(key.x)) << 32) |
-            static_cast<uint32_t>(key.y);
-        int &age = equal_rev_force_age[col_key];
-        ++age;
-        if (!in.force_stale_ticket &&
-            ShouldCooldownForceEqualRevPendingFullyDark(
-                pending_pl, any_fully_dark, any_light_ahead, focus_horiz, age))
-        {
-          in.force_stale_ticket = true;
-          age = 0;
-          for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+          else if (NeedsOpenSkyEqualRevLightRepair(/*fully_dark=*/true,
+                                                   /*still_stale=*/false,
+                                                   open_sky))
           {
-            if (snap.fully_dark && MeshService)
+            rec.legal_dark_settled = false;
+            rec.visual_obligation = VisualObligation::LightRepair;
+            in.column_settled = false;
+            bool live_pipeline = false;
+            for (const ColumnChunkSnapshot &snap : in.relit_chunks)
             {
-              MeshService->GetCache().InvalidateMeshCapture(snap.coord);
+              if (LightRepairHasLivePipeline(snap.raa_pending, snap.gpu_pending,
+                                             snap.inflight))
+              {
+                live_pipeline = true;
+                break;
+              }
+            }
+            const double now_ms = VisualObligationNowMs();
+            if (ShouldRemintLightRepairDirty(
+                    /*obligation=*/true, live_pipeline, rec.visual_attempt_id,
+                    rec.visual_deadline_ms, now_ms))
+            {
+              for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+              {
+                if (snap.fully_dark && MeshService)
+                {
+                  MeshService->GetCache().InvalidateMeshCapture(snap.coord);
+                }
+              }
+              in.light_repair_once = true;
+              static uint64_t next_visual_attempt = 1;
+              rec.visual_attempt_id = next_visual_attempt++;
+              rec.visual_deadline_ms = StampLightRepairDeadlineMs(now_ms);
+              ++PhysicsTelemetryData.MarkRelitScheduleN;
             }
           }
         }
-        if (!pending_pl || !any_fully_dark)
+        else if (any_still_stale)
         {
-          equal_rev_force_age.erase(col_key);
+          rec.legal_dark_settled = false;
+          rec.visual_obligation = VisualObligation::LightRepair;
+          in.column_settled = false;
+          // A41: open_sky still_stale without live pipeline → SLA Dirty remint
+          // (Relight-only was starving when fifo empty / Dirty stuck).
+          if (open_sky)
+          {
+            bool live_pipeline = false;
+            for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+            {
+              if (LightRepairHasLivePipeline(snap.raa_pending, snap.gpu_pending,
+                                             snap.inflight))
+              {
+                live_pipeline = true;
+                break;
+              }
+            }
+            const double now_ms = VisualObligationNowMs();
+            if (ShouldRemintLightRepairDirty(
+                    /*obligation=*/true, live_pipeline, rec.visual_attempt_id,
+                    rec.visual_deadline_ms, now_ms))
+            {
+              for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+              {
+                if (snap.fully_dark && MeshService)
+                {
+                  MeshService->GetCache().InvalidateMeshCapture(snap.coord);
+                }
+              }
+              in.light_repair_once = true;
+              static uint64_t next_stale_attempt = 1;
+              rec.visual_attempt_id = next_stale_attempt++;
+              rec.visual_deadline_ms = StampLightRepairDeadlineMs(now_ms);
+              ++PhysicsTelemetryData.MarkRelitScheduleN;
+            }
+          }
+        }
+        else if (!any_fully_dark)
+        {
+          rec.legal_dark_settled = false;
+          rec.visual_obligation = VisualObligation::LitDrawable;
+          rec.visual_attempt_id = 0;
+          rec.visual_deadline_ms = 0;
+          in.column_settled = true;
+        }
+        else
+        {
+          rec.legal_dark_settled = false;
+          in.column_settled = false;
         }
       }
+      // A41: do not call ShouldCooldownForceEqualRevPendingFullyDark (replaced by
+      // LightRepair). Keep ticketed still_stale force only.
       if (in.force_stale_ticket)
       {
         ++PhysicsTelemetryData.MarkRelitForceStaleN;
@@ -648,11 +757,34 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
       const auto plan_t0 = Clock::now();
       LitApplyPlan plan = PlanColumnInstall(in);
-      // A22 S1: FullyDark drawable still present → keep PendingLight until bake
-      // heals. PrimaryConsume used to erase pending every apply (133440 pending≡0).
-      if (any_fully_dark)
+      // A41: keep PL while LightRepair; clear on LegalDark / LitDrawable.
       {
-        plan.erase_pending_light = false;
+        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(key);
+        const bool light_repair =
+            any_still_stale || in.light_repair_once ||
+            NeedsOpenSkyEqualRevLightRepair(any_fully_dark, any_still_stale,
+                                            open_sky);
+        if (light_repair)
+        {
+          plan.erase_pending_light = false;
+          if (any_still_stale && Persistence &&
+              AsyncRelightColumnsInFlight.count(key) == 0)
+          {
+            Persistence->EnqueueTerrainColumnRelight(
+                key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true,
+                band.min_y, band.max_y);
+            ++PhysicsTelemetryData.MarkRelitScheduleN;
+          }
+        }
+        else if (ShouldClearPendingAfterRelightTerminal(
+                     IsColumnLitReady(ground) ||
+                         GetColumnEmergeState(ground) ==
+                             ColumnEmergeState::Lighting,
+                     /*all_slices_terminal=*/!any_still_stale,
+                     any_still_stale))
+        {
+          plan.erase_pending_light = true;
+        }
       }
       // Audit16 S5: H2 ticketed FullyDark remesh Dirty deleted (sole-owner).
       // Census remesh FREEZE; MarkRelit RelightReplace remains Dirty owner.

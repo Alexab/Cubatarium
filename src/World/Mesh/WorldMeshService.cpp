@@ -58,6 +58,12 @@ void UWorldMeshService::SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> f
   Cache.SetDeferMeshUntilLitFn(std::move(fn));
 }
 
+void UWorldMeshService::SetIsLightRepairRemeshFn(
+    std::function<bool(glm::ivec3)> fn)
+{
+  Cache.SetIsLightRepairRemeshFn(std::move(fn));
+}
+
 void UWorldMeshService::SetChunkResidentFn(std::function<bool(glm::ivec3)> fn)
 {
   Cache.SetChunkResidentFn(std::move(fn));

@@ -673,6 +673,11 @@ public:
   {
     DeferMeshUntilLit = std::move(fn);
   }
+  /// A42: SoftDefer schedule fallthrough for LightRepair drawable remesh.
+  void SetIsLightRepairRemeshFn(std::function<bool(glm::ivec3)> fn)
+  {
+    IsLightRepairRemesh = std::move(fn);
+  }
   /// SRBR-P0: optional HasChunk gate for MarkDirty* (unset = admit, tests).
   void SetChunkResidentFn(std::function<bool(glm::ivec3)> fn)
   {
@@ -1090,6 +1095,8 @@ private:
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
   UMeshCaptureStore CaptureStore;
   int CaptureRefreshBudgetLeft{4};
+  /// A42b: reserved Capture refreshes for LightRepair remesh when FM spent budget.
+  int LightRepairCaptureReserveLeft{0};
   /// A27 S5: resumable Capture/dirty scan cursor across frames.
   ResumableWorkCursor CaptureWorkCursor_{};
   bool GpuPipelineInitAttempted{false};
@@ -1320,6 +1327,8 @@ private:
   /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
   int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
+  /// A42: true when column visual_obligation == LightRepair (Emerge installs).
+  std::function<bool(glm::ivec3)> IsLightRepairRemesh;
   std::function<bool(glm::ivec3)> ChunkResidentFn;
   std::function<void(glm::ivec3)> OnLitPendingNeeded;
   std::function<void(glm::ivec3)> OnSoftDeferHeld;

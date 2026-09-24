@@ -9,6 +9,7 @@
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/VisualObligationPolicy.h"
 #include "World/Streaming/EnterSessionPhase.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/ColumnJobGraph.h"
@@ -832,10 +833,11 @@ int main()
          "FZ2.4-C3b: no_ticket=9 → skip defer");
   Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 8, 12, 8, 0, 0),
          "FZ2.4-C3b: no_ticket=8 → defer allowed");
-  Expect(ShouldSuppressPendingLightNote(0, 15, 41), "FZ24: nt0 PL15 VB41 suppress");
-  Expect(!ShouldSuppressPendingLightNote(0, 14, 41), "FZ24: PL below thresh");
-  Expect(!ShouldSuppressPendingLightNote(1, 20, 50), "FZ24: nt>0 no suppress");
-  Expect(!ShouldSuppressPendingLightNote(0, 20, 40), "FZ24: VB<=40 no suppress");
+  // A40: plateau suppress OFF — only TryNote dup filter (IsPending/InFlight).
+  Expect(!ShouldSuppressPendingLightNote(0, 15, 41), "A40: nt0 PL15 VB41 no suppress");
+  Expect(!ShouldSuppressPendingLightNote(0, 14, 41), "A40: PL below thresh still no suppress");
+  Expect(!ShouldSuppressPendingLightNote(1, 20, 50), "A40: nt>0 no suppress");
+  Expect(!ShouldSuppressPendingLightNote(0, 20, 40), "A40: VB<=40 no suppress");
   Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 41,
                                                   2),
          "FZ2.3-C3a: steady VB>40 stable2 → skip defer");
@@ -1513,6 +1515,84 @@ int main()
            "lit drawable = settled");
     Expect(!EnterFullyDarkColumnSettled(true, true, true, false, false),
            "pending ⇒ not settled");
+    Expect(EnterFullyDarkColumnSettled(false, true, true, false, false, true),
+           "A40: legal_dark_settled overrides pending");
+    Expect(!EnterFullyDarkColumnSettled(false, false, true, true, false, true),
+           "A40: legal_dark_settled still requires !stale");
+    using cutum::ShouldClearPendingAfterRelightTerminal;
+    Expect(ShouldClearPendingAfterRelightTerminal(true, true, false),
+           "A40: clear pending when terminal");
+    Expect(!ShouldClearPendingAfterRelightTerminal(true, true, true),
+           "A40: no clear while still_stale");
+    using cutum::ClassifyVisualObligation;
+    using cutum::VisualObligation;
+    using cutum::NeedsOpenSkyEqualRevLightRepair;
+    using cutum::IsLegalDarkEqualRevFullyDark;
+    using cutum::SoftDeferHoldAllowedWithTicket;
+    Expect(ClassifyVisualObligation(true, true, false, true, false, false,
+                                    false) == VisualObligation::LitDrawable,
+           "A41: lit wins");
+    Expect(ClassifyVisualObligation(false, true, false, false, false, false,
+                                    false) == VisualObligation::LegalDark,
+           "A41: cave equal-rev FD → LegalDark");
+    Expect(ClassifyVisualObligation(false, true, false, true, false, false,
+                                    false) == VisualObligation::LightRepair,
+           "A41: open_sky equal-rev FD → LightRepair");
+    Expect(ClassifyVisualObligation(false, true, true, true, false, false,
+                                    false) == VisualObligation::LightRepair,
+           "A41: still_stale → LightRepair");
+    Expect(NeedsOpenSkyEqualRevLightRepair(true, false, true),
+           "A41: open_sky FD needs repair");
+    Expect(!NeedsOpenSkyEqualRevLightRepair(true, false, false),
+           "A41: cave FD no open_sky repair");
+    Expect(IsLegalDarkEqualRevFullyDark(true, false, false),
+           "A41: cave LegalDark predicate");
+    Expect(SoftDeferHoldAllowedWithTicket(true, true),
+           "A41: SoftDefer hold with ticket OK");
+    Expect(!SoftDeferHoldAllowedWithTicket(true, false),
+           "A41: SoftDefer hold without ticket rejected");
+    using cutum::SoftDeferAllowsLightRepairRemesh;
+    Expect(SoftDeferAllowsLightRepairRemesh(false, true,
+                                            VisualObligation::None),
+           "A42: SoftDefer inactive → schedule OK");
+    Expect(SoftDeferAllowsLightRepairRemesh(true, true,
+                                            VisualObligation::LightRepair),
+           "A42: LightRepair drawable remesh allowed under SoftDefer");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, false,
+                                             VisualObligation::LightRepair),
+           "A42: LightRepair without drawable ≠ remesh exempt");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, true,
+                                             VisualObligation::LegalDark),
+           "A42: LegalDark drawable still SoftDefer-blocked");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, true,
+                                             VisualObligation::None),
+           "A42: no obligation → SoftDefer RemoveAt path");
+    Expect(SoftDeferAllowsLightRepairRemesh(true, true,
+                                            VisualObligation::None, true),
+           "A42c: FullyDark drawable remesh allowed under SoftDefer");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, true,
+                                             VisualObligation::None, false),
+           "A42c: non-FD without LightRepair still blocked");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, true,
+                                             VisualObligation::LegalDark, true),
+           "A42c: LegalDark FullyDark stays SoftDefer-blocked");
+    Expect(SoftDeferAllowsLightRepairRemesh(true, true,
+                                            VisualObligation::None, false, true),
+           "A42d: StaleVL drawable remesh allowed under SoftDefer");
+    using cutum::ShouldRemintLightRepairDirty;
+    using cutum::StampLightRepairDeadlineMs;
+    Expect(ShouldRemintLightRepairDirty(true, false, 0, 0.0, 100.0),
+           "A41: first LightRepair mint");
+    Expect(!ShouldRemintLightRepairDirty(true, true, 0, 0.0, 100.0),
+           "A41: live pipeline blocks remint");
+    Expect(!ShouldRemintLightRepairDirty(true, false, 1, 5000.0, 1000.0),
+           "A41: before SLA no remint");
+    Expect(ShouldRemintLightRepairDirty(true, false, 1, 500.0, 1000.0),
+           "A41: after SLA remint");
+    Expect(ShouldRemintLightRepairDirty(true, false, 1, 0.0, 1000.0),
+           "A41: legacy deadline<=0 remints");
+    Expect(StampLightRepairDeadlineMs(1000.0) == 4000.0,
+           "A41: SLA stamp is absolute now+3000");
     using cutum::EnterLitSnapshotResolvedByWorklistDone;
     using cutum::EnterLitSnapshotResolvedByStickyRemesh;
     using cutum::ShouldForceUnderfeetSolidFirstMeshDirty;
