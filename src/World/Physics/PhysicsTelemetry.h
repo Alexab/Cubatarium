@@ -300,6 +300,13 @@ struct PhysicsTelemetry
   /// FZ2.7-P9: Dirty schedule skip breakdown (locked ≈ inflight/gpu).
   int MeshDirtyScheduleSkipPipelineN{0};
   int MeshDirtyScheduleSkipSnapshotN{0};
+  int MeshSnapshotDeferTimeBudgetN{0};
+  int MeshSnapshotDeferRefreshBudgetN{0};
+  int MeshSnapshotDeferPipelineBytesN{0};
+  int MeshSnapshotDeferMissingBandN{0};
+  int MeshSnapshotDeferDependencyN{0};
+  int MeshSnapshotDeferPublicationN{0};
+  int MeshSnapshotDeferStoreCommitN{0};
   int MeshDirtyScheduleSkipSoftDeferN{0};
   int MeshDirtyScheduleSkipLockedN{0};
   int MeshDirtyScheduleSkipOrphanN{0};

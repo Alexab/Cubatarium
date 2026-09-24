@@ -1196,6 +1196,22 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshDirtyScheduleSkipPipelineN();
   PhysicsTelemetryData.MeshDirtyScheduleSkipSnapshotN =
       GetMeshService().GetLastMeshDirtyScheduleSkipSnapshotN();
+  const MeshSnapshotDeferStats &snapshot_defer =
+      GetMeshService().GetLastMeshSnapshotDeferStats();
+  PhysicsTelemetryData.MeshSnapshotDeferTimeBudgetN =
+      snapshot_defer.ScheduleTimeBudget;
+  PhysicsTelemetryData.MeshSnapshotDeferRefreshBudgetN =
+      snapshot_defer.RefreshCountBudget;
+  PhysicsTelemetryData.MeshSnapshotDeferPipelineBytesN =
+      snapshot_defer.PipelineBytes;
+  PhysicsTelemetryData.MeshSnapshotDeferMissingBandN =
+      snapshot_defer.MissingCaptureBand;
+  PhysicsTelemetryData.MeshSnapshotDeferDependencyN =
+      snapshot_defer.DependencyChanged;
+  PhysicsTelemetryData.MeshSnapshotDeferPublicationN =
+      snapshot_defer.PublicationRejected;
+  PhysicsTelemetryData.MeshSnapshotDeferStoreCommitN =
+      snapshot_defer.StoreCommitRejected;
   PhysicsTelemetryData.MeshDirtyScheduleSkipSoftDeferN =
       GetMeshService().GetLastMeshDirtyScheduleSkipSoftDeferN();
   PhysicsTelemetryData.MeshDirtyScheduleSkipLockedN =

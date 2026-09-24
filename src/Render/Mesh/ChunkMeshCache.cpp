@@ -3363,14 +3363,27 @@ bool UChunkMeshCache::TryCommitCompletedCapture(
 bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
                                              const UBlockRegistry *registry,
                                              glm::ivec3 coord,
-                                             uint64_t source_revision)
+                                             uint64_t source_revision,
+                                             SnapshotAcquireDeferReason *defer_reason)
 {
+  if (defer_reason)
+  {
+    *defer_reason = SnapshotAcquireDeferReason::None;
+  }
+  const auto deferred = [&](SnapshotAcquireDeferReason reason)
+  {
+    if (defer_reason)
+    {
+      *defer_reason = reason;
+    }
+    return false;
+  };
   // Q7: same reserve-before-allocate as CaptureAndStore — never allocate band
   // when snapshot credits are exhausted.
   if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
           kEstimatedChunkSnapshotBytes))
   {
-    return false;
+    return deferred(SnapshotAcquireDeferReason::PipelineBytes);
   }
   UPipelineCreditGuard credit(PipelineCreditKind::Snapshot,
                               kEstimatedChunkSnapshotBytes, true);
@@ -3384,7 +3397,7 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
       CaptureStore.GetNeighborDrawableCtx());
   if (!band)
   {
-    return false;
+    return deferred(SnapshotAcquireDeferReason::MissingCaptureBand);
   }
   DependencyStamp deps;
   deps.content_revision = source_revision;
@@ -3400,13 +3413,17 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
       {
         Dirty.MarkDirtyPriority(coord);
       }
-      return false;
+      return deferred(SnapshotAcquireDeferReason::DependencyChanged);
     }
   }
   // Audit R12: move credit into Store entry (lifetime until eviction).
   auto owned = std::make_unique<UPipelineCreditGuard>(std::move(credit));
-  return CaptureStore.TryCommit(coord, source_revision, work_token.world_epoch,
-                                std::move(*band), &deps, std::move(owned));
+  if (!CaptureStore.TryCommit(coord, source_revision, work_token.world_epoch,
+                              std::move(*band), &deps, std::move(owned)))
+  {
+    return deferred(SnapshotAcquireDeferReason::StoreCommitRejected);
+  }
+  return true;
 }
 
 void UChunkMeshCache::DrainCaptureWorkerCommits(const UBlockWorld &world,
@@ -3552,6 +3569,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
           if (!refreshed->inputStampsValid)
           {
             out.kind = SnapshotAcquireKind::Deferred;
+            out.deferReason = SnapshotAcquireDeferReason::DependencyChanged;
             return out;
           }
           // A29 U3: shell residual publish shares ArtifactManifest gate.
@@ -3564,6 +3582,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
             if (xv != PublicationValidation::Ok)
             {
               out.kind = SnapshotAcquireKind::Deferred;
+              out.deferReason = SnapshotAcquireDeferReason::PublicationRejected;
               return out;
             }
           }
@@ -3643,6 +3662,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
             kEstimatedChunkSnapshotBytes))
     {
       out.kind = SnapshotAcquireKind::Deferred;
+      out.deferReason = SnapshotAcquireDeferReason::PipelineBytes;
       return out;
     }
     UPipelineCreditGuard credit(PipelineCreditKind::Snapshot,
@@ -3653,6 +3673,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     if (!band)
     {
       out.kind = SnapshotAcquireKind::Deferred;
+      out.deferReason = SnapshotAcquireDeferReason::MissingCaptureBand;
       return out;
     }
     CaptureWorker->Enqueue(std::move(*band), work_token, deps);
@@ -3673,6 +3694,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     if (!light_repair_remesh || LightRepairCaptureReserveLeft <= 0)
     {
       out.kind = SnapshotAcquireKind::Deferred;
+      out.deferReason = SnapshotAcquireDeferReason::RefreshCountBudget;
       return out;
     }
     --LightRepairCaptureReserveLeft;
@@ -3681,7 +3703,9 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
   {
     --CaptureRefreshBudgetLeft;
   }
-  if (CaptureAndCommitOnMain(world, &registry, coord, source_revision))
+  SnapshotAcquireDeferReason defer_reason = SnapshotAcquireDeferReason::None;
+  if (CaptureAndCommitOnMain(world, &registry, coord, source_revision,
+                             &defer_reason))
   {
     if (auto hit = CaptureStore.TryGet(world, coord, source_revision))
     {
@@ -3689,8 +3713,10 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
       out.snapshot = std::move(*hit);
       return out;
     }
+    defer_reason = SnapshotAcquireDeferReason::DependencyChanged;
   }
   out.kind = SnapshotAcquireKind::Deferred;
+  out.deferReason = defer_reason;
   return out;
 }
 
@@ -5811,6 +5837,33 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     return ms;
   };
   MeshRebuildTickStats stats;
+  LastMeshSnapshotDeferStats = {};
+  const auto note_snapshot_defer = [this](SnapshotAcquireDeferReason reason)
+  {
+    switch (reason)
+    {
+    case SnapshotAcquireDeferReason::RefreshCountBudget:
+      ++LastMeshSnapshotDeferStats.RefreshCountBudget;
+      break;
+    case SnapshotAcquireDeferReason::PipelineBytes:
+      ++LastMeshSnapshotDeferStats.PipelineBytes;
+      break;
+    case SnapshotAcquireDeferReason::MissingCaptureBand:
+      ++LastMeshSnapshotDeferStats.MissingCaptureBand;
+      break;
+    case SnapshotAcquireDeferReason::DependencyChanged:
+      ++LastMeshSnapshotDeferStats.DependencyChanged;
+      break;
+    case SnapshotAcquireDeferReason::PublicationRejected:
+      ++LastMeshSnapshotDeferStats.PublicationRejected;
+      break;
+    case SnapshotAcquireDeferReason::StoreCommitRejected:
+      ++LastMeshSnapshotDeferStats.StoreCommitRejected;
+      break;
+    case SnapshotAcquireDeferReason::None:
+      break;
+    }
+  };
   CaptureRefreshBudgetLeft =
       // Era14 TD-ARCH-046: prefer store hit; live Capture refresh is the hitch.
       // Cap refreshes from MeshSnapshotBudgetMs (already cruise-clamped in
@@ -6528,6 +6581,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
       {
+        ++LastMeshSnapshotDeferStats.ScheduleTimeBudget;
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
         return Dirty.end();
@@ -6739,6 +6793,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (acquire.kind == SnapshotAcquireKind::Deferred || !acquire.snapshot)
       {
+        note_snapshot_defer(acquire.deferReason);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
         // F3: budget=0 skips live refresh only — keep scanning the dirty ring.
@@ -6979,6 +7034,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
         {
+          ++LastMeshSnapshotDeferStats.ScheduleTimeBudget;
           break;
         }
         const double remesh_slice_ms =
@@ -7165,6 +7221,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
       {
+        ++LastMeshSnapshotDeferStats.ScheduleTimeBudget;
         break;
       }
       // Era47: enter lit-quiesce — drop lit drawable remesh Dirty (gate blocker).
@@ -7423,6 +7480,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (acquire.kind == SnapshotAcquireKind::Deferred || !acquire.snapshot)
       {
+        note_snapshot_defer(acquire.deferReason);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
         // F3: budget=0 skips live refresh only — keep scanning the dirty ring.

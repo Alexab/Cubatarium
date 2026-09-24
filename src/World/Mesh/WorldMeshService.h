@@ -243,6 +243,10 @@ public:
   double GetLastFlatRebuildMs() const;
   double GetLastMeshSyncMs() const;
   double GetLastMeshSnapshotMs() const;
+  const MeshSnapshotDeferStats &GetLastMeshSnapshotDeferStats() const
+  {
+    return Cache.GetLastMeshSnapshotDeferStats();
+  }
   double GetLastMeshDirtyTickMs() const;
   double GetLastMeshDirtyPruneMs() const;
   int GetLastMeshDirtyPruneN() const;

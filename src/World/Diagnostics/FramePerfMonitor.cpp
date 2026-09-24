@@ -323,6 +323,13 @@ struct FrameNumbers
   int mesh_dirty_schedule_skip_n{0};
   int mesh_dirty_schedule_skip_pipeline_n{0};
   int mesh_dirty_schedule_skip_snapshot_n{0};
+  int mesh_snapshot_defer_time_budget_n{0};
+  int mesh_snapshot_defer_refresh_budget_n{0};
+  int mesh_snapshot_defer_pipeline_bytes_n{0};
+  int mesh_snapshot_defer_missing_band_n{0};
+  int mesh_snapshot_defer_dependency_n{0};
+  int mesh_snapshot_defer_publication_n{0};
+  int mesh_snapshot_defer_store_commit_n{0};
   int mesh_dirty_schedule_skip_softdefer_n{0};
   int mesh_dirty_schedule_skip_locked_n{0};
   int mesh_dirty_schedule_skip_orphan_n{0};
@@ -995,6 +1002,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_schedule_skip_n = phys.MeshDirtyScheduleSkipN;
   n.mesh_dirty_schedule_skip_pipeline_n = phys.MeshDirtyScheduleSkipPipelineN;
   n.mesh_dirty_schedule_skip_snapshot_n = phys.MeshDirtyScheduleSkipSnapshotN;
+  n.mesh_snapshot_defer_time_budget_n = phys.MeshSnapshotDeferTimeBudgetN;
+  n.mesh_snapshot_defer_refresh_budget_n = phys.MeshSnapshotDeferRefreshBudgetN;
+  n.mesh_snapshot_defer_pipeline_bytes_n = phys.MeshSnapshotDeferPipelineBytesN;
+  n.mesh_snapshot_defer_missing_band_n = phys.MeshSnapshotDeferMissingBandN;
+  n.mesh_snapshot_defer_dependency_n = phys.MeshSnapshotDeferDependencyN;
+  n.mesh_snapshot_defer_publication_n = phys.MeshSnapshotDeferPublicationN;
+  n.mesh_snapshot_defer_store_commit_n = phys.MeshSnapshotDeferStoreCommitN;
   n.mesh_dirty_schedule_skip_softdefer_n = phys.MeshDirtyScheduleSkipSoftDeferN;
   n.mesh_dirty_schedule_skip_locked_n = phys.MeshDirtyScheduleSkipLockedN;
   n.mesh_dirty_schedule_skip_orphan_n = phys.MeshDirtyScheduleSkipOrphanN;
@@ -1709,6 +1723,20 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mesh_dirty_schedule_skip_pipeline_n
           << ",\"mesh_dirty_schedule_skip_snapshot_n\":"
           << n.mesh_dirty_schedule_skip_snapshot_n
+          << ",\"mesh_snapshot_defer_time_budget_n\":"
+          << n.mesh_snapshot_defer_time_budget_n
+          << ",\"mesh_snapshot_defer_refresh_budget_n\":"
+          << n.mesh_snapshot_defer_refresh_budget_n
+          << ",\"mesh_snapshot_defer_pipeline_bytes_n\":"
+          << n.mesh_snapshot_defer_pipeline_bytes_n
+          << ",\"mesh_snapshot_defer_missing_band_n\":"
+          << n.mesh_snapshot_defer_missing_band_n
+          << ",\"mesh_snapshot_defer_dependency_n\":"
+          << n.mesh_snapshot_defer_dependency_n
+          << ",\"mesh_snapshot_defer_publication_n\":"
+          << n.mesh_snapshot_defer_publication_n
+          << ",\"mesh_snapshot_defer_store_commit_n\":"
+          << n.mesh_snapshot_defer_store_commit_n
           << ",\"mesh_dirty_schedule_skip_softdefer_n\":"
           << n.mesh_dirty_schedule_skip_softdefer_n
           << ",\"mesh_dirty_schedule_skip_locked_n\":"

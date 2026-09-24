@@ -46,6 +46,17 @@ struct MeshRebuildTickStats
   int SyncRebuilt{0};
 };
 
+struct MeshSnapshotDeferStats
+{
+  int ScheduleTimeBudget{0};
+  int RefreshCountBudget{0};
+  int PipelineBytes{0};
+  int MissingCaptureBand{0};
+  int DependencyChanged{0};
+  int PublicationRejected{0};
+  int StoreCommitRejected{0};
+};
+
 struct FaceInstance
 {
   glm::mat4 model{1.0f};
@@ -166,6 +177,10 @@ public:
   int GetLastMeshDirtyScheduleSkipSnapshotN() const
   {
     return LastMeshDirtyScheduleSkipSnapshotN;
+  }
+  const MeshSnapshotDeferStats &GetLastMeshSnapshotDeferStats() const
+  {
+    return LastMeshSnapshotDeferStats;
   }
   int GetLastMeshDirtyScheduleSkipSoftDeferN() const
   {
@@ -1024,9 +1039,20 @@ private:
     PendingCapture,
     Deferred,
   };
+  enum class SnapshotAcquireDeferReason : uint8_t
+  {
+    None,
+    RefreshCountBudget,
+    PipelineBytes,
+    MissingCaptureBand,
+    DependencyChanged,
+    PublicationRejected,
+    StoreCommitRejected,
+  };
   struct SnapshotAcquireResult
   {
     SnapshotAcquireKind kind{SnapshotAcquireKind::Deferred};
+    SnapshotAcquireDeferReason deferReason{SnapshotAcquireDeferReason::None};
     std::optional<ChunkMeshSnapshot> snapshot;
   };
   SnapshotAcquireResult TryAcquireSnapshotForSchedule(
@@ -1048,7 +1074,8 @@ private:
   /// admission exhausted or band/deps fail (no allocate-then-drop).
   bool CaptureAndCommitOnMain(const UBlockWorld &world,
                               const UBlockRegistry *registry,
-                              glm::ivec3 coord, uint64_t source_revision);
+                              glm::ivec3 coord, uint64_t source_revision,
+                              SnapshotAcquireDeferReason *defer_reason = nullptr);
   void AgePendingCaptureEntries(const UBlockWorld *world = nullptr,
                                 const UBlockRegistry *registry = nullptr);
   bool IsWorkerCaptureSaturated() const;
@@ -1123,6 +1150,7 @@ private:
   int LastMeshDirtyScheduleSkipN{0};
   int LastMeshDirtyScheduleSkipPipelineN{0};
   int LastMeshDirtyScheduleSkipSnapshotN{0};
+  MeshSnapshotDeferStats LastMeshSnapshotDeferStats{};
   int LastMeshDirtyScheduleSkipSoftDeferN{0};
   int LastMeshDirtyScheduleSkipLockedN{0};
   int LastMeshDirtyScheduleSkipOrphanN{0};
