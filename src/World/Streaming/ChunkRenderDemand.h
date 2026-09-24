@@ -116,12 +116,25 @@ public:
   bool NoteStageProgress(glm::ivec3 coord, JobStage stage,
                          uint64_t attempt_id = 0, double now_ms = 0.0);
 
-  /// Stale attempt_id (non-zero and != active) is ignored.
+  /// Published with has_active_attempt requires matching non-zero attempt_id.
+  /// Stale attempt_id (!= active) is ignored. Coverage advances only when
+  /// published_coverage_gen > 0 (or face debt clears — see NoteFaceDebtSatisfied).
   bool NoteInstallResult(glm::ivec3 coord, InstallResult result,
                          uint64_t published_geom_rev = 0,
                          uint64_t published_light_rev = 0,
                          uint64_t attempt_id = 0,
                          uint64_t published_coverage_gen = 0);
+
+  struct UnsatisfiedBreakdown
+  {
+    int geom{0};
+    int light{0};
+    int face{0};
+    int coverage{0};
+    int retain{0};
+  };
+  /// Counts open obligations by class (a record may increment several).
+  UnsatisfiedBreakdown CountUnsatisfiedBreakdown() const;
 
   /// A26 N1: sole path to refresh published_* without InstallResult (shadow sync).
   /// Does not clear active/retain flags — use NoteInstallResult for lifecycle.
@@ -200,6 +213,21 @@ inline uint64_t DemandActiveAttemptId(const UChunkRenderDemandStore &store,
     if (rec->has_active_attempt)
     {
       return rec->active_attempt_id;
+    }
+  }
+  return 0;
+}
+
+/// A38 R1: when face debt closed and coverage desired, publish desired gen.
+inline uint64_t DemandCoverageGenToPublish(const UChunkRenderDemandStore &store,
+                                          glm::ivec3 coord)
+{
+  if (const ChunkRenderDemandRecord *rec = store.Find(coord))
+  {
+    if (rec->desired_coverage_gen > 0 && rec->face_debt_mask == 0 &&
+        rec->published_coverage_gen < rec->desired_coverage_gen)
+    {
+      return rec->desired_coverage_gen;
     }
   }
   return 0;

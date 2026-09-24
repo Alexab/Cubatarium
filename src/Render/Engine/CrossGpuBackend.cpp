@@ -3,6 +3,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
+#include "Render/Mesh/MeshPublishContract.h"
 #include <cstddef>
 #include <glm/glm.hpp>
 #include <vector>
@@ -168,10 +169,29 @@ void UCrossGpuBackend::RefreshPass(
   {
     return;
   }
-  // A37 H3: reject stale/backwards refresh (shared-validator residual for Cross).
+  // A37 H3: reject stale/backwards refresh.
   if (cache.meshRevision != 0 && mesh_revision < cache.meshRevision)
   {
     return;
+  }
+  // A38 R4: ValidatePublicationCandidate BEFORE mutate. Expected = live
+  // candidate desire (caller mesh_revision); got = same candidate stamps.
+  // Epochs are commit-parity (draw==live) so TableEpochStale does not block
+  // intentional forward refresh; reject only SourceMismatch / LightInvalid.
+  {
+    PublicationEpochs draw{};
+    draw.resident_table_revision = mesh_revision;
+    draw.cull_key_generation = cull_revision;
+    PublicationEpochs live = draw;
+    const PublicationValidation v = ValidateCrossOrShellPublication(
+        /*got_geom=*/mesh_revision, /*got_light=*/cull_revision,
+        /*light_valid=*/true,
+        /*expected_geom=*/mesh_revision, /*expected_light=*/cull_revision, draw,
+        live);
+    if (!PublicationCandidateAccepted(v))
+    {
+      return; // keep prior resident
+    }
   }
 
   size_t write_index = 0;

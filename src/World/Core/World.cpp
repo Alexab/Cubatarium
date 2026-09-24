@@ -1839,7 +1839,7 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
         UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
   }
-  // A32/A37: production StopConverged + stop-plateau reconcile/orphan cancel.
+  // A32/A37/A38: production StopConverged + stop-plateau reconcile/orphan cancel.
   {
     using clock = std::chrono::steady_clock;
     static const auto t0 = clock::now();
@@ -1847,10 +1847,17 @@ void UWorld::SampleColumnEmergeStageTelemetry()
         std::chrono::duration<double, std::milli>(clock::now() - t0).count();
     if (kChunkDemandShadow())
     {
-      (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/48,
+      (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
                                                                 now_ms);
       (void)UChunkRenderDemandStore::Get().CancelOrphanActiveAttempts(
-          /*max_n=*/32, now_ms);
+          /*max_n=*/64, now_ms);
+      const auto br =
+          UChunkRenderDemandStore::Get().CountUnsatisfiedBreakdown();
+      PhysicsTelemetryData.DemandUnsatGeom = br.geom;
+      PhysicsTelemetryData.DemandUnsatLight = br.light;
+      PhysicsTelemetryData.DemandUnsatFace = br.face;
+      PhysicsTelemetryData.DemandUnsatCoverage = br.coverage;
+      PhysicsTelemetryData.DemandUnsatRetain = br.retain;
     }
     PhysicsTelemetryData.DemandStopConverged =
         UChunkRenderDemandStore::Get().StopConverged(now_ms) ? 1 : 0;
@@ -2517,46 +2524,107 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   {
     return 0;
   }
+  // A38 R1: backlog-bounded admit — scale with unfinished plateau (not Kick).
+  const int unfinished = static_cast<int>(keys.size());
+  const int budget =
+      (std::min)(64, (std::max)(max_n, (std::max)(8, unfinished / 2)));
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   int admitted = 0;
   for (uint64_t key : keys)
   {
-    if (admitted >= max_n)
+    if (admitted >= budget)
     {
       break;
     }
     const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
     const int cz = static_cast<int>(static_cast<uint32_t>(key));
-    const glm::ivec3 coord(cx, 0, cz);
-    uint64_t desired_geom = 0;
-    uint64_t desired_light = 0;
-    if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+    for (int cy = 0; cy <= cy1 && admitted < budget; ++cy)
     {
-      desired_geom = ch->GetContentRevision();
-      desired_light = ch->GetLightFieldRevision();
+      const glm::ivec3 coord(cx, cy, cz);
+      const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (!ch)
+      {
+        continue;
+      }
+      uint64_t desired_geom = ch->GetContentRevision();
+      uint64_t desired_light = ch->GetLightFieldRevision();
+      if (desired_geom == 0 && desired_light == 0)
+      {
+        desired_geom = 1;
+      }
+      uint64_t desired_coverage = 0;
+      if (const ChunkRenderDemandRecord *existing = demand.Find(coord))
+      {
+        if (existing->face_debt_mask != 0 ||
+            existing->desired_coverage_gen > 0)
+        {
+          desired_coverage =
+              (std::max)(existing->desired_coverage_gen, uint64_t{1});
+        }
+      }
+      const MeshPublishRevs pub =
+          MeshService->GetCache().GetMeshPublishRevs(coord);
+      demand.NotePublishedRevs(coord, pub.geom_rev, pub.light_rev);
+      // A38 R2: meshed_unlit / FullyDark → raise light desire above published.
+      UChunkMeshCache::LitApplyMeshProbe probe{};
+      MeshService->FillLitApplyMeshProbe(coord, probe);
+      const bool meshed_unlit =
+          probe.has_drawable &&
+          (probe.fully_dark || probe.gpu_has_dark_face ||
+           MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
+           (probe.meshed_light_rev != 0 && desired_light != 0 &&
+            probe.meshed_light_rev != desired_light));
+      if (meshed_unlit)
+      {
+        const uint64_t light_need =
+            (std::max)(desired_light, pub.light_rev) + 1ull;
+        desired_light = light_need;
+        // Light ownership: invalidate capture so Relight/remesh re-bakes light;
+        // do not invent geom desire above content.
+        MeshService->GetCache().InvalidateMeshCapture(coord);
+      }
+      DemandResult dr =
+          demand.NoteDemand(coord, desired_geom, desired_light,
+                            desired_coverage);
+      if (dr == DemandResult::AlreadySatisfied)
+      {
+        // Mesh not ready despite published revs — Dirty without fake geom bump
+        // (desired_geom must stay ≤ content revision or Stop never converges).
+        if (!MeshService->HasMeshSatisfyingColumnReady(coord))
+        {
+          (void)MeshService->TryConsumeDirtyAdmit();
+          MeshService->MarkDirtyPriority(coord);
+          uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+          if (attempt_id == 0)
+          {
+            // Mint attempt via light coalesce if needed.
+            (void)demand.NoteDemand(coord, desired_geom,
+                                    (std::max)(desired_light, uint64_t{1}),
+                                    desired_coverage);
+            attempt_id = DemandActiveAttemptId(demand, coord);
+          }
+          if (attempt_id != 0)
+          {
+            demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
+          }
+          ++admitted;
+        }
+        continue;
+      }
+      (void)MeshService->TryConsumeDirtyAdmit();
+      // Unlit-with-mesh: prefer capture invalidate already done; still MarkDirty
+      // so builder re-reads light (Relight path owns desire via NoteDemand).
+      MeshService->MarkDirtyPriority(coord);
+      uint64_t attempt_id = 0;
+      if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
+      {
+        attempt_id = rec->active_attempt_id;
+      }
+      demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
+      ++admitted;
     }
-    if (desired_geom == 0 && desired_light == 0)
-    {
-      desired_geom = 1;
-    }
-    const MeshPublishRevs pub =
-        MeshService->GetCache().GetMeshPublishRevs(coord);
-    demand.NotePublishedRevs(coord, pub.geom_rev, pub.light_rev);
-    const DemandResult dr =
-        demand.NoteDemand(coord, desired_geom, desired_light);
-    if (dr == DemandResult::AlreadySatisfied)
-    {
-      continue;
-    }
-    (void)MeshService->TryConsumeDirtyAdmit();
-    MeshService->MarkDirtyPriority(coord);
-    uint64_t attempt_id = 0;
-    if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
-    {
-      attempt_id = rec->active_attempt_id;
-    }
-    demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
-    ++admitted;
   }
   return admitted;
 }

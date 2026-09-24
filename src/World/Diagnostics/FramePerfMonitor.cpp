@@ -7,6 +7,7 @@
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
+#include "Render/Mesh/MeshPublishContract.h"
 #include "Render/Pipeline/GpuTransparentSort.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
@@ -502,6 +503,12 @@ struct FrameNumbers
   int column_record_shadow_mismatch_n{0};
   int column_record_shadow_stage_disagree_n{0};
   int demand_stop_converged{0};
+  int demand_unsat_geom{0};
+  int demand_unsat_light{0};
+  int demand_unsat_face{0};
+  int demand_unsat_coverage{0};
+  int demand_unsat_retain{0};
+  int defect_class_primary{7}; // ChunkDefectClass::Unknown
   int pending_light{0};
   int stream_pressure{0};
   int pending_light_focus{0};
@@ -1174,6 +1181,28 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_record_shadow_stage_disagree_n =
       phys.ColumnRecordShadowStageDisagreeN;
   n.demand_stop_converged = phys.DemandStopConverged;
+  n.demand_unsat_geom = phys.DemandUnsatGeom;
+  n.demand_unsat_light = phys.DemandUnsatLight;
+  n.demand_unsat_face = phys.DemandUnsatFace;
+  n.demand_unsat_coverage = phys.DemandUnsatCoverage;
+  n.demand_unsat_retain = phys.DemandUnsatRetain;
+  // A38 R6: primary defect class from period proxies (mutually exclusive).
+  {
+    using cutum::ChunkDefectClass;
+    using cutum::ClassifyChunkDefect;
+    const bool holes = phys.NearFocusHoles > 0 || phys.VisualHoles > 0;
+    const bool unfinished = phys.UnfinishedVisual > 0;
+    const bool unlit = phys.PendingLightFocus > 0 || phys.LightDebt > 0;
+    const bool face = phys.DemandUnsatFace > 0;
+    const bool fluid_hitch = false; // stamped from heavy bucket elsewhere
+    const ChunkDefectClass cls = ClassifyChunkDefect(
+        /*has_voxel_input=*/unfinished || holes, /*has_published=*/!holes,
+        /*cull_excluded=*/false, /*light_mismatch=*/unlit && !holes,
+        /*seam_peer_debt=*/face && !holes, /*material_mismatch=*/false,
+        /*precision=*/false, /*legal_dark=*/false);
+    n.defect_class_primary = static_cast<int>(cls);
+    (void)fluid_hitch;
+  }
   n.pending_light = phys.PendingLightCount;
   n.stream_pressure = phys.StreamPressure;
   n.pending_light_focus = phys.PendingLightFocus;
@@ -1880,6 +1909,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"column_record_shadow_stage_disagree_n\":"
           << n.column_record_shadow_stage_disagree_n
           << ",\"demand_stop_converged\":" << n.demand_stop_converged
+          << ",\"demand_unsat_geom\":" << n.demand_unsat_geom
+          << ",\"demand_unsat_light\":" << n.demand_unsat_light
+          << ",\"demand_unsat_face\":" << n.demand_unsat_face
+          << ",\"demand_unsat_coverage\":" << n.demand_unsat_coverage
+          << ",\"demand_unsat_retain\":" << n.demand_unsat_retain
+          << ",\"defect_class_primary\":" << n.defect_class_primary
           << ",\"pending_light\":" << n.pending_light
           << ",\"stream_pressure\":" << n.stream_pressure
           << ",\"pending_light_focus\":" << n.pending_light_focus

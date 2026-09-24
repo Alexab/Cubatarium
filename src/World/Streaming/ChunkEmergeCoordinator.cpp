@@ -635,9 +635,38 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // A37 H2: single authority gate (cutover ⇒ authority).
           if (ChunkDemandAuthorityEnabled())
           {
-            // A37 H3: peer_gen≥1 so waiting faces are not "ready with 0".
+            // A38 R3: per-face required peer gen from peer's published coverage
+            // (prefer coverage, else geom); never fabricate peer_pub=1 on read.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            demand.NoteFaceDebt(chunk_coord, 0x3Fu, /*peer_gen=*/1);
+            static const glm::ivec3 kFaceDir[6] = {
+                {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+                {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+            auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
+              if (const ChunkRenderDemandRecord *pr = demand.Find(peer))
+              {
+                if (pr->published_coverage_gen > 0)
+                {
+                  return pr->published_coverage_gen;
+                }
+                if (pr->published_geom_rev > 0)
+                {
+                  return pr->published_geom_rev;
+                }
+              }
+              const MeshPublishRevs pr =
+                  world_ref.GetMeshService().GetCache().GetMeshPublishRevs(peer);
+              return pr.geom_rev;
+            };
+            for (int f = 0; f < 6; ++f)
+            {
+              const uint8_t bit = static_cast<uint8_t>(1u << f);
+              uint64_t need = peer_cov_gen(chunk_coord + kFaceDir[f]);
+              if (need == 0)
+              {
+                need = 1; // wait for first non-zero peer publication
+              }
+              demand.NoteFaceDebt(chunk_coord, bit, need);
+            }
             // Coverage desire with face debt; preserve existing geom/light desire.
             uint64_t g = 1, l = 1;
             if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
@@ -682,7 +711,39 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           if (ChunkDemandAuthorityEnabled())
           {
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            demand.NoteFaceDebt(chunk_coord, mask, /*peer_gen=*/1);
+            static const glm::ivec3 kFaceDir[6] = {
+                {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+                {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+            auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
+              if (const ChunkRenderDemandRecord *pr = demand.Find(peer))
+              {
+                if (pr->published_coverage_gen > 0)
+                {
+                  return pr->published_coverage_gen;
+                }
+                if (pr->published_geom_rev > 0)
+                {
+                  return pr->published_geom_rev;
+                }
+              }
+              const MeshPublishRevs pr =
+                  world_ref.GetMeshService().GetCache().GetMeshPublishRevs(peer);
+              return pr.geom_rev;
+            };
+            for (int f = 0; f < 6; ++f)
+            {
+              const uint8_t bit = static_cast<uint8_t>(1u << f);
+              if ((mask & bit) == 0)
+              {
+                continue;
+              }
+              uint64_t need = peer_cov_gen(chunk_coord + kFaceDir[f]);
+              if (need == 0)
+              {
+                need = 1;
+              }
+              demand.NoteFaceDebt(chunk_coord, bit, need);
+            }
             uint64_t g = 1, l = 1;
             if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
             {
@@ -751,15 +812,45 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const MeshPublishRevs cache_pub =
                 world_ref.GetMeshService().GetCache().GetMeshPublishRevs(
                     chunk_coord);
-            uint64_t pub_gen = cache_pub.geom_rev;
+            // A38 R3: prefer published_coverage_gen over geom stub.
+            uint64_t pub_gen = 0;
+            if (const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord))
+            {
+              pub_gen = pub->published_coverage_gen > 0
+                            ? pub->published_coverage_gen
+                            : pub->published_geom_rev;
+            }
             if (pub_gen == 0)
             {
-              if (const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord))
+              pub_gen = cache_pub.geom_rev;
+            }
+            // Gate on real waiting gens when present (not sole required=1).
+            bool any_face_ready = false;
+            if (const ChunkRenderDemandRecord *self =
+                    demand.Find(chunk_coord))
+            {
+              for (int f = 0; f < 6; ++f)
               {
-                pub_gen = pub->published_geom_rev;
+                if ((self->face_debt_mask &
+                     static_cast<uint8_t>(1u << f)) == 0)
+                {
+                  continue;
+                }
+                const uint64_t need = self->waiting_peer_gen[f] > 0
+                                         ? self->waiting_peer_gen[f]
+                                         : 1;
+                if (PeerReadyBeforeSubscribe(pub_gen, need))
+                {
+                  any_face_ready = true;
+                  break;
+                }
               }
             }
-            if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
+            else if (PeerReadyBeforeSubscribe(pub_gen, /*required=*/1))
+            {
+              any_face_ready = true;
+            }
+            if (any_face_ready)
             {
               uint8_t clear_mask = 0;
               if (const ChunkRenderDemandRecord *self =
@@ -772,8 +863,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   {
                     continue;
                   }
-                  if (PeerReadyBeforeSubscribe(pub_gen,
-                                               self->waiting_peer_gen[f]))
+                  const uint64_t need = self->waiting_peer_gen[f] > 0
+                                           ? self->waiting_peer_gen[f]
+                                           : 1;
+                  if (PeerReadyBeforeSubscribe(pub_gen, need))
                   {
                     clear_mask = static_cast<uint8_t>(clear_mask | bit);
                   }
@@ -799,8 +892,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
-                demand.NoteFaceDebtSatisfied(
-                    n, static_cast<uint8_t>(1u << face_toward), pub_gen);
+                uint64_t need = 1;
+                if (const ChunkRenderDemandRecord *nr = demand.Find(n))
+                {
+                  if (nr->waiting_peer_gen[face_toward] > 0)
+                  {
+                    need = nr->waiting_peer_gen[face_toward];
+                  }
+                }
+                if (PeerReadyBeforeSubscribe(pub_gen, need))
+                {
+                  demand.NoteFaceDebtSatisfied(
+                      n, static_cast<uint8_t>(1u << face_toward), pub_gen);
+                }
               }
             }
           }
@@ -839,21 +943,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const bool face_debt =
                 world_ref.GetColumnRecords().HasFaceDebtFace(
                     glm::ivec2(n.x, n.z), face_toward);
-            // A27/A31: peer (publisher) must be published before neighbor subscribe.
+            // A27/A31/A38: peer must be published; prefer coverage gen over geom.
             // Missing / gen==0 ⇒ not ready (never fabricate peer_pub=1).
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
             const MeshPublishRevs cache_pub =
                 mesh.GetCache().GetMeshPublishRevs(chunk_coord);
-            uint64_t peer_pub = cache_pub.geom_rev;
+            uint64_t peer_pub = 0;
+            if (const ChunkRenderDemandRecord *pub_rec =
+                    demand.Find(chunk_coord))
+            {
+              peer_pub = pub_rec->published_coverage_gen > 0
+                             ? pub_rec->published_coverage_gen
+                             : pub_rec->published_geom_rev;
+            }
             if (peer_pub == 0)
             {
-              if (const ChunkRenderDemandRecord *pub_rec =
-                      demand.Find(chunk_coord))
+              peer_pub = cache_pub.geom_rev;
+            }
+            uint64_t required = 1;
+            if (face_toward >= 0 && face_toward <= 5)
+            {
+              if (const ChunkRenderDemandRecord *nr = demand.Find(n))
               {
-                peer_pub = pub_rec->published_geom_rev;
+                if (nr->waiting_peer_gen[face_toward] > 0)
+                {
+                  required = nr->waiting_peer_gen[face_toward];
+                }
               }
             }
-            if (!PeerReadyBeforeSubscribe(peer_pub, /*required=*/1))
+            if (!PeerReadyBeforeSubscribe(peer_pub, required))
             {
               continue;
             }

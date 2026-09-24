@@ -859,8 +859,9 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     {
       const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
       const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
+      const uint64_t cov_pub = DemandCoverageGenToPublish(demand, coord);
       demand.NoteInstallResult(coord, InstallResult::Published, pub.geom_rev,
-                               pub.light_rev, attempt_id);
+                               pub.light_rev, attempt_id, cov_pub);
       JobStageSpan span{};
       span.cx = coord.x;
       span.cy = coord.y;

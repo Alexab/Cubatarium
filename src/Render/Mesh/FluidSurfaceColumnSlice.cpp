@@ -185,17 +185,20 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
         }
         return false;
       }
-      // A37 H5: no main height×16×16 — enqueue demand; worker gets empty flags
-      // until a non-pressured PreferGpu frame rebuilds / install from completed.
-      FluidSummaryWorkerJob job{};
-      job.ground_chunk = groundChunkCoord;
-      FluidColumnSummaryRequest req{};
-      req.world_epoch = gFluidPackWorldEpoch;
-      req.content_rev = content_rev;
-      req.catalog_rev = catalog_rev;
-      req.y_min = y_min;
-      req.height = height;
-      (void)TryEnqueueFluidSummaryWorker(job, req, true);
+      // A38 R5: no empty-flags enqueue (worker ready=false forever). Prefer
+      // last-good above; otherwise mark incomplete Pending and return — PreferGpu
+      // cold path rebuilds flags on a non-pressured frame (Installed|Retry).
+      {
+        FluidPackCacheEntry &pending = cache[groundChunkCoord];
+        pending.world_epoch = gFluidPackWorldEpoch;
+        pending.content_rev = content_rev;
+        pending.catalog_rev = catalog_rev;
+        pending.y_min = y_min;
+        pending.height = height;
+        pending.incomplete = true;
+        pending.has_slice = false;
+        pending.stored_steady_ms = SteadyNowMs();
+      }
       if (out_deferred)
       {
         *out_deferred = true;

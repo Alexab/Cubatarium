@@ -1706,10 +1706,10 @@ def main() -> int:
             args.replay_manual_fly_heavy = False
             # A37 H0: ~5 blk/s × scale × fly_sec ≥ 8192. Default scale 12 → ~10800.
             if "--fly-phase-sec" not in sys.argv:
-                args.fly_phase_sec = max(args.fly_phase_sec, 180.0)
+                args.fly_phase_sec = max(args.fly_phase_sec, 300.0)
             far_scale = os.environ.get("CUBA_FLIGHT_MOVE_SPEED_SCALE", "").strip()
             if not far_scale:
-                os.environ["CUBA_FLIGHT_MOVE_SPEED_SCALE"] = "12"
+                os.environ["CUBA_FLIGHT_MOVE_SPEED_SCALE"] = "28"
             # Far runs need headroom beyond default 600s soft_force timeout.
             if args.process_timeout <= 0.0:
                 args.process_timeout = 900.0

@@ -111,12 +111,63 @@ int main()
     Expect(store.NoteDemand(cov, 3, 3, /*desired_coverage_gen=*/9) ==
                DemandResult::NewDemand,
            "coverage desire NewDemand");
-    store.NoteInstallResult(cov, InstallResult::Published, 3, 3, /*attempt=*/0,
-                            /*published_coverage_gen=*/0);
+    const uint64_t aid =
+        store.Find(cov) ? store.Find(cov)->active_attempt_id : 0;
+    Expect(aid != 0, "coverage desire mints attempt");
+    Expect(!store.NoteInstallResult(cov, InstallResult::Published, 3, 3,
+                                    /*attempt=*/0,
+                                    /*published_coverage_gen=*/0),
+           "A38: attempt 0 rejected while active");
+    Expect(store.NoteInstallResult(cov, InstallResult::Published, 3, 3, aid,
+                                   /*published_coverage_gen=*/0),
+           "Published with matching attempt");
     const ChunkRenderDemandRecord *cr = store.Find(cov);
     Expect(cr && cr->published_coverage_gen == 0,
            "no auto-advance published coverage");
     Expect(cr && cr->desired_coverage_gen == 9, "desired coverage retained");
+    // A38 R1: explicit coverage publish unlocks CoverageSatisfied.
+    const DemandResult re =
+        store.NoteDemand(cov, 3, 3, /*desired_coverage_gen=*/9);
+    Expect(re == DemandResult::NewDemand || re == DemandResult::Coalesced,
+           "re-desire after publish");
+    const uint64_t aid2 =
+        store.Find(cov) ? store.Find(cov)->active_attempt_id : 0;
+    Expect(store.NoteInstallResult(cov, InstallResult::Published, 3, 3, aid2,
+                                   /*published_coverage_gen=*/9),
+           "explicit coverage publish");
+    cr = store.Find(cov);
+    Expect(cr && cr->published_coverage_gen == 9, "coverage published");
+    Expect(store.StopConverged(), "stop after coverage publish");
+  }
+
+  // A38 R1: face debt clear advances published_coverage_gen.
+  {
+    store.Clear();
+    const glm::ivec3 face{5, 0, 5};
+    Expect(store.NoteDemand(face, 2, 2, /*desired_coverage_gen=*/1) ==
+               DemandResult::NewDemand,
+           "face coverage desire");
+    store.NoteFaceDebt(face, 0x1u, /*peer_gen=*/3);
+    Expect(store.Find(face) && store.Find(face)->face_debt_mask != 0,
+           "face debt set");
+    Expect(!store.StopConverged(), "stop blocked by face+coverage");
+    store.NoteFaceDebtSatisfied(face, 0x1u, /*peer_gen=*/3);
+    const ChunkRenderDemandRecord *fr = store.Find(face);
+    Expect(fr && fr->face_debt_mask == 0, "face cleared");
+    Expect(fr && fr->published_coverage_gen == 1,
+           "coverage published on face clear");
+    const uint64_t faid = fr->has_active_attempt ? fr->active_attempt_id : 0;
+    if (faid != 0)
+    {
+      Expect(store.NoteInstallResult(face, InstallResult::Published, 2, 2, faid,
+                                     DemandCoverageGenToPublish(store, face)),
+             "geom/light publish");
+    }
+    else
+    {
+      store.NotePublishedRevs(face, 2, 2);
+    }
+    Expect(store.StopConverged(), "stop after face clear + publish");
   }
 
   const auto recon = store.ReconcileMaintenance(8);
@@ -263,7 +314,16 @@ int main()
         const uint64_t g = 100 + (rnd() % 5u);
         const uint64_t l = 200 + (rnd() % 5u);
         store.NotePublishedRevs(c0, g, l);
-        store.NoteInstallResult(c0, InstallResult::Published, g, l);
+        const uint64_t aid = DemandActiveAttemptId(store, c0);
+        if (aid != 0)
+        {
+          store.NoteInstallResult(c0, InstallResult::Published, g, l, aid,
+                                  DemandCoverageGenToPublish(store, c0));
+        }
+        else
+        {
+          store.NoteInstallResult(c0, InstallResult::Published, g, l);
+        }
       }
       else if (op == 4)
       {
@@ -296,8 +356,10 @@ int main()
       {
         if (r->desired_geom_rev != 0 || r->desired_light_rev != 0)
         {
+          const uint64_t aid = DemandActiveAttemptId(store, c0);
           store.NoteInstallResult(c0, InstallResult::Published,
-                                  r->desired_geom_rev, r->desired_light_rev);
+                                  r->desired_geom_rev, r->desired_light_rev,
+                                  aid, DemandCoverageGenToPublish(store, c0));
         }
       }
     }
@@ -317,7 +379,8 @@ int main()
     store.Clear();
     const glm::ivec3 bad{7, 0, 7};
     store.NoteDemand(bad, 1, 1);
-    store.NoteInstallResult(bad, InstallResult::Published, 1, 1);
+    const uint64_t baid = DemandActiveAttemptId(store, bad);
+    store.NoteInstallResult(bad, InstallResult::Published, 1, 1, baid);
     store.NoteInstallResult(bad, InstallResult::RetainedAwaitingSuccessor);
     Expect(!store.StopConverged(), "infinite Retain fails stop");
     store.NoteDemand(bad, 2, 2);

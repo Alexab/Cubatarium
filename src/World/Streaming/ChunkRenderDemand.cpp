@@ -207,6 +207,13 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
                                                uint64_t published_coverage_gen)
 {
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  // A38 R1: Published must not close an active attempt with attempt_id==0.
+  if (result == InstallResult::Published && rec.has_active_attempt &&
+      rec.active_attempt_id != 0 &&
+      (attempt_id == 0 || attempt_id != rec.active_attempt_id))
+  {
+    return false;
+  }
   if (attempt_id != 0 && rec.has_active_attempt &&
       rec.active_attempt_id != 0 && attempt_id != rec.active_attempt_id)
   {
@@ -223,7 +230,7 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
     {
       rec.published_light_rev = published_light_rev;
     }
-    // A37 H3: coverage advances only with explicit published_coverage_gen.
+    // A37 H3 / A38 R1: coverage advances only with explicit published_coverage_gen.
     if (published_coverage_gen > 0)
     {
       rec.published_coverage_gen = published_coverage_gen;
@@ -314,6 +321,12 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
   rec->face_debt_mask =
       static_cast<uint8_t>(rec->face_debt_mask &
                            static_cast<uint8_t>(~clear_mask));
+  // A38 R1: closing all face debt publishes desired coverage (stop unlock).
+  if (rec->face_debt_mask == 0 && rec->desired_coverage_gen > 0 &&
+      rec->published_coverage_gen < rec->desired_coverage_gen)
+  {
+    rec->published_coverage_gen = rec->desired_coverage_gen;
+  }
 }
 
 UChunkRenderDemandStore::ReconcileStats
@@ -440,6 +453,45 @@ int UChunkRenderDemandStore::CountUnsatisfiedDemands() const
     }
   }
   return n;
+}
+
+UChunkRenderDemandStore::UnsatisfiedBreakdown
+UChunkRenderDemandStore::CountUnsatisfiedBreakdown() const
+{
+  UnsatisfiedBreakdown b{};
+  for (const auto &kv : Records_)
+  {
+    const ChunkRenderDemandRecord &rec = kv.second;
+    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0 &&
+        rec.desired_coverage_gen == 0 && rec.face_debt_mask == 0 &&
+        !rec.retained_awaiting_successor)
+    {
+      continue;
+    }
+    if (rec.desired_geom_rev != 0 &&
+        rec.published_geom_rev != rec.desired_geom_rev)
+    {
+      ++b.geom;
+    }
+    if (rec.desired_light_rev != 0 &&
+        rec.published_light_rev != rec.desired_light_rev)
+    {
+      ++b.light;
+    }
+    if (rec.face_debt_mask != 0)
+    {
+      ++b.face;
+    }
+    if (!CoverageSatisfied(rec, 0))
+    {
+      ++b.coverage;
+    }
+    if (rec.retained_awaiting_successor)
+    {
+      ++b.retain;
+    }
+  }
+  return b;
 }
 
 bool UChunkRenderDemandStore::StopConverged(double now_ms) const

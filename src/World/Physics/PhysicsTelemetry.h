@@ -561,6 +561,12 @@ struct PhysicsTelemetry
   int ColumnRecordShadowStageDisagreeN{0};
   /// A32 S2: UChunkRenderDemandStore::StopConverged (1=true, 0=false).
   int DemandStopConverged{0};
+  /// A38 R1: unsatisfied demand class counts (last sample).
+  int DemandUnsatGeom{0};
+  int DemandUnsatLight{0};
+  int DemandUnsatFace{0};
+  int DemandUnsatCoverage{0};
+  int DemandUnsatRetain{0};
   int PendingLightCount{0};
   int FocusChunkX{0};
   int FocusChunkZ{0};

@@ -4111,9 +4111,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
     const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+    const uint64_t cov_pub = DemandCoverageGenToPublish(demand, coord);
     demand.NoteInstallResult(coord, InstallResult::Published,
                              chunkMesh.PublishRevs.geom_rev,
-                             chunkMesh.PublishRevs.light_rev, attempt_id);
+                             chunkMesh.PublishRevs.light_rev, attempt_id,
+                             cov_pub);
     JobStageSpan span{};
     span.cx = coord.x;
     span.cy = coord.y;
@@ -5528,9 +5530,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
     const uint64_t attempt_id = DemandActiveAttemptId(demand, result.coord);
+    const uint64_t cov_pub = DemandCoverageGenToPublish(demand, result.coord);
     demand.NoteInstallResult(result.coord, InstallResult::Published,
                              chunkMesh.PublishRevs.geom_rev,
-                             chunkMesh.PublishRevs.light_rev, attempt_id);
+                             chunkMesh.PublishRevs.light_rev, attempt_id,
+                             cov_pub);
     JobStageSpan span{};
     span.cx = result.coord.x;
     span.cy = result.coord.y;
@@ -7873,9 +7877,11 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     {
       UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
       const uint64_t attempt_id = DemandActiveAttemptId(demand, chunkCoord);
+      const uint64_t cov_pub = DemandCoverageGenToPublish(demand, chunkCoord);
       demand.NoteInstallResult(chunkCoord, InstallResult::Published,
                                chunkMesh.PublishRevs.geom_rev,
-                               chunkMesh.PublishRevs.light_rev, attempt_id);
+                               chunkMesh.PublishRevs.light_rev, attempt_id,
+                               cov_pub);
       JobStageSpan span{};
       span.cx = chunkCoord.x;
       span.cy = chunkCoord.y;
