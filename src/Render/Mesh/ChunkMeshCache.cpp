@@ -5799,6 +5799,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
     double max_sync_ms, bool skip_gpu_consume)
 {
+  Dirty.AdvanceScheduleFrame();
   const auto dirty_tick_t0 = std::chrono::high_resolution_clock::now();
   auto seg_t0 = dirty_tick_t0;
   auto take_seg_ms = [&seg_t0]() -> double
@@ -7015,7 +7016,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     LastScheduleLaneStarveReason_ = sched_adm.dual_lane_starve_reason;
     if (MeshFocusValid && first_mesh_cap > 0 && focus_missing_for_schedule)
     {
-      Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, 1);
+      // Keep newly arriving near-focus holes urgent while guaranteeing that a
+      // long-waiting in-focus FirstMesh ticket eventually passes the head.
+      constexpr uint64_t kFirstMeshFairAgeFrames = 120;
+      Dirty.PrioritizeAgedNearHorizontal(
+          MeshFocusGroundChunk, MeshFocusRadiusChunks,
+          kFirstMeshFairAgeFrames);
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {

@@ -20,6 +20,7 @@ class UChunkDirtySet
 public:
   void MarkDirty(glm::ivec3 coord);
   void MarkDirtyPriority(glm::ivec3 coord);
+  void AdvanceScheduleFrame() { ++ScheduleFrame; }
   void Erase(glm::ivec3 coord);
   void Clear();
   bool IsFirstMesh(glm::ivec3 coord) const
@@ -83,6 +84,9 @@ public:
   void PrioritizeChunksWithoutMesh(
       const std::function<bool(glm::ivec3)> &missing_mesh);
   void PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk, int radius_chunks);
+  void PrioritizeAgedNearHorizontal(glm::ivec3 focus_ground_chunk,
+                                    int radius_chunks,
+                                    uint64_t minimum_age_frames);
   void PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk, int radius_chunks,
                             int preferred_cy, bool prefer_lower_cy);
 
@@ -133,6 +137,9 @@ private:
   mutable bool UnifiedDirty{true};
   /// Packed (x,z) → dirty chunk count in that column (all cy).
   std::unordered_map<uint64_t, int> ColumnCounts;
+  /// First insertion frame; repeated priority marks must not reset queue age.
+  uint64_t ScheduleFrame{0};
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> EnqueueFrameByCoord;
 };
 
 } // namespace cutum

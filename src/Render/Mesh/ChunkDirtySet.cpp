@@ -228,6 +228,7 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
     return;
   }
   RemeshQ.push_back(coord);
+  EnqueueFrameByCoord.emplace(coord, ScheduleFrame);
   NoteColumnAdd(coord);
   InvalidateUnified();
 }
@@ -253,6 +254,7 @@ void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
       NoteColumnAdd(coord);
     }
   }
+  EnqueueFrameByCoord.emplace(coord, ScheduleFrame);
   FirstMeshQ.insert(FirstMeshQ.begin(), coord);
   InvalidateUnified();
 }
@@ -274,6 +276,7 @@ void UChunkDirtySet::Erase(glm::ivec3 coord)
   }
   if (erased)
   {
+    EnqueueFrameByCoord.erase(coord);
     NoteColumnRemove(coord);
     InvalidateUnified();
   }
@@ -285,6 +288,7 @@ void UChunkDirtySet::Clear()
   RemeshQ.clear();
   FirstMeshSet.clear();
   RemeshSet.clear();
+  EnqueueFrameByCoord.clear();
   Queue.clear();
   ColumnCounts.clear();
   UnifiedDirty = false;
@@ -305,6 +309,7 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
     RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
                   RemeshQ.end());
   }
+  EnqueueFrameByCoord.erase(coord);
   NoteColumnRemove(coord);
   auto next = Queue.erase(it);
   // Unified still matches except removed element — keep valid.
@@ -369,6 +374,56 @@ void UChunkDirtySet::PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk,
 {
   (void)radius_chunks;
   SortByDistanceKey(focus_ground_chunk, 0, false, false, {});
+}
+
+void UChunkDirtySet::PrioritizeAgedNearHorizontal(
+    glm::ivec3 focus_ground_chunk, int radius_chunks,
+    uint64_t minimum_age_frames)
+{
+  const int radius = std::max(0, radius_chunks);
+  const auto is_overdue_in_focus = [&](glm::ivec3 coord)
+  {
+    const auto it = EnqueueFrameByCoord.find(coord);
+    if (it == EnqueueFrameByCoord.end())
+    {
+      return false;
+    }
+    const uint64_t age = ScheduleFrame >= it->second
+                             ? ScheduleFrame - it->second
+                             : 0;
+    return age >= minimum_age_frames &&
+           HorizDist(coord, focus_ground_chunk) <= radius;
+  };
+  const auto enqueue_frame = [&](glm::ivec3 coord)
+  {
+    const auto it = EnqueueFrameByCoord.find(coord);
+    return it == EnqueueFrameByCoord.end() ? ScheduleFrame : it->second;
+  };
+  auto less = [&](const glm::ivec3 &a, const glm::ivec3 &b)
+  {
+    const bool a_overdue = is_overdue_in_focus(a);
+    const bool b_overdue = is_overdue_in_focus(b);
+    if (a_overdue != b_overdue)
+    {
+      return a_overdue;
+    }
+    if (a_overdue)
+    {
+      const uint64_t a_enqueued = enqueue_frame(a);
+      const uint64_t b_enqueued = enqueue_frame(b);
+      if (a_enqueued != b_enqueued)
+      {
+        return a_enqueued < b_enqueued;
+      }
+    }
+    return HorizDist(a, focus_ground_chunk) <
+           HorizDist(b, focus_ground_chunk);
+  };
+  if (FirstMeshQ.size() > 1)
+  {
+    std::stable_sort(FirstMeshQ.begin(), FirstMeshQ.end(), less);
+  }
+  InvalidateUnified();
 }
 
 void UChunkDirtySet::PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk,
