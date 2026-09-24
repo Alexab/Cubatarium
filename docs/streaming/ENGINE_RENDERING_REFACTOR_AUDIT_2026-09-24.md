@@ -236,6 +236,15 @@ VisualObligation следует сделать derived state/policy для эт�
 
 Откат — на последнюю фазу по feature flag/state shadow; не возвращать целиком старый commit, потому что history сохраняет полезные fixes по GPU lifetimes, stamp validation, camera culling, face coverage, async jobs и per-chunk demand.
 
+## Исполнение: baseline Release/no-teleport, 2026-09-24
+
+- Чистая Release-сборка `61a2b496`, executable SHA-256 `0401ec84…1fef4e97`.
+- Первую попытку `product-174657-far` остановил по сигналу оператора о чрезмерной скорости. В ней scenario сам выставил `CUBA_FLIGHT_MOVE_SPEED_SCALE=28`; артефакт `baseline_far.json` и perf-log сохранены как **непригодный для штатной скорости speed-stress/прерванный запуск**, acceptance из него не делать.
+- Повторный `product-174657 --visible`, `teleport_cruise=false`, scale `1`, Release exe без изменений. Harness подтвердил старт `(7,3)`, конец `(-12,3)`, 19 чанков / 304 блока. Результат: `holes_rate=1.0`, `fly_visible_black_max=48`, `dirty_med/max=477/744`, `wall_med/fly_med=16.06/17.51 ms`; eye-proxy и post-stop convergence FAIL. Это воспроизводит rendering-дефект на нормальной скорости; маршрут покрывает west corridor, не дальний стресс.
+- Проверена collision-цепочка: `UCamera::ProcessKeyboard` → `UWorld::ResolveMovement` → `UWorldCollision::ResolveMovement`, с collision-aware axis stepping и движением камеры; `AppRunner` также динамически корректирует высоту по рельефу при CruiseEyeY. Поэтому штатный scale-1 запуск использует физическую коррекцию. Фар-сценарий при scale 28 не подходит для этой проверки: большой delta меняет условия collision stepping.
+- `AppRunner` держит заданный yaw постоянным; отдельного горизонтального obstacle-avoidance/route planner в этом пути нет. Для данного запроса оператор подтвердил, что имеется в виду физическая остановка/смещение при столкновении. GUI был запущен, однако артефакты содержат telemetry, не screenshots или pixel oracle.
+- Run artifacts (оставлены в рабочем дереве отдельно от production-коммита): [scale-1 report](../../bin/suite_reports/engine_refactor/baseline_nominal.json), [scale-1 perf](../../bin/logs/perf_20260924-202153_24360.jsonl), [scale-28 interrupted report](../../bin/suite_reports/engine_refactor/baseline_far.json), [scale-28 perf](../../bin/logs/perf_20260924-200557_24204.jsonl).
+
 ## Основные ссылки
 
 - [Sysreset v3 evidence на dd7871ab](SYSRESET_V3_AF_EVIDENCE.md)
