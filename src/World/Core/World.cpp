@@ -1876,6 +1876,12 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     PhysicsTelemetryData.DemandStopConverged =
         UChunkRenderDemandStore::Get().StopConverged(now_ms) ? 1 : 0;
   }
+  {
+    const auto &shadow = GetVisualObligationShadowCounters();
+    PhysicsTelemetryData.VisualObligationShadowSampleN = shadow.samples;
+    PhysicsTelemetryData.VisualObligationShadowMismatchN =
+        shadow.draw_mismatches;
+  }
 }
 
 ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
@@ -2000,6 +2006,45 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   }
   auto memo = [&](bool ready) -> bool
   {
+    if (VisualObligationShadowEnabled())
+    {
+      using cutum::ClassifyVisualObligation;
+      using cutum::VisualObligationAllowsDraw;
+      auto &shadow = GetVisualObligationShadowCounters();
+      ++shadow.samples;
+
+      const UChunkMeshCache &cache = MeshService->GetCache();
+      const bool has_lit_drawable =
+          MeshService->ChunkHasLitDrawableFace(chunk_coord);
+      const bool has_greedy_mesh =
+          MeshService->HasMeshSatisfyingColumnReady(chunk_coord);
+      const bool fully_dark = cache.ChunkHasFullyDarkFace(chunk_coord) &&
+                              !has_lit_drawable;
+      const bool stale = fully_dark &&
+                         MeshService->ChunkHasStaleDarkFaces(chunk_coord,
+                                                             BlockWorld);
+      const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
+      const ColumnRecord *column = ColumnRecords.Find(col_xz);
+      const ChunkRenderDemandRecord *demand =
+          UChunkRenderDemandStore::Get().Find(chunk_coord);
+      const UChunk *chunk =
+          BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+      const bool air_only = chunk && chunk->IsAirOnly();
+      const bool light_unsatisfied =
+          demand && demand->desired_light_rev > demand->published_light_rev;
+      const bool geom_unsatisfied =
+          (demand && demand->desired_geom_rev > demand->published_geom_rev) ||
+          (!has_greedy_mesh && !air_only);
+      const VisualObligation shadow_obligation = ClassifyVisualObligation(
+          has_lit_drawable || air_only, fully_dark, stale || light_unsatisfied,
+          EnterVisualGateCtrl.WasOpenSkyApplied(col_xz),
+          column && column->legal_dark_settled,
+          cache.IsSoftDeferHeld(chunk_coord), geom_unsatisfied);
+      if (VisualObligationAllowsDraw(shadow_obligation) != ready)
+      {
+        ++shadow.draw_mismatches;
+      }
+    }
     SliceReadyMemo.emplace(chunk_coord, ready);
     return ready;
   };

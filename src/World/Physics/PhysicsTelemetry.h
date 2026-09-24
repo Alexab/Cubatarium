@@ -785,6 +785,8 @@ struct PhysicsTelemetry
   uint64_t DemandAlreadySatisfiedSkipN{0};
   uint64_t DemandReconcileMismatchN{0};
   uint64_t DemandShadowMismatchN{0};
+  uint64_t VisualObligationShadowSampleN{0};
+  uint64_t VisualObligationShadowMismatchN{0};
   /// FZ2.7-P12 B0: PendingLight trim source breakdown (per-frame).
   int PendingLightTrimEmergeN{0};
   int PendingLightTrimMemoryN{0};

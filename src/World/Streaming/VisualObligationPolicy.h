@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 
 namespace cutum
 {
@@ -16,6 +17,31 @@ enum class VisualObligation : uint8_t
   GeomRepair,
   SoftDeferOwned
 };
+
+struct VisualObligationShadowCounters
+{
+  uint64_t samples{0};
+  uint64_t draw_mismatches{0};
+};
+
+inline VisualObligationShadowCounters &GetVisualObligationShadowCounters()
+{
+  static VisualObligationShadowCounters counters;
+  return counters;
+}
+
+/// Shadow is opt-in because the per-slice classifier adds work to the draw gate.
+inline bool VisualObligationShadowEnabled()
+{
+  static const bool enabled = []() {
+    if (const char *env = std::getenv("CUBA_VISUAL_OBLIGATION_SHADOW"))
+    {
+      return env[0] == '1' || env[0] == 't' || env[0] == 'T';
+    }
+    return false;
+  }();
+  return enabled;
+}
 
 /// Classify obligation from observational predicates. Callers stamp ColumnRecord.
 /// Priority: lit > LegalDark > LightRepair > GeomRepair > SoftDeferOwned.

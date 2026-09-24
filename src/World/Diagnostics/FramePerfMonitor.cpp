@@ -508,6 +508,8 @@ struct FrameNumbers
   int demand_unsat_face{0};
   int demand_unsat_coverage{0};
   int demand_unsat_retain{0};
+  uint64_t visual_obligation_shadow_sample_n{0};
+  uint64_t visual_obligation_shadow_mismatch_n{0};
   int defect_class_primary{7}; // ChunkDefectClass::Unknown
   int pending_light{0};
   int stream_pressure{0};
@@ -1186,6 +1188,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.demand_unsat_face = phys.DemandUnsatFace;
   n.demand_unsat_coverage = phys.DemandUnsatCoverage;
   n.demand_unsat_retain = phys.DemandUnsatRetain;
+  n.visual_obligation_shadow_sample_n =
+      phys.VisualObligationShadowSampleN;
+  n.visual_obligation_shadow_mismatch_n =
+      phys.VisualObligationShadowMismatchN;
   // A38 R6: primary defect class from period proxies (mutually exclusive).
   {
     using cutum::ChunkDefectClass;
@@ -1914,6 +1920,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"demand_unsat_face\":" << n.demand_unsat_face
           << ",\"demand_unsat_coverage\":" << n.demand_unsat_coverage
           << ",\"demand_unsat_retain\":" << n.demand_unsat_retain
+          << ",\"visual_obligation_shadow_sample_n\":"
+          << n.visual_obligation_shadow_sample_n
+          << ",\"visual_obligation_shadow_mismatch_n\":"
+          << n.visual_obligation_shadow_mismatch_n
           << ",\"defect_class_primary\":" << n.defect_class_primary
           << ",\"pending_light\":" << n.pending_light
           << ",\"stream_pressure\":" << n.stream_pressure
