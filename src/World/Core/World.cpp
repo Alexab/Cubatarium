@@ -2006,7 +2006,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   }
   auto memo = [&](bool ready) -> bool
   {
-    if (VisualObligationShadowEnabled())
+    bool shadow_ready = ready;
+    if (VisualObligationShadowEnabled() || VisualObligationCutoverEnabled())
     {
       using cutum::ClassifyVisualObligation;
       using cutum::VisualObligationAllowsDraw;
@@ -2040,13 +2041,27 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
           EnterVisualGateCtrl.WasOpenSkyApplied(col_xz),
           column && column->legal_dark_settled,
           cache.IsSoftDeferHeld(chunk_coord), geom_unsatisfied);
-      if (VisualObligationAllowsDraw(shadow_obligation) != ready)
+      shadow_ready = VisualObligationAllowsDraw(shadow_obligation);
+      if (shadow_ready != ready)
       {
         ++shadow.draw_mismatches;
       }
     }
-    SliceReadyMemo.emplace(chunk_coord, ready);
-    return ready;
+    bool final_ready = ready;
+    if (VisualObligationCutoverEnabled())
+    {
+      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
+          GetPreferredLoadFocusBlock());
+      const int horiz =
+          std::max(std::abs(chunk_coord.x - focus_chunk.x),
+                   std::abs(chunk_coord.z - focus_chunk.z));
+      if (horiz <= GetStreamingFocusRadius())
+      {
+        final_ready = shadow_ready;
+      }
+    }
+    SliceReadyMemo.emplace(chunk_coord, final_ready);
+    return final_ready;
   };
   // P0 sticky: live lit GPU always draws until a lit replacement binds —
   // must win even when CPU SoftDefer/empty left Satisfying false.

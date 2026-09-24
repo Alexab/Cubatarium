@@ -43,6 +43,18 @@ inline bool VisualObligationShadowEnabled()
   return enabled;
 }
 
+inline bool VisualObligationCutoverEnabled()
+{
+  static const bool enabled = []() {
+    if (const char *env = std::getenv("CUBA_VISUAL_OBLIGATION_CUTOVER"))
+    {
+      return env[0] == '1' || env[0] == 't' || env[0] == 'T';
+    }
+    return false;
+  }();
+  return enabled;
+}
+
 /// Classify obligation from observational predicates. Callers stamp ColumnRecord.
 /// Priority: lit > LegalDark > LightRepair > GeomRepair > SoftDeferOwned.
 inline VisualObligation ClassifyVisualObligation(bool has_lit_drawable,
