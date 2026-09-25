@@ -110,9 +110,10 @@ MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
   {
     const UChunk *chunk = world.GetChunkManager().GetChunk(stamp.coord);
     const ChunkInputStamp current =
-        ChunkInputStamp::Capture(stamp.coord, chunk, stamp.readsLight);
+        ChunkInputStamp::Capture(stamp.coord, chunk, stamp.readsLight,
+                                 stamp.readsContent);
     if (stamp.incarnation != current.incarnation ||
-        stamp.content != current.content)
+        (stamp.readsContent && stamp.content != current.content))
     {
       any_geom = true;
       continue;
