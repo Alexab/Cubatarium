@@ -280,6 +280,15 @@ VisualObligation следует сделать derived state/policy для эт�
 - Следующий ограниченный эксперимент: заменить фиксированное число refresh captures на оценку из измеренной стоимости snapshot и `MeshSnapshotBudgetMs`; уже существующая проверка `LastMeshSnapshotMs` остаётся жёстким временным пределом. Сравнить capture defers, FM/remesh service, frame time и post-stop convergence. Не менять FirstMesh reserve повторно и не расширять GPU apply quota в этом эксперименте.
 - Артефакты: [раздельный trace report](../../bin/suite_reports/engine_refactor/separate_trace_visible.json), [perf JSONL](../../bin/logs/perf_20260925-101748_24408.jsonl).
 
+## Исполнение: capture budget и scheduler clamp, 2026-09-25
+
+- Коммит `e83255c2` заменил `0.35 * snapshot_ms` count quota на bounded refresh count, вычисленный по rolling EMA стоимости snapshot; прежняя проверка фактически потраченного snapshot time осталась главным пределом. Release build и статическая проверка EXE — PASS.
+- Тот же видимый no-teleport маршрут: нормальная скорость `5.99991` блока/с; `mesh_snapshot_defer_refresh_budget_n` и time-budget defer в последних периодах стали `0` (до изменения refresh-budget defers были `33–34`). В tail `mesh_snapshot_ms≈0.17–0.39 ms`.
+- Симптом полностью не исправлен: `holes_rate=0.837` (без улучшения относительно предыдущего trace baseline), `fly_visible_black_max=68`, `post_stop_missing_max=99`, post-stop convergence — FAIL. `visible_black_focus_n` снизился в tail до `14`, но FullyDark stalled median в середине маршрута вырос до `20`; eye-proxy и A24 частные stop-lines PASS, dual-lane stop-line и общий report FAIL.
+- В tail `mesh_schedule_final=2` при `first_mesh_schedule_cap=14`, effective FirstMesh cap `12`, remesh cap `2`, очереди `dirty_fm=9–13` и `dirty_remesh=52–64`. При этом snapshot/pipeline skips равны нулю, а throughput остаётся `1` FirstMesh + `1` remesh за период. Из кода ровно один clamp выставляет общий schedule к `2`: «saturated async on lit cruise» (`moving && !visual_holes && !missing_underfeet && pending_async >= 28`). Он не учитывает FullyDark/stale-light debt, который на этом же прогоне остаётся видимым.
+- Следующий targeted change: разрешать этот no-hole saturation clamp только когда отсутствуют FocusMissingMesh, FullyDark repair debt и stale vertex-light debt. Оставить admission lane caps и реальные временные бюджеты; это будет проверка scheduler classification, а не увеличение произвольной квоты.
+- Артефакты: [cost-based budget report](../../bin/suite_reports/engine_refactor/capture_cost_budget_visible.json), [perf JSONL](../../bin/logs/perf_20260925-103111_25520.jsonl).
+
 ## Основные ссылки
 
 - [Sysreset v3 evidence на dd7871ab](SYSRESET_V3_AF_EVIDENCE.md)
