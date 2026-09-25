@@ -132,6 +132,7 @@ void NoteRendererGateRejection(UWorld &world, const UChunkMeshCache &cache,
                                uint32_t cpu_index_count,
                                uint32_t gpu_quad_count)
 {
+  world.NoteRendererDrawGateRejection(coord);
   if (!UJobStageTrace::VisualBlackTraceEnabled())
   {
     return;

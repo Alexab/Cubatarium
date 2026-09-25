@@ -4089,88 +4089,140 @@ int UWorld::CollectDrawGateRelightTargets(
   }
 
   const int max_y = ProceduralTemplate.MaxHeight;
-  const bool moving =
-      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
-  int band_min = std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
-  int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
-                                     CHUNK_SIZE * 3 - 1);
-  if (moving)
-  {
-    const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
-    band_min = std::max(0, eye_y - CHUNK_SIZE);
-    band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
-    if (ProceduralTemplate.FillWater)
-    {
-      band_min = std::min(band_min,
-                          std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE));
-      band_max = std::max(band_max,
-                          std::min(max_y, ProceduralTemplate.SeaLevel + CHUNK_SIZE));
-    }
-  }
-  else if (ProceduralTemplate.FillWater)
-  {
-    band_min = std::min(band_min,
-                        std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE * 4));
-    band_max = std::max(band_max,
-                        std::min(max_y, ProceduralTemplate.SeaLevel + CHUNK_SIZE * 2));
-  }
-  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
-  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  const uint64_t max_age_frames = 2;
   const UChunkMeshCache &cache = MeshService->GetCache();
-
-  // Search by distance so the target stays bounded and the nearest hidden
-  // column can be promoted without scanning the whole world ring.
-  for (int dist = 0; dist <= radius_chunks; ++dist)
+  struct Candidate
   {
-    for (int dx = -dist; dx <= dist; ++dx)
+    DrawGateRelightTarget target{};
+    int horizontal_distance{0};
+    int vertical_distance{0};
+    uint64_t observed_epoch{0};
+  };
+  std::unordered_map<glm::ivec2, Candidate, IVec2Hash> candidates;
+  candidates.reserve(RecentRendererDrawGateRejections.size());
+
+  // Use the actual rejected draw refs from the previous render frame. A broad
+  // radial scan selected unrelated dark meshes and could flood relight/GPU
+  // work without repairing the geometry the player was looking at.
+  for (const auto &[coord, observed_epoch] : RecentRendererDrawGateRejections)
+  {
+    if (StreamingFrameEpoch < observed_epoch ||
+        StreamingFrameEpoch - observed_epoch > max_age_frames)
     {
-      for (int dz = -dist; dz <= dist; ++dz)
-      {
-        if (std::max(std::abs(dx), std::abs(dz)) != dist)
-        {
-          continue;
-        }
-        const glm::ivec2 column(focus_ground_chunk.x + dx,
-                                focus_ground_chunk.z + dz);
-        int min_cy = std::numeric_limits<int>::max();
-        int max_cy = -1;
-        for (int cy = cy0; cy <= cy1; ++cy)
-        {
-          const glm::ivec3 coord(column.x, cy, column.y);
-          if (!MeshService->HasDrawableGreedyMesh(coord))
-          {
-            continue;
-          }
-          UChunkMeshCache::StaleDarkWitness witness{};
-          const bool stale_light =
-              cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &witness);
-          if (!stale_light)
-          {
-            continue;
-          }
-          min_cy = std::min(
-              min_cy, stale_light ? std::min(coord.y, witness.source_chunk.y)
-                                  : coord.y);
-          max_cy = std::max(
-              max_cy, stale_light ? std::max(coord.y, witness.source_chunk.y)
-                                  : coord.y);
-        }
-        if (max_cy < 0)
-        {
-          continue;
-        }
-        const int min_world_y = std::clamp(min_cy * CHUNK_SIZE, 0, max_y);
-        const int max_world_y =
-            std::clamp((max_cy + 1) * CHUNK_SIZE - 1, 0, max_y);
-        out.push_back({column, min_world_y, max_world_y});
-        if (static_cast<int>(out.size()) >= max_cols)
-        {
-          return static_cast<int>(out.size());
-        }
-      }
+      continue;
     }
+    const int horiz = std::max(std::abs(coord.x - focus_ground_chunk.x),
+                               std::abs(coord.z - focus_ground_chunk.z));
+    if (horiz > radius_chunks || coord.y < 0 ||
+        coord.y * CHUNK_SIZE > max_y ||
+        !MeshService->HasDrawableGreedyMesh(coord))
+    {
+      continue;
+    }
+
+    UChunkMeshCache::StaleDarkWitness witness{};
+    const bool stale_light =
+        cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &witness);
+    const bool fully_dark = cache.ChunkHasFullyDarkFace(coord) &&
+                            !MeshService->ChunkHasLitDrawableFace(coord);
+    const glm::ivec2 column(coord.x, coord.z);
+    const bool open_sky_applied =
+        EnterVisualGateCtrl.WasOpenSkyApplied(column);
+    if (!stale_light && !(fully_dark && !open_sky_applied))
+    {
+      continue;
+    }
+
+    const int min_cy = stale_light ? std::min(coord.y, witness.source_chunk.y)
+                                   : coord.y;
+    const int max_cy = stale_light ? std::max(coord.y, witness.source_chunk.y)
+                                   : coord.y;
+    const int min_world_y = std::clamp(min_cy * CHUNK_SIZE, 0, max_y);
+    const int max_world_y =
+        std::clamp((max_cy + 1) * CHUNK_SIZE - 1, 0, max_y);
+    const int vertical_distance = std::abs(coord.y - focus_ground_chunk.y);
+    auto [it, inserted] = candidates.try_emplace(
+        column, Candidate{{column, min_world_y, max_world_y}, horiz,
+                          vertical_distance, observed_epoch});
+    if (!inserted)
+    {
+      it->second.target.min_world_y =
+          std::min(it->second.target.min_world_y, min_world_y);
+      it->second.target.max_world_y =
+          std::max(it->second.target.max_world_y, max_world_y);
+      it->second.vertical_distance =
+          std::min(it->second.vertical_distance, vertical_distance);
+      it->second.observed_epoch =
+          std::max(it->second.observed_epoch, observed_epoch);
+    }
+  }
+
+  std::vector<Candidate> ordered;
+  ordered.reserve(candidates.size());
+  for (const auto &[column, candidate] : candidates)
+  {
+    (void)column;
+    ordered.push_back(candidate);
+  }
+  std::sort(ordered.begin(), ordered.end(),
+            [](const Candidate &a, const Candidate &b)
+            {
+              if (a.horizontal_distance != b.horizontal_distance)
+              {
+                return a.horizontal_distance < b.horizontal_distance;
+              }
+              if (a.vertical_distance != b.vertical_distance)
+              {
+                return a.vertical_distance < b.vertical_distance;
+              }
+              return a.observed_epoch > b.observed_epoch;
+            });
+  const int n = std::min(max_cols, static_cast<int>(ordered.size()));
+  out.reserve(static_cast<size_t>(n));
+  for (int i = 0; i < n; ++i)
+  {
+    out.push_back(ordered[static_cast<size_t>(i)].target);
   }
   return static_cast<int>(out.size());
+}
+
+void UWorld::NoteRendererDrawGateRejection(glm::ivec3 chunk_coord)
+{
+  if (RendererDrawGateRejectPruneEpoch != StreamingFrameEpoch)
+  {
+    for (auto it = RecentRendererDrawGateRejections.begin();
+         it != RecentRendererDrawGateRejections.end();)
+    {
+      if (StreamingFrameEpoch > it->second &&
+          StreamingFrameEpoch - it->second > 2)
+      {
+        it = RecentRendererDrawGateRejections.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
+    RendererDrawGateRejectPruneEpoch = StreamingFrameEpoch;
+  }
+
+  constexpr size_t kMaxRecentRendererDrawGateRejections = 256;
+  if (RecentRendererDrawGateRejections.count(chunk_coord) == 0 &&
+      RecentRendererDrawGateRejections.size() >=
+          kMaxRecentRendererDrawGateRejections)
+  {
+    auto oldest = RecentRendererDrawGateRejections.begin();
+    for (auto it = RecentRendererDrawGateRejections.begin();
+         it != RecentRendererDrawGateRejections.end(); ++it)
+    {
+      if (it->second < oldest->second)
+      {
+        oldest = it;
+      }
+    }
+    RecentRendererDrawGateRejections.erase(oldest);
+  }
+  RecentRendererDrawGateRejections[chunk_coord] = StreamingFrameEpoch;
 }
 
 int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,

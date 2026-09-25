@@ -1134,17 +1134,18 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   bool draw_gate_target_pinned = false;
   glm::ivec2 draw_gate_target_key(0);
   const auto &visible_black = world.GetPhysicsTelemetry();
-  const int visible_draw_gate_repair_n = visible_black.VisibleBlackStaleLitN;
+  const int visible_draw_gate_repair_n =
+      visible_black.VisibleBlackStaleLitN +
+      visible_black.VisibleBlackFullyDarkRepairN;
   if (async_bg && visible_draw_gate_repair_n > 0 && world.MeshService)
   {
     std::vector<DrawGateRelightTarget> draw_gate_targets;
     const int draw_gate_radius = std::min(focus_radius,
                                           RelightMissPinMaxHoriz());
     world.CollectDrawGateRelightTargets(focus_chunk, draw_gate_radius,
-                                        draw_gate_targets, /*max_cols=*/1);
-    if (!draw_gate_targets.empty())
+                                        draw_gate_targets, /*max_cols=*/8);
+    for (const DrawGateRelightTarget &target : draw_gate_targets)
     {
-      const DrawGateRelightTarget &target = draw_gate_targets.front();
       draw_gate_target_key =
           glm::ivec2(target.column.x * CHUNK_SIZE,
                      target.column.y * CHUNK_SIZE);
@@ -1186,6 +1187,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             prio.push_front(draw_gate_target_key);
           }
         }
+        break;
       }
     }
   }

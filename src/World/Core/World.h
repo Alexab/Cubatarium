@@ -1209,6 +1209,9 @@ public:
   int CollectDrawGateRelightTargets(
       glm::ivec3 focus_ground_chunk, int radius_chunks,
       std::vector<DrawGateRelightTarget> &out, int max_cols) const;
+  /// Remember a mesh rejected by a renderer draw gate so streaming can repair
+  /// the exact visible slice on its next update.
+  void NoteRendererDrawGateRejection(glm::ivec3 chunk_coord);
   /// Focus columns with greedy mesh that still have fully-dark faces (void-edge
   /// debt: mesh dark and light field 0 — needs Relight, not remesh alone).
   int CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
@@ -1701,6 +1704,9 @@ private:
   mutable uint64_t SpawnCatchUpSampleEpoch{UINT64_MAX};
   mutable bool CachedNeedsSpawnRingCatchUp{false};
   std::vector<AdmitFocusMarkRange> AdmitFocusMarkBuffer_;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
+      RecentRendererDrawGateRejections;
+  uint64_t RendererDrawGateRejectPruneEpoch{UINT64_MAX};
   uint64_t StreamingFrameEpoch{0};
   uint64_t PhysicsTickCounter{0};
   double WallFrameDeltaSec{0.0};
