@@ -1188,6 +1188,39 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         trace.draw_gate_ready = 0;
         trace.flags = draw_gate_target_pinned ? 4u
                       : (already_inflight && !already_queued ? 1u : 2u);
+        if (!draw_gate_target_pinned)
+        {
+          trace.focus_state = static_cast<uint8_t>(std::min<size_t>(
+              PendingTerrainColumnRelights.size(), UINT8_MAX));
+          trace.active_stage = static_cast<uint8_t>(std::min<size_t>(
+              PendingTerrainColumnRelightsPriority.size(), UINT8_MAX));
+          int farthest_unpinned_horiz = -1;
+          const auto note_farthest_unpinned = [&](
+              const std::deque<glm::ivec2> &queue)
+          {
+            for (const glm::ivec2 &candidate : queue)
+            {
+              const int cx = FloorDiv(candidate.x, CHUNK_SIZE);
+              const int cz = FloorDiv(candidate.y, CHUNK_SIZE);
+              const int candidate_horiz =
+                  std::max(std::abs(cx - focus_chunk.x),
+                           std::abs(cz - focus_chunk.z));
+              if (candidate_horiz > draw_gate_radius &&
+                  !ShouldProtectRelightFifoPinKey(
+                      cx, cz, RelightFifoPinValid, RelightFifoPinCx,
+                      RelightFifoPinCz))
+              {
+                farthest_unpinned_horiz =
+                    std::max(farthest_unpinned_horiz, candidate_horiz);
+              }
+            }
+          };
+          note_farthest_unpinned(PendingTerrainColumnRelights);
+          note_farthest_unpinned(PendingTerrainColumnRelightsPriority);
+          trace.cause = farthest_unpinned_horiz >= 0 ? 1u : 0u;
+          trace.face_debt_mask = static_cast<uint8_t>(
+              std::max(0, farthest_unpinned_horiz));
+        }
         trace.relight_y_band_defined = 1;
         trace.relight_band_min_y = target.min_world_y;
         trace.relight_band_max_y = target.max_world_y;
