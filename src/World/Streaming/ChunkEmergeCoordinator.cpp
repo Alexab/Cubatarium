@@ -6802,8 +6802,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       lane_in.remesh_lit_demand = remesh_n > 0;
       lane_in.protect_remesh_floor =
           bounded.protect_lit_settle_remesh ? 1 : 0;
-      lane_in.prior_first_mesh_schedule = bounded.first_mesh_schedule;
-      lane_in.prior_remesh_schedule = bounded.remesh_schedule;
+      // Rebuild the split from current demand. Carrying prior lane weights
+      // preserved a stale 1/3 FirstMesh/remesh split under a growing no-mesh
+      // backlog, starving columns that had never acquired a drawable mesh.
+      if (lane_in.fm_demand && lane_in.remesh_lit_demand)
+      {
+        lane_in.prior_first_mesh_schedule = kBackpressuredScheduleCap - 1;
+        lane_in.prior_remesh_schedule = 1;
+      }
+      else if (lane_in.fm_demand)
+      {
+        lane_in.prior_first_mesh_schedule = kBackpressuredScheduleCap;
+        lane_in.prior_remesh_schedule = 0;
+      }
+      else if (lane_in.remesh_lit_demand)
+      {
+        lane_in.prior_first_mesh_schedule = 0;
+        lane_in.prior_remesh_schedule = kBackpressuredScheduleCap;
+      }
       lane_in.rr_token = DualLaneRrToken_;
       lane_in.miss_pressure =
           focus_missing_or_holes || pt.DarkFaceStaleNearN >= 20 ||
