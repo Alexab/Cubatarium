@@ -3139,6 +3139,22 @@ void UFramePerfMonitor::Shutdown()
                << ",\"published_light_rev\":" << r.published_light_rev
                << ",\"meshed_light_rev\":" << r.meshed_light_rev
                << ",\"field_light_rev\":" << r.field_light_rev
+               << ",\"stale_sample_x\":" << r.stale_sample_x
+               << ",\"stale_sample_y\":" << r.stale_sample_y
+               << ",\"stale_sample_z\":" << r.stale_sample_z
+               << ",\"stale_source_cx\":" << r.stale_source_cx
+               << ",\"stale_source_cy\":" << r.stale_source_cy
+               << ",\"stale_source_cz\":" << r.stale_source_cz
+               << ",\"stale_source_incarnation\":"
+               << r.stale_source_incarnation
+               << ",\"stale_source_light_rev\":"
+               << r.stale_source_light_rev
+               << ",\"stale_face_index\":"
+               << static_cast<int>(r.stale_face_index)
+               << ",\"stale_sample_light\":"
+               << static_cast<int>(r.stale_sample_light)
+               << ",\"stale_sample_gpu_path\":"
+               << static_cast<int>(r.stale_sample_gpu_path)
                << ",\"cause\":" << static_cast<int>(r.cause)
                << ",\"active_stage\":" << static_cast<int>(r.active_stage)
                << ",\"face_debt_mask\":"

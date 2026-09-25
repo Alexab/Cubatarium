@@ -498,8 +498,19 @@ public:
       const std::vector<GreedyMeshBatch> &batches);
   /// Mesh vertex light=0 but current world light at the face air neighbor
   /// is non-zero — stale bake (empty lightmap / missed MarkRelit remesh).
+  struct StaleDarkWitness
+  {
+    glm::ivec3 sampled_block{0};
+    glm::ivec3 source_chunk{0};
+    uint64_t source_incarnation{0};
+    uint64_t source_light_revision{0};
+    uint8_t packed_light{0};
+    uint8_t face_index{0};
+    bool gpu_probe{false};
+  };
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
-                              const UBlockWorld &world) const;
+                              const UBlockWorld &world,
+                              StaleDarkWitness *witness = nullptr) const;
   /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
   /// Inline like GetMeshPublishRevs — GreedyGpuPublication links without
   /// ChunkMeshCache.cpp (publication_audit / greedy_vertex_pool_production_test).

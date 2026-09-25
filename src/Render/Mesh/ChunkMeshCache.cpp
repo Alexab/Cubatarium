@@ -1081,8 +1081,13 @@ void UChunkMeshCache::FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
 }
 
 bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
-                                             const UBlockWorld &world) const
+                                             const UBlockWorld &world,
+                                             StaleDarkWitness *witness) const
 {
+  if (witness)
+  {
+    *witness = {};
+  }
   const auto it = GreedyCache.find(chunk_coord);
   if (it == GreedyCache.end())
   {
@@ -1104,6 +1109,25 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
       return {0, 1, 0};
     default:
       return {0, -1, 0};
+    }
+  };
+  auto note_witness = [&](glm::ivec3 sampled_block, uint8_t packed_light,
+                          uint8_t face_index, bool gpu_probe)
+  {
+    if (!witness)
+    {
+      return;
+    }
+    witness->sampled_block = sampled_block;
+    witness->source_chunk = UChunkManager::WorldToChunk(sampled_block);
+    witness->packed_light = packed_light;
+    witness->face_index = face_index;
+    witness->gpu_probe = gpu_probe;
+    if (const UChunk *source =
+            world.GetChunkManager().GetChunk(witness->source_chunk))
+    {
+      witness->source_incarnation = source->GetIncarnation();
+      witness->source_light_revision = source->GetLightFieldRevision();
     }
   };
   // GPU-resident meshes clear CPU batches — probe sky light on solids / +Y air.
@@ -1132,13 +1156,17 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
             continue;
           }
           const glm::ivec3 solid = base + local;
-          if (UnpackSky(SampleLightPacked(world, solid)) > 0)
+          const uint8_t solid_light = SampleLightPacked(world, solid);
+          if (UnpackSky(solid_light) > 0)
           {
+            note_witness(solid, solid_light, 255, true);
             return true;
           }
           const glm::ivec3 above = solid + glm::ivec3(0, 1, 0);
-          if (UnpackSky(SampleLightPacked(world, above)) > 0)
+          const uint8_t above_light = SampleLightPacked(world, above);
+          if (UnpackSky(above_light) > 0)
           {
+            note_witness(above, above_light, 4, true);
             return true;
           }
         }
@@ -1165,9 +1193,16 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
           WorldCoordToBlockIndex(v.py - 0.5f * static_cast<float>(off.y)),
           WorldCoordToBlockIndex(v.pz - 0.5f * static_cast<float>(off.z)));
       const glm::ivec3 air = solid + off;
-      if (SampleLightPacked(world, air) != 0 ||
-          SampleLightPacked(world, solid) != 0)
+      const uint8_t air_light = SampleLightPacked(world, air);
+      if (air_light != 0)
       {
+        note_witness(air, air_light, static_cast<uint8_t>(fi), false);
+        return true;
+      }
+      const uint8_t solid_light = SampleLightPacked(world, solid);
+      if (solid_light != 0)
+      {
+        note_witness(solid, solid_light, static_cast<uint8_t>(fi), false);
         return true;
       }
     }

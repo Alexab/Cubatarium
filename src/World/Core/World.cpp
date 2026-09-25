@@ -2796,9 +2796,10 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         const UChunkMeshCache &cache = MeshService->GetCache();
         const bool fully_dark = cache.ChunkHasFullyDarkFace(coord);
         const bool has_lit_face = MeshService->ChunkHasLitDrawableFace(coord);
+        UChunkMeshCache::StaleDarkWitness stale_witness{};
         const bool stale_dark =
             fully_dark && !has_lit_face &&
-            MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+            cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &stale_witness);
         const glm::ivec2 col(coord.x, coord.z);
         const bool pending_light = IsPendingLightBeforeMesh(col);
         const bool soft_defer = cache.IsSoftDeferHeld(coord);
@@ -2806,6 +2807,11 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             IsColumnLitReady(glm::ivec3(coord.x, 0, coord.z));
         const ColumnRecord *column = ColumnRecords.Find(col);
         const bool legal_dark = column && column->legal_dark_settled;
+        const bool light_repair =
+            column && column->visual_obligation == VisualObligation::LightRepair;
+        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col);
+        const bool true_dark = fully_dark && open_sky && !pending_light &&
+                               column_lit && !stale_dark && !has_lit_face;
         const bool flow_ticket = GetColumnFlowExecutor().HasRepairTicket(col);
         const bool sticky_remesh = IsColumnStickyRemesh(col);
         const bool repair_progress = ColumnHasRepairProgress(col);
@@ -2832,7 +2838,24 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             (async_relight ? 1u << 19 : 0u) |
             (persistence_relight ? 1u << 20 : 0u) |
             (mesh_dependency_pending ? 1u << 21 : 0u) |
-            (legal_dark ? 1u << 22 : 0u));
+            (legal_dark ? 1u << 22 : 0u) |
+            (open_sky ? 1u << 23 : 0u) |
+            (light_repair ? 1u << 24 : 0u) |
+            (true_dark ? 1u << 25 : 0u));
+        if (stale_dark)
+        {
+          trace.stale_sample_x = stale_witness.sampled_block.x;
+          trace.stale_sample_y = stale_witness.sampled_block.y;
+          trace.stale_sample_z = stale_witness.sampled_block.z;
+          trace.stale_source_cx = stale_witness.source_chunk.x;
+          trace.stale_source_cy = stale_witness.source_chunk.y;
+          trace.stale_source_cz = stale_witness.source_chunk.z;
+          trace.stale_source_incarnation = stale_witness.source_incarnation;
+          trace.stale_source_light_rev = stale_witness.source_light_revision;
+          trace.stale_face_index = stale_witness.face_index;
+          trace.stale_sample_light = stale_witness.packed_light;
+          trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
+        }
       }
       UJobStageTrace::NoteVisualBlack(trace);
       ++recorded_by_state[state];

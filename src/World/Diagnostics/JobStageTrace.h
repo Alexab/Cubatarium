@@ -96,11 +96,22 @@ struct VisualBlackTraceRecord
   uint64_t published_light_rev{0};
   uint64_t meshed_light_rev{0};
   uint64_t field_light_rev{0};
+  int32_t stale_sample_x{0};
+  int32_t stale_sample_y{0};
+  int32_t stale_sample_z{0};
+  int32_t stale_source_cx{0};
+  int32_t stale_source_cy{0};
+  int32_t stale_source_cz{0};
+  uint64_t stale_source_incarnation{0};
+  uint64_t stale_source_light_rev{0};
   /// VisibleBlackCause ordinal from VisibleBlackAttribution.h.
   uint8_t cause{0};
   uint8_t active_stage{0};
   uint8_t face_debt_mask{0};
   uint8_t draw_gate_ready{0};
+  uint8_t stale_face_index{0};
+  uint8_t stale_sample_light{0};
+  uint8_t stale_sample_gpu_path{0};
   /// sample_kind=0 bits: ticket, progress, sticky, pending_replace,
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,
@@ -109,6 +120,7 @@ struct VisualBlackTraceRecord
   /// gpu_pending, gpu_extract, live_gpu, draw_gate_ready, remesh_after_apply.
   /// Bits 9..15 classify dark/light/column readiness. Bits 16..22 identify
   /// repair, relight, dependency queue ownership, and legal-dark settlement.
+  /// Bits 23..25 identify OpenSky, LightRepair, and true-dark state.
   uint32_t flags{0};
 };
 
