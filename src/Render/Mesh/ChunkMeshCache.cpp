@@ -5092,11 +5092,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           ? 20
           : std::max(VisibleBlackFocusPressure_,
                      VisibleBlackNoTicketPressure_);
-  // A queued replacement for a drawable stale-dark slice is itself visual
-  // debt. Do not require the aggregate black-focus counter to cross a second,
-  // higher threshold before allowing that queued result to advance.
-  bool have_urgent_stale_repair = false;
-  glm::ivec3 urgent_stale_repair{};
+  // A queued replacement for a drawable, fully-dark priority remesh is itself
+  // visual debt, even when the current field-light revision says the darkness
+  // is not stale. Do not require a second aggregate-pressure threshold before
+  // allowing this already-owned repair to advance.
+  bool have_urgent_dark_repair = false;
+  glm::ivec3 urgent_dark_repair{};
   if (queued_n > 0)
   {
     for (const PendingGpuApply &pending : PendingGpuApplies)
@@ -5104,19 +5105,20 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       if (pending.phase != PendingGpuApply::Phase::Queued ||
           !HasDrawableGreedyMesh(pending.coord) ||
           !IsRimIngressWatchCoord(pending.coord, MeshFocusGroundChunk) ||
-          !ChunkHasStaleDarkFaces(pending.coord, world))
+          !Dirty.IsPriorityRemesh(pending.coord) ||
+          !ChunkHasFullyDarkFace(pending.coord))
       {
         continue;
       }
-      urgent_stale_repair = pending.coord;
-      have_urgent_stale_repair = true;
+      urgent_dark_repair = pending.coord;
+      have_urgent_dark_repair = true;
       break;
     }
   }
   const bool force_kick_debt = ShouldForceGpuKickUnderQueuedDebt(
       queued_n,
       StarveRemeshForHoles || ColumnLoadedNoMeshPressure_ > 0 ||
-          VisibleBlackFocusPressure_ >= 20 || have_urgent_stale_repair,
+          VisibleBlackFocusPressure_ >= 20 || have_urgent_dark_repair,
       kick_debt_proxy);
   if (force_kick_debt)
   {
@@ -5124,17 +5126,17 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   }
   int debt_forced_kicks = 0;
   auto find_prefer_queued = [&]() {
-    if (have_urgent_stale_repair)
+    if (have_urgent_dark_repair)
     {
-      auto stale_repair_it = std::find_if(
+      auto dark_repair_it = std::find_if(
           PendingGpuApplies.begin(), PendingGpuApplies.end(),
           [&](const PendingGpuApply &p) {
             return p.phase == PendingGpuApply::Phase::Queued &&
-                   p.coord == urgent_stale_repair;
+                   p.coord == urgent_dark_repair;
           });
-      if (stale_repair_it != PendingGpuApplies.end())
+      if (dark_repair_it != PendingGpuApplies.end())
       {
-        return stale_repair_it;
+        return dark_repair_it;
       }
     }
     auto missing_it = std::find_if(
@@ -5156,30 +5158,31 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   while (kicked < kick_cap && processed < max_count && budget_left() &&
          pipeline->HasFreeReadbackSlot())
   {
-    // Sysreset v3 mid-Kick gate: only missing-drawable may bypass deadline.
+    // Sysreset v3 mid-Kick gate: only explicitly prioritized visual debt may
+    // bypass the deadline, and that bypass is still limited to one debt kick.
     auto queued_peek = find_prefer_queued();
     const bool critical_missing =
         queued_peek != PendingGpuApplies.end() &&
         !HasDrawableGreedyMesh(queued_peek->coord);
-    const bool critical_stale_repair =
+    const bool critical_dark_repair =
         queued_peek != PendingGpuApplies.end() &&
-        have_urgent_stale_repair &&
-        queued_peek->coord == urgent_stale_repair;
+        have_urgent_dark_repair &&
+        queued_peek->coord == urgent_dark_repair;
     const bool debt_kick_quota =
         force_kick_debt && kicked == 0 &&
-        (critical_missing || critical_stale_repair);
+        (critical_missing || critical_dark_repair);
     // Cost-class: do not start Kick if remaining budget < ~2ms unless critical.
     constexpr double kKickCostClassMs = 2.0;
-    if (!critical_missing && !critical_stale_repair && budget_ms > 0.0 &&
+    if (!critical_missing && !critical_dark_repair && budget_ms > 0.0 &&
         (budget_ms - elapsed_ms()) < kKickCostClassMs)
     {
       break;
     }
     if (UFrameDeadline::ShouldDeferProducer(
             /*critical_progress=*/debt_kick_quota || critical_missing ||
-                critical_stale_repair))
+                critical_dark_repair))
     {
-      if (!(debt_kick_quota || critical_missing || critical_stale_repair))
+      if (!(debt_kick_quota || critical_missing || critical_dark_repair))
       {
         if (force_kick_debt && kicked == 0)
         {
