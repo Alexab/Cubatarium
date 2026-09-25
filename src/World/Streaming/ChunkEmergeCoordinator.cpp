@@ -6780,6 +6780,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const UnifiedAdmissionPools pools{};
     if (pipeline_outstanding >= pools.queued_output_slots)
     {
+      constexpr int kBackpressuredScheduleCap = 4;
       MeshWorkAdmission bounded = mesh_service.GetMeshWorkAdmission();
       if (bounded.mode == MeshWorkAdmission::Mode::Normal)
       {
@@ -6793,7 +6794,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           missing_visible_mesh || missing_underfeet || visual_holes ||
           pt.FocusMissingMesh > 0 || pt.UnfinishedVisual > 0;
       DualLaneScheduleInput lane_in{};
-      lane_in.schedule_cap = 2;
+      lane_in.schedule_cap = kBackpressuredScheduleCap;
       lane_in.fm_q = dirty_fm_n;
       lane_in.remesh_q = remesh_n;
       lane_in.focus_missing_or_holes = focus_missing_or_holes;
@@ -6810,13 +6811,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const DualLaneSchedule lane = ComputeDualLaneSchedule(lane_in);
       bounded.first_mesh_schedule = lane.first_mesh_schedule;
       bounded.remesh_schedule = lane.remesh_schedule;
-      bounded.max_schedule = 2;
+      bounded.max_schedule = kBackpressuredScheduleCap;
       bounded.dual_lane_starve_reason =
           static_cast<int>(lane.starve_reason);
       bounded.dual_lane_rr_token_next = lane.next_rr_token;
       DualLaneRrToken_ = lane.next_rr_token;
       mesh_service.SetMeshWorkAdmission(bounded);
-      mesh_schedule = std::min(std::max(0, mesh_schedule), 2);
+      mesh_schedule =
+          std::min(std::max(0, mesh_schedule), kBackpressuredScheduleCap);
       LastBudget.MaxMeshSchedule = mesh_schedule;
       LastBudget.AdmissionMode = static_cast<int>(bounded.mode);
       auto &pt_out = world.GetPhysicsTelemetryMutable();
