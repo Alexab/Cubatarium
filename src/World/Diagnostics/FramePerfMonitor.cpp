@@ -3110,8 +3110,11 @@ void UFramePerfMonitor::Shutdown()
         (*out) << "{\"kind\":\""
                << (r.sample_kind == 1
                        ? "focus_slice_trace"
-                       : (r.sample_kind == 2 ? "view_draw_gate_trace"
-                                             : "visual_black_trace"))
+                       : (r.sample_kind == 2
+                              ? "view_draw_gate_trace"
+                              : (r.sample_kind == 3
+                                     ? "draw_gate_relight_trace"
+                                     : "visual_black_trace")))
                << "\""
                << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                << ",\"cz\":" << r.cz

@@ -24,6 +24,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
@@ -1155,13 +1156,66 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       const bool already_queued =
           IsTerrainColumnRelightQueued(draw_gate_target_key);
       const glm::ivec2 target_column(target.column.x, target.column.y);
-      if (already_queued ||
-          !world.IsAsyncRelightColumnInFlight(target_column))
+      const bool already_inflight =
+          world.IsAsyncRelightColumnInFlight(target_column);
+      if (already_queued || !already_inflight)
       {
         draw_gate_target_pinned = EnqueueVisibleDrawGateRelight(
             draw_gate_target_key.x, draw_gate_target_key.y,
             target.min_world_y, target.max_world_y, focus_chunk,
             draw_gate_radius);
+      }
+      if (UJobStageTrace::VisualBlackTraceEnabled())
+      {
+        VisualBlackTraceRecord trace{};
+        trace.sample_kind = 3;
+        trace.cx = target.rejected_slice.x;
+        trace.cy = target.rejected_slice.y;
+        trace.cz = target.rejected_slice.z;
+        trace.focus_cx = focus_chunk.x;
+        trace.focus_cz = focus_chunk.z;
+        trace.frame_epoch = world.GetStreamingFrameEpoch();
+        trace.camera_x = focus_block.x;
+        trace.camera_y = focus_block.y;
+        trace.camera_z = focus_block.z;
+        trace.draw_gate_ready = 0;
+        trace.flags = draw_gate_target_pinned ? 4u
+                      : (already_inflight && !already_queued ? 1u : 2u);
+        trace.relight_y_band_defined = 1;
+        trace.relight_band_min_y = target.min_world_y;
+        trace.relight_band_max_y = target.max_world_y;
+        if (const UChunk *chunk = world.GetBlockWorld()
+                                      .GetChunkManager()
+                                      .GetChunk(target.rejected_slice))
+        {
+          trace.non_air_blocks = chunk->GetNonAirCount();
+          trace.chunk_content_revision = chunk->GetContentRevision();
+          trace.incarnation = chunk->GetIncarnation();
+          trace.field_light_rev = chunk->GetLightFieldRevision();
+        }
+        if (world.MeshService)
+        {
+          const auto &cache = world.MeshService->GetCache();
+          trace.mesh_revision =
+              cache.GetChunkMeshRevision(target.rejected_slice);
+          const MeshPublishRevs published =
+              cache.GetMeshPublishRevs(target.rejected_slice);
+          trace.published_geom_rev = published.geom_rev;
+          trace.published_light_rev = published.light_rev;
+          trace.meshed_light_rev =
+              cache.GetMeshedLightRevision(target.rejected_slice);
+        }
+        const TerrainColumnRelightQueueInfo queue_info =
+            GetTerrainColumnRelightQueueInfo(draw_gate_target_key);
+        trace.relight_queue_kind =
+            !queue_info.keyed
+                ? 0
+                : (!queue_info.in_deque
+                       ? 3
+                       : (queue_info.priority ? 1 : 2));
+        trace.relight_queue_index = queue_info.queue_index;
+        trace.relight_queue_size = queue_info.queue_size;
+        UJobStageTrace::NoteVisualBlack(trace);
       }
       if (draw_gate_target_pinned)
       {

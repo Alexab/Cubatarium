@@ -90,6 +90,7 @@ struct DrawGateRelightTarget
   glm::ivec2 column{0};
   int min_world_y{0};
   int max_world_y{0};
+  glm::ivec3 rejected_slice{0};
 };
 
 /// Per-column focus-ring status used to explain visually unfinished terrain.

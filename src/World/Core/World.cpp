@@ -4142,7 +4142,7 @@ int UWorld::CollectDrawGateRelightTargets(
         std::clamp((max_cy + 1) * CHUNK_SIZE - 1, 0, max_y);
     const int vertical_distance = std::abs(coord.y - focus_ground_chunk.y);
     auto [it, inserted] = candidates.try_emplace(
-        column, Candidate{{column, min_world_y, max_world_y}, horiz,
+        column, Candidate{{column, min_world_y, max_world_y, coord}, horiz,
                           vertical_distance, observed_epoch});
     if (!inserted)
     {
@@ -4150,8 +4150,13 @@ int UWorld::CollectDrawGateRelightTargets(
           std::min(it->second.target.min_world_y, min_world_y);
       it->second.target.max_world_y =
           std::max(it->second.target.max_world_y, max_world_y);
-      it->second.vertical_distance =
-          std::min(it->second.vertical_distance, vertical_distance);
+      if (vertical_distance < it->second.vertical_distance ||
+          (vertical_distance == it->second.vertical_distance &&
+           observed_epoch > it->second.observed_epoch))
+      {
+        it->second.target.rejected_slice = coord;
+        it->second.vertical_distance = vertical_distance;
+      }
       it->second.observed_epoch =
           std::max(it->second.observed_epoch, observed_epoch);
     }
