@@ -27,8 +27,14 @@ struct JobStageSpan
   int32_t cx{0};
   int32_t cy{0};
   int32_t cz{0};
-  uint32_t incarnation{0};
+  uint64_t incarnation{0};
   uint64_t attempt_id{0};
+  /// Typed render stamps; legacy desired_rev/source_rev/published_rev remain
+  /// for existing consumers and may belong to different revision domains.
+  uint64_t desired_geom_rev{0};
+  uint64_t source_geom_rev{0};
+  uint64_t published_geom_rev{0};
+  uint64_t source_light_rev{0};
   uint64_t desired_rev{0};
   uint64_t source_rev{0};
   uint64_t published_rev{0};

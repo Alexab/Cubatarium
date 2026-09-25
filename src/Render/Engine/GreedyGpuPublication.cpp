@@ -534,6 +534,9 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
           span.outcome =
               static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
           span.attempt_id = attempt_id;
+          span.source_geom_rev = mesh_cache->GetChunkMeshRevision(coord);
+          span.source_light_rev = mesh_cache->GetMeshedLightRevision(coord);
+          (void)StampChunkRenderDemandTrace(span, demand, coord);
           UJobStageTrace::Note(span);
         }
         continue;
@@ -591,6 +594,9 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         span.stage = JobStage::Published;
         span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
         span.attempt_id = attempt_id;
+        span.source_geom_rev = mesh_cache->GetChunkMeshRevision(coord);
+        span.source_light_rev = mesh_cache->GetMeshedLightRevision(coord);
+        (void)StampChunkRenderDemandTrace(span, demand, coord);
         UJobStageTrace::Note(span);
       }
     }
@@ -785,6 +791,9 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
           span.outcome =
               static_cast<uint8_t>(InstallResult::RejectedRetryable);
           span.attempt_id = attempt_id;
+          span.source_geom_rev = mesh_cache->GetChunkMeshRevision(coord);
+          span.source_light_rev = mesh_cache->GetMeshedLightRevision(coord);
+          (void)StampChunkRenderDemandTrace(span, demand, coord);
           UJobStageTrace::Note(span);
         }
       }
@@ -871,6 +880,9 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
       span.attempt_id = attempt_id;
       span.published_rev = pub.geom_rev;
       span.published_light_rev = pub.light_rev;
+      span.source_geom_rev = mesh_cache->GetChunkMeshRevision(coord);
+      span.source_light_rev = mesh_cache->GetMeshedLightRevision(coord);
+      (void)StampChunkRenderDemandTrace(span, demand, coord);
       UJobStageTrace::Note(span);
     }
   }

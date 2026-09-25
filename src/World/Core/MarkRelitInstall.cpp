@@ -268,6 +268,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           span.desired_rev = ch->GetLightFieldRevision();
           span.source_rev = mesh->GetChunkMeshRevision(coord);
           span.desired_light_rev = ch->GetLightFieldRevision();
+          span.source_geom_rev = span.source_rev;
+          span.source_light_rev = ch->GetLightFieldRevision();
         }
         {
           const MeshPublishRevs pub = mesh->GetCache().GetMeshPublishRevs(coord);
@@ -291,10 +293,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           if (const ChunkRenderDemandRecord *drec = demand.Find(coord))
           {
             attempt_id = drec->active_attempt_id;
-            span.world_epoch = drec->world_epoch;
-            span.desired_coverage_gen = drec->desired_coverage_gen;
-            span.published_coverage_gen = drec->published_coverage_gen;
-            span.face_mask = drec->face_debt_mask;
+            (void)StampChunkRenderDemandTrace(span, demand, coord);
             if (drec->desired_light_rev != 0)
             {
               span.desired_rev = drec->desired_light_rev;

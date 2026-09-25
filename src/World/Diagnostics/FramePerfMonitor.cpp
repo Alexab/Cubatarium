@@ -2962,6 +2962,10 @@ void UFramePerfMonitor::Shutdown()
                   << ",\"cz\":" << sp.cz
                   << ",\"incarnation\":" << sp.incarnation
                   << ",\"attempt_id\":" << sp.attempt_id
+                  << ",\"desired_geom_rev\":" << sp.desired_geom_rev
+                  << ",\"source_geom_rev\":" << sp.source_geom_rev
+                  << ",\"published_geom_rev\":" << sp.published_geom_rev
+                  << ",\"source_light_rev\":" << sp.source_light_rev
                   << ",\"desired_rev\":" << sp.desired_rev
                   << ",\"source_rev\":" << sp.source_rev
                   << ",\"published_rev\":" << sp.published_rev

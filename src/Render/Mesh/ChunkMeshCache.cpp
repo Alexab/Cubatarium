@@ -4160,6 +4160,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           span.outcome =
               static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
           span.attempt_id = attempt_id;
+          span.source_geom_rev = source_revision;
+          span.source_light_rev = has_source_light_revision
+                                      ? source_light_revision
+                                      : 0;
+          (void)StampChunkRenderDemandTrace(span, demand, coord);
           UJobStageTrace::Note(span);
         }
         (void)demand.NoteDemand(coord, succ_geom, succ_light,
@@ -4228,6 +4233,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       span.stage = JobStage::Published;
       span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
       span.attempt_id = attempt_id;
+      span.source_geom_rev = source_revision;
+      span.source_light_rev = has_source_light_revision
+                                  ? source_light_revision
+                                  : 0;
+      (void)StampChunkRenderDemandTrace(span, demand, coord);
       UJobStageTrace::Note(span);
     }
     return false;
@@ -4282,6 +4292,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
         span.stage = JobStage::Published;
         span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
         span.attempt_id = attempt_id;
+        span.source_geom_rev = source_revision;
+        span.source_light_rev = got.source_light_rev;
+        (void)StampChunkRenderDemandTrace(span, demand, coord);
         UJobStageTrace::Note(span);
       }
       MarkDirtyPriority(coord);
@@ -4357,6 +4370,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     span.published_rev = chunkMesh.PublishRevs.geom_rev;
     span.published_light_rev = chunkMesh.PublishRevs.light_rev;
     span.source_rev = source_revision;
+    span.source_geom_rev = source_revision;
+    span.source_light_rev = chunkMesh.MeshedLightRevision;
+    (void)StampChunkRenderDemandTrace(span, demand, coord);
     UJobStageTrace::Note(span);
   }
   NoteGeometryDirty(coord);
@@ -5409,6 +5425,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           span.outcome =
               static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
           span.attempt_id = attempt_id;
+          span.source_geom_rev = result.sourceRevision;
+          span.source_light_rev = result.InputStampsValid
+                                      ? result.InputStamps[0].light
+                                      : 0;
+          (void)StampChunkRenderDemandTrace(span, demand, result.coord);
           UJobStageTrace::Note(span);
         }
         (void)demand.NoteDemand(
@@ -5724,6 +5745,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         span.stage = JobStage::Published;
         span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
         span.attempt_id = attempt_id;
+        span.source_geom_rev = result.sourceRevision;
+        span.source_light_rev = chunkMesh.MeshedLightRevision;
+        (void)StampChunkRenderDemandTrace(span, demand, result.coord);
         UJobStageTrace::Note(span);
       }
       // Keep prior batches; ask for remesh/retry without publishing candidate.
@@ -5787,6 +5811,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     span.published_rev = chunkMesh.PublishRevs.geom_rev;
     span.published_light_rev = chunkMesh.PublishRevs.light_rev;
     span.source_rev = result.sourceRevision;
+    span.source_geom_rev = result.sourceRevision;
+    span.source_light_rev = chunkMesh.MeshedLightRevision;
+    (void)StampChunkRenderDemandTrace(span, demand, result.coord);
     UJobStageTrace::Note(span);
   }
   // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
@@ -8236,6 +8263,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
           span.outcome =
               static_cast<uint8_t>(InstallResult::RejectedRetryable);
           span.attempt_id = attempt_id;
+          span.source_geom_rev = sync_rev;
+          span.source_light_rev = chunk->GetLightFieldRevision();
+          (void)StampChunkRenderDemandTrace(span, demand, chunkCoord);
           UJobStageTrace::Note(span);
         }
         MarkDirtyPriority(chunkCoord);
@@ -8281,6 +8311,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       span.attempt_id = attempt_id;
       span.published_rev = chunkMesh.PublishRevs.geom_rev;
       span.published_light_rev = chunkMesh.PublishRevs.light_rev;
+      span.source_geom_rev = sync_rev;
+      span.source_light_rev = chunk->GetLightFieldRevision();
+      (void)StampChunkRenderDemandTrace(span, demand, chunkCoord);
       UJobStageTrace::Note(span);
     }
     const bool intentional_empty =

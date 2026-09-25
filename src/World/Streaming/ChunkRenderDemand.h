@@ -245,4 +245,27 @@ inline uint64_t DemandCoverageGenToPublish(const UChunkRenderDemandStore &store,
   return 0;
 }
 
+/// Copy the demand identity and typed desired/published stamps into a stage
+/// event. Source stamps belong to the job and must be filled by its caller.
+inline bool StampChunkRenderDemandTrace(
+    JobStageSpan &span, const UChunkRenderDemandStore &store,
+    glm::ivec3 coord)
+{
+  const ChunkRenderDemandRecord *rec = store.Find(coord);
+  if (!rec)
+  {
+    return false;
+  }
+  span.incarnation = rec->incarnation;
+  span.world_epoch = rec->world_epoch;
+  span.desired_geom_rev = rec->desired_geom_rev;
+  span.desired_light_rev = rec->desired_light_rev;
+  span.published_geom_rev = rec->published_geom_rev;
+  span.published_light_rev = rec->published_light_rev;
+  span.desired_coverage_gen = rec->desired_coverage_gen;
+  span.published_coverage_gen = rec->published_coverage_gen;
+  span.face_mask = rec->face_debt_mask;
+  return true;
+}
+
 } // namespace cutum

@@ -1856,10 +1856,7 @@ void UWorld::SampleColumnEmergeStageTelemetry()
   }
   // A32/A37/A38: production StopConverged + stop-plateau reconcile/orphan cancel.
   {
-    using clock = std::chrono::steady_clock;
-    static const auto t0 = clock::now();
-    const double now_ms =
-        std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    const double now_ms = VisualObligationNowMs();
     if (kChunkDemandShadow())
     {
       (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
