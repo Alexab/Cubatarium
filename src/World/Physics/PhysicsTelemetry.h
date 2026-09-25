@@ -558,6 +558,8 @@ struct PhysicsTelemetry
   int ColumnFlowUpgradeN{0};
   /// ColumnFlow tickets actually dispatched by DrainBudget this frame.
   int ColumnFlowDrainedN{0};
+  /// Tickets requeued because their work class exceeded the frame deadline.
+  int ColumnFlowDeferredN{0};
   /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
   /// Alias docs: emerge_fsm_* — not ColumnJobGraph stages.
   int ColumnLightingN{0};

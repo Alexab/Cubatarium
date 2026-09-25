@@ -518,9 +518,18 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   FlushPromoteRequest();
   ++frame_counter_;
   int drained = 0;
+  int deferred_n = 0;
+  // A deadline-deferred high-priority item must not hide an eligible
+  // FirstMesh/repair ticket behind it. Probe a small bounded slice of the
+  // queue while counting only successfully dispatched work against n.
+  const int probe_budget = std::clamp(std::max(n, 1) * 4, 4, 16);
+  int probed = 0;
+  std::vector<ColumnWorkItem> deferred;
+  deferred.reserve(static_cast<size_t>(probe_budget));
   ColumnWorkItem work{};
-  while (drained < n && scheduler_.DrainOne(work))
+  while (drained < n && probed < probe_budget && scheduler_.DrainOne(work))
   {
+    ++probed;
     // Q8: soft deadline — defer Relight/Seam/Promote when frame budget is
     // exhausted; re-queue and stop. FirstMesh keeps a progress floor.
     // G1/N04: a stalled visible-black ticket already means repair ticket ∧
@@ -536,12 +545,18 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
         work.kind == ColumnWorkKind::FirstMesh || relight_critical;
     if (UFrameDeadline::ShouldDeferProducer(critical))
     {
-      scheduler_.Enqueue(work);
-      break;
+      deferred.push_back(work);
+      ++deferred_n;
+      continue;
     }
     AdvanceColumn(world, work, focus_ground_horiz, focus_radius, admit_batch);
     ++drained;
   }
+  for (const ColumnWorkItem &item : deferred)
+  {
+    scheduler_.Enqueue(item);
+  }
+  world.GetPhysicsTelemetryMutable().ColumnFlowDeferredN += deferred_n;
   world.GetPhysicsTelemetryMutable().ColumnBumpDenied +=
       static_cast<int>(scheduler_.DeniedCount());
   scheduler_.ClearDeniedCount();
