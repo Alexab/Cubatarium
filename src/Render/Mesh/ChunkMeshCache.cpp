@@ -2907,6 +2907,7 @@ const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
 
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
+  UChunkRenderDemandStore::Get().Remove(chunkCoord);
   if (GpuPipeline)
   {
     GpuPipeline->FreeChunk(chunkCoord);
@@ -2963,6 +2964,7 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
   for (int cy = 0; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
+    UChunkRenderDemandStore::Get().Remove(slice);
     if (GpuPipeline)
     {
       GpuPipeline->FreeChunk(slice);
@@ -4142,6 +4144,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           succ_light = ch->GetLightFieldRevision();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        demand.BindIdentity(coord, CaptureStore.WorldEpoch(),
+                            ChunkIncarnationAt(world, coord));
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         demand.NoteInstallResult(coord,
                                  InstallResult::RetainedAwaitingSuccessor,
@@ -4158,7 +4162,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           span.attempt_id = attempt_id;
           UJobStageTrace::Note(span);
         }
-        (void)demand.NoteDemand(coord, succ_geom, succ_light);
+        (void)demand.NoteDemand(coord, succ_geom, succ_light,
+                                /*desired_coverage_gen=*/0, /*now_ms=*/0.0,
+                                CaptureStore.WorldEpoch(),
+                                ChunkIncarnationAt(world, coord));
       }
       return false;
     }
@@ -4201,6 +4208,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     if (kChunkDemandShadow())
     {
       UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      demand.BindIdentity(coord, CaptureStore.WorldEpoch(),
+                          ChunkIncarnationAt(world, coord));
       const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
       const ChunkGreedyMesh *prior = nullptr;
       const auto pit = GreedyCache.find(coord);
@@ -4261,6 +4270,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       if (kChunkDemandShadow())
       {
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        demand.BindIdentity(coord, CaptureStore.WorldEpoch(),
+                            ChunkIncarnationAt(world, coord));
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
                                  prior_geom, prior_pub_light, attempt_id);
@@ -4328,6 +4339,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   if (kChunkDemandShadow())
   {
     UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    demand.BindIdentity(coord, CaptureStore.WorldEpoch(),
+                        ChunkIncarnationAt(world, coord));
     const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
     const uint64_t cov_pub = DemandCoverageGenToPublish(demand, coord);
     demand.NoteInstallResult(coord, InstallResult::Published,
@@ -5379,6 +5392,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           succ_light = ch->GetLightFieldRevision();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        demand.BindIdentity(result.coord, CaptureStore.WorldEpoch(),
+                            ChunkIncarnationAt(world, result.coord));
         const uint64_t attempt_id =
             DemandActiveAttemptId(demand, result.coord);
         demand.NoteInstallResult(result.coord,
@@ -5396,7 +5411,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           span.attempt_id = attempt_id;
           UJobStageTrace::Note(span);
         }
-        (void)demand.NoteDemand(result.coord, succ_geom, succ_light);
+        (void)demand.NoteDemand(
+            result.coord, succ_geom, succ_light, /*desired_coverage_gen=*/0,
+            /*now_ms=*/0.0, CaptureStore.WorldEpoch(),
+            ChunkIncarnationAt(world, result.coord));
       }
       return;
     }
@@ -5691,6 +5709,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       if (kChunkDemandShadow())
       {
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        demand.BindIdentity(result.coord, CaptureStore.WorldEpoch(),
+                            ChunkIncarnationAt(world, result.coord));
         const uint64_t attempt_id =
             DemandActiveAttemptId(demand, result.coord);
         demand.NoteInstallResult(
@@ -5749,6 +5769,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (kChunkDemandShadow())
   {
     UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    demand.BindIdentity(result.coord, CaptureStore.WorldEpoch(),
+                        ChunkIncarnationAt(world, result.coord));
     const uint64_t attempt_id = DemandActiveAttemptId(demand, result.coord);
     const uint64_t cov_pub = DemandCoverageGenToPublish(demand, result.coord);
     demand.NoteInstallResult(result.coord, InstallResult::Published,
@@ -8198,6 +8220,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         if (kChunkDemandShadow())
         {
           UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+          demand.BindIdentity(chunkCoord, CaptureStore.WorldEpoch(),
+                              ChunkIncarnationAt(world, chunkCoord));
           const uint64_t attempt_id =
               DemandActiveAttemptId(demand, chunkCoord);
           demand.NoteInstallResult(
@@ -8240,6 +8264,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     if (kChunkDemandShadow())
     {
       UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+      demand.BindIdentity(chunkCoord, CaptureStore.WorldEpoch(),
+                          ChunkIncarnationAt(world, chunkCoord));
       const uint64_t attempt_id = DemandActiveAttemptId(demand, chunkCoord);
       const uint64_t cov_pub = DemandCoverageGenToPublish(demand, chunkCoord);
       demand.NoteInstallResult(chunkCoord, InstallResult::Published,

@@ -45,6 +45,45 @@ UChunkRenderDemandStore::GetOrCreate(glm::ivec3 coord)
   return rec;
 }
 
+void UChunkRenderDemandStore::BindIdentity(glm::ivec3 coord,
+                                          uint64_t world_epoch,
+                                          uint64_t incarnation)
+{
+  // An unloaded / absent chunk has no incarnation to bind. World epoch zero is
+  // valid in initial worlds, but a live chunk incarnation is always nonzero.
+  if (incarnation == 0)
+  {
+    return;
+  }
+  auto it = Records_.find(coord);
+  if (it == Records_.end())
+  {
+    ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+    rec.world_epoch = world_epoch;
+    rec.incarnation = incarnation;
+    return;
+  }
+
+  ChunkRenderDemandRecord &rec = it->second;
+  const bool has_identity = rec.incarnation != 0;
+  // A record first created through a legacy/identity-free path must not carry
+  // its old coordinate-only state into the first identified chunk instance.
+  if (!has_identity || rec.world_epoch != world_epoch ||
+      rec.incarnation != incarnation)
+  {
+    rec = ChunkRenderDemandRecord{};
+    rec.coord = coord;
+  }
+  rec.world_epoch = world_epoch;
+  rec.incarnation = incarnation;
+}
+
+void UChunkRenderDemandStore::Remove(glm::ivec3 coord)
+{
+  Records_.erase(coord);
+  ReconcileCursor_ = 0;
+}
+
 bool UChunkRenderDemandStore::CoverageSatisfied(
     const ChunkRenderDemandRecord &rec, uint64_t desired_coverage_gen)
 {
@@ -80,8 +119,11 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
                                                 uint64_t desired_geom_rev,
                                                 uint64_t desired_light_rev,
                                                 uint64_t desired_coverage_gen,
-                                                double now_ms)
+                                                double now_ms,
+                                                uint64_t world_epoch,
+                                                uint64_t incarnation)
 {
+  BindIdentity(coord, world_epoch, incarnation);
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
   const bool satisfied =
       !rec.retained_awaiting_successor && desired_geom_rev > 0 &&

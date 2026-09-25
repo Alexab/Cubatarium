@@ -827,10 +827,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // A38 R3: per-face required peer gen from peer's published coverage
             // (prefer coverage, else geom); never fabricate peer_pub=1 on read.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            const uint64_t world_epoch =
+                world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+            auto bind_current_identity = [&](glm::ivec3 coord)
+            {
+              if (const UChunk *ch =
+                      world_ref.GetBlockWorld().GetChunkManager().GetChunk(coord))
+              {
+                demand.BindIdentity(coord, world_epoch, ch->GetIncarnation());
+              }
+            };
+            bind_current_identity(chunk_coord);
             static const glm::ivec3 kFaceDir[6] = {
                 {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
                 {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
             auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
+              bind_current_identity(peer);
               if (const ChunkRenderDemandRecord *pr = demand.Find(peer))
               {
                 if (pr->published_coverage_gen > 0)
@@ -858,12 +870,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // domain consumed by publication, light uses the field revision.
             // Never stub g=1,l=1 — that invents unrelated demand.
             uint64_t g = 0, l = 0;
+            uint64_t incarnation = 0;
             if (const UChunk *ch =
                     world_ref.GetBlockWorld().GetChunkManager().GetChunk(
                         chunk_coord))
             {
               g = world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
               l = ch->GetLightFieldRevision();
+              incarnation = ch->GetIncarnation();
             }
             if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
             {
@@ -889,7 +903,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               // Geometry and publication use the same mesh-revision domain;
               // coverage can remain independently unsatisfied.
               (void)demand.NoteDemand(chunk_coord, g, l,
-                                      /*desired_coverage_gen=*/1);
+                                      /*desired_coverage_gen=*/1,
+                                      /*now_ms=*/0.0, world_epoch,
+                                      incarnation);
             }
           }
           world_ref.NoteUnfinishedColumnDirty(col);
@@ -921,10 +937,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           if (ChunkDemandAuthorityEnabled())
           {
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            const uint64_t world_epoch =
+                world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+            auto bind_current_identity = [&](glm::ivec3 coord)
+            {
+              if (const UChunk *ch =
+                      world_ref.GetBlockWorld().GetChunkManager().GetChunk(coord))
+              {
+                demand.BindIdentity(coord, world_epoch, ch->GetIncarnation());
+              }
+            };
+            bind_current_identity(chunk_coord);
             static const glm::ivec3 kFaceDir[6] = {
                 {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
                 {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
             auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
+              bind_current_identity(peer);
               if (const ChunkRenderDemandRecord *pr = demand.Find(peer))
               {
                 if (pr->published_coverage_gen > 0)
@@ -953,12 +981,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             // Geometry uses the mesh-revision domain consumed by publication.
             uint64_t g = 0, l = 0;
+            uint64_t incarnation = 0;
             if (const UChunk *ch =
                     world_ref.GetBlockWorld().GetChunkManager().GetChunk(
                         chunk_coord))
             {
               g = world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
               l = ch->GetLightFieldRevision();
+              incarnation = ch->GetIncarnation();
             }
             if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
             {
@@ -982,7 +1012,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             if (g != 0 || l != 0)
             {
               (void)demand.NoteDemand(chunk_coord, g, l,
-                                      /*desired_coverage_gen=*/1);
+                                      /*desired_coverage_gen=*/1,
+                                      /*now_ms=*/0.0, world_epoch,
+                                      incarnation);
             }
           }
           world_ref.NoteUnfinishedColumnDirty(col);

@@ -2706,6 +2706,9 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       {
         continue;
       }
+      demand.BindIdentity(
+          coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+          ch->GetIncarnation());
       if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
       {
         if (rec->has_active_attempt)
@@ -2805,7 +2808,9 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                                  probe.meshed_light_rev != desired_light);
       DemandResult dr =
           demand.NoteDemand(coord, desired_geom, desired_light,
-                            desired_coverage, demand_now_ms);
+                            desired_coverage, demand_now_ms,
+                            MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+                            ch->GetIncarnation());
       if (relight_only)
       {
         MeshService->GetCache().InvalidateMeshCapture(coord);
@@ -2891,7 +2896,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           if (attempt_id == 0)
           {
             (void)demand.NoteDemand(coord, desired_geom, desired_light,
-                                    desired_coverage, demand_now_ms);
+                                    desired_coverage, demand_now_ms,
+                                    MeshService->GetCache()
+                                        .GetCaptureStore()
+                                        .WorldEpoch(),
+                                    ch->GetIncarnation());
             attempt_id = DemandActiveAttemptId(demand, coord);
           }
           if (attempt_id != 0 && has_slice_work_owner(coord))

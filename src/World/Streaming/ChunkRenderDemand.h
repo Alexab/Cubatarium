@@ -107,12 +107,20 @@ public:
   ChunkRenderDemandRecord *Find(glm::ivec3 coord);
   const ChunkRenderDemandRecord *Find(glm::ivec3 coord) const;
   ChunkRenderDemandRecord &GetOrCreate(glm::ivec3 coord);
+  /// Bind coordinate state to one live world/chunk generation. A mismatch
+  /// retires the old attempt and all of its revisions/debts before reuse.
+  void BindIdentity(glm::ivec3 coord, uint64_t world_epoch,
+                    uint64_t incarnation);
+  /// Forget demand state when the corresponding chunk slice is unloaded.
+  void Remove(glm::ivec3 coord);
 
   /// Raise or coalesce desire. AlreadySatisfied when published meets desired.
   DemandResult NoteDemand(glm::ivec3 coord, uint64_t desired_geom_rev,
                           uint64_t desired_light_rev,
                           uint64_t desired_coverage_gen = 0,
-                          double now_ms = 0.0);
+                          double now_ms = 0.0,
+                          uint64_t world_epoch = 0,
+                          uint64_t incarnation = 0);
 
   /// Returns false if attempt_id mismatches active or stage regresses.
   bool NoteStageProgress(glm::ivec3 coord, JobStage stage,

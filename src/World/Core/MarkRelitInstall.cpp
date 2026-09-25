@@ -129,13 +129,18 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       {
         uint64_t desired_geom = 0;
         uint64_t desired_light = 0;
+        uint64_t incarnation = 0;
         if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
         {
           // Demand geom rev shares the MeshRevisions domain used by Published.
           desired_geom = mesh->GetChunkMeshRevision(coord);
           desired_light = ch->GetLightFieldRevision();
+          incarnation = ch->GetIncarnation();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+        const uint64_t world_epoch =
+            mesh->GetCache().GetCaptureStore().WorldEpoch();
+        demand.BindIdentity(coord, world_epoch, incarnation);
         const MeshPublishRevs pub = mesh->GetCache().GetMeshPublishRevs(coord);
         uint64_t pub_geom = pub.geom_rev;
         uint64_t pub_light = pub.light_rev;
@@ -150,7 +155,9 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         }
         demand.NotePublishedRevs(coord, pub_geom, pub_light);
         const DemandResult dr =
-            demand.NoteDemand(coord, desired_geom, desired_light);
+            demand.NoteDemand(coord, desired_geom, desired_light,
+                              /*desired_coverage_gen=*/0, /*now_ms=*/0.0,
+                              world_epoch, incarnation);
         // A21 residual R2 / A37 H4: FullyDark is light desire, not geometry miss.
         UChunkMeshCache::LitApplyMeshProbe dark_probe{};
         mesh->FillLitApplyMeshProbe(coord, dark_probe);
