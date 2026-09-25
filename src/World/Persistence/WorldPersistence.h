@@ -33,6 +33,18 @@ class UWorld;
 class UWorldPersistence
 {
 public:
+  struct TerrainColumnRelightQueueInfo
+  {
+    bool keyed{false};
+    bool priority{false};
+    bool in_deque{false};
+    bool y_band_defined{false};
+    int queue_index{-1};
+    int queue_size{0};
+    int min_world_y{0};
+    int max_world_y{-1};
+  };
+
   UWorldPersistence();
 
   static bool HasPersistedTerrainOnDisk(const std::string &world_folder_path);
@@ -94,6 +106,8 @@ public:
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   int GetPendingTerrainColumnRelightCount() const;
   bool IsTerrainColumnRelightQueued(glm::ivec2 world_block_key) const;
+  TerrainColumnRelightQueueInfo GetTerrainColumnRelightQueueInfo(
+      glm::ivec2 world_block_key) const;
   int GetPendingPlayerRelightCount() const;
   /// Drop farthest far-FIFO columns until size <= soft_cap (priority untouched).
   int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground, int soft_cap,

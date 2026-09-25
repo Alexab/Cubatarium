@@ -1652,6 +1652,47 @@ bool UWorldPersistence::IsTerrainColumnRelightQueued(
   return PendingTerrainColumnRelightKeys.count(world_block_key) != 0;
 }
 
+UWorldPersistence::TerrainColumnRelightQueueInfo
+UWorldPersistence::GetTerrainColumnRelightQueueInfo(
+    glm::ivec2 world_block_key) const
+{
+  TerrainColumnRelightQueueInfo out{};
+  out.keyed = PendingTerrainColumnRelightKeys.count(world_block_key) != 0;
+
+  auto find_position = [&](const std::deque<glm::ivec2> &queue) -> int
+  {
+    const auto it = std::find(queue.begin(), queue.end(), world_block_key);
+    return it == queue.end() ? -1 : static_cast<int>(it - queue.begin());
+  };
+  const int priority_index = find_position(PendingTerrainColumnRelightsPriority);
+  if (priority_index >= 0)
+  {
+    out.priority = true;
+    out.in_deque = true;
+    out.queue_index = priority_index;
+    out.queue_size = static_cast<int>(PendingTerrainColumnRelightsPriority.size());
+  }
+  else
+  {
+    const int far_index = find_position(PendingTerrainColumnRelights);
+    if (far_index >= 0)
+    {
+      out.in_deque = true;
+      out.queue_index = far_index;
+      out.queue_size = static_cast<int>(PendingTerrainColumnRelights.size());
+    }
+  }
+
+  const auto band_it = PendingTerrainColumnRelightYBands.find(world_block_key);
+  if (band_it != PendingTerrainColumnRelightYBands.end())
+  {
+    out.y_band_defined = true;
+    out.min_world_y = band_it->second.x;
+    out.max_world_y = band_it->second.y;
+  }
+  return out;
+}
+
 int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
                                                   int soft_cap,
                                                   int protect_horiz)

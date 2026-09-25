@@ -3163,6 +3163,14 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_cpu_index_count
                << ",\"renderer_gpu_quad_count\":"
                << r.renderer_gpu_quad_count
+               << ",\"relight_queue_kind\":"
+               << static_cast<int>(r.relight_queue_kind)
+               << ",\"relight_y_band_defined\":"
+               << static_cast<int>(r.relight_y_band_defined)
+               << ",\"relight_queue_index\":" << r.relight_queue_index
+               << ",\"relight_queue_size\":" << r.relight_queue_size
+               << ",\"relight_band_min_y\":" << r.relight_band_min_y
+               << ",\"relight_band_max_y\":" << r.relight_band_max_y
                << ",\"cause\":" << static_cast<int>(r.cause)
                << ",\"active_stage\":" << static_cast<int>(r.active_stage)
                << ",\"face_debt_mask\":"

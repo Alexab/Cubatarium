@@ -2837,6 +2837,21 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                    coord.z * CHUNK_SIZE);
         const bool persistence_relight =
             Persistence && Persistence->IsTerrainColumnRelightQueued(block_key);
+        const auto relight_queue =
+            Persistence
+                ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
+                : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+        trace.relight_queue_kind =
+            !relight_queue.keyed
+                ? 0
+                : (!relight_queue.in_deque
+                       ? 3
+                       : (relight_queue.priority ? 1 : 2));
+        trace.relight_y_band_defined = relight_queue.y_band_defined ? 1 : 0;
+        trace.relight_queue_index = relight_queue.queue_index;
+        trace.relight_queue_size = relight_queue.queue_size;
+        trace.relight_band_min_y = relight_queue.min_world_y;
+        trace.relight_band_max_y = relight_queue.max_world_y;
         const bool mesh_dependency_pending =
             cache.HasPendingMeshDependencyInvalidation(coord);
         const bool gpu_apply_queued = cache.IsPendingGpuQueued(coord);

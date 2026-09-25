@@ -117,6 +117,14 @@ struct VisualBlackTraceRecord
   uint8_t renderer_path{0};
   uint32_t renderer_cpu_index_count{0};
   uint32_t renderer_gpu_quad_count{0};
+  /// Focus sample's persistence relight queue location/band at capture time.
+  /// 0=not keyed, 1=priority deque, 2=far deque, 3=keyed but absent from deque.
+  uint8_t relight_queue_kind{0};
+  uint8_t relight_y_band_defined{0};
+  int32_t relight_queue_index{-1};
+  int32_t relight_queue_size{0};
+  int32_t relight_band_min_y{0};
+  int32_t relight_band_max_y{-1};
   /// sample_kind=0 bits: ticket, progress, sticky, pending_replace,
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,
