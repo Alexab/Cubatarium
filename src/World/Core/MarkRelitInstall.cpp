@@ -122,6 +122,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
     int dirty_admitted_n = 0;
     auto admit_dirty = [&](const glm::ivec3 &coord, bool priority) {
+      bool recent_draw_gate_reject = false;
+      bool visible_remesh_priority = false;
       const int horiz = std::max(std::abs(coord.x - focus_g.x),
                                  std::abs(coord.z - focus_g.z));
       const double demand_now_ms = VisualObligationNowMs();
@@ -245,9 +247,12 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       if (priority)
       {
         mesh->MarkDirtyPriority(coord);
-        if (WasRecentlyRendererDrawGateRejected(coord))
+        recent_draw_gate_reject =
+            WasRecentlyRendererDrawGateRejected(coord);
+        if (recent_draw_gate_reject)
         {
-          (void)mesh->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
+          visible_remesh_priority =
+              mesh->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
         }
         ++PhysicsTelemetryData.FmDirtyEnqueueN;
         ++PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN;
@@ -265,6 +270,9 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         span.cz = coord.z;
         span.stage = JobStage::Admitted;
         span.queue_reason = priority ? 1 : 0;
+        span.outcome = visible_remesh_priority
+                           ? 1u
+                           : (recent_draw_gate_reject ? 2u : 0u);
         span.stage_ms = ElapsedMs(dirty_t0, Clock::now());
         // A23 D0: always stamp desired/source revs on Admit (even when shadow OFF).
         if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
