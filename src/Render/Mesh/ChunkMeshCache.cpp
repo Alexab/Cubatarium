@@ -6921,6 +6921,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int remesh_cap =
         sched_adm.remesh_schedule > 0 ? sched_adm.remesh_schedule
                                       : max_schedule_per_frame;
+    const int remesh_cap_from_admission = remesh_cap;
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
     int rear_focus_scheduled = 0;
     const auto leave_in_under_pl = [&](const glm::ivec3 &c) {
@@ -7356,7 +7357,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
       if (LightRepairCaptureReserveLeft > 0 && Dirty.GetRemeshCount() > 0)
       {
-        remesh_cap = LightRepairCaptureReserveLeft;
+        // Preserve the caller's dual-lane allocation. Raising this to the full
+        // light-repair reserve here let remesh consume every schedule slot
+        // before the FirstMesh pass under a growing no-drawable backlog.
+        remesh_cap = std::min(LightRepairCaptureReserveLeft,
+                              remesh_cap_from_admission);
       }
     }
     // G1-P1 / A11: under StaleVertexLight/FullyDark debt, spend remesh_schedule
