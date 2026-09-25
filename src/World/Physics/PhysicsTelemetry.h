@@ -728,6 +728,14 @@ struct PhysicsTelemetry
   int RelightCaptureFinalize{0};
   /// One async capture admitted despite hot-frame skip for draw-gated light debt.
   int RelightCaptureHotSkipDrawGate{0};
+  /// Last DrainRelightQueues stop: 0=unset, 1=world gate, 2=no budget,
+  /// 3=column cap, 4=wall budget, 5=hot frame, 6=sync hot frame,
+  /// 7=async inflight ceiling, 8=empty FIFO, 9=duplicate inflight scan,
+  /// 10=admitted (overwritten by the loop's terminal reason if another pass ran).
+  int RelightCaptureStopReason{0};
+  int RelightCaptureInFlightN{0};
+  int RelightCaptureInFlightLimit{0};
+  int RelightCaptureInflightScanN{0};
   int RelightCaptureBandCySpan{0};
   int RelightCaptureFullN{0};
   int RelightCaptureNeighborLightN{0};

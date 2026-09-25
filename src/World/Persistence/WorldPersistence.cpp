@@ -816,11 +816,17 @@ void UWorldPersistence::EnqueuePlayerRelight(
 void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                            int max_bg_columns)
 {
+  auto &capture_telem = world.GetPhysicsTelemetryMutable();
+  capture_telem.RelightCaptureStopReason = 0;
+  capture_telem.RelightCaptureInFlightN = world.GetAsyncRelightInFlightCount();
+  capture_telem.RelightCaptureInFlightLimit = 0;
+  capture_telem.RelightCaptureInflightScanN = 0;
   if (world.BlocksAsyncRelightDrain())
   {
+    capture_telem.RelightCaptureStopReason = 1;
     return;
   }
-  world.GetPhysicsTelemetryMutable().RelightCaptureHotSkipDrawGate = 0;
+  capture_telem.RelightCaptureHotSkipDrawGate = 0;
   {
     const glm::ivec3 focus_chunk =
         UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
@@ -871,6 +877,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
 
   if (max_bg_columns <= 0)
   {
+    capture_telem.RelightCaptureStopReason = 2;
     harvest_fifo_overflow();
     return;
   }
@@ -923,6 +930,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) *
                      inflight_mult
                : 0;
+  capture_telem.RelightCaptureInFlightN =
+      world.GetAsyncRelightInFlightCount();
+  capture_telem.RelightCaptureInFlightLimit = max_inflight;
 
   // Continuously re-order priority FIFO by effective distance + forward bias.
   if (PendingTerrainColumnRelightsPriority.size() > 1)
@@ -1656,6 +1666,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     if (drained_bg >= bg_cap)
     {
+      capture_telem.RelightCaptureStopReason = 3;
       return false;
     }
     const double elapsed_ms =
@@ -1664,6 +1675,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             .count();
     if (elapsed_ms >= capture_drain_budget_ms)
     {
+      capture_telem.RelightCaptureStopReason = 4;
       return false;
     }
     // Frame already far over Capture budget (sticky hitch) — skip this frame.
@@ -1695,17 +1707,22 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       if (!enter_fov_lit && !soft_defer_hole && !miss_rim_pin &&
           !idle_pending_progress && !draw_gate_hot_bypass)
       {
+        capture_telem.RelightCaptureStopReason = 5;
         return false;
       }
       if (!async_bg &&
           frame_ms_so_far >= static_cast<double>(tune.CaptureSyncSkipWallMs) &&
           !idle_pending_progress)
       {
+        capture_telem.RelightCaptureStopReason = 6;
         return false;
       }
     }
-    if (async_bg && world.GetAsyncRelightInFlightCount() >= max_inflight)
+    const int inflight_now = world.GetAsyncRelightInFlightCount();
+    capture_telem.RelightCaptureInFlightN = inflight_now;
+    if (async_bg && inflight_now >= max_inflight)
     {
+      capture_telem.RelightCaptureStopReason = 7;
       return false;
     }
     glm::ivec2 col;
@@ -1721,6 +1738,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     else
     {
+      capture_telem.RelightCaptureStopReason = 8;
       return false;
     }
     int relight_min = 0;
@@ -1895,6 +1913,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           PromoteTerrainColumnRelight(col);
         }
         ++skipped_inflight;
+        capture_telem.RelightCaptureStopReason = 9;
+        ++capture_telem.RelightCaptureInflightScanN;
         return skipped_inflight < std::max(8, max_bg_columns * 4);
       }
     }
@@ -1993,6 +2013,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             std::chrono::high_resolution_clock::now() - capture_t0)
             .count();
     ++drained_bg;
+    capture_telem.RelightCaptureStopReason = 10;
     // One expensive Capture consumes the frame budget — stop the loop.
     if (capture_ms >= capture_drain_budget_ms)
     {
