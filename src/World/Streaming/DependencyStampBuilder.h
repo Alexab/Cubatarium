@@ -34,13 +34,12 @@ inline DependencyStamp BuildMeshCaptureDependencyStamp(
         {
           continue;
         }
-        const glm::ivec3 neighbor_coord = coord + glm::ivec3(dx, dy, dz);
-        if (const UChunk *neighbor =
-                world.GetChunkManager().GetChunk(neighbor_coord))
-        {
-          stamp.halo_light_revision[stamp_index] =
-              neighbor->GetLightFieldRevision();
-        }
+        const glm::ivec3 offset(dx, dy, dz);
+        const glm::ivec3 neighbor_coord = coord + offset;
+        const UChunk *neighbor =
+            world.GetChunkManager().GetChunk(neighbor_coord);
+        stamp.halo_light_dependency[stamp_index] =
+            ChunkMeshLightHaloSignature(neighbor, offset);
         ++stamp_index;
       }
     }
@@ -68,7 +67,7 @@ inline DependencyStamp BuildRelightDependencyStamp(
     if (const UChunk *neighbor =
             world.GetChunkManager().GetChunk(neighbor_coord))
     {
-      stamp.halo_light_revision[i] = neighbor->GetLightFieldRevision();
+      stamp.halo_light_dependency[i] = neighbor->GetLightFieldRevision();
     }
   }
   return stamp;
@@ -93,7 +92,7 @@ inline bool CaptureDependencyStillValid(const DependencyStamp &captured,
   {
     return false;
   }
-  if (captured.halo_light_revision != current.halo_light_revision)
+  if (captured.halo_light_dependency != current.halo_light_dependency)
   {
     return false;
   }

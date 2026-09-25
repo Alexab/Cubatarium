@@ -72,6 +72,71 @@ int LightHaloFlatIndex(glm::ivec3 local)
   return (local.x + pad) + size * (local.y + pad) + size * size * (local.z + pad);
 }
 
+uint64_t PaddedLightHaloSignature(
+    const std::array<uint8_t, ChunkMeshSnapshot::kLightHaloVolume> &padded,
+    glm::ivec3 neighbor_offset)
+{
+  constexpr uint64_t kFnvOffset = 1469598103934665603ull;
+  constexpr uint64_t kFnvPrime = 1099511628211ull;
+  glm::ivec3 local_min(0);
+  glm::ivec3 local_max(CHUNK_SIZE - 1);
+  for (int axis = 0; axis < 3; ++axis)
+  {
+    if (neighbor_offset[axis] < 0)
+    {
+      local_min[axis] = -ChunkMeshSnapshot::kLightHaloRadius;
+      local_max[axis] = -1;
+    }
+    else if (neighbor_offset[axis] > 0)
+    {
+      local_min[axis] = CHUNK_SIZE;
+      local_max[axis] = CHUNK_SIZE + ChunkMeshSnapshot::kLightHaloRadius - 1;
+    }
+  }
+  uint64_t hash = kFnvOffset;
+  for (int y = local_min.y; y <= local_max.y; ++y)
+  {
+    for (int z = local_min.z; z <= local_max.z; ++z)
+    {
+      for (int x = local_min.x; x <= local_max.x; ++x)
+      {
+        hash ^= padded[static_cast<size_t>(LightHaloFlatIndex({x, y, z}))];
+        hash *= kFnvPrime;
+      }
+    }
+  }
+  return hash;
+}
+
+bool LightHaloSignaturesMatch(
+    const std::array<uint64_t, kChunkMeshNeighborStampCount> &signatures,
+    const UBlockWorld &world, glm::ivec3 center_coord)
+{
+  size_t signature_index = 0;
+  for (int dy = -1; dy <= 1; ++dy)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        if (dx == 0 && dy == 0 && dz == 0)
+        {
+          continue;
+        }
+        const glm::ivec3 offset(dx, dy, dz);
+        const UChunk *neighbor =
+            world.GetChunkManager().GetChunk(center_coord + offset);
+        if (signatures[signature_index++] !=
+            ChunkMeshLightHaloSignature(neighbor, offset))
+        {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 } // namespace
 
 bool ChunkMeshSnapshot::InputsStillValid(
@@ -92,13 +157,14 @@ bool ChunkMeshSnapshot::InputsStillValid(
       return false;
     }
   }
-  return true;
+  return LightHaloSignaturesMatch(lightHaloSignatures, world, coord);
 }
 
 MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
     bool input_stamps_valid, bool catalog_match,
     const std::array<ChunkInputStamp, kChunkMeshInputStampCount> &stamps,
-    const UBlockWorld &world)
+    const UBlockWorld &world,
+    const std::array<uint64_t, kChunkMeshNeighborStampCount> &light_signatures)
 {
   if (!input_stamps_valid)
     return MeshApplyStaleInputReason::StampInvalid;
@@ -106,20 +172,33 @@ MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
     return MeshApplyStaleInputReason::Catalog;
   bool any_geom = false;
   bool any_light = false;
-  for (const auto &stamp : stamps)
+  for (size_t i = 0; i < stamps.size(); ++i)
   {
+    const auto &stamp = stamps[i];
+    if (!stamp.readsContent && !stamp.readsLight)
+    {
+      continue;
+    }
     const UChunk *chunk = world.GetChunkManager().GetChunk(stamp.coord);
     const ChunkInputStamp current =
         ChunkInputStamp::Capture(stamp.coord, chunk, stamp.readsLight,
                                  stamp.readsContent);
-    if (stamp.incarnation != current.incarnation ||
-        (stamp.readsContent && stamp.content != current.content))
+    if (stamp.readsContent &&
+        (stamp.incarnation != current.incarnation ||
+         stamp.content != current.content))
     {
       any_geom = true;
-      continue;
     }
-    if (stamp.readsLight && stamp.light != current.light)
+    // Only center light is sampled throughout the interior. Neighbor light
+    // is validated below from exact halo cells, not whole-chunk revisions.
+    if (i == 0 && stamp.readsLight && stamp.light != current.light)
+    {
       any_light = true;
+    }
+  }
+  if (!LightHaloSignaturesMatch(light_signatures, world, stamps[0].coord))
+  {
+    any_light = true;
   }
   if (any_geom)
     return MeshApplyStaleInputReason::Geom;
@@ -149,6 +228,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   const glm::ivec3 origin = snapshot.ChunkOrigin();
   // Capture exactly the radius-2 light neighborhood read by FaceLightPacked.
   // Copy by chunk once (27 lookups), not by voxel through the chunk map.
+  size_t signature_index = 0;
   for (int dy = -1; dy <= 1; ++dy)
   {
     for (int dz = -1; dz <= 1; ++dz)
@@ -158,39 +238,43 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
         const glm::ivec3 chunk_offset(dx, dy, dz);
         const UChunk *light_chunk =
             world.GetChunkManager().GetChunk(chunkCoord + chunk_offset);
-        if (!light_chunk)
+        if (light_chunk && (dx != 0 || dy != 0 || dz != 0))
         {
-          continue;
-        }
-        glm::ivec3 dst_min(0);
-        glm::ivec3 dst_max(CHUNK_SIZE - 1);
-        for (int axis = 0; axis < 3; ++axis)
-        {
-          if (chunk_offset[axis] < 0)
+          glm::ivec3 dst_min(0);
+          glm::ivec3 dst_max(CHUNK_SIZE - 1);
+          for (int axis = 0; axis < 3; ++axis)
           {
-            dst_min[axis] = -kLightHaloRadius;
-            dst_max[axis] = -1;
-          }
-          else if (chunk_offset[axis] > 0)
-          {
-            dst_min[axis] = CHUNK_SIZE;
-            dst_max[axis] = CHUNK_SIZE + kLightHaloRadius - 1;
-          }
-        }
-        for (int y = dst_min.y; y <= dst_max.y; ++y)
-        {
-          for (int z = dst_min.z; z <= dst_max.z; ++z)
-          {
-            for (int x = dst_min.x; x <= dst_max.x; ++x)
+            if (chunk_offset[axis] < 0)
             {
-              const glm::ivec3 dst_local(x, y, z);
-              const glm::ivec3 neighbor_local =
-                  dst_local - chunk_offset * CHUNK_SIZE;
-              snapshot.paddedLight[static_cast<size_t>(
-                  LightHaloFlatIndex(dst_local))] =
-                  light_chunk->GetLightPackedLocal(neighbor_local);
+              dst_min[axis] = -kLightHaloRadius;
+              dst_max[axis] = -1;
+            }
+            else if (chunk_offset[axis] > 0)
+            {
+              dst_min[axis] = CHUNK_SIZE;
+              dst_max[axis] = CHUNK_SIZE + kLightHaloRadius - 1;
             }
           }
+          for (int y = dst_min.y; y <= dst_max.y; ++y)
+          {
+            for (int z = dst_min.z; z <= dst_max.z; ++z)
+            {
+              for (int x = dst_min.x; x <= dst_max.x; ++x)
+              {
+                const glm::ivec3 dst_local(x, y, z);
+                const glm::ivec3 neighbor_local =
+                    dst_local - chunk_offset * CHUNK_SIZE;
+                snapshot.paddedLight[static_cast<size_t>(
+                    LightHaloFlatIndex(dst_local))] =
+                    light_chunk->GetLightPackedLocal(neighbor_local);
+              }
+            }
+          }
+        }
+        if (dx != 0 || dy != 0 || dz != 0)
+        {
+          snapshot.lightHaloSignatures[signature_index++] =
+              PaddedLightHaloSignature(snapshot.paddedLight, chunk_offset);
         }
       }
     }
@@ -210,7 +294,9 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       const bool neighbor_loaded = neighbor_chunk != nullptr;
       // Stamp = geom/light only. Drawable fn affects shell occlusion preview.
       snapshot.inputStamps[static_cast<size_t>(face + 1)] =
-          ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk);
+          ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk,
+                                   /*reads_light=*/false,
+                                   /*reads_content=*/true);
       bool neighbor_visually_drawable = neighbor_loaded;
       if (neighbor_loaded && neighbor_drawable)
       {
@@ -272,7 +358,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
         // fallback; block geometry reads remain center + six face shells.
         snapshot.inputStamps[stamp_index++] = ChunkInputStamp::Capture(
             neighbor_coord,
-            world.GetChunkManager().GetChunk(neighbor_coord), true, false);
+            world.GetChunkManager().GetChunk(neighbor_coord), false, false);
       }
     }
   }

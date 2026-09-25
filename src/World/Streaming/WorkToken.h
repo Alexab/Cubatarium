@@ -50,15 +50,16 @@ struct DependencyStamp
   uint64_t content_revision{0};
   uint64_t light_revision{0};
   uint64_t material_catalog_revision{0};
-  /// Mesh light read halo: all 26 adjacent chunks, 0 if absent.
-  std::array<uint64_t, kChunkMeshNeighborStampCount> halo_light_revision{};
+  /// Mesh: exact light sample signatures for all adjacent chunks. Relight
+  /// dependencies use the same slots for their legacy neighbor revisions.
+  std::array<uint64_t, kChunkMeshNeighborStampCount> halo_light_dependency{};
 
   bool Matches(const DependencyStamp &current) const
   {
     return content_revision == current.content_revision &&
            light_revision == current.light_revision &&
            material_catalog_revision == current.material_catalog_revision &&
-           halo_light_revision == current.halo_light_revision;
+           halo_light_dependency == current.halo_light_dependency;
   }
 };
 

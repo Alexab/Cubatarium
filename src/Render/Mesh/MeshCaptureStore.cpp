@@ -159,7 +159,9 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
     }
     // Geom stamp only; drawable affects overlay mask, not stamp equality.
     snap.inputStamps[static_cast<size_t>(face + 1)] =
-        ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk);
+        ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk,
+                                 /*reads_light=*/false,
+                                 /*reads_content=*/true);
     for (int u = 0; u < CHUNK_SIZE; ++u)
     {
       for (int v = 0; v < CHUNK_SIZE; ++v)

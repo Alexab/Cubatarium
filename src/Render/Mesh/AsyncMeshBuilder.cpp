@@ -135,6 +135,7 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         result.jobId = jobId;
         result.submitEpoch = submitEpoch;
         result.InputStamps = snapshot.inputStamps;
+        result.InputLightHaloSignatures = snapshot.lightHaloSignatures;
         result.InputStampsValid = snapshot.inputStampsValid;
         result.InputCatalog = catalogKeep;
         result.BoundaryOverlay = snapshot.boundaryOverlay;

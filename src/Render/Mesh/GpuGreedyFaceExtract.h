@@ -230,7 +230,7 @@ inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
   }
 }
 
-/// Padded light: center + one-block shell (parity with FaceLightPacked air sample).
+/// Padded light: center plus the radius-2 shell used by FaceLightPacked fallback.
 inline void BuildPaddedLight(const ChunkMeshSnapshot &snap,
                              std::vector<uint8_t> &lights)
 {

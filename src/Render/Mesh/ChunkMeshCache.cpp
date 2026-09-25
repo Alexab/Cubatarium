@@ -4651,7 +4651,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     const MeshApplyStaleInputReason stale_reason =
         ChunkMeshSnapshot::ClassifyStaleInput(
             pending.snapshot.inputStampsValid, catalog_ok,
-            pending.snapshot.inputStamps, world);
+            pending.snapshot.inputStamps, world,
+            pending.snapshot.lightHaloSignatures);
     // P1-b2/P2: light-only always commit; geom+drawable commit (avoid remesh
     // unfinished blink mid-cruise). Holes (!drawable) still fail+Priority.
     const bool accept_input_stale =
@@ -5195,7 +5196,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
   const MeshApplyStaleInputReason stale_reason =
       ChunkMeshSnapshot::ClassifyStaleInput(result.InputStampsValid, catalog_ok,
-                                           result.InputStamps, world);
+                                             result.InputStamps, world,
+                                             result.InputLightHaloSignatures);
   const bool accept_input_stale =
       stale_reason == MeshApplyStaleInputReason::Light ||
       (stale_reason == MeshApplyStaleInputReason::Geom &&

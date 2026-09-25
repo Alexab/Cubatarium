@@ -34,6 +34,8 @@ struct MeshBuildResult
   std::unique_ptr<ChunkMeshSnapshot> PendingSnapshot;
   std::unique_ptr<UPipelineCreditGuard> ResultCredit;
   std::array<ChunkInputStamp, kChunkMeshInputStampCount> InputStamps{};
+  std::array<uint64_t, kChunkMeshNeighborStampCount>
+      InputLightHaloSignatures{};
   bool InputStampsValid{false};
   std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
   /// W1: sticky overlay from capture — ApplyMeshResult must stamp CPU path too

@@ -17,7 +17,7 @@ struct MeshInputs
   uint64_t content_revision{0};
   uint64_t light_revision{0};
   uint64_t material_catalog_revision{0};
-  /// Exact mesher read set (center + 26 neighbors).
+  /// Center and six geometry-shell stamps; neighbor light uses exact halo hashes.
   std::array<ChunkInputStamp, kChunkMeshInputStampCount> halo_stamps{};
   bool stamps_valid{false};
 };

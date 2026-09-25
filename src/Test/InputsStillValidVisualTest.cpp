@@ -1,6 +1,7 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Lighting/LightUtil.h"
 
 #include <iostream>
 
@@ -59,8 +60,8 @@ int main()
   neighbor_chunk->SetBlockLocal({0, 0, 0}, static_cast<cutum::BlockId>(1));
   Expect(!snap.InputsStillValid(world, DrawableAlwaysFalse, nullptr),
          "neighbor content edit invalidates geom stamp");
-  Expect(ChunkMeshSnapshot::ClassifyStaleInput(true, true, snap.inputStamps,
-                                               world) ==
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(
+             true, true, snap.inputStamps, world, snap.lightHaloSignatures) ==
              cutum::MeshApplyStaleInputReason::Geom,
          "content edit classifies as Geom");
 
@@ -70,17 +71,25 @@ int main()
                                  DrawableAlwaysTrue, nullptr);
   Expect(snap2.InputsStillValid(world), "snap2 valid after content settle");
   neighbor_chunk->BumpLightFieldRevision();
-  Expect(!snap2.InputsStillValid(world), "light bump invalidates stamp");
-  Expect(ChunkMeshSnapshot::ClassifyStaleInput(true, true, snap2.inputStamps,
-                                               world) ==
+  Expect(snap2.InputsStillValid(world),
+         "unrelated neighbor light revision does not invalidate halo");
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(
+             true, true, snap2.inputStamps, world, snap2.lightHaloSignatures) ==
+             cutum::MeshApplyStaleInputReason::Ok,
+         "unrelated neighbor light revision classifies as Ok");
+  auto &neighbor_light = neighbor_chunk->GetLightDataMutable();
+  neighbor_light[cutum::UChunk::LocalIndex({0, 0, 0})] = cutum::PackLight(8, 0);
+  Expect(!snap2.InputsStillValid(world), "halo light sample invalidates stamp");
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(
+             true, true, snap2.inputStamps, world, snap2.lightHaloSignatures) ==
              cutum::MeshApplyStaleInputReason::Light,
-         "light bump classifies as Light");
-  Expect(ChunkMeshSnapshot::ClassifyStaleInput(false, true, snap2.inputStamps,
-                                               world) ==
+         "halo light sample classifies as Light");
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(
+             false, true, snap2.inputStamps, world, snap2.lightHaloSignatures) ==
              cutum::MeshApplyStaleInputReason::StampInvalid,
          "invalid flag classifies StampInvalid");
-  Expect(ChunkMeshSnapshot::ClassifyStaleInput(true, false, snap2.inputStamps,
-                                               world) ==
+  Expect(ChunkMeshSnapshot::ClassifyStaleInput(
+             true, false, snap2.inputStamps, world, snap2.lightHaloSignatures) ==
              cutum::MeshApplyStaleInputReason::Catalog,
          "catalog mismatch classifies Catalog");
 
