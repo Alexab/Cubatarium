@@ -2762,10 +2762,15 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       VisualBlackTraceRecord trace = candidate.record;
       const glm::ivec3 coord(trace.cx, trace.cy, trace.cz);
       trace.mesh_revision = MeshService->GetChunkMeshRevision(coord);
+      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        trace.field_light_rev = chunk->GetLightFieldRevision();
+      }
       const MeshPublishRevs published =
           mesh_cache.GetMeshPublishRevs(coord);
       trace.published_geom_rev = published.geom_rev;
       trace.published_light_rev = published.light_rev;
+      trace.meshed_light_rev = mesh_cache.GetMeshedLightRevision(coord);
       if (const ChunkRenderDemandRecord *demand =
               UChunkRenderDemandStore::Get().Find(coord))
       {
