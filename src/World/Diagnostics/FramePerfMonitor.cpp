@@ -2941,37 +2941,38 @@ void UFramePerfMonitor::Shutdown()
       struct DumpCtx
       {
         std::ofstream *out;
+        const char *kind;
       };
-      DumpCtx ctx{&s.Jsonl};
-      UJobStageTrace::ForEachNewest(
-          64,
-          [](const JobStageSpan &sp, void *p) {
-            auto *c = static_cast<DumpCtx *>(p);
-            (*c->out) << "{\"kind\":\"job_trace\""
-                      << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
-                      << ",\"cz\":" << sp.cz
-                      << ",\"incarnation\":" << sp.incarnation
-                      << ",\"attempt_id\":" << sp.attempt_id
-                      << ",\"desired_rev\":" << sp.desired_rev
-                      << ",\"source_rev\":" << sp.source_rev
-                      << ",\"published_rev\":" << sp.published_rev
-                      << ",\"world_epoch\":" << sp.world_epoch
-                      << ",\"desired_light_rev\":" << sp.desired_light_rev
-                      << ",\"published_light_rev\":" << sp.published_light_rev
-                      << ",\"desired_coverage_gen\":" << sp.desired_coverage_gen
-                      << ",\"published_coverage_gen\":"
-                      << sp.published_coverage_gen
-                      << ",\"face_mask\":" << static_cast<int>(sp.face_mask)
-                      << ",\"outcome\":" << static_cast<int>(sp.outcome)
-                      << ",\"cull_decision\":"
-                      << static_cast<int>(sp.cull_decision)
-                      << ",\"stage\":\"" << UJobStageTrace::StageName(sp.stage)
-                      << "\""
-                      << ",\"queue_reason\":" << static_cast<int>(sp.queue_reason)
-                      << ",\"created_ms\":" << sp.created_ms
-                      << ",\"stage_ms\":" << sp.stage_ms << "}\n";
-          },
-          &ctx);
+      const auto dumpTrace = [](const JobStageSpan &sp, void *p) {
+        auto *c = static_cast<DumpCtx *>(p);
+        (*c->out) << "{\"kind\":\"" << c->kind << "\""
+                  << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
+                  << ",\"cz\":" << sp.cz
+                  << ",\"incarnation\":" << sp.incarnation
+                  << ",\"attempt_id\":" << sp.attempt_id
+                  << ",\"desired_rev\":" << sp.desired_rev
+                  << ",\"source_rev\":" << sp.source_rev
+                  << ",\"published_rev\":" << sp.published_rev
+                  << ",\"world_epoch\":" << sp.world_epoch
+                  << ",\"desired_light_rev\":" << sp.desired_light_rev
+                  << ",\"published_light_rev\":" << sp.published_light_rev
+                  << ",\"desired_coverage_gen\":" << sp.desired_coverage_gen
+                  << ",\"published_coverage_gen\":"
+                  << sp.published_coverage_gen
+                  << ",\"face_mask\":" << static_cast<int>(sp.face_mask)
+                  << ",\"outcome\":" << static_cast<int>(sp.outcome)
+                  << ",\"cull_decision\":"
+                  << static_cast<int>(sp.cull_decision)
+                  << ",\"stage\":\"" << UJobStageTrace::StageName(sp.stage)
+                  << "\""
+                  << ",\"queue_reason\":" << static_cast<int>(sp.queue_reason)
+                  << ",\"created_ms\":" << sp.created_ms
+                  << ",\"stage_ms\":" << sp.stage_ms << "}\n";
+      };
+      DumpCtx jobCtx{&s.Jsonl, "job_trace"};
+      UJobStageTrace::ForEachNewest(64, dumpTrace, &jobCtx);
+      DumpCtx cullCtx{&s.Jsonl, "cull_trace"};
+      UJobStageTrace::ForEachCullDecisionNewest(64, dumpTrace, &cullCtx);
       s.Jsonl.flush();
     }
     ResetAccum(s);

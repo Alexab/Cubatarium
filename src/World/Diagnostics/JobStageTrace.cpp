@@ -22,6 +22,20 @@ Ring &GetRing()
   return r;
 }
 
+struct CullDecisionRing
+{
+  std::array<JobStageSpan, UJobStageTrace::kCullDecisionRingCapacity> slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+CullDecisionRing &GetCullDecisionRing()
+{
+  static CullDecisionRing r;
+  return r;
+}
+
 } // namespace
 
 void UJobStageTrace::Note(const JobStageSpan &span)
@@ -50,7 +64,14 @@ void UJobStageTrace::NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,
   span.published_rev = published_rev;
   span.stage = JobStage::Published;
   span.outcome = cull_decision != 0 ? 1 : 0;
-  Note(span);
+  auto &r = GetCullDecisionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.slots[r.write % kCullDecisionRingCapacity] = span;
+  ++r.write;
+  if (r.count < kCullDecisionRingCapacity)
+  {
+    ++r.count;
+  }
 }
 
 size_t UJobStageTrace::Size()
@@ -89,6 +110,24 @@ void UJobStageTrace::ForEachNewest(size_t max_n,
   for (size_t i = 0; i < n; ++i)
   {
     const size_t abs = (r.write + kRingCapacity - 1 - i) % kRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+void UJobStageTrace::ForEachCullDecisionNewest(
+    size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetCullDecisionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs = (r.write + kCullDecisionRingCapacity - 1 - i) %
+                       kCullDecisionRingCapacity;
     fn(r.slots[abs], ctx);
   }
 }

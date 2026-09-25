@@ -50,6 +50,7 @@ class UJobStageTrace
 {
 public:
   static constexpr size_t kRingCapacity = 256;
+  static constexpr size_t kCullDecisionRingCapacity = 64;
 
   static void Note(const JobStageSpan &span);
   static size_t Size();
@@ -58,6 +59,9 @@ public:
   /// via callback; used by FramePerfMonitor emergency dump.
   static void ForEachNewest(size_t max_n,
                             void (*fn)(const JobStageSpan &, void *), void *ctx);
+  /// Cull decisions are high volume and must not evict lifecycle transitions.
+  static void ForEachCullDecisionNewest(
+      size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static const char *StageName(JobStage s);
   /// A36 S1: note cull exclusion for a tracked chunk (bounded ring).
   static void NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,
