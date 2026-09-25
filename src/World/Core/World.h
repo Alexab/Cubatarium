@@ -83,9 +83,9 @@ struct ColumnRenderableState
   bool has_repair_ticket{false};
 };
 
-/// A drawable focus column with stale baked light and the Y range containing
-/// its stale mesh/source-light witnesses.
-struct StaleLitRelightTarget
+/// A drawable focus column held behind the render gate until its light is
+/// repaired, with the Y range containing the mesh/light witness.
+struct DrawGateRelightTarget
 {
   glm::ivec2 column{0};
   int min_world_y{0};
@@ -1204,11 +1204,11 @@ public:
                                    int radius_chunks,
                                    std::vector<glm::ivec2> &out,
                                    int max_cols) const;
-  /// Nearest drawable focus columns whose mesh has stale baked light. Includes
-  /// columns with existing repair owners and reports the affected Y range.
-  int CollectStaleLitRelightTargets(
+  /// Nearest drawable columns blocked by stale light or unapplied OpenSky.
+  /// Includes columns with existing repair owners and reports the Y range.
+  int CollectDrawGateRelightTargets(
       glm::ivec3 focus_ground_chunk, int radius_chunks,
-      std::vector<StaleLitRelightTarget> &out, int max_cols) const;
+      std::vector<DrawGateRelightTarget> &out, int max_cols) const;
   /// Focus columns with greedy mesh that still have fully-dark faces (void-edge
   /// debt: mesh dark and light field 0 — needs Relight, not remesh alone).
   int CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,

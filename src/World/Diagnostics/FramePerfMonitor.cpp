@@ -730,7 +730,7 @@ struct FrameNumbers
   uint64_t relight_completed_discarded{0};
   int relight_capture_col_horiz{-1};
   int relight_capture_finalize{0};
-  int relight_capture_hot_skip_stale_lit{0};
+  int relight_capture_hot_skip_draw_gate{0};
   int relight_capture_band_cy_span{0};
   int relight_capture_full_n{0};
   int relight_capture_neighbor_light_n{0};
@@ -1480,8 +1480,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_completed_discarded = phys.RelightCompletedDiscarded;
   n.relight_capture_col_horiz = phys.RelightCaptureColHoriz;
   n.relight_capture_finalize = phys.RelightCaptureFinalize;
-  n.relight_capture_hot_skip_stale_lit =
-      phys.RelightCaptureHotSkipStaleLit;
+  n.relight_capture_hot_skip_draw_gate = phys.RelightCaptureHotSkipDrawGate;
   n.relight_capture_band_cy_span = phys.RelightCaptureBandCySpan;
   n.relight_capture_full_n = phys.RelightCaptureFullN;
   n.relight_capture_neighbor_light_n = phys.RelightCaptureNeighborLightN;
@@ -2308,8 +2307,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_completed_discarded\":" << n.relight_completed_discarded
           << ",\"relight_capture_col_horiz\":" << n.relight_capture_col_horiz
           << ",\"relight_capture_finalize\":" << n.relight_capture_finalize
-          << ",\"relight_capture_hot_skip_stale_lit\":"
-          << n.relight_capture_hot_skip_stale_lit
+          << ",\"relight_capture_hot_skip_draw_gate\":"
+          << n.relight_capture_hot_skip_draw_gate
           << ",\"relight_capture_band_cy_span\":" << n.relight_capture_band_cy_span
           << ",\"relight_capture_full_n\":" << n.relight_capture_full_n
           << ",\"relight_capture_neighbor_light_n\":"

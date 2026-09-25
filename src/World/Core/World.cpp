@@ -4078,9 +4078,9 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
   return static_cast<int>(out.size());
 }
 
-int UWorld::CollectStaleLitRelightTargets(
+int UWorld::CollectDrawGateRelightTargets(
     glm::ivec3 focus_ground_chunk, int radius_chunks,
-    std::vector<StaleLitRelightTarget> &out, int max_cols) const
+    std::vector<DrawGateRelightTarget> &out, int max_cols) const
 {
   out.clear();
   if (!MeshService || radius_chunks < 0 || max_cols <= 0)
@@ -4118,8 +4118,8 @@ int UWorld::CollectStaleLitRelightTargets(
   const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
   const UChunkMeshCache &cache = MeshService->GetCache();
 
-  // Search by distance so the target stays bounded and the first stale
-  // visible column can be promoted without scanning the whole world ring.
+  // Search by distance so the target stays bounded and the nearest hidden
+  // column can be promoted without scanning the whole world ring.
   for (int dist = 0; dist <= radius_chunks; ++dist)
   {
     for (int dx = -dist; dx <= dist; ++dx)
@@ -4132,6 +4132,8 @@ int UWorld::CollectStaleLitRelightTargets(
         }
         const glm::ivec2 column(focus_ground_chunk.x + dx,
                                 focus_ground_chunk.z + dz);
+        const bool open_sky_applied =
+            EnterVisualGateCtrl.WasOpenSkyApplied(column);
         int min_cy = std::numeric_limits<int>::max();
         int max_cy = -1;
         for (int cy = cy0; cy <= cy1; ++cy)
@@ -4142,12 +4144,21 @@ int UWorld::CollectStaleLitRelightTargets(
             continue;
           }
           UChunkMeshCache::StaleDarkWitness witness{};
-          if (!cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &witness))
+          const bool stale_light =
+              cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &witness);
+          const bool fully_dark =
+              cache.ChunkHasFullyDarkFace(coord) &&
+              !MeshService->ChunkHasLitDrawableFace(coord);
+          if (!stale_light && !(fully_dark && !open_sky_applied))
           {
             continue;
           }
-          min_cy = std::min(min_cy, std::min(coord.y, witness.source_chunk.y));
-          max_cy = std::max(max_cy, std::max(coord.y, witness.source_chunk.y));
+          min_cy = std::min(
+              min_cy, stale_light ? std::min(coord.y, witness.source_chunk.y)
+                                  : coord.y);
+          max_cy = std::max(
+              max_cy, stale_light ? std::max(coord.y, witness.source_chunk.y)
+                                  : coord.y);
         }
         if (max_cy < 0)
         {
