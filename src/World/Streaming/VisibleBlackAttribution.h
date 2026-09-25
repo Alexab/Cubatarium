@@ -42,7 +42,9 @@ inline VisibleBlackCause ClassifyVisibleBlackColumn(bool stale_dark,
                                                     bool pending_replace,
                                                     bool light_revs_match = true)
 {
-  if (!fully_dark)
+  // A stale lit face is actionable even when a different slice in the same
+  // XZ column is legally dark.
+  if (stale_dark || !fully_dark)
   {
     return VisibleBlackCause::StaleDarkWithLitField;
   }

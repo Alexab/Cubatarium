@@ -3987,9 +3987,15 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       {
         continue;
       }
-      const bool fully_dark =
+      const bool any_dark_face =
           MeshService->GetCache().ChunkHasFullyDarkFace(coord);
-      if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+      const bool lit_drawable = MeshService->ChunkHasLitDrawableFace(coord);
+      // A dark vertex on one face is common in shaded/cave geometry. A slice
+      // is fully dark only when it has no lit drawable face at all.
+      const bool fully_dark = any_dark_face && !lit_drawable;
+      const bool stale_dark =
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+      if (stale_dark)
       {
         column_stale_dark = true;
         is_black = true;
@@ -4009,7 +4015,7 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
           have_fully_dark_coord = true;
         }
       }
-      if (is_black && column_fully_dark)
+      if (column_stale_dark && column_fully_dark)
       {
         break;
       }
@@ -4031,7 +4037,8 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       {
         const glm::ivec3 coord(key.x, cy, key.y);
         if (!MeshService->HasDrawableGreedyMesh(coord) ||
-            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+            !MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
+            MeshService->ChunkHasLitDrawableFace(coord))
         {
           continue;
         }
@@ -4042,8 +4049,9 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
         {
           field_rev = ch->GetLightFieldRevision();
         }
-        if (probe.meshed_light_rev != 0 && field_rev != 0 &&
-            probe.meshed_light_rev != field_rev)
+        // Zero is a real initial revision. Comparing only nonzero stamps
+        // incorrectly treated an unstamped dark mesh as current.
+        if (probe.meshed_light_rev != field_rev)
         {
           light_revs_match = false;
           if (!have_light_mismatch_coord)
@@ -4069,7 +4077,9 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     {
       ++counts.no_ticket;
     }
-    const bool stale_dark_attr = column_stale_dark && !column_fully_dark;
+    // A stale lit face remains repair debt even when another Y slice in the
+    // same column contains legal dark geometry.
+    const bool stale_dark_attr = column_stale_dark;
     const VisibleBlackCause cause =
         ClassifyVisibleBlackColumn(stale_dark_attr, column_fully_dark, contains,
                                    progress, sticky, pending_replace,
@@ -4110,8 +4120,8 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       const glm::ivec3 coord =
           have_light_mismatch_coord
               ? first_light_mismatch_coord
-              : (have_fully_dark_coord ? first_fully_dark_coord
-                                       : first_stale_coord);
+              : (have_stale_coord ? first_stale_coord
+                                  : first_fully_dark_coord);
       UChunkMeshCache::LitApplyMeshProbe probe{};
       MeshService->FillLitApplyMeshProbe(coord, probe);
       uint64_t field_light_rev = 0;
@@ -4131,28 +4141,42 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       trace.field_light_rev = field_light_rev;
       trace.published_geom_rev = published.geom_rev;
       trace.published_light_rev = published.light_rev;
+      const bool slice_stale_dark =
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+      const bool slice_lit_drawable =
+          MeshService->ChunkHasLitDrawableFace(coord);
+      const bool slice_any_dark_face =
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord);
       trace.flags = static_cast<uint16_t>(
           (contains ? 1u << 0 : 0u) | (progress ? 1u << 1 : 0u) |
           (sticky ? 1u << 2 : 0u) | (pending_replace ? 1u << 3 : 0u) |
           (light_revs_match ? 1u << 4 : 0u) |
           (probe.has_drawable ? 1u << 5 : 0u) |
-          (probe.fully_dark ? 1u << 6 : 0u) |
+          (slice_any_dark_face ? 1u << 6 : 0u) |
           (probe.is_dirty ? 1u << 7 : 0u) |
           (probe.raa_pending ? 1u << 8 : 0u) |
           (probe.gpu_pending ? 1u << 9 : 0u) |
           (probe.inflight ? 1u << 10 : 0u) |
           (column_stale_dark ? 1u << 11 : 0u) |
-          (probe.gpu_resident ? 1u << 12 : 0u));
+          (probe.gpu_resident ? 1u << 12 : 0u) |
+          (slice_stale_dark ? 1u << 13 : 0u) |
+          (slice_lit_drawable ? 1u << 14 : 0u));
       if (const ChunkRenderDemandRecord *demand =
               UChunkRenderDemandStore::Get().Find(coord))
       {
         trace.world_epoch = demand->world_epoch;
         trace.incarnation = demand->incarnation;
-        trace.attempt_id = demand->active_attempt_id;
+        trace.attempt_id = demand->has_active_attempt
+                               ? demand->active_attempt_id
+                               : 0;
         trace.desired_geom_rev = demand->desired_geom_rev;
         trace.desired_light_rev = demand->desired_light_rev;
         trace.active_stage = static_cast<uint8_t>(demand->active_stage);
         trace.face_debt_mask = demand->face_debt_mask;
+        if (demand->has_active_attempt)
+        {
+          trace.flags = static_cast<uint16_t>(trace.flags | (1u << 15));
+        }
       }
       UJobStageTrace::NoteVisualBlack(trace);
     }

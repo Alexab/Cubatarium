@@ -69,8 +69,9 @@ struct VisualBlackTraceRecord
   uint8_t active_stage{0};
   uint8_t face_debt_mask{0};
   /// Bits: ticket, progress, sticky, pending_replace, column_light_revs_match,
-  /// drawable, fully_dark, dirty, remesh_after_apply, gpu_pending, inflight,
-  /// column_has_stale_dark, gpu_resident (bits 0..12 in that order).
+  /// drawable, any_dark_face, dirty, remesh_after_apply, gpu_pending, inflight,
+  /// column_has_stale_dark, gpu_resident, slice_stale_dark, lit_drawable,
+  /// active_attempt (bits 0..15 in that order).
   uint16_t flags{0};
 };
 
