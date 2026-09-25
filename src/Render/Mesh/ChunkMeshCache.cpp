@@ -5043,6 +5043,28 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   {
     kick_cap = std::max(kick_cap, 1);
   }
+  // A drawable but stale-dark mesh is also urgent visual debt. The previous
+  // deadline escape recognized only chunks with no drawable mesh, so queued
+  // lit repairs could remain un-kicked throughout a pressured flight even
+  // while the black-focus census was high.
+  bool have_urgent_stale_repair = false;
+  glm::ivec3 urgent_stale_repair{};
+  if (force_kick_debt && VisibleBlackFocusPressure_ >= 20)
+  {
+    for (const PendingGpuApply &pending : PendingGpuApplies)
+    {
+      if (pending.phase != PendingGpuApply::Phase::Queued ||
+          !HasDrawableGreedyMesh(pending.coord) ||
+          !IsRimIngressWatchCoord(pending.coord, MeshFocusGroundChunk) ||
+          !ChunkHasStaleDarkFaces(pending.coord, world))
+      {
+        continue;
+      }
+      urgent_stale_repair = pending.coord;
+      have_urgent_stale_repair = true;
+      break;
+    }
+  }
   int debt_forced_kicks = 0;
   auto find_prefer_queued = [&]() {
     auto missing_it = std::find_if(
@@ -5054,6 +5076,19 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     if (missing_it != PendingGpuApplies.end())
     {
       return missing_it;
+    }
+    if (have_urgent_stale_repair)
+    {
+      auto stale_repair_it = std::find_if(
+          PendingGpuApplies.begin(), PendingGpuApplies.end(),
+          [&](const PendingGpuApply &p) {
+            return p.phase == PendingGpuApply::Phase::Queued &&
+                   p.coord == urgent_stale_repair;
+          });
+      if (stale_repair_it != PendingGpuApplies.end())
+      {
+        return stale_repair_it;
+      }
     }
     return std::find_if(PendingGpuApplies.begin(), PendingGpuApplies.end(),
                         [](const PendingGpuApply &p) {
@@ -5069,19 +5104,25 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     const bool critical_missing =
         queued_peek != PendingGpuApplies.end() &&
         !HasDrawableGreedyMesh(queued_peek->coord);
+    const bool critical_stale_repair =
+        queued_peek != PendingGpuApplies.end() &&
+        have_urgent_stale_repair &&
+        queued_peek->coord == urgent_stale_repair;
     const bool debt_kick_quota =
-        force_kick_debt && kicked == 0 && critical_missing;
+        force_kick_debt && kicked == 0 &&
+        (critical_missing || critical_stale_repair);
     // Cost-class: do not start Kick if remaining budget < ~2ms unless critical.
     constexpr double kKickCostClassMs = 2.0;
-    if (!critical_missing && budget_ms > 0.0 &&
+    if (!critical_missing && !critical_stale_repair && budget_ms > 0.0 &&
         (budget_ms - elapsed_ms()) < kKickCostClassMs)
     {
       break;
     }
     if (UFrameDeadline::ShouldDeferProducer(
-            /*critical_progress=*/debt_kick_quota || critical_missing))
+            /*critical_progress=*/debt_kick_quota || critical_missing ||
+                critical_stale_repair))
     {
-      if (!(debt_kick_quota || critical_missing))
+      if (!(debt_kick_quota || critical_missing || critical_stale_repair))
       {
         if (force_kick_debt && kicked == 0)
         {
