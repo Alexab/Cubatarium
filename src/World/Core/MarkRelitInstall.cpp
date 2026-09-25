@@ -124,6 +124,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     auto admit_dirty = [&](const glm::ivec3 &coord, bool priority) {
       const int horiz = std::max(std::abs(coord.x - focus_g.x),
                                  std::abs(coord.z - focus_g.z));
+      const double demand_now_ms = VisualObligationNowMs();
       // A21 P2.1/P2.2: shadow demand — skip MarkDirty when published meets desire.
       if (kChunkDemandShadow())
       {
@@ -307,8 +308,10 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           }
           span.attempt_id = attempt_id;
           UJobStageTrace::Note(span);
+          // Keep lifecycle clocks on the VisualObligationNowMs timeline;
+          // span.stage_ms is only the duration of this MarkRelit operation.
           demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
-                                   span.stage_ms);
+                                   demand_now_ms);
         }
       }
     };
@@ -919,7 +922,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   if (kChunkDemandShadow())
   {
     const auto recon =
-        UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/32);
+        UChunkRenderDemandStore::Get().ReconcileMaintenance(
+            /*max_n=*/32, VisualObligationNowMs());
     PhysicsTelemetryData.DemandReconcileMismatchN +=
         recon.mismatch_desired_vs_published;
     PhysicsTelemetryData.DemandShadowMismatchN =
