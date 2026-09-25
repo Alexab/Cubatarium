@@ -2815,6 +2815,19 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   CrossBatchesDirty = true;
 }
 
+bool UChunkMeshCache::PrioritizeVisibleLightRepairRemesh(
+    glm::ivec3 chunkCoord)
+{
+  if (!Dirty.PrioritizeRemesh(chunkCoord))
+  {
+    return false;
+  }
+  InstancesDirty = true;
+  GreedyBatchesDirty = true;
+  CrossBatchesDirty = true;
+  return true;
+}
+
 void UChunkMeshCache::QueueMeshDependencyInvalidations(
     const UBlockWorld &world,
     const std::vector<glm::ivec3> &changed_input_chunks)

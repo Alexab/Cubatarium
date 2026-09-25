@@ -236,6 +236,7 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
 void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
 {
   const bool was_remesh = RemeshSet.erase(coord) > 0;
+  PriorityRemeshSet.erase(coord);
   if (was_remesh)
   {
     RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
@@ -259,6 +260,23 @@ void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
   InvalidateUnified();
 }
 
+bool UChunkDirtySet::PrioritizeRemesh(glm::ivec3 coord)
+{
+  if (FirstMeshSet.count(coord) > 0 || RemeshSet.count(coord) == 0)
+  {
+    return false;
+  }
+  PriorityRemeshSet.insert(coord);
+  const auto it = std::find(RemeshQ.begin(), RemeshQ.end(), coord);
+  if (it != RemeshQ.end() && it != RemeshQ.begin())
+  {
+    RemeshQ.erase(it);
+    RemeshQ.insert(RemeshQ.begin(), coord);
+  }
+  InvalidateUnified();
+  return true;
+}
+
 void UChunkDirtySet::Erase(glm::ivec3 coord)
 {
   bool erased = false;
@@ -274,6 +292,7 @@ void UChunkDirtySet::Erase(glm::ivec3 coord)
                   RemeshQ.end());
     erased = true;
   }
+  PriorityRemeshSet.erase(coord);
   if (erased)
   {
     EnqueueFrameByCoord.erase(coord);
@@ -288,6 +307,7 @@ void UChunkDirtySet::Clear()
   RemeshQ.clear();
   FirstMeshSet.clear();
   RemeshSet.clear();
+  PriorityRemeshSet.clear();
   EnqueueFrameByCoord.clear();
   Queue.clear();
   ColumnCounts.clear();
@@ -309,6 +329,7 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
     RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
                   RemeshQ.end());
   }
+  PriorityRemeshSet.erase(coord);
   EnqueueFrameByCoord.erase(coord);
   NoteColumnRemove(coord);
   auto next = Queue.erase(it);
@@ -328,6 +349,8 @@ void UChunkDirtySet::SortByDistanceKey(
   SortQueue(RemeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
             vertical_valid, missing_mesh, forward_bias_k, forward_xz,
             focus_radius_for_tail);
+  std::stable_partition(RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
+                        { return PriorityRemeshSet.count(coord) > 0; });
   InvalidateUnified();
 }
 
@@ -366,6 +389,8 @@ void UChunkDirtySet::PartialSortByDistanceKey(
   PartialSortQueue(RemeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
                    vertical_valid, missing_mesh, rem_front, forward_bias_k,
                    forward_xz, focus_radius_for_tail);
+  std::stable_partition(RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
+                        { return PriorityRemeshSet.count(coord) > 0; });
   InvalidateUnified();
 }
 

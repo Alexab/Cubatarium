@@ -75,6 +75,7 @@ public:
                              bool clear_existing_caches = false);
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
+  bool PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
       const std::vector<glm::ivec3> &changed_input_chunks);

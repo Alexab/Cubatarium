@@ -20,6 +20,8 @@ class UChunkDirtySet
 public:
   void MarkDirty(glm::ivec3 coord);
   void MarkDirtyPriority(glm::ivec3 coord);
+  /// Keep a visible light-repair remesh ahead of generic remesh work.
+  bool PrioritizeRemesh(glm::ivec3 coord);
   void AdvanceScheduleFrame() { ++ScheduleFrame; }
   void Erase(glm::ivec3 coord);
   void Clear();
@@ -132,6 +134,7 @@ private:
   std::vector<glm::ivec3> RemeshQ;
   std::unordered_set<glm::ivec3, IVec3Hash> FirstMeshSet;
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshSet;
+  std::unordered_set<glm::ivec3, IVec3Hash> PriorityRemeshSet;
   /// Lazy concat FirstMeshQ + RemeshQ for legacy iterators.
   mutable std::vector<glm::ivec3> Queue;
   mutable bool UnifiedDirty{true};

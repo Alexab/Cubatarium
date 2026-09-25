@@ -245,6 +245,10 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       if (priority)
       {
         mesh->MarkDirtyPriority(coord);
+        if (WasRecentlyRendererDrawGateRejected(coord))
+        {
+          (void)mesh->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
+        }
         ++PhysicsTelemetryData.FmDirtyEnqueueN;
         ++PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN;
       }

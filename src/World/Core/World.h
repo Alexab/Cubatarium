@@ -1213,6 +1213,8 @@ public:
   /// Remember a mesh rejected by a renderer draw gate so streaming can repair
   /// the exact visible slice on its next update.
   void NoteRendererDrawGateRejection(glm::ivec3 chunk_coord);
+  /// True while a renderer draw-gate rejection is recent enough to own repair.
+  bool WasRecentlyRendererDrawGateRejected(glm::ivec3 chunk_coord) const;
   /// Focus columns with greedy mesh that still have fully-dark faces (void-edge
   /// debt: mesh dark and light field 0 — needs Relight, not remesh alone).
   int CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,

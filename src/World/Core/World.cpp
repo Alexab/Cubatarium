@@ -4230,6 +4230,15 @@ void UWorld::NoteRendererDrawGateRejection(glm::ivec3 chunk_coord)
   RecentRendererDrawGateRejections[chunk_coord] = StreamingFrameEpoch;
 }
 
+bool UWorld::WasRecentlyRendererDrawGateRejected(
+    glm::ivec3 chunk_coord) const
+{
+  const auto it = RecentRendererDrawGateRejections.find(chunk_coord);
+  return it != RecentRendererDrawGateRejections.end() &&
+         StreamingFrameEpoch >= it->second &&
+         StreamingFrameEpoch - it->second <= 2;
+}
+
 int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
                                          int radius_chunks,
                                          std::vector<glm::ivec2> &out,
