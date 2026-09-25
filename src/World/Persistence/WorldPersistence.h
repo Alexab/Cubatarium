@@ -94,7 +94,9 @@ public:
                                      int max_y, glm::ivec3 focus_ground,
                                      int max_horiz,
                                      const std::vector<glm::ivec2>
-                                         &protected_visible_columns);
+                                         &protected_visible_columns,
+                                     uint8_t *outcome = nullptr,
+                                     int *victim_horiz = nullptr);
   /// F3b: enqueue only when column surface still needs relight.
   bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
                                       bool priority = false, int min_y = 0,

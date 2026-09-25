@@ -64,6 +64,8 @@ namespace cutum
 namespace
 {
 
+constexpr int kVisibleDrawGateRelightTargetLimit = 8;
+
 int ColumnTopBlockY(const UWorld &world, glm::ivec2 ground_xz, int max_y)
 {
   const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
@@ -404,8 +406,22 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
 bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
     int max_horiz,
-    const std::vector<glm::ivec2> &protected_visible_columns)
+    const std::vector<glm::ivec2> &protected_visible_columns,
+    uint8_t *outcome, int *out_victim_horiz)
 {
+  // Outcome: 1=normal admission, 2=no replaceable victim,
+  // 3=victim replaced and target queued, 4=target failed after victim removal,
+  // 5=already queued, 6=outside horizon, 7=normal admission failed,
+  // 8=already in flight, 9=admitted into the bounded visible-repair reserve,
+  // 10=visible-repair reserve insertion failed.
+  if (outcome)
+  {
+    *outcome = 0;
+  }
+  if (out_victim_horiz)
+  {
+    *out_victim_horiz = -1;
+  }
   const glm::ivec2 key(world_x, world_z);
   const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
                              FloorDiv(world_z, CHUNK_SIZE));
@@ -413,6 +429,10 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
                              std::abs(ground_xz.y - focus_ground.z));
   if (max_horiz < 0 || horiz > max_horiz)
   {
+    if (outcome)
+    {
+      *outcome = 6;
+    }
     return false;
   }
 
@@ -420,6 +440,10 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
   {
     EnqueueTerrainColumnRelight(world_x, world_z, /*priority=*/true, min_y,
                                 max_y);
+    if (outcome)
+    {
+      *outcome = 5;
+    }
     return true;
   }
 
@@ -428,7 +452,12 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
   {
     EnqueueTerrainColumnRelight(world_x, world_z, /*priority=*/true, min_y,
                                 max_y);
-    return PendingTerrainColumnRelightKeys.count(key) != 0;
+    const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
+    if (outcome)
+    {
+      *outcome = admitted ? 1 : 7;
+    }
+    return admitted;
   }
 
   // Keep total relight work bounded: replace one queued entry outside the
@@ -466,9 +495,36 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
   find_farthest_unpinned_victim(PendingTerrainColumnRelightsPriority);
   if (!victim_queue)
   {
+    // The normal FIFO starts back-pressuring non-core work at 16 entries.
+    // Exact renderer rejects are bounded to eight targets per drain, so allow
+    // that many additional deduplicated visible repairs before applying the
+    // same victim policy at the hard reserve limit.
+    constexpr int kVisibleRelightReserve =
+        kVisibleDrawGateRelightTargetLimit;
+    if (ShouldAdmitRelightFifoEnqueue(
+            fifo_n, horiz, /*fifo_backpressure=*/16 + kVisibleRelightReserve))
+    {
+      EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true,
+                                      min_y, max_y,
+                                      /*visible_admission=*/true);
+      const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
+      if (outcome)
+      {
+        *outcome = admitted ? 9 : 10;
+      }
+      return admitted;
+    }
+    if (outcome)
+    {
+      *outcome = 2;
+    }
     return false;
   }
 
+  if (out_victim_horiz)
+  {
+    *out_victim_horiz = victim_horiz;
+  }
   const glm::ivec2 victim = *victim_it;
   victim_queue->erase(victim_it);
   PendingTerrainColumnRelightKeys.erase(victim);
@@ -476,7 +532,12 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
   ++RelightFifoOverflowDroppedN;
   EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true, min_y,
                                   max_y, /*visible_admission=*/true);
-  return PendingTerrainColumnRelightKeys.count(key) != 0;
+  const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
+  if (outcome)
+  {
+    *outcome = admitted ? 3 : 4;
+  }
+  return admitted;
 }
 
 bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_x,
@@ -1155,7 +1216,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int draw_gate_radius = std::min(focus_radius,
                                           RelightMissPinMaxHoriz());
     world.CollectDrawGateRelightTargets(focus_chunk, draw_gate_radius,
-                                        draw_gate_targets, /*max_cols=*/8);
+                                        draw_gate_targets,
+                                        kVisibleDrawGateRelightTargetLimit);
     std::vector<glm::ivec2> protected_visible_columns;
     protected_visible_columns.reserve(draw_gate_targets.size());
     for (const DrawGateRelightTarget &target : draw_gate_targets)
@@ -1176,12 +1238,19 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       const glm::ivec2 target_column(target.column.x, target.column.y);
       const bool already_inflight =
           world.IsAsyncRelightColumnInFlight(target_column);
+      uint8_t draw_gate_admission_outcome = 0;
+      int draw_gate_victim_horiz = -1;
       if (already_queued || !already_inflight)
       {
         draw_gate_target_pinned = EnqueueVisibleDrawGateRelight(
             draw_gate_target_key.x, draw_gate_target_key.y,
             target.min_world_y, target.max_world_y, focus_chunk,
-            draw_gate_radius, protected_visible_columns);
+            draw_gate_radius, protected_visible_columns,
+            &draw_gate_admission_outcome, &draw_gate_victim_horiz);
+      }
+      else
+      {
+        draw_gate_admission_outcome = 8;
       }
       if (UJobStageTrace::VisualBlackTraceEnabled())
       {
@@ -1205,41 +1274,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               PendingTerrainColumnRelights.size(), UINT8_MAX));
           trace.active_stage = static_cast<uint8_t>(std::min<size_t>(
               PendingTerrainColumnRelightsPriority.size(), UINT8_MAX));
-          int farthest_unpinned_horiz = -1;
-          const auto note_farthest_unpinned = [&](
-              const std::deque<glm::ivec2> &queue)
-          {
-            for (const glm::ivec2 &candidate : queue)
-            {
-              const int cx = FloorDiv(candidate.x, CHUNK_SIZE);
-              const int cz = FloorDiv(candidate.y, CHUNK_SIZE);
-              const int candidate_horiz =
-                  std::max(std::abs(cx - focus_chunk.x),
-                           std::abs(cz - focus_chunk.z));
-              if (candidate_horiz >
-                      std::max(std::abs(target.rejected_slice.x -
-                                        focus_chunk.x),
-                               std::abs(target.rejected_slice.z -
-                                        focus_chunk.z)) &&
-                  !ShouldProtectRelightFifoPinKey(
-                      cx, cz, RelightFifoPinValid, RelightFifoPinCx,
-                      RelightFifoPinCz) &&
-                  std::find(protected_visible_columns.begin(),
-                            protected_visible_columns.end(),
-                            glm::ivec2(cx, cz)) ==
-                      protected_visible_columns.end())
-              {
-                farthest_unpinned_horiz =
-                    std::max(farthest_unpinned_horiz, candidate_horiz);
-              }
-            }
-          };
-          note_farthest_unpinned(PendingTerrainColumnRelights);
-          note_farthest_unpinned(PendingTerrainColumnRelightsPriority);
-          trace.cause = farthest_unpinned_horiz >= 0 ? 1u : 0u;
-          trace.face_debt_mask = static_cast<uint8_t>(
-              std::max(0, farthest_unpinned_horiz));
         }
+        trace.cause = draw_gate_admission_outcome;
+        trace.face_debt_mask = static_cast<uint8_t>(std::clamp(
+            draw_gate_victim_horiz, 0, static_cast<int>(UINT8_MAX)));
         trace.relight_y_band_defined = 1;
         trace.relight_band_min_y = target.min_world_y;
         trace.relight_band_max_y = target.max_world_y;
