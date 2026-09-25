@@ -6761,6 +6761,69 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
   // burning 100–200ms whenever burst frames were non-zero on cruise.
   sync_cap = 0;
+  // Final output-pipeline backpressure fence. ComputeMeshWorkAdmission is
+  // followed by miss, coverage, abort and underfeet floors above; those may
+  // deliberately raise the proposed schedule again. Bound the actual work
+  // after those policy layers, accounting for jobs that have not reached the
+  // GPU queue yet so a just-drained queue cannot immediately refill in a burst.
+  {
+    const size_t queued_gpu = mesh_service.GetPendingGpuAppliesCount();
+    const int async_inflight =
+        std::max(0, mesh_service.GetAsyncInFlightCount());
+    const int capture_pending =
+        std::max(0, mesh_service.GetPendingCaptureCount());
+    const size_t completed_waiting =
+        mesh_service.GetCache().GetMeshCompletedSize();
+    const size_t pipeline_outstanding =
+        queued_gpu + static_cast<size_t>(async_inflight) +
+        static_cast<size_t>(capture_pending) + completed_waiting;
+    const UnifiedAdmissionPools pools{};
+    if (pipeline_outstanding >= pools.queued_output_slots)
+    {
+      MeshWorkAdmission bounded = mesh_service.GetMeshWorkAdmission();
+      if (bounded.mode == MeshWorkAdmission::Mode::Normal)
+      {
+        bounded.mode = MeshWorkAdmission::Mode::WarmBacklog;
+      }
+
+      const int dirty_fm_n = mesh_service.GetLastDirtyFmN();
+      const int remesh_n = mesh_service.GetLastDirtyRemeshN();
+      const auto &pt = world.GetPhysicsTelemetry();
+      const bool focus_missing_or_holes =
+          missing_visible_mesh || missing_underfeet || visual_holes ||
+          pt.FocusMissingMesh > 0 || pt.UnfinishedVisual > 0;
+      DualLaneScheduleInput lane_in{};
+      lane_in.schedule_cap = 2;
+      lane_in.fm_q = dirty_fm_n;
+      lane_in.remesh_q = remesh_n;
+      lane_in.focus_missing_or_holes = focus_missing_or_holes;
+      lane_in.fm_demand = dirty_fm_n > 0 || pt.ColumnLoadedNoMeshN > 0;
+      lane_in.remesh_lit_demand = remesh_n > 0;
+      lane_in.protect_remesh_floor =
+          bounded.protect_lit_settle_remesh ? 1 : 0;
+      lane_in.prior_first_mesh_schedule = bounded.first_mesh_schedule;
+      lane_in.prior_remesh_schedule = bounded.remesh_schedule;
+      lane_in.rr_token = DualLaneRrToken_;
+      lane_in.miss_pressure =
+          focus_missing_or_holes || pt.DarkFaceStaleNearN >= 20 ||
+          pt.VisibleBlackFullyDarkRepairN >= 20;
+      const DualLaneSchedule lane = ComputeDualLaneSchedule(lane_in);
+      bounded.first_mesh_schedule = lane.first_mesh_schedule;
+      bounded.remesh_schedule = lane.remesh_schedule;
+      bounded.max_schedule = 2;
+      bounded.dual_lane_starve_reason =
+          static_cast<int>(lane.starve_reason);
+      bounded.dual_lane_rr_token_next = lane.next_rr_token;
+      DualLaneRrToken_ = lane.next_rr_token;
+      mesh_service.SetMeshWorkAdmission(bounded);
+      mesh_schedule = std::min(std::max(0, mesh_schedule), 2);
+      LastBudget.MaxMeshSchedule = mesh_schedule;
+      LastBudget.AdmissionMode = static_cast<int>(bounded.mode);
+      auto &pt_out = world.GetPhysicsTelemetryMutable();
+      pt_out.FirstMeshScheduleCap = bounded.first_mesh_schedule;
+      pt_out.RemeshScheduleCap = bounded.remesh_schedule;
+    }
+  }
   MeshRebuildTickStats tick_stats{};
   {
     const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();
