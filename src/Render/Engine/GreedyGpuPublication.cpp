@@ -3,7 +3,6 @@
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/MeshPublishContract.h"
-#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include <atomic>
 #include <unordered_map>
@@ -42,6 +41,19 @@ struct GpuBatchKeyHash
     return h;
   }
 };
+
+// A render-pass refresh uploads the mesh already resident in ChunkMeshCache;
+// it is not itself evidence that the current render demand was built. Only
+// let this downstream pass finish/reject a demand when its source artifact
+// matches the current desired geometry and light stamps.
+bool PassMeshMatchesDemand(const UChunkRenderDemandStore &demand,
+                           glm::ivec3 coord, const MeshPublishRevs &published)
+{
+  const ChunkRenderDemandRecord *record = demand.Find(coord);
+  return !record ||
+         (record->desired_geom_rev == published.geom_rev &&
+          record->desired_light_rev == published.light_rev);
+}
 
 } // namespace
 void UGreedyGpuBackend::DestroyBatchBuffers(GreedyGpuBatch &batch)
@@ -520,24 +532,16 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         if (kChunkDemandShadow())
         {
           UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-          const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
           const MeshPublishRevs pub =
               mesh_cache->GetMeshPublishRevs(coord);
-          demand.NoteInstallResult(coord,
-                                   InstallResult::RetainedAwaitingSuccessor,
-                                   pub.geom_rev, pub.light_rev, attempt_id);
-          JobStageSpan span{};
-          span.cx = coord.x;
-          span.cy = coord.y;
-          span.cz = coord.z;
-          span.stage = JobStage::Published;
-          span.outcome =
-              static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
-          span.attempt_id = attempt_id;
-          span.source_geom_rev = mesh_cache->GetChunkMeshRevision(coord);
-          span.source_light_rev = mesh_cache->GetMeshedLightRevision(coord);
-          (void)StampChunkRenderDemandTrace(span, demand, coord);
-          UJobStageTrace::Note(span);
+          if (PassMeshMatchesDemand(demand, coord, pub))
+          {
+            const uint64_t attempt_id =
+                DemandActiveAttemptId(demand, coord);
+            demand.NoteInstallResult(
+                coord, InstallResult::RetainedAwaitingSuccessor,
+                pub.geom_rev, pub.light_rev, attempt_id);
+          }
         }
         continue;
       }
@@ -583,21 +587,14 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
       UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
       for (const auto &coord : upload_order)
       {
-        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
-        demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
-                                 pub.geom_rev, pub.light_rev, attempt_id);
-        JobStageSpan span{};
-        span.cx = coord.x;
-        span.cy = coord.y;
-        span.cz = coord.z;
-        span.stage = JobStage::Published;
-        span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
-        span.attempt_id = attempt_id;
-        span.source_geom_rev = mesh_cache->GetChunkMeshRevision(coord);
-        span.source_light_rev = mesh_cache->GetMeshedLightRevision(coord);
-        (void)StampChunkRenderDemandTrace(span, demand, coord);
-        UJobStageTrace::Note(span);
+        if (PassMeshMatchesDemand(demand, coord, pub))
+        {
+          const uint64_t attempt_id =
+              DemandActiveAttemptId(demand, coord);
+          demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
+                                   pub.geom_rev, pub.light_rev, attempt_id);
+        }
       }
     }
     return false;
@@ -779,22 +776,14 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
         for (const auto &coord : published_ok)
         {
-          const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
           const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
-          demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
-                                   pub.geom_rev, pub.light_rev, attempt_id);
-          JobStageSpan span{};
-          span.cx = coord.x;
-          span.cy = coord.y;
-          span.cz = coord.z;
-          span.stage = JobStage::Published;
-          span.outcome =
-              static_cast<uint8_t>(InstallResult::RejectedRetryable);
-          span.attempt_id = attempt_id;
-          span.source_geom_rev = mesh_cache->GetChunkMeshRevision(coord);
-          span.source_light_rev = mesh_cache->GetMeshedLightRevision(coord);
-          (void)StampChunkRenderDemandTrace(span, demand, coord);
-          UJobStageTrace::Note(span);
+          if (PassMeshMatchesDemand(demand, coord, pub))
+          {
+            const uint64_t attempt_id =
+                DemandActiveAttemptId(demand, coord);
+            demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
+                                     pub.geom_rev, pub.light_rev, attempt_id);
+          }
         }
       }
       return false;
@@ -866,24 +855,14 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
     UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
     for (const auto &coord : published_ok)
     {
-      const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
       const MeshPublishRevs pub = mesh_cache->GetMeshPublishRevs(coord);
-      const uint64_t cov_pub = DemandCoverageGenToPublish(demand, coord);
-      demand.NoteInstallResult(coord, InstallResult::Published, pub.geom_rev,
-                               pub.light_rev, attempt_id, cov_pub);
-      JobStageSpan span{};
-      span.cx = coord.x;
-      span.cy = coord.y;
-      span.cz = coord.z;
-      span.stage = JobStage::Published;
-      span.outcome = static_cast<uint8_t>(InstallResult::Published);
-      span.attempt_id = attempt_id;
-      span.published_rev = pub.geom_rev;
-      span.published_light_rev = pub.light_rev;
-      span.source_geom_rev = mesh_cache->GetChunkMeshRevision(coord);
-      span.source_light_rev = mesh_cache->GetMeshedLightRevision(coord);
-      (void)StampChunkRenderDemandTrace(span, demand, coord);
-      UJobStageTrace::Note(span);
+      if (PassMeshMatchesDemand(demand, coord, pub))
+      {
+        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+        const uint64_t cov_pub = DemandCoverageGenToPublish(demand, coord);
+        demand.NoteInstallResult(coord, InstallResult::Published, pub.geom_rev,
+                                 pub.light_rev, attempt_id, cov_pub);
+      }
     }
   }
   return true;
