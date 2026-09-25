@@ -1122,6 +1122,9 @@ private:
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
   UMeshCaptureStore CaptureStore;
   int CaptureRefreshBudgetLeft{4};
+  /// Rolling capture cost estimate used to translate snapshot ms into a bounded
+  /// refresh count. LastMeshSnapshotMs remains the authoritative time limit.
+  double CaptureSnapshotCostEmaMs_{0.5};
   /// A42b: reserved Capture refreshes for LightRepair remesh when FM spent budget.
   int LightRepairCaptureReserveLeft{0};
   /// Keep one count-budget refresh for an active focus FirstMesh miss.

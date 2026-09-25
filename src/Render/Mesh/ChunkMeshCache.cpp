@@ -5871,10 +5871,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
   };
   CaptureRefreshBudgetLeft =
-      // Era14 TD-ARCH-046: prefer store hit; live Capture refresh is the hitch.
-      // Cap refreshes from MeshSnapshotBudgetMs (already cruise-clamped in
-      // emerge). Floor 1 so schedule can still progress on store miss.
-      std::max(1, static_cast<int>(MeshSnapshotBudgetMs * 0.35));
+      // Refreshes are count-bounded using the measured cost estimate, while the
+      // accumulated LastMeshSnapshotMs check below enforces the real time budget.
+      // The old 0.35 * ms heuristic allowed only 2–4 new captures even when
+      // snapshot time was far below budget, starving missing focus meshes.
+      std::clamp(static_cast<int>(std::floor(
+                     MeshSnapshotBudgetMs /
+                     std::clamp(CaptureSnapshotCostEmaMs_, 0.10, 8.0))),
+                 1, 32);
   // A42b/d: reserve Capture slots for LightRepair remesh (Published owner).
   // Under VB/StaleVL debt allow up to 4 so miss-floor remesh can drain.
   {
@@ -6806,10 +6810,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         return std::next(it);
       }
       ChunkMeshSnapshot snapshot = std::move(*acquire.snapshot);
-      LastMeshSnapshotMs += std::chrono::duration<double, std::milli>(
-                                std::chrono::high_resolution_clock::now() -
-                                snap_t0)
-                                .count();
+      const double snapshot_acquire_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - snap_t0)
+              .count();
+      LastMeshSnapshotMs += snapshot_acquire_ms;
+      if (snapshot_acquire_ms > 0.0)
+      {
+        constexpr double kSnapshotCostEmaAlpha = 0.20;
+        CaptureSnapshotCostEmaMs_ = std::clamp(
+            CaptureSnapshotCostEmaMs_ * (1.0 - kSnapshotCostEmaAlpha) +
+                snapshot_acquire_ms * kSnapshotCostEmaAlpha,
+            0.10, 8.0);
+      }
       const uint64_t submitted_revision = snapshot.sourceRevision;
       if (!AsyncBuilder->Enqueue(std::move(snapshot), registry))
       {
