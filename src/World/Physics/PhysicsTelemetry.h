@@ -552,6 +552,17 @@ struct PhysicsTelemetry
   int ColumnAbsentInRdN{0};
   /// Era51: columns in RD loaded but not render-ready (mesh/light debt).
   int ColumnLoadedNoMeshN{0};
+  /// Focus-ring column census by authoritative visual-readiness reason.
+  int FocusVisualTerrainIncompleteN{0};
+  int FocusVisualPendingLightN{0};
+  int FocusVisualStickyRemeshN{0};
+  int FocusVisualStaleDarkN{0};
+  int FocusVisualMissingMeshN{0};
+  int FocusVisualGpuInFlightN{0};
+  int FocusVisualNotLoadedN{0};
+  int FocusVisualNotReadyStateN{0};
+  int FocusVisualFaceDebtN{0};
+  int FocusVisualReadyN{0};
   /// Exclusive ColumnEmergeState bump denials this frame (competing producer).
   int ColumnBumpDenied{0};
   /// ColPipe P1: ColumnFlow ExclusiveRank upgrades this frame.

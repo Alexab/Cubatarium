@@ -1421,6 +1421,28 @@ void UWorldStreaming::RefreshStreamingPressure(
     }
   }
   world.PhysicsTelemetryData.FocusNotRenderReady = unfinished_visual;
+  const FocusRingVisualCensus focus_visual =
+      world.GetFocusRingVisualCensus();
+  world.PhysicsTelemetryData.FocusVisualTerrainIncompleteN =
+      focus_visual.Get(FocusColumnVisualClass::TerrainIncomplete);
+  world.PhysicsTelemetryData.FocusVisualPendingLightN =
+      focus_visual.Get(FocusColumnVisualClass::PendingLight);
+  world.PhysicsTelemetryData.FocusVisualStickyRemeshN =
+      focus_visual.Get(FocusColumnVisualClass::StickyRemesh);
+  world.PhysicsTelemetryData.FocusVisualStaleDarkN =
+      focus_visual.Get(FocusColumnVisualClass::StaleDark);
+  world.PhysicsTelemetryData.FocusVisualMissingMeshN =
+      focus_visual.Get(FocusColumnVisualClass::MissingMesh);
+  world.PhysicsTelemetryData.FocusVisualGpuInFlightN =
+      focus_visual.Get(FocusColumnVisualClass::GpuInFlight);
+  world.PhysicsTelemetryData.FocusVisualNotLoadedN =
+      focus_visual.Get(FocusColumnVisualClass::NotLoaded);
+  world.PhysicsTelemetryData.FocusVisualNotReadyStateN =
+      focus_visual.Get(FocusColumnVisualClass::NotReadyState);
+  world.PhysicsTelemetryData.FocusVisualFaceDebtN =
+      focus_visual.Get(FocusColumnVisualClass::FaceDebt);
+  world.PhysicsTelemetryData.FocusVisualReadyN =
+      focus_visual.Get(FocusColumnVisualClass::Ready);
   world.PhysicsTelemetryData.FocusPressure = focus_pressure;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
   if (missing_near && world.PhysicsTelemetryData.MissCx != 0)

@@ -499,6 +499,16 @@ struct FrameNumbers
   int allow_proc_fill{0};
   int column_absent_in_rd_n{0};
   int column_loaded_no_mesh_n{0};
+  int focus_visual_terrain_incomplete_n{0};
+  int focus_visual_pending_light_n{0};
+  int focus_visual_sticky_remesh_n{0};
+  int focus_visual_stale_dark_n{0};
+  int focus_visual_missing_mesh_n{0};
+  int focus_visual_gpu_in_flight_n{0};
+  int focus_visual_not_loaded_n{0};
+  int focus_visual_not_ready_state_n{0};
+  int focus_visual_face_debt_n{0};
+  int focus_visual_ready_n{0};
   int column_bump_denied{0};
   int column_flow_upgrade_n{0};
   int column_flow_drained_n{0};
@@ -1190,6 +1200,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.allow_proc_fill = phys.AllowProcFill;
   n.column_absent_in_rd_n = phys.ColumnAbsentInRdN;
   n.column_loaded_no_mesh_n = phys.ColumnLoadedNoMeshN;
+  n.focus_visual_terrain_incomplete_n = phys.FocusVisualTerrainIncompleteN;
+  n.focus_visual_pending_light_n = phys.FocusVisualPendingLightN;
+  n.focus_visual_sticky_remesh_n = phys.FocusVisualStickyRemeshN;
+  n.focus_visual_stale_dark_n = phys.FocusVisualStaleDarkN;
+  n.focus_visual_missing_mesh_n = phys.FocusVisualMissingMeshN;
+  n.focus_visual_gpu_in_flight_n = phys.FocusVisualGpuInFlightN;
+  n.focus_visual_not_loaded_n = phys.FocusVisualNotLoadedN;
+  n.focus_visual_not_ready_state_n = phys.FocusVisualNotReadyStateN;
+  n.focus_visual_face_debt_n = phys.FocusVisualFaceDebtN;
+  n.focus_visual_ready_n = phys.FocusVisualReadyN;
   n.column_bump_denied = phys.ColumnBumpDenied;
   n.column_flow_upgrade_n = phys.ColumnFlowUpgradeN;
   n.column_flow_drained_n = phys.ColumnFlowDrainedN;
@@ -1943,6 +1963,25 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"allow_proc_fill\":" << n.allow_proc_fill
           << ",\"column_absent_in_rd_n\":" << n.column_absent_in_rd_n
           << ",\"column_loaded_no_mesh_n\":" << n.column_loaded_no_mesh_n
+          << ",\"focus_visual_terrain_incomplete_n\":"
+          << n.focus_visual_terrain_incomplete_n
+          << ",\"focus_visual_pending_light_n\":"
+          << n.focus_visual_pending_light_n
+          << ",\"focus_visual_sticky_remesh_n\":"
+          << n.focus_visual_sticky_remesh_n
+          << ",\"focus_visual_stale_dark_n\":"
+          << n.focus_visual_stale_dark_n
+          << ",\"focus_visual_missing_mesh_n\":"
+          << n.focus_visual_missing_mesh_n
+          << ",\"focus_visual_gpu_in_flight_n\":"
+          << n.focus_visual_gpu_in_flight_n
+          << ",\"focus_visual_not_loaded_n\":"
+          << n.focus_visual_not_loaded_n
+          << ",\"focus_visual_not_ready_state_n\":"
+          << n.focus_visual_not_ready_state_n
+          << ",\"focus_visual_face_debt_n\":"
+          << n.focus_visual_face_debt_n
+          << ",\"focus_visual_ready_n\":" << n.focus_visual_ready_n
           << ",\"column_bump_denied\":" << n.column_bump_denied
           << ",\"column_flow_upgrade_n\":" << n.column_flow_upgrade_n
           << ",\"column_flow_drained_n\":" << n.column_flow_drained_n

@@ -83,6 +83,32 @@ struct ColumnRenderableState
   bool has_repair_ticket{false};
 };
 
+/// Per-column focus-ring status used to explain visually unfinished terrain.
+enum class FocusColumnVisualClass : uint8_t
+{
+  Ready = 0,
+  TerrainIncomplete,
+  PendingLight,
+  StickyRemesh,
+  StaleDark,
+  MissingMesh,
+  GpuInFlight,
+  NotLoaded,
+  NotReadyState,
+  FaceDebt,
+  Count,
+};
+
+struct FocusRingVisualCensus
+{
+  std::array<int, static_cast<size_t>(FocusColumnVisualClass::Count)> counts{};
+
+  int Get(FocusColumnVisualClass visual_class) const
+  {
+    return counts[static_cast<size_t>(visual_class)];
+  }
+};
+
 class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 struct CreatureDefinition;
@@ -1220,6 +1246,7 @@ public:
   /// Focus columns that are loaded but not yet safe to render.
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;
+  FocusRingVisualCensus GetFocusRingVisualCensus() const;
   /// A37 H2: owned desire→admit for unfinished keys (replaces Kick as writer).
   /// Returns number of NewDemand/MarkDirty admits this call.
   int AdmitUnfinishedVisualDemand(int max_n = 8);
@@ -1613,6 +1640,8 @@ private:
     glm::ivec3 focus{0};
     int radius{-1};
     int count{0};
+    FocusRingVisualCensus readiness{};
+    std::unordered_map<uint64_t, FocusColumnVisualClass> readiness_by_column;
     /// Packed xz of columns currently counted unfinished in the ring.
     std::unordered_set<uint64_t> unfinished_keys;
     /// Columns needing ±1 recheck (MarkDirty / mesh-ready / load).

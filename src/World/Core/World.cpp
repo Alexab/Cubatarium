@@ -2445,26 +2445,85 @@ uint64_t PackUnfinishedColKey(int x, int z)
          static_cast<uint32_t>(z);
 }
 
-/// Cheap unfinished probe for ring cache: terrain complete columns that are not
-/// visually render-ready (SoT: IsColumnRenderReady — Phase 1 unify).
-/// Sysreset v3: face_debt also counts unfinished (seam x-ray while draw_ok).
-bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
-                                 int dx, int dz)
+FocusColumnVisualClass ClassifyFocusColumnVisual(const UWorld &world,
+                                                 glm::ivec3 focus_ground,
+                                                 int dx, int dz)
 {
   const glm::ivec3 ground(focus_ground.x + dx, 0, focus_ground.z + dz);
-  // R4.6.1: cached complete — raw IsTerrainChunkComplete is O(256×H) per column.
   if (!world.IsTerrainColumnCompleteFast(ground))
   {
-    return false;
+    return FocusColumnVisualClass::TerrainIncomplete;
   }
-  if (!world.IsColumnRenderReady(ground))
-  {
-    return true;
-  }
+
+  const ColumnRenderableState state =
+      world.GetColumnRenderableState(glm::ivec2(ground.x, ground.z));
+  bool face_debt = false;
   if (const ColumnRecord *rec =
           world.GetColumnRecords().Find(glm::ivec2(ground.x, ground.z)))
   {
-    return ColumnHasFaceDebt(rec->face_debt_mask);
+    face_debt = ColumnHasFaceDebt(rec->face_debt_mask);
+  }
+  if (state.draw_ok && face_debt)
+  {
+    return FocusColumnVisualClass::FaceDebt;
+  }
+  using Reason = ColumnRenderableState::BlockReason;
+  switch (state.reason)
+  {
+  case Reason::PendingLight:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::PendingLight;
+    break;
+  case Reason::StickyRemesh:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::StickyRemesh;
+    break;
+  case Reason::StaleDark:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::StaleDark;
+    break;
+  case Reason::MissingMesh:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::MissingMesh;
+    break;
+  case Reason::GpuInFlight:
+    return FocusColumnVisualClass::GpuInFlight;
+  case Reason::NotLoaded:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::NotLoaded;
+    break;
+  case Reason::NotReadyState:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::NotReadyState;
+    break;
+  case Reason::None:
+    break;
+  }
+
+  if (face_debt)
+  {
+    return FocusColumnVisualClass::FaceDebt;
+  }
+  return FocusColumnVisualClass::Ready;
+}
+
+bool IsUnfinishedFocusColumnVisual(FocusColumnVisualClass visual_class)
+{
+  switch (visual_class)
+  {
+  case FocusColumnVisualClass::PendingLight:
+  case FocusColumnVisualClass::StickyRemesh:
+  case FocusColumnVisualClass::StaleDark:
+  case FocusColumnVisualClass::MissingMesh:
+  case FocusColumnVisualClass::NotLoaded:
+  case FocusColumnVisualClass::NotReadyState:
+  case FocusColumnVisualClass::FaceDebt:
+    return true;
+  case FocusColumnVisualClass::Ready:
+  case FocusColumnVisualClass::TerrainIncomplete:
+  case FocusColumnVisualClass::GpuInFlight:
+  case FocusColumnVisualClass::Count:
+    return false;
   }
   return false;
 }
@@ -2546,8 +2605,22 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       const int cz = static_cast<int>(static_cast<uint32_t>(key));
       const int rdx = cx - focus_ground_chunk.x;
       const int rdz = cz - focus_ground_chunk.z;
-      const bool now =
-          ColumnUnfinishedVisualCheap(*this, focus_ground_chunk, rdx, rdz);
+      const FocusColumnVisualClass visual_class =
+          ClassifyFocusColumnVisual(*this, focus_ground_chunk, rdx, rdz);
+      const auto old_it = cache.readiness_by_column.find(key);
+      const FocusColumnVisualClass was_class =
+          old_it != cache.readiness_by_column.end()
+              ? old_it->second
+              : FocusColumnVisualClass::Ready;
+      if (was_class != FocusColumnVisualClass::Count)
+      {
+        int &old_count = cache.readiness.counts[
+            static_cast<size_t>(was_class)];
+        old_count = std::max(0, old_count - 1);
+      }
+      ++cache.readiness.counts[static_cast<size_t>(visual_class)];
+      cache.readiness_by_column[key] = visual_class;
+      const bool now = IsUnfinishedFocusColumnVisual(visual_class);
       const bool was = cache.unfinished_keys.count(key) != 0;
       if (now == was)
       {
@@ -2573,6 +2646,10 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   }
   int unfinished = 0;
   cache.unfinished_keys.clear();
+  cache.readiness = {};
+  cache.readiness_by_column.clear();
+  cache.readiness_by_column.reserve(static_cast<size_t>(
+      (2 * radius_chunks + 1) * (2 * radius_chunks + 1)));
   cache.unfinished_keys.reserve(static_cast<size_t>((2 * radius_chunks + 1) *
                                                     (2 * radius_chunks + 1) /
                                                     4));
@@ -2580,13 +2657,17 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   {
     for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
     {
-      if (!ColumnUnfinishedVisualCheap(*this, focus_ground_chunk, dx, dz))
+      const uint64_t key = PackUnfinishedColKey(
+          focus_ground_chunk.x + dx, focus_ground_chunk.z + dz);
+      const FocusColumnVisualClass visual_class =
+          ClassifyFocusColumnVisual(*this, focus_ground_chunk, dx, dz);
+      ++cache.readiness.counts[static_cast<size_t>(visual_class)];
+      cache.readiness_by_column.emplace(key, visual_class);
+      if (IsUnfinishedFocusColumnVisual(visual_class))
       {
-        continue;
+        ++unfinished;
+        cache.unfinished_keys.insert(key);
       }
-      ++unfinished;
-      cache.unfinished_keys.insert(PackUnfinishedColKey(
-          focus_ground_chunk.x + dx, focus_ground_chunk.z + dz));
     }
   }
   cache.valid = true;
@@ -2598,6 +2679,11 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   LastUnfinishedVisualSample = unfinished;
   LastUnfinishedVisualSampleValid = true;
   return unfinished;
+}
+
+FocusRingVisualCensus UWorld::GetFocusRingVisualCensus() const
+{
+  return UnfinishedVisualCache.readiness;
 }
 
 int UWorld::AdmitUnfinishedVisualDemand(int max_n)
@@ -2981,6 +3067,8 @@ void UWorld::InvalidateUnfinishedVisualCache() const
   UnfinishedVisualCache.valid = false;
   UnfinishedVisualCache.dirty_cols.clear();
   UnfinishedVisualCache.unfinished_keys.clear();
+  UnfinishedVisualCache.readiness_by_column.clear();
+  UnfinishedVisualCache.readiness = {};
   UnfinishedVisualCache.count = 0;
   LastUnfinishedVisualSampleValid = false;
   // Phase 5.7R: do not InvalidateVisibleBlackFocusSample here — unfinished
@@ -7089,7 +7177,9 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
         {
           continue;
         }
-        if (!ColumnUnfinishedVisualCheap(*this, focus, dx, dz))
+        const FocusColumnVisualClass visual_class =
+            ClassifyFocusColumnVisual(*this, focus, dx, dz);
+        if (!IsUnfinishedFocusColumnVisual(visual_class))
         {
           continue;
         }
