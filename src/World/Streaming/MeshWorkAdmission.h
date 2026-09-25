@@ -1448,6 +1448,55 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     }
   }
 
+  // Hard output backpressure must be the final schedule decision. Earlier
+  // admission-pool softening is followed by hole/coverage urgency floors, which
+  // can otherwise raise max_schedule back to 12–16 while the queued GPU output
+  // pool is already far beyond capacity. Keep a small two-item progress window
+  // so focus work can continue while the consumer drains existing results.
+  {
+    const UnifiedAdmissionPools pools{};
+    const int queued_output =
+        static_cast<int>(std::min<size_t>(MeshWorkQueuedApprox(in), 100000));
+    if (queued_output >= pools.queued_output_slots)
+    {
+      if (out.mode == MeshWorkAdmission::Mode::Normal)
+      {
+        out.mode = MeshWorkAdmission::Mode::WarmBacklog;
+      }
+
+      const bool holes_or_miss =
+          holes || in.missing_underfeet ||
+          IsNearFocusMissUrgent(in.visual_holes, in.missing_underfeet,
+                                in.nearest_miss_horiz);
+      const int stale_fd_debt =
+          std::max(in.dark_face_stale_near_n,
+                   in.visible_black_fully_dark_repair_n);
+      DualLaneScheduleInput bounded{};
+      bounded.schedule_cap = 2;
+      bounded.fm_q = in.dirty_fm_n;
+      bounded.remesh_q = in.remesh_queue_n;
+      bounded.focus_missing_or_holes = holes_or_miss;
+      bounded.fm_demand =
+          in.dirty_fm_n > 0 || in.column_loaded_no_mesh_n > 0;
+      bounded.remesh_lit_demand = in.remesh_queue_n > 0;
+      bounded.protect_remesh_floor =
+          out.protect_lit_settle_remesh ? 1 : 0;
+      bounded.steal_remesh_to_fm = false;
+      bounded.prior_first_mesh_schedule = out.first_mesh_schedule;
+      bounded.prior_remesh_schedule = out.remesh_schedule;
+      bounded.rr_token = in.dual_lane_rr_token;
+      bounded.miss_pressure =
+          holes_or_miss || stale_fd_debt >= 20;
+      const DualLaneSchedule lane = ComputeDualLaneSchedule(bounded);
+      out.first_mesh_schedule = lane.first_mesh_schedule;
+      out.remesh_schedule = lane.remesh_schedule;
+      out.max_schedule = 2;
+      out.dual_lane_starve_reason =
+          static_cast<int>(lane.starve_reason);
+      out.dual_lane_rr_token_next = lane.next_rr_token;
+    }
+  }
+
   out.stop_vb_drain_frames_report = stop_vb_drain_frames;
   out.stop_vb_budget_active =
       (!in.moving &&
