@@ -150,6 +150,9 @@ inline void BuildOccupancy(const ChunkMeshSnapshot &snap,
 /// Padded (CHUNK_SIZE+2)^3 occupancy including one-block shell for GPU extract.
 inline constexpr int kGpuOccPad = CHUNK_SIZE + 2;
 inline constexpr int kGpuOccPadVolume = kGpuOccPad * kGpuOccPad * kGpuOccPad;
+inline constexpr int kGpuLightPad = CHUNK_SIZE + 4;
+inline constexpr int kGpuLightPadVolume =
+    kGpuLightPad * kGpuLightPad * kGpuLightPad;
 
 inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
                                  UBlockRegistry &registry,
@@ -231,16 +234,17 @@ inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
 inline void BuildPaddedLight(const ChunkMeshSnapshot &snap,
                              std::vector<uint8_t> &lights)
 {
-  lights.assign(static_cast<size_t>(kGpuOccPadVolume), 0);
-  const int pad = kGpuOccPad;
-  for (int y = -1; y <= CHUNK_SIZE; ++y)
+  lights.assign(static_cast<size_t>(kGpuLightPadVolume), 0);
+  const int pad = kGpuLightPad;
+  constexpr int halo = ChunkMeshSnapshot::kLightHaloRadius;
+  for (int y = -halo; y < CHUNK_SIZE + halo; ++y)
   {
-    for (int z = -1; z <= CHUNK_SIZE; ++z)
+    for (int z = -halo; z < CHUNK_SIZE + halo; ++z)
     {
-      for (int x = -1; x <= CHUNK_SIZE; ++x)
+      for (int x = -halo; x < CHUNK_SIZE + halo; ++x)
       {
         const glm::ivec3 world = snap.ChunkOrigin() + glm::ivec3(x, y, z);
-        const int pi = ((y + 1) * pad + (z + 1)) * pad + (x + 1);
+        const int pi = ((y + halo) * pad + (z + halo)) * pad + (x + halo);
         lights[static_cast<size_t>(pi)] = snap.GetLightPacked(world);
       }
     }

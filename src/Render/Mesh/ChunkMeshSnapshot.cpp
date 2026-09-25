@@ -4,6 +4,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include <cstdlib>
 
 namespace cutum
 {
@@ -64,6 +65,13 @@ int ShellFlatIndex(int face, int cell)
   return face * ChunkMeshSnapshot::kShellFaceCells + cell;
 }
 
+int LightHaloFlatIndex(glm::ivec3 local)
+{
+  constexpr int pad = ChunkMeshSnapshot::kLightHaloRadius;
+  constexpr int size = ChunkMeshSnapshot::kLightHaloSize;
+  return (local.x + pad) + size * (local.y + pad) + size * size * (local.z + pad);
+}
+
 } // namespace
 
 bool ChunkMeshSnapshot::InputsStillValid(
@@ -89,7 +97,8 @@ bool ChunkMeshSnapshot::InputsStillValid(
 
 MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
     bool input_stamps_valid, bool catalog_match,
-    const std::array<ChunkInputStamp, 7> &stamps, const UBlockWorld &world)
+    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> &stamps,
+    const UBlockWorld &world)
 {
   if (!input_stamps_valid)
     return MeshApplyStaleInputReason::StampInvalid;
@@ -137,6 +146,56 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.light_packed = chunk->GetLightData();
 
   const glm::ivec3 origin = snapshot.ChunkOrigin();
+  // Capture exactly the radius-2 light neighborhood read by FaceLightPacked.
+  // Copy by chunk once (27 lookups), not by voxel through the chunk map.
+  for (int dy = -1; dy <= 1; ++dy)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        const glm::ivec3 chunk_offset(dx, dy, dz);
+        const UChunk *light_chunk =
+            world.GetChunkManager().GetChunk(chunkCoord + chunk_offset);
+        if (!light_chunk)
+        {
+          continue;
+        }
+        glm::ivec3 dst_min(0);
+        glm::ivec3 dst_max(CHUNK_SIZE - 1);
+        for (int axis = 0; axis < 3; ++axis)
+        {
+          if (chunk_offset[axis] < 0)
+          {
+            dst_min[axis] = -kLightHaloRadius;
+            dst_max[axis] = -1;
+          }
+          else if (chunk_offset[axis] > 0)
+          {
+            dst_min[axis] = CHUNK_SIZE;
+            dst_max[axis] = CHUNK_SIZE + kLightHaloRadius - 1;
+          }
+        }
+        for (int y = dst_min.y; y <= dst_max.y; ++y)
+        {
+          for (int z = dst_min.z; z <= dst_max.z; ++z)
+          {
+            for (int x = dst_min.x; x <= dst_max.x; ++x)
+            {
+              const glm::ivec3 dst_local(x, y, z);
+              const glm::ivec3 neighbor_local =
+                  dst_local - chunk_offset * CHUNK_SIZE;
+              snapshot.paddedLight[static_cast<size_t>(
+                  LightHaloFlatIndex(dst_local))] =
+                  light_chunk->GetLightPackedLocal(neighbor_local);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Keep center + six face stamps at stable indices for existing consumers.
   uint8_t missing_faces = 0;
   for (int axis = 0; axis < 3; ++axis)
   {
@@ -184,12 +243,6 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
           snapshot.shellNeighborState[static_cast<size_t>(flat)] =
               static_cast<uint8_t>(ClassifyShellCell(
                   neighbor_loaded, raw, neighbor_visually_drawable));
-          if (neighbor_chunk)
-          {
-            snapshot.shellLight[static_cast<size_t>(flat)] =
-                neighbor_chunk->GetLightPackedLocal(
-                    UChunkManager::WorldToLocal(worldPos));
-          }
           snapshot.shellFluid[static_cast<size_t>(flat)] =
               PackFluidCellState(world.GetFluidState(worldPos));
         }
@@ -199,6 +252,27 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       // force Unknown via overlay (sky-through SoT 161139).
       if (!neighbor_loaded)
         missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
+    }
+  }
+  size_t stamp_index = 7;
+  for (int dy = -1; dy <= 1; ++dy)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        if (std::abs(dx) + std::abs(dy) + std::abs(dz) <= 1)
+        {
+          continue;
+        }
+        const glm::ivec3 neighbor_coord =
+            chunkCoord + glm::ivec3(dx, dy, dz);
+        // Diagonal chunks can contribute only to the radius-2 lighting
+        // fallback; block geometry reads remain center + six face shells.
+        snapshot.inputStamps[stamp_index++] = ChunkInputStamp::Capture(
+            neighbor_coord,
+            world.GetChunkManager().GetChunk(neighbor_coord), true, false);
+      }
     }
   }
   BoundaryOverlaySetMissingFaces(snapshot.boundaryOverlay, missing_faces);
@@ -263,11 +337,12 @@ uint8_t ChunkMeshSnapshot::GetLightPacked(glm::ivec3 worldPos) const
   {
     return GetLightPackedLocal(local);
   }
-  int face = 0;
-  int cell = 0;
-  if (TryShellIndex(local, face, cell))
+  constexpr int kMin = -kLightHaloRadius;
+  constexpr int kMax = CHUNK_SIZE + kLightHaloRadius - 1;
+  if (local.x >= kMin && local.x <= kMax && local.y >= kMin &&
+      local.y <= kMax && local.z >= kMin && local.z <= kMax)
   {
-    return shellLight[static_cast<size_t>(ShellFlatIndex(face, cell))];
+    return paddedLight[static_cast<size_t>(LightHaloFlatIndex(local))];
   }
   return 0;
 }

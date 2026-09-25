@@ -2750,42 +2750,65 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   CrossBatchesDirty = true;
 }
 
-void UChunkMeshCache::QueueLightDependencyInvalidations(
+void UChunkMeshCache::QueueMeshDependencyInvalidations(
     const UBlockWorld &world,
-    const std::vector<glm::ivec3> &changed_light_chunks)
+    const std::vector<glm::ivec3> &changed_input_chunks)
 {
   const UChunkManager &chunks = world.GetChunkManager();
-  for (const glm::ivec3 changed_coord : changed_light_chunks)
+  for (const glm::ivec3 changed_coord : changed_input_chunks)
   {
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    for (int dy = -1; dy <= 1; ++dy)
     {
-      const glm::ivec3 dependent_coord = changed_coord + offset;
-      if (!chunks.HasChunk(dependent_coord) ||
-          !HasDrawableGreedyMesh(dependent_coord))
+      for (int dz = -1; dz <= 1; ++dz)
       {
-        continue;
-      }
-      if (PendingLightDependencyInvalidations_.insert(dependent_coord).second)
-      {
-        ++LightDependencyQueuedSinceDrain_;
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+          if (dx == 0 && dy == 0 && dz == 0)
+          {
+            continue;
+          }
+          const glm::ivec3 dependent_coord =
+              changed_coord + glm::ivec3(dx, dy, dz);
+          if (!chunks.HasChunk(dependent_coord) ||
+              !HasDrawableGreedyMesh(dependent_coord))
+          {
+            continue;
+          }
+          if (PendingMeshDependencyInvalidations_
+                  .insert(dependent_coord)
+                  .second)
+          {
+            ++MeshDependencyQueuedSinceDrain_;
+          }
+        }
       }
     }
   }
 }
 
-void UChunkMeshCache::DrainLightDependencyInvalidations(
+void UChunkMeshCache::QueueMeshDependencyInvalidation(
+    glm::ivec3 dependent_chunk)
+{
+  if (HasDrawableGreedyMesh(dependent_chunk) &&
+      PendingMeshDependencyInvalidations_.insert(dependent_chunk).second)
+  {
+    ++MeshDependencyQueuedSinceDrain_;
+  }
+}
+
+void UChunkMeshCache::DrainMeshDependencyInvalidations(
     UBlockWorld &world, int max_schedule_per_frame)
 {
-  LastLightDependencyQueuedN_ = LightDependencyQueuedSinceDrain_;
-  LightDependencyQueuedSinceDrain_ = 0;
-  LastLightDependencyAppliedN_ = 0;
-  if (PendingLightDependencyInvalidations_.empty())
+  LastMeshDependencyQueuedN_ = MeshDependencyQueuedSinceDrain_;
+  MeshDependencyQueuedSinceDrain_ = 0;
+  LastMeshDependencyAppliedN_ = 0;
+  if (PendingMeshDependencyInvalidations_.empty())
   {
     return;
   }
 
-  std::vector<glm::ivec3> candidates(PendingLightDependencyInvalidations_.begin(),
-                                    PendingLightDependencyInvalidations_.end());
+  std::vector<glm::ivec3> candidates(PendingMeshDependencyInvalidations_.begin(),
+                                    PendingMeshDependencyInvalidations_.end());
   std::sort(candidates.begin(), candidates.end(), [this](glm::ivec3 a,
                                                          glm::ivec3 b)
   {
@@ -2819,7 +2842,7 @@ void UChunkMeshCache::DrainLightDependencyInvalidations(
     if (!world.GetChunkManager().HasChunk(coord) ||
         !HasDrawableGreedyMesh(coord))
     {
-      PendingLightDependencyInvalidations_.erase(coord);
+      PendingMeshDependencyInvalidations_.erase(coord);
       continue;
     }
 
@@ -2832,7 +2855,7 @@ void UChunkMeshCache::DrainLightDependencyInvalidations(
     }
     if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0)
     {
-      PendingLightDependencyInvalidations_.erase(coord);
+      PendingMeshDependencyInvalidations_.erase(coord);
       continue;
     }
 
@@ -2842,12 +2865,12 @@ void UChunkMeshCache::DrainLightDependencyInvalidations(
         (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
         IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord))
     {
-      PendingLightDependencyInvalidations_.erase(coord);
-      ++LastLightDependencyAppliedN_;
+      PendingMeshDependencyInvalidations_.erase(coord);
+      ++LastMeshDependencyAppliedN_;
       ++enqueued;
-      if (OnLightDependencyAppliedFn_)
+      if (OnMeshDependencyAppliedFn_)
       {
-        OnLightDependencyAppliedFn_(coord);
+        OnMeshDependencyAppliedFn_(coord);
       }
     }
   }
@@ -6084,7 +6107,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyRevisitSameN = 0;
   LastDirtyScheduleDedupN = 0;
   ScheduledThisFrame_.clear();
-  DrainLightDependencyInvalidations(world, max_schedule_per_frame);
+  DrainMeshDependencyInvalidations(world, max_schedule_per_frame);
   AgeFmDirtyGpuWatchFrames();
   // FmDirtyToGpuFinishMatchN_ cleared after emerge telemetry latch (Consume*).
   // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner must

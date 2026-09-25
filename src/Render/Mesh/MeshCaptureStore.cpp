@@ -187,12 +187,6 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
         snap.shellNeighborState[static_cast<size_t>(flat)] =
             static_cast<uint8_t>(ClassifyShellCell(
                 neighbor_loaded, raw, neighbor_visually_drawable));
-        if (neighbor_chunk)
-        {
-          snap.shellLight[static_cast<size_t>(flat)] =
-              neighbor_chunk->GetLightPackedLocal(
-                  UChunkManager::WorldToLocal(worldPos));
-        }
         snap.shellFluid[static_cast<size_t>(flat)] =
             PackFluidCellState(world.GetFluidState(worldPos));
       }

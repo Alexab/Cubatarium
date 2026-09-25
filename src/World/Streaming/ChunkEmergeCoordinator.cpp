@@ -1150,6 +1150,69 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             mesh.MarkDirtyPriority(n);
             ++face_debt_remesh_n;
           }
+
+          // Vertical shell dependencies are not part of the horizontal sea
+          // seam policy below. When a slice gains first drawable coverage,
+          // durably requeue an already-published vertical peer that captured
+          // this boundary as missing/unlit.
+          {
+            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            const MeshPublishRevs cache_pub =
+                mesh.GetCache().GetMeshPublishRevs(chunk_coord);
+            uint64_t publisher_gen = 0;
+            if (const ChunkRenderDemandRecord *pub =
+                    demand.Find(chunk_coord))
+            {
+              publisher_gen = pub->published_coverage_gen > 0
+                                  ? pub->published_coverage_gen
+                                  : pub->published_geom_rev;
+            }
+            if (publisher_gen == 0)
+            {
+              publisher_gen = cache_pub.geom_rev;
+            }
+            if (publisher_gen != 0)
+            {
+              for (int dy : {-1, 1})
+              {
+                const glm::ivec3 target = chunk_coord + glm::ivec3(0, dy, 0);
+                if (!mesh.HasDrawableGreedyMesh(target))
+                {
+                  continue;
+                }
+                const int face_toward_publisher = dy > 0 ? 2 : 3;
+                const uint8_t face_bit = static_cast<uint8_t>(
+                    1u << face_toward_publisher);
+                const bool has_overlay = mesh.HasActiveBoundaryOverlayFace(
+                    target, face_toward_publisher);
+                const ChunkRenderDemandRecord *target_demand =
+                    demand.Find(target);
+                const bool has_face_debt =
+                    target_demand &&
+                    (target_demand->face_debt_mask & face_bit) != 0;
+                if (!has_overlay && !has_face_debt)
+                {
+                  continue;
+                }
+                const uint64_t required_peer_gen =
+                    target_demand
+                        ? target_demand->waiting_peer_gen[
+                              face_toward_publisher]
+                        : 0;
+                if (required_peer_gen != 0 &&
+                    publisher_gen < required_peer_gen)
+                {
+                  continue;
+                }
+                if (has_face_debt)
+                {
+                  demand.NoteFaceDebtSatisfied(target, face_bit,
+                                               publisher_gen);
+                }
+                mesh.QueueMeshDependencyInvalidation(target);
+              }
+            }
+          }
           if (!ShouldRemeshSeaSeamOnFirstDrawable(chunk_coord.y, sea_cy,
                                                  seam_eye))
           {

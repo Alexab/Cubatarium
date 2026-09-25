@@ -33,7 +33,7 @@ struct MeshBuildResult
   bool GpuExtractPending{false};
   std::unique_ptr<ChunkMeshSnapshot> PendingSnapshot;
   std::unique_ptr<UPipelineCreditGuard> ResultCredit;
-  std::array<ChunkInputStamp, 7> InputStamps{};
+  std::array<ChunkInputStamp, kChunkMeshInputStampCount> InputStamps{};
   bool InputStampsValid{false};
   std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
   /// W1: sticky overlay from capture — ApplyMeshResult must stamp CPU path too

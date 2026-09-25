@@ -1,5 +1,6 @@
 #pragma once
 
+#include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
 #include <array>
 #include <cstdint>
@@ -49,8 +50,8 @@ struct DependencyStamp
   uint64_t content_revision{0};
   uint64_t light_revision{0};
   uint64_t material_catalog_revision{0};
-  /// Neighbor halo: ±X, ∓X, ±Z, ∓Z, ±Y, ∓Y light-field revisions (0 if absent).
-  std::array<uint64_t, 6> halo_light_revision{};
+  /// Mesh light read halo: all 26 adjacent chunks, 0 if absent.
+  std::array<uint64_t, kChunkMeshNeighborStampCount> halo_light_revision{};
 
   bool Matches(const DependencyStamp &current) const
   {

@@ -34,6 +34,10 @@ struct ChunkMeshSnapshot
   static constexpr int kShellFaceCount = 6;
   static constexpr int kShellFaceCells = CHUNK_SIZE * CHUNK_SIZE;
   static constexpr int kShellCells = kShellFaceCount * kShellFaceCells;
+  static constexpr int kLightHaloRadius = 2;
+  static constexpr int kLightHaloSize = CHUNK_SIZE + 2 * kLightHaloRadius;
+  static constexpr int kLightHaloVolume =
+      kLightHaloSize * kLightHaloSize * kLightHaloSize;
 
   glm::ivec3 coord{0};
   std::array<BlockId, CHUNK_VOLUME> blocks{};
@@ -41,10 +45,11 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
   std::array<BlockId, kShellCells> shellBlocks{};
   std::array<uint8_t, kShellCells> shellFluid{};
-  std::array<uint8_t, kShellCells> shellLight{};
+  /// Light-only radius-2 padded neighborhood; covers FaceLightPacked fallback.
+  std::array<uint8_t, kLightHaloVolume> paddedLight{};
   std::array<uint8_t, kShellCells> shellNeighborState{};
   uint64_t sourceRevision{0};
-  std::array<ChunkInputStamp, 7> inputStamps{};
+  std::array<ChunkInputStamp, kChunkMeshInputStampCount> inputStamps{};
   bool inputStampsValid{false};
   /// S4: versioned neighbor-missing overlay (not part of stamp equality).
   BoundaryOverlayState boundaryOverlay{};
@@ -65,7 +70,8 @@ struct ChunkMeshSnapshot
   /// Geom wins over Light if both halo stamps mismatch.
   static MeshApplyStaleInputReason ClassifyStaleInput(
       bool input_stamps_valid, bool catalog_match,
-      const std::array<ChunkInputStamp, 7> &stamps, const UBlockWorld &world);
+      const std::array<ChunkInputStamp, kChunkMeshInputStampCount> &stamps,
+      const UBlockWorld &world);
 
   static ChunkMeshSnapshot Capture(const UBlockWorld &world,
                                    glm::ivec3 chunkCoord,

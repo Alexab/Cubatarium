@@ -23,15 +23,26 @@ inline DependencyStamp BuildMeshCaptureDependencyStamp(
   {
     stamp.light_revision = chunk->GetLightFieldRevision();
   }
-  static constexpr std::array<glm::ivec3, 6> kNeighborDelta{
-      glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),  glm::ivec3(0, 0, -1),
-      glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0), glm::ivec3(0, 1, 0)};
-  for (size_t i = 0; i < kNeighborDelta.size(); ++i)
+  size_t stamp_index = 0;
+  for (int dy = -1; dy <= 1; ++dy)
   {
-    const glm::ivec3 ncoord = coord + kNeighborDelta[i];
-    if (const UChunk *neighbor = world.GetChunkManager().GetChunk(ncoord))
+    for (int dz = -1; dz <= 1; ++dz)
     {
-      stamp.halo_light_revision[i] = neighbor->GetLightFieldRevision();
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        if (dx == 0 && dy == 0 && dz == 0)
+        {
+          continue;
+        }
+        const glm::ivec3 neighbor_coord = coord + glm::ivec3(dx, dy, dz);
+        if (const UChunk *neighbor =
+                world.GetChunkManager().GetChunk(neighbor_coord))
+        {
+          stamp.halo_light_revision[stamp_index] =
+              neighbor->GetLightFieldRevision();
+        }
+        ++stamp_index;
+      }
     }
   }
   return stamp;
@@ -41,7 +52,26 @@ inline DependencyStamp BuildRelightDependencyStamp(
     const UBlockWorld &world, glm::ivec3 chunk_coord,
     const UBlockRegistry &registry)
 {
-  return BuildMeshCaptureDependencyStamp(world, chunk_coord, 0, registry);
+  DependencyStamp stamp;
+  stamp.material_catalog_revision =
+      MaterialCatalogRevision(registry.GetDefinitionsCatalogSnapshot());
+  if (const UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord))
+  {
+    stamp.light_revision = chunk->GetLightFieldRevision();
+  }
+  static constexpr std::array<glm::ivec3, 6> kRelightNeighborDelta{
+      glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),  glm::ivec3(0, 0, -1),
+      glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0), glm::ivec3(0, 1, 0)};
+  for (size_t i = 0; i < kRelightNeighborDelta.size(); ++i)
+  {
+    const glm::ivec3 neighbor_coord = chunk_coord + kRelightNeighborDelta[i];
+    if (const UChunk *neighbor =
+            world.GetChunkManager().GetChunk(neighbor_coord))
+    {
+      stamp.halo_light_revision[i] = neighbor->GetLightFieldRevision();
+    }
+  }
+  return stamp;
 }
 
 inline uint64_t ChunkIncarnationAt(const UBlockWorld &world, glm::ivec3 coord)

@@ -691,8 +691,8 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, EmitState.CountersSsbo);
   glUseProgram(EmitState.GreedyProgram);
   glUniform1ui(glGetUniformLocation(EmitState.GreedyProgram, "side"), side);
-  glUniform1ui(glGetUniformLocation(EmitState.GreedyProgram, "pad"),
-               static_cast<uint32_t>(kGpuOccPad));
+  glUniform1ui(glGetUniformLocation(EmitState.GreedyProgram, "lightPad"),
+               static_cast<uint32_t>(kGpuLightPad));
   glDispatchCompute(102u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 

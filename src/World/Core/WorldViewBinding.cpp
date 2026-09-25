@@ -1184,12 +1184,12 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshDirtyDrainN();
   PhysicsTelemetryData.MeshDirtyScheduleMs =
       GetMeshService().GetLastMeshDirtyScheduleMs();
-  PhysicsTelemetryData.MeshLightDependencyQueuedN =
-      GetMeshService().GetLastLightDependencyQueuedN();
-  PhysicsTelemetryData.MeshLightDependencyAppliedN =
-      GetMeshService().GetLastLightDependencyAppliedN();
-  PhysicsTelemetryData.MeshLightDependencyBacklogN =
-      GetMeshService().GetLightDependencyInvalidationBacklogN();
+  PhysicsTelemetryData.MeshDependencyQueuedN =
+      GetMeshService().GetLastMeshDependencyQueuedN();
+  PhysicsTelemetryData.MeshDependencyAppliedN =
+      GetMeshService().GetLastMeshDependencyAppliedN();
+  PhysicsTelemetryData.MeshDependencyBacklogN =
+      GetMeshService().GetMeshDependencyInvalidationBacklogN();
   PhysicsTelemetryData.MeshDirtyScheduleOkN =
       GetMeshService().GetLastMeshDirtyScheduleOkN();
   PhysicsTelemetryData.MeshDirtyScheduleOkFmN =

@@ -80,15 +80,29 @@ struct GpuRect {
 layout(std430, binding = 3) buffer Rects { GpuRect rects[]; };
 layout(std430, binding = 4) buffer Counters { uint rectCount; };
 uniform uint side;
-uniform uint pad;
+uniform uint lightPad;
 uint readBlock(uint index) {
   uint word = blocks[index >> 2u];
   return (word >> ((index & 3u) * 8u)) & 0xFFu;
 }
 uint readLightPad(ivec3 local) {
-  int pi = ((local.y + 1) * int(pad) + (local.z + 1)) * int(pad) + (local.x + 1);
+  int pi = ((local.y + 2) * int(lightPad) + (local.z + 2)) * int(lightPad) + (local.x + 2);
   uint word = lights[uint(pi) >> 2u];
   return (word >> ((uint(pi) & 3u) * 8u)) & 0xFFu;
+}
+uint sampleFaceLight(ivec3 air, ivec3 solid) {
+  uint face = readLightPad(air);
+  if (face != 0u) return face;
+  const ivec3 horizontal[4] = ivec3[4](
+      ivec3(1,0,0), ivec3(-1,0,0), ivec3(0,0,1), ivec3(0,0,-1));
+  uint best = 0u;
+  uint bestSum = 0u;
+  for (int i = 0; i < 4; ++i) {
+    uint packed = readLightPad(air + horizontal[i]);
+    uint sum = (packed & 0x0Fu) + ((packed >> 4u) & 0x0Fu);
+    if (sum > bestSum) { bestSum = sum; best = packed; }
+  }
+  return best != 0u ? best : readLightPad(solid);
 }
 void main() {
   uint plane = gl_WorkGroupID.x;
@@ -114,9 +128,8 @@ void main() {
           uint bid = readBlock(uint(li));
           if (bid != 0u) {
             ivec3 air = local; air[axis] += faceSign;
-            uint fl = readLightPad(air);
-            uint sl = readLightPad(local);
-            val = bid | ((fl != 0u ? fl : sl) << 8u);
+            uint light = sampleFaceLight(air, local);
+            val = bid | (light << 8u);
           }
         }
       }
@@ -442,8 +455,8 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, state.CountersSsbo);
   glUseProgram(state.GreedyProgram);
   glUniform1ui(glGetUniformLocation(state.GreedyProgram, "side"), side);
-  glUniform1ui(glGetUniformLocation(state.GreedyProgram, "pad"),
-               static_cast<uint32_t>(kGpuOccPad));
+  glUniform1ui(glGetUniformLocation(state.GreedyProgram, "lightPad"),
+               static_cast<uint32_t>(kGpuLightPad));
   glDispatchCompute(kGpuPlaneWorkgroups, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 

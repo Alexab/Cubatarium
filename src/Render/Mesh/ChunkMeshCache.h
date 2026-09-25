@@ -75,24 +75,25 @@ public:
                              bool clear_existing_caches = false);
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
-  void QueueLightDependencyInvalidations(
+  void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
-      const std::vector<glm::ivec3> &changed_light_chunks);
-  void SetOnLightDependencyAppliedFn(std::function<void(glm::ivec3)> fn)
+      const std::vector<glm::ivec3> &changed_input_chunks);
+  void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
+  void SetOnMeshDependencyAppliedFn(std::function<void(glm::ivec3)> fn)
   {
-    OnLightDependencyAppliedFn_ = std::move(fn);
+    OnMeshDependencyAppliedFn_ = std::move(fn);
   }
-  int GetLastLightDependencyQueuedN() const
+  int GetLastMeshDependencyQueuedN() const
   {
-    return LastLightDependencyQueuedN_;
+    return LastMeshDependencyQueuedN_;
   }
-  int GetLastLightDependencyAppliedN() const
+  int GetLastMeshDependencyAppliedN() const
   {
-    return LastLightDependencyAppliedN_;
+    return LastMeshDependencyAppliedN_;
   }
-  int GetLightDependencyInvalidationBacklogN() const
+  int GetMeshDependencyInvalidationBacklogN() const
   {
-    return static_cast<int>(PendingLightDependencyInvalidations_.size());
+    return static_cast<int>(PendingMeshDependencyInvalidations_.size());
   }
   /// P3: next Dirty sort boosts this column's nh≤2 / underfeet FirstMesh.
   void SetJustRelitFirstMeshColumn(glm::ivec2 column, bool valid)
@@ -1315,8 +1316,8 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
   void BumpChunkMeshRevision(glm::ivec3 chunk_coord);
-  void DrainLightDependencyInvalidations(UBlockWorld &world,
-                                         int max_schedule_per_frame);
+  void DrainMeshDependencyInvalidations(UBlockWorld &world,
+                                        int max_schedule_per_frame);
   /// Draw SoT: GreedyCache GpuResident flags must match live allocator slot.
   bool ChunkHasLiveGpuDraw(glm::ivec3 chunk_coord) const;
   void ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord);
@@ -1363,14 +1364,14 @@ private:
   int MaxOutsideFocusMeshPerFrame{2};
   int MaxRearFocusMeshPerFrame{0};
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
-  /// Published border meshes waiting for light-dependent remesh. Kept separate
-  /// from Dirty so primary-only relight apply cannot silently discard debt.
+  /// Published neighbor meshes awaiting input/coverage-dependent remesh. Kept
+  /// separate from Dirty so filtered side effects cannot silently drop debt.
   std::unordered_set<glm::ivec3, IVec3Hash>
-      PendingLightDependencyInvalidations_;
-  int LightDependencyQueuedSinceDrain_{0};
-  int LastLightDependencyQueuedN_{0};
-  int LastLightDependencyAppliedN_{0};
-  std::function<void(glm::ivec3)> OnLightDependencyAppliedFn_;
+      PendingMeshDependencyInvalidations_;
+  int MeshDependencyQueuedSinceDrain_{0};
+  int LastMeshDependencyQueuedN_{0};
+  int LastMeshDependencyAppliedN_{0};
+  std::function<void(glm::ivec3)> OnMeshDependencyAppliedFn_;
   /// SoftDefer dropped !Drawable FirstMesh outside focus — requeue when
   /// MayMesh / focus admits (rim plan B4; avoid forever-RemoveAt).
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferHeld;
