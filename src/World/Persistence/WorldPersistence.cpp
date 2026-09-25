@@ -430,35 +430,43 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     return PendingTerrainColumnRelightKeys.count(key) != 0;
   }
 
-  // Keep the FIFO bounded: replace one far-FIFO entry outside the current
-  // visible repair ring. Preserve the active miss pin; the wider focus trim
-  // halo is too broad here and can otherwise block every draw-gate repair.
+  // Keep total relight work bounded: replace one queued entry outside the
+  // current visible repair ring. The queue can be priority-heavy, so inspect
+  // both deques. Preserve the active miss pin; the wider focus trim halo is
+  // too broad here and can otherwise block every draw-gate repair.
+  std::deque<glm::ivec2> *victim_queue = nullptr;
   auto victim_it = PendingTerrainColumnRelights.end();
   int victim_horiz = max_horiz;
-  for (auto it = PendingTerrainColumnRelights.begin();
-       it != PendingTerrainColumnRelights.end(); ++it)
+  const auto find_farthest_unpinned_victim =
+      [&](std::deque<glm::ivec2> &queue)
   {
-    const int cx = FloorDiv(it->x, CHUNK_SIZE);
-    const int cz = FloorDiv(it->y, CHUNK_SIZE);
-    const int candidate_horiz =
-        std::max(std::abs(cx - focus_ground.x),
-                 std::abs(cz - focus_ground.z));
-    if (candidate_horiz <= victim_horiz ||
-        ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid,
-                                       RelightFifoPinCx, RelightFifoPinCz))
+    for (auto it = queue.begin(); it != queue.end(); ++it)
     {
-      continue;
+      const int cx = FloorDiv(it->x, CHUNK_SIZE);
+      const int cz = FloorDiv(it->y, CHUNK_SIZE);
+      const int candidate_horiz =
+          std::max(std::abs(cx - focus_ground.x),
+                   std::abs(cz - focus_ground.z));
+      if (candidate_horiz <= victim_horiz ||
+          ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid,
+                                         RelightFifoPinCx, RelightFifoPinCz))
+      {
+        continue;
+      }
+      victim_queue = &queue;
+      victim_it = it;
+      victim_horiz = candidate_horiz;
     }
-    victim_it = it;
-    victim_horiz = candidate_horiz;
-  }
-  if (victim_it == PendingTerrainColumnRelights.end())
+  };
+  find_farthest_unpinned_victim(PendingTerrainColumnRelights);
+  find_farthest_unpinned_victim(PendingTerrainColumnRelightsPriority);
+  if (!victim_queue)
   {
     return false;
   }
 
   const glm::ivec2 victim = *victim_it;
-  PendingTerrainColumnRelights.erase(victim_it);
+  victim_queue->erase(victim_it);
   PendingTerrainColumnRelightKeys.erase(victim);
   PendingTerrainColumnRelightYBands.erase(victim);
   ++RelightFifoOverflowDroppedN;
