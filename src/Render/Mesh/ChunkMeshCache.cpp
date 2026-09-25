@@ -5092,22 +5092,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           ? 20
           : std::max(VisibleBlackFocusPressure_,
                      VisibleBlackNoTicketPressure_);
-  const bool force_kick_debt = ShouldForceGpuKickUnderQueuedDebt(
-      queued_n,
-      StarveRemeshForHoles || ColumnLoadedNoMeshPressure_ > 0 ||
-          VisibleBlackFocusPressure_ >= 20,
-      kick_debt_proxy);
-  if (force_kick_debt)
-  {
-    kick_cap = std::max(kick_cap, 1);
-  }
-  // A drawable but stale-dark mesh is also urgent visual debt. The previous
-  // deadline escape recognized only chunks with no drawable mesh, so queued
-  // lit repairs could remain un-kicked throughout a pressured flight even
-  // while the black-focus census was high.
+  // A queued replacement for a drawable stale-dark slice is itself visual
+  // debt. Do not require the aggregate black-focus counter to cross a second,
+  // higher threshold before allowing that queued result to advance.
   bool have_urgent_stale_repair = false;
   glm::ivec3 urgent_stale_repair{};
-  if (force_kick_debt && VisibleBlackFocusPressure_ >= 20)
+  if (queued_n > 0)
   {
     for (const PendingGpuApply &pending : PendingGpuApplies)
     {
@@ -5123,18 +5113,17 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       break;
     }
   }
+  const bool force_kick_debt = ShouldForceGpuKickUnderQueuedDebt(
+      queued_n,
+      StarveRemeshForHoles || ColumnLoadedNoMeshPressure_ > 0 ||
+          VisibleBlackFocusPressure_ >= 20 || have_urgent_stale_repair,
+      kick_debt_proxy);
+  if (force_kick_debt)
+  {
+    kick_cap = std::max(kick_cap, 1);
+  }
   int debt_forced_kicks = 0;
   auto find_prefer_queued = [&]() {
-    auto missing_it = std::find_if(
-        PendingGpuApplies.begin(), PendingGpuApplies.end(),
-        [&](const PendingGpuApply &p) {
-          return p.phase == PendingGpuApply::Phase::Queued &&
-                 !HasDrawableGreedyMesh(p.coord);
-        });
-    if (missing_it != PendingGpuApplies.end())
-    {
-      return missing_it;
-    }
     if (have_urgent_stale_repair)
     {
       auto stale_repair_it = std::find_if(
@@ -5147,6 +5136,16 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       {
         return stale_repair_it;
       }
+    }
+    auto missing_it = std::find_if(
+        PendingGpuApplies.begin(), PendingGpuApplies.end(),
+        [&](const PendingGpuApply &p) {
+          return p.phase == PendingGpuApply::Phase::Queued &&
+                 !HasDrawableGreedyMesh(p.coord);
+        });
+    if (missing_it != PendingGpuApplies.end())
+    {
+      return missing_it;
     }
     return std::find_if(PendingGpuApplies.begin(), PendingGpuApplies.end(),
                         [](const PendingGpuApply &p) {
