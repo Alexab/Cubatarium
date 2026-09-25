@@ -556,6 +556,8 @@ struct PhysicsTelemetry
   int ColumnBumpDenied{0};
   /// ColPipe P1: ColumnFlow ExclusiveRank upgrades this frame.
   int ColumnFlowUpgradeN{0};
+  /// ColumnFlow tickets actually dispatched by DrainBudget this frame.
+  int ColumnFlowDrainedN{0};
   /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
   /// Alias docs: emerge_fsm_* — not ColumnJobGraph stages.
   int ColumnLightingN{0};

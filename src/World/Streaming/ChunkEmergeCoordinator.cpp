@@ -6271,6 +6271,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       column_flow_admit_batch =
           std::max(column_flow_admit_batch, sticky_rim ? 2 : 1);
     }
+    else if (presentable_carve)
+    {
+      // Keep a small ColumnFlow feed alive for presentable repair debt. The
+      // mesh schedule floor below cannot service a black slice whose ticket
+      // has not yet transferred it into Dirty.
+      column_flow_drain_n =
+          std::clamp(std::max(column_flow_drain_n, 1), 1, 2);
+      column_flow_admit_batch = 1;
+    }
     else
     {
       column_flow_drain_n = 0;
@@ -6282,10 +6291,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const auto column_flow_t0 = std::chrono::high_resolution_clock::now();
     const int drain_n =
         (phase_abort_heavy && !abort_needs_drip)
-            ? 0
+            ? (presentable_carve ? column_flow_drain_n : 0)
             : std::max(1, column_flow_drain_n);
-    exec.DrainBudget(world, drain_n, focus_ground_horiz, focus_radius,
-                     column_flow_admit_batch);
+    world.GetPhysicsTelemetryMutable().ColumnFlowDrainedN =
+        exec.DrainBudget(world, drain_n, focus_ground_horiz, focus_radius,
+                         column_flow_admit_batch);
     const int seam_budget =
         phase_abort_heavy
             ? 0
