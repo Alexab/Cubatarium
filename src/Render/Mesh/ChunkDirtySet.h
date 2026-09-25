@@ -29,6 +29,10 @@ public:
   {
     return FirstMeshSet.find(coord) != FirstMeshSet.end();
   }
+  bool IsPriorityRemesh(glm::ivec3 coord) const
+  {
+    return PriorityRemeshSet.find(coord) != PriorityRemeshSet.end();
+  }
 
   size_t GetCount() const { return FirstMeshQ.size() + RemeshQ.size(); }
   size_t GetFirstMeshCount() const { return FirstMeshQ.size(); }

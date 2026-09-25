@@ -7282,6 +7282,53 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       return it;
     };
 
+    // One fresh renderer-rejected light repair gets a bounded scheduling slot
+    // before generic FirstMesh work. Otherwise a growing first-mesh backlog can
+    // consume the snapshot budget every frame while visible stale remeshes sit
+    // at the head of RemeshQ indefinitely.
+    {
+      std::vector<glm::ivec3> visible_repair_remesh;
+      for (const glm::ivec3 &coord : Dirty.RemeshQueue())
+      {
+        if (!Dirty.IsPriorityRemesh(coord))
+        {
+          break;
+        }
+        visible_repair_remesh.push_back(coord);
+      }
+      if (!visible_repair_remesh.empty())
+      {
+        for (const glm::ivec3 &coord : visible_repair_remesh)
+        {
+          if (max_schedule_per_frame > 0 &&
+              scheduled >= max_schedule_per_frame)
+          {
+            break;
+          }
+          auto it = std::find(Dirty.begin(), Dirty.end(), coord);
+          if (it == Dirty.end())
+          {
+            continue;
+          }
+          const int scheduled_before = scheduled;
+          (void)try_schedule(it, /*count_outside=*/false,
+                             /*count_overflow=*/false,
+                             /*count_reserved=*/false);
+          if (scheduled > scheduled_before)
+          {
+            ++remesh_scheduled;
+            if (remesh_cap > 0)
+            {
+              --remesh_cap;
+            }
+          }
+          // Retry at most one visible repair per frame. A blocked first target
+          // must not turn the bounded reserve into an unbounded scan.
+          break;
+        }
+      }
+    }
+
     // Pass 1: FirstMeshQ prefix only (dual-queue: remesh never scanned here).
     seg_t0 = std::chrono::high_resolution_clock::now();
     // R4.5.1: reuse MissingMemo when same xz/radius (avoid second cold ForEach).
