@@ -85,7 +85,7 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
   const bool satisfied =
       !rec.retained_awaiting_successor && desired_geom_rev > 0 &&
-      desired_light_rev > 0 && rec.published_geom_rev == desired_geom_rev &&
+      rec.published_geom_rev == desired_geom_rev &&
       rec.published_light_rev == desired_light_rev &&
       CoverageSatisfied(rec, desired_coverage_gen);
 
@@ -107,8 +107,14 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
     {
       rec.desired_coverage_gen = desired_coverage_gen;
     }
-    ++CoalesceN_;
-    return DemandResult::Coalesced;
+    if (rec.has_active_attempt)
+    {
+      ++CoalesceN_;
+      return DemandResult::Coalesced;
+    }
+    // A rejected/cancelled attempt leaves its desired stamp intact. Re-admit
+    // the same desire with a fresh attempt instead of coalescing into a dead
+    // lifecycle record with no owner.
   }
 
   rec.desired_geom_rev = desired_geom_rev;

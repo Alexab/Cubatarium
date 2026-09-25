@@ -2645,6 +2645,21 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       base, GetPhysicsTelemetry().VisibleBlackFullyDarkRepairN, dropped_recent,
       /*dropped_soft_cap=*/800);
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const auto has_slice_work_owner = [&](glm::ivec3 coord) {
+    const glm::ivec2 column(coord.x, coord.z);
+    const glm::ivec2 block_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
+    const bool mesh_owned =
+        MeshService->IsChunkMeshDirty(coord) ||
+        MeshService->IsRemeshAfterApplyPending(coord) ||
+        MeshService->HasInflightMeshBuild(coord) ||
+        MeshService->IsGpuExtractInFlight(coord) ||
+        MeshService->IsPendingGpuApply(coord);
+    const bool relight_owned = IsPendingLightBeforeMesh(column) ||
+                               IsAsyncRelightColumnInFlight(column) ||
+                               (Persistence && Persistence->IsTerrainColumnRelightQueued(
+                                                   block_key));
+    return mesh_owned || relight_owned;
+  };
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   int admitted = 0;
@@ -2695,8 +2710,19 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           if (st >= static_cast<uint8_t>(JobStage::Admitted) &&
               st <= static_cast<uint8_t>(JobStage::Uploaded))
           {
-            // A39 P2: wait for in-flight attempt — no re-Dirty flood.
-            continue;
+            // Demand stage alone is not a live owner: earlier paths could
+            // mark Admitted even when MarkDirtyPriority was gated/deduped.
+            // Keep the attempt only while its exact mesh slice or owning
+            // column has a concrete mesh/relight queue owner. Generic
+            // column progress alone does not keep a dead attempt alive.
+            if (has_slice_work_owner(coord))
+            {
+              continue;
+            }
+            (void)demand.NoteInstallResult(
+                coord, InstallResult::CancelledSuperseded,
+                /*published_geom_rev=*/0, /*published_light_rev=*/0,
+                rec->active_attempt_id);
           }
         }
       }
@@ -2712,7 +2738,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         if (pub_early.geom_rev != 0)
         {
           desired_geom = pub_early.geom_rev;
-          desired_light = pub_early.light_rev != 0 ? pub_early.light_rev : 1;
+          desired_light = pub_early.light_rev;
         }
         else
         {
@@ -2787,35 +2813,48 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             {
               MeshService->GetCache().InvalidateMeshCapture(coord);
               MeshService->MarkDirtyPriority(coord);
-              static uint64_t next_admit_lr = 1;
-              orec.visual_attempt_id = next_admit_lr++;
-              orec.visual_deadline_ms = StampLightRepairDeadlineMs(now_ms);
-              const uint64_t attempt_id =
-                  DemandActiveAttemptId(demand, coord);
-              if (attempt_id != 0)
+              if (has_slice_work_owner(coord))
               {
-                demand.NoteStageProgress(coord, JobStage::Admitted,
-                                         attempt_id);
+                static uint64_t next_admit_lr = 1;
+                orec.visual_attempt_id = next_admit_lr++;
+                orec.visual_deadline_ms = StampLightRepairDeadlineMs(now_ms);
+                const uint64_t attempt_id =
+                    DemandActiveAttemptId(demand, coord);
+                if (attempt_id != 0)
+                {
+                  demand.NoteStageProgress(coord, JobStage::Admitted,
+                                           attempt_id);
+                }
+                ++admitted;
+                ++y_taken;
+                continue;
               }
-              ++admitted;
-              ++y_taken;
-              continue;
             }
           }
         }
+        bool relight_enqueued = false;
         if (Persistence)
         {
           Persistence->EnqueueTerrainColumnRelight(
               cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
               cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+          const glm::ivec2 column(cx, cz);
+          const glm::ivec2 block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
+          relight_enqueued =
+              Persistence->IsTerrainColumnRelightQueued(block_key) ||
+              IsAsyncRelightColumnInFlight(column) ||
+              IsPendingLightBeforeMesh(column);
         }
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
-        if (attempt_id != 0)
+        if (attempt_id != 0 && relight_enqueued)
         {
           demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
         }
-        ++admitted;
-        ++y_taken;
+        if (relight_enqueued)
+        {
+          ++admitted;
+          ++y_taken;
+        }
         continue;
       }
       if (dr == DemandResult::AlreadySatisfied)
@@ -2830,17 +2869,19 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
           if (attempt_id == 0)
           {
-            (void)demand.NoteDemand(coord, desired_geom,
-                                    (std::max)(desired_light, uint64_t{1}),
+            (void)demand.NoteDemand(coord, desired_geom, desired_light,
                                     desired_coverage);
             attempt_id = DemandActiveAttemptId(demand, coord);
           }
-          if (attempt_id != 0)
+          if (attempt_id != 0 && has_slice_work_owner(coord))
           {
             demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
           }
-          ++admitted;
-          ++y_taken;
+          if (has_slice_work_owner(coord))
+          {
+            ++admitted;
+            ++y_taken;
+          }
         }
         continue;
       }
@@ -2854,9 +2895,12 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       {
         attempt_id = rec->active_attempt_id;
       }
-      demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
-      ++admitted;
-      ++y_taken;
+      if (has_slice_work_owner(coord))
+      {
+        demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
+        ++admitted;
+        ++y_taken;
+      }
     }
   }
   return admitted;
