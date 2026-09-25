@@ -4857,6 +4857,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (pending_ref.ticket.quadCount == 0)
     {
+      if (pending_ref.stageTrace.job_id != 0)
+      {
+        NoteMeshJobStage(pending_ref.stageTrace, JobStage::GpuReady);
+      }
       GpuMeshProcessResult gpu_result;
       gpu_result.success = true;
       gpu_result.slotIndex = pending_ref.ticket.slotIndex;
@@ -4941,6 +4945,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       ++LastGpuFinishNotReadyN;
       ++i;
       continue;
+    }
+    if (st == UGpuMeshPipeline::GpuFinishStatus::Ready &&
+        pending_ref.stageTrace.job_id != 0)
+    {
+      NoteMeshJobStage(pending_ref.stageTrace, JobStage::GpuReady);
     }
     PendingGpuApply pending = std::move(pending_ref);
     PendingGpuApplies.erase(PendingGpuApplies.begin() +
