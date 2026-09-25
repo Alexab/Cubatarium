@@ -436,10 +436,84 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     return false;
   }
 
+  const auto prioritize_visible_repair = [&]()
+  {
+    auto remove_key = [&](std::deque<glm::ivec2> &queue)
+    {
+      const auto it = std::find(queue.begin(), queue.end(), key);
+      if (it != queue.end())
+      {
+        queue.erase(it);
+      }
+    };
+    remove_key(PendingTerrainColumnRelights);
+    remove_key(PendingTerrainColumnRelightsPriority);
+
+    // Preserve the active miss witness at the front, including when it was
+    // still in the far deque. The renderer's exact rejects then run before
+    // other outer-ring priority work, but after the immediate focus core.
+    const glm::ivec2 pin_key(RelightFifoPinCx * CHUNK_SIZE,
+                             RelightFifoPinCz * CHUNK_SIZE);
+    if (RelightFifoPinValid && pin_key == key)
+    {
+      PendingTerrainColumnRelightsPriority.push_front(key);
+      return;
+    }
+    bool pin_front = false;
+    if (RelightFifoPinValid && pin_key != key &&
+        PendingTerrainColumnRelightKeys.count(pin_key) != 0)
+    {
+      auto pin_it = std::find(PendingTerrainColumnRelightsPriority.begin(),
+                              PendingTerrainColumnRelightsPriority.end(),
+                              pin_key);
+      if (pin_it == PendingTerrainColumnRelightsPriority.end())
+      {
+        pin_it = std::find(PendingTerrainColumnRelights.begin(),
+                           PendingTerrainColumnRelights.end(), pin_key);
+        if (pin_it != PendingTerrainColumnRelights.end())
+        {
+          PendingTerrainColumnRelights.erase(pin_it);
+          PendingTerrainColumnRelightsPriority.push_front(pin_key);
+          pin_front = true;
+        }
+      }
+      else
+      {
+        if (pin_it != PendingTerrainColumnRelightsPriority.begin())
+        {
+          PendingTerrainColumnRelightsPriority.erase(pin_it);
+          PendingTerrainColumnRelightsPriority.push_front(pin_key);
+        }
+        pin_front = true;
+      }
+    }
+
+    auto insert_it = PendingTerrainColumnRelightsPriority.begin();
+    if (pin_front)
+    {
+      ++insert_it;
+    }
+    while (insert_it != PendingTerrainColumnRelightsPriority.end())
+    {
+      const int cx = FloorDiv(insert_it->x, CHUNK_SIZE);
+      const int cz = FloorDiv(insert_it->y, CHUNK_SIZE);
+      const int queued_horiz =
+          std::max(std::abs(cx - focus_ground.x),
+                   std::abs(cz - focus_ground.z));
+      if (queued_horiz > 1)
+      {
+        break;
+      }
+      ++insert_it;
+    }
+    PendingTerrainColumnRelightsPriority.insert(insert_it, key);
+  };
+
   if (PendingTerrainColumnRelightKeys.count(key) != 0)
   {
     EnqueueTerrainColumnRelight(world_x, world_z, /*priority=*/true, min_y,
                                 max_y);
+    prioritize_visible_repair();
     if (outcome)
     {
       *outcome = 5;
@@ -453,6 +527,10 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     EnqueueTerrainColumnRelight(world_x, world_z, /*priority=*/true, min_y,
                                 max_y);
     const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
+    if (admitted)
+    {
+      prioritize_visible_repair();
+    }
     if (outcome)
     {
       *outcome = admitted ? 1 : 7;
@@ -508,6 +586,10 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
                                       min_y, max_y,
                                       /*visible_admission=*/true);
       const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
+      if (admitted)
+      {
+        prioritize_visible_repair();
+      }
       if (outcome)
       {
         *outcome = admitted ? 9 : 10;
@@ -533,6 +615,10 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
   EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true, min_y,
                                   max_y, /*visible_admission=*/true);
   const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
+  if (admitted)
+  {
+    prioritize_visible_repair();
+  }
   if (outcome)
   {
     *outcome = admitted ? 3 : 4;
