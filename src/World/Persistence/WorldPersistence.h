@@ -92,7 +92,9 @@ public:
   /// when normal near-ring admission is backpressured.
   bool EnqueueVisibleDrawGateRelight(int world_x, int world_z, int min_y,
                                      int max_y, glm::ivec3 focus_ground,
-                                     int max_horiz);
+                                     int max_horiz,
+                                     const std::vector<glm::ivec2>
+                                         &protected_visible_columns);
   /// F3b: enqueue only when column surface still needs relight.
   bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
                                       bool priority = false, int min_y = 0,

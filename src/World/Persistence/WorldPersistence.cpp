@@ -403,7 +403,8 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
 
 bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
-    int max_horiz)
+    int max_horiz,
+    const std::vector<glm::ivec2> &protected_visible_columns)
 {
   const glm::ivec2 key(world_x, world_z);
   const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
@@ -436,7 +437,7 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
   // too broad here and can otherwise block every draw-gate repair.
   std::deque<glm::ivec2> *victim_queue = nullptr;
   auto victim_it = PendingTerrainColumnRelights.end();
-  int victim_horiz = max_horiz;
+  int victim_horiz = horiz;
   const auto find_farthest_unpinned_victim =
       [&](std::deque<glm::ivec2> &queue)
   {
@@ -449,7 +450,10 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
                    std::abs(cz - focus_ground.z));
       if (candidate_horiz <= victim_horiz ||
           ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid,
-                                         RelightFifoPinCx, RelightFifoPinCz))
+                                         RelightFifoPinCx, RelightFifoPinCz) ||
+          std::find(protected_visible_columns.begin(),
+                    protected_visible_columns.end(),
+                    glm::ivec2(cx, cz)) != protected_visible_columns.end())
       {
         continue;
       }
@@ -1152,6 +1156,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                           RelightMissPinMaxHoriz());
     world.CollectDrawGateRelightTargets(focus_chunk, draw_gate_radius,
                                         draw_gate_targets, /*max_cols=*/8);
+    std::vector<glm::ivec2> protected_visible_columns;
+    protected_visible_columns.reserve(draw_gate_targets.size());
+    for (const DrawGateRelightTarget &target : draw_gate_targets)
+    {
+      protected_visible_columns.emplace_back(target.column.x,
+                                             target.column.y);
+    }
     for (const DrawGateRelightTarget &target : draw_gate_targets)
     {
       draw_gate_target_key =
@@ -1170,7 +1181,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         draw_gate_target_pinned = EnqueueVisibleDrawGateRelight(
             draw_gate_target_key.x, draw_gate_target_key.y,
             target.min_world_y, target.max_world_y, focus_chunk,
-            draw_gate_radius);
+            draw_gate_radius, protected_visible_columns);
       }
       if (UJobStageTrace::VisualBlackTraceEnabled())
       {
@@ -1205,10 +1216,18 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               const int candidate_horiz =
                   std::max(std::abs(cx - focus_chunk.x),
                            std::abs(cz - focus_chunk.z));
-              if (candidate_horiz > draw_gate_radius &&
+              if (candidate_horiz >
+                      std::max(std::abs(target.rejected_slice.x -
+                                        focus_chunk.x),
+                               std::abs(target.rejected_slice.z -
+                                        focus_chunk.z)) &&
                   !ShouldProtectRelightFifoPinKey(
                       cx, cz, RelightFifoPinValid, RelightFifoPinCx,
-                      RelightFifoPinCz))
+                      RelightFifoPinCz) &&
+                  std::find(protected_visible_columns.begin(),
+                            protected_visible_columns.end(),
+                            glm::ivec2(cx, cz)) ==
+                      protected_visible_columns.end())
               {
                 farthest_unpinned_horiz =
                     std::max(farthest_unpinned_horiz, candidate_horiz);
