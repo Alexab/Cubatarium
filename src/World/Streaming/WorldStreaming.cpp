@@ -1443,6 +1443,30 @@ void UWorldStreaming::RefreshStreamingPressure(
       focus_visual.Get(FocusColumnVisualClass::FaceDebt);
   world.PhysicsTelemetryData.FocusVisualReadyN =
       focus_visual.Get(FocusColumnVisualClass::Ready);
+  world.PhysicsTelemetryData.FocusDataCensusValid =
+      focus_visual.data_mesh_valid ? 1 : 0;
+  world.PhysicsTelemetryData.FocusDataSolidSliceN =
+      focus_visual.resident_solid_slice_n;
+  world.PhysicsTelemetryData.FocusDataAirSliceN =
+      focus_visual.resident_air_slice_n;
+  world.PhysicsTelemetryData.FocusDataAbsentSliceN =
+      focus_visual.absent_slice_n;
+  world.PhysicsTelemetryData.FocusDataNonAirVoxelN =
+      focus_visual.non_air_voxel_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidSliceN =
+      focus_visual.band_solid_slice_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidMeshN =
+      focus_visual.band_solid_mesh_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidNoMeshN =
+      focus_visual.band_solid_no_mesh_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidPendingMeshN =
+      focus_visual.band_solid_pending_mesh_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidDrawGateClosedN =
+      focus_visual.band_solid_draw_gate_closed_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidDrawReadyN =
+      focus_visual.band_solid_draw_ready_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidGpuLiveN =
+      focus_visual.band_solid_gpu_live_n;
   world.PhysicsTelemetryData.FocusPressure = focus_pressure;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
   if (missing_near && world.PhysicsTelemetryData.MissCx != 0)

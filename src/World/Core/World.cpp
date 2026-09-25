@@ -2555,9 +2555,112 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   }
   ++UnfinishedVisualCache.prep_calls_n;
   auto &cache = UnfinishedVisualCache;
+  auto refresh_data_mesh_census = [&]()
+  {
+    FocusRingVisualCensus &census = cache.readiness;
+    census.data_mesh_valid =
+        UJobStageTrace::VisualBlackTraceEnabled() && MeshService != nullptr;
+    census.resident_solid_slice_n = 0;
+    census.resident_air_slice_n = 0;
+    census.absent_slice_n = 0;
+    census.non_air_voxel_n = 0;
+    census.band_solid_slice_n = 0;
+    census.band_solid_mesh_n = 0;
+    census.band_solid_no_mesh_n = 0;
+    census.band_solid_pending_mesh_n = 0;
+    census.band_solid_draw_gate_closed_n = 0;
+    census.band_solid_draw_ready_n = 0;
+    census.band_solid_gpu_live_n = 0;
+    if (!census.data_mesh_valid)
+    {
+      return;
+    }
+
+    const int max_height = std::max(0, ProceduralTemplate.MaxHeight);
+    const int max_cy =
+        std::max(0, FloorDiv(max_height, CHUNK_SIZE));
+    const int focus_y = GetPreferredLoadFocusBlock().y;
+    int band_min = std::max(0, focus_y - CHUNK_SIZE);
+    int band_max = std::min(max_height, focus_y + CHUNK_SIZE * 2);
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(
+          band_min,
+          std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE * 4));
+      band_max = std::max(
+          band_max,
+          std::min(max_height,
+                   ProceduralTemplate.SeaLevel + CHUNK_SIZE * 2));
+    }
+    const int band_cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+    const int band_cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+    const auto &mesh_cache = MeshService->GetCache();
+    const auto &chunk_manager = BlockWorld.GetChunkManager();
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+      {
+        const int cx = focus_ground_chunk.x + dx;
+        const int cz = focus_ground_chunk.z + dz;
+        for (int cy = 0; cy <= max_cy; ++cy)
+        {
+          const glm::ivec3 coord(cx, cy, cz);
+          const UChunk *chunk = chunk_manager.GetChunk(coord);
+          if (!chunk)
+          {
+            ++census.absent_slice_n;
+            continue;
+          }
+          if (chunk->IsAirOnly())
+          {
+            ++census.resident_air_slice_n;
+            continue;
+          }
+
+          ++census.resident_solid_slice_n;
+          census.non_air_voxel_n += chunk->GetNonAirCount();
+          if (cy < band_cy0 || cy > band_cy1)
+          {
+            continue;
+          }
+
+          ++census.band_solid_slice_n;
+          const bool has_mesh = MeshService->HasDrawableGreedyMesh(coord);
+          if (has_mesh)
+          {
+            ++census.band_solid_mesh_n;
+            if (mesh_cache.HasLiveGpuDraw(coord))
+            {
+              ++census.band_solid_gpu_live_n;
+            }
+            if (IsChunkSliceRenderReady(coord))
+            {
+              ++census.band_solid_draw_ready_n;
+            }
+            else
+            {
+              ++census.band_solid_draw_gate_closed_n;
+            }
+          }
+          else
+          {
+            ++census.band_solid_no_mesh_n;
+            if (mesh_cache.IsChunkMeshDirty(coord) ||
+                MeshService->HasInflightMeshBuild(coord) ||
+                MeshService->IsPendingGpuApply(coord) ||
+                MeshService->IsGpuExtractInFlight(coord))
+            {
+              ++census.band_solid_pending_mesh_n;
+            }
+          }
+        }
+      }
+    }
+  };
   if (cache.valid && cache.focus == focus_ground_chunk &&
       cache.radius == radius_chunks && cache.dirty_cols.empty())
   {
+    refresh_data_mesh_census();
     ++cache.prep_hit_n;
     ++cache.prep_incremental_n;
     LastUnfinishedVisualSample = cache.count;
@@ -2640,6 +2743,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     cache.count = std::max(0, count);
     cache.dirty_cols.clear();
     ++cache.prep_incremental_n;
+    refresh_data_mesh_census();
     LastUnfinishedVisualSample = cache.count;
     LastUnfinishedVisualSampleValid = true;
     return cache.count;
@@ -2676,6 +2780,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   cache.count = unfinished;
   cache.dirty_cols.clear();
   ++cache.prep_full_n;
+  refresh_data_mesh_census();
   LastUnfinishedVisualSample = unfinished;
   LastUnfinishedVisualSampleValid = true;
   return unfinished;

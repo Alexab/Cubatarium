@@ -103,6 +103,21 @@ struct FocusRingVisualCensus
 {
   std::array<int, static_cast<size_t>(FocusColumnVisualClass::Count)> counts{};
 
+  /// Bounded diagnostic census of actual voxel occupancy and mesh readiness.
+  /// Populated only when CUBA_VISUAL_BLACK_TRACE is enabled for a flight.
+  bool data_mesh_valid{false};
+  int resident_solid_slice_n{0};
+  int resident_air_slice_n{0};
+  int absent_slice_n{0};
+  int non_air_voxel_n{0};
+  int band_solid_slice_n{0};
+  int band_solid_mesh_n{0};
+  int band_solid_no_mesh_n{0};
+  int band_solid_pending_mesh_n{0};
+  int band_solid_draw_gate_closed_n{0};
+  int band_solid_draw_ready_n{0};
+  int band_solid_gpu_live_n{0};
+
   int Get(FocusColumnVisualClass visual_class) const
   {
     return counts[static_cast<size_t>(visual_class)];

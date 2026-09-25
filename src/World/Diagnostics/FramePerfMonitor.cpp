@@ -509,6 +509,18 @@ struct FrameNumbers
   int focus_visual_not_ready_state_n{0};
   int focus_visual_face_debt_n{0};
   int focus_visual_ready_n{0};
+  int focus_data_census_valid{0};
+  int focus_data_solid_slice_n{0};
+  int focus_data_air_slice_n{0};
+  int focus_data_absent_slice_n{0};
+  int focus_data_non_air_voxel_n{0};
+  int focus_data_band_solid_slice_n{0};
+  int focus_data_band_solid_mesh_n{0};
+  int focus_data_band_solid_no_mesh_n{0};
+  int focus_data_band_solid_pending_mesh_n{0};
+  int focus_data_band_solid_draw_gate_closed_n{0};
+  int focus_data_band_solid_draw_ready_n{0};
+  int focus_data_band_solid_gpu_live_n{0};
   int column_bump_denied{0};
   int column_flow_upgrade_n{0};
   int column_flow_drained_n{0};
@@ -1210,6 +1222,19 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_visual_not_ready_state_n = phys.FocusVisualNotReadyStateN;
   n.focus_visual_face_debt_n = phys.FocusVisualFaceDebtN;
   n.focus_visual_ready_n = phys.FocusVisualReadyN;
+  n.focus_data_census_valid = phys.FocusDataCensusValid;
+  n.focus_data_solid_slice_n = phys.FocusDataSolidSliceN;
+  n.focus_data_air_slice_n = phys.FocusDataAirSliceN;
+  n.focus_data_absent_slice_n = phys.FocusDataAbsentSliceN;
+  n.focus_data_non_air_voxel_n = phys.FocusDataNonAirVoxelN;
+  n.focus_data_band_solid_slice_n = phys.FocusDataBandSolidSliceN;
+  n.focus_data_band_solid_mesh_n = phys.FocusDataBandSolidMeshN;
+  n.focus_data_band_solid_no_mesh_n = phys.FocusDataBandSolidNoMeshN;
+  n.focus_data_band_solid_pending_mesh_n = phys.FocusDataBandSolidPendingMeshN;
+  n.focus_data_band_solid_draw_gate_closed_n =
+      phys.FocusDataBandSolidDrawGateClosedN;
+  n.focus_data_band_solid_draw_ready_n = phys.FocusDataBandSolidDrawReadyN;
+  n.focus_data_band_solid_gpu_live_n = phys.FocusDataBandSolidGpuLiveN;
   n.column_bump_denied = phys.ColumnBumpDenied;
   n.column_flow_upgrade_n = phys.ColumnFlowUpgradeN;
   n.column_flow_drained_n = phys.ColumnFlowDrainedN;
@@ -1982,6 +2007,28 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_visual_face_debt_n\":"
           << n.focus_visual_face_debt_n
           << ",\"focus_visual_ready_n\":" << n.focus_visual_ready_n
+          << ",\"focus_data_census_valid\":" << n.focus_data_census_valid
+          << ",\"focus_data_solid_slice_n\":"
+          << n.focus_data_solid_slice_n
+          << ",\"focus_data_air_slice_n\":" << n.focus_data_air_slice_n
+          << ",\"focus_data_absent_slice_n\":"
+          << n.focus_data_absent_slice_n
+          << ",\"focus_data_non_air_voxel_n\":"
+          << n.focus_data_non_air_voxel_n
+          << ",\"focus_data_band_solid_slice_n\":"
+          << n.focus_data_band_solid_slice_n
+          << ",\"focus_data_band_solid_mesh_n\":"
+          << n.focus_data_band_solid_mesh_n
+          << ",\"focus_data_band_solid_no_mesh_n\":"
+          << n.focus_data_band_solid_no_mesh_n
+          << ",\"focus_data_band_solid_pending_mesh_n\":"
+          << n.focus_data_band_solid_pending_mesh_n
+          << ",\"focus_data_band_solid_draw_gate_closed_n\":"
+          << n.focus_data_band_solid_draw_gate_closed_n
+          << ",\"focus_data_band_solid_draw_ready_n\":"
+          << n.focus_data_band_solid_draw_ready_n
+          << ",\"focus_data_band_solid_gpu_live_n\":"
+          << n.focus_data_band_solid_gpu_live_n
           << ",\"column_bump_denied\":" << n.column_bump_denied
           << ",\"column_flow_upgrade_n\":" << n.column_flow_upgrade_n
           << ",\"column_flow_drained_n\":" << n.column_flow_drained_n

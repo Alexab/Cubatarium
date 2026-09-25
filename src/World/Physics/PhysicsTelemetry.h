@@ -563,6 +563,19 @@ struct PhysicsTelemetry
   int FocusVisualNotReadyStateN{0};
   int FocusVisualFaceDebtN{0};
   int FocusVisualReadyN{0};
+  /// Diagnostic voxel/mesh census; populated with CUBA_VISUAL_BLACK_TRACE.
+  int FocusDataCensusValid{0};
+  int FocusDataSolidSliceN{0};
+  int FocusDataAirSliceN{0};
+  int FocusDataAbsentSliceN{0};
+  int FocusDataNonAirVoxelN{0};
+  int FocusDataBandSolidSliceN{0};
+  int FocusDataBandSolidMeshN{0};
+  int FocusDataBandSolidNoMeshN{0};
+  int FocusDataBandSolidPendingMeshN{0};
+  int FocusDataBandSolidDrawGateClosedN{0};
+  int FocusDataBandSolidDrawReadyN{0};
+  int FocusDataBandSolidGpuLiveN{0};
   /// Exclusive ColumnEmergeState bump denials this frame (competing producer).
   int ColumnBumpDenied{0};
   /// ColPipe P1: ColumnFlow ExclusiveRank upgrades this frame.
