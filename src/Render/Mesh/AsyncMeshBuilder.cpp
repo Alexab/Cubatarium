@@ -9,7 +9,9 @@
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Math/GridMath.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include <algorithm>
 #include <memory>
 #include <mutex>
@@ -113,6 +115,25 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
   const uint64_t submitEpoch = Epoch.load(std::memory_order_acquire);
   const uint64_t jobId =
       NextJobId.fetch_add(1, std::memory_order_relaxed);
+  JobStageSpan stage_trace{};
+  stage_trace.cx = coord.x;
+  stage_trace.cy = coord.y;
+  stage_trace.cz = coord.z;
+  stage_trace.job_id = jobId;
+  stage_trace.source_geom_rev = snapshot.sourceRevision;
+  stage_trace.source_light_rev =
+      snapshot.inputStampsValid ? snapshot.inputStamps[0].light : 0;
+  if (snapshot.inputStampsValid)
+  {
+    stage_trace.incarnation = snapshot.inputStamps[0].incarnation;
+  }
+  if (const ChunkRenderDemandRecord *demand =
+          UChunkRenderDemandStore::Get().Find(coord))
+  {
+    stage_trace.attempt_id = demand->active_attempt_id;
+    (void)StampChunkRenderDemandTrace(stage_trace,
+                                      UChunkRenderDemandStore::Get(), coord);
+  }
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight[coord] = jobId;
@@ -125,10 +146,14 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
   if (!Pool.TryEnqueue(
           [this, snapshot = std::move(snapshot), registryPtr = &registry,
            catalogKeep = std::move(catalogKeep), jobId, submitEpoch,
+           stage_trace,
            snapshot_credit = std::move(snapshot_credit),
            work_slot = std::move(work_slot)]() mutable
           {
         (void)work_slot;
+        const auto worker_started = std::chrono::steady_clock::now();
+        stage_trace.stage = JobStage::Started;
+        UJobStageTrace::Note(stage_trace);
         MeshBuildResult result;
         result.coord = snapshot.coord;
         result.sourceRevision = snapshot.sourceRevision;
@@ -187,6 +212,12 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
             result.batches.push_back(std::move(entry.second));
           }
         }
+        stage_trace.stage = JobStage::Built;
+        stage_trace.stage_ms = std::chrono::duration<double, std::milli>(
+                                   std::chrono::steady_clock::now() -
+                                   worker_started)
+                                   .count();
+        UJobStageTrace::Note(stage_trace);
         const std::size_t result_bytes = EstimateMeshResultBytes(result);
         auto &pipe_adm = UPipelineAdmission::Get();
         if (!pipe_adm.TryAcquireResultBytes(result_bytes))

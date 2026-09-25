@@ -27,6 +27,8 @@ struct JobStageSpan
   int32_t cx{0};
   int32_t cy{0};
   int32_t cz{0};
+  /// Internal async mesh job identity, distinct from render-demand attempt ID.
+  uint64_t job_id{0};
   uint64_t incarnation{0};
   uint64_t attempt_id{0};
   /// Typed render stamps; legacy desired_rev/source_rev/published_rev remain

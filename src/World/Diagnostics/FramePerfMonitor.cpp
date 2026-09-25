@@ -2960,6 +2960,7 @@ void UFramePerfMonitor::Shutdown()
         (*c->out) << "{\"kind\":\"" << c->kind << "\""
                   << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
                   << ",\"cz\":" << sp.cz
+                  << ",\"job_id\":" << sp.job_id
                   << ",\"incarnation\":" << sp.incarnation
                   << ",\"attempt_id\":" << sp.attempt_id
                   << ",\"desired_geom_rev\":" << sp.desired_geom_rev
@@ -2986,7 +2987,7 @@ void UFramePerfMonitor::Shutdown()
                   << ",\"stage_ms\":" << sp.stage_ms << "}\n";
       };
       DumpCtx jobCtx{&s.Jsonl, "job_trace"};
-      UJobStageTrace::ForEachNewest(64, dumpTrace, &jobCtx);
+      UJobStageTrace::ForEachNewest(128, dumpTrace, &jobCtx);
       DumpCtx cullCtx{&s.Jsonl, "cull_trace"};
       UJobStageTrace::ForEachCullDecisionNewest(64, dumpTrace, &cullCtx);
       const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,
