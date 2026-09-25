@@ -2645,11 +2645,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       base, GetPhysicsTelemetry().VisibleBlackFullyDarkRepairN, dropped_recent,
       /*dropped_soft_cap=*/800);
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-  const auto has_slice_work_owner = [&](glm::ivec3 coord) {
+  const double demand_now_ms = VisualObligationNowMs();
+  const auto has_live_slice_owner = [&](glm::ivec3 coord) {
     const glm::ivec2 column(coord.x, coord.z);
     const glm::ivec2 block_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
-    const bool mesh_owned =
-        MeshService->IsChunkMeshDirty(coord) ||
+    const bool mesh_in_flight =
         MeshService->IsRemeshAfterApplyPending(coord) ||
         MeshService->HasInflightMeshBuild(coord) ||
         MeshService->IsGpuExtractInFlight(coord) ||
@@ -2658,7 +2658,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                                IsAsyncRelightColumnInFlight(column) ||
                                (Persistence && Persistence->IsTerrainColumnRelightQueued(
                                                    block_key));
-    return mesh_owned || relight_owned;
+    return mesh_in_flight || relight_owned;
+  };
+  const auto has_slice_work_owner = [&](glm::ivec3 coord) {
+    return MeshService->IsChunkMeshDirty(coord) ||
+           has_live_slice_owner(coord);
   };
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
@@ -2715,7 +2719,23 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             // Keep the attempt only while its exact mesh slice or owning
             // column has a concrete mesh/relight queue owner. Generic
             // column progress alone does not keep a dead attempt alive.
-            if (has_slice_work_owner(coord))
+            const bool dirty_only =
+                MeshService->IsChunkMeshDirty(coord) &&
+                !has_live_slice_owner(coord);
+            if (has_slice_work_owner(coord) && !dirty_only)
+            {
+              continue;
+            }
+            const double since_progress_ms =
+                rec->last_progress_ms > 0.0
+                    ? demand_now_ms - rec->last_progress_ms
+                    : (rec->attempt_created_ms > 0.0
+                           ? demand_now_ms - rec->attempt_created_ms
+                           : 0.0);
+            // A queued owner can disappear between admission and execution.
+            // Give it the existing light-repair SLA to appear before retrying;
+            // immediate reminting here caused a Dirty→revision-bump storm.
+            if (since_progress_ms < kLightRepairSlaMs)
             {
               continue;
             }
@@ -2785,7 +2805,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                                  probe.meshed_light_rev != desired_light);
       DemandResult dr =
           demand.NoteDemand(coord, desired_geom, desired_light,
-                            desired_coverage);
+                            desired_coverage, demand_now_ms);
       if (relight_only)
       {
         MeshService->GetCache().InvalidateMeshCapture(coord);
@@ -2823,7 +2843,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                 if (attempt_id != 0)
                 {
                   demand.NoteStageProgress(coord, JobStage::Admitted,
-                                           attempt_id);
+                                           attempt_id, demand_now_ms);
                 }
                 ++admitted;
                 ++y_taken;
@@ -2848,7 +2868,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         if (attempt_id != 0 && relight_enqueued)
         {
-          demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
+          demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                   demand_now_ms);
         }
         if (relight_enqueued)
         {
@@ -2870,12 +2891,13 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           if (attempt_id == 0)
           {
             (void)demand.NoteDemand(coord, desired_geom, desired_light,
-                                    desired_coverage);
+                                    desired_coverage, demand_now_ms);
             attempt_id = DemandActiveAttemptId(demand, coord);
           }
           if (attempt_id != 0 && has_slice_work_owner(coord))
           {
-            demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
+            demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                     demand_now_ms);
           }
           if (has_slice_work_owner(coord))
           {
@@ -2897,7 +2919,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
       if (has_slice_work_owner(coord))
       {
-        demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id);
+        demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                 demand_now_ms);
         ++admitted;
         ++y_taken;
       }
