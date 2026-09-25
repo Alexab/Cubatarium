@@ -160,10 +160,124 @@ void UChunkEmergeCoordinator::BeginFrame(const ProceduralSettings &procedural,
   FaceDebtAlreadyKnownRemeshN = 0;
 }
 
+void UChunkEmergeCoordinator::EnqueueVerticalFaceDebtRepair(glm::ivec3 coord)
+{
+  if (PendingVerticalFaceDebtRepairSet_.insert(coord).second)
+  {
+    PendingVerticalFaceDebtRepairs_.push_back(coord);
+  }
+}
+
+void UChunkEmergeCoordinator::DrainVerticalFaceDebtRepairs(UWorld &world,
+                                                             int budget)
+{
+  if (budget <= 0 || PendingVerticalFaceDebtRepairs_.empty())
+  {
+    return;
+  }
+
+  UWorldMeshService &mesh = world.GetMeshService();
+  UChunkMeshCache &cache = mesh.GetCache();
+  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
+  static constexpr uint8_t kPositiveYFace = 1u << 2;
+  static constexpr uint8_t kNegativeYFace = 1u << 3;
+  const glm::ivec3 face_peer_delta[2] = {{0, 1, 0}, {0, -1, 0}};
+  const uint8_t face_bits[2] = {kPositiveYFace, kNegativeYFace};
+
+  const int attempts = std::min<int>(budget, PendingVerticalFaceDebtRepairs_.size());
+  for (int i = 0; i < attempts; ++i)
+  {
+    const glm::ivec3 coord = PendingVerticalFaceDebtRepairs_.front();
+    PendingVerticalFaceDebtRepairs_.pop_front();
+
+    const ChunkRenderDemandRecord *record = demand.Find(coord);
+    if (!record || (record->face_debt_mask &
+                    static_cast<uint8_t>(kPositiveYFace | kNegativeYFace)) == 0 ||
+        !chunks.HasChunk(coord) || !mesh.HasDrawableGreedyMesh(coord))
+    {
+      PendingVerticalFaceDebtRepairSet_.erase(coord);
+      continue;
+    }
+
+    uint8_t satisfied_mask = 0;
+    uint64_t satisfied_peer_gen[2]{};
+    for (int side = 0; side < 2; ++side)
+    {
+      const uint8_t bit = face_bits[side];
+      if ((record->face_debt_mask & bit) == 0)
+      {
+        continue;
+      }
+      const glm::ivec3 peer = coord + face_peer_delta[side];
+      if (!chunks.HasChunk(peer) || !mesh.HasDrawableGreedyMesh(peer))
+      {
+        continue;
+      }
+
+      uint64_t peer_gen = 0;
+      if (const ChunkRenderDemandRecord *peer_record = demand.Find(peer))
+      {
+        peer_gen = peer_record->published_coverage_gen > 0
+                       ? peer_record->published_coverage_gen
+                       : peer_record->published_geom_rev;
+      }
+      if (peer_gen == 0)
+      {
+        peer_gen = cache.GetMeshPublishRevs(peer).geom_rev;
+      }
+      const uint64_t waiting = record->waiting_peer_gen[side + 2];
+      if (peer_gen == 0 || (waiting != 0 && peer_gen < waiting))
+      {
+        continue;
+      }
+      satisfied_mask = static_cast<uint8_t>(satisfied_mask | bit);
+      satisfied_peer_gen[side] = peer_gen;
+    }
+
+    if (satisfied_mask != 0)
+    {
+      // Queue invalidation before closing the obligation. The dependency queue
+      // retains it while a mesh/GPU owner is live and transfers it to Dirty
+      // once that owner is idle.
+      mesh.QueueMeshDependencyInvalidation(coord);
+      for (int side = 0; side < 2; ++side)
+      {
+        const uint8_t bit = face_bits[side];
+        if ((satisfied_mask & bit) != 0)
+        {
+          demand.NoteFaceDebtSatisfied(coord, bit, satisfied_peer_gen[side]);
+        }
+      }
+    }
+
+    const ChunkRenderDemandRecord *updated = demand.Find(coord);
+    const bool vertical_debt_remains =
+        updated && (updated->face_debt_mask &
+                    static_cast<uint8_t>(kPositiveYFace | kNegativeYFace)) != 0;
+    if (vertical_debt_remains)
+    {
+      PendingVerticalFaceDebtRepairs_.push_back(coord);
+    }
+    else
+    {
+      PendingVerticalFaceDebtRepairSet_.erase(coord);
+    }
+  }
+}
+
 void UChunkEmergeCoordinator::TickMeshEmerge(
     UWorld &world, const StreamingPressureCaps &pressure)
 {
   CUBA_ZONE("ChunkEmerge.TickMeshEmerge");
+  const uint64_t mesh_world_epoch =
+      world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+  if (VerticalFaceDebtWorldEpoch_ != mesh_world_epoch)
+  {
+    PendingVerticalFaceDebtRepairs_.clear();
+    PendingVerticalFaceDebtRepairSet_.clear();
+    VerticalFaceDebtWorldEpoch_ = mesh_world_epoch;
+  }
   const auto emerge_t0 = std::chrono::high_resolution_clock::now();
   auto prep_ms_since =
       [](std::chrono::high_resolution_clock::time_point t0) -> double
@@ -706,6 +820,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // FaceDebt census only — Dirty admission stays at mismatch writers
           // (material / PublishedEmpty), not light-accepted Retain.
           world_ref.GetColumnRecords().NoteFaceDebt(col);
+          EnqueueVerticalFaceDebtRepair(chunk_coord);
           // A37 H2: single authority gate (cutover ⇒ authority).
           if (ChunkDemandAuthorityEnabled())
           {
@@ -801,6 +916,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
           world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
+          EnqueueVerticalFaceDebtRepair(chunk_coord);
           // A37 H2: single authority gate (cutover ⇒ authority).
           if (ChunkDemandAuthorityEnabled())
           {
@@ -1293,6 +1409,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         });
     SoftDeferCallbacksInstalled = true;
   }
+  DrainVerticalFaceDebtRepairs(
+      world, std::clamp(LastBudget.MaxMeshSchedule, 1, 8));
   prep_softdefer_setup_ms = prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();
 

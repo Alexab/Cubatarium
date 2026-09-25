@@ -6,6 +6,7 @@
 #include "World/Streaming/StreamingPressure.h"
 
 #include <cstdint>
+#include <deque>
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -53,6 +54,8 @@ public:
 
 private:
   FrameBudget LastBudget{};
+  void EnqueueVerticalFaceDebtRepair(glm::ivec3 coord);
+  void DrainVerticalFaceDebtRepairs(UWorld &world, int budget);
   int DualLaneRrToken_{0};
   /// A28 T1: DirtyDropped watermark for CapDirtyAdmitUnderThrash recent rate.
   uint64_t LastDirtyDroppedForAdmit_{0};
@@ -100,6 +103,12 @@ private:
   std::unordered_set<uint64_t> SeaSeamRemeshCoalesceCols;
   /// Sysreset v5: FaceDebt already-known peer remesh cap (shared with BecameKnown).
   int FaceDebtAlreadyKnownRemeshN{0};
+  /// Durable retry for vertical seam debt that appears after the publisher's
+  /// one-shot first-drawable callback has already run.
+  std::deque<glm::ivec3> PendingVerticalFaceDebtRepairs_;
+  std::unordered_set<glm::ivec3, IVec3Hash>
+      PendingVerticalFaceDebtRepairSet_;
+  uint64_t VerticalFaceDebtWorldEpoch_{0};
   /// Prior-frame FM enqueue / schedule baselines (was function-static).
   int FmEnqueuePrior{0};
   int ScheduleOkPrior{0};
