@@ -2599,6 +2599,16 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     const int band_cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
     const auto &mesh_cache = MeshService->GetCache();
     const auto &chunk_manager = BlockWorld.GetChunkManager();
+    struct FocusSliceCandidate
+    {
+      VisualBlackTraceRecord record{};
+      int horizontal_distance{0};
+      int vertical_distance{0};
+    };
+    std::vector<FocusSliceCandidate> focus_slice_candidates;
+    focus_slice_candidates.reserve(128);
+    const glm::ivec3 camera_block = GetPreferredLoadFocusBlock();
+    const int camera_cy = FloorDiv(camera_block.y, CHUNK_SIZE);
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
     {
       for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
@@ -2631,6 +2641,15 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           const bool has_mesh = MeshService->HasDrawableGreedyMesh(coord);
           const bool satisfying =
               MeshService->HasMeshSatisfyingColumnReady(coord);
+          const bool dirty = mesh_cache.IsChunkMeshDirty(coord);
+          const bool inflight = MeshService->HasInflightMeshBuild(coord);
+          const bool gpu_pending = MeshService->IsPendingGpuApply(coord);
+          const bool gpu_extract = MeshService->IsGpuExtractInFlight(coord);
+          const bool remesh_after_apply =
+              mesh_cache.IsRemeshAfterApplyPending(coord);
+          const bool work_pending = dirty || inflight || gpu_pending ||
+                                    gpu_extract || remesh_after_apply;
+          bool draw_ready = false;
           if (satisfying)
           {
             ++census.band_solid_satisfying_n;
@@ -2646,7 +2665,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             {
               ++census.band_solid_gpu_live_n;
             }
-            if (IsChunkSliceRenderReady(coord))
+            draw_ready = IsChunkSliceRenderReady(coord);
+            if (draw_ready)
             {
               ++census.band_solid_draw_ready_n;
             }
@@ -2658,10 +2678,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           else
           {
             ++census.band_solid_no_drawable_n;
-            if (mesh_cache.IsChunkMeshDirty(coord) ||
-                MeshService->HasInflightMeshBuild(coord) ||
-                MeshService->IsPendingGpuApply(coord) ||
-                MeshService->IsGpuExtractInFlight(coord))
+            if (work_pending)
             {
               ++census.band_solid_pending_mesh_n;
             }
@@ -2670,8 +2687,98 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               ++census.band_solid_unresolved_no_work_n;
             }
           }
+
+          // Trace states: 1=unresolved/no work, 2=missing drawable/owned
+          // work pending, 3=drawable mesh blocked by the draw gate.
+          uint8_t focus_state = 0;
+          if (!has_mesh && !satisfying)
+          {
+            focus_state = work_pending ? 2 : 1;
+          }
+          else if (has_mesh && !draw_ready)
+          {
+            focus_state = 3;
+          }
+          if (focus_state != 0)
+          {
+            FocusSliceCandidate candidate{};
+            auto &trace = candidate.record;
+            trace.sample_kind = 1;
+            trace.focus_state = focus_state;
+            trace.cx = coord.x;
+            trace.cy = coord.y;
+            trace.cz = coord.z;
+            trace.focus_cx = focus_ground_chunk.x;
+            trace.focus_cz = focus_ground_chunk.z;
+            trace.camera_x = camera_block.x;
+            trace.camera_y = camera_block.y;
+            trace.camera_z = camera_block.z;
+            trace.non_air_blocks = chunk->GetNonAirCount();
+            trace.chunk_content_revision = chunk->GetContentRevision();
+            trace.mesh_revision = MeshService->GetChunkMeshRevision(coord);
+            trace.frame_epoch = StreamingFrameEpoch;
+            trace.incarnation = chunk->GetIncarnation();
+            trace.draw_gate_ready = draw_ready ? 1 : 0;
+            trace.flags = static_cast<uint16_t>(
+                (has_mesh ? 1u << 0 : 0u) |
+                (satisfying ? 1u << 1 : 0u) |
+                (dirty ? 1u << 2 : 0u) |
+                (inflight ? 1u << 3 : 0u) |
+                (gpu_pending ? 1u << 4 : 0u) |
+                (gpu_extract ? 1u << 5 : 0u) |
+                (mesh_cache.HasLiveGpuDraw(coord) ? 1u << 6 : 0u) |
+                (draw_ready ? 1u << 7 : 0u) |
+                (remesh_after_apply ? 1u << 8 : 0u));
+            const MeshPublishRevs published =
+                mesh_cache.GetMeshPublishRevs(coord);
+            trace.published_geom_rev = published.geom_rev;
+            trace.published_light_rev = published.light_rev;
+            if (const ChunkRenderDemandRecord *demand =
+                    UChunkRenderDemandStore::Get().Find(coord))
+            {
+              trace.world_epoch = demand->world_epoch;
+              trace.incarnation = demand->incarnation;
+              trace.attempt_id = demand->has_active_attempt
+                                     ? demand->active_attempt_id
+                                     : 0;
+              trace.desired_geom_rev = demand->desired_geom_rev;
+              trace.desired_light_rev = demand->desired_light_rev;
+              trace.active_stage =
+                  static_cast<uint8_t>(demand->active_stage);
+            }
+            candidate.horizontal_distance =
+                std::max(std::abs(dx), std::abs(dz));
+            candidate.vertical_distance = std::abs(cy - camera_cy);
+            focus_slice_candidates.push_back(candidate);
+          }
         }
       }
+    }
+    std::sort(focus_slice_candidates.begin(), focus_slice_candidates.end(),
+              [](const FocusSliceCandidate &a, const FocusSliceCandidate &b)
+              {
+                if (a.record.focus_state != b.record.focus_state)
+                {
+                  return a.record.focus_state < b.record.focus_state;
+                }
+                if (a.horizontal_distance != b.horizontal_distance)
+                {
+                  return a.horizontal_distance < b.horizontal_distance;
+                }
+                return a.vertical_distance < b.vertical_distance;
+              });
+    int recorded_by_state[4]{};
+    constexpr int kFocusSliceTracePerState = 12;
+    for (const FocusSliceCandidate &candidate : focus_slice_candidates)
+    {
+      const int state = candidate.record.focus_state;
+      if (state <= 0 || state >= 4 ||
+          recorded_by_state[state] >= kFocusSliceTracePerState)
+      {
+        continue;
+      }
+      UJobStageTrace::NoteVisualBlack(candidate.record);
+      ++recorded_by_state[state];
     }
   };
   if (cache.valid && cache.focus == focus_ground_chunk &&

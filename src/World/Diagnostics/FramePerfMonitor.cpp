@@ -3103,9 +3103,25 @@ void UFramePerfMonitor::Shutdown()
       const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,
                                       void *p) {
         auto *out = static_cast<std::ofstream *>(p);
-        (*out) << "{\"kind\":\"visual_black_trace\""
+        (*out) << "{\"kind\":\""
+               << (r.sample_kind == 1 ? "focus_slice_trace"
+                                      : "visual_black_trace")
+               << "\""
                << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                << ",\"cz\":" << r.cz
+               << ",\"sample_kind\":" << static_cast<int>(r.sample_kind)
+               << ",\"focus_state\":" << static_cast<int>(r.focus_state)
+               << ",\"focus_cx\":" << r.focus_cx
+               << ",\"focus_cz\":" << r.focus_cz
+               << ",\"camera_x\":" << r.camera_x
+               << ",\"camera_y\":" << r.camera_y
+               << ",\"camera_z\":" << r.camera_z
+               << ",\"non_air_blocks\":" << r.non_air_blocks
+               << ",\"chunk_content_revision\":"
+               << r.chunk_content_revision
+               << ",\"mesh_revision\":" << r.mesh_revision
+               << ",\"draw_gate_ready\":"
+               << static_cast<int>(r.draw_gate_ready)
                << ",\"frame_epoch\":" << r.frame_epoch
                << ",\"world_epoch\":" << r.world_epoch
                << ",\"incarnation\":" << r.incarnation
