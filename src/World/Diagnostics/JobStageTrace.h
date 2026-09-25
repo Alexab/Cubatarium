@@ -122,6 +122,7 @@ struct VisualBlackTraceRecord
   /// repair, relight, dependency queue ownership, and legal-dark settlement.
   /// Bits 23..25 identify OpenSky, LightRepair, and true-dark state.
   /// Bits 26..27 split GPU apply into queued and kicked/dispatched phases.
+  /// Bits 28..31 identify live ColumnFlow tickets by work kind.
   uint32_t flags{0};
 };
 

@@ -2817,7 +2817,17 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col);
         const bool true_dark = fully_dark && open_sky && !pending_light &&
                                column_lit && !stale_dark && !has_lit_face;
-        const bool flow_ticket = GetColumnFlowExecutor().HasRepairTicket(col);
+        const UColumnFlowExecutor &flow_executor = GetColumnFlowExecutor();
+        const auto &flow_scheduler = flow_executor.Scheduler();
+        const bool flow_ticket = flow_executor.HasRepairTicket(col);
+        const bool flow_relight_then_mesh =
+            flow_scheduler.Contains(col, ColumnWorkKind::RelightThenMesh);
+        const bool flow_first_mesh =
+            flow_scheduler.Contains(col, ColumnWorkKind::FirstMesh);
+        const bool flow_remesh_seam =
+            flow_scheduler.Contains(col, ColumnWorkKind::RemeshSeam);
+        const bool flow_promote_relight =
+            flow_scheduler.Contains(col, ColumnWorkKind::PromoteRelight);
         const bool sticky_remesh = IsColumnStickyRemesh(col);
         const bool repair_progress = ColumnHasRepairProgress(col);
         const bool repair_ticket =
@@ -2851,7 +2861,11 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             (light_repair ? 1u << 24 : 0u) |
             (true_dark ? 1u << 25 : 0u) |
             (gpu_apply_queued ? 1u << 26 : 0u) |
-            (gpu_apply_kicked_or_dispatched ? 1u << 27 : 0u));
+            (gpu_apply_kicked_or_dispatched ? 1u << 27 : 0u) |
+            (flow_relight_then_mesh ? 1u << 28 : 0u) |
+            (flow_first_mesh ? 1u << 29 : 0u) |
+            (flow_remesh_seam ? 1u << 30 : 0u) |
+            (flow_promote_relight ? 1u << 31 : 0u));
         if (stale_dark)
         {
           trace.stale_sample_x = stale_witness.sampled_block.x;
