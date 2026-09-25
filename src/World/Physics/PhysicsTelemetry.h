@@ -726,6 +726,8 @@ struct PhysicsTelemetry
   /// (throughput; RelightCompletedN is ring occupancy at sample).
   int RelightCaptureColHoriz{-1};
   int RelightCaptureFinalize{0};
+  /// One async capture admitted despite hot-frame skip for visible stale-lit debt.
+  int RelightCaptureHotSkipStaleLit{0};
   int RelightCaptureBandCySpan{0};
   int RelightCaptureFullN{0};
   int RelightCaptureNeighborLightN{0};

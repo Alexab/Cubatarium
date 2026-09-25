@@ -4078,6 +4078,95 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
   return static_cast<int>(out.size());
 }
 
+int UWorld::CollectStaleLitRelightTargets(
+    glm::ivec3 focus_ground_chunk, int radius_chunks,
+    std::vector<StaleLitRelightTarget> &out, int max_cols) const
+{
+  out.clear();
+  if (!MeshService || radius_chunks < 0 || max_cols <= 0)
+  {
+    return 0;
+  }
+
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const bool moving =
+      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+  int band_min = std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
+                                     CHUNK_SIZE * 3 - 1);
+  if (moving)
+  {
+    const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
+    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(band_min,
+                          std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE));
+      band_max = std::max(band_max,
+                          std::min(max_y, ProceduralTemplate.SeaLevel + CHUNK_SIZE));
+    }
+  }
+  else if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min,
+                        std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE * 4));
+    band_max = std::max(band_max,
+                        std::min(max_y, ProceduralTemplate.SeaLevel + CHUNK_SIZE * 2));
+  }
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  const UChunkMeshCache &cache = MeshService->GetCache();
+
+  // Search by distance so the target stays bounded and the first stale
+  // visible column can be promoted without scanning the whole world ring.
+  for (int dist = 0; dist <= radius_chunks; ++dist)
+  {
+    for (int dx = -dist; dx <= dist; ++dx)
+    {
+      for (int dz = -dist; dz <= dist; ++dz)
+      {
+        if (std::max(std::abs(dx), std::abs(dz)) != dist)
+        {
+          continue;
+        }
+        const glm::ivec2 column(focus_ground_chunk.x + dx,
+                                focus_ground_chunk.z + dz);
+        int min_cy = std::numeric_limits<int>::max();
+        int max_cy = -1;
+        for (int cy = cy0; cy <= cy1; ++cy)
+        {
+          const glm::ivec3 coord(column.x, cy, column.y);
+          if (!MeshService->HasDrawableGreedyMesh(coord))
+          {
+            continue;
+          }
+          UChunkMeshCache::StaleDarkWitness witness{};
+          if (!cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &witness))
+          {
+            continue;
+          }
+          min_cy = std::min(min_cy, std::min(coord.y, witness.source_chunk.y));
+          max_cy = std::max(max_cy, std::max(coord.y, witness.source_chunk.y));
+        }
+        if (max_cy < 0)
+        {
+          continue;
+        }
+        const int min_world_y = std::clamp(min_cy * CHUNK_SIZE, 0, max_y);
+        const int max_world_y =
+            std::clamp((max_cy + 1) * CHUNK_SIZE - 1, 0, max_y);
+        out.push_back({column, min_world_y, max_world_y});
+        if (static_cast<int>(out.size()) >= max_cols)
+        {
+          return static_cast<int>(out.size());
+        }
+      }
+    }
+  }
+  return static_cast<int>(out.size());
+}
+
 int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
                                          int radius_chunks,
                                          std::vector<glm::ivec2> &out,

@@ -598,6 +598,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     return;
   }
+  world.GetPhysicsTelemetryMutable().RelightCaptureHotSkipStaleLit = 0;
   {
     const glm::ivec3 focus_chunk =
         UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
@@ -1053,6 +1054,53 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       }
     }
   }
+
+  bool stale_lit_target_pinned = false;
+  glm::ivec2 stale_lit_target_key(0);
+  const int visible_stale_lit_n =
+      world.GetPhysicsTelemetry().VisibleBlackStaleLitN;
+  if (async_bg && visible_stale_lit_n > 0 && world.MeshService)
+  {
+    std::vector<StaleLitRelightTarget> stale_targets;
+    world.CollectStaleLitRelightTargets(focus_chunk, focus_radius, stale_targets,
+                                        /*max_cols=*/1);
+    if (!stale_targets.empty())
+    {
+      const StaleLitRelightTarget &target = stale_targets.front();
+      stale_lit_target_key =
+          glm::ivec2(target.column.x * CHUNK_SIZE,
+                     target.column.y * CHUNK_SIZE);
+      // Merge the stale mesh/source witness band with the current queue band.
+      // This lets a lower stale slice survive the next top-down remainder.
+      EnqueueTerrainColumnRelight(stale_lit_target_key.x,
+                                  stale_lit_target_key.y,
+                                  /*priority=*/true, target.min_world_y,
+                                  target.max_world_y);
+      auto &prio = PendingTerrainColumnRelightsPriority;
+      auto &far = PendingTerrainColumnRelights;
+      auto prio_it = std::find(prio.begin(), prio.end(), stale_lit_target_key);
+      if (prio_it != prio.end())
+      {
+        if (prio_it != prio.begin())
+        {
+          prio.erase(prio_it);
+          prio.push_front(stale_lit_target_key);
+        }
+        stale_lit_target_pinned = true;
+      }
+      else
+      {
+        auto far_it = std::find(far.begin(), far.end(), stale_lit_target_key);
+        if (far_it != far.end())
+        {
+          far.erase(far_it);
+          prio.push_front(stale_lit_target_key);
+          stale_lit_target_pinned = true;
+        }
+      }
+    }
+  }
+
   // Capture() is main-thread and copies a 3x3 column band. Idle used to allow
   // 48–56 Captures/frame with no wall budget → 15–52s spikes and multi-GB
   // snapshot high-water (manual 220018). Always bound Capture wall time.
@@ -1326,8 +1374,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           world.GetAsyncRelightInFlightCount() == 0 &&
           frame_ms_so_far <
               static_cast<double>(tune.CaptureIdlePendingMaxWallMs);
+      const bool stale_lit_hot_bypass =
+          async_bg && stale_lit_target_pinned &&
+          PendingTerrainColumnRelightKeys.count(stale_lit_target_key) != 0;
       if (!enter_fov_lit && !soft_defer_hole && !miss_rim_pin &&
-          !idle_pending_progress)
+          !idle_pending_progress && !stale_lit_hot_bypass)
       {
         return false;
       }
@@ -1531,6 +1582,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         ++skipped_inflight;
         return skipped_inflight < std::max(8, max_bg_columns * 4);
       }
+    }
+    if (frame_ms_so_far >= capture_hot_skip_ms && async_bg &&
+        stale_lit_target_pinned && col == stale_lit_target_key)
+    {
+      world.GetPhysicsTelemetryMutable().RelightCaptureHotSkipStaleLit = 1;
     }
     PendingTerrainColumnRelightKeys.erase(col);
     const auto capture_t0 = std::chrono::high_resolution_clock::now();
