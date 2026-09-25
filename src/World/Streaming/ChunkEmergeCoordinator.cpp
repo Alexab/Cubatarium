@@ -739,14 +739,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   peer_cov_gen(chunk_coord + kFaceDir[f]);
               demand.NoteFaceDebt(chunk_coord, bit, need);
             }
-            // Coverage desire with face debt; geom/light = content revs (A40 P3/P4).
-            // Never stub g=1,l=1 — that invents unsat_geom vs published content.
+            // Coverage desire with face debt; geometry uses the mesh-revision
+            // domain consumed by publication, light uses the field revision.
+            // Never stub g=1,l=1 — that invents unrelated demand.
             uint64_t g = 0, l = 0;
             if (const UChunk *ch =
                     world_ref.GetBlockWorld().GetChunkManager().GetChunk(
                         chunk_coord))
             {
-              g = ch->GetContentRevision();
+              g = world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
               l = ch->GetLightFieldRevision();
             }
             if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
@@ -770,9 +771,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             if (g != 0 || l != 0)
             {
-              // A41 P5: content-rev desire + coverage bump; never stub g=1.
-              // When published already equals g/l, NoteDemand only leaves
-              // coverage unsat (no invent geom mismatch).
+              // Geometry and publication use the same mesh-revision domain;
+              // coverage can remain independently unsatisfied.
               (void)demand.NoteDemand(chunk_coord, g, l,
                                       /*desired_coverage_gen=*/1);
             }
@@ -835,13 +835,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               // A39 P3: UnknownPeer keeps waiting=0 (never fabricate need=1).
               demand.NoteFaceDebt(chunk_coord, bit, need);
             }
-            // A40 P3/P4: content-rev desire (never stub g=1 inventing unsat_geom).
+            // Geometry uses the mesh-revision domain consumed by publication.
             uint64_t g = 0, l = 0;
             if (const UChunk *ch =
                     world_ref.GetBlockWorld().GetChunkManager().GetChunk(
                         chunk_coord))
             {
-              g = ch->GetContentRevision();
+              g = world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
               l = ch->GetLightFieldRevision();
             }
             if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))

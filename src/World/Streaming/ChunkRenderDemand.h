@@ -78,6 +78,8 @@ struct ChunkRenderDemandRecord
   glm::ivec3 coord{};
   uint64_t world_epoch{0};
   uint64_t incarnation{0};
+  /// Geometry values are UChunkMeshRevisionRegistry source revisions.
+  /// Light values are UChunk light-field revisions; never compare across domains.
   uint64_t desired_geom_rev{0};
   uint64_t desired_light_rev{0};
   uint64_t desired_coverage_gen{0};

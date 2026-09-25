@@ -2700,11 +2700,13 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           }
         }
       }
-      uint64_t desired_geom = ch->GetContentRevision();
+      // Demand geometry and published geometry are MeshRevisions values, not
+      // Chunk content revisions (the two counters are independent).
+      uint64_t desired_geom = MeshService->GetChunkMeshRevision(coord);
       uint64_t desired_light = ch->GetLightFieldRevision();
       const MeshPublishRevs pub_early =
           MeshService->GetCache().GetMeshPublishRevs(coord);
-      // A41: do not invent geom=1 when published already has content rev.
+      // Do not invent a mismatch when a published mesh already has a source rev.
       if (desired_geom == 0 && desired_light == 0)
       {
         if (pub_early.geom_rev != 0)
@@ -2730,7 +2732,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const MeshPublishRevs pub =
           MeshService->GetCache().GetMeshPublishRevs(coord);
       demand.NotePublishedRevs(coord, pub.geom_rev, pub.light_rev);
-      // A39 P1: desire stays at content light (reachable). RelightOnly owns
+      // A39 P1: desire stays at field light (reachable). RelightOnly owns
       // FullyDark / mesh-behind — never invent content+1 / pub+1.
       UChunkMeshCache::LitApplyMeshProbe probe{};
       MeshService->FillLitApplyMeshProbe(coord, probe);

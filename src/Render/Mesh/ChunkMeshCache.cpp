@@ -1641,7 +1641,26 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
 
 void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
 {
-  MeshRevisions.Bump(chunk_coord);
+  const uint64_t mesh_revision = MeshRevisions.Bump(chunk_coord);
+  // Demand geometry must follow this same source-revision domain. A demand can
+  // be noted before MarkDirty bumps the mesh generation, so advance the target
+  // here rather than comparing Chunk::ContentRevision with PublishedRev.
+  if (kChunkDemandShadow())
+  {
+    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+    if (const ChunkRenderDemandRecord *rec = demand.Find(chunk_coord))
+    {
+      if (rec->desired_geom_rev != mesh_revision &&
+          (rec->desired_geom_rev != 0 || rec->desired_light_rev != 0 ||
+           rec->desired_coverage_gen != 0 || rec->face_debt_mask != 0))
+      {
+        const uint64_t desired_light = rec->desired_light_rev;
+        const uint64_t desired_coverage = rec->desired_coverage_gen;
+        demand.NoteDemand(chunk_coord, mesh_revision, desired_light,
+                          desired_coverage);
+      }
+    }
+  }
   CaptureStore.Invalidate(chunk_coord);
 }
 
@@ -3991,7 +4010,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
         uint64_t succ_light = 0;
         if (const UChunk *ch = world.GetChunkManager().GetChunk(coord))
         {
-          succ_geom = ch->GetContentRevision();
+          succ_geom = GetChunkMeshRevision(coord);
           succ_light = ch->GetLightFieldRevision();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
@@ -5226,7 +5245,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         uint64_t succ_light = 0;
         if (const UChunk *ch = world.GetChunkManager().GetChunk(result.coord))
         {
-          succ_geom = ch->GetContentRevision();
+          succ_geom = GetChunkMeshRevision(result.coord);
           succ_light = ch->GetLightFieldRevision();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();

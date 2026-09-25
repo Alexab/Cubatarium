@@ -131,7 +131,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         uint64_t desired_light = 0;
         if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
         {
-          desired_geom = ch->GetContentRevision();
+          // Demand geom rev shares the MeshRevisions domain used by Published.
+          desired_geom = mesh->GetChunkMeshRevision(coord);
           desired_light = ch->GetLightFieldRevision();
         }
         UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
@@ -257,7 +258,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
         {
           span.desired_rev = ch->GetLightFieldRevision();
-          span.source_rev = ch->GetContentRevision();
+          span.source_rev = mesh->GetChunkMeshRevision(coord);
           span.desired_light_rev = ch->GetLightFieldRevision();
         }
         {
