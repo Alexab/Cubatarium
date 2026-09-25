@@ -772,6 +772,16 @@ bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
   {
     return false;
   }
+  // A zero-quad mesh has no prior image to retain while its inputs are being
+  // replaced. Do not let an accepted empty result greenwash an outstanding
+  // geometry repair; drawable meshes still follow the retain-old-image path
+  // above.
+  if (Dirty.Contains(chunk_coord) || HasInflightMeshBuild(chunk_coord) ||
+      RemeshAfterApply.count(chunk_coord) > 0 ||
+      IsPendingGpuApply(chunk_coord) || IsGpuExtractInFlight(chunk_coord))
+  {
+    return false;
+  }
   const bool defer_active =
       DeferMeshUntilLit && DeferMeshUntilLit(chunk_coord);
   const bool soft_held = SoftDeferHeld.count(chunk_coord) > 0;
