@@ -293,6 +293,10 @@ struct PhysicsTelemetry
   double MeshDirtyDrainMs{0.0};
   int MeshDirtyDrainN{0};
   double MeshDirtyScheduleMs{0.0};
+  /// Published neighbor meshes awaiting/remeshed for changed boundary light.
+  int MeshLightDependencyQueuedN{0};
+  int MeshLightDependencyAppliedN{0};
+  int MeshLightDependencyBacklogN{0};
   int MeshDirtyScheduleOkN{0};
   int MeshDirtyScheduleOkFmN{0};
   int MeshDirtyScheduleOkRemeshN{0};

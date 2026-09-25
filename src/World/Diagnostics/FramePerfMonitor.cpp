@@ -317,6 +317,9 @@ struct FrameNumbers
   double mesh_dirty_drain_ms{0.0};
   int mesh_dirty_drain_n{0};
   double mesh_dirty_schedule_ms{0.0};
+  int mesh_light_dependency_queued_n{0};
+  int mesh_light_dependency_applied_n{0};
+  int mesh_light_dependency_backlog_n{0};
   int mesh_dirty_schedule_ok_n{0};
   int mesh_dirty_schedule_ok_fm_n{0};
   int mesh_dirty_schedule_ok_remesh_n{0};
@@ -996,6 +999,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_drain_ms = phys.MeshDirtyDrainMs;
   n.mesh_dirty_drain_n = phys.MeshDirtyDrainN;
   n.mesh_dirty_schedule_ms = phys.MeshDirtyScheduleMs;
+  n.mesh_light_dependency_queued_n = phys.MeshLightDependencyQueuedN;
+  n.mesh_light_dependency_applied_n = phys.MeshLightDependencyAppliedN;
+  n.mesh_light_dependency_backlog_n = phys.MeshLightDependencyBacklogN;
   n.mesh_dirty_schedule_ok_n = phys.MeshDirtyScheduleOkN;
   n.mesh_dirty_schedule_ok_fm_n = phys.MeshDirtyScheduleOkFmN;
   n.mesh_dirty_schedule_ok_remesh_n = phys.MeshDirtyScheduleOkRemeshN;
@@ -1713,6 +1719,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_dirty_drain_ms\":" << n.mesh_dirty_drain_ms
           << ",\"mesh_dirty_drain_n\":" << n.mesh_dirty_drain_n
           << ",\"mesh_dirty_schedule_ms\":" << n.mesh_dirty_schedule_ms
+          << ",\"mesh_light_dependency_queued_n\":"
+          << n.mesh_light_dependency_queued_n
+          << ",\"mesh_light_dependency_applied_n\":"
+          << n.mesh_light_dependency_applied_n
+          << ",\"mesh_light_dependency_backlog_n\":"
+          << n.mesh_light_dependency_backlog_n
           << ",\"mesh_dirty_schedule_ok_n\":" << n.mesh_dirty_schedule_ok_n
           << ",\"mesh_dirty_schedule_ok_fm_n\":"
           << n.mesh_dirty_schedule_ok_fm_n

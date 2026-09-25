@@ -19,7 +19,18 @@
 namespace cutum
 {
 
-UWorldMeshService::UWorldMeshService() = default;
+UWorldMeshService::UWorldMeshService()
+{
+  Cache.SetOnLightDependencyAppliedFn(
+      [this](glm::ivec3 chunk_coord)
+      {
+        NotifyChunkBlocksChanged(chunk_coord);
+        if (OnMeshColumnDirtyFn)
+        {
+          OnMeshColumnDirtyFn(chunk_coord);
+        }
+      });
+}
 
 void UWorldMeshService::SetRenderSettings(const RenderSettings &settings)
 {
@@ -348,6 +359,13 @@ void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
   {
     OnMeshColumnDirtyFn(chunk_coord);
   }
+}
+
+void UWorldMeshService::QueueLightDependencyInvalidations(
+    const UBlockWorld &world,
+    const std::vector<glm::ivec3> &changed_light_chunks)
+{
+  Cache.QueueLightDependencyInvalidations(world, changed_light_chunks);
 }
 
 void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,

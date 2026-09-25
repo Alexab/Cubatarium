@@ -40,6 +40,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <tuple>
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
 #include <unordered_map>
@@ -2748,6 +2749,110 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
 }
+
+void UChunkMeshCache::QueueLightDependencyInvalidations(
+    const UBlockWorld &world,
+    const std::vector<glm::ivec3> &changed_light_chunks)
+{
+  const UChunkManager &chunks = world.GetChunkManager();
+  for (const glm::ivec3 changed_coord : changed_light_chunks)
+  {
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      const glm::ivec3 dependent_coord = changed_coord + offset;
+      if (!chunks.HasChunk(dependent_coord) ||
+          !HasDrawableGreedyMesh(dependent_coord))
+      {
+        continue;
+      }
+      if (PendingLightDependencyInvalidations_.insert(dependent_coord).second)
+      {
+        ++LightDependencyQueuedSinceDrain_;
+      }
+    }
+  }
+}
+
+void UChunkMeshCache::DrainLightDependencyInvalidations(
+    UBlockWorld &world, int max_schedule_per_frame)
+{
+  LastLightDependencyQueuedN_ = LightDependencyQueuedSinceDrain_;
+  LightDependencyQueuedSinceDrain_ = 0;
+  LastLightDependencyAppliedN_ = 0;
+  if (PendingLightDependencyInvalidations_.empty())
+  {
+    return;
+  }
+
+  std::vector<glm::ivec3> candidates(PendingLightDependencyInvalidations_.begin(),
+                                    PendingLightDependencyInvalidations_.end());
+  std::sort(candidates.begin(), candidates.end(), [this](glm::ivec3 a,
+                                                         glm::ivec3 b)
+  {
+    const auto key = [this](glm::ivec3 coord)
+    {
+      const int horizontal =
+          MeshFocusValid
+              ? std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                         std::abs(coord.z - MeshFocusGroundChunk.z))
+              : 0;
+      const int vertical = MeshFocusValid
+                               ? std::abs(coord.y - MeshFocusGroundChunk.y)
+                               : 0;
+      return std::tuple<int, int, int, int, int>{
+          horizontal, vertical, coord.x, coord.y, coord.z};
+    };
+    return key(a) < key(b);
+  });
+
+  // This only transfers durable dependency debt into the existing dirty owner;
+  // mesh admission and capture/GPU work remain governed by the normal budgets.
+  const int enqueue_budget =
+      std::clamp(std::max(1, max_schedule_per_frame) * 2, 4, 16);
+  int enqueued = 0;
+  for (const glm::ivec3 coord : candidates)
+  {
+    if (enqueued >= enqueue_budget)
+    {
+      break;
+    }
+    if (!world.GetChunkManager().HasChunk(coord) ||
+        !HasDrawableGreedyMesh(coord))
+    {
+      PendingLightDependencyInvalidations_.erase(coord);
+      continue;
+    }
+
+    const bool live_pipeline =
+        (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+        IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord);
+    if (live_pipeline)
+    {
+      continue;
+    }
+    if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0)
+    {
+      PendingLightDependencyInvalidations_.erase(coord);
+      continue;
+    }
+
+    InvalidateMeshCapture(coord);
+    MarkDirtyPriority(coord);
+    if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
+        (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+        IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord))
+    {
+      PendingLightDependencyInvalidations_.erase(coord);
+      ++LastLightDependencyAppliedN_;
+      ++enqueued;
+      if (OnLightDependencyAppliedFn_)
+      {
+        OnLightDependencyAppliedFn_(coord);
+      }
+    }
+  }
+}
+
 void UChunkMeshCache::EnsureGpuPipeline()
 {
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
@@ -5979,6 +6084,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyRevisitSameN = 0;
   LastDirtyScheduleDedupN = 0;
   ScheduledThisFrame_.clear();
+  DrainLightDependencyInvalidations(world, max_schedule_per_frame);
   AgeFmDirtyGpuWatchFrames();
   // FmDirtyToGpuFinishMatchN_ cleared after emerge telemetry latch (Consume*).
   // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner must

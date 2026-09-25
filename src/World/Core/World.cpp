@@ -5405,6 +5405,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     else
     {
       std::vector<glm::ivec3> relit_coords = light_changes.changed_coords;
+      if (light_changes.any_changed() && MeshService)
+      {
+        MeshService->QueueLightDependencyInvalidations(
+            BlockWorld, light_changes.changed_coords);
+      }
       if (!light_changes.any_changed() && relit_coords.empty())
       {
         for (const RelightChunkLightData &chunk_data : result.chunks)

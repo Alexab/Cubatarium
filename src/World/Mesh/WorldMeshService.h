@@ -110,6 +110,21 @@ public:
 
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
+  void QueueLightDependencyInvalidations(
+      const UBlockWorld &world,
+      const std::vector<glm::ivec3> &changed_light_chunks);
+  int GetLastLightDependencyQueuedN() const
+  {
+    return Cache.GetLastLightDependencyQueuedN();
+  }
+  int GetLastLightDependencyAppliedN() const
+  {
+    return Cache.GetLastLightDependencyAppliedN();
+  }
+  int GetLightDependencyInvalidationBacklogN() const
+  {
+    return Cache.GetLightDependencyInvalidationBacklogN();
+  }
   void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
   void PumpCaptureWorkerCommits();
   void PrefetchMeshCaptureBand(const UBlockWorld &world,
