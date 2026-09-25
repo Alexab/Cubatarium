@@ -7006,14 +7006,100 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     auto try_schedule = [&](auto it, bool count_outside, bool count_overflow,
                             bool count_reserved) -> decltype(it)
     {
+      const glm::ivec3 schedule_coord = *it;
+      const bool trace_visible_repair =
+          Dirty.IsPriorityRemesh(schedule_coord) &&
+          !Dirty.IsFirstMesh(schedule_coord);
+      const auto trace_visible_schedule =
+          [&](uint8_t outcome, uint8_t detail)
+      {
+        if (!trace_visible_repair ||
+            !UJobStageTrace::VisualBlackTraceEnabled())
+        {
+          return;
+        }
+        VisualBlackTraceRecord trace{};
+        trace.sample_kind = 4;
+        trace.cx = schedule_coord.x;
+        trace.cy = schedule_coord.y;
+        trace.cz = schedule_coord.z;
+        trace.focus_cx = MeshFocusGroundChunk.x;
+        trace.focus_cz = MeshFocusGroundChunk.z;
+        trace.cause = outcome;
+        trace.face_debt_mask = detail;
+        trace.active_stage = detail;
+        trace.relight_queue_kind = 4; // Dirty.RemeshQ schedule probe.
+        const auto &remesh_queue = Dirty.RemeshQueue();
+        const auto queue_it =
+            std::find(remesh_queue.begin(), remesh_queue.end(), schedule_coord);
+        trace.relight_queue_index =
+            queue_it == remesh_queue.end()
+                ? -1
+                : static_cast<int32_t>(queue_it - remesh_queue.begin());
+        trace.relight_queue_size = static_cast<int32_t>(remesh_queue.size());
+        const bool drawable = HasDrawableGreedyMesh(schedule_coord);
+        const bool builder_inflight = AsyncBuilder->IsInFlight(schedule_coord);
+        const bool gpu_apply = IsPendingGpuApply(schedule_coord);
+        const bool gpu_queued = IsPendingGpuQueued(schedule_coord);
+        const bool gpu_kicked =
+            IsPendingGpuKickedOrDispatched(schedule_coord);
+        const bool gpu_extract =
+            GpuExtractInFlight.find(schedule_coord) != GpuExtractInFlight.end();
+        const bool soft_defer =
+            DeferMeshUntilLit && DeferMeshUntilLit(schedule_coord);
+        trace.flags = static_cast<uint32_t>(
+            (drawable ? 1u << 0 : 0u) |
+            (Dirty.IsPriorityRemesh(schedule_coord) ? 1u << 1 : 0u) |
+            (Dirty.IsFirstMesh(schedule_coord) ? 1u << 2 : 0u) |
+            (Dirty.Contains(schedule_coord) ? 1u << 3 : 0u) |
+            (builder_inflight ? 1u << 4 : 0u) |
+            (gpu_apply ? 1u << 5 : 0u) |
+            (gpu_queued ? 1u << 6 : 0u) |
+            (gpu_kicked ? 1u << 7 : 0u) |
+            (gpu_extract ? 1u << 8 : 0u) |
+            (soft_defer ? 1u << 9 : 0u) |
+            (StarveRemeshForHoles ? 1u << 10 : 0u) |
+            (EnterLitQuiesce ? 1u << 11 : 0u) |
+            (EnterGpuQuiesceDrain ? 1u << 12 : 0u) |
+            (AsyncBuilder->GetInFlightCount() >= max_pipeline ? 1u << 13
+                                                              : 0u));
+        trace.mesh_revision = MeshRevisions.Current(schedule_coord);
+        const MeshPublishRevs published =
+            GetMeshPublishRevs(schedule_coord);
+        trace.published_geom_rev = published.geom_rev;
+        trace.published_light_rev = published.light_rev;
+        trace.meshed_light_rev = GetMeshedLightRevision(schedule_coord);
+        if (const UChunk *chunk =
+                world.GetChunkManager().GetChunk(schedule_coord))
+        {
+          trace.non_air_blocks = chunk->GetNonAirCount();
+          trace.incarnation = chunk->GetIncarnation();
+          trace.field_light_rev = chunk->GetLightFieldRevision();
+        }
+        if (const ChunkRenderDemandRecord *demand =
+                UChunkRenderDemandStore::Get().Find(schedule_coord))
+        {
+          trace.world_epoch = demand->world_epoch;
+          trace.demand_incarnation = demand->incarnation;
+          trace.attempt_id = demand->active_attempt_id;
+          trace.desired_geom_rev = demand->desired_geom_rev;
+          trace.desired_light_rev = demand->desired_light_rev;
+          trace.demand_published_geom_rev = demand->published_geom_rev;
+          trace.demand_published_light_rev = demand->published_light_rev;
+          trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+        }
+        UJobStageTrace::NoteVisualBlack(trace);
+      };
       if (AsyncBuilder->GetInFlightCount() >= max_pipeline)
       {
+        trace_visible_schedule(1, 0);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipPipelineN;
         return Dirty.end();
       }
       if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
       {
+        trace_visible_schedule(2, 0);
         ++LastMeshSnapshotDeferStats.ScheduleTimeBudget;
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
@@ -7026,6 +7112,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                 .count();
         if (total_elapsed > MeshEmergeTotalBudgetMs)
         {
+          trace_visible_schedule(3, 0);
           ++LastMeshDirtyScheduleSkipN;
           ++LastMeshDirtyScheduleSkipPipelineN;
           return Dirty.end();
@@ -7033,6 +7120,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0)
       {
+        trace_visible_schedule(4, 0);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipOtherN;
         return Dirty.RemoveAt(it);
@@ -7046,6 +7134,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         else
         {
+          trace_visible_schedule(5, 0);
           ++LastMeshDirtyScheduleSkipN;
           ++LastMeshDirtyScheduleSkipOtherN;
           return Dirty.RemoveAt(it);
@@ -7060,6 +7149,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             DeferMeshUntilLit && DeferMeshUntilLit(*it);
         if (soft_still)
         {
+          trace_visible_schedule(6, 0);
           ++LastMeshDirtyScheduleSkipN;
           ++LastMeshDirtyScheduleSkipSoftDeferN;
           return Dirty.RemoveAt(it);
@@ -7068,6 +7158,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (AsyncBuilder->IsInFlight(*it))
       {
+        trace_visible_schedule(7, 0);
         // SRBR-P0.2: enter FirstMesh hole — keep Dirty while Inflight owns
         // (do NOT Invalidate: that aborted heal every schedule tick → 233131
         // sticky (-1,3,-1) dirty=1 async forever). Cruise: RemoveAt as before.
@@ -7097,6 +7188,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (IsPendingGpuApply(*it) || IsPendingGpuQueued(*it) ||
           IsPendingGpuKickedOrDispatched(*it))
       {
+        trace_visible_schedule(8, 0);
         // Phase 5.7R6: focus miss / holes — PreferKick + leave-in Dirty
         // (enter quiesce path); do not silent RemoveAt without kick progress.
         if ((EnterLitQuiesce || EnterGpuQuiesceDrain || StarveRemeshForHoles) &&
@@ -7117,6 +7209,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {
+        trace_visible_schedule(9, 0);
         // Era47/Era52: orphan Dirty under streaming freeze must not sticky-block ring.
         // FZ2.7-P10: under holes RemoveAt — leave-in thrash inflated skip without drain.
         ++LastMeshDirtyScheduleSkipN;
@@ -7161,6 +7254,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         else
         {
+          trace_visible_schedule(10, 0);
           if (!has_drawable)
           {
             HoldSoftDeferFirstMesh(*it);
@@ -7196,6 +7290,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           }
           else
           {
+            trace_visible_schedule(11, 0);
             ++LastMeshDirtyScheduleSkipN;
             ++LastMeshDirtyScheduleSkipRemeshStarveN;
             return Dirty.RemoveAt(it);
@@ -7221,11 +7316,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           TryAcquireSnapshotForSchedule(world, registry, *it, source_revision);
       if (acquire.kind == SnapshotAcquireKind::PendingCapture)
       {
+        trace_visible_schedule(12, 0);
         ++LastMeshPendingCaptureN_;
         return std::next(it);
       }
       if (acquire.kind == SnapshotAcquireKind::Deferred || !acquire.snapshot)
       {
+        trace_visible_schedule(
+            13, static_cast<uint8_t>(acquire.deferReason));
         note_snapshot_defer(acquire.deferReason);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
@@ -7249,10 +7347,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const uint64_t submitted_revision = snapshot.sourceRevision;
       if (!AsyncBuilder->Enqueue(std::move(snapshot), registry))
       {
+        trace_visible_schedule(14, 0);
         ++LastMeshDirtyScheduleSkipN;
         return std::next(it);
       }
       ActiveMeshSourceRevision[*it] = submitted_revision;
+      trace_visible_schedule(15, 0);
       ScheduledThisFrame_.insert(*it);
       if (Dirty.IsFirstMesh(*it))
       {
