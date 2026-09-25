@@ -218,14 +218,19 @@ bool UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
       rec.attempt_created_ms = now_ms;
     }
   }
-  if (rec.has_active_attempt &&
-      !StageIsMonotonic(rec.active_stage, stage))
+  const bool had_active_attempt = rec.has_active_attempt;
+  const JobStage previous_stage = rec.active_stage;
+  if (had_active_attempt && !StageIsMonotonic(previous_stage, stage))
   {
     return false;
   }
   rec.has_active_attempt = true;
   rec.active_stage = stage;
-  if (now_ms > 0.0)
+  // Repeated queue/admission observations at the same stage are not useful
+  // progress. Resetting the watchdog on every scan let a dead Admitted demand
+  // live forever even when its slice had no Dirty, worker, or GPU owner.
+  const bool stage_advanced = !had_active_attempt || stage != previous_stage;
+  if (stage_advanced && now_ms > 0.0)
   {
     rec.last_progress_ms = now_ms;
   }
