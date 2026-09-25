@@ -2829,6 +2829,9 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             Persistence && Persistence->IsTerrainColumnRelightQueued(block_key);
         const bool mesh_dependency_pending =
             cache.HasPendingMeshDependencyInvalidation(coord);
+        const bool gpu_apply_queued = cache.IsPendingGpuQueued(coord);
+        const bool gpu_apply_kicked_or_dispatched =
+            cache.IsPendingGpuKickedOrDispatched(coord);
         trace.flags = static_cast<uint32_t>(
             trace.flags | (fully_dark ? 1u << 9 : 0u) |
             (has_lit_face ? 1u << 10 : 0u) |
@@ -2846,7 +2849,9 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             (legal_dark ? 1u << 22 : 0u) |
             (open_sky ? 1u << 23 : 0u) |
             (light_repair ? 1u << 24 : 0u) |
-            (true_dark ? 1u << 25 : 0u));
+            (true_dark ? 1u << 25 : 0u) |
+            (gpu_apply_queued ? 1u << 26 : 0u) |
+            (gpu_apply_kicked_or_dispatched ? 1u << 27 : 0u));
         if (stale_dark)
         {
           trace.stale_sample_x = stale_witness.sampled_block.x;

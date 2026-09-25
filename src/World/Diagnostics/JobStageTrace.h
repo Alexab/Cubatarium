@@ -121,6 +121,7 @@ struct VisualBlackTraceRecord
   /// Bits 9..15 classify dark/light/column readiness. Bits 16..22 identify
   /// repair, relight, dependency queue ownership, and legal-dark settlement.
   /// Bits 23..25 identify OpenSky, LightRepair, and true-dark state.
+  /// Bits 26..27 split GPU apply into queued and kicked/dispatched phases.
   uint32_t flags{0};
 };
 
