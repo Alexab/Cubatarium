@@ -7187,9 +7187,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (IsPendingGpuApply(*it) || IsPendingGpuQueued(*it) ||
           IsPendingGpuKickedOrDispatched(*it))
       {
+        // A draw-gated repair may be fully dark at the current field-light
+        // revision, so ChunkHasStaleDarkFaces is false even though the slice
+        // still has a prioritized LightRepair obligation. Finish its queued
+        // GPU owner first; the draw gate remains closed until a later mesh is
+        // actually publishable.
         const bool visible_repair_gpu_promoted =
             trace_visible_repair && HasDrawableGreedyMesh(*it) &&
-            ChunkHasStaleDarkFaces(*it, world) &&
+            ChunkHasFullyDarkFace(*it) &&
             IsPendingGpuQueued(*it) && PreferKickPendingGpuQueued(*it);
         trace_visible_schedule(8,
                                visible_repair_gpu_promoted ? 1u : 0u);
