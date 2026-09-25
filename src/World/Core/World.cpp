@@ -37,6 +37,7 @@
 #include "World/Core/WorldFluidFacade.h"
 #include "World/Core/WorldViewBinding.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Environment/WeatherAutoController.h"
 #include "World/Environment/WeatherBiomeUtil.h"
 #include "World/IO/ChunkStorageService.h"
@@ -3971,6 +3972,12 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     bool is_black = false;
     bool column_fully_dark = false;
     bool column_stale_dark = false;
+    bool have_stale_coord = false;
+    bool have_fully_dark_coord = false;
+    bool have_light_mismatch_coord = false;
+    glm::ivec3 first_stale_coord{};
+    glm::ivec3 first_fully_dark_coord{};
+    glm::ivec3 first_light_mismatch_coord{};
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(key.x, cy, key.y);
@@ -3984,11 +3991,21 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       {
         column_stale_dark = true;
         is_black = true;
+        if (!have_stale_coord)
+        {
+          first_stale_coord = coord;
+          have_stale_coord = true;
+        }
       }
       if (fully_dark)
       {
         column_fully_dark = true;
         is_black = true;
+        if (!have_fully_dark_coord)
+        {
+          first_fully_dark_coord = coord;
+          have_fully_dark_coord = true;
+        }
       }
       if (is_black && column_fully_dark)
       {
@@ -4027,6 +4044,11 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
             probe.meshed_light_rev != field_rev)
         {
           light_revs_match = false;
+          if (!have_light_mismatch_coord)
+          {
+            first_light_mismatch_coord = coord;
+            have_light_mismatch_coord = true;
+          }
           break;
         }
       }
@@ -4046,9 +4068,11 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       ++counts.no_ticket;
     }
     const bool stale_dark_attr = column_stale_dark && !column_fully_dark;
-    switch (ClassifyVisibleBlackColumn(stale_dark_attr, column_fully_dark,
-                                       contains, progress, sticky,
-                                       pending_replace, light_revs_match))
+    const VisibleBlackCause cause =
+        ClassifyVisibleBlackColumn(stale_dark_attr, column_fully_dark, contains,
+                                   progress, sticky, pending_replace,
+                                   light_revs_match);
+    switch (cause)
     {
     case VisibleBlackCause::StaleDarkWithLitField:
       ++counts.stale_lit;
@@ -4078,6 +4102,57 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     case VisibleBlackCause::LegalDarkNoRepair:
       ++counts.legal_dark;
       break;
+    }
+    if (UJobStageTrace::VisualBlackTraceEnabled())
+    {
+      const glm::ivec3 coord =
+          have_light_mismatch_coord
+              ? first_light_mismatch_coord
+              : (have_fully_dark_coord ? first_fully_dark_coord
+                                       : first_stale_coord);
+      UChunkMeshCache::LitApplyMeshProbe probe{};
+      MeshService->FillLitApplyMeshProbe(coord, probe);
+      uint64_t field_light_rev = 0;
+      if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        field_light_rev = ch->GetLightFieldRevision();
+      }
+      const MeshPublishRevs published =
+          MeshService->GetCache().GetMeshPublishRevs(coord);
+      VisualBlackTraceRecord trace{};
+      trace.cx = coord.x;
+      trace.cy = coord.y;
+      trace.cz = coord.z;
+      trace.frame_epoch = StreamingFrameEpoch;
+      trace.cause = static_cast<uint8_t>(cause);
+      trace.meshed_light_rev = probe.meshed_light_rev;
+      trace.field_light_rev = field_light_rev;
+      trace.published_geom_rev = published.geom_rev;
+      trace.published_light_rev = published.light_rev;
+      trace.flags = static_cast<uint16_t>(
+          (contains ? 1u << 0 : 0u) | (progress ? 1u << 1 : 0u) |
+          (sticky ? 1u << 2 : 0u) | (pending_replace ? 1u << 3 : 0u) |
+          (light_revs_match ? 1u << 4 : 0u) |
+          (probe.has_drawable ? 1u << 5 : 0u) |
+          (probe.fully_dark ? 1u << 6 : 0u) |
+          (probe.is_dirty ? 1u << 7 : 0u) |
+          (probe.raa_pending ? 1u << 8 : 0u) |
+          (probe.gpu_pending ? 1u << 9 : 0u) |
+          (probe.inflight ? 1u << 10 : 0u) |
+          (column_stale_dark ? 1u << 11 : 0u) |
+          (probe.gpu_resident ? 1u << 12 : 0u));
+      if (const ChunkRenderDemandRecord *demand =
+              UChunkRenderDemandStore::Get().Find(coord))
+      {
+        trace.world_epoch = demand->world_epoch;
+        trace.incarnation = demand->incarnation;
+        trace.attempt_id = demand->active_attempt_id;
+        trace.desired_geom_rev = demand->desired_geom_rev;
+        trace.desired_light_rev = demand->desired_light_rev;
+        trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+        trace.face_debt_mask = demand->face_debt_mask;
+      }
+      UJobStageTrace::NoteVisualBlack(trace);
     }
   };
   std::unordered_set<uint64_t> counted_cols;

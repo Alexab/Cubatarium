@@ -2973,6 +2973,31 @@ void UFramePerfMonitor::Shutdown()
       UJobStageTrace::ForEachNewest(64, dumpTrace, &jobCtx);
       DumpCtx cullCtx{&s.Jsonl, "cull_trace"};
       UJobStageTrace::ForEachCullDecisionNewest(64, dumpTrace, &cullCtx);
+      const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,
+                                      void *p) {
+        auto *out = static_cast<std::ofstream *>(p);
+        (*out) << "{\"kind\":\"visual_black_trace\""
+               << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
+               << ",\"cz\":" << r.cz
+               << ",\"frame_epoch\":" << r.frame_epoch
+               << ",\"world_epoch\":" << r.world_epoch
+               << ",\"incarnation\":" << r.incarnation
+               << ",\"attempt_id\":" << r.attempt_id
+               << ",\"desired_geom_rev\":" << r.desired_geom_rev
+               << ",\"desired_light_rev\":" << r.desired_light_rev
+               << ",\"published_geom_rev\":" << r.published_geom_rev
+               << ",\"published_light_rev\":" << r.published_light_rev
+               << ",\"meshed_light_rev\":" << r.meshed_light_rev
+               << ",\"field_light_rev\":" << r.field_light_rev
+               << ",\"cause\":" << static_cast<int>(r.cause)
+               << ",\"active_stage\":" << static_cast<int>(r.active_stage)
+               << ",\"face_debt_mask\":"
+               << static_cast<int>(r.face_debt_mask)
+               << ",\"flags\":" << r.flags << "}\n";
+      };
+      UJobStageTrace::ForEachVisualBlackNewest(
+          UJobStageTrace::kVisualBlackTraceRingCapacity, dumpVisualBlack,
+          &s.Jsonl);
       s.Jsonl.flush();
     }
     ResetAccum(s);

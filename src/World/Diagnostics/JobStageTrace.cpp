@@ -1,6 +1,7 @@
 #include "World/Diagnostics/JobStageTrace.h"
 
 #include <array>
+#include <cstdlib>
 #include <mutex>
 
 namespace cutum
@@ -33,6 +34,22 @@ struct CullDecisionRing
 CullDecisionRing &GetCullDecisionRing()
 {
   static CullDecisionRing r;
+  return r;
+}
+
+struct VisualBlackTraceRing
+{
+  std::array<VisualBlackTraceRecord,
+             UJobStageTrace::kVisualBlackTraceRingCapacity>
+      slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+VisualBlackTraceRing &GetVisualBlackTraceRing()
+{
+  static VisualBlackTraceRing r;
   return r;
 }
 
@@ -128,6 +145,46 @@ void UJobStageTrace::ForEachCullDecisionNewest(
   {
     const size_t abs = (r.write + kCullDecisionRingCapacity - 1 - i) %
                        kCullDecisionRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
+bool UJobStageTrace::VisualBlackTraceEnabled()
+{
+  static const bool enabled = []() {
+    const char *env = std::getenv("CUBA_VISUAL_BLACK_TRACE");
+    return env != nullptr && env[0] != '\0' && env[0] != '0';
+  }();
+  return enabled;
+}
+
+void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
+{
+  auto &r = GetVisualBlackTraceRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.slots[r.write % kVisualBlackTraceRingCapacity] = record;
+  ++r.write;
+  if (r.count < kVisualBlackTraceRingCapacity)
+  {
+    ++r.count;
+  }
+}
+
+void UJobStageTrace::ForEachVisualBlackNewest(
+    size_t max_n, void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetVisualBlackTraceRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kVisualBlackTraceRingCapacity - 1 - i) %
+        kVisualBlackTraceRingCapacity;
     fn(r.slots[abs], ctx);
   }
 }
