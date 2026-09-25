@@ -297,6 +297,16 @@ VisualObligation следует сделать derived state/policy для эт�
 - Следующая правка расширяет только measured repair branch: при FullyDark/stale-light debt AbortDrip сохраняет небольшой schedule floor и четыре remesh slots; обычные abort и frame-time budgets остаются.
 - Артефакты: [repair-debt scheduler report](../../bin/suite_reports/engine_refactor/repair_debt_schedule_visible.json), [perf JSONL](../../bin/logs/perf_20260925-103818_11176.jsonl).
 
+## Исполнение: repair floor переживает phase abort, 2026-09-25
+
+- Коммит `537b8c7e` сохраняет четыре remesh admission slots и schedule/drain floor 6 при фактическом FullyDark или stale-vertex-light repair debt. Floor проходит и ранний, и поздний AbortDrip clamp; telemetry cap синхронизирован с admission, переданным mesh service.
+- Release build и статическая проверка Windows executable — PASS. Видимый no-teleport `product-174657` завершился штатно: 45 периодов, 19 чанков / 304 блока, скорость `5.99991` блока/с. Это тот же короткий west corridor, не дальний маршрут.
+- Политика сработала как задумано: при `phase_abort_heavy=1` schedule и abort schedule держались на 6 (пики 16), remesh cap был 4; по moving periods remesh scheduling-ok вырос до медианы 4. В одном сравнительном прогоне pending-GPU максимум уменьшился с 241 до 149; видимый чёрный focus максимум снизился с 82 до 75, медиана — с 20 до 17, post-stop missing — со 112 до 90. Одного прогона недостаточно, чтобы приписать всё улучшение floor.
+- Исправления проблемы пока нет: общий report `pass=false`, `holes_rate=1.0`, route `visible_black_focus_n` остаётся ненулевым, а после остановки FullyDark/stale-light debt держится на 17 и `post_stop_demand_stop_converged=false`. Pending GPU queue к остановке опустилась до 0, relight FIFO — до 1, но чернота не исчезла. Значит queue starvation была частью проблемы, но floor одного общего remesh lane не связывает repair с точными slice coordinates и не доказывает, что корректный light target был опубликован для каждого чёрного среза.
+- Во время движения queue всё ещё накапливает до 149 pending GPU applies; moving-period медианы — 16 pending light FIFO, 17 FullyDark/stale-light obligations и 86 unfinished visual. Это требует backpressure/coalescing по downstream capacity, иначе дополнительная admission может обменивать задержку ремонта на растущий GPU backlog.
+- Следующая работа: писать bounded per-slice trace для одного и того же `{x,y,z, incarnation, attempt_id}` через obligation → relight ticket/apply → dirty lane/admission → GPU kick/finish → publication, с terminal reason и target/published light stamp. Отдельно измерить oldest repair age и сохранить координаты оставшихся black obligations после stop. До этого не увеличивать count caps дальше.
+- Артефакты: [repair abort floor report](../../bin/suite_reports/engine_refactor/repair_abort_floor_visible.json), [perf JSONL](../../bin/logs/perf_20260925-104920_23488.jsonl).
+
 ## Основные ссылки
 
 - [Sysreset v3 evidence на dd7871ab](SYSRESET_V3_AF_EVIDENCE.md)
