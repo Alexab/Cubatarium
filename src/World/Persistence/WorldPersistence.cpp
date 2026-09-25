@@ -430,10 +430,11 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     return PendingTerrainColumnRelightKeys.count(key) != 0;
   }
 
-  // Keep the FIFO bounded: replace one farther, unprotected far-FIFO entry
-  // with this closer draw-gate witness. Priority entries and active pins stay.
+  // Keep the FIFO bounded: replace one far-FIFO entry outside the current
+  // visible repair ring. Preserve the active miss pin; the wider focus trim
+  // halo is too broad here and can otherwise block every draw-gate repair.
   auto victim_it = PendingTerrainColumnRelights.end();
-  int victim_horiz = horiz;
+  int victim_horiz = max_horiz;
   for (auto it = PendingTerrainColumnRelights.begin();
        it != PendingTerrainColumnRelights.end(); ++it)
   {
@@ -443,10 +444,8 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
         std::max(std::abs(cx - focus_ground.x),
                  std::abs(cz - focus_ground.z));
     if (candidate_horiz <= victim_horiz ||
-        ShouldProtectRelightFifoTrimVictim(
-            cx, cz, RelightFifoPinValid, RelightFifoPinCx,
-            RelightFifoPinCz, RelightFifoTrimFocusValid,
-            RelightFifoTrimFocusCx, RelightFifoTrimFocusCz))
+        ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid,
+                                       RelightFifoPinCx, RelightFifoPinCz))
     {
       continue;
     }
