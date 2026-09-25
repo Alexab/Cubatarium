@@ -65,7 +65,7 @@ struct JobStageSpan
 /// stamps so aggregate census counts can be traced to their real work owner.
 struct VisualBlackTraceRecord
 {
-  /// 0=black-attribution sample, 1=focus solid-slice visibility sample.
+  /// 0=black-attribution, 1=focus slice, 2=renderer draw-gate rejection.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   int32_t cx{0};
@@ -112,6 +112,11 @@ struct VisualBlackTraceRecord
   uint8_t stale_face_index{0};
   uint8_t stale_sample_light{0};
   uint8_t stale_sample_gpu_path{0};
+  /// sample_kind=2: 1=CPU opaque, 2=CPU transparent, 3=packed opaque,
+  /// 4=packed transparent.
+  uint8_t renderer_path{0};
+  uint32_t renderer_cpu_index_count{0};
+  uint32_t renderer_gpu_quad_count{0};
   /// sample_kind=0 bits: ticket, progress, sticky, pending_replace,
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,

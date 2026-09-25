@@ -125,6 +125,63 @@ void ApplyGreedyEnvironmentUniformsToShader(
   shader->SetFloat("uEnvWetness", 0.0f);
 }
 
+void NoteRendererGateRejection(UWorld &world, const UChunkMeshCache &cache,
+                               glm::ivec3 coord,
+                               const glm::vec3 &camera_position,
+                               uint8_t renderer_path,
+                               uint32_t cpu_index_count,
+                               uint32_t gpu_quad_count)
+{
+  if (!UJobStageTrace::VisualBlackTraceEnabled())
+  {
+    return;
+  }
+
+  static uint64_t traced_epoch = UINT64_MAX;
+  static int traced_this_frame = 0;
+  const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
+  if (traced_epoch != frame_epoch)
+  {
+    traced_epoch = frame_epoch;
+    traced_this_frame = 0;
+  }
+  constexpr int kMaxRendererGateTracesPerFrame = 32;
+  if (traced_this_frame >= kMaxRendererGateTracesPerFrame)
+  {
+    return;
+  }
+  ++traced_this_frame;
+
+  VisualBlackTraceRecord record{};
+  record.sample_kind = 2;
+  record.cx = coord.x;
+  record.cy = coord.y;
+  record.cz = coord.z;
+  record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+  record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+  record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+  record.frame_epoch = frame_epoch;
+  record.renderer_path = renderer_path;
+  record.renderer_cpu_index_count = cpu_index_count;
+  record.renderer_gpu_quad_count = gpu_quad_count;
+  record.mesh_revision = cache.GetChunkMeshRevision(coord);
+  record.draw_gate_ready = 0;
+  if (const UChunk *chunk =
+          world.GetBlockWorld().GetChunkManager().GetChunk(coord))
+  {
+    record.non_air_blocks = chunk->GetNonAirCount();
+    record.incarnation = chunk->GetIncarnation();
+    record.chunk_content_revision = chunk->GetContentRevision();
+    record.field_light_rev = chunk->GetLightFieldRevision();
+  }
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+  record.published_geom_rev = published.geom_rev;
+  record.published_light_rev = published.light_rev;
+  record.meshed_light_rev = cache.GetMeshedLightRevision(coord);
+  record.flags = 1u; // candidate was in the renderer's frustum draw list.
+  UJobStageTrace::NoteVisualBlack(record);
+}
+
 } // namespace
 
 void UGeometryEngine::ApplyGreedyEnvironmentUniforms(
@@ -667,9 +724,11 @@ void UGeometryEngine::DrawCubeGeometry()
   if (useGreedyMesh)
   {
     // Shared ready memo across opaque+transparent (World also memos per frame).
-    mesh_service->GetCache().BeginGpuPassDirtyFrame();
+    UChunkMeshCache &mesh_cache = mesh_service->GetCache();
+    mesh_cache.BeginGpuPassDirtyFrame();
     std::unordered_map<int64_t, bool> ready_cache;
-    auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
+    auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in,
+                                        uint8_t renderer_path)
     {
       std::vector<GreedyBatchRef> out;
       out.reserve(in.size());
@@ -690,6 +749,15 @@ void UGeometryEngine::DrawCubeGeometry()
         {
           ready = WorldInstance->IsChunkSliceRenderReady(ref.chunkCoord);
           ready_cache.emplace(key, ready);
+          if (!ready)
+          {
+            const GreedyMeshBatch *batch = mesh_cache.TryGetGreedyBatch(ref);
+            const uint32_t index_count =
+                batch ? static_cast<uint32_t>(batch->indices.size()) : 0u;
+            NoteRendererGateRejection(
+                *WorldInstance, mesh_cache, ref.chunkCoord,
+                camera->GetPosition(), renderer_path, index_count, 0u);
+          }
         }
         if (ready)
         {
@@ -707,8 +775,9 @@ void UGeometryEngine::DrawCubeGeometry()
     {
       ScopedPhase filter_phase(&filter_ms);
       CUBA_ZONE("Scene.FilterReady");
-      filtered_opaque = filter_render_ready_refs(draw.opaqueCutoutRefs);
-      filtered_transparent = filter_render_ready_refs(draw.transparentRefs);
+      filtered_opaque = filter_render_ready_refs(draw.opaqueCutoutRefs, 1u);
+      filtered_transparent =
+          filter_render_ready_refs(draw.transparentRefs, 2u);
     }
     {
       auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
@@ -2315,6 +2384,17 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
         pipeline->GetAllocator().GetSlot(chunk.chunkCoord);
     if (!slot || slot->QuadCount == 0)
     {
+      continue;
+    }
+    if (WorldInstance &&
+        !WorldInstance->IsChunkSliceRenderReady(chunk.chunkCoord))
+    {
+      NoteRendererGateRejection(
+          *WorldInstance, cache, chunk.chunkCoord,
+          WorldInstance->GetCurrentUserCamera()
+              ? WorldInstance->GetCurrentUserCamera()->GetPosition()
+              : glm::vec3(0.0f),
+          transparent_pass ? 4u : 3u, 0u, slot->QuadCount);
       continue;
     }
     ++packed_draw_chunks;

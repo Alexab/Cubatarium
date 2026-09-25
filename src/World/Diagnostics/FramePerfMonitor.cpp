@@ -3104,8 +3104,10 @@ void UFramePerfMonitor::Shutdown()
                                       void *p) {
         auto *out = static_cast<std::ofstream *>(p);
         (*out) << "{\"kind\":\""
-               << (r.sample_kind == 1 ? "focus_slice_trace"
-                                      : "visual_black_trace")
+               << (r.sample_kind == 1
+                       ? "focus_slice_trace"
+                       : (r.sample_kind == 2 ? "view_draw_gate_trace"
+                                             : "visual_black_trace"))
                << "\""
                << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                << ",\"cz\":" << r.cz
@@ -3155,6 +3157,12 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.stale_sample_light)
                << ",\"stale_sample_gpu_path\":"
                << static_cast<int>(r.stale_sample_gpu_path)
+               << ",\"renderer_path\":"
+               << static_cast<int>(r.renderer_path)
+               << ",\"renderer_cpu_index_count\":"
+               << r.renderer_cpu_index_count
+               << ",\"renderer_gpu_quad_count\":"
+               << r.renderer_gpu_quad_count
                << ",\"cause\":" << static_cast<int>(r.cause)
                << ",\"active_stage\":" << static_cast<int>(r.active_stage)
                << ",\"face_debt_mask\":"
