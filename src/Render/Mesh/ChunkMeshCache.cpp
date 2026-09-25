@@ -7187,7 +7187,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (IsPendingGpuApply(*it) || IsPendingGpuQueued(*it) ||
           IsPendingGpuKickedOrDispatched(*it))
       {
-        trace_visible_schedule(8, 0);
+        const bool visible_repair_gpu_promoted =
+            trace_visible_repair && HasDrawableGreedyMesh(*it) &&
+            ChunkHasStaleDarkFaces(*it, world) &&
+            IsPendingGpuQueued(*it) && PreferKickPendingGpuQueued(*it);
+        trace_visible_schedule(8,
+                               visible_repair_gpu_promoted ? 1u : 0u);
         // Phase 5.7R6: focus miss / holes — PreferKick + leave-in Dirty
         // (enter quiesce path); do not silent RemoveAt without kick progress.
         if ((EnterLitQuiesce || EnterGpuQuiesceDrain || StarveRemeshForHoles) &&
