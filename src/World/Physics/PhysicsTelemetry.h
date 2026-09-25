@@ -571,8 +571,11 @@ struct PhysicsTelemetry
   int FocusDataNonAirVoxelN{0};
   int FocusDataBandSolidSliceN{0};
   int FocusDataBandSolidMeshN{0};
-  int FocusDataBandSolidNoMeshN{0};
+  int FocusDataBandSolidNoDrawableN{0};
+  int FocusDataBandSolidSatisfyingN{0};
+  int FocusDataBandSolidAcceptedEmptyN{0};
   int FocusDataBandSolidPendingMeshN{0};
+  int FocusDataBandSolidUnresolvedNoWorkN{0};
   int FocusDataBandSolidDrawGateClosedN{0};
   int FocusDataBandSolidDrawReadyN{0};
   int FocusDataBandSolidGpuLiveN{0};

@@ -112,8 +112,11 @@ struct FocusRingVisualCensus
   int non_air_voxel_n{0};
   int band_solid_slice_n{0};
   int band_solid_mesh_n{0};
-  int band_solid_no_mesh_n{0};
+  int band_solid_no_drawable_n{0};
+  int band_solid_satisfying_n{0};
+  int band_solid_accepted_empty_n{0};
   int band_solid_pending_mesh_n{0};
+  int band_solid_unresolved_no_work_n{0};
   int band_solid_draw_gate_closed_n{0};
   int band_solid_draw_ready_n{0};
   int band_solid_gpu_live_n{0};

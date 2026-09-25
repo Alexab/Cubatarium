@@ -1457,10 +1457,16 @@ void UWorldStreaming::RefreshStreamingPressure(
       focus_visual.band_solid_slice_n;
   world.PhysicsTelemetryData.FocusDataBandSolidMeshN =
       focus_visual.band_solid_mesh_n;
-  world.PhysicsTelemetryData.FocusDataBandSolidNoMeshN =
-      focus_visual.band_solid_no_mesh_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidNoDrawableN =
+      focus_visual.band_solid_no_drawable_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidSatisfyingN =
+      focus_visual.band_solid_satisfying_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidAcceptedEmptyN =
+      focus_visual.band_solid_accepted_empty_n;
   world.PhysicsTelemetryData.FocusDataBandSolidPendingMeshN =
       focus_visual.band_solid_pending_mesh_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidUnresolvedNoWorkN =
+      focus_visual.band_solid_unresolved_no_work_n;
   world.PhysicsTelemetryData.FocusDataBandSolidDrawGateClosedN =
       focus_visual.band_solid_draw_gate_closed_n;
   world.PhysicsTelemetryData.FocusDataBandSolidDrawReadyN =

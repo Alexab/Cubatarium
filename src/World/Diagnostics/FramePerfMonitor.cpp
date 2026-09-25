@@ -516,8 +516,11 @@ struct FrameNumbers
   int focus_data_non_air_voxel_n{0};
   int focus_data_band_solid_slice_n{0};
   int focus_data_band_solid_mesh_n{0};
-  int focus_data_band_solid_no_mesh_n{0};
+  int focus_data_band_solid_no_drawable_n{0};
+  int focus_data_band_solid_satisfying_n{0};
+  int focus_data_band_solid_accepted_empty_n{0};
   int focus_data_band_solid_pending_mesh_n{0};
+  int focus_data_band_solid_unresolved_no_work_n{0};
   int focus_data_band_solid_draw_gate_closed_n{0};
   int focus_data_band_solid_draw_ready_n{0};
   int focus_data_band_solid_gpu_live_n{0};
@@ -1229,8 +1232,15 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_data_non_air_voxel_n = phys.FocusDataNonAirVoxelN;
   n.focus_data_band_solid_slice_n = phys.FocusDataBandSolidSliceN;
   n.focus_data_band_solid_mesh_n = phys.FocusDataBandSolidMeshN;
-  n.focus_data_band_solid_no_mesh_n = phys.FocusDataBandSolidNoMeshN;
+  n.focus_data_band_solid_no_drawable_n =
+      phys.FocusDataBandSolidNoDrawableN;
+  n.focus_data_band_solid_satisfying_n =
+      phys.FocusDataBandSolidSatisfyingN;
+  n.focus_data_band_solid_accepted_empty_n =
+      phys.FocusDataBandSolidAcceptedEmptyN;
   n.focus_data_band_solid_pending_mesh_n = phys.FocusDataBandSolidPendingMeshN;
+  n.focus_data_band_solid_unresolved_no_work_n =
+      phys.FocusDataBandSolidUnresolvedNoWorkN;
   n.focus_data_band_solid_draw_gate_closed_n =
       phys.FocusDataBandSolidDrawGateClosedN;
   n.focus_data_band_solid_draw_ready_n = phys.FocusDataBandSolidDrawReadyN;
@@ -2019,10 +2029,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.focus_data_band_solid_slice_n
           << ",\"focus_data_band_solid_mesh_n\":"
           << n.focus_data_band_solid_mesh_n
-          << ",\"focus_data_band_solid_no_mesh_n\":"
-          << n.focus_data_band_solid_no_mesh_n
+          << ",\"focus_data_band_solid_no_drawable_n\":"
+          << n.focus_data_band_solid_no_drawable_n
+          << ",\"focus_data_band_solid_satisfying_n\":"
+          << n.focus_data_band_solid_satisfying_n
+          << ",\"focus_data_band_solid_accepted_empty_n\":"
+          << n.focus_data_band_solid_accepted_empty_n
           << ",\"focus_data_band_solid_pending_mesh_n\":"
           << n.focus_data_band_solid_pending_mesh_n
+          << ",\"focus_data_band_solid_unresolved_no_work_n\":"
+          << n.focus_data_band_solid_unresolved_no_work_n
           << ",\"focus_data_band_solid_draw_gate_closed_n\":"
           << n.focus_data_band_solid_draw_gate_closed_n
           << ",\"focus_data_band_solid_draw_ready_n\":"

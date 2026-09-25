@@ -2566,8 +2566,11 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     census.non_air_voxel_n = 0;
     census.band_solid_slice_n = 0;
     census.band_solid_mesh_n = 0;
-    census.band_solid_no_mesh_n = 0;
+    census.band_solid_no_drawable_n = 0;
+    census.band_solid_satisfying_n = 0;
+    census.band_solid_accepted_empty_n = 0;
     census.band_solid_pending_mesh_n = 0;
+    census.band_solid_unresolved_no_work_n = 0;
     census.band_solid_draw_gate_closed_n = 0;
     census.band_solid_draw_ready_n = 0;
     census.band_solid_gpu_live_n = 0;
@@ -2626,6 +2629,16 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
 
           ++census.band_solid_slice_n;
           const bool has_mesh = MeshService->HasDrawableGreedyMesh(coord);
+          const bool satisfying =
+              MeshService->HasMeshSatisfyingColumnReady(coord);
+          if (satisfying)
+          {
+            ++census.band_solid_satisfying_n;
+            if (!has_mesh)
+            {
+              ++census.band_solid_accepted_empty_n;
+            }
+          }
           if (has_mesh)
           {
             ++census.band_solid_mesh_n;
@@ -2644,13 +2657,17 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           }
           else
           {
-            ++census.band_solid_no_mesh_n;
+            ++census.band_solid_no_drawable_n;
             if (mesh_cache.IsChunkMeshDirty(coord) ||
                 MeshService->HasInflightMeshBuild(coord) ||
                 MeshService->IsPendingGpuApply(coord) ||
                 MeshService->IsGpuExtractInFlight(coord))
             {
               ++census.band_solid_pending_mesh_n;
+            }
+            else if (!satisfying)
+            {
+              ++census.band_solid_unresolved_no_work_n;
             }
           }
         }
