@@ -88,6 +88,11 @@ public:
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
                                    bool priority = false, int min_y = 0,
                                    int max_y = -1);
+  /// Admit a bounded draw-gate repair by replacing a farther far-FIFO item
+  /// when normal near-ring admission is backpressured.
+  bool EnqueueVisibleDrawGateRelight(int world_x, int world_z, int min_y,
+                                     int max_y, glm::ivec3 focus_ground,
+                                     int max_horiz);
   /// F3b: enqueue only when column surface still needs relight.
   bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
                                       bool priority = false, int min_y = 0,
@@ -159,6 +164,9 @@ private:
 
   void FinalizeAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
                                       PendingAsyncColumnLoadState state);
+  void EnqueueTerrainColumnRelightImpl(int world_x, int world_z,
+                                       bool priority, int min_y, int max_y,
+                                       bool visible_admission);
 
   std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
   std::unique_ptr<UChunkStorageService> ChunkStorage;

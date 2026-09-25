@@ -4132,8 +4132,6 @@ int UWorld::CollectDrawGateRelightTargets(
         }
         const glm::ivec2 column(focus_ground_chunk.x + dx,
                                 focus_ground_chunk.z + dz);
-        const bool open_sky_applied =
-            EnterVisualGateCtrl.WasOpenSkyApplied(column);
         int min_cy = std::numeric_limits<int>::max();
         int max_cy = -1;
         for (int cy = cy0; cy <= cy1; ++cy)
@@ -4146,10 +4144,7 @@ int UWorld::CollectDrawGateRelightTargets(
           UChunkMeshCache::StaleDarkWitness witness{};
           const bool stale_light =
               cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &witness);
-          const bool fully_dark =
-              cache.ChunkHasFullyDarkFace(coord) &&
-              !MeshService->ChunkHasLitDrawableFace(coord);
-          if (!stale_light && !(fully_dark && !open_sky_applied))
+          if (!stale_light)
           {
             continue;
           }
