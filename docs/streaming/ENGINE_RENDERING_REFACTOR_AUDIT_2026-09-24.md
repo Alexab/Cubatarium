@@ -289,6 +289,14 @@ VisualObligation следует сделать derived state/policy для эт�
 - Следующий targeted change: разрешать этот no-hole saturation clamp только когда отсутствуют FocusMissingMesh, FullyDark repair debt и stale vertex-light debt. Оставить admission lane caps и реальные временные бюджеты; это будет проверка scheduler classification, а не увеличение произвольной квоты.
 - Артефакты: [cost-based budget report](../../bin/suite_reports/engine_refactor/capture_cost_budget_visible.json), [perf JSONL](../../bin/logs/perf_20260925-103111_25520.jsonl).
 
+## Исполнение: emergency floor не видел light-repair debt, 2026-09-25
+
+- Коммит `b0112c2c` исключил насыщенный cruise clamp при известных repair obligations, но повторный маршрут всё ещё показал `mesh_schedule_final=2` в хвосте: `phase_abort_heavy=1` и `abort_schedule_final=2`. Значит следующая ветка AbortDrip перекрывает cruise policy.
+- В том же хвосте: `focus_missing_mesh=0`, `visible_black_fully_dark_repair_n=12`, `draw_oracle_fully_dark_debt_n=12`, `draw_oracle_stale_vertex_light_n=12`; `relight_fifo_n` и `pending_light_focus_n` к остановке опустились до нуля, хотя чёрный ремонт сохранился. Поздний AbortDrip reinforce поднимал schedule только по missing mesh, underfeet и SoftDefer evidence, поэтому black mesh без missing geometry выпадал из service floor.
+- Итог прогона не прошёл: `holes_rate=1.0`, `fly_visible_black_max=82`, FullyDark stalled median `19`, `post_stop_missing_max=99`, demand convergence FAIL. `schedule_ok_zero_rate=0` и eye-proxy/A24 частные checks PASS не меняют общий визуальный FAIL. Скорость осталась `5.99991` блоков/с.
+- Следующая правка расширяет только measured repair branch: при FullyDark/stale-light debt AbortDrip сохраняет небольшой schedule floor и четыре remesh slots; обычные abort и frame-time budgets остаются.
+- Артефакты: [repair-debt scheduler report](../../bin/suite_reports/engine_refactor/repair_debt_schedule_visible.json), [perf JSONL](../../bin/logs/perf_20260925-103818_11176.jsonl).
+
 ## Основные ссылки
 
 - [Sysreset v3 evidence на dd7871ab](SYSRESET_V3_AF_EVIDENCE.md)
