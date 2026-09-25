@@ -4882,13 +4882,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool abort_needs_drip =
       AbortNeedsDrip(world.GetPhysicsTelemetry(), missing_underfeet,
                      nearest_miss_h, visual_holes);
-  // Phase 5.5.3: presentable carve survives abort (FocusMissing / underfeet /
-  // SoftDefer stuck) — do not heal only via AbortDripN.
+  const auto &abort_telem = world.GetPhysicsTelemetry();
+  const bool repair_debt_reinforce =
+      abort_telem.VisibleBlackFullyDarkRepairN > 0 ||
+      abort_telem.DrawOracleFullyDarkDebtN > 0 ||
+      abort_telem.DrawOracleStaleVertexLightN > 0;
+  // Preserve service for visible mesh-repair obligations across the streaming
+  // phase abort. FullyDark/stale-light debt can exist with FocusMissingMesh=0.
   const bool presentable_carve =
-      world.GetPhysicsTelemetry().FocusMissingMesh > 0 || missing_underfeet ||
-      world.GetPhysicsTelemetry().SoftDeferEmptyStuckN > 0 ||
-      world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0;
-  const int presentable_floor = presentable_carve ? 2 : 0;
+      abort_telem.FocusMissingMesh > 0 || missing_underfeet ||
+      abort_telem.SoftDeferEmptyStuckN > 0 ||
+      abort_telem.EnterSettleSoftForceWithDebt != 0 || repair_debt_reinforce;
+  const int presentable_floor =
+      repair_debt_reinforce ? 6 : (presentable_carve ? 2 : 0);
   if (phase_abort_heavy)
   {
     // Phase 5.3.1 AbortDripCap + Phase 5.4.2 AbortDripN escalate on sticky rim.
@@ -6364,6 +6370,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         mesh_service.SetMeshWorkAdmission(cut);
       }
     }
+    if (repair_debt_reinforce)
+    {
+      // The regular backpressure policy caps remesh at 2–3 during a dirty,
+      // high-pressure cruise. Under measured black repair debt, keep four
+      // remesh slots and a bounded aggregate schedule floor so the repair lane
+      // can make progress while the normal phase budget remains active.
+      MeshWorkAdmission repair_adm = mesh_service.GetMeshWorkAdmission();
+      repair_adm.remesh_schedule =
+          std::max(repair_adm.remesh_schedule, 4);
+      repair_adm.max_schedule =
+          std::max(repair_adm.max_schedule,
+                   repair_adm.first_mesh_schedule +
+                       repair_adm.remesh_schedule);
+      mesh_service.SetMeshWorkAdmission(repair_adm);
+      adm = repair_adm;
+      mesh_schedule = std::max(mesh_schedule, presentable_floor);
+      mesh_drain = std::max(mesh_drain, presentable_floor);
+    }
     LastBudget.MaxMeshSchedule = mesh_schedule;
     LastBudget.MaxMeshDrain = mesh_drain;
     LastBudget.AdmissionMode = static_cast<int>(adm.mode);
@@ -6427,12 +6451,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   if (phase_abort_heavy)
   {
     // Reinforce AbortDripCap after late floors (calm/alpha must not starve drip).
-    // Phase 5.5.3: presentable carve floor survives reinforce clamp.
+    // Repair debt also survives this final clamp, even without a missing mesh.
     const bool presentable_reinforce =
         world.GetPhysicsTelemetry().FocusMissingMesh > 0 || missing_underfeet ||
         world.GetPhysicsTelemetry().SoftDeferEmptyStuckN > 0 ||
-        world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0;
-    const int presentable_floor = presentable_reinforce ? 2 : 0;
+        world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 ||
+        repair_debt_reinforce;
+    const int presentable_floor = repair_debt_reinforce
+                                      ? 6
+                                      : (presentable_reinforce ? 2 : 0);
     if (abort_needs_drip || presentable_reinforce)
     {
       const int drip =
