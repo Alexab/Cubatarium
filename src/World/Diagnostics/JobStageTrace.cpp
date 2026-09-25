@@ -209,6 +209,14 @@ const char *UJobStageTrace::StageName(JobStage s)
     return "retired";
   case JobStage::Cancelled:
     return "cancelled";
+  case JobStage::GpuQueued:
+    return "gpu_queued";
+  case JobStage::GpuKicked:
+    return "gpu_kicked";
+  case JobStage::GpuCountersReady:
+    return "gpu_counters_ready";
+  case JobStage::GpuReady:
+    return "gpu_ready";
   default:
     return "unknown";
   }

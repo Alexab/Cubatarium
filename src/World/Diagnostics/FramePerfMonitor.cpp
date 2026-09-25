@@ -2984,10 +2984,12 @@ void UFramePerfMonitor::Shutdown()
                   << "\""
                   << ",\"queue_reason\":" << static_cast<int>(sp.queue_reason)
                   << ",\"created_ms\":" << sp.created_ms
-                  << ",\"stage_ms\":" << sp.stage_ms << "}\n";
+                  << ",\"stage_ms\":" << sp.stage_ms
+                  << ",\"elapsed_ms\":" << sp.elapsed_ms << "}\n";
       };
       DumpCtx jobCtx{&s.Jsonl, "job_trace"};
-      UJobStageTrace::ForEachNewest(128, dumpTrace, &jobCtx);
+      UJobStageTrace::ForEachNewest(UJobStageTrace::kRingCapacity, dumpTrace,
+                                    &jobCtx);
       DumpCtx cullCtx{&s.Jsonl, "cull_trace"};
       UJobStageTrace::ForEachCullDecisionNewest(64, dumpTrace, &cullCtx);
       const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,

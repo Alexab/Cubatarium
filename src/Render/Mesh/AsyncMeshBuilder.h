@@ -5,6 +5,7 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <atomic>
@@ -29,6 +30,7 @@ struct MeshBuildResult
   uint64_t sourceRevision{0};
   uint64_t jobId{0};
   uint64_t submitEpoch{0};
+  JobStageSpan stageTrace{};
   /// P5: worker deferred eligible opaque extract to main (GL) thread.
   bool GpuExtractPending{false};
   std::unique_ptr<ChunkMeshSnapshot> PendingSnapshot;

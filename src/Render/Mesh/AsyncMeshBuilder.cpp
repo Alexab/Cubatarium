@@ -120,6 +120,10 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
   stage_trace.cy = coord.y;
   stage_trace.cz = coord.z;
   stage_trace.job_id = jobId;
+  stage_trace.created_ms = std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now()
+                                   .time_since_epoch())
+                               .count();
   stage_trace.source_geom_rev = snapshot.sourceRevision;
   stage_trace.source_light_rev =
       snapshot.inputStampsValid ? snapshot.inputStamps[0].light : 0;
@@ -153,6 +157,10 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         (void)work_slot;
         const auto worker_started = std::chrono::steady_clock::now();
         stage_trace.stage = JobStage::Started;
+        stage_trace.elapsed_ms = std::chrono::duration<double, std::milli>(
+                                     worker_started.time_since_epoch())
+                                     .count() -
+                                 stage_trace.created_ms;
         UJobStageTrace::Note(stage_trace);
         MeshBuildResult result;
         result.coord = snapshot.coord;
@@ -217,6 +225,12 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
                                    std::chrono::steady_clock::now() -
                                    worker_started)
                                    .count();
+        stage_trace.elapsed_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count() -
+            stage_trace.created_ms;
+        result.stageTrace = stage_trace;
         UJobStageTrace::Note(stage_trace);
         const std::size_t result_bytes = EstimateMeshResultBytes(result);
         auto &pipe_adm = UPipelineAdmission::Get();

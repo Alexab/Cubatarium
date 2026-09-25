@@ -19,6 +19,10 @@ enum class JobStage : uint8_t
   Published,
   Retired,
   Cancelled,
+  GpuQueued,
+  GpuKicked,
+  GpuCountersReady,
+  GpuReady,
   Count
 };
 
@@ -52,6 +56,8 @@ struct JobStageSpan
   uint8_t queue_reason{0};
   double created_ms{0.0};
   double stage_ms{0.0};
+  /// Milliseconds from mesh-job creation to this event, when available.
+  double elapsed_ms{0.0};
 };
 
 /// Bounded, opt-in sample of a chunk counted by the visible-black census.

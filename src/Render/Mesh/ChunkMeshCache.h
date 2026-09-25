@@ -1027,6 +1027,7 @@ private:
     std::shared_ptr<const BlockDefinitionCatalog> inputCatalog;
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
     Phase phase{Phase::Queued};
+    JobStageSpan stageTrace{};
     bool transparent{false};
     /// N04 H4: accepted light/geom-stale input — refresh Dirty after commit.
     bool accepted_input_stale{false};
@@ -1043,7 +1044,8 @@ private:
       uint64_t source_light_revision = 0,
       bool has_source_light_revision = false,
       BoundaryOverlayState boundary_overlay = {},
-      bool accepted_geom_stale = false);
+      bool accepted_geom_stale = false,
+      JobStageSpan stage_trace = {});
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);

@@ -53,6 +53,26 @@ namespace
 
 constexpr int kRemeshDeferredRingMax = 64;
 
+double MeshJobTraceNowMs()
+{
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
+void NoteMeshJobStage(JobStageSpan span, JobStage stage,
+                      uint8_t outcome = 0)
+{
+  span.stage = stage;
+  span.outcome = outcome;
+  span.stage_ms = 0.0;
+  if (span.created_ms > 0.0)
+  {
+    span.elapsed_ms = MeshJobTraceNowMs() - span.created_ms;
+  }
+  UJobStageTrace::Note(span);
+}
+
 bool CacheNeighborVisuallyDrawable(void *ctx, glm::ivec3 neighbor_chunk)
 {
   auto *cache = static_cast<UChunkMeshCache *>(ctx);
@@ -4065,7 +4085,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers,
     bool accepted_input_stale, uint64_t source_light_revision,
     bool has_source_light_revision, BoundaryOverlayState boundary_overlay,
-    bool accepted_geom_stale)
+    bool accepted_geom_stale, JobStageSpan job_trace)
 {
   (void)registry;
   (void)source_revision;
@@ -4159,13 +4179,26 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           span.stage = JobStage::Published;
           span.outcome =
               static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
-          span.attempt_id = attempt_id;
+          span.job_id = job_trace.job_id;
+          span.created_ms = job_trace.created_ms;
+          span.attempt_id = job_trace.job_id != 0
+                                ? job_trace.attempt_id
+                                : attempt_id;
           span.source_geom_rev = source_revision;
           span.source_light_rev = has_source_light_revision
                                       ? source_light_revision
                                       : 0;
           (void)StampChunkRenderDemandTrace(span, demand, coord);
-          UJobStageTrace::Note(span);
+          if (job_trace.job_id != 0)
+          {
+            NoteMeshJobStage(
+                span, JobStage::Published,
+                static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor));
+          }
+          else
+          {
+            UJobStageTrace::Note(span);
+          }
         }
         (void)demand.NoteDemand(coord, succ_geom, succ_light,
                                 /*desired_coverage_gen=*/0, /*now_ms=*/0.0,
@@ -4291,11 +4324,22 @@ bool UChunkMeshCache::CommitGpuMeshResult(
         span.cz = coord.z;
         span.stage = JobStage::Published;
         span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
-        span.attempt_id = attempt_id;
+        span.job_id = job_trace.job_id;
+        span.created_ms = job_trace.created_ms;
+        span.attempt_id = job_trace.job_id != 0 ? job_trace.attempt_id
+                                                : attempt_id;
         span.source_geom_rev = source_revision;
         span.source_light_rev = got.source_light_rev;
         (void)StampChunkRenderDemandTrace(span, demand, coord);
-        UJobStageTrace::Note(span);
+        if (job_trace.job_id != 0)
+        {
+          NoteMeshJobStage(span, JobStage::Published,
+                           static_cast<uint8_t>(InstallResult::RejectedRetryable));
+        }
+        else
+        {
+          UJobStageTrace::Note(span);
+        }
       }
       MarkDirtyPriority(coord);
       return false;
@@ -4366,14 +4410,25 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     span.cz = coord.z;
     span.stage = JobStage::Published;
     span.outcome = static_cast<uint8_t>(InstallResult::Published);
-    span.attempt_id = attempt_id;
+    span.attempt_id = job_trace.job_id != 0 ? job_trace.attempt_id : attempt_id;
+    span.job_id = job_trace.job_id;
     span.published_rev = chunkMesh.PublishRevs.geom_rev;
     span.published_light_rev = chunkMesh.PublishRevs.light_rev;
     span.source_rev = source_revision;
     span.source_geom_rev = source_revision;
     span.source_light_rev = chunkMesh.MeshedLightRevision;
     (void)StampChunkRenderDemandTrace(span, demand, coord);
-    UJobStageTrace::Note(span);
+    if (job_trace.job_id != 0)
+    {
+      span.attempt_id = job_trace.attempt_id;
+      span.created_ms = job_trace.created_ms;
+      NoteMeshJobStage(span, JobStage::Published,
+                       static_cast<uint8_t>(InstallResult::Published));
+    }
+    else
+    {
+      UJobStageTrace::Note(span);
+    }
   }
   NoteGeometryDirty(coord);
   PendingMeshRevisionBump = true;
@@ -4641,6 +4696,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   };
 
   auto fail_ticket = [&](PendingGpuApply &pending) {
+    if (pending.stageTrace.job_id != 0)
+    {
+      NoteMeshJobStage(pending.stageTrace, JobStage::Cancelled);
+    }
     if (pending.ticket.valid && pending.ticket.slotIndex >= 0)
     {
       pipeline->GetAllocator().FreeSlotByIndex(pending.ticket.slotIndex);
@@ -4792,6 +4851,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       TouchPendingGpuIndex();
       continue;
     }
+    if (pending_ref.stageTrace.job_id != 0)
+    {
+      NoteMeshJobStage(pending_ref.stageTrace, JobStage::GpuCountersReady);
+    }
     if (pending_ref.ticket.quadCount == 0)
     {
       GpuMeshProcessResult gpu_result;
@@ -4814,7 +4877,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                   : 0ull,
                               pending.snapshot.inputStampsValid,
                               pending.snapshot.boundaryOverlay,
-                              pending.accepted_geom_stale))
+                              pending.accepted_geom_stale,
+                              pending.stageTrace))
       {
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
@@ -4900,7 +4964,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                   : 0ull,
                               pending.snapshot.inputStampsValid,
                               pending.snapshot.boundaryOverlay,
-                              pending.accepted_geom_stale))
+                              pending.accepted_geom_stale,
+                              pending.stageTrace))
     {
       NoteGpuPipelineProgress(pending.coord);
       ++processed;
@@ -5089,6 +5154,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       Dirty.MarkDirtyPriority(pending.coord);
       continue;
     }
+    if (pending.stageTrace.job_id != 0)
+    {
+      NoteMeshJobStage(pending.stageTrace, JobStage::GpuKicked);
+    }
     pending.transparent = has_transparent;
     pending.phase = pending.ticket.awaitingCounters
                         ? PendingGpuApply::Phase::Dispatched
@@ -5147,16 +5216,21 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       gpu_result.success = true;
       gpu_result.slotIndex = pending_ref.ticket.slotIndex;
       uint32_t quad_count = 0;
-      const auto st = pipeline->TryFinishComputePasses(
+    const auto st = pipeline->TryFinishComputePasses(
           pending_ref.ticket, registry, quad_count, &gpu_result.blockRanges,
           &gpu_result.hasFullyDarkFace, /*timeout_ns=*/0);
       if (st == UGpuMeshPipeline::GpuFinishStatus::NotReady)
       {
         ++LastGpuFinishNotReadyN;
-        ++i;
-        continue;
-      }
-      PendingGpuApply pending = std::move(pending_ref);
+      ++i;
+      continue;
+    }
+    if (st == UGpuMeshPipeline::GpuFinishStatus::Ready &&
+        pending_ref.stageTrace.job_id != 0)
+    {
+      NoteMeshJobStage(pending_ref.stageTrace, JobStage::GpuReady);
+    }
+    PendingGpuApply pending = std::move(pending_ref);
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
       TouchPendingGpuIndex();
@@ -5178,7 +5252,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                   : 0ull,
                               pending.snapshot.inputStampsValid,
                               pending.snapshot.boundaryOverlay,
-                              pending.accepted_geom_stale))
+                              pending.accepted_geom_stale,
+                              pending.stageTrace))
       {
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
@@ -5424,13 +5499,26 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           span.stage = JobStage::Published;
           span.outcome =
               static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
-          span.attempt_id = attempt_id;
+          span.job_id = result.jobId;
+          span.created_ms = result.stageTrace.created_ms;
+          span.attempt_id = result.jobId != 0
+                                ? result.stageTrace.attempt_id
+                                : attempt_id;
           span.source_geom_rev = result.sourceRevision;
           span.source_light_rev = result.InputStampsValid
                                       ? result.InputStamps[0].light
                                       : 0;
           (void)StampChunkRenderDemandTrace(span, demand, result.coord);
-          UJobStageTrace::Note(span);
+          if (result.jobId != 0)
+          {
+            NoteMeshJobStage(
+                span, JobStage::Published,
+                static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor));
+          }
+          else
+          {
+            UJobStageTrace::Note(span);
+          }
         }
         (void)demand.NoteDemand(
             result.coord, succ_geom, succ_light, /*desired_coverage_gen=*/0,
@@ -5489,6 +5577,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       pending.accepted_geom_stale =
           refresh_after_accept_stale &&
           stale_reason == MeshApplyStaleInputReason::Geom;
+      pending.stageTrace = result.stageTrace;
+      if (pending.stageTrace.job_id != 0)
+      {
+        NoteMeshJobStage(pending.stageTrace, JobStage::GpuQueued);
+      }
       result.PendingSnapshot.reset();
       result.GpuExtractPending = false;
       if (MeshFocusValid)
@@ -5744,11 +5837,22 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         span.cz = result.coord.z;
         span.stage = JobStage::Published;
         span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
-        span.attempt_id = attempt_id;
+        span.job_id = result.jobId;
+        span.created_ms = result.stageTrace.created_ms;
+        span.attempt_id = result.jobId != 0 ? result.stageTrace.attempt_id
+                                            : attempt_id;
         span.source_geom_rev = result.sourceRevision;
         span.source_light_rev = chunkMesh.MeshedLightRevision;
         (void)StampChunkRenderDemandTrace(span, demand, result.coord);
-        UJobStageTrace::Note(span);
+        if (result.jobId != 0)
+        {
+          NoteMeshJobStage(span, JobStage::Published,
+                           static_cast<uint8_t>(InstallResult::RejectedRetryable));
+        }
+        else
+        {
+          UJobStageTrace::Note(span);
+        }
       }
       // Keep prior batches; ask for remesh/retry without publishing candidate.
       MarkDirtyPriority(result.coord);
@@ -5807,14 +5911,25 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     span.cz = result.coord.z;
     span.stage = JobStage::Published;
     span.outcome = static_cast<uint8_t>(InstallResult::Published);
-    span.attempt_id = attempt_id;
+    span.job_id = result.jobId;
+    span.created_ms = result.stageTrace.created_ms;
+    span.attempt_id = result.jobId != 0 ? result.stageTrace.attempt_id
+                                        : attempt_id;
     span.published_rev = chunkMesh.PublishRevs.geom_rev;
     span.published_light_rev = chunkMesh.PublishRevs.light_rev;
     span.source_rev = result.sourceRevision;
     span.source_geom_rev = result.sourceRevision;
     span.source_light_rev = chunkMesh.MeshedLightRevision;
     (void)StampChunkRenderDemandTrace(span, demand, result.coord);
-    UJobStageTrace::Note(span);
+    if (result.jobId != 0)
+    {
+      NoteMeshJobStage(span, JobStage::Published,
+                       static_cast<uint8_t>(InstallResult::Published));
+    }
+    else
+    {
+      UJobStageTrace::Note(span);
+    }
   }
   // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
   const bool intentional_empty =
