@@ -1709,10 +1709,10 @@ def main() -> int:
                 args.fly_phase_sec = max(args.fly_phase_sec, 300.0)
             far_scale = os.environ.get("CUBA_FLIGHT_MOVE_SPEED_SCALE", "").strip()
             if not far_scale:
-                # Match the documented A37 far-distance stress scale. A prior
-                # value of 28 overshot the target distance and made visible
-                # no-teleport flights unusably fast.
-                os.environ["CUBA_FLIGHT_MOVE_SPEED_SCALE"] = "12"
+                # Keep visible diagnostic flights at normal camera speed. Far
+                # distance must come from a longer run, not an artificial speed
+                # multiplier that masks streaming/collision behavior.
+                os.environ["CUBA_FLIGHT_MOVE_SPEED_SCALE"] = "1"
             # Far runs need headroom beyond default 600s soft_force timeout.
             if args.process_timeout <= 0.0:
                 args.process_timeout = 900.0
