@@ -2718,7 +2718,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             trace.frame_epoch = StreamingFrameEpoch;
             trace.incarnation = chunk->GetIncarnation();
             trace.draw_gate_ready = draw_ready ? 1 : 0;
-            trace.flags = static_cast<uint16_t>(
+            trace.flags = static_cast<uint32_t>(
                 (has_mesh ? 1u << 0 : 0u) |
                 (satisfying ? 1u << 1 : 0u) |
                 (dirty ? 1u << 2 : 0u) |
@@ -2770,7 +2770,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               UChunkRenderDemandStore::Get().Find(coord))
       {
         trace.world_epoch = demand->world_epoch;
-        trace.incarnation = demand->incarnation;
+        trace.demand_incarnation = demand->incarnation;
         trace.attempt_id = demand->has_active_attempt
                                ? demand->active_attempt_id
                                : 0;
@@ -2779,6 +2779,17 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         trace.demand_published_geom_rev = demand->published_geom_rev;
         trace.demand_published_light_rev = demand->published_light_rev;
         trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+        const double now_ms = VisualObligationNowMs();
+        if (demand->attempt_created_ms > 0.0)
+        {
+          trace.demand_attempt_age_ms =
+              std::max(0.0, now_ms - demand->attempt_created_ms);
+        }
+        if (demand->last_progress_ms > 0.0)
+        {
+          trace.demand_progress_age_ms =
+              std::max(0.0, now_ms - demand->last_progress_ms);
+        }
       }
       if (state == 3)
       {
@@ -2795,17 +2806,33 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             IsColumnLitReady(glm::ivec3(coord.x, 0, coord.z));
         const ColumnRecord *column = ColumnRecords.Find(col);
         const bool legal_dark = column && column->legal_dark_settled;
+        const bool flow_ticket = GetColumnFlowExecutor().HasRepairTicket(col);
+        const bool sticky_remesh = IsColumnStickyRemesh(col);
+        const bool repair_progress = ColumnHasRepairProgress(col);
         const bool repair_ticket =
-            GetColumnFlowExecutor().HasRepairTicket(col) ||
-            IsColumnStickyRemesh(col) || ColumnHasRepairProgress(col);
-        trace.flags = static_cast<uint16_t>(
+            flow_ticket || sticky_remesh || repair_progress;
+        const bool async_relight = IsAsyncRelightColumnInFlight(col);
+        const glm::ivec2 block_key(coord.x * CHUNK_SIZE,
+                                   coord.z * CHUNK_SIZE);
+        const bool persistence_relight =
+            Persistence && Persistence->IsTerrainColumnRelightQueued(block_key);
+        const bool mesh_dependency_pending =
+            cache.HasPendingMeshDependencyInvalidation(coord);
+        trace.flags = static_cast<uint32_t>(
             trace.flags | (fully_dark ? 1u << 9 : 0u) |
             (has_lit_face ? 1u << 10 : 0u) |
             (stale_dark ? 1u << 11 : 0u) |
             (pending_light ? 1u << 12 : 0u) |
             (soft_defer ? 1u << 13 : 0u) |
             (column_lit ? 1u << 14 : 0u) |
-            (repair_ticket ? 1u << 15 : 0u));
+            (repair_ticket ? 1u << 15 : 0u) |
+            (flow_ticket ? 1u << 16 : 0u) |
+            (sticky_remesh ? 1u << 17 : 0u) |
+            (repair_progress ? 1u << 18 : 0u) |
+            (async_relight ? 1u << 19 : 0u) |
+            (persistence_relight ? 1u << 20 : 0u) |
+            (mesh_dependency_pending ? 1u << 21 : 0u) |
+            (legal_dark ? 1u << 22 : 0u));
       }
       UJobStageTrace::NoteVisualBlack(trace);
       ++recorded_by_state[state];

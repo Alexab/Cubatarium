@@ -79,7 +79,10 @@ struct VisualBlackTraceRecord
   int32_t non_air_blocks{0};
   uint64_t frame_epoch{0};
   uint64_t world_epoch{0};
+  /// Incarnation of the resident voxel chunk (never overwritten by demand).
   uint64_t incarnation{0};
+  /// Incarnation recorded by the demand store; diagnose stale coordinate reuse.
+  uint64_t demand_incarnation{0};
   uint64_t chunk_content_revision{0};
   uint64_t mesh_revision{0};
   uint64_t attempt_id{0};
@@ -87,6 +90,8 @@ struct VisualBlackTraceRecord
   uint64_t desired_light_rev{0};
   uint64_t demand_published_geom_rev{0};
   uint64_t demand_published_light_rev{0};
+  double demand_attempt_age_ms{0.0};
+  double demand_progress_age_ms{0.0};
   uint64_t published_geom_rev{0};
   uint64_t published_light_rev{0};
   uint64_t meshed_light_rev{0};
@@ -100,9 +105,11 @@ struct VisualBlackTraceRecord
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,
   /// gpu_resident, slice_stale_dark, lit_drawable, active_attempt.
-  /// sample_kind=1 bits: drawable, satisfying, dirty, inflight, gpu_pending,
-  /// gpu_extract, live_gpu, draw_gate_ready, remesh_after_apply.
-  uint16_t flags{0};
+  /// sample_kind=1 bits 0..8: drawable, satisfying, dirty, inflight,
+  /// gpu_pending, gpu_extract, live_gpu, draw_gate_ready, remesh_after_apply.
+  /// Bits 9..15 classify dark/light/column readiness. Bits 16..22 identify
+  /// repair, relight, dependency queue ownership, and legal-dark settlement.
+  uint32_t flags{0};
 };
 
 class UJobStageTrace

@@ -3125,6 +3125,7 @@ void UFramePerfMonitor::Shutdown()
                << ",\"frame_epoch\":" << r.frame_epoch
                << ",\"world_epoch\":" << r.world_epoch
                << ",\"incarnation\":" << r.incarnation
+               << ",\"demand_incarnation\":" << r.demand_incarnation
                << ",\"attempt_id\":" << r.attempt_id
                << ",\"desired_geom_rev\":" << r.desired_geom_rev
                << ",\"desired_light_rev\":" << r.desired_light_rev
@@ -3132,6 +3133,8 @@ void UFramePerfMonitor::Shutdown()
                << r.demand_published_geom_rev
                << ",\"demand_published_light_rev\":"
                << r.demand_published_light_rev
+               << ",\"demand_attempt_age_ms\":" << r.demand_attempt_age_ms
+               << ",\"demand_progress_age_ms\":" << r.demand_progress_age_ms
                << ",\"published_geom_rev\":" << r.published_geom_rev
                << ",\"published_light_rev\":" << r.published_light_rev
                << ",\"meshed_light_rev\":" << r.meshed_light_rev

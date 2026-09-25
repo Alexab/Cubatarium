@@ -95,6 +95,10 @@ public:
   {
     return static_cast<int>(PendingMeshDependencyInvalidations_.size());
   }
+  bool HasPendingMeshDependencyInvalidation(glm::ivec3 coord) const
+  {
+    return PendingMeshDependencyInvalidations_.count(coord) != 0;
+  }
   /// P3: next Dirty sort boosts this column's nh≤2 / underfeet FirstMesh.
   void SetJustRelitFirstMeshColumn(glm::ivec2 column, bool valid)
   {
