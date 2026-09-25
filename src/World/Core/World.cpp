@@ -2715,7 +2715,6 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             trace.camera_z = camera_block.z;
             trace.non_air_blocks = chunk->GetNonAirCount();
             trace.chunk_content_revision = chunk->GetContentRevision();
-            trace.mesh_revision = MeshService->GetChunkMeshRevision(coord);
             trace.frame_epoch = StreamingFrameEpoch;
             trace.incarnation = chunk->GetIncarnation();
             trace.draw_gate_ready = draw_ready ? 1 : 0;
@@ -2729,23 +2728,6 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                 (mesh_cache.HasLiveGpuDraw(coord) ? 1u << 6 : 0u) |
                 (draw_ready ? 1u << 7 : 0u) |
                 (remesh_after_apply ? 1u << 8 : 0u));
-            const MeshPublishRevs published =
-                mesh_cache.GetMeshPublishRevs(coord);
-            trace.published_geom_rev = published.geom_rev;
-            trace.published_light_rev = published.light_rev;
-            if (const ChunkRenderDemandRecord *demand =
-                    UChunkRenderDemandStore::Get().Find(coord))
-            {
-              trace.world_epoch = demand->world_epoch;
-              trace.incarnation = demand->incarnation;
-              trace.attempt_id = demand->has_active_attempt
-                                     ? demand->active_attempt_id
-                                     : 0;
-              trace.desired_geom_rev = demand->desired_geom_rev;
-              trace.desired_light_rev = demand->desired_light_rev;
-              trace.active_stage =
-                  static_cast<uint8_t>(demand->active_stage);
-            }
             candidate.horizontal_distance =
                 std::max(std::abs(dx), std::abs(dz));
             candidate.vertical_distance = std::abs(cy - camera_cy);
@@ -2777,7 +2759,55 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       {
         continue;
       }
-      UJobStageTrace::NoteVisualBlack(candidate.record);
+      VisualBlackTraceRecord trace = candidate.record;
+      const glm::ivec3 coord(trace.cx, trace.cy, trace.cz);
+      trace.mesh_revision = MeshService->GetChunkMeshRevision(coord);
+      const MeshPublishRevs published =
+          mesh_cache.GetMeshPublishRevs(coord);
+      trace.published_geom_rev = published.geom_rev;
+      trace.published_light_rev = published.light_rev;
+      if (const ChunkRenderDemandRecord *demand =
+              UChunkRenderDemandStore::Get().Find(coord))
+      {
+        trace.world_epoch = demand->world_epoch;
+        trace.incarnation = demand->incarnation;
+        trace.attempt_id = demand->has_active_attempt
+                               ? demand->active_attempt_id
+                               : 0;
+        trace.desired_geom_rev = demand->desired_geom_rev;
+        trace.desired_light_rev = demand->desired_light_rev;
+        trace.demand_published_geom_rev = demand->published_geom_rev;
+        trace.demand_published_light_rev = demand->published_light_rev;
+        trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+      }
+      if (state == 3)
+      {
+        const UChunkMeshCache &cache = MeshService->GetCache();
+        const bool fully_dark = cache.ChunkHasFullyDarkFace(coord);
+        const bool has_lit_face = MeshService->ChunkHasLitDrawableFace(coord);
+        const bool stale_dark =
+            fully_dark && !has_lit_face &&
+            MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+        const glm::ivec2 col(coord.x, coord.z);
+        const bool pending_light = IsPendingLightBeforeMesh(col);
+        const bool soft_defer = cache.IsSoftDeferHeld(coord);
+        const bool column_lit =
+            IsColumnLitReady(glm::ivec3(coord.x, 0, coord.z));
+        const ColumnRecord *column = ColumnRecords.Find(col);
+        const bool legal_dark = column && column->legal_dark_settled;
+        const bool repair_ticket =
+            GetColumnFlowExecutor().HasRepairTicket(col) ||
+            IsColumnStickyRemesh(col) || ColumnHasRepairProgress(col);
+        trace.flags = static_cast<uint16_t>(
+            trace.flags | (fully_dark ? 1u << 9 : 0u) |
+            (has_lit_face ? 1u << 10 : 0u) |
+            (stale_dark ? 1u << 11 : 0u) |
+            (pending_light ? 1u << 12 : 0u) |
+            (soft_defer ? 1u << 13 : 0u) |
+            (column_lit ? 1u << 14 : 0u) |
+            (repair_ticket ? 1u << 15 : 0u));
+      }
+      UJobStageTrace::NoteVisualBlack(trace);
       ++recorded_by_state[state];
     }
   };

@@ -85,6 +85,8 @@ struct VisualBlackTraceRecord
   uint64_t attempt_id{0};
   uint64_t desired_geom_rev{0};
   uint64_t desired_light_rev{0};
+  uint64_t demand_published_geom_rev{0};
+  uint64_t demand_published_light_rev{0};
   uint64_t published_geom_rev{0};
   uint64_t published_light_rev{0};
   uint64_t meshed_light_rev{0};
