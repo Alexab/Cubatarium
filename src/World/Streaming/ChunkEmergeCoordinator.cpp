@@ -4630,14 +4630,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const auto schedule_clamp_t0 = std::chrono::high_resolution_clock::now();
   if (!cruise_fast_path)
   {
-  if (moving && !visual_holes && !missing_underfeet && pending_dirty > 280)
+  const auto &repair_telem = world.GetPhysicsTelemetry();
+  const bool focus_repair_debt =
+      visual_holes || missing_visible_mesh || missing_underfeet ||
+      repair_telem.FocusMissingMesh > 0 ||
+      repair_telem.DrawOracleFullyDarkDebtN > 0 ||
+      repair_telem.DrawOracleStaleVertexLightN > 0;
+  if (moving && !focus_repair_debt && pending_dirty > 280)
   {
     mesh_schedule = std::min(mesh_schedule, 3);
     mesh_drain = std::min(mesh_drain, 10);
     mesh_service.SetMeshSnapshotBudgetMs(2.0);
   }
-  // Saturated async on lit cruise: ease snapshot so phys catch-up stays down.
-  if (moving && !visual_holes && !missing_underfeet && pending_async >= 28)
+  // Saturated async on healed lit cruise: retain throughput while any focus
+  // FirstMesh, FullyDark, or stale-light repair obligation remains.
+  if (moving && !focus_repair_debt && pending_async >= 28)
   {
     mesh_schedule = std::min(mesh_schedule, 2);
     mesh_drain = std::min(mesh_drain, 12);
