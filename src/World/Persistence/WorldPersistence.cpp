@@ -450,8 +450,8 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     remove_key(PendingTerrainColumnRelightsPriority);
 
     // Preserve the active miss witness at the front, including when it was
-    // still in the far deque. The renderer's exact rejects then run before
-    // other outer-ring priority work, but after the immediate focus core.
+    // still in the far deque. Exact renderer rejects follow it immediately,
+    // ahead of generic focus work that can otherwise starve visible repair.
     const glm::ivec2 pin_key(RelightFifoPinCx * CHUNK_SIZE,
                              RelightFifoPinCz * CHUNK_SIZE);
     if (RelightFifoPinValid && pin_key == key)
@@ -491,19 +491,6 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     auto insert_it = PendingTerrainColumnRelightsPriority.begin();
     if (pin_front)
     {
-      ++insert_it;
-    }
-    while (insert_it != PendingTerrainColumnRelightsPriority.end())
-    {
-      const int cx = FloorDiv(insert_it->x, CHUNK_SIZE);
-      const int cz = FloorDiv(insert_it->y, CHUNK_SIZE);
-      const int queued_horiz =
-          std::max(std::abs(cx - focus_ground.x),
-                   std::abs(cz - focus_ground.z));
-      if (queued_horiz > 1)
-      {
-        break;
-      }
       ++insert_it;
     }
     PendingTerrainColumnRelightsPriority.insert(insert_it, key);
