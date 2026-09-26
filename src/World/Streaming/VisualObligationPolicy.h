@@ -18,6 +18,19 @@ enum class VisualObligation : uint8_t
   SoftDeferOwned
 };
 
+/// A fully dark mesh is safe to draw only when this exact slice has a
+/// validated light calculation and both its CPU mesh and published image use
+/// that same light field. Revision equality by itself is not settlement proof.
+inline bool CurrentDarkSliceImageMayDraw(
+    bool fully_dark_mesh, bool settled_light_current, bool stale_dark,
+    bool demand_light_current, uint64_t field_light_rev,
+    uint64_t published_light_rev, uint64_t meshed_light_rev)
+{
+  return fully_dark_mesh && settled_light_current && !stale_dark &&
+         demand_light_current && published_light_rev == field_light_rev &&
+         meshed_light_rev == field_light_rev;
+}
+
 struct VisualObligationShadowCounters
 {
   uint64_t samples{0};

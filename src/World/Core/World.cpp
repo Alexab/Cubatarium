@@ -2216,10 +2216,10 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
             slice_demand->has_settled_light &&
             slice_demand->settled_light_rev == field_light_rev;
         const bool current_dark_image =
-            slice_light_settled && slice_chunk && !stale &&
-            demand_light_current &&
-            published_revs.light_rev == field_light_rev &&
-            meshed_light_rev == field_light_rev;
+            CurrentDarkSliceImageMayDraw(
+                fully_dark, slice_light_settled, stale, demand_light_current,
+                field_light_rev, published_revs.light_rev,
+                meshed_light_rev);
         if (current_dark_image)
         {
           return memo(true);
@@ -4233,10 +4233,10 @@ int UWorld::CollectDrawGateRelightTargets(
         demand_identity_current && slice_demand->has_settled_light &&
         slice_demand->settled_light_rev == field_light_rev;
     const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
-    const bool current_dark_image =
-        slice_light_settled && !stale_light && demand_light_current &&
-        published.light_rev == field_light_rev &&
-        cache.GetMeshedLightRevision(coord) == field_light_rev;
+    const bool current_dark_image = CurrentDarkSliceImageMayDraw(
+        fully_dark, slice_light_settled, stale_light, demand_light_current,
+        field_light_rev, published.light_rev,
+        cache.GetMeshedLightRevision(coord));
     // Match IsChunkSliceRenderReady: open-sky column state alone cannot prove
     // this exact slice was lit. Any drawable dark slice that the gate rejects
     // for missing settlement or stale light publication must get repair work.

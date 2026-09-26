@@ -10,6 +10,7 @@
 #include "World/Diagnostics/ScopedPhase.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Streaming/ChunkRenderDemand.h"
+#include "World/Streaming/VisualObligationPolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
@@ -246,10 +247,9 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   const bool settled_light_current =
       demand_identity_current && slice_demand->has_settled_light &&
       slice_demand->settled_light_rev == field_light_rev;
-  const bool current_dark_image =
-      settled_light_current && !stale_dark && demand_light_current &&
-      published.light_rev == field_light_rev &&
-      record.meshed_light_rev == field_light_rev;
+  const bool current_dark_image = CurrentDarkSliceImageMayDraw(
+      fully_dark, settled_light_current, stale_dark, demand_light_current,
+      field_light_rev, published.light_rev, record.meshed_light_rev);
   record.renderer_gate_flags |=
       (slice_demand && slice_demand->has_settled_light ? (1u << 18) : 0u) |
       (settled_light_current ? (1u << 19) : 0u) |
