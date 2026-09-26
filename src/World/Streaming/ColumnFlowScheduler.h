@@ -68,6 +68,9 @@ public:
   void Enqueue(glm::ivec2 column, ColumnWorkKind kind, int priority);
   void Enqueue(const ColumnWorkItem &item);
   bool DrainOne(ColumnWorkItem &out);
+  /// When the frame deadline is exhausted, make progress work bypass deferred
+  /// relight/seam items without changing normal priority ordering.
+  bool DrainProgress(ColumnWorkItem &out, bool include_relight);
   void Clear();
 
   /// Live tickets only (excludes superseded heap entries).
@@ -131,9 +134,19 @@ private:
     }
   };
 
+  bool DrainFromHeap(
+      std::priority_queue<HeapEntry, std::vector<HeapEntry>, Compare> &heap,
+      ColumnWorkKind kind, ColumnWorkItem &out);
+
   void PushLive(const ColumnWorkItem &item);
 
   std::priority_queue<HeapEntry, std::vector<HeapEntry>, Compare> heap_;
+  // Secondary indices let deadline-critical work bypass any number of
+  // non-critical tickets deferred from the main priority heap.
+  std::priority_queue<HeapEntry, std::vector<HeapEntry>, Compare>
+      first_mesh_heap_;
+  std::priority_queue<HeapEntry, std::vector<HeapEntry>, Compare>
+      relight_heap_;
   std::unordered_map<ColumnCoord, LiveTicket, ColumnCoordHash> live_;
   uint64_t next_generation_{1};
   uint64_t next_sequence_{1};
