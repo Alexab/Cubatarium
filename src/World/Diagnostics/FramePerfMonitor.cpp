@@ -3072,12 +3072,18 @@ void UFramePerfMonitor::Shutdown()
 {
   Session &s = GetSession();
   std::lock_guard<std::mutex> lock(s.Mutex);
-  if (s.FrameCount > 0 && s.Jsonl.is_open())
+  if (s.Jsonl.is_open())
   {
-    FrameNumbers last{};
-    const FrameNumbers avg = AverageFromSession(s, last);
-    WriteJsonl(s, avg, "shutdown", /*flush=*/true);
-    LogLine(avg, "shutdown", s.FrameCount, s.MaxWallMs);
+    if (s.FrameCount > 0)
+    {
+      FrameNumbers last{};
+      const FrameNumbers avg = AverageFromSession(s, last);
+      WriteJsonl(s, avg, "shutdown", /*flush=*/true);
+      LogLine(avg, "shutdown", s.FrameCount, s.MaxWallMs);
+    }
+    // Always dump diagnostic rings when a session exists. If the last regular
+    // period ended exactly at shutdown, FrameCount is zero but those rings may
+    // still contain the only renderer-coordinate evidence for the run.
     // A21 P0.3: dump newest job-stage spans for emergency correlation.
     if (s.Jsonl.is_open())
     {
