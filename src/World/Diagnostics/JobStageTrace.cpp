@@ -52,6 +52,14 @@ GetVisualBlackTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kVisualBlackAttributionTraceRingCapacity> &
+GetVisualBlackAttributionTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kVisualBlackAttributionTraceRingCapacity> r;
+  return r;
+}
+
 VisualBlackTraceRing<UJobStageTrace::kVisualRepairTraceRingCapacity> &
 GetVisualRepairTraceRing()
 {
@@ -211,7 +219,13 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   // Renderer/focus samples are emitted at frame rate. Keep repair admission,
   // repair scans, general mesh scheduling, and priority remesh scheduling in
   // separate rings so busy first-mesh work cannot overwrite repair outcomes.
-  if (record.sample_kind == 3 || record.sample_kind == 5)
+  if (record.sample_kind == 0)
+  {
+    // Per-column census attribution is the evidence behind the aggregate VB
+    // counter. Give it its own ring so renderer/focus samples cannot evict it.
+    PushVisualTrace(GetVisualBlackAttributionTraceRing(), record);
+  }
+  else if (record.sample_kind == 3 || record.sample_kind == 5)
   {
     PushVisualTrace(GetVisualRepairTraceRing(), record);
   }
@@ -238,6 +252,8 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   }
   // Class groups are emitted separately; use frame_epoch to join their
   // records because their bounded rings have independent write sequences.
+  ForEachVisualTraceNewest(GetVisualBlackAttributionTraceRing(), max_n, fn,
+                           ctx);
   ForEachVisualTraceNewest(GetVisualRepairTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);

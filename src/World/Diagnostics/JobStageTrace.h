@@ -177,12 +177,15 @@ public:
   static constexpr size_t kRingCapacity = 256;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
+  static constexpr size_t kVisualBlackAttributionTraceRingCapacity = 1024;
   static constexpr size_t kVisualRepairTraceRingCapacity = 2048;
   static constexpr size_t kMeshScheduleTraceRingCapacity = 1024;
   static constexpr size_t kPriorityRemeshTraceRingCapacity = 2048;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
-      kVisualBlackTraceRingCapacity + kVisualRepairTraceRingCapacity +
-      kMeshScheduleTraceRingCapacity + kPriorityRemeshTraceRingCapacity;
+      kVisualBlackTraceRingCapacity +
+      kVisualBlackAttributionTraceRingCapacity +
+      kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
+      kPriorityRemeshTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   static size_t Size();
