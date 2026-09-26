@@ -299,6 +299,29 @@ void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
   }
 }
 
+void NoteColumnLightCalculationSettled(UWorld &world,
+                                       glm::ivec2 column_block_xz,
+                                       int min_world_y, int max_world_y)
+{
+  if (max_world_y < min_world_y)
+  {
+    return;
+  }
+  const glm::ivec3 ground = UChunkManager::WorldToChunk(
+      glm::ivec3(column_block_xz.x, 0, column_block_xz.y));
+  const int cy0 = std::max(0, FloorDiv(std::max(0, min_world_y), CHUNK_SIZE));
+  const int cy1 = FloorDiv(std::max(0, max_world_y), CHUNK_SIZE);
+  UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    if (chunks.HasChunk(coord))
+    {
+      world.NoteChunkSliceLightCalculationSettled(coord);
+    }
+  }
+}
+
 } // namespace
 
 UWorldCooperativeSession::~UWorldCooperativeSession()
@@ -1361,9 +1384,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (RelightQueueIndex < RelightQueue.size() &&
              relit < relight_budget)
       {
+        const glm::ivec3 coord = RelightQueue[RelightQueueIndex++];
         world.GetLightingPipeline().RelightChunk(
-            world.BlockWorld, *world.BlockRegistry,
-            RelightQueue[RelightQueueIndex++], false, true);
+            world.BlockWorld, *world.BlockRegistry, coord, false, true);
+        world.NoteChunkSliceLightCalculationSettled(coord);
         ++relit;
       }
     }
@@ -1394,10 +1418,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (BulkRelightChunkScheduledIndex < BulkRelightChunkQueue.size() &&
              relit < chunk_budget)
       {
+        const glm::ivec3 coord =
+            BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++];
         world.GetLightingPipeline().RelightChunk(
-            world.BlockWorld, *world.BlockRegistry,
-            BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++], false,
-            true);
+            world.BlockWorld, *world.BlockRegistry, coord, false, true);
+        world.NoteChunkSliceLightCalculationSettled(coord);
         ++relit;
       }
     }
@@ -1486,6 +1511,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         world.GetLightingPipeline().RelightColumn(
             world.BlockWorld, *world.BlockRegistry, col.x, col.y, 0, max_y,
             false, true);
+        NoteColumnLightCalculationSettled(world, col, 0, max_y);
         ++relit;
       }
       ColumnRelightScheduledIndex = ColumnRelightIndex;
@@ -1569,9 +1595,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (EmissiveChunkRelightIndex < EmissiveChunkRelightQueue.size() &&
              relit < relight_budget)
       {
+        const glm::ivec3 coord =
+            EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++];
         world.GetLightingPipeline().RelightChunkBlockLight(
-            world.BlockWorld, *world.BlockRegistry,
-            EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
+            world.BlockWorld, *world.BlockRegistry, coord);
+        world.NoteChunkSliceLightCalculationSettled(coord);
         ++relit;
       }
     }
