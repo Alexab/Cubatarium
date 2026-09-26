@@ -1653,15 +1653,18 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
   }
   // Exact renderer rejects are bounded and already occupy the priority
-  // queue. When they are waiting, a one-column cruise cap lets that visible
-  // backlog grow faster than it can be serviced. Allow one extra async
-  // capture while worker/completion capacity is available; the time budget
-  // and the hard caller/in-flight limits still apply in drain_one().
-  if (async_bg && draw_gate_target_pinned && max_bg_columns > 1 &&
+  // queue. Streaming may pass a one-column budget here because of a hitch or
+  // mesh-scheduling pressure; that general cap can then prevent the visible
+  // repair queue from feeding the relight worker. While byte memory pressure
+  // is green, let exact draw-gate work use one additional async capture slot.
+  // The capture time budget, completed-queue backpressure and worker limit
+  // still bound this priority exception.
+  if (async_bg && draw_gate_target_pinned &&
+      world.GetPhysicsTelemetry().MemoryPressure == 0 &&
       world.GetAsyncRelightInFlightCount() < max_inflight &&
       world.GetRelightCompletedSize() < 2)
   {
-    bg_cap = std::max(bg_cap, std::min(2, max_bg_columns));
+    bg_cap = std::max(bg_cap, 2);
   }
   {
     auto &telem = world.GetPhysicsTelemetryMutable();
