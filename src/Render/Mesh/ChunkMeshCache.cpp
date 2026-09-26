@@ -5092,10 +5092,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           ? 20
           : std::max(VisibleBlackFocusPressure_,
                      VisibleBlackNoTicketPressure_);
-  // A queued replacement for a drawable, fully-dark priority remesh is itself
-  // visual debt, even when the current field-light revision says the darkness
-  // is not stale. Do not require a second aggregate-pressure threshold before
-  // allowing this already-owned repair to advance.
+  // A queued replacement for a drawable, fully-dark slice is visual debt even
+  // after its Dirty remesh entry has been consumed. Use the per-slice demand
+  // record as the durable owner in that phase; otherwise newly queued first
+  // meshes can repeatedly take the one debt kick while the hidden replacement
+  // waits behind them.
   bool have_urgent_dark_repair = false;
   glm::ivec3 urgent_dark_repair{};
   if (queued_n > 0)
@@ -5105,8 +5106,30 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       if (pending.phase != PendingGpuApply::Phase::Queued ||
           !HasDrawableGreedyMesh(pending.coord) ||
           !IsRimIngressWatchCoord(pending.coord, MeshFocusGroundChunk) ||
-          !Dirty.IsPriorityRemesh(pending.coord) ||
           !ChunkHasFullyDarkFace(pending.coord))
+      {
+        continue;
+      }
+      const ChunkRenderDemandRecord *demand =
+          UChunkRenderDemandStore::Get().Find(pending.coord);
+      const bool demand_unpublished =
+          demand &&
+          (demand->desired_geom_rev > demand->published_geom_rev ||
+           demand->desired_light_rev > demand->published_light_rev ||
+           demand->desired_coverage_gen > demand->published_coverage_gen ||
+           demand->face_debt_mask != 0 ||
+           demand->retained_awaiting_successor);
+      // A dark mesh without a queued remesh or an open per-slice demand may be
+      // legally dark. Promote only explicit work owners, not darkness alone.
+      if (!Dirty.IsPriorityRemesh(pending.coord) && !demand_unpublished)
+      {
+        continue;
+      }
+      // Do not spend the reserved kick on an owner that is already obsolete;
+      // the normal revision check will discard it, but it cannot clear the
+      // currently visible obligation.
+      if (demand_unpublished &&
+          pending.sourceRevision != MeshRevisions.Current(pending.coord))
       {
         continue;
       }
