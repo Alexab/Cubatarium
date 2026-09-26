@@ -4395,8 +4395,13 @@ int UWorld::CollectDrawGateRelightTargets(
   return static_cast<int>(out.size());
 }
 
-bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord)
+bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
+                                            bool *out_queued)
 {
+  if (out_queued)
+  {
+    *out_queued = false;
+  }
   if (!MeshService || !MeshService->HasDrawableGreedyMesh(chunk_coord))
   {
     return false;
@@ -4430,9 +4435,25 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord)
     }
     else if (StreamingFrameEpoch < retry_it->second.next_retry_epoch)
     {
-      return false;
+      return true;
     }
   }
+  const bool has_retry_ticket =
+      retry_it != SettledDrawGateMeshRepairRetries.end();
+  uint8_t attempts = 1;
+  if (has_retry_ticket)
+  {
+    attempts = static_cast<uint8_t>(std::min<int>(
+        static_cast<int>(retry_it->second.attempts) + 1, 8));
+  }
+  const uint64_t retry_delay = std::min<uint64_t>(
+      8ull << std::min<int>(static_cast<int>(attempts) - 1, 3), 64ull);
+  const auto stamp_retry = [&]()
+  {
+    SettledDrawGateMeshRepairRetries[chunk_coord] =
+        {chunk->GetIncarnation(), field_light_rev,
+         StreamingFrameEpoch + retry_delay, attempts};
+  };
   if (cache.IsChunkMeshDirty(chunk_coord) ||
       MeshService->HasInflightMeshBuild(chunk_coord) ||
       cache.IsRemeshAfterApplyPending(chunk_coord) ||
@@ -4441,7 +4462,7 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord)
       cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
       cache.IsGpuExtractInFlight(chunk_coord))
   {
-    return false;
+    return has_retry_ticket;
   }
 
   // Force the next capture to read the already-settled current field. A cached
@@ -4450,19 +4471,17 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord)
   MeshService->MarkDirty(chunk_coord);
   if (!cache.IsChunkMeshDirty(chunk_coord))
   {
-    return false;
+    if (has_retry_ticket)
+    {
+      stamp_retry();
+    }
+    return has_retry_ticket;
   }
-  uint8_t attempts = 1;
-  if (retry_it != SettledDrawGateMeshRepairRetries.end())
+  stamp_retry();
+  if (out_queued)
   {
-    attempts = static_cast<uint8_t>(std::min<int>(
-        static_cast<int>(retry_it->second.attempts) + 1, 8));
+    *out_queued = true;
   }
-  const uint64_t retry_delay = std::min<uint64_t>(
-      8ull << std::min<int>(static_cast<int>(attempts) - 1, 3), 64ull);
-  SettledDrawGateMeshRepairRetries[chunk_coord] =
-      {chunk->GetIncarnation(), field_light_rev,
-       StreamingFrameEpoch + retry_delay, attempts};
   (void)cache.PrioritizeVisibleLightRepairRemesh(chunk_coord);
   ColumnRecord &column_record = GetColumnRecords().GetOrCreate(
       glm::ivec2(chunk_coord.x, chunk_coord.z));

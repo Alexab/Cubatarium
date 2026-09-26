@@ -1218,7 +1218,8 @@ public:
       std::vector<DrawGateRelightTarget> &out, int max_cols) const;
   /// Queue one exact mesh-only repair after the draw gate observes that its
   /// resident slice has a current settled field and stale baked light.
-  bool QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord);
+  bool QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
+                                      bool *out_queued = nullptr);
   /// Remember a mesh rejected by a renderer draw gate so streaming can repair
   /// the exact visible slice on its next update.
   void NoteRendererDrawGateRejection(glm::ivec3 chunk_coord);
