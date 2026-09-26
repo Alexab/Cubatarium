@@ -1720,6 +1720,19 @@ private:
   mutable uint64_t SpawnCatchUpSampleEpoch{UINT64_MAX};
   mutable bool CachedNeedsSpawnRingCatchUp{false};
   std::vector<AdmitFocusMarkRange> AdmitFocusMarkBuffer_;
+  struct SettledDrawGateMeshRepairRetry
+  {
+    uint64_t incarnation{0};
+    uint64_t field_light_revision{0};
+    uint64_t next_retry_epoch{0};
+    uint8_t attempts{0};
+  };
+  /// A draw-gate repair remains outstanding after one enqueue even when an
+  /// async result temporarily drops its mesh owner. This backoff prevents the
+  /// renderer from bumping MeshRevision and invalidating the same repair every
+  /// frame while still allowing bounded retries for a persistent hole.
+  std::unordered_map<glm::ivec3, SettledDrawGateMeshRepairRetry, IVec3Hash>
+      SettledDrawGateMeshRepairRetries;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
       RecentRendererDrawGateRejections;
   uint64_t RendererDrawGateRejectPruneEpoch{UINT64_MAX};

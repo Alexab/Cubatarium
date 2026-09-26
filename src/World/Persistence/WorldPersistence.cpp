@@ -1368,8 +1368,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       {
         target_pinned = world.QueueSettledDrawGateMeshRepair(
             target.rejected_slice);
-        // 11=queued an exact mesh-only repair, 12=the mesh obligation changed
-        // or could not be admitted before dispatch.
+        // 11=queued an exact mesh-only repair, 12=already owned/backing off,
+        // or the mesh obligation could not be admitted before dispatch.
         draw_gate_admission_outcome = target_pinned ? 11 : 12;
       }
       else if (already_queued || !already_inflight)

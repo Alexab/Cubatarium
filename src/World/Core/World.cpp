@@ -4416,7 +4416,22 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord)
   if (published.light_rev >= field_light_rev &&
       cache.GetMeshedLightRevision(chunk_coord) >= field_light_rev)
   {
+    SettledDrawGateMeshRepairRetries.erase(chunk_coord);
     return false;
+  }
+  auto retry_it = SettledDrawGateMeshRepairRetries.find(chunk_coord);
+  if (retry_it != SettledDrawGateMeshRepairRetries.end())
+  {
+    if (retry_it->second.incarnation != chunk->GetIncarnation() ||
+        retry_it->second.field_light_revision != field_light_rev)
+    {
+      SettledDrawGateMeshRepairRetries.erase(retry_it);
+      retry_it = SettledDrawGateMeshRepairRetries.end();
+    }
+    else if (StreamingFrameEpoch < retry_it->second.next_retry_epoch)
+    {
+      return false;
+    }
   }
   if (cache.IsChunkMeshDirty(chunk_coord) ||
       MeshService->HasInflightMeshBuild(chunk_coord) ||
@@ -4437,6 +4452,17 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord)
   {
     return false;
   }
+  uint8_t attempts = 1;
+  if (retry_it != SettledDrawGateMeshRepairRetries.end())
+  {
+    attempts = static_cast<uint8_t>(std::min<int>(
+        static_cast<int>(retry_it->second.attempts) + 1, 8));
+  }
+  const uint64_t retry_delay = std::min<uint64_t>(
+      8ull << std::min<int>(static_cast<int>(attempts) - 1, 3), 64ull);
+  SettledDrawGateMeshRepairRetries[chunk_coord] =
+      {chunk->GetIncarnation(), field_light_rev,
+       StreamingFrameEpoch + retry_delay, attempts};
   (void)cache.PrioritizeVisibleLightRepairRemesh(chunk_coord);
   ColumnRecord &column_record = GetColumnRecords().GetOrCreate(
       glm::ivec2(chunk_coord.x, chunk_coord.z));
@@ -4452,6 +4478,20 @@ void UWorld::NoteRendererDrawGateRejection(glm::ivec3 chunk_coord)
 {
   if (RendererDrawGateRejectPruneEpoch != StreamingFrameEpoch)
   {
+    for (auto it = SettledDrawGateMeshRepairRetries.begin();
+         it != SettledDrawGateMeshRepairRetries.end();)
+    {
+      const uint64_t last_retry_epoch = it->second.next_retry_epoch;
+      if (StreamingFrameEpoch > last_retry_epoch &&
+          StreamingFrameEpoch - last_retry_epoch > 128)
+      {
+        it = SettledDrawGateMeshRepairRetries.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
     for (auto it = RecentRendererDrawGateRejections.begin();
          it != RecentRendererDrawGateRejections.end();)
     {
