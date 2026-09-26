@@ -33,14 +33,6 @@ void UColumnFlowScheduler::PushLive(const ColumnWorkItem &item)
   entry.item = stamped;
   entry.sequence = next_sequence_++;
   heap_.push(entry);
-  if (stamped.kind == ColumnWorkKind::FirstMesh)
-  {
-    first_mesh_heap_.push(entry);
-  }
-  else if (stamped.kind == ColumnWorkKind::RelightThenMesh)
-  {
-    relight_heap_.push(entry);
-  }
 }
 
 void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
@@ -108,54 +100,11 @@ bool UColumnFlowScheduler::DrainOne(ColumnWorkItem &out)
   return false;
 }
 
-bool UColumnFlowScheduler::DrainFromHeap(
-    std::priority_queue<HeapEntry, std::vector<HeapEntry>, Compare> &heap,
-    ColumnWorkKind kind, ColumnWorkItem &out)
-{
-  while (!heap.empty())
-  {
-    HeapEntry entry = heap.top();
-    heap.pop();
-    const ColumnCoord coord(entry.item.column);
-    const auto it = live_.find(coord);
-    if (it == live_.end() || it->second.generation != entry.item.generation ||
-        it->second.kind != kind)
-    {
-      // This index contains a superseded ticket or work already drained from
-      // the main heap.
-      continue;
-    }
-    out = entry.item;
-    live_.erase(it);
-    return true;
-  }
-  return false;
-}
-
-bool UColumnFlowScheduler::DrainProgress(ColumnWorkItem &out,
-                                         bool include_relight)
-{
-  if (DrainFromHeap(first_mesh_heap_, ColumnWorkKind::FirstMesh, out))
-  {
-    return true;
-  }
-  return include_relight &&
-         DrainFromHeap(relight_heap_, ColumnWorkKind::RelightThenMesh, out);
-}
-
 void UColumnFlowScheduler::Clear()
 {
   while (!heap_.empty())
   {
     heap_.pop();
-  }
-  while (!first_mesh_heap_.empty())
-  {
-    first_mesh_heap_.pop();
-  }
-  while (!relight_heap_.empty())
-  {
-    relight_heap_.pop();
   }
   live_.clear();
 }

@@ -527,51 +527,29 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   std::vector<ColumnWorkItem> deferred;
   deferred.reserve(static_cast<size_t>(probe_budget));
   ColumnWorkItem work{};
-  const bool relight_critical =
-      world.GetPhysicsTelemetry().VisibleBlackStalledN > 0;
-  while (drained < n && probed < probe_budget)
+  while (drained < n && probed < probe_budget && scheduler_.DrainOne(work))
   {
-    // Once the shared frame budget is gone, secondary entries in the main
-    // heap may be deferred repeatedly ahead of a FirstMesh ticket. Pull a
-    // progress owner directly from its indexed heap before probing those
-    // entries; within-budget dispatch still follows the normal priority heap.
-    const bool progress_item =
-        UFrameDeadline::Get().Exhausted() &&
-        scheduler_.DrainProgress(work, relight_critical);
-    if (!progress_item && !scheduler_.DrainOne(work))
-    {
-      break;
-    }
     ++probed;
     // Q8: soft deadline — defer Relight/Seam/Promote when frame budget is
     // exhausted; re-queue and stop. FirstMesh keeps a progress floor.
     // G1/N04: a stalled visible-black ticket already means repair ticket ∧
     // ¬progress. Drain RelightThenMesh as critical even while other first-mesh
     // holes exist; equal-rev census debt need not set StaleLit/pending_light.
+    const auto &pt = world.GetPhysicsTelemetry();
     // A stalled black repair ticket must not lose its deadline floor just
     // because a different slice is also missing its first mesh.
-    const bool item_relight_critical =
-        work.kind == ColumnWorkKind::RelightThenMesh && relight_critical;
+    const bool relight_critical =
+        work.kind == ColumnWorkKind::RelightThenMesh &&
+        pt.VisibleBlackStalledN > 0;
     const bool critical =
-        work.kind == ColumnWorkKind::FirstMesh || item_relight_critical;
+        work.kind == ColumnWorkKind::FirstMesh || relight_critical;
     if (UFrameDeadline::ShouldDeferProducer(critical))
     {
       deferred.push_back(work);
       ++deferred_n;
-      // Critical allowance is one non-preemptible unit per frame. Further
-      // progress tickets cannot run in this frame, so avoid dequeue/requeue
-      // churn and leave the remaining work in the scheduler.
-      if (critical)
-      {
-        break;
-      }
       continue;
     }
     AdvanceColumn(world, work, focus_ground_horiz, focus_radius, admit_batch);
-    if (critical)
-    {
-      UFrameDeadline::NoteCriticalUnitFinished();
-    }
     ++drained;
   }
   for (const ColumnWorkItem &item : deferred)
