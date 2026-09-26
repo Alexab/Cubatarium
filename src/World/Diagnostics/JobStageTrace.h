@@ -124,6 +124,8 @@ struct VisualBlackTraceRecord
   /// lit drawable, stale dark, dirty, mesh in-flight, GPU pending, extract
   /// in-flight, queued/kicked GPU apply, pending light, async relight, sticky
   /// remesh, repair progress, and column draw-ready/repair-ticket.
+  /// Bits 18..21: settlement exists, matches current field revision, demand
+  /// light is current, and the exact dark drawable satisfies its draw gate.
   uint32_t renderer_gate_flags{0};
   uint8_t renderer_column_reason{0};
   uint8_t renderer_column_draw_ok{0};

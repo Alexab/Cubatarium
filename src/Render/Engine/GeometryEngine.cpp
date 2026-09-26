@@ -9,6 +9,7 @@
 #include "World/Diagnostics/Profile.h"
 #include "World/Diagnostics/ScopedPhase.h"
 #include "World/Diagnostics/JobStageTrace.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "Blocks/BlockRegistry.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
@@ -219,8 +220,11 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
   record.renderer_column_has_repair_ticket =
       column_state.has_repair_ticket ? 1u : 0u;
-  if (const UChunk *chunk =
-          world.GetBlockWorld().GetChunkManager().GetChunk(coord))
+  const UChunk *chunk =
+      world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+  const ChunkRenderDemandRecord *slice_demand =
+      UChunkRenderDemandStore::Get().Find(coord);
+  if (chunk)
   {
     record.non_air_blocks = chunk->GetNonAirCount();
     record.incarnation = chunk->GetIncarnation();
@@ -231,6 +235,41 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   record.published_geom_rev = published.geom_rev;
   record.published_light_rev = published.light_rev;
   record.meshed_light_rev = cache.GetMeshedLightRevision(coord);
+  const uint64_t field_light_rev = chunk ? chunk->GetLightFieldRevision() : 0;
+  const bool demand_identity_current =
+      slice_demand && chunk &&
+      slice_demand->incarnation == chunk->GetIncarnation();
+  const bool demand_light_current =
+      !slice_demand ||
+      (demand_identity_current &&
+       slice_demand->desired_light_rev <= slice_demand->published_light_rev);
+  const bool settled_light_current =
+      demand_identity_current && slice_demand->has_settled_light &&
+      slice_demand->settled_light_rev == field_light_rev;
+  const bool current_dark_image =
+      settled_light_current && !stale_dark && demand_light_current &&
+      published.light_rev == field_light_rev &&
+      record.meshed_light_rev == field_light_rev;
+  record.renderer_gate_flags |=
+      (slice_demand && slice_demand->has_settled_light ? (1u << 18) : 0u) |
+      (settled_light_current ? (1u << 19) : 0u) |
+      (demand_light_current ? (1u << 20) : 0u) |
+      (current_dark_image ? (1u << 21) : 0u);
+  if (slice_demand)
+  {
+    record.world_epoch = slice_demand->world_epoch;
+    record.demand_incarnation = slice_demand->incarnation;
+    record.attempt_id = slice_demand->has_active_attempt
+                            ? slice_demand->active_attempt_id
+                            : 0;
+    record.desired_geom_rev = slice_demand->desired_geom_rev;
+    record.desired_light_rev = slice_demand->desired_light_rev;
+    record.demand_published_geom_rev = slice_demand->published_geom_rev;
+    record.demand_published_light_rev = slice_demand->published_light_rev;
+    record.settled_light_rev = slice_demand->settled_light_rev;
+    record.has_settled_light = slice_demand->has_settled_light ? 1u : 0u;
+    record.active_stage = static_cast<uint8_t>(slice_demand->active_stage);
+  }
   record.flags = 1u; // candidate was in the renderer's frustum list pre-gate.
   UJobStageTrace::NoteVisualBlack(record);
 }
