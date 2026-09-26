@@ -1291,11 +1291,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
 
   bool draw_gate_target_pinned = false;
   glm::ivec2 draw_gate_target_key(0);
-  const auto &visible_black = world.GetPhysicsTelemetry();
-  const int visible_draw_gate_repair_n =
-      visible_black.VisibleBlackStaleLitN +
-      visible_black.VisibleBlackFullyDarkRepairN;
-  if (async_bg && visible_draw_gate_repair_n > 0 && world.MeshService)
+  // RecentRendererDrawGateRejections is the direct view-level observation.
+  // Do not require the separately sampled VisibleBlack census as a second
+  // gate: its update cadence can leave zero here while real draw candidates
+  // were rejected in the previous render frame.
+  if (async_bg && world.MeshService)
   {
     std::vector<DrawGateRelightTarget> draw_gate_targets;
     const int draw_gate_radius = std::min(focus_radius,
