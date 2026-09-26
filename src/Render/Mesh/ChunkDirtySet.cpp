@@ -432,17 +432,16 @@ void UChunkDirtySet::PrioritizeAgedNearHorizontal(
     {
       return a_overdue;
     }
-    if (a_overdue)
+    if (!a_overdue)
     {
-      const uint64_t a_enqueued = enqueue_frame(a);
-      const uint64_t b_enqueued = enqueue_frame(b);
-      if (a_enqueued != b_enqueued)
-      {
-        return a_enqueued < b_enqueued;
-      }
+      // Preserve the queue's existing camera-forward and preferred-Y order.
+      // It was established by SortByDistanceKey; sorting these entries again
+      // by horizontal distance alone erases both priorities under hole load.
+      return false;
     }
-    return HorizDist(a, focus_ground_chunk) <
-           HorizDist(b, focus_ground_chunk);
+    // Once overdue, age takes precedence to guarantee bounded service. Stable
+    // ties retain the scheduler's existing FOV/vertical ordering.
+    return enqueue_frame(a) < enqueue_frame(b);
   };
   if (FirstMeshQ.size() > 1)
   {
