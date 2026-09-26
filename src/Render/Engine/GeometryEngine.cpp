@@ -321,7 +321,10 @@ void NoteFrustumCoverageGaps(
   struct Candidate
   {
     glm::ivec3 coord{0};
-    uint8_t state{0}; // 1=no drawable mesh, 2=absent from draw refs, 3=gate
+    // 1=no drawable mesh, 2=drawable mesh missing from renderer snapshot,
+    // 3=renderer ref rejected by the normal render-ready gate.
+    uint8_t state{0};
+    bool drawable{false};
     float distance_sq{0.0f};
   };
   std::vector<Candidate> candidates;
@@ -346,15 +349,14 @@ void NoteFrustumCoverageGaps(
     {
       return;
     }
+    const bool drawable = cache.HasDrawableGreedyMesh(coord);
     const glm::vec3 center =
         (ChunkAABBMin(coord) + ChunkAABBMax(coord)) * 0.5f;
-    // A loaded solid chunk without a prepared renderer ref has no drawable
-    // batch in this snapshot; a prepared ref absent from the ready list was
-    // rejected by the normal render gate.
-    const uint8_t state = draw_refs.count(coord) != 0 ? 2u : 1u;
+    const bool in_draw_refs = draw_refs.count(coord) != 0;
+    const uint8_t state = in_draw_refs ? 3u : (drawable ? 2u : 1u);
     candidates.push_back(
-        {coord, state, glm::dot(center - camera_position,
-                                center - camera_position)});
+        {coord, state, drawable,
+         glm::dot(center - camera_position, center - camera_position)});
   });
 
   constexpr size_t kMaxFrustumCoverageTraces = 12;
@@ -362,7 +364,7 @@ void NoteFrustumCoverageGaps(
   {
     if (a.state != b.state)
     {
-      return a.state < b.state;
+      return a.state > b.state;
     }
     return a.distance_sq < b.distance_sq;
   };
@@ -412,10 +414,13 @@ void NoteFrustumCoverageGaps(
     record.incarnation = chunk->GetIncarnation();
     record.mesh_revision = cache.GetChunkMeshRevision(coord);
     record.draw_gate_ready = draw_ready ? 1u : 0u;
-    record.renderer_gate_flags = (in_draw_refs ? 1u : 0u) |
+    // Bit 0=drawable mesh, 1=column-satisfying mesh, 2=live GPU mesh,
+    // 3=prepared renderer ref, 4=passed the render-ready gate.
+    record.renderer_gate_flags = (candidate.drawable ? 1u : 0u) |
                                  (satisfying ? 1u << 1 : 0u) |
                                  (cache.HasLiveGpuDraw(coord) ? 1u << 2 : 0u) |
-                                 (draw_ready ? 1u << 3 : 0u);
+                                 (in_draw_refs ? 1u << 3 : 0u) |
+                                 (draw_ready ? 1u << 4 : 0u);
     record.renderer_column_reason =
         static_cast<uint8_t>(column_state.reason);
     record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
