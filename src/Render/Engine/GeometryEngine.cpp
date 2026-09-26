@@ -62,6 +62,7 @@
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -349,8 +350,6 @@ void NoteFrustumCoverageGaps(
   std::vector<Candidate> candidates;
   candidates.reserve(64);
   auto &chunks = world.GetBlockWorld().GetChunkManager();
-  const float max_distance = cache.MaxCullDistance();
-  const bool horizontal_distance = cache.UseHorizontalCullDistance();
   chunks.ForEachChunk([&](const UChunk &chunk)
   {
     if (chunk.IsAirOnly() || chunk.GetNonAirCount() == 0)
@@ -358,9 +357,12 @@ void NoteFrustumCoverageGaps(
       return;
     }
     const glm::ivec3 coord = chunk.GetCoord();
-    if (!frustum.IntersectsChunkAABB(ChunkAABBMin(coord), ChunkAABBMax(coord),
-                                     camera_position, max_distance,
-                                     horizontal_distance))
+    // This probe answers whether geometry is actually inside the camera clip
+    // volume. The runtime chunk culler intentionally skips near/top/bottom
+    // planes and may admit by distance, which is useful for avoiding false
+    // negatives in draw submission but too permissive for a visual-gap census.
+    if (!frustum.IntersectsAABB(ChunkAABBMin(coord), ChunkAABBMax(coord),
+                                camera_position))
     {
       return;
     }
@@ -379,25 +381,35 @@ void NoteFrustumCoverageGaps(
   });
 
   constexpr size_t kMaxFrustumCoverageTraces = 12;
-  const auto candidate_less = [](const Candidate &a, const Candidate &b)
+  constexpr size_t kMaxFrustumCoverageTracesPerState = 4;
+  std::sort(candidates.begin(), candidates.end(),
+            [](const Candidate &a, const Candidate &b)
+            { return a.distance_sq < b.distance_sq; });
+  // Keep nearest examples from each pipeline failure stage. Without this
+  // quota, many draw-list gate rejects could starve samples where non-air
+  // voxel data has no drawable mesh at all.
+  std::array<size_t, 4> sampled_per_state{};
+  std::vector<Candidate> sampled_candidates;
+  sampled_candidates.reserve(kMaxFrustumCoverageTraces);
+  for (const Candidate &candidate : candidates)
   {
-    if (a.state != b.state)
+    if (candidate.state == 0 || candidate.state >= sampled_per_state.size())
     {
-      return a.state > b.state;
+      continue;
     }
-    return a.distance_sq < b.distance_sq;
-  };
-  if (candidates.size() > kMaxFrustumCoverageTraces)
-  {
-    std::partial_sort(candidates.begin(),
-                      candidates.begin() + kMaxFrustumCoverageTraces,
-                      candidates.end(), candidate_less);
-    candidates.resize(kMaxFrustumCoverageTraces);
+    size_t &state_count = sampled_per_state[candidate.state];
+    if (state_count >= kMaxFrustumCoverageTracesPerState)
+    {
+      continue;
+    }
+    ++state_count;
+    sampled_candidates.push_back(candidate);
+    if (sampled_candidates.size() >= kMaxFrustumCoverageTraces)
+    {
+      break;
+    }
   }
-  else
-  {
-    std::sort(candidates.begin(), candidates.end(), candidate_less);
-  }
+  candidates = std::move(sampled_candidates);
 
   const glm::ivec3 focus = UChunkManager::WorldToChunk(
       world.GetPreferredLoadFocusBlock());
