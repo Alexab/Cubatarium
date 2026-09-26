@@ -1850,81 +1850,8 @@ bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
 int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
     glm::ivec3 center_chunk, int radius_chunks) const
 {
-  if (radius_chunks < 0)
-  {
-    return 0;
-  }
-  if (FocusDirtyCacheValid_ && center_chunk.x == FocusDirtyQueryCenter_.x &&
-      center_chunk.z == FocusDirtyQueryCenter_.z &&
-      radius_chunks == FocusDirtyQueryRadius_)
-  {
-    if (--FocusDirtyReconcileCd_ <= 0)
-    {
-      ReconcileFocusDirtyRingCache();
-      FocusDirtyReconcileCd_ = 32;
-    }
-    return FocusDirtyCachedCount_;
-  }
-  int count = Dirty.CountWithinHorizontalRadius(center_chunk, radius_chunks);
-  SeedFocusDirtyRingCache(center_chunk, radius_chunks, count);
-  FocusDirtyReconcileCd_ = 32;
-  return count;
-}
-
-void UChunkMeshCache::InvalidateFocusDirtyRingCache()
-{
-  FocusDirtyCacheValid_ = false;
-}
-
-bool UChunkMeshCache::CoordInFocusDirtyQuery(glm::ivec3 coord) const
-{
-  if (!FocusDirtyCacheValid_)
-  {
-    return false;
-  }
-  const int dx = std::abs(coord.x - FocusDirtyQueryCenter_.x);
-  const int dz = std::abs(coord.z - FocusDirtyQueryCenter_.z);
-  return std::max(dx, dz) <= FocusDirtyQueryRadius_;
-}
-
-void UChunkMeshCache::NoteFocusDirtyRingChange(glm::ivec3 coord, int delta)
-{
-  if (!FocusDirtyCacheValid_ || delta == 0)
-  {
-    return;
-  }
-  if (!CoordInFocusDirtyQuery(coord))
-  {
-    return;
-  }
-  FocusDirtyCachedCount_ += delta;
-  if (FocusDirtyCachedCount_ < 0)
-  {
-    FocusDirtyCacheValid_ = false;
-  }
-}
-
-void UChunkMeshCache::SeedFocusDirtyRingCache(glm::ivec3 center, int radius,
-                                              int count) const
-{
-  FocusDirtyQueryCenter_ = center;
-  FocusDirtyQueryRadius_ = radius;
-  FocusDirtyCachedCount_ = count;
-  FocusDirtyCacheValid_ = true;
   LastFocusDirtyReconcileDelta_ = 0;
-}
-
-void UChunkMeshCache::ReconcileFocusDirtyRingCache() const
-{
-  if (!FocusDirtyCacheValid_)
-  {
-    return;
-  }
-  const int count = Dirty.CountWithinHorizontalRadius(FocusDirtyQueryCenter_,
-                                                      FocusDirtyQueryRadius_);
-  LastFocusDirtyReconcileDelta_ =
-      std::abs(count - FocusDirtyCachedCount_);
-  FocusDirtyCachedCount_ = count;
+  return Dirty.CountWithinHorizontalRadius(center_chunk, radius_chunks);
 }
 
 int UChunkMeshCache::ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
@@ -1941,7 +1868,6 @@ int UChunkMeshCache::ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
     const int dz = std::abs(it->z - center_chunk.z);
     if (std::max(dx, dz) <= radius_chunks)
     {
-      NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
       ++parked;
     }
@@ -2589,7 +2515,6 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   {
     return;
   }
-  NoteFocusDirtyRingChange(chunkCoord, 1);
   int horiz = 999;
   if (MeshFocusValid)
   {
@@ -2841,7 +2766,6 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   if (!existed)
   {
     BumpChunkMeshRevision(chunkCoord);
-    NoteFocusDirtyRingChange(chunkCoord, 1);
   }
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -4084,7 +4008,6 @@ int UChunkMeshCache::RetryPendingCaptures(UBlockWorld &world,
     {
       NoteFmDirtyGpuScheduled(coord);
     }
-    NoteFocusDirtyRingChange(coord, -1);
     Dirty.Erase(coord);
     PendingCaptureReady_.erase(coord);
     ++scheduled;
@@ -7527,7 +7450,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         ++LastMeshDirtyScheduleOkRemeshN;
       }
-      NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
@@ -8272,7 +8194,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         NoteFmDirtyGpuScheduled(*it);
         ++LastMeshDirtyScheduleOkFmN;
       }
-      NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;

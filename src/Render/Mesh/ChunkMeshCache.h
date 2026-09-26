@@ -1358,18 +1358,9 @@ private:
   int MeshFocusRadiusChunks{6};
   uint64_t MeshFocusFrameEpoch{0};
   bool MeshFocusValid{false};
-  /// I12-A7: incremental focus-ring dirty count cache.
-  mutable glm::ivec3 FocusDirtyQueryCenter_{0};
-  mutable int FocusDirtyQueryRadius_{-1};
-  mutable int FocusDirtyCachedCount_{0};
-  mutable bool FocusDirtyCacheValid_{false};
-  mutable int FocusDirtyReconcileCd_{0};
+  /// Kept for existing telemetry consumers; the value is zero now that dirty
+  /// membership is counted by the authoritative Dirty set column index.
   mutable int LastFocusDirtyReconcileDelta_{0};
-  void InvalidateFocusDirtyRingCache();
-  bool CoordInFocusDirtyQuery(glm::ivec3 coord) const;
-  void NoteFocusDirtyRingChange(glm::ivec3 coord, int delta);
-  void SeedFocusDirtyRingCache(glm::ivec3 center, int radius, int count) const;
-  void ReconcileFocusDirtyRingCache() const;
   bool JustRelitFirstMeshValid_{false};
   glm::ivec2 JustRelitFirstMeshColumn_{0};
   int MeshVerticalPreferredCy{0};

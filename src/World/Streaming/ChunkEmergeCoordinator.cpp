@@ -3166,27 +3166,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   static bool s_ring_enter_was_active = false;
   static glm::ivec3 s_ring_cache_focus{0};
   static uint64_t s_ring_world_epoch = 0;
-  static int s_ring_unfinished = -1;
-  static int s_ring_not_ready = -1;
+  static bool s_ring_was_dirty = false;
+  static bool s_ring_had_unfinished = false;
+  static bool s_ring_had_not_ready = false;
+  static uint64_t s_ring_next_recheck_epoch = 0;
   const glm::ivec3 ring_focus = focus_ground;
   const uint64_t ring_world_epoch =
       mesh_service.GetCache().GetCaptureStore().WorldEpoch();
+  const uint64_t ring_frame_epoch = world.GetStreamingFrameEpoch();
   const int ring_unfinished =
       world.GetPhysicsTelemetry().UnfinishedVisual;
   const int ring_not_ready =
       world.GetPhysicsTelemetry().PostLoadRingNotReady;
   const bool enter_edge = enter_gate_active != s_ring_enter_was_active;
   const bool ring_dirty = world.NeedsSpawnRingCatchUp();
-  // Dependency epoch proxy: unfinished / ring-not-ready change invalidates
-  // readiness projection (audit R08 incremental key).
-  if (ring_dirty || ring_world_epoch != s_ring_world_epoch ||
-      ring_unfinished != s_ring_unfinished ||
-      ring_not_ready != s_ring_not_ready)
-    s_ring_cache_valid = false;
+  // Exact positive debt counts fluctuate as chunks stream in. Invalidate only
+  // when a debt category appears or clears, then periodically recheck a ring
+  // that is still not ready. This avoids walking the same ring every frame.
+  const bool ring_debt_changed =
+      ring_dirty != s_ring_was_dirty ||
+      (ring_unfinished > 0) != s_ring_had_unfinished ||
+      (ring_not_ready > 0) != s_ring_had_not_ready;
   bool need_ring_query = enter_gate_active || enter_edge || !s_ring_cache_valid ||
+                         ring_world_epoch != s_ring_world_epoch ||
+                         ring_debt_changed ||
                          ring_focus.x != s_ring_cache_focus.x ||
                          ring_focus.y != s_ring_cache_focus.y ||
-                         ring_focus.z != s_ring_cache_focus.z;
+                         ring_focus.z != s_ring_cache_focus.z ||
+                         (!s_ring_cached_ready &&
+                          ring_frame_epoch >= s_ring_next_recheck_epoch);
   bool spawn_ring_ready = s_ring_cached_ready;
   prep_spawn_ring_ms = 0.0;
   if (need_ring_query)
@@ -3198,9 +3206,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     s_ring_cache_valid = true;
     s_ring_cache_focus = ring_focus;
     s_ring_world_epoch = ring_world_epoch;
-    s_ring_unfinished = ring_unfinished;
-    s_ring_not_ready = ring_not_ready;
+    s_ring_next_recheck_epoch = ring_frame_epoch + 8;
   }
+  s_ring_was_dirty = ring_dirty;
+  s_ring_had_unfinished = ring_unfinished > 0;
+  s_ring_had_not_ready = ring_not_ready > 0;
   s_ring_enter_was_active = enter_gate_active;
   world.SetSuppressRelightSeamDirty(ShouldSuppressRelightSeamDirtyForEnterGate(
       enter_gate_active, spawn_ring_ready, base_suppress));
