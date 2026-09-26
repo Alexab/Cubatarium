@@ -86,6 +86,10 @@ struct ChunkRenderDemandRecord
   uint64_t published_geom_rev{0};
   uint64_t published_light_rev{0};
   uint64_t published_coverage_gen{0};
+  /// Last successfully computed chunk-light revision, including no-change
+  /// results. This is distinct from mesh publication and column LitReady.
+  uint64_t settled_light_rev{0};
+  bool has_settled_light{false};
   uint64_t active_attempt_id{0};
   JobStage active_stage{JobStage::Created};
   double last_progress_ms{0.0};
@@ -150,6 +154,14 @@ public:
   /// Does not clear active/retain flags — use NoteInstallResult for lifecycle.
   void NotePublishedRevs(glm::ivec3 coord, uint64_t published_geom_rev,
                          uint64_t published_light_rev);
+  /// Record a validated lighting computation for this chunk incarnation.
+  void NoteLightCalculationSettled(glm::ivec3 coord, uint64_t world_epoch,
+                                   uint64_t incarnation,
+                                   uint64_t light_field_rev);
+  /// Invalidate settlement when a new relight obligation covers this slice.
+  void InvalidateLightCalculationSettlement(glm::ivec3 coord,
+                                            uint64_t world_epoch,
+                                            uint64_t incarnation);
 
   /// Face debt keyed by chunkXYZ/face; optional peer coverage generation (P2.4).
   /// peer_gen bumps waiting_peer_gen[f] via max on all set bits (monotonic).

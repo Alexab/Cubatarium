@@ -3161,6 +3161,9 @@ void UFramePerfMonitor::Shutdown()
                << r.demand_published_geom_rev
                << ",\"demand_published_light_rev\":"
                << r.demand_published_light_rev
+               << ",\"settled_light_rev\":" << r.settled_light_rev
+               << ",\"has_settled_light\":"
+               << static_cast<int>(r.has_settled_light)
                << ",\"demand_attempt_age_ms\":" << r.demand_attempt_age_ms
                << ",\"demand_progress_age_ms\":" << r.demand_progress_age_ms
                << ",\"published_geom_rev\":" << r.published_geom_rev

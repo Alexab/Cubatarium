@@ -189,6 +189,10 @@ private:
   /// Optional Y band per pending column (min,max); missing => full 0..MaxHeight.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
       PendingTerrainColumnRelightYBands;
+  /// Exact renderer-rejected Y band, kept separately from a coalesced column
+  /// relight band so surface clamping cannot silently skip a visible slice.
+  std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
+      PendingVisibleDrawGateRelightYBands;
   /// FZ2.3-O2: last StreamingFrameEpoch when finalize_gate Capture submitted.
   std::unordered_map<glm::ivec2, uint64_t, IVec2Hash> RelightLastFinalizeEpoch_;
   struct DeferredFarRelightEntry

@@ -1178,7 +1178,8 @@ public:
   void EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz);
   void ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
   bool IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const;
-  bool HasPendingLightForSlice(glm::ivec3 chunk_coord) const;
+  /// Stamp a validated lighting calculation on one loaded chunk slice.
+  void NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord);
   bool HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                      int radius_chunks) const;
   size_t GetPendingLightBeforeMeshCount() const

@@ -1566,6 +1566,24 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
       return;
     }
   }
+  if (MeshService)
+  {
+    const uint64_t world_epoch =
+        MeshService->GetCache().GetCaptureStore().WorldEpoch();
+    const int min_cy = std::max(0, FloorDiv(std::max(0, min_y), CHUNK_SIZE));
+    const int max_cy = std::min(
+        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE),
+        FloorDiv(std::min(max_y, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+    for (int cy = min_cy; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(ground.x, cy, ground.z);
+      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
+            coord, world_epoch, chunk->GetIncarnation());
+      }
+    }
+  }
   SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
   // A40: new light debt invalidates prior LegalDark settlement stamp.
   ColumnRecord &pl_rec = ColumnRecords.GetOrCreate(key);
@@ -1776,18 +1794,21 @@ bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
   return PendingLightBeforeMesh.find(ground_xz) != PendingLightBeforeMesh.end();
 }
 
-bool UWorld::HasPendingLightForSlice(glm::ivec3 chunk_coord) const
+void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
 {
-  const auto it = PendingLightBeforeMesh.find(
-      glm::ivec2(chunk_coord.x, chunk_coord.z));
-  if (it == PendingLightBeforeMesh.end())
+  if (!MeshService)
   {
-    return false;
+    return;
   }
-  const int slice_min_y = chunk_coord.y * CHUNK_SIZE;
-  const int slice_max_y = slice_min_y + CHUNK_SIZE - 1;
-  return it->second.min_y <= slice_max_y &&
-         it->second.max_y >= slice_min_y;
+  const UChunk *chunk =
+      BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return;
+  }
+  UChunkRenderDemandStore::Get().NoteLightCalculationSettled(
+      chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+      chunk->GetIncarnation(), chunk->GetLightFieldRevision());
 }
 
 void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
@@ -2132,13 +2153,6 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       {
         const bool stale =
             MeshService->ChunkHasStaleDarkFaces(chunk_coord, BlockWorld);
-        const bool lit_ready =
-            IsColumnLitReady(glm::ivec3(col_xz.x, 0, col_xz.y));
-        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
-        const ColumnRecord *rec = ColumnRecords.Find(col_xz);
-        const bool legal_settled = rec && rec->legal_dark_settled;
-        const bool light_repair =
-            rec && rec->visual_obligation == VisualObligation::LightRepair;
         const UChunk *slice_chunk =
             BlockWorld.GetChunkManager().GetChunk(chunk_coord);
         const uint64_t field_light_rev =
@@ -2154,39 +2168,31 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
             (slice_chunk &&
              slice_demand->incarnation == slice_chunk->GetIncarnation() &&
              slice_demand->desired_light_rev <=
-                 slice_demand->published_light_rev &&
-             slice_demand->published_light_rev == field_light_rev);
+                 slice_demand->published_light_rev);
         // Keep an existing dark image visible when this slice's light data is
         // settled and its mesh still matches that data. Column-wide geometry
         // or relight work can belong to another Y slice; hiding this drawable
         // while that work runs turns retained meshes into visible holes.
         // If lighting changes, the stale-dark witness closes the gate until a
         // matching replacement is published.
+        const bool slice_light_settled =
+            slice_demand && slice_chunk &&
+            slice_demand->incarnation == slice_chunk->GetIncarnation() &&
+            slice_demand->has_settled_light &&
+            slice_demand->settled_light_rev == field_light_rev;
         const bool current_dark_image =
-            lit_ready && slice_chunk && !stale &&
-            !HasPendingLightForSlice(chunk_coord) && demand_light_current &&
+            slice_light_settled && slice_chunk && !stale &&
+            demand_light_current &&
             published_revs.light_rev == field_light_rev &&
             meshed_light_rev == field_light_rev;
         if (current_dark_image)
         {
           return memo(true);
         }
-        const bool true_dark = EnterFullyDarkColumnSettled(
-            open_sky, pending, lit_ready, stale, /*has_lit_drawable=*/false,
-            legal_settled);
-        if (!true_dark || light_repair)
-        {
-          const bool has_ticket =
-              GetColumnFlowExecutor().HasRepairTicket(col_xz) ||
-              IsColumnStickyRemesh(col_xz) || ColumnHasRepairProgress(col_xz) ||
-              pending || IsAsyncRelightColumnInFlight(col_xz) || light_repair;
-          // LightStale / LightRepair / open Relight-Dirty ticket → hide.
-          // Equal-rev FD without ticket → draw (LegalDark honesty).
-          if (stale || has_ticket || light_repair)
-          {
-            return memo(false);
-          }
-        }
+        // A column-level LegalDark/OpenSky stamp can describe another Y slice.
+        // Fully dark geometry is drawable only after this exact chunk slice
+        // has a validated light calculation and a matching published lightmap.
+        return memo(false);
       }
     }
     return memo(true);
@@ -2829,6 +2835,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         trace.desired_light_rev = demand->desired_light_rev;
         trace.demand_published_geom_rev = demand->published_geom_rev;
         trace.demand_published_light_rev = demand->published_light_rev;
+        trace.settled_light_rev = demand->settled_light_rev;
+        trace.has_settled_light = demand->has_settled_light ? 1 : 0;
         trace.active_stage = static_cast<uint8_t>(demand->active_stage);
         const double now_ms = VisualObligationNowMs();
         if (demand->attempt_created_ms > 0.0)
@@ -5973,9 +5981,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
-        if (InstallComputedLight(*chunk, chunk_data.light_packed,
+        const bool installed =
+            InstallComputedLight(*chunk, chunk_data.light_packed,
                                  result.include_skylight,
-                                 result.include_block_light))
+                                 result.include_block_light);
+        // The async result has passed its world/catalog/read-set validation;
+        // record the computed state even when it produced no light-byte delta.
+        NoteChunkSliceLightCalculationSettled(chunk_data.coord);
+        if (installed)
         {
           light_changes.Add(chunk_data.coord);
         }

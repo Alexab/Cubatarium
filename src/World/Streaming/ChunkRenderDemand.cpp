@@ -252,6 +252,42 @@ void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
   }
 }
 
+void UChunkRenderDemandStore::NoteLightCalculationSettled(
+    glm::ivec3 coord, uint64_t world_epoch, uint64_t incarnation,
+    uint64_t light_field_rev)
+{
+  if (incarnation == 0)
+  {
+    return;
+  }
+  BindIdentity(coord, world_epoch, incarnation);
+  ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  if (rec.world_epoch != world_epoch || rec.incarnation != incarnation)
+  {
+    return;
+  }
+  rec.settled_light_rev = light_field_rev;
+  rec.has_settled_light = true;
+}
+
+void UChunkRenderDemandStore::InvalidateLightCalculationSettlement(
+    glm::ivec3 coord, uint64_t world_epoch, uint64_t incarnation)
+{
+  if (incarnation == 0 || !Find(coord))
+  {
+    return;
+  }
+  BindIdentity(coord, world_epoch, incarnation);
+  ChunkRenderDemandRecord *rec = Find(coord);
+  if (!rec || rec->world_epoch != world_epoch ||
+      rec->incarnation != incarnation)
+  {
+    return;
+  }
+  rec->has_settled_light = false;
+  rec->settled_light_rev = 0;
+}
+
 bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
                                                InstallResult result,
                                                uint64_t published_geom_rev,

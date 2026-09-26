@@ -399,6 +399,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 {
   ++PhysicsTelemetryData.MarkRelitInvokedN;
   const auto total_t0 = Clock::now();
+  for (const glm::ivec3 &coord : relit_chunks)
+  {
+    NoteChunkSliceLightCalculationSettled(coord);
+  }
   const bool enter_gate = EnterLitGateActive;
   // FZ2.7-B1e: CountEnterFovLitDebt is O(R²)×stale-probe — only needed for
   // enter quiesce latch. Cruise MarkRelit was paying ~17ms here every Apply.

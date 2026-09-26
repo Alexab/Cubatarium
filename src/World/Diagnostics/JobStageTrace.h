@@ -91,6 +91,8 @@ struct VisualBlackTraceRecord
   uint64_t desired_light_rev{0};
   uint64_t demand_published_geom_rev{0};
   uint64_t demand_published_light_rev{0};
+  uint64_t settled_light_rev{0};
+  uint8_t has_settled_light{0};
   double demand_attempt_age_ms{0.0};
   double demand_progress_age_ms{0.0};
   uint64_t published_geom_rev{0};
