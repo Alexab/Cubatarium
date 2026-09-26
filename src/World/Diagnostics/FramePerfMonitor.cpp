@@ -3237,7 +3237,7 @@ void UFramePerfMonitor::Shutdown()
                << ",\"flags\":" << r.flags << "}\n";
       };
       UJobStageTrace::ForEachVisualBlackNewest(
-          UJobStageTrace::kVisualBlackTraceRingCapacity, dumpVisualBlack,
+          UJobStageTrace::kVisualBlackTraceDumpCapacity, dumpVisualBlack,
           &s.Jsonl);
       s.Jsonl.flush();
     }

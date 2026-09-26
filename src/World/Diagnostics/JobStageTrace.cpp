@@ -37,20 +37,60 @@ CullDecisionRing &GetCullDecisionRing()
   return r;
 }
 
-struct VisualBlackTraceRing
+template <size_t Capacity> struct VisualBlackTraceRing
 {
-  std::array<VisualBlackTraceRecord,
-             UJobStageTrace::kVisualBlackTraceRingCapacity>
-      slots{};
+  std::array<VisualBlackTraceRecord, Capacity> slots{};
   size_t write{0};
   size_t count{0};
   std::mutex mu;
 };
 
-VisualBlackTraceRing &GetVisualBlackTraceRing()
+VisualBlackTraceRing<UJobStageTrace::kVisualBlackTraceRingCapacity> &
+GetVisualBlackTraceRing()
 {
-  static VisualBlackTraceRing r;
+  static VisualBlackTraceRing<UJobStageTrace::kVisualBlackTraceRingCapacity> r;
   return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kVisualRepairTraceRingCapacity> &
+GetVisualRepairTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kVisualRepairTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kMeshScheduleTraceRingCapacity> &
+GetMeshScheduleTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kMeshScheduleTraceRingCapacity> r;
+  return r;
+}
+
+template <size_t Capacity>
+void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
+                     const VisualBlackTraceRecord &record)
+{
+  std::lock_guard<std::mutex> lock(ring.mu);
+  ring.slots[ring.write % Capacity] = record;
+  ++ring.write;
+  if (ring.count < Capacity)
+  {
+    ++ring.count;
+  }
+}
+
+template <size_t Capacity>
+void ForEachVisualTraceNewest(
+    VisualBlackTraceRing<Capacity> &ring, size_t max_n,
+    void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
+{
+  std::lock_guard<std::mutex> lock(ring.mu);
+  const size_t n = (max_n < ring.count) ? max_n : ring.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs = (ring.write + Capacity - 1 - i) % Capacity;
+    fn(ring.slots[abs], ctx);
+  }
 }
 
 } // namespace
@@ -160,13 +200,20 @@ bool UJobStageTrace::VisualBlackTraceEnabled()
 
 void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
 {
-  auto &r = GetVisualBlackTraceRing();
-  std::lock_guard<std::mutex> lock(r.mu);
-  r.slots[r.write % kVisualBlackTraceRingCapacity] = record;
-  ++r.write;
-  if (r.count < kVisualBlackTraceRingCapacity)
+  // Renderer/focus samples are emitted at frame rate. Keep repair admission,
+  // repair-scan summaries, and mesh scheduling in separate rings so the
+  // high-volume view stream cannot overwrite the control path being audited.
+  if (record.sample_kind == 3 || record.sample_kind == 5)
   {
-    ++r.count;
+    PushVisualTrace(GetVisualRepairTraceRing(), record);
+  }
+  else if (record.sample_kind == 4 || record.sample_kind == 6)
+  {
+    PushVisualTrace(GetMeshScheduleTraceRing(), record);
+  }
+  else
+  {
+    PushVisualTrace(GetVisualBlackTraceRing(), record);
   }
 }
 
@@ -177,16 +224,11 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   {
     return;
   }
-  auto &r = GetVisualBlackTraceRing();
-  std::lock_guard<std::mutex> lock(r.mu);
-  const size_t n = (max_n < r.count) ? max_n : r.count;
-  for (size_t i = 0; i < n; ++i)
-  {
-    const size_t abs =
-        (r.write + kVisualBlackTraceRingCapacity - 1 - i) %
-        kVisualBlackTraceRingCapacity;
-    fn(r.slots[abs], ctx);
-  }
+  // Class groups are emitted separately; use frame_epoch to join their
+  // records because their bounded rings have independent write sequences.
+  ForEachVisualTraceNewest(GetVisualRepairTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);
 }
 
 const char *UJobStageTrace::StageName(JobStage s)

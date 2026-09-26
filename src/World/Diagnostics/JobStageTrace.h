@@ -166,6 +166,11 @@ public:
   static constexpr size_t kRingCapacity = 256;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
+  static constexpr size_t kVisualRepairTraceRingCapacity = 2048;
+  static constexpr size_t kMeshScheduleTraceRingCapacity = 1024;
+  static constexpr size_t kVisualBlackTraceDumpCapacity =
+      kVisualBlackTraceRingCapacity + kVisualRepairTraceRingCapacity +
+      kMeshScheduleTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   static size_t Size();
@@ -179,6 +184,8 @@ public:
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static bool VisualBlackTraceEnabled();
   static void NoteVisualBlack(const VisualBlackTraceRecord &record);
+  /// Dump each trace class from its own bounded ring. max_n is applied per
+  /// class so high-rate view samples cannot evict repair/schedule evidence.
   static void ForEachVisualBlackNewest(
       size_t max_n, void (*fn)(const VisualBlackTraceRecord &, void *),
       void *ctx);
