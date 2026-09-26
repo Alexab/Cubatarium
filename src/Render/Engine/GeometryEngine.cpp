@@ -772,6 +772,14 @@ void UGeometryEngine::DrawCubeGeometry()
     return;
   }
 
+  // IsChunkSliceRenderReady is also sampled during the world streaming tick.
+  // That tick can publish a relight or mesh after the first sample, so the
+  // tick-scoped memo must not carry a stale rejection into this render frame.
+  if (WorldInstance)
+  {
+    WorldInstance->InvalidateChunkSliceRenderReadyMemo();
+  }
+
   UGlStateScope glGuard(kGlMaskDrawCubeRestore);
 
   // Ensure instanced resources are ready

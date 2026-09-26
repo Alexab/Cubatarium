@@ -2048,6 +2048,12 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   return GetColumnRenderableState(glm::ivec2(ground.x, ground.z)).draw_ok;
 }
 
+void UWorld::InvalidateChunkSliceRenderReadyMemo() const
+{
+  SliceReadyMemoEpoch = UINT64_MAX;
+  SliceReadyMemo.clear();
+}
+
 bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
 {
   if (!MeshService)

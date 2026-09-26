@@ -1282,6 +1282,9 @@ public:
   bool IsTerrainColumnCompleteFast(glm::ivec3 ground) const;
   /// P2: single cy-slice may draw when meshed/Pending even if siblings missing.
   bool IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const;
+  /// The streaming tick epoch may contain state changes before the renderer
+  /// consumes the frame. Drop readiness decisions at the render-frame boundary.
+  void InvalidateChunkSliceRenderReadyMemo() const;
   /// Full draw-gate state including repair-ticket flag (TD-ARCH-028).
   ColumnRenderableState GetColumnRenderableState(glm::ivec2 ground_xz) const;
   /// Focus columns that are loaded but not yet safe to render.
