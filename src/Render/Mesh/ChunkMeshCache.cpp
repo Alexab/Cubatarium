@@ -7080,19 +7080,24 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                             bool count_reserved) -> decltype(it)
     {
       const glm::ivec3 schedule_coord = *it;
+      const bool trace_first_mesh =
+          Dirty.IsFirstMesh(schedule_coord) && MeshFocusValid &&
+          std::max(std::abs(schedule_coord.x - MeshFocusGroundChunk.x),
+                   std::abs(schedule_coord.z - MeshFocusGroundChunk.z)) <=
+              std::max(2, MeshFocusRadiusChunks);
       const bool trace_visible_repair =
           Dirty.IsPriorityRemesh(schedule_coord) &&
           !Dirty.IsFirstMesh(schedule_coord);
       const auto trace_visible_schedule =
           [&](uint8_t outcome, uint8_t detail)
       {
-        if (!trace_visible_repair ||
+        if ((!trace_visible_repair && !trace_first_mesh) ||
             !UJobStageTrace::VisualBlackTraceEnabled())
         {
           return;
         }
         VisualBlackTraceRecord trace{};
-        trace.sample_kind = 4;
+        trace.sample_kind = trace_first_mesh ? 6 : 4;
         trace.cx = schedule_coord.x;
         trace.cy = schedule_coord.y;
         trace.cz = schedule_coord.z;
@@ -7101,15 +7106,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         trace.cause = outcome;
         trace.face_debt_mask = detail;
         trace.active_stage = detail;
-        trace.relight_queue_kind = 4; // Dirty.RemeshQ schedule probe.
-        const auto &remesh_queue = Dirty.RemeshQueue();
-        const auto queue_it =
-            std::find(remesh_queue.begin(), remesh_queue.end(), schedule_coord);
+        const auto &schedule_queue = trace_first_mesh
+                                        ? Dirty.FirstMeshQueue()
+                                        : Dirty.RemeshQueue();
+        trace.relight_queue_kind = trace_first_mesh ? 5 : 4;
+        const auto queue_it = std::find(schedule_queue.begin(),
+                                        schedule_queue.end(), schedule_coord);
         trace.relight_queue_index =
-            queue_it == remesh_queue.end()
+            queue_it == schedule_queue.end()
                 ? -1
-                : static_cast<int32_t>(queue_it - remesh_queue.begin());
-        trace.relight_queue_size = static_cast<int32_t>(remesh_queue.size());
+                : static_cast<int32_t>(queue_it - schedule_queue.begin());
+        trace.relight_queue_size = static_cast<int32_t>(schedule_queue.size());
         const bool drawable = HasDrawableGreedyMesh(schedule_coord);
         const bool builder_inflight = AsyncBuilder->IsInFlight(schedule_coord);
         const bool gpu_apply = IsPendingGpuApply(schedule_coord);

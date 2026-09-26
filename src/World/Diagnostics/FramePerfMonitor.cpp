@@ -3135,7 +3135,9 @@ void UFramePerfMonitor::Shutdown()
                                      ? "draw_gate_relight_trace"
                                      : (r.sample_kind == 5
                                             ? "draw_gate_repair_scan_trace"
-                                            : "visual_black_trace"))))
+                                            : (r.sample_kind == 6
+                                                   ? "mesh_schedule_trace"
+                                                   : "visual_black_trace")))))
                << "\""
                << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                << ",\"cz\":" << r.cz

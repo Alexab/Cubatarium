@@ -67,7 +67,7 @@ struct VisualBlackTraceRecord
 {
   /// 0=black-attribution, 1=focus slice, 2=renderer draw-gate candidate,
   /// 3=visible relight-queue admission, 4=visible remesh scheduling attempt,
-  /// 5=draw-gate relight scan counts.
+  /// 5=draw-gate relight scan counts, 6=near-focus FirstMesh scheduling attempt.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   int32_t cx{0};
