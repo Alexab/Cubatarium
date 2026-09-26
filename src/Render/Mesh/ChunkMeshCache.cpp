@@ -4161,6 +4161,29 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   const bool had_live_lit_gpu =
       ChunkHasLiveGpuDraw(coord) && !ChunkHasFullyDarkFace(coord);
   const int prior_lit_age = GetPriorLitHoldAge(coord);
+  const UChunk *source_chunk = world.GetChunkManager().GetChunk(coord);
+  const ChunkRenderDemandRecord *slice_demand =
+      UChunkRenderDemandStore::Get().Find(coord);
+  const uint64_t current_incarnation = ChunkIncarnationAt(world, coord);
+  const bool demand_identity_current =
+      source_chunk && slice_demand &&
+      slice_demand->world_epoch == CaptureStore.WorldEpoch() &&
+      slice_demand->incarnation == current_incarnation;
+  // SoftDefer is column-wide; an exact slice can be settled while another Y
+  // slice still owns PendingLight. Permit this dark candidate only when all
+  // publication revisions and the explicit per-slice settlement agree.
+  const bool settled_current_dark_candidate =
+      gpu_result.hasFullyDarkFace && has_source_light_revision &&
+      (!boundary_overlay.active || boundary_overlay.missingNeighborFaces == 0) &&
+      MeshCandidateMatchesSettledDemand(
+          !accepted_input_stale, demand_identity_current,
+          slice_demand && slice_demand->has_settled_light, source_revision,
+          MeshRevisions.Current(coord),
+          slice_demand ? slice_demand->desired_geom_rev : 0,
+          source_light_revision,
+          source_chunk ? source_chunk->GetLightFieldRevision() : 0,
+          slice_demand ? slice_demand->settled_light_rev : 0,
+          slice_demand ? slice_demand->desired_light_rev : 0);
   // Sysreset v6: geom-stale Accept must not Retain dark over prior lit.
   if (ShouldRejectDarkOnGeomStaleAccept(gpu_result.hasFullyDarkFace,
                                         accepted_geom_stale, had_lit_mesh,
@@ -4268,7 +4291,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace,
                                  defer_until_lit && had_mesh, had_lit_mesh,
-                                 had_live_lit_gpu, prior_lit_age))
+                                 had_live_lit_gpu, prior_lit_age) &&
+      !settled_current_dark_candidate)
   {
     // Free staging only — FreeChunk(coord) would drop the live lit mesh that
     // ProcessSnapshot used to overwrite in-place (opaque collapse 213543).
@@ -5798,9 +5822,33 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       ChunkHasLiveGpuDraw(result.coord) && !ChunkHasFullyDarkFace(result.coord);
   const bool new_dark = BatchesHaveFullyDarkFace(result.batches);
   const int prior_lit_age = GetPriorLitHoldAge(result.coord);
+  const UChunk *source_chunk =
+      world.GetChunkManager().GetChunk(result.coord);
+  const ChunkRenderDemandRecord *slice_demand =
+      UChunkRenderDemandStore::Get().Find(result.coord);
+  const uint64_t current_incarnation = ChunkIncarnationAt(world, result.coord);
+  const bool demand_identity_current =
+      source_chunk && slice_demand &&
+      slice_demand->world_epoch == CaptureStore.WorldEpoch() &&
+      slice_demand->incarnation == current_incarnation;
+  const bool settled_current_dark_candidate =
+      new_dark && result.InputStampsValid && !refresh_after_accept_stale &&
+      (!result.BoundaryOverlay.active ||
+       result.BoundaryOverlay.missingNeighborFaces == 0) &&
+      MeshCandidateMatchesSettledDemand(
+          stale_reason == MeshApplyStaleInputReason::Ok,
+          demand_identity_current,
+          slice_demand && slice_demand->has_settled_light,
+          result.sourceRevision, expected_revision,
+          slice_demand ? slice_demand->desired_geom_rev : 0,
+          result.InputStamps[0].light,
+          source_chunk ? source_chunk->GetLightFieldRevision() : 0,
+          slice_demand ? slice_demand->settled_light_rev : 0,
+          slice_demand ? slice_demand->desired_light_rev : 0);
   if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
                                  had_lit_mesh, had_live_lit_gpu,
-                                 prior_lit_age))
+                                 prior_lit_age) &&
+      !settled_current_dark_candidate)
   {
     // Keep prior lit mesh (or hole). MarkRelit owns requeue when SoftDefer+had_mesh.
     if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
@@ -8515,11 +8563,35 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         ChunkHasLiveGpuDraw(chunkCoord) && !ChunkHasFullyDarkFace(chunkCoord);
     const bool new_dark = BatchesHaveFullyDarkFace(new_batches);
     const int prior_lit_age = GetPriorLitHoldAge(chunkCoord);
+    const UChunk *source_chunk = world.GetChunkManager().GetChunk(chunkCoord);
+    const ChunkRenderDemandRecord *slice_demand =
+        UChunkRenderDemandStore::Get().Find(chunkCoord);
+    const uint64_t current_incarnation = ChunkIncarnationAt(world, chunkCoord);
+    const bool demand_identity_current =
+        source_chunk && slice_demand &&
+        slice_demand->world_epoch == CaptureStore.WorldEpoch() &&
+        slice_demand->incarnation == current_incarnation;
+    const uint64_t current_geom_rev = MeshRevisions.Current(chunkCoord);
+    const bool settled_current_dark_candidate =
+        new_dark && sync_snap.inputStampsValid &&
+        sync_snap.InputsStillValid(world, CacheNeighborVisuallyDrawable, this) &&
+        (!sync_snap.boundaryOverlay.active ||
+         sync_snap.boundaryOverlay.missingNeighborFaces == 0) &&
+        MeshCandidateMatchesSettledDemand(
+            true, demand_identity_current,
+            slice_demand && slice_demand->has_settled_light,
+            current_geom_rev, current_geom_rev,
+            slice_demand ? slice_demand->desired_geom_rev : 0,
+            sync_snap.inputStamps[0].light,
+            source_chunk ? source_chunk->GetLightFieldRevision() : 0,
+            slice_demand ? slice_demand->settled_light_rev : 0,
+            slice_demand ? slice_demand->desired_light_rev : 0);
     // First mesh (!had_mesh): never SoftDefer-reject dark place — otherwise
     // side-wall / far-focus edits stay invisible until Capture clears the gate.
     if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
                                    had_lit_mesh, had_live_lit_gpu,
-                                   prior_lit_age))
+                                   prior_lit_age) &&
+        !settled_current_dark_candidate)
     {
       // SoftDefer+had_mesh: wait MarkRelit (no Dirty thrash — manual 195432).
       if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace cutum
 {
 
@@ -122,6 +124,26 @@ inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
     return true;
   }
   return had_lit_mesh || had_live_lit_gpu;
+}
+
+/// A dark remesh may replace an older lit image only when this exact candidate
+/// satisfies current geometry and light demand, and that light revision has
+/// been explicitly settled for the same chunk incarnation. Column-level
+/// SoftDefer can remain active for another Y slice in the same column.
+inline bool MeshCandidateMatchesSettledDemand(
+    bool input_stamps_current, bool demand_identity_current,
+    bool has_settled_light, uint64_t source_geom_rev,
+    uint64_t current_geom_rev, uint64_t desired_geom_rev,
+    uint64_t source_light_rev, uint64_t field_light_rev,
+    uint64_t settled_light_rev, uint64_t desired_light_rev)
+{
+  return input_stamps_current && demand_identity_current &&
+         has_settled_light && source_geom_rev != 0 && source_light_rev != 0 &&
+         source_geom_rev == current_geom_rev &&
+         source_geom_rev == desired_geom_rev &&
+         source_light_rev == field_light_rev &&
+         source_light_rev == settled_light_rev &&
+         source_light_rev == desired_light_rev;
 }
 
 /// Sysreset v6: geom-stale Accept Retain must not keep a dark bake over prior
