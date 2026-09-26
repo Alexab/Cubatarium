@@ -4215,9 +4215,32 @@ int UWorld::CollectDrawGateRelightTargets(
     const bool fully_dark = cache.ChunkHasFullyDarkFace(coord) &&
                             !MeshService->ChunkHasLitDrawableFace(coord);
     const glm::ivec2 column(coord.x, coord.z);
-    const bool open_sky_applied =
-        EnterVisualGateCtrl.WasOpenSkyApplied(column);
-    if (!stale_light && !(fully_dark && !open_sky_applied))
+    const UChunk *slice_chunk =
+        BlockWorld.GetChunkManager().GetChunk(coord);
+    const ChunkRenderDemandRecord *slice_demand =
+        UChunkRenderDemandStore::Get().Find(coord);
+    const uint64_t field_light_rev =
+        slice_chunk ? slice_chunk->GetLightFieldRevision() : 0;
+    const bool demand_identity_current =
+        slice_demand && slice_chunk &&
+        slice_demand->incarnation == slice_chunk->GetIncarnation();
+    const bool demand_light_current =
+        !slice_demand ||
+        (demand_identity_current &&
+         slice_demand->desired_light_rev <=
+             slice_demand->published_light_rev);
+    const bool slice_light_settled =
+        demand_identity_current && slice_demand->has_settled_light &&
+        slice_demand->settled_light_rev == field_light_rev;
+    const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+    const bool current_dark_image =
+        slice_light_settled && !stale_light && demand_light_current &&
+        published.light_rev == field_light_rev &&
+        cache.GetMeshedLightRevision(coord) == field_light_rev;
+    // Match IsChunkSliceRenderReady: open-sky column state alone cannot prove
+    // this exact slice was lit. Any drawable dark slice that the gate rejects
+    // for missing settlement or stale light publication must get repair work.
+    if (!stale_light && !(fully_dark && !current_dark_image))
     {
       continue;
     }
