@@ -57,6 +57,7 @@ struct LitApplyColumnInput
   glm::ivec2 column{0};
   bool is_primary{false};
   bool finalize_gate{true};
+  bool visible_slice_repair{false};
   bool primary_only{false};
   bool consume_mode{false};
   bool defer_side{false};
@@ -107,7 +108,7 @@ struct LitApplyPlan
 inline ColumnInstallPath ClassifyColumnInstallPath(
     const LitApplyColumnInput &in)
 {
-  if (!in.finalize_gate)
+  if (!in.finalize_gate && !in.visible_slice_repair)
   {
     return ColumnInstallPath::PartialNoDirty;
   }

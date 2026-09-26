@@ -5731,7 +5731,8 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
                                               int min_y, int max_y,
                                               bool include_skylight,
                                               bool include_block_light,
-                                              bool finalize_pending_gate)
+                                              bool finalize_pending_gate,
+                                              bool visible_draw_gate_repair)
 {
   if (!BlockRegistry)
   {
@@ -5759,6 +5760,7 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
   spec.frontier_iterations = kRelightFrontierIterationsColumn;
   spec.job_id = ++NextAsyncRelightJobId;
   spec.finalize_pending_gate = finalize_pending_gate;
+  spec.visible_draw_gate_repair = visible_draw_gate_repair;
   spec.column_center_only = true;
   AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
   PhysicsTelemetryData.RelightCaptureFullN =
@@ -6135,7 +6137,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       // ColdFix P0: primary_only only under defer (not forever on moving).
       MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
                              result.finalize_pending_gate,
-                             /*primary_only=*/primary_only_apply);
+                             /*primary_only=*/primary_only_apply,
+                             result.visible_draw_gate_repair);
       ++PhysicsTelemetryData.RelightApplyToMarkRelitN;
     }
     const auto install_t1 = std::chrono::high_resolution_clock::now();

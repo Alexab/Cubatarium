@@ -711,6 +711,7 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
   result.job_id = Spec.job_id;
   result.source_block_positions = Spec.block_positions;
   result.finalize_pending_gate = Spec.finalize_pending_gate;
+  result.visible_draw_gate_repair = Spec.visible_draw_gate_repair;
   result.include_skylight = Spec.include_skylight;
   result.include_block_light = Spec.include_block_light;
   if (Blocks.empty())

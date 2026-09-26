@@ -1105,7 +1105,8 @@ public:
   void EnqueueAsyncTerrainColumnRelight(int world_x, int world_z, int min_y,
                                         int max_y, bool include_skylight = true,
                                         bool include_block_light = true,
-                                        bool finalize_pending_gate = true);
+                                        bool finalize_pending_gate = true,
+                                        bool visible_draw_gate_repair = false);
   void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
                                         int frontier_iterations = 1);
   void EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord, bool include_skylight,
@@ -1440,7 +1441,8 @@ private:
                               bool priority_mesh,
                               const std::vector<glm::ivec2> &primary_grounds,
                               bool finalize_pending_gate = true,
-                              bool primary_only = false);
+                              bool primary_only = false,
+                              bool visible_draw_gate_repair = false);
   /// FZ2.7-B3: apply planner output (MarkRelit refactor).
   void ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &column,
                              const glm::ivec3 &ground, bool finalize_gate);

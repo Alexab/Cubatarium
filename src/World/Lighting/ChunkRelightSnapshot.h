@@ -30,6 +30,8 @@ struct RelightJobSpec
   uint64_t job_id{0};
   /// False while more Y-bands remain for this column (SoftDefer keeps Pending).
   bool finalize_pending_gate{true};
+  /// Renderer-rejected exact slice may remesh before the column gate finalizes.
+  bool visible_draw_gate_repair{false};
   /// Terrain column FIFO: copy center column full + neighbor shell/light only.
   bool column_center_only{false};
 };
@@ -76,6 +78,7 @@ struct RelightComputeResult
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
   bool finalize_pending_gate{true};
+  bool visible_draw_gate_repair{false};
   bool include_skylight{true};
   bool include_block_light{true};
   std::vector<glm::ivec3> source_block_positions;

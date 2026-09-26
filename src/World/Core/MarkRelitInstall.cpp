@@ -395,7 +395,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                     bool priority_mesh,
                                     const std::vector<glm::ivec2> &primary_grounds,
                                     bool finalize_pending_gate,
-                                    bool primary_only)
+                                    bool primary_only,
+                                    bool visible_draw_gate_repair)
 {
   ++PhysicsTelemetryData.MarkRelitInvokedN;
   const auto total_t0 = Clock::now();
@@ -533,7 +534,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
     if (is_primary)
     {
-      if (!finalize_pending_gate)
+      if (!finalize_pending_gate && !visible_draw_gate_repair)
       {
         AsyncRelightColumnsInFlight.erase(key);
         continue;
@@ -544,6 +545,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       in.column = key;
       in.is_primary = true;
       in.finalize_gate = finalize_pending_gate;
+      in.visible_slice_repair = visible_draw_gate_repair;
       in.primary_only = primary_only;
       in.consume_mode = consume_mode;
       in.enter_gate = enter_gate;
