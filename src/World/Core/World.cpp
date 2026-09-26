@@ -2907,105 +2907,107 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               std::max(0.0, now_ms - demand->last_progress_ms);
         }
       }
-      if (state == 3)
+      const UChunkMeshCache &cache = MeshService->GetCache();
+      const bool fully_dark = cache.ChunkHasFullyDarkFace(coord);
+      const bool has_lit_face = MeshService->ChunkHasLitDrawableFace(coord);
+      UChunkMeshCache::StaleDarkWitness stale_witness{};
+      const bool stale_dark =
+          state == 3 && fully_dark && !has_lit_face &&
+          cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &stale_witness);
+      const glm::ivec2 col(coord.x, coord.z);
+      const bool pending_light = IsPendingLightBeforeMesh(col);
+      const bool soft_defer = cache.IsSoftDeferHeld(coord);
+      const bool defer_until_lit = cache.IsDeferMeshUntilLit(coord);
+      const bool column_lit = IsColumnLitReady(glm::ivec3(coord.x, 0, coord.z));
+      const ColumnRecord *column = ColumnRecords.Find(col);
+      const bool legal_dark = column && column->legal_dark_settled;
+      const bool light_repair =
+          column && column->visual_obligation == VisualObligation::LightRepair;
+      const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col);
+      const bool true_dark = fully_dark && open_sky && !pending_light &&
+                             column_lit && !stale_dark && !has_lit_face;
+      const UColumnFlowExecutor &flow_executor = GetColumnFlowExecutor();
+      const auto &flow_scheduler = flow_executor.Scheduler();
+      const bool flow_ticket = flow_executor.HasRepairTicket(col);
+      const bool flow_relight_then_mesh =
+          flow_scheduler.Contains(col, ColumnWorkKind::RelightThenMesh);
+      const bool flow_first_mesh =
+          flow_scheduler.Contains(col, ColumnWorkKind::FirstMesh);
+      const bool flow_remesh_seam =
+          flow_scheduler.Contains(col, ColumnWorkKind::RemeshSeam);
+      const bool flow_promote_relight =
+          flow_scheduler.Contains(col, ColumnWorkKind::PromoteRelight);
+      const bool sticky_remesh = IsColumnStickyRemesh(col);
+      const bool repair_progress = ColumnHasRepairProgress(col);
+      const bool repair_ticket =
+          flow_ticket || sticky_remesh || repair_progress;
+      const bool async_relight = IsAsyncRelightColumnInFlight(col);
+      const glm::ivec2 block_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
+      const bool persistence_relight =
+          Persistence && Persistence->IsTerrainColumnRelightQueued(block_key);
+      const auto relight_queue =
+          Persistence
+              ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
+              : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+      trace.relight_queue_kind =
+          !relight_queue.keyed
+              ? 0
+              : (!relight_queue.in_deque
+                     ? 3
+                     : (relight_queue.priority ? 1 : 2));
+      trace.relight_y_band_defined = relight_queue.y_band_defined ? 1 : 0;
+      trace.relight_queue_index = relight_queue.queue_index;
+      trace.relight_queue_size = relight_queue.queue_size;
+      trace.relight_band_min_y = relight_queue.min_world_y;
+      trace.relight_band_max_y = relight_queue.max_world_y;
+      const bool mesh_dependency_pending =
+          cache.HasPendingMeshDependencyInvalidation(coord);
+      const bool gpu_apply_queued = cache.IsPendingGpuQueued(coord);
+      const bool gpu_apply_kicked_or_dispatched =
+          cache.IsPendingGpuKickedOrDispatched(coord);
+      const bool dirty = (trace.flags & (1u << 2)) != 0;
+      const bool inflight = (trace.flags & (1u << 3)) != 0;
+      const bool gpu_pending = (trace.flags & (1u << 4)) != 0;
+      const bool gpu_extract = (trace.flags & (1u << 5)) != 0;
+      const bool remesh_after_apply = (trace.flags & (1u << 8)) != 0;
+      trace.mesh_work_owner_flags =
+          (dirty ? 1u << 0 : 0u) | (inflight ? 1u << 1 : 0u) |
+          (remesh_after_apply ? 1u << 2 : 0u) | (gpu_pending ? 1u << 3 : 0u) |
+          (gpu_apply_queued ? 1u << 4 : 0u) |
+          (gpu_apply_kicked_or_dispatched ? 1u << 5 : 0u) |
+          (gpu_extract ? 1u << 6 : 0u) | (flow_ticket ? 1u << 7 : 0u) |
+          (soft_defer ? 1u << 8 : 0u) | (defer_until_lit ? 1u << 9 : 0u) |
+          (pending_light ? 1u << 10 : 0u);
+      trace.flags = static_cast<uint32_t>(
+          trace.flags | (fully_dark ? 1u << 9 : 0u) |
+          (has_lit_face ? 1u << 10 : 0u) | (stale_dark ? 1u << 11 : 0u) |
+          (pending_light ? 1u << 12 : 0u) | (soft_defer ? 1u << 13 : 0u) |
+          (column_lit ? 1u << 14 : 0u) | (repair_ticket ? 1u << 15 : 0u) |
+          (flow_ticket ? 1u << 16 : 0u) | (sticky_remesh ? 1u << 17 : 0u) |
+          (repair_progress ? 1u << 18 : 0u) | (async_relight ? 1u << 19 : 0u) |
+          (persistence_relight ? 1u << 20 : 0u) |
+          (mesh_dependency_pending ? 1u << 21 : 0u) |
+          (legal_dark ? 1u << 22 : 0u) | (open_sky ? 1u << 23 : 0u) |
+          (light_repair ? 1u << 24 : 0u) | (true_dark ? 1u << 25 : 0u) |
+          (gpu_apply_queued ? 1u << 26 : 0u) |
+          (gpu_apply_kicked_or_dispatched ? 1u << 27 : 0u) |
+          (flow_relight_then_mesh ? 1u << 28 : 0u) |
+          (flow_first_mesh ? 1u << 29 : 0u) |
+          (flow_remesh_seam ? 1u << 30 : 0u) |
+          (flow_promote_relight ? 1u << 31 : 0u));
+      if (stale_dark)
       {
-        const UChunkMeshCache &cache = MeshService->GetCache();
-        const bool fully_dark = cache.ChunkHasFullyDarkFace(coord);
-        const bool has_lit_face = MeshService->ChunkHasLitDrawableFace(coord);
-        UChunkMeshCache::StaleDarkWitness stale_witness{};
-        const bool stale_dark =
-            fully_dark && !has_lit_face &&
-            cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &stale_witness);
-        const glm::ivec2 col(coord.x, coord.z);
-        const bool pending_light = IsPendingLightBeforeMesh(col);
-        const bool soft_defer = cache.IsSoftDeferHeld(coord);
-        const bool column_lit =
-            IsColumnLitReady(glm::ivec3(coord.x, 0, coord.z));
-        const ColumnRecord *column = ColumnRecords.Find(col);
-        const bool legal_dark = column && column->legal_dark_settled;
-        const bool light_repair =
-            column && column->visual_obligation == VisualObligation::LightRepair;
-        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col);
-        const bool true_dark = fully_dark && open_sky && !pending_light &&
-                               column_lit && !stale_dark && !has_lit_face;
-        const UColumnFlowExecutor &flow_executor = GetColumnFlowExecutor();
-        const auto &flow_scheduler = flow_executor.Scheduler();
-        const bool flow_ticket = flow_executor.HasRepairTicket(col);
-        const bool flow_relight_then_mesh =
-            flow_scheduler.Contains(col, ColumnWorkKind::RelightThenMesh);
-        const bool flow_first_mesh =
-            flow_scheduler.Contains(col, ColumnWorkKind::FirstMesh);
-        const bool flow_remesh_seam =
-            flow_scheduler.Contains(col, ColumnWorkKind::RemeshSeam);
-        const bool flow_promote_relight =
-            flow_scheduler.Contains(col, ColumnWorkKind::PromoteRelight);
-        const bool sticky_remesh = IsColumnStickyRemesh(col);
-        const bool repair_progress = ColumnHasRepairProgress(col);
-        const bool repair_ticket =
-            flow_ticket || sticky_remesh || repair_progress;
-        const bool async_relight = IsAsyncRelightColumnInFlight(col);
-        const glm::ivec2 block_key(coord.x * CHUNK_SIZE,
-                                   coord.z * CHUNK_SIZE);
-        const bool persistence_relight =
-            Persistence && Persistence->IsTerrainColumnRelightQueued(block_key);
-        const auto relight_queue =
-            Persistence
-                ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
-                : UWorldPersistence::TerrainColumnRelightQueueInfo{};
-        trace.relight_queue_kind =
-            !relight_queue.keyed
-                ? 0
-                : (!relight_queue.in_deque
-                       ? 3
-                       : (relight_queue.priority ? 1 : 2));
-        trace.relight_y_band_defined = relight_queue.y_band_defined ? 1 : 0;
-        trace.relight_queue_index = relight_queue.queue_index;
-        trace.relight_queue_size = relight_queue.queue_size;
-        trace.relight_band_min_y = relight_queue.min_world_y;
-        trace.relight_band_max_y = relight_queue.max_world_y;
-        const bool mesh_dependency_pending =
-            cache.HasPendingMeshDependencyInvalidation(coord);
-        const bool gpu_apply_queued = cache.IsPendingGpuQueued(coord);
-        const bool gpu_apply_kicked_or_dispatched =
-            cache.IsPendingGpuKickedOrDispatched(coord);
-        trace.flags = static_cast<uint32_t>(
-            trace.flags | (fully_dark ? 1u << 9 : 0u) |
-            (has_lit_face ? 1u << 10 : 0u) |
-            (stale_dark ? 1u << 11 : 0u) |
-            (pending_light ? 1u << 12 : 0u) |
-            (soft_defer ? 1u << 13 : 0u) |
-            (column_lit ? 1u << 14 : 0u) |
-            (repair_ticket ? 1u << 15 : 0u) |
-            (flow_ticket ? 1u << 16 : 0u) |
-            (sticky_remesh ? 1u << 17 : 0u) |
-            (repair_progress ? 1u << 18 : 0u) |
-            (async_relight ? 1u << 19 : 0u) |
-            (persistence_relight ? 1u << 20 : 0u) |
-            (mesh_dependency_pending ? 1u << 21 : 0u) |
-            (legal_dark ? 1u << 22 : 0u) |
-            (open_sky ? 1u << 23 : 0u) |
-            (light_repair ? 1u << 24 : 0u) |
-            (true_dark ? 1u << 25 : 0u) |
-            (gpu_apply_queued ? 1u << 26 : 0u) |
-            (gpu_apply_kicked_or_dispatched ? 1u << 27 : 0u) |
-            (flow_relight_then_mesh ? 1u << 28 : 0u) |
-            (flow_first_mesh ? 1u << 29 : 0u) |
-            (flow_remesh_seam ? 1u << 30 : 0u) |
-            (flow_promote_relight ? 1u << 31 : 0u));
-        if (stale_dark)
-        {
-          trace.stale_sample_x = stale_witness.sampled_block.x;
-          trace.stale_sample_y = stale_witness.sampled_block.y;
-          trace.stale_sample_z = stale_witness.sampled_block.z;
-          trace.stale_source_cx = stale_witness.source_chunk.x;
-          trace.stale_source_cy = stale_witness.source_chunk.y;
-          trace.stale_source_cz = stale_witness.source_chunk.z;
-          trace.stale_source_incarnation = stale_witness.source_incarnation;
-          trace.stale_source_light_rev = stale_witness.source_light_revision;
-          trace.stale_face_index = stale_witness.face_index;
-          trace.stale_sample_light = stale_witness.packed_light;
-          trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
-        }
+        trace.stale_sample_x = stale_witness.sampled_block.x;
+        trace.stale_sample_y = stale_witness.sampled_block.y;
+        trace.stale_sample_z = stale_witness.sampled_block.z;
+        trace.stale_source_cx = stale_witness.source_chunk.x;
+        trace.stale_source_cy = stale_witness.source_chunk.y;
+        trace.stale_source_cz = stale_witness.source_chunk.z;
+        trace.stale_source_incarnation = stale_witness.source_incarnation;
+        trace.stale_source_light_rev = stale_witness.source_light_revision;
+        trace.stale_face_index = stale_witness.face_index;
+        trace.stale_sample_light = stale_witness.packed_light;
+        trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
       }
       UJobStageTrace::NoteVisualBlack(trace);
       ++recorded_by_state[state];
