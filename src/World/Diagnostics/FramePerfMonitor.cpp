@@ -3133,7 +3133,9 @@ void UFramePerfMonitor::Shutdown()
                               ? "view_draw_gate_trace"
                               : (r.sample_kind == 3
                                      ? "draw_gate_relight_trace"
-                                     : "visual_black_trace")))
+                                     : (r.sample_kind == 5
+                                            ? "draw_gate_repair_scan_trace"
+                                            : "visual_black_trace"))))
                << "\""
                << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                << ",\"cz\":" << r.cz
@@ -3208,6 +3210,18 @@ void UFramePerfMonitor::Shutdown()
                << ",\"relight_queue_size\":" << r.relight_queue_size
                << ",\"relight_band_min_y\":" << r.relight_band_min_y
                << ",\"relight_band_max_y\":" << r.relight_band_max_y
+               << ",\"draw_gate_scan_recent_n\":"
+               << r.draw_gate_scan_recent_n
+               << ",\"draw_gate_scan_recent_age_n\":"
+               << r.draw_gate_scan_recent_age_n
+               << ",\"draw_gate_scan_radius_n\":"
+               << r.draw_gate_scan_radius_n
+               << ",\"draw_gate_scan_drawable_n\":"
+               << r.draw_gate_scan_drawable_n
+               << ",\"draw_gate_scan_repairable_n\":"
+               << r.draw_gate_scan_repairable_n
+               << ",\"draw_gate_scan_target_n\":"
+               << r.draw_gate_scan_target_n
                << ",\"cause\":" << static_cast<int>(r.cause)
                << ",\"active_stage\":" << static_cast<int>(r.active_stage)
                << ",\"face_debt_mask\":"

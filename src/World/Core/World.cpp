@@ -4180,6 +4180,12 @@ int UWorld::CollectDrawGateRelightTargets(
   const int max_y = ProceduralTemplate.MaxHeight;
   const uint64_t max_age_frames = 2;
   const UChunkMeshCache &cache = MeshService->GetCache();
+  const uint32_t recent_rejections_n = static_cast<uint32_t>(
+      std::min<size_t>(RecentRendererDrawGateRejections.size(), UINT32_MAX));
+  uint32_t recent_age_n = 0;
+  uint32_t in_radius_n = 0;
+  uint32_t drawable_n = 0;
+  uint32_t repairable_n = 0;
   struct Candidate
   {
     DrawGateRelightTarget target{};
@@ -4200,14 +4206,20 @@ int UWorld::CollectDrawGateRelightTargets(
     {
       continue;
     }
+    ++recent_age_n;
     const int horiz = std::max(std::abs(coord.x - focus_ground_chunk.x),
                                std::abs(coord.z - focus_ground_chunk.z));
     if (horiz > radius_chunks || coord.y < 0 ||
-        coord.y * CHUNK_SIZE > max_y ||
-        !MeshService->HasDrawableGreedyMesh(coord))
+        coord.y * CHUNK_SIZE > max_y)
     {
       continue;
     }
+    ++in_radius_n;
+    if (!MeshService->HasDrawableGreedyMesh(coord))
+    {
+      continue;
+    }
+    ++drawable_n;
 
     UChunkMeshCache::StaleDarkWitness witness{};
     const bool stale_light =
@@ -4244,6 +4256,7 @@ int UWorld::CollectDrawGateRelightTargets(
     {
       continue;
     }
+    ++repairable_n;
 
     const int min_cy = stale_light ? std::min(coord.y, witness.source_chunk.y)
                                    : coord.y;
@@ -4299,6 +4312,25 @@ int UWorld::CollectDrawGateRelightTargets(
   for (int i = 0; i < n; ++i)
   {
     out.push_back(ordered[static_cast<size_t>(i)].target);
+  }
+  if (UJobStageTrace::VisualBlackTraceEnabled())
+  {
+    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+    VisualBlackTraceRecord trace{};
+    trace.sample_kind = 5;
+    trace.frame_epoch = StreamingFrameEpoch;
+    trace.focus_cx = focus_ground_chunk.x;
+    trace.focus_cz = focus_ground_chunk.z;
+    trace.camera_x = focus_block.x;
+    trace.camera_y = focus_block.y;
+    trace.camera_z = focus_block.z;
+    trace.draw_gate_scan_recent_n = recent_rejections_n;
+    trace.draw_gate_scan_recent_age_n = recent_age_n;
+    trace.draw_gate_scan_radius_n = in_radius_n;
+    trace.draw_gate_scan_drawable_n = drawable_n;
+    trace.draw_gate_scan_repairable_n = repairable_n;
+    trace.draw_gate_scan_target_n = static_cast<uint32_t>(n);
+    UJobStageTrace::NoteVisualBlack(trace);
   }
   return static_cast<int>(out.size());
 }

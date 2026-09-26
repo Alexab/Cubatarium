@@ -66,7 +66,8 @@ struct JobStageSpan
 struct VisualBlackTraceRecord
 {
   /// 0=black-attribution, 1=focus slice, 2=renderer draw-gate candidate,
-  /// 3=visible relight-queue admission, 4=visible remesh scheduling attempt.
+  /// 3=visible relight-queue admission, 4=visible remesh scheduling attempt,
+  /// 5=draw-gate relight scan counts.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   int32_t cx{0};
@@ -138,6 +139,13 @@ struct VisualBlackTraceRecord
   int32_t relight_queue_size{0};
   int32_t relight_band_min_y{0};
   int32_t relight_band_max_y{-1};
+  /// sample_kind=5: counts through CollectDrawGateRelightTargets filters.
+  uint32_t draw_gate_scan_recent_n{0};
+  uint32_t draw_gate_scan_recent_age_n{0};
+  uint32_t draw_gate_scan_radius_n{0};
+  uint32_t draw_gate_scan_drawable_n{0};
+  uint32_t draw_gate_scan_repairable_n{0};
+  uint32_t draw_gate_scan_target_n{0};
   /// sample_kind=0 bits: ticket, progress, sticky, pending_replace,
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,
