@@ -1419,6 +1419,37 @@ bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
   return Dirty.Contains(chunk_coord);
 }
 
+uint8_t UChunkMeshCache::GetDirtyQueueTrace(glm::ivec3 chunk_coord,
+                                           int32_t &index,
+                                           int32_t &size) const
+{
+  index = -1;
+  size = 0;
+  const std::vector<glm::ivec3> *queue = nullptr;
+  uint8_t kind = 0;
+  if (Dirty.IsFirstMesh(chunk_coord))
+  {
+    queue = &Dirty.FirstMeshQueue();
+    kind = 1;
+  }
+  else if (Dirty.Contains(chunk_coord))
+  {
+    queue = &Dirty.RemeshQueue();
+    kind = Dirty.IsPriorityRemesh(chunk_coord) ? 2 : 3;
+  }
+  if (!queue)
+  {
+    return 0;
+  }
+  size = static_cast<int32_t>(queue->size());
+  const auto it = std::find(queue->begin(), queue->end(), chunk_coord);
+  if (it != queue->end())
+  {
+    index = static_cast<int32_t>(it - queue->begin());
+  }
+  return kind;
+}
+
 int UChunkMeshCache::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
                                             size_t soft_cap,
                                             int min_keep_horiz)
@@ -7090,10 +7121,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const bool trace_visible_repair =
           Dirty.IsPriorityRemesh(schedule_coord) &&
           !Dirty.IsFirstMesh(schedule_coord);
+      const bool trace_normal_focus_remesh =
+          UJobStageTrace::VisualBlackTraceEnabled() &&
+          !Dirty.IsFirstMesh(schedule_coord) && MeshFocusValid &&
+          std::max(std::abs(schedule_coord.x - MeshFocusGroundChunk.x),
+                   std::abs(schedule_coord.z - MeshFocusGroundChunk.z)) <=
+              std::max(2, MeshFocusRadiusChunks);
       const auto trace_visible_schedule =
           [&](uint8_t outcome, uint8_t detail)
       {
-        if ((!trace_visible_repair && !trace_first_mesh) ||
+        if ((!trace_visible_repair && !trace_normal_focus_remesh &&
+             !trace_first_mesh) ||
             !UJobStageTrace::VisualBlackTraceEnabled())
         {
           return;

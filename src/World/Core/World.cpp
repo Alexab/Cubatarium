@@ -2804,6 +2804,9 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             trace.chunk_content_revision = chunk->GetContentRevision();
             trace.frame_epoch = StreamingFrameEpoch;
             trace.incarnation = chunk->GetIncarnation();
+            trace.mesh_dirty_queue_kind = mesh_cache.GetDirtyQueueTrace(
+                coord, trace.mesh_dirty_queue_index,
+                trace.mesh_dirty_queue_size);
             trace.draw_gate_ready = draw_ready ? 1 : 0;
             trace.flags = static_cast<uint32_t>(
                 (has_mesh ? 1u << 0 : 0u) |

@@ -3141,7 +3141,8 @@ void UFramePerfMonitor::Shutdown()
                                      ? "draw_gate_relight_trace"
                                      : (r.sample_kind == 5
                                             ? "draw_gate_repair_scan_trace"
-                                            : (r.sample_kind == 6
+                                            : ((r.sample_kind == 4 ||
+                                                r.sample_kind == 6)
                                                    ? "mesh_schedule_trace"
                                                    : "visual_black_trace")))))
                << "\""
@@ -3216,6 +3217,12 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.relight_y_band_defined)
                << ",\"relight_queue_index\":" << r.relight_queue_index
                << ",\"relight_queue_size\":" << r.relight_queue_size
+               << ",\"mesh_dirty_queue_kind\":"
+               << static_cast<int>(r.mesh_dirty_queue_kind)
+               << ",\"mesh_dirty_queue_index\":"
+               << r.mesh_dirty_queue_index
+               << ",\"mesh_dirty_queue_size\":"
+               << r.mesh_dirty_queue_size
                << ",\"relight_band_min_y\":" << r.relight_band_min_y
                << ",\"relight_band_max_y\":" << r.relight_band_max_y
                << ",\"draw_gate_scan_recent_n\":"

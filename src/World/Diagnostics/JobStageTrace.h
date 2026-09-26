@@ -137,6 +137,11 @@ struct VisualBlackTraceRecord
   uint8_t relight_y_band_defined{0};
   int32_t relight_queue_index{-1};
   int32_t relight_queue_size{0};
+  /// Focus sample queue ownership: 0=not dirty, 1=first mesh, 2=priority
+  /// remesh, 3=ordinary remesh.
+  uint8_t mesh_dirty_queue_kind{0};
+  int32_t mesh_dirty_queue_index{-1};
+  int32_t mesh_dirty_queue_size{0};
   int32_t relight_band_min_y{0};
   int32_t relight_band_max_y{-1};
   /// sample_kind=5: counts through CollectDrawGateRelightTargets filters.
