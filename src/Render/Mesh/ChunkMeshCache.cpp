@@ -1967,6 +1967,9 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
     }
     return false;
   };
+  const auto has_live_light_repair_ticket = [this](glm::ivec3 coord) {
+    return IsLightRepairRemesh && IsLightRepairRemesh(coord);
+  };
   int dropped = 0;
   constexpr int kMaxDropPerCall = 6; // A28 T1: DirtyDropped/period ≤800 target
   for (auto it = Dirty.begin(); it != Dirty.end();)
@@ -1980,11 +1983,12 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
       ++it;
       continue;
     }
-    // Renderer-rejected visible light repairs are bounded priority remeshes.
-    // Keep their exact slice work through both radius pruning and the later
-    // scheduler pass; otherwise draw-gate retries repeatedly enqueue work
-    // that this same frame's backlog policy immediately erases.
-    if (Dirty.IsPriorityRemesh(*it))
+    // A visible LightRepair obligation can live in the ordinary remesh lane
+    // while its column ticket remains active. Pruning by queue class alone
+    // repeatedly erased those slices after stop, then the visual census
+    // re-admitted them on the next frame. Preserve both explicit priority
+    // entries and ordinary remesh entries that still have a live repair owner.
+    if (Dirty.IsPriorityRemesh(*it) || has_live_light_repair_ticket(*it))
     {
       ++it;
       continue;
@@ -2009,7 +2013,7 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
     {
       break;
     }
-    if (beyond_keep(*it))
+    if (beyond_keep(*it) && !has_live_light_repair_ticket(*it))
     {
       it = RemeshAfterApply.erase(it);
       ++dropped;
