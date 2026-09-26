@@ -52,7 +52,8 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
-  void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks,
+                           uint64_t frame_epoch = 0);
   void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy);
   void ClearMeshVerticalPriority();
   void SetMeshForwardBias(float bias_k, glm::vec2 forward_xz);

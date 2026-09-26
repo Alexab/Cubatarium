@@ -177,10 +177,12 @@ float UChunkMeshCache::MaxCullDistance() const
 }
 
 void UChunkMeshCache::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
-                                          int radius_chunks)
+                                          int radius_chunks,
+                                          uint64_t frame_epoch)
 {
   MeshFocusGroundChunk = ground_chunk_coord;
   MeshFocusRadiusChunks = std::max(1, radius_chunks);
+  MeshFocusFrameEpoch = frame_epoch;
   MeshFocusValid = true;
 }
 
@@ -7101,6 +7103,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         trace.cx = schedule_coord.x;
         trace.cy = schedule_coord.y;
         trace.cz = schedule_coord.z;
+        trace.frame_epoch = MeshFocusFrameEpoch;
         trace.focus_cx = MeshFocusGroundChunk.x;
         trace.focus_cz = MeshFocusGroundChunk.z;
         trace.cause = outcome;

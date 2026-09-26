@@ -4244,6 +4244,33 @@ int UWorld::CollectDrawGateRelightTargets(
     const bool slice_light_settled =
         demand_identity_current && slice_demand->has_settled_light &&
         slice_demand->settled_light_rev == field_light_rev;
+    bool stale_source_light_settled = !stale_light;
+    if (stale_light)
+    {
+      const UChunk *source_chunk =
+          BlockWorld.GetChunkManager().GetChunk(witness.source_chunk);
+      const ChunkRenderDemandRecord *source_demand =
+          UChunkRenderDemandStore::Get().Find(witness.source_chunk);
+      stale_source_light_settled =
+          source_chunk && source_demand && field_light_rev != 0 &&
+          witness.source_incarnation == source_chunk->GetIncarnation() &&
+          witness.source_light_revision ==
+              source_chunk->GetLightFieldRevision() &&
+          source_demand->incarnation == source_chunk->GetIncarnation() &&
+          source_demand->has_settled_light &&
+          source_demand->settled_light_rev ==
+              source_chunk->GetLightFieldRevision();
+    }
+    // A current settlement proves the light field is already calculated.
+    // If the rejected mesh still carries stale baked light, the remaining
+    // obligation is a mesh rebuild/publication. Re-enqueueing relight for that
+    // slice on every renderer rejection repeatedly dirties the same geometry
+    // revision and can invalidate the mesh result that would close the gate.
+    if (slice_light_settled && stale_source_light_settled &&
+        field_light_rev != 0)
+    {
+      continue;
+    }
     const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
     const bool current_dark_image = CurrentDarkSliceImageMayDraw(
         fully_dark, slice_light_settled, stale_light, demand_light_current,

@@ -43,9 +43,10 @@ void UWorldMeshService::SetRenderDistanceChunks(int distance)
 }
 
 void UWorldMeshService::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
-                                            int radius_chunks)
+                                            int radius_chunks,
+                                            uint64_t frame_epoch)
 {
-  Cache.SetMeshRebuildFocus(ground_chunk_coord, radius_chunks);
+  Cache.SetMeshRebuildFocus(ground_chunk_coord, radius_chunks, frame_epoch);
 }
 
 void UWorldMeshService::SetMeshVerticalPriority(int preferred_cy,

@@ -345,7 +345,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
-  mesh_service.SetMeshRebuildFocus(focus_ground, focus_radius);
+  mesh_service.SetMeshRebuildFocus(focus_ground, focus_radius,
+                                   world.GetStreamingFrameEpoch());
   // Soft-defer / V2a: no first-mesh while PendingLight except underfeet; remesh
   // of existing mesh is deferred even underfeet (player dig dark overwrite).
   // Cold SoftDefer hole: also allow first-mesh for the single nearest missing

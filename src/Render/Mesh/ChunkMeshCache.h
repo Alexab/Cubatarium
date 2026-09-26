@@ -704,7 +704,8 @@ public:
   {
     RenderDistanceChunks = distance;
   }
-  void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks,
+                           uint64_t frame_epoch = 0);
   /// preferred_cy: sea/surface slice; prefer_lower_cy=true when camera underwater.
   void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy)
   {
@@ -1351,6 +1352,7 @@ private:
                                 int max_sync, double max_ms = 0.0);
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
+  uint64_t MeshFocusFrameEpoch{0};
   bool MeshFocusValid{false};
   /// I12-A7: incremental focus-ring dirty count cache.
   mutable glm::ivec3 FocusDirtyQueryCenter_{0};
