@@ -1652,6 +1652,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       bg_cap = std::min(bg_cap, 3);
     }
   }
+  // Exact renderer rejects are bounded and already occupy the priority
+  // queue. When they are waiting, a one-column cruise cap lets that visible
+  // backlog grow faster than it can be serviced. Allow one extra async
+  // capture while worker/completion capacity is available; the time budget
+  // and the hard caller/in-flight limits still apply in drain_one().
+  if (async_bg && draw_gate_target_pinned && max_bg_columns > 1 &&
+      world.GetAsyncRelightInFlightCount() < max_inflight &&
+      world.GetRelightCompletedSize() < 2)
+  {
+    bg_cap = std::max(bg_cap, std::min(2, max_bg_columns));
+  }
   {
     auto &telem = world.GetPhysicsTelemetryMutable();
     telem.CaptureBgCapN = bg_cap;
