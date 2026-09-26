@@ -570,6 +570,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             return true;
           }
+          if (world_ptr->IsSettledDrawGateMeshRepairPending(chunk_coord))
+          {
+            return true;
+          }
           const ColumnRecord *rec = world_ptr->GetColumnRecords().Find(xz);
           return rec &&
                  rec->visual_obligation == VisualObligation::LightRepair;

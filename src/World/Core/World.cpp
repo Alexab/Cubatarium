@@ -4493,6 +4493,32 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
   return true;
 }
 
+bool UWorld::IsSettledDrawGateMeshRepairPending(
+    glm::ivec3 chunk_coord) const
+{
+  const auto retry = SettledDrawGateMeshRepairRetries.find(chunk_coord);
+  if (retry == SettledDrawGateMeshRepairRetries.end() || !MeshService)
+  {
+    return false;
+  }
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(chunk_coord);
+  if (!chunk || !demand ||
+      retry->second.incarnation != chunk->GetIncarnation() ||
+      retry->second.field_light_revision != chunk->GetLightFieldRevision() ||
+      !demand->has_settled_light ||
+      demand->settled_light_rev != chunk->GetLightFieldRevision())
+  {
+    return false;
+  }
+  const UChunkMeshCache &cache = MeshService->GetCache();
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+  return published.light_rev < chunk->GetLightFieldRevision() ||
+         cache.GetMeshedLightRevision(chunk_coord) <
+             chunk->GetLightFieldRevision();
+}
+
 void UWorld::NoteRendererDrawGateRejection(glm::ivec3 chunk_coord)
 {
   if (RendererDrawGateRejectPruneEpoch != StreamingFrameEpoch)

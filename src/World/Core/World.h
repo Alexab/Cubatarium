@@ -1220,6 +1220,8 @@ public:
   /// resident slice has a current settled field and stale baked light.
   bool QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
                                       bool *out_queued = nullptr);
+  /// True while an exact settled draw-gate mesh repair ticket is still needed.
+  bool IsSettledDrawGateMeshRepairPending(glm::ivec3 chunk_coord) const;
   /// Remember a mesh rejected by a renderer draw gate so streaming can repair
   /// the exact visible slice on its next update.
   void NoteRendererDrawGateRejection(glm::ivec3 chunk_coord);
