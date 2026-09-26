@@ -125,33 +125,40 @@ void ApplyGreedyEnvironmentUniformsToShader(
   shader->SetFloat("uEnvWetness", 0.0f);
 }
 
-void NoteRendererGateRejection(UWorld &world, const UChunkMeshCache &cache,
+void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
                                glm::ivec3 coord,
                                const glm::vec3 &camera_position,
                                uint8_t renderer_path,
                                uint32_t cpu_index_count,
-                               uint32_t gpu_quad_count)
+                               uint32_t gpu_quad_count, bool draw_gate_ready)
 {
-  world.NoteRendererDrawGateRejection(coord);
+  if (!draw_gate_ready)
+  {
+    world.NoteRendererDrawGateRejection(coord);
+  }
   if (!UJobStageTrace::VisualBlackTraceEnabled())
   {
     return;
   }
 
   static uint64_t traced_epoch = UINT64_MAX;
-  static int traced_this_frame = 0;
+  static int traced_ready_this_frame = 0;
+  static int traced_rejected_this_frame = 0;
   const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
   if (traced_epoch != frame_epoch)
   {
     traced_epoch = frame_epoch;
-    traced_this_frame = 0;
+    traced_ready_this_frame = 0;
+    traced_rejected_this_frame = 0;
   }
-  constexpr int kMaxRendererGateTracesPerFrame = 32;
-  if (traced_this_frame >= kMaxRendererGateTracesPerFrame)
+  constexpr int kMaxRendererGateTracesPerOutcomePerFrame = 16;
+  int &outcome_count =
+      draw_gate_ready ? traced_ready_this_frame : traced_rejected_this_frame;
+  if (outcome_count >= kMaxRendererGateTracesPerOutcomePerFrame)
   {
     return;
   }
-  ++traced_this_frame;
+  ++outcome_count;
 
   VisualBlackTraceRecord record{};
   record.sample_kind = 2;
@@ -166,7 +173,52 @@ void NoteRendererGateRejection(UWorld &world, const UChunkMeshCache &cache,
   record.renderer_cpu_index_count = cpu_index_count;
   record.renderer_gpu_quad_count = gpu_quad_count;
   record.mesh_revision = cache.GetChunkMeshRevision(coord);
-  record.draw_gate_ready = 0;
+  record.draw_gate_ready = draw_gate_ready ? 1u : 0u;
+  const glm::ivec2 column_coord(coord.x, coord.z);
+  const bool drawable = cache.HasDrawableGreedyMesh(coord);
+  const bool satisfying = cache.HasMeshSatisfyingColumnReady(coord);
+  const bool live_gpu = cache.HasLiveGpuDraw(coord);
+  const bool fully_dark = cache.ChunkHasFullyDarkFace(coord);
+  const bool lit_drawable = cache.ChunkHasLitDrawableFace(coord);
+  const bool stale_dark = fully_dark && !lit_drawable &&
+                          cache.ChunkHasStaleDarkFaces(
+                              coord, world.GetBlockWorld());
+  const bool dirty = cache.IsChunkMeshDirty(coord);
+  const bool mesh_inflight = cache.HasInflightMeshBuild(coord);
+  const bool gpu_pending = cache.IsPendingGpuApply(coord);
+  const bool gpu_extract = cache.IsGpuExtractInFlight(coord);
+  const bool gpu_queued = cache.IsPendingGpuQueued(coord);
+  const bool gpu_kicked = cache.IsPendingGpuKickedOrDispatched(coord);
+  const bool pending_light = world.IsPendingLightBeforeMesh(column_coord);
+  const bool async_relight = world.IsAsyncRelightColumnInFlight(column_coord);
+  const bool sticky_remesh = world.IsColumnStickyRemesh(column_coord);
+  const bool repair_progress = world.ColumnHasRepairProgress(column_coord);
+  const ColumnRenderableState column_state =
+      world.GetColumnRenderableState(column_coord);
+  record.renderer_gate_flags =
+      (drawable ? (1u << 0) : 0u) |
+      (satisfying ? (1u << 1) : 0u) |
+      (live_gpu ? (1u << 2) : 0u) |
+      (fully_dark ? (1u << 3) : 0u) |
+      (lit_drawable ? (1u << 4) : 0u) |
+      (stale_dark ? (1u << 5) : 0u) |
+      (dirty ? (1u << 6) : 0u) |
+      (mesh_inflight ? (1u << 7) : 0u) |
+      (gpu_pending ? (1u << 8) : 0u) |
+      (gpu_extract ? (1u << 9) : 0u) |
+      (gpu_queued ? (1u << 10) : 0u) |
+      (gpu_kicked ? (1u << 11) : 0u) |
+      (pending_light ? (1u << 12) : 0u) |
+      (async_relight ? (1u << 13) : 0u) |
+      (sticky_remesh ? (1u << 14) : 0u) |
+      (repair_progress ? (1u << 15) : 0u) |
+      (column_state.draw_ok ? (1u << 16) : 0u) |
+      (column_state.has_repair_ticket ? (1u << 17) : 0u);
+  record.renderer_column_reason =
+      static_cast<uint8_t>(column_state.reason);
+  record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
+  record.renderer_column_has_repair_ticket =
+      column_state.has_repair_ticket ? 1u : 0u;
   if (const UChunk *chunk =
           world.GetBlockWorld().GetChunkManager().GetChunk(coord))
   {
@@ -179,7 +231,7 @@ void NoteRendererGateRejection(UWorld &world, const UChunkMeshCache &cache,
   record.published_geom_rev = published.geom_rev;
   record.published_light_rev = published.light_rev;
   record.meshed_light_rev = cache.GetMeshedLightRevision(coord);
-  record.flags = 1u; // candidate was in the renderer's frustum draw list.
+  record.flags = 1u; // candidate was in the renderer's frustum list pre-gate.
   UJobStageTrace::NoteVisualBlack(record);
 }
 
@@ -750,15 +802,12 @@ void UGeometryEngine::DrawCubeGeometry()
         {
           ready = WorldInstance->IsChunkSliceRenderReady(ref.chunkCoord);
           ready_cache.emplace(key, ready);
-          if (!ready)
-          {
-            const GreedyMeshBatch *batch = mesh_cache.TryGetGreedyBatch(ref);
-            const uint32_t index_count =
-                batch ? static_cast<uint32_t>(batch->indices.size()) : 0u;
-            NoteRendererGateRejection(
-                *WorldInstance, mesh_cache, ref.chunkCoord,
-                camera->GetPosition(), renderer_path, index_count, 0u);
-          }
+          const GreedyMeshBatch *batch = mesh_cache.TryGetGreedyBatch(ref);
+          const uint32_t index_count =
+              batch ? static_cast<uint32_t>(batch->indices.size()) : 0u;
+          NoteRendererGateCandidate(
+              *WorldInstance, mesh_cache, ref.chunkCoord,
+              camera->GetPosition(), renderer_path, index_count, 0u, ready);
         }
         if (ready)
         {
@@ -2390,13 +2439,22 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     if (WorldInstance &&
         !WorldInstance->IsChunkSliceRenderReady(chunk.chunkCoord))
     {
-      NoteRendererGateRejection(
+      NoteRendererGateCandidate(
           *WorldInstance, cache, chunk.chunkCoord,
           WorldInstance->GetCurrentUserCamera()
               ? WorldInstance->GetCurrentUserCamera()->GetPosition()
               : glm::vec3(0.0f),
-          transparent_pass ? 4u : 3u, 0u, slot->QuadCount);
+          transparent_pass ? 4u : 3u, 0u, slot->QuadCount, false);
       continue;
+    }
+    if (WorldInstance)
+    {
+      NoteRendererGateCandidate(
+          *WorldInstance, cache, chunk.chunkCoord,
+          WorldInstance->GetCurrentUserCamera()
+              ? WorldInstance->GetCurrentUserCamera()->GetPosition()
+              : glm::vec3(0.0f),
+          transparent_pass ? 4u : 3u, 0u, slot->QuadCount, true);
     }
     ++packed_draw_chunks;
     const glm::vec3 origin =

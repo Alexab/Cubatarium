@@ -65,7 +65,7 @@ struct JobStageSpan
 /// stamps so aggregate census counts can be traced to their real work owner.
 struct VisualBlackTraceRecord
 {
-  /// 0=black-attribution, 1=focus slice, 2=renderer draw-gate rejection,
+  /// 0=black-attribution, 1=focus slice, 2=renderer draw-gate candidate,
   /// 3=visible relight-queue admission, 4=visible remesh scheduling attempt.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
@@ -118,6 +118,14 @@ struct VisualBlackTraceRecord
   uint8_t renderer_path{0};
   uint32_t renderer_cpu_index_count{0};
   uint32_t renderer_gpu_quad_count{0};
+  /// sample_kind=2 flags 0..17: drawable, satisfying, live GPU, fully dark,
+  /// lit drawable, stale dark, dirty, mesh in-flight, GPU pending, extract
+  /// in-flight, queued/kicked GPU apply, pending light, async relight, sticky
+  /// remesh, repair progress, and column draw-ready/repair-ticket.
+  uint32_t renderer_gate_flags{0};
+  uint8_t renderer_column_reason{0};
+  uint8_t renderer_column_draw_ok{0};
+  uint8_t renderer_column_has_repair_ticket{0};
   /// Focus sample's persistence relight queue location/band at capture time.
   /// 0=not keyed, 1=priority deque, 2=far deque, 3=keyed but absent from deque.
   uint8_t relight_queue_kind{0};

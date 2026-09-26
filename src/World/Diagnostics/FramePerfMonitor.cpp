@@ -3189,6 +3189,14 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_cpu_index_count
                << ",\"renderer_gpu_quad_count\":"
                << r.renderer_gpu_quad_count
+               << ",\"renderer_gate_flags\":"
+               << r.renderer_gate_flags
+               << ",\"renderer_column_reason\":"
+               << static_cast<int>(r.renderer_column_reason)
+               << ",\"renderer_column_draw_ok\":"
+               << static_cast<int>(r.renderer_column_draw_ok)
+               << ",\"renderer_column_has_repair_ticket\":"
+               << static_cast<int>(r.renderer_column_has_repair_ticket)
                << ",\"relight_queue_kind\":"
                << static_cast<int>(r.relight_queue_kind)
                << ",\"relight_y_band_defined\":"
