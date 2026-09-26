@@ -7060,6 +7060,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int overflow_scheduled = 0;
     int reserved_focus_scheduled = 0;
     int remesh_scheduled = 0;
+    bool focus_first_mesh_budget_reserve_used = false;
     const int outside_focus_cap = MaxOutsideFocusMeshPerFrame;
     constexpr int kReservedFocusMissingSlots = 16;
     const MeshWorkAdmission &sched_adm = WorkAdmission;
@@ -7127,6 +7128,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           std::max(std::abs(schedule_coord.x - MeshFocusGroundChunk.x),
                    std::abs(schedule_coord.z - MeshFocusGroundChunk.z)) <=
               std::max(2, MeshFocusRadiusChunks);
+      bool focus_first_mesh_budget_reserve_candidate = false;
       const auto trace_visible_schedule =
           [&](uint8_t outcome, uint8_t detail)
       {
@@ -7158,6 +7160,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                 ? -1
                 : static_cast<int32_t>(queue_it - schedule_queue.begin());
         trace.relight_queue_size = static_cast<int32_t>(schedule_queue.size());
+        trace.mesh_dirty_queue_kind =
+            trace_first_mesh
+                ? 1
+                : (Dirty.IsPriorityRemesh(schedule_coord) ? 2 : 3);
+        trace.mesh_dirty_queue_index = trace.relight_queue_index;
+        trace.mesh_dirty_queue_size = trace.relight_queue_size;
         const bool drawable = HasDrawableGreedyMesh(schedule_coord);
         const bool builder_inflight = AsyncBuilder->IsInFlight(schedule_coord);
         const bool gpu_apply = IsPendingGpuApply(schedule_coord);
@@ -7231,7 +7239,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - dirty_tick_t0)
                 .count();
-        if (total_elapsed > MeshEmergeTotalBudgetMs)
+        focus_first_mesh_budget_reserve_candidate =
+            total_elapsed > MeshEmergeTotalBudgetMs && trace_first_mesh &&
+            Dirty.IsFirstMesh(schedule_coord) &&
+            !HasDrawableGreedyMesh(schedule_coord) &&
+            !focus_first_mesh_budget_reserve_used &&
+            LastMeshSnapshotMs < kSnapshotBudgetMs;
+        if (total_elapsed > MeshEmergeTotalBudgetMs &&
+            !focus_first_mesh_budget_reserve_candidate)
         {
           trace_visible_schedule(3, 0);
           ++LastMeshDirtyScheduleSkipN;
@@ -7448,6 +7463,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (acquire.kind == SnapshotAcquireKind::PendingCapture)
       {
         trace_visible_schedule(12, 0);
+        if (focus_first_mesh_budget_reserve_candidate)
+        {
+          focus_first_mesh_budget_reserve_used = true;
+        }
         ++LastMeshPendingCaptureN_;
         return std::next(it);
       }
@@ -7482,8 +7501,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++LastMeshDirtyScheduleSkipN;
         return std::next(it);
       }
+      if (focus_first_mesh_budget_reserve_candidate)
+      {
+        focus_first_mesh_budget_reserve_used = true;
+      }
       ActiveMeshSourceRevision[*it] = submitted_revision;
-      trace_visible_schedule(15, 0);
+      trace_visible_schedule(
+          15, focus_first_mesh_budget_reserve_candidate ? 1u : 0u);
       ScheduledThisFrame_.insert(*it);
       if (Dirty.IsFirstMesh(*it))
       {
