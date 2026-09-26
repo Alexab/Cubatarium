@@ -1290,7 +1290,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   }
 
   bool draw_gate_target_pinned = false;
-  glm::ivec2 draw_gate_target_key(0);
+  std::vector<glm::ivec2> draw_gate_target_keys;
   // RecentRendererDrawGateRejections is the direct view-level observation.
   // Do not require the separately sampled VisibleBlack census as a second
   // gate: its update cadence can leave zero here while real draw candidates
@@ -1310,11 +1310,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       protected_visible_columns.emplace_back(target.column.x,
                                              target.column.y);
     }
-    for (const DrawGateRelightTarget &target : draw_gate_targets)
+    for (auto target_it = draw_gate_targets.rbegin();
+         target_it != draw_gate_targets.rend(); ++target_it)
     {
-      draw_gate_target_key =
-          glm::ivec2(target.column.x * CHUNK_SIZE,
-                     target.column.y * CHUNK_SIZE);
+      const DrawGateRelightTarget &target = *target_it;
+      const glm::ivec2 draw_gate_target_key{
+          target.column.x * CHUNK_SIZE, target.column.y * CHUNK_SIZE};
       // Avoid duplicate capture debt while the column is already being
       // repaired. A queued entry still receives the witness band so it can
       // survive the top-down remainder.
@@ -1325,9 +1326,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           world.IsAsyncRelightColumnInFlight(target_column);
       uint8_t draw_gate_admission_outcome = 0;
       int draw_gate_victim_horiz = -1;
+      bool target_pinned = false;
       if (already_queued || !already_inflight)
       {
-        draw_gate_target_pinned = EnqueueVisibleDrawGateRelight(
+        target_pinned = EnqueueVisibleDrawGateRelight(
             draw_gate_target_key.x, draw_gate_target_key.y,
             target.min_world_y, target.max_world_y, focus_chunk,
             draw_gate_radius, protected_visible_columns,
@@ -1337,8 +1339,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       {
         draw_gate_admission_outcome = 8;
       }
-      if (draw_gate_target_pinned)
+      if (target_pinned)
       {
+        draw_gate_target_pinned = true;
+        if (std::find(draw_gate_target_keys.begin(),
+                      draw_gate_target_keys.end(), draw_gate_target_key) ==
+            draw_gate_target_keys.end())
+        {
+          draw_gate_target_keys.push_back(draw_gate_target_key);
+        }
         auto [band_it, inserted] = PendingVisibleDrawGateRelightYBands.try_emplace(
             draw_gate_target_key,
             glm::ivec2(target.min_world_y, target.max_world_y));
@@ -1362,9 +1371,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         trace.camera_y = focus_block.y;
         trace.camera_z = focus_block.z;
         trace.draw_gate_ready = 0;
-        trace.flags = draw_gate_target_pinned ? 4u
+        trace.flags = target_pinned ? 4u
                       : (already_inflight && !already_queued ? 1u : 2u);
-        if (!draw_gate_target_pinned)
+        if (!target_pinned)
         {
           trace.focus_state = static_cast<uint8_t>(std::min<size_t>(
               PendingTerrainColumnRelights.size(), UINT8_MAX));
@@ -1409,32 +1418,6 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         trace.relight_queue_index = queue_info.queue_index;
         trace.relight_queue_size = queue_info.queue_size;
         UJobStageTrace::NoteVisualBlack(trace);
-      }
-      if (draw_gate_target_pinned)
-      {
-        auto &prio = PendingTerrainColumnRelightsPriority;
-        auto &far = PendingTerrainColumnRelights;
-        auto prio_it =
-            std::find(prio.begin(), prio.end(), draw_gate_target_key);
-        if (prio_it != prio.end())
-        {
-          if (prio_it != prio.begin())
-          {
-            prio.erase(prio_it);
-            prio.push_front(draw_gate_target_key);
-          }
-        }
-        else
-        {
-          auto far_it =
-              std::find(far.begin(), far.end(), draw_gate_target_key);
-          if (far_it != far.end())
-          {
-            far.erase(far_it);
-            prio.push_front(draw_gate_target_key);
-          }
-        }
-        break;
       }
     }
   }
@@ -1716,7 +1699,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               static_cast<double>(tune.CaptureIdlePendingMaxWallMs);
       const bool draw_gate_hot_bypass =
           async_bg && draw_gate_target_pinned &&
-          PendingTerrainColumnRelightKeys.count(draw_gate_target_key) != 0;
+          std::any_of(draw_gate_target_keys.begin(),
+                      draw_gate_target_keys.end(),
+                      [&](glm::ivec2 target_key)
+                      {
+                        return PendingTerrainColumnRelightKeys.count(
+                                   target_key) != 0;
+                      });
       if (!enter_fov_lit && !soft_defer_hole && !miss_rim_pin &&
           !idle_pending_progress && !draw_gate_hot_bypass)
       {
@@ -1988,7 +1977,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       }
     }
     if (frame_ms_so_far >= capture_hot_skip_ms && async_bg &&
-        draw_gate_target_pinned && col == draw_gate_target_key)
+        draw_gate_target_pinned &&
+        std::find(draw_gate_target_keys.begin(),
+                  draw_gate_target_keys.end(), col) !=
+            draw_gate_target_keys.end())
     {
       world.GetPhysicsTelemetryMutable().RelightCaptureHotSkipDrawGate = 1;
     }
