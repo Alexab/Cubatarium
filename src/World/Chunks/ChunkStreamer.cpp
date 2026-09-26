@@ -325,6 +325,10 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
   if (!generated && state.cursor >= kTerrainSubColumnsPerChunk)
   {
     ColumnGenStates.erase(chunkCoord);
+    // Synchronous world generation writes blocks directly and does not pass
+    // through NotifyChunkCommitted. Any earlier false result may therefore be
+    // stale once the cursor has examined the full column.
+    TerrainCompleteCache.erase(chunkCoord);
     const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
     if (existing != nullptr && IsTerrainChunkCompleteCached(chunkCoord))
     {
@@ -338,6 +342,16 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
     return IsTerrainChunkCompleteCached(chunkCoord);
   }
 
+  // Keep the intermediate 32-subcolumn slices cheap. Terrain completeness is
+  // only authoritative after the cursor has visited the whole column; before
+  // then a previously cached false must not prevent the completion scan.
+  if (state.cursor < kTerrainSubColumnsPerChunk)
+  {
+    ProcedurallyGenerated.erase(chunkCoord);
+    return false;
+  }
+
+  TerrainCompleteCache.erase(chunkCoord);
   const bool complete = IsTerrainChunkCompleteCached(chunkCoord);
   if (complete)
   {
