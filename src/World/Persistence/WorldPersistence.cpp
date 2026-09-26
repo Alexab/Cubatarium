@@ -1475,7 +1475,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                    ? 1u << 5
                    : 0u) |
               (cache.IsGpuExtractInFlight(target.rejected_slice) ? 1u << 6
-                                                                  : 0u);
+                                                                  : 0u) |
+              (cache.HasPendingCaptureWork(target.rejected_slice) ? 1u << 7
+                                                                   : 0u);
           trace.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
               target.rejected_slice, trace.mesh_dirty_queue_index,
               trace.mesh_dirty_queue_size);

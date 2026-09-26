@@ -2962,6 +2962,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       trace.relight_band_max_y = relight_queue.max_world_y;
       const bool mesh_dependency_pending =
           cache.HasPendingMeshDependencyInvalidation(coord);
+      const bool pending_capture_work = cache.HasPendingCaptureWork(coord);
       const bool gpu_apply_queued = cache.IsPendingGpuQueued(coord);
       const bool gpu_apply_kicked_or_dispatched =
           cache.IsPendingGpuKickedOrDispatched(coord);
@@ -2977,7 +2978,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           (gpu_apply_kicked_or_dispatched ? 1u << 5 : 0u) |
           (gpu_extract ? 1u << 6 : 0u) | (flow_ticket ? 1u << 7 : 0u) |
           (soft_defer ? 1u << 8 : 0u) | (defer_until_lit ? 1u << 9 : 0u) |
-          (pending_light ? 1u << 10 : 0u);
+          (pending_light ? 1u << 10 : 0u) |
+          (pending_capture_work ? 1u << 11 : 0u);
       trace.flags = static_cast<uint32_t>(
           trace.flags | (fully_dark ? 1u << 9 : 0u) |
           (has_lit_face ? 1u << 10 : 0u) | (stale_dark ? 1u << 11 : 0u) |
@@ -4307,7 +4309,8 @@ int UWorld::CollectDrawGateRelightTargets(
           cache.IsRemeshAfterApplyPending(coord) ||
           cache.IsPendingGpuApply(coord) || cache.IsPendingGpuQueued(coord) ||
           cache.IsPendingGpuKickedOrDispatched(coord) ||
-          cache.IsGpuExtractInFlight(coord);
+          cache.IsGpuExtractInFlight(coord) ||
+          cache.HasPendingCaptureWork(coord);
       if (!baked_light_stale || mesh_work_owned)
       {
         continue;
@@ -4481,7 +4484,8 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
       cache.IsPendingGpuApply(chunk_coord) ||
       cache.IsPendingGpuQueued(chunk_coord) ||
       cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
-      cache.IsGpuExtractInFlight(chunk_coord))
+      cache.IsGpuExtractInFlight(chunk_coord) ||
+      cache.HasPendingCaptureWork(chunk_coord))
   {
     return has_retry_ticket;
   }

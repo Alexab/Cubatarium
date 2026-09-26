@@ -3666,6 +3666,12 @@ int UChunkMeshCache::GetPendingCaptureCount() const
   return static_cast<int>(PendingCaptureSet_.size());
 }
 
+bool UChunkMeshCache::HasPendingCaptureWork(glm::ivec3 chunk_coord) const
+{
+  return PendingCaptureSet_.count(chunk_coord) > 0 ||
+         PendingCaptureReady_.count(chunk_coord) > 0;
+}
+
 void UChunkMeshCache::AgePendingCaptureEntries(const UBlockWorld *world,
                                              const UBlockRegistry *registry)
 {

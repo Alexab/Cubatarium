@@ -265,6 +265,9 @@ public:
     return LastMeshPendingCaptureMaxAge_;
   }
   int GetPendingCaptureCount() const;
+  /// Exact slice ownership in the asynchronous capture stage, including a
+  /// completed capture waiting for the mesh scheduler to consume it.
+  bool HasPendingCaptureWork(glm::ivec3 chunk_coord) const;
   int GetLastMeshDegradedCaptureN() const { return LastMeshDegradedCaptureN_; }
   int GetLastDirtyTouchN() const { return LastDirtyTouchN; }
   int GetLastDirtyRevisitSameN() const { return LastDirtyRevisitSameN; }
