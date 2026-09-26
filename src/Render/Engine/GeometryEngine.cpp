@@ -145,6 +145,9 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   }
 
   static uint64_t traced_epoch = UINT64_MAX;
+  static uint64_t last_sampled_epoch = 0;
+  static bool has_sampled_epoch = false;
+  static bool capture_this_epoch = false;
   static int traced_ready_this_frame = 0;
   static int traced_rejected_this_frame = 0;
   const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
@@ -153,8 +156,24 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
     traced_epoch = frame_epoch;
     traced_ready_this_frame = 0;
     traced_rejected_this_frame = 0;
+    // Sample every few render epochs rather than tracing every frame. The
+    // trace is opt-in and intended to cover a complete flight; an unsampled
+    // full-rate ring otherwise contains only the final seconds of the route.
+    constexpr uint64_t kRendererGateSampleStrideEpochs = 4;
+    capture_this_epoch =
+        !has_sampled_epoch ||
+        frame_epoch >= last_sampled_epoch + kRendererGateSampleStrideEpochs;
+    if (capture_this_epoch)
+    {
+      last_sampled_epoch = frame_epoch;
+      has_sampled_epoch = true;
+    }
   }
-  constexpr int kMaxRendererGateTracesPerOutcomePerFrame = 16;
+  if (!capture_this_epoch)
+  {
+    return;
+  }
+  constexpr int kMaxRendererGateTracesPerOutcomePerFrame = 4;
   int &outcome_count =
       draw_gate_ready ? traced_ready_this_frame : traced_rejected_this_frame;
   if (outcome_count >= kMaxRendererGateTracesPerOutcomePerFrame)
