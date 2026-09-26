@@ -6525,6 +6525,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++LastMeshDirtyPruneN;
         continue;
       }
+      // A renderer-rejected visible repair is an outstanding render
+      // obligation. Enter/quiesce housekeeping may not transfer it to a
+      // passive held state or erase it before a replacement is scheduled.
+      if (Dirty.IsPriorityRemesh(*it))
+      {
+        ++it;
+        continue;
+      }
       int horiz = 999;
       if (MeshFocusValid)
       {
@@ -6639,6 +6647,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       for (auto it = Dirty.begin(); it != Dirty.end();)
       {
+        // This prune is an admission optimization for ordinary remesh work.
+        // Keep exact renderer-visible repair tickets in the active queue.
+        if (Dirty.IsPriorityRemesh(*it))
+        {
+          ++it;
+          continue;
+        }
         // SoftDefer remesh: drop. Era22 I-S1: under miss/focus !Drawable
         // FirstMesh keep Dirty for schedule (not RemoveAt / Held-park forever).
         // Outside !Drawable → SoftDeferHeld (requeue when MayMesh/focus).
@@ -6864,7 +6879,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                      std::abs(it->z - MeshFocusGroundChunk.z));
           if (horiz > 0 && horiz > compact_horiz &&
               GreedyCache.find(*it) != GreedyCache.end() &&
-              !Dirty.IsFirstMesh(*it))
+              !Dirty.IsFirstMesh(*it) && !Dirty.IsPriorityRemesh(*it))
           {
             it = Dirty.RemoveAt(it);
             ++LastMeshDirtyPruneN;
@@ -7201,14 +7216,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           return Dirty.end();
         }
       }
-      if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0)
+      if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0 &&
+          !Dirty.IsPriorityRemesh(*it))
       {
         trace_visible_schedule(4, 0);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipOtherN;
         return Dirty.RemoveAt(it);
       }
-      if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
+      if (EnterLitQuiesce && HasDrawableGreedyMesh(*it) &&
+          !Dirty.IsPriorityRemesh(*it))
       {
         // Era49: keep FullyDark remesh Dirty under enter quiesce.
         if (ChunkHasFullyDarkFace(*it))
@@ -7226,7 +7243,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // SoftDeferHeld: SoftDefer ON → SoftDefer owns (RemoveAt). SoftDefer
       // lifted under enter → erase Held keep Dirty.
       if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0 &&
-          !ChunkHasFullyDarkFace(*it))
+          !ChunkHasFullyDarkFace(*it) && !Dirty.IsPriorityRemesh(*it))
       {
         const bool soft_still =
             DeferMeshUntilLit && DeferMeshUntilLit(*it);
@@ -7348,6 +7365,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         else
         {
           trace_visible_schedule(10, 0);
+          if (Dirty.IsPriorityRemesh(*it))
+          {
+            ++LastMeshDirtyScheduleSkipN;
+            ++LastMeshDirtyScheduleSkipSoftDeferN;
+            return std::next(it);
+          }
           if (!has_drawable)
           {
             HoldSoftDeferFirstMesh(*it);
@@ -7365,7 +7388,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           return Dirty.RemoveAt(it);
         }
       }
-      if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
+      if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it) &&
+          !Dirty.IsPriorityRemesh(*it))
       {
         // Keep near-ring remesh for neighbor black-face repair beside holes.
         // G1/195525: FullyDark lit-ring remesh must schedule under hole starve.
@@ -7929,19 +7953,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       // Era47: enter lit-quiesce — drop lit drawable remesh Dirty (gate blocker).
       // Era49: keep FullyDark drawable Dirty until lit GPU commit.
-      if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0)
+      if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0 &&
+          !Dirty.IsPriorityRemesh(*it))
       {
         it = Dirty.RemoveAt(it);
         continue;
       }
       if (EnterLitQuiesce && HasDrawableGreedyMesh(*it) &&
-          !ChunkHasFullyDarkFace(*it))
+          !ChunkHasFullyDarkFace(*it) && !Dirty.IsPriorityRemesh(*it))
       {
         it = Dirty.RemoveAt(it);
         continue;
       }
       if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0 &&
-          !ChunkHasFullyDarkFace(*it))
+          !ChunkHasFullyDarkFace(*it) && !Dirty.IsPriorityRemesh(*it))
       {
         it = Dirty.RemoveAt(it);
         continue;
@@ -7979,7 +8004,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // D1c: when drain-first left schedule=1 under miss, never spend it on remesh.
       // G1-P1: remesh snapshot slice under debt may use that slot.
       if (!reserve_remesh_snap && focus_missing_for_schedule &&
-          max_schedule_per_frame <= 1 && HasDrawableGreedyMesh(*it))
+          max_schedule_per_frame <= 1 && HasDrawableGreedyMesh(*it) &&
+          !Dirty.IsPriorityRemesh(*it))
       {
         // ColdWall S0c: remesh starve under miss — erase Dirty (not leave-in).
         it = Dirty.RemoveAt(it);
@@ -7989,6 +8015,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const bool is_remesh = HasDrawableGreedyMesh(*it);
       // A42c: miss floor is LightRepair / FullyDark Published remesh only.
       if (is_remesh && light_repair_only_under_miss &&
+          !Dirty.IsPriorityRemesh(*it) &&
           !((IsLightRepairRemesh && IsLightRepairRemesh(*it)) ||
             ChunkHasFullyDarkFace(*it) ||
             ChunkHasStaleDarkFaces(*it, world)))
@@ -8006,6 +8033,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // ColdPL-2A: defer over-cap remesh (not leave-in revisit churn).
         if (!Dirty.IsFirstMesh(*it))
         {
+          if (Dirty.IsPriorityRemesh(*it))
+          {
+            ++it;
+            continue;
+          }
           if (!skip_defer_lit_ring(*it))
           {
             DeferRemeshCoord(*it);
@@ -8044,7 +8076,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               (dirty_n > 400 || in_flight >= 32) ? MeshFocusRadiusChunks
                                                  : MeshFocusRadiusChunks + 1;
           if (dirty_n > 400 && GreedyCache.find(*it) != GreedyCache.end() &&
-              horiz > drop_horiz)
+              horiz > drop_horiz && !Dirty.IsPriorityRemesh(*it))
           {
             it = Dirty.RemoveAt(it);
             continue;
@@ -8062,7 +8094,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           }
           if (outside_focus_scheduled >= outside_cap)
           {
-            if (is_remesh && HasDrawableGreedyMesh(*it))
+            if (is_remesh && HasDrawableGreedyMesh(*it) &&
+                !Dirty.IsPriorityRemesh(*it))
             {
               if (!skip_defer_lit_ring(*it))
               {
@@ -8129,6 +8162,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         else
         {
+          if (Dirty.IsPriorityRemesh(*it))
+          {
+            ++LastMeshDirtyScheduleSkipN;
+            ++LastMeshDirtyScheduleSkipSoftDeferN;
+            ++it;
+            continue;
+          }
           if (!has_drawable)
           {
             HoldSoftDeferFirstMesh(*it);
@@ -8138,7 +8178,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           continue;
         }
       }
-      if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
+      if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it) &&
+          !Dirty.IsPriorityRemesh(*it))
       {
         // Keep near-ring remesh for neighbor black-face repair beside holes.
         // G1/195525: FullyDark lit-ring remesh must schedule under hole starve.
