@@ -2099,15 +2099,34 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       const UChunk *chunk =
           BlockWorld.GetChunkManager().GetChunk(chunk_coord);
       const bool air_only = chunk && chunk->IsAirOnly();
+      const uint64_t field_light_rev = chunk ? chunk->GetLightFieldRevision() : 0;
+      const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+      const uint64_t meshed_light_rev =
+          cache.GetMeshedLightRevision(chunk_coord);
+      const bool settled_light_current =
+          demand && chunk && demand->incarnation == chunk->GetIncarnation() &&
+          demand->has_settled_light &&
+          demand->settled_light_rev == field_light_rev;
+      const bool demand_light_current =
+          !demand ||
+          (chunk && demand->incarnation == chunk->GetIncarnation() &&
+           demand->desired_light_rev <= demand->published_light_rev);
+      const bool dark_image_current = CurrentDarkSliceImageMayDraw(
+          fully_dark, settled_light_current, stale, demand_light_current,
+          field_light_rev, published.light_rev, meshed_light_rev);
+      // Revision equality at zero is not proof that this slice was lit. A
+      // dark image needs the same per-slice settlement and publication checks
+      // as the renderer before the shadow policy may classify it as legal.
       const bool light_unsatisfied =
-          demand && demand->desired_light_rev > demand->published_light_rev;
+          (demand && demand->desired_light_rev > demand->published_light_rev) ||
+          (fully_dark && !dark_image_current);
       const bool geom_unsatisfied =
           (demand && demand->desired_geom_rev > demand->published_geom_rev) ||
           (!has_greedy_mesh && !air_only);
       const VisualObligation shadow_obligation = ClassifyVisualObligation(
           has_lit_drawable || air_only, fully_dark, stale || light_unsatisfied,
           EnterVisualGateCtrl.WasOpenSkyApplied(col_xz),
-          column && column->legal_dark_settled,
+          column && column->legal_dark_settled && dark_image_current,
           cache.IsSoftDeferHeld(chunk_coord), geom_unsatisfied);
       shadow_ready = VisualObligationAllowsDraw(shadow_obligation);
       if (shadow_ready != ready)
