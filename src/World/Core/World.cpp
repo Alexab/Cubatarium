@@ -1566,24 +1566,6 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
       return;
     }
   }
-  if (MeshService)
-  {
-    const uint64_t world_epoch =
-        MeshService->GetCache().GetCaptureStore().WorldEpoch();
-    const int min_cy = std::max(0, FloorDiv(std::max(0, min_y), CHUNK_SIZE));
-    const int max_cy = std::min(
-        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE),
-        FloorDiv(std::min(max_y, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
-    for (int cy = min_cy; cy <= max_cy; ++cy)
-    {
-      const glm::ivec3 coord(ground.x, cy, ground.z);
-      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
-      {
-        UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
-            coord, world_epoch, chunk->GetIncarnation());
-      }
-    }
-  }
   SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
   // A40: new light debt invalidates prior LegalDark settlement stamp.
   ColumnRecord &pl_rec = ColumnRecords.GetOrCreate(key);
@@ -1616,9 +1598,56 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
     ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
     return;
   }
+  const int note_min_y = std::max(0, min_y);
+  const auto invalidate_slice_band = [&](int band_min_y, int band_max_y)
+  {
+    if (!MeshService || band_max_y < band_min_y)
+    {
+      return;
+    }
+    const uint64_t world_epoch =
+        MeshService->GetCache().GetCaptureStore().WorldEpoch();
+    const int min_cy =
+        std::max(0, FloorDiv(std::max(0, band_min_y), CHUNK_SIZE));
+    const int max_cy = std::min(
+        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE),
+        FloorDiv(std::min(band_max_y, ProceduralTemplate.MaxHeight),
+                 CHUNK_SIZE));
+    for (int cy = min_cy; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(ground.x, cy, ground.z);
+      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
+            coord, world_epoch, chunk->GetIncarnation());
+      }
+    }
+  };
   if (inserted)
   {
-    it->second.min_y = std::max(0, min_y);
+    invalidate_slice_band(note_min_y, max_y);
+  }
+  else
+  {
+    // Repeated notes for an already-covered interval are queue coalescing,
+    // not new light work. Only invalidate slices newly added to the column's
+    // relight coverage; otherwise duplicate notes can erase a completed
+    // per-slice settlement every frame while the same FIFO item is pending.
+    const int covered_min_y = it->second.min_y;
+    const int covered_max_y = it->second.max_y;
+    if (note_min_y < covered_min_y)
+    {
+      invalidate_slice_band(note_min_y,
+                            std::min(max_y, covered_min_y - 1));
+    }
+    if (max_y > covered_max_y)
+    {
+      invalidate_slice_band(std::max(note_min_y, covered_max_y + 1), max_y);
+    }
+  }
+  if (inserted)
+  {
+    it->second.min_y = note_min_y;
     it->second.max_y = max_y;
     return;
   }
