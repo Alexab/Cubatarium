@@ -5149,10 +5149,10 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     if (UJobStageTrace::VisualBlackTraceEnabled())
     {
       const glm::ivec3 coord =
-          have_light_mismatch_coord
-              ? first_light_mismatch_coord
-              : (have_stale_coord ? first_stale_coord
-                                  : first_fully_dark_coord);
+          have_stale_coord
+              ? first_stale_coord
+              : (have_light_mismatch_coord ? first_light_mismatch_coord
+                                           : first_fully_dark_coord);
       UChunkMeshCache::LitApplyMeshProbe probe{};
       MeshService->FillLitApplyMeshProbe(coord, probe);
       uint64_t field_light_rev = 0;
@@ -5163,6 +5163,8 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       const MeshPublishRevs published =
           MeshService->GetCache().GetMeshPublishRevs(coord);
       VisualBlackTraceRecord trace{};
+      trace.focus_cx = focus_ground_chunk.x;
+      trace.focus_cz = focus_ground_chunk.z;
       trace.cx = coord.x;
       trace.cy = coord.y;
       trace.cz = coord.z;
@@ -5172,8 +5174,9 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       trace.field_light_rev = field_light_rev;
       trace.published_geom_rev = published.geom_rev;
       trace.published_light_rev = published.light_rev;
-      const bool slice_stale_dark =
-          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+      UChunkMeshCache::StaleDarkWitness stale_witness{};
+      const bool slice_stale_dark = MeshService->GetCache().ChunkHasStaleDarkFaces(
+          coord, BlockWorld, &stale_witness);
       const bool slice_lit_drawable =
           MeshService->ChunkHasLitDrawableFace(coord);
       const bool slice_any_dark_face =
@@ -5197,17 +5200,43 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       {
         trace.world_epoch = demand->world_epoch;
         trace.incarnation = demand->incarnation;
+        trace.demand_incarnation = demand->incarnation;
         trace.attempt_id = demand->has_active_attempt
                                ? demand->active_attempt_id
                                : 0;
         trace.desired_geom_rev = demand->desired_geom_rev;
         trace.desired_light_rev = demand->desired_light_rev;
+        trace.demand_published_geom_rev = demand->published_geom_rev;
+        trace.demand_published_light_rev = demand->published_light_rev;
+        trace.settled_light_rev = demand->settled_light_rev;
+        trace.has_settled_light = demand->has_settled_light ? 1 : 0;
         trace.active_stage = static_cast<uint8_t>(demand->active_stage);
         trace.face_debt_mask = demand->face_debt_mask;
         if (demand->has_active_attempt)
         {
           trace.flags = static_cast<uint16_t>(trace.flags | (1u << 15));
         }
+      }
+      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        trace.non_air_blocks = chunk->GetNonAirCount();
+        trace.chunk_content_revision = chunk->GetContentRevision();
+        trace.incarnation = chunk->GetIncarnation();
+      }
+      trace.mesh_revision = MeshService->GetChunkMeshRevision(coord);
+      if (slice_stale_dark)
+      {
+        trace.stale_sample_x = stale_witness.sampled_block.x;
+        trace.stale_sample_y = stale_witness.sampled_block.y;
+        trace.stale_sample_z = stale_witness.sampled_block.z;
+        trace.stale_source_cx = stale_witness.source_chunk.x;
+        trace.stale_source_cy = stale_witness.source_chunk.y;
+        trace.stale_source_cz = stale_witness.source_chunk.z;
+        trace.stale_source_incarnation = stale_witness.source_incarnation;
+        trace.stale_source_light_rev = stale_witness.source_light_revision;
+        trace.stale_face_index = stale_witness.face_index;
+        trace.stale_sample_light = stale_witness.packed_light;
+        trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
       }
       UJobStageTrace::NoteVisualBlack(trace);
     }
