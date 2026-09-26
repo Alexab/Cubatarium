@@ -1980,6 +1980,15 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
       ++it;
       continue;
     }
+    // Renderer-rejected visible light repairs are bounded priority remeshes.
+    // Keep their exact slice work through both radius pruning and the later
+    // scheduler pass; otherwise draw-gate retries repeatedly enqueue work
+    // that this same frame's backlog policy immediately erases.
+    if (Dirty.IsPriorityRemesh(*it))
+    {
+      ++it;
+      continue;
+    }
     // Cruise: never drop first-mesh Dirty (creates holes in the focus ring).
     // Empty SoftDefer placeholders are !Drawable — protect like !HasGreedy.
     // Phase 5.7R7.2.1: Cut B fingerprint/cheap SoftDefer skip reverted after
