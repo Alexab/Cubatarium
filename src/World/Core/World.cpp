@@ -1776,6 +1776,20 @@ bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
   return PendingLightBeforeMesh.find(ground_xz) != PendingLightBeforeMesh.end();
 }
 
+bool UWorld::HasPendingLightForSlice(glm::ivec3 chunk_coord) const
+{
+  const auto it = PendingLightBeforeMesh.find(
+      glm::ivec2(chunk_coord.x, chunk_coord.z));
+  if (it == PendingLightBeforeMesh.end())
+  {
+    return false;
+  }
+  const int slice_min_y = chunk_coord.y * CHUNK_SIZE;
+  const int slice_max_y = slice_min_y + CHUNK_SIZE - 1;
+  return it->second.min_y <= slice_max_y &&
+         it->second.max_y >= slice_min_y;
+}
+
 void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
 {
   if (ground.y != 0)
@@ -2125,6 +2139,38 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
         const bool legal_settled = rec && rec->legal_dark_settled;
         const bool light_repair =
             rec && rec->visual_obligation == VisualObligation::LightRepair;
+        const UChunk *slice_chunk =
+            BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+        const uint64_t field_light_rev =
+            slice_chunk ? slice_chunk->GetLightFieldRevision() : 0;
+        const MeshPublishRevs published_revs =
+            MeshService->GetCache().GetMeshPublishRevs(chunk_coord);
+        const uint64_t meshed_light_rev =
+            MeshService->GetCache().GetMeshedLightRevision(chunk_coord);
+        const ChunkRenderDemandRecord *slice_demand =
+            UChunkRenderDemandStore::Get().Find(chunk_coord);
+        const bool demand_light_current =
+            !slice_demand ||
+            (slice_chunk &&
+             slice_demand->incarnation == slice_chunk->GetIncarnation() &&
+             slice_demand->desired_light_rev <=
+                 slice_demand->published_light_rev &&
+             slice_demand->published_light_rev == field_light_rev);
+        // Keep an existing dark image visible when this slice's light data is
+        // settled and its mesh still matches that data. Column-wide geometry
+        // or relight work can belong to another Y slice; hiding this drawable
+        // while that work runs turns retained meshes into visible holes.
+        // If lighting changes, the stale-dark witness closes the gate until a
+        // matching replacement is published.
+        const bool current_dark_image =
+            lit_ready && slice_chunk && !stale &&
+            !HasPendingLightForSlice(chunk_coord) && demand_light_current &&
+            published_revs.light_rev == field_light_rev &&
+            meshed_light_rev == field_light_rev;
+        if (current_dark_image)
+        {
+          return memo(true);
+        }
         const bool true_dark = EnterFullyDarkColumnSettled(
             open_sky, pending, lit_ready, stale, /*has_lit_drawable=*/false,
             legal_settled);
