@@ -91,6 +91,9 @@ struct DrawGateRelightTarget
   int min_world_y{0};
   int max_world_y{0};
   glm::ivec3 rejected_slice{0};
+  /// The current light field is settled but this slice's mesh baked an older
+  /// light revision, so it needs a mesh rebuild without another relight.
+  bool settled_mesh_repair{false};
 };
 
 /// Per-column focus-ring status used to explain visually unfinished terrain.
@@ -1213,6 +1216,9 @@ public:
   int CollectDrawGateRelightTargets(
       glm::ivec3 focus_ground_chunk, int radius_chunks,
       std::vector<DrawGateRelightTarget> &out, int max_cols) const;
+  /// Queue one exact mesh-only repair after the draw gate observes that its
+  /// resident slice has a current settled field and stale baked light.
+  bool QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord);
   /// Remember a mesh rejected by a renderer draw gate so streaming can repair
   /// the exact visible slice on its next update.
   void NoteRendererDrawGateRejection(glm::ivec3 chunk_coord);

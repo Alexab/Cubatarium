@@ -3211,6 +3211,8 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.renderer_column_draw_ok)
                << ",\"renderer_column_has_repair_ticket\":"
                << static_cast<int>(r.renderer_column_has_repair_ticket)
+               << ",\"draw_gate_repair_mode\":"
+               << static_cast<int>(r.draw_gate_repair_mode)
                << ",\"relight_queue_kind\":"
                << static_cast<int>(r.relight_queue_kind)
                << ",\"relight_y_band_defined\":"

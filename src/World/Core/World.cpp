@@ -4197,7 +4197,10 @@ int UWorld::CollectDrawGateRelightTargets(
     uint64_t observed_epoch{0};
   };
   std::unordered_map<glm::ivec2, Candidate, IVec2Hash> candidates;
+  std::unordered_map<glm::ivec2, Candidate, IVec2Hash>
+      settled_mesh_candidates;
   candidates.reserve(RecentRendererDrawGateRejections.size());
+  settled_mesh_candidates.reserve(RecentRendererDrawGateRejections.size());
 
   // Use the actual rejected draw refs from the previous render frame. A broad
   // radial scan selected unrelated dark meshes and could flood relight/GPU
@@ -4264,6 +4267,8 @@ int UWorld::CollectDrawGateRelightTargets(
           source_demand->settled_light_rev ==
               source_chunk->GetLightFieldRevision();
     }
+    const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+    bool settled_mesh_repair = false;
     // A current settlement proves the light field is already calculated.
     // If the rejected mesh still carries stale baked light, the remaining
     // obligation is a mesh rebuild/publication. Re-enqueueing relight for that
@@ -4272,9 +4277,22 @@ int UWorld::CollectDrawGateRelightTargets(
     if (slice_light_settled && stale_source_light_settled &&
         field_light_rev != 0)
     {
-      continue;
+      const bool baked_light_stale =
+          published.light_rev < field_light_rev ||
+          cache.GetMeshedLightRevision(coord) < field_light_rev;
+      const bool mesh_work_owned =
+          cache.IsChunkMeshDirty(coord) ||
+          MeshService->HasInflightMeshBuild(coord) ||
+          cache.IsRemeshAfterApplyPending(coord) ||
+          cache.IsPendingGpuApply(coord) || cache.IsPendingGpuQueued(coord) ||
+          cache.IsPendingGpuKickedOrDispatched(coord) ||
+          cache.IsGpuExtractInFlight(coord);
+      if (!baked_light_stale || mesh_work_owned)
+      {
+        continue;
+      }
+      settled_mesh_repair = true;
     }
-    const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
     const bool current_dark_image = CurrentDarkSliceImageMayDraw(
         fully_dark, slice_light_settled, stale_light, demand_light_current,
         field_light_rev, published.light_rev,
@@ -4288,17 +4306,24 @@ int UWorld::CollectDrawGateRelightTargets(
     }
     ++repairable_n;
 
-    const int min_cy = stale_light ? std::min(coord.y, witness.source_chunk.y)
-                                   : coord.y;
-    const int max_cy = stale_light ? std::max(coord.y, witness.source_chunk.y)
-                                   : coord.y;
+    const int min_cy =
+        !settled_mesh_repair && stale_light
+            ? std::min(coord.y, witness.source_chunk.y)
+            : coord.y;
+    const int max_cy =
+        !settled_mesh_repair && stale_light
+            ? std::max(coord.y, witness.source_chunk.y)
+            : coord.y;
     const int min_world_y = std::clamp(min_cy * CHUNK_SIZE, 0, max_y);
     const int max_world_y =
         std::clamp((max_cy + 1) * CHUNK_SIZE - 1, 0, max_y);
     const int vertical_distance = std::abs(coord.y - focus_ground_chunk.y);
-    auto [it, inserted] = candidates.try_emplace(
-        column, Candidate{{column, min_world_y, max_world_y, coord}, horiz,
-                          vertical_distance, observed_epoch});
+    auto &candidate_set =
+        settled_mesh_repair ? settled_mesh_candidates : candidates;
+    auto [it, inserted] = candidate_set.try_emplace(
+        column, Candidate{{column, min_world_y, max_world_y, coord,
+                           settled_mesh_repair},
+                          horiz, vertical_distance, observed_epoch});
     if (!inserted)
     {
       it->second.target.min_world_y =
@@ -4318,8 +4343,13 @@ int UWorld::CollectDrawGateRelightTargets(
   }
 
   std::vector<Candidate> ordered;
-  ordered.reserve(candidates.size());
+  ordered.reserve(candidates.size() + settled_mesh_candidates.size());
   for (const auto &[column, candidate] : candidates)
+  {
+    (void)column;
+    ordered.push_back(candidate);
+  }
+  for (const auto &[column, candidate] : settled_mesh_candidates)
   {
     (void)column;
     ordered.push_back(candidate);
@@ -4363,6 +4393,59 @@ int UWorld::CollectDrawGateRelightTargets(
     UJobStageTrace::NoteVisualBlack(trace);
   }
   return static_cast<int>(out.size());
+}
+
+bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord)
+{
+  if (!MeshService || !MeshService->HasDrawableGreedyMesh(chunk_coord))
+  {
+    return false;
+  }
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(chunk_coord);
+  if (!chunk || !demand || demand->incarnation != chunk->GetIncarnation() ||
+      !demand->has_settled_light || chunk->GetLightFieldRevision() == 0 ||
+      demand->settled_light_rev != chunk->GetLightFieldRevision())
+  {
+    return false;
+  }
+  UChunkMeshCache &cache = MeshService->GetCache();
+  const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+  if (published.light_rev >= field_light_rev &&
+      cache.GetMeshedLightRevision(chunk_coord) >= field_light_rev)
+  {
+    return false;
+  }
+  if (cache.IsChunkMeshDirty(chunk_coord) ||
+      MeshService->HasInflightMeshBuild(chunk_coord) ||
+      cache.IsRemeshAfterApplyPending(chunk_coord) ||
+      cache.IsPendingGpuApply(chunk_coord) ||
+      cache.IsPendingGpuQueued(chunk_coord) ||
+      cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
+      cache.IsGpuExtractInFlight(chunk_coord))
+  {
+    return false;
+  }
+
+  // Force the next capture to read the already-settled current field. A cached
+  // dark snapshot can otherwise bake the same stale vertex light again.
+  cache.InvalidateMeshCapture(chunk_coord);
+  MeshService->MarkDirty(chunk_coord);
+  if (!cache.IsChunkMeshDirty(chunk_coord))
+  {
+    return false;
+  }
+  (void)cache.PrioritizeVisibleLightRepairRemesh(chunk_coord);
+  ColumnRecord &column_record = GetColumnRecords().GetOrCreate(
+      glm::ivec2(chunk_coord.x, chunk_coord.z));
+  column_record.legal_dark_settled = false;
+  column_record.visual = ColumnVisualState::NeedRemesh;
+  column_record.visual_obligation = VisualObligation::GeomRepair;
+  SetColumnEmergeState(glm::ivec3(chunk_coord.x, 0, chunk_coord.z),
+                       ColumnEmergeState::Meshing);
+  return true;
 }
 
 void UWorld::NoteRendererDrawGateRejection(glm::ivec3 chunk_coord)

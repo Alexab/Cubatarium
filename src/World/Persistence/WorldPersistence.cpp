@@ -1340,8 +1340,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     protected_visible_columns.reserve(draw_gate_targets.size());
     for (const DrawGateRelightTarget &target : draw_gate_targets)
     {
-      protected_visible_columns.emplace_back(target.column.x,
-                                             target.column.y);
+      if (!target.settled_mesh_repair)
+      {
+        protected_visible_columns.emplace_back(target.column.x,
+                                               target.column.y);
+      }
     }
     for (auto target_it = draw_gate_targets.rbegin();
          target_it != draw_gate_targets.rend(); ++target_it)
@@ -1360,7 +1363,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       uint8_t draw_gate_admission_outcome = 0;
       int draw_gate_victim_horiz = -1;
       bool target_pinned = false;
-      if (already_queued || !already_inflight)
+      if (target.settled_mesh_repair)
+      {
+        target_pinned = world.QueueSettledDrawGateMeshRepair(
+            target.rejected_slice);
+        // 11=queued an exact mesh-only repair, 12=the mesh obligation changed
+        // or could not be admitted before dispatch.
+        draw_gate_admission_outcome = target_pinned ? 11 : 12;
+      }
+      else if (already_queued || !already_inflight)
       {
         target_pinned = EnqueueVisibleDrawGateRelight(
             draw_gate_target_key.x, draw_gate_target_key.y,
@@ -1404,6 +1415,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         trace.camera_y = focus_block.y;
         trace.camera_z = focus_block.z;
         trace.draw_gate_ready = 0;
+        trace.draw_gate_repair_mode =
+            target.settled_mesh_repair ? 1u : 0u;
         trace.flags = target_pinned ? 4u
                       : (already_inflight && !already_queued ? 1u : 2u);
         if (!target_pinned)
@@ -1431,6 +1444,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         if (world.MeshService)
         {
           const auto &cache = world.MeshService->GetCache();
+          trace.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+              target.rejected_slice, trace.mesh_dirty_queue_index,
+              trace.mesh_dirty_queue_size);
           trace.mesh_revision =
               cache.GetChunkMeshRevision(target.rejected_slice);
           const MeshPublishRevs published =

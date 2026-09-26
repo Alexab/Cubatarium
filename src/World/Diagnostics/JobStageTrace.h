@@ -131,6 +131,8 @@ struct VisualBlackTraceRecord
   uint8_t renderer_column_reason{0};
   uint8_t renderer_column_draw_ok{0};
   uint8_t renderer_column_has_repair_ticket{0};
+  /// sample_kind=3: 1=settled field needs mesh-only repair; 0=relight target.
+  uint8_t draw_gate_repair_mode{0};
   /// Focus sample's persistence relight queue location/band at capture time.
   /// 0=not keyed, 1=priority deque, 2=far deque, 3=keyed but absent from deque.
   uint8_t relight_queue_kind{0};
