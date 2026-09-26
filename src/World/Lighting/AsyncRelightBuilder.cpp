@@ -6,8 +6,10 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Streaming/DependencyStampBuilder.h"
+#include "App/Platform/Log.h"
 #include <algorithm>
 #include <atomic>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -80,6 +82,9 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
                                       RelightJobSpec spec,
                                       const UBlockRegistry &registry)
 {
+  const bool audit_relight =
+      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  const auto capture_started = std::chrono::steady_clock::now();
   const uint64_t submit_epoch = Epoch.load(std::memory_order_acquire);
   const uint64_t job_id =
       spec.job_id > 0 ? spec.job_id
@@ -107,6 +112,30 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
     deps = BuildRelightDependencyStamp(world, chunk, registry);
   }
   snapshot.SetSubmitContext(work_token, deps);
+  const double capture_ms = std::chrono::duration<double, std::milli>(
+                                std::chrono::steady_clock::now() - capture_started)
+                                .count();
+  const int captured_full_n = snapshot.GetCapturedFullChunks();
+  const int captured_neighbor_light_n =
+      snapshot.GetCapturedNeighborLightChunks();
+  if (audit_relight)
+  {
+    const glm::ivec3 source = spec.block_positions.empty()
+                                  ? glm::ivec3(-1)
+                                  : spec.block_positions.front();
+    CubatariumLogInfo(
+        "RelightAudit",
+        "snapshot job=" + std::to_string(job_id) + " source=(" +
+            std::to_string(source.x) + "," + std::to_string(source.y) + "," +
+            std::to_string(source.z) + ") band=" +
+            std::to_string(spec.min_world_y) + ":" +
+            std::to_string(spec.max_world_y) + " capture_ms=" +
+            std::to_string(capture_ms) + " full=" +
+            std::to_string(captured_full_n) + " neighbor_light=" +
+            std::to_string(captured_neighbor_light_n) + " finalize=" +
+            std::to_string(spec.finalize_pending_gate) + " draw_gate=" +
+            std::to_string(spec.visible_draw_gate_repair));
+  }
 
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
@@ -139,10 +168,34 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
 
   Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
                 catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
-                work_slot = std::move(work_slot)]() mutable
+                work_slot = std::move(work_slot), audit_relight,
+                captured_full_n, captured_neighbor_light_n]() mutable
                {
                  (void)work_slot;
+                 const auto compute_started = std::chrono::steady_clock::now();
+                 if (audit_relight)
+                 {
+                   CubatariumLogInfo("RelightAudit",
+                       "worker_start job=" + std::to_string(job_id));
+                 }
                  RelightComputeResult result = snapshot.Compute(*registry);
+                 const double compute_ms = std::chrono::duration<double, std::milli>(
+                                               std::chrono::steady_clock::now() - compute_started)
+                                               .count();
+                 if (audit_relight)
+                 {
+                   CubatariumLogInfo(
+                       "RelightAudit",
+                       "worker_done job=" + std::to_string(job_id) +
+                           " compute_ms=" + std::to_string(compute_ms) +
+                           " full=" + std::to_string(captured_full_n) +
+                           " neighbor_light=" +
+                           std::to_string(captured_neighbor_light_n) +
+                           " chunks=" + std::to_string(result.chunks.size()) +
+                           " read_set=" + std::to_string(result.read_set.size()) +
+                           " frontier_unfinished=" +
+                           std::to_string(result.frontier_unfinished));
+                 }
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
                  result.work_token = snapshot.GetWorkToken();

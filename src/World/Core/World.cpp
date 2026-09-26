@@ -6214,6 +6214,21 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       ++PhysicsTelemetryData.RelightApplyPartialN;
     }
+    if (audit_relight)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "apply job=" + std::to_string(result.job_id) +
+              " source_count=" +
+              std::to_string(result.source_block_positions.size()) +
+              " chunks=" + std::to_string(result.chunks.size()) +
+              " changed=" +
+              std::to_string(light_changes.changed_coords.size()) +
+              " stale_mesh=" + std::to_string(stale_mesh_coords.size()) +
+              " finalize=" +
+              std::to_string(result.finalize_pending_gate) + " draw_gate=" +
+              std::to_string(result.visible_draw_gate_repair));
+    }
     // Ensure inflight tracking clears even when MarkRelit only remeshed
     // neighbors (primary already erased inside MarkRelit).
     for (const glm::ivec2 &g : primary_grounds)

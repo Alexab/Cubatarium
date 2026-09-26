@@ -29,12 +29,14 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Lighting/ChunkLighting.h"
+#include "App/Platform/Log.h"
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Math/GridMath.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
+#include <cstdlib>
 #include <queue>
 #include <unordered_set>
 
@@ -819,6 +821,35 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                            int max_bg_columns)
 {
   auto &capture_telem = world.GetPhysicsTelemetryMutable();
+  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  auto log_capture_state = [&](const char *phase, int cap, int drained)
+  {
+    if (!audit_relight)
+    {
+      return;
+    }
+    const glm::ivec3 focus =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    const glm::ivec2 front =
+        !PendingTerrainColumnRelightsPriority.empty()
+            ? PendingTerrainColumnRelightsPriority.front()
+            : (!PendingTerrainColumnRelights.empty()
+                   ? PendingTerrainColumnRelights.front()
+                   : glm::ivec2(-1));
+    CubatariumLogInfo(
+        "RelightAudit",
+        std::string("capture phase=") + phase + " drained=" +
+            std::to_string(drained) + " cap=" + std::to_string(cap) +
+            " stop=" + std::to_string(capture_telem.RelightCaptureStopReason) +
+            " fifo=" + std::to_string(GetPendingTerrainColumnRelightCount()) +
+            " fifo_front=(" + std::to_string(front.x) + "," +
+            std::to_string(front.y) + ") focus=(" +
+            std::to_string(focus.x) + "," + std::to_string(focus.z) +
+            ") pending_light=" +
+            std::to_string(world.GetPendingLightBeforeMeshCount()) +
+            " inflight=" + std::to_string(world.GetAsyncRelightInFlightCount()) +
+            " completed=" + std::to_string(world.GetRelightCompletedSize()));
+  };
   capture_telem.RelightCaptureStopReason = 0;
   capture_telem.RelightCaptureInFlightN = world.GetAsyncRelightInFlightCount();
   capture_telem.RelightCaptureInFlightLimit = 0;
@@ -826,6 +857,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   if (world.BlocksAsyncRelightDrain())
   {
     capture_telem.RelightCaptureStopReason = 1;
+    log_capture_state("blocked", max_bg_columns, 0);
     return;
   }
   capture_telem.RelightCaptureHotSkipDrawGate = 0;
@@ -880,6 +912,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   if (max_bg_columns <= 0)
   {
     capture_telem.RelightCaptureStopReason = 2;
+    log_capture_state("no_budget", max_bg_columns, 0);
     harvest_fifo_overflow();
     return;
   }
@@ -2007,6 +2040,19 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     PendingTerrainColumnRelightKeys.erase(col);
     const auto capture_t0 = std::chrono::high_resolution_clock::now();
+    if (audit_relight)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "capture submit column=(" + std::to_string(ground_xz.x) + "," +
+              std::to_string(ground_xz.y) + ") band=" +
+              std::to_string(relight_min) + ":" + std::to_string(relight_max) +
+              " finalize=" + std::to_string(finalize_gate) +
+              " draw_gate=" + std::to_string(exact_draw_gate_band) +
+              " horiz=" + std::to_string(horiz_dist) +
+              " fifo=" + std::to_string(GetPendingTerrainColumnRelightCount()) +
+              " inflight=" + std::to_string(world.GetAsyncRelightInFlightCount()));
+    }
     if (async_bg)
     {
       world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, relight_min,
@@ -2107,6 +2153,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   while (drain_one())
   {
   }
+  log_capture_state("end", bg_cap, drained_bg);
   harvest_fifo_overflow();
 }
 
