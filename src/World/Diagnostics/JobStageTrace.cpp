@@ -66,6 +66,14 @@ GetMeshScheduleTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kPriorityRemeshTraceRingCapacity> &
+GetPriorityRemeshTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kPriorityRemeshTraceRingCapacity> r;
+  return r;
+}
+
 template <size_t Capacity>
 void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
                      const VisualBlackTraceRecord &record)
@@ -201,11 +209,15 @@ bool UJobStageTrace::VisualBlackTraceEnabled()
 void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
 {
   // Renderer/focus samples are emitted at frame rate. Keep repair admission,
-  // repair-scan summaries, and mesh scheduling in separate rings so the
-  // high-volume view stream cannot overwrite the control path being audited.
+  // repair scans, general mesh scheduling, and priority remesh scheduling in
+  // separate rings so busy first-mesh work cannot overwrite repair outcomes.
   if (record.sample_kind == 3 || record.sample_kind == 5)
   {
     PushVisualTrace(GetVisualRepairTraceRing(), record);
+  }
+  else if (record.sample_kind == 7)
+  {
+    PushVisualTrace(GetPriorityRemeshTraceRing(), record);
   }
   else if (record.sample_kind == 4 || record.sample_kind == 6)
   {
@@ -228,6 +240,7 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   // records because their bounded rings have independent write sequences.
   ForEachVisualTraceNewest(GetVisualRepairTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);
 }
 

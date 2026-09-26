@@ -7139,7 +7139,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           return;
         }
         VisualBlackTraceRecord trace{};
-        trace.sample_kind = trace_first_mesh ? 6 : 4;
+        trace.sample_kind =
+            trace_visible_repair ? 7 : (trace_first_mesh ? 6 : 4);
         trace.cx = schedule_coord.x;
         trace.cy = schedule_coord.y;
         trace.cz = schedule_coord.z;
@@ -7176,6 +7177,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             GpuExtractInFlight.find(schedule_coord) != GpuExtractInFlight.end();
         const bool soft_defer =
             DeferMeshUntilLit && DeferMeshUntilLit(schedule_coord);
+        trace.mesh_work_owner_flags =
+            (Dirty.Contains(schedule_coord) ? 1u << 0 : 0u) |
+            (builder_inflight ? 1u << 1 : 0u) |
+            (IsRemeshAfterApplyPending(schedule_coord) ? 1u << 2 : 0u) |
+            (gpu_apply ? 1u << 3 : 0u) |
+            (gpu_queued ? 1u << 4 : 0u) |
+            (gpu_kicked ? 1u << 5 : 0u) |
+            (gpu_extract ? 1u << 6 : 0u);
         trace.flags = static_cast<uint32_t>(
             (drawable ? 1u << 0 : 0u) |
             (Dirty.IsPriorityRemesh(schedule_coord) ? 1u << 1 : 0u) |

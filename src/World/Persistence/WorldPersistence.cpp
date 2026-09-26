@@ -26,6 +26,7 @@
 #include "World/Core/World.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Lighting/ChunkLighting.h"
@@ -1419,19 +1420,28 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             target.settled_mesh_repair ? 1u : 0u;
         trace.flags = target_pinned ? 4u
                       : (already_inflight && !already_queued ? 1u : 2u);
-        if (!target_pinned)
-        {
-          trace.focus_state = static_cast<uint8_t>(std::min<size_t>(
-              PendingTerrainColumnRelights.size(), UINT8_MAX));
-          trace.active_stage = static_cast<uint8_t>(std::min<size_t>(
-              PendingTerrainColumnRelightsPriority.size(), UINT8_MAX));
-        }
         trace.cause = draw_gate_admission_outcome;
         trace.face_debt_mask = static_cast<uint8_t>(std::clamp(
             draw_gate_victim_horiz, 0, static_cast<int>(UINT8_MAX)));
         trace.relight_y_band_defined = 1;
         trace.relight_band_min_y = target.min_world_y;
         trace.relight_band_max_y = target.max_world_y;
+        if (const ChunkRenderDemandRecord *demand =
+                UChunkRenderDemandStore::Get().Find(target.rejected_slice))
+        {
+          trace.world_epoch = demand->world_epoch;
+          trace.demand_incarnation = demand->incarnation;
+          trace.attempt_id = demand->has_active_attempt
+                                 ? demand->active_attempt_id
+                                 : 0;
+          trace.desired_geom_rev = demand->desired_geom_rev;
+          trace.desired_light_rev = demand->desired_light_rev;
+          trace.demand_published_geom_rev = demand->published_geom_rev;
+          trace.demand_published_light_rev = demand->published_light_rev;
+          trace.settled_light_rev = demand->settled_light_rev;
+          trace.has_settled_light = demand->has_settled_light ? 1u : 0u;
+          trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+        }
         if (const UChunk *chunk = world.GetBlockWorld()
                                       .GetChunkManager()
                                       .GetChunk(target.rejected_slice))
@@ -1444,6 +1454,23 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         if (world.MeshService)
         {
           const auto &cache = world.MeshService->GetCache();
+          trace.mesh_work_owner_flags =
+              (cache.IsChunkMeshDirty(target.rejected_slice) ? 1u << 0 : 0u) |
+              (world.MeshService->HasInflightMeshBuild(target.rejected_slice)
+                   ? 1u << 1
+                   : 0u) |
+              (cache.IsRemeshAfterApplyPending(target.rejected_slice)
+                   ? 1u << 2
+                   : 0u) |
+              (cache.IsPendingGpuApply(target.rejected_slice) ? 1u << 3
+                                                               : 0u) |
+              (cache.IsPendingGpuQueued(target.rejected_slice) ? 1u << 4
+                                                                : 0u) |
+              (cache.IsPendingGpuKickedOrDispatched(target.rejected_slice)
+                   ? 1u << 5
+                   : 0u) |
+              (cache.IsGpuExtractInFlight(target.rejected_slice) ? 1u << 6
+                                                                  : 0u);
           trace.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
               target.rejected_slice, trace.mesh_dirty_queue_index,
               trace.mesh_dirty_queue_size);

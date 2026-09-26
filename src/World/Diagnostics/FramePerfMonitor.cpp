@@ -3132,19 +3132,32 @@ void UFramePerfMonitor::Shutdown()
       const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,
                                       void *p) {
         auto *out = static_cast<std::ofstream *>(p);
-        (*out) << "{\"kind\":\""
-               << (r.sample_kind == 1
-                       ? "focus_slice_trace"
-                       : (r.sample_kind == 2
-                              ? "view_draw_gate_trace"
-                              : (r.sample_kind == 3
-                                     ? "draw_gate_relight_trace"
-                                     : (r.sample_kind == 5
-                                            ? "draw_gate_repair_scan_trace"
-                                            : ((r.sample_kind == 4 ||
-                                                r.sample_kind == 6)
-                                                   ? "mesh_schedule_trace"
-                                                   : "visual_black_trace")))))
+        const char *trace_kind = "visual_black_trace";
+        switch (r.sample_kind)
+        {
+        case 1:
+          trace_kind = "focus_slice_trace";
+          break;
+        case 2:
+          trace_kind = "view_draw_gate_trace";
+          break;
+        case 3:
+          trace_kind = "draw_gate_relight_trace";
+          break;
+        case 4:
+        case 6:
+          trace_kind = "mesh_schedule_trace";
+          break;
+        case 5:
+          trace_kind = "draw_gate_repair_scan_trace";
+          break;
+        case 7:
+          trace_kind = "mesh_repair_trace";
+          break;
+        default:
+          break;
+        }
+        (*out) << "{\"kind\":\"" << trace_kind
                << "\""
                << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                << ",\"cz\":" << r.cz
@@ -3225,6 +3238,8 @@ void UFramePerfMonitor::Shutdown()
                << r.mesh_dirty_queue_index
                << ",\"mesh_dirty_queue_size\":"
                << r.mesh_dirty_queue_size
+               << ",\"mesh_work_owner_flags\":"
+               << r.mesh_work_owner_flags
                << ",\"relight_band_min_y\":" << r.relight_band_min_y
                << ",\"relight_band_max_y\":" << r.relight_band_max_y
                << ",\"draw_gate_scan_recent_n\":"

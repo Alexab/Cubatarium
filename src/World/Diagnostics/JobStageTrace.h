@@ -66,8 +66,9 @@ struct JobStageSpan
 struct VisualBlackTraceRecord
 {
   /// 0=black-attribution, 1=focus slice, 2=renderer draw-gate candidate,
-  /// 3=visible relight-queue admission, 4=visible remesh scheduling attempt,
-  /// 5=draw-gate relight scan counts, 6=near-focus FirstMesh scheduling attempt.
+  /// 3=visible relight-queue admission, 4=ordinary focus remesh attempt,
+  /// 5=draw-gate relight scan counts, 6=near-focus FirstMesh attempt,
+  /// 7=priority-remesh scheduling attempt.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   int32_t cx{0};
@@ -144,6 +145,9 @@ struct VisualBlackTraceRecord
   uint8_t mesh_dirty_queue_kind{0};
   int32_t mesh_dirty_queue_index{-1};
   int32_t mesh_dirty_queue_size{0};
+  /// sample_kind=3/7 bits: dirty, async build, remesh-after-apply, GPU apply,
+  /// GPU queued, GPU kicked/dispatched, and GPU extract owner.
+  uint32_t mesh_work_owner_flags{0};
   int32_t relight_band_min_y{0};
   int32_t relight_band_max_y{-1};
   /// sample_kind=5: counts through CollectDrawGateRelightTargets filters.
@@ -175,9 +179,10 @@ public:
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   static constexpr size_t kVisualRepairTraceRingCapacity = 2048;
   static constexpr size_t kMeshScheduleTraceRingCapacity = 1024;
+  static constexpr size_t kPriorityRemeshTraceRingCapacity = 2048;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
       kVisualBlackTraceRingCapacity + kVisualRepairTraceRingCapacity +
-      kMeshScheduleTraceRingCapacity;
+      kMeshScheduleTraceRingCapacity + kPriorityRemeshTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   static size_t Size();
