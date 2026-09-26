@@ -66,6 +66,7 @@
 #include <cstdint>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <chrono>
 #include <cmath>
@@ -272,6 +273,157 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   }
   record.flags = 1u; // candidate was in the renderer's frustum list pre-gate.
   UJobStageTrace::NoteVisualBlack(record);
+}
+
+void NoteFrustumCoverageGaps(
+    UWorld &world, const UChunkMeshCache &cache, const Frustum &frustum,
+    const glm::vec3 &camera_position,
+    const std::vector<GreedyBatchRef> &opaque_refs,
+    const std::vector<GreedyBatchRef> &transparent_refs)
+{
+  if (!UJobStageTrace::VisualBlackTraceEnabled())
+  {
+    return;
+  }
+  const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
+  static uint64_t last_scanned_epoch = UINT64_MAX;
+  if (last_scanned_epoch == frame_epoch || frame_epoch % 30 != 0)
+  {
+    return;
+  }
+  last_scanned_epoch = frame_epoch;
+
+  std::unordered_set<glm::ivec3, IVec3Hash> draw_refs;
+  draw_refs.reserve(opaque_refs.size() + transparent_refs.size());
+  for (const GreedyBatchRef &ref : opaque_refs)
+  {
+    draw_refs.insert(ref.chunkCoord);
+  }
+  for (const GreedyBatchRef &ref : transparent_refs)
+  {
+    draw_refs.insert(ref.chunkCoord);
+  }
+
+  struct Candidate
+  {
+    glm::ivec3 coord{0};
+    uint8_t state{0}; // 1=no drawable mesh, 2=absent from draw refs, 3=gate
+    float distance_sq{0.0f};
+  };
+  std::vector<Candidate> candidates;
+  candidates.reserve(64);
+  auto &chunks = world.GetBlockWorld().GetChunkManager();
+  const float max_distance = cache.MaxCullDistance();
+  const bool horizontal_distance = cache.UseHorizontalCullDistance();
+  chunks.ForEachChunk([&](const UChunk &chunk)
+  {
+    if (chunk.IsAirOnly() || chunk.GetNonAirCount() == 0)
+    {
+      return;
+    }
+    const glm::ivec3 coord = chunk.GetCoord();
+    if (!frustum.IntersectsChunkAABB(ChunkAABBMin(coord), ChunkAABBMax(coord),
+                                     camera_position, max_distance,
+                                     horizontal_distance))
+    {
+      return;
+    }
+    const bool drawable = cache.HasDrawableGreedyMesh(coord);
+    const bool in_draw_refs = draw_refs.count(coord) != 0;
+    const bool draw_ready = world.IsChunkSliceRenderReady(coord);
+    if (drawable && in_draw_refs && draw_ready)
+    {
+      return;
+    }
+    const glm::vec3 center =
+        (ChunkAABBMin(coord) + ChunkAABBMax(coord)) * 0.5f;
+    const uint8_t state = !drawable ? 1u : (!in_draw_refs ? 2u : 3u);
+    candidates.push_back(
+        {coord, state, glm::dot(center - camera_position,
+                                center - camera_position)});
+  });
+
+  std::sort(candidates.begin(), candidates.end(),
+            [](const Candidate &a, const Candidate &b)
+            {
+              if (a.state != b.state)
+              {
+                return a.state < b.state;
+              }
+              return a.distance_sq < b.distance_sq;
+            });
+
+  constexpr size_t kMaxFrustumCoverageTraces = 12;
+  size_t traced = 0;
+  const glm::ivec3 focus = UChunkManager::WorldToChunk(
+      world.GetPreferredLoadFocusBlock());
+  for (const Candidate &candidate : candidates)
+  {
+    if (traced >= kMaxFrustumCoverageTraces)
+    {
+      break;
+    }
+    const glm::ivec3 coord = candidate.coord;
+    const UChunk *chunk = chunks.GetChunk(coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    const glm::ivec2 column(coord.x, coord.z);
+    const bool drawable = cache.HasDrawableGreedyMesh(coord);
+    const bool satisfying = cache.HasMeshSatisfyingColumnReady(coord);
+    const bool draw_ready = world.IsChunkSliceRenderReady(coord);
+    const ColumnRenderableState column_state =
+        world.GetColumnRenderableState(column);
+
+    VisualBlackTraceRecord record{};
+    record.sample_kind = 8;
+    record.focus_state = candidate.state;
+    record.cx = coord.x;
+    record.cy = coord.y;
+    record.cz = coord.z;
+    record.focus_cx = focus.x;
+    record.focus_cz = focus.z;
+    record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+    record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+    record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+    record.frame_epoch = frame_epoch;
+    record.non_air_blocks = chunk->GetNonAirCount();
+    record.chunk_content_revision = chunk->GetContentRevision();
+    record.incarnation = chunk->GetIncarnation();
+    record.mesh_revision = cache.GetChunkMeshRevision(coord);
+    record.draw_gate_ready = draw_ready ? 1u : 0u;
+    record.renderer_gate_flags = (drawable ? 1u : 0u) |
+                                 (satisfying ? 1u << 1 : 0u) |
+                                 (cache.HasLiveGpuDraw(coord) ? 1u << 2 : 0u) |
+                                 (draw_refs.count(coord) ? 1u << 3 : 0u);
+    record.renderer_column_reason =
+        static_cast<uint8_t>(column_state.reason);
+    record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
+    record.renderer_column_has_repair_ticket =
+        column_state.has_repair_ticket ? 1u : 0u;
+    const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+    record.published_geom_rev = published.geom_rev;
+    record.published_light_rev = published.light_rev;
+    record.meshed_light_rev = cache.GetMeshedLightRevision(coord);
+    record.field_light_rev = chunk->GetLightFieldRevision();
+    record.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+        coord, record.mesh_dirty_queue_index, record.mesh_dirty_queue_size);
+    if (const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(coord))
+    {
+      record.world_epoch = demand->world_epoch;
+      record.demand_incarnation = demand->incarnation;
+      record.attempt_id = demand->has_active_attempt
+                              ? demand->active_attempt_id
+                              : 0;
+      record.desired_geom_rev = demand->desired_geom_rev;
+      record.desired_light_rev = demand->desired_light_rev;
+      record.active_stage = static_cast<uint8_t>(demand->active_stage);
+    }
+    UJobStageTrace::NoteVisualBlack(record);
+    ++traced;
+  }
 }
 
 } // namespace
@@ -867,6 +1019,15 @@ void UGeometryEngine::DrawCubeGeometry()
         mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                         WorldInstance->GetBlockRegistry(),
                                         camera);
+    if (UJobStageTrace::VisualBlackTraceEnabled())
+    {
+      const glm::mat4 coverage_vp =
+          camera->GetProjection() * camera->GetViewMatrix();
+      NoteFrustumCoverageGaps(
+          *WorldInstance, draw.cache,
+          Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
+          draw.opaqueCutoutRefs, draw.transparentRefs);
+    }
     std::vector<GreedyBatchRef> filtered_opaque;
     std::vector<GreedyBatchRef> filtered_transparent;
     {

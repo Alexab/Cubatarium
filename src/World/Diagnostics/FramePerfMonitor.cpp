@@ -3154,6 +3154,9 @@ void UFramePerfMonitor::Shutdown()
         case 7:
           trace_kind = "mesh_repair_trace";
           break;
+        case 8:
+          trace_kind = "view_frustum_coverage_trace";
+          break;
         default:
           break;
         }
