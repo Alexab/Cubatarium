@@ -515,8 +515,11 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
   const int fifo_n = GetPendingTerrainColumnRelightCount();
   if (ShouldAdmitRelightFifoEnqueue(fifo_n, horiz))
   {
-    EnqueueTerrainColumnRelight(world_x, world_z, /*priority=*/true, min_y,
-                                max_y);
+    // This branch has already admitted against the caller's current focus.
+    // Bypass EnqueueTerrainColumnRelight's second pressure check, which uses
+    // the FIFO trim focus and can reject the same visible target while moving.
+    EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true, min_y,
+                                    max_y, /*visible_admission=*/true);
     const bool admitted = PendingTerrainColumnRelightKeys.count(key) != 0;
     if (admitted)
     {
