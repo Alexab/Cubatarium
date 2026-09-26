@@ -501,6 +501,14 @@ int UChunkDirtySet::MaybeDropFarthest(
     for (size_t i = 0; i < RemeshQ.size(); ++i)
     {
       const glm::ivec3 &c = RemeshQ[i];
+      // A priority remesh is an exact visible-light repair admitted after the
+      // renderer rejected this slice. Dropping it here would leave its
+      // bounded retry ticket alive without a queue owner, creating long gaps
+      // before it can be admitted again. Soft-cap only ordinary remesh work.
+      if (PriorityRemeshSet.count(c) > 0)
+      {
+        continue;
+      }
       const int d = HorizDist(c, focus_ground_chunk);
       if (d <= min_keep_horiz)
       {

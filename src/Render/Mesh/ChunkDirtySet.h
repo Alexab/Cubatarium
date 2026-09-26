@@ -96,8 +96,9 @@ public:
   void PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk, int radius_chunks,
                             int preferred_cy, bool prefer_lower_cy);
 
-  /// Drop farthest remesh entries until total Size <= soft_cap. Never drops
-  /// FirstMeshQ or underfeet / missing when missing_mesh is set.
+  /// Drop farthest ordinary remesh entries until total Size <= soft_cap.
+  /// Never drops FirstMeshQ, priority visible repairs, or underfeet / missing
+  /// remesh when missing_mesh is set.
   int MaybeDropFarthest(glm::ivec3 focus_ground_chunk, size_t soft_cap,
                         int min_keep_horiz = 1,
                         const std::function<bool(glm::ivec3)> &missing_mesh = {});
