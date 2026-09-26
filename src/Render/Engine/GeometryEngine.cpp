@@ -279,25 +279,39 @@ void NoteFrustumCoverageGaps(
     UWorld &world, const UChunkMeshCache &cache, const Frustum &frustum,
     const glm::vec3 &camera_position,
     const std::vector<GreedyBatchRef> &opaque_refs,
-    const std::vector<GreedyBatchRef> &transparent_refs)
+    const std::vector<GreedyBatchRef> &transparent_refs,
+    const std::vector<GreedyBatchRef> &ready_opaque_refs,
+    const std::vector<GreedyBatchRef> &ready_transparent_refs)
 {
   if (!UJobStageTrace::VisualBlackTraceEnabled())
   {
     return;
   }
   const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
-  static uint64_t last_scanned_epoch = UINT64_MAX;
-  if (last_scanned_epoch == frame_epoch || frame_epoch % 30 != 0)
+  // StreamingFrameEpoch advances on the world streaming tick, not on every
+  // rendered frame. A modulo gate can therefore miss its sample window when
+  // the renderer is behind. Count calls to this render-path probe instead.
+  static uint32_t render_probe_count = 0;
+  if (++render_probe_count % 120u != 0u)
   {
     return;
   }
-  last_scanned_epoch = frame_epoch;
 
   std::unordered_set<glm::ivec3, IVec3Hash> draw_refs;
   draw_refs.reserve(opaque_refs.size() + transparent_refs.size());
   for (const GreedyBatchRef &ref : opaque_refs)
   {
     draw_refs.insert(ref.chunkCoord);
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> ready_refs;
+  ready_refs.reserve(ready_opaque_refs.size() + ready_transparent_refs.size());
+  for (const GreedyBatchRef &ref : ready_opaque_refs)
+  {
+    ready_refs.insert(ref.chunkCoord);
+  }
+  for (const GreedyBatchRef &ref : ready_transparent_refs)
+  {
+    ready_refs.insert(ref.chunkCoord);
   }
   for (const GreedyBatchRef &ref : transparent_refs)
   {
@@ -328,41 +342,46 @@ void NoteFrustumCoverageGaps(
     {
       return;
     }
-    const bool drawable = cache.HasDrawableGreedyMesh(coord);
-    const bool in_draw_refs = draw_refs.count(coord) != 0;
-    const bool draw_ready = world.IsChunkSliceRenderReady(coord);
-    if (drawable && in_draw_refs && draw_ready)
+    if (ready_refs.count(coord) != 0)
     {
       return;
     }
     const glm::vec3 center =
         (ChunkAABBMin(coord) + ChunkAABBMax(coord)) * 0.5f;
-    const uint8_t state = !drawable ? 1u : (!in_draw_refs ? 2u : 3u);
+    // A loaded solid chunk without a prepared renderer ref has no drawable
+    // batch in this snapshot; a prepared ref absent from the ready list was
+    // rejected by the normal render gate.
+    const uint8_t state = draw_refs.count(coord) != 0 ? 2u : 1u;
     candidates.push_back(
         {coord, state, glm::dot(center - camera_position,
                                 center - camera_position)});
   });
 
-  std::sort(candidates.begin(), candidates.end(),
-            [](const Candidate &a, const Candidate &b)
-            {
-              if (a.state != b.state)
-              {
-                return a.state < b.state;
-              }
-              return a.distance_sq < b.distance_sq;
-            });
-
   constexpr size_t kMaxFrustumCoverageTraces = 12;
-  size_t traced = 0;
+  const auto candidate_less = [](const Candidate &a, const Candidate &b)
+  {
+    if (a.state != b.state)
+    {
+      return a.state < b.state;
+    }
+    return a.distance_sq < b.distance_sq;
+  };
+  if (candidates.size() > kMaxFrustumCoverageTraces)
+  {
+    std::partial_sort(candidates.begin(),
+                      candidates.begin() + kMaxFrustumCoverageTraces,
+                      candidates.end(), candidate_less);
+    candidates.resize(kMaxFrustumCoverageTraces);
+  }
+  else
+  {
+    std::sort(candidates.begin(), candidates.end(), candidate_less);
+  }
+
   const glm::ivec3 focus = UChunkManager::WorldToChunk(
       world.GetPreferredLoadFocusBlock());
   for (const Candidate &candidate : candidates)
   {
-    if (traced >= kMaxFrustumCoverageTraces)
-    {
-      break;
-    }
     const glm::ivec3 coord = candidate.coord;
     const UChunk *chunk = chunks.GetChunk(coord);
     if (!chunk)
@@ -370,9 +389,9 @@ void NoteFrustumCoverageGaps(
       continue;
     }
     const glm::ivec2 column(coord.x, coord.z);
-    const bool drawable = cache.HasDrawableGreedyMesh(coord);
+    const bool in_draw_refs = draw_refs.count(coord) != 0;
     const bool satisfying = cache.HasMeshSatisfyingColumnReady(coord);
-    const bool draw_ready = world.IsChunkSliceRenderReady(coord);
+    const bool draw_ready = ready_refs.count(coord) != 0;
     const ColumnRenderableState column_state =
         world.GetColumnRenderableState(column);
 
@@ -393,10 +412,10 @@ void NoteFrustumCoverageGaps(
     record.incarnation = chunk->GetIncarnation();
     record.mesh_revision = cache.GetChunkMeshRevision(coord);
     record.draw_gate_ready = draw_ready ? 1u : 0u;
-    record.renderer_gate_flags = (drawable ? 1u : 0u) |
+    record.renderer_gate_flags = (in_draw_refs ? 1u : 0u) |
                                  (satisfying ? 1u << 1 : 0u) |
                                  (cache.HasLiveGpuDraw(coord) ? 1u << 2 : 0u) |
-                                 (draw_refs.count(coord) ? 1u << 3 : 0u);
+                                 (draw_ready ? 1u << 3 : 0u);
     record.renderer_column_reason =
         static_cast<uint8_t>(column_state.reason);
     record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
@@ -422,7 +441,6 @@ void NoteFrustumCoverageGaps(
       record.active_stage = static_cast<uint8_t>(demand->active_stage);
     }
     UJobStageTrace::NoteVisualBlack(record);
-    ++traced;
   }
 }
 
@@ -1019,15 +1037,6 @@ void UGeometryEngine::DrawCubeGeometry()
         mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                         WorldInstance->GetBlockRegistry(),
                                         camera);
-    if (UJobStageTrace::VisualBlackTraceEnabled())
-    {
-      const glm::mat4 coverage_vp =
-          camera->GetProjection() * camera->GetViewMatrix();
-      NoteFrustumCoverageGaps(
-          *WorldInstance, draw.cache,
-          Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
-          draw.opaqueCutoutRefs, draw.transparentRefs);
-    }
     std::vector<GreedyBatchRef> filtered_opaque;
     std::vector<GreedyBatchRef> filtered_transparent;
     {
@@ -1036,6 +1045,16 @@ void UGeometryEngine::DrawCubeGeometry()
       filtered_opaque = filter_render_ready_refs(draw.opaqueCutoutRefs, 1u);
       filtered_transparent =
           filter_render_ready_refs(draw.transparentRefs, 2u);
+    }
+    if (UJobStageTrace::VisualBlackTraceEnabled())
+    {
+      const glm::mat4 coverage_vp =
+          camera->GetProjection() * camera->GetViewMatrix();
+      NoteFrustumCoverageGaps(
+          *WorldInstance, draw.cache,
+          Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
+          draw.opaqueCutoutRefs, draw.transparentRefs, filtered_opaque,
+          filtered_transparent);
     }
     {
       auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
