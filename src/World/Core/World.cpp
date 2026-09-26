@@ -6004,6 +6004,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     ++applied;
     LightChangeSet light_changes;
     light_changes.changed_coords.reserve(result.chunks.size());
+    std::vector<glm::ivec3> stale_mesh_coords;
+    stale_mesh_coords.reserve(result.chunks.size());
     for (const RelightChunkLightData &chunk_data : result.chunks)
     {
       ++PhysicsTelemetryData.RelightLightChunksN;
@@ -6024,6 +6026,16 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         else
         {
           ++PhysicsTelemetryData.RelightLightSkipN;
+          // A result can validate the current field without changing its
+          // light bytes. If a resident mesh still contains an older light
+          // revision, it still needs a replacement even when another slice
+          // in this same column result was the one with a byte delta.
+          if (MeshService && MeshService->HasGreedyMesh(chunk_data.coord) &&
+              MeshService->GetCache().GetMeshedLightRevision(
+                  chunk_data.coord) != chunk->GetLightFieldRevision())
+          {
+            stale_mesh_coords.push_back(chunk_data.coord);
+          }
         }
       }
     }
@@ -6047,7 +6059,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     const bool primary_only_apply = consume_mode || defer_side_iter;
     bool force_unchanged_relit = ShouldForceMarkRelitOnUnchangedLight(
         consume_mode, vb_focus_n, false, false, -1);
-    if (!light_changes.any_changed() && !force_unchanged_relit)
+    if (!light_changes.any_changed() && !force_unchanged_relit &&
+        stale_mesh_coords.empty())
     {
       for (const glm::ivec2 &g : primary_grounds)
       {
@@ -6096,6 +6109,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     else
     {
       std::vector<glm::ivec3> relit_coords = light_changes.changed_coords;
+      for (const glm::ivec3 &coord : stale_mesh_coords)
+      {
+        if (std::find(relit_coords.begin(), relit_coords.end(), coord) ==
+            relit_coords.end())
+        {
+          relit_coords.push_back(coord);
+        }
+      }
       if (light_changes.any_changed() && MeshService)
       {
         MeshService->QueueMeshDependencyInvalidations(
