@@ -3581,6 +3581,23 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     return MeshService->IsChunkMeshDirty(coord) ||
            has_live_slice_owner(coord);
   };
+  const auto mark_slice_dirty_without_reordering_first_mesh =
+      [&](glm::ivec3 coord) {
+        int32_t queue_index = -1;
+        int32_t queue_size = 0;
+        // This admission pass revisits the same unresolved census every frame.
+        // Re-promoting its already queued FirstMesh item resets its queue age
+        // and lets a later batch of repeated demands rotate ahead of older
+        // visible holes. Keep those existing owners in place; new work and
+        // remesh-to-first-mesh promotions still use the normal priority path.
+        if (MeshService->GetCache().GetDirtyQueueTrace(
+                coord, queue_index, queue_size) == 1)
+        {
+          return;
+        }
+        MeshService->MarkDirtyPriority(
+            coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      };
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   int admitted = 0;
@@ -3884,8 +3901,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             if (MeshService->TryConsumeDirtyAdmit() || col_horiz <= 4)
             {
               MeshService->GetCache().InvalidateMeshCapture(coord);
-              MeshService->MarkDirtyPriority(
-                coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+              mark_slice_dirty_without_reordering_first_mesh(coord);
               if (has_slice_work_owner(coord))
               {
                 static uint64_t next_admit_lr = 1;
@@ -3927,8 +3943,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           {
             continue;
           }
-          MeshService->MarkDirtyPriority(
-            coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+          mark_slice_dirty_without_reordering_first_mesh(coord);
           uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
           if (attempt_id == 0)
           {
@@ -3957,8 +3972,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       {
         continue;
       }
-      MeshService->MarkDirtyPriority(
-        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      mark_slice_dirty_without_reordering_first_mesh(coord);
       uint64_t attempt_id = 0;
       if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
       {

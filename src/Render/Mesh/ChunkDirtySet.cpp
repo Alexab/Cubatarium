@@ -235,14 +235,6 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
 
 void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
 {
-  // FirstMesh is already the highest-priority dirty class. Repeated repair
-  // scans must not remove and reinsert an existing item at the head: that
-  // turns bounded, per-frame admission into LIFO churn and can starve older
-  // visible holes behind a stream of refreshed demands.
-  if (FirstMeshSet.count(coord) > 0)
-  {
-    return;
-  }
   const bool was_remesh = RemeshSet.erase(coord) > 0;
   PriorityRemeshSet.erase(coord);
   if (was_remesh)
@@ -250,10 +242,18 @@ void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
     RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
                   RemeshQ.end());
   }
-  FirstMeshSet.insert(coord);
-  if (!was_remesh)
+  if (FirstMeshSet.count(coord) > 0)
   {
-    NoteColumnAdd(coord);
+    FirstMeshQ.erase(std::remove(FirstMeshQ.begin(), FirstMeshQ.end(), coord),
+                     FirstMeshQ.end());
+  }
+  else
+  {
+    FirstMeshSet.insert(coord);
+    if (!was_remesh)
+    {
+      NoteColumnAdd(coord);
+    }
   }
   EnqueueFrameByCoord.emplace(coord, ScheduleFrame);
   FirstMeshQ.insert(FirstMeshQ.begin(), coord);
