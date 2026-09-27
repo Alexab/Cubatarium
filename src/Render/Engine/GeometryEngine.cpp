@@ -89,6 +89,8 @@ namespace cutum
 namespace
 {
 
+constexpr int kPackedNearHoriz = 4;
+
 float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
 {
   float scale = env.WeatherSkyAttenuation;
@@ -366,10 +368,15 @@ void NoteFrustumCoverageGaps(
   }
 
   std::unordered_set<glm::ivec3, IVec3Hash> draw_refs;
-  draw_refs.reserve(opaque_refs.size() + transparent_refs.size());
+  draw_refs.reserve(opaque_refs.size() + transparent_refs.size() +
+                    cache.GetGpuPackedOpaqueRefs().size() +
+                    cache.GetGpuPackedTransparentRefs().size());
+  std::unordered_set<glm::ivec3, IVec3Hash> cpu_refs;
+  cpu_refs.reserve(opaque_refs.size() + transparent_refs.size());
   for (const GreedyBatchRef &ref : opaque_refs)
   {
     draw_refs.insert(ref.chunkCoord);
+    cpu_refs.insert(ref.chunkCoord);
   }
   std::unordered_set<glm::ivec3, IVec3Hash> ready_refs;
   ready_refs.reserve(ready_opaque_refs.size() + ready_transparent_refs.size());
@@ -384,6 +391,38 @@ void NoteFrustumCoverageGaps(
   for (const GreedyBatchRef &ref : transparent_refs)
   {
     draw_refs.insert(ref.chunkCoord);
+    cpu_refs.insert(ref.chunkCoord);
+  }
+  std::unordered_set<glm::ivec3, IVec3Hash> packed_refs;
+  packed_refs.reserve(cache.GetGpuPackedOpaqueRefs().size() +
+                      cache.GetGpuPackedTransparentRefs().size());
+  const glm::ivec3 camera_chunk = UChunkManager::WorldToChunk(
+      glm::ivec3(static_cast<int>(std::floor(camera_position.x)),
+                 static_cast<int>(std::floor(camera_position.y)),
+                 static_cast<int>(std::floor(camera_position.z))));
+  for (const GpuPackedChunkRef &ref : cache.GetGpuPackedOpaqueRefs())
+  {
+    if (std::max(std::abs(ref.chunkCoord.x - camera_chunk.x),
+                 std::abs(ref.chunkCoord.z - camera_chunk.z)) >
+        kPackedNearHoriz)
+    {
+      continue;
+    }
+    draw_refs.insert(ref.chunkCoord);
+    packed_refs.insert(ref.chunkCoord);
+    if (world.IsChunkSliceRenderReady(ref.chunkCoord))
+    {
+      ready_refs.insert(ref.chunkCoord);
+    }
+  }
+  for (const GpuPackedChunkRef &ref : cache.GetGpuPackedTransparentRefs())
+  {
+    draw_refs.insert(ref.chunkCoord);
+    packed_refs.insert(ref.chunkCoord);
+    if (world.IsChunkSliceRenderReady(ref.chunkCoord))
+    {
+      ready_refs.insert(ref.chunkCoord);
+    }
   }
 
   struct Candidate
@@ -471,6 +510,8 @@ void NoteFrustumCoverageGaps(
     }
     const glm::ivec2 column(coord.x, coord.z);
     const bool in_draw_refs = draw_refs.count(coord) != 0;
+    const bool in_cpu_refs = cpu_refs.count(coord) != 0;
+    const bool in_packed_refs = packed_refs.count(coord) != 0;
     const bool satisfying = cache.HasMeshSatisfyingColumnReady(coord);
     const bool draw_ready = ready_refs.count(coord) != 0;
     const ColumnRenderableState column_state =
@@ -494,12 +535,13 @@ void NoteFrustumCoverageGaps(
     record.mesh_revision = cache.GetChunkMeshRevision(coord);
     record.draw_gate_ready = draw_ready ? 1u : 0u;
     // Bit 0=drawable mesh, 1=column-satisfying mesh, 2=live GPU mesh,
-    // 3=prepared renderer ref, 4=passed the render-ready gate.
+    // 3=prepared CPU ref, 4=passed the render-ready gate, 5=GPU-packed ref.
     record.renderer_gate_flags = (candidate.drawable ? 1u : 0u) |
                                  (satisfying ? 1u << 1 : 0u) |
                                  (cache.HasLiveGpuDraw(coord) ? 1u << 2 : 0u) |
-                                 (in_draw_refs ? 1u << 3 : 0u) |
-                                 (draw_ready ? 1u << 4 : 0u);
+                                 (in_cpu_refs ? 1u << 3 : 0u) |
+                                 (draw_ready ? 1u << 4 : 0u) |
+                                 (in_packed_refs ? 1u << 5 : 0u);
     record.renderer_column_reason =
         static_cast<uint8_t>(column_state.reason);
     record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
@@ -2615,7 +2657,6 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   const auto &packed_opaque_refs = cache.GetGpuPackedOpaqueRefs();
   std::vector<GpuPackedChunkRef> packed_opaque_draw;
   const std::vector<GpuPackedChunkRef> *packed_to_draw = &packed_opaque_refs;
-  constexpr int kPackedNearHoriz = 4;
   const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
       glm::ivec3(static_cast<int>(std::floor(cameraPos.x)),
                  static_cast<int>(std::floor(cameraPos.y)),

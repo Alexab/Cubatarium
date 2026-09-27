@@ -255,9 +255,10 @@ struct VisualBlackTraceRecord
   /// Bits 18..21: settlement exists, matches current field revision, demand
   /// light is current, and the exact dark drawable satisfies its draw gate.
   uint32_t renderer_gate_flags{0};
-  /// sample_kind=8 bits 0..4: drawable, satisfying, live GPU draw, prepared
-  /// renderer ref, and passed the render-ready gate. `focus_state`: 1=no
-  /// drawable, 2=drawable missing from renderer snapshot, 3=gate rejected.
+  /// sample_kind=8 bits 0..5: drawable, satisfying, live GPU draw, prepared
+  /// CPU renderer ref, passed the render-ready gate, and prepared GPU-packed
+  /// ref. `focus_state`: 1=no drawable, 2=drawable missing from renderer
+  /// snapshot, 3=renderer ref rejected by the render-ready gate.
   uint8_t renderer_column_reason{0};
   uint8_t renderer_column_draw_ok{0};
   uint8_t renderer_column_has_repair_ticket{0};

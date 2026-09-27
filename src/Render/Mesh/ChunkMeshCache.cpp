@@ -3524,7 +3524,7 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
       GpuPackedOpaqueRefs.empty() && GpuPackedTransparentRefs.empty();
   const CullInputKey current = MakeCullInputKey(
       CullPassId::FlatVisible, MeshRevision, CullRevision, cameraPos,
-      HashViewProjection(viewProj), maxCullDistance,
+      HashFrustumPlanes(frustum.planes), maxCullDistance,
       UseHorizontalCullDistance(), true);
   // The flat greedy and cross lists are view-dependent. A new camera/frustum
   // must invalidate them even when no mesh result made the cache dirty; the
@@ -3598,7 +3598,7 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   // would observe our own output revision as another input change.
   LastFlatCullInputKey = MakeCullInputKey(
       CullPassId::FlatVisible, MeshRevision, CullRevision, cameraPos,
-      HashViewProjection(viewProj), maxCullDistance,
+      HashFrustumPlanes(frustum.planes), maxCullDistance,
       UseHorizontalCullDistance(), true);
 }
 void UChunkMeshCache::EnsureAsyncBuilder()
