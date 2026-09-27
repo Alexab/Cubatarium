@@ -624,6 +624,18 @@ const char *UJobStageTrace::MeshRevisionBumpReasonName(
     return "streamer_commit_sea_seam";
   case MeshRevisionBumpReason::PendingLightColumnRecovery:
     return "pending_light_column_recovery";
+  case MeshRevisionBumpReason::PriorityWorldStreamingRepair:
+    return "priority_world_streaming_repair";
+  case MeshRevisionBumpReason::PriorityChunkEmergeRepair:
+    return "priority_chunk_emerge_repair";
+  case MeshRevisionBumpReason::PriorityWorldCoreRepair:
+    return "priority_world_core_repair";
+  case MeshRevisionBumpReason::PriorityRelitInstallRepair:
+    return "priority_relit_install_repair";
+  case MeshRevisionBumpReason::PriorityWorldStreamingCommit:
+    return "priority_world_streaming_commit";
+  case MeshRevisionBumpReason::PriorityWorldCoreCommit:
+    return "priority_world_core_commit";
   }
   return "unknown";
 }

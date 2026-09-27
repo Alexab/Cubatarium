@@ -346,6 +346,13 @@ void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord,
 
 void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
 {
+  MarkDirtyPriority(chunk_coord,
+                    MeshRevisionBumpReason::PriorityDirtyEnqueued);
+}
+
+void UWorldMeshService::MarkDirtyPriority(
+    glm::ivec3 chunk_coord, MeshRevisionBumpReason reason)
+{
 #ifndef NDEBUG
   if (ColumnFlowContainsFn)
   {
@@ -361,7 +368,7 @@ void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
   {
     return;
   }
-  Cache.MarkDirtyPriority(chunk_coord);
+  Cache.MarkDirtyPriority(chunk_coord, reason);
   NotifyChunkBlocksChanged(chunk_coord);
   if (OnMeshColumnDirtyFn)
   {
@@ -556,6 +563,15 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamedPriority(
     glm::ivec3 ground_chunk_coord, int min_y, int max_y,
     bool include_horizontal_neighbors)
 {
+  MarkTerrainChunkMeshDirtySeamedPriority(
+      ground_chunk_coord, min_y, max_y, include_horizontal_neighbors,
+      MeshRevisionBumpReason::PriorityDirtyEnqueued);
+}
+
+void UWorldMeshService::MarkTerrainChunkMeshDirtySeamedPriority(
+    glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+    bool include_horizontal_neighbors, MeshRevisionBumpReason reason)
+{
   const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   const int cx0 = include_horizontal_neighbors ? ground_chunk_coord.x - 1
@@ -572,7 +588,7 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamedPriority(
     {
       for (int cy = cy0; cy <= cy1; ++cy)
       {
-        MarkDirtyPriority(glm::ivec3(cx, cy, cz));
+        MarkDirtyPriority(glm::ivec3(cx, cy, cz), reason);
       }
     }
   }

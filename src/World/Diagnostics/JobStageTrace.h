@@ -137,7 +137,13 @@ enum class MeshRevisionBumpReason : uint8_t
   SurfaceDarkRepairSeam,
   PersistenceTerrainLoad,
   StreamerCommitSeaSeam,
-  PendingLightColumnRecovery
+  PendingLightColumnRecovery,
+  PriorityWorldStreamingRepair,
+  PriorityChunkEmergeRepair,
+  PriorityWorldCoreRepair,
+  PriorityRelitInstallRepair,
+  PriorityWorldStreamingCommit,
+  PriorityWorldCoreCommit
 };
 
 struct DemandTransitionSpan

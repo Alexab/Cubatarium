@@ -2635,6 +2635,13 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
 }
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
+  MarkDirtyPriority(chunkCoord,
+                    MeshRevisionBumpReason::PriorityDirtyEnqueued);
+}
+
+void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord,
+                                        MeshRevisionBumpReason reason)
+{
   if (!ShouldAdmitDirtyCoord(chunkCoord))
   {
     return;
@@ -2860,8 +2867,7 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   }
   if (!existed)
   {
-    BumpChunkMeshRevision(
-        chunkCoord, MeshRevisionBumpReason::PriorityDirtyEnqueued);
+    BumpChunkMeshRevision(chunkCoord, reason);
   }
   InstancesDirty = true;
   GreedyBatchesDirty = true;

@@ -359,7 +359,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
             {
               world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                   ground, dirty_min, dirty_max,
-                  /*include_horizontal_neighbors=*/true);
+                  /*include_horizontal_neighbors=*/true,
+                  MeshRevisionBumpReason::PriorityWorldStreamingCommit);
               auto &exec = GetColumnFlowExecutor();
               ColumnWorkItem fm{};
               fm.column = glm::ivec2(ground.x, ground.z);
@@ -515,7 +516,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
                 world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                     ground, dirty_min, dirty_max,
-                    /*include_horizontal_neighbors=*/true);
+                    /*include_horizontal_neighbors=*/true,
+                    MeshRevisionBumpReason::PriorityWorldStreamingCommit);
                 enqueue_frontier_stage_tickets(/*lit_ready_now=*/true,
                                               /*pending_light_now=*/false);
               }
@@ -538,7 +540,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         {
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, dirty_min, dirty_max, true);
+              ground, dirty_min, dirty_max, true,
+              MeshRevisionBumpReason::PriorityWorldStreamingCommit);
           // Flat/no-relight-deferred path: still pin FirstMesh for near commit.
           {
             auto &exec = GetColumnFlowExecutor();
@@ -2386,7 +2389,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       if (near_column)
       {
         world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-            ground, mesh_min_y, mesh_max_y, seam);
+            ground, mesh_min_y, mesh_max_y, seam,
+            MeshRevisionBumpReason::PriorityWorldStreamingCommit);
       }
       else if (world.GetMeshService().GetDirtyCount() < 350)
       {
@@ -3150,7 +3154,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             {
               ms.PreferKickPendingGpuQueued(miss_hole);
             }
-            ms.MarkDirtyPriority(miss_hole);
+            ms.MarkDirtyPriority(
+                miss_hole,
+                MeshRevisionBumpReason::PriorityWorldStreamingRepair);
             const glm::ivec3 cand_hole(cand_xz.x, cand_cy >= 0 ? cand_cy : 0,
                                        cand_xz.y);
             if (ms.IsPendingGpuQueued(cand_hole) ||
@@ -3159,7 +3165,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             {
               ms.PreferKickPendingGpuQueued(cand_hole);
             }
-            ms.MarkDirtyPriority(cand_hole);
+            ms.MarkDirtyPriority(
+                cand_hole,
+                MeshRevisionBumpReason::PriorityWorldStreamingRepair);
           }
           periods_since_witness_retarget = 0;
           SoftDeferCapturePinValid = true;
@@ -3207,7 +3215,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             {
               ms.PreferKickPendingGpuQueued(pin_hole);
             }
-            ms.MarkDirtyPriority(pin_hole);
+            ms.MarkDirtyPriority(
+                pin_hole,
+                MeshRevisionBumpReason::PriorityWorldStreamingRepair);
             SoftDeferCaptureLastAgedKickAge = SoftDeferCapturePinAge;
           }
         }

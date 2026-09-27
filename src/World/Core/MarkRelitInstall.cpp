@@ -246,7 +246,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       }
       if (priority)
       {
-        mesh->MarkDirtyPriority(coord);
+        mesh->MarkDirtyPriority(
+            coord, MeshRevisionBumpReason::PriorityRelitInstallRepair);
         recent_draw_gate_reject =
             WasRecentlyRendererDrawGateRejected(coord);
         if (recent_draw_gate_reject)
@@ -461,7 +462,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           const int dirty_max = std::min(max_y, sea + CHUNK_SIZE * 2);
           MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, dirty_min, dirty_max,
-              /*include_horizontal_neighbors=*/false);
+              /*include_horizontal_neighbors=*/false,
+              MeshRevisionBumpReason::PriorityRelitInstallRepair);
         }
       }
       PhysicsTelemetryData.MarkRelitEmptyRelitMs +=
@@ -922,7 +924,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       {
         MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
             ground, dirty_min, dirty_max,
-            /*include_horizontal_neighbors=*/false);
+            /*include_horizontal_neighbors=*/false,
+            MeshRevisionBumpReason::PriorityRelitInstallRepair);
       }
       else
       {

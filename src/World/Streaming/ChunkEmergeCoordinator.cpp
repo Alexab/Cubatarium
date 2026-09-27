@@ -1302,7 +1302,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               demand.NoteFaceDebt(
                   n, static_cast<uint8_t>(1u << face_toward), peer_pub);
             }
-            mesh.MarkDirtyPriority(n);
+            mesh.MarkDirtyPriority(n,
+                                   MeshRevisionBumpReason::FaceDebtCallback);
             ++face_debt_remesh_n;
           }
 
@@ -2307,7 +2308,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 will_enqueue_fm || has_fm) &&
             SoftDeferEmptyShouldMarkDirty(true, has_fm, inflight_or_pending))
         {
-          mesh_service.MarkDirtyPriority(coord);
+          mesh_service.MarkDirtyPriority(
+              coord, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
         }
         if (will_enqueue_fm)
         {
@@ -2555,7 +2557,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           continue;
         }
-        mesh_service.MarkDirtyPriority(owned);
+        mesh_service.MarkDirtyPriority(
+            owned, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
         SoftDeferUnderfeetMarkEpoch[owned] = epoch;
         ColumnWorkItem pin{};
         pin.column = uf_col;
@@ -2614,7 +2617,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       else
       {
-        mesh_service.MarkDirtyPriority(stuck);
+        mesh_service.MarkDirtyPriority(
+            stuck, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
         ColumnWorkItem pin{};
         pin.column = stuck_col;
         pin.kind = ColumnWorkKind::FirstMesh;
@@ -4389,7 +4393,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       else if (!mesh_service.HasDrawableGreedyMesh(hole) &&
                !mesh_service.HasInflightMeshBuild(hole))
       {
-        mesh_service.MarkDirtyPriority(hole);
+        mesh_service.MarkDirtyPriority(
+            hole, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
         GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
                                         ColumnWorkKind::FirstMesh, 110);
       }
@@ -4538,7 +4543,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // ColPipe P4: no underfeet Immediate — DirtyPriority + FirstMesh.
             GetColumnFlowExecutor().Enqueue(
                 glm::ivec2(coord.x, coord.z), ColumnWorkKind::FirstMesh, 110);
-            mesh_service.MarkDirtyPriority(coord);
+            mesh_service.MarkDirtyPriority(
+                coord, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
             ++immediate;
             continue;
           }
@@ -5024,7 +5030,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         return false;
       }
-      mesh_service.MarkDirtyPriority(hole);
+      mesh_service.MarkDirtyPriority(
+          hole, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
       GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
                                       ColumnWorkKind::FirstMesh, 100);
       note_column_flow_drain(1, 1);
@@ -5847,7 +5854,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 miss_resident && !miss_already_owned_pre &&
                 !miss_pending_gpu_pre)
             {
-              mesh_service.MarkDirtyPriority(isolated_hole);
+              mesh_service.MarkDirtyPriority(
+                  isolated_hole,
+                  MeshRevisionBumpReason::PriorityChunkEmergeRepair);
               if (!exec.Scheduler().Contains(miss_xz_pre,
                                              ColumnWorkKind::FirstMesh))
               {
@@ -5891,7 +5900,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               miss_resident)
           {
             MissWitnessRemeshLatched = true;
-            mesh_service.MarkDirtyPriority(isolated_hole);
+            mesh_service.MarkDirtyPriority(
+                isolated_hole,
+                MeshRevisionBumpReason::PriorityChunkEmergeRepair);
             ++world.GetPhysicsTelemetryMutable().MissWitnessRemeshN;
             if (!exec.Scheduler().Contains(miss_xz_sla, ColumnWorkKind::FirstMesh))
             {
@@ -6401,7 +6412,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.GetLiveDirtyFirstMeshCount() == 0 &&
           mesh_service.IsSoftDeferHeld(hole))
       {
-        mesh_service.MarkDirtyPriority(hole);
+        mesh_service.MarkDirtyPriority(
+            hole, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
         --stuck_escape_fm_budget;
       }
     }
@@ -7099,7 +7111,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 MissWitnessRemeshAgeSla(moving, world.GetPhysicsTelemetry().MissHoriz),
                 MissStuckRunFrames))
         {
-          mesh_service.MarkDirtyPriority(isolated_hole);
+          mesh_service.MarkDirtyPriority(
+              isolated_hole,
+              MeshRevisionBumpReason::PriorityChunkEmergeRepair);
           ++pt.MissWitnessRemeshN;
           if (!exec_stuck.Scheduler().Contains(miss_xz,
                                                ColumnWorkKind::FirstMesh))

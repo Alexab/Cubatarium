@@ -1123,7 +1123,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
             MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                 ground, remesh_min, remesh_max,
-                /*include_horizontal_neighbors=*/false);
+                /*include_horizontal_neighbors=*/false,
+                MeshRevisionBumpReason::PriorityWorldCoreCommit);
             SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
             ++repaired;
             continue;
@@ -1153,7 +1154,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
           MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, remesh_min, remesh_max, /*include_horizontal_neighbors=*/
-              !underfeet);
+              !underfeet, MeshRevisionBumpReason::PriorityWorldCoreCommit);
           ++repaired;
           continue;
         }
@@ -1232,7 +1233,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
               {
                 MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                     ground, remesh_min, remesh_max,
-                    /*include_horizontal_neighbors=*/false);
+                    /*include_horizontal_neighbors=*/false,
+                    MeshRevisionBumpReason::PriorityWorldCoreCommit);
               }
             }
             ++repaired;
@@ -1257,7 +1259,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                   ground, remesh_min, remesh_max,
-                  /*include_horizontal_neighbors=*/false);
+                  /*include_horizontal_neighbors=*/false,
+                  MeshRevisionBumpReason::PriorityWorldCoreCommit);
             }
             ++repaired;
           }
@@ -1348,7 +1351,8 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     {
       MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
           ground, remesh_min, remesh_max,
-          /*include_horizontal_neighbors=*/false);
+          /*include_horizontal_neighbors=*/false,
+          MeshRevisionBumpReason::PriorityWorldCoreCommit);
       SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     }
     ++admitted;
@@ -3383,7 +3387,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             if (MeshService->TryConsumeDirtyAdmit() || col_horiz <= 4)
             {
               MeshService->GetCache().InvalidateMeshCapture(coord);
-              MeshService->MarkDirtyPriority(coord);
+              MeshService->MarkDirtyPriority(
+                coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
               if (has_slice_work_owner(coord))
               {
                 static uint64_t next_admit_lr = 1;
@@ -3437,7 +3442,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           {
             continue;
           }
-          MeshService->MarkDirtyPriority(coord);
+          MeshService->MarkDirtyPriority(
+            coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
           uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
           if (attempt_id == 0)
           {
@@ -3466,7 +3472,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       {
         continue;
       }
-      MeshService->MarkDirtyPriority(coord);
+      MeshService->MarkDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
       uint64_t attempt_id = 0;
       if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
       {
@@ -3520,7 +3527,8 @@ void UWorld::KickUnfinishedVisualRemesh(int max_n)
     }
     const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
     const int cz = static_cast<int>(static_cast<uint32_t>(key));
-    MeshService->MarkDirtyPriority(glm::ivec3(cx, 0, cz));
+    MeshService->MarkDirtyPriority(
+      glm::ivec3(cx, 0, cz), MeshRevisionBumpReason::PriorityWorldCoreRepair);
     ++marked;
   }
 }
@@ -5952,7 +5960,8 @@ void UWorld::PromotePendingLightBeforeMesh(
     if (priority_mesh)
     {
       MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-          ground, it->second.min_y, it->second.max_y, true);
+          ground, it->second.min_y, it->second.max_y, true,
+          MeshRevisionBumpReason::PriorityWorldCoreCommit);
     }
     else
     {
@@ -7741,7 +7750,8 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
               continue;
             }
           }
-          mesh.MarkDirtyPriority(coord);
+          mesh.MarkDirtyPriority(
+            coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
         }
       }
     }
@@ -7837,7 +7847,8 @@ int UWorld::MarkEnterMissingMeshesDirty()
             {
               continue;
             }
-            mesh.MarkDirtyPriority(coord);
+            mesh.MarkDirtyPriority(
+              coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
             ++marked;
           }
         }
@@ -7858,7 +7869,8 @@ int UWorld::MarkEnterMissingMeshesDirty()
         miss_xz, ColumnWorkKind::FirstMesh);
     if (!gate_fm_ticket || !gate_dirty)
     {
-      mesh.MarkDirtyPriority(gate_miss);
+      mesh.MarkDirtyPriority(
+        gate_miss, MeshRevisionBumpReason::PriorityWorldCoreRepair);
       marked = 1;
     }
   }
@@ -7913,7 +7925,8 @@ int UWorld::MarkEnterMissingMeshesDirty()
           const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
           if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
           {
-            mesh.MarkDirtyPriority(coord);
+            mesh.MarkDirtyPriority(
+              coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
             ++marked;
             continue;
           }
@@ -7929,7 +7942,8 @@ int UWorld::MarkEnterMissingMeshesDirty()
                                                      /*spawn_radius=*/2,
                                                      underfeet_exit_blocked))
             {
-              mesh.MarkDirtyPriority(coord);
+              mesh.MarkDirtyPriority(
+                coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
               ++marked;
             }
           }
@@ -7941,7 +7955,8 @@ int UWorld::MarkEnterMissingMeshesDirty()
         if (fm_ticket && !dirty &&
             !mesh.HasMeshSatisfyingColumnReady(coord))
         {
-          mesh.MarkDirtyPriority(coord);
+          mesh.MarkDirtyPriority(
+            coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
           ++marked;
           continue;
         }
@@ -7950,7 +7965,8 @@ int UWorld::MarkEnterMissingMeshesDirty()
         {
           continue;
         }
-        mesh.MarkDirtyPriority(coord);
+        mesh.MarkDirtyPriority(
+          coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
         ++marked;
       }
     }
@@ -8099,7 +8115,8 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
       const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
       if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
       {
-        mesh.MarkDirtyPriority(coord);
+        mesh.MarkDirtyPriority(
+          coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
         return true;
       }
       return false;
@@ -8109,7 +8126,8 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
         col_xz, ColumnWorkKind::FirstMesh);
     if (fm_ticket && !dirty && !mesh.HasMeshSatisfyingColumnReady(coord))
     {
-      mesh.MarkDirtyPriority(coord);
+      mesh.MarkDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
       return true;
     }
     if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
@@ -8117,7 +8135,8 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
     {
       return false;
     }
-    mesh.MarkDirtyPriority(coord);
+    mesh.MarkDirtyPriority(
+      coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
     return true;
   };
   // Underfeet-first ring order — nh=0 before rim backlog (miss_stuck SLA).
@@ -8173,7 +8192,8 @@ bool UWorld::HealPinnedMissSlice(glm::ivec3 coord)
     const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
     if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
     {
-      mesh.MarkDirtyPriority(coord);
+      mesh.MarkDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
     }
   }
   else
@@ -8182,7 +8202,8 @@ bool UWorld::HealPinnedMissSlice(glm::ivec3 coord)
         col_xz, ColumnWorkKind::FirstMesh);
     if (!dirty || fm_ticket)
     {
-      mesh.MarkDirtyPriority(coord);
+      mesh.MarkDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
     }
   }
   if (mesh.IsPendingGpuApply(coord) || mesh.IsPendingGpuQueued(coord) ||
@@ -8838,7 +8859,8 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         continue;
       }
       // ColPipe P7/P2: one remesh owner — Dirty only (no dual RAA + sticky producer).
-      MeshService->MarkDirtyPriority(coord);
+      MeshService->MarkDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
       touched = true;
       ++scheduled;
     }
@@ -10544,7 +10566,8 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
     if (ShouldForceFirstMeshOnPlaceHole(soft_empty || !drawable,
                                         /*near_or_underfeet=*/true))
     {
-      MeshService->MarkDirtyPriority(place_chunk);
+      MeshService->MarkDirtyPriority(
+        place_chunk, MeshRevisionBumpReason::PriorityWorldCoreRepair);
       ColumnWorkItem item{};
       item.column = glm::ivec2(place_chunk.x, place_chunk.z);
       item.kind = ColumnWorkKind::FirstMesh;

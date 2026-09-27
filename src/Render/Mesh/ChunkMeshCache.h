@@ -78,6 +78,8 @@ public:
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirty(glm::ivec3 chunkCoord, MeshRevisionBumpReason reason);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
+  void MarkDirtyPriority(glm::ivec3 chunkCoord,
+                         MeshRevisionBumpReason reason);
   bool PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,

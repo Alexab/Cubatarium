@@ -112,6 +112,8 @@ public:
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirty(glm::ivec3 chunk_coord, MeshRevisionBumpReason reason);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
+  void MarkDirtyPriority(glm::ivec3 chunk_coord,
+                         MeshRevisionBumpReason reason);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
       const std::vector<glm::ivec3> &changed_input_chunks);
@@ -162,6 +164,9 @@ public:
   void MarkTerrainChunkMeshDirtySeamedPriority(
       glm::ivec3 ground_chunk_coord, int min_y, int max_y,
       bool include_horizontal_neighbors = true);
+  void MarkTerrainChunkMeshDirtySeamedPriority(
+      glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+      bool include_horizontal_neighbors, MeshRevisionBumpReason reason);
   /// Dirty only solid slices in [min_y,max_y] that fail column-ready / not in-flight.
   int MarkMissingSlicesDirtyPriority(const UBlockWorld &world,
                                      glm::ivec3 ground_chunk_coord, int min_y,
