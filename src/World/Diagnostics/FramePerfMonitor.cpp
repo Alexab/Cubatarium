@@ -3127,6 +3127,13 @@ void UFramePerfMonitor::Shutdown()
       DumpCtx jobCtx{&s.Jsonl, "job_trace"};
       UJobStageTrace::ForEachNewest(UJobStageTrace::kRingCapacity, dumpTrace,
                                     &jobCtx);
+      // Preserve worker/GPU transitions for coordinates sampled by the
+      // opt-in renderer frustum trace. The general job ring is intentionally
+      // small and otherwise loses those route-local events before shutdown.
+      DumpCtx visualLifecycleCtx{&s.Jsonl, "visual_lifecycle_trace"};
+      UJobStageTrace::ForEachWatchedNewest(
+          UJobStageTrace::kVisualLifecycleRingCapacity, dumpTrace,
+          &visualLifecycleCtx);
       DumpCtx cullCtx{&s.Jsonl, "cull_trace"};
       UJobStageTrace::ForEachCullDecisionNewest(64, dumpTrace, &cullCtx);
       const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,

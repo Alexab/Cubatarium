@@ -2,6 +2,7 @@
 #define JOB_STAGE_TRACE_H
 
 #include <cstdint>
+#include <cstddef>
 #include <string>
 
 namespace cutum
@@ -179,6 +180,8 @@ class UJobStageTrace
 {
 public:
   static constexpr size_t kRingCapacity = 256;
+  /// Bounded worker/GPU lifecycle history retained for sampled visible slices.
+  static constexpr size_t kVisualLifecycleRingCapacity = 4096;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
@@ -196,6 +199,10 @@ public:
       kPriorityRemeshTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
+  /// Retain lifecycle events for a chunk selected by the opt-in frustum trace.
+  static void WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz);
+  static void ForEachWatchedNewest(
+      size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static size_t Size();
   static bool Get(size_t newest_index, JobStageSpan &out);
   /// Emit compact JSONL lines (kind=job_trace) into an open ostream-like sink

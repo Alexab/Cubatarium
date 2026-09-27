@@ -309,6 +309,7 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
             : 0.0;
   }
   record.flags = 1u; // candidate was in the renderer's frustum list pre-gate.
+  UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
   UJobStageTrace::NoteVisualBlack(record);
 }
 
@@ -506,6 +507,7 @@ void NoteFrustumCoverageGaps(
               ? std::max(0.0, demand_sample_now_ms - demand->last_progress_ms)
               : 0.0;
     }
+    UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
     UJobStageTrace::NoteVisualBlack(record);
   }
 }

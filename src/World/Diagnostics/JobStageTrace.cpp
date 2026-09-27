@@ -2,7 +2,9 @@
 
 #include <array>
 #include <cstdlib>
+#include <deque>
 #include <mutex>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -20,6 +22,66 @@ struct Ring
 Ring &GetRing()
 {
   static Ring r;
+  return r;
+}
+
+struct VisualChunkKey
+{
+  int32_t cx{0};
+  int32_t cy{0};
+  int32_t cz{0};
+
+  bool operator==(const VisualChunkKey &other) const
+  {
+    return cx == other.cx && cy == other.cy && cz == other.cz;
+  }
+};
+
+struct VisualChunkKeyHash
+{
+  size_t operator()(const VisualChunkKey &key) const
+  {
+    size_t h = static_cast<uint32_t>(key.cx);
+    h ^= static_cast<size_t>(static_cast<uint32_t>(key.cy)) +
+         0x9e3779b9u + (h << 6) + (h >> 2);
+    h ^= static_cast<size_t>(static_cast<uint32_t>(key.cz)) +
+         0x9e3779b9u + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+
+struct VisualChunkWatches
+{
+  static constexpr size_t kCapacity = 1024;
+  std::unordered_set<VisualChunkKey, VisualChunkKeyHash> chunks;
+  std::deque<VisualChunkKey> order;
+  std::mutex mu;
+};
+
+VisualChunkWatches &GetVisualChunkWatches()
+{
+  static VisualChunkWatches watches;
+  return watches;
+}
+
+bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz)
+{
+  auto &watches = GetVisualChunkWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  return watches.chunks.count({cx, cy, cz}) != 0;
+}
+
+struct WatchedJobRing
+{
+  std::array<JobStageSpan, UJobStageTrace::kVisualLifecycleRingCapacity> slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+WatchedJobRing &GetWatchedJobRing()
+{
+  static WatchedJobRing r;
   return r;
 }
 
@@ -129,12 +191,49 @@ void ForEachVisualTraceNewest(
 void UJobStageTrace::Note(const JobStageSpan &span)
 {
   auto &r = GetRing();
-  std::lock_guard<std::mutex> lock(r.mu);
-  r.slots[r.write % kRingCapacity] = span;
-  ++r.write;
-  if (r.count < kRingCapacity)
   {
-    ++r.count;
+    std::lock_guard<std::mutex> lock(r.mu);
+    r.slots[r.write % kRingCapacity] = span;
+    ++r.write;
+    if (r.count < kRingCapacity)
+    {
+      ++r.count;
+    }
+  }
+  if (!VisualBlackTraceEnabled() ||
+      !IsVisualChunkWatched(span.cx, span.cy, span.cz))
+  {
+    return;
+  }
+
+  auto &watched = GetWatchedJobRing();
+  std::lock_guard<std::mutex> lock(watched.mu);
+  watched.slots[watched.write % kVisualLifecycleRingCapacity] = span;
+  ++watched.write;
+  if (watched.count < kVisualLifecycleRingCapacity)
+  {
+    ++watched.count;
+  }
+}
+
+void UJobStageTrace::WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz)
+{
+  if (!VisualBlackTraceEnabled())
+  {
+    return;
+  }
+  auto &watches = GetVisualChunkWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  const VisualChunkKey key{cx, cy, cz};
+  if (!watches.chunks.insert(key).second)
+  {
+    return;
+  }
+  watches.order.push_back(key);
+  if (watches.order.size() > VisualChunkWatches::kCapacity)
+  {
+    watches.chunks.erase(watches.order.front());
+    watches.order.pop_front();
   }
 }
 
@@ -284,6 +383,25 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);
+}
+
+void UJobStageTrace::ForEachWatchedNewest(
+    size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetWatchedJobRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs =
+        (r.write + kVisualLifecycleRingCapacity - 1 - i) %
+        kVisualLifecycleRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
 }
 
 const char *UJobStageTrace::StageName(JobStage s)
