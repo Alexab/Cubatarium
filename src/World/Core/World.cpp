@@ -3194,9 +3194,9 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   const int budget = CapDirtyAdmitUnderThrash(
       base, GetPhysicsTelemetry().VisibleBlackFullyDarkRepairN, dropped_recent,
       /*dropped_soft_cap=*/800);
-  // A bounded visible relight admission may evict far work. Protect the
-  // unfinished columns in the lit drawable ring, just as the draw-gate path
-  // protects other exact renderer rejects.
+  // A bounded visible relight admission may evict far work. Protect only the
+  // immediate near-FOV ring; protecting the wider lit ring also protected
+  // farther candidates that should yield their FIFO slots to nearer holes.
   std::vector<glm::ivec2> protected_visible_columns;
   protected_visible_columns.reserve(keys.size());
   for (const uint64_t key : keys)
@@ -3205,7 +3205,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     const int cz = static_cast<int>(static_cast<uint32_t>(key));
     const int horiz =
         (std::max)(std::abs(cx - focus_g.x), std::abs(cz - focus_g.z));
-    if (horiz <= kVisualStageLitDrawableHoriz)
+    if (horiz <= kVisualStageNearFovHoriz)
     {
       protected_visible_columns.emplace_back(cx, cz);
     }
