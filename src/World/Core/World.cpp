@@ -1811,6 +1811,38 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
             demand ? demand->published_light_rev : 0;
         const bool demand_light_current =
             demand && desired_light_rev <= published_light_rev;
+        // PendingLight is column-scoped, while settlement and the renderer
+        // gate are per-slice. Do not erase a current slice proof just because
+        // a wider debt band was opened for another slice in the column. If
+        // this slice's light changes, its field revision will make the proof
+        // stale; a changed neighbor is independently caught by stale-dark
+        // validation before a dark image can draw.
+        if (settlement_current)
+        {
+          if (audit_relight)
+          {
+            CubatariumLogInfo(
+                "RelightAudit",
+                "settlement preserve source=" +
+                    std::string(audit_source ? audit_source : "unspecified") +
+                    " reason=" + reason + " coord=(" +
+                    std::to_string(coord.x) + "," +
+                    std::to_string(coord.y) + "," +
+                    std::to_string(coord.z) + ") field_rev=" +
+                    std::to_string(field_rev) + " settled_rev=" +
+                    std::to_string(settled_rev) + " proof_current=1 identity=" +
+                    std::to_string(demand_epoch) + ":" +
+                    std::to_string(demand_incarnation) + "/" +
+                    std::to_string(world_epoch) + ":" +
+                    std::to_string(current_incarnation) +
+                    " demand_light=" +
+                    std::to_string(desired_light_rev) + ":" +
+                    std::to_string(published_light_rev) + " band=" +
+                    std::to_string(band_min_y) + ":" +
+                    std::to_string(band_max_y));
+          }
+          continue;
+        }
         UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
             coord, world_epoch, current_incarnation);
         if (audit_relight && had_settlement)
