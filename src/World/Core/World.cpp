@@ -6852,6 +6852,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         }
       }
     }
+    std::vector<glm::ivec3> relit_coords;
     // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch
     // unless P1 repair debt (VB / ticket / FullyDark ring).
     if (!light_changes.any_changed() && !force_unchanged_relit)
@@ -6869,7 +6870,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     else
     {
-      std::vector<glm::ivec3> relit_coords = light_changes.changed_coords;
+      relit_coords = light_changes.changed_coords;
       for (const glm::ivec3 &coord : stale_mesh_coords)
       {
         if (std::find(relit_coords.begin(), relit_coords.end(), coord) ==
@@ -6899,6 +6900,110 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                              /*primary_only=*/primary_only_apply,
                              result.visible_draw_gate_repair);
       ++PhysicsTelemetryData.RelightApplyToMarkRelitN;
+    }
+    if (audit_relight && MeshService)
+    {
+      const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+      const uint64_t current_world_epoch =
+          MeshService->GetCache().GetCaptureStore().WorldEpoch();
+      for (const RelightChunkLightData &chunk_data : result.chunks)
+      {
+        UChunk *chunk =
+            BlockWorld.GetChunkManager().GetChunk(chunk_data.coord);
+        if (!chunk || chunk->GetNonAirCount() == 0)
+        {
+          continue;
+        }
+        const glm::ivec2 column(chunk_data.coord.x, chunk_data.coord.z);
+        const glm::ivec2 block_key(column.x * CHUNK_SIZE,
+                                   column.y * CHUNK_SIZE);
+        const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(chunk_data.coord);
+        const MeshPublishRevs published =
+            MeshService->GetCache().GetMeshPublishRevs(chunk_data.coord);
+        const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+        const bool drawable =
+            MeshService->HasDrawableGreedyMesh(chunk_data.coord);
+        const bool satisfying =
+            MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord);
+        if (satisfying && ChunkSliceHasCurrentLightSettlement(
+                              *this, chunk_data.coord))
+        {
+          continue;
+        }
+        const bool queued = Persistence &&
+            Persistence->IsTerrainColumnRelightQueued(block_key);
+        const auto queue_info = Persistence
+            ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
+            : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+        const bool first_mesh = flow_scheduler.Contains(
+            column, ColumnWorkKind::FirstMesh);
+        const bool relight_flow =
+            flow_scheduler.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+            flow_scheduler.Contains(column, ColumnWorkKind::PromoteRelight);
+        const bool has_repair_ticket =
+            GetColumnFlowExecutor().HasRepairTicket(column);
+        const bool markrelit_input =
+            std::find(relit_coords.begin(), relit_coords.end(),
+                      chunk_data.coord) != relit_coords.end();
+        CubatariumLogInfo(
+            "RelightAudit",
+            "slice_handoff job=" + std::to_string(result.job_id) +
+                " coord=(" + std::to_string(chunk_data.coord.x) + "," +
+                std::to_string(chunk_data.coord.y) + "," +
+                std::to_string(chunk_data.coord.z) + ") non_air=" +
+                std::to_string(chunk->GetNonAirCount()) + " installed=" +
+                std::to_string(light_changes.changed_coords.size() > 0 &&
+                               std::find(light_changes.changed_coords.begin(),
+                                         light_changes.changed_coords.end(),
+                                         chunk_data.coord) !=
+                                   light_changes.changed_coords.end()) +
+                " markrelit_input=" + std::to_string(markrelit_input) +
+                " settled_current=" + std::to_string(
+                    ChunkSliceHasCurrentLightSettlement(*this,
+                                                        chunk_data.coord)) +
+                " demand_identity=" +
+                std::to_string(demand ? demand->world_epoch : 0) + ":" +
+                std::to_string(demand ? demand->incarnation : 0) + "/" +
+                std::to_string(current_world_epoch) + ":" +
+                std::to_string(chunk->GetIncarnation()) +
+                " settled=" +
+                std::to_string(demand && demand->has_settled_light) + ":" +
+                std::to_string(demand ? demand->settled_light_rev : 0) +
+                " field_light_rev=" + std::to_string(field_light_rev) +
+                " desired_published_light=" +
+                std::to_string(demand ? demand->desired_light_rev : 0) + ":" +
+                std::to_string(demand ? demand->published_light_rev : 0) +
+                " mesh_published=" + std::to_string(published.geom_rev) +
+                ":" + std::to_string(published.light_rev) +
+                " meshed_light_rev=" + std::to_string(
+                    MeshService->GetCache().GetMeshedLightRevision(
+                        chunk_data.coord)) +
+                " drawable=" + std::to_string(drawable) +
+                " satisfying=" + std::to_string(satisfying) +
+                " dirty=" + std::to_string(
+                    MeshService->IsChunkMeshDirty(chunk_data.coord)) +
+                " mesh_inflight=" + std::to_string(
+                    MeshService->HasInflightMeshBuild(chunk_data.coord)) +
+                " gpu_pending=" + std::to_string(
+                    MeshService->IsPendingGpuApply(chunk_data.coord)) +
+                " pending_light=" + std::to_string(
+                    IsPendingLightBeforeMesh(column)) +
+                " relight_queued=" + std::to_string(queued) +
+                " queue=" + std::to_string(queue_info.keyed) + ":" +
+                std::to_string(queue_info.queue_index) + "/" +
+                std::to_string(queue_info.queue_size) + ":" +
+                std::to_string(queue_info.min_world_y) + ":" +
+                std::to_string(queue_info.max_world_y) +
+                " async_inflight=" + std::to_string(
+                    IsAsyncRelightColumnInFlight(column)) +
+                " first_mesh_ticket=" + std::to_string(first_mesh) +
+                " relight_flow_ticket=" + std::to_string(relight_flow) +
+                " repair_ticket=" + std::to_string(has_repair_ticket) +
+                " defer_until_lit=" + std::to_string(
+                    MeshService->GetCache().IsDeferMeshUntilLit(
+                        chunk_data.coord)));
+      }
     }
     const auto install_t1 = std::chrono::high_resolution_clock::now();
     PhysicsTelemetryData.RelightApplyInstallMs +=
