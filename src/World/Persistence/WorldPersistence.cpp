@@ -568,11 +568,12 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   if (!victim_queue)
   {
     // The normal FIFO starts back-pressuring non-core work at 16 entries.
-    // Exact renderer rejects are bounded to eight targets per drain, so allow
-    // that many additional deduplicated visible repairs before applying the
-    // same victim policy at the hard reserve limit.
+    // Exact renderer rejects are bounded to eight targets per drain. Keep two
+    // bounded batches of deduplicated visible repairs admissible when all FIFO
+    // work is already within the same visible ring and no safe far victim
+    // exists; beyond this reserve, retain the existing backpressure.
     constexpr int kVisibleRelightReserve =
-        kVisibleDrawGateRelightTargetLimit;
+        kVisibleDrawGateRelightTargetLimit * 2;
     if (ShouldAdmitRelightFifoEnqueue(
             fifo_n, horiz, /*fifo_backpressure=*/16 + kVisibleRelightReserve))
     {
