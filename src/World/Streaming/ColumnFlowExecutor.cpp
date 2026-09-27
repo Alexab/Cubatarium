@@ -691,9 +691,13 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // single-owner scheduler slot from reaching RelightThenMesh. Repair this
   // bounded set even when the normal recovery producer is paused by idle/debt
   // gates; columns with a real FIFO/async light owner need no replacement.
+  const int orphan_reticket_radius = std::min(4, focus_radius);
   std::vector<glm::ivec2> orphaned_mesh_tickets;
   scheduler_.ForEachOccupiedColumn([&](glm::ivec2 col) {
-    if (scheduler_.Contains(col, ColumnWorkKind::FirstMesh) &&
+    const int horiz = std::max(std::abs(col.x - focus.x),
+                               std::abs(col.y - focus.y));
+    if (horiz <= orphan_reticket_radius &&
+        scheduler_.Contains(col, ColumnWorkKind::FirstMesh) &&
         world.IsPendingLightBeforeMesh(col) &&
         !world.IsTerrainColumnRelightQueued(col) &&
         !world.IsAsyncRelightColumnInFlight(col))
@@ -716,7 +720,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   int orphaned_mesh_ticket_n = 0;
   for (const glm::ivec2 &col : orphaned_mesh_tickets)
   {
-    if (orphaned_mesh_ticket_n >= std::max(1, recover_n))
+    if (orphaned_mesh_ticket_n >= 1)
     {
       break;
     }
