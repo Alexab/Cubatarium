@@ -995,6 +995,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
   const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
+  const bool audit_relight =
+      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
   // Playerв€Єsea band, plus deeper ocean floor (sea-4 chunks).
   int band_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
@@ -1026,6 +1028,10 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         bool missing_mesh = false;
         bool any_sky = false;
         bool any_solid = false;
+        glm::ivec3 first_fully_dark_unsettled_coord(-1);
+        glm::ivec3 first_stale_dark_coord(-1);
+        UChunkMeshCache::StaleDarkWitness first_stale_dark_witness{};
+        bool first_stale_dark_settled = false;
         for (int cy = cy0; cy <= cy1; ++cy)
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -1205,17 +1211,30 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               continue;
             }
+            const bool slice_settled =
+                ChunkSliceHasCurrentLightSettlement(*this, coord);
             if (MeshService->GetCache().ChunkHasFullyDarkFace(coord) &&
-                !ChunkSliceHasCurrentLightSettlement(*this, coord))
+                !slice_settled)
             {
               fully_dark = true;
               bad_mesh = true;
+              if (first_fully_dark_unsettled_coord.x < 0)
+              {
+                first_fully_dark_unsettled_coord = coord;
+              }
             }
-            if (MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
-                                                              BlockWorld))
+            UChunkMeshCache::StaleDarkWitness stale_witness{};
+            if (MeshService->GetCache().ChunkHasStaleDarkFaces(
+                    coord, BlockWorld, &stale_witness))
             {
               stale_dark_faces = true;
               bad_mesh = true;
+              if (first_stale_dark_coord.x < 0)
+              {
+                first_stale_dark_coord = coord;
+                first_stale_dark_witness = stale_witness;
+                first_stale_dark_settled = slice_settled;
+              }
             }
             if (fully_dark && stale_dark_faces)
             {
@@ -1232,7 +1251,108 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
               ShouldHealFullyDarkWithRemesh(any_sky, stale_dark_faces);
           const bool relight_only = ShouldHealFullyDarkWithRelightOnly(
               fully_dark, any_sky, stale_dark_faces);
-          if (!any_sky || fully_dark || relight_only)
+          const bool enqueue_relight = !any_sky || fully_dark || relight_only;
+          if (audit_relight)
+          {
+            const glm::ivec3 trigger_coord =
+                first_stale_dark_coord.x >= 0
+                    ? first_stale_dark_coord
+                    : first_fully_dark_unsettled_coord;
+            const UChunk *trigger_chunk =
+                trigger_coord.x >= 0
+                    ? BlockWorld.GetChunkManager().GetChunk(trigger_coord)
+                    : nullptr;
+            const ChunkRenderDemandRecord *trigger_demand =
+                trigger_coord.x >= 0
+                    ? UChunkRenderDemandStore::Get().Find(trigger_coord)
+                    : nullptr;
+            const glm::ivec3 source_coord =
+                first_stale_dark_witness.source_chunk;
+            const UChunk *source_chunk =
+                first_stale_dark_coord.x >= 0
+                    ? BlockWorld.GetChunkManager().GetChunk(source_coord)
+                    : nullptr;
+            const ChunkRenderDemandRecord *source_demand =
+                first_stale_dark_coord.x >= 0
+                    ? UChunkRenderDemandStore::Get().Find(source_coord)
+                    : nullptr;
+            const uint64_t source_field_rev =
+                source_chunk ? source_chunk->GetLightFieldRevision() : 0;
+            const bool source_settled =
+                first_stale_dark_coord.x >= 0 &&
+                ChunkSliceHasCurrentLightSettlement(*this, source_coord);
+            const MeshPublishRevs trigger_published =
+                trigger_coord.x >= 0
+                    ? MeshService->GetCache().GetMeshPublishRevs(trigger_coord)
+                    : MeshPublishRevs{};
+            CubatariumLogInfo(
+                "RelightAudit",
+                "recover decision column=(" + std::to_string(key.x) + "," +
+                    std::to_string(key.y) + ") action=" +
+                    std::string(enqueue_relight ? "relight" : "mesh_only") +
+                    " pending=" + std::to_string(pending) +
+                    " any_sky=" + std::to_string(any_sky) +
+                    " any_solid=" + std::to_string(any_solid) +
+                    " has_mesh=" + std::to_string(has_mesh) +
+                    " missing_mesh=" + std::to_string(missing_mesh) +
+                    " fully_dark_unsettled=" + std::to_string(fully_dark) +
+                    " stale_dark=" + std::to_string(stale_dark_faces) +
+                    " remesh_heal=" + std::to_string(remesh_heal) +
+                    " relight_only=" + std::to_string(relight_only) +
+                    " trigger=(" + std::to_string(trigger_coord.x) + "," +
+                    std::to_string(trigger_coord.y) + "," +
+                    std::to_string(trigger_coord.z) + ") trigger_settled=" +
+                    std::to_string(first_stale_dark_coord.x >= 0
+                                       ? first_stale_dark_settled
+                                       : (trigger_coord.x >= 0 &&
+                                          ChunkSliceHasCurrentLightSettlement(
+                                              *this, trigger_coord))) +
+                    " trigger_light=" +
+                    std::to_string(trigger_chunk
+                                       ? trigger_chunk->GetLightFieldRevision()
+                                       : 0) +
+                    ":" + std::to_string(trigger_demand
+                                             ? trigger_demand->desired_light_rev
+                                             : 0) + ":" +
+                    std::to_string(trigger_demand
+                                       ? trigger_demand->published_light_rev
+                                       : 0) + " mesh=" +
+                    std::to_string(trigger_published.geom_rev) + ":" +
+                    std::to_string(trigger_published.light_rev) + ":" +
+                    std::to_string(trigger_coord.x >= 0
+                                       ? MeshService->GetCache()
+                                             .GetMeshedLightRevision(trigger_coord)
+                                       : 0) +
+                    " stale_source=(" + std::to_string(source_coord.x) + "," +
+                    std::to_string(source_coord.y) + "," +
+                    std::to_string(source_coord.z) + ") source_incarnation=" +
+                    std::to_string(first_stale_dark_witness.source_incarnation) +
+                    ":" + std::to_string(source_chunk
+                                             ? source_chunk->GetIncarnation()
+                                             : 0) + " source_light_rev=" +
+                    std::to_string(first_stale_dark_witness.source_light_revision) +
+                    ":" + std::to_string(source_field_rev) +
+                    " source_settled=" + std::to_string(source_settled) +
+                    " source_demand_light=" +
+                    std::to_string(source_demand
+                                       ? source_demand->desired_light_rev
+                                       : 0) + ":" +
+                    std::to_string(source_demand
+                                       ? source_demand->published_light_rev
+                                       : 0) + " stale_sample=(" +
+                    std::to_string(first_stale_dark_witness.sampled_block.x) +
+                    "," +
+                    std::to_string(first_stale_dark_witness.sampled_block.y) +
+                    "," +
+                    std::to_string(first_stale_dark_witness.sampled_block.z) +
+                    ") packed=" +
+                    std::to_string(first_stale_dark_witness.packed_light) +
+                    " face=" +
+                    std::to_string(first_stale_dark_witness.face_index) +
+                    " gpu=" +
+                    std::to_string(first_stale_dark_witness.gpu_probe));
+          }
+          if (enqueue_relight)
           {
             TryNotePendingLightBeforeMesh(ground, remesh_min, remesh_max,
                                           __FUNCTION__);
