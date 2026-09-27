@@ -116,7 +116,8 @@ public:
   void PromoteTerrainColumnRelight(glm::ivec2 world_block_key);
   /// Move one queued near-focus column to the priority head, preserving the
   /// active relight pin immediately ahead of it when that pin is queued.
-  bool PrioritizeTerrainColumnRelight(glm::ivec2 world_block_key);
+  bool PrioritizeTerrainColumnRelight(glm::ivec2 world_block_key,
+                                      bool pin_in_flight = false);
   /// Promote all pending far-FIFO columns within focus radius (block keys).
   int PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
                                        int radius_chunks);
@@ -181,6 +182,9 @@ private:
   void EnqueueTerrainColumnRelightImpl(int world_x, int world_z,
                                        bool priority, int min_y, int max_y,
                                        bool visible_admission);
+  bool PrioritizeNearestTerrainColumnRelight(UWorld &world,
+                                             glm::ivec3 focus_ground,
+                                             int radius_chunks, int scan_cap);
 
   std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
   std::unique_ptr<UChunkStorageService> ChunkStorage;

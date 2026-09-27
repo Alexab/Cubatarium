@@ -794,7 +794,7 @@ void UWorldPersistence::PromoteTerrainColumnRelight(
 }
 
 bool UWorldPersistence::PrioritizeTerrainColumnRelight(
-    glm::ivec2 world_block_key)
+    glm::ivec2 world_block_key, bool pin_in_flight)
 {
   if (PendingTerrainColumnRelightKeys.count(world_block_key) == 0)
   {
@@ -815,7 +815,8 @@ bool UWorldPersistence::PrioritizeTerrainColumnRelight(
   const glm::ivec2 pin_key(RelightFifoPinCx * CHUNK_SIZE,
                             RelightFifoPinCz * CHUNK_SIZE);
   const bool target_is_pin = RelightFifoPinValid && pin_key == world_block_key;
-  const bool pin_queued = RelightFifoPinValid && !target_is_pin &&
+  const bool pin_queued = RelightFifoPinValid && !pin_in_flight &&
+                          !target_is_pin &&
                           PendingTerrainColumnRelightKeys.count(pin_key) != 0;
   if (pin_queued)
   {
@@ -834,6 +835,62 @@ bool UWorldPersistence::PrioritizeTerrainColumnRelight(
   }
   PendingTerrainColumnRelightsPriority.insert(insert_at, world_block_key);
   return true;
+}
+
+bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
+    UWorld &world, glm::ivec3 focus_ground, int radius_chunks,
+    int scan_cap)
+{
+  if (radius_chunks < 0 || scan_cap <= 0 ||
+      PendingTerrainColumnRelightsPriority.empty())
+  {
+    return false;
+  }
+
+  const int scan_n = std::min(
+      static_cast<int>(PendingTerrainColumnRelightsPriority.size()), scan_cap);
+  int best_index = -1;
+  int best_distance = radius_chunks + 1;
+  for (int i = 0; i < scan_n; ++i)
+  {
+    const glm::ivec2 key = PendingTerrainColumnRelightsPriority[i];
+    const glm::ivec2 column(FloorDiv(key.x, CHUNK_SIZE),
+                           FloorDiv(key.y, CHUNK_SIZE));
+    if (RelightFifoPinValid &&
+        column == glm::ivec2(RelightFifoPinCx, RelightFifoPinCz))
+    {
+      continue;
+    }
+    if (world.IsAsyncRelightColumnInFlight(column))
+    {
+      continue;
+    }
+    const int distance =
+        std::max(std::abs(column.x - focus_ground.x),
+                 std::abs(column.y - focus_ground.z));
+    if (distance > radius_chunks)
+    {
+      continue;
+    }
+    // Prefer nearer targets; break ties in favor of the oldest queued entry.
+    if (best_index < 0 || distance < best_distance ||
+        (distance == best_distance && i > best_index))
+    {
+      best_index = i;
+      best_distance = distance;
+    }
+  }
+  if (best_index < 0)
+  {
+    return false;
+  }
+
+  const glm::ivec2 target = PendingTerrainColumnRelightsPriority[best_index];
+  const bool pin_in_flight =
+      RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(
+                                 glm::ivec2(RelightFifoPinCx,
+                                            RelightFifoPinCz));
+  return PrioritizeTerrainColumnRelight(target, pin_in_flight);
 }
 
 int UWorldPersistence::PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
@@ -1891,6 +1948,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       capture_telem.RelightCaptureStopReason = 7;
       return false;
     }
+    PrioritizeNearestTerrainColumnRelight(
+        world, focus_chunk, RelightMissPinMaxHoriz(), /*scan_cap=*/64);
     glm::ivec2 col;
     if (!PendingTerrainColumnRelightsPriority.empty())
     {
