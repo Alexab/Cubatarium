@@ -197,6 +197,10 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   record.renderer_gpu_quad_count = gpu_quad_count;
   record.mesh_revision = cache.GetChunkMeshRevision(coord);
   record.draw_gate_ready = draw_gate_ready ? 1u : 0u;
+  record.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+      coord, record.mesh_dirty_queue_index, record.mesh_dirty_queue_size);
+  record.mesh_dirty_queue_age_frames = cache.GetDirtyQueueAgeFrames(coord);
+  const double demand_sample_now_ms = VisualObligationNowMs();
   const glm::ivec2 column_coord(coord.x, coord.z);
   const bool drawable = cache.HasDrawableGreedyMesh(coord);
   const bool satisfying = cache.HasMeshSatisfyingColumnReady(coord);
@@ -290,6 +294,19 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
     record.settled_light_rev = slice_demand->settled_light_rev;
     record.has_settled_light = slice_demand->has_settled_light ? 1u : 0u;
     record.active_stage = static_cast<uint8_t>(slice_demand->active_stage);
+    const bool has_attempt_timestamp =
+        slice_demand->has_active_attempt &&
+        slice_demand->attempt_created_ms > 0.0;
+    record.demand_attempt_age_ms =
+        has_attempt_timestamp
+            ? std::max(0.0, demand_sample_now_ms -
+                                slice_demand->attempt_created_ms)
+            : 0.0;
+    record.demand_progress_age_ms =
+        slice_demand->last_progress_ms > 0.0
+            ? std::max(0.0, demand_sample_now_ms -
+                                slice_demand->last_progress_ms)
+            : 0.0;
   }
   record.flags = 1u; // candidate was in the renderer's frustum list pre-gate.
   UJobStageTrace::NoteVisualBlack(record);
@@ -464,6 +481,8 @@ void NoteFrustumCoverageGaps(
     record.field_light_rev = chunk->GetLightFieldRevision();
     record.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
         coord, record.mesh_dirty_queue_index, record.mesh_dirty_queue_size);
+    record.mesh_dirty_queue_age_frames = cache.GetDirtyQueueAgeFrames(coord);
+    const double demand_sample_now_ms = VisualObligationNowMs();
     if (const ChunkRenderDemandRecord *demand =
             UChunkRenderDemandStore::Get().Find(coord))
     {
@@ -475,6 +494,17 @@ void NoteFrustumCoverageGaps(
       record.desired_geom_rev = demand->desired_geom_rev;
       record.desired_light_rev = demand->desired_light_rev;
       record.active_stage = static_cast<uint8_t>(demand->active_stage);
+      const bool has_attempt_timestamp =
+          demand->has_active_attempt && demand->attempt_created_ms > 0.0;
+      record.demand_attempt_age_ms =
+          has_attempt_timestamp
+              ? std::max(0.0, demand_sample_now_ms -
+                                  demand->attempt_created_ms)
+              : 0.0;
+      record.demand_progress_age_ms =
+          demand->last_progress_ms > 0.0
+              ? std::max(0.0, demand_sample_now_ms - demand->last_progress_ms)
+              : 0.0;
     }
     UJobStageTrace::NoteVisualBlack(record);
   }

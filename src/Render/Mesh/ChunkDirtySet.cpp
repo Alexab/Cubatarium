@@ -450,6 +450,16 @@ void UChunkDirtySet::PrioritizeAgedNearHorizontal(
   InvalidateUnified();
 }
 
+uint64_t UChunkDirtySet::GetEnqueueAgeFrames(glm::ivec3 coord) const
+{
+  const auto it = EnqueueFrameByCoord.find(coord);
+  if (it == EnqueueFrameByCoord.end() || ScheduleFrame < it->second)
+  {
+    return 0;
+  }
+  return ScheduleFrame - it->second;
+}
+
 void UChunkDirtySet::PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk,
                                           int radius_chunks, int preferred_cy,
                                           bool prefer_lower_cy)

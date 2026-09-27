@@ -671,6 +671,10 @@ public:
   /// 3=ordinary Remesh. Index and size are queue-local.
   uint8_t GetDirtyQueueTrace(glm::ivec3 chunk_coord, int32_t &index,
                              int32_t &size) const;
+  uint64_t GetDirtyQueueAgeFrames(glm::ivec3 chunk_coord) const
+  {
+    return Dirty.GetEnqueueAgeFrames(chunk_coord);
+  }
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
   /// Drop stale async apply for this chunk (revision bump + clear RemeshAfterApply).

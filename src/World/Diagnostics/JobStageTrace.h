@@ -148,6 +148,7 @@ struct VisualBlackTraceRecord
   uint8_t mesh_dirty_queue_kind{0};
   int32_t mesh_dirty_queue_index{-1};
   int32_t mesh_dirty_queue_size{0};
+  uint64_t mesh_dirty_queue_age_frames{0};
   /// sample_kind=3/7 bits: dirty, async build, remesh-after-apply, GPU apply,
   /// GPU queued, GPU kicked/dispatched, and GPU extract owner.
   uint32_t mesh_work_owner_flags{0};

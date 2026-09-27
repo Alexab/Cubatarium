@@ -128,6 +128,9 @@ public:
   /// Perf-root P2: O(R²) column-index lookup instead of O(|Dirty|) scan.
   int CountWithinHorizontalRadius(glm::ivec3 center_chunk,
                                   int radius_chunks) const;
+  /// Number of scheduler frames since this coordinate entered its dirty lane.
+  /// Returns zero when it has no live dirty entry.
+  uint64_t GetEnqueueAgeFrames(glm::ivec3 coord) const;
 
 private:
   void InvalidateUnified() const { UnifiedDirty = true; }

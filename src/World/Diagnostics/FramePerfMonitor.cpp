@@ -3241,6 +3241,8 @@ void UFramePerfMonitor::Shutdown()
                << r.mesh_dirty_queue_index
                << ",\"mesh_dirty_queue_size\":"
                << r.mesh_dirty_queue_size
+               << ",\"mesh_dirty_queue_age_frames\":"
+               << r.mesh_dirty_queue_age_frames
                << ",\"mesh_work_owner_flags\":"
                << r.mesh_work_owner_flags
                << ",\"relight_band_min_y\":" << r.relight_band_min_y
