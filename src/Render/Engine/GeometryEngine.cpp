@@ -189,6 +189,10 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   record.cx = coord.x;
   record.cy = coord.y;
   record.cz = coord.z;
+  const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
+      world.GetPreferredLoadFocusBlock());
+  record.focus_cx = focus_chunk.x;
+  record.focus_cz = focus_chunk.z;
   record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
   record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
   record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
@@ -247,6 +251,30 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
   record.renderer_column_has_repair_ticket =
       column_state.has_repair_ticket ? 1u : 0u;
+  const bool relight_queued = world.IsTerrainColumnRelightQueued(column_coord);
+  const bool column_lit_ready = world.IsColumnLitReady(
+      glm::ivec3(column_coord.x, 0, column_coord.y));
+  const bool lit_gate_required = world.RequiresLightingLitGate();
+  record.relight_owner_flags =
+      (pending_light ? 1u << 0 : 0u) |
+      (relight_queued ? 1u << 1 : 0u) |
+      (async_relight ? 1u << 2 : 0u) |
+      (cache.IsDeferMeshUntilLit(coord) ? 1u << 3 : 0u) |
+      (cache.IsSoftDeferHeld(coord) ? 1u << 4 : 0u) |
+      (column_lit_ready ? 1u << 5 : 0u) |
+      (lit_gate_required ? 1u << 6 : 0u) |
+      (column_state.has_repair_ticket ? 1u << 7 : 0u);
+  record.column_emerge_stage =
+      static_cast<uint8_t>(column_state.stage);
+  record.mesh_work_owner_flags =
+      (dirty ? 1u << 0 : 0u) |
+      (mesh_inflight ? 1u << 1 : 0u) |
+      (cache.IsRemeshAfterApplyPending(coord) ? 1u << 2 : 0u) |
+      (gpu_pending ? 1u << 3 : 0u) |
+      (gpu_queued ? 1u << 4 : 0u) |
+      (gpu_kicked ? 1u << 5 : 0u) |
+      (gpu_extract ? 1u << 6 : 0u) |
+      (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u);
   const UChunk *chunk =
       world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *slice_demand =
