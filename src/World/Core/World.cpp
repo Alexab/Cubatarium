@@ -4493,7 +4493,8 @@ bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
   // Force the next capture to read the already-settled current field. A cached
   // dark snapshot can otherwise bake the same stale vertex light again.
   cache.InvalidateMeshCapture(chunk_coord);
-  MeshService->MarkDirty(chunk_coord);
+  MeshService->MarkDirty(chunk_coord,
+                         MeshRevisionBumpReason::SettledDrawGateRepair);
   if (!cache.IsChunkMeshDirty(chunk_coord))
   {
     if (has_retry_ticket)
@@ -5580,7 +5581,8 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       // Closeout C: idle VB/stale drawable remesh → RemeshQ.
-      MeshService->MarkDirty(glm::ivec3(key.x, cy, key.y));
+      MeshService->MarkDirty(glm::ivec3(key.x, cy, key.y),
+                              MeshRevisionBumpReason::PostLightMeshFinalize);
     }
     StickyRemeshAfterLight.erase(key);
     PendingLightBeforeMesh.erase(key);

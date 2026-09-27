@@ -588,6 +588,26 @@ const char *UJobStageTrace::MeshRevisionBumpReasonName(
     return "invalidated_inflight";
   case MeshRevisionBumpReason::MissingHoleSeamNeighbor:
     return "missing_hole_seam_neighbor";
+  case MeshRevisionBumpReason::MarkRelitInstall:
+    return "mark_relit_install";
+  case MeshRevisionBumpReason::FaceDebtCallback:
+    return "face_debt_callback";
+  case MeshRevisionBumpReason::SoftDeferVisibilitySeam:
+    return "soft_defer_visibility_seam";
+  case MeshRevisionBumpReason::SettledDrawGateRepair:
+    return "settled_draw_gate_repair";
+  case MeshRevisionBumpReason::VisualRebuildQueue:
+    return "visual_rebuild_queue";
+  case MeshRevisionBumpReason::FluidWorldGeometry:
+    return "fluid_world_geometry";
+  case MeshRevisionBumpReason::TerrainColumnInvalidation:
+    return "terrain_column_invalidation";
+  case MeshRevisionBumpReason::TerrainChunkEmergence:
+    return "terrain_chunk_emergence";
+  case MeshRevisionBumpReason::BlockRegistryInvalidation:
+    return "block_registry_invalidation";
+  case MeshRevisionBumpReason::PostLightMeshFinalize:
+    return "post_light_mesh_finalize";
   }
   return "unknown";
 }

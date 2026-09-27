@@ -1,4 +1,5 @@
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/Frustum.h"
@@ -506,7 +507,7 @@ void UWorldMeshService::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
   }
   for (const glm::ivec3 &coord : dirty_chunks)
   {
-    MarkDirty(coord);
+    MarkDirty(coord, MeshRevisionBumpReason::TerrainColumnInvalidation);
   }
 }
 
@@ -530,7 +531,8 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamed(
     {
       for (int cy = cy0; cy <= cy1; ++cy)
       {
-        MarkDirty(glm::ivec3(cx, cy, cz));
+        MarkDirty(glm::ivec3(cx, cy, cz),
+                  MeshRevisionBumpReason::TerrainChunkEmergence);
       }
     }
   }
@@ -1582,7 +1584,8 @@ void UWorldMeshService::MarkChunksContainingBlockIds(
         }
         if (contains_target)
         {
-          MarkDirty(chunk.GetCoord());
+          MarkDirty(chunk.GetCoord(),
+                    MeshRevisionBumpReason::BlockRegistryInvalidation);
         }
       });
 }

@@ -1,4 +1,5 @@
 #include "World/Physics/WorldChunkDirtyService.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Collision/WorldCollision.h"
@@ -117,7 +118,8 @@ void UWorldChunkDirtyService::DrainRebuildQueues(UWorld &world)
     world.ModifiedChunks.insert(chunk_coord);
     if (world.BlockRegistry)
     {
-      world.MeshService->MarkDirty(chunk_coord);
+      world.MeshService->MarkDirty(chunk_coord,
+                                   MeshRevisionBumpReason::VisualRebuildQueue);
     }
   }
 

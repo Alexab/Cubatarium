@@ -925,7 +925,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             return;
           }
           // Cap: material/geom mismatch schedules one Dirty (not flood).
-          world_ptr->GetMeshService().MarkDirty(chunk_coord);
+          world_ptr->GetMeshService().MarkDirty(
+              chunk_coord, MeshRevisionBumpReason::FaceDebtCallback);
         });
     mesh_service.SetOnFaceDebtMaskFn(
         [this](glm::ivec3 chunk_coord, uint8_t mask)
@@ -2089,7 +2090,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             continue;
           }
           mesh_service.GetCache().InvalidateMeshCapture(nb);
-          mesh_service.MarkDirty(nb);
+          mesh_service.MarkDirty(nb,
+                                 MeshRevisionBumpReason::SoftDeferVisibilitySeam);
           ++seamed;
         }
       };

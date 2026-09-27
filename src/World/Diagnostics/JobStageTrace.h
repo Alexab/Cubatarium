@@ -119,7 +119,17 @@ enum class MeshRevisionBumpReason : uint8_t
   PriorityFullyDarkRemesh,
   PriorityDirtyEnqueued,
   InvalidatedInFlight,
-  MissingHoleSeamNeighbor
+  MissingHoleSeamNeighbor,
+  MarkRelitInstall,
+  FaceDebtCallback,
+  SoftDeferVisibilitySeam,
+  SettledDrawGateRepair,
+  VisualRebuildQueue,
+  FluidWorldGeometry,
+  TerrainColumnInvalidation,
+  TerrainChunkEmergence,
+  BlockRegistryInvalidation,
+  PostLightMeshFinalize
 };
 
 struct DemandTransitionSpan

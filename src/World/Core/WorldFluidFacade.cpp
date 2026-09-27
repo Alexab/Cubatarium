@@ -1,4 +1,5 @@
 #include "World/Core/WorldFluidFacade.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include <unordered_set>
 
 #include "Blocks/BlockRegistry.h"
@@ -177,7 +178,8 @@ void UWorldFluidFacade::MarkFluidRegionDirty(UWorld &world, glm::ivec3 center,
     }
     else
     {
-      world.MeshService->MarkDirty(chunk_coord);
+      world.MeshService->MarkDirty(chunk_coord,
+                                   MeshRevisionBumpReason::FluidWorldGeometry);
     }
   }
 }
@@ -221,7 +223,8 @@ void UWorldFluidFacade::MarkFluidFloodMeshDirty(
         continue;
       }
     }
-    world.MeshService->MarkDirty(chunk_coord);
+    world.MeshService->MarkDirty(chunk_coord,
+                                 MeshRevisionBumpReason::FluidWorldGeometry);
   }
 }
 

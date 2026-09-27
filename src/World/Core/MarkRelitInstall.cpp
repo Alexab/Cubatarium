@@ -259,7 +259,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       }
       else
       {
-        mesh->MarkDirty(coord);
+        mesh->MarkDirty(coord, MeshRevisionBumpReason::MarkRelitInstall);
       }
       ++PhysicsTelemetryData.MarkRelitScheduleN;
       ++dirty_admitted_n;
