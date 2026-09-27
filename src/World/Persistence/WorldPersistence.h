@@ -105,8 +105,8 @@ public:
                              bool priority);
   int AdmitDeferredFarRelightColumns(UWorld &world, glm::ivec3 focus_ground,
                                      int pin_horiz);
-  /// Move an already-queued column from the far FIFO into the priority deque.
-  void PromoteTerrainColumnRelight(glm::ivec2 key);
+  /// Move an already-queued world-block-key column from far to priority FIFO.
+  void PromoteTerrainColumnRelight(glm::ivec2 world_block_key);
   /// Promote all pending far-FIFO columns within focus radius (block keys).
   int PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
                                        int radius_chunks);

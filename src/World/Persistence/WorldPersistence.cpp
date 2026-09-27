@@ -745,34 +745,40 @@ int UWorldPersistence::TakeRelightFifoProtectBlock()
   return n;
 }
 
-void UWorldPersistence::PromoteTerrainColumnRelight(glm::ivec2 key)
+void UWorldPersistence::PromoteTerrainColumnRelight(
+    glm::ivec2 world_block_key)
 {
+  // Queue keys are world-block coordinates; the protected pin is a chunk
+  // coordinate. Compare in one coordinate space or every non-origin column
+  // is incorrectly treated as a different pinned target.
+  const glm::ivec2 column(FloorDiv(world_block_key.x, CHUNK_SIZE),
+                          FloorDiv(world_block_key.y, CHUNK_SIZE));
   if (RelightFifoPinValid &&
-      key != glm::ivec2(RelightFifoPinCx, RelightFifoPinCz))
+      column != glm::ivec2(RelightFifoPinCx, RelightFifoPinCz))
   {
     ++RelightFifoProtectBlockN;
     return;
   }
   for (const glm::ivec2 &queued : PendingTerrainColumnRelightsPriority)
   {
-    if (queued == key)
+    if (queued == world_block_key)
     {
       return;
     }
   }
   auto it = std::find(PendingTerrainColumnRelights.begin(),
-                      PendingTerrainColumnRelights.end(), key);
+                      PendingTerrainColumnRelights.end(), world_block_key);
   if (it != PendingTerrainColumnRelights.end())
   {
     PendingTerrainColumnRelights.erase(it);
-    PendingTerrainColumnRelightsPriority.push_back(key);
+    PendingTerrainColumnRelightsPriority.push_back(world_block_key);
     return;
   }
   // Keys-without-deque ghost: Drain used to re-Enqueue in-flight columns and
   // leave Keys set with no FIFO entry — pending_light then stuck forever.
-  if (PendingTerrainColumnRelightKeys.count(key) != 0)
+  if (PendingTerrainColumnRelightKeys.count(world_block_key) != 0)
   {
-    PendingTerrainColumnRelightsPriority.push_back(key);
+    PendingTerrainColumnRelightsPriority.push_back(world_block_key);
   }
 }
 
