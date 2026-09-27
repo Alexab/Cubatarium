@@ -235,6 +235,10 @@ struct VisualBlackTraceRecord
   uint8_t cause{0};
   uint8_t active_stage{0};
   uint8_t face_debt_mask{0};
+  /// sample_kind 4/6/7: SnapshotAcquireDeferReason, set when cause=13.
+  uint8_t mesh_snapshot_defer_reason{0};
+  /// sample_kind 4/6/7: MeshEnqueueResult, set when cause=14.
+  uint8_t mesh_enqueue_reject_reason{0};
   uint8_t draw_gate_ready{0};
   uint8_t stale_face_index{0};
   uint8_t stale_sample_light{0};

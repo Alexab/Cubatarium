@@ -3340,6 +3340,10 @@ void UFramePerfMonitor::Shutdown()
                << ",\"active_stage\":" << static_cast<int>(r.active_stage)
                << ",\"face_debt_mask\":"
                << static_cast<int>(r.face_debt_mask)
+               << ",\"mesh_snapshot_defer_reason\":"
+               << static_cast<int>(r.mesh_snapshot_defer_reason)
+               << ",\"mesh_enqueue_reject_reason\":"
+               << static_cast<int>(r.mesh_enqueue_reject_reason)
                << ",\"flags\":" << r.flags << "}\n";
       };
       UJobStageTrace::ForEachVisualBlackNewest(

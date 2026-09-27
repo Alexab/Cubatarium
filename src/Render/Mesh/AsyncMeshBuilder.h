@@ -22,6 +22,14 @@ class UBlockRegistry;
 class IUChunkMesher;
 struct BlockDefinitionCatalog;
 
+enum class MeshEnqueueResult : uint8_t
+{
+  Accepted = 0,
+  WorkSlotRejected,
+  SnapshotBudgetRejected,
+  WorkerPoolRejected,
+};
+
 struct MeshBuildResult
 {
   glm::ivec3 coord{0};
@@ -53,7 +61,10 @@ public:
   void SetMesher(IUChunkMesher *mesher) { Mesher = mesher; }
   IUChunkMesher *GetMesher() const { return Mesher; }
 
-  [[nodiscard]] bool Enqueue(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
+  [[nodiscard]] bool Enqueue(ChunkMeshSnapshot snapshot,
+                             UBlockRegistry &registry);
+  [[nodiscard]] MeshEnqueueResult
+  EnqueueDetailed(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
   bool IsInFlight(glm::ivec3 coord) const;
   int GetInFlightCount() const;

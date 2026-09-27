@@ -92,11 +92,19 @@ int MaxSolidLocalYSnapshot(const ChunkMeshSnapshot &snapshot,
 bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
                                 UBlockRegistry &registry)
 {
+  return EnqueueDetailed(std::move(snapshot), registry) ==
+         MeshEnqueueResult::Accepted;
+}
+
+MeshEnqueueResult
+UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
+                                   UBlockRegistry &registry)
+{
   const glm::ivec3 coord = snapshot.coord;
   // Audit R12: shared mesh/relight/gen concurrency envelope.
   if (!UPipelineAdmission::Get().TryAcquireWorkSlot())
   {
-    return false;
+    return MeshEnqueueResult::WorkSlotRejected;
   }
   struct WorkSlotGuard
   {
@@ -107,7 +115,7 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
   if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
           sizeof(ChunkMeshSnapshot)))
   {
-    return false;
+    return MeshEnqueueResult::SnapshotBudgetRejected;
   }
   // std::function is copyable; the last queued/running closure owns the lease.
   auto snapshot_credit = std::make_shared<UPipelineCreditGuard>(
@@ -281,9 +289,9 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
     }
     UJobStageTrace::NoteTerminal(stage_trace, JobStage::Cancelled,
                                  JobTerminalReason::WorkerPoolRejected);
-    return false;
+    return MeshEnqueueResult::WorkerPoolRejected;
   }
-  return true;
+  return MeshEnqueueResult::Accepted;
 }
 
 void UAsyncMeshBuilder::SetCompletedCapacity(std::size_t cap)

@@ -7279,7 +7279,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               std::max(2, MeshFocusRadiusChunks);
       bool focus_first_mesh_budget_reserve_candidate = false;
       const auto trace_visible_schedule =
-          [&](uint8_t outcome, uint8_t detail)
+          [&](uint8_t outcome, uint8_t detail,
+              uint8_t enqueue_reject_reason = 0)
       {
         if ((!trace_visible_repair && !trace_normal_focus_remesh &&
              !trace_first_mesh) ||
@@ -7297,8 +7298,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         trace.focus_cx = MeshFocusGroundChunk.x;
         trace.focus_cz = MeshFocusGroundChunk.z;
         trace.cause = outcome;
-        trace.face_debt_mask = detail;
-        trace.active_stage = detail;
+        if (outcome == 13)
+        {
+          trace.mesh_snapshot_defer_reason = detail;
+        }
+        if (outcome == 14)
+        {
+          trace.mesh_enqueue_reject_reason = enqueue_reject_reason;
+        }
         const auto &schedule_queue = trace_first_mesh
                                         ? Dirty.FirstMeshQueue()
                                         : Dirty.RemeshQueue();
@@ -7371,6 +7378,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           trace.attempt_id = demand->active_attempt_id;
           trace.desired_geom_rev = demand->desired_geom_rev;
           trace.desired_light_rev = demand->desired_light_rev;
+          trace.face_debt_mask = demand->face_debt_mask;
           trace.demand_published_geom_rev = demand->published_geom_rev;
           trace.demand_published_light_rev = demand->published_light_rev;
           trace.active_stage = static_cast<uint8_t>(demand->active_stage);
@@ -7662,9 +7670,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             0.10, 8.0);
       }
       const uint64_t submitted_revision = snapshot.sourceRevision;
-      if (!AsyncBuilder->Enqueue(std::move(snapshot), registry))
+      const MeshEnqueueResult enqueue_result =
+          AsyncBuilder->EnqueueDetailed(std::move(snapshot), registry);
+      if (enqueue_result != MeshEnqueueResult::Accepted)
       {
-        trace_visible_schedule(14, 0);
+        trace_visible_schedule(14, 0,
+                               static_cast<uint8_t>(enqueue_result));
         ++LastMeshDirtyScheduleSkipN;
         return std::next(it);
       }

@@ -6515,6 +6515,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     light_changes.changed_coords.reserve(result.chunks.size());
     std::vector<glm::ivec3> stale_mesh_coords;
     stale_mesh_coords.reserve(result.chunks.size());
+    int audit_unsatisfied_solid_n = 0;
+    int audit_ownerless_solid_n = 0;
     for (const RelightChunkLightData &chunk_data : result.chunks)
     {
       ++PhysicsTelemetryData.RelightLightChunksN;
@@ -6545,6 +6547,78 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           {
             stale_mesh_coords.push_back(chunk_data.coord);
           }
+        }
+        if (audit_relight)
+        {
+          const glm::ivec2 column(chunk_data.coord.x, chunk_data.coord.z);
+          const bool drawable =
+              MeshService && MeshService->HasDrawableGreedyMesh(chunk_data.coord);
+          const bool satisfying = MeshService &&
+              MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord);
+          const bool dirty =
+              MeshService && MeshService->GetCache().IsChunkMeshDirty(
+                                 chunk_data.coord);
+          const bool mesh_inflight =
+              MeshService && MeshService->HasInflightMeshBuild(chunk_data.coord);
+          const bool gpu_pending =
+              MeshService && MeshService->IsPendingGpuApply(chunk_data.coord);
+          const bool gpu_extract =
+              MeshService && MeshService->IsGpuExtractInFlight(chunk_data.coord);
+          const bool capture_pending =
+              MeshService && MeshService->GetCache().HasPendingCaptureWork(
+                                 chunk_data.coord);
+          const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+          const bool first_mesh_ticket =
+              flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh);
+          const bool relight_ticket =
+              flow_scheduler.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+              flow_scheduler.Contains(column, ColumnWorkKind::PromoteRelight);
+          const bool mesh_owner = dirty || mesh_inflight || gpu_pending ||
+                                  gpu_extract || capture_pending ||
+                                  first_mesh_ticket;
+          if (chunk->GetNonAirCount() > 0 && !drawable && !satisfying)
+          {
+            ++audit_unsatisfied_solid_n;
+            if (!mesh_owner)
+            {
+              ++audit_ownerless_solid_n;
+            }
+          }
+          const MeshPublishRevs published =
+              MeshService ? MeshService->GetCache().GetMeshPublishRevs(
+                                chunk_data.coord)
+                          : MeshPublishRevs{};
+          const ChunkRenderDemandRecord *demand =
+              UChunkRenderDemandStore::Get().Find(chunk_data.coord);
+          const uint64_t settled_rev = demand ? demand->settled_light_rev : 0;
+          const bool has_settled = demand && demand->has_settled_light;
+          const uint64_t meshed_light =
+              MeshService ? MeshService->GetCache().GetMeshedLightRevision(
+                                chunk_data.coord)
+                          : 0;
+          CubatariumLogInfo(
+              "RelightAudit",
+              "slice job=" + std::to_string(result.job_id) + " coord=(" +
+                  std::to_string(chunk_data.coord.x) + "," +
+                  std::to_string(chunk_data.coord.y) + "," +
+                  std::to_string(chunk_data.coord.z) + ") non_air=" +
+                  std::to_string(chunk->GetNonAirCount()) + " installed=" +
+                  std::to_string(installed) + " drawable=" +
+                  std::to_string(drawable) + " satisfying=" +
+                  std::to_string(satisfying) + " dirty=" +
+                  std::to_string(dirty) + " mesh_inflight=" +
+                  std::to_string(mesh_inflight) + " gpu_pending=" +
+                  std::to_string(gpu_pending) + " gpu_extract=" +
+                  std::to_string(gpu_extract) + " capture_pending=" +
+                  std::to_string(capture_pending) + " first_mesh_ticket=" +
+                  std::to_string(first_mesh_ticket) + " relight_ticket=" +
+                  std::to_string(relight_ticket) + " field_light_rev=" +
+                  std::to_string(chunk->GetLightFieldRevision()) +
+                  " settled=" + std::to_string(has_settled) + ":" +
+                  std::to_string(settled_rev) + " published=" +
+                  std::to_string(published.geom_rev) + ":" +
+                  std::to_string(published.light_rev) + " meshed_light_rev=" +
+                  std::to_string(meshed_light));
         }
       }
     }
@@ -6671,6 +6745,12 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
               " changed=" +
               std::to_string(light_changes.changed_coords.size()) +
               " stale_mesh=" + std::to_string(stale_mesh_coords.size()) +
+              " unsatisfied_solid=" +
+              std::to_string(audit_unsatisfied_solid_n) +
+              " ownerless_solid=" +
+              std::to_string(audit_ownerless_solid_n) +
+              " force_unchanged=" +
+              std::to_string(force_unchanged_relit) +
               " finalize=" +
               std::to_string(result.finalize_pending_gate) + " draw_gate=" +
               std::to_string(result.visible_draw_gate_repair));
