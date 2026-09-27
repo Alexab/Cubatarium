@@ -598,6 +598,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             return;
           }
+          // A completed no-change light calculation is still a settlement,
+          // including revision zero. Reopening PendingLight here invalidates
+          // the proof and repeats dark-first-mesh → relight indefinitely.
+          if (world_ref.HasCurrentChunkSliceLightSettlement(chunk_coord))
+          {
+            return;
+          }
           const int light_band_min =
               std::max(0, chunk_coord.y * CHUNK_SIZE);
           const int light_band_max = std::min(

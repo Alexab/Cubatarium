@@ -133,7 +133,7 @@ bool ChunkSliceHasCurrentLightSettlement(const UWorld &world,
       world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *demand =
       UChunkRenderDemandStore::Get().Find(coord);
-  if (!chunk || !demand || chunk->GetLightFieldRevision() == 0 ||
+  if (!chunk || !demand ||
       demand->world_epoch !=
           world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch() ||
       demand->incarnation != chunk->GetIncarnation() ||
@@ -1967,6 +1967,11 @@ void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
   UChunkRenderDemandStore::Get().NoteLightCalculationSettled(
       chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
       chunk->GetIncarnation(), chunk->GetLightFieldRevision());
+}
+
+bool UWorld::HasCurrentChunkSliceLightSettlement(glm::ivec3 chunk_coord) const
+{
+  return MeshService && ChunkSliceHasCurrentLightSettlement(*this, chunk_coord);
 }
 
 void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
