@@ -1757,12 +1757,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Visible FirstMesh slices can be held behind PendingLight debt even after
   // they have an executable FIFO owner. Streaming may pass a one-column
   // budget here, which leaves the relight worker underfed despite an active
-  // near-FOV repair target. While byte memory pressure is green, give exact
-  // draw-gate work and near-FOV PendingLight debt one additional async capture
-  // slot. Time budget, completed-queue backpressure and worker limit still
-  // bound this priority exception.
+  // near-FOV repair target. Keep this near-FOV boost limited to a short
+  // in-flight queue: m13 showed that filling the full worker allowance moved
+  // the bottleneck into first-mesh scheduling. Exact draw-gate work retains
+  // its existing exception. Time budget, completed-queue backpressure and
+  // worker limit still bound the capture loop.
+  const bool near_fov_capture_headroom =
+      near_fov_pending_light_n > 0 &&
+      world.GetAsyncRelightInFlightCount() < std::min(max_inflight, 2);
   if (async_bg &&
-      (draw_gate_target_pinned || near_fov_pending_light_n > 0) &&
+      (draw_gate_target_pinned || near_fov_capture_headroom) &&
       world.GetPhysicsTelemetry().MemoryPressure == 0 &&
       world.GetAsyncRelightInFlightCount() < max_inflight &&
       world.GetRelightCompletedSize() < 2)
