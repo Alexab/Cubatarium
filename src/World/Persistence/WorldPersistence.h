@@ -90,6 +90,13 @@ public:
                                    int max_y = -1);
   /// Admit a bounded draw-gate repair by replacing a farther far-FIFO item
   /// when normal near-ring admission is backpressured.
+  bool EnqueueVisibleRelight(int world_x, int world_z, int min_y, int max_y,
+                             glm::ivec3 focus_ground, int max_horiz,
+                             const std::vector<glm::ivec2>
+                                 &protected_visible_columns,
+                             uint8_t *outcome = nullptr,
+                             int *victim_horiz = nullptr);
+  /// Compatibility entry point for renderer draw-gate callers.
   bool EnqueueVisibleDrawGateRelight(int world_x, int world_z, int min_y,
                                      int max_y, glm::ivec3 focus_ground,
                                      int max_horiz,

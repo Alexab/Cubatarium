@@ -407,7 +407,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
   }
 }
 
-bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
+bool UWorldPersistence::EnqueueVisibleRelight(
     int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
     int max_horiz,
     const std::vector<glm::ivec2> &protected_visible_columns,
@@ -619,6 +619,17 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
     *outcome = admitted ? 3 : 4;
   }
   return admitted;
+}
+
+bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
+    int world_x, int world_z, int min_y, int max_y, glm::ivec3 focus_ground,
+    int max_horiz,
+    const std::vector<glm::ivec2> &protected_visible_columns,
+    uint8_t *outcome, int *out_victim_horiz)
+{
+  return EnqueueVisibleRelight(world_x, world_z, min_y, max_y, focus_ground,
+                               max_horiz, protected_visible_columns, outcome,
+                               out_victim_horiz);
 }
 
 bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_x,

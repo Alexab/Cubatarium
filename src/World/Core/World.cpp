@@ -3194,6 +3194,25 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   const int budget = CapDirtyAdmitUnderThrash(
       base, GetPhysicsTelemetry().VisibleBlackFullyDarkRepairN, dropped_recent,
       /*dropped_soft_cap=*/800);
+  // A bounded visible relight admission may evict far work. Protect the
+  // unfinished columns in the lit drawable ring, just as the draw-gate path
+  // protects other exact renderer rejects.
+  std::vector<glm::ivec2> protected_visible_columns;
+  protected_visible_columns.reserve(keys.size());
+  for (const uint64_t key : keys)
+  {
+    const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+    const int cz = static_cast<int>(static_cast<uint32_t>(key));
+    const int horiz =
+        (std::max)(std::abs(cx - focus_g.x), std::abs(cz - focus_g.z));
+    if (horiz <= kVisualStageLitDrawableHoriz)
+    {
+      protected_visible_columns.emplace_back(cx, cz);
+    }
+  }
+  std::unordered_set<glm::ivec2, IVec2Hash>
+      first_mesh_visible_relight_columns;
+  constexpr size_t kFirstMeshVisibleRelightLimit = 8;
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
   const double demand_now_ms = VisualObligationNowMs();
   const auto has_live_slice_owner = [&](glm::ivec3 coord) {
@@ -3362,9 +3381,32 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const auto ensure_slice_relight = [&]() {
         if (Persistence)
         {
-          Persistence->EnqueueTerrainColumnRelight(
-              cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
-              cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+          const bool use_visible_admission =
+              defer_until_lit &&
+              col_horiz <= kVisualStageLitDrawableHoriz &&
+              (first_mesh_visible_relight_columns.count(slice_column) != 0 ||
+               first_mesh_visible_relight_columns.size() <
+                   kFirstMeshVisibleRelightLimit);
+          if (use_visible_admission)
+          {
+            const bool was_queued =
+                Persistence->IsTerrainColumnRelightQueued(slice_block_key);
+            const bool admitted_visible = Persistence->EnqueueVisibleRelight(
+                slice_block_key.x, slice_block_key.y,
+                cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1, focus_g,
+                kVisualStageLitDrawableHoriz, protected_visible_columns);
+            if (admitted_visible && !was_queued &&
+                Persistence->IsTerrainColumnRelightQueued(slice_block_key))
+            {
+              first_mesh_visible_relight_columns.insert(slice_column);
+            }
+          }
+          else
+          {
+            Persistence->EnqueueTerrainColumnRelight(
+                cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
+                cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+          }
         }
         return (Persistence &&
                 Persistence->IsTerrainColumnRelightQueued(slice_block_key)) ||
