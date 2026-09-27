@@ -402,6 +402,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     PendingTerrainColumnRelights.erase(victim_it);
     PendingTerrainColumnRelightKeys.erase(victim);
     PendingTerrainColumnRelightYBands.erase(victim);
+    PendingVisibleFirstMeshRelightYBands.erase(victim);
     if (DeferredVisibleDrawGateRelightYBands.count(victim) == 0)
     {
       PendingVisibleDrawGateRelightYBands.erase(victim);
@@ -676,6 +677,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   victim_queue->erase(victim_it);
   PendingTerrainColumnRelightKeys.erase(victim);
   PendingTerrainColumnRelightYBands.erase(victim);
+  PendingVisibleFirstMeshRelightYBands.erase(victim);
   if (DeferredVisibleDrawGateRelightYBands.count(victim) == 0)
   {
     PendingVisibleDrawGateRelightYBands.erase(victim);
@@ -704,6 +706,31 @@ bool UWorldPersistence::EnqueueVisibleDrawGateRelight(
   return EnqueueVisibleRelight(world_x, world_z, min_y, max_y, focus_ground,
                                max_horiz, protected_visible_columns, outcome,
                                out_victim_horiz);
+}
+
+void UWorldPersistence::NoteVisibleFirstMeshRelight(
+    glm::ivec2 world_block_key, int min_y, int max_y)
+{
+  if (max_y < min_y)
+  {
+    return;
+  }
+  auto [it, inserted] = PendingVisibleFirstMeshRelightYBands.try_emplace(
+      world_block_key, glm::ivec2(std::max(0, min_y), max_y));
+  if (!inserted)
+  {
+    it->second.x = std::min(it->second.x, std::max(0, min_y));
+    it->second.y = std::max(it->second.y, max_y);
+  }
+}
+
+void UWorldPersistence::ClearVisibleFirstMeshRelightIfNotQueued(
+    glm::ivec2 world_block_key)
+{
+  if (PendingTerrainColumnRelightKeys.count(world_block_key) == 0)
+  {
+    PendingVisibleFirstMeshRelightYBands.erase(world_block_key);
+  }
 }
 
 bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_x,
@@ -975,7 +1002,10 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
       EnqueueTerrainColumnRelightImpl(
           visible_target.x, visible_target.y, /*priority=*/true,
           visible_band.x, visible_band.y, /*visible_admission=*/true);
-      PendingVisibleDrawGateRelightYBands[visible_target] = visible_band;
+      if (PendingVisibleFirstMeshRelightYBands.count(visible_target) == 0)
+      {
+        PendingVisibleDrawGateRelightYBands[visible_target] = visible_band;
+      }
     }
     const bool pin_in_flight =
         RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(
@@ -2132,6 +2162,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const glm::ivec2 ground_xz(FloorDiv(col.x, CHUNK_SIZE),
                                FloorDiv(col.y, CHUNK_SIZE));
     bool exact_draw_gate_band = false;
+    bool exact_first_mesh_band = false;
     int retained_band_min = -1;
     int retained_band_max = -1;
     if (async_bg)
@@ -2172,12 +2203,39 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         }
       }
     }
+    if (!exact_draw_gate_band)
+    {
+      const auto first_mesh_band_it =
+          PendingVisibleFirstMeshRelightYBands.find(col);
+      if (first_mesh_band_it != PendingVisibleFirstMeshRelightYBands.end())
+      {
+        const int exact_min = std::max(0, first_mesh_band_it->second.x);
+        const int exact_max = std::min(max_y, first_mesh_band_it->second.y);
+        if (exact_max >= exact_min)
+        {
+          exact_first_mesh_band = true;
+          // Multiple visible slice demands can coalesce under one column key.
+          // Preserve the full owned interval; the surface clamp would otherwise
+          // silently replace a missing FirstMesh slice with the surface slice.
+          relight_min = queued_band_defined
+                            ? std::min(std::max(0, queued_band.x), exact_min)
+                            : exact_min;
+          relight_max = queued_band_defined
+                            ? std::max(std::min(max_y, queued_band.y), exact_max)
+                            : exact_max;
+        }
+        else
+        {
+          PendingVisibleFirstMeshRelightYBands.erase(first_mesh_band_it);
+        }
+      }
+    }
     // Era36/37 B1: clamp Capture Y-band to visible surface — drop underground.
     const int requested_relight_min = relight_min;
     const int requested_relight_max = relight_max;
     bool surface_band_adjusted = false;
     const int col_top_y = ColumnTopBlockY(world, ground_xz, max_y);
-    if (!exact_draw_gate_band)
+    if (!exact_draw_gate_band && !exact_first_mesh_band)
     {
       const auto col_band = RelightSurfaceBandForColumn(
           focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min, relight_max);
@@ -2205,6 +2263,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         ++telem.RelightFalseClearN;
         PendingTerrainColumnRelightKeys.erase(col);
         PendingVisibleDrawGateRelightYBands.erase(col);
+        PendingVisibleFirstMeshRelightYBands.erase(col);
         DeferredVisibleDrawGateRelightYBands.erase(col);
         return skipped_inflight < std::max(8, max_bg_columns * 4);
       }
@@ -2257,7 +2316,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         ShouldFinalizeRelightUnderVbPressure(vb_no_ticket_n, horiz_dist) ||
         ShouldFinalizeRelightUnderVbSteadyPressure(
             vb_focus_n, pending_light_focus_n, horiz_dist);
-    if (!exact_draw_gate_band && async_bg && band_cy > 0 &&
+    if (!exact_draw_gate_band && !exact_first_mesh_band && async_bg &&
+        band_cy > 0 &&
         !miss_finalize_band)
     {
       const int band_h = band_cy * CHUNK_SIZE;
@@ -2294,14 +2354,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                 cap_telem.VisibleBlackNoTicketN, pending_light_focus_n,
                 cap_telem.VisibleBlackFocusN);
         const bool consume_finalize_carve = consume_mode && band_needs;
-        if (plateau_suppress && cap_telem.RelightApplyNPrev == 0 &&
+        if (!exact_first_mesh_band && plateau_suppress &&
+            cap_telem.RelightApplyNPrev == 0 &&
             world.IsAsyncRelightColumnInFlight(ground_xz) &&
             !consume_finalize_carve)
         {
           finalize_gate = false;
           ++telem.RelightFinalizeDedupN;
         }
-        else if (fit != RelightLastFinalizeEpoch_.end() && epoch >= fit->second &&
+        else if (!exact_first_mesh_band &&
+                 fit != RelightLastFinalizeEpoch_.end() && epoch >= fit->second &&
                  (epoch - fit->second) < 4 &&
                  world.IsPendingLightBeforeMesh(ground_xz) && !band_needs &&
                  !consume_finalize_carve)
@@ -2368,6 +2430,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       // the corresponding relight job is actually submitted below.
       PendingVisibleDrawGateRelightYBands.erase(col);
     }
+    if (exact_first_mesh_band)
+    {
+      PendingVisibleFirstMeshRelightYBands.erase(col);
+    }
     DeferredVisibleDrawGateRelightYBands.erase(col);
     PendingTerrainColumnRelightKeys.erase(col);
     const auto capture_t0 = std::chrono::high_resolution_clock::now();
@@ -2391,6 +2457,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               " column_top=" + std::to_string(col_top_y) +
               " finalize=" + std::to_string(finalize_gate) +
               " draw_gate=" + std::to_string(exact_draw_gate_band) +
+              " first_mesh_exact=" +
+              std::to_string(exact_first_mesh_band) +
               " horiz=" + std::to_string(horiz_dist) +
               " fifo=" + std::to_string(GetPendingTerrainColumnRelightCount()) +
               " inflight=" + std::to_string(world.GetAsyncRelightInFlightCount()));
@@ -2564,6 +2632,14 @@ UWorldPersistence::GetTerrainColumnRelightQueueInfo(
     out.min_world_y = visible_it->second.x;
     out.max_world_y = visible_it->second.y;
   }
+  else if (const auto first_mesh_it =
+               PendingVisibleFirstMeshRelightYBands.find(world_block_key);
+           first_mesh_it != PendingVisibleFirstMeshRelightYBands.end())
+  {
+    out.y_band_defined = true;
+    out.min_world_y = first_mesh_it->second.x;
+    out.max_world_y = first_mesh_it->second.y;
+  }
   return out;
 }
 
@@ -2676,6 +2752,7 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
         PendingTerrainColumnRelightKeys.erase(key);
         PendingTerrainColumnRelightYBands.erase(key);
         PendingVisibleDrawGateRelightYBands.erase(key);
+        PendingVisibleFirstMeshRelightYBands.erase(key);
       }
     }
     q.swap(kept);
@@ -2693,6 +2770,7 @@ void UWorldPersistence::ClearPendingRelights()
   PendingTerrainColumnRelightKeys.clear();
   PendingTerrainColumnRelightYBands.clear();
   PendingVisibleDrawGateRelightYBands.clear();
+  PendingVisibleFirstMeshRelightYBands.clear();
   DeferredVisibleDrawGateRelightYBands.clear();
 }
 

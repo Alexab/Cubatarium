@@ -1843,6 +1843,23 @@ void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
 {
   PendingLightBeforeMesh.erase(ground_xz);
   StickyRemeshAfterLight.erase(ground_xz);
+  if (Persistence)
+  {
+    Persistence->ClearVisibleFirstMeshRelightIfNotQueued(
+        glm::ivec2(ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE));
+  }
+}
+
+void UWorld::NoteVisibleFirstMeshRelightBand(glm::ivec2 chunk_xz, int min_y,
+                                            int max_y)
+{
+  if (!Persistence || max_y < min_y)
+  {
+    return;
+  }
+  Persistence->NoteVisibleFirstMeshRelight(
+      glm::ivec2(chunk_xz.x * CHUNK_SIZE, chunk_xz.y * CHUNK_SIZE), min_y,
+      max_y);
 }
 
 int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
@@ -3541,6 +3558,12 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                 slice_block_key.x, slice_block_key.y,
                 cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1, focus_g,
                 kVisualStageLitDrawableHoriz, protected_visible_columns);
+            if (admitted_visible)
+            {
+              Persistence->NoteVisibleFirstMeshRelight(
+                  slice_block_key, cy * CHUNK_SIZE,
+                  (cy + 1) * CHUNK_SIZE - 1);
+            }
             if (admitted_visible && !was_queued &&
                 Persistence->IsTerrainColumnRelightQueued(slice_block_key))
             {
@@ -3552,6 +3575,13 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             Persistence->EnqueueTerrainColumnRelight(
                 cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
                 cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+            if (Persistence->IsTerrainColumnRelightQueued(slice_block_key) ||
+                IsAsyncRelightColumnInFlight(slice_column))
+            {
+              Persistence->NoteVisibleFirstMeshRelight(
+                  slice_block_key, cy * CHUNK_SIZE,
+                  (cy + 1) * CHUNK_SIZE - 1);
+            }
           }
         }
         // PendingLightBeforeMesh records debt, not executable work. Treating

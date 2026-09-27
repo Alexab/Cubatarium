@@ -97,6 +97,12 @@ public:
                                  &protected_visible_columns,
                              uint8_t *outcome = nullptr,
                              int *victim_horiz = nullptr);
+  /// Preserve an exact FirstMesh light band through surface-range selection.
+  /// The key is the block-space XZ column origin used by the relight queues.
+  void NoteVisibleFirstMeshRelight(glm::ivec2 world_block_key, int min_y,
+                                   int max_y);
+  void ClearVisibleFirstMeshRelightIfNotQueued(
+      glm::ivec2 world_block_key);
   /// Compatibility entry point for renderer draw-gate callers.
   bool EnqueueVisibleDrawGateRelight(int world_x, int world_z, int min_y,
                                      int max_y, glm::ivec3 focus_ground,
@@ -208,6 +214,10 @@ private:
   /// relight band so surface clamping cannot silently skip a visible slice.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
       PendingVisibleDrawGateRelightYBands;
+  /// Exact visible FirstMesh debt; these bands must not be moved to the
+  /// surface slice while the corresponding missing-mesh demand is pending.
+  std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
+      PendingVisibleFirstMeshRelightYBands;
   /// Bounded exact draw-gate targets kept outside the shared FIFO until the
   /// capture dequeue can promote one directly to the head.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>

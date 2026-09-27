@@ -1184,6 +1184,8 @@ public:
   /// Era23 I-V5: NotePendingLight + priority FIFO on void enqueue (ColumnFlow).
   void EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz);
   void ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
+  void NoteVisibleFirstMeshRelightBand(glm::ivec2 chunk_xz, int min_y,
+                                       int max_y);
   bool IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const;
   /// Stamp a validated lighting calculation on one loaded chunk slice.
   void NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord);
