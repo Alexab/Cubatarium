@@ -129,7 +129,15 @@ enum class MeshRevisionBumpReason : uint8_t
   TerrainColumnInvalidation,
   TerrainChunkEmergence,
   BlockRegistryInvalidation,
-  PostLightMeshFinalize
+  PostLightMeshFinalize,
+  WorldStreamingColumnCommit,
+  WorldStreamingLitFinalize,
+  RelitOrphanGround,
+  FirstDrawableSeaSeam,
+  SurfaceDarkRepairSeam,
+  PersistenceTerrainLoad,
+  StreamerCommitSeaSeam,
+  PendingLightColumnRecovery
 };
 
 struct DemandTransitionSpan

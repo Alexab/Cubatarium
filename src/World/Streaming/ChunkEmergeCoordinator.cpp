@@ -1418,7 +1418,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               continue;
             }
             mesh.MarkTerrainChunkMeshDirtySeamed(
-                glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, false);
+                glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, false,
+                MeshRevisionBumpReason::FirstDrawableSeaSeam);
           }
         });
     mesh_service.SetOnMeshColumnDirtyFn(
@@ -2220,7 +2221,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const int ymin = peer.y * CHUNK_SIZE;
             const int ymax = ymin + CHUNK_SIZE - 1;
             mesh_service.MarkTerrainChunkMeshDirtySeamed(
-                glm::ivec3(peer.x, 0, peer.z), ymin, ymax, false);
+                glm::ivec3(peer.x, 0, peer.z), ymin, ymax, false,
+                MeshRevisionBumpReason::SurfaceDarkRepairSeam);
             ++healed;
           }
         }

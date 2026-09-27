@@ -928,7 +928,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       {
         MeshService->MarkTerrainChunkMeshDirtySeamed(
             ground, dirty_min, dirty_max,
-            /*include_horizontal_neighbors=*/false);
+            /*include_horizontal_neighbors=*/false,
+            MeshRevisionBumpReason::RelitOrphanGround);
       }
       SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     }

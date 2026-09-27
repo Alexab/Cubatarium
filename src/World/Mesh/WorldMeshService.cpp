@@ -515,6 +515,15 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamed(
     glm::ivec3 ground_chunk_coord, int min_y, int max_y,
     bool include_horizontal_neighbors)
 {
+  MarkTerrainChunkMeshDirtySeamed(
+      ground_chunk_coord, min_y, max_y, include_horizontal_neighbors,
+      MeshRevisionBumpReason::TerrainChunkEmergence);
+}
+
+void UWorldMeshService::MarkTerrainChunkMeshDirtySeamed(
+    glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+    bool include_horizontal_neighbors, MeshRevisionBumpReason reason)
+{
   const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   const int cx0 = include_horizontal_neighbors ? ground_chunk_coord.x - 1
@@ -531,8 +540,7 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamed(
     {
       for (int cy = cy0; cy <= cy1; ++cy)
       {
-        MarkDirty(glm::ivec3(cx, cy, cz),
-                  MeshRevisionBumpReason::TerrainChunkEmergence);
+        MarkDirty(glm::ivec3(cx, cy, cz), reason);
       }
     }
   }

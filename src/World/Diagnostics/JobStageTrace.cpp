@@ -608,6 +608,22 @@ const char *UJobStageTrace::MeshRevisionBumpReasonName(
     return "block_registry_invalidation";
   case MeshRevisionBumpReason::PostLightMeshFinalize:
     return "post_light_mesh_finalize";
+  case MeshRevisionBumpReason::WorldStreamingColumnCommit:
+    return "world_streaming_column_commit";
+  case MeshRevisionBumpReason::WorldStreamingLitFinalize:
+    return "world_streaming_lit_finalize";
+  case MeshRevisionBumpReason::RelitOrphanGround:
+    return "relit_orphan_ground";
+  case MeshRevisionBumpReason::FirstDrawableSeaSeam:
+    return "first_drawable_sea_seam";
+  case MeshRevisionBumpReason::SurfaceDarkRepairSeam:
+    return "surface_dark_repair_seam";
+  case MeshRevisionBumpReason::PersistenceTerrainLoad:
+    return "persistence_terrain_load";
+  case MeshRevisionBumpReason::StreamerCommitSeaSeam:
+    return "streamer_commit_sea_seam";
+  case MeshRevisionBumpReason::PendingLightColumnRecovery:
+    return "pending_light_column_recovery";
   }
   return "unknown";
 }

@@ -154,6 +154,9 @@ public:
   void MarkTerrainChunkMeshDirtySeamed(glm::ivec3 ground_chunk_coord, int min_y,
                                        int max_y,
                                        bool include_horizontal_neighbors = true);
+  void MarkTerrainChunkMeshDirtySeamed(
+      glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+      bool include_horizontal_neighbors, MeshRevisionBumpReason reason);
   void MarkTerrainChunkMeshDirtyPriority(glm::ivec3 ground_chunk_coord, int min_y,
                                          int max_y);
   void MarkTerrainChunkMeshDirtySeamedPriority(

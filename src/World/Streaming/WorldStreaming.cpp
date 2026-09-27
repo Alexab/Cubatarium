@@ -1,4 +1,5 @@
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnRecordCoordinator.h"
@@ -370,7 +371,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
             else if (admit_far_dirty)
             {
               world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-                  ground, dirty_min, dirty_max, false);
+                  ground, dirty_min, dirty_max, false,
+                  MeshRevisionBumpReason::WorldStreamingColumnCommit);
             }
           }
           else
@@ -429,7 +431,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               else if (admit_far_dirty)
               {
                 world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-                    ground, dirty_min, dirty_max, false);
+                    ground, dirty_min, dirty_max, false,
+                    MeshRevisionBumpReason::WorldStreamingColumnCommit);
                 world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
               }
               else
@@ -553,7 +556,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         {
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-              ground, dirty_min, dirty_max, false);
+              ground, dirty_min, dirty_max, false,
+              MeshRevisionBumpReason::WorldStreamingLitFinalize);
         }
         else
         {
@@ -2387,7 +2391,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       else if (world.GetMeshService().GetDirtyCount() < 350)
       {
         world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-            ground, mesh_min_y, mesh_max_y, false);
+            ground, mesh_min_y, mesh_max_y, false,
+            MeshRevisionBumpReason::FluidWorldGeometry);
       }
     };
     for (auto it = DeferredShoreSealQueue.begin();
@@ -3864,8 +3869,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const ProceduralSettings &settings = world.GetProceduralSettings();
         const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
         const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
-        world.MarkTerrainChunkMeshDirtySeamed(ground, remesh_min_y, remesh_max_y,
-                                              true);
+        world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
+            ground, remesh_min_y, remesh_max_y, true,
+            MeshRevisionBumpReason::StreamerCommitSeaSeam);
       },
       [this, &world](int x, int z)
       {

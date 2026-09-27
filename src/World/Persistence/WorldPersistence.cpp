@@ -2564,8 +2564,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       // under Yellow/Red via commit path; disk-load always Dirty near.
       if (near_focus)
       {
-        world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
-                                              false);
+        world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
+            ground_coord, dirty_min, dirty_max, false,
+            MeshRevisionBumpReason::PersistenceTerrainLoad);
         // TD-ARCH-015: warm Capture store on first-mesh admit (not remesh).
         world.GetMeshService().PrefetchMeshCaptureBand(
             world.GetBlockWorld(), ground_coord, dirty_min, dirty_max);
@@ -2593,9 +2594,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             dirty_max,
             std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
       }
-      world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
-                                            /*include_horizontal_neighbors=*/
-                                            false);
+      world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
+          ground_coord, dirty_min, dirty_max, false,
+          MeshRevisionBumpReason::PersistenceTerrainLoad);
       const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
       const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
       bool has_lit_drawable = false;
@@ -2667,8 +2668,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             dirty_max,
             std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
       }
-      world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
-                                            near_focus);
+      world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
+          ground_coord, dirty_min, dirty_max, near_focus,
+          MeshRevisionBumpReason::PersistenceTerrainLoad);
     }
   }
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);

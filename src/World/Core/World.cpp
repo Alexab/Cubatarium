@@ -4758,7 +4758,8 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
       (preferred_cy + 1) * CHUNK_SIZE + CHUNK_SIZE - 1;
   MeshService->MarkTerrainChunkMeshDirtySeamed(
       glm::ivec3(ground_xz.x, 0, ground_xz.y), remesh_min, remesh_max,
-      /*include_horizontal_neighbors=*/false);
+      /*include_horizontal_neighbors=*/false,
+      MeshRevisionBumpReason::SettledDrawGateRepair);
   StickyRemeshAfterLight.erase(ground_xz);
   PendingLightBeforeMesh.erase(ground_xz);
   SetColumnEmergeState(glm::ivec3(ground_xz.x, 0, ground_xz.y),
@@ -5552,7 +5553,8 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
     }
     const glm::ivec3 ground(c.key.x, 0, c.key.y);
     MeshService->MarkTerrainChunkMeshDirtySeamed(
-        ground, c.min_y, c.max_y, /*include_horizontal_neighbors=*/false);
+        ground, c.min_y, c.max_y, /*include_horizontal_neighbors=*/false,
+        MeshRevisionBumpReason::SettledDrawGateRepair);
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     synced_keys.push_back(c.key);
     ++synced;
@@ -5955,7 +5957,8 @@ void UWorld::PromotePendingLightBeforeMesh(
     else
     {
       MeshService->MarkTerrainChunkMeshDirtySeamed(
-          ground, it->second.min_y, it->second.max_y, true);
+          ground, it->second.min_y, it->second.max_y, true,
+          MeshRevisionBumpReason::PendingLightColumnRecovery);
     }
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
   }
