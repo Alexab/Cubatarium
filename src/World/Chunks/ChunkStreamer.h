@@ -264,6 +264,9 @@ private:
   ChunkLoadPriorityParams PriorityParams;
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
+  /// Columns whose current terrain revision already triggered the broad seam
+  /// remesh. Cleared whenever a chunk commit invalidates terrain completeness.
+  std::unordered_set<glm::ivec3, IVec3Hash> TerrainSeamRemeshNotified;
   struct ColumnGenState
   {
     int cursor{0};

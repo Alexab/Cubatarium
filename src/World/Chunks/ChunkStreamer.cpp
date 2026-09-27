@@ -51,13 +51,21 @@ bool TerrainColumnNeedsGeneration(const UBlockWorld &world, int worldX,
 }
 
 void MarkTerrainColumnMeshDirty(const UChunkStreamer::MarkDirtyFn &markDirtyFn,
-                                glm::ivec3 groundCoord)
+                                glm::ivec3 groundCoord,
+                                std::unordered_set<glm::ivec3, IVec3Hash>
+                                    &seam_remesh_notified)
 {
   if (!markDirtyFn)
   {
     return;
   }
   groundCoord.y = 0;
+  // A ready column is revisited by collision/load checks every frame. Seam
+  // invalidation is needed when terrain changes, not for every readiness hit.
+  if (!seam_remesh_notified.insert(groundCoord).second)
+  {
+    return;
+  }
   markDirtyFn(groundCoord);
 }
 
@@ -158,6 +166,7 @@ void UChunkStreamer::InvalidateTerrainCompleteCache(glm::ivec3 groundCoord)
   }
   TerrainCompleteCache.erase(groundCoord);
   ColumnGenStates.erase(groundCoord);
+  TerrainSeamRemeshNotified.erase(groundCoord);
 }
 
 int UChunkStreamer::ChunkHorizontalDistance(glm::ivec3 groundCoord) const
@@ -360,7 +369,8 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
     {
       OnRelightTerrainColumn(chunkCoord);
     }
-    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
+                               TerrainSeamRemeshNotified);
     ProcedurallyGenerated.insert(chunkCoord);
   }
   else
@@ -426,7 +436,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       IsTerrainChunkCompleteCached(chunkCoord))
   {
     ProcedurallyGenerated.insert(chunkCoord);
-    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+    MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
+                               TerrainSeamRemeshNotified);
     return true;
   }
   if (existing != nullptr && !forceSync && AsyncGeneration &&
@@ -435,7 +446,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     if (IsTerrainChunkCompleteCached(chunkCoord))
     {
       ProcedurallyGenerated.insert(chunkCoord);
-      MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+      MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
+                                 TerrainSeamRemeshNotified);
       return true;
     }
     ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
@@ -459,7 +471,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       if (IsTerrainChunkCompleteCached(chunkCoord))
       {
         ProcedurallyGenerated.insert(chunkCoord);
-        MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+        MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord,
+                                   TerrainSeamRemeshNotified);
         ++LastFrameStats.diskCompleteThisFrame;
         return true;
       }
