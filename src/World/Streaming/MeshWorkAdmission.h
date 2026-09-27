@@ -130,6 +130,9 @@ struct MeshWorkAdmission
   /// Under holes: guaranteed FirstMesh slots (Pass 1); remesh uses remesh_schedule.
   int first_mesh_schedule{0};
   int remesh_schedule{0};
+  /// Caller computed per-lane slots from remaining output-pipeline space.
+  /// When set, zero is a hard lane quota and must not fall back to defaults.
+  bool enforce_schedule_lanes{false};
   /// Max new Queued GPU applies this frame (Apply enqueue throttle).
   int enqueue_gpu_budget{4};
   /// FZ2.7-P12 A2: full Remesh→FM steal applied (skip remesh floor backpressure).

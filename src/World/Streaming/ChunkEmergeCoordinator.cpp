@@ -6836,14 +6836,36 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         queued_gpu + static_cast<size_t>(async_inflight) +
         static_cast<size_t>(capture_pending) + completed_waiting;
     const UnifiedAdmissionPools pools{};
-    if (pipeline_outstanding >= pools.queued_output_slots)
+    constexpr int kBackpressuredScheduleCap = 4;
+    const size_t output_slot_limit =
+        static_cast<size_t>(pools.queued_output_slots);
+    const int output_headroom =
+        pipeline_outstanding >= output_slot_limit
+            ? 0
+            : static_cast<int>(output_slot_limit - pipeline_outstanding);
+    const size_t requested_schedule =
+        static_cast<size_t>(std::max(0, mesh_schedule));
+    const size_t backpressure_threshold =
+        output_slot_limit > static_cast<size_t>(kBackpressuredScheduleCap)
+            ? output_slot_limit -
+                  static_cast<size_t>(kBackpressuredScheduleCap)
+            : 0;
+    if (pipeline_outstanding >= backpressure_threshold ||
+        pipeline_outstanding + requested_schedule > output_slot_limit)
     {
-      constexpr int kBackpressuredScheduleCap = 4;
       MeshWorkAdmission bounded = mesh_service.GetMeshWorkAdmission();
+      const bool normal_admission =
+          bounded.mode == MeshWorkAdmission::Mode::Normal;
       if (bounded.mode == MeshWorkAdmission::Mode::Normal)
       {
         bounded.mode = MeshWorkAdmission::Mode::WarmBacklog;
       }
+      const int admission_schedule_cap =
+          normal_admission ? kBackpressuredScheduleCap
+                           : std::max(0, bounded.max_schedule);
+      const int available_schedule_cap = std::min(
+          {kBackpressuredScheduleCap, output_headroom,
+           admission_schedule_cap});
 
       const int dirty_fm_n = mesh_service.GetLastDirtyFmN();
       const int remesh_n = mesh_service.GetLastDirtyRemeshN();
@@ -6852,7 +6874,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           missing_visible_mesh || missing_underfeet || visual_holes ||
           pt.FocusMissingMesh > 0 || pt.UnfinishedVisual > 0;
       DualLaneScheduleInput lane_in{};
-      lane_in.schedule_cap = kBackpressuredScheduleCap;
+      lane_in.schedule_cap = available_schedule_cap;
       lane_in.fm_q = dirty_fm_n;
       lane_in.remesh_q = remesh_n;
       lane_in.focus_missing_or_holes = focus_missing_or_holes;
@@ -6865,18 +6887,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // backlog, starving columns that had never acquired a drawable mesh.
       if (lane_in.fm_demand && lane_in.remesh_lit_demand)
       {
-        lane_in.prior_first_mesh_schedule = kBackpressuredScheduleCap - 1;
+        lane_in.prior_first_mesh_schedule =
+            std::max(0, available_schedule_cap - 1);
         lane_in.prior_remesh_schedule = 1;
       }
       else if (lane_in.fm_demand)
       {
-        lane_in.prior_first_mesh_schedule = kBackpressuredScheduleCap;
+        lane_in.prior_first_mesh_schedule = available_schedule_cap;
         lane_in.prior_remesh_schedule = 0;
       }
       else if (lane_in.remesh_lit_demand)
       {
         lane_in.prior_first_mesh_schedule = 0;
-        lane_in.prior_remesh_schedule = kBackpressuredScheduleCap;
+        lane_in.prior_remesh_schedule = available_schedule_cap;
       }
       lane_in.rr_token = DualLaneRrToken_;
       lane_in.miss_pressure =
@@ -6885,14 +6908,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const DualLaneSchedule lane = ComputeDualLaneSchedule(lane_in);
       bounded.first_mesh_schedule = lane.first_mesh_schedule;
       bounded.remesh_schedule = lane.remesh_schedule;
-      bounded.max_schedule = kBackpressuredScheduleCap;
+      bounded.max_schedule = available_schedule_cap;
+      bounded.enforce_schedule_lanes = true;
       bounded.dual_lane_starve_reason =
           static_cast<int>(lane.starve_reason);
       bounded.dual_lane_rr_token_next = lane.next_rr_token;
       DualLaneRrToken_ = lane.next_rr_token;
       mesh_service.SetMeshWorkAdmission(bounded);
       mesh_schedule =
-          std::min(std::max(0, mesh_schedule), kBackpressuredScheduleCap);
+          std::min(std::max(0, mesh_schedule), available_schedule_cap);
       LastBudget.MaxMeshSchedule = mesh_schedule;
       LastBudget.AdmissionMode = static_cast<int>(bounded.mode);
       auto &pt_out = world.GetPhysicsTelemetryMutable();

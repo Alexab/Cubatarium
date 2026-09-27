@@ -7152,8 +7152,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       gpu_max = std::max(gpu_max, adm.gpu_apply_max);
       if (adm.mode != MeshWorkAdmission::Mode::Normal)
       {
+        const int schedule_cap =
+            adm.enforce_schedule_lanes ? std::max(0, adm.max_schedule)
+                                       : std::max(1, adm.max_schedule);
         max_schedule_per_frame =
-            std::min(max_schedule_per_frame, std::max(1, adm.max_schedule));
+            std::min(max_schedule_per_frame, schedule_cap);
       }
       else if (!EnterGpuQuiesceDrain && pending_n >= 24)
       {
@@ -7180,8 +7183,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     else if (skip_gpu_consume &&
              WorkAdmission.mode != MeshWorkAdmission::Mode::Normal)
     {
-      max_schedule_per_frame = std::min(max_schedule_per_frame,
-                                        std::max(1, WorkAdmission.max_schedule));
+      const int schedule_cap =
+          WorkAdmission.enforce_schedule_lanes
+              ? std::max(0, WorkAdmission.max_schedule)
+              : std::max(1, WorkAdmission.max_schedule);
+      max_schedule_per_frame =
+          std::min(max_schedule_per_frame, schedule_cap);
     }
     LastMeshDirtyGpuMs += take_seg_ms();
 
@@ -7189,7 +7196,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     // never sit at max_schedule=0 (sticky ring forever).
     if (EnterLitQuiesce && max_schedule_per_frame <= 0 && !Dirty.empty())
     {
-      max_schedule_per_frame = 1;
+      if (!WorkAdmission.enforce_schedule_lanes ||
+          WorkAdmission.max_schedule > 0)
+      {
+        max_schedule_per_frame = 1;
+      }
     }
     // R3.7: post-prune live FM count — start-of-tick dirty_fm inflated schedule_starved.
     LastDirtyFmN = static_cast<int>(Dirty.GetFirstMeshCount());
@@ -7214,10 +7225,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     constexpr int kReservedFocusMissingSlots = 16;
     const MeshWorkAdmission &sched_adm = WorkAdmission;
     // F2: under holes, Pass 1 uses first_mesh_schedule; remesh uses remesh_schedule.
-    const int first_mesh_cap_base =
-        sched_adm.first_mesh_schedule > 0
+    const int first_mesh_cap_base = sched_adm.enforce_schedule_lanes
+        ? std::max(0, sched_adm.first_mesh_schedule)
+        : (sched_adm.first_mesh_schedule > 0
             ? sched_adm.first_mesh_schedule
-            : kReservedFocusMissingSlots;
+            : kReservedFocusMissingSlots);
     int first_mesh_cap = first_mesh_cap_base;
     if (FmDirtyEnqueueReserveN_ > 0 &&
         !ShouldDeferFmDirtyEnqueueReserve(false, EnterLitQuiesce,
@@ -7232,9 +7244,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       FmConsumerStarvedActive_ = fm_consumer_starved ? 1 : 0;
     }
     LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
-    int remesh_cap =
-        sched_adm.remesh_schedule > 0 ? sched_adm.remesh_schedule
-                                      : max_schedule_per_frame;
+    int remesh_cap = sched_adm.enforce_schedule_lanes
+                         ? std::max(0, sched_adm.remesh_schedule)
+                         : (sched_adm.remesh_schedule > 0
+                                ? sched_adm.remesh_schedule
+                                : max_schedule_per_frame);
     const int remesh_cap_from_admission = remesh_cap;
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
     int rear_focus_scheduled = 0;
@@ -7890,9 +7904,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     if (miss_or_holes_starve)
     {
       remesh_cap = 0;
-      first_mesh_cap = std::max(first_mesh_cap, 12);
+      if (!sched_adm.enforce_schedule_lanes)
+      {
+        first_mesh_cap = std::max(first_mesh_cap, 12);
+      }
       LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
-      if (LightRepairCaptureReserveLeft > 0 && Dirty.GetRemeshCount() > 0)
+      if (LightRepairCaptureReserveLeft > 0 && Dirty.GetRemeshCount() > 0 &&
+          (!sched_adm.enforce_schedule_lanes ||
+           remesh_cap_from_admission > 0))
       {
         // Preserve the caller's dual-lane allocation. Raising this to the full
         // light-repair reserve here let remesh consume every schedule slot
@@ -7907,7 +7926,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // missing-mesh snapshot deferred on RefreshCountBudget. Keep one repair
       // refresh when both lanes have debt, and dedicate up to four available
       // refreshes to FirstMesh. The time budget below remains authoritative.
-      if (Dirty.GetFirstMeshCount() > 0)
+      if (Dirty.GetFirstMeshCount() > 0 && first_mesh_cap > 0)
       {
         constexpr int kMissLightRepairCaptureFloor = 1;
         if (Dirty.GetRemeshCount() > 0)
@@ -7929,8 +7948,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
         constexpr int kMissFirstMeshCaptureReserveMax = 4;
         const int fm_capture_reserve =
-            std::min(kMissFirstMeshCaptureReserveMax,
-                     CaptureRefreshBudgetLeft);
+            std::min({kMissFirstMeshCaptureReserveMax, first_mesh_cap,
+                      CaptureRefreshBudgetLeft});
         FirstMeshCaptureReserveLeft += fm_capture_reserve;
         CaptureRefreshBudgetLeft -= fm_capture_reserve;
 
