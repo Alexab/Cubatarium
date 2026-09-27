@@ -3522,15 +3522,24 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   const bool greedy_refs_empty =
       GreedyOpaqueCutoutRefs.empty() && GreedyTransparentRefs.empty() &&
       GpuPackedOpaqueRefs.empty() && GpuPackedTransparentRefs.empty();
-  const bool needs_greedy_rebuild =
-      GreedyBatchesDirty || (greedy_refs_empty && !GreedyCache.empty());
-  const bool needs_cross_rebuild =
-      CrossBatchesDirty ||
-      (CrossBatches.empty() && TotalCrossCenterCount() > 0);
   const CullInputKey current = MakeCullInputKey(
       CullPassId::FlatVisible, MeshRevision, CullRevision, cameraPos,
       HashViewProjection(viewProj), maxCullDistance,
       UseHorizontalCullDistance(), true);
+  // The flat greedy and cross lists are view-dependent. A new camera/frustum
+  // must invalidate them even when no mesh result made the cache dirty; the
+  // old guard fell through on a key miss but rebuilt only dirty lists, then
+  // cached the new key beside stale refs.
+  const bool cull_input_changed =
+      Render.FrustumCulling &&
+      !CullInputKeyAllowsCacheReuse(LastFlatCullInputKey, current);
+  const bool needs_greedy_rebuild =
+      GreedyBatchesDirty || (greedy_refs_empty && !GreedyCache.empty()) ||
+      cull_input_changed;
+  const bool needs_cross_rebuild =
+      CrossBatchesDirty ||
+      (CrossBatches.empty() && TotalCrossCenterCount() > 0) ||
+      cull_input_changed;
   if (!InstancesDirty && !needs_greedy_rebuild && !needs_cross_rebuild &&
       CullInputKeyAllowsCacheReuse(LastFlatCullInputKey, current))
   {
@@ -3585,8 +3594,12 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
       RebuildFlatInstanceList(nullptr, nullptr, 0.0f);
     }
   }
-  LastFlatCullInputKey = current;
-  LastFlatCullInputKey.resultValid = true;
+  // Rebuilds bump CullRevision. Cache the post-rebuild key, or the next frame
+  // would observe our own output revision as another input change.
+  LastFlatCullInputKey = MakeCullInputKey(
+      CullPassId::FlatVisible, MeshRevision, CullRevision, cameraPos,
+      HashViewProjection(viewProj), maxCullDistance,
+      UseHorizontalCullDistance(), true);
 }
 void UChunkMeshCache::EnsureAsyncBuilder()
 {
