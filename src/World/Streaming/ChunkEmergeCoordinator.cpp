@@ -600,9 +600,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           if (!world_ref.IsPendingLightBeforeMesh(key))
           {
+            // The callback names the exact chunk whose dark first-mesh was
+            // deferred. A full-column note invalidates unrelated settled
+            // slices and causes the same column to cycle back through relight.
+            const int light_band_min =
+                std::max(0, chunk_coord.y * CHUNK_SIZE);
+            const int light_band_max = std::min(
+                world_ref.GetProceduralSettings().MaxHeight,
+                (chunk_coord.y + 1) * CHUNK_SIZE - 1);
+            if (light_band_max < light_band_min)
+            {
+              return;
+            }
             world_ref.TryNotePendingLightBeforeMesh(
-                glm::ivec3(key.x, 0, key.y), 0,
-                world_ref.GetProceduralSettings().MaxHeight, __FUNCTION__);
+                glm::ivec3(key.x, 0, key.y), light_band_min,
+                light_band_max, "ChunkEmergeCoordinator.OnLitPendingNeeded");
           }
           // Phase 5.7R3: SoftDefer lit-pending Relight — same latch underfeet+fifo gate.
           const auto &pt = world_ref.GetPhysicsTelemetry();
