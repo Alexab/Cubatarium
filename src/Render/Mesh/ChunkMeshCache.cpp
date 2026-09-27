@@ -2337,15 +2337,6 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
     }
     const bool still_deferred =
         DeferMeshUntilLit && DeferMeshUntilLit(coord);
-    const bool relight_owner_active =
-        HasPendingLightRelightOwner && HasPendingLightRelightOwner(coord);
-    // The relight chain owns this prerequisite. Do not turn its held FirstMesh
-    // back into Dirty work or refresh a competing FirstMesh ticket.
-    if (relight_owner_active)
-    {
-      ++it;
-      continue;
-    }
     int horiz = 999;
     bool in_focus = false;
     if (MeshFocusValid)
@@ -6626,14 +6617,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++LastMeshDirtyPruneN;
         continue;
       }
-      if (!HasDrawableGreedyMesh(*it) && HasPendingLightRelightOwner &&
-          HasPendingLightRelightOwner(*it))
-      {
-        HoldSoftDeferFirstMesh(*it);
-        it = Dirty.RemoveAt(it);
-        ++LastMeshDirtyPruneN;
-        continue;
-      }
       // A renderer-rejected visible repair is an outstanding render
       // obligation. Enter/quiesce housekeeping may not transfer it to a
       // passive held state or erase it before a replacement is scheduled.
@@ -6756,14 +6739,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       for (auto it = Dirty.begin(); it != Dirty.end();)
       {
-        if (!HasDrawableGreedyMesh(*it) && HasPendingLightRelightOwner &&
-            HasPendingLightRelightOwner(*it))
-        {
-          HoldSoftDeferFirstMesh(*it);
-          it = Dirty.RemoveAt(it);
-          ++LastMeshDirtyPruneN;
-          continue;
-        }
         // This prune is an admission optimization for ordinary remesh work.
         // Keep exact renderer-visible repair tickets in the active queue.
         if (Dirty.IsPriorityRemesh(*it))
@@ -7445,14 +7420,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         {
           return Dirty.RemoveAt(it);
         }
-        return Dirty.RemoveAt(it);
-      }
-      if (!HasDrawableGreedyMesh(*it) && HasPendingLightRelightOwner &&
-          HasPendingLightRelightOwner(*it))
-      {
-        HoldSoftDeferFirstMesh(*it);
-        ++LastMeshDirtyScheduleSkipN;
-        ++LastMeshDirtyScheduleSkipSoftDeferN;
         return Dirty.RemoveAt(it);
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
@@ -8258,14 +8225,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           }
         }
         ++it;
-        continue;
-      }
-      if (!HasDrawableGreedyMesh(*it) && HasPendingLightRelightOwner &&
-          HasPendingLightRelightOwner(*it))
-      {
-        HoldSoftDeferFirstMesh(*it);
-        ++LastMeshDirtyScheduleSkipSoftDeferN;
-        it = Dirty.RemoveAt(it);
         continue;
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))

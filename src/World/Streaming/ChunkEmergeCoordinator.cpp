@@ -554,13 +554,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               world_ref.RequiresLightingLitGate() && pending, in_focus, may_mesh,
               allow_unlit, allow_unlit_hole);
         });
-    mesh_service.SetHasPendingLightRelightOwnerFn(
-        [this](glm::ivec3 chunk_coord)
-        {
-          UWorld *world_ptr = SoftDeferPolicy.world;
-          return world_ptr && world_ptr->HasPendingLightRelightOwner(
-                                  glm::ivec2(chunk_coord.x, chunk_coord.z));
-        });
     // A42: SoftDefer must not RemoveAt LightRepair drawable remesh Dirty.
     // A42b: PendingLight ⊆ LightRepair — treat PL as LightRepair for Capture/
     // SoftDefer schedule even if stamp lag behind NotePending.
@@ -637,13 +630,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           UWorld &world_ref = *world_ptr;
           const SoftDeferFramePolicy &pol = SoftDeferPolicy;
-          const glm::ivec2 key(chunk_coord.x, chunk_coord.z);
-          // Relight owns the prerequisite. Refreshing a FirstMesh ticket here
-          // would let it race the same unresolved light obligation.
-          if (world_ref.HasPendingLightRelightOwner(key))
-          {
-            return;
-          }
           const int horiz =
               std::max(std::abs(chunk_coord.x - pol.focus_ground.x),
                        std::abs(chunk_coord.z - pol.focus_ground.z));

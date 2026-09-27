@@ -741,12 +741,6 @@ public:
   {
     IsLightRepairRemesh = std::move(fn);
   }
-  /// Pending-light meshes stay parked while an actual relight owner is active.
-  void SetHasPendingLightRelightOwnerFn(
-      std::function<bool(glm::ivec3)> fn)
-  {
-    HasPendingLightRelightOwner = std::move(fn);
-  }
   /// SRBR-P0: optional HasChunk gate for MarkDirty* (unset = admit, tests).
   void SetChunkResidentFn(std::function<bool(glm::ivec3)> fn)
   {
@@ -1420,7 +1414,6 @@ private:
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
   /// A42: true when column visual_obligation == LightRepair (Emerge installs).
   std::function<bool(glm::ivec3)> IsLightRepairRemesh;
-  std::function<bool(glm::ivec3)> HasPendingLightRelightOwner;
   std::function<bool(glm::ivec3)> ChunkResidentFn;
   std::function<void(glm::ivec3)> OnLitPendingNeeded;
   std::function<void(glm::ivec3)> OnSoftDeferHeld;
