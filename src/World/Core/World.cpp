@@ -3355,6 +3355,22 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool light_surface_stale = still_stale || stale_dark_faces;
       const bool open_sky =
           EnterVisualGateCtrl.WasOpenSkyApplied(glm::ivec2(cx, cz));
+      const bool defer_until_lit =
+          MeshService->GetCache().IsDeferMeshUntilLit(coord);
+      const glm::ivec2 slice_column(cx, cz);
+      const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
+      const auto ensure_slice_relight = [&]() {
+        if (Persistence)
+        {
+          Persistence->EnqueueTerrainColumnRelight(
+              cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
+              cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+        }
+        return (Persistence &&
+                Persistence->IsTerrainColumnRelightQueued(slice_block_key)) ||
+               IsAsyncRelightColumnInFlight(slice_column) ||
+               IsPendingLightBeforeMesh(slice_column);
+      };
       const bool equal_rev_fd =
           fully_dark && !still_stale && !mesh_behind_light &&
           !(probe.has_drawable && probe.meshed_light_rev != 0 &&
@@ -3370,6 +3386,25 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                             desired_coverage, demand_now_ms,
                             MeshService->GetCache().GetCaptureStore().WorldEpoch(),
                             ch->GetIncarnation());
+      if (defer_until_lit)
+      {
+        // Lighting owns this slice until the defer gate lifts. Rebuilding an
+        // empty/unlit result here advances geometry without changing its
+        // inputs, while the relight already has a separate queue owner.
+        const bool relight_enqueued = ensure_slice_relight();
+        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+        if (attempt_id != 0 && relight_enqueued)
+        {
+          demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                   demand_now_ms);
+        }
+        if (relight_enqueued)
+        {
+          ++admitted;
+          ++y_taken;
+        }
+        continue;
+      }
       if (relight_only)
       {
         MeshService->GetCache().InvalidateMeshCapture(coord);
@@ -3418,19 +3453,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             }
           }
         }
-        bool relight_enqueued = false;
-        if (Persistence)
-        {
-          Persistence->EnqueueTerrainColumnRelight(
-              cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
-              cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
-          const glm::ivec2 column(cx, cz);
-          const glm::ivec2 block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
-          relight_enqueued =
-              Persistence->IsTerrainColumnRelightQueued(block_key) ||
-              IsAsyncRelightColumnInFlight(column) ||
-              IsPendingLightBeforeMesh(column);
-        }
+        const bool relight_enqueued = ensure_slice_relight();
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         if (attempt_id != 0 && relight_enqueued)
         {
