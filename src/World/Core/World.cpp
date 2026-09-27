@@ -3293,9 +3293,26 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             // Keep the attempt only while its exact mesh slice or owning
             // column has a concrete mesh/relight queue owner. Generic
             // column progress alone does not keep a dead attempt alive.
+            const glm::ivec2 column(coord.x, coord.z);
+            const glm::ivec2 block_key(coord.x * CHUNK_SIZE,
+                                       coord.z * CHUNK_SIZE);
+            const bool mesh_in_flight =
+                MeshService->IsRemeshAfterApplyPending(coord) ||
+                MeshService->HasInflightMeshBuild(coord) ||
+                MeshService->IsGpuExtractInFlight(coord) ||
+                MeshService->IsPendingGpuApply(coord);
+            const bool relight_queued_or_inflight =
+                IsAsyncRelightColumnInFlight(column) ||
+                (Persistence &&
+                 Persistence->IsTerrainColumnRelightQueued(block_key));
+            const bool deferred_without_light_owner =
+                !mesh_in_flight &&
+                MeshService->GetCache().IsDeferMeshUntilLit(coord) &&
+                !relight_queued_or_inflight;
             const bool dirty_only =
-                MeshService->IsChunkMeshDirty(coord) &&
-                !has_live_slice_owner(coord);
+                (MeshService->IsChunkMeshDirty(coord) &&
+                 !has_live_slice_owner(coord)) ||
+                deferred_without_light_owner;
             if (has_slice_work_owner(coord) && !dirty_only)
             {
               continue;
@@ -3307,9 +3324,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                            ? demand_now_ms - rec->attempt_created_ms
                            : 0.0);
             // A queued owner can disappear between admission and execution.
-            // Give it the existing light-repair SLA to appear before retrying;
-            // immediate reminting here caused a Dirty→revision-bump storm.
-            if (since_progress_ms < kLightRepairSlaMs)
+            // Give ordinary work the existing light-repair SLA to reappear;
+            // a mesh held by defer-until-lit cannot execute and must not delay
+            // recovery when its concrete relight owner is gone.
+            if (since_progress_ms < kLightRepairSlaMs &&
+                !deferred_without_light_owner)
             {
               continue;
             }
@@ -3391,7 +3410,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           !probe.has_drawable && ch->GetNonAirCount() > 0 &&
           RequiresLightingLitGate() &&
           col_horiz <= kVisualStageLitDrawableHoriz &&
-          (!IsColumnLitReady(ground) || !slice_light_settled);
+          (!IsColumnLitReady(ground) ||
+           (desired_light == 0 && !slice_light_settled));
       const glm::ivec2 slice_column(cx, cz);
       const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
       const auto ensure_slice_relight = [&]() {
