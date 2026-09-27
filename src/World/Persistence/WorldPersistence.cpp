@@ -420,7 +420,8 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   // 3=victim replaced and target queued, 4=target failed after victim removal,
   // 5=already queued, 6=outside horizon, 7=normal admission failed,
   // 8=already in flight, 9=admitted into the bounded visible-repair reserve,
-  // 10=visible-repair reserve insertion failed.
+  // 10=visible-repair reserve insertion failed, 14=nearer exact target
+  // replaced a farther, not-yet-promoted deferred target.
   if (outcome)
   {
     *outcome = 0;
@@ -614,6 +615,49 @@ bool UWorldPersistence::EnqueueVisibleRelight(
       if (outcome)
       {
         *outcome = 9;
+      }
+      return true;
+    }
+
+    // The exact-target side lane is intentionally bounded, but retaining its
+    // first eight requests forever can starve a newly visible near target.
+    // Replace only an unpromoted entry and only when the incoming target is
+    // strictly closer. Keep both the active miss pin and targets already
+    // promoted into the shared FIFO out of the victim set.
+    auto farthest_deferred = DeferredVisibleDrawGateRelightYBands.end();
+    int farthest_deferred_horiz = horiz;
+    for (auto it = DeferredVisibleDrawGateRelightYBands.begin();
+         it != DeferredVisibleDrawGateRelightYBands.end(); ++it)
+    {
+      const glm::ivec2 deferred_key = it->first;
+      const int deferred_cx = FloorDiv(deferred_key.x, CHUNK_SIZE);
+      const int deferred_cz = FloorDiv(deferred_key.y, CHUNK_SIZE);
+      if (ShouldProtectRelightFifoPinKey(
+              deferred_cx, deferred_cz, RelightFifoPinValid,
+              RelightFifoPinCx, RelightFifoPinCz) ||
+          PendingTerrainColumnRelightKeys.count(deferred_key) != 0)
+      {
+        continue;
+      }
+      const int deferred_horiz =
+          std::max(std::abs(deferred_cx - focus_ground.x),
+                   std::abs(deferred_cz - focus_ground.z));
+      if (deferred_horiz > farthest_deferred_horiz)
+      {
+        farthest_deferred = it;
+        farthest_deferred_horiz = deferred_horiz;
+      }
+    }
+    if (farthest_deferred != DeferredVisibleDrawGateRelightYBands.end())
+    {
+      const glm::ivec2 victim = farthest_deferred->first;
+      DeferredVisibleDrawGateRelightYBands.erase(farthest_deferred);
+      PendingVisibleDrawGateRelightYBands.erase(victim);
+      DeferredVisibleDrawGateRelightYBands.emplace(
+          key, glm::ivec2(min_y, max_y));
+      if (outcome)
+      {
+        *outcome = 14;
       }
       return true;
     }
