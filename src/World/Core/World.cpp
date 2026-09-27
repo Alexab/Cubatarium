@@ -3444,10 +3444,17 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                 cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
           }
         }
+        // PendingLightBeforeMesh records debt, not executable work. Treating
+        // the map entry itself as success let a rejected FIFO admission mark
+        // the render-demand attempt as progressing while no relight owner
+        // existed. Keep only concrete persistence, async, or ColumnFlow
+        // relight owners in this check.
+        const auto &flow = GetColumnFlowExecutor().Scheduler();
         return (Persistence &&
                 Persistence->IsTerrainColumnRelightQueued(slice_block_key)) ||
                IsAsyncRelightColumnInFlight(slice_column) ||
-               IsPendingLightBeforeMesh(slice_column);
+               flow.Contains(slice_column, ColumnWorkKind::RelightThenMesh) ||
+               flow.Contains(slice_column, ColumnWorkKind::PromoteRelight);
       };
       const bool equal_rev_fd =
           fully_dark && !still_stale && !mesh_behind_light &&
