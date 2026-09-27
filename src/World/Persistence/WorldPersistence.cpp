@@ -953,6 +953,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const int focus_radius = world.GetStreamingFocusRadius();
   const int pending_light_focus_n =
       world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+  const int near_fov_pending_light_n = world.CountPendingLightBeforeMeshNear(
+      focus_horiz, kVisualStageNearFovHoriz);
   const bool focus_pending_high = pending_light_focus_n > 15;
   const bool focus_pending_mid = pending_light_focus_n > 0;
   const bool visual_holes =
@@ -1752,14 +1754,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       bg_cap = std::min(bg_cap, 3);
     }
   }
-  // Exact renderer rejects are bounded and already occupy the priority
-  // queue. Streaming may pass a one-column budget here because of a hitch or
-  // mesh-scheduling pressure; that general cap can then prevent the visible
-  // repair queue from feeding the relight worker. While byte memory pressure
-  // is green, let exact draw-gate work use one additional async capture slot.
-  // The capture time budget, completed-queue backpressure and worker limit
-  // still bound this priority exception.
-  if (async_bg && draw_gate_target_pinned &&
+  // Visible FirstMesh slices can be held behind PendingLight debt even after
+  // they have an executable FIFO owner. Streaming may pass a one-column
+  // budget here, which leaves the relight worker underfed despite an active
+  // near-FOV repair target. While byte memory pressure is green, give exact
+  // draw-gate work and near-FOV PendingLight debt one additional async capture
+  // slot. Time budget, completed-queue backpressure and worker limit still
+  // bound this priority exception.
+  if (async_bg &&
+      (draw_gate_target_pinned || near_fov_pending_light_n > 0) &&
       world.GetPhysicsTelemetry().MemoryPressure == 0 &&
       world.GetAsyncRelightInFlightCount() < max_inflight &&
       world.GetRelightCompletedSize() < 2)
