@@ -691,16 +691,34 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // single-owner scheduler slot from reaching RelightThenMesh. Repair this
   // bounded set even when the normal recovery producer is paused by idle/debt
   // gates; columns with a real FIFO/async light owner need no replacement.
-  int orphaned_mesh_ticket_n = 0;
-  for (const glm::ivec2 &col : pending_cols)
-  {
-    if (orphaned_mesh_ticket_n >= std::max(1, recover_n) ||
-        !scheduler_.Contains(col, ColumnWorkKind::FirstMesh) ||
-        !world.IsPendingLightBeforeMesh(col) ||
-        world.IsTerrainColumnRelightQueued(col) ||
-        world.IsAsyncRelightColumnInFlight(col))
+  std::vector<glm::ivec2> orphaned_mesh_tickets;
+  scheduler_.ForEachOccupiedColumn([&](glm::ivec2 col) {
+    if (scheduler_.Contains(col, ColumnWorkKind::FirstMesh) &&
+        world.IsPendingLightBeforeMesh(col) &&
+        !world.IsTerrainColumnRelightQueued(col) &&
+        !world.IsAsyncRelightColumnInFlight(col))
     {
-      continue;
+      orphaned_mesh_tickets.push_back(col);
+    }
+  });
+  std::sort(orphaned_mesh_tickets.begin(), orphaned_mesh_tickets.end(),
+            [&](glm::ivec2 a, glm::ivec2 b) {
+              const int ah = std::max(std::abs(a.x - focus.x),
+                                      std::abs(a.y - focus.y));
+              const int bh = std::max(std::abs(b.x - focus.x),
+                                      std::abs(b.y - focus.y));
+              if (ah != bh)
+              {
+                return ah < bh;
+              }
+              return a.x != b.x ? a.x < b.x : a.y < b.y;
+            });
+  int orphaned_mesh_ticket_n = 0;
+  for (const glm::ivec2 &col : orphaned_mesh_tickets)
+  {
+    if (orphaned_mesh_ticket_n >= std::max(1, recover_n))
+    {
+      break;
     }
     const int horiz = std::max(std::abs(col.x - focus.x),
                                std::abs(col.y - focus.y));
