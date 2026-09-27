@@ -138,11 +138,14 @@ bool ChunkSliceHasCurrentLightSettlement(const UWorld &world,
           world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch() ||
       demand->incarnation != chunk->GetIncarnation() ||
       !demand->has_settled_light ||
-      demand->settled_light_rev != chunk->GetLightFieldRevision() ||
-      demand->desired_light_rev > demand->published_light_rev)
+      demand->settled_light_rev != chunk->GetLightFieldRevision())
   {
     return false;
   }
+  // Light calculation settlement and mesh publication are separate proofs.
+  // A current settled field may still have an older/unpublished mesh; callers
+  // use this helper to decide whether lighting work is needed. The renderer
+  // independently checks desired/published mesh revisions before drawing.
   return true;
 }
 
