@@ -402,7 +402,10 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
     PendingTerrainColumnRelights.erase(victim_it);
     PendingTerrainColumnRelightKeys.erase(victim);
     PendingTerrainColumnRelightYBands.erase(victim);
-    PendingVisibleDrawGateRelightYBands.erase(victim);
+    if (DeferredVisibleDrawGateRelightYBands.count(victim) == 0)
+    {
+      PendingVisibleDrawGateRelightYBands.erase(victim);
+    }
     ++RelightFifoOverflowDroppedN;
   }
 }
@@ -438,6 +441,18 @@ bool UWorldPersistence::EnqueueVisibleRelight(
       *outcome = 6;
     }
     return false;
+  }
+
+  if (auto deferred = DeferredVisibleDrawGateRelightYBands.find(key);
+      deferred != DeferredVisibleDrawGateRelightYBands.end())
+  {
+    deferred->second.x = std::min(deferred->second.x, min_y);
+    deferred->second.y = std::max(deferred->second.y, max_y);
+    if (outcome)
+    {
+      *outcome = 9;
+    }
+    return true;
   }
 
   const auto prioritize_visible_repair = [&]()
@@ -567,10 +582,11 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   find_farthest_unpinned_victim(PendingTerrainColumnRelightsPriority);
   if (!victim_queue)
   {
-    // The normal FIFO starts back-pressuring non-core work at 16 entries.
-    // Exact renderer rejects are bounded to eight targets per drain, so allow
-    // that many additional deduplicated visible repairs before applying the
-    // same victim policy at the hard reserve limit.
+    // Keep the existing shared-FIFO reserve first. If no safe victim exists,
+    // retain a small number of exact draw-gate targets outside the shared FIFO;
+    // the capture dequeue promotes these directly when it is ready to consume
+    // another item. This preserves visible work without growing/churning the
+    // priority deque.
     constexpr int kVisibleRelightReserve =
         kVisibleDrawGateRelightTargetLimit;
     if (ShouldAdmitRelightFifoEnqueue(
@@ -590,6 +606,17 @@ bool UWorldPersistence::EnqueueVisibleRelight(
       }
       return admitted;
     }
+    if (DeferredVisibleDrawGateRelightYBands.size() <
+        static_cast<size_t>(kVisibleRelightReserve))
+    {
+      DeferredVisibleDrawGateRelightYBands.emplace(
+          key, glm::ivec2(min_y, max_y));
+      if (outcome)
+      {
+        *outcome = 9;
+      }
+      return true;
+    }
     if (outcome)
     {
       *outcome = 2;
@@ -605,7 +632,10 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   victim_queue->erase(victim_it);
   PendingTerrainColumnRelightKeys.erase(victim);
   PendingTerrainColumnRelightYBands.erase(victim);
-  PendingVisibleDrawGateRelightYBands.erase(victim);
+  if (DeferredVisibleDrawGateRelightYBands.count(victim) == 0)
+  {
+    PendingVisibleDrawGateRelightYBands.erase(victim);
+  }
   ++RelightFifoOverflowDroppedN;
   EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true, min_y,
                                   max_y, /*visible_admission=*/true);
@@ -841,8 +871,76 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     UWorld &world, glm::ivec3 focus_ground, int radius_chunks,
     int scan_cap)
 {
-  if (radius_chunks < 0 || scan_cap <= 0 ||
-      PendingTerrainColumnRelightsPriority.empty())
+  if (radius_chunks < 0 || scan_cap <= 0)
+  {
+    return false;
+  }
+
+  // Exact renderer rejections that could not safely enter the shared FIFO stay
+  // in a bounded side lane. Promote one just-in-time, ahead of ordinary work
+  // but immediately behind the active miss pin. Keep the reservation until the
+  // corresponding capture is submitted.
+  bool have_visible_target = false;
+  glm::ivec2 visible_target{};
+  glm::ivec2 visible_band{};
+  int visible_distance = radius_chunks + 1;
+  std::vector<glm::ivec2> expired_visible;
+  for (const auto &entry : DeferredVisibleDrawGateRelightYBands)
+  {
+    const glm::ivec2 world_key = entry.first;
+    const glm::ivec2 column(FloorDiv(world_key.x, CHUNK_SIZE),
+                            FloorDiv(world_key.y, CHUNK_SIZE));
+    const int distance =
+        std::max(std::abs(column.x - focus_ground.x),
+                 std::abs(column.y - focus_ground.z));
+    const bool already_queued =
+        PendingTerrainColumnRelightKeys.count(world_key) != 0;
+    if (!already_queued && distance > radius_chunks)
+    {
+      DeferFarRelightColumn(column, entry.second.x, entry.second.y,
+                            /*priority=*/true);
+      PendingVisibleDrawGateRelightYBands.erase(world_key);
+      expired_visible.push_back(world_key);
+      continue;
+    }
+    if (distance > radius_chunks ||
+        world.IsAsyncRelightColumnInFlight(column))
+    {
+      continue;
+    }
+    if (!have_visible_target || distance < visible_distance ||
+        (distance == visible_distance &&
+         (world_key.x < visible_target.x ||
+          (world_key.x == visible_target.x && world_key.y < visible_target.y))))
+    {
+      have_visible_target = true;
+      visible_target = world_key;
+      visible_band = entry.second;
+      visible_distance = distance;
+    }
+  }
+  for (const glm::ivec2 &world_key : expired_visible)
+  {
+    DeferredVisibleDrawGateRelightYBands.erase(world_key);
+  }
+
+  if (have_visible_target)
+  {
+    if (PendingTerrainColumnRelightKeys.count(visible_target) == 0)
+    {
+      EnqueueTerrainColumnRelightImpl(
+          visible_target.x, visible_target.y, /*priority=*/true,
+          visible_band.x, visible_band.y, /*visible_admission=*/true);
+      PendingVisibleDrawGateRelightYBands[visible_target] = visible_band;
+    }
+    const bool pin_in_flight =
+        RelightFifoPinValid && world.IsAsyncRelightColumnInFlight(
+                                   glm::ivec2(RelightFifoPinCx,
+                                              RelightFifoPinCz));
+    return PrioritizeTerrainColumnRelight(visible_target, pin_in_flight);
+  }
+
+  if (PendingTerrainColumnRelightsPriority.empty())
   {
     return false;
   }
@@ -1612,11 +1710,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         const TerrainColumnRelightQueueInfo queue_info =
             GetTerrainColumnRelightQueueInfo(draw_gate_target_key);
         trace.relight_queue_kind =
-            !queue_info.keyed
+            queue_info.deferred_visible && !queue_info.keyed
+                ? 4
+                : (!queue_info.keyed
                 ? 0
                 : (!queue_info.in_deque
                        ? 3
-                       : (queue_info.priority ? 1 : 2));
+                       : (queue_info.priority ? 1 : 2)));
         trace.relight_queue_index = queue_info.queue_index;
         trace.relight_queue_size = queue_info.queue_size;
         UJobStageTrace::NoteVisualBlack(trace);
@@ -1925,6 +2025,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                       [&](glm::ivec2 target_key)
                       {
                         return PendingTerrainColumnRelightKeys.count(
+                                   target_key) != 0 ||
+                               DeferredVisibleDrawGateRelightYBands.count(
                                    target_key) != 0;
                       });
       if (!enter_fov_lit && !soft_defer_hole && !miss_rim_pin &&
@@ -2022,6 +2124,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         else
         {
           PendingVisibleDrawGateRelightYBands.erase(visible_band_it);
+          DeferredVisibleDrawGateRelightYBands.erase(col);
         }
       }
     }
@@ -2052,6 +2155,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         ++telem.RelightFalseClearN;
         PendingTerrainColumnRelightKeys.erase(col);
         PendingVisibleDrawGateRelightYBands.erase(col);
+        DeferredVisibleDrawGateRelightYBands.erase(col);
         return skipped_inflight < std::max(8, max_bg_columns * 4);
       }
     }
@@ -2214,6 +2318,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       // the corresponding relight job is actually submitted below.
       PendingVisibleDrawGateRelightYBands.erase(col);
     }
+    DeferredVisibleDrawGateRelightYBands.erase(col);
     PendingTerrainColumnRelightKeys.erase(col);
     const auto capture_t0 = std::chrono::high_resolution_clock::now();
     if (audit_relight)
@@ -2356,6 +2461,8 @@ UWorldPersistence::GetTerrainColumnRelightQueueInfo(
 {
   TerrainColumnRelightQueueInfo out{};
   out.keyed = PendingTerrainColumnRelightKeys.count(world_block_key) != 0;
+  out.deferred_visible =
+      DeferredVisibleDrawGateRelightYBands.count(world_block_key) != 0;
 
   auto find_position = [&](const std::deque<glm::ivec2> &queue) -> int
   {
@@ -2387,6 +2494,14 @@ UWorldPersistence::GetTerrainColumnRelightQueueInfo(
     out.y_band_defined = true;
     out.min_world_y = band_it->second.x;
     out.max_world_y = band_it->second.y;
+  }
+  else if (const auto visible_it =
+               DeferredVisibleDrawGateRelightYBands.find(world_block_key);
+           visible_it != DeferredVisibleDrawGateRelightYBands.end())
+  {
+    out.y_band_defined = true;
+    out.min_world_y = visible_it->second.x;
+    out.max_world_y = visible_it->second.y;
   }
   return out;
 }
@@ -2517,6 +2632,7 @@ void UWorldPersistence::ClearPendingRelights()
   PendingTerrainColumnRelightKeys.clear();
   PendingTerrainColumnRelightYBands.clear();
   PendingVisibleDrawGateRelightYBands.clear();
+  DeferredVisibleDrawGateRelightYBands.clear();
 }
 
 int UWorldPersistence::GetPendingPlayerRelightCount() const

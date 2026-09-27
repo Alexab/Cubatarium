@@ -38,6 +38,7 @@ public:
     bool keyed{false};
     bool priority{false};
     bool in_deque{false};
+    bool deferred_visible{false};
     bool y_band_defined{false};
     int queue_index{-1};
     int queue_size{0};
@@ -207,6 +208,10 @@ private:
   /// relight band so surface clamping cannot silently skip a visible slice.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
       PendingVisibleDrawGateRelightYBands;
+  /// Bounded exact draw-gate targets kept outside the shared FIFO until the
+  /// capture dequeue can promote one directly to the head.
+  std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
+      DeferredVisibleDrawGateRelightYBands;
   /// FZ2.3-O2: last StreamingFrameEpoch when finalize_gate Capture submitted.
   std::unordered_map<glm::ivec2, uint64_t, IVec2Hash> RelightLastFinalizeEpoch_;
   struct DeferredFarRelightEntry
