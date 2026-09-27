@@ -952,6 +952,7 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
   // but immediately behind the active miss pin. Keep the reservation until the
   // corresponding capture is submitted.
   bool have_visible_target = false;
+  bool visible_target_is_deferred = false;
   glm::ivec2 visible_target{};
   glm::ivec2 visible_band{};
   int visible_distance = radius_chunks + 1;
@@ -985,6 +986,7 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
           (world_key.x == visible_target.x && world_key.y < visible_target.y))))
     {
       have_visible_target = true;
+      visible_target_is_deferred = true;
       visible_target = world_key;
       visible_band = entry.second;
       visible_distance = distance;
@@ -995,9 +997,45 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     DeferredVisibleDrawGateRelightYBands.erase(world_key);
   }
 
+  // A draw-gate rejection that was admitted to the shared FIFO keeps its
+  // exact Y-band in PendingVisibleDrawGateRelightYBands. Re-run that exact
+  // lane at dequeue time as well: generic nearest-column sorting below can
+  // otherwise replace the earlier admission pin with unrelated PendingLight
+  // work on every Capture iteration.
+  for (const auto &entry : PendingVisibleDrawGateRelightYBands)
+  {
+    const glm::ivec2 world_key = entry.first;
+    if (PendingTerrainColumnRelightKeys.count(world_key) == 0)
+    {
+      continue;
+    }
+    const glm::ivec2 column(FloorDiv(world_key.x, CHUNK_SIZE),
+                            FloorDiv(world_key.y, CHUNK_SIZE));
+    const int distance =
+        std::max(std::abs(column.x - focus_ground.x),
+                 std::abs(column.y - focus_ground.z));
+    if (distance > radius_chunks ||
+        world.IsAsyncRelightColumnInFlight(column))
+    {
+      continue;
+    }
+    if (!have_visible_target || distance < visible_distance ||
+        (distance == visible_distance &&
+         (world_key.x < visible_target.x ||
+          (world_key.x == visible_target.x && world_key.y < visible_target.y))))
+    {
+      have_visible_target = true;
+      visible_target_is_deferred = false;
+      visible_target = world_key;
+      visible_band = entry.second;
+      visible_distance = distance;
+    }
+  }
+
   if (have_visible_target)
   {
-    if (PendingTerrainColumnRelightKeys.count(visible_target) == 0)
+    if (visible_target_is_deferred &&
+        PendingTerrainColumnRelightKeys.count(visible_target) == 0)
     {
       EnqueueTerrainColumnRelightImpl(
           visible_target.x, visible_target.y, /*priority=*/true,
