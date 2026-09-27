@@ -9,6 +9,7 @@
 #include "World/Diagnostics/Profile.h"
 #include "World/Diagnostics/ScopedPhase.h"
 #include "World/Diagnostics/JobStageTrace.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/VisualObligationPolicy.h"
 #include "Blocks/BlockRegistry.h"
@@ -492,6 +493,20 @@ void NoteFrustumCoverageGaps(
         (column_lit_ready ? 1u << 5 : 0u) |
         (lit_gate_required ? 1u << 6 : 0u) |
         (column_state.has_repair_ticket ? 1u << 7 : 0u);
+    const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+    record.column_flow_ticket_flags =
+        (flow_scheduler.Contains(column, ColumnWorkKind::RelightThenMesh)
+             ? 1u << 0
+             : 0u) |
+        (flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh)
+             ? 1u << 1
+             : 0u) |
+        (flow_scheduler.Contains(column, ColumnWorkKind::RemeshSeam)
+             ? 1u << 2
+             : 0u) |
+        (flow_scheduler.Contains(column, ColumnWorkKind::PromoteRelight)
+             ? 1u << 3
+             : 0u);
     record.column_emerge_stage = static_cast<uint8_t>(column_state.stage);
     const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
     record.published_geom_rev = published.geom_rev;

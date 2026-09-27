@@ -278,6 +278,9 @@ struct VisualBlackTraceRecord
   /// async relight in flight, defer-until-lit, SoftDeferHeld, column LitReady,
   /// lit gate required, and ColumnFlow repair ticket (bits 0..7).
   uint32_t relight_owner_flags{0};
+  /// ColumnFlowScheduler ticket kinds: RelightThenMesh, FirstMesh,
+  /// RemeshSeam, PromoteRelight (bits 0..3).
+  uint8_t column_flow_ticket_flags{0};
   uint8_t column_emerge_stage{0};
   int32_t relight_band_min_y{0};
   int32_t relight_band_max_y{-1};

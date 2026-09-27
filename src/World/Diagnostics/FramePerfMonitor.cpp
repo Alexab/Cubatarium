@@ -3318,6 +3318,8 @@ void UFramePerfMonitor::Shutdown()
                << r.mesh_work_owner_flags
                << ",\"relight_owner_flags\":"
                << r.relight_owner_flags
+               << ",\"column_flow_ticket_flags\":"
+               << static_cast<int>(r.column_flow_ticket_flags)
                << ",\"column_emerge_stage\":"
                << static_cast<int>(r.column_emerge_stage)
                << ",\"relight_band_min_y\":" << r.relight_band_min_y

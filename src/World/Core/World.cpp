@@ -5343,6 +5343,20 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
           (column_lit_ready ? 1u << 5 : 0u) |
           (lit_gate_required ? 1u << 6 : 0u) |
           (contains ? 1u << 7 : 0u);
+      const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+      trace.column_flow_ticket_flags =
+          (flow_scheduler.Contains(key, ColumnWorkKind::RelightThenMesh)
+               ? 1u << 0
+               : 0u) |
+          (flow_scheduler.Contains(key, ColumnWorkKind::FirstMesh)
+               ? 1u << 1
+               : 0u) |
+          (flow_scheduler.Contains(key, ColumnWorkKind::RemeshSeam)
+               ? 1u << 2
+               : 0u) |
+          (flow_scheduler.Contains(key, ColumnWorkKind::PromoteRelight)
+               ? 1u << 3
+               : 0u);
       UChunkMeshCache::StaleDarkWitness stale_witness{};
       const bool slice_stale_dark = MeshService->GetCache().ChunkHasStaleDarkFaces(
           coord, BlockWorld, &stale_witness);
