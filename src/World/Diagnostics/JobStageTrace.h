@@ -264,8 +264,8 @@ struct VisualBlackTraceRecord
   /// sample_kind=3: 1=settled field needs mesh-only repair; 0=relight target.
   uint8_t draw_gate_repair_mode{0};
   /// Persistence relight queue location/band for renderer, focus, and
-  /// draw-gate samples. sample_kind=2 currently records presence via bit 1 of
-  /// relight_owner_flags; detailed queue position/band is emitted by kind 3.
+  /// draw-gate samples. sample_kind=2 and 8 populate exact FIFO position/band;
+  /// kind 3 also emits the capture-target scan that selected the queue entry.
   /// 0=not keyed, 1=priority deque, 2=far deque, 3=keyed but absent from deque,
   /// 6=bounded exact visible target awaiting capture-dequeue promotion.
   /// Other trace kinds may reuse this byte for their own queue classification.

@@ -264,6 +264,7 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
       (column_lit_ready ? 1u << 5 : 0u) |
       (lit_gate_required ? 1u << 6 : 0u) |
       (column_state.has_repair_ticket ? 1u << 7 : 0u);
+  world.PopulateRendererRelightQueueTrace(column_coord, record);
   record.column_emerge_stage =
       static_cast<uint8_t>(column_state.stage);
   record.mesh_work_owner_flags =

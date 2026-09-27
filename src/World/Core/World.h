@@ -165,6 +165,7 @@ struct BlockUpdateQueueStats;
 struct FluidUpdateSetStats;
 struct FallingBlocksStats;
 struct FluidSpreadStats;
+struct VisualBlackTraceRecord;
 
 struct UBackgroundQuiesceState
 {
@@ -1125,6 +1126,9 @@ public:
   void SetRelightCompletedCapacity(size_t cap);
   bool IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const;
   bool IsTerrainColumnRelightQueued(glm::ivec2 ground_xz) const;
+  /// Add exact FIFO/ColumnFlow ownership to opt-in renderer draw-gate traces.
+  void PopulateRendererRelightQueueTrace(
+      glm::ivec2 chunk_column, VisualBlackTraceRecord &trace) const;
   /// Drop column inflight marks when the async builder has no jobs (stale set).
   void ReconcileAsyncRelightColumnInFlight();
   uint64_t GetRelightDiscardedLateCount() const;

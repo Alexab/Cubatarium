@@ -7198,6 +7198,38 @@ bool UWorld::IsTerrainColumnRelightQueued(glm::ivec2 ground_xz) const
                             ground_xz * CHUNK_SIZE);
 }
 
+void UWorld::PopulateRendererRelightQueueTrace(
+    glm::ivec2 chunk_column, VisualBlackTraceRecord &trace) const
+{
+  if (Persistence)
+  {
+    const glm::ivec2 block_key = chunk_column * CHUNK_SIZE;
+    const auto queue =
+        Persistence->GetTerrainColumnRelightQueueInfo(block_key);
+    trace.relight_queue_kind =
+        queue.deferred_visible && !queue.keyed
+            ? 6
+            : (!queue.keyed
+                   ? 0
+                   : (!queue.in_deque ? 3 : (queue.priority ? 1 : 2)));
+    trace.relight_y_band_defined = queue.y_band_defined ? 1 : 0;
+    trace.relight_queue_index = queue.queue_index;
+    trace.relight_queue_size = queue.queue_size;
+    trace.relight_band_min_y = queue.min_world_y;
+    trace.relight_band_max_y = queue.max_world_y;
+  }
+  const auto &flow = GetColumnFlowExecutor().Scheduler();
+  trace.column_flow_ticket_flags =
+      (flow.Contains(chunk_column, ColumnWorkKind::RelightThenMesh)
+           ? 1u << 0
+           : 0u) |
+      (flow.Contains(chunk_column, ColumnWorkKind::FirstMesh) ? 1u << 1 : 0u) |
+      (flow.Contains(chunk_column, ColumnWorkKind::RemeshSeam) ? 1u << 2 : 0u) |
+      (flow.Contains(chunk_column, ColumnWorkKind::PromoteRelight)
+           ? 1u << 3
+           : 0u);
+}
+
 void UWorld::ReconcileAsyncRelightColumnInFlight()
 {
   if (GetAsyncRelightInFlightCount() == 0 && !AsyncRelightColumnsInFlight.empty())
