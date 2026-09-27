@@ -3190,7 +3190,10 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(sp.has_active_attempt)
                << ",\"retained_awaiting_successor\":"
                << static_cast<int>(sp.retained_awaiting_successor)
-               << ",\"event_ms\":" << sp.event_ms << "}\n";
+               << ",\"event_ms\":";
+        const std::streamsize previous_precision = out->precision();
+        (*out) << std::setprecision(17) << sp.event_ms
+               << std::setprecision(previous_precision) << "}\n";
       };
       UJobStageTrace::ForEachDemandTransitionNewest(
           UJobStageTrace::kDemandTransitionRingCapacity,

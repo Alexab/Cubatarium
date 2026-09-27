@@ -118,7 +118,8 @@ enum class MeshRevisionBumpReason : uint8_t
   PriorityEnterFirstMesh,
   PriorityFullyDarkRemesh,
   PriorityDirtyEnqueued,
-  InvalidatedInFlight
+  InvalidatedInFlight,
+  MissingHoleSeamNeighbor
 };
 
 struct DemandTransitionSpan

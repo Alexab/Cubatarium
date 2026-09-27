@@ -586,6 +586,8 @@ const char *UJobStageTrace::MeshRevisionBumpReasonName(
     return "priority_dirty_enqueued";
   case MeshRevisionBumpReason::InvalidatedInFlight:
     return "invalidated_inflight";
+  case MeshRevisionBumpReason::MissingHoleSeamNeighbor:
+    return "missing_hole_seam_neighbor";
   }
   return "unknown";
 }

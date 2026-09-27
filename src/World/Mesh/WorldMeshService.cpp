@@ -325,11 +325,17 @@ void UWorldMeshService::NotifyChunkUnloaded(glm::ivec3 chunk_coord)
 
 void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord)
 {
+  MarkDirty(chunk_coord, MeshRevisionBumpReason::MarkDirtyEnqueued);
+}
+
+void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord,
+                                  MeshRevisionBumpReason reason)
+{
   if (!Cache.ShouldAdmitDirtyCoord(chunk_coord))
   {
     return;
   }
-  Cache.MarkDirty(chunk_coord);
+  Cache.MarkDirty(chunk_coord, reason);
   NotifyChunkBlocksChanged(chunk_coord);
   if (OnMeshColumnDirtyFn)
   {

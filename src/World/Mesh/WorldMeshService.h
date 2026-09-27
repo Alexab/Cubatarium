@@ -110,6 +110,7 @@ public:
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
+  void MarkDirty(glm::ivec3 chunk_coord, MeshRevisionBumpReason reason);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,

@@ -76,6 +76,7 @@ public:
   void MarkAllDirtyFromWorld(const UBlockWorld &world,
                              bool clear_existing_caches = false);
   void MarkDirty(glm::ivec3 chunkCoord);
+  void MarkDirty(glm::ivec3 chunkCoord, MeshRevisionBumpReason reason);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
   bool PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(

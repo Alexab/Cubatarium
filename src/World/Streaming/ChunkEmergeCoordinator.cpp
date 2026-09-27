@@ -1,5 +1,6 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Diagnostics/Profile.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnJobGraph.h"
@@ -4822,7 +4823,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                     mesh_service.TryConsumeDirtyAdmit())
                 {
                   // Closeout C: drawable hole-seam → RemeshQ (not FirstMesh).
-                  mesh_service.MarkDirty(neighbor);
+                  mesh_service.MarkDirty(
+                      neighbor,
+                      MeshRevisionBumpReason::MissingHoleSeamNeighbor);
                   ++seamed;
                 }
               }

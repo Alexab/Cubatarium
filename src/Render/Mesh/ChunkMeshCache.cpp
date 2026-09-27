@@ -2488,6 +2488,12 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
 
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
+  MarkDirty(chunkCoord, MeshRevisionBumpReason::MarkDirtyEnqueued);
+}
+
+void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
+                                MeshRevisionBumpReason reason)
+{
   if (!ShouldAdmitDirtyCoord(chunkCoord))
   {
     return;
@@ -2618,8 +2624,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
            WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
            WitnessSwapGrace_.prior_xz.y == chunkCoord.z))
   {
-    BumpChunkMeshRevision(chunkCoord,
-                          MeshRevisionBumpReason::MarkDirtyEnqueued);
+    BumpChunkMeshRevision(chunkCoord, reason);
   }
   // Do not InvalidateFluidSurface here: full-column remesh calls MarkDirty for
   // every cy×seam and kept fluid_map_dirty permanently high (100+), burning
