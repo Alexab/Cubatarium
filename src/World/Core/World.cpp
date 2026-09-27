@@ -3376,13 +3376,22 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           EnterVisualGateCtrl.WasOpenSkyApplied(glm::ivec2(cx, cz));
       const bool defer_until_lit =
           MeshService->GetCache().IsDeferMeshUntilLit(coord);
+      const glm::ivec3 ground(cx, 0, cz);
+      // The render gate can classify a cold first mesh as PendingLight before
+      // either SoftDefer or PendingLightBeforeMesh has an owner. Seed that
+      // missing light stage for visible solid columns instead of submitting a
+      // mesh that cannot pass the renderer gate.
+      const bool first_mesh_needs_lighting =
+          !probe.has_drawable && RequiresLightingLitGate() &&
+          col_horiz <= kVisualStageLitDrawableHoriz &&
+          !IsColumnLitReady(ground);
       const glm::ivec2 slice_column(cx, cz);
       const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
       const auto ensure_slice_relight = [&]() {
         if (Persistence)
         {
           const bool use_visible_admission =
-              defer_until_lit &&
+              (defer_until_lit || first_mesh_needs_lighting) &&
               col_horiz <= kVisualStageLitDrawableHoriz &&
               (first_mesh_visible_relight_columns.count(slice_column) != 0 ||
                first_mesh_visible_relight_columns.size() <
@@ -3428,12 +3437,19 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                             desired_coverage, demand_now_ms,
                             MeshService->GetCache().GetCaptureStore().WorldEpoch(),
                             ch->GetIncarnation());
-      if (defer_until_lit)
+      if (defer_until_lit || first_mesh_needs_lighting)
       {
-        // Lighting owns this slice until the defer gate lifts. Rebuilding an
-        // empty/unlit result here advances geometry without changing its
-        // inputs, while the relight already has a separate queue owner.
+        // Lighting owns this visible first-mesh slice. A cold VoxelsReady
+        // column may not yet have a PendingLight/defer owner, so create that
+        // debt only after a queue, in-flight relight, or pending-light owner
+        // confirms that real relight work exists.
         const bool relight_enqueued = ensure_slice_relight();
+        if (relight_enqueued && first_mesh_needs_lighting &&
+            !IsPendingLightBeforeMesh(slice_column))
+        {
+          NotePendingLightBeforeMesh(
+              ground, cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+        }
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         if (attempt_id != 0 && relight_enqueued)
         {
