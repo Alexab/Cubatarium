@@ -456,6 +456,34 @@ void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
   }
 }
 
+void UJobStageTrace::NoteMeshRevisionBump(
+    DemandTransitionSpan span, uint64_t revision_before,
+    uint64_t revision_after, MeshRevisionBumpReason reason,
+    uint32_t owner_flags)
+{
+  if (!VisualBlackTraceEnabled() ||
+      !IsVisualChunkWatched(span.cx, span.cy, span.cz))
+  {
+    return;
+  }
+  span.kind = DemandTransitionKind::MeshRevisionBumped;
+  span.mesh_revision_before = revision_before;
+  span.mesh_revision_after = revision_after;
+  span.mesh_revision_bump_reason = reason;
+  span.mesh_owner_flags = owner_flags;
+  span.event_ms = std::chrono::duration<double, std::milli>(
+                      std::chrono::steady_clock::now().time_since_epoch())
+                      .count();
+  auto &r = GetDemandTransitionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.slots[r.write % kDemandTransitionRingCapacity] = span;
+  ++r.write;
+  if (r.count < kDemandTransitionRingCapacity)
+  {
+    ++r.count;
+  }
+}
+
 void UJobStageTrace::ForEachDemandTransitionNewest(
     size_t max_n, void (*fn)(const DemandTransitionSpan &, void *), void *ctx)
 {
@@ -531,8 +559,33 @@ const char *UJobStageTrace::DemandTransitionName(DemandTransitionKind kind)
     return "published_revision_advanced";
   case DemandTransitionKind::AttemptReminted:
     return "attempt_reminted";
+  case DemandTransitionKind::MeshRevisionBumped:
+    return "mesh_revision_bumped";
   case DemandTransitionKind::IdentityReset:
     return "identity_reset";
+  }
+  return "unknown";
+}
+
+const char *UJobStageTrace::MeshRevisionBumpReasonName(
+    MeshRevisionBumpReason reason)
+{
+  switch (reason)
+  {
+  case MeshRevisionBumpReason::Unknown:
+    return "unknown";
+  case MeshRevisionBumpReason::MarkDirtyEnqueued:
+    return "mark_dirty_enqueued";
+  case MeshRevisionBumpReason::PriorityEnterSoftDefer:
+    return "priority_enter_soft_defer";
+  case MeshRevisionBumpReason::PriorityEnterFirstMesh:
+    return "priority_enter_first_mesh";
+  case MeshRevisionBumpReason::PriorityFullyDarkRemesh:
+    return "priority_fully_dark_remesh";
+  case MeshRevisionBumpReason::PriorityDirtyEnqueued:
+    return "priority_dirty_enqueued";
+  case MeshRevisionBumpReason::InvalidatedInFlight:
+    return "invalidated_inflight";
   }
   return "unknown";
 }

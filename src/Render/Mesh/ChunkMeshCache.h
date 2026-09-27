@@ -34,6 +34,8 @@
 #include <vector>
 namespace cutum
 {
+
+enum class MeshRevisionBumpReason : uint8_t;
 struct Frustum;
 struct MeshBuildResult;
 class IUChunkCull;
@@ -1345,7 +1347,8 @@ private:
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
-  void BumpChunkMeshRevision(glm::ivec3 chunk_coord);
+  void BumpChunkMeshRevision(glm::ivec3 chunk_coord,
+                             MeshRevisionBumpReason reason);
   void DrainMeshDependencyInvalidations(UBlockWorld &world,
                                         int max_schedule_per_frame);
   /// Draw SoT: GreedyCache GpuResident flags must match live allocator slot.

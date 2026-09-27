@@ -52,10 +52,9 @@ DemandSnapshot SnapshotDemand(const ChunkRenderDemandRecord &rec)
 
 double DemandEventTimeMs(double requested_ms = 0.0)
 {
-  if (requested_ms > 0.0)
-  {
-    return requested_ms;
-  }
+  // Callers may pass World/flight-relative timestamps. Keep this trace's sort
+  // key on one monotonic process-wide clock instead of mixing time domains.
+  (void)requested_ms;
   return std::chrono::duration<double, std::milli>(
              std::chrono::steady_clock::now().time_since_epoch())
       .count();

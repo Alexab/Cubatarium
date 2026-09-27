@@ -3170,6 +3170,15 @@ void UFramePerfMonitor::Shutdown()
                << sp.previous_published_coverage_gen
                << ",\"published_coverage_gen\":"
                << sp.published_coverage_gen
+               << ",\"mesh_revision_before\":"
+               << sp.mesh_revision_before
+               << ",\"mesh_revision_after\":"
+               << sp.mesh_revision_after
+               << ",\"mesh_revision_bump_reason\":\""
+               << UJobStageTrace::MeshRevisionBumpReasonName(
+                      sp.mesh_revision_bump_reason)
+               << "\""
+               << ",\"mesh_owner_flags\":" << sp.mesh_owner_flags
                << ",\"previous_stage\":\""
                << UJobStageTrace::StageName(sp.previous_stage) << "\""
                << ",\"stage\":\""

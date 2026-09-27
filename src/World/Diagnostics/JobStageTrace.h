@@ -106,7 +106,19 @@ enum class DemandTransitionKind : uint8_t
   StaleInstallIgnored,
   PublishedRevisionAdvanced,
   AttemptReminted,
+  MeshRevisionBumped,
   IdentityReset
+};
+
+enum class MeshRevisionBumpReason : uint8_t
+{
+  Unknown = 0,
+  MarkDirtyEnqueued,
+  PriorityEnterSoftDefer,
+  PriorityEnterFirstMesh,
+  PriorityFullyDarkRemesh,
+  PriorityDirtyEnqueued,
+  InvalidatedInFlight
 };
 
 struct DemandTransitionSpan
@@ -130,9 +142,14 @@ struct DemandTransitionSpan
   uint64_t published_light_rev{0};
   uint64_t previous_published_coverage_gen{0};
   uint64_t published_coverage_gen{0};
+  uint64_t mesh_revision_before{0};
+  uint64_t mesh_revision_after{0};
+  uint32_t mesh_owner_flags{0};
   JobStage previous_stage{JobStage::Created};
   JobStage stage{JobStage::Created};
   DemandTransitionKind kind{DemandTransitionKind::AttemptCreated};
+  MeshRevisionBumpReason mesh_revision_bump_reason{
+      MeshRevisionBumpReason::Unknown};
   uint8_t result{0};
   uint8_t had_active_attempt{0};
   uint8_t has_active_attempt{0};
@@ -288,6 +305,11 @@ public:
   static void ForEachWatchedNewest(
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static void NoteDemandTransition(const DemandTransitionSpan &span);
+  static void NoteMeshRevisionBump(DemandTransitionSpan span,
+                                   uint64_t revision_before,
+                                   uint64_t revision_after,
+                                   MeshRevisionBumpReason reason,
+                                   uint32_t owner_flags);
   static void ForEachDemandTransitionNewest(
       size_t max_n, void (*fn)(const DemandTransitionSpan &, void *),
       void *ctx);
@@ -309,6 +331,8 @@ public:
       void *ctx);
   static const char *StageName(JobStage s);
   static const char *DemandTransitionName(DemandTransitionKind kind);
+  static const char *MeshRevisionBumpReasonName(
+      MeshRevisionBumpReason reason);
   static const char *TerminalReasonName(JobTerminalReason reason);
   /// A36 S1: note cull exclusion for a tracked chunk (bounded ring).
   static void NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,

@@ -1738,8 +1738,10 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
   return found;
 }
 
-void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
+void UChunkMeshCache::BumpChunkMeshRevision(
+    glm::ivec3 chunk_coord, MeshRevisionBumpReason reason)
 {
+  const uint64_t revision_before = MeshRevisions.Current(chunk_coord);
   const uint64_t mesh_revision = MeshRevisions.Bump(chunk_coord);
   // Demand geometry must follow this same source-revision domain. A demand can
   // be noted before MarkDirty bumps the mesh generation, so advance the target
@@ -1759,6 +1761,76 @@ void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
                           desired_coverage);
       }
     }
+  }
+  if (UJobStageTrace::VisualBlackTraceEnabled())
+  {
+    DemandTransitionSpan trace{};
+    trace.cx = chunk_coord.x;
+    trace.cy = chunk_coord.y;
+    trace.cz = chunk_coord.z;
+    trace.world_epoch = CaptureStore.WorldEpoch();
+    trace.mesh_revision_before = revision_before;
+    trace.mesh_revision_after = mesh_revision;
+    trace.mesh_revision_bump_reason = reason;
+    if (const ChunkRenderDemandRecord *rec =
+            UChunkRenderDemandStore::Get().Find(chunk_coord))
+    {
+      trace.incarnation = rec->incarnation;
+      trace.previous_attempt_id = rec->active_attempt_id;
+      trace.attempt_id = rec->active_attempt_id;
+      trace.previous_desired_geom_rev = rec->desired_geom_rev;
+      trace.desired_geom_rev = rec->desired_geom_rev;
+      trace.previous_desired_light_rev = rec->desired_light_rev;
+      trace.desired_light_rev = rec->desired_light_rev;
+      trace.previous_desired_coverage_gen = rec->desired_coverage_gen;
+      trace.desired_coverage_gen = rec->desired_coverage_gen;
+      trace.previous_published_geom_rev = rec->published_geom_rev;
+      trace.published_geom_rev = rec->published_geom_rev;
+      trace.previous_published_light_rev = rec->published_light_rev;
+      trace.published_light_rev = rec->published_light_rev;
+      trace.previous_published_coverage_gen = rec->published_coverage_gen;
+      trace.published_coverage_gen = rec->published_coverage_gen;
+      trace.previous_stage = rec->active_stage;
+      trace.stage = rec->active_stage;
+      trace.had_active_attempt = rec->has_active_attempt ? 1 : 0;
+      trace.has_active_attempt = rec->has_active_attempt ? 1 : 0;
+      trace.retained_awaiting_successor =
+          rec->retained_awaiting_successor ? 1 : 0;
+    }
+    if (Dirty.Contains(chunk_coord))
+    {
+      trace.mesh_owner_flags |= 1u << 0;
+    }
+    if (ActiveMeshSourceRevision.count(chunk_coord) > 0)
+    {
+      trace.mesh_owner_flags |= 1u << 1;
+    }
+    if (PendingCaptureSet_.count(chunk_coord) > 0)
+    {
+      trace.mesh_owner_flags |= 1u << 2;
+    }
+    if (PendingCaptureReady_.count(chunk_coord) > 0)
+    {
+      trace.mesh_owner_flags |= 1u << 3;
+    }
+    if (AsyncBuilder && AsyncBuilder->IsInFlight(chunk_coord))
+    {
+      trace.mesh_owner_flags |= 1u << 4;
+    }
+    if (GpuExtractInFlight.count(chunk_coord) > 0)
+    {
+      trace.mesh_owner_flags |= 1u << 5;
+    }
+    if (IsPendingGpuApply(chunk_coord))
+    {
+      trace.mesh_owner_flags |= 1u << 6;
+    }
+    if (RemeshAfterApply.count(chunk_coord) > 0)
+    {
+      trace.mesh_owner_flags |= 1u << 7;
+    }
+    UJobStageTrace::NoteMeshRevisionBump(
+        trace, revision_before, mesh_revision, reason, trace.mesh_owner_flags);
   }
   CaptureStore.Invalidate(chunk_coord);
 }
@@ -1838,7 +1910,8 @@ void UChunkMeshCache::InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord)
 {
   ActiveMeshSourceRevision.erase(chunk_coord);
   RemeshAfterApply.erase(chunk_coord);
-  BumpChunkMeshRevision(chunk_coord);
+  BumpChunkMeshRevision(chunk_coord,
+                        MeshRevisionBumpReason::InvalidatedInFlight);
 }
 
 bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
@@ -2545,7 +2618,8 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
            WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
            WitnessSwapGrace_.prior_xz.y == chunkCoord.z))
   {
-    BumpChunkMeshRevision(chunkCoord);
+    BumpChunkMeshRevision(chunkCoord,
+                          MeshRevisionBumpReason::MarkDirtyEnqueued);
   }
   // Do not InvalidateFluidSurface here: full-column remesh calls MarkDirty for
   // every cy×seam and kept fluid_map_dirty permanently high (100+), burning
@@ -2582,7 +2656,8 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     Dirty.MarkDirtyPriority(chunkCoord);
     if (!existed)
     {
-      BumpChunkMeshRevision(chunkCoord);
+      BumpChunkMeshRevision(
+          chunkCoord, MeshRevisionBumpReason::PriorityEnterSoftDefer);
     }
     InstancesDirty = true;
     GreedyBatchesDirty = true;
@@ -2601,7 +2676,8 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     Dirty.MarkDirtyPriority(chunkCoord);
     if (!existed)
     {
-      BumpChunkMeshRevision(chunkCoord);
+      BumpChunkMeshRevision(
+          chunkCoord, MeshRevisionBumpReason::PriorityEnterFirstMesh);
     }
     InstancesDirty = true;
     GreedyBatchesDirty = true;
@@ -2738,7 +2814,8 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
         Dirty.MarkDirty(chunkCoord);
         if (!existed_dark)
         {
-          BumpChunkMeshRevision(chunkCoord);
+          BumpChunkMeshRevision(
+              chunkCoord, MeshRevisionBumpReason::PriorityFullyDarkRemesh);
         }
         InstancesDirty = true;
         GreedyBatchesDirty = true;
@@ -2778,7 +2855,8 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   }
   if (!existed)
   {
-    BumpChunkMeshRevision(chunkCoord);
+    BumpChunkMeshRevision(
+        chunkCoord, MeshRevisionBumpReason::PriorityDirtyEnqueued);
   }
   InstancesDirty = true;
   GreedyBatchesDirty = true;
