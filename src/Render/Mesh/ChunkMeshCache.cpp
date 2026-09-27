@@ -666,6 +666,7 @@ void UChunkMeshCache::ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord)
   it->second.GpuSlotIndex = -1;
   it->second.GpuQuadCount = 0;
   it->second.GpuHasDarkFace = false;
+  it->second.GpuHasLitDrawableFace = false;
   it->second.GpuBlockRanges.clear();
   it->second.GpuTransparent = false;
 }
@@ -1021,10 +1022,11 @@ bool UChunkMeshCache::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
   {
     return false;
   }
-  // Keep-until-replace: live lit GPU wins over dark CPU batches (PendingReplace).
-  if (ChunkHasLiveGpuDraw(chunk_coord) && !it->second.GpuHasDarkFace)
+  // Keep-until-replace: classify the live GPU image independently from any
+  // CPU staging batches that may be waiting to replace it.
+  if (ChunkHasLiveGpuDraw(chunk_coord))
   {
-    return true;
+    return it->second.GpuHasLitDrawableFace;
   }
   if (!it->second.batches.empty())
   {
@@ -1062,14 +1064,13 @@ void UChunkMeshCache::FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
     }
     if (out.has_drawable)
     {
-      if (mesh.GpuResident)
-      {
-        out.fully_dark = mesh.GpuHasDarkFace;
-      }
-      else
-      {
-        out.fully_dark = BatchesHaveFullyDarkFace(mesh.batches);
-      }
+      const bool has_dark_surface =
+          mesh.GpuResident ? mesh.GpuHasDarkFace
+                           : BatchesHaveFullyDarkFace(mesh.batches);
+      const bool has_lit_surface = ChunkHasLitDrawableFace(chunk_coord);
+      // A dark vertex is common on shaded/cave faces. Only a drawable with no
+      // lit side/top surface is a fully-dark mesh candidate for repair policy.
+      out.fully_dark = has_dark_surface && !has_lit_surface;
     }
   }
   out.is_dirty = Dirty.Contains(chunk_coord);
@@ -4248,9 +4249,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
   const bool had_mesh = HasDrawableGreedyMesh(coord);
-  const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(coord);
+  const bool had_lit_mesh = had_mesh && ChunkHasLitDrawableFace(coord);
   const bool had_live_lit_gpu =
-      ChunkHasLiveGpuDraw(coord) && !ChunkHasFullyDarkFace(coord);
+      ChunkHasLiveGpuDraw(coord) && ChunkHasLitDrawableFace(coord);
   const int prior_lit_age = GetPriorLitHoldAge(coord);
   const UChunk *source_chunk = world.GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *slice_demand =
@@ -4264,7 +4265,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   // slice still owns PendingLight. Permit this dark candidate only when all
   // publication revisions and the explicit per-slice settlement agree.
   const bool settled_current_dark_candidate =
-      gpu_result.hasFullyDarkFace && has_source_light_revision &&
+      gpu_result.hasFullyDarkFace && !gpu_result.hasLitDrawableFace &&
+      has_source_light_revision &&
       (!boundary_overlay.active || boundary_overlay.missingNeighborFaces == 0) &&
       MeshCandidateMatchesSettledDemand(
           !accepted_input_stale, demand_identity_current,
@@ -4276,7 +4278,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           slice_demand ? slice_demand->settled_light_rev : 0,
           slice_demand ? slice_demand->desired_light_rev : 0);
   // Sysreset v6: geom-stale Accept must not Retain dark over prior lit.
-  if (ShouldRejectDarkOnGeomStaleAccept(gpu_result.hasFullyDarkFace,
+  if (ShouldRejectDarkOnGeomStaleAccept(
+          gpu_result.hasFullyDarkFace && !gpu_result.hasLitDrawableFace,
                                         accepted_geom_stale, had_lit_mesh,
                                         had_live_lit_gpu))
   {
@@ -4384,7 +4387,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       return false;
     }
   }
-  if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace,
+  if (ShouldRejectDarkMeshCommit(
+          gpu_result.hasFullyDarkFace && !gpu_result.hasLitDrawableFace,
                                  defer_until_lit && had_mesh, had_lit_mesh,
                                  had_live_lit_gpu, prior_lit_age) &&
       !settled_current_dark_candidate)
@@ -4516,6 +4520,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   chunkMesh.GpuQuadCount = gpu_result.quadCount;
   chunkMesh.GpuTransparent = gpu_result.transparent;
   chunkMesh.GpuHasDarkFace = gpu_result.hasFullyDarkFace;
+  chunkMesh.GpuHasLitDrawableFace = gpu_result.hasLitDrawableFace;
   chunkMesh.GpuBlockRanges = std::move(gpu_result.blockRanges);
   if (has_source_light_revision)
   {
@@ -4589,7 +4594,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     OnFirstDrawableCoverage(coord);
   }
   // Era49: lit GPU outcome clears StickyRemesh work-set (ready ≠ schedule).
-  if (!gpu_result.hasFullyDarkFace && OnLitDrawableCommitted)
+  if (gpu_result.hasLitDrawableFace && OnLitDrawableCommitted)
   {
     OnLitDrawableCommitted(coord);
   }
@@ -4597,7 +4602,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   // After lit quiesce (remaining==0) stop the commit→Dirty pump — cruise heals.
   // A10 RelightReplace + S5: MarkRelit owns FullyDark Dirty — enter pump OFF.
   if (false && EnterGpuQuiesceDrain && !EnterLitQuiesce &&
-      gpu_result.hasFullyDarkFace && !Dirty.Contains(coord) &&
+      gpu_result.hasFullyDarkFace && !gpu_result.hasLitDrawableFace &&
+      !Dirty.Contains(coord) &&
       !ShouldSkipSecondaryFullyDarkDirty(true))
   {
     const bool stale_lit_field = ChunkHasStaleDarkFaces(coord, world);
@@ -4611,7 +4617,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   // Era15 TD-050: Unlit FirstMesh publish → LitPending (not every dark remesh).
   if (OnLitPendingNeeded && !had_mesh &&
-      (defer_until_lit || gpu_result.hasFullyDarkFace))
+      (defer_until_lit || !gpu_result.hasLitDrawableFace))
   {
     OnLitPendingNeeded(coord);
   }
@@ -4622,7 +4628,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
         EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
     const bool needs_first_mesh = !HasDrawableGreedyMesh(coord);
     const bool fully_dark_drawable =
-        HasDrawableGreedyMesh(coord) && ChunkHasFullyDarkFace(coord);
+        HasDrawableGreedyMesh(coord) &&
+        ChunkHasFullyDarkFace(coord) && !ChunkHasLitDrawableFace(coord);
     if (gpu_pending)
     {
       PreferKickPendingGpuQueued(coord);
@@ -5107,7 +5114,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     uint32_t quad_count = 0;
     const auto st = pipeline->TryFinishComputePasses(
         pending_ref.ticket, registry, quad_count, &gpu_result.blockRanges,
-        &gpu_result.hasFullyDarkFace, /*timeout_ns=*/0);
+        &gpu_result.hasFullyDarkFace, &gpu_result.hasLitDrawableFace,
+        /*timeout_ns=*/0);
     if (st == UGpuMeshPipeline::GpuFinishStatus::NotReady)
     {
       ++LastGpuFinishNotReadyN;
@@ -5464,7 +5472,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       uint32_t quad_count = 0;
     const auto st = pipeline->TryFinishComputePasses(
           pending_ref.ticket, registry, quad_count, &gpu_result.blockRanges,
-          &gpu_result.hasFullyDarkFace, /*timeout_ns=*/0);
+          &gpu_result.hasFullyDarkFace, &gpu_result.hasLitDrawableFace,
+          /*timeout_ns=*/0);
       if (st == UGpuMeshPipeline::GpuFinishStatus::NotReady)
       {
         ++LastGpuFinishNotReadyN;
@@ -5713,18 +5722,20 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     const bool has_drawable = HasDrawableGreedyMesh(result.coord);
     const bool had_lit_mesh =
-        has_drawable && !ChunkHasFullyDarkFace(result.coord);
+        has_drawable && ChunkHasLitDrawableFace(result.coord);
     const bool had_live_lit_gpu =
-        ChunkHasLiveGpuDraw(result.coord) && !ChunkHasFullyDarkFace(result.coord);
+        ChunkHasLiveGpuDraw(result.coord) &&
+        ChunkHasLitDrawableFace(result.coord);
     const bool accepted_geom_stale =
         refresh_after_accept_stale &&
         stale_reason == MeshApplyStaleInputReason::Geom;
     // Sysreset v6: CPU geom-stale dark over prior lit → reject + one light-fresh.
     // GPU packed path checks dark at CommitGpuMeshResult (hasFullyDarkFace).
     if (!result.GpuExtractPending &&
-        ShouldRejectDarkOnGeomStaleAccept(BatchesHaveFullyDarkFace(result.batches),
-                                          accepted_geom_stale, had_lit_mesh,
-                                          had_live_lit_gpu))
+        ShouldRejectDarkOnGeomStaleAccept(
+            BatchesHaveFullyDarkFace(result.batches) &&
+                !BatchesHaveLitDrawableFace(result.batches),
+            accepted_geom_stale, had_lit_mesh, had_live_lit_gpu))
     {
       ActiveMeshSourceRevision.erase(revisionIt);
       GpuExtractInFlight.erase(result.coord);
@@ -5958,10 +5969,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       DeferMeshUntilLit && DeferMeshUntilLit(result.coord);
   // Empty SoftDefer placeholders must not count as had_lit (keep dark forever).
   const bool had_mesh = HasDrawableGreedyMesh(result.coord);
-  const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(result.coord);
+  const bool had_lit_mesh = had_mesh && ChunkHasLitDrawableFace(result.coord);
   const bool had_live_lit_gpu =
-      ChunkHasLiveGpuDraw(result.coord) && !ChunkHasFullyDarkFace(result.coord);
-  const bool new_dark = BatchesHaveFullyDarkFace(result.batches);
+      ChunkHasLiveGpuDraw(result.coord) &&
+      ChunkHasLitDrawableFace(result.coord);
+  const bool new_dark = BatchesHaveFullyDarkFace(result.batches) &&
+                        !BatchesHaveLitDrawableFace(result.batches);
   const int prior_lit_age = GetPriorLitHoldAge(result.coord);
   const UChunk *source_chunk =
       world.GetChunkManager().GetChunk(result.coord);
@@ -6377,6 +6390,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       chunkMesh.GpuSlotIndex = -1;
       chunkMesh.GpuQuadCount = 0;
       chunkMesh.GpuHasDarkFace = false;
+      chunkMesh.GpuHasLitDrawableFace = false;
       chunkMesh.GpuBlockRanges.clear();
       chunkMesh.GpuTransparent = false;
     }
@@ -6391,6 +6405,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.GpuSlotIndex = -1;
     chunkMesh.GpuQuadCount = 0;
     chunkMesh.GpuHasDarkFace = false;
+    chunkMesh.GpuHasLitDrawableFace = false;
     chunkMesh.GpuBlockRanges.clear();
     chunkMesh.GpuTransparent = false;
   }
@@ -8797,10 +8812,12 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     // !Drawable / GpuQuadCount=0) must NOT count as had_lit_mesh — otherwise
     // place Immediate rejects dark rebuild and forever keeps undrawn (184035).
     const bool had_mesh = HasDrawableGreedyMesh(chunkCoord);
-    const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(chunkCoord);
+    const bool had_lit_mesh = had_mesh && ChunkHasLitDrawableFace(chunkCoord);
     const bool had_live_lit_gpu =
-        ChunkHasLiveGpuDraw(chunkCoord) && !ChunkHasFullyDarkFace(chunkCoord);
-    const bool new_dark = BatchesHaveFullyDarkFace(new_batches);
+        ChunkHasLiveGpuDraw(chunkCoord) &&
+        ChunkHasLitDrawableFace(chunkCoord);
+    const bool new_dark = BatchesHaveFullyDarkFace(new_batches) &&
+                          !BatchesHaveLitDrawableFace(new_batches);
     const int prior_lit_age = GetPriorLitHoldAge(chunkCoord);
     const UChunk *source_chunk = world.GetChunkManager().GetChunk(chunkCoord);
     const ChunkRenderDemandRecord *slice_demand =
@@ -9115,6 +9132,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     chunkMesh.GpuSlotIndex = -1;
     chunkMesh.GpuQuadCount = 0;
     chunkMesh.GpuHasDarkFace = false;
+    chunkMesh.GpuHasLitDrawableFace = false;
     chunkMesh.GpuBlockRanges.clear();
     chunkMesh.GpuTransparent = false;
     // Intentional empty (fully occluded solid): match GPU 0-quad ready so

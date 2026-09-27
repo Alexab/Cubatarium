@@ -15,24 +15,35 @@ namespace
 {
 
 constexpr size_t kBlockTypeBuckets = 1024;
-constexpr size_t kSortCountsWords = kBlockTypeBuckets + 1; // + dark flag
+constexpr size_t kDarkFaceFlagIndex = kBlockTypeBuckets;
+constexpr size_t kLitFaceFlagIndex = kBlockTypeBuckets + 1;
+constexpr size_t kSortCountsWords = kBlockTypeBuckets + 2;
 
 /// BlockType is 10 bits → 1024 buckets. Stable counting sort (CPU fallback).
 void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
                                         std::vector<PackedQuad> &scratch,
                                         UBlockRegistry &registry,
                                         std::vector<GpuBlockDrawRange> *out_ranges,
-                                        bool *out_has_dark)
+                                        bool *out_has_dark,
+                                        bool *out_has_lit_drawable_face)
 {
   std::array<uint32_t, kBlockTypeBuckets> counts{};
   bool has_dark = false;
+  bool has_lit_drawable_face = false;
   for (const PackedQuad &q : quads)
   {
     ++counts[static_cast<size_t>(q.BlockType())];
-    if (!has_dark && q.Face() != 5 && q.SkyLight() <= 0 &&
-        q.BlockLight() <= 0)
+    if (q.Face() != 5)
     {
-      has_dark = true;
+      if (!has_dark && q.SkyLight() <= 0 && q.BlockLight() <= 0)
+      {
+        has_dark = true;
+      }
+      if (!has_lit_drawable_face &&
+          (q.SkyLight() > 0 || q.BlockLight() > 0))
+      {
+        has_lit_drawable_face = true;
+      }
     }
   }
   std::array<uint32_t, kBlockTypeBuckets> offsets{};
@@ -74,6 +85,10 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
   {
     *out_has_dark = has_dark;
   }
+  if (out_has_lit_drawable_face)
+  {
+    *out_has_lit_drawable_face = has_lit_drawable_face;
+  }
 }
 
 void BuildRangesFromHistogram(const uint32_t *counts,
@@ -110,9 +125,11 @@ void BuildRangesFromHistogram(const uint32_t *counts,
 void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
                                       UBlockRegistry &registry,
                                       std::vector<GpuBlockDrawRange> *out_ranges,
-                                      bool *out_has_dark)
+                                      bool *out_has_dark,
+                                      bool *out_has_lit_drawable_face)
 {
   bool has_dark = false;
+  bool has_lit_drawable_face = false;
   if (out_ranges)
   {
     out_ranges->clear();
@@ -125,10 +142,17 @@ void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
   {
     const PackedQuad &q = quads[i];
     const BlockId bid = static_cast<BlockId>(q.BlockType());
-    if (!has_dark && q.Face() != 5 && q.SkyLight() <= 0 &&
-        q.BlockLight() <= 0)
+    if (q.Face() != 5)
     {
-      has_dark = true;
+      if (!has_dark && q.SkyLight() <= 0 && q.BlockLight() <= 0)
+      {
+        has_dark = true;
+      }
+      if (!has_lit_drawable_face &&
+          (q.SkyLight() > 0 || q.BlockLight() > 0))
+      {
+        has_lit_drawable_face = true;
+      }
     }
     if (!have_run)
     {
@@ -170,6 +194,10 @@ void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
   if (out_has_dark)
   {
     *out_has_dark = has_dark;
+  }
+  if (out_has_lit_drawable_face)
+  {
+    *out_has_lit_drawable_face = has_lit_drawable_face;
   }
 }
 
@@ -218,7 +246,8 @@ GLuint CompileSortCompute(const char *src, const char *label)
   return prog;
 }
 
-// Histogram + dark flag. counts[0..1023]=BlockType hist, counts[1024]=dark.
+// Histogram + any-dark and any-lit surface flags.
+// counts[0..1023]=BlockType hist, counts[1024]=dark, counts[1025]=lit.
 const char *kSortHistCompute = R"(#version 430
 layout(local_size_x = 64) in;
 layout(std430, binding = 0) readonly buffer Quads { uvec2 quads[]; };
@@ -234,7 +263,10 @@ void main() {
   uint sky = (q.y >> 10u) & 0xFu;
   uint blk = (q.y >> 14u) & 0xFu;
   if (face != 5u && sky == 0u && blk == 0u) {
-    atomicOr(counts[1024], 1u);
+    atomicOr(counts[1024u], 1u);
+  }
+  if (face != 5u && (sky > 0u || blk > 0u)) {
+    atomicOr(counts[1025u], 1u);
   }
 }
 )";
@@ -891,7 +923,7 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
 UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
     GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
     std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
-    uint64_t timeout_ns)
+    bool *out_has_lit_drawable_face, uint64_t timeout_ns)
 {
   out_quad_count = 0;
   if (out_ranges)
@@ -901,6 +933,10 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
   if (out_has_dark_face)
   {
     *out_has_dark_face = false;
+  }
+  if (out_has_lit_drawable_face)
+  {
+    *out_has_lit_drawable_face = false;
   }
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)ticket;
@@ -937,7 +973,8 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
   const bool sorted_gpu =
       ticket.quadCount >= kGpuSortMinQuads &&
       GpuSortSlotQuads(ticket.slotOffsetQuads, ticket.quadCount, registry,
-                       out_ranges, out_has_dark_face);
+                       out_ranges, out_has_dark_face,
+                       out_has_lit_drawable_face);
   if (sorted_gpu)
   {
     if (ticket.fence)
@@ -968,7 +1005,8 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   }
   BuildRunLengthRangesFromUnsorted(ScratchQuads, registry, out_ranges,
-                                   out_has_dark_face);
+                                   out_has_dark_face,
+                                   out_has_lit_drawable_face);
   ReleaseReadbackSlot(ticket);
   return GpuFinishStatus::Ready;
 #endif
@@ -976,10 +1014,12 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
 
 bool UGpuMeshPipeline::FinishComputePasses(
     GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
-    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
+    bool *out_has_lit_drawable_face)
 {
   return TryFinishComputePasses(ticket, registry, out_quad_count, out_ranges,
                                 out_has_dark_face,
+                                out_has_lit_drawable_face,
                                 /*timeout_ns=*/100'000'000) ==
          GpuFinishStatus::Ready;
 }
@@ -989,7 +1029,8 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
                                         glm::ivec3 coord, int slot_idx,
                                         uint32_t &out_quad_count,
                                         std::vector<GpuBlockDrawRange> *out_ranges,
-                                        bool *out_has_dark_face)
+                                        bool *out_has_dark_face,
+                                        bool *out_has_lit_drawable_face)
 {
   GpuApplyTicket ticket;
   if (!KickComputePasses(snapshot, registry, coord, slot_idx, ticket))
@@ -1016,13 +1057,14 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
     }
   }
   return FinishComputePasses(ticket, registry, out_quad_count, out_ranges,
-                             out_has_dark_face);
+                             out_has_dark_face, out_has_lit_drawable_face);
 }
 
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
 bool UGpuMeshPipeline::GpuSortSlotQuads(
     uint32_t slot_offset, uint32_t num_quads, UBlockRegistry &registry,
-    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
+    bool *out_has_lit_drawable_face)
 {
   if (!SortHistProgram || !SortScatterProgram || num_quads == 0)
   {
@@ -1047,7 +1089,7 @@ bool UGpuMeshPipeline::GpuSortSlotQuads(
   glDispatchCompute((num_quads + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-  // Histogram + dark only (~4KB) — not the full quad payload.
+  // Histogram + two flags (~4KB) — not the full quad payload.
   std::array<uint32_t, kSortCountsWords> counts{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortCountsSsbo);
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(counts), counts.data());
@@ -1069,7 +1111,11 @@ bool UGpuMeshPipeline::GpuSortSlotQuads(
   BuildRangesFromHistogram(counts.data(), offsets.data(), registry, out_ranges);
   if (out_has_dark_face)
   {
-    *out_has_dark_face = counts[kBlockTypeBuckets] != 0;
+    *out_has_dark_face = counts[kDarkFaceFlagIndex] != 0;
+  }
+  if (out_has_lit_drawable_face)
+  {
+    *out_has_lit_drawable_face = counts[kLitFaceFlagIndex] != 0;
   }
 
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortOffsetsSsbo);
@@ -1126,7 +1172,9 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
 
   uint32_t quad_count = 0;
   if (!RunComputePasses(snapshot, registry, coord, slot_idx, quad_count,
-                        &out_result.blockRanges, &out_result.hasFullyDarkFace))
+                        &out_result.blockRanges,
+                        &out_result.hasFullyDarkFace,
+                        &out_result.hasLitDrawableFace))
   {
     Allocator.FreeSlotByIndex(slot_idx);
     return false;

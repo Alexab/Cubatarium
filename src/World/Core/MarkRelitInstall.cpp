@@ -85,6 +85,14 @@ ColumnChunkSnapshot BuildLitApplyChunkSnapshot(
         probe.gpu_resident, probe.gpu_has_dark_face, snap.meshed_light_rev,
         snap.light_field_rev);
   }
+  const bool has_dark_surface =
+      probe.gpu_has_dark_face ||
+      mesh->GetCache().ChunkHasFullyDarkFace(coord);
+  if (!snap.still_stale && snap.has_drawable && has_dark_surface &&
+      mesh->ChunkHasStaleDarkFaces(coord, block_world))
+  {
+    snap.still_stale = true;
+  }
   return snap;
 }
 
@@ -165,15 +173,20 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         UChunkMeshCache::LitApplyMeshProbe dark_probe{};
         mesh->FillLitApplyMeshProbe(coord, dark_probe);
         const bool fully_dark_drawable =
+            dark_probe.has_drawable && dark_probe.fully_dark;
+        const bool stale_dark_drawable =
             dark_probe.has_drawable &&
-            (dark_probe.fully_dark || dark_probe.gpu_has_dark_face ||
-             mesh->GetCache().ChunkHasFullyDarkFace(coord));
-        if (dr == DemandResult::AlreadySatisfied && !fully_dark_drawable)
+            (dark_probe.gpu_has_dark_face ||
+             mesh->GetCache().ChunkHasFullyDarkFace(coord)) &&
+            mesh->ChunkHasStaleDarkFaces(coord, BlockWorld);
+        const bool needs_dark_repair =
+            fully_dark_drawable || stale_dark_drawable;
+        if (dr == DemandResult::AlreadySatisfied && !needs_dark_repair)
         {
           ++PhysicsTelemetryData.DemandAlreadySatisfiedSkipN;
           return;
         }
-        if (dr == DemandResult::AlreadySatisfied && fully_dark_drawable)
+        if (dr == DemandResult::AlreadySatisfied && needs_dark_repair)
         {
           // A41: open_sky equal-rev FD → LightRepair Dirty once (never +1).
           // Cave (!open_sky) → RelightOnly / LegalDark path (no Dirty invent).
@@ -238,8 +251,10 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
         UChunkMeshCache::LitApplyMeshProbe dark_probe{};
         mesh->FillLitApplyMeshProbe(coord, dark_probe);
         if (dark_probe.has_drawable &&
-            (dark_probe.fully_dark || dark_probe.gpu_has_dark_face ||
-             mesh->GetCache().ChunkHasFullyDarkFace(coord)))
+            (dark_probe.fully_dark ||
+             ((dark_probe.gpu_has_dark_face ||
+               mesh->GetCache().ChunkHasFullyDarkFace(coord)) &&
+              mesh->ChunkHasStaleDarkFaces(coord, BlockWorld))))
         {
           mesh->GetCache().InvalidateMeshCapture(coord);
         }

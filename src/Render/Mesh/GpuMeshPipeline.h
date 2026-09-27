@@ -72,12 +72,13 @@ public:
   GpuFinishStatus TryFinishComputePasses(
       GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
       std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
-      uint64_t timeout_ns);
+      bool *out_has_lit_drawable_face, uint64_t timeout_ns);
   /// Blocking Finish (up to 100ms) for sync ProcessSnapshot path.
   bool FinishComputePasses(GpuApplyTicket &ticket, UBlockRegistry &registry,
                            uint32_t &out_quad_count,
                            std::vector<GpuBlockDrawRange> *out_ranges,
-                           bool *out_has_dark_face);
+                           bool *out_has_dark_face,
+                           bool *out_has_lit_drawable_face);
 
   /// Free ring PBO held by ticket (CancelOutside / fail paths).
   void ReleaseReadbackSlot(GpuApplyTicket &ticket);
@@ -106,13 +107,15 @@ private:
                         UBlockRegistry &registry, glm::ivec3 coord,
                         int slot_idx, uint32_t &out_quad_count,
                         std::vector<GpuBlockDrawRange> *out_ranges = nullptr,
-                        bool *out_has_dark_face = nullptr);
+                        bool *out_has_dark_face = nullptr,
+                        bool *out_has_lit_drawable_face = nullptr);
 
   /// GPU counting-sort in-slot; downloads histogram only (not full quads).
   bool GpuSortSlotQuads(uint32_t slot_offset, uint32_t num_quads,
                         UBlockRegistry &registry,
                         std::vector<GpuBlockDrawRange> *out_ranges,
-                        bool *out_has_dark_face);
+                        bool *out_has_dark_face,
+                        bool *out_has_lit_drawable_face);
 
   void ShutdownGpuSort();
   void EnsureReadbackPbo();

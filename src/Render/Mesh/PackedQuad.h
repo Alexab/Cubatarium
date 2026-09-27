@@ -50,6 +50,7 @@ struct PackedQuad
   int BlockLight() const { return static_cast<int>((word1 >> 14) & 0xF); }
 };
 
+/// True when any non-bottom surface quad has zero sky and block light.
 inline bool PackedQuadsHaveFullyDarkFace(const std::vector<PackedQuad> &quads)
 {
   for (const PackedQuad &q : quads)
@@ -59,6 +60,23 @@ inline bool PackedQuadsHaveFullyDarkFace(const std::vector<PackedQuad> &quads)
       continue;
     }
     if (q.SkyLight() <= 0 && q.BlockLight() <= 0)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool PackedQuadsHaveLitDrawableFace(
+    const std::vector<PackedQuad> &quads)
+{
+  for (const PackedQuad &q : quads)
+  {
+    if (q.Face() == 5)
+    {
+      continue;
+    }
+    if (q.SkyLight() > 0 || q.BlockLight() > 0)
     {
       return true;
     }

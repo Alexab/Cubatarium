@@ -3335,23 +3335,32 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       // FullyDark / mesh-behind — never invent content+1 / pub+1.
       UChunkMeshCache::LitApplyMeshProbe probe{};
       MeshService->FillLitApplyMeshProbe(coord, probe);
-      const bool fully_dark =
+      // Any single zero-light face is normal in shaded/cave geometry. Repair
+      // only a wholly unlit drawable or a mesh demonstrably stale against the
+      // current light field.
+      const bool fully_dark = probe.has_drawable && probe.fully_dark;
+      const bool has_dark_surface =
           probe.has_drawable &&
-          (probe.fully_dark || probe.gpu_has_dark_face ||
+          (probe.gpu_has_dark_face ||
            MeshService->GetCache().ChunkHasFullyDarkFace(coord));
+      const bool stale_dark_faces =
+          has_dark_surface &&
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
       const bool mesh_behind_light =
           probe.has_drawable && probe.meshed_light_rev != 0 &&
           desired_light != 0 && probe.meshed_light_rev < desired_light;
       const bool still_stale =
           probe.has_drawable && probe.meshed_light_rev != 0 &&
           desired_light != 0 && probe.meshed_light_rev < desired_light;
+      const bool light_surface_stale = still_stale || stale_dark_faces;
       const bool open_sky =
           EnterVisualGateCtrl.WasOpenSkyApplied(glm::ivec2(cx, cz));
       const bool equal_rev_fd =
           fully_dark && !still_stale && !mesh_behind_light &&
           !(probe.has_drawable && probe.meshed_light_rev != 0 &&
             desired_light != 0 && probe.meshed_light_rev != desired_light);
-      const bool relight_only = fully_dark || mesh_behind_light ||
+      const bool relight_only = fully_dark || stale_dark_faces ||
+                                mesh_behind_light ||
                                 (probe.has_drawable &&
                                  probe.meshed_light_rev != 0 &&
                                  desired_light != 0 &&
@@ -3366,10 +3375,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         MeshService->GetCache().InvalidateMeshCapture(coord);
         // A41: open_sky equal-rev FD → LightRepair Dirty with SLA remint.
         // Dirty-only does not block (skip_snapshot plateau); live Capture/GPU does.
-        if (NeedsOpenSkyEqualRevLightRepair(fully_dark, still_stale,
+        if (NeedsOpenSkyEqualRevLightRepair(fully_dark, light_surface_stale,
                                             open_sky) ||
             (fully_dark && open_sky && equal_rev_fd) ||
-            (fully_dark && open_sky && still_stale))
+            (fully_dark && open_sky && light_surface_stale) ||
+            (stale_dark_faces && open_sky))
         {
           ColumnRecord &orec =
               ColumnRecords.GetOrCreate(glm::ivec2(cx, cz));

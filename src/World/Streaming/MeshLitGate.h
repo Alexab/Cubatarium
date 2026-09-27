@@ -101,21 +101,21 @@ inline bool ShouldAvoidEmptyPublishOverPriorLit(bool had_live_lit_gpu,
   return had_gpu_resident && had_lit_mesh;
 }
 
-/// Reject committing a mesh that has fully-dark faces when light is still
+/// Reject committing a surface mesh with no lit drawable face when light is
 /// pending, or when it would replace an already-lit mesh (dig/async race).
 /// Also reject dark over a live lit GPU SSBO (PendingReplace / SoftDefer empty
 /// with GpuResident lit — had_lit_mesh alone can miss that case).
 /// Cave / far UnlitFirstMesh first-mesh with light=0 is allowed (no lit predecessor).
 /// Sysreset v2: PriorLit TTL expire must NOT allow silent dark Replace — call
 /// site clears to PublishedEmpty + requeues MarkRelit instead.
-inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
+inline bool ShouldRejectDarkMeshCommit(bool new_surface_is_fully_dark,
                                        bool defer_until_lit,
                                        bool had_lit_mesh,
                                        bool had_live_lit_gpu = false,
                                        int hold_age_frames = 0)
 {
   (void)hold_age_frames;
-  if (!new_has_dark_face)
+  if (!new_surface_is_fully_dark)
   {
     return false;
   }
@@ -149,12 +149,13 @@ inline bool MeshCandidateMatchesSettledDemand(
 /// Sysreset v6: geom-stale Accept Retain must not keep a dark bake over prior
 /// lit (SoT 145008 black block faces). Caller: prior lit KEEP + one light-fresh
 /// RemeshAfterApply / DirtyPriority. Light Accept (non-geom) stays v3 D4.
-inline bool ShouldRejectDarkOnGeomStaleAccept(bool new_has_dark_face,
+inline bool ShouldRejectDarkOnGeomStaleAccept(
+                                             bool new_surface_is_fully_dark,
                                              bool accepted_geom_stale,
                                              bool had_lit_mesh,
                                              bool had_live_lit_gpu = false)
 {
-  if (!new_has_dark_face || !accepted_geom_stale)
+  if (!new_surface_is_fully_dark || !accepted_geom_stale)
   {
     return false;
   }

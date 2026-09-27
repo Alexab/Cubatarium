@@ -30,7 +30,10 @@ struct GpuMeshProcessResult
   int slotIndex{-1};
   uint32_t quadCount{0};
   bool transparent{false};
+  /// At least one non-bottom face quad has zero sky and block light.
   bool hasFullyDarkFace{false};
+  /// At least one non-bottom face quad has a nonzero light value.
+  bool hasLitDrawableFace{false};
   std::vector<GpuBlockDrawRange> blockRanges;
 };
 

@@ -1038,6 +1038,7 @@ private:
     uint32_t GpuQuadCount{0};
     bool GpuTransparent{false};
     bool GpuHasDarkFace{false};
+    bool GpuHasLitDrawableFace{false};
     uint64_t MeshedLightRevision{0};
     /// Sysreset v2: Accept gate stamps (geom/light/material).
     MeshPublishRevs PublishRevs{};
