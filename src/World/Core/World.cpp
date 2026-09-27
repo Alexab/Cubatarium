@@ -126,6 +126,26 @@ namespace cutum
 namespace
 {
 
+bool ChunkSliceHasCurrentLightSettlement(const UWorld &world,
+                                         glm::ivec3 coord)
+{
+  const UChunk *chunk =
+      world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(coord);
+  if (!chunk || !demand || chunk->GetLightFieldRevision() == 0 ||
+      demand->world_epoch !=
+          world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch() ||
+      demand->incarnation != chunk->GetIncarnation() ||
+      !demand->has_settled_light ||
+      demand->settled_light_rev != chunk->GetLightFieldRevision() ||
+      demand->desired_light_rev > demand->published_light_rev)
+  {
+    return false;
+  }
+  return true;
+}
+
 int CountMissingSlicesInRange(const UBlockWorld &world,
                             const UWorldMeshService *mesh_service,
                             glm::ivec3 ground_chunk_coord, int min_y,
@@ -1185,7 +1205,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               continue;
             }
-            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord) &&
+                !ChunkSliceHasCurrentLightSettlement(*this, coord))
             {
               fully_dark = true;
               bad_mesh = true;
@@ -1760,6 +1781,37 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   if (surface_band.second < surface_band.first)
   {
     return;
+  }
+  if (MeshService)
+  {
+    const int min_cy = FloorDiv(surface_band.first, CHUNK_SIZE);
+    const int max_cy = FloorDiv(surface_band.second, CHUNK_SIZE);
+    bool has_settled_dark_drawable = false;
+    bool has_unsettled_dark_drawable = false;
+    for (int cy = min_cy; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(col_xz.x, cy, col_xz.y);
+      if (!MeshService->HasDrawableGreedyMesh(coord) ||
+          !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        continue;
+      }
+      if (ChunkSliceHasCurrentLightSettlement(*this, coord))
+      {
+        has_settled_dark_drawable = true;
+      }
+      else
+      {
+        has_unsettled_dark_drawable = true;
+      }
+    }
+    if (has_settled_dark_drawable && !has_unsettled_dark_drawable)
+    {
+      // Current dark light is a completed result. Renderer rejection of its
+      // mesh is handled by the settled mesh-repair path; reopening PendingLight
+      // here would immediately invalidate the proof and repeat this loop.
+      return;
+    }
   }
   TryNotePendingLightBeforeMesh(ground, surface_band.first,
                                 surface_band.second, __FUNCTION__);
@@ -4840,8 +4892,13 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
       {
         const glm::ivec3 coord(key.x, cy, key.y);
         if (MeshService->HasDrawableGreedyMesh(coord) &&
-            MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+            MeshService->GetCache().ChunkHasFullyDarkFace(coord) &&
+            !ChunkSliceHasCurrentLightSettlement(*this, coord))
         {
+          // A fully dark image is still a valid lighting result when its
+          // exact slice has a current settlement stamp. Re-relighting it
+          // invalidates that proof and can keep the renderer gate closed
+          // forever even though no light bytes change.
           fully_dark = true;
           break;
         }
