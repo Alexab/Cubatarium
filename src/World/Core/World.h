@@ -1176,9 +1176,11 @@ public:
   bool IsColumnDiskLightComplete(glm::ivec2 ground_xz) const;
 
   /// Near-focus columns waiting for first light before first mesh (plan A).
-  void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);
+  void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
+                                  const char *audit_source = nullptr);
   /// FZ2.2-O1: idempotent Note — skip inflight/already-Noted; counts dups in telem.
-  bool TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);
+  bool TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
+                                    const char *audit_source = nullptr);
   /// Era23 I-V5: NotePendingLight + priority FIFO on void enqueue (ColumnFlow).
   void EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz);
   void ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);

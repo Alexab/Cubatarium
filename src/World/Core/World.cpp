@@ -1213,7 +1213,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
               fully_dark, any_sky, stale_dark_faces);
           if (!any_sky || fully_dark || relight_only)
           {
-            TryNotePendingLightBeforeMesh(ground, remesh_min, remesh_max);
+            TryNotePendingLightBeforeMesh(ground, remesh_min, remesh_max,
+                                          __FUNCTION__);
             // Light path owns heal — do not leave StickyRemesh ghost (IDLE
             // black_sticky=1 with faces already 0; manual/autofly false sticky).
             StickyRemeshAfterLight.erase(glm::ivec2(ground.x, ground.z));
@@ -1551,7 +1552,8 @@ void UWorld::ClearAdmitFocusMarkBuffer()
   AdmitFocusMarkBuffer_.clear();
 }
 
-void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
+void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
+                                       const char *audit_source)
 {
   if (!RequiresLightingLitGate())
   {
@@ -1565,6 +1567,8 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   {
     return;
   }
+  const bool audit_relight =
+      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
   const glm::ivec2 key(ground.x, ground.z);
   if (EnterLitGateActive && EnterLitSnapshotCaptured &&
       URuntimeTuning::Get().EnterLitUseSnapshotDebt)
@@ -1613,7 +1617,8 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
     return;
   }
   const int note_min_y = std::max(0, min_y);
-  const auto invalidate_slice_band = [&](int band_min_y, int band_max_y)
+  const auto invalidate_slice_band = [&](int band_min_y, int band_max_y,
+                                         const char *reason)
   {
     if (!MeshService || band_max_y < band_min_y)
     {
@@ -1632,14 +1637,35 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
       const glm::ivec3 coord(ground.x, cy, ground.z);
       if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
       {
+        const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(coord);
+        const bool had_settlement = demand && demand->has_settled_light;
+        const uint64_t settled_rev = demand ? demand->settled_light_rev : 0;
+        const uint64_t field_rev = chunk->GetLightFieldRevision();
         UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
             coord, world_epoch, chunk->GetIncarnation());
+        if (audit_relight && had_settlement)
+        {
+          CubatariumLogInfo(
+              "RelightAudit",
+              "settlement invalidate source=" +
+                  std::string(audit_source ? audit_source : "unspecified") +
+                  " reason=" + reason + " coord=(" +
+                  std::to_string(coord.x) + "," +
+                  std::to_string(coord.y) + "," +
+                  std::to_string(coord.z) + ") field_rev=" +
+                  std::to_string(field_rev) + " settled_rev=" +
+                  std::to_string(settled_rev) + " matched=" +
+                  std::to_string(settled_rev == field_rev) + " band=" +
+                  std::to_string(band_min_y) + ":" +
+                  std::to_string(band_max_y));
+        }
       }
     }
   };
   if (inserted)
   {
-    invalidate_slice_band(note_min_y, max_y);
+    invalidate_slice_band(note_min_y, max_y, "insert");
   }
   else
   {
@@ -1652,11 +1678,12 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
     if (note_min_y < covered_min_y)
     {
       invalidate_slice_band(note_min_y,
-                            std::min(max_y, covered_min_y - 1));
+                            std::min(max_y, covered_min_y - 1), "extend_low");
     }
     if (max_y > covered_max_y)
     {
-      invalidate_slice_band(std::max(note_min_y, covered_max_y + 1), max_y);
+      invalidate_slice_band(std::max(note_min_y, covered_max_y + 1), max_y,
+                            "extend_high");
     }
   }
   if (inserted)
@@ -1669,7 +1696,8 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   it->second.max_y = std::max(it->second.max_y, max_y);
 }
 
-bool UWorld::TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
+bool UWorld::TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y,
+                                          int max_y, const char *audit_source)
 {
   if (ground.y != 0)
   {
@@ -1691,7 +1719,7 @@ bool UWorld::TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max
     ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
     return false;
   }
-  NotePendingLightBeforeMesh(ground, min_y, max_y);
+  NotePendingLightBeforeMesh(ground, min_y, max_y, audit_source);
   return true;
 }
 
@@ -1733,7 +1761,8 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   {
     return;
   }
-  TryNotePendingLightBeforeMesh(ground, surface_band.first, surface_band.second);
+  TryNotePendingLightBeforeMesh(ground, surface_band.first,
+                                surface_band.second, __FUNCTION__);
   Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
                                            col_xz.y * CHUNK_SIZE,
                                            /*priority=*/true,
@@ -3494,7 +3523,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             !IsPendingLightBeforeMesh(slice_column))
         {
           NotePendingLightBeforeMesh(
-              ground, cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+              ground, cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1,
+              __FUNCTION__);
         }
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         if (attempt_id != 0 && relight_enqueued)

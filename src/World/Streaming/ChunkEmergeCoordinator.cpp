@@ -602,7 +602,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             world_ref.TryNotePendingLightBeforeMesh(
                 glm::ivec3(key.x, 0, key.y), 0,
-                world_ref.GetProceduralSettings().MaxHeight);
+                world_ref.GetProceduralSettings().MaxHeight, __FUNCTION__);
           }
           // Phase 5.7R3: SoftDefer lit-pending Relight — same latch underfeet+fifo gate.
           const auto &pt = world_ref.GetPhysicsTelemetry();

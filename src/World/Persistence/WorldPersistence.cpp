@@ -781,7 +781,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
                                 ground_xz.y * CHUNK_SIZE, kv.second.priority,
                                 band.x, band.y);
     world.TryNotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
-                                     band.x, band.y);
+                                     band.x, band.y, __FUNCTION__);
     to_erase.push_back(ground_xz);
     ++admitted;
   }
@@ -2191,7 +2191,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         relight_max = surface_band_max;
         ++telem.RelightSkippedUndergroundN;
         world.TryNotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
-                                         relight_min, relight_max);
+                                         relight_min, relight_max, __FUNCTION__);
       }
       else
       {
@@ -2810,7 +2810,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
         {
           return;
         }
-        world.TryNotePendingLightBeforeMesh(ground_coord, dmin, dmax);
+        world.TryNotePendingLightBeforeMesh(ground_coord, dmin, dmax,
+                                            __FUNCTION__);
       };
       const int fifo_n = GetPendingTerrainColumnRelightCount();
       const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
@@ -2843,7 +2844,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
                                       ground_coord.z * CHUNK_SIZE,
                                       /*priority=*/true, dirty_min, dirty_max);
           world.TryNotePendingLightBeforeMesh(ground_coord, dirty_min,
-                                              dirty_max);
+                                              dirty_max, __FUNCTION__);
         }
       }
       // Focus: first-mesh Dirty immediately (preview). Far waits MarkRelit
