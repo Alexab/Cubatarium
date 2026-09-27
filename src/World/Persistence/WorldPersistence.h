@@ -114,6 +114,9 @@ public:
                                      int pin_horiz);
   /// Move an already-queued world-block-key column from far to priority FIFO.
   void PromoteTerrainColumnRelight(glm::ivec2 world_block_key);
+  /// Move one queued near-focus column to the priority head, preserving the
+  /// active relight pin immediately ahead of it when that pin is queued.
+  bool PrioritizeTerrainColumnRelight(glm::ivec2 world_block_key);
   /// Promote all pending far-FIFO columns within focus radius (block keys).
   int PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
                                        int radius_chunks);

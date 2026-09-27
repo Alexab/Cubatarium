@@ -6110,6 +6110,54 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
         /*priority=*/true, entry.second.min_y, entry.second.max_y);
     ++promoted;
   }
+
+  // Priority is a queue class, not a moving distance order. Once the camera
+  // advances, entries already in that deque otherwise retain their old order.
+  // Promote one currently queued PendingLight target per scheduler dispatch;
+  // choose the visible missing-mesh witness first, then the nearest and oldest
+  // queued debt. Persistence keeps the active miss pin ahead of this target.
+  glm::ivec2 promote_key{};
+  int best_distance = radius_chunks + 1;
+  int best_queue_index = -1;
+  bool have_promote_key = false;
+  for (const auto &entry : PendingLightBeforeMesh)
+  {
+    const int distance = std::max(
+        std::abs(entry.first.x - focus_ground_horiz.x),
+        std::abs(entry.first.y - focus_ground_horiz.z));
+    if (distance > radius_chunks)
+    {
+      continue;
+    }
+    const glm::ivec2 block_key(entry.first.x * CHUNK_SIZE,
+                               entry.first.y * CHUNK_SIZE);
+    const auto queue = Persistence->GetTerrainColumnRelightQueueInfo(block_key);
+    if (!queue.keyed || !queue.in_deque)
+    {
+      continue;
+    }
+    const bool missing_mesh_witness =
+        nearest_missing_hole && entry.first.x == nearest_hole.x &&
+        entry.first.y == nearest_hole.z;
+    const int urgency = missing_mesh_witness && queue.queue_index > 1
+                            ? -1
+                            : distance;
+    if (!have_promote_key || urgency < best_distance ||
+        (urgency == best_distance &&
+         queue.queue_index > best_queue_index))
+    {
+      promote_key = entry.first;
+      best_distance = urgency;
+      best_queue_index = queue.queue_index;
+      have_promote_key = true;
+    }
+  }
+  if (have_promote_key)
+  {
+    Persistence->PrioritizeTerrainColumnRelight(
+        glm::ivec2(promote_key.x * CHUNK_SIZE,
+                   promote_key.y * CHUNK_SIZE));
+  }
   return promoted;
 }
 

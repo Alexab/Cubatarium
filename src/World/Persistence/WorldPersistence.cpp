@@ -793,6 +793,49 @@ void UWorldPersistence::PromoteTerrainColumnRelight(
   }
 }
 
+bool UWorldPersistence::PrioritizeTerrainColumnRelight(
+    glm::ivec2 world_block_key)
+{
+  if (PendingTerrainColumnRelightKeys.count(world_block_key) == 0)
+  {
+    return false;
+  }
+
+  auto erase_key = [&](std::deque<glm::ivec2> &queue)
+  {
+    const auto it = std::find(queue.begin(), queue.end(), world_block_key);
+    if (it == queue.end())
+    {
+      return false;
+    }
+    queue.erase(it);
+    return true;
+  };
+
+  const glm::ivec2 pin_key(RelightFifoPinCx * CHUNK_SIZE,
+                            RelightFifoPinCz * CHUNK_SIZE);
+  const bool target_is_pin = RelightFifoPinValid && pin_key == world_block_key;
+  const bool pin_queued = RelightFifoPinValid && !target_is_pin &&
+                          PendingTerrainColumnRelightKeys.count(pin_key) != 0;
+  if (pin_queued)
+  {
+    // The witness owns the first slot even if it was left in the far deque.
+    erase_key(PendingTerrainColumnRelightsPriority);
+    erase_key(PendingTerrainColumnRelights);
+    PendingTerrainColumnRelightsPriority.push_front(pin_key);
+  }
+
+  erase_key(PendingTerrainColumnRelightsPriority);
+  erase_key(PendingTerrainColumnRelights);
+  auto insert_at = PendingTerrainColumnRelightsPriority.begin();
+  if (pin_queued && !target_is_pin)
+  {
+    ++insert_at;
+  }
+  PendingTerrainColumnRelightsPriority.insert(insert_at, world_block_key);
+  return true;
+}
+
 int UWorldPersistence::PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
                                                         int radius_chunks)
 {
