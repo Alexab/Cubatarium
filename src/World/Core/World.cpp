@@ -1782,9 +1782,6 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   const glm::ivec3 ground(col_xz.x, 0, col_xz.y);
-  // Match RecoverUnlit: light path owns heal — drop StickyRemesh ghost so
-  // PendingLight+mesh does not latch black_sticky (IDLE gate).
-  StickyRemeshAfterLight.erase(col_xz);
   // Era37 P5: per-column surface band (hills/trees), not focus Y only.
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const int col_top_cy =
@@ -1799,12 +1796,15 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   {
     return;
   }
+  int nearest_unsettled_dark_cy = -1;
+  int nearest_unsettled_dark_dist = INT_MAX;
   if (MeshService)
   {
     const int min_cy = FloorDiv(surface_band.first, CHUNK_SIZE);
     const int max_cy = FloorDiv(surface_band.second, CHUNK_SIZE);
     bool has_settled_dark_drawable = false;
     bool has_unsettled_dark_drawable = false;
+    const int focus_cy = FloorDiv(focus_block.y, CHUNK_SIZE);
     for (int cy = min_cy; cy <= max_cy; ++cy)
     {
       const glm::ivec3 coord(col_xz.x, cy, col_xz.y);
@@ -1820,6 +1820,12 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
       else
       {
         has_unsettled_dark_drawable = true;
+        const int distance = std::abs(cy - focus_cy);
+        if (distance < nearest_unsettled_dark_dist)
+        {
+          nearest_unsettled_dark_cy = cy;
+          nearest_unsettled_dark_dist = distance;
+        }
       }
     }
     if (has_settled_dark_drawable && !has_unsettled_dark_drawable)
@@ -1830,13 +1836,42 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
       return;
     }
   }
-  TryNotePendingLightBeforeMesh(ground, surface_band.first,
-                                surface_band.second, __FUNCTION__);
+  int relight_min_y = surface_band.first;
+  int relight_max_y = surface_band.second;
+  // If a drawable dark slice is missing a current calculation proof, repair
+  // the nearest such slice first. A column-wide surface interval invalidates
+  // settlements in unrelated slices before we know whether they need work.
+  if (nearest_unsettled_dark_cy >= 0)
+  {
+    relight_min_y = nearest_unsettled_dark_cy * CHUNK_SIZE;
+    relight_max_y = std::min(
+        max_y, (nearest_unsettled_dark_cy + 1) * CHUNK_SIZE - 1);
+  }
   Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
                                            col_xz.y * CHUNK_SIZE,
                                            /*priority=*/true,
-                                           surface_band.first,
-                                           surface_band.second);
+                                           relight_min_y, relight_max_y);
+  const glm::ivec2 world_block_key(col_xz.x * CHUNK_SIZE,
+                                   col_xz.y * CHUNK_SIZE);
+  if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
+      !IsAsyncRelightColumnInFlight(col_xz))
+  {
+    if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "void-dark enqueue rejected column=(" + std::to_string(col_xz.x) +
+              "," + std::to_string(col_xz.y) + ") band=" +
+              std::to_string(relight_min_y) + ":" +
+              std::to_string(relight_max_y));
+    }
+    return;
+  }
+  // Match RecoverUnlit: light path owns heal — drop StickyRemesh ghost only
+  // after an executable relight owner has accepted the work.
+  StickyRemeshAfterLight.erase(col_xz);
+  TryNotePendingLightBeforeMesh(ground, relight_min_y, relight_max_y,
+                                __FUNCTION__);
 }
 
 void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
