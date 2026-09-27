@@ -686,6 +686,31 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     world.GetColumnRecords().SetDesired(focus, desired);
   }
 
+  // A pending-light column may already have a FirstMesh ticket from an older
+  // focus position. That ticket cannot pass the light gate and can keep the
+  // single-owner scheduler slot from reaching RelightThenMesh. Repair this
+  // bounded set even when the normal recovery producer is paused by idle/debt
+  // gates; columns with a real FIFO/async light owner need no replacement.
+  int orphaned_mesh_ticket_n = 0;
+  for (const glm::ivec2 &col : pending_cols)
+  {
+    if (orphaned_mesh_ticket_n >= std::max(1, recover_n) ||
+        !scheduler_.Contains(col, ColumnWorkKind::FirstMesh) ||
+        !world.IsPendingLightBeforeMesh(col) ||
+        world.IsTerrainColumnRelightQueued(col) ||
+        world.IsAsyncRelightColumnInFlight(col))
+    {
+      continue;
+    }
+    const int horiz = std::max(std::abs(col.x - focus.x),
+                               std::abs(col.y - focus.y));
+    Enqueue(col, ColumnWorkKind::RelightThenMesh,
+            ColumnFlowRelightPriorityUnderMiss(56 - orphaned_mesh_ticket_n,
+                                               horiz, focus_radius,
+                                               missing_visible_mesh));
+    ++orphaned_mesh_ticket_n;
+  }
+
   // should_relight_then_mesh / should_promote_relight: real pending columns.
   // While missing FirstMesh, keep Relight priority below FirstMesh (≤99).
   if (!idle_remesh_debt && !idle_focus_dirty_debt && recover_n > 0)
