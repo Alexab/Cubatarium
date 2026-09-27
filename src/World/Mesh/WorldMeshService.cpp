@@ -76,6 +76,12 @@ void UWorldMeshService::SetIsLightRepairRemeshFn(
   Cache.SetIsLightRepairRemeshFn(std::move(fn));
 }
 
+void UWorldMeshService::SetHasPendingLightRelightOwnerFn(
+    std::function<bool(glm::ivec3)> fn)
+{
+  Cache.SetHasPendingLightRelightOwnerFn(std::move(fn));
+}
+
 void UWorldMeshService::SetChunkResidentFn(std::function<bool(glm::ivec3)> fn)
 {
   Cache.SetChunkResidentFn(std::move(fn));

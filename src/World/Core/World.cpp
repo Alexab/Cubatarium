@@ -1823,6 +1823,28 @@ bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
   return PendingLightBeforeMesh.find(ground_xz) != PendingLightBeforeMesh.end();
 }
 
+bool UWorld::HasPendingLightRelightOwner(glm::ivec2 ground_xz) const
+{
+  if (!IsPendingLightBeforeMesh(ground_xz))
+  {
+    return false;
+  }
+
+  const UColumnFlowScheduler &scheduler =
+      GetColumnFlowExecutor().Scheduler();
+  if (scheduler.Contains(ground_xz, ColumnWorkKind::RelightThenMesh) ||
+      scheduler.Contains(ground_xz, ColumnWorkKind::PromoteRelight) ||
+      IsAsyncRelightColumnInFlight(ground_xz))
+  {
+    return true;
+  }
+
+  const glm::ivec2 world_block_key(ground_xz.x * CHUNK_SIZE,
+                                   ground_xz.y * CHUNK_SIZE);
+  return Persistence &&
+         Persistence->IsTerrainColumnRelightQueued(world_block_key);
+}
+
 void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
 {
   if (!MeshService)

@@ -1182,6 +1182,9 @@ public:
   void EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz);
   void ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
   bool IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const;
+  /// True while a pending-light column has an actual relight ticket, FIFO
+  /// entry, or async job owning its publication prerequisite.
+  bool HasPendingLightRelightOwner(glm::ivec2 ground_xz) const;
   /// Stamp a validated lighting calculation on one loaded chunk slice.
   void NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord);
   bool HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
