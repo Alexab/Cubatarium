@@ -284,6 +284,14 @@ const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
 
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
 {
+  if (item.kind == ColumnWorkKind::FirstMesh && !item.scan_full_focus &&
+      decide_world_ != nullptr &&
+      decide_world_->IsPendingLightBeforeMesh(item.column))
+  {
+    // A targeted first-mesh ticket cannot pass the PendingLight draw/mesh gate;
+    // leave that column for relight and admit it to meshing after light settles.
+    return;
+  }
   if (item.kind == ColumnWorkKind::RelightThenMesh && decide_world_ != nullptr &&
       (decide_world_->IsTerrainColumnRelightQueued(item.column) ||
        decide_world_->IsAsyncRelightColumnInFlight(item.column)))
@@ -292,6 +300,13 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
     // debt alone must not create a duplicate Flow relight ticket.
     return;
   }
+  const bool actionable_relight_debt =
+      (item.kind == ColumnWorkKind::RelightThenMesh ||
+       item.kind == ColumnWorkKind::PromoteRelight) &&
+      decide_world_ != nullptr &&
+      decide_world_->IsPendingLightBeforeMesh(item.column) &&
+      !decide_world_->IsTerrainColumnRelightQueued(item.column) &&
+      !decide_world_->IsAsyncRelightColumnInFlight(item.column);
   const bool new_ticket = !scheduler_.Contains(item.column, item.kind);
   bool legacy_want = true;
   bool record_want = true;
@@ -335,7 +350,8 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
            item.kind == ColumnWorkKind::PromoteRelight)
   {
     if (!UColumnRecordCoordinator::DecideRelightEnqueue(
-            legacy_want, record_want, item.column, new_ticket))
+            legacy_want, record_want, item.column, new_ticket) &&
+        !actionable_relight_debt)
     {
       return;
     }
@@ -350,8 +366,17 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
   }
   const auto key = MakeCooldownKey(item.column, item.kind);
   const auto it = last_dispatch_frame_.find(key);
+  const bool replace_blocked_first_mesh =
+      item.kind == ColumnWorkKind::RelightThenMesh && actionable_relight_debt &&
+      scheduler_.Contains(item.column, ColumnWorkKind::FirstMesh);
   if (it != last_dispatch_frame_.end() &&
-      frame_counter_ - it->second < kEnqueueCooldownFrames)
+      frame_counter_ - it->second < kEnqueueCooldownFrames &&
+      !replace_blocked_first_mesh)
+  {
+    return;
+  }
+  if (replace_blocked_first_mesh && scheduler_.ReplaceColumnTicket(
+                                        item, ColumnWorkKind::FirstMesh))
   {
     return;
   }
@@ -431,7 +456,8 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
     // they are not the light job itself. Persistence/async state owns that
     // work. Marking the ticket as an in-flight job here made PendingLight debt
     // look permanently owned after a FIFO admission refusal.
-    const bool record_tracks_job = !pending;
+    const bool record_tracks_job =
+        !pending && !world.IsPendingLightBeforeMesh(work.column);
     if (record_tracks_job)
     {
       rec.inflight_job = frame_counter_ == 0 ? 1 : frame_counter_;

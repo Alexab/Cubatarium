@@ -80,6 +80,21 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
   ++denied_n_;
 }
 
+bool UColumnFlowScheduler::ReplaceColumnTicket(
+    const ColumnWorkItem &item, ColumnWorkKind expected_kind)
+{
+  const ColumnCoord coord(item.column);
+  const auto it = live_.find(coord);
+  if (it == live_.end() || it->second.kind != expected_kind)
+  {
+    return false;
+  }
+  ++superseded_n_;
+  ++upgrade_n_;
+  PushLive(item);
+  return true;
+}
+
 bool UColumnFlowScheduler::DrainOne(ColumnWorkItem &out)
 {
   while (!heap_.empty())

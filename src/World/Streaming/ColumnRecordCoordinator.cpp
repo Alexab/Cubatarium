@@ -188,10 +188,10 @@ bool UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(
 bool UColumnRecordCoordinator::RecordWantsRelightEnqueue(
     const ColumnRecord &rec)
 {
-  // PendingLight is debt, not proof that a relight job has an owner. Allow a
-  // new relight ticket when the debt has no active ColumnRecord job token;
-  // the Flow executor separately deduplicates against persistence/async owners.
-  if (rec.pending_light && !ColumnHasActivePending(rec))
+  // PendingLight is debt, not proof that a relight job has an owner. The Flow
+  // executor checks persistence/async ownership before admitting duplicate work;
+  // a stale pending token must not suppress recovery of the actual debt.
+  if (rec.pending_light)
   {
     return true;
   }
