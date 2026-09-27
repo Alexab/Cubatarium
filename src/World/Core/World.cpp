@@ -3475,11 +3475,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       // Chunk content revisions (the two counters are independent).
       uint64_t desired_geom = MeshService->GetChunkMeshRevision(coord);
       uint64_t desired_light = ch->GetLightFieldRevision();
-      const ChunkRenderDemandRecord *light_demand = demand.Find(coord);
+      // Use the same current-settlement proof as the renderer. A zero-change
+      // relight can settle revision zero; column LitReady is not a reason to
+      // reopen debt for this already-computed slice.
       const bool slice_light_settled =
-          light_demand && light_demand->incarnation == ch->GetIncarnation() &&
-          light_demand->has_settled_light &&
-          light_demand->settled_light_rev == desired_light;
+          HasCurrentChunkSliceLightSettlement(coord);
       const MeshPublishRevs pub_early =
           MeshService->GetCache().GetMeshPublishRevs(coord);
       // Do not invent a mismatch when a published mesh already has a source rev.
@@ -3542,8 +3542,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           !probe.has_drawable && ch->GetNonAirCount() > 0 &&
           RequiresLightingLitGate() &&
           col_horiz <= kVisualStageLitDrawableHoriz &&
-          (!IsColumnLitReady(ground) ||
-           (desired_light == 0 && !slice_light_settled));
+          !slice_light_settled &&
+          (!IsColumnLitReady(ground) || desired_light == 0);
       const glm::ivec2 slice_column(cx, cz);
       const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
       const auto ensure_slice_relight = [&]() {
