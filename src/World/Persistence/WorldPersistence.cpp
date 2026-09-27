@@ -549,7 +549,14 @@ bool UWorldPersistence::EnqueueVisibleRelight(
       const int candidate_horiz =
           std::max(std::abs(cx - focus_ground.x),
                    std::abs(cz - focus_ground.z));
-      if (candidate_horiz <= victim_horiz ||
+      // Prefer work farther from the focus, but a full queue can consist
+      // entirely of entries in the same LitDrawable ring. In that case the
+      // strict-distance check rejects every newly observed draw-gate hole.
+      // Recycle the oldest same-distance, unpinned, non-witness entry only
+      // after no farther candidate has been found. The current pass's exact
+      // visible targets are protected below.
+      if (candidate_horiz < victim_horiz ||
+          (candidate_horiz == victim_horiz && victim_queue != nullptr) ||
           ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid,
                                          RelightFifoPinCx, RelightFifoPinCz) ||
           std::find(protected_visible_columns.begin(),
