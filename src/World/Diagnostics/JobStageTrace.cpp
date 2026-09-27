@@ -80,6 +80,22 @@ struct WatchedJobRing
   std::mutex mu;
 };
 
+struct DemandTransitionRing
+{
+  std::array<DemandTransitionSpan,
+             UJobStageTrace::kDemandTransitionRingCapacity>
+      slots{};
+  size_t write{0};
+  size_t count{0};
+  std::mutex mu;
+};
+
+DemandTransitionRing &GetDemandTransitionRing()
+{
+  static DemandTransitionRing r;
+  return r;
+}
+
 WatchedJobRing &GetWatchedJobRing()
 {
   static WatchedJobRing r;
@@ -423,6 +439,41 @@ void UJobStageTrace::ForEachWatchedNewest(
   }
 }
 
+void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
+{
+  if (!VisualBlackTraceEnabled() ||
+      !IsVisualChunkWatched(span.cx, span.cy, span.cz))
+  {
+    return;
+  }
+  auto &r = GetDemandTransitionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  r.slots[r.write % kDemandTransitionRingCapacity] = span;
+  ++r.write;
+  if (r.count < kDemandTransitionRingCapacity)
+  {
+    ++r.count;
+  }
+}
+
+void UJobStageTrace::ForEachDemandTransitionNewest(
+    size_t max_n, void (*fn)(const DemandTransitionSpan &, void *), void *ctx)
+{
+  if (!fn)
+  {
+    return;
+  }
+  auto &r = GetDemandTransitionRing();
+  std::lock_guard<std::mutex> lock(r.mu);
+  const size_t n = (max_n < r.count) ? max_n : r.count;
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t abs = (r.write + kDemandTransitionRingCapacity - 1 - i) %
+                       kDemandTransitionRingCapacity;
+    fn(r.slots[abs], ctx);
+  }
+}
+
 const char *UJobStageTrace::StageName(JobStage s)
 {
   switch (s)
@@ -454,6 +505,36 @@ const char *UJobStageTrace::StageName(JobStage s)
   default:
     return "unknown";
   }
+}
+
+const char *UJobStageTrace::DemandTransitionName(DemandTransitionKind kind)
+{
+  switch (kind)
+  {
+  case DemandTransitionKind::AttemptCreated:
+    return "attempt_created";
+  case DemandTransitionKind::TargetAdvanced:
+    return "target_advanced";
+  case DemandTransitionKind::StageAdvanced:
+    return "stage_advanced";
+  case DemandTransitionKind::InstallPublished:
+    return "install_published";
+  case DemandTransitionKind::InstallRetained:
+    return "install_retained";
+  case DemandTransitionKind::InstallRejected:
+    return "install_rejected";
+  case DemandTransitionKind::InstallCancelled:
+    return "install_cancelled";
+  case DemandTransitionKind::StaleInstallIgnored:
+    return "stale_install_ignored";
+  case DemandTransitionKind::PublishedRevisionAdvanced:
+    return "published_revision_advanced";
+  case DemandTransitionKind::AttemptReminted:
+    return "attempt_reminted";
+  case DemandTransitionKind::IdentityReset:
+    return "identity_reset";
+  }
+  return "unknown";
 }
 
 const char *UJobStageTrace::TerminalReasonName(JobTerminalReason reason)

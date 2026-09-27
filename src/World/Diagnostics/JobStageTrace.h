@@ -91,6 +91,55 @@ struct JobStageSpan
   double elapsed_ms{0.0};
 };
 
+/// State transitions for the per-slice render-demand owner. JobStageSpan is
+/// worker/GPU centric; this trace records the target revision and attempt
+/// lifetime that those jobs are meant to satisfy.
+enum class DemandTransitionKind : uint8_t
+{
+  AttemptCreated = 0,
+  TargetAdvanced,
+  StageAdvanced,
+  InstallPublished,
+  InstallRetained,
+  InstallRejected,
+  InstallCancelled,
+  StaleInstallIgnored,
+  PublishedRevisionAdvanced,
+  AttemptReminted,
+  IdentityReset
+};
+
+struct DemandTransitionSpan
+{
+  int32_t cx{0};
+  int32_t cy{0};
+  int32_t cz{0};
+  uint64_t world_epoch{0};
+  uint64_t incarnation{0};
+  uint64_t previous_attempt_id{0};
+  uint64_t attempt_id{0};
+  uint64_t previous_desired_geom_rev{0};
+  uint64_t desired_geom_rev{0};
+  uint64_t previous_desired_light_rev{0};
+  uint64_t desired_light_rev{0};
+  uint64_t previous_desired_coverage_gen{0};
+  uint64_t desired_coverage_gen{0};
+  uint64_t previous_published_geom_rev{0};
+  uint64_t published_geom_rev{0};
+  uint64_t previous_published_light_rev{0};
+  uint64_t published_light_rev{0};
+  uint64_t previous_published_coverage_gen{0};
+  uint64_t published_coverage_gen{0};
+  JobStage previous_stage{JobStage::Created};
+  JobStage stage{JobStage::Created};
+  DemandTransitionKind kind{DemandTransitionKind::AttemptCreated};
+  uint8_t result{0};
+  uint8_t had_active_attempt{0};
+  uint8_t has_active_attempt{0};
+  uint8_t retained_awaiting_successor{0};
+  double event_ms{0.0};
+};
+
 /// Bounded, opt-in sample of a chunk counted by the visible-black census.
 /// Captures both column-level ownership flags and the exact slice's mesh/demand
 /// stamps so aggregate census counts can be traced to their real work owner.
@@ -212,6 +261,8 @@ public:
   static constexpr size_t kRingCapacity = 256;
   /// Bounded worker/GPU lifecycle history retained for sampled visible slices.
   static constexpr size_t kVisualLifecycleRingCapacity = 8192;
+  /// Bounded demand-owner transitions for slices sampled by the renderer trace.
+  static constexpr size_t kDemandTransitionRingCapacity = 16384;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
@@ -236,6 +287,10 @@ public:
   static void WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz);
   static void ForEachWatchedNewest(
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
+  static void NoteDemandTransition(const DemandTransitionSpan &span);
+  static void ForEachDemandTransitionNewest(
+      size_t max_n, void (*fn)(const DemandTransitionSpan &, void *),
+      void *ctx);
   static size_t Size();
   static bool Get(size_t newest_index, JobStageSpan &out);
   /// Emit compact JSONL lines (kind=job_trace) into an open ostream-like sink
@@ -253,6 +308,7 @@ public:
       size_t max_n, void (*fn)(const VisualBlackTraceRecord &, void *),
       void *ctx);
   static const char *StageName(JobStage s);
+  static const char *DemandTransitionName(DemandTransitionKind kind);
   static const char *TerminalReasonName(JobTerminalReason reason);
   /// A36 S1: note cull exclusion for a tracked chunk (bounded ring).
   static void NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,

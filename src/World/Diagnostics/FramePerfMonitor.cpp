@@ -3137,6 +3137,55 @@ void UFramePerfMonitor::Shutdown()
       UJobStageTrace::ForEachWatchedNewest(
           UJobStageTrace::kVisualLifecycleRingCapacity, dumpTrace,
           &visualLifecycleCtx);
+      const auto dumpDemandTransition = [](const DemandTransitionSpan &sp,
+                                           void *p) {
+        auto *out = static_cast<std::ofstream *>(p);
+        (*out) << "{\"kind\":\"demand_transition_trace\""
+               << ",\"event\":\""
+               << UJobStageTrace::DemandTransitionName(sp.kind) << "\""
+               << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
+               << ",\"cz\":" << sp.cz
+               << ",\"world_epoch\":" << sp.world_epoch
+               << ",\"incarnation\":" << sp.incarnation
+               << ",\"previous_attempt_id\":" << sp.previous_attempt_id
+               << ",\"attempt_id\":" << sp.attempt_id
+               << ",\"previous_desired_geom_rev\":"
+               << sp.previous_desired_geom_rev
+               << ",\"desired_geom_rev\":" << sp.desired_geom_rev
+               << ",\"previous_desired_light_rev\":"
+               << sp.previous_desired_light_rev
+               << ",\"desired_light_rev\":" << sp.desired_light_rev
+               << ",\"previous_desired_coverage_gen\":"
+               << sp.previous_desired_coverage_gen
+               << ",\"desired_coverage_gen\":"
+               << sp.desired_coverage_gen
+               << ",\"previous_published_geom_rev\":"
+               << sp.previous_published_geom_rev
+               << ",\"published_geom_rev\":" << sp.published_geom_rev
+               << ",\"previous_published_light_rev\":"
+               << sp.previous_published_light_rev
+               << ",\"published_light_rev\":"
+               << sp.published_light_rev
+               << ",\"previous_published_coverage_gen\":"
+               << sp.previous_published_coverage_gen
+               << ",\"published_coverage_gen\":"
+               << sp.published_coverage_gen
+               << ",\"previous_stage\":\""
+               << UJobStageTrace::StageName(sp.previous_stage) << "\""
+               << ",\"stage\":\""
+               << UJobStageTrace::StageName(sp.stage) << "\""
+               << ",\"result\":" << static_cast<int>(sp.result)
+               << ",\"had_active_attempt\":"
+               << static_cast<int>(sp.had_active_attempt)
+               << ",\"has_active_attempt\":"
+               << static_cast<int>(sp.has_active_attempt)
+               << ",\"retained_awaiting_successor\":"
+               << static_cast<int>(sp.retained_awaiting_successor)
+               << ",\"event_ms\":" << sp.event_ms << "}\n";
+      };
+      UJobStageTrace::ForEachDemandTransitionNewest(
+          UJobStageTrace::kDemandTransitionRingCapacity,
+          dumpDemandTransition, &s.Jsonl);
       DumpCtx cullCtx{&s.Jsonl, "cull_trace"};
       UJobStageTrace::ForEachCullDecisionNewest(64, dumpTrace, &cullCtx);
       const auto dumpVisualBlack = [](const VisualBlackTraceRecord &r,

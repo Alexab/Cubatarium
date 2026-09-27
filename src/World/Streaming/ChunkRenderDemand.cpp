@@ -1,6 +1,7 @@
 #include "World/Streaming/ChunkRenderDemand.h"
 
 #include <algorithm>
+#include <chrono>
 #include <iterator>
 
 namespace cutum
@@ -15,6 +16,87 @@ bool StageIsMonotonic(JobStage prev, JobStage next)
     return true;
   }
   return static_cast<uint8_t>(next) >= static_cast<uint8_t>(prev);
+}
+
+struct DemandSnapshot
+{
+  uint64_t world_epoch{0};
+  uint64_t incarnation{0};
+  uint64_t attempt_id{0};
+  uint64_t desired_geom_rev{0};
+  uint64_t desired_light_rev{0};
+  uint64_t desired_coverage_gen{0};
+  uint64_t published_geom_rev{0};
+  uint64_t published_light_rev{0};
+  uint64_t published_coverage_gen{0};
+  JobStage stage{JobStage::Created};
+  bool has_active_attempt{false};
+  bool retained_awaiting_successor{false};
+};
+
+DemandSnapshot SnapshotDemand(const ChunkRenderDemandRecord &rec)
+{
+  return {rec.world_epoch,
+          rec.incarnation,
+          rec.active_attempt_id,
+          rec.desired_geom_rev,
+          rec.desired_light_rev,
+          rec.desired_coverage_gen,
+          rec.published_geom_rev,
+          rec.published_light_rev,
+          rec.published_coverage_gen,
+          rec.active_stage,
+          rec.has_active_attempt,
+          rec.retained_awaiting_successor};
+}
+
+double DemandEventTimeMs(double requested_ms = 0.0)
+{
+  if (requested_ms > 0.0)
+  {
+    return requested_ms;
+  }
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
+void TraceDemandTransition(glm::ivec3 coord,
+                           const DemandSnapshot &before,
+                           const ChunkRenderDemandRecord &after,
+                           DemandTransitionKind kind, double event_ms = 0.0,
+                           uint8_t result = 0)
+{
+  DemandTransitionSpan span{};
+  span.cx = coord.x;
+  span.cy = coord.y;
+  span.cz = coord.z;
+  span.world_epoch = after.world_epoch;
+  span.incarnation = after.incarnation;
+  span.previous_attempt_id = before.attempt_id;
+  span.attempt_id = after.active_attempt_id;
+  span.previous_desired_geom_rev = before.desired_geom_rev;
+  span.desired_geom_rev = after.desired_geom_rev;
+  span.previous_desired_light_rev = before.desired_light_rev;
+  span.desired_light_rev = after.desired_light_rev;
+  span.previous_desired_coverage_gen = before.desired_coverage_gen;
+  span.desired_coverage_gen = after.desired_coverage_gen;
+  span.previous_published_geom_rev = before.published_geom_rev;
+  span.published_geom_rev = after.published_geom_rev;
+  span.previous_published_light_rev = before.published_light_rev;
+  span.published_light_rev = after.published_light_rev;
+  span.previous_published_coverage_gen = before.published_coverage_gen;
+  span.published_coverage_gen = after.published_coverage_gen;
+  span.previous_stage = before.stage;
+  span.stage = after.active_stage;
+  span.kind = kind;
+  span.result = result;
+  span.had_active_attempt = before.has_active_attempt ? 1 : 0;
+  span.has_active_attempt = after.has_active_attempt ? 1 : 0;
+  span.retained_awaiting_successor =
+      after.retained_awaiting_successor ? 1 : 0;
+  span.event_ms = DemandEventTimeMs(event_ms);
+  UJobStageTrace::NoteDemandTransition(span);
 }
 } // namespace
 
@@ -71,8 +153,13 @@ void UChunkRenderDemandStore::BindIdentity(glm::ivec3 coord,
   if (!has_identity || rec.world_epoch != world_epoch ||
       rec.incarnation != incarnation)
   {
+    const DemandSnapshot before = SnapshotDemand(rec);
     rec = ChunkRenderDemandRecord{};
     rec.coord = coord;
+    rec.world_epoch = world_epoch;
+    rec.incarnation = incarnation;
+    TraceDemandTransition(coord, before, rec,
+                         DemandTransitionKind::IdentityReset);
   }
   rec.world_epoch = world_epoch;
   rec.incarnation = incarnation;
@@ -125,6 +212,7 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
 {
   BindIdentity(coord, world_epoch, incarnation);
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  const DemandSnapshot before = SnapshotDemand(rec);
   const bool satisfied =
       !rec.retained_awaiting_successor && desired_geom_rev > 0 &&
       rec.published_geom_rev == desired_geom_rev &&
@@ -148,6 +236,12 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
     if (desired_coverage_gen > rec.desired_coverage_gen)
     {
       rec.desired_coverage_gen = desired_coverage_gen;
+      if (rec.has_active_attempt)
+      {
+        TraceDemandTransition(coord, before, rec,
+                              DemandTransitionKind::TargetAdvanced,
+                              now_ms);
+      }
     }
     if (rec.has_active_attempt)
     {
@@ -176,6 +270,16 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
     }
   }
   ++NewDemandN_;
+  const bool target_changed =
+      before.desired_geom_rev != rec.desired_geom_rev ||
+      before.desired_light_rev != rec.desired_light_rev ||
+      before.desired_coverage_gen != rec.desired_coverage_gen;
+  TraceDemandTransition(
+      coord, before, rec,
+      before.has_active_attempt && target_changed
+          ? DemandTransitionKind::TargetAdvanced
+          : DemandTransitionKind::AttemptCreated,
+      now_ms);
   return DemandResult::NewDemand;
 }
 
@@ -190,6 +294,7 @@ bool UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
     return false;
   }
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  const DemandSnapshot before = SnapshotDemand(rec);
   if (attempt_id != 0)
   {
     if (rec.has_active_attempt && rec.active_attempt_id != 0 &&
@@ -234,6 +339,11 @@ bool UChunkRenderDemandStore::NoteStageProgress(glm::ivec3 coord,
   {
     rec.last_progress_ms = now_ms;
   }
+  if (stage_advanced)
+  {
+    TraceDemandTransition(coord, before, rec,
+                          DemandTransitionKind::StageAdvanced, now_ms);
+  }
   return true;
 }
 
@@ -242,6 +352,9 @@ void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
                                                 uint64_t published_light_rev)
 {
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  const DemandSnapshot before = SnapshotDemand(rec);
+  const uint64_t old_geom = rec.published_geom_rev;
+  const uint64_t old_light = rec.published_light_rev;
   if (published_geom_rev > 0)
   {
     rec.published_geom_rev = published_geom_rev;
@@ -249,6 +362,12 @@ void UChunkRenderDemandStore::NotePublishedRevs(glm::ivec3 coord,
   if (published_light_rev > 0)
   {
     rec.published_light_rev = published_light_rev;
+  }
+  if (old_geom != rec.published_geom_rev ||
+      old_light != rec.published_light_rev)
+  {
+    TraceDemandTransition(coord, before, rec,
+                          DemandTransitionKind::PublishedRevisionAdvanced);
   }
 }
 
@@ -296,16 +415,23 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
                                                uint64_t published_coverage_gen)
 {
   ChunkRenderDemandRecord &rec = GetOrCreate(coord);
+  const DemandSnapshot before = SnapshotDemand(rec);
   // A38 R1: Published must not close an active attempt with attempt_id==0.
   if (result == InstallResult::Published && rec.has_active_attempt &&
       rec.active_attempt_id != 0 &&
       (attempt_id == 0 || attempt_id != rec.active_attempt_id))
   {
+    TraceDemandTransition(coord, before, rec,
+                          DemandTransitionKind::StaleInstallIgnored, 0.0,
+                          static_cast<uint8_t>(result));
     return false;
   }
   if (attempt_id != 0 && rec.has_active_attempt &&
       rec.active_attempt_id != 0 && attempt_id != rec.active_attempt_id)
   {
+    TraceDemandTransition(coord, before, rec,
+                          DemandTransitionKind::StaleInstallIgnored, 0.0,
+                          static_cast<uint8_t>(result));
     return false; // stale completion
   }
   switch (result)
@@ -344,6 +470,24 @@ bool UChunkRenderDemandStore::NoteInstallResult(glm::ivec3 coord,
     rec.active_stage = JobStage::Cancelled;
     break;
   }
+  DemandTransitionKind kind = DemandTransitionKind::InstallCancelled;
+  switch (result)
+  {
+  case InstallResult::Published:
+    kind = DemandTransitionKind::InstallPublished;
+    break;
+  case InstallResult::RetainedAwaitingSuccessor:
+    kind = DemandTransitionKind::InstallRetained;
+    break;
+  case InstallResult::RejectedRetryable:
+    kind = DemandTransitionKind::InstallRejected;
+    break;
+  case InstallResult::CancelledSuperseded:
+    kind = DemandTransitionKind::InstallCancelled;
+    break;
+  }
+  TraceDemandTransition(coord, before, rec, kind, 0.0,
+                        static_cast<uint8_t>(result));
   return true;
 }
 
@@ -465,6 +609,7 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
       if (past_grace)
       {
         ++stats.orphan_active;
+        const DemandSnapshot before = SnapshotDemand(rec);
         // Re-admit desire: keep desire, clear orphan attempt so NoteDemand can
         // mint a successor rather than silent cancel of obligation.
         rec.has_active_attempt = false;
@@ -479,6 +624,11 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
             rec.attempt_created_ms = now_ms;
           }
         }
+        TraceDemandTransition(
+            rec.coord, before, rec,
+            rec.has_active_attempt ? DemandTransitionKind::AttemptReminted
+                                   : DemandTransitionKind::InstallCancelled,
+            now_ms);
       }
     }
     // A40 P3: stall > SLA → remint one Created attempt (keep desire). Not Kick.
@@ -489,6 +639,7 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
         now_ms > 0.0 && rec.last_progress_ms > 0.0 &&
         (now_ms - rec.last_progress_ms) > kStallFailMs)
     {
+      const DemandSnapshot before = SnapshotDemand(rec);
       rec.has_active_attempt = false;
       rec.active_stage = JobStage::Cancelled;
       if (rec.desired_geom_rev != 0 || rec.desired_light_rev != 0 ||
@@ -501,6 +652,11 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
         rec.attempt_created_ms = now_ms;
         ++stats.stalled_reschedule;
       }
+      TraceDemandTransition(rec.coord, before, rec,
+                            rec.has_active_attempt
+                                ? DemandTransitionKind::AttemptReminted
+                                : DemandTransitionKind::InstallCancelled,
+                            now_ms);
     }
     if (rec.retained_awaiting_successor)
     {
@@ -544,9 +700,12 @@ int UChunkRenderDemandStore::CancelOrphanActiveAttempts(int max_n,
       {
         continue;
       }
+      const DemandSnapshot before = SnapshotDemand(rec);
       rec.has_active_attempt = false;
       rec.active_stage = JobStage::Cancelled;
       ++cancelled;
+      TraceDemandTransition(kv.first, before, rec,
+                            DemandTransitionKind::InstallCancelled, now_ms);
     }
   }
   return cancelled;
