@@ -5308,6 +5308,34 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       trace.field_light_rev = field_light_rev;
       trace.published_geom_rev = published.geom_rev;
       trace.published_light_rev = published.light_rev;
+      const UChunkMeshCache &trace_cache = MeshService->GetCache();
+      trace.mesh_dirty_queue_kind = trace_cache.GetDirtyQueueTrace(
+          coord, trace.mesh_dirty_queue_index, trace.mesh_dirty_queue_size);
+      trace.mesh_dirty_queue_age_frames =
+          trace_cache.GetDirtyQueueAgeFrames(coord);
+      const ColumnRenderableState column_render_state =
+          GetColumnRenderableState(key);
+      trace.renderer_column_reason =
+          static_cast<uint8_t>(column_render_state.reason);
+      trace.renderer_column_draw_ok = column_render_state.draw_ok ? 1u : 0u;
+      trace.renderer_column_has_repair_ticket =
+          column_render_state.has_repair_ticket ? 1u : 0u;
+      const bool relight_queued = IsTerrainColumnRelightQueued(key);
+      const bool relight_inflight = IsAsyncRelightColumnInFlight(key);
+      const bool defer_until_lit = trace_cache.IsDeferMeshUntilLit(coord);
+      const bool soft_defer_held = MeshService->IsSoftDeferHeld(coord);
+      const bool column_lit_ready =
+          IsColumnLitReady(glm::ivec3(key.x, 0, key.y));
+      const bool lit_gate_required = RequiresLightingLitGate();
+      trace.relight_owner_flags =
+          (pending_replace ? 1u << 0 : 0u) |
+          (relight_queued ? 1u << 1 : 0u) |
+          (relight_inflight ? 1u << 2 : 0u) |
+          (defer_until_lit ? 1u << 3 : 0u) |
+          (soft_defer_held ? 1u << 4 : 0u) |
+          (column_lit_ready ? 1u << 5 : 0u) |
+          (lit_gate_required ? 1u << 6 : 0u) |
+          (contains ? 1u << 7 : 0u);
       UChunkMeshCache::StaleDarkWitness stale_witness{};
       const bool slice_stale_dark = MeshService->GetCache().ChunkHasStaleDarkFaces(
           coord, BlockWorld, &stale_witness);
