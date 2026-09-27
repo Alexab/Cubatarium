@@ -52,7 +52,8 @@ enum class JobTerminalReason : uint8_t
   CompletedQueueCapacityReduced,
   SubmissionEpochChanged,
   JobIdentityReplaced,
-  WorkerPoolRejected
+  WorkerPoolRejected,
+  GpuPipelineFailed
 };
 
 struct JobStageSpan

@@ -504,6 +504,8 @@ const char *UJobStageTrace::TerminalReasonName(JobTerminalReason reason)
     return "job_identity_replaced";
   case JobTerminalReason::WorkerPoolRejected:
     return "worker_pool_rejected";
+  case JobTerminalReason::GpuPipelineFailed:
+    return "gpu_pipeline_failed";
   }
   return "unknown";
 }

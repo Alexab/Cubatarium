@@ -4122,12 +4122,39 @@ bool UChunkMeshCache::CommitGpuMeshResult(
 {
   (void)registry;
   (void)source_revision;
+  const auto note_terminal = [&](JobTerminalReason reason,
+                                 uint8_t outcome = 0)
+  {
+    if (job_trace.job_id == 0)
+    {
+      return;
+    }
+    JobStageSpan span = job_trace;
+    span.cx = coord.x;
+    span.cy = coord.y;
+    span.cz = coord.z;
+    span.outcome = outcome;
+    span.desired_geom_rev = MeshRevisions.Current(coord);
+    span.world_epoch = CaptureStore.WorldEpoch();
+    if (const UChunk *chunk = world.GetChunkManager().GetChunk(coord))
+    {
+      span.desired_light_rev = chunk->GetLightFieldRevision();
+    }
+    const auto published = GreedyCache.find(coord);
+    if (published != GreedyCache.end())
+    {
+      span.published_geom_rev = published->second.PublishRevs.geom_rev;
+      span.published_light_rev = published->second.PublishRevs.light_rev;
+    }
+    UJobStageTrace::NoteTerminal(span, JobStage::Retired, reason);
+  };
   if (!world.GetChunkManager().HasChunk(coord))
   {
     if (GpuPipeline && gpu_result.slotIndex >= 0)
     {
       GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
     }
+    note_terminal(JobTerminalReason::ChunkNotResident);
     return false;
   }
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
@@ -4182,6 +4209,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     {
       RemeshAfterApply.insert(coord);
     }
+    note_terminal(JobTerminalReason::DarkMeshRejected);
     return false;
   }
   // N04 I3t: accepted stale on prior drawable — keep prior sole live image;
@@ -4235,6 +4263,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           span.stage = JobStage::Published;
           span.outcome =
               static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
+          span.terminal_reason =
+              JobTerminalReason::SoftDeferPriorMeshRetained;
           span.job_id = job_trace.job_id;
           span.created_ms = job_trace.created_ms;
           span.attempt_id = job_trace.job_id != 0
@@ -4261,6 +4291,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
                                 CaptureStore.WorldEpoch(),
                                 ChunkIncarnationAt(world, coord));
       }
+      note_terminal(JobTerminalReason::SoftDeferPriorMeshRetained);
       return false;
     }
   }
@@ -4316,20 +4347,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           coord, InstallResult::RejectedRetryable,
           prior ? prior->PublishRevs.geom_rev : 0ull,
           prior ? prior->PublishRevs.light_rev : 0ull, attempt_id);
-      JobStageSpan span{};
-      span.cx = coord.x;
-      span.cy = coord.y;
-      span.cz = coord.z;
-      span.stage = JobStage::Published;
-      span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
-      span.attempt_id = attempt_id;
-      span.source_geom_rev = source_revision;
-      span.source_light_rev = has_source_light_revision
-                                  ? source_light_revision
-                                  : 0;
-      (void)StampChunkRenderDemandTrace(span, demand, coord);
-      UJobStageTrace::Note(span);
     }
+    note_terminal(
+        JobTerminalReason::DarkMeshRejected,
+        static_cast<uint8_t>(InstallResult::RejectedRetryable));
     return false;
   }
 
@@ -4375,29 +4396,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         demand.NoteInstallResult(coord, InstallResult::RejectedRetryable,
                                  prior_geom, prior_pub_light, attempt_id);
-        JobStageSpan span{};
-        span.cx = coord.x;
-        span.cy = coord.y;
-        span.cz = coord.z;
-        span.stage = JobStage::Published;
-        span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
-        span.job_id = job_trace.job_id;
-        span.created_ms = job_trace.created_ms;
-        span.attempt_id = job_trace.job_id != 0 ? job_trace.attempt_id
-                                                : attempt_id;
-        span.source_geom_rev = source_revision;
-        span.source_light_rev = got.source_light_rev;
-        (void)StampChunkRenderDemandTrace(span, demand, coord);
-        if (job_trace.job_id != 0)
-        {
-          NoteMeshJobStage(span, JobStage::Published,
-                           static_cast<uint8_t>(InstallResult::RejectedRetryable));
-        }
-        else
-        {
-          UJobStageTrace::Note(span);
-        }
       }
+      note_terminal(
+          JobTerminalReason::PublicationRejected,
+          static_cast<uint8_t>(InstallResult::RejectedRetryable));
       MarkDirtyPriority(coord);
       return false;
     }
@@ -4752,10 +4754,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
   };
 
-  auto fail_ticket = [&](PendingGpuApply &pending) {
+  auto fail_ticket = [&](PendingGpuApply &pending,
+                         JobTerminalReason reason) {
     if (pending.stageTrace.job_id != 0)
     {
-      NoteMeshJobStage(pending.stageTrace, JobStage::Cancelled);
+      UJobStageTrace::NoteTerminal(pending.stageTrace, JobStage::Cancelled,
+                                   reason);
     }
     if (pending.ticket.valid && pending.ticket.slotIndex >= 0)
     {
@@ -4806,7 +4810,25 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
          HasDrawableGreedyMesh(pending.coord));
     if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_input_stale)
     {
-      fail_ticket(pending);
+      JobTerminalReason terminal_reason = JobTerminalReason::StaleInputStamp;
+      switch (stale_reason)
+      {
+      case MeshApplyStaleInputReason::StampInvalid:
+        terminal_reason = JobTerminalReason::StaleInputStamp;
+        break;
+      case MeshApplyStaleInputReason::Catalog:
+        terminal_reason = JobTerminalReason::StaleCatalog;
+        break;
+      case MeshApplyStaleInputReason::Geom:
+        terminal_reason = JobTerminalReason::StaleGeometryInput;
+        break;
+      case MeshApplyStaleInputReason::Light:
+        terminal_reason = JobTerminalReason::StaleLightInput;
+        break;
+      case MeshApplyStaleInputReason::Ok:
+        break;
+      }
+      fail_ticket(pending, terminal_reason);
       note_stale_visual(stale_reason);
       CaptureStore.Invalidate(pending.coord);
       requeue_after_stale_input(pending.coord, stale_reason);
@@ -4835,7 +4857,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         has_active, active_rev, pending.sourceRevision, expected_revision);
     if (decision == MeshApplyRevDecision::DropNoActive)
     {
-      fail_ticket(pending);
+      fail_ticket(pending, JobTerminalReason::NoActiveOwner);
       ++MeshApplyDropNoActiveCount;
       if (!HasDrawableGreedyMesh(pending.coord) &&
           !Dirty.Contains(pending.coord))
@@ -4847,14 +4869,14 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (decision == MeshApplyRevDecision::DiscardOlderKeepActive)
     {
-      fail_ticket(pending);
+      fail_ticket(pending, JobTerminalReason::SupersededByNewerRevision);
       ++MeshApplySupersededCount;
       out_drop = true;
       return false;
     }
     if (decision == MeshApplyRevDecision::RemeshObsoleteTracked)
     {
-      fail_ticket(pending);
+      fail_ticket(pending, JobTerminalReason::CurrentRevisionAdvanced);
       ++MeshApplyStaleCount;
       ++MeshApplyStaleRevCount;
       if (!HasDrawableGreedyMesh(pending.coord) &&
@@ -4901,7 +4923,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
     {
-      fail_ticket(pending_ref);
+      fail_ticket(pending_ref, JobTerminalReason::GpuPipelineFailed);
       GpuExtractInFlight.erase(pending_ref.coord);
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
@@ -5015,7 +5037,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     GpuExtractInFlight.erase(pending.coord);
     if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
     {
-      fail_ticket(pending);
+      fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);
       continue;
     }
     gpu_result.quadCount = quad_count;
@@ -5284,6 +5306,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       pipeline->GetAllocator().FreeSlotByIndex(slot_idx);
       ActiveMeshSourceRevision.erase(pending.coord);
       Dirty.MarkDirtyPriority(pending.coord);
+      UJobStageTrace::NoteTerminal(
+          pending.stageTrace, JobStage::Cancelled,
+          JobTerminalReason::GpuPipelineFailed);
       continue;
     }
     if (pending.stageTrace.job_id != 0)
@@ -5369,7 +5394,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       GpuExtractInFlight.erase(pending.coord);
       if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
       {
-        fail_ticket(pending);
+        fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);
         continue;
       }
       gpu_result.quadCount = quad_count;
@@ -7111,7 +7136,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int rear_focus_scheduled = 0;
     const auto leave_in_under_pl = [&](const glm::ivec3 &c) {
       if (!ShouldLeaveInRemeshUnderPlPressure())
-        return false;
+      return false;
       int horiz = 999;
       if (MeshFocusValid)
       {
