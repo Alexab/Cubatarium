@@ -242,6 +242,9 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
             if (it != InFlight.end() && it->second == jobId)
               InFlight.erase(it);
           }
+          UJobStageTrace::NoteTerminal(
+              result.stageTrace, JobStage::Retired,
+              JobTerminalReason::ResultMemoryBudgetRejected);
           std::lock_guard<std::mutex> lock(OverflowMutex);
           OverflowCoords.push_back(result.coord); // Unconditional demand retry.
           return;
@@ -252,6 +255,9 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         MeshBuildResult dropped;
         if (Completed.PushDropOldest(std::move(result), &dropped))
         {
+          UJobStageTrace::NoteTerminal(
+              dropped.stageTrace, JobStage::Retired,
+              JobTerminalReason::CompletedQueueOverflow);
           {
             std::lock_guard<std::mutex> lock(InFlightMutex);
             const auto it = InFlight.find(dropped.coord);
@@ -273,6 +279,8 @@ bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         InFlight.erase(it);
       }
     }
+    UJobStageTrace::NoteTerminal(stage_trace, JobStage::Cancelled,
+                                 JobTerminalReason::WorkerPoolRejected);
     return false;
   }
   return true;
@@ -282,6 +290,9 @@ void UAsyncMeshBuilder::SetCompletedCapacity(std::size_t cap)
 {
   for (auto &dropped : Completed.SetCapacity(cap))
   {
+    UJobStageTrace::NoteTerminal(
+        dropped.stageTrace, JobStage::Retired,
+        JobTerminalReason::CompletedQueueCapacityReduced);
     {
       std::lock_guard<std::mutex> lock(InFlightMutex);
       const auto it = InFlight.find(dropped.coord);
@@ -302,6 +313,13 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
   std::vector<MeshBuildResult> accepted;
   accepted.reserve(drained.size());
 
+  struct TerminalEvent
+  {
+    JobStageSpan span{};
+    JobTerminalReason reason{JobTerminalReason::None};
+  };
+  std::vector<TerminalEvent> terminal_events;
+  terminal_events.reserve(drained.size());
   std::vector<glm::ivec3> discarded_now;
   discarded_now.reserve(drained.size());
   {
@@ -318,6 +336,8 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
           InFlight.erase(it);
         }
         discarded_now.push_back(result.coord);
+        terminal_events.push_back(
+            {result.stageTrace, JobTerminalReason::SubmissionEpochChanged});
         continue;
       }
       const auto it = InFlight.find(result.coord);
@@ -326,11 +346,18 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
         DiscardedLateJobMismatch.fetch_add(1, std::memory_order_relaxed);
         discarded_now.push_back(result.coord);
+        terminal_events.push_back(
+            {result.stageTrace, JobTerminalReason::JobIdentityReplaced});
         continue;
       }
       InFlight.erase(it);
       accepted.push_back(std::move(result));
     }
+  }
+  for (const TerminalEvent &event : terminal_events)
+  {
+    UJobStageTrace::NoteTerminal(event.span, JobStage::Retired,
+                                 event.reason);
   }
   if (!discarded_now.empty())
   {

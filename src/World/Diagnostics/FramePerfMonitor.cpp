@@ -3119,6 +3119,9 @@ void UFramePerfMonitor::Shutdown()
                   << static_cast<int>(sp.cull_decision)
                   << ",\"stage\":\"" << UJobStageTrace::StageName(sp.stage)
                   << "\""
+                  << ",\"terminal_reason\":\""
+                  << UJobStageTrace::TerminalReasonName(sp.terminal_reason)
+                  << "\""
                   << ",\"queue_reason\":" << static_cast<int>(sp.queue_reason)
                   << ",\"created_ms\":" << sp.created_ms
                   << ",\"stage_ms\":" << sp.stage_ms

@@ -1,6 +1,7 @@
 #include "World/Diagnostics/JobStageTrace.h"
 
 #include <array>
+#include <chrono>
 #include <cstdlib>
 #include <deque>
 #include <mutex>
@@ -214,6 +215,24 @@ void UJobStageTrace::Note(const JobStageSpan &span)
   {
     ++watched.count;
   }
+}
+
+void UJobStageTrace::NoteTerminal(JobStageSpan span,
+                                  JobStage terminal_stage,
+                                  JobTerminalReason reason)
+{
+  span.stage = terminal_stage;
+  span.terminal_reason = reason;
+  span.stage_ms = 0.0;
+  if (span.created_ms > 0.0)
+  {
+    const double now_ms = std::chrono::duration<double, std::milli>(
+                              std::chrono::steady_clock::now()
+                                  .time_since_epoch())
+                              .count();
+    span.elapsed_ms = now_ms - span.created_ms;
+  }
+  Note(span);
 }
 
 void UJobStageTrace::WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz)
@@ -435,6 +454,58 @@ const char *UJobStageTrace::StageName(JobStage s)
   default:
     return "unknown";
   }
+}
+
+const char *UJobStageTrace::TerminalReasonName(JobTerminalReason reason)
+{
+  switch (reason)
+  {
+  case JobTerminalReason::None:
+    return "none";
+  case JobTerminalReason::StaleInputStamp:
+    return "stale_input_stamp";
+  case JobTerminalReason::StaleCatalog:
+    return "stale_catalog";
+  case JobTerminalReason::StaleGeometryInput:
+    return "stale_geometry_input";
+  case JobTerminalReason::StaleLightInput:
+    return "stale_light_input";
+  case JobTerminalReason::ChunkNotResident:
+    return "chunk_not_resident";
+  case JobTerminalReason::NoActiveOwner:
+    return "no_active_owner";
+  case JobTerminalReason::SupersededByNewerRevision:
+    return "superseded_by_newer_revision";
+  case JobTerminalReason::CurrentRevisionAdvanced:
+    return "current_revision_advanced";
+  case JobTerminalReason::DarkMeshRejected:
+    return "dark_mesh_rejected";
+  case JobTerminalReason::GpuAdmissionDeferred:
+    return "gpu_admission_deferred";
+  case JobTerminalReason::PublicationRejected:
+    return "publication_rejected";
+  case JobTerminalReason::SoftDeferPriorGpuRetained:
+    return "softdefer_prior_gpu_retained";
+  case JobTerminalReason::SoftDeferPriorMeshRetained:
+    return "softdefer_prior_mesh_retained";
+  case JobTerminalReason::SoftDeferRetryRequired:
+    return "softdefer_retry_required";
+  case JobTerminalReason::SoftDeferFirstMeshHeld:
+    return "softdefer_first_mesh_held";
+  case JobTerminalReason::ResultMemoryBudgetRejected:
+    return "result_memory_budget_rejected";
+  case JobTerminalReason::CompletedQueueOverflow:
+    return "completed_queue_overflow";
+  case JobTerminalReason::CompletedQueueCapacityReduced:
+    return "completed_queue_capacity_reduced";
+  case JobTerminalReason::SubmissionEpochChanged:
+    return "submission_epoch_changed";
+  case JobTerminalReason::JobIdentityReplaced:
+    return "job_identity_replaced";
+  case JobTerminalReason::WorkerPoolRejected:
+    return "worker_pool_rejected";
+  }
+  return "unknown";
 }
 
 } // namespace cutum

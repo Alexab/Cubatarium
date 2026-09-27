@@ -27,6 +27,34 @@ enum class JobStage : uint8_t
   Count
 };
 
+/// Why a built mesh result stopped progressing through its job lifecycle.
+/// Kept separately from outcome, which describes install/render-demand state.
+enum class JobTerminalReason : uint8_t
+{
+  None = 0,
+  StaleInputStamp,
+  StaleCatalog,
+  StaleGeometryInput,
+  StaleLightInput,
+  ChunkNotResident,
+  NoActiveOwner,
+  SupersededByNewerRevision,
+  CurrentRevisionAdvanced,
+  DarkMeshRejected,
+  GpuAdmissionDeferred,
+  PublicationRejected,
+  SoftDeferPriorGpuRetained,
+  SoftDeferPriorMeshRetained,
+  SoftDeferRetryRequired,
+  SoftDeferFirstMeshHeld,
+  ResultMemoryBudgetRejected,
+  CompletedQueueOverflow,
+  CompletedQueueCapacityReduced,
+  SubmissionEpochChanged,
+  JobIdentityReplaced,
+  WorkerPoolRejected
+};
+
 struct JobStageSpan
 {
   int32_t cx{0};
@@ -54,6 +82,7 @@ struct JobStageSpan
   uint8_t outcome{0};
   uint8_t cull_decision{0};
   JobStage stage{JobStage::Created};
+  JobTerminalReason terminal_reason{JobTerminalReason::None};
   uint8_t queue_reason{0};
   double created_ms{0.0};
   double stage_ms{0.0};
@@ -181,7 +210,7 @@ class UJobStageTrace
 public:
   static constexpr size_t kRingCapacity = 256;
   /// Bounded worker/GPU lifecycle history retained for sampled visible slices.
-  static constexpr size_t kVisualLifecycleRingCapacity = 4096;
+  static constexpr size_t kVisualLifecycleRingCapacity = 8192;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
@@ -199,6 +228,9 @@ public:
       kPriorityRemeshTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
+  /// Record the final retirement/cancellation reason and elapsed job age.
+  static void NoteTerminal(JobStageSpan span, JobStage terminal_stage,
+                           JobTerminalReason reason);
   /// Retain lifecycle events for a chunk selected by the opt-in frustum trace.
   static void WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz);
   static void ForEachWatchedNewest(
@@ -220,6 +252,7 @@ public:
       size_t max_n, void (*fn)(const VisualBlackTraceRecord &, void *),
       void *ctx);
   static const char *StageName(JobStage s);
+  static const char *TerminalReasonName(JobTerminalReason reason);
   /// A36 S1: note cull exclusion for a tracked chunk (bounded ring).
   static void NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,
                                uint8_t cull_decision, uint64_t attempt_id = 0,

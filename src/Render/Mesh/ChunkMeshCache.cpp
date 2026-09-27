@@ -5428,6 +5428,31 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                                       MeshBuildResult &&result)
 {
   LastApplyWasRetainedPrior_ = false;
+  const auto note_terminal = [&](JobTerminalReason reason)
+  {
+    if (result.jobId == 0)
+    {
+      return;
+    }
+    JobStageSpan span = result.stageTrace;
+    span.cx = result.coord.x;
+    span.cy = result.coord.y;
+    span.cz = result.coord.z;
+    span.desired_geom_rev = MeshRevisions.Current(result.coord);
+    span.world_epoch = CaptureStore.WorldEpoch();
+    if (const UChunk *chunk =
+            world.GetChunkManager().GetChunk(result.coord))
+    {
+      span.desired_light_rev = chunk->GetLightFieldRevision();
+    }
+    const auto published = GreedyCache.find(result.coord);
+    if (published != GreedyCache.end())
+    {
+      span.published_geom_rev = published->second.PublishRevs.geom_rev;
+      span.published_light_rev = published->second.PublishRevs.light_rev;
+    }
+    UJobStageTrace::NoteTerminal(span, JobStage::Retired, reason);
+  };
   const bool catalog_ok =
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
   const MeshApplyStaleInputReason stale_reason =
@@ -5459,6 +5484,25 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     case MeshApplyStaleInputReason::Ok:
       break;
     }
+    JobTerminalReason terminal_reason = JobTerminalReason::StaleInputStamp;
+    switch (stale_reason)
+    {
+    case MeshApplyStaleInputReason::StampInvalid:
+      terminal_reason = JobTerminalReason::StaleInputStamp;
+      break;
+    case MeshApplyStaleInputReason::Catalog:
+      terminal_reason = JobTerminalReason::StaleCatalog;
+      break;
+    case MeshApplyStaleInputReason::Geom:
+      terminal_reason = JobTerminalReason::StaleGeometryInput;
+      break;
+    case MeshApplyStaleInputReason::Light:
+      terminal_reason = JobTerminalReason::StaleLightInput;
+      break;
+    case MeshApplyStaleInputReason::Ok:
+      break;
+    }
+    note_terminal(terminal_reason);
     CaptureStore.Invalidate(result.coord);
     const auto active = ActiveMeshSourceRevision.find(result.coord);
     if (active != ActiveMeshSourceRevision.end() &&
@@ -5493,6 +5537,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (!world.GetChunkManager().HasChunk(result.coord))
   {
     abandon_fm_watch();
+    note_terminal(JobTerminalReason::ChunkNotResident);
     return;
   }
   const uint64_t expected_revision = MeshRevisions.Current(result.coord);
@@ -5511,6 +5556,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       CrossBatchesDirty = true;
     }
     abandon_fm_watch();
+    note_terminal(JobTerminalReason::NoActiveOwner);
     return;
   }
   const MeshApplyRevDecision decision = ClassifyMeshApplyRevision(
@@ -5520,6 +5566,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     // Older async result — keep Active tracking for the newer in-flight rev.
     ++MeshApplySupersededCount;
     abandon_fm_watch();
+    note_terminal(JobTerminalReason::SupersededByNewerRevision);
     return;
   }
   if (decision == MeshApplyRevDecision::RemeshObsoleteTracked)
@@ -5542,6 +5589,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     GreedyBatchesDirty = true;
     CrossBatchesDirty = true;
     abandon_fm_watch();
+    note_terminal(JobTerminalReason::CurrentRevisionAdvanced);
     return;
   }
 
@@ -5582,6 +5630,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       }
       abandon_fm_watch();
       LastApplyWasRetainedPrior_ = true;
+      note_terminal(JobTerminalReason::DarkMeshRejected);
       return;
     }
     const auto git = GreedyCache.find(result.coord);
@@ -5631,6 +5680,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           span.stage = JobStage::Published;
           span.outcome =
               static_cast<uint8_t>(InstallResult::RetainedAwaitingSuccessor);
+          span.terminal_reason =
+              JobTerminalReason::SoftDeferPriorMeshRetained;
           span.job_id = result.jobId;
           span.created_ms = result.stageTrace.created_ms;
           span.attempt_id = result.jobId != 0
@@ -5692,6 +5743,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         InstancesDirty = true;
         GreedyBatchesDirty = true;
         CrossBatchesDirty = true;
+        note_terminal(JobTerminalReason::GpuAdmissionDeferred);
         return;
       }
       if (missing_first)
@@ -5840,6 +5892,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     {
       MarkDirtyPriority(result.coord);
     }
+    note_terminal(JobTerminalReason::DarkMeshRejected);
     return;
   }
 
@@ -5877,6 +5930,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         NoteSoftDeferEmptyPublishAvoided(result.coord);
         ++MeshReplaceHoleAvoided;
                 NotePriorLitHold(result.coord);
+        note_terminal(JobTerminalReason::SoftDeferPriorGpuRetained);
         return;
       }
       SoftDeferHeld.erase(result.coord);
@@ -5886,6 +5940,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     {
       ++MeshReplaceHoleAvoided;
       MarkDirtyPriority(result.coord);
+      note_terminal(JobTerminalReason::SoftDeferPriorGpuRetained);
       return;
     }
   }
@@ -5905,6 +5960,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         NoteSoftDeferEmptyPublishAvoided(result.coord);
         ++MeshReplaceHoleAvoided;
                 NotePriorLitHold(result.coord);
+        note_terminal(JobTerminalReason::SoftDeferPriorGpuRetained);
         return;
       }
       SoftDeferHeld.erase(result.coord);
@@ -5916,6 +5972,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       SoftDeferHeld.erase(result.coord);
       RemeshAfterApply.erase(result.coord);
       MarkDirtyPriority(result.coord);
+      note_terminal(JobTerminalReason::SoftDeferRetryRequired);
       return;
     }
     else
@@ -5930,10 +5987,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     {
       ++MeshReplaceHoleAvoided;
       MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
+      note_terminal(JobTerminalReason::SoftDeferPriorGpuRetained);
       return;
     }
     // Era39: keep HasGreedy sticky — do not erase GreedyCache (flash).
     MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
+    note_terminal(JobTerminalReason::SoftDeferFirstMeshHeld);
     return;
     }
   }
@@ -5993,6 +6052,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         span.cz = result.coord.z;
         span.stage = JobStage::Published;
         span.outcome = static_cast<uint8_t>(InstallResult::RejectedRetryable);
+        span.terminal_reason = JobTerminalReason::PublicationRejected;
         span.job_id = result.jobId;
         span.created_ms = result.stageTrace.created_ms;
         span.attempt_id = result.jobId != 0 ? result.stageTrace.attempt_id
@@ -6002,12 +6062,15 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         (void)StampChunkRenderDemandTrace(span, demand, result.coord);
         if (result.jobId != 0)
         {
-          NoteMeshJobStage(span, JobStage::Published,
-                           static_cast<uint8_t>(InstallResult::RejectedRetryable));
+          UJobStageTrace::NoteTerminal(
+              span, JobStage::Retired,
+              JobTerminalReason::PublicationRejected);
         }
         else
         {
-          UJobStageTrace::Note(span);
+          UJobStageTrace::NoteTerminal(
+              span, JobStage::Retired,
+              JobTerminalReason::PublicationRejected);
         }
       }
       // Keep prior batches; ask for remesh/retry without publishing candidate.
