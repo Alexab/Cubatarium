@@ -1853,8 +1853,12 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
                                            relight_min_y, relight_max_y);
   const glm::ivec2 world_block_key(col_xz.x * CHUNK_SIZE,
                                    col_xz.y * CHUNK_SIZE);
+  const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+  const bool flow_owned =
+      flow_scheduler.Contains(col_xz, ColumnWorkKind::RelightThenMesh) ||
+      flow_scheduler.Contains(col_xz, ColumnWorkKind::PromoteRelight);
   if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
-      !IsAsyncRelightColumnInFlight(col_xz))
+      !IsAsyncRelightColumnInFlight(col_xz) && !flow_owned)
   {
     if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
     {
@@ -9257,9 +9261,9 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         StickyRemeshAfterLight.erase(col);
       }
       EnterVisualGateCtrl.NoteVoidRelightProbed(col);
-      EnqueueVoidDarkColumnRelightNote(col);
       GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
                                       /*priority=*/80);
+      EnqueueVoidDarkColumnRelightNote(col);
       ++scheduled;
       return;
     }
