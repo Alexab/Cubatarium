@@ -2173,11 +2173,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       }
     }
     // Era36/37 B1: clamp Capture Y-band to visible surface — drop underground.
+    const int requested_relight_min = relight_min;
+    const int requested_relight_max = relight_max;
+    bool surface_band_adjusted = false;
     const int col_top_y = ColumnTopBlockY(world, ground_xz, max_y);
     if (!exact_draw_gate_band)
     {
       const auto col_band = RelightSurfaceBandForColumn(
           focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min, relight_max);
+      surface_band_adjusted = col_band.first != relight_min ||
+                              col_band.second != relight_max;
       relight_min = col_band.first;
       relight_max = col_band.second;
     }
@@ -2189,6 +2194,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       {
         relight_min = surface_band_min;
         relight_max = surface_band_max;
+        surface_band_adjusted = true;
         ++telem.RelightSkippedUndergroundN;
         world.TryNotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
                                          relight_min, relight_max, __FUNCTION__);
@@ -2372,6 +2378,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           "capture submit column=(" + std::to_string(ground_xz.x) + "," +
               std::to_string(ground_xz.y) + ") band=" +
               std::to_string(relight_min) + ":" + std::to_string(relight_max) +
+              " queued=" +
+              (queued_band_defined
+                   ? (std::to_string(queued_band.x) + ":" +
+                      std::to_string(queued_band.y))
+                   : std::string("none")) +
+              " requested=" + std::to_string(requested_relight_min) + ":" +
+              std::to_string(requested_relight_max) +
+              " surface_adjusted=" +
+              std::to_string(surface_band_adjusted) +
+              " focus_y=" + std::to_string(focus_block.y) +
+              " column_top=" + std::to_string(col_top_y) +
               " finalize=" + std::to_string(finalize_gate) +
               " draw_gate=" + std::to_string(exact_draw_gate_band) +
               " horiz=" + std::to_string(horiz_dist) +

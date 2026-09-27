@@ -1638,6 +1638,23 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
     return;
   }
   const int note_min_y = std::max(0, min_y);
+  auto log_pending_light_note = [&](const char *action, int covered_min_y,
+                                    int covered_max_y)
+  {
+    if (!audit_relight)
+    {
+      return;
+    }
+    CubatariumLogInfo(
+        "RelightAudit",
+        "pending note source=" +
+            std::string(audit_source ? audit_source : "unspecified") +
+            " action=" + action + " column=(" + std::to_string(key.x) + "," +
+            std::to_string(key.y) + ") requested=" +
+            std::to_string(note_min_y) + ":" + std::to_string(max_y) +
+            " covered=" + std::to_string(covered_min_y) + ":" +
+            std::to_string(covered_max_y));
+  };
   const auto invalidate_slice_band = [&](int band_min_y, int band_max_y,
                                          const char *reason)
   {
@@ -1687,34 +1704,34 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
   if (inserted)
   {
     invalidate_slice_band(note_min_y, max_y, "insert");
-  }
-  else
-  {
-    // Repeated notes for an already-covered interval are queue coalescing,
-    // not new light work. Only invalidate slices newly added to the column's
-    // relight coverage; otherwise duplicate notes can erase a completed
-    // per-slice settlement every frame while the same FIFO item is pending.
-    const int covered_min_y = it->second.min_y;
-    const int covered_max_y = it->second.max_y;
-    if (note_min_y < covered_min_y)
-    {
-      invalidate_slice_band(note_min_y,
-                            std::min(max_y, covered_min_y - 1), "extend_low");
-    }
-    if (max_y > covered_max_y)
-    {
-      invalidate_slice_band(std::max(note_min_y, covered_max_y + 1), max_y,
-                            "extend_high");
-    }
-  }
-  if (inserted)
-  {
     it->second.min_y = note_min_y;
     it->second.max_y = max_y;
+    log_pending_light_note("insert", it->second.min_y, it->second.max_y);
     return;
+  }
+  // Repeated notes for an already-covered interval are queue coalescing,
+  // not new light work. Only invalidate slices newly added to the column's
+  // relight coverage; otherwise duplicate notes can erase a completed
+  // per-slice settlement every frame while the same FIFO item is pending.
+  const int covered_min_y = it->second.min_y;
+  const int covered_max_y = it->second.max_y;
+  if (note_min_y < covered_min_y)
+  {
+    invalidate_slice_band(note_min_y,
+                          std::min(max_y, covered_min_y - 1), "extend_low");
+  }
+  if (max_y > covered_max_y)
+  {
+    invalidate_slice_band(std::max(note_min_y, covered_max_y + 1), max_y,
+                          "extend_high");
   }
   it->second.min_y = std::min(it->second.min_y, std::max(0, min_y));
   it->second.max_y = std::max(it->second.max_y, max_y);
+  if (it->second.min_y != covered_min_y ||
+      it->second.max_y != covered_max_y)
+  {
+    log_pending_light_note("extend", it->second.min_y, it->second.max_y);
+  }
 }
 
 bool UWorld::TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y,
