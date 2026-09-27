@@ -658,7 +658,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   std::vector<glm::ivec2> pending_cols;
   std::vector<glm::ivec2> sticky_cols;
   world.CollectPendingLightFocusColumns(focus_ground_horiz, focus_radius,
-                                        pending_cols, std::max(4, recover_n));
+                                        pending_cols,
+                                        std::max(64, recover_n * 4));
   world.CollectStickyRemeshFocusColumns(focus_ground_horiz, focus_radius,
                                         sticky_cols, std::max(2, recover_n / 2));
 
@@ -691,34 +692,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // single-owner scheduler slot from reaching RelightThenMesh. Repair this
   // bounded set even when the normal recovery producer is paused by idle/debt
   // gates; columns with a real FIFO/async light owner need no replacement.
+  // pending_cols is distance-sorted and capped to avoid scanning the full Flow
+  // scheduler every frame; replace only one near-FOV ticket per tick.
   const int orphan_reticket_radius = std::min(4, focus_radius);
-  std::vector<glm::ivec2> orphaned_mesh_tickets;
-  scheduler_.ForEachOccupiedColumn([&](glm::ivec2 col) {
-    const int horiz = std::max(std::abs(col.x - focus.x),
-                               std::abs(col.y - focus.y));
-    if (horiz <= orphan_reticket_radius &&
-        scheduler_.Contains(col, ColumnWorkKind::FirstMesh) &&
-        world.IsPendingLightBeforeMesh(col) &&
-        !world.IsTerrainColumnRelightQueued(col) &&
-        !world.IsAsyncRelightColumnInFlight(col))
-    {
-      orphaned_mesh_tickets.push_back(col);
-    }
-  });
-  std::sort(orphaned_mesh_tickets.begin(), orphaned_mesh_tickets.end(),
-            [&](glm::ivec2 a, glm::ivec2 b) {
-              const int ah = std::max(std::abs(a.x - focus.x),
-                                      std::abs(a.y - focus.y));
-              const int bh = std::max(std::abs(b.x - focus.x),
-                                      std::abs(b.y - focus.y));
-              if (ah != bh)
-              {
-                return ah < bh;
-              }
-              return a.x != b.x ? a.x < b.x : a.y < b.y;
-            });
   int orphaned_mesh_ticket_n = 0;
-  for (const glm::ivec2 &col : orphaned_mesh_tickets)
+  for (const glm::ivec2 &col : pending_cols)
   {
     if (orphaned_mesh_ticket_n >= 1)
     {
@@ -726,6 +704,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
     const int horiz = std::max(std::abs(col.x - focus.x),
                                std::abs(col.y - focus.y));
+    if (horiz > orphan_reticket_radius ||
+        !scheduler_.Contains(col, ColumnWorkKind::FirstMesh) ||
+        !world.IsPendingLightBeforeMesh(col) ||
+        world.IsTerrainColumnRelightQueued(col) ||
+        world.IsAsyncRelightColumnInFlight(col))
+    {
+      continue;
+    }
     Enqueue(col, ColumnWorkKind::RelightThenMesh,
             ColumnFlowRelightPriorityUnderMiss(56 - orphaned_mesh_ticket_n,
                                                horiz, focus_radius,
