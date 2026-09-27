@@ -3324,6 +3324,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       // Chunk content revisions (the two counters are independent).
       uint64_t desired_geom = MeshService->GetChunkMeshRevision(coord);
       uint64_t desired_light = ch->GetLightFieldRevision();
+      const ChunkRenderDemandRecord *light_demand = demand.Find(coord);
+      const bool slice_light_settled =
+          light_demand && light_demand->incarnation == ch->GetIncarnation() &&
+          light_demand->has_settled_light &&
+          light_demand->settled_light_rev == desired_light;
       const MeshPublishRevs pub_early =
           MeshService->GetCache().GetMeshPublishRevs(coord);
       // Do not invent a mismatch when a published mesh already has a source rev.
@@ -3379,14 +3384,14 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool defer_until_lit =
           MeshService->GetCache().IsDeferMeshUntilLit(coord);
       const glm::ivec3 ground(cx, 0, cz);
-      // The render gate can classify a cold first mesh as PendingLight before
-      // either SoftDefer or PendingLightBeforeMesh has an owner. Seed that
-      // missing light stage for visible columns still before LitReady instead
-      // of submitting a mesh that cannot pass the renderer gate.
+      // ColumnEmergeState can advance to Meshing/LitReady before this exact
+      // slice has a settled light proof. Seed lighting for visible first-mesh
+      // work from the slice's publication gate, not the coarse column state.
       const bool first_mesh_needs_lighting =
-          !probe.has_drawable && RequiresLightingLitGate() &&
+          !probe.has_drawable && ch->GetNonAirCount() > 0 &&
+          RequiresLightingLitGate() &&
           col_horiz <= kVisualStageLitDrawableHoriz &&
-          !IsColumnLitReady(ground);
+          (!IsColumnLitReady(ground) || !slice_light_settled);
       const glm::ivec2 slice_column(cx, cz);
       const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
       const auto ensure_slice_relight = [&]() {
@@ -3441,8 +3446,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                             ch->GetIncarnation());
       if (defer_until_lit || first_mesh_needs_lighting)
       {
-        // Lighting owns this visible first-mesh slice. A pre-LitReady column
-        // may not yet have a PendingLight/defer owner, so create that
+        // Lighting owns this visible first-mesh slice. An unsettled slice may
+        // not yet have a PendingLight/defer owner, so create that
         // debt only after a queue, in-flight relight, or pending-light owner
         // confirms that real relight work exists.
         const bool relight_enqueued = ensure_slice_relight();
