@@ -1680,8 +1680,19 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
         const bool had_settlement = demand && demand->has_settled_light;
         const uint64_t settled_rev = demand ? demand->settled_light_rev : 0;
         const uint64_t field_rev = chunk->GetLightFieldRevision();
+        const uint64_t demand_epoch = demand ? demand->world_epoch : 0;
+        const uint64_t demand_incarnation = demand ? demand->incarnation : 0;
+        const uint64_t current_incarnation = chunk->GetIncarnation();
+        const bool settlement_current =
+            ChunkSliceHasCurrentLightSettlement(*this, coord);
+        const uint64_t desired_light_rev =
+            demand ? demand->desired_light_rev : 0;
+        const uint64_t published_light_rev =
+            demand ? demand->published_light_rev : 0;
+        const bool demand_light_current =
+            demand && desired_light_rev <= published_light_rev;
         UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
-            coord, world_epoch, chunk->GetIncarnation());
+            coord, world_epoch, current_incarnation);
         if (audit_relight && had_settlement)
         {
           CubatariumLogInfo(
@@ -1694,7 +1705,16 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
                   std::to_string(coord.z) + ") field_rev=" +
                   std::to_string(field_rev) + " settled_rev=" +
                   std::to_string(settled_rev) + " matched=" +
-                  std::to_string(settled_rev == field_rev) + " band=" +
+                  std::to_string(settled_rev == field_rev) +
+                  " proof_current=" + std::to_string(settlement_current) +
+                  " identity=" + std::to_string(demand_epoch) + ":" +
+                  std::to_string(demand_incarnation) + "/" +
+                  std::to_string(world_epoch) + ":" +
+                  std::to_string(current_incarnation) +
+                  " demand_light_current=" +
+                  std::to_string(demand_light_current) +
+                  " demand_light=" + std::to_string(desired_light_rev) +
+                  ":" + std::to_string(published_light_rev) + " band=" +
                   std::to_string(band_min_y) + ":" +
                   std::to_string(band_max_y));
         }
