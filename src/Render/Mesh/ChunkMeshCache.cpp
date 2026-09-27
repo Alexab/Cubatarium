@@ -7900,6 +7900,45 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         remesh_cap = std::min(LightRepairCaptureReserveLeft,
                               remesh_cap_from_admission);
       }
+      // The schedule-lane split also needs a capture-count split. Previously
+      // LightRepair could reserve four refreshes while FirstMesh received only
+      // the single residual refresh below. With a large FirstMesh queue this
+      // made the advertised 12–16 FM schedule slots unreachable: every later
+      // missing-mesh snapshot deferred on RefreshCountBudget. Keep one repair
+      // refresh when both lanes have debt, and dedicate up to four available
+      // refreshes to FirstMesh. The time budget below remains authoritative.
+      if (Dirty.GetFirstMeshCount() > 0)
+      {
+        constexpr int kMissLightRepairCaptureFloor = 1;
+        if (Dirty.GetRemeshCount() > 0)
+        {
+          if (LightRepairCaptureReserveLeft >
+              kMissLightRepairCaptureFloor)
+          {
+            CaptureRefreshBudgetLeft +=
+                LightRepairCaptureReserveLeft -
+                kMissLightRepairCaptureFloor;
+            LightRepairCaptureReserveLeft = kMissLightRepairCaptureFloor;
+          }
+        }
+        else
+        {
+          CaptureRefreshBudgetLeft += LightRepairCaptureReserveLeft;
+          LightRepairCaptureReserveLeft = 0;
+        }
+
+        constexpr int kMissFirstMeshCaptureReserveMax = 4;
+        const int fm_capture_reserve =
+            std::min(kMissFirstMeshCaptureReserveMax,
+                     CaptureRefreshBudgetLeft);
+        FirstMeshCaptureReserveLeft += fm_capture_reserve;
+        CaptureRefreshBudgetLeft -= fm_capture_reserve;
+
+        // The remesh schedule quota must track the reduced capture reserve too.
+        remesh_cap = Dirty.GetRemeshCount() > 0
+                         ? std::min(remesh_cap, LightRepairCaptureReserveLeft)
+                         : 0;
+      }
     }
     // G1-P1 / A11: under StaleVertexLight/FullyDark debt, spend remesh_schedule
     // snapshot attempts before FirstMesh walk burns MeshSnapshotBudgetMs.
@@ -7926,15 +7965,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
          Dirty.GetRemeshCount() > 0);
     const bool light_repair_only_under_miss =
         miss_or_holes_starve && remesh_cap > 0;
-    // The remesh slice runs before Pass 1. Keep its one residual count-budget
-    // refresh for an in-focus FirstMesh miss; otherwise cached remesh hits can
-    // still schedule while all live FirstMesh captures are count-deferred.
-    if (focus_missing_for_schedule && first_mesh_cap > 0 &&
-        Dirty.GetFirstMeshCount() > 0 && CaptureRefreshBudgetLeft > 0)
-    {
-      FirstMeshCaptureReserveLeft = 1;
-      --CaptureRefreshBudgetLeft;
-    }
+    // The miss-path capture split above protects FM refreshes from the earlier
+    // LightRepair snapshot slice. Keep the pass order stable; the FirstMesh
+    // reserve is consumed only by FirstMesh coordinates in TryAcquireSnapshot.
     auto schedule_remesh_snapshot_slice = [&]() {
       if (!reserve_remesh_snap || remesh_cap <= 0 ||
           Dirty.GetRemeshCount() == 0)
