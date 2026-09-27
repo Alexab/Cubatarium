@@ -88,8 +88,8 @@ public:
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
                                    bool priority = false, int min_y = 0,
                                    int max_y = -1);
-  /// Admit a bounded draw-gate repair by replacing a farther far-FIFO item
-  /// when normal near-ring admission is backpressured.
+  /// Admit bounded visible relight work with far-victim replacement/reserve
+  /// when normal near-ring FIFO admission is backpressured.
   bool EnqueueVisibleRelight(int world_x, int world_z, int min_y, int max_y,
                              glm::ivec3 focus_ground, int max_horiz,
                              const std::vector<glm::ivec2>

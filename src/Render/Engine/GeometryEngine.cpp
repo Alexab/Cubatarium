@@ -475,6 +475,24 @@ void NoteFrustumCoverageGaps(
     record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
     record.renderer_column_has_repair_ticket =
         column_state.has_repair_ticket ? 1u : 0u;
+    const bool pending_light = world.IsPendingLightBeforeMesh(column);
+    const bool relight_queued = world.IsTerrainColumnRelightQueued(column);
+    const bool relight_inflight = world.IsAsyncRelightColumnInFlight(column);
+    const bool defer_until_lit = cache.IsDeferMeshUntilLit(coord);
+    const bool soft_defer_held = cache.IsSoftDeferHeld(coord);
+    const bool column_lit_ready = world.IsColumnLitReady(
+        glm::ivec3(column.x, 0, column.y));
+    const bool lit_gate_required = world.RequiresLightingLitGate();
+    record.relight_owner_flags =
+        (pending_light ? 1u << 0 : 0u) |
+        (relight_queued ? 1u << 1 : 0u) |
+        (relight_inflight ? 1u << 2 : 0u) |
+        (defer_until_lit ? 1u << 3 : 0u) |
+        (soft_defer_held ? 1u << 4 : 0u) |
+        (column_lit_ready ? 1u << 5 : 0u) |
+        (lit_gate_required ? 1u << 6 : 0u) |
+        (column_state.has_repair_ticket ? 1u << 7 : 0u);
+    record.column_emerge_stage = static_cast<uint8_t>(column_state.stage);
     const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
     record.published_geom_rev = published.geom_rev;
     record.published_light_rev = published.light_rev;

@@ -3379,8 +3379,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const glm::ivec3 ground(cx, 0, cz);
       // The render gate can classify a cold first mesh as PendingLight before
       // either SoftDefer or PendingLightBeforeMesh has an owner. Seed that
-      // missing light stage for visible solid columns instead of submitting a
-      // mesh that cannot pass the renderer gate.
+      // missing light stage for visible columns still before LitReady instead
+      // of submitting a mesh that cannot pass the renderer gate.
       const bool first_mesh_needs_lighting =
           !probe.has_drawable && RequiresLightingLitGate() &&
           col_horiz <= kVisualStageLitDrawableHoriz &&
@@ -3439,8 +3439,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                             ch->GetIncarnation());
       if (defer_until_lit || first_mesh_needs_lighting)
       {
-        // Lighting owns this visible first-mesh slice. A cold VoxelsReady
-        // column may not yet have a PendingLight/defer owner, so create that
+        // Lighting owns this visible first-mesh slice. A pre-LitReady column
+        // may not yet have a PendingLight/defer owner, so create that
         // debt only after a queue, in-flight relight, or pending-light owner
         // confirms that real relight work exists.
         const bool relight_enqueued = ensure_slice_relight();
@@ -6718,6 +6718,12 @@ void UWorld::SetRelightCompletedCapacity(size_t cap)
 bool UWorld::IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const
 {
   return AsyncRelightColumnsInFlight.count(ground_xz) != 0;
+}
+
+bool UWorld::IsTerrainColumnRelightQueued(glm::ivec2 ground_xz) const
+{
+  return Persistence && Persistence->IsTerrainColumnRelightQueued(
+                            ground_xz * CHUNK_SIZE);
 }
 
 void UWorld::ReconcileAsyncRelightColumnInFlight()

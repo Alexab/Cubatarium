@@ -274,6 +274,11 @@ struct VisualBlackTraceRecord
   /// sample_kind=3/7 bits: dirty, async build, remesh-after-apply, GPU apply,
   /// GPU queued, GPU kicked/dispatched, and GPU extract owner.
   uint32_t mesh_work_owner_flags{0};
+  /// sample_kind=8 bitset: PendingLight map, persistence FIFO key, async
+  /// relight in flight, defer-until-lit, SoftDeferHeld, column LitReady,
+  /// lit gate required, and ColumnFlow repair ticket (bits 0..7).
+  uint32_t relight_owner_flags{0};
+  uint8_t column_emerge_stage{0};
   int32_t relight_band_min_y{0};
   int32_t relight_band_max_y{-1};
   /// sample_kind=5: counts through CollectDrawGateRelightTargets filters.

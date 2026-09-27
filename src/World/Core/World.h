@@ -1124,6 +1124,7 @@ public:
   uint64_t GetRelightCompletedDiscardedOverflow() const;
   void SetRelightCompletedCapacity(size_t cap);
   bool IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const;
+  bool IsTerrainColumnRelightQueued(glm::ivec2 ground_xz) const;
   /// Drop column inflight marks when the async builder has no jobs (stale set).
   void ReconcileAsyncRelightColumnInFlight();
   uint64_t GetRelightDiscardedLateCount() const;
