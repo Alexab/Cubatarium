@@ -568,18 +568,14 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   if (!victim_queue)
   {
     // The normal FIFO starts back-pressuring non-core work at 16 entries.
-    // Exact renderer rejects are bounded to eight targets per drain. Keep a
-    // separate bounded set of exact visible targets so generic near-focus work
-    // cannot consume every admission slot; each reservation stays occupied
-    // until its capture is actually submitted.
+    // Exact renderer rejects are bounded to eight targets per drain. Keep two
+    // bounded batches of deduplicated visible repairs admissible when all FIFO
+    // work is already within the same visible ring and no safe far victim
+    // exists; beyond this reserve, retain the existing backpressure.
     constexpr int kVisibleRelightReserve =
-        kVisibleDrawGateRelightTargetLimit;
-    const bool within_shared_reserve = ShouldAdmitRelightFifoEnqueue(
-        fifo_n, horiz, /*fifo_backpressure=*/16 + kVisibleRelightReserve);
-    const bool has_dedicated_visible_slot =
-        PendingVisibleDrawGateRelightYBands.size() <
-        static_cast<size_t>(kVisibleRelightReserve);
-    if (within_shared_reserve || has_dedicated_visible_slot)
+        kVisibleDrawGateRelightTargetLimit * 2;
+    if (ShouldAdmitRelightFifoEnqueue(
+            fifo_n, horiz, /*fifo_backpressure=*/16 + kVisibleRelightReserve))
     {
       EnqueueTerrainColumnRelightImpl(world_x, world_z, /*priority=*/true,
                                       min_y, max_y,
