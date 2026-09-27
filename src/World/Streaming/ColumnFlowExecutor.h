@@ -38,6 +38,7 @@ public:
   {
     scheduler_.Clear();
     last_dispatch_frame_.clear();
+    relight_retry_after_frame_.clear();
     promote_pending_ = false;
     promote_enqueued_ = false;
     promote_priority_ = 0;
@@ -150,6 +151,9 @@ private:
   int frame_counter_{0};
   /// column+kind → frame when last Dispatched (cooldown 3 frames).
   std::unordered_map<CooldownKey, int, CooldownKeyHash> last_dispatch_frame_;
+  /// Failed FIFO admission keeps a live relight ticket while backing off.
+  std::unordered_map<CooldownKey, int, CooldownKeyHash>
+      relight_retry_after_frame_;
   static constexpr int kEnqueueCooldownFrames = 3;
   /// One PromoteRelight enqueue per streaming+emerge frame (max priority).
   bool promote_pending_{false};

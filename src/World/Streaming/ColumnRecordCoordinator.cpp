@@ -188,7 +188,14 @@ bool UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(
 bool UColumnRecordCoordinator::RecordWantsRelightEnqueue(
     const ColumnRecord &rec)
 {
-  // Refuse while PendingLight already in flight; RenderReady may still relight.
+  // PendingLight is debt, not proof that a relight job has an owner. Allow a
+  // new relight ticket when the debt has no active ColumnRecord job token;
+  // the Flow executor separately deduplicates against persistence/async owners.
+  if (rec.pending_light && !ColumnHasActivePending(rec))
+  {
+    return true;
+  }
+  // Refuse while a real PendingLight job is already represented as in flight.
   const ColumnJobStage stage = DeriveJobStageFromRecord(rec);
   return stage != ColumnJobStage::PendingLight;
 }

@@ -1140,6 +1140,16 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           Persistence->EnqueueTerrainColumnRelight(
               key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true,
               enqueue_min, enqueue_max);
+          const glm::ivec2 world_block_key(key.x * CHUNK_SIZE,
+                                           key.y * CHUNK_SIZE);
+          if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
+              !IsAsyncRelightColumnInFlight(key))
+          {
+            // Admission can be refused by FIFO backpressure. Keep the existing
+            // Flow ticket as the retry owner; do not report progress or unlock
+            // the column as LitReady without executable relight work.
+            continue;
+          }
           SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           (void)missing_mesh;
           // Do NOT MarkDirty pending columns here. Re-admitting missing slices

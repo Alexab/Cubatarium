@@ -284,6 +284,14 @@ const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
 
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
 {
+  if (item.kind == ColumnWorkKind::RelightThenMesh && decide_world_ != nullptr &&
+      (decide_world_->IsTerrainColumnRelightQueued(item.column) ||
+       decide_world_->IsAsyncRelightColumnInFlight(item.column)))
+  {
+    // Persistence FIFO / async capture is the executable owner. PendingLight
+    // debt alone must not create a duplicate Flow relight ticket.
+    return;
+  }
   const bool new_ticket = !scheduler_.Contains(item.column, item.kind);
   bool legacy_want = true;
   bool record_want = true;
@@ -419,20 +427,18 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
         ticket, world.GetColumnEmergeState(ground), missing, pending, dark);
     auto &rec = world.GetColumnRecords().GetOrCreate(work.column);
     rec.desired = desired;
-    rec.inflight_job = frame_counter_ == 0 ? 1 : frame_counter_;
-    // Q6: stamp pending immediately so RecordWants* / Decide* see in-flight
-    // before the next SyncFocusRing (stops legacy re-feed mismatch spam).
-    rec.pending.token = rec.inflight_job;
-    switch (work.kind)
+    // Flow relight tickets only request admission into the persistence queue;
+    // they are not the light job itself. Persistence/async state owns that
+    // work. Marking the ticket as an in-flight job here made PendingLight debt
+    // look permanently owned after a FIFO admission refusal.
+    const bool record_tracks_job = !pending;
+    if (record_tracks_job)
     {
-    case ColumnWorkKind::RelightThenMesh:
-    case ColumnWorkKind::PromoteRelight:
-      rec.pending.stage = ColumnJobStage::PendingLight;
-      break;
-    case ColumnWorkKind::FirstMesh:
-    case ColumnWorkKind::RemeshSeam:
+      rec.inflight_job = frame_counter_ == 0 ? 1 : frame_counter_;
+      // Q6: stamp pending immediately so RecordWants* / Decide* see in-flight
+      // before the next SyncFocusRing (stops legacy re-feed mismatch spam).
+      rec.pending.token = rec.inflight_job;
       rec.pending.stage = ColumnJobStage::Meshing;
-      break;
     }
   }
   const glm::ivec2 *only =
@@ -481,6 +487,21 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
   }
   case ColumnWorkKind::RelightThenMesh:
     world.RecoverUnlitFocusMeshes(1, only);
+    if (world.IsPendingLightBeforeMesh(work.column) &&
+        !world.IsTerrainColumnRelightQueued(work.column) &&
+        !world.IsAsyncRelightColumnInFlight(work.column))
+    {
+      const CooldownKey retry_key =
+          MakeCooldownKey(work.column, ColumnWorkKind::RelightThenMesh);
+      relight_retry_after_frame_[retry_key] =
+          frame_counter_ + kEnqueueCooldownFrames;
+      scheduler_.Enqueue(work);
+    }
+    else
+    {
+      relight_retry_after_frame_.erase(
+          MakeCooldownKey(work.column, ColumnWorkKind::RelightThenMesh));
+    }
     break;
   case ColumnWorkKind::RemeshSeam:
     if (only)
@@ -506,6 +527,20 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
     {
       world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
     }
+    if (world.IsPendingLightBeforeMesh(work.column) &&
+        !world.IsTerrainColumnRelightQueued(work.column) &&
+        !world.IsAsyncRelightColumnInFlight(work.column))
+    {
+      ColumnWorkItem retry = work;
+      retry.kind = ColumnWorkKind::RelightThenMesh;
+      retry.scan_full_focus = false;
+      retry.cy = -1;
+      const CooldownKey retry_key =
+          MakeCooldownKey(retry.column, ColumnWorkKind::RelightThenMesh);
+      relight_retry_after_frame_[retry_key] =
+          frame_counter_ + kEnqueueCooldownFrames;
+      scheduler_.Enqueue(retry);
+    }
     break;
   }
 }
@@ -530,6 +565,21 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   while (drained < n && probed < probe_budget && scheduler_.DrainOne(work))
   {
     ++probed;
+    const CooldownKey retry_key =
+        MakeCooldownKey(work.column, ColumnWorkKind::RelightThenMesh);
+    if (work.kind == ColumnWorkKind::RelightThenMesh)
+    {
+      const auto retry_it = relight_retry_after_frame_.find(retry_key);
+      if (retry_it != relight_retry_after_frame_.end())
+      {
+        if (frame_counter_ < retry_it->second)
+        {
+          deferred.push_back(work);
+          continue;
+        }
+        relight_retry_after_frame_.erase(retry_it);
+      }
+    }
     // Q8: soft deadline — defer Relight/Seam/Promote when frame budget is
     // exhausted; re-queue and stop. FirstMesh keeps a progress floor.
     // G1/N04: a stalled visible-black ticket already means repair ticket ∧
