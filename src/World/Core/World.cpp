@@ -3223,8 +3223,10 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         MeshService->HasInflightMeshBuild(coord) ||
         MeshService->IsGpuExtractInFlight(coord) ||
         MeshService->IsPendingGpuApply(coord);
-    const bool relight_owned = IsPendingLightBeforeMesh(column) ||
-                               IsAsyncRelightColumnInFlight(column) ||
+    // PendingLightBeforeMesh is debt state, not an executable owner. Treating
+    // an orphaned debt as live work skipped the defer branch forever and left
+    // FirstMesh Dirty queued while no relight existed to clear the debt.
+    const bool relight_owned = IsAsyncRelightColumnInFlight(column) ||
                                (Persistence && Persistence->IsTerrainColumnRelightQueued(
                                                    block_key));
     return mesh_in_flight || relight_owned;
