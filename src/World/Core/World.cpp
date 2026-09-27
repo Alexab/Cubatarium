@@ -2965,7 +2965,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               : UWorldPersistence::TerrainColumnRelightQueueInfo{};
       trace.relight_queue_kind =
           relight_queue.deferred_visible && !relight_queue.keyed
-              ? 4
+              ? 6
               : (!relight_queue.keyed
               ? 0
               : (!relight_queue.in_deque

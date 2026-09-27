@@ -1711,7 +1711,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             GetTerrainColumnRelightQueueInfo(draw_gate_target_key);
         trace.relight_queue_kind =
             queue_info.deferred_visible && !queue_info.keyed
-                ? 4
+                ? 6
                 : (!queue_info.keyed
                 ? 0
                 : (!queue_info.in_deque
