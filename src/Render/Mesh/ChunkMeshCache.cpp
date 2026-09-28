@@ -4807,6 +4807,42 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     return budget_ms < 0.0 || elapsed_ms() < budget_ms;
   };
 
+  int queued_n = 0;
+  bool queued_missing_mesh = false;
+  for (const PendingGpuApply &pending : PendingGpuApplies)
+  {
+    if (pending.phase != PendingGpuApply::Phase::Queued)
+    {
+      continue;
+    }
+    ++queued_n;
+    queued_missing_mesh =
+        queued_missing_mesh || !HasDrawableGreedyMesh(pending.coord);
+  }
+  const int kick_debt_proxy =
+      WorkAdmission.protect_lit_settle_remesh
+          ? 20
+          : std::max(VisibleBlackFocusPressure_,
+                     VisibleBlackNoTicketPressure_);
+  const bool focus_kick_debt =
+      StarveRemeshForHoles || ColumnLoadedNoMeshPressure_ > 0 ||
+      VisibleBlackFocusPressure_ >= 20;
+  const bool reserve_missing_mesh_kick =
+      queued_missing_mesh && pipeline->HasFreeReadbackSlot() &&
+      ShouldForceGpuKickUnderQueuedDebt(queued_n, focus_kick_debt,
+                                        kick_debt_proxy);
+  // Finish polling is opportunistic when a visible first mesh is queued. Keep
+  // part of this frame's GPU budget available for one kick; otherwise a finish
+  // pass can consume the whole budget before the debt-kick path runs, leaving
+  // queued meshes to fill every output slot and blocking new first-mesh work.
+  const double finish_budget_ms =
+      reserve_missing_mesh_kick && budget_ms > 0.0
+          ? std::max(0.0, budget_ms - std::min(1.0, budget_ms * 0.5))
+          : budget_ms;
+  auto finish_budget_left = [&]() {
+    return finish_budget_ms < 0.0 || elapsed_ms() < finish_budget_ms;
+  };
+
   // Underfeet + rim ingress: finish/kick horiz≤4 before hinterland GPU backlog.
   {
     const glm::ivec3 focus = MeshFocusGroundChunk;
@@ -5037,7 +5073,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 
   // Pass B0: advance Dispatched (counter poll + emit). RectsHold per PBO →
   // multiple Dispatched OK (≤ kReadbackRing). NotReady leaves in place.
-  for (size_t i = 0; i < PendingGpuApplies.size() && budget_left();)
+  for (size_t i = 0;
+       i < PendingGpuApplies.size() && finish_budget_left();)
   {
     if (PendingGpuApplies[i].phase != PendingGpuApply::Phase::Dispatched)
     {
@@ -5133,7 +5170,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   // never erase+push_back (deque iterator UB / spin). attempts_cap = finish_cap.
   for (size_t i = 0; i < PendingGpuApplies.size() && finished < finish_cap &&
                      finish_attempts < finish_cap && processed < max_count &&
-                     budget_left();)
+                     finish_budget_left();)
   {
     if (PendingGpuApplies[i].phase != PendingGpuApply::Phase::Kicked)
     {
@@ -5242,19 +5279,6 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                  : 0.55);
   const double kick_cut =
       DynamicKickCutBiasForFmWatch(watch_rim_n, base_kick_cut);
-  int queued_n = 0;
-  for (const auto &pending : PendingGpuApplies)
-  {
-    if (pending.phase == PendingGpuApply::Phase::Queued)
-    {
-      ++queued_n;
-    }
-  }
-  const int kick_debt_proxy =
-      WorkAdmission.protect_lit_settle_remesh
-          ? 20
-          : std::max(VisibleBlackFocusPressure_,
-                     VisibleBlackNoTicketPressure_);
   // A queued replacement for a drawable, fully-dark slice is visual debt even
   // after its Dirty remesh entry has been consumed. Use the per-slice demand
   // record as the durable owner in that phase; otherwise newly queued first
