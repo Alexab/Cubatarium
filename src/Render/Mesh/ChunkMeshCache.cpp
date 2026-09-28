@@ -1032,7 +1032,7 @@ bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
   {
     return it->second.GpuHasDarkFace;
   }
-  return BatchesHaveFullyDarkFace(it->second.batches);
+  return it->second.CpuHasDarkFace;
 }
 
 bool UChunkMeshCache::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
@@ -1048,11 +1048,7 @@ bool UChunkMeshCache::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
   {
     return it->second.GpuHasLitDrawableFace;
   }
-  if (!it->second.batches.empty())
-  {
-    return BatchesHaveLitDrawableFace(it->second.batches);
-  }
-  return false;
+  return it->second.CpuHasLitDrawableFace;
 }
 
 void UChunkMeshCache::FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
@@ -1085,8 +1081,7 @@ void UChunkMeshCache::FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
     if (out.has_drawable)
     {
       const bool has_dark_surface =
-          mesh.GpuResident ? mesh.GpuHasDarkFace
-                           : BatchesHaveFullyDarkFace(mesh.batches);
+          mesh.GpuResident ? mesh.GpuHasDarkFace : mesh.CpuHasDarkFace;
       const bool has_lit_surface = ChunkHasLitDrawableFace(chunk_coord);
       // A dark vertex is common on shaded/cave faces. Only a drawable with no
       // lit side/top surface is a fully-dark mesh candidate for repair policy.
@@ -4624,6 +4619,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   chunkMesh.GpuTransparent = gpu_result.transparent;
   chunkMesh.GpuHasDarkFace = gpu_result.hasFullyDarkFace;
   chunkMesh.GpuHasLitDrawableFace = gpu_result.hasLitDrawableFace;
+  chunkMesh.CpuHasDarkFace = false;
+  chunkMesh.CpuHasLitDrawableFace = false;
   chunkMesh.GpuBlockRanges = std::move(gpu_result.blockRanges);
   if (has_source_light_revision)
   {
@@ -6117,8 +6114,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const bool had_live_lit_gpu =
       ChunkHasLiveGpuDraw(result.coord) &&
       ChunkHasLitDrawableFace(result.coord);
-  const bool new_dark = BatchesHaveFullyDarkFace(result.batches) &&
-                        !BatchesHaveLitDrawableFace(result.batches);
+  const bool new_cpu_has_dark_face =
+      BatchesHaveFullyDarkFace(result.batches);
+  const bool new_cpu_has_lit_drawable_face =
+      BatchesHaveLitDrawableFace(result.batches);
+  const bool new_dark =
+      new_cpu_has_dark_face && !new_cpu_has_lit_drawable_face;
   const int prior_lit_age = GetPriorLitHoldAge(result.coord);
   const UChunk *source_chunk =
       world.GetChunkManager().GetChunk(result.coord);
@@ -6358,6 +6359,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   GreedyVertexCountTotal += new_vertex_count;
   // Write-first: CPU drawable before FreeChunk (ShouldPublishCpuBatchesBeforeFreeGpu).
   chunkMesh.batches = std::move(result.batches);
+  chunkMesh.CpuHasDarkFace = new_cpu_has_dark_face;
+  chunkMesh.CpuHasLitDrawableFace = new_cpu_has_lit_drawable_face;
   chunkMesh.crossCenters = std::move(result.crossCenters);
   chunkMesh.ProvisionalLightPreview = result.ProvisionalLightPreview;
   // W1 SoT 185830: sync BoundaryOverlay on CPU Apply (heal gates were blind).
@@ -9047,8 +9050,12 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     const bool had_live_lit_gpu =
         ChunkHasLiveGpuDraw(chunkCoord) &&
         ChunkHasLitDrawableFace(chunkCoord);
-    const bool new_dark = BatchesHaveFullyDarkFace(new_batches) &&
-                          !BatchesHaveLitDrawableFace(new_batches);
+    const bool new_cpu_has_dark_face =
+        BatchesHaveFullyDarkFace(new_batches);
+    const bool new_cpu_has_lit_drawable_face =
+        BatchesHaveLitDrawableFace(new_batches);
+    const bool new_dark =
+        new_cpu_has_dark_face && !new_cpu_has_lit_drawable_face;
     const int prior_lit_age = GetPriorLitHoldAge(chunkCoord);
     const UChunk *source_chunk = world.GetChunkManager().GetChunk(chunkCoord);
     const ChunkRenderDemandRecord *slice_demand =
@@ -9246,6 +9253,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       }
     }
     chunkMesh.batches = std::move(new_batches);
+    chunkMesh.CpuHasDarkFace = new_cpu_has_dark_face;
+    chunkMesh.CpuHasLitDrawableFace = new_cpu_has_lit_drawable_face;
     chunkMesh.ProvisionalLightPreview = false;
     {
       std::vector<uint16_t> ids;

@@ -1062,6 +1062,9 @@ private:
     bool GpuTransparent{false};
     bool GpuHasDarkFace{false};
     bool GpuHasLitDrawableFace{false};
+    // Cached CPU batch classification for hot readiness and repair queries.
+    bool CpuHasDarkFace{false};
+    bool CpuHasLitDrawableFace{false};
     bool ProvisionalLightPreview{false};
     uint64_t MeshedLightRevision{0};
     /// Sysreset v2: Accept gate stamps (geom/light/material).
