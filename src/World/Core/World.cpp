@@ -4125,14 +4125,15 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
       if (relight_only)
       {
-        MeshService->GetCache().InvalidateMeshCapture(coord);
-        // A41: open_sky equal-rev FD → LightRepair Dirty with SLA remint.
-        // Dirty-only does not block (skip_snapshot plateau); live Capture/GPU does.
+        // A41: open_sky equal-rev FD and any concrete stale-light witness
+        // require a bounded LightRepair Dirty attempt. A stale-dark witness
+        // means current world light is already available, so RelightThenMesh
+        // alone can become a ticket without executable light work.
         if (NeedsOpenSkyEqualRevLightRepair(fully_dark, light_surface_stale,
                                             open_sky) ||
             (fully_dark && open_sky && equal_rev_fd) ||
             (fully_dark && open_sky && light_surface_stale) ||
-            (stale_dark_faces && open_sky))
+            stale_dark_faces)
         {
           ColumnRecord &orec =
               ColumnRecords.GetOrCreate(glm::ivec2(cx, cz));
@@ -4169,6 +4170,13 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
               }
             }
           }
+        }
+        if (stale_dark_faces)
+        {
+          // Do not replace a current-light mesh repair with a relight ticket.
+          // When the SLA/admission gate is closed, leave the obligation for
+          // the next bounded admission pass.
+          continue;
         }
         const bool relight_enqueued = ensure_slice_relight();
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
