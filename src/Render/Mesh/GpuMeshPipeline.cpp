@@ -672,7 +672,8 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
                                          UBlockRegistry &registry,
                                          glm::ivec3 coord, int slot_idx,
                                          GpuApplyTicket &out_ticket,
-                                         const BlockDefinitionCatalog *catalog)
+                                         const BlockDefinitionCatalog *catalog,
+                                         ComputeKickProfile *profile)
 {
   out_ticket = {};
   out_ticket.provisionalLightPreview = snapshot.provisionalLightPreview;
@@ -682,6 +683,7 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   (void)coord;
   (void)slot_idx;
   (void)catalog;
+  (void)profile;
   return false;
 #else
   const bool eligible =
@@ -698,6 +700,9 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
     return false;
   }
 
+  using ProfileClock = std::chrono::steady_clock;
+  const auto cpu_prepare_start = profile ? ProfileClock::now()
+                                         : ProfileClock::time_point{};
   std::vector<uint8_t> occ;
   if (catalog)
   {
@@ -738,7 +743,16 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
 
   const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
   const uint32_t side = static_cast<uint32_t>(CHUNK_SIZE);
+  if (profile)
+  {
+    profile->cpu_prepare_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - cpu_prepare_start)
+            .count();
+  }
 
+  const auto input_upload_start = profile ? ProfileClock::now()
+                                          : ProfileClock::time_point{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.OccSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(occ_words.size() * sizeof(uint32_t)),
@@ -755,7 +769,16 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(light_words.size() * sizeof(uint32_t)),
                light_words.data(), GL_DYNAMIC_DRAW);
+  if (profile)
+  {
+    profile->input_upload_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - input_upload_start)
+            .count();
+  }
 
+  const auto mask_dispatch_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, EmitState.OccSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, EmitState.MaskSsbo);
   glUseProgram(EmitState.MaskProgram);
@@ -765,14 +788,32 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
                static_cast<uint32_t>(kGpuOccPad));
   glDispatchCompute((volume + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  if (profile)
+  {
+    profile->mask_dispatch_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - mask_dispatch_start)
+            .count();
+  }
 
   const std::array<uint32_t, 4> zero_counters{0, 0, 0, 0};
+  const auto counter_reset_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(zero_counters),
                zero_counters.data(), GL_DYNAMIC_DRAW);
+  if (profile)
+  {
+    profile->counter_reset_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - counter_reset_start)
+            .count();
+  }
   const GLuint rects_ssbo = RectsHoldSsbo[pbo_index] != 0
                                 ? RectsHoldSsbo[pbo_index]
                                 : EmitState.RectsSsbo;
+  const auto greedy_dispatch_start = profile ? ProfileClock::now()
+                                              : ProfileClock::time_point{};
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, EmitState.MaskSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, EmitState.BlocksSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, EmitState.LightsSsbo);
@@ -784,8 +825,17 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
                static_cast<uint32_t>(kGpuLightPad));
   glDispatchCompute(102u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  if (profile)
+  {
+    profile->greedy_dispatch_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - greedy_dispatch_start)
+            .count();
+  }
 
   // Async counter poll (D3): copy+fence without ClientWait — TryComplete later.
+  const auto counter_copy_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   glBindBuffer(GL_COPY_READ_BUFFER, EmitState.CountersSsbo);
   glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
@@ -795,6 +845,13 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   GLsync counter_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
   glUseProgram(0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  if (profile)
+  {
+    profile->counter_copy_submit_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - counter_copy_start)
+            .count();
+  }
   if (!counter_fence)
   {
     // Fallback: sync read path.

@@ -5032,6 +5032,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   double gpu_profile_quad_readback_copy_ms = 0.0;
   double gpu_profile_quad_finish_ms = 0.0;
   double gpu_profile_kick_dispatch_ms = 0.0;
+  double gpu_profile_kick_cpu_prepare_ms = 0.0;
+  double gpu_profile_kick_input_upload_ms = 0.0;
+  double gpu_profile_kick_mask_dispatch_ms = 0.0;
+  double gpu_profile_kick_counter_reset_ms = 0.0;
+  double gpu_profile_kick_greedy_dispatch_ms = 0.0;
+  double gpu_profile_kick_counter_copy_submit_ms = 0.0;
   double gpu_profile_commit_ms = 0.0;
   int gpu_profile_counter_ready_n = 0;
   int gpu_profile_counter_not_ready_n = 0;
@@ -5814,15 +5820,24 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     const auto kick_profile_t0 =
         gpu_process_profile_sample ? GpuProfileClock::now()
                                    : GpuProfileClock::time_point{};
+    UGpuMeshPipeline::ComputeKickProfile kick_stages;
     const bool kick_succeeded = pipeline->KickComputePasses(
         pending.snapshot, registry, pending.coord, slot_idx, pending.ticket,
-        pinned);
+        pinned, gpu_process_profile_sample ? &kick_stages : nullptr);
     if (gpu_process_profile_sample)
     {
       gpu_profile_kick_dispatch_ms +=
           std::chrono::duration<double, std::milli>(
               GpuProfileClock::now() - kick_profile_t0)
               .count();
+      gpu_profile_kick_cpu_prepare_ms += kick_stages.cpu_prepare_ms;
+      gpu_profile_kick_input_upload_ms += kick_stages.input_upload_ms;
+      gpu_profile_kick_mask_dispatch_ms += kick_stages.mask_dispatch_ms;
+      gpu_profile_kick_counter_reset_ms += kick_stages.counter_reset_ms;
+      gpu_profile_kick_greedy_dispatch_ms +=
+          kick_stages.greedy_dispatch_ms;
+      gpu_profile_kick_counter_copy_submit_ms +=
+          kick_stages.counter_copy_submit_ms;
     }
     if (!kick_succeeded)
     {
@@ -6050,6 +6065,16 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         << gpu_profile_quad_readback_copy_ms
         << ",\"quad_finish\":" << gpu_profile_quad_finish_ms
         << ",\"kick_dispatch\":" << gpu_profile_kick_dispatch_ms
+        << ",\"kick_cpu_prepare\":" << gpu_profile_kick_cpu_prepare_ms
+        << ",\"kick_input_upload\":" << gpu_profile_kick_input_upload_ms
+        << ",\"kick_mask_dispatch\":"
+        << gpu_profile_kick_mask_dispatch_ms
+        << ",\"kick_counter_reset\":"
+        << gpu_profile_kick_counter_reset_ms
+        << ",\"kick_greedy_dispatch\":"
+        << gpu_profile_kick_greedy_dispatch_ms
+        << ",\"kick_counter_copy_submit\":"
+        << gpu_profile_kick_counter_copy_submit_ms
         << ",\"commit\":" << gpu_profile_commit_ms
         << ",\"other\":" << other_ms << "}}\n";
     gpu_process_profile_sink->flush();

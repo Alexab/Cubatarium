@@ -56,10 +56,21 @@ public:
     /// Carry first-mesh presentation state through asynchronous packed emit.
     bool provisionalLightPreview{false};
   };
+  struct ComputeKickProfile
+  {
+    double cpu_prepare_ms{0.0};
+    double input_upload_ms{0.0};
+    double mask_dispatch_ms{0.0};
+    double counter_reset_ms{0.0};
+    double greedy_dispatch_ms{0.0};
+    double counter_copy_submit_ms{0.0};
+  };
+  /// Submit occupancy/mask/greedy work; optional sampled substage timings.
   bool KickComputePasses(const ChunkMeshSnapshot &snapshot,
                          UBlockRegistry &registry, glm::ivec3 coord,
                          int slot_idx, GpuApplyTicket &out_ticket,
-                         const BlockDefinitionCatalog *catalog = nullptr);
+                         const BlockDefinitionCatalog *catalog = nullptr,
+                         ComputeKickProfile *profile = nullptr);
   enum class GpuFinishStatus : uint8_t
   {
     Ready = 0,
