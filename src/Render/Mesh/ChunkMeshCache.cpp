@@ -1199,8 +1199,19 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
   }
   for (const GreedyMeshBatch &batch : it->second.batches)
   {
-    for (const GreedyMeshVertex &v : batch.vertices)
+    // AppendGreedyQuad writes exactly four vertices per rectangle and assigns
+    // the same packed light sample to all four. Probe the rectangle center,
+    // not each corner: a corner lies on the boundary between voxel cells, and
+    // mapping that point independently can inspect a lit neighbor outside the
+    // quad. That made valid dark faces look stale and repeatedly schedule the
+    // same no-op remesh.
+    for (size_t vertex = 0; vertex + 3 < batch.vertices.size(); vertex += 4)
     {
+      const GreedyMeshVertex &v0 = batch.vertices[vertex];
+      const GreedyMeshVertex &v1 = batch.vertices[vertex + 1];
+      const GreedyMeshVertex &v2 = batch.vertices[vertex + 2];
+      const GreedyMeshVertex &v3 = batch.vertices[vertex + 3];
+      const GreedyMeshVertex &v = v0;
       if (v.skyLight > 0.0f || v.blockLight > 0.0f)
       {
         continue;
@@ -1211,10 +1222,18 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
         continue; // −Y bottoms often legitimately unlit
       }
       const glm::ivec3 off = face_air_offset(fi);
+      const glm::vec3 face_center =
+          (glm::vec3(v0.px, v0.py, v0.pz) +
+           glm::vec3(v1.px, v1.py, v1.pz) +
+           glm::vec3(v2.px, v2.py, v2.pz) +
+           glm::vec3(v3.px, v3.py, v3.pz)) * 0.25f;
       const glm::ivec3 solid(
-          WorldCoordToBlockIndex(v.px - 0.5f * static_cast<float>(off.x)),
-          WorldCoordToBlockIndex(v.py - 0.5f * static_cast<float>(off.y)),
-          WorldCoordToBlockIndex(v.pz - 0.5f * static_cast<float>(off.z)));
+          WorldCoordToBlockIndex(face_center.x -
+                                 0.5f * static_cast<float>(off.x)),
+          WorldCoordToBlockIndex(face_center.y -
+                                 0.5f * static_cast<float>(off.y)),
+          WorldCoordToBlockIndex(face_center.z -
+                                 0.5f * static_cast<float>(off.z)));
       const glm::ivec3 air = solid + off;
       const uint8_t air_light = SampleLightPacked(world, air);
       if (air_light != 0)
