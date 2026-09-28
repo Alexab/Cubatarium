@@ -38,7 +38,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
+#include <fstream>
 #include <limits>
 #include <tuple>
 #include <glm/gtc/matrix_transform.hpp>
@@ -52,6 +54,142 @@ namespace
 {
 
 constexpr int kRemeshDeferredRingMax = 64;
+
+class MeshApplyProfileRecorder
+{
+public:
+  enum class Phase : uint8_t
+  {
+    InputValidation,
+    StaleOwnerPolicy,
+    GpuExtractDispatch,
+    LegacyFallback,
+    CandidateClassification,
+    CandidateValidation,
+    CpuPublication,
+    DemandPublication,
+    GpuResidencyPolicy,
+    PublicationBookkeeping,
+    FirstCoverageCallback,
+    LitDrawableCallback,
+    LitPendingCallback,
+    PostPublication,
+    Count
+  };
+
+  MeshApplyProfileRecorder(std::ostream *out, uint64_t sequence,
+                           glm::ivec3 coord, uint64_t source_revision,
+                           size_t input_batch_count, bool gpu_extract_pending)
+      : Out(out), Sequence(sequence), Coord(coord),
+        SourceRevision(source_revision), InputBatchCount(input_batch_count),
+        GpuExtractPending(gpu_extract_pending),
+        TotalStart(out ? Clock::now() : Clock::time_point{}),
+        PhaseStart(TotalStart)
+  {
+  }
+
+  ~MeshApplyProfileRecorder()
+  {
+    if (!Out)
+    {
+      return;
+    }
+    Accumulate(Clock::now());
+    *Out << "{\"kind\":\"mesh_apply_profile\",\"seq\":" << Sequence
+         << ",\"coord\":[" << Coord.x << ',' << Coord.y << ',' << Coord.z
+         << "],\"source_revision\":" << SourceRevision
+         << ",\"input_batch_count\":" << InputBatchCount
+         << ",\"gpu_extract_pending\":"
+         << (GpuExtractPending ? "true" : "false") << ",\"total_ms\":"
+         << Milliseconds(TotalStart, Clock::now()) << ",\"phase_ms\":{";
+    for (size_t i = 0; i < static_cast<size_t>(Phase::Count); ++i)
+    {
+      if (i != 0)
+      {
+        *Out << ',';
+      }
+      *Out << '"' << PhaseName(static_cast<Phase>(i)) << "\":" << PhaseMs[i];
+    }
+    *Out << "}}\n";
+  }
+
+  void Enter(Phase next)
+  {
+    if (!Out)
+    {
+      return;
+    }
+    Accumulate(Clock::now());
+    Current = next;
+  }
+
+private:
+  using Clock = std::chrono::steady_clock;
+
+  static double Milliseconds(Clock::time_point from, Clock::time_point to)
+  {
+    return std::chrono::duration<double, std::milli>(to - from).count();
+  }
+
+  static const char *PhaseName(Phase phase)
+  {
+    switch (phase)
+    {
+    case Phase::InputValidation:
+      return "input_validation";
+    case Phase::StaleOwnerPolicy:
+      return "stale_owner_policy";
+    case Phase::GpuExtractDispatch:
+      return "gpu_extract_dispatch";
+    case Phase::LegacyFallback:
+      return "legacy_fallback";
+    case Phase::CandidateClassification:
+      return "candidate_classification";
+    case Phase::CandidateValidation:
+      return "candidate_validation";
+    case Phase::CpuPublication:
+      return "cpu_publication";
+    case Phase::DemandPublication:
+      return "demand_publication";
+    case Phase::GpuResidencyPolicy:
+      return "gpu_residency_policy";
+    case Phase::PublicationBookkeeping:
+      return "publication_bookkeeping";
+    case Phase::FirstCoverageCallback:
+      return "first_coverage_callback";
+    case Phase::LitDrawableCallback:
+      return "lit_drawable_callback";
+    case Phase::LitPendingCallback:
+      return "lit_pending_callback";
+    case Phase::PostPublication:
+      return "post_publication";
+    case Phase::Count:
+      break;
+    }
+    return "unknown";
+  }
+
+  void Accumulate(Clock::time_point now)
+  {
+    const size_t index = static_cast<size_t>(Current);
+    if (index < static_cast<size_t>(Phase::Count))
+    {
+      PhaseMs[index] += Milliseconds(PhaseStart, now);
+    }
+    PhaseStart = now;
+  }
+
+  std::ostream *Out{nullptr};
+  uint64_t Sequence{0};
+  glm::ivec3 Coord{0};
+  uint64_t SourceRevision{0};
+  size_t InputBatchCount{0};
+  bool GpuExtractPending{false};
+  Clock::time_point TotalStart;
+  Clock::time_point PhaseStart;
+  Phase Current{Phase::InputValidation};
+  double PhaseMs[static_cast<size_t>(Phase::Count)]{};
+};
 
 double MeshJobTraceNowMs()
 {
@@ -5680,6 +5818,35 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                                       UBlockRegistry &registry,
                                       MeshBuildResult &&result)
 {
+  static std::ofstream apply_profile_file;
+  static uint64_t apply_profile_sequence = 0;
+  const char *profile_enabled_env = std::getenv("CUBA_MESH_APPLY_PROFILE");
+  std::ostream *profile_sink = nullptr;
+  uint64_t profile_sequence = 0;
+  if (profile_enabled_env && profile_enabled_env[0] == '1')
+  {
+    profile_sequence = ++apply_profile_sequence;
+    if (profile_sequence % 8 == 0)
+    {
+      if (!apply_profile_file.is_open())
+      {
+        const char *profile_path =
+            std::getenv("CUBA_MESH_APPLY_PROFILE_PATH");
+        if (profile_path && profile_path[0] != '\0')
+        {
+          apply_profile_file.open(profile_path,
+                                  std::ios::out | std::ios::app);
+        }
+      }
+      if (apply_profile_file.good())
+      {
+        profile_sink = &apply_profile_file;
+      }
+    }
+  }
+  MeshApplyProfileRecorder apply_profile(
+      profile_sink, profile_sequence, result.coord, result.sourceRevision,
+      result.batches.size(), result.GpuExtractPending);
   LastApplyWasRetainedPrior_ = false;
   const auto note_terminal = [&](JobTerminalReason reason)
   {
@@ -5716,6 +5883,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       stale_reason == MeshApplyStaleInputReason::Light ||
       (stale_reason == MeshApplyStaleInputReason::Geom &&
        HasDrawableGreedyMesh(result.coord));
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::StaleOwnerPolicy);
   if (stale_reason != MeshApplyStaleInputReason::Ok && !accept_input_stale)
   {
     ++MeshApplyStaleCount;
@@ -5967,6 +6135,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
   }
 
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::GpuExtractDispatch);
   // GPU packed-quad path: defer GL compute out of ApplyMeshResult so async
   // drain stays fast and MeshEmergeTotalBudgetMs is not blown on one chunk.
   if (result.GpuExtractPending && result.PendingSnapshot)
@@ -6050,6 +6219,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
   }
 
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::LegacyFallback);
   ActiveMeshSourceRevision.erase(revisionIt);
 
   // Legacy GPF1 readback path (fallback).
@@ -6106,6 +6276,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
   }
 
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::CandidateClassification);
   const bool defer_until_lit =
       DeferMeshUntilLit && DeferMeshUntilLit(result.coord);
   // Empty SoftDefer placeholders must not count as had_lit (keep dark forever).
@@ -6130,6 +6301,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       source_chunk && slice_demand &&
       slice_demand->world_epoch == CaptureStore.WorldEpoch() &&
       slice_demand->incarnation == current_incarnation;
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::CandidateValidation);
   const bool settled_current_dark_candidate =
       new_dark && result.InputStampsValid && !refresh_after_accept_stale &&
       (!result.BoundaryOverlay.active ||
@@ -6169,6 +6341,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     return;
   }
 
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::CpuPublication);
   ClearPriorLitHoldAge(result.coord);
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
   // Era15 TD-ARCH-049 MeshResidency: publish CPU batches before FreeChunk so
@@ -6388,6 +6561,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.PublishRevs.material_stamp =
         MeshPublishMaterialStamp(ids.data(), ids.size());
   }
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::DemandPublication);
   // A26 N1 / A31: sole Published lifecycle after validation commit.
   if (kChunkDemandShadow())
   {
@@ -6426,6 +6600,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       UJobStageTrace::Note(span);
     }
   }
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::GpuResidencyPolicy);
   // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
   const bool intentional_empty =
       new_vertex_count == 0 && !defer_until_lit &&
@@ -6567,25 +6742,30 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.GpuSlotIndex = -1;
     chunkMesh.GpuQuadCount = 0;
   }
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::PublicationBookkeeping);
   NoteGeometryDirty(result.coord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::FirstCoverageCallback);
   if (!had_mesh && OnFirstDrawableCoverage)
   {
     OnFirstDrawableCoverage(result.coord);
   }
   // Era49: lit CPU mesh outcome clears StickyRemesh work-set.
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::LitDrawableCallback);
   if (!new_dark && OnLitDrawableCommitted)
   {
     OnLitDrawableCommitted(result.coord);
   }
   // Era15 TD-050: Unlit FirstMesh CPU publish → LitPending.
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::LitPendingCallback);
   if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
   {
     OnLitPendingNeeded(result.coord);
   }
+  apply_profile.Enter(MeshApplyProfileRecorder::Phase::PostPublication);
   // Light/content changed while this build was Active — remesh once with a
   // fresh Capture (avoids MarkDirty mid-flight Dirty plateau).
   if (RemeshAfterApply.erase(result.coord) > 0)
