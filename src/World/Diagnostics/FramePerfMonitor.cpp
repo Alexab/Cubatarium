@@ -353,6 +353,11 @@ struct FrameNumbers
   double mesh_async_drain_ms{0.0};
   int mesh_capture_store_hit_n{0};
   int mesh_capture_store_miss_n{0};
+  int mesh_capture_store_entries_n{0};
+  uint64_t mesh_capture_store_stale_evictions_n{0};
+  uint64_t mesh_capture_store_capacity_evictions_n{0};
+  uint64_t mesh_capture_store_pressure_evictions_n{0};
+  uint64_t mesh_snapshot_pending_bytes{0};
   int dirty_touch_n{0};
   int dirty_revisit_same_n{0};
   int dirty_fm_n{0};
@@ -651,6 +656,9 @@ struct FrameNumbers
   int gpu_mesh_slot_unbound_allocated_n{0};
   uint64_t gpu_staging_allocation_failure_n{0};
   uint64_t gpu_staging_allocation_failure_delta{0};
+  uint64_t gpu_mesh_slot_eviction_n{0};
+  uint64_t gpu_mesh_slot_no_victim_n{0};
+  uint64_t gpu_zero_quad_slot_release_n{0};
   int mesh_pipeline_pending_gpu_n{0};
   int mesh_pipeline_async_inflight_n{0};
   int mesh_pipeline_async_builder_inflight_n{0};
@@ -1095,6 +1103,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_async_drain_ms = phys.MeshAsyncDrainMs;
   n.mesh_capture_store_hit_n = phys.MeshCaptureStoreHitN;
   n.mesh_capture_store_miss_n = phys.MeshCaptureStoreMissN;
+  n.mesh_capture_store_entries_n = phys.MeshCaptureStoreEntriesN;
+  n.mesh_capture_store_stale_evictions_n =
+      phys.MeshCaptureStoreStaleEvictionsN;
+  n.mesh_capture_store_capacity_evictions_n =
+      phys.MeshCaptureStoreCapacityEvictionsN;
+  n.mesh_capture_store_pressure_evictions_n =
+      phys.MeshCaptureStorePressureEvictionsN;
+  n.mesh_snapshot_pending_bytes = phys.MeshSnapshotPendingBytes;
   n.dirty_touch_n = phys.DirtyTouchN;
   n.dirty_revisit_same_n = phys.DirtyRevisitSameN;
   n.dirty_fm_n = phys.DirtyFmN;
@@ -1417,6 +1433,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.gpu_staging_allocation_failure_n = phys.GpuStagingAllocationFailureN;
   n.gpu_staging_allocation_failure_delta =
       phys.GpuStagingAllocationFailureDelta;
+  n.gpu_mesh_slot_eviction_n = phys.GpuMeshSlotEvictionN;
+  n.gpu_mesh_slot_no_victim_n = phys.GpuMeshSlotNoVictimN;
+  n.gpu_zero_quad_slot_release_n = phys.GpuZeroQuadSlotReleaseN;
   n.mesh_pipeline_pending_gpu_n = phys.MeshPipelinePendingGpuN;
   n.mesh_pipeline_async_inflight_n = phys.MeshPipelineAsyncInFlightN;
   n.mesh_pipeline_async_builder_inflight_n =
@@ -1907,6 +1926,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_async_drain_ms\":" << n.mesh_async_drain_ms
           << ",\"mesh_capture_store_hit_n\":" << n.mesh_capture_store_hit_n
           << ",\"mesh_capture_store_miss_n\":" << n.mesh_capture_store_miss_n
+          << ",\"mesh_capture_store_entries_n\":"
+          << n.mesh_capture_store_entries_n
+          << ",\"mesh_capture_store_stale_evictions_n\":"
+          << n.mesh_capture_store_stale_evictions_n
+          << ",\"mesh_capture_store_capacity_evictions_n\":"
+          << n.mesh_capture_store_capacity_evictions_n
+          << ",\"mesh_capture_store_pressure_evictions_n\":"
+          << n.mesh_capture_store_pressure_evictions_n
+          << ",\"mesh_snapshot_pending_bytes\":"
+          << n.mesh_snapshot_pending_bytes
           << ",\"dirty_touch_n\":" << n.dirty_touch_n
           << ",\"dirty_revisit_same_n\":" << n.dirty_revisit_same_n
           << ",\"dirty_fm_n\":" << n.dirty_fm_n
@@ -2284,6 +2313,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.gpu_staging_allocation_failure_n
           << ",\"gpu_staging_allocation_failure_delta\":"
           << n.gpu_staging_allocation_failure_delta
+          << ",\"gpu_mesh_slot_eviction_n\":"
+          << n.gpu_mesh_slot_eviction_n
+          << ",\"gpu_mesh_slot_no_victim_n\":"
+          << n.gpu_mesh_slot_no_victim_n
+          << ",\"gpu_zero_quad_slot_release_n\":"
+          << n.gpu_zero_quad_slot_release_n
           << ",\"mesh_pipeline_pending_gpu_n\":"
           << n.mesh_pipeline_pending_gpu_n
           << ",\"mesh_pipeline_async_inflight_n\":"

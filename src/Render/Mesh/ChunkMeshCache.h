@@ -385,6 +385,12 @@ public:
   size_t GetPendingGpuKickedCount() const;
   int GetLastGpuKickN() const { return LastGpuKickN; }
   int GetLastGpuKickDebtForcedN() const { return LastGpuKickDebtForcedN; }
+  uint64_t GetGpuSlotEvictionCount() const { return GpuSlotEvictionCount_; }
+  uint64_t GetGpuSlotNoVictimCount() const { return GpuSlotNoVictimCount_; }
+  uint64_t GetGpuZeroQuadSlotReleaseCount() const
+  {
+    return GpuZeroQuadSlotReleaseCount_;
+  }
   const std::string &GetLastGpuKickDeferReason() const
   {
     return LastGpuKickDeferReason_;
@@ -1381,6 +1387,10 @@ private:
   std::string LastGpuKickDeferReason_;
   int LastGpuFinishN{0};
   int LastGpuFinishNotReadyN{0};
+  uint64_t GpuSlotEvictionCount_{0};
+  uint64_t GpuSlotNoVictimCount_{0};
+  uint64_t GpuZeroQuadSlotReleaseCount_{0};
+  uint64_t LastGpuSlotNoVictimFrameEpoch_{0};
   std::unordered_map<glm::ivec3, FluidSurfaceColumnSlice, IVec3Hash>
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
@@ -1392,6 +1402,8 @@ private:
   /// Draw SoT: GreedyCache GpuResident flags must match live allocator slot.
   bool ChunkHasLiveGpuDraw(glm::ivec3 chunk_coord) const;
   void ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord);
+  bool TryEvictFarthestGpuMeshForStagingSlot(const UBlockWorld &world,
+                                              UGpuMeshPipeline &pipeline);
   bool HasAnyValidatedDrawRefs() const;
   void RebuildFluidSurfaceSlice(const UBlockWorld &world,
                                 UBlockRegistry &registry,

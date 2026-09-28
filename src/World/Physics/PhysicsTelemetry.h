@@ -85,6 +85,9 @@ struct PhysicsTelemetry
   int GpuMeshSlotUnboundAllocatedN{0};
   uint64_t GpuStagingAllocationFailureN{0};
   uint64_t GpuStagingAllocationFailureDelta{0};
+  uint64_t GpuMeshSlotEvictionN{0};
+  uint64_t GpuMeshSlotNoVictimN{0};
+  uint64_t GpuZeroQuadSlotReleaseN{0};
   /// Final mesh schedule/drain after TickMeshEmerge (MeshWorkAdmission SoT).
   int MeshScheduleFinal{0};
   int MeshDrainFinal{0};
@@ -336,6 +339,11 @@ struct PhysicsTelemetry
   double MeshAsyncDrainMs{0.0};
   int MeshCaptureStoreHitN{0};
   int MeshCaptureStoreMissN{0};
+  int MeshCaptureStoreEntriesN{0};
+  uint64_t MeshCaptureStoreStaleEvictionsN{0};
+  uint64_t MeshCaptureStoreCapacityEvictionsN{0};
+  uint64_t MeshCaptureStorePressureEvictionsN{0};
+  uint64_t MeshSnapshotPendingBytes{0};
   int DirtyTouchN{0};
   int DirtyRevisitSameN{0};
   int DirtyFmN{0};

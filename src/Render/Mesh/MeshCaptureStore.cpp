@@ -30,27 +30,74 @@ void UMeshCaptureStore::BumpWorldEpoch()
 }
 
 std::optional<ChunkMeshSnapshot>
-UMeshCaptureStore::TryGet(const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision) const
+UMeshCaptureStore::TryGet(const UBlockWorld &world, glm::ivec3 coord,
+                          uint64_t source_revision)
 {
-  const auto it = Store_.find(coord);
+  auto it = Store_.find(coord);
   if (it == Store_.end())
   {
     return std::nullopt;
   }
   if (it->second.worldEpoch != WorldEpoch_)
   {
+    Store_.erase(it);
+    ++StaleEntryEvictions_;
     return std::nullopt;
   }
   if (it->second.sourceRevision != source_revision)
   {
+    Store_.erase(it);
+    ++StaleEntryEvictions_;
     return std::nullopt;
   }
   if (!it->second.data.InputsStillValid(world, NeighborDrawableFn_,
                                         NeighborDrawableCtx_))
   {
+    Store_.erase(it);
+    ++StaleEntryEvictions_;
     return std::nullopt;
   }
+  it->second.last_access_sequence = NextAccessSequence_++;
   return it->second.data;
+}
+
+bool UMeshCaptureStore::TryAcquireSnapshotCredit()
+{
+  auto &admission = UPipelineAdmission::Get();
+  if (admission.TryAcquireSnapshotBytes(kEstimatedChunkSnapshotBytes))
+  {
+    return true;
+  }
+  if (!EvictLeastRecentlyUsed(/*require_credit=*/true))
+  {
+    return false;
+  }
+  ++PressureEvictions_;
+  return admission.TryAcquireSnapshotBytes(kEstimatedChunkSnapshotBytes);
+}
+
+bool UMeshCaptureStore::EvictLeastRecentlyUsed(const bool require_credit)
+{
+  auto oldest = Store_.end();
+  for (auto it = Store_.begin(); it != Store_.end(); ++it)
+  {
+    if (require_credit && (!it->second.credit || !it->second.credit->Held()))
+    {
+      continue;
+    }
+    if (oldest == Store_.end() ||
+        it->second.last_access_sequence <
+            oldest->second.last_access_sequence)
+    {
+      oldest = it;
+    }
+  }
+  if (oldest == Store_.end())
+  {
+    return false;
+  }
+  Store_.erase(oldest);
+  return true;
 }
 
 bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
@@ -63,6 +110,15 @@ bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
   {
     return false;
   }
+  if (Store_.find(coord) == Store_.end() &&
+      Store_.size() >= kMaxRetainedEntries)
+  {
+    if (!EvictLeastRecentlyUsed(/*require_credit=*/false))
+    {
+      return false;
+    }
+    ++CapacityEvictions_;
+  }
   Entry entry;
   entry.worldEpoch = world_epoch;
   entry.sourceRevision = source_revision;
@@ -72,6 +128,7 @@ bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
   }
   entry.data = std::move(snapshot);
   entry.credit = std::move(credit);
+  entry.last_access_sequence = NextAccessSequence_++;
   Store_[coord] = std::move(entry);
   return true;
 }
@@ -90,8 +147,7 @@ UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
 {
   // Q7/R2: reserve snapshot credit before Capture; fail ⇒ nullopt (not empty).
   // Audit R12: credit lives with Store_ entry until Invalidate/BumpWorldEpoch.
-  if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
-          kEstimatedChunkSnapshotBytes))
+  if (!TryAcquireSnapshotCredit())
   {
     return std::nullopt;
   }
@@ -127,14 +183,22 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
     uint8_t face_mask)
 {
   auto it = Store_.find(coord);
-  if (it == Store_.end() || it->second.sourceRevision != source_revision ||
-      it->second.worldEpoch != WorldEpoch_ || face_mask == 0 ||
-      !it->second.data.InputsStillValid(world, NeighborDrawableFn_,
-                                         NeighborDrawableCtx_))
+  if (it != Store_.end() &&
+      (it->second.sourceRevision != source_revision ||
+       it->second.worldEpoch != WorldEpoch_ ||
+       !it->second.data.InputsStillValid(world, NeighborDrawableFn_,
+                                         NeighborDrawableCtx_)))
+  {
+    Store_.erase(it);
+    ++StaleEntryEvictions_;
+    it = Store_.end();
+  }
+  if (it == Store_.end() || face_mask == 0)
   {
     int budget = 1;
     return TakeOrRefresh(world, coord, source_revision, budget);
   }
+  it->second.last_access_sequence = NextAccessSequence_++;
   ChunkMeshSnapshot snap = it->second.data;
   const glm::ivec3 origin = snap.ChunkOrigin();
   uint8_t missing_faces = snap.boundaryOverlay.missingNeighborFaces;

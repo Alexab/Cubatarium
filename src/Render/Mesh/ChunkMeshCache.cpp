@@ -810,6 +810,114 @@ void UChunkMeshCache::ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord)
   it->second.GpuTransparent = false;
 }
 
+bool UChunkMeshCache::TryEvictFarthestGpuMeshForStagingSlot(
+    const UBlockWorld &world, UGpuMeshPipeline &pipeline)
+{
+  UGpuMeshSlotAllocator &allocator = pipeline.GetAllocator();
+  if (allocator.GetFreeSlotCount() != 0)
+  {
+    return false;
+  }
+
+  // A slot is reusable only when its chunk is outside both the draw horizon
+  // and the active rebuild focus. Keep an extra two-chunk guard band so a
+  // small camera/focus lag cannot turn an eviction into a visible hole.
+  const int protected_radius =
+      std::max({RenderDistanceChunks,
+                MeshFocusValid ? MeshFocusRadiusChunks : 0, 1}) +
+      2;
+  auto best = GreedyCache.end();
+  bool best_has_cpu_fallback = false;
+  int best_horizontal_distance = -1;
+  int best_vertical_distance = -1;
+
+  for (auto it = GreedyCache.begin(); it != GreedyCache.end(); ++it)
+  {
+    const glm::ivec3 coord = it->first;
+    const ChunkGreedyMesh &mesh = it->second;
+    if (!MeshFocusValid || !mesh.GpuResident || mesh.GpuQuadCount == 0 ||
+        !world.GetChunkManager().HasChunk(coord))
+    {
+      continue;
+    }
+
+    const int horizontal_distance =
+        std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                 std::abs(coord.z - MeshFocusGroundChunk.z));
+    if (horizontal_distance <= protected_radius)
+    {
+      continue;
+    }
+
+    if (!pipeline.HasGpuMesh(coord))
+    {
+      continue;
+    }
+    const GpuMeshSlot *slot = allocator.GetSlot(coord);
+    if (!slot || slot->QuadCount == 0 || slot->ChunkCoord != coord)
+    {
+      continue;
+    }
+
+    // Never retire a chunk while work is actively reading or publishing this
+    // mesh. Dormant Dirty/RAA/dependency/demand work is not a slot owner: it
+    // remains queued and can rebuild the chunk if it returns to the draw ring.
+    if (ActiveMeshSourceRevision.count(coord) > 0 ||
+        IsPendingGpuApply(coord) || GpuExtractInFlight.count(coord) > 0 ||
+        (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+        HasPendingCaptureWork(coord))
+    {
+      continue;
+    }
+
+    const bool has_cpu_fallback = std::any_of(
+        mesh.batches.begin(), mesh.batches.end(),
+        [](const GreedyMeshBatch &batch)
+        { return !batch.vertices.empty() && !batch.indices.empty(); });
+    const int vertical_distance =
+        std::abs(coord.y - MeshFocusGroundChunk.y);
+    const bool is_better =
+        best == GreedyCache.end() ||
+        (has_cpu_fallback && !best_has_cpu_fallback) ||
+        (has_cpu_fallback == best_has_cpu_fallback &&
+         (horizontal_distance > best_horizontal_distance ||
+          (horizontal_distance == best_horizontal_distance &&
+           vertical_distance > best_vertical_distance)));
+    if (is_better)
+    {
+      best = it;
+      best_has_cpu_fallback = has_cpu_fallback;
+      best_horizontal_distance = horizontal_distance;
+      best_vertical_distance = vertical_distance;
+    }
+  }
+
+  if (best == GreedyCache.end())
+  {
+    if (MeshFocusFrameEpoch == 0 ||
+        LastGpuSlotNoVictimFrameEpoch_ != MeshFocusFrameEpoch)
+    {
+      ++GpuSlotNoVictimCount_;
+      LastGpuSlotNoVictimFrameEpoch_ = MeshFocusFrameEpoch;
+    }
+    return false;
+  }
+
+  const glm::ivec3 evicted_coord = best->first;
+  pipeline.FreeChunk(evicted_coord);
+  ClearStaleGpuResidentFlags(evicted_coord);
+
+  // The mesh becomes a first-mesh hole only after it leaves the guarded draw
+  // radius. The existing focus hole-fill path will rebuild it if the camera
+  // later returns; no far-away Dirty work is injected into the live queue.
+  ++GpuSlotEvictionCount_;
+  ++MeshRevision;
+  GreedyBatchesDirty = true;
+  ForceFlatRebuildNext = true;
+  LastFlatCullInputKey = {};
+  return true;
+}
+
 bool UChunkMeshCache::HasAnyValidatedDrawRefs() const
 {
   for (const GreedyBatchRef &ref : GreedyOpaqueCutoutRefs)
@@ -2054,8 +2162,7 @@ void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
       deps.content_revision = rev;
     }
     // Q7: reserve snapshot credit before band allocate / worker enqueue.
-    if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
-            kEstimatedChunkSnapshotBytes))
+    if (!CaptureStore.TryAcquireSnapshotCredit())
     {
       return;
     }
@@ -3873,8 +3980,7 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
   };
   // Q7: same reserve-before-allocate as CaptureAndStore — never allocate band
   // when snapshot credits are exhausted.
-  if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
-          kEstimatedChunkSnapshotBytes))
+  if (!CaptureStore.TryAcquireSnapshotCredit())
   {
     return deferred(SnapshotAcquireDeferReason::PipelineBytes);
   }
@@ -4157,8 +4263,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     DependencyStamp deps =
         BuildMeshCaptureDependencyStamp(world, coord, source_revision, registry);
     // Q7: reserve before band allocate / worker enqueue.
-    if (!UPipelineAdmission::Get().TryAcquireSnapshotBytes(
-            kEstimatedChunkSnapshotBytes))
+    if (!CaptureStore.TryAcquireSnapshotCredit())
     {
       out.kind = SnapshotAcquireKind::Deferred;
       out.deferReason = SnapshotAcquireDeferReason::PipelineBytes;
@@ -4739,21 +4844,39 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
 
   ChunkGreedyMesh &chunkMesh = GreedyCache[coord];
+  int resident_slot_index =
+      gpu_result.quadCount > 0 ? gpu_result.slotIndex : -1;
   if (GpuPipeline)
   {
-    // Publish staging over any prior live slot (Bind frees the old index).
     auto &alloc = GpuPipeline->GetAllocator();
-    alloc.BindCommittedSlot(coord, gpu_result.slotIndex);
-    if (const GpuMeshSlot *slot = alloc.GetSlotByIndex(gpu_result.slotIndex))
+    if (gpu_result.quadCount == 0)
     {
-      // A27 S3: fence watermark — committed slot implies prior GPU work done.
-      alloc.NoteFenceCompletedGeneration(slot->generation);
+      // A validated empty mesh still satisfies geometry readiness, but it has
+      // no draw data and must not pin a scarce packed-quad slot. Retire both
+      // the previous live representation and this completed staging slot.
+      GpuPipeline->FreeChunk(coord);
+      if (gpu_result.slotIndex >= 0)
+      {
+        alloc.FreeSlotByIndex(gpu_result.slotIndex);
+      }
+      ++GpuZeroQuadSlotReleaseCount_;
+    }
+    else
+    {
+      // Publish staging over any prior live slot (Bind frees the old index).
+      alloc.BindCommittedSlot(coord, gpu_result.slotIndex);
+      if (const GpuMeshSlot *slot =
+              alloc.GetSlotByIndex(gpu_result.slotIndex))
+      {
+        // A27 S3: committed slot implies prior GPU work done.
+        alloc.NoteFenceCompletedGeneration(slot->generation);
+      }
     }
   }
   ClearPriorLitHoldAge(coord);
   chunkMesh.ProvisionalLightPreview = gpu_result.provisionalLightPreview;
   chunkMesh.GpuResident = true;
-  chunkMesh.GpuSlotIndex = gpu_result.slotIndex;
+  chunkMesh.GpuSlotIndex = resident_slot_index;
   chunkMesh.GpuQuadCount = gpu_result.quadCount;
   chunkMesh.GpuTransparent = gpu_result.transparent;
   chunkMesh.GpuHasDarkFace = gpu_result.hasFullyDarkFace;
@@ -5806,8 +5929,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         break;
       }
     }
-    const int slot_idx =
-        pipeline->GetAllocator().AllocateStagingSlot(has_transparent);
+    UGpuMeshSlotAllocator &slot_allocator = pipeline->GetAllocator();
+    const bool evicted_gpu_mesh =
+        slot_allocator.GetFreeSlotCount() == 0 &&
+        TryEvictFarthestGpuMeshForStagingSlot(world, *pipeline);
+    const int slot_idx = slot_allocator.AllocateStagingSlot(has_transparent);
     if (slot_idx < 0)
     {
       PendingGpuApplies.push_front(std::move(pending));
@@ -5815,7 +5941,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       GpuExtractInFlight.insert(PendingGpuApplies.front().coord);
       if (force_kick_debt && kicked == 0)
       {
-        LastGpuKickDeferReason_ = "no_staging_slot";
+        LastGpuKickDeferReason_ = evicted_gpu_mesh
+                                      ? "slot_recycle_retry_failed"
+                                      : "no_evictable_victim";
       }
       break;
     }

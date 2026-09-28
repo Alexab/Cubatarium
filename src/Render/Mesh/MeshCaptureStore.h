@@ -19,13 +19,20 @@ class UBlockWorld;
 class UMeshCaptureStore
 {
 public:
+  static constexpr size_t kMaxRetainedEntries = 512;
+
   void Invalidate(glm::ivec3 coord);
   void InvalidateAll();
   void BumpWorldEpoch();
   uint64_t WorldEpoch() const { return WorldEpoch_; }
 
-  std::optional<ChunkMeshSnapshot> TryGet(const UBlockWorld &world, glm::ivec3 coord,
-                                          uint64_t source_revision) const;
+  std::optional<ChunkMeshSnapshot> TryGet(const UBlockWorld &world,
+                                          glm::ivec3 coord,
+                                          uint64_t source_revision);
+
+  /// Reserve one capture credit, evicting the least-recently-used cached
+  /// snapshot if global snapshot memory is currently full.
+  bool TryAcquireSnapshotCredit();
 
   /// Store capture result. Rejects when `world_epoch` != current epoch (M08).
   /// Optional credit lives until entry eviction (audit R12).
@@ -68,6 +75,9 @@ public:
   }
 
   size_t Size() const { return Store_.size(); }
+  uint64_t StaleEntryEvictions() const { return StaleEntryEvictions_; }
+  uint64_t CapacityEvictions() const { return CapacityEvictions_; }
+  uint64_t PressureEvictions() const { return PressureEvictions_; }
 
   ChunkMeshSnapshot::NeighborVisualDrawableFn GetNeighborDrawableFn() const
   {
@@ -83,8 +93,14 @@ private:
     DependencyStamp deps{};
     ChunkMeshSnapshot data;
     std::unique_ptr<UPipelineCreditGuard> credit;
+    uint64_t last_access_sequence{0};
   };
+  bool EvictLeastRecentlyUsed(bool require_credit);
   uint64_t WorldEpoch_{1};
+  uint64_t NextAccessSequence_{1};
+  uint64_t StaleEntryEvictions_{0};
+  uint64_t CapacityEvictions_{0};
+  uint64_t PressureEvictions_{0};
   std::unordered_map<glm::ivec3, Entry, IVec3Hash> Store_;
   ChunkMeshSnapshot::NeighborVisualDrawableFn NeighborDrawableFn_{nullptr};
   void *NeighborDrawableCtx_{nullptr};

@@ -21,6 +21,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "World/Streaming/StreamerAmortizePolicy.h"
 #include "Core/FrameDeadline.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "World/Lighting/LightingSeedBackendFactory.h"
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
@@ -2216,6 +2217,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
               ? staging_failures - LastGpuStagingAllocationFailure
               : staging_failures;
       LastGpuStagingAllocationFailure = staging_failures;
+      const UChunkMeshCache &mesh_cache = world.GetMeshService().GetCache();
+      phys.GpuMeshSlotEvictionN = mesh_cache.GetGpuSlotEvictionCount();
+      phys.GpuMeshSlotNoVictimN = mesh_cache.GetGpuSlotNoVictimCount();
+      phys.GpuZeroQuadSlotReleaseN =
+          mesh_cache.GetGpuZeroQuadSlotReleaseCount();
     }
     {
       const auto &budget = EmergeCoordinator->GetLastBudget();
@@ -3806,6 +3812,21 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastMeshCaptureStoreHitN();
   world.PhysicsTelemetryData.MeshCaptureStoreMissN =
       world.GetMeshService().GetLastMeshCaptureStoreMissN();
+  {
+    const auto &capture_store =
+        world.GetMeshService().GetCache().GetCaptureStore();
+    auto &telemetry = world.PhysicsTelemetryData;
+    telemetry.MeshCaptureStoreEntriesN =
+        static_cast<int>(std::min<size_t>(capture_store.Size(), INT_MAX));
+    telemetry.MeshCaptureStoreStaleEvictionsN =
+        capture_store.StaleEntryEvictions();
+    telemetry.MeshCaptureStoreCapacityEvictionsN =
+        capture_store.CapacityEvictions();
+    telemetry.MeshCaptureStorePressureEvictionsN =
+        capture_store.PressureEvictions();
+    telemetry.MeshSnapshotPendingBytes = static_cast<uint64_t>(
+        UPipelineAdmission::Get().SnapshotPendingBytes());
+  }
   world.PhysicsTelemetryData.MeshPendingCaptureN =
       world.GetMeshService().GetLastMeshPendingCaptureN();
   world.PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN =
