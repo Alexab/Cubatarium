@@ -785,6 +785,26 @@ bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
   {
     return false;
   }
+  // The queue flags above are executor-local. A repair can lose its Dirty
+  // entry while the per-slice demand remains newer than the last published
+  // image; in that case a zero-quad result is not proof that the current
+  // geometry is intentionally occluded. Keep the slice unsatisfied so the
+  // FirstMesh recovery path can reclaim that orphaned obligation. A drawable
+  // prior image takes the retain-old-image path at the start of this method.
+  if (const ChunkRenderDemandRecord *demand =
+          UChunkRenderDemandStore::Get().Find(chunk_coord))
+  {
+    const bool geometry_unpublished =
+        demand->desired_geom_rev > it->second.PublishRevs.geom_rev;
+    const bool coverage_unpublished =
+        demand->desired_coverage_gen > demand->published_coverage_gen ||
+        demand->face_debt_mask != 0;
+    if (geometry_unpublished || coverage_unpublished ||
+        demand->retained_awaiting_successor)
+    {
+      return false;
+    }
+  }
   const bool defer_active =
       DeferMeshUntilLit && DeferMeshUntilLit(chunk_coord);
   const bool soft_held = SoftDeferHeld.count(chunk_coord) > 0;
