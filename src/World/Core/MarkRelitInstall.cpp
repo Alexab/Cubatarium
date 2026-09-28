@@ -744,6 +744,17 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           rec.legal_dark_settled = false;
           rec.visual_obligation = VisualObligation::LightRepair;
           in.column_settled = false;
+          // A stale witness is concrete evidence that this mesh's cached
+          // capture cannot be reused. Apply the invalidation for cave and
+          // open-sky slices alike; open-sky only controls equal-revision
+          // FullyDark repair policy.
+          for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+          {
+            if (snap.still_stale && MeshService)
+            {
+              MeshService->GetCache().InvalidateMeshCapture(snap.coord);
+            }
+          }
           // A41: open_sky still_stale without live pipeline → SLA Dirty remint
           // (Relight-only was starving when fifo empty / Dirty stuck).
           if (open_sky)
@@ -763,13 +774,6 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                     /*obligation=*/true, live_pipeline, rec.visual_attempt_id,
                     rec.visual_deadline_ms, now_ms))
             {
-              for (const ColumnChunkSnapshot &snap : in.relit_chunks)
-              {
-                if (snap.fully_dark && MeshService)
-                {
-                  MeshService->GetCache().InvalidateMeshCapture(snap.coord);
-                }
-              }
               in.light_repair_once = true;
               static uint64_t next_stale_attempt = 1;
               rec.visual_attempt_id = next_stale_attempt++;
