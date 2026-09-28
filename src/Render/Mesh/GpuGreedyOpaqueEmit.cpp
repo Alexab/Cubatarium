@@ -237,6 +237,7 @@ struct GpuRect {
 layout(std430, binding = 0) readonly buffer Rects { GpuRect rects[]; };
 layout(std430, binding = 1) writeonly buffer PackedQuads { uvec2 quads[]; };
 uniform uint numRects;
+uniform uint lightPreview;
 void main() {
   uint rid = gl_GlobalInvocationID.x;
   if (rid >= numRects) return;

@@ -111,6 +111,7 @@ public:
       *Out << '"' << PhaseName(static_cast<Phase>(i)) << "\":" << PhaseMs[i];
     }
     *Out << "}}\n";
+    Out->flush();
   }
 
   void Enter(Phase next)
