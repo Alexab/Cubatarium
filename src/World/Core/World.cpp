@@ -2433,6 +2433,7 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   }
 
   const UChunkMeshCache &cache = MeshService->GetCache();
+  const glm::ivec2 column(chunk_coord.x, chunk_coord.z);
   if (!cache.HasDrawableGreedyMesh(chunk_coord))
   {
     return false;
@@ -2443,12 +2444,15 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   }
   if (!cache.ChunkHasFullyDarkFace(chunk_coord) ||
       MeshService->ChunkHasLitDrawableFace(chunk_coord) ||
-      !IsPendingLightBeforeMeshSlice(chunk_coord))
+      !IsPendingLightBeforeMesh(column) ||
+      HasCurrentChunkSliceLightSettlement(chunk_coord))
   {
     return false;
   }
 
-  const glm::ivec2 column(chunk_coord.x, chunk_coord.z);
+  // PendingLight and its FIFO key are column-scoped, while Capture advances
+  // through Y-bands. A dark slice outside the current band is still waiting
+  // behind the same column repair; don't hide its existing mesh between bands.
   const bool relight_owned = IsTerrainColumnRelightQueued(column) ||
                              IsAsyncRelightColumnInFlight(column) ||
                              GetColumnFlowExecutor().HasRepairTicket(column);
@@ -5688,7 +5692,7 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       // Tagged preview surfaces have an ambient shader floor and are tracked
       // separately; they are not black user-visible work even when packed
       // source light is still zero.
-      if (MeshService->GetCache().HasProvisionalLightPreview(coord))
+      if (ShouldDrawProvisionalLightPreview(coord))
       {
         continue;
       }
