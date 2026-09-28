@@ -3511,18 +3511,21 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
   const uint64_t mesh_revision = MeshService->GetChunkMeshRevision(coord);
   const uint64_t world_epoch =
       MeshService->GetCache().GetCaptureStore().WorldEpoch();
+  const MeshPublishRevs published =
+      MeshService->GetCache().GetMeshPublishRevs(coord);
+  const bool demand_identity_matches =
+      !active_demand ||
+      (active_demand->world_epoch == world_epoch && chunk &&
+       active_demand->incarnation == chunk->GetIncarnation());
   const bool requeue_existing_target =
-      active_demand && active_demand->has_active_attempt &&
-      active_demand->active_attempt_id != 0 && chunk &&
-      active_demand->world_epoch == world_epoch &&
-      active_demand->incarnation == chunk->GetIncarnation() &&
-      active_demand->desired_geom_rev == mesh_revision &&
-      active_demand->published_geom_rev < active_demand->desired_geom_rev;
+      chunk && demand_identity_matches && mesh_revision != 0 &&
+      mesh_revision > published.geom_rev;
   if (requeue_existing_target)
   {
-    // Re-admit this exact unpublished target. Advancing its revision on every
-    // retry lets demand outrun the scheduler when a gate temporarily removes
-    // its Dirty owner.
+    // The current mesh revision is already newer than the published mesh.
+    // Re-admit that outstanding target even if its demand record has not been
+    // created yet; advancing it on each retry lets repair producers outrun the
+    // scheduler when a gate temporarily removes the Dirty owner.
     MeshService->RequeueDirtyPriority(
         coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
   }
