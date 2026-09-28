@@ -343,6 +343,9 @@ bool UGpuMeshPipeline::Init(uint32_t max_slots)
   Ready = true;
   ScratchQuads.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
   ScratchQuadsSorted.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
+  ScratchOccWords.reserve(static_cast<size_t>((kGpuOccPadVolume + 3) / 4));
+  ScratchBlockWords.reserve(static_cast<size_t>((CHUNK_VOLUME + 3) / 4));
+  ScratchLightWords.reserve(static_cast<size_t>((kGpuLightPadVolume + 3) / 4));
   EnsureReadbackPbo();
   LOG(INFO) << "[GpuMeshPipeline] initialized with " << max_slots << " slots";
   return true;
@@ -686,59 +689,172 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   (void)profile;
   return false;
 #else
-  const bool eligible =
-      catalog ? SnapshotIsGpuExtractEligible(snapshot, catalog)
-              : SnapshotIsGpuExtractEligible(snapshot, registry);
+  using ProfileClock = std::chrono::steady_clock;
+  const auto eligibility_start = profile ? ProfileClock::now()
+                                         : ProfileClock::time_point{};
+  constexpr uint8_t kUnclassifiedBlock = 0xffu;
+  std::array<uint8_t, 1u << 16> block_occ_class{};
+  block_occ_class.fill(kUnclassifiedBlock);
+  block_occ_class[BLOCK_AIR] = 0u;
+  const auto occupancy_class = [&](BlockId id) -> uint8_t
+  {
+    uint8_t &cached = block_occ_class[static_cast<size_t>(id)];
+    if (cached != kUnclassifiedBlock)
+    {
+      return cached;
+    }
+    if (id == BLOCK_AIR)
+    {
+      cached = 0u;
+      return cached;
+    }
+    if (catalog)
+    {
+      if (!IsGpuFaceExtractEligible(catalog, id))
+      {
+        cached = 0u;
+        return cached;
+      }
+      const BlockRenderStyle style = CatalogGetRenderStyle(catalog, id);
+      cached = (CatalogIsTransparent(catalog, id) ||
+                style == BlockRenderStyle::Cutout)
+                   ? 3u
+                   : 1u;
+      return cached;
+    }
+    if (!IsGpuFaceExtractEligible(registry, id))
+    {
+      cached = 0u;
+      return cached;
+    }
+    const BlockRenderStyle style = registry.GetRenderStyle(id);
+    cached = (registry.IsTransparent(id) ||
+              style == BlockRenderStyle::Cutout)
+                 ? 3u
+                 : 1u;
+    return cached;
+  };
+  bool eligible = true;
+  for (BlockId id : snapshot.blocks)
+  {
+    if (id != BLOCK_AIR && occupancy_class(id) == 0u)
+    {
+      eligible = false;
+      break;
+    }
+  }
+  if (profile)
+  {
+    profile->eligibility_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - eligibility_start)
+            .count();
+  }
   if (!eligible || EmitState.PackedEmitProgram == 0)
   {
     return false;
   }
 
+  const auto readback_slot_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   const int pbo_index = AcquireReadbackSlot();
+  if (profile)
+  {
+    profile->readback_slot_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - readback_slot_start)
+            .count();
+  }
   if (pbo_index < 0)
   {
     return false;
   }
 
-  using ProfileClock = std::chrono::steady_clock;
   const auto cpu_prepare_start = profile ? ProfileClock::now()
                                          : ProfileClock::time_point{};
-  std::vector<uint8_t> occ;
-  if (catalog)
+  auto &occ_words = ScratchOccWords;
+  occ_words.assign(static_cast<size_t>((kGpuOccPadVolume + 3) / 4), 0u);
+  const int occ_pad = kGpuOccPad;
+  const glm::ivec3 origin = snapshot.ChunkOrigin();
+  for (int y = -1; y <= CHUNK_SIZE; ++y)
   {
-    BuildPaddedOccupancy(snapshot, catalog, occ);
-  }
-  else
-  {
-    BuildPaddedOccupancy(snapshot, registry, occ);
-  }
-  std::vector<uint32_t> occ_words;
-  occ_words.assign((occ.size() + 3) / 4, 0);
-  for (size_t i = 0; i < occ.size(); ++i)
-  {
-    occ_words[i >> 2] |= static_cast<uint32_t>(occ[i]) << ((i & 3u) * 8u);
+    const bool inside_y = y >= 0 && y < CHUNK_SIZE;
+    for (int z = -1; z <= CHUNK_SIZE; ++z)
+    {
+      const bool inside_yz = inside_y && z >= 0 && z < CHUNK_SIZE;
+      for (int x = -1; x <= CHUNK_SIZE; ++x)
+      {
+        const int padded_index =
+            ((y + 1) * occ_pad + (z + 1)) * occ_pad + (x + 1);
+        uint8_t value = 0u;
+        if (inside_yz && x >= 0 && x < CHUNK_SIZE)
+        {
+          const size_t block_index =
+              static_cast<size_t>(x + CHUNK_SIZE * y +
+                                  CHUNK_SIZE * CHUNK_SIZE * z);
+          value = block_occ_class[
+              static_cast<size_t>(snapshot.blocks[block_index])];
+        }
+        else
+        {
+          const glm::ivec3 world = origin + glm::ivec3(x, y, z);
+          if (ShouldSkipFaceForNeighbor(snapshot.GetNeighborLoadState(world)))
+          {
+            value = 2u;
+          }
+          else
+          {
+            value = occupancy_class(snapshot.GetBlock(world));
+          }
+        }
+        occ_words[static_cast<size_t>(padded_index >> 2)] |=
+            static_cast<uint32_t>(value)
+            << (static_cast<unsigned>(padded_index & 3) * 8u);
+      }
+    }
   }
 
-  std::array<uint8_t, CHUNK_VOLUME> blocks{};
-  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  auto &block_words = ScratchBlockWords;
+  block_words.assign(static_cast<size_t>((CHUNK_VOLUME + 3) / 4), 0u);
+  for (size_t i = 0; i < snapshot.blocks.size(); ++i)
   {
-    blocks[static_cast<size_t>(i)] =
-        static_cast<uint8_t>(snapshot.blocks[static_cast<size_t>(i)]);
+    block_words[i >> 2] |=
+        static_cast<uint32_t>(static_cast<uint8_t>(snapshot.blocks[i]))
+        << (static_cast<unsigned>(i & 3u) * 8u);
   }
-  std::vector<uint8_t> padded_lights;
-  BuildPaddedLight(snapshot, padded_lights);
-  std::vector<uint32_t> block_words;
-  std::vector<uint32_t> light_words;
-  block_words.assign((blocks.size() + 3) / 4, 0);
-  for (size_t i = 0; i < blocks.size(); ++i)
+
+  auto &light_words = ScratchLightWords;
+  light_words.assign(static_cast<size_t>((kGpuLightPadVolume + 3) / 4), 0u);
+  constexpr int light_halo = ChunkMeshSnapshot::kLightHaloRadius;
+  const int light_pad = kGpuLightPad;
+  for (int y = -light_halo; y < CHUNK_SIZE + light_halo; ++y)
   {
-    block_words[i >> 2] |= static_cast<uint32_t>(blocks[i]) << ((i & 3u) * 8u);
-  }
-  light_words.assign((padded_lights.size() + 3) / 4, 0);
-  for (size_t i = 0; i < padded_lights.size(); ++i)
-  {
-    light_words[i >> 2] |=
-        static_cast<uint32_t>(padded_lights[i]) << ((i & 3u) * 8u);
+    const bool inside_y = y >= 0 && y < CHUNK_SIZE;
+    for (int z = -light_halo; z < CHUNK_SIZE + light_halo; ++z)
+    {
+      const bool inside_yz = inside_y && z >= 0 && z < CHUNK_SIZE;
+      for (int x = -light_halo; x < CHUNK_SIZE + light_halo; ++x)
+      {
+        const int padded_index =
+            ((y + light_halo) * light_pad + (z + light_halo)) * light_pad +
+            (x + light_halo);
+        uint8_t value = 0u;
+        if (inside_yz && x >= 0 && x < CHUNK_SIZE)
+        {
+          const size_t block_index =
+              static_cast<size_t>(x + CHUNK_SIZE * y +
+                                  CHUNK_SIZE * CHUNK_SIZE * z);
+          value = snapshot.light_packed[block_index];
+        }
+        else
+        {
+          value = snapshot.GetLightPacked(origin + glm::ivec3(x, y, z));
+        }
+        light_words[static_cast<size_t>(padded_index >> 2)] |=
+            static_cast<uint32_t>(value)
+            << (static_cast<unsigned>(padded_index & 3) * 8u);
+      }
+    }
   }
 
   const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);

@@ -58,6 +58,8 @@ public:
   };
   struct ComputeKickProfile
   {
+    double eligibility_ms{0.0};
+    double readback_slot_ms{0.0};
     double cpu_prepare_ms{0.0};
     double input_upload_ms{0.0};
     double mask_dispatch_ms{0.0};
@@ -175,6 +177,10 @@ private:
   /// CPU fallback when GPU sort programs unavailable.
   std::vector<PackedQuad> ScratchQuads;
   std::vector<PackedQuad> ScratchQuadsSorted;
+  /// Reused CPU staging words; KickComputePasses is render-thread serialized.
+  std::vector<uint32_t> ScratchOccWords;
+  std::vector<uint32_t> ScratchBlockWords;
+  std::vector<uint32_t> ScratchLightWords;
 };
 
 } // namespace cutum

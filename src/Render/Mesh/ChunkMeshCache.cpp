@@ -5032,6 +5032,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   double gpu_profile_quad_readback_copy_ms = 0.0;
   double gpu_profile_quad_finish_ms = 0.0;
   double gpu_profile_kick_dispatch_ms = 0.0;
+  double gpu_profile_kick_eligibility_ms = 0.0;
+  double gpu_profile_kick_readback_slot_ms = 0.0;
   double gpu_profile_kick_cpu_prepare_ms = 0.0;
   double gpu_profile_kick_input_upload_ms = 0.0;
   double gpu_profile_kick_mask_dispatch_ms = 0.0;
@@ -5830,6 +5832,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           std::chrono::duration<double, std::milli>(
               GpuProfileClock::now() - kick_profile_t0)
               .count();
+      gpu_profile_kick_eligibility_ms += kick_stages.eligibility_ms;
+      gpu_profile_kick_readback_slot_ms += kick_stages.readback_slot_ms;
       gpu_profile_kick_cpu_prepare_ms += kick_stages.cpu_prepare_ms;
       gpu_profile_kick_input_upload_ms += kick_stages.input_upload_ms;
       gpu_profile_kick_mask_dispatch_ms += kick_stages.mask_dispatch_ms;
@@ -6065,6 +6069,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         << gpu_profile_quad_readback_copy_ms
         << ",\"quad_finish\":" << gpu_profile_quad_finish_ms
         << ",\"kick_dispatch\":" << gpu_profile_kick_dispatch_ms
+        << ",\"kick_eligibility\":"
+        << gpu_profile_kick_eligibility_ms
+        << ",\"kick_readback_slot\":"
+        << gpu_profile_kick_readback_slot_ms
         << ",\"kick_cpu_prepare\":" << gpu_profile_kick_cpu_prepare_ms
         << ",\"kick_input_upload\":" << gpu_profile_kick_input_upload_ms
         << ",\"kick_mask_dispatch\":"
