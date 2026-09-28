@@ -4945,6 +4945,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       UJobStageTrace::Note(span);
     }
   }
+  NoteBoundaryOverlayPublished(
+      coord, boundary_overlay.active ? boundary_overlay.missingNeighborFaces : 0);
   NoteGeometryDirty(coord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
@@ -7004,6 +7006,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       UJobStageTrace::Note(span);
     }
   }
+  NoteBoundaryOverlayPublished(
+      result.coord,
+      result.BoundaryOverlay.active
+          ? result.BoundaryOverlay.missingNeighborFaces
+          : 0);
   apply_profile.Enter(MeshApplyProfileRecorder::Phase::GpuResidencyPolicy);
   // S4 fail-closed: hold prior MeshedLightRevision without source stamps.
   const bool intentional_empty =
@@ -8126,6 +8133,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           trace.desired_geom_rev = demand->desired_geom_rev;
           trace.desired_light_rev = demand->desired_light_rev;
           trace.face_debt_mask = demand->face_debt_mask;
+          trace.overlay_face_debt_mask = demand->overlay_face_debt_mask;
+          trace.peer_face_debt_mask = demand->peer_face_debt_mask;
           trace.demand_published_geom_rev = demand->published_geom_rev;
           trace.demand_published_light_rev = demand->published_light_rev;
           trace.active_stage = static_cast<uint8_t>(demand->active_stage);
@@ -9859,6 +9868,12 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       chunkMesh.BoundaryOverlay = sync_snap.boundaryOverlay;
       chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
     }
+    if (sync_snap.boundaryOverlay.active &&
+        sync_snap.boundaryOverlay.missingNeighborFaces != 0)
+    {
+      NoteFaceDebtOverlayMask(
+          chunkCoord, sync_snap.boundaryOverlay.missingNeighborFaces);
+    }
     if (kChunkDemandShadow())
     {
       UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
@@ -9884,6 +9899,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       (void)StampChunkRenderDemandTrace(span, demand, chunkCoord);
       UJobStageTrace::Note(span);
     }
+    NoteBoundaryOverlayPublished(
+        chunkCoord, sync_snap.boundaryOverlay.active
+                       ? sync_snap.boundaryOverlay.missingNeighborFaces
+                       : 0);
     const bool intentional_empty =
         new_vertex_count == 0 && !defer_until_lit &&
         SoftDeferHeld.count(chunkCoord) == 0;

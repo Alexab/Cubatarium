@@ -499,8 +499,10 @@ void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
     face_mask = 0x3Fu;
   }
   ChunkRenderDemandRecord &rec = GetOrCreate(chunk_xyz);
-  rec.face_debt_mask =
-      static_cast<uint8_t>(rec.face_debt_mask | face_mask);
+  rec.peer_face_debt_mask =
+      static_cast<uint8_t>(rec.peer_face_debt_mask | face_mask);
+  rec.face_debt_mask = static_cast<uint8_t>(
+      rec.peer_face_debt_mask | rec.overlay_face_debt_mask);
   if (peer_gen != 0)
   {
     for (int f = 0; f < 6; ++f)
@@ -513,6 +515,49 @@ void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
         }
       }
     }
+  }
+}
+
+void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
+    glm::ivec3 chunk_xyz, uint8_t face_mask)
+{
+  if (face_mask == 0)
+  {
+    return;
+  }
+  ChunkRenderDemandRecord &rec = GetOrCreate(chunk_xyz);
+  rec.overlay_face_debt_mask = static_cast<uint8_t>(
+      rec.overlay_face_debt_mask | face_mask);
+  rec.face_debt_mask = static_cast<uint8_t>(
+      rec.peer_face_debt_mask | rec.overlay_face_debt_mask);
+}
+
+void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
+    glm::ivec3 chunk_xyz, uint8_t missing_face_mask)
+{
+  ChunkRenderDemandRecord *rec = Find(chunk_xyz);
+  if (!rec)
+  {
+    return;
+  }
+  missing_face_mask = static_cast<uint8_t>(missing_face_mask & 0x3Fu);
+  rec->overlay_face_debt_mask = missing_face_mask;
+  rec->face_debt_mask = static_cast<uint8_t>(
+      rec->peer_face_debt_mask | rec->overlay_face_debt_mask);
+  for (int f = 0; f < 6; ++f)
+  {
+    const uint8_t bit = static_cast<uint8_t>(1u << f);
+    if ((missing_face_mask & bit) == 0 &&
+        (rec->peer_face_debt_mask & bit) == 0)
+    {
+      rec->waiting_peer_gen[f] = 0;
+    }
+  }
+  // A38 R1: closing all face debt publishes desired coverage (stop unlock).
+  if (rec->face_debt_mask == 0 && rec->desired_coverage_gen > 0 &&
+      rec->published_coverage_gen < rec->desired_coverage_gen)
+  {
+    rec->published_coverage_gen = rec->desired_coverage_gen;
   }
 }
 
@@ -556,9 +601,10 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
     clear_mask = static_cast<uint8_t>(clear_mask | bit);
     rec->waiting_peer_gen[f] = 0;
   }
-  rec->face_debt_mask =
-      static_cast<uint8_t>(rec->face_debt_mask &
-                           static_cast<uint8_t>(~clear_mask));
+  rec->peer_face_debt_mask = static_cast<uint8_t>(
+      rec->peer_face_debt_mask & static_cast<uint8_t>(~clear_mask));
+  rec->face_debt_mask = static_cast<uint8_t>(
+      rec->peer_face_debt_mask | rec->overlay_face_debt_mask);
   // A38 R1: closing all face debt publishes desired coverage (stop unlock).
   if (rec->face_debt_mask == 0 && rec->desired_coverage_gen > 0 &&
       rec->published_coverage_gen < rec->desired_coverage_gen)

@@ -59,6 +59,18 @@ namespace cutum
 
 namespace
 {
+uint64_t PublishedCoverageGeneration(
+    const UChunkRenderDemandStore &demand, glm::ivec3 coord)
+{
+  const ChunkRenderDemandRecord *record = demand.Find(coord);
+  return record ? record->published_coverage_gen : 0;
+}
+
+bool PeerCoverageMeets(uint64_t published, uint64_t required)
+{
+  return published != 0 && (required == 0 || published >= required);
+}
+
 #ifndef NDEBUG
 int gMeshTelemetryTick{0};
 #endif
@@ -161,18 +173,17 @@ void UChunkEmergeCoordinator::BeginFrame(const ProceduralSettings &procedural,
   FaceDebtAlreadyKnownRemeshN = 0;
 }
 
-void UChunkEmergeCoordinator::EnqueueVerticalFaceDebtRepair(glm::ivec3 coord)
+void UChunkEmergeCoordinator::EnqueueFaceDebtRepair(glm::ivec3 coord)
 {
-  if (PendingVerticalFaceDebtRepairSet_.insert(coord).second)
+  if (PendingFaceDebtRepairSet_.insert(coord).second)
   {
-    PendingVerticalFaceDebtRepairs_.push_back(coord);
+    PendingFaceDebtRepairs_.push_back(coord);
   }
 }
 
-void UChunkEmergeCoordinator::DrainVerticalFaceDebtRepairs(UWorld &world,
-                                                             int budget)
+void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
 {
-  if (budget <= 0 || PendingVerticalFaceDebtRepairs_.empty())
+  if (budget <= 0 || PendingFaceDebtRepairs_.empty())
   {
     return;
   }
@@ -181,88 +192,113 @@ void UChunkEmergeCoordinator::DrainVerticalFaceDebtRepairs(UWorld &world,
   UChunkMeshCache &cache = mesh.GetCache();
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
   UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
-  static constexpr uint8_t kPositiveYFace = 1u << 2;
-  static constexpr uint8_t kNegativeYFace = 1u << 3;
-  const glm::ivec3 face_peer_delta[2] = {{0, 1, 0}, {0, -1, 0}};
-  const uint8_t face_bits[2] = {kPositiveYFace, kNegativeYFace};
+  static constexpr glm::ivec3 kFaceDir[6] = {
+      {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+      {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
 
-  const int attempts = std::min<int>(budget, PendingVerticalFaceDebtRepairs_.size());
+  const int attempts =
+      std::min<int>(budget, PendingFaceDebtRepairs_.size());
   for (int i = 0; i < attempts; ++i)
   {
-    const glm::ivec3 coord = PendingVerticalFaceDebtRepairs_.front();
-    PendingVerticalFaceDebtRepairs_.pop_front();
+    const glm::ivec3 coord = PendingFaceDebtRepairs_.front();
+    PendingFaceDebtRepairs_.pop_front();
 
     const ChunkRenderDemandRecord *record = demand.Find(coord);
-    if (!record || (record->face_debt_mask &
-                    static_cast<uint8_t>(kPositiveYFace | kNegativeYFace)) == 0 ||
-        !chunks.HasChunk(coord) || !mesh.HasDrawableGreedyMesh(coord))
+    if (!record || record->face_debt_mask == 0 || !chunks.HasChunk(coord))
     {
-      PendingVerticalFaceDebtRepairSet_.erase(coord);
+      PendingFaceDebtRepairSet_.erase(coord);
       continue;
     }
 
-    uint8_t satisfied_mask = 0;
-    uint64_t satisfied_peer_gen[2]{};
-    for (int side = 0; side < 2; ++side)
+    const bool target_has_mesh = cache.HasGreedyMesh(coord);
+    if (target_has_mesh)
     {
-      const uint8_t bit = face_bits[side];
+      uint8_t published_overlay_mask = 0;
+      for (int face = 0; face < 6; ++face)
+      {
+        if (cache.HasActiveBoundaryOverlayFace(coord, face))
+        {
+          published_overlay_mask = static_cast<uint8_t>(
+              published_overlay_mask | static_cast<uint8_t>(1u << face));
+        }
+      }
+      if (const UChunk *target_chunk = chunks.GetChunk(coord);
+          target_chunk && target_chunk->GetNonAirCount() == 0)
+      {
+        published_overlay_mask = 0;
+      }
+      demand.NoteBoundaryOverlayPublished(coord, published_overlay_mask);
+      record = demand.Find(coord);
+    }
+
+    uint8_t satisfied_peer_mask = 0;
+    uint64_t satisfied_peer_gen[6]{};
+    for (int face = 0; face < 6; ++face)
+    {
+      const uint8_t bit = static_cast<uint8_t>(1u << face);
       if ((record->face_debt_mask & bit) == 0)
       {
         continue;
       }
-      const glm::ivec3 peer = coord + face_peer_delta[side];
-      if (!chunks.HasChunk(peer) || !mesh.HasDrawableGreedyMesh(peer))
+
+      const glm::ivec3 peer = coord + kFaceDir[face];
+      if ((record->overlay_face_debt_mask & bit) != 0)
+      {
+        // A missing-neighbor overlay is a target-local capture obligation. A
+        // loaded peer means the target snapshot is stale; refresh the target,
+        // then close the bit only when that target publishes without overlay.
+        if (chunks.HasChunk(peer) && target_has_mesh)
+        {
+          mesh.QueueMeshDependencyInvalidation(coord);
+        }
+        continue;
+      }
+
+      if (!target_has_mesh || !chunks.HasChunk(peer) ||
+          !mesh.HasMeshSatisfyingColumnReady(peer))
       {
         continue;
       }
 
-      uint64_t peer_gen = 0;
-      if (const ChunkRenderDemandRecord *peer_record = demand.Find(peer))
-      {
-        peer_gen = peer_record->published_coverage_gen > 0
-                       ? peer_record->published_coverage_gen
-                       : peer_record->published_geom_rev;
-      }
-      if (peer_gen == 0)
-      {
-        peer_gen = cache.GetMeshPublishRevs(peer).geom_rev;
-      }
-      const uint64_t waiting = record->waiting_peer_gen[side + 2];
-      if (peer_gen == 0 || (waiting != 0 && peer_gen < waiting))
+      const ChunkRenderDemandRecord *peer_record = demand.Find(peer);
+      const uint64_t peer_coverage_gen =
+          peer_record ? peer_record->published_coverage_gen : 0;
+      const uint64_t waiting = record->waiting_peer_gen[face];
+      if (peer_coverage_gen == 0 ||
+          (waiting != 0 && peer_coverage_gen < waiting))
       {
         continue;
       }
-      satisfied_mask = static_cast<uint8_t>(satisfied_mask | bit);
-      satisfied_peer_gen[side] = peer_gen;
+      satisfied_peer_mask = static_cast<uint8_t>(satisfied_peer_mask | bit);
+      satisfied_peer_gen[face] = peer_coverage_gen;
     }
 
-    if (satisfied_mask != 0)
+    if (satisfied_peer_mask != 0)
     {
-      // Queue invalidation before closing the obligation. The dependency queue
-      // retains it while a mesh/GPU owner is live and transfers it to Dirty
-      // once that owner is idle.
-      mesh.QueueMeshDependencyInvalidation(coord);
-      for (int side = 0; side < 2; ++side)
+      if (target_has_mesh)
       {
-        const uint8_t bit = face_bits[side];
-        if ((satisfied_mask & bit) != 0)
+        // Queue invalidation before closing the obligation. The dependency
+        // queue holds it while a mesh/GPU owner is live.
+        mesh.QueueMeshDependencyInvalidation(coord);
+      }
+      for (int face = 0; face < 6; ++face)
+      {
+        const uint8_t bit = static_cast<uint8_t>(1u << face);
+        if ((satisfied_peer_mask & bit) != 0)
         {
-          demand.NoteFaceDebtSatisfied(coord, bit, satisfied_peer_gen[side]);
+          demand.NoteFaceDebtSatisfied(coord, bit, satisfied_peer_gen[face]);
         }
       }
     }
 
     const ChunkRenderDemandRecord *updated = demand.Find(coord);
-    const bool vertical_debt_remains =
-        updated && (updated->face_debt_mask &
-                    static_cast<uint8_t>(kPositiveYFace | kNegativeYFace)) != 0;
-    if (vertical_debt_remains)
+    if (updated && updated->face_debt_mask != 0)
     {
-      PendingVerticalFaceDebtRepairs_.push_back(coord);
+      PendingFaceDebtRepairs_.push_back(coord);
     }
     else
     {
-      PendingVerticalFaceDebtRepairSet_.erase(coord);
+      PendingFaceDebtRepairSet_.erase(coord);
     }
   }
 }
@@ -273,11 +309,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   CUBA_ZONE("ChunkEmerge.TickMeshEmerge");
   const uint64_t mesh_world_epoch =
       world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
-  if (VerticalFaceDebtWorldEpoch_ != mesh_world_epoch)
+  if (FaceDebtWorldEpoch_ != mesh_world_epoch)
   {
-    PendingVerticalFaceDebtRepairs_.clear();
-    PendingVerticalFaceDebtRepairSet_.clear();
-    VerticalFaceDebtWorldEpoch_ = mesh_world_epoch;
+    PendingFaceDebtRepairs_.clear();
+    PendingFaceDebtRepairSet_.clear();
+    FaceDebtWorldEpoch_ = mesh_world_epoch;
   }
   const auto emerge_t0 = std::chrono::high_resolution_clock::now();
   auto prep_ms_since =
@@ -716,26 +752,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // A27/A32: publisher lit ⇒ per-face clear only when peer-ready;
             // also satisfy subscriber neighbors facing this publisher.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const MeshPublishRevs cache_pub =
-                world_ref.GetMeshService().GetCache().GetMeshPublishRevs(
-                    chunk_coord);
-            uint64_t pub_gen = cache_pub.geom_rev;
-            if (pub_gen == 0)
-            {
-              if (const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord))
-              {
-                pub_gen = pub->published_geom_rev;
-              }
-            }
-            // A39 P3: waiting==0 (UnknownPeer) needs pub_gen!=0; never use
-            // PeerReadyBeforeSubscribe(pub, 0) which returns true.
-            auto face_peer_ready = [](uint64_t pub_gen, uint64_t waiting) {
-              if (waiting == 0)
-              {
-                return pub_gen != 0;
-              }
-              return PeerReadyBeforeSubscribe(pub_gen, waiting);
-            };
+            // Coverage generations are typed independently from geometry revs.
+            const uint64_t pub_gen =
+                PublishedCoverageGeneration(demand, chunk_coord);
             if (pub_gen != 0)
             {
               uint8_t clear_mask = 0;
@@ -749,7 +768,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   {
                     continue;
                   }
-                  if (face_peer_ready(pub_gen, self->waiting_peer_gen[f]))
+                  if (PeerCoverageMeets(pub_gen,
+                                        self->waiting_peer_gen[f]))
                   {
                     clear_mask = static_cast<uint8_t>(clear_mask | bit);
                   }
@@ -782,8 +802,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
-                if (face_peer_ready(pub_gen,
-                                    nr->waiting_peer_gen[face_toward]))
+                if (PeerCoverageMeets(
+                        pub_gen, nr->waiting_peer_gen[face_toward]))
                 {
                   demand.NoteFaceDebtSatisfied(
                       n, static_cast<uint8_t>(1u << face_toward), pub_gen);
@@ -850,12 +870,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // FaceDebt census only — Dirty admission stays at mismatch writers
           // (material / PublishedEmpty), not light-accepted Retain.
           world_ref.GetColumnRecords().NoteFaceDebt(col);
-          EnqueueVerticalFaceDebtRepair(chunk_coord);
+          EnqueueFaceDebtRepair(chunk_coord);
           // A37 H2: single authority gate (cutover ⇒ authority).
           if (ChunkDemandAuthorityEnabled())
           {
-            // A38 R3: per-face required peer gen from peer's published coverage
-            // (prefer coverage, else geom); never fabricate peer_pub=1 on read.
+            // Face wait stamps are coverage generations; geometry revisions
+            // are a separate domain and cannot be used as a fallback.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
             const uint64_t world_epoch =
                 world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
@@ -873,20 +893,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
             auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
               bind_current_identity(peer);
-              if (const ChunkRenderDemandRecord *pr = demand.Find(peer))
-              {
-                if (pr->published_coverage_gen > 0)
-                {
-                  return pr->published_coverage_gen;
-                }
-                if (pr->published_geom_rev > 0)
-                {
-                  return pr->published_geom_rev;
-                }
-              }
-              const MeshPublishRevs pr =
-                  world_ref.GetMeshService().GetCache().GetMeshPublishRevs(peer);
-              return pr.geom_rev;
+              return PublishedCoverageGeneration(demand, peer);
             };
             for (int f = 0; f < 6; ++f)
             {
@@ -962,124 +969,53 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
-          // A37 H2: single authority gate (cutover ⇒ authority).
           if (ChunkDemandAuthorityEnabled())
           {
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
             const uint64_t world_epoch =
                 world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
-            auto bind_current_identity = [&](glm::ivec3 coord)
-            {
-              if (const UChunk *ch =
-                      world_ref.GetBlockWorld().GetChunkManager().GetChunk(coord))
-              {
-                demand.BindIdentity(coord, world_epoch, ch->GetIncarnation());
-              }
-            };
-            bind_current_identity(chunk_coord);
-            static const glm::ivec3 kFaceDir[6] = {
-                {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
-                {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
-            auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
-              bind_current_identity(peer);
-              if (const ChunkRenderDemandRecord *pr = demand.Find(peer))
-              {
-                if (pr->published_coverage_gen > 0)
-                {
-                  return pr->published_coverage_gen;
-                }
-                if (pr->published_geom_rev > 0)
-                {
-                  return pr->published_geom_rev;
-                }
-              }
-              const MeshPublishRevs pr =
-                  world_ref.GetMeshService().GetCache().GetMeshPublishRevs(peer);
-              return pr.geom_rev;
-            };
-            uint8_t unresolved_mask = 0;
-            uint8_t already_covered_mask = 0;
-            for (int f = 0; f < 6; ++f)
-            {
-              const uint8_t bit = static_cast<uint8_t>(1u << f);
-              if ((mask & bit) == 0)
-              {
-                continue;
-              }
-              const glm::ivec3 peer = chunk_coord + kFaceDir[f];
-              const uint64_t need = peer_cov_gen(peer);
-              const UChunk *peer_chunk =
-                  world_ref.GetBlockWorld().GetChunkManager().GetChunk(peer);
-              const bool peer_has_coverage =
-                  peer_chunk &&
-                  world_ref.GetMeshService().HasMeshSatisfyingColumnReady(peer);
-              const ChunkRenderDemandRecord *self = demand.Find(chunk_coord);
-              const uint64_t waiting = self ? self->waiting_peer_gen[f] : 0;
-              const bool generation_satisfied =
-                  need != 0 && (waiting == 0 || need >= waiting);
-              if (peer_has_coverage && generation_satisfied)
-              {
-                // The peer may have completed before this subscriber was
-                // registered. Resolve that read-before-subscribe race here;
-                // intentional empty coverage has no drawable callback.
-                demand.NoteFaceDebt(chunk_coord, bit, need);
-                demand.NoteFaceDebtSatisfied(chunk_coord, bit, need);
-                already_covered_mask = static_cast<uint8_t>(
-                    already_covered_mask | bit);
-                continue;
-              }
-              unresolved_mask =
-                  static_cast<uint8_t>(unresolved_mask | bit);
-              // A39 P3: UnknownPeer keeps waiting=0 (never fabricate need=1).
-              demand.NoteFaceDebt(chunk_coord, bit, need);
-            }
-            if (already_covered_mask != 0)
-            {
-              // The target was captured with a missing-neighbor overlay. The
-              // peer's prior completion satisfies the dependency, but the
-              // target still needs a fresh capture to remove that overlay.
-              world_ref.GetMeshService().QueueMeshDependencyInvalidation(
-                  chunk_coord);
-            }
-            if (unresolved_mask != 0)
-            {
-              world_ref.GetColumnRecords().ApplyFaceDebtMask(col,
-                                                              unresolved_mask);
-              EnqueueVerticalFaceDebtRepair(chunk_coord);
-            }
-            // Geometry uses the mesh-revision domain consumed by publication.
-            uint64_t g = 0, l = 0;
             uint64_t incarnation = 0;
-            if (const UChunk *ch =
-                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(
-                        chunk_coord))
+            if (const UChunk *chunk =
+                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
             {
-              g = world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
-              l = ch->GetLightFieldRevision();
-              incarnation = ch->GetIncarnation();
+              incarnation = chunk->GetIncarnation();
+              demand.BindIdentity(chunk_coord, world_epoch, incarnation);
             }
-            if (const ChunkRenderDemandRecord *r = demand.Find(chunk_coord))
+            // BoundaryOverlay is a target-local stale-capture obligation. Do
+            // not encode it as a peer publication generation.
+            demand.NoteBoundaryOverlayDebt(chunk_coord, mask);
+            EnqueueFaceDebtRepair(chunk_coord);
+
+            uint64_t geom =
+                world_ref.GetMeshService().GetChunkMeshRevision(chunk_coord);
+            uint64_t light = 0;
+            if (const UChunk *chunk =
+                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
             {
-              if (r->desired_geom_rev != 0)
+              light = chunk->GetLightFieldRevision();
+            }
+            if (const ChunkRenderDemandRecord *record = demand.Find(chunk_coord))
+            {
+              if (record->desired_geom_rev != 0)
               {
-                g = r->desired_geom_rev;
+                geom = record->desired_geom_rev;
               }
-              if (r->desired_light_rev != 0)
+              if (record->desired_light_rev != 0)
               {
-                l = r->desired_light_rev;
+                light = record->desired_light_rev;
               }
-              if (g == 0 && r->published_geom_rev != 0)
+              if (geom == 0)
               {
-                g = r->published_geom_rev;
+                geom = record->published_geom_rev;
               }
-              if (l == 0 && r->published_light_rev != 0)
+              if (light == 0)
               {
-                l = r->published_light_rev;
+                light = record->published_light_rev;
               }
             }
-            if (g != 0 || l != 0)
+            if (geom != 0 || light != 0)
             {
-              (void)demand.NoteDemand(chunk_coord, g, l,
+              (void)demand.NoteDemand(chunk_coord, geom, light,
                                       /*desired_coverage_gen=*/1,
                                       /*now_ms=*/0.0, world_epoch,
                                       incarnation);
@@ -1088,12 +1024,38 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           else
           {
             world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
-            EnqueueVerticalFaceDebtRepair(chunk_coord);
+            EnqueueFaceDebtRepair(chunk_coord);
           }
           world_ref.NoteUnfinishedColumnDirty(col);
-          // Ownership SeamDebt: FaceDebt = census only (unfinished).
-          // Heal = BecameKnown coalesce after peer drawable∧!SoftDefer —
-          // no MarkDirtyPriority from mask (v5 remesh flood / 161139).
+        });
+    mesh_service.SetOnBoundaryOverlayPublishedFn(
+        [this](glm::ivec3 chunk_coord, uint8_t missing_face_mask)
+        {
+          UWorld *world_ptr = SoftDeferPolicy.world;
+          if (!world_ptr)
+          {
+            return;
+          }
+          UWorld &world_ref = *world_ptr;
+          const uint64_t world_epoch =
+              world_ref.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+          if (const UChunk *chunk =
+                  world_ref.GetBlockWorld().GetChunkManager().GetChunk(chunk_coord))
+          {
+            UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            demand.BindIdentity(chunk_coord, world_epoch, chunk->GetIncarnation());
+            if (chunk->GetNonAirCount() == 0)
+            {
+              missing_face_mask = 0;
+            }
+            demand.NoteBoundaryOverlayPublished(chunk_coord, missing_face_mask);
+          }
+          if (missing_face_mask != 0)
+          {
+            EnqueueFaceDebtRepair(chunk_coord);
+          }
+          world_ref.NoteUnfinishedColumnDirty(
+              glm::ivec2(chunk_coord.x, chunk_coord.z));
         });
     mesh_service.SetOnGpuPipelineProgressFn(
         [this](glm::ivec3 chunk_coord)
@@ -1140,30 +1102,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             // A27/A32: first coverage — per-face clear + subscriber satisfy.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const MeshPublishRevs cache_pub =
-                world_ref.GetMeshService().GetCache().GetMeshPublishRevs(
-                    chunk_coord);
-            // A38 R3: prefer published_coverage_gen over geom stub.
-            uint64_t pub_gen = 0;
-            if (const ChunkRenderDemandRecord *pub = demand.Find(chunk_coord))
-            {
-              pub_gen = pub->published_coverage_gen > 0
-                            ? pub->published_coverage_gen
-                            : pub->published_geom_rev;
-            }
-            if (pub_gen == 0)
-            {
-              pub_gen = cache_pub.geom_rev;
-            }
-            // A39 P3: waiting==0 (UnknownPeer) ready only when pub_gen!=0;
-            // never substitute required=1 via PeerReadyBeforeSubscribe(0)→true.
-            auto face_peer_ready = [](uint64_t pub_gen, uint64_t waiting) {
-              if (waiting == 0)
-              {
-                return pub_gen != 0;
-              }
-              return PeerReadyBeforeSubscribe(pub_gen, waiting);
-            };
+            const uint64_t pub_gen =
+                PublishedCoverageGeneration(demand, chunk_coord);
             bool any_face_ready = false;
             if (const ChunkRenderDemandRecord *self =
                     demand.Find(chunk_coord))
@@ -1175,7 +1115,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
-                if (face_peer_ready(pub_gen, self->waiting_peer_gen[f]))
+                if (PeerCoverageMeets(pub_gen,
+                                      self->waiting_peer_gen[f]))
                 {
                   any_face_ready = true;
                   break;
@@ -1196,7 +1137,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   {
                     continue;
                   }
-                  if (face_peer_ready(pub_gen, self->waiting_peer_gen[f]))
+                  if (PeerCoverageMeets(pub_gen,
+                                        self->waiting_peer_gen[f]))
                   {
                     clear_mask = static_cast<uint8_t>(clear_mask | bit);
                   }
@@ -1230,7 +1172,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   continue;
                 }
                 const uint64_t need = nr->waiting_peer_gen[face_toward];
-                if (face_peer_ready(pub_gen, need))
+                if (PeerCoverageMeets(pub_gen, need))
                 {
                   demand.NoteFaceDebtSatisfied(
                       n, static_cast<uint8_t>(1u << face_toward), pub_gen);
@@ -1273,23 +1215,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const bool face_debt =
                 world_ref.GetColumnRecords().HasFaceDebtFace(
                     glm::ivec2(n.x, n.z), face_toward);
-            // A27/A31/A38: peer must be published; prefer coverage gen over geom.
-            // Missing / gen==0 ⇒ not ready (never fabricate peer_pub=1).
+            // SeamCoverageManifest carries coverage generations, never mesh
+            // geometry revisions. Unknown coverage remains unresolved.
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const MeshPublishRevs cache_pub =
-                mesh.GetCache().GetMeshPublishRevs(chunk_coord);
-            uint64_t peer_pub = 0;
-            if (const ChunkRenderDemandRecord *pub_rec =
-                    demand.Find(chunk_coord))
-            {
-              peer_pub = pub_rec->published_coverage_gen > 0
-                             ? pub_rec->published_coverage_gen
-                             : pub_rec->published_geom_rev;
-            }
-            if (peer_pub == 0)
-            {
-              peer_pub = cache_pub.geom_rev;
-            }
+            const uint64_t peer_pub =
+                PublishedCoverageGeneration(demand, chunk_coord);
             uint64_t required = 1;
             if (face_toward >= 0 && face_toward <= 5)
             {
@@ -1323,16 +1253,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               for (int f = 0; f < 6; ++f)
               {
                 const glm::ivec3 peer = n + kFaceDir[f];
-                const MeshPublishRevs peer_revs =
-                    mesh.GetCache().GetMeshPublishRevs(peer);
-                published_peer_gen[f] = peer_revs.geom_rev;
-                if (peer_revs.geom_rev == 0)
-                {
-                  if (const ChunkRenderDemandRecord *prec = demand.Find(peer))
-                  {
-                    published_peer_gen[f] = prec->published_geom_rev;
-                  }
-                }
+                published_peer_gen[f] =
+                    PublishedCoverageGeneration(demand, peer);
               }
               if (face_toward >= 0 && face_toward <= 5)
               {
@@ -1379,20 +1301,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // this boundary as missing/unlit.
           {
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-            const MeshPublishRevs cache_pub =
-                mesh.GetCache().GetMeshPublishRevs(chunk_coord);
-            uint64_t publisher_gen = 0;
-            if (const ChunkRenderDemandRecord *pub =
-                    demand.Find(chunk_coord))
-            {
-              publisher_gen = pub->published_coverage_gen > 0
-                                  ? pub->published_coverage_gen
-                                  : pub->published_geom_rev;
-            }
-            if (publisher_gen == 0)
-            {
-              publisher_gen = cache_pub.geom_rev;
-            }
+            const uint64_t publisher_gen =
+                PublishedCoverageGeneration(demand, chunk_coord);
             if (publisher_gen != 0)
             {
               for (int dy : {-1, 1})
@@ -1516,7 +1426,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         });
     SoftDeferCallbacksInstalled = true;
   }
-  DrainVerticalFaceDebtRepairs(
+  DrainFaceDebtRepairs(
       world, std::clamp(LastBudget.MaxMeshSchedule, 1, 8));
   prep_softdefer_setup_ms = prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();

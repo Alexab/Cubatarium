@@ -100,6 +100,11 @@ struct ChunkRenderDemandRecord
   uint64_t waiting_peer_gen[6]{};
   /// P2.4 shadow FaceDebt keyed by this chunkXYZ (column mask remains legacy).
   uint8_t face_debt_mask{0};
+  /// Face debt caused by this slice's published missing-neighbor overlay.
+  /// Kept separate so only a newer publication of this slice can clear it.
+  uint8_t overlay_face_debt_mask{0};
+  /// Face debt from peer/seam obligations, independent of boundary overlays.
+  uint8_t peer_face_debt_mask{0};
 };
 
 /// Per-chunk render demand store (process singleton for Cache + World callers).
@@ -167,6 +172,12 @@ public:
   /// peer_gen bumps waiting_peer_gen[f] via max on all set bits (monotonic).
   void NoteFaceDebt(glm::ivec3 chunk_xyz, uint8_t face_mask,
                     uint64_t peer_gen = 0);
+  /// Record missing-neighbor faces on this slice's current mesh overlay.
+  /// These bits are resolved only by a later publication of this slice.
+  void NoteBoundaryOverlayDebt(glm::ivec3 chunk_xyz, uint8_t face_mask);
+  /// Replace overlay debt with the mask from a successfully published mesh.
+  void NoteBoundaryOverlayPublished(glm::ivec3 chunk_xyz,
+                                    uint8_t missing_face_mask);
   /// Clear face bits. peer_gen==0 never clears a face with waiting_peer_gen!=0.
   /// Otherwise clear iff peer_gen >= waiting[f].
   void NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz, uint8_t face_mask,

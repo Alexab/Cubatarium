@@ -812,6 +812,13 @@ public:
   {
     OnFirstDrawableCoverage = std::move(fn);
   }
+  /// Notify after each accepted mesh publication, including intentional-empty
+  /// coverage, so target-local boundary-overlay debt can be reconciled.
+  void SetOnBoundaryOverlayPublishedFn(
+      std::function<void(glm::ivec3, uint8_t)> fn)
+  {
+    OnBoundaryOverlayPublished = std::move(fn);
+  }
   /// Sysreset v3: Accept Retain / PublishedEmpty → FaceDebt on column.
   void SetOnFaceDebtFn(std::function<void(glm::ivec3)> fn)
   {
@@ -852,6 +859,14 @@ public:
     else if (OnFaceDebt)
     {
       OnFaceDebt(chunk_coord);
+    }
+  }
+  void NoteBoundaryOverlayPublished(glm::ivec3 chunk_coord,
+                                    uint8_t missing_face_mask) const
+  {
+    if (OnBoundaryOverlayPublished)
+    {
+      OnBoundaryOverlayPublished(chunk_coord, missing_face_mask);
     }
   }
   /// Sysreset v4: Kick/Finish counts as publish progress for PreferKick gate.
@@ -1472,6 +1487,7 @@ private:
   std::function<void(glm::ivec3)> OnSoftDeferHeld;
   std::function<void(glm::ivec3)> OnLitDrawableCommitted;
   std::function<void(glm::ivec3)> OnFirstDrawableCoverage;
+  std::function<void(glm::ivec3, uint8_t)> OnBoundaryOverlayPublished;
   mutable std::function<void(glm::ivec3)> OnFaceDebt;
   mutable std::function<void(glm::ivec3)> OnFaceDebtDirty;
   mutable std::function<void(glm::ivec3, uint8_t)> OnFaceDebtMask;

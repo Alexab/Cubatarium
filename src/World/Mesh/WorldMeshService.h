@@ -65,6 +65,8 @@ public:
   void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn);
   void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn);
   void SetOnFirstDrawableCoverageFn(std::function<void(glm::ivec3)> fn);
+  void SetOnBoundaryOverlayPublishedFn(
+      std::function<void(glm::ivec3, uint8_t)> fn);
   void SetOnFaceDebtFn(std::function<void(glm::ivec3)> fn);
   void SetOnFaceDebtDirtyFn(std::function<void(glm::ivec3)> fn);
   void SetOnFaceDebtMaskFn(std::function<void(glm::ivec3, uint8_t)> fn);

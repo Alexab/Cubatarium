@@ -3327,6 +3327,9 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         trace.demand_published_coverage_gen =
             focus_demand->published_coverage_gen;
         trace.face_debt_mask = focus_demand->face_debt_mask;
+        trace.overlay_face_debt_mask =
+            focus_demand->overlay_face_debt_mask;
+        trace.peer_face_debt_mask = focus_demand->peer_face_debt_mask;
         trace.settled_light_rev = focus_demand->settled_light_rev;
         trace.has_settled_light = focus_demand->has_settled_light ? 1 : 0;
         trace.active_stage = static_cast<uint8_t>(focus_demand->active_stage);
@@ -3426,18 +3429,11 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               peer_demand->published_coverage_gen;
           trace.face_peer_desired_coverage_gen[face] =
               peer_demand->desired_coverage_gen;
-          effective_peer_gen =
-              peer_demand->published_coverage_gen > 0
-                  ? peer_demand->published_coverage_gen
-                  : peer_demand->published_geom_rev;
+          effective_peer_gen = peer_demand->published_coverage_gen;
         }
         const MeshPublishRevs peer_published =
             mesh_cache.GetMeshPublishRevs(peer_coord);
         trace.face_peer_published_geom_rev[face] = peer_published.geom_rev;
-        if (effective_peer_gen == 0)
-        {
-          effective_peer_gen = peer_published.geom_rev;
-        }
         trace.face_peer_effective_gen[face] = effective_peer_gen;
         if (mesh_cache.HasDrawableGreedyMesh(peer_coord))
         {
@@ -6073,6 +6069,8 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
         trace.has_settled_light = demand->has_settled_light ? 1 : 0;
         trace.active_stage = static_cast<uint8_t>(demand->active_stage);
         trace.face_debt_mask = demand->face_debt_mask;
+        trace.overlay_face_debt_mask = demand->overlay_face_debt_mask;
+        trace.peer_face_debt_mask = demand->peer_face_debt_mask;
         if (demand->has_active_attempt)
         {
           trace.flags = static_cast<uint16_t>(trace.flags | (1u << 15));

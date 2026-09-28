@@ -3485,7 +3485,11 @@ void UFramePerfMonitor::Shutdown()
                << ",\"cause\":" << static_cast<int>(r.cause)
                << ",\"active_stage\":" << static_cast<int>(r.active_stage)
                << ",\"face_debt_mask\":"
-               << static_cast<int>(r.face_debt_mask);
+               << static_cast<int>(r.face_debt_mask)
+               << ",\"overlay_face_debt_mask\":"
+               << static_cast<int>(r.overlay_face_debt_mask)
+               << ",\"peer_face_debt_mask\":"
+               << static_cast<int>(r.peer_face_debt_mask);
         const auto dumpFaceArray = [&](const char *name, const auto &values) {
           (*out) << ",\"" << name << "\":[";
           for (size_t i = 0; i < 6; ++i)

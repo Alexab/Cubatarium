@@ -110,6 +110,12 @@ void UWorldMeshService::SetOnFirstDrawableCoverageFn(
   Cache.SetOnFirstDrawableCoverageFn(std::move(fn));
 }
 
+void UWorldMeshService::SetOnBoundaryOverlayPublishedFn(
+    std::function<void(glm::ivec3, uint8_t)> fn)
+{
+  Cache.SetOnBoundaryOverlayPublishedFn(std::move(fn));
+}
+
 void UWorldMeshService::SetOnFaceDebtFn(std::function<void(glm::ivec3)> fn)
 {
   Cache.SetOnFaceDebtFn(std::move(fn));
