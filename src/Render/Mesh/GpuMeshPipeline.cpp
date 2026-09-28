@@ -410,11 +410,41 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
       kReadbackQuadsOffset +
       static_cast<GLsizeiptr>(UGpuMeshSlotAllocator::kMaxQuadsPerSlot *
                               sizeof(PackedQuad));
+  const bool persistent_mapping_supported =
+      GLEW_ARB_buffer_storage == GL_TRUE && glBufferStorage != nullptr;
+  int persistent_mapped_count = 0;
   for (int i = 0; i < kReadbackRing; ++i)
   {
     glGenBuffers(1, &ReadbackPbos[i]);
     glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
-    glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+    if (persistent_mapping_supported)
+    {
+      constexpr GLbitfield kPersistentReadbackFlags =
+          GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT |
+          GL_CLIENT_STORAGE_BIT;
+      glBufferStorage(GL_COPY_WRITE_BUFFER, bytes, nullptr,
+                      kPersistentReadbackFlags);
+      ReadbackMapped[i] = glMapBufferRange(
+          GL_COPY_WRITE_BUFFER, 0, bytes,
+          GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+      if (ReadbackMapped[i])
+      {
+        ++persistent_mapped_count;
+      }
+      else
+      {
+        // Immutable storage cannot be reallocated. Replace this slot with a
+        // mutable PBO so mapping failure does not disable GPU meshing.
+        glDeleteBuffers(1, &ReadbackPbos[i]);
+        glGenBuffers(1, &ReadbackPbos[i]);
+        glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
+        glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+      }
+    }
+    else
+    {
+      glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+    }
     ReadbackInUse[i] = false;
     glGenBuffers(1, &RectsHoldSsbo[i]);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, RectsHoldSsbo[i]);
@@ -423,6 +453,10 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
   }
   glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  LOG(INFO) << "[GpuMeshPipeline] persistent readback mapping "
+            << persistent_mapped_count << "/" << kReadbackRing
+            << " slots (ARB_buffer_storage="
+            << (persistent_mapping_supported ? "yes" : "no") << ")";
 #endif
 }
 
@@ -434,6 +468,12 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
   {
     if (ReadbackPbos[i])
     {
+      if (ReadbackMapped[i])
+      {
+        glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
+        glUnmapBuffer(GL_COPY_WRITE_BUFFER);
+        ReadbackMapped[i] = nullptr;
+      }
       glDeleteBuffers(1, &ReadbackPbos[i]);
       ReadbackPbos[i] = 0;
     }
@@ -444,6 +484,7 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
     }
     ReadbackInUse[i] = false;
   }
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
 #endif
 }
 
@@ -526,6 +567,12 @@ bool UGpuMeshPipeline::ReadCountersViaPbo(int pbo_index,
     // Do not Map after timeout (can block again). Caller remeshes.
     return false;
   }
+  if (ReadbackMapped[pbo_index])
+  {
+    std::memcpy(out_counters.data(), ReadbackMapped[pbo_index],
+                sizeof(out_counters));
+    return true;
+  }
   glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   void *mapped =
       glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
@@ -598,6 +645,14 @@ UGpuMeshPipeline::MapQuadsFromPbo(int pbo_index, uint32_t quad_count,
   const GLsizeiptr quad_bytes =
       static_cast<GLsizeiptr>(quad_count * sizeof(PackedQuad));
   ScratchQuads.resize(quad_count);
+  if (ReadbackMapped[pbo_index])
+  {
+    const auto *mapped =
+        static_cast<const unsigned char *>(ReadbackMapped[pbo_index]);
+    std::memcpy(ScratchQuads.data(), mapped + kReadbackQuadsOffset,
+                static_cast<size_t>(quad_bytes));
+    return GpuFinishStatus::Ready;
+  }
   glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   void *mapped = glMapBufferRange(GL_COPY_WRITE_BUFFER, kReadbackQuadsOffset,
                                   quad_bytes, GL_MAP_READ_BIT);
@@ -867,28 +922,36 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
   std::array<uint32_t, 4> counters{};
   const auto counter_readback_start = profile ? ProfileClock::now()
                                               : ProfileClock::time_point{};
-  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[ticket.pboIndex]);
-  void *mapped =
-      glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
-                       GL_MAP_READ_BIT);
-  if (!mapped && profile)
+  if (ReadbackMapped[ticket.pboIndex])
   {
-    profile->counter_readback_ms +=
-        std::chrono::duration<double, std::milli>(
-            ProfileClock::now() - counter_readback_start)
-            .count();
+    std::memcpy(counters.data(), ReadbackMapped[ticket.pboIndex],
+                sizeof(counters));
   }
-  if (!mapped)
+  else
   {
+    glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[ticket.pboIndex]);
+    void *mapped =
+        glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
+                         GL_MAP_READ_BIT);
+    if (!mapped)
+    {
+      if (profile)
+      {
+        profile->counter_readback_ms +=
+            std::chrono::duration<double, std::milli>(
+                ProfileClock::now() - counter_readback_start)
+                .count();
+      }
+      glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+      ReleaseReadbackSlot(ticket);
+      ticket.awaitingCounters = false;
+      ticket.valid = false;
+      return GpuFinishStatus::Failed;
+    }
+    std::memcpy(counters.data(), mapped, sizeof(counters));
+    glUnmapBuffer(GL_COPY_WRITE_BUFFER);
     glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
-    ReleaseReadbackSlot(ticket);
-    ticket.awaitingCounters = false;
-    ticket.valid = false;
-    return GpuFinishStatus::Failed;
   }
-  std::memcpy(counters.data(), mapped, sizeof(counters));
-  glUnmapBuffer(GL_COPY_WRITE_BUFFER);
-  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
   if (profile)
   {
     profile->counter_readback_ms +=

@@ -6043,7 +6043,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         << ",\"counter_poll\":" << gpu_profile_counter_poll_ms
         << ",\"counter_fence_wait\":"
         << gpu_profile_counter_fence_wait_ms
-        << ",\"counter_readback_map\":"
+        << ",\"counter_readback_access\":"
         << gpu_profile_counter_readback_ms
         << ",\"packed_emit_dispatch\":" << gpu_profile_packed_emit_ms
         << ",\"quad_readback_copy\":"

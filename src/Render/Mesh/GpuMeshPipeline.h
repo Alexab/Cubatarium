@@ -151,6 +151,9 @@ private:
   GLuint SortScratchSsbo{0}; // kMaxQuadsPerSlot PackedQuads
   /// Ring of pack=counters(16)+PackedQuad[kMaxQuads] — multi in-flight apply.
   GLuint ReadbackPbos[kReadbackRing]{};
+  /// Optional persistent CPU view; per-slot fence still governs when bytes are
+  /// safe to read. Null entries use the map/unmap fallback.
+  void *ReadbackMapped[kReadbackRing]{};
   bool ReadbackInUse[kReadbackRing]{};
   /// Per-slot greedy rect hold — frees EmitState.RectsSsbo for next Kick.
   GLuint RectsHoldSsbo[kReadbackRing]{};
