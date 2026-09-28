@@ -6826,14 +6826,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // GPU queue yet so a just-drained queue cannot immediately refill in a burst.
   {
     const size_t queued_gpu = mesh_service.GetPendingGpuAppliesCount();
+    const int async_builder_inflight = std::max(
+        0, mesh_service.GetCache().GetAsyncBuilderInFlightCount());
+    const int gpu_extract_inflight = static_cast<int>(std::min<size_t>(
+        mesh_service.GetCache().GetGpuExtractInFlightCount(), INT_MAX));
     const int async_inflight =
         std::max(0, mesh_service.GetAsyncInFlightCount());
     const int capture_pending =
         std::max(0, mesh_service.GetPendingCaptureCount());
     const size_t completed_waiting =
         mesh_service.GetCache().GetMeshCompletedSize();
+    // PendingGpuApplies owns GPU extractions through completion. The legacy
+    // async aggregate also includes GpuExtractInFlight for those coordinates,
+    // so count only CPU builder jobs beside pending GPU applies.
     const size_t pipeline_outstanding =
-        queued_gpu + static_cast<size_t>(async_inflight) +
+        queued_gpu + static_cast<size_t>(async_builder_inflight) +
         static_cast<size_t>(capture_pending) + completed_waiting;
     const UnifiedAdmissionPools pools{};
     constexpr int kBackpressuredScheduleCap = 4;
@@ -6857,6 +6864,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pipeline_telem.MeshPipelinePendingGpuN =
         static_cast<int>(std::min<size_t>(queued_gpu, INT_MAX));
     pipeline_telem.MeshPipelineAsyncInFlightN = async_inflight;
+    pipeline_telem.MeshPipelineAsyncBuilderInFlightN =
+        async_builder_inflight;
+    pipeline_telem.MeshPipelineGpuExtractInFlightN = gpu_extract_inflight;
     pipeline_telem.MeshPipelineCapturePendingN = capture_pending;
     pipeline_telem.MeshPipelineCompletedWaitingN =
         static_cast<int>(std::min<size_t>(completed_waiting, INT_MAX));

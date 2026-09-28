@@ -41,6 +41,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Render/Camera/Camera.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
@@ -2181,6 +2182,41 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetPendingGpuQueuedCount());
     world.PhysicsTelemetryData.PendingGpuKickedN = static_cast<int>(
         world.GetMeshService().GetPendingGpuKickedCount());
+    {
+      auto &phys = world.PhysicsTelemetryData;
+      UGpuMeshPipeline *gpu_pipeline =
+          world.GetMeshService().GetCache().GetGpuMeshPipeline();
+      size_t free_slots = 0;
+      size_t bound_slots = 0;
+      size_t max_slots = 0;
+      uint64_t staging_failures = 0;
+      if (gpu_pipeline)
+      {
+        const UGpuMeshSlotAllocator &allocator = gpu_pipeline->GetAllocator();
+        free_slots = allocator.GetFreeSlotCount();
+        bound_slots = allocator.GetBoundSlotCount();
+        max_slots = allocator.GetMaxSlots();
+        staging_failures = allocator.GetStagingAllocationFailureCount();
+      }
+      phys.GpuMeshSlotMaxN =
+          static_cast<int>(std::min<size_t>(max_slots, INT_MAX));
+      phys.GpuMeshSlotFreeN =
+          static_cast<int>(std::min<size_t>(free_slots, INT_MAX));
+      phys.GpuMeshSlotBoundN =
+          static_cast<int>(std::min<size_t>(bound_slots, INT_MAX));
+      const size_t allocated_slots =
+          max_slots > free_slots ? max_slots - free_slots : 0;
+      const size_t unbound_allocated =
+          allocated_slots > bound_slots ? allocated_slots - bound_slots : 0;
+      phys.GpuMeshSlotUnboundAllocatedN =
+          static_cast<int>(std::min<size_t>(unbound_allocated, INT_MAX));
+      phys.GpuStagingAllocationFailureN = staging_failures;
+      phys.GpuStagingAllocationFailureDelta =
+          staging_failures >= LastGpuStagingAllocationFailure
+              ? staging_failures - LastGpuStagingAllocationFailure
+              : staging_failures;
+      LastGpuStagingAllocationFailure = staging_failures;
+    }
     {
       const auto &budget = EmergeCoordinator->GetLastBudget();
       world.PhysicsTelemetryData.MeshScheduleFinal = budget.MaxMeshSchedule;

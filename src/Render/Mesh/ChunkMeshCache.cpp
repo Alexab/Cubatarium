@@ -9292,8 +9292,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
 int UChunkMeshCache::GetAsyncInFlightCount() const
 {
-  const int async_n = AsyncBuilder ? AsyncBuilder->GetInFlightCount() : 0;
-  return async_n + static_cast<int>(GpuExtractInFlight.size());
+  return GetAsyncBuilderInFlightCount() +
+         static_cast<int>(GpuExtractInFlight.size());
+}
+
+int UChunkMeshCache::GetAsyncBuilderInFlightCount() const
+{
+  return AsyncBuilder ? AsyncBuilder->GetInFlightCount() : 0;
 }
 
 size_t UChunkMeshCache::GetMeshCompletedSize() const

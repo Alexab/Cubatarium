@@ -645,8 +645,16 @@ struct FrameNumbers
   int pending_gpu_applies_n{0};
   int pending_gpu_queued_n{0};
   int pending_gpu_kicked_n{0};
+  int gpu_mesh_slot_max_n{0};
+  int gpu_mesh_slot_free_n{0};
+  int gpu_mesh_slot_bound_n{0};
+  int gpu_mesh_slot_unbound_allocated_n{0};
+  uint64_t gpu_staging_allocation_failure_n{0};
+  uint64_t gpu_staging_allocation_failure_delta{0};
   int mesh_pipeline_pending_gpu_n{0};
   int mesh_pipeline_async_inflight_n{0};
+  int mesh_pipeline_async_builder_inflight_n{0};
+  int mesh_pipeline_gpu_extract_inflight_n{0};
   int mesh_pipeline_capture_pending_n{0};
   int mesh_pipeline_completed_waiting_n{0};
   int mesh_pipeline_outstanding_n{0};
@@ -1402,8 +1410,19 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
   n.pending_gpu_queued_n = phys.PendingGpuQueuedN;
   n.pending_gpu_kicked_n = phys.PendingGpuKickedN;
+  n.gpu_mesh_slot_max_n = phys.GpuMeshSlotMaxN;
+  n.gpu_mesh_slot_free_n = phys.GpuMeshSlotFreeN;
+  n.gpu_mesh_slot_bound_n = phys.GpuMeshSlotBoundN;
+  n.gpu_mesh_slot_unbound_allocated_n = phys.GpuMeshSlotUnboundAllocatedN;
+  n.gpu_staging_allocation_failure_n = phys.GpuStagingAllocationFailureN;
+  n.gpu_staging_allocation_failure_delta =
+      phys.GpuStagingAllocationFailureDelta;
   n.mesh_pipeline_pending_gpu_n = phys.MeshPipelinePendingGpuN;
   n.mesh_pipeline_async_inflight_n = phys.MeshPipelineAsyncInFlightN;
+  n.mesh_pipeline_async_builder_inflight_n =
+      phys.MeshPipelineAsyncBuilderInFlightN;
+  n.mesh_pipeline_gpu_extract_inflight_n =
+      phys.MeshPipelineGpuExtractInFlightN;
   n.mesh_pipeline_capture_pending_n = phys.MeshPipelineCapturePendingN;
   n.mesh_pipeline_completed_waiting_n =
       phys.MeshPipelineCompletedWaitingN;
@@ -2256,10 +2275,23 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
           << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
           << ",\"pending_gpu_kicked_n\":" << n.pending_gpu_kicked_n
+          << ",\"gpu_mesh_slot_max_n\":" << n.gpu_mesh_slot_max_n
+          << ",\"gpu_mesh_slot_free_n\":" << n.gpu_mesh_slot_free_n
+          << ",\"gpu_mesh_slot_bound_n\":" << n.gpu_mesh_slot_bound_n
+          << ",\"gpu_mesh_slot_unbound_allocated_n\":"
+          << n.gpu_mesh_slot_unbound_allocated_n
+          << ",\"gpu_staging_allocation_failure_n\":"
+          << n.gpu_staging_allocation_failure_n
+          << ",\"gpu_staging_allocation_failure_delta\":"
+          << n.gpu_staging_allocation_failure_delta
           << ",\"mesh_pipeline_pending_gpu_n\":"
           << n.mesh_pipeline_pending_gpu_n
           << ",\"mesh_pipeline_async_inflight_n\":"
           << n.mesh_pipeline_async_inflight_n
+          << ",\"mesh_pipeline_async_builder_inflight_n\":"
+          << n.mesh_pipeline_async_builder_inflight_n
+          << ",\"mesh_pipeline_gpu_extract_inflight_n\":"
+          << n.mesh_pipeline_gpu_extract_inflight_n
           << ",\"mesh_pipeline_capture_pending_n\":"
           << n.mesh_pipeline_capture_pending_n
           << ",\"mesh_pipeline_completed_waiting_n\":"

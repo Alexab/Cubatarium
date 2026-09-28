@@ -13,6 +13,7 @@ bool UGpuMeshSlotAllocator::Init(uint32_t max_slots)
   return false;
 #else
   MaxSlots = max_slots;
+  StagingAllocationFailureCount_ = 0;
   Slots.resize(max_slots);
   FreeList.reserve(max_slots);
   for (int i = static_cast<int>(max_slots) - 1; i >= 0; --i)
@@ -87,6 +88,7 @@ int UGpuMeshSlotAllocator::AllocateStagingSlot(bool transparent)
 {
   if (FreeList.empty())
   {
+    ++StagingAllocationFailureCount_;
     return -1;
   }
   const int slot_idx = FreeList.back();

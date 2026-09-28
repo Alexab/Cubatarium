@@ -79,6 +79,12 @@ struct PhysicsTelemetry
   int PendingGpuQueuedN{0};
   /// Kicked phase (fence outstanding); capped by readback ring.
   int PendingGpuKickedN{0};
+  int GpuMeshSlotMaxN{0};
+  int GpuMeshSlotFreeN{0};
+  int GpuMeshSlotBoundN{0};
+  int GpuMeshSlotUnboundAllocatedN{0};
+  uint64_t GpuStagingAllocationFailureN{0};
+  uint64_t GpuStagingAllocationFailureDelta{0};
   /// Final mesh schedule/drain after TickMeshEmerge (MeshWorkAdmission SoT).
   int MeshScheduleFinal{0};
   int MeshDrainFinal{0};
@@ -348,7 +354,10 @@ struct PhysicsTelemetry
   int FirstMeshScheduleEffectiveCap{0};
   /// Components of the final output-pool fence around mesh scheduling.
   int MeshPipelinePendingGpuN{0};
+  /// Legacy aggregate includes GpuExtractInFlight and overlaps PendingGpuN.
   int MeshPipelineAsyncInFlightN{0};
+  int MeshPipelineAsyncBuilderInFlightN{0};
+  int MeshPipelineGpuExtractInFlightN{0};
   int MeshPipelineCapturePendingN{0};
   int MeshPipelineCompletedWaitingN{0};
   int MeshPipelineOutstandingN{0};

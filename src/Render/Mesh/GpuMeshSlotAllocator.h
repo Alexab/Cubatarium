@@ -106,6 +106,12 @@ public:
   GLuint GetQuadSsbo() const { return QuadSsbo; }
   GLuint GetIndirectBuffer() const { return IndirectBuffer; }
   uint32_t GetMaxSlots() const { return MaxSlots; }
+  size_t GetFreeSlotCount() const { return FreeList.size(); }
+  size_t GetBoundSlotCount() const { return ChunkToSlot.size(); }
+  uint64_t GetStagingAllocationFailureCount() const
+  {
+    return StagingAllocationFailureCount_;
+  }
 
 private:
   GLuint QuadSsbo{0};
@@ -126,6 +132,7 @@ private:
   std::vector<DrawIndirectCmd> TransparentCommands;
   uint64_t NextGeneration_{1};
   uint64_t FenceCompletedGeneration_{0};
+  uint64_t StagingAllocationFailureCount_{0};
 };
 
 } // namespace cutum

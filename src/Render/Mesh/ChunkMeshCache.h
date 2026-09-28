@@ -286,6 +286,13 @@ public:
     return static_cast<int>(Dirty.GetFirstMeshCount());
   }
   int GetLastDirtyRemeshN() const { return LastDirtyRemeshN; }
+  /// CPU mesh-build workers only; excludes GPU extraction tickets.
+  int GetAsyncBuilderInFlightCount() const;
+  /// GPU extraction coordinates, which overlap PendingGpuApplies by design.
+  size_t GetGpuExtractInFlightCount() const
+  {
+    return GpuExtractInFlight.size();
+  }
   int GetAsyncInFlightCount() const;
   size_t GetMeshCompletedSize() const;
   size_t GetMeshCompletedCapacity() const;

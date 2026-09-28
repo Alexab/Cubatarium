@@ -150,6 +150,7 @@ private:
   uint64_t LastMeshCompletedDiscarded{0};
   uint64_t LastRelightCompletedDiscarded{0};
   uint64_t LastPubRejectSourceMismatch{0};
+  uint64_t LastGpuStagingAllocationFailure{0};
   int LastCompletedExpandFrame{-10000};
   /// Era27 I-A1: SoftDefer Capture witness pin (cx, cz, cy) for T frames.
   bool SoftDeferCapturePinValid{false};
