@@ -66,10 +66,18 @@ public:
     NotReady = 1,
     Failed = 2,
   };
+  struct CounterEmitProfile
+  {
+    double fence_wait_ms{0.0};
+    double counter_readback_ms{0.0};
+    double packed_emit_ms{0.0};
+    double quad_readback_copy_ms{0.0};
+  };
   /// Poll counter fence (timeout_ns=0), map, packed emit, CopyQuads fence.
   GpuFinishStatus TryCompleteCountersAndEmit(GpuApplyTicket &ticket,
                                             UBlockRegistry &registry,
-                                            uint64_t timeout_ns);
+                                            uint64_t timeout_ns,
+                                            CounterEmitProfile *profile = nullptr);
   /// Poll fence (timeout_ns=0 non-blocking), map PBO, build RLE ranges.
   GpuFinishStatus TryFinishComputePasses(
       GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,

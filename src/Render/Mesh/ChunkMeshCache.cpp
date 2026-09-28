@@ -5026,6 +5026,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                  : GpuProfileClock::time_point{};
   double gpu_profile_revision_validation_ms = 0.0;
   double gpu_profile_counter_poll_ms = 0.0;
+  double gpu_profile_counter_fence_wait_ms = 0.0;
+  double gpu_profile_counter_readback_ms = 0.0;
+  double gpu_profile_packed_emit_ms = 0.0;
+  double gpu_profile_quad_readback_copy_ms = 0.0;
   double gpu_profile_quad_finish_ms = 0.0;
   double gpu_profile_kick_dispatch_ms = 0.0;
   double gpu_profile_commit_ms = 0.0;
@@ -5345,14 +5349,23 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     const auto counter_profile_t0 =
         gpu_process_profile_sample ? GpuProfileClock::now()
                                    : GpuProfileClock::time_point{};
+    UGpuMeshPipeline::CounterEmitProfile counter_emit_profile;
     const auto st = pipeline->TryCompleteCountersAndEmit(
-        pending_ref.ticket, registry, /*timeout_ns=*/0);
+        pending_ref.ticket, registry, /*timeout_ns=*/0,
+        gpu_process_profile_sample ? &counter_emit_profile : nullptr);
     if (gpu_process_profile_sample)
     {
       gpu_profile_counter_poll_ms +=
           std::chrono::duration<double, std::milli>(
               GpuProfileClock::now() - counter_profile_t0)
               .count();
+      gpu_profile_counter_fence_wait_ms +=
+          counter_emit_profile.fence_wait_ms;
+      gpu_profile_counter_readback_ms +=
+          counter_emit_profile.counter_readback_ms;
+      gpu_profile_packed_emit_ms += counter_emit_profile.packed_emit_ms;
+      gpu_profile_quad_readback_copy_ms +=
+          counter_emit_profile.quad_readback_copy_ms;
     }
     if (st == UGpuMeshPipeline::GpuFinishStatus::Ready)
     {
@@ -6028,6 +6041,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         << "\"revision_validation\":"
         << gpu_profile_revision_validation_ms
         << ",\"counter_poll\":" << gpu_profile_counter_poll_ms
+        << ",\"counter_fence_wait\":"
+        << gpu_profile_counter_fence_wait_ms
+        << ",\"counter_readback_map\":"
+        << gpu_profile_counter_readback_ms
+        << ",\"packed_emit_dispatch\":" << gpu_profile_packed_emit_ms
+        << ",\"quad_readback_copy\":"
+        << gpu_profile_quad_readback_copy_ms
         << ",\"quad_finish\":" << gpu_profile_quad_finish_ms
         << ",\"kick_dispatch\":" << gpu_profile_kick_dispatch_ms
         << ",\"commit\":" << gpu_profile_commit_ms

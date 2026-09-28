@@ -6,6 +6,7 @@
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <array>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 
@@ -817,12 +818,14 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
 }
 
 UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
-    GpuApplyTicket &ticket, UBlockRegistry &registry, uint64_t timeout_ns)
+    GpuApplyTicket &ticket, UBlockRegistry &registry, uint64_t timeout_ns,
+    CounterEmitProfile *profile)
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)ticket;
   (void)registry;
   (void)timeout_ns;
+  (void)profile;
   return GpuFinishStatus::Failed;
 #else
   if (!ticket.valid || !ticket.awaitingCounters)
@@ -834,8 +837,17 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
     ticket.awaitingCounters = false;
     return GpuFinishStatus::Failed;
   }
+  using ProfileClock = std::chrono::steady_clock;
+  const auto fence_wait_start = profile ? ProfileClock::now()
+                                        : ProfileClock::time_point{};
   const GLenum wait =
       glClientWaitSync(ticket.fence, GL_SYNC_FLUSH_COMMANDS_BIT, timeout_ns);
+  if (profile)
+  {
+    profile->fence_wait_ms += std::chrono::duration<double, std::milli>(
+                                  ProfileClock::now() - fence_wait_start)
+                                  .count();
+  }
   if (wait == GL_TIMEOUT_EXPIRED)
   {
     return GpuFinishStatus::NotReady;
@@ -853,10 +865,19 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
   ticket.fence = nullptr;
 
   std::array<uint32_t, 4> counters{};
+  const auto counter_readback_start = profile ? ProfileClock::now()
+                                              : ProfileClock::time_point{};
   glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[ticket.pboIndex]);
   void *mapped =
       glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
                        GL_MAP_READ_BIT);
+  if (!mapped && profile)
+  {
+    profile->counter_readback_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - counter_readback_start)
+            .count();
+  }
   if (!mapped)
   {
     glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
@@ -868,6 +889,13 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
   std::memcpy(counters.data(), mapped, sizeof(counters));
   glUnmapBuffer(GL_COPY_WRITE_BUFFER);
   glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  if (profile)
+  {
+    profile->counter_readback_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - counter_readback_start)
+            .count();
+  }
 
   ticket.awaitingCounters = false;
   const uint32_t rect_count = counters[0];
@@ -898,6 +926,8 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
        RectsHoldSsbo[ticket.pboIndex] != 0)
           ? RectsHoldSsbo[ticket.pboIndex]
           : EmitState.RectsSsbo;
+  const auto packed_emit_start = profile ? ProfileClock::now()
+                                         : ProfileClock::time_point{};
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, rects_ssbo);
   glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 1, Allocator.GetQuadSsbo(),
                     static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
@@ -912,13 +942,35 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
   glUseProgram(0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  if (profile)
+  {
+    profile->packed_emit_ms += std::chrono::duration<double, std::milli>(
+                                   ProfileClock::now() - packed_emit_start)
+                                   .count();
+  }
   Allocator.SetSlotQuadCount(ticket.slotIndex, rect_count);
   GLsync fence = nullptr;
+  const auto quad_copy_start = profile ? ProfileClock::now()
+                                       : ProfileClock::time_point{};
   if (!CopyQuadsToPbo(ticket.pboIndex, slot_offset, rect_count, &fence))
   {
+    if (profile)
+    {
+      profile->quad_readback_copy_ms +=
+          std::chrono::duration<double, std::milli>(
+              ProfileClock::now() - quad_copy_start)
+              .count();
+    }
     ReleaseReadbackSlot(ticket);
     ticket.valid = false;
     return GpuFinishStatus::Failed;
+  }
+  if (profile)
+  {
+    profile->quad_readback_copy_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - quad_copy_start)
+            .count();
   }
   ticket.quadCount = rect_count;
   ticket.slotOffsetQuads = slot_offset;
