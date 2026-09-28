@@ -4991,6 +4991,52 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   }
   LastGpuKickDeferReason_.clear();
 
+  using GpuProfileClock = std::chrono::steady_clock;
+  static std::ofstream gpu_process_profile_file;
+  static uint64_t gpu_process_profile_sequence = 0;
+  const char *gpu_process_profile_env =
+      std::getenv("CUBA_GPU_PROCESS_PROFILE");
+  std::ostream *gpu_process_profile_sink = nullptr;
+  uint64_t gpu_process_profile_seq = 0;
+  if (gpu_process_profile_env && gpu_process_profile_env[0] == '1')
+  {
+    gpu_process_profile_seq = ++gpu_process_profile_sequence;
+    if (gpu_process_profile_seq % 8 == 0)
+    {
+      if (!gpu_process_profile_file.is_open())
+      {
+        const char *profile_path =
+            std::getenv("CUBA_GPU_PROCESS_PROFILE_PATH");
+        if (profile_path && profile_path[0] != '\0')
+        {
+          gpu_process_profile_file.open(profile_path,
+                                        std::ios::out | std::ios::app);
+        }
+      }
+      if (gpu_process_profile_file.good())
+      {
+        gpu_process_profile_sink = &gpu_process_profile_file;
+      }
+    }
+  }
+  const bool gpu_process_profile_sample =
+      gpu_process_profile_sink != nullptr;
+  const auto gpu_process_profile_start =
+      gpu_process_profile_sample ? GpuProfileClock::now()
+                                 : GpuProfileClock::time_point{};
+  double gpu_profile_revision_validation_ms = 0.0;
+  double gpu_profile_counter_poll_ms = 0.0;
+  double gpu_profile_quad_finish_ms = 0.0;
+  double gpu_profile_kick_dispatch_ms = 0.0;
+  double gpu_profile_commit_ms = 0.0;
+  int gpu_profile_counter_ready_n = 0;
+  int gpu_profile_counter_not_ready_n = 0;
+  int gpu_profile_counter_failed_n = 0;
+  int gpu_profile_quad_ready_n = 0;
+  int gpu_profile_quad_not_ready_n = 0;
+  int gpu_profile_quad_failed_n = 0;
+  const size_t gpu_profile_pending_begin = PendingGpuApplies.size();
+
   const auto t0 = std::chrono::high_resolution_clock::now();
   auto elapsed_ms = [&]() {
     return std::chrono::duration<double, std::milli>(
@@ -5277,7 +5323,18 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     PendingGpuApply &pending_ref = PendingGpuApplies[i];
     bool dropped = false;
-    if (!revision_ok(pending_ref, dropped))
+    const auto revision_profile_t0 =
+        gpu_process_profile_sample ? GpuProfileClock::now()
+                                   : GpuProfileClock::time_point{};
+    const bool revision_valid = revision_ok(pending_ref, dropped);
+    if (gpu_process_profile_sample)
+    {
+      gpu_profile_revision_validation_ms +=
+          std::chrono::duration<double, std::milli>(
+              GpuProfileClock::now() - revision_profile_t0)
+              .count();
+    }
+    if (!revision_valid)
     {
       GpuExtractInFlight.erase(pending_ref.coord);
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
@@ -5285,16 +5342,32 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       TouchPendingGpuIndex();
       continue;
     }
+    const auto counter_profile_t0 =
+        gpu_process_profile_sample ? GpuProfileClock::now()
+                                   : GpuProfileClock::time_point{};
     const auto st = pipeline->TryCompleteCountersAndEmit(
         pending_ref.ticket, registry, /*timeout_ns=*/0);
+    if (gpu_process_profile_sample)
+    {
+      gpu_profile_counter_poll_ms +=
+          std::chrono::duration<double, std::milli>(
+              GpuProfileClock::now() - counter_profile_t0)
+              .count();
+    }
+    if (st == UGpuMeshPipeline::GpuFinishStatus::Ready)
+    {
+      ++gpu_profile_counter_ready_n;
+    }
     if (st == UGpuMeshPipeline::GpuFinishStatus::NotReady)
     {
+      ++gpu_profile_counter_not_ready_n;
       ++LastGpuFinishNotReadyN;
       ++i;
       continue;
     }
     if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
     {
+      ++gpu_profile_counter_failed_n;
       fail_ticket(pending_ref, JobTerminalReason::GpuPipelineFailed);
       GpuExtractInFlight.erase(pending_ref.coord);
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
@@ -5325,17 +5398,26 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       TouchPendingGpuIndex();
       GpuExtractInFlight.erase(pending.coord);
       ActiveMeshSourceRevision.erase(pending.coord);
-      if (CommitGpuMeshResult(world, registry, pending.coord,
-                              pending.sourceRevision, std::move(gpu_result),
-                              std::move(pending.crossCenters),
-                              pending.accepted_input_stale,
-                              pending.snapshot.inputStampsValid
-                                  ? pending.snapshot.inputStamps[0].light
-                                  : 0ull,
-                              pending.snapshot.inputStampsValid,
-                              pending.snapshot.boundaryOverlay,
-                              pending.accepted_geom_stale,
-                              pending.stageTrace))
+      const auto commit_profile_t0 =
+          gpu_process_profile_sample ? GpuProfileClock::now()
+                                     : GpuProfileClock::time_point{};
+      const bool committed = CommitGpuMeshResult(
+          world, registry, pending.coord, pending.sourceRevision,
+          std::move(gpu_result), std::move(pending.crossCenters),
+          pending.accepted_input_stale,
+          pending.snapshot.inputStampsValid
+              ? pending.snapshot.inputStamps[0].light
+              : 0ull,
+          pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
+          pending.accepted_geom_stale, pending.stageTrace);
+      if (gpu_process_profile_sample)
+      {
+        gpu_profile_commit_ms +=
+            std::chrono::duration<double, std::milli>(
+                GpuProfileClock::now() - commit_profile_t0)
+                .count();
+      }
+      if (committed)
       {
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
@@ -5377,7 +5459,18 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     PendingGpuApply &pending_ref = PendingGpuApplies[i];
 
     bool dropped = false;
-    if (!revision_ok(pending_ref, dropped))
+    const auto revision_profile_t0 =
+        gpu_process_profile_sample ? GpuProfileClock::now()
+                                   : GpuProfileClock::time_point{};
+    const bool revision_valid = revision_ok(pending_ref, dropped);
+    if (gpu_process_profile_sample)
+    {
+      gpu_profile_revision_validation_ms +=
+          std::chrono::duration<double, std::milli>(
+              GpuProfileClock::now() - revision_profile_t0)
+              .count();
+    }
+    if (!revision_valid)
     {
       GpuExtractInFlight.erase(pending_ref.coord);
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
@@ -5390,12 +5483,27 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     gpu_result.success = true;
     gpu_result.slotIndex = pending_ref.ticket.slotIndex;
     uint32_t quad_count = 0;
+    const auto quad_finish_profile_t0 =
+        gpu_process_profile_sample ? GpuProfileClock::now()
+                                   : GpuProfileClock::time_point{};
     const auto st = pipeline->TryFinishComputePasses(
         pending_ref.ticket, registry, quad_count, &gpu_result.blockRanges,
         &gpu_result.hasFullyDarkFace, &gpu_result.hasLitDrawableFace,
         /*timeout_ns=*/0);
+    if (gpu_process_profile_sample)
+    {
+      gpu_profile_quad_finish_ms +=
+          std::chrono::duration<double, std::milli>(
+              GpuProfileClock::now() - quad_finish_profile_t0)
+              .count();
+    }
+    if (st == UGpuMeshPipeline::GpuFinishStatus::Ready)
+    {
+      ++gpu_profile_quad_ready_n;
+    }
     if (st == UGpuMeshPipeline::GpuFinishStatus::NotReady)
     {
+      ++gpu_profile_quad_not_ready_n;
       ++LastGpuFinishNotReadyN;
       ++i;
       continue;
@@ -5412,6 +5520,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     GpuExtractInFlight.erase(pending.coord);
     if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
     {
+      ++gpu_profile_quad_failed_n;
       fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);
       continue;
     }
@@ -5420,17 +5529,26 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     gpu_result.provisionalLightPreview =
         pending.snapshot.provisionalLightPreview;
     ActiveMeshSourceRevision.erase(pending.coord);
-    if (CommitGpuMeshResult(world, registry, pending.coord,
-                              pending.sourceRevision, std::move(gpu_result),
-                              std::move(pending.crossCenters),
-                              pending.accepted_input_stale,
-                              pending.snapshot.inputStampsValid
-                                  ? pending.snapshot.inputStamps[0].light
-                                  : 0ull,
-                              pending.snapshot.inputStampsValid,
-                              pending.snapshot.boundaryOverlay,
-                              pending.accepted_geom_stale,
-                              pending.stageTrace))
+    const auto commit_profile_t0 =
+        gpu_process_profile_sample ? GpuProfileClock::now()
+                                   : GpuProfileClock::time_point{};
+    const bool committed = CommitGpuMeshResult(
+        world, registry, pending.coord, pending.sourceRevision,
+        std::move(gpu_result), std::move(pending.crossCenters),
+        pending.accepted_input_stale,
+        pending.snapshot.inputStampsValid
+            ? pending.snapshot.inputStamps[0].light
+            : 0ull,
+        pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
+        pending.accepted_geom_stale, pending.stageTrace);
+    if (gpu_process_profile_sample)
+    {
+      gpu_profile_commit_ms +=
+          std::chrono::duration<double, std::milli>(
+              GpuProfileClock::now() - commit_profile_t0)
+              .count();
+    }
+    if (committed)
     {
       NoteGpuPipelineProgress(pending.coord);
       ++processed;
@@ -5450,6 +5568,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
     }
   }
+
+  local_gpu_finish_ms += std::chrono::duration<double, std::milli>(
+                             std::chrono::high_resolution_clock::now() -
+                             finish_pass_t0)
+                             .count();
 
   // Pass A: Kick Queued while free ring PBO + staging; stop new kicks late so
   // remaining budget can Finish fences that became ready during Kick.
@@ -5622,7 +5745,18 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     GpuExtractInFlight.erase(pending.coord);
 
     bool dropped = false;
-    if (!revision_ok(pending, dropped))
+    const auto revision_profile_t0 =
+        gpu_process_profile_sample ? GpuProfileClock::now()
+                                   : GpuProfileClock::time_point{};
+    const bool revision_valid = revision_ok(pending, dropped);
+    if (gpu_process_profile_sample)
+    {
+      gpu_profile_revision_validation_ms +=
+          std::chrono::duration<double, std::milli>(
+              GpuProfileClock::now() - revision_profile_t0)
+              .count();
+    }
+    if (!revision_valid)
     {
       continue;
     }
@@ -5664,8 +5798,20 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       break;
     }
-    if (!pipeline->KickComputePasses(pending.snapshot, registry, pending.coord,
-                                     slot_idx, pending.ticket, pinned))
+    const auto kick_profile_t0 =
+        gpu_process_profile_sample ? GpuProfileClock::now()
+                                   : GpuProfileClock::time_point{};
+    const bool kick_succeeded = pipeline->KickComputePasses(
+        pending.snapshot, registry, pending.coord, slot_idx, pending.ticket,
+        pinned);
+    if (gpu_process_profile_sample)
+    {
+      gpu_profile_kick_dispatch_ms +=
+          std::chrono::duration<double, std::milli>(
+              GpuProfileClock::now() - kick_profile_t0)
+              .count();
+    }
+    if (!kick_succeeded)
     {
       pipeline->GetAllocator().FreeSlotByIndex(slot_idx);
       ActiveMeshSourceRevision.erase(pending.coord);
@@ -5694,6 +5840,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       ++debt_forced_kicks;
     }
   }
+  local_gpu_kick_ms += std::chrono::duration<double, std::milli>(
+                           std::chrono::high_resolution_clock::now() -
+                           kick_pass_t0)
+                           .count();
   if (force_kick_debt && kicked == 0 && queued_n > 0 &&
       LastGpuKickDeferReason_.empty())
   {
@@ -5707,6 +5857,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   const bool focus_miss_or_holes_finish =
       StarveRemeshForHoles || ColumnLoadedNoMeshPressure_ > 0 ||
       VisibleBlackFocusPressure_ >= 20;
+  const auto second_finish_pass_t0 =
+      std::chrono::high_resolution_clock::now();
   if (ShouldRunSecondGpuFinishPass(hole_finish_bias, force_kick_debt, kicked,
                                    focus_miss_or_holes_finish) &&
       finished < finish_cap && processed < max_count && budget_left())
@@ -5724,7 +5876,18 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       PendingGpuApply &pending_ref = PendingGpuApplies[i];
 
       bool dropped = false;
-      if (!revision_ok(pending_ref, dropped))
+      const auto revision_profile_t0 =
+          gpu_process_profile_sample ? GpuProfileClock::now()
+                                     : GpuProfileClock::time_point{};
+      const bool revision_valid = revision_ok(pending_ref, dropped);
+      if (gpu_process_profile_sample)
+      {
+        gpu_profile_revision_validation_ms +=
+            std::chrono::duration<double, std::milli>(
+                GpuProfileClock::now() - revision_profile_t0)
+                .count();
+      }
+      if (!revision_valid)
       {
         GpuExtractInFlight.erase(pending_ref.coord);
         PendingGpuApplies.erase(PendingGpuApplies.begin() +
@@ -5737,15 +5900,34 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       gpu_result.success = true;
       gpu_result.slotIndex = pending_ref.ticket.slotIndex;
       uint32_t quad_count = 0;
+      const auto quad_finish_profile_t0 =
+          gpu_process_profile_sample ? GpuProfileClock::now()
+                                     : GpuProfileClock::time_point{};
     const auto st = pipeline->TryFinishComputePasses(
           pending_ref.ticket, registry, quad_count, &gpu_result.blockRanges,
           &gpu_result.hasFullyDarkFace, &gpu_result.hasLitDrawableFace,
           /*timeout_ns=*/0);
+      if (gpu_process_profile_sample)
+      {
+        gpu_profile_quad_finish_ms +=
+            std::chrono::duration<double, std::milli>(
+                GpuProfileClock::now() - quad_finish_profile_t0)
+                .count();
+      }
+      if (st == UGpuMeshPipeline::GpuFinishStatus::Ready)
+      {
+        ++gpu_profile_quad_ready_n;
+      }
       if (st == UGpuMeshPipeline::GpuFinishStatus::NotReady)
       {
+        ++gpu_profile_quad_not_ready_n;
         ++LastGpuFinishNotReadyN;
       ++i;
       continue;
+    }
+    if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
+    {
+      ++gpu_profile_quad_failed_n;
     }
     if (st == UGpuMeshPipeline::GpuFinishStatus::Ready &&
         pending_ref.stageTrace.job_id != 0)
@@ -5767,17 +5949,26 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       gpu_result.provisionalLightPreview =
           pending.snapshot.provisionalLightPreview;
       ActiveMeshSourceRevision.erase(pending.coord);
-      if (CommitGpuMeshResult(world, registry, pending.coord,
-                              pending.sourceRevision, std::move(gpu_result),
-                              std::move(pending.crossCenters),
-                              pending.accepted_input_stale,
-                              pending.snapshot.inputStampsValid
-                                  ? pending.snapshot.inputStamps[0].light
-                                  : 0ull,
-                              pending.snapshot.inputStampsValid,
-                              pending.snapshot.boundaryOverlay,
-                              pending.accepted_geom_stale,
-                              pending.stageTrace))
+      const auto commit_profile_t0 =
+          gpu_process_profile_sample ? GpuProfileClock::now()
+                                     : GpuProfileClock::time_point{};
+      const bool committed = CommitGpuMeshResult(
+          world, registry, pending.coord, pending.sourceRevision,
+          std::move(gpu_result), std::move(pending.crossCenters),
+          pending.accepted_input_stale,
+          pending.snapshot.inputStampsValid
+              ? pending.snapshot.inputStamps[0].light
+              : 0ull,
+          pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
+          pending.accepted_geom_stale, pending.stageTrace);
+      if (gpu_process_profile_sample)
+      {
+        gpu_profile_commit_ms +=
+            std::chrono::duration<double, std::milli>(
+                GpuProfileClock::now() - commit_profile_t0)
+                .count();
+      }
+      if (committed)
       {
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
@@ -5801,17 +5992,48 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 
   local_gpu_finish_ms += std::chrono::duration<double, std::milli>(
                              std::chrono::high_resolution_clock::now() -
-                             finish_pass_t0)
+                             second_finish_pass_t0)
                              .count();
   LastGpuKickN += kicked;
   LastGpuFinishN += finished;
   LastGpuFinishWatchRimN_ = gpu_finish_watch_rim_n;
-  local_gpu_kick_ms += std::chrono::duration<double, std::milli>(
-                           std::chrono::high_resolution_clock::now() -
-                           kick_pass_t0)
-                           .count();
   LastMeshGpuKickMs += local_gpu_kick_ms;
   LastMeshGpuFinishMs += local_gpu_finish_ms;
+  if (gpu_process_profile_sample)
+  {
+    const double total_ms = std::chrono::duration<double, std::milli>(
+                                GpuProfileClock::now() -
+                                gpu_process_profile_start)
+                                .count();
+    const double measured_ms = gpu_profile_revision_validation_ms +
+                               gpu_profile_counter_poll_ms +
+                               gpu_profile_quad_finish_ms +
+                               gpu_profile_kick_dispatch_ms +
+                               gpu_profile_commit_ms;
+    const double other_ms = std::max(0.0, total_ms - measured_ms);
+    *gpu_process_profile_sink
+        << "{\"kind\":\"gpu_mesh_process_profile\",\"seq\":"
+        << gpu_process_profile_seq << ",\"pending_begin\":"
+        << gpu_profile_pending_begin << ",\"pending_end\":"
+        << PendingGpuApplies.size() << ",\"processed\":" << processed
+        << ",\"kicked\":" << kicked << ",\"finished\":" << finished
+        << ",\"finish_attempts\":" << finish_attempts
+        << ",\"counter_ready_n\":" << gpu_profile_counter_ready_n
+        << ",\"counter_not_ready_n\":" << gpu_profile_counter_not_ready_n
+        << ",\"counter_failed_n\":" << gpu_profile_counter_failed_n
+        << ",\"quad_ready_n\":" << gpu_profile_quad_ready_n
+        << ",\"quad_not_ready_n\":" << gpu_profile_quad_not_ready_n
+        << ",\"quad_failed_n\":" << gpu_profile_quad_failed_n
+        << ",\"total_ms\":" << total_ms << ",\"phase_ms\":{"
+        << "\"revision_validation\":"
+        << gpu_profile_revision_validation_ms
+        << ",\"counter_poll\":" << gpu_profile_counter_poll_ms
+        << ",\"quad_finish\":" << gpu_profile_quad_finish_ms
+        << ",\"kick_dispatch\":" << gpu_profile_kick_dispatch_ms
+        << ",\"commit\":" << gpu_profile_commit_ms
+        << ",\"other\":" << other_ms << "}}\n";
+    gpu_process_profile_sink->flush();
+  }
   return processed;
 }
 
