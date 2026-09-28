@@ -1260,6 +1260,8 @@ public:
   /// Focus columns with GreedyMesh and PendingLightBeforeMesh (sticky black).
   int CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
                                   int radius_chunks) const;
+  int CountProvisionalLightPreviewFocusMeshes(
+      glm::ivec3 focus_ground_chunk, int radius_chunks) const;
   /// Era16 TD-052: focus columns with drawable dark/stale mesh (user-visible
   /// black), independent of StickyRemeshAfterLight.
   /// out_no_ticket = VB ∧ ¬Contains ∧ ¬Progress ∧ ¬Sticky.
@@ -1349,6 +1351,7 @@ public:
     int pending_light{0};
     int dirty_n{0};
     int black_sticky{0};
+    int provisional_light_preview{0};
     int unfinished{0};
     int visible_black_focus_n{0};
     int visible_black_no_ticket_n{0};

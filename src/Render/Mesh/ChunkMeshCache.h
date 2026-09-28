@@ -412,6 +412,9 @@ public:
     const auto it = GreedyCache.find(chunk_coord);
     return it != GreedyCache.end() && it->second.ProvisionalLightPreview;
   }
+  int CountProvisionalLightPreviewsNear(glm::ivec3 focus_chunk,
+                                        int radius_chunks, int min_cy,
+                                        int max_cy) const;
   /// R06 R2: last-applied BoundaryOverlay still active (sticky closing faces).
   bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
   /// True if overlay missing-face bit for shell face 0..5 is set.

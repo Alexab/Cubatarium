@@ -657,6 +657,8 @@ struct PhysicsTelemetry
   /// Era39 A4: pending-dark (hidden until lit) vs sticky remesh (preview class).
   int FocusDarkMeshHidden{0};
   int FocusDarkMeshPreview{0};
+  /// Drawable first meshes shown with ambient fallback while light settles.
+  int FocusProvisionalLightPreview{0};
   /// Pending-light + sticky black preview columns in focus (subset of dark).
   int FocusPendingDark{0};
   int FocusStickyRemesh{0};

@@ -619,6 +619,7 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
                                          const BlockDefinitionCatalog *catalog)
 {
   out_ticket = {};
+  out_ticket.provisionalLightPreview = snapshot.provisionalLightPreview;
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)snapshot;
   (void)registry;
@@ -783,6 +784,9 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
     glUseProgram(EmitState.PackedEmitProgram);
     glUniform1ui(glGetUniformLocation(EmitState.PackedEmitProgram, "numRects"),
                  rect_count);
+    glUniform1ui(
+        glGetUniformLocation(EmitState.PackedEmitProgram, "lightPreview"),
+        out_ticket.provisionalLightPreview ? 1u : 0u);
     glDispatchCompute((rect_count + 63u) / 64u, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glUseProgram(0);
@@ -807,6 +811,7 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   out_ticket.awaitingCounters = true;
   out_ticket.valid = true;
   out_ticket.quadCount = 0;
+  out_ticket.provisionalLightPreview = snapshot.provisionalLightPreview;
   return true;
 #endif
 }
@@ -900,6 +905,9 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
   glUseProgram(EmitState.PackedEmitProgram);
   glUniform1ui(glGetUniformLocation(EmitState.PackedEmitProgram, "numRects"),
                rect_count);
+  glUniform1ui(
+      glGetUniformLocation(EmitState.PackedEmitProgram, "lightPreview"),
+      ticket.provisionalLightPreview ? 1u : 0u);
   glDispatchCompute((rect_count + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
   glUseProgram(0);
@@ -1184,6 +1192,7 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
   out_result.slotIndex = slot_idx;
   out_result.quadCount = quad_count;
   out_result.transparent = has_transparent;
+  out_result.provisionalLightPreview = snapshot.provisionalLightPreview;
   return true;
 #endif
 }

@@ -2533,8 +2533,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   };
   const UChunkMeshCache &mesh_cache = MeshService->GetCache();
   if (mesh_cache.HasProvisionalLightPreview(chunk_coord) &&
-      mesh_cache.HasDrawableGreedyMesh(chunk_coord) &&
-      !mesh_cache.HasLiveGpuDraw(chunk_coord))
+      mesh_cache.HasDrawableGreedyMesh(chunk_coord))
   {
     return memo(true, /*provisional_preview=*/true);
   }
@@ -5520,6 +5519,40 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
   return sticky;
 }
 
+int UWorld::CountProvisionalLightPreviewFocusMeshes(
+    glm::ivec3 focus_ground_chunk, int radius_chunks) const
+{
+  if (!MeshService || radius_chunks < 0)
+  {
+    return 0;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  int band_min =
+      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
+                                     CHUNK_SIZE * 2 - 1);
+  if (LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
+  {
+    const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
+    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
+    }
+  }
+  else if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+  }
+  return MeshService->GetCache().CountProvisionalLightPreviewsNear(
+      focus_ground_chunk, radius_chunks, FloorDiv(band_min, CHUNK_SIZE),
+      FloorDiv(band_max, CHUNK_SIZE));
+}
+
 int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
                                          int radius_chunks,
                                          int *out_no_ticket,
@@ -5610,6 +5643,13 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
     {
       const glm::ivec3 coord(key.x, cy, key.y);
       if (!MeshService->HasDrawableGreedyMesh(coord))
+      {
+        continue;
+      }
+      // Tagged preview surfaces have an ambient shader floor and are tracked
+      // separately; they are not black user-visible work even when packed
+      // source light is still zero.
+      if (MeshService->GetCache().HasProvisionalLightPreview(coord))
       {
         continue;
       }

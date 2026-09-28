@@ -187,7 +187,6 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         // Q4: WorkerCompute GPU-extract eligibility from pinned catalog.
         const bool defer_gpu =
             gpu_mesher &&
-            !snapshot.provisionalLightPreview &&
             gpu_mesher->CanDeferGpuExtract(snapshot, *registryPtr, pinned);
         if (defer_gpu)
         {

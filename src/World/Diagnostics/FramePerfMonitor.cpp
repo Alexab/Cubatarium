@@ -576,6 +576,7 @@ struct FrameNumbers
   int light_debt{0};
   int focus_missing_mesh{0};
   int focus_dark_mesh{0};
+  int focus_provisional_light_preview{0};
   int focus_pending_dark{0};
   int focus_sticky_remesh{0};
   int visible_black_focus_n{0};
@@ -1328,6 +1329,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.miss_cz = phys.MissCz;
   n.miss_horiz = phys.MissHoriz;
   n.focus_dark_mesh = phys.FocusDarkMesh;
+  n.focus_provisional_light_preview = phys.FocusProvisionalLightPreview;
   n.focus_pending_dark = phys.FocusPendingDark;
   n.focus_sticky_remesh = phys.FocusStickyRemesh;
   n.visible_black_focus_n = phys.VisibleBlackFocusN;
@@ -2118,6 +2120,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"miss_cz\":" << n.miss_cz
           << ",\"miss_horiz\":" << n.miss_horiz
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
+          << ",\"focus_provisional_light_preview\":"
+          << n.focus_provisional_light_preview
           << ",\"focus_pending_dark\":" << n.focus_pending_dark
           << ",\"focus_sticky_remesh\":" << n.focus_sticky_remesh
           << ",\"visible_black_focus_n\":" << n.visible_black_focus_n

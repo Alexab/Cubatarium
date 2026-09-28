@@ -53,5 +53,5 @@ void main()
     vSkyLight = sky;
     vBlockLight = blk;
     vWetness = 0.0;
-    vLightPreview = 0.0;
+    vLightPreview = float((w1 >> 24u) & 0x1u);
 }

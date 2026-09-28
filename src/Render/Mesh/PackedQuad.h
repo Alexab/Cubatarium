@@ -50,6 +50,9 @@ struct PackedQuad
   int BlockLight() const { return static_cast<int>((word1 >> 14) & 0xF); }
 };
 
+/// word1 flag bit 24 is reserved for tagged first-mesh light previews.
+inline constexpr uint32_t kPackedQuadFlagLightPreview = 1u << 24u;
+
 /// True when any non-bottom surface quad has zero sky and block light.
 inline bool PackedQuadsHaveFullyDarkFace(const std::vector<PackedQuad> &quads)
 {

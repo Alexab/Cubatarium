@@ -986,10 +986,13 @@ void UWorldStreaming::RefreshStreamingPressure(
       sticky_epoch_delta, witness_retarget_delta);
   int sticky_remesh = 0;
   int pending_dark = 0;
+  int provisional_light_preview = 0;
   if (cruise_ring_reuse && !sticky_ring_resync)
   {
     sticky_remesh = ring_sample_prev.black_sticky;
     pending_dark = ring_sample_prev.pending_light;
+    provisional_light_preview =
+        ring_sample_prev.provisional_light_preview;
   }
   else
   {
@@ -997,6 +1000,8 @@ void UWorldStreaming::RefreshStreamingPressure(
         world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
     pending_dark =
         world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+    provisional_light_preview = world.CountProvisionalLightPreviewFocusMeshes(
+        focus_ground, focus_radius);
     rp.last_sticky_focus_xz = glm::ivec2(focus_ground.x, focus_ground.z);
     rp.last_sticky_keep_cols = keep_cols_now;
     pt.PrepRefreshRingResyncMs += lap_ms(sticky_t0);
@@ -1198,6 +1203,7 @@ void UWorldStreaming::RefreshStreamingPressure(
     sample.pending_light = pending_light_focus;
     sample.dirty_n = focus_dirty_chunks;
     sample.black_sticky = sticky_remesh;
+    sample.provisional_light_preview = provisional_light_preview;
     sample.unfinished = unfinished_visual;
     sample.valid = true;
     world.SetFocusRingVisualSample(sample);
@@ -1208,6 +1214,8 @@ void UWorldStreaming::RefreshStreamingPressure(
   // Era39 A4: split Type A — pending-dark (hidden) vs sticky remesh (preview).
   world.PhysicsTelemetryData.FocusDarkMeshHidden = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMeshPreview = sticky_remesh;
+  world.PhysicsTelemetryData.FocusProvisionalLightPreview =
+      provisional_light_preview;
   // Era16 TD-052: VisibleBlack column SoT (independent of StickyRemesh set).
   // Cruise: every 4 frames. Stand: every frame until VB raw stable, then
   // cadence 4 (FZ2.7-P17: idle every-frame scan burned stream_ms on 100413).

@@ -4245,6 +4245,30 @@ bool UChunkMeshCache::HasWitnessSwapGraceAt(glm::ivec2 coord_xz) const
   return cutum::IsWitnessSwapGraceActive(WitnessSwapGrace_, coord_xz);
 }
 
+int UChunkMeshCache::CountProvisionalLightPreviewsNear(
+    glm::ivec3 focus_chunk, int radius_chunks, int min_cy, int max_cy) const
+{
+  if (radius_chunks < 0 || max_cy < min_cy)
+  {
+    return 0;
+  }
+  int count = 0;
+  for (const auto &[coord, mesh] : GreedyCache)
+  {
+    if (!mesh.ProvisionalLightPreview || coord.y < min_cy || coord.y > max_cy)
+    {
+      continue;
+    }
+    const int horiz = std::max(std::abs(coord.x - focus_chunk.x),
+                               std::abs(coord.z - focus_chunk.z));
+    if (horiz <= radius_chunks && HasDrawableGreedyMesh(coord))
+    {
+      ++count;
+    }
+  }
+  return count;
+}
+
 bool UChunkMeshCache::TryConsumeFmDirtyGpuWatch(glm::ivec3 coord)
 {
   if (FmDirtyGpuWatchAge_.erase(coord) > 0)
@@ -4444,7 +4468,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
           gpu_result.hasFullyDarkFace && !gpu_result.hasLitDrawableFace,
                                  defer_until_lit && had_mesh, had_lit_mesh,
                                  had_live_lit_gpu, prior_lit_age) &&
-      !settled_current_dark_candidate)
+      !settled_current_dark_candidate &&
+      !(gpu_result.provisionalLightPreview && !had_mesh))
   {
     // Free staging only — FreeChunk(coord) would drop the live lit mesh that
     // ProcessSnapshot used to overwrite in-place (opaque collapse 213543).
@@ -4568,7 +4593,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
   }
   ClearPriorLitHoldAge(coord);
-  chunkMesh.ProvisionalLightPreview = false;
+  chunkMesh.ProvisionalLightPreview = gpu_result.provisionalLightPreview;
   chunkMesh.GpuResident = true;
   chunkMesh.GpuSlotIndex = gpu_result.slotIndex;
   chunkMesh.GpuQuadCount = gpu_result.quadCount;
@@ -5132,6 +5157,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       gpu_result.slotIndex = pending_ref.ticket.slotIndex;
       gpu_result.quadCount = 0;
       gpu_result.transparent = pending_ref.transparent;
+      gpu_result.provisionalLightPreview =
+          pending_ref.snapshot.provisionalLightPreview;
       PendingGpuApply pending = std::move(pending_ref);
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
@@ -5230,6 +5257,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     gpu_result.quadCount = quad_count;
     gpu_result.transparent = pending.transparent;
+    gpu_result.provisionalLightPreview =
+        pending.snapshot.provisionalLightPreview;
     ActiveMeshSourceRevision.erase(pending.coord);
     if (CommitGpuMeshResult(world, registry, pending.coord,
                               pending.sourceRevision, std::move(gpu_result),
@@ -5575,6 +5604,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       gpu_result.quadCount = quad_count;
       gpu_result.transparent = pending.transparent;
+      gpu_result.provisionalLightPreview =
+          pending.snapshot.provisionalLightPreview;
       ActiveMeshSourceRevision.erase(pending.coord);
       if (CommitGpuMeshResult(world, registry, pending.coord,
                               pending.sourceRevision, std::move(gpu_result),
@@ -6043,6 +6074,17 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     result.GpuExtractPending = false;
   }
 
+  if (result.ProvisionalLightPreview)
+  {
+    for (GreedyMeshBatch &batch : result.batches)
+    {
+      for (GreedyMeshVertex &vertex : batch.vertices)
+      {
+        vertex.lightPreview = 1.0f;
+      }
+    }
+  }
+
   const bool defer_until_lit =
       DeferMeshUntilLit && DeferMeshUntilLit(result.coord);
   // Empty SoftDefer placeholders must not count as had_lit (keep dark forever).
@@ -6080,7 +6122,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
                                  had_lit_mesh, had_live_lit_gpu,
                                  prior_lit_age) &&
-      !settled_current_dark_candidate)
+      !settled_current_dark_candidate &&
+      !(result.ProvisionalLightPreview && !had_mesh))
   {
     // Keep prior lit mesh (or hole). MarkRelit owns requeue when SoftDefer+had_mesh.
     if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
@@ -7758,15 +7801,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const bool current_demand =
             chunk && demand && demand->world_epoch == CaptureStore.WorldEpoch() &&
             demand->incarnation == chunk->GetIncarnation();
-        if (current_demand)
-        {
-          const uint64_t field_light_rev = chunk->GetLightFieldRevision();
-          const bool light_unsettled =
-              !demand->has_settled_light ||
-              demand->settled_light_rev != field_light_rev ||
-              demand->desired_light_rev > demand->published_light_rev;
-          snapshot.provisionalLightPreview = light_unsettled;
-        }
+        const uint64_t field_light_rev =
+            chunk ? chunk->GetLightFieldRevision() : 0;
+        const bool light_is_settled =
+            current_demand && demand->has_settled_light &&
+            demand->settled_light_rev == field_light_rev &&
+            demand->desired_light_rev <= demand->published_light_rev;
+        // Absence of current per-slice settlement is not evidence that the
+        // first mesh is safe to publish with raw zero light.
+        snapshot.provisionalLightPreview = !light_is_settled;
       }
       const double snapshot_acquire_ms =
           std::chrono::duration<double, std::milli>(

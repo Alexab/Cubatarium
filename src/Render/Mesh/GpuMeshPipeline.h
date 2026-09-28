@@ -53,6 +53,8 @@ public:
     bool valid{false};
     /// True after greedy dispatch until counters mapped + packed emit done.
     bool awaitingCounters{false};
+    /// Carry first-mesh presentation state through asynchronous packed emit.
+    bool provisionalLightPreview{false};
   };
   bool KickComputePasses(const ChunkMeshSnapshot &snapshot,
                          UBlockRegistry &registry, glm::ivec3 coord,

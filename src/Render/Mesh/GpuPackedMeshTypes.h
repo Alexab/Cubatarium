@@ -34,6 +34,8 @@ struct GpuMeshProcessResult
   bool hasFullyDarkFace{false};
   /// At least one non-bottom face quad has a nonzero light value.
   bool hasLitDrawableFace{false};
+  /// This packed mesh is a temporary first-mesh preview while light settles.
+  bool provisionalLightPreview{false};
   std::vector<GpuBlockDrawRange> blockRanges;
 };
 

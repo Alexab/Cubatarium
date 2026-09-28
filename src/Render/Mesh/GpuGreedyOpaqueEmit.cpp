@@ -183,6 +183,7 @@ layout(std430, binding = 0) readonly buffer Rects { GpuRect rects[]; };
 layout(std430, binding = 1) writeonly buffer Vertices { float verts[]; };
 layout(std430, binding = 2) writeonly buffer Indices { uint inds[]; };
 uniform uint numRects;
+uniform uint lightPreview;
 uniform ivec3 chunkCoord;
 uniform uint side;
 int faceIndexFromGreedy(int axis, int faceSign) {
@@ -262,7 +263,8 @@ void main() {
   uint blk = (r.lightPacked >> 4u) & 0x0Fu;
   uint w1 = (r.blockId & 0x3FFu)
           | (sky << 10u)
-          | (blk << 14u);
+          | (blk << 14u)
+          | ((lightPreview & 1u) << 24u);
   quads[rid] = uvec2(w0, w1);
 }
 )";
