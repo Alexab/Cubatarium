@@ -3320,6 +3320,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         trace.desired_light_rev = demand->desired_light_rev;
         trace.demand_published_geom_rev = demand->published_geom_rev;
         trace.demand_published_light_rev = demand->published_light_rev;
+        trace.face_debt_mask = demand->face_debt_mask;
         trace.settled_light_rev = demand->settled_light_rev;
         trace.has_settled_light = demand->has_settled_light ? 1 : 0;
         trace.active_stage = static_cast<uint8_t>(demand->active_stage);
