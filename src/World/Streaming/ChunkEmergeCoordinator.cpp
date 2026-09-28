@@ -962,8 +962,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
-          world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
-          EnqueueVerticalFaceDebtRepair(chunk_coord);
           // A37 H2: single authority gate (cutover ⇒ authority).
           if (ChunkDemandAuthorityEnabled())
           {
@@ -999,6 +997,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   world_ref.GetMeshService().GetCache().GetMeshPublishRevs(peer);
               return pr.geom_rev;
             };
+            uint8_t unresolved_mask = 0;
+            uint8_t already_covered_mask = 0;
             for (int f = 0; f < 6; ++f)
             {
               const uint8_t bit = static_cast<uint8_t>(1u << f);
@@ -1006,9 +1006,46 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               {
                 continue;
               }
-              uint64_t need = peer_cov_gen(chunk_coord + kFaceDir[f]);
+              const glm::ivec3 peer = chunk_coord + kFaceDir[f];
+              const uint64_t need = peer_cov_gen(peer);
+              const UChunk *peer_chunk =
+                  world_ref.GetBlockWorld().GetChunkManager().GetChunk(peer);
+              const bool peer_has_coverage =
+                  peer_chunk &&
+                  world_ref.GetMeshService().HasMeshSatisfyingColumnReady(peer);
+              const ChunkRenderDemandRecord *self = demand.Find(chunk_coord);
+              const uint64_t waiting = self ? self->waiting_peer_gen[f] : 0;
+              const bool generation_satisfied =
+                  need != 0 && (waiting == 0 || need >= waiting);
+              if (peer_has_coverage && generation_satisfied)
+              {
+                // The peer may have completed before this subscriber was
+                // registered. Resolve that read-before-subscribe race here;
+                // intentional empty coverage has no drawable callback.
+                demand.NoteFaceDebt(chunk_coord, bit, need);
+                demand.NoteFaceDebtSatisfied(chunk_coord, bit, need);
+                already_covered_mask = static_cast<uint8_t>(
+                    already_covered_mask | bit);
+                continue;
+              }
+              unresolved_mask =
+                  static_cast<uint8_t>(unresolved_mask | bit);
               // A39 P3: UnknownPeer keeps waiting=0 (never fabricate need=1).
               demand.NoteFaceDebt(chunk_coord, bit, need);
+            }
+            if (already_covered_mask != 0)
+            {
+              // The target was captured with a missing-neighbor overlay. The
+              // peer's prior completion satisfies the dependency, but the
+              // target still needs a fresh capture to remove that overlay.
+              world_ref.GetMeshService().QueueMeshDependencyInvalidation(
+                  chunk_coord);
+            }
+            if (unresolved_mask != 0)
+            {
+              world_ref.GetColumnRecords().ApplyFaceDebtMask(col,
+                                                              unresolved_mask);
+              EnqueueVerticalFaceDebtRepair(chunk_coord);
             }
             // Geometry uses the mesh-revision domain consumed by publication.
             uint64_t g = 0, l = 0;
@@ -1047,6 +1084,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                       /*now_ms=*/0.0, world_epoch,
                                       incarnation);
             }
+          }
+          else
+          {
+            world_ref.GetColumnRecords().ApplyFaceDebtMask(col, mask);
+            EnqueueVerticalFaceDebtRepair(chunk_coord);
           }
           world_ref.NoteUnfinishedColumnDirty(col);
           // Ownership SeamDebt: FaceDebt = census only (unfinished).
