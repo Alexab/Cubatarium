@@ -114,6 +114,8 @@ public:
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
   void MarkDirtyPriority(glm::ivec3 chunk_coord,
                          MeshRevisionBumpReason reason);
+  void RequeueDirtyPriority(glm::ivec3 chunk_coord,
+                            MeshRevisionBumpReason reason);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
       const std::vector<glm::ivec3> &changed_input_chunks);

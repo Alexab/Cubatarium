@@ -2643,6 +2643,18 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord,
                                         MeshRevisionBumpReason reason)
 {
+  MarkDirtyPriorityImpl(chunkCoord, reason, true);
+}
+
+void UChunkMeshCache::RequeueDirtyPriority(
+    glm::ivec3 chunkCoord, MeshRevisionBumpReason reason)
+{
+  MarkDirtyPriorityImpl(chunkCoord, reason, false);
+}
+
+void UChunkMeshCache::MarkDirtyPriorityImpl(
+    glm::ivec3 chunkCoord, MeshRevisionBumpReason reason, bool bump_revision)
+{
   if (!ShouldAdmitDirtyCoord(chunkCoord))
   {
     return;
@@ -2667,7 +2679,7 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord,
     RemeshAfterApply.erase(chunkCoord);
     const bool existed = Dirty.Contains(chunkCoord);
     Dirty.MarkDirtyPriority(chunkCoord);
-    if (!existed)
+    if (bump_revision && !existed)
     {
       BumpChunkMeshRevision(
           chunkCoord, MeshRevisionBumpReason::PriorityEnterSoftDefer);
@@ -2687,7 +2699,7 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord,
     RemeshAfterApply.erase(chunkCoord);
     const bool existed = Dirty.Contains(chunkCoord);
     Dirty.MarkDirtyPriority(chunkCoord);
-    if (!existed)
+    if (bump_revision && !existed)
     {
       BumpChunkMeshRevision(
           chunkCoord, MeshRevisionBumpReason::PriorityEnterFirstMesh);
@@ -2825,7 +2837,7 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord,
           Dirty.Erase(chunkCoord);
         }
         Dirty.MarkDirty(chunkCoord);
-        if (!existed_dark)
+        if (bump_revision && !existed_dark)
         {
           BumpChunkMeshRevision(
               chunkCoord, MeshRevisionBumpReason::PriorityFullyDarkRemesh);
@@ -2866,7 +2878,7 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord,
     }
     Dirty.MarkDirty(chunkCoord);
   }
-  if (!existed)
+  if (bump_revision && !existed)
   {
     BumpChunkMeshRevision(chunkCoord, reason);
   }

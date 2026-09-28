@@ -3595,8 +3595,34 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         {
           return;
         }
-        MeshService->MarkDirtyPriority(
-            coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+        const ChunkRenderDemandRecord *active_demand = demand.Find(coord);
+        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        const uint64_t mesh_revision =
+            MeshService->GetChunkMeshRevision(coord);
+        const uint64_t world_epoch =
+            MeshService->GetCache().GetCaptureStore().WorldEpoch();
+        const bool requeue_existing_target =
+            active_demand && active_demand->has_active_attempt &&
+            active_demand->active_attempt_id != 0 && chunk &&
+            active_demand->world_epoch == world_epoch &&
+            active_demand->incarnation == chunk->GetIncarnation() &&
+            active_demand->desired_geom_rev == mesh_revision &&
+            active_demand->published_geom_rev <
+                active_demand->desired_geom_rev;
+        if (requeue_existing_target)
+        {
+          // The demand already owns this exact unpublished target. Requeueing
+          // its work must not mint a new mesh revision on each retry: doing so
+          // advanced the target every frame while the scheduler temporarily
+          // removed its Dirty owner, so no worker could ever catch up.
+          MeshService->RequeueDirtyPriority(
+              coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+        }
+        else
+        {
+          MeshService->MarkDirtyPriority(
+              coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+        }
       };
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);

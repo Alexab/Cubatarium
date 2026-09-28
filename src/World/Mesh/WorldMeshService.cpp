@@ -376,6 +376,32 @@ void UWorldMeshService::MarkDirtyPriority(
   }
 }
 
+void UWorldMeshService::RequeueDirtyPriority(
+    glm::ivec3 chunk_coord, MeshRevisionBumpReason reason)
+{
+#ifndef NDEBUG
+  if (ColumnFlowContainsFn)
+  {
+    const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+    if (!ColumnFlowContainsFn(col))
+    {
+      LOG(WARNING) << "[OWNERSHIP_VIOLATION] RequeueDirtyPriority outside ColumnFlow col="
+                   << col.x << "," << col.y << " cy=" << chunk_coord.y;
+    }
+  }
+#endif
+  if (!Cache.ShouldAdmitDirtyCoord(chunk_coord))
+  {
+    return;
+  }
+  Cache.RequeueDirtyPriority(chunk_coord, reason);
+  NotifyChunkBlocksChanged(chunk_coord);
+  if (OnMeshColumnDirtyFn)
+  {
+    OnMeshColumnDirtyFn(chunk_coord);
+  }
+}
+
 void UWorldMeshService::QueueMeshDependencyInvalidations(
     const UBlockWorld &world,
     const std::vector<glm::ivec3> &changed_input_chunks)

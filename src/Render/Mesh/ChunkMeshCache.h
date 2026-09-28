@@ -80,6 +80,10 @@ public:
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
   void MarkDirtyPriority(glm::ivec3 chunkCoord,
                          MeshRevisionBumpReason reason);
+  /// Re-admit an unfinished target without changing its mesh revision.
+  /// Use only when a live render-demand record already owns this exact target.
+  void RequeueDirtyPriority(glm::ivec3 chunkCoord,
+                           MeshRevisionBumpReason reason);
   bool PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
@@ -1029,6 +1033,10 @@ public:
   float MaxCullDistance() const;
 
 private:
+  void MarkDirtyPriorityImpl(glm::ivec3 chunkCoord,
+                             MeshRevisionBumpReason reason,
+                             bool bump_revision);
+
   struct ChunkGreedyMesh
   {
     std::vector<GreedyMeshBatch> batches;
