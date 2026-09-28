@@ -687,6 +687,10 @@ public:
   int MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk, size_t soft_cap,
                              int min_keep_horiz = 1);
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
+  bool WasScheduledThisFrame(glm::ivec3 chunk_coord) const
+  {
+    return ScheduledThisFrame_.count(chunk_coord) > 0;
+  }
   /// Diagnostic queue owner: 0=none, 1=FirstMesh, 2=priority Remesh,
   /// 3=ordinary Remesh. Index and size are queue-local.
   uint8_t GetDirtyQueueTrace(glm::ivec3 chunk_coord, int32_t &index,
