@@ -6,6 +6,7 @@ flat in int vFaceIndex;
 in float vSkyLight;
 in float vBlockLight;
 in float vWetness;
+flat in float vLightPreview;
 
 out vec4 FragColor;
 
@@ -250,6 +251,11 @@ void main()
     float blockStrength = mix(0.9, 0.35, daySky);
     float blockLit = mix(blockAmbientFloor, blockStrength, block01);
     float lit = clamp(max(skyLit, blockLit), 0.0, 1.0);
+    // Unsettled first meshes use an explicitly marked ambient presentation
+    // until the light solver publishes a replacement. Light debug remains raw.
+    if (vLightPreview > 0.5 && uEnvLightDebugMode <= 0.5) {
+        lit = max(lit, 0.42);
+    }
     FragColor.rgb *= lit;
     if (uEnvLightDebugMode > 0.5) {
         if (uEnvLightDebugMode < 1.5) {

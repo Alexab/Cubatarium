@@ -6,6 +6,7 @@ layout (location = 2) in vec2 aUV;
 layout (location = 3) in float aSkyLight;
 layout (location = 4) in float aBlockLight;
 layout (location = 5) in float aWetness;
+layout (location = 6) in float aLightPreview;
 
 out vec3 vWorldPos;
 out vec2 vUV;
@@ -13,6 +14,7 @@ flat out int vFaceIndex;
 out float vSkyLight;
 out float vBlockLight;
 out float vWetness;
+flat out float vLightPreview;
 
 uniform mat4 mvp_matrix;
 
@@ -25,4 +27,5 @@ void main()
     vSkyLight = aSkyLight;
     vBlockLight = aBlockLight;
     vWetness = aWetness;
+    vLightPreview = aLightPreview;
 }

@@ -41,6 +41,7 @@ struct MeshBuildResult
   JobStageSpan stageTrace{};
   /// P5: worker deferred eligible opaque extract to main (GL) thread.
   bool GpuExtractPending{false};
+  bool ProvisionalLightPreview{false};
   std::unique_ptr<ChunkMeshSnapshot> PendingSnapshot;
   std::unique_ptr<UPipelineCreditGuard> ResultCredit;
   std::array<ChunkInputStamp, kChunkMeshInputStampCount> InputStamps{};

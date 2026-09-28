@@ -55,6 +55,9 @@ struct ChunkMeshSnapshot
   bool inputStampsValid{false};
   /// S4: versioned neighbor-missing overlay (not part of stamp equality).
   BoundaryOverlayState boundaryOverlay{};
+  /// Temporary visibility for a first mesh captured while this slice's light
+  /// calculation is unsettled. This never counts as lit-ready.
+  bool provisionalLightPreview{false};
 
   /// Optional: when false for a neighbor chunk coord, shell treats that
   /// neighbor as Air (Era39 SoftDefer-hidden seam). Nullptr ⇒ all drawable.

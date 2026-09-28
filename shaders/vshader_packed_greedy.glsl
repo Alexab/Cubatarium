@@ -10,6 +10,7 @@ flat out int vFaceIndex;
 out float vSkyLight;
 out float vBlockLight;
 out float vWetness;
+flat out float vLightPreview;
 
 void main()
 {
@@ -52,4 +53,5 @@ void main()
     vSkyLight = sky;
     vBlockLight = blk;
     vWetness = 0.0;
+    vLightPreview = 0.0;
 }

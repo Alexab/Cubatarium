@@ -180,12 +180,14 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         result.InputStampsValid = snapshot.inputStampsValid;
         result.InputCatalog = catalogKeep;
         result.BoundaryOverlay = snapshot.boundaryOverlay;
+        result.ProvisionalLightPreview = snapshot.provisionalLightPreview;
         const BlockDefinitionCatalog *pinned = catalogKeep.get();
 
         auto *gpu_mesher = Mesher;
         // Q4: WorkerCompute GPU-extract eligibility from pinned catalog.
         const bool defer_gpu =
             gpu_mesher &&
+            !snapshot.provisionalLightPreview &&
             gpu_mesher->CanDeferGpuExtract(snapshot, *registryPtr, pinned);
         if (defer_gpu)
         {
@@ -217,6 +219,10 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
             for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
             {
               ApplyVertexLight(batch.vertices[i], q.LightPacked);
+              if (result.ProvisionalLightPreview)
+              {
+                batch.vertices[i].lightPreview = 1.0f;
+              }
             }
           }
           CollectCrossInstancesFromSnapshot(snapshot, *registryPtr, pinned,

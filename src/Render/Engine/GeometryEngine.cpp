@@ -1768,6 +1768,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         5, 1, GL_FLOAT, GL_FALSE, kStride,
         reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
     glEnableVertexAttribArray(5);
+    glVertexAttribPointer(
+        6, 1, GL_FLOAT, GL_FALSE, kStride,
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, lightPreview)));
+    glEnableVertexAttribArray(6);
 
     std::vector<DrawElementsIndirectCommand> cmds;
     size_t i = 0;
@@ -1877,6 +1881,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           5, 1, GL_FLOAT, GL_FALSE, kStride,
           reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
       glEnableVertexAttribArray(5);
+      glVertexAttribPointer(
+          6, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, lightPreview)));
+      glEnableVertexAttribArray(6);
       glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
       NoteGpuHotPathFallback();
       ++draw_cmds;
@@ -1939,6 +1947,11 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
                                    offsetof(GreedyMeshVertex, wetness)));
       glEnableVertexAttribArray(5);
+      glVertexAttribPointer(
+          6, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, lightPreview)));
+      glEnableVertexAttribArray(6);
       glDrawElements(
           GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
           reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
@@ -3136,6 +3149,9 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
   glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, kStride,
                         (void *)(offsetof(GreedyMeshVertex, wetness)));
   glEnableVertexAttribArray(5);
+  glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, kStride,
+                        (void *)(offsetof(GreedyMeshVertex, lightPreview)));
+  glEnableVertexAttribArray(6);
   glBindVertexArray(0);
   return greedyMeshVAO != 0;
 }

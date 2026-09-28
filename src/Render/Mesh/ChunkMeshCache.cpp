@@ -4568,6 +4568,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
   }
   ClearPriorLitHoldAge(coord);
+  chunkMesh.ProvisionalLightPreview = false;
   chunkMesh.GpuResident = true;
   chunkMesh.GpuSlotIndex = gpu_result.slotIndex;
   chunkMesh.GpuQuadCount = gpu_result.quadCount;
@@ -6291,6 +6292,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Write-first: CPU drawable before FreeChunk (ShouldPublishCpuBatchesBeforeFreeGpu).
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
+  chunkMesh.ProvisionalLightPreview = result.ProvisionalLightPreview;
   // W1 SoT 185830: sync BoundaryOverlay on CPU Apply (heal gates were blind).
   chunkMesh.BoundaryOverlay = result.BoundaryOverlay;
   if (result.BoundaryOverlay.active &&
@@ -7748,6 +7750,24 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         return std::next(it);
       }
       ChunkMeshSnapshot snapshot = std::move(*acquire.snapshot);
+      if (Dirty.IsFirstMesh(*it) && !HasDrawableGreedyMesh(*it))
+      {
+        const UChunk *chunk = world.GetChunkManager().GetChunk(*it);
+        const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(*it);
+        const bool current_demand =
+            chunk && demand && demand->world_epoch == CaptureStore.WorldEpoch() &&
+            demand->incarnation == chunk->GetIncarnation();
+        if (current_demand)
+        {
+          const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+          const bool light_unsettled =
+              !demand->has_settled_light ||
+              demand->settled_light_rev != field_light_rev ||
+              demand->desired_light_rev > demand->published_light_rev;
+          snapshot.provisionalLightPreview = light_unsettled;
+        }
+      }
       const double snapshot_acquire_ms =
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - snap_t0)
@@ -9157,6 +9177,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       }
     }
     chunkMesh.batches = std::move(new_batches);
+    chunkMesh.ProvisionalLightPreview = false;
     {
       std::vector<uint16_t> ids;
       ids.reserve(chunkMesh.batches.size());

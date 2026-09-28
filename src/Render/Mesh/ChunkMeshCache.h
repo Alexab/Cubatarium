@@ -406,6 +406,12 @@ public:
   /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
   /// (manual 215919: place-block remesh instantly fills "invisible" chunk).
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// True for an explicitly provisional drawable preview; never light-ready.
+  bool HasProvisionalLightPreview(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyCache.find(chunk_coord);
+    return it != GreedyCache.end() && it->second.ProvisionalLightPreview;
+  }
   /// R06 R2: last-applied BoundaryOverlay still active (sticky closing faces).
   bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
   /// True if overlay missing-face bit for shell face 0..5 is set.
@@ -1047,6 +1053,7 @@ private:
     bool GpuTransparent{false};
     bool GpuHasDarkFace{false};
     bool GpuHasLitDrawableFace{false};
+    bool ProvisionalLightPreview{false};
     uint64_t MeshedLightRevision{0};
     /// Sysreset v2: Accept gate stamps (geom/light/material).
     MeshPublishRevs PublishRevs{};

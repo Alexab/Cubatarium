@@ -2443,7 +2443,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       return it->second;
     }
   }
-  auto memo = [&](bool ready) -> bool
+  auto memo = [&](bool ready, bool provisional_preview = false) -> bool
   {
     bool shadow_ready = ready;
     if (VisualObligationShadowEnabled() || VisualObligationCutoverEnabled())
@@ -2494,12 +2494,22 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       const bool geom_unsatisfied =
           (demand && demand->desired_geom_rev > demand->published_geom_rev) ||
           (!has_greedy_mesh && !air_only);
-      const VisualObligation shadow_obligation = ClassifyVisualObligation(
-          has_lit_drawable || air_only, fully_dark, stale || light_unsatisfied,
-          EnterVisualGateCtrl.WasOpenSkyApplied(col_xz),
-          column && column->legal_dark_settled && dark_image_current,
-          cache.IsSoftDeferHeld(chunk_coord), geom_unsatisfied);
-      shadow_ready = VisualObligationAllowsDraw(shadow_obligation);
+      if (provisional_preview)
+      {
+        // This mesh is explicitly marked and shader-lit with an ambient
+        // fallback. It remains a presentation preview, not a settled image.
+        shadow_ready = ready;
+      }
+      else
+      {
+        const VisualObligation shadow_obligation = ClassifyVisualObligation(
+            has_lit_drawable || air_only, fully_dark,
+            stale || light_unsatisfied,
+            EnterVisualGateCtrl.WasOpenSkyApplied(col_xz),
+            column && column->legal_dark_settled && dark_image_current,
+            cache.IsSoftDeferHeld(chunk_coord), geom_unsatisfied);
+        shadow_ready = VisualObligationAllowsDraw(shadow_obligation);
+      }
       if (shadow_ready != ready)
       {
         ++shadow.draw_mismatches;
@@ -2521,6 +2531,13 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     SliceReadyMemo.emplace(chunk_coord, final_ready);
     return final_ready;
   };
+  const UChunkMeshCache &mesh_cache = MeshService->GetCache();
+  if (mesh_cache.HasProvisionalLightPreview(chunk_coord) &&
+      mesh_cache.HasDrawableGreedyMesh(chunk_coord) &&
+      !mesh_cache.HasLiveGpuDraw(chunk_coord))
+  {
+    return memo(true, /*provisional_preview=*/true);
+  }
   // P0 sticky: live lit GPU always draws until a lit replacement binds —
   // must win even when CPU SoftDefer/empty left Satisfying false.
   if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord) &&
