@@ -1191,6 +1191,9 @@ public:
   void NoteVisibleFirstMeshRelightBand(glm::ivec2 chunk_xz, int min_y,
                                        int max_y);
   bool IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const;
+  /// True only when this slice overlaps the column's pending Y band and has
+  /// no current per-slice light-settlement proof.
+  bool IsPendingLightBeforeMeshSlice(glm::ivec3 chunk_coord) const;
   /// Stamp a validated lighting calculation on one loaded chunk slice.
   void NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord);
   /// True only for a current, validated calculation stamp; revision zero is

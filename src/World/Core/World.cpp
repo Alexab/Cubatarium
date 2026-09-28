@@ -2166,6 +2166,29 @@ bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
   return PendingLightBeforeMesh.find(ground_xz) != PendingLightBeforeMesh.end();
 }
 
+bool UWorld::IsPendingLightBeforeMeshSlice(glm::ivec3 chunk_coord) const
+{
+  const auto pending = PendingLightBeforeMesh.find(
+      glm::ivec2(chunk_coord.x, chunk_coord.z));
+  if (pending == PendingLightBeforeMesh.end())
+  {
+    return false;
+  }
+  const int slice_min_y = chunk_coord.y * CHUNK_SIZE;
+  const int slice_max_y = slice_min_y + CHUNK_SIZE - 1;
+  const bool overlaps_pending_band =
+      slice_min_y <= pending->second.max_y &&
+      slice_max_y >= pending->second.min_y;
+  if (!overlaps_pending_band)
+  {
+    return false;
+  }
+  // The pending map is column-scoped for queue ownership and closeout, but a
+  // settled slice in a wider band can mesh independently. If its light field
+  // changes, the settlement proof becomes stale and this gate closes again.
+  return !HasCurrentChunkSliceLightSettlement(chunk_coord);
+}
+
 void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
 {
   if (!MeshService)

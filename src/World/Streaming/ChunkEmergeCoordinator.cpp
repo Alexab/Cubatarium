@@ -516,8 +516,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             return true;
           }
           const bool underfeet = horiz <= 1;
-          const bool pending = world_ref.IsPendingLightBeforeMesh(
-              glm::ivec2(chunk_coord.x, chunk_coord.z));
+          const bool pending =
+              world_ref.IsPendingLightBeforeMeshSlice(chunk_coord);
           if (EnterLitQuiesceMayLiftSpawnSoftDefer(
                   world_ref.IsEnterLitQuiesceLatched(), horiz, pending,
                   /*spawn_radius=*/2,
