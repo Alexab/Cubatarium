@@ -654,7 +654,21 @@ int UWorldMeshService::MarkMissingSlicesDirtyPriority(
     {
       continue;
     }
-    MarkDirtyPriority(coord);
+    const uint64_t mesh_revision = GetChunkMeshRevision(coord);
+    const MeshPublishRevs published = Cache.GetMeshPublishRevs(coord);
+    if (mesh_revision != 0 && mesh_revision > published.geom_rev)
+    {
+      // FirstMesh tickets can revisit a slice after the scheduler removed its
+      // temporary Dirty owner. Keep retrying the outstanding revision instead
+      // of invalidating its worker target on every ticket pass.
+      RequeueDirtyPriority(coord,
+                           MeshRevisionBumpReason::PriorityDirtyEnqueued);
+    }
+    else
+    {
+      MarkDirtyPriority(coord,
+                        MeshRevisionBumpReason::PriorityDirtyEnqueued);
+    }
     ++marked;
   }
   return marked;
