@@ -639,11 +639,27 @@ struct FrameNumbers
   uint64_t mesh_replace_hole_avoided{0};
   uint64_t pub_reject_light_invalid{0};
   uint64_t pub_reject_source_mismatch{0};
+  uint64_t pub_reject_source_mismatch_delta{0};
   uint64_t pub_reject_other{0};
   uint64_t pub_accept_first_publish{0};
   int pending_gpu_applies_n{0};
   int pending_gpu_queued_n{0};
   int pending_gpu_kicked_n{0};
+  int mesh_pipeline_pending_gpu_n{0};
+  int mesh_pipeline_async_inflight_n{0};
+  int mesh_pipeline_capture_pending_n{0};
+  int mesh_pipeline_completed_waiting_n{0};
+  int mesh_pipeline_outstanding_n{0};
+  int mesh_pipeline_output_slots{0};
+  int mesh_pipeline_output_headroom_n{0};
+  int mesh_pipeline_backpressure_active{0};
+  int mesh_pipeline_backpressure_reason{0};
+  int mesh_pipeline_schedule_requested_n{0};
+  int mesh_pipeline_admission_schedule_cap_n{0};
+  int mesh_pipeline_available_schedule_cap_n{0};
+  int mesh_pipeline_schedule_after_cap_n{0};
+  int mesh_pipeline_first_mesh_cap_n{0};
+  int mesh_pipeline_remesh_cap_n{0};
   int gpu_kick_n{0};
   int gpu_kick_debt_forced_n{0};
   std::string gpu_kick_defer_reason;
@@ -1379,11 +1395,35 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
   n.pub_reject_light_invalid = phys.PubRejectLightInvalid;
   n.pub_reject_source_mismatch = phys.PubRejectSourceMismatch;
+  n.pub_reject_source_mismatch_delta =
+      phys.PubRejectSourceMismatchDelta;
   n.pub_reject_other = phys.PubRejectOther;
   n.pub_accept_first_publish = phys.PubAcceptFirstPublish;
   n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
   n.pending_gpu_queued_n = phys.PendingGpuQueuedN;
   n.pending_gpu_kicked_n = phys.PendingGpuKickedN;
+  n.mesh_pipeline_pending_gpu_n = phys.MeshPipelinePendingGpuN;
+  n.mesh_pipeline_async_inflight_n = phys.MeshPipelineAsyncInFlightN;
+  n.mesh_pipeline_capture_pending_n = phys.MeshPipelineCapturePendingN;
+  n.mesh_pipeline_completed_waiting_n =
+      phys.MeshPipelineCompletedWaitingN;
+  n.mesh_pipeline_outstanding_n = phys.MeshPipelineOutstandingN;
+  n.mesh_pipeline_output_slots = phys.MeshPipelineOutputSlots;
+  n.mesh_pipeline_output_headroom_n = phys.MeshPipelineOutputHeadroomN;
+  n.mesh_pipeline_backpressure_active =
+      phys.MeshPipelineBackpressureActive;
+  n.mesh_pipeline_backpressure_reason =
+      phys.MeshPipelineBackpressureReason;
+  n.mesh_pipeline_schedule_requested_n =
+      phys.MeshPipelineScheduleRequestedN;
+  n.mesh_pipeline_admission_schedule_cap_n =
+      phys.MeshPipelineAdmissionScheduleCapN;
+  n.mesh_pipeline_available_schedule_cap_n =
+      phys.MeshPipelineAvailableScheduleCapN;
+  n.mesh_pipeline_schedule_after_cap_n =
+      phys.MeshPipelineScheduleAfterCapN;
+  n.mesh_pipeline_first_mesh_cap_n = phys.MeshPipelineFirstMeshCapN;
+  n.mesh_pipeline_remesh_cap_n = phys.MeshPipelineRemeshCapN;
   n.gpu_kick_n = phys.GpuKickN;
   n.gpu_kick_debt_forced_n = phys.GpuKickDebtForcedN;
   n.gpu_kick_defer_reason = phys.GpuKickDeferReason;
@@ -2209,11 +2249,43 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_replace_hole_avoided\":" << n.mesh_replace_hole_avoided
           << ",\"pub_reject_light_invalid\":" << n.pub_reject_light_invalid
           << ",\"pub_reject_source_mismatch\":" << n.pub_reject_source_mismatch
+          << ",\"pub_reject_source_mismatch_delta\":"
+          << n.pub_reject_source_mismatch_delta
           << ",\"pub_reject_other\":" << n.pub_reject_other
           << ",\"pub_accept_first_publish\":" << n.pub_accept_first_publish
           << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
           << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
           << ",\"pending_gpu_kicked_n\":" << n.pending_gpu_kicked_n
+          << ",\"mesh_pipeline_pending_gpu_n\":"
+          << n.mesh_pipeline_pending_gpu_n
+          << ",\"mesh_pipeline_async_inflight_n\":"
+          << n.mesh_pipeline_async_inflight_n
+          << ",\"mesh_pipeline_capture_pending_n\":"
+          << n.mesh_pipeline_capture_pending_n
+          << ",\"mesh_pipeline_completed_waiting_n\":"
+          << n.mesh_pipeline_completed_waiting_n
+          << ",\"mesh_pipeline_outstanding_n\":"
+          << n.mesh_pipeline_outstanding_n
+          << ",\"mesh_pipeline_output_slots\":"
+          << n.mesh_pipeline_output_slots
+          << ",\"mesh_pipeline_output_headroom_n\":"
+          << n.mesh_pipeline_output_headroom_n
+          << ",\"mesh_pipeline_backpressure_active\":"
+          << n.mesh_pipeline_backpressure_active
+          << ",\"mesh_pipeline_backpressure_reason\":"
+          << n.mesh_pipeline_backpressure_reason
+          << ",\"mesh_pipeline_schedule_requested_n\":"
+          << n.mesh_pipeline_schedule_requested_n
+          << ",\"mesh_pipeline_admission_schedule_cap_n\":"
+          << n.mesh_pipeline_admission_schedule_cap_n
+          << ",\"mesh_pipeline_available_schedule_cap_n\":"
+          << n.mesh_pipeline_available_schedule_cap_n
+          << ",\"mesh_pipeline_schedule_after_cap_n\":"
+          << n.mesh_pipeline_schedule_after_cap_n
+          << ",\"mesh_pipeline_first_mesh_cap_n\":"
+          << n.mesh_pipeline_first_mesh_cap_n
+          << ",\"mesh_pipeline_remesh_cap_n\":"
+          << n.mesh_pipeline_remesh_cap_n
           << ",\"gpu_kick_n\":" << n.gpu_kick_n
           << ",\"gpu_kick_debt_forced_n\":" << n.gpu_kick_debt_forced_n
           << ",\"gpu_kick_defer_reason\":\"" << n.gpu_kick_defer_reason << "\""

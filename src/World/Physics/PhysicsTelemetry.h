@@ -66,6 +66,7 @@ struct PhysicsTelemetry
   /// A34: ArtifactManifest reject / first-accept (empty-world hot-fix).
   uint64_t PubRejectLightInvalid{0};
   uint64_t PubRejectSourceMismatch{0};
+  uint64_t PubRejectSourceMismatchDelta{0};
   uint64_t PubRejectOther{0};
   uint64_t PubAcceptFirstPublish{0};
   /// Prior-lit hold: dark commit retained prior (not Completed publish).
@@ -345,6 +346,23 @@ struct PhysicsTelemetry
   int DirtyAdmitBudgetEnd{0};
   int FirstMeshScheduleCap{0};
   int FirstMeshScheduleEffectiveCap{0};
+  /// Components of the final output-pool fence around mesh scheduling.
+  int MeshPipelinePendingGpuN{0};
+  int MeshPipelineAsyncInFlightN{0};
+  int MeshPipelineCapturePendingN{0};
+  int MeshPipelineCompletedWaitingN{0};
+  int MeshPipelineOutstandingN{0};
+  int MeshPipelineOutputSlots{0};
+  int MeshPipelineOutputHeadroomN{0};
+  int MeshPipelineBackpressureActive{0};
+  /// Bit 0: near/at soft-threshold; bit 1: requested output exceeds pool.
+  int MeshPipelineBackpressureReason{0};
+  int MeshPipelineScheduleRequestedN{0};
+  int MeshPipelineAdmissionScheduleCapN{0};
+  int MeshPipelineAvailableScheduleCapN{0};
+  int MeshPipelineScheduleAfterCapN{0};
+  int MeshPipelineFirstMeshCapN{0};
+  int MeshPipelineRemeshCapN{0};
   int FmDirtyEnqueueReserveN{0};
   int RemeshScheduleCap{0};
   /// Dual-lane Cap1 starve telem (0=None,1=Cap1YieldFm,2=Cap1YieldRemesh,3=NoDemand).

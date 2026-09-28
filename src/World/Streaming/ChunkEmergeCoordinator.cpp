@@ -6850,8 +6850,38 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             ? output_slot_limit -
                   static_cast<size_t>(kBackpressuredScheduleCap)
             : 0;
-    if (pipeline_outstanding >= backpressure_threshold ||
-        pipeline_outstanding + requested_schedule > output_slot_limit)
+    const bool output_backpressure_active =
+        pipeline_outstanding >= backpressure_threshold ||
+        pipeline_outstanding + requested_schedule > output_slot_limit;
+    auto &pipeline_telem = world.GetPhysicsTelemetryMutable();
+    pipeline_telem.MeshPipelinePendingGpuN =
+        static_cast<int>(std::min<size_t>(queued_gpu, INT_MAX));
+    pipeline_telem.MeshPipelineAsyncInFlightN = async_inflight;
+    pipeline_telem.MeshPipelineCapturePendingN = capture_pending;
+    pipeline_telem.MeshPipelineCompletedWaitingN =
+        static_cast<int>(std::min<size_t>(completed_waiting, INT_MAX));
+    pipeline_telem.MeshPipelineOutstandingN =
+        static_cast<int>(std::min<size_t>(pipeline_outstanding, INT_MAX));
+    pipeline_telem.MeshPipelineOutputSlots =
+        static_cast<int>(std::min<size_t>(output_slot_limit, INT_MAX));
+    pipeline_telem.MeshPipelineOutputHeadroomN = output_headroom;
+    pipeline_telem.MeshPipelineBackpressureActive =
+        output_backpressure_active ? 1 : 0;
+    pipeline_telem.MeshPipelineBackpressureReason =
+        (pipeline_outstanding >= backpressure_threshold ? 1 : 0) |
+        (pipeline_outstanding + requested_schedule > output_slot_limit ? 2 : 0);
+    pipeline_telem.MeshPipelineScheduleRequestedN =
+        static_cast<int>(std::min<size_t>(requested_schedule, INT_MAX));
+    pipeline_telem.MeshPipelineAdmissionScheduleCapN =
+        std::max(0, mesh_service.GetMeshWorkAdmission().max_schedule);
+    pipeline_telem.MeshPipelineAvailableScheduleCapN =
+        output_backpressure_active ? 0 : mesh_schedule;
+    pipeline_telem.MeshPipelineScheduleAfterCapN = mesh_schedule;
+    pipeline_telem.MeshPipelineFirstMeshCapN =
+        mesh_service.GetMeshWorkAdmission().first_mesh_schedule;
+    pipeline_telem.MeshPipelineRemeshCapN =
+        mesh_service.GetMeshWorkAdmission().remesh_schedule;
+    if (output_backpressure_active)
     {
       MeshWorkAdmission bounded = mesh_service.GetMeshWorkAdmission();
       const bool normal_admission =
@@ -6866,6 +6896,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int available_schedule_cap = std::min(
           {kBackpressuredScheduleCap, output_headroom,
            admission_schedule_cap});
+      pipeline_telem.MeshPipelineAdmissionScheduleCapN =
+          admission_schedule_cap;
+      pipeline_telem.MeshPipelineAvailableScheduleCapN =
+          available_schedule_cap;
 
       const int dirty_fm_n = mesh_service.GetLastDirtyFmN();
       const int remesh_n = mesh_service.GetLastDirtyRemeshN();
@@ -6922,7 +6956,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       auto &pt_out = world.GetPhysicsTelemetryMutable();
       pt_out.FirstMeshScheduleCap = bounded.first_mesh_schedule;
       pt_out.RemeshScheduleCap = bounded.remesh_schedule;
+      pipeline_telem.MeshPipelineFirstMeshCapN =
+          bounded.first_mesh_schedule;
+      pipeline_telem.MeshPipelineRemeshCapN = bounded.remesh_schedule;
     }
+    pipeline_telem.MeshPipelineScheduleAfterCapN = mesh_schedule;
   }
   MeshRebuildTickStats tick_stats{};
   {

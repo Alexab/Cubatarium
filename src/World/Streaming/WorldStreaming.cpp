@@ -2152,8 +2152,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshReplaceHoleAvoidedCount();
     world.PhysicsTelemetryData.PubRejectLightInvalid =
         world.GetMeshService().GetPubRejectLightInvalidCount();
-    world.PhysicsTelemetryData.PubRejectSourceMismatch =
+    const uint64_t pub_reject_source_mismatch =
         world.GetMeshService().GetPubRejectSourceMismatchCount();
+    world.PhysicsTelemetryData.PubRejectSourceMismatch =
+        pub_reject_source_mismatch;
+    world.PhysicsTelemetryData.PubRejectSourceMismatchDelta =
+        pub_reject_source_mismatch >= LastPubRejectSourceMismatch
+            ? pub_reject_source_mismatch - LastPubRejectSourceMismatch
+            : pub_reject_source_mismatch;
+    LastPubRejectSourceMismatch = pub_reject_source_mismatch;
     world.PhysicsTelemetryData.PubRejectOther =
         world.GetMeshService().GetPubRejectOtherCount();
     world.PhysicsTelemetryData.PubAcceptFirstPublish =
