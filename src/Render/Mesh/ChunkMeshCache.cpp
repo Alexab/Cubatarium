@@ -4265,7 +4265,8 @@ bool UChunkMeshCache::HasWitnessSwapGraceAt(glm::ivec2 coord_xz) const
 }
 
 int UChunkMeshCache::CountProvisionalLightPreviewsNear(
-    glm::ivec3 focus_chunk, int radius_chunks, int min_cy, int max_cy) const
+    glm::ivec3 focus_chunk, int radius_chunks, int min_cy, int max_cy,
+    const std::function<bool(glm::ivec3)> &is_dynamic_preview) const
 {
   if (radius_chunks < 0 || max_cy < min_cy)
   {
@@ -4274,7 +4275,7 @@ int UChunkMeshCache::CountProvisionalLightPreviewsNear(
   int count = 0;
   for (const auto &[coord, mesh] : GreedyCache)
   {
-    if (!mesh.ProvisionalLightPreview || coord.y < min_cy || coord.y > max_cy)
+    if (coord.y < min_cy || coord.y > max_cy)
     {
       continue;
     }
@@ -4282,7 +4283,11 @@ int UChunkMeshCache::CountProvisionalLightPreviewsNear(
                                std::abs(coord.z - focus_chunk.z));
     if (horiz <= radius_chunks && HasDrawableGreedyMesh(coord))
     {
-      ++count;
+      if (mesh.ProvisionalLightPreview ||
+          (is_dynamic_preview && is_dynamic_preview(coord)))
+      {
+        ++count;
+      }
     }
   }
   return count;

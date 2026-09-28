@@ -45,6 +45,7 @@ uniform float uEnvNightFactor;
 uniform float uEnvSkyLightScale;
 uniform float uEnvLightDebug;
 uniform float uEnvLightDebugMode;
+uniform float uLightPreviewOverride;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
 uniform vec2 uFluidSurfaceOrigin;
@@ -253,7 +254,8 @@ void main()
     float lit = clamp(max(skyLit, blockLit), 0.0, 1.0);
     // Unsettled first meshes use an explicitly marked ambient presentation
     // until the light solver publishes a replacement. Light debug remains raw.
-    if (vLightPreview > 0.5 && uEnvLightDebugMode <= 0.5) {
+    if ((vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
+        uEnvLightDebugMode <= 0.5) {
         lit = max(lit, 0.42);
     }
     FragColor.rgb *= lit;

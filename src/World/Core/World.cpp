@@ -2425,6 +2425,44 @@ void UWorld::InvalidateChunkSliceRenderReadyMemo() const
   SliceReadyMemo.clear();
 }
 
+bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+
+  const UChunkMeshCache &cache = MeshService->GetCache();
+  if (!cache.HasDrawableGreedyMesh(chunk_coord))
+  {
+    return false;
+  }
+  if (cache.HasProvisionalLightPreview(chunk_coord))
+  {
+    return true;
+  }
+  if (!cache.ChunkHasFullyDarkFace(chunk_coord) ||
+      MeshService->ChunkHasLitDrawableFace(chunk_coord) ||
+      !IsPendingLightBeforeMeshSlice(chunk_coord))
+  {
+    return false;
+  }
+
+  const glm::ivec2 column(chunk_coord.x, chunk_coord.z);
+  const bool relight_owned = IsTerrainColumnRelightQueued(column) ||
+                             IsAsyncRelightColumnInFlight(column) ||
+                             GetColumnFlowExecutor().HasRepairTicket(column);
+  const bool mesh_repair_owned =
+      cache.IsChunkMeshDirty(chunk_coord) ||
+      cache.HasInflightMeshBuild(chunk_coord) ||
+      cache.IsRemeshAfterApplyPending(chunk_coord) ||
+      cache.IsPendingGpuApply(chunk_coord) ||
+      cache.IsPendingGpuQueued(chunk_coord) ||
+      cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
+      cache.IsGpuExtractInFlight(chunk_coord);
+  return relight_owned || mesh_repair_owned;
+}
+
 bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
 {
   if (!MeshService)
@@ -2532,8 +2570,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     return final_ready;
   };
   const UChunkMeshCache &mesh_cache = MeshService->GetCache();
-  if (mesh_cache.HasProvisionalLightPreview(chunk_coord) &&
-      mesh_cache.HasDrawableGreedyMesh(chunk_coord))
+  if (ShouldDrawProvisionalLightPreview(chunk_coord))
   {
     return memo(true, /*provisional_preview=*/true);
   }
@@ -5550,7 +5587,9 @@ int UWorld::CountProvisionalLightPreviewFocusMeshes(
   }
   return MeshService->GetCache().CountProvisionalLightPreviewsNear(
       focus_ground_chunk, radius_chunks, FloorDiv(band_min, CHUNK_SIZE),
-      FloorDiv(band_max, CHUNK_SIZE));
+      FloorDiv(band_max, CHUNK_SIZE),
+      [this](glm::ivec3 coord)
+      { return ShouldDrawProvisionalLightPreview(coord); });
 }
 
 int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,

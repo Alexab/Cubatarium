@@ -414,7 +414,9 @@ public:
   }
   int CountProvisionalLightPreviewsNear(glm::ivec3 focus_chunk,
                                         int radius_chunks, int min_cy,
-                                        int max_cy) const;
+                                        int max_cy,
+                                        const std::function<bool(glm::ivec3)> &
+                                            is_dynamic_preview = {}) const;
   /// R06 R2: last-applied BoundaryOverlay still active (sticky closing faces).
   bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
   /// True if overlay missing-face bit for shell face 0..5 is set.

@@ -254,6 +254,7 @@ struct VisualBlackTraceRecord
   /// remesh, repair progress, and column draw-ready/repair-ticket.
   /// Bits 18..21: settlement exists, matches current field revision, demand
   /// light is current, and the exact dark drawable satisfies its draw gate.
+  /// Bit 22: this drawable is temporarily shown with the ambient preview floor.
   uint32_t renderer_gate_flags{0};
   /// sample_kind=8 bits 0..5: drawable, satisfying, live GPU draw, prepared
   /// CPU renderer ref, passed the render-ready gate, and prepared GPU-packed

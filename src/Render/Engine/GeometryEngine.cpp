@@ -304,6 +304,8 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   const bool settled_light_current =
       demand_identity_current && slice_demand->has_settled_light &&
       slice_demand->settled_light_rev == field_light_rev;
+  const bool provisional_preview =
+      world.ShouldDrawProvisionalLightPreview(coord);
   const bool current_dark_image = CurrentDarkSliceImageMayDraw(
       fully_dark, settled_light_current, stale_dark, demand_light_current,
       field_light_rev, published.light_rev, record.meshed_light_rev);
@@ -311,7 +313,8 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
       (slice_demand && slice_demand->has_settled_light ? (1u << 18) : 0u) |
       (settled_light_current ? (1u << 19) : 0u) |
       (demand_light_current ? (1u << 20) : 0u) |
-      (current_dark_image ? (1u << 21) : 0u);
+      (current_dark_image ? (1u << 21) : 0u) |
+      (provisional_preview ? (1u << 22) : 0u);
   if (slice_demand)
   {
     record.world_epoch = slice_demand->world_epoch;
@@ -1720,6 +1723,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   {
     OpaqueDepthCapture.Bind();
   }
+  greedyShader->SetFloat("uLightPreviewOverride", 0.0f);
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
@@ -1790,15 +1794,23 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         continue;
       }
 
+      const bool light_preview =
+          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
+                               head.chunkCoord);
       size_t j = i + 1;
       while (j < cache.batches.size() && cache.batches[j].pooled &&
              cache.batches[j].indexCountGl > 0 &&
-             cache.batches[j].blockId == head.blockId)
+             cache.batches[j].blockId == head.blockId &&
+             (!WorldInstance ||
+              WorldInstance->ShouldDrawProvisionalLightPreview(
+                  cache.batches[j].chunkCoord) == light_preview))
       {
         ++j;
       }
 
       SetBlockAnimUniforms(greedyShader, head.blockId, textures);
+      greedyShader->SetFloat("uLightPreviewOverride",
+                             light_preview ? 1.0f : 0.0f);
       glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
       // P2: prefer GPU-resident 1:1 cmd table (instanceCount from compact).
       if (store.SubmitIndirectCommandsGpuRange(cache, i, j))
@@ -1855,6 +1867,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         continue;
       }
+      greedyShader->SetFloat(
+          "uLightPreviewOverride",
+          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
+                               gpu.chunkCoord)
+              ? 1.0f
+              : 0.0f);
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
       glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
       glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
@@ -1915,6 +1933,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       {
         continue;
       }
+      greedyShader->SetFloat(
+          "uLightPreviewOverride",
+          WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
+                               gpu.chunkCoord)
+              ? 1.0f
+              : 0.0f);
       glBindTexture(GL_TEXTURE_2D, textureId);
       glBindBuffer(GL_ARRAY_BUFFER, vbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -2833,6 +2857,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     }
     ApplyGreedyEnvironmentUniforms(packedGreedyShader);
   }
+  packedGreedyShader->SetFloat("uLightPreviewOverride", 0.0f);
   glActiveTexture(GL_TEXTURE0);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
                    pipeline->GetAllocator().GetQuadSsbo());
@@ -2871,6 +2896,12 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     const glm::vec3 origin =
         glm::vec3(chunk.chunkCoord * CHUNK_SIZE);
     packedGreedyShader->SetVec3("chunkOrigin", origin);
+    packedGreedyShader->SetFloat(
+        "uLightPreviewOverride",
+        WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(
+                             chunk.chunkCoord)
+            ? 1.0f
+            : 0.0f);
     for (const GpuBlockDrawRange &range : chunk.blockRanges)
     {
       if (range.Transparent != transparent_pass)
