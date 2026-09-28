@@ -3299,41 +3299,155 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       VisualBlackTraceRecord trace = candidate.record;
       const glm::ivec3 coord(trace.cx, trace.cy, trace.cz);
       trace.mesh_revision = MeshService->GetChunkMeshRevision(coord);
-      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
+      const UChunk *focus_chunk =
+          BlockWorld.GetChunkManager().GetChunk(coord);
+      if (focus_chunk)
       {
-        trace.field_light_rev = chunk->GetLightFieldRevision();
+        trace.field_light_rev = focus_chunk->GetLightFieldRevision();
       }
       const MeshPublishRevs published =
           mesh_cache.GetMeshPublishRevs(coord);
       trace.published_geom_rev = published.geom_rev;
       trace.published_light_rev = published.light_rev;
       trace.meshed_light_rev = mesh_cache.GetMeshedLightRevision(coord);
-      if (const ChunkRenderDemandRecord *demand =
-              UChunkRenderDemandStore::Get().Find(coord))
+      const ChunkRenderDemandRecord *focus_demand =
+          UChunkRenderDemandStore::Get().Find(coord);
+      if (focus_demand)
       {
-        trace.world_epoch = demand->world_epoch;
-        trace.demand_incarnation = demand->incarnation;
-        trace.attempt_id = demand->has_active_attempt
-                               ? demand->active_attempt_id
+        trace.world_epoch = focus_demand->world_epoch;
+        trace.demand_incarnation = focus_demand->incarnation;
+        trace.attempt_id = focus_demand->has_active_attempt
+                               ? focus_demand->active_attempt_id
                                : 0;
-        trace.desired_geom_rev = demand->desired_geom_rev;
-        trace.desired_light_rev = demand->desired_light_rev;
-        trace.demand_published_geom_rev = demand->published_geom_rev;
-        trace.demand_published_light_rev = demand->published_light_rev;
-        trace.face_debt_mask = demand->face_debt_mask;
-        trace.settled_light_rev = demand->settled_light_rev;
-        trace.has_settled_light = demand->has_settled_light ? 1 : 0;
-        trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+        trace.desired_geom_rev = focus_demand->desired_geom_rev;
+        trace.desired_light_rev = focus_demand->desired_light_rev;
+        trace.desired_coverage_gen = focus_demand->desired_coverage_gen;
+        trace.demand_published_geom_rev = focus_demand->published_geom_rev;
+        trace.demand_published_light_rev = focus_demand->published_light_rev;
+        trace.demand_published_coverage_gen =
+            focus_demand->published_coverage_gen;
+        trace.face_debt_mask = focus_demand->face_debt_mask;
+        trace.settled_light_rev = focus_demand->settled_light_rev;
+        trace.has_settled_light = focus_demand->has_settled_light ? 1 : 0;
+        trace.active_stage = static_cast<uint8_t>(focus_demand->active_stage);
         const double now_ms = VisualObligationNowMs();
-        if (demand->attempt_created_ms > 0.0)
+        if (focus_demand->attempt_created_ms > 0.0)
         {
           trace.demand_attempt_age_ms =
-              std::max(0.0, now_ms - demand->attempt_created_ms);
+              std::max(0.0, now_ms - focus_demand->attempt_created_ms);
         }
-        if (demand->last_progress_ms > 0.0)
+        if (focus_demand->last_progress_ms > 0.0)
         {
           trace.demand_progress_age_ms =
-              std::max(0.0, now_ms - demand->last_progress_ms);
+              std::max(0.0, now_ms - focus_demand->last_progress_ms);
+        }
+      }
+      static const glm::ivec3 kFaceDirections[6] = {
+          {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+          {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+      const auto count_boundary_non_air = [](const UChunk &boundary_chunk,
+                                             int face, bool peer_side) {
+        uint16_t count = 0;
+        for (int a = 0; a < CHUNK_SIZE; ++a)
+        {
+          for (int b = 0; b < CHUNK_SIZE; ++b)
+          {
+            glm::ivec3 local{};
+            switch (face)
+            {
+            case 0:
+              local = {peer_side ? 0 : CHUNK_SIZE - 1, a, b};
+              break;
+            case 1:
+              local = {peer_side ? CHUNK_SIZE - 1 : 0, a, b};
+              break;
+            case 2:
+              local = {a, peer_side ? 0 : CHUNK_SIZE - 1, b};
+              break;
+            case 3:
+              local = {a, peer_side ? CHUNK_SIZE - 1 : 0, b};
+              break;
+            case 4:
+              local = {a, b, peer_side ? 0 : CHUNK_SIZE - 1};
+              break;
+            default:
+              local = {a, b, peer_side ? CHUNK_SIZE - 1 : 0};
+              break;
+            }
+            if (boundary_chunk.GetBlockLocal(local) != BLOCK_AIR)
+            {
+              ++count;
+            }
+          }
+        }
+        return count;
+      };
+      for (int face = 0; face < 6; ++face)
+      {
+        const uint8_t bit = static_cast<uint8_t>(1u << face);
+        if (focus_demand)
+        {
+          trace.face_waiting_peer_gen[face] =
+              focus_demand->waiting_peer_gen[face];
+        }
+        if ((trace.face_debt_mask & bit) == 0)
+        {
+          continue;
+        }
+        if (focus_chunk)
+        {
+          trace.face_focus_boundary_non_air[face] =
+              count_boundary_non_air(*focus_chunk, face, false);
+        }
+        const glm::ivec3 peer_coord = coord + kFaceDirections[face];
+        const UChunk *peer_chunk =
+            BlockWorld.GetChunkManager().GetChunk(peer_coord);
+        if (peer_chunk)
+        {
+          trace.face_peer_loaded_mask =
+              static_cast<uint8_t>(trace.face_peer_loaded_mask | bit);
+          trace.face_peer_incarnation[face] = peer_chunk->GetIncarnation();
+          trace.face_peer_boundary_non_air[face] =
+              count_boundary_non_air(*peer_chunk, face, true);
+          if (peer_chunk->GetNonAirCount() > 0)
+          {
+            trace.face_peer_nonair_mask =
+                static_cast<uint8_t>(trace.face_peer_nonair_mask | bit);
+          }
+        }
+        const ChunkRenderDemandRecord *peer_demand =
+            UChunkRenderDemandStore::Get().Find(peer_coord);
+        uint64_t effective_peer_gen = 0;
+        if (peer_demand)
+        {
+          trace.face_peer_demand_published_geom_rev[face] =
+              peer_demand->published_geom_rev;
+          trace.face_peer_published_coverage_gen[face] =
+              peer_demand->published_coverage_gen;
+          trace.face_peer_desired_coverage_gen[face] =
+              peer_demand->desired_coverage_gen;
+          effective_peer_gen =
+              peer_demand->published_coverage_gen > 0
+                  ? peer_demand->published_coverage_gen
+                  : peer_demand->published_geom_rev;
+        }
+        const MeshPublishRevs peer_published =
+            mesh_cache.GetMeshPublishRevs(peer_coord);
+        trace.face_peer_published_geom_rev[face] = peer_published.geom_rev;
+        if (effective_peer_gen == 0)
+        {
+          effective_peer_gen = peer_published.geom_rev;
+        }
+        trace.face_peer_effective_gen[face] = effective_peer_gen;
+        if (mesh_cache.HasDrawableGreedyMesh(peer_coord))
+        {
+          trace.face_peer_drawable_mask =
+              static_cast<uint8_t>(trace.face_peer_drawable_mask | bit);
+        }
+        if (mesh_cache.HasMeshSatisfyingColumnReady(peer_coord))
+        {
+          trace.face_peer_satisfying_mask =
+              static_cast<uint8_t>(trace.face_peer_satisfying_mask | bit);
         }
       }
       const UChunkMeshCache &cache = MeshService->GetCache();

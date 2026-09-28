@@ -213,8 +213,10 @@ struct VisualBlackTraceRecord
   uint64_t attempt_id{0};
   uint64_t desired_geom_rev{0};
   uint64_t desired_light_rev{0};
+  uint64_t desired_coverage_gen{0};
   uint64_t demand_published_geom_rev{0};
   uint64_t demand_published_light_rev{0};
+  uint64_t demand_published_coverage_gen{0};
   uint64_t settled_light_rev{0};
   uint8_t has_settled_light{0};
   double demand_attempt_age_ms{0.0};
@@ -235,6 +237,21 @@ struct VisualBlackTraceRecord
   uint8_t cause{0};
   uint8_t active_stage{0};
   uint8_t face_debt_mask{0};
+  /// sample_kind=1: per-face debt requirements and current peer publications.
+  /// Face order matches ChunkEmergeCoordinator: +X, -X, +Y, -Y, +Z, -Z.
+  uint64_t face_waiting_peer_gen[6]{};
+  uint64_t face_peer_effective_gen[6]{};
+  uint64_t face_peer_published_geom_rev[6]{};
+  uint64_t face_peer_demand_published_geom_rev[6]{};
+  uint64_t face_peer_published_coverage_gen[6]{};
+  uint64_t face_peer_desired_coverage_gen[6]{};
+  uint64_t face_peer_incarnation[6]{};
+  uint8_t face_peer_loaded_mask{0};
+  uint8_t face_peer_nonair_mask{0};
+  uint8_t face_peer_drawable_mask{0};
+  uint8_t face_peer_satisfying_mask{0};
+  uint16_t face_focus_boundary_non_air[6]{};
+  uint16_t face_peer_boundary_non_air[6]{};
   /// sample_kind 4/6/7: SnapshotAcquireDeferReason, set when cause=13.
   uint8_t mesh_snapshot_defer_reason{0};
   /// sample_kind 4/6/7: MeshEnqueueResult, set when cause=14.

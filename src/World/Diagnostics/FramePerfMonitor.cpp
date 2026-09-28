@@ -3398,10 +3398,13 @@ void UFramePerfMonitor::Shutdown()
                << ",\"attempt_id\":" << r.attempt_id
                << ",\"desired_geom_rev\":" << r.desired_geom_rev
                << ",\"desired_light_rev\":" << r.desired_light_rev
+               << ",\"desired_coverage_gen\":" << r.desired_coverage_gen
                << ",\"demand_published_geom_rev\":"
                << r.demand_published_geom_rev
                << ",\"demand_published_light_rev\":"
                << r.demand_published_light_rev
+               << ",\"demand_published_coverage_gen\":"
+               << r.demand_published_coverage_gen
                << ",\"settled_light_rev\":" << r.settled_light_rev
                << ",\"has_settled_light\":"
                << static_cast<int>(r.has_settled_light)
@@ -3482,7 +3485,42 @@ void UFramePerfMonitor::Shutdown()
                << ",\"cause\":" << static_cast<int>(r.cause)
                << ",\"active_stage\":" << static_cast<int>(r.active_stage)
                << ",\"face_debt_mask\":"
-               << static_cast<int>(r.face_debt_mask)
+               << static_cast<int>(r.face_debt_mask);
+        const auto dumpFaceArray = [&](const char *name, const auto &values) {
+          (*out) << ",\"" << name << "\":[";
+          for (size_t i = 0; i < 6; ++i)
+          {
+            if (i != 0)
+            {
+              (*out) << ',';
+            }
+            (*out) << values[i];
+          }
+          (*out) << ']';
+        };
+        dumpFaceArray("face_waiting_peer_gen", r.face_waiting_peer_gen);
+        dumpFaceArray("face_peer_effective_gen", r.face_peer_effective_gen);
+        dumpFaceArray("face_peer_published_geom_rev",
+                      r.face_peer_published_geom_rev);
+        dumpFaceArray("face_peer_demand_published_geom_rev",
+                      r.face_peer_demand_published_geom_rev);
+        dumpFaceArray("face_peer_published_coverage_gen",
+                      r.face_peer_published_coverage_gen);
+        dumpFaceArray("face_peer_desired_coverage_gen",
+                      r.face_peer_desired_coverage_gen);
+        dumpFaceArray("face_peer_incarnation", r.face_peer_incarnation);
+        dumpFaceArray("face_focus_boundary_non_air",
+                      r.face_focus_boundary_non_air);
+        dumpFaceArray("face_peer_boundary_non_air",
+                      r.face_peer_boundary_non_air);
+        (*out) << ",\"face_peer_loaded_mask\":"
+               << static_cast<int>(r.face_peer_loaded_mask)
+               << ",\"face_peer_nonair_mask\":"
+               << static_cast<int>(r.face_peer_nonair_mask)
+               << ",\"face_peer_drawable_mask\":"
+               << static_cast<int>(r.face_peer_drawable_mask)
+               << ",\"face_peer_satisfying_mask\":"
+               << static_cast<int>(r.face_peer_satisfying_mask)
                << ",\"mesh_snapshot_defer_reason\":"
                << static_cast<int>(r.mesh_snapshot_defer_reason)
                << ",\"mesh_enqueue_reject_reason\":"
