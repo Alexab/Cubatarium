@@ -1408,6 +1408,9 @@ public:
   friend class UBlockBreakService;
 
 private:
+  /// Requeue a live per-slice visual demand without minting another mesh revision.
+  void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
+
   friend class UWorldCooperativeSession;
   friend class UWorldStreaming;
   friend class UWorldPersistence;

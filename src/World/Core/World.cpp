@@ -3499,6 +3499,40 @@ FocusRingVisualCensus UWorld::GetFocusRingVisualCensus() const
   return UnfinishedVisualCache.readiness;
 }
 
+void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
+{
+  if (!MeshService)
+  {
+    return;
+  }
+  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const ChunkRenderDemandRecord *active_demand = demand.Find(coord);
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+  const uint64_t mesh_revision = MeshService->GetChunkMeshRevision(coord);
+  const uint64_t world_epoch =
+      MeshService->GetCache().GetCaptureStore().WorldEpoch();
+  const bool requeue_existing_target =
+      active_demand && active_demand->has_active_attempt &&
+      active_demand->active_attempt_id != 0 && chunk &&
+      active_demand->world_epoch == world_epoch &&
+      active_demand->incarnation == chunk->GetIncarnation() &&
+      active_demand->desired_geom_rev == mesh_revision &&
+      active_demand->published_geom_rev < active_demand->desired_geom_rev;
+  if (requeue_existing_target)
+  {
+    // Re-admit this exact unpublished target. Advancing its revision on every
+    // retry lets demand outrun the scheduler when a gate temporarily removes
+    // its Dirty owner.
+    MeshService->RequeueDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+  }
+  else
+  {
+    MeshService->MarkDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+  }
+}
+
 int UWorld::AdmitUnfinishedVisualDemand(int max_n)
 {
   if (max_n <= 0 || !MeshService)
@@ -3595,34 +3629,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         {
           return;
         }
-        const ChunkRenderDemandRecord *active_demand = demand.Find(coord);
-        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-        const uint64_t mesh_revision =
-            MeshService->GetChunkMeshRevision(coord);
-        const uint64_t world_epoch =
-            MeshService->GetCache().GetCaptureStore().WorldEpoch();
-        const bool requeue_existing_target =
-            active_demand && active_demand->has_active_attempt &&
-            active_demand->active_attempt_id != 0 && chunk &&
-            active_demand->world_epoch == world_epoch &&
-            active_demand->incarnation == chunk->GetIncarnation() &&
-            active_demand->desired_geom_rev == mesh_revision &&
-            active_demand->published_geom_rev <
-                active_demand->desired_geom_rev;
-        if (requeue_existing_target)
-        {
-          // The demand already owns this exact unpublished target. Requeueing
-          // its work must not mint a new mesh revision on each retry: doing so
-          // advanced the target every frame while the scheduler temporarily
-          // removed its Dirty owner, so no worker could ever catch up.
-          MeshService->RequeueDirtyPriority(
-              coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
-        }
-        else
-        {
-          MeshService->MarkDirtyPriority(
-              coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
-        }
+        EnsureVisualRepairDirtyPriority(coord);
       };
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
@@ -4052,8 +4059,7 @@ void UWorld::KickUnfinishedVisualRemesh(int max_n)
     }
     const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
     const int cz = static_cast<int>(static_cast<uint32_t>(key));
-    MeshService->MarkDirtyPriority(
-      glm::ivec3(cx, 0, cz), MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    EnsureVisualRepairDirtyPriority(glm::ivec3(cx, 0, cz));
     ++marked;
   }
 }
@@ -8546,8 +8552,7 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
               continue;
             }
           }
-          mesh.MarkDirtyPriority(
-            coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+          EnsureVisualRepairDirtyPriority(coord);
         }
       }
     }
@@ -8643,8 +8648,7 @@ int UWorld::MarkEnterMissingMeshesDirty()
             {
               continue;
             }
-            mesh.MarkDirtyPriority(
-              coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+            EnsureVisualRepairDirtyPriority(coord);
             ++marked;
           }
         }
@@ -8665,8 +8669,7 @@ int UWorld::MarkEnterMissingMeshesDirty()
         miss_xz, ColumnWorkKind::FirstMesh);
     if (!gate_fm_ticket || !gate_dirty)
     {
-      mesh.MarkDirtyPriority(
-        gate_miss, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      EnsureVisualRepairDirtyPriority(gate_miss);
       marked = 1;
     }
   }
@@ -8721,8 +8724,7 @@ int UWorld::MarkEnterMissingMeshesDirty()
           const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
           if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
           {
-            mesh.MarkDirtyPriority(
-              coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+            EnsureVisualRepairDirtyPriority(coord);
             ++marked;
             continue;
           }
@@ -8738,8 +8740,7 @@ int UWorld::MarkEnterMissingMeshesDirty()
                                                      /*spawn_radius=*/2,
                                                      underfeet_exit_blocked))
             {
-              mesh.MarkDirtyPriority(
-                coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+              EnsureVisualRepairDirtyPriority(coord);
               ++marked;
             }
           }
@@ -8751,8 +8752,7 @@ int UWorld::MarkEnterMissingMeshesDirty()
         if (fm_ticket && !dirty &&
             !mesh.HasMeshSatisfyingColumnReady(coord))
         {
-          mesh.MarkDirtyPriority(
-            coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+          EnsureVisualRepairDirtyPriority(coord);
           ++marked;
           continue;
         }
@@ -8761,8 +8761,7 @@ int UWorld::MarkEnterMissingMeshesDirty()
         {
           continue;
         }
-        mesh.MarkDirtyPriority(
-          coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+        EnsureVisualRepairDirtyPriority(coord);
         ++marked;
       }
     }
@@ -8911,8 +8910,7 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
       const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
       if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
       {
-        mesh.MarkDirtyPriority(
-          coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+        EnsureVisualRepairDirtyPriority(coord);
         return true;
       }
       return false;
@@ -8922,8 +8920,7 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
         col_xz, ColumnWorkKind::FirstMesh);
     if (fm_ticket && !dirty && !mesh.HasMeshSatisfyingColumnReady(coord))
     {
-      mesh.MarkDirtyPriority(
-        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      EnsureVisualRepairDirtyPriority(coord);
       return true;
     }
     if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
@@ -8931,8 +8928,7 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
     {
       return false;
     }
-    mesh.MarkDirtyPriority(
-      coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    EnsureVisualRepairDirtyPriority(coord);
     return true;
   };
   // Underfeet-first ring order — nh=0 before rim backlog (miss_stuck SLA).
@@ -8988,8 +8984,7 @@ bool UWorld::HealPinnedMissSlice(glm::ivec3 coord)
     const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
     if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
     {
-      mesh.MarkDirtyPriority(
-        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      EnsureVisualRepairDirtyPriority(coord);
     }
   }
   else
@@ -8998,8 +8993,7 @@ bool UWorld::HealPinnedMissSlice(glm::ivec3 coord)
         col_xz, ColumnWorkKind::FirstMesh);
     if (!dirty || fm_ticket)
     {
-      mesh.MarkDirtyPriority(
-        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      EnsureVisualRepairDirtyPriority(coord);
     }
   }
   if (mesh.IsPendingGpuApply(coord) || mesh.IsPendingGpuQueued(coord) ||
@@ -9655,8 +9649,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         continue;
       }
       // ColPipe P7/P2: one remesh owner — Dirty only (no dual RAA + sticky producer).
-      MeshService->MarkDirtyPriority(
-        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      EnsureVisualRepairDirtyPriority(coord);
       touched = true;
       ++scheduled;
     }
