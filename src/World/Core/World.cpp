@@ -3373,6 +3373,24 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       const glm::ivec2 block_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
       const bool persistence_relight =
           Persistence && Persistence->IsTerrainColumnRelightQueued(block_key);
+      // Keep the generic focus-slice trace's named owner fields consistent
+      // with renderer samples. The aggregate `flags` below also contains
+      // owner bits, but consumers should not have to decode that private mask
+      // to distinguish a real FIFO ticket from an ownerless light debt.
+      trace.relight_owner_flags =
+          (pending_light ? 1u << 0 : 0u) |
+          (persistence_relight ? 1u << 1 : 0u) |
+          (async_relight ? 1u << 2 : 0u) |
+          (defer_until_lit ? 1u << 3 : 0u) |
+          (soft_defer ? 1u << 4 : 0u) |
+          (column_lit ? 1u << 5 : 0u) |
+          (RequiresLightingLitGate() ? 1u << 6 : 0u) |
+          (repair_ticket ? 1u << 7 : 0u);
+      trace.column_flow_ticket_flags =
+          (flow_relight_then_mesh ? 1u << 0 : 0u) |
+          (flow_first_mesh ? 1u << 1 : 0u) |
+          (flow_remesh_seam ? 1u << 2 : 0u) |
+          (flow_promote_relight ? 1u << 3 : 0u);
       const auto relight_queue =
           Persistence
               ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
