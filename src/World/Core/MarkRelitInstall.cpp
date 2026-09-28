@@ -169,6 +169,11 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
             demand.NoteDemand(coord, desired_geom, desired_light,
                               /*desired_coverage_gen=*/0, /*now_ms=*/0.0,
                               world_epoch, incarnation);
+        const UChunk *target_chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        const bool missing_first_mesh =
+            target_chunk && target_chunk->GetNonAirCount() > 0 &&
+            !mesh->HasDrawableGreedyMesh(coord) &&
+            !mesh->HasMeshSatisfyingColumnReady(coord);
         // A21 residual R2 / A37 H4: FullyDark is light desire, not geometry miss.
         UChunkMeshCache::LitApplyMeshProbe dark_probe{};
         mesh->FillLitApplyMeshProbe(coord, dark_probe);
@@ -181,7 +186,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
             mesh->ChunkHasStaleDarkFaces(coord, BlockWorld);
         const bool needs_dark_repair =
             fully_dark_drawable || stale_dark_drawable;
-        if (dr == DemandResult::AlreadySatisfied && !needs_dark_repair)
+        if (dr == DemandResult::AlreadySatisfied && !needs_dark_repair &&
+            !missing_first_mesh)
         {
           ++PhysicsTelemetryData.DemandAlreadySatisfiedSkipN;
           return;

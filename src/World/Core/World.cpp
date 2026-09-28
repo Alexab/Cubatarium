@@ -6940,6 +6940,21 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     light_changes.changed_coords.reserve(result.chunks.size());
     std::vector<glm::ivec3> stale_mesh_coords;
     stale_mesh_coords.reserve(result.chunks.size());
+    std::vector<glm::ivec3> ownerless_first_mesh_coords;
+    ownerless_first_mesh_coords.reserve(result.chunks.size());
+    const auto has_mesh_or_first_mesh_owner = [&](glm::ivec3 coord) {
+      const glm::ivec2 column(coord.x, coord.z);
+      const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+      return MeshService->GetCache().IsChunkMeshDirty(coord) ||
+             MeshService->HasInflightMeshBuild(coord) ||
+             MeshService->IsPendingGpuApply(coord) ||
+             MeshService->IsGpuExtractInFlight(coord) ||
+             MeshService->GetCache().HasPendingCaptureWork(coord) ||
+             flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh) ||
+             flow_scheduler.Contains(column,
+                                     ColumnWorkKind::RelightThenMesh) ||
+             flow_scheduler.Contains(column, ColumnWorkKind::PromoteRelight);
+    };
     int audit_unsatisfied_solid_n = 0;
     int audit_ownerless_solid_n = 0;
     for (const RelightChunkLightData &chunk_data : result.chunks)
@@ -6971,6 +6986,19 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                   chunk_data.coord) != chunk->GetLightFieldRevision())
           {
             stale_mesh_coords.push_back(chunk_data.coord);
+          }
+        }
+        if (MeshService && chunk->GetNonAirCount() > 0 &&
+            !MeshService->HasDrawableGreedyMesh(chunk_data.coord) &&
+            !MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord))
+        {
+          if (!has_mesh_or_first_mesh_owner(chunk_data.coord))
+          {
+            // A validated light result can settle an unchanged slice without
+            // including it in changed_coords. If that solid slice has never
+            // published a satisfying mesh, carry its geometry obligation
+            // through the relight handoff instead of dropping its last owner.
+            ownerless_first_mesh_coords.push_back(chunk_data.coord);
           }
         }
         if (audit_relight)
@@ -7068,7 +7096,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     bool force_unchanged_relit = ShouldForceMarkRelitOnUnchangedLight(
         consume_mode, vb_focus_n, false, false, -1);
     if (!light_changes.any_changed() && !force_unchanged_relit &&
-        stale_mesh_coords.empty())
+        stale_mesh_coords.empty() && ownerless_first_mesh_coords.empty())
     {
       for (const glm::ivec2 &g : primary_grounds)
       {
@@ -7126,6 +7154,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           relit_coords.push_back(coord);
         }
       }
+      for (const glm::ivec3 &coord : ownerless_first_mesh_coords)
+      {
+        if (std::find(relit_coords.begin(), relit_coords.end(), coord) ==
+            relit_coords.end())
+        {
+          relit_coords.push_back(coord);
+        }
+      }
       if (light_changes.any_changed() && MeshService)
       {
         MeshService->QueueMeshDependencyInvalidations(
@@ -7146,6 +7182,19 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                              result.finalize_pending_gate,
                              /*primary_only=*/primary_only_apply,
                              result.visible_draw_gate_repair);
+      for (const glm::ivec3 &coord : ownerless_first_mesh_coords)
+      {
+        if (has_mesh_or_first_mesh_owner(coord))
+        {
+          continue;
+        }
+        // A no-delta relight may leave a FirstMesh target with geom_rev=0.
+        // The install planner can be throttled or shadow-deduped before it
+        // owns Dirty, while a bounded column ticket can be rejected at queue
+        // capacity. This exact slice has settled lighting and no executable
+        // owner, so install the dirty owner directly at every distance.
+        EnsureVisualRepairDirtyPriority(coord);
+      }
       ++PhysicsTelemetryData.RelightApplyToMarkRelitN;
     }
     if (audit_relight && MeshService)
@@ -7266,6 +7315,17 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     if (audit_relight)
     {
+      int ownerless_mesh_repair_owned_n = 0;
+      if (MeshService)
+      {
+        for (const glm::ivec3 &coord : ownerless_first_mesh_coords)
+        {
+          if (has_mesh_or_first_mesh_owner(coord))
+          {
+            ++ownerless_mesh_repair_owned_n;
+          }
+        }
+      }
       CubatariumLogInfo(
           "RelightAudit",
           "apply job=" + std::to_string(result.job_id) +
@@ -7279,6 +7339,9 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
               std::to_string(audit_unsatisfied_solid_n) +
               " ownerless_solid=" +
               std::to_string(audit_ownerless_solid_n) +
+              " first_mesh_repair=" +
+              std::to_string(ownerless_first_mesh_coords.size()) + ":" +
+              std::to_string(ownerless_mesh_repair_owned_n) +
               " force_unchanged=" +
               std::to_string(force_unchanged_relit) +
               " finalize=" +

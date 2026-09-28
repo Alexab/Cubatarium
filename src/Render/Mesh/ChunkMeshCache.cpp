@@ -2297,8 +2297,13 @@ int UChunkMeshCache::PruneEnterPhantomDirty(const UBlockWorld &world)
   for (auto it = Dirty.begin(); it != Dirty.end();)
   {
     const glm::ivec3 &c = *it;
-    if (ShouldPruneEnterPhantomDirtyCoord(EnterTerminalHeld.count(c) > 0,
-                                          world.GetChunkManager().HasChunk(c)))
+    // Terminal hold protects an already visible mesh from enter-time churn.
+    // A held coordinate with no drawable FirstMesh is still a live visual
+    // obligation, not a phantom queue entry.
+    const bool terminal_mesh_drawable =
+        EnterTerminalHeld.count(c) > 0 && HasDrawableGreedyMesh(c);
+    if (ShouldPruneEnterPhantomDirtyCoord(
+            terminal_mesh_drawable, world.GetChunkManager().HasChunk(c)))
     {
       RemeshAfterApply.erase(c);
       it = Dirty.RemoveAt(it);
@@ -2409,7 +2414,8 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
     const glm::ivec3 coord = *it;
     // Era51b: enter SoftDefer terminal keeps SoftDeferHeld even if drawable FullyDark
     // (Hide⇒Ticket — exclude from void telem / no Dirty requeue).
-    if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(coord) > 0)
+    if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(coord) > 0 &&
+        HasDrawableGreedyMesh(coord))
     {
       ++it;
       continue;
@@ -2521,7 +2527,8 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
   }
   // Era51: EnterTerminalHeld SoftDefer survives MarkDirty under enter gate.
   const bool keep_terminal =
-      EnterGpuQuiesceDrain && EnterTerminalHeld.count(chunkCoord) > 0;
+      EnterGpuQuiesceDrain && EnterTerminalHeld.count(chunkCoord) > 0 &&
+      HasDrawableGreedyMesh(chunkCoord);
   if (keep_terminal)
   {
     // PreferKick only — do not re-Dirty FullyDark terminal remesh churn.
@@ -2680,7 +2687,8 @@ void UChunkMeshCache::MarkDirtyPriorityImpl(
     return;
   }
   const bool keep_terminal =
-      EnterGpuQuiesceDrain && EnterTerminalHeld.count(chunkCoord) > 0;
+      EnterGpuQuiesceDrain && EnterTerminalHeld.count(chunkCoord) > 0 &&
+      HasDrawableGreedyMesh(chunkCoord);
   if (keep_terminal)
   {
     if (IsPendingGpuApply(chunkCoord))
@@ -7504,6 +7512,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
       }
       if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0 &&
+          HasDrawableGreedyMesh(*it) &&
           !Dirty.IsPriorityRemesh(*it))
       {
         trace_visible_schedule(4, 0);
@@ -8282,6 +8291,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // Era47: enter lit-quiesce — drop lit drawable remesh Dirty (gate blocker).
       // Era49: keep FullyDark drawable Dirty until lit GPU commit.
       if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0 &&
+          HasDrawableGreedyMesh(*it) &&
           !Dirty.IsPriorityRemesh(*it))
       {
         it = Dirty.RemoveAt(it);
