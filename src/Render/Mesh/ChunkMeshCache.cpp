@@ -8011,12 +8011,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // A29 U1: under focus miss, kick more SoftDefer empties per frame.
       const int empty_kick_cap =
           focus_missing_for_schedule ? 8 : kMaxEmptyStuckKick;
-      for (const glm::ivec3 &stuck : SoftDeferHeld)
+      // MaybeMarkDirtyAfterSoftDeferEmptyAvoid can move the current coord out
+      // of SoftDeferHeld while enter-quiesce is active. Advance before calling
+      // any kick path so erasing the current member cannot invalidate our
+      // iterator.
+      for (auto it = SoftDeferHeld.begin();
+           it != SoftDeferHeld.end() && empty_kicked < empty_kick_cap;)
       {
-        if (empty_kicked >= empty_kick_cap)
-        {
-          break;
-        }
+        const glm::ivec3 stuck = *it++;
         if (HasDrawableGreedyMesh(stuck))
         {
           continue;
