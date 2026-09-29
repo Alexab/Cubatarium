@@ -3472,8 +3472,12 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     }
 
     InvalidateMeshCapture(coord);
-    MarkDirtyPriority(coord,
-                      MeshRevisionBumpReason::PriorityRelitInstallRepair);
+    MarkDirty(coord, MeshRevisionBumpReason::PriorityRelitInstallRepair);
+    // Keep a drawable light repair in RemeshQ and apply the existing visible
+    // repair priority. MarkDirtyPriority may route ordinary drawable work to
+    // the generic remesh lane, where hole/backlog pruning can discard this
+    // durable owner's ticket before its light revision is published.
+    (void)PrioritizeVisibleLightRepairRemesh(coord);
     const bool has_owner =
         Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
         (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
