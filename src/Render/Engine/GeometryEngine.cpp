@@ -425,6 +425,7 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
 void CaptureTransparentPixelProbe(
     UWorld &world, const UChunkMeshCache &cache,
     const std::vector<GreedyBatchRef> &transparent_refs,
+    const GreedyGpuPassCache &mdi_transparent_pass,
     const std::map<size_t, UTextureCube> &textures,
     const glm::mat4 &view_projection, const glm::vec3 &camera_position,
     uint64_t frame_epoch, const OpaquePixelProbeCapture &opaque_capture)
@@ -454,6 +455,10 @@ void CaptureTransparentPixelProbe(
       static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
       world.GetPreferredLoadFocusBlock());
+  // This is an opt-in forensic probe. Limit readbacks to one GPU payload per
+  // ray-mapped chunk in a capture, and only when the sampled output is dark.
+  std::unordered_set<glm::ivec3, IVec3Hash> payload_checked_chunks;
+  payload_checked_chunks.reserve(12);
 
   for (int row = 0; row < kTileRows; ++row)
   {
@@ -788,6 +793,174 @@ void CaptureTransparentPixelProbe(
               record.renderer_source_block_light_min = source_block_min;
               record.renderer_source_block_light_max = source_block_max;
             }
+
+            const bool near_black_pixel =
+                red <= 16u && green <= 24u && blue <= 32u && alpha >= 200u;
+            if (near_black_pixel &&
+                payload_checked_chunks.insert(surface_chunk).second &&
+                record.renderer_mdi_first_block_id != 0xffffu)
+            {
+              const BlockId source_block = static_cast<BlockId>(
+                  record.renderer_mdi_first_block_id);
+              const GreedyMeshBatch *source_batch = nullptr;
+              for (const GreedyBatchRef &ref : transparent_refs)
+              {
+                if (ref.chunkCoord == surface_chunk &&
+                    ref.blockId == source_block &&
+                    world.GetBlockRegistry().GetRenderStyle(ref.blockId) ==
+                        BlockRenderStyle::Fluid)
+                {
+                  source_batch = cache.TryGetGreedyBatch(ref);
+                  if (source_batch)
+                  {
+                    break;
+                  }
+                }
+              }
+
+              const GreedyGpuBatch *gpu_batch = nullptr;
+              size_t gpu_batch_index = 0;
+              for (size_t i = 0; i < mdi_transparent_pass.batches.size(); ++i)
+              {
+                const GreedyGpuBatch &candidate =
+                    mdi_transparent_pass.batches[i];
+                if (candidate.chunkCoord != surface_chunk ||
+                    candidate.blockId != source_block ||
+                    candidate.indexCountGl <= 0)
+                {
+                  continue;
+                }
+                gpu_batch = &candidate;
+                gpu_batch_index = i;
+                break;
+              }
+
+              if (gpu_batch)
+              {
+                record.renderer_mdi_resident_pass_flags |= 1u << 2;
+                record.renderer_mdi_command_count = 1;
+                record.renderer_mdi_index_count =
+                    static_cast<uint32_t>(gpu_batch->indexCountGl);
+                if (gpu_batch->drawInstanceCount > 0)
+                {
+                  record.renderer_mdi_visible_pass_flags |= 1u << 2;
+                  record.renderer_mdi_visible_command_count = 1;
+                  record.renderer_mdi_visible_index_count =
+                      static_cast<uint32_t>(gpu_batch->indexCountGl);
+                }
+                record.renderer_mdi_first_block_id =
+                    static_cast<uint16_t>(gpu_batch->blockId);
+                record.renderer_mdi_payload_flags |= 1u << 0;
+                if (gpu_batch->pooled)
+                {
+                  record.renderer_mdi_payload_flags |= 1u << 1;
+                }
+                if (source_batch)
+                {
+                  record.renderer_mdi_payload_flags |= 1u << 2;
+                  const bool vertex_count_matches =
+                      gpu_batch->vertexCount == source_batch->vertices.size();
+                  const bool index_count_matches =
+                      gpu_batch->indexCount == source_batch->indices.size() &&
+                      gpu_batch->indexCountGl == static_cast<GLsizei>(
+                                                     source_batch->indices.size());
+                  const GLuint vertex_buffer = gpu_batch->pooled
+                                                   ? mdi_transparent_pass.poolVbo
+                                                   : gpu_batch->vbo;
+                  const GLuint index_buffer = gpu_batch->pooled
+                                                  ? mdi_transparent_pass.poolEbo
+                                                  : gpu_batch->ebo;
+                  GLint old_copy_read_buffer = 0;
+                  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING,
+                                &old_copy_read_buffer);
+                  if (vertex_count_matches && vertex_buffer != 0 &&
+                      !source_batch->vertices.empty())
+                  {
+                    std::vector<GreedyMeshVertex> gpu_vertices(
+                        source_batch->vertices.size());
+                    const GLintptr vertex_offset = gpu_batch->pooled
+                                                       ? static_cast<GLintptr>(
+                                                             gpu_batch->vboByteOffset)
+                                                       : 0;
+                    glBindBuffer(GL_COPY_READ_BUFFER, vertex_buffer);
+                    glGetBufferSubData(
+                        GL_COPY_READ_BUFFER, vertex_offset,
+                        static_cast<GLsizeiptr>(gpu_vertices.size() *
+                                                sizeof(GreedyMeshVertex)),
+                        gpu_vertices.data());
+                    if (std::memcmp(gpu_vertices.data(),
+                                    source_batch->vertices.data(),
+                                    gpu_vertices.size() *
+                                        sizeof(GreedyMeshVertex)) == 0)
+                    {
+                      record.renderer_mdi_payload_flags |= 1u << 3;
+                    }
+                  }
+                  if (index_count_matches && index_buffer != 0 &&
+                      !source_batch->indices.empty())
+                  {
+                    std::vector<uint32_t> gpu_indices(
+                        source_batch->indices.size());
+                    const GLintptr index_offset = gpu_batch->pooled
+                                                      ? static_cast<GLintptr>(
+                                                            gpu_batch->eboByteOffset)
+                                                      : 0;
+                    glBindBuffer(GL_COPY_READ_BUFFER, index_buffer);
+                    glGetBufferSubData(
+                        GL_COPY_READ_BUFFER, index_offset,
+                        static_cast<GLsizeiptr>(gpu_indices.size() *
+                                                sizeof(uint32_t)),
+                        gpu_indices.data());
+                    if (std::memcmp(gpu_indices.data(),
+                                    source_batch->indices.data(),
+                                    gpu_indices.size() * sizeof(uint32_t)) == 0)
+                    {
+                      record.renderer_mdi_payload_flags |= 1u << 4;
+                    }
+                  }
+                  glBindBuffer(GL_COPY_READ_BUFFER,
+                               static_cast<GLuint>(old_copy_read_buffer));
+                }
+
+                if (gpu_batch->pooled && mdi_transparent_pass.GpuCompactActive &&
+                    mdi_transparent_pass.IndirectCmdsBuffer != 0)
+                {
+                  DrawElementsIndirectCommand command{};
+                  GLint old_copy_read_buffer = 0;
+                  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING,
+                                &old_copy_read_buffer);
+                  glBindBuffer(GL_COPY_READ_BUFFER,
+                               mdi_transparent_pass.IndirectCmdsBuffer);
+                  glGetBufferSubData(
+                      GL_COPY_READ_BUFFER,
+                      static_cast<GLintptr>(gpu_batch_index * sizeof(command)),
+                      static_cast<GLsizeiptr>(sizeof(command)), &command);
+                  glBindBuffer(GL_COPY_READ_BUFFER,
+                               static_cast<GLuint>(old_copy_read_buffer));
+                  record.renderer_mdi_command_flags |= 1u << 0;
+                  record.renderer_mdi_command_instance_count =
+                      command.instanceCount;
+                  record.renderer_mdi_command_first_index = command.firstIndex;
+                  record.renderer_mdi_command_base_vertex = command.baseVertex;
+                  const uint32_t expected_first_index = static_cast<uint32_t>(
+                      gpu_batch->eboByteOffset / sizeof(uint32_t));
+                  const int32_t expected_base_vertex = static_cast<int32_t>(
+                      gpu_batch->vboByteOffset / sizeof(GreedyMeshVertex));
+                  if (command.count ==
+                              static_cast<uint32_t>(gpu_batch->indexCountGl) &&
+                      command.firstIndex == expected_first_index &&
+                      command.baseVertex == expected_base_vertex &&
+                      command.baseInstance == 0)
+                  {
+                    record.renderer_mdi_command_flags |= 1u << 1;
+                  }
+                  if (command.instanceCount == gpu_batch->drawInstanceCount)
+                  {
+                    record.renderer_mdi_command_flags |= 1u << 2;
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -822,9 +995,6 @@ void NoteFrustumCoverageGaps(
     return;
   }
   const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
-  CaptureTransparentPixelProbe(world, cache, transparent_refs, textures,
-                               view_projection, camera_position, frame_epoch,
-                               opaque_capture);
   // GPU compact culling keeps the SSBO result on-device and leaves the CPU
   // mirror stale. On this opt-in diagnostic sample only, read back visibility
   // so the trace reports the command that was actually submitted this frame.
@@ -834,6 +1004,10 @@ void NoteFrustumCoverageGaps(
     mdi_store->SyncCompactVisToCpu(mdi_cutout_pass);
     mdi_store->SyncCompactVisToCpu(mdi_transparent_pass);
   }
+  CaptureTransparentPixelProbe(world, cache, transparent_refs,
+                               mdi_transparent_pass, textures,
+                               view_projection, camera_position, frame_epoch,
+                               opaque_capture);
 
   std::unordered_set<glm::ivec3, IVec3Hash> draw_refs;
   draw_refs.reserve(opaque_refs.size() + transparent_refs.size() +
