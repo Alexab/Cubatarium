@@ -235,6 +235,33 @@ bool IsFullyEnclosed(const UBlockWorld &world, glm::ivec3 pos)
   }
   return true;
 }
+
+void QueueSettledProvisionalPreviewRepair(const UBlockWorld &world,
+                                          UChunkMeshCache &cache,
+                                          glm::ivec3 coord)
+{
+  if (!cache.HasProvisionalLightPreview(coord) ||
+      !cache.HasDrawableGreedyMesh(coord))
+  {
+    return;
+  }
+  const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(coord);
+  if (!chunk || !demand ||
+      demand->world_epoch != cache.GetCaptureStore().WorldEpoch() ||
+      demand->incarnation != chunk->GetIncarnation() ||
+      !demand->has_settled_light ||
+      demand->settled_light_rev != chunk->GetLightFieldRevision() ||
+      demand->desired_light_rev > chunk->GetLightFieldRevision())
+  {
+    return;
+  }
+  // The mesh became drawable after the settlement callback ran. Promote its
+  // preview marker to durable repair debt now that the exact slice is ready.
+  cache.QueueStaleLightRemesh(coord);
+}
+
 constexpr int kCrossScanBelow = 2;
 constexpr int kCrossScanAbove = 4;
 
@@ -3440,7 +3467,8 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     const uint64_t meshed_light_rev = GetMeshedLightRevision(coord);
     const uint64_t published_light_rev = GetMeshPublishRevs(coord).light_rev;
     if (meshed_light_rev >= field_light_rev &&
-        published_light_rev >= field_light_rev)
+        published_light_rev >= field_light_rev &&
+        !HasProvisionalLightPreview(coord))
     {
       PendingStaleLightRemeshes_.erase(coord);
       if (audit_relight)
@@ -5110,6 +5138,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     chunkMesh.PublishRevs.geom_rev = source_revision;
     chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
   }
+  QueueSettledProvisionalPreviewRepair(world, *this, coord);
   if (kChunkDemandShadow())
   {
     UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
@@ -7186,6 +7215,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.PublishRevs.material_stamp =
         MeshPublishMaterialStamp(ids.data(), ids.size());
   }
+  QueueSettledProvisionalPreviewRepair(world, *this, result.coord);
   apply_profile.Enter(MeshApplyProfileRecorder::Phase::DemandPublication);
   // A26 N1 / A31: sole Published lifecycle after validation commit.
   if (kChunkDemandShadow())
@@ -8643,10 +8673,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             demand->incarnation == chunk->GetIncarnation();
         const uint64_t field_light_rev =
             chunk ? chunk->GetLightFieldRevision() : 0;
+        // Published revision is the output of this mesh itself. Requiring it
+        // here makes an otherwise settled first mesh permanently provisional
+        // until after its own publication, and can leave the preview marker on
+        // the committed mesh. The settled field revision is the input proof.
         const bool light_is_settled =
             current_demand && demand->has_settled_light &&
             demand->settled_light_rev == field_light_rev &&
-            demand->desired_light_rev <= demand->published_light_rev;
+            demand->desired_light_rev <= field_light_rev;
         // Absence of current per-slice settlement is not evidence that the
         // first mesh is safe to publish with raw zero light.
         snapshot.provisionalLightPreview = !light_is_settled;
