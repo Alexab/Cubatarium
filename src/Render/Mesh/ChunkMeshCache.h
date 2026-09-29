@@ -89,6 +89,15 @@ public:
       const UBlockWorld &world,
       const std::vector<glm::ivec3> &changed_input_chunks);
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
+  void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
+  bool HasPendingStaleLightRemesh(glm::ivec3 chunk_coord) const
+  {
+    return PendingStaleLightRemeshes_.count(chunk_coord) != 0;
+  }
+  int GetStaleLightRemeshBacklogN() const
+  {
+    return static_cast<int>(PendingStaleLightRemeshes_.size());
+  }
   void SetOnMeshDependencyAppliedFn(std::function<void(glm::ivec3)> fn)
   {
     OnMeshDependencyAppliedFn_ = std::move(fn);
@@ -1414,6 +1423,8 @@ private:
                              MeshRevisionBumpReason reason);
   void DrainMeshDependencyInvalidations(UBlockWorld &world,
                                         int max_schedule_per_frame);
+  void DrainStaleLightRemeshDebt(UBlockWorld &world,
+                                 int max_schedule_per_frame);
   /// Draw SoT: GreedyCache GpuResident flags must match live allocator slot.
   bool ChunkHasLiveGpuDraw(glm::ivec3 chunk_coord) const;
   void ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord);
@@ -1458,6 +1469,9 @@ private:
   /// separate from Dirty so filtered side effects cannot silently drop debt.
   std::unordered_set<glm::ivec3, IVec3Hash>
       PendingMeshDependencyInvalidations_;
+  /// Stale-light remesh requests survive Dirty admission until the replacement
+  /// mesh publishes the current light-field revision.
+  std::unordered_set<glm::ivec3, IVec3Hash> PendingStaleLightRemeshes_;
   int MeshDependencyQueuedSinceDrain_{0};
   int LastMeshDependencyQueuedN_{0};
   int LastMeshDependencyAppliedN_{0};

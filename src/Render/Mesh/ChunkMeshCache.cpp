@@ -1,5 +1,6 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Engine/GreedyPassBatchRefs.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/FrameDeadline.h"
 #include "Core/Jobs/PipelineAdmission.h"
@@ -3234,6 +3235,25 @@ void UChunkMeshCache::QueueMeshDependencyInvalidation(
   }
 }
 
+void UChunkMeshCache::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
+{
+  if (!HasDrawableGreedyMesh(chunk_coord) ||
+      !PendingStaleLightRemeshes_.insert(chunk_coord).second)
+  {
+    return;
+  }
+  if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+  {
+    CubatariumLogInfo(
+        "RelightAudit",
+        "stale_light_debt event=queued coord=(" +
+            std::to_string(chunk_coord.x) + "," +
+            std::to_string(chunk_coord.y) + "," +
+            std::to_string(chunk_coord.z) + ") backlog=" +
+            std::to_string(PendingStaleLightRemeshes_.size()));
+  }
+}
+
 void UChunkMeshCache::DrainMeshDependencyInvalidations(
     UBlockWorld &world, int max_schedule_per_frame)
 {
@@ -3310,6 +3330,128 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
       {
         OnMeshDependencyAppliedFn_(coord);
       }
+    }
+  }
+}
+
+void UChunkMeshCache::DrainStaleLightRemeshDebt(
+    UBlockWorld &world, int max_schedule_per_frame)
+{
+  if (PendingStaleLightRemeshes_.empty() || max_schedule_per_frame <= 0)
+  {
+    return;
+  }
+
+  const bool audit_relight =
+      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  const UChunkManager &chunks = world.GetChunkManager();
+  std::vector<glm::ivec3> candidates(PendingStaleLightRemeshes_.begin(),
+                                    PendingStaleLightRemeshes_.end());
+  std::sort(candidates.begin(), candidates.end(), [this](glm::ivec3 a,
+                                                         glm::ivec3 b)
+  {
+    const auto key = [this](glm::ivec3 coord)
+    {
+      const int horizontal =
+          MeshFocusValid
+              ? std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                         std::abs(coord.z - MeshFocusGroundChunk.z))
+              : 0;
+      const int vertical = MeshFocusValid
+                               ? std::abs(coord.y - MeshFocusGroundChunk.y)
+                               : 0;
+      return std::tuple<int, int, int, int, int>{
+          horizontal, vertical, coord.x, coord.y, coord.z};
+    };
+    return key(a) < key(b);
+  });
+
+  const int schedule_budget = max_schedule_per_frame > 0
+                                  ? std::clamp(max_schedule_per_frame, 1, 8)
+                                  : 8;
+  int admitted = 0;
+  for (const glm::ivec3 coord : candidates)
+  {
+    if (admitted >= schedule_budget)
+    {
+      break;
+    }
+    const UChunk *chunk = chunks.GetChunk(coord);
+    if (!chunk || chunk->GetNonAirCount() == 0 ||
+        !HasDrawableGreedyMesh(coord))
+    {
+      PendingStaleLightRemeshes_.erase(coord);
+      continue;
+    }
+
+    const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+    const uint64_t meshed_light_rev = GetMeshedLightRevision(coord);
+    const uint64_t published_light_rev = GetMeshPublishRevs(coord).light_rev;
+    if (meshed_light_rev >= field_light_rev &&
+        published_light_rev >= field_light_rev)
+    {
+      PendingStaleLightRemeshes_.erase(coord);
+      if (audit_relight)
+      {
+        CubatariumLogInfo(
+            "RelightAudit",
+            "stale_light_debt event=published coord=(" +
+                std::to_string(coord.x) + "," + std::to_string(coord.y) +
+                "," + std::to_string(coord.z) + ") field_light_rev=" +
+                std::to_string(field_light_rev) + " meshed_light_rev=" +
+                std::to_string(meshed_light_rev) +
+                " published_light_rev=" +
+                std::to_string(published_light_rev) + " backlog=" +
+                std::to_string(PendingStaleLightRemeshes_.size()));
+      }
+      continue;
+    }
+
+    const bool dirty = Dirty.Contains(coord);
+    const bool raa_pending = RemeshAfterApply.count(coord) > 0;
+    const bool mesh_inflight = AsyncBuilder && AsyncBuilder->IsInFlight(coord);
+    const bool gpu_owned = IsGpuExtractInFlight(coord) ||
+                           IsPendingGpuApply(coord) ||
+                           IsPendingGpuQueued(coord) ||
+                           IsPendingGpuKickedOrDispatched(coord);
+    if (dirty || raa_pending || mesh_inflight || gpu_owned)
+    {
+      continue;
+    }
+
+    InvalidateMeshCapture(coord);
+    MarkDirtyPriority(coord,
+                      MeshRevisionBumpReason::PriorityRelitInstallRepair);
+    const bool has_owner =
+        Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
+        (AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
+        IsGpuExtractInFlight(coord) || IsPendingGpuApply(coord) ||
+        IsPendingGpuQueued(coord) || IsPendingGpuKickedOrDispatched(coord);
+    if (!has_owner)
+    {
+      continue;
+    }
+    ++admitted;
+    if (OnMeshDependencyAppliedFn_)
+    {
+      OnMeshDependencyAppliedFn_(coord);
+    }
+    if (audit_relight)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "stale_light_debt event=admitted coord=(" +
+              std::to_string(coord.x) + "," + std::to_string(coord.y) +
+              "," + std::to_string(coord.z) + ") field_light_rev=" +
+              std::to_string(field_light_rev) + " meshed_light_rev=" +
+              std::to_string(meshed_light_rev) + " published_light_rev=" +
+              std::to_string(published_light_rev) + " dirty=" +
+              std::to_string(Dirty.Contains(coord)) + " raa=" +
+              std::to_string(RemeshAfterApply.count(coord) > 0) +
+              " mesh_inflight=" +
+              std::to_string(AsyncBuilder && AsyncBuilder->IsInFlight(coord)) +
+              " gpu_owned=" + std::to_string(gpu_owned) + " backlog=" +
+              std::to_string(PendingStaleLightRemeshes_.size()));
     }
   }
 }
@@ -7379,6 +7521,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyScheduleDedupN = 0;
   ScheduledThisFrame_.clear();
   DrainMeshDependencyInvalidations(world, max_schedule_per_frame);
+  DrainStaleLightRemeshDebt(world, max_schedule_per_frame);
   AgeFmDirtyGpuWatchFrames();
   // FmDirtyToGpuFinishMatchN_ cleared after emerge telemetry latch (Consume*).
   // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner must
@@ -8506,49 +8649,115 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       return it;
     };
 
-    // One fresh renderer-rejected light repair gets a bounded scheduling slot
-    // before generic FirstMesh work. Otherwise a growing first-mesh backlog can
-    // consume the snapshot budget every frame while visible stale remeshes sit
-    // at the head of RemeshQ indefinitely.
+    // Durable stale-light debt gets the repair slot first. It can bypass a
+    // different blocked priority-remesh head, while still using the same
+    // bounded try_schedule path and per-frame schedule cap.
     {
-      std::vector<glm::ivec3> visible_repair_remesh;
-      for (const glm::ivec3 &coord : Dirty.RemeshQueue())
+      std::vector<glm::ivec3> stale_light_remesh;
+      stale_light_remesh.reserve(PendingStaleLightRemeshes_.size());
+      for (const glm::ivec3 coord : PendingStaleLightRemeshes_)
       {
-        if (!Dirty.IsPriorityRemesh(coord))
+        const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+        if (Dirty.Contains(coord) && chunk &&
+            GetMeshedLightRevision(coord) < chunk->GetLightFieldRevision())
+        {
+          stale_light_remesh.push_back(coord);
+        }
+      }
+      std::sort(stale_light_remesh.begin(), stale_light_remesh.end(),
+                [this](glm::ivec3 a, glm::ivec3 b)
+      {
+        const auto key = [this](glm::ivec3 coord)
+        {
+          const int horizontal =
+              MeshFocusValid
+                  ? std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                             std::abs(coord.z - MeshFocusGroundChunk.z))
+                  : 0;
+          const int vertical = MeshFocusValid
+                                   ? std::abs(coord.y - MeshFocusGroundChunk.y)
+                                   : 0;
+          return std::tuple<int, int, int, int, int>{
+              horizontal, vertical, coord.x, coord.y, coord.z};
+        };
+        return key(a) < key(b);
+      });
+
+      bool stale_light_scheduled = false;
+      int stale_light_attempts = 0;
+      for (const glm::ivec3 coord : stale_light_remesh)
+      {
+        if ((max_schedule_per_frame > 0 &&
+             scheduled >= max_schedule_per_frame) ||
+            stale_light_attempts >= 4)
         {
           break;
         }
-        visible_repair_remesh.push_back(coord);
-      }
-      if (!visible_repair_remesh.empty())
-      {
-        for (const glm::ivec3 &coord : visible_repair_remesh)
+        auto it = std::find(Dirty.begin(), Dirty.end(), coord);
+        if (it == Dirty.end())
         {
-          if (max_schedule_per_frame > 0 &&
-              scheduled >= max_schedule_per_frame)
+          continue;
+        }
+        ++stale_light_attempts;
+        const int scheduled_before = scheduled;
+        (void)try_schedule(it, /*count_outside=*/false,
+                           /*count_overflow=*/false,
+                           /*count_reserved=*/false);
+        if (scheduled > scheduled_before)
+        {
+          ++remesh_scheduled;
+          if (remesh_cap > 0)
+          {
+            --remesh_cap;
+          }
+          stale_light_scheduled = true;
+          break;
+        }
+      }
+
+      // Preserve the prior visible-repair lane if no stale-light debt used the
+      // reserved slot. A bounded stale candidate scan can skip blocked owners.
+      if (!stale_light_scheduled)
+      {
+        std::vector<glm::ivec3> visible_repair_remesh;
+        for (const glm::ivec3 &coord : Dirty.RemeshQueue())
+        {
+          if (!Dirty.IsPriorityRemesh(coord))
           {
             break;
           }
-          auto it = std::find(Dirty.begin(), Dirty.end(), coord);
-          if (it == Dirty.end())
+          visible_repair_remesh.push_back(coord);
+        }
+        if (!visible_repair_remesh.empty())
+        {
+          for (const glm::ivec3 &coord : visible_repair_remesh)
           {
-            continue;
-          }
-          const int scheduled_before = scheduled;
-          (void)try_schedule(it, /*count_outside=*/false,
-                             /*count_overflow=*/false,
-                             /*count_reserved=*/false);
-          if (scheduled > scheduled_before)
-          {
-            ++remesh_scheduled;
-            if (remesh_cap > 0)
+            if (max_schedule_per_frame > 0 &&
+                scheduled >= max_schedule_per_frame)
             {
-              --remesh_cap;
+              break;
             }
+            auto it = std::find(Dirty.begin(), Dirty.end(), coord);
+            if (it == Dirty.end())
+            {
+              continue;
+            }
+            const int scheduled_before = scheduled;
+            (void)try_schedule(it, /*count_outside=*/false,
+                               /*count_overflow=*/false,
+                               /*count_reserved=*/false);
+            if (scheduled > scheduled_before)
+            {
+              ++remesh_scheduled;
+              if (remesh_cap > 0)
+              {
+                --remesh_cap;
+              }
+            }
+            // Keep the existing bounded first-candidate retry for ordinary
+            // visible repairs.
+            break;
           }
-          // Retry at most one visible repair per frame. A blocked first target
-          // must not turn the bounded reserve into an unbounded scan.
-          break;
         }
       }
     }

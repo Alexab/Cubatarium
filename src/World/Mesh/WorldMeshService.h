@@ -122,6 +122,7 @@ public:
       const UBlockWorld &world,
       const std::vector<glm::ivec3> &changed_input_chunks);
   void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
+  void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
   int GetLastMeshDependencyQueuedN() const
   {
     return Cache.GetLastMeshDependencyQueuedN();

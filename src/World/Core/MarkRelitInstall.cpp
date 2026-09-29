@@ -265,7 +265,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
               meshed_light_rev < field_light_rev;
           if (stale_drawable)
           {
-            mesh->QueueMeshDependencyInvalidation(coord);
+            mesh->QueueStaleLightRemesh(coord);
             if (audit_relight)
             {
               CubatariumLogInfo(
@@ -281,10 +281,9 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
                       " meshed_light_rev=" +
                       std::to_string(meshed_light_rev) +
                       " durable_owner=" + std::to_string(
-                          mesh->GetCache().HasPendingMeshDependencyInvalidation(
-                              coord)) +
+                          mesh->GetCache().HasPendingStaleLightRemesh(coord)) +
                       " invalidation_backlog=" + std::to_string(
-                          mesh->GetMeshDependencyInvalidationBacklogN()) +
+                          mesh->GetCache().GetStaleLightRemeshBacklogN()) +
                       " dirty=" +
                       std::to_string(mesh->IsChunkMeshDirty(coord)));
             }

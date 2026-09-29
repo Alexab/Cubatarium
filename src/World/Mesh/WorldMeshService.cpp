@@ -421,6 +421,11 @@ void UWorldMeshService::QueueMeshDependencyInvalidation(
   Cache.QueueMeshDependencyInvalidation(dependent_chunk);
 }
 
+void UWorldMeshService::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
+{
+  Cache.QueueStaleLightRemesh(chunk_coord);
+}
+
 void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,
                                             glm::ivec3 chunk_coord)
 {
