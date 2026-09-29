@@ -210,6 +210,9 @@ void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
       continue;
     }
 
+    const UChunk *target_chunk = chunks.GetChunk(coord);
+    const uint64_t target_light_rev =
+        target_chunk ? target_chunk->GetLightFieldRevision() : 0;
     const bool target_has_mesh = cache.HasGreedyMesh(coord);
     if (target_has_mesh)
     {
@@ -222,8 +225,7 @@ void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
               published_overlay_mask | static_cast<uint8_t>(1u << face));
         }
       }
-      if (const UChunk *target_chunk = chunks.GetChunk(coord);
-          target_chunk && target_chunk->GetNonAirCount() == 0)
+      if (target_chunk && target_chunk->GetNonAirCount() == 0)
       {
         published_overlay_mask = 0;
       }
@@ -257,7 +259,7 @@ void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
               peer_record ? peer_record->published_coverage_gen : 0;
           if (demand.TryBeginBoundaryOverlayRepair(
                   coord, face, peer_chunk->GetIncarnation(),
-                  peer_coverage_gen))
+                  peer_coverage_gen, target_light_rev))
           {
             mesh.QueueMeshDependencyInvalidation(coord);
           }
@@ -1312,6 +1314,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // this boundary as missing/unlit.
           {
             UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+            const UChunk *publisher_chunk =
+                world_ref.GetBlockWorld().GetChunkManager().GetChunk(
+                    chunk_coord);
             const uint64_t publisher_gen =
                 PublishedCoverageGeneration(demand, chunk_coord);
             if (publisher_gen != 0)
@@ -1328,6 +1333,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                     1u << face_toward_publisher);
                 const bool has_overlay = mesh.HasActiveBoundaryOverlayFace(
                     target, face_toward_publisher);
+                const UChunk *target_chunk =
+                    world_ref.GetBlockWorld().GetChunkManager().GetChunk(
+                        target);
                 const ChunkRenderDemandRecord *target_demand =
                     demand.Find(target);
                 const bool has_face_debt =
@@ -1347,10 +1355,32 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
+                if (has_overlay &&
+                    (!publisher_chunk || !target_chunk ||
+                     !demand.CanBeginBoundaryOverlayRepair(
+                         target, face_toward_publisher,
+                         publisher_chunk->GetIncarnation(), publisher_gen,
+                         target_chunk->GetLightFieldRevision())))
+                {
+                  if (has_face_debt)
+                  {
+                    demand.NoteFaceDebtSatisfied(target, face_bit,
+                                                 publisher_gen);
+                  }
+                  continue;
+                }
                 if (has_face_debt)
                 {
                   demand.NoteFaceDebtSatisfied(target, face_bit,
                                                publisher_gen);
+                }
+                if (has_overlay &&
+                    !demand.TryBeginBoundaryOverlayRepair(
+                        target, face_toward_publisher,
+                        publisher_chunk->GetIncarnation(), publisher_gen,
+                        target_chunk->GetLightFieldRevision()))
+                {
+                  continue;
                 }
                 mesh.QueueMeshDependencyInvalidation(target);
               }
@@ -2124,6 +2154,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
       const glm::ivec3 focus_g = focus_ground_horiz;
       const int scan_r = std::min(focus_radius, 4);
+      UChunkRenderDemandStore &overlay_demand =
+          UChunkRenderDemandStore::Get();
+      UChunkManager &chunk_manager =
+          world.GetBlockWorld().GetChunkManager();
       for (int dz = -scan_r; dz <= scan_r && healed < heal_cap; ++dz)
       {
         for (int dx = -scan_r; dx <= scan_r && healed < heal_cap; ++dx)
@@ -2146,6 +2180,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               continue;
             }
             bool face_toward_with_drawable_nb = false;
+            int overlay_repair_face = -1;
+            uint64_t overlay_repair_peer_incarnation = 0;
+            uint64_t overlay_repair_peer_coverage_gen = 0;
+            uint64_t overlay_repair_target_light_rev = 0;
             for (const glm::ivec3 &d : kFaceHeal)
             {
               const int face = SeaSeamPeerFaceTowardPublisher(d.x, d.z);
@@ -2156,7 +2194,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               if (mesh_service.HasDrawableGreedyMesh(peer + d))
               {
                 face_toward_with_drawable_nb = true;
-                break;
+                const UChunk *target_chunk = chunk_manager.GetChunk(peer);
+                const UChunk *face_peer = chunk_manager.GetChunk(peer + d);
+                if (!target_chunk || !face_peer)
+                {
+                  continue;
+                }
+                const ChunkRenderDemandRecord *face_peer_demand =
+                    overlay_demand.Find(peer + d);
+                const uint64_t peer_coverage_gen =
+                    face_peer_demand
+                        ? face_peer_demand->published_coverage_gen
+                        : 0;
+                if (overlay_demand.CanBeginBoundaryOverlayRepair(
+                        peer, face, face_peer->GetIncarnation(),
+                        peer_coverage_gen,
+                        target_chunk->GetLightFieldRevision()))
+                {
+                  overlay_repair_face = face;
+                  overlay_repair_peer_incarnation =
+                      face_peer->GetIncarnation();
+                  overlay_repair_peer_coverage_gen = peer_coverage_gen;
+                  overlay_repair_target_light_rev =
+                      target_chunk->GetLightFieldRevision();
+                }
               }
             }
             const bool peer_dark =
@@ -2183,6 +2244,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            if (face_toward_with_drawable_nb && overlay_repair_face < 0)
+            {
+              // This overlay has already received a repair attempt for every
+              // unchanged drawable peer; wait for peer or target-light state
+              // to advance instead of dirtying the terrain column each tick.
+              continue;
+            }
             const uint64_t col_key =
                 (static_cast<uint64_t>(static_cast<uint32_t>(peer.x)) << 42) |
                 (static_cast<uint64_t>(static_cast<uint32_t>(peer.z)) << 10) |
@@ -2203,6 +2271,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               continue;
             }
             if (!mesh_service.TryConsumeDirtyAdmit())
+            {
+              continue;
+            }
+            if (overlay_repair_face >= 0 &&
+                !overlay_demand.TryBeginBoundaryOverlayRepair(
+                    peer, overlay_repair_face,
+                    overlay_repair_peer_incarnation,
+                    overlay_repair_peer_coverage_gen,
+                    overlay_repair_target_light_rev))
             {
               continue;
             }

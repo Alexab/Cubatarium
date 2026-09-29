@@ -539,6 +539,7 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
     {
       rec.overlay_repair_peer_incarnation[f] = 0;
       rec.overlay_repair_peer_coverage_gen[f] = 0;
+      rec.overlay_repair_target_light_rev[f] = 0;
     }
   }
   rec.face_debt_mask = static_cast<uint8_t>(
@@ -566,6 +567,7 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
     {
       rec->overlay_repair_peer_incarnation[f] = 0;
       rec->overlay_repair_peer_coverage_gen[f] = 0;
+      rec->overlay_repair_target_light_rev[f] = 0;
     }
     if ((missing_face_mask & bit) == 0 &&
         (rec->peer_face_debt_mask & bit) == 0)
@@ -581,15 +583,15 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
   }
 }
 
-bool UChunkRenderDemandStore::TryBeginBoundaryOverlayRepair(
+bool UChunkRenderDemandStore::CanBeginBoundaryOverlayRepair(
     glm::ivec3 chunk_xyz, int face, uint64_t peer_incarnation,
-    uint64_t peer_coverage_gen)
+    uint64_t peer_coverage_gen, uint64_t target_light_rev) const
 {
   if (face < 0 || face >= 6)
   {
     return false;
   }
-  ChunkRenderDemandRecord *rec = Find(chunk_xyz);
+  const ChunkRenderDemandRecord *rec = Find(chunk_xyz);
   const uint8_t bit = static_cast<uint8_t>(1u << face);
   if (!rec || (rec->overlay_face_debt_mask & bit) == 0)
   {
@@ -599,16 +601,28 @@ bool UChunkRenderDemandStore::TryBeginBoundaryOverlayRepair(
   const bool already_attempted =
       (rec->overlay_repair_attempted_mask & bit) != 0 &&
       rec->overlay_repair_peer_incarnation[face] == peer_incarnation &&
-      rec->overlay_repair_peer_coverage_gen[face] == peer_coverage_gen;
-  if (already_attempted)
+      rec->overlay_repair_peer_coverage_gen[face] == peer_coverage_gen &&
+      rec->overlay_repair_target_light_rev[face] == target_light_rev;
+  return !already_attempted;
+}
+
+bool UChunkRenderDemandStore::TryBeginBoundaryOverlayRepair(
+    glm::ivec3 chunk_xyz, int face, uint64_t peer_incarnation,
+    uint64_t peer_coverage_gen, uint64_t target_light_rev)
+{
+  if (!CanBeginBoundaryOverlayRepair(chunk_xyz, face, peer_incarnation,
+                                     peer_coverage_gen, target_light_rev))
   {
     return false;
   }
+  ChunkRenderDemandRecord *rec = Find(chunk_xyz);
+  const uint8_t bit = static_cast<uint8_t>(1u << face);
 
   rec->overlay_repair_attempted_mask = static_cast<uint8_t>(
       rec->overlay_repair_attempted_mask | bit);
   rec->overlay_repair_peer_incarnation[face] = peer_incarnation;
   rec->overlay_repair_peer_coverage_gen[face] = peer_coverage_gen;
+  rec->overlay_repair_target_light_rev[face] = target_light_rev;
   return true;
 }
 
