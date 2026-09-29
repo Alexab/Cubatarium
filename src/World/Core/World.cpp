@@ -3118,8 +3118,11 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     const int max_cy =
         std::max(0, FloorDiv(max_height, CHUNK_SIZE));
     const int focus_y = GetPreferredLoadFocusBlock().y;
-    int band_min = std::max(0, focus_y - CHUNK_SIZE);
-    int band_max = std::min(max_height, focus_y + CHUNK_SIZE * 2);
+    const int camera_band_min = std::max(0, focus_y - CHUNK_SIZE);
+    const int camera_band_max =
+        std::min(max_height, focus_y + CHUNK_SIZE * 2);
+    int band_min = camera_band_min;
+    int band_max = camera_band_max;
     if (ProceduralTemplate.FillWater)
     {
       band_min = std::min(
@@ -3132,6 +3135,10 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     }
     const int band_cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
     const int band_cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+    const int camera_band_cy0 =
+        std::max(0, FloorDiv(camera_band_min, CHUNK_SIZE));
+    const int camera_band_cy1 =
+        std::min(max_cy, FloorDiv(camera_band_max, CHUNK_SIZE));
     const auto &mesh_cache = MeshService->GetCache();
     const auto &chunk_manager = BlockWorld.GetChunkManager();
     struct FocusSliceCandidate
@@ -3270,7 +3277,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             candidate.horizontal_distance =
                 std::max(std::abs(dx), std::abs(dz));
             candidate.vertical_distance = std::abs(cy - camera_cy);
-            candidate.in_visual_band = cy >= band_cy0 && cy <= band_cy1;
+            candidate.in_visual_band =
+                cy >= camera_band_cy0 && cy <= camera_band_cy1;
             focus_slice_candidates.push_back(candidate);
           }
         }
