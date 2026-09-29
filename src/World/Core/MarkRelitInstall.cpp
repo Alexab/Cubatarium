@@ -1,5 +1,6 @@
 #include "World/Core/World.h"
 
+#include "App/Platform/Log.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -18,8 +19,10 @@
 
 #include "Render/Mesh/MeshCaptureWorker.h"
 
+#include <algorithm>
 #include <chrono>
 #include <climits>
+#include <cstdlib>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -106,6 +109,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     return;
   }
   UWorldMeshService *const mesh = MeshService.get();
+  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
   ColumnRecord &col_rec = GetColumnRecords().GetOrCreate(column);
   for (const glm::ivec3 &coord : plan.prefer_kick_gpu)
   {
@@ -241,15 +245,68 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       }
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
       // enqueues (PreferKick≡0 cannot own pending GPU alone).
-      if (!mesh->TryConsumeDirtyAdmit())
+      const bool dirty_admit_budget = mesh->TryConsumeDirtyAdmit();
+      if (!dirty_admit_budget)
       {
         if (horiz > 4)
         {
           // A28 T1: hinterland admit-deny is not a Dirty queue drop — omit
           // DirtyDropped so A24 thrash gate measures DropRemesh/MaybeDrop only.
+          if (audit_relight)
+          {
+            UChunkMeshCache::LitApplyMeshProbe probe{};
+            mesh->FillLitApplyMeshProbe(coord, probe);
+            const UChunk *chunk =
+                BlockWorld.GetChunkManager().GetChunk(coord);
+            const uint64_t field_light_rev =
+                chunk ? chunk->GetLightFieldRevision() : 0;
+            if (probe.has_drawable &&
+                probe.meshed_light_rev < field_light_rev)
+            {
+              CubatariumLogInfo(
+                  "RelightAudit",
+                  "dirty_admit coord=(" + std::to_string(coord.x) + "," +
+                      std::to_string(coord.y) + "," +
+                      std::to_string(coord.z) + ") result=denied_far" +
+                      " priority=" + std::to_string(priority) +
+                      " horiz=" + std::to_string(horiz) +
+                      " focus=(" + std::to_string(focus_g.x) + "," +
+                      std::to_string(focus_g.z) + ") field_light_rev=" +
+                      std::to_string(field_light_rev) +
+                      " meshed_light_rev=" +
+                      std::to_string(probe.meshed_light_rev) +
+                      " dirty=" +
+                      std::to_string(mesh->IsChunkMeshDirty(coord)));
+            }
+          }
           return;
         }
         // Focus bypass: still MarkDirty* without consuming admit.
+      }
+      if (audit_relight)
+      {
+        UChunkMeshCache::LitApplyMeshProbe probe{};
+        mesh->FillLitApplyMeshProbe(coord, probe);
+        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        const uint64_t field_light_rev =
+            chunk ? chunk->GetLightFieldRevision() : 0;
+        if (probe.has_drawable && probe.meshed_light_rev < field_light_rev)
+        {
+          CubatariumLogInfo(
+              "RelightAudit",
+              "dirty_admit coord=(" + std::to_string(coord.x) + "," +
+                  std::to_string(coord.y) + "," +
+                  std::to_string(coord.z) + ") result=" +
+                  std::string(dirty_admit_budget ? "admitted" :
+                                                       "focus_bypass") +
+                  " priority=" + std::to_string(priority) +
+                  " horiz=" + std::to_string(horiz) +
+                  " focus=(" + std::to_string(focus_g.x) + "," +
+                  std::to_string(focus_g.z) + ") field_light_rev=" +
+                  std::to_string(field_light_rev) + " meshed_light_rev=" +
+                  std::to_string(probe.meshed_light_rev) + " dirty=" +
+                  std::to_string(mesh->IsChunkMeshDirty(coord)));
+        }
       }
       // A23 D0/D1: equal-rev CaptureStore hit re-bakes the same dark vertices —
       // Invalidate so the next build re-reads GetLightData().
@@ -808,6 +865,48 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
       const auto plan_t0 = Clock::now();
       LitApplyPlan plan = PlanColumnInstall(in);
+      if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+      {
+        for (const ColumnChunkSnapshot &snap : in.relit_chunks)
+        {
+          if (!snap.has_drawable || !snap.still_stale)
+          {
+            continue;
+          }
+          const bool dirty_priority =
+              std::find(plan.mark_dirty_priority.begin(),
+                        plan.mark_dirty_priority.end(), snap.coord) !=
+              plan.mark_dirty_priority.end();
+          const bool dirty_normal =
+              std::find(plan.mark_dirty.begin(), plan.mark_dirty.end(),
+                        snap.coord) != plan.mark_dirty.end();
+          CubatariumLogInfo(
+              "RelightAudit",
+              "stale_plan coord=(" + std::to_string(snap.coord.x) + "," +
+                  std::to_string(snap.coord.y) + "," +
+                  std::to_string(snap.coord.z) + ") path=" +
+                  std::to_string(static_cast<int>(plan.path)) +
+                  " dirty_priority=" + std::to_string(dirty_priority) +
+                  " dirty_normal=" + std::to_string(dirty_normal) +
+                  " schedule_n=" + std::to_string(plan.schedule_n) +
+                  " drawable=" + std::to_string(snap.has_drawable) +
+                  " dark=" + std::to_string(snap.fully_dark) +
+                  " field_light_rev=" +
+                  std::to_string(snap.light_field_rev) +
+                  " meshed_light_rev=" +
+                  std::to_string(snap.meshed_light_rev) +
+                  " dirty_before=" + std::to_string(snap.is_dirty) +
+                  " inflight=" + std::to_string(snap.inflight) +
+                  " raa=" + std::to_string(snap.raa_pending) +
+                  " gpu_pending=" + std::to_string(snap.gpu_pending) +
+                  " consume=" + std::to_string(in.consume_mode) +
+                  " primary_only=" + std::to_string(in.primary_only) +
+                  " focus_horiz=" + std::to_string(in.focus_horiz) +
+                  " force_stale=" + std::to_string(in.force_stale_ticket) +
+                  " light_repair_once=" +
+                  std::to_string(in.light_repair_once));
+        }
+      }
       // A41: keep PL while LightRepair; clear on LegalDark / LitDrawable.
       {
         const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(key);
