@@ -277,11 +277,28 @@ struct VisualBlackTraceRecord
   uint32_t renderer_gate_flags{0};
   /// sample_kind=8 bits 0..5: drawable, satisfying, live GPU draw, prepared
   /// CPU renderer ref, passed the render-ready gate, and prepared GPU-packed
-  /// ref. `focus_state`: 1=no drawable, 2=drawable missing from renderer
-  /// snapshot, 3=renderer ref rejected by the render-ready gate.
+  /// ref. `focus_state`: 1=no drawable, 2=drawable missing from CPU/packed
+  /// snapshot, 3=CPU/packed ref rejected by render-ready gate, 4=ready CPU/
+  /// packed ref sampled to inspect its actual post-cull GPU command.
+  /// GPU MDI ownership is reported separately below; absence from CPU/packed
+  /// refs does not imply absence from an MDI pass.
   uint8_t renderer_column_reason{0};
   uint8_t renderer_column_draw_ok{0};
   uint8_t renderer_column_has_repair_ticket{0};
+  /// sample_kind=8: runtime frustum + configured draw-horizon result.
+  uint8_t renderer_runtime_cull_visible{0};
+  /// MDI pass bits: opaque, cutout, transparent (bits 0..2), separately for
+  /// a resident command with indices and one whose post-cull instance count
+  /// is non-zero.
+  uint8_t renderer_mdi_resident_pass_flags{0};
+  uint8_t renderer_mdi_visible_pass_flags{0};
+  uint8_t renderer_gpu_resident_marker{0};
+  uint16_t renderer_mdi_command_count{0};
+  uint16_t renderer_mdi_visible_command_count{0};
+  uint16_t renderer_mdi_first_block_id{0xffffu};
+  uint32_t renderer_mdi_index_count{0};
+  uint32_t renderer_mdi_visible_index_count{0};
+  uint32_t renderer_gpu_slot_quad_count{0};
   /// sample_kind=3: 1=settled field needs mesh-only repair; 0=relight target.
   uint8_t draw_gate_repair_mode{0};
   /// Persistence relight queue location/band for renderer, focus, and

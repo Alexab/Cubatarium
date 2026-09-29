@@ -3438,6 +3438,26 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_gpu_quad_count
                << ",\"renderer_gate_flags\":"
                << r.renderer_gate_flags
+               << ",\"renderer_runtime_cull_visible\":"
+               << static_cast<int>(r.renderer_runtime_cull_visible)
+               << ",\"renderer_mdi_resident_pass_flags\":"
+               << static_cast<int>(r.renderer_mdi_resident_pass_flags)
+               << ",\"renderer_mdi_visible_pass_flags\":"
+               << static_cast<int>(r.renderer_mdi_visible_pass_flags)
+               << ",\"renderer_gpu_resident_marker\":"
+               << static_cast<int>(r.renderer_gpu_resident_marker)
+               << ",\"renderer_mdi_command_count\":"
+               << r.renderer_mdi_command_count
+               << ",\"renderer_mdi_visible_command_count\":"
+               << r.renderer_mdi_visible_command_count
+               << ",\"renderer_mdi_first_block_id\":"
+               << r.renderer_mdi_first_block_id
+               << ",\"renderer_mdi_index_count\":"
+               << r.renderer_mdi_index_count
+               << ",\"renderer_mdi_visible_index_count\":"
+               << r.renderer_mdi_visible_index_count
+               << ",\"renderer_gpu_slot_quad_count\":"
+               << r.renderer_gpu_slot_quad_count
                << ",\"renderer_column_reason\":"
                << static_cast<int>(r.renderer_column_reason)
                << ",\"renderer_column_draw_ok\":"

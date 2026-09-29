@@ -354,7 +354,11 @@ void NoteFrustumCoverageGaps(
     const std::vector<GreedyBatchRef> &opaque_refs,
     const std::vector<GreedyBatchRef> &transparent_refs,
     const std::vector<GreedyBatchRef> &ready_opaque_refs,
-    const std::vector<GreedyBatchRef> &ready_transparent_refs)
+    const std::vector<GreedyBatchRef> &ready_transparent_refs,
+    GreedyGpuPassCache &mdi_opaque_pass,
+    GreedyGpuPassCache &mdi_cutout_pass,
+    GreedyGpuPassCache &mdi_transparent_pass,
+    UMdiVertexPoolStore *mdi_store)
 {
   if (!UJobStageTrace::VisualBlackTraceEnabled())
   {
@@ -368,6 +372,15 @@ void NoteFrustumCoverageGaps(
   if (++render_probe_count % 120u != 0u)
   {
     return;
+  }
+  // GPU compact culling keeps the SSBO result on-device and leaves the CPU
+  // mirror stale. On this opt-in diagnostic sample only, read back visibility
+  // so the trace reports the command that was actually submitted this frame.
+  if (mdi_store)
+  {
+    mdi_store->SyncCompactVisToCpu(mdi_opaque_pass);
+    mdi_store->SyncCompactVisToCpu(mdi_cutout_pass);
+    mdi_store->SyncCompactVisToCpu(mdi_transparent_pass);
   }
 
   std::unordered_set<glm::ivec3, IVec3Hash> draw_refs;
@@ -431,8 +444,9 @@ void NoteFrustumCoverageGaps(
   struct Candidate
   {
     glm::ivec3 coord{0};
-    // 1=no drawable mesh, 2=drawable mesh missing from renderer snapshot,
-    // 3=renderer ref rejected by the normal render-ready gate.
+    // 1=no drawable mesh, 2=drawable mesh missing from CPU/packed refs,
+    // 3=CPU/packed ref rejected by render-ready gate, 4=ready ref sampled to
+    // inspect its actual MDI command after culling.
     uint8_t state{0};
     bool drawable{false};
     float distance_sq{0.0f};
@@ -456,29 +470,29 @@ void NoteFrustumCoverageGaps(
     {
       return;
     }
-    if (ready_refs.count(coord) != 0)
-    {
-      return;
-    }
     const bool drawable = cache.HasDrawableGreedyMesh(coord);
     const glm::vec3 center =
         (ChunkAABBMin(coord) + ChunkAABBMax(coord)) * 0.5f;
     const bool in_draw_refs = draw_refs.count(coord) != 0;
-    const uint8_t state = in_draw_refs ? 3u : (drawable ? 2u : 1u);
+    const bool in_ready_refs = ready_refs.count(coord) != 0;
+    const uint8_t state = in_ready_refs ? 4u
+                            : in_draw_refs ? 3u
+                            : drawable ? 2u
+                                        : 1u;
     candidates.push_back(
         {coord, state, drawable,
          glm::dot(center - camera_position, center - camera_position)});
   });
 
   constexpr size_t kMaxFrustumCoverageTraces = 12;
-  constexpr size_t kMaxFrustumCoverageTracesPerState = 4;
+  constexpr size_t kMaxFrustumCoverageTracesPerState = 3;
   std::sort(candidates.begin(), candidates.end(),
             [](const Candidate &a, const Candidate &b)
             { return a.distance_sq < b.distance_sq; });
   // Keep nearest examples from each pipeline failure stage. Without this
   // quota, many draw-list gate rejects could starve samples where non-air
   // voxel data has no drawable mesh at all.
-  std::array<size_t, 4> sampled_per_state{};
+  std::array<size_t, 5> sampled_per_state{};
   std::vector<Candidate> sampled_candidates;
   sampled_candidates.reserve(kMaxFrustumCoverageTraces);
   for (const Candidate &candidate : candidates)
@@ -545,6 +559,47 @@ void NoteFrustumCoverageGaps(
                                  (in_cpu_refs ? 1u << 3 : 0u) |
                                  (draw_ready ? 1u << 4 : 0u) |
                                  (in_packed_refs ? 1u << 5 : 0u);
+    record.renderer_runtime_cull_visible =
+        frustum.IntersectsChunkAABB(ChunkAABBMin(coord), ChunkAABBMax(coord),
+                                    camera_position, cache.MaxCullDistance(),
+                                    cache.UseHorizontalCullDistance())
+            ? 1u
+            : 0u;
+    record.renderer_gpu_resident_marker =
+        cache.QueryGreedyGpuResident(coord) ? 1u : 0u;
+    record.renderer_gpu_slot_quad_count = static_cast<uint32_t>(
+        std::max(0, cache.QueryGreedyGpuQuadCount(coord)));
+    auto collect_mdi_state = [&](const GreedyGpuPassCache &pass,
+                                 uint8_t pass_bit)
+    {
+      for (const GreedyGpuBatch &batch : pass.batches)
+      {
+        if (batch.chunkCoord != coord || batch.indexCountGl <= 0)
+        {
+          continue;
+        }
+        record.renderer_mdi_resident_pass_flags |= pass_bit;
+        ++record.renderer_mdi_command_count;
+        record.renderer_mdi_index_count +=
+            static_cast<uint32_t>(batch.indexCountGl);
+        if (record.renderer_mdi_first_block_id == 0xffffu)
+        {
+          record.renderer_mdi_first_block_id =
+              static_cast<uint16_t>(batch.blockId);
+        }
+        if (batch.drawInstanceCount == 0)
+        {
+          continue;
+        }
+        record.renderer_mdi_visible_pass_flags |= pass_bit;
+        ++record.renderer_mdi_visible_command_count;
+        record.renderer_mdi_visible_index_count +=
+            static_cast<uint32_t>(batch.indexCountGl);
+      }
+    };
+    collect_mdi_state(mdi_opaque_pass, 1u << 0);
+    collect_mdi_state(mdi_cutout_pass, 1u << 1);
+    collect_mdi_state(mdi_transparent_pass, 1u << 2);
     record.renderer_column_reason =
         static_cast<uint8_t>(column_state.reason);
     record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
@@ -1221,16 +1276,6 @@ void UGeometryEngine::DrawCubeGeometry()
       filtered_transparent =
           filter_render_ready_refs(draw.transparentRefs, 2u);
     }
-    if (UJobStageTrace::VisualBlackTraceEnabled())
-    {
-      const glm::mat4 coverage_vp =
-          camera->GetProjection() * camera->GetViewMatrix();
-      NoteFrustumCoverageGaps(
-          *WorldInstance, draw.cache,
-          Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
-          draw.opaqueCutoutRefs, draw.transparentRefs, filtered_opaque,
-          filtered_transparent);
-    }
     {
       auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
       phys.OpaqueRefsCpuVis =
@@ -1289,6 +1334,18 @@ void UGeometryEngine::DrawCubeGeometry()
                                         WorldInstance->GetBlockRegistry(),
                                         textures};
       UGreedyTransparentPipeline::Draw(*this, tctx);
+    }
+    if (UJobStageTrace::VisualBlackTraceEnabled())
+    {
+      const glm::mat4 coverage_vp =
+          camera->GetProjection() * camera->GetViewMatrix();
+      NoteFrustumCoverageGaps(
+          *WorldInstance, draw.cache,
+          Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
+          draw.opaqueCutoutRefs, draw.transparentRefs, filtered_opaque,
+          filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,
+          GreedyGpuTransparent,
+          dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()));
     }
     if (cullWasEnabled)
     {
