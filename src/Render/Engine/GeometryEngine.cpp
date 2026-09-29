@@ -565,6 +565,159 @@ void CaptureTransparentPixelProbe(
             record.cy = surface_chunk.y;
             record.cz = surface_chunk.z;
 
+            // Snapshot the exact ray-mapped slice lifecycle beside its pixel
+            // color. This makes a transient dark sample useful: it can be
+            // joined to the source chunk's current mesh/light/demand versions
+            // without borrowing state from a neighboring MDI candidate.
+            const UChunk *surface_chunk_data =
+                world.GetBlockWorld().GetChunkManager().GetChunk(surface_chunk);
+            if (surface_chunk_data)
+            {
+              record.non_air_blocks = surface_chunk_data->GetNonAirCount();
+              record.incarnation = surface_chunk_data->GetIncarnation();
+              record.chunk_content_revision =
+                  surface_chunk_data->GetContentRevision();
+              record.field_light_rev =
+                  surface_chunk_data->GetLightFieldRevision();
+            }
+            record.mesh_revision = cache.GetChunkMeshRevision(surface_chunk);
+            const MeshPublishRevs pixel_published =
+                cache.GetMeshPublishRevs(surface_chunk);
+            record.published_geom_rev = pixel_published.geom_rev;
+            record.published_light_rev = pixel_published.light_rev;
+            record.meshed_light_rev =
+                cache.GetMeshedLightRevision(surface_chunk);
+            record.draw_gate_ready =
+                world.IsChunkSliceRenderReady(surface_chunk) ? 1u : 0u;
+            const bool pixel_drawable =
+                cache.HasDrawableGreedyMesh(surface_chunk);
+            const bool pixel_satisfying =
+                cache.HasMeshSatisfyingColumnReady(surface_chunk);
+            const bool pixel_live_gpu = cache.HasLiveGpuDraw(surface_chunk);
+            const bool pixel_fully_dark =
+                cache.ChunkHasFullyDarkFace(surface_chunk);
+            const bool pixel_lit_drawable =
+                cache.ChunkHasLitDrawableFace(surface_chunk);
+            const bool pixel_stale_dark =
+                pixel_fully_dark && !pixel_lit_drawable &&
+                cache.ChunkHasStaleDarkFaces(surface_chunk,
+                                             world.GetBlockWorld());
+            const bool pixel_dirty = cache.IsChunkMeshDirty(surface_chunk);
+            const bool pixel_mesh_inflight =
+                cache.HasInflightMeshBuild(surface_chunk);
+            const bool pixel_gpu_pending =
+                cache.IsPendingGpuApply(surface_chunk);
+            const bool pixel_gpu_extract =
+                cache.IsGpuExtractInFlight(surface_chunk);
+            const bool pixel_gpu_queued =
+                cache.IsPendingGpuQueued(surface_chunk);
+            const bool pixel_gpu_kicked =
+                cache.IsPendingGpuKickedOrDispatched(surface_chunk);
+            const glm::ivec2 surface_column(surface_chunk.x, surface_chunk.z);
+            const bool pixel_pending_light =
+                world.IsPendingLightBeforeMesh(surface_column);
+            const bool pixel_async_relight =
+                world.IsAsyncRelightColumnInFlight(surface_column);
+            const bool pixel_sticky_remesh =
+                world.IsColumnStickyRemesh(surface_column);
+            const bool pixel_repair_progress =
+                world.ColumnHasRepairProgress(surface_column);
+            const ColumnRenderableState pixel_column_state =
+                world.GetColumnRenderableState(surface_column);
+            record.renderer_gate_flags =
+                (pixel_drawable ? (1u << 0) : 0u) |
+                (pixel_satisfying ? (1u << 1) : 0u) |
+                (pixel_live_gpu ? (1u << 2) : 0u) |
+                (pixel_fully_dark ? (1u << 3) : 0u) |
+                (pixel_lit_drawable ? (1u << 4) : 0u) |
+                (pixel_stale_dark ? (1u << 5) : 0u) |
+                (pixel_dirty ? (1u << 6) : 0u) |
+                (pixel_mesh_inflight ? (1u << 7) : 0u) |
+                (pixel_gpu_pending ? (1u << 8) : 0u) |
+                (pixel_gpu_extract ? (1u << 9) : 0u) |
+                (pixel_gpu_queued ? (1u << 10) : 0u) |
+                (pixel_gpu_kicked ? (1u << 11) : 0u) |
+                (pixel_pending_light ? (1u << 12) : 0u) |
+                (pixel_async_relight ? (1u << 13) : 0u) |
+                (pixel_sticky_remesh ? (1u << 14) : 0u) |
+                (pixel_repair_progress ? (1u << 15) : 0u) |
+                (pixel_column_state.draw_ok ? (1u << 16) : 0u) |
+                (pixel_column_state.has_repair_ticket ? (1u << 17) : 0u);
+            const ChunkRenderDemandRecord *pixel_demand =
+                UChunkRenderDemandStore::Get().Find(surface_chunk);
+            const bool pixel_demand_identity_current =
+                pixel_demand && surface_chunk_data &&
+                pixel_demand->incarnation ==
+                    surface_chunk_data->GetIncarnation();
+            const uint64_t pixel_field_light_rev =
+                surface_chunk_data
+                    ? surface_chunk_data->GetLightFieldRevision()
+                    : 0;
+            const bool pixel_demand_light_current =
+                !pixel_demand ||
+                (pixel_demand_identity_current &&
+                 pixel_demand->desired_light_rev <=
+                     pixel_demand->published_light_rev);
+            const bool pixel_settled_light_current =
+                pixel_demand_identity_current &&
+                pixel_demand->has_settled_light &&
+                pixel_demand->settled_light_rev == pixel_field_light_rev;
+            const bool pixel_current_dark_image = CurrentDarkSliceImageMayDraw(
+                pixel_fully_dark, pixel_settled_light_current,
+                pixel_stale_dark, pixel_demand_light_current,
+                pixel_field_light_rev, pixel_published.light_rev,
+                record.meshed_light_rev);
+            record.renderer_gate_flags |=
+                (pixel_demand && pixel_demand->has_settled_light
+                     ? (1u << 18)
+                     : 0u) |
+                (pixel_settled_light_current ? (1u << 19) : 0u) |
+                (pixel_demand_light_current ? (1u << 20) : 0u) |
+                (pixel_current_dark_image ? (1u << 21) : 0u) |
+                (world.ShouldDrawProvisionalLightPreview(surface_chunk)
+                     ? (1u << 22)
+                     : 0u);
+            if (pixel_demand)
+            {
+              record.world_epoch = pixel_demand->world_epoch;
+              record.demand_incarnation = pixel_demand->incarnation;
+              record.attempt_id = pixel_demand->has_active_attempt
+                                      ? pixel_demand->active_attempt_id
+                                      : 0;
+              record.desired_geom_rev = pixel_demand->desired_geom_rev;
+              record.desired_light_rev = pixel_demand->desired_light_rev;
+              record.desired_coverage_gen =
+                  pixel_demand->desired_coverage_gen;
+              record.demand_published_geom_rev =
+                  pixel_demand->published_geom_rev;
+              record.demand_published_light_rev =
+                  pixel_demand->published_light_rev;
+              record.demand_published_coverage_gen =
+                  pixel_demand->published_coverage_gen;
+              record.settled_light_rev = pixel_demand->settled_light_rev;
+              record.has_settled_light =
+                  pixel_demand->has_settled_light ? 1u : 0u;
+              record.active_stage =
+                  static_cast<uint8_t>(pixel_demand->active_stage);
+              const double demand_now_ms = VisualObligationNowMs();
+              if (pixel_demand->has_active_attempt &&
+                  pixel_demand->attempt_created_ms > 0.0)
+              {
+                record.demand_attempt_age_ms = std::max(
+                    0.0, demand_now_ms - pixel_demand->attempt_created_ms);
+              }
+              if (pixel_demand->has_active_attempt &&
+                  pixel_demand->last_progress_ms > 0.0)
+              {
+                record.demand_progress_age_ms = std::max(
+                    0.0, demand_now_ms - pixel_demand->last_progress_ms);
+              }
+            }
+            record.renderer_gpu_resident_marker =
+                cache.QueryGreedyGpuResident(surface_chunk) ? 1u : 0u;
+            record.renderer_gpu_slot_quad_count = static_cast<uint32_t>(
+                std::max(0, cache.QueryGreedyGpuQuadCount(surface_chunk)));
+
             // Tie the sampled screen ray to the CPU source vertices for the
             // exact fluid chunk slice under that ray. This distinguishes
             // chunk-local vertex-light/material differences from missing

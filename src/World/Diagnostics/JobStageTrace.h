@@ -191,7 +191,8 @@ struct VisualBlackTraceRecord
   /// 3=visible relight-queue admission, 4=ordinary focus remesh attempt,
   /// 5=draw-gate relight scan counts, 6=near-focus FirstMesh attempt,
   /// 7=priority-remesh scheduling attempt, 8=frustum candidate, 9=screen pixel
-  /// sampled after the transparent pass (diagnostic marker mode).
+  /// sampled after transparent pass (normal RGBA or diagnostic marker), joined
+  /// to lifecycle/source-mesh state of the exact ray-mapped chunk slice.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   int32_t cx{0};
@@ -268,7 +269,8 @@ struct VisualBlackTraceRecord
   uint8_t renderer_path{0};
   uint32_t renderer_cpu_index_count{0};
   uint32_t renderer_gpu_quad_count{0};
-  /// sample_kind=2 flags 0..17: drawable, satisfying, live GPU, fully dark,
+  /// sample_kind=2 flags 0..17; sample_kind=9 uses the same flags for the
+  /// exact ray-mapped pixel chunk: drawable, satisfying, live GPU, fully dark,
   /// lit drawable, stale dark, dirty, mesh in-flight, GPU pending, extract
   /// in-flight, queued/kicked GPU apply, pending light, async relight, sticky
   /// remesh, repair progress, and column draw-ready/repair-ticket.
