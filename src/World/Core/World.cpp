@@ -2443,8 +2443,11 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   {
     return true;
   }
+  // ChunkHasFullyDarkFace is an any-face census (it deliberately excludes
+  // bottom faces), not proof that every drawable face is dark. A mixed mesh
+  // can still contain zero-light vertices; do not suppress its preview just
+  // because a different face in the same chunk is lit.
   if (!cache.ChunkHasFullyDarkFace(chunk_coord) ||
-      MeshService->ChunkHasLitDrawableFace(chunk_coord) ||
       !IsPendingLightBeforeMesh(column) ||
       HasCurrentChunkSliceLightSettlement(chunk_coord))
   {
