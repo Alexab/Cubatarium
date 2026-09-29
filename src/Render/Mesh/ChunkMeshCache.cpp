@@ -3445,8 +3445,9 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     return key(a) < key(b);
   });
 
-  // The scheduler has one dedicated stale-light repair slot per frame.
-  // Enqueue one durable owner to match that service rate and avoid Dirty churn.
+  // Stale-light repair has one enqueue slot per frame, but it still consumes
+  // the shared dirty-admission budget. Debt stays in this set when unrelated
+  // visible work has exhausted the frame budget.
   constexpr int schedule_budget = 1;
   int admitted = 0;
   for (const glm::ivec3 coord : candidates)
@@ -3497,6 +3498,10 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     if (dirty || raa_pending || mesh_inflight || gpu_owned)
     {
       continue;
+    }
+    if (!TryConsumeDirtyAdmit())
+    {
+      break;
     }
 
     InvalidateMeshCapture(coord);
