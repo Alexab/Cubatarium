@@ -245,11 +245,22 @@ void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
       if ((record->overlay_face_debt_mask & bit) != 0)
       {
         // A missing-neighbor overlay is a target-local capture obligation. A
-        // loaded peer means the target snapshot is stale; refresh the target,
-        // then close the bit only when that target publishes without overlay.
-        if (chunks.HasChunk(peer) && target_has_mesh)
+        // loaded peer means the target snapshot may be stale. Refresh at most
+        // once for this peer incarnation/coverage generation; if the target
+        // republishes the same overlay, do not mint another geom revision
+        // until the peer state changes.
+        const UChunk *peer_chunk = chunks.GetChunk(peer);
+        if (peer_chunk && target_has_mesh)
         {
-          mesh.QueueMeshDependencyInvalidation(coord);
+          const ChunkRenderDemandRecord *peer_record = demand.Find(peer);
+          const uint64_t peer_coverage_gen =
+              peer_record ? peer_record->published_coverage_gen : 0;
+          if (demand.TryBeginBoundaryOverlayRepair(
+                  coord, face, peer_chunk->GetIncarnation(),
+                  peer_coverage_gen))
+          {
+            mesh.QueueMeshDependencyInvalidation(coord);
+          }
         }
         continue;
       }

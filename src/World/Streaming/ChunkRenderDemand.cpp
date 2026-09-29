@@ -526,8 +526,21 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
     return;
   }
   ChunkRenderDemandRecord &rec = GetOrCreate(chunk_xyz);
+  const uint8_t newly_missing = static_cast<uint8_t>(
+      face_mask & static_cast<uint8_t>(~rec.overlay_face_debt_mask));
   rec.overlay_face_debt_mask = static_cast<uint8_t>(
       rec.overlay_face_debt_mask | face_mask);
+  rec.overlay_repair_attempted_mask = static_cast<uint8_t>(
+      rec.overlay_repair_attempted_mask &
+      static_cast<uint8_t>(~newly_missing));
+  for (int f = 0; f < 6; ++f)
+  {
+    if ((newly_missing & static_cast<uint8_t>(1u << f)) != 0)
+    {
+      rec.overlay_repair_peer_incarnation[f] = 0;
+      rec.overlay_repair_peer_coverage_gen[f] = 0;
+    }
+  }
   rec.face_debt_mask = static_cast<uint8_t>(
       rec.peer_face_debt_mask | rec.overlay_face_debt_mask);
 }
@@ -542,11 +555,18 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
   }
   missing_face_mask = static_cast<uint8_t>(missing_face_mask & 0x3Fu);
   rec->overlay_face_debt_mask = missing_face_mask;
+  rec->overlay_repair_attempted_mask = static_cast<uint8_t>(
+      rec->overlay_repair_attempted_mask & missing_face_mask);
   rec->face_debt_mask = static_cast<uint8_t>(
       rec->peer_face_debt_mask | rec->overlay_face_debt_mask);
   for (int f = 0; f < 6; ++f)
   {
     const uint8_t bit = static_cast<uint8_t>(1u << f);
+    if ((missing_face_mask & bit) == 0)
+    {
+      rec->overlay_repair_peer_incarnation[f] = 0;
+      rec->overlay_repair_peer_coverage_gen[f] = 0;
+    }
     if ((missing_face_mask & bit) == 0 &&
         (rec->peer_face_debt_mask & bit) == 0)
     {
@@ -559,6 +579,37 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
   {
     rec->published_coverage_gen = rec->desired_coverage_gen;
   }
+}
+
+bool UChunkRenderDemandStore::TryBeginBoundaryOverlayRepair(
+    glm::ivec3 chunk_xyz, int face, uint64_t peer_incarnation,
+    uint64_t peer_coverage_gen)
+{
+  if (face < 0 || face >= 6)
+  {
+    return false;
+  }
+  ChunkRenderDemandRecord *rec = Find(chunk_xyz);
+  const uint8_t bit = static_cast<uint8_t>(1u << face);
+  if (!rec || (rec->overlay_face_debt_mask & bit) == 0)
+  {
+    return false;
+  }
+
+  const bool already_attempted =
+      (rec->overlay_repair_attempted_mask & bit) != 0 &&
+      rec->overlay_repair_peer_incarnation[face] == peer_incarnation &&
+      rec->overlay_repair_peer_coverage_gen[face] == peer_coverage_gen;
+  if (already_attempted)
+  {
+    return false;
+  }
+
+  rec->overlay_repair_attempted_mask = static_cast<uint8_t>(
+      rec->overlay_repair_attempted_mask | bit);
+  rec->overlay_repair_peer_incarnation[face] = peer_incarnation;
+  rec->overlay_repair_peer_coverage_gen[face] = peer_coverage_gen;
+  return true;
 }
 
 void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,

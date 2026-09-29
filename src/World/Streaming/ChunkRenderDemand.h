@@ -105,6 +105,12 @@ struct ChunkRenderDemandRecord
   uint8_t overlay_face_debt_mask{0};
   /// Face debt from peer/seam obligations, independent of boundary overlays.
   uint8_t peer_face_debt_mask{0};
+  /// Peer state that last triggered a BoundaryOverlay target refresh. Retrying
+  /// against the same loaded peer after every target publication creates an
+  /// unbounded desired-geometry revision loop.
+  uint8_t overlay_repair_attempted_mask{0};
+  uint64_t overlay_repair_peer_incarnation[6]{};
+  uint64_t overlay_repair_peer_coverage_gen[6]{};
 };
 
 /// Per-chunk render demand store (process singleton for Cache + World callers).
@@ -178,6 +184,11 @@ public:
   /// Replace overlay debt with the mask from a successfully published mesh.
   void NoteBoundaryOverlayPublished(glm::ivec3 chunk_xyz,
                                     uint8_t missing_face_mask);
+  /// Return true once for each distinct peer incarnation/coverage generation
+  /// while the target still carries the corresponding missing-neighbor face.
+  bool TryBeginBoundaryOverlayRepair(glm::ivec3 chunk_xyz, int face,
+                                     uint64_t peer_incarnation,
+                                     uint64_t peer_coverage_gen);
   /// Clear face bits. peer_gen==0 never clears a face with waiting_peer_gen!=0.
   /// Otherwise clear iff peer_gen >= waiting[f].
   void NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz, uint8_t face_mask,
