@@ -385,24 +385,24 @@ void CaptureTransparentPixelProbe(UWorld &world,
   glReadPixels(viewport[0], viewport[1], width, capture_height, GL_RGBA,
                GL_UNSIGNED_BYTE, pixels.data());
 
-  const std::array<float, 5> x_fractions{{0.1f, 0.3f, 0.5f, 0.7f, 0.9f}};
-  const std::array<float, 4> y_fractions{{0.04f, 0.08f, 0.12f, 0.16f}};
+  constexpr int kTileColumns = 10;
+  constexpr int kTileRows = 4;
   const glm::mat4 inverse_view_projection = glm::inverse(view_projection);
   const float sea_plane_y =
       static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
       world.GetPreferredLoadFocusBlock());
 
-  for (const float y_fraction : y_fractions)
+  for (int row = 0; row < kTileRows; ++row)
   {
-    const int local_y = std::clamp(
-        static_cast<int>(y_fraction * static_cast<float>(height)), 0,
-        capture_height - 1);
-    for (const float x_fraction : x_fractions)
+    const int y0 = row * capture_height / kTileRows;
+    const int y1 = (row + 1) * capture_height / kTileRows;
+    const int local_y = std::clamp((y0 + y1) / 2, 0, capture_height - 1);
+    for (int column = 0; column < kTileColumns; ++column)
     {
-      const int local_x = std::clamp(
-          static_cast<int>(x_fraction * static_cast<float>(width)), 0,
-          width - 1);
+      const int x0 = column * width / kTileColumns;
+      const int x1 = (column + 1) * width / kTileColumns;
+      const int local_x = std::clamp((x0 + x1) / 2, 0, width - 1);
       const size_t pixel_offset =
           (static_cast<size_t>(local_y) * static_cast<size_t>(width) +
            static_cast<size_t>(local_x)) *
@@ -422,6 +422,35 @@ void CaptureTransparentPixelProbe(UWorld &world,
                                    (blue << 8u) | alpha;
       record.renderer_pixel_marker_visible =
           red >= 240u && green <= 15u && blue >= 240u && alpha >= 240u;
+
+      uint32_t tile_marker_pixels = 0;
+      uint32_t tile_pixel_count = 0;
+      for (int py = y0; py < y1; ++py)
+      {
+        for (int px = x0; px < x1; ++px)
+        {
+          const size_t offset =
+              (static_cast<size_t>(py) * static_cast<size_t>(width) +
+               static_cast<size_t>(px)) *
+              4u;
+          const uint8_t pr = pixels[offset + 0];
+          const uint8_t pg = pixels[offset + 1];
+          const uint8_t pb = pixels[offset + 2];
+          const uint8_t pa = pixels[offset + 3];
+          if (pr >= 240u && pg <= 15u && pb >= 240u && pa >= 240u)
+          {
+            ++tile_marker_pixels;
+          }
+          ++tile_pixel_count;
+        }
+      }
+      const float tile_coverage =
+          tile_pixel_count > 0
+              ? static_cast<float>(tile_marker_pixels) /
+                    static_cast<float>(tile_pixel_count)
+              : 0.0f;
+      const uint8_t coverage7 = static_cast<uint8_t>(
+          std::lround(std::clamp(tile_coverage, 0.0f, 1.0f) * 127.0f));
       record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
       record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
       record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
@@ -467,6 +496,12 @@ void CaptureTransparentPixelProbe(UWorld &world,
           }
         }
       }
+      // Preserve the valid bit and pack seven bits of tile coverage in the
+      // upper bits; FramePerfMonitor emits both as separate JSON fields.
+      const uint8_t surface_valid =
+          record.renderer_pixel_surface_valid != 0 ? 1u : 0u;
+      record.renderer_pixel_surface_valid =
+          static_cast<uint8_t>(surface_valid | (coverage7 << 1u));
       UJobStageTrace::NoteVisualBlack(record);
     }
   }
