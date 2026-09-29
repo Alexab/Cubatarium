@@ -794,9 +794,21 @@ void CaptureTransparentPixelProbe(
               record.renderer_source_block_light_max = source_block_max;
             }
 
+            const uint32_t pretransparent_rgba =
+                record.renderer_pixel_pretransparent_rgba;
+            const uint32_t pretransparent_red =
+                (pretransparent_rgba >> 24u) & 0xffu;
+            const uint32_t pretransparent_green =
+                (pretransparent_rgba >> 16u) & 0xffu;
+            const uint32_t pretransparent_blue =
+                (pretransparent_rgba >> 8u) & 0xffu;
+            const bool transparent_pass_changed_pixel =
+                red != pretransparent_red || green != pretransparent_green ||
+                blue != pretransparent_blue;
             const bool near_black_pixel =
                 red <= 16u && green <= 24u && blue <= 32u && alpha >= 200u;
-            if (near_black_pixel &&
+            if (near_black_pixel && transparent_pass_changed_pixel &&
+                payload_checked_chunks.size() < 3u &&
                 payload_checked_chunks.insert(surface_chunk).second &&
                 record.renderer_mdi_first_block_id != 0xffffu)
             {
@@ -2144,12 +2156,16 @@ void UGeometryEngine::DrawCubeGeometry()
       // post-transparent probe, so each sample is a direct before/after pair.
       static uint32_t render_probe_count = 0;
       ++render_probe_count;
-      // The M147 repro is localized near x=-155. Sample that narrow route
-      // window twice as often so a 16-block chunk cannot fall between probes;
-      // retain the lower-cost cadence everywhere else.
+      // M147/M148 dark-water samples were localized around x=-265, while M149
+      // also targeted the adjacent -155 window. Sample both windows twice as
+      // often so a 16-block chunk cannot fall between probes; retain the
+      // lower-cost cadence everywhere else.
       const float probe_camera_x = camera->GetPosition().x;
       const uint32_t probe_stride =
-          probe_camera_x >= -210.0f && probe_camera_x <= -120.0f ? 60u : 120u;
+          ((probe_camera_x >= -290.0f && probe_camera_x <= -245.0f) ||
+           (probe_camera_x >= -210.0f && probe_camera_x <= -120.0f))
+              ? 60u
+              : 120u;
       if (render_probe_count % probe_stride == 0u)
       {
         pixel_probe_capture.probe_id = render_probe_count;
