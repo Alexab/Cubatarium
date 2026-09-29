@@ -3369,7 +3369,8 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
 void UChunkMeshCache::DrainStaleLightRemeshDebt(
     UBlockWorld &world, int max_schedule_per_frame)
 {
-  if (PendingStaleLightRemeshes_.empty() || max_schedule_per_frame <= 0)
+  if (PendingStaleLightRemeshes_.empty() || max_schedule_per_frame <= 0 ||
+      !MeshFocusValid)
   {
     return;
   }
@@ -3377,8 +3378,27 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
   const bool audit_relight =
       std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
   const UChunkManager &chunks = world.GetChunkManager();
-  std::vector<glm::ivec3> candidates(PendingStaleLightRemeshes_.begin(),
-                                    PendingStaleLightRemeshes_.end());
+  // A denied far repair remains durable but must not be injected into Dirty
+  // ahead of the normal admission budget. Activate it only in the lit-drawable
+  // ring; this keeps far debt from flooding the priority queue during travel.
+  const int activation_radius =
+      std::max(0, std::min(MeshFocusRadiusChunks,
+                           kVisualStageLitDrawableHoriz));
+  std::vector<glm::ivec3> candidates;
+  candidates.reserve(PendingStaleLightRemeshes_.size());
+  for (const glm::ivec3 coord : PendingStaleLightRemeshes_)
+  {
+    const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                               std::abs(coord.z - MeshFocusGroundChunk.z));
+    if (horiz <= activation_radius)
+    {
+      candidates.push_back(coord);
+    }
+  }
+  if (candidates.empty())
+  {
+    return;
+  }
   std::sort(candidates.begin(), candidates.end(), [this](glm::ivec3 a,
                                                          glm::ivec3 b)
   {
@@ -3398,9 +3418,9 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     return key(a) < key(b);
   });
 
-  const int schedule_budget = max_schedule_per_frame > 0
-                                  ? std::clamp(max_schedule_per_frame, 1, 8)
-                                  : 8;
+  // The scheduler has one dedicated stale-light repair slot per frame.
+  // Enqueue one durable owner to match that service rate and avoid Dirty churn.
+  constexpr int schedule_budget = 1;
   int admitted = 0;
   for (const glm::ivec3 coord : candidates)
   {
@@ -3520,6 +3540,8 @@ const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
   UChunkRenderDemandStore::Get().Remove(chunkCoord);
+  PendingStaleLightRemeshes_.erase(chunkCoord);
+  PendingMeshDependencyInvalidations_.erase(chunkCoord);
   if (GpuPipeline)
   {
     GpuPipeline->FreeChunk(chunkCoord);
@@ -3577,6 +3599,8 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
     UChunkRenderDemandStore::Get().Remove(slice);
+    PendingStaleLightRemeshes_.erase(slice);
+    PendingMeshDependencyInvalidations_.erase(slice);
     if (GpuPipeline)
     {
       GpuPipeline->FreeChunk(slice);
