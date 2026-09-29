@@ -6,6 +6,7 @@
 #include "Render/Pipeline/TransparentPass.h"
 
 #include "Render/GlIncludes.h"
+#include <cstdlib>
 #include <iostream>
 
 namespace cutum
@@ -65,7 +66,15 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
 
   backend.PrepareTransparent(ctx);
 
-  if (GetActiveRenderBackendCaps().PreferSinglePassTransparent)
+  // Diagnostic A/B: bypass the desktop stencil shell while keeping the same
+  // transparent MDI batches, textures, shader, and opaque-depth guard.
+  const char *force_single_pass_env =
+      std::getenv("CUBA_DEBUG_TRANSPARENT_SINGLE_PASS");
+  const bool force_single_pass = force_single_pass_env != nullptr &&
+                                 force_single_pass_env[0] != '\0' &&
+                                 force_single_pass_env[0] != '0';
+  if (GetActiveRenderBackendCaps().PreferSinglePassTransparent ||
+      force_single_pass)
   {
     DrawTransparentSinglePass(backend, settings);
     return;
