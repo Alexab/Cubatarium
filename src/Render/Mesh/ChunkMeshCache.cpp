@@ -687,6 +687,33 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
   {
     return;
   }
+  // A relight repair can be outside the temporarily-shrunk render radius while
+  // still lying in the protected visual ring. Dropping Active ownership there
+  // makes its otherwise-valid async result fail with NoActiveOwner; the durable
+  // debt then re-admits it and repeats the same work. Keep only those exact
+  // stale-light tickets leased, and only through the bounded repair ring.
+  const int stale_light_lease =
+      std::max(radius_chunks, RelightFifoTrimProtectHoriz());
+  const bool audit_relight =
+      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  const auto keep_stale_light_debt = [&](glm::ivec3 coord, int horiz,
+                                         const char *stage)
+  {
+    const bool keep = horiz <= stale_light_lease &&
+                      HasPendingStaleLightRemesh(coord);
+    if (keep && audit_relight)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "stale_light_debt event=cancel_lease coord=(" +
+              std::to_string(coord.x) + "," + std::to_string(coord.y) +
+              "," + std::to_string(coord.z) + ") stage=" + stage +
+              " horiz=" + std::to_string(horiz) + " radius=" +
+              std::to_string(radius_chunks) + " protect=" +
+              std::to_string(stale_light_lease));
+    }
+    return keep;
+  };
   std::vector<glm::ivec3> outside;
   outside.reserve(ActiveMeshSourceRevision.size());
   for (const auto &entry : ActiveMeshSourceRevision)
@@ -695,6 +722,10 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
     const int horiz = std::max(std::abs(coord.x - focus_ground_chunk.x),
                                std::abs(coord.z - focus_ground_chunk.z));
     if (horiz <= keep_horiz_lease)
+    {
+      continue;
+    }
+    if (keep_stale_light_debt(coord, horiz, "mesh"))
     {
       continue;
     }
@@ -718,7 +749,8 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
   {
     const int horiz = std::max(std::abs(it->coord.x - focus_ground_chunk.x),
                                std::abs(it->coord.z - focus_ground_chunk.z));
-    if (horiz <= keep_horiz_lease || horiz <= radius_chunks)
+    if (horiz <= keep_horiz_lease || horiz <= radius_chunks ||
+        keep_stale_light_debt(it->coord, horiz, "gpu_apply"))
     {
       ++it;
       continue;
