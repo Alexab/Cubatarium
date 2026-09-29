@@ -637,7 +637,7 @@ void NoteFrustumCoverageGaps(
             {
               record.renderer_source_face_mask |=
                   static_cast<uint8_t>(1u << face);
-              if (face == 5)
+              if (face == 4)
               {
                 ++record.renderer_source_top_face_quads;
               }
@@ -674,7 +674,8 @@ void NoteFrustumCoverageGaps(
       };
       collect_source_light(opaque_refs);
       collect_source_light(transparent_refs);
-      // Each top-face quad contributes four source vertices. Store the actual
+      // In GreedyMesher's convention face 4 is +Y and face 5 is -Y. Each
+      // top-face quad contributes four source vertices. Store the actual
       // quad count rather than vertex count so the JSON is easy to compare.
       record.renderer_source_top_face_quads /= 4u;
     }
