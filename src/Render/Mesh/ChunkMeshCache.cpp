@@ -3378,50 +3378,22 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
   const bool audit_relight =
       std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
   const UChunkManager &chunks = world.GetChunkManager();
-  // Keep the main repair share inside the near lit-drawable ring. A smaller
-  // outer-ring share prevents nearest-first arrivals from starving stale faces
-  // that are already visible near the render horizon.
-  const int near_activation_radius =
+  // A denied far repair remains durable but must not be injected into Dirty
+  // ahead of the normal admission budget. Activate it only in the lit-drawable
+  // ring; this keeps far debt from flooding the priority queue during travel.
+  const int activation_radius =
       std::max(0, std::min(MeshFocusRadiusChunks,
                            kVisualStageLitDrawableHoriz));
-  const int outer_activation_radius =
-      std::max(near_activation_radius,
-               std::min(MeshFocusRadiusChunks,
-                        RelightFifoTrimProtectHoriz()));
-  std::vector<glm::ivec3> near_candidates;
-  std::vector<glm::ivec3> outer_candidates;
-  near_candidates.reserve(PendingStaleLightRemeshes_.size());
-  outer_candidates.reserve(PendingStaleLightRemeshes_.size());
+  std::vector<glm::ivec3> candidates;
+  candidates.reserve(PendingStaleLightRemeshes_.size());
   for (const glm::ivec3 coord : PendingStaleLightRemeshes_)
   {
     const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
                                std::abs(coord.z - MeshFocusGroundChunk.z));
-    if (horiz <= near_activation_radius)
+    if (horiz <= activation_radius)
     {
-      near_candidates.push_back(coord);
+      candidates.push_back(coord);
     }
-    else if (horiz <= outer_activation_radius)
-    {
-      outer_candidates.push_back(coord);
-    }
-  }
-  const bool outer_repair_turn =
-      !outer_candidates.empty() && (MeshFocusFrameEpoch % 5u) == 0u;
-  std::vector<glm::ivec3> candidates;
-  bool selected_outer_ring = false;
-  if (outer_repair_turn)
-  {
-    candidates.swap(outer_candidates);
-    selected_outer_ring = true;
-  }
-  else if (!near_candidates.empty())
-  {
-    candidates.swap(near_candidates);
-  }
-  else
-  {
-    candidates.swap(outer_candidates);
-    selected_outer_ring = !candidates.empty();
   }
   if (candidates.empty())
   {
@@ -3531,12 +3503,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
               " mesh_inflight=" +
               std::to_string(AsyncBuilder && AsyncBuilder->IsInFlight(coord)) +
               " gpu_owned=" + std::to_string(gpu_owned) + " backlog=" +
-              std::to_string(PendingStaleLightRemeshes_.size()) +
-              " horiz=" +
-              std::to_string(std::max(
-                  std::abs(coord.x - MeshFocusGroundChunk.x),
-                  std::abs(coord.z - MeshFocusGroundChunk.z))) +
-              " ring=" + (selected_outer_ring ? "outer" : "near"));
+              std::to_string(PendingStaleLightRemeshes_.size()));
     }
   }
 }
