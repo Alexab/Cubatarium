@@ -487,6 +487,16 @@ NeighborLoadState ChunkMeshSnapshot::GetNeighborLoadState(
         (boundaryOverlay.missingNeighborFaces &
          static_cast<uint8_t>(1u << face)) != 0)
     {
+      // A missing +Y chunk is often an air-only slice that terrain streaming
+      // deliberately never materializes. Emit the local top surface during
+      // bootstrap, but keep BoundaryOverlay/FaceDebt intact so a later
+      // resident peer can trigger the normal seam-remesh and remove any
+      // provisional faces. Unknown side and bottom faces still stay hidden to
+      // avoid the distant closing walls this overlay was introduced to stop.
+      if (IsProvisionalMissingTopFace(face))
+      {
+        return NeighborLoadState::Air;
+      }
       return NeighborLoadState::Unknown;
     }
     return static_cast<NeighborLoadState>(

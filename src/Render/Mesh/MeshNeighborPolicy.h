@@ -26,6 +26,12 @@ inline bool NeighborUnknownAlwaysHidesFace(NeighborLoadState state)
   return state == NeighborLoadState::Unknown;
 }
 
+/// Face index 3 is the +Y boundary in the shared face-mask order. An absent
+/// vertical slice above terrain is commonly an intentionally unmaterialized
+/// air-only slice, so bootstrap its top surface while retaining overlay debt
+/// for a later corrective remesh if a peer becomes resident.
+inline bool IsProvisionalMissingTopFace(int face) { return face == 3; }
+
 /// NeighborBecameKnown: coalesce seam remesh 1/column/frame when a face-neighbor
 /// flips to loaded/drawable (overlay Missing and/or FaceDebt toward publisher).
 inline bool ShouldCoalesceNeighborBecameKnownSeam(
