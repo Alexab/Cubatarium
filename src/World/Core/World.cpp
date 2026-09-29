@@ -994,11 +994,15 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
   {
     return 0;
   }
-  const glm::ivec3 focus =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus = UChunkManager::WorldToChunk(focus_block);
   const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
+  const int visible_band_min =
+      std::max(0, focus_block.y - CHUNK_SIZE);
+  const int visible_band_max =
+      std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
   const bool audit_relight =
       std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
   // Preserve already-visible holes when pending first-mesh columns need to
@@ -1051,7 +1055,10 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         const glm::ivec3 ground(key.x, 0, key.y);
         bool has_mesh = false;
         bool missing_mesh = false;
-        glm::ivec3 first_missing_mesh_coord(-1);
+        glm::ivec3 first_visible_missing_mesh_coord(-1);
+        uint64_t first_visible_missing_mesh_incarnation = 0;
+        int first_visible_missing_mesh_content_revision = 0;
+        int best_visible_slice_distance = max_y + CHUNK_SIZE;
         bool any_sky = false;
         bool any_solid = false;
         glm::ivec3 first_fully_dark_unsettled_coord(-1);
@@ -1091,9 +1098,28 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             if (slice_solid)
             {
               missing_mesh = true;
-              if (first_missing_mesh_coord.x < 0)
+              const int slice_min_y = cy * CHUNK_SIZE;
+              const int slice_max_y =
+                  std::min(max_y, slice_min_y + CHUNK_SIZE - 1);
+              if (slice_max_y >= visible_band_min &&
+                  slice_min_y <= visible_band_max)
               {
-                first_missing_mesh_coord = coord;
+                const int vertical_distance =
+                    focus_block.y < slice_min_y
+                        ? slice_min_y - focus_block.y
+                        : (focus_block.y > slice_max_y
+                               ? focus_block.y - slice_max_y
+                               : 0);
+                if (first_visible_missing_mesh_coord.x < 0 ||
+                    vertical_distance < best_visible_slice_distance)
+                {
+                  first_visible_missing_mesh_coord = coord;
+                  first_visible_missing_mesh_incarnation =
+                      chunk->GetIncarnation();
+                  first_visible_missing_mesh_content_revision =
+                      chunk->GetContentRevision();
+                  best_visible_slice_distance = vertical_distance;
+                }
               }
             }
           }
@@ -1203,7 +1229,18 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           bool admitted_visible = false;
           uint8_t visible_admission_outcome = 0;
           int visible_victim_horiz = -1;
-          if (missing_mesh && r <= kVisualStageLitDrawableHoriz)
+          const bool has_visible_first_mesh_candidate =
+              first_visible_missing_mesh_coord.x >= 0;
+          const int visible_first_mesh_band_min =
+              has_visible_first_mesh_candidate
+                  ? first_visible_missing_mesh_coord.y * CHUNK_SIZE
+                  : enqueue_min;
+          const int visible_first_mesh_band_max =
+              has_visible_first_mesh_candidate
+                  ? std::min(max_y, visible_first_mesh_band_min + CHUNK_SIZE - 1)
+                  : enqueue_max;
+          if (has_visible_first_mesh_candidate &&
+              r <= kVisualStageLitDrawableHoriz)
           {
             admitted_visible = Persistence->EnqueueVisibleRelight(
                 world_block_key.x, world_block_key.y, enqueue_min, enqueue_max,
@@ -1220,33 +1257,27 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           const bool queued_after =
               Persistence->IsTerrainColumnRelightQueued(world_block_key);
           const bool async_after = IsAsyncRelightColumnInFlight(key);
-          if ((admitted_visible || queued_after) && missing_mesh &&
+          if ((admitted_visible || queued_after) &&
+              has_visible_first_mesh_candidate &&
               r <= kVisualStageLitDrawableHoriz)
           {
             Persistence->NoteVisibleFirstMeshRelight(
-                world_block_key, enqueue_min, enqueue_max);
+                world_block_key, visible_first_mesh_band_min,
+                visible_first_mesh_band_max);
           }
           const auto queue_info =
               Persistence->GetTerrainColumnRelightQueueInfo(world_block_key);
-          if (audit_relight && missing_mesh &&
+          if (audit_relight && has_visible_first_mesh_candidate &&
               r <= kVisualStageLitDrawableHoriz)
           {
-            const UChunk *trace_chunk = first_missing_mesh_coord.x >= 0
-                                            ? BlockWorld.GetChunkManager()
-                                                  .GetChunk(
-                                                      first_missing_mesh_coord)
-                                            : nullptr;
-            const uint64_t incarnation =
-                trace_chunk ? trace_chunk->GetIncarnation() : 0;
             const ChunkRenderDemandRecord *trace_demand =
-                first_missing_mesh_coord.x >= 0
-                    ? UChunkRenderDemandStore::Get().Find(
-                          first_missing_mesh_coord)
-                    : nullptr;
+                UChunkRenderDemandStore::Get().Find(
+                    first_visible_missing_mesh_coord);
             const bool flow_ticket =
                 GetColumnFlowExecutor().HasRepairTicket(key);
             const std::string signature =
                 std::to_string(visible_admission_outcome) + ":" +
+                std::to_string(first_visible_missing_mesh_coord.y) + ":" +
                 std::to_string(queued_after) + ":" +
                 std::to_string(async_after) + ":" +
                 std::to_string(queue_info.deferred_visible) + ":" +
@@ -1255,7 +1286,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                 std::to_string(queue_info.min_world_y) + ":" +
                 std::to_string(queue_info.max_world_y) + ":" +
                 std::to_string(flow_ticket) + ":" +
-                std::to_string(incarnation);
+                std::to_string(first_visible_missing_mesh_incarnation);
             static std::unordered_map<glm::ivec2, std::string, IVec2Hash>
                 last_first_mesh_admission_signature;
             const auto last =
@@ -1269,10 +1300,15 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                   "first_mesh_admission column=(" +
                       std::to_string(key.x) + "," +
                       std::to_string(key.y) + ") target=(" +
-                      std::to_string(first_missing_mesh_coord.x) + "," +
-                      std::to_string(first_missing_mesh_coord.y) + "," +
-                      std::to_string(first_missing_mesh_coord.z) +
-                      ") horiz=" + std::to_string(r) + " band=" +
+                      std::to_string(first_visible_missing_mesh_coord.x) +
+                      "," +
+                      std::to_string(first_visible_missing_mesh_coord.y) +
+                      "," +
+                      std::to_string(first_visible_missing_mesh_coord.z) +
+                      ") horiz=" + std::to_string(r) + " target_band=" +
+                      std::to_string(visible_first_mesh_band_min) + ":" +
+                      std::to_string(visible_first_mesh_band_max) +
+                      " request_band=" +
                       std::to_string(enqueue_min) + ":" +
                       std::to_string(enqueue_max) + " visible_admitted=" +
                       std::to_string(admitted_visible) + " outcome=" +
@@ -1291,7 +1327,14 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                       " queue=" + std::to_string(queue_info.queue_index) +
                       "/" + std::to_string(queue_info.queue_size) +
                       " flow_ticket=" + std::to_string(flow_ticket) +
-                      " incarnation=" + std::to_string(incarnation) +
+                      " incarnation=" +
+                      std::to_string(
+                          first_visible_missing_mesh_incarnation) +
+                      " content_revision=" +
+                      std::to_string(
+                          first_visible_missing_mesh_content_revision) +
+                      " vertical_distance=" +
+                      std::to_string(best_visible_slice_distance) +
                       " demand_light=" +
                       std::to_string(trace_demand
                                          ? trace_demand->desired_light_rev
