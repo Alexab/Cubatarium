@@ -1051,6 +1051,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         const glm::ivec3 ground(key.x, 0, key.y);
         bool has_mesh = false;
         bool missing_mesh = false;
+        glm::ivec3 first_missing_mesh_coord(-1);
         bool any_sky = false;
         bool any_solid = false;
         glm::ivec3 first_fully_dark_unsettled_coord(-1);
@@ -1090,6 +1091,10 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             if (slice_solid)
             {
               missing_mesh = true;
+              if (first_missing_mesh_coord.x < 0)
+              {
+                first_missing_mesh_coord = coord;
+              }
             }
           }
           for (int z = 0; z < CHUNK_SIZE && (!any_sky || !any_solid); z += 4)
@@ -1190,24 +1195,111 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           }
           const glm::ivec2 world_block_key(key.x * CHUNK_SIZE,
                                            key.y * CHUNK_SIZE);
+          const int fifo_before =
+              Persistence->GetPendingTerrainColumnRelightCount();
+          const bool queued_before =
+              Persistence->IsTerrainColumnRelightQueued(world_block_key);
+          const bool async_before = IsAsyncRelightColumnInFlight(key);
           bool admitted_visible = false;
+          uint8_t visible_admission_outcome = 0;
+          int visible_victim_horiz = -1;
           if (missing_mesh && r <= kVisualStageLitDrawableHoriz)
           {
             admitted_visible = Persistence->EnqueueVisibleRelight(
                 world_block_key.x, world_block_key.y, enqueue_min, enqueue_max,
                 focus, kVisualStageLitDrawableHoriz,
-                protected_visible_columns);
-            if (admitted_visible)
-            {
-              Persistence->NoteVisibleFirstMeshRelight(
-                  world_block_key, enqueue_min, enqueue_max);
-            }
+                protected_visible_columns, &visible_admission_outcome,
+                &visible_victim_horiz);
           }
           if (!admitted_visible)
           {
             Persistence->EnqueueTerrainColumnRelight(
                 world_block_key.x, world_block_key.y, /*priority=*/true,
                 enqueue_min, enqueue_max);
+          }
+          const bool queued_after =
+              Persistence->IsTerrainColumnRelightQueued(world_block_key);
+          const bool async_after = IsAsyncRelightColumnInFlight(key);
+          if ((admitted_visible || queued_after) && missing_mesh &&
+              r <= kVisualStageLitDrawableHoriz)
+          {
+            Persistence->NoteVisibleFirstMeshRelight(
+                world_block_key, enqueue_min, enqueue_max);
+          }
+          const auto queue_info =
+              Persistence->GetTerrainColumnRelightQueueInfo(world_block_key);
+          if (audit_relight && missing_mesh &&
+              r <= kVisualStageLitDrawableHoriz)
+          {
+            const UChunk *trace_chunk = first_missing_mesh_coord.x >= 0
+                                            ? BlockWorld.GetChunkManager()
+                                                  .GetChunk(
+                                                      first_missing_mesh_coord)
+                                            : nullptr;
+            const uint64_t incarnation =
+                trace_chunk ? trace_chunk->GetIncarnation() : 0;
+            const ChunkRenderDemandRecord *trace_demand =
+                first_missing_mesh_coord.x >= 0
+                    ? UChunkRenderDemandStore::Get().Find(
+                          first_missing_mesh_coord)
+                    : nullptr;
+            const bool flow_ticket =
+                GetColumnFlowExecutor().HasRepairTicket(key);
+            const std::string signature =
+                std::to_string(visible_admission_outcome) + ":" +
+                std::to_string(queued_after) + ":" +
+                std::to_string(async_after) + ":" +
+                std::to_string(queue_info.deferred_visible) + ":" +
+                std::to_string(queue_info.priority) + ":" +
+                std::to_string(queue_info.y_band_defined) + ":" +
+                std::to_string(queue_info.min_world_y) + ":" +
+                std::to_string(queue_info.max_world_y) + ":" +
+                std::to_string(flow_ticket) + ":" +
+                std::to_string(incarnation);
+            static std::unordered_map<glm::ivec2, std::string, IVec2Hash>
+                last_first_mesh_admission_signature;
+            const auto last =
+                last_first_mesh_admission_signature.find(key);
+            if (last == last_first_mesh_admission_signature.end() ||
+                last->second != signature)
+            {
+              last_first_mesh_admission_signature[key] = signature;
+              CubatariumLogInfo(
+                  "RelightAudit",
+                  "first_mesh_admission column=(" +
+                      std::to_string(key.x) + "," +
+                      std::to_string(key.y) + ") target=(" +
+                      std::to_string(first_missing_mesh_coord.x) + "," +
+                      std::to_string(first_missing_mesh_coord.y) + "," +
+                      std::to_string(first_missing_mesh_coord.z) +
+                      ") horiz=" + std::to_string(r) + " band=" +
+                      std::to_string(enqueue_min) + ":" +
+                      std::to_string(enqueue_max) + " visible_admitted=" +
+                      std::to_string(admitted_visible) + " outcome=" +
+                      std::to_string(visible_admission_outcome) +
+                      " victim_horiz=" +
+                      std::to_string(visible_victim_horiz) + " fifo=" +
+                      std::to_string(fifo_before) + "->" +
+                      std::to_string(
+                          Persistence->GetPendingTerrainColumnRelightCount()) +
+                      " queued=" + std::to_string(queued_before) + "->" +
+                      std::to_string(queued_after) + " async=" +
+                      std::to_string(async_before) + "->" +
+                      std::to_string(async_after) + " deferred=" +
+                      std::to_string(queue_info.deferred_visible) +
+                      " priority=" + std::to_string(queue_info.priority) +
+                      " queue=" + std::to_string(queue_info.queue_index) +
+                      "/" + std::to_string(queue_info.queue_size) +
+                      " flow_ticket=" + std::to_string(flow_ticket) +
+                      " incarnation=" + std::to_string(incarnation) +
+                      " demand_light=" +
+                      std::to_string(trace_demand
+                                         ? trace_demand->desired_light_rev
+                                         : 0) + ":" +
+                      std::to_string(trace_demand
+                                         ? trace_demand->published_light_rev
+                                         : 0));
+            }
           }
           if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
               !IsAsyncRelightColumnInFlight(key))
