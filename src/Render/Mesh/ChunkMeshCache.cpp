@@ -8673,17 +8673,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             demand->incarnation == chunk->GetIncarnation();
         const uint64_t field_light_rev =
             chunk ? chunk->GetLightFieldRevision() : 0;
-        // Published revision is the output of this mesh itself. Requiring it
-        // here makes an otherwise settled first mesh permanently provisional
-        // until after its own publication, and can leave the preview marker on
-        // the committed mesh. The settled field revision is the input proof.
-        const bool light_is_settled =
+        // Keep the ambient preview until a matching light revision has been
+        // published. A first mesh may read a settled field before its demand
+        // publication catches up; the committed preview then creates durable
+        // repair debt and a successor mesh clears the marker.
+        const bool light_can_publish_without_preview =
             current_demand && demand->has_settled_light &&
             demand->settled_light_rev == field_light_rev &&
-            demand->desired_light_rev <= field_light_rev;
+            demand->desired_light_rev <= demand->published_light_rev;
         // Absence of current per-slice settlement is not evidence that the
         // first mesh is safe to publish with raw zero light.
-        snapshot.provisionalLightPreview = !light_is_settled;
+        snapshot.provisionalLightPreview =
+            !light_can_publish_without_preview;
       }
       const double snapshot_acquire_ms =
           std::chrono::duration<double, std::milli>(
