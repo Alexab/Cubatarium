@@ -307,20 +307,15 @@ int FloodWetPocketsInBoxImpl(UBlockWorld &blockWorld,
   next_retry_candidates.reserve(64);
   next_frontier_sources.reserve(64);
 
-  const auto queue_if_eligible = [&](glm::ivec3 pos, uint32_t generation)
+  const auto queue_candidate = [&](glm::ivec3 pos, size_t index,
+                                   BlockId block_id, uint32_t generation)
   {
-    if (!in_box(pos))
-    {
-      return;
-    }
-    const size_t index = linear_index(pos);
     if (candidate_generation[index] == generation)
     {
       return;
     }
     candidate_generation[index] = generation;
 
-    const BlockId block_id = blockWorld.GetBlock(pos);
     if (block_id == BLOCK_AIR)
     {
       to_fill_air.push_back(index);
@@ -331,6 +326,15 @@ int FloodWetPocketsInBoxImpl(UBlockWorld &blockWorld,
     {
       to_fill_permeable.push_back(index);
     }
+  };
+  const auto queue_if_eligible = [&](glm::ivec3 pos, uint32_t generation)
+  {
+    if (!in_box(pos))
+    {
+      return;
+    }
+    const size_t index = linear_index(pos);
+    queue_candidate(pos, index, blockWorld.GetBlock(pos), generation);
   };
 
   static constexpr std::array<glm::ivec3, 6> kDirs = {
@@ -353,9 +357,16 @@ int FloodWetPocketsInBoxImpl(UBlockWorld &blockWorld,
           for (int z = min_corner.z; z <= max_corner.z; ++z)
           {
             const glm::ivec3 pos(x, y, z);
+            const BlockId block_id = blockWorld.GetBlock(pos);
+            if (block_id != BLOCK_AIR &&
+                (!IsFluidPermeableId(definitions, block_id) ||
+                 PackFluidCellState(blockWorld.GetFluidState(pos)) != 0))
+            {
+              continue;
+            }
             if (CellTouchesWetImpl(blockWorld, definitions, pos))
             {
-              queue_if_eligible(pos, generation);
+              queue_candidate(pos, linear_index(pos), block_id, generation);
             }
           }
         }
