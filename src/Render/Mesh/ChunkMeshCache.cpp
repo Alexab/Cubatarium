@@ -3501,9 +3501,16 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     }
     const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
                                std::abs(coord.z - MeshFocusGroundChunk.z));
-    const bool reserved_near_focus_slot =
-        horiz <= 2 && (Dirty.GetScheduleFrame() % 4u) == 0u;
-    if (!TryConsumeDirtyAdmit() && !reserved_near_focus_slot)
+    // The stale-light probe samples drawable chunks through the complete lit
+    // visual ring (up to activation_radius), while the old fallback only
+    // reserved service for the two innermost chunks. Under sustained admission
+    // pressure, visible debt at radii 3..8 could therefore stay queued for the
+    // whole flight. Preserve the shared budget when it is available, then give
+    // one bounded repair slot every four scheduler frames anywhere in that
+    // same drawable ring.
+    const bool reserved_visible_light_slot =
+        horiz <= activation_radius && (Dirty.GetScheduleFrame() % 4u) == 0u;
+    if (!TryConsumeDirtyAdmit() && !reserved_visible_light_slot)
     {
       break;
     }
