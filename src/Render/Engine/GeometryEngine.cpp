@@ -1971,6 +1971,17 @@ void UGeometryEngine::SetGreedyShaderMode(
   }
 }
 
+namespace
+{
+
+bool DebugDisableOpaqueDepthGuard()
+{
+  const char *value = std::getenv("CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD");
+  return value != nullptr && value[0] != '\0' && value[0] != '0';
+}
+
+} // namespace
+
 void UGeometryEngine::DrawGreedyGpuBatches(
     GreedyGpuPassCache &cache, const glm::mat4 &vp,
     const std::map<size_t, UTextureCube> &textures, bool alphaCutout,
@@ -1995,7 +2006,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   SetGreedyShaderMode(greedyShader, alphaCutout, transparentPass, mode,
                       shellAlphaThreshold);
   const bool opaqueDepthGuard =
-      transparentPass && mode != GreedyShaderMode::ShellDepthPrepass;
+      transparentPass && mode != GreedyShaderMode::ShellDepthPrepass &&
+      !DebugDisableOpaqueDepthGuard();
   if (opaqueDepthGuard)
   {
     OpaqueDepthCapture.Bind();
@@ -3118,7 +3130,8 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   SetGreedyShaderMode(packedGreedyShader, false, transparent_pass, mode,
                       shell_alpha);
   const bool opaque_depth_guard =
-      transparent_pass && mode != GreedyShaderMode::ShellDepthPrepass;
+      transparent_pass && mode != GreedyShaderMode::ShellDepthPrepass &&
+      !DebugDisableOpaqueDepthGuard();
   if (opaque_depth_guard)
   {
     OpaqueDepthCapture.Bind();
