@@ -33,6 +33,7 @@ public:
   {
     return PriorityRemeshSet.find(coord) != PriorityRemeshSet.end();
   }
+  uint64_t GetScheduleFrame() const { return ScheduleFrame; }
 
   size_t GetCount() const { return FirstMeshQ.size() + RemeshQ.size(); }
   size_t GetFirstMeshCount() const { return FirstMeshQ.size(); }

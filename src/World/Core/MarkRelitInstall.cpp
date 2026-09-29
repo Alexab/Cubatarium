@@ -256,12 +256,15 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           mesh->GetCache().GetMeshedLightRevision(coord);
       const uint64_t published_light_rev =
           mesh->GetCache().GetMeshPublishRevs(coord).light_rev;
+      const bool revision_stale =
+          meshed_light_rev < field_light_rev ||
+          published_light_rev < field_light_rev;
+      const bool provisional_preview =
+          mesh->GetCache().HasProvisionalLightPreview(coord);
       const bool stale_drawable =
           relit_chunk && mesh->HasDrawableGreedyMesh(coord) &&
-          (mesh->GetCache().HasProvisionalLightPreview(coord) ||
-           meshed_light_rev < field_light_rev ||
-           published_light_rev < field_light_rev);
-      if (stale_drawable)
+          (provisional_preview || revision_stale);
+      if (stale_drawable && (revision_stale || horiz <= 4))
       {
         mesh->QueueStaleLightRemesh(coord);
       }

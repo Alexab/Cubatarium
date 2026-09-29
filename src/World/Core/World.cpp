@@ -2377,21 +2377,6 @@ void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
   UChunkRenderDemandStore::Get().NoteLightCalculationSettled(
       chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
       chunk->GetIncarnation(), chunk->GetLightFieldRevision());
-
-  UChunkMeshCache &cache = MeshService->GetCache();
-  const uint64_t field_light_rev = chunk->GetLightFieldRevision();
-  const bool drawable_needs_light_repair =
-      cache.HasDrawableGreedyMesh(chunk_coord) &&
-      (cache.HasProvisionalLightPreview(chunk_coord) ||
-       cache.GetMeshedLightRevision(chunk_coord) < field_light_rev ||
-       cache.GetMeshPublishRevs(chunk_coord).light_rev < field_light_rev);
-  if (drawable_needs_light_repair)
-  {
-    // Settlement can arrive after the first mesh was captured or published.
-    // Keep a durable remesh owner even when the preview's revision stamp
-    // happens to equal the settled field revision.
-    MeshService->QueueStaleLightRemesh(chunk_coord);
-  }
 }
 
 bool UWorld::HasCurrentChunkSliceLightSettlement(glm::ivec3 chunk_coord) const

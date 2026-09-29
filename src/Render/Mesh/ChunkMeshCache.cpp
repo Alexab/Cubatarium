@@ -236,32 +236,6 @@ bool IsFullyEnclosed(const UBlockWorld &world, glm::ivec3 pos)
   return true;
 }
 
-void QueueSettledProvisionalPreviewRepair(const UBlockWorld &world,
-                                          UChunkMeshCache &cache,
-                                          glm::ivec3 coord)
-{
-  if (!cache.HasProvisionalLightPreview(coord) ||
-      !cache.HasDrawableGreedyMesh(coord))
-  {
-    return;
-  }
-  const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
-  const ChunkRenderDemandRecord *demand =
-      UChunkRenderDemandStore::Get().Find(coord);
-  if (!chunk || !demand ||
-      demand->world_epoch != cache.GetCaptureStore().WorldEpoch() ||
-      demand->incarnation != chunk->GetIncarnation() ||
-      !demand->has_settled_light ||
-      demand->settled_light_rev != chunk->GetLightFieldRevision() ||
-      demand->desired_light_rev > chunk->GetLightFieldRevision())
-  {
-    return;
-  }
-  // The mesh became drawable after the settlement callback ran. Promote its
-  // preview marker to durable repair debt now that the exact slice is ready.
-  cache.QueueStaleLightRemesh(coord);
-}
-
 constexpr int kCrossScanBelow = 2;
 constexpr int kCrossScanAbove = 4;
 
@@ -3396,8 +3370,7 @@ void UChunkMeshCache::DrainMeshDependencyInvalidations(
 void UChunkMeshCache::DrainStaleLightRemeshDebt(
     UBlockWorld &world, int max_schedule_per_frame)
 {
-  if (PendingStaleLightRemeshes_.empty() || max_schedule_per_frame <= 0 ||
-      !MeshFocusValid)
+  if (max_schedule_per_frame <= 0 || !MeshFocusValid)
   {
     return;
   }
@@ -3411,6 +3384,33 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
   const int activation_radius =
       std::max(0, std::min(MeshFocusRadiusChunks,
                            kVisualStageLitDrawableHoriz));
+  // Discover settled provisional previews only when they enter the active
+  // visual ring. Far previews retain their ambient fallback without filling
+  // the durable queue during long flights; revision-stale debts stay queued.
+  for (const auto &entry : GreedyCache)
+  {
+    const glm::ivec3 coord = entry.first;
+    const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                               std::abs(coord.z - MeshFocusGroundChunk.z));
+    if (horiz > activation_radius || !entry.second.ProvisionalLightPreview ||
+        !HasDrawableGreedyMesh(coord))
+    {
+      continue;
+    }
+    const UChunk *chunk = chunks.GetChunk(coord);
+    const ChunkRenderDemandRecord *demand =
+        UChunkRenderDemandStore::Get().Find(coord);
+    if (!chunk || chunk->GetNonAirCount() == 0 || !demand ||
+        demand->world_epoch != CaptureStore.WorldEpoch() ||
+        demand->incarnation != chunk->GetIncarnation() ||
+        !demand->has_settled_light ||
+        demand->settled_light_rev != chunk->GetLightFieldRevision() ||
+        demand->desired_light_rev > chunk->GetLightFieldRevision())
+    {
+      continue;
+    }
+    QueueStaleLightRemesh(coord);
+  }
   std::vector<glm::ivec3> candidates;
   candidates.reserve(PendingStaleLightRemeshes_.size());
   for (const glm::ivec3 coord : PendingStaleLightRemeshes_)
@@ -3499,7 +3499,11 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
     {
       continue;
     }
-    if (!TryConsumeDirtyAdmit())
+    const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                               std::abs(coord.z - MeshFocusGroundChunk.z));
+    const bool reserved_near_focus_slot =
+        horiz <= 2 && (Dirty.GetScheduleFrame() % 4u) == 0u;
+    if (!TryConsumeDirtyAdmit() && !reserved_near_focus_slot)
     {
       break;
     }
@@ -5143,7 +5147,6 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     chunkMesh.PublishRevs.geom_rev = source_revision;
     chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
   }
-  QueueSettledProvisionalPreviewRepair(world, *this, coord);
   if (kChunkDemandShadow())
   {
     UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
@@ -7220,7 +7223,6 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.PublishRevs.material_stamp =
         MeshPublishMaterialStamp(ids.data(), ids.size());
   }
-  QueueSettledProvisionalPreviewRepair(world, *this, result.coord);
   apply_profile.Enter(MeshApplyProfileRecorder::Phase::DemandPublication);
   // A26 N1 / A31: sole Published lifecycle after validation commit.
   if (kChunkDemandShadow())
