@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <vector>
 
 namespace cutum
@@ -257,78 +258,170 @@ int FloodWetPocketsInBoxImpl(UBlockWorld &blockWorld,
                               std::max(box_min.y, box_max.y),
                               std::max(box_min.z, box_max.z));
 
-  int filled = 0;
-  bool changed = true;
-  const int max_passes = std::max(1, options.max_passes);
-  for (int pass = 0; changed && pass < max_passes; ++pass)
+  const size_t width =
+      static_cast<size_t>(max_corner.x - min_corner.x + 1);
+  const size_t height =
+      static_cast<size_t>(max_corner.y - min_corner.y + 1);
+  const size_t depth =
+      static_cast<size_t>(max_corner.z - min_corner.z + 1);
+  const size_t volume = width * height * depth;
+  // The first pass preserves the existing full-box boundary/wet-neighbor
+  // discovery. Later passes only need the frontier exposed by new fills plus
+  // candidates that previously had no resolvable fluid type. This replaces up
+  // to max_passes full volume rescans with one scan and local neighbor visits.
+  std::vector<uint32_t> candidate_generation(volume, 0);
+  const auto linear_index = [&](glm::ivec3 pos)
   {
-    changed = false;
-    std::vector<glm::ivec3> to_fill_air;
-    std::vector<glm::ivec3> to_fill_permeable;
-    to_fill_air.reserve(64);
-    to_fill_permeable.reserve(64);
-    for (int x = min_corner.x; x <= max_corner.x; ++x)
+    const size_t x = static_cast<size_t>(pos.x - min_corner.x);
+    const size_t y = static_cast<size_t>(pos.y - min_corner.y);
+    const size_t z = static_cast<size_t>(pos.z - min_corner.z);
+    return (x * height + y) * depth + z;
+  };
+  const auto position_at = [&](size_t index)
+  {
+    const size_t z = index % depth;
+    index /= depth;
+    const size_t y = index % height;
+    const size_t x = index / height;
+    return glm::ivec3(min_corner.x + static_cast<int>(x),
+                      min_corner.y + static_cast<int>(y),
+                      min_corner.z + static_cast<int>(z));
+  };
+  const auto in_box = [&](glm::ivec3 pos)
+  {
+    return pos.x >= min_corner.x && pos.x <= max_corner.x &&
+           pos.y >= min_corner.y && pos.y <= max_corner.y &&
+           pos.z >= min_corner.z && pos.z <= max_corner.z;
+  };
+
+  std::vector<size_t> to_fill_air;
+  std::vector<size_t> to_fill_permeable;
+  std::vector<size_t> retry_candidates;
+  std::vector<size_t> frontier_sources;
+  std::vector<size_t> next_retry_candidates;
+  std::vector<size_t> next_frontier_sources;
+  to_fill_air.reserve(64);
+  to_fill_permeable.reserve(64);
+  retry_candidates.reserve(64);
+  frontier_sources.reserve(64);
+  next_retry_candidates.reserve(64);
+  next_frontier_sources.reserve(64);
+
+  const auto queue_if_eligible = [&](glm::ivec3 pos, uint32_t generation)
+  {
+    if (!in_box(pos))
     {
-      for (int y = min_corner.y; y <= max_corner.y; ++y)
+      return;
+    }
+    const size_t index = linear_index(pos);
+    if (candidate_generation[index] == generation)
+    {
+      return;
+    }
+    candidate_generation[index] = generation;
+
+    const BlockId block_id = blockWorld.GetBlock(pos);
+    if (block_id == BLOCK_AIR)
+    {
+      to_fill_air.push_back(index);
+      return;
+    }
+    if (IsFluidPermeableId(definitions, block_id) &&
+        PackFluidCellState(blockWorld.GetFluidState(pos)) == 0)
+    {
+      to_fill_permeable.push_back(index);
+    }
+  };
+
+  static constexpr std::array<glm::ivec3, 6> kDirs = {
+      glm::ivec3(0, 1, 0),  glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+      glm::ivec3(0, 0, -1), glm::ivec3(0, 0, 1),  glm::ivec3(0, -1, 0)};
+
+  int filled = 0;
+  const int max_passes = std::max(1, options.max_passes);
+  for (int pass = 0; pass < max_passes; ++pass)
+  {
+    to_fill_air.clear();
+    to_fill_permeable.clear();
+    const uint32_t generation = static_cast<uint32_t>(pass + 1);
+    if (pass == 0)
+    {
+      for (int x = min_corner.x; x <= max_corner.x; ++x)
       {
-        for (int z = min_corner.z; z <= max_corner.z; ++z)
+        for (int y = min_corner.y; y <= max_corner.y; ++y)
         {
-          const glm::ivec3 pos(x, y, z);
-          if (!CellTouchesWetImpl(blockWorld, definitions, pos))
+          for (int z = min_corner.z; z <= max_corner.z; ++z)
           {
-            continue;
-          }
-          const BlockId block_id = blockWorld.GetBlock(pos);
-          if (block_id == BLOCK_AIR)
-          {
-            to_fill_air.push_back(pos);
-            continue;
-          }
-          if (IsFluidPermeableId(definitions, block_id) &&
-              PackFluidCellState(blockWorld.GetFluidState(pos)) == 0)
-          {
-            to_fill_permeable.push_back(pos);
+            const glm::ivec3 pos(x, y, z);
+            if (CellTouchesWetImpl(blockWorld, definitions, pos))
+            {
+              queue_if_eligible(pos, generation);
+            }
           }
         }
       }
     }
-    for (const glm::ivec3 &pos : to_fill_air)
+    else
     {
+      for (const size_t index : retry_candidates)
+      {
+        queue_if_eligible(position_at(index), generation);
+      }
+      for (const size_t index : frontier_sources)
+      {
+        const glm::ivec3 source = position_at(index);
+        for (const glm::ivec3 &offset : kDirs)
+        {
+          queue_if_eligible(source + offset, generation);
+        }
+      }
+      // Match the full scan's x/y/z order before resolving mixed-fluid cells.
+      std::sort(to_fill_air.begin(), to_fill_air.end());
+      std::sort(to_fill_permeable.begin(), to_fill_permeable.end());
+    }
+
+    bool changed = false;
+    next_retry_candidates.clear();
+    next_frontier_sources.clear();
+    const auto apply_fill = [&](size_t index, bool source_for_air)
+    {
+      const glm::ivec3 pos = position_at(index);
       const BlockId fluid_id =
           ResolveFloodFluidIdImpl(blockWorld, definitions, pos, options);
       if (fluid_id == BLOCK_AIR)
       {
-        continue;
+        next_retry_candidates.push_back(index);
+        return;
       }
       const FluidCellState state =
-          options.source_for_air ? FluidCellState::Source()
-                                 : FluidCellState::Flowing(1);
+          source_for_air && options.source_for_air
+              ? FluidCellState::Source()
+              : FluidCellState::Flowing(1);
       UFluidSpreadSystem::ApplyFluidFill(blockWorld, definitions, pos, fluid_id,
                                          state);
       ++filled;
       changed = true;
+      next_frontier_sources.push_back(index);
       if (out_changed != nullptr)
       {
         out_changed->push_back(pos);
       }
-    }
-    for (const glm::ivec3 &pos : to_fill_permeable)
+    };
+    for (const size_t index : to_fill_air)
     {
-      const BlockId fluid_id =
-          ResolveFloodFluidIdImpl(blockWorld, definitions, pos, options);
-      if (fluid_id == BLOCK_AIR)
-      {
-        continue;
-      }
-      UFluidSpreadSystem::ApplyFluidFill(blockWorld, definitions, pos, fluid_id,
-                                         FluidCellState::Flowing(1));
-      ++filled;
-      changed = true;
-      if (out_changed != nullptr)
-      {
-        out_changed->push_back(pos);
-      }
+      apply_fill(index, true);
     }
+    for (const size_t index : to_fill_permeable)
+    {
+      apply_fill(index, false);
+    }
+
+    if (!changed)
+    {
+      break;
+    }
+    retry_candidates.swap(next_retry_candidates);
+    frontier_sources.swap(next_frontier_sources);
   }
   return filled;
 }
