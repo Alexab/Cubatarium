@@ -307,6 +307,14 @@ struct VisualBlackTraceRecord
   uint32_t renderer_source_light_preview_vertices{0};
   uint8_t renderer_source_face_mask{0};
   uint8_t renderer_texture_ready{0};
+  /// Opt-in payload verification: bits 0=batch, 1=pooled, 2=CPU source,
+  /// 3=VBO bytes match, 4=EBO bytes match. Command bits: 0=read, 1=static
+  /// fields match, 2=post-cull instanceCount matches the visibility SSBO.
+  uint8_t renderer_mdi_payload_flags{0};
+  uint8_t renderer_mdi_command_flags{0};
+  uint32_t renderer_mdi_command_instance_count{0};
+  uint32_t renderer_mdi_command_first_index{0};
+  int32_t renderer_mdi_command_base_vertex{0};
   float renderer_source_sky_light_min{0.0f};
   float renderer_source_sky_light_max{0.0f};
   float renderer_source_block_light_min{0.0f};

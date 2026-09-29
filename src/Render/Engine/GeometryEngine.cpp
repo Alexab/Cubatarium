@@ -66,6 +66,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
@@ -611,6 +612,7 @@ void NoteFrustumCoverageGaps(
               : 0u;
 
       bool has_source_vertex = false;
+      const GreedyMeshBatch *source_batch = nullptr;
       auto collect_source_light = [&](const std::vector<GreedyBatchRef> &refs)
       {
         for (const GreedyBatchRef &ref : refs)
@@ -625,6 +627,10 @@ void NoteFrustumCoverageGaps(
                   static_cast<BlockId>(record.renderer_mdi_first_block_id))
           {
             continue;
+          }
+          if (!source_batch)
+          {
+            source_batch = source;
           }
           record.renderer_source_index_count +=
               static_cast<uint32_t>(source->indices.size());
@@ -678,6 +684,141 @@ void NoteFrustumCoverageGaps(
       // top-face quad contributes four source vertices. Store the actual
       // quad count rather than vertex count so the JSON is easy to compare.
       record.renderer_source_top_face_quads /= 4u;
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+      const GreedyGpuPassCache *payload_pass = nullptr;
+      const GreedyGpuBatch *payload_batch = nullptr;
+      size_t payload_index = 0;
+      auto find_payload_batch = [&](const GreedyGpuPassCache &pass)
+      {
+        for (size_t i = 0; i < pass.batches.size(); ++i)
+        {
+          const GreedyGpuBatch &batch = pass.batches[i];
+          if (batch.chunkCoord == coord && batch.indexCountGl > 0 &&
+              batch.blockId ==
+                  static_cast<BlockId>(record.renderer_mdi_first_block_id))
+          {
+            payload_pass = &pass;
+            payload_batch = &batch;
+            payload_index = i;
+            return true;
+          }
+        }
+        return false;
+      };
+      find_payload_batch(mdi_opaque_pass) ||
+          find_payload_batch(mdi_cutout_pass) ||
+          find_payload_batch(mdi_transparent_pass);
+      if (payload_pass && payload_batch)
+      {
+        record.renderer_mdi_payload_flags |= 1u << 0;
+        if (payload_batch->pooled)
+        {
+          record.renderer_mdi_payload_flags |= 1u << 1;
+        }
+        if (source_batch)
+        {
+          record.renderer_mdi_payload_flags |= 1u << 2;
+          const bool vertex_count_matches =
+              payload_batch->vertexCount == source_batch->vertices.size();
+          const bool index_count_matches =
+              payload_batch->indexCount == source_batch->indices.size() &&
+              payload_batch->indexCountGl ==
+                  static_cast<GLsizei>(source_batch->indices.size());
+          const GLuint vertex_buffer = payload_batch->pooled
+                                           ? payload_pass->poolVbo
+                                           : payload_batch->vbo;
+          const GLuint index_buffer = payload_batch->pooled
+                                          ? payload_pass->poolEbo
+                                          : payload_batch->ebo;
+          if (vertex_count_matches && vertex_buffer != 0 &&
+              !source_batch->vertices.empty())
+          {
+            std::vector<GreedyMeshVertex> gpu_vertices(
+                source_batch->vertices.size());
+            const GLintptr vertex_offset = payload_batch->pooled
+                                               ? static_cast<GLintptr>(
+                                                     payload_batch->vboByteOffset)
+                                               : 0;
+            GLint old_copy_read_buffer = 0;
+            glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy_read_buffer);
+            glBindBuffer(GL_COPY_READ_BUFFER, vertex_buffer);
+            glGetBufferSubData(
+                GL_COPY_READ_BUFFER, vertex_offset,
+                static_cast<GLsizeiptr>(gpu_vertices.size() *
+                                        sizeof(GreedyMeshVertex)),
+                gpu_vertices.data());
+            glBindBuffer(GL_COPY_READ_BUFFER,
+                         static_cast<GLuint>(old_copy_read_buffer));
+            if (std::memcmp(gpu_vertices.data(), source_batch->vertices.data(),
+                            gpu_vertices.size() * sizeof(GreedyMeshVertex)) ==
+                0)
+            {
+              record.renderer_mdi_payload_flags |= 1u << 3;
+            }
+          }
+          if (index_count_matches && index_buffer != 0 &&
+              !source_batch->indices.empty())
+          {
+            std::vector<uint32_t> gpu_indices(source_batch->indices.size());
+            const GLintptr index_offset = payload_batch->pooled
+                                              ? static_cast<GLintptr>(
+                                                    payload_batch->eboByteOffset)
+                                              : 0;
+            GLint old_copy_read_buffer = 0;
+            glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy_read_buffer);
+            glBindBuffer(GL_COPY_READ_BUFFER, index_buffer);
+            glGetBufferSubData(
+                GL_COPY_READ_BUFFER, index_offset,
+                static_cast<GLsizeiptr>(gpu_indices.size() * sizeof(uint32_t)),
+                gpu_indices.data());
+            glBindBuffer(GL_COPY_READ_BUFFER,
+                         static_cast<GLuint>(old_copy_read_buffer));
+            if (std::memcmp(gpu_indices.data(), source_batch->indices.data(),
+                            gpu_indices.size() * sizeof(uint32_t)) == 0)
+            {
+              record.renderer_mdi_payload_flags |= 1u << 4;
+            }
+          }
+        }
+
+        if (payload_batch->pooled && payload_pass->GpuCompactActive &&
+            payload_pass->IndirectCmdsBuffer != 0)
+        {
+          DrawElementsIndirectCommand command{};
+          GLint old_copy_read_buffer = 0;
+          glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy_read_buffer);
+          glBindBuffer(GL_COPY_READ_BUFFER,
+                       payload_pass->IndirectCmdsBuffer);
+          glGetBufferSubData(
+              GL_COPY_READ_BUFFER,
+              static_cast<GLintptr>(payload_index * sizeof(command)),
+              static_cast<GLsizeiptr>(sizeof(command)), &command);
+          glBindBuffer(GL_COPY_READ_BUFFER,
+                       static_cast<GLuint>(old_copy_read_buffer));
+          record.renderer_mdi_command_flags |= 1u << 0;
+          record.renderer_mdi_command_instance_count = command.instanceCount;
+          record.renderer_mdi_command_first_index = command.firstIndex;
+          record.renderer_mdi_command_base_vertex = command.baseVertex;
+          const uint32_t expected_first_index = static_cast<uint32_t>(
+              payload_batch->eboByteOffset / sizeof(uint32_t));
+          const int32_t expected_base_vertex = static_cast<int32_t>(
+              payload_batch->vboByteOffset / sizeof(GreedyMeshVertex));
+          if (command.count ==
+                  static_cast<uint32_t>(payload_batch->indexCountGl) &&
+              command.firstIndex == expected_first_index &&
+              command.baseVertex == expected_base_vertex &&
+              command.baseInstance == 0)
+          {
+            record.renderer_mdi_command_flags |= 1u << 1;
+          }
+          if (command.instanceCount == payload_batch->drawInstanceCount)
+          {
+            record.renderer_mdi_command_flags |= 1u << 2;
+          }
+        }
+      }
+#endif
     }
     record.renderer_column_reason =
         static_cast<uint8_t>(column_state.reason);

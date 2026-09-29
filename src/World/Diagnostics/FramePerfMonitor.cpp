@@ -3470,6 +3470,16 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.renderer_source_face_mask)
                << ",\"renderer_texture_ready\":"
                << static_cast<int>(r.renderer_texture_ready)
+               << ",\"renderer_mdi_payload_flags\":"
+               << static_cast<int>(r.renderer_mdi_payload_flags)
+               << ",\"renderer_mdi_command_flags\":"
+               << static_cast<int>(r.renderer_mdi_command_flags)
+               << ",\"renderer_mdi_command_instance_count\":"
+               << r.renderer_mdi_command_instance_count
+               << ",\"renderer_mdi_command_first_index\":"
+               << r.renderer_mdi_command_first_index
+               << ",\"renderer_mdi_command_base_vertex\":"
+               << r.renderer_mdi_command_base_vertex
                << ",\"renderer_source_sky_light_min\":"
                << r.renderer_source_sky_light_min
                << ",\"renderer_source_sky_light_max\":"
