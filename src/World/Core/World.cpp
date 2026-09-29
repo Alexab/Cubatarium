@@ -2615,14 +2615,6 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   {
     return true;
   }
-  // ChunkHasFullyDarkFace is an any-face census (it deliberately excludes
-  // bottom faces), not proof that every drawable face is dark. A mixed mesh
-  // can still contain zero-light vertices; do not suppress its preview just
-  // because a different face in the same chunk is lit.
-  if (!cache.ChunkHasFullyDarkFace(chunk_coord))
-  {
-    return false;
-  }
 
   const UChunk *chunk =
       BlockWorld.GetChunkManager().GetChunk(chunk_coord);
@@ -2632,15 +2624,37 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
       demand && chunk &&
       demand->world_epoch == cache.GetCaptureStore().WorldEpoch() &&
       demand->incarnation == chunk->GetIncarnation();
+  const uint64_t field_light_rev =
+      chunk ? chunk->GetLightFieldRevision() : 0;
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+  const bool field_settled_current =
+      HasCurrentChunkSliceLightSettlement(chunk_coord);
+  const bool drawable_light_stale =
+      chunk && (published.light_rev < field_light_rev ||
+                cache.GetMeshedLightRevision(chunk_coord) < field_light_rev);
+  if (field_settled_current && drawable_light_stale)
+  {
+    // The settled field is the source of truth, but the drawable image can
+    // still carry zero/stale vertex light. Keep its geometry visible with the
+    // shader's ambient fallback until a mesh at this light revision publishes.
+    return true;
+  }
+
+  // ChunkHasFullyDarkFace is an any-face census (it deliberately excludes
+  // bottom faces), not proof that every drawable face is dark. A mixed mesh
+  // can still contain zero-light vertices; do not suppress its preview just
+  // because a different face in the same chunk is lit.
+  if (!cache.ChunkHasFullyDarkFace(chunk_coord))
+  {
+    return false;
+  }
+
   const bool demand_light_current =
       !demand ||
       (demand_identity_current &&
        demand->desired_light_rev <= demand->published_light_rev);
-  const uint64_t field_light_rev =
-      chunk ? chunk->GetLightFieldRevision() : 0;
-  const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
   const bool settled_mesh_light_current =
-      HasCurrentChunkSliceLightSettlement(chunk_coord) &&
+      field_settled_current &&
       demand_light_current && published.light_rev == field_light_rev &&
       cache.GetMeshedLightRevision(chunk_coord) == field_light_rev;
   const bool demand_owns_light_repair =
