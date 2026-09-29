@@ -3496,11 +3496,15 @@ void UFramePerfMonitor::Shutdown()
                << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
                << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
                << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba
+               << ",\"renderer_pixel_marker_mode\":"
+               << (r.renderer_pixel_marker_visible != 2 ? "true" : "false")
                << ",\"renderer_pixel_marker_visible\":"
-               << static_cast<int>(r.renderer_pixel_marker_visible)
+               << (r.renderer_pixel_marker_visible == 1 ? "true" : "false")
                << ",\"renderer_pixel_marker_coverage\":"
-               << static_cast<double>(r.renderer_pixel_surface_valid >> 1u) /
-                      127.0
+               << (r.renderer_pixel_marker_visible != 2
+                       ? static_cast<double>(r.renderer_pixel_surface_valid >> 1u) /
+                             127.0
+                       : -1.0)
                << ",\"renderer_pixel_surface_valid\":"
                << static_cast<int>(r.renderer_pixel_surface_valid & 1u)
                << ",\"renderer_pixel_surface_x\":"

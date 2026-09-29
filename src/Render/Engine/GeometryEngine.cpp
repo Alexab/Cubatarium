@@ -364,10 +364,7 @@ void CaptureTransparentPixelProbe(UWorld &world,
                                   const glm::vec3 &camera_position,
                                   uint64_t frame_epoch, uint64_t probe_id)
 {
-  if (!DebugTransparentFragmentMarkerEnabled())
-  {
-    return;
-  }
+  const bool marker_mode = DebugTransparentFragmentMarkerEnabled();
 
   GLint viewport[4] = {0, 0, 0, 0};
   glGetIntegerv(GL_VIEWPORT, viewport);
@@ -420,8 +417,12 @@ void CaptureTransparentPixelProbe(UWorld &world,
       record.renderer_pixel_y = viewport[1] + local_y;
       record.renderer_pixel_rgba = (red << 24u) | (green << 16u) |
                                    (blue << 8u) | alpha;
-      record.renderer_pixel_marker_visible =
+      const bool center_marker_visible =
           red >= 240u && green <= 15u && blue >= 240u && alpha >= 240u;
+      // 2 is an internal sentinel for the normal-color sample: zero and one
+      // retain their meaning as marker miss/hit when diagnostic mode is on.
+      record.renderer_pixel_marker_visible =
+          marker_mode ? (center_marker_visible ? 1u : 0u) : 2u;
 
       uint32_t tile_marker_pixels = 0;
       uint32_t tile_pixel_count = 0;
