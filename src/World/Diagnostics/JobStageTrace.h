@@ -190,7 +190,8 @@ struct VisualBlackTraceRecord
   /// 0=black-attribution, 1=focus slice, 2=renderer draw-gate candidate,
   /// 3=visible relight-queue admission, 4=ordinary focus remesh attempt,
   /// 5=draw-gate relight scan counts, 6=near-focus FirstMesh attempt,
-  /// 7=priority-remesh scheduling attempt.
+  /// 7=priority-remesh scheduling attempt, 8=frustum candidate, 9=screen pixel
+  /// sampled after the transparent pass (diagnostic marker mode).
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   int32_t cx{0};
@@ -319,6 +320,15 @@ struct VisualBlackTraceRecord
   float renderer_source_sky_light_max{0.0f};
   float renderer_source_block_light_min{0.0f};
   float renderer_source_block_light_max{0.0f};
+  uint64_t renderer_pixel_probe_id{0};
+  int32_t renderer_pixel_x{0};
+  int32_t renderer_pixel_y{0};
+  uint32_t renderer_pixel_rgba{0};
+  uint8_t renderer_pixel_marker_visible{0};
+  uint8_t renderer_pixel_surface_valid{0};
+  float renderer_pixel_surface_x{0.0f};
+  float renderer_pixel_surface_y{0.0f};
+  float renderer_pixel_surface_z{0.0f};
   /// sample_kind=3: 1=settled field needs mesh-only repair; 0=relight target.
   uint8_t draw_gate_repair_mode{0};
   /// Persistence relight queue location/band for renderer, focus, and
@@ -381,6 +391,7 @@ public:
   static constexpr size_t kDemandTransitionRingCapacity = 16384;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
+  static constexpr size_t kVisualPixelTraceRingCapacity = 2048;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
   static constexpr size_t kFrustumCoverageTraceRingCapacity = 256;
   static constexpr size_t kVisualBlackAttributionTraceRingCapacity = 1024;
@@ -393,7 +404,7 @@ public:
       kFrustumCoverageTraceRingCapacity +
       kVisualBlackAttributionTraceRingCapacity +
       kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
-      kPriorityRemeshTraceRingCapacity;
+      kPriorityRemeshTraceRingCapacity + kVisualPixelTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.

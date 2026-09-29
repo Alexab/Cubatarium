@@ -92,6 +92,16 @@ namespace
 
 constexpr int kPackedNearHoriz = 4;
 
+bool DebugTransparentFragmentMarkerEnabled()
+{
+  static const bool enabled = []() {
+    const char *value =
+        std::getenv("CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
 float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
 {
   float scale = env.WeatherSkyAttenuation;
@@ -349,6 +359,119 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   UJobStageTrace::NoteVisualBlack(record);
 }
 
+void CaptureTransparentPixelProbe(UWorld &world,
+                                  const glm::mat4 &view_projection,
+                                  const glm::vec3 &camera_position,
+                                  uint64_t frame_epoch, uint64_t probe_id)
+{
+  if (!DebugTransparentFragmentMarkerEnabled())
+  {
+    return;
+  }
+
+  GLint viewport[4] = {0, 0, 0, 0};
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  const int width = viewport[2];
+  const int height = viewport[3];
+  const int capture_height = std::max(1, height / 5);
+  if (width <= 0 || height <= 0)
+  {
+    return;
+  }
+
+  // Read a narrow bottom strip, where the visible westbound ocean surface
+  // occupies the frame. One small readback per probe avoids one sync per pixel.
+  std::vector<GLubyte> pixels(static_cast<size_t>(width) * capture_height * 4u);
+  glReadPixels(viewport[0], viewport[1], width, capture_height, GL_RGBA,
+               GL_UNSIGNED_BYTE, pixels.data());
+
+  const std::array<float, 5> x_fractions{{0.1f, 0.3f, 0.5f, 0.7f, 0.9f}};
+  const std::array<float, 4> y_fractions{{0.04f, 0.08f, 0.12f, 0.16f}};
+  const glm::mat4 inverse_view_projection = glm::inverse(view_projection);
+  const float sea_plane_y =
+      static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
+  const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
+      world.GetPreferredLoadFocusBlock());
+
+  for (const float y_fraction : y_fractions)
+  {
+    const int local_y = std::clamp(
+        static_cast<int>(y_fraction * static_cast<float>(height)), 0,
+        capture_height - 1);
+    for (const float x_fraction : x_fractions)
+    {
+      const int local_x = std::clamp(
+          static_cast<int>(x_fraction * static_cast<float>(width)), 0,
+          width - 1);
+      const size_t pixel_offset =
+          (static_cast<size_t>(local_y) * static_cast<size_t>(width) +
+           static_cast<size_t>(local_x)) *
+          4u;
+      const uint32_t red = pixels[pixel_offset + 0];
+      const uint32_t green = pixels[pixel_offset + 1];
+      const uint32_t blue = pixels[pixel_offset + 2];
+      const uint32_t alpha = pixels[pixel_offset + 3];
+
+      VisualBlackTraceRecord record{};
+      record.sample_kind = 9;
+      record.frame_epoch = frame_epoch;
+      record.renderer_pixel_probe_id = probe_id;
+      record.renderer_pixel_x = viewport[0] + local_x;
+      record.renderer_pixel_y = viewport[1] + local_y;
+      record.renderer_pixel_rgba = (red << 24u) | (green << 16u) |
+                                   (blue << 8u) | alpha;
+      record.renderer_pixel_marker_visible =
+          red >= 240u && green <= 15u && blue >= 240u && alpha >= 240u;
+      record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+      record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+      record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+      record.focus_cx = focus_chunk.x;
+      record.focus_cz = focus_chunk.z;
+
+      const float ndc_x =
+          (static_cast<float>(local_x) + 0.5f) / static_cast<float>(width) *
+              2.0f -
+          1.0f;
+      const float ndc_y =
+          (static_cast<float>(local_y) + 0.5f) / static_cast<float>(height) *
+              2.0f -
+          1.0f;
+      glm::vec4 near_h =
+          inverse_view_projection * glm::vec4(ndc_x, ndc_y, -1.0f, 1.0f);
+      glm::vec4 far_h =
+          inverse_view_projection * glm::vec4(ndc_x, ndc_y, 1.0f, 1.0f);
+      if (std::abs(near_h.w) > 1e-6f && std::abs(far_h.w) > 1e-6f)
+      {
+        const glm::vec3 near_point = glm::vec3(near_h) / near_h.w;
+        const glm::vec3 far_point = glm::vec3(far_h) / far_h.w;
+        const glm::vec3 ray = far_point - near_point;
+        if (std::abs(ray.y) > 1e-6f)
+        {
+          const float t = (sea_plane_y - near_point.y) / ray.y;
+          if (t >= 0.0f && t <= 1.0f)
+          {
+            const glm::vec3 surface_point = near_point + ray * t;
+            record.renderer_pixel_surface_valid = 1;
+            record.renderer_pixel_surface_x = surface_point.x;
+            record.renderer_pixel_surface_y = surface_point.y;
+            record.renderer_pixel_surface_z = surface_point.z;
+            const glm::ivec3 surface_cell(
+                static_cast<int>(std::floor(surface_point.x)),
+                static_cast<int>(std::floor(surface_point.y)),
+                static_cast<int>(std::floor(surface_point.z)));
+            const glm::ivec3 surface_chunk =
+                UChunkManager::WorldToChunk(surface_cell);
+            record.cx = surface_chunk.x;
+            record.cy = surface_chunk.y;
+            record.cz = surface_chunk.z;
+          }
+        }
+      }
+      UJobStageTrace::NoteVisualBlack(record);
+    }
+  }
+}
+
 void NoteFrustumCoverageGaps(
     UWorld &world, const UChunkMeshCache &cache, const Frustum &frustum,
     const glm::vec3 &camera_position,
@@ -360,7 +483,8 @@ void NoteFrustumCoverageGaps(
     GreedyGpuPassCache &mdi_cutout_pass,
     GreedyGpuPassCache &mdi_transparent_pass,
     UMdiVertexPoolStore *mdi_store,
-    const std::map<size_t, UTextureCube> &textures)
+    const std::map<size_t, UTextureCube> &textures,
+    const glm::mat4 &view_projection)
 {
   if (!UJobStageTrace::VisualBlackTraceEnabled())
   {
@@ -371,10 +495,13 @@ void NoteFrustumCoverageGaps(
   // rendered frame. A modulo gate can therefore miss its sample window when
   // the renderer is behind. Count calls to this render-path probe instead.
   static uint32_t render_probe_count = 0;
-  if (++render_probe_count % 120u != 0u)
+  ++render_probe_count;
+  if (render_probe_count % 120u != 0u)
   {
     return;
   }
+  CaptureTransparentPixelProbe(world, view_projection, camera_position,
+                               frame_epoch, render_probe_count / 120u);
   // GPU compact culling keeps the SSBO result on-device and leaves the CPU
   // mirror stale. On this opt-in diagnostic sample only, read back visibility
   // so the trace reports the command that was actually submitted this frame.
@@ -1565,7 +1692,8 @@ void UGeometryEngine::DrawCubeGeometry()
           draw.opaqueCutoutRefs, draw.transparentRefs, filtered_opaque,
           filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,
           GreedyGpuTransparent,
-          dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()), textures);
+          dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()), textures,
+          coverage_vp);
     }
     if (cullWasEnabled)
     {
@@ -2005,6 +2133,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   greedyShader->SetInt("texture0", 0);
   SetGreedyShaderMode(greedyShader, alphaCutout, transparentPass, mode,
                       shellAlphaThreshold);
+  greedyShader->SetFloat(
+      "uDebugTransparentFragmentMarker",
+      transparentPass && mode == GreedyShaderMode::TransparentColor &&
+              DebugTransparentFragmentMarkerEnabled()
+          ? 1.0f
+          : 0.0f);
   const bool opaqueDepthGuard =
       transparentPass && mode != GreedyShaderMode::ShellDepthPrepass &&
       !DebugDisableOpaqueDepthGuard();
@@ -3129,6 +3263,12 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   packedGreedyShader->SetInt("texture0", 0);
   SetGreedyShaderMode(packedGreedyShader, false, transparent_pass, mode,
                       shell_alpha);
+  packedGreedyShader->SetFloat(
+      "uDebugTransparentFragmentMarker",
+      transparent_pass && mode == GreedyShaderMode::TransparentColor &&
+              DebugTransparentFragmentMarkerEnabled()
+          ? 1.0f
+          : 0.0f);
   const bool opaque_depth_guard =
       transparent_pass && mode != GreedyShaderMode::ShellDepthPrepass &&
       !DebugDisableOpaqueDepthGuard();

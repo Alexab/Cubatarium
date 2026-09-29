@@ -3371,6 +3371,9 @@ void UFramePerfMonitor::Shutdown()
         case 8:
           trace_kind = "view_frustum_coverage_trace";
           break;
+        case 9:
+          trace_kind = "renderer_pixel_probe";
+          break;
         default:
           break;
         }
@@ -3488,6 +3491,21 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_source_block_light_min
                << ",\"renderer_source_block_light_max\":"
                << r.renderer_source_block_light_max
+               << ",\"renderer_pixel_probe_id\":"
+               << r.renderer_pixel_probe_id
+               << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
+               << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
+               << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba
+               << ",\"renderer_pixel_marker_visible\":"
+               << static_cast<int>(r.renderer_pixel_marker_visible)
+               << ",\"renderer_pixel_surface_valid\":"
+               << static_cast<int>(r.renderer_pixel_surface_valid)
+               << ",\"renderer_pixel_surface_x\":"
+               << r.renderer_pixel_surface_x
+               << ",\"renderer_pixel_surface_y\":"
+               << r.renderer_pixel_surface_y
+               << ",\"renderer_pixel_surface_z\":"
+               << r.renderer_pixel_surface_z
                << ",\"renderer_column_reason\":"
                << static_cast<int>(r.renderer_column_reason)
                << ",\"renderer_column_draw_ok\":"
