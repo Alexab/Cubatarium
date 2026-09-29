@@ -887,13 +887,13 @@ void CaptureTransparentPixelProbe(
                 opaque_vertex_light.preview;
             const glm::ivec3 face_normal =
                 GreedyFaceNormal(opaque_vertex_light.face_index);
-            const glm::ivec3 face_solid(
-                static_cast<int>(std::floor(opaque_vertex_light.surface.x -
-                                             face_normal.x * 0.501f)),
-                static_cast<int>(std::floor(opaque_vertex_light.surface.y -
-                                             face_normal.y * 0.501f)),
-                static_cast<int>(std::floor(opaque_vertex_light.surface.z -
-                                             face_normal.z * 0.501f)));
+            // Voxel centers are integer coordinates. Move just inside the
+            // sampled face, then use the world's center-based block mapping;
+            // floor() alone assigns positive-normal faces to the previous cell.
+            const glm::vec3 face_interior =
+                opaque_vertex_light.surface -
+                glm::vec3(face_normal) * 0.501f;
+            const glm::ivec3 face_solid = WorldPosToBlock(face_interior);
             const CurrentFaceLightSample live_face_light =
                 SampleCurrentFaceLight(world.GetBlockWorld(), face_solid,
                                        opaque_vertex_light.face_index);
