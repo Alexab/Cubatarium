@@ -71,10 +71,13 @@ public:
 
   /// Soft defer for Relight/Seam/non-critical drains. Pass
   /// `critical_progress=true` for FirstMesh — allows a bounded overrun of one
-  /// critical unit after Exhausted (audit R08), not infinite bypass.
+  /// critical unit after Exhausted (audit R08), not infinite bypass. A caller
+  /// with a narrowly scoped repair SLA may request a larger shared unit cap;
+  /// the default remains one.
   /// When MaxCriticalUnitMs > 0, callers should NoteCriticalUnitFinished so
   /// overruns are counted (cost gate for measured-bounded quantum).
-  static bool ShouldDeferProducer(bool critical_progress)
+  static bool ShouldDeferProducer(bool critical_progress,
+                                  int max_critical_units = 1)
   {
     auto &dl = Get();
     if (!dl.Exhausted())
@@ -85,8 +88,15 @@ public:
     {
       return true;
     }
-    // One non-preemptible critical unit after budget exhaust.
-    if (dl.CriticalUnitsThisFrame_ >= 1)
+    const int unit_limit = max_critical_units > 0 ? max_critical_units : 1;
+    if (dl.CriticalUnitsThisFrame_ >= unit_limit)
+    {
+      return true;
+    }
+    // Do not start a second over-budget unit after the last measured unit
+    // already exceeded its cost class.
+    if (dl.CriticalUnitsThisFrame_ > 0 && dl.MaxCriticalUnitMs_ > 0.0 &&
+        dl.LastCriticalUnitMs_ > dl.MaxCriticalUnitMs_)
     {
       return true;
     }
@@ -117,6 +127,7 @@ public:
 
   double LastCriticalUnitMs() const { return LastCriticalUnitMs_; }
   int CriticalUnitExceededN() const { return CriticalUnitExceededN_; }
+  int CriticalUnitsUsed() const { return CriticalUnitsThisFrame_; }
 
 private:
   double BudgetMs_{0.0};

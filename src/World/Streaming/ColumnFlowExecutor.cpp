@@ -585,6 +585,9 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   // queue while counting only successfully dispatched work against n.
   const int probe_budget = std::clamp(std::max(n, 1) * 4, 4, 16);
   int probed = 0;
+  const int critical_units_at_entry =
+      UFrameDeadline::Get().CriticalUnitsUsed();
+  int critical_units_reserved_by_flow = 0;
   std::vector<ColumnWorkItem> deferred;
   deferred.reserve(static_cast<size_t>(probe_budget));
   ColumnWorkItem work{};
@@ -613,6 +616,9 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
     // it has not aged into the stalled census yet; let one bounded
     // RelightThenMesh unit reach the persistence relight owner under deadline.
     const auto &pt = world.GetPhysicsTelemetry();
+    const bool stale_light_repair =
+        work.kind == ColumnWorkKind::RelightThenMesh &&
+        pt.DrawOracleStaleVertexLightN > 0;
     // A stalled black or stale-light repair ticket must not lose its deadline
     // floor just because a different slice is also missing its first mesh.
     const bool relight_critical =
@@ -621,13 +627,32 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
          pt.DrawOracleStaleVertexLightN > 0);
     const bool critical =
         work.kind == ColumnWorkKind::FirstMesh || relight_critical;
-    if (UFrameDeadline::ShouldDeferProducer(critical))
+    // M118 showed a queue of stale-light RelightThenMesh tickets with no local
+    // mesh job while the shared deadline admitted at most one critical unit.
+    // Permit one measured second unit only when this Flow drain owns the whole
+    // post-deadline reserve; preserve the ordinary one-unit rule if another
+    // producer has already consumed it this frame.
+    const bool may_use_second_stale_repair_unit =
+        stale_light_repair && critical_units_at_entry == 0 &&
+        critical_units_reserved_by_flow < 2;
+    const int critical_unit_limit = may_use_second_stale_repair_unit ? 2 : 1;
+    const bool deadline_exhausted_before = UFrameDeadline::Get().Exhausted();
+    const int critical_units_before = UFrameDeadline::Get().CriticalUnitsUsed();
+    if (UFrameDeadline::ShouldDeferProducer(critical, critical_unit_limit))
     {
       deferred.push_back(work);
       ++deferred_n;
       continue;
     }
+    const bool reserved_post_deadline_unit =
+        deadline_exhausted_before && critical &&
+        UFrameDeadline::Get().CriticalUnitsUsed() > critical_units_before;
     AdvanceColumn(world, work, focus_ground_horiz, focus_radius, admit_batch);
+    if (reserved_post_deadline_unit)
+    {
+      ++critical_units_reserved_by_flow;
+      UFrameDeadline::NoteCriticalUnitFinished();
+    }
     ++drained;
   }
   for (const ColumnWorkItem &item : deferred)
