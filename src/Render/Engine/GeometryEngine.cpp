@@ -103,9 +103,11 @@ bool DebugTransparentFragmentMarkerEnabled()
   return enabled;
 }
 
-constexpr size_t kPixelProbeSampleCount = 40;
-constexpr int kPixelProbeColumns = 10;
+constexpr int kPixelProbeColumns = 20;
 constexpr int kPixelProbeRows = 4;
+constexpr size_t kPixelProbeSampleCount =
+    static_cast<size_t>(kPixelProbeColumns * kPixelProbeRows);
+constexpr float kOpaqueVertexLightMatchDistance = 0.25f;
 
 int PixelProbeSampleY(int row, int height)
 {
@@ -176,6 +178,122 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
     }
   }
   capture.active = true;
+}
+
+struct OpaqueVertexLightMatch
+{
+  bool valid{false};
+  float distance{std::numeric_limits<float>::infinity()};
+  float sky{0.0f};
+  float block{0.0f};
+  float preview{0.0f};
+  int face_index{-1};
+  BlockId block_id{BLOCK_AIR};
+};
+
+struct ClosestTrianglePoint
+{
+  glm::vec3 point{0.0f};
+  glm::vec3 barycentric{0.0f};
+};
+
+ClosestTrianglePoint ClosestPointOnTriangle(const glm::vec3 &p,
+                                            const glm::vec3 &a,
+                                            const glm::vec3 &b,
+                                            const glm::vec3 &c)
+{
+  const glm::vec3 ab = b - a;
+  const glm::vec3 ac = c - a;
+  const glm::vec3 ap = p - a;
+  const float d1 = glm::dot(ab, ap);
+  const float d2 = glm::dot(ac, ap);
+  if (d1 <= 0.0f && d2 <= 0.0f)
+  {
+    return {a, glm::vec3(1.0f, 0.0f, 0.0f)};
+  }
+
+  const glm::vec3 bp = p - b;
+  const float d3 = glm::dot(ab, bp);
+  const float d4 = glm::dot(ac, bp);
+  if (d3 >= 0.0f && d4 <= d3)
+  {
+    return {b, glm::vec3(0.0f, 1.0f, 0.0f)};
+  }
+
+  const float vc = d1 * d4 - d3 * d2;
+  if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f)
+  {
+    const float v = d1 / (d1 - d3);
+    return {a + v * ab, glm::vec3(1.0f - v, v, 0.0f)};
+  }
+
+  const glm::vec3 cp = p - c;
+  const float d5 = glm::dot(ab, cp);
+  const float d6 = glm::dot(ac, cp);
+  if (d6 >= 0.0f && d5 <= d6)
+  {
+    return {c, glm::vec3(0.0f, 0.0f, 1.0f)};
+  }
+
+  const float vb = d5 * d2 - d1 * d6;
+  if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f)
+  {
+    const float w = d2 / (d2 - d6);
+    return {a + w * ac, glm::vec3(1.0f - w, 0.0f, w)};
+  }
+
+  const float va = d3 * d6 - d5 * d4;
+  if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f)
+  {
+    const float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+    return {b + w * (c - b), glm::vec3(0.0f, 1.0f - w, w)};
+  }
+
+  const float inverse_sum = 1.0f / (va + vb + vc);
+  const float v = vb * inverse_sum;
+  const float w = vc * inverse_sum;
+  return {a + ab * v + ac * w, glm::vec3(1.0f - v - w, v, w)};
+}
+
+void ConsiderOpaqueVertexLightTriangle(const glm::vec3 &surface,
+                                       const GreedyMeshBatch &batch,
+                                       const GreedyMeshVertex &a,
+                                       const GreedyMeshVertex &b,
+                                       const GreedyMeshVertex &c,
+                                       OpaqueVertexLightMatch &best)
+{
+  const int face_index = static_cast<int>(a.faceIndex + 0.5f);
+  if (face_index < 0 || face_index >= 6 ||
+      static_cast<int>(b.faceIndex + 0.5f) != face_index ||
+      static_cast<int>(c.faceIndex + 0.5f) != face_index)
+  {
+    return;
+  }
+
+  const glm::vec3 pa(a.px, a.py, a.pz);
+  const glm::vec3 pb(b.px, b.py, b.pz);
+  const glm::vec3 pc(c.px, c.py, c.pz);
+  const ClosestTrianglePoint closest =
+      ClosestPointOnTriangle(surface, pa, pb, pc);
+  const float distance = glm::length(surface - closest.point);
+  if (!std::isfinite(distance) || distance >= best.distance)
+  {
+    return;
+  }
+
+  best.distance = distance;
+  best.sky = a.skyLight * closest.barycentric.x +
+             b.skyLight * closest.barycentric.y +
+             c.skyLight * closest.barycentric.z;
+  best.block = a.blockLight * closest.barycentric.x +
+               b.blockLight * closest.barycentric.y +
+               c.blockLight * closest.barycentric.z;
+  best.preview = a.lightPreview * closest.barycentric.x +
+                 b.lightPreview * closest.barycentric.y +
+                 c.lightPreview * closest.barycentric.z;
+  best.face_index = face_index;
+  best.block_id = batch.blockId;
+  best.valid = distance <= kOpaqueVertexLightMatchDistance;
 }
 
 float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
@@ -634,27 +752,63 @@ void CaptureTransparentPixelProbe(
                 opaque_chunk_data->GetLightFieldRevision();
           }
 
-          for (const GreedyBatchRef &ref : opaque_refs)
+          OpaqueVertexLightMatch opaque_vertex_light{};
+          const glm::vec3 opaque_surface(opaque_point);
+          const auto collect_opaque_source =
+              [&](const std::vector<GreedyBatchRef> &refs)
           {
-            if (ref.chunkCoord == opaque_chunk)
+            for (const GreedyBatchRef &ref : refs)
             {
-              if (const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref))
+              if (ref.chunkCoord != opaque_chunk)
               {
-                record.renderer_pixel_opaque_source_index_count +=
-                    static_cast<uint32_t>(batch->indices.size());
+                continue;
+              }
+              const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
+              if (!batch)
+              {
+                continue;
+              }
+              record.renderer_pixel_opaque_source_index_count +=
+                  static_cast<uint32_t>(batch->indices.size());
+              for (size_t index = 0; index + 2u < batch->indices.size();
+                   index += 3u)
+              {
+                const uint32_t ia = batch->indices[index];
+                const uint32_t ib = batch->indices[index + 1u];
+                const uint32_t ic = batch->indices[index + 2u];
+                if (ia >= batch->vertices.size() ||
+                    ib >= batch->vertices.size() ||
+                    ic >= batch->vertices.size())
+                {
+                  continue;
+                }
+                ConsiderOpaqueVertexLightTriangle(
+                    opaque_surface, *batch, batch->vertices[ia],
+                    batch->vertices[ib], batch->vertices[ic],
+                    opaque_vertex_light);
               }
             }
+          };
+          collect_opaque_source(opaque_refs);
+          collect_opaque_source(transparent_refs);
+          if (std::isfinite(opaque_vertex_light.distance))
+          {
+            record.renderer_pixel_opaque_vertex_light_distance =
+                opaque_vertex_light.distance;
           }
-          for (const GreedyBatchRef &ref : transparent_refs)
+          if (opaque_vertex_light.valid)
           {
-            if (ref.chunkCoord == opaque_chunk)
-            {
-              if (const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref))
-              {
-                record.renderer_pixel_opaque_source_index_count +=
-                    static_cast<uint32_t>(batch->indices.size());
-              }
-            }
+            record.renderer_pixel_opaque_vertex_light_valid = 1;
+            record.renderer_pixel_opaque_vertex_light_block_id =
+                static_cast<int32_t>(opaque_vertex_light.block_id);
+            record.renderer_pixel_opaque_vertex_light_face_index =
+                opaque_vertex_light.face_index;
+            record.renderer_pixel_opaque_vertex_sky_light =
+                opaque_vertex_light.sky;
+            record.renderer_pixel_opaque_vertex_block_light =
+                opaque_vertex_light.block;
+            record.renderer_pixel_opaque_vertex_light_preview =
+                opaque_vertex_light.preview;
           }
 
           const auto collect_depth_mdi_state =

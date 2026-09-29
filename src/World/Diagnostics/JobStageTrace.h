@@ -351,6 +351,15 @@ struct VisualBlackTraceRecord
   uint64_t renderer_pixel_opaque_published_light_rev{0};
   uint64_t renderer_pixel_opaque_field_light_rev{0};
   uint32_t renderer_pixel_opaque_source_index_count{0};
+  /// Barycentrically interpolated source light at the closest CPU mesh
+  /// triangle to the opaque depth hit; only valid within the match radius.
+  uint8_t renderer_pixel_opaque_vertex_light_valid{0};
+  int32_t renderer_pixel_opaque_vertex_light_block_id{-1};
+  int32_t renderer_pixel_opaque_vertex_light_face_index{-1};
+  float renderer_pixel_opaque_vertex_light_distance{-1.0f};
+  float renderer_pixel_opaque_vertex_sky_light{0.0f};
+  float renderer_pixel_opaque_vertex_block_light{0.0f};
+  float renderer_pixel_opaque_vertex_light_preview{0.0f};
   /// Ref bits: opaque CPU, transparent CPU, packed opaque, packed transparent.
   uint8_t renderer_pixel_opaque_ref_flags{0};
   uint8_t renderer_pixel_opaque_drawable{0};
