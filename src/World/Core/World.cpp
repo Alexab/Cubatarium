@@ -3391,10 +3391,10 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           trace.face_waiting_peer_gen[face] =
               focus_demand->waiting_peer_gen[face];
         }
-        if ((trace.face_debt_mask & bit) == 0)
-        {
-          continue;
-        }
+        // Keep a complete six-face neighbor census for each selected slice.
+        // Restricting this data to faces with current debt cannot distinguish
+        // a legitimately occluded zero-quad slice from an exposed boundary
+        // hidden by an unloaded neighbor.
         if (focus_chunk)
         {
           trace.face_focus_boundary_non_air[face] =
