@@ -3560,6 +3560,32 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_opaque_vertex_block_light
                << ",\"renderer_pixel_opaque_vertex_light_preview\":"
                << r.renderer_pixel_opaque_vertex_light_preview
+               << ",\"renderer_pixel_opaque_live_face_light_valid\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_live_face_light_valid)
+               << ",\"renderer_pixel_opaque_live_face_light_packed\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_live_face_light_packed)
+               << ",\"renderer_pixel_opaque_live_face_light_source\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_live_face_light_source)
+               << ",\"renderer_pixel_opaque_demand_present\":"
+               << static_cast<int>(r.renderer_pixel_opaque_demand_present)
+               << ",\"renderer_pixel_opaque_demand_has_active_attempt\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_demand_has_active_attempt)
+               << ",\"renderer_pixel_opaque_demand_has_settled_light\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_demand_has_settled_light)
+               << ",\"renderer_pixel_opaque_demand_active_stage\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_demand_active_stage)
+               << ",\"renderer_pixel_opaque_demand_desired_light_rev\":"
+               << r.renderer_pixel_opaque_demand_desired_light_rev
+               << ",\"renderer_pixel_opaque_demand_published_light_rev\":"
+               << r.renderer_pixel_opaque_demand_published_light_rev
+               << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
+               << r.renderer_pixel_opaque_demand_settled_light_rev
                << ",\"renderer_pixel_opaque_ref_flags\":"
                << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
                << ",\"renderer_pixel_opaque_drawable\":"

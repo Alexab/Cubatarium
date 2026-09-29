@@ -56,6 +56,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
 #include "World/Lighting/IULightingPipeline.h"
+#include "World/Lighting/LightUtil.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Physics/LiquidDebugTrace.h"
@@ -184,6 +185,7 @@ struct OpaqueVertexLightMatch
 {
   bool valid{false};
   float distance{std::numeric_limits<float>::infinity()};
+  glm::vec3 surface{0.0f};
   float sky{0.0f};
   float block{0.0f};
   float preview{0.0f};
@@ -196,6 +198,79 @@ struct ClosestTrianglePoint
   glm::vec3 point{0.0f};
   glm::vec3 barycentric{0.0f};
 };
+
+struct CurrentFaceLightSample
+{
+  bool valid{false};
+  uint8_t packed{0};
+  /// 0=face air, 1=horizontal fallback, 2=solid fallback.
+  uint8_t source{2};
+};
+
+glm::ivec3 GreedyFaceNormal(int face_index)
+{
+  switch (face_index)
+  {
+  case 0:
+    return {0, 0, 1};
+  case 1:
+    return {1, 0, 0};
+  case 2:
+    return {0, 0, -1};
+  case 3:
+    return {-1, 0, 0};
+  case 4:
+    return {0, 1, 0};
+  default:
+    return {0, -1, 0};
+  }
+}
+
+CurrentFaceLightSample SampleCurrentFaceLight(const UBlockWorld &world,
+                                             const glm::ivec3 &solid,
+                                             int face_index)
+{
+  const glm::ivec3 normal = GreedyFaceNormal(face_index);
+  const glm::ivec3 face_air = solid + normal;
+  bool any_loaded = false;
+  auto sample = [&](const glm::ivec3 &position)
+  {
+    const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(position);
+    const UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+    if (!chunk)
+    {
+      return uint8_t{0};
+    }
+    any_loaded = true;
+    return chunk->GetLightPackedLocal(UChunkManager::WorldToLocal(position));
+  };
+
+  const uint8_t face_light = sample(face_air);
+  if (face_light != 0)
+  {
+    return {any_loaded, face_light, 0};
+  }
+
+  static constexpr glm::ivec3 kHorizontalOffsets[] = {
+      {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+  uint8_t best_light = 0;
+  int best_sum = 0;
+  for (const glm::ivec3 &offset : kHorizontalOffsets)
+  {
+    const uint8_t packed = sample(face_air + offset);
+    const int sum = UnpackSky(packed) + UnpackBlock(packed);
+    if (sum > best_sum)
+    {
+      best_sum = sum;
+      best_light = packed;
+    }
+  }
+  if (best_light != 0)
+  {
+    return {any_loaded, best_light, 1};
+  }
+  return {any_loaded, sample(solid), 2};
+}
 
 ClosestTrianglePoint ClosestPointOnTriangle(const glm::vec3 &p,
                                             const glm::vec3 &a,
@@ -282,6 +357,7 @@ void ConsiderOpaqueVertexLightTriangle(const glm::vec3 &surface,
   }
 
   best.distance = distance;
+  best.surface = closest.point;
   best.sky = a.skyLight * closest.barycentric.x +
              b.skyLight * closest.barycentric.y +
              c.skyLight * closest.barycentric.z;
@@ -809,6 +885,41 @@ void CaptureTransparentPixelProbe(
                 opaque_vertex_light.block;
             record.renderer_pixel_opaque_vertex_light_preview =
                 opaque_vertex_light.preview;
+            const glm::ivec3 face_normal =
+                GreedyFaceNormal(opaque_vertex_light.face_index);
+            const glm::ivec3 face_solid(
+                static_cast<int>(std::floor(opaque_vertex_light.surface.x -
+                                             face_normal.x * 0.501f)),
+                static_cast<int>(std::floor(opaque_vertex_light.surface.y -
+                                             face_normal.y * 0.501f)),
+                static_cast<int>(std::floor(opaque_vertex_light.surface.z -
+                                             face_normal.z * 0.501f)));
+            const CurrentFaceLightSample live_face_light =
+                SampleCurrentFaceLight(world.GetBlockWorld(), face_solid,
+                                       opaque_vertex_light.face_index);
+            record.renderer_pixel_opaque_live_face_light_valid =
+                live_face_light.valid ? 1u : 0u;
+            record.renderer_pixel_opaque_live_face_light_packed =
+                live_face_light.packed;
+            record.renderer_pixel_opaque_live_face_light_source =
+                live_face_light.source;
+          }
+          if (const ChunkRenderDemandRecord *opaque_demand =
+                  UChunkRenderDemandStore::Get().Find(opaque_chunk))
+          {
+            record.renderer_pixel_opaque_demand_present = 1;
+            record.renderer_pixel_opaque_demand_has_active_attempt =
+                opaque_demand->has_active_attempt ? 1u : 0u;
+            record.renderer_pixel_opaque_demand_has_settled_light =
+                opaque_demand->has_settled_light ? 1u : 0u;
+            record.renderer_pixel_opaque_demand_active_stage =
+                static_cast<uint8_t>(opaque_demand->active_stage);
+            record.renderer_pixel_opaque_demand_desired_light_rev =
+                opaque_demand->desired_light_rev;
+            record.renderer_pixel_opaque_demand_published_light_rev =
+                opaque_demand->published_light_rev;
+            record.renderer_pixel_opaque_demand_settled_light_rev =
+                opaque_demand->settled_light_rev;
           }
 
           const auto collect_depth_mdi_state =
