@@ -1001,6 +1001,27 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
   const int sea = ProceduralTemplate.SeaLevel;
   const bool audit_relight =
       std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  // Preserve already-visible holes when pending first-mesh columns need to
+  // enter the bounded visible relight lane under FIFO backpressure.
+  std::vector<glm::ivec2> protected_visible_columns;
+  if (UnfinishedVisualCache.valid &&
+      UnfinishedVisualCache.focus.x == focus.x &&
+      UnfinishedVisualCache.focus.z == focus.z)
+  {
+    protected_visible_columns.reserve(
+        UnfinishedVisualCache.unfinished_keys.size());
+    for (const uint64_t packed : UnfinishedVisualCache.unfinished_keys)
+    {
+      const int cx = static_cast<int>(static_cast<uint32_t>(packed >> 32));
+      const int cz = static_cast<int>(static_cast<uint32_t>(packed));
+      const int horiz =
+          std::max(std::abs(cx - focus.x), std::abs(cz - focus.z));
+      if (horiz <= kVisualStageNearFovHoriz)
+      {
+        protected_visible_columns.emplace_back(cx, cz);
+      }
+    }
+  }
   // Playerв€Єsea band, plus deeper ocean floor (sea-4 chunks).
   int band_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
@@ -1167,11 +1188,27 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             enqueue_min = pit->second.min_y;
             enqueue_max = pit->second.max_y;
           }
-          Persistence->EnqueueTerrainColumnRelight(
-              key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true,
-              enqueue_min, enqueue_max);
           const glm::ivec2 world_block_key(key.x * CHUNK_SIZE,
                                            key.y * CHUNK_SIZE);
+          bool admitted_visible = false;
+          if (missing_mesh && r <= kVisualStageLitDrawableHoriz)
+          {
+            admitted_visible = Persistence->EnqueueVisibleRelight(
+                world_block_key.x, world_block_key.y, enqueue_min, enqueue_max,
+                focus, kVisualStageLitDrawableHoriz,
+                protected_visible_columns);
+            if (admitted_visible)
+            {
+              Persistence->NoteVisibleFirstMeshRelight(
+                  world_block_key, enqueue_min, enqueue_max);
+            }
+          }
+          if (!admitted_visible)
+          {
+            Persistence->EnqueueTerrainColumnRelight(
+                world_block_key.x, world_block_key.y, /*priority=*/true,
+                enqueue_min, enqueue_max);
+          }
           if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
               !IsAsyncRelightColumnInFlight(key))
           {
