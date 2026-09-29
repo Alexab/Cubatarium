@@ -2074,11 +2074,19 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // the bottleneck into first-mesh scheduling. Exact draw-gate work retains
   // its existing exception. Time budget, completed-queue backpressure and
   // worker limit still bound the capture loop.
+  // M120 observed stale vertex-light debt with a one-column capture cap while
+  // async inflight stayed near two of forty slots, the completion queue was
+  // empty, and memory pressure was absent. Let that measured debt use the same
+  // small refill headroom as a near-FOV pending-light target.
+  const bool stale_vertex_light_capture_headroom =
+      world.GetPhysicsTelemetry().DrawOracleStaleVertexLightN > 0 &&
+      world.GetAsyncRelightInFlightCount() < std::min(max_inflight, 2);
   const bool near_fov_capture_headroom =
       near_fov_pending_light_n > 0 &&
       world.GetAsyncRelightInFlightCount() < std::min(max_inflight, 2);
   if (async_bg &&
-      (draw_gate_target_pinned || near_fov_capture_headroom) &&
+      (draw_gate_target_pinned || near_fov_capture_headroom ||
+       stale_vertex_light_capture_headroom) &&
       world.GetPhysicsTelemetry().MemoryPressure == 0 &&
       world.GetAsyncRelightInFlightCount() < max_inflight &&
       world.GetRelightCompletedSize() < 2)
