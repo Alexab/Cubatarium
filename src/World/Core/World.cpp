@@ -83,6 +83,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/RingReadinessBudget.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
+#include "Render/Mesh/ChunkMeshFace.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Render/Mesh/FluidColumnSummary.h"
 #include "World/Streaming/EnterVisualGate.h"
@@ -3345,9 +3346,6 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               std::max(0.0, now_ms - focus_demand->last_progress_ms);
         }
       }
-      static const glm::ivec3 kFaceDirections[6] = {
-          {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
-          {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
       const auto count_boundary_non_air = [](const UChunk &boundary_chunk,
                                              int face, bool peer_side) {
         uint16_t count = 0;
@@ -3359,22 +3357,22 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             switch (face)
             {
             case 0:
-              local = {peer_side ? 0 : CHUNK_SIZE - 1, a, b};
-              break;
-            case 1:
               local = {peer_side ? CHUNK_SIZE - 1 : 0, a, b};
               break;
-            case 2:
-              local = {a, peer_side ? 0 : CHUNK_SIZE - 1, b};
+            case 1:
+              local = {peer_side ? 0 : CHUNK_SIZE - 1, a, b};
               break;
-            case 3:
+            case 2:
               local = {a, peer_side ? CHUNK_SIZE - 1 : 0, b};
               break;
+            case 3:
+              local = {a, peer_side ? 0 : CHUNK_SIZE - 1, b};
+              break;
             case 4:
-              local = {a, b, peer_side ? 0 : CHUNK_SIZE - 1};
+              local = {a, b, peer_side ? CHUNK_SIZE - 1 : 0};
               break;
             default:
-              local = {a, b, peer_side ? CHUNK_SIZE - 1 : 0};
+              local = {a, b, peer_side ? 0 : CHUNK_SIZE - 1};
               break;
             }
             if (boundary_chunk.GetBlockLocal(local) != BLOCK_AIR)
@@ -3402,7 +3400,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           trace.face_focus_boundary_non_air[face] =
               count_boundary_non_air(*focus_chunk, face, false);
         }
-        const glm::ivec3 peer_coord = coord + kFaceDirections[face];
+        const glm::ivec3 peer_coord =
+            coord + ChunkMeshFaceNeighborDelta(face);
         const UChunk *peer_chunk =
             BlockWorld.GetChunkManager().GetChunk(peer_coord);
         if (peer_chunk)

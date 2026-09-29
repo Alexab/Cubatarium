@@ -240,7 +240,7 @@ struct VisualBlackTraceRecord
   uint8_t overlay_face_debt_mask{0};
   uint8_t peer_face_debt_mask{0};
   /// sample_kind=1: per-face debt requirements and current peer publications.
-  /// Face order matches ChunkEmergeCoordinator: +X, -X, +Y, -Y, +Z, -Z.
+  /// Face order matches ChunkMeshSnapshot: -X, +X, -Y, +Y, -Z, +Z.
   uint64_t face_waiting_peer_gen[6]{};
   uint64_t face_peer_effective_gen[6]{};
   uint64_t face_peer_published_geom_rev[6]{};

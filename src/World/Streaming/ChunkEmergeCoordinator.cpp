@@ -25,6 +25,7 @@
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/VisualObligationPolicy.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
+#include "Render/Mesh/ChunkMeshFace.h"
 #include "Render/Mesh/SeamCoverageManifest.h"
 #include "Core/FrameDeadline.h"
 #include "World/Streaming/CyOrderPolicy.h"
@@ -192,10 +193,6 @@ void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
   UChunkMeshCache &cache = mesh.GetCache();
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
   UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
-  static constexpr glm::ivec3 kFaceDir[6] = {
-      {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
-      {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
-
   const int attempts =
       std::min<int>(budget, PendingFaceDebtRepairs_.size());
   for (int i = 0; i < attempts; ++i)
@@ -243,7 +240,7 @@ void UChunkEmergeCoordinator::DrainFaceDebtRepairs(UWorld &world, int budget)
         continue;
       }
 
-      const glm::ivec3 peer = coord + kFaceDir[face];
+      const glm::ivec3 peer = coord + ChunkMeshFaceNeighborDelta(face);
       if ((record->overlay_face_debt_mask & bit) != 0)
       {
         // A missing-neighbor overlay is a target-local capture obligation. A
@@ -901,9 +898,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               }
             };
             bind_current_identity(chunk_coord);
-            static const glm::ivec3 kFaceDir[6] = {
-                {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
-                {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
             auto peer_cov_gen = [&](glm::ivec3 peer) -> uint64_t {
               bind_current_identity(peer);
               return PublishedCoverageGeneration(demand, peer);
@@ -913,7 +907,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               const uint8_t bit = static_cast<uint8_t>(1u << f);
               // A39 P3: UnknownPeer keeps waiting=0 (never fabricate need=1).
               const uint64_t need =
-                  peer_cov_gen(chunk_coord + kFaceDir[f]);
+                  peer_cov_gen(chunk_coord +
+                               ChunkMeshFaceNeighborDelta(f));
               demand.NoteFaceDebt(chunk_coord, bit, need);
             }
             // Coverage desire with face debt; geometry uses the mesh-revision
@@ -1260,12 +1255,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               uint64_t published_peer_gen[6]{};
               // Face toward publisher requires peer_pub; other faces read
               // that face's neighbor publish rev (0 = unused / satisfied).
-              static const glm::ivec3 kFaceDir[6] = {
-                  {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
-                  {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
               for (int f = 0; f < 6; ++f)
               {
-                const glm::ivec3 peer = n + kFaceDir[f];
+                const glm::ivec3 peer =
+                    n + ChunkMeshFaceNeighborDelta(f);
                 published_peer_gen[f] =
                     PublishedCoverageGeneration(demand, peer);
               }
@@ -1328,7 +1321,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
-                const int face_toward_publisher = dy > 0 ? 2 : 3;
+                const int face_toward_publisher =
+                    ChunkMeshFaceIndexForDelta({0, -dy, 0});
                 const uint8_t face_bit = static_cast<uint8_t>(
                     1u << face_toward_publisher);
                 const bool has_overlay = mesh.HasActiveBoundaryOverlayFace(

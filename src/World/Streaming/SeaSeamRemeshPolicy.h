@@ -1,4 +1,6 @@
 #pragma once
+
+#include "Render/Mesh/ChunkMeshFace.h"
 // BUDGET_MS: 0.0
 // R06 field: when first drawable coverage publishes, remesh sea/subsea seams.
 // Drawable stays out of InputsStillValid stamp (ADR Strategy A).
@@ -135,23 +137,8 @@ inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
 /// peer = publisher + delta; axis*2+(sign>0). Returns -1 if not a face-nb.
 inline int SeaSeamPeerFaceTowardPublisher(int delta_x, int delta_z)
 {
-  if (delta_x == 1 && delta_z == 0)
-  {
-    return 0; // peer +X of publisher → peer -X face
-  }
-  if (delta_x == -1 && delta_z == 0)
-  {
-    return 1; // peer -X → peer +X
-  }
-  if (delta_x == 0 && delta_z == 1)
-  {
-    return 4; // peer +Z → peer -Z
-  }
-  if (delta_x == 0 && delta_z == -1)
-  {
-    return 5; // peer -Z → peer +Z
-  }
-  return -1;
+  // Return the face on the neighbor that points back toward the publisher.
+  return ChunkMeshFaceIndexForDelta({-delta_x, 0, -delta_z});
 }
 
 /// R2: remesh peer only while sticky overlay still owes that seam face.
