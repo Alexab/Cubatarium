@@ -329,10 +329,38 @@ struct VisualBlackTraceRecord
   uint32_t renderer_pixel_pretransparent_rgba{0};
   float renderer_pixel_pretransparent_depth{1.0f};
   uint8_t renderer_pixel_marker_visible{0};
+  /// Valid bit plus seven-bit marker occupancy on the sampled scanline.
   uint8_t renderer_pixel_surface_valid{0};
   float renderer_pixel_surface_x{0.0f};
   float renderer_pixel_surface_y{0.0f};
   float renderer_pixel_surface_z{0.0f};
+  /// Exact opaque hit reconstructed from the sampled pre-transparent depth.
+  /// The existing `renderer_pixel_surface_*` fields remain the sea-plane ray
+  /// intersection used to identify fluid sources.
+  uint8_t renderer_pixel_opaque_surface_valid{0};
+  float renderer_pixel_opaque_surface_x{0.0f};
+  float renderer_pixel_opaque_surface_y{0.0f};
+  float renderer_pixel_opaque_surface_z{0.0f};
+  int32_t renderer_pixel_opaque_chunk_x{0};
+  int32_t renderer_pixel_opaque_chunk_y{0};
+  int32_t renderer_pixel_opaque_chunk_z{0};
+  uint32_t renderer_pixel_opaque_chunk_nonair{0};
+  uint64_t renderer_pixel_opaque_chunk_content_revision{0};
+  uint64_t renderer_pixel_opaque_mesh_revision{0};
+  uint64_t renderer_pixel_opaque_published_geom_rev{0};
+  uint64_t renderer_pixel_opaque_published_light_rev{0};
+  uint64_t renderer_pixel_opaque_field_light_rev{0};
+  uint32_t renderer_pixel_opaque_source_index_count{0};
+  /// Ref bits: opaque CPU, transparent CPU, packed opaque, packed transparent.
+  uint8_t renderer_pixel_opaque_ref_flags{0};
+  uint8_t renderer_pixel_opaque_drawable{0};
+  uint8_t renderer_pixel_opaque_draw_ready{0};
+  uint8_t renderer_pixel_opaque_live_gpu{0};
+  /// MDI pass bits 0..2: opaque, cutout, transparent; resident vs visible.
+  uint8_t renderer_pixel_opaque_mdi_resident_pass_flags{0};
+  uint8_t renderer_pixel_opaque_mdi_visible_pass_flags{0};
+  uint32_t renderer_pixel_opaque_mdi_index_count{0};
+  uint32_t renderer_pixel_opaque_mdi_visible_index_count{0};
   /// sample_kind=3: 1=settled field needs mesh-only repair; 0=relight target.
   uint8_t draw_gate_repair_mode{0};
   /// Persistence relight queue location/band for renderer, focus, and

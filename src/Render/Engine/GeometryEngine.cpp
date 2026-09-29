@@ -104,6 +104,15 @@ bool DebugTransparentFragmentMarkerEnabled()
 }
 
 constexpr size_t kPixelProbeSampleCount = 40;
+constexpr int kPixelProbeColumns = 10;
+constexpr int kPixelProbeRows = 4;
+
+int PixelProbeSampleY(int row, int height)
+{
+  const int y0 = row * height / kPixelProbeRows;
+  const int y1 = (row + 1) * height / kPixelProbeRows;
+  return std::clamp((y0 + y1) / 2, 0, height - 1);
+}
 
 struct OpaquePixelProbeCapture
 {
@@ -119,34 +128,38 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
   glGetIntegerv(GL_VIEWPORT, viewport);
   const int width = viewport[2];
   const int height = viewport[3];
-  const int capture_height = std::max(1, height / 5);
   if (width <= 0 || height <= 0)
   {
     return;
   }
 
-  std::vector<GLubyte> pixels(static_cast<size_t>(width) * capture_height * 4u);
-  std::vector<GLfloat> depths(static_cast<size_t>(width) * capture_height);
-  glReadPixels(viewport[0], viewport[1], width, capture_height, GL_RGBA,
-               GL_UNSIGNED_BYTE, pixels.data());
-  glReadPixels(viewport[0], viewport[1], width, capture_height,
-               GL_DEPTH_COMPONENT, GL_FLOAT, depths.data());
-
-  constexpr int kTileColumns = 10;
-  constexpr int kTileRows = 4;
-  size_t sample = 0;
-  for (int row = 0; row < kTileRows; ++row)
+  // Read one full-width scanline in each screen quadrant. This keeps the
+  // forensic sample distributed over the whole view without copying the full
+  // framebuffer or issuing a synchronous read for every pixel.
+  std::vector<GLubyte> pixels(static_cast<size_t>(width) * kPixelProbeRows *
+                              4u);
+  std::vector<GLfloat> depths(static_cast<size_t>(width) * kPixelProbeRows);
+  for (int row = 0; row < kPixelProbeRows; ++row)
   {
-    const int y0 = row * capture_height / kTileRows;
-    const int y1 = (row + 1) * capture_height / kTileRows;
-    const int local_y = std::clamp((y0 + y1) / 2, 0, capture_height - 1);
-    for (int column = 0; column < kTileColumns; ++column)
+    const int local_y = PixelProbeSampleY(row, height);
+    glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
+                 GL_UNSIGNED_BYTE,
+                 pixels.data() + static_cast<size_t>(row) * width * 4u);
+    glReadPixels(viewport[0], viewport[1] + local_y, width, 1,
+                 GL_DEPTH_COMPONENT, GL_FLOAT,
+                 depths.data() + static_cast<size_t>(row) * width);
+  }
+
+  size_t sample = 0;
+  for (int row = 0; row < kPixelProbeRows; ++row)
+  {
+    for (int column = 0; column < kPixelProbeColumns; ++column)
     {
-      const int x0 = column * width / kTileColumns;
-      const int x1 = (column + 1) * width / kTileColumns;
+      const int x0 = column * width / kPixelProbeColumns;
+      const int x1 = (column + 1) * width / kPixelProbeColumns;
       const int local_x = std::clamp((x0 + x1) / 2, 0, width - 1);
       const size_t pixel_offset =
-          (static_cast<size_t>(local_y) * static_cast<size_t>(width) +
+          (static_cast<size_t>(row) * static_cast<size_t>(width) +
            static_cast<size_t>(local_x)) *
           4u;
       const uint32_t red = pixels[pixel_offset + 0];
@@ -156,7 +169,7 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
       capture.rgba[sample] = (red << 24u) | (green << 16u) |
                              (blue << 8u) | alpha;
       const size_t depth_offset =
-          static_cast<size_t>(local_y) * static_cast<size_t>(width) +
+          static_cast<size_t>(row) * static_cast<size_t>(width) +
           static_cast<size_t>(local_x);
       capture.depth[sample] = depths[depth_offset];
       ++sample;
@@ -424,7 +437,10 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
 
 void CaptureTransparentPixelProbe(
     UWorld &world, const UChunkMeshCache &cache,
+    const std::vector<GreedyBatchRef> &opaque_refs,
     const std::vector<GreedyBatchRef> &transparent_refs,
+    const GreedyGpuPassCache &mdi_opaque_pass,
+    const GreedyGpuPassCache &mdi_cutout_pass,
     const GreedyGpuPassCache &mdi_transparent_pass,
     const std::map<size_t, UTextureCube> &textures,
     const glm::mat4 &view_projection, const glm::vec3 &camera_position,
@@ -436,20 +452,21 @@ void CaptureTransparentPixelProbe(
   glGetIntegerv(GL_VIEWPORT, viewport);
   const int width = viewport[2];
   const int height = viewport[3];
-  const int capture_height = std::max(1, height / 5);
   if (width <= 0 || height <= 0)
   {
     return;
   }
 
-  // Read a narrow bottom strip, where the visible westbound ocean surface
-  // occupies the frame. One small readback per probe avoids one sync per pixel.
-  std::vector<GLubyte> pixels(static_cast<size_t>(width) * capture_height * 4u);
-  glReadPixels(viewport[0], viewport[1], width, capture_height, GL_RGBA,
-               GL_UNSIGNED_BYTE, pixels.data());
-
-  constexpr int kTileColumns = 10;
-  constexpr int kTileRows = 4;
+  // Match the opaque-depth probe with four sparse scanlines across the view.
+  std::vector<GLubyte> pixels(static_cast<size_t>(width) * kPixelProbeRows *
+                              4u);
+  for (int row = 0; row < kPixelProbeRows; ++row)
+  {
+    const int local_y = PixelProbeSampleY(row, height);
+    glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
+                 GL_UNSIGNED_BYTE,
+                 pixels.data() + static_cast<size_t>(row) * width * 4u);
+  }
   const glm::mat4 inverse_view_projection = glm::inverse(view_projection);
   const float sea_plane_y =
       static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
@@ -461,19 +478,39 @@ void CaptureTransparentPixelProbe(
   // even when the sampled pixel is not near-black.
   std::unordered_set<glm::ivec3, IVec3Hash> payload_checked_chunks;
   payload_checked_chunks.reserve(12);
-
-  for (int row = 0; row < kTileRows; ++row)
+  std::unordered_set<glm::ivec3, IVec3Hash> opaque_ref_chunks;
+  std::unordered_set<glm::ivec3, IVec3Hash> transparent_ref_chunks;
+  std::unordered_set<glm::ivec3, IVec3Hash> packed_opaque_chunks;
+  std::unordered_set<glm::ivec3, IVec3Hash> packed_transparent_chunks;
+  opaque_ref_chunks.reserve(opaque_refs.size());
+  transparent_ref_chunks.reserve(transparent_refs.size());
+  for (const GreedyBatchRef &ref : opaque_refs)
   {
-    const int y0 = row * capture_height / kTileRows;
-    const int y1 = (row + 1) * capture_height / kTileRows;
-    const int local_y = std::clamp((y0 + y1) / 2, 0, capture_height - 1);
-    for (int column = 0; column < kTileColumns; ++column)
+    opaque_ref_chunks.insert(ref.chunkCoord);
+  }
+  for (const GreedyBatchRef &ref : transparent_refs)
+  {
+    transparent_ref_chunks.insert(ref.chunkCoord);
+  }
+  for (const GpuPackedChunkRef &ref : cache.GetGpuPackedOpaqueRefs())
+  {
+    packed_opaque_chunks.insert(ref.chunkCoord);
+  }
+  for (const GpuPackedChunkRef &ref : cache.GetGpuPackedTransparentRefs())
+  {
+    packed_transparent_chunks.insert(ref.chunkCoord);
+  }
+
+  for (int row = 0; row < kPixelProbeRows; ++row)
+  {
+    const int local_y = PixelProbeSampleY(row, height);
+    for (int column = 0; column < kPixelProbeColumns; ++column)
     {
-      const int x0 = column * width / kTileColumns;
-      const int x1 = (column + 1) * width / kTileColumns;
+      const int x0 = column * width / kPixelProbeColumns;
+      const int x1 = (column + 1) * width / kPixelProbeColumns;
       const int local_x = std::clamp((x0 + x1) / 2, 0, width - 1);
       const size_t pixel_offset =
-          (static_cast<size_t>(local_y) * static_cast<size_t>(width) +
+          (static_cast<size_t>(row) * static_cast<size_t>(width) +
            static_cast<size_t>(local_x)) *
           4u;
       const uint32_t red = pixels[pixel_offset + 0];
@@ -489,7 +526,8 @@ void CaptureTransparentPixelProbe(
       record.renderer_pixel_y = viewport[1] + local_y;
       record.renderer_pixel_rgba = (red << 24u) | (green << 16u) |
                                    (blue << 8u) | alpha;
-      const size_t sample = static_cast<size_t>(row * kTileColumns + column);
+      const size_t sample = static_cast<size_t>(row * kPixelProbeColumns +
+                                                column);
       record.renderer_pixel_pretransparent_rgba =
           opaque_capture.rgba[sample];
       record.renderer_pixel_pretransparent_depth =
@@ -503,24 +541,20 @@ void CaptureTransparentPixelProbe(
 
       uint32_t tile_marker_pixels = 0;
       uint32_t tile_pixel_count = 0;
-      for (int py = y0; py < y1; ++py)
+      const size_t scanline_offset =
+          static_cast<size_t>(row) * static_cast<size_t>(width) * 4u;
+      for (int px = x0; px < x1; ++px)
       {
-        for (int px = x0; px < x1; ++px)
+        const size_t offset = scanline_offset + static_cast<size_t>(px) * 4u;
+        const uint8_t pr = pixels[offset + 0];
+        const uint8_t pg = pixels[offset + 1];
+        const uint8_t pb = pixels[offset + 2];
+        const uint8_t pa = pixels[offset + 3];
+        if (pr >= 240u && pg <= 15u && pb >= 240u && pa >= 240u)
         {
-          const size_t offset =
-              (static_cast<size_t>(py) * static_cast<size_t>(width) +
-               static_cast<size_t>(px)) *
-              4u;
-          const uint8_t pr = pixels[offset + 0];
-          const uint8_t pg = pixels[offset + 1];
-          const uint8_t pb = pixels[offset + 2];
-          const uint8_t pa = pixels[offset + 3];
-          if (pr >= 240u && pg <= 15u && pb >= 240u && pa >= 240u)
-          {
-            ++tile_marker_pixels;
-          }
-          ++tile_pixel_count;
+          ++tile_marker_pixels;
         }
+        ++tile_pixel_count;
       }
       const float tile_coverage =
           tile_pixel_count > 0
@@ -543,6 +577,114 @@ void CaptureTransparentPixelProbe(
           (static_cast<float>(local_y) + 0.5f) / static_cast<float>(height) *
               2.0f -
           1.0f;
+      const float opaque_depth = opaque_capture.depth[sample];
+      if (std::isfinite(opaque_depth) && opaque_depth >= 0.0f &&
+          opaque_depth < 0.999999f)
+      {
+        const glm::vec4 opaque_h = inverse_view_projection *
+                                   glm::vec4(ndc_x, ndc_y,
+                                             opaque_depth * 2.0f - 1.0f, 1.0f);
+        if (std::abs(opaque_h.w) > 1e-6f)
+        {
+          const glm::vec3 opaque_point = glm::vec3(opaque_h) / opaque_h.w;
+          const glm::ivec3 opaque_cell(
+              static_cast<int>(std::floor(opaque_point.x)),
+              static_cast<int>(std::floor(opaque_point.y)),
+              static_cast<int>(std::floor(opaque_point.z)));
+          const glm::ivec3 opaque_chunk =
+              UChunkManager::WorldToChunk(opaque_cell);
+          record.renderer_pixel_opaque_surface_valid = 1;
+          record.renderer_pixel_opaque_surface_x = opaque_point.x;
+          record.renderer_pixel_opaque_surface_y = opaque_point.y;
+          record.renderer_pixel_opaque_surface_z = opaque_point.z;
+          record.renderer_pixel_opaque_chunk_x = opaque_chunk.x;
+          record.renderer_pixel_opaque_chunk_y = opaque_chunk.y;
+          record.renderer_pixel_opaque_chunk_z = opaque_chunk.z;
+          record.renderer_pixel_opaque_ref_flags =
+              (opaque_ref_chunks.count(opaque_chunk) != 0 ? 1u << 0 : 0u) |
+              (transparent_ref_chunks.count(opaque_chunk) != 0 ? 1u << 1
+                                                                : 0u) |
+              (packed_opaque_chunks.count(opaque_chunk) != 0 ? 1u << 2
+                                                             : 0u) |
+              (packed_transparent_chunks.count(opaque_chunk) != 0 ? 1u << 3
+                                                                  : 0u);
+          record.renderer_pixel_opaque_drawable =
+              cache.HasDrawableGreedyMesh(opaque_chunk) ? 1u : 0u;
+          record.renderer_pixel_opaque_draw_ready =
+              world.IsChunkSliceRenderReady(opaque_chunk) ? 1u : 0u;
+          record.renderer_pixel_opaque_live_gpu =
+              cache.HasLiveGpuDraw(opaque_chunk) ? 1u : 0u;
+          record.renderer_pixel_opaque_mesh_revision =
+              cache.GetChunkMeshRevision(opaque_chunk);
+          const MeshPublishRevs opaque_published =
+              cache.GetMeshPublishRevs(opaque_chunk);
+          record.renderer_pixel_opaque_published_geom_rev =
+              opaque_published.geom_rev;
+          record.renderer_pixel_opaque_published_light_rev =
+              opaque_published.light_rev;
+          if (const UChunk *opaque_chunk_data =
+                  world.GetBlockWorld().GetChunkManager().GetChunk(
+                      opaque_chunk))
+          {
+            record.renderer_pixel_opaque_chunk_nonair =
+                opaque_chunk_data->GetNonAirCount();
+            record.renderer_pixel_opaque_chunk_content_revision =
+                opaque_chunk_data->GetContentRevision();
+            record.renderer_pixel_opaque_field_light_rev =
+                opaque_chunk_data->GetLightFieldRevision();
+          }
+
+          for (const GreedyBatchRef &ref : opaque_refs)
+          {
+            if (ref.chunkCoord == opaque_chunk)
+            {
+              if (const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref))
+              {
+                record.renderer_pixel_opaque_source_index_count +=
+                    static_cast<uint32_t>(batch->indices.size());
+              }
+            }
+          }
+          for (const GreedyBatchRef &ref : transparent_refs)
+          {
+            if (ref.chunkCoord == opaque_chunk)
+            {
+              if (const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref))
+              {
+                record.renderer_pixel_opaque_source_index_count +=
+                    static_cast<uint32_t>(batch->indices.size());
+              }
+            }
+          }
+
+          const auto collect_depth_mdi_state =
+              [&](const GreedyGpuPassCache &pass, uint8_t pass_bit)
+          {
+            for (const GreedyGpuBatch &batch : pass.batches)
+            {
+              if (batch.chunkCoord != opaque_chunk || batch.indexCountGl <= 0)
+              {
+                continue;
+              }
+              record.renderer_pixel_opaque_mdi_resident_pass_flags |=
+                  pass_bit;
+              record.renderer_pixel_opaque_mdi_index_count +=
+                  static_cast<uint32_t>(batch.indexCountGl);
+              if (batch.drawInstanceCount == 0)
+              {
+                continue;
+              }
+              record.renderer_pixel_opaque_mdi_visible_pass_flags |=
+                  pass_bit;
+              record.renderer_pixel_opaque_mdi_visible_index_count +=
+                  static_cast<uint32_t>(batch.indexCountGl);
+            }
+          };
+          collect_depth_mdi_state(mdi_opaque_pass, 1u << 0);
+          collect_depth_mdi_state(mdi_cutout_pass, 1u << 1);
+          collect_depth_mdi_state(mdi_transparent_pass, 1u << 2);
+        }
+      }
       glm::vec4 near_h =
           inverse_view_projection * glm::vec4(ndc_x, ndc_y, -1.0f, 1.0f);
       glm::vec4 far_h =
@@ -1019,7 +1161,8 @@ void NoteFrustumCoverageGaps(
     mdi_store->SyncCompactVisToCpu(mdi_cutout_pass);
     mdi_store->SyncCompactVisToCpu(mdi_transparent_pass);
   }
-  CaptureTransparentPixelProbe(world, cache, transparent_refs,
+  CaptureTransparentPixelProbe(world, cache, opaque_refs, transparent_refs,
+                               mdi_opaque_pass, mdi_cutout_pass,
                                mdi_transparent_pass, textures,
                                view_projection, camera_position, frame_epoch,
                                opaque_capture);

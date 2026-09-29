@@ -3517,6 +3517,52 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_surface_y
                << ",\"renderer_pixel_surface_z\":"
                << r.renderer_pixel_surface_z
+               << ",\"renderer_pixel_opaque_surface_valid\":"
+               << static_cast<int>(r.renderer_pixel_opaque_surface_valid)
+               << ",\"renderer_pixel_opaque_surface_x\":"
+               << r.renderer_pixel_opaque_surface_x
+               << ",\"renderer_pixel_opaque_surface_y\":"
+               << r.renderer_pixel_opaque_surface_y
+               << ",\"renderer_pixel_opaque_surface_z\":"
+               << r.renderer_pixel_opaque_surface_z
+               << ",\"renderer_pixel_opaque_chunk_x\":"
+               << r.renderer_pixel_opaque_chunk_x
+               << ",\"renderer_pixel_opaque_chunk_y\":"
+               << r.renderer_pixel_opaque_chunk_y
+               << ",\"renderer_pixel_opaque_chunk_z\":"
+               << r.renderer_pixel_opaque_chunk_z
+               << ",\"renderer_pixel_opaque_chunk_nonair\":"
+               << r.renderer_pixel_opaque_chunk_nonair
+               << ",\"renderer_pixel_opaque_chunk_content_revision\":"
+               << r.renderer_pixel_opaque_chunk_content_revision
+               << ",\"renderer_pixel_opaque_mesh_revision\":"
+               << r.renderer_pixel_opaque_mesh_revision
+               << ",\"renderer_pixel_opaque_published_geom_rev\":"
+               << r.renderer_pixel_opaque_published_geom_rev
+               << ",\"renderer_pixel_opaque_published_light_rev\":"
+               << r.renderer_pixel_opaque_published_light_rev
+               << ",\"renderer_pixel_opaque_field_light_rev\":"
+               << r.renderer_pixel_opaque_field_light_rev
+               << ",\"renderer_pixel_opaque_source_index_count\":"
+               << r.renderer_pixel_opaque_source_index_count
+               << ",\"renderer_pixel_opaque_ref_flags\":"
+               << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
+               << ",\"renderer_pixel_opaque_drawable\":"
+               << static_cast<int>(r.renderer_pixel_opaque_drawable)
+               << ",\"renderer_pixel_opaque_draw_ready\":"
+               << static_cast<int>(r.renderer_pixel_opaque_draw_ready)
+               << ",\"renderer_pixel_opaque_live_gpu\":"
+               << static_cast<int>(r.renderer_pixel_opaque_live_gpu)
+               << ",\"renderer_pixel_opaque_mdi_resident_pass_flags\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_mdi_resident_pass_flags)
+               << ",\"renderer_pixel_opaque_mdi_visible_pass_flags\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_mdi_visible_pass_flags)
+               << ",\"renderer_pixel_opaque_mdi_index_count\":"
+               << r.renderer_pixel_opaque_mdi_index_count
+               << ",\"renderer_pixel_opaque_mdi_visible_index_count\":"
+               << r.renderer_pixel_opaque_mdi_visible_index_count
                << ",\"renderer_column_reason\":"
                << static_cast<int>(r.renderer_column_reason)
                << ",\"renderer_column_draw_ok\":"
