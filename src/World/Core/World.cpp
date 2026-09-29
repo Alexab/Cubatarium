@@ -7734,12 +7734,16 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         const MeshPublishRevs published =
             MeshService->GetCache().GetMeshPublishRevs(chunk_data.coord);
         const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+        const uint64_t meshed_light_rev =
+            MeshService->GetCache().GetMeshedLightRevision(chunk_data.coord);
         const bool drawable =
             MeshService->HasDrawableGreedyMesh(chunk_data.coord);
         const bool satisfying =
             MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord);
-        if (satisfying && ChunkSliceHasCurrentLightSettlement(
-                              *this, chunk_data.coord))
+        const bool settled_current =
+            ChunkSliceHasCurrentLightSettlement(*this, chunk_data.coord);
+        if (satisfying && settled_current &&
+            meshed_light_rev >= field_light_rev)
         {
           continue;
         }
@@ -7758,6 +7762,16 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         const bool markrelit_input =
             std::find(relit_coords.begin(), relit_coords.end(),
                       chunk_data.coord) != relit_coords.end();
+        const bool primary_source =
+            std::find(primary_grounds.begin(), primary_grounds.end(), column) !=
+            primary_grounds.end();
+        const bool light_changed =
+            std::find(light_changes.changed_coords.begin(),
+                      light_changes.changed_coords.end(), chunk_data.coord) !=
+            light_changes.changed_coords.end();
+        const bool stale_mesh_input =
+            std::find(stale_mesh_coords.begin(), stale_mesh_coords.end(),
+                      chunk_data.coord) != stale_mesh_coords.end();
         CubatariumLogInfo(
             "RelightAudit",
             "slice_handoff job=" + std::to_string(result.job_id) +
@@ -7765,15 +7779,16 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                 std::to_string(chunk_data.coord.y) + "," +
                 std::to_string(chunk_data.coord.z) + ") non_air=" +
                 std::to_string(chunk->GetNonAirCount()) + " installed=" +
-                std::to_string(light_changes.changed_coords.size() > 0 &&
-                               std::find(light_changes.changed_coords.begin(),
-                                         light_changes.changed_coords.end(),
-                                         chunk_data.coord) !=
-                                   light_changes.changed_coords.end()) +
+                std::to_string(light_changed) +
+                " stale_mesh_input=" + std::to_string(stale_mesh_input) +
+                " primary_source=" + std::to_string(primary_source) +
+                " primary_only=" + std::to_string(primary_only_apply) +
+                " finalize=" +
+                std::to_string(result.finalize_pending_gate) +
+                " draw_gate=" +
+                std::to_string(result.visible_draw_gate_repair) +
                 " markrelit_input=" + std::to_string(markrelit_input) +
-                " settled_current=" + std::to_string(
-                    ChunkSliceHasCurrentLightSettlement(*this,
-                                                        chunk_data.coord)) +
+                " settled_current=" + std::to_string(settled_current) +
                 " demand_identity=" +
                 std::to_string(demand ? demand->world_epoch : 0) + ":" +
                 std::to_string(demand ? demand->incarnation : 0) + "/" +
@@ -7790,9 +7805,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                 ":" + std::to_string(published.light_rev) +
                 " mesh_revision=" + std::to_string(
                     MeshService->GetChunkMeshRevision(chunk_data.coord)) +
-                " meshed_light_rev=" + std::to_string(
-                    MeshService->GetCache().GetMeshedLightRevision(
-                        chunk_data.coord)) +
+                " meshed_light_rev=" + std::to_string(meshed_light_rev) +
                 " drawable=" + std::to_string(drawable) +
                 " satisfying=" + std::to_string(satisfying) +
                 " dirty=" + std::to_string(
