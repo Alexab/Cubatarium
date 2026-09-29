@@ -299,6 +299,18 @@ struct VisualBlackTraceRecord
   uint32_t renderer_mdi_index_count{0};
   uint32_t renderer_mdi_visible_index_count{0};
   uint32_t renderer_gpu_slot_quad_count{0};
+  /// sample_kind=8 CPU source-mesh cross-check for the first MDI material:
+  /// counts verify face coverage while light extrema expose dark vertex data.
+  uint32_t renderer_source_vertex_count{0};
+  uint32_t renderer_source_index_count{0};
+  uint32_t renderer_source_top_face_quads{0};
+  uint32_t renderer_source_light_preview_vertices{0};
+  uint8_t renderer_source_face_mask{0};
+  uint8_t renderer_texture_ready{0};
+  float renderer_source_sky_light_min{0.0f};
+  float renderer_source_sky_light_max{0.0f};
+  float renderer_source_block_light_min{0.0f};
+  float renderer_source_block_light_max{0.0f};
   /// sample_kind=3: 1=settled field needs mesh-only repair; 0=relight target.
   uint8_t draw_gate_repair_mode{0};
   /// Persistence relight queue location/band for renderer, focus, and

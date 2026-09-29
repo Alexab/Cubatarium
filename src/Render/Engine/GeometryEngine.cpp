@@ -358,7 +358,8 @@ void NoteFrustumCoverageGaps(
     GreedyGpuPassCache &mdi_opaque_pass,
     GreedyGpuPassCache &mdi_cutout_pass,
     GreedyGpuPassCache &mdi_transparent_pass,
-    UMdiVertexPoolStore *mdi_store)
+    UMdiVertexPoolStore *mdi_store,
+    const std::map<size_t, UTextureCube> &textures)
 {
   if (!UJobStageTrace::VisualBlackTraceEnabled())
   {
@@ -600,6 +601,83 @@ void NoteFrustumCoverageGaps(
     collect_mdi_state(mdi_opaque_pass, 1u << 0);
     collect_mdi_state(mdi_cutout_pass, 1u << 1);
     collect_mdi_state(mdi_transparent_pass, 1u << 2);
+    if (record.renderer_mdi_first_block_id != 0xffffu)
+    {
+      const auto texture_it = textures.find(
+          static_cast<size_t>(record.renderer_mdi_first_block_id));
+      record.renderer_texture_ready =
+          texture_it != textures.end() && texture_it->second.GetTextureId() != 0
+              ? 1u
+              : 0u;
+
+      bool has_source_vertex = false;
+      auto collect_source_light = [&](const std::vector<GreedyBatchRef> &refs)
+      {
+        for (const GreedyBatchRef &ref : refs)
+        {
+          if (ref.chunkCoord != coord)
+          {
+            continue;
+          }
+          const GreedyMeshBatch *source = cache.TryGetGreedyBatch(ref);
+          if (!source ||
+              source->blockId !=
+                  static_cast<BlockId>(record.renderer_mdi_first_block_id))
+          {
+            continue;
+          }
+          record.renderer_source_index_count +=
+              static_cast<uint32_t>(source->indices.size());
+          record.renderer_source_vertex_count +=
+              static_cast<uint32_t>(source->vertices.size());
+          for (const GreedyMeshVertex &vertex : source->vertices)
+          {
+            const int face = static_cast<int>(vertex.faceIndex + 0.5f);
+            if (face >= 0 && face < 6)
+            {
+              record.renderer_source_face_mask |=
+                  static_cast<uint8_t>(1u << face);
+              if (face == 5)
+              {
+                ++record.renderer_source_top_face_quads;
+              }
+            }
+            if (vertex.lightPreview > 0.5f)
+            {
+              ++record.renderer_source_light_preview_vertices;
+            }
+            if (!has_source_vertex)
+            {
+              record.renderer_source_sky_light_min = vertex.skyLight;
+              record.renderer_source_sky_light_max = vertex.skyLight;
+              record.renderer_source_block_light_min = vertex.blockLight;
+              record.renderer_source_block_light_max = vertex.blockLight;
+              has_source_vertex = true;
+            }
+            else
+            {
+              record.renderer_source_sky_light_min =
+                  std::min(record.renderer_source_sky_light_min,
+                           vertex.skyLight);
+              record.renderer_source_sky_light_max =
+                  std::max(record.renderer_source_sky_light_max,
+                           vertex.skyLight);
+              record.renderer_source_block_light_min =
+                  std::min(record.renderer_source_block_light_min,
+                           vertex.blockLight);
+              record.renderer_source_block_light_max =
+                  std::max(record.renderer_source_block_light_max,
+                           vertex.blockLight);
+            }
+          }
+        }
+      };
+      collect_source_light(opaque_refs);
+      collect_source_light(transparent_refs);
+      // Each top-face quad contributes four source vertices. Store the actual
+      // quad count rather than vertex count so the JSON is easy to compare.
+      record.renderer_source_top_face_quads /= 4u;
+    }
     record.renderer_column_reason =
         static_cast<uint8_t>(column_state.reason);
     record.renderer_column_draw_ok = column_state.draw_ok ? 1u : 0u;
@@ -1345,7 +1423,7 @@ void UGeometryEngine::DrawCubeGeometry()
           draw.opaqueCutoutRefs, draw.transparentRefs, filtered_opaque,
           filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,
           GreedyGpuTransparent,
-          dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()));
+          dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()), textures);
     }
     if (cullWasEnabled)
     {

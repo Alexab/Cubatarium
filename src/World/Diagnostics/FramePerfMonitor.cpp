@@ -3458,6 +3458,26 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_mdi_visible_index_count
                << ",\"renderer_gpu_slot_quad_count\":"
                << r.renderer_gpu_slot_quad_count
+               << ",\"renderer_source_vertex_count\":"
+               << r.renderer_source_vertex_count
+               << ",\"renderer_source_index_count\":"
+               << r.renderer_source_index_count
+               << ",\"renderer_source_top_face_quads\":"
+               << r.renderer_source_top_face_quads
+               << ",\"renderer_source_light_preview_vertices\":"
+               << r.renderer_source_light_preview_vertices
+               << ",\"renderer_source_face_mask\":"
+               << static_cast<int>(r.renderer_source_face_mask)
+               << ",\"renderer_texture_ready\":"
+               << static_cast<int>(r.renderer_texture_ready)
+               << ",\"renderer_source_sky_light_min\":"
+               << r.renderer_source_sky_light_min
+               << ",\"renderer_source_sky_light_max\":"
+               << r.renderer_source_sky_light_max
+               << ",\"renderer_source_block_light_min\":"
+               << r.renderer_source_block_light_min
+               << ",\"renderer_source_block_light_max\":"
+               << r.renderer_source_block_light_max
                << ",\"renderer_column_reason\":"
                << static_cast<int>(r.renderer_column_reason)
                << ",\"renderer_column_draw_ok\":"
