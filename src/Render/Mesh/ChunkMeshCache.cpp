@@ -3378,12 +3378,13 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
   const bool audit_relight =
       std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
   const UChunkManager &chunks = world.GetChunkManager();
-  // A denied far repair remains durable but must not be injected into Dirty
-  // ahead of the normal admission budget. Activate it only in the lit-drawable
-  // ring; this keeps far debt from flooding the priority queue during travel.
+  // A denied far repair remains durable but must not flood Dirty ahead of the
+  // normal admission budget. Activate it only inside the bounded visual repair
+  // ring; the single-ticket rate below keeps that wider ring from becoming a
+  // priority-queue burst during travel.
   const int activation_radius =
       std::max(0, std::min(MeshFocusRadiusChunks,
-                           kVisualStageLitDrawableHoriz));
+                           RelightFifoTrimProtectHoriz()));
   std::vector<glm::ivec3> candidates;
   candidates.reserve(PendingStaleLightRemeshes_.size());
   for (const glm::ivec3 coord : PendingStaleLightRemeshes_)
