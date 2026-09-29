@@ -3384,20 +3384,28 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
   const int activation_radius =
       std::max(0, std::min(MeshFocusRadiusChunks,
                            kVisualStageLitDrawableHoriz));
-  // Discover settled provisional previews only when they enter the active
-  // visual ring. Far previews retain their ambient fallback without filling
-  // the durable queue during long flights; revision-stale debts stay queued.
+  // Discover settled provisional previews and revision-stale drawables only
+  // when they enter the active visual ring. Far previews retain their ambient
+  // fallback without filling the durable queue during long flights.
   for (const auto &entry : GreedyCache)
   {
     const glm::ivec3 coord = entry.first;
     const int horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
                                std::abs(coord.z - MeshFocusGroundChunk.z));
-    if (horiz > activation_radius || !entry.second.ProvisionalLightPreview ||
-        !HasDrawableGreedyMesh(coord))
+    if (horiz > activation_radius || !HasDrawableGreedyMesh(coord))
     {
       continue;
     }
     const UChunk *chunk = chunks.GetChunk(coord);
+    const uint64_t field_light_rev =
+        chunk ? chunk->GetLightFieldRevision() : 0;
+    const bool revision_stale =
+        chunk && (GetMeshedLightRevision(coord) < field_light_rev ||
+                  GetMeshPublishRevs(coord).light_rev < field_light_rev);
+    if (!entry.second.ProvisionalLightPreview && !revision_stale)
+    {
+      continue;
+    }
     const ChunkRenderDemandRecord *demand =
         UChunkRenderDemandStore::Get().Find(coord);
     if (!chunk || chunk->GetNonAirCount() == 0 || !demand ||
