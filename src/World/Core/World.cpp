@@ -3137,6 +3137,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     struct FocusSliceCandidate
     {
       VisualBlackTraceRecord record{};
+      bool in_visual_band{false};
       int horizontal_distance{0};
       int vertical_distance{0};
     };
@@ -3269,6 +3270,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             candidate.horizontal_distance =
                 std::max(std::abs(dx), std::abs(dz));
             candidate.vertical_distance = std::abs(cy - camera_cy);
+            candidate.in_visual_band = cy >= band_cy0 && cy <= band_cy1;
             focus_slice_candidates.push_back(candidate);
           }
         }
@@ -3280,6 +3282,10 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                 if (a.record.focus_state != b.record.focus_state)
                 {
                   return a.record.focus_state < b.record.focus_state;
+                }
+                if (a.in_visual_band != b.in_visual_band)
+                {
+                  return a.in_visual_band;
                 }
                 if (a.horizontal_distance != b.horizontal_distance)
                 {
