@@ -922,6 +922,61 @@ void CaptureTransparentPixelProbe(
                 opaque_demand->settled_light_rev;
           }
 
+          // Reuse the renderer-owner fields for the exact opaque depth-hit
+          // slice. Pixel kind 9 also samples the sea plane, so keep
+          // renderer_gate_flags reserved for its established sea-plane
+          // semantics and put opaque ownership only in these generic fields.
+          record.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+              opaque_chunk, record.mesh_dirty_queue_index,
+              record.mesh_dirty_queue_size);
+          record.mesh_dirty_queue_age_frames =
+              cache.GetDirtyQueueAgeFrames(opaque_chunk);
+          const glm::ivec2 opaque_column(opaque_chunk.x, opaque_chunk.z);
+          const bool opaque_dirty = cache.IsChunkMeshDirty(opaque_chunk);
+          const bool opaque_mesh_inflight =
+              cache.HasInflightMeshBuild(opaque_chunk);
+          const bool opaque_gpu_pending =
+              cache.IsPendingGpuApply(opaque_chunk);
+          const bool opaque_gpu_queued =
+              cache.IsPendingGpuQueued(opaque_chunk);
+          const bool opaque_gpu_kicked =
+              cache.IsPendingGpuKickedOrDispatched(opaque_chunk);
+          const bool opaque_gpu_extract =
+              cache.IsGpuExtractInFlight(opaque_chunk);
+          record.mesh_work_owner_flags =
+              (opaque_dirty ? 1u << 0 : 0u) |
+              (opaque_mesh_inflight ? 1u << 1 : 0u) |
+              (cache.IsRemeshAfterApplyPending(opaque_chunk) ? 1u << 2 : 0u) |
+              (opaque_gpu_pending ? 1u << 3 : 0u) |
+              (opaque_gpu_queued ? 1u << 4 : 0u) |
+              (opaque_gpu_kicked ? 1u << 5 : 0u) |
+              (opaque_gpu_extract ? 1u << 6 : 0u) |
+              (cache.HasPendingCaptureWork(opaque_chunk) ? 1u << 7 : 0u);
+          const bool opaque_pending_light =
+              world.IsPendingLightBeforeMesh(opaque_column);
+          const bool opaque_async_relight =
+              world.IsAsyncRelightColumnInFlight(opaque_column);
+          const ColumnRenderableState opaque_column_state =
+              world.GetColumnRenderableState(opaque_column);
+          const bool opaque_relight_queued =
+              world.IsTerrainColumnRelightQueued(opaque_column);
+          const bool opaque_lit_ready = world.IsColumnLitReady(
+              glm::ivec3(opaque_column.x, 0, opaque_column.y));
+          const bool opaque_lit_gate_required =
+              world.RequiresLightingLitGate();
+          record.relight_owner_flags =
+              (opaque_pending_light ? 1u << 0 : 0u) |
+              (opaque_relight_queued ? 1u << 1 : 0u) |
+              (opaque_async_relight ? 1u << 2 : 0u) |
+              (cache.IsDeferMeshUntilLit(opaque_chunk) ? 1u << 3 : 0u) |
+              (cache.IsSoftDeferHeld(opaque_chunk) ? 1u << 4 : 0u) |
+              (opaque_lit_ready ? 1u << 5 : 0u) |
+              (opaque_lit_gate_required ? 1u << 6 : 0u) |
+              (opaque_column_state.has_repair_ticket ? 1u << 7 : 0u);
+          world.PopulateRendererRelightQueueTrace(opaque_column, record);
+          record.column_emerge_stage =
+              static_cast<uint8_t>(opaque_column_state.stage);
+
           const auto collect_depth_mdi_state =
               [&](const GreedyGpuPassCache &pass, uint8_t pass_bit)
           {
