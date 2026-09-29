@@ -2447,9 +2447,36 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   // bottom faces), not proof that every drawable face is dark. A mixed mesh
   // can still contain zero-light vertices; do not suppress its preview just
   // because a different face in the same chunk is lit.
-  if (!cache.ChunkHasFullyDarkFace(chunk_coord) ||
-      !IsPendingLightBeforeMesh(column) ||
-      HasCurrentChunkSliceLightSettlement(chunk_coord))
+  if (!cache.ChunkHasFullyDarkFace(chunk_coord))
+  {
+    return false;
+  }
+
+  const UChunk *chunk =
+      BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(chunk_coord);
+  const bool demand_identity_current =
+      demand && chunk &&
+      demand->world_epoch == cache.GetCaptureStore().WorldEpoch() &&
+      demand->incarnation == chunk->GetIncarnation();
+  const bool demand_light_current =
+      !demand ||
+      (demand_identity_current &&
+       demand->desired_light_rev <= demand->published_light_rev);
+  const uint64_t field_light_rev =
+      chunk ? chunk->GetLightFieldRevision() : 0;
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+  const bool settled_mesh_light_current =
+      HasCurrentChunkSliceLightSettlement(chunk_coord) &&
+      demand_light_current && published.light_rev == field_light_rev &&
+      cache.GetMeshedLightRevision(chunk_coord) == field_light_rev;
+  const bool demand_owns_light_repair =
+      demand_identity_current && demand->has_active_attempt &&
+      demand->desired_light_rev > demand->published_light_rev;
+  const bool light_repair_pending =
+      IsPendingLightBeforeMesh(column) || demand_owns_light_repair;
+  if (!light_repair_pending || settled_mesh_light_current)
   {
     return false;
   }
@@ -2457,6 +2484,11 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   // PendingLight and its FIFO key are column-scoped, while Capture advances
   // through Y-bands. A dark slice outside the current band is still waiting
   // behind the same column repair; don't hide its existing mesh between bands.
+  // A settled field alone is not enough to suppress this preview: M148 showed
+  // a field at light revision 1 with an active demand for revision 1, while
+  // both the meshed and published image remained at revision 0. Keep the
+  // existing mesh visible with the shader fallback until that image catches
+  // up; only a settled, matching published mesh ends the preview.
   const bool relight_owned = IsTerrainColumnRelightQueued(column) ||
                              IsAsyncRelightColumnInFlight(column) ||
                              GetColumnFlowExecutor().HasRepairTicket(column);
@@ -2468,7 +2500,7 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
       cache.IsPendingGpuQueued(chunk_coord) ||
       cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
       cache.IsGpuExtractInFlight(chunk_coord);
-  return relight_owned || mesh_repair_owned;
+  return relight_owned || mesh_repair_owned || demand_owns_light_repair;
 }
 
 bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
