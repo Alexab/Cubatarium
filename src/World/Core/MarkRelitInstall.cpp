@@ -243,6 +243,28 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           }
         }
       }
+      // Preserve an exact retry owner for every drawable whose installed light
+      // mesh revision is behind the chunk's current light field. This applies
+      // even when the normal dirty budget admits the first attempt: the queue
+      // remains until publication catches up, covering queue trimming and
+      // transient owners that disappear before the replacement is published.
+      const UChunk *relit_chunk =
+          BlockWorld.GetChunkManager().GetChunk(coord);
+      const uint64_t field_light_rev =
+          relit_chunk ? relit_chunk->GetLightFieldRevision() : 0;
+      const uint64_t meshed_light_rev =
+          mesh->GetCache().GetMeshedLightRevision(coord);
+      const uint64_t published_light_rev =
+          mesh->GetCache().GetMeshPublishRevs(coord).light_rev;
+      const bool stale_drawable =
+          relit_chunk && mesh->HasDrawableGreedyMesh(coord) &&
+          (meshed_light_rev < field_light_rev ||
+           published_light_rev < field_light_rev);
+      if (stale_drawable)
+      {
+        mesh->QueueStaleLightRemesh(coord);
+      }
+
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
       // enqueues (PreferKick≡0 cannot own pending GPU alone).
       const bool dirty_admit_budget = mesh->TryConsumeDirtyAdmit();
@@ -250,22 +272,11 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       {
         if (horiz > 4)
         {
-          // Dirty admission is budgeted, but a stale-light remesh cannot be
-          // forgotten when the moving focus has outrun that budget. Keep the
-          // exact drawable chunk as durable invalidation debt; the cache drains
-          // it near-first in bounded batches and invalidates its capture before
-          // admitting the replacement mesh.
-          const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-          const uint64_t field_light_rev =
-              chunk ? chunk->GetLightFieldRevision() : 0;
-          const uint64_t meshed_light_rev =
-              mesh->GetCache().GetMeshedLightRevision(coord);
-          const bool stale_drawable =
-              chunk && mesh->HasDrawableGreedyMesh(coord) &&
-              meshed_light_rev < field_light_rev;
+          // Dirty admission is budgeted. A stale drawable is already in the
+          // durable debt queue above; it will be admitted near-first once it
+          // enters the visual repair ring.
           if (stale_drawable)
           {
-            mesh->QueueStaleLightRemesh(coord);
             if (audit_relight)
             {
               CubatariumLogInfo(
@@ -348,6 +359,14 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       else
       {
         mesh->MarkDirty(coord, MeshRevisionBumpReason::MarkRelitInstall);
+      }
+      // A drawable light repair belongs in the protected remesh lane no matter
+      // whether the first dirty owner came from the ordinary budget, focus
+      // bypass, or the priority admission path.
+      if (stale_drawable)
+      {
+        visible_remesh_priority =
+            mesh->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
       }
       ++PhysicsTelemetryData.MarkRelitScheduleN;
       ++dirty_admitted_n;
