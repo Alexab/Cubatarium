@@ -1970,9 +1970,15 @@ void UGeometryEngine::DrawCubeGeometry()
       // post-transparent probe, so each sample is a direct before/after pair.
       static uint32_t render_probe_count = 0;
       ++render_probe_count;
-      if (render_probe_count % 120u == 0u)
+      // The M147 repro is localized near x=-155. Sample that narrow route
+      // window twice as often so a 16-block chunk cannot fall between probes;
+      // retain the lower-cost cadence everywhere else.
+      const float probe_camera_x = camera->GetPosition().x;
+      const uint32_t probe_stride =
+          probe_camera_x >= -210.0f && probe_camera_x <= -120.0f ? 60u : 120u;
+      if (render_probe_count % probe_stride == 0u)
       {
-        pixel_probe_capture.probe_id = render_probe_count / 120u;
+        pixel_probe_capture.probe_id = render_probe_count;
       }
     }
     {
