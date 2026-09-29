@@ -455,8 +455,10 @@ void CaptureTransparentPixelProbe(
       static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
       world.GetPreferredLoadFocusBlock());
-  // This is an opt-in forensic probe. Limit readbacks to one GPU payload per
-  // ray-mapped chunk in a capture, and only when the sampled output is dark.
+  // This is an opt-in forensic probe. Limit GPU payload readbacks to three
+  // unique ray-mapped fluid chunks per capture; selection is based on CPU fluid
+  // surface geometry, not framebuffer color, so missing commands can be seen
+  // even when the sampled pixel is not near-black.
   std::unordered_set<glm::ivec3, IVec3Hash> payload_checked_chunks;
   payload_checked_chunks.reserve(12);
 
@@ -805,12 +807,13 @@ void CaptureTransparentPixelProbe(
             const bool transparent_pass_changed_pixel =
                 red != pretransparent_red || green != pretransparent_green ||
                 blue != pretransparent_blue;
-            const bool near_black_pixel =
-                red <= 16u && green <= 24u && blue <= 32u && alpha >= 200u;
-            if (near_black_pixel && transparent_pass_changed_pixel &&
+            const bool mapped_fluid_surface_candidate =
+                record.renderer_source_top_face_quads > 0u ||
+                transparent_pass_changed_pixel;
+            if (mapped_fluid_surface_candidate &&
+                record.renderer_mdi_first_block_id != 0xffffu &&
                 payload_checked_chunks.size() < 3u &&
-                payload_checked_chunks.insert(surface_chunk).second &&
-                record.renderer_mdi_first_block_id != 0xffffu)
+                payload_checked_chunks.insert(surface_chunk).second)
             {
               const BlockId source_block = static_cast<BlockId>(
                   record.renderer_mdi_first_block_id);
