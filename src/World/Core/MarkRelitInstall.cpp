@@ -250,18 +250,23 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       {
         if (horiz > 4)
         {
-          // A28 T1: hinterland admit-deny is not a Dirty queue drop — omit
-          // DirtyDropped so A24 thrash gate measures DropRemesh/MaybeDrop only.
-          if (audit_relight)
+          // Dirty admission is budgeted, but a stale-light remesh cannot be
+          // forgotten when the moving focus has outrun that budget. Keep the
+          // exact drawable chunk as durable invalidation debt; the cache drains
+          // it near-first in bounded batches and invalidates its capture before
+          // admitting the replacement mesh.
+          const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+          const uint64_t field_light_rev =
+              chunk ? chunk->GetLightFieldRevision() : 0;
+          const uint64_t meshed_light_rev =
+              mesh->GetCache().GetMeshedLightRevision(coord);
+          const bool stale_drawable =
+              chunk && mesh->HasDrawableGreedyMesh(coord) &&
+              meshed_light_rev < field_light_rev;
+          if (stale_drawable)
           {
-            UChunkMeshCache::LitApplyMeshProbe probe{};
-            mesh->FillLitApplyMeshProbe(coord, probe);
-            const UChunk *chunk =
-                BlockWorld.GetChunkManager().GetChunk(coord);
-            const uint64_t field_light_rev =
-                chunk ? chunk->GetLightFieldRevision() : 0;
-            if (probe.has_drawable &&
-                probe.meshed_light_rev < field_light_rev)
+            mesh->QueueMeshDependencyInvalidation(coord);
+            if (audit_relight)
             {
               CubatariumLogInfo(
                   "RelightAudit",
@@ -274,7 +279,12 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
                       std::to_string(focus_g.z) + ") field_light_rev=" +
                       std::to_string(field_light_rev) +
                       " meshed_light_rev=" +
-                      std::to_string(probe.meshed_light_rev) +
+                      std::to_string(meshed_light_rev) +
+                      " durable_owner=" + std::to_string(
+                          mesh->GetCache().HasPendingMeshDependencyInvalidation(
+                              coord)) +
+                      " invalidation_backlog=" + std::to_string(
+                          mesh->GetMeshDependencyInvalidationBacklogN()) +
                       " dirty=" +
                       std::to_string(mesh->IsChunkMeshDirty(coord)));
             }
