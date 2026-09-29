@@ -80,6 +80,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <limits>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -421,11 +422,12 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
   UJobStageTrace::NoteVisualBlack(record);
 }
 
-void CaptureTransparentPixelProbe(UWorld &world,
-                                  const glm::mat4 &view_projection,
-                                  const glm::vec3 &camera_position,
-                                  uint64_t frame_epoch,
-                                  const OpaquePixelProbeCapture &opaque_capture)
+void CaptureTransparentPixelProbe(
+    UWorld &world, const UChunkMeshCache &cache,
+    const std::vector<GreedyBatchRef> &transparent_refs,
+    const std::map<size_t, UTextureCube> &textures,
+    const glm::mat4 &view_projection, const glm::vec3 &camera_position,
+    uint64_t frame_epoch, const OpaquePixelProbeCapture &opaque_capture)
 {
   const bool marker_mode = DebugTransparentFragmentMarkerEnabled();
 
@@ -562,6 +564,77 @@ void CaptureTransparentPixelProbe(UWorld &world,
             record.cx = surface_chunk.x;
             record.cy = surface_chunk.y;
             record.cz = surface_chunk.z;
+
+            // Tie the sampled screen ray to the CPU source vertices for the
+            // exact fluid chunk slice under that ray. This distinguishes
+            // chunk-local vertex-light/material differences from missing
+            // transparent fragments in neighboring chunks.
+            float source_sky_min = std::numeric_limits<float>::infinity();
+            float source_sky_max = -std::numeric_limits<float>::infinity();
+            float source_block_min = std::numeric_limits<float>::infinity();
+            float source_block_max = -std::numeric_limits<float>::infinity();
+            for (const GreedyBatchRef &ref : transparent_refs)
+            {
+              if (ref.chunkCoord != surface_chunk ||
+                  world.GetBlockRegistry().GetRenderStyle(ref.blockId) !=
+                      BlockRenderStyle::Fluid)
+              {
+                continue;
+              }
+              const GreedyMeshBatch *source = cache.TryGetGreedyBatch(ref);
+              if (!source)
+              {
+                continue;
+              }
+              const auto texture_it =
+                  textures.find(static_cast<size_t>(source->blockId));
+              if (record.renderer_mdi_first_block_id == 0xffffu)
+              {
+                record.renderer_mdi_first_block_id =
+                    static_cast<uint16_t>(source->blockId);
+                record.renderer_texture_ready =
+                    texture_it != textures.end() &&
+                            texture_it->second.GetTextureId() != 0
+                        ? 1u
+                        : 0u;
+              }
+              for (const GreedyMeshVertex &vertex : source->vertices)
+              {
+                const int face = static_cast<int>(vertex.faceIndex + 0.5f);
+                if (face < 0 || face >= 6)
+                {
+                  continue;
+                }
+                record.renderer_source_face_mask |=
+                    static_cast<uint8_t>(1u << face);
+                if (face != 4)
+                {
+                  continue;
+                }
+                ++record.renderer_source_vertex_count;
+                if (vertex.lightPreview > 0.5f)
+                {
+                  ++record.renderer_source_light_preview_vertices;
+                }
+                source_sky_min = std::min(source_sky_min, vertex.skyLight);
+                source_sky_max = std::max(source_sky_max, vertex.skyLight);
+                source_block_min =
+                    std::min(source_block_min, vertex.blockLight);
+                source_block_max =
+                    std::max(source_block_max, vertex.blockLight);
+              }
+            }
+            if (record.renderer_source_vertex_count > 0)
+            {
+              record.renderer_source_top_face_quads =
+                  record.renderer_source_vertex_count / 4u;
+              record.renderer_source_index_count =
+                  record.renderer_source_top_face_quads * 6u;
+              record.renderer_source_sky_light_min = source_sky_min;
+              record.renderer_source_sky_light_max = source_sky_max;
+              record.renderer_source_block_light_min = source_block_min;
+              record.renderer_source_block_light_max = source_block_max;
+            }
           }
         }
       }
@@ -596,8 +669,9 @@ void NoteFrustumCoverageGaps(
     return;
   }
   const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
-  CaptureTransparentPixelProbe(world, view_projection, camera_position,
-                               frame_epoch, opaque_capture);
+  CaptureTransparentPixelProbe(world, cache, transparent_refs, textures,
+                               view_projection, camera_position, frame_epoch,
+                               opaque_capture);
   // GPU compact culling keeps the SSBO result on-device and leaves the CPU
   // mirror stale. On this opt-in diagnostic sample only, read back visibility
   // so the trace reports the command that was actually submitted this frame.
