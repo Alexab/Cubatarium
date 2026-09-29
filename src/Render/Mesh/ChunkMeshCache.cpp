@@ -5208,12 +5208,19 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       queued_missing_mesh && pipeline->HasFreeReadbackSlot() &&
       ShouldForceGpuKickUnderQueuedDebt(queued_n, focus_kick_debt,
                                         kick_debt_proxy);
-  // Finish polling is opportunistic when a visible first mesh is queued. Keep
-  // part of this frame's GPU budget available for one kick; otherwise a finish
-  // pass can consume the whole budget before the debt-kick path runs, leaving
-  // queued meshes to fill every output slot and blocking new first-mesh work.
+  // A saturated output queue also needs a bounded kick when the readback ring
+  // has room. Without one, existing drawable remeshes are not treated as
+  // critical missing-mesh debt; a short frame budget can leave all queued
+  // outputs unsubmitted while admission is already clamped to zero.
+  const bool output_queue_progress_kick =
+      queued_n > 0 && PendingGpuApplies.size() >= 12 &&
+      pipeline->HasFreeReadbackSlot();
+  // Finish polling is opportunistic when a visible first mesh or saturated
+  // output queue needs a kick. Keep part of this frame's GPU budget available
+  // for that bounded progress kick.
   const double finish_budget_ms =
-      reserve_missing_mesh_kick && budget_ms > 0.0
+      (reserve_missing_mesh_kick || output_queue_progress_kick) &&
+              budget_ms > 0.0
           ? std::max(0.0, budget_ms - std::min(1.0, budget_ms * 0.5))
           : budget_ms;
   auto finish_budget_left = [&]() {
@@ -5796,10 +5803,17 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       queued_n,
       StarveRemeshForHoles || ColumnLoadedNoMeshPressure_ > 0 ||
           VisibleBlackFocusPressure_ >= 20 || have_urgent_dark_repair,
-      kick_debt_proxy);
+      kick_debt_proxy) ||
+      output_queue_progress_kick;
   if (force_kick_debt)
   {
     kick_cap = std::max(kick_cap, 1);
+  }
+  if (output_queue_progress_kick)
+  {
+    // Bound the saturation escape to one submission per cache tick. GPU
+    // completion and its fence polls reclaim capacity before more is admitted.
+    kick_cap = std::min(kick_cap, 1);
   }
   int debt_forced_kicks = 0;
   auto find_prefer_queued = [&]() {
@@ -5847,10 +5861,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         queued_peek->coord == urgent_dark_repair;
     const bool debt_kick_quota =
         force_kick_debt && kicked == 0 &&
-        (critical_missing || critical_dark_repair);
-    // Cost-class: do not start Kick if remaining budget < ~2ms unless critical.
+        (critical_missing || critical_dark_repair ||
+         output_queue_progress_kick);
+    // Cost-class: do not start Kick if remaining budget < ~2ms unless this is
+    // the reserved debt/output-progress submission.
     constexpr double kKickCostClassMs = 2.0;
-    if (!critical_missing && !critical_dark_repair && budget_ms > 0.0 &&
+    if (!debt_kick_quota && !critical_missing && !critical_dark_repair &&
+        budget_ms > 0.0 &&
         (budget_ms - elapsed_ms()) < kKickCostClassMs)
     {
       break;
