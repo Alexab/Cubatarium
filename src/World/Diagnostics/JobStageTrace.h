@@ -324,6 +324,8 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_x{0};
   int32_t renderer_pixel_y{0};
   uint32_t renderer_pixel_rgba{0};
+  uint32_t renderer_pixel_pretransparent_rgba{0};
+  float renderer_pixel_pretransparent_depth{1.0f};
   uint8_t renderer_pixel_marker_visible{0};
   uint8_t renderer_pixel_surface_valid{0};
   float renderer_pixel_surface_x{0.0f};

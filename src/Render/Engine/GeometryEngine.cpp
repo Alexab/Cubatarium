@@ -102,6 +102,68 @@ bool DebugTransparentFragmentMarkerEnabled()
   return enabled;
 }
 
+constexpr size_t kPixelProbeSampleCount = 40;
+
+struct OpaquePixelProbeCapture
+{
+  bool active{false};
+  uint64_t probe_id{0};
+  std::array<uint32_t, kPixelProbeSampleCount> rgba{};
+  std::array<float, kPixelProbeSampleCount> depth{};
+};
+
+void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
+{
+  GLint viewport[4] = {0, 0, 0, 0};
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  const int width = viewport[2];
+  const int height = viewport[3];
+  const int capture_height = std::max(1, height / 5);
+  if (width <= 0 || height <= 0)
+  {
+    return;
+  }
+
+  std::vector<GLubyte> pixels(static_cast<size_t>(width) * capture_height * 4u);
+  std::vector<GLfloat> depths(static_cast<size_t>(width) * capture_height);
+  glReadPixels(viewport[0], viewport[1], width, capture_height, GL_RGBA,
+               GL_UNSIGNED_BYTE, pixels.data());
+  glReadPixels(viewport[0], viewport[1], width, capture_height,
+               GL_DEPTH_COMPONENT, GL_FLOAT, depths.data());
+
+  constexpr int kTileColumns = 10;
+  constexpr int kTileRows = 4;
+  size_t sample = 0;
+  for (int row = 0; row < kTileRows; ++row)
+  {
+    const int y0 = row * capture_height / kTileRows;
+    const int y1 = (row + 1) * capture_height / kTileRows;
+    const int local_y = std::clamp((y0 + y1) / 2, 0, capture_height - 1);
+    for (int column = 0; column < kTileColumns; ++column)
+    {
+      const int x0 = column * width / kTileColumns;
+      const int x1 = (column + 1) * width / kTileColumns;
+      const int local_x = std::clamp((x0 + x1) / 2, 0, width - 1);
+      const size_t pixel_offset =
+          (static_cast<size_t>(local_y) * static_cast<size_t>(width) +
+           static_cast<size_t>(local_x)) *
+          4u;
+      const uint32_t red = pixels[pixel_offset + 0];
+      const uint32_t green = pixels[pixel_offset + 1];
+      const uint32_t blue = pixels[pixel_offset + 2];
+      const uint32_t alpha = pixels[pixel_offset + 3];
+      capture.rgba[sample] = (red << 24u) | (green << 16u) |
+                             (blue << 8u) | alpha;
+      const size_t depth_offset =
+          static_cast<size_t>(local_y) * static_cast<size_t>(width) +
+          static_cast<size_t>(local_x);
+      capture.depth[sample] = depths[depth_offset];
+      ++sample;
+    }
+  }
+  capture.active = true;
+}
+
 float EnvironmentSkyLightScale(const UWorld::EnvironmentState &env)
 {
   float scale = env.WeatherSkyAttenuation;
@@ -362,7 +424,8 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
 void CaptureTransparentPixelProbe(UWorld &world,
                                   const glm::mat4 &view_projection,
                                   const glm::vec3 &camera_position,
-                                  uint64_t frame_epoch, uint64_t probe_id)
+                                  uint64_t frame_epoch,
+                                  const OpaquePixelProbeCapture &opaque_capture)
 {
   const bool marker_mode = DebugTransparentFragmentMarkerEnabled();
 
@@ -412,11 +475,16 @@ void CaptureTransparentPixelProbe(UWorld &world,
       VisualBlackTraceRecord record{};
       record.sample_kind = 9;
       record.frame_epoch = frame_epoch;
-      record.renderer_pixel_probe_id = probe_id;
+      record.renderer_pixel_probe_id = opaque_capture.probe_id;
       record.renderer_pixel_x = viewport[0] + local_x;
       record.renderer_pixel_y = viewport[1] + local_y;
       record.renderer_pixel_rgba = (red << 24u) | (green << 16u) |
                                    (blue << 8u) | alpha;
+      const size_t sample = static_cast<size_t>(row * kTileColumns + column);
+      record.renderer_pixel_pretransparent_rgba =
+          opaque_capture.rgba[sample];
+      record.renderer_pixel_pretransparent_depth =
+          opaque_capture.depth[sample];
       const bool center_marker_visible =
           red >= 240u && green <= 15u && blue >= 240u && alpha >= 240u;
       // 2 is an internal sentinel for the normal-color sample: zero and one
@@ -520,24 +588,16 @@ void NoteFrustumCoverageGaps(
     GreedyGpuPassCache &mdi_transparent_pass,
     UMdiVertexPoolStore *mdi_store,
     const std::map<size_t, UTextureCube> &textures,
-    const glm::mat4 &view_projection)
+    const glm::mat4 &view_projection,
+    const OpaquePixelProbeCapture &opaque_capture)
 {
-  if (!UJobStageTrace::VisualBlackTraceEnabled())
+  if (!UJobStageTrace::VisualBlackTraceEnabled() || !opaque_capture.active)
   {
     return;
   }
   const uint64_t frame_epoch = world.GetStreamingFrameEpoch();
-  // StreamingFrameEpoch advances on the world streaming tick, not on every
-  // rendered frame. A modulo gate can therefore miss its sample window when
-  // the renderer is behind. Count calls to this render-path probe instead.
-  static uint32_t render_probe_count = 0;
-  ++render_probe_count;
-  if (render_probe_count % 120u != 0u)
-  {
-    return;
-  }
   CaptureTransparentPixelProbe(world, view_projection, camera_position,
-                               frame_epoch, render_probe_count / 120u);
+                               frame_epoch, opaque_capture);
   // GPU compact culling keeps the SSBO result on-device and leaves the CPU
   // mirror stale. On this opt-in diagnostic sample only, read back visibility
   // so the trace reports the command that was actually submitted this frame.
@@ -1676,6 +1736,18 @@ void UGeometryEngine::DrawCubeGeometry()
       BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
+    OpaquePixelProbeCapture pixel_probe_capture{};
+    if (UJobStageTrace::VisualBlackTraceEnabled())
+    {
+      // Take the pre-transparent color/depth on the same render frames as the
+      // post-transparent probe, so each sample is a direct before/after pair.
+      static uint32_t render_probe_count = 0;
+      ++render_probe_count;
+      if (render_probe_count % 120u == 0u)
+      {
+        pixel_probe_capture.probe_id = render_probe_count / 120u;
+      }
+    }
     {
       ScopedPhase opaque_phase(&opaque_ms);
       CUBA_ZONE("Scene.OpaqueDraw");
@@ -1693,6 +1765,10 @@ void UGeometryEngine::DrawCubeGeometry()
               cross_ms;
         }
       }
+    }
+    if (pixel_probe_capture.probe_id != 0)
+    {
+      CaptureOpaquePixelProbe(pixel_probe_capture);
     }
     // Skip full-FB depth copy when nothing transparent needs soft particles.
     if (!filtered_transparent.empty())
@@ -1729,7 +1805,7 @@ void UGeometryEngine::DrawCubeGeometry()
           filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,
           GreedyGpuTransparent,
           dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()), textures,
-          coverage_vp);
+          coverage_vp, pixel_probe_capture);
     }
     if (cullWasEnabled)
     {

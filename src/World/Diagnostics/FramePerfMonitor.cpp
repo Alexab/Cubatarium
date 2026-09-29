@@ -3496,6 +3496,10 @@ void UFramePerfMonitor::Shutdown()
                << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
                << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
                << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba
+               << ",\"renderer_pixel_pretransparent_rgba\":"
+               << r.renderer_pixel_pretransparent_rgba
+               << ",\"renderer_pixel_pretransparent_depth\":"
+               << r.renderer_pixel_pretransparent_depth
                << ",\"renderer_pixel_marker_mode\":"
                << (r.renderer_pixel_marker_visible != 2 ? "true" : "false")
                << ",\"renderer_pixel_marker_visible\":"
