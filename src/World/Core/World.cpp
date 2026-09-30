@@ -4249,7 +4249,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             const glm::ivec3 coord(cx, cy, cz);
             const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
             if (!chunk || chunk->GetNonAirCount() <= 0 ||
-                MeshService->HasMeshSatisfyingColumnReady(coord) ||
                 has_slice_work_owner(coord) ||
                 MeshService->IsPendingGpuApply(coord) ||
                 MeshService->HasInflightMeshBuild(coord) ||
