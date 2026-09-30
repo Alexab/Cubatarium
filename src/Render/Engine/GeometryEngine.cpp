@@ -4748,9 +4748,8 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
           transparent_pass ? 4u : 3u, 0u, slot->QuadCount, true);
     }
     ++packed_draw_chunks;
-    const glm::vec3 origin =
-        glm::vec3(chunk.chunkCoord * CHUNK_SIZE);
-    packedGreedyShader->SetVec3("chunkOrigin", origin);
+    const glm::ivec3 origin = chunk.chunkCoord * CHUNK_SIZE;
+    packedGreedyShader->SetIVec3("chunkOrigin", origin);
     packedGreedyShader->SetFloat(
         "uLightPreviewOverride",
         WorldInstance && WorldInstance->ShouldDrawProvisionalLightPreview(

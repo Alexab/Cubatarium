@@ -122,6 +122,16 @@ void UShaderProgram::SetVec3(const std::string &Name, const glm::vec3 &value)
   }
 }
 
+void UShaderProgram::SetIVec3(const std::string &Name,
+                              const glm::ivec3 &value)
+{
+  GLint location = GetUniformLocation(Name);
+  if (location != -1)
+  {
+    glUniform3iv(location, 1, glm::value_ptr(value));
+  }
+}
+
 void UShaderProgram::SetVec4(const std::string &Name, const glm::vec4 &value)
 {
   GLint location = GetUniformLocation(Name);
