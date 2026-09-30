@@ -8038,8 +8038,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                 missing_mesh, MeshForwardBiasK, MeshForwardXz,
                                 MeshFocusRadiusChunks);
       }
+      Dirty.BoostForwardApproachFirstMesh(
+          MeshFocusGroundChunk, MeshForwardXz,
+          kVisualStageLitDrawableHoriz - 1,
+          kVisualStageFirstMeshRelightForwardHoriz,
+          /*max_vertical_delta=*/3);
       if (JustRelitFirstMeshValid_)
       {
+        // Apply the one-sort relight boost after geometric ordering so the
+        // exact newly relit column remains first in its bounded neighborhood.
         Dirty.BoostJustRelitNear(MeshFocusGroundChunk, JustRelitFirstMeshColumn_,
                                  kVisualStageFirstMeshRelightApproachHoriz);
         // MarkRelit grants a one-sort boost to its exact primary column. A
@@ -8047,11 +8054,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // bounded handoff has already been applied.
         JustRelitFirstMeshValid_ = false;
       }
-      Dirty.BoostForwardApproachFirstMesh(
-          MeshFocusGroundChunk, MeshForwardXz,
-          kVisualStageLitDrawableHoriz - 1,
-          kVisualStageFirstMeshRelightForwardHoriz,
-          /*max_vertical_delta=*/3);
     }
     else
     {

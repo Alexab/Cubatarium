@@ -390,31 +390,80 @@ void UChunkDirtySet::BoostForwardApproachFirstMesh(
   const int near_limit = std::max(0, near_horiz);
   const int approach_limit = std::max(near_limit, max_approach_horiz);
   const int vertical_limit = std::max(0, max_vertical_delta);
-  const auto near_or_forward_approach = [&](const glm::ivec3 &coord)
+  const auto forward_dot = [&](const glm::ivec3 &coord)
   {
-    const int horiz = HorizDist(coord, focus_ground_chunk);
-    if (horiz <= near_limit)
-    {
-      return true;
-    }
-    if (horiz > approach_limit ||
-        std::abs(coord.y - focus_ground_chunk.y) > vertical_limit)
-    {
-      return false;
-    }
     const float dx = static_cast<float>(coord.x - focus_ground_chunk.x);
     const float dz = static_cast<float>(coord.z - focus_ground_chunk.z);
     const float distance = std::sqrt(dx * dx + dz * dz);
     if (distance < 0.01f)
     {
-      return false;
+      return 1.0f;
     }
-    const float forward_dot =
-        (dx * forward_x + dz * forward_z) / distance;
-    return forward_dot >= 0.5f;
+    return (dx * forward_x + dz * forward_z) / distance;
   };
-  std::stable_partition(FirstMeshQ.begin(), FirstMeshQ.end(),
-                        near_or_forward_approach);
+  const auto priority_band = [&](const glm::ivec3 &coord)
+  {
+    const int horiz = HorizDist(coord, focus_ground_chunk);
+    const int vertical = std::abs(coord.y - focus_ground_chunk.y);
+    if (horiz <= near_limit && vertical <= vertical_limit)
+    {
+      return 0; // near-FOV work in the camera's active vertical band
+    }
+    if (horiz > near_limit && horiz <= approach_limit &&
+        vertical <= vertical_limit && forward_dot(coord) >= 0.5f)
+    {
+      return 1; // visible approach work just outside the near ring
+    }
+    if (horiz <= near_limit)
+    {
+      return 2; // nearby but vertically outside the camera band
+    }
+    return 3;
+  };
+  const auto in_approach_sector = [&](const glm::ivec3 &coord)
+  { return priority_band(coord) < 3; };
+  const auto approach_end = std::stable_partition(
+      FirstMeshQ.begin(), FirstMeshQ.end(), in_approach_sector);
+
+  // PartialSortByDistanceKey only orders a bounded prefix when the dirty set
+  // is large. Promoting every approach candidate from its unsorted suffix
+  // could therefore put a ray-visible h=3 slice behind dozens of unrelated
+  // slices at the same distance. Fully order the small spatial sector after
+  // the linear partition; leave the far queue in its existing order.
+  std::stable_sort(FirstMeshQ.begin(), approach_end,
+                   [&](const glm::ivec3 &a, const glm::ivec3 &b)
+  {
+    const int band_a = priority_band(a);
+    const int band_b = priority_band(b);
+    if (band_a != band_b)
+    {
+      return band_a < band_b;
+    }
+    const int horiz_a = HorizDist(a, focus_ground_chunk);
+    const int horiz_b = HorizDist(b, focus_ground_chunk);
+    if (horiz_a != horiz_b)
+    {
+      return horiz_a < horiz_b;
+    }
+    const int vertical_a = std::abs(a.y - focus_ground_chunk.y);
+    const int vertical_b = std::abs(b.y - focus_ground_chunk.y);
+    if (vertical_a != vertical_b)
+    {
+      return vertical_a < vertical_b;
+    }
+    if (band_a == 1)
+    {
+      const float dot_a = forward_dot(a);
+      const float dot_b = forward_dot(b);
+      if (dot_a != dot_b)
+      {
+        return dot_a > dot_b;
+      }
+    }
+    const uint64_t age_a = GetEnqueueAgeFrames(a);
+    const uint64_t age_b = GetEnqueueAgeFrames(b);
+    return age_a > age_b;
+  });
   InvalidateUnified();
 }
 
@@ -485,8 +534,20 @@ void UChunkDirtySet::PrioritizeAgedNearHorizontal(
       // by horizontal distance alone erases both priorities under hole load.
       return false;
     }
-    // Once overdue, age takes precedence to guarantee bounded service. Stable
-    // ties retain the scheduler's existing FOV/vertical ordering.
+    // Keep nearer/vertically relevant holes ahead of older work farther out;
+    // age guarantees FIFO service inside each spatial band.
+    const int horiz_a = HorizDist(a, focus_ground_chunk);
+    const int horiz_b = HorizDist(b, focus_ground_chunk);
+    if (horiz_a != horiz_b)
+    {
+      return horiz_a < horiz_b;
+    }
+    const int vertical_a = std::abs(a.y - focus_ground_chunk.y);
+    const int vertical_b = std::abs(b.y - focus_ground_chunk.y);
+    if (vertical_a != vertical_b)
+    {
+      return vertical_a < vertical_b;
+    }
     return enqueue_frame(a) < enqueue_frame(b);
   };
   if (FirstMeshQ.size() > 1)
