@@ -4084,6 +4084,149 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       };
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  std::unordered_map<uint64_t, int> outer_first_mesh_target_cy;
+  if (Persistence && budget > 0 && RequiresLightingLitGate())
+  {
+    glm::vec2 forward = GetLastMovementDirXz();
+    if (GetLastMovementSpeed() <=
+            ProceduralTemplate.MovementPrefetchThreshold ||
+        glm::length(forward) <= 0.01f)
+    {
+      if (const auto camera = GetCurrentUserCamera())
+      {
+        const glm::vec3 front = camera->GetFront();
+        forward = glm::vec2(front.x, front.z);
+      }
+    }
+    const float forward_len = glm::length(forward);
+    if (forward_len > 0.01f)
+    {
+      forward /= forward_len;
+      const int approach_ring =
+          kVisualStageFirstMeshRelightApproachHoriz;
+      const int camera_band_min = std::max(0, focus_block.y - CHUNK_SIZE);
+      const int camera_band_max =
+          std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
+      const int camera_cy_min =
+          std::max(0, FloorDiv(camera_band_min, CHUNK_SIZE));
+      const int camera_cy_max =
+          std::min(cy1, FloorDiv(camera_band_max, CHUNK_SIZE));
+      struct OuterCandidate
+      {
+        uint64_t key{0};
+        int cy{-1};
+        float forward_score{0.0f};
+      };
+      std::vector<OuterCandidate> candidates;
+      const auto &flow = GetColumnFlowExecutor().Scheduler();
+      for (const uint64_t key : keys)
+      {
+        const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+        const int cz = static_cast<int>(static_cast<uint32_t>(key));
+        const int dx = cx - focus_g.x;
+        const int dz = cz - focus_g.z;
+        if ((std::max)(std::abs(dx), std::abs(dz)) != approach_ring)
+        {
+          continue;
+        }
+        const glm::vec2 to_column(static_cast<float>(dx),
+                                  static_cast<float>(dz));
+        const float distance = glm::length(to_column);
+        if (distance <= 0.01f)
+        {
+          continue;
+        }
+        const float forward_score = glm::dot(to_column / distance, forward);
+        const glm::ivec2 column(cx, cz);
+        if (forward_score < 0.5f || !IsPendingLightBeforeMesh(column))
+        {
+          continue;
+        }
+        const glm::ivec2 block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
+        if (Persistence->IsTerrainColumnRelightQueued(block_key) ||
+            IsAsyncRelightColumnInFlight(column) ||
+            flow.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+            flow.Contains(column, ColumnWorkKind::PromoteRelight))
+        {
+          continue;
+        }
+
+        int target_cy = -1;
+        int best_vertical_distance = max_y + CHUNK_SIZE;
+        for (int cy = camera_cy_min; cy <= camera_cy_max; ++cy)
+        {
+          const glm::ivec3 coord(cx, cy, cz);
+          const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+          if (!chunk || chunk->GetNonAirCount() <= 0 ||
+              MeshService->HasMeshSatisfyingColumnReady(coord) ||
+              MeshService->IsPendingGpuApply(coord) ||
+              MeshService->HasInflightMeshBuild(coord) ||
+              HasCurrentChunkSliceLightSettlement(coord))
+          {
+            continue;
+          }
+          const int slice_min_y = cy * CHUNK_SIZE;
+          const int slice_max_y =
+              std::min(max_y, slice_min_y + CHUNK_SIZE - 1);
+          const int vertical_distance =
+              focus_block.y < slice_min_y
+                  ? slice_min_y - focus_block.y
+                  : (focus_block.y > slice_max_y
+                         ? focus_block.y - slice_max_y
+                         : 0);
+          if (vertical_distance < best_vertical_distance)
+          {
+            target_cy = cy;
+            best_vertical_distance = vertical_distance;
+          }
+        }
+        if (target_cy >= 0)
+        {
+          candidates.push_back({key, target_cy, forward_score});
+        }
+      }
+      std::sort(candidates.begin(), candidates.end(),
+                [](const OuterCandidate &a, const OuterCandidate &b) {
+                  if (a.forward_score != b.forward_score)
+                  {
+                    return a.forward_score > b.forward_score;
+                  }
+                  return a.key < b.key;
+                });
+
+      // Reserve at most two slots within this frame's existing admission
+      // budget. Keep the closest ordinary work first, then let an approaching
+      // first-mesh/light obligation use the bounded visible-repair path.
+      const size_t outer_slots = std::min<size_t>(
+          2, static_cast<size_t>(std::max(0, budget)));
+      const size_t budget_slots =
+          static_cast<size_t>(std::max(0, budget));
+      const size_t insert_at = budget_slots > outer_slots
+                                   ? std::min(keys.size(),
+                                              budget_slots - outer_slots)
+                                   : 0;
+      size_t inserted = 0;
+      for (const OuterCandidate &candidate : candidates)
+      {
+        if (inserted >= outer_slots)
+        {
+          break;
+        }
+        const auto key_it =
+            std::find(keys.begin(), keys.end(), candidate.key);
+        if (key_it == keys.end())
+        {
+          continue;
+        }
+        keys.erase(key_it);
+        const size_t position = std::min(insert_at + inserted, keys.size());
+        keys.insert(keys.begin() + static_cast<std::ptrdiff_t>(position),
+                    candidate.key);
+        outer_first_mesh_target_cy[candidate.key] = candidate.cy;
+        ++inserted;
+      }
+    }
+  }
   int admitted = 0;
   for (uint64_t key : keys)
   {
@@ -4108,7 +4251,19 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
       ys.push_back(cy);
     }
+    const auto outer_target = outer_first_mesh_target_cy.find(key);
     std::sort(ys.begin(), ys.end(), [&](int a, int b) {
+      if (outer_target != outer_first_mesh_target_cy.end())
+      {
+        if (a == outer_target->second)
+        {
+          return b != outer_target->second;
+        }
+        if (b == outer_target->second)
+        {
+          return false;
+        }
+      }
       return std::abs(a - focus_g.y) < std::abs(b - focus_g.y);
     });
     int y_taken = 0;
@@ -4256,7 +4411,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool first_mesh_needs_lighting =
           !probe.has_drawable && ch->GetNonAirCount() > 0 &&
           RequiresLightingLitGate() &&
-          col_horiz <= kVisualStageLitDrawableHoriz &&
+          col_horiz <= kVisualStageFirstMeshRelightApproachHoriz &&
           !slice_light_settled &&
           (!IsColumnLitReady(ground) || desired_light == 0);
       const glm::ivec2 slice_column(cx, cz);
@@ -4266,7 +4421,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         {
           const bool use_visible_admission =
               (defer_until_lit || first_mesh_needs_lighting) &&
-              col_horiz <= kVisualStageLitDrawableHoriz &&
+              col_horiz <= kVisualStageFirstMeshRelightApproachHoriz &&
               (first_mesh_visible_relight_columns.count(slice_column) != 0 ||
                first_mesh_visible_relight_columns.size() <
                    kFirstMeshVisibleRelightLimit);
@@ -4277,7 +4432,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             const bool admitted_visible = Persistence->EnqueueVisibleRelight(
                 slice_block_key.x, slice_block_key.y,
                 cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1, focus_g,
-                kVisualStageLitDrawableHoriz, protected_visible_columns);
+                kVisualStageFirstMeshRelightApproachHoriz,
+                protected_visible_columns);
             if (admitted_visible)
             {
               Persistence->NoteVisibleFirstMeshRelight(

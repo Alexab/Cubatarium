@@ -11,6 +11,11 @@ constexpr int kVisualStageNearFovHoriz = 2;
 /// hinterland (horiz > ring); fully-dark drawable in ring is unfinished.
 constexpr int kVisualStageLitDrawableHoriz = 4;
 
+/// A first-mesh slice one chunk beyond the publish ring can already be
+/// screen-visible. Give that approach ring bounded light admission headroom.
+constexpr int kVisualStageFirstMeshRelightApproachHoriz =
+    kVisualStageLitDrawableHoriz + 1;
+
 /// Ocean / cruise protect ring (FIFO trim + live-GPU keep). LitDrawable+4.
 constexpr int kVisualStageProtectHoriz = kVisualStageLitDrawableHoriz + 4;
 
