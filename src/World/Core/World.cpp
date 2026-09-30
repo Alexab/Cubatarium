@@ -4104,6 +4104,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       forward /= forward_len;
       const int approach_ring =
           kVisualStageFirstMeshRelightForwardHoriz;
+      const int approach_ring_min =
+          kVisualStageFirstMeshRelightApproachHoriz + 1;
       const int camera_band_min = std::max(0, focus_block.y - CHUNK_SIZE);
       const int camera_band_max =
           std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
@@ -4124,7 +4126,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         const int cz = static_cast<int>(static_cast<uint32_t>(key));
         const int dx = cx - focus_g.x;
         const int dz = cz - focus_g.z;
-        if ((std::max)(std::abs(dx), std::abs(dz)) != approach_ring)
+        const int horiz = (std::max)(std::abs(dx), std::abs(dz));
+        if (horiz < approach_ring_min || horiz > approach_ring)
         {
           continue;
         }
