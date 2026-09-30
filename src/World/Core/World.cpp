@@ -3986,6 +3986,7 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
 
 int UWorld::AdmitUnfinishedVisualDemand(int max_n)
 {
+  // Avoid retrying an unpublished slice every frame after an actual attempt.
   constexpr double kUnownedGeometryRetryCooldownMs = 2000.0;
   if (max_n <= 0 || !MeshService)
   {
@@ -4304,7 +4305,37 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool unowned_geometry_debt =
           current_mesh_revision > current_published_revs.geom_rev &&
           !has_slice_work_owner(coord);
-      bool unowned_geometry_retry_reserved = false;
+      const auto note_unowned_geometry_retry_attempt =
+          [&](const char *action) {
+            if (!unowned_geometry_debt)
+            {
+              return;
+            }
+            if (ChunkRenderDemandRecord *rec = demand.Find(coord))
+            {
+              // A census hit is not an admission. Only start the cooldown
+              // after this slice reaches an actual work/admission path.
+              rec->last_unowned_geometry_retry_ms = demand_now_ms;
+              rec->unowned_geometry_retry_geom_rev = current_mesh_revision;
+            }
+            if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+            {
+              CubatariumLogInfo(
+                  "RelightAudit",
+                  "unowned geometry debt retry coord=(" +
+                      std::to_string(coord.x) + "," +
+                      std::to_string(coord.y) + "," +
+                      std::to_string(coord.z) + ") focus=(" +
+                      std::to_string(focus_g.x) + "," +
+                      std::to_string(focus_g.z) + ") action=" + action +
+                      " owner_after=" +
+                      std::to_string(has_slice_work_owner(coord)) +
+                      " desired_geom=" +
+                      std::to_string(current_mesh_revision) +
+                      " published_geom=" +
+                      std::to_string(current_published_revs.geom_rev));
+            }
+          };
       if (unowned_geometry_debt)
       {
         if (ChunkRenderDemandRecord *rec = demand.Find(coord))
@@ -4318,11 +4349,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           {
             continue;
           }
-          // Reserve at most one recovery admission per cooldown. A new
-          // geometry revision bypasses the old revision's backoff.
-          rec->last_unowned_geometry_retry_ms = demand_now_ms;
-          rec->unowned_geometry_retry_geom_rev = current_mesh_revision;
-          unowned_geometry_retry_reserved = true;
         }
       }
       if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
@@ -4535,36 +4561,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                             desired_coverage, demand_now_ms,
                             MeshService->GetCache().GetCaptureStore().WorldEpoch(),
                             ch->GetIncarnation());
-      if (unowned_geometry_debt)
-      {
-        if (ChunkRenderDemandRecord *rec = demand.Find(coord))
-        {
-          // First-time demand records do not exist at the reservation point
-          // above. Stamp them after NoteDemand creates the lifecycle record.
-          if (rec->unowned_geometry_retry_geom_rev != current_mesh_revision ||
-              rec->last_unowned_geometry_retry_ms <= 0.0)
-          {
-            rec->last_unowned_geometry_retry_ms = demand_now_ms;
-            rec->unowned_geometry_retry_geom_rev = current_mesh_revision;
-            unowned_geometry_retry_reserved = true;
-          }
-        }
-      }
-      if (unowned_geometry_retry_reserved &&
-          std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
-      {
-        CubatariumLogInfo(
-            "RelightAudit",
-            "unowned geometry debt retry coord=(" +
-                std::to_string(coord.x) + "," +
-                std::to_string(coord.y) + "," +
-                std::to_string(coord.z) + ") focus=(" +
-                std::to_string(focus_g.x) + "," +
-                std::to_string(focus_g.z) + ") desired_geom=" +
-                std::to_string(current_mesh_revision) +
-                " published_geom=" +
-                std::to_string(current_published_revs.geom_rev));
-      }
       if (defer_until_lit || first_mesh_needs_lighting)
       {
         // Lighting owns this visible first-mesh slice. An unsettled slice may
@@ -4572,6 +4568,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         // debt only after a queue, in-flight relight, or pending-light owner
         // confirms that real relight work exists.
         const bool relight_enqueued = ensure_slice_relight();
+        note_unowned_geometry_retry_attempt("defer_relight");
         if (relight_enqueued && first_mesh_needs_lighting &&
             !IsPendingLightBeforeMesh(slice_column))
         {
@@ -4617,10 +4614,13 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                   /*obligation=*/true, live_pipeline, orec.visual_attempt_id,
                   orec.visual_deadline_ms, now_ms))
           {
-            if (MeshService->TryConsumeDirtyAdmit() || col_horiz <= 4)
+            const bool dirty_admit_allowed =
+                MeshService->TryConsumeDirtyAdmit();
+            if (dirty_admit_allowed || col_horiz <= 4)
             {
               MeshService->GetCache().InvalidateMeshCapture(coord);
               mark_slice_dirty_without_reordering_first_mesh(coord);
+              note_unowned_geometry_retry_attempt("light_repair_mesh");
               if (has_slice_work_owner(coord))
               {
                 static uint64_t next_admit_lr = 1;
@@ -4638,6 +4638,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                 continue;
               }
             }
+            else if (stale_dark_faces)
+            {
+              note_unowned_geometry_retry_attempt(
+                  "light_repair_admit_denied");
+            }
           }
         }
         if (stale_dark_faces)
@@ -4648,6 +4653,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           continue;
         }
         const bool relight_enqueued = ensure_slice_relight();
+        note_unowned_geometry_retry_attempt("relight_only");
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         if (attempt_id != 0 && relight_enqueued)
         {
@@ -4667,9 +4673,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         {
           if (!MeshService->TryConsumeDirtyAdmit() && col_horiz > 4)
           {
+            note_unowned_geometry_retry_attempt("dirty_admit_denied");
             continue;
           }
           mark_slice_dirty_without_reordering_first_mesh(coord);
+          note_unowned_geometry_retry_attempt("already_satisfied_mesh");
           uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
           if (attempt_id == 0)
           {
@@ -4696,9 +4704,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
       if (!MeshService->TryConsumeDirtyAdmit() && col_horiz > 4)
       {
+        note_unowned_geometry_retry_attempt("dirty_admit_denied");
         continue;
       }
       mark_slice_dirty_without_reordering_first_mesh(coord);
+      note_unowned_geometry_retry_attempt("mesh");
       uint64_t attempt_id = 0;
       if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
       {
