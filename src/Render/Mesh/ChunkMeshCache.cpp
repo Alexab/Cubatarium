@@ -9166,7 +9166,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       // Keep newly arriving near-focus holes urgent while guaranteeing that a
       // long-waiting in-focus FirstMesh ticket eventually passes the head.
-      constexpr uint64_t kFirstMeshFairAgeFrames = 120;
+      // Pixel-ray flight traces found missing, settled chunks still queued as
+      // FirstMesh after 51-113 scheduler frames. Promote overdue near-focus
+      // work before it spends the whole visible approach behind newer holes.
+      constexpr uint64_t kFirstMeshFairAgeFrames = 48;
       Dirty.PrioritizeAgedNearHorizontal(
           MeshFocusGroundChunk, MeshFocusRadiusChunks,
           kFirstMeshFairAgeFrames);
