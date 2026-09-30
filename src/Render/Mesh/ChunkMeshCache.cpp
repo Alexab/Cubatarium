@@ -8024,12 +8024,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const size_t sort_front = std::max(
           kMinSortFront,
           static_cast<size_t>(std::max(8, max_schedule_per_frame) * 4 + 16));
+      size_t distance_sorted_fm_prefix = 0;
       if (Dirty.GetCount() > kPartialSortThreshold)
       {
         Dirty.PartialSortByDistanceKey(
             MeshFocusGroundChunk, MeshVerticalPreferredCy, MeshPreferLowerCy,
             MeshVerticalPriorityValid, missing_mesh, sort_front,
             MeshForwardBiasK, MeshForwardXz, MeshFocusRadiusChunks);
+        distance_sorted_fm_prefix =
+            std::min(sort_front, Dirty.GetFirstMeshCount());
       }
       else
       {
@@ -8037,12 +8040,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                 MeshPreferLowerCy, MeshVerticalPriorityValid,
                                 missing_mesh, MeshForwardBiasK, MeshForwardXz,
                                 MeshFocusRadiusChunks);
+        distance_sorted_fm_prefix = Dirty.GetFirstMeshCount();
       }
       Dirty.BoostForwardApproachFirstMesh(
           MeshFocusGroundChunk, MeshForwardXz,
           kVisualStageLitDrawableHoriz - 1,
           kVisualStageFirstMeshRelightForwardHoriz,
-          /*max_vertical_delta=*/3);
+          /*max_vertical_delta=*/3, distance_sorted_fm_prefix,
+          MeshVerticalPreferredCy, MeshPreferLowerCy,
+          MeshVerticalPriorityValid, MeshForwardBiasK);
       if (JustRelitFirstMeshValid_)
       {
         // Apply the one-sort relight boost after geometric ordering so the

@@ -85,7 +85,11 @@ public:
   void BoostForwardApproachFirstMesh(glm::ivec3 focus_ground_chunk,
                                      glm::vec2 forward_xz, int near_horiz,
                                      int max_approach_horiz,
-                                     int max_vertical_delta);
+                                     int max_vertical_delta,
+                                     size_t distance_sorted_prefix,
+                                     int preferred_cy, bool prefer_lower_cy,
+                                     bool vertical_valid,
+                                     float forward_bias_k);
 
   void PartialSortByDistanceKey(
       glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,

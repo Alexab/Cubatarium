@@ -373,7 +373,9 @@ void UChunkDirtySet::BoostJustRelitNear(glm::ivec3 focus_ground_chunk,
 
 void UChunkDirtySet::BoostForwardApproachFirstMesh(
     glm::ivec3 focus_ground_chunk, glm::vec2 forward_xz, int near_horiz,
-    int max_approach_horiz, int max_vertical_delta)
+    int max_approach_horiz, int max_vertical_delta,
+    size_t distance_sorted_prefix, int preferred_cy, bool prefer_lower_cy,
+    bool vertical_valid, float forward_bias_k)
 {
   if (FirstMeshQ.size() < 2 || max_approach_horiz <= near_horiz)
   {
@@ -422,16 +424,13 @@ void UChunkDirtySet::BoostForwardApproachFirstMesh(
   };
   const auto in_approach_sector = [&](const glm::ivec3 &coord)
   { return priority_band(coord) < 3; };
-  const auto approach_end = std::stable_partition(
-      FirstMeshQ.begin(), FirstMeshQ.end(), in_approach_sector);
-
-  // PartialSortByDistanceKey only orders a bounded prefix when the dirty set
-  // is large. Promoting every approach candidate from its unsorted suffix
-  // could therefore put a ray-visible h=3 slice behind dozens of unrelated
-  // slices at the same distance. Fully order the small spatial sector after
-  // the linear partition; leave the far queue in its existing order.
-  std::stable_sort(FirstMeshQ.begin(), approach_end,
-                   [&](const glm::ivec3 &a, const glm::ivec3 &b)
+  const auto always_missing = [](glm::ivec3) { return true; };
+  const auto distance_less = MakeDistanceKeyLess(
+      focus_ground_chunk, preferred_cy, prefer_lower_cy, vertical_valid,
+      std::function<bool(glm::ivec3)>(always_missing), forward_bias_k,
+      forward_xz, -1);
+  const auto sorted_suffix_less = [&](const glm::ivec3 &a,
+                                      const glm::ivec3 &b)
   {
     const int band_a = priority_band(a);
     const int band_b = priority_band(b);
@@ -439,31 +438,52 @@ void UChunkDirtySet::BoostForwardApproachFirstMesh(
     {
       return band_a < band_b;
     }
-    const int horiz_a = HorizDist(a, focus_ground_chunk);
-    const int horiz_b = HorizDist(b, focus_ground_chunk);
-    if (horiz_a != horiz_b)
+    if (distance_less(a, b))
     {
-      return horiz_a < horiz_b;
+      return true;
     }
-    const int vertical_a = std::abs(a.y - focus_ground_chunk.y);
-    const int vertical_b = std::abs(b.y - focus_ground_chunk.y);
-    if (vertical_a != vertical_b)
+    if (distance_less(b, a))
     {
-      return vertical_a < vertical_b;
-    }
-    if (band_a == 1)
-    {
-      const float dot_a = forward_dot(a);
-      const float dot_b = forward_dot(b);
-      if (dot_a != dot_b)
-      {
-        return dot_a > dot_b;
-      }
+      return false;
     }
     const uint64_t age_a = GetEnqueueAgeFrames(a);
     const uint64_t age_b = GetEnqueueAgeFrames(b);
-    return age_a > age_b;
-  });
+    if (age_a != age_b)
+    {
+      return age_a > age_b;
+    }
+    if (a.x != b.x)
+    {
+      return a.x < b.x;
+    }
+    if (a.y != b.y)
+    {
+      return a.y < b.y;
+    }
+    return a.z < b.z;
+  };
+
+  // Keep the camera-distance prefix intact: PartialSortByDistanceKey already
+  // ranked it with the forward bias and preferred vertical band. Only promote
+  // and reorder approach candidates from the unspecified suffix.
+  const size_t prefix_count =
+      std::min(distance_sorted_prefix, FirstMeshQ.size());
+  if (prefix_count == FirstMeshQ.size())
+  {
+    std::stable_partition(FirstMeshQ.begin(), FirstMeshQ.end(),
+                          in_approach_sector);
+  }
+  else
+  {
+    const auto prefix_end =
+        FirstMeshQ.begin() + static_cast<std::ptrdiff_t>(prefix_count);
+    const auto prefix_approach_end = std::stable_partition(
+        FirstMeshQ.begin(), prefix_end, in_approach_sector);
+    const auto suffix_approach_end = std::stable_partition(
+        prefix_end, FirstMeshQ.end(), in_approach_sector);
+    std::stable_sort(prefix_end, suffix_approach_end, sorted_suffix_less);
+    std::rotate(prefix_approach_end, prefix_end, suffix_approach_end);
+  }
   InvalidateUnified();
 }
 
