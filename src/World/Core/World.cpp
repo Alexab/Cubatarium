@@ -3995,59 +3995,19 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   // A39 P2: focus-near first + CapDirtyAdmitUnderThrash (not Kick).
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
-  glm::vec2 admission_forward(0.0f);
-  if (GetLastMovementSpeed() > ProceduralTemplate.MovementPrefetchThreshold)
-  {
-    admission_forward = GetLastMovementDirXz();
-    const float forward_len = glm::length(admission_forward);
-    if (forward_len > 0.01f)
-    {
-      admission_forward /= forward_len;
-    }
-    else
-    {
-      admission_forward = glm::vec2(0.0f);
-    }
-  }
-  constexpr float kMovingVisualAdmissionForwardCredit = 2.5f;
-  const auto admission_distance = [&](int x, int z) {
-    const int dx = x - focus_g.x;
-    const int dz = z - focus_g.z;
-    const int radial = (std::max)(std::abs(dx), std::abs(dz));
-    if (glm::dot(admission_forward, admission_forward) < 0.5f || radial == 0)
-    {
-      return static_cast<float>(radial);
-    }
-    const float dx_f = static_cast<float>(dx);
-    const float dz_f = static_cast<float>(dz);
-    const float length = std::sqrt(dx_f * dx_f + dz_f * dz_f);
-    const float facing =
-        std::max(0.0f, (dx_f * admission_forward.x +
-                        dz_f * admission_forward.y) /
-                           length);
-    return std::max(1.0f,
-                    static_cast<float>(radial) -
-                        kMovingVisualAdmissionForwardCredit * facing);
-  };
   std::vector<uint64_t> keys(raw_keys.begin(), raw_keys.end());
   std::sort(keys.begin(), keys.end(), [&](uint64_t a, uint64_t b) {
     const int ax = static_cast<int>(static_cast<uint32_t>(a >> 32));
     const int az = static_cast<int>(static_cast<uint32_t>(a));
     const int bx = static_cast<int>(static_cast<uint32_t>(b >> 32));
     const int bz = static_cast<int>(static_cast<uint32_t>(b));
-    const float da = admission_distance(ax, az);
-    const float db = admission_distance(bx, bz);
+    const int da =
+        (std::max)(std::abs(ax - focus_g.x), std::abs(az - focus_g.z));
+    const int db =
+        (std::max)(std::abs(bx - focus_g.x), std::abs(bz - focus_g.z));
     if (da != db)
     {
       return da < db;
-    }
-    const int radial_a =
-        (std::max)(std::abs(ax - focus_g.x), std::abs(az - focus_g.z));
-    const int radial_b =
-        (std::max)(std::abs(bx - focus_g.x), std::abs(bz - focus_g.z));
-    if (radial_a != radial_b)
-    {
-      return radial_a < radial_b;
     }
     return a < b;
   });
