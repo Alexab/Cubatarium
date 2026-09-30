@@ -3551,6 +3551,25 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_voxel_chunk_y
                << ",\"renderer_pixel_voxel_chunk_z\":"
                << r.renderer_pixel_voxel_chunk_z
+               << ",\"renderer_pixel_voxel_chunk_pending_light\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_pending_light)
+               << ",\"renderer_pixel_voxel_chunk_async_relight_inflight\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_async_relight_inflight)
+               << ",\"renderer_pixel_voxel_chunk_relight_queue_kind\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_relight_queue_kind)
+               << ",\"renderer_pixel_voxel_chunk_relight_y_band_defined\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_relight_y_band_defined)
+               << ",\"renderer_pixel_voxel_chunk_relight_queue_index\":"
+               << r.renderer_pixel_voxel_chunk_relight_queue_index
+               << ",\"renderer_pixel_voxel_chunk_relight_queue_size\":"
+               << r.renderer_pixel_voxel_chunk_relight_queue_size
+               << ",\"renderer_pixel_voxel_chunk_flow_ticket_flags\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_flow_ticket_flags)
                << ",\"renderer_pixel_voxel_chunk_nonair\":"
                << r.renderer_pixel_voxel_chunk_nonair
                << ",\"renderer_pixel_voxel_chunk_mesh_revision\":"

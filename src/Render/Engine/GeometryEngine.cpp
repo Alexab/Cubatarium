@@ -1200,6 +1200,23 @@ void CaptureTransparentPixelProbe(
                 static_cast<uint32_t>(voxel_chunk_data->GetNonAirCount());
           }
           const glm::ivec2 voxel_column(voxel_chunk.x, voxel_chunk.z);
+          record.renderer_pixel_voxel_chunk_pending_light =
+              world.IsPendingLightBeforeMesh(voxel_column) ? 1u : 0u;
+          record.renderer_pixel_voxel_chunk_async_relight_inflight =
+              world.IsAsyncRelightColumnInFlight(voxel_column) ? 1u : 0u;
+          VisualBlackTraceRecord voxel_relight_trace{};
+          world.PopulateRendererRelightQueueTrace(voxel_column,
+                                                  voxel_relight_trace);
+          record.renderer_pixel_voxel_chunk_relight_queue_kind =
+              voxel_relight_trace.relight_queue_kind;
+          record.renderer_pixel_voxel_chunk_relight_y_band_defined =
+              voxel_relight_trace.relight_y_band_defined;
+          record.renderer_pixel_voxel_chunk_relight_queue_index =
+              voxel_relight_trace.relight_queue_index;
+          record.renderer_pixel_voxel_chunk_relight_queue_size =
+              voxel_relight_trace.relight_queue_size;
+          record.renderer_pixel_voxel_chunk_flow_ticket_flags =
+              voxel_relight_trace.column_flow_ticket_flags;
           const ColumnRenderableState voxel_column_state =
               world.GetColumnRenderableState(voxel_column);
           record.renderer_pixel_voxel_chunk_column_reason =

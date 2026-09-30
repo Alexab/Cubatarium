@@ -357,6 +357,16 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_voxel_chunk_x{0};
   int32_t renderer_pixel_voxel_chunk_y{0};
   int32_t renderer_pixel_voxel_chunk_z{0};
+  /// Exact ownership state for the column containing the voxel-ray hit.
+  /// Queue kind follows relight_queue_kind (0 none, 1 priority, 2 far,
+  /// 3 keyed/no deque, 6 deferred visible, 7 deferred far).
+  uint8_t renderer_pixel_voxel_chunk_pending_light{0};
+  uint8_t renderer_pixel_voxel_chunk_async_relight_inflight{0};
+  uint8_t renderer_pixel_voxel_chunk_relight_queue_kind{0};
+  uint8_t renderer_pixel_voxel_chunk_relight_y_band_defined{0};
+  int32_t renderer_pixel_voxel_chunk_relight_queue_index{-1};
+  int32_t renderer_pixel_voxel_chunk_relight_queue_size{0};
+  uint8_t renderer_pixel_voxel_chunk_flow_ticket_flags{0};
   uint32_t renderer_pixel_voxel_chunk_nonair{0};
   uint64_t renderer_pixel_voxel_chunk_mesh_revision{0};
   uint64_t renderer_pixel_voxel_chunk_published_geom_rev{0};
