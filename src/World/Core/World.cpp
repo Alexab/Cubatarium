@@ -3986,6 +3986,7 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
 
 int UWorld::AdmitUnfinishedVisualDemand(int max_n)
 {
+  constexpr double kUnownedGeometryRetryCooldownMs = 2000.0;
   if (max_n <= 0 || !MeshService)
   {
     return 0;
@@ -4296,6 +4297,34 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       demand.BindIdentity(
           coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
           ch->GetIncarnation());
+      const uint64_t current_mesh_revision =
+          MeshService->GetChunkMeshRevision(coord);
+      const MeshPublishRevs current_published_revs =
+          MeshService->GetCache().GetMeshPublishRevs(coord);
+      const bool unowned_geometry_debt =
+          current_mesh_revision > current_published_revs.geom_rev &&
+          !has_slice_work_owner(coord);
+      bool unowned_geometry_retry_reserved = false;
+      if (unowned_geometry_debt)
+      {
+        if (ChunkRenderDemandRecord *rec = demand.Find(coord))
+        {
+          const bool same_retry_revision =
+              rec->unowned_geometry_retry_geom_rev == current_mesh_revision;
+          if (same_retry_revision &&
+              rec->last_unowned_geometry_retry_ms > 0.0 &&
+              demand_now_ms - rec->last_unowned_geometry_retry_ms <
+                  kUnownedGeometryRetryCooldownMs)
+          {
+            continue;
+          }
+          // Reserve at most one recovery admission per cooldown. A new
+          // geometry revision bypasses the old revision's backoff.
+          rec->last_unowned_geometry_retry_ms = demand_now_ms;
+          rec->unowned_geometry_retry_geom_rev = current_mesh_revision;
+          unowned_geometry_retry_reserved = true;
+        }
+      }
       if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
       {
         if (rec->has_active_attempt)
@@ -4339,42 +4368,17 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                     : (rec->attempt_created_ms > 0.0
                            ? demand_now_ms - rec->attempt_created_ms
                            : 0.0);
-            const uint64_t current_mesh_revision =
-                MeshService->GetChunkMeshRevision(coord);
-            const MeshPublishRevs current_published_revs =
-                MeshService->GetCache().GetMeshPublishRevs(coord);
-            const bool unowned_geometry_debt =
-                current_mesh_revision > current_published_revs.geom_rev &&
-                !has_slice_work_owner(coord);
             // A queued owner can disappear between admission and execution.
             // Give ordinary work the existing light-repair SLA to reappear;
             // a mesh held by defer-until-lit cannot execute and must not delay
             // recovery when its concrete relight owner is gone. An unpublished
-            // geometry revision with no concrete owner is also an immediate
-            // retry: at cruise speed, the visual ring can pass this chunk
-            // before the generic SLA expires.
+            // geometry revision with no concrete owner is retried through the
+            // per-slice cooldown above, so cruise flight can recover promptly
+            // without repeatedly reminting work every frame.
             if (since_progress_ms < kLightRepairSlaMs &&
                 !deferred_without_light_owner && !unowned_geometry_debt)
             {
               continue;
-            }
-            if (unowned_geometry_debt &&
-                since_progress_ms < kLightRepairSlaMs &&
-                std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
-            {
-              CubatariumLogInfo(
-                  "RelightAudit",
-                  "unowned geometry debt retry coord=(" +
-                      std::to_string(coord.x) + "," +
-                      std::to_string(coord.y) + "," +
-                      std::to_string(coord.z) + ") focus=(" +
-                      std::to_string(focus_g.x) + "," +
-                      std::to_string(focus_g.z) + ") desired_geom=" +
-                      std::to_string(current_mesh_revision) +
-                      " published_geom=" +
-                      std::to_string(current_published_revs.geom_rev) +
-                      " scheduler_age_ms=" +
-                      std::to_string(since_progress_ms));
             }
             (void)demand.NoteInstallResult(
                 coord, InstallResult::CancelledSuperseded,
@@ -4531,6 +4535,36 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                             desired_coverage, demand_now_ms,
                             MeshService->GetCache().GetCaptureStore().WorldEpoch(),
                             ch->GetIncarnation());
+      if (unowned_geometry_debt)
+      {
+        if (ChunkRenderDemandRecord *rec = demand.Find(coord))
+        {
+          // First-time demand records do not exist at the reservation point
+          // above. Stamp them after NoteDemand creates the lifecycle record.
+          if (rec->unowned_geometry_retry_geom_rev != current_mesh_revision ||
+              rec->last_unowned_geometry_retry_ms <= 0.0)
+          {
+            rec->last_unowned_geometry_retry_ms = demand_now_ms;
+            rec->unowned_geometry_retry_geom_rev = current_mesh_revision;
+            unowned_geometry_retry_reserved = true;
+          }
+        }
+      }
+      if (unowned_geometry_retry_reserved &&
+          std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+      {
+        CubatariumLogInfo(
+            "RelightAudit",
+            "unowned geometry debt retry coord=(" +
+                std::to_string(coord.x) + "," +
+                std::to_string(coord.y) + "," +
+                std::to_string(coord.z) + ") focus=(" +
+                std::to_string(focus_g.x) + "," +
+                std::to_string(focus_g.z) + ") desired_geom=" +
+                std::to_string(current_mesh_revision) +
+                " published_geom=" +
+                std::to_string(current_published_revs.geom_rev));
+      }
       if (defer_until_lit || first_mesh_needs_lighting)
       {
         // Lighting owns this visible first-mesh slice. An unsettled slice may
