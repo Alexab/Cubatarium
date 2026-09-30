@@ -371,6 +371,53 @@ void UChunkDirtySet::BoostJustRelitNear(glm::ivec3 focus_ground_chunk,
   InvalidateUnified();
 }
 
+void UChunkDirtySet::BoostForwardApproachFirstMesh(
+    glm::ivec3 focus_ground_chunk, glm::vec2 forward_xz, int near_horiz,
+    int max_approach_horiz, int max_vertical_delta)
+{
+  if (FirstMeshQ.size() < 2 || max_approach_horiz <= near_horiz)
+  {
+    return;
+  }
+  const float forward_len =
+      std::sqrt(forward_xz.x * forward_xz.x + forward_xz.y * forward_xz.y);
+  if (forward_len < 0.01f)
+  {
+    return;
+  }
+  const float forward_x = forward_xz.x / forward_len;
+  const float forward_z = forward_xz.y / forward_len;
+  const int near_limit = std::max(0, near_horiz);
+  const int approach_limit = std::max(near_limit, max_approach_horiz);
+  const int vertical_limit = std::max(0, max_vertical_delta);
+  const auto near_or_forward_approach = [&](const glm::ivec3 &coord)
+  {
+    const int horiz = HorizDist(coord, focus_ground_chunk);
+    if (horiz <= near_limit)
+    {
+      return true;
+    }
+    if (horiz > approach_limit ||
+        std::abs(coord.y - focus_ground_chunk.y) > vertical_limit)
+    {
+      return false;
+    }
+    const float dx = static_cast<float>(coord.x - focus_ground_chunk.x);
+    const float dz = static_cast<float>(coord.z - focus_ground_chunk.z);
+    const float distance = std::sqrt(dx * dx + dz * dz);
+    if (distance < 0.01f)
+    {
+      return false;
+    }
+    const float forward_dot =
+        (dx * forward_x + dz * forward_z) / distance;
+    return forward_dot >= 0.5f;
+  };
+  std::stable_partition(FirstMeshQ.begin(), FirstMeshQ.end(),
+                        near_or_forward_approach);
+  InvalidateUnified();
+}
+
 void UChunkDirtySet::PartialSortByDistanceKey(
     glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
     bool vertical_valid,

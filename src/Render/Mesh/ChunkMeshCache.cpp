@@ -8028,6 +8028,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // bounded handoff has already been applied.
         JustRelitFirstMeshValid_ = false;
       }
+      Dirty.BoostForwardApproachFirstMesh(
+          MeshFocusGroundChunk, MeshForwardXz,
+          kVisualStageLitDrawableHoriz - 1,
+          kVisualStageFirstMeshRelightApproachHoriz + 1,
+          /*max_vertical_delta=*/3);
     }
     else
     {

@@ -80,6 +80,12 @@ public:
   /// P3: stable-partition FirstMeshQ so underfeet / just-relit nh≤2 sit first.
   void BoostJustRelitNear(glm::ivec3 focus_ground_chunk, glm::ivec2 relit_xz,
                           int max_horiz);
+  /// Keep near-FOV work first, then promote only forward-facing approach
+  /// FirstMeshes inside a bounded horizontal and vertical camera band.
+  void BoostForwardApproachFirstMesh(glm::ivec3 focus_ground_chunk,
+                                     glm::vec2 forward_xz, int near_horiz,
+                                     int max_approach_horiz,
+                                     int max_vertical_delta);
 
   void PartialSortByDistanceKey(
       glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
