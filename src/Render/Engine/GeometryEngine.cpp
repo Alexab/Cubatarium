@@ -1314,21 +1314,6 @@ void CaptureTransparentPixelProbe(
                 voxel_demand->has_settled_light ? 1u : 0u;
             record.renderer_pixel_voxel_chunk_settled_light_rev =
                 voxel_demand->settled_light_rev;
-            const double demand_sample_now_ms =
-                std::chrono::duration<double, std::milli>(
-                    std::chrono::steady_clock::now().time_since_epoch())
-                    .count();
-            record.renderer_pixel_voxel_chunk_demand_attempt_age_ms =
-                voxel_demand->has_active_attempt &&
-                        voxel_demand->attempt_created_ms > 0.0
-                    ? std::max(0.0, demand_sample_now_ms -
-                                        voxel_demand->attempt_created_ms)
-                    : 0.0;
-            record.renderer_pixel_voxel_chunk_demand_progress_age_ms =
-                voxel_demand->last_progress_ms > 0.0
-                    ? std::max(0.0, demand_sample_now_ms -
-                                        voxel_demand->last_progress_ms)
-                    : 0.0;
           }
           record.renderer_pixel_voxel_chunk_defer_until_lit =
               cache.IsDeferMeshUntilLit(voxel_chunk) ? 1u : 0u;
