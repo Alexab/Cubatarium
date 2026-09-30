@@ -5592,6 +5592,18 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     ActiveMeshSourceRevision.erase(pending.coord);
   };
 
+  auto requeue_after_gpu_failure = [&](glm::ivec3 coord) {
+    CaptureStore.Invalidate(coord);
+    if (HasDrawableGreedyMesh(coord))
+    {
+      Dirty.MarkDirty(coord);
+    }
+    else
+    {
+      Dirty.MarkDirtyPriority(coord);
+    }
+  };
+
   // P1-a/b: holes → Priority; drawable+Light → no Dirty (MarkRelit owner);
   // drawable+Geom/Catalog → MarkDirty (not Priority FM storm).
   auto requeue_after_stale_input =
@@ -5775,11 +5787,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
     {
       ++gpu_profile_counter_failed_n;
+      const glm::ivec3 failed_coord = pending_ref.coord;
       fail_ticket(pending_ref, JobTerminalReason::GpuPipelineFailed);
-      GpuExtractInFlight.erase(pending_ref.coord);
+      GpuExtractInFlight.erase(failed_coord);
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
       TouchPendingGpuIndex();
+      requeue_after_gpu_failure(failed_coord);
       continue;
     }
     if (pending_ref.stageTrace.job_id != 0)
@@ -5929,6 +5943,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     {
       ++gpu_profile_quad_failed_n;
       fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);
+      requeue_after_gpu_failure(pending.coord);
       continue;
     }
     gpu_result.quadCount = quad_count;
@@ -6375,6 +6390,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
       {
         fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);
+        requeue_after_gpu_failure(pending.coord);
         continue;
       }
       gpu_result.quadCount = quad_count;

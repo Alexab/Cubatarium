@@ -70,11 +70,25 @@ inline bool BuildGpuBlockTypePalette(
   return true;
 }
 
+inline bool TryResolveGpuBlockTypePaletteIndex(
+    const std::vector<BlockId> &block_palette, uint32_t palette_index,
+    BlockId &out_block_id)
+{
+  if (palette_index == 0 || palette_index >= block_palette.size())
+  {
+    return false;
+  }
+  out_block_id = block_palette[palette_index];
+  return out_block_id != BLOCK_AIR;
+}
+
 inline BlockId ResolveGpuBlockTypePaletteIndex(
     const std::vector<BlockId> &block_palette, uint32_t palette_index)
 {
-  return palette_index < block_palette.size()
-             ? block_palette[palette_index]
+  BlockId block_id = BLOCK_AIR;
+  return TryResolveGpuBlockTypePaletteIndex(block_palette, palette_index,
+                                            block_id)
+             ? block_id
              : BLOCK_AIR;
 }
 

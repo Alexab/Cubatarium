@@ -99,7 +99,7 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
   }
 }
 
-void BuildRangesFromHistogram(const uint32_t *counts,
+bool BuildRangesFromHistogram(const uint32_t *counts,
                               const uint32_t *exclusive_offsets,
                               UBlockRegistry &registry,
                               const std::vector<BlockId> &block_palette,
@@ -107,7 +107,7 @@ void BuildRangesFromHistogram(const uint32_t *counts,
 {
   if (!out_ranges)
   {
-    return;
+    return true;
   }
   out_ranges->clear();
   out_ranges->reserve(32);
@@ -117,12 +117,12 @@ void BuildRangesFromHistogram(const uint32_t *counts,
     {
       continue;
     }
-    const BlockId bid =
-        ResolveGpuBlockTypePaletteIndex(block_palette,
-                                        static_cast<uint32_t>(b));
-    if (bid == BLOCK_AIR)
+    BlockId bid = BLOCK_AIR;
+    if (!TryResolveGpuBlockTypePaletteIndex(
+            block_palette, static_cast<uint32_t>(b), bid))
     {
-      continue;
+      out_ranges->clear();
+      return false;
     }
     GpuBlockDrawRange range;
     range.blockId = bid;
@@ -133,11 +133,12 @@ void BuildRangesFromHistogram(const uint32_t *counts,
         registry.GetRenderStyle(bid) == BlockRenderStyle::Cutout;
     out_ranges->push_back(range);
   }
+  return true;
 }
 
 /// Build draw ranges from emit order without reordering GPU quads — skips
 /// full-slot glBufferSubData writeback after CPU readback (rim plan C1).
-void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
+bool BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
                                       UBlockRegistry &registry,
                                       const std::vector<BlockId> &block_palette,
                                       std::vector<GpuBlockDrawRange> *out_ranges,
@@ -157,11 +158,15 @@ void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
   for (uint32_t i = 0; i < static_cast<uint32_t>(quads.size()); ++i)
   {
     const PackedQuad &q = quads[i];
-    const BlockId bid = ResolveGpuBlockTypePaletteIndex(
-        block_palette, static_cast<uint32_t>(q.BlockType()));
-    if (bid == BLOCK_AIR)
+    BlockId bid = BLOCK_AIR;
+    if (!TryResolveGpuBlockTypePaletteIndex(
+            block_palette, static_cast<uint32_t>(q.BlockType()), bid))
     {
-      continue;
+      if (out_ranges)
+      {
+        out_ranges->clear();
+      }
+      return false;
     }
     if (q.Face() != 5)
     {
@@ -220,6 +225,7 @@ void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
   {
     *out_has_lit_drawable_face = has_lit_drawable_face;
   }
+  return true;
 }
 
 bool ChunkHasTransparentOrCutout(const ChunkMeshSnapshot &snapshot,
@@ -1329,10 +1335,16 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
         ScratchQuads.data());
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   }
-  BuildRunLengthRangesFromUnsorted(ScratchQuads, registry,
-                                   ticket.blockPalette, out_ranges,
-                                   out_has_dark_face,
-                                   out_has_lit_drawable_face);
+  if (!BuildRunLengthRangesFromUnsorted(
+          ScratchQuads, registry, ticket.blockPalette, out_ranges,
+          out_has_dark_face, out_has_lit_drawable_face))
+  {
+    LOG(ERROR) << "[GpuMeshPipeline] packed quad references invalid block "
+                  "palette index; rejecting GPU mesh coord=("
+               << ticket.coord.x << "," << ticket.coord.y << ","
+               << ticket.coord.z << ")";
+    return GpuFinishStatus::Failed;
+  }
   ReleaseReadbackSlot(ticket);
   return GpuFinishStatus::Ready;
 #endif
@@ -1435,8 +1447,13 @@ bool UGpuMeshPipeline::GpuSortSlotQuads(
                  << " != numQuads " << num_quads;
     return false;
   }
-  BuildRangesFromHistogram(counts.data(), offsets.data(), registry,
-                            block_palette, out_ranges);
+  if (!BuildRangesFromHistogram(counts.data(), offsets.data(), registry,
+                                block_palette, out_ranges))
+  {
+    LOG(ERROR) << "[GpuMeshPipeline] GPU histogram references invalid block "
+                  "palette index";
+    return false;
+  }
   if (out_has_dark_face)
   {
     *out_has_dark_face = counts[kDarkFaceFlagIndex] != 0;
