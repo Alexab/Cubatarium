@@ -445,11 +445,25 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     return false;
   }
 
+  // A visible first-mesh request may be retrying a durable far-deferred
+  // relight for the same column. Transfer that band into the visible owner so
+  // accepting this request cannot leave a duplicate deferred record behind.
+  const auto deferred_far = DeferredFarRelightColumns.find(ground_xz);
+  if (deferred_far != DeferredFarRelightColumns.end() &&
+      deferred_far->second.y_band.y >= deferred_far->second.y_band.x)
+  {
+    min_y = std::min(min_y, deferred_far->second.y_band.x);
+    max_y = std::max(max_y, deferred_far->second.y_band.y);
+  }
+  const auto clear_deferred_far = [&]()
+  { DeferredFarRelightColumns.erase(ground_xz); };
+
   if (auto deferred = DeferredVisibleDrawGateRelightYBands.find(key);
       deferred != DeferredVisibleDrawGateRelightYBands.end())
   {
     deferred->second.x = std::min(deferred->second.x, min_y);
     deferred->second.y = std::max(deferred->second.y, max_y);
+    clear_deferred_far();
     if (outcome)
     {
       *outcome = 9;
@@ -522,6 +536,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     EnqueueTerrainColumnRelight(world_x, world_z, /*priority=*/true, min_y,
                                 max_y);
     prioritize_visible_repair();
+    clear_deferred_far();
     if (outcome)
     {
       *outcome = 5;
@@ -541,6 +556,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     if (admitted)
     {
       prioritize_visible_repair();
+      clear_deferred_far();
     }
     if (outcome)
     {
@@ -613,6 +629,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     {
       DeferredVisibleDrawGateRelightYBands.emplace(
           key, glm::ivec2(min_y, max_y));
+      clear_deferred_far();
       if (outcome)
       {
         *outcome = 9;
@@ -656,6 +673,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
       PendingVisibleDrawGateRelightYBands.erase(victim);
       DeferredVisibleDrawGateRelightYBands.emplace(
           key, glm::ivec2(min_y, max_y));
+      clear_deferred_far();
       if (outcome)
       {
         *outcome = 14;
@@ -686,6 +704,7 @@ bool UWorldPersistence::EnqueueVisibleRelight(
   if (admitted)
   {
     prioritize_visible_repair();
+    clear_deferred_far();
   }
   if (outcome)
   {
@@ -1014,6 +1033,13 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
   {
     return false;
   }
+  const auto target_service_radius = [&](glm::ivec2 world_key)
+  {
+    return PendingVisibleFirstMeshRelightYBands.count(world_key) != 0
+               ? std::max(radius_chunks,
+                          kVisualStageFirstMeshRelightApproachHoriz)
+               : radius_chunks;
+  };
 
   // Exact renderer rejections that could not safely enter the shared FIFO stay
   // in a bounded side lane. Promote one just-in-time, ahead of ordinary work
@@ -1033,9 +1059,10 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     const int distance =
         std::max(std::abs(column.x - focus_ground.x),
                  std::abs(column.y - focus_ground.z));
+    const int service_radius = target_service_radius(world_key);
     const bool already_queued =
         PendingTerrainColumnRelightKeys.count(world_key) != 0;
-    if (!already_queued && distance > radius_chunks)
+    if (!already_queued && distance > service_radius)
     {
       DeferFarRelightColumn(column, entry.second.x, entry.second.y,
                             /*priority=*/true);
@@ -1043,7 +1070,7 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
       expired_visible.push_back(world_key);
       continue;
     }
-    if (distance > radius_chunks ||
+    if (distance > service_radius ||
         world.IsAsyncRelightColumnInFlight(column))
     {
       continue;
@@ -1082,7 +1109,40 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
     const int distance =
         std::max(std::abs(column.x - focus_ground.x),
                  std::abs(column.y - focus_ground.z));
-    if (distance > radius_chunks ||
+    if (distance > target_service_radius(world_key) ||
+        world.IsAsyncRelightColumnInFlight(column))
+    {
+      continue;
+    }
+    if (!have_visible_target || distance < visible_distance ||
+        (distance == visible_distance &&
+         (world_key.x < visible_target.x ||
+          (world_key.x == visible_target.x && world_key.y < visible_target.y))))
+    {
+      have_visible_target = true;
+      visible_target_is_deferred = false;
+      visible_target = world_key;
+      visible_band = entry.second;
+      visible_distance = distance;
+    }
+  }
+
+  // FirstMesh relights can be reserved one column beyond the ordinary
+  // renderer-repair ring. Let those exact bands reach the front of the same
+  // bounded queue lane once they are inside that approach horizon.
+  for (const auto &entry : PendingVisibleFirstMeshRelightYBands)
+  {
+    const glm::ivec2 world_key = entry.first;
+    if (PendingTerrainColumnRelightKeys.count(world_key) == 0)
+    {
+      continue;
+    }
+    const glm::ivec2 column(FloorDiv(world_key.x, CHUNK_SIZE),
+                            FloorDiv(world_key.y, CHUNK_SIZE));
+    const int distance =
+        std::max(std::abs(column.x - focus_ground.x),
+                 std::abs(column.y - focus_ground.z));
+    if (distance > target_service_radius(world_key) ||
         world.IsAsyncRelightColumnInFlight(column))
     {
       continue;
@@ -1108,6 +1168,12 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
       EnqueueTerrainColumnRelightImpl(
           visible_target.x, visible_target.y, /*priority=*/true,
           visible_band.x, visible_band.y, /*visible_admission=*/true);
+      if (PendingTerrainColumnRelightKeys.count(visible_target) != 0)
+      {
+        ClearDeferredFarRelightColumn(glm::ivec2(
+            FloorDiv(visible_target.x, CHUNK_SIZE),
+            FloorDiv(visible_target.y, CHUNK_SIZE)));
+      }
       if (PendingVisibleFirstMeshRelightYBands.count(visible_target) == 0)
       {
         PendingVisibleDrawGateRelightYBands[visible_target] = visible_band;
