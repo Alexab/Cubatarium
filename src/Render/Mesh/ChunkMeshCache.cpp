@@ -6080,9 +6080,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   }
   if (output_queue_progress_kick)
   {
-    // Bound the saturation escape to one submission per cache tick. GPU
-    // completion and its fence polls reclaim capacity before more is admitted.
-    kick_cap = std::min(kick_cap, 1);
+    // The mesh scheduler admits up to four outputs per pass and the readback
+    // ring has eight slots. Permit a bounded two-kick refill at saturation so
+    // queued outputs do not outpace GPU service while leaving most ring slots
+    // idle. Keep the cap tied to the current processing quantum.
+    const int progress_kick_cap =
+        std::min(2, std::max(1, (max_count + 1) / 2));
+    kick_cap = std::min(kick_cap, progress_kick_cap);
   }
   int debt_forced_kicks = 0;
   auto find_prefer_queued = [&]() {
