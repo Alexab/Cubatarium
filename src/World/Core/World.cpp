@@ -4339,14 +4339,42 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                     : (rec->attempt_created_ms > 0.0
                            ? demand_now_ms - rec->attempt_created_ms
                            : 0.0);
+            const uint64_t current_mesh_revision =
+                MeshService->GetChunkMeshRevision(coord);
+            const MeshPublishRevs current_published_revs =
+                MeshService->GetCache().GetMeshPublishRevs(coord);
+            const bool unowned_geometry_debt =
+                current_mesh_revision > current_published_revs.geom_rev &&
+                !has_slice_work_owner(coord);
             // A queued owner can disappear between admission and execution.
             // Give ordinary work the existing light-repair SLA to reappear;
             // a mesh held by defer-until-lit cannot execute and must not delay
-            // recovery when its concrete relight owner is gone.
+            // recovery when its concrete relight owner is gone. An unpublished
+            // geometry revision with no concrete owner is also an immediate
+            // retry: at cruise speed, the visual ring can pass this chunk
+            // before the generic SLA expires.
             if (since_progress_ms < kLightRepairSlaMs &&
-                !deferred_without_light_owner)
+                !deferred_without_light_owner && !unowned_geometry_debt)
             {
               continue;
+            }
+            if (unowned_geometry_debt &&
+                since_progress_ms < kLightRepairSlaMs &&
+                std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+            {
+              CubatariumLogInfo(
+                  "RelightAudit",
+                  "unowned geometry debt retry coord=(" +
+                      std::to_string(coord.x) + "," +
+                      std::to_string(coord.y) + "," +
+                      std::to_string(coord.z) + ") focus=(" +
+                      std::to_string(focus_g.x) + "," +
+                      std::to_string(focus_g.z) + ") desired_geom=" +
+                      std::to_string(current_mesh_revision) +
+                      " published_geom=" +
+                      std::to_string(current_published_revs.geom_rev) +
+                      " scheduler_age_ms=" +
+                      std::to_string(since_progress_ms));
             }
             (void)demand.NoteInstallResult(
                 coord, InstallResult::CancelledSuperseded,
