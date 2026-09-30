@@ -122,10 +122,13 @@ void main() {
       local[uAxis] = u; local[vAxis] = v;
       uint val = 0u;
       if (local[axis] >= 0 && local[axis] < int(side)) {
-        int li = (local.y * int(side) + local.z) * int(side) + local.x;
+        // Face masks follow the padded occupancy buffer's x/z/y linear order.
+        int maskIndex = (local.y * int(side) + local.z) * int(side) + local.x;
+        // Block palettes follow Chunk::LocalIndex: x + side*y + side^2*z.
+        int blockIndex = (local.z * int(side) + local.y) * int(side) + local.x;
         uint bit = uint(axis) * 2u + (faceSign > 0 ? 1u : 0u);
-        if ((mask[li] & (1u << bit)) != 0u) {
-          uint bid = readBlock(uint(li));
+        if ((mask[maskIndex] & (1u << bit)) != 0u) {
+          uint bid = readBlock(uint(blockIndex));
           if (bid != 0u) {
             ivec3 air = local; air[axis] += faceSign;
             uint light = sampleFaceLight(air, local);

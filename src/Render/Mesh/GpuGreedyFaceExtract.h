@@ -396,8 +396,8 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
     {
       for (int x = 0; x < n; ++x)
       {
-        const int li = (y * n + z) * n + x;
-        const BlockId id = snap.blocks[static_cast<size_t>(li)];
+        // ChunkMeshSnapshot blocks use Chunk::LocalIndex (x + n*y + n^2*z).
+        const BlockId id = snap.GetBlockLocal(glm::ivec3(x, y, z));
         if (!IsOpaqueSolidForGpuExtract(registry, id))
         {
           continue;
@@ -587,10 +587,12 @@ DecodeFaceMasks(const ChunkMeshSnapshot &snap, UBlockRegistry &registry,
     {
       continue;
     }
+    // The face-mask SSBO uses the GPU occupancy layout x + n*z + n^2*y.
+    // Recover that voxel coordinate, then fetch its block in chunk storage order.
     const int x = static_cast<int>(i % n);
     const int y = static_cast<int>(i / (n * n));
     const int z = static_cast<int>((i / n) % n);
-    const BlockId id = snap.blocks[i];
+    const BlockId id = snap.GetBlockLocal(glm::ivec3(x, y, z));
     auto emit = [&](int axis, int sign, uint32_t bit)
     {
       if ((m & bit) == 0)
