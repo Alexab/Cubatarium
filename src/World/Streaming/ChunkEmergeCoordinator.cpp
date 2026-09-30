@@ -2902,9 +2902,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           fwd = glm::vec2(front.x, front.z);
         }
       }
+      // While moving with a visible first-mesh hole, radial ordering alone
+      // can put the next FOV-leading slices behind every slice in the nearby
+      // square (M185: visible targets at queue positions 175–198/212). Give
+      // the forward cone a bounded three-chunk lead so those missing surfaces
+      // enter the schedulable front window. Keep ordinary cruise on the
+      // configured soft bias; the stronger preference ends as soon as the
+      // visible-mesh miss clears.
+      constexpr float kMovingVisibleMissForwardBias = 3.0f;
       const float bias_k =
           !moving ? std::max(tune.MeshForwardBiasK, 1.5f)
-                  : tune.MeshForwardBiasK;
+                  : (missing_visible_mesh
+                         ? std::max(tune.MeshForwardBiasK,
+                                    kMovingVisibleMissForwardBias)
+                         : tune.MeshForwardBiasK);
       mesh_service.SetMeshForwardBias(bias_k, fwd);
       // Era38 A2: no rear Pass1b while near SoftDefer empty or pending debt.
       const bool starve_hinterland = StarveHinterlandUnlit(
