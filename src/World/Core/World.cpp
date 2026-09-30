@@ -7936,6 +7936,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           const MeshPublishRevs published =
               MeshService->GetCache().GetMeshPublishRevs(coord);
           const auto &cache = MeshService->GetCache();
+          int32_t dirty_queue_index = -1;
+          int32_t dirty_queue_size = 0;
+          const uint8_t dirty_queue_kind =
+              cache.GetDirtyQueueTrace(coord, dirty_queue_index,
+                                       dirty_queue_size);
           CubatariumLogInfo(
               "RelightAudit",
               "first_mesh_repair job=" + std::to_string(result.job_id) +
@@ -7953,6 +7958,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                   std::to_string(cache.IsEnterTerminalHeld(coord)) +
                   " dirty=" +
                   std::to_string(cache.IsChunkMeshDirty(coord)) +
+                  " dirty_queue=" + std::to_string(dirty_queue_kind) + ":" +
+                  std::to_string(dirty_queue_index) + "/" +
+                  std::to_string(dirty_queue_size) + " dirty_age_frames=" +
+                  std::to_string(cache.GetDirtyQueueAgeFrames(coord)) +
                   " inflight=" + std::to_string(
                       cache.HasInflightMeshBuild(coord)) +
                   " raa=" +
@@ -8031,6 +8040,13 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         const bool stale_mesh_input =
             std::find(stale_mesh_coords.begin(), stale_mesh_coords.end(),
                       chunk_data.coord) != stale_mesh_coords.end();
+        int32_t dirty_queue_index = -1;
+        int32_t dirty_queue_size = 0;
+        const uint8_t dirty_queue_kind =
+            MeshService->GetCache().GetDirtyQueueTrace(
+                chunk_data.coord, dirty_queue_index, dirty_queue_size);
+        const uint64_t dirty_queue_age_frames =
+            MeshService->GetCache().GetDirtyQueueAgeFrames(chunk_data.coord);
         CubatariumLogInfo(
             "RelightAudit",
             "slice_handoff job=" + std::to_string(result.job_id) +
@@ -8069,6 +8085,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                 " satisfying=" + std::to_string(satisfying) +
                 " dirty=" + std::to_string(
                     MeshService->IsChunkMeshDirty(chunk_data.coord)) +
+                " dirty_queue=" + std::to_string(dirty_queue_kind) + ":" +
+                std::to_string(dirty_queue_index) + "/" +
+                std::to_string(dirty_queue_size) + " dirty_age_frames=" +
+                std::to_string(dirty_queue_age_frames) +
                 " mesh_inflight=" + std::to_string(
                     MeshService->HasInflightMeshBuild(chunk_data.coord)) +
                 " raa_pending=" + std::to_string(
