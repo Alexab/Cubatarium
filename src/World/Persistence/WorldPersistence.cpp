@@ -868,6 +868,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   int already_inflight = 0;
   int enqueue_attempts = 0;
   int enqueue_rejected = 0;
+  int enqueue_trimmed = 0;
   int nearest_horiz = -1;
   glm::ivec2 nearest_coord{};
   std::vector<glm::ivec2> to_erase;
@@ -902,20 +903,31 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
                                ground_xz.y * CHUNK_SIZE);
     const bool async_owned = world.IsAsyncRelightColumnInFlight(ground_xz);
     const bool queued_before = IsTerrainColumnRelightQueued(world_key);
+    bool enqueue_caused_fifo_drop = false;
     already_queued += queued_before ? 1 : 0;
     already_inflight += async_owned ? 1 : 0;
     if (!async_owned && !queued_before)
     {
       ++enqueue_attempts;
-      EnqueueTerrainColumnRelight(world_key.x, world_key.y,
-                                  kv.second.priority, band.x, band.y);
+      // This entry already passed the live FIFO admission check above using
+      // focus_ground. Match EnqueueVisibleRelight: skip the second pressure
+      // check in EnqueueTerrainColumnRelightImpl, which recomputes distance
+      // against the independently stored trim focus and can reject this same
+      // work after the outer admission decision.
+      const int fifo_dropped_before = RelightFifoOverflowDroppedN;
+      EnqueueTerrainColumnRelightImpl(world_key.x, world_key.y,
+                                      kv.second.priority, band.x, band.y,
+                                      /*visible_admission=*/true);
+      enqueue_caused_fifo_drop =
+          RelightFifoOverflowDroppedN > fifo_dropped_before;
     }
     const bool accepted = IsTerrainColumnRelightQueued(world_key) || async_owned;
     if (!accepted)
     {
       ++enqueue_rejected;
-      // A secondary admission guard may still refuse the attempt. Keep this
-      // deferred record and let a later drain retry it.
+      enqueue_trimmed += enqueue_caused_fifo_drop ? 1 : 0;
+      // If the bounded FIFO does not retain the key, keep this deferred
+      // record and let a later admission pass retry it.
       continue;
     }
     world.TryNotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
@@ -959,6 +971,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
             " inflight=" + std::to_string(already_inflight) +
             " enqueue=" + std::to_string(enqueue_attempts) +
             " rejected=" + std::to_string(enqueue_rejected) +
+            " trimmed=" + std::to_string(enqueue_trimmed) +
             " admitted=" + std::to_string(admitted) + " nearest=(" +
             std::to_string(nearest_coord.x) + "," +
             std::to_string(nearest_coord.y) + ")/h=" +
