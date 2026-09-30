@@ -341,6 +341,17 @@ struct VisualBlackTraceRecord
   float renderer_pixel_opaque_surface_x{0.0f};
   float renderer_pixel_opaque_surface_y{0.0f};
   float renderer_pixel_opaque_surface_z{0.0f};
+  /// Optional CPU voxel-ray witness for the same screen pixel. State is
+  /// 0=not sampled, 1=opaque cube hit, 2=unloaded chunk before hit,
+  /// 3=no opaque cube within the renderer horizon.
+  uint8_t renderer_pixel_voxel_ray_state{0};
+  uint8_t renderer_pixel_voxel_ray_gap{0};
+  int32_t renderer_pixel_voxel_hit_x{0};
+  int32_t renderer_pixel_voxel_hit_y{0};
+  int32_t renderer_pixel_voxel_hit_z{0};
+  int32_t renderer_pixel_voxel_hit_block_id{-1};
+  float renderer_pixel_voxel_hit_distance{-1.0f};
+  float renderer_pixel_opaque_hit_distance{-1.0f};
   int32_t renderer_pixel_opaque_chunk_x{0};
   int32_t renderer_pixel_opaque_chunk_y{0};
   int32_t renderer_pixel_opaque_chunk_z{0};

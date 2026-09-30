@@ -3525,6 +3525,22 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_opaque_surface_y
                << ",\"renderer_pixel_opaque_surface_z\":"
                << r.renderer_pixel_opaque_surface_z
+               << ",\"renderer_pixel_voxel_ray_state\":"
+               << static_cast<int>(r.renderer_pixel_voxel_ray_state)
+               << ",\"renderer_pixel_voxel_ray_gap\":"
+               << static_cast<int>(r.renderer_pixel_voxel_ray_gap)
+               << ",\"renderer_pixel_voxel_hit_x\":"
+               << r.renderer_pixel_voxel_hit_x
+               << ",\"renderer_pixel_voxel_hit_y\":"
+               << r.renderer_pixel_voxel_hit_y
+               << ",\"renderer_pixel_voxel_hit_z\":"
+               << r.renderer_pixel_voxel_hit_z
+               << ",\"renderer_pixel_voxel_hit_block_id\":"
+               << r.renderer_pixel_voxel_hit_block_id
+               << ",\"renderer_pixel_voxel_hit_distance\":"
+               << r.renderer_pixel_voxel_hit_distance
+               << ",\"renderer_pixel_opaque_hit_distance\":"
+               << r.renderer_pixel_opaque_hit_distance
                << ",\"renderer_pixel_opaque_chunk_x\":"
                << r.renderer_pixel_opaque_chunk_x
                << ",\"renderer_pixel_opaque_chunk_y\":"

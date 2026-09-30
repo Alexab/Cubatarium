@@ -117,6 +117,98 @@ int PixelProbeSampleY(int row, int height)
   return std::clamp((y0 + y1) / 2, 0, height - 1);
 }
 
+struct OpaqueVoxelRayWitness
+{
+  // 1=opaque cube, 2=unloaded chunk before any opaque cube, 3=none in range.
+  uint8_t state{0};
+  glm::ivec3 block{0};
+  BlockId block_id{BLOCK_AIR};
+  float distance{-1.0f};
+};
+
+OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
+                                          const glm::vec3 &origin,
+                                          const glm::vec3 &direction,
+                                          float max_distance)
+{
+  OpaqueVoxelRayWitness result{};
+  if (!std::isfinite(max_distance) || max_distance <= 0.0f ||
+      glm::dot(direction, direction) < 0.99f)
+  {
+    return result;
+  }
+
+  const glm::vec3 ray_origin = origin + direction * 1e-4f;
+  glm::ivec3 cell(static_cast<int>(std::floor(ray_origin.x)),
+                  static_cast<int>(std::floor(ray_origin.y)),
+                  static_cast<int>(std::floor(ray_origin.z)));
+  const glm::ivec3 step(direction.x > 0.0f ? 1 : direction.x < 0.0f ? -1 : 0,
+                        direction.y > 0.0f ? 1 : direction.y < 0.0f ? -1 : 0,
+                        direction.z > 0.0f ? 1 : direction.z < 0.0f ? -1 : 0);
+  const float infinity = std::numeric_limits<float>::infinity();
+  const auto first_boundary_t = [&](float position, float ray_dir, int voxel,
+                                    int axis_step)
+  {
+    if (axis_step == 0)
+    {
+      return infinity;
+    }
+    const float boundary = static_cast<float>(voxel + (axis_step > 0 ? 1 : 0));
+    return std::max(0.0f, (boundary - position) / ray_dir);
+  };
+  glm::vec3 next_t(first_boundary_t(ray_origin.x, direction.x, cell.x, step.x),
+                   first_boundary_t(ray_origin.y, direction.y, cell.y, step.y),
+                   first_boundary_t(ray_origin.z, direction.z, cell.z, step.z));
+  const glm::vec3 delta_t(
+      step.x == 0 ? infinity : std::abs(1.0f / direction.x),
+      step.y == 0 ? infinity : std::abs(1.0f / direction.y),
+      step.z == 0 ? infinity : std::abs(1.0f / direction.z));
+  const auto &chunks = world.GetBlockWorld().GetChunkManager();
+  const auto &registry = world.GetBlockRegistry();
+  float entry_distance = 0.0f;
+  const int max_steps = std::max(32, static_cast<int>(max_distance * 2.0f) + 16);
+  for (int i = 0; i < max_steps && entry_distance <= max_distance; ++i)
+  {
+    const BlockQueryResult query = chunks.QueryBlock(cell);
+    if (query.IsUnloaded())
+    {
+      result.state = 2;
+      result.distance = entry_distance;
+      return result;
+    }
+    if (query.IsSolid() &&
+        registry.GetRenderStyle(query.id) == BlockRenderStyle::UCube &&
+        !registry.IsTransparent(query.id))
+    {
+      result.state = 1;
+      result.block = cell;
+      result.block_id = query.id;
+      result.distance = entry_distance;
+      return result;
+    }
+
+    int axis = 0;
+    if (next_t.y < next_t.x)
+    {
+      axis = 1;
+    }
+    if (next_t.z < next_t[axis])
+    {
+      axis = 2;
+    }
+    entry_distance = next_t[axis];
+    if (!std::isfinite(entry_distance) || entry_distance > max_distance)
+    {
+      break;
+    }
+    cell[axis] += step[axis];
+    next_t[axis] += delta_t[axis];
+  }
+  result.state = 3;
+  result.distance = max_distance;
+  return result;
+}
+
 struct OpaquePixelProbeCapture
 {
   bool active{false};
@@ -772,6 +864,7 @@ void CaptureTransparentPixelProbe(
               2.0f -
           1.0f;
       const float opaque_depth = opaque_capture.depth[sample];
+      float opaque_hit_distance = -1.0f;
       if (std::isfinite(opaque_depth) && opaque_depth >= 0.0f &&
           opaque_depth < 0.999999f)
       {
@@ -781,6 +874,8 @@ void CaptureTransparentPixelProbe(
         if (std::abs(opaque_h.w) > 1e-6f)
         {
           const glm::vec3 opaque_point = glm::vec3(opaque_h) / opaque_h.w;
+          opaque_hit_distance = glm::length(opaque_point - camera_position);
+          record.renderer_pixel_opaque_hit_distance = opaque_hit_distance;
           const glm::ivec3 opaque_cell(
               static_cast<int>(std::floor(opaque_point.x)),
               static_cast<int>(std::floor(opaque_point.y)),
@@ -1003,6 +1098,37 @@ void CaptureTransparentPixelProbe(
           collect_depth_mdi_state(mdi_opaque_pass, 1u << 0);
           collect_depth_mdi_state(mdi_cutout_pass, 1u << 1);
           collect_depth_mdi_state(mdi_transparent_pass, 1u << 2);
+        }
+      }
+      const glm::vec4 voxel_ray_far_h =
+          inverse_view_projection * glm::vec4(ndc_x, ndc_y, 1.0f, 1.0f);
+      if (std::abs(voxel_ray_far_h.w) > 1e-6f)
+      {
+        const glm::vec3 voxel_ray_far =
+            glm::vec3(voxel_ray_far_h) / voxel_ray_far_h.w;
+        const glm::vec3 voxel_ray_direction =
+            glm::normalize(voxel_ray_far - camera_position);
+        const OpaqueVoxelRayWitness voxel_witness = TraceOpaqueVoxelRay(
+            world, camera_position, voxel_ray_direction,
+            cache.MaxCullDistance());
+        record.renderer_pixel_voxel_ray_state = voxel_witness.state;
+        if (voxel_witness.state == 1)
+        {
+          record.renderer_pixel_voxel_hit_x = voxel_witness.block.x;
+          record.renderer_pixel_voxel_hit_y = voxel_witness.block.y;
+          record.renderer_pixel_voxel_hit_z = voxel_witness.block.z;
+          record.renderer_pixel_voxel_hit_block_id =
+              static_cast<int32_t>(voxel_witness.block_id);
+          record.renderer_pixel_voxel_hit_distance = voxel_witness.distance;
+          // A nearer world-space opaque cube with no corresponding depth
+          // sample is direct evidence of a screen-facing geometry gap. A
+          // nearer rendered surface (terrain, entity, or another occluder)
+          // is expected and does not count as a gap.
+          record.renderer_pixel_voxel_ray_gap =
+              opaque_hit_distance < 0.0f ||
+                      opaque_hit_distance > voxel_witness.distance + 0.75f
+                  ? 1u
+                  : 0u;
         }
       }
       glm::vec4 near_h =
