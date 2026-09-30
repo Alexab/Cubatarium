@@ -357,7 +357,6 @@ void UChunkDirtySet::SortByDistanceKey(
 void UChunkDirtySet::BoostJustRelitNear(glm::ivec3 focus_ground_chunk,
                                         glm::ivec2 relit_xz, int max_horiz)
 {
-  (void)max_horiz;
   if (FirstMeshQ.size() < 2)
   {
     return;
@@ -366,7 +365,7 @@ void UChunkDirtySet::BoostJustRelitNear(glm::ivec3 focus_ground_chunk,
   {
     const int h = HorizDist(c, focus_ground_chunk);
     const bool just = c.x == relit_xz.x && c.z == relit_xz.y;
-    return ShouldFirstMeshSortBoost(h, just);
+    return ShouldFirstMeshSortBoost(h, just, max_horiz);
   };
   std::stable_partition(FirstMeshQ.begin(), FirstMeshQ.end(), boosted);
   InvalidateUnified();

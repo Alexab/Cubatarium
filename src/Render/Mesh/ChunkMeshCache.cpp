@@ -8022,7 +8022,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (JustRelitFirstMeshValid_)
       {
         Dirty.BoostJustRelitNear(MeshFocusGroundChunk, JustRelitFirstMeshColumn_,
-                                 kVisualStageNearFovHoriz);
+                                 kVisualStageFirstMeshRelightApproachHoriz);
+        // MarkRelit grants a one-sort boost to its exact primary column. A
+        // persistent flag would keep biasing later FirstMesh work after this
+        // bounded handoff has already been applied.
+        JustRelitFirstMeshValid_ = false;
       }
     }
     else

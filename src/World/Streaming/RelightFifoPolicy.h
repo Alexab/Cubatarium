@@ -1515,15 +1515,17 @@ inline bool ShouldExtendWitnessPinHold(int pin_age, bool pinned_still,
   return pin_age < hold_frames;
 }
 
-/// P3: FirstMeshQ head = underfeet or just-MarkRelit nh≤2 (not a quota bump).
-inline bool ShouldFirstMeshSortBoost(int horiz, bool just_relit_column)
+/// P3: FirstMeshQ head = underfeet or the just-relit column within its bounded
+/// approach horizon (not a quota bump).
+inline bool ShouldFirstMeshSortBoost(
+    int horiz, bool just_relit_column,
+    int max_horiz = kVisualStageNearFovHoriz)
 {
   if (horiz == 0)
   {
     return true;
   }
-  return just_relit_column && horiz >= 0 &&
-         horiz <= kVisualStageNearFovHoriz;
+  return just_relit_column && horiz >= 0 && horiz <= max_horiz;
 }
 
 /// F3b: skip terrain relight FIFO when column is lit-settled and surface has

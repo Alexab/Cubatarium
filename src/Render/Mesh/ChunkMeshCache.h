@@ -118,7 +118,8 @@ public:
   {
     return PendingMeshDependencyInvalidations_.count(coord) != 0;
   }
-  /// P3: next Dirty sort boosts this column's nh≤2 / underfeet FirstMesh.
+  /// P3: next Dirty sort boosts this column within the supplied near/approach
+  /// horizon, plus underfeet FirstMesh entries.
   void SetJustRelitFirstMeshColumn(glm::ivec2 column, bool valid)
   {
     JustRelitFirstMeshValid_ = valid;
