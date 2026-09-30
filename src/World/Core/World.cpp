@@ -4192,10 +4192,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         if (target_cy >= 0)
         {
           const uint64_t key = PackUnfinishedColKey(cx, cz);
-          if (std::find(keys.begin(), keys.end(), key) == keys.end())
-          {
-            keys.push_back(key);
-          }
           candidates.push_back({key, target_cy, forward_score});
         }
       }
@@ -4228,11 +4224,10 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         }
         const auto key_it =
             std::find(keys.begin(), keys.end(), candidate.key);
-        if (key_it == keys.end())
+        if (key_it != keys.end())
         {
-          continue;
+          keys.erase(key_it);
         }
-        keys.erase(key_it);
         const size_t position = std::min(insert_at + inserted, keys.size());
         keys.insert(keys.begin() + static_cast<std::ptrdiff_t>(position),
                     candidate.key);
