@@ -7604,6 +7604,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyDrainMs = 0.0;
   LastMeshDirtyDrainN = 0;
   LastMeshDirtyScheduleMs = 0.0;
+  const int prior_mesh_dirty_schedule_ok_n = LastMeshDirtyScheduleOkN;
+  const int prior_mesh_dirty_schedule_ok_fm_n = LastMeshDirtyScheduleOkFmN;
   LastMeshDirtyScheduleOkN = 0;
   LastMeshDirtyScheduleOkFmN = 0;
   LastMeshDirtyScheduleOkRemeshN = 0;
@@ -7991,7 +7993,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     const bool holes_known_clear =
         MissingMemo.epoch == HoleQueryEpoch && !MissingMemo.result;
     const bool skip_sort_schedule_healthy =
-        LastMeshDirtyScheduleOkN > 0 && !EnterLitQuiesce && holes_known_clear &&
+        prior_mesh_dirty_schedule_ok_n > 0 && !EnterLitQuiesce &&
+        holes_known_clear &&
         !StarveRemeshForHoles && (DirtySortFrameCounter_ % 2) != 0;
     if (!skip_sort_for_budget && !skip_sort_high_revisit &&
         !skip_sort_vb_heal && !skip_sort_o4_throttle &&
@@ -8274,10 +8277,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       const int fm_q = static_cast<int>(Dirty.GetFirstMeshCount());
       const bool fm_consumer_starved =
-          IsFmConsumerStarved(fm_q, LastMeshDirtyScheduleOkN);
+          IsFmConsumerStarved(fm_q, prior_mesh_dirty_schedule_ok_fm_n);
       first_mesh_cap = ComputeFirstMeshScheduleEffectiveCap(
           first_mesh_cap_base, fm_q, FmDirtyEnqueueReserveN_, 4,
-          fm_consumer_starved, LastMeshDirtyScheduleOkN);
+          fm_consumer_starved, prior_mesh_dirty_schedule_ok_fm_n);
       FmConsumerStarvedActive_ = fm_consumer_starved ? 1 : 0;
     }
     LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
@@ -8325,19 +8328,27 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     const bool miss_or_holes_starve =
         StarveRemeshForHoles || focus_missing_for_schedule;
-    if (miss_or_holes_starve && Dirty.GetFirstMeshCount() > 0 &&
-        first_mesh_cap > 0)
+    if (Dirty.GetFirstMeshCount() > 0 && first_mesh_cap > 0)
     {
-      // Protect the FirstMesh capture credits before the stale-light and
-      // visible-repair prepasses below. Reserving later allowed those remesh
-      // snapshots to spend the shared refresh budget first, leaving a positive
-      // FirstMesh schedule cap with zero FirstMesh submissions.
-      constexpr int kMissFirstMeshCaptureReserveMax = 4;
+      // FirstMesh is the only lane that can create a drawable for an empty
+      // resident slice. Protect its capture credits before stale-light and
+      // visible-repair prepasses; the shared refresh budget must not let those
+      // remesh snapshots consume the entire FirstMesh service opportunity.
+      constexpr int kFirstMeshCaptureReserveMax = 4;
       FirstMeshCaptureReserveLeft = std::min(
-          {kMissFirstMeshCaptureReserveMax, first_mesh_cap,
+          {kFirstMeshCaptureReserveMax, first_mesh_cap,
            CaptureRefreshBudgetLeft});
       CaptureRefreshBudgetLeft -= FirstMeshCaptureReserveLeft;
     }
+    constexpr int kFirstMeshScheduleSlotReserve = 4;
+    const int first_mesh_schedule_slot_reserve =
+        Dirty.GetFirstMeshCount() > 0 && first_mesh_cap > 0
+            ? std::min({kFirstMeshScheduleSlotReserve, first_mesh_cap,
+                        max_schedule_per_frame})
+            : 0;
+    const int pre_first_mesh_schedule_limit =
+        std::max(0, max_schedule_per_frame -
+                        first_mesh_schedule_slot_reserve);
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
     int rear_focus_scheduled = 0;
     const auto leave_in_under_pl = [&](const glm::ivec3 &c) {
@@ -8880,8 +8891,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       int stale_light_attempts = 0;
       for (const glm::ivec3 coord : stale_light_remesh)
       {
-        if ((max_schedule_per_frame > 0 &&
-             scheduled >= max_schedule_per_frame) ||
+        if (scheduled >= pre_first_mesh_schedule_limit ||
             stale_light_attempts >= 4)
         {
           break;
@@ -8925,8 +8935,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         {
           for (const glm::ivec3 &coord : visible_repair_remesh)
           {
-            if (max_schedule_per_frame > 0 &&
-                scheduled >= max_schedule_per_frame)
+            if (scheduled >= pre_first_mesh_schedule_limit)
             {
               break;
             }
@@ -9144,10 +9153,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // FirstMesh queue is starved (same Capture owner; no N04 caps).
       const int dirty_fm_n = static_cast<int>(Dirty.GetFirstMeshCount());
       const bool fm_starved =
-          IsFmConsumerStarved(dirty_fm_n, LastMeshDirtyScheduleOkFmN);
+          IsFmConsumerStarved(dirty_fm_n,
+                              prior_mesh_dirty_schedule_ok_fm_n);
       const double slice_budget_anchor = LastMeshSnapshotMs;
       for (auto it = Dirty.begin();
-           it != Dirty.end() && scheduled < max_schedule_per_frame &&
+           it != Dirty.end() &&
+           scheduled < pre_first_mesh_schedule_limit &&
            remesh_scheduled < remesh_cap;)
       {
         if (Dirty.IsFirstMesh(*it))
