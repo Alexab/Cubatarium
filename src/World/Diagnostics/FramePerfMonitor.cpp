@@ -3570,6 +3570,25 @@ void UFramePerfMonitor::Shutdown()
                << ",\"renderer_pixel_voxel_chunk_flow_ticket_flags\":"
                << static_cast<int>(
                       r.renderer_pixel_voxel_chunk_flow_ticket_flags)
+               << ",\"renderer_pixel_voxel_chunk_defer_until_lit\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_defer_until_lit)
+               << ",\"renderer_pixel_voxel_chunk_soft_defer_held\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_soft_defer_held)
+               << ",\"renderer_pixel_voxel_chunk_has_settled_light\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_has_settled_light)
+               << ",\"renderer_pixel_voxel_chunk_attempt_id\":"
+               << r.renderer_pixel_voxel_chunk_attempt_id
+               << ",\"renderer_pixel_voxel_chunk_settled_light_rev\":"
+               << r.renderer_pixel_voxel_chunk_settled_light_rev
+               << ",\"renderer_pixel_voxel_chunk_field_light_rev\":"
+               << r.renderer_pixel_voxel_chunk_field_light_rev
+               << ",\"renderer_pixel_voxel_chunk_demand_attempt_age_ms\":"
+               << r.renderer_pixel_voxel_chunk_demand_attempt_age_ms
+               << ",\"renderer_pixel_voxel_chunk_demand_progress_age_ms\":"
+               << r.renderer_pixel_voxel_chunk_demand_progress_age_ms
                << ",\"renderer_pixel_voxel_chunk_nonair\":"
                << r.renderer_pixel_voxel_chunk_nonair
                << ",\"renderer_pixel_voxel_chunk_mesh_revision\":"

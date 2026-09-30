@@ -1198,7 +1198,11 @@ void CaptureTransparentPixelProbe(
           {
             record.renderer_pixel_voxel_chunk_nonair =
                 static_cast<uint32_t>(voxel_chunk_data->GetNonAirCount());
+            record.renderer_pixel_voxel_chunk_field_light_rev =
+                voxel_chunk_data->GetLightFieldRevision();
           }
+          UJobStageTrace::WatchVisualChunk(voxel_chunk.x, voxel_chunk.y,
+                                           voxel_chunk.z);
           const glm::ivec2 voxel_column(voxel_chunk.x, voxel_chunk.z);
           record.renderer_pixel_voxel_chunk_pending_light =
               world.IsPendingLightBeforeMesh(voxel_column) ? 1u : 0u;
@@ -1302,7 +1306,34 @@ void CaptureTransparentPixelProbe(
                 voxel_demand->desired_geom_rev;
             record.renderer_pixel_voxel_chunk_demand_desired_light_rev =
                 voxel_demand->desired_light_rev;
+            record.renderer_pixel_voxel_chunk_attempt_id =
+                voxel_demand->has_active_attempt
+                    ? voxel_demand->active_attempt_id
+                    : 0;
+            record.renderer_pixel_voxel_chunk_has_settled_light =
+                voxel_demand->has_settled_light ? 1u : 0u;
+            record.renderer_pixel_voxel_chunk_settled_light_rev =
+                voxel_demand->settled_light_rev;
+            const double demand_sample_now_ms =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now().time_since_epoch())
+                    .count();
+            record.renderer_pixel_voxel_chunk_demand_attempt_age_ms =
+                voxel_demand->has_active_attempt &&
+                        voxel_demand->attempt_created_ms > 0.0
+                    ? std::max(0.0, demand_sample_now_ms -
+                                        voxel_demand->attempt_created_ms)
+                    : 0.0;
+            record.renderer_pixel_voxel_chunk_demand_progress_age_ms =
+                voxel_demand->last_progress_ms > 0.0
+                    ? std::max(0.0, demand_sample_now_ms -
+                                        voxel_demand->last_progress_ms)
+                    : 0.0;
           }
+          record.renderer_pixel_voxel_chunk_defer_until_lit =
+              cache.IsDeferMeshUntilLit(voxel_chunk) ? 1u : 0u;
+          record.renderer_pixel_voxel_chunk_soft_defer_held =
+              cache.IsSoftDeferHeld(voxel_chunk) ? 1u : 0u;
           // A nearer world-space opaque cube with no corresponding depth
           // sample is direct evidence of a screen-facing geometry gap. A
           // nearer rendered surface (terrain, entity, or another occluder)

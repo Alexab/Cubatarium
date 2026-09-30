@@ -367,6 +367,14 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_voxel_chunk_relight_queue_index{-1};
   int32_t renderer_pixel_voxel_chunk_relight_queue_size{0};
   uint8_t renderer_pixel_voxel_chunk_flow_ticket_flags{0};
+  uint8_t renderer_pixel_voxel_chunk_defer_until_lit{0};
+  uint8_t renderer_pixel_voxel_chunk_soft_defer_held{0};
+  uint8_t renderer_pixel_voxel_chunk_has_settled_light{0};
+  uint64_t renderer_pixel_voxel_chunk_attempt_id{0};
+  uint64_t renderer_pixel_voxel_chunk_settled_light_rev{0};
+  uint64_t renderer_pixel_voxel_chunk_field_light_rev{0};
+  double renderer_pixel_voxel_chunk_demand_attempt_age_ms{0.0};
+  double renderer_pixel_voxel_chunk_demand_progress_age_ms{0.0};
   uint32_t renderer_pixel_voxel_chunk_nonair{0};
   uint64_t renderer_pixel_voxel_chunk_mesh_revision{0};
   uint64_t renderer_pixel_voxel_chunk_published_geom_rev{0};
