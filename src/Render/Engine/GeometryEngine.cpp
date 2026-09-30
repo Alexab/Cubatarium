@@ -121,8 +121,11 @@ struct OpaqueVoxelRayWitness
 {
   // 1=opaque cube, 2=unloaded chunk before any opaque cube, 3=none in range.
   uint8_t state{0};
+  uint8_t entry_face{0xffu};
   glm::ivec3 block{0};
+  glm::ivec3 previous_block{0};
   BlockId block_id{BLOCK_AIR};
+  BlockId previous_block_id{BLOCK_AIR};
   float distance{-1.0f};
 };
 
@@ -167,6 +170,10 @@ OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
   const auto &chunks = world.GetBlockWorld().GetChunkManager();
   const auto &registry = world.GetBlockRegistry();
   float entry_distance = 0.0f;
+  int entered_axis = -1;
+  int entered_step = 0;
+  glm::ivec3 previous_cell = cell;
+  BlockId previous_block_id = BLOCK_AIR;
   const int max_steps = std::max(32, static_cast<int>(max_distance * 2.0f) + 16);
   for (int i = 0; i < max_steps && entry_distance <= max_distance; ++i)
   {
@@ -183,27 +190,51 @@ OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
     {
       result.state = 1;
       result.block = cell;
+      result.previous_block = previous_cell;
+      result.previous_block_id = previous_block_id;
+      if (entered_axis >= 0)
+      {
+        const int face_axis = entered_axis;
+        result.entry_face = static_cast<uint8_t>(
+            face_axis == 0 ? (entered_step > 0 ? 0 : 1)
+            : face_axis == 1 ? (entered_step > 0 ? 2 : 3)
+                             : (entered_step > 0 ? 4 : 5));
+      }
       result.block_id = query.id;
       result.distance = entry_distance;
       return result;
     }
 
-    int axis = 0;
-    if (next_t.y < next_t.x)
-    {
-      axis = 1;
-    }
-    if (next_t.z < next_t[axis])
-    {
-      axis = 2;
-    }
-    entry_distance = next_t[axis];
+    const float next_distance =
+        (std::min)(next_t.x, (std::min)(next_t.y, next_t.z));
+    entry_distance = next_distance;
     if (!std::isfinite(entry_distance) || entry_distance > max_distance)
     {
       break;
     }
-    cell[axis] += step[axis];
-    next_t[axis] += delta_t[axis];
+    previous_cell = cell;
+    previous_block_id = query.id;
+    entered_axis = -1;
+    entered_step = 0;
+    constexpr float kRayTieEpsilon = 1e-5f;
+    int crossed_axes = 0;
+    for (int axis = 0; axis < 3; ++axis)
+    {
+      if (step[axis] == 0 ||
+          std::abs(next_t[axis] - next_distance) > kRayTieEpsilon)
+      {
+        continue;
+      }
+      cell[axis] += step[axis];
+      next_t[axis] += delta_t[axis];
+      entered_axis = axis;
+      entered_step = step[axis];
+      ++crossed_axes;
+    }
+    if (crossed_axes != 1)
+    {
+      entered_axis = -1;
+    }
   }
   result.state = 3;
   result.distance = max_distance;
@@ -759,6 +790,7 @@ void CaptureTransparentPixelProbe(
       static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
       world.GetPreferredLoadFocusBlock());
+  const auto &voxel_chunks = world.GetBlockWorld().GetChunkManager();
   // This is an opt-in forensic probe. Limit GPU payload readbacks to three
   // unique ray-mapped fluid chunks per capture; selection is based on CPU fluid
   // surface geometry, not framebuffer color, so missing commands can be seen
@@ -1120,7 +1152,132 @@ void CaptureTransparentPixelProbe(
           record.renderer_pixel_voxel_hit_z = voxel_witness.block.z;
           record.renderer_pixel_voxel_hit_block_id =
               static_cast<int32_t>(voxel_witness.block_id);
+          record.renderer_pixel_voxel_previous_block_id =
+              static_cast<int32_t>(voxel_witness.previous_block_id);
+          record.renderer_pixel_voxel_entry_face =
+              voxel_witness.entry_face;
           record.renderer_pixel_voxel_hit_distance = voxel_witness.distance;
+          const glm::ivec3 voxel_chunk =
+              UChunkManager::WorldToChunk(voxel_witness.block);
+          record.renderer_pixel_voxel_chunk_x = voxel_chunk.x;
+          record.renderer_pixel_voxel_chunk_y = voxel_chunk.y;
+          record.renderer_pixel_voxel_chunk_z = voxel_chunk.z;
+          const bool voxel_drawable =
+              cache.HasDrawableGreedyMesh(voxel_chunk);
+          const bool voxel_satisfying =
+              cache.HasMeshSatisfyingColumnReady(voxel_chunk);
+          const bool voxel_draw_ready =
+              world.IsChunkSliceRenderReady(voxel_chunk);
+          const bool voxel_live_gpu = cache.HasLiveGpuDraw(voxel_chunk);
+          record.renderer_pixel_voxel_chunk_render_flags =
+              (voxel_drawable ? 1u : 0u) |
+              (voxel_satisfying ? 1u << 1 : 0u) |
+              (voxel_draw_ready ? 1u << 2 : 0u) |
+              (voxel_live_gpu ? 1u << 3 : 0u);
+          record.renderer_pixel_voxel_chunk_ref_flags =
+              (opaque_ref_chunks.count(voxel_chunk) != 0 ? 1u << 0 : 0u) |
+              (transparent_ref_chunks.count(voxel_chunk) != 0 ? 1u << 1
+                                                               : 0u) |
+              (packed_opaque_chunks.count(voxel_chunk) != 0 ? 1u << 2
+                                                            : 0u) |
+              (packed_transparent_chunks.count(voxel_chunk) != 0 ? 1u << 3
+                                                                 : 0u);
+          record.renderer_pixel_voxel_chunk_gpu_slot_quad_count =
+              static_cast<uint32_t>(std::max(
+                  0, cache.QueryGreedyGpuQuadCount(voxel_chunk)));
+          record.renderer_pixel_voxel_chunk_mesh_revision =
+              cache.GetChunkMeshRevision(voxel_chunk);
+          const MeshPublishRevs voxel_published =
+              cache.GetMeshPublishRevs(voxel_chunk);
+          record.renderer_pixel_voxel_chunk_published_geom_rev =
+              voxel_published.geom_rev;
+          record.renderer_pixel_voxel_chunk_published_light_rev =
+              voxel_published.light_rev;
+          const UChunk *voxel_chunk_data = voxel_chunks.GetChunk(voxel_chunk);
+          if (voxel_chunk_data)
+          {
+            record.renderer_pixel_voxel_chunk_nonair =
+                static_cast<uint32_t>(voxel_chunk_data->GetNonAirCount());
+          }
+          const glm::ivec2 voxel_column(voxel_chunk.x, voxel_chunk.z);
+          const ColumnRenderableState voxel_column_state =
+              world.GetColumnRenderableState(voxel_column);
+          record.renderer_pixel_voxel_chunk_column_reason =
+              static_cast<uint8_t>(voxel_column_state.reason);
+          int voxel_dirty_queue_index = -1;
+          int voxel_dirty_queue_size = 0;
+          record.renderer_pixel_voxel_chunk_dirty_queue_kind =
+              cache.GetDirtyQueueTrace(
+                  voxel_chunk, voxel_dirty_queue_index,
+                  voxel_dirty_queue_size);
+          record.renderer_pixel_voxel_chunk_work_owner_flags =
+              (cache.IsChunkMeshDirty(voxel_chunk) ? 1u : 0u) |
+              (cache.HasInflightMeshBuild(voxel_chunk) ? 1u << 1 : 0u) |
+              (cache.IsRemeshAfterApplyPending(voxel_chunk) ? 1u << 2 : 0u) |
+              (cache.IsPendingGpuApply(voxel_chunk) ? 1u << 3 : 0u) |
+              (cache.IsPendingGpuQueued(voxel_chunk) ? 1u << 4 : 0u) |
+              (cache.IsPendingGpuKickedOrDispatched(voxel_chunk) ? 1u << 5
+                                                                 : 0u) |
+              (cache.IsGpuExtractInFlight(voxel_chunk) ? 1u << 6 : 0u) |
+              (cache.HasPendingCaptureWork(voxel_chunk) ? 1u << 7 : 0u);
+          auto add_voxel_source_indices =
+              [&](const std::vector<GreedyBatchRef> &refs)
+          {
+            for (const GreedyBatchRef &ref : refs)
+            {
+              if (ref.chunkCoord != voxel_chunk)
+              {
+                continue;
+              }
+              if (const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref))
+              {
+                record.renderer_pixel_voxel_chunk_source_index_count +=
+                    static_cast<uint32_t>(batch->indices.size());
+              }
+            }
+          };
+          add_voxel_source_indices(opaque_refs);
+          add_voxel_source_indices(transparent_refs);
+          auto collect_voxel_mdi_state =
+              [&](const GreedyGpuPassCache &pass)
+          {
+            for (const GreedyGpuBatch &batch : pass.batches)
+            {
+              if (batch.chunkCoord != voxel_chunk || batch.indexCountGl <= 0)
+              {
+                continue;
+              }
+              ++record.renderer_pixel_voxel_chunk_mdi_command_count;
+              record.renderer_pixel_voxel_chunk_mdi_index_count +=
+                  static_cast<uint32_t>(batch.indexCountGl);
+              if (batch.drawInstanceCount != 0)
+              {
+                ++record.renderer_pixel_voxel_chunk_mdi_visible_command_count;
+                record.renderer_pixel_voxel_chunk_mdi_visible_index_count +=
+                    static_cast<uint32_t>(batch.indexCountGl);
+              }
+            }
+          };
+          collect_voxel_mdi_state(mdi_opaque_pass);
+          collect_voxel_mdi_state(mdi_cutout_pass);
+          collect_voxel_mdi_state(mdi_transparent_pass);
+          if (const ChunkRenderDemandRecord *voxel_demand =
+                  UChunkRenderDemandStore::Get().Find(voxel_chunk);
+              voxel_demand && voxel_chunk_data &&
+              voxel_demand->incarnation ==
+                  voxel_chunk_data->GetIncarnation())
+          {
+            record.renderer_pixel_voxel_chunk_face_debt_mask =
+                voxel_demand->face_debt_mask;
+            record.renderer_pixel_voxel_chunk_demand_has_active_attempt =
+                voxel_demand->has_active_attempt ? 1u : 0u;
+            record.renderer_pixel_voxel_chunk_demand_active_stage =
+                static_cast<uint8_t>(voxel_demand->active_stage);
+            record.renderer_pixel_voxel_chunk_demand_desired_geom_rev =
+                voxel_demand->desired_geom_rev;
+            record.renderer_pixel_voxel_chunk_demand_desired_light_rev =
+                voxel_demand->desired_light_rev;
+          }
           // A nearer world-space opaque cube with no corresponding depth
           // sample is direct evidence of a screen-facing geometry gap. A
           // nearer rendered surface (terrain, entity, or another occluder)

@@ -350,8 +350,35 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_voxel_hit_y{0};
   int32_t renderer_pixel_voxel_hit_z{0};
   int32_t renderer_pixel_voxel_hit_block_id{-1};
+  int32_t renderer_pixel_voxel_previous_block_id{-1};
+  uint8_t renderer_pixel_voxel_entry_face{0xffu};
   float renderer_pixel_voxel_hit_distance{-1.0f};
   float renderer_pixel_opaque_hit_distance{-1.0f};
+  int32_t renderer_pixel_voxel_chunk_x{0};
+  int32_t renderer_pixel_voxel_chunk_y{0};
+  int32_t renderer_pixel_voxel_chunk_z{0};
+  uint32_t renderer_pixel_voxel_chunk_nonair{0};
+  uint64_t renderer_pixel_voxel_chunk_mesh_revision{0};
+  uint64_t renderer_pixel_voxel_chunk_published_geom_rev{0};
+  uint64_t renderer_pixel_voxel_chunk_published_light_rev{0};
+  /// Bits: drawable mesh, satisfying mesh, draw-ready slice, live GPU draw.
+  uint8_t renderer_pixel_voxel_chunk_render_flags{0};
+  /// CPU opaque, CPU transparent, packed opaque, packed transparent refs.
+  uint8_t renderer_pixel_voxel_chunk_ref_flags{0};
+  uint8_t renderer_pixel_voxel_chunk_column_reason{0};
+  uint8_t renderer_pixel_voxel_chunk_face_debt_mask{0};
+  uint16_t renderer_pixel_voxel_chunk_mdi_command_count{0};
+  uint16_t renderer_pixel_voxel_chunk_mdi_visible_command_count{0};
+  uint32_t renderer_pixel_voxel_chunk_mdi_index_count{0};
+  uint32_t renderer_pixel_voxel_chunk_mdi_visible_index_count{0};
+  uint32_t renderer_pixel_voxel_chunk_gpu_slot_quad_count{0};
+  uint32_t renderer_pixel_voxel_chunk_source_index_count{0};
+  uint32_t renderer_pixel_voxel_chunk_work_owner_flags{0};
+  uint8_t renderer_pixel_voxel_chunk_dirty_queue_kind{0};
+  uint8_t renderer_pixel_voxel_chunk_demand_has_active_attempt{0};
+  uint8_t renderer_pixel_voxel_chunk_demand_active_stage{0};
+  uint64_t renderer_pixel_voxel_chunk_demand_desired_geom_rev{0};
+  uint64_t renderer_pixel_voxel_chunk_demand_desired_light_rev{0};
   int32_t renderer_pixel_opaque_chunk_x{0};
   int32_t renderer_pixel_opaque_chunk_y{0};
   int32_t renderer_pixel_opaque_chunk_z{0};

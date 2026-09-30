@@ -3537,10 +3537,62 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_voxel_hit_z
                << ",\"renderer_pixel_voxel_hit_block_id\":"
                << r.renderer_pixel_voxel_hit_block_id
+               << ",\"renderer_pixel_voxel_previous_block_id\":"
+               << r.renderer_pixel_voxel_previous_block_id
+               << ",\"renderer_pixel_voxel_entry_face\":"
+               << static_cast<int>(r.renderer_pixel_voxel_entry_face)
                << ",\"renderer_pixel_voxel_hit_distance\":"
                << r.renderer_pixel_voxel_hit_distance
                << ",\"renderer_pixel_opaque_hit_distance\":"
                << r.renderer_pixel_opaque_hit_distance
+               << ",\"renderer_pixel_voxel_chunk_x\":"
+               << r.renderer_pixel_voxel_chunk_x
+               << ",\"renderer_pixel_voxel_chunk_y\":"
+               << r.renderer_pixel_voxel_chunk_y
+               << ",\"renderer_pixel_voxel_chunk_z\":"
+               << r.renderer_pixel_voxel_chunk_z
+               << ",\"renderer_pixel_voxel_chunk_nonair\":"
+               << r.renderer_pixel_voxel_chunk_nonair
+               << ",\"renderer_pixel_voxel_chunk_mesh_revision\":"
+               << r.renderer_pixel_voxel_chunk_mesh_revision
+               << ",\"renderer_pixel_voxel_chunk_published_geom_rev\":"
+               << r.renderer_pixel_voxel_chunk_published_geom_rev
+               << ",\"renderer_pixel_voxel_chunk_published_light_rev\":"
+               << r.renderer_pixel_voxel_chunk_published_light_rev
+               << ",\"renderer_pixel_voxel_chunk_render_flags\":"
+               << static_cast<int>(r.renderer_pixel_voxel_chunk_render_flags)
+               << ",\"renderer_pixel_voxel_chunk_ref_flags\":"
+               << static_cast<int>(r.renderer_pixel_voxel_chunk_ref_flags)
+               << ",\"renderer_pixel_voxel_chunk_column_reason\":"
+               << static_cast<int>(r.renderer_pixel_voxel_chunk_column_reason)
+               << ",\"renderer_pixel_voxel_chunk_face_debt_mask\":"
+               << static_cast<int>(r.renderer_pixel_voxel_chunk_face_debt_mask)
+               << ",\"renderer_pixel_voxel_chunk_mdi_command_count\":"
+               << r.renderer_pixel_voxel_chunk_mdi_command_count
+               << ",\"renderer_pixel_voxel_chunk_mdi_visible_command_count\":"
+               << r.renderer_pixel_voxel_chunk_mdi_visible_command_count
+               << ",\"renderer_pixel_voxel_chunk_mdi_index_count\":"
+               << r.renderer_pixel_voxel_chunk_mdi_index_count
+               << ",\"renderer_pixel_voxel_chunk_mdi_visible_index_count\":"
+               << r.renderer_pixel_voxel_chunk_mdi_visible_index_count
+               << ",\"renderer_pixel_voxel_chunk_gpu_slot_quad_count\":"
+               << r.renderer_pixel_voxel_chunk_gpu_slot_quad_count
+               << ",\"renderer_pixel_voxel_chunk_source_index_count\":"
+               << r.renderer_pixel_voxel_chunk_source_index_count
+               << ",\"renderer_pixel_voxel_chunk_work_owner_flags\":"
+               << r.renderer_pixel_voxel_chunk_work_owner_flags
+               << ",\"renderer_pixel_voxel_chunk_dirty_queue_kind\":"
+               << static_cast<int>(r.renderer_pixel_voxel_chunk_dirty_queue_kind)
+               << ",\"renderer_pixel_voxel_chunk_demand_has_active_attempt\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_demand_has_active_attempt)
+               << ",\"renderer_pixel_voxel_chunk_demand_active_stage\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_demand_active_stage)
+               << ",\"renderer_pixel_voxel_chunk_demand_desired_geom_rev\":"
+               << r.renderer_pixel_voxel_chunk_demand_desired_geom_rev
+               << ",\"renderer_pixel_voxel_chunk_demand_desired_light_rev\":"
+               << r.renderer_pixel_voxel_chunk_demand_desired_light_rev
                << ",\"renderer_pixel_opaque_chunk_x\":"
                << r.renderer_pixel_opaque_chunk_x
                << ",\"renderer_pixel_opaque_chunk_y\":"
