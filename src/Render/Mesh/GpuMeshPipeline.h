@@ -55,6 +55,8 @@ public:
     bool awaitingCounters{false};
     /// Carry first-mesh presentation state through asynchronous packed emit.
     bool provisionalLightPreview{false};
+    /// Compact GPU block types are indices into this full BlockId table.
+    std::vector<BlockId> blockPalette;
   };
   struct ComputeKickProfile
   {
@@ -136,6 +138,7 @@ private:
   /// GPU counting-sort in-slot; downloads histogram only (not full quads).
   bool GpuSortSlotQuads(uint32_t slot_offset, uint32_t num_quads,
                         UBlockRegistry &registry,
+                        const std::vector<BlockId> &block_palette,
                         std::vector<GpuBlockDrawRange> *out_ranges,
                         bool *out_has_dark_face,
                         bool *out_has_lit_drawable_face);

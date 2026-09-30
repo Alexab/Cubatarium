@@ -82,8 +82,8 @@ layout(std430, binding = 4) buffer Counters { uint rectCount; };
 uniform uint side;
 uniform uint lightPad;
 uint readBlock(uint index) {
-  uint word = blocks[index >> 2u];
-  return (word >> ((index & 3u) * 8u)) & 0xFFu;
+  uint word = blocks[index >> 1u];
+  return (word >> ((index & 1u) * 16u)) & 0xFFFFu;
 }
 uint readLightPad(ivec3 local) {
   int pi = ((local.y + 2) * int(lightPad) + (local.z + 2)) * int(lightPad) + (local.x + 2);
@@ -129,7 +129,7 @@ void main() {
           if (bid != 0u) {
             ivec3 air = local; air[axis] += faceSign;
             uint light = sampleFaceLight(air, local);
-            val = bid | (light << 8u);
+            val = bid | (light << 10u);
           }
         }
       }
@@ -168,7 +168,7 @@ void main() {
       rects[idx].axis = axisU; rects[idx].faceSign = signIdx;
       rects[idx].slice = sliceU; rects[idx].u = uint(u); rects[idx].v = uint(v);
       rects[idx].width = uint(width); rects[idx].height = uint(height);
-      rects[idx].blockId = val & 0xFFu; rects[idx].lightPacked = (val >> 8u) & 0xFFu;
+      rects[idx].blockId = val & 0x3FFu; rects[idx].lightPacked = (val >> 10u) & 0xFFu;
     }
   }
 }
@@ -309,6 +309,17 @@ void PackBytes(const uint8_t *bytes, size_t count, std::vector<uint32_t> &out)
   }
 }
 
+void PackHalfWords(const uint16_t *values, size_t count,
+                   std::vector<uint32_t> &out)
+{
+  out.assign((count + 1u) / 2u, 0u);
+  for (size_t i = 0; i < count; ++i)
+  {
+    out[i >> 1u] |= static_cast<uint32_t>(values[i])
+                    << (static_cast<unsigned>(i & 1u) * 16u);
+  }
+}
+
 #endif
 
 } // namespace
@@ -392,6 +403,14 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
     return false;
   }
 
+  std::vector<BlockId> block_palette;
+  std::vector<uint16_t> block_palette_indices;
+  if (!BuildGpuBlockTypePalette(snapshot, block_palette,
+                                block_palette_indices))
+  {
+    return false;
+  }
+
   std::vector<uint8_t> occ;
   if (catalog)
   {
@@ -404,17 +423,12 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   std::vector<uint32_t> occ_words;
   PackBytes(occ.data(), occ.size(), occ_words);
 
-  std::array<uint8_t, CHUNK_VOLUME> blocks{};
-  for (int i = 0; i < CHUNK_VOLUME; ++i)
-  {
-    blocks[static_cast<size_t>(i)] =
-        static_cast<uint8_t>(snapshot.blocks[static_cast<size_t>(i)]);
-  }
   std::vector<uint8_t> padded_lights;
   BuildPaddedLight(snapshot, padded_lights);
   std::vector<uint32_t> block_words;
   std::vector<uint32_t> light_words;
-  PackBytes(blocks.data(), blocks.size(), block_words);
+  PackHalfWords(block_palette_indices.data(), block_palette_indices.size(),
+                block_words);
   PackBytes(padded_lights.data(), padded_lights.size(), light_words);
 
   const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
@@ -522,7 +536,13 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
   for (uint32_t r = 0; r < rect_count; ++r)
   {
-    const BlockId id = static_cast<BlockId>(rects[r].blockId);
+    const BlockId id = ResolveGpuBlockTypePaletteIndex(
+        block_palette, rects[r].blockId);
+    if (id == BLOCK_AIR)
+    {
+      out_batches.clear();
+      return false;
+    }
     GreedyMeshBatch &batch = byBlockId[id];
     batch.blockId = id;
     batch.Transparent = registry.IsTransparent(id);

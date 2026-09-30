@@ -6,6 +6,7 @@
 #include "Blocks/BlockCatalogQueries.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Lighting/LightUtil.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <unordered_map>
@@ -15,6 +16,67 @@
 
 namespace cutum
 {
+
+/// PackedQuad has a 10-bit block field. Keep its value as a per-chunk palette
+/// index and preserve full 16-bit BlockIds in the side table used by draw
+/// ranges. Index zero is reserved for air so the compute grid's zero sentinel
+/// remains unambiguous.
+inline constexpr size_t kGpuBlockTypePaletteCapacity = 1u << 10u;
+
+inline bool BuildGpuBlockTypePalette(
+    const ChunkMeshSnapshot &snapshot, std::vector<BlockId> &block_palette,
+    std::vector<uint16_t> &block_palette_indices)
+{
+  block_palette.clear();
+  block_palette_indices.clear();
+  block_palette.reserve(kGpuBlockTypePaletteCapacity);
+
+  std::unordered_map<BlockId, uint16_t> indices_by_block;
+  indices_by_block.reserve(64);
+  block_palette.push_back(BLOCK_AIR);
+  for (BlockId id : snapshot.blocks)
+  {
+    if (id == BLOCK_AIR || indices_by_block.count(id) != 0)
+    {
+      continue;
+    }
+    if (block_palette.size() >= kGpuBlockTypePaletteCapacity)
+    {
+      block_palette.clear();
+      return false;
+    }
+    const uint16_t index = static_cast<uint16_t>(block_palette.size());
+    block_palette.push_back(id);
+    indices_by_block.emplace(id, index);
+  }
+
+  block_palette_indices.resize(snapshot.blocks.size(), 0u);
+  for (size_t i = 0; i < snapshot.blocks.size(); ++i)
+  {
+    const BlockId id = snapshot.blocks[i];
+    if (id == BLOCK_AIR)
+    {
+      continue;
+    }
+    const auto found = indices_by_block.find(id);
+    if (found == indices_by_block.end())
+    {
+      block_palette.clear();
+      block_palette_indices.clear();
+      return false;
+    }
+    block_palette_indices[i] = found->second;
+  }
+  return true;
+}
+
+inline BlockId ResolveGpuBlockTypePaletteIndex(
+    const std::vector<BlockId> &block_palette, uint32_t palette_index)
+{
+  return palette_index < block_palette.size()
+             ? block_palette[palette_index]
+             : BLOCK_AIR;
+}
 
 /// CPU reference for G5 compute face extract: one unmerged quad per exposed
 /// Returns true for blocks that can be face-extracted on GPU. Solid opaque,

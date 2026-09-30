@@ -24,6 +24,7 @@ constexpr size_t kSortCountsWords = kBlockTypeBuckets + 2;
 void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
                                         std::vector<PackedQuad> &scratch,
                                         UBlockRegistry &registry,
+                                        const std::vector<BlockId> &block_palette,
                                         std::vector<GpuBlockDrawRange> *out_ranges,
                                         bool *out_has_dark,
                                         bool *out_has_lit_drawable_face)
@@ -64,7 +65,13 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
       {
         continue;
       }
-      const BlockId bid = static_cast<BlockId>(b);
+      const BlockId bid =
+          ResolveGpuBlockTypePaletteIndex(block_palette,
+                                          static_cast<uint32_t>(b));
+      if (bid == BLOCK_AIR)
+      {
+        continue;
+      }
       GpuBlockDrawRange range;
       range.blockId = bid;
       range.quadOffset = offsets[b];
@@ -95,6 +102,7 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
 void BuildRangesFromHistogram(const uint32_t *counts,
                               const uint32_t *exclusive_offsets,
                               UBlockRegistry &registry,
+                              const std::vector<BlockId> &block_palette,
                               std::vector<GpuBlockDrawRange> *out_ranges)
 {
   if (!out_ranges)
@@ -109,7 +117,13 @@ void BuildRangesFromHistogram(const uint32_t *counts,
     {
       continue;
     }
-    const BlockId bid = static_cast<BlockId>(b);
+    const BlockId bid =
+        ResolveGpuBlockTypePaletteIndex(block_palette,
+                                        static_cast<uint32_t>(b));
+    if (bid == BLOCK_AIR)
+    {
+      continue;
+    }
     GpuBlockDrawRange range;
     range.blockId = bid;
     range.quadOffset = exclusive_offsets[b];
@@ -125,6 +139,7 @@ void BuildRangesFromHistogram(const uint32_t *counts,
 /// full-slot glBufferSubData writeback after CPU readback (rim plan C1).
 void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
                                       UBlockRegistry &registry,
+                                      const std::vector<BlockId> &block_palette,
                                       std::vector<GpuBlockDrawRange> *out_ranges,
                                       bool *out_has_dark,
                                       bool *out_has_lit_drawable_face)
@@ -142,7 +157,12 @@ void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
   for (uint32_t i = 0; i < static_cast<uint32_t>(quads.size()); ++i)
   {
     const PackedQuad &q = quads[i];
-    const BlockId bid = static_cast<BlockId>(q.BlockType());
+    const BlockId bid = ResolveGpuBlockTypePaletteIndex(
+        block_palette, static_cast<uint32_t>(q.BlockType()));
+    if (bid == BLOCK_AIR)
+    {
+      continue;
+    }
     if (q.Face() != 5)
     {
       if (!has_dark && q.SkyLight() <= 0 && q.BlockLight() <= 0)
@@ -755,6 +775,14 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
     return false;
   }
 
+  std::vector<uint16_t> block_palette_indices;
+  if (!BuildGpuBlockTypePalette(snapshot, out_ticket.blockPalette,
+                                block_palette_indices))
+  {
+    out_ticket.blockPalette.clear();
+    return false;
+  }
+
   const auto readback_slot_start = profile ? ProfileClock::now()
                                            : ProfileClock::time_point{};
   const int pbo_index = AcquireReadbackSlot();
@@ -815,12 +843,12 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   }
 
   auto &block_words = ScratchBlockWords;
-  block_words.assign(static_cast<size_t>((CHUNK_VOLUME + 3) / 4), 0u);
-  for (size_t i = 0; i < snapshot.blocks.size(); ++i)
+  block_words.assign(static_cast<size_t>((CHUNK_VOLUME + 1) / 2), 0u);
+  for (size_t i = 0; i < block_palette_indices.size(); ++i)
   {
-    block_words[i >> 2] |=
-        static_cast<uint32_t>(static_cast<uint8_t>(snapshot.blocks[i]))
-        << (static_cast<unsigned>(i & 3u) * 8u);
+    block_words[i >> 1u] |=
+        static_cast<uint32_t>(block_palette_indices[i])
+        << (static_cast<unsigned>(i & 1u) * 16u);
   }
 
   auto &light_words = ScratchLightWords;
@@ -1269,6 +1297,7 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
   const bool sorted_gpu =
       ticket.quadCount >= kGpuSortMinQuads &&
       GpuSortSlotQuads(ticket.slotOffsetQuads, ticket.quadCount, registry,
+                       ticket.blockPalette,
                        out_ranges, out_has_dark_face,
                        out_has_lit_drawable_face);
   if (sorted_gpu)
@@ -1300,7 +1329,8 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
         ScratchQuads.data());
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   }
-  BuildRunLengthRangesFromUnsorted(ScratchQuads, registry, out_ranges,
+  BuildRunLengthRangesFromUnsorted(ScratchQuads, registry,
+                                   ticket.blockPalette, out_ranges,
                                    out_has_dark_face,
                                    out_has_lit_drawable_face);
   ReleaseReadbackSlot(ticket);
@@ -1359,6 +1389,7 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
 bool UGpuMeshPipeline::GpuSortSlotQuads(
     uint32_t slot_offset, uint32_t num_quads, UBlockRegistry &registry,
+    const std::vector<BlockId> &block_palette,
     std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
     bool *out_has_lit_drawable_face)
 {
@@ -1404,7 +1435,8 @@ bool UGpuMeshPipeline::GpuSortSlotQuads(
                  << " != numQuads " << num_quads;
     return false;
   }
-  BuildRangesFromHistogram(counts.data(), offsets.data(), registry, out_ranges);
+  BuildRangesFromHistogram(counts.data(), offsets.data(), registry,
+                            block_palette, out_ranges);
   if (out_has_dark_face)
   {
     *out_has_dark_face = counts[kDarkFaceFlagIndex] != 0;
