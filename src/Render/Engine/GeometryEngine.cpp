@@ -4452,18 +4452,18 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     return std::max(std::abs(coord.x - cam_chunk.x),
                     std::abs(coord.z - cam_chunk.z)) <= kPackedNearHoriz;
   };
-  auto mdi_resident_owns = [&](const glm::ivec3 &coord) -> bool
+  auto mdi_has_drawable_batch = [&](const glm::ivec3 &coord) -> bool
   {
     for (const GreedyGpuBatch &gpu : GreedyGpuOpaque.batches)
     {
-      if (gpu.chunkCoord == coord)
+      if (gpu.chunkCoord == coord && gpu.pooled && gpu.indexCountGl > 0)
       {
         return true;
       }
     }
     for (const GreedyGpuBatch &gpu : GreedyGpuCutout.batches)
     {
-      if (gpu.chunkCoord == coord)
+      if (gpu.chunkCoord == coord && gpu.pooled && gpu.indexCountGl > 0)
       {
         return true;
       }
@@ -4472,7 +4472,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   };
   auto note_dual_if_packed_and_mdi = [&](const glm::ivec3 &coord)
   {
-    if (!WorldInstance || !mdi_resident_owns(coord))
+    if (!WorldInstance || !mdi_has_drawable_batch(coord))
     {
       return;
     }
@@ -4489,9 +4489,10 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         continue;
       }
       bool found = false;
-      // Audit R03: exclude packed when MDI resident table still owns the coord,
-      // not merely when this frame's CPU opaque_draw refs omit it.
-      if (mdi_resident_owns(pref.chunkCoord))
+      // Exclude packed only when an executable pooled MDI batch owns the
+      // chunk. A stale/unpooled zero-index table entry is not a drawable
+      // representation and must not hide valid packed GPU geometry.
+      if (mdi_has_drawable_batch(pref.chunkCoord))
       {
         found = true;
       }
@@ -4522,8 +4523,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   }
   else if (!packed_opaque_refs.empty())
   {
-    // Same exclusion as MDI path — empty opaque_draw must not dual-draw packed
-    // against leftover GreedyGpuOpaque.batches (audit R03 hole).
+    // Apply the same representation check when the MDI draw path is inactive.
+    // Merely retaining a stale batch record cannot suppress packed fallback.
     packed_opaque_draw.reserve(packed_opaque_refs.size());
     for (const GpuPackedChunkRef &pref : packed_opaque_refs)
     {
@@ -4531,7 +4532,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       {
         continue;
       }
-      if (mdi_resident_owns(pref.chunkCoord))
+      if (mdi_has_drawable_batch(pref.chunkCoord))
       {
         continue;
       }
