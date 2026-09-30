@@ -858,7 +858,18 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     world.GetPhysicsTelemetryMutable().RelightDeferredFarPendingN = 0;
     return 0;
   }
+  const size_t deferred_before = DeferredFarRelightColumns.size();
+  const int fifo_before = GetPendingTerrainColumnRelightCount();
   int admitted = 0;
+  int in_range = 0;
+  int outside_range = 0;
+  int fifo_blocked = 0;
+  int already_queued = 0;
+  int already_inflight = 0;
+  int enqueue_attempts = 0;
+  int enqueue_rejected = 0;
+  int nearest_horiz = -1;
+  glm::ivec2 nearest_coord{};
   std::vector<glm::ivec2> to_erase;
   to_erase.reserve(DeferredFarRelightColumns.size());
   for (const auto &kv : DeferredFarRelightColumns)
@@ -866,30 +877,43 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     const glm::ivec2 ground_xz = kv.first;
     const int horiz = std::max(std::abs(ground_xz.x - focus_ground.x),
                                std::abs(ground_xz.y - focus_ground.z));
+    if (nearest_horiz < 0 || horiz < nearest_horiz)
+    {
+      nearest_horiz = horiz;
+      nearest_coord = ground_xz;
+    }
     if (horiz > pin_horiz)
     {
+      ++outside_range;
       continue;
     }
+    ++in_range;
     // Use the same live-FIFO predicate as EnqueueTerrainColumnRelightImpl.
     // The wider deferral pin (currently four) is a service horizon, not the
     // FIFO's tighter nh<=1 pressure admission rule.
     const int fifo_n = GetPendingTerrainColumnRelightCount();
     if (!ShouldAdmitRelightFifoEnqueue(fifo_n, horiz))
     {
+      ++fifo_blocked;
       continue;
     }
     const glm::ivec2 band = kv.second.y_band;
     const glm::ivec2 world_key(ground_xz.x * CHUNK_SIZE,
                                ground_xz.y * CHUNK_SIZE);
     const bool async_owned = world.IsAsyncRelightColumnInFlight(ground_xz);
-    if (!async_owned && !IsTerrainColumnRelightQueued(world_key))
+    const bool queued_before = IsTerrainColumnRelightQueued(world_key);
+    already_queued += queued_before ? 1 : 0;
+    already_inflight += async_owned ? 1 : 0;
+    if (!async_owned && !queued_before)
     {
+      ++enqueue_attempts;
       EnqueueTerrainColumnRelight(world_key.x, world_key.y,
                                   kv.second.priority, band.x, band.y);
     }
     const bool accepted = IsTerrainColumnRelightQueued(world_key) || async_owned;
     if (!accepted)
     {
+      ++enqueue_rejected;
       // A secondary admission guard may still refuse the attempt. Keep this
       // deferred record and let a later drain retry it.
       continue;
@@ -906,6 +930,40 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   auto &telem = world.GetPhysicsTelemetryMutable();
   telem.RelightDeferredFarPendingN =
       static_cast<int>(DeferredFarRelightColumns.size());
+  static const bool audit_admission = []()
+  {
+    const char *value = std::getenv("CUBATARIUM_RELIGHT_AUDIT");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  static auto last_admission_audit = std::chrono::steady_clock::time_point{};
+  const auto audit_now = std::chrono::steady_clock::now();
+  if (audit_admission &&
+      (last_admission_audit == std::chrono::steady_clock::time_point{} ||
+       audit_now - last_admission_audit >= std::chrono::seconds(1)))
+  {
+    last_admission_audit = audit_now;
+    CubatariumLogInfo(
+        "RelightAudit",
+        std::string("deferred_far_admit focus=(") +
+            std::to_string(focus_ground.x) + "," +
+            std::to_string(focus_ground.z) + ") pending=" +
+            std::to_string(deferred_before) + "->" +
+            std::to_string(DeferredFarRelightColumns.size()) + " fifo=" +
+            std::to_string(fifo_before) + "->" +
+            std::to_string(GetPendingTerrainColumnRelightCount()) +
+            " pin=" + std::to_string(pin_horiz) +
+            " in_range=" + std::to_string(in_range) +
+            " outside=" + std::to_string(outside_range) +
+            " fifo_blocked=" + std::to_string(fifo_blocked) +
+            " queued=" + std::to_string(already_queued) +
+            " inflight=" + std::to_string(already_inflight) +
+            " enqueue=" + std::to_string(enqueue_attempts) +
+            " rejected=" + std::to_string(enqueue_rejected) +
+            " admitted=" + std::to_string(admitted) + " nearest=(" +
+            std::to_string(nearest_coord.x) + "," +
+            std::to_string(nearest_coord.y) + ")/h=" +
+            std::to_string(nearest_horiz));
+  }
   return admitted;
 }
 
