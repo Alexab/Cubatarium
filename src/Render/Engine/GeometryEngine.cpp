@@ -194,11 +194,12 @@ OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
       result.previous_block_id = previous_block_id;
       if (entered_axis >= 0)
       {
-        const int face_axis = entered_axis;
+        // Keep the witness in GreedyMesher's face order:
+        // +Z, +X, -Z, -X, +Y, -Y. The ray enters opposite its travel step.
         result.entry_face = static_cast<uint8_t>(
-            face_axis == 0 ? (entered_step > 0 ? 0 : 1)
-            : face_axis == 1 ? (entered_step > 0 ? 2 : 3)
-                             : (entered_step > 0 ? 4 : 5));
+            entered_axis == 0 ? (entered_step > 0 ? 3 : 1)
+            : entered_axis == 1 ? (entered_step > 0 ? 5 : 4)
+                                : (entered_step > 0 ? 2 : 0));
       }
       result.block_id = query.id;
       result.distance = entry_distance;
