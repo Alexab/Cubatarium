@@ -3239,9 +3239,11 @@ FocusColumnVisualClass ClassifyFocusColumnVisual(const UWorld &world,
       return FocusColumnVisualClass::StaleDark;
     break;
   case Reason::MissingMesh:
-    if (!state.draw_ok)
-      return FocusColumnVisualClass::MissingMesh;
-    break;
+    // Column draw readiness is intentionally progressive: one ready Y slice
+    // keeps its siblings visible. It does not satisfy the missing slice's
+    // FirstMesh obligation, so keep the column in the bounded repair demand
+    // until every resident solid slice in the presentable band is meshed.
+    return FocusColumnVisualClass::MissingMesh;
   case Reason::GpuInFlight:
     return FocusColumnVisualClass::GpuInFlight;
   case Reason::NotLoaded:
