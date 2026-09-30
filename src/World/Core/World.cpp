@@ -3991,7 +3991,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     return 0;
   }
   const auto &raw_keys = UnfinishedVisualCache.unfinished_keys;
-  if (raw_keys.empty())
+  if (raw_keys.empty() && PendingLightBeforeMesh.empty())
   {
     return 0;
   }
@@ -4120,10 +4120,15 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         float forward_score{0.0f};
       };
       std::vector<OuterCandidate> candidates;
-      for (const uint64_t key : keys)
+      // The unfinished visual cache is intentionally limited to the lit
+      // drawable work radius (currently h4). Forward first-mesh relight
+      // targets live outside that cache, so discover them from the pending
+      // light debt source instead of expecting them to already be in `keys`.
+      for (const auto &pending_entry : PendingLightBeforeMesh)
       {
-        const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
-        const int cz = static_cast<int>(static_cast<uint32_t>(key));
+        const glm::ivec2 column = pending_entry.first;
+        const int cx = column.x;
+        const int cz = column.y;
         const int dx = cx - focus_g.x;
         const int dz = cz - focus_g.z;
         const int horiz = (std::max)(std::abs(dx), std::abs(dz));
@@ -4139,8 +4144,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           continue;
         }
         const float forward_score = glm::dot(to_column / distance, forward);
-        const glm::ivec2 column(cx, cz);
-        if (forward_score < 0.5f || !IsPendingLightBeforeMesh(column))
+        if (forward_score < 0.5f)
         {
           continue;
         }
@@ -4168,6 +4172,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           const int slice_min_y = cy * CHUNK_SIZE;
           const int slice_max_y =
               std::min(max_y, slice_min_y + CHUNK_SIZE - 1);
+          if (slice_max_y < pending_entry.second.min_y ||
+              slice_min_y > pending_entry.second.max_y)
+          {
+            continue;
+          }
           const int vertical_distance =
               focus_block.y < slice_min_y
                   ? slice_min_y - focus_block.y
@@ -4182,6 +4191,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         }
         if (target_cy >= 0)
         {
+          const uint64_t key = PackUnfinishedColKey(cx, cz);
+          if (std::find(keys.begin(), keys.end(), key) == keys.end())
+          {
+            keys.push_back(key);
+          }
           candidates.push_back({key, target_cy, forward_score});
         }
       }
