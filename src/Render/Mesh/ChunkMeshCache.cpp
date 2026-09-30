@@ -6469,6 +6469,16 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         << gpu_process_profile_seq << ",\"pending_begin\":"
         << gpu_profile_pending_begin << ",\"pending_end\":"
         << PendingGpuApplies.size() << ",\"processed\":" << processed
+        << ",\"max_count\":" << max_count << ",\"budget_ms\":"
+        << budget_ms << ",\"queued_begin\":" << queued_n
+        << ",\"output_progress_kick\":"
+        << (output_queue_progress_kick ? 1 : 0)
+        << ",\"free_readback_begin\":"
+        << (pipeline->HasFreeReadbackSlot() ? 1 : 0)
+        << ",\"kick_cap\":" << kick_cap << ",\"finish_cap\":"
+        << finish_cap << ",\"force_kick_debt\":"
+        << (force_kick_debt ? 1 : 0)
+        << ",\"debt_forced_kicks\":" << debt_forced_kicks
         << ",\"kicked\":" << kicked << ",\"finished\":" << finished
         << ",\"finish_attempts\":" << finish_attempts
         << ",\"counter_ready_n\":" << gpu_profile_counter_ready_n
