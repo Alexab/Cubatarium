@@ -263,10 +263,11 @@ DemandResult UChunkRenderDemandStore::NoteDemand(glm::ivec3 coord,
     rec.active_attempt_id = NextAttemptId_++;
     rec.active_stage = JobStage::Created;
     rec.has_active_attempt = true;
-    if (now_ms > 0.0)
-    {
-      rec.attempt_created_ms = now_ms;
-    }
+    // Progress timestamps belong to an attempt, not to the desired revision.
+    // A successor must not inherit its predecessor's progress and thereby
+    // evade Created-orphan cleanup or age immediately into the stall timeout.
+    rec.last_progress_ms = 0.0;
+    rec.attempt_created_ms = now_ms > 0.0 ? now_ms : 0.0;
   }
   ++NewDemandN_;
   const bool target_changed =
