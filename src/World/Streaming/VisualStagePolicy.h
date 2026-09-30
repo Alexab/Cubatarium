@@ -16,6 +16,12 @@ constexpr int kVisualStageLitDrawableHoriz = 4;
 constexpr int kVisualStageFirstMeshRelightApproachHoriz =
     kVisualStageLitDrawableHoriz + 1;
 
+/// A direct camera ray can hit the same missing FirstMesh slices farther ahead
+/// than the ordinary approach ring. Only forward-facing candidates use this
+/// bounded extension; they still need a concrete relight queue owner.
+constexpr int kVisualStageFirstMeshRelightForwardHoriz =
+    kVisualStageLitDrawableHoriz + 3;
+
 /// Ocean / cruise protect ring (FIFO trim + live-GPU keep). LitDrawable+4.
 constexpr int kVisualStageProtectHoriz = kVisualStageLitDrawableHoriz + 4;
 

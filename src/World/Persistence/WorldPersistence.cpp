@@ -1037,7 +1037,7 @@ bool UWorldPersistence::PrioritizeNearestTerrainColumnRelight(
   {
     return PendingVisibleFirstMeshRelightYBands.count(world_key) != 0
                ? std::max(radius_chunks,
-                          kVisualStageFirstMeshRelightApproachHoriz)
+                          kVisualStageFirstMeshRelightForwardHoriz)
                : radius_chunks;
   };
 

@@ -8031,7 +8031,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       Dirty.BoostForwardApproachFirstMesh(
           MeshFocusGroundChunk, MeshForwardXz,
           kVisualStageLitDrawableHoriz - 1,
-          kVisualStageFirstMeshRelightApproachHoriz + 1,
+          kVisualStageFirstMeshRelightForwardHoriz,
           /*max_vertical_delta=*/3);
     }
     else

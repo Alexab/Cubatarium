@@ -4103,7 +4103,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     {
       forward /= forward_len;
       const int approach_ring =
-          kVisualStageFirstMeshRelightApproachHoriz;
+          kVisualStageFirstMeshRelightForwardHoriz;
       const int camera_band_min = std::max(0, focus_block.y - CHUNK_SIZE);
       const int camera_band_max =
           std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
@@ -4118,7 +4118,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         float forward_score{0.0f};
       };
       std::vector<OuterCandidate> candidates;
-      const auto &flow = GetColumnFlowExecutor().Scheduler();
       for (const uint64_t key : keys)
       {
         const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
@@ -4144,9 +4143,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         }
         const glm::ivec2 block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
         if (Persistence->IsTerrainColumnRelightQueued(block_key) ||
-            IsAsyncRelightColumnInFlight(column) ||
-            flow.Contains(column, ColumnWorkKind::RelightThenMesh) ||
-            flow.Contains(column, ColumnWorkKind::PromoteRelight))
+            IsAsyncRelightColumnInFlight(column))
         {
           continue;
         }
@@ -4238,6 +4235,12 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     const int cz = static_cast<int>(static_cast<uint32_t>(key));
     const int col_horiz =
         (std::max)(std::abs(cx - focus_g.x), std::abs(cz - focus_g.z));
+    const auto outer_target = outer_first_mesh_target_cy.find(key);
+    const bool forward_first_mesh_approach =
+        outer_target != outer_first_mesh_target_cy.end();
+    const bool within_first_mesh_relight_horizon =
+        col_horiz <= kVisualStageFirstMeshRelightApproachHoriz ||
+        forward_first_mesh_approach;
     const int y_cap = (col_horiz <= 2) ? 2 : 1;
     // Rank Y by |cy-focus| then prefer unlit / missing mesh.
     std::vector<int> ys;
@@ -4251,7 +4254,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
       ys.push_back(cy);
     }
-    const auto outer_target = outer_first_mesh_target_cy.find(key);
     std::sort(ys.begin(), ys.end(), [&](int a, int b) {
       if (outer_target != outer_first_mesh_target_cy.end())
       {
@@ -4411,7 +4413,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const bool first_mesh_needs_lighting =
           !probe.has_drawable && ch->GetNonAirCount() > 0 &&
           RequiresLightingLitGate() &&
-          col_horiz <= kVisualStageFirstMeshRelightApproachHoriz &&
+          within_first_mesh_relight_horizon &&
           !slice_light_settled &&
           (!IsColumnLitReady(ground) || desired_light == 0);
       const glm::ivec2 slice_column(cx, cz);
@@ -4421,7 +4423,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         {
           const bool use_visible_admission =
               (defer_until_lit || first_mesh_needs_lighting) &&
-              col_horiz <= kVisualStageFirstMeshRelightApproachHoriz &&
+              within_first_mesh_relight_horizon &&
               (first_mesh_visible_relight_columns.count(slice_column) != 0 ||
                first_mesh_visible_relight_columns.size() <
                    kFirstMeshVisibleRelightLimit);
@@ -4432,7 +4434,9 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             const bool admitted_visible = Persistence->EnqueueVisibleRelight(
                 slice_block_key.x, slice_block_key.y,
                 cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1, focus_g,
-                kVisualStageFirstMeshRelightApproachHoriz,
+                forward_first_mesh_approach
+                    ? kVisualStageFirstMeshRelightForwardHoriz
+                    : kVisualStageFirstMeshRelightApproachHoriz,
                 protected_visible_columns);
             if (admitted_visible)
             {
