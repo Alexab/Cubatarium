@@ -139,9 +139,9 @@ OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
   }
 
   const glm::vec3 ray_origin = origin + direction * 1e-4f;
-  glm::ivec3 cell(static_cast<int>(std::floor(ray_origin.x)),
-                  static_cast<int>(std::floor(ray_origin.y)),
-                  static_cast<int>(std::floor(ray_origin.z)));
+  // World voxel coordinates identify block centers (cells span n±0.5),
+  // matching WorldPosToBlock and the mesh vertex convention.
+  glm::ivec3 cell = WorldPosToBlock(ray_origin);
   const glm::ivec3 step(direction.x > 0.0f ? 1 : direction.x < 0.0f ? -1 : 0,
                         direction.y > 0.0f ? 1 : direction.y < 0.0f ? -1 : 0,
                         direction.z > 0.0f ? 1 : direction.z < 0.0f ? -1 : 0);
@@ -153,7 +153,8 @@ OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
     {
       return infinity;
     }
-    const float boundary = static_cast<float>(voxel + (axis_step > 0 ? 1 : 0));
+    const float boundary =
+        static_cast<float>(voxel) + (axis_step > 0 ? 0.5f : -0.5f);
     return std::max(0.0f, (boundary - position) / ray_dir);
   };
   glm::vec3 next_t(first_boundary_t(ray_origin.x, direction.x, cell.x, step.x),
