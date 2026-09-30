@@ -389,6 +389,20 @@ struct VisualBlackTraceRecord
   uint32_t renderer_pixel_voxel_chunk_mdi_visible_index_count{0};
   uint32_t renderer_pixel_voxel_chunk_gpu_slot_quad_count{0};
   uint32_t renderer_pixel_voxel_chunk_source_index_count{0};
+  /// Packed fallback status for the pixel-hit chunk: selected into the opaque
+  /// fallback list, slot present, slice gate open, usable ranges/textures, and
+  /// glDrawArrays calls actually issued by that list.
+  uint8_t renderer_pixel_voxel_chunk_packed_draw_selected{0};
+  uint8_t renderer_pixel_voxel_chunk_packed_draw_path_ready{0};
+  uint8_t renderer_pixel_voxel_chunk_packed_slot_present{0};
+  uint8_t renderer_pixel_voxel_chunk_packed_slice_ready{0};
+  uint16_t renderer_pixel_voxel_chunk_packed_opaque_range_count{0};
+  uint16_t renderer_pixel_voxel_chunk_packed_texture_ready_range_count{0};
+  uint16_t renderer_pixel_voxel_chunk_packed_draw_call_count{0};
+  uint32_t renderer_pixel_voxel_chunk_packed_slot_quad_count{0};
+  uint32_t renderer_pixel_voxel_chunk_packed_opaque_range_quad_count{0};
+  uint32_t renderer_pixel_voxel_chunk_packed_drawn_quad_count{0};
+  uint32_t renderer_pixel_voxel_chunk_packed_drawn_index_count{0};
   uint32_t renderer_pixel_voxel_chunk_work_owner_flags{0};
   uint8_t renderer_pixel_voxel_chunk_dirty_queue_kind{0};
   int32_t renderer_pixel_voxel_chunk_dirty_queue_index{-1};

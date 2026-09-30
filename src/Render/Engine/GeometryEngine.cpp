@@ -762,7 +762,8 @@ void CaptureTransparentPixelProbe(
     const GreedyGpuPassCache &mdi_transparent_pass,
     const std::map<size_t, UTextureCube> &textures,
     const glm::mat4 &view_projection, const glm::vec3 &camera_position,
-    uint64_t frame_epoch, const OpaquePixelProbeCapture &opaque_capture)
+    uint64_t frame_epoch, const OpaquePixelProbeCapture &opaque_capture,
+    const std::vector<PackedOpaqueDrawTrace> &packed_draw_trace)
 {
   const bool marker_mode = DebugTransparentFragmentMarkerEnabled();
 
@@ -1290,6 +1291,37 @@ void CaptureTransparentPixelProbe(
           collect_voxel_mdi_state(mdi_opaque_pass);
           collect_voxel_mdi_state(mdi_cutout_pass);
           collect_voxel_mdi_state(mdi_transparent_pass);
+          const auto packed_draw = std::find_if(
+              packed_draw_trace.begin(), packed_draw_trace.end(),
+              [&](const PackedOpaqueDrawTrace &entry)
+              { return entry.coord == voxel_chunk; });
+          if (packed_draw != packed_draw_trace.end())
+          {
+            record.renderer_pixel_voxel_chunk_packed_draw_selected =
+                packed_draw->selected;
+            record.renderer_pixel_voxel_chunk_packed_draw_path_ready =
+                packed_draw->draw_path_ready;
+            record.renderer_pixel_voxel_chunk_packed_slot_present =
+                packed_draw->slot_present;
+            record.renderer_pixel_voxel_chunk_packed_slice_ready =
+                packed_draw->slice_ready;
+            record.renderer_pixel_voxel_chunk_packed_opaque_range_count =
+                packed_draw->opaque_range_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_texture_ready_range_count =
+                    packed_draw->texture_ready_range_count;
+            record.renderer_pixel_voxel_chunk_packed_draw_call_count =
+                packed_draw->draw_call_count;
+            record.renderer_pixel_voxel_chunk_packed_slot_quad_count =
+                packed_draw->slot_quad_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_opaque_range_quad_count =
+                    packed_draw->opaque_range_quad_count;
+            record.renderer_pixel_voxel_chunk_packed_drawn_quad_count =
+                packed_draw->drawn_quad_count;
+            record.renderer_pixel_voxel_chunk_packed_drawn_index_count =
+                packed_draw->drawn_index_count;
+          }
           if (const ChunkRenderDemandRecord *voxel_demand =
                   UChunkRenderDemandStore::Get().Find(voxel_chunk);
               voxel_demand && voxel_chunk_data &&
@@ -1790,7 +1822,8 @@ void NoteFrustumCoverageGaps(
     UMdiVertexPoolStore *mdi_store,
     const std::map<size_t, UTextureCube> &textures,
     const glm::mat4 &view_projection,
-    const OpaquePixelProbeCapture &opaque_capture)
+    const OpaquePixelProbeCapture &opaque_capture,
+    const std::vector<PackedOpaqueDrawTrace> &packed_draw_trace)
 {
   if (!UJobStageTrace::VisualBlackTraceEnabled() || !opaque_capture.active)
   {
@@ -1810,7 +1843,7 @@ void NoteFrustumCoverageGaps(
                                mdi_opaque_pass, mdi_cutout_pass,
                                mdi_transparent_pass, textures,
                                view_projection, camera_position, frame_epoch,
-                               opaque_capture);
+                               opaque_capture, packed_draw_trace);
 
   std::unordered_set<glm::ivec3, IVec3Hash> draw_refs;
   draw_refs.reserve(opaque_refs.size() + transparent_refs.size() +
@@ -3019,7 +3052,7 @@ void UGeometryEngine::DrawCubeGeometry()
           filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,
           GreedyGpuTransparent,
           dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()), textures,
-          coverage_vp, pixel_probe_capture);
+          coverage_vp, pixel_probe_capture, LastOpaquePackedDrawTrace);
     }
     if (cullWasEnabled)
     {
@@ -4047,6 +4080,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     const glm::vec3 &cameraPos, const std::map<size_t, UTextureCube> &textures,
     uint64_t meshRevision, uint64_t cullRevision)
 {
+  LastOpaquePackedDrawTrace.clear();
   if (WorldInstance && !PackedRepresentationSwitchBound_)
   {
     WorldInstance->GetMeshService().GetCache().SetOnPackedRepresentationSwitchFn(
@@ -4571,6 +4605,36 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     const std::map<size_t, UTextureCube> &textures, bool transparent_pass,
     GreedyShaderMode mode, float shell_alpha)
 {
+  const bool capture_opaque_packed_trace =
+      !transparent_pass && UJobStageTrace::VisualBlackTraceEnabled();
+  const auto get_opaque_trace = [&](glm::ivec3 coord)
+      -> PackedOpaqueDrawTrace *
+  {
+    if (!capture_opaque_packed_trace)
+    {
+      return nullptr;
+    }
+    const auto it = std::find_if(
+        LastOpaquePackedDrawTrace.begin(), LastOpaquePackedDrawTrace.end(),
+        [&](const PackedOpaqueDrawTrace &entry)
+        { return entry.coord == coord; });
+    if (it != LastOpaquePackedDrawTrace.end())
+    {
+      return &*it;
+    }
+    PackedOpaqueDrawTrace trace{};
+    trace.coord = coord;
+    trace.selected = 1;
+    LastOpaquePackedDrawTrace.push_back(trace);
+    return &LastOpaquePackedDrawTrace.back();
+  };
+  if (capture_opaque_packed_trace)
+  {
+    for (const GpuPackedChunkRef &chunk : chunk_refs)
+    {
+      (void)get_opaque_trace(chunk.chunkCoord);
+    }
+  }
   const UGpuMeshPipeline *pipeline = cache.GetGpuMeshPipeline();
   if (!pipeline || !pipeline->IsReady() || chunk_refs.empty())
   {
@@ -4583,6 +4647,13 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers())
   {
     return 0;
+  }
+  if (capture_opaque_packed_trace)
+  {
+    for (PackedOpaqueDrawTrace &trace : LastOpaquePackedDrawTrace)
+    {
+      trace.draw_path_ready = 1;
+    }
   }
 
   packedGreedyShader->Use();
@@ -4623,11 +4694,19 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   size_t packed_draw_chunks = 0;
   for (const GpuPackedChunkRef &chunk : chunk_refs)
   {
+    PackedOpaqueDrawTrace *trace =
+        capture_opaque_packed_trace ? get_opaque_trace(chunk.chunkCoord)
+                                    : nullptr;
     const GpuMeshSlot *slot =
         pipeline->GetAllocator().GetSlot(chunk.chunkCoord);
     if (!slot || slot->QuadCount == 0)
     {
       continue;
+    }
+    if (trace)
+    {
+      trace->slot_present = 1;
+      trace->slot_quad_count = slot->QuadCount;
     }
     if (WorldInstance &&
         !WorldInstance->IsChunkSliceRenderReady(chunk.chunkCoord))
@@ -4639,6 +4718,10 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
               : glm::vec3(0.0f),
           transparent_pass ? 4u : 3u, 0u, slot->QuadCount, false);
       continue;
+    }
+    if (trace)
+    {
+      trace->slice_ready = 1;
     }
     if (WorldInstance)
     {
@@ -4665,6 +4748,11 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       {
         continue;
       }
+      if (trace)
+      {
+        ++trace->opaque_range_count;
+        trace->opaque_range_quad_count += range.quadCount;
+      }
       const auto texIt = textures.find(static_cast<size_t>(range.blockId));
       if (texIt == textures.end())
       {
@@ -4674,6 +4762,10 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       if (texture_id == 0)
       {
         continue;
+      }
+      if (trace)
+      {
+        ++trace->texture_ready_range_count;
       }
       SetBlockAnimUniforms(packedGreedyShader, range.blockId, textures);
       glBindTexture(GL_TEXTURE_2D, texture_id);
@@ -4685,6 +4777,12 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
         continue;
       }
       glDrawArrays(GL_TRIANGLES, first, count);
+      if (trace)
+      {
+        ++trace->draw_call_count;
+        trace->drawn_quad_count += range.quadCount;
+        trace->drawn_index_count += static_cast<uint32_t>(count);
+      }
     }
   }
 

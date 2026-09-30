@@ -67,6 +67,25 @@ struct RenderBatch
   std::vector<glm::vec2> quadSizes;
 };
 
+/// Per-chunk evidence for the last opaque packed fallback submission. The
+/// pixel probe uses this to distinguish packed residency from actual draw
+/// calls for a ray-mapped chunk.
+struct PackedOpaqueDrawTrace
+{
+  glm::ivec3 coord{0};
+  uint8_t selected{0};
+  uint8_t draw_path_ready{0};
+  uint8_t slot_present{0};
+  uint8_t slice_ready{0};
+  uint16_t opaque_range_count{0};
+  uint16_t texture_ready_range_count{0};
+  uint16_t draw_call_count{0};
+  uint32_t slot_quad_count{0};
+  uint32_t opaque_range_quad_count{0};
+  uint32_t drawn_quad_count{0};
+  uint32_t drawn_index_count{0};
+};
+
 class UGeometryEngine : public IUGreedyTransparentBackend
 {
 public:
@@ -325,6 +344,7 @@ private:
   GreedyGpuPassCache GreedyGpuOpaque;
   GreedyGpuPassCache GreedyGpuCutout;
   GreedyGpuPassCache GreedyGpuTransparent;
+  std::vector<PackedOpaqueDrawTrace> LastOpaquePackedDrawTrace;
   CrossGpuPassCache CrossGpuPass;
   std::vector<GreedyBatchRef> CachedTransparentSortedRefs;
   uint64_t CachedTransparentSortRevision{0};
