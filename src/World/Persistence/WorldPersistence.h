@@ -39,6 +39,7 @@ public:
     bool priority{false};
     bool in_deque{false};
     bool deferred_visible{false};
+    bool deferred_far{false};
     bool y_band_defined{false};
     int queue_index{-1};
     int queue_size{0};
@@ -117,6 +118,7 @@ public:
                                       int max_y = -1);
   void DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y, int max_y,
                              bool priority);
+  void ClearDeferredFarRelightColumn(glm::ivec2 ground_xz);
   int AdmitDeferredFarRelightColumns(UWorld &world, glm::ivec3 focus_ground,
                                      int pin_horiz);
   /// Move an already-queued world-block-key column from far to priority FIFO.
@@ -189,6 +191,8 @@ private:
   void EnqueueTerrainColumnRelightImpl(int world_x, int world_z,
                                        bool priority, int min_y, int max_y,
                                        bool visible_admission);
+  void PreserveRelightFifoVictimAsDeferred(glm::ivec2 world_block_key,
+                                           bool priority);
   bool PrioritizeNearestTerrainColumnRelight(UWorld &world,
                                              glm::ivec3 focus_ground,
                                              int radius_chunks, int scan_cap);

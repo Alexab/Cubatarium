@@ -428,7 +428,8 @@ struct VisualBlackTraceRecord
   /// draw-gate samples. sample_kind=2 and 8 populate exact FIFO position/band;
   /// kind 3 also emits the capture-target scan that selected the queue entry.
   /// 0=not keyed, 1=priority deque, 2=far deque, 3=keyed but absent from deque,
-  /// 6=bounded exact visible target awaiting capture-dequeue promotion.
+  /// 6=bounded exact visible target awaiting capture-dequeue promotion,
+  /// 7=durable far relight awaiting FIFO admission.
   /// Other trace kinds may reuse this byte for their own queue classification.
   uint8_t relight_queue_kind{0};
   uint8_t relight_y_band_defined{0};
@@ -445,7 +446,8 @@ struct VisualBlackTraceRecord
   uint32_t mesh_work_owner_flags{0};
   /// sample_kind=8, 2, and 0 bitset: PendingLight map, persistence FIFO key,
   /// async relight in flight, defer-until-lit, SoftDeferHeld, column LitReady,
-  /// lit gate required, and ColumnFlow repair ticket (bits 0..7).
+  /// lit gate required, ColumnFlow repair ticket (bits 0..7), and durable far
+  /// relight awaiting FIFO admission (bit 8).
   uint32_t relight_owner_flags{0};
   /// ColumnFlowScheduler ticket kinds: RelightThenMesh, FirstMesh,
   /// RemeshSeam, PromoteRelight (bits 0..3).

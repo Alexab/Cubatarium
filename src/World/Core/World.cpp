@@ -2232,6 +2232,7 @@ void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
   StickyRemeshAfterLight.erase(ground_xz);
   if (Persistence)
   {
+    Persistence->ClearDeferredFarRelightColumn(ground_xz);
     Persistence->ClearVisibleFirstMeshRelightIfNotQueued(
         glm::ivec2(ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE));
   }
@@ -3718,8 +3719,11 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           flow_ticket || sticky_remesh || repair_progress;
       const bool async_relight = IsAsyncRelightColumnInFlight(col);
       const glm::ivec2 block_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
-      const bool persistence_relight =
-          Persistence && Persistence->IsTerrainColumnRelightQueued(block_key);
+      const auto relight_queue =
+          Persistence
+              ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
+              : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+      const bool persistence_relight = relight_queue.keyed;
       // Keep the generic focus-slice trace's named owner fields consistent
       // with renderer samples. The aggregate `flags` below also contains
       // owner bits, but consumers should not have to decode that private mask
@@ -3732,24 +3736,23 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           (soft_defer ? 1u << 4 : 0u) |
           (column_lit ? 1u << 5 : 0u) |
           (RequiresLightingLitGate() ? 1u << 6 : 0u) |
-          (repair_ticket ? 1u << 7 : 0u);
+          (repair_ticket ? 1u << 7 : 0u) |
+          (relight_queue.deferred_far ? 1u << 8 : 0u);
       trace.column_flow_ticket_flags =
           (flow_relight_then_mesh ? 1u << 0 : 0u) |
           (flow_first_mesh ? 1u << 1 : 0u) |
           (flow_remesh_seam ? 1u << 2 : 0u) |
           (flow_promote_relight ? 1u << 3 : 0u);
-      const auto relight_queue =
-          Persistence
-              ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
-              : UWorldPersistence::TerrainColumnRelightQueueInfo{};
       trace.relight_queue_kind =
           relight_queue.deferred_visible && !relight_queue.keyed
               ? 6
-              : (!relight_queue.keyed
-              ? 0
-              : (!relight_queue.in_deque
-                     ? 3
-                     : (relight_queue.priority ? 1 : 2)));
+              : (relight_queue.deferred_far && !relight_queue.keyed
+                     ? 7
+                     : (!relight_queue.keyed
+                            ? 0
+                            : (!relight_queue.in_deque
+                                   ? 3
+                                   : (relight_queue.priority ? 1 : 2))));
       trace.relight_y_band_defined = relight_queue.y_band_defined ? 1 : 0;
       trace.relight_queue_index = relight_queue.queue_index;
       trace.relight_queue_size = relight_queue.queue_size;
@@ -6238,6 +6241,11 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
       trace.renderer_column_has_repair_ticket =
           column_render_state.has_repair_ticket ? 1u : 0u;
       const bool relight_queued = IsTerrainColumnRelightQueued(key);
+      const auto relight_queue =
+          Persistence
+              ? Persistence->GetTerrainColumnRelightQueueInfo(
+                    glm::ivec2(key.x * CHUNK_SIZE, key.y * CHUNK_SIZE))
+              : UWorldPersistence::TerrainColumnRelightQueueInfo{};
       const bool relight_inflight = IsAsyncRelightColumnInFlight(key);
       const bool defer_until_lit = trace_cache.IsDeferMeshUntilLit(coord);
       const bool soft_defer_held = MeshService->IsSoftDeferHeld(coord);
@@ -6252,7 +6260,8 @@ VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
           (soft_defer_held ? 1u << 4 : 0u) |
           (column_lit_ready ? 1u << 5 : 0u) |
           (lit_gate_required ? 1u << 6 : 0u) |
-          (contains ? 1u << 7 : 0u);
+          (contains ? 1u << 7 : 0u) |
+          (relight_queue.deferred_far ? 1u << 8 : 0u);
       const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
       trace.column_flow_ticket_flags =
           (flow_scheduler.Contains(key, ColumnWorkKind::RelightThenMesh)
@@ -8054,9 +8063,13 @@ void UWorld::PopulateRendererRelightQueueTrace(
     trace.relight_queue_kind =
         queue.deferred_visible && !queue.keyed
             ? 6
-            : (!queue.keyed
-                   ? 0
-                   : (!queue.in_deque ? 3 : (queue.priority ? 1 : 2)));
+            : (queue.deferred_far && !queue.keyed
+                   ? 7
+                   : (!queue.keyed
+                          ? 0
+                          : (!queue.in_deque
+                                 ? 3
+                                 : (queue.priority ? 1 : 2))));
     trace.relight_y_band_defined = queue.y_band_defined ? 1 : 0;
     trace.relight_queue_index = queue.queue_index;
     trace.relight_queue_size = queue.queue_size;
