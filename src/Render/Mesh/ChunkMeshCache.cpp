@@ -8271,17 +8271,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             ? sched_adm.first_mesh_schedule
             : kReservedFocusMissingSlots);
     int first_mesh_cap = first_mesh_cap_base;
+    const int fm_q_for_schedule =
+        static_cast<int>(Dirty.GetFirstMeshCount());
+    const bool first_mesh_consumer_starved = IsFmConsumerStarved(
+        fm_q_for_schedule, prior_mesh_dirty_schedule_ok_fm_n);
+    FmConsumerStarvedActive_ = first_mesh_consumer_starved ? 1 : 0;
     if (FmDirtyEnqueueReserveN_ > 0 &&
         !ShouldDeferFmDirtyEnqueueReserve(false, EnterLitQuiesce,
                                           EnterFovLitPressure_))
     {
-      const int fm_q = static_cast<int>(Dirty.GetFirstMeshCount());
-      const bool fm_consumer_starved =
-          IsFmConsumerStarved(fm_q, prior_mesh_dirty_schedule_ok_fm_n);
       first_mesh_cap = ComputeFirstMeshScheduleEffectiveCap(
-          first_mesh_cap_base, fm_q, FmDirtyEnqueueReserveN_, 4,
-          fm_consumer_starved, prior_mesh_dirty_schedule_ok_fm_n);
-      FmConsumerStarvedActive_ = fm_consumer_starved ? 1 : 0;
+          first_mesh_cap_base, fm_q_for_schedule, FmDirtyEnqueueReserveN_, 4,
+          first_mesh_consumer_starved,
+          prior_mesh_dirty_schedule_ok_fm_n);
     }
     LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
     int remesh_cap = sched_adm.enforce_schedule_lanes
@@ -9214,14 +9216,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     LastScheduleLaneFmN_ = first_mesh_cap;
     LastScheduleLaneRemeshN_ = remesh_cap;
     LastScheduleLaneStarveReason_ = sched_adm.dual_lane_starve_reason;
-    if (MeshFocusValid && first_mesh_cap > 0 && focus_missing_for_schedule)
+    if (MeshFocusValid && first_mesh_cap > 0 &&
+        (focus_missing_for_schedule || first_mesh_consumer_starved))
     {
-      // Keep newly arriving near-focus holes urgent while guaranteeing that a
-      // long-waiting in-focus FirstMesh ticket eventually passes the head.
-      // Pixel-ray flight traces found missing, settled chunks still queued as
-      // FirstMesh after 51-113 scheduler frames. Promote overdue near-focus
-      // work before it spends the whole visible approach behind newer holes.
-      constexpr uint64_t kFirstMeshFairAgeFrames = 48;
+      // Keep new holes urgent, but let an older in-focus FirstMesh pass newer
+      // arrivals while prior-tick FM service is below its four-item floor.
+      // Pixel-ray gaps appeared for settled, non-air chunks at queue ages 13–20
+      // and indexes 11–36, before the old 48-frame promotion threshold.
+      constexpr uint64_t kFirstMeshFairAgeFrames = 12;
       Dirty.PrioritizeAgedNearHorizontal(
           MeshFocusGroundChunk, MeshFocusRadiusChunks,
           kFirstMeshFairAgeFrames);
