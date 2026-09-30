@@ -720,25 +720,15 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
       {
         ++stats.orphan_active;
         const DemandSnapshot before = SnapshotDemand(rec);
-        // Re-admit desire: keep desire, clear orphan attempt so NoteDemand can
-        // mint a successor rather than silent cancel of obligation.
+        // Preserve the desired revisions, but do not mint a replacement here:
+        // reconciliation has no admission owner and cannot promise executable
+        // mesh work. The next producer that reaches NoteDemand will mint a new
+        // attempt while it performs the real queue admission.
         rec.has_active_attempt = false;
         rec.active_stage = JobStage::Cancelled;
-        if (rec.desired_geom_rev != 0 || rec.desired_light_rev != 0)
-        {
-          rec.active_attempt_id = NextAttemptId_++;
-          rec.active_stage = JobStage::Created;
-          rec.has_active_attempt = true;
-          if (now_ms > 0.0)
-          {
-            rec.attempt_created_ms = now_ms;
-          }
-        }
-        TraceDemandTransition(
-            rec.coord, before, rec,
-            rec.has_active_attempt ? DemandTransitionKind::AttemptReminted
-                                   : DemandTransitionKind::InstallCancelled,
-            now_ms);
+        TraceDemandTransition(rec.coord, before, rec,
+                              DemandTransitionKind::InstallCancelled,
+                              now_ms);
       }
     }
     // A40 P3: stall > SLA → remint one Created attempt (keep desire). Not Kick.
