@@ -9244,7 +9244,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
-      // Spend at most two existing FirstMesh slots on directly forward h3-h4
+      // Spend at most two existing FirstMesh slots on directly forward h3-h7
       // holes seen by renderer ray probes. This is a placement reservation
       // inside the current cap; try_schedule still owns every admission budget.
       const float forward_length =
@@ -9259,7 +9259,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         constexpr int kForwardReserveAcceptedLimit = 2;
         constexpr int kForwardReserveScanLimit = 256;
         constexpr int kForwardReserveMinHoriz = 3;
-        constexpr int kForwardReserveMaxHoriz = 4;
+        constexpr int kForwardReserveMaxHoriz = 7;
         constexpr int kForwardReserveVerticalBand = 3;
         constexpr float kForwardReserveMinDot = 0.5f;
         int forward_reserve_scheduled = 0;
