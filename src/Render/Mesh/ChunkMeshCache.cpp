@@ -8287,6 +8287,57 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                 ? sched_adm.remesh_schedule
                                 : max_schedule_per_frame);
     const int remesh_cap_from_admission = remesh_cap;
+    // Decide whether the focus still has a missing drawable before running
+    // repair/remesh lanes. Their early snapshots must not consume every
+    // refresh credit before the FirstMesh lane can reserve its own work.
+    bool focus_missing_for_schedule = false;
+    if (MeshFocusValid)
+    {
+      if (MissingMemo.epoch == HoleQueryEpoch &&
+          MissingMemo.center.x == MeshFocusGroundChunk.x &&
+          MissingMemo.center.z == MeshFocusGroundChunk.z)
+      {
+        if (MissingMemo.radius == MeshFocusRadiusChunks)
+        {
+          focus_missing_for_schedule = MissingMemo.result;
+        }
+        else if (!MissingMemo.result &&
+                 MissingMemo.radius >= MeshFocusRadiusChunks)
+        {
+          focus_missing_for_schedule = false;
+        }
+        else if (MissingMemo.result &&
+                 MissingMemo.radius <= MeshFocusRadiusChunks)
+        {
+          focus_missing_for_schedule = true;
+        }
+        else
+        {
+          focus_missing_for_schedule = HasMissingGreedyMeshInHorizontalRadius(
+              world, MeshFocusGroundChunk, MeshFocusRadiusChunks);
+        }
+      }
+      else
+      {
+        focus_missing_for_schedule = HasMissingGreedyMeshInHorizontalRadius(
+            world, MeshFocusGroundChunk, MeshFocusRadiusChunks);
+      }
+    }
+    const bool miss_or_holes_starve =
+        StarveRemeshForHoles || focus_missing_for_schedule;
+    if (miss_or_holes_starve && Dirty.GetFirstMeshCount() > 0 &&
+        first_mesh_cap > 0)
+    {
+      // Protect the FirstMesh capture credits before the stale-light and
+      // visible-repair prepasses below. Reserving later allowed those remesh
+      // snapshots to spend the shared refresh budget first, leaving a positive
+      // FirstMesh schedule cap with zero FirstMesh submissions.
+      constexpr int kMissFirstMeshCaptureReserveMax = 4;
+      FirstMeshCaptureReserveLeft = std::min(
+          {kMissFirstMeshCaptureReserveMax, first_mesh_cap,
+           CaptureRefreshBudgetLeft});
+      CaptureRefreshBudgetLeft -= FirstMeshCaptureReserveLeft;
+    }
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
     int rear_focus_scheduled = 0;
     const auto leave_in_under_pl = [&](const glm::ivec3 &c) {
@@ -8906,40 +8957,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
     // Pass 1: FirstMeshQ prefix only (dual-queue: remesh never scanned here).
     seg_t0 = std::chrono::high_resolution_clock::now();
-    // R4.5.1: reuse MissingMemo when same xz/radius (avoid second cold ForEach).
-    bool focus_missing_for_schedule = false;
-    if (MeshFocusValid)
-    {
-      if (MissingMemo.epoch == HoleQueryEpoch &&
-          MissingMemo.center.x == MeshFocusGroundChunk.x &&
-          MissingMemo.center.z == MeshFocusGroundChunk.z)
-      {
-        if (MissingMemo.radius == MeshFocusRadiusChunks)
-        {
-          focus_missing_for_schedule = MissingMemo.result;
-        }
-        else if (!MissingMemo.result &&
-                 MissingMemo.radius >= MeshFocusRadiusChunks)
-        {
-          focus_missing_for_schedule = false;
-        }
-        else if (MissingMemo.result &&
-                 MissingMemo.radius <= MeshFocusRadiusChunks)
-        {
-          focus_missing_for_schedule = true;
-        }
-        else
-        {
-          focus_missing_for_schedule = HasMissingGreedyMeshInHorizontalRadius(
-              world, MeshFocusGroundChunk, MeshFocusRadiusChunks);
-        }
-      }
-      else
-      {
-        focus_missing_for_schedule = HasMissingGreedyMeshInHorizontalRadius(
-            world, MeshFocusGroundChunk, MeshFocusRadiusChunks);
-      }
-    }
     // FZ2.7-P10: under holes PreferKick pending GPU in protect ring before new
     // FM Capture — finish slots, don't raise first_mesh_cap.
     if ((StarveRemeshForHoles || focus_missing_for_schedule) && MeshFocusValid)
@@ -9030,8 +9047,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     // was burning MeshSnapshotBudgetMs before FirstMesh closed holes (AF fm~300).
     // A42c: keep LightRepair Capture floor — remesh_cap=0 made A42b reserve
     // unreachable (ok_remesh=0 while sticky miss/holes; blacks stay Published).
-    const bool miss_or_holes_starve =
-        StarveRemeshForHoles || focus_missing_for_schedule;
     if (miss_or_holes_starve)
     {
       remesh_cap = 0;
@@ -9078,9 +9093,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
 
         constexpr int kMissFirstMeshCaptureReserveMax = 4;
-        const int fm_capture_reserve =
-            std::min({kMissFirstMeshCaptureReserveMax, first_mesh_cap,
-                      CaptureRefreshBudgetLeft});
+        const int fm_capture_reserve = std::min(
+            {std::max(0, kMissFirstMeshCaptureReserveMax -
+                             FirstMeshCaptureReserveLeft),
+             first_mesh_cap, CaptureRefreshBudgetLeft});
         FirstMeshCaptureReserveLeft += fm_capture_reserve;
         CaptureRefreshBudgetLeft -= fm_capture_reserve;
 
