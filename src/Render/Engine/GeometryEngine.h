@@ -80,6 +80,11 @@ struct PackedOpaqueDrawTrace
   uint16_t opaque_range_count{0};
   uint16_t texture_ready_range_count{0};
   uint16_t draw_call_count{0};
+  uint16_t missing_texture_entry_count{0};
+  uint16_t zero_texture_id_range_count{0};
+  int32_t first_opaque_range_block_id{-1};
+  int32_t first_missing_texture_block_id{-1};
+  int32_t first_zero_texture_id_block_id{-1};
   uint32_t slot_quad_count{0};
   uint32_t opaque_range_quad_count{0};
   uint32_t drawn_quad_count{0};

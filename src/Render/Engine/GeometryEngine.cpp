@@ -1312,6 +1312,21 @@ void CaptureTransparentPixelProbe(
                     packed_draw->texture_ready_range_count;
             record.renderer_pixel_voxel_chunk_packed_draw_call_count =
                 packed_draw->draw_call_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_missing_texture_entry_count =
+                    packed_draw->missing_texture_entry_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_zero_texture_id_range_count =
+                    packed_draw->zero_texture_id_range_count;
+            record
+                .renderer_pixel_voxel_chunk_packed_first_opaque_range_block_id =
+                    packed_draw->first_opaque_range_block_id;
+            record
+                .renderer_pixel_voxel_chunk_packed_first_missing_texture_block_id =
+                    packed_draw->first_missing_texture_block_id;
+            record
+                .renderer_pixel_voxel_chunk_packed_first_zero_texture_id_block_id =
+                    packed_draw->first_zero_texture_id_block_id;
             record.renderer_pixel_voxel_chunk_packed_slot_quad_count =
                 packed_draw->slot_quad_count;
             record
@@ -4752,15 +4767,35 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       {
         ++trace->opaque_range_count;
         trace->opaque_range_quad_count += range.quadCount;
+        if (trace->first_opaque_range_block_id < 0)
+        {
+          trace->first_opaque_range_block_id = range.blockId;
+        }
       }
       const auto texIt = textures.find(static_cast<size_t>(range.blockId));
       if (texIt == textures.end())
       {
+        if (trace)
+        {
+          ++trace->missing_texture_entry_count;
+          if (trace->first_missing_texture_block_id < 0)
+          {
+            trace->first_missing_texture_block_id = range.blockId;
+          }
+        }
         continue;
       }
       const GLuint texture_id = texIt->second.GetTextureId();
       if (texture_id == 0)
       {
+        if (trace)
+        {
+          ++trace->zero_texture_id_range_count;
+          if (trace->first_zero_texture_id_block_id < 0)
+          {
+            trace->first_zero_texture_id_block_id = range.blockId;
+          }
+        }
         continue;
       }
       if (trace)

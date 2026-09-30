@@ -399,6 +399,11 @@ struct VisualBlackTraceRecord
   uint16_t renderer_pixel_voxel_chunk_packed_opaque_range_count{0};
   uint16_t renderer_pixel_voxel_chunk_packed_texture_ready_range_count{0};
   uint16_t renderer_pixel_voxel_chunk_packed_draw_call_count{0};
+  uint16_t renderer_pixel_voxel_chunk_packed_missing_texture_entry_count{0};
+  uint16_t renderer_pixel_voxel_chunk_packed_zero_texture_id_range_count{0};
+  int32_t renderer_pixel_voxel_chunk_packed_first_opaque_range_block_id{-1};
+  int32_t renderer_pixel_voxel_chunk_packed_first_missing_texture_block_id{-1};
+  int32_t renderer_pixel_voxel_chunk_packed_first_zero_texture_id_block_id{-1};
   uint32_t renderer_pixel_voxel_chunk_packed_slot_quad_count{0};
   uint32_t renderer_pixel_voxel_chunk_packed_opaque_range_quad_count{0};
   uint32_t renderer_pixel_voxel_chunk_packed_drawn_quad_count{0};

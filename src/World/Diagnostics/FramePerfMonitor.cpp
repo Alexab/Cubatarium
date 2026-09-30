@@ -3631,6 +3631,16 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_voxel_chunk_packed_texture_ready_range_count
                << ",\"renderer_pixel_voxel_chunk_packed_draw_call_count\":"
                << r.renderer_pixel_voxel_chunk_packed_draw_call_count
+               << ",\"renderer_pixel_voxel_chunk_packed_missing_texture_entry_count\":"
+               << r.renderer_pixel_voxel_chunk_packed_missing_texture_entry_count
+               << ",\"renderer_pixel_voxel_chunk_packed_zero_texture_id_range_count\":"
+               << r.renderer_pixel_voxel_chunk_packed_zero_texture_id_range_count
+               << ",\"renderer_pixel_voxel_chunk_packed_first_opaque_range_block_id\":"
+               << r.renderer_pixel_voxel_chunk_packed_first_opaque_range_block_id
+               << ",\"renderer_pixel_voxel_chunk_packed_first_missing_texture_block_id\":"
+               << r.renderer_pixel_voxel_chunk_packed_first_missing_texture_block_id
+               << ",\"renderer_pixel_voxel_chunk_packed_first_zero_texture_id_block_id\":"
+               << r.renderer_pixel_voxel_chunk_packed_first_zero_texture_id_block_id
                << ",\"renderer_pixel_voxel_chunk_packed_slot_quad_count\":"
                << r.renderer_pixel_voxel_chunk_packed_slot_quad_count
                << ",\"renderer_pixel_voxel_chunk_packed_opaque_range_quad_count\":"
