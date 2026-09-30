@@ -534,20 +534,8 @@ void UChunkDirtySet::PrioritizeAgedNearHorizontal(
       // by horizontal distance alone erases both priorities under hole load.
       return false;
     }
-    // Keep nearer/vertically relevant holes ahead of older work farther out;
-    // age guarantees FIFO service inside each spatial band.
-    const int horiz_a = HorizDist(a, focus_ground_chunk);
-    const int horiz_b = HorizDist(b, focus_ground_chunk);
-    if (horiz_a != horiz_b)
-    {
-      return horiz_a < horiz_b;
-    }
-    const int vertical_a = std::abs(a.y - focus_ground_chunk.y);
-    const int vertical_b = std::abs(b.y - focus_ground_chunk.y);
-    if (vertical_a != vertical_b)
-    {
-      return vertical_a < vertical_b;
-    }
+    // Age takes precedence across the bounded focus region so continuous near
+    // arrivals cannot starve older FirstMesh work farther along the route.
     return enqueue_frame(a) < enqueue_frame(b);
   };
   if (FirstMeshQ.size() > 1)
