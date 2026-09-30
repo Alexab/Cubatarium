@@ -6,10 +6,10 @@ namespace cutum
 {
 
 /// Soft-defer / first-mesh gate (V2 RenderReady / Era28 Visual Stage).
-/// Near FOV (AllowUnlitFirstMesh=false): hide-until-lit while PendingLight —
-/// do not publish Unlit dark/bright preview. Far FOV may Unlit via allow flag.
-/// Remesh while PendingLight always deferred. Player dig/place does not set
-/// PendingLight.
+/// Near FOV waits for light except for the explicitly selected nearest missing
+/// first mesh, which receives a provisional ambient preview. Far FOV may also
+/// preview through the allow flag. Remesh while PendingLight always deferred.
+/// Player dig/place does not set PendingLight.
 inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
                                         bool pending_light, bool in_focus,
                                         bool may_mesh_outside_focus,

@@ -61,18 +61,19 @@ inline ColumnSoTDecision ClassifyStickyStaleDarkSoT(
   return out;
 }
 
-/// Era28/32: UnlitFirstMesh only outside LitDrawable ring (horiz > ring).
-/// Ring missing waits Relight-before-draw; hinterland may Unlit preview.
-/// Reject Unlit near «ради дыр» (Era28/29 PREMERGE).
+/// UnlitFirstMesh is a provisional ambient preview. Keep the general
+/// LitDrawable ring behind relight, but let the single nearest missing hole
+/// use that preview so a queued light calculation cannot leave the leading
+/// visible chunk empty.
 inline bool AllowUnlitFirstMesh(bool has_mesh, int horiz_from_focus,
-                                bool /*is_nearest_missing*/, bool in_focus,
+                                bool is_nearest_missing, bool in_focus,
                                 int near_r = kVisualStageLitDrawableHoriz)
 {
   if (has_mesh || !in_focus)
   {
     return false;
   }
-  return horiz_from_focus > near_r;
+  return horiz_from_focus > near_r || is_nearest_missing;
 }
 
 /// Void-edge / VisibleBlack debt: Relight-first (mesh dark + light field 0).

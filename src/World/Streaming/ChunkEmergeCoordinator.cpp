@@ -588,8 +588,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const bool starve_hinterland = StarveHinterlandUnlit(
               world_ref.GetPhysicsTelemetry().SoftDeferEmptyNearN,
               pol.pending_focus_count);
+          // Starvation applies to hinterland previews. The nearest missing
+          // first mesh is a bounded near-FOV exception; its snapshot is marked
+          // provisional and rendered with the ambient fallback until relight
+          // publishes the settled image.
           const bool allow_unlit =
-              !starve_hinterland &&
+              (is_nearest_hole || !starve_hinterland) &&
               AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
                                   kVisualStageLitDrawableHoriz);
           const bool allow_unlit_hole = AllowUnlitDrawableUnderLightDebt(
@@ -597,7 +601,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               has_greedy, underfeet);
           (void)pol.missing_visible_mesh;
           return SoftDeferMeshUntilLitPolicy(
-              underfeet, has_mesh || has_greedy,
+              underfeet, has_mesh,
               world_ref.RequiresLightingLitGate() && pending, in_focus, may_mesh,
               allow_unlit, allow_unlit_hole);
         });
