@@ -9244,7 +9244,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
-      // Spend at most one existing FirstMesh slot on a directly forward,
+      // Spend at most two existing FirstMesh slots on directly forward,
       // mid-range hole. This is a placement reservation inside the current
       // cap; the normal try_schedule path still owns every admission budget.
       const float forward_length =
@@ -9256,16 +9256,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         const float forward_x = MeshForwardXz.x / forward_length;
         const float forward_z = MeshForwardXz.y / forward_length;
+        constexpr int kForwardReserveAcceptedLimit = 2;
         constexpr int kForwardReserveScanLimit = 256;
         constexpr int kForwardReserveMinHoriz = 3;
         constexpr int kForwardReserveMaxHoriz = 7;
         constexpr int kForwardReserveVerticalBand = 3;
         constexpr float kForwardReserveMinDot = 0.5f;
+        int forward_reserve_scheduled = 0;
         int scanned_first_mesh = 0;
         for (auto it = Dirty.begin();
              it != Dirty.end() &&
              Dirty.IsFirstMesh(*it) &&
              scanned_first_mesh < kForwardReserveScanLimit &&
+             forward_reserve_scheduled < kForwardReserveAcceptedLimit &&
              scheduled < max_schedule_per_frame &&
              reserved_focus_scheduled < first_mesh_cap;)
         {
@@ -9302,7 +9305,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           }
           if (scheduled > scheduled_before)
           {
-            break; // one accepted forward slot at most
+            ++forward_reserve_scheduled;
           }
           it = next;
         }
