@@ -508,6 +508,8 @@ struct VisualBlackTraceRecord
   /// Bits 23..25 identify OpenSky, LightRepair, and true-dark state.
   /// Bits 26..27 split GPU apply into queued and kicked/dispatched phases.
   /// Bits 28..31 identify live ColumnFlow tickets by work kind.
+  /// sample_kind=6: bit 14 marks a FirstMesh candidate attempted by the
+  /// forward-facing mid-range schedule reservation.
   uint32_t flags{0};
 };
 

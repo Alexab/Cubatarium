@@ -8359,6 +8359,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     const int pre_first_mesh_schedule_limit =
         std::max(0, max_schedule_per_frame -
                         first_mesh_schedule_slot_reserve);
+    bool first_mesh_forward_reserve_candidate = false;
+    constexpr uint32_t kFirstMeshForwardReserveTraceFlag = 1u << 14;
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
     int rear_focus_scheduled = 0;
     const auto leave_in_under_pl = [&](const glm::ivec3 &c) {
@@ -8480,6 +8482,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             (EnterGpuQuiesceDrain ? 1u << 12 : 0u) |
             (AsyncBuilder->GetInFlightCount() >= max_pipeline ? 1u << 13
                                                               : 0u));
+        if (first_mesh_forward_reserve_candidate)
+        {
+          trace.flags |= kFirstMeshForwardReserveTraceFlag;
+        }
         trace.mesh_revision = MeshRevisions.Current(schedule_coord);
         const MeshPublishRevs published =
             GetMeshPublishRevs(schedule_coord);
@@ -9238,6 +9244,70 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
+      // Spend at most one existing FirstMesh slot on a directly forward,
+      // mid-range hole. This is a placement reservation inside the current
+      // cap; the normal try_schedule path still owns every admission budget.
+      const float forward_length =
+          std::sqrt(MeshForwardXz.x * MeshForwardXz.x +
+                    MeshForwardXz.y * MeshForwardXz.y);
+      if (forward_length >= 0.01f &&
+          scheduled < max_schedule_per_frame &&
+          reserved_focus_scheduled < first_mesh_cap)
+      {
+        const float forward_x = MeshForwardXz.x / forward_length;
+        const float forward_z = MeshForwardXz.y / forward_length;
+        constexpr int kForwardReserveScanLimit = 256;
+        constexpr int kForwardReserveMinHoriz = 3;
+        constexpr int kForwardReserveMaxHoriz = 7;
+        constexpr int kForwardReserveVerticalBand = 3;
+        constexpr float kForwardReserveMinDot = 0.5f;
+        int scanned_first_mesh = 0;
+        for (auto it = Dirty.begin();
+             it != Dirty.end() &&
+             Dirty.IsFirstMesh(*it) &&
+             scanned_first_mesh < kForwardReserveScanLimit &&
+             scheduled < max_schedule_per_frame &&
+             reserved_focus_scheduled < first_mesh_cap;)
+        {
+          ++scanned_first_mesh;
+          const int dx = it->x - MeshFocusGroundChunk.x;
+          const int dz = it->z - MeshFocusGroundChunk.z;
+          const int horiz = std::max(std::abs(dx), std::abs(dz));
+          const int vertical = std::abs(it->y - MeshFocusGroundChunk.y);
+          const float horizontal_length =
+              std::sqrt(static_cast<float>(dx) * static_cast<float>(dx) +
+                        static_cast<float>(dz) * static_cast<float>(dz));
+          const float forward_dot = horizontal_length > 0.0f
+              ? (static_cast<float>(dx) * forward_x +
+                 static_cast<float>(dz) * forward_z) / horizontal_length
+              : -1.0f;
+          if (horiz < kForwardReserveMinHoriz ||
+              horiz > std::min(kForwardReserveMaxHoriz,
+                               MeshFocusRadiusChunks) ||
+              vertical > kForwardReserveVerticalBand ||
+              forward_dot < kForwardReserveMinDot ||
+              HasDrawableGreedyMesh(*it))
+          {
+            ++it;
+            continue;
+          }
+
+          const int scheduled_before = scheduled;
+          first_mesh_forward_reserve_candidate = true;
+          auto next = try_schedule(it, false, false, true);
+          first_mesh_forward_reserve_candidate = false;
+          if (next == Dirty.end())
+          {
+            break;
+          }
+          if (scheduled > scheduled_before)
+          {
+            break; // one accepted forward slot at most
+          }
+          it = next;
+        }
+      }
+
       int outer_soft_defer_skips = 0;
       constexpr int kMaxOuterSoftDeferSkips = 32;
       for (auto it = Dirty.begin();
