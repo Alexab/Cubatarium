@@ -3583,6 +3583,15 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_voxel_chunk_work_owner_flags
                << ",\"renderer_pixel_voxel_chunk_dirty_queue_kind\":"
                << static_cast<int>(r.renderer_pixel_voxel_chunk_dirty_queue_kind)
+               << ",\"renderer_pixel_voxel_chunk_dirty_queue_index\":"
+               << r.renderer_pixel_voxel_chunk_dirty_queue_index
+               << ",\"renderer_pixel_voxel_chunk_dirty_queue_size\":"
+               << r.renderer_pixel_voxel_chunk_dirty_queue_size
+               << ",\"renderer_pixel_voxel_chunk_dirty_queue_age_frames\":"
+               << r.renderer_pixel_voxel_chunk_dirty_queue_age_frames
+               << ",\"renderer_pixel_voxel_chunk_scheduled_this_frame\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_chunk_scheduled_this_frame)
                << ",\"renderer_pixel_voxel_chunk_demand_has_active_attempt\":"
                << static_cast<int>(
                       r.renderer_pixel_voxel_chunk_demand_has_active_attempt)

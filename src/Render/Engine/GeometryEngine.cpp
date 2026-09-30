@@ -1210,6 +1210,14 @@ void CaptureTransparentPixelProbe(
               cache.GetDirtyQueueTrace(
                   voxel_chunk, voxel_dirty_queue_index,
                   voxel_dirty_queue_size);
+          record.renderer_pixel_voxel_chunk_dirty_queue_index =
+              voxel_dirty_queue_index;
+          record.renderer_pixel_voxel_chunk_dirty_queue_size =
+              voxel_dirty_queue_size;
+          record.renderer_pixel_voxel_chunk_dirty_queue_age_frames =
+              cache.GetDirtyQueueAgeFrames(voxel_chunk);
+          record.renderer_pixel_voxel_chunk_scheduled_this_frame =
+              cache.WasScheduledThisFrame(voxel_chunk) ? 1u : 0u;
           record.renderer_pixel_voxel_chunk_work_owner_flags =
               (cache.IsChunkMeshDirty(voxel_chunk) ? 1u : 0u) |
               (cache.HasInflightMeshBuild(voxel_chunk) ? 1u << 1 : 0u) |
