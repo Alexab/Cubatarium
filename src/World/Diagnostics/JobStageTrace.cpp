@@ -471,15 +471,14 @@ void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
 void UJobStageTrace::NoteMeshRevisionBump(
     DemandTransitionSpan span, uint64_t revision_before,
     uint64_t revision_after, MeshRevisionBumpReason reason,
-    uint32_t owner_flags, bool coalesced)
+    uint32_t owner_flags)
 {
   if (!VisualBlackTraceEnabled() ||
       !IsVisualChunkWatched(span.cx, span.cy, span.cz))
   {
     return;
   }
-  span.kind = coalesced ? DemandTransitionKind::MeshRevisionBumpCoalesced
-                        : DemandTransitionKind::MeshRevisionBumped;
+  span.kind = DemandTransitionKind::MeshRevisionBumped;
   span.mesh_revision_before = revision_before;
   span.mesh_revision_after = revision_after;
   span.mesh_revision_bump_reason = reason;
@@ -574,8 +573,6 @@ const char *UJobStageTrace::DemandTransitionName(DemandTransitionKind kind)
     return "attempt_reminted";
   case DemandTransitionKind::MeshRevisionBumped:
     return "mesh_revision_bumped";
-  case DemandTransitionKind::MeshRevisionBumpCoalesced:
-    return "mesh_revision_bump_coalesced";
   case DemandTransitionKind::IdentityReset:
     return "identity_reset";
   }
