@@ -6971,9 +6971,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int admission_schedule_cap =
           normal_admission ? kBackpressuredScheduleCap
                            : std::max(0, bounded.max_schedule);
-      const int available_schedule_cap = std::min(
-          {kBackpressuredScheduleCap, output_headroom,
-           admission_schedule_cap});
+      // In an active backlog, use the output slots that are actually free.
+      // The former unconditional four-job clamp left most of this bounded
+      // capacity idle: during a visible FirstMesh backlog it held scheduling to
+      // 4 even when 7–10 output slots were free, extending the time that ray-hit
+      // chunks had terrain but no published mesh. Normal admission keeps its
+      // conservative cap; non-normal admission remains bounded by both its
+      // policy cap and the measured output headroom.
+      const int available_schedule_cap =
+          std::min(output_headroom, admission_schedule_cap);
       pipeline_telem.MeshPipelineAdmissionScheduleCapN =
           admission_schedule_cap;
       pipeline_telem.MeshPipelineAvailableScheduleCapN =
