@@ -4110,6 +4110,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           kVisualStageFirstMeshRelightForwardHoriz;
       const int approach_ring_min =
           kVisualStageFirstMeshRelightApproachHoriz + 1;
+      const int geometry_debt_ring_min =
+          kVisualStageFirstMeshRelightApproachHoriz;
       const int camera_band_min = std::max(0, focus_block.y - CHUNK_SIZE);
       const int camera_band_max =
           std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
@@ -4215,14 +4217,15 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
 
       // Settled but unpublished geometry is a different debt source from
       // PendingLightBeforeMesh. The h4 unfinished cache does not enumerate
-      // it at h5–h7, so inspect only the resident camera band in the narrow
-      // camera-forward approach sector and retain the nearest slice per column.
+      // it at h5–h7, and h5 still relies on the saturated global Dirty-admit
+      // pool, so inspect the full approach-to-forward band in the resident
+      // camera sector and retain the nearest slice per column.
       for (int dz = -approach_ring; dz <= approach_ring; ++dz)
       {
         for (int dx = -approach_ring; dx <= approach_ring; ++dx)
         {
           const int horiz = (std::max)(std::abs(dx), std::abs(dz));
-          if (horiz < approach_ring_min || horiz > approach_ring)
+          if (horiz < geometry_debt_ring_min || horiz > approach_ring)
           {
             continue;
           }
