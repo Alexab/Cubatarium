@@ -3454,6 +3454,9 @@ void UFramePerfMonitor::Shutdown()
         case 10:
           trace_kind = "screen_ray_candidate_trace";
           break;
+        case 11:
+          trace_kind = "mesh_watched_schedule_trace";
+          break;
         default:
           break;
         }

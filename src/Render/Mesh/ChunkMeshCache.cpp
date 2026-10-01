@@ -8473,20 +8473,27 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           std::max(std::abs(schedule_coord.x - MeshFocusGroundChunk.x),
                    std::abs(schedule_coord.z - MeshFocusGroundChunk.z)) <=
               std::max(2, MeshFocusRadiusChunks);
+      const bool trace_watched_visual =
+          UJobStageTrace::VisualBlackTraceEnabled() &&
+          UJobStageTrace::IsVisualChunkWatched(
+              schedule_coord.x, schedule_coord.y, schedule_coord.z);
       bool focus_first_mesh_budget_reserve_candidate = false;
       const auto trace_visible_schedule =
           [&](uint8_t outcome, uint8_t detail,
               uint8_t enqueue_reject_reason = 0)
       {
         if ((!trace_visible_repair && !trace_normal_focus_remesh &&
-             !trace_first_mesh) ||
+             !trace_first_mesh && !trace_watched_visual) ||
             !UJobStageTrace::VisualBlackTraceEnabled())
         {
           return;
         }
         VisualBlackTraceRecord trace{};
-        trace.sample_kind =
-            trace_visible_repair ? 7 : (trace_first_mesh ? 6 : 4);
+        trace.sample_kind = trace_watched_visual
+                                ? 11
+                                : (trace_visible_repair
+                                       ? 7
+                                       : (trace_first_mesh ? 6 : 4));
         trace.cx = schedule_coord.x;
         trace.cy = schedule_coord.y;
         trace.cz = schedule_coord.z;
@@ -8519,6 +8526,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                 : (Dirty.IsPriorityRemesh(schedule_coord) ? 2 : 3);
         trace.mesh_dirty_queue_index = trace.relight_queue_index;
         trace.mesh_dirty_queue_size = trace.relight_queue_size;
+        trace.mesh_dirty_queue_age_frames =
+            Dirty.GetEnqueueAgeFrames(schedule_coord);
         const bool drawable = HasDrawableGreedyMesh(schedule_coord);
         const bool builder_inflight = AsyncBuilder->IsInFlight(schedule_coord);
         const bool gpu_apply = IsPendingGpuApply(schedule_coord);

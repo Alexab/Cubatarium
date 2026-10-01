@@ -578,13 +578,15 @@ public:
   static constexpr size_t kVisualRepairTraceRingCapacity = 2048;
   static constexpr size_t kMeshScheduleTraceRingCapacity = 1024;
   static constexpr size_t kPriorityRemeshTraceRingCapacity = 2048;
+  static constexpr size_t kWatchedMeshScheduleTraceRingCapacity = 512;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
       kVisualBlackTraceRingCapacity +
       kRendererGateTraceRingCapacity +
       kFrustumCoverageTraceRingCapacity +
       kVisualBlackAttributionTraceRingCapacity +
       kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
-      kPriorityRemeshTraceRingCapacity + kVisualPixelTraceRingCapacity +
+      kPriorityRemeshTraceRingCapacity +
+      kWatchedMeshScheduleTraceRingCapacity + kVisualPixelTraceRingCapacity +
       kScreenRayTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
@@ -593,6 +595,7 @@ public:
                            JobTerminalReason reason);
   /// Retain lifecycle events for a chunk selected by the opt-in frustum trace.
   static void WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz);
+  static bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz);
   static void ForEachWatchedNewest(
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static void NoteDemandTransition(const DemandTransitionSpan &span);

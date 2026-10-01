@@ -190,6 +190,14 @@ GetPriorityRemeshTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kWatchedMeshScheduleTraceRingCapacity> &
+GetWatchedMeshScheduleTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kWatchedMeshScheduleTraceRingCapacity> r;
+  return r;
+}
+
 template <size_t Capacity>
 void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
                      const VisualBlackTraceRecord &record)
@@ -284,6 +292,11 @@ void UJobStageTrace::WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz)
     watches.chunks.erase(watches.order.front());
     watches.order.pop_front();
   }
+}
+
+bool UJobStageTrace::IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz)
+{
+  return ::cutum::IsVisualChunkWatched(cx, cy, cz);
 }
 
 void UJobStageTrace::NoteCullDecision(int32_t cx, int32_t cy, int32_t cz,
@@ -413,6 +426,10 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetPriorityRemeshTraceRing(), record);
   }
+  else if (record.sample_kind == 11)
+  {
+    PushVisualTrace(GetWatchedMeshScheduleTraceRing(), record);
+  }
   else if (record.sample_kind == 4 || record.sample_kind == 6)
   {
     PushVisualTrace(GetMeshScheduleTraceRing(), record);
@@ -439,6 +456,7 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   ForEachVisualTraceNewest(GetVisualRepairTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetWatchedMeshScheduleTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);
