@@ -123,12 +123,14 @@ void main() {
   vec3 pos = vec3(x, y, z);
   vec3 du, dv;
 
-  if (face == 0)      { pos.z += 1.0; du = vec3(1,0,0); dv = vec3(0,1,0); }
-  else if (face == 1) { pos.x += 1.0; du = vec3(0,0,1); dv = vec3(0,1,0); }
+  // Keep the packed shader's tangent axes aligned with the GPU greedy grid:
+  // u=(axis+1)%3 and v=(axis+2)%3. Width/height must follow du/dv exactly.
+  if (face == 0)      { pos.z += 1.0; du = vec3(1,0,0);  dv = vec3(0,1,0); }
+  else if (face == 1) { pos.x += 1.0; du = vec3(0,1,0);  dv = vec3(0,0,1); }
   else if (face == 2) { du = vec3(-1,0,0); dv = vec3(0,1,0); pos.x += qw; }
-  else if (face == 3) { du = vec3(0,0,-1); dv = vec3(0,1,0); pos.z += qw; }
-  else if (face == 4) { pos.y += 1.0; du = vec3(1,0,0); dv = vec3(0,0,1); }
-  else                { du = vec3(1,0,0); dv = vec3(0,0,-1); pos.z += qh; }
+  else if (face == 3) { du = vec3(0,-1,0); dv = vec3(0,0,1); pos.y += qw; }
+  else if (face == 4) { pos.y += 1.0; du = vec3(0,0,1);  dv = vec3(1,0,0); }
+  else                { du = vec3(0,0,-1); dv = vec3(1,0,0); pos.z += qw; }
 
   // 6 vertices per quad: 0-1-2, 0-2-3 (two triangles)
   // corners: 0=origin, 1=+du*w, 2=+du*w+dv*h, 3=+dv*h

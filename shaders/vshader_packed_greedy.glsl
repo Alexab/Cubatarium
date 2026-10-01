@@ -33,12 +33,15 @@ void main()
     vec3 pos = vec3(x, y, z);
     vec3 du, dv;
 
-    if (face == 0)      { pos.z += 1.0; du = vec3(1,0,0); dv = vec3(0,1,0); }
-    else if (face == 1) { pos.x += 1.0; du = vec3(0,0,1); dv = vec3(0,1,0); }
+    // Packed emit preserves the GPU greedy grid's axes:
+    // u=(axis+1)%3 and v=(axis+2)%3. Keep du/dv and the negative-face
+    // origin aligned with that same ordering so width/height cover the mesh.
+    if (face == 0)      { pos.z += 1.0; du = vec3(1,0,0);  dv = vec3(0,1,0); }
+    else if (face == 1) { pos.x += 1.0; du = vec3(0,1,0);  dv = vec3(0,0,1); }
     else if (face == 2) { du = vec3(-1,0,0); dv = vec3(0,1,0); pos.x += qw; }
-    else if (face == 3) { du = vec3(0,0,-1); dv = vec3(0,1,0); pos.z += qw; }
-    else if (face == 4) { pos.y += 1.0; du = vec3(1,0,0); dv = vec3(0,0,1); }
-    else                { du = vec3(1,0,0); dv = vec3(0,0,-1); pos.z += qh; }
+    else if (face == 3) { du = vec3(0,-1,0); dv = vec3(0,0,1); pos.y += qw; }
+    else if (face == 4) { pos.y += 1.0; du = vec3(0,0,1);  dv = vec3(1,0,0); }
+    else                { du = vec3(0,0,-1); dv = vec3(1,0,0); pos.z += qw; }
 
     vec3 offset;
     if      (corner == 0) offset = vec3(0);
