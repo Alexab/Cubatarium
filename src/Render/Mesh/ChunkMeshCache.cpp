@@ -9198,19 +9198,55 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // made the advertised 12–16 FM schedule slots unreachable: every later
       // missing-mesh snapshot deferred on RefreshCountBudget. Keep one repair
       // refresh when both lanes have debt, and dedicate up to four available
-      // refreshes to FirstMesh. The time budget below remains authoritative.
+      // refreshes to FirstMesh. When a sustained backlog of aged priority
+      // remeshes exists inside the focus ring, preserve one extra repair
+      // capture and lane slot so that visible stale geometry does not drain at
+      // only one snapshot per tick. Keep the existing FirstMesh capture
+      // reserve and total scheduling cap; the time budget remains authoritative.
       if (Dirty.GetFirstMeshCount() > 0 && first_mesh_cap > 0)
       {
-        constexpr int kMissLightRepairCaptureFloor = 1;
+        constexpr uint64_t kPriorityRemeshFairAgeFrames = 30;
+        constexpr int kAgedPriorityRemeshBacklogForExtraCapture = 4;
+        int aged_priority_remesh_n = 0;
+        if (MeshFocusValid)
+        {
+          const int priority_focus_radius =
+              std::max(0, MeshFocusRadiusChunks);
+          aged_priority_remesh_n = static_cast<int>(std::count_if(
+              Dirty.RemeshQueue().begin(), Dirty.RemeshQueue().end(),
+              [&](const glm::ivec3 &coord)
+              {
+                const int horizontal =
+                    std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                             std::abs(coord.z - MeshFocusGroundChunk.z));
+                return Dirty.IsPriorityRemesh(coord) &&
+                       Dirty.GetEnqueueAgeFrames(coord) >=
+                           kPriorityRemeshFairAgeFrames &&
+                       horizontal <= priority_focus_radius;
+              }));
+        }
+        const int first_mesh_capture_need = std::min(
+            std::max(0, 4 - FirstMeshCaptureReserveLeft), first_mesh_cap);
+        const bool add_aged_priority_remesh_slot =
+            aged_priority_remesh_n >=
+                kAgedPriorityRemeshBacklogForExtraCapture &&
+            remesh_cap_from_admission > 0 &&
+            !sched_adm.steal_remesh_to_fm &&
+            LightRepairCaptureReserveLeft >= 2 &&
+            CaptureRefreshBudgetLeft + LightRepairCaptureReserveLeft - 2 >=
+                first_mesh_capture_need;
+        const int miss_light_repair_capture_floor =
+            add_aged_priority_remesh_slot ? 2 : 1;
         if (Dirty.GetRemeshCount() > 0)
         {
           if (LightRepairCaptureReserveLeft >
-              kMissLightRepairCaptureFloor)
+              miss_light_repair_capture_floor)
           {
             CaptureRefreshBudgetLeft +=
                 LightRepairCaptureReserveLeft -
-                kMissLightRepairCaptureFloor;
-            LightRepairCaptureReserveLeft = kMissLightRepairCaptureFloor;
+                miss_light_repair_capture_floor;
+            LightRepairCaptureReserveLeft =
+                miss_light_repair_capture_floor;
           }
         }
         else
@@ -9228,9 +9264,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         CaptureRefreshBudgetLeft -= fm_capture_reserve;
 
         // The remesh schedule quota must track the reduced capture reserve too.
-        remesh_cap = Dirty.GetRemeshCount() > 0
-                         ? std::min(remesh_cap, LightRepairCaptureReserveLeft)
-                         : 0;
+        if (Dirty.GetRemeshCount() > 0)
+        {
+          const int miss_remesh_lane_cap =
+              add_aged_priority_remesh_slot
+                  ? std::max(2, remesh_cap_from_admission)
+                  : remesh_cap_from_admission;
+          remesh_cap =
+              std::min(miss_remesh_lane_cap, LightRepairCaptureReserveLeft);
+        }
+        else
+        {
+          remesh_cap = 0;
+        }
       }
     }
     // G1-P1 / A11: under StaleVertexLight/FullyDark debt, spend remesh_schedule
