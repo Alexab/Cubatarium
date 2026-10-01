@@ -605,6 +605,29 @@ void UChunkDirtySet::PrioritizeAgedPriorityRemeshNearHorizontal(
     }
     return GetEnqueueAgeFrames(a) > GetEnqueueAgeFrames(b);
   };
+  bool saw_non_overdue = false;
+  bool priority_order_is_stale = false;
+  uint64_t previous_overdue_age = UINT64_MAX;
+  for (auto it = RemeshQ.begin(); it != priority_end; ++it)
+  {
+    const glm::ivec3 coord = *it;
+    if (!is_overdue_in_focus(coord))
+    {
+      saw_non_overdue = true;
+      continue;
+    }
+    const uint64_t age = GetEnqueueAgeFrames(coord);
+    if (saw_non_overdue || age > previous_overdue_age)
+    {
+      priority_order_is_stale = true;
+      break;
+    }
+    previous_overdue_age = age;
+  }
+  if (!priority_order_is_stale)
+  {
+    return;
+  }
   std::stable_sort(RemeshQ.begin(), priority_end, older_first);
   InvalidateUnified();
 }
@@ -648,6 +671,10 @@ void UChunkDirtySet::PrioritizeChunksWithoutMesh(
   if (RemeshQ.size() >= 2)
   {
     std::stable_sort(RemeshQ.begin(), RemeshQ.end(), by_missing);
+    // Keep visible light-repair remeshes ahead of ordinary remeshes even when
+    // focus is unavailable and the missing-mesh order is refreshed.
+    std::stable_partition(RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
+                          { return PriorityRemeshSet.count(coord) > 0; });
   }
   InvalidateUnified();
 }
