@@ -1449,6 +1449,8 @@ private:
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
+  bool ShouldBumpChunkMeshRevisionOnDirty(
+      glm::ivec3 chunk_coord, MeshRevisionBumpReason reason) const;
   void BumpChunkMeshRevision(glm::ivec3 chunk_coord,
                              MeshRevisionBumpReason reason);
   void DrainMeshDependencyInvalidations(UBlockWorld &world,

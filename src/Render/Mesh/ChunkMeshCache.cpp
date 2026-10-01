@@ -2841,6 +2841,23 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
   }
 }
 
+bool UChunkMeshCache::ShouldBumpChunkMeshRevisionOnDirty(
+    glm::ivec3 chunk_coord, MeshRevisionBumpReason reason) const
+{
+  if (reason != MeshRevisionBumpReason::PriorityRelitInstallRepair)
+  {
+    return true;
+  }
+
+  // Relight installation changes the light input, not the voxel geometry
+  // source. If a newer geometry revision is already waiting for publication,
+  // retain that target and let its fresh light/input stamps cover the relight.
+  // Advancing the geometry revision again here only invalidates that pending
+  // repair and can keep the drawable predecessor permanently behind.
+  return MeshRevisions.Current(chunk_coord) <=
+         GetMeshPublishRevs(chunk_coord).geom_rev;
+}
+
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
   MarkDirty(chunkCoord, MeshRevisionBumpReason::MarkDirtyEnqueued);
@@ -2969,16 +2986,17 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
     horiz = std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
                      std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
   }
-  if (!ShouldDeferRimRevisionBumpForPendingGpu(
-          MeshFocusValid, horiz, IsPendingGpuApply(chunkCoord),
-          HasDrawableGreedyMesh(chunkCoord),
-          kI18WitnessComfortEnabled && WitnessSwapGrace_.frames_left > 0 &&
-              WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
-              WitnessSwapGrace_.prior_xz.y == chunkCoord.z) ||
-          (kI18UnderfeetGraceEnabled && horiz <= 1 &&
-           WitnessSwapGrace_.frames_left > 0 &&
-           WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
-           WitnessSwapGrace_.prior_xz.y == chunkCoord.z))
+  if ((!ShouldDeferRimRevisionBumpForPendingGpu(
+           MeshFocusValid, horiz, IsPendingGpuApply(chunkCoord),
+           HasDrawableGreedyMesh(chunkCoord),
+           kI18WitnessComfortEnabled && WitnessSwapGrace_.frames_left > 0 &&
+               WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
+               WitnessSwapGrace_.prior_xz.y == chunkCoord.z) ||
+       (kI18UnderfeetGraceEnabled && horiz <= 1 &&
+        WitnessSwapGrace_.frames_left > 0 &&
+        WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
+        WitnessSwapGrace_.prior_xz.y == chunkCoord.z)) &&
+      ShouldBumpChunkMeshRevisionOnDirty(chunkCoord, reason))
   {
     BumpChunkMeshRevision(chunkCoord, reason);
   }
@@ -2998,7 +3016,9 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord,
                                         MeshRevisionBumpReason reason)
 {
-  MarkDirtyPriorityImpl(chunkCoord, reason, true);
+  MarkDirtyPriorityImpl(
+      chunkCoord, reason,
+      ShouldBumpChunkMeshRevisionOnDirty(chunkCoord, reason));
 }
 
 void UChunkMeshCache::RequeueDirtyPriority(
