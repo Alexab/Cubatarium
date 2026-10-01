@@ -793,10 +793,10 @@ void UWorldStreaming::RefreshStreamingPressure(
             int center_rank{INT32_MAX};
             float nearest_distance{std::numeric_limits<float>::max()};
           };
-          // Match the renderer pixel oracle's four vertical scanlines, while
-          // keeping only five evenly spaced columns for a bounded CPU probe.
-          constexpr std::array<float, 5> kScreenColumns = {
-              0.10f, 0.30f, 0.50f, 0.70f, 0.90f};
+          // Match the renderer pixel oracle's scanline centers at known gaps,
+          // while keeping a bounded CPU probe across the full viewport.
+          constexpr std::array<float, 6> kScreenColumns = {
+              0.075f, 0.275f, 0.375f, 0.475f, 0.675f, 0.875f};
           constexpr std::array<float, 4> kScreenRows = {
               0.125f, 0.375f, 0.625f, 0.875f};
           constexpr size_t kScreenSampleCount =
@@ -860,7 +860,7 @@ void UWorldStreaming::RefreshStreamingPressure(
               const int row_rank =
                   (row_index == 1 || row_index == 2) ? 0 : 2;
               const int center_rank =
-                  std::abs(static_cast<int>(column_index) - 2) + row_rank;
+                  std::abs(static_cast<int>(column_index) - 3) + row_rank;
               candidate.center_rank =
                   std::min(candidate.center_rank, center_rank);
               candidate.nearest_distance =
