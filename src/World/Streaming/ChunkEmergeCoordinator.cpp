@@ -586,10 +586,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               pol.have_nearest_missing &&
               chunk_coord.x == pol.nearest_missing_hole.x &&
               chunk_coord.z == pol.nearest_missing_hole.z;
-          const bool is_forward_preview_neighbor =
-              pol.have_nearest_missing &&
-              IsForwardMissLateralPreviewTarget(
-                  chunk_coord, pol.focus_ground, pol.nearest_missing_hole);
           const bool has_mesh = mesh_svc.HasDrawableGreedyMesh(chunk_coord);
           const bool has_greedy = mesh_svc.HasGreedyMesh(chunk_coord);
           const bool in_focus = horiz <= pol.focus_radius;
@@ -603,16 +599,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               world_ref.GetPhysicsTelemetry().SoftDeferEmptyNearN,
               pol.pending_focus_count);
           // Starvation applies to hinterland previews. The nearest missing
-          // first mesh and two same-height lateral neighbors form a bounded
-          // near-FOV exception; their snapshots are provisional and rendered
-          // with the ambient fallback until relight publishes settled images.
+          // first mesh is a bounded near-FOV exception; its snapshot is marked
+          // provisional and rendered with the ambient fallback until relight
+          // publishes the settled image.
           const bool allow_unlit =
-              (is_nearest_hole || is_forward_preview_neighbor ||
-               !starve_hinterland) &&
-              AllowUnlitFirstMesh(has_mesh, horiz,
-                                  is_nearest_hole ||
-                                      is_forward_preview_neighbor,
-                                  in_focus, kVisualStageLitDrawableHoriz);
+              (is_nearest_hole || !starve_hinterland) &&
+              AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
+                                  kVisualStageLitDrawableHoriz);
           const bool allow_unlit_hole = AllowUnlitDrawableUnderLightDebt(
               pol.pending_focus_count, pol.unlit_near_count, horiz, fully_dark,
               has_greedy, underfeet);
