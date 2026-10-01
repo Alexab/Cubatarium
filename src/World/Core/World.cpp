@@ -4092,6 +4092,10 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   std::unordered_map<uint64_t, uint8_t> outer_relight_admission_results;
   std::vector<uint64_t> outer_reserved_keys;
   size_t outer_candidate_count = 0;
+  size_t outer_light_candidate_count = 0;
+  size_t outer_geometry_candidate_count = 0;
+  size_t outer_selected_light_count = 0;
+  size_t outer_selected_geometry_count = 0;
   size_t outer_reserved_slots = 0;
   if (budget > 0)
   {
@@ -4326,9 +4330,21 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                   return a.key < b.key;
                 });
       outer_candidate_count = candidates.size();
+      for (const OuterCandidate &candidate : candidates)
+      {
+        if (candidate.settled_geometry_debt)
+        {
+          ++outer_geometry_candidate_count;
+        }
+        else
+        {
+          ++outer_light_candidate_count;
+        }
+      }
 
       // Reserve at most two slots within this frame's existing admission
-      // budget. Keep ordinary work first, then serve forward visual debt.
+      // budget. Guarantee the nearest eligible light-debt candidate one slot
+      // when present; use the remaining slot(s) for nearest forward work.
       const size_t outer_slots = std::min<size_t>(
           2, static_cast<size_t>(std::max(0, budget)));
       const size_t budget_slots =
@@ -4337,13 +4353,37 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                                    ? std::min(keys.size(),
                                               budget_slots - outer_slots)
                                    : 0;
-      size_t inserted = 0;
-      for (const OuterCandidate &candidate : candidates)
+      std::vector<size_t> selected_candidate_indices;
+      selected_candidate_indices.reserve(outer_slots);
+      if (outer_slots > 0)
       {
-        if (inserted >= outer_slots)
+        const auto nearest_light =
+            std::find_if(candidates.begin(), candidates.end(),
+                         [](const OuterCandidate &candidate) {
+                           return !candidate.settled_geometry_debt;
+                         });
+        if (nearest_light != candidates.end())
         {
-          break;
+          selected_candidate_indices.push_back(static_cast<size_t>(
+              std::distance(candidates.begin(), nearest_light)));
         }
+      }
+      for (size_t i = 0;
+           i < candidates.size() &&
+           selected_candidate_indices.size() < outer_slots;
+           ++i)
+      {
+        if (std::find(selected_candidate_indices.begin(),
+                      selected_candidate_indices.end(), i) ==
+            selected_candidate_indices.end())
+        {
+          selected_candidate_indices.push_back(i);
+        }
+      }
+      size_t inserted = 0;
+      for (const size_t candidate_index : selected_candidate_indices)
+      {
+        const OuterCandidate &candidate = candidates[candidate_index];
         const auto key_it =
             std::find(keys.begin(), keys.end(), candidate.key);
         if (key_it != keys.end())
@@ -4357,6 +4397,14 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         outer_reserved_geometry_debt[candidate.key] =
             candidate.settled_geometry_debt;
         outer_reserved_keys.push_back(candidate.key);
+        if (candidate.settled_geometry_debt)
+        {
+          ++outer_selected_geometry_count;
+        }
+        else
+        {
+          ++outer_selected_light_count;
+        }
         ++inserted;
       }
       outer_reserved_slots = inserted;
@@ -4886,13 +4934,21 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     static auto audit_window_start = std::chrono::steady_clock::now();
     static uint64_t audit_calls = 0;
     static uint64_t audit_candidates = 0;
+    static uint64_t audit_light_candidates = 0;
+    static uint64_t audit_geometry_candidates = 0;
     static uint64_t audit_selected = 0;
+    static uint64_t audit_selected_light = 0;
+    static uint64_t audit_selected_geometry = 0;
     static uint64_t audit_relight_attempts = 0;
     static uint64_t audit_relight_accepted = 0;
     static std::string audit_last_selected;
     ++audit_calls;
     audit_candidates += outer_candidate_count;
+    audit_light_candidates += outer_light_candidate_count;
+    audit_geometry_candidates += outer_geometry_candidate_count;
     audit_selected += outer_reserved_keys.size();
+    audit_selected_light += outer_selected_light_count;
+    audit_selected_geometry += outer_selected_geometry_count;
     audit_relight_attempts += outer_relight_admission_results.size();
     for (const auto &entry : outer_relight_admission_results)
     {
@@ -4944,15 +5000,24 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           "forward_relight_admission focus=(" + std::to_string(focus_g.x) +
               "," + std::to_string(focus_g.z) + ") calls=" +
               std::to_string(audit_calls) + " candidate_rows=" +
-              std::to_string(audit_candidates) + " selected=" +
-              std::to_string(audit_selected) + " visible_attempts=" +
+              std::to_string(audit_candidates) + " light_candidates=" +
+              std::to_string(audit_light_candidates) +
+              " geometry_candidates=" +
+              std::to_string(audit_geometry_candidates) + " selected=" +
+              std::to_string(audit_selected) + " selected_light=" +
+              std::to_string(audit_selected_light) + " selected_geometry=" +
+              std::to_string(audit_selected_geometry) + " visible_attempts=" +
               std::to_string(audit_relight_attempts) + " visible_accepted=" +
               std::to_string(audit_relight_accepted) + " last_selected=[" +
               audit_last_selected + "]");
       audit_window_start = audit_now;
       audit_calls = 0;
       audit_candidates = 0;
+      audit_light_candidates = 0;
+      audit_geometry_candidates = 0;
       audit_selected = 0;
+      audit_selected_light = 0;
+      audit_selected_geometry = 0;
       audit_relight_attempts = 0;
       audit_relight_accepted = 0;
       audit_last_selected.clear();
