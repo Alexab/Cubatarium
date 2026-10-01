@@ -827,6 +827,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             uint8_t in_height_band{0};
             uint8_t mesh_satisfying{0};
             uint8_t geometry_debt{0};
+            uint8_t needs_light_repair{0};
             uint8_t needs_refresh{0};
             uint8_t candidate{0};
           };
@@ -909,6 +910,8 @@ void UWorldStreaming::RefreshStreamingPressure(
               ray_trace.coord = coord;
               ray_trace.block = hit.block;
               ray_trace.distance = hit.distance;
+              ray_trace.needs_light_repair =
+                  world.IsPendingLightBeforeMeshSlice(coord) ? 1u : 0u;
               const int horiz = std::max(std::abs(coord.x - focus_ground.x),
                                          std::abs(coord.z - focus_ground.z));
               ray_trace.in_focus_radius =
@@ -1079,6 +1082,7 @@ void UWorldStreaming::RefreshStreamingPressure(
               record.screen_ray_mesh_satisfying =
                   ray_trace.mesh_satisfying;
               record.screen_ray_geometry_debt = ray_trace.geometry_debt;
+              record.screen_ray_light_debt = ray_trace.needs_light_repair;
               record.screen_ray_needs_refresh = ray_trace.needs_refresh;
               record.screen_ray_candidate = ray_trace.candidate;
               for (size_t rank = 0;
@@ -1175,8 +1179,36 @@ void UWorldStreaming::RefreshStreamingPressure(
           !world.GetMeshService().HasDrawableGreedyMesh(miss_coord);
       const auto enqueue_first_mesh = [&](glm::ivec3 coord)
       {
+        const glm::ivec2 column(coord.x, coord.z);
+        if (world.IsPendingLightBeforeMeshSlice(coord))
+        {
+          const glm::ivec2 world_key(coord.x * CHUNK_SIZE,
+                                     coord.z * CHUNK_SIZE);
+          if (world.Persistence &&
+              world.Persistence->IsTerrainColumnRelightQueued(world_key))
+          {
+            if (!world.IsAsyncRelightColumnInFlight(column))
+            {
+              world.Persistence->PrioritizeTerrainColumnRelight(world_key);
+            }
+          }
+          else if (world.Persistence &&
+                   !world.IsAsyncRelightColumnInFlight(column))
+          {
+            ColumnWorkItem relight{};
+            relight.column = column;
+            relight.kind = ColumnWorkKind::RelightThenMesh;
+            relight.priority = 116;
+            relight.scan_full_focus = false;
+            relight.cy = coord.y;
+            exec.Enqueue(relight);
+          }
+          // The exact slice still needs a settled light revision. Let its
+          // relight owner finish before admitting any geometry build.
+          return;
+        }
         ColumnWorkItem fm{};
-        fm.column = glm::ivec2(coord.x, coord.z);
+        fm.column = column;
         fm.kind = ColumnWorkKind::FirstMesh;
         fm.priority = 112;
         fm.scan_full_focus = false;

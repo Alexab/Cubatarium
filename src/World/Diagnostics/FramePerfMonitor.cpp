@@ -3952,6 +3952,8 @@ void UFramePerfMonitor::Shutdown()
                  << static_cast<int>(r.screen_ray_mesh_satisfying)
                  << ",\"screen_ray_geometry_debt\":"
                  << static_cast<int>(r.screen_ray_geometry_debt)
+                 << ",\"screen_ray_light_debt\":"
+                 << static_cast<int>(r.screen_ray_light_debt)
                  << ",\"screen_ray_needs_refresh\":"
                  << static_cast<int>(r.screen_ray_needs_refresh)
                  << ",\"screen_ray_candidate\":"

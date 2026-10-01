@@ -284,12 +284,16 @@ const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
 
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
 {
-  if (item.kind == ColumnWorkKind::FirstMesh && !item.scan_full_focus &&
+  const bool targeted_first_mesh_waits_for_light =
+      item.kind == ColumnWorkKind::FirstMesh && !item.scan_full_focus &&
       decide_world_ != nullptr &&
-      decide_world_->IsPendingLightBeforeMesh(item.column))
+      decide_world_->IsPendingLightBeforeMesh(item.column) &&
+      (item.cy < 0 || decide_world_->IsPendingLightBeforeMeshSlice(
+                          glm::ivec3(item.column.x, item.cy, item.column.y)));
+  if (targeted_first_mesh_waits_for_light)
   {
-    // A targeted first-mesh ticket cannot pass the PendingLight draw/mesh gate;
-    // leave that column for relight and admit it to meshing after light settles.
+    // A targeted slice cannot pass the PendingLight draw/mesh gate. A wider
+    // column debt does not block a slice with a current light settlement.
     return;
   }
   if (item.kind == ColumnWorkKind::RelightThenMesh && decide_world_ != nullptr &&
