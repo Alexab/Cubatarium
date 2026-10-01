@@ -3506,6 +3506,21 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             trace.cz = coord.z;
             trace.focus_cx = focus_ground_chunk.x;
             trace.focus_cz = focus_ground_chunk.z;
+            const uint64_t visual_column_key =
+                PackUnfinishedColKey(coord.x, coord.z);
+            const auto visual_class_it =
+                cache.readiness_by_column.find(visual_column_key);
+            if (visual_class_it != cache.readiness_by_column.end())
+            {
+              trace.focus_column_visual_class =
+                  static_cast<uint8_t>(visual_class_it->second);
+            }
+            trace.focus_column_terrain_complete =
+                IsTerrainColumnCompleteFast(glm::ivec3(coord.x, 0, coord.z))
+                    ? 1
+                    : 0;
+            trace.focus_column_in_unfinished_keys =
+                cache.unfinished_keys.count(visual_column_key) != 0 ? 1 : 0;
             trace.camera_x = camera_block.x;
             trace.camera_y = camera_block.y;
             trace.camera_z = camera_block.z;

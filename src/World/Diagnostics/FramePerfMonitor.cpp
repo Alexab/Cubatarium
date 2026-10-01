@@ -3424,6 +3424,12 @@ void UFramePerfMonitor::Shutdown()
                << ",\"cz\":" << r.cz
                << ",\"sample_kind\":" << static_cast<int>(r.sample_kind)
                << ",\"focus_state\":" << static_cast<int>(r.focus_state)
+               << ",\"focus_column_visual_class\":"
+               << static_cast<int>(r.focus_column_visual_class)
+               << ",\"focus_column_terrain_complete\":"
+               << static_cast<int>(r.focus_column_terrain_complete)
+               << ",\"focus_column_in_unfinished_keys\":"
+               << static_cast<int>(r.focus_column_in_unfinished_keys)
                << ",\"focus_cx\":" << r.focus_cx
                << ",\"focus_cz\":" << r.focus_cz
                << ",\"camera_x\":" << r.camera_x

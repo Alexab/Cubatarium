@@ -195,6 +195,10 @@ struct VisualBlackTraceRecord
   /// to lifecycle/source-mesh state of the exact ray-mapped chunk slice.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
+  /// sample_kind=1: FocusColumnVisualClass ordinal, 255 when outside cache.
+  uint8_t focus_column_visual_class{0xFFu};
+  uint8_t focus_column_terrain_complete{0};
+  uint8_t focus_column_in_unfinished_keys{0};
   int32_t cx{0};
   int32_t cy{0};
   int32_t cz{0};
