@@ -565,6 +565,50 @@ void UChunkDirtySet::PrioritizeAgedNearHorizontal(
   InvalidateUnified();
 }
 
+void UChunkDirtySet::PrioritizeAgedPriorityRemeshNearHorizontal(
+    glm::ivec3 focus_ground_chunk, int radius_chunks,
+    uint64_t minimum_age_frames)
+{
+  if (RemeshQ.size() < 2)
+  {
+    return;
+  }
+
+  // SortByDistanceKey/PartialSortByDistanceKey keep visible priority remesh
+  // work in a contiguous prefix. Leave ordinary remesh order alone.
+  const auto priority_end = std::find_if(
+      RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
+      { return PriorityRemeshSet.count(coord) == 0; });
+  if (priority_end - RemeshQ.begin() < 2)
+  {
+    return;
+  }
+
+  const int radius = std::max(0, radius_chunks);
+  const auto is_overdue_in_focus = [&](glm::ivec3 coord)
+  {
+    return GetEnqueueAgeFrames(coord) >= minimum_age_frames &&
+           HorizDist(coord, focus_ground_chunk) <= radius;
+  };
+  const auto older_first = [&](const glm::ivec3 &a, const glm::ivec3 &b)
+  {
+    const bool a_overdue = is_overdue_in_focus(a);
+    const bool b_overdue = is_overdue_in_focus(b);
+    if (a_overdue != b_overdue)
+    {
+      return a_overdue;
+    }
+    if (!a_overdue)
+    {
+      // Preserve the existing camera-distance order among other entries.
+      return false;
+    }
+    return GetEnqueueAgeFrames(a) > GetEnqueueAgeFrames(b);
+  };
+  std::stable_sort(RemeshQ.begin(), priority_end, older_first);
+  InvalidateUnified();
+}
+
 uint64_t UChunkDirtySet::GetEnqueueAgeFrames(glm::ivec3 coord) const
 {
   const auto it = EnqueueFrameByCoord.find(coord);

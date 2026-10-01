@@ -8143,6 +8143,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   {
     LastMeshDirtyPruneMs += take_seg_ms();
   }
+  if (MeshFocusValid)
+  {
+    // Aged priority repairs were observed at queue positions >100 while the
+    // focus-ring geometry was still stale. Promote them within their existing
+    // RemeshQ prefix; total schedule caps and FirstMesh reservations stay put.
+    constexpr uint64_t kPriorityRemeshFairAgeFrames = 30;
+    Dirty.PrioritizeAgedPriorityRemeshNearHorizontal(
+        MeshFocusGroundChunk, MeshFocusRadiusChunks,
+        kPriorityRemeshFairAgeFrames);
+  }
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
     const int sync_cap =

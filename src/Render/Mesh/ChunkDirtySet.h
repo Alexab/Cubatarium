@@ -104,6 +104,10 @@ public:
   void PrioritizeAgedNearHorizontal(glm::ivec3 focus_ground_chunk,
                                     int radius_chunks,
                                     uint64_t minimum_age_frames);
+  /// Promote only aged entries in the already-prioritized RemeshQ prefix.
+  void PrioritizeAgedPriorityRemeshNearHorizontal(
+      glm::ivec3 focus_ground_chunk, int radius_chunks,
+      uint64_t minimum_age_frames);
   void PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk, int radius_chunks,
                             int preferred_cy, bool prefer_lower_cy);
 
