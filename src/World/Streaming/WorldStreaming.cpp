@@ -1220,6 +1220,7 @@ void UWorldStreaming::RefreshStreamingPressure(
         const uint64_t record_inflight_job = record ? record->inflight_job : 0;
         const bool mesh_build_inflight =
             world.GetMeshService().HasInflightMeshBuild(coord);
+        const bool mesh_dirty = world.GetMeshService().IsChunkMeshDirty(coord);
         const bool gpu_extract_inflight =
             world.GetMeshService().IsGpuExtractInFlight(coord);
         const bool gpu_apply_pending =
@@ -1233,6 +1234,8 @@ void UWorldStreaming::RefreshStreamingPressure(
         const bool geometry_debt =
             chunk && world.GetMeshService().HasGeometryPublicationDebt(
                          coord, chunk->GetIncarnation());
+        const int column_emerge_state = static_cast<int>(
+            world.GetColumnEmergeState(glm::ivec3(coord.x, 0, coord.z)));
         CubatariumLogInfo(
             "ScreenRayRepair",
             "frame=" + std::to_string(screen_ray_frame_epoch) +
@@ -1260,8 +1263,11 @@ void UWorldStreaming::RefreshStreamingPressure(
                 std::to_string(record_pending_token) +
                 " record_inflight_job=" +
                 std::to_string(record_inflight_job) +
+                " column_emerge_state=" +
+                std::to_string(column_emerge_state) +
                 " mesh_build_inflight=" +
                 std::to_string(mesh_build_inflight ? 1 : 0) +
+                " mesh_dirty=" + std::to_string(mesh_dirty ? 1 : 0) +
                 " gpu_extract_inflight=" +
                 std::to_string(gpu_extract_inflight ? 1 : 0) +
                 " gpu_apply_pending=" +
