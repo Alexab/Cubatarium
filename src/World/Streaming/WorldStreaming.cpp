@@ -1191,6 +1191,9 @@ void UWorldStreaming::RefreshStreamingPressure(
         {
           return;
         }
+        // Preserve the exact ray witness in the bounded lifecycle/bump rings
+        // so later revision churn can be joined to this request by identity.
+        UJobStageTrace::WatchVisualChunk(coord.x, coord.y, coord.z);
         const auto queue_state = [](
                                 const UWorldPersistence::TerrainColumnRelightQueueInfo
                                     &info)
