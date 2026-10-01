@@ -4122,6 +4122,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         uint64_t key{0};
         int cy{-1};
         float forward_score{0.0f};
+        float forward_distance{0.0f};
         bool settled_geometry_debt{false};
       };
       std::vector<OuterCandidate> candidates;
@@ -4203,7 +4204,10 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             const uint64_t key = PackUnfinishedColKey(cx, cz);
             if (candidate_columns.insert(key).second)
             {
-              candidates.push_back({key, target_cy, forward_score, false});
+              const float forward_distance =
+                  glm::dot(to_column, forward);
+              candidates.push_back(
+                  {key, target_cy, forward_score, forward_distance, false});
             }
           }
         }
@@ -4285,12 +4289,22 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           if (target_cy >= 0)
           {
             candidate_columns.insert(key);
-            candidates.push_back({key, target_cy, forward_score, true});
+            const float forward_distance = glm::dot(to_column, forward);
+            candidates.push_back(
+                {key, target_cy, forward_score, forward_distance, true});
           }
         }
       }
       std::sort(candidates.begin(), candidates.end(),
                 [](const OuterCandidate &a, const OuterCandidate &b) {
+                  // Spend scarce outer slots on the nearest approaching
+                  // columns first. With angle-only ranking, equal-direction
+                  // candidates fell through to packed-key order, which put
+                  // farther h6-h7 work ahead of the h5 visual frontier.
+                  if (a.forward_distance != b.forward_distance)
+                  {
+                    return a.forward_distance < b.forward_distance;
+                  }
                   if (a.forward_score != b.forward_score)
                   {
                     return a.forward_score > b.forward_score;
