@@ -76,6 +76,37 @@ inline bool AllowUnlitFirstMesh(bool has_mesh, int horiz_from_focus,
   return horiz_from_focus > near_r || is_nearest_missing;
 }
 
+/// A missing first-mesh witness can be the center of a visible, forward-facing
+/// gap. Permit its two same-height lateral neighbors to use the existing
+/// provisional-light preview as well. The target set is capped at three
+/// horizontal columns (witness + two neighbors) and stays inside the normal
+/// LitDrawable ring; remeshes remain behind the strict light gate.
+inline bool IsForwardMissLateralPreviewTarget(glm::ivec3 candidate,
+                                              glm::ivec3 focus,
+                                              glm::ivec3 witness,
+                                              int lit_ring =
+                                                  kVisualStageLitDrawableHoriz)
+{
+  const int dx = witness.x - focus.x;
+  const int dz = witness.z - focus.z;
+  const int horiz = std::max(std::abs(dx), std::abs(dz));
+  if (candidate.y != witness.y || horiz < 2 || horiz > lit_ring)
+  {
+    return false;
+  }
+
+  // Keep the two candidates across the width of the ray-hit lane, rather than
+  // admitting a growing square around a miss. On a diagonal, choose the
+  // weaker axis as the lateral direction.
+  if (std::abs(dx) >= std::abs(dz))
+  {
+    return dx != 0 && candidate.x == witness.x &&
+           std::abs(candidate.z - witness.z) == 1;
+  }
+  return dz != 0 && candidate.z == witness.z &&
+         std::abs(candidate.x - witness.x) == 1;
+}
+
 /// Void-edge / VisibleBlack debt: Relight-first (mesh dark + light field 0).
 /// No RemeshSeam — remesh alone cannot invent light (manual 190350 / Era32 P1).
 inline void EnqueueVoidDarkRelightTickets(
