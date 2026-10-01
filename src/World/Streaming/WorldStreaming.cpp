@@ -1335,6 +1335,41 @@ void UWorldStreaming::RefreshStreamingPressure(
                 std::to_string(mesh_satisfying ? 1 : 0) +
                 " geometry_debt=" + std::to_string(geometry_debt ? 1 : 0));
       };
+      bool screen_ray_preview_marked = false;
+      const auto mark_direct_missing_slice = [&](glm::ivec3 coord)
+      {
+        UWorldMeshService &mesh_service = world.GetMeshService();
+        const bool slice_has_owner =
+            mesh_service.IsChunkMeshDirty(coord) ||
+            mesh_service.HasInflightMeshBuild(coord) ||
+            mesh_service.IsGpuExtractInFlight(coord) ||
+            mesh_service.IsPendingGpuApply(coord) ||
+            mesh_service.IsPendingGpuQueued(coord);
+        const UChunk *slice_chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        const bool slice_needs_geometry =
+            !mesh_service.HasMeshSatisfyingColumnReady(coord) ||
+            (slice_chunk && mesh_service.HasGeometryPublicationDebt(
+                                coord, slice_chunk->GetIncarnation()));
+        if (slice_has_owner || !slice_needs_geometry)
+        {
+          return 0;
+        }
+        const int mark_min = coord.y * CHUNK_SIZE;
+        const int mark_max = mark_min + CHUNK_SIZE - 1;
+        const glm::ivec2 column(coord.x, coord.z);
+        const int marked = mesh_service.MarkMissingSlicesDirtyPriority(
+            world.GetBlockWorld(), glm::ivec3(column.x, 0, column.y),
+            mark_min, mark_max);
+        if (marked > 0)
+        {
+          world.GetPhysicsTelemetryMutable().FmDirtyEnqueueN += marked;
+          world.SetColumnEmergeState(
+              glm::ivec3(column.x, 0, column.y),
+              ColumnEmergeState::Meshing);
+        }
+        return marked;
+      };
       const auto enqueue_first_mesh = [&](glm::ivec3 coord,
                                           bool screen_ray_selected)
       {
@@ -1358,6 +1393,10 @@ void UWorldStreaming::RefreshStreamingPressure(
         };
         if (light_debt)
         {
+          const char *light_action = "pending_light_without_persistence";
+          bool flow_before = false;
+          bool flow_after = false;
+          const char *flow_kind = "none";
           if (world.Persistence &&
               world.Persistence->IsTerrainColumnRelightQueued(world_key))
           {
@@ -1367,24 +1406,18 @@ void UWorldStreaming::RefreshStreamingPressure(
               promoted = world.Persistence->PrioritizeTerrainColumnRelight(
                   world_key);
             }
-            write_screen_ray_repair_trace(
-                coord, screen_ray_selected,
-                async_before ? "fifo_queued_async_owner"
-                             : (promoted ? "fifo_promoted"
-                                         : "fifo_promotion_rejected"),
-                light_debt, async_before, false, false, "none", queue_before,
-                queue_after_now());
+            light_action = async_before
+                               ? "fifo_queued_async_owner"
+                               : (promoted ? "fifo_promoted"
+                                           : "fifo_promotion_rejected");
           }
           else if (async_before)
           {
-            write_screen_ray_repair_trace(
-                coord, screen_ray_selected, "async_owner_without_fifo",
-                light_debt, async_before,
-                false, false, "none", queue_before, queue_after_now());
+            light_action = "async_owner_without_fifo";
           }
           else if (world.Persistence)
           {
-            const bool flow_before = exec.Scheduler().Contains(
+            flow_before = exec.Scheduler().Contains(
                 column, ColumnWorkKind::RelightThenMesh);
             ColumnWorkItem relight{};
             relight.column = column;
@@ -1393,25 +1426,32 @@ void UWorldStreaming::RefreshStreamingPressure(
             relight.scan_full_focus = false;
             relight.cy = coord.y;
             exec.Enqueue(relight);
-            const bool flow_after = exec.Scheduler().Contains(
+            flow_after = exec.Scheduler().Contains(
                 column, ColumnWorkKind::RelightThenMesh);
-            write_screen_ray_repair_trace(
-                coord, screen_ray_selected,
-                flow_after ? "relight_flow_ticket_present"
-                           : "relight_flow_ticket_rejected",
-                light_debt, async_before, flow_before, flow_after, "relight",
-                queue_before, queue_after_now());
+            flow_kind = "relight";
+            light_action = flow_after ? "relight_flow_ticket_present"
+                                      : "relight_flow_ticket_rejected";
           }
-          else
+          // Keep the relight owner, and let one exact screen-ray witness
+          // produce a bounded ambient first-mesh preview while light settles.
+          // The normal snapshot stamps and provisional-light draw path still
+          // apply; this only avoids leaving the selected solid slice empty.
+          int preview_marked = 0;
+          if (screen_ray_selected && coord == miss_coord &&
+              !screen_ray_preview_marked &&
+              !world.GetMeshService().HasDrawableGreedyMesh(coord))
           {
-            write_screen_ray_repair_trace(
-                coord, screen_ray_selected,
-                "pending_light_without_persistence", light_debt,
-                async_before, false, false, "none", queue_before,
-                queue_after_now());
+            preview_marked = mark_direct_missing_slice(coord);
+            screen_ray_preview_marked = preview_marked > 0;
           }
-          // The exact slice still needs a settled light revision. Let its
-          // relight owner finish before admitting any geometry build.
+          if (preview_marked > 0)
+          {
+            light_action = "relight_plus_unlit_preview_dirty";
+          }
+          write_screen_ray_repair_trace(
+              coord, screen_ray_selected, light_action, light_debt,
+              async_before, flow_before, flow_after, flow_kind, queue_before,
+              queue_after_now());
           return;
         }
         ColumnWorkItem fm{};
@@ -1428,36 +1468,7 @@ void UWorldStreaming::RefreshStreamingPressure(
         int direct_slice_marked = 0;
         if (screen_ray_selected && !flow_after && !light_debt)
         {
-          const bool slice_has_owner =
-              world.GetMeshService().IsChunkMeshDirty(coord) ||
-              world.GetMeshService().HasInflightMeshBuild(coord) ||
-              world.GetMeshService().IsGpuExtractInFlight(coord) ||
-              world.GetMeshService().IsPendingGpuApply(coord) ||
-              world.GetMeshService().IsPendingGpuQueued(coord);
-          const UChunk *slice_chunk =
-              world.GetBlockWorld().GetChunkManager().GetChunk(coord);
-          const bool slice_needs_geometry =
-              !world.GetMeshService().HasMeshSatisfyingColumnReady(coord) ||
-              (slice_chunk &&
-               world.GetMeshService().HasGeometryPublicationDebt(
-                   coord, slice_chunk->GetIncarnation()));
-          if (!slice_has_owner && slice_needs_geometry)
-          {
-            const int mark_min = coord.y * CHUNK_SIZE;
-            const int mark_max = mark_min + CHUNK_SIZE - 1;
-            direct_slice_marked =
-                world.GetMeshService().MarkMissingSlicesDirtyPriority(
-                    world.GetBlockWorld(),
-                    glm::ivec3(column.x, 0, column.y), mark_min, mark_max);
-            if (direct_slice_marked > 0)
-            {
-              world.GetPhysicsTelemetryMutable().FmDirtyEnqueueN +=
-                  direct_slice_marked;
-              world.SetColumnEmergeState(
-                  glm::ivec3(column.x, 0, column.y),
-                  ColumnEmergeState::Meshing);
-            }
-          }
+          direct_slice_marked = mark_direct_missing_slice(coord);
         }
         if (screen_ray_selected)
         {
