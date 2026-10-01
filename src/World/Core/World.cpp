@@ -4684,13 +4684,14 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           (!IsColumnLitReady(ground) || desired_light == 0);
       const glm::ivec2 slice_column(cx, cz);
       const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
-      const auto ensure_slice_relight = [&]() {
+      const auto ensure_slice_relight =
+          [&](bool visible_light_repair_candidate = false) {
         if (Persistence)
         {
           const bool reserved_outer_candidate = outer_reserved_column;
           const bool use_visible_admission =
               (reserved_outer_candidate || defer_until_lit ||
-               first_mesh_needs_lighting) &&
+               first_mesh_needs_lighting || visible_light_repair_candidate) &&
               within_first_mesh_relight_horizon &&
               (reserved_outer_candidate ||
                first_mesh_visible_relight_columns.count(slice_column) != 0 ||
@@ -4858,8 +4859,14 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           // the next bounded admission pass.
           continue;
         }
-        const bool relight_enqueued = ensure_slice_relight();
-        note_unowned_geometry_retry_attempt("relight_only");
+        const bool visible_light_repair_candidate =
+            RequiresLightingLitGate() && IsPendingLightBeforeMesh(slice_column) &&
+            col_horiz <= kVisualStageFirstMeshRelightApproachHoriz;
+        const bool relight_enqueued =
+            ensure_slice_relight(visible_light_repair_candidate);
+        note_unowned_geometry_retry_attempt(
+            visible_light_repair_candidate ? "relight_only_visible"
+                                           : "relight_only");
         const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
         if (attempt_id != 0 && relight_enqueued)
         {
