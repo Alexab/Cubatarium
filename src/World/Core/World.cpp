@@ -167,7 +167,12 @@ int CountMissingSlicesInRange(const UBlockWorld &world,
   {
     const glm::ivec3 coord(ground_chunk_coord.x, cy, ground_chunk_coord.z);
     const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
-    if (!chunk || mesh_service->HasMeshSatisfyingColumnReady(coord) ||
+    const bool mesh_satisfying =
+        chunk && mesh_service->HasMeshSatisfyingColumnReady(coord);
+    const bool geometry_debt =
+        mesh_satisfying && mesh_service->HasGeometryPublicationDebt(
+                               coord, chunk->GetIncarnation());
+    if (!chunk || (mesh_satisfying && !geometry_debt) ||
         mesh_service->IsPendingGpuApply(coord) ||
         mesh_service->HasInflightMeshBuild(coord))
     {

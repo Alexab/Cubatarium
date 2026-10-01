@@ -1217,6 +1217,8 @@ void UWorldStreaming::RefreshStreamingPressure(
                              *record))
                    : -1;
         const uint64_t record_pending_token = record ? record->pending.token : 0;
+        const int record_pending_stage =
+            record ? static_cast<int>(record->pending.stage) : -1;
         const uint64_t record_inflight_job = record ? record->inflight_job : 0;
         const bool mesh_build_inflight =
             world.GetMeshService().HasInflightMeshBuild(coord);
@@ -1236,6 +1238,38 @@ void UWorldStreaming::RefreshStreamingPressure(
                          coord, chunk->GetIncarnation());
         const int column_emerge_state = static_cast<int>(
             world.GetColumnEmergeState(glm::ivec3(coord.x, 0, coord.z)));
+        int32_t mesh_dirty_queue_index = -1;
+        int32_t mesh_dirty_queue_size = 0;
+        const uint8_t mesh_dirty_queue_kind =
+            world.GetMeshService().GetCache().GetDirtyQueueTrace(
+                coord, mesh_dirty_queue_index, mesh_dirty_queue_size);
+        const uint64_t mesh_dirty_queue_age =
+            world.GetMeshService().GetCache().GetDirtyQueueAgeFrames(coord);
+        const bool mesh_scheduled_this_frame =
+            world.GetMeshService().GetCache().WasScheduledThisFrame(coord);
+        const uint64_t mesh_revision =
+            world.GetMeshService().GetChunkMeshRevision(coord);
+        const auto published_revisions =
+            world.GetMeshService().GetCache().GetMeshPublishRevs(coord);
+        int column_mesh_dirty_slices = 0;
+        int column_mesh_build_slices = 0;
+        int column_gpu_pending_slices = 0;
+        const int max_cy = std::max(
+            0, FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE));
+        for (int cy = 0; cy <= max_cy; ++cy)
+        {
+          const glm::ivec3 slice(coord.x, cy, coord.z);
+          column_mesh_dirty_slices +=
+              world.GetMeshService().IsChunkMeshDirty(slice) ? 1 : 0;
+          column_mesh_build_slices +=
+              world.GetMeshService().HasInflightMeshBuild(slice) ? 1 : 0;
+          column_gpu_pending_slices +=
+              (world.GetMeshService().IsGpuExtractInFlight(slice) ||
+               world.GetMeshService().IsPendingGpuApply(slice) ||
+               world.GetMeshService().IsPendingGpuQueued(slice))
+                  ? 1
+                  : 0;
+        }
         CubatariumLogInfo(
             "ScreenRayRepair",
             "frame=" + std::to_string(screen_ray_frame_epoch) +
@@ -1261,10 +1295,32 @@ void UWorldStreaming::RefreshStreamingPressure(
                 " record_stage=" + std::to_string(record_stage) +
                 " record_pending_token=" +
                 std::to_string(record_pending_token) +
+                " record_pending_stage=" +
+                std::to_string(record_pending_stage) +
                 " record_inflight_job=" +
                 std::to_string(record_inflight_job) +
                 " column_emerge_state=" +
                 std::to_string(column_emerge_state) +
+                " column_mesh_dirty_slices=" +
+                std::to_string(column_mesh_dirty_slices) +
+                " column_mesh_build_slices=" +
+                std::to_string(column_mesh_build_slices) +
+                " column_gpu_pending_slices=" +
+                std::to_string(column_gpu_pending_slices) +
+                " mesh_dirty_queue_kind=" +
+                std::to_string(mesh_dirty_queue_kind) +
+                " mesh_dirty_queue_index=" +
+                std::to_string(mesh_dirty_queue_index) + "/" +
+                std::to_string(mesh_dirty_queue_size) +
+                " mesh_dirty_queue_age=" +
+                std::to_string(mesh_dirty_queue_age) +
+                " mesh_scheduled_this_frame=" +
+                std::to_string(mesh_scheduled_this_frame ? 1 : 0) +
+                " mesh_revision=" + std::to_string(mesh_revision) +
+                " published_geom_rev=" +
+                std::to_string(published_revisions.geom_rev) +
+                " published_light_rev=" +
+                std::to_string(published_revisions.light_rev) +
                 " mesh_build_inflight=" +
                 std::to_string(mesh_build_inflight ? 1 : 0) +
                 " mesh_dirty=" + std::to_string(mesh_dirty ? 1 : 0) +
@@ -1369,12 +1425,49 @@ void UWorldStreaming::RefreshStreamingPressure(
         exec.Enqueue(fm);
         const bool flow_after = exec.Scheduler().Contains(
             column, ColumnWorkKind::FirstMesh);
+        int direct_slice_marked = 0;
+        if (screen_ray_selected && !flow_after && !light_debt)
+        {
+          const bool slice_has_owner =
+              world.GetMeshService().IsChunkMeshDirty(coord) ||
+              world.GetMeshService().HasInflightMeshBuild(coord) ||
+              world.GetMeshService().IsGpuExtractInFlight(coord) ||
+              world.GetMeshService().IsPendingGpuApply(coord) ||
+              world.GetMeshService().IsPendingGpuQueued(coord);
+          const UChunk *slice_chunk =
+              world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+          const bool slice_needs_geometry =
+              !world.GetMeshService().HasMeshSatisfyingColumnReady(coord) ||
+              (slice_chunk &&
+               world.GetMeshService().HasGeometryPublicationDebt(
+                   coord, slice_chunk->GetIncarnation()));
+          if (!slice_has_owner && slice_needs_geometry)
+          {
+            const int mark_min = coord.y * CHUNK_SIZE;
+            const int mark_max = mark_min + CHUNK_SIZE - 1;
+            direct_slice_marked =
+                world.GetMeshService().MarkMissingSlicesDirtyPriority(
+                    world.GetBlockWorld(),
+                    glm::ivec3(column.x, 0, column.y), mark_min, mark_max);
+            if (direct_slice_marked > 0)
+            {
+              world.GetPhysicsTelemetryMutable().FmDirtyEnqueueN +=
+                  direct_slice_marked;
+              world.SetColumnEmergeState(
+                  glm::ivec3(column.x, 0, column.y),
+                  ColumnEmergeState::Meshing);
+            }
+          }
+        }
         if (screen_ray_selected)
         {
           write_screen_ray_repair_trace(
               coord, screen_ray_selected,
-              flow_after ? "first_mesh_ticket_present"
-                         : "first_mesh_ticket_rejected",
+              flow_after
+                  ? "first_mesh_ticket_present"
+                  : (direct_slice_marked > 0
+                         ? "first_mesh_slice_dirty_direct"
+                         : "first_mesh_ticket_rejected"),
               light_debt, async_before, flow_before, flow_after, "first_mesh",
               queue_before, queue_after_now());
         }
