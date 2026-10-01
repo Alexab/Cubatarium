@@ -408,8 +408,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       ring_for_miss.frame_epoch == world.GetStreamingFrameEpoch();
   constexpr int kFocusVisualMissingMeshBacklogThreshold = 24;
   const auto &focus_visual_telem = world.GetPhysicsTelemetry();
+  // FocusVisualMissingMeshN is the ordinary render-readiness census. The
+  // separate FocusDataCensusValid flag gates only the opt-in voxel-occupancy
+  // diagnostics and must not disable FirstMesh demand in normal play.
   const bool focus_visual_missing_mesh_backlog =
-      focus_visual_telem.FocusDataCensusValid != 0 &&
       focus_visual_telem.FocusVisualMissingMeshN >=
           kFocusVisualMissingMeshBacklogThreshold;
   const bool missing_visible_mesh =
