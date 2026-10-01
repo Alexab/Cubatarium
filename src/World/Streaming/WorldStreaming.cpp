@@ -790,14 +790,18 @@ void UWorldStreaming::RefreshStreamingPressure(
           {
             glm::ivec3 coord{0};
             int sample_count{0};
-            int first_sample{INT32_MAX};
+            int center_rank{INT32_MAX};
             float nearest_distance{std::numeric_limits<float>::max()};
           };
-          constexpr std::array<glm::vec2, 5> kScreenSamples = {
-              glm::vec2(0.50f, 0.50f), glm::vec2(0.25f, 0.50f),
-              glm::vec2(0.75f, 0.50f), glm::vec2(0.50f, 0.25f),
-              glm::vec2(0.50f, 0.75f)};
-          std::array<Candidate, kScreenSamples.size()> candidates{};
+          // Match the renderer pixel oracle's four vertical scanlines, while
+          // keeping only five evenly spaced columns for a bounded CPU probe.
+          constexpr std::array<float, 5> kScreenColumns = {
+              0.10f, 0.30f, 0.50f, 0.70f, 0.90f};
+          constexpr std::array<float, 4> kScreenRows = {
+              0.125f, 0.375f, 0.625f, 0.875f};
+          constexpr size_t kScreenSampleCount =
+              kScreenColumns.size() * kScreenRows.size();
+          std::array<Candidate, kScreenSampleCount> candidates{};
           size_t candidate_count = 0;
           const float max_distance = std::min(
               static_cast<float>((miss_probe_radius + 1) * CHUNK_SIZE),
@@ -809,50 +813,59 @@ void UWorldStreaming::RefreshStreamingPressure(
             cy_scan_lo = std::max(0, focus_ground.y - 1);
             cy_scan_hi = std::min(48, focus_ground.y + 1);
           }
-          for (size_t sample_index = 0; sample_index < kScreenSamples.size();
-               ++sample_index)
+          for (size_t row_index = 0; row_index < kScreenRows.size();
+               ++row_index)
           {
-            const glm::vec2 sample = kScreenSamples[sample_index];
-            glm::vec3 ray_origin(0.0f);
-            glm::vec3 ray_direction(0.0f);
-            if (!probe_camera->TryGetViewRayAtScreen(
-                    sample.x * static_cast<float>(viewport_width),
-                    sample.y * static_cast<float>(viewport_height),
-                    ray_origin, ray_direction))
+            for (size_t column_index = 0;
+                 column_index < kScreenColumns.size(); ++column_index)
             {
-              continue;
+              glm::vec3 ray_origin(0.0f);
+              glm::vec3 ray_direction(0.0f);
+              if (!probe_camera->TryGetViewRayAtScreen(
+                      kScreenColumns[column_index] *
+                          static_cast<float>(viewport_width),
+                      kScreenRows[row_index] *
+                          static_cast<float>(viewport_height),
+                      ray_origin, ray_direction))
+              {
+                continue;
+              }
+              const OpaqueVoxelRayWitness hit = TraceOpaqueVoxelRay(
+                  world, ray_origin, ray_direction, max_distance);
+              if (hit.state != 1)
+              {
+                continue;
+              }
+              const glm::ivec3 coord = UChunkManager::WorldToChunk(hit.block);
+              const int horiz = std::max(std::abs(coord.x - focus_ground.x),
+                                         std::abs(coord.z - focus_ground.z));
+              if (horiz > miss_probe_radius || coord.y < cy_scan_lo ||
+                  coord.y > cy_scan_hi || !slice_still_missing(coord))
+              {
+                continue;
+              }
+              size_t candidate_index = 0;
+              while (candidate_index < candidate_count &&
+                     candidates[candidate_index].coord != coord)
+              {
+                ++candidate_index;
+              }
+              if (candidate_index == candidate_count)
+              {
+                candidates[candidate_count].coord = coord;
+                ++candidate_count;
+              }
+              Candidate &candidate = candidates[candidate_index];
+              ++candidate.sample_count;
+              const int row_rank =
+                  (row_index == 1 || row_index == 2) ? 0 : 2;
+              const int center_rank =
+                  std::abs(static_cast<int>(column_index) - 2) + row_rank;
+              candidate.center_rank =
+                  std::min(candidate.center_rank, center_rank);
+              candidate.nearest_distance =
+                  std::min(candidate.nearest_distance, hit.distance);
             }
-            const OpaqueVoxelRayWitness hit = TraceOpaqueVoxelRay(
-                world, ray_origin, ray_direction, max_distance);
-            if (hit.state != 1)
-            {
-              continue;
-            }
-            const glm::ivec3 coord = UChunkManager::WorldToChunk(hit.block);
-            const int horiz = std::max(std::abs(coord.x - focus_ground.x),
-                                       std::abs(coord.z - focus_ground.z));
-            if (horiz > miss_probe_radius || coord.y < cy_scan_lo ||
-                coord.y > cy_scan_hi || !slice_still_missing(coord))
-            {
-              continue;
-            }
-            size_t candidate_index = 0;
-            while (candidate_index < candidate_count &&
-                   candidates[candidate_index].coord != coord)
-            {
-              ++candidate_index;
-            }
-            if (candidate_index == candidate_count)
-            {
-              candidates[candidate_count].coord = coord;
-              ++candidate_count;
-            }
-            Candidate &candidate = candidates[candidate_index];
-            ++candidate.sample_count;
-            candidate.first_sample = std::min(
-                candidate.first_sample, static_cast<int>(sample_index));
-            candidate.nearest_distance =
-                std::min(candidate.nearest_distance, hit.distance);
           }
           size_t best_index = candidate_count;
           for (size_t i = 0; i < candidate_count; ++i)
@@ -861,11 +874,11 @@ void UWorldStreaming::RefreshStreamingPressure(
             if (best_index == candidate_count ||
                 candidate.sample_count > candidates[best_index].sample_count ||
                 (candidate.sample_count == candidates[best_index].sample_count &&
-                 candidate.first_sample <
-                     candidates[best_index].first_sample) ||
+                 candidate.center_rank <
+                     candidates[best_index].center_rank) ||
                 (candidate.sample_count == candidates[best_index].sample_count &&
-                 candidate.first_sample ==
-                     candidates[best_index].first_sample &&
+                 candidate.center_rank ==
+                     candidates[best_index].center_rank &&
                  candidate.nearest_distance <
                      candidates[best_index].nearest_distance))
             {
