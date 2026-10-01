@@ -793,16 +793,20 @@ void UWorldStreaming::RefreshStreamingPressure(
             int center_rank{INT32_MAX};
             float nearest_distance{std::numeric_limits<float>::max()};
           };
-          // Match the renderer pixel oracle's scanline centers at known gaps,
-          // while keeping a bounded CPU probe across the full viewport.
-          constexpr std::array<float, 6> kScreenColumns = {
-              0.075f, 0.275f, 0.375f, 0.475f, 0.675f, 0.875f};
+          // Cover five of the renderer oracle's twenty exact X tile centers
+          // per probe; rotate phases to scan the full viewport over four calls.
+          constexpr size_t kRendererPixelColumnCount = 20;
+          constexpr size_t kScreenColumnsPerProbe = 5;
           constexpr std::array<float, 4> kScreenRows = {
               0.125f, 0.375f, 0.625f, 0.875f};
           constexpr size_t kScreenSampleCount =
-              kScreenColumns.size() * kScreenRows.size();
+              kScreenColumnsPerProbe * kScreenRows.size();
           std::array<Candidate, kScreenSampleCount> candidates{};
           size_t candidate_count = 0;
+          const size_t column_phase = static_cast<size_t>(
+              std::clamp(rp.screen_ray_sample_phase, 0, 3));
+          rp.screen_ray_sample_phase =
+              static_cast<int>((column_phase + 1) % 4);
           const float max_distance = std::min(
               static_cast<float>((miss_probe_radius + 1) * CHUNK_SIZE),
               192.0f);
@@ -816,14 +820,17 @@ void UWorldStreaming::RefreshStreamingPressure(
           for (size_t row_index = 0; row_index < kScreenRows.size();
                ++row_index)
           {
-            for (size_t column_index = 0;
-                 column_index < kScreenColumns.size(); ++column_index)
+            for (size_t sample_column = 0;
+                 sample_column < kScreenColumnsPerProbe; ++sample_column)
             {
+              const size_t column_index = sample_column * 4 + column_phase;
+              const float screen_x =
+                  (static_cast<float>(column_index) + 0.5f) /
+                  static_cast<float>(kRendererPixelColumnCount);
               glm::vec3 ray_origin(0.0f);
               glm::vec3 ray_direction(0.0f);
               if (!probe_camera->TryGetViewRayAtScreen(
-                      kScreenColumns[column_index] *
-                          static_cast<float>(viewport_width),
+                      screen_x * static_cast<float>(viewport_width),
                       kScreenRows[row_index] *
                           static_cast<float>(viewport_height),
                       ray_origin, ray_direction))
@@ -859,8 +866,11 @@ void UWorldStreaming::RefreshStreamingPressure(
               ++candidate.sample_count;
               const int row_rank =
                   (row_index == 1 || row_index == 2) ? 0 : 2;
+              const int x_center_rank =
+                  std::min(std::abs(static_cast<int>(column_index) - 9),
+                           std::abs(static_cast<int>(column_index) - 10));
               const int center_rank =
-                  std::abs(static_cast<int>(column_index) - 3) + row_rank;
+                  x_center_rank + row_rank * 20;
               candidate.center_rank =
                   std::min(candidate.center_rank, center_rank);
               candidate.nearest_distance =

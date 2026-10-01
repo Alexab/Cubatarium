@@ -176,6 +176,7 @@ private:
   struct RefreshProbeState
   {
     int miss_probe_cd{0};
+    int screen_ray_sample_phase{0};
     bool last_missing_near{false};
     int miss_positive_hold{0};
     glm::ivec2 last_sticky_focus_xz{INT_MAX, INT_MAX};
