@@ -9,6 +9,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Mesh/EditMeshRemeshPolicy.h"
 #include "World/Physics/PhysicsTelemetry.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "App/Platform/Log.h"
 #include "glog/logging.h"
 #include <algorithm>
@@ -642,7 +643,12 @@ int UWorldMeshService::MarkMissingSlicesDirtyPriority(
   {
     const glm::ivec3 coord(ground_chunk_coord.x, cy, ground_chunk_coord.z);
     const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
-    if (!chunk || HasMeshSatisfyingColumnReady(coord) ||
+    const bool mesh_satisfying =
+        chunk && HasMeshSatisfyingColumnReady(coord);
+    const bool geometry_debt =
+        mesh_satisfying &&
+        HasGeometryPublicationDebt(coord, chunk->GetIncarnation());
+    if (!chunk || (mesh_satisfying && !geometry_debt) ||
         IsPendingGpuApply(coord) || HasInflightMeshBuild(coord))
     {
       continue;
@@ -1442,6 +1448,21 @@ bool UWorldMeshService::HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord,
 bool UWorldMeshService::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
 {
   return Cache.HasMeshSatisfyingColumnReady(chunk_coord);
+}
+
+bool UWorldMeshService::HasGeometryPublicationDebt(
+    glm::ivec3 chunk_coord, uint64_t incarnation) const
+{
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(chunk_coord);
+  if (!demand || incarnation == 0 || demand->incarnation != incarnation)
+  {
+    return false;
+  }
+  const MeshPublishRevs published = Cache.GetMeshPublishRevs(chunk_coord);
+  return demand->desired_geom_rev > published.geom_rev ||
+         demand->desired_coverage_gen > demand->published_coverage_gen ||
+         demand->face_debt_mask != 0 || demand->retained_awaiting_successor;
 }
 
 size_t UWorldMeshService::GetSoftDeferHeldCount() const

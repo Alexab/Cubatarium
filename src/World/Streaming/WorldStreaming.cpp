@@ -745,13 +745,12 @@ void UWorldStreaming::RefreshStreamingPressure(
                                     std::abs(prev_miss_cz - focus_ground.z));
     const glm::ivec3 pinned(prev_miss_cx, world.PhysicsTelemetryData.MissCy,
                             prev_miss_cz);
-    auto slice_still_missing = [&](glm::ivec3 coord) -> bool
+    auto slice_still_missing = [&](glm::ivec3 coord,
+                                   uint8_t *geometry_debt_out = nullptr,
+                                   uint8_t *mesh_satisfying_out = nullptr)
+        -> bool
     {
       const UWorldMeshService &mesh = world.GetMeshService();
-      if (mesh.HasMeshSatisfyingColumnReady(coord))
-      {
-        return false;
-      }
       if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
       {
         return false;
@@ -759,6 +758,21 @@ void UWorldStreaming::RefreshStreamingPressure(
       const UChunk *ch =
           world.GetBlockWorld().GetChunkManager().GetChunk(coord);
       if (!ch)
+      {
+        return false;
+      }
+      const bool geometry_debt =
+          mesh.HasGeometryPublicationDebt(coord, ch->GetIncarnation());
+      const bool mesh_satisfying = mesh.HasMeshSatisfyingColumnReady(coord);
+      if (geometry_debt_out)
+      {
+        *geometry_debt_out = geometry_debt ? 1u : 0u;
+      }
+      if (mesh_satisfying_out)
+      {
+        *mesh_satisfying_out = mesh_satisfying ? 1u : 0u;
+      }
+      if (mesh_satisfying && !geometry_debt)
       {
         return false;
       }
@@ -805,7 +819,9 @@ void UWorldStreaming::RefreshStreamingPressure(
             uint8_t state{0};
             uint8_t in_focus_radius{0};
             uint8_t in_height_band{0};
-            uint8_t missing_drawable{0};
+            uint8_t mesh_satisfying{0};
+            uint8_t geometry_debt{0};
+            uint8_t needs_refresh{0};
             uint8_t candidate{0};
           };
           // Cover five of the renderer oracle's twenty exact X tile centers
@@ -818,10 +834,14 @@ void UWorldStreaming::RefreshStreamingPressure(
               kScreenColumnsPerProbe * kScreenRows.size();
           std::array<Candidate, kScreenSampleCount> candidates{};
           std::array<ScreenRaySampleTrace, kScreenSampleCount> ray_traces{};
-          const bool capture_screen_ray_trace =
-              UJobStageTrace::VisualBlackTraceEnabled();
           const uint64_t screen_ray_frame_epoch =
-              capture_screen_ray_trace ? world.GetStreamingFrameEpoch() : 0;
+              world.GetStreamingFrameEpoch();
+          // Pixel-oracle captures use 60- or 120-render-epoch intervals. Keep
+          // same-epoch CPU evidence while bounding the opt-in ring for a full
+          // visible flight rather than retaining only its final segment.
+          const bool capture_screen_ray_trace =
+              UJobStageTrace::VisualBlackTraceEnabled() &&
+              screen_ray_frame_epoch % 60u == 0;
           const glm::ivec3 screen_ray_focus_chunk = UChunkManager::WorldToChunk(
               world.GetPreferredLoadFocusBlock());
           size_t candidate_count = 0;
@@ -854,16 +874,18 @@ void UWorldStreaming::RefreshStreamingPressure(
               ScreenRaySampleTrace &ray_trace = ray_traces[trace_index];
               ray_trace.column = static_cast<uint8_t>(column_index);
               ray_trace.row = static_cast<uint8_t>(row_index);
-              ray_trace.screen_x = screen_x *
-                                   static_cast<float>(viewport_width);
-              ray_trace.screen_y = kScreenRows[row_index] *
-                                   static_cast<float>(viewport_height);
+              // Match the pixel oracle's framebuffer pixel centers. The
+              // camera API takes top-left screen coordinates and flips Y.
+              ray_trace.screen_x =
+                  screen_x * static_cast<float>(viewport_width) + 0.5f;
+              ray_trace.screen_y =
+                  kScreenRows[row_index] *
+                      static_cast<float>(viewport_height) -
+                  0.5f;
               glm::vec3 ray_origin(0.0f);
               glm::vec3 ray_direction(0.0f);
               if (!probe_camera->TryGetViewRayAtScreen(
-                      screen_x * static_cast<float>(viewport_width),
-                      kScreenRows[row_index] *
-                          static_cast<float>(viewport_height),
+                      ray_trace.screen_x, ray_trace.screen_y,
                       ray_origin, ray_direction))
               {
                 continue;
@@ -889,9 +911,12 @@ void UWorldStreaming::RefreshStreamingPressure(
               {
                 continue;
               }
-              ray_trace.missing_drawable =
-                  slice_still_missing(coord) ? 1u : 0u;
-              if (!ray_trace.missing_drawable)
+              ray_trace.needs_refresh =
+                  slice_still_missing(coord, &ray_trace.geometry_debt,
+                                       &ray_trace.mesh_satisfying)
+                      ? 1u
+                      : 0u;
+              if (!ray_trace.needs_refresh)
               {
                 continue;
               }
@@ -970,8 +995,10 @@ void UWorldStreaming::RefreshStreamingPressure(
               record.screen_ray_in_focus_radius =
                   ray_trace.in_focus_radius;
               record.screen_ray_in_height_band = ray_trace.in_height_band;
-              record.screen_ray_missing_drawable =
-                  ray_trace.missing_drawable;
+              record.screen_ray_mesh_satisfying =
+                  ray_trace.mesh_satisfying;
+              record.screen_ray_geometry_debt = ray_trace.geometry_debt;
+              record.screen_ray_needs_refresh = ray_trace.needs_refresh;
               record.screen_ray_candidate = ray_trace.candidate;
               record.screen_ray_selected =
                   ray_trace.candidate && found &&
@@ -1057,9 +1084,22 @@ void UWorldStreaming::RefreshStreamingPressure(
           }
         }
       }
-      // I9-D2: near miss witness — ColumnFlow FirstMesh owner in pressure path.
-      if (world.PhysicsTelemetryData.MissHoriz <= 1 &&
-          !world.GetMeshService().HasDrawableGreedyMesh(miss_coord))
+      // Keep ray-confirmed stale drawable geometry on the same bounded
+      // ColumnFlow FirstMesh path as a missing first mesh. The cache may retain
+      // an older drawable image while its requested geometry/coverage revision
+      // remains unpublished; that image can still contain the observed gap.
+      const UChunk *miss_chunk = world.GetBlockWorld()
+                                     .GetChunkManager()
+                                     .GetChunk(miss_coord);
+      const bool miss_geometry_debt =
+          screen_ray_candidate && miss_chunk &&
+          world.GetMeshService().HasGeometryPublicationDebt(
+              miss_coord, miss_chunk->GetIncarnation());
+      const bool missing_drawable =
+          !world.GetMeshService().HasDrawableGreedyMesh(miss_coord);
+      if ((world.PhysicsTelemetryData.MissHoriz <= 1 && missing_drawable) ||
+          (screen_ray_candidate && miss_geometry_debt &&
+           world.PhysicsTelemetryData.MissHoriz <= miss_probe_radius))
       {
         ColumnWorkItem fm{};
         fm.column = miss_xz;

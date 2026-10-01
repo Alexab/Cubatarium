@@ -360,7 +360,9 @@ struct VisualBlackTraceRecord
   uint8_t screen_ray_state{0};
   uint8_t screen_ray_in_focus_radius{0};
   uint8_t screen_ray_in_height_band{0};
-  uint8_t screen_ray_missing_drawable{0};
+  uint8_t screen_ray_mesh_satisfying{0};
+  uint8_t screen_ray_geometry_debt{0};
+  uint8_t screen_ray_needs_refresh{0};
   uint8_t screen_ray_candidate{0};
   uint8_t screen_ray_selected{0};
   int32_t renderer_pixel_x{0};

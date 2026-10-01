@@ -1753,7 +1753,14 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-          if (!chunk || MeshService->HasMeshSatisfyingColumnReady(coord) ||
+          const bool mesh_satisfying =
+              chunk && MeshService->HasMeshSatisfyingColumnReady(coord);
+          const bool geometry_debt =
+              mesh_satisfying &&
+              MeshService->HasGeometryPublicationDebt(
+                  coord, chunk->GetIncarnation());
+          if (!chunk ||
+              (mesh_satisfying && !geometry_debt) ||
               MeshService->IsPendingGpuApply(coord) ||
               MeshService->HasInflightMeshBuild(coord))
           {

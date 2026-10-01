@@ -3948,8 +3948,12 @@ void UFramePerfMonitor::Shutdown()
                  << static_cast<int>(r.screen_ray_in_focus_radius)
                  << ",\"screen_ray_in_height_band\":"
                  << static_cast<int>(r.screen_ray_in_height_band)
-                 << ",\"screen_ray_missing_drawable\":"
-                 << static_cast<int>(r.screen_ray_missing_drawable)
+                 << ",\"screen_ray_mesh_satisfying\":"
+                 << static_cast<int>(r.screen_ray_mesh_satisfying)
+                 << ",\"screen_ray_geometry_debt\":"
+                 << static_cast<int>(r.screen_ray_geometry_debt)
+                 << ",\"screen_ray_needs_refresh\":"
+                 << static_cast<int>(r.screen_ray_needs_refresh)
                  << ",\"screen_ray_candidate\":"
                  << static_cast<int>(r.screen_ray_candidate)
                  << ",\"screen_ray_selected\":"

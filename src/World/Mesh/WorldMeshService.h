@@ -333,6 +333,10 @@ public:
   bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
   bool HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord, int face) const;
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
+  /// True when a resident slice has a newer demanded geometry/coverage
+  /// revision than its currently published mesh for the same incarnation.
+  bool HasGeometryPublicationDebt(glm::ivec3 chunk_coord,
+                                 uint64_t incarnation) const;
   size_t GetSoftDeferHeldCount() const;
   /// Era24: SoftDeferHeld membership for Hide⇒Ticket ownership.
   bool IsSoftDeferHeld(glm::ivec3 chunk_coord) const;
