@@ -567,7 +567,10 @@ public:
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   static constexpr size_t kVisualPixelTraceRingCapacity = 2048;
   /// Retain a complete opt-in history of bounded streaming screen-ray probes.
-  static constexpr size_t kScreenRayTraceRingCapacity = 4096;
+  // The screen-ray selector rotates through four horizontal phases. Keeping
+  // the opt-in audit trace at 15-frame cadence retains all phases for a full
+  // visible flight without overwriting the route's opening samples.
+  static constexpr size_t kScreenRayTraceRingCapacity = 8192;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
   static constexpr size_t kFrustumCoverageTraceRingCapacity = 256;
   static constexpr size_t kVisualBlackAttributionTraceRingCapacity = 1024;

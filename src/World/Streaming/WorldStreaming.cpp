@@ -844,12 +844,12 @@ void UWorldStreaming::RefreshStreamingPressure(
           std::array<ScreenRaySampleTrace, kScreenSampleCount> ray_traces{};
           const uint64_t screen_ray_frame_epoch =
               world.GetStreamingFrameEpoch();
-          // Pixel-oracle captures use 60- or 120-render-epoch intervals. Keep
-          // same-epoch CPU evidence while bounding the opt-in ring for a full
-          // visible flight rather than retaining only its final segment.
+          // Capture often enough to observe the four rotating X-column phases
+          // near the same camera position. A 60-epoch cadence aliased with the
+          // phase cycle in traces and hid which rays ran between pixel probes.
           const bool capture_screen_ray_trace =
               UJobStageTrace::VisualBlackTraceEnabled() &&
-              screen_ray_frame_epoch % 60u == 0;
+              screen_ray_frame_epoch % 15u == 0;
           const glm::ivec3 screen_ray_focus_chunk = UChunkManager::WorldToChunk(
               world.GetPreferredLoadFocusBlock());
           size_t candidate_count = 0;
