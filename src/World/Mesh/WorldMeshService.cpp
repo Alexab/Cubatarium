@@ -686,6 +686,12 @@ int UWorldMeshService::MarkMissingSlicesDirtyPriority(
       MarkDirtyPriority(coord,
                         MeshRevisionBumpReason::PriorityDirtyEnqueued);
     }
+    if (geometry_debt)
+    {
+      // A drawable predecessor routes through RemeshQ. Keep visible stale
+      // geometry at the head of its repair lane instead of the ordinary tail.
+      (void)Cache.PrioritizeVisibleLightRepairRemesh(coord);
+    }
     ++marked;
   }
   return marked;
