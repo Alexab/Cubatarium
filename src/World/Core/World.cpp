@@ -4088,6 +4088,10 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   std::unordered_map<uint64_t, int> outer_reserved_target_cy;
+  std::unordered_map<uint64_t, bool> outer_reserved_geometry_debt;
+  std::unordered_map<uint64_t, uint8_t> outer_relight_admission_results;
+  std::vector<uint64_t> outer_reserved_keys;
+  size_t outer_candidate_count = 0;
   size_t outer_reserved_slots = 0;
   if (budget > 0)
   {
@@ -4321,6 +4325,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                   }
                   return a.key < b.key;
                 });
+      outer_candidate_count = candidates.size();
 
       // Reserve at most two slots within this frame's existing admission
       // budget. Keep ordinary work first, then serve forward visual debt.
@@ -4349,6 +4354,9 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         keys.insert(keys.begin() + static_cast<std::ptrdiff_t>(position),
                     candidate.key);
         outer_reserved_target_cy[candidate.key] = candidate.cy;
+        outer_reserved_geometry_debt[candidate.key] =
+            candidate.settled_geometry_debt;
+        outer_reserved_keys.push_back(candidate.key);
         ++inserted;
       }
       outer_reserved_slots = inserted;
@@ -4644,13 +4652,21 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           {
             const bool was_queued =
                 Persistence->IsTerrainColumnRelightQueued(slice_block_key);
+            uint8_t visible_admission_outcome = 0;
             const bool admitted_visible = Persistence->EnqueueVisibleRelight(
                 slice_block_key.x, slice_block_key.y,
                 cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1, focus_g,
                 outer_reserved_column
                     ? kVisualStageFirstMeshRelightForwardHoriz
                     : kVisualStageFirstMeshRelightApproachHoriz,
-                protected_visible_columns);
+                protected_visible_columns,
+                &visible_admission_outcome);
+            if (reserved_outer_candidate)
+            {
+              outer_relight_admission_results[PackUnfinishedColKey(cx, cz)] =
+                  static_cast<uint8_t>(visible_admission_outcome |
+                                       (admitted_visible ? 0x80u : 0u));
+            }
             if (admitted_visible)
             {
               Persistence->NoteVisibleFirstMeshRelight(
@@ -4863,6 +4879,83 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         ++admitted;
         ++y_taken;
       }
+    }
+  }
+  if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+  {
+    static auto audit_window_start = std::chrono::steady_clock::now();
+    static uint64_t audit_calls = 0;
+    static uint64_t audit_candidates = 0;
+    static uint64_t audit_selected = 0;
+    static uint64_t audit_relight_attempts = 0;
+    static uint64_t audit_relight_accepted = 0;
+    static std::string audit_last_selected;
+    ++audit_calls;
+    audit_candidates += outer_candidate_count;
+    audit_selected += outer_reserved_keys.size();
+    audit_relight_attempts += outer_relight_admission_results.size();
+    for (const auto &entry : outer_relight_admission_results)
+    {
+      audit_relight_accepted += (entry.second & 0x80u) != 0 ? 1u : 0u;
+    }
+    if (!outer_reserved_keys.empty())
+    {
+      audit_last_selected.clear();
+      for (const uint64_t key : outer_reserved_keys)
+      {
+        const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+        const int cz = static_cast<int>(static_cast<uint32_t>(key));
+        const auto target = outer_reserved_target_cy.find(key);
+        const auto geometry = outer_reserved_geometry_debt.find(key);
+        const auto result = outer_relight_admission_results.find(key);
+        if (!audit_last_selected.empty())
+        {
+          audit_last_selected += ";";
+        }
+        audit_last_selected += "(" + std::to_string(cx) + "," +
+                               std::to_string(cz) + ",cy=" +
+                               (target == outer_reserved_target_cy.end()
+                                    ? std::string("?")
+                                    : std::to_string(target->second)) +
+                               ",debt=" +
+                               (geometry != outer_reserved_geometry_debt.end() &&
+                                        geometry->second
+                                    ? std::string("geometry")
+                                    : std::string("light")) +
+                               ",admit=";
+        if (result == outer_relight_admission_results.end())
+        {
+          audit_last_selected += "not_called";
+        }
+        else
+        {
+          audit_last_selected +=
+              ((result->second & 0x80u) != 0 ? "accepted:" : "rejected:") +
+              std::to_string(result->second & 0x7fu);
+        }
+        audit_last_selected += ")";
+      }
+    }
+    const auto audit_now = std::chrono::steady_clock::now();
+    if (audit_now - audit_window_start >= std::chrono::seconds(1))
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "forward_relight_admission focus=(" + std::to_string(focus_g.x) +
+              "," + std::to_string(focus_g.z) + ") calls=" +
+              std::to_string(audit_calls) + " candidate_rows=" +
+              std::to_string(audit_candidates) + " selected=" +
+              std::to_string(audit_selected) + " visible_attempts=" +
+              std::to_string(audit_relight_attempts) + " visible_accepted=" +
+              std::to_string(audit_relight_accepted) + " last_selected=[" +
+              audit_last_selected + "]");
+      audit_window_start = audit_now;
+      audit_calls = 0;
+      audit_candidates = 0;
+      audit_selected = 0;
+      audit_relight_attempts = 0;
+      audit_relight_accepted = 0;
+      audit_last_selected.clear();
     }
   }
   return admitted;
