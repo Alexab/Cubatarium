@@ -4032,6 +4032,14 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
     // scheduler when a gate temporarily removes the Dirty owner.
     MeshService->RequeueDirtyPriority(
         coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    // RequeueDirtyPriority preserves the revision, but a drawable predecessor
+    // is routed to RemeshQ by MarkDirtyPriorityImpl. Keep this admitted visible
+    // geometry debt in the priority Remesh lane so repeated FirstMesh demand
+    // cannot leave it behind the ordinary remesh backlog.
+    if (MeshService->HasDrawableGreedyMesh(coord))
+    {
+      (void)MeshService->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
+    }
   }
   else
   {
