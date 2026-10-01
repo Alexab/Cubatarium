@@ -4565,6 +4565,41 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             }
             if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
             {
+              const auto &cache = MeshService->GetCache();
+              int32_t dirty_queue_index = -1;
+              int32_t dirty_queue_size = 0;
+              const uint8_t dirty_queue_kind =
+                  cache.GetDirtyQueueTrace(coord, dirty_queue_index,
+                                           dirty_queue_size);
+              const glm::ivec2 column(coord.x, coord.z);
+              const glm::ivec2 block_key(coord.x * CHUNK_SIZE,
+                                         coord.z * CHUNK_SIZE);
+              const bool mesh_inflight =
+                  MeshService->HasInflightMeshBuild(coord);
+              const bool gpu_extract =
+                  MeshService->IsGpuExtractInFlight(coord);
+              const bool gpu_pending =
+                  MeshService->IsPendingGpuApply(coord);
+              const bool raa = MeshService->IsRemeshAfterApplyPending(coord);
+              const bool capture_pending = cache.HasPendingCaptureWork(coord);
+              const bool async_relight = IsAsyncRelightColumnInFlight(column);
+              const bool persistence_relight =
+                  Persistence && Persistence->IsTerrainColumnRelightQueued(
+                                     block_key);
+              const bool deferred_visible_relight =
+                  has_deferred_visible_relight(block_key);
+              const bool flow_ticket =
+                  GetColumnFlowExecutor().HasRepairTicket(column);
+              const ChunkRenderDemandRecord *retry_demand =
+                  demand.Find(coord);
+              const uint64_t attempt_id =
+                  retry_demand && retry_demand->has_active_attempt
+                      ? retry_demand->active_attempt_id
+                      : 0;
+              const int attempt_stage =
+                  retry_demand && retry_demand->has_active_attempt
+                      ? static_cast<int>(retry_demand->active_stage)
+                      : 0;
               CubatariumLogInfo(
                   "RelightAudit",
                   "unowned geometry debt retry coord=(" +
@@ -4578,7 +4613,26 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                       " desired_geom=" +
                       std::to_string(current_mesh_revision) +
                       " published_geom=" +
-                      std::to_string(current_published_revs.geom_rev));
+                      std::to_string(current_published_revs.geom_rev) +
+                      " dirty_queue=" + std::to_string(dirty_queue_kind) +
+                      ":" + std::to_string(dirty_queue_index) + "/" +
+                      std::to_string(dirty_queue_size) +
+                      " dirty_age_frames=" +
+                      std::to_string(cache.GetDirtyQueueAgeFrames(coord)) +
+                      " inflight=" + std::to_string(mesh_inflight) +
+                      " raa=" + std::to_string(raa) +
+                      " gpu_pending=" + std::to_string(gpu_pending) +
+                      " gpu_extract=" + std::to_string(gpu_extract) +
+                      " capture_pending=" +
+                      std::to_string(capture_pending) +
+                      " relight_async=" + std::to_string(async_relight) +
+                      " relight_persistence=" +
+                      std::to_string(persistence_relight) +
+                      " relight_deferred=" +
+                      std::to_string(deferred_visible_relight) +
+                      " flow_ticket=" + std::to_string(flow_ticket) +
+                      " attempt=" + std::to_string(attempt_id) + ":" +
+                      std::to_string(attempt_stage));
             }
           };
       if (unowned_geometry_debt)
