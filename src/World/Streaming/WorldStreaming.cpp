@@ -67,6 +67,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <string>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -741,6 +742,8 @@ void UWorldStreaming::RefreshStreamingPressure(
     glm::ivec3 miss_coord{0};
     bool found = false;
     bool screen_ray_candidate = false;
+    uint64_t screen_ray_frame_epoch = 0;
+    bool capture_screen_ray_trace = false;
     constexpr size_t kMaxScreenRayRepairCandidates = 4;
     std::array<glm::ivec3, kMaxScreenRayRepairCandidates>
         screen_ray_repair_coords{};
@@ -843,12 +846,11 @@ void UWorldStreaming::RefreshStreamingPressure(
               kScreenColumnsPerProbe * kScreenRows.size();
           std::array<Candidate, kScreenSampleCount> candidates{};
           std::array<ScreenRaySampleTrace, kScreenSampleCount> ray_traces{};
-          const uint64_t screen_ray_frame_epoch =
-              world.GetStreamingFrameEpoch();
+          screen_ray_frame_epoch = world.GetStreamingFrameEpoch();
           // Capture often enough to observe the four rotating X-column phases
           // near the same camera position. A 60-epoch cadence aliased with the
           // phase cycle in traces and hid which rays ran between pixel probes.
-          const bool capture_screen_ray_trace =
+          capture_screen_ray_trace =
               UJobStageTrace::VisualBlackTraceEnabled() &&
               screen_ray_frame_epoch % 15u == 0;
           const glm::ivec3 screen_ray_focus_chunk = UChunkManager::WorldToChunk(
@@ -1177,24 +1179,102 @@ void UWorldStreaming::RefreshStreamingPressure(
       }
       const bool missing_drawable =
           !world.GetMeshService().HasDrawableGreedyMesh(miss_coord);
-      const auto enqueue_first_mesh = [&](glm::ivec3 coord)
+      const auto write_screen_ray_repair_trace =
+          [&](glm::ivec3 coord, bool screen_ray_selected,
+              const char *action, bool light_debt,
+              bool async_before, bool flow_before, bool flow_after,
+              const char *flow_kind,
+              const UWorldPersistence::TerrainColumnRelightQueueInfo &before,
+              const UWorldPersistence::TerrainColumnRelightQueueInfo &after)
+      {
+        if (!capture_screen_ray_trace || !screen_ray_selected)
+        {
+          return;
+        }
+        const auto queue_state = [](
+                                const UWorldPersistence::TerrainColumnRelightQueueInfo
+                                    &info)
+        {
+          if (info.in_deque)
+          {
+            return info.priority ? std::string("priority")
+                                 : std::string("far");
+          }
+          if (info.keyed)
+          {
+            return std::string("keyed_no_deque");
+          }
+          return info.deferred_far ? std::string("deferred_far")
+                                   : std::string("none");
+        };
+        CubatariumLogInfo(
+            "ScreenRayRepair",
+            "frame=" + std::to_string(screen_ray_frame_epoch) +
+                " coord=" + std::to_string(coord.x) + "," +
+                std::to_string(coord.y) + "," + std::to_string(coord.z) +
+                " light_debt=" + std::to_string(light_debt ? 1 : 0) +
+                " action=" + action + " async_before=" +
+                std::to_string(async_before ? 1 : 0) + " fifo_before=" +
+                queue_state(before) + ":" +
+                std::to_string(before.queue_index) + "/" +
+                std::to_string(before.queue_size) + " fifo_after=" +
+                queue_state(after) + ":" +
+                std::to_string(after.queue_index) + "/" +
+                std::to_string(after.queue_size) + " flow=" + flow_kind +
+                " flow_before=" + std::to_string(flow_before ? 1 : 0) +
+                " flow_after=" + std::to_string(flow_after ? 1 : 0));
+      };
+      const auto enqueue_first_mesh = [&](glm::ivec3 coord,
+                                          bool screen_ray_selected)
       {
         const glm::ivec2 column(coord.x, coord.z);
-        if (world.IsPendingLightBeforeMeshSlice(coord))
+        const bool light_debt =
+            world.IsPendingLightBeforeMeshSlice(coord);
+        const glm::ivec2 world_key(coord.x * CHUNK_SIZE,
+                                   coord.z * CHUNK_SIZE);
+        const auto queue_before = world.Persistence
+                                      ? world.Persistence
+                                            ->GetTerrainColumnRelightQueueInfo(
+                                                world_key)
+                                      : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+        const bool async_before = world.IsAsyncRelightColumnInFlight(column);
+        const auto queue_after_now = [&]()
         {
-          const glm::ivec2 world_key(coord.x * CHUNK_SIZE,
-                                     coord.z * CHUNK_SIZE);
+          return world.Persistence
+                     ? world.Persistence->GetTerrainColumnRelightQueueInfo(
+                           world_key)
+                     : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+        };
+        if (light_debt)
+        {
           if (world.Persistence &&
               world.Persistence->IsTerrainColumnRelightQueued(world_key))
           {
-            if (!world.IsAsyncRelightColumnInFlight(column))
+            bool promoted = false;
+            if (!async_before)
             {
-              world.Persistence->PrioritizeTerrainColumnRelight(world_key);
+              promoted = world.Persistence->PrioritizeTerrainColumnRelight(
+                  world_key);
             }
+            write_screen_ray_repair_trace(
+                coord, screen_ray_selected,
+                async_before ? "fifo_queued_async_owner"
+                             : (promoted ? "fifo_promoted"
+                                         : "fifo_promotion_rejected"),
+                light_debt, async_before, false, false, "none", queue_before,
+                queue_after_now());
           }
-          else if (world.Persistence &&
-                   !world.IsAsyncRelightColumnInFlight(column))
+          else if (async_before)
           {
+            write_screen_ray_repair_trace(
+                coord, screen_ray_selected, "async_owner_without_fifo",
+                light_debt, async_before,
+                false, false, "none", queue_before, queue_after_now());
+          }
+          else if (world.Persistence)
+          {
+            const bool flow_before = exec.Scheduler().Contains(
+                column, ColumnWorkKind::RelightThenMesh);
             ColumnWorkItem relight{};
             relight.column = column;
             relight.kind = ColumnWorkKind::RelightThenMesh;
@@ -1202,6 +1282,22 @@ void UWorldStreaming::RefreshStreamingPressure(
             relight.scan_full_focus = false;
             relight.cy = coord.y;
             exec.Enqueue(relight);
+            const bool flow_after = exec.Scheduler().Contains(
+                column, ColumnWorkKind::RelightThenMesh);
+            write_screen_ray_repair_trace(
+                coord, screen_ray_selected,
+                flow_after ? "relight_flow_ticket_present"
+                           : "relight_flow_ticket_rejected",
+                light_debt, async_before, flow_before, flow_after, "relight",
+                queue_before, queue_after_now());
+          }
+          else
+          {
+            write_screen_ray_repair_trace(
+                coord, screen_ray_selected,
+                "pending_light_without_persistence", light_debt,
+                async_before, false, false, "none", queue_before,
+                queue_after_now());
           }
           // The exact slice still needs a settled light revision. Let its
           // relight owner finish before admitting any geometry build.
@@ -1213,13 +1309,33 @@ void UWorldStreaming::RefreshStreamingPressure(
         fm.priority = 112;
         fm.scan_full_focus = false;
         fm.cy = coord.y;
+        const bool flow_before = exec.Scheduler().Contains(
+            column, ColumnWorkKind::FirstMesh);
         exec.Enqueue(fm);
+        const bool flow_after = exec.Scheduler().Contains(
+            column, ColumnWorkKind::FirstMesh);
+        if (screen_ray_selected)
+        {
+          write_screen_ray_repair_trace(
+              coord, screen_ray_selected,
+              flow_after ? "first_mesh_ticket_present"
+                         : "first_mesh_ticket_rejected",
+              light_debt, async_before, flow_before, flow_after, "first_mesh",
+              queue_before, queue_after_now());
+        }
       };
       const bool primary_first_mesh_enqueued =
           world.PhysicsTelemetryData.MissHoriz <= 1 && missing_drawable;
       if (primary_first_mesh_enqueued)
       {
-        enqueue_first_mesh(miss_coord);
+        bool primary_is_selected_ray = false;
+        for (size_t i = 0; i < screen_ray_repair_count; ++i)
+        {
+          primary_is_selected_ray =
+              primary_is_selected_ray ||
+              screen_ray_repair_coords[i] == miss_coord;
+        }
+        enqueue_first_mesh(miss_coord, primary_is_selected_ray);
       }
       // Route a bounded set of ray-confirmed missing or stale geometry slices
       // through ColumnFlow. Existing drawable images remain available until a
@@ -1230,9 +1346,24 @@ void UWorldStreaming::RefreshStreamingPressure(
         if (primary_first_mesh_enqueued && coord.x == miss_coord.x &&
             coord.z == miss_coord.z)
         {
+          if (capture_screen_ray_trace && coord != miss_coord)
+          {
+            const UWorldPersistence::TerrainColumnRelightQueueInfo queue_info =
+                world.Persistence
+                    ? world.Persistence->GetTerrainColumnRelightQueueInfo(
+                          glm::ivec2(coord.x * CHUNK_SIZE,
+                                     coord.z * CHUNK_SIZE))
+                    : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+            write_screen_ray_repair_trace(
+                coord, true, "shadowed_by_primary_column_ticket",
+                world.IsPendingLightBeforeMeshSlice(coord),
+                world.IsAsyncRelightColumnInFlight(
+                    glm::ivec2(coord.x, coord.z)),
+                false, false, "primary_first_mesh", queue_info, queue_info);
+          }
           continue;
         }
-        enqueue_first_mesh(coord);
+        enqueue_first_mesh(coord, true);
       }
     }
   }
