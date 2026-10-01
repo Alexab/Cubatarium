@@ -1207,6 +1207,32 @@ void UWorldStreaming::RefreshStreamingPressure(
           return info.deferred_far ? std::string("deferred_far")
                                    : std::string("none");
         };
+        const UChunk *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        const ColumnRecord *record = world.GetColumnRecords().Find(
+            glm::ivec2(coord.x, coord.z));
+        const int record_stage =
+            record ? static_cast<int>(
+                         UColumnRecordCoordinator::DeriveJobStageFromRecord(
+                             *record))
+                   : -1;
+        const uint64_t record_pending_token = record ? record->pending.token : 0;
+        const uint64_t record_inflight_job = record ? record->inflight_job : 0;
+        const bool mesh_build_inflight =
+            world.GetMeshService().HasInflightMeshBuild(coord);
+        const bool gpu_extract_inflight =
+            world.GetMeshService().IsGpuExtractInFlight(coord);
+        const bool gpu_apply_pending =
+            world.GetMeshService().IsPendingGpuApply(coord);
+        const bool gpu_apply_queued =
+            world.GetMeshService().IsPendingGpuQueued(coord);
+        const bool drawable =
+            world.GetMeshService().HasDrawableGreedyMesh(coord);
+        const bool mesh_satisfying =
+            world.GetMeshService().HasMeshSatisfyingColumnReady(coord);
+        const bool geometry_debt =
+            chunk && world.GetMeshService().HasGeometryPublicationDebt(
+                         coord, chunk->GetIncarnation());
         CubatariumLogInfo(
             "ScreenRayRepair",
             "frame=" + std::to_string(screen_ray_frame_epoch) +
@@ -1222,7 +1248,30 @@ void UWorldStreaming::RefreshStreamingPressure(
                 std::to_string(after.queue_index) + "/" +
                 std::to_string(after.queue_size) + " flow=" + flow_kind +
                 " flow_before=" + std::to_string(flow_before ? 1 : 0) +
-                " flow_after=" + std::to_string(flow_after ? 1 : 0));
+                " flow_after=" +
+                std::to_string(flow_after ? 1 : 0) +
+                " flow_column_ticket=" +
+                std::to_string(exec.HasRepairTicket(
+                                   glm::ivec2(coord.x, coord.z))
+                                   ? 1
+                                   : 0) +
+                " record_stage=" + std::to_string(record_stage) +
+                " record_pending_token=" +
+                std::to_string(record_pending_token) +
+                " record_inflight_job=" +
+                std::to_string(record_inflight_job) +
+                " mesh_build_inflight=" +
+                std::to_string(mesh_build_inflight ? 1 : 0) +
+                " gpu_extract_inflight=" +
+                std::to_string(gpu_extract_inflight ? 1 : 0) +
+                " gpu_apply_pending=" +
+                std::to_string(gpu_apply_pending ? 1 : 0) +
+                " gpu_apply_queued=" +
+                std::to_string(gpu_apply_queued ? 1 : 0) +
+                " drawable=" + std::to_string(drawable ? 1 : 0) +
+                " mesh_satisfying=" +
+                std::to_string(mesh_satisfying ? 1 : 0) +
+                " geometry_debt=" + std::to_string(geometry_debt ? 1 : 0));
       };
       const auto enqueue_first_mesh = [&](glm::ivec3 coord,
                                           bool screen_ray_selected)
