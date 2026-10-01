@@ -2079,22 +2079,16 @@ void UChunkMeshCache::BumpChunkMeshRevision(
       IsPendingGpuApply(chunk_coord) || IsPendingGpuQueued(chunk_coord) ||
       IsPendingGpuKickedOrDispatched(chunk_coord) ||
       RemeshAfterApply.count(chunk_coord) > 0;
-  const bool published_mesh_matches_current_revision =
-      HasGreedyMesh(chunk_coord) &&
-      GetMeshPublishRevs(chunk_coord).geom_rev == revision_before;
   // A Dirty entry with the exact live attempt already owns the next capture.
   // If no source has been captured, its eventual snapshot reads the current
   // voxel/light data, so another revision increment would only cancel/remint
   // the same queued work. Keep the target revision and invalidate any cached
-  // capture below. A mesh already published for this revision must still be
-  // invalidated by advancing the revision; otherwise its old geometry would
-  // continue to satisfy the current target. Once a source/capture/GPU owner
-  // exists, retain strict revision superseding so stale results can never
-  // publish.
+  // capture below. Once a source/capture/GPU owner exists, retain strict
+  // revision superseding so stale results can never publish.
   const bool coalesce_queued_target =
       Dirty.Contains(chunk_coord) && pre_capture_demand &&
       reason != MeshRevisionBumpReason::InvalidatedInFlight &&
-      !mesh_source_owned && !published_mesh_matches_current_revision;
+      !mesh_source_owned;
   const uint64_t mesh_revision =
       coalesce_queued_target ? revision_before
                              : MeshRevisions.Bump(chunk_coord);
