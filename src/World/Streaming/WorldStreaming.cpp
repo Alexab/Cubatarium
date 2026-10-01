@@ -741,10 +741,10 @@ void UWorldStreaming::RefreshStreamingPressure(
     glm::ivec3 miss_coord{0};
     bool found = false;
     bool screen_ray_candidate = false;
-    constexpr size_t kMaxScreenRayRefreshCandidates = 3;
-    std::array<glm::ivec3, kMaxScreenRayRefreshCandidates>
-        screen_ray_refresh_coords{};
-    size_t screen_ray_refresh_count = 0;
+    constexpr size_t kMaxScreenRayRepairCandidates = 4;
+    std::array<glm::ivec3, kMaxScreenRayRepairCandidates>
+        screen_ray_repair_coords{};
+    size_t screen_ray_repair_count = 0;
     const int prev_horiz = std::max(std::abs(prev_miss_cx - focus_ground.x),
                                     std::abs(prev_miss_cz - focus_ground.z));
     const glm::ivec3 pinned(prev_miss_cx, world.PhysicsTelemetryData.MissCy,
@@ -811,6 +811,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             int center_rank{INT32_MAX};
             float nearest_distance{std::numeric_limits<float>::max()};
             bool geometry_debt{false};
+            bool needs_first_mesh{false};
           };
           struct ScreenRaySampleTrace
           {
@@ -943,6 +944,9 @@ void UWorldStreaming::RefreshStreamingPressure(
               ++candidate.sample_count;
               candidate.geometry_debt =
                   candidate.geometry_debt || ray_trace.geometry_debt != 0;
+              candidate.needs_first_mesh =
+                  candidate.needs_first_mesh ||
+                  ray_trace.mesh_satisfying == 0;
               const int row_rank =
                   (row_index == 1 || row_index == 2) ? 0 : 2;
               const int x_center_rank =
@@ -982,23 +986,71 @@ void UWorldStreaming::RefreshStreamingPressure(
           std::sort(candidate_order.begin(),
                     candidate_order.begin() + candidate_count,
                     candidate_better);
-          const size_t selected_candidate_count =
-              std::min<size_t>(candidate_count, screen_ray_refresh_coords.size());
+          std::array<size_t, kMaxScreenRayRepairCandidates>
+              selected_candidate_indices{};
+          size_t selected_candidate_count = 0;
+          const auto add_selected_candidate = [&](size_t candidate_index)
+          {
+            if (selected_candidate_count >=
+                selected_candidate_indices.size())
+            {
+              return;
+            }
+            const glm::ivec3 coord = candidates[candidate_index].coord;
+            for (size_t selected = 0;
+                 selected < selected_candidate_count; ++selected)
+            {
+              const glm::ivec3 prior = candidates[
+                  selected_candidate_indices[selected]].coord;
+              // ColumnFlow owns one FirstMesh ticket per horizontal column;
+              // do not supersede one visible slice with another Y slice.
+              if (prior.x == coord.x && prior.z == coord.z)
+              {
+                return;
+              }
+            }
+            selected_candidate_indices[selected_candidate_count++] =
+                candidate_index;
+          };
+          // Reserve one slot for a screen-hit slice with no satisfying mesh.
+          // Previously only geometry-debt hits were sent to ColumnFlow, so a
+          // new solid slice outside the one primary focus column could be a
+          // visible ray candidate yet never receive a repair ticket.
+          for (size_t rank = 0; rank < candidate_count; ++rank)
+          {
+            const size_t index = candidate_order[rank];
+            if (candidates[index].needs_first_mesh)
+            {
+              add_selected_candidate(index);
+              break;
+            }
+          }
+          // Keep stale drawable geometry ahead of ordinary nearby misses in
+          // the remaining bounded slots, then use any spare slot for another
+          // ray-confirmed first-mesh slice.
+          for (size_t rank = 0; rank < candidate_count; ++rank)
+          {
+            const size_t index = candidate_order[rank];
+            if (candidates[index].geometry_debt)
+            {
+              add_selected_candidate(index);
+            }
+          }
+          for (size_t rank = 0; rank < candidate_count; ++rank)
+          {
+            add_selected_candidate(candidate_order[rank]);
+          }
+          for (size_t rank = 0; rank < selected_candidate_count; ++rank)
+          {
+            screen_ray_repair_coords[rank] =
+                candidates[selected_candidate_indices[rank]].coord;
+          }
+          screen_ray_repair_count = selected_candidate_count;
           if (selected_candidate_count > 0)
           {
             miss_coord = candidates[candidate_order[0]].coord;
             found = true;
             screen_ray_candidate = true;
-            for (size_t rank = 0; rank < selected_candidate_count; ++rank)
-            {
-              const Candidate &candidate =
-                  candidates[candidate_order[rank]];
-              if (candidate.geometry_debt)
-              {
-                screen_ray_refresh_coords[screen_ray_refresh_count++] =
-                    candidate.coord;
-              }
-            }
           }
           if (capture_screen_ray_trace)
           {
@@ -1034,7 +1086,7 @@ void UWorldStreaming::RefreshStreamingPressure(
                    ++rank)
               {
                 if (ray_trace.coord ==
-                    candidates[candidate_order[rank]].coord)
+                    candidates[selected_candidate_indices[rank]].coord)
                 {
                   record.screen_ray_selected = 1;
                   break;
@@ -1137,13 +1189,14 @@ void UWorldStreaming::RefreshStreamingPressure(
       {
         enqueue_first_mesh(miss_coord);
       }
-      // Keep a small set of ray-confirmed stale drawable slices on the
-      // ColumnFlow FirstMesh path. Their old images remain available until a
+      // Route a bounded set of ray-confirmed missing or stale geometry slices
+      // through ColumnFlow. Existing drawable images remain available until a
       // newer geometry/coverage revision publishes successfully.
-      for (size_t i = 0; i < screen_ray_refresh_count; ++i)
+      for (size_t i = 0; i < screen_ray_repair_count; ++i)
       {
-        const glm::ivec3 coord = screen_ray_refresh_coords[i];
-        if (primary_first_mesh_enqueued && coord == miss_coord)
+        const glm::ivec3 coord = screen_ray_repair_coords[i];
+        if (primary_first_mesh_enqueued && coord.x == miss_coord.x &&
+            coord.z == miss_coord.z)
         {
           continue;
         }
