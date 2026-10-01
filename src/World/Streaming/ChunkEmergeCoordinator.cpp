@@ -406,11 +406,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool refresh_miss_same_epoch =
       ring_for_miss.valid &&
       ring_for_miss.frame_epoch == world.GetStreamingFrameEpoch();
+  constexpr int kFocusVisualMissingMeshBacklogThreshold = 24;
+  const auto &focus_visual_telem = world.GetPhysicsTelemetry();
+  const bool focus_visual_missing_mesh_backlog =
+      focus_visual_telem.FocusDataCensusValid != 0 &&
+      focus_visual_telem.FocusVisualMissingMeshN >=
+          kFocusVisualMissingMeshBacklogThreshold;
   const bool missing_visible_mesh =
       refresh_miss_same_epoch
-          ? (world.GetPhysicsTelemetry().FocusMissingMesh != 0)
-          : mesh_service.HasMissingGreedyMeshInHorizontalRadius(
-                world.GetBlockWorld(), focus_ground, focus_radius);
+          ? (world.GetPhysicsTelemetry().FocusMissingMesh != 0 ||
+             focus_visual_missing_mesh_backlog)
+          : (focus_visual_missing_mesh_backlog ||
+             mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+                 world.GetBlockWorld(), focus_ground, focus_radius));
   // Era22 I-M8: track miss witness age (~120 frames ≈ 1 period ≈2s).
   if (missing_visible_mesh)
   {
