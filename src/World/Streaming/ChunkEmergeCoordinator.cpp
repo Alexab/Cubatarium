@@ -967,8 +967,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             return;
           }
-          // Cap: material/geom mismatch schedules one Dirty (not flood).
-          world_ptr->GetMeshService().MarkDirty(
+          UWorldMeshService &mesh_service = world_ptr->GetMeshService();
+          // A retained material upload still needs a successor, but repeated
+          // rejects must not advance the target that successor is building.
+          // Requeue only when demand owns this exact unpublished revision;
+          // otherwise create the first dirty target with a normal revision bump.
+          if (ChunkDemandAuthorityEnabled())
+          {
+            const UChunkRenderDemandStore &demand =
+                UChunkRenderDemandStore::Get();
+            const ChunkRenderDemandRecord *record = demand.Find(chunk_coord);
+            const uint64_t current_geom_rev =
+                mesh_service.GetChunkMeshRevision(chunk_coord);
+            if (record && record->has_active_attempt &&
+                record->desired_geom_rev == current_geom_rev &&
+                record->published_geom_rev < current_geom_rev)
+            {
+              mesh_service.RequeueDirtyPriority(
+                  chunk_coord, MeshRevisionBumpReason::FaceDebtCallback);
+              return;
+            }
+          }
+          mesh_service.MarkDirty(
               chunk_coord, MeshRevisionBumpReason::FaceDebtCallback);
         });
     mesh_service.SetOnFaceDebtMaskFn(
