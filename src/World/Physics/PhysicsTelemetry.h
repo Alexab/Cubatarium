@@ -618,6 +618,7 @@ struct PhysicsTelemetry
   int FocusDataBandSolidSatisfyingN{0};
   int FocusDataBandSolidAcceptedEmptyN{0};
   int FocusDataBandSolidPendingMeshN{0};
+  int FocusDataBandSolidPendingWorkN{0};
   int FocusDataBandSolidUnresolvedNoWorkN{0};
   int FocusDataBandSolidDrawGateClosedN{0};
   int FocusDataBandSolidDrawReadyN{0};

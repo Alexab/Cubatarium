@@ -3208,13 +3208,18 @@ FocusColumnVisualClass ClassifyFocusColumnVisual(const UWorld &world,
                                                  int dx, int dz)
 {
   const glm::ivec3 ground(focus_ground.x + dx, 0, focus_ground.z + dz);
-  if (!world.IsTerrainColumnCompleteFast(ground))
+  const ColumnRenderableState state =
+      world.GetColumnRenderableState(glm::ivec2(ground.x, ground.z));
+  // A partial terrain column can already contain solid, camera-band slices.
+  // GetColumnRenderableState reports those as MissingMesh so the resident
+  // slices can be revealed progressively; do not hide that FirstMesh debt
+  // behind the column-wide generation bit. Keep the generation gate for
+  // incomplete columns that have no resident visual hole.
+  if (!world.IsTerrainColumnCompleteFast(ground) &&
+      state.reason != ColumnRenderableState::BlockReason::MissingMesh)
   {
     return FocusColumnVisualClass::TerrainIncomplete;
   }
-
-  const ColumnRenderableState state =
-      world.GetColumnRenderableState(glm::ivec2(ground.x, ground.z));
   bool face_debt = false;
   if (const ColumnRecord *rec =
           world.GetColumnRecords().Find(glm::ivec2(ground.x, ground.z)))
@@ -3330,6 +3335,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     census.band_solid_satisfying_n = 0;
     census.band_solid_accepted_empty_n = 0;
     census.band_solid_pending_mesh_n = 0;
+    census.band_solid_pending_work_n = 0;
     census.band_solid_unresolved_no_work_n = 0;
     census.band_solid_draw_gate_closed_n = 0;
     census.band_solid_draw_ready_n = 0;
@@ -3415,8 +3421,26 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           const bool gpu_extract = MeshService->IsGpuExtractInFlight(coord);
           const bool remesh_after_apply =
               mesh_cache.IsRemeshAfterApplyPending(coord);
-          const bool work_pending = dirty || inflight || gpu_pending ||
-                                    gpu_extract || remesh_after_apply;
+          const bool mesh_work_pending =
+              dirty || inflight || gpu_pending || gpu_extract ||
+              remesh_after_apply || mesh_cache.IsPendingGpuQueued(coord) ||
+              mesh_cache.IsPendingGpuKickedOrDispatched(coord) ||
+              mesh_cache.HasPendingCaptureWork(coord);
+          bool work_pending = mesh_work_pending;
+          if (!work_pending && !satisfying)
+          {
+            const glm::ivec2 column(coord.x, coord.z);
+            const glm::ivec2 block_key(coord.x * CHUNK_SIZE,
+                                       coord.z * CHUNK_SIZE);
+            const bool relight_queued =
+                Persistence &&
+                Persistence->IsTerrainColumnRelightQueued(block_key);
+            const bool relight_inflight =
+                IsAsyncRelightColumnInFlight(column);
+            const bool flow_ticket =
+                GetColumnFlowExecutor().HasRepairTicket(column);
+            work_pending = relight_queued || relight_inflight || flow_ticket;
+          }
           bool draw_ready = false;
           if (satisfying)
           {
@@ -3448,6 +3472,10 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             ++census.band_solid_no_drawable_n;
             if (work_pending)
             {
+              ++census.band_solid_pending_work_n;
+            }
+            if (mesh_work_pending)
+            {
               ++census.band_solid_pending_mesh_n;
             }
             else if (!satisfying)
@@ -3456,7 +3484,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             }
           }
 
-          // Trace states: 1=unresolved/no work, 2=missing drawable/owned
+          // Trace states: 1=unresolved/no owner, 2=missing drawable/owned
           // work pending, 3=drawable mesh blocked by the draw gate.
           uint8_t focus_state = 0;
           if (!has_mesh && !satisfying)
