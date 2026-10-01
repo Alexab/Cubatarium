@@ -2088,6 +2088,40 @@ void UChunkMeshCache::BumpChunkMeshRevision(
     trace.mesh_revision_before = revision_before;
     trace.mesh_revision_after = mesh_revision;
     trace.mesh_revision_bump_reason = reason;
+    trace.mesh_dirty_queue_kind =
+        GetDirtyQueueTrace(chunk_coord, trace.mesh_dirty_queue_index,
+                           trace.mesh_dirty_queue_size);
+    trace.mesh_dirty_queue_age_frames =
+        Dirty.GetEnqueueAgeFrames(chunk_coord);
+    if (const auto source_it = ActiveMeshSourceRevision.find(chunk_coord);
+        source_it != ActiveMeshSourceRevision.end())
+    {
+      trace.has_active_mesh_source_revision = 1;
+      trace.active_mesh_source_revision = source_it->second;
+    }
+    if (const auto capture_it = PendingCaptureSet_.find(chunk_coord);
+        capture_it != PendingCaptureSet_.end())
+    {
+      trace.has_pending_capture = 1;
+      trace.pending_capture_source_revision =
+          capture_it->second.source_revision;
+    }
+    if (const auto ready_it = PendingCaptureReady_.find(chunk_coord);
+        ready_it != PendingCaptureReady_.end())
+    {
+      trace.has_pending_capture_ready = 1;
+      trace.pending_capture_ready_source_revision = ready_it->second;
+    }
+    trace.async_builder_inflight =
+        AsyncBuilder && AsyncBuilder->IsInFlight(chunk_coord) ? 1 : 0;
+    trace.gpu_extract_inflight =
+        GpuExtractInFlight.count(chunk_coord) > 0 ? 1 : 0;
+    trace.pending_gpu_apply = IsPendingGpuApply(chunk_coord) ? 1 : 0;
+    trace.pending_gpu_queued = IsPendingGpuQueued(chunk_coord) ? 1 : 0;
+    trace.pending_gpu_kicked_or_dispatched =
+        IsPendingGpuKickedOrDispatched(chunk_coord) ? 1 : 0;
+    trace.mesh_scheduled_this_frame =
+        ScheduledThisFrame_.count(chunk_coord) > 0 ? 1 : 0;
     if (const ChunkRenderDemandRecord *rec =
             UChunkRenderDemandStore::Get().Find(chunk_coord))
     {

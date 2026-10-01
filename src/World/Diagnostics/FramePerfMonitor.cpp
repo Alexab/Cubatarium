@@ -3363,6 +3363,38 @@ void UFramePerfMonitor::Shutdown()
                       sp.mesh_revision_bump_reason)
                << "\""
                << ",\"mesh_owner_flags\":" << sp.mesh_owner_flags
+               << ",\"mesh_dirty_queue_kind\":"
+               << static_cast<int>(sp.mesh_dirty_queue_kind)
+               << ",\"mesh_dirty_queue_index\":"
+               << sp.mesh_dirty_queue_index
+               << ",\"mesh_dirty_queue_size\":"
+               << sp.mesh_dirty_queue_size
+               << ",\"mesh_dirty_queue_age_frames\":"
+               << sp.mesh_dirty_queue_age_frames
+               << ",\"has_active_mesh_source_revision\":"
+               << static_cast<int>(sp.has_active_mesh_source_revision)
+               << ",\"active_mesh_source_revision\":"
+               << sp.active_mesh_source_revision
+               << ",\"has_pending_capture\":"
+               << static_cast<int>(sp.has_pending_capture)
+               << ",\"pending_capture_source_revision\":"
+               << sp.pending_capture_source_revision
+               << ",\"has_pending_capture_ready\":"
+               << static_cast<int>(sp.has_pending_capture_ready)
+               << ",\"pending_capture_ready_source_revision\":"
+               << sp.pending_capture_ready_source_revision
+               << ",\"async_builder_inflight\":"
+               << static_cast<int>(sp.async_builder_inflight)
+               << ",\"gpu_extract_inflight\":"
+               << static_cast<int>(sp.gpu_extract_inflight)
+               << ",\"pending_gpu_apply\":"
+               << static_cast<int>(sp.pending_gpu_apply)
+               << ",\"pending_gpu_queued\":"
+               << static_cast<int>(sp.pending_gpu_queued)
+               << ",\"pending_gpu_kicked_or_dispatched\":"
+               << static_cast<int>(sp.pending_gpu_kicked_or_dispatched)
+               << ",\"mesh_scheduled_this_frame\":"
+               << static_cast<int>(sp.mesh_scheduled_this_frame)
                << ",\"previous_stage\":\""
                << UJobStageTrace::StageName(sp.previous_stage) << "\""
                << ",\"stage\":\""
