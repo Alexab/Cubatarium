@@ -330,8 +330,17 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
           snapshot.shellNeighborState[static_cast<size_t>(flat)] =
               static_cast<uint8_t>(ClassifyShellCell(
                   neighbor_loaded, raw, neighbor_visually_drawable));
+          // The face neighbor was looked up once above. Read its packed fluid
+          // byte directly instead of repeating ChunkManager's hash lookup for
+          // every shell voxel (6 * CHUNK_SIZE * CHUNK_SIZE lookups per capture).
+          // An unloaded neighbor has no chunk-owned fluid, matching
+          // UChunkManager::GetFluidState's empty result.
           snapshot.shellFluid[static_cast<size_t>(flat)] =
-              PackFluidCellState(world.GetFluidState(worldPos));
+              neighbor_chunk
+                  ? neighbor_chunk->GetFluidData()[static_cast<size_t>(
+                        UChunk::LocalIndex(
+                            UChunkManager::WorldToLocal(worldPos)))]
+                  : uint8_t{0};
         }
       }
       // Ownership SeamVisibility: overlay Missing only for true unload.
