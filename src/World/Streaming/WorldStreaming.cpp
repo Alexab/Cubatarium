@@ -741,6 +741,10 @@ void UWorldStreaming::RefreshStreamingPressure(
     glm::ivec3 miss_coord{0};
     bool found = false;
     bool screen_ray_candidate = false;
+    constexpr size_t kMaxScreenRayRefreshCandidates = 3;
+    std::array<glm::ivec3, kMaxScreenRayRefreshCandidates>
+        screen_ray_refresh_coords{};
+    size_t screen_ray_refresh_count = 0;
     const int prev_horiz = std::max(std::abs(prev_miss_cx - focus_ground.x),
                                     std::abs(prev_miss_cz - focus_ground.z));
     const glm::ivec3 pinned(prev_miss_cx, world.PhysicsTelemetryData.MissCy,
@@ -806,6 +810,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             int sample_count{0};
             int center_rank{INT32_MAX};
             float nearest_distance{std::numeric_limits<float>::max()};
+            bool geometry_debt{false};
           };
           struct ScreenRaySampleTrace
           {
@@ -826,6 +831,8 @@ void UWorldStreaming::RefreshStreamingPressure(
           };
           // Cover five of the renderer oracle's twenty exact X tile centers
           // per probe; rotate phases to scan the full viewport over four calls.
+          // Admit a bounded set of distinct debt slices so a center candidate
+          // cannot starve other stale geometry in the same view.
           constexpr size_t kRendererPixelColumnCount = 20;
           constexpr size_t kScreenColumnsPerProbe = 5;
           constexpr std::array<float, 4> kScreenRows = {
@@ -934,6 +941,8 @@ void UWorldStreaming::RefreshStreamingPressure(
               }
               Candidate &candidate = candidates[candidate_index];
               ++candidate.sample_count;
+              candidate.geometry_debt =
+                  candidate.geometry_debt || ray_trace.geometry_debt != 0;
               const int row_rank =
                   (row_index == 1 || row_index == 2) ? 0 : 2;
               const int x_center_rank =
@@ -947,29 +956,49 @@ void UWorldStreaming::RefreshStreamingPressure(
                   std::min(candidate.nearest_distance, hit.distance);
             }
           }
-          size_t best_index = candidate_count;
+          std::array<size_t, kScreenSampleCount> candidate_order{};
           for (size_t i = 0; i < candidate_count; ++i)
           {
-            const Candidate &candidate = candidates[i];
-            if (best_index == candidate_count ||
-                candidate.sample_count > candidates[best_index].sample_count ||
-                (candidate.sample_count == candidates[best_index].sample_count &&
-                 candidate.center_rank <
-                     candidates[best_index].center_rank) ||
-                (candidate.sample_count == candidates[best_index].sample_count &&
-                 candidate.center_rank ==
-                     candidates[best_index].center_rank &&
-                 candidate.nearest_distance <
-                     candidates[best_index].nearest_distance))
-            {
-              best_index = i;
-            }
+            candidate_order[i] = i;
           }
-          if (best_index < candidate_count)
+          const auto candidate_better = [&](size_t lhs, size_t rhs)
           {
-            miss_coord = candidates[best_index].coord;
+            const Candidate &a = candidates[lhs];
+            const Candidate &b = candidates[rhs];
+            if (a.geometry_debt != b.geometry_debt)
+            {
+              return a.geometry_debt;
+            }
+            if (a.sample_count != b.sample_count)
+            {
+              return a.sample_count > b.sample_count;
+            }
+            if (a.center_rank != b.center_rank)
+            {
+              return a.center_rank < b.center_rank;
+            }
+            return a.nearest_distance < b.nearest_distance;
+          };
+          std::sort(candidate_order.begin(),
+                    candidate_order.begin() + candidate_count,
+                    candidate_better);
+          const size_t selected_candidate_count =
+              std::min<size_t>(candidate_count, screen_ray_refresh_coords.size());
+          if (selected_candidate_count > 0)
+          {
+            miss_coord = candidates[candidate_order[0]].coord;
             found = true;
             screen_ray_candidate = true;
+            for (size_t rank = 0; rank < selected_candidate_count; ++rank)
+            {
+              const Candidate &candidate =
+                  candidates[candidate_order[rank]];
+              if (candidate.geometry_debt)
+              {
+                screen_ray_refresh_coords[screen_ray_refresh_count++] =
+                    candidate.coord;
+              }
+            }
           }
           if (capture_screen_ray_trace)
           {
@@ -1000,11 +1029,17 @@ void UWorldStreaming::RefreshStreamingPressure(
               record.screen_ray_geometry_debt = ray_trace.geometry_debt;
               record.screen_ray_needs_refresh = ray_trace.needs_refresh;
               record.screen_ray_candidate = ray_trace.candidate;
-              record.screen_ray_selected =
-                  ray_trace.candidate && found &&
-                          ray_trace.coord == miss_coord
-                      ? 1u
-                      : 0u;
+              for (size_t rank = 0;
+                   rank < selected_candidate_count && ray_trace.candidate;
+                   ++rank)
+              {
+                if (ray_trace.coord ==
+                    candidates[candidate_order[rank]].coord)
+                {
+                  record.screen_ray_selected = 1;
+                  break;
+                }
+              }
               UJobStageTrace::NoteVisualBlack(record);
             }
           }
@@ -1084,30 +1119,35 @@ void UWorldStreaming::RefreshStreamingPressure(
           }
         }
       }
-      // Keep ray-confirmed stale drawable geometry on the same bounded
-      // ColumnFlow FirstMesh path as a missing first mesh. The cache may retain
-      // an older drawable image while its requested geometry/coverage revision
-      // remains unpublished; that image can still contain the observed gap.
-      const UChunk *miss_chunk = world.GetBlockWorld()
-                                     .GetChunkManager()
-                                     .GetChunk(miss_coord);
-      const bool miss_geometry_debt =
-          screen_ray_candidate && miss_chunk &&
-          world.GetMeshService().HasGeometryPublicationDebt(
-              miss_coord, miss_chunk->GetIncarnation());
       const bool missing_drawable =
           !world.GetMeshService().HasDrawableGreedyMesh(miss_coord);
-      if ((world.PhysicsTelemetryData.MissHoriz <= 1 && missing_drawable) ||
-          (screen_ray_candidate && miss_geometry_debt &&
-           world.PhysicsTelemetryData.MissHoriz <= miss_probe_radius))
+      const auto enqueue_first_mesh = [&](glm::ivec3 coord)
       {
         ColumnWorkItem fm{};
-        fm.column = miss_xz;
+        fm.column = glm::ivec2(coord.x, coord.z);
         fm.kind = ColumnWorkKind::FirstMesh;
         fm.priority = 112;
         fm.scan_full_focus = false;
-        fm.cy = miss_coord.y;
+        fm.cy = coord.y;
         exec.Enqueue(fm);
+      };
+      const bool primary_first_mesh_enqueued =
+          world.PhysicsTelemetryData.MissHoriz <= 1 && missing_drawable;
+      if (primary_first_mesh_enqueued)
+      {
+        enqueue_first_mesh(miss_coord);
+      }
+      // Keep a small set of ray-confirmed stale drawable slices on the
+      // ColumnFlow FirstMesh path. Their old images remain available until a
+      // newer geometry/coverage revision publishes successfully.
+      for (size_t i = 0; i < screen_ray_refresh_count; ++i)
+      {
+        const glm::ivec3 coord = screen_ray_refresh_coords[i];
+        if (primary_first_mesh_enqueued && coord == miss_coord)
+        {
+          continue;
+        }
+        enqueue_first_mesh(coord);
       }
     }
   }
