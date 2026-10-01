@@ -4108,8 +4108,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       forward /= forward_len;
       const int approach_ring =
           kVisualStageFirstMeshRelightForwardHoriz;
-      const int approach_ring_min =
-          kVisualStageFirstMeshRelightApproachHoriz + 1;
+      const int pending_light_ring_min =
+          kVisualStageFirstMeshRelightApproachHoriz;
       const int geometry_debt_ring_min =
           kVisualStageFirstMeshRelightApproachHoriz;
       const int camera_band_min = std::max(0, focus_block.y - CHUNK_SIZE);
@@ -4132,7 +4132,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       candidate_columns.reserve(64);
       // The unfinished visual cache is intentionally limited to the lit
       // drawable work radius (currently h4). Discover forward relight debt
-      // outside that cache from its owning pending-light source.
+      // from its pending-light owner starting at h5, the ordinary approach
+      // ring whose global FIFO admissions can be saturated.
       if (Persistence && RequiresLightingLitGate())
       {
         for (const auto &pending_entry : PendingLightBeforeMesh)
@@ -4143,7 +4144,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           const int dx = cx - focus_g.x;
           const int dz = cz - focus_g.z;
           const int horiz = (std::max)(std::abs(dx), std::abs(dz));
-          if (horiz < approach_ring_min || horiz > approach_ring)
+          if (horiz < pending_light_ring_min || horiz > approach_ring)
           {
             continue;
           }
@@ -4173,7 +4174,6 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             const glm::ivec3 coord(cx, cy, cz);
             const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
             if (!chunk || chunk->GetNonAirCount() <= 0 ||
-                MeshService->HasMeshSatisfyingColumnReady(coord) ||
                 MeshService->IsPendingGpuApply(coord) ||
                 MeshService->HasInflightMeshBuild(coord) ||
                 (RequiresLightingLitGate() &&
@@ -4181,6 +4181,9 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             {
               continue;
             }
+            // A retained drawable is not proof that pending light is
+            // satisfied. The exact settled-light check above owns this gate;
+            // keep stale drawables eligible for their relight successor.
             const int slice_min_y = cy * CHUNK_SIZE;
             const int slice_max_y =
                 std::min(max_y, slice_min_y + CHUNK_SIZE - 1);
@@ -4628,10 +4631,13 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       const auto ensure_slice_relight = [&]() {
         if (Persistence)
         {
+          const bool reserved_outer_candidate = outer_reserved_column;
           const bool use_visible_admission =
-              (defer_until_lit || first_mesh_needs_lighting) &&
+              (reserved_outer_candidate || defer_until_lit ||
+               first_mesh_needs_lighting) &&
               within_first_mesh_relight_horizon &&
-              (first_mesh_visible_relight_columns.count(slice_column) != 0 ||
+              (reserved_outer_candidate ||
+               first_mesh_visible_relight_columns.count(slice_column) != 0 ||
                first_mesh_visible_relight_columns.size() <
                    kFirstMeshVisibleRelightLimit);
           if (use_visible_admission)
