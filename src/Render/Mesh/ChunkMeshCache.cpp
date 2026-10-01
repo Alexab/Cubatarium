@@ -2058,14 +2058,47 @@ void UChunkMeshCache::BumpChunkMeshRevision(
     glm::ivec3 chunk_coord, MeshRevisionBumpReason reason)
 {
   const uint64_t revision_before = MeshRevisions.Current(chunk_coord);
-  const uint64_t mesh_revision = MeshRevisions.Bump(chunk_coord);
+  UChunkRenderDemandStore *demand_store = nullptr;
+  const ChunkRenderDemandRecord *demand_before = nullptr;
+  if (kChunkDemandShadow())
+  {
+    demand_store = &UChunkRenderDemandStore::Get();
+    demand_before = demand_store->Find(chunk_coord);
+  }
+  const bool pre_capture_demand =
+      demand_before && demand_before->has_active_attempt &&
+      demand_before->desired_geom_rev == revision_before &&
+      (demand_before->active_stage == JobStage::Created ||
+       demand_before->active_stage == JobStage::Admitted);
+  const bool mesh_source_owned =
+      ActiveMeshSourceRevision.count(chunk_coord) > 0 ||
+      PendingCaptureSet_.count(chunk_coord) > 0 ||
+      PendingCaptureReady_.count(chunk_coord) > 0 ||
+      (AsyncBuilder && AsyncBuilder->IsInFlight(chunk_coord)) ||
+      GpuExtractInFlight.count(chunk_coord) > 0 ||
+      IsPendingGpuApply(chunk_coord) || IsPendingGpuQueued(chunk_coord) ||
+      IsPendingGpuKickedOrDispatched(chunk_coord) ||
+      RemeshAfterApply.count(chunk_coord) > 0;
+  // A Dirty entry with the exact live attempt already owns the next capture.
+  // If no source has been captured, its eventual snapshot reads the current
+  // voxel/light data, so another revision increment would only cancel/remint
+  // the same queued work. Keep the target revision and invalidate any cached
+  // capture below. Once a source/capture/GPU owner exists, retain strict
+  // revision superseding so stale results can never publish.
+  const bool coalesce_queued_target =
+      Dirty.Contains(chunk_coord) && pre_capture_demand &&
+      reason != MeshRevisionBumpReason::InvalidatedInFlight &&
+      !mesh_source_owned;
+  const uint64_t mesh_revision =
+      coalesce_queued_target ? revision_before
+                             : MeshRevisions.Bump(chunk_coord);
   // Demand geometry must follow this same source-revision domain. A demand can
   // be noted before MarkDirty bumps the mesh generation, so advance the target
   // here rather than comparing Chunk::ContentRevision with PublishedRev.
-  if (kChunkDemandShadow())
+  if (demand_store && !coalesce_queued_target)
   {
-    UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
-    if (const ChunkRenderDemandRecord *rec = demand.Find(chunk_coord))
+    if (const ChunkRenderDemandRecord *rec =
+            demand_store->Find(chunk_coord))
     {
       if (rec->desired_geom_rev != mesh_revision &&
           (rec->desired_geom_rev != 0 || rec->desired_light_rev != 0 ||
@@ -2073,8 +2106,8 @@ void UChunkMeshCache::BumpChunkMeshRevision(
       {
         const uint64_t desired_light = rec->desired_light_rev;
         const uint64_t desired_coverage = rec->desired_coverage_gen;
-        demand.NoteDemand(chunk_coord, mesh_revision, desired_light,
-                          desired_coverage);
+        demand_store->NoteDemand(chunk_coord, mesh_revision, desired_light,
+                                 desired_coverage);
       }
     }
   }
@@ -2180,7 +2213,8 @@ void UChunkMeshCache::BumpChunkMeshRevision(
       trace.mesh_owner_flags |= 1u << 7;
     }
     UJobStageTrace::NoteMeshRevisionBump(
-        trace, revision_before, mesh_revision, reason, trace.mesh_owner_flags);
+        trace, revision_before, mesh_revision, reason, trace.mesh_owner_flags,
+        coalesce_queued_target);
   }
   CaptureStore.Invalidate(chunk_coord);
 }

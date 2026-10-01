@@ -107,6 +107,7 @@ enum class DemandTransitionKind : uint8_t
   PublishedRevisionAdvanced,
   AttemptReminted,
   MeshRevisionBumped,
+  MeshRevisionBumpCoalesced,
   IdentityReset
 };
 
@@ -571,7 +572,8 @@ public:
                                    uint64_t revision_before,
                                    uint64_t revision_after,
                                    MeshRevisionBumpReason reason,
-                                   uint32_t owner_flags);
+                                   uint32_t owner_flags,
+                                   bool coalesced = false);
   static void ForEachDemandTransitionNewest(
       size_t max_n, void (*fn)(const DemandTransitionSpan &, void *),
       void *ctx);
