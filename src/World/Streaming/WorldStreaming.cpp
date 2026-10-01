@@ -793,6 +793,21 @@ void UWorldStreaming::RefreshStreamingPressure(
             int center_rank{INT32_MAX};
             float nearest_distance{std::numeric_limits<float>::max()};
           };
+          struct ScreenRaySampleTrace
+          {
+            glm::ivec3 coord{0};
+            glm::ivec3 block{0};
+            float screen_x{0.0f};
+            float screen_y{0.0f};
+            float distance{-1.0f};
+            uint8_t column{0};
+            uint8_t row{0};
+            uint8_t state{0};
+            uint8_t in_focus_radius{0};
+            uint8_t in_height_band{0};
+            uint8_t missing_drawable{0};
+            uint8_t candidate{0};
+          };
           // Cover five of the renderer oracle's twenty exact X tile centers
           // per probe; rotate phases to scan the full viewport over four calls.
           constexpr size_t kRendererPixelColumnCount = 20;
@@ -802,6 +817,13 @@ void UWorldStreaming::RefreshStreamingPressure(
           constexpr size_t kScreenSampleCount =
               kScreenColumnsPerProbe * kScreenRows.size();
           std::array<Candidate, kScreenSampleCount> candidates{};
+          std::array<ScreenRaySampleTrace, kScreenSampleCount> ray_traces{};
+          const bool capture_screen_ray_trace =
+              UJobStageTrace::VisualBlackTraceEnabled();
+          const uint64_t screen_ray_frame_epoch =
+              capture_screen_ray_trace ? world.GetStreamingFrameEpoch() : 0;
+          const glm::ivec3 screen_ray_focus_chunk = UChunkManager::WorldToChunk(
+              world.GetPreferredLoadFocusBlock());
           size_t candidate_count = 0;
           const size_t column_phase = static_cast<size_t>(
               std::clamp(rp.screen_ray_sample_phase, 0, 3));
@@ -827,6 +849,15 @@ void UWorldStreaming::RefreshStreamingPressure(
               const float screen_x =
                   (static_cast<float>(column_index) + 0.5f) /
                   static_cast<float>(kRendererPixelColumnCount);
+              const size_t trace_index = row_index * kScreenColumnsPerProbe +
+                                         sample_column;
+              ScreenRaySampleTrace &ray_trace = ray_traces[trace_index];
+              ray_trace.column = static_cast<uint8_t>(column_index);
+              ray_trace.row = static_cast<uint8_t>(row_index);
+              ray_trace.screen_x = screen_x *
+                                   static_cast<float>(viewport_width);
+              ray_trace.screen_y = kScreenRows[row_index] *
+                                   static_cast<float>(viewport_height);
               glm::vec3 ray_origin(0.0f);
               glm::vec3 ray_direction(0.0f);
               if (!probe_camera->TryGetViewRayAtScreen(
@@ -839,18 +870,32 @@ void UWorldStreaming::RefreshStreamingPressure(
               }
               const OpaqueVoxelRayWitness hit = TraceOpaqueVoxelRay(
                   world, ray_origin, ray_direction, max_distance);
+              ray_trace.state = hit.state;
               if (hit.state != 1)
               {
                 continue;
               }
               const glm::ivec3 coord = UChunkManager::WorldToChunk(hit.block);
+              ray_trace.coord = coord;
+              ray_trace.block = hit.block;
+              ray_trace.distance = hit.distance;
               const int horiz = std::max(std::abs(coord.x - focus_ground.x),
                                          std::abs(coord.z - focus_ground.z));
-              if (horiz > miss_probe_radius || coord.y < cy_scan_lo ||
-                  coord.y > cy_scan_hi || !slice_still_missing(coord))
+              ray_trace.in_focus_radius =
+                  horiz <= miss_probe_radius ? 1u : 0u;
+              ray_trace.in_height_band =
+                  coord.y >= cy_scan_lo && coord.y <= cy_scan_hi ? 1u : 0u;
+              if (!ray_trace.in_focus_radius || !ray_trace.in_height_band)
               {
                 continue;
               }
+              ray_trace.missing_drawable =
+                  slice_still_missing(coord) ? 1u : 0u;
+              if (!ray_trace.missing_drawable)
+              {
+                continue;
+              }
+              ray_trace.candidate = 1;
               size_t candidate_index = 0;
               while (candidate_index < candidate_count &&
                      candidates[candidate_index].coord != coord)
@@ -900,6 +945,41 @@ void UWorldStreaming::RefreshStreamingPressure(
             miss_coord = candidates[best_index].coord;
             found = true;
             screen_ray_candidate = true;
+          }
+          if (capture_screen_ray_trace)
+          {
+            for (const ScreenRaySampleTrace &ray_trace : ray_traces)
+            {
+              VisualBlackTraceRecord record{};
+              record.sample_kind = 10;
+              record.frame_epoch = screen_ray_frame_epoch;
+              record.focus_cx = screen_ray_focus_chunk.x;
+              record.focus_cz = screen_ray_focus_chunk.z;
+              record.cx = ray_trace.coord.x;
+              record.cy = ray_trace.coord.y;
+              record.cz = ray_trace.coord.z;
+              record.screen_ray_x = ray_trace.screen_x;
+              record.screen_ray_y = ray_trace.screen_y;
+              record.screen_ray_distance = ray_trace.distance;
+              record.screen_ray_block_x = ray_trace.block.x;
+              record.screen_ray_block_y = ray_trace.block.y;
+              record.screen_ray_block_z = ray_trace.block.z;
+              record.screen_ray_column = ray_trace.column;
+              record.screen_ray_row = ray_trace.row;
+              record.screen_ray_state = ray_trace.state;
+              record.screen_ray_in_focus_radius =
+                  ray_trace.in_focus_radius;
+              record.screen_ray_in_height_band = ray_trace.in_height_band;
+              record.screen_ray_missing_drawable =
+                  ray_trace.missing_drawable;
+              record.screen_ray_candidate = ray_trace.candidate;
+              record.screen_ray_selected =
+                  ray_trace.candidate && found &&
+                          ray_trace.coord == miss_coord
+                      ? 1u
+                      : 0u;
+              UJobStageTrace::NoteVisualBlack(record);
+            }
           }
         }
       }

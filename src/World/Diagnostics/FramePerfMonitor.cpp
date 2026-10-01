@@ -3451,6 +3451,9 @@ void UFramePerfMonitor::Shutdown()
         case 9:
           trace_kind = "renderer_pixel_probe";
           break;
+        case 10:
+          trace_kind = "screen_ray_candidate_trace";
+          break;
         default:
           break;
         }
@@ -3925,7 +3928,34 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.mesh_snapshot_defer_reason)
                << ",\"mesh_enqueue_reject_reason\":"
                << static_cast<int>(r.mesh_enqueue_reject_reason)
-               << ",\"flags\":" << r.flags << "}\n";
+               << ",\"flags\":" << r.flags;
+        if (r.sample_kind == 10)
+        {
+          (*out) << ",\"screen_ray_x\":" << r.screen_ray_x
+                 << ",\"screen_ray_y\":" << r.screen_ray_y
+                 << ",\"screen_ray_distance\":"
+                 << r.screen_ray_distance
+                 << ",\"screen_ray_block_x\":" << r.screen_ray_block_x
+                 << ",\"screen_ray_block_y\":" << r.screen_ray_block_y
+                 << ",\"screen_ray_block_z\":" << r.screen_ray_block_z
+                 << ",\"screen_ray_column\":"
+                 << static_cast<int>(r.screen_ray_column)
+                 << ",\"screen_ray_row\":"
+                 << static_cast<int>(r.screen_ray_row)
+                 << ",\"screen_ray_state\":"
+                 << static_cast<int>(r.screen_ray_state)
+                 << ",\"screen_ray_in_focus_radius\":"
+                 << static_cast<int>(r.screen_ray_in_focus_radius)
+                 << ",\"screen_ray_in_height_band\":"
+                 << static_cast<int>(r.screen_ray_in_height_band)
+                 << ",\"screen_ray_missing_drawable\":"
+                 << static_cast<int>(r.screen_ray_missing_drawable)
+                 << ",\"screen_ray_candidate\":"
+                 << static_cast<int>(r.screen_ray_candidate)
+                 << ",\"screen_ray_selected\":"
+                 << static_cast<int>(r.screen_ray_selected);
+        }
+        (*out) << "}\n";
       };
       UJobStageTrace::ForEachVisualBlackNewest(
           UJobStageTrace::kVisualBlackTraceDumpCapacity, dumpVisualBlack,

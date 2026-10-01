@@ -208,7 +208,8 @@ struct VisualBlackTraceRecord
   /// 5=draw-gate relight scan counts, 6=near-focus FirstMesh attempt,
   /// 7=priority-remesh scheduling attempt, 8=frustum candidate, 9=screen pixel
   /// sampled after transparent pass (normal RGBA or diagnostic marker), joined
-  /// to lifecycle/source-mesh state of the exact ray-mapped chunk slice.
+  /// to lifecycle/source-mesh state of the exact ray-mapped chunk slice,
+  /// 10=CPU screen ray tested by the streaming miss selector.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   /// sample_kind=1: FocusColumnVisualClass ordinal, 255 when outside cache.
@@ -343,6 +344,25 @@ struct VisualBlackTraceRecord
   float renderer_source_block_light_min{0.0f};
   float renderer_source_block_light_max{0.0f};
   uint64_t renderer_pixel_probe_id{0};
+  /// sample_kind=10: exact streaming screen-ray sample and selector decision.
+  /// Screen coordinates use top-left pixel space; column/row indices map to
+  /// the renderer's 20x4 pixel-probe grid (row 0 is the top scanline).
+  float screen_ray_x{0.0f};
+  float screen_ray_y{0.0f};
+  float screen_ray_distance{-1.0f};
+  int32_t screen_ray_block_x{0};
+  int32_t screen_ray_block_y{0};
+  int32_t screen_ray_block_z{0};
+  uint8_t screen_ray_column{0};
+  uint8_t screen_ray_row{0};
+  /// Opaque voxel DDA state: 0=not sampled, 1=opaque hit, 2=unloaded,
+  /// 3=no opaque hit in range.
+  uint8_t screen_ray_state{0};
+  uint8_t screen_ray_in_focus_radius{0};
+  uint8_t screen_ray_in_height_band{0};
+  uint8_t screen_ray_missing_drawable{0};
+  uint8_t screen_ray_candidate{0};
+  uint8_t screen_ray_selected{0};
   int32_t renderer_pixel_x{0};
   int32_t renderer_pixel_y{0};
   uint32_t renderer_pixel_rgba{0};
@@ -544,6 +564,8 @@ public:
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   static constexpr size_t kVisualPixelTraceRingCapacity = 2048;
+  /// Retain a complete opt-in history of bounded streaming screen-ray probes.
+  static constexpr size_t kScreenRayTraceRingCapacity = 4096;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
   static constexpr size_t kFrustumCoverageTraceRingCapacity = 256;
   static constexpr size_t kVisualBlackAttributionTraceRingCapacity = 1024;
@@ -556,7 +578,8 @@ public:
       kFrustumCoverageTraceRingCapacity +
       kVisualBlackAttributionTraceRingCapacity +
       kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
-      kPriorityRemeshTraceRingCapacity + kVisualPixelTraceRingCapacity;
+      kPriorityRemeshTraceRingCapacity + kVisualPixelTraceRingCapacity +
+      kScreenRayTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.

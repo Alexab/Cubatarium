@@ -138,6 +138,13 @@ GetVisualPixelTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kScreenRayTraceRingCapacity> &
+GetScreenRayTraceRing()
+{
+  static VisualBlackTraceRing<UJobStageTrace::kScreenRayTraceRingCapacity> r;
+  return r;
+}
+
 VisualBlackTraceRing<UJobStageTrace::kRendererGateTraceRingCapacity> &
 GetRendererGateTraceRing()
 {
@@ -394,6 +401,10 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetVisualPixelTraceRing(), record);
   }
+  else if (record.sample_kind == 10)
+  {
+    PushVisualTrace(GetScreenRayTraceRing(), record);
+  }
   else if (record.sample_kind == 3 || record.sample_kind == 5)
   {
     PushVisualTrace(GetVisualRepairTraceRing(), record);
@@ -429,6 +440,7 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);
 }
 
