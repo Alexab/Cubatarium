@@ -4049,6 +4049,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
   constexpr size_t kFirstMeshVisibleRelightLimit = 8;
   UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
   const double demand_now_ms = VisualObligationNowMs();
+  const auto has_deferred_visible_relight = [&](glm::ivec2 block_key) {
+    return Persistence &&
+           Persistence->GetTerrainColumnRelightQueueInfo(block_key)
+               .deferred_visible;
+  };
   const auto has_live_slice_owner = [&](glm::ivec3 coord) {
     const glm::ivec2 column(coord.x, coord.z);
     const glm::ivec2 block_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
@@ -4062,7 +4067,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
     // FirstMesh Dirty queued while no relight existed to clear the debt.
     const bool relight_owned = IsAsyncRelightColumnInFlight(column) ||
                                (Persistence && Persistence->IsTerrainColumnRelightQueued(
-                                                   block_key));
+                                                   block_key)) ||
+                               has_deferred_visible_relight(block_key);
     return mesh_in_flight || relight_owned;
   };
   const auto has_slice_work_owner = [&](glm::ivec3 coord) {
@@ -4571,7 +4577,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             const bool relight_queued_or_inflight =
                 IsAsyncRelightColumnInFlight(column) ||
                 (Persistence &&
-                 Persistence->IsTerrainColumnRelightQueued(block_key));
+                 Persistence->IsTerrainColumnRelightQueued(block_key)) ||
+                has_deferred_visible_relight(block_key);
             const bool deferred_without_light_owner =
                 !mesh_in_flight &&
                 MeshService->GetCache().IsDeferMeshUntilLit(coord) &&
@@ -4723,7 +4730,8 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                   (cy + 1) * CHUNK_SIZE - 1);
             }
             if (admitted_visible && !was_queued &&
-                Persistence->IsTerrainColumnRelightQueued(slice_block_key))
+                (Persistence->IsTerrainColumnRelightQueued(slice_block_key) ||
+                 has_deferred_visible_relight(slice_block_key)))
             {
               first_mesh_visible_relight_columns.insert(slice_column);
             }
@@ -4750,6 +4758,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         const auto &flow = GetColumnFlowExecutor().Scheduler();
         return (Persistence &&
                 Persistence->IsTerrainColumnRelightQueued(slice_block_key)) ||
+               has_deferred_visible_relight(slice_block_key) ||
                IsAsyncRelightColumnInFlight(slice_column) ||
                flow.Contains(slice_column, ColumnWorkKind::RelightThenMesh) ||
                flow.Contains(slice_column, ColumnWorkKind::PromoteRelight);
@@ -4860,7 +4869,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           continue;
         }
         const bool visible_light_repair_candidate =
-            RequiresLightingLitGate() && IsPendingLightBeforeMesh(slice_column) &&
+            RequiresLightingLitGate() &&
             col_horiz <= kVisualStageFirstMeshRelightApproachHoriz;
         const bool relight_enqueued =
             ensure_slice_relight(visible_light_repair_candidate);
