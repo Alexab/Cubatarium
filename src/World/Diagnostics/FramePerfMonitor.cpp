@@ -328,6 +328,14 @@ struct FrameNumbers
   int mesh_dirty_schedule_skip_snapshot_n{0};
   int mesh_snapshot_defer_time_budget_n{0};
   int mesh_snapshot_defer_refresh_budget_n{0};
+  double mesh_snapshot_budget_ms{0.0};
+  double capture_snapshot_cost_ema_ms{0.0};
+  int mesh_snapshot_refresh_credits_initial_n{0};
+  int mesh_snapshot_refresh_credits_remaining_n{0};
+  int first_mesh_capture_reserve_remaining_n{0};
+  int light_repair_capture_reserve_remaining_n{0};
+  int mesh_snapshot_firstmesh_refresh_defers_n{0};
+  int mesh_snapshot_remesh_refresh_defers_n{0};
   int mesh_snapshot_defer_pipeline_bytes_n{0};
   int mesh_snapshot_defer_missing_band_n{0};
   int mesh_snapshot_defer_dependency_n{0};
@@ -1076,6 +1084,20 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_schedule_skip_snapshot_n = phys.MeshDirtyScheduleSkipSnapshotN;
   n.mesh_snapshot_defer_time_budget_n = phys.MeshSnapshotDeferTimeBudgetN;
   n.mesh_snapshot_defer_refresh_budget_n = phys.MeshSnapshotDeferRefreshBudgetN;
+  n.mesh_snapshot_budget_ms = phys.MeshSnapshotBudgetMs;
+  n.capture_snapshot_cost_ema_ms = phys.CaptureSnapshotCostEmaMs;
+  n.mesh_snapshot_refresh_credits_initial_n =
+      phys.MeshSnapshotRefreshCreditsInitialN;
+  n.mesh_snapshot_refresh_credits_remaining_n =
+      phys.MeshSnapshotRefreshCreditsRemainingN;
+  n.first_mesh_capture_reserve_remaining_n =
+      phys.FirstMeshCaptureReserveRemainingN;
+  n.light_repair_capture_reserve_remaining_n =
+      phys.LightRepairCaptureReserveRemainingN;
+  n.mesh_snapshot_firstmesh_refresh_defers_n =
+      phys.MeshSnapshotFirstMeshRefreshDefersN;
+  n.mesh_snapshot_remesh_refresh_defers_n =
+      phys.MeshSnapshotRemeshRefreshDefersN;
   n.mesh_snapshot_defer_pipeline_bytes_n = phys.MeshSnapshotDeferPipelineBytesN;
   n.mesh_snapshot_defer_missing_band_n = phys.MeshSnapshotDeferMissingBandN;
   n.mesh_snapshot_defer_dependency_n = phys.MeshSnapshotDeferDependencyN;
@@ -1890,6 +1912,21 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mesh_snapshot_defer_time_budget_n
           << ",\"mesh_snapshot_defer_refresh_budget_n\":"
           << n.mesh_snapshot_defer_refresh_budget_n
+          << ",\"mesh_snapshot_budget_ms\":" << n.mesh_snapshot_budget_ms
+          << ",\"capture_snapshot_cost_ema_ms\":"
+          << n.capture_snapshot_cost_ema_ms
+          << ",\"mesh_snapshot_refresh_credits_initial_n\":"
+          << n.mesh_snapshot_refresh_credits_initial_n
+          << ",\"mesh_snapshot_refresh_credits_remaining_n\":"
+          << n.mesh_snapshot_refresh_credits_remaining_n
+          << ",\"first_mesh_capture_reserve_remaining_n\":"
+          << n.first_mesh_capture_reserve_remaining_n
+          << ",\"light_repair_capture_reserve_remaining_n\":"
+          << n.light_repair_capture_reserve_remaining_n
+          << ",\"mesh_snapshot_firstmesh_refresh_defers_n\":"
+          << n.mesh_snapshot_firstmesh_refresh_defers_n
+          << ",\"mesh_snapshot_remesh_refresh_defers_n\":"
+          << n.mesh_snapshot_remesh_refresh_defers_n
           << ",\"mesh_snapshot_defer_pipeline_bytes_n\":"
           << n.mesh_snapshot_defer_pipeline_bytes_n
           << ",\"mesh_snapshot_defer_missing_band_n\":"

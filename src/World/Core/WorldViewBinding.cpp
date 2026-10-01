@@ -1208,6 +1208,23 @@ void UWorld::TickWorldStreamingPhase()
       snapshot_defer.ScheduleTimeBudget;
   PhysicsTelemetryData.MeshSnapshotDeferRefreshBudgetN =
       snapshot_defer.RefreshCountBudget;
+  const UChunkMeshCache &mesh_cache = GetMeshService().GetCache();
+  PhysicsTelemetryData.MeshSnapshotBudgetMs =
+      mesh_cache.GetMeshSnapshotBudgetMs();
+  PhysicsTelemetryData.CaptureSnapshotCostEmaMs =
+      mesh_cache.GetCaptureSnapshotCostEmaMs();
+  PhysicsTelemetryData.MeshSnapshotRefreshCreditsInitialN =
+      mesh_cache.GetLastMeshSnapshotRefreshCreditsInitialN();
+  PhysicsTelemetryData.MeshSnapshotRefreshCreditsRemainingN =
+      mesh_cache.GetCaptureRefreshBudgetLeft();
+  PhysicsTelemetryData.FirstMeshCaptureReserveRemainingN =
+      mesh_cache.GetFirstMeshCaptureReserveLeft();
+  PhysicsTelemetryData.LightRepairCaptureReserveRemainingN =
+      mesh_cache.GetLightRepairCaptureReserveLeft();
+  PhysicsTelemetryData.MeshSnapshotFirstMeshRefreshDefersN =
+      mesh_cache.GetLastMeshSnapshotFirstMeshRefreshDefersN();
+  PhysicsTelemetryData.MeshSnapshotRemeshRefreshDefersN =
+      mesh_cache.GetLastMeshSnapshotRemeshRefreshDefersN();
   PhysicsTelemetryData.MeshSnapshotDeferPipelineBytesN =
       snapshot_defer.PipelineBytes;
   PhysicsTelemetryData.MeshSnapshotDeferMissingBandN =

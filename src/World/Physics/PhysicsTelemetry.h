@@ -316,6 +316,14 @@ struct PhysicsTelemetry
   int MeshDirtyScheduleSkipSnapshotN{0};
   int MeshSnapshotDeferTimeBudgetN{0};
   int MeshSnapshotDeferRefreshBudgetN{0};
+  double MeshSnapshotBudgetMs{0.0};
+  double CaptureSnapshotCostEmaMs{0.0};
+  int MeshSnapshotRefreshCreditsInitialN{0};
+  int MeshSnapshotRefreshCreditsRemainingN{0};
+  int FirstMeshCaptureReserveRemainingN{0};
+  int LightRepairCaptureReserveRemainingN{0};
+  int MeshSnapshotFirstMeshRefreshDefersN{0};
+  int MeshSnapshotRemeshRefreshDefersN{0};
   int MeshSnapshotDeferPipelineBytesN{0};
   int MeshSnapshotDeferMissingBandN{0};
   int MeshSnapshotDeferDependencyN{0};

@@ -7546,6 +7546,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   MeshRebuildTickStats stats;
   LastMeshSnapshotDeferStats = {};
   FirstMeshCaptureReserveLeft = 0;
+  LastMeshSnapshotFirstMeshRefreshDefersN_ = 0;
+  LastMeshSnapshotRemeshRefreshDefersN_ = 0;
   const auto note_snapshot_defer = [this](SnapshotAcquireDeferReason reason)
   {
     switch (reason)
@@ -7581,6 +7583,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                      MeshSnapshotBudgetMs /
                      std::clamp(CaptureSnapshotCostEmaMs_, 0.10, 8.0))),
                  1, 32);
+  LastMeshSnapshotRefreshCreditsInitialN_ = CaptureRefreshBudgetLeft;
   // A42b/d: reserve Capture slots for LightRepair remesh (Published owner).
   // Under VB/StaleVL debt allow up to 4 so miss-floor remesh can drain.
   {
@@ -8795,6 +8798,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         trace_visible_schedule(
             13, static_cast<uint8_t>(acquire.deferReason));
+        if (acquire.deferReason ==
+            SnapshotAcquireDeferReason::RefreshCountBudget)
+        {
+          if (Dirty.IsFirstMesh(*it))
+          {
+            ++LastMeshSnapshotFirstMeshRefreshDefersN_;
+          }
+          else
+          {
+            ++LastMeshSnapshotRemeshRefreshDefersN_;
+          }
+        }
         note_snapshot_defer(acquire.deferReason);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
@@ -9742,6 +9757,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (acquire.kind == SnapshotAcquireKind::Deferred || !acquire.snapshot)
       {
+        if (acquire.deferReason ==
+            SnapshotAcquireDeferReason::RefreshCountBudget)
+        {
+          if (Dirty.IsFirstMesh(*it))
+          {
+            ++LastMeshSnapshotFirstMeshRefreshDefersN_;
+          }
+          else
+          {
+            ++LastMeshSnapshotRemeshRefreshDefersN_;
+          }
+        }
         note_snapshot_defer(acquire.deferReason);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;

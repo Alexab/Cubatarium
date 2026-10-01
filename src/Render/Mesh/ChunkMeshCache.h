@@ -193,6 +193,32 @@ public:
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
   double GetLastMeshSyncMs() const { return LastMeshSyncMs; }
   double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
+  double GetMeshSnapshotBudgetMs() const { return MeshSnapshotBudgetMs; }
+  double GetCaptureSnapshotCostEmaMs() const
+  {
+    return CaptureSnapshotCostEmaMs_;
+  }
+  int GetLastMeshSnapshotRefreshCreditsInitialN() const
+  {
+    return LastMeshSnapshotRefreshCreditsInitialN_;
+  }
+  int GetCaptureRefreshBudgetLeft() const { return CaptureRefreshBudgetLeft; }
+  int GetFirstMeshCaptureReserveLeft() const
+  {
+    return FirstMeshCaptureReserveLeft;
+  }
+  int GetLightRepairCaptureReserveLeft() const
+  {
+    return LightRepairCaptureReserveLeft;
+  }
+  int GetLastMeshSnapshotFirstMeshRefreshDefersN() const
+  {
+    return LastMeshSnapshotFirstMeshRefreshDefersN_;
+  }
+  int GetLastMeshSnapshotRemeshRefreshDefersN() const
+  {
+    return LastMeshSnapshotRemeshRefreshDefersN_;
+  }
   double GetLastMeshDirtyTickMs() const { return LastMeshDirtyTickMs; }
   /// Cruise wall A1: substages inside RebuildDirtyChunksWithStats (ms / ops).
   double GetLastMeshDirtyPruneMs() const { return LastMeshDirtyPruneMs; }
@@ -1243,6 +1269,9 @@ private:
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
   UMeshCaptureStore CaptureStore;
   int CaptureRefreshBudgetLeft{4};
+  int LastMeshSnapshotRefreshCreditsInitialN_{0};
+  int LastMeshSnapshotFirstMeshRefreshDefersN_{0};
+  int LastMeshSnapshotRemeshRefreshDefersN_{0};
   /// Rolling capture cost estimate used to translate snapshot ms into a bounded
   /// refresh count. LastMeshSnapshotMs remains the authoritative time limit.
   double CaptureSnapshotCostEmaMs_{0.5};
