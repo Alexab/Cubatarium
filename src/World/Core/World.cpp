@@ -4586,6 +4586,15 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
             {
               const auto &cache = MeshService->GetCache();
+              const ChunkRenderDemandRecord *preview_demand =
+                  demand.Find(coord);
+              const bool drawable =
+                  MeshService->HasDrawableGreedyMesh(coord);
+              const bool provisional_light_preview =
+                  cache.HasProvisionalLightPreview(coord);
+              const uint64_t field_light_rev = ch->GetLightFieldRevision();
+              const uint64_t meshed_light_rev =
+                  cache.GetMeshedLightRevision(coord);
               int32_t dirty_queue_index = -1;
               int32_t dirty_queue_size = 0;
               const uint8_t dirty_queue_kind =
@@ -4627,13 +4636,33 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                       std::to_string(coord.y) + "," +
                       std::to_string(coord.z) + ") focus=(" +
                       std::to_string(focus_g.x) + "," +
-                      std::to_string(focus_g.z) + ") action=" + action +
+                      std::to_string(focus_g.z) + ") world_epoch=" +
+                      std::to_string(cache.GetCaptureStore().WorldEpoch()) +
+                      " incarnation=" +
+                      std::to_string(ch->GetIncarnation()) + " action=" +
+                      action +
                       " owner_after=" +
                       std::to_string(has_slice_work_owner(coord)) +
+                      " drawable=" + std::to_string(drawable) +
+                      " provisional_light_preview=" +
+                      std::to_string(provisional_light_preview) +
                       " desired_geom=" +
                       std::to_string(current_mesh_revision) +
                       " published_geom=" +
                       std::to_string(current_published_revs.geom_rev) +
+                      " field_light_rev=" +
+                      std::to_string(field_light_rev) +
+                      " meshed_light_rev=" +
+                      std::to_string(meshed_light_rev) +
+                      " published_light_rev=" +
+                      std::to_string(current_published_revs.light_rev) +
+                      " settled=" +
+                      std::to_string(preview_demand &&
+                                     preview_demand->has_settled_light) +
+                      ":" + std::to_string(
+                                preview_demand
+                                    ? preview_demand->settled_light_rev
+                                    : 0) +
                       " dirty_queue=" + std::to_string(dirty_queue_kind) +
                       ":" + std::to_string(dirty_queue_index) + "/" +
                       std::to_string(dirty_queue_size) +
@@ -8167,6 +8196,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           const glm::ivec2 column(chunk_data.coord.x, chunk_data.coord.z);
           const bool drawable =
               MeshService && MeshService->HasDrawableGreedyMesh(chunk_data.coord);
+          const bool provisional_light_preview =
+              MeshService &&
+              MeshService->GetCache().HasProvisionalLightPreview(
+                  chunk_data.coord);
           const bool satisfying = MeshService &&
               MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord);
           const bool dirty =
@@ -8218,7 +8251,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                   std::to_string(chunk_data.coord.z) + ") non_air=" +
                   std::to_string(chunk->GetNonAirCount()) + " installed=" +
                   std::to_string(installed) + " drawable=" +
-                  std::to_string(drawable) + " satisfying=" +
+                  std::to_string(drawable) + " provisional_light_preview=" +
+                  std::to_string(provisional_light_preview) + " satisfying=" +
                   std::to_string(satisfying) + " dirty=" +
                   std::to_string(dirty) + " mesh_inflight=" +
                   std::to_string(mesh_inflight) + " gpu_pending=" +
@@ -8449,6 +8483,9 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
             MeshService->GetCache().GetMeshedLightRevision(chunk_data.coord);
         const bool drawable =
             MeshService->HasDrawableGreedyMesh(chunk_data.coord);
+        const bool provisional_light_preview =
+            MeshService->GetCache().HasProvisionalLightPreview(
+                chunk_data.coord);
         const bool satisfying =
             MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord);
         const bool settled_current =
@@ -8525,6 +8562,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                     MeshService->GetChunkMeshRevision(chunk_data.coord)) +
                 " meshed_light_rev=" + std::to_string(meshed_light_rev) +
                 " drawable=" + std::to_string(drawable) +
+                " provisional_light_preview=" +
+                std::to_string(provisional_light_preview) +
                 " satisfying=" + std::to_string(satisfying) +
                 " dirty=" + std::to_string(
                     MeshService->IsChunkMeshDirty(chunk_data.coord)) +

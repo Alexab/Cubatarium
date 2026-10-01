@@ -1231,6 +1231,9 @@ void UWorldStreaming::RefreshStreamingPressure(
             world.GetMeshService().IsPendingGpuQueued(coord);
         const bool drawable =
             world.GetMeshService().HasDrawableGreedyMesh(coord);
+        const bool provisional_light_preview =
+            world.GetMeshService().GetCache().HasProvisionalLightPreview(
+                coord);
         const bool mesh_satisfying =
             world.GetMeshService().HasMeshSatisfyingColumnReady(coord);
         const bool geometry_debt =
@@ -1249,6 +1252,9 @@ void UWorldStreaming::RefreshStreamingPressure(
             world.GetMeshService().GetCache().WasScheduledThisFrame(coord);
         const uint64_t mesh_revision =
             world.GetMeshService().GetChunkMeshRevision(coord);
+        const uint64_t world_epoch =
+            world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+        const uint64_t incarnation = chunk ? chunk->GetIncarnation() : 0;
         const auto published_revisions =
             world.GetMeshService().GetCache().GetMeshPublishRevs(coord);
         int column_mesh_dirty_slices = 0;
@@ -1275,6 +1281,8 @@ void UWorldStreaming::RefreshStreamingPressure(
             "frame=" + std::to_string(screen_ray_frame_epoch) +
                 " coord=" + std::to_string(coord.x) + "," +
                 std::to_string(coord.y) + "," + std::to_string(coord.z) +
+                " world_epoch=" + std::to_string(world_epoch) +
+                " incarnation=" + std::to_string(incarnation) +
                 " light_debt=" + std::to_string(light_debt ? 1 : 0) +
                 " action=" + action + " async_before=" +
                 std::to_string(async_before ? 1 : 0) + " fifo_before=" +
@@ -1331,6 +1339,8 @@ void UWorldStreaming::RefreshStreamingPressure(
                 " gpu_apply_queued=" +
                 std::to_string(gpu_apply_queued ? 1 : 0) +
                 " drawable=" + std::to_string(drawable ? 1 : 0) +
+                " provisional_light_preview=" +
+                std::to_string(provisional_light_preview ? 1 : 0) +
                 " mesh_satisfying=" +
                 std::to_string(mesh_satisfying ? 1 : 0) +
                 " geometry_debt=" + std::to_string(geometry_debt ? 1 : 0));
