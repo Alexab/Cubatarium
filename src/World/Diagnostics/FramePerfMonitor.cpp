@@ -699,6 +699,7 @@ struct FrameNumbers
   int miss_cy{0};
   int miss_cz{0};
   int miss_horiz{0};
+  int miss_screen_ray_candidate{0};
   int post_load_ring_not_ready{0};
   int enter_game_warmup_missing_greedy{0};
   uint64_t softdefer_capture_floor_hits{0};
@@ -1392,6 +1393,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.miss_cy = phys.MissCy;
   n.miss_cz = phys.MissCz;
   n.miss_horiz = phys.MissHoriz;
+  n.miss_screen_ray_candidate = phys.MissScreenRayCandidate;
   n.focus_dark_mesh = phys.FocusDarkMesh;
   n.focus_provisional_light_preview = phys.FocusProvisionalLightPreview;
   n.focus_pending_dark = phys.FocusPendingDark;
@@ -2248,6 +2250,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"miss_cy\":" << n.miss_cy
           << ",\"miss_cz\":" << n.miss_cz
           << ",\"miss_horiz\":" << n.miss_horiz
+          << ",\"miss_screen_ray_candidate\":"
+          << n.miss_screen_ray_candidate
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
           << ",\"focus_provisional_light_preview\":"
           << n.focus_provisional_light_preview

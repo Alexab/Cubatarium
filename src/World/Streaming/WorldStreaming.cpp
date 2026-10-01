@@ -12,6 +12,7 @@
 #include "World/Streaming/MemoryBudgetController.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Math/GridMath.h"
+#include "World/Raycast/BlockRaycast.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
@@ -60,10 +61,12 @@
 #include "World/Core/RuntimeTuning.h"
 #include "App/Platform/Log.h"
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <climits>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -737,6 +740,7 @@ void UWorldStreaming::RefreshStreamingPressure(
   {
     glm::ivec3 miss_coord{0};
     bool found = false;
+    bool screen_ray_candidate = false;
     const int prev_horiz = std::max(std::abs(prev_miss_cx - focus_ground.x),
                                     std::abs(prev_miss_cz - focus_ground.z));
     const glm::ivec3 pinned(prev_miss_cx, world.PhysicsTelemetryData.MissCy,
@@ -774,7 +778,113 @@ void UWorldStreaming::RefreshStreamingPressure(
       }
       return false;
     };
-    if (ShouldHoldNearMissWitness(prev_horiz, slice_still_missing(pinned)))
+    if (run_miss_probe)
+    {
+      if (const auto probe_camera = world.GetCurrentUserCamera())
+      {
+        const int viewport_width = probe_camera->GetViewportWidth();
+        const int viewport_height = probe_camera->GetViewportHeight();
+        if (viewport_width > 0 && viewport_height > 0)
+        {
+          struct Candidate
+          {
+            glm::ivec3 coord{0};
+            int sample_count{0};
+            int first_sample{INT32_MAX};
+            float nearest_distance{std::numeric_limits<float>::max()};
+          };
+          constexpr std::array<glm::vec2, 5> kScreenSamples = {
+              glm::vec2(0.50f, 0.50f), glm::vec2(0.25f, 0.50f),
+              glm::vec2(0.75f, 0.50f), glm::vec2(0.50f, 0.25f),
+              glm::vec2(0.50f, 0.75f)};
+          std::array<Candidate, kScreenSamples.size()> candidates{};
+          size_t candidate_count = 0;
+          const float max_distance = std::min(
+              static_cast<float>((miss_probe_radius + 1) * CHUNK_SIZE),
+              192.0f);
+          int cy_scan_lo = 0;
+          int cy_scan_hi = 48;
+          if (focus_ground.y > 0)
+          {
+            cy_scan_lo = std::max(0, focus_ground.y - 1);
+            cy_scan_hi = std::min(48, focus_ground.y + 1);
+          }
+          for (size_t sample_index = 0; sample_index < kScreenSamples.size();
+               ++sample_index)
+          {
+            const glm::vec2 sample = kScreenSamples[sample_index];
+            glm::vec3 ray_origin(0.0f);
+            glm::vec3 ray_direction(0.0f);
+            if (!probe_camera->TryGetViewRayAtScreen(
+                    sample.x * static_cast<float>(viewport_width),
+                    sample.y * static_cast<float>(viewport_height),
+                    ray_origin, ray_direction))
+            {
+              continue;
+            }
+            const OpaqueVoxelRayWitness hit = TraceOpaqueVoxelRay(
+                world, ray_origin, ray_direction, max_distance);
+            if (hit.state != 1)
+            {
+              continue;
+            }
+            const glm::ivec3 coord = UChunkManager::WorldToChunk(hit.block);
+            const int horiz = std::max(std::abs(coord.x - focus_ground.x),
+                                       std::abs(coord.z - focus_ground.z));
+            if (horiz > miss_probe_radius || coord.y < cy_scan_lo ||
+                coord.y > cy_scan_hi || !slice_still_missing(coord))
+            {
+              continue;
+            }
+            size_t candidate_index = 0;
+            while (candidate_index < candidate_count &&
+                   candidates[candidate_index].coord != coord)
+            {
+              ++candidate_index;
+            }
+            if (candidate_index == candidate_count)
+            {
+              candidates[candidate_count].coord = coord;
+              ++candidate_count;
+            }
+            Candidate &candidate = candidates[candidate_index];
+            ++candidate.sample_count;
+            candidate.first_sample = std::min(
+                candidate.first_sample, static_cast<int>(sample_index));
+            candidate.nearest_distance =
+                std::min(candidate.nearest_distance, hit.distance);
+          }
+          size_t best_index = candidate_count;
+          for (size_t i = 0; i < candidate_count; ++i)
+          {
+            const Candidate &candidate = candidates[i];
+            if (best_index == candidate_count ||
+                candidate.sample_count > candidates[best_index].sample_count ||
+                (candidate.sample_count == candidates[best_index].sample_count &&
+                 candidate.first_sample <
+                     candidates[best_index].first_sample) ||
+                (candidate.sample_count == candidates[best_index].sample_count &&
+                 candidate.first_sample ==
+                     candidates[best_index].first_sample &&
+                 candidate.nearest_distance <
+                     candidates[best_index].nearest_distance))
+            {
+              best_index = i;
+            }
+          }
+          if (best_index < candidate_count)
+          {
+            miss_coord = candidates[best_index].coord;
+            found = true;
+            screen_ray_candidate = true;
+          }
+        }
+      }
+    }
+    world.PhysicsTelemetryData.MissScreenRayCandidate =
+        screen_ray_candidate ? 1 : 0;
+    if (!found &&
+        ShouldHoldNearMissWitness(prev_horiz, slice_still_missing(pinned)))
     {
       miss_coord = pinned;
       found = true;
@@ -864,6 +974,7 @@ void UWorldStreaming::RefreshStreamingPressure(
     world.PhysicsTelemetryData.MissCy = 0;
     world.PhysicsTelemetryData.MissCz = 0;
     world.PhysicsTelemetryData.MissHoriz = 0;
+    world.PhysicsTelemetryData.MissScreenRayCandidate = 0;
     world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
     GetColumnFlowExecutor().SetPromoteRelightHold(glm::ivec2(0), false);
     if (world.Persistence)
@@ -1512,6 +1623,7 @@ void UWorldStreaming::RefreshStreamingPressure(
       world.PhysicsTelemetryData.MissCy = 0;
       world.PhysicsTelemetryData.MissCz = 0;
       world.PhysicsTelemetryData.MissHoriz = 0;
+      world.PhysicsTelemetryData.MissScreenRayCandidate = 0;
       world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
       GetColumnFlowExecutor().SetPromoteRelightHold(glm::ivec2(0), false);
       if (world.Persistence)

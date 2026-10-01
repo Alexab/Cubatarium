@@ -696,6 +696,8 @@ struct PhysicsTelemetry
   int MissCy{0};
   int MissCz{0};
   int MissHoriz{0};
+  /// Current miss witness came from a camera screen-ray opaque voxel hit.
+  int MissScreenRayCandidate{0};
   /// Count of focus columns with mesh but no sky light sample.
   int FocusDarkMesh{0};
   /// Era39 A4: pending-dark (hidden until lit) vs sticky remesh (preview class).
