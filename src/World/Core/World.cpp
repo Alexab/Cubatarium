@@ -2067,6 +2067,10 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
     invalidate_slice_band(note_min_y, max_y, "insert");
     it->second.min_y = note_min_y;
     it->second.max_y = max_y;
+    // Pending-light changes the column's unfinished classification even when
+    // no mesh owner was admitted. Keep the cached admission set in sync with
+    // this debt so a denied relight cannot leave solid slices classified Ready.
+    NoteUnfinishedColumnDirty(key);
     log_pending_light_note("insert", it->second.min_y, it->second.max_y);
     return;
   }
@@ -2241,13 +2245,19 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
 
 void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
 {
-  PendingLightBeforeMesh.erase(ground_xz);
-  StickyRemeshAfterLight.erase(ground_xz);
+  bool visual_state_changed =
+      PendingLightBeforeMesh.erase(ground_xz) > 0;
+  visual_state_changed =
+      StickyRemeshAfterLight.erase(ground_xz) > 0 || visual_state_changed;
   if (Persistence)
   {
     Persistence->ClearDeferredFarRelightColumn(ground_xz);
     Persistence->ClearVisibleFirstMeshRelightIfNotQueued(
         glm::ivec2(ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE));
+  }
+  if (visual_state_changed)
+  {
+    NoteUnfinishedColumnDirty(ground_xz);
   }
 }
 
@@ -2420,6 +2430,10 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
   ColumnEmergeStates[glm::ivec2(ground.x, ground.z)] = state;
   // Phase 2 dual-write: ColumnRecord mirrors emerge SoT.
   ColumnRecords.SetEmerge(glm::ivec2(ground.x, ground.z), state);
+  // Emerge state participates in the focus-column readiness classification.
+  // Recheck this column and seam neighbors instead of reusing a stale Ready
+  // entry after a streamed column changes state.
+  NoteUnfinishedColumnDirty(glm::ivec2(ground.x, ground.z));
   if (state == ColumnEmergeState::RenderReady)
   {
     ColumnRecords.GetOrCreate(glm::ivec2(ground.x, ground.z)).inflight_job = 0;
