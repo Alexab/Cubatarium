@@ -1505,7 +1505,11 @@ void UWorldStreaming::RefreshStreamingPressure(
         const bool flow_after = exec.Scheduler().Contains(
             column, ColumnWorkKind::FirstMesh);
         int direct_slice_marked = 0;
-        if (screen_ray_selected && !flow_after && !light_debt)
+        // A column-level Flow ticket is not a concrete owner for this slice.
+        // It may already be queued behind other column work after the Dirty
+        // ticket for this exact geometry/coverage debt was consumed. Let the
+        // per-slice owner check decide whether a direct repair is still needed.
+        if (screen_ray_selected && !light_debt)
         {
           direct_slice_marked = mark_direct_missing_slice(coord);
         }
@@ -1513,11 +1517,10 @@ void UWorldStreaming::RefreshStreamingPressure(
         {
           write_screen_ray_repair_trace(
               coord, screen_ray_selected,
-              flow_after
-                  ? "first_mesh_ticket_present"
-                  : (direct_slice_marked > 0
-                         ? "first_mesh_slice_dirty_direct"
-                         : "first_mesh_ticket_rejected"),
+              direct_slice_marked > 0
+                  ? "first_mesh_slice_dirty_direct"
+                  : (flow_after ? "first_mesh_ticket_present"
+                                : "first_mesh_ticket_rejected"),
               light_debt, async_before, flow_before, flow_after,
               visible_geometry_promoted, "first_mesh", queue_before,
               queue_after_now());
