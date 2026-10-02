@@ -99,6 +99,8 @@ struct ChunkRenderDemandRecord
   /// successful stage progress.
   double last_unowned_geometry_retry_ms{0.0};
   uint64_t unowned_geometry_retry_geom_rev{0};
+  /// Retry delay depends on whether a concrete owner was admitted.
+  double unowned_geometry_retry_cooldown_ms{0.0};
   bool has_active_attempt{false};
   bool retained_awaiting_successor{false};
   /// Optional peer coverage generation per face 0..5.

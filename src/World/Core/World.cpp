@@ -4059,7 +4059,8 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
 int UWorld::AdmitUnfinishedVisualDemand(int max_n)
 {
   // Avoid retrying an unpublished slice every frame after an actual attempt.
-  constexpr double kUnownedGeometryRetryCooldownMs = 2000.0;
+  constexpr double kUnownedGeometryOwnerRetryCooldownMs = 2000.0;
+  constexpr double kUnownedGeometryDeniedRetryCooldownMs = 250.0;
   if (max_n <= 0 || !MeshService)
   {
     return 0;
@@ -4584,12 +4585,18 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
             {
               return;
             }
+            const bool owner_after = has_slice_work_owner(coord);
             if (ChunkRenderDemandRecord *rec = demand.Find(coord))
             {
-              // A census hit is not an admission. Only start the cooldown
-              // after this slice reaches an actual work/admission path.
+              // Keep an admitted owner behind the longer disappearance guard.
+              // Budget denial gets only a short bounded retry delay, so it
+              // cannot hide unpublished geometry for the full owner SLA.
               rec->last_unowned_geometry_retry_ms = demand_now_ms;
-              rec->unowned_geometry_retry_geom_rev = current_mesh_revision;
+              rec->unowned_geometry_retry_geom_rev =
+                  MeshService->GetChunkMeshRevision(coord);
+              rec->unowned_geometry_retry_cooldown_ms =
+                  owner_after ? kUnownedGeometryOwnerRetryCooldownMs
+                              : kUnownedGeometryDeniedRetryCooldownMs;
             }
             if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
             {
@@ -4650,7 +4657,11 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                       std::to_string(ch->GetIncarnation()) + " action=" +
                       action +
                       " owner_after=" +
-                      std::to_string(has_slice_work_owner(coord)) +
+                      std::to_string(owner_after) +
+                      " retry_cooldown_ms=" +
+                      std::to_string(owner_after
+                                         ? kUnownedGeometryOwnerRetryCooldownMs
+                                         : kUnownedGeometryDeniedRetryCooldownMs) +
                       " drawable=" + std::to_string(drawable) +
                       " provisional_light_preview=" +
                       std::to_string(provisional_light_preview) +
@@ -4698,10 +4709,14 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
         {
           const bool same_retry_revision =
               rec->unowned_geometry_retry_geom_rev == current_mesh_revision;
+          const double retry_cooldown_ms =
+              rec->unowned_geometry_retry_cooldown_ms > 0.0
+                  ? rec->unowned_geometry_retry_cooldown_ms
+                  : kUnownedGeometryOwnerRetryCooldownMs;
           if (same_retry_revision &&
               rec->last_unowned_geometry_retry_ms > 0.0 &&
               demand_now_ms - rec->last_unowned_geometry_retry_ms <
-                  kUnownedGeometryRetryCooldownMs)
+                  retry_cooldown_ms)
           {
             continue;
           }
