@@ -292,6 +292,12 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       const UChunk *neighbor_chunk =
           world.GetChunkManager().GetChunk(neighbor_coord);
       const bool neighbor_loaded = neighbor_chunk != nullptr;
+      // Terrain chunks only exist at world Y >= 0. The absent chunk below
+      // cy=0 is a known world boundary, not an unloaded neighbor: expose the
+      // bottom shell to the mesher and do not create permanent FaceDebt for
+      // space that can never stream in. Other missing neighbors stay Unknown.
+      const bool known_world_exterior =
+          axis == 1 && sign < 0 && neighbor_coord.y < 0 && !neighbor_loaded;
       // Stamp = geom/light only. Drawable fn affects shell occlusion preview.
       snapshot.inputStamps[static_cast<size_t>(face + 1)] =
           ChunkInputStamp::Capture(neighbor_coord, neighbor_chunk,
@@ -328,8 +334,11 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
           }
           snapshot.shellBlocks[static_cast<size_t>(flat)] = raw;
           snapshot.shellNeighborState[static_cast<size_t>(flat)] =
-              static_cast<uint8_t>(ClassifyShellCell(
-                  neighbor_loaded, raw, neighbor_visually_drawable));
+              static_cast<uint8_t>(
+                  known_world_exterior
+                      ? NeighborLoadState::Air
+                      : ClassifyShellCell(neighbor_loaded, raw,
+                                          neighbor_visually_drawable));
           // The face neighbor was looked up once above. Read its packed fluid
           // byte directly instead of repeating ChunkManager's hash lookup for
           // every shell voxel (6 * CHUNK_SIZE * CHUNK_SIZE lookups per capture).
@@ -346,7 +355,7 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       // Ownership SeamVisibility: overlay Missing only for true unload.
       // SoftDefer / !drawable → ClassifyShellCell Unlit (emit faces); do NOT
       // force Unknown via overlay (sky-through SoT 161139).
-      if (!neighbor_loaded)
+      if (!neighbor_loaded && !known_world_exterior)
         missing_faces = static_cast<uint8_t>(missing_faces | (1u << face));
     }
   }
