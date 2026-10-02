@@ -3618,6 +3618,20 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.renderer_pixel_voxel_ray_state)
                << ",\"renderer_pixel_voxel_ray_gap\":"
                << static_cast<int>(r.renderer_pixel_voxel_ray_gap)
+               << ",\"renderer_pixel_voxel_unloaded_x\":"
+               << r.renderer_pixel_voxel_unloaded_x
+               << ",\"renderer_pixel_voxel_unloaded_y\":"
+               << r.renderer_pixel_voxel_unloaded_y
+               << ",\"renderer_pixel_voxel_unloaded_z\":"
+               << r.renderer_pixel_voxel_unloaded_z
+               << ",\"renderer_pixel_voxel_unloaded_chunk_x\":"
+               << r.renderer_pixel_voxel_unloaded_chunk_x
+               << ",\"renderer_pixel_voxel_unloaded_chunk_y\":"
+               << r.renderer_pixel_voxel_unloaded_chunk_y
+               << ",\"renderer_pixel_voxel_unloaded_chunk_z\":"
+               << r.renderer_pixel_voxel_unloaded_chunk_z
+               << ",\"renderer_pixel_voxel_unloaded_distance\":"
+               << r.renderer_pixel_voxel_unloaded_distance
                << ",\"renderer_pixel_voxel_hit_x\":"
                << r.renderer_pixel_voxel_hit_x
                << ",\"renderer_pixel_voxel_hit_y\":"

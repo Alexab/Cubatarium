@@ -26,6 +26,7 @@ struct OpaqueVoxelRayWitness
   uint8_t state{0};
   uint8_t entry_face{0xffu};
   glm::ivec3 block{0};
+  glm::ivec3 unloaded_cell{0};
   glm::ivec3 previous_block{0};
   BlockId block_id{BLOCK_AIR};
   BlockId previous_block_id{BLOCK_AIR};

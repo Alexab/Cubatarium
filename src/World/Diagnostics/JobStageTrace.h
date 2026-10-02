@@ -389,6 +389,13 @@ struct VisualBlackTraceRecord
   /// 3=no opaque cube within the renderer horizon.
   uint8_t renderer_pixel_voxel_ray_state{0};
   uint8_t renderer_pixel_voxel_ray_gap{0};
+  int32_t renderer_pixel_voxel_unloaded_x{0};
+  int32_t renderer_pixel_voxel_unloaded_y{0};
+  int32_t renderer_pixel_voxel_unloaded_z{0};
+  int32_t renderer_pixel_voxel_unloaded_chunk_x{0};
+  int32_t renderer_pixel_voxel_unloaded_chunk_y{0};
+  int32_t renderer_pixel_voxel_unloaded_chunk_z{0};
+  float renderer_pixel_voxel_unloaded_distance{-1.0f};
   int32_t renderer_pixel_voxel_hit_x{0};
   int32_t renderer_pixel_voxel_hit_y{0};
   int32_t renderer_pixel_voxel_hit_z{0};

@@ -143,6 +143,7 @@ OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
     if (query.IsUnloaded())
     {
       result.state = 2;
+      result.unloaded_cell = cell;
       result.distance = entry_distance;
       return result;
     }

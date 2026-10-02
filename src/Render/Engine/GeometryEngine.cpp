@@ -1023,6 +1023,22 @@ void CaptureTransparentPixelProbe(
             world, camera_position, voxel_ray_direction,
             cache.MaxCullDistance());
         record.renderer_pixel_voxel_ray_state = voxel_witness.state;
+        if (voxel_witness.state == 2)
+        {
+          record.renderer_pixel_voxel_unloaded_x =
+              voxel_witness.unloaded_cell.x;
+          record.renderer_pixel_voxel_unloaded_y =
+              voxel_witness.unloaded_cell.y;
+          record.renderer_pixel_voxel_unloaded_z =
+              voxel_witness.unloaded_cell.z;
+          const glm::ivec3 unloaded_chunk =
+              UChunkManager::WorldToChunk(voxel_witness.unloaded_cell);
+          record.renderer_pixel_voxel_unloaded_chunk_x = unloaded_chunk.x;
+          record.renderer_pixel_voxel_unloaded_chunk_y = unloaded_chunk.y;
+          record.renderer_pixel_voxel_unloaded_chunk_z = unloaded_chunk.z;
+          record.renderer_pixel_voxel_unloaded_distance =
+              voxel_witness.distance;
+        }
         if (voxel_witness.state == 1)
         {
           record.renderer_pixel_voxel_hit_x = voxel_witness.block.x;
