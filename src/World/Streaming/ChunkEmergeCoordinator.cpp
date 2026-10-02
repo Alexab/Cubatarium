@@ -2676,6 +2676,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // (no MarkDirtyPriority / full-column Dirty storm).
   // FZ2.7-P12 A6: also pin under moving cruise when unfinished storm.
   // Phase 5.3.2: earlier escape when SoftDeferEmptyStuckHoriz∈[1,5] ages.
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.stuck_escape_setup");
   const int unf_stuck = world.GetPhysicsTelemetry().UnfinishedVisual;
   const int soft_stuck_n = phys_telem.SoftDeferEmptyStuckN;
   const int soft_stuck_h = phys_telem.SoftDeferEmptyStuckHoriz;
@@ -2688,15 +2689,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     const glm::ivec2 stuck_col(stuck.x, stuck.z);
     auto &exec = GetColumnFlowExecutor();
+    UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.stuck_escape_lookup");
     const bool ticketed =
         exec.Scheduler().Contains(stuck_col, ColumnWorkKind::FirstMesh);
     const bool owned = SoftDeferEmptyOwned.count(stuck) > 0;
+    UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.stuck_escape_gpu_state");
     const bool gpu_queued =
         mesh_service.IsPendingGpuQueued(stuck) ||
         mesh_service.IsPendingGpuKickedOrDispatched(stuck);
     const int age =
         SoftDeferEmptyAgeFrames.count(stuck) > 0 ? SoftDeferEmptyAgeFrames[stuck]
                                                  : soft_age_max;
+    UFrameStageWatchdog::MarkCurrentStage(
+        "mesh_emerge.stuck_escape_drawable_query");
     const bool drawable = mesh_service.HasDrawableGreedyMesh(stuck);
     // A29 U1: under near FocusMissing, invalidate Owned-without-GPU earlier.
     const int invalidate_sla =
@@ -2708,6 +2713,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (SoftDeferEmptyInvalidateOwnedWithoutProgress(owned, gpu_queued, age,
                                                      drawable, invalidate_sla))
     {
+      UFrameStageWatchdog::MarkCurrentStage(
+          "mesh_emerge.stuck_escape_invalidate");
       SoftDeferEmptyOwned.erase(stuck);
       SoftDeferEmptyAgeFrames.erase(stuck);
       if (gpu_queued)
@@ -2718,6 +2725,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         mesh_service.MarkDirtyPriority(
             stuck, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
+        UFrameStageWatchdog::MarkCurrentStage(
+            "mesh_emerge.stuck_escape_enqueue");
         ColumnWorkItem pin{};
         pin.column = stuck_col;
         pin.kind = ColumnWorkKind::FirstMesh;
@@ -2736,6 +2745,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       return false;
     }
+    UFrameStageWatchdog::MarkCurrentStage(
+        "mesh_emerge.stuck_escape_new_enqueue");
     ColumnWorkItem pin{};
     pin.column = stuck_col;
     pin.kind = ColumnWorkKind::FirstMesh;
@@ -2748,6 +2759,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     --stuck_escape_fm_budget;
     return true;
   };
+  UFrameStageWatchdog::MarkCurrentStage(
+      "mesh_emerge.stuck_escape_candidate_check");
   if ((missing_visible_mesh ||
        world.GetPhysicsTelemetry().FocusMissingMesh > 0) &&
       soft_stuck_n > 0 &&
@@ -2796,6 +2809,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // missing_visible_mesh (manual 075706 underwater enter with vis_debt).
   if (procedural.FillWater && stuck_escape_fm_budget > 0)
   {
+    UFrameStageWatchdog::MarkCurrentStage(
+        "mesh_emerge.stuck_escape_water_range");
     int pin_cy0 = 0;
     int pin_cy1 = 0;
     const int max_cy_pin =
@@ -2803,7 +2818,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     EnterSpawnPresentableCyRange(preferred_cy,
                                  FloorDiv(procedural.SeaLevel, CHUNK_SIZE),
                                  true, max_cy_pin, pin_cy0, pin_cy1);
+    // try_stuck_escape_fm can erase and reinsert this same set entry. Snapshot
+    // before invoking it so unordered_set erase/rehash cannot invalidate the
+    // active range-for iterator and turn this bounded recovery pass into UB.
+    std::vector<glm::ivec3> owned_candidates;
+    owned_candidates.reserve(SoftDeferEmptyOwned.size());
     for (const glm::ivec3 &coord : SoftDeferEmptyOwned)
+    {
+      owned_candidates.push_back(coord);
+    }
+    UFrameStageWatchdog::MarkCurrentStage(
+        "mesh_emerge.stuck_escape_owned_iteration");
+    for (const glm::ivec3 &coord : owned_candidates)
     {
       if (stuck_escape_fm_budget <= 0)
       {
@@ -2819,6 +2845,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         continue;
       }
+      UFrameStageWatchdog::MarkCurrentStage(
+          "mesh_emerge.stuck_escape_owned_drawable_query");
       if (mesh_service.HasDrawableGreedyMesh(coord))
       {
         continue;
@@ -2832,6 +2860,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
 
+  UFrameStageWatchdog::MarkCurrentStage(
+      "mesh_emerge.stuck_escape_held_summary");
   phys_telem.SoftDeferHeldN =
       static_cast<int>(mesh_service.GetSoftDeferHeldCount());
   phys_telem.SoftDeferHeldAgeMax =
@@ -2841,6 +2871,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool missing_feet_column =
       have_nearest_missing && nearest_missing_hole.x == focus_ground_horiz.x &&
       nearest_missing_hole.z == focus_ground_horiz.z;
+  UFrameStageWatchdog::MarkCurrentStage(
+      "mesh_emerge.stuck_escape_underfeet_light_query");
   const bool pending_feet = world.IsPendingLightBeforeMesh(
       glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z));
   const bool underfeet_need = UnderfeetNeedUrgent(
