@@ -39,6 +39,12 @@ public:
   {
     return PriorityRemeshSet.find(coord) != PriorityRemeshSet.end();
   }
+  bool IsScreenRayRemesh(glm::ivec3 coord) const
+  {
+    return ScreenRayRemeshSet.find(coord) != ScreenRayRemeshSet.end() ||
+           DeferredScreenRayRemeshSet.find(coord) !=
+               DeferredScreenRayRemeshSet.end();
+  }
   uint64_t GetScheduleFrame() const { return ScheduleFrame; }
 
   size_t GetCount() const { return FirstMeshQ.size() + RemeshQ.size(); }

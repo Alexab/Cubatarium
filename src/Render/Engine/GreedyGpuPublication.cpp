@@ -3,10 +3,15 @@
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/MeshPublishContract.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Streaming/ChunkRenderDemand.h"
+#include "glog/logging.h"
+#include <algorithm>
 #include <atomic>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace cutum
@@ -20,6 +25,9 @@ std::atomic<uint64_t> gPublicationProgressUnitN{0};
 std::atomic<uint64_t> gPubVerChangedWithoutFreshN{0};
 std::atomic<uint64_t> gPassMeshRevLagMax{0};
 std::atomic<uint64_t> gPublicationMaterialBlockIdFlipN{0};
+std::atomic<uint64_t> gScreenRayMaterialRetainAuditN{0};
+std::unordered_map<glm::ivec3, uint8_t, IVec3Hash>
+    gScreenRayMaterialRetainAuditByCoord;
 
 struct GpuBatchKey
 {
@@ -463,40 +471,67 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
       const uint64_t meshed_light = mesh_cache->GetMeshedLightRevision(coord);
       expected.light_rev =
           meshed_light != 0 ? meshed_light : publish_revs.light_rev;
+      std::vector<std::pair<uint16_t, uint16_t>> expected_batches;
+      std::unordered_set<uint16_t> expected_batch_indices;
       {
         std::vector<GreedyBatchRef> pass_refs;
         mesh_cache->AppendGreedyPassBatchRefs(coord, transparent_pass,
                                               pass_refs);
-        std::vector<uint16_t> expected_ids;
-        expected_ids.reserve(pass_refs.size());
+        expected_batches.reserve(pass_refs.size());
         for (const auto &ref : pass_refs)
         {
+          uint16_t block_id = static_cast<uint16_t>(ref.blockId);
           if (const GreedyMeshBatch *cpu = mesh_cache->TryGetGreedyBatch(ref))
           {
-            expected_ids.push_back(static_cast<uint16_t>(cpu->blockId));
+            block_id = static_cast<uint16_t>(cpu->blockId);
           }
-          else
-          {
-            expected_ids.push_back(static_cast<uint16_t>(ref.blockId));
-          }
+          expected_batches.emplace_back(ref.batchIndex, block_id);
         }
-        expected.material_stamp =
-            MeshPublishMaterialStamp(expected_ids.data(), expected_ids.size());
+        std::sort(expected_batches.begin(), expected_batches.end(),
+                  [](const auto &a, const auto &b)
+                  { return a.first < b.first; });
+        expected_batch_indices.reserve(expected_batches.size());
+        for (const auto &entry : expected_batches)
+        {
+          expected_batch_indices.insert(entry.first);
+        }
       }
-      std::vector<uint16_t> got_ids;
-      got_ids.reserve(group_fresh.size());
+      std::unordered_map<uint16_t, uint16_t> got_id_by_batch_index;
+      got_id_by_batch_index.reserve(group_fresh.size());
       for (const auto &gpu : group_fresh)
       {
-        got_ids.push_back(static_cast<uint16_t>(gpu.blockId));
+        got_id_by_batch_index[gpu.batchIndex] =
+            static_cast<uint16_t>(gpu.blockId);
       }
+      std::vector<uint16_t> expected_ids;
+      std::vector<uint16_t> got_ids;
+      expected_ids.reserve(expected_batches.size());
+      got_ids.reserve(expected_batches.size());
+      for (const auto &[batch_index, expected_block_id] : expected_batches)
+      {
+        expected_ids.push_back(expected_block_id);
+        const auto got_it = got_id_by_batch_index.find(batch_index);
+        if (got_it != got_id_by_batch_index.end())
+        {
+          got_ids.push_back(got_it->second);
+        }
+      }
+      expected.material_stamp =
+          MeshPublishMaterialStamp(expected_ids.data(), expected_ids.size());
       MeshPublishRevs got{};
       got.geom_rev = mesh_revision;
       got.light_rev = expected.light_rev;
       got.material_stamp =
           MeshPublishMaterialStamp(got_ids.data(), got_ids.size());
+      const bool complete_material_payload =
+          expected_ids.size() == got_ids.size();
       bool material_flip = false;
       for (const auto &gpu : group_fresh)
       {
+        if (expected_batch_indices.count(gpu.batchIndex) == 0)
+        {
+          continue;
+        }
         const auto found =
             resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
         if (found == resident.end())
@@ -510,9 +545,80 @@ bool UGreedyGpuBackend::ApplyPublicationDelta(GreedyGpuPassCache &cache,
         }
       }
       if (material_flip &&
-          !ShouldAcceptMaterialBlockIdFlip(got, expected, /*gpu_ready=*/true,
-                                           true))
+          (!complete_material_payload ||
+           !ShouldAcceptMaterialBlockIdFlip(got, expected,
+                                            /*gpu_ready=*/true, true)))
       {
+        if (UJobStageTrace::VisualBlackTraceEnabled() &&
+            mesh_cache->HasScreenRayRepairPin(coord))
+        {
+          // PublishPassInputs runs on the render thread. Keep this diagnostic
+          // bounded globally and per ray-confirmed slice so one hot coord
+          // cannot hide later material-retain examples on the route.
+          uint8_t &coord_records = gScreenRayMaterialRetainAuditByCoord[coord];
+          const uint64_t total_records =
+              gScreenRayMaterialRetainAuditN.load(std::memory_order_relaxed);
+          if (coord_records < 8 && total_records < 128)
+          {
+            ++coord_records;
+            gScreenRayMaterialRetainAuditN.fetch_add(
+                1, std::memory_order_relaxed);
+            auto join_ids = [](const std::vector<uint16_t> &ids)
+            {
+              std::ostringstream joined;
+              for (size_t i = 0; i < ids.size(); ++i)
+              {
+                if (i != 0)
+                {
+                  joined << ',';
+                }
+                joined << ids[i];
+              }
+              return joined.str();
+            };
+            std::ostringstream flips;
+            bool first_flip = true;
+            for (const auto &gpu : group_fresh)
+            {
+              if (expected_batch_indices.count(gpu.batchIndex) == 0)
+              {
+                continue;
+              }
+              const auto found =
+                  resident.find(GpuBatchKey{gpu.chunkCoord, gpu.batchIndex});
+              if (found == resident.end())
+              {
+                continue;
+              }
+              const uint16_t prior_id = cache.batches[found->second].blockId;
+              if (prior_id == gpu.blockId)
+              {
+                continue;
+              }
+              if (!first_flip)
+              {
+                flips << ',';
+              }
+              first_flip = false;
+              flips << gpu.batchIndex << ':' << prior_id << "->" << gpu.blockId;
+            }
+            LOG(INFO) << "[ScreenRayMaterialRetain] coord=(" << coord.x << ','
+                      << coord.y << ',' << coord.z << ") pass="
+                      << (transparent_pass ? "transparent" : "opaque")
+                      << " pass_mesh_revision=" << mesh_revision
+                      << " current_chunk_mesh_rev="
+                      << mesh_cache->GetChunkMeshRevision(coord)
+                      << " expected_geom=" << expected.geom_rev
+                      << " expected_light=" << expected.light_rev
+                      << " expected_material=" << expected.material_stamp
+                      << " got_material=" << got.material_stamp
+                      << " flips=[" << flips.str()
+                      << "] expected_ids_by_batch_index=["
+                      << join_ids(expected_ids)
+                      << "] got_ids_by_batch_index=[" << join_ids(got_ids)
+                      << ']';
+          }
+        }
         // Retain prior + keep dirty for remesh — do not commit flip.
         for (auto &gpu : group_fresh)
           ReleasePooledBatch(gpu, cache.VertexPool);
