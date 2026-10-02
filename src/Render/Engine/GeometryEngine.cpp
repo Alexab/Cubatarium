@@ -4321,8 +4321,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     if (mdi)
     {
       ScopedPhase cull_phase(&cull_ms);
-      // Q8: HUD arms delayed CullStats readback; cruise stays CPU AABB fallback.
-      mdi->SetCullStatsReadbackEnabled(ShowPerformance);
+      // Keep exact GPU CullStats reads out of the frame path. The fence is
+      // polled with timeout=0, but glGetBufferSubData can still stall the CPU.
+      // LastCullOpaqueOn falls back to the CPU AABB estimate for reuse policy;
+      // exact readback remains available through the explicit one-shot request.
+      mdi->SetCullStatsReadbackEnabled(false);
       // Phase 5.3.4 / audit M06: CullInputKey-gated skip + light-cruise + reuse.
       float move_spd = 0.0f;
       bool focus_missing = false;

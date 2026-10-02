@@ -364,7 +364,7 @@ void UMdiVertexPoolStore::PollCullStatsAsyncRing()
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
       }
       ++gCullStatsReadback;
-      // Not a sync stall: fence already signaled before SubData.
+      // The fence is signaled, but the driver readback call can still stall CPU.
       StagedCullStatsVisible_ = visible;
       StagedCullStatsValid_ = true;
     }

@@ -99,7 +99,10 @@ public:
   double LastCullGpuExecMs() const;
   bool CullGpuTimingAvailable() const { return CullGpuTimingAvailable_; }
 
-  /// Enable async CullStats HUD samples (fence + staging; no blocking SubData).
+  /// Opt in to repeated exact GPU CullStats samples. The fence uses a zero-time
+  /// poll, but the later staging-buffer read can still stall the CPU; keep this
+  /// disabled on the normal render path and use RequestCullStatsReadbackOnce()
+  /// for explicit diagnostics.
   void SetCullStatsReadbackEnabled(bool enabled)
   {
     CullStatsReadbackEnabled_ = enabled;
