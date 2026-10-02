@@ -423,6 +423,17 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_voxel_previous_block_id{-1};
   uint8_t renderer_pixel_voxel_entry_face{0xffu};
   float renderer_pixel_voxel_hit_distance{-1.0f};
+  /// Exact expected entry-face coverage for the voxel-ray hit, checked against
+  /// the CPU greedy source and its current opaque GPU command/material.
+  uint8_t renderer_pixel_voxel_face_source_valid{0};
+  float renderer_pixel_voxel_face_source_distance{-1.0f};
+  uint8_t renderer_pixel_voxel_face_batch_ref{0};
+  uint8_t renderer_pixel_voxel_face_gpu_command{0};
+  uint8_t renderer_pixel_voxel_face_gpu_pooled{0};
+  uint32_t renderer_pixel_voxel_face_gpu_index_count{0};
+  uint32_t renderer_pixel_voxel_face_gpu_instances{0};
+  uint8_t renderer_pixel_voxel_face_texture_ready{0};
+  uint32_t renderer_pixel_voxel_face_texture_id{0};
   float renderer_pixel_opaque_hit_distance{-1.0f};
   int32_t renderer_pixel_voxel_chunk_x{0};
   int32_t renderer_pixel_voxel_chunk_y{0};

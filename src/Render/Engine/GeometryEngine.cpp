@@ -1072,6 +1072,89 @@ void CaptureTransparentPixelProbe(
           record.renderer_pixel_voxel_hit_distance = voxel_witness.distance;
           const glm::ivec3 voxel_chunk =
               UChunkManager::WorldToChunk(voxel_witness.block);
+          if (voxel_witness.entry_face < 6u)
+          {
+            const glm::vec3 expected_face_point =
+                glm::vec3(voxel_witness.block) +
+                glm::vec3(GreedyFaceNormal(voxel_witness.entry_face)) * 0.5f;
+            GreedyVertexLightMatch voxel_face_source{};
+            int matched_batch_index = -1;
+            for (const GreedyBatchRef &ref : opaque_refs)
+            {
+              if (ref.chunkCoord != voxel_chunk ||
+                  ref.blockId != voxel_witness.block_id)
+              {
+                continue;
+              }
+              record.renderer_pixel_voxel_face_batch_ref = 1;
+              const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
+              if (!batch || batch->blockId != voxel_witness.block_id)
+              {
+                continue;
+              }
+              GreedyVertexLightMatch candidate{};
+              for (size_t index = 0; index + 2u < batch->indices.size();
+                   index += 3u)
+              {
+                const uint32_t ia = batch->indices[index];
+                const uint32_t ib = batch->indices[index + 1u];
+                const uint32_t ic = batch->indices[index + 2u];
+                if (ia >= batch->vertices.size() ||
+                    ib >= batch->vertices.size() ||
+                    ic >= batch->vertices.size())
+                {
+                  continue;
+                }
+                ConsiderGreedyVertexLightTriangle(
+                    expected_face_point, *batch, batch->vertices[ia],
+                    batch->vertices[ib], batch->vertices[ic], candidate,
+                    voxel_witness.entry_face);
+              }
+              if (candidate.distance < voxel_face_source.distance)
+              {
+                voxel_face_source = candidate;
+                matched_batch_index = static_cast<int>(ref.batchIndex);
+              }
+            }
+            if (std::isfinite(voxel_face_source.distance))
+            {
+              record.renderer_pixel_voxel_face_source_distance =
+                  voxel_face_source.distance;
+              record.renderer_pixel_voxel_face_source_valid =
+                  voxel_face_source.valid ? 1u : 0u;
+            }
+            const auto texture =
+                textures.find(static_cast<size_t>(voxel_witness.block_id));
+            if (texture != textures.end())
+            {
+              record.renderer_pixel_voxel_face_texture_id =
+                  texture->second.GetTextureId();
+              record.renderer_pixel_voxel_face_texture_ready =
+                  record.renderer_pixel_voxel_face_texture_id != 0 ? 1u : 0u;
+            }
+            if (matched_batch_index >= 0)
+            {
+              for (const GreedyGpuBatch &gpu : mdi_opaque_pass.batches)
+              {
+                if (gpu.chunkCoord != voxel_chunk ||
+                    gpu.blockId != voxel_witness.block_id ||
+                    gpu.batchIndex !=
+                        static_cast<uint16_t>(matched_batch_index))
+                {
+                  continue;
+                }
+                record.renderer_pixel_voxel_face_gpu_command =
+                    gpu.indexCountGl > 0 ? 1u : 0u;
+                record.renderer_pixel_voxel_face_gpu_pooled =
+                    gpu.pooled ? 1u : 0u;
+                record.renderer_pixel_voxel_face_gpu_index_count =
+                    static_cast<uint32_t>(std::max(0, gpu.indexCountGl));
+                record.renderer_pixel_voxel_face_gpu_instances =
+                    gpu.drawInstanceCount;
+                break;
+              }
+            }
+          }
           record.renderer_pixel_voxel_chunk_x = voxel_chunk.x;
           record.renderer_pixel_voxel_chunk_y = voxel_chunk.y;
           record.renderer_pixel_voxel_chunk_z = voxel_chunk.z;

@@ -3682,6 +3682,24 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.renderer_pixel_voxel_entry_face)
                << ",\"renderer_pixel_voxel_hit_distance\":"
                << r.renderer_pixel_voxel_hit_distance
+               << ",\"renderer_pixel_voxel_face_source_valid\":"
+               << static_cast<int>(r.renderer_pixel_voxel_face_source_valid)
+               << ",\"renderer_pixel_voxel_face_source_distance\":"
+               << r.renderer_pixel_voxel_face_source_distance
+               << ",\"renderer_pixel_voxel_face_batch_ref\":"
+               << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
+               << ",\"renderer_pixel_voxel_face_gpu_command\":"
+               << static_cast<int>(r.renderer_pixel_voxel_face_gpu_command)
+               << ",\"renderer_pixel_voxel_face_gpu_pooled\":"
+               << static_cast<int>(r.renderer_pixel_voxel_face_gpu_pooled)
+               << ",\"renderer_pixel_voxel_face_gpu_index_count\":"
+               << r.renderer_pixel_voxel_face_gpu_index_count
+               << ",\"renderer_pixel_voxel_face_gpu_instances\":"
+               << r.renderer_pixel_voxel_face_gpu_instances
+               << ",\"renderer_pixel_voxel_face_texture_ready\":"
+               << static_cast<int>(r.renderer_pixel_voxel_face_texture_ready)
+               << ",\"renderer_pixel_voxel_face_texture_id\":"
+               << r.renderer_pixel_voxel_face_texture_id
                << ",\"renderer_pixel_opaque_hit_distance\":"
                << r.renderer_pixel_opaque_hit_distance
                << ",\"renderer_pixel_voxel_chunk_x\":"
