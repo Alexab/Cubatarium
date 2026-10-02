@@ -26,6 +26,8 @@ public:
   /// Keep a screen-ray-confirmed geometry hole at the head of visible repair
   /// work, including across queue sorting and deferred RAA ownership.
   bool PrioritizeScreenRayRemesh(glm::ivec3 coord);
+  /// Drop a deferred ray pin after its visual demand and debt are satisfied.
+  void ClearDeferredScreenRayRemesh(glm::ivec3 coord);
   void AdvanceScheduleFrame() { ++ScheduleFrame; }
   void Erase(glm::ivec3 coord);
   void Clear();

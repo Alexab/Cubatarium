@@ -367,10 +367,17 @@ bool UChunkDirtySet::PrioritizeScreenRayRemesh(glm::ivec3 coord)
   }
   if (ScreenRayRemeshSet.count(coord) > 0)
   {
+    // Keep one successor pin while this ticket is owned by the queue. If the
+    // queue item is consumed before a later face-debt invalidation, that next
+    // Dirty ticket must inherit the exact screen-ray witness.
+    DeferredPriorityRemeshSet.insert(coord);
+    DeferredScreenRayRemeshSet.insert(coord);
     return true;
   }
   PriorityRemeshSet.insert(coord);
   ScreenRayRemeshSet.insert(coord);
+  DeferredPriorityRemeshSet.insert(coord);
+  DeferredScreenRayRemeshSet.insert(coord);
   const auto it = std::find(RemeshQ.begin(), RemeshQ.end(), coord);
   if (it != RemeshQ.end())
   {
@@ -382,6 +389,14 @@ bool UChunkDirtySet::PrioritizeScreenRayRemesh(glm::ivec3 coord)
     InvalidateUnified();
   }
   return true;
+}
+
+void UChunkDirtySet::ClearDeferredScreenRayRemesh(glm::ivec3 coord)
+{
+  if (DeferredScreenRayRemeshSet.erase(coord) > 0)
+  {
+    DeferredPriorityRemeshSet.erase(coord);
+  }
 }
 
 void UChunkDirtySet::Erase(glm::ivec3 coord)
@@ -431,8 +446,18 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
 {
   EnsureUnified();
   const glm::ivec3 coord = *it;
-  DeferredPriorityRemeshSet.erase(coord);
-  DeferredScreenRayRemeshSet.erase(coord);
+  const bool preserve_screen_ray_successor =
+      ScreenRayRemeshSet.count(coord) > 0;
+  if (preserve_screen_ray_successor)
+  {
+    DeferredPriorityRemeshSet.insert(coord);
+    DeferredScreenRayRemeshSet.insert(coord);
+  }
+  else
+  {
+    DeferredPriorityRemeshSet.erase(coord);
+    DeferredScreenRayRemeshSet.erase(coord);
+  }
   // Erase from owning queue without Invalidate mid-erase of unified.
   if (FirstMeshSet.erase(coord) > 0)
   {

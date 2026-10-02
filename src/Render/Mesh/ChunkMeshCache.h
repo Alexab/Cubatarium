@@ -1456,6 +1456,7 @@ private:
       glm::ivec3 chunk_coord, MeshRevisionBumpReason reason) const;
   void BumpChunkMeshRevision(glm::ivec3 chunk_coord,
                              MeshRevisionBumpReason reason);
+  void ClearSatisfiedScreenRayRepairPin(glm::ivec3 chunk_coord);
   void DrainMeshDependencyInvalidations(UBlockWorld &world,
                                         int max_schedule_per_frame);
   void DrainStaleLightRemeshDebt(UBlockWorld &world,

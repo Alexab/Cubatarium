@@ -3287,10 +3287,18 @@ bool UChunkMeshCache::PrioritizeVisibleLightRepairRemesh(
 bool UChunkMeshCache::PrioritizeScreenRayRepairRemesh(
     glm::ivec3 chunkCoord)
 {
-  // There is no RemeshQ member while an active build owns a follow-up in RAA.
-  // Remember the exact pixel witness only for that explicit deferred owner.
-  if (!Dirty.Contains(chunkCoord) &&
-      RemeshAfterApply.count(chunkCoord) == 0)
+  // The current Dirty ticket can be consumed while the async/capture/GPU
+  // pipeline still owns the target. Keep the exact ray witness through that
+  // owner so a later FaceDebtCallback successor does not return to ordinary
+  // RemeshQ behind unrelated work.
+  const bool has_owner =
+      Dirty.Contains(chunkCoord) || RemeshAfterApply.count(chunkCoord) > 0 ||
+      ActiveMeshSourceRevision.count(chunkCoord) > 0 ||
+      HasInflightMeshBuild(chunkCoord) || IsGpuExtractInFlight(chunkCoord) ||
+      IsPendingGpuApply(chunkCoord) || IsPendingGpuQueued(chunkCoord) ||
+      IsPendingGpuKickedOrDispatched(chunkCoord) ||
+      HasPendingCaptureWork(chunkCoord);
+  if (!has_owner)
   {
     return false;
   }
@@ -3302,6 +3310,32 @@ bool UChunkMeshCache::PrioritizeScreenRayRepairRemesh(
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
   return true;
+}
+
+void UChunkMeshCache::ClearSatisfiedScreenRayRepairPin(
+    glm::ivec3 chunkCoord)
+{
+  if (Dirty.Contains(chunkCoord) || RemeshAfterApply.count(chunkCoord) > 0 ||
+      MeshRevisions.Current(chunkCoord) >
+          GetMeshPublishRevs(chunkCoord).geom_rev)
+  {
+    return;
+  }
+  // A mesh publication can close the current revision while the slice still
+  // owns face/coverage debt. FaceDebtCallback may create a successor after
+  // ApplyMeshResult returns, so publishing one revision is not sufficient to
+  // retire a ray witness for a still-visible hole.
+  if (const ChunkRenderDemandRecord *demand =
+          UChunkRenderDemandStore::Get().Find(chunkCoord))
+  {
+    if (demand->desired_geom_rev > demand->published_geom_rev ||
+        demand->desired_coverage_gen > demand->published_coverage_gen ||
+        demand->face_debt_mask != 0 || demand->retained_awaiting_successor)
+    {
+      return;
+    }
+  }
+  Dirty.ClearDeferredScreenRayRemesh(chunkCoord);
 }
 
 void UChunkMeshCache::QueueMeshDependencyInvalidations(
@@ -7581,6 +7615,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       chunkMesh.GpuSlotIndex = -1;
       chunkMesh.GpuQuadCount = 0;
     }
+    ClearSatisfiedScreenRayRepairPin(result.coord);
     return;
   }
   if (had_gpu_resident)
@@ -7696,6 +7731,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     ++MeshApplyStaleAcceptedRefreshCount;
   }
   TryConsumeFmDirtyGpuWatch(result.coord);
+  ClearSatisfiedScreenRayRepairPin(result.coord);
 }
 
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
@@ -10158,8 +10194,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   const int sync_budget = std::max(max_drain_per_frame, max_schedule_per_frame);
   for (auto it = Dirty.begin(); it != Dirty.end() && rebuilt < sync_budget;)
   {
-    RebuildChunk(world, registry, *it);
+    const glm::ivec3 coord = *it;
+    RebuildChunk(world, registry, coord);
     it = Dirty.RemoveAt(it);
+    ClearSatisfiedScreenRayRepairPin(coord);
     ++rebuilt;
     ++stats.SyncRebuilt;
     ++stats.Completed;
