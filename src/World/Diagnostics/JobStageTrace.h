@@ -347,6 +347,14 @@ struct VisualBlackTraceRecord
   float renderer_source_sky_light_max{0.0f};
   float renderer_source_block_light_min{0.0f};
   float renderer_source_block_light_max{0.0f};
+  uint8_t renderer_pixel_fluid_triangle_match{0};
+  float renderer_pixel_fluid_triangle_distance{-1.0f};
+  int32_t renderer_pixel_fluid_face_index{-1};
+  int32_t renderer_pixel_fluid_block_id{-1};
+  float renderer_pixel_fluid_sky_light{-1.0f};
+  float renderer_pixel_fluid_block_light{-1.0f};
+  float renderer_pixel_fluid_light_preview{-1.0f};
+  float renderer_pixel_fluid_wetness{-1.0f};
   uint64_t renderer_pixel_probe_id{0};
   /// sample_kind=10: exact streaming screen-ray sample and selector decision.
   /// Screen coordinates use top-left pixel space. Columns map to the
@@ -376,6 +384,13 @@ struct VisualBlackTraceRecord
   uint32_t renderer_pixel_rgba{0};
   uint32_t renderer_pixel_pretransparent_rgba{0};
   float renderer_pixel_pretransparent_depth{1.0f};
+  float renderer_pixel_shader_min_ambient{0.12f};
+  float renderer_pixel_shader_day_factor{1.0f};
+  float renderer_pixel_shader_night_factor{0.0f};
+  float renderer_pixel_shader_sky_scale{1.0f};
+  float renderer_pixel_shader_precipitation{0.0f};
+  float renderer_pixel_shader_wetness{0.0f};
+  float renderer_pixel_shader_light_debug_mode{0.0f};
   uint8_t renderer_pixel_marker_visible{0};
   /// Valid bit plus seven-bit marker occupancy on the sampled scanline.
   uint8_t renderer_pixel_surface_valid{0};

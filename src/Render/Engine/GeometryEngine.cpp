@@ -195,7 +195,7 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
   capture.active = true;
 }
 
-struct OpaqueVertexLightMatch
+struct GreedyVertexLightMatch
 {
   bool valid{false};
   float distance{std::numeric_limits<float>::infinity()};
@@ -203,6 +203,7 @@ struct OpaqueVertexLightMatch
   float sky{0.0f};
   float block{0.0f};
   float preview{0.0f};
+  float wetness{0.0f};
   int face_index{-1};
   BlockId block_id{BLOCK_AIR};
 };
@@ -344,17 +345,19 @@ ClosestTrianglePoint ClosestPointOnTriangle(const glm::vec3 &p,
   return {a + ab * v + ac * w, glm::vec3(1.0f - v - w, v, w)};
 }
 
-void ConsiderOpaqueVertexLightTriangle(const glm::vec3 &surface,
+void ConsiderGreedyVertexLightTriangle(const glm::vec3 &surface,
                                        const GreedyMeshBatch &batch,
                                        const GreedyMeshVertex &a,
                                        const GreedyMeshVertex &b,
                                        const GreedyMeshVertex &c,
-                                       OpaqueVertexLightMatch &best)
+                                       GreedyVertexLightMatch &best,
+                                       int required_face_index = -1)
 {
   const int face_index = static_cast<int>(a.faceIndex + 0.5f);
   if (face_index < 0 || face_index >= 6 ||
       static_cast<int>(b.faceIndex + 0.5f) != face_index ||
-      static_cast<int>(c.faceIndex + 0.5f) != face_index)
+      static_cast<int>(c.faceIndex + 0.5f) != face_index ||
+      (required_face_index >= 0 && face_index != required_face_index))
   {
     return;
   }
@@ -381,6 +384,9 @@ void ConsiderOpaqueVertexLightTriangle(const glm::vec3 &surface,
   best.preview = a.lightPreview * closest.barycentric.x +
                  b.lightPreview * closest.barycentric.y +
                  c.lightPreview * closest.barycentric.z;
+  best.wetness = a.wetness * closest.barycentric.x +
+                 b.wetness * closest.barycentric.y +
+                 c.wetness * closest.barycentric.z;
   best.face_index = face_index;
   best.block_id = batch.blockId;
   best.valid = distance <= kOpaqueVertexLightMatchDistance;
@@ -847,7 +853,7 @@ void CaptureTransparentPixelProbe(
                 opaque_chunk_data->GetLightFieldRevision();
           }
 
-          OpaqueVertexLightMatch opaque_vertex_light{};
+          GreedyVertexLightMatch opaque_vertex_light{};
           const glm::vec3 opaque_surface(opaque_point);
           const auto collect_opaque_source =
               [&](const std::vector<GreedyBatchRef> &refs)
@@ -877,7 +883,7 @@ void CaptureTransparentPixelProbe(
                 {
                   continue;
                 }
-                ConsiderOpaqueVertexLightTriangle(
+                ConsiderGreedyVertexLightTriangle(
                     opaque_surface, *batch, batch->vertices[ia],
                     batch->vertices[ib], batch->vertices[ic],
                     opaque_vertex_light);
@@ -1302,6 +1308,24 @@ void CaptureTransparentPixelProbe(
             record.renderer_pixel_surface_x = surface_point.x;
             record.renderer_pixel_surface_y = surface_point.y;
             record.renderer_pixel_surface_z = surface_point.z;
+            const UWorld::EnvironmentState &shader_env =
+                world.GetEnvironmentState();
+            const UWorld::LightingSettings &shader_lighting =
+                world.GetLightingSettings();
+            record.renderer_pixel_shader_min_ambient =
+                shader_lighting.MinAmbient;
+            record.renderer_pixel_shader_day_factor =
+                shader_env.DayNightFactor;
+            record.renderer_pixel_shader_night_factor =
+                shader_env.MoonNightFactor;
+            record.renderer_pixel_shader_sky_scale =
+                EnvironmentSkyLightScale(shader_env);
+            record.renderer_pixel_shader_precipitation =
+                shader_env.PrecipitationIntensity;
+            record.renderer_pixel_shader_wetness =
+                shader_env.SurfaceWetness;
+            record.renderer_pixel_shader_light_debug_mode =
+                shader_lighting.DebugMode;
             const glm::ivec3 surface_cell(
                 static_cast<int>(std::floor(surface_point.x)),
                 static_cast<int>(std::floor(surface_point.y)),
@@ -1473,6 +1497,7 @@ void CaptureTransparentPixelProbe(
             float source_sky_max = -std::numeric_limits<float>::infinity();
             float source_block_min = std::numeric_limits<float>::infinity();
             float source_block_max = -std::numeric_limits<float>::infinity();
+            GreedyVertexLightMatch fluid_vertex_light{};
             for (const GreedyBatchRef &ref : transparent_refs)
             {
               if (ref.chunkCoord != surface_chunk ||
@@ -1485,6 +1510,23 @@ void CaptureTransparentPixelProbe(
               if (!source)
               {
                 continue;
+              }
+              for (size_t index = 0; index + 2u < source->indices.size();
+                   index += 3u)
+              {
+                const uint32_t ia = source->indices[index];
+                const uint32_t ib = source->indices[index + 1u];
+                const uint32_t ic = source->indices[index + 2u];
+                if (ia >= source->vertices.size() ||
+                    ib >= source->vertices.size() ||
+                    ic >= source->vertices.size())
+                {
+                  continue;
+                }
+                ConsiderGreedyVertexLightTriangle(
+                    surface_point, *source, source->vertices[ia],
+                    source->vertices[ib], source->vertices[ic],
+                    fluid_vertex_light, /*required_face_index=*/4);
               }
               const auto texture_it =
                   textures.find(static_cast<size_t>(source->blockId));
@@ -1534,6 +1576,25 @@ void CaptureTransparentPixelProbe(
               record.renderer_source_sky_light_max = source_sky_max;
               record.renderer_source_block_light_min = source_block_min;
               record.renderer_source_block_light_max = source_block_max;
+            }
+            if (std::isfinite(fluid_vertex_light.distance))
+            {
+              record.renderer_pixel_fluid_triangle_match =
+                  fluid_vertex_light.valid ? 1u : 0u;
+              record.renderer_pixel_fluid_triangle_distance =
+                  fluid_vertex_light.distance;
+              record.renderer_pixel_fluid_face_index =
+                  fluid_vertex_light.face_index;
+              record.renderer_pixel_fluid_block_id =
+                  static_cast<int32_t>(fluid_vertex_light.block_id);
+              record.renderer_pixel_fluid_sky_light =
+                  fluid_vertex_light.sky;
+              record.renderer_pixel_fluid_block_light =
+                  fluid_vertex_light.block;
+              record.renderer_pixel_fluid_light_preview =
+                  fluid_vertex_light.preview;
+              record.renderer_pixel_fluid_wetness =
+                  fluid_vertex_light.wetness;
             }
 
             const uint32_t pretransparent_rgba =

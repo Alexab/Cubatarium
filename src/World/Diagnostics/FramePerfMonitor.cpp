@@ -3586,6 +3586,22 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_source_block_light_min
                << ",\"renderer_source_block_light_max\":"
                << r.renderer_source_block_light_max
+               << ",\"renderer_pixel_fluid_triangle_match\":"
+               << static_cast<int>(r.renderer_pixel_fluid_triangle_match)
+               << ",\"renderer_pixel_fluid_triangle_distance\":"
+               << r.renderer_pixel_fluid_triangle_distance
+               << ",\"renderer_pixel_fluid_face_index\":"
+               << r.renderer_pixel_fluid_face_index
+               << ",\"renderer_pixel_fluid_block_id\":"
+               << r.renderer_pixel_fluid_block_id
+               << ",\"renderer_pixel_fluid_sky_light\":"
+               << r.renderer_pixel_fluid_sky_light
+               << ",\"renderer_pixel_fluid_block_light\":"
+               << r.renderer_pixel_fluid_block_light
+               << ",\"renderer_pixel_fluid_light_preview\":"
+               << r.renderer_pixel_fluid_light_preview
+               << ",\"renderer_pixel_fluid_wetness\":"
+               << r.renderer_pixel_fluid_wetness
                << ",\"renderer_pixel_probe_id\":"
                << r.renderer_pixel_probe_id
                << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
@@ -3595,6 +3611,20 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_pretransparent_rgba
                << ",\"renderer_pixel_pretransparent_depth\":"
                << r.renderer_pixel_pretransparent_depth
+               << ",\"renderer_pixel_shader_min_ambient\":"
+               << r.renderer_pixel_shader_min_ambient
+               << ",\"renderer_pixel_shader_day_factor\":"
+               << r.renderer_pixel_shader_day_factor
+               << ",\"renderer_pixel_shader_night_factor\":"
+               << r.renderer_pixel_shader_night_factor
+               << ",\"renderer_pixel_shader_sky_scale\":"
+               << r.renderer_pixel_shader_sky_scale
+               << ",\"renderer_pixel_shader_precipitation\":"
+               << r.renderer_pixel_shader_precipitation
+               << ",\"renderer_pixel_shader_wetness\":"
+               << r.renderer_pixel_shader_wetness
+               << ",\"renderer_pixel_shader_light_debug_mode\":"
+               << r.renderer_pixel_shader_light_debug_mode
                << ",\"renderer_pixel_marker_mode\":"
                << (r.renderer_pixel_marker_visible != 2 ? "true" : "false")
                << ",\"renderer_pixel_marker_visible\":"
