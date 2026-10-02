@@ -901,8 +901,16 @@ struct PhysicsTelemetry
   std::string BackendCull{"cpu_frustum"};
   uint64_t GpuDrawCmds{0};
   double GpuCullMs{0.0};
-  /// CPU wall around GPU compact dispatch + barrier (not GPU execution).
+  /// CPU wall around opaque compact GL command submission (not GPU execution).
   double CullSubmitCpuMs{0.0};
+  /// Opaque MDI compact-cull CPU wall split into measured subphases.
+  double OpaqueMdiCullTotalMs{0.0};
+  double OpaqueMdiCullAabbProbeCpuMs{0.0};
+  double OpaqueMdiCullFallbackCpuMs{0.0};
+  double OpaqueMdiCullSetupCpuMs{0.0};
+  double OpaqueMdiCullQueryPollCpuMs{0.0};
+  double OpaqueMdiCullPostSubmitCpuMs{0.0};
+  double OpaqueMdiCullUnattributedCpuMs{0.0};
   /// Delayed GL_TIME_ELAPSED when available; <0 = unavailable sample.
   double CullGpuExecMs{-1.0};
   double VertexPoolFill{0.0};

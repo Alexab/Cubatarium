@@ -4464,6 +4464,13 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
     phys.CullSubmitCpuMs = 0.0;
     phys.CullGpuExecMs = -1.0;
+    phys.OpaqueMdiCullTotalMs = 0.0;
+    phys.OpaqueMdiCullAabbProbeCpuMs = 0.0;
+    phys.OpaqueMdiCullFallbackCpuMs = 0.0;
+    phys.OpaqueMdiCullSetupCpuMs = 0.0;
+    phys.OpaqueMdiCullQueryPollCpuMs = 0.0;
+    phys.OpaqueMdiCullPostSubmitCpuMs = 0.0;
+    phys.OpaqueMdiCullUnattributedCpuMs = 0.0;
     phys.GpuPoolUsedMb = static_cast<double>(used) / (1024.0 * 1024.0);
     phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
     phys.VertexPoolFill =
@@ -4530,6 +4537,19 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       }
       phys.GpuCullIndirect = 1.0;
       phys.CullSubmitCpuMs = mdi->LastCullSubmitCpuMs();
+      phys.OpaqueMdiCullTotalMs = mdi->LastCullTotalMs();
+      phys.OpaqueMdiCullAabbProbeCpuMs = mdi->LastCullAabbProbeCpuMs();
+      phys.OpaqueMdiCullFallbackCpuMs = mdi->LastCullFallbackCpuMs();
+      phys.OpaqueMdiCullSetupCpuMs = mdi->LastCullSetupCpuMs();
+      phys.OpaqueMdiCullQueryPollCpuMs = mdi->LastCullQueryPollCpuMs();
+      phys.OpaqueMdiCullPostSubmitCpuMs = mdi->LastCullPostSubmitCpuMs();
+      const double mdi_cull_attributed =
+          phys.OpaqueMdiCullAabbProbeCpuMs +
+          phys.OpaqueMdiCullFallbackCpuMs + phys.OpaqueMdiCullSetupCpuMs +
+          phys.OpaqueMdiCullQueryPollCpuMs + phys.CullSubmitCpuMs +
+          phys.OpaqueMdiCullPostSubmitCpuMs;
+      phys.OpaqueMdiCullUnattributedCpuMs =
+          (std::max)(0.0, phys.OpaqueMdiCullTotalMs - mdi_cull_attributed);
       if (mdi->CullGpuTimingAvailable())
       {
         phys.CullGpuExecMs = mdi->LastCullGpuExecMs();

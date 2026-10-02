@@ -914,6 +914,13 @@ struct FrameNumbers
   double gpu_cull_cpu_ms{0.0};
   double gpu_cull_submit_cpu_ms{0.0};
   double gpu_cull_exec_ms{-1.0};
+  double opaque_mdi_cull_total_ms{0.0};
+  double opaque_mdi_cull_aabb_probe_ms{0.0};
+  double opaque_mdi_cull_fallback_ms{0.0};
+  double opaque_mdi_cull_setup_ms{0.0};
+  double opaque_mdi_cull_query_poll_ms{0.0};
+  double opaque_mdi_cull_post_submit_ms{0.0};
+  double opaque_mdi_cull_unattributed_ms{0.0};
   uint64_t gpu_blocklight_flood{0};
   uint64_t gpu_fluid_readback{0};
   uint64_t gpu_light_readback{0};
@@ -1670,6 +1677,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.gpu_cull_cpu_ms = phys.GpuCullMs;
   n.gpu_cull_submit_cpu_ms = phys.CullSubmitCpuMs;
   n.gpu_cull_exec_ms = phys.CullGpuExecMs;
+  n.opaque_mdi_cull_total_ms = phys.OpaqueMdiCullTotalMs;
+  n.opaque_mdi_cull_aabb_probe_ms = phys.OpaqueMdiCullAabbProbeCpuMs;
+  n.opaque_mdi_cull_fallback_ms = phys.OpaqueMdiCullFallbackCpuMs;
+  n.opaque_mdi_cull_setup_ms = phys.OpaqueMdiCullSetupCpuMs;
+  n.opaque_mdi_cull_query_poll_ms = phys.OpaqueMdiCullQueryPollCpuMs;
+  n.opaque_mdi_cull_post_submit_ms = phys.OpaqueMdiCullPostSubmitCpuMs;
+  n.opaque_mdi_cull_unattributed_ms = phys.OpaqueMdiCullUnattributedCpuMs;
   n.vertex_pool_fill = phys.VertexPoolFill;
   n.gpu_cull_indirect = phys.GpuCullIndirect;
   n.opaque_cmd_total = phys.OpaqueCmdTotal;
@@ -2602,6 +2616,20 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_cull_cpu_ms\":" << n.gpu_cull_cpu_ms
           << ",\"gpu_cull_submit_cpu_ms\":" << n.gpu_cull_submit_cpu_ms
           << ",\"gpu_cull_exec_ms\":" << n.gpu_cull_exec_ms
+          << ",\"opaque_mdi_cull_total_ms\":"
+          << n.opaque_mdi_cull_total_ms
+          << ",\"opaque_mdi_cull_aabb_probe_ms\":"
+          << n.opaque_mdi_cull_aabb_probe_ms
+          << ",\"opaque_mdi_cull_fallback_ms\":"
+          << n.opaque_mdi_cull_fallback_ms
+          << ",\"opaque_mdi_cull_setup_ms\":"
+          << n.opaque_mdi_cull_setup_ms
+          << ",\"opaque_mdi_cull_query_poll_ms\":"
+          << n.opaque_mdi_cull_query_poll_ms
+          << ",\"opaque_mdi_cull_post_submit_ms\":"
+          << n.opaque_mdi_cull_post_submit_ms
+          << ",\"opaque_mdi_cull_unattributed_ms\":"
+          << n.opaque_mdi_cull_unattributed_ms
           << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
           << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
           << ",\"opaque_cmd_total\":" << n.opaque_cmd_total

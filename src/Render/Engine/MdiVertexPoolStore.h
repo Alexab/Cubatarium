@@ -72,8 +72,14 @@ public:
   uint64_t LastCullOpaqueTotal() const { return LastCullOpaqueTotal_; }
   uint64_t LastCullOpaqueOn() const { return LastCullOpaqueOn_; }
   uint64_t LastCpuAabbWouldOn() const { return LastCpuAabbWouldOn_; }
-  /// CPU wall around compact dispatch + barrier (not GPU execution time).
+  /// CPU wall around compact GL command submission (not GPU execution time).
   double LastCullSubmitCpuMs() const { return LastCullSubmitCpuMs_; }
+  double LastCullTotalMs() const { return LastCullTotalMs_; }
+  double LastCullAabbProbeCpuMs() const { return LastCullAabbProbeCpuMs_; }
+  double LastCullFallbackCpuMs() const { return LastCullFallbackCpuMs_; }
+  double LastCullSetupCpuMs() const { return LastCullSetupCpuMs_; }
+  double LastCullQueryPollCpuMs() const { return LastCullQueryPollCpuMs_; }
+  double LastCullPostSubmitCpuMs() const { return LastCullPostSubmitCpuMs_; }
   /// Delayed GPU timestamp when queries available; else unavailable (<0).
   double LastCullGpuExecMs() const;
   bool CullGpuTimingAvailable() const { return CullGpuTimingAvailable_; }
@@ -96,6 +102,12 @@ private:
   uint64_t LastCullOpaqueOn_{0};
   uint64_t LastCpuAabbWouldOn_{0};
   double LastCullSubmitCpuMs_{0.0};
+  double LastCullTotalMs_{0.0};
+  double LastCullAabbProbeCpuMs_{0.0};
+  double LastCullFallbackCpuMs_{0.0};
+  double LastCullSetupCpuMs_{0.0};
+  double LastCullQueryPollCpuMs_{0.0};
+  double LastCullPostSubmitCpuMs_{0.0};
   bool CullGpuTimingAvailable_{false};
 
   struct GpuTimestampQueryRing
