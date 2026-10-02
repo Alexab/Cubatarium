@@ -1152,6 +1152,8 @@ private:
     std::shared_ptr<const BlockDefinitionCatalog> inputCatalog;
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
     Phase phase{Phase::Queued};
+    std::chrono::steady_clock::time_point queuedAt{};
+    std::chrono::steady_clock::time_point phaseSince{};
     JobStageSpan stageTrace{};
     bool transparent{false};
     /// N04 H4: accepted light/geom-stale input — refresh Dirty after commit.

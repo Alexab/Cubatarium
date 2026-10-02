@@ -5481,6 +5481,17 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   int gpu_profile_quad_not_ready_n = 0;
   int gpu_profile_quad_failed_n = 0;
   const size_t gpu_profile_pending_begin = PendingGpuApplies.size();
+  const bool gpu_profile_free_readback_begin =
+      pipeline->HasFreeReadbackSlot();
+  int gpu_profile_queued_first_mesh_begin = 0;
+  int gpu_profile_queued_remesh_begin = 0;
+  int gpu_profile_focus_missing_queued_begin = 0;
+  double gpu_profile_oldest_pending_ms = 0.0;
+  double gpu_profile_oldest_queued_ms = 0.0;
+  double gpu_profile_oldest_dispatched_ms = 0.0;
+  double gpu_profile_oldest_kicked_ms = 0.0;
+  double gpu_profile_oldest_focus_missing_queued_ms = 0.0;
+  std::string gpu_profile_kick_stop_reason;
 
   const auto t0 = std::chrono::high_resolution_clock::now();
   auto elapsed_ms = [&]() {
@@ -5494,8 +5505,60 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 
   int queued_n = 0;
   bool queued_missing_mesh = false;
+  const auto pending_age_now = gpu_process_profile_sample
+                                   ? GpuProfileClock::now()
+                                   : GpuProfileClock::time_point{};
+  auto age_ms = [&](GpuProfileClock::time_point since) {
+    return since == GpuProfileClock::time_point{}
+               ? 0.0
+               : std::chrono::duration<double, std::milli>(pending_age_now -
+                                                            since)
+                     .count();
+  };
   for (const PendingGpuApply &pending : PendingGpuApplies)
   {
+    if (gpu_process_profile_sample)
+    {
+      gpu_profile_oldest_pending_ms =
+          std::max(gpu_profile_oldest_pending_ms, age_ms(pending.queuedAt));
+      const double phase_age_ms = age_ms(pending.phaseSince);
+      if (pending.phase == PendingGpuApply::Phase::Queued)
+      {
+        const bool missing = !HasDrawableGreedyMesh(pending.coord);
+        if (missing)
+        {
+          ++gpu_profile_queued_first_mesh_begin;
+        }
+        else
+        {
+          ++gpu_profile_queued_remesh_begin;
+        }
+        gpu_profile_oldest_queued_ms =
+            std::max(gpu_profile_oldest_queued_ms, phase_age_ms);
+        const int horiz = MeshFocusValid
+                              ? std::max(std::abs(pending.coord.x -
+                                                  MeshFocusGroundChunk.x),
+                                         std::abs(pending.coord.z -
+                                                  MeshFocusGroundChunk.z))
+                              : INT_MAX;
+        if (missing && horiz <= MeshFocusRadiusChunks)
+        {
+          ++gpu_profile_focus_missing_queued_begin;
+          gpu_profile_oldest_focus_missing_queued_ms = std::max(
+              gpu_profile_oldest_focus_missing_queued_ms, phase_age_ms);
+        }
+      }
+      else if (pending.phase == PendingGpuApply::Phase::Dispatched)
+      {
+        gpu_profile_oldest_dispatched_ms =
+            std::max(gpu_profile_oldest_dispatched_ms, phase_age_ms);
+      }
+      else if (pending.phase == PendingGpuApply::Phase::Kicked)
+      {
+        gpu_profile_oldest_kicked_ms =
+            std::max(gpu_profile_oldest_kicked_ms, phase_age_ms);
+      }
+    }
     if (pending.phase != PendingGpuApply::Phase::Queued)
     {
       continue;
@@ -5915,6 +5978,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       continue;
     }
     pending_ref.phase = PendingGpuApply::Phase::Kicked;
+    pending_ref.phaseSince = GpuProfileClock::now();
     TouchPendingGpuIndex();
     ++i;
   }
@@ -6197,6 +6261,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         budget_ms > 0.0 &&
         (budget_ms - elapsed_ms()) < kKickCostClassMs)
     {
+      gpu_profile_kick_stop_reason = "kick_cost_cut";
       break;
     }
     if (UFrameDeadline::ShouldDeferProducer(
@@ -6209,6 +6274,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         {
           LastGpuKickDeferReason_ = "frame_deadline";
         }
+        gpu_profile_kick_stop_reason = "frame_deadline";
         break;
       }
     }
@@ -6220,12 +6286,14 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         {
           LastGpuKickDeferReason_ = "kick_cut";
         }
+        gpu_profile_kick_stop_reason = "kick_cut";
         break; // Finish-only remainder — avoid Kick counter-sync storm
       }
     }
     auto queued_it = find_prefer_queued();
     if (queued_it == PendingGpuApplies.end())
     {
+      gpu_profile_kick_stop_reason = "no_queued_item";
       break;
     }
 
@@ -6291,6 +6359,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                       ? "slot_recycle_retry_failed"
                                       : "no_evictable_victim";
       }
+      gpu_profile_kick_stop_reason = "no_staging_slot";
       break;
     }
     const auto kick_profile_t0 =
@@ -6319,6 +6388,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (!kick_succeeded)
     {
+      gpu_profile_kick_stop_reason = "gpu_kick_failed";
       pipeline->GetAllocator().FreeSlotByIndex(slot_idx);
       ActiveMeshSourceRevision.erase(pending.coord);
       Dirty.MarkDirtyPriority(pending.coord);
@@ -6335,6 +6405,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     pending.phase = pending.ticket.awaitingCounters
                         ? PendingGpuApply::Phase::Dispatched
                         : PendingGpuApply::Phase::Kicked;
+    pending.phaseSince = GpuProfileClock::now();
     const glm::ivec3 kicked_coord = pending.coord;
     PendingGpuApplies.push_back(std::move(pending));
     TouchPendingGpuIndex();
@@ -6355,6 +6426,16 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   {
     LastGpuKickDeferReason_ = pipeline->HasFreeReadbackSlot() ? "no_kick"
                                                               : "no_readback";
+  }
+  if (gpu_profile_kick_stop_reason.empty() && queued_n > 0 && kicked == 0)
+  {
+    gpu_profile_kick_stop_reason = pipeline->HasFreeReadbackSlot()
+                                       ? "no_kick"
+                                       : "no_readback_slot";
+  }
+  else if (gpu_profile_kick_stop_reason.empty() && kicked >= kick_cap)
+  {
+    gpu_profile_kick_stop_reason = "kick_cap";
   }
   LastGpuKickDebtForcedN += debt_forced_kicks;
 
@@ -6523,16 +6604,31 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         << gpu_process_profile_seq << ",\"pending_begin\":"
         << gpu_profile_pending_begin << ",\"pending_end\":"
         << PendingGpuApplies.size() << ",\"processed\":" << processed
+        << ",\"free_readback_begin\":"
+        << (gpu_profile_free_readback_begin ? 1 : 0)
+        << ",\"queued_first_mesh_begin\":"
+        << gpu_profile_queued_first_mesh_begin
+        << ",\"queued_remesh_begin\":"
+        << gpu_profile_queued_remesh_begin
+        << ",\"focus_missing_queued_begin\":"
+        << gpu_profile_focus_missing_queued_begin
+        << ",\"oldest_pending_ms\":" << gpu_profile_oldest_pending_ms
+        << ",\"oldest_queued_ms\":" << gpu_profile_oldest_queued_ms
+        << ",\"oldest_dispatched_ms\":"
+        << gpu_profile_oldest_dispatched_ms
+        << ",\"oldest_kicked_ms\":" << gpu_profile_oldest_kicked_ms
+        << ",\"oldest_focus_missing_queued_ms\":"
+        << gpu_profile_oldest_focus_missing_queued_ms
         << ",\"max_count\":" << max_count << ",\"budget_ms\":"
         << budget_ms << ",\"queued_begin\":" << queued_n
         << ",\"output_progress_kick\":"
         << (output_queue_progress_kick ? 1 : 0)
-        << ",\"free_readback_begin\":"
-        << (pipeline->HasFreeReadbackSlot() ? 1 : 0)
         << ",\"kick_cap\":" << kick_cap << ",\"finish_cap\":"
         << finish_cap << ",\"force_kick_debt\":"
         << (force_kick_debt ? 1 : 0)
         << ",\"debt_forced_kicks\":" << debt_forced_kicks
+        << ",\"kick_stop_reason\":\""
+        << gpu_profile_kick_stop_reason << "\""
         << ",\"kicked\":" << kicked << ",\"finished\":" << finished
         << ",\"finish_attempts\":" << finish_attempts
         << ",\"counter_ready_n\":" << gpu_profile_counter_ready_n
@@ -6947,6 +7043,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
           refresh_after_accept_stale &&
           stale_reason == MeshApplyStaleInputReason::Geom;
       pending.stageTrace = result.stageTrace;
+      pending.queuedAt = std::chrono::steady_clock::now();
+      pending.phaseSince = pending.queuedAt;
       if (pending.stageTrace.job_id != 0)
       {
         NoteMeshJobStage(pending.stageTrace, JobStage::GpuQueued);
