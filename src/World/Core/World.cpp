@@ -16,6 +16,7 @@
 #include "Game/Economy/ResourceEconomy.h"
 #include "Creatures/Core/Creature.h"
 #include "Core/Progress/IUProgressSink.h"
+#include "Core/FrameStageWatchdog.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -9273,6 +9274,7 @@ void UWorld::TickMeshEmerge()
   {
     return;
   }
+  UFrameStageWatchdog::Scope stage("streaming.mesh_emerge_coordinator");
   Streaming->TickMeshEmerge(*this);
   TickPlayerRelightMeshBurst();
 }
@@ -13770,6 +13772,7 @@ void UWorld::TickMeshLoadDiagnostics()
 
 void UWorld::UpdateStreaming()
 {
+  UFrameStageWatchdog::Scope stage("streaming.coordinator_update");
   Streaming->UpdateStreaming(*this, *MeshService, Render, RenderDistanceChunks,
                              EffectiveRenderDistance, EffectiveFogStartRatio,
                              AltitudeParams, LastCameraPosition,

@@ -32,6 +32,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "Core/Progress/IUProgressSink.h"
+#include "Core/FrameStageWatchdog.h"
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -408,7 +409,10 @@ void UWindowManager::Run()
         std::chrono::duration<double>(frame_begin - LastFrameTime).count();
     LastFrameTime = frame_begin;
 
-    glfwPollEvents();
+    {
+      UFrameStageWatchdog::Scope stage("window.poll_events");
+      glfwPollEvents();
+    }
 
     if (World)
     {
@@ -417,7 +421,10 @@ void UWindowManager::Run()
 
     // Input processing
     const auto input_begin = std::chrono::high_resolution_clock::now();
-    ProcessInput();
+    {
+      UFrameStageWatchdog::Scope stage("window.process_input");
+      ProcessInput();
+    }
     const double input_ms = std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() -
                                 input_begin)
@@ -425,6 +432,7 @@ void UWindowManager::Run()
     const auto app_begin = std::chrono::high_resolution_clock::now();
     if (Application)
     {
+      UFrameStageWatchdog::Scope stage("window.application_update");
       Application->Update(DeltaTime);
     }
     const double app_ms = std::chrono::duration<double, std::milli>(
@@ -434,7 +442,10 @@ void UWindowManager::Run()
 
     // Logic update (includes DoMovement → phys_ms)
     const auto world_begin = std::chrono::high_resolution_clock::now();
-    Update();
+    {
+      UFrameStageWatchdog::Scope stage("window.logic_update");
+      Update();
+    }
     const double world_ms = std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() -
                                 world_begin)
@@ -449,7 +460,10 @@ void UWindowManager::Run()
     // Outside world_ms so autosave Init/Ticks do not inflate world_extra.
     {
       const auto t_autosave = std::chrono::high_resolution_clock::now();
-      TickBudgetedAutosave();
+      {
+        UFrameStageWatchdog::Scope stage("window.autosave");
+        TickBudgetedAutosave();
+      }
       if (World)
       {
         World->SetLastAutosaveMs(
@@ -460,7 +474,12 @@ void UWindowManager::Run()
     }
 
     // Flight-sim stop: skip a final heavy render once the harness predicate fires.
-    if (StopPredicate && StopPredicate())
+    bool stop_before_render = false;
+    {
+      UFrameStageWatchdog::Scope stage("window.stop_predicate");
+      stop_before_render = StopPredicate && StopPredicate();
+    }
+    if (stop_before_render)
     {
       IsRunning = false;
       break;
@@ -469,7 +488,10 @@ void UWindowManager::Run()
     // Rendering
     CUBA_FRAME_MARK;
     const auto render_begin = std::chrono::high_resolution_clock::now();
-    Render();
+    {
+      UFrameStageWatchdog::Scope stage("window.render");
+      Render();
+    }
     if (World)
     {
       World->SetLastRenderTotalMs(
@@ -496,18 +518,24 @@ void UWindowManager::Run()
         std::ostringstream filename;
         filename << "frame_" << std::setw(3) << std::setfill('0')
                  << capture_index++ << ".png";
-        if (!CaptureFramebufferPng(
-                Window, std::filesystem::path(flight_capture_dir) /
-                            filename.str()))
         {
-          CubatariumLogInfo("FlightCapture",
-                            "Unable to capture framebuffer PNG");
+          UFrameStageWatchdog::Scope stage("window.frame_capture");
+          if (!CaptureFramebufferPng(
+                  Window, std::filesystem::path(flight_capture_dir) /
+                              filename.str()))
+          {
+            CubatariumLogInfo("FlightCapture",
+                              "Unable to capture framebuffer PNG");
+          }
         }
       }
     }
 
     const auto swap_begin = std::chrono::high_resolution_clock::now();
-    glfwSwapBuffers(Window);
+    {
+      UFrameStageWatchdog::Scope stage("window.swap_buffers");
+      glfwSwapBuffers(Window);
+    }
     const auto frame_end = std::chrono::high_resolution_clock::now();
     const double swap_wait_ms =
         std::chrono::duration<double, std::milli>(frame_end - swap_begin)
@@ -526,11 +554,17 @@ void UWindowManager::Run()
       {
         interval = Core->GetUiSettings().PerfLogIntervalSec;
       }
+      UFrameStageWatchdog::Scope stage("window.perf_emit");
       UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval,
                                        frame_wall_ms);
     }
 
-    if (StopPredicate && StopPredicate())
+    bool stop_after_frame = false;
+    {
+      UFrameStageWatchdog::Scope stage("window.stop_predicate");
+      stop_after_frame = StopPredicate && StopPredicate();
+    }
+    if (stop_after_frame)
     {
       IsRunning = false;
     }
@@ -660,7 +694,10 @@ void UWindowManager::Update()
   if (Views)
   {
     const auto t0 = clock::now();
-    Views->UpdateFrameTime();
+    {
+      UFrameStageWatchdog::Scope stage("world.views_update");
+      Views->UpdateFrameTime();
+    }
     if (World)
     {
       World->GetPhysicsTelemetryMutable().ViewsMs =
@@ -672,6 +709,7 @@ void UWindowManager::Update()
   {
     {
       const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.do_movement");
       World->DoMovement();
       World->GetPhysicsTelemetryMutable().DoMovementMs =
           std::chrono::duration<double, std::milli>(clock::now() - t0).count();
@@ -679,10 +717,12 @@ void UWindowManager::Update()
     // Era14: stream/mesh outside DoMovement so phys_ms stays locomotion-only.
     {
       const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.streaming_phase");
       World->TickWorldStreamingPhase();
       World->GetPhysicsTelemetryMutable().WorldStreamingPhaseMs =
           std::chrono::duration<double, std::milli>(clock::now() - t0).count();
     }
+    UFrameStageWatchdog::Scope break_stage("world.post_streaming_logic");
     if (World->ConsumeFlightSimBreakRequest())
     {
       if (auto camera = World->GetCurrentUserCamera())
@@ -747,6 +787,7 @@ void UWindowManager::Update()
     if (BlockInput)
     {
       const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.block_input");
       BlockInputContext ctx;
       ctx.World = World;
       ctx.Geometries = Geometries.get();
@@ -763,6 +804,7 @@ void UWindowManager::Update()
     {
       PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
       UWorldMeshService &mesh = World->GetMeshService();
+      UFrameStageWatchdog::Scope stage("world.dig_seam_drain");
       mesh.TickDigSeamDrain(World->GetBlockWorld(), World->GetBlockRegistry(),
                             &tele);
       tele.DigSeamPendingN = mesh.GetLastDigSeamPendingN();

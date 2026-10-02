@@ -29,6 +29,7 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Core/RuntimeTuning.h"
 #include "Core/FrameDeadline.h"
+#include "Core/FrameStageWatchdog.h"
 
 #include <chrono>
 #include <optional>
@@ -1062,9 +1063,15 @@ void UWorld::TickWorldStreamingPhase()
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   GetMeshService().BeginHoleQueryFrame(hole_focus);
   const auto t_stream0 = std::chrono::high_resolution_clock::now();
-  UpdateStreaming();
+  {
+    UFrameStageWatchdog::Scope stage("streaming.update_streaming");
+    UpdateStreaming();
+  }
   const auto t_stream1 = std::chrono::high_resolution_clock::now();
-  TickAsyncChunkSystems();
+  {
+    UFrameStageWatchdog::Scope stage("streaming.async_chunk_systems");
+    TickAsyncChunkSystems();
+  }
   const auto t_after_stream = std::chrono::high_resolution_clock::now();
   // T0 SoT 210431: do NOT overwrite StreamerUpdateMs (core load) with full
   // UpdateStreaming — that hid unload/keep costs. Phase wall is separate.
@@ -1139,6 +1146,7 @@ void UWorld::TickWorldStreamingPhase()
   // Burst when general remain > 0 or miss (reserved still feeds emerge).
   if (remain_general > 0.0 || miss_carve_out)
   {
+    UFrameStageWatchdog::Scope stage("streaming.enter_game_mesh_burst");
     TickEnterGameMeshBurst();
   }
   // Phase 5.2.2 / 5.3.2: skip empty emerge only when no hole/backlog pressure.
@@ -1154,6 +1162,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.EmptyBacklogN = EmptyBacklogN(PhysicsTelemetryData);
   if (!skip_empty_emerge)
   {
+    UFrameStageWatchdog::Scope stage("streaming.mesh_emerge");
     TickMeshEmerge();
   }
   const auto t_after_mesh = std::chrono::high_resolution_clock::now();
