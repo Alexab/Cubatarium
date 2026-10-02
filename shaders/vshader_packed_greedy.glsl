@@ -30,7 +30,9 @@ void main()
     float sky = float((w1 >> 10u) & 0xFu) / 15.0;
     float blk = float((w1 >> 14u) & 0xFu) / 15.0;
 
-    vec3 pos = vec3(x, y, z);
+    // Keep the packed vertex-pulling path on the same half-centered voxel
+    // grid as GreedyMeshEmitter: its local face origin is u/v/slice - 0.5.
+    vec3 pos = vec3(x, y, z) - vec3(0.5);
     vec3 du, dv;
 
     // Packed emit preserves the GPU greedy grid's axes:

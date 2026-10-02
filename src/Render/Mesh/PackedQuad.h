@@ -120,7 +120,8 @@ void main() {
   // face 0: +Z (front)   1: +X (right)  2: -Z (back)
   //      3: -X (left)    4: +Y (top)    5: -Y (bottom)
   // Axis normal, U tangent, V tangent:
-  vec3 pos = vec3(x, y, z);
+  // Match GreedyMeshEmitter's half-centered local face origin.
+  vec3 pos = vec3(x, y, z) - vec3(0.5);
   vec3 du, dv;
 
   // Keep the packed shader's tangent axes aligned with the GPU greedy grid:
