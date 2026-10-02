@@ -4045,6 +4045,14 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
   {
     MeshService->MarkDirtyPriority(
         coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    // MarkDirtyPriority routes an existing drawable mesh into RemeshQ. Give
+    // this newly-created visible repair the same lane priority as a requeued
+    // target; if an active build owns it, DirtySet carries that priority into
+    // the deferred RemeshAfterApply ticket.
+    if (MeshService->HasDrawableGreedyMesh(coord))
+    {
+      (void)MeshService->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
+    }
   }
 }
 

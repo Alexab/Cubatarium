@@ -3266,6 +3266,14 @@ void UChunkMeshCache::MarkDirtyPriorityImpl(
 bool UChunkMeshCache::PrioritizeVisibleLightRepairRemesh(
     glm::ivec3 chunkCoord)
 {
+  // There is no RemeshQ member while an active build owns a follow-up in RAA.
+  // Remember priority only for that explicit deferred owner; requests with no
+  // live queue/build owner must not leave a detached marker behind.
+  if (!Dirty.Contains(chunkCoord) &&
+      RemeshAfterApply.count(chunkCoord) == 0)
+  {
+    return false;
+  }
   if (!Dirty.PrioritizeRemesh(chunkCoord))
   {
     return false;

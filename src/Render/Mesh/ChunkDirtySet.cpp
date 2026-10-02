@@ -227,7 +227,16 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
   {
     return;
   }
-  RemeshQ.push_back(coord);
+  const bool priority = DeferredPriorityRemeshSet.erase(coord) > 0;
+  if (priority)
+  {
+    PriorityRemeshSet.insert(coord);
+    RemeshQ.insert(RemeshQ.begin(), coord);
+  }
+  else
+  {
+    RemeshQ.push_back(coord);
+  }
   EnqueueFrameByCoord.emplace(coord, ScheduleFrame);
   NoteColumnAdd(coord);
   InvalidateUnified();
@@ -235,6 +244,7 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
 
 void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
 {
+  DeferredPriorityRemeshSet.erase(coord);
   const bool was_remesh = RemeshSet.erase(coord) > 0;
   PriorityRemeshSet.erase(coord);
   if (was_remesh)
@@ -262,9 +272,17 @@ void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
 
 bool UChunkDirtySet::PrioritizeRemesh(glm::ivec3 coord)
 {
-  if (FirstMeshSet.count(coord) > 0 || RemeshSet.count(coord) == 0)
+  if (FirstMeshSet.count(coord) > 0)
   {
+    DeferredPriorityRemeshSet.erase(coord);
     return false;
+  }
+  if (RemeshSet.count(coord) == 0)
+  {
+    // A running build can own the coord while its follow-up is parked in
+    // RemeshAfterApply. Keep the priority request until that ticket is enqueued.
+    DeferredPriorityRemeshSet.insert(coord);
+    return true;
   }
   PriorityRemeshSet.insert(coord);
   const auto it = std::find(RemeshQ.begin(), RemeshQ.end(), coord);
@@ -279,6 +297,7 @@ bool UChunkDirtySet::PrioritizeRemesh(glm::ivec3 coord)
 
 void UChunkDirtySet::Erase(glm::ivec3 coord)
 {
+  DeferredPriorityRemeshSet.erase(coord);
   bool erased = false;
   if (FirstMeshSet.erase(coord) > 0)
   {
@@ -308,6 +327,7 @@ void UChunkDirtySet::Clear()
   FirstMeshSet.clear();
   RemeshSet.clear();
   PriorityRemeshSet.clear();
+  DeferredPriorityRemeshSet.clear();
   EnqueueFrameByCoord.clear();
   Queue.clear();
   ColumnCounts.clear();
@@ -318,6 +338,7 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
 {
   EnsureUnified();
   const glm::ivec3 coord = *it;
+  DeferredPriorityRemeshSet.erase(coord);
   // Erase from owning queue without Invalidate mid-erase of unified.
   if (FirstMeshSet.erase(coord) > 0)
   {
