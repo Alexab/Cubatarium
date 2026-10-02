@@ -840,8 +840,8 @@ void UWorldStreaming::RefreshStreamingPressure(
           // cannot starve other stale geometry in the same view.
           constexpr size_t kRendererPixelColumnCount = 20;
           constexpr size_t kScreenColumnsPerProbe = 5;
-          constexpr std::array<float, 4> kScreenRows = {
-              0.125f, 0.375f, 0.625f, 0.875f};
+          constexpr std::array<float, 5> kScreenRows = {
+              0.125f, 0.375f, 0.5625f, 0.625f, 0.875f};
           constexpr size_t kScreenSampleCount =
               kScreenColumnsPerProbe * kScreenRows.size();
           std::array<Candidate, kScreenSampleCount> candidates{};
@@ -953,7 +953,7 @@ void UWorldStreaming::RefreshStreamingPressure(
                   candidate.needs_first_mesh ||
                   ray_trace.mesh_satisfying == 0;
               const int row_rank =
-                  (row_index == 1 || row_index == 2) ? 0 : 2;
+                  std::abs(kScreenRows[row_index] - 0.5f) <= 0.125f ? 0 : 2;
               const int x_center_rank =
                   std::min(std::abs(static_cast<int>(column_index) - 9),
                            std::abs(static_cast<int>(column_index) - 10));
