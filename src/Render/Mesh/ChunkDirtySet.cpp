@@ -102,21 +102,60 @@ auto MakeDistanceKeyLess(glm::ivec3 focus_ground_chunk, int preferred_cy,
   };
 }
 
+template <typename RandomIt>
+void SortQueueRange(RandomIt begin, RandomIt end,
+                    glm::ivec3 focus_ground_chunk, int preferred_cy,
+                    bool prefer_lower_cy, bool vertical_valid,
+                    const std::function<bool(glm::ivec3)> &missing_mesh,
+                    float forward_bias_k, glm::vec2 forward_xz,
+                    int focus_radius_for_tail)
+{
+  if (end - begin < 2)
+  {
+    return;
+  }
+  std::stable_sort(begin, end,
+                   MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
+                                       prefer_lower_cy, vertical_valid,
+                                       missing_mesh, forward_bias_k, forward_xz,
+                                       focus_radius_for_tail));
+}
+
 void SortQueue(std::vector<glm::ivec3> &q, glm::ivec3 focus_ground_chunk,
                int preferred_cy, bool prefer_lower_cy, bool vertical_valid,
                const std::function<bool(glm::ivec3)> &missing_mesh,
                float forward_bias_k, glm::vec2 forward_xz,
                int focus_radius_for_tail)
 {
-  if (q.size() < 2)
+  SortQueueRange(q.begin(), q.end(), focus_ground_chunk, preferred_cy,
+                 prefer_lower_cy, vertical_valid, missing_mesh,
+                 forward_bias_k, forward_xz, focus_radius_for_tail);
+}
+
+template <typename RandomIt>
+void PartialSortQueueRange(RandomIt begin, RandomIt end,
+                           glm::ivec3 focus_ground_chunk, int preferred_cy,
+                           bool prefer_lower_cy, bool vertical_valid,
+                           const std::function<bool(glm::ivec3)> &missing_mesh,
+                           size_t keep_front, float forward_bias_k,
+                           glm::vec2 forward_xz, int focus_radius_for_tail)
+{
+  const size_t count = static_cast<size_t>(end - begin);
+  if (count < 2 || keep_front == 0)
   {
     return;
   }
-  std::stable_sort(q.begin(), q.end(),
-                   MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
-                                       prefer_lower_cy, vertical_valid,
-                                       missing_mesh, forward_bias_k, forward_xz,
-                                       focus_radius_for_tail));
+  auto less = MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
+                                  prefer_lower_cy, vertical_valid, missing_mesh,
+                                  forward_bias_k, forward_xz,
+                                  focus_radius_for_tail);
+  if (keep_front >= count)
+  {
+    std::stable_sort(begin, end, less);
+    return;
+  }
+  std::partial_sort(begin,
+                    begin + static_cast<std::ptrdiff_t>(keep_front), end, less);
 }
 
 void PartialSortQueue(std::vector<glm::ivec3> &q, glm::ivec3 focus_ground_chunk,
@@ -126,24 +165,10 @@ void PartialSortQueue(std::vector<glm::ivec3> &q, glm::ivec3 focus_ground_chunk,
                       size_t keep_front, float forward_bias_k,
                       glm::vec2 forward_xz, int focus_radius_for_tail)
 {
-  if (q.size() < 2 || keep_front == 0)
-  {
-    return;
-  }
-  if (keep_front >= q.size())
-  {
-    SortQueue(q, focus_ground_chunk, preferred_cy, prefer_lower_cy,
-              vertical_valid, missing_mesh, forward_bias_k, forward_xz,
-              focus_radius_for_tail);
-    return;
-  }
-  auto less = MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
-                                  prefer_lower_cy, vertical_valid, missing_mesh,
-                                  forward_bias_k, forward_xz,
-                                  focus_radius_for_tail);
-  std::partial_sort(q.begin(),
-                    q.begin() + static_cast<std::ptrdiff_t>(keep_front),
-                    q.end(), less);
+  PartialSortQueueRange(q.begin(), q.end(), focus_ground_chunk, preferred_cy,
+                        prefer_lower_cy, vertical_valid, missing_mesh,
+                        keep_front, forward_bias_k, forward_xz,
+                        focus_radius_for_tail);
 }
 
 } // namespace
@@ -227,11 +252,28 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
   {
     return;
   }
-  const bool priority = DeferredPriorityRemeshSet.erase(coord) > 0;
+  const bool screen_ray_priority =
+      DeferredScreenRayRemeshSet.erase(coord) > 0;
+  const bool priority =
+      DeferredPriorityRemeshSet.erase(coord) > 0 || screen_ray_priority;
   if (priority)
   {
     PriorityRemeshSet.insert(coord);
-    RemeshQ.insert(RemeshQ.begin(), coord);
+    if (screen_ray_priority)
+    {
+      ScreenRayRemeshSet.insert(coord);
+      const auto screen_ray_end = std::find_if(
+          RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 queued)
+          { return ScreenRayRemeshSet.count(queued) == 0; });
+      RemeshQ.insert(screen_ray_end, coord);
+    }
+    else
+    {
+      const auto priority_end = std::find_if(
+          RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 queued)
+          { return PriorityRemeshSet.count(queued) == 0; });
+      RemeshQ.insert(priority_end, coord);
+    }
   }
   else
   {
@@ -245,8 +287,10 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
 void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
 {
   DeferredPriorityRemeshSet.erase(coord);
+  DeferredScreenRayRemeshSet.erase(coord);
   const bool was_remesh = RemeshSet.erase(coord) > 0;
   PriorityRemeshSet.erase(coord);
+  ScreenRayRemeshSet.erase(coord);
   if (was_remesh)
   {
     RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
@@ -275,6 +319,7 @@ bool UChunkDirtySet::PrioritizeRemesh(glm::ivec3 coord)
   if (FirstMeshSet.count(coord) > 0)
   {
     DeferredPriorityRemeshSet.erase(coord);
+    DeferredScreenRayRemeshSet.erase(coord);
     return false;
   }
   if (RemeshSet.count(coord) == 0)
@@ -284,20 +329,65 @@ bool UChunkDirtySet::PrioritizeRemesh(glm::ivec3 coord)
     DeferredPriorityRemeshSet.insert(coord);
     return true;
   }
+  if (PriorityRemeshSet.count(coord) > 0)
+  {
+    // Repeated visible demand must not rotate an existing priority item ahead
+    // of older repairs or reset the lane's stable order.
+    return true;
+  }
   PriorityRemeshSet.insert(coord);
   const auto it = std::find(RemeshQ.begin(), RemeshQ.end(), coord);
-  if (it != RemeshQ.end() && it != RemeshQ.begin())
+  if (it != RemeshQ.end())
   {
     RemeshQ.erase(it);
-    RemeshQ.insert(RemeshQ.begin(), coord);
+    const auto priority_end = std::find_if(
+        RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 queued)
+        { return PriorityRemeshSet.count(queued) == 0; });
+    RemeshQ.insert(priority_end, coord);
   }
   InvalidateUnified();
+  return true;
+}
+
+bool UChunkDirtySet::PrioritizeScreenRayRemesh(glm::ivec3 coord)
+{
+  if (FirstMeshSet.count(coord) > 0)
+  {
+    DeferredPriorityRemeshSet.erase(coord);
+    DeferredScreenRayRemeshSet.erase(coord);
+    return false;
+  }
+  if (RemeshSet.count(coord) == 0)
+  {
+    // The active build/RAA owns the follow-up. Transfer the ray urgency with
+    // that concrete deferred ticket when MarkDirty enqueues it.
+    DeferredPriorityRemeshSet.insert(coord);
+    DeferredScreenRayRemeshSet.insert(coord);
+    return true;
+  }
+  if (ScreenRayRemeshSet.count(coord) > 0)
+  {
+    return true;
+  }
+  PriorityRemeshSet.insert(coord);
+  ScreenRayRemeshSet.insert(coord);
+  const auto it = std::find(RemeshQ.begin(), RemeshQ.end(), coord);
+  if (it != RemeshQ.end())
+  {
+    RemeshQ.erase(it);
+    const auto screen_ray_end = std::find_if(
+        RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 queued)
+        { return ScreenRayRemeshSet.count(queued) == 0; });
+    RemeshQ.insert(screen_ray_end, coord);
+    InvalidateUnified();
+  }
   return true;
 }
 
 void UChunkDirtySet::Erase(glm::ivec3 coord)
 {
   DeferredPriorityRemeshSet.erase(coord);
+  DeferredScreenRayRemeshSet.erase(coord);
   bool erased = false;
   if (FirstMeshSet.erase(coord) > 0)
   {
@@ -312,6 +402,7 @@ void UChunkDirtySet::Erase(glm::ivec3 coord)
     erased = true;
   }
   PriorityRemeshSet.erase(coord);
+  ScreenRayRemeshSet.erase(coord);
   if (erased)
   {
     EnqueueFrameByCoord.erase(coord);
@@ -327,7 +418,9 @@ void UChunkDirtySet::Clear()
   FirstMeshSet.clear();
   RemeshSet.clear();
   PriorityRemeshSet.clear();
+  ScreenRayRemeshSet.clear();
   DeferredPriorityRemeshSet.clear();
+  DeferredScreenRayRemeshSet.clear();
   EnqueueFrameByCoord.clear();
   Queue.clear();
   ColumnCounts.clear();
@@ -339,6 +432,7 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
   EnsureUnified();
   const glm::ivec3 coord = *it;
   DeferredPriorityRemeshSet.erase(coord);
+  DeferredScreenRayRemeshSet.erase(coord);
   // Erase from owning queue without Invalidate mid-erase of unified.
   if (FirstMeshSet.erase(coord) > 0)
   {
@@ -351,6 +445,7 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
                   RemeshQ.end());
   }
   PriorityRemeshSet.erase(coord);
+  ScreenRayRemeshSet.erase(coord);
   EnqueueFrameByCoord.erase(coord);
   NoteColumnRemove(coord);
   auto next = Queue.erase(it);
@@ -367,11 +462,18 @@ void UChunkDirtySet::SortByDistanceKey(
   SortQueue(FirstMeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
             vertical_valid, missing_mesh, forward_bias_k, forward_xz,
             focus_radius_for_tail);
-  SortQueue(RemeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
-            vertical_valid, missing_mesh, forward_bias_k, forward_xz,
-            focus_radius_for_tail);
-  std::stable_partition(RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
-                        { return PriorityRemeshSet.count(coord) > 0; });
+  const auto screen_ray_end = std::stable_partition(
+      RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
+      { return ScreenRayRemeshSet.count(coord) > 0; });
+  const auto priority_end = std::stable_partition(
+      screen_ray_end, RemeshQ.end(), [&](glm::ivec3 coord)
+      { return PriorityRemeshSet.count(coord) > 0; });
+  // Keep exact pixel-hit repairs in a stable head lane. Distance sorting the
+  // entire RemeshQ used to move a just-promoted screen witness behind dozens
+  // of unrelated priority entries before the renderer sampled that frame.
+  SortQueueRange(priority_end, RemeshQ.end(), focus_ground_chunk,
+                 preferred_cy, prefer_lower_cy, vertical_valid, missing_mesh,
+                 forward_bias_k, forward_xz, focus_radius_for_tail);
   InvalidateUnified();
 }
 
@@ -522,11 +624,20 @@ void UChunkDirtySet::PartialSortByDistanceKey(
   PartialSortQueue(FirstMeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
                    vertical_valid, missing_mesh, fm_front, forward_bias_k,
                    forward_xz, focus_radius_for_tail);
-  PartialSortQueue(RemeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
-                   vertical_valid, missing_mesh, rem_front, forward_bias_k,
-                   forward_xz, focus_radius_for_tail);
-  std::stable_partition(RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
-                        { return PriorityRemeshSet.count(coord) > 0; });
+  const auto screen_ray_end = std::stable_partition(
+      RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
+      { return ScreenRayRemeshSet.count(coord) > 0; });
+  const auto priority_end = std::stable_partition(
+      screen_ray_end, RemeshQ.end(), [&](glm::ivec3 coord)
+      { return PriorityRemeshSet.count(coord) > 0; });
+  const size_t priority_count =
+      static_cast<size_t>(priority_end - RemeshQ.begin());
+  const size_t ordinary_keep_front =
+      rem_front > priority_count ? rem_front - priority_count : 0;
+  PartialSortQueueRange(priority_end, RemeshQ.end(), focus_ground_chunk,
+                        preferred_cy, prefer_lower_cy, vertical_valid,
+                        missing_mesh, ordinary_keep_front, forward_bias_k,
+                        forward_xz, focus_radius_for_tail);
   InvalidateUnified();
 }
 
@@ -595,12 +706,15 @@ void UChunkDirtySet::PrioritizeAgedPriorityRemeshNearHorizontal(
     return;
   }
 
-  // SortByDistanceKey/PartialSortByDistanceKey keep visible priority remesh
-  // work in a contiguous prefix. Leave ordinary remesh order alone.
-  const auto priority_end = std::find_if(
+  // The screen-ray sub-prefix is a direct pixel witness; age fairness applies
+  // to the remaining priority lane without reordering those exact hits.
+  const auto screen_ray_end = std::find_if(
       RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
+      { return ScreenRayRemeshSet.count(coord) == 0; });
+  const auto priority_end = std::find_if(
+      screen_ray_end, RemeshQ.end(), [&](glm::ivec3 coord)
       { return PriorityRemeshSet.count(coord) == 0; });
-  if (priority_end - RemeshQ.begin() < 2)
+  if (priority_end - screen_ray_end < 2)
   {
     return;
   }
@@ -629,7 +743,7 @@ void UChunkDirtySet::PrioritizeAgedPriorityRemeshNearHorizontal(
   bool saw_non_overdue = false;
   bool priority_order_is_stale = false;
   uint64_t previous_overdue_age = UINT64_MAX;
-  for (auto it = RemeshQ.begin(); it != priority_end; ++it)
+  for (auto it = screen_ray_end; it != priority_end; ++it)
   {
     const glm::ivec3 coord = *it;
     if (!is_overdue_in_focus(coord))
@@ -649,7 +763,7 @@ void UChunkDirtySet::PrioritizeAgedPriorityRemeshNearHorizontal(
   {
     return;
   }
-  std::stable_sort(RemeshQ.begin(), priority_end, older_first);
+  std::stable_sort(screen_ray_end, priority_end, older_first);
   InvalidateUnified();
 }
 
@@ -691,11 +805,13 @@ void UChunkDirtySet::PrioritizeChunksWithoutMesh(
   }
   if (RemeshQ.size() >= 2)
   {
-    std::stable_sort(RemeshQ.begin(), RemeshQ.end(), by_missing);
-    // Keep visible light-repair remeshes ahead of ordinary remeshes even when
-    // focus is unavailable and the missing-mesh order is refreshed.
-    std::stable_partition(RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
-                          { return PriorityRemeshSet.count(coord) > 0; });
+    const auto screen_ray_end = std::stable_partition(
+        RemeshQ.begin(), RemeshQ.end(), [&](glm::ivec3 coord)
+        { return ScreenRayRemeshSet.count(coord) > 0; });
+    const auto priority_end = std::stable_partition(
+        screen_ray_end, RemeshQ.end(), [&](glm::ivec3 coord)
+        { return PriorityRemeshSet.count(coord) > 0; });
+    std::stable_sort(priority_end, RemeshQ.end(), by_missing);
   }
   InvalidateUnified();
 }

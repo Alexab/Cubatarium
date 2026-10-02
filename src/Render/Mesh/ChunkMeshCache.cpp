@@ -3284,6 +3284,26 @@ bool UChunkMeshCache::PrioritizeVisibleLightRepairRemesh(
   return true;
 }
 
+bool UChunkMeshCache::PrioritizeScreenRayRepairRemesh(
+    glm::ivec3 chunkCoord)
+{
+  // There is no RemeshQ member while an active build owns a follow-up in RAA.
+  // Remember the exact pixel witness only for that explicit deferred owner.
+  if (!Dirty.Contains(chunkCoord) &&
+      RemeshAfterApply.count(chunkCoord) == 0)
+  {
+    return false;
+  }
+  if (!Dirty.PrioritizeScreenRayRemesh(chunkCoord))
+  {
+    return false;
+  }
+  InstancesDirty = true;
+  GreedyBatchesDirty = true;
+  CrossBatchesDirty = true;
+  return true;
+}
+
 void UChunkMeshCache::QueueMeshDependencyInvalidations(
     const UBlockWorld &world,
     const std::vector<glm::ivec3> &changed_input_chunks)

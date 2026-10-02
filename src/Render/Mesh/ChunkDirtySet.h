@@ -23,6 +23,9 @@ public:
   /// Keep a visible repair ahead of generic remesh work, including when its
   /// current build owns the chunk and the follow-up Dirty ticket is deferred.
   bool PrioritizeRemesh(glm::ivec3 coord);
+  /// Keep a screen-ray-confirmed geometry hole at the head of visible repair
+  /// work, including across queue sorting and deferred RAA ownership.
+  bool PrioritizeScreenRayRemesh(glm::ivec3 coord);
   void AdvanceScheduleFrame() { ++ScheduleFrame; }
   void Erase(glm::ivec3 coord);
   void Clear();
@@ -127,6 +130,8 @@ public:
     RemeshSet.reserve(n);
     Queue.reserve(n);
     DeferredPriorityRemeshSet.reserve(n);
+    ScreenRayRemeshSet.reserve(n);
+    DeferredScreenRayRemeshSet.reserve(n);
   }
 
   const std::vector<glm::ivec3> &FirstMeshQueue() const { return FirstMeshQ; }
@@ -160,8 +165,11 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> FirstMeshSet;
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshSet;
   std::unordered_set<glm::ivec3, IVec3Hash> PriorityRemeshSet;
+  /// Screen-ray hits form a stable sub-prefix ahead of other priority remesh.
+  std::unordered_set<glm::ivec3, IVec3Hash> ScreenRayRemeshSet;
   /// Priority requested while a build/RAA owns the coord; consumed on enqueue.
   std::unordered_set<glm::ivec3, IVec3Hash> DeferredPriorityRemeshSet;
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredScreenRayRemeshSet;
   /// Lazy concat FirstMeshQ + RemeshQ for legacy iterators.
   mutable std::vector<glm::ivec3> Queue;
   mutable bool UnifiedDirty{true};

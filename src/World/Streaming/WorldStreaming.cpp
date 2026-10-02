@@ -1404,7 +1404,7 @@ void UWorldStreaming::RefreshStreamingPressure(
         }
         return world.GetMeshService()
             .GetCache()
-            .PrioritizeVisibleLightRepairRemesh(coord);
+            .PrioritizeScreenRayRepairRemesh(coord);
       };
       const auto enqueue_first_mesh = [&](glm::ivec3 coord,
                                           bool screen_ray_selected)

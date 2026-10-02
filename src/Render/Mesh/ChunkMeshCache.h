@@ -85,6 +85,7 @@ public:
   void RequeueDirtyPriority(glm::ivec3 chunkCoord,
                            MeshRevisionBumpReason reason);
   bool PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord);
+  bool PrioritizeScreenRayRepairRemesh(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
       const std::vector<glm::ivec3> &changed_input_chunks);
