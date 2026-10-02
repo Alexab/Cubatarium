@@ -4470,6 +4470,12 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     phys.OpaqueMdiCullSetupCpuMs = 0.0;
     phys.OpaqueMdiCullQueryPollCpuMs = 0.0;
     phys.OpaqueMdiCullPostSubmitCpuMs = 0.0;
+    phys.OpaqueMdiCullStatsPollCpuMs = 0.0;
+    phys.OpaqueMdiCullStatsFencePollCpuMs = 0.0;
+    phys.OpaqueMdiCullStatsBufferReadCpuMs = 0.0;
+    phys.OpaqueMdiCullStatsArmCpuMs = 0.0;
+    phys.OpaqueMdiCullBatchStateCpuMs = 0.0;
+    phys.OpaqueMdiCullPostSubmitOtherCpuMs = 0.0;
     phys.OpaqueMdiCullUnattributedCpuMs = 0.0;
     phys.GpuPoolUsedMb = static_cast<double>(used) / (1024.0 * 1024.0);
     phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
@@ -4543,6 +4549,15 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       phys.OpaqueMdiCullSetupCpuMs = mdi->LastCullSetupCpuMs();
       phys.OpaqueMdiCullQueryPollCpuMs = mdi->LastCullQueryPollCpuMs();
       phys.OpaqueMdiCullPostSubmitCpuMs = mdi->LastCullPostSubmitCpuMs();
+      phys.OpaqueMdiCullStatsPollCpuMs = mdi->LastCullStatsPollCpuMs();
+      phys.OpaqueMdiCullStatsFencePollCpuMs =
+          mdi->LastCullStatsFencePollCpuMs();
+      phys.OpaqueMdiCullStatsBufferReadCpuMs =
+          mdi->LastCullStatsBufferReadCpuMs();
+      phys.OpaqueMdiCullStatsArmCpuMs = mdi->LastCullStatsArmCpuMs();
+      phys.OpaqueMdiCullBatchStateCpuMs = mdi->LastCullBatchStateCpuMs();
+      phys.OpaqueMdiCullPostSubmitOtherCpuMs =
+          mdi->LastCullPostSubmitOtherCpuMs();
       const double mdi_cull_attributed =
           phys.OpaqueMdiCullAabbProbeCpuMs +
           phys.OpaqueMdiCullFallbackCpuMs + phys.OpaqueMdiCullSetupCpuMs +

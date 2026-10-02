@@ -80,6 +80,21 @@ public:
   double LastCullSetupCpuMs() const { return LastCullSetupCpuMs_; }
   double LastCullQueryPollCpuMs() const { return LastCullQueryPollCpuMs_; }
   double LastCullPostSubmitCpuMs() const { return LastCullPostSubmitCpuMs_; }
+  double LastCullStatsPollCpuMs() const { return LastCullStatsPollCpuMs_; }
+  double LastCullStatsFencePollCpuMs() const
+  {
+    return LastCullStatsFencePollCpuMs_;
+  }
+  double LastCullStatsBufferReadCpuMs() const
+  {
+    return LastCullStatsBufferReadCpuMs_;
+  }
+  double LastCullStatsArmCpuMs() const { return LastCullStatsArmCpuMs_; }
+  double LastCullBatchStateCpuMs() const { return LastCullBatchStateCpuMs_; }
+  double LastCullPostSubmitOtherCpuMs() const
+  {
+    return LastCullPostSubmitOtherCpuMs_;
+  }
   /// Delayed GPU timestamp when queries available; else unavailable (<0).
   double LastCullGpuExecMs() const;
   bool CullGpuTimingAvailable() const { return CullGpuTimingAvailable_; }
@@ -108,6 +123,12 @@ private:
   double LastCullSetupCpuMs_{0.0};
   double LastCullQueryPollCpuMs_{0.0};
   double LastCullPostSubmitCpuMs_{0.0};
+  double LastCullStatsPollCpuMs_{0.0};
+  double LastCullStatsFencePollCpuMs_{0.0};
+  double LastCullStatsBufferReadCpuMs_{0.0};
+  double LastCullStatsArmCpuMs_{0.0};
+  double LastCullBatchStateCpuMs_{0.0};
+  double LastCullPostSubmitOtherCpuMs_{0.0};
   bool CullGpuTimingAvailable_{false};
 
   struct GpuTimestampQueryRing

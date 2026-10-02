@@ -910,6 +910,12 @@ struct PhysicsTelemetry
   double OpaqueMdiCullSetupCpuMs{0.0};
   double OpaqueMdiCullQueryPollCpuMs{0.0};
   double OpaqueMdiCullPostSubmitCpuMs{0.0};
+  double OpaqueMdiCullStatsPollCpuMs{0.0};
+  double OpaqueMdiCullStatsFencePollCpuMs{0.0};
+  double OpaqueMdiCullStatsBufferReadCpuMs{0.0};
+  double OpaqueMdiCullStatsArmCpuMs{0.0};
+  double OpaqueMdiCullBatchStateCpuMs{0.0};
+  double OpaqueMdiCullPostSubmitOtherCpuMs{0.0};
   double OpaqueMdiCullUnattributedCpuMs{0.0};
   /// Delayed GL_TIME_ELAPSED when available; <0 = unavailable sample.
   double CullGpuExecMs{-1.0};

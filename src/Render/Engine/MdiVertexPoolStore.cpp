@@ -326,6 +326,7 @@ void UMdiVertexPoolStore::PollCullStatsAsyncRing()
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   return;
 #else
+  ScopedElapsedTimer poll_timer(LastCullStatsPollCpuMs_);
   if (!CullStatsAsync_.Initialized)
   {
     return;
@@ -343,7 +344,11 @@ void UMdiVertexPoolStore::PollCullStatsAsyncRing()
       continue;
     }
     // Non-blocking: never ClientWait with timeout>0 on HUD path.
-    const GLenum r = glClientWaitSync(fence, 0, 0);
+    GLenum r = GL_WAIT_FAILED;
+    {
+      ScopedElapsedTimer fence_poll_timer(LastCullStatsFencePollCpuMs_);
+      r = glClientWaitSync(fence, 0, 0);
+    }
     if (r == GL_TIMEOUT_EXPIRED)
     {
       continue;
@@ -351,10 +356,13 @@ void UMdiVertexPoolStore::PollCullStatsAsyncRing()
     if (r == GL_ALREADY_SIGNALED || r == GL_CONDITION_SATISFIED)
     {
       uint32_t visible = 0;
-      glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsAsync_.Staging[i]);
-      glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t),
-                         &visible);
-      glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+      {
+        ScopedElapsedTimer buffer_read_timer(LastCullStatsBufferReadCpuMs_);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsAsync_.Staging[i]);
+        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t),
+                           &visible);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+      }
       ++gCullStatsReadback;
       // Not a sync stall: fence already signaled before SubData.
       StagedCullStatsVisible_ = visible;
@@ -372,6 +380,7 @@ void UMdiVertexPoolStore::ArmCullStatsAsyncSample(GreedyGpuPassId pass_id)
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   return;
 #else
+  ScopedElapsedTimer arm_timer(LastCullStatsArmCpuMs_);
   if (CullStatsSsbo == 0)
   {
     return;
@@ -902,6 +911,12 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   LastCullSetupCpuMs_ = 0.0;
   LastCullQueryPollCpuMs_ = 0.0;
   LastCullPostSubmitCpuMs_ = 0.0;
+  LastCullStatsPollCpuMs_ = 0.0;
+  LastCullStatsFencePollCpuMs_ = 0.0;
+  LastCullStatsBufferReadCpuMs_ = 0.0;
+  LastCullStatsArmCpuMs_ = 0.0;
+  LastCullBatchStateCpuMs_ = 0.0;
+  LastCullPostSubmitOtherCpuMs_ = 0.0;
   LastCullGpuExecMs_ = -1.0;
   ScopedElapsedTimer total_timer(LastCullTotalMs_);
 
@@ -1194,10 +1209,13 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   // No full vis readback: IndirectCmdsBuffer is authoritative for MultiDraw.
   // Keep CPU drawInstanceCount=1 so rare DrawElementsBaseVertex fallback still
   // draws (overdraw-only if compact culled); avoids N-uint GetBufferSubData.
-  for (GreedyGpuBatch &b : cache.batches)
   {
-    b.drawInstanceCount =
-        (b.pooled && b.indexCountGl > 0) ? 1u : 0u;
+    ScopedElapsedTimer batch_state_timer(LastCullBatchStateCpuMs_);
+    for (GreedyGpuBatch &b : cache.batches)
+    {
+      b.drawInstanceCount =
+          (b.pooled && b.indexCountGl > 0) ? 1u : 0u;
+    }
   }
   cache.IndirectCullReady = true;
   cache.GpuCompactActive = true;
@@ -1206,6 +1224,12 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   {
     cache.LastGoodCullOn = LastCullOpaqueOn_;
   }
+  post_submit_timer.Stop();
+  const double post_submit_attributed_ms =
+      LastCullStatsPollCpuMs_ + LastCullStatsArmCpuMs_ +
+      LastCullBatchStateCpuMs_;
+  LastCullPostSubmitOtherCpuMs_ =
+      (std::max)(0.0, LastCullPostSubmitCpuMs_ - post_submit_attributed_ms);
   return true;
 #endif
 }

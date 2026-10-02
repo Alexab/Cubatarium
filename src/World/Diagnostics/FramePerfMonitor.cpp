@@ -920,6 +920,12 @@ struct FrameNumbers
   double opaque_mdi_cull_setup_ms{0.0};
   double opaque_mdi_cull_query_poll_ms{0.0};
   double opaque_mdi_cull_post_submit_ms{0.0};
+  double opaque_mdi_cull_stats_poll_ms{0.0};
+  double opaque_mdi_cull_stats_fence_poll_ms{0.0};
+  double opaque_mdi_cull_stats_buffer_read_ms{0.0};
+  double opaque_mdi_cull_stats_arm_ms{0.0};
+  double opaque_mdi_cull_batch_state_ms{0.0};
+  double opaque_mdi_cull_post_submit_other_ms{0.0};
   double opaque_mdi_cull_unattributed_ms{0.0};
   uint64_t gpu_blocklight_flood{0};
   uint64_t gpu_fluid_readback{0};
@@ -1683,6 +1689,15 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.opaque_mdi_cull_setup_ms = phys.OpaqueMdiCullSetupCpuMs;
   n.opaque_mdi_cull_query_poll_ms = phys.OpaqueMdiCullQueryPollCpuMs;
   n.opaque_mdi_cull_post_submit_ms = phys.OpaqueMdiCullPostSubmitCpuMs;
+  n.opaque_mdi_cull_stats_poll_ms = phys.OpaqueMdiCullStatsPollCpuMs;
+  n.opaque_mdi_cull_stats_fence_poll_ms =
+      phys.OpaqueMdiCullStatsFencePollCpuMs;
+  n.opaque_mdi_cull_stats_buffer_read_ms =
+      phys.OpaqueMdiCullStatsBufferReadCpuMs;
+  n.opaque_mdi_cull_stats_arm_ms = phys.OpaqueMdiCullStatsArmCpuMs;
+  n.opaque_mdi_cull_batch_state_ms = phys.OpaqueMdiCullBatchStateCpuMs;
+  n.opaque_mdi_cull_post_submit_other_ms =
+      phys.OpaqueMdiCullPostSubmitOtherCpuMs;
   n.opaque_mdi_cull_unattributed_ms = phys.OpaqueMdiCullUnattributedCpuMs;
   n.vertex_pool_fill = phys.VertexPoolFill;
   n.gpu_cull_indirect = phys.GpuCullIndirect;
@@ -2628,6 +2643,18 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.opaque_mdi_cull_query_poll_ms
           << ",\"opaque_mdi_cull_post_submit_ms\":"
           << n.opaque_mdi_cull_post_submit_ms
+          << ",\"opaque_mdi_cull_stats_poll_ms\":"
+          << n.opaque_mdi_cull_stats_poll_ms
+          << ",\"opaque_mdi_cull_stats_fence_poll_ms\":"
+          << n.opaque_mdi_cull_stats_fence_poll_ms
+          << ",\"opaque_mdi_cull_stats_buffer_read_ms\":"
+          << n.opaque_mdi_cull_stats_buffer_read_ms
+          << ",\"opaque_mdi_cull_stats_arm_ms\":"
+          << n.opaque_mdi_cull_stats_arm_ms
+          << ",\"opaque_mdi_cull_batch_state_ms\":"
+          << n.opaque_mdi_cull_batch_state_ms
+          << ",\"opaque_mdi_cull_post_submit_other_ms\":"
+          << n.opaque_mdi_cull_post_submit_other_ms
           << ",\"opaque_mdi_cull_unattributed_ms\":"
           << n.opaque_mdi_cull_unattributed_ms
           << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
