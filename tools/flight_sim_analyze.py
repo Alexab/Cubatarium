@@ -1053,7 +1053,15 @@ def analyze(
     cruise_softdefer_empty_med = median(
         col(cruise_src, "softdefer_empty_placeholder_n")
     )
-    cruise_relight_completed_med = median(col(cruise_src, "relight_completed_n"))
+    # `relight_completed_n` is ring occupancy at the period sample, after the
+    # same-frame Apply drain. Use actual final installs for completion metrics
+    # and retain ring occupancy under an explicit diagnostic name.
+    cruise_relight_completion_ring_occupancy_med = median(
+        col(cruise_src, "relight_completed_n")
+    )
+    cruise_relight_completed_med = median(
+        col(cruise_src, "relight_apply_final_n")
+    )
     cruise_relight_apply_ms_med = median(col(cruise_src, "relight_apply_ms"))
     cruise_fifo_dropped_vals = col(cruise_src, "relight_fifo_dropped")
     cruise_fifo_dropped_delta = None
@@ -1132,7 +1140,9 @@ def analyze(
         else None
     )
     cruise_relight_completed_spike_med = (
-        median(col(fly_spikes, "relight_completed_n")) if fly_spikes else None
+        median(col(fly_spikes, "relight_apply_final_n"))
+        if fly_spikes
+        else None
     )
     cruise_relight_apply_final_med = (
         median(col(fly_spikes, "relight_apply_final_n")) if fly_spikes else None
@@ -1381,12 +1391,16 @@ def analyze(
     )
     dominant_schedule_blocker_mode = dominant_schedule_blocker
     cruise_relight_completed_throughput = None
-    if len(fly_spikes) >= 2:
-        rc0 = float(fly_spikes[0].get("relight_completed_n") or 0)
-        rc1 = float(fly_spikes[-1].get("relight_completed_n") or 0)
-        cruise_relight_completed_throughput = max(
-            0.0, (rc1 - rc0) / max(1, len(fly_spikes) - 1)
-        )
+    cruise_relight_apply_final_values = col(
+        cruise_src, "relight_apply_final_n"
+    )
+    if cruise_relight_apply_final_values:
+        # Rows are fixed-period samples; report applied final installs per
+        # moving period. Ring occupancy can return to zero after a healthy
+        # apply and is not a throughput counter.
+        cruise_relight_completed_throughput = sum(
+            cruise_relight_apply_final_values
+        ) / float(len(cruise_relight_apply_final_values))
     unfinished_visual_med = (
         median(unfinished_visual) if unfinished_visual else None
     )
@@ -1913,6 +1927,9 @@ def analyze(
         "visual_instability_soft_fail": visual_instability_soft_fail,
         "pending_partial_capture_soft_fail": pending_partial_capture_soft_fail,
         "cruise_relight_completed_med": cruise_relight_completed_med,
+        "cruise_relight_completion_ring_occupancy_med": (
+            cruise_relight_completion_ring_occupancy_med
+        ),
         "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,
         "cruise_false_clear_delta": cruise_false_clear_delta,
         "gates_stop": gates_stop,
@@ -2032,6 +2049,9 @@ def analyze(
             "cruise_unlit_med": cruise_unlit_med,
             "cruise_softdefer_empty_med": cruise_softdefer_empty_med,
             "cruise_relight_completed_med": cruise_relight_completed_med,
+            "cruise_relight_completion_ring_occupancy_med": (
+                cruise_relight_completion_ring_occupancy_med
+            ),
             "cruise_schedule_ok_med": cruise_schedule_ok_med,
             "cruise_schedule_ok_when_positive_med": cruise_schedule_ok_when_positive_med,
             "cruise_idle_spike_share": cruise_idle_spike_share,
