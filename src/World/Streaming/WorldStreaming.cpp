@@ -1475,8 +1475,10 @@ void UWorldStreaming::RefreshStreamingPressure(
           // The normal snapshot stamps and provisional-light draw path still
           // apply; this only avoids leaving the selected solid slice empty.
           int preview_marked = 0;
-          if (screen_ray_selected && coord == miss_coord &&
-              !screen_ray_preview_marked &&
+          // The selected list already contains only bounded exact-ray solid
+          // candidates. Its first no-mesh slice may differ from miss_coord
+          // when a higher-ranked stale-geometry hit owns the primary witness.
+          if (screen_ray_selected && !screen_ray_preview_marked &&
               !world.GetMeshService().HasDrawableGreedyMesh(coord))
           {
             preview_marked = mark_direct_missing_slice(coord);
