@@ -9274,9 +9274,16 @@ void UWorld::TickMeshEmerge()
   {
     return;
   }
-  UFrameStageWatchdog::Scope stage("streaming.mesh_emerge_coordinator");
-  Streaming->TickMeshEmerge(*this);
-  TickPlayerRelightMeshBurst();
+  UFrameStageWatchdog::Scope stage("streaming.world_tick_mesh_emerge");
+  {
+    UFrameStageWatchdog::Scope tick_stage("streaming.world_streaming_tick");
+    Streaming->TickMeshEmerge(*this);
+  }
+  {
+    UFrameStageWatchdog::Scope burst_stage(
+        "streaming.player_relight_mesh_burst");
+    TickPlayerRelightMeshBurst();
+  }
 }
 
 void UWorld::RefreshStreamerSettings()

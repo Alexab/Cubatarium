@@ -1,4 +1,5 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "Core/FrameStageWatchdog.h"
 #include "World/Diagnostics/Profile.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
@@ -317,6 +318,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     UWorld &world, const StreamingPressureCaps &pressure)
 {
   CUBA_ZONE("ChunkEmerge.TickMeshEmerge");
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.focus_miss_census");
   const uint64_t mesh_world_epoch =
       world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
   if (FaceDebtWorldEpoch_ != mesh_world_epoch)
@@ -1837,6 +1839,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
 
+  UFrameStageWatchdog::MarkCurrentStage(
+      "mesh_emerge.softdefer_ownership_scan");
   // SoftDefer empty / Hide⇒Ticket: FirstMesh-until-Drawable ownership + age SLA.
   // Era38 A1: collect → NearFovWorkScore sort → near reserve → rim-only offset.
   bool underfeet_undrawn = false;
@@ -2666,6 +2670,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     prep_softdefer_policy_ms =
         phys_telem.SoftdeferEmptyScanMs + phys_telem.SoftdeferEmptyOwnMs;
   }
+  UFrameStageWatchdog::MarkCurrentStage(
+      "mesh_emerge.stuck_firstmesh_recovery");
   // B5: SoftDefer-empty stuck — ColPipe P4: FirstMesh only if not already owned
   // (no MarkDirtyPriority / full-column Dirty storm).
   // FZ2.7-P12 A6: also pin under moving cruise when unfinished storm.
@@ -2845,6 +2851,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                  ColumnWorkKind::FirstMesh, 110);
   }
+  UFrameStageWatchdog::MarkCurrentStage(
+      "mesh_emerge.underfeet_gap_recovery");
   // Sky-only regress: holes SoT false while underfeet has solid without
   // drawable (0-quad fake-ready / SoftDefer empty pruned). Force FirstMesh
   // only when no Dirty/Held/inflight/GPU/RAA owner already holds the slice.
@@ -2905,6 +2913,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
 
   mesh_service.SetMeshVerticalPriority(preferred_cy, prefer_lower_cy);
+  UFrameStageWatchdog::MarkCurrentStage(
+      "mesh_emerge.lit_dirty_catchup");
   // Lit-but-dirty catch-up: vertical priority left deep Dirty cy forever, so
   // IsColumnRenderReady (full 0..MaxHeight) never cleared (nr≈50 plateau).
   if (idle_remesh_debt)
@@ -2961,6 +2971,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int fifo_n_imm = world.GetPendingTerrainRelightFifoCount();
   const int fifo_cap_imm = URuntimeTuning::Get().RelightFifoSoftCap;
 
+  UFrameStageWatchdog::MarkCurrentStage(
+      "mesh_emerge.dirty_thrashing_prune");
   // Soft-cap Dirty under Yellow/Red: drop farthest remesh (not holes).
   // Manual 091724: Dirty~400–590 with SoftCap 1200 and async≤29 — thrash never
   // engaged. Use DirtyThrashSoftCap whenever stream Yellow/Red OR async thrash.
@@ -3077,6 +3089,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     async_relief_cooldown = 0;
   }
 
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.schedule_admission");
   // SOTA: FirstMesh > Relight > Remesh via queue priority — no starve forks.
   mesh_service.SetStarveOutsideFocusMesh(false);
   {
@@ -3138,6 +3151,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             static_cast<double>(mesh_service.GetMeshEmergeTotalBudgetMs()), cap,
             protect_near)));
   };
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.schedule_policy");
   // Phase5 finishing: StreamSimple / deadline / idle-CPU — skip non-critical
   // schedule_policy walks (CancelAsync, DropRemesh, full focus/FIFO scans).
   // Never shed under visual_holes / underfeet / enter / unfinished_hard / mh≤2.
@@ -3260,6 +3274,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool base_suppress =
       idle_remesh_debt || idle_focus_dirty_debt ||
       suppress_seam_for_sticky_catchup || suppress_seam_standing_churn;
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.spawn_ring_sync");
   // D3.3 / S3: cache spawn-ring readiness. Never assume true off-enter (B3
   // blink). Do not full-query every cruise frame (~25 ms).
   const bool enter_gate_active = world.IsEnterLitGateActive();
@@ -3317,6 +3332,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   world.SetSuppressRelightSeamDirty(ShouldSuppressRelightSeamDirtyForEnterGate(
       enter_gate_active, spawn_ring_ready, base_suppress));
   world.GetPhysicsTelemetryMutable().PrepSpawnRingQueryMs = prep_spawn_ring_ms;
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.hole_fill_scan");
   // Always scan full focus for sync hole-fill when holes exist. Cap rebuild
   // count via sync_cap (cruise tiny, idle larger) — radius=2 while "moving"
   // missed stop holes when residual speed kept moving=true.
@@ -3341,6 +3357,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       flushed_for_holes = true;
     }
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.outside_focus_drain");
   // Healthy Dirty flush: raise outside-focus schedule so keep-shell remesh
   // cannot plateau ~450 forever (kMaxOutsideFocusPerFrame=2 alone).
   // Idle lit-but-dirty: never open outside cap — that regressed not_ready.
@@ -3642,6 +3659,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     world.ClearPendingLightAfterMeshCommitted(16);
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.budget_selection");
   // Standing, no holes/pending/sticky: prefer drain over schedule so Dirty
   // shrinks without feeding remesh thrash (async pinned at max pipeline).
   if (!moving && !visual_holes && !pending_near_light && black_sticky == 0 &&
@@ -3787,6 +3805,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   } while (0);
   } // else !shed_schedule_policy
   prep_schedule_policy_ms = prep_ms_since(schedule_policy_t0);
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.final_drain");
   // Phase5 S3: single DrainIdle before admission.
   flush_drain_idle();
   // Early pending_gpu read — MeshWorkAdmission for producers; Finalize after
@@ -3898,6 +3917,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, 14);
     mesh_drain = std::max(mesh_drain, 14);
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.async_schedule");
   // TD-ARCH-027: FOV unfinished → async throughput floor (not schedule cap).
   // Cap Immediate/sync elsewhere; workers need schedule headroom when Dirty high.
   if ((visual_holes || focus_not_render_ready > 0 ||
@@ -4020,6 +4040,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_schedule = std::max(mesh_schedule, 24);
     }
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.near_dirty_work");
   // TD-ARCH-021: catch-up while visual ring unfinished — include enter fly.
   if (world.NeedsSpawnRingCatchUp())
   {
@@ -4341,6 +4362,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
 
   const auto hole_force_t0 = std::chrono::high_resolution_clock::now();
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.sync_hole_fill");
   // Sync-rebuild missing solid slices: underfeet always; idle focus holes too.
   // Hitch must NOT disable focus hole sync — last_frame_ms>20 used to skip the
   // whole ring while visual_holes=1 for the entire stop.
@@ -4787,6 +4809,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     sync_cap = 2;
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.frontier_hole_policy");
   // SoftDefer frontier hole: never RebuildChunkImmediate while PendingLight —
   // that builds dark preview and leaves sticky (manual 091143: holes+pending
   // → sticky 2–5). Promote/async light must clear the gate; mesh fills after.
@@ -5078,6 +5101,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.PrepSyncFocusRingMs = prep_sync_focus_ring_ms;
     pt.PrepRecoverMs = prep_recover_ms;
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.phase_budget_abort");
   // Phase 5.1 T3: hard abort heavy post-prep when StreamingPhaseBudget spent
   // (StreamMs latched before emerge). Keep mh≤2/underfeet protect + nearest heal.
   // visual_holes no longer blocks abort (else phase wall never holds on land).
@@ -6285,6 +6309,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.Enqueue(focus_scan);
     note_column_flow_drain(moving ? 2 : 3, moving ? 2 : 3);
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.cruise_budget_clamp");
   // P3: soft cruise clamp — underfeet (or nh<=1 ahead under HoleDrain/Deep).
   // Applied next movement tick via PhysicsTelemetry.StreamSpeedClampScale.
   // Input-first: do not brake player when SLA is already broken; flight clamp
@@ -6371,6 +6396,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
   ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.column_flow_drain");
   // I9-C2: cruise FM starvation — ColumnFlow drain + underfeet FirstMesh nudge.
   if (moving && !visual_holes && mesh_service.GetLastDirtyFmN() == 0 &&
       mesh_service.GetLastMeshDirtyScheduleOkN() < 4)
@@ -6514,6 +6540,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         world.GetBlockWorld(), registry, consume_drain, consume_gpu,
         consume_budget);
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.admission_finalize");
   // E1/F0: Finalize on post-drain pending; floors above only propose.
   {
     pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
@@ -6884,10 +6911,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     world.GetPhysicsTelemetryMutable().FmDirtyEnqueueReserveN = fm_reserve;
   }
   mesh_service.SetFz2DeferGated(URuntimeTuning::Get().Fz2DeferGated);
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.final_work_limits");
   // F0: SyncRebuild always off in TickMeshEmerge. Dig/edit uses
   // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
   // burning 100–200ms whenever burst frames were non-zero on cruise.
   sync_cap = 0;
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.output_backpressure");
   // Final output-pipeline backpressure fence. ComputeMeshWorkAdmission is
   // followed by miss, coverage, abort and underfeet floors above; those may
   // deliberately raise the proposed schedule again. Bound the actual work
@@ -7114,6 +7143,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                  idle_recovery ? 24 : 12);
     }
   }
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.post_apply_prune");
   // After Apply/RemeshAfterApply: prune again so next frame's FocusDirtyChunks
   // (counted at UpdateStreaming start) sees the eye-shell residual, not the
   // full-focus remesh stack.
@@ -7410,6 +7440,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
 
+  UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.final_telemetry");
   // Phase 5.3.0: latch empty backlog / abort drip + DetectEmptyBatchEvent.
   {
     auto &pt = world.GetPhysicsTelemetryMutable();

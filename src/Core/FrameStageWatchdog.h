@@ -59,6 +59,17 @@ public:
     int64_t PreviousStartNs_{0};
   };
 
+  /// Replace the active stage marker without creating a nested RAII scope.
+  /// Useful for checkpoints inside a large routine where a stack scope around
+  /// each branch would distort or obscure the last non-returning phase.
+  static void MarkCurrentStage(const char *stage)
+  {
+    if (auto *watchdog = GetIfEnabled())
+    {
+      watchdog->SetStage(stage);
+    }
+  }
+
 private:
   explicit UFrameStageWatchdog(const char *path)
       : Output_(path, std::ios::out | std::ios::app),

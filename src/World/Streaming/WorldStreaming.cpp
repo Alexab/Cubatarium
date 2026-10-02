@@ -22,6 +22,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "World/Streaming/StreamerAmortizePolicy.h"
 #include "Core/FrameDeadline.h"
+#include "Core/FrameStageWatchdog.h"
 #include "Core/Jobs/PipelineAdmission.h"
 #include "World/Lighting/LightingSeedBackendFactory.h"
 #include "Render/Backend/RenderBackendCaps.h"
@@ -4440,7 +4441,11 @@ void UWorldStreaming::ResumeStreamerAfterQuiesce()
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
   CUBA_ZONE("TickMeshEmerge");
-  EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
+  {
+    UFrameStageWatchdog::Scope stage("streaming.emerge_scheduler_tick");
+    EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
+  }
+  UFrameStageWatchdog::Scope telemetry_stage("streaming.emerge_post_tick");
   // MeshWorkAdmission SoT lands in LastBudget at end of TickMeshEmerge.
   // finish_telemetry in TickAsyncChunkSystems runs *before* emerge — write
   // final schedule/drain/mode here so periods see HoleDrain under miss.
