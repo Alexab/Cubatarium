@@ -2688,8 +2688,36 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   const bool demand_owns_light_repair =
       demand_identity_current && demand->has_active_attempt &&
       demand->desired_light_rev > demand->published_light_rev;
-  const bool light_repair_pending =
-      IsPendingLightBeforeMesh(column) || demand_owns_light_repair;
+  bool deferred_relight_owned = false;
+  if (Persistence)
+  {
+    const auto queue =
+        Persistence->GetTerrainColumnRelightQueueInfo(column * CHUNK_SIZE);
+    deferred_relight_owned = queue.deferred_far || queue.deferred_visible;
+  }
+  const bool relight_owned = IsTerrainColumnRelightQueued(column) ||
+                             deferred_relight_owned ||
+                             IsAsyncRelightColumnInFlight(column) ||
+                             GetColumnFlowExecutor().HasRepairTicket(column);
+  const bool mesh_repair_owned =
+      cache.IsChunkMeshDirty(chunk_coord) ||
+      cache.HasInflightMeshBuild(chunk_coord) ||
+      cache.IsRemeshAfterApplyPending(chunk_coord) ||
+      cache.IsPendingGpuApply(chunk_coord) ||
+      cache.IsPendingGpuQueued(chunk_coord) ||
+      cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
+      cache.IsGpuExtractInFlight(chunk_coord);
+
+  // FirstMesh and deferred-far relight owners can publish a dark provisional
+  // image before the slice has a settlement proof. Column PendingLight is not
+  // guaranteed to cover those owners. M316 captured black ocean tiles in this
+  // exact state; keep a mixed dark mesh on the shader's ambient fallback until
+  // the slice settles and its replacement publishes.
+  const bool unsettled_repair_owned =
+      !field_settled_current && (relight_owned || mesh_repair_owned);
+  const bool light_repair_pending = IsPendingLightBeforeMesh(column) ||
+                                    demand_owns_light_repair ||
+                                    unsettled_repair_owned;
   if (!light_repair_pending || settled_mesh_light_current)
   {
     return false;
@@ -2703,17 +2731,6 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
   // both the meshed and published image remained at revision 0. Keep the
   // existing mesh visible with the shader fallback until that image catches
   // up; only a settled, matching published mesh ends the preview.
-  const bool relight_owned = IsTerrainColumnRelightQueued(column) ||
-                             IsAsyncRelightColumnInFlight(column) ||
-                             GetColumnFlowExecutor().HasRepairTicket(column);
-  const bool mesh_repair_owned =
-      cache.IsChunkMeshDirty(chunk_coord) ||
-      cache.HasInflightMeshBuild(chunk_coord) ||
-      cache.IsRemeshAfterApplyPending(chunk_coord) ||
-      cache.IsPendingGpuApply(chunk_coord) ||
-      cache.IsPendingGpuQueued(chunk_coord) ||
-      cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
-      cache.IsGpuExtractInFlight(chunk_coord);
   return relight_owned || mesh_repair_owned || demand_owns_light_repair;
 }
 
