@@ -840,6 +840,7 @@ void UWorldStreaming::RefreshStreamingPressure(
           // cannot starve other stale geometry in the same view.
           constexpr size_t kRendererPixelColumnCount = 20;
           constexpr size_t kScreenColumnsPerProbe = 5;
+          // M319 found repeated raster gaps at this exact dense-probe scanline.
           constexpr std::array<float, 5> kScreenRows = {
               0.125f, 0.375f, 0.5625f, 0.625f, 0.875f};
           constexpr size_t kScreenSampleCount =

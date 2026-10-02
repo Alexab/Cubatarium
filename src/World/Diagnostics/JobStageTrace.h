@@ -349,8 +349,9 @@ struct VisualBlackTraceRecord
   float renderer_source_block_light_max{0.0f};
   uint64_t renderer_pixel_probe_id{0};
   /// sample_kind=10: exact streaming screen-ray sample and selector decision.
-  /// Screen coordinates use top-left pixel space; column/row indices map to
-  /// the renderer's 20x4 pixel-probe grid (row 0 is the top scanline).
+  /// Screen coordinates use top-left pixel space. Columns map to the
+  /// renderer's 20-tile X centers; row is an index in the selector's ordered
+  /// vertical sample list (row 0 is topmost). Use screen_ray_y to join rows.
   float screen_ray_x{0.0f};
   float screen_ray_y{0.0f};
   float screen_ray_distance{-1.0f};
