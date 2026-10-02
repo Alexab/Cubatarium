@@ -1183,6 +1183,7 @@ void UWorldStreaming::RefreshStreamingPressure(
           [&](glm::ivec3 coord, bool screen_ray_selected,
               const char *action, bool light_debt,
               bool async_before, bool flow_before, bool flow_after,
+              bool visible_geometry_promoted,
               const char *flow_kind,
               const UWorldPersistence::TerrainColumnRelightQueueInfo &before,
               const UWorldPersistence::TerrainColumnRelightQueueInfo &after)
@@ -1298,6 +1299,8 @@ void UWorldStreaming::RefreshStreamingPressure(
                 " flow_before=" + std::to_string(flow_before ? 1 : 0) +
                 " flow_after=" +
                 std::to_string(flow_after ? 1 : 0) +
+                " visible_geometry_promoted=" +
+                std::to_string(visible_geometry_promoted ? 1 : 0) +
                 " flow_column_ticket=" +
                 std::to_string(exec.HasRepairTicket(
                                    glm::ivec2(coord.x, coord.z))
@@ -1383,10 +1386,32 @@ void UWorldStreaming::RefreshStreamingPressure(
         }
         return marked;
       };
+      const auto promote_visible_geometry_debt =
+          [&](glm::ivec3 coord, bool screen_ray_selected)
+      {
+        if (!screen_ray_selected)
+        {
+          return false;
+        }
+        const UChunk *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        if (!chunk ||
+            !world.GetMeshService().HasDrawableGreedyMesh(coord) ||
+            !world.GetMeshService().HasGeometryPublicationDebt(
+                coord, chunk->GetIncarnation()))
+        {
+          return false;
+        }
+        return world.GetMeshService()
+            .GetCache()
+            .PrioritizeVisibleLightRepairRemesh(coord);
+      };
       const auto enqueue_first_mesh = [&](glm::ivec3 coord,
                                           bool screen_ray_selected)
       {
         const glm::ivec2 column(coord.x, coord.z);
+        const bool visible_geometry_promoted =
+            promote_visible_geometry_debt(coord, screen_ray_selected);
         const bool light_debt =
             world.IsPendingLightBeforeMeshSlice(coord);
         const glm::ivec2 world_key(coord.x * CHUNK_SIZE,
@@ -1463,7 +1488,8 @@ void UWorldStreaming::RefreshStreamingPressure(
           }
           write_screen_ray_repair_trace(
               coord, screen_ray_selected, light_action, light_debt,
-              async_before, flow_before, flow_after, flow_kind, queue_before,
+              async_before, flow_before, flow_after,
+              visible_geometry_promoted, flow_kind, queue_before,
               queue_after_now());
           return;
         }
@@ -1492,8 +1518,9 @@ void UWorldStreaming::RefreshStreamingPressure(
                   : (direct_slice_marked > 0
                          ? "first_mesh_slice_dirty_direct"
                          : "first_mesh_ticket_rejected"),
-              light_debt, async_before, flow_before, flow_after, "first_mesh",
-              queue_before, queue_after_now());
+              light_debt, async_before, flow_before, flow_after,
+              visible_geometry_promoted, "first_mesh", queue_before,
+              queue_after_now());
         }
       };
       const bool primary_first_mesh_enqueued =
@@ -1518,6 +1545,9 @@ void UWorldStreaming::RefreshStreamingPressure(
         if (primary_first_mesh_enqueued && coord.x == miss_coord.x &&
             coord.z == miss_coord.z)
         {
+          const bool visible_geometry_promoted =
+              coord != miss_coord &&
+              promote_visible_geometry_debt(coord, true);
           if (capture_screen_ray_trace && coord != miss_coord)
           {
             const UWorldPersistence::TerrainColumnRelightQueueInfo queue_info =
@@ -1531,7 +1561,8 @@ void UWorldStreaming::RefreshStreamingPressure(
                 world.IsPendingLightBeforeMeshSlice(coord),
                 world.IsAsyncRelightColumnInFlight(
                     glm::ivec2(coord.x, coord.z)),
-                false, false, "primary_first_mesh", queue_info, queue_info);
+                false, false, visible_geometry_promoted,
+                "primary_first_mesh", queue_info, queue_info);
           }
           continue;
         }
