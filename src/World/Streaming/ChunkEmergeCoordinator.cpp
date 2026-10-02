@@ -994,12 +994,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 record->published_geom_rev < current_geom_rev)
             {
               mesh_service.RequeueDirtyPriority(
-                  chunk_coord, MeshRevisionBumpReason::FaceDebtCallback);
+                  chunk_coord,
+                  MeshRevisionBumpReason::FaceDebtMaterialRetry);
               return;
             }
           }
           mesh_service.MarkDirty(
-              chunk_coord, MeshRevisionBumpReason::FaceDebtCallback);
+              chunk_coord, MeshRevisionBumpReason::FaceDebtMaterialRetry);
         });
     mesh_service.SetOnFaceDebtMaskFn(
         [this](glm::ivec3 chunk_coord, uint8_t mask)

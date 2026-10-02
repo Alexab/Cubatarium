@@ -678,6 +678,8 @@ const char *UJobStageTrace::MeshRevisionBumpReasonName(
     return "priority_world_streaming_commit";
   case MeshRevisionBumpReason::PriorityWorldCoreCommit:
     return "priority_world_core_commit";
+  case MeshRevisionBumpReason::FaceDebtMaterialRetry:
+    return "face_debt_material_retry";
   }
   return "unknown";
 }

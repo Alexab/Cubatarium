@@ -143,7 +143,8 @@ enum class MeshRevisionBumpReason : uint8_t
   PriorityWorldCoreRepair,
   PriorityRelitInstallRepair,
   PriorityWorldStreamingCommit,
-  PriorityWorldCoreCommit
+  PriorityWorldCoreCommit,
+  FaceDebtMaterialRetry
 };
 
 struct DemandTransitionSpan
@@ -169,6 +170,9 @@ struct DemandTransitionSpan
   uint64_t published_coverage_gen{0};
   uint64_t mesh_revision_before{0};
   uint64_t mesh_revision_after{0};
+  uint8_t face_debt_mask{0};
+  uint8_t overlay_face_debt_mask{0};
+  uint8_t peer_face_debt_mask{0};
   uint32_t mesh_owner_flags{0};
   uint64_t mesh_dirty_queue_age_frames{0};
   uint64_t active_mesh_source_revision{0};

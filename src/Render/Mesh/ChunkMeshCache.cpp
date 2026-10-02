@@ -2140,6 +2140,9 @@ void UChunkMeshCache::BumpChunkMeshRevision(
       trace.published_light_rev = rec->published_light_rev;
       trace.previous_published_coverage_gen = rec->published_coverage_gen;
       trace.published_coverage_gen = rec->published_coverage_gen;
+      trace.face_debt_mask = rec->face_debt_mask;
+      trace.overlay_face_debt_mask = rec->overlay_face_debt_mask;
+      trace.peer_face_debt_mask = rec->peer_face_debt_mask;
       trace.previous_stage = rec->active_stage;
       trace.stage = rec->active_stage;
       trace.had_active_attempt = rec->has_active_attempt ? 1 : 0;

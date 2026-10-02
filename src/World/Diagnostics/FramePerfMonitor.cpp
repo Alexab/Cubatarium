@@ -3366,6 +3366,12 @@ void UFramePerfMonitor::Shutdown()
                << UJobStageTrace::MeshRevisionBumpReasonName(
                       sp.mesh_revision_bump_reason)
                << "\""
+               << ",\"face_debt_mask\":"
+               << static_cast<int>(sp.face_debt_mask)
+               << ",\"overlay_face_debt_mask\":"
+               << static_cast<int>(sp.overlay_face_debt_mask)
+               << ",\"peer_face_debt_mask\":"
+               << static_cast<int>(sp.peer_face_debt_mask)
                << ",\"mesh_owner_flags\":" << sp.mesh_owner_flags
                << ",\"mesh_dirty_queue_kind\":"
                << static_cast<int>(sp.mesh_dirty_queue_kind)
