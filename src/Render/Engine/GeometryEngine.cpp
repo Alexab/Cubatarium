@@ -106,15 +106,27 @@ bool DebugTransparentFragmentMarkerEnabled()
 }
 
 constexpr int kPixelProbeColumns = 20;
-constexpr int kPixelProbeRows = 4;
+constexpr int kPixelProbeDefaultRows = 4;
+constexpr int kPixelProbeDenseRows = 8;
 constexpr size_t kPixelProbeSampleCount =
-    static_cast<size_t>(kPixelProbeColumns * kPixelProbeRows);
+    static_cast<size_t>(kPixelProbeColumns * kPixelProbeDenseRows);
 constexpr float kOpaqueVertexLightMatchDistance = 0.25f;
 
-int PixelProbeSampleY(int row, int height)
+int PixelProbeRows()
 {
-  const int y0 = row * height / kPixelProbeRows;
-  const int y1 = (row + 1) * height / kPixelProbeRows;
+  static const int rows = []() {
+    const char *value = std::getenv("CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS");
+    return value != nullptr && value[0] != '\0' && value[0] != '0'
+               ? kPixelProbeDenseRows
+               : kPixelProbeDefaultRows;
+  }();
+  return rows;
+}
+
+int PixelProbeSampleY(int row, int height, int rows)
+{
+  const int y0 = row * height / rows;
+  const int y1 = (row + 1) * height / rows;
   return std::clamp((y0 + y1) / 2, 0, height - 1);
 }
 
@@ -136,16 +148,17 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
   {
     return;
   }
+  const int rows = PixelProbeRows();
 
-  // Read one full-width scanline in each screen quadrant. This keeps the
-  // forensic sample distributed over the whole view without copying the full
-  // framebuffer or issuing a synchronous read for every pixel.
-  std::vector<GLubyte> pixels(static_cast<size_t>(width) * kPixelProbeRows *
+  // Read one full-width scanline in each vertical band. Dense diagnostic mode
+  // adds rows where the full-frame captures showed bounded water-color
+  // discontinuities, while the normal trace retains four vertical bands.
+  std::vector<GLubyte> pixels(static_cast<size_t>(width) * rows *
                               4u);
-  std::vector<GLfloat> depths(static_cast<size_t>(width) * kPixelProbeRows);
-  for (int row = 0; row < kPixelProbeRows; ++row)
+  std::vector<GLfloat> depths(static_cast<size_t>(width) * rows);
+  for (int row = 0; row < rows; ++row)
   {
-    const int local_y = PixelProbeSampleY(row, height);
+    const int local_y = PixelProbeSampleY(row, height, rows);
     glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
                  GL_UNSIGNED_BYTE,
                  pixels.data() + static_cast<size_t>(row) * width * 4u);
@@ -155,7 +168,7 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
   }
 
   size_t sample = 0;
-  for (int row = 0; row < kPixelProbeRows; ++row)
+  for (int row = 0; row < rows; ++row)
   {
     for (int column = 0; column < kPixelProbeColumns; ++column)
     {
@@ -652,13 +665,13 @@ void CaptureTransparentPixelProbe(
   {
     return;
   }
+  const int rows = PixelProbeRows();
 
-  // Match the opaque-depth probe with four sparse scanlines across the view.
-  std::vector<GLubyte> pixels(static_cast<size_t>(width) * kPixelProbeRows *
-                              4u);
-  for (int row = 0; row < kPixelProbeRows; ++row)
+  // Match the opaque-depth probe's active scanlines across the view.
+  std::vector<GLubyte> pixels(static_cast<size_t>(width) * rows * 4u);
+  for (int row = 0; row < rows; ++row)
   {
-    const int local_y = PixelProbeSampleY(row, height);
+    const int local_y = PixelProbeSampleY(row, height, rows);
     glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
                  GL_UNSIGNED_BYTE,
                  pixels.data() + static_cast<size_t>(row) * width * 4u);
@@ -698,9 +711,9 @@ void CaptureTransparentPixelProbe(
     packed_transparent_chunks.insert(ref.chunkCoord);
   }
 
-  for (int row = 0; row < kPixelProbeRows; ++row)
+  for (int row = 0; row < rows; ++row)
   {
-    const int local_y = PixelProbeSampleY(row, height);
+    const int local_y = PixelProbeSampleY(row, height, rows);
     for (int column = 0; column < kPixelProbeColumns; ++column)
     {
       const int x0 = column * width / kPixelProbeColumns;
