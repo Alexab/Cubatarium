@@ -201,6 +201,22 @@ GetWatchedMeshScheduleTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kCameraBandPeakTraceRingCapacity> &
+GetCameraBandNoDrawablePeakTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<UJobStageTrace::kCameraBandPeakTraceRingCapacity> &
+GetCameraBandUnownedPeakTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakTraceRingCapacity> r;
+  return r;
+}
+
 template <size_t Capacity>
 void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
                      const VisualBlackTraceRecord &record)
@@ -441,6 +457,14 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetWatchedMeshScheduleTraceRing(), record);
   }
+  else if (record.sample_kind == 12)
+  {
+    PushVisualTrace(GetCameraBandNoDrawablePeakTraceRing(), record);
+  }
+  else if (record.sample_kind == 13)
+  {
+    PushVisualTrace(GetCameraBandUnownedPeakTraceRing(), record);
+  }
   else if (record.sample_kind == 4 || record.sample_kind == 6)
   {
     PushVisualTrace(GetMeshScheduleTraceRing(), record);
@@ -448,6 +472,24 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   else
   {
     PushVisualTrace(GetVisualBlackTraceRing(), record);
+  }
+}
+
+void UJobStageTrace::ResetCameraBandPeakTrace(uint8_t sample_kind)
+{
+  auto reset = [](auto &ring) {
+    std::lock_guard<std::mutex> lock(ring.mu);
+    ring.slots.clear();
+    ring.write = 0;
+    ring.count = 0;
+  };
+  if (sample_kind == 12)
+  {
+    reset(GetCameraBandNoDrawablePeakTraceRing());
+  }
+  else if (sample_kind == 13)
+  {
+    reset(GetCameraBandUnownedPeakTraceRing());
   }
 }
 
@@ -468,6 +510,10 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetWatchedMeshScheduleTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetCameraBandNoDrawablePeakTraceRing(), max_n, fn,
+                           ctx);
+  ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(), max_n, fn,
+                           ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);

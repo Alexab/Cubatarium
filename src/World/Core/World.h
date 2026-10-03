@@ -1740,6 +1740,10 @@ private:
     int prep_hit_n{0};
     int prep_overflow_n{0};
     int prep_calls_n{0};
+    /// Run-wide maxima for the opt-in visible camera-band diagnostic. They
+    /// persist as focus moves so a peak snapshot is not lost on the next ring.
+    int camera_band_peak_no_drawable_n{0};
+    int camera_band_peak_unowned_n{0};
   } UnfinishedVisualCache;
   /// Last unfinished count produced by Streaming (Coordinator reuses — no 2nd O(R²)).
   mutable int LastUnfinishedVisualSample{0};

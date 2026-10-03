@@ -3613,8 +3613,68 @@ void UFramePerfMonitor::Shutdown()
         case 11:
           trace_kind = "mesh_watched_schedule_trace";
           break;
+        case 12:
+          trace_kind = "camera_band_no_drawable_peak_slice_trace";
+          break;
+        case 13:
+          trace_kind = "camera_band_unowned_peak_slice_trace";
+          break;
         default:
           break;
+        }
+        if (r.sample_kind == 12 || r.sample_kind == 13)
+        {
+          // Peak snapshots are intentionally sparse and bounded. Emit only
+          // the exact slice census and work-owner fields needed to explain the
+          // high-water mark; the generic row repeats hundreds of unrelated
+          // renderer fields for every slice.
+          (*out) << "{\"kind\":\"" << trace_kind << "\""
+                 << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
+                 << ",\"cz\":" << r.cz
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"camera_x\":" << r.camera_x
+                 << ",\"camera_y\":" << r.camera_y
+                 << ",\"camera_z\":" << r.camera_z
+                 << ",\"focus_state\":" << static_cast<int>(r.focus_state)
+                 << ",\"non_air_blocks\":" << r.non_air_blocks
+                 << ",\"camera_band_solid_no_drawable_n\":"
+                 << r.camera_band_solid_no_drawable_n
+                 << ",\"camera_band_solid_unowned_n\":"
+                 << r.camera_band_solid_unowned_n
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"world_epoch\":" << r.world_epoch
+                 << ",\"incarnation\":" << r.incarnation
+                 << ",\"demand_incarnation\":" << r.demand_incarnation
+                 << ",\"chunk_content_revision\":"
+                 << r.chunk_content_revision
+                 << ",\"mesh_revision\":" << r.mesh_revision
+                 << ",\"published_geom_rev\":" << r.published_geom_rev
+                 << ",\"published_light_rev\":" << r.published_light_rev
+                 << ",\"meshed_light_rev\":" << r.meshed_light_rev
+                 << ",\"field_light_rev\":" << r.field_light_rev
+                 << ",\"attempt_id\":" << r.attempt_id
+                 << ",\"active_stage\":" << static_cast<int>(r.active_stage)
+                 << ",\"desired_geom_rev\":" << r.desired_geom_rev
+                 << ",\"desired_light_rev\":" << r.desired_light_rev
+                 << ",\"demand_published_geom_rev\":"
+                 << r.demand_published_geom_rev
+                 << ",\"demand_published_light_rev\":"
+                 << r.demand_published_light_rev
+                 << ",\"mesh_dirty_queue_kind\":"
+                 << static_cast<int>(r.mesh_dirty_queue_kind)
+                 << ",\"mesh_dirty_queue_index\":"
+                 << r.mesh_dirty_queue_index
+                 << ",\"mesh_work_owner_flags\":"
+                 << r.mesh_work_owner_flags
+                 << ",\"relight_owner_flags\":" << r.relight_owner_flags
+                 << ",\"relight_queue_kind\":"
+                 << static_cast<int>(r.relight_queue_kind)
+                 << ",\"relight_queue_index\":" << r.relight_queue_index
+                 << ",\"column_flow_ticket_flags\":"
+                 << static_cast<int>(r.column_flow_ticket_flags)
+                 << ",\"flags\":" << r.flags << "}\n";
+          return;
         }
         if (r.sample_kind == 9)
         {

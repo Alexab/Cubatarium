@@ -3455,6 +3455,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     {
       VisualBlackTraceRecord record{};
       bool in_visual_band{false};
+      bool camera_band_no_drawable{false};
       int horizontal_distance{0};
       int vertical_distance{0};
     };
@@ -3602,7 +3603,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           {
             focus_state = 3;
           }
-          if (focus_state != 0)
+          if (focus_state != 0 || (in_camera_band && !has_mesh))
           {
             FocusSliceCandidate candidate{};
             auto &trace = candidate.record;
@@ -3654,10 +3655,27 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             candidate.vertical_distance = std::abs(cy - camera_cy);
             candidate.in_visual_band =
                 cy >= camera_band_cy0 && cy <= camera_band_cy1;
+            candidate.camera_band_no_drawable = in_camera_band && !has_mesh;
             focus_slice_candidates.push_back(candidate);
           }
         }
       }
+    }
+    const bool camera_band_no_drawable_peak =
+        census.camera_band_solid_no_drawable_n >
+        cache.camera_band_peak_no_drawable_n;
+    const bool camera_band_unowned_peak =
+        census.camera_band_solid_unowned_n > cache.camera_band_peak_unowned_n;
+    if (camera_band_no_drawable_peak)
+    {
+      cache.camera_band_peak_no_drawable_n =
+          census.camera_band_solid_no_drawable_n;
+      UJobStageTrace::ResetCameraBandPeakTrace(12);
+    }
+    if (camera_band_unowned_peak)
+    {
+      cache.camera_band_peak_unowned_n = census.camera_band_solid_unowned_n;
+      UJobStageTrace::ResetCameraBandPeakTrace(13);
     }
     std::sort(focus_slice_candidates.begin(), focus_slice_candidates.end(),
               [](const FocusSliceCandidate &a, const FocusSliceCandidate &b)
@@ -3681,8 +3699,16 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     for (const FocusSliceCandidate &candidate : focus_slice_candidates)
     {
       const int state = candidate.record.focus_state;
-      if (state <= 0 || state >= 4 ||
-          recorded_by_state[state] >= kFocusSliceTracePerState)
+      const bool record_focus_slice =
+          state > 0 && state < 4 &&
+          recorded_by_state[state] < kFocusSliceTracePerState;
+      const bool record_no_drawable_peak =
+          camera_band_no_drawable_peak && candidate.in_visual_band &&
+          candidate.camera_band_no_drawable;
+      const bool record_unowned_peak =
+          camera_band_unowned_peak && candidate.in_visual_band && state == 1;
+      if (!record_focus_slice && !record_no_drawable_peak &&
+          !record_unowned_peak)
       {
         continue;
       }
@@ -3960,8 +3986,32 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
         trace.stale_sample_light = stale_witness.packed_light;
         trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
       }
-      UJobStageTrace::NoteVisualBlack(trace);
-      ++recorded_by_state[state];
+      if (record_focus_slice)
+      {
+        trace.sample_kind = 1;
+        UJobStageTrace::NoteVisualBlack(trace);
+        ++recorded_by_state[state];
+      }
+      if (record_no_drawable_peak)
+      {
+        VisualBlackTraceRecord peak_trace = trace;
+        peak_trace.sample_kind = 12;
+        peak_trace.camera_band_solid_no_drawable_n =
+            static_cast<uint32_t>(census.camera_band_solid_no_drawable_n);
+        peak_trace.camera_band_solid_unowned_n =
+            static_cast<uint32_t>(census.camera_band_solid_unowned_n);
+        UJobStageTrace::NoteVisualBlack(peak_trace);
+      }
+      if (record_unowned_peak)
+      {
+        VisualBlackTraceRecord peak_trace = trace;
+        peak_trace.sample_kind = 13;
+        peak_trace.camera_band_solid_no_drawable_n =
+            static_cast<uint32_t>(census.camera_band_solid_no_drawable_n);
+        peak_trace.camera_band_solid_unowned_n =
+            static_cast<uint32_t>(census.camera_band_solid_unowned_n);
+        UJobStageTrace::NoteVisualBlack(peak_trace);
+      }
     }
   };
   if (cache.valid && cache.focus == focus_ground_chunk &&

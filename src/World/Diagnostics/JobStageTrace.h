@@ -213,7 +213,9 @@ struct VisualBlackTraceRecord
   /// 7=priority-remesh scheduling attempt, 8=frustum candidate, 9=screen pixel
   /// sampled after transparent pass (normal RGBA or diagnostic marker), joined
   /// to lifecycle/source-mesh state of the exact ray-mapped chunk slice,
-  /// 10=CPU screen ray tested by the streaming miss selector.
+  /// 10=CPU screen ray tested by the streaming miss selector,
+  /// 11=watched mesh schedule, 12=camera-band no-drawable peak slice,
+  /// 13=camera-band unowned peak slice.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   /// sample_kind=1: FocusColumnVisualClass ordinal, 255 when outside cache.
@@ -581,6 +583,10 @@ struct VisualBlackTraceRecord
   uint32_t draw_gate_scan_drawable_n{0};
   uint32_t draw_gate_scan_repairable_n{0};
   uint32_t draw_gate_scan_target_n{0};
+  /// sample_kind=12/13: camera-band census totals captured at a new high-water
+  /// mark; 12 is no-drawable, 13 is unowned.
+  uint32_t camera_band_solid_no_drawable_n{0};
+  uint32_t camera_band_solid_unowned_n{0};
   /// sample_kind=0 bits: ticket, progress, sticky, pending_replace,
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,
@@ -623,6 +629,9 @@ public:
   static constexpr size_t kMeshScheduleTraceRingCapacity = 1024;
   static constexpr size_t kPriorityRemeshTraceRingCapacity = 2048;
   static constexpr size_t kWatchedMeshScheduleTraceRingCapacity = 512;
+  /// Preserve exact slice ownership only for the latest no-drawable/unowned
+  /// camera-band high-water snapshots; the rings are cleared on each new peak.
+  static constexpr size_t kCameraBandPeakTraceRingCapacity = 256;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
       kVisualBlackTraceRingCapacity +
       kRendererGateTraceRingCapacity +
@@ -631,7 +640,7 @@ public:
       kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
       kPriorityRemeshTraceRingCapacity +
       kWatchedMeshScheduleTraceRingCapacity + kVisualPixelTraceRingCapacity +
-      kScreenRayTraceRingCapacity;
+      kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.
@@ -662,6 +671,8 @@ public:
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static bool VisualBlackTraceEnabled();
   static void NoteVisualBlack(const VisualBlackTraceRecord &record);
+  /// Clear the latest high-water snapshot ring for sample_kind 12 or 13.
+  static void ResetCameraBandPeakTrace(uint8_t sample_kind);
   /// Dump each trace class from its own bounded ring. max_n is applied per
   /// class so high-rate view samples cannot evict repair/schedule evidence.
   static void ForEachVisualBlackNewest(
