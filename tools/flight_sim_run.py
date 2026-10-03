@@ -1748,16 +1748,22 @@ def main() -> int:
             )
         # Focus (7,3) ≈ world (120, y, 56); pin eye Y to manual 122212/100645 (~56).
         users = BIN / "worlds" / "World_164" / "users.json"
+        args._product174657_users_restore = None  # type: ignore[attr-defined]
         if users.is_file():
             try:
-                data = json.loads(users.read_text(encoding="utf-8"))
+                original_users = users.read_bytes()
+                data = json.loads(original_users.decode("utf-8"))
                 user = data.get("Username") or data
                 y = 56.0
                 user["position"] = [120.0, y, 56.0]
                 user["yaw"] = 180.0
                 user["pitch"] = 0.0
-                users.write_text(
-                    json.dumps(data, indent=4) + "\n", encoding="utf-8"
+                pinned_users = json.dumps(data, indent=4) + "\n"
+                users.write_text(pinned_users, encoding="utf-8")
+                args._product174657_users_restore = (  # type: ignore[attr-defined]
+                    users,
+                    original_users,
+                    pinned_users,
                 )
                 print(
                     f"INFO: {args.scenario} pinned World_164 locus to "
@@ -2350,6 +2356,18 @@ def main() -> int:
     run_reports: list[Path] = []
 
     for rep in range(1, repeats + 1):
+        user_restore = getattr(args, "_product174657_users_restore", None)
+        if user_restore:
+            users_path, _original_users, pinned_users = user_restore
+            try:
+                # App shutdown persists the flight endpoint to users.json.
+                # Re-pin before every repeat so each route starts identically.
+                users_path.write_text(pinned_users, encoding="utf-8")
+            except OSError as exc:
+                print(
+                    f"WARN: product-174657 user locus repin failed: {exc}",
+                    flush=True,
+                )
         if repeats > 1:
             if rep == 1:
                 report_path = base_report
@@ -3033,6 +3051,21 @@ def main() -> int:
             )
         except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
             print(f"WARN: product-174657 fog restore failed: {exc}", flush=True)
+
+    user_restore = getattr(args, "_product174657_users_restore", None)
+    if user_restore:
+        users_path, original_users, _pinned_users = user_restore
+        try:
+            # Preserve the operator's pre-flight user/world position. Streaming
+            # chunk saves remain part of the experiment; only the test locus is
+            # restored after the app has exited.
+            users_path.write_bytes(original_users)
+            print(
+                "INFO: product-174657 restored World_164 users.json after run",
+                flush=True,
+            )
+        except OSError as exc:
+            print(f"WARN: product-174657 user restore failed: {exc}", flush=True)
 
     return last_rc
 
