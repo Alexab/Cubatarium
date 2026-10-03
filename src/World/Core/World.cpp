@@ -4211,15 +4211,17 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
             published_overlay_mask | static_cast<uint8_t>(1u << face));
       }
     }
-    if (published_overlay_mask == active_demand->overlay_face_debt_mask)
+    if (published_overlay_mask != 0)
     {
       // The accepted empty result already carries the current missing-neighbor
       // overlay. An unowned Created demand and coverage lag caused only by that
       // overlay do not represent executable mesh work. Re-admitting this slice
       // through generic FirstMesh repair cannot close the dependency; the
       // face-debt queue retries after peer identity, coverage, or target-light
-      // inputs change. Keep the visual obligation open, but avoid advancing
-      // the same geometry revision on every census.
+      // inputs change. Cache and demand masks can briefly differ while a new
+      // overlay publication is reconciled, so a nonempty cache overlay is the
+      // dependency witness here. Keep the visual obligation open, but avoid
+      // advancing the same geometry revision on every census.
       return;
     }
   }
