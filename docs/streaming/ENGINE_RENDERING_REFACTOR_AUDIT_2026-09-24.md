@@ -2911,7 +2911,7 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
 - Камера фиксировала `camera_flight_ground_contacts=1` после остановки; `camera_move_blocked_substeps=0` в стабильном хвосте. `UCamera::DoMovement` при `HasGroundSupport` вызывает `OnLandedFromFlight` и выходит из physics step до обработки W. Это объясняет устойчивую остановку flight-sim на контакте и отсутствие автоматического обхода; точка столкновения «дерево» основана на наблюдении пользователя. Heading telemetry исключает случайный поворот, но блокирующийся substep отдельно не записался.
 - Рендеринговые proxy после остановки не сошлись: `holes_rate=1.0`, `dirty_med/max=1 672/1 792`, `chunk_not_ready_med=24`, `unlit_max=19`, `fly_visible_black_max=18`, `wall_ms_fly_med=73.68 ms`, `post_stop_convergence_pass=false`. В конечном INFO sample оставались примерно 1 670 dirty meshes, 52 pending lights и 20+ not-ready chunks. Это полезный фиксированный-camera stall sample, но не оценка загрузки новых дальних чанков после x≈−2832.
 - По raw report `process_rc=0`, но harness `pass=false`; `collision_stop_triggered=false`, потому что этот запуск начался до default watchdog и имел `stop_after_blocked_sec=0`. Manifest фиксирует стартовый commit `aaff26c5` и Release EXE SHA-256 `1a2420a3ab678ae6669e96a51169f3a04131f4593545bc18eeb7ff93708d087a`. `dirty_diff_hash` не чистый: runner файл был изменён во время активного прогона; manifest acceptance этого отчёта считать недействительным.
-- После наблюдения добавлены два harness изменения: `7bfc330c` восстанавливает точный исходный `users.json` и заново задаёт pin между повторами; `19387103` завершает будущий `product-174657-far` через 8 секунд устойчивого контакта, сохраняя отчёт. Следующий длинный no-teleport повтор должен явно задавать `--cruise-eye-y 96`, оставить scale `1` и проверить маршрут над кронами. Низкий y56 сохранить отдельно для collision-sensitive диагностики.
+- После наблюдения добавлены два harness изменения: `7bfc330c` восстанавливает точный исходный `users.json` и заново задаёт pin между повторами; `19387103` завершает будущий `product-174657-far` через 8 секунд устойчивого контакта, сохраняя отчёт. M369 на y96 проверил маршрут над кронами без контакта, но высота вышла из eye-level proxy коридора. Повторять тот же XY-коридор на y70 не следует: M335 уже упирался там в лес около x=-2759. Предварительный просмотр сохранённых `.cchunk` вдоль соседней полосы z≈224 не нашёл непустых voxels в z±2 и y64..76, но это лишь проверка имеющихся файлов: она не гарантирует, что все маршрутные колонки сохранены или что runtime collision будет отсутствовать. Следующий шаг — поддержать явный стартовый XYZ в flight runner и выполнить короткий видимый no-teleport collision probe на y68–70 со сдвигом z; при контакте маршрут менять, collision response оставить включённым.
 - Артефакты: [M368 report](../../bin/suite_reports/engine_refactor/g3_world164_far_diskfirst_20261003.json), [perf trace](../../bin/logs/perf_20261003-220433_38772.jsonl), [AppRunner report](../../bin/flight_sim_report.json), [INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-220428.38772).
 
 ## M369: длинный World_164 y96 прошёл по фронтиру генерации, но не достиг far checkpoint
@@ -2953,3 +2953,28 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   analyzer/harness `pass=false`; `run_outcome=success` означает только штатное
   завершение приложения.
 - Артефакты: [M369 report](../../bin/suite_reports/engine_refactor/g3_world164_far_y96_diskfirst_20261003.json), [perf trace](../../bin/logs/perf_20261003-225116_32248.jsonl), [AppRunner report](../../bin/flight_sim_report.json), [INFO source trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-225112.32248).
+
+## M370: новый seed на текущем Release показывает длинный prepare_view в CLI create
+
+- Чистый последовательный Release CLI запуск создал `CI_3650471212` для seed
+  `3650471212`, preset `balanced`, radius `5`, `809` chunk files. Фазовый лог:
+  [INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-234806.4692),
+  JSON [create report](../../bin/create_world_3650471212.json), каталог мира
+  `bin/worlds/CI_3650471212`.
+- `WorldLoadPerf`: `generate_columns=23.021 s`, `post_create=5.138 s`, relight
+  columns `0.434 s`, emissive relight `0.020 s`, `mesh_warmup=13.970 s`,
+  `prepare_view=25.346 s`, cumulative operation `67.962 s`. `prepare_view` завершил
+  фазу с ещё неготовым рендер-долгом: в конце лога `mesh_dirty=290`,
+  `mesh_in_flight=1`; EnterLit на frame30 фиксировал `debt=10`, `ring=30`,
+  `mesh_missing=1`.
+- Этот CLI режим намеренно принудительно отключает `AsyncChunkGeneration` и
+  `AsyncChunkIo`; в логе `generation_workers=1`. Поэтому это чистый новый-seed
+  замер фаз генерации и view preparation, но не оценка обычного интерактивного
+  запуска с четырьмя workers и не проверка исправления очереди completed results.
+  Интерактивный World_175 sample от 21:08 всё ещё устарел относительно текущего
+  Release. Доступного native GUI окна для повторения через computer-use сейчас не
+  было; G1 остаётся открытым.
+- Бинарь — Release SHA-256
+  `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`, commit
+  `4ff3aa35`; запуск прошёл без второго параллельного `Cubatarium.exe`. Созданный
+  мир сохранён для последующих seed-cohort проверок.

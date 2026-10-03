@@ -121,6 +121,16 @@ incomplete; все disk complete имели valid light flag.
 Это искусственный headless reference, а не оценка интерактивного создания.
 При обычной Release-сборке генерация мира уже идёт на 4 worker-потоках.
 
+Повтор на новом seed `3650471212` и актуальном Release (M370) подтвердил длинные
+фазы создания и подготовки обзора в последовательном CLI-режиме: суммарно
+`67.962 s`, из них `generate_columns=23.021 s` и `prepare_view=25.346 s`.
+Это новый seed sample, но CLI явно использовал `async_generation=0`,
+`async_chunk_io=0`, один worker; он не закрывает G1 для пользовательского
+интерактивного старта и не измеряет изменение очереди completed results.
+К концу `prepare_view` сохранялись `mesh_dirty=290`, `mesh_in_flight=1`, а
+EnterLit сообщал `debt=10`, `ring=30`, `mesh_missing=1`. Следующий G1 замер —
+интерактивное создание на текущем Release с фазовыми причинами ожидания.
+
 ### Дальний World_164 no-teleport run: остановка на дереве (M368)
 
 Видимый Release run начался из контрольной позиции `[120,56,56]`, yaw `180°`,
@@ -153,9 +163,12 @@ move, но при сохраняющейся ground support камера ост�
 Коммит `7bfc330c` сохраняет исходный `users.json` и повторно ставит pin перед
 каждым `--repeat`, а `19387103` включает watchdog по умолчанию для far-сценария.
 M369 проверил y96 как безопасный для препятствий stress-маршрут, но этот уровень
-вне eye-level proxy corridor и не достиг дальнего checkpoint. Для следующего
-acceptance сначала нужен короткий collision probe на y68–70, затем — более длинная
-фаза движения. Low-eye/y56 остаётся collision-sensitive diagnostic.
+вне eye-level proxy corridor и не достиг дальнего checkpoint. Прямой y70 маршрут
+также пересекает лес (M335 около x=-2759), поэтому повторять ту же линию не нужно.
+Для следующего acceptance сначала нужен короткий collision probe на y68–70 со
+сдвигом стартового коридора по Z; сохранённые чанки предлагают z≈224, но требуют
+проверки runtime. Затем можно увеличить фазу движения. Low-eye/y56 остаётся
+collision-sensitive diagnostic, а collision response включён во всех профилях.
 
 Отчёт: `bin/suite_reports/engine_refactor/g3_world164_far_diskfirst_20261003.json`;
 perf: `bin/logs/perf_20261003-220433_38772.jsonl`; AppRunner report:
@@ -207,9 +220,12 @@ M369 выполнен как продолжающаяся диагностика
 заменяет повторное измерение загрузки и создания мира на актуальном Release.
 
 **G1 статус: частично закрыт.** Синхронный saved-world read измерен и заменён на
-bounded async apply; disk-first работает также на движущемся frontier. Интерактивное
-создание измерено. Для закрытия G1 нужны повтор warm/cold входа и устранение либо
-обоснование 31-секундного `prepare_view` gate.
+bounded async apply; disk-first работает также на движущемся frontier.
+Интерактивный новый мир измерен на более раннем Release (World_175, M367), а M370
+добавил чистый одно-worker CLI срез на новом seed. Ни один из них не заменяет
+повтор интерактивного создания на текущем Release. Для закрытия G1 нужны такой
+повтор, warm/cold вход и устранение либо обоснование длинного `prepare_view` с
+остаточным mesh/readiness debt.
 Дальний acceptance остаётся за этой проверкой и должен пройти 8 192 блока без
 speed multiplier; короткие round-trip/source probes допустимы как диагностика.
 
@@ -238,9 +254,10 @@ speed multiplier; короткие round-trip/source probes допустимы �
    освещение, стартовая позиция и версия мира. Всегда сохранять commit/EXE hash,
    конфигурационные hashes, траекторию и метрики. M369 показал, что y96 обходит
    деревья, но находится вне eye-level proxy corridor `y45..70` и не воспроизводит
-   продуктовый dark symptom. Для acceptance коротким no-teleport probe проверить
-   верхнюю границу `y68..70`; low-eye y56 оставить collision-sensitive control,
-   а y96 — отдельным high-altitude stress diagnostic.
+   продуктовый dark symptom. Прямой y70 маршрут проходит через лес; для acceptance
+   коротким no-teleport probe проверить верхнюю границу `y68..70` на сдвинутой по Z
+   полосе (предварительный кандидат z≈224). Low-eye y56 оставить collision-sensitive
+   control, а y96 — отдельным high-altitude stress diagnostic.
 3. После каждого изменения повторять контрольный отрезок до задетой области;
    дальний acceptance не объявлять до достижения checkpoint 8 192 без collision
    shortfall или искусственного ускорения.
