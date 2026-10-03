@@ -35,6 +35,7 @@
 #include <chrono>
 #include <climits>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -46,6 +47,12 @@ namespace cutum
 
 namespace
 {
+
+bool IsWorldColumnSourceTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+  return value && value[0] == '1';
+}
 
 void ParkSpawnRingMeshWhileRelightDeferred(UWorld &world)
 {
@@ -651,6 +658,65 @@ void UWorldCooperativeSession::Report(IUProgressSink &sink,
   sink.Report(phaseId, fraction, message);
 }
 
+void UWorldCooperativeSession::RecordPhaseTiming(const UWorld &world)
+{
+  const auto now = std::chrono::steady_clock::now();
+  const std::string current_phase = PhaseId();
+  if (TimedPhaseId.empty())
+  {
+    TimedPhaseId = current_phase;
+    OperationStartedAt = now;
+    PhaseStartedAt = now;
+    return;
+  }
+  if (current_phase == TimedPhaseId)
+  {
+    return;
+  }
+
+  const double phase_ms = std::chrono::duration<double, std::milli>(
+                              now - PhaseStartedAt)
+                              .count();
+  const double operation_ms = std::chrono::duration<double, std::milli>(
+                                  now - OperationStartedAt)
+                                  .count();
+  const char *kind = Kind == WorldCoopKind::Load
+                         ? "load"
+                         : (Kind == WorldCoopKind::Create ? "create" : "save");
+  const ProceduralSettings &settings = world.GetProceduralSettings();
+  const bool has_cooperative_generation =
+      Kind == WorldCoopKind::Create || ProceduralFillLoadPath;
+  const size_t generation_workers =
+      has_cooperative_generation
+          ? (settings.AsyncChunkGeneration
+                 ? ComputeWorkerThreadCount(JobPoolKind::CoopGeneration)
+                 : 1)
+          : 0;
+  const int spatial_total = SpatialRadius > 0
+                                ? (2 * SpatialRadius + 1) *
+                                      (2 * SpatialRadius + 1)
+                                : 0;
+
+  std::string line =
+      std::string("kind=") + kind + " phase=" + TimedPhaseId +
+      " phase_ms=" + std::to_string(phase_ms) +
+      " operation_ms=" + std::to_string(operation_ms) +
+      " chunk_files_seen=" + std::to_string(ChunkFiles.size()) +
+      " chunk_files_read=" + std::to_string(ChunkFilesRead) +
+      " voxels_from_files=" + std::to_string(VoxelsFromChunkFiles) +
+      " spatial_columns=" + std::to_string(SpatialColumnsVisited) + "/" +
+      std::to_string(spatial_total) + " generation_columns=" +
+      std::to_string(GenDoneColumns) + "/" + std::to_string(GenTotalColumns) +
+      " async_generation=" + (settings.AsyncChunkGeneration ? "1" : "0") +
+      " generation_workers=" + std::to_string(generation_workers) +
+      " async_chunk_io=" + (settings.AsyncChunkIo ? "1" : "0");
+  CubatariumLogInfo("WorldLoadPerf", line);
+  std::cerr << "[WorldLoadPerf] " << line << std::endl;
+
+  TimedPhaseId = current_phase;
+  PhaseStartedAt = now;
+}
+
 bool UWorldCooperativeSession::ForceCapEnterGameVisual(UWorld &world,
                                                        IUProgressSink &sink)
 {
@@ -678,6 +744,7 @@ bool UWorldCooperativeSession::ForceCapEnterGameVisual(UWorld &world,
   StreamingWarmupTicks = 0;
   StreamingWarmupPeakDebt = 0;
   Report(sink, "done", 1.f, "World loaded.");
+  RecordPhaseTiming(world);
   return true;
 }
 
@@ -741,6 +808,9 @@ void UWorldCooperativeSession::BeginLoad(UWorld &world,
   Active = true;
   FolderPath = world_folder_path;
   CurrentPhase = Phase::Init;
+  TimedPhaseId = "init";
+  OperationStartedAt = std::chrono::steady_clock::now();
+  PhaseStartedAt = OperationStartedAt;
   (void)world;
 }
 
@@ -756,6 +826,9 @@ void UWorldCooperativeSession::BeginSave(UWorld &world,
   ResumeStreamingAfterSave = resume_streaming_after_save;
   FolderPath = world_folder_path;
   CurrentPhase = Phase::Init;
+  TimedPhaseId = "init";
+  OperationStartedAt = std::chrono::steady_clock::now();
+  PhaseStartedAt = OperationStartedAt;
   (void)world;
 }
 
@@ -769,6 +842,9 @@ void UWorldCooperativeSession::BeginCreate(UWorld &world,
   Active = true;
   TargetWorldName = world_name;
   CurrentPhase = Phase::Init;
+  TimedPhaseId = "init";
+  OperationStartedAt = std::chrono::steady_clock::now();
+  PhaseStartedAt = OperationStartedAt;
   (void)world;
 }
 
@@ -927,6 +1003,13 @@ void UWorldCooperativeSession::InitGenerationGrid(UWorld &world,
                              (bz - GenCenterZ) * (bz - GenCenterZ);
               return da < db;
             });
+  if (world.GetProceduralSettings().AsyncChunkGeneration)
+  {
+    // Parallel generation commits complete chunks, so its progress numerator
+    // advances by CHUNK_SIZE squared per result rather than one column entry.
+    GenTotalColumns = static_cast<int>(GenChunkQueue.size() *
+                                       CHUNK_SIZE * CHUNK_SIZE);
+  }
 }
 
 void UWorldCooperativeSession::EnsureParallelGenerationInfrastructure(
@@ -1308,8 +1391,25 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.AllowProceduralFill = world.IsStreamingEnabled();
       if (SpatialStreamingLoad && world.LoadedFromChunkSave)
       {
-        SpatialDx = -SpatialRadius;
-        SpatialDz = -SpatialRadius;
+        SpatialColumnQueue.clear();
+        SpatialAsyncColumns.clear();
+        SpatialColumnQueueIndex = 0;
+        SpatialColumnsVisited = 0;
+        for (int ring = 0; ring <= SpatialRadius; ++ring)
+        {
+          for (int dx = -ring; dx <= ring; ++dx)
+          {
+            for (int dz = -ring; dz <= ring; ++dz)
+            {
+              if (std::max(std::abs(dx), std::abs(dz)) != ring)
+              {
+                continue;
+              }
+              SpatialColumnQueue.emplace_back(SpatialCenter.x + dx, 0,
+                                              SpatialCenter.z + dz);
+            }
+          }
+        }
         CurrentPhase = Phase::SpatialChunks;
         Report(sink, "spatial", kPhaseWeightMetadata + kPhaseWeightEntities +
                                     kPhaseWeightChunks,
@@ -1324,24 +1424,29 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::SpatialChunks:
   {
-    int loaded = 0;
     const int total = (2 * SpatialRadius + 1) * (2 * SpatialRadius + 1);
-    int doneBefore = (SpatialDx + SpatialRadius) * (2 * SpatialRadius + 1) +
-                     (SpatialDz + SpatialRadius);
-    while (loaded < budget)
+    int queued = 0;
+    while (SpatialColumnQueueIndex < SpatialColumnQueue.size() &&
+           queued < budget)
     {
-      if (SpatialDx > SpatialRadius)
+      const glm::ivec3 ground = SpatialColumnQueue[SpatialColumnQueueIndex++];
+      const bool async_spatial_load =
+          world.Persistence && world.ProceduralTemplate.AsyncChunkIo;
+      if (async_spatial_load)
       {
-        BeginMeshWarmup(world);
-        break;
+        world.Persistence->RequestAsyncTerrainColumnLoad(world, ground);
+        if (world.Persistence->IsTerrainColumnDiskLoadPending(ground))
+        {
+          SpatialAsyncColumns.push_back(ground);
+        }
       }
-      if (world.BlockRegistry)
+      else if (world.BlockRegistry)
       {
-        const glm::ivec3 ground(SpatialCenter.x + SpatialDx, 0,
-                                SpatialCenter.z + SpatialDz);
-        world.GetChunkStorage().LoadTerrainColumn(
+        const auto column_load_started = std::chrono::steady_clock::now();
+        const int loaded_slices = world.GetChunkStorage().LoadTerrainColumn(
             ground, world.BlockWorld, FolderPath, *world.BlockRegistry,
             world.ProceduralTemplate.MaxHeight);
+        bool purged_incomplete_column = false;
         if (!IsTerrainChunkComplete(world.BlockWorld, ground,
                                     world.ProceduralTemplate.MaxHeight))
         {
@@ -1350,28 +1455,64 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                    world.ProceduralTemplate.MaxHeight);
           world.GetChunkStorage().RemoveTerrainColumnFromDisk(
               FolderPath, ground, world.ProceduralTemplate.MaxHeight);
+          purged_incomplete_column = true;
+        }
+        if (IsWorldColumnSourceTraceEnabled())
+        {
+          const double column_load_ms =
+              std::chrono::duration<double, std::milli>(
+                  std::chrono::steady_clock::now() - column_load_started)
+                  .count();
+          const std::string source =
+              loaded_slices > 0 ? "disk" : "disk_miss";
+          const std::string outcome =
+              purged_incomplete_column ? "purged_incomplete" : "spatial_load";
+          const std::string message =
+              "source=" + source + " outcome=" + outcome + " coord=(" +
+              std::to_string(ground.x) + ",0," + std::to_string(ground.z) +
+              ") slices=" + std::to_string(loaded_slices) + " elapsed_ms=" +
+              std::to_string(column_load_ms);
+          CubatariumLogInfo("WorldColumnSource", message);
         }
       }
-      ++loaded;
-      ++SpatialDz;
-      if (SpatialDz > SpatialRadius)
+      ++SpatialColumnsVisited;
+      ++queued;
+    }
+    if (world.Persistence && world.ProceduralTemplate.AsyncChunkIo)
+    {
+      // The entry gate used to read/decode 121 complete terrain columns
+      // synchronously. Reuse the streaming disk worker, but keep the loading
+      // screen responsive and bound main-thread deserialization/application.
+      world.Persistence->TickAsyncChunkIo(world, 10, 6.0);
+    }
+    size_t pending_columns = 0;
+    if (world.Persistence)
+    {
+      for (const glm::ivec3 &coord : SpatialAsyncColumns)
       {
-        SpatialDz = -SpatialRadius;
-        ++SpatialDx;
+        if (world.Persistence->IsTerrainColumnDiskLoadPending(coord))
+        {
+          ++pending_columns;
+        }
       }
     }
-    if (CurrentPhase == Phase::SpatialChunks)
+    const size_t completed_columns =
+        SpatialColumnsVisited >= pending_columns
+            ? SpatialColumnsVisited - pending_columns
+            : 0;
+    const float chunkBase =
+        kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks;
+    const float frac =
+        chunkBase + kPhaseWeightSpatial *
+                        (static_cast<float>(completed_columns) /
+                         static_cast<float>(std::max(1, total)));
+    Report(sink, "spatial", frac,
+           "Loading nearby terrain (" + std::to_string(completed_columns) +
+               "/" + std::to_string(total) + ")...");
+    if (SpatialColumnQueueIndex >= SpatialColumnQueue.size() &&
+        pending_columns == 0)
     {
-      const int doneAfter = (SpatialDx + SpatialRadius) * (2 * SpatialRadius + 1) +
-                            (SpatialDz + SpatialRadius);
-      const float chunkBase =
-          kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks;
-      const float frac =
-          chunkBase + kPhaseWeightSpatial *
-                          (static_cast<float>(doneAfter) /
-                           static_cast<float>(std::max(1, total)));
-      Report(sink, "spatial", frac, "Loading nearby terrain...");
-      (void)doneBefore;
+      BeginMeshWarmup(world);
     }
     break;
   }
@@ -2608,6 +2749,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     LogWorldLoadDiag(PhaseId(), world);
     LastDiagPhase = CurrentPhase;
   }
+
+  RecordPhaseTiming(world);
 
   return CurrentPhase == Phase::Done;
 }

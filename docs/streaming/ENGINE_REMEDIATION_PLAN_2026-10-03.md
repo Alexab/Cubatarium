@@ -15,6 +15,50 @@
 
 ## Текущая позиция и пределы доказательств
 
+### Замер производительности и загрузки 2026-10-03
+
+Для World_164 сравнивали холодный вход до и после передачи стартовой загрузки
+terrain columns существующему AsyncChunkIO:
+
+| Замер | До | После | Вывод |
+|---|---:|---:|---|
+| `spatial_chunks` | 35,28 с | 1,56 с | Фаза ускорилась примерно в 22,6 раза. |
+| От начала операции до `prepare_view` | 39,12 с | 5,70 с | Синхронное чтение сохранённых колонок было крупным стартовым тормозом. |
+| Источник 121 стартовой колонки | sync disk | 121/121 disk, `disk_light=1` | В этом входе повторной генерации не было; все завершились до mesh warmup. |
+
+После изменения асинхронный worker читает сохранённые срезы, а основной поток
+ограниченно применяет результаты: максимум 10 срезов или около 6 мс за update.
+Это исправляет измеренный saved-world вход, но не является дальним flight acceptance.
+Файл старого замера: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-203444.39168`;
+нового: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-205930.20528`.
+
+Для интерактивного нового мира (World_175, seed `3650471210`) получено:
+
+| Фаза | Время | Наблюдение |
+|---|---:|---|
+| `generate_columns` | 6,08 с | `async_generation=1`, `generation_workers=4`. |
+| relight columns + emissive | 0,54 с | Релайт не является доминирующей фазой этого запуска. |
+| `mesh_warmup` | 10,66 с | В начале было 1270 dirty meshes. |
+| `prepare_view` | 31,11 с | К концу прогрева ещё оставались dirty/missing mesh и неготовый spawn ring. |
+| От начала создания до конца `prepare_view` | 51,29 с | Стартовый визуальный gate — открытая задача G1. |
+
+У `prepare_view` пока нет точного terminal-reason в фазовом логе, поэтому нельзя
+утверждать, что все 31 секунду ушли на один конкретный долг. Диагностический
+`enter_lit` лог показывает состояние на 28,6 с: visibility debt 64, ring not ready
+11, один missing greedy mesh, 7 inflight, underfeet/spawn ring не готовы. В
+последующем live entry gate завершился через 1,9 с с `settle_reason=live_blockers`.
+Свежий мир сохранён; данные и параметры прогона не удалять.
+
+Отдельный CLI `--create-world` дал поколение на одном worker и выключенном async.
+Это искусственный headless reference, а не оценка интерактивного создания.
+При обычной Release-сборке генерация мира уже идёт на 4 worker-потоках.
+
+**G1 статус: частично закрыт.** Синхронный saved-world read измерен и заменён на
+bounded async apply; интерактивное создание измерено. Для закрытия G1 нужны повтор
+warm/cold входа и устранение либо обоснование 31-секундного `prepare_view` gate.
+Дальний маршрут остаётся за этой проверкой; flight simulator отдельно требует
+чистое дерево, поэтому измеренный код сначала фиксируется коммитом.
+
 - На M367 отрисованные почти чёрные пиксели совпали с валидными opaque-поверхностями,
   ненулевыми GPU face indices и видимой MDI-командой. Следовательно, низкая
   яркость сама по себе не доказывает отсутствие voxel data или mesh.
@@ -70,7 +114,12 @@ main-thread hitch contribution, worker count и очередь; найденны
 
 ### G2 — Разделить disk reload и procedural generation
 
-Добавить координатную трассу жизненного цикла колонки:
+Трасса уже покрывает стартовый disk load и commit процедурной генерации. На
+дальнем маршруте использовать `CUBA_WORLD_COLUMN_SOURCE_TRACE=1`; текущая
+инструментация фиксирует disk hit/miss, pending save, highest Y, valid disk light,
+retry, очередь/latency/apply для async disk load и очередь/generation/apply для
+procedural commit. Пока это не полная трасса до GPU publication и пикселя.
+Продолжить координатную трассу жизненного цикла колонки:
 
 `request → persisted high-water/file hit → save-pending guard → disk read result
 → deserialize/apply → generation request/commit → relight → mesh source revision
@@ -123,9 +172,11 @@ preset и настройками. На fresh-world run проверять соз
 `cmake --build bin --config Release --target Cubatarium --parallel 8` ограничивал
 параллельность MSBuild, однако generated `Cubatarium.vcxproj` не задавал `/MP`,
 поэтому единый MSVC compile task не компилировал translation units параллельно.
-Включить `/MP` для основного приложения; строить только Release target и
-подтвердить compiler options в generated project/verbose build. Не запускать
-Debug или тестовые targets в этой работе.
+Для основного приложения включён `/MP`; Release target собран командой
+`cmake --build bin --config Release --target Cubatarium --parallel 8`. Generated
+Visual Studio project подтверждает `MultiProcessorCompilation=true`, а сборка
+использовала несколько `cl.exe` процессов. Продолжать собирать только Release
+target; Debug и тестовые targets в этой работе не запускать.
 
 ## Исследовательская основа
 

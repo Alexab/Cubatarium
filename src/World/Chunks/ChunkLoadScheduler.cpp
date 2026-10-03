@@ -1,14 +1,27 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "App/Platform/Log.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <thread>
 
 namespace cutum
 {
+
+namespace
+{
+
+bool IsWorldColumnSourceTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+  return value && value[0] == '1';
+}
+
+} // namespace
 
 UChunkLoadScheduler::UChunkLoadScheduler(IUChunkPopulator &populator,
                                          UChunkGenerationRegistry &tokens)
@@ -70,6 +83,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   pending.coord = coord;
   pending.priority = priority;
   pending.token = Tokens.Current(coord);
+  pending.requestedAt = std::chrono::steady_clock::now();
   pending.settings = settings;
   pending.columnOrigin = column_origin;
   pending.hasColumnOrigin = has_column_origin;
@@ -161,15 +175,23 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
   populateRequest.shouldCancel = [this, coord, start_sequence]()
   { return Tokens.Current(coord).sequence != start_sequence; };
   populateRequest.content = CaptureWorldGenContentSnapshot();
+  const auto requested_at = request.requestedAt;
   const int priority = request.priority;
   const int max_height = request.settings.MaxHeight;
   Pool.Enqueue(
-      [this, populateRequest, priority, max_height]()
+      [this, populateRequest, requested_at, priority, max_height]()
       {
         PendingResult pending;
         pending.priority = priority;
         pending.maxHeight = max_height;
+        pending.requestedAt = requested_at;
+        pending.generationStartedAt = std::chrono::steady_clock::now();
+        const auto generation_started = pending.generationStartedAt;
         pending.result = Populator.Populate(populateRequest);
+        pending.generationMs = std::chrono::duration<double, std::milli>(
+                                   std::chrono::steady_clock::now() -
+                                   generation_started)
+                                   .count();
         Completed.Push(std::move(pending));
       });
 }
@@ -249,9 +271,32 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                 pending.result.fluidSealed);
     }
     // Include MarkDirty in apply wall — previously invisible in stream_ms gap.
-    LastTickApplyMs += std::chrono::duration<double, std::milli>(
-                           std::chrono::high_resolution_clock::now() - apply_t0)
-                           .count();
+    const double apply_ms = std::chrono::duration<double, std::milli>(
+                                std::chrono::high_resolution_clock::now() -
+                                apply_t0)
+                                .count();
+    LastTickApplyMs += apply_ms;
+    if (IsWorldColumnSourceTraceEnabled())
+    {
+      const double queue_ms = std::chrono::duration<double, std::milli>(
+                                  pending.generationStartedAt -
+                                  pending.requestedAt)
+                                  .count();
+      const double total_ms = std::chrono::duration<double, std::milli>(
+                                  std::chrono::steady_clock::now() -
+                                  pending.requestedAt)
+                                  .count();
+      const std::string message =
+          "source=procedural outcome=committed coord=(" +
+          std::to_string(pending.result.coord.x) + ",0," +
+          std::to_string(pending.result.coord.z) + ") priority=" +
+          std::to_string(pending.priority) + " token=" +
+          std::to_string(pending.result.token.sequence) + " queue_ms=" +
+          std::to_string(queue_ms) + " generation_ms=" +
+          std::to_string(pending.generationMs) + " apply_ms=" +
+          std::to_string(apply_ms) + " total_ms=" + std::to_string(total_ms);
+      CubatariumLogInfo("WorldColumnSource", message);
+    }
     ++committed;
   }
   LastCommitsThisFrame = committed;

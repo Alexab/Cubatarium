@@ -9,6 +9,7 @@
 - [`tools/flight_sim_suite.py`](../../tools/flight_sim_suite.py) — запуск групп сценариев; [`tools/flight_sim_iterate.py`](../../tools/flight_sim_iterate.py) — последовательные итерации фиксов.
 - Диагностические поддерживаемые модули: `flight_sim_baseline.py`, `flight_sim_checkpoint.py`, `flight_sim_diag.py`, `flight_sim_eval.py`, `flight_sim_parity.py`, `flight_sim_phase_gate.py`, `flight_sim_timeline_analyze.py`, `perf_capture.py`, `compare_idle_autofly_manual.py`, `CompareFlightF5.py`, `AnalyzeEnterLit.py`, `AnalyzePhase54Scorecard.py`–`AnalyzePhase57Scorecard.py`, `analyze_stop_hang_dive.py`.
 - Основной повторяемый маршрут: `python tools/flight_sim_run.py --scenario product-174657-far --world World_164 --visible --report bin/suite_reports/engine_refactor/<run>.json`. Сценарий не использует teleport; перед запуском требуются Release EXE и зафиксированные start/config hashes.
+- Для сопоставления disk reload и procedural creation задать `CUBA_WORLD_COLUMN_SOURCE_TRACE=1` в окружении процесса; runner сохраняет трассу `WorldColumnSource` вместе с обычными flight-артефактами. Сопоставлять по координатам с ray/pixel и mesh lifecycle; один source event не объясняет цвет.
 - Для исследования cold saved-world entry: `--scenario fz-cold-enter --world World_164 --visible`. После появления phase timing использовать отчёт только как startup/load контроль, а не как far-distance acceptance.
 
 ## Сохранённые одноразовые материалы

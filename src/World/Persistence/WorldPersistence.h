@@ -81,7 +81,8 @@ public:
   void LoadWorldData(UWorld &world, const std::string &file_name);
   void SaveWorldData(UWorld &world, const std::string &file_name);
 
-  void TickAsyncChunkIo(UWorld &world);
+  void TickAsyncChunkIo(UWorld &world, std::size_t max_slice_applies = 0,
+                        double max_apply_ms = 0.0);
   void FlushAsyncChunkIo(UWorld &world);
   bool TickDrainAsyncChunkIo(UWorld &world, int max_iterations);
   bool IsAsyncChunkIoQuiescent() const;
@@ -178,6 +179,7 @@ private:
   {
     int remaining_results{0};
     int highest_cy_on_disk{-1};
+    std::chrono::steady_clock::time_point requested_at{};
     bool had_disk_read_failure{false};
     bool had_invalid_token{false};
     bool had_disk_light{false};

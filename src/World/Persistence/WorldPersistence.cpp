@@ -105,6 +105,27 @@ bool ColumnSurfaceBandNeedsRelight(const UWorld &world, glm::ivec2 ground_xz,
 constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
 
+bool IsWorldColumnSourceTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+  return value && value[0] == '1';
+}
+
+void LogWorldColumnSource(const char *source, const char *outcome,
+                          glm::ivec3 ground, const std::string &details)
+{
+  if (!IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      std::string("source=") + source + " outcome=" + outcome + " coord=(" +
+      std::to_string(ground.x) + ",0," + std::to_string(ground.z) + ") " +
+      details;
+  CubatariumLogInfo("WorldColumnSource", message);
+  std::cerr << "[WorldColumnSource] " << message << std::endl;
+}
+
 bool HasChunkDataFiles(const std::string &chunks_dir)
 {
   if (!std::filesystem::exists(chunks_dir) ||
@@ -3061,14 +3082,30 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   const bool should_retry =
       has_disk &&
       (state.had_disk_read_failure || state.had_invalid_token || !complete);
+  const double load_ms =
+      state.requested_at == std::chrono::steady_clock::time_point{}
+          ? 0.0
+          : std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - state.requested_at)
+                .count();
 
   if (should_retry && state.retry_generation < kMaxAsyncColumnLoadRetries)
   {
+    LogWorldColumnSource(
+        "disk", "retry",
+        ground_coord,
+        "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+            " retry=" + std::to_string(state.retry_generation + 1) +
+            " read_failed=" + (state.had_disk_read_failure ? "1" : "0") +
+            " token_invalid=" + (state.had_invalid_token ? "1" : "0") +
+            " complete=" + (complete ? "1" : "0") +
+            " elapsed_ms=" + std::to_string(load_ms));
     ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height);
     PendingAsyncColumnLoadState retry_state;
     const int load_to_cy = state.highest_cy_on_disk;
     retry_state.remaining_results = load_to_cy + 1;
     retry_state.highest_cy_on_disk = state.highest_cy_on_disk;
+    retry_state.requested_at = state.requested_at;
     retry_state.retry_generation = state.retry_generation + 1;
     PendingAsyncColumnLoadSlices[ground_coord] = retry_state;
     const glm::ivec3 focus =
@@ -3114,6 +3151,13 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
 
   if (!complete)
   {
+    LogWorldColumnSource(
+        "disk", "incomplete", ground_coord,
+        "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+            " retry=" + std::to_string(state.retry_generation) +
+            " read_failed=" + (state.had_disk_read_failure ? "1" : "0") +
+            " token_invalid=" + (state.had_invalid_token ? "1" : "0") +
+            " elapsed_ms=" + std::to_string(load_ms));
     if (has_disk)
     {
       ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height);
@@ -3121,6 +3165,13 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     }
     return;
   }
+
+  LogWorldColumnSource(
+      has_disk ? "disk" : "empty-disk-column", "complete", ground_coord,
+      "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+          " disk_light=" + (state.had_disk_light ? "1" : "0") +
+          " retry=" + std::to_string(state.retry_generation) +
+          " elapsed_ms=" + std::to_string(load_ms));
 
   if (!world.Streaming || !world.Streaming->GetStreamer())
   {
@@ -3322,7 +3373,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);
 }
 
-void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
+void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
+                                         std::size_t max_slice_applies_override,
+                                         double max_apply_ms)
 {
   if (!ChunkStorage)
   {
@@ -3332,22 +3385,45 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
     const double frame_ms = world.GetLastMovementFrameMs();
-    std::size_t max_slice_applies = 10;
-    if (frame_ms > 24.0)
+    std::size_t max_slice_applies = max_slice_applies_override;
+    if (max_slice_applies == 0)
     {
-      max_slice_applies = 4;
+      max_slice_applies = 10;
+      if (frame_ms > 24.0)
+      {
+        max_slice_applies = 4;
+      }
+      else if (frame_ms > 16.0)
+      {
+        max_slice_applies = 6;
+      }
     }
-    else if (frame_ms > 16.0)
+    const auto apply_started = std::chrono::steady_clock::now();
+    std::size_t applied_slices = 0;
+    const auto apply_budget_expired = [&]()
     {
-      max_slice_applies = 6;
-    }
-    for (AsyncChunkLoadResult &load :
-         AsyncChunkIo->DrainLoadsUpTo(max_slice_applies))
+      return max_apply_ms > 0.0 && applied_slices > 0 &&
+             std::chrono::duration<double, std::milli>(
+                 std::chrono::steady_clock::now() - apply_started)
+                     .count() >= max_apply_ms;
+    };
+    while (applied_slices < max_slice_applies)
     {
+      auto completed_loads = AsyncChunkIo->DrainLoadsUpTo(1);
+      if (completed_loads.empty())
+      {
+        break;
+      }
+      AsyncChunkLoadResult &load = completed_loads.front();
+      ++applied_slices;
       const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
       auto pending_it = PendingAsyncColumnLoadSlices.find(ground);
       if (pending_it == PendingAsyncColumnLoadSlices.end())
       {
+        if (apply_budget_expired())
+        {
+          break;
+        }
         continue;
       }
 
@@ -3393,12 +3469,21 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
       --state.remaining_results;
       if (state.remaining_results > 0)
       {
+        if (apply_budget_expired())
+        {
+          break;
+        }
         continue;
       }
 
       const PendingAsyncColumnLoadState finished = state;
       PendingAsyncColumnLoadSlices.erase(pending_it);
       FinalizeAsyncTerrainColumnLoad(world, ground, finished);
+
+      if (apply_budget_expired())
+      {
+        break;
+      }
     }
 
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
@@ -3515,6 +3600,7 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
 void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
                                                       glm::ivec3 ground_coord)
 {
+  EnsureChunkIoInitialized();
   if (!AsyncChunkIo || !ChunkStorage || !world.BlockRegistry)
   {
     return;
@@ -3533,10 +3619,17 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
   if (state.highest_cy_on_disk < 0)
   {
+    LogWorldColumnSource("procedural", "disk_miss", ground_coord,
+                         "highest_cy=-1 pending_save=0");
     return;
   }
+  state.requested_at = std::chrono::steady_clock::now();
   state.remaining_results = state.highest_cy_on_disk + 1;
   PendingAsyncColumnLoadSlices[ground_coord] = state;
+  LogWorldColumnSource(
+      "disk", "queued", ground_coord,
+      "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+          " slices=" + std::to_string(state.remaining_results));
 
   // I/O order: player cy / sea surface first, then expand. Finalize still waits
   // for the full column, but near-surface slices land in RAM sooner and mesh

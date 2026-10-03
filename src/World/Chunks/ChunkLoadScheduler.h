@@ -71,6 +71,7 @@ private:
     glm::ivec3 coord;
     int priority{0};
     ChunkGenerationToken token;
+    std::chrono::steady_clock::time_point requestedAt{};
     ProceduralSettings settings;
     glm::ivec2 columnOrigin{0};
     bool hasColumnOrigin{false};
@@ -81,6 +82,9 @@ private:
     ChunkPopulateResult result;
     int priority{0};
     int maxHeight{256};
+    std::chrono::steady_clock::time_point requestedAt{};
+    std::chrono::steady_clock::time_point generationStartedAt{};
+    double generationMs{0.0};
   };
 
   struct RequestCompare
