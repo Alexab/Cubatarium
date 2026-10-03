@@ -2745,3 +2745,75 @@ VisualObligation следует сделать derived state/policy для эт�
 - M367 оставил продуктовые ворота красными: `holes_rate=1.0`, near-focus hole periods >0 — `7` (corridor `2`), `fly_visible_black_max=22`, dirty median/max `108/215`, post-stop convergence=false; маршрут `7→−105`, 112 чанков / 1,792 блока, far checkpoint `8,192` не достигнут. Перелёт был видимым Release no-teleport, `process_rc=0`, без hang-kill, скорость median `5.19607` блока/с; collision counters по маршруту нулевые. Manifest SHA — commit `63426798`, EXE `6c6214e95a5ab02162c246327af0b58d5e7575263aa295ffec85f75fd19696cf`. Настройки после runner восстановлены к прежним SHA для config/users/world_data.
 - Вывод ограниченный: overlay-only повторные generic retries у выбранной incarnation существенно сократились, а следующий drawable publication подтверждён MDI и screen-ray/pixel probes; общий дефект графики не закрыт, и крупный маршрут остаётся с устойчивыми holes proxy и плохой stop convergence. Следующий шаг — записывать ground-column trigger в trace для `streamer_commit_sea_seam` и связывать draw-gate transitions с framebuffer pixel probes в окне target-координаты. Сравнение black samples должно учитывать валидность opaque surface, shader light, GPU face source и MDI command, а не только luminance.
 - Артефакты: [M366 report](../../bin/suite_reports/engine_refactor/m366_overlay_mask_tolerant_20261003.json), [M366 perf trace](../../bin/logs/perf_20261003-190115_15524.jsonl), [M367 report](../../bin/suite_reports/engine_refactor/m367_face_debt_owner_20261003.json), [210 MB M367 perf/pixel/slice trace](../../bin/logs/perf_20261003-191210_30056.jsonl).
+
+## Перепроверка после merge в develop: disk reload, generation и стартовая загрузка
+
+База: `develop` / `codex_audit2`, HEAD `185e2f08` (merge `codex_audit`), 2026-10-03.
+Обновлённый порядок работ: [план от 2026-10-03](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+
+### Ответ на гипотезу о тёмных чанках
+
+В движке существуют оба предполагаемых пути, и длинный пролёт способен пройти по
+обоим:
+
+1. При выгрузке колонок callback streamer ставит сохранение в `UAsyncChunkIO`, если
+   `AsyncChunkIo` включён. При возвращении `EnsureChunkLoaded` сначала пытается
+   прочитать колонку с диска; запрос получает high-water mark сохранённых slices и
+   асинхронно читает найденные файлы.
+2. Если сохранённой колонки нет (`highest_cy_on_disk < 0`), callback не загружает
+   диск, после чего колонка ставится в `UChunkLoadScheduler` и генерируется
+   процедурно. При обычном создании мира используются настройки по умолчанию:
+   `AsyncChunkGeneration=true`, `AsyncChunkIo=true`, `AsyncRelight=true`.
+3. Disk read и готовность для рендера — разные этапы: worker читает bytes, но
+   `TickAsyncChunkIo` на игровом потоке десериализует и применяет буферы. Затем
+   следуют relight, mesh capture/build, GPU publication и draw gate. Поэтому
+   disk-hit сам по себе не доказывает, что свет и mesh уже пригодны для кадра.
+
+Зона, которую пользователь впервые достигает, обычно пойдёт через generation; уже
+посещённая и выгруженная зона может прийти с диска, если сохранение завершилось.
+Для M367 источник данных тёмных областей не трассировался до координаты и кадра.
+Следовательно, выбрать одну из гипотез по этому прогону нельзя. Предыдущие pixel
+probes M367 дополнительно показывают, что отдельные очень тёмные пиксели были
+реальными валидными непрозрачными поверхностями с GPU indices, а не пустой
+геометрией.
+
+### Найденный риск загрузки/создания мира
+
+Кооперативный load-path для сохранённого streaming мира не сканирует все chunk
+files, но фаза `SpatialChunks` синхронно вызывает `LoadTerrainColumn` на главном
+потоке для каждой колонки в начальном радиусе. Пер-frame лимит — число колонок
+(`chunkBudget`), а не фактическое время. Значит, тяжёлая колонка может превысить
+бюджет кадра, несмотря на включённый `AsyncChunkIo`. В runtime-path чтение bytes
+асинхронное, а deserialize/apply остаются на игровом потоке с лимитом 4–10 slices
+за тик. Это конкретные места для замера и ограничения; фактическая длительность
+начального load/create пока не записывалась в фазовый timeline.
+
+Создание мира при обычном приложении может генерировать параллельно: отдельный
+`CoopGeneration` pool получает до 4 workers на этой машине-конфигурации (верхний
+cap в `JobThreadBudget` — 4 на pool). Но CLI `--create-world` в
+`WorldLifecycleFacade.cpp` принудительно отключает `AsyncChunkGeneration` и
+`AsyncChunkIo`, поэтому его elapsed time нельзя выдавать за меру интерактивного
+создания мира.
+
+### Обновлённый вывод аудита
+
+- Чёрные/приглушённые участки нельзя автоматически приписать выгрузке на диск или
+  пустым voxel chunks. В предыдущем M367 наблюдался valid geometry с очень низким
+  светом; дальний незнакомый участок при этом обычно начинает с procedural path.
+- Высокая стоимость стриминга подтверждена M367: `world_streaming_phase_ms`
+  median `40.2582`, `mesh_emerge_ms` median `19.1426`, wall median `59.606 ms` на
+  полёте. Это runtime flight cost, не cold load/create cost.
+- Для cold saved-world entry выявлен синхронный disk load начальной spatial
+  области. До дальнего стресс-маршрута нужно получить длительности фаз cold/warm
+  load и нового мира, а затем устранить главные main-thread stalls.
+- Сборка была много-target-параллельной только если граф содержал независимые
+  проекты; основной MSVC target не имел `/MP`. `--parallel 8` само по себе не
+  подтверждало параллельную компиляцию source files одного `Cubatarium.vcxproj`.
+  Включение `/MP` и его подтверждение Release-сборкой записываются в плане.
+- Полный дальний acceptance остаётся FAIL/UNTESTED: M367 дошёл лишь до 1 792
+  блоков при пороге 8 192; продуктовые holes и stop-convergence ворота красные.
+
+Следующий узкий implementation шаг: записать фазовые длительности load/create и
+координатное происхождение данных; сравнить sync spatial load с budgeted async
+path; затем менять узкие места. Подробные контрольные ворота и периодичность
+fresh-world исследований зафиксированы в плане от 2026-10-03.

@@ -1,8 +1,10 @@
 # План системной доработки отображения и стриминга мира
 
-> Архитектурные контракты и общий порядок фаз остаются reference. Текущие
-> execution statuses и конкретный successor для HEAD `243e817d` приведены в
-> [A31 re-audit](A31_REAUDIT_2026-09-23.md) и [A31 remediation plan](../../.cursor/plans/remediation_after_a30_open.plan.md).
+> Архитектурные контракты ниже остаются reference, но статусы фаз не отражают
+> текущий HEAD. Текущий execution plan для `develop` от 2026-10-03 —
+> [план длинных полётов, загрузки и стриминга](ENGINE_REMEDIATION_PLAN_2026-10-03.md);
+> актуальные доказательства и открытые дефекты находятся в
+> [аудите движка](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md).
 
 Дата: 22 сентября 2026. База: `dcc02e27201542c1ef95ad87217af9843bd69368`, `cursor_audit6_impl`.
 
