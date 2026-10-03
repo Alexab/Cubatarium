@@ -50,6 +50,8 @@ struct FlightSimOptions
   bool HoldSpace{false};
   /// Keep the autopilot's forward vector horizontal while the camera looks up/down.
   bool LevelForward{false};
+  /// Flight-sim-only predictive obstacle bypass. Production locomotion is unchanged.
+  bool AvoidObstacles{true};
   bool Sprint{false};
   /// Reset to a fixed ocean cruise start each run (matches World_164 manual).
   bool TeleportToCruiseStart{false};
