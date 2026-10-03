@@ -188,8 +188,9 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
         pending.generationStartedAt = std::chrono::steady_clock::now();
         const auto generation_started = pending.generationStartedAt;
         pending.result = Populator.Populate(populateRequest);
+        pending.generationFinishedAt = std::chrono::steady_clock::now();
         pending.generationMs = std::chrono::duration<double, std::milli>(
-                                   std::chrono::steady_clock::now() -
+                                   pending.generationFinishedAt -
                                    generation_started)
                                    .count();
         Completed.Push(std::move(pending));
@@ -253,6 +254,10 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       Completed.Push(std::move(pending));
       continue;
     }
+    const double ready_wait_ms = std::chrono::duration<double, std::milli>(
+                                     std::chrono::steady_clock::now() -
+                                     pending.generationFinishedAt)
+                                     .count();
     const auto apply_t0 = std::chrono::high_resolution_clock::now();
     pending.result.buffer.ApplyTo(world);
     States[pending.result.coord] = ChunkLoadState::Committed;
@@ -293,7 +298,10 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
           std::to_string(pending.priority) + " token=" +
           std::to_string(pending.result.token.sequence) + " queue_ms=" +
           std::to_string(queue_ms) + " generation_ms=" +
-          std::to_string(pending.generationMs) + " apply_ms=" +
+          std::to_string(pending.generationMs) + " ready_wait_ms=" +
+          std::to_string(ready_wait_ms) + " ready_batch_n=" +
+          std::to_string(ready.size()) + " max_commits_per_frame=" +
+          std::to_string(maxCommitsPerFrame) + " apply_ms=" +
           std::to_string(apply_ms) + " total_ms=" + std::to_string(total_ms);
       CubatariumLogInfo("WorldColumnSource", message);
     }

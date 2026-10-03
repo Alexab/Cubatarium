@@ -2830,8 +2830,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           chunk_budget.MaxChunkCommits,
           std::min(3, procedural.MaxChunkCommitsPerFrameBoost));
     }
-    // FocusIngressBudget (GotBlocks analog): stall shell commit when focus missing
-    // mesh but async pool idle.
+    // FocusIngressBudget (GotBlocks analog): stall new shell commits when focus
+    // mesh is missing and the mesh pool is idle. Do not strand terrain results
+    // that have finished generation; applying one can provide the missing source
+    // column and keeps the completed queue moving.
     {
       static int ingress_stall_frames = 0;
       if (missing_near_mesh && mesh_async == 0)
@@ -2842,7 +2844,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       {
         ingress_stall_frames = 0;
       }
-      if (ingress_stall_frames > 8 && near_focus_holes && moving_fast)
+      if (ingress_stall_frames > 8 && near_focus_holes && moving_fast &&
+          completed_ready == 0)
       {
         chunk_budget.MaxChunkCommits = 0;
       }

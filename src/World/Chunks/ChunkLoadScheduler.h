@@ -84,6 +84,7 @@ private:
     int maxHeight{256};
     std::chrono::steady_clock::time_point requestedAt{};
     std::chrono::steady_clock::time_point generationStartedAt{};
+    std::chrono::steady_clock::time_point generationFinishedAt{};
     double generationMs{0.0};
   };
 
