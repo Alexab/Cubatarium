@@ -3380,6 +3380,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     census.band_solid_accepted_empty_n = 0;
     census.band_solid_pending_mesh_n = 0;
     census.band_solid_pending_work_n = 0;
+    census.band_solid_unowned_n = 0;
     census.band_solid_unresolved_no_work_n = 0;
     census.band_solid_draw_gate_closed_n = 0;
     census.band_solid_draw_ready_n = 0;
@@ -3524,6 +3525,12 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             }
             else if (!satisfying)
             {
+              if (!work_pending)
+              {
+                ++census.band_solid_unowned_n;
+              }
+              // This historical field describes the absence of mesh-pipeline
+              // work. Relight and ColumnFlow tickets can still own the slice.
               ++census.band_solid_unresolved_no_work_n;
             }
           }

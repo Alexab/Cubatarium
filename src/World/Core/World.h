@@ -130,6 +130,10 @@ struct FocusRingVisualCensus
   int band_solid_accepted_empty_n{0};
   int band_solid_pending_mesh_n{0};
   int band_solid_pending_work_n{0};
+  /// No mesh-work in the direct pipeline and no relight/ColumnFlow owner.
+  /// Mirrors focus_state=1 in the coordinate trace.
+  int band_solid_unowned_n{0};
+  /// Historical no-mesh-work count; can overlap relight/ColumnFlow ownership.
   int band_solid_unresolved_no_work_n{0};
   int band_solid_draw_gate_closed_n{0};
   int band_solid_draw_ready_n{0};

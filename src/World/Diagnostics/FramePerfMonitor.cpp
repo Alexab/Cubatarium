@@ -551,6 +551,7 @@ struct FrameNumbers
   int focus_data_band_solid_accepted_empty_n{0};
   int focus_data_band_solid_pending_mesh_n{0};
   int focus_data_band_solid_pending_work_n{0};
+  int focus_data_band_solid_unowned_n{0};
   int focus_data_band_solid_unresolved_no_work_n{0};
   int focus_data_band_solid_draw_gate_closed_n{0};
   int focus_data_band_solid_draw_ready_n{0};
@@ -1349,6 +1350,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
       phys.FocusDataBandSolidAcceptedEmptyN;
   n.focus_data_band_solid_pending_mesh_n = phys.FocusDataBandSolidPendingMeshN;
   n.focus_data_band_solid_pending_work_n = phys.FocusDataBandSolidPendingWorkN;
+  n.focus_data_band_solid_unowned_n = phys.FocusDataBandSolidUnownedN;
   n.focus_data_band_solid_unresolved_no_work_n =
       phys.FocusDataBandSolidUnresolvedNoWorkN;
   n.focus_data_band_solid_draw_gate_closed_n =
@@ -2250,6 +2252,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.focus_data_band_solid_pending_mesh_n
           << ",\"focus_data_band_solid_pending_work_n\":"
           << n.focus_data_band_solid_pending_work_n
+          << ",\"focus_data_band_solid_unowned_n\":"
+          << n.focus_data_band_solid_unowned_n
           << ",\"focus_data_band_solid_unresolved_no_work_n\":"
           << n.focus_data_band_solid_unresolved_no_work_n
           << ",\"focus_data_band_solid_draw_gate_closed_n\":"

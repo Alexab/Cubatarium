@@ -607,7 +607,10 @@ public:
   static constexpr size_t kDemandTransitionRingCapacity = 16384;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
-  static constexpr size_t kVisualPixelTraceRingCapacity = 2048;
+  // M352 showed that 2,048 samples retained only the last 26 focus scans.
+  // At 80 pixels per scan, 32,768 records retain 409 scans across a full
+  // no-teleport route, including the focus-change and periodic captures.
+  static constexpr size_t kVisualPixelTraceRingCapacity = 32768;
   /// Retain a complete opt-in history of bounded streaming screen-ray probes.
   // The screen-ray selector rotates through four horizontal phases. Keeping
   // the opt-in audit trace at 15-frame cadence retains all phases for a full

@@ -6,6 +6,7 @@
 #include <deque>
 #include <mutex>
 #include <unordered_set>
+#include <vector>
 
 namespace cutum
 {
@@ -118,10 +119,12 @@ CullDecisionRing &GetCullDecisionRing()
 
 template <size_t Capacity> struct VisualBlackTraceRing
 {
-  std::array<VisualBlackTraceRecord, Capacity> slots{};
+  std::vector<VisualBlackTraceRecord> slots;
   size_t write{0};
   size_t count{0};
   std::mutex mu;
+
+  VisualBlackTraceRing() { slots.reserve(Capacity); }
 };
 
 VisualBlackTraceRing<UJobStageTrace::kVisualBlackTraceRingCapacity> &
@@ -203,7 +206,14 @@ void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
                      const VisualBlackTraceRecord &record)
 {
   std::lock_guard<std::mutex> lock(ring.mu);
-  ring.slots[ring.write % Capacity] = record;
+  if (ring.slots.size() < Capacity)
+  {
+    ring.slots.push_back(record);
+  }
+  else
+  {
+    ring.slots[ring.write % Capacity] = record;
+  }
   ++ring.write;
   if (ring.count < Capacity)
   {
@@ -218,9 +228,10 @@ void ForEachVisualTraceNewest(
 {
   std::lock_guard<std::mutex> lock(ring.mu);
   const size_t n = (max_n < ring.count) ? max_n : ring.count;
+  const size_t capacity = ring.slots.size();
   for (size_t i = 0; i < n; ++i)
   {
-    const size_t abs = (ring.write + Capacity - 1 - i) % Capacity;
+    const size_t abs = (ring.write + capacity - 1 - i) % capacity;
     fn(ring.slots[abs], ctx);
   }
 }

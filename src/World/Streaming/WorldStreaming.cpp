@@ -2231,6 +2231,8 @@ void UWorldStreaming::RefreshStreamingPressure(
       focus_visual.band_solid_pending_mesh_n;
   world.PhysicsTelemetryData.FocusDataBandSolidPendingWorkN =
       focus_visual.band_solid_pending_work_n;
+  world.PhysicsTelemetryData.FocusDataBandSolidUnownedN =
+      focus_visual.band_solid_unowned_n;
   world.PhysicsTelemetryData.FocusDataBandSolidUnresolvedNoWorkN =
       focus_visual.band_solid_unresolved_no_work_n;
   world.PhysicsTelemetryData.FocusDataBandSolidDrawGateClosedN =
