@@ -3027,6 +3027,9 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
 
   if (IsPendingLightBeforeMesh(ground_xz))
   {
+    bool saw_drawable = false;
+    bool saw_gpu_inflight = false;
+    bool saw_missing_solid = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -3034,17 +3037,43 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       // placeholders (HasGreedy, !Drawable) must not look ready (manual 101824).
       if (MeshService->HasMeshSatisfyingColumnReady(coord))
       {
-        out.draw_ok = true;
-        out.reason = ColumnRenderableState::BlockReason::None;
-        return out;
+        saw_drawable = true;
+        continue;
       }
       if (MeshService->IsPendingGpuApply(coord) ||
           MeshService->IsGpuExtractInFlight(coord))
       {
-        out.draw_ok = true;
-        out.reason = ColumnRenderableState::BlockReason::GpuInFlight;
-        return out;
+        saw_gpu_inflight = true;
+        continue;
       }
+      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (chunk && !chunk->IsAirOnly() &&
+          !MeshService->HasDrawableGreedyMesh(coord))
+      {
+        // PendingLightBeforeMesh is column-wide, but FirstMesh is per slice.
+        // A ready sibling must not hide a resident solid slice that has no
+        // drawable and no GPU owner; the column then stays in unfinished_keys
+        // so the slice admission pass can mint its own demand.
+        saw_missing_solid = true;
+      }
+    }
+    if (saw_missing_solid)
+    {
+      out.draw_ok = saw_drawable || saw_gpu_inflight;
+      out.reason = ColumnRenderableState::BlockReason::MissingMesh;
+      return out;
+    }
+    if (saw_drawable)
+    {
+      out.draw_ok = true;
+      out.reason = ColumnRenderableState::BlockReason::None;
+      return out;
+    }
+    if (saw_gpu_inflight)
+    {
+      out.draw_ok = true;
+      out.reason = ColumnRenderableState::BlockReason::GpuInFlight;
+      return out;
     }
     out.reason = ColumnRenderableState::BlockReason::PendingLight;
     return out;
@@ -3381,6 +3410,11 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     census.band_solid_pending_mesh_n = 0;
     census.band_solid_pending_work_n = 0;
     census.band_solid_unowned_n = 0;
+    census.camera_band_solid_slice_n = 0;
+    census.camera_band_solid_no_drawable_n = 0;
+    census.camera_band_solid_satisfying_n = 0;
+    census.camera_band_solid_pending_work_n = 0;
+    census.camera_band_solid_unowned_n = 0;
     census.band_solid_unresolved_no_work_n = 0;
     census.band_solid_draw_gate_closed_n = 0;
     census.band_solid_draw_ready_n = 0;
@@ -3456,7 +3490,13 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
             continue;
           }
 
+          const bool in_camera_band =
+              cy >= camera_band_cy0 && cy <= camera_band_cy1;
           ++census.band_solid_slice_n;
+          if (in_camera_band)
+          {
+            ++census.camera_band_solid_slice_n;
+          }
           const bool has_mesh = MeshService->HasDrawableGreedyMesh(coord);
           const bool satisfying =
               MeshService->HasMeshSatisfyingColumnReady(coord);
@@ -3490,6 +3530,10 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           if (satisfying)
           {
             ++census.band_solid_satisfying_n;
+            if (in_camera_band)
+            {
+              ++census.camera_band_solid_satisfying_n;
+            }
             if (!has_mesh)
             {
               ++census.band_solid_accepted_empty_n;
@@ -3515,9 +3559,17 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           else
           {
             ++census.band_solid_no_drawable_n;
+            if (in_camera_band)
+            {
+              ++census.camera_band_solid_no_drawable_n;
+            }
             if (work_pending)
             {
               ++census.band_solid_pending_work_n;
+              if (in_camera_band)
+              {
+                ++census.camera_band_solid_pending_work_n;
+              }
             }
             if (mesh_work_pending)
             {
@@ -3528,6 +3580,10 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               if (!work_pending)
               {
                 ++census.band_solid_unowned_n;
+                if (in_camera_band)
+                {
+                  ++census.camera_band_solid_unowned_n;
+                }
               }
               // This historical field describes the absence of mesh-pipeline
               // work. Relight and ColumnFlow tickets can still own the slice.

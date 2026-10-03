@@ -552,6 +552,11 @@ struct FrameNumbers
   int focus_data_band_solid_pending_mesh_n{0};
   int focus_data_band_solid_pending_work_n{0};
   int focus_data_band_solid_unowned_n{0};
+  int focus_data_camera_band_solid_slice_n{0};
+  int focus_data_camera_band_solid_no_drawable_n{0};
+  int focus_data_camera_band_solid_satisfying_n{0};
+  int focus_data_camera_band_solid_pending_work_n{0};
+  int focus_data_camera_band_solid_unowned_n{0};
   int focus_data_band_solid_unresolved_no_work_n{0};
   int focus_data_band_solid_draw_gate_closed_n{0};
   int focus_data_band_solid_draw_ready_n{0};
@@ -1351,6 +1356,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_data_band_solid_pending_mesh_n = phys.FocusDataBandSolidPendingMeshN;
   n.focus_data_band_solid_pending_work_n = phys.FocusDataBandSolidPendingWorkN;
   n.focus_data_band_solid_unowned_n = phys.FocusDataBandSolidUnownedN;
+  n.focus_data_camera_band_solid_slice_n =
+      phys.FocusDataCameraBandSolidSliceN;
+  n.focus_data_camera_band_solid_no_drawable_n =
+      phys.FocusDataCameraBandSolidNoDrawableN;
+  n.focus_data_camera_band_solid_satisfying_n =
+      phys.FocusDataCameraBandSolidSatisfyingN;
+  n.focus_data_camera_band_solid_pending_work_n =
+      phys.FocusDataCameraBandSolidPendingWorkN;
+  n.focus_data_camera_band_solid_unowned_n =
+      phys.FocusDataCameraBandSolidUnownedN;
   n.focus_data_band_solid_unresolved_no_work_n =
       phys.FocusDataBandSolidUnresolvedNoWorkN;
   n.focus_data_band_solid_draw_gate_closed_n =
@@ -2254,6 +2269,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.focus_data_band_solid_pending_work_n
           << ",\"focus_data_band_solid_unowned_n\":"
           << n.focus_data_band_solid_unowned_n
+          << ",\"focus_data_camera_band_solid_slice_n\":"
+          << n.focus_data_camera_band_solid_slice_n
+          << ",\"focus_data_camera_band_solid_no_drawable_n\":"
+          << n.focus_data_camera_band_solid_no_drawable_n
+          << ",\"focus_data_camera_band_solid_satisfying_n\":"
+          << n.focus_data_camera_band_solid_satisfying_n
+          << ",\"focus_data_camera_band_solid_pending_work_n\":"
+          << n.focus_data_camera_band_solid_pending_work_n
+          << ",\"focus_data_camera_band_solid_unowned_n\":"
+          << n.focus_data_camera_band_solid_unowned_n
           << ",\"focus_data_band_solid_unresolved_no_work_n\":"
           << n.focus_data_band_solid_unresolved_no_work_n
           << ",\"focus_data_band_solid_draw_gate_closed_n\":"
@@ -3590,6 +3615,256 @@ void UFramePerfMonitor::Shutdown()
           break;
         default:
           break;
+        }
+        if (r.sample_kind == 9)
+        {
+          // Pixel probes are captured as a dense 8x10 grid across the route.
+          // The generic VisualBlackTraceRecord serializer repeats hundreds
+          // of unrelated fields per point and made a single visible flight
+          // write hundreds of MiB. Keep the pixel oracle's render, voxel,
+          // fluid, draw, revision, and light witnesses in a compact row.
+          (*out) << "{\"kind\":\"renderer_pixel_probe\""
+                 << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
+                 << ",\"cz\":" << r.cz
+                 << ",\"sample_kind\":"
+                 << static_cast<int>(r.sample_kind)
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"camera_x\":" << r.camera_x
+                 << ",\"camera_y\":" << r.camera_y
+                 << ",\"camera_z\":" << r.camera_z
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"world_epoch\":" << r.world_epoch
+                 << ",\"incarnation\":" << r.incarnation
+                 << ",\"renderer_pixel_probe_id\":"
+                 << r.renderer_pixel_probe_id
+                 << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
+                 << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
+                 << ",\"renderer_pixel_rgba\":"
+                 << r.renderer_pixel_rgba
+                 << ",\"renderer_pixel_pretransparent_rgba\":"
+                 << r.renderer_pixel_pretransparent_rgba
+                 << ",\"renderer_pixel_pretransparent_depth\":"
+                 << r.renderer_pixel_pretransparent_depth
+                 << ",\"renderer_pixel_shader_min_ambient\":"
+                 << r.renderer_pixel_shader_min_ambient
+                 << ",\"renderer_pixel_shader_day_factor\":"
+                 << r.renderer_pixel_shader_day_factor
+                 << ",\"renderer_pixel_shader_night_factor\":"
+                 << r.renderer_pixel_shader_night_factor
+                 << ",\"renderer_pixel_shader_sky_scale\":"
+                 << r.renderer_pixel_shader_sky_scale
+                 << ",\"renderer_pixel_shader_light_debug_mode\":"
+                 << r.renderer_pixel_shader_light_debug_mode
+                 << ",\"renderer_pixel_surface_valid\":"
+                 << static_cast<int>(r.renderer_pixel_surface_valid)
+                 << ",\"renderer_pixel_surface_x\":"
+                 << r.renderer_pixel_surface_x
+                 << ",\"renderer_pixel_surface_y\":"
+                 << r.renderer_pixel_surface_y
+                 << ",\"renderer_pixel_surface_z\":"
+                 << r.renderer_pixel_surface_z
+                 << ",\"renderer_pixel_opaque_surface_valid\":"
+                 << static_cast<int>(r.renderer_pixel_opaque_surface_valid)
+                 << ",\"renderer_pixel_opaque_surface_x\":"
+                 << r.renderer_pixel_opaque_surface_x
+                 << ",\"renderer_pixel_opaque_surface_y\":"
+                 << r.renderer_pixel_opaque_surface_y
+                 << ",\"renderer_pixel_opaque_surface_z\":"
+                 << r.renderer_pixel_opaque_surface_z
+                 << ",\"renderer_pixel_voxel_ray_state\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_ray_state)
+                 << ",\"renderer_pixel_voxel_known_air_steps\":"
+                 << r.renderer_pixel_voxel_known_air_steps
+                 << ",\"renderer_pixel_voxel_ray_gap\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_ray_gap)
+                 << ",\"renderer_pixel_voxel_unloaded_x\":"
+                 << r.renderer_pixel_voxel_unloaded_x
+                 << ",\"renderer_pixel_voxel_unloaded_y\":"
+                 << r.renderer_pixel_voxel_unloaded_y
+                 << ",\"renderer_pixel_voxel_unloaded_z\":"
+                 << r.renderer_pixel_voxel_unloaded_z
+                 << ",\"renderer_pixel_voxel_unloaded_chunk_x\":"
+                 << r.renderer_pixel_voxel_unloaded_chunk_x
+                 << ",\"renderer_pixel_voxel_unloaded_chunk_y\":"
+                 << r.renderer_pixel_voxel_unloaded_chunk_y
+                 << ",\"renderer_pixel_voxel_unloaded_chunk_z\":"
+                 << r.renderer_pixel_voxel_unloaded_chunk_z
+                 << ",\"renderer_pixel_voxel_unloaded_distance\":"
+                 << r.renderer_pixel_voxel_unloaded_distance
+                 << ",\"renderer_pixel_voxel_hit_x\":"
+                 << r.renderer_pixel_voxel_hit_x
+                 << ",\"renderer_pixel_voxel_hit_y\":"
+                 << r.renderer_pixel_voxel_hit_y
+                 << ",\"renderer_pixel_voxel_hit_z\":"
+                 << r.renderer_pixel_voxel_hit_z
+                 << ",\"renderer_pixel_voxel_hit_block_id\":"
+                 << r.renderer_pixel_voxel_hit_block_id
+                 << ",\"renderer_pixel_voxel_previous_block_id\":"
+                 << r.renderer_pixel_voxel_previous_block_id
+                 << ",\"renderer_pixel_voxel_entry_face\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_entry_face)
+                 << ",\"renderer_pixel_voxel_hit_distance\":"
+                 << r.renderer_pixel_voxel_hit_distance
+                 << ",\"renderer_pixel_voxel_face_source_valid\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_face_source_valid)
+                 << ",\"renderer_pixel_voxel_face_source_distance\":"
+                 << r.renderer_pixel_voxel_face_source_distance
+                 << ",\"renderer_pixel_voxel_face_batch_ref\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
+                 << ",\"renderer_pixel_voxel_face_gpu_command\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_face_gpu_command)
+                 << ",\"renderer_pixel_voxel_face_gpu_pooled\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_face_gpu_pooled)
+                 << ",\"renderer_pixel_voxel_face_gpu_index_count\":"
+                 << r.renderer_pixel_voxel_face_gpu_index_count
+                 << ",\"renderer_pixel_voxel_face_gpu_instances\":"
+                 << r.renderer_pixel_voxel_face_gpu_instances
+                 << ",\"renderer_pixel_voxel_face_texture_ready\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_face_texture_ready)
+                 << ",\"renderer_pixel_voxel_face_texture_id\":"
+                 << r.renderer_pixel_voxel_face_texture_id
+                 << ",\"renderer_pixel_voxel_chunk_x\":"
+                 << r.renderer_pixel_voxel_chunk_x
+                 << ",\"renderer_pixel_voxel_chunk_y\":"
+                 << r.renderer_pixel_voxel_chunk_y
+                 << ",\"renderer_pixel_voxel_chunk_z\":"
+                 << r.renderer_pixel_voxel_chunk_z
+                 << ",\"renderer_pixel_voxel_chunk_pending_light\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_pending_light)
+                 << ",\"renderer_pixel_voxel_chunk_relight_queue_kind\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_relight_queue_kind)
+                 << ",\"renderer_pixel_voxel_chunk_flow_ticket_flags\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_flow_ticket_flags)
+                 << ",\"renderer_pixel_voxel_chunk_has_settled_light\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_has_settled_light)
+                 << ",\"renderer_pixel_voxel_chunk_settled_light_rev\":"
+                 << r.renderer_pixel_voxel_chunk_settled_light_rev
+                 << ",\"renderer_pixel_voxel_chunk_field_light_rev\":"
+                 << r.renderer_pixel_voxel_chunk_field_light_rev
+                 << ",\"renderer_pixel_voxel_chunk_nonair\":"
+                 << r.renderer_pixel_voxel_chunk_nonair
+                 << ",\"renderer_pixel_voxel_chunk_mesh_revision\":"
+                 << r.renderer_pixel_voxel_chunk_mesh_revision
+                 << ",\"renderer_pixel_voxel_chunk_published_geom_rev\":"
+                 << r.renderer_pixel_voxel_chunk_published_geom_rev
+                 << ",\"renderer_pixel_voxel_chunk_published_light_rev\":"
+                 << r.renderer_pixel_voxel_chunk_published_light_rev
+                 << ",\"renderer_pixel_voxel_chunk_work_owner_flags\":"
+                 << r.renderer_pixel_voxel_chunk_work_owner_flags
+                 << ",\"renderer_pixel_voxel_chunk_dirty_queue_kind\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_dirty_queue_kind)
+                 << ",\"renderer_pixel_voxel_chunk_dirty_queue_age_frames\":"
+                 << r.renderer_pixel_voxel_chunk_dirty_queue_age_frames
+                 << ",\"renderer_pixel_voxel_chunk_demand_has_active_attempt\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_demand_has_active_attempt)
+                 << ",\"renderer_pixel_voxel_chunk_demand_active_stage\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_demand_active_stage)
+                 << ",\"renderer_pixel_voxel_chunk_demand_desired_geom_rev\":"
+                 << r.renderer_pixel_voxel_chunk_demand_desired_geom_rev
+                 << ",\"renderer_pixel_voxel_chunk_demand_desired_light_rev\":"
+                 << r.renderer_pixel_voxel_chunk_demand_desired_light_rev
+                 << ",\"renderer_pixel_fluid_triangle_match\":"
+                 << static_cast<int>(r.renderer_pixel_fluid_triangle_match)
+                 << ",\"renderer_pixel_fluid_triangle_distance\":"
+                 << r.renderer_pixel_fluid_triangle_distance
+                 << ",\"renderer_pixel_fluid_face_index\":"
+                 << r.renderer_pixel_fluid_face_index
+                 << ",\"renderer_pixel_fluid_block_id\":"
+                 << r.renderer_pixel_fluid_block_id
+                 << ",\"renderer_pixel_fluid_sky_light\":"
+                 << r.renderer_pixel_fluid_sky_light
+                 << ",\"renderer_pixel_fluid_block_light\":"
+                 << r.renderer_pixel_fluid_block_light
+                 << ",\"renderer_pixel_opaque_hit_distance\":"
+                 << r.renderer_pixel_opaque_hit_distance
+                 << ",\"renderer_pixel_opaque_chunk_x\":"
+                 << r.renderer_pixel_opaque_chunk_x
+                 << ",\"renderer_pixel_opaque_chunk_y\":"
+                 << r.renderer_pixel_opaque_chunk_y
+                 << ",\"renderer_pixel_opaque_chunk_z\":"
+                 << r.renderer_pixel_opaque_chunk_z
+                 << ",\"renderer_pixel_opaque_chunk_nonair\":"
+                 << r.renderer_pixel_opaque_chunk_nonair
+                 << ",\"renderer_pixel_opaque_chunk_content_revision\":"
+                 << r.renderer_pixel_opaque_chunk_content_revision
+                 << ",\"renderer_pixel_opaque_mesh_revision\":"
+                 << r.renderer_pixel_opaque_mesh_revision
+                 << ",\"renderer_pixel_opaque_published_geom_rev\":"
+                 << r.renderer_pixel_opaque_published_geom_rev
+                 << ",\"renderer_pixel_opaque_published_light_rev\":"
+                 << r.renderer_pixel_opaque_published_light_rev
+                 << ",\"renderer_pixel_opaque_field_light_rev\":"
+                 << r.renderer_pixel_opaque_field_light_rev
+                 << ",\"renderer_pixel_opaque_source_index_count\":"
+                 << r.renderer_pixel_opaque_source_index_count
+                 << ",\"renderer_pixel_opaque_vertex_light_valid\":"
+                 << static_cast<int>(r.renderer_pixel_opaque_vertex_light_valid)
+                 << ",\"renderer_pixel_opaque_vertex_light_block_id\":"
+                 << r.renderer_pixel_opaque_vertex_light_block_id
+                 << ",\"renderer_pixel_opaque_vertex_light_face_index\":"
+                 << r.renderer_pixel_opaque_vertex_light_face_index
+                 << ",\"renderer_pixel_opaque_vertex_light_distance\":"
+                 << r.renderer_pixel_opaque_vertex_light_distance
+                 << ",\"renderer_pixel_opaque_vertex_sky_light\":"
+                 << r.renderer_pixel_opaque_vertex_sky_light
+                 << ",\"renderer_pixel_opaque_vertex_block_light\":"
+                 << r.renderer_pixel_opaque_vertex_block_light
+                 << ",\"renderer_pixel_opaque_vertex_light_preview\":"
+                 << r.renderer_pixel_opaque_vertex_light_preview
+                 << ",\"renderer_pixel_opaque_live_face_light_valid\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_live_face_light_valid)
+                 << ",\"renderer_pixel_opaque_live_face_light_packed\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_live_face_light_packed)
+                 << ",\"renderer_pixel_opaque_live_face_light_source\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_live_face_light_source)
+                 << ",\"renderer_pixel_opaque_demand_present\":"
+                 << static_cast<int>(r.renderer_pixel_opaque_demand_present)
+                 << ",\"renderer_pixel_opaque_demand_has_active_attempt\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_demand_has_active_attempt)
+                 << ",\"renderer_pixel_opaque_demand_has_settled_light\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_demand_has_settled_light)
+                 << ",\"renderer_pixel_opaque_demand_active_stage\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_demand_active_stage)
+                 << ",\"renderer_pixel_opaque_demand_desired_light_rev\":"
+                 << r.renderer_pixel_opaque_demand_desired_light_rev
+                 << ",\"renderer_pixel_opaque_demand_published_light_rev\":"
+                 << r.renderer_pixel_opaque_demand_published_light_rev
+                 << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
+                 << r.renderer_pixel_opaque_demand_settled_light_rev
+                 << ",\"renderer_pixel_opaque_ref_flags\":"
+                 << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
+                 << ",\"renderer_pixel_opaque_drawable\":"
+                 << static_cast<int>(r.renderer_pixel_opaque_drawable)
+                 << ",\"renderer_pixel_opaque_draw_ready\":"
+                 << static_cast<int>(r.renderer_pixel_opaque_draw_ready)
+                 << ",\"renderer_pixel_opaque_live_gpu\":"
+                 << static_cast<int>(r.renderer_pixel_opaque_live_gpu)
+                 << ",\"renderer_pixel_opaque_mdi_resident_pass_flags\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_mdi_resident_pass_flags)
+                 << ",\"renderer_pixel_opaque_mdi_visible_pass_flags\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_mdi_visible_pass_flags)
+                 << ",\"renderer_pixel_opaque_mdi_index_count\":"
+                 << r.renderer_pixel_opaque_mdi_index_count
+                 << ",\"renderer_pixel_opaque_mdi_visible_index_count\":"
+                 << r.renderer_pixel_opaque_mdi_visible_index_count
+                 << "}\n";
+          return;
         }
         (*out) << "{\"kind\":\"" << trace_kind
                << "\""

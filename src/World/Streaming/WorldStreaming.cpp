@@ -2233,6 +2233,16 @@ void UWorldStreaming::RefreshStreamingPressure(
       focus_visual.band_solid_pending_work_n;
   world.PhysicsTelemetryData.FocusDataBandSolidUnownedN =
       focus_visual.band_solid_unowned_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidSliceN =
+      focus_visual.camera_band_solid_slice_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidNoDrawableN =
+      focus_visual.camera_band_solid_no_drawable_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidSatisfyingN =
+      focus_visual.camera_band_solid_satisfying_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidPendingWorkN =
+      focus_visual.camera_band_solid_pending_work_n;
+  world.PhysicsTelemetryData.FocusDataCameraBandSolidUnownedN =
+      focus_visual.camera_band_solid_unowned_n;
   world.PhysicsTelemetryData.FocusDataBandSolidUnresolvedNoWorkN =
       focus_visual.band_solid_unresolved_no_work_n;
   world.PhysicsTelemetryData.FocusDataBandSolidDrawGateClosedN =

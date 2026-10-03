@@ -629,6 +629,11 @@ struct PhysicsTelemetry
   int FocusDataBandSolidPendingMeshN{0};
   int FocusDataBandSolidPendingWorkN{0};
   int FocusDataBandSolidUnownedN{0};
+  int FocusDataCameraBandSolidSliceN{0};
+  int FocusDataCameraBandSolidNoDrawableN{0};
+  int FocusDataCameraBandSolidSatisfyingN{0};
+  int FocusDataCameraBandSolidPendingWorkN{0};
+  int FocusDataCameraBandSolidUnownedN{0};
   int FocusDataBandSolidUnresolvedNoWorkN{0};
   int FocusDataBandSolidDrawGateClosedN{0};
   int FocusDataBandSolidDrawReadyN{0};
