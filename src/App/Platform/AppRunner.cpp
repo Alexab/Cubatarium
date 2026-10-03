@@ -801,8 +801,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 }
                 const double reverse_at_sec =
                     options.IdleBeforeFlySec + options.ReverseCourseAfterSec;
-                if (options.ReverseCourseAfterSec > 0.0 &&
-                    ingame_sec >= reverse_at_sec)
+                const bool reverse_course_requested =
+                    options.ReverseCourseAfterSec > 0.0 &&
+                    ingame_sec >= reverse_at_sec;
+                const bool intentional_course_turn =
+                    reverse_course_requested && !reverse_course_engaged;
+                if (reverse_course_requested)
                 {
                   yaw = std::remainder(yaw + 180.0f, 360.0f);
                   if (yaw < 0.0f)
@@ -820,6 +824,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 const float pitch =
                     in_dive ? options.DivePitchDeg : options.FacePitchDeg;
                 if (autopilot_flying && !fly_stop_released &&
+                    !intentional_course_turn &&
                     camera->GetLastMoveAttemptSubsteps() > 0)
                 {
                   const float yaw_delta = std::abs(
