@@ -2736,6 +2736,14 @@ def main() -> int:
                                 "CUBA_VISUAL_BLACK_TRACE", ""
                             ).strip()
                             not in ("", "0"),
+                            "visual_black_trace_focus_probes": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES", ""
+                            ).strip()
+                            not in ("", "0"),
+                            "visual_black_trace_dense_pixels": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS", ""
+                            ).strip()
+                            not in ("", "0"),
                             "world_column_source_trace": os.environ.get(
                                 "CUBA_WORLD_COLUMN_SOURCE_TRACE", ""
                             ).strip()
