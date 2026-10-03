@@ -61,6 +61,9 @@ struct FlightSimOptions
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};
   double StopPhaseSec{35.0};
+  /// Optional diagnostic guard: stop after sustained blocked/ground-contact
+  /// movement during the active fly phase. Zero keeps the full requested run.
+  double StopAfterBlockedSec{0.0};
   /// After fly, before stop: pitch down / no altitude clamp (underwater hang).
   double DivePhaseSec{0.0};
   float DivePitchDeg{-30.0f};

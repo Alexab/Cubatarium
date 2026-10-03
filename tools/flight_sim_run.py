@@ -1097,6 +1097,12 @@ def main() -> int:
     ap.add_argument("--fly-phase-sec", type=float, default=50.0)
     ap.add_argument("--stop-phase-sec", type=float, default=50.0)
     ap.add_argument(
+        "--stop-after-blocked-sec",
+        type=float,
+        default=0.0,
+        help="end the diagnostic flight after sustained collision/ground contact",
+    )
+    ap.add_argument(
         "--dive-phase-sec",
         type=float,
         default=0.0,
@@ -2396,6 +2402,10 @@ def main() -> int:
             sim_cmd.append("--fly-stop")
             sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
             sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
+            if args.stop_after_blocked_sec > 0.0:
+                sim_cmd.extend(
+                    ["--stop-after-blocked", str(args.stop_after_blocked_sec)]
+                )
             if args.dive_phase_sec > 0.0:
                 sim_cmd.extend(["--dive-phase", str(args.dive_phase_sec)])
                 sim_cmd.extend(["--dive-pitch", str(args.dive_pitch)])

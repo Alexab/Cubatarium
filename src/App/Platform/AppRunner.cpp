@@ -641,6 +641,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
+    int heading_deviation_during_move_samples = 0;
+    float max_heading_yaw_delta_deg = 0.0f;
+    float max_heading_pitch_delta_deg = 0.0f;
+    bool collision_stop_triggered = false;
+    double collision_stop_elapsed_sec = 0.0;
+    std::chrono::steady_clock::time_point blocked_move_started{};
     // Land cruise: follow column top + 12 along the route (was sticky-once,
     // which pinned Y at spawn and stuck product-174657 west at focus_cx≈2).
     // Apply every frame with floor/ceiling — lift-only ratcheted Y~70 and
@@ -793,7 +799,60 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 }
                 const float pitch =
                     in_dive ? options.DivePitchDeg : options.FacePitchDeg;
+                if (autopilot_flying && !fly_stop_released &&
+                    camera->GetLastMoveAttemptSubsteps() > 0)
+                {
+                  const float yaw_delta = std::abs(
+                      std::remainder(camera->GetYaw() - yaw, 360.0f));
+                  const float pitch_delta =
+                      std::abs(camera->GetPitch() - pitch);
+                  max_heading_yaw_delta_deg =
+                      (std::max)(max_heading_yaw_delta_deg, yaw_delta);
+                  max_heading_pitch_delta_deg =
+                      (std::max)(max_heading_pitch_delta_deg, pitch_delta);
+                  constexpr float kHeadingOverrideEpsilonDeg = 0.25f;
+                  if (yaw_delta > kHeadingOverrideEpsilonDeg ||
+                      pitch_delta > kHeadingOverrideEpsilonDeg)
+                  {
+                    ++heading_deviation_during_move_samples;
+                  }
+                }
                 camera->SetOrientation(yaw, pitch);
+                if (options.StopAfterBlockedSec > 0.0 &&
+                    options.HoldForward && !options.BreakStandMode &&
+                    !options.YawSweepMode && autopilot_flying &&
+                    !fly_stop_released &&
+                    ingame_sec >= options.IdleBeforeFlySec)
+                {
+                  const bool blocked_or_landed =
+                      camera->GetLastMoveBlockedSubsteps() > 0 ||
+                      camera->GetLastFlightGroundContacts() > 0;
+                  if (blocked_or_landed)
+                  {
+                    if (blocked_move_started ==
+                        std::chrono::steady_clock::time_point{})
+                    {
+                      blocked_move_started = now;
+                    }
+                    collision_stop_elapsed_sec =
+                        std::chrono::duration<double>(now - blocked_move_started)
+                            .count();
+                    if (collision_stop_elapsed_sec >=
+                        options.StopAfterBlockedSec)
+                    {
+                      collision_stop_triggered = true;
+                      std::cout << "flight-sim: sustained collision stop after "
+                                << collision_stop_elapsed_sec << "s at t="
+                                << ingame_sec << "s" << std::endl;
+                      return true;
+                    }
+                  }
+                  else
+                  {
+                    blocked_move_started = {};
+                    collision_stop_elapsed_sec = 0.0;
+                  }
+                }
                 // Keep cruise altitude (manual holds Space / levels pitch).
                 // Set every frame (not lift-only) so rising canopy does not
                 // ratchet Y into altitude-blind void_near collapse.
@@ -1027,6 +1086,19 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"autopilot_flying\": "
                << (autopilot_flying ? "true" : "false") << ",\n"
                << "  \"face_yaw_deg\": " << options.FaceYawDeg << ",\n"
+               << "  \"face_pitch_deg\": " << options.FacePitchDeg << ",\n"
+               << "  \"heading_deviation_during_move_samples\": "
+               << heading_deviation_during_move_samples << ",\n"
+               << "  \"max_heading_yaw_delta_deg\": "
+               << max_heading_yaw_delta_deg << ",\n"
+               << "  \"max_heading_pitch_delta_deg\": "
+               << max_heading_pitch_delta_deg << ",\n"
+               << "  \"stop_after_blocked_sec\": "
+               << options.StopAfterBlockedSec << ",\n"
+               << "  \"collision_stop_triggered\": "
+               << (collision_stop_triggered ? "true" : "false") << ",\n"
+               << "  \"collision_stop_elapsed_sec\": "
+               << collision_stop_elapsed_sec << ",\n"
                << "  \"idle_before_fly_sec\": " << options.IdleBeforeFlySec
                << ",\n"
                << "  \"start_focus\": [" << start_focus_cx << ", "

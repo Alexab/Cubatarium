@@ -201,6 +201,11 @@ int main(int argc, char *argv[])
         {
           opt.StopPhaseSec = std::atof(argv[++j]);
         }
+        else if (std::strcmp(argv[j], "--stop-after-blocked") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.StopAfterBlockedSec = std::atof(argv[++j]);
+        }
         else if (std::strcmp(argv[j], "--dive-phase") == 0 && j + 1 < argc)
         {
           opt.DivePhaseSec = std::atof(argv[++j]);
