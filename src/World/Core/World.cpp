@@ -5,10 +5,18 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "World/Core/World.h"
+#include "App/Platform/Log.h"
+#include <cstdlib>
 #include <climits>
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
+#include "Items/ToolCapabilities.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Game/ModePolicy.h"
+#include "Game/Economy/ResourceEconomy.h"
+#include "Creatures/Core/Creature.h"
 #include "Core/Progress/IUProgressSink.h"
+#include "Core/FrameStageWatchdog.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -30,13 +38,15 @@
 #include "World/Core/WorldFluidFacade.h"
 #include "World/Core/WorldViewBinding.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Environment/WeatherAutoController.h"
 #include "World/Environment/WeatherBiomeUtil.h"
 #include "World/IO/ChunkStorageService.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
-#include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "World/Lighting/LightChangeSet.h"
+#include "World/Lighting/RelightResultInstall.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/LightingPipelineFactory.h"
@@ -44,7 +54,10 @@
 #include "Render/Backend/RenderBackendCaps.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
+#include "World/Streaming/ColumnEmergeBump.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnRecordCoordinator.h"
+#include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Mesh/WorldMeshDirtyPolicy.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
@@ -59,9 +72,35 @@
 #include "World/Physics/WorldChunkDirtyService.h"
 #include "World/Physics/WorldMovementPhysicsService.h"
 #include "World/Physics/WorldPhysicsScheduler.h"
+#include "World/Interaction/BlockBreakService.h"
+#include "World/Interaction/BlockPlacementService.h"
 #include "World/Raycast/BlockRaycast.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
+#include "World/Streaming/MeshLightStalePolicy.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/RingReadinessBudget.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
+#include "Render/Mesh/ChunkMeshFace.h"
+#include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/FluidColumnSummary.h"
+#include "World/Streaming/EnterVisualGate.h"
+#include "World/Streaming/DependencyStampBuilder.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/VisualObligationPolicy.h"
+#include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/RelightInstallPlanner.h"
+#include "World/Streaming/MeshWorkAdmission.h"
+#include <algorithm>
+#include <unordered_set>
+#include <vector>
+#include "World/Streaming/ColumnVisualReadyPolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Streaming/VisibleBlackAttribution.h"
+#include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
@@ -87,6 +126,82 @@ using json = nlohmann::json;
 
 namespace cutum
 {
+namespace
+{
+
+bool ChunkSliceHasCurrentLightSettlement(const UWorld &world,
+                                         glm::ivec3 coord)
+{
+  const UChunk *chunk =
+      world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(coord);
+  if (!chunk || !demand ||
+      demand->world_epoch !=
+          world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch() ||
+      demand->incarnation != chunk->GetIncarnation() ||
+      !demand->has_settled_light ||
+      demand->settled_light_rev != chunk->GetLightFieldRevision())
+  {
+    return false;
+  }
+  // Light calculation settlement and mesh publication are separate proofs.
+  // A current settled field may still have an older/unpublished mesh; callers
+  // use this helper to decide whether lighting work is needed. The renderer
+  // independently checks desired/published mesh revisions before drawing.
+  return true;
+}
+
+int CountMissingSlicesInRange(const UBlockWorld &world,
+                            const UWorldMeshService *mesh_service,
+                            glm::ivec3 ground_chunk_coord, int min_y,
+                            int max_y)
+{
+  if (!mesh_service)
+  {
+    return 0;
+  }
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  int marked = 0;
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground_chunk_coord.x, cy, ground_chunk_coord.z);
+    const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+    const bool mesh_satisfying =
+        chunk && mesh_service->HasMeshSatisfyingColumnReady(coord);
+    const bool geometry_debt =
+        mesh_satisfying && mesh_service->HasGeometryPublicationDebt(
+                               coord, chunk->GetIncarnation());
+    if (!chunk || (mesh_satisfying && !geometry_debt) ||
+        mesh_service->IsPendingGpuApply(coord) ||
+        mesh_service->HasInflightMeshBuild(coord))
+    {
+      continue;
+    }
+    bool solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+      {
+        for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            solid = true;
+          }
+        }
+      }
+    }
+    if (solid)
+    {
+      ++marked;
+    }
+  }
+  return marked;
+}
+
+} // namespace
 
 namespace
 {
@@ -763,7 +878,7 @@ IULightingPipeline &UWorld::GetLightingPipeline()
   if (!LightingPipeline)
   {
     LightingMode mode =
-        GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode();
+        GraphicsQualityProfile::ResolveLightingMode(Render);
     const RenderBackendCaps caps = GetActiveRenderBackendCaps();
     const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
     if (sel.Mesher == MesherBackendKind::GpuGreedy ||
@@ -804,6 +919,16 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   GetLightingPipeline().RelightColumnWithFrontier(
       BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y,
       include_block_light, include_skylight, &relit_chunks);
+  // Era51: enter rim OpenSky — missing neighbors inject daytime sky (enter only).
+  if (EnterLitGateActive && include_skylight)
+  {
+    ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, world_x, world_z,
+                              min_y, max_y);
+    const glm::ivec3 primary =
+        UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
+    EnterVisualGateCtrl.NoteOpenSkyApplied(
+        glm::ivec2(primary.x, primary.z));
+  }
   const glm::ivec3 primary_chunk =
       UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
   MarkRelitChunksForMesh(relit_chunks, priority_mesh,
@@ -867,372 +992,6 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
       std::chrono::duration<double, std::milli>(t1 - t0).count();
 }
 
-void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
-                                    bool priority_mesh,
-                                    const std::vector<glm::ivec2> &primary_grounds,
-                                    bool finalize_pending_gate)
-{
-  if (relit_chunks.empty())
-  {
-    // Job finished with nothing to apply (empty capture / unloaded). Still
-    // clear the mesh gate — leaving Pending forever made Promote spin and
-    // pending_light_focus climb to 60–80 with relight_drain_ms≈0.
-    for (const glm::ivec2 &g : primary_grounds)
-    {
-      AsyncRelightColumnsInFlight.erase(g);
-      if (!finalize_pending_gate)
-      {
-        continue;
-      }
-      PendingLightBeforeMesh.erase(g);
-      SetColumnEmergeState(glm::ivec3(g.x, 0, g.y), ColumnEmergeState::LitReady);
-      // Empty apply used to leave Lighting columns with no Dirty forever if
-      // commit skipped preview (trail wedge). Admit first mesh now.
-      if (MeshService)
-      {
-        const glm::ivec3 ground(g.x, 0, g.y);
-        const int sea = ProceduralTemplate.SeaLevel;
-        const int max_y = ProceduralTemplate.MaxHeight;
-        const int dirty_min = std::max(0, sea - CHUNK_SIZE);
-        const int dirty_max = std::min(max_y, sea + CHUNK_SIZE * 2);
-        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-            ground, dirty_min, dirty_max,
-            /*include_horizontal_neighbors=*/false);
-      }
-    }
-    return;
-  }
-  std::unordered_set<glm::ivec2, GroundColumnHash> primary_set;
-  primary_set.reserve(primary_grounds.size() * 2 + 1);
-  for (const glm::ivec2 &g : primary_grounds)
-  {
-    primary_set.insert(g);
-  }
-  // Per-column Y from chunks that were actually lit.
-  struct YBand
-  {
-    int min_y{INT32_MAX};
-    int max_y{INT32_MIN};
-  };
-  std::unordered_map<glm::ivec2, YBand, GroundColumnHash> bands;
-  bands.reserve(relit_chunks.size());
-  for (const glm::ivec3 &coord : relit_chunks)
-  {
-    YBand &band = bands[glm::ivec2(coord.x, coord.z)];
-    const int chunk_base_y = coord.y * CHUNK_SIZE;
-    band.min_y = std::min(band.min_y, chunk_base_y);
-    band.max_y = std::max(band.max_y, chunk_base_y + CHUNK_SIZE - 1);
-  }
-  const int column_max_y = ProceduralTemplate.MaxHeight;
-  const int sea = ProceduralTemplate.SeaLevel;
-  for (auto &[key, band] : bands)
-  {
-    const glm::ivec3 ground(key.x, 0, key.y);
-    const bool is_primary = primary_set.count(key) != 0;
-    // Only the column whose light job finished may leave the mesh gate.
-    // Neighbors remesh for seams only after they are already LitReady.
-    if (is_primary)
-    {
-      // Dirty = lit cy ∪ narrow pending ∪ sea±CHUNK ∪ player band when near.
-      // Ignore pending bands that span most of the world (legacy NotePending
-      // used full height and flooded Dirty back to 1000+).
-      int dirty_min = std::max(0, band.min_y - 1);
-      int dirty_max = std::min(column_max_y, band.max_y + 1);
-      if (const auto pit = PendingLightBeforeMesh.find(key);
-          pit != PendingLightBeforeMesh.end())
-      {
-        const int span = pit->second.max_y - pit->second.min_y;
-        if (span >= 0 && span <= CHUNK_SIZE * 4)
-        {
-          dirty_min = std::min(dirty_min, pit->second.min_y);
-          dirty_max = std::max(dirty_max, pit->second.max_y);
-        }
-      }
-      if (ProceduralTemplate.FillWater)
-      {
-        dirty_min =
-            std::min(dirty_min, std::max(0, sea - CHUNK_SIZE));
-        dirty_max = std::max(
-            dirty_max, std::min(column_max_y, sea + CHUNK_SIZE * 2));
-      }
-      {
-        const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-        const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
-        const int horiz = std::max(std::abs(key.x - focus_chunk.x),
-                                   std::abs(key.y - focus_chunk.z));
-        if (horiz <= 1)
-        {
-          dirty_min =
-              std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
-          dirty_max = std::max(
-              dirty_max,
-              std::min(column_max_y, focus_block.y + CHUNK_SIZE * 2));
-        }
-      }
-      // Partial relight results must not feed Dirty while the first-light gate
-      // is still closed. Those remeshes are soft-deferred anyway and were a big
-      // source of dirty backlog during flight.
-      if (!finalize_pending_gate)
-      {
-        AsyncRelightColumnsInFlight.erase(key);
-        continue;
-      }
-      bool had_mesh = false;
-      const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
-      const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
-      for (int cy = cy0; cy <= cy1; ++cy)
-      {
-        if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
-        {
-          had_mesh = true;
-          break;
-        }
-      }
-      if (finalize_pending_gate)
-      {
-        PendingLightBeforeMesh.erase(key);
-      }
-      if (finalize_pending_gate && had_mesh)
-      {
-        const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-        const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
-        const int horiz = std::max(std::abs(key.x - focus_chunk.x),
-                                   std::abs(key.y - focus_chunk.z));
-        // Cruise: only track underfeet sticky. Idle: never expand sticky ring —
-        // async-saturated insert of full focus made sticky 7→13 while Dirty
-        // remesh thrash left not_ready climbing (manual 210341).
-        const bool idle =
-            LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
-        const int pending_n =
-            static_cast<int>(PendingLightBeforeMesh.size());
-        const int sticky_r =
-            idle ? 1
-                 : (pending_n > 10 ? GetStreamingFocusRadius() : 1);
-        if (horiz <= sticky_r)
-        {
-          StickyRemeshAfterLight.insert(key);
-        }
-      }
-      AsyncRelightColumnsInFlight.erase(key);
-      if (finalize_pending_gate)
-      {
-        SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-      }
-      if (dirty_max < dirty_min)
-      {
-        dirty_min = std::max(0, band.min_y - 1);
-        dirty_max = std::min(column_max_y, band.max_y + 1);
-      }
-      const bool seam_ok =
-          finalize_pending_gate && !SuppressRelightSeamDirty;
-      // Standing Dirty churn suppresses global seam fanout, but empty-shell
-      // border faces in the focus ring stick forever without a remesh. Keep
-      // underfeet (±1) seam remesh even while SuppressRelightSeamDirty.
-      bool focus_ring_seam = false;
-      if (finalize_pending_gate && SuppressRelightSeamDirty)
-      {
-        const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-        const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
-        const int focus_horiz =
-            std::max(std::abs(key.x - focus_chunk.x),
-                     std::abs(key.y - focus_chunk.z));
-        focus_ring_seam = focus_horiz <= 1;
-      }
-      if (SuppressRelightSeamDirty && had_mesh && !focus_ring_seam)
-      {
-        // Idle remesh: do not MarkDirty Inflight (re-Dirty after Apply froze
-        // focus_dirty). Request post-Apply remesh instead so Capture sees new
-        // light without mid-flight thrash.
-        for (int cy = cy0; cy <= cy1; ++cy)
-        {
-          const glm::ivec3 coord(key.x, cy, key.y);
-          if (MeshService->IsChunkMeshDirty(coord))
-          {
-            continue;
-          }
-          if (MeshService->HasInflightMeshBuild(coord))
-          {
-            MeshService->RequestRemeshAfterApply(coord);
-            continue;
-          }
-          if (priority_mesh)
-          {
-            MeshService->MarkDirtyPriority(coord);
-          }
-          else
-          {
-            MeshService->MarkDirty(coord);
-          }
-        }
-      }
-      else if (priority_mesh)
-      {
-        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-            ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
-      }
-      else
-      {
-        MeshService->MarkTerrainChunkMeshDirtySeamed(
-            ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
-      }
-      if (finalize_pending_gate)
-      {
-        SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-      }
-      continue;
-    }
-    // Neighbor: skip Dirty while still awaiting own first light.
-    // Idle lit-but-dirty catch-up: skip far neighbor Dirty — seam cascade
-    // kept focus_dirty≈400 while async remeshed in place. Focus-ring (±1)
-    // neighbors that actually received light still remesh (no further seam).
-    if (SuppressRelightSeamDirty)
-    {
-      const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
-      const int focus_horiz =
-          std::max(std::abs(key.x - focus_chunk.x),
-                   std::abs(key.y - focus_chunk.z));
-      if (focus_horiz > 1)
-      {
-        continue;
-      }
-    }
-    if (PendingLightBeforeMesh.count(key) != 0 ||
-        !IsColumnLitReady(ground))
-    {
-      continue;
-    }
-    if (MeshService->GetDirtyCount() >= 350)
-    {
-      continue;
-    }
-    int dirty_min = std::max(0, band.min_y - 1);
-    int dirty_max = std::min(column_max_y, band.max_y + 1);
-    if (dirty_max < dirty_min)
-    {
-      continue;
-    }
-    // Under standing suppress: remesh this lit neighbor only (no seam fanout).
-    const bool neighbor_seam = !SuppressRelightSeamDirty;
-    if (priority_mesh)
-    {
-      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-          ground, dirty_min, dirty_max, neighbor_seam);
-    }
-    else
-    {
-      MeshService->MarkTerrainChunkMeshDirtySeamed(ground, dirty_min, dirty_max,
-                                                   neighbor_seam);
-    }
-  }
-  // Primary may be absent from relit_chunks (chunk unload / empty apply slice).
-  // Still drop SoftDefer gate — otherwise PendingLight waits forever
-  // (manual 220951: pf/fdm stuck at 1 while other columns drained).
-  // TD-ARCH-015: warm Capture store after Dirty revisions so schedule skips
-  // live GetChunk shell Capture in the hot tick.
-  if (MeshService && !relit_chunks.empty())
-  {
-    for (const glm::ivec3 &coord : relit_chunks)
-    {
-      MeshService->PrefetchMeshCapture(GetBlockWorld(), coord);
-    }
-  }
-  if (!finalize_pending_gate || !MeshService)
-  {
-    return;
-  }
-  for (const glm::ivec2 &g : primary_grounds)
-  {
-    if (bands.count(g) != 0)
-    {
-      continue;
-    }
-    AsyncRelightColumnsInFlight.erase(g);
-    PendingLightBeforeMesh.erase(g);
-    const glm::ivec3 ground(g.x, 0, g.y);
-    SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-    const int dirty_min = std::max(0, sea - CHUNK_SIZE);
-    const int dirty_max = std::min(column_max_y, sea + CHUNK_SIZE * 2);
-    if (priority_mesh)
-    {
-      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-          ground, dirty_min, dirty_max,
-          /*include_horizontal_neighbors=*/false);
-    }
-    else
-    {
-      MeshService->MarkTerrainChunkMeshDirtySeamed(
-          ground, dirty_min, dirty_max,
-          /*include_horizontal_neighbors=*/false);
-    }
-    SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-  }
-}
-
-void UWorld::AccumulateRelightMeshColumns(
-    const std::vector<glm::ivec3> &relit_chunks)
-{
-  if (relit_chunks.empty())
-  {
-    return;
-  }
-  for (const glm::ivec3 &coord : relit_chunks)
-  {
-    const glm::ivec2 ground(coord.x, coord.z);
-    const int chunk_base_y = coord.y * CHUNK_SIZE;
-    const int chunk_top_y = chunk_base_y + CHUNK_SIZE - 1;
-    auto [it, inserted] = PendingRelightMeshColumns.try_emplace(ground);
-    if (inserted)
-    {
-      it->second.min_y = std::max(0, chunk_base_y - 1);
-      it->second.max_y = chunk_top_y + 1;
-    }
-    else
-    {
-      it->second.min_y =
-          std::min(it->second.min_y, std::max(0, chunk_base_y - 1));
-      it->second.max_y = std::max(it->second.max_y, chunk_top_y + 1);
-    }
-  }
-}
-
-void UWorld::FlushPendingRelightMeshColumns(int max_columns_per_flush)
-{
-  if (PendingRelightMeshColumns.empty() || max_columns_per_flush <= 0)
-  {
-    return;
-  }
-  const glm::ivec3 focus =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  std::vector<std::pair<int, glm::ivec2>> ordered;
-  ordered.reserve(PendingRelightMeshColumns.size());
-  for (const auto &entry : PendingRelightMeshColumns)
-  {
-    const int dist = std::max(std::abs(entry.first.x - focus.x),
-                              std::abs(entry.first.y - focus.z));
-    ordered.push_back({dist, entry.first});
-  }
-  std::sort(ordered.begin(), ordered.end(),
-            [](const auto &a, const auto &b) { return a.first < b.first; });
-  int flushed = 0;
-  for (const auto &item : ordered)
-  {
-    if (flushed >= max_columns_per_flush)
-    {
-      break;
-    }
-    const auto it = PendingRelightMeshColumns.find(item.second);
-    if (it == PendingRelightMeshColumns.end())
-    {
-      continue;
-    }
-    const glm::ivec3 ground(it->first.x, 0, it->first.y);
-    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-        ground, it->second.min_y, it->second.max_y, true);
-    PendingRelightMeshColumns.erase(it);
-    ++flushed;
-  }
-}
 
 int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                                     const glm::ivec2 *only_column)
@@ -1242,11 +1001,38 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
   {
     return 0;
   }
-  const glm::ivec3 focus =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus = UChunkManager::WorldToChunk(focus_block);
   const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
+  const int visible_band_min =
+      std::max(0, focus_block.y - CHUNK_SIZE);
+  const int visible_band_max =
+      std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
+  const bool audit_relight =
+      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  // Preserve already-visible holes when pending first-mesh columns need to
+  // enter the bounded visible relight lane under FIFO backpressure.
+  std::vector<glm::ivec2> protected_visible_columns;
+  if (UnfinishedVisualCache.valid &&
+      UnfinishedVisualCache.focus.x == focus.x &&
+      UnfinishedVisualCache.focus.z == focus.z)
+  {
+    protected_visible_columns.reserve(
+        UnfinishedVisualCache.unfinished_keys.size());
+    for (const uint64_t packed : UnfinishedVisualCache.unfinished_keys)
+    {
+      const int cx = static_cast<int>(static_cast<uint32_t>(packed >> 32));
+      const int cz = static_cast<int>(static_cast<uint32_t>(packed));
+      const int horiz =
+          std::max(std::abs(cx - focus.x), std::abs(cz - focus.z));
+      if (horiz <= kVisualStageNearFovHoriz)
+      {
+        protected_visible_columns.emplace_back(cx, cz);
+      }
+    }
+  }
   // Playerв€Єsea band, plus deeper ocean floor (sea-4 chunks).
   int band_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
@@ -1276,8 +1062,16 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         const glm::ivec3 ground(key.x, 0, key.y);
         bool has_mesh = false;
         bool missing_mesh = false;
+        glm::ivec3 first_visible_missing_mesh_coord(-1);
+        uint64_t first_visible_missing_mesh_incarnation = 0;
+        int first_visible_missing_mesh_content_revision = 0;
+        int best_visible_slice_distance = max_y + CHUNK_SIZE;
         bool any_sky = false;
         bool any_solid = false;
+        glm::ivec3 first_fully_dark_unsettled_coord(-1);
+        glm::ivec3 first_stale_dark_coord(-1);
+        UChunkMeshCache::StaleDarkWitness first_stale_dark_witness{};
+        bool first_stale_dark_settled = false;
         for (int cy = cy0; cy <= cy1; ++cy)
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -1286,7 +1080,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           {
             continue;
           }
-          if (MeshService->HasGreedyMesh(coord) ||
+          if (MeshService->HasMeshSatisfyingColumnReady(coord) ||
               MeshService->IsPendingGpuApply(coord))
           {
             has_mesh = true;
@@ -1311,6 +1105,29 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             if (slice_solid)
             {
               missing_mesh = true;
+              const int slice_min_y = cy * CHUNK_SIZE;
+              const int slice_max_y =
+                  std::min(max_y, slice_min_y + CHUNK_SIZE - 1);
+              if (slice_max_y >= visible_band_min &&
+                  slice_min_y <= visible_band_max)
+              {
+                const int vertical_distance =
+                    focus_block.y < slice_min_y
+                        ? slice_min_y - focus_block.y
+                        : (focus_block.y > slice_max_y
+                               ? focus_block.y - slice_max_y
+                               : 0);
+                if (first_visible_missing_mesh_coord.x < 0 ||
+                    vertical_distance < best_visible_slice_distance)
+                {
+                  first_visible_missing_mesh_coord = coord;
+                  first_visible_missing_mesh_incarnation =
+                      chunk->GetIncarnation();
+                  first_visible_missing_mesh_content_revision =
+                      chunk->GetContentRevision();
+                  best_visible_slice_distance = vertical_distance;
+                }
+              }
             }
           }
           for (int z = 0; z < CHUNK_SIZE && (!any_sky || !any_solid); z += 4)
@@ -1351,11 +1168,11 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           }
         }
         const bool underfeet = r <= 1;
-        // Pending + dark greedy preview: hole beats black squares (async race /
-        // pre-pending bake). Drop slices; MarkRelit rebuilds when lit.
+        // A24 R1: do not RemoveChunk pending FullyDark (hole-over-black).
+        // D2 keeps PL while FD — drop path caused mass near_focus_holes
+        // (manual 155529). Keep mesh/GPU; heal continues below.
         if (pending && has_mesh)
         {
-          bool dropped = false;
           for (int cy = cy0; cy <= cy1; ++cy)
           {
             const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -1363,16 +1180,21 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               continue;
             }
-            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+            if (!MeshService->GetCache().ChunkHasFullyDarkFace(coord))
             {
-              MeshService->RemoveChunk(coord);
-              dropped = true;
+              continue;
             }
-          }
-          if (dropped)
-          {
-            ++repaired;
-            continue;
+            const bool had_gpu =
+                MeshService->GetCache().HasLiveGpuDraw(coord);
+            if (ShouldDropPendingFullyDarkMesh(pending, /*fully_dark=*/true,
+                                               had_gpu))
+            {
+              if (ShouldKeepGpuSlotUntilBindInRing(had_gpu, r, radius, false))
+              {
+                continue;
+              }
+              MeshService->RemoveChunk(coord);
+            }
           }
         }
         // Focus ring: enqueue relight and unlock ring via LitReady. Keep
@@ -1390,7 +1212,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
             MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                 ground, remesh_min, remesh_max,
-                /*include_horizontal_neighbors=*/false);
+                /*include_horizontal_neighbors=*/false,
+                MeshRevisionBumpReason::PriorityWorldCoreCommit);
             SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
             ++repaired;
             continue;
@@ -1403,9 +1226,139 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             enqueue_min = pit->second.min_y;
             enqueue_max = pit->second.max_y;
           }
-          Persistence->EnqueueTerrainColumnRelight(
-              key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true,
-              enqueue_min, enqueue_max);
+          const glm::ivec2 world_block_key(key.x * CHUNK_SIZE,
+                                           key.y * CHUNK_SIZE);
+          const int fifo_before =
+              Persistence->GetPendingTerrainColumnRelightCount();
+          const bool queued_before =
+              Persistence->IsTerrainColumnRelightQueued(world_block_key);
+          const bool async_before = IsAsyncRelightColumnInFlight(key);
+          bool admitted_visible = false;
+          uint8_t visible_admission_outcome = 0;
+          int visible_victim_horiz = -1;
+          const bool has_visible_first_mesh_candidate =
+              first_visible_missing_mesh_coord.x >= 0;
+          const int visible_first_mesh_band_min =
+              has_visible_first_mesh_candidate
+                  ? first_visible_missing_mesh_coord.y * CHUNK_SIZE
+                  : enqueue_min;
+          const int visible_first_mesh_band_max =
+              has_visible_first_mesh_candidate
+                  ? std::min(max_y, visible_first_mesh_band_min + CHUNK_SIZE - 1)
+                  : enqueue_max;
+          if (has_visible_first_mesh_candidate &&
+              r <= kVisualStageLitDrawableHoriz)
+          {
+            admitted_visible = Persistence->EnqueueVisibleRelight(
+                world_block_key.x, world_block_key.y, enqueue_min, enqueue_max,
+                focus, kVisualStageLitDrawableHoriz,
+                protected_visible_columns, &visible_admission_outcome,
+                &visible_victim_horiz);
+          }
+          if (!admitted_visible)
+          {
+            Persistence->EnqueueTerrainColumnRelight(
+                world_block_key.x, world_block_key.y, /*priority=*/true,
+                enqueue_min, enqueue_max);
+          }
+          const bool queued_after =
+              Persistence->IsTerrainColumnRelightQueued(world_block_key);
+          const bool async_after = IsAsyncRelightColumnInFlight(key);
+          if ((admitted_visible || queued_after) &&
+              has_visible_first_mesh_candidate &&
+              r <= kVisualStageLitDrawableHoriz)
+          {
+            Persistence->NoteVisibleFirstMeshRelight(
+                world_block_key, visible_first_mesh_band_min,
+                visible_first_mesh_band_max);
+          }
+          const auto queue_info =
+              Persistence->GetTerrainColumnRelightQueueInfo(world_block_key);
+          if (audit_relight && has_visible_first_mesh_candidate &&
+              r <= kVisualStageLitDrawableHoriz)
+          {
+            const ChunkRenderDemandRecord *trace_demand =
+                UChunkRenderDemandStore::Get().Find(
+                    first_visible_missing_mesh_coord);
+            const bool flow_ticket =
+                GetColumnFlowExecutor().HasRepairTicket(key);
+            const std::string signature =
+                std::to_string(visible_admission_outcome) + ":" +
+                std::to_string(first_visible_missing_mesh_coord.y) + ":" +
+                std::to_string(queued_after) + ":" +
+                std::to_string(async_after) + ":" +
+                std::to_string(queue_info.deferred_visible) + ":" +
+                std::to_string(queue_info.priority) + ":" +
+                std::to_string(queue_info.y_band_defined) + ":" +
+                std::to_string(queue_info.min_world_y) + ":" +
+                std::to_string(queue_info.max_world_y) + ":" +
+                std::to_string(flow_ticket) + ":" +
+                std::to_string(first_visible_missing_mesh_incarnation);
+            static std::unordered_map<glm::ivec2, std::string, IVec2Hash>
+                last_first_mesh_admission_signature;
+            const auto last =
+                last_first_mesh_admission_signature.find(key);
+            if (last == last_first_mesh_admission_signature.end() ||
+                last->second != signature)
+            {
+              last_first_mesh_admission_signature[key] = signature;
+              CubatariumLogInfo(
+                  "RelightAudit",
+                  "first_mesh_admission column=(" +
+                      std::to_string(key.x) + "," +
+                      std::to_string(key.y) + ") target=(" +
+                      std::to_string(first_visible_missing_mesh_coord.x) +
+                      "," +
+                      std::to_string(first_visible_missing_mesh_coord.y) +
+                      "," +
+                      std::to_string(first_visible_missing_mesh_coord.z) +
+                      ") horiz=" + std::to_string(r) + " target_band=" +
+                      std::to_string(visible_first_mesh_band_min) + ":" +
+                      std::to_string(visible_first_mesh_band_max) +
+                      " request_band=" +
+                      std::to_string(enqueue_min) + ":" +
+                      std::to_string(enqueue_max) + " visible_admitted=" +
+                      std::to_string(admitted_visible) + " outcome=" +
+                      std::to_string(visible_admission_outcome) +
+                      " victim_horiz=" +
+                      std::to_string(visible_victim_horiz) + " fifo=" +
+                      std::to_string(fifo_before) + "->" +
+                      std::to_string(
+                          Persistence->GetPendingTerrainColumnRelightCount()) +
+                      " queued=" + std::to_string(queued_before) + "->" +
+                      std::to_string(queued_after) + " async=" +
+                      std::to_string(async_before) + "->" +
+                      std::to_string(async_after) + " deferred=" +
+                      std::to_string(queue_info.deferred_visible) +
+                      " priority=" + std::to_string(queue_info.priority) +
+                      " queue=" + std::to_string(queue_info.queue_index) +
+                      "/" + std::to_string(queue_info.queue_size) +
+                      " flow_ticket=" + std::to_string(flow_ticket) +
+                      " incarnation=" +
+                      std::to_string(
+                          first_visible_missing_mesh_incarnation) +
+                      " content_revision=" +
+                      std::to_string(
+                          first_visible_missing_mesh_content_revision) +
+                      " vertical_distance=" +
+                      std::to_string(best_visible_slice_distance) +
+                      " demand_light=" +
+                      std::to_string(trace_demand
+                                         ? trace_demand->desired_light_rev
+                                         : 0) + ":" +
+                      std::to_string(trace_demand
+                                         ? trace_demand->published_light_rev
+                                         : 0));
+            }
+          }
+          if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
+              !IsAsyncRelightColumnInFlight(key))
+          {
+            // Admission can be refused by FIFO backpressure. Keep the existing
+            // Flow ticket as the retry owner; do not report progress or unlock
+            // the column as LitReady without executable relight work.
+            continue;
+          }
           SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           (void)missing_mesh;
           // Do NOT MarkDirty pending columns here. Re-admitting missing slices
@@ -1420,13 +1373,18 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
           MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, remesh_min, remesh_max, /*include_horizontal_neighbors=*/
-              !underfeet);
+              !underfeet, MeshRevisionBumpReason::PriorityWorldCoreCommit);
           ++repaired;
           continue;
         }
         // Stuck black mesh on lit-ready columns: remesh when baked side/top
         // faces are dark or world light outran the mesh (stale bake).
+        // Era18 I-L1: void/fully-dark must NotePendingLightBeforeMesh — FIFO +
+        // MarkDirty alone leaves pending_light_focus=0 and starves drain
+        // (manual 165953).
         bool bad_mesh = false;
+        bool fully_dark = false;
+        bool stale_dark_faces = false;
         if (has_mesh)
         {
           for (int cy = cy0; cy <= cy1; ++cy)
@@ -1436,27 +1394,211 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               continue;
             }
-            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
-                MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
-                                                              BlockWorld))
+            const bool slice_settled =
+                ChunkSliceHasCurrentLightSettlement(*this, coord);
+            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord) &&
+                !slice_settled)
             {
+              fully_dark = true;
               bad_mesh = true;
+              if (first_fully_dark_unsettled_coord.x < 0)
+              {
+                first_fully_dark_unsettled_coord = coord;
+              }
+            }
+            UChunkMeshCache::StaleDarkWitness stale_witness{};
+            if (MeshService->GetCache().ChunkHasStaleDarkFaces(
+                    coord, BlockWorld, &stale_witness))
+            {
+              stale_dark_faces = true;
+              bad_mesh = true;
+              if (first_stale_dark_coord.x < 0)
+              {
+                first_stale_dark_coord = coord;
+                first_stale_dark_witness = stale_witness;
+                first_stale_dark_settled = slice_settled;
+              }
+            }
+            if (fully_dark && stale_dark_faces)
+            {
               break;
             }
           }
         }
         if (has_mesh && bad_mesh)
         {
-          if (!any_sky)
+          // A23 LightConverge bifurcate (sole heal owner for focus FullyDark):
+          //   sky|stale_dark → InvalidateMeshCapture + one priority Dirty
+          //   !sky && !stale → PendingLight + Relight only (no Dirty)
+          const bool remesh_heal =
+              ShouldHealFullyDarkWithRemesh(any_sky, stale_dark_faces);
+          const bool relight_only = ShouldHealFullyDarkWithRelightOnly(
+              fully_dark, any_sky, stale_dark_faces);
+          const bool enqueue_relight = !any_sky || fully_dark || relight_only;
+          if (audit_relight)
           {
+            const glm::ivec3 trigger_coord =
+                first_stale_dark_coord.x >= 0
+                    ? first_stale_dark_coord
+                    : first_fully_dark_unsettled_coord;
+            const UChunk *trigger_chunk =
+                trigger_coord.x >= 0
+                    ? BlockWorld.GetChunkManager().GetChunk(trigger_coord)
+                    : nullptr;
+            const ChunkRenderDemandRecord *trigger_demand =
+                trigger_coord.x >= 0
+                    ? UChunkRenderDemandStore::Get().Find(trigger_coord)
+                    : nullptr;
+            const glm::ivec3 source_coord =
+                first_stale_dark_witness.source_chunk;
+            const UChunk *source_chunk =
+                first_stale_dark_coord.x >= 0
+                    ? BlockWorld.GetChunkManager().GetChunk(source_coord)
+                    : nullptr;
+            const ChunkRenderDemandRecord *source_demand =
+                first_stale_dark_coord.x >= 0
+                    ? UChunkRenderDemandStore::Get().Find(source_coord)
+                    : nullptr;
+            const uint64_t source_field_rev =
+                source_chunk ? source_chunk->GetLightFieldRevision() : 0;
+            const bool source_settled =
+                first_stale_dark_coord.x >= 0 &&
+                ChunkSliceHasCurrentLightSettlement(*this, source_coord);
+            const MeshPublishRevs trigger_published =
+                trigger_coord.x >= 0
+                    ? MeshService->GetCache().GetMeshPublishRevs(trigger_coord)
+                    : MeshPublishRevs{};
+            CubatariumLogInfo(
+                "RelightAudit",
+                "recover decision column=(" + std::to_string(key.x) + "," +
+                    std::to_string(key.y) + ") action=" +
+                    std::string(enqueue_relight ? "relight" : "mesh_only") +
+                    " pending=" + std::to_string(pending) +
+                    " any_sky=" + std::to_string(any_sky) +
+                    " any_solid=" + std::to_string(any_solid) +
+                    " has_mesh=" + std::to_string(has_mesh) +
+                    " missing_mesh=" + std::to_string(missing_mesh) +
+                    " fully_dark_unsettled=" + std::to_string(fully_dark) +
+                    " stale_dark=" + std::to_string(stale_dark_faces) +
+                    " remesh_heal=" + std::to_string(remesh_heal) +
+                    " relight_only=" + std::to_string(relight_only) +
+                    " trigger=(" + std::to_string(trigger_coord.x) + "," +
+                    std::to_string(trigger_coord.y) + "," +
+                    std::to_string(trigger_coord.z) + ") trigger_settled=" +
+                    std::to_string(first_stale_dark_coord.x >= 0
+                                       ? first_stale_dark_settled
+                                       : (trigger_coord.x >= 0 &&
+                                          ChunkSliceHasCurrentLightSettlement(
+                                              *this, trigger_coord))) +
+                    " trigger_light=" +
+                    std::to_string(trigger_chunk
+                                       ? trigger_chunk->GetLightFieldRevision()
+                                       : 0) +
+                    ":" + std::to_string(trigger_demand
+                                             ? trigger_demand->desired_light_rev
+                                             : 0) + ":" +
+                    std::to_string(trigger_demand
+                                       ? trigger_demand->published_light_rev
+                                       : 0) + " mesh=" +
+                    std::to_string(trigger_published.geom_rev) + ":" +
+                    std::to_string(trigger_published.light_rev) + ":" +
+                    std::to_string(trigger_coord.x >= 0
+                                       ? MeshService->GetCache()
+                                             .GetMeshedLightRevision(trigger_coord)
+                                       : 0) +
+                    " stale_source=(" + std::to_string(source_coord.x) + "," +
+                    std::to_string(source_coord.y) + "," +
+                    std::to_string(source_coord.z) + ") source_incarnation=" +
+                    std::to_string(first_stale_dark_witness.source_incarnation) +
+                    ":" + std::to_string(source_chunk
+                                             ? source_chunk->GetIncarnation()
+                                             : 0) + " source_light_rev=" +
+                    std::to_string(first_stale_dark_witness.source_light_revision) +
+                    ":" + std::to_string(source_field_rev) +
+                    " source_settled=" + std::to_string(source_settled) +
+                    " source_demand_light=" +
+                    std::to_string(source_demand
+                                       ? source_demand->desired_light_rev
+                                       : 0) + ":" +
+                    std::to_string(source_demand
+                                       ? source_demand->published_light_rev
+                                       : 0) + " stale_sample=(" +
+                    std::to_string(first_stale_dark_witness.sampled_block.x) +
+                    "," +
+                    std::to_string(first_stale_dark_witness.sampled_block.y) +
+                    "," +
+                    std::to_string(first_stale_dark_witness.sampled_block.z) +
+                    ") packed=" +
+                    std::to_string(first_stale_dark_witness.packed_light) +
+                    " face=" +
+                    std::to_string(first_stale_dark_witness.face_index) +
+                    " gpu=" +
+                    std::to_string(first_stale_dark_witness.gpu_probe));
+          }
+          if (enqueue_relight)
+          {
+            TryNotePendingLightBeforeMesh(ground, remesh_min, remesh_max,
+                                          __FUNCTION__);
+            // Light path owns heal — do not leave StickyRemesh ghost (IDLE
+            // black_sticky=1 with faces already 0; manual/autofly false sticky).
+            StickyRemeshAfterLight.erase(glm::ivec2(ground.x, ground.z));
             Persistence->EnqueueTerrainColumnRelight(
                 ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
                 remesh_min, remesh_max);
+            if (remesh_heal)
+            {
+              // A24 R2: always Invalidate so equal-rev Capture cannot no-op
+              // even when Dirty already owns the column; no seamed neighbors
+              // (A23 neighbors=true drove dirty_dropped ~3x vs A22).
+              for (int cy = cy0; cy <= cy1; ++cy)
+              {
+                const glm::ivec3 coord(ground.x, cy, ground.z);
+                if (MeshService->HasGreedyMesh(coord) &&
+                    (MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
+                     MeshService->GetCache().ChunkHasStaleDarkFaces(
+                         coord, BlockWorld)))
+                {
+                  MeshService->GetCache().InvalidateMeshCapture(coord);
+                }
+              }
+              const bool already_owned =
+                  MeshService->HasDirtyInColumnBand(key, remesh_min,
+                                                    remesh_max);
+              if (!already_owned)
+              {
+                MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                    ground, remesh_min, remesh_max,
+                    /*include_horizontal_neighbors=*/false,
+                    MeshRevisionBumpReason::PriorityWorldCoreCommit);
+              }
+            }
+            ++repaired;
+            continue;
           }
-          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, remesh_min, remesh_max,
-              /*include_horizontal_neighbors=*/true);
-          ++repaired;
+          // Stale-dark with sky, not FullyDark: Invalidate + Dirty (no PL).
+          if (remesh_heal)
+          {
+            for (int cy = cy0; cy <= cy1; ++cy)
+            {
+              const glm::ivec3 coord(ground.x, cy, ground.z);
+              if (MeshService->HasGreedyMesh(coord) &&
+                  MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
+                                                                BlockWorld))
+              {
+                MeshService->GetCache().InvalidateMeshCapture(coord);
+              }
+            }
+            const bool already_owned =
+                MeshService->HasDirtyInColumnBand(key, remesh_min, remesh_max);
+            if (!already_owned)
+            {
+              MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                  ground, remesh_min, remesh_max,
+                  /*include_horizontal_neighbors=*/false,
+                  MeshRevisionBumpReason::PriorityWorldCoreCommit);
+            }
+            ++repaired;
+          }
         }
       }
     }
@@ -1544,7 +1686,8 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     {
       MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
           ground, remesh_min, remesh_max,
-          /*include_horizontal_neighbors=*/false);
+          /*include_horizontal_neighbors=*/false,
+          MeshRevisionBumpReason::PriorityWorldCoreCommit);
       SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     }
     ++admitted;
@@ -1560,6 +1703,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
   {
     return 0;
   }
+  AdmitFocusMarkBuffer_.clear();
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = GetStreamingFocusRadius();
@@ -1574,6 +1718,11 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
   remesh_max = std::max(remesh_max, player_max);
   const int cy0 = FloorDiv(remesh_min, CHUNK_SIZE);
   const int cy1 = FloorDiv(remesh_max, CHUNK_SIZE);
+  // Era22 F2c/F2: special whole-column mode.
+  // - only_cy == -1: whole remesh band (0..remesh_max).
+  // - only_cy == -2: whole column up to procedural MaxHeight.
+  const bool full_column_only = only_cy == -2;
+  const int scan_cy1 = full_column_only ? FloorDiv(max_y, CHUNK_SIZE) : cy1;
   const glm::vec2 fwd_norm =
       glm::length(forward_xz) > 0.01f ? glm::normalize(forward_xz) : glm::vec2(0.0f);
 
@@ -1604,11 +1753,20 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
         const int horiz = std::max(std::abs(dx), std::abs(dz));
         const glm::ivec3 ground(key.x, 0, key.y);
         bool missing = false;
-        for (int cy = cy0; cy <= cy1 && !missing; ++cy)
+        // Scan full column for missing solid slices — player-altitude band alone
+        // missed cy=0..2 at exit (manual 110751: miss_cy=0–3, underfeet OK).
+        for (int cy = 0; cy <= scan_cy1 && !missing; ++cy)
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-          if (!chunk || MeshService->HasMeshSatisfyingColumnReady(coord) ||
+          const bool mesh_satisfying =
+              chunk && MeshService->HasMeshSatisfyingColumnReady(coord);
+          const bool geometry_debt =
+              mesh_satisfying &&
+              MeshService->HasGeometryPublicationDebt(
+                  coord, chunk->GetIncarnation());
+          if (!chunk ||
+              (mesh_satisfying && !geometry_debt) ||
               MeshService->IsPendingGpuApply(coord) ||
               MeshService->HasInflightMeshBuild(coord))
           {
@@ -1646,21 +1804,28 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
     }
   }
 
+  // P1: idle FOV fill — prefer look direction more strongly than ring alone
+  // (k≥1.5 vs MeshForwardBiasK 0.75). Horiz still primary via score.
   std::sort(candidates.begin(), candidates.end(),
             [](const Candidate &a, const Candidate &b)
             {
-              if (a.horiz != b.horiz)
+              const float score_a = static_cast<float>(a.horiz) -
+                                   1.5f * std::max(0.0f, a.forward_score);
+              const float score_b = static_cast<float>(b.horiz) -
+                                   1.5f * std::max(0.0f, b.forward_score);
+              if (score_a != score_b)
               {
-                return a.horiz < b.horiz;
+                return score_a < score_b;
               }
               if (a.forward_score != b.forward_score)
               {
                 return a.forward_score > b.forward_score;
               }
-              return false;
+              return a.horiz < b.horiz;
             });
 
   int admitted = 0;
+  int marked_total = 0;
   for (const Candidate &candidate : candidates)
   {
     if (admitted >= max_columns)
@@ -1686,24 +1851,40 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
           ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
           enqueue_min, enqueue_max);
     }
+    int marked = 0;
+    int mark_min = 0;
+    int mark_max = remesh_max;
     if (only_cy >= 0)
     {
-      const int y0 = only_cy * CHUNK_SIZE;
-      const int y1 = y0 + CHUNK_SIZE - 1;
-      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, y0, y1);
+      mark_min = only_cy * CHUNK_SIZE;
+      mark_max = mark_min + CHUNK_SIZE - 1;
     }
-    else
+    else if (full_column_only)
     {
-      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, remesh_min,
-                                                  remesh_max);
+      mark_min = 0;
+      mark_max = max_y;
     }
-    SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-    ++admitted;
+    marked = CountMissingSlicesInRange(BlockWorld, MeshService.get(), ground,
+                                       mark_min, mark_max);
+    ++PhysicsTelemetryData.AdmitCandidatesN;
+    if (marked > 0)
+    {
+      AdmitFocusMarkBuffer_.push_back(
+          {candidate.key, mark_min, mark_max});
+      marked_total += marked;
+      ++admitted;
+    }
   }
-  return admitted;
+  return marked_total;
 }
 
-void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
+void UWorld::ClearAdmitFocusMarkBuffer()
+{
+  AdmitFocusMarkBuffer_.clear();
+}
+
+void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
+                                       const char *audit_source)
 {
   if (!RequiresLightingLitGate())
   {
@@ -1713,23 +1894,384 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   {
     ground.y = 0;
   }
+  if (max_y < min_y)
+  {
+    return;
+  }
+  const bool audit_relight =
+      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
   const glm::ivec2 key(ground.x, ground.z);
+  if (EnterLitGateActive && EnterLitSnapshotCaptured &&
+      URuntimeTuning::Get().EnterLitUseSnapshotDebt)
+  {
+    if (EnterLitDebtSnapshot.count(key) == 0)
+    {
+      return;
+    }
+    // Column already resolved (relit) — do not re-add to PendingLight and
+    // restart the relight cycle; mesh emerge should proceed without re-gate.
+    if (IsColumnLitReady(ground))
+    {
+      return;
+    }
+  }
   SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+  // A40: new light debt invalidates prior LegalDark settlement stamp.
+  ColumnRecord &pl_rec = ColumnRecords.GetOrCreate(key);
+  pl_rec.legal_dark_settled = false;
+  pl_rec.visual_obligation = VisualObligation::LightRepair;
+  // A41: keep live LightRepair SLA across dup Note* (manual 132520: wipe
+  // attempt_id every Note left Dirty stuck with no remint clock).
+  if (pl_rec.visual_attempt_id == 0)
+  {
+    pl_rec.visual_deadline_ms = 0;
+  }
   auto [it, inserted] = PendingLightBeforeMesh.try_emplace(key);
+  bool has_mesh = false;
+  if (MeshService)
+  {
+    const int max_cy =
+        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE);
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      if (MeshService->HasGreedyMesh(glm::ivec3(ground.x, cy, ground.z)))
+      {
+        has_mesh = true;
+        break;
+      }
+    }
+  }
+  if (!inserted &&
+      ShouldSuppressDuplicatePendingLightWithoutMeshProgress(true, has_mesh))
+  {
+    ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
+    return;
+  }
+  const int note_min_y = std::max(0, min_y);
+  auto log_pending_light_note = [&](const char *action, int covered_min_y,
+                                    int covered_max_y)
+  {
+    if (!audit_relight)
+    {
+      return;
+    }
+    CubatariumLogInfo(
+        "RelightAudit",
+        "pending note source=" +
+            std::string(audit_source ? audit_source : "unspecified") +
+            " action=" + action + " column=(" + std::to_string(key.x) + "," +
+            std::to_string(key.y) + ") requested=" +
+            std::to_string(note_min_y) + ":" + std::to_string(max_y) +
+            " covered=" + std::to_string(covered_min_y) + ":" +
+            std::to_string(covered_max_y));
+  };
+  const auto invalidate_slice_band = [&](int band_min_y, int band_max_y,
+                                         const char *reason)
+  {
+    if (!MeshService || band_max_y < band_min_y)
+    {
+      return;
+    }
+    const uint64_t world_epoch =
+        MeshService->GetCache().GetCaptureStore().WorldEpoch();
+    const int min_cy =
+        std::max(0, FloorDiv(std::max(0, band_min_y), CHUNK_SIZE));
+    const int max_cy = std::min(
+        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE),
+        FloorDiv(std::min(band_max_y, ProceduralTemplate.MaxHeight),
+                 CHUNK_SIZE));
+    for (int cy = min_cy; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(ground.x, cy, ground.z);
+      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(coord);
+        const bool had_settlement = demand && demand->has_settled_light;
+        const uint64_t settled_rev = demand ? demand->settled_light_rev : 0;
+        const uint64_t field_rev = chunk->GetLightFieldRevision();
+        const uint64_t demand_epoch = demand ? demand->world_epoch : 0;
+        const uint64_t demand_incarnation = demand ? demand->incarnation : 0;
+        const uint64_t current_incarnation = chunk->GetIncarnation();
+        const bool settlement_current =
+            ChunkSliceHasCurrentLightSettlement(*this, coord);
+        const uint64_t desired_light_rev =
+            demand ? demand->desired_light_rev : 0;
+        const uint64_t published_light_rev =
+            demand ? demand->published_light_rev : 0;
+        const bool demand_light_current =
+            demand && desired_light_rev <= published_light_rev;
+        // PendingLight is column-scoped, while settlement and the renderer
+        // gate are per-slice. Do not erase a current slice proof just because
+        // a wider debt band was opened for another slice in the column. If
+        // this slice's light changes, its field revision will make the proof
+        // stale; a changed neighbor is independently caught by stale-dark
+        // validation before a dark image can draw.
+        if (settlement_current)
+        {
+          if (audit_relight)
+          {
+            CubatariumLogInfo(
+                "RelightAudit",
+                "settlement preserve source=" +
+                    std::string(audit_source ? audit_source : "unspecified") +
+                    " reason=" + reason + " coord=(" +
+                    std::to_string(coord.x) + "," +
+                    std::to_string(coord.y) + "," +
+                    std::to_string(coord.z) + ") field_rev=" +
+                    std::to_string(field_rev) + " settled_rev=" +
+                    std::to_string(settled_rev) + " proof_current=1 identity=" +
+                    std::to_string(demand_epoch) + ":" +
+                    std::to_string(demand_incarnation) + "/" +
+                    std::to_string(world_epoch) + ":" +
+                    std::to_string(current_incarnation) +
+                    " demand_light=" +
+                    std::to_string(desired_light_rev) + ":" +
+                    std::to_string(published_light_rev) + " band=" +
+                    std::to_string(band_min_y) + ":" +
+                    std::to_string(band_max_y));
+          }
+          continue;
+        }
+        UChunkRenderDemandStore::Get().InvalidateLightCalculationSettlement(
+            coord, world_epoch, current_incarnation);
+        if (audit_relight && had_settlement)
+        {
+          CubatariumLogInfo(
+              "RelightAudit",
+              "settlement invalidate source=" +
+                  std::string(audit_source ? audit_source : "unspecified") +
+                  " reason=" + reason + " coord=(" +
+                  std::to_string(coord.x) + "," +
+                  std::to_string(coord.y) + "," +
+                  std::to_string(coord.z) + ") field_rev=" +
+                  std::to_string(field_rev) + " settled_rev=" +
+                  std::to_string(settled_rev) + " matched=" +
+                  std::to_string(settled_rev == field_rev) +
+                  " proof_current=" + std::to_string(settlement_current) +
+                  " identity=" + std::to_string(demand_epoch) + ":" +
+                  std::to_string(demand_incarnation) + "/" +
+                  std::to_string(world_epoch) + ":" +
+                  std::to_string(current_incarnation) +
+                  " demand_light_current=" +
+                  std::to_string(demand_light_current) +
+                  " demand_light=" + std::to_string(desired_light_rev) +
+                  ":" + std::to_string(published_light_rev) + " band=" +
+                  std::to_string(band_min_y) + ":" +
+                  std::to_string(band_max_y));
+        }
+      }
+    }
+  };
   if (inserted)
   {
-    it->second.min_y = std::max(0, min_y);
+    invalidate_slice_band(note_min_y, max_y, "insert");
+    it->second.min_y = note_min_y;
     it->second.max_y = max_y;
+    // Pending-light changes the column's unfinished classification even when
+    // no mesh owner was admitted. Keep the cached admission set in sync with
+    // this debt so a denied relight cannot leave solid slices classified Ready.
+    NoteUnfinishedColumnDirty(key);
+    log_pending_light_note("insert", it->second.min_y, it->second.max_y);
     return;
+  }
+  // Repeated notes for an already-covered interval are queue coalescing,
+  // not new light work. Only invalidate slices newly added to the column's
+  // relight coverage; otherwise duplicate notes can erase a completed
+  // per-slice settlement every frame while the same FIFO item is pending.
+  const int covered_min_y = it->second.min_y;
+  const int covered_max_y = it->second.max_y;
+  if (note_min_y < covered_min_y)
+  {
+    invalidate_slice_band(note_min_y,
+                          std::min(max_y, covered_min_y - 1), "extend_low");
+  }
+  if (max_y > covered_max_y)
+  {
+    invalidate_slice_band(std::max(note_min_y, covered_max_y + 1), max_y,
+                          "extend_high");
   }
   it->second.min_y = std::min(it->second.min_y, std::max(0, min_y));
   it->second.max_y = std::max(it->second.max_y, max_y);
+  if (it->second.min_y != covered_min_y ||
+      it->second.max_y != covered_max_y)
+  {
+    log_pending_light_note("extend", it->second.min_y, it->second.max_y);
+  }
+}
+
+bool UWorld::TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y,
+                                          int max_y, const char *audit_source)
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  const glm::ivec2 col(ground.x, ground.z);
+  if (IsAsyncRelightColumnInFlight(col) || IsPendingLightBeforeMesh(col))
+  {
+    ++PhysicsTelemetryData.RelightNoteSkippedDupN;
+    return false;
+  }
+  // FZ2.4-P0a: do not grow PL after nt cleared while VB/PL debt open.
+  // Enter FOV lit pass exempt — still seed during enter heal.
+  const auto &t = PhysicsTelemetryData;
+  if (!EnterFovLitPassActive &&
+      ShouldSuppressPendingLightNote(t.VisibleBlackNoTicketN, t.PendingLightFocus,
+                                     t.VisibleBlackFocusN))
+  {
+    ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
+    return false;
+  }
+  NotePendingLightBeforeMesh(ground, min_y, max_y, audit_source);
+  return true;
+}
+
+void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
+{
+  if (!Persistence || !ShouldNotePendingLightOnVoidEnqueue(true))
+  {
+    return;
+  }
+  // Cap flood: already-Noted columns keep Dispatch/FIFO; do not re-Note/Enqueue
+  // every TickDerived frame (IDLE emerge tax).
+  if (IsPendingLightBeforeMesh(col_xz))
+  {
+    return;
+  }
+  // Enter OpenSky owns the column — do not re-flood FIFO after LitReady.
+  if (EnterLitGateActive &&
+      EnterVisualGateCtrl.WasOpenSkyApplied(col_xz) &&
+      IsColumnLitReady(glm::ivec3(col_xz.x, 0, col_xz.y)))
+  {
+    return;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const glm::ivec3 ground(col_xz.x, 0, col_xz.y);
+  // Era37 P5: per-column surface band (hills/trees), not focus Y only.
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const int col_top_cy =
+      GetHighestNonAirChunkSlice(BlockWorld, ground, max_y);
+  const int col_top_y =
+      col_top_cy >= 0
+          ? std::min(max_y, (col_top_cy + 1) * CHUNK_SIZE - 1)
+          : -1;
+  const auto surface_band = RelightSurfaceBandForColumn(
+      focus_block.y, col_top_y, CHUNK_SIZE, max_y, 0, max_y);
+  if (surface_band.second < surface_band.first)
+  {
+    return;
+  }
+  int nearest_unsettled_dark_cy = -1;
+  int nearest_unsettled_dark_dist = INT_MAX;
+  if (MeshService)
+  {
+    const int min_cy = FloorDiv(surface_band.first, CHUNK_SIZE);
+    const int max_cy = FloorDiv(surface_band.second, CHUNK_SIZE);
+    bool has_settled_dark_drawable = false;
+    bool has_unsettled_dark_drawable = false;
+    const int focus_cy = FloorDiv(focus_block.y, CHUNK_SIZE);
+    for (int cy = min_cy; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(col_xz.x, cy, col_xz.y);
+      if (!MeshService->HasDrawableGreedyMesh(coord) ||
+          !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        continue;
+      }
+      if (ChunkSliceHasCurrentLightSettlement(*this, coord))
+      {
+        has_settled_dark_drawable = true;
+      }
+      else
+      {
+        has_unsettled_dark_drawable = true;
+        const int distance = std::abs(cy - focus_cy);
+        if (distance < nearest_unsettled_dark_dist)
+        {
+          nearest_unsettled_dark_cy = cy;
+          nearest_unsettled_dark_dist = distance;
+        }
+      }
+    }
+    if (has_settled_dark_drawable && !has_unsettled_dark_drawable)
+    {
+      // Current dark light is a completed result. Renderer rejection of its
+      // mesh is handled by the settled mesh-repair path; reopening PendingLight
+      // here would immediately invalidate the proof and repeat this loop.
+      return;
+    }
+  }
+  int relight_min_y = surface_band.first;
+  int relight_max_y = surface_band.second;
+  // If a drawable dark slice is missing a current calculation proof, repair
+  // the nearest such slice first. A column-wide surface interval invalidates
+  // settlements in unrelated slices before we know whether they need work.
+  if (nearest_unsettled_dark_cy >= 0)
+  {
+    relight_min_y = nearest_unsettled_dark_cy * CHUNK_SIZE;
+    relight_max_y = std::min(
+        max_y, (nearest_unsettled_dark_cy + 1) * CHUNK_SIZE - 1);
+  }
+  Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
+                                           col_xz.y * CHUNK_SIZE,
+                                           /*priority=*/true,
+                                           relight_min_y, relight_max_y);
+  const glm::ivec2 world_block_key(col_xz.x * CHUNK_SIZE,
+                                   col_xz.y * CHUNK_SIZE);
+  const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+  const bool flow_owned =
+      flow_scheduler.Contains(col_xz, ColumnWorkKind::RelightThenMesh) ||
+      flow_scheduler.Contains(col_xz, ColumnWorkKind::PromoteRelight);
+  if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
+      !IsAsyncRelightColumnInFlight(col_xz) && !flow_owned)
+  {
+    if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "void-dark enqueue rejected column=(" + std::to_string(col_xz.x) +
+              "," + std::to_string(col_xz.y) + ") band=" +
+              std::to_string(relight_min_y) + ":" +
+              std::to_string(relight_max_y));
+    }
+    return;
+  }
+  // Match RecoverUnlit: light path owns heal — drop StickyRemesh ghost only
+  // after an executable relight owner has accepted the work.
+  StickyRemeshAfterLight.erase(col_xz);
+  TryNotePendingLightBeforeMesh(ground, relight_min_y, relight_max_y,
+                                __FUNCTION__);
 }
 
 void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
 {
-  PendingLightBeforeMesh.erase(ground_xz);
-  StickyRemeshAfterLight.erase(ground_xz);
+  bool visual_state_changed =
+      PendingLightBeforeMesh.erase(ground_xz) > 0;
+  visual_state_changed =
+      StickyRemeshAfterLight.erase(ground_xz) > 0 || visual_state_changed;
+  if (Persistence)
+  {
+    Persistence->ClearDeferredFarRelightColumn(ground_xz);
+    Persistence->ClearVisibleFirstMeshRelightIfNotQueued(
+        glm::ivec2(ground_xz.x * CHUNK_SIZE, ground_xz.y * CHUNK_SIZE));
+  }
+  if (visual_state_changed)
+  {
+    NoteUnfinishedColumnDirty(ground_xz);
+  }
+}
+
+void UWorld::NoteVisibleFirstMeshRelightBand(glm::ivec2 chunk_xz, int min_y,
+                                            int max_y)
+{
+  if (!Persistence || max_y < min_y)
+  {
+    return;
+  }
+  Persistence->NoteVisibleFirstMeshRelight(
+      glm::ivec2(chunk_xz.x * CHUNK_SIZE, chunk_xz.y * CHUNK_SIZE), min_y,
+      max_y);
 }
 
 int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
@@ -1753,7 +2295,7 @@ int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
     const glm::ivec2 &key = entry.first;
     const int dist = std::max(std::abs(key.x - focus_ground_horiz.x),
                               std::abs(key.y - focus_ground_horiz.z));
-    if (dist <= 1)
+    if (dist <= RelightFifoTrimProtectHoriz())
     {
       continue;
     }
@@ -1799,12 +2341,72 @@ int UWorld::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz,
   {
     return 0;
   }
-  return Persistence->TrimFarRelightFifoFarthest(focus_ground_horiz, soft_cap);
+  const int fifo_n = Persistence->GetPendingTerrainColumnRelightCount();
+  const int completed_n = static_cast<int>(GetRelightCompletedSize());
+  const int protect =
+      RelightFifoEffectiveTrimProtectHoriz(fifo_n, soft_cap, completed_n);
+  const int dropped = Persistence->TrimFarRelightFifoFarthest(
+      focus_ground_horiz, soft_cap, protect);
+  const int overflow = Persistence->TakeRelightFifoOverflowDropped();
+  const int saved = Persistence->TakeRelightFifoPinSaved();
+  const int protect_block = Persistence->TakeRelightFifoProtectBlock();
+  PhysicsTelemetryData.RelightFifoDropN += overflow;
+  PhysicsTelemetryData.RelightFifoOverflowDropN += overflow;
+  PhysicsTelemetryData.RelightFifoPinSavedN += saved;
+  PhysicsTelemetryData.RelightFifoProtectBlockN += protect_block;
+  PhysicsTelemetryData.RelightFifoDropped +=
+      static_cast<uint64_t>(std::max(0, overflow));
+  return dropped;
 }
 
 bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
 {
   return PendingLightBeforeMesh.find(ground_xz) != PendingLightBeforeMesh.end();
+}
+
+bool UWorld::IsPendingLightBeforeMeshSlice(glm::ivec3 chunk_coord) const
+{
+  const auto pending = PendingLightBeforeMesh.find(
+      glm::ivec2(chunk_coord.x, chunk_coord.z));
+  if (pending == PendingLightBeforeMesh.end())
+  {
+    return false;
+  }
+  const int slice_min_y = chunk_coord.y * CHUNK_SIZE;
+  const int slice_max_y = slice_min_y + CHUNK_SIZE - 1;
+  const bool overlaps_pending_band =
+      slice_min_y <= pending->second.max_y &&
+      slice_max_y >= pending->second.min_y;
+  if (!overlaps_pending_band)
+  {
+    return false;
+  }
+  // The pending map is column-scoped for queue ownership and closeout, but a
+  // settled slice in a wider band can mesh independently. If its light field
+  // changes, the settlement proof becomes stale and this gate closes again.
+  return !HasCurrentChunkSliceLightSettlement(chunk_coord);
+}
+
+void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
+{
+  if (!MeshService)
+  {
+    return;
+  }
+  const UChunk *chunk =
+      BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return;
+  }
+  UChunkRenderDemandStore::Get().NoteLightCalculationSettled(
+      chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+      chunk->GetIncarnation(), chunk->GetLightFieldRevision());
+}
+
+bool UWorld::HasCurrentChunkSliceLightSettlement(glm::ivec3 chunk_coord) const
+{
+  return MeshService && ChunkSliceHasCurrentLightSettlement(*this, chunk_coord);
 }
 
 void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
@@ -1813,7 +2415,108 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
   {
     ground.y = 0;
   }
+  const ColumnEmergeState current = GetColumnEmergeState(ground);
+  // Exclusive store: Denied is illegal regression; LitReady-after-Meshing is Noop.
+  const ColumnEmergeBumpResult bump =
+      TryAcquireColumnEmergeBump(current, state);
+  if (bump == ColumnEmergeBumpResult::Denied)
+  {
+    ++PhysicsTelemetryData.ColumnBumpDenied;
+    return;
+  }
+  if (bump == ColumnEmergeBumpResult::Noop)
+  {
+    return;
+  }
   ColumnEmergeStates[glm::ivec2(ground.x, ground.z)] = state;
+  // Phase 2 dual-write: ColumnRecord mirrors emerge SoT.
+  ColumnRecords.SetEmerge(glm::ivec2(ground.x, ground.z), state);
+  // Emerge state participates in the focus-column readiness classification.
+  // Recheck this column and seam neighbors instead of reusing a stale Ready
+  // entry after a streamed column changes state.
+  NoteUnfinishedColumnDirty(glm::ivec2(ground.x, ground.z));
+  if (state == ColumnEmergeState::RenderReady)
+  {
+    ColumnRecords.GetOrCreate(glm::ivec2(ground.x, ground.z)).inflight_job = 0;
+  }
+}
+
+void UWorld::SampleColumnEmergeStageTelemetry()
+{
+  int lighting = 0;
+  int meshing = 0;
+  int render_ready = 0;
+  for (const auto &kv : ColumnEmergeStates)
+  {
+    switch (kv.second)
+    {
+    case ColumnEmergeState::Lighting:
+      ++lighting;
+      break;
+    case ColumnEmergeState::Meshing:
+      ++meshing;
+      break;
+    case ColumnEmergeState::RenderReady:
+      ++render_ready;
+      break;
+    default:
+      break;
+    }
+  }
+  PhysicsTelemetryData.ColumnLightingN = lighting;
+  PhysicsTelemetryData.ColumnMeshingN = meshing;
+  PhysicsTelemetryData.ColumnRenderReadyN = render_ready;
+
+  // Focus-ring job graph census (distinct from emerge FSM above).
+  const glm::ivec3 focus = GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus);
+  const glm::ivec3 focus_ground(focus_chunk.x, 0, focus_chunk.z);
+  int job_pl = 0;
+  int job_mesh = 0;
+  int job_gpu = 0;
+  int job_ready = 0;
+  GetColumnFlowExecutor().CountFocusRingJobStages(focus_ground, 4, job_pl,
+                                                  job_mesh, job_gpu, job_ready);
+  PhysicsTelemetryData.ColumnJobPendingLightN = job_pl;
+  PhysicsTelemetryData.ColumnJobMeshingN = job_mesh;
+  PhysicsTelemetryData.ColumnJobGpuPendingN = job_gpu;
+  PhysicsTelemetryData.ColumnJobRenderReadyN = job_ready;
+  {
+    const uint64_t shadow_n =
+        UColumnRecordCoordinator::ShadowMismatchCount();
+    PhysicsTelemetryData.ColumnRecordShadowMismatchN =
+        shadow_n > static_cast<uint64_t>(INT_MAX)
+            ? INT_MAX
+            : static_cast<int>(shadow_n);
+    PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
+        UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
+  }
+  // A32/A37/A38: production StopConverged + stop-plateau reconcile/orphan cancel.
+  {
+    const double now_ms = VisualObligationNowMs();
+    if (kChunkDemandShadow())
+    {
+      (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
+                                                                now_ms);
+      (void)UChunkRenderDemandStore::Get().CancelOrphanActiveAttempts(
+          /*max_n=*/64, now_ms);
+      const auto br =
+          UChunkRenderDemandStore::Get().CountUnsatisfiedBreakdown();
+      PhysicsTelemetryData.DemandUnsatGeom = br.geom;
+      PhysicsTelemetryData.DemandUnsatLight = br.light;
+      PhysicsTelemetryData.DemandUnsatFace = br.face;
+      PhysicsTelemetryData.DemandUnsatCoverage = br.coverage;
+      PhysicsTelemetryData.DemandUnsatRetain = br.retain;
+    }
+    PhysicsTelemetryData.DemandStopConverged =
+        UChunkRenderDemandStore::Get().StopConverged(now_ms) ? 1 : 0;
+  }
+  {
+    const auto &shadow = GetVisualObligationShadowCounters();
+    PhysicsTelemetryData.VisualObligationShadowSampleN = shadow.samples;
+    PhysicsTelemetryData.VisualObligationShadowMismatchN =
+        shadow.draw_mismatches;
+  }
 }
 
 ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
@@ -1822,17 +2525,24 @@ ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
   {
     ground.y = 0;
   }
+  // Map remains bump SoT; ColumnRecord mirrors (SetDesired must not win Empty).
   const auto it = ColumnEmergeStates.find(glm::ivec2(ground.x, ground.z));
-  if (it == ColumnEmergeStates.end())
+  if (it != ColumnEmergeStates.end())
   {
-    return ColumnEmergeState::Empty;
+    return it->second;
   }
-  return it->second;
+  if (const ColumnRecord *rec =
+          ColumnRecords.Find(glm::ivec2(ground.x, ground.z)))
+  {
+    return rec->emerge;
+  }
+  return ColumnEmergeState::Empty;
 }
 
 void UWorld::ClearColumnEmergeState(glm::ivec2 ground_xz)
 {
   ColumnEmergeStates.erase(ground_xz);
+  ColumnRecords.Erase(ground_xz);
 }
 
 bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
@@ -1911,6 +2621,341 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   return GetColumnRenderableState(glm::ivec2(ground.x, ground.z)).draw_ok;
 }
 
+void UWorld::InvalidateChunkSliceRenderReadyMemo() const
+{
+  SliceReadyMemoEpoch = UINT64_MAX;
+  SliceReadyMemo.clear();
+}
+
+bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+
+  const UChunkMeshCache &cache = MeshService->GetCache();
+  const glm::ivec2 column(chunk_coord.x, chunk_coord.z);
+  if (!cache.HasDrawableGreedyMesh(chunk_coord))
+  {
+    return false;
+  }
+  if (cache.HasProvisionalLightPreview(chunk_coord))
+  {
+    return true;
+  }
+
+  const UChunk *chunk =
+      BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(chunk_coord);
+  const bool demand_identity_current =
+      demand && chunk &&
+      demand->world_epoch == cache.GetCaptureStore().WorldEpoch() &&
+      demand->incarnation == chunk->GetIncarnation();
+  const uint64_t field_light_rev =
+      chunk ? chunk->GetLightFieldRevision() : 0;
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+  const bool field_settled_current =
+      HasCurrentChunkSliceLightSettlement(chunk_coord);
+  const bool drawable_light_stale =
+      chunk && (published.light_rev < field_light_rev ||
+                cache.GetMeshedLightRevision(chunk_coord) < field_light_rev);
+  if (field_settled_current && drawable_light_stale)
+  {
+    // The settled field is the source of truth, but the drawable image can
+    // still carry zero/stale vertex light. Keep its geometry visible with the
+    // shader's ambient fallback until a mesh at this light revision publishes.
+    return true;
+  }
+
+  // ChunkHasFullyDarkFace is an any-face census (it deliberately excludes
+  // bottom faces), not proof that every drawable face is dark. A mixed mesh
+  // can still contain zero-light vertices; do not suppress its preview just
+  // because a different face in the same chunk is lit.
+  if (!cache.ChunkHasFullyDarkFace(chunk_coord))
+  {
+    return false;
+  }
+
+  const bool demand_light_current =
+      !demand ||
+      (demand_identity_current &&
+       demand->desired_light_rev <= demand->published_light_rev);
+  const bool settled_mesh_light_current =
+      field_settled_current &&
+      demand_light_current && published.light_rev == field_light_rev &&
+      cache.GetMeshedLightRevision(chunk_coord) == field_light_rev;
+  const bool demand_owns_light_repair =
+      demand_identity_current && demand->has_active_attempt &&
+      demand->desired_light_rev > demand->published_light_rev;
+  bool deferred_relight_owned = false;
+  if (Persistence)
+  {
+    const auto queue =
+        Persistence->GetTerrainColumnRelightQueueInfo(column * CHUNK_SIZE);
+    deferred_relight_owned = queue.deferred_far || queue.deferred_visible;
+  }
+  const bool relight_owned = IsTerrainColumnRelightQueued(column) ||
+                             deferred_relight_owned ||
+                             IsAsyncRelightColumnInFlight(column) ||
+                             GetColumnFlowExecutor().HasRepairTicket(column);
+  const bool mesh_repair_owned =
+      cache.IsChunkMeshDirty(chunk_coord) ||
+      cache.HasInflightMeshBuild(chunk_coord) ||
+      cache.IsRemeshAfterApplyPending(chunk_coord) ||
+      cache.IsPendingGpuApply(chunk_coord) ||
+      cache.IsPendingGpuQueued(chunk_coord) ||
+      cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
+      cache.IsGpuExtractInFlight(chunk_coord);
+
+  // FirstMesh and deferred-far relight owners can publish a dark provisional
+  // image before the slice has a settlement proof. Column PendingLight is not
+  // guaranteed to cover those owners. M316 captured black ocean tiles in this
+  // exact state; keep a mixed dark mesh on the shader's ambient fallback until
+  // the slice settles and its replacement publishes.
+  const bool unsettled_repair_owned =
+      !field_settled_current && (relight_owned || mesh_repair_owned);
+  const bool light_repair_pending = IsPendingLightBeforeMesh(column) ||
+                                    demand_owns_light_repair ||
+                                    unsettled_repair_owned;
+  if (!light_repair_pending || settled_mesh_light_current)
+  {
+    return false;
+  }
+
+  // PendingLight and its FIFO key are column-scoped, while Capture advances
+  // through Y-bands. A dark slice outside the current band is still waiting
+  // behind the same column repair; don't hide its existing mesh between bands.
+  // A settled field alone is not enough to suppress this preview: M148 showed
+  // a field at light revision 1 with an active demand for revision 1, while
+  // both the meshed and published image remained at revision 0. Keep the
+  // existing mesh visible with the shader fallback until that image catches
+  // up; only a settled, matching published mesh ends the preview.
+  return relight_owned || mesh_repair_owned || demand_owns_light_repair;
+}
+
+bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+  if (SliceReadyMemoEpoch != StreamingFrameEpoch)
+  {
+    SliceReadyMemoEpoch = StreamingFrameEpoch;
+    SliceReadyMemo.clear();
+  }
+  {
+    const auto it = SliceReadyMemo.find(chunk_coord);
+    if (it != SliceReadyMemo.end())
+    {
+      return it->second;
+    }
+  }
+  auto memo = [&](bool ready, bool provisional_preview = false) -> bool
+  {
+    bool shadow_ready = ready;
+    if (VisualObligationShadowEnabled() || VisualObligationCutoverEnabled())
+    {
+      using cutum::ClassifyVisualObligation;
+      using cutum::VisualObligationAllowsDraw;
+      auto &shadow = GetVisualObligationShadowCounters();
+      ++shadow.samples;
+
+      const UChunkMeshCache &cache = MeshService->GetCache();
+      const bool has_lit_drawable =
+          MeshService->ChunkHasLitDrawableFace(chunk_coord);
+      const bool has_greedy_mesh =
+          MeshService->HasMeshSatisfyingColumnReady(chunk_coord);
+      const bool fully_dark = cache.ChunkHasFullyDarkFace(chunk_coord) &&
+                              !has_lit_drawable;
+      const bool stale = fully_dark &&
+                         MeshService->ChunkHasStaleDarkFaces(chunk_coord,
+                                                             BlockWorld);
+      const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
+      const ColumnRecord *column = ColumnRecords.Find(col_xz);
+      const ChunkRenderDemandRecord *demand =
+          UChunkRenderDemandStore::Get().Find(chunk_coord);
+      const UChunk *chunk =
+          BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+      const bool air_only = chunk && chunk->IsAirOnly();
+      const uint64_t field_light_rev = chunk ? chunk->GetLightFieldRevision() : 0;
+      const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+      const uint64_t meshed_light_rev =
+          cache.GetMeshedLightRevision(chunk_coord);
+      const bool settled_light_current =
+          demand && chunk && demand->incarnation == chunk->GetIncarnation() &&
+          demand->has_settled_light &&
+          demand->settled_light_rev == field_light_rev;
+      const bool demand_light_current =
+          !demand ||
+          (chunk && demand->incarnation == chunk->GetIncarnation() &&
+           demand->desired_light_rev <= demand->published_light_rev);
+      const bool dark_image_current = CurrentDarkSliceImageMayDraw(
+          fully_dark, settled_light_current, stale, demand_light_current,
+          field_light_rev, published.light_rev, meshed_light_rev);
+      // Revision equality at zero is not proof that this slice was lit. A
+      // dark image needs the same per-slice settlement and publication checks
+      // as the renderer before the shadow policy may classify it as legal.
+      const bool light_unsatisfied =
+          (demand && demand->desired_light_rev > demand->published_light_rev) ||
+          (fully_dark && !dark_image_current);
+      const bool geom_unsatisfied =
+          (demand && demand->desired_geom_rev > demand->published_geom_rev) ||
+          (!has_greedy_mesh && !air_only);
+      if (provisional_preview)
+      {
+        // This mesh is explicitly marked and shader-lit with an ambient
+        // fallback. It remains a presentation preview, not a settled image.
+        shadow_ready = ready;
+      }
+      else
+      {
+        const VisualObligation shadow_obligation = ClassifyVisualObligation(
+            has_lit_drawable || air_only, fully_dark,
+            stale || light_unsatisfied,
+            EnterVisualGateCtrl.WasOpenSkyApplied(col_xz),
+            column && column->legal_dark_settled && dark_image_current,
+            cache.IsSoftDeferHeld(chunk_coord), geom_unsatisfied);
+        shadow_ready = VisualObligationAllowsDraw(shadow_obligation);
+      }
+      if (shadow_ready != ready)
+      {
+        ++shadow.draw_mismatches;
+      }
+    }
+    bool final_ready = ready;
+    if (VisualObligationCutoverEnabled())
+    {
+      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
+          GetPreferredLoadFocusBlock());
+      const int horiz =
+          std::max(std::abs(chunk_coord.x - focus_chunk.x),
+                   std::abs(chunk_coord.z - focus_chunk.z));
+      if (horiz <= GetStreamingFocusRadius())
+      {
+        final_ready = shadow_ready;
+      }
+    }
+    SliceReadyMemo.emplace(chunk_coord, final_ready);
+    return final_ready;
+  };
+  const UChunkMeshCache &mesh_cache = MeshService->GetCache();
+  if (ShouldDrawProvisionalLightPreview(chunk_coord))
+  {
+    return memo(true, /*provisional_preview=*/true);
+  }
+  // P0 sticky: live lit GPU always draws until a lit replacement binds —
+  // must win even when CPU SoftDefer/empty left Satisfying false.
+  if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord) &&
+      !MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
+  {
+    return memo(true);
+  }
+  // ColdFix P3: keep live lit GPU opaque. FullyDark live plugs do not keep
+  // (prior-lit hold / zero-in-frame) — fall through to Satisfying hide.
+  if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord))
+  {
+    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+    const int horiz =
+        std::max(std::abs(chunk_coord.x - focus_chunk.x),
+                 std::abs(chunk_coord.z - focus_chunk.z));
+    const bool live_fd =
+        MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord);
+    if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(
+            true, horiz, /*has_repair_progress=*/false,
+            RelightFifoTrimProtectHoriz(), live_fd))
+    {
+      return memo(true);
+    }
+  }
+  if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
+  {
+    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+    const int horiz =
+        std::max(std::abs(chunk_coord.x - focus_chunk.x),
+                 std::abs(chunk_coord.z - focus_chunk.z));
+    const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
+    const bool pending = IsPendingLightBeforeMesh(col_xz);
+    // ColdPL F4: underfeet keep drawing during pending_light remesh window.
+    if (horiz <= 1 && pending &&
+        (MeshService->GetCache().HasLiveGpuDraw(chunk_coord) ||
+         MeshService->IsPendingGpuApply(chunk_coord) ||
+         MeshService->HasInflightMeshBuild(chunk_coord)))
+    {
+      return memo(true);
+    }
+    // A40 / A31-03: FullyDark classes are mutually exclusive —
+    // LightStale (repair owed) ≠ LegalDarkSettled (draw OK) ≠ GeometryMissing.
+    // FD census alone is never eternal hide without a live repair ticket.
+    const bool fully_dark =
+        MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord) &&
+        !MeshService->ChunkHasLitDrawableFace(chunk_coord);
+    if (fully_dark)
+    {
+      const bool lit_drawable = false;
+      const bool keep_prior_lit_gpu = false;
+      if (!ShouldPublishMeshToDraw(lit_drawable, keep_prior_lit_gpu,
+                                   /*unlit_preview=*/false))
+      {
+        const bool stale =
+            MeshService->ChunkHasStaleDarkFaces(chunk_coord, BlockWorld);
+        const UChunk *slice_chunk =
+            BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+        const uint64_t field_light_rev =
+            slice_chunk ? slice_chunk->GetLightFieldRevision() : 0;
+        const MeshPublishRevs published_revs =
+            MeshService->GetCache().GetMeshPublishRevs(chunk_coord);
+        const uint64_t meshed_light_rev =
+            MeshService->GetCache().GetMeshedLightRevision(chunk_coord);
+        const ChunkRenderDemandRecord *slice_demand =
+            UChunkRenderDemandStore::Get().Find(chunk_coord);
+        const bool demand_light_current =
+            !slice_demand ||
+            (slice_chunk &&
+             slice_demand->incarnation == slice_chunk->GetIncarnation() &&
+             slice_demand->desired_light_rev <=
+                 slice_demand->published_light_rev);
+        // Keep an existing dark image visible when this slice's light data is
+        // settled and its mesh still matches that data. Column-wide geometry
+        // or relight work can belong to another Y slice; hiding this drawable
+        // while that work runs turns retained meshes into visible holes.
+        // If lighting changes, the stale-dark witness closes the gate until a
+        // matching replacement is published.
+        const bool slice_light_settled =
+            slice_demand && slice_chunk &&
+            slice_demand->incarnation == slice_chunk->GetIncarnation() &&
+            slice_demand->has_settled_light &&
+            slice_demand->settled_light_rev == field_light_rev;
+        const bool current_dark_image =
+            CurrentDarkSliceImageMayDraw(
+                fully_dark, slice_light_settled, stale, demand_light_current,
+                field_light_rev, published_revs.light_rev,
+                meshed_light_rev);
+        if (current_dark_image)
+        {
+          return memo(true);
+        }
+        // A column-level LegalDark/OpenSky stamp can describe another Y slice.
+        // Fully dark geometry is drawable only after this exact chunk slice
+        // has a validated light calculation and a matching published lightmap.
+        return memo(false);
+      }
+    }
+    return memo(true);
+  }
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return memo(false);
+  }
+  // Perf-root P2: O(1) air-only flag — no 4096-voxel scan on draw path.
+  return memo(chunk->IsAirOnly());
+}
+
 ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) const
 {
   ColumnRenderableState out;
@@ -1921,10 +2966,10 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   }
   const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
   out.stage = GetColumnEmergeState(ground);
-  // Live ColumnFlow ticket OR sticky set (NoteColumnRepairNeeded).
+  // Live ColumnFlow Contains OR sticky OR real Dirty/Inflight/PendingLight.
   out.has_repair_ticket =
       GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
-      IsColumnStickyRemesh(ground_xz);
+      IsColumnStickyRemesh(ground_xz) || ColumnHasRepairProgress(ground_xz);
 
   const int max_cy =
       std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
@@ -1944,29 +2989,91 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
         std::max(band_max, std::min(ProceduralTemplate.MaxHeight,
                                     sea + CHUNK_SIZE * 2));
   }
-  const int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
-  const int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+  // Underfeet: full column — camera±1 band alone falsely reports NotLoaded(6)
+  // when surface mesh sits below the player band (manual 201626).
+  int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+  int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+  if (horiz_from_focus <= 1)
+  {
+    const bool moving =
+        LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+    const bool visual_holes = PhysicsTelemetryData.VisualHoles > 0;
+    const bool pending_uf = IsPendingLightBeforeMesh(ground_xz);
+    const int mh = PhysicsTelemetryData.MissHoriz;
+    const bool safety_full =
+        visual_holes || pending_uf || (mh >= 0 && mh <= 2);
+    // I10-F2: cruise clear uses camera band only; safety paths keep full column.
+    if (!moving || safety_full)
+    {
+      cy0 = 0;
+      cy1 = max_cy;
+    }
+  }
+  auto column_mesh_or_gpu = [&](glm::ivec3 coord) -> bool
+  {
+    if (MeshService->HasMeshSatisfyingColumnReady(coord))
+    {
+      return true;
+    }
+    // F3: published lit live GPU counts as presentable during pending remesh.
+    if (MeshService->GetCache().HasLiveGpuDraw(coord) &&
+        !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      return true;
+    }
+    return MeshService->IsPendingGpuApply(coord) ||
+           MeshService->IsGpuExtractInFlight(coord);
+  };
 
   if (IsPendingLightBeforeMesh(ground_xz))
   {
+    bool saw_drawable = false;
+    bool saw_gpu_inflight = false;
+    bool saw_missing_solid = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
-      // SoT draw_ok: drawable mesh OR queued GPU apply. Empty SoftDefer
+      // SoT draw_ok: drawable / GpuPacked / queued GPU. Empty SoftDefer
       // placeholders (HasGreedy, !Drawable) must not look ready (manual 101824).
       if (MeshService->HasMeshSatisfyingColumnReady(coord))
       {
-        out.draw_ok = true;
-        out.reason = ColumnRenderableState::BlockReason::None;
-        return out;
+        saw_drawable = true;
+        continue;
       }
       if (MeshService->IsPendingGpuApply(coord) ||
           MeshService->IsGpuExtractInFlight(coord))
       {
-        out.draw_ok = true;
-        out.reason = ColumnRenderableState::BlockReason::GpuInFlight;
-        return out;
+        saw_gpu_inflight = true;
+        continue;
       }
+      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (chunk && !chunk->IsAirOnly() &&
+          !MeshService->HasDrawableGreedyMesh(coord))
+      {
+        // PendingLightBeforeMesh is column-wide, but FirstMesh is per slice.
+        // A ready sibling must not hide a resident solid slice that has no
+        // drawable and no GPU owner; the column then stays in unfinished_keys
+        // so the slice admission pass can mint its own demand.
+        saw_missing_solid = true;
+      }
+    }
+    if (saw_missing_solid)
+    {
+      out.draw_ok = saw_drawable || saw_gpu_inflight;
+      out.reason = ColumnRenderableState::BlockReason::MissingMesh;
+      return out;
+    }
+    if (saw_drawable)
+    {
+      out.draw_ok = true;
+      out.reason = ColumnRenderableState::BlockReason::None;
+      return out;
+    }
+    if (saw_gpu_inflight)
+    {
+      out.draw_ok = true;
+      out.reason = ColumnRenderableState::BlockReason::GpuInFlight;
+      return out;
     }
     out.reason = ColumnRenderableState::BlockReason::PendingLight;
     return out;
@@ -1976,40 +3083,63 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   {
     bool has_mesh_or_gpu = false;
     bool stale_dark_with_mesh = false;
+    bool fully_dark_drawable = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
-      if (MeshService->HasMeshSatisfyingColumnReady(coord) ||
-          MeshService->IsPendingGpuApply(coord) ||
-          MeshService->IsGpuExtractInFlight(coord))
+      if (column_mesh_or_gpu(coord))
       {
         has_mesh_or_gpu = true;
       }
-      if (MeshService->HasDrawableGreedyMesh(coord) &&
-          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+      UChunkMeshCache::LitApplyMeshProbe probe{};
+      MeshService->FillLitApplyMeshProbe(coord, probe);
+      uint64_t field_rev = 0;
+      if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        field_rev = ch->GetLightFieldRevision();
+      }
+      const bool stale_o1 =
+          probe.gpu_resident
+              ? (horiz_from_focus <= 2
+                     // R4.5.2: near SoT ignores lone GpuHasDarkFace stickiness.
+                     ? IsMeshLightStale(probe.meshed_light_rev, field_rev)
+                     : IsMeshLightStaleGpu(true, probe.gpu_has_dark_face,
+                                          probe.meshed_light_rev, field_rev))
+              : (probe.has_drawable &&
+                 IsMeshLightStale(probe.meshed_light_rev, field_rev));
+      if (probe.has_drawable && stale_o1)
       {
         stale_dark_with_mesh = true;
       }
+      if (MeshService->HasDrawableGreedyMesh(coord) &&
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        fully_dark_drawable = true;
+      }
     }
     const bool sticky = IsColumnStickyRemesh(ground_xz);
+    const bool has_real_repair_ticket =
+        GetColumnFlowExecutor().HasRepairTicket(ground_xz) || sticky ||
+        ColumnHasRepairProgress(ground_xz);
+    // Era32: column draw_ok stays meshed-ready (holes telem = missing mesh).
+    // Per-slice LitDrawable hide is IsChunkSliceRenderReady (no black plugs).
     const ColumnSoTDecision sot = ClassifyStickyStaleDarkSoT(
-        has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus);
+        has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus,
+        has_real_repair_ticket, fully_dark_drawable,
+        // A21 P7: EffectiveLitRing behind flag (default OFF → baseline 4).
+        EffectiveLitRingOrBaseline(kVisualStageLitDrawableHoriz));
     if (sot.kind == ColumnSoTKind::StickyRemesh)
     {
       out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
-      out.has_repair_ticket =
-          GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
-          IsColumnStickyRemesh(ground_xz) || sot.has_repair_ticket;
-      out.draw_ok = sot.draw_ok;
+      out.has_repair_ticket = has_real_repair_ticket || sot.has_repair_ticket;
+      out.draw_ok = has_mesh_or_gpu;
       return out;
     }
     if (sot.kind == ColumnSoTKind::StaleDark)
     {
       out.reason = ColumnRenderableState::BlockReason::StaleDark;
-      out.has_repair_ticket =
-          GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
-          sot.has_repair_ticket;
-      out.draw_ok = sot.draw_ok;
+      out.has_repair_ticket = has_real_repair_ticket;
+      out.draw_ok = has_mesh_or_gpu;
       return out;
     }
   }
@@ -2027,11 +3157,20 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       has_mesh_or_gpu = true;
     }
-    if (MeshService->IsPendingGpuApply(coord) ||
-        MeshService->IsGpuExtractInFlight(coord))
+    else if (MeshService->GetCache().HasLiveGpuDraw(coord) &&
+             !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      has_mesh_or_gpu = true;
+    }
+    else if (MeshService->IsPendingGpuApply(coord) ||
+             MeshService->IsGpuExtractInFlight(coord))
     {
       has_mesh_or_gpu = true;
       saw_gpu_inflight_early = true;
+    }
+    else if (column_mesh_or_gpu(coord))
+    {
+      has_mesh_or_gpu = true;
     }
   }
   if (out.stage != ColumnEmergeState::RenderReady &&
@@ -2052,15 +3191,29 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   }
   bool saw_loaded_meshable = false;
   bool saw_gpu_inflight = false;
+  bool saw_missing_solid = false;
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
     const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
     if (!chunk)
     {
+      if (horiz_from_focus <= 1 &&
+          (MeshService->IsPendingGpuApply(coord) ||
+           MeshService->IsGpuExtractInFlight(coord)))
+      {
+        saw_loaded_meshable = true;
+        saw_gpu_inflight = true;
+      }
       continue;
     }
     if (MeshService->HasMeshSatisfyingColumnReady(coord))
+    {
+      saw_loaded_meshable = true;
+      continue;
+    }
+    if (MeshService->GetCache().HasLiveGpuDraw(coord) &&
+        !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
     {
       saw_loaded_meshable = true;
       continue;
@@ -2085,19 +3238,150 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       continue;
     }
-    out.reason = ColumnRenderableState::BlockReason::MissingMesh;
-    return out;
+    // P2: missing solid cy does not block drawing ready sibling slices
+    // (JE-like section progressive reveal). HasMissing* telemetry unchanged.
+    saw_missing_solid = true;
   }
   if (saw_loaded_meshable || out.stage == ColumnEmergeState::Empty)
   {
     out.draw_ok = true;
     out.reason = saw_gpu_inflight
                      ? ColumnRenderableState::BlockReason::GpuInFlight
-                     : ColumnRenderableState::BlockReason::None;
+                     : (saw_missing_solid
+                            ? ColumnRenderableState::BlockReason::MissingMesh
+                            : ColumnRenderableState::BlockReason::None);
+    // draw_ok true even with MissingMesh reason — partial column visible.
+    return out;
+  }
+  if (saw_missing_solid)
+  {
+    out.reason = ColumnRenderableState::BlockReason::MissingMesh;
+    return out;
+  }
+  if (horiz_from_focus <= 1 &&
+      !IsTerrainColumnCompleteFast(glm::ivec3(ground.x, 0, ground.z)))
+  {
+    out.reason = ColumnRenderableState::BlockReason::NotReadyState;
     return out;
   }
   out.reason = ColumnRenderableState::BlockReason::NotLoaded;
   return out;
+}
+
+namespace
+{
+uint64_t PackUnfinishedColKey(int x, int z)
+{
+  return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) |
+         static_cast<uint32_t>(z);
+}
+
+FocusColumnVisualClass ClassifyFocusColumnVisual(const UWorld &world,
+                                                 glm::ivec3 focus_ground,
+                                                 int dx, int dz)
+{
+  const glm::ivec3 ground(focus_ground.x + dx, 0, focus_ground.z + dz);
+  const ColumnRenderableState state =
+      world.GetColumnRenderableState(glm::ivec2(ground.x, ground.z));
+  // A partial terrain column can already contain solid, camera-band slices.
+  // GetColumnRenderableState reports those as MissingMesh so the resident
+  // slices can be revealed progressively; do not hide that FirstMesh debt
+  // behind the column-wide generation bit. Keep the generation gate for
+  // incomplete columns that have no resident visual hole.
+  if (!world.IsTerrainColumnCompleteFast(ground) &&
+      state.reason != ColumnRenderableState::BlockReason::MissingMesh)
+  {
+    return FocusColumnVisualClass::TerrainIncomplete;
+  }
+  bool face_debt = false;
+  if (const ColumnRecord *rec =
+          world.GetColumnRecords().Find(glm::ivec2(ground.x, ground.z)))
+  {
+    face_debt = ColumnHasFaceDebt(rec->face_debt_mask);
+  }
+  if (state.draw_ok && face_debt)
+  {
+    return FocusColumnVisualClass::FaceDebt;
+  }
+  using Reason = ColumnRenderableState::BlockReason;
+  switch (state.reason)
+  {
+  case Reason::PendingLight:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::PendingLight;
+    break;
+  case Reason::StickyRemesh:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::StickyRemesh;
+    break;
+  case Reason::StaleDark:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::StaleDark;
+    break;
+  case Reason::MissingMesh:
+    // Column draw readiness is intentionally progressive: one ready Y slice
+    // keeps its siblings visible. It does not satisfy the missing slice's
+    // FirstMesh obligation, so keep the column in the bounded repair demand
+    // until every resident solid slice in the presentable band is meshed.
+    return FocusColumnVisualClass::MissingMesh;
+  case Reason::GpuInFlight:
+    return FocusColumnVisualClass::GpuInFlight;
+  case Reason::NotLoaded:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::NotLoaded;
+    break;
+  case Reason::NotReadyState:
+    if (!state.draw_ok)
+      return FocusColumnVisualClass::NotReadyState;
+    break;
+  case Reason::None:
+    break;
+  }
+
+  if (face_debt)
+  {
+    return FocusColumnVisualClass::FaceDebt;
+  }
+  return FocusColumnVisualClass::Ready;
+}
+
+bool IsUnfinishedFocusColumnVisual(FocusColumnVisualClass visual_class)
+{
+  switch (visual_class)
+  {
+  case FocusColumnVisualClass::PendingLight:
+  case FocusColumnVisualClass::StickyRemesh:
+  case FocusColumnVisualClass::StaleDark:
+  case FocusColumnVisualClass::MissingMesh:
+  case FocusColumnVisualClass::NotLoaded:
+  case FocusColumnVisualClass::NotReadyState:
+  case FocusColumnVisualClass::FaceDebt:
+    return true;
+  case FocusColumnVisualClass::Ready:
+  case FocusColumnVisualClass::TerrainIncomplete:
+  case FocusColumnVisualClass::GpuInFlight:
+  case FocusColumnVisualClass::Count:
+    return false;
+  }
+  return false;
+}
+} // namespace
+
+bool UWorld::IsTerrainColumnCompleteFast(glm::ivec3 ground) const
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  if (Streaming)
+  {
+    if (const UChunkStreamer *streamer = Streaming->GetStreamer())
+    {
+      return streamer->IsTerrainChunkCompleteCached(ground);
+    }
+  }
+  return IsTerrainChunkComplete(BlockWorld, ground,
+                                ProceduralTemplate.MaxHeight);
 }
 
 int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
@@ -2107,24 +3391,2156 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   {
     return 0;
   }
+  ++UnfinishedVisualCache.prep_calls_n;
+  auto &cache = UnfinishedVisualCache;
+  auto refresh_data_mesh_census = [&]()
+  {
+    FocusRingVisualCensus &census = cache.readiness;
+    census.data_mesh_valid =
+        UJobStageTrace::VisualBlackTraceEnabled() && MeshService != nullptr;
+    census.resident_solid_slice_n = 0;
+    census.resident_air_slice_n = 0;
+    census.absent_slice_n = 0;
+    census.non_air_voxel_n = 0;
+    census.band_solid_slice_n = 0;
+    census.band_solid_mesh_n = 0;
+    census.band_solid_no_drawable_n = 0;
+    census.band_solid_satisfying_n = 0;
+    census.band_solid_accepted_empty_n = 0;
+    census.band_solid_pending_mesh_n = 0;
+    census.band_solid_pending_work_n = 0;
+    census.band_solid_unowned_n = 0;
+    census.camera_band_solid_slice_n = 0;
+    census.camera_band_solid_no_drawable_n = 0;
+    census.camera_band_solid_satisfying_n = 0;
+    census.camera_band_solid_pending_work_n = 0;
+    census.camera_band_solid_unowned_n = 0;
+    census.band_solid_unresolved_no_work_n = 0;
+    census.band_solid_draw_gate_closed_n = 0;
+    census.band_solid_draw_ready_n = 0;
+    census.band_solid_gpu_live_n = 0;
+    if (!census.data_mesh_valid)
+    {
+      return;
+    }
+
+    const int max_height = std::max(0, ProceduralTemplate.MaxHeight);
+    const int max_cy =
+        std::max(0, FloorDiv(max_height, CHUNK_SIZE));
+    const int focus_y = GetPreferredLoadFocusBlock().y;
+    const int camera_band_min = std::max(0, focus_y - CHUNK_SIZE);
+    const int camera_band_max =
+        std::min(max_height, focus_y + CHUNK_SIZE * 2);
+    int band_min = camera_band_min;
+    int band_max = camera_band_max;
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(
+          band_min,
+          std::max(0, ProceduralTemplate.SeaLevel - CHUNK_SIZE * 4));
+      band_max = std::max(
+          band_max,
+          std::min(max_height,
+                   ProceduralTemplate.SeaLevel + CHUNK_SIZE * 2));
+    }
+    const int band_cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+    const int band_cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+    const int camera_band_cy0 =
+        std::max(0, FloorDiv(camera_band_min, CHUNK_SIZE));
+    const int camera_band_cy1 =
+        std::min(max_cy, FloorDiv(camera_band_max, CHUNK_SIZE));
+    const auto &mesh_cache = MeshService->GetCache();
+    const auto &chunk_manager = BlockWorld.GetChunkManager();
+    struct FocusSliceCandidate
+    {
+      VisualBlackTraceRecord record{};
+      bool in_visual_band{false};
+      bool camera_band_no_drawable{false};
+      int horizontal_distance{0};
+      int vertical_distance{0};
+    };
+    std::vector<FocusSliceCandidate> focus_slice_candidates;
+    focus_slice_candidates.reserve(128);
+    const glm::ivec3 camera_block = GetPreferredLoadFocusBlock();
+    const int camera_cy = FloorDiv(camera_block.y, CHUNK_SIZE);
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+      {
+        const int cx = focus_ground_chunk.x + dx;
+        const int cz = focus_ground_chunk.z + dz;
+        for (int cy = 0; cy <= max_cy; ++cy)
+        {
+          const glm::ivec3 coord(cx, cy, cz);
+          const UChunk *chunk = chunk_manager.GetChunk(coord);
+          if (!chunk)
+          {
+            ++census.absent_slice_n;
+            continue;
+          }
+          if (chunk->IsAirOnly())
+          {
+            ++census.resident_air_slice_n;
+            continue;
+          }
+
+          ++census.resident_solid_slice_n;
+          census.non_air_voxel_n += chunk->GetNonAirCount();
+          if (cy < band_cy0 || cy > band_cy1)
+          {
+            continue;
+          }
+
+          const bool in_camera_band =
+              cy >= camera_band_cy0 && cy <= camera_band_cy1;
+          ++census.band_solid_slice_n;
+          if (in_camera_band)
+          {
+            ++census.camera_band_solid_slice_n;
+          }
+          const bool has_mesh = MeshService->HasDrawableGreedyMesh(coord);
+          const bool satisfying =
+              MeshService->HasMeshSatisfyingColumnReady(coord);
+          const bool dirty = mesh_cache.IsChunkMeshDirty(coord);
+          const bool inflight = MeshService->HasInflightMeshBuild(coord);
+          const bool gpu_pending = MeshService->IsPendingGpuApply(coord);
+          const bool gpu_extract = MeshService->IsGpuExtractInFlight(coord);
+          const bool remesh_after_apply =
+              mesh_cache.IsRemeshAfterApplyPending(coord);
+          const bool mesh_work_pending =
+              dirty || inflight || gpu_pending || gpu_extract ||
+              remesh_after_apply || mesh_cache.IsPendingGpuQueued(coord) ||
+              mesh_cache.IsPendingGpuKickedOrDispatched(coord) ||
+              mesh_cache.HasPendingCaptureWork(coord);
+          bool work_pending = mesh_work_pending;
+          if (!work_pending && !satisfying)
+          {
+            const glm::ivec2 column(coord.x, coord.z);
+            const glm::ivec2 block_key(coord.x * CHUNK_SIZE,
+                                       coord.z * CHUNK_SIZE);
+            const bool relight_queued =
+                Persistence &&
+                Persistence->IsTerrainColumnRelightQueued(block_key);
+            const bool relight_inflight =
+                IsAsyncRelightColumnInFlight(column);
+            const bool flow_ticket =
+                GetColumnFlowExecutor().HasRepairTicket(column);
+            work_pending = relight_queued || relight_inflight || flow_ticket;
+          }
+          bool draw_ready = false;
+          if (satisfying)
+          {
+            ++census.band_solid_satisfying_n;
+            if (in_camera_band)
+            {
+              ++census.camera_band_solid_satisfying_n;
+            }
+            if (!has_mesh)
+            {
+              ++census.band_solid_accepted_empty_n;
+            }
+          }
+          if (has_mesh)
+          {
+            ++census.band_solid_mesh_n;
+            if (mesh_cache.HasLiveGpuDraw(coord))
+            {
+              ++census.band_solid_gpu_live_n;
+            }
+            draw_ready = IsChunkSliceRenderReady(coord);
+            if (draw_ready)
+            {
+              ++census.band_solid_draw_ready_n;
+            }
+            else
+            {
+              ++census.band_solid_draw_gate_closed_n;
+            }
+          }
+          else
+          {
+            ++census.band_solid_no_drawable_n;
+            if (in_camera_band)
+            {
+              ++census.camera_band_solid_no_drawable_n;
+            }
+            if (work_pending)
+            {
+              ++census.band_solid_pending_work_n;
+              if (in_camera_band)
+              {
+                ++census.camera_band_solid_pending_work_n;
+              }
+            }
+            if (mesh_work_pending)
+            {
+              ++census.band_solid_pending_mesh_n;
+            }
+            else if (!satisfying)
+            {
+              if (!work_pending)
+              {
+                ++census.band_solid_unowned_n;
+                if (in_camera_band)
+                {
+                  ++census.camera_band_solid_unowned_n;
+                }
+              }
+              // This historical field describes the absence of mesh-pipeline
+              // work. Relight and ColumnFlow tickets can still own the slice.
+              ++census.band_solid_unresolved_no_work_n;
+            }
+          }
+
+          // Trace states: 1=unresolved/no owner, 2=missing drawable/owned
+          // work pending, 3=drawable mesh blocked by the draw gate.
+          uint8_t focus_state = 0;
+          if (!has_mesh && !satisfying)
+          {
+            focus_state = work_pending ? 2 : 1;
+          }
+          else if (has_mesh && !draw_ready)
+          {
+            focus_state = 3;
+          }
+          if (focus_state != 0 || (in_camera_band && !has_mesh))
+          {
+            FocusSliceCandidate candidate{};
+            auto &trace = candidate.record;
+            trace.sample_kind = 1;
+            trace.focus_state = focus_state;
+            trace.cx = coord.x;
+            trace.cy = coord.y;
+            trace.cz = coord.z;
+            trace.focus_cx = focus_ground_chunk.x;
+            trace.focus_cz = focus_ground_chunk.z;
+            const uint64_t visual_column_key =
+                PackUnfinishedColKey(coord.x, coord.z);
+            const auto visual_class_it =
+                cache.readiness_by_column.find(visual_column_key);
+            if (visual_class_it != cache.readiness_by_column.end())
+            {
+              trace.focus_column_visual_class =
+                  static_cast<uint8_t>(visual_class_it->second);
+            }
+            trace.focus_column_terrain_complete =
+                IsTerrainColumnCompleteFast(glm::ivec3(coord.x, 0, coord.z))
+                    ? 1
+                    : 0;
+            trace.focus_column_in_unfinished_keys =
+                cache.unfinished_keys.count(visual_column_key) != 0 ? 1 : 0;
+            trace.camera_x = camera_block.x;
+            trace.camera_y = camera_block.y;
+            trace.camera_z = camera_block.z;
+            trace.non_air_blocks = chunk->GetNonAirCount();
+            trace.chunk_content_revision = chunk->GetContentRevision();
+            trace.frame_epoch = StreamingFrameEpoch;
+            trace.incarnation = chunk->GetIncarnation();
+            trace.mesh_dirty_queue_kind = mesh_cache.GetDirtyQueueTrace(
+                coord, trace.mesh_dirty_queue_index,
+                trace.mesh_dirty_queue_size);
+            trace.draw_gate_ready = draw_ready ? 1 : 0;
+            trace.flags = static_cast<uint32_t>(
+                (has_mesh ? 1u << 0 : 0u) |
+                (satisfying ? 1u << 1 : 0u) |
+                (dirty ? 1u << 2 : 0u) |
+                (inflight ? 1u << 3 : 0u) |
+                (gpu_pending ? 1u << 4 : 0u) |
+                (gpu_extract ? 1u << 5 : 0u) |
+                (mesh_cache.HasLiveGpuDraw(coord) ? 1u << 6 : 0u) |
+                (draw_ready ? 1u << 7 : 0u) |
+                (remesh_after_apply ? 1u << 8 : 0u));
+            candidate.horizontal_distance =
+                std::max(std::abs(dx), std::abs(dz));
+            candidate.vertical_distance = std::abs(cy - camera_cy);
+            candidate.in_visual_band =
+                cy >= camera_band_cy0 && cy <= camera_band_cy1;
+            candidate.camera_band_no_drawable = in_camera_band && !has_mesh;
+            focus_slice_candidates.push_back(candidate);
+          }
+        }
+      }
+    }
+    const bool camera_band_no_drawable_peak =
+        census.camera_band_solid_no_drawable_n >
+        cache.camera_band_peak_no_drawable_n;
+    const bool camera_band_unowned_peak =
+        census.camera_band_solid_unowned_n > cache.camera_band_peak_unowned_n;
+    if (camera_band_no_drawable_peak)
+    {
+      cache.camera_band_peak_no_drawable_n =
+          census.camera_band_solid_no_drawable_n;
+      UJobStageTrace::ResetCameraBandPeakTrace(12);
+    }
+    if (camera_band_unowned_peak)
+    {
+      cache.camera_band_peak_unowned_n = census.camera_band_solid_unowned_n;
+      UJobStageTrace::ResetCameraBandPeakTrace(13);
+    }
+    std::sort(focus_slice_candidates.begin(), focus_slice_candidates.end(),
+              [](const FocusSliceCandidate &a, const FocusSliceCandidate &b)
+              {
+                if (a.record.focus_state != b.record.focus_state)
+                {
+                  return a.record.focus_state < b.record.focus_state;
+                }
+                if (a.in_visual_band != b.in_visual_band)
+                {
+                  return a.in_visual_band;
+                }
+                if (a.horizontal_distance != b.horizontal_distance)
+                {
+                  return a.horizontal_distance < b.horizontal_distance;
+                }
+                return a.vertical_distance < b.vertical_distance;
+              });
+    int recorded_by_state[4]{};
+    constexpr int kFocusSliceTracePerState = 12;
+    for (const FocusSliceCandidate &candidate : focus_slice_candidates)
+    {
+      const int state = candidate.record.focus_state;
+      const bool record_focus_slice =
+          state > 0 && state < 4 &&
+          recorded_by_state[state] < kFocusSliceTracePerState;
+      const bool record_no_drawable_peak =
+          camera_band_no_drawable_peak && candidate.in_visual_band &&
+          candidate.camera_band_no_drawable;
+      const bool record_unowned_peak =
+          camera_band_unowned_peak && candidate.in_visual_band && state == 1;
+      if (!record_focus_slice && !record_no_drawable_peak &&
+          !record_unowned_peak)
+      {
+        continue;
+      }
+      VisualBlackTraceRecord trace = candidate.record;
+      const glm::ivec3 coord(trace.cx, trace.cy, trace.cz);
+      trace.mesh_revision = MeshService->GetChunkMeshRevision(coord);
+      const UChunk *focus_chunk =
+          BlockWorld.GetChunkManager().GetChunk(coord);
+      if (focus_chunk)
+      {
+        trace.field_light_rev = focus_chunk->GetLightFieldRevision();
+      }
+      const MeshPublishRevs published =
+          mesh_cache.GetMeshPublishRevs(coord);
+      trace.published_geom_rev = published.geom_rev;
+      trace.published_light_rev = published.light_rev;
+      trace.meshed_light_rev = mesh_cache.GetMeshedLightRevision(coord);
+      const ChunkRenderDemandRecord *focus_demand =
+          UChunkRenderDemandStore::Get().Find(coord);
+      if (focus_demand)
+      {
+        trace.world_epoch = focus_demand->world_epoch;
+        trace.demand_incarnation = focus_demand->incarnation;
+        trace.attempt_id = focus_demand->has_active_attempt
+                               ? focus_demand->active_attempt_id
+                               : 0;
+        trace.desired_geom_rev = focus_demand->desired_geom_rev;
+        trace.desired_light_rev = focus_demand->desired_light_rev;
+        trace.desired_coverage_gen = focus_demand->desired_coverage_gen;
+        trace.demand_published_geom_rev = focus_demand->published_geom_rev;
+        trace.demand_published_light_rev = focus_demand->published_light_rev;
+        trace.demand_published_coverage_gen =
+            focus_demand->published_coverage_gen;
+        trace.face_debt_mask = focus_demand->face_debt_mask;
+        trace.overlay_face_debt_mask =
+            focus_demand->overlay_face_debt_mask;
+        trace.peer_face_debt_mask = focus_demand->peer_face_debt_mask;
+        trace.settled_light_rev = focus_demand->settled_light_rev;
+        trace.has_settled_light = focus_demand->has_settled_light ? 1 : 0;
+        trace.active_stage = static_cast<uint8_t>(focus_demand->active_stage);
+        const double now_ms = VisualObligationNowMs();
+        if (focus_demand->attempt_created_ms > 0.0)
+        {
+          trace.demand_attempt_age_ms =
+              std::max(0.0, now_ms - focus_demand->attempt_created_ms);
+        }
+        if (focus_demand->last_progress_ms > 0.0)
+        {
+          trace.demand_progress_age_ms =
+              std::max(0.0, now_ms - focus_demand->last_progress_ms);
+        }
+      }
+      const auto count_boundary_non_air = [](const UChunk &boundary_chunk,
+                                             int face, bool peer_side) {
+        uint16_t count = 0;
+        for (int a = 0; a < CHUNK_SIZE; ++a)
+        {
+          for (int b = 0; b < CHUNK_SIZE; ++b)
+          {
+            glm::ivec3 local{};
+            switch (face)
+            {
+            case 0:
+              local = {peer_side ? CHUNK_SIZE - 1 : 0, a, b};
+              break;
+            case 1:
+              local = {peer_side ? 0 : CHUNK_SIZE - 1, a, b};
+              break;
+            case 2:
+              local = {a, peer_side ? CHUNK_SIZE - 1 : 0, b};
+              break;
+            case 3:
+              local = {a, peer_side ? 0 : CHUNK_SIZE - 1, b};
+              break;
+            case 4:
+              local = {a, b, peer_side ? CHUNK_SIZE - 1 : 0};
+              break;
+            default:
+              local = {a, b, peer_side ? 0 : CHUNK_SIZE - 1};
+              break;
+            }
+            if (boundary_chunk.GetBlockLocal(local) != BLOCK_AIR)
+            {
+              ++count;
+            }
+          }
+        }
+        return count;
+      };
+      for (int face = 0; face < 6; ++face)
+      {
+        const uint8_t bit = static_cast<uint8_t>(1u << face);
+        if (focus_demand)
+        {
+          trace.face_waiting_peer_gen[face] =
+              focus_demand->waiting_peer_gen[face];
+        }
+        // Keep a complete six-face neighbor census for each selected slice.
+        // Restricting this data to faces with current debt cannot distinguish
+        // a legitimately occluded zero-quad slice from an exposed boundary
+        // hidden by an unloaded neighbor.
+        if (focus_chunk)
+        {
+          trace.face_focus_boundary_non_air[face] =
+              count_boundary_non_air(*focus_chunk, face, false);
+        }
+        const glm::ivec3 peer_coord =
+            coord + ChunkMeshFaceNeighborDelta(face);
+        const UChunk *peer_chunk =
+            BlockWorld.GetChunkManager().GetChunk(peer_coord);
+        if (peer_chunk)
+        {
+          trace.face_peer_loaded_mask =
+              static_cast<uint8_t>(trace.face_peer_loaded_mask | bit);
+          trace.face_peer_incarnation[face] = peer_chunk->GetIncarnation();
+          trace.face_peer_boundary_non_air[face] =
+              count_boundary_non_air(*peer_chunk, face, true);
+          if (peer_chunk->GetNonAirCount() > 0)
+          {
+            trace.face_peer_nonair_mask =
+                static_cast<uint8_t>(trace.face_peer_nonair_mask | bit);
+          }
+        }
+        const ChunkRenderDemandRecord *peer_demand =
+            UChunkRenderDemandStore::Get().Find(peer_coord);
+        uint64_t effective_peer_gen = 0;
+        if (peer_demand)
+        {
+          trace.face_peer_demand_published_geom_rev[face] =
+              peer_demand->published_geom_rev;
+          trace.face_peer_published_coverage_gen[face] =
+              peer_demand->published_coverage_gen;
+          trace.face_peer_desired_coverage_gen[face] =
+              peer_demand->desired_coverage_gen;
+          effective_peer_gen = peer_demand->published_coverage_gen;
+        }
+        const MeshPublishRevs peer_published =
+            mesh_cache.GetMeshPublishRevs(peer_coord);
+        trace.face_peer_published_geom_rev[face] = peer_published.geom_rev;
+        trace.face_peer_effective_gen[face] = effective_peer_gen;
+        if (mesh_cache.HasDrawableGreedyMesh(peer_coord))
+        {
+          trace.face_peer_drawable_mask =
+              static_cast<uint8_t>(trace.face_peer_drawable_mask | bit);
+        }
+        if (mesh_cache.HasMeshSatisfyingColumnReady(peer_coord))
+        {
+          trace.face_peer_satisfying_mask =
+              static_cast<uint8_t>(trace.face_peer_satisfying_mask | bit);
+        }
+      }
+      const UChunkMeshCache &cache = MeshService->GetCache();
+      const bool fully_dark = cache.ChunkHasFullyDarkFace(coord);
+      const bool has_lit_face = MeshService->ChunkHasLitDrawableFace(coord);
+      UChunkMeshCache::StaleDarkWitness stale_witness{};
+      const bool stale_dark =
+          state == 3 && fully_dark && !has_lit_face &&
+          cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &stale_witness);
+      const glm::ivec2 col(coord.x, coord.z);
+      const bool pending_light = IsPendingLightBeforeMesh(col);
+      const bool soft_defer = cache.IsSoftDeferHeld(coord);
+      const bool defer_until_lit = cache.IsDeferMeshUntilLit(coord);
+      const bool column_lit = IsColumnLitReady(glm::ivec3(coord.x, 0, coord.z));
+      const ColumnRecord *column = ColumnRecords.Find(col);
+      const bool legal_dark = column && column->legal_dark_settled;
+      const bool light_repair =
+          column && column->visual_obligation == VisualObligation::LightRepair;
+      const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col);
+      const bool true_dark = fully_dark && open_sky && !pending_light &&
+                             column_lit && !stale_dark && !has_lit_face;
+      const UColumnFlowExecutor &flow_executor = GetColumnFlowExecutor();
+      const auto &flow_scheduler = flow_executor.Scheduler();
+      const bool flow_ticket = flow_executor.HasRepairTicket(col);
+      const bool flow_relight_then_mesh =
+          flow_scheduler.Contains(col, ColumnWorkKind::RelightThenMesh);
+      const bool flow_first_mesh =
+          flow_scheduler.Contains(col, ColumnWorkKind::FirstMesh);
+      const bool flow_remesh_seam =
+          flow_scheduler.Contains(col, ColumnWorkKind::RemeshSeam);
+      const bool flow_promote_relight =
+          flow_scheduler.Contains(col, ColumnWorkKind::PromoteRelight);
+      const bool sticky_remesh = IsColumnStickyRemesh(col);
+      const bool repair_progress = ColumnHasRepairProgress(col);
+      const bool repair_ticket =
+          flow_ticket || sticky_remesh || repair_progress;
+      const bool async_relight = IsAsyncRelightColumnInFlight(col);
+      const glm::ivec2 block_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
+      const auto relight_queue =
+          Persistence
+              ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
+              : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+      const bool persistence_relight = relight_queue.keyed;
+      // Keep the generic focus-slice trace's named owner fields consistent
+      // with renderer samples. The aggregate `flags` below also contains
+      // owner bits, but consumers should not have to decode that private mask
+      // to distinguish a real FIFO ticket from an ownerless light debt.
+      trace.relight_owner_flags =
+          (pending_light ? 1u << 0 : 0u) |
+          (persistence_relight ? 1u << 1 : 0u) |
+          (async_relight ? 1u << 2 : 0u) |
+          (defer_until_lit ? 1u << 3 : 0u) |
+          (soft_defer ? 1u << 4 : 0u) |
+          (column_lit ? 1u << 5 : 0u) |
+          (RequiresLightingLitGate() ? 1u << 6 : 0u) |
+          (repair_ticket ? 1u << 7 : 0u) |
+          (relight_queue.deferred_far ? 1u << 8 : 0u);
+      trace.column_flow_ticket_flags =
+          (flow_relight_then_mesh ? 1u << 0 : 0u) |
+          (flow_first_mesh ? 1u << 1 : 0u) |
+          (flow_remesh_seam ? 1u << 2 : 0u) |
+          (flow_promote_relight ? 1u << 3 : 0u);
+      trace.relight_queue_kind =
+          relight_queue.deferred_visible && !relight_queue.keyed
+              ? 6
+              : (relight_queue.deferred_far && !relight_queue.keyed
+                     ? 7
+                     : (!relight_queue.keyed
+                            ? 0
+                            : (!relight_queue.in_deque
+                                   ? 3
+                                   : (relight_queue.priority ? 1 : 2))));
+      trace.relight_y_band_defined = relight_queue.y_band_defined ? 1 : 0;
+      trace.relight_queue_index = relight_queue.queue_index;
+      trace.relight_queue_size = relight_queue.queue_size;
+      trace.relight_band_min_y = relight_queue.min_world_y;
+      trace.relight_band_max_y = relight_queue.max_world_y;
+      const bool mesh_dependency_pending =
+          cache.HasPendingMeshDependencyInvalidation(coord);
+      const bool pending_capture_work = cache.HasPendingCaptureWork(coord);
+      const bool gpu_apply_queued = cache.IsPendingGpuQueued(coord);
+      const bool gpu_apply_kicked_or_dispatched =
+          cache.IsPendingGpuKickedOrDispatched(coord);
+      const bool dirty = (trace.flags & (1u << 2)) != 0;
+      const bool inflight = (trace.flags & (1u << 3)) != 0;
+      const bool gpu_pending = (trace.flags & (1u << 4)) != 0;
+      const bool gpu_extract = (trace.flags & (1u << 5)) != 0;
+      const bool remesh_after_apply = (trace.flags & (1u << 8)) != 0;
+      trace.mesh_work_owner_flags =
+          (dirty ? 1u << 0 : 0u) | (inflight ? 1u << 1 : 0u) |
+          (remesh_after_apply ? 1u << 2 : 0u) | (gpu_pending ? 1u << 3 : 0u) |
+          (gpu_apply_queued ? 1u << 4 : 0u) |
+          (gpu_apply_kicked_or_dispatched ? 1u << 5 : 0u) |
+          (gpu_extract ? 1u << 6 : 0u) | (flow_ticket ? 1u << 7 : 0u) |
+          (soft_defer ? 1u << 8 : 0u) | (defer_until_lit ? 1u << 9 : 0u) |
+          (pending_light ? 1u << 10 : 0u) |
+          (pending_capture_work ? 1u << 11 : 0u);
+      trace.flags = static_cast<uint32_t>(
+          trace.flags | (fully_dark ? 1u << 9 : 0u) |
+          (has_lit_face ? 1u << 10 : 0u) | (stale_dark ? 1u << 11 : 0u) |
+          (pending_light ? 1u << 12 : 0u) | (soft_defer ? 1u << 13 : 0u) |
+          (column_lit ? 1u << 14 : 0u) | (repair_ticket ? 1u << 15 : 0u) |
+          (flow_ticket ? 1u << 16 : 0u) | (sticky_remesh ? 1u << 17 : 0u) |
+          (repair_progress ? 1u << 18 : 0u) | (async_relight ? 1u << 19 : 0u) |
+          (persistence_relight ? 1u << 20 : 0u) |
+          (mesh_dependency_pending ? 1u << 21 : 0u) |
+          (legal_dark ? 1u << 22 : 0u) | (open_sky ? 1u << 23 : 0u) |
+          (light_repair ? 1u << 24 : 0u) | (true_dark ? 1u << 25 : 0u) |
+          (gpu_apply_queued ? 1u << 26 : 0u) |
+          (gpu_apply_kicked_or_dispatched ? 1u << 27 : 0u) |
+          (flow_relight_then_mesh ? 1u << 28 : 0u) |
+          (flow_first_mesh ? 1u << 29 : 0u) |
+          (flow_remesh_seam ? 1u << 30 : 0u) |
+          (flow_promote_relight ? 1u << 31 : 0u));
+      if (stale_dark)
+      {
+        trace.stale_sample_x = stale_witness.sampled_block.x;
+        trace.stale_sample_y = stale_witness.sampled_block.y;
+        trace.stale_sample_z = stale_witness.sampled_block.z;
+        trace.stale_source_cx = stale_witness.source_chunk.x;
+        trace.stale_source_cy = stale_witness.source_chunk.y;
+        trace.stale_source_cz = stale_witness.source_chunk.z;
+        trace.stale_source_incarnation = stale_witness.source_incarnation;
+        trace.stale_source_light_rev = stale_witness.source_light_revision;
+        trace.stale_face_index = stale_witness.face_index;
+        trace.stale_sample_light = stale_witness.packed_light;
+        trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
+      }
+      if (record_focus_slice)
+      {
+        trace.sample_kind = 1;
+        UJobStageTrace::NoteVisualBlack(trace);
+        ++recorded_by_state[state];
+      }
+      if (record_no_drawable_peak)
+      {
+        VisualBlackTraceRecord peak_trace = trace;
+        peak_trace.sample_kind = 12;
+        peak_trace.camera_band_solid_no_drawable_n =
+            static_cast<uint32_t>(census.camera_band_solid_no_drawable_n);
+        peak_trace.camera_band_solid_unowned_n =
+            static_cast<uint32_t>(census.camera_band_solid_unowned_n);
+        UJobStageTrace::NoteVisualBlack(peak_trace);
+      }
+      if (record_unowned_peak)
+      {
+        VisualBlackTraceRecord peak_trace = trace;
+        peak_trace.sample_kind = 13;
+        peak_trace.camera_band_solid_no_drawable_n =
+            static_cast<uint32_t>(census.camera_band_solid_no_drawable_n);
+        peak_trace.camera_band_solid_unowned_n =
+            static_cast<uint32_t>(census.camera_band_solid_unowned_n);
+        UJobStageTrace::NoteVisualBlack(peak_trace);
+      }
+    }
+  };
+  if (cache.valid && cache.focus == focus_ground_chunk &&
+      cache.radius == radius_chunks && cache.dirty_cols.empty())
+  {
+    refresh_data_mesh_census();
+    ++cache.prep_hit_n;
+    ++cache.prep_incremental_n;
+    LastUnfinishedVisualSample = cache.count;
+    LastUnfinishedVisualSampleValid = true;
+    return cache.count;
+  }
+  // Incremental: recheck dirty columns ∪ rim±1 and adjust cached count/set.
+  // No hard wipe on overflow — always incremental when focus/radius match.
+  constexpr int kIncrementalDirtyMax = 96;
+  if (cache.valid && cache.focus == focus_ground_chunk &&
+      cache.radius == radius_chunks && !cache.dirty_cols.empty())
+  {
+    if (static_cast<int>(cache.dirty_cols.size()) > kIncrementalDirtyMax)
+    {
+      // Truncate oldest dirty; keep cache.valid (Phase 1a: no full wipe).
+      const size_t keep = static_cast<size_t>(kIncrementalDirtyMax / 2);
+      cache.dirty_cols.erase(cache.dirty_cols.begin(),
+                             cache.dirty_cols.end() - static_cast<std::ptrdiff_t>(keep));
+      ++cache.prep_overflow_n;
+    }
+    std::unordered_set<uint64_t> recheck;
+    recheck.reserve(cache.dirty_cols.size() * 9u);
+    for (const glm::ivec2 &col : cache.dirty_cols)
+    {
+      for (int dz = -1; dz <= 1; ++dz)
+      {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+          const int cx = col.x + dx;
+          const int cz = col.y + dz;
+          const int rdx = cx - focus_ground_chunk.x;
+          const int rdz = cz - focus_ground_chunk.z;
+          if (std::max(std::abs(rdx), std::abs(rdz)) > radius_chunks)
+          {
+            continue;
+          }
+          recheck.insert(PackUnfinishedColKey(cx, cz));
+        }
+      }
+    }
+    int count = cache.count;
+    for (uint64_t key : recheck)
+    {
+      const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+      const int cz = static_cast<int>(static_cast<uint32_t>(key));
+      const int rdx = cx - focus_ground_chunk.x;
+      const int rdz = cz - focus_ground_chunk.z;
+      const FocusColumnVisualClass visual_class =
+          ClassifyFocusColumnVisual(*this, focus_ground_chunk, rdx, rdz);
+      const auto old_it = cache.readiness_by_column.find(key);
+      const FocusColumnVisualClass was_class =
+          old_it != cache.readiness_by_column.end()
+              ? old_it->second
+              : FocusColumnVisualClass::Ready;
+      if (was_class != FocusColumnVisualClass::Count)
+      {
+        int &old_count = cache.readiness.counts[
+            static_cast<size_t>(was_class)];
+        old_count = std::max(0, old_count - 1);
+      }
+      ++cache.readiness.counts[static_cast<size_t>(visual_class)];
+      cache.readiness_by_column[key] = visual_class;
+      const bool now = IsUnfinishedFocusColumnVisual(visual_class);
+      const bool was = cache.unfinished_keys.count(key) != 0;
+      if (now == was)
+      {
+        continue;
+      }
+      if (now)
+      {
+        cache.unfinished_keys.insert(key);
+        ++count;
+      }
+      else
+      {
+        cache.unfinished_keys.erase(key);
+        --count;
+      }
+    }
+    cache.count = std::max(0, count);
+    cache.dirty_cols.clear();
+    ++cache.prep_incremental_n;
+    refresh_data_mesh_census();
+    LastUnfinishedVisualSample = cache.count;
+    LastUnfinishedVisualSampleValid = true;
+    return cache.count;
+  }
   int unfinished = 0;
+  cache.unfinished_keys.clear();
+  cache.readiness = {};
+  cache.readiness_by_column.clear();
+  cache.readiness_by_column.reserve(static_cast<size_t>(
+      (2 * radius_chunks + 1) * (2 * radius_chunks + 1)));
+  cache.unfinished_keys.reserve(static_cast<size_t>((2 * radius_chunks + 1) *
+                                                    (2 * radius_chunks + 1) /
+                                                    4));
   for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
   {
     for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
     {
-      const glm::ivec3 ground(focus_ground_chunk.x + dx, 0,
-                              focus_ground_chunk.z + dz);
-      if (!IsTerrainChunkComplete(BlockWorld, ground, ProceduralTemplate.MaxHeight))
-      {
-        continue;
-      }
-      if (!IsColumnRenderReady(ground))
+      const uint64_t key = PackUnfinishedColKey(
+          focus_ground_chunk.x + dx, focus_ground_chunk.z + dz);
+      const FocusColumnVisualClass visual_class =
+          ClassifyFocusColumnVisual(*this, focus_ground_chunk, dx, dz);
+      ++cache.readiness.counts[static_cast<size_t>(visual_class)];
+      cache.readiness_by_column.emplace(key, visual_class);
+      if (IsUnfinishedFocusColumnVisual(visual_class))
       {
         ++unfinished;
+        cache.unfinished_keys.insert(key);
       }
     }
   }
+  cache.valid = true;
+  cache.focus = focus_ground_chunk;
+  cache.radius = radius_chunks;
+  cache.count = unfinished;
+  cache.dirty_cols.clear();
+  ++cache.prep_full_n;
+  refresh_data_mesh_census();
+  LastUnfinishedVisualSample = unfinished;
+  LastUnfinishedVisualSampleValid = true;
   return unfinished;
+}
+
+FocusRingVisualCensus UWorld::GetFocusRingVisualCensus() const
+{
+  return UnfinishedVisualCache.readiness;
+}
+
+void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
+{
+  if (!MeshService)
+  {
+    return;
+  }
+  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const ChunkRenderDemandRecord *active_demand = demand.Find(coord);
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+  const uint64_t mesh_revision = MeshService->GetChunkMeshRevision(coord);
+  const uint64_t world_epoch =
+      MeshService->GetCache().GetCaptureStore().WorldEpoch();
+  const MeshPublishRevs published =
+      MeshService->GetCache().GetMeshPublishRevs(coord);
+  const bool demand_identity_matches =
+      !active_demand ||
+      (active_demand->world_epoch == world_epoch && chunk &&
+       active_demand->incarnation == chunk->GetIncarnation());
+  const bool unowned_created_attempt =
+      active_demand &&
+      (!active_demand->has_active_attempt ||
+       (active_demand->active_stage == JobStage::Created &&
+        active_demand->last_progress_ms <= 0.0));
+  const bool coverage_waits_only_on_overlay_debt =
+      active_demand &&
+      (active_demand->desired_coverage_gen ==
+           active_demand->published_coverage_gen ||
+       (active_demand->desired_coverage_gen >
+            active_demand->published_coverage_gen &&
+        active_demand->overlay_face_debt_mask != 0 &&
+        active_demand->face_debt_mask ==
+            active_demand->overlay_face_debt_mask));
+  if (chunk && active_demand && demand_identity_matches &&
+      active_demand->overlay_face_debt_mask != 0 &&
+      active_demand->peer_face_debt_mask == 0 &&
+      active_demand->face_debt_mask ==
+          active_demand->overlay_face_debt_mask &&
+      unowned_created_attempt && coverage_waits_only_on_overlay_debt &&
+      !active_demand->retained_awaiting_successor &&
+      !MeshService->IsSoftDeferHeld(coord) &&
+      !MeshService->HasDrawableGreedyMesh(coord) &&
+      MeshService->HasGreedyMesh(coord) &&
+      !MeshService->IsChunkMeshDirty(coord) &&
+      !MeshService->IsRemeshAfterApplyPending(coord) &&
+      !MeshService->HasInflightMeshBuild(coord) &&
+      !MeshService->IsGpuExtractInFlight(coord) &&
+      !MeshService->IsPendingGpuApply(coord) &&
+      mesh_revision != 0 && mesh_revision == published.geom_rev &&
+      active_demand->desired_geom_rev == published.geom_rev &&
+      active_demand->published_geom_rev == published.geom_rev &&
+      active_demand->desired_light_rev == published.light_rev &&
+      active_demand->published_light_rev == published.light_rev &&
+      chunk->GetLightFieldRevision() == published.light_rev)
+  {
+    // The demand record carries the target-local missing-neighbor obligation;
+    // RepairFaceDebt reconciles it against the published cache overlay and peer
+    // state. An unowned Created demand and coverage lag caused only by overlay
+    // debt are not executable mesh work. Re-admitting through generic FirstMesh
+    // repair cannot close that dependency while its peer inputs are unchanged.
+    // Keep the visual obligation open, but avoid advancing the same geometry
+    // revision on every census.
+    return;
+  }
+  const bool requeue_existing_target =
+      chunk && demand_identity_matches && mesh_revision != 0 &&
+      mesh_revision > published.geom_rev;
+  if (requeue_existing_target)
+  {
+    // The current mesh revision is already newer than the published mesh.
+    // Re-admit that outstanding target even if its demand record has not been
+    // created yet; advancing it on each retry lets repair producers outrun the
+    // scheduler when a gate temporarily removes the Dirty owner.
+    MeshService->RequeueDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    // RequeueDirtyPriority preserves the revision, but a drawable predecessor
+    // is routed to RemeshQ by MarkDirtyPriorityImpl. Keep this admitted visible
+    // geometry debt in the priority Remesh lane so repeated FirstMesh demand
+    // cannot leave it behind the ordinary remesh backlog.
+    if (MeshService->HasDrawableGreedyMesh(coord))
+    {
+      (void)MeshService->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
+    }
+  }
+  else
+  {
+    MeshService->MarkDirtyPriority(
+        coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    // MarkDirtyPriority routes an existing drawable mesh into RemeshQ. Give
+    // this newly-created visible repair the same lane priority as a requeued
+    // target; if an active build owns it, DirtySet carries that priority into
+    // the deferred RemeshAfterApply ticket.
+    if (MeshService->HasDrawableGreedyMesh(coord))
+    {
+      (void)MeshService->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
+    }
+  }
+}
+
+int UWorld::AdmitUnfinishedVisualDemand(int max_n)
+{
+  // Avoid retrying an unpublished slice every frame after an actual attempt.
+  constexpr double kUnownedGeometryOwnerRetryCooldownMs = 2000.0;
+  constexpr double kUnownedGeometryDeniedRetryCooldownMs = 250.0;
+  if (max_n <= 0 || !MeshService)
+  {
+    return 0;
+  }
+  const auto &raw_keys = UnfinishedVisualCache.unfinished_keys;
+  if (raw_keys.empty() && PendingLightBeforeMesh.empty())
+  {
+    return 0;
+  }
+  // A39 P2: focus-near first + CapDirtyAdmitUnderThrash (not Kick).
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_g = UChunkManager::WorldToChunk(focus_block);
+  std::vector<uint64_t> keys(raw_keys.begin(), raw_keys.end());
+  std::sort(keys.begin(), keys.end(), [&](uint64_t a, uint64_t b) {
+    const int ax = static_cast<int>(static_cast<uint32_t>(a >> 32));
+    const int az = static_cast<int>(static_cast<uint32_t>(a));
+    const int bx = static_cast<int>(static_cast<uint32_t>(b >> 32));
+    const int bz = static_cast<int>(static_cast<uint32_t>(b));
+    const int da =
+        (std::max)(std::abs(ax - focus_g.x), std::abs(az - focus_g.z));
+    const int db =
+        (std::max)(std::abs(bx - focus_g.x), std::abs(bz - focus_g.z));
+    if (da != db)
+    {
+      return da < db;
+    }
+    return a < b;
+  });
+  static uint64_t s_last_dirty_dropped_watermark = 0;
+  const uint64_t dropped_now = GetPhysicsTelemetry().DirtyDropped;
+  const int dropped_recent = static_cast<int>(std::min<uint64_t>(
+      100000ull, dropped_now - s_last_dirty_dropped_watermark));
+  s_last_dirty_dropped_watermark = dropped_now;
+  const int unfinished = static_cast<int>(keys.size());
+  const int base =
+      (std::min)(64, (std::max)(max_n, (std::max)(8, unfinished / 2)));
+  const int budget = CapDirtyAdmitUnderThrash(
+      base, GetPhysicsTelemetry().VisibleBlackFullyDarkRepairN, dropped_recent,
+      /*dropped_soft_cap=*/800);
+  // A bounded visible relight admission may evict far work. Protect only the
+  // immediate near-FOV ring; protecting the wider lit ring also protected
+  // farther candidates that should yield their FIFO slots to nearer holes.
+  std::vector<glm::ivec2> protected_visible_columns;
+  protected_visible_columns.reserve(keys.size());
+  for (const uint64_t key : keys)
+  {
+    const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+    const int cz = static_cast<int>(static_cast<uint32_t>(key));
+    const int horiz =
+        (std::max)(std::abs(cx - focus_g.x), std::abs(cz - focus_g.z));
+    if (horiz <= kVisualStageNearFovHoriz)
+    {
+      protected_visible_columns.emplace_back(cx, cz);
+    }
+  }
+  std::unordered_set<glm::ivec2, IVec2Hash>
+      first_mesh_visible_relight_columns;
+  constexpr size_t kFirstMeshVisibleRelightLimit = 8;
+  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const double demand_now_ms = VisualObligationNowMs();
+  const auto has_deferred_visible_relight = [&](glm::ivec2 block_key) {
+    return Persistence &&
+           Persistence->GetTerrainColumnRelightQueueInfo(block_key)
+               .deferred_visible;
+  };
+  const auto has_live_slice_owner = [&](glm::ivec3 coord) {
+    const glm::ivec2 column(coord.x, coord.z);
+    const glm::ivec2 block_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
+    const bool mesh_in_flight =
+        MeshService->IsRemeshAfterApplyPending(coord) ||
+        MeshService->HasInflightMeshBuild(coord) ||
+        MeshService->IsGpuExtractInFlight(coord) ||
+        MeshService->IsPendingGpuApply(coord);
+    // PendingLightBeforeMesh is debt state, not an executable owner. Treating
+    // an orphaned debt as live work skipped the defer branch forever and left
+    // FirstMesh Dirty queued while no relight existed to clear the debt.
+    const bool relight_owned = IsAsyncRelightColumnInFlight(column) ||
+                               (Persistence && Persistence->IsTerrainColumnRelightQueued(
+                                                   block_key)) ||
+                               has_deferred_visible_relight(block_key);
+    return mesh_in_flight || relight_owned;
+  };
+  const auto has_slice_work_owner = [&](glm::ivec3 coord) {
+    return MeshService->IsChunkMeshDirty(coord) ||
+           has_live_slice_owner(coord);
+  };
+  const auto mark_slice_dirty_without_reordering_first_mesh =
+      [&](glm::ivec3 coord) {
+        int32_t queue_index = -1;
+        int32_t queue_size = 0;
+        // This admission pass revisits the same unresolved census every frame.
+        // Re-promoting its already queued FirstMesh item resets its queue age
+        // and lets a later batch of repeated demands rotate ahead of older
+        // visible holes. Keep those existing owners in place; new work and
+        // remesh-to-first-mesh promotions still use the normal priority path.
+        if (MeshService->GetCache().GetDirtyQueueTrace(
+                coord, queue_index, queue_size) == 1)
+        {
+          return;
+        }
+        EnsureVisualRepairDirtyPriority(coord);
+      };
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  std::unordered_map<uint64_t, int> outer_reserved_target_cy;
+  std::unordered_map<uint64_t, bool> outer_reserved_geometry_debt;
+  std::unordered_map<uint64_t, uint8_t> outer_relight_admission_results;
+  std::vector<uint64_t> outer_reserved_keys;
+  size_t outer_candidate_count = 0;
+  size_t outer_light_candidate_count = 0;
+  size_t outer_geometry_candidate_count = 0;
+  size_t outer_selected_light_count = 0;
+  size_t outer_selected_geometry_count = 0;
+  size_t outer_reserved_slots = 0;
+  if (budget > 0)
+  {
+    glm::vec2 forward = GetLastMovementDirXz();
+    if (GetLastMovementSpeed() <=
+            ProceduralTemplate.MovementPrefetchThreshold ||
+        glm::length(forward) <= 0.01f)
+    {
+      if (const auto camera = GetCurrentUserCamera())
+      {
+        const glm::vec3 front = camera->GetFront();
+        forward = glm::vec2(front.x, front.z);
+      }
+    }
+    const float forward_len = glm::length(forward);
+    if (forward_len > 0.01f)
+    {
+      forward /= forward_len;
+      const int approach_ring =
+          kVisualStageFirstMeshRelightForwardHoriz;
+      const int pending_light_ring_min =
+          kVisualStageFirstMeshRelightApproachHoriz;
+      const int geometry_debt_ring_min =
+          kVisualStageFirstMeshRelightApproachHoriz;
+      const int camera_band_min = std::max(0, focus_block.y - CHUNK_SIZE);
+      const int camera_band_max =
+          std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
+      const int camera_cy_min =
+          std::max(0, FloorDiv(camera_band_min, CHUNK_SIZE));
+      const int camera_cy_max =
+          std::min(cy1, FloorDiv(camera_band_max, CHUNK_SIZE));
+      struct OuterCandidate
+      {
+        uint64_t key{0};
+        int cy{-1};
+        float forward_score{0.0f};
+        float forward_distance{0.0f};
+        bool settled_geometry_debt{false};
+      };
+      std::vector<OuterCandidate> candidates;
+      std::unordered_set<uint64_t> candidate_columns;
+      candidate_columns.reserve(64);
+      // The unfinished visual cache is intentionally limited to the lit
+      // drawable work radius (currently h4). Discover forward relight debt
+      // from its pending-light owner starting at h5, the ordinary approach
+      // ring whose global FIFO admissions can be saturated.
+      if (Persistence && RequiresLightingLitGate())
+      {
+        for (const auto &pending_entry : PendingLightBeforeMesh)
+        {
+          const glm::ivec2 column = pending_entry.first;
+          const int cx = column.x;
+          const int cz = column.y;
+          const int dx = cx - focus_g.x;
+          const int dz = cz - focus_g.z;
+          const int horiz = (std::max)(std::abs(dx), std::abs(dz));
+          if (horiz < pending_light_ring_min || horiz > approach_ring)
+          {
+            continue;
+          }
+          const glm::vec2 to_column(static_cast<float>(dx),
+                                    static_cast<float>(dz));
+          const float distance = glm::length(to_column);
+          if (distance <= 0.01f)
+          {
+            continue;
+          }
+          const float forward_score = glm::dot(to_column / distance, forward);
+          if (forward_score < 0.5f)
+          {
+            continue;
+          }
+          const glm::ivec2 block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
+          if (Persistence->IsTerrainColumnRelightQueued(block_key) ||
+              IsAsyncRelightColumnInFlight(column))
+          {
+            continue;
+          }
+
+          int target_cy = -1;
+          int best_vertical_distance = max_y + CHUNK_SIZE;
+          for (int cy = camera_cy_min; cy <= camera_cy_max; ++cy)
+          {
+            const glm::ivec3 coord(cx, cy, cz);
+            const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+            if (!chunk || chunk->GetNonAirCount() <= 0 ||
+                MeshService->IsPendingGpuApply(coord) ||
+                MeshService->HasInflightMeshBuild(coord) ||
+                (RequiresLightingLitGate() &&
+                 HasCurrentChunkSliceLightSettlement(coord)))
+            {
+              continue;
+            }
+            // A retained drawable is not proof that pending light is
+            // satisfied. The exact settled-light check above owns this gate;
+            // keep stale drawables eligible for their relight successor.
+            const int slice_min_y = cy * CHUNK_SIZE;
+            const int slice_max_y =
+                std::min(max_y, slice_min_y + CHUNK_SIZE - 1);
+            if (slice_max_y < pending_entry.second.min_y ||
+                slice_min_y > pending_entry.second.max_y)
+            {
+              continue;
+            }
+            const int vertical_distance =
+                focus_block.y < slice_min_y
+                    ? slice_min_y - focus_block.y
+                    : (focus_block.y > slice_max_y
+                           ? focus_block.y - slice_max_y
+                           : 0);
+            if (vertical_distance < best_vertical_distance)
+            {
+              target_cy = cy;
+              best_vertical_distance = vertical_distance;
+            }
+          }
+          if (target_cy >= 0)
+          {
+            const uint64_t key = PackUnfinishedColKey(cx, cz);
+            if (candidate_columns.insert(key).second)
+            {
+              const float forward_distance =
+                  glm::dot(to_column, forward);
+              candidates.push_back(
+                  {key, target_cy, forward_score, forward_distance, false});
+            }
+          }
+        }
+      }
+
+      // Settled but unpublished geometry is a different debt source from
+      // PendingLightBeforeMesh. The h4 unfinished cache does not enumerate
+      // it at h5–h7, and h5 still relies on the saturated global Dirty-admit
+      // pool, so inspect the full approach-to-forward band in the resident
+      // camera sector and retain the nearest slice per column.
+      for (int dz = -approach_ring; dz <= approach_ring; ++dz)
+      {
+        for (int dx = -approach_ring; dx <= approach_ring; ++dx)
+        {
+          const int horiz = (std::max)(std::abs(dx), std::abs(dz));
+          if (horiz < geometry_debt_ring_min || horiz > approach_ring)
+          {
+            continue;
+          }
+          const glm::vec2 to_column(static_cast<float>(dx),
+                                    static_cast<float>(dz));
+          const float distance = glm::length(to_column);
+          if (distance <= 0.01f)
+          {
+            continue;
+          }
+          const float forward_score = glm::dot(to_column / distance, forward);
+          if (forward_score < 0.5f)
+          {
+            continue;
+          }
+          const int cx = focus_g.x + dx;
+          const int cz = focus_g.z + dz;
+          const uint64_t key = PackUnfinishedColKey(cx, cz);
+          if (candidate_columns.count(key) != 0)
+          {
+            continue;
+          }
+
+          int target_cy = -1;
+          int best_vertical_distance = max_y + CHUNK_SIZE;
+          for (int cy = camera_cy_min; cy <= camera_cy_max; ++cy)
+          {
+            const glm::ivec3 coord(cx, cy, cz);
+            const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+            if (!chunk || chunk->GetNonAirCount() <= 0 ||
+                has_slice_work_owner(coord) ||
+                MeshService->IsPendingGpuApply(coord) ||
+                MeshService->HasInflightMeshBuild(coord) ||
+                MeshService->IsGpuExtractInFlight(coord) ||
+                MeshService->IsRemeshAfterApplyPending(coord) ||
+                (RequiresLightingLitGate() &&
+                 !HasCurrentChunkSliceLightSettlement(coord)))
+            {
+              continue;
+            }
+            const uint64_t desired_geom =
+                MeshService->GetChunkMeshRevision(coord);
+            const MeshPublishRevs published =
+                MeshService->GetCache().GetMeshPublishRevs(coord);
+            if (desired_geom == 0 || desired_geom <= published.geom_rev)
+            {
+              continue;
+            }
+            const int slice_min_y = cy * CHUNK_SIZE;
+            const int slice_max_y =
+                std::min(max_y, slice_min_y + CHUNK_SIZE - 1);
+            const int vertical_distance =
+                focus_block.y < slice_min_y
+                    ? slice_min_y - focus_block.y
+                    : (focus_block.y > slice_max_y
+                           ? focus_block.y - slice_max_y
+                           : 0);
+            if (vertical_distance < best_vertical_distance)
+            {
+              target_cy = cy;
+              best_vertical_distance = vertical_distance;
+            }
+          }
+          if (target_cy >= 0)
+          {
+            candidate_columns.insert(key);
+            const float forward_distance = glm::dot(to_column, forward);
+            candidates.push_back(
+                {key, target_cy, forward_score, forward_distance, true});
+          }
+        }
+      }
+      std::sort(candidates.begin(), candidates.end(),
+                [](const OuterCandidate &a, const OuterCandidate &b) {
+                  // Spend scarce outer slots on the nearest approaching
+                  // columns first. With angle-only ranking, equal-direction
+                  // candidates fell through to packed-key order, which put
+                  // farther h6-h7 work ahead of the h5 visual frontier.
+                  if (a.forward_distance != b.forward_distance)
+                  {
+                    return a.forward_distance < b.forward_distance;
+                  }
+                  if (a.forward_score != b.forward_score)
+                  {
+                    return a.forward_score > b.forward_score;
+                  }
+                  if (a.settled_geometry_debt != b.settled_geometry_debt)
+                  {
+                    return a.settled_geometry_debt;
+                  }
+                  return a.key < b.key;
+                });
+      outer_candidate_count = candidates.size();
+      for (const OuterCandidate &candidate : candidates)
+      {
+        if (candidate.settled_geometry_debt)
+        {
+          ++outer_geometry_candidate_count;
+        }
+        else
+        {
+          ++outer_light_candidate_count;
+        }
+      }
+
+      // Reserve at most two slots within this frame's existing admission
+      // budget. Guarantee the nearest eligible light-debt candidate one slot
+      // when present; use the remaining slot(s) for nearest forward work.
+      const size_t outer_slots = std::min<size_t>(
+          2, static_cast<size_t>(std::max(0, budget)));
+      const size_t budget_slots =
+          static_cast<size_t>(std::max(0, budget));
+      const size_t insert_at = budget_slots > outer_slots
+                                   ? std::min(keys.size(),
+                                              budget_slots - outer_slots)
+                                   : 0;
+      std::vector<size_t> selected_candidate_indices;
+      selected_candidate_indices.reserve(outer_slots);
+      if (outer_slots > 0)
+      {
+        const auto nearest_light =
+            std::find_if(candidates.begin(), candidates.end(),
+                         [](const OuterCandidate &candidate) {
+                           return !candidate.settled_geometry_debt;
+                         });
+        if (nearest_light != candidates.end())
+        {
+          selected_candidate_indices.push_back(static_cast<size_t>(
+              std::distance(candidates.begin(), nearest_light)));
+        }
+      }
+      for (size_t i = 0;
+           i < candidates.size() &&
+           selected_candidate_indices.size() < outer_slots;
+           ++i)
+      {
+        if (std::find(selected_candidate_indices.begin(),
+                      selected_candidate_indices.end(), i) ==
+            selected_candidate_indices.end())
+        {
+          selected_candidate_indices.push_back(i);
+        }
+      }
+      size_t inserted = 0;
+      for (const size_t candidate_index : selected_candidate_indices)
+      {
+        const OuterCandidate &candidate = candidates[candidate_index];
+        const auto key_it =
+            std::find(keys.begin(), keys.end(), candidate.key);
+        if (key_it != keys.end())
+        {
+          keys.erase(key_it);
+        }
+        const size_t position = std::min(insert_at + inserted, keys.size());
+        keys.insert(keys.begin() + static_cast<std::ptrdiff_t>(position),
+                    candidate.key);
+        outer_reserved_target_cy[candidate.key] = candidate.cy;
+        outer_reserved_geometry_debt[candidate.key] =
+            candidate.settled_geometry_debt;
+        outer_reserved_keys.push_back(candidate.key);
+        if (candidate.settled_geometry_debt)
+        {
+          ++outer_selected_geometry_count;
+        }
+        else
+        {
+          ++outer_selected_light_count;
+        }
+        ++inserted;
+      }
+      outer_reserved_slots = inserted;
+    }
+  }
+  int admitted = 0;
+  size_t outer_reserved_admissions = 0;
+  const int ordinary_admission_limit =
+      std::max(0, budget - static_cast<int>(outer_reserved_slots));
+  for (uint64_t key : keys)
+  {
+    if (admitted >= budget)
+    {
+      break;
+    }
+    const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+    const int cz = static_cast<int>(static_cast<uint32_t>(key));
+    const int col_horiz =
+        (std::max)(std::abs(cx - focus_g.x), std::abs(cz - focus_g.z));
+    const auto outer_target = outer_reserved_target_cy.find(key);
+    const bool outer_reserved_column =
+        outer_target != outer_reserved_target_cy.end();
+    if (!outer_reserved_column && admitted >= ordinary_admission_limit)
+    {
+      continue;
+    }
+    const bool within_first_mesh_relight_horizon =
+        col_horiz <= kVisualStageFirstMeshRelightApproachHoriz ||
+        outer_reserved_column;
+    const int y_cap = (col_horiz <= 2) ? 2 : 1;
+    // Rank Y by |cy-focus| then prefer unlit / missing mesh.
+    std::vector<int> ys;
+    ys.reserve(static_cast<size_t>(cy1 + 1));
+    for (int cy = 0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(cx, cy, cz);
+      if (!BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        continue;
+      }
+      ys.push_back(cy);
+    }
+    std::sort(ys.begin(), ys.end(), [&](int a, int b) {
+      if (outer_reserved_column)
+      {
+        if (a == outer_target->second)
+        {
+          return b != outer_target->second;
+        }
+        if (b == outer_target->second)
+        {
+          return false;
+        }
+      }
+      return std::abs(a - focus_g.y) < std::abs(b - focus_g.y);
+    });
+    int y_taken = 0;
+    for (int cy : ys)
+    {
+      if (admitted >= (outer_reserved_column ? budget
+                                             : ordinary_admission_limit) ||
+          y_taken >= y_cap)
+      {
+        break;
+      }
+      const glm::ivec3 coord(cx, cy, cz);
+      const bool outer_reserved_slice =
+          outer_reserved_column && cy == outer_target->second;
+      const auto consume_dirty_admit = [&]() {
+        if (MeshService->TryConsumeDirtyAdmit())
+        {
+          return true;
+        }
+        if (outer_reserved_slice &&
+            outer_reserved_admissions < outer_reserved_slots)
+        {
+          ++outer_reserved_admissions;
+          return true;
+        }
+        return false;
+      };
+      const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (!ch)
+      {
+        continue;
+      }
+      demand.BindIdentity(
+          coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+          ch->GetIncarnation());
+      const uint64_t current_mesh_revision =
+          MeshService->GetChunkMeshRevision(coord);
+      const MeshPublishRevs current_published_revs =
+          MeshService->GetCache().GetMeshPublishRevs(coord);
+      const bool unowned_geometry_debt =
+          current_mesh_revision > current_published_revs.geom_rev &&
+          !has_slice_work_owner(coord);
+      const auto note_unowned_geometry_retry_attempt =
+          [&](const char *action) {
+            if (!unowned_geometry_debt)
+            {
+              return;
+            }
+            const bool owner_after = has_slice_work_owner(coord);
+            if (ChunkRenderDemandRecord *rec = demand.Find(coord))
+            {
+              // Keep an admitted owner behind the longer disappearance guard.
+              // Budget denial gets only a short bounded retry delay, so it
+              // cannot hide unpublished geometry for the full owner SLA.
+              rec->last_unowned_geometry_retry_ms = demand_now_ms;
+              rec->unowned_geometry_retry_geom_rev =
+                  MeshService->GetChunkMeshRevision(coord);
+              rec->unowned_geometry_retry_cooldown_ms =
+                  owner_after ? kUnownedGeometryOwnerRetryCooldownMs
+                              : kUnownedGeometryDeniedRetryCooldownMs;
+            }
+            if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+            {
+              const auto &cache = MeshService->GetCache();
+              const ChunkRenderDemandRecord *preview_demand =
+                  demand.Find(coord);
+              const bool drawable =
+                  MeshService->HasDrawableGreedyMesh(coord);
+              const bool provisional_light_preview =
+                  cache.HasProvisionalLightPreview(coord);
+              const uint64_t field_light_rev = ch->GetLightFieldRevision();
+              const uint64_t meshed_light_rev =
+                  cache.GetMeshedLightRevision(coord);
+              int32_t dirty_queue_index = -1;
+              int32_t dirty_queue_size = 0;
+              const uint8_t dirty_queue_kind =
+                  cache.GetDirtyQueueTrace(coord, dirty_queue_index,
+                                           dirty_queue_size);
+              const glm::ivec2 column(coord.x, coord.z);
+              const glm::ivec2 block_key(coord.x * CHUNK_SIZE,
+                                         coord.z * CHUNK_SIZE);
+              const bool mesh_inflight =
+                  MeshService->HasInflightMeshBuild(coord);
+              const bool gpu_extract =
+                  MeshService->IsGpuExtractInFlight(coord);
+              const bool gpu_pending =
+                  MeshService->IsPendingGpuApply(coord);
+              const bool raa = MeshService->IsRemeshAfterApplyPending(coord);
+              const bool capture_pending = cache.HasPendingCaptureWork(coord);
+              const bool async_relight = IsAsyncRelightColumnInFlight(column);
+              const bool persistence_relight =
+                  Persistence && Persistence->IsTerrainColumnRelightQueued(
+                                     block_key);
+              const bool deferred_visible_relight =
+                  has_deferred_visible_relight(block_key);
+              const bool flow_ticket =
+                  GetColumnFlowExecutor().HasRepairTicket(column);
+              const ChunkRenderDemandRecord *retry_demand =
+                  demand.Find(coord);
+              const uint64_t attempt_id =
+                  retry_demand && retry_demand->has_active_attempt
+                      ? retry_demand->active_attempt_id
+                      : 0;
+              const int attempt_stage =
+                  retry_demand && retry_demand->has_active_attempt
+                      ? static_cast<int>(retry_demand->active_stage)
+                      : 0;
+              CubatariumLogInfo(
+                  "RelightAudit",
+                  "unowned geometry debt retry coord=(" +
+                      std::to_string(coord.x) + "," +
+                      std::to_string(coord.y) + "," +
+                      std::to_string(coord.z) + ") focus=(" +
+                      std::to_string(focus_g.x) + "," +
+                      std::to_string(focus_g.z) + ") world_epoch=" +
+                      std::to_string(cache.GetCaptureStore().WorldEpoch()) +
+                      " incarnation=" +
+                      std::to_string(ch->GetIncarnation()) + " action=" +
+                      action +
+                      " owner_after=" +
+                      std::to_string(owner_after) +
+                      " retry_cooldown_ms=" +
+                      std::to_string(owner_after
+                                         ? kUnownedGeometryOwnerRetryCooldownMs
+                                         : kUnownedGeometryDeniedRetryCooldownMs) +
+                      " drawable=" + std::to_string(drawable) +
+                      " provisional_light_preview=" +
+                      std::to_string(provisional_light_preview) +
+                      " desired_geom=" +
+                      std::to_string(current_mesh_revision) +
+                      " published_geom=" +
+                      std::to_string(current_published_revs.geom_rev) +
+                      " field_light_rev=" +
+                      std::to_string(field_light_rev) +
+                      " meshed_light_rev=" +
+                      std::to_string(meshed_light_rev) +
+                      " published_light_rev=" +
+                      std::to_string(current_published_revs.light_rev) +
+                      " settled=" +
+                      std::to_string(preview_demand &&
+                                     preview_demand->has_settled_light) +
+                      ":" + std::to_string(
+                                preview_demand
+                                    ? preview_demand->settled_light_rev
+                                    : 0) +
+                      " dirty_queue=" + std::to_string(dirty_queue_kind) +
+                      ":" + std::to_string(dirty_queue_index) + "/" +
+                      std::to_string(dirty_queue_size) +
+                      " dirty_age_frames=" +
+                      std::to_string(cache.GetDirtyQueueAgeFrames(coord)) +
+                      " inflight=" + std::to_string(mesh_inflight) +
+                      " raa=" + std::to_string(raa) +
+                      " gpu_pending=" + std::to_string(gpu_pending) +
+                      " gpu_extract=" + std::to_string(gpu_extract) +
+                      " capture_pending=" +
+                      std::to_string(capture_pending) +
+                      " relight_async=" + std::to_string(async_relight) +
+                      " relight_persistence=" +
+                      std::to_string(persistence_relight) +
+                      " relight_deferred=" +
+                      std::to_string(deferred_visible_relight) +
+                      " flow_ticket=" + std::to_string(flow_ticket) +
+                      " attempt=" + std::to_string(attempt_id) + ":" +
+                      std::to_string(attempt_stage));
+            }
+          };
+      if (unowned_geometry_debt)
+      {
+        if (ChunkRenderDemandRecord *rec = demand.Find(coord))
+        {
+          const bool same_retry_revision =
+              rec->unowned_geometry_retry_geom_rev == current_mesh_revision;
+          const double retry_cooldown_ms =
+              rec->unowned_geometry_retry_cooldown_ms > 0.0
+                  ? rec->unowned_geometry_retry_cooldown_ms
+                  : kUnownedGeometryOwnerRetryCooldownMs;
+          if (same_retry_revision &&
+              rec->last_unowned_geometry_retry_ms > 0.0 &&
+              demand_now_ms - rec->last_unowned_geometry_retry_ms <
+                  retry_cooldown_ms)
+          {
+            continue;
+          }
+        }
+      }
+      if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
+      {
+        if (rec->has_active_attempt)
+        {
+          const auto st = static_cast<uint8_t>(rec->active_stage);
+          if (st >= static_cast<uint8_t>(JobStage::Admitted) &&
+              st <= static_cast<uint8_t>(JobStage::Uploaded))
+          {
+            // Demand stage alone is not a live owner: earlier paths could
+            // mark Admitted even when MarkDirtyPriority was gated/deduped.
+            // Keep the attempt only while its exact mesh slice or owning
+            // column has a concrete mesh/relight queue owner. Generic
+            // column progress alone does not keep a dead attempt alive.
+            const glm::ivec2 column(coord.x, coord.z);
+            const glm::ivec2 block_key(coord.x * CHUNK_SIZE,
+                                       coord.z * CHUNK_SIZE);
+            const bool mesh_in_flight =
+                MeshService->IsRemeshAfterApplyPending(coord) ||
+                MeshService->HasInflightMeshBuild(coord) ||
+                MeshService->IsGpuExtractInFlight(coord) ||
+                MeshService->IsPendingGpuApply(coord);
+            const bool relight_queued_or_inflight =
+                IsAsyncRelightColumnInFlight(column) ||
+                (Persistence &&
+                 Persistence->IsTerrainColumnRelightQueued(block_key)) ||
+                has_deferred_visible_relight(block_key);
+            const bool deferred_without_light_owner =
+                !mesh_in_flight &&
+                MeshService->GetCache().IsDeferMeshUntilLit(coord) &&
+                !relight_queued_or_inflight;
+            const bool dirty_only =
+                (MeshService->IsChunkMeshDirty(coord) &&
+                 !has_live_slice_owner(coord)) ||
+                deferred_without_light_owner;
+            if (has_slice_work_owner(coord) && !dirty_only)
+            {
+              continue;
+            }
+            const double since_progress_ms =
+                rec->last_progress_ms > 0.0
+                    ? demand_now_ms - rec->last_progress_ms
+                    : (rec->attempt_created_ms > 0.0
+                           ? demand_now_ms - rec->attempt_created_ms
+                           : 0.0);
+            // A queued owner can disappear between admission and execution.
+            // Give ordinary work the existing light-repair SLA to reappear;
+            // a mesh held by defer-until-lit cannot execute and must not delay
+            // recovery when its concrete relight owner is gone. An unpublished
+            // geometry revision with no concrete owner is retried through the
+            // per-slice cooldown above, so cruise flight can recover promptly
+            // without repeatedly reminting work every frame.
+            if (since_progress_ms < kLightRepairSlaMs &&
+                !deferred_without_light_owner && !unowned_geometry_debt)
+            {
+              continue;
+            }
+            (void)demand.NoteInstallResult(
+                coord, InstallResult::CancelledSuperseded,
+                /*published_geom_rev=*/0, /*published_light_rev=*/0,
+                rec->active_attempt_id);
+          }
+        }
+      }
+      // Demand geometry and published geometry are MeshRevisions values, not
+      // Chunk content revisions (the two counters are independent).
+      uint64_t desired_geom = MeshService->GetChunkMeshRevision(coord);
+      uint64_t desired_light = ch->GetLightFieldRevision();
+      // Use the same current-settlement proof as the renderer. A zero-change
+      // relight can settle revision zero; column LitReady is not a reason to
+      // reopen debt for this already-computed slice.
+      const bool slice_light_settled =
+          HasCurrentChunkSliceLightSettlement(coord);
+      const MeshPublishRevs pub_early =
+          MeshService->GetCache().GetMeshPublishRevs(coord);
+      // Do not invent a mismatch when a published mesh already has a source rev.
+      if (desired_geom == 0 && desired_light == 0)
+      {
+        if (pub_early.geom_rev != 0)
+        {
+          desired_geom = pub_early.geom_rev;
+          desired_light = pub_early.light_rev;
+        }
+        else
+        {
+          desired_geom = 1;
+        }
+      }
+      uint64_t desired_coverage = 0;
+      if (const ChunkRenderDemandRecord *existing = demand.Find(coord))
+      {
+        if (existing->face_debt_mask != 0 ||
+            existing->desired_coverage_gen > 0)
+        {
+          desired_coverage =
+              (std::max)(existing->desired_coverage_gen, uint64_t{1});
+        }
+      }
+      const MeshPublishRevs pub =
+          MeshService->GetCache().GetMeshPublishRevs(coord);
+      demand.NotePublishedRevs(coord, pub.geom_rev, pub.light_rev);
+      // A39 P1: desire stays at field light (reachable). RelightOnly owns
+      // FullyDark / mesh-behind — never invent content+1 / pub+1.
+      UChunkMeshCache::LitApplyMeshProbe probe{};
+      MeshService->FillLitApplyMeshProbe(coord, probe);
+      // Any single zero-light face is normal in shaded/cave geometry. Repair
+      // only a wholly unlit drawable or a mesh demonstrably stale against the
+      // current light field.
+      const bool fully_dark = probe.has_drawable && probe.fully_dark;
+      const bool has_dark_surface =
+          probe.has_drawable &&
+          (probe.gpu_has_dark_face ||
+           MeshService->GetCache().ChunkHasFullyDarkFace(coord));
+      const bool stale_dark_faces =
+          has_dark_surface &&
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+      const bool mesh_behind_light =
+          probe.has_drawable && probe.meshed_light_rev != 0 &&
+          desired_light != 0 && probe.meshed_light_rev < desired_light;
+      const bool still_stale =
+          probe.has_drawable && probe.meshed_light_rev != 0 &&
+          desired_light != 0 && probe.meshed_light_rev < desired_light;
+      const bool light_surface_stale = still_stale || stale_dark_faces;
+      const bool open_sky =
+          EnterVisualGateCtrl.WasOpenSkyApplied(glm::ivec2(cx, cz));
+      const bool defer_until_lit =
+          MeshService->GetCache().IsDeferMeshUntilLit(coord);
+      const glm::ivec3 ground(cx, 0, cz);
+      // ColumnEmergeState can advance to Meshing/LitReady before this exact
+      // slice has a settled light proof. Seed lighting for visible first-mesh
+      // work from the slice's publication gate, not the coarse column state.
+      const bool first_mesh_needs_lighting =
+          !probe.has_drawable && ch->GetNonAirCount() > 0 &&
+          RequiresLightingLitGate() &&
+          within_first_mesh_relight_horizon &&
+          !slice_light_settled &&
+          (!IsColumnLitReady(ground) || desired_light == 0);
+      const glm::ivec2 slice_column(cx, cz);
+      const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
+      const auto ensure_slice_relight =
+          [&](bool visible_light_repair_candidate = false) {
+        if (Persistence)
+        {
+          const bool reserved_outer_candidate = outer_reserved_column;
+          const bool use_visible_admission =
+              (reserved_outer_candidate || defer_until_lit ||
+               first_mesh_needs_lighting || visible_light_repair_candidate) &&
+              within_first_mesh_relight_horizon &&
+              (reserved_outer_candidate ||
+               first_mesh_visible_relight_columns.count(slice_column) != 0 ||
+               first_mesh_visible_relight_columns.size() <
+                   kFirstMeshVisibleRelightLimit);
+          if (use_visible_admission)
+          {
+            const bool was_queued =
+                Persistence->IsTerrainColumnRelightQueued(slice_block_key);
+            uint8_t visible_admission_outcome = 0;
+            const bool admitted_visible = Persistence->EnqueueVisibleRelight(
+                slice_block_key.x, slice_block_key.y,
+                cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1, focus_g,
+                outer_reserved_column
+                    ? kVisualStageFirstMeshRelightForwardHoriz
+                    : kVisualStageFirstMeshRelightApproachHoriz,
+                protected_visible_columns,
+                &visible_admission_outcome);
+            if (reserved_outer_candidate)
+            {
+              outer_relight_admission_results[PackUnfinishedColKey(cx, cz)] =
+                  static_cast<uint8_t>(visible_admission_outcome |
+                                       (admitted_visible ? 0x80u : 0u));
+            }
+            if (admitted_visible)
+            {
+              Persistence->NoteVisibleFirstMeshRelight(
+                  slice_block_key, cy * CHUNK_SIZE,
+                  (cy + 1) * CHUNK_SIZE - 1);
+            }
+            if (admitted_visible && !was_queued &&
+                (Persistence->IsTerrainColumnRelightQueued(slice_block_key) ||
+                 has_deferred_visible_relight(slice_block_key)))
+            {
+              first_mesh_visible_relight_columns.insert(slice_column);
+            }
+          }
+          else
+          {
+            Persistence->EnqueueTerrainColumnRelight(
+                cx * CHUNK_SIZE, cz * CHUNK_SIZE, /*priority=*/true,
+                cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1);
+            if (Persistence->IsTerrainColumnRelightQueued(slice_block_key) ||
+                IsAsyncRelightColumnInFlight(slice_column))
+            {
+              Persistence->NoteVisibleFirstMeshRelight(
+                  slice_block_key, cy * CHUNK_SIZE,
+                  (cy + 1) * CHUNK_SIZE - 1);
+            }
+          }
+        }
+        // PendingLightBeforeMesh records debt, not executable work. Treating
+        // the map entry itself as success let a rejected FIFO admission mark
+        // the render-demand attempt as progressing while no relight owner
+        // existed. Keep only concrete persistence, async, or ColumnFlow
+        // relight owners in this check.
+        const auto &flow = GetColumnFlowExecutor().Scheduler();
+        return (Persistence &&
+                Persistence->IsTerrainColumnRelightQueued(slice_block_key)) ||
+               has_deferred_visible_relight(slice_block_key) ||
+               IsAsyncRelightColumnInFlight(slice_column) ||
+               flow.Contains(slice_column, ColumnWorkKind::RelightThenMesh) ||
+               flow.Contains(slice_column, ColumnWorkKind::PromoteRelight);
+      };
+      const bool equal_rev_fd =
+          fully_dark && !still_stale && !mesh_behind_light &&
+          !(probe.has_drawable && probe.meshed_light_rev != 0 &&
+            desired_light != 0 && probe.meshed_light_rev != desired_light);
+      const bool relight_only = fully_dark || stale_dark_faces ||
+                                mesh_behind_light ||
+                                (probe.has_drawable &&
+                                 probe.meshed_light_rev != 0 &&
+                                 desired_light != 0 &&
+                                 probe.meshed_light_rev != desired_light);
+      DemandResult dr =
+          demand.NoteDemand(coord, desired_geom, desired_light,
+                            desired_coverage, demand_now_ms,
+                            MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+                            ch->GetIncarnation());
+      if (defer_until_lit || first_mesh_needs_lighting)
+      {
+        // Lighting owns this visible first-mesh slice. An unsettled slice may
+        // not yet have a PendingLight/defer owner, so create that
+        // debt only after a queue, in-flight relight, or pending-light owner
+        // confirms that real relight work exists.
+        const bool relight_enqueued = ensure_slice_relight();
+        note_unowned_geometry_retry_attempt("defer_relight");
+        if (relight_enqueued && first_mesh_needs_lighting &&
+            !IsPendingLightBeforeMesh(slice_column))
+        {
+          NotePendingLightBeforeMesh(
+              ground, cy * CHUNK_SIZE, (cy + 1) * CHUNK_SIZE - 1,
+              __FUNCTION__);
+        }
+        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+        if (attempt_id != 0 && relight_enqueued)
+        {
+          demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                   demand_now_ms);
+        }
+        if (relight_enqueued)
+        {
+          ++admitted;
+          ++y_taken;
+        }
+        continue;
+      }
+      if (relight_only)
+      {
+        // A41: open_sky equal-rev FD and any concrete stale-light witness
+        // require a bounded LightRepair Dirty attempt. A stale-dark witness
+        // means current world light is already available, so RelightThenMesh
+        // alone can become a ticket without executable light work.
+        if (NeedsOpenSkyEqualRevLightRepair(fully_dark, light_surface_stale,
+                                            open_sky) ||
+            (fully_dark && open_sky && equal_rev_fd) ||
+            (fully_dark && open_sky && light_surface_stale) ||
+            stale_dark_faces)
+        {
+          ColumnRecord &orec =
+              ColumnRecords.GetOrCreate(glm::ivec2(cx, cz));
+          orec.legal_dark_settled = false;
+          orec.visual_obligation = VisualObligation::LightRepair;
+          const bool live_pipeline = LightRepairHasLivePipeline(
+              MeshService->IsRemeshAfterApplyPending(coord),
+              MeshService->IsPendingGpuApply(coord),
+              MeshService->HasInflightMeshBuild(coord));
+          const double now_ms = VisualObligationNowMs();
+          if (ShouldRemintLightRepairDirty(
+                  /*obligation=*/true, live_pipeline, orec.visual_attempt_id,
+                  orec.visual_deadline_ms, now_ms))
+          {
+            const bool dirty_admit_allowed = consume_dirty_admit();
+            if (dirty_admit_allowed || col_horiz <= 4)
+            {
+              MeshService->GetCache().InvalidateMeshCapture(coord);
+              mark_slice_dirty_without_reordering_first_mesh(coord);
+              note_unowned_geometry_retry_attempt("light_repair_mesh");
+              if (has_slice_work_owner(coord))
+              {
+                static uint64_t next_admit_lr = 1;
+                orec.visual_attempt_id = next_admit_lr++;
+                orec.visual_deadline_ms = StampLightRepairDeadlineMs(now_ms);
+                const uint64_t attempt_id =
+                    DemandActiveAttemptId(demand, coord);
+                if (attempt_id != 0)
+                {
+                  demand.NoteStageProgress(coord, JobStage::Admitted,
+                                           attempt_id, demand_now_ms);
+                }
+                ++admitted;
+                ++y_taken;
+                continue;
+              }
+            }
+            else if (stale_dark_faces)
+            {
+              note_unowned_geometry_retry_attempt(
+                  "light_repair_admit_denied");
+            }
+          }
+        }
+        if (stale_dark_faces)
+        {
+          // Do not replace a current-light mesh repair with a relight ticket.
+          // When the SLA/admission gate is closed, leave the obligation for
+          // the next bounded admission pass.
+          continue;
+        }
+        const bool visible_light_repair_candidate =
+            RequiresLightingLitGate() &&
+            col_horiz <= kVisualStageFirstMeshRelightApproachHoriz;
+        const bool relight_enqueued =
+            ensure_slice_relight(visible_light_repair_candidate);
+        note_unowned_geometry_retry_attempt(
+            visible_light_repair_candidate ? "relight_only_visible"
+                                           : "relight_only");
+        const uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+        if (attempt_id != 0 && relight_enqueued)
+        {
+          demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                   demand_now_ms);
+        }
+        if (relight_enqueued)
+        {
+          ++admitted;
+          ++y_taken;
+        }
+        continue;
+      }
+      if (dr == DemandResult::AlreadySatisfied)
+      {
+        if (!MeshService->HasMeshSatisfyingColumnReady(coord))
+        {
+          if (!consume_dirty_admit() && col_horiz > 4)
+          {
+            note_unowned_geometry_retry_attempt("dirty_admit_denied");
+            continue;
+          }
+          mark_slice_dirty_without_reordering_first_mesh(coord);
+          note_unowned_geometry_retry_attempt("already_satisfied_mesh");
+          uint64_t attempt_id = DemandActiveAttemptId(demand, coord);
+          if (attempt_id == 0)
+          {
+            (void)demand.NoteDemand(coord, desired_geom, desired_light,
+                                    desired_coverage, demand_now_ms,
+                                    MeshService->GetCache()
+                                        .GetCaptureStore()
+                                        .WorldEpoch(),
+                                    ch->GetIncarnation());
+            attempt_id = DemandActiveAttemptId(demand, coord);
+          }
+          if (attempt_id != 0 && has_slice_work_owner(coord))
+          {
+            demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                     demand_now_ms);
+          }
+          if (has_slice_work_owner(coord))
+          {
+            ++admitted;
+            ++y_taken;
+          }
+        }
+        continue;
+      }
+      if (!consume_dirty_admit() && col_horiz > 4)
+      {
+        note_unowned_geometry_retry_attempt("dirty_admit_denied");
+        continue;
+      }
+      mark_slice_dirty_without_reordering_first_mesh(coord);
+      note_unowned_geometry_retry_attempt("mesh");
+      uint64_t attempt_id = 0;
+      if (const ChunkRenderDemandRecord *rec = demand.Find(coord))
+      {
+        attempt_id = rec->active_attempt_id;
+      }
+      if (has_slice_work_owner(coord))
+      {
+        demand.NoteStageProgress(coord, JobStage::Admitted, attempt_id,
+                                 demand_now_ms);
+        ++admitted;
+        ++y_taken;
+      }
+    }
+  }
+  if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+  {
+    static auto audit_window_start = std::chrono::steady_clock::now();
+    static uint64_t audit_calls = 0;
+    static uint64_t audit_candidates = 0;
+    static uint64_t audit_light_candidates = 0;
+    static uint64_t audit_geometry_candidates = 0;
+    static uint64_t audit_selected = 0;
+    static uint64_t audit_selected_light = 0;
+    static uint64_t audit_selected_geometry = 0;
+    static uint64_t audit_relight_attempts = 0;
+    static uint64_t audit_relight_accepted = 0;
+    static std::string audit_last_selected;
+    ++audit_calls;
+    audit_candidates += outer_candidate_count;
+    audit_light_candidates += outer_light_candidate_count;
+    audit_geometry_candidates += outer_geometry_candidate_count;
+    audit_selected += outer_reserved_keys.size();
+    audit_selected_light += outer_selected_light_count;
+    audit_selected_geometry += outer_selected_geometry_count;
+    audit_relight_attempts += outer_relight_admission_results.size();
+    for (const auto &entry : outer_relight_admission_results)
+    {
+      audit_relight_accepted += (entry.second & 0x80u) != 0 ? 1u : 0u;
+    }
+    if (!outer_reserved_keys.empty())
+    {
+      audit_last_selected.clear();
+      for (const uint64_t key : outer_reserved_keys)
+      {
+        const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+        const int cz = static_cast<int>(static_cast<uint32_t>(key));
+        const auto target = outer_reserved_target_cy.find(key);
+        const auto geometry = outer_reserved_geometry_debt.find(key);
+        const auto result = outer_relight_admission_results.find(key);
+        if (!audit_last_selected.empty())
+        {
+          audit_last_selected += ";";
+        }
+        audit_last_selected += "(" + std::to_string(cx) + "," +
+                               std::to_string(cz) + ",cy=" +
+                               (target == outer_reserved_target_cy.end()
+                                    ? std::string("?")
+                                    : std::to_string(target->second)) +
+                               ",debt=" +
+                               (geometry != outer_reserved_geometry_debt.end() &&
+                                        geometry->second
+                                    ? std::string("geometry")
+                                    : std::string("light")) +
+                               ",admit=";
+        if (result == outer_relight_admission_results.end())
+        {
+          audit_last_selected += "not_called";
+        }
+        else
+        {
+          audit_last_selected +=
+              ((result->second & 0x80u) != 0 ? "accepted:" : "rejected:") +
+              std::to_string(result->second & 0x7fu);
+        }
+        audit_last_selected += ")";
+      }
+    }
+    const auto audit_now = std::chrono::steady_clock::now();
+    if (audit_now - audit_window_start >= std::chrono::seconds(1))
+    {
+      CubatariumLogInfo(
+          "RelightAudit",
+          "forward_relight_admission focus=(" + std::to_string(focus_g.x) +
+              "," + std::to_string(focus_g.z) + ") calls=" +
+              std::to_string(audit_calls) + " candidate_rows=" +
+              std::to_string(audit_candidates) + " light_candidates=" +
+              std::to_string(audit_light_candidates) +
+              " geometry_candidates=" +
+              std::to_string(audit_geometry_candidates) + " selected=" +
+              std::to_string(audit_selected) + " selected_light=" +
+              std::to_string(audit_selected_light) + " selected_geometry=" +
+              std::to_string(audit_selected_geometry) + " visible_attempts=" +
+              std::to_string(audit_relight_attempts) + " visible_accepted=" +
+              std::to_string(audit_relight_accepted) + " last_selected=[" +
+              audit_last_selected + "]");
+      audit_window_start = audit_now;
+      audit_calls = 0;
+      audit_candidates = 0;
+      audit_light_candidates = 0;
+      audit_geometry_candidates = 0;
+      audit_selected = 0;
+      audit_selected_light = 0;
+      audit_selected_geometry = 0;
+      audit_relight_attempts = 0;
+      audit_relight_accepted = 0;
+      audit_last_selected.clear();
+    }
+  }
+  return admitted;
+}
+
+void UWorld::KickUnfinishedVisualRemesh(int max_n)
+{
+  // A37 H6: symptom Kick off by default — use AdmitUnfinishedVisualDemand.
+  if (const char *env = std::getenv("CUBA_KICK_UNFINISHED"))
+  {
+    if (!(env[0] == '1' || env[0] == 't' || env[0] == 'T'))
+    {
+      return;
+    }
+  }
+  else
+  {
+    return;
+  }
+  if (max_n <= 0 || !MeshService)
+  {
+    return;
+  }
+  if (MeshService->GetDirtyCount() > 0)
+  {
+    return; // work already queued — not a starve case
+  }
+  const auto &keys = UnfinishedVisualCache.unfinished_keys;
+  if (keys.empty())
+  {
+    return;
+  }
+  int marked = 0;
+  for (uint64_t key : keys)
+  {
+    if (marked >= max_n)
+    {
+      break;
+    }
+    const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+    const int cz = static_cast<int>(static_cast<uint32_t>(key));
+    EnsureVisualRepairDirtyPriority(glm::ivec3(cx, 0, cz));
+    ++marked;
+  }
+}
+
+void UWorld::InvalidateUnfinishedVisualCache() const
+{
+  UnfinishedVisualCache.valid = false;
+  UnfinishedVisualCache.dirty_cols.clear();
+  UnfinishedVisualCache.unfinished_keys.clear();
+  UnfinishedVisualCache.readiness_by_column.clear();
+  UnfinishedVisualCache.readiness = {};
+  UnfinishedVisualCache.count = 0;
+  LastUnfinishedVisualSampleValid = false;
+  // Phase 5.7R: do not InvalidateVisibleBlackFocusSample here — unfinished
+  // remesh thrash was forcing VB cd→1 every frame. VB dirty only on dark/drawable
+  // transitions (SetVisibleBlackFocusSample / explicit Invalidate).
+}
+
+void UWorld::NoteUnfinishedColumnDirty(glm::ivec2 col) const
+{
+  if (!UnfinishedVisualCache.valid)
+  {
+    return;
+  }
+  auto &dirty = UnfinishedVisualCache.dirty_cols;
+  constexpr size_t kDirtyCap = 96;
+  for (const glm::ivec2 &existing : dirty)
+  {
+    if (existing.x == col.x && existing.y == col.y)
+    {
+      return;
+    }
+  }
+  if (dirty.size() >= kDirtyCap)
+  {
+    // Ring-buffer: drop oldest, keep cache.valid (no full O(R²) next frame).
+    dirty.erase(dirty.begin());
+    ++UnfinishedVisualCache.prep_overflow_n;
+  }
+  dirty.push_back(col);
+}
+
+void UWorld::HarvestUnfinishedPrepTelem(PhysicsTelemetry &tele) const
+{
+  tele.PrepUnfinishedCallsN = UnfinishedVisualCache.prep_calls_n;
+  tele.PrepUnfinishedFullN = UnfinishedVisualCache.prep_full_n;
+  tele.PrepUnfinishedIncrementalN = UnfinishedVisualCache.prep_incremental_n;
+  tele.UnfinishedCacheHitN = UnfinishedVisualCache.prep_hit_n;
+  tele.UnfinishedCacheOverflowN = UnfinishedVisualCache.prep_overflow_n;
+  UnfinishedVisualCache.prep_calls_n = 0;
+  UnfinishedVisualCache.prep_full_n = 0;
+  UnfinishedVisualCache.prep_incremental_n = 0;
+  UnfinishedVisualCache.prep_hit_n = 0;
+  UnfinishedVisualCache.prep_overflow_n = 0;
+}
+
+int UWorld::GetLastUnfinishedVisualSample(bool *out_valid) const
+{
+  if (out_valid)
+  {
+    *out_valid = LastUnfinishedVisualSampleValid;
+  }
+  return LastUnfinishedVisualSample;
+}
+
+void UWorld::SetLastUnfinishedVisualSample(int count) const
+{
+  LastUnfinishedVisualSample = count;
+  LastUnfinishedVisualSampleValid = true;
+}
+
+void UWorld::SetVisibleBlackFocusSample(
+    const VisibleBlackFocusSample &sample) const
+{
+  LastVisibleBlackFocusSample = sample;
+  VisibleBlackFocusSampleDirty = false;
+}
+
+UWorld::VisibleBlackFocusSample UWorld::GetVisibleBlackFocusSample() const
+{
+  return LastVisibleBlackFocusSample;
+}
+
+void UWorld::InvalidateVisibleBlackFocusSample() const
+{
+  VisibleBlackFocusSampleDirty = true;
+}
+
+bool UWorld::ConsumeVisibleBlackFocusSampleDirty() const
+{
+  const bool dirty = VisibleBlackFocusSampleDirty;
+  VisibleBlackFocusSampleDirty = false;
+  return dirty;
+}
+
+const UWorld::FocusRingVisualSample &UWorld::GetFocusRingVisualSample() const
+{
+  return LastFocusRingVisualSample;
+}
+
+void UWorld::SetFocusRingVisualSample(const FocusRingVisualSample &sample) const
+{
+  LastFocusRingVisualSample = sample;
 }
 
 void UWorld::CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
@@ -2149,8 +5565,8 @@ void UWorld::CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
     {
       const glm::ivec3 ground(focus_ground_chunk.x + dx, 0,
                               focus_ground_chunk.z + dz);
-      if (!IsTerrainChunkComplete(BlockWorld, ground,
-                                  ProceduralTemplate.MaxHeight))
+      // R4.6.1: TerrainCompleteCache — Facing is O(R²) and must not raw-scan.
+      if (!IsTerrainColumnCompleteFast(ground))
       {
         continue;
       }
@@ -2221,10 +5637,10 @@ bool UWorld::HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
 int UWorld::DrainFocusVisualWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
                                  int clear_pending_budget)
 {
-  int drained = 0;
-  drained += PromotePendingLightRelightsNear(focus_ground_horiz, radius_chunks);
-  drained += ClearPendingLightAfterMeshCommitted(clear_pending_budget);
-  return drained;
+  (void)focus_ground_horiz;
+  (void)radius_chunks;
+  // Promote is ColumnFlow-only; this helper only clears committed PendingLight.
+  return ClearPendingLightAfterMeshCommitted(clear_pending_budget);
 }
 
 void UWorld::DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns)
@@ -2235,10 +5651,12 @@ void UWorld::DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns)
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
   Persistence->DrainRelightQueues(*this, max_player_jobs, max_bg_columns);
-  PhysicsTelemetryData.RelightDrainMs +=
+  const double capture_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - t0)
           .count();
+  PhysicsTelemetryData.RelightCaptureMs += capture_ms;
+  PhysicsTelemetryData.RelightDrainMs += capture_ms;
 }
 
 bool UWorld::CanSeedSkylightAtCommit(glm::ivec3 ground) const
@@ -2290,7 +5708,22 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
   }
   if (LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
   {
-    return 0;
+    // Era26 I-O1: under miss+void/VB allow capped drain while moving
+    // (ocean lateral Relight; idle-only gate starved fifo on 214325).
+    // Era36 B3: also drain on land when pending_light_focus is high.
+    const int pending_focus_n =
+        CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks);
+    if (!ShouldDrainPendingLightUnderMissMoving(
+            PhysicsTelemetryData.FocusMissingMesh != 0, /*moving=*/true,
+            PhysicsTelemetryData.DarkFaceVoidNearN,
+            PhysicsTelemetryData.VisibleBlackFocusN) &&
+        !ShouldDrainPendingLightUnderOceanVoid(
+            /*moving=*/true, PhysicsTelemetryData.DarkFaceVoidNearN,
+            PhysicsTelemetryData.VisibleBlackFocusN) &&
+        !ShouldDrainPendingLightLandMoving(pending_focus_n))
+    {
+      return 0;
+    }
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
@@ -2418,7 +5851,20 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
   }
   if (LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
   {
-    return 0;
+    // Era36 B3: also drain on land when pending_light_focus is high.
+    const int sync_pending_n =
+        CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks);
+    if (!ShouldDrainPendingLightUnderMissMoving(
+            PhysicsTelemetryData.FocusMissingMesh != 0, /*moving=*/true,
+            PhysicsTelemetryData.DarkFaceVoidNearN,
+            PhysicsTelemetryData.VisibleBlackFocusN) &&
+        !ShouldDrainPendingLightUnderOceanVoid(
+            /*moving=*/true, PhysicsTelemetryData.DarkFaceVoidNearN,
+            PhysicsTelemetryData.VisibleBlackFocusN) &&
+        !ShouldDrainPendingLightLandMoving(sync_pending_n))
+    {
+      return 0;
+    }
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
@@ -2623,22 +6069,24 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
     {
       const int dist = std::max(std::abs(dx), std::abs(dz));
-      // Include horiz 1–2 (edge/near ring). Only skip camera column (dist 0)
-      // so underfeet dark preview is not force-ticketed every frame.
-      if (dist < 1)
-      {
-        continue;
-      }
+      // Era16: include underfeet (dist 0) — VisibleBlack Hide⇒Ticket DoD.
       const glm::ivec2 key(focus_ground_horiz.x + dx, focus_ground_horiz.z + dz);
       if (IsColumnStickyRemesh(key))
       {
         continue; // sticky path already tickets RemeshSeam
       }
+      // Era17: skip columns with live Flow Contains OR real repair progress
+      // (Dirty/Inflight/PendingLight). Phantom live-window removed.
+      if (GetColumnFlowExecutor().HasRepairTicket(key) ||
+          ColumnHasRepairProgress(key))
+      {
+        continue;
+      }
       bool stale = false;
       for (int cy = 0; cy <= max_cy; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
-        if (MeshService->HasGreedyMesh(coord) &&
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
             MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
         {
           stale = true;
@@ -2660,6 +6108,420 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
     out.push_back(entries[static_cast<size_t>(i)].key);
   }
   return static_cast<int>(out.size());
+}
+
+int UWorld::CollectDrawGateRelightTargets(
+    glm::ivec3 focus_ground_chunk, int radius_chunks,
+    std::vector<DrawGateRelightTarget> &out, int max_cols) const
+{
+  out.clear();
+  if (!MeshService || radius_chunks < 0 || max_cols <= 0)
+  {
+    return 0;
+  }
+
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const uint64_t max_age_frames = 2;
+  const UChunkMeshCache &cache = MeshService->GetCache();
+  const uint32_t recent_rejections_n = static_cast<uint32_t>(
+      std::min<size_t>(RecentRendererDrawGateRejections.size(), UINT32_MAX));
+  uint32_t recent_age_n = 0;
+  uint32_t in_radius_n = 0;
+  uint32_t drawable_n = 0;
+  uint32_t repairable_n = 0;
+  struct Candidate
+  {
+    DrawGateRelightTarget target{};
+    int horizontal_distance{0};
+    int vertical_distance{0};
+    uint64_t observed_epoch{0};
+  };
+  std::unordered_map<glm::ivec2, Candidate, IVec2Hash> candidates;
+  std::unordered_map<glm::ivec2, Candidate, IVec2Hash>
+      settled_mesh_candidates;
+  candidates.reserve(RecentRendererDrawGateRejections.size());
+  settled_mesh_candidates.reserve(RecentRendererDrawGateRejections.size());
+
+  // Use the actual rejected draw refs from the previous render frame. A broad
+  // radial scan selected unrelated dark meshes and could flood relight/GPU
+  // work without repairing the geometry the player was looking at.
+  for (const auto &[coord, observed_epoch] : RecentRendererDrawGateRejections)
+  {
+    if (StreamingFrameEpoch < observed_epoch ||
+        StreamingFrameEpoch - observed_epoch > max_age_frames)
+    {
+      continue;
+    }
+    ++recent_age_n;
+    const int horiz = std::max(std::abs(coord.x - focus_ground_chunk.x),
+                               std::abs(coord.z - focus_ground_chunk.z));
+    if (horiz > radius_chunks || coord.y < 0 ||
+        coord.y * CHUNK_SIZE > max_y)
+    {
+      continue;
+    }
+    ++in_radius_n;
+    if (!MeshService->HasDrawableGreedyMesh(coord))
+    {
+      continue;
+    }
+    ++drawable_n;
+
+    UChunkMeshCache::StaleDarkWitness witness{};
+    const bool stale_light =
+        cache.ChunkHasStaleDarkFaces(coord, BlockWorld, &witness);
+    const bool fully_dark = cache.ChunkHasFullyDarkFace(coord) &&
+                            !MeshService->ChunkHasLitDrawableFace(coord);
+    const glm::ivec2 column(coord.x, coord.z);
+    const UChunk *slice_chunk =
+        BlockWorld.GetChunkManager().GetChunk(coord);
+    const ChunkRenderDemandRecord *slice_demand =
+        UChunkRenderDemandStore::Get().Find(coord);
+    const uint64_t field_light_rev =
+        slice_chunk ? slice_chunk->GetLightFieldRevision() : 0;
+    const bool demand_identity_current =
+        slice_demand && slice_chunk &&
+        slice_demand->incarnation == slice_chunk->GetIncarnation();
+    const bool demand_light_current =
+        !slice_demand ||
+        (demand_identity_current &&
+         slice_demand->desired_light_rev <=
+             slice_demand->published_light_rev);
+    const bool slice_light_settled =
+        demand_identity_current && slice_demand->has_settled_light &&
+        slice_demand->settled_light_rev == field_light_rev;
+    bool stale_source_light_settled = !stale_light;
+    if (stale_light)
+    {
+      const UChunk *source_chunk =
+          BlockWorld.GetChunkManager().GetChunk(witness.source_chunk);
+      const ChunkRenderDemandRecord *source_demand =
+          UChunkRenderDemandStore::Get().Find(witness.source_chunk);
+      stale_source_light_settled =
+          source_chunk && source_demand && field_light_rev != 0 &&
+          witness.source_incarnation == source_chunk->GetIncarnation() &&
+          witness.source_light_revision ==
+              source_chunk->GetLightFieldRevision() &&
+          source_demand->incarnation == source_chunk->GetIncarnation() &&
+          source_demand->has_settled_light &&
+          source_demand->settled_light_rev ==
+              source_chunk->GetLightFieldRevision();
+    }
+    const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+    bool settled_mesh_repair = false;
+    // A current settlement proves the light field is already calculated.
+    // If the rejected mesh still carries stale baked light, the remaining
+    // obligation is a mesh rebuild/publication. Re-enqueueing relight for that
+    // slice on every renderer rejection repeatedly dirties the same geometry
+    // revision and can invalidate the mesh result that would close the gate.
+    if (slice_light_settled && stale_source_light_settled &&
+        field_light_rev != 0)
+    {
+      const bool baked_light_stale =
+          published.light_rev < field_light_rev ||
+          cache.GetMeshedLightRevision(coord) < field_light_rev;
+      const bool mesh_work_owned =
+          cache.IsChunkMeshDirty(coord) ||
+          MeshService->HasInflightMeshBuild(coord) ||
+          cache.IsRemeshAfterApplyPending(coord) ||
+          cache.IsPendingGpuApply(coord) || cache.IsPendingGpuQueued(coord) ||
+          cache.IsPendingGpuKickedOrDispatched(coord) ||
+          cache.IsGpuExtractInFlight(coord) ||
+          cache.HasPendingCaptureWork(coord);
+      if (!baked_light_stale || mesh_work_owned)
+      {
+        continue;
+      }
+      settled_mesh_repair = true;
+    }
+    const bool current_dark_image = CurrentDarkSliceImageMayDraw(
+        fully_dark, slice_light_settled, stale_light, demand_light_current,
+        field_light_rev, published.light_rev,
+        cache.GetMeshedLightRevision(coord));
+    // Match IsChunkSliceRenderReady: open-sky column state alone cannot prove
+    // this exact slice was lit. Any drawable dark slice that the gate rejects
+    // for missing settlement or stale light publication must get repair work.
+    if (!stale_light && !(fully_dark && !current_dark_image))
+    {
+      continue;
+    }
+    ++repairable_n;
+
+    const int min_cy =
+        !settled_mesh_repair && stale_light
+            ? std::min(coord.y, witness.source_chunk.y)
+            : coord.y;
+    const int max_cy =
+        !settled_mesh_repair && stale_light
+            ? std::max(coord.y, witness.source_chunk.y)
+            : coord.y;
+    const int min_world_y = std::clamp(min_cy * CHUNK_SIZE, 0, max_y);
+    const int max_world_y =
+        std::clamp((max_cy + 1) * CHUNK_SIZE - 1, 0, max_y);
+    const int vertical_distance = std::abs(coord.y - focus_ground_chunk.y);
+    auto &candidate_set =
+        settled_mesh_repair ? settled_mesh_candidates : candidates;
+    auto [it, inserted] = candidate_set.try_emplace(
+        column, Candidate{{column, min_world_y, max_world_y, coord,
+                           settled_mesh_repair},
+                          horiz, vertical_distance, observed_epoch});
+    if (!inserted)
+    {
+      it->second.target.min_world_y =
+          std::min(it->second.target.min_world_y, min_world_y);
+      it->second.target.max_world_y =
+          std::max(it->second.target.max_world_y, max_world_y);
+      if (vertical_distance < it->second.vertical_distance ||
+          (vertical_distance == it->second.vertical_distance &&
+           observed_epoch > it->second.observed_epoch))
+      {
+        it->second.target.rejected_slice = coord;
+        it->second.vertical_distance = vertical_distance;
+      }
+      it->second.observed_epoch =
+          std::max(it->second.observed_epoch, observed_epoch);
+    }
+  }
+
+  std::vector<Candidate> ordered;
+  ordered.reserve(candidates.size() + settled_mesh_candidates.size());
+  for (const auto &[column, candidate] : candidates)
+  {
+    (void)column;
+    ordered.push_back(candidate);
+  }
+  for (const auto &[column, candidate] : settled_mesh_candidates)
+  {
+    (void)column;
+    ordered.push_back(candidate);
+  }
+  std::sort(ordered.begin(), ordered.end(),
+            [](const Candidate &a, const Candidate &b)
+            {
+              if (a.horizontal_distance != b.horizontal_distance)
+              {
+                return a.horizontal_distance < b.horizontal_distance;
+              }
+              if (a.vertical_distance != b.vertical_distance)
+              {
+                return a.vertical_distance < b.vertical_distance;
+              }
+              return a.observed_epoch > b.observed_epoch;
+            });
+  const int n = std::min(max_cols, static_cast<int>(ordered.size()));
+  out.reserve(static_cast<size_t>(n));
+  for (int i = 0; i < n; ++i)
+  {
+    out.push_back(ordered[static_cast<size_t>(i)].target);
+  }
+  if (UJobStageTrace::VisualBlackTraceEnabled())
+  {
+    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+    VisualBlackTraceRecord trace{};
+    trace.sample_kind = 5;
+    trace.frame_epoch = StreamingFrameEpoch;
+    trace.focus_cx = focus_ground_chunk.x;
+    trace.focus_cz = focus_ground_chunk.z;
+    trace.camera_x = focus_block.x;
+    trace.camera_y = focus_block.y;
+    trace.camera_z = focus_block.z;
+    trace.draw_gate_scan_recent_n = recent_rejections_n;
+    trace.draw_gate_scan_recent_age_n = recent_age_n;
+    trace.draw_gate_scan_radius_n = in_radius_n;
+    trace.draw_gate_scan_drawable_n = drawable_n;
+    trace.draw_gate_scan_repairable_n = repairable_n;
+    trace.draw_gate_scan_target_n = static_cast<uint32_t>(n);
+    UJobStageTrace::NoteVisualBlack(trace);
+  }
+  return static_cast<int>(out.size());
+}
+
+bool UWorld::QueueSettledDrawGateMeshRepair(glm::ivec3 chunk_coord,
+                                            bool *out_queued)
+{
+  if (out_queued)
+  {
+    *out_queued = false;
+  }
+  if (!MeshService || !MeshService->HasDrawableGreedyMesh(chunk_coord))
+  {
+    return false;
+  }
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(chunk_coord);
+  if (!chunk || !demand || demand->incarnation != chunk->GetIncarnation() ||
+      !demand->has_settled_light || chunk->GetLightFieldRevision() == 0 ||
+      demand->settled_light_rev != chunk->GetLightFieldRevision())
+  {
+    return false;
+  }
+  UChunkMeshCache &cache = MeshService->GetCache();
+  const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+  if (published.light_rev >= field_light_rev &&
+      cache.GetMeshedLightRevision(chunk_coord) >= field_light_rev)
+  {
+    SettledDrawGateMeshRepairRetries.erase(chunk_coord);
+    return false;
+  }
+  auto retry_it = SettledDrawGateMeshRepairRetries.find(chunk_coord);
+  if (retry_it != SettledDrawGateMeshRepairRetries.end())
+  {
+    if (retry_it->second.incarnation != chunk->GetIncarnation() ||
+        retry_it->second.field_light_revision != field_light_rev)
+    {
+      SettledDrawGateMeshRepairRetries.erase(retry_it);
+      retry_it = SettledDrawGateMeshRepairRetries.end();
+    }
+    else if (StreamingFrameEpoch < retry_it->second.next_retry_epoch)
+    {
+      return true;
+    }
+  }
+  const bool has_retry_ticket =
+      retry_it != SettledDrawGateMeshRepairRetries.end();
+  uint8_t attempts = 1;
+  if (has_retry_ticket)
+  {
+    attempts = static_cast<uint8_t>(std::min<int>(
+        static_cast<int>(retry_it->second.attempts) + 1, 8));
+  }
+  const uint64_t retry_delay = std::min<uint64_t>(
+      8ull << std::min<int>(static_cast<int>(attempts) - 1, 3), 64ull);
+  const auto stamp_retry = [&]()
+  {
+    SettledDrawGateMeshRepairRetries[chunk_coord] =
+        {chunk->GetIncarnation(), field_light_rev,
+         StreamingFrameEpoch + retry_delay, attempts};
+  };
+  if (cache.IsChunkMeshDirty(chunk_coord) ||
+      MeshService->HasInflightMeshBuild(chunk_coord) ||
+      cache.IsRemeshAfterApplyPending(chunk_coord) ||
+      cache.IsPendingGpuApply(chunk_coord) ||
+      cache.IsPendingGpuQueued(chunk_coord) ||
+      cache.IsPendingGpuKickedOrDispatched(chunk_coord) ||
+      cache.IsGpuExtractInFlight(chunk_coord) ||
+      cache.HasPendingCaptureWork(chunk_coord))
+  {
+    return has_retry_ticket;
+  }
+
+  // Force the next capture to read the already-settled current field. A cached
+  // dark snapshot can otherwise bake the same stale vertex light again.
+  cache.InvalidateMeshCapture(chunk_coord);
+  MeshService->MarkDirty(chunk_coord,
+                         MeshRevisionBumpReason::SettledDrawGateRepair);
+  if (!cache.IsChunkMeshDirty(chunk_coord))
+  {
+    if (has_retry_ticket)
+    {
+      stamp_retry();
+    }
+    return has_retry_ticket;
+  }
+  stamp_retry();
+  if (out_queued)
+  {
+    *out_queued = true;
+  }
+  (void)cache.PrioritizeVisibleLightRepairRemesh(chunk_coord);
+  ColumnRecord &column_record = GetColumnRecords().GetOrCreate(
+      glm::ivec2(chunk_coord.x, chunk_coord.z));
+  column_record.legal_dark_settled = false;
+  column_record.visual = ColumnVisualState::NeedRemesh;
+  column_record.visual_obligation = VisualObligation::GeomRepair;
+  SetColumnEmergeState(glm::ivec3(chunk_coord.x, 0, chunk_coord.z),
+                       ColumnEmergeState::Meshing);
+  return true;
+}
+
+bool UWorld::IsSettledDrawGateMeshRepairPending(
+    glm::ivec3 chunk_coord) const
+{
+  const auto retry = SettledDrawGateMeshRepairRetries.find(chunk_coord);
+  if (retry == SettledDrawGateMeshRepairRetries.end() || !MeshService)
+  {
+    return false;
+  }
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(chunk_coord);
+  if (!chunk || !demand ||
+      retry->second.incarnation != chunk->GetIncarnation() ||
+      retry->second.field_light_revision != chunk->GetLightFieldRevision() ||
+      !demand->has_settled_light ||
+      demand->settled_light_rev != chunk->GetLightFieldRevision())
+  {
+    return false;
+  }
+  const UChunkMeshCache &cache = MeshService->GetCache();
+  const MeshPublishRevs published = cache.GetMeshPublishRevs(chunk_coord);
+  return published.light_rev < chunk->GetLightFieldRevision() ||
+         cache.GetMeshedLightRevision(chunk_coord) <
+             chunk->GetLightFieldRevision();
+}
+
+void UWorld::NoteRendererDrawGateRejection(glm::ivec3 chunk_coord)
+{
+  if (RendererDrawGateRejectPruneEpoch != StreamingFrameEpoch)
+  {
+    for (auto it = SettledDrawGateMeshRepairRetries.begin();
+         it != SettledDrawGateMeshRepairRetries.end();)
+    {
+      const uint64_t last_retry_epoch = it->second.next_retry_epoch;
+      if (StreamingFrameEpoch > last_retry_epoch &&
+          StreamingFrameEpoch - last_retry_epoch > 128)
+      {
+        it = SettledDrawGateMeshRepairRetries.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
+    for (auto it = RecentRendererDrawGateRejections.begin();
+         it != RecentRendererDrawGateRejections.end();)
+    {
+      if (StreamingFrameEpoch > it->second &&
+          StreamingFrameEpoch - it->second > 2)
+      {
+        it = RecentRendererDrawGateRejections.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
+    RendererDrawGateRejectPruneEpoch = StreamingFrameEpoch;
+  }
+
+  constexpr size_t kMaxRecentRendererDrawGateRejections = 256;
+  if (RecentRendererDrawGateRejections.count(chunk_coord) == 0 &&
+      RecentRendererDrawGateRejections.size() >=
+          kMaxRecentRendererDrawGateRejections)
+  {
+    auto oldest = RecentRendererDrawGateRejections.begin();
+    for (auto it = RecentRendererDrawGateRejections.begin();
+         it != RecentRendererDrawGateRejections.end(); ++it)
+    {
+      if (it->second < oldest->second)
+      {
+        oldest = it;
+      }
+    }
+    RecentRendererDrawGateRejections.erase(oldest);
+  }
+  RecentRendererDrawGateRejections[chunk_coord] = StreamingFrameEpoch;
+}
+
+bool UWorld::WasRecentlyRendererDrawGateRejected(
+    glm::ivec3 chunk_coord) const
+{
+  const auto it = RecentRendererDrawGateRejections.find(chunk_coord);
+  return it != RecentRendererDrawGateRejections.end() &&
+         StreamingFrameEpoch >= it->second &&
+         StreamingFrameEpoch - it->second <= 2;
 }
 
 int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
@@ -2686,12 +6548,32 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
     {
       const int dist = std::max(std::abs(dx), std::abs(dz));
-      if (dist < 1 || dist > 2)
+      // Near-ring default; callers may pass radius>2 for VisibleBlack orphans.
+      if (dist > radius_chunks)
       {
-        continue; // near-ring only (void Relight thrash guard)
+        continue;
       }
       const glm::ivec2 key(focus_ground_horiz.x + dx, focus_ground_horiz.z + dz);
       if (IsColumnStickyRemesh(key))
+      {
+        continue;
+      }
+      // Era26 I-O3: skip Relight/PendingLight ownership. FirstMesh-only must
+      // not mask void (dual-debt). Dirty/gpu without FM still counts as progress.
+      const auto &flow = GetColumnFlowExecutor();
+      const bool has_relight_or_pending =
+          flow.Scheduler().Contains(key, ColumnWorkKind::RelightThenMesh) ||
+          flow.Scheduler().Contains(key, ColumnWorkKind::PromoteRelight) ||
+          IsPendingLightBeforeMesh(key);
+      // Era29 P3: near FOV always report fully-dark (VB honesty); far keeps
+      // Era26 Relight/Pending skip.
+      if (CollectFullyDarkShouldSkipForOwnership(dist, has_relight_or_pending))
+      {
+        continue;
+      }
+      const bool first_mesh_only =
+          flow.Scheduler().Contains(key, ColumnWorkKind::FirstMesh);
+      if (!first_mesh_only && ColumnHasRepairProgress(key))
       {
         continue;
       }
@@ -2699,9 +6581,14 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
       for (int cy = 0; cy <= max_cy; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
-        if (MeshService->HasGreedyMesh(coord) &&
-            MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
+            MeshService->GetCache().ChunkHasFullyDarkFace(coord) &&
+            !ChunkSliceHasCurrentLightSettlement(*this, coord))
         {
+          // A fully dark image is still a valid lighting result when its
+          // exact slice has a current settlement stamp. Re-relighting it
+          // invalidates that proof and can keep the renderer gate closed
+          // forever even though no light bytes change.
           fully_dark = true;
           break;
         }
@@ -2723,14 +6610,141 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
   return static_cast<int>(out.size());
 }
 
+int UWorld::RemeshTicketedFullyDarkStalledNearFocus(
+    glm::ivec3 /*focus_ground_horiz*/, int /*radius_chunks*/, int /*max_dirty*/)
+{
+  // Audit16 S5: FullyDark census remesh path deleted — stub kept for ABI/docs.
+  // Demand must come from dependency mismatch / coverage owner only.
+  return 0;
+}
+
 void UWorld::NoteColumnRepairNeeded(glm::ivec2 ground_xz)
 {
   StickyRemeshAfterLight.insert(ground_xz);
 }
 
+int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
+{
+  if (!MeshService)
+  {
+    return 0;
+  }
+  // Skip if column no longer VisibleBlack — avoid idle emerge churn after heal.
+  // Fully-dark (void) remesh cannot invent light — PromoteRelight owns that path.
+  bool stale_dark = false;
+  bool remesh_owned = false;
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
+                             MeshService->IsRemeshAfterApplyPending(coord),
+                             MeshService->IsPendingGpuApply(coord),
+                             MeshService->HasInflightMeshBuild(coord)))
+    {
+      remesh_owned = true;
+    }
+    if (!MeshService->HasDrawableGreedyMesh(coord))
+    {
+      continue;
+    }
+    if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+    {
+      stale_dark = true;
+    }
+  }
+  // RAA/GPU already owns remesh — do not dual MarkDirty (DrainRemeshSeam).
+  if (remesh_owned)
+  {
+    return 0;
+  }
+  if (!stale_dark)
+  {
+    StickyRemeshAfterLight.erase(ground_xz);
+    return 0;
+  }
+  // A10 RelightReplace: MarkRelit owns FullyDark/stale_dark Dirty — skip seam pump.
+  if (IsRelightReplaceDirtyOwnerEnabled())
+  {
+    StickyRemeshAfterLight.erase(ground_xz);
+    return 0;
+  }
+  // Era17 P1: VisibleBlack stale in focus ring always MarkDirty (heal-until).
+  // Far/calm skip removed for stale_dark — churn capped by Collect repair_cap.
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int preferred_cy = focus.y;
+  const int remesh_min = (preferred_cy - 1) * CHUNK_SIZE;
+  const int remesh_max =
+      (preferred_cy + 1) * CHUNK_SIZE + CHUNK_SIZE - 1;
+  MeshService->MarkTerrainChunkMeshDirtySeamed(
+      glm::ivec3(ground_xz.x, 0, ground_xz.y), remesh_min, remesh_max,
+      /*include_horizontal_neighbors=*/false,
+      MeshRevisionBumpReason::SettledDrawGateRepair);
+  StickyRemeshAfterLight.erase(ground_xz);
+  PendingLightBeforeMesh.erase(ground_xz);
+  SetColumnEmergeState(glm::ivec3(ground_xz.x, 0, ground_xz.y),
+                       ColumnEmergeState::Meshing);
+  return 1;
+}
+
 bool UWorld::NeedsSpawnRingCatchUp() const
 {
-  return CountPostLoadRingNotReady() > 0;
+  // Phase 5.6.1 PresentableCatchUp: keep heal until shared clear predicate.
+  if (PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0)
+  {
+    // Phase 5.7R2: use cached VisibilityDebt (WorldStreaming samples O(R²)).
+    const int debt = PhysicsTelemetryData.VisibilityDebt;
+    const int ring_nr = CountPostLoadRingNotReady();
+    const int focus_miss = PhysicsTelemetryData.FocusMissingMesh;
+    // Phase 5.7R4: clear latch only on real underfeet presentable.
+    const bool underfeet = IsEnterUnderfeetPresentReady();
+    if (!EnterPresentableCatchUpClear(
+            PhysicsTelemetryData.SoftDeferOwnedNoGpuN,
+            PhysicsTelemetryData.SoftDeferEmptyStuckN, debt, ring_nr, focus_miss,
+            underfeet))
+    {
+      return true;
+    }
+  }
+  if (IsEnterSessionActive())
+  {
+    return false;
+  }
+  // Enter lit / burst / StreamSimple: dense — never cadence-skip the ring walk.
+  const bool force_dense = IsEnterLitGateActive() ||
+                           GetEnterGameMeshBurstFrames() > 0 ||
+                           URuntimeTuning::Get().StreamSimple;
+  if (SpawnCatchUpSampleEpoch == StreamingFrameEpoch)
+  {
+    return CachedNeedsSpawnRingCatchUp;
+  }
+  if (!force_dense)
+  {
+    // Cruise: prior-frame telemetry already clear ⇒ skip CountPostLoadRingNotReady
+    // for several frames (Refresh used to pay this every frame via setup_probe).
+    // Audit P3: while moving, never cadence-skip — west-sea rim debt grows
+    // between samples and leaves black columns at LitDrawable edge.
+    constexpr uint64_t kCatchUpRecheckFrames = 8;
+    const bool cruise_moving = PhysicsTelemetryData.MovementSpeed > 2.0f;
+    const bool telemetry_clear =
+        PhysicsTelemetryData.PostLoadRingNotReady <= 0 &&
+        PhysicsTelemetryData.UnfinishedVisual <= 0;
+    if (!cruise_moving && telemetry_clear && !CachedNeedsSpawnRingCatchUp &&
+        SpawnCatchUpSampleEpoch != UINT64_MAX)
+    {
+      const uint64_t age = StreamingFrameEpoch - SpawnCatchUpSampleEpoch;
+      if (age < kCatchUpRecheckFrames)
+      {
+        return false;
+      }
+    }
+  }
+  const bool need = CountPostLoadRingNotReady() > 0;
+  CachedNeedsSpawnRingCatchUp = need;
+  SpawnCatchUpSampleEpoch = StreamingFrameEpoch;
+  return need;
 }
 
 std::string UWorld::FormatPendingLightFocusColumns(
@@ -2818,9 +6832,20 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
     {
       continue;
     }
+    // Era18: remesh-on-lit MarkRelit inserts sticky before RemeshSeam drain —
+    // do not count columns already ticketed / pending light (stop_tail max
+    // flicker black_sticky=1 with faces already healing).
+    if (GetColumnFlowExecutor().HasRepairTicket(key) ||
+        IsPendingLightBeforeMesh(key))
+    {
+      continue;
+    }
     for (int cy = cy0; cy <= cy1; ++cy)
     {
-      if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
+      const glm::ivec3 coord(key.x, cy, key.y);
+      // I6: sticky set can linger after lit remesh; only count black/stale debt.
+      if (MeshService->HasGreedyMesh(coord) &&
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
       {
         ++sticky;
         break;
@@ -2828,6 +6853,538 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
     }
   }
   return sticky;
+}
+
+int UWorld::CountProvisionalLightPreviewFocusMeshes(
+    glm::ivec3 focus_ground_chunk, int radius_chunks) const
+{
+  if (!MeshService || radius_chunks < 0)
+  {
+    return 0;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  int band_min =
+      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
+                                     CHUNK_SIZE * 2 - 1);
+  if (LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
+  {
+    const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
+    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
+    }
+  }
+  else if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+  }
+  return MeshService->GetCache().CountProvisionalLightPreviewsNear(
+      focus_ground_chunk, radius_chunks, FloorDiv(band_min, CHUNK_SIZE),
+      FloorDiv(band_max, CHUNK_SIZE),
+      [this](glm::ivec3 coord)
+      { return ShouldDrawProvisionalLightPreview(coord); });
+}
+
+int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
+                                         int radius_chunks,
+                                         int *out_no_ticket,
+                                         int *out_progress,
+                                         int *out_stalled,
+                                         bool ticketed_consume_scan,
+                                         int vb_stable_frames) const
+{
+  const VisibleBlackFocusCounts counts = CountVisibleBlackFocusMeshes(
+      focus_ground_chunk, radius_chunks, ticketed_consume_scan,
+      vb_stable_frames);
+  if (out_no_ticket)
+  {
+    *out_no_ticket = counts.no_ticket;
+  }
+  if (out_progress)
+  {
+    *out_progress = counts.progress;
+  }
+  if (out_stalled)
+  {
+    *out_stalled = counts.stalled;
+  }
+  return counts.focus_n;
+}
+
+VisibleBlackFocusCounts UWorld::CountVisibleBlackFocusMeshes(
+    glm::ivec3 focus_ground_chunk, int radius_chunks,
+    bool ticketed_consume_scan, int vb_stable_frames) const
+{
+  VisibleBlackFocusCounts counts{};
+  if (!MeshService || radius_chunks < 0)
+  {
+    return counts;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  const bool moving =
+      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+  int band_min =
+      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
+                                      CHUNK_SIZE * 3 - 1);
+  if (moving)
+  {
+    // ColdWall S2b: cruise — eye ±1 cy ∪ sea±CHUNK (not sea±4*CHUNK).
+    const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
+    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
+    }
+  }
+  else if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+  }
+  // FZ2.5-Perf3: standing VB stable 3+ frames — narrow cy band (eye±1).
+  if (!moving && vb_stable_frames >= 3)
+  {
+    const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
+    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
+    }
+  }
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  auto count_column =
+      [&](glm::ivec2 key)
+  {
+    bool is_black = false;
+    bool column_fully_dark = false;
+    bool column_stale_dark = false;
+    bool have_stale_coord = false;
+    bool have_fully_dark_coord = false;
+    bool have_light_mismatch_coord = false;
+    glm::ivec3 first_stale_coord{};
+    glm::ivec3 first_fully_dark_coord{};
+    glm::ivec3 first_light_mismatch_coord{};
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (!MeshService->HasDrawableGreedyMesh(coord))
+      {
+        continue;
+      }
+      // Tagged preview surfaces have an ambient shader floor and are tracked
+      // separately; they are not black user-visible work even when packed
+      // source light is still zero.
+      if (ShouldDrawProvisionalLightPreview(coord))
+      {
+        continue;
+      }
+      const bool any_dark_face =
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+      const bool lit_drawable = MeshService->ChunkHasLitDrawableFace(coord);
+      // A dark vertex on one face is common in shaded/cave geometry. A slice
+      // is fully dark only when it has no lit drawable face at all.
+      const bool fully_dark = any_dark_face && !lit_drawable;
+      const bool stale_dark =
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+      if (stale_dark)
+      {
+        column_stale_dark = true;
+        is_black = true;
+        if (!have_stale_coord)
+        {
+          first_stale_coord = coord;
+          have_stale_coord = true;
+        }
+      }
+      if (fully_dark)
+      {
+        column_fully_dark = true;
+        is_black = true;
+        if (!have_fully_dark_coord)
+        {
+          first_fully_dark_coord = coord;
+          have_fully_dark_coord = true;
+        }
+      }
+      if (column_stale_dark && column_fully_dark)
+      {
+        break;
+      }
+    }
+    if (!is_black)
+    {
+      return;
+    }
+    ++counts.focus_n;
+    const bool contains = GetColumnFlowExecutor().HasRepairTicket(key);
+    const bool progress = ColumnHasRepairProgress(key);
+    const bool sticky = IsColumnStickyRemesh(key);
+    const bool pending_replace = IsPendingLightBeforeMesh(key);
+    // A21 residual R1: LegalDark needs matching meshed vs field light revs.
+    bool light_revs_match = true;
+    if (column_fully_dark)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (!MeshService->HasDrawableGreedyMesh(coord) ||
+            !MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
+            MeshService->ChunkHasLitDrawableFace(coord))
+        {
+          continue;
+        }
+        UChunkMeshCache::LitApplyMeshProbe probe{};
+        MeshService->FillLitApplyMeshProbe(coord, probe);
+        uint64_t field_rev = 0;
+        if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+        {
+          field_rev = ch->GetLightFieldRevision();
+        }
+        // Zero is a real initial revision. Comparing only nonzero stamps
+        // incorrectly treated an unstamped dark mesh as current.
+        if (probe.meshed_light_rev != field_rev)
+        {
+          light_revs_match = false;
+          if (!have_light_mismatch_coord)
+          {
+            first_light_mismatch_coord = coord;
+            have_light_mismatch_coord = true;
+          }
+          break;
+        }
+      }
+    }
+    const bool counts_progress = ShouldCountVisibleBlackProgress(
+        contains || progress || sticky, column_fully_dark, pending_replace);
+    if (counts_progress)
+    {
+      ++counts.progress;
+    }
+    if (contains && !progress && !sticky)
+    {
+      ++counts.stalled;
+    }
+    if (!contains && !progress && !sticky)
+    {
+      ++counts.no_ticket;
+    }
+    // A stale lit face remains repair debt even when another Y slice in the
+    // same column contains legal dark geometry.
+    const bool stale_dark_attr = column_stale_dark;
+    const VisibleBlackCause cause =
+        ClassifyVisibleBlackColumn(stale_dark_attr, column_fully_dark, contains,
+                                   progress, sticky, pending_replace,
+                                   light_revs_match);
+    switch (cause)
+    {
+    case VisibleBlackCause::StaleDarkWithLitField:
+      ++counts.stale_lit;
+      break;
+    case VisibleBlackCause::FullyDarkPendingRepair:
+      ++counts.fully_dark_repair;
+      break;
+    case VisibleBlackCause::FullyDarkNoTicket:
+      ++counts.fully_dark_no_ticket;
+      break;
+    case VisibleBlackCause::FullyDarkStalledTicket:
+      ++counts.fully_dark_stalled;
+      // N04 autopsy I1: sample ≤8 FullyDark stalled for ticket/PendingLight.
+      if (counts.stalled_sample_n < 8)
+      {
+        ++counts.stalled_sample_n;
+        if (contains)
+        {
+          ++counts.stalled_sample_has_ticket_n;
+        }
+        if (pending_replace)
+        {
+          ++counts.stalled_sample_pending_light_n;
+        }
+      }
+      break;
+    case VisibleBlackCause::LegalDarkNoRepair:
+      ++counts.legal_dark;
+      break;
+    }
+    if (UJobStageTrace::VisualBlackTraceEnabled())
+    {
+      const glm::ivec3 coord =
+          have_stale_coord
+              ? first_stale_coord
+              : (have_light_mismatch_coord ? first_light_mismatch_coord
+                                           : first_fully_dark_coord);
+      UChunkMeshCache::LitApplyMeshProbe probe{};
+      MeshService->FillLitApplyMeshProbe(coord, probe);
+      uint64_t field_light_rev = 0;
+      if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        field_light_rev = ch->GetLightFieldRevision();
+      }
+      const MeshPublishRevs published =
+          MeshService->GetCache().GetMeshPublishRevs(coord);
+      VisualBlackTraceRecord trace{};
+      trace.focus_cx = focus_ground_chunk.x;
+      trace.focus_cz = focus_ground_chunk.z;
+      trace.cx = coord.x;
+      trace.cy = coord.y;
+      trace.cz = coord.z;
+      trace.frame_epoch = StreamingFrameEpoch;
+      trace.cause = static_cast<uint8_t>(cause);
+      trace.meshed_light_rev = probe.meshed_light_rev;
+      trace.field_light_rev = field_light_rev;
+      trace.published_geom_rev = published.geom_rev;
+      trace.published_light_rev = published.light_rev;
+      const UChunkMeshCache &trace_cache = MeshService->GetCache();
+      trace.mesh_dirty_queue_kind = trace_cache.GetDirtyQueueTrace(
+          coord, trace.mesh_dirty_queue_index, trace.mesh_dirty_queue_size);
+      trace.mesh_dirty_queue_age_frames =
+          trace_cache.GetDirtyQueueAgeFrames(coord);
+      const ColumnRenderableState column_render_state =
+          GetColumnRenderableState(key);
+      trace.renderer_column_reason =
+          static_cast<uint8_t>(column_render_state.reason);
+      trace.renderer_column_draw_ok = column_render_state.draw_ok ? 1u : 0u;
+      trace.renderer_column_has_repair_ticket =
+          column_render_state.has_repair_ticket ? 1u : 0u;
+      const bool relight_queued = IsTerrainColumnRelightQueued(key);
+      const auto relight_queue =
+          Persistence
+              ? Persistence->GetTerrainColumnRelightQueueInfo(
+                    glm::ivec2(key.x * CHUNK_SIZE, key.y * CHUNK_SIZE))
+              : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+      const bool relight_inflight = IsAsyncRelightColumnInFlight(key);
+      const bool defer_until_lit = trace_cache.IsDeferMeshUntilLit(coord);
+      const bool soft_defer_held = MeshService->IsSoftDeferHeld(coord);
+      const bool column_lit_ready =
+          IsColumnLitReady(glm::ivec3(key.x, 0, key.y));
+      const bool lit_gate_required = RequiresLightingLitGate();
+      trace.relight_owner_flags =
+          (pending_replace ? 1u << 0 : 0u) |
+          (relight_queued ? 1u << 1 : 0u) |
+          (relight_inflight ? 1u << 2 : 0u) |
+          (defer_until_lit ? 1u << 3 : 0u) |
+          (soft_defer_held ? 1u << 4 : 0u) |
+          (column_lit_ready ? 1u << 5 : 0u) |
+          (lit_gate_required ? 1u << 6 : 0u) |
+          (contains ? 1u << 7 : 0u) |
+          (relight_queue.deferred_far ? 1u << 8 : 0u);
+      const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+      trace.column_flow_ticket_flags =
+          (flow_scheduler.Contains(key, ColumnWorkKind::RelightThenMesh)
+               ? 1u << 0
+               : 0u) |
+          (flow_scheduler.Contains(key, ColumnWorkKind::FirstMesh)
+               ? 1u << 1
+               : 0u) |
+          (flow_scheduler.Contains(key, ColumnWorkKind::RemeshSeam)
+               ? 1u << 2
+               : 0u) |
+          (flow_scheduler.Contains(key, ColumnWorkKind::PromoteRelight)
+               ? 1u << 3
+               : 0u);
+      UChunkMeshCache::StaleDarkWitness stale_witness{};
+      const bool slice_stale_dark = MeshService->GetCache().ChunkHasStaleDarkFaces(
+          coord, BlockWorld, &stale_witness);
+      const bool slice_lit_drawable =
+          MeshService->ChunkHasLitDrawableFace(coord);
+      const bool slice_any_dark_face =
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+      trace.flags = static_cast<uint16_t>(
+          (contains ? 1u << 0 : 0u) | (progress ? 1u << 1 : 0u) |
+          (sticky ? 1u << 2 : 0u) | (pending_replace ? 1u << 3 : 0u) |
+          (light_revs_match ? 1u << 4 : 0u) |
+          (probe.has_drawable ? 1u << 5 : 0u) |
+          (slice_any_dark_face ? 1u << 6 : 0u) |
+          (probe.is_dirty ? 1u << 7 : 0u) |
+          (probe.raa_pending ? 1u << 8 : 0u) |
+          (probe.gpu_pending ? 1u << 9 : 0u) |
+          (probe.inflight ? 1u << 10 : 0u) |
+          (column_stale_dark ? 1u << 11 : 0u) |
+          (probe.gpu_resident ? 1u << 12 : 0u) |
+          (slice_stale_dark ? 1u << 13 : 0u) |
+          (slice_lit_drawable ? 1u << 14 : 0u));
+      if (const ChunkRenderDemandRecord *demand =
+              UChunkRenderDemandStore::Get().Find(coord))
+      {
+        trace.world_epoch = demand->world_epoch;
+        trace.incarnation = demand->incarnation;
+        trace.demand_incarnation = demand->incarnation;
+        trace.attempt_id = demand->has_active_attempt
+                               ? demand->active_attempt_id
+                               : 0;
+        trace.desired_geom_rev = demand->desired_geom_rev;
+        trace.desired_light_rev = demand->desired_light_rev;
+        trace.demand_published_geom_rev = demand->published_geom_rev;
+        trace.demand_published_light_rev = demand->published_light_rev;
+        trace.settled_light_rev = demand->settled_light_rev;
+        trace.has_settled_light = demand->has_settled_light ? 1 : 0;
+        trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+        trace.face_debt_mask = demand->face_debt_mask;
+        trace.overlay_face_debt_mask = demand->overlay_face_debt_mask;
+        trace.peer_face_debt_mask = demand->peer_face_debt_mask;
+        if (demand->has_active_attempt)
+        {
+          trace.flags = static_cast<uint16_t>(trace.flags | (1u << 15));
+        }
+      }
+      if (const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        trace.non_air_blocks = chunk->GetNonAirCount();
+        trace.chunk_content_revision = chunk->GetContentRevision();
+        trace.incarnation = chunk->GetIncarnation();
+      }
+      trace.mesh_revision = MeshService->GetChunkMeshRevision(coord);
+      if (slice_stale_dark)
+      {
+        trace.stale_sample_x = stale_witness.sampled_block.x;
+        trace.stale_sample_y = stale_witness.sampled_block.y;
+        trace.stale_sample_z = stale_witness.sampled_block.z;
+        trace.stale_source_cx = stale_witness.source_chunk.x;
+        trace.stale_source_cy = stale_witness.source_chunk.y;
+        trace.stale_source_cz = stale_witness.source_chunk.z;
+        trace.stale_source_incarnation = stale_witness.source_incarnation;
+        trace.stale_source_light_rev = stale_witness.source_light_revision;
+        trace.stale_face_index = stale_witness.face_index;
+        trace.stale_sample_light = stale_witness.packed_light;
+        trace.stale_sample_gpu_path = stale_witness.gpu_probe ? 1 : 0;
+      }
+      UJobStageTrace::NoteVisualBlack(trace);
+    }
+  };
+  std::unordered_set<uint64_t> counted_cols;
+  counted_cols.reserve(static_cast<size_t>((radius_chunks * 2 + 1) *
+                                          (radius_chunks * 2 + 1)));
+  auto count_column_once =
+      [&](glm::ivec2 key)
+  {
+    const uint64_t col_key =
+        (static_cast<uint64_t>(static_cast<uint32_t>(key.x)) << 32) |
+        static_cast<uint32_t>(key.y);
+    if (!counted_cols.insert(col_key).second)
+    {
+      return;
+    }
+    count_column(key);
+  };
+  if (ticketed_consume_scan)
+  {
+    GetColumnFlowExecutor().Scheduler().ForEachOccupiedColumn(count_column_once);
+    for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+    {
+      for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+      {
+        const glm::ivec2 key(focus_ground_chunk.x + dx,
+                             focus_ground_chunk.z + dz);
+        if (GetColumnFlowExecutor().HasRepairTicket(key))
+        {
+          continue;
+        }
+        if (!ColumnHasRepairProgress(key) && !IsColumnStickyRemesh(key))
+        {
+          continue;
+        }
+        count_column_once(key);
+      }
+    }
+  }
+  else
+  {
+    for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+    {
+      for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+      {
+        count_column_once(
+            glm::ivec2(focus_ground_chunk.x + dx, focus_ground_chunk.z + dz));
+      }
+    }
+  }
+  return counts;
+}
+
+bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const
+{
+  if (IsPendingLightBeforeMesh(ground_xz))
+  {
+    return true;
+  }
+  if (!MeshService)
+  {
+    return false;
+  }
+  // Era22 I-S2 / Era23 I-V6: SoftDeferHeld ∈ progress only when not fully-dark
+  // (Held must not skip CollectFullyDark / mask void faces on 172232).
+  if (MeshService->HasSoftDeferHeldInColumn(ground_xz))
+  {
+    bool fully_dark = false;
+    const int max_cy = std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+      if (MeshService->HasDrawableGreedyMesh(coord) &&
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        fully_dark = true;
+        break;
+      }
+    }
+    if (SoftDeferHeldCountsAsVoidProgress(true, fully_dark))
+    {
+      return true;
+    }
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  if (MeshService->HasDirtyInColumnBand(ground_xz, 0, max_y))
+  {
+    return true;
+  }
+  const int max_cy = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (MeshService->IsRemeshAfterApplyPending(coord) ||
+        MeshService->IsPendingGpuApply(coord) ||
+        MeshService->IsPendingGpuQueued(coord) ||
+        MeshService->IsPendingGpuKickedOrDispatched(coord) ||
+        MeshService->HasInflightMeshBuild(coord))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UWorld::ShouldDeferRepairReticketUntilGpuApplied(
+    glm::ivec2 ground_xz) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (MeshService->IsPendingGpuApply(coord) ||
+        MeshService->IsGpuExtractInFlight(coord))
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
@@ -2880,6 +7437,27 @@ bool UWorld::IsColumnStickyRemesh(glm::ivec2 ground_xz) const
   return StickyRemeshAfterLight.find(ground_xz) != StickyRemeshAfterLight.end();
 }
 
+void UWorld::ClearStickyRemeshAfterLightColumn(glm::ivec2 ground_xz)
+{
+  if (StickyRemeshAfterLight.erase(ground_xz))
+  {
+    ++PhysicsTelemetryData.StickyEraseRemeshCommitN;
+  }
+}
+
+void UWorld::NoteStickyRemeshAfterLight(glm::ivec2 ground_xz)
+{
+  if (StickyRemeshAfterLight.insert(ground_xz).second)
+  {
+    ++PhysicsTelemetryData.StickyInsertOtherN;
+  }
+}
+
+bool UWorld::IsColumnDiskLightComplete(glm::ivec2 ground_xz) const
+{
+  return Persistence && Persistence->IsColumnLightComplete(ground_xz);
+}
+
 int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
 {
   if (!MeshService || !BlockRegistry || max_columns <= 0)
@@ -2913,6 +7491,19 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
         GetColumnEmergeState(ground) != ColumnEmergeState::Meshing)
     {
       return;
+    }
+    // DrainRemeshSeam must not MarkDirty when RAA/GPU already owns remesh.
+    for (int cy = FloorDiv(band_min, CHUNK_SIZE);
+         cy <= FloorDiv(band_max, CHUNK_SIZE); ++cy)
+    {
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
+                               MeshService->IsRemeshAfterApplyPending(coord),
+                               MeshService->IsPendingGpuApply(coord),
+                               MeshService->HasInflightMeshBuild(coord)))
+      {
+        return;
+      }
     }
     int remesh_min = band_min;
     int remesh_max = band_max;
@@ -2955,17 +7546,10 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
     }
     try_add(key, dist);
   }
-  if (candidates.empty())
-  {
-    for (int dz = -radius; dz <= radius; ++dz)
-    {
-      for (int dx = -radius; dx <= radius; ++dx)
-      {
-        try_add(glm::ivec2(focus.x + dx, focus.z + dz),
-                std::max(std::abs(dx), std::abs(dz)));
-      }
-    }
-  }
+  // Era22: NEVER fall back to remeshing the focus ring when sticky is empty
+  // or all remesh-owned. That sorted dist=0 first and forever remeshed the
+  // column under the player (manual 172208: only underfeet flickers; fly to
+  // next chunk → that one flickers). Sticky/TickDerived owns true debt.
   if (candidates.empty())
   {
     return 0;
@@ -2983,8 +7567,9 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
       break;
     }
     const glm::ivec3 ground(c.key.x, 0, c.key.y);
-    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-        ground, c.min_y, c.max_y, /*include_horizontal_neighbors=*/false);
+    MeshService->MarkTerrainChunkMeshDirtySeamed(
+        ground, c.min_y, c.max_y, /*include_horizontal_neighbors=*/false,
+        MeshRevisionBumpReason::SettledDrawGateRepair);
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     synced_keys.push_back(c.key);
     ++synced;
@@ -3012,9 +7597,9 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
     const int cy1 = FloorDiv(found->max_y, CHUNK_SIZE);
     for (int cy = cy0; cy <= cy1; ++cy)
     {
-      // MarkDirty→async only. RebuildChunkImmediate here caused seconds-scale
-      // mesh_emerge (manual 190126: emerge~3.7s with imm wiped by later Reset).
-      MeshService->MarkDirtyPriority(glm::ivec3(key.x, cy, key.y));
+      // Closeout C: idle VB/stale drawable remesh → RemeshQ.
+      MeshService->MarkDirty(glm::ivec3(key.x, cy, key.y),
+                              MeshRevisionBumpReason::PostLightMeshFinalize);
     }
     StickyRemeshAfterLight.erase(key);
     PendingLightBeforeMesh.erase(key);
@@ -3060,34 +7645,90 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       continue;
     }
     const glm::ivec3 ground(key.x, 0, key.y);
-    if (!IsColumnLitReady(ground))
+    const ColumnRecord *settled_rec = ColumnRecords.Find(key);
+    const bool legal_settled_early =
+        settled_rec && settled_rec->legal_dark_settled;
+    if (!IsColumnLitReady(ground) && !legal_settled_early)
     {
       ++it;
       continue;
     }
-    bool has_mesh = false;
-    for (int cy = cy0; cy <= cy1; ++cy)
+    // PendingLight owns a recorded Y range. Do not satisfy it with a mesh
+    // from the camera's current vertical band, which may be unrelated.
+    const int ticket_min_y = std::max(0, it->second.min_y);
+    const int ticket_max_y = std::min(max_y, it->second.max_y);
+    if (ticket_max_y < ticket_min_y)
     {
-      if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
+      ++it;
+      continue;
+    }
+    const int ticket_cy0 = FloorDiv(ticket_min_y, CHUNK_SIZE);
+    const int ticket_cy1 = FloorDiv(ticket_max_y, CHUNK_SIZE);
+    bool has_terminal_slice = false;
+    bool all_resident_slices_accounted = true;
+    for (int cy = ticket_cy0; cy <= ticket_cy1; ++cy)
+    {
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (MeshService->HasGreedyMesh(coord))
       {
-        has_mesh = true;
+        has_terminal_slice = true;
+        continue;
+      }
+      if (MeshService->IsPendingGpuApply(coord) ||
+          MeshService->HasInflightMeshBuild(coord))
+      {
+        has_terminal_slice = true;
+        continue;
+      }
+      const UChunk *slice = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (slice && slice->IsAirOnly())
+      {
+        has_terminal_slice = true;
+      }
+      else if (slice)
+      {
+        all_resident_slices_accounted = false;
         break;
       }
     }
-    if (!has_mesh)
+    if (!has_terminal_slice || !all_resident_slices_accounted)
     {
       ++it;
       continue;
     }
+    // A40/A42e: PendingLight clears on terminal Relight outcome (LitDrawable /
+    // LitReady or LegalDarkSettled) — checked via IsColumnLitReady above.
+    // Observational FullyDark/StaleVL mesh must NOT pin PL: SoftDefer stays ON,
+    // ShouldRejectDarkMeshCommit rejects remesh, Capture stays dark (A42d
+    // ok_remesh>0 / VB stuck). LightRepair remesh heals after SoftDefer lifts.
     if (MeshService->HasDirtyInColumnBand(key, it->second.min_y, it->second.max_y))
     {
-      ++it;
-      continue;
+      bool only_gpu_inflight = true;
+      for (int cy = ticket_cy0; cy <= ticket_cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (!MeshService->IsChunkMeshDirty(coord))
+        {
+          continue;
+        }
+        if (!MeshService->IsPendingGpuApply(coord) &&
+            !MeshService->HasInflightMeshBuild(coord))
+        {
+          only_gpu_inflight = false;
+          break;
+        }
+      }
+      if (!only_gpu_inflight)
+      {
+        ++it;
+        continue;
+      }
     }
     AsyncRelightColumnsInFlight.erase(key);
     it = PendingLightBeforeMesh.erase(it);
     StickyRemeshAfterLight.erase(key);
-    SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
+    // A41: ClearPending must not write RenderReady — sole Ready = LitDrawable.
+    SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
     ++cleared;
   }
   for (auto it = StickyRemeshAfterLight.begin();
@@ -3107,11 +7748,6 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       continue;
     }
     const glm::ivec3 ground(key.x, 0, key.y);
-    if (!IsColumnLitReady(ground))
-    {
-      ++it;
-      continue;
-    }
     bool has_mesh = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
@@ -3126,13 +7762,9 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       ++it;
       continue;
     }
-    if (MeshService->HasDirtyInColumnBand(key, band_min, band_max))
-    {
-      ++it;
-      continue;
-    }
-    // Keep sticky only while stale-dark remesh debt remains. Void-edge faces
-    // are Relight-owned — holding sticky forced RemeshSeam thrash (201621).
+    // I6: lit + mesh + no stale-dark → clear sticky even if Dirty still queues
+    // remesh. Holding sticky for Dirty pinned autofly post_stop sticky 4–6 while
+    // manual calm clears to 0 (async remesh does not need sticky SoT).
     bool still_stale = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
@@ -3144,13 +7776,75 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
         break;
       }
     }
-    if (still_stale)
+    // Trusted disk bake-before-present: promote LitReady only when remesh left
+    // non-FullyDark drawable (residual void → RelightThenMesh, not LitReady).
+    if (!IsColumnLitReady(ground))
+    {
+      const bool trusted =
+          Persistence && Persistence->IsColumnLightComplete(key);
+      bool has_lit_drawable = false;
+      bool remesh_in_flight = false;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
+            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          has_lit_drawable = true;
+        }
+        if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
+                                 MeshService->IsRemeshAfterApplyPending(coord),
+                                 MeshService->IsPendingGpuApply(coord),
+                                 MeshService->HasInflightMeshBuild(coord)))
+        {
+          remesh_in_flight = true;
+        }
+      }
+      if (!trusted ||
+          !ShouldSetLitReadyOnTrustedDisk(has_lit_drawable, remesh_in_flight))
+      {
+        // Residual FullyDark after remesh: RelightThenMesh owns heal, not LitReady.
+        if (trusted && !remesh_in_flight)
+        {
+          bool any_drawable = false;
+          for (int cy = cy0; cy <= cy1; ++cy)
+          {
+            if (MeshService->HasDrawableGreedyMesh(
+                    glm::ivec3(key.x, cy, key.y)))
+            {
+              any_drawable = true;
+              break;
+            }
+          }
+          if (any_drawable && !has_lit_drawable)
+          {
+            GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RelightThenMesh,
+                                            /*priority=*/80);
+          }
+        }
+        ++it;
+        continue;
+      }
+      SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+    }
+    else if (still_stale)
     {
       ++it;
       continue;
     }
+    if (MeshService->HasDirtyInColumnBand(key, band_min, band_max))
+    {
+      // Keep draining remesh, but sticky gate is for black/stale faces only.
+      it = StickyRemeshAfterLight.erase(it);
+      // A41: sticky clear → LitReady, not RenderReady (sole Ready = LitDrawable).
+      SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+      ++cleared;
+      continue;
+    }
+    // Keep sticky only while stale-dark remesh debt remains. Void-edge faces
+    // are Relight-owned — holding sticky forced RemeshSeam thrash (201621).
     it = StickyRemeshAfterLight.erase(it);
-    SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
+    SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
     ++cleared;
   }
   return cleared;
@@ -3246,6 +7940,7 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
         /*priority=*/true, entry.second.min_y, entry.second.max_y);
     ++promoted;
   }
+
   return promoted;
 }
 
@@ -3273,12 +7968,14 @@ void UWorld::PromotePendingLightBeforeMesh(
     if (priority_mesh)
     {
       MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-          ground, it->second.min_y, it->second.max_y, true);
+          ground, it->second.min_y, it->second.max_y, true,
+          MeshRevisionBumpReason::PriorityWorldCoreCommit);
     }
     else
     {
       MeshService->MarkTerrainChunkMeshDirtySeamed(
-          ground, it->second.min_y, it->second.max_y, true);
+          ground, it->second.min_y, it->second.max_y, true,
+          MeshRevisionBumpReason::PendingLightColumnRecovery);
     }
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
   }
@@ -3369,7 +8066,8 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
                                               int min_y, int max_y,
                                               bool include_skylight,
                                               bool include_block_light,
-                                              bool finalize_pending_gate)
+                                              bool finalize_pending_gate,
+                                              bool visible_draw_gate_repair)
 {
   if (!BlockRegistry)
   {
@@ -3394,10 +8092,16 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
   spec.max_world_y = max_y;
   spec.include_skylight = include_skylight;
   spec.include_block_light = include_block_light;
-  spec.frontier_iterations = kRelightFrontierIterationsFull;
+  spec.frontier_iterations = kRelightFrontierIterationsColumn;
   spec.job_id = ++NextAsyncRelightJobId;
   spec.finalize_pending_gate = finalize_pending_gate;
+  spec.visible_draw_gate_repair = visible_draw_gate_repair;
+  spec.column_center_only = true;
   AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+  PhysicsTelemetryData.RelightCaptureFullN =
+      AsyncRelight->GetLastCaptureFullChunks();
+  PhysicsTelemetryData.RelightCaptureNeighborLightN =
+      AsyncRelight->GetLastCaptureNeighborLightChunks();
 }
 
 void UWorld::EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
@@ -3440,6 +8144,17 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   {
     return 0;
   }
+  int relight_apply_cap = max_per_frame;
+  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  if (audit_relight)
+  {
+    CubatariumLogInfo("RelightAudit",
+        "drain cap=" + std::to_string(max_per_frame) +
+        " inflight=" + std::to_string(AsyncRelight->GetInFlightCount()) +
+        " queued=" + std::to_string(AsyncRelight->GetQueuedJobCount()) +
+        " running=" + std::to_string(AsyncRelight->GetRunningJobCount()) +
+        " completed=" + std::to_string(AsyncRelight->GetCompletedSize()));
+  }
   const auto t0 = std::chrono::high_resolution_clock::now();
   int applied = 0;
   if (Persistence)
@@ -3451,34 +8166,345 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
     }
   }
-  for (RelightComputeResult &result :
-       AsyncRelight->DrainCompleted(max_per_frame))
+  const double miss_reserved_ms =
+      static_cast<double>(URuntimeTuning::Get().MissReservedMs);
+  const bool moving =
+      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+  const bool enter_pass = EnterFovLitPassActive;
+  const int vb_no_ticket_n = PhysicsTelemetryData.VisibleBlackNoTicketN;
+  const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
+  const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
+  const bool consume_mode =
+      IsTicketedVbConsumeMode(vb_no_ticket_n, vb_focus_n, vb_stalled_n, moving,
+                              PhysicsTelemetryData.PendingLightFocus) ||
+      ShouldConsumeUnlitTicketedVbStand(
+          moving, vb_focus_n, vb_no_ticket_n,
+          static_cast<int>(PhysicsTelemetryData.ChunkMeshedUnlitHidden),
+          PhysicsTelemetryData.PendingLightFocus);
+  if (vb_no_ticket_n >= 20 && moving)
   {
+    relight_apply_cap = std::max(relight_apply_cap, 3);
+  }
+  const glm::ivec3 pl_focus_chunk =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int pl_focus_n = CountPendingLightBeforeMeshNear(
+      glm::ivec3(pl_focus_chunk.x, 0, pl_focus_chunk.z),
+      GetStreamingFocusRadius());
+  const bool defer_side =
+      ShouldDeferHeavyApplySideEffects(PhysicsTelemetryData.RelightApplyMsPrev,
+                                       PhysicsTelemetryData.RelightApplyNPrev) &&
+      !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n) && !consume_mode;
+  const double unit_ms_prev =
+      PhysicsTelemetryData.RelightApplyNPrev > 0
+          ? (PhysicsTelemetryData.RelightApplyMsPrev /
+             static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+          : PhysicsTelemetryData.RelightApplyMsPrev;
+  const double light_unit_ms_prev =
+      PhysicsTelemetryData.RelightApplyNPrev > 0 &&
+              PhysicsTelemetryData.RelightApplyLightMsPrev > 0.0
+          ? (PhysicsTelemetryData.RelightApplyLightMsPrev /
+             static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+          : 0.0;
+  const double install_unit_ms_prev =
+      PhysicsTelemetryData.RelightApplyNPrev > 0 &&
+              PhysicsTelemetryData.RelightApplyInstallMsPrev > 0.0
+          ? (PhysicsTelemetryData.RelightApplyInstallMsPrev /
+             static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+          : 0.0;
+  const int ready_at_start =
+      AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
+  const int fifo_soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+  const double cap_unit_raw = RelightApplyCapUnitMs(
+      unit_ms_prev, light_unit_ms_prev, install_unit_ms_prev);
+  const double cap_unit_prev = RelightSmoothCapUnitMs(
+      PhysicsTelemetryData.RelightCapUnitEma, cap_unit_raw);
+  bool throughput_mode = ShouldUseThroughputApplyCap(
+      consume_mode, defer_side, enter_pass, miss_reserved_ms, unit_ms_prev,
+      light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
+      PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
+      PhysicsTelemetryData.PendingLightFocus, PhysicsTelemetryData.PendingLightN);
+  if (throughput_mode)
+  {
+    PhysicsTelemetryData.RelightThroughputHoldN = 5;
+  }
+  else if (!enter_pass && PhysicsTelemetryData.RelightThroughputHoldN > 0)
+  {
+    throughput_mode = true;
+    --PhysicsTelemetryData.RelightThroughputHoldN;
+  }
+  double slice_ms = RelightThroughputSliceMs(
+      miss_reserved_ms, consume_mode, moving, throughput_mode, cap_unit_prev,
+      ready_at_start);
+  if (vb_no_ticket_n >= 20 && moving)
+  {
+    // Audit16 S7: no independent 6ms floor — widen via throughput slice policy.
+    slice_ms = std::max(slice_ms, miss_reserved_ms > 0.0 ? miss_reserved_ms : slice_ms);
+  }
+  // G1: widen slice before earned_cap so cheap/backlog math sees repair debt.
+  if (PhysicsTelemetryData.VisibleBlackFullyDarkRepairN >= 20)
+  {
+    slice_ms = std::max(slice_ms, miss_reserved_ms > 0.0 ? miss_reserved_ms : slice_ms);
+  }
+  const int earned_cap_base = EarnedRelightApplyCap(
+      relight_apply_cap, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
+      light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
+      PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
+      PhysicsTelemetryData.PendingLightN, consume_mode, moving,
+      PhysicsTelemetryData.VisibleBlackFullyDarkRepairN);
+  int earned_cap =
+      (PhysicsTelemetryData.DirtyFmN == 0 &&
+       PhysicsTelemetryData.ColumnLoadedNoMeshN > 0)
+          ? std::max(earned_cap_base, 2)
+          : earned_cap_base;
+  if (vb_focus_n >= 20 && PhysicsTelemetryData.DarkFaceStaleNearN >= 40)
+  {
+    earned_cap = std::max(earned_cap, 3);
+  }
+  if (PhysicsTelemetryData.VisibleBlackFullyDarkRepairN >= 20)
+  {
+    earned_cap = std::max(earned_cap, 3);
+  }
+  // I15-A4: consume_mode earns +1 apply slice on cruise/stop drain.
+  if (consume_mode)
+  {
+    earned_cap = std::min(earned_cap + 1, relight_apply_cap);
+  }
+  // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
+  // (DrainCompleted(N) would MarkRelit all N before any early-out).
+  bool stopped_by_time = false;
+  bool stopped_by_cap = false;
+  int examined = 0;
+  while (examined < relight_apply_cap)
+  {
+    if (examined > 0 && std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - t0).count() >= slice_ms)
+    {
+      stopped_by_time = true;
+      break;
+    }
+    const auto drain_t0 = std::chrono::high_resolution_clock::now();
+    std::vector<RelightComputeResult> batch =
+        AsyncRelight->DrainCompleted(/*max_per_frame=*/1);
+    const auto merge_t0 = std::chrono::high_resolution_clock::now();
+    PhysicsTelemetryData.RelightDrainCompletedMs +=
+        std::chrono::duration<double, std::milli>(merge_t0 - drain_t0).count();
+    if (batch.empty())
+    {
+      break;
+    }
+    RelightComputeResult &result = batch.front();
+    ++examined; // Rejected work consumes drain budget as well.
+    bool reject_stale = false;
+    const ChunkInputStamp *stale_input = nullptr;
+    if (result.work_token.world_epoch != 0 &&
+        result.work_token.world_epoch != AsyncRelight->SubmitEpoch())
+    {
+      reject_stale = true;
+    }
+    if (!reject_stale && BlockRegistry != nullptr)
+    {
+      if (result.input_catalog != BlockRegistry->GetDefinitionsCatalogSnapshot())
+        reject_stale = true;
+      for (const auto &stamp : result.read_set)
+        if (!stamp.Matches(BlockWorld.GetChunkManager().GetChunk(stamp.coord)))
+        {
+          reject_stale = true;
+          stale_input = &stamp;
+          break;
+        }
+    }
+    if (reject_stale)
+    {
+      if (audit_relight)
+      {
+        std::string reason = "epoch_or_catalog";
+        if (stale_input)
+        {
+          const auto now = ChunkInputStamp::Capture(stale_input->coord,
+              BlockWorld.GetChunkManager().GetChunk(stale_input->coord));
+          reason = "input=(" + std::to_string(stale_input->coord.x) + "," +
+              std::to_string(stale_input->coord.y) + "," +
+              std::to_string(stale_input->coord.z) + ") incarnation=" +
+              std::to_string(stale_input->incarnation) + "->" + std::to_string(now.incarnation) +
+              " content=" + std::to_string(stale_input->content) + "->" + std::to_string(now.content) +
+              " light=" + std::to_string(stale_input->light) + "->" + std::to_string(now.light);
+        }
+        CubatariumLogInfo("RelightAudit", "retry job=" +
+            std::to_string(result.job_id) + " " + reason);
+      }
+      // Preserve exact Y band / light domains / finalization semantics, not a
+      // generic terrain request. InFlight stays occupied by the replacement.
+      result.retry_spec.job_id = ++NextAsyncRelightJobId;
+      AsyncRelight->EnqueueJob(BlockWorld, std::move(result.retry_spec), *BlockRegistry);
+      continue;
+    }
     ++applied;
-    std::vector<glm::ivec3> relit_coords;
-    relit_coords.reserve(result.chunks.size());
+    LightChangeSet light_changes;
+    light_changes.changed_coords.reserve(result.chunks.size());
+    std::vector<glm::ivec3> stale_mesh_coords;
+    stale_mesh_coords.reserve(result.chunks.size());
+    std::vector<glm::ivec3> ownerless_first_mesh_coords;
+    ownerless_first_mesh_coords.reserve(result.chunks.size());
+    const auto has_mesh_or_first_mesh_owner = [&](glm::ivec3 coord) {
+      const glm::ivec2 column(coord.x, coord.z);
+      const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+      return MeshService->GetCache().IsChunkMeshDirty(coord) ||
+             MeshService->HasInflightMeshBuild(coord) ||
+             MeshService->IsPendingGpuApply(coord) ||
+             MeshService->IsGpuExtractInFlight(coord) ||
+             MeshService->GetCache().HasPendingCaptureWork(coord) ||
+             // A FirstMesh ticket owns a geometry-admission scan. Relight
+             // tickets only admit/promote light work; after a completed apply
+             // they do not guarantee that any slice was dirtied or meshed.
+             flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh);
+    };
+    int audit_unsatisfied_solid_n = 0;
+    int audit_ownerless_solid_n = 0;
     for (const RelightChunkLightData &chunk_data : result.chunks)
     {
+      ++PhysicsTelemetryData.RelightLightChunksN;
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
-        if (result.include_skylight &&
-            ApplyGpuSkylightSeedToChunk(*chunk, *BlockRegistry))
+        const bool installed =
+            InstallComputedLight(*chunk, chunk_data.light_packed,
+                                 result.include_skylight,
+                                 result.include_block_light);
+        // The async result has passed its world/catalog/read-set validation;
+        // record the computed state even when it produced no light-byte delta.
+        NoteChunkSliceLightCalculationSettled(chunk_data.coord);
+        if (installed)
         {
-          if (result.include_block_light)
-          {
-            MergeBlockLightKeepingGpuSky(*chunk, chunk_data.light_packed);
-          }
+          light_changes.Add(chunk_data.coord);
         }
         else
         {
-          chunk->GetLightDataMutable() = chunk_data.light_packed;
+          ++PhysicsTelemetryData.RelightLightSkipN;
+          // A result can validate the current field without changing its
+          // light bytes. If a resident mesh still contains an older light
+          // revision, it still needs a replacement even when another slice
+          // in this same column result was the one with a byte delta.
+          if (MeshService && MeshService->HasGreedyMesh(chunk_data.coord) &&
+              MeshService->GetCache().GetMeshedLightRevision(
+                  chunk_data.coord) != chunk->GetLightFieldRevision())
+          {
+            stale_mesh_coords.push_back(chunk_data.coord);
+          }
         }
-        relit_coords.push_back(chunk_data.coord);
+        if (MeshService && chunk->GetNonAirCount() > 0 &&
+            !MeshService->HasDrawableGreedyMesh(chunk_data.coord) &&
+            !MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord))
+        {
+          if (!has_mesh_or_first_mesh_owner(chunk_data.coord))
+          {
+            // A validated light result can settle an unchanged slice without
+            // including it in changed_coords. If that solid slice has never
+            // published a satisfying mesh, carry its geometry obligation
+            // through the relight handoff instead of dropping its last owner.
+            ownerless_first_mesh_coords.push_back(chunk_data.coord);
+          }
+        }
+        if (audit_relight)
+        {
+          const glm::ivec2 column(chunk_data.coord.x, chunk_data.coord.z);
+          const bool drawable =
+              MeshService && MeshService->HasDrawableGreedyMesh(chunk_data.coord);
+          const bool provisional_light_preview =
+              MeshService &&
+              MeshService->GetCache().HasProvisionalLightPreview(
+                  chunk_data.coord);
+          const bool satisfying = MeshService &&
+              MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord);
+          const bool dirty =
+              MeshService && MeshService->GetCache().IsChunkMeshDirty(
+                                 chunk_data.coord);
+          const bool mesh_inflight =
+              MeshService && MeshService->HasInflightMeshBuild(chunk_data.coord);
+          const bool gpu_pending =
+              MeshService && MeshService->IsPendingGpuApply(chunk_data.coord);
+          const bool gpu_extract =
+              MeshService && MeshService->IsGpuExtractInFlight(chunk_data.coord);
+          const bool capture_pending =
+              MeshService && MeshService->GetCache().HasPendingCaptureWork(
+                                 chunk_data.coord);
+          const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+          const bool first_mesh_ticket =
+              flow_scheduler.Contains(column, ColumnWorkKind::FirstMesh);
+          const bool relight_ticket =
+              flow_scheduler.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+              flow_scheduler.Contains(column, ColumnWorkKind::PromoteRelight);
+          const bool mesh_owner = dirty || mesh_inflight || gpu_pending ||
+                                  gpu_extract || capture_pending ||
+                                  first_mesh_ticket;
+          if (chunk->GetNonAirCount() > 0 && !drawable && !satisfying)
+          {
+            ++audit_unsatisfied_solid_n;
+            if (!mesh_owner)
+            {
+              ++audit_ownerless_solid_n;
+            }
+          }
+          const MeshPublishRevs published =
+              MeshService ? MeshService->GetCache().GetMeshPublishRevs(
+                                chunk_data.coord)
+                          : MeshPublishRevs{};
+          const ChunkRenderDemandRecord *demand =
+              UChunkRenderDemandStore::Get().Find(chunk_data.coord);
+          const uint64_t settled_rev = demand ? demand->settled_light_rev : 0;
+          const bool has_settled = demand && demand->has_settled_light;
+          const uint64_t meshed_light =
+              MeshService ? MeshService->GetCache().GetMeshedLightRevision(
+                                chunk_data.coord)
+                          : 0;
+          CubatariumLogInfo(
+              "RelightAudit",
+              "slice job=" + std::to_string(result.job_id) + " coord=(" +
+                  std::to_string(chunk_data.coord.x) + "," +
+                  std::to_string(chunk_data.coord.y) + "," +
+                  std::to_string(chunk_data.coord.z) + ") non_air=" +
+                  std::to_string(chunk->GetNonAirCount()) + " installed=" +
+                  std::to_string(installed) + " drawable=" +
+                  std::to_string(drawable) + " provisional_light_preview=" +
+                  std::to_string(provisional_light_preview) + " satisfying=" +
+                  std::to_string(satisfying) + " dirty=" +
+                  std::to_string(dirty) + " mesh_inflight=" +
+                  std::to_string(mesh_inflight) + " gpu_pending=" +
+                  std::to_string(gpu_pending) + " gpu_extract=" +
+                  std::to_string(gpu_extract) + " capture_pending=" +
+                  std::to_string(capture_pending) + " raa_pending=" +
+                  std::to_string(MeshService &&
+                                 MeshService->IsRemeshAfterApplyPending(
+                                     chunk_data.coord)) +
+                  " mesh_revision=" + std::to_string(
+                      MeshService
+                          ? MeshService->GetChunkMeshRevision(
+                                chunk_data.coord)
+                          : 0) + " active_source_revision=" +
+                  std::to_string(
+                      MeshService
+                          ? MeshService->GetCache().GetInflightSourceRevision(
+                                chunk_data.coord)
+                          : 0) + " scheduled_this_frame=" +
+                  std::to_string(MeshService &&
+                                 MeshService->GetCache().WasScheduledThisFrame(
+                                     chunk_data.coord)) +
+                  " first_mesh_ticket=" +
+                  std::to_string(first_mesh_ticket) + " relight_ticket=" +
+                  std::to_string(relight_ticket) + " field_light_rev=" +
+                  std::to_string(chunk->GetLightFieldRevision()) +
+                  " settled=" + std::to_string(has_settled) + ":" +
+                  std::to_string(settled_rev) + " published=" +
+                  std::to_string(published.geom_rev) + ":" +
+                  std::to_string(published.light_rev) + " meshed_light_rev=" +
+                  std::to_string(meshed_light));
+        }
       }
     }
-    // Always remesh after light apply. Deferring via Accumulate/Flush left
-    // light=0 meshes stuck black under Dirty backlog (especially while flying).
+    const auto light_t1 = std::chrono::high_resolution_clock::now();
+    const double merge_ms =
+        std::chrono::duration<double, std::milli>(light_t1 - merge_t0).count();
+    PhysicsTelemetryData.RelightMergeLightMs += merge_ms;
+    PhysicsTelemetryData.RelightApplyLightMs += merge_ms;
     std::vector<glm::ivec2> primary_grounds;
     primary_grounds.reserve(result.source_block_positions.size());
     for (const glm::ivec3 &pos : result.source_block_positions)
@@ -3486,25 +8512,388 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
       primary_grounds.push_back(glm::ivec2(chunk.x, chunk.z));
     }
-    MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
-                           result.finalize_pending_gate);
+    const bool defer_side_iter =
+        ShouldDeferHeavyApplySideEffects(
+            PhysicsTelemetryData.RelightApplyMsPrev,
+            PhysicsTelemetryData.RelightApplyNPrev) &&
+        !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n) && !consume_mode;
+    const bool primary_only_apply = consume_mode || defer_side_iter;
+    bool force_unchanged_relit = ShouldForceMarkRelitOnUnchangedLight(
+        consume_mode, vb_focus_n, false, false, -1);
+    if (!light_changes.any_changed() && !force_unchanged_relit &&
+        stale_mesh_coords.empty() && ownerless_first_mesh_coords.empty())
+    {
+      for (const glm::ivec2 &g : primary_grounds)
+      {
+        const int horiz =
+            std::max(std::abs(g.x - pl_focus_chunk.x),
+                     std::abs(g.y - pl_focus_chunk.z));
+        const bool ticket = GetColumnFlowExecutor().HasRepairTicket(g) ||
+                            IsColumnStickyRemesh(g) ||
+                            ColumnHasRepairProgress(g);
+        bool fully_dark = false;
+        if (MeshService)
+        {
+          for (const RelightChunkLightData &cd : result.chunks)
+          {
+            if (cd.coord.x == g.x && cd.coord.z == g.y &&
+                MeshService->GetCache().ChunkHasFullyDarkFace(cd.coord))
+            {
+              fully_dark = true;
+              break;
+            }
+          }
+        }
+        if (ShouldForceMarkRelitOnUnchangedLight(false, 0, ticket, fully_dark,
+                                                 horiz))
+        {
+          force_unchanged_relit = true;
+          break;
+        }
+      }
+    }
+    std::vector<glm::ivec3> relit_coords;
+    // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch
+    // unless P1 repair debt (VB / ticket / FullyDark ring).
+    if (!light_changes.any_changed() && !force_unchanged_relit)
+    {
+      for (const glm::ivec2 &g : primary_grounds)
+      {
+        AsyncRelightColumnsInFlight.erase(g);
+        if (result.finalize_pending_gate)
+        {
+          PendingLightBeforeMesh.erase(g);
+          SetColumnEmergeState(glm::ivec3(g.x, 0, g.y),
+                               ColumnEmergeState::LitReady);
+        }
+      }
+    }
+    else
+    {
+      relit_coords = light_changes.changed_coords;
+      for (const glm::ivec3 &coord : stale_mesh_coords)
+      {
+        if (std::find(relit_coords.begin(), relit_coords.end(), coord) ==
+            relit_coords.end())
+        {
+          relit_coords.push_back(coord);
+        }
+      }
+      for (const glm::ivec3 &coord : ownerless_first_mesh_coords)
+      {
+        if (std::find(relit_coords.begin(), relit_coords.end(), coord) ==
+            relit_coords.end())
+        {
+          relit_coords.push_back(coord);
+        }
+      }
+      if (light_changes.any_changed() && MeshService)
+      {
+        MeshService->QueueMeshDependencyInvalidations(
+            BlockWorld, light_changes.changed_coords);
+      }
+      if (!light_changes.any_changed() && relit_coords.empty())
+      {
+        for (const RelightChunkLightData &chunk_data : result.chunks)
+        {
+          if (BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
+          {
+            relit_coords.push_back(chunk_data.coord);
+          }
+        }
+      }
+      // ColdFix P0: primary_only only under defer (not forever on moving).
+      MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
+                             result.finalize_pending_gate,
+                             /*primary_only=*/primary_only_apply,
+                             result.visible_draw_gate_repair);
+      for (const glm::ivec3 &coord : ownerless_first_mesh_coords)
+      {
+        const bool owner_before = has_mesh_or_first_mesh_owner(coord);
+        if (!owner_before)
+        {
+          // A no-delta relight may leave a FirstMesh target with geom_rev=0.
+          // The install planner can be throttled or shadow-deduped before it
+          // owns Dirty, while a bounded column ticket can be rejected at queue
+          // capacity. This exact slice has settled lighting and no executable
+          // owner, so install the dirty owner directly at every distance.
+          EnsureVisualRepairDirtyPriority(coord);
+        }
+        if (audit_relight && MeshService)
+        {
+          const glm::ivec2 column(coord.x, coord.z);
+          const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+          const MeshPublishRevs published =
+              MeshService->GetCache().GetMeshPublishRevs(coord);
+          const auto &cache = MeshService->GetCache();
+          int32_t dirty_queue_index = -1;
+          int32_t dirty_queue_size = 0;
+          const uint8_t dirty_queue_kind =
+              cache.GetDirtyQueueTrace(coord, dirty_queue_index,
+                                       dirty_queue_size);
+          CubatariumLogInfo(
+              "RelightAudit",
+              "first_mesh_repair job=" + std::to_string(result.job_id) +
+                  " coord=(" + std::to_string(coord.x) + "," +
+                  std::to_string(coord.y) + "," + std::to_string(coord.z) +
+                  ") action=" + (owner_before ? "preserve_owner" : "ensure") +
+                  " resident=" + std::to_string(
+                      BlockWorld.GetChunkManager().HasChunk(coord)) +
+                  " admit=" + std::to_string(cache.ShouldAdmitDirtyCoord(coord)) +
+                  " enter_lit=" +
+                  std::to_string(cache.IsEnterLitQuiesce()) +
+                  " enter_gpu=" +
+                  std::to_string(cache.IsEnterGpuQuiesceDrain()) +
+                  " terminal_held=" +
+                  std::to_string(cache.IsEnterTerminalHeld(coord)) +
+                  " dirty=" +
+                  std::to_string(cache.IsChunkMeshDirty(coord)) +
+                  " dirty_queue=" + std::to_string(dirty_queue_kind) + ":" +
+                  std::to_string(dirty_queue_index) + "/" +
+                  std::to_string(dirty_queue_size) + " dirty_age_frames=" +
+                  std::to_string(cache.GetDirtyQueueAgeFrames(coord)) +
+                  " inflight=" + std::to_string(
+                      cache.HasInflightMeshBuild(coord)) +
+                  " raa=" +
+                  std::to_string(cache.IsRemeshAfterApplyPending(coord)) +
+                  " gpu_pending=" +
+                  std::to_string(MeshService->IsPendingGpuApply(coord)) +
+                  " gpu_extract=" +
+                  std::to_string(MeshService->IsGpuExtractInFlight(coord)) +
+                  " scheduled=" +
+                  std::to_string(cache.WasScheduledThisFrame(coord)) +
+                  " first_mesh=" + std::to_string(flow_scheduler.Contains(
+                      column, ColumnWorkKind::FirstMesh)) +
+                  " mesh_revision=" + std::to_string(
+                      MeshService->GetChunkMeshRevision(coord)) +
+                  " published_geom=" + std::to_string(published.geom_rev));
+        }
+      }
+      ++PhysicsTelemetryData.RelightApplyToMarkRelitN;
+    }
+    if (audit_relight && MeshService)
+    {
+      const auto &flow_scheduler = GetColumnFlowExecutor().Scheduler();
+      const uint64_t current_world_epoch =
+          MeshService->GetCache().GetCaptureStore().WorldEpoch();
+      for (const RelightChunkLightData &chunk_data : result.chunks)
+      {
+        UChunk *chunk =
+            BlockWorld.GetChunkManager().GetChunk(chunk_data.coord);
+        if (!chunk || chunk->GetNonAirCount() == 0)
+        {
+          continue;
+        }
+        const glm::ivec2 column(chunk_data.coord.x, chunk_data.coord.z);
+        const glm::ivec2 block_key(column.x * CHUNK_SIZE,
+                                   column.y * CHUNK_SIZE);
+        const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(chunk_data.coord);
+        const MeshPublishRevs published =
+            MeshService->GetCache().GetMeshPublishRevs(chunk_data.coord);
+        const uint64_t field_light_rev = chunk->GetLightFieldRevision();
+        const uint64_t meshed_light_rev =
+            MeshService->GetCache().GetMeshedLightRevision(chunk_data.coord);
+        const bool drawable =
+            MeshService->HasDrawableGreedyMesh(chunk_data.coord);
+        const bool provisional_light_preview =
+            MeshService->GetCache().HasProvisionalLightPreview(
+                chunk_data.coord);
+        const bool satisfying =
+            MeshService->HasMeshSatisfyingColumnReady(chunk_data.coord);
+        const bool settled_current =
+            ChunkSliceHasCurrentLightSettlement(*this, chunk_data.coord);
+        if (satisfying && settled_current &&
+            meshed_light_rev >= field_light_rev)
+        {
+          continue;
+        }
+        const bool queued = Persistence &&
+            Persistence->IsTerrainColumnRelightQueued(block_key);
+        const auto queue_info = Persistence
+            ? Persistence->GetTerrainColumnRelightQueueInfo(block_key)
+            : UWorldPersistence::TerrainColumnRelightQueueInfo{};
+        const bool first_mesh = flow_scheduler.Contains(
+            column, ColumnWorkKind::FirstMesh);
+        const bool relight_flow =
+            flow_scheduler.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+            flow_scheduler.Contains(column, ColumnWorkKind::PromoteRelight);
+        const bool has_repair_ticket =
+            GetColumnFlowExecutor().HasRepairTicket(column);
+        const bool markrelit_input =
+            std::find(relit_coords.begin(), relit_coords.end(),
+                      chunk_data.coord) != relit_coords.end();
+        const bool primary_source =
+            std::find(primary_grounds.begin(), primary_grounds.end(), column) !=
+            primary_grounds.end();
+        const bool light_changed =
+            std::find(light_changes.changed_coords.begin(),
+                      light_changes.changed_coords.end(), chunk_data.coord) !=
+            light_changes.changed_coords.end();
+        const bool stale_mesh_input =
+            std::find(stale_mesh_coords.begin(), stale_mesh_coords.end(),
+                      chunk_data.coord) != stale_mesh_coords.end();
+        int32_t dirty_queue_index = -1;
+        int32_t dirty_queue_size = 0;
+        const uint8_t dirty_queue_kind =
+            MeshService->GetCache().GetDirtyQueueTrace(
+                chunk_data.coord, dirty_queue_index, dirty_queue_size);
+        const uint64_t dirty_queue_age_frames =
+            MeshService->GetCache().GetDirtyQueueAgeFrames(chunk_data.coord);
+        CubatariumLogInfo(
+            "RelightAudit",
+            "slice_handoff job=" + std::to_string(result.job_id) +
+                " coord=(" + std::to_string(chunk_data.coord.x) + "," +
+                std::to_string(chunk_data.coord.y) + "," +
+                std::to_string(chunk_data.coord.z) + ") non_air=" +
+                std::to_string(chunk->GetNonAirCount()) + " installed=" +
+                std::to_string(light_changed) +
+                " stale_mesh_input=" + std::to_string(stale_mesh_input) +
+                " primary_source=" + std::to_string(primary_source) +
+                " primary_only=" + std::to_string(primary_only_apply) +
+                " finalize=" +
+                std::to_string(result.finalize_pending_gate) +
+                " draw_gate=" +
+                std::to_string(result.visible_draw_gate_repair) +
+                " markrelit_input=" + std::to_string(markrelit_input) +
+                " settled_current=" + std::to_string(settled_current) +
+                " demand_identity=" +
+                std::to_string(demand ? demand->world_epoch : 0) + ":" +
+                std::to_string(demand ? demand->incarnation : 0) + "/" +
+                std::to_string(current_world_epoch) + ":" +
+                std::to_string(chunk->GetIncarnation()) +
+                " settled=" +
+                std::to_string(demand && demand->has_settled_light) + ":" +
+                std::to_string(demand ? demand->settled_light_rev : 0) +
+                " field_light_rev=" + std::to_string(field_light_rev) +
+                " desired_published_light=" +
+                std::to_string(demand ? demand->desired_light_rev : 0) + ":" +
+                std::to_string(demand ? demand->published_light_rev : 0) +
+                " mesh_published=" + std::to_string(published.geom_rev) +
+                ":" + std::to_string(published.light_rev) +
+                " mesh_revision=" + std::to_string(
+                    MeshService->GetChunkMeshRevision(chunk_data.coord)) +
+                " meshed_light_rev=" + std::to_string(meshed_light_rev) +
+                " drawable=" + std::to_string(drawable) +
+                " provisional_light_preview=" +
+                std::to_string(provisional_light_preview) +
+                " satisfying=" + std::to_string(satisfying) +
+                " dirty=" + std::to_string(
+                    MeshService->IsChunkMeshDirty(chunk_data.coord)) +
+                " dirty_queue=" + std::to_string(dirty_queue_kind) + ":" +
+                std::to_string(dirty_queue_index) + "/" +
+                std::to_string(dirty_queue_size) + " dirty_age_frames=" +
+                std::to_string(dirty_queue_age_frames) +
+                " mesh_inflight=" + std::to_string(
+                    MeshService->HasInflightMeshBuild(chunk_data.coord)) +
+                " raa_pending=" + std::to_string(
+                    MeshService->IsRemeshAfterApplyPending(chunk_data.coord)) +
+                " active_source_revision=" + std::to_string(
+                    MeshService->GetCache().GetInflightSourceRevision(
+                        chunk_data.coord)) +
+                " scheduled_this_frame=" + std::to_string(
+                    MeshService->GetCache().WasScheduledThisFrame(
+                        chunk_data.coord)) +
+                " gpu_pending=" + std::to_string(
+                    MeshService->IsPendingGpuApply(chunk_data.coord)) +
+                " pending_light=" + std::to_string(
+                    IsPendingLightBeforeMesh(column)) +
+                " relight_queued=" + std::to_string(queued) +
+                " queue=" + std::to_string(queue_info.keyed) + ":" +
+                std::to_string(queue_info.queue_index) + "/" +
+                std::to_string(queue_info.queue_size) + ":" +
+                std::to_string(queue_info.min_world_y) + ":" +
+                std::to_string(queue_info.max_world_y) +
+                " async_inflight=" + std::to_string(
+                    IsAsyncRelightColumnInFlight(column)) +
+                " first_mesh_ticket=" + std::to_string(first_mesh) +
+                " relight_flow_ticket=" + std::to_string(relight_flow) +
+                " repair_ticket=" + std::to_string(has_repair_ticket) +
+                " defer_until_lit=" + std::to_string(
+                    MeshService->GetCache().IsDeferMeshUntilLit(
+                        chunk_data.coord)));
+      }
+    }
+    const auto install_t1 = std::chrono::high_resolution_clock::now();
+    PhysicsTelemetryData.RelightApplyInstallMs +=
+        std::chrono::duration<double, std::milli>(install_t1 - light_t1).count();
+    ++PhysicsTelemetryData.RelightApplyN;
+    if (result.finalize_pending_gate)
+    {
+      ++PhysicsTelemetryData.RelightApplyFinalN;
+    }
+    else
+    {
+      ++PhysicsTelemetryData.RelightApplyPartialN;
+    }
+    if (audit_relight)
+    {
+      int ownerless_mesh_repair_owned_n = 0;
+      if (MeshService)
+      {
+        for (const glm::ivec3 &coord : ownerless_first_mesh_coords)
+        {
+          if (has_mesh_or_first_mesh_owner(coord))
+          {
+            ++ownerless_mesh_repair_owned_n;
+          }
+        }
+      }
+      CubatariumLogInfo(
+          "RelightAudit",
+          "apply job=" + std::to_string(result.job_id) +
+              " source_count=" +
+              std::to_string(result.source_block_positions.size()) +
+              " chunks=" + std::to_string(result.chunks.size()) +
+              " changed=" +
+              std::to_string(light_changes.changed_coords.size()) +
+              " stale_mesh=" + std::to_string(stale_mesh_coords.size()) +
+              " unsatisfied_solid=" +
+              std::to_string(audit_unsatisfied_solid_n) +
+              " ownerless_solid=" +
+              std::to_string(audit_ownerless_solid_n) +
+              " first_mesh_repair=" +
+              std::to_string(ownerless_first_mesh_coords.size()) + ":" +
+              std::to_string(ownerless_mesh_repair_owned_n) +
+              " force_unchanged=" +
+              std::to_string(force_unchanged_relit) +
+              " finalize=" +
+              std::to_string(result.finalize_pending_gate) + " draw_gate=" +
+              std::to_string(result.visible_draw_gate_repair));
+    }
     // Ensure inflight tracking clears even when MarkRelit only remeshed
     // neighbors (primary already erased inside MarkRelit).
     for (const glm::ivec2 &g : primary_grounds)
     {
       AsyncRelightColumnsInFlight.erase(g);
     }
-    if (priority_mesh)
+    if (priority_mesh && !defer_side_iter && !consume_mode)
     {
       PlayerRelightMeshBurstFrames = 3;
     }
     if (enqueue_background_frontier && result.frontier_unfinished &&
-        Persistence)
+        Persistence && !defer_side_iter && !consume_mode)
     {
       for (const glm::ivec3 &pos : result.source_block_positions)
       {
-        Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+        Persistence->TryEnqueueTerrainColumnRelight(*this, pos.x, pos.z);
       }
+    }
+    const double elapsed_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - t0)
+            .count();
+    if (ShouldStopRelightApplySlice(elapsed_ms, applied, slice_ms, enter_pass,
+                                    throughput_mode, earned_cap, unit_ms_prev,
+                                    vb_stalled_n, light_unit_ms_prev,
+                                    install_unit_ms_prev, ready_at_start,
+                                    PhysicsTelemetryData.RelightFifoN,
+                                    fifo_soft_cap,
+                                    PhysicsTelemetryData.PendingLightN))
+    {
+      stopped_by_cap = applied >= earned_cap;
+      stopped_by_time = elapsed_ms >= slice_ms && !stopped_by_cap;
+      break;
     }
   }
   const auto t1 = std::chrono::high_resolution_clock::now();
@@ -3513,8 +8902,41 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     PhysicsTelemetryData.FullRelightMs =
         std::chrono::duration<double, std::milli>(t1 - t0).count();
   }
+  const double frame_unit_ms =
+      applied > 0
+          ? PhysicsTelemetryData.FullRelightMs / static_cast<double>(applied)
+          : unit_ms_prev;
+  PhysicsTelemetryData.ApplyBinding = static_cast<int>(ClassifyApplyBinding(
+      applied, ready_at_start, stopped_by_time, stopped_by_cap, frame_unit_ms,
+      slice_ms, earned_cap));
+  if (applied > 0)
+  {
+    const double sample = RelightApplyCapUnitMs(
+        frame_unit_ms,
+        PhysicsTelemetryData.RelightApplyLightMs /
+            static_cast<double>(applied),
+        PhysicsTelemetryData.RelightApplyInstallMs /
+            static_cast<double>(applied));
+    PhysicsTelemetryData.RelightCapUnitEma =
+        RelightSmoothCapUnitMs(PhysicsTelemetryData.RelightCapUnitEma, sample);
+  }
   PhysicsTelemetryData.AsyncRelightInflight =
       static_cast<uint64_t>(AsyncRelight->GetInFlightCount());
+  PhysicsTelemetryData.MarkRelitToFmDirtyN =
+      PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN;
+  if (applied > 0 && vb_focus_n >= 20 &&
+      (PhysicsTelemetryData.GpuFinishN > 0 ||
+       PhysicsTelemetryData.MarkRelitToFmDirtyN > 0 ||
+       PhysicsTelemetryData.MarkRelitChainProgressFrames > 0))
+  {
+    PhysicsTelemetryData.PostRelightApplyMeshDrainFloor = 14;
+  }
+  if (PhysicsTelemetryData.MarkRelitToFmDirtyN > 0 &&
+      PhysicsTelemetryData.MissCompletionStuckFrames > 30)
+  {
+    PhysicsTelemetryData.PostRelightApplyMeshDrainFloor =
+        std::max(PhysicsTelemetryData.PostRelightApplyMeshDrainFloor, 14);
+  }
   PhysicsTelemetryData.RelightDiscardedLate =
       AsyncRelight->GetDiscardedLateCount();
   if (Persistence)
@@ -3573,6 +8995,48 @@ bool UWorld::IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const
   return AsyncRelightColumnsInFlight.count(ground_xz) != 0;
 }
 
+bool UWorld::IsTerrainColumnRelightQueued(glm::ivec2 ground_xz) const
+{
+  return Persistence && Persistence->IsTerrainColumnRelightQueued(
+                            ground_xz * CHUNK_SIZE);
+}
+
+void UWorld::PopulateRendererRelightQueueTrace(
+    glm::ivec2 chunk_column, VisualBlackTraceRecord &trace) const
+{
+  if (Persistence)
+  {
+    const glm::ivec2 block_key = chunk_column * CHUNK_SIZE;
+    const auto queue =
+        Persistence->GetTerrainColumnRelightQueueInfo(block_key);
+    trace.relight_queue_kind =
+        queue.deferred_visible && !queue.keyed
+            ? 6
+            : (queue.deferred_far && !queue.keyed
+                   ? 7
+                   : (!queue.keyed
+                          ? 0
+                          : (!queue.in_deque
+                                 ? 3
+                                 : (queue.priority ? 1 : 2))));
+    trace.relight_y_band_defined = queue.y_band_defined ? 1 : 0;
+    trace.relight_queue_index = queue.queue_index;
+    trace.relight_queue_size = queue.queue_size;
+    trace.relight_band_min_y = queue.min_world_y;
+    trace.relight_band_max_y = queue.max_world_y;
+  }
+  const auto &flow = GetColumnFlowExecutor().Scheduler();
+  trace.column_flow_ticket_flags =
+      (flow.Contains(chunk_column, ColumnWorkKind::RelightThenMesh)
+           ? 1u << 0
+           : 0u) |
+      (flow.Contains(chunk_column, ColumnWorkKind::FirstMesh) ? 1u << 1 : 0u) |
+      (flow.Contains(chunk_column, ColumnWorkKind::RemeshSeam) ? 1u << 2 : 0u) |
+      (flow.Contains(chunk_column, ColumnWorkKind::PromoteRelight)
+           ? 1u << 3
+           : 0u);
+}
+
 void UWorld::ReconcileAsyncRelightColumnInFlight()
 {
   if (GetAsyncRelightInFlightCount() == 0 && !AsyncRelightColumnsInFlight.empty())
@@ -3597,6 +9061,16 @@ uint64_t UWorld::GetRelightDiscardedLateCount() const
 uint64_t UWorld::GetMeshDiscardedLateCount() const
 {
   return MeshService ? MeshService->GetMeshDiscardedLateCount() : 0;
+}
+
+uint64_t UWorld::GetMeshDiscardedLateEpochCount() const
+{
+  return MeshService ? MeshService->GetMeshDiscardedLateEpochCount() : 0;
+}
+
+uint64_t UWorld::GetMeshDiscardedLateJobMismatchCount() const
+{
+  return MeshService ? MeshService->GetMeshDiscardedLateJobMismatchCount() : 0;
 }
 
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
@@ -3636,8 +9110,30 @@ void UWorld::SetWorldName(const std::string &value) { WorldName = value; }
 
 glm::vec3 UWorld::GetSpawnPoint() const { return SpawnPoint; }
 
+glm::ivec3 UWorld::GetEnterWarmupFocusBlock() const
+{
+  return WorldPosToBlock(SpawnPoint);
+}
+
+bool UWorld::UsesEnterWarmupFocus() const
+{
+  if (EnterLitGateActive)
+  {
+    return true;
+  }
+  if (CoopSession && CoopSession->IsEnterVisualWarmupActive())
+  {
+    return true;
+  }
+  return false;
+}
+
 glm::ivec3 UWorld::GetPreferredLoadFocusBlock() const
 {
+  if (UsesEnterWarmupFocus())
+  {
+    return GetEnterWarmupFocusBlock();
+  }
   if (auto user = GetCurrentUser())
   {
     return WorldPosToBlock(user->GetPosition());
@@ -3830,6 +9326,81 @@ void UWorld::TickAsyncChunkSystems()
   {
     drain_budget = std::max(drain_budget, 8);
   }
+  const bool moving =
+      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+  const int vb_no_ticket_n = PhysicsTelemetryData.VisibleBlackNoTicketN;
+  if (vb_no_ticket_n > 20)
+  {
+    drain_budget = std::max(drain_budget, moving ? 10 : 14);
+  }
+  else if (vb_no_ticket_n > 8)
+  {
+    drain_budget = std::max(drain_budget, moving ? 8 : 10);
+  }
+  else if (vb_no_ticket_n > 0)
+  {
+    drain_budget = std::max(drain_budget, moving ? 6 : 8);
+  }
+  const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
+  if (vb_focus_n > 60)
+  {
+    drain_budget = std::max(drain_budget, moving ? 10 : 12);
+  }
+  else if (vb_focus_n > 45)
+  {
+    // FZ2.2-C4a: idle VB steady debt — faster Apply drain.
+    drain_budget = std::max(drain_budget, moving ? 10 : 16);
+  }
+  else if (vb_focus_n > 40)
+  {
+    drain_budget = std::max(drain_budget, moving ? 8 : 10);
+  }
+  // FZ2.4-P0b: standing plateau — raise Apply drain when nt=0 but PL/VB debt.
+  if (ShouldSuppressPendingLightNote(vb_no_ticket_n, pending_light_focus_n,
+                                   vb_focus_n))
+  {
+    drain_budget = std::max(drain_budget, moving ? 12 : 20);
+    ++PhysicsTelemetryData.RelightApplyPlateauBoostN;
+  }
+  // RateMatch R0 / lit-drain: high-PL cruise floors Apply at 4 when PL≥16
+  // (thresh was >30; vb≤50 gate removed so mid LitDrawable PL debt still drains).
+  const bool high_pl_cruise =
+      ShouldUseHighPlCruiseApplyFloor(moving, pending_light_focus_n);
+  const int ready_for_floor =
+      AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
+  drain_budget = CruiseRelightApplyBudget(
+      moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
+      PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
+      near_pending_light || underfeet_pending_light,
+      PhysicsTelemetryData.RelightApplyNPrev);
+  if (high_pl_cruise && ShouldRaiseApplyBudgetOnlyWhenReady(ready_for_floor) &&
+      !ShouldKillProducerBoostOnSimHot(PhysicsTelemetryData.SimMsPrev))
+  {
+    drain_budget = std::max(drain_budget, HighPlCruiseApplyFloorN());
+  }
+  {
+    const double apply_unit_prev =
+        PhysicsTelemetryData.RelightApplyNPrev > 0
+            ? (PhysicsTelemetryData.RelightApplyMsPrev /
+               static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+            : PhysicsTelemetryData.RelightApplyMsPrev;
+    const double light_unit_prev =
+        PhysicsTelemetryData.RelightApplyNPrev > 0 &&
+                PhysicsTelemetryData.RelightApplyLightMsPrev > 0.0
+            ? (PhysicsTelemetryData.RelightApplyLightMsPrev /
+               static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+            : 0.0;
+    const double install_unit_prev =
+        PhysicsTelemetryData.RelightApplyNPrev > 0 &&
+                PhysicsTelemetryData.RelightApplyInstallMsPrev > 0.0
+            ? (PhysicsTelemetryData.RelightApplyInstallMsPrev /
+               static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+            : 0.0;
+    drain_budget = ClampCruiseDrainToReadyCheap(
+        drain_budget, ready_for_floor,
+        RelightApplyCapUnitMs(apply_unit_prev, light_unit_prev,
+                              install_unit_prev));
+  }
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =
       pending_player > 0 || near_pending_light || underfeet_pending_light ||
@@ -3837,10 +9408,12 @@ void UWorld::TickAsyncChunkSystems()
   const auto relight_t0 = std::chrono::high_resolution_clock::now();
   const int applied =
       DrainAsyncRelightResults(drain_budget, priority_mesh, true);
-  PhysicsTelemetryData.RelightDrainMs +=
+  const double apply_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - relight_t0)
           .count();
+  PhysicsTelemetryData.RelightApplyMs += apply_ms;
+  PhysicsTelemetryData.RelightDrainMs += apply_ms;
   if (applied > 0)
   {
     const double dt = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec : (1.0 / 60.0);
@@ -3859,8 +9432,16 @@ void UWorld::TickMeshEmerge()
   {
     return;
   }
-  Streaming->TickMeshEmerge(*this);
-  TickPlayerRelightMeshBurst();
+  UFrameStageWatchdog::Scope stage("streaming.world_tick_mesh_emerge");
+  {
+    UFrameStageWatchdog::Scope tick_stage("streaming.world_streaming_tick");
+    Streaming->TickMeshEmerge(*this);
+  }
+  {
+    UFrameStageWatchdog::Scope burst_stage(
+        "streaming.player_relight_mesh_burst");
+    TickPlayerRelightMeshBurst();
+  }
 }
 
 void UWorld::RefreshStreamerSettings()
@@ -4172,6 +9753,8 @@ void UWorld::PrepareForShutdownWithBudgets(
     BlockPhysicsService->ClearFluidQueue();
     phase_ms("clear_fluid_queue");
   }
+  (void)ShutdownFluidSummaryWorker(2000);
+  phase_ms("fluid_summary_worker");
   if (Streaming)
   {
     // Abandon before mesh WaitIdle so long populate cannot hang shutdown.
@@ -4253,6 +9836,42 @@ void UWorld::RebuildBlockMesh()
   BlockWorldReady = CachedBlockCount > 0;
 }
 
+void UWorld::AbandonTerrainForWorldReplace()
+{
+  if (HasActiveCooperativeOperation())
+  {
+    CancelCooperativeOperation();
+  }
+
+  if (Streaming)
+  {
+    Streaming->CancelChunkGeneration();
+    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(150));
+  }
+  if (Persistence)
+  {
+    (void)Persistence->AbortAsyncChunkIoFor(std::chrono::milliseconds(0));
+  }
+
+  if (MeshService)
+  {
+    MeshService->CancelAsyncMeshWork();
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(2000));
+  }
+  CancelAsyncRelightWork();
+
+  BlockWorld.Clear();
+  if (MeshService)
+  {
+    MeshService->GetCache().MarkAllDirty();
+  }
+  UChunkRenderDemandStore::Get().Clear();
+  ResetFluidSurfacePackReuseCache();
+  ModifiedChunks.clear();
+  BlockWorldReady = false;
+  CachedBlockCount = 0;
+}
+
 bool UWorld::IsReasonablePlayerPosition(const glm::vec3 &position) const
 {
   if (!std::isfinite(position.x) || !std::isfinite(position.y) ||
@@ -4264,7 +9883,7 @@ bool UWorld::IsReasonablePlayerPosition(const glm::vec3 &position) const
   {
     return false;
   }
-  if (std::abs(position.x) > 100000.0f || std::abs(position.z) > 100000.0f)
+  if (!IsInsideHardWorldBorder(position, WorldBorder))
   {
     return false;
   }
@@ -4276,6 +9895,12 @@ void UWorld::SanitizeUserPosition(const std::shared_ptr<UUser> &user)
   if (!user)
   {
     return;
+  }
+  glm::vec3 pos = user->GetPosition();
+  // Phase 4: soft border clamp before hard sanitize teleport.
+  if (ClampToSoftWorldBorder(pos, WorldBorder))
+  {
+    user->SetPosition(pos);
   }
   if (!IsReasonablePlayerPosition(user->GetPosition()))
   {
@@ -4332,32 +9957,125 @@ namespace
 
 int EnterGameMeshRadiusChunks(const UWorld &world)
 {
-  return std::max(1, world.GetRenderDistanceChunks() + 1);
+  // Era20/33: Dirty/greedy underfeet r≤2 for enter mesh burst — not full FOV.
+  // LitDrawable ring=4 settle is NeedsEnterGameVisualWarmup. r=4 Dirty thrash
+  // left missing sticky while dirty_n≈30 (214138).
+  (void)world;
+  return 2;
 }
 
-bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
+bool EnterMeshAsyncBlocksRing(const UWorld &world,
+                              const UWorldMeshService &mesh,
+                              glm::ivec3 center_ground_chunk, int radius_chunks)
 {
-  // Do not CountNonAir here: under streamer contention it can stall for minutes.
-  const glm::ivec3 center =
-      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-  const int radius = EnterGameMeshRadiusChunks(world);
-  const UWorldMeshService &mesh = world.GetMeshService();
+  // Era53 / Phase 5.5.1: under enter gate only near-band async blocks ring
+  // (full spawn radius hinterland async is PresentableCatchUp / cruise).
+  if (world.IsEnterLitGateActive() || world.IsEnterSessionActive())
+  {
+    const int near_r = EnterMeshAsyncBlockRadiusChunks(radius_chunks);
+    return mesh.HasAsyncInflightInHorizontalRadius(center_ground_chunk, near_r);
+  }
+  return mesh.HasPendingAsyncMeshWork();
+}
+
+bool HasDirtyWithinHorizontalRadiusBand(const UWorldMeshService &mesh,
+                                        glm::ivec3 center, int radius, int cy0,
+                                        int cy1)
+{
+  // HasDirtyInColumnBand takes block-Y and FloorDivs to cy.
+  const int band_min = cy0 * CHUNK_SIZE;
+  const int band_max = cy1 * CHUNK_SIZE + (CHUNK_SIZE - 1);
   for (int dx = -radius; dx <= radius; ++dx)
   {
     for (int dz = -radius; dz <= radius; ++dz)
     {
-      const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
-      if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
-      {
-        continue;
-      }
-      if (!mesh.HasGreedyMesh(coord))
+      if (mesh.HasDirtyInColumnBand(glm::ivec2(center.x + dx, center.z + dz),
+                                    band_min, band_max))
       {
         return true;
       }
     }
   }
   return false;
+}
+
+bool FindFirstSpawnRingMissingGreedyImpl(const UWorld &world, glm::ivec3 &out_coord)
+{
+  // Do not CountNonAir here: under streamer contention it can stall for minutes.
+  // SoftDefer empty has HasGreedy but !Drawable — treat as missing (sky-only)
+  // only when the slice still has solid. True-empty 0-quad is ready.
+  // Presentable cy band (not cy=0 only): underfeet can be ready while bedrock
+  // SoftDefer empty kept missing=1 forever (manual 182802).
+  const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
+  const int radius = EnterGameMeshRadiusChunks(world);
+  const UWorldMeshService &mesh = world.GetMeshService();
+  const auto &proc = world.GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  auto sample_solid = [](const UChunk *chunk) -> bool
+  {
+    if (!chunk)
+    {
+      return false;
+    }
+    for (int z = 0; z < CHUNK_SIZE; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE; x += 4)
+      {
+        for (int y = 0; y < CHUNK_SIZE; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dz = -radius; dz <= radius; ++dz)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+        if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
+        {
+          continue;
+        }
+        if (mesh.HasInflightMeshBuild(coord) || mesh.IsPendingGpuApply(coord))
+        {
+          continue;
+        }
+        if (mesh.HasMeshSatisfyingColumnReady(coord))
+        {
+          continue;
+        }
+        if (mesh.HasGreedyMesh(coord) &&
+            !sample_solid(
+                world.GetBlockWorld().GetChunkManager().GetChunk(coord)))
+        {
+          continue;
+        }
+        out_coord = coord;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
+{
+  glm::ivec3 unused{};
+  return FindFirstSpawnRingMissingGreedyImpl(world, unused);
 }
 
 } // namespace
@@ -4376,7 +10094,13 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   const bool spawn_meshes_pending =
       mesh.HasDirtyWithinHorizontalRadius(center, radius) ||
       HasMissingGreedyMeshesNearFocus(*this);
-  if (!spawn_meshes_pending && !mesh.HasPendingAsyncMeshWork())
+  const bool async_mesh_pending =
+      EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
+  const int gpu_pending_near =
+      mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius);
+  // Era43e/43f: must not return early while GPU uploads remain.
+  if (!ShouldContinueEnterMeshWarmupDrain(spawn_meshes_pending, async_mesh_pending,
+                                          gpu_pending_near))
   {
     return true;
   }
@@ -4384,33 +10108,77 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   {
     return mesh.GetGreedyCacheSize() > 0;
   }
+  const UChunkEmergeCoordinator::FrameBudget mesh_budget =
+      UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
   // Never MarkAllDirtyFromWorld here: ForEachChunk races with streamer workers
   // and re-dirties the entire load radius every frame (hang / crash).
-  if (HasMissingGreedyMeshesNearFocus(*this))
+  if (spawn_meshes_pending && HasMissingGreedyMeshesNearFocus(*this))
   {
+    const auto &proc = GetProceduralSettings();
+    const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+    const int player_cy =
+        FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+    const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+    int cy0 = 0;
+    int cy1 = 0;
+    EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                                 cy1);
     for (int dx = -radius; dx <= radius; ++dx)
     {
       for (int dz = -radius; dz <= radius; ++dz)
       {
-        const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
-        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        for (int cy = cy0; cy <= cy1; ++cy)
         {
-          continue;
-        }
-        if (!mesh.HasGreedyMesh(coord))
-        {
-          mesh.MarkDirtyPriority(coord);
+          const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+          if (!BlockWorld.GetChunkManager().HasChunk(coord))
+          {
+            continue;
+          }
+          // Align with HasMissingGreedyMeshesNearFocus: SoftDefer empty
+          // (HasGreedy && !ready && solid) must Dirty — !HasGreedy-only left
+          // missing=1 dirty=0 forever (manual enter 143303 ~96% bar).
+          if (mesh.HasMeshSatisfyingColumnReady(coord))
+          {
+            continue;
+          }
+          if (mesh.HasGreedyMesh(coord))
+          {
+            const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
+            bool any_solid = false;
+            if (ch)
+            {
+              for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+              {
+                for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+                {
+                  for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                  {
+                    if (ch->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                    {
+                      any_solid = true;
+                    }
+                  }
+                }
+              }
+            }
+            if (!any_solid)
+            {
+              continue;
+            }
+          }
+          EnsureVisualRepairDirtyPriority(coord);
         }
       }
     }
   }
-  const UChunkEmergeCoordinator::FrameBudget mesh_budget =
-      UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
-  mesh.RebuildDirtyChunks(BlockWorld, *BlockRegistry, mesh_budget.MaxMeshDrain,
-                          mesh_budget.MaxMeshSchedule);
-  mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
-                             mesh_budget.MaxMeshDrain);
-  if (BlockRegistry && mesh.GetPendingGpuAppliesCount() > 0)
+  if (spawn_meshes_pending || async_mesh_pending)
+  {
+    mesh.RebuildDirtyChunks(BlockWorld, *BlockRegistry, mesh_budget.MaxMeshDrain,
+                            mesh_budget.MaxMeshSchedule);
+    mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
+                               mesh_budget.MaxMeshDrain);
+  }
+  if (gpu_pending_near > 0 || mesh.GetPendingGpuAppliesCount() > 0)
   {
     mesh.DrainPendingGpuMeshes(BlockWorld, *BlockRegistry,
                                mesh_budget.MaxMeshDrain,
@@ -4418,8 +10186,206 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   }
   return !HasMissingGreedyMeshesNearFocus(*this) &&
          !mesh.HasDirtyWithinHorizontalRadius(center, radius) &&
-         !mesh.HasPendingAsyncMeshWork() &&
+         !EnterMeshAsyncBlocksRing(*this, mesh, center, radius) &&
          mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) == 0;
+}
+
+int UWorld::MarkEnterMissingMeshesDirty()
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  if (!HasMissingGreedyMeshesNearFocus(*this))
+  {
+    return 0;
+  }
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  const auto &proc = GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy =
+      FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  int marked = 0;
+  const bool underfeet_exit_blocked =
+      IsEnterLitGateActive() && !IsEnterUnderfeetPresentReady();
+  // SRBR-P0.3 / manual 202127: underfeet nh≤1 before rim scan order — InGame
+  // exit SoT must not wait on hinterland gate_miss while nh=0 stays missing.
+  if (underfeet_exit_blocked)
+  {
+    for (int horiz = 0; horiz <= 1; ++horiz)
+    {
+      for (int dx = -horiz; dx <= horiz; ++dx)
+      {
+        for (int dz = -horiz; dz <= horiz; ++dz)
+        {
+          if (std::max(std::abs(dx), std::abs(dz)) != horiz)
+          {
+            continue;
+          }
+          for (int cy = cy0; cy <= cy1; ++cy)
+          {
+            const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+            if (!BlockWorld.GetChunkManager().HasChunk(coord) ||
+                mesh.HasMeshSatisfyingColumnReady(coord) ||
+                mesh.IsPendingGpuApply(coord) ||
+                mesh.HasInflightMeshBuild(coord))
+            {
+              continue;
+            }
+            const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
+            bool any_solid = false;
+            if (ch)
+            {
+              for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+              {
+                for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+                {
+                  for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                  {
+                    if (ch->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                    {
+                      any_solid = true;
+                    }
+                  }
+                }
+              }
+            }
+            if (!any_solid)
+            {
+              continue;
+            }
+            EnsureVisualRepairDirtyPriority(coord);
+            ++marked;
+          }
+        }
+      }
+    }
+  }
+  // SRBR-P0.2: gate SoT slice — one Dirty owner even when ring scan/pin miss
+  // (manual 094507: (-5,3,0) orphan soft_held=0 defer=0 inflight=0).
+  glm::ivec3 gate_miss{};
+  if (FindFirstSpawnRingMissingGreedy(gate_miss) &&
+      !mesh.HasInflightMeshBuild(gate_miss) &&
+      !mesh.IsPendingGpuApply(gate_miss) &&
+      !mesh.HasMeshSatisfyingColumnReady(gate_miss))
+  {
+    const glm::ivec2 miss_xz(gate_miss.x, gate_miss.z);
+    const bool gate_dirty = mesh.IsChunkMeshDirty(gate_miss);
+    const bool gate_fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+        miss_xz, ColumnWorkKind::FirstMesh);
+    if (!gate_fm_ticket || !gate_dirty)
+    {
+      EnsureVisualRepairDirtyPriority(gate_miss);
+      marked = 1;
+    }
+  }
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dz = -radius; dz <= radius; ++dz)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        {
+          continue;
+        }
+        if (mesh.HasMeshSatisfyingColumnReady(coord))
+        {
+          continue;
+        }
+        if (mesh.HasGreedyMesh(coord))
+        {
+          const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
+          bool any_solid = false;
+          if (ch)
+          {
+            for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+            {
+              for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+              {
+                for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                {
+                  if (ch->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                  {
+                    any_solid = true;
+                  }
+                }
+              }
+            }
+          }
+          if (!any_solid)
+          {
+            continue;
+          }
+        }
+        // SRBR-P0.2: one owner — skip slices already owned by pipeline/ticket.
+        const bool soft_held = mesh.IsSoftDeferHeld(coord);
+        const bool dirty = mesh.IsChunkMeshDirty(coord);
+        const bool raa = mesh.IsRemeshAfterApplyPending(coord);
+        const bool inflight = mesh.HasInflightMeshBuild(coord);
+        const bool pending_gpu = mesh.IsPendingGpuApply(coord);
+        if (soft_held)
+        {
+          const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
+          if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
+          {
+            EnsureVisualRepairDirtyPriority(coord);
+            ++marked;
+            continue;
+          }
+          if (IsEnterLitGateActive())
+          {
+            const int horiz =
+                std::max(std::abs(coord.x - center.x),
+                         std::abs(coord.z - center.z));
+            const bool pending =
+                IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z));
+            if (EnterLitQuiesceMayLiftSpawnSoftDefer(IsEnterLitQuiesceLatched(),
+                                                     horiz, pending,
+                                                     /*spawn_radius=*/2,
+                                                     underfeet_exit_blocked))
+            {
+              EnsureVisualRepairDirtyPriority(coord);
+              ++marked;
+            }
+          }
+          continue;
+        }
+        const glm::ivec2 col_xz(coord.x, coord.z);
+        const bool fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+            col_xz, ColumnWorkKind::FirstMesh);
+        if (fm_ticket && !dirty &&
+            !mesh.HasMeshSatisfyingColumnReady(coord))
+        {
+          EnsureVisualRepairDirtyPriority(coord);
+          ++marked;
+          continue;
+        }
+        if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
+                                  fm_ticket, mesh.HasDrawableGreedyMesh(coord)))
+        {
+          continue;
+        }
+        EnsureVisualRepairDirtyPriority(coord);
+        ++marked;
+      }
+    }
+  }
+  return marked;
+}
+
+bool UWorld::FindFirstSpawnRingMissingGreedy(glm::ivec3 &out_coord) const
+{
+  return FindFirstSpawnRingMissingGreedyImpl(*this, out_coord);
 }
 
 bool UWorld::IsSpawnMeshRingReady() const
@@ -4428,31 +10394,228 @@ bool UWorld::IsSpawnMeshRingReady() const
   {
     return false;
   }
-  const glm::ivec3 center =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const glm::ivec3 focus = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
   const int radius = EnterGameMeshRadiusChunks(*this);
-  if (HasMissingGreedyMeshesNearFocus(*this))
+  const auto &proc = GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  const bool underfeet_present = IsEnterUnderfeetPresentReady();
+  // Near presentable: underfeet + no near async/gpu (debt may remain hinterland).
+  const int near_async_r = EnterMeshAsyncBlockRadiusChunks(radius);
+  const bool near_async =
+      MeshService->HasAsyncInflightInHorizontalRadius(center, near_async_r);
+  const int near_gpu =
+      MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
+  const bool near_presentable_ready =
+      underfeet_present && !near_async && near_gpu <= 0;
+  const bool ignore_hinterland = EnterSpawnRingIgnoresHinterlandMeshDebt(
+      EnterLitGateActive || IsEnterSessionActive(), CountEnterVisibilityDebt(),
+      underfeet_present, near_presentable_ready);
+  if (!ignore_hinterland && CountPostLoadRingNotReady() > 0)
   {
     return false;
+  }
+  // Era49 / manual 182802: after worklist Done + underfeet, only presentable
+  // cy-band Dirty blocks — residual deep SoftDefer empty GPU/async is cruise.
+  if (ignore_hinterland)
+  {
+    const bool async_pending =
+        EnterMeshAsyncBlocksRing(*this, *MeshService, center, radius);
+    const int gpu_pending =
+        MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
+    if (gpu_pending > 0 || async_pending)
+    {
+      return false;
+    }
+    return !HasDirtyWithinHorizontalRadiusBand(*MeshService, center, radius,
+                                               cy0, cy1);
   }
   if (MeshService->HasDirtyWithinHorizontalRadius(center, radius))
   {
     return false;
   }
-  if (MeshService->HasPendingAsyncMeshWork())
-  {
-    return false;
-  }
-  return MeshService->CountPendingGpuAppliesInHorizontalRadius(center,
-                                                               radius) == 0;
+  const bool async_pending =
+      EnterMeshAsyncBlocksRing(*this, *MeshService, center, radius);
+  const int gpu_pending =
+      MeshService->CountPendingGpuAppliesInHorizontalRadius(center, radius);
+  return gpu_pending <= 0 && !async_pending;
 }
 
 int UWorld::CountPostLoadRingNotReady() const
 {
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const glm::ivec3 focus_ground(focus.x, 0, focus.z);
-  return CountUnfinishedVisualNear(focus_ground, GetRenderDistanceChunks() + 1);
+  const int vis_r = EnterVisualWorkRadiusChunks();
+  // Enter SLA: keep a true R=4 walk. Cruise must not stomp UnfinishedVisualCache
+  // (radius 4 vs streaming R) — dual full walks were ~2× O(R²) per frame.
+  if (IsEnterLitGateActive() || IsEnterSessionActive() ||
+      GetEnterGameMeshBurstFrames() > 0)
+  {
+    return CountUnfinishedVisualNear(focus, vis_r);
+  }
+  auto &cache = UnfinishedVisualCache;
+  if (cache.valid && cache.focus.x == focus.x && cache.focus.z == focus.z &&
+      cache.radius >= vis_r)
+  {
+    int n = 0;
+    for (uint64_t key : cache.unfinished_keys)
+    {
+      const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+      const int cz = static_cast<int>(static_cast<uint32_t>(key));
+      const int rdx = std::abs(cx - focus.x);
+      const int rdz = std::abs(cz - focus.z);
+      if (std::max(rdx, rdz) <= vis_r)
+      {
+        ++n;
+      }
+    }
+    return n;
+  }
+  return CountUnfinishedVisualNear(focus, vis_r);
+}
+
+int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
+{
+  if (!MeshService || !BlockRegistry || max_marks <= 0)
+  {
+    return 0;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int vis_r = EnterVisualWorkRadiusChunks();
+  const int ring_r = max_horiz < 0 ? vis_r : std::min(vis_r, max_horiz);
+  const auto &proc = GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy =
+      FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  int marked = 0;
+  auto try_mark_slice = [&](glm::ivec3 coord) -> bool
+  {
+    if (!BlockWorld.GetChunkManager().HasChunk(coord))
+    {
+      return false;
+    }
+    if (EnterCatchUpSkipMarkBecauseMeshOwned(
+            mesh.HasMeshSatisfyingColumnReady(coord),
+            mesh.IsPendingGpuApply(coord),
+            IsColumnVisualReady(glm::ivec2(coord.x, coord.z))))
+    {
+      return false;
+    }
+    const bool soft_held = mesh.IsSoftDeferHeld(coord);
+    const bool dirty = mesh.IsChunkMeshDirty(coord);
+    const bool raa = mesh.IsRemeshAfterApplyPending(coord);
+    const bool inflight = mesh.HasInflightMeshBuild(coord);
+    const bool pending_gpu = mesh.IsPendingGpuApply(coord);
+    if (soft_held)
+    {
+      const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
+      if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
+      {
+        EnsureVisualRepairDirtyPriority(coord);
+        return true;
+      }
+      return false;
+    }
+    const glm::ivec2 col_xz(coord.x, coord.z);
+    const bool fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+        col_xz, ColumnWorkKind::FirstMesh);
+    if (fm_ticket && !dirty && !mesh.HasMeshSatisfyingColumnReady(coord))
+    {
+      EnsureVisualRepairDirtyPriority(coord);
+      return true;
+    }
+    if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
+                              fm_ticket, mesh.HasDrawableGreedyMesh(coord)))
+    {
+      return false;
+    }
+    EnsureVisualRepairDirtyPriority(coord);
+    return true;
+  };
+  // Underfeet-first ring order — nh=0 before rim backlog (miss_stuck SLA).
+  for (int horiz = 0; horiz <= ring_r && marked < max_marks; ++horiz)
+  {
+    for (int dx = -horiz; dx <= horiz && marked < max_marks; ++dx)
+    {
+      for (int dz = -horiz; dz <= horiz && marked < max_marks; ++dz)
+      {
+        if (std::max(std::abs(dx), std::abs(dz)) != horiz)
+        {
+          continue;
+        }
+        const FocusColumnVisualClass visual_class =
+            ClassifyFocusColumnVisual(*this, focus, dx, dz);
+        if (!IsUnfinishedFocusColumnVisual(visual_class))
+        {
+          continue;
+        }
+        for (int cy = cy0; cy <= cy1 && marked < max_marks; ++cy)
+        {
+          if (try_mark_slice(glm::ivec3(focus.x + dx, cy, focus.z + dz)))
+          {
+            ++marked;
+          }
+        }
+      }
+    }
+  }
+  return marked;
+}
+
+bool UWorld::HealPinnedMissSlice(glm::ivec3 coord)
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  if (!BlockWorld.GetChunkManager().HasChunk(coord))
+  {
+    return false;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  if (mesh.HasMeshSatisfyingColumnReady(coord))
+  {
+    return true;
+  }
+  const glm::ivec2 col_xz(coord.x, coord.z);
+  const bool dirty = mesh.IsChunkMeshDirty(coord);
+  const bool soft_held = mesh.IsSoftDeferHeld(coord);
+  if (soft_held)
+  {
+    const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
+    if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
+    {
+      EnsureVisualRepairDirtyPriority(coord);
+    }
+  }
+  else
+  {
+    const bool fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+        col_xz, ColumnWorkKind::FirstMesh);
+    if (!dirty || fm_ticket)
+    {
+      EnsureVisualRepairDirtyPriority(coord);
+    }
+  }
+  if (mesh.IsPendingGpuApply(coord) || mesh.IsPendingGpuQueued(coord) ||
+      mesh.IsPendingGpuKickedOrDispatched(coord))
+  {
+    mesh.PreferKickPendingGpuQueued(coord);
+  }
+  return false;
 }
 
 void UWorld::TickEnterGameMeshBurst()
@@ -4474,56 +10637,1601 @@ void UWorld::SetEnterGameWarmupMissingGreedy(int n)
   PhysicsTelemetryData.EnterGameWarmupMissingGreedy = EnterGameWarmupMissingGreedy;
 }
 
+void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out) const
+{
+  out = {};
+  if (!MeshService || (!BlockWorldReady && CachedBlockCount == 0 &&
+                       MeshService->GetGreedyCacheSize() == 0))
+  {
+    return;
+  }
+  const UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  const auto &proc = GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  out.missing_greedy = HasMissingGreedyMeshesNearFocus(*this);
+  out.visual_warmup = NeedsEnterGameVisualWarmup();
+  const bool enter_warmup_gate =
+      EnterLitGateActive || IsEnterSessionActive();
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  if (enter_warmup_gate)
+  {
+    // Enter exit: hinterland miss is post-InGame catch-up (SRBR enter convergence).
+    out.missing_greedy =
+        IsEnterUnderfeetPresentReady()
+            ? false
+            : mesh.HasMissingGreedyMeshInHorizontalRadius(
+                  BlockWorld, focus_ground, 1);
+  }
+  if (EnterSpawnRingIgnoresHinterlandMeshDebt(
+          enter_warmup_gate, CountEnterVisibilityDebt(),
+          IsEnterUnderfeetPresentReady(),
+          /*near_presentable_ready=*/
+          IsEnterUnderfeetPresentReady() &&
+              !EnterMeshAsyncBlocksRing(*this, mesh, center, radius) &&
+              mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1) <= 0))
+  {
+    out.dirty = HasDirtyWithinHorizontalRadiusBand(mesh, center, radius, cy0,
+                                                   cy1);
+    // Hinterland GPU/async is not an enter blocker; underfeet GPU still is
+    // (remaining==0 + CPU drawable used to drop the bar while gpu_finish=0).
+    out.gpu_pending_near =
+        mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1);
+    // Near-band async only (EnterMeshAsyncBlocksRing already near-scoped).
+    out.async_mesh_pending =
+        EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
+    return;
+  }
+  out.dirty = mesh.HasDirtyWithinHorizontalRadius(center, radius);
+  out.gpu_pending_near =
+      mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius);
+  out.async_mesh_pending =
+      EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
+}
+
 bool UWorld::NeedsEnterGameMeshWarmup() const
 {
+  // Phase5 S2: post-enter cruise must not pay SampleEnterGameMeshWarmupBlockers
+  // every Refresh (~60ms setup_probe). Enter exit still samples while gate or
+  // session is active (MeshWarmupFinalize / visual warmup paths included).
+  if (!EnterLitGateActive && !IsEnterSessionActive())
+  {
+    return false;
+  }
   if (!BlockWorldReady && CachedBlockCount == 0 &&
       MeshService->GetGreedyCacheSize() == 0)
   {
     return false;
   }
+  // Phase 5.2.0: do NOT memo on StreamingFrameEpoch. Epoch advances only in
+  // TickWorldStreamingPhase (InGame); Loading/PrepareView freezes it so the
+  // first mesh_dirty=1 sample pinned CachedNeedsEnterMeshWarmup forever and
+  // stuck PrepareView at 100% until soft_exit 150s.
+  EnterGameMeshWarmupBlockers blockers{};
+  SampleEnterGameMeshWarmupBlockers(blockers);
+  bool need = false;
+  if (blockers.dirty || blockers.missing_greedy)
+  {
+    need = true;
+  }
+  else if (blockers.async_mesh_pending || blockers.gpu_pending_near > 0)
+  {
+    need = true;
+  }
+  else
+  {
+    need = blockers.visual_warmup;
+  }
+  CachedNeedsEnterMeshWarmup = need;
+  EnterWarmupSampleEpoch = StreamingFrameEpoch;
+  return need;
+}
+
+bool UWorld::NeedsEnterGameVisualWarmup() const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  // PrepareView already baked spawn-ring Presentable. GpuWarmup is upload-only.
+  if (SpawnAreaPreparedByCooperativeLoad)
+  {
+    return false;
+  }
+  const bool underfeet_present = IsEnterUnderfeetPresentReady();
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int underfeet_gpu_pending =
+      MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
+  // Enter north-star: underfeet present — hinterland vis/mesh debt is post-InGame.
+  if (IsEnterSessionActive() && underfeet_present &&
+      underfeet_gpu_pending <= 0 &&
+      (EnterVisualGateCtrl.IsCaptured() || EnterLitQuiesceLatched))
+  {
+    return false;
+  }
+  // Yield when LitDrawable r=4 is VisualReady (not r=2 Dirty-clear).
+  if (EnterVisualWarmupYieldsToGateRemaining(
+          EnterLitGateActive || IsEnterSessionActive(),
+          CountEnterVisibilityDebt(), underfeet_present, underfeet_gpu_pending))
+  {
+    return false;
+  }
   const UWorldMeshService &mesh = *MeshService;
-  if (mesh.HasPendingAsyncMeshWork())
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  const int visual_r = EnterVisualWarmupRadiusChunks();
+  if (HasPendingLightBeforeMeshNear(focus_ground, visual_r))
   {
     return true;
   }
-  const glm::ivec3 center =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const int radius = EnterGameMeshRadiusChunks(*this);
-  if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, ProceduralTemplate.SeaLevel),
+                               CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  for (int dx = -visual_r; dx <= visual_r; ++dx)
+  {
+    for (int dz = -visual_r; dz <= visual_r; ++dz)
+    {
+      const bool soft_underfeet = std::max(std::abs(dx), std::abs(dz)) <= 1;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
+        const bool has_greedy = mesh.HasGreedyMesh(coord);
+        const bool soft_held = mesh.IsSoftDeferHeld(coord);
+        const bool empty_or_held =
+            (!has_drawable && has_greedy) || soft_held;
+        if (EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, soft_underfeet))
+        {
+          return true;
+        }
+        bool any_solid = false;
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+            {
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                any_solid = true;
+              }
+            }
+          }
+        }
+        if (!any_solid)
+        {
+          continue;
+        }
+        if (!has_greedy && !has_drawable)
+        {
+          return true;
+        }
+        if (mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord))
+        {
+          return true;
+        }
+        if (!soft_underfeet)
+        {
+          continue;
+        }
+        const bool fully_dark =
+            has_drawable && mesh.GetCache().ChunkHasFullyDarkFace(coord) &&
+            !mesh.ChunkHasLitDrawableFace(coord);
+        const bool lit_drawable =
+            has_drawable && mesh.ChunkHasLitDrawableFace(coord);
+        const glm::ivec2 col_xz(coord.x, coord.z);
+        const bool pending_col = IsPendingLightBeforeMesh(col_xz);
+        const bool stale =
+            fully_dark && MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
+        const bool true_dark =
+            fully_dark && open_sky && !pending_col && !stale;
+        if (!EnterUnderfeetSliceReady(lit_drawable, pending_col, true_dark))
+        {
+          return true;
+        }
+        // SoftDefer empty / !drawable is a hole — not present.
+        if (soft_held && !has_drawable)
+        {
+          return true;
+        }
+        if (has_drawable && !IsChunkSliceRenderReady(coord))
+        {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+int UWorld::GetPendingTerrainRelightFifoCount() const
+{
+  return Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
+}
+
+int UWorld::EnterLitGateLitRadiusChunks() const
+{
+  return EnterVisualWarmupRadiusChunks();
+}
+
+bool UWorld::ColumnFullyDarkSolidDrawable(glm::ivec2 col_chunk_xz) const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    if (!chunk || !MeshService->HasDrawableGreedyMesh(coord))
+    {
+      continue;
+    }
+    bool any_solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+      {
+        for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            any_solid = true;
+          }
+        }
+      }
+    }
+    if (!any_solid)
+    {
+      continue;
+    }
+    // Unlit-only: FullyDark verts and no lit drawable face.
+    if (MeshService->GetCache().ChunkHasFullyDarkFace(coord) &&
+        !MeshService->ChunkHasLitDrawableFace(coord))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UWorld::ColumnHasLitDrawableFace(glm::ivec2 col_chunk_xz) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
+    if (MeshService->HasDrawableGreedyMesh(coord) &&
+        MeshService->ChunkHasLitDrawableFace(coord))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UWorld::IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const
+{
+  // Worklist Done is enter SoT — do not keep snapshot debt after Remaining=0.
+  if (EnterLitSnapshotResolvedByWorklistDone(
+          EnterVisualGateCtrl.IsCaptured(),
+          EnterVisualGateCtrl.Contains(col_chunk_xz),
+          EnterVisualGateCtrl.GetState(col_chunk_xz) ==
+              EnterVisualItemState::Done))
   {
     return true;
   }
-  if (HasMissingGreedyMeshesNearFocus(*this))
+  const bool pending = IsPendingLightBeforeMesh(col_chunk_xz);
+  const bool lit_ready =
+      IsColumnLitReady(glm::ivec3(col_chunk_xz.x, 0, col_chunk_xz.y));
+  if (EnterLitSnapshotResolvedByStickyRemesh(
+          EnterLitGateActive, StickyRemeshAfterLight.count(col_chunk_xz) > 0,
+          pending, lit_ready))
   {
     return true;
   }
-  // TD-ARCH-021/D2b: Visual RD spawn barrier — post-load ring must be draw-ready.
-  if (CountPostLoadRingNotReady() > 0)
+  if (pending)
+  {
+    return false;
+  }
+  if (!lit_ready)
+  {
+    return false;
+  }
+  // Lit drawable faces (even with leftover dark verts) are enter-resolved.
+  if (ColumnHasLitDrawableFace(col_chunk_xz))
   {
     return true;
   }
-  return mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) > 0;
+  if (!ColumnFullyDarkSolidDrawable(col_chunk_xz))
+  {
+    return true;
+  }
+  const bool stale = ColumnFullyDarkLooksStaleWithLitField(col_chunk_xz);
+  const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_chunk_xz);
+  const ColumnRecord *rec = ColumnRecords.Find(col_chunk_xz);
+  const bool legal_settled = rec && rec->legal_dark_settled;
+  return EnterFullyDarkColumnSettled(open_sky, pending, lit_ready, stale,
+                                     /*has_lit_drawable=*/false, legal_settled);
+}
+
+int UWorld::CountEnterLitSnapshotDebt() const
+{
+  int debt = 0;
+  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  {
+    if (!IsEnterLitSnapshotColumnResolved(col))
+    {
+      ++debt;
+    }
+  }
+  return debt;
+}
+
+void UWorld::CaptureEnterLitDebtSnapshot()
+{
+  EnterLitDebtSnapshot.clear();
+  if (!MeshService || !BlockRegistry)
+  {
+    return;
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int lit_r = EnterLitGateLitRadiusChunks();
+  for (int dx = -lit_r; dx <= lit_r; ++dx)
+  {
+    for (int dz = -lit_r; dz <= lit_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (IsPendingLightBeforeMesh(col) || ColumnFullyDarkSolidDrawable(col))
+      {
+        EnterLitDebtSnapshot.insert(col);
+      }
+    }
+  }
+  EnterLitSnapshotCaptured = true;
+}
+
+void UWorld::EnqueueEnterLitSnapshotRelight()
+{
+  if (!Persistence || !EnterLitSnapshotCaptured)
+  {
+    return;
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int fov_r = EnterVisualWarmupRadiusChunks();
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int band_min = 0;
+  const int band_max = max_y;
+
+  auto try_enqueue = [&](glm::ivec2 col, bool priority)
+  {
+    if (!EnterLitDebtSnapshot.count(col))
+    {
+      return;
+    }
+    const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
+    if (Persistence->IsTerrainColumnRelightQueued(world_key) ||
+        IsAsyncRelightColumnInFlight(col))
+    {
+      return;
+    }
+    Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
+                                             band_min, band_max);
+  };
+
+  for (int dx = -fov_r; dx <= fov_r; ++dx)
+  {
+    for (int dz = -fov_r; dz <= fov_r; ++dz)
+    {
+      try_enqueue(glm::ivec2(center.x + dx, center.z + dz), /*priority=*/true);
+    }
+  }
+  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  {
+    const int horiz =
+        std::max(std::abs(col.x - center.x), std::abs(col.y - center.z));
+    if (horiz <= fov_r)
+    {
+      continue;
+    }
+    try_enqueue(col, /*priority=*/false);
+  }
+}
+
+void UWorld::RepairEnterLitSnapshotFifoGhosts()
+{
+  if (!Persistence || !EnterLitSnapshotCaptured)
+  {
+    return;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int band_min = 0;
+  const int band_max = max_y;
+  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  {
+    if (IsEnterLitSnapshotColumnResolved(col))
+    {
+      continue;
+    }
+    // Era48: void-edge FullyDark (LitReady, zero field) is not a fifo-ghost —
+    // remesh cannot invent light; snapshot treats it resolved. Only pending /
+    // !LitReady columns need another terrain relight enqueue here.
+    if (!IsPendingLightBeforeMesh(col) &&
+        IsColumnLitReady(glm::ivec3(col.x, 0, col.y)))
+    {
+      continue;
+    }
+    const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
+    if (Persistence->IsTerrainColumnRelightQueued(world_key) ||
+        IsAsyncRelightColumnInFlight(col))
+    {
+      continue;
+    }
+    const int horiz = std::max(
+        std::abs(col.x - UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock()).x),
+        std::abs(col.y - UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock()).z));
+    const bool priority = horiz <= EnterVisualWarmupRadiusChunks();
+    Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
+                                             band_min, band_max);
+  }
+}
+
+bool UWorld::ColumnFullyDarkLooksStaleWithLitField(glm::ivec2 col_chunk_xz) const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  if (!ColumnFullyDarkSolidDrawable(col_chunk_xz))
+  {
+    return false;
+  }
+  // Sticky owns the one OpenSky→bake remesh for enter. Residual FullyDark after
+  // that attempt is true-dark / cave — not unfinished bake debt.
+  // P5 out-of-scope: mixed GPU chunks can keep GpuHasDarkFace after one remesh
+  // (no separate GpuHasLitFace); full dark-free first paint needs that bit.
+  if (StickyRemeshAfterLight.count(col_chunk_xz) > 0)
+  {
+    return false;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
+    if (!MeshService->HasDrawableGreedyMesh(coord) ||
+        !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      continue;
+    }
+    // Match ChunkMeshCache stale vs void-edge split (face air/solid sample).
+    if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
+{
+  if (!MeshService || !EnterLitGateActive)
+  {
+    return 0;
+  }
+  if (!EnterVisualGateCtrl.IsCaptured() && !EnterLitSnapshotCaptured)
+  {
+    return 0;
+  }
+  int scheduled = 0;
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int vis_r = EnterVisualWorkRadiusChunks();
+
+  auto schedule_col = [&](glm::ivec2 col)
+  {
+    const bool fully_dark = ColumnFullyDarkSolidDrawable(col);
+    const bool stale = ColumnFullyDarkLooksStaleWithLitField(col);
+    // Missing-from-worklist is GetState=Done; those spawn columns still need
+    // OpenSky/relight if snapshot debt remains. Skip only worklist-Done that
+    // snapshot already treats as resolved.
+    if (EnterVisualGateCtrl.Contains(col) &&
+        EnterVisualGateCtrl.GetState(col) == EnterVisualItemState::Done &&
+        IsEnterLitSnapshotColumnResolved(col))
+    {
+      return;
+    }
+    if (MeshService->HasSoftDeferHeldInColumn(col) &&
+        !GetColumnFlowExecutor().Scheduler().Contains(
+            col, ColumnWorkKind::FirstMesh))
+    {
+      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
+                                      /*priority=*/100);
+    }
+    if (IsPendingLightBeforeMesh(col) ||
+        !IsColumnLitReady(glm::ivec3(col.x, 0, col.y)))
+    {
+      return;
+    }
+    if (!fully_dark)
+    {
+      return;
+    }
+    const bool has_fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+        col, ColumnWorkKind::FirstMesh);
+    const bool soft_ticket =
+        MeshService->HasSoftDeferHeldInColumn(col) && has_fm_ticket;
+    const bool open_sky_done = EnterVisualGateCtrl.WasOpenSkyApplied(col);
+    const bool relight_owned =
+        IsPendingLightBeforeMesh(col) ||
+        AsyncRelightColumnsInFlight.count(col) > 0 ||
+        GetColumnFlowExecutor().Scheduler().Contains(
+            col, ColumnWorkKind::RelightThenMesh) ||
+        GetColumnFlowExecutor().Scheduler().Contains(
+            col, ColumnWorkKind::PromoteRelight);
+    const EnterVoidEdgeAction action = ClassifyEnterVoidEdgeAction(
+        /*fully_dark=*/true, stale, soft_ticket, relight_owned, open_sky_done);
+
+    if (action == EnterVoidEdgeAction::RelightOnce)
+    {
+      if (!open_sky_done)
+      {
+        const int sea = ProceduralTemplate.SeaLevel;
+        const int max_h = ProceduralTemplate.MaxHeight;
+        const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+        const int dirty_max = std::min(max_h, sea + CHUNK_SIZE * 2);
+        ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, col.x * CHUNK_SIZE,
+                                  col.y * CHUNK_SIZE, dirty_min, dirty_max);
+        EnterVisualGateCtrl.NoteOpenSkyApplied(col);
+        StickyRemeshAfterLight.erase(col);
+      }
+      EnterVisualGateCtrl.NoteVoidRelightProbed(col);
+      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
+                                      /*priority=*/80);
+      EnqueueVoidDarkColumnRelightNote(col);
+      ++scheduled;
+      return;
+    }
+    if (action != EnterVoidEdgeAction::RemeshStale)
+    {
+      return;
+    }
+    // Sticky owns one remesh attempt after OpenSky — do not re-MarkDirty spin.
+    if (StickyRemeshAfterLight.count(col) > 0)
+    {
+      return;
+    }
+    bool touched = false;
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(col.x, cy, col.y);
+      if (!MeshService->HasDrawableGreedyMesh(coord) ||
+          !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        continue;
+      }
+      // Already rebuilding — count as the one enter remesh attempt.
+      if (MeshService->IsChunkMeshDirty(coord) ||
+          MeshService->IsRemeshAfterApplyPending(coord) ||
+          MeshService->HasInflightMeshBuild(coord))
+      {
+        StickyRemeshAfterLight.insert(col);
+        touched = true;
+        continue;
+      }
+      if (MeshService->IsPendingGpuApply(coord))
+      {
+        MeshService->PreferKickPendingGpuQueued(coord);
+        StickyRemeshAfterLight.insert(col);
+        touched = true;
+        ++scheduled;
+        continue;
+      }
+      // ColPipe P7/P2: one remesh owner — Dirty only (no dual RAA + sticky producer).
+      EnsureVisualRepairDirtyPriority(coord);
+      touched = true;
+      ++scheduled;
+    }
+    (void)touched;
+    (void)has_fm_ticket;
+  };
+
+  if (EnterVisualGateCtrl.IsCaptured())
+  {
+    for (const auto &kv : EnterVisualGateCtrl.Items())
+    {
+      if (kv.second != EnterVisualItemState::Done)
+      {
+        schedule_col(kv.first);
+      }
+    }
+  }
+  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  {
+    schedule_col(col);
+  }
+  // Convergence: when worklist Remaining==0, do not re-sweep full LitDrawable
+  // ring every frame (refeeds Dirty forever; manual 173849 dirty≈50–80).
+  if (EnterVisualGateCtrl.IsCaptured() && EnterVisualGateCtrl.Remaining() <= 0)
+  {
+    return scheduled;
+  }
+  for (int dx = -vis_r; dx <= vis_r; ++dx)
+  {
+    for (int dz = -vis_r; dz <= vis_r; ++dz)
+    {
+      schedule_col(glm::ivec2(center.x + dx, center.z + dz));
+    }
+  }
+  return scheduled;
+}
+
+void UWorld::SyncEnterVisualGateQuiesceFlags()
+{
+  if (!MeshService)
+  {
+    return;
+  }
+  const bool gate = EnterLitGateActive;
+  if (gate && EnterVisualGateCtrl.IsCaptured())
+  {
+    std::vector<glm::ivec2> done_cols;
+    done_cols.reserve(static_cast<size_t>(EnterVisualGateCtrl.Peak()));
+    for (const auto &kv : EnterVisualGateCtrl.Items())
+    {
+      if (kv.second == EnterVisualItemState::Done)
+      {
+        done_cols.push_back(kv.first);
+      }
+    }
+    MeshService->SyncEnterGateDoneColumns(done_cols);
+  }
+  else if (!gate)
+  {
+    MeshService->SyncEnterGateDoneColumns({});
+  }
+  if (gate)
+  {
+    MeshService->SetEnterVoidTelemLitReadyFn(
+        [this](glm::ivec2 col)
+        { return IsColumnLitReady(glm::ivec3(col.x, 0, col.y)); });
+  }
+  else
+  {
+    MeshService->SetEnterVoidTelemLitReadyFn({});
+  }
+  const int lit_remaining = CountEnterFovLitDebt();
+  if (gate && EnterLitQuiesceAllowed(gate, lit_remaining))
+  {
+    EnterLitQuiesceLatched = true;
+  }
+  if (!gate)
+  {
+    EnterLitQuiesceLatched = false;
+  }
+  MeshService->SetEnterGpuQuiesceDrain(EnterGpuQuiesceDrainAllowed(gate));
+  // Era47 KEEP: once LIGHT snapshot hits 0, stay silent. Snapshot blips must
+  // not re-open MarkRelit (dirty 0→300 spiral).
+  MeshService->SetEnterLitQuiesce(gate && EnterLitQuiesceLatched);
+}
+
+void UWorld::RefreshEnterVisualWorklistStates()
+{
+  if (!EnterVisualGateCtrl.IsCaptured() || !MeshService)
+  {
+    return;
+  }
+  for (const auto &kv : EnterVisualGateCtrl.Items())
+  {
+    const glm::ivec2 col = kv.first;
+    if (kv.second == EnterVisualItemState::Done)
+    {
+      continue;
+    }
+    const bool pending = IsPendingLightBeforeMesh(col);
+    const bool lit_ready =
+        IsColumnLitReady(glm::ivec3(col.x, 0, col.y));
+    const bool fully_dark = ColumnFullyDarkSolidDrawable(col);
+    const bool has_lit = ColumnHasLitDrawableFace(col);
+    const bool stale =
+        fully_dark && ColumnFullyDarkLooksStaleWithLitField(col);
+    const bool true_dark =
+        fully_dark && !pending && lit_ready &&
+        EnterVisualGateCtrl.WasOpenSkyApplied(col) && !stale;
+    const bool terminal =
+        IsColumnVisualReady(col) || has_lit || true_dark;
+    bool gpu_busy = false;
+    if (!terminal && MeshService)
+    {
+      const int max_cy =
+          std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+      for (int cy = 0; cy <= max_cy && !gpu_busy; ++cy)
+      {
+        const glm::ivec3 coord(col.x, cy, col.y);
+        if (MeshService->IsPendingGpuApply(coord) ||
+            MeshService->HasInflightMeshBuild(coord))
+        {
+          gpu_busy = true;
+        }
+      }
+    }
+    const EnterVisualItemState observed = ClassifyEnterVisualItemState(
+        pending || !lit_ready, stale, gpu_busy, terminal);
+    EnterVisualGateCtrl.ObserveColumn(col, observed);
+  }
+  const int rem = EnterVisualGateCtrl.Remaining();
+  if (rem <= 0)
+  {
+    EnterVisualGateCtrl.SetPhase(EnterVisualGatePhase::Verify);
+  }
+  else if (EnterVisualGateCtrl.Phase() == EnterVisualGatePhase::Capture ||
+           EnterVisualGateCtrl.Phase() == EnterVisualGatePhase::Idle)
+  {
+    EnterVisualGateCtrl.SetPhase(EnterVisualGatePhase::DrainLight);
+  }
+}
+
+void UWorld::BeginEnterLitGate()
+{
+  if (EnterLitGateActive)
+  {
+    return;
+  }
+  StreamingEnabledBeforeEnterLitGate = IsStreamingEnabled();
+  EnterLitGateActive = true;
+  EnterLitGateBeginTp = std::chrono::steady_clock::now();
+  LastEnterSettleReason.clear();
+  LastEnterGateElapsedMs = 0.0;
+  EnterLitQuiesceLatched = false;
+  CreateSpawnWarmupSettledLatched = false;
+  EnterVisualGateCtrl.Reset();
+  if (MeshService)
+  {
+    // Era50: GPU quiesce for whole gate; lit quiesce only after remaining==0.
+    MeshService->SetEnterGpuQuiesceDrain(true);
+    MeshService->SetEnterLitQuiesce(false);
+  }
+  if (URuntimeTuning::Get().EnterLitUseSnapshotDebt)
+  {
+    CaptureEnterLitDebtSnapshot();
+  }
+  CaptureEnterVisualWorkSnapshot();
+  if (EnterLitSnapshotCaptured && BlockRegistry)
+  {
+    const int sea = ProceduralTemplate.SeaLevel;
+    const int max_h = ProceduralTemplate.MaxHeight;
+    const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+    const int dirty_max = std::min(max_h, sea + CHUNK_SIZE * 2);
+    for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+    {
+      ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, col.x * CHUNK_SIZE,
+                                col.y * CHUNK_SIZE, dirty_min, dirty_max);
+      EnterVisualGateCtrl.NoteOpenSkyApplied(col);
+      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
+                                      /*priority=*/80);
+      // OpenSky inject is a light delta — remesh via ColumnFlow (not direct MarkDirty).
+      if (MeshService && ColumnFullyDarkSolidDrawable(col))
+      {
+        StickyRemeshAfterLight.erase(col);
+        GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
+                                        /*priority=*/85);
+      }
+    }
+    EnqueueEnterLitSnapshotRelight();
+  }
+}
+
+double UWorld::GetEnterLitGateElapsedMs() const
+{
+  if (!EnterLitGateActive)
+  {
+    return LastEnterGateElapsedMs;
+  }
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now() - EnterLitGateBeginTp)
+      .count();
+}
+
+void UWorld::SetLastEnterSettleReason(const char *reason)
+{
+  LastEnterSettleReason = reason ? reason : "";
+}
+
+void UWorld::EndEnterLitGate()
+{
+  if (!EnterLitGateActive)
+  {
+    return;
+  }
+  LastEnterGateElapsedMs = GetEnterLitGateElapsedMs();
+  EnterLitGateActive = false;
+  EnterLitSnapshotCaptured = false;
+  EnterLitQuiesceLatched = false;
+  // Phase5.1: latch spawn-warmup settled on gate end — quiesce flag is cleared
+  // above and must not reopen O(FOV) IsCreateSpawnWarmupSettled on cruise.
+  CreateSpawnWarmupSettledLatched = true;
+  EnterLitDebtSnapshot.clear();
+  EnterVisualWorkSnapshot.clear();
+  EnterVisualWorkSnapshotCaptured = false;
+  EnterVisualWorkPeak = 0;
+  EnterVisualGateCtrl.Reset();
+  if (MeshService)
+  {
+    MeshService->SetEnterGpuQuiesceDrain(false);
+    MeshService->SetEnterLitQuiesce(false);
+    MeshService->ClearEnterTerminalHeld();
+  }
+  SetStreamingEnabled(StreamingEnabledBeforeEnterLitGate);
+  EnsurePlayerOnGround();
+  PhysicsSuspendFrames = std::max(PhysicsSuspendFrames, 2);
+}
+
+int UWorld::CountEnterFovLitDebt() const
+{
+  if (EnterLitGateActive && EnterLitSnapshotCaptured &&
+      URuntimeTuning::Get().EnterLitUseSnapshotDebt)
+  {
+    return CountEnterLitSnapshotDebt();
+  }
+  if (!MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  const UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int lit_r = EnterLitGateLitRadiusChunks();
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+
+  int debt = static_cast<int>(PendingLightBeforeMesh.size());
+
+  for (int dx = -lit_r; dx <= lit_r; ++dx)
+  {
+    for (int dz = -lit_r; dz <= lit_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (IsPendingLightBeforeMesh(col))
+      {
+        continue;
+      }
+      // Live FOV debt mirrors snapshot: only stale-dark (remesh-able) counts.
+      if (ColumnFullyDarkLooksStaleWithLitField(col))
+      {
+        ++debt;
+      }
+    }
+  }
+  (void)mesh;
+  (void)max_cy;
+  return debt;
+}
+
+int UWorld::CountEnterVisibilityDebt() const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  // Enter worklist Remaining is spawn-ring Presentable (true-dark/lit Done).
+  // Live CountUnreadyColumns treats ocean FullyDark as holes and never hits 0.
+  if (EnterLitGateActive && EnterVisualGateCtrl.IsCaptured())
+  {
+    return EnterVisualGateCtrl.Remaining();
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  return CountUnreadyColumns(center, EnterVisualWorkRadiusChunks());
+}
+
+bool UWorld::ColumnHasTerrainInEnterVisualBand(glm::ivec2 col_chunk_xz) const
+{
+  if (!BlockRegistry)
+  {
+    return false;
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy =
+      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    if (BlockWorld.GetChunkManager().HasChunk(
+            glm::ivec3(col_chunk_xz.x, cy, col_chunk_xz.y)))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void UWorld::CaptureEnterVisualWorkSnapshot()
+{
+  EnterVisualWorkSnapshot.clear();
+  EnterVisualWorkSnapshotCaptured = false;
+  EnterVisualWorkPeak = 0;
+  EnterVisualGateCtrl.BeginCapture();
+  if (!MeshService || !BlockRegistry)
+  {
+    EnterVisualGateCtrl.EndCapture();
+    return;
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int vis_r = EnterVisualWorkRadiusChunks();
+  for (int dx = -vis_r; dx <= vis_r; ++dx)
+  {
+    for (int dz = -vis_r; dz <= vis_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      const bool pending = IsPendingLightBeforeMesh(col);
+      const bool fully_dark = ColumnFullyDarkSolidDrawable(col);
+      // Terrain-band N/A excluded, but full-column FullyDark is snapshot debt
+      // even when the enter visual band looks ready.
+      if (!ColumnHasTerrainInEnterVisualBand(col) && !pending && !fully_dark)
+      {
+        continue;
+      }
+      if (IsColumnVisualReady(col) && !fully_dark && !pending)
+      {
+        continue;
+      }
+      EnterVisualWorkSnapshot.insert(col);
+      const bool lit_ready =
+          IsColumnLitReady(glm::ivec3(col.x, 0, col.y));
+      const bool stale =
+          fully_dark && ColumnFullyDarkLooksStaleWithLitField(col);
+      const EnterVisualItemState initial = ClassifyEnterVisualItemState(
+          pending || !lit_ready, stale,
+          /*gpu*/ false, /*terminal*/ false);
+      EnterVisualGateCtrl.AddCapturedColumn(col, initial);
+    }
+  }
+  EnterVisualGateCtrl.EndCapture();
+  EnterVisualWorkPeak = EnterVisualGateCtrl.Peak();
+  EnterVisualWorkSnapshotCaptured = EnterVisualGateCtrl.IsCaptured();
+}
+
+bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  const bool pending = IsPendingLightBeforeMesh(col_chunk_xz);
+  if (pending)
+  {
+    return false;
+  }
+  const bool lit_ready =
+      IsColumnLitReady(glm::ivec3(col_chunk_xz.x, 0, col_chunk_xz.y));
+
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy =
+      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+
+  bool any_chunk = false;
+  bool fully_dark_solid = false;
+  bool missing_greedy = false;
+  bool soft_defer_empty = false;
+
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
+    if (!BlockWorld.GetChunkManager().HasChunk(coord))
+    {
+      continue;
+    }
+    any_chunk = true;
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    bool any_solid = false;
+    if (chunk)
+    {
+      for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+      {
+        for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+        {
+          for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+          {
+            if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+            {
+              any_solid = true;
+            }
+          }
+        }
+      }
+    }
+    if (!any_solid)
+    {
+      continue;
+    }
+    if (MeshService->HasDrawableGreedyMesh(coord) &&
+        MeshService->GetCache().ChunkHasFullyDarkFace(coord) &&
+        !MeshService->ChunkHasLitDrawableFace(coord))
+    {
+      // Stale FullyDark (or sticky remesh) is not Presentable. True-dark
+      // ocean/cave (field 0, bake done) is Presentable — not a hole.
+      const bool stale =
+          ColumnFullyDarkLooksStaleWithLitField(col_chunk_xz);
+      const bool sticky =
+          StickyRemeshAfterLight.count(col_chunk_xz) > 0;
+      if (stale || sticky)
+      {
+        fully_dark_solid = true;
+        break;
+      }
+      continue;
+    }
+    if (!MeshService->HasGreedyMesh(coord))
+    {
+      // Phase 5.7.3: intentional 0-quad / satisfying empty is not missing debt.
+      if (MeshService->HasMeshSatisfyingColumnReady(coord))
+      {
+        continue;
+      }
+      missing_greedy = true;
+      break;
+    }
+    // SoftDefer empty is a hole — not VisualReady (ticket alone ≠ present).
+    if (MeshService->IsSoftDeferHeld(coord) &&
+        !MeshService->HasDrawableGreedyMesh(coord))
+    {
+      if (MeshService->HasMeshSatisfyingColumnReady(coord))
+      {
+        continue;
+      }
+      soft_defer_empty = true;
+      break;
+    }
+  }
+
+  // Era49b: no terrain in band under frozen enter streaming = N/A (not debt).
+  if (!any_chunk)
+  {
+    return true;
+  }
+
+  // Presentable mesh (lit or true-dark) is VisualReady even if FSM is still
+  // Lighting — exclusive bump must not hold the enter bar on stale stage.
+  const bool mesh_presentable =
+      !fully_dark_solid && !missing_greedy && !soft_defer_empty;
+  return ColumnVisualReadyFromFlags(/*terrain*/ true, /*pending*/ false,
+                                    lit_ready || mesh_presentable,
+                                    fully_dark_solid, missing_greedy,
+                                    soft_defer_empty);
+}
+
+int UWorld::CountUnreadyColumns(glm::ivec3 center_chunk,
+                                int radius_chunks) const
+{
+  if (!MeshService || !BlockRegistry || radius_chunks < 0)
+  {
+    return 0;
+  }
+  int debt = 0;
+  for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+  {
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      const glm::ivec2 col(center_chunk.x + dx, center_chunk.z + dz);
+      if (!IsColumnVisualReady(col))
+      {
+        ++debt;
+      }
+    }
+  }
+  return debt;
+}
+
+bool UWorld::IsEnterVisibilityReady() const
+{
+  if (CountEnterVisibilityDebt() > 0)
+  {
+    return false;
+  }
+  // Presentable remaining is the enter vis SoT. Stale FullyDark is cruise
+  // ColumnFlow heal, not a second InGame gate.
+  return IsEnterUnderfeetPresentReady();
+}
+
+bool UWorld::IsEnterUnderfeetPresentReady() const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  // Enter worklist settled: focus drawable is the opaque-present SoT.
+  // (GPU commit clears CPU lit-face bits; SoftDefer neighbors must not hole exit.)
+  if (EnterLitGateActive && EnterVisualGateCtrl.IsCaptured() &&
+      EnterVisualGateCtrl.Remaining() <= 0)
+  {
+    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+    const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+    const int max_cy =
+        std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+    const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+    const int sea_cy =
+        FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+    int cy0 = 0;
+    int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+    if (ProceduralTemplate.FillWater)
+    {
+      cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+    }
+    cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+    bool saw_solid = false;
+    bool opaque = false;
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(center.x, cy, center.z);
+      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (!chunk)
+      {
+        continue;
+      }
+      bool any_solid = false;
+      for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+      {
+        for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+        {
+          for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+          {
+            if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+            {
+              any_solid = true;
+            }
+          }
+        }
+      }
+      if (!any_solid)
+      {
+        continue;
+      }
+      saw_solid = true;
+      if (MeshService->IsSoftDeferHeld(coord) &&
+          !MeshService->HasDrawableGreedyMesh(coord))
+      {
+        return false;
+      }
+      if (MeshService->HasDrawableGreedyMesh(coord) &&
+          IsChunkSliceRenderReady(coord))
+      {
+        opaque = true;
+      }
+    }
+    if (!saw_solid)
+    {
+      return true;
+    }
+    return EnterUnderfeetPresentReady(true, opaque);
+  }
+
+  // Pre-settle: require lit/true-dark focus slice.
+  const UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy =
+      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  bool saw_solid_focus = false;
+  bool opaque_present = false;
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(center.x, cy, center.z);
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    bool any_solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 2)
+    {
+      for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 2)
+      {
+        for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 2)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            any_solid = true;
+          }
+        }
+      }
+    }
+    if (!any_solid)
+    {
+      continue;
+    }
+    saw_solid_focus = true;
+    const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
+    if (mesh.IsSoftDeferHeld(coord) && !has_drawable)
+    {
+      return false;
+    }
+    if (!has_drawable)
+    {
+      return false;
+    }
+    const bool fully_dark =
+        mesh.GetCache().ChunkHasFullyDarkFace(coord) &&
+        !mesh.ChunkHasLitDrawableFace(coord);
+    const bool lit_drawable = mesh.ChunkHasLitDrawableFace(coord);
+    const glm::ivec2 col_xz(coord.x, coord.z);
+    const bool pending_col = IsPendingLightBeforeMesh(col_xz);
+    const bool stale =
+        fully_dark && MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+    const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
+    const bool true_dark =
+        fully_dark && open_sky && !pending_col && !stale;
+    if (!EnterUnderfeetSliceReady(lit_drawable, pending_col, true_dark))
+    {
+      return false;
+    }
+    if (!IsChunkSliceRenderReady(coord))
+    {
+      return false;
+    }
+    opaque_present = true;
+  }
+  if (!saw_solid_focus)
+  {
+    return true;
+  }
+  return EnterUnderfeetPresentReady(/*slice_ready=*/true, opaque_present);
+}
+
+int UWorld::TickEnterFovLitPass(int capture_budget)
+{
+  if (!Persistence || !MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  struct EnterFovLitPassScope
+  {
+    UWorld &w;
+    explicit EnterFovLitPassScope(UWorld &world) : w(world)
+    {
+      w.EnterFovLitPassActive = true;
+    }
+    ~EnterFovLitPassScope() { w.EnterFovLitPassActive = false; }
+  } scope(*this);
+
+  const int cap_budget =
+      capture_budget > 0
+          ? capture_budget
+          : std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget);
+  const int apply_budget =
+      std::max(1, URuntimeTuning::Get().EnterFovLitApplyBudget);
+
+  if (EnterLitGateActive && EnterLitSnapshotCaptured)
+  {
+    RepairEnterLitSnapshotFifoGhosts();
+    RepairEnterLitSnapshotFullyDarkRemesh();
+    DrainRelightQueuesBudget(/*max_player_jobs=*/0, cap_budget);
+    DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
+                             /*enqueue_background_frontier=*/false);
+    DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
+                             /*enqueue_background_frontier=*/false);
+    return static_cast<int>(EnterLitDebtSnapshot.size());
+  }
+
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int fov_r = EnterVisualWarmupRadiusChunks();
+  const int lit_r = std::max(fov_r, GetRenderDistanceChunks() + 1);
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int max_cy = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
+  const int band_min = 0;
+  const int band_max = max_y;
+
+  auto column_needs_light = [&](glm::ivec2 col) -> bool {
+    if (IsPendingLightBeforeMesh(col))
+    {
+      return true;
+    }
+    return ColumnFullyDarkSolidDrawable(col);
+  };
+
+  auto enqueue_col = [&](glm::ivec2 col, bool priority) {
+    const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
+    if (Persistence->IsTerrainColumnRelightQueued(world_key) ||
+        IsAsyncRelightColumnInFlight(col))
+    {
+      return;
+    }
+    Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
+                                             band_min, band_max);
+    // FZ2.1-B1c: skip follow-up if Enqueue put column in flight this frame.
+    if (IsAsyncRelightColumnInFlight(col))
+    {
+      return;
+    }
+    // FZ2.1-B1b: no NotePendingLight here — ColumnFlow + terrain commit own PL.
+  };
+
+  int enqueued = 0;
+  for (int dx = -fov_r; dx <= fov_r; ++dx)
+  {
+    for (int dz = -fov_r; dz <= fov_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (!column_needs_light(col))
+      {
+        continue;
+      }
+      enqueue_col(col, /*priority=*/true);
+      ++enqueued;
+    }
+  }
+  for (int dx = -lit_r; dx <= lit_r; ++dx)
+  {
+    for (int dz = -lit_r; dz <= lit_r; ++dz)
+    {
+      if (std::max(std::abs(dx), std::abs(dz)) <= fov_r)
+      {
+        continue;
+      }
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (!column_needs_light(col))
+      {
+        continue;
+      }
+      enqueue_col(col, /*priority=*/false);
+      ++enqueued;
+    }
+  }
+  for (const auto &entry : PendingLightBeforeMesh)
+  {
+    const glm::ivec2 &col = entry.first;
+    const int horiz =
+        std::max(std::abs(col.x - center.x), std::abs(col.y - center.z));
+    if (horiz <= lit_r)
+    {
+      continue;
+    }
+    if (!column_needs_light(col))
+    {
+      continue;
+    }
+    enqueue_col(col, /*priority=*/false);
+    ++enqueued;
+  }
+
+  DrainRelightQueuesBudget(/*max_player_jobs=*/0, cap_budget);
+  DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
+                           /*enqueue_background_frontier=*/false);
+  DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
+                           /*enqueue_background_frontier=*/false);
+  return enqueued;
 }
 
 bool UWorld::IsCreateSpawnWarmupSettled() const
 {
-  if (!IsStreamingEnabled() || !Streaming || !Streaming->HasStreamer())
+  if (CreateSpawnWarmupSettledLatched)
   {
-    if (GetBlockWorld().CountNonAir() == 0)
-    {
-      return true;
-    }
-    const glm::ivec3 feet = GetPreferredLoadFocusBlock();
-    const glm::ivec3 center = UChunkManager::WorldToChunk(feet);
-    const int radius = RenderDistanceChunks + 1;
-    const UWorldMeshService &mesh = *MeshService;
-    if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
-    {
-      return false;
-    }
-    return !mesh.HasPendingAsyncMeshWork();
+    return true;
   }
-  return IsEnterStreamingWarmupSettled();
+  if (GetBlockWorld().CountNonAir() == 0)
+  {
+    CreateSpawnWarmupSettledLatched = true;
+    return true;
+  }
+  // Phase5.1: EndEnterLitGate clears EnterLitQuiesceLatched — without this,
+  // cruise pays CountCreateNearFovWarmupDebt every frame (~45ms prep_warmup).
+  if (!EnterLitGateActive && !IsEnterSessionActive())
+  {
+    CreateSpawnWarmupSettledLatched = true;
+    return true;
+  }
+  // Cruise: after enter gate quiesced, spawn-warmup debt recount is redundant.
+  if (!EnterLitGateActive && EnterLitQuiesceLatched)
+  {
+    CreateSpawnWarmupSettledLatched = true;
+    return true;
+  }
+  // Era34 P0: near-FOV settle; Era41: also LitDrawable FOV lit debt ring=4.
+  bool underfeet_lit = false;
+  const bool settled = CountCreateNearFovWarmupDebt(&underfeet_lit) == 0 &&
+                       CountEnterFovLitDebt() == 0;
+  if (settled)
+  {
+    CreateSpawnWarmupSettledLatched = true;
+  }
+  return settled;
+}
+
+int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
+{
+  bool underfeet_lit_ready = true;
+  if (out_underfeet_lit_ready)
+  {
+    *out_underfeet_lit_ready = true;
+  }
+  if (!MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  const UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  const int near_r = CreateNearFovSoftDeferRadiusChunks();
+  int debt = 0;
+  const int vis_debt = CountEnterVisibilityDebt();
+  const bool gate_visual_done = EnterVisualWarmupYieldsToGateRemaining(
+      EnterLitGateActive || IsEnterSessionActive(), vis_debt,
+      IsEnterUnderfeetPresentReady(),
+      mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1));
+  if (HasPendingLightBeforeMeshNear(focus_ground, near_r))
+  {
+    ++debt;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy =
+      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  for (int dx = -near_r; dx <= near_r; ++dx)
+  {
+    for (int dz = -near_r; dz <= near_r; ++dz)
+    {
+      const int horiz = std::max(std::abs(dx), std::abs(dz));
+      const bool underfeet = horiz <= 1;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
+        const bool has_greedy = mesh.HasGreedyMesh(coord);
+        const bool soft_held = mesh.IsSoftDeferHeld(coord);
+        const bool empty_or_held =
+            (!has_drawable && has_greedy) || soft_held;
+        if (empty_or_held && !gate_visual_done &&
+            EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, underfeet))
+        {
+          ++debt;
+          if (underfeet)
+          {
+            underfeet_lit_ready = false;
+          }
+          continue;
+        }
+        bool any_solid = false;
+        // Era35 P5: stride-2 for near-FOV debt count (matches emerge scan).
+        const int probe_stride = underfeet ? 2 : 4;
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += probe_stride)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += probe_stride)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += probe_stride)
+            {
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                any_solid = true;
+              }
+            }
+          }
+        }
+        if (!any_solid)
+        {
+          continue;
+        }
+        if (!has_greedy && !has_drawable)
+        {
+          ++debt;
+          if (underfeet)
+          {
+            underfeet_lit_ready = false;
+          }
+          continue;
+        }
+        if (mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord))
+        {
+          ++debt;
+          continue;
+        }
+        if (underfeet)
+        {
+          const bool fully_dark =
+              has_drawable && mesh.GetCache().ChunkHasFullyDarkFace(coord) &&
+              !mesh.ChunkHasLitDrawableFace(coord);
+          const bool lit_drawable =
+              has_drawable && mesh.ChunkHasLitDrawableFace(coord);
+          const glm::ivec2 col_xz(coord.x, coord.z);
+          const bool pending_col = IsPendingLightBeforeMesh(col_xz);
+          const bool stale =
+              fully_dark &&
+              MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+          const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
+          const bool true_dark =
+              fully_dark && open_sky && !pending_col && !stale;
+          if (!EnterUnderfeetSliceReady(lit_drawable, pending_col, true_dark))
+          {
+            ++debt;
+            underfeet_lit_ready = false;
+          }
+        }
+      }
+    }
+  }
+  if (out_underfeet_lit_ready)
+  {
+    *out_underfeet_lit_ready = underfeet_lit_ready;
+  }
+  return debt;
 }
 
 void UWorld::DrainSpawnRadiusMeshWarmup(int budget)
@@ -4617,10 +12325,90 @@ bool UWorld::IsEnterStreamingWarmupSettled() const
   return true;
 }
 
+void UWorld::TickEnterGateMeshDrain(int iteration_budget, double max_wall_ms)
+{
+  const int iterations = std::max(1, iteration_budget);
+  const auto t0 = std::chrono::steady_clock::now();
+  for (int i = 0; i < iterations; ++i)
+  {
+    if (max_wall_ms > 0.0 && i > 0)
+    {
+      const double elapsed_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - t0)
+              .count();
+      if (elapsed_ms >= max_wall_ms)
+      {
+        break;
+      }
+    }
+    if (MeshService && IsEnterLitGateActive())
+    {
+      SyncEnterVisualGateQuiesceFlags();
+    }
+    TickAsyncChunkSystems();
+    TickMeshEmerge();
+  }
+}
+
+void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations,
+                                       double max_gate_wall_ms)
+{
+  // Era50: EnterVisualGate owns enter drain — quiesce split + worklist FSM.
+  // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
+  // runs TickMeshEmerge (ConsumeGpuApplyBacklog) for iterations.
+  SyncEnterVisualGateQuiesceFlags();
+  if (IsEnterLitGateActive())
+  {
+    RefreshEnterVisualWorklistStates();
+  }
+  const int gpu_finish_before = PhysicsTelemetryData.GpuFinishN;
+  // Gate-active: TickEnterGateMeshDrain / TickMeshEmerge is the single GPU
+  // consume. DrainEnterGameMeshWarmup is the no-gate mesh+GPU path only.
+  if (NeedsEnterGameMeshWarmup() && !IsEnterLitGateActive())
+  {
+    DrainEnterGameMeshWarmup(std::max(1, mesh_budget));
+  }
+  if (IsEnterLitGateActive())
+  {
+    MeshService->PruneEnterPhantomDirty(BlockWorld);
+    // Gate never runs DrainEnterGameMeshWarmup — transfer SoftDefer-empty /
+    // !ready to one Dirty (SRBR-P0.2 single owner).
+    MarkEnterMissingMeshesDirty();
+    // Gate Tick: Repair is drain helper, not SoT — worklist Done is SoT.
+    RepairEnterLitSnapshotFullyDarkRemesh();
+    TickEnterGateMeshDrain(std::max(1, gate_iterations), max_gate_wall_ms);
+    if (MeshService && BlockRegistry)
+    {
+      const int gpu_n = MeshService->GetPendingGpuAppliesCount() +
+                        MeshService->GetPendingGpuQueuedCount();
+      if (gpu_n > 0)
+      {
+        MeshService->DrainPendingGpuMeshes(
+            BlockWorld, *BlockRegistry, std::max(8, mesh_budget), 8.0);
+      }
+    }
+    RefreshEnterVisualWorklistStates();
+    SyncEnterVisualGateQuiesceFlags();
+    const bool any_finish =
+        PhysicsTelemetryData.GpuFinishN > gpu_finish_before;
+    EnterVisualGateCtrl.NoteGpuFinishProgress(any_finish);
+    if (EnterVisualGateCtrl.Remaining() <= 0)
+    {
+      EnterVisualGateCtrl.SetPhase(EnterVisualGatePhase::Verify);
+    }
+  }
+}
+
 void UWorld::TickEnterStreamingWarmup(int iteration_budget)
 {
   if (!IsStreamingEnabled() || !Streaming->HasStreamer())
   {
+    return;
+  }
+  if (EnterLitGateActive)
+  {
+    TickEnterGateMeshDrain(std::max(1, iteration_budget));
     return;
   }
   const int iterations = std::max(1, iteration_budget);
@@ -4721,6 +12509,49 @@ void UWorld::Create(const std::string &world_name)
   BeginCooperativeCreate(world_name);
   while (!TickCooperativeCreate(sink, 64))
   {
+  }
+}
+
+void UWorld::ApplyGameModeLocomotionPolicy()
+{
+  ForEachCreature(
+      [this](UCreature &creature)
+      {
+        const CreatureDefinition *def = GetCreatureDefinition(creature.GetTypeId());
+        if (!def)
+        {
+          return;
+        }
+        CreatureLocomotionCapabilities caps = def->locomotion;
+        if (!ModePolicy::AllowsFlight(GameMode, def->habitat))
+        {
+          caps.canFly = false;
+          if (creature.GetMovementMode() == CreatureMovementMode::Flying &&
+              def->habitat == CreatureHabitat::Terrestrial)
+          {
+            creature.GetLocomotion().SetMode(CreatureMovementMode::Walking);
+          }
+        }
+        creature.SetCapabilities(caps);
+      });
+  if (GameMode == WorldGameMode::Survival)
+  {
+    if (auto camera = GetCurrentUserCamera())
+    {
+      CreatureHabitat habitat = CreatureHabitat::Terrestrial;
+      if (UCreature *controlled = GetControlledCreature())
+      {
+        if (const CreatureDefinition *def =
+                GetCreatureDefinition(controlled->GetTypeId()))
+        {
+          habitat = def->habitat;
+        }
+      }
+      if (!ModePolicy::AllowsFlight(GameMode, habitat))
+      {
+        camera->SetFreeMove(false);
+      }
+    }
   }
 }
 
@@ -4830,6 +12661,15 @@ bool UWorld::TickCooperativeLoad(IUProgressSink &sink, int chunkBudget)
     return true;
   }
   return CoopSession->Tick(*this, sink, chunkBudget);
+}
+
+bool UWorld::ForceCapEnterGameLoad(IUProgressSink &sink)
+{
+  if (!CoopSession)
+  {
+    return true;
+  }
+  return CoopSession->ForceCapEnterGameVisual(*this, sink);
 }
 
 void UWorld::BeginCooperativeSave(const std::string &world_folder_path,
@@ -5107,10 +12947,38 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
       std::max(PhysicsTelemetryData.EditLightEmission, emission);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight({blockPos});
-  // Face-neighbor Immediate: dig/place seams. Light ring when placing emitters
-  // so glow is not delayed behind mesh_async backlog (manual 230913).
+  // Face-neighbor Immediate + light ring so side-wall underside air that lost
+  // skylight still remeshes neighbors (manual absolute-black under place).
   MarkBlockChunkDirty(blockPos, /*sync_neighbor_chunks=*/true,
-                      /*sync_light_ring=*/emission > 0);
+                      /*sync_light_ring=*/true);
+  // Place Immediate remesh'es placed slice only; enqueue lower missing column
+  // slices for DigSeam drain (manual 110751: top invisible, place no heal).
+  if (MeshService)
+  {
+    const glm::ivec3 ground_col(FloorDiv(blockPos.x, CHUNK_SIZE), 0,
+                                FloorDiv(blockPos.z, CHUNK_SIZE));
+    MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground_col, 0,
+                                                blockPos.y + CHUNK_SIZE);
+    MeshService->EnqueueColumnMissingDigSeamBelow(BlockWorld, blockPos);
+    // Era23 I-P1: SoftDefer empty / !Drawable under place → FirstMesh + Dirty
+    // same tick (collision already via MarkBlockChunkDirty). No Imm flood.
+    const glm::ivec3 place_chunk = UChunkManager::WorldToChunk(blockPos);
+    const bool drawable = MeshService->HasDrawableGreedyMesh(place_chunk);
+    const bool soft_empty =
+        MeshService->HasGreedyMesh(place_chunk) && !drawable;
+    if (ShouldForceFirstMeshOnPlaceHole(soft_empty || !drawable,
+                                        /*near_or_underfeet=*/true))
+    {
+      MeshService->MarkDirtyPriority(
+        place_chunk, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      ColumnWorkItem item{};
+      item.column = glm::ivec2(place_chunk.x, place_chunk.z);
+      item.kind = ColumnWorkKind::FirstMesh;
+      item.priority = 110;
+      item.cy = place_chunk.y;
+      GetColumnFlowExecutor().Enqueue(item);
+    }
+  }
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - edit_t0)
@@ -5150,14 +13018,36 @@ bool UWorld::PlaceObject(const std::string &prefab_name,
   {
     return false;
   }
+  std::vector<glm::ivec3> placed_blocks;
+  placed_blocks.reserve(prefab->voxels.size());
+  int max_emission = 0;
   for (const auto &voxel : prefab->voxels)
   {
     const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
     const BlockId blockId =
         ResolveObjectVoxelPlacementId(voxel, *BlockRegistry);
-    if (BlockWorld.GetBlock(worldPos) == blockId)
+    if (BlockWorld.GetBlock(worldPos) != blockId)
     {
-      MarkBlockChunkDirty(worldPos);
+      continue;
+    }
+    placed_blocks.push_back(worldPos);
+    max_emission =
+        std::max(max_emission, BlockRegistry->GetLightEmission(blockId));
+  }
+  if (!placed_blocks.empty())
+  {
+    ApplyEditFastRelight(placed_blocks);
+    for (const glm::ivec3 &worldPos : placed_blocks)
+    {
+      MarkBlockChunkDirty(worldPos, /*sync_neighbor_chunks=*/true,
+                          /*sync_light_ring=*/max_emission > 0);
+    }
+    ApplyEditLighting(placed_blocks);
+    if (max_emission > 0)
+    {
+      PhysicsTelemetryData.EditLightEmission =
+          std::max(PhysicsTelemetryData.EditLightEmission, max_emission);
+      PlayerRelightMeshBurstFrames = 5;
     }
   }
   return true;
@@ -5245,7 +13135,10 @@ bool UWorld::AddUser(const std::string &Name)
       }
     }
     UCreatureInventory &inv = player->GetInventory();
-    inv.InitCreativeDefaults();
+    if (ModePolicy::ShouldInitCreativeDefaults(GameMode))
+    {
+      inv.InitCreativeDefaults();
+    }
     inv.EnsureDefaultHotbar();
   }
   if (Users.size() == 1)
@@ -5380,80 +13273,14 @@ UWorld::FindNearestFreeCubePosition(const glm::vec3 &position,
 
 bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
 {
-  auto user = GetCurrentUser();
-  if (!user)
-  {
-    return false;
-  }
-
-  UCreature *controlled = GetControlledCreature();
-  if (!controlled)
-  {
-    return false;
-  }
-  const std::string &blockType =
-      controlled->GetInventory().GetActiveBlockTypeName();
-  if (blockType.empty())
-  {
-    return false;
-  }
-
-  PlayerCapsule cap = ViewBinding ? ViewBinding->ResolvePlacementCapsule(*this)
-                                  : PlayerCapsule::Standing();
-
-  float max_distance = 8.0f;
-  glm::vec3 player_eye = position;
-  if (auto camera = GetCurrentUserCamera())
-  {
-    max_distance = camera->GetBlockInteractMaxDistance();
-    player_eye = camera->GetPosition();
-  }
-  const BlockPlacementResolve resolved = Collision.ResolveBlockPlacement(
-      position, front, cap, max_distance, player_eye);
-  if (!resolved.place_block_pos)
-  {
-    return false;
-  }
-  if (AddObject(blockType, BlockCenter(*resolved.place_block_pos)))
-  {
-    UpdateIntersection(position, front);
-    return true;
-  }
-  return false;
+  return UBlockPlacementService::AddObjectByView(*this, position, front);
 }
 
 bool UWorld::PlaceActiveObjectByView(const glm::vec3 &position,
                                      const glm::vec3 &front)
 {
-  auto user = GetCurrentUser();
-  if (!user)
-  {
-    return false;
-  }
-
-  UCreature *controlled = GetControlledCreature();
-  if (!controlled)
-  {
-    return false;
-  }
-  const std::string &prefabName =
-      controlled->GetInventory().GetActiveObjectName();
-  if (prefabName.empty())
-  {
-    return false;
-  }
-
-  const auto anchor = FindObjectAnchorFromView(position, front);
-  if (!anchor.has_value())
-  {
-    return false;
-  }
-  if (PlaceObject(prefabName, anchor.value()))
-  {
-    UpdateIntersection(position, front);
-    return true;
-  }
-  return false;
+  return UBlockPlacementService::PlaceActiveObjectByView(*this, position,
+                                                         front);
 }
 
 bool UWorld::DelBlockAt(glm::ivec3 blockPos)
@@ -5525,50 +13352,49 @@ bool UWorld::DelObjectByView(const glm::vec3 &position, const glm::vec3 &front)
   return DelBlockAt(hit->blockPos);
 }
 
-void UWorld::StartBreakSession(glm::ivec3 blockPos)
+void UWorld::StartBreakSession(glm::ivec3 blockPos, float pendingWearDelta,
+                               std::string pendingToolId)
 {
-  BlockBreakSession session;
-  session.blockPos = blockPos;
-  session.progress = 0.f;
-  BreakSession = session;
+  if (!BreakService)
+  {
+    BreakService = std::make_unique<UBlockBreakService>();
+  }
+  BreakService->Start(blockPos, pendingWearDelta, std::move(pendingToolId));
 }
 
-void UWorld::CancelBreakSession() { BreakSession.reset(); }
+void UWorld::CancelBreakSession()
+{
+  if (BreakService)
+  {
+    BreakService->Cancel();
+  }
+}
 
 void UWorld::TickBreakSession(float dt, float durationSeconds)
 {
-  if (!BreakSession || durationSeconds <= 0.f)
+  if (BreakService)
   {
-    return;
+    BreakService->Tick(dt, durationSeconds);
   }
-  BreakSession->progress =
-      std::min(1.f, BreakSession->progress + dt / durationSeconds);
 }
 
 bool UWorld::CompleteBreakSession()
 {
-  if (!BreakSession)
+  if (!BreakService)
   {
     return false;
   }
-  const glm::ivec3 pos = BreakSession->blockPos;
-  BreakSession.reset();
-  ++PhysicsTelemetryData.BreakCompleteN;
-  return DelBlockAt(pos);
+  return BreakService->Complete(*this);
 }
 
 float UWorld::GetBreakProgress() const
 {
-  return BreakSession ? BreakSession->progress : 0.f;
+  return BreakService ? BreakService->GetProgress() : 0.f;
 }
 
 std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
 {
-  if (!BreakSession)
-  {
-    return std::nullopt;
-  }
-  return BreakSession->blockPos;
+  return BreakService ? BreakService->GetBlockPos() : std::nullopt;
 }
 
 FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,
@@ -5760,6 +13586,7 @@ void UWorld::ConfigurePhysicsServices()
 {
   BlockPhysicsService = std::make_unique<UWorldBlockPhysicsService>();
   MovementPhysicsService = std::make_unique<UWorldMovementPhysicsService>();
+  BreakService = std::make_unique<UBlockBreakService>();
   ChunkDirtyService = std::make_unique<UWorldChunkDirtyService>();
   if (BlockPhysicsService)
   {
@@ -6073,6 +13900,7 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                PhysicsTelemetryData.PhysicsStepMs > 50.0 ||
                                MovementDiag.deltaTime > 0.1f;
   MovementDiag.simMs = sim_ms;
+  PhysicsTelemetryData.SimMsPrev = sim_ms;
   MovementDiag.swapWaitMs = LastSwapWaitMs;
   MovementDiag.unaccountedMs = wall_ms - sim_ms - LastSwapWaitMs;
 }
@@ -6109,6 +13937,7 @@ void UWorld::TickMeshLoadDiagnostics()
 
 void UWorld::UpdateStreaming()
 {
+  UFrameStageWatchdog::Scope stage("streaming.coordinator_update");
   Streaming->UpdateStreaming(*this, *MeshService, Render, RenderDistanceChunks,
                              EffectiveRenderDistance, EffectiveFogStartRatio,
                              AltitudeParams, LastCameraPosition,
@@ -6152,7 +13981,7 @@ void UWorld::InvalidateBlockMesh()
 void UWorld::SetRenderSettings(const RenderSettings &settings)
 {
   LightingMode new_mode =
-      GraphicsQualityProfile::FromPreset(settings.Preset).GetLightingMode();
+      GraphicsQualityProfile::ResolveLightingMode(settings);
   // D1.4: Desktop GPU stack must not consume Flat lighting results.
   {
     const RenderBackendCaps caps = GetActiveRenderBackendCaps();

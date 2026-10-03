@@ -1,8 +1,15 @@
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Core/RuntimeTuning.h"
 #include "App/Platform/Log.h"
+#include "glog/logging.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/ChunkRenderDemand.h"
+#include "World/Diagnostics/EnterLitDiagnostics.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/FluidColumnSummary.h"
 #include "Core/Jobs/JobThreadPool.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "Blocks/BlockRegistry.h"
@@ -26,7 +33,9 @@
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <chrono>
+#include <climits>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -34,6 +43,30 @@
 
 namespace cutum
 {
+
+namespace
+{
+
+void ParkSpawnRingMeshWhileRelightDeferred(UWorld &world)
+{
+  if (!world.IsLightingRelightDeferred())
+  {
+    return;
+  }
+  const auto &phys = world.GetPhysicsTelemetry();
+  if (ShouldSkipParkSpawnRingForMissHeal(
+          world.NeedsSpawnRingCatchUp(), phys.FocusMissingMesh != 0,
+          phys.MissHoriz, world.IsEnterSessionActive()))
+  {
+    return;
+  }
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  world.GetMeshService().ParkDirtyWithinHorizontalRadius(
+      focus, EnterVisualWorkRadiusChunks());
+}
+
+} // namespace
 
 struct CooperativeParallelGenState
 {
@@ -80,7 +113,6 @@ constexpr int kMeshWarmupMaxTicks = 50000;
 constexpr int kMeshWarmupMaxWallMs = 75000;
 /// Hidden-window flight-sim: RelightColumns can stall >2min on World_164.
 constexpr int kRelightColumnsMaxWallMs = 60000;
-constexpr int kCreateSpawnWarmupMaxTicks = 48;
 constexpr int kStreamUnloadMarginChunks = 1;
 
 glm::ivec3 ResolveSpatialLoadCenter(const UWorld &world)
@@ -161,7 +193,15 @@ bool IsCreateSpawnWarmupSettled(const UWorld &world)
 void TickCreateSpawnMeshWarmup(UWorld &world, int budget)
 {
   world.DrainSpawnRadiusMeshWarmup(budget);
-  world.TickEnterStreamingWarmup(std::max(1, budget / 2));
+  const int emerge_budget = std::max(1, budget / 2);
+  if (world.IsEnterLitGateActive())
+  {
+    world.TickEnterGateMeshDrain(emerge_budget);
+  }
+  else
+  {
+    world.TickEnterStreamingWarmup(emerge_budget);
+  }
 }
 
 static_assert(kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +
@@ -246,10 +286,9 @@ void MarkSpawnAreaPreparedAfterCooperativeLoad(UWorld &world,
   {
     return;
   }
-  if (world.IsSpawnMeshRingReady())
-  {
-    world.MarkSpawnAreaPreparedByCooperativeLoad();
-  }
+  // PrepareView already required spawn-ring Presentable + vis. Always mark so
+  // GpuWarmup is upload-only (do not wait on post-EndEnterLitGate live debt).
+  world.MarkSpawnAreaPreparedByCooperativeLoad();
 }
 
 void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
@@ -257,6 +296,29 @@ void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
   if (kind == WorldCoopKind::Load)
   {
     MarkSpawnAreaPreparedAfterCooperativeLoad(world, kind);
+  }
+}
+
+void NoteColumnLightCalculationSettled(UWorld &world,
+                                       glm::ivec2 column_block_xz,
+                                       int min_world_y, int max_world_y)
+{
+  if (max_world_y < min_world_y)
+  {
+    return;
+  }
+  const glm::ivec3 ground = UChunkManager::WorldToChunk(
+      glm::ivec3(column_block_xz.x, 0, column_block_xz.y));
+  const int cy0 = std::max(0, FloorDiv(std::max(0, min_world_y), CHUNK_SIZE));
+  const int cy1 = FloorDiv(std::max(0, max_world_y), CHUNK_SIZE);
+  UChunkManager &chunks = world.GetBlockWorld().GetChunkManager();
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    if (chunks.HasChunk(coord))
+    {
+      world.NoteChunkSliceLightCalculationSettled(coord);
+    }
   }
 }
 
@@ -434,6 +496,24 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
 {
   // Skylight-only bulk relight ends here; gameplay edits/streaming need block light.
   world.SetLightingSkylightBulkComplete(false);
+  const size_t pending_now =
+      world.MeshService->GetDirtyCount() +
+      static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
+  if (MeshWarmupFinalizeOnly)
+  {
+    // Era51: continue residual drain — do not MarkAllDirty the whole world again.
+    if (MeshWarmupTicks == 0)
+    {
+      MeshWarmupStartedAt = std::chrono::steady_clock::now();
+      MeshWarmupStartPending = std::max<size_t>(1, pending_now);
+      MeshWarmupCompletedTotal = 0;
+      MeshWarmupProcessedMax = 0;
+      std::cout << "[WorldLoad] MeshWarmup finalize: pending=" << pending_now
+                << std::endl;
+    }
+    CurrentPhase = Phase::MeshWarmup;
+    return;
+  }
   world.BlockCounter.MarkNeedsRecount();
   world.MeshService->CancelAsyncInFlightKeepDirty();
   bool has_chunks = false;
@@ -460,6 +540,10 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
         }
       }
     }
+  }
+  if (Kind == WorldCoopKind::Load)
+  {
+    ParkSpawnRingMeshWhileRelightDeferred(world);
   }
   MeshWarmupTicks = 0;
   MeshWarmupStartedAt = {};
@@ -567,6 +651,36 @@ void UWorldCooperativeSession::Report(IUProgressSink &sink,
   sink.Report(phaseId, fraction, message);
 }
 
+bool UWorldCooperativeSession::ForceCapEnterGameVisual(UWorld &world,
+                                                       IUProgressSink &sink)
+{
+  if (!Active || Kind != WorldCoopKind::Load)
+  {
+    return false;
+  }
+  if (CurrentPhase == Phase::Done)
+  {
+    return true;
+  }
+  world.FinalizePlayerAfterWorldLoad();
+  if (auto user = world.GetCurrentUser())
+  {
+    world.ApplyUserToCamera(user);
+  }
+  else
+  {
+    world.ApplySpawnToCamera();
+  }
+  world.WarmupVisibleListAtCamera();
+  FinalizeCooperativeLoadForEnterGame(world, Kind);
+  CurrentPhase = Phase::Done;
+  Active = false;
+  StreamingWarmupTicks = 0;
+  StreamingWarmupPeakDebt = 0;
+  Report(sink, "done", 1.f, "World loaded.");
+  return true;
+}
+
 void UWorldCooperativeSession::Cancel()
 {
   Active = false;
@@ -582,6 +696,8 @@ void UWorldCooperativeSession::CancelBackgroundWorkers()
     (void)ParallelGen->Completed.DrainAll();
     ParallelGen->InFlight = 0;
   }
+  // A35 R0 / A31 P4: join fluid summary worker on coop cancel / world switch.
+  (void)ShutdownFluidSummaryWorker(2000);
 }
 
 bool UWorldCooperativeSession::BlocksStreamingTick() const
@@ -603,6 +719,16 @@ bool UWorldCooperativeSession::BlocksStreamingTick() const
   default:
     return true;
   }
+}
+
+bool UWorldCooperativeSession::IsEnterVisualWarmupActive() const
+{
+  if (!Active || Kind != WorldCoopKind::Load)
+  {
+    return false;
+  }
+  return CurrentPhase >= Phase::MeshWarmup &&
+         CurrentPhase <= Phase::PrepareView;
 }
 
 void UWorldCooperativeSession::BeginLoad(UWorld &world,
@@ -1023,6 +1149,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       world.MeshService->CancelAsyncMeshWork();
       world.BlockWorld.Clear();
       world.MeshService->GetCache().MarkAllDirty();
+      UChunkRenderDemandStore::Get().Clear();
+      ResetFluidSurfacePackReuseCache();
       world.ResetPhysicsRuntimeState();
       world.CancelAsyncRelightWork();
       world.ModifiedChunks.clear();
@@ -1256,9 +1384,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (RelightQueueIndex < RelightQueue.size() &&
              relit < relight_budget)
       {
+        const glm::ivec3 coord = RelightQueue[RelightQueueIndex++];
         world.GetLightingPipeline().RelightChunk(
-            world.BlockWorld, *world.BlockRegistry,
-            RelightQueue[RelightQueueIndex++], false, true);
+            world.BlockWorld, *world.BlockRegistry, coord, false, true);
+        world.NoteChunkSliceLightCalculationSettled(coord);
         ++relit;
       }
     }
@@ -1289,10 +1418,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (BulkRelightChunkScheduledIndex < BulkRelightChunkQueue.size() &&
              relit < chunk_budget)
       {
+        const glm::ivec3 coord =
+            BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++];
         world.GetLightingPipeline().RelightChunk(
-            world.BlockWorld, *world.BlockRegistry,
-            BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++], false,
-            true);
+            world.BlockWorld, *world.BlockRegistry, coord, false, true);
+        world.NoteChunkSliceLightCalculationSettled(coord);
         ++relit;
       }
     }
@@ -1341,7 +1471,36 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   {
     const int max_y = world.ProceduralTemplate.MaxHeight;
     const auto tick_t0 = std::chrono::steady_clock::now();
-    if (world.BlockRegistry)
+    const bool use_async = world.ProceduralTemplate.AsyncRelight &&
+                           world.AllowsAsyncLighting() && world.BlockRegistry;
+    if (use_async)
+    {
+      // Era26 I-L1: scoped async RelightColumns (snapshot JobPool). Drain
+      // without frontier re-queue / priority mesh — streaming is blocked.
+      world.DrainAsyncRelightResults(/*max_per_frame=*/48,
+                                     /*priority_mesh=*/false,
+                                     /*enqueue_background_frontier=*/false);
+      world.ReconcileAsyncRelightColumnInFlight();
+
+      const int workers =
+          std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
+      const int max_inflight = workers * 3;
+      int schedule_batch = std::clamp(budget, 2, 8);
+      while (ColumnRelightScheduledIndex < ColumnRelightQueue.size() &&
+             schedule_batch > 0 &&
+             world.GetAsyncRelightInFlightCount() < max_inflight)
+      {
+        const glm::ivec2 &col =
+            ColumnRelightQueue[ColumnRelightScheduledIndex++];
+        world.EnqueueAsyncTerrainColumnRelight(
+            col.x * CHUNK_SIZE, col.y * CHUNK_SIZE, 0, max_y,
+            /*include_skylight=*/true, /*include_block_light=*/false,
+            /*finalize_pending_gate=*/false);
+        --schedule_batch;
+      }
+      ColumnRelightIndex = ColumnRelightScheduledIndex;
+    }
+    else if (world.BlockRegistry)
     {
       const int column_budget = std::clamp(budget, 8, 32);
       int relit = 0;
@@ -1352,13 +1511,18 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         world.GetLightingPipeline().RelightColumn(
             world.BlockWorld, *world.BlockRegistry, col.x, col.y, 0, max_y,
             false, true);
+        NoteColumnLightCalculationSettled(world, col, 0, max_y);
         ++relit;
       }
+      ColumnRelightScheduledIndex = ColumnRelightIndex;
     }
 
-    const bool columns_done =
-        ColumnRelightIndex >= ColumnRelightQueue.size();
-    const size_t relight_done = ColumnRelightIndex;
+    const bool columns_scheduled =
+        ColumnRelightScheduledIndex >= ColumnRelightQueue.size();
+    const bool async_idle =
+        !use_async || !world.HasPendingAsyncRelightWork();
+    const bool columns_done = columns_scheduled && async_idle;
+    const size_t relight_done = ColumnRelightScheduledIndex;
     const size_t relight_total = ColumnRelightQueue.size();
 
     bool force_done = columns_done;
@@ -1374,6 +1538,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                   << "ms, done=" << relight_done << "/" << relight_total
                   << " — continuing to mesh warmup" << std::endl;
         ColumnRelightIndex = ColumnRelightQueue.size();
+        ColumnRelightScheduledIndex = ColumnRelightQueue.size();
+        if (use_async)
+        {
+          world.CancelAsyncRelightWork();
+        }
         force_done = true;
       }
     }
@@ -1387,23 +1556,28 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
     const float relight_inner =
         relight_total > 0
-            ? std::min(1.0f, static_cast<float>(ColumnRelightIndex) /
+            ? std::min(1.0f, static_cast<float>(ColumnRelightScheduledIndex) /
                                  static_cast<float>(relight_total))
             : 1.0f;
     const float relight_frac = relight_base + relight_weight * relight_inner;
     Report(sink, "relight", relight_frac,
            force_done ? "Lighting ready."
                       : "Computing lighting... " +
-                            std::to_string(ColumnRelightIndex) + "/" +
+                            std::to_string(ColumnRelightScheduledIndex) + "/" +
                             std::to_string(relight_total));
 
     if (force_done)
     {
+      if (use_async && world.HasPendingAsyncRelightWork())
+      {
+        world.CancelAsyncRelightWork();
+      }
       const auto tick_t1 = std::chrono::steady_clock::now();
       const double tick_ms =
           std::chrono::duration<double, std::milli>(tick_t1 - tick_t0).count();
       std::cout << "[WorldLoad] RelightColumns done: " << relight_total
-                << " columns, last_tick_ms=" << tick_ms << std::endl;
+                << " columns, async=" << (use_async ? 1 : 0)
+                << ", last_tick_ms=" << tick_ms << std::endl;
       BeginEmissiveBlockLightQueue(world);
       if (CurrentPhase == Phase::MeshWarmup)
       {
@@ -1421,9 +1595,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (EmissiveChunkRelightIndex < EmissiveChunkRelightQueue.size() &&
              relit < relight_budget)
       {
+        const glm::ivec3 coord =
+            EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++];
         world.GetLightingPipeline().RelightChunkBlockLight(
-            world.BlockWorld, *world.BlockRegistry,
-            EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
+            world.BlockWorld, *world.BlockRegistry, coord);
+        world.NoteChunkSliceLightCalculationSettled(coord);
         ++relit;
       }
     }
@@ -1457,6 +1633,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     const int pass_limit = create_mesh_warmup ? 8 : 1;
     const int sync_mesh_budget =
         force_sync_mesh ? std::max(8, budget * 4) : mesh_budget.MaxMeshDrain;
+    if (Kind == WorldCoopKind::Load)
+    {
+      ParkSpawnRingMeshWhileRelightDeferred(world);
+      if (world.IsEnterSessionActive())
+      {
+        world.MarkEnterMissingMeshesDirty();
+      }
+    }
     MeshRebuildTickStats tick_stats;
     for (int pass = 0; pass < pass_limit; ++pass)
     {
@@ -1528,11 +1712,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       MeshWarmupProcessedMax = MeshWarmupCompletedTotal;
     }
     const float completed_frac =
-        MeshWarmupStartPending > 0
-            ? std::min(1.0f,
-                       static_cast<float>(MeshWarmupCompletedTotal) /
-                           static_cast<float>(MeshWarmupStartPending))
-            : 1.0f;
+        MeshWarmupResolvedFraction(MeshWarmupStartPending, pending_now);
     const float mesh_base =
         Kind == WorldCoopKind::Create
             ? CooperativeCreateMeshProgressBase()
@@ -1545,13 +1725,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                       : kPhaseWeightMeshWarmup);
     const float mesh_frac =
         mesh_base + mesh_weight * (mesh_done ? 1.0f : completed_frac);
-    const size_t done_count = MeshWarmupCompletedTotal;
-    const size_t total_count = MeshWarmupStartPending;
     Report(sink, "mesh_warmup", mesh_frac,
            mesh_done ? "Terrain meshes ready."
-                     : "Building meshes... " + std::to_string(done_count) +
-                           "/" + std::to_string(total_count) +
-                           " (" + std::to_string(pending_now) + " pending)");
+                     : FormatMeshWarmupProgress(MeshWarmupStartPending,
+                                                pending_now));
     if (mesh_done)
     {
       world.SetLightingRelightDeferred(false);
@@ -1562,10 +1739,22 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else if (MeshWarmupFinalizeOnly)
       {
+        // SOTA: FinalizeOnly still owns ColumnFlow until Presentable — do not
+        // skip BeginEnterLitGate (Era51 0ms PrepareView / second GpuWarmup).
+        if (!world.IsEnterLitGateActive())
+        {
+          UEnterLitDiagnostics::BeginSession();
+          world.BeginEnterLitGate();
+        }
         BeginPrepareEnter();
       }
       else
       {
+        if (!world.IsEnterLitGateActive())
+        {
+          UEnterLitDiagnostics::BeginSession();
+          world.BeginEnterLitGate();
+        }
         CurrentPhase = Phase::PostLoadAnalysis;
       }
     }
@@ -1581,14 +1770,29 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           warmup_elapsed_ms >= kMeshWarmupMaxWallMs;
       if (MeshWarmupTicks >= kMeshWarmupMaxTicks || warmup_wall_timeout)
       {
+        const size_t dirty_residual = world.MeshService->GetDirtyCount();
         std::cerr << "MeshWarmup: timeout with pending dirty="
-                  << world.MeshService->GetDirtyCount()
+                  << dirty_residual
                   << " ticks=" << MeshWarmupTicks
                   << " wall_ms=" << warmup_elapsed_ms << std::endl;
+        if (dirty_residual > 0)
+        {
+          // A35 R0: timeout ≠ MeshWarmup done — stamp residual for AF binding.
+          world.GetPhysicsTelemetryMutable().MeshWarmupTimeoutDirtyResidual = 1;
+          world.GetPhysicsTelemetryMutable().EnterMeshDirtyResidualN =
+              static_cast<int>(
+                  std::min<size_t>(dirty_residual, static_cast<size_t>(INT_MAX)));
+          MeshWarmupTimedOutWithDirty = true;
+        }
         world.SetLightingRelightDeferred(false);
         world.SetLightingSkylightBulkComplete(false);
         if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
         {
+          if (MeshWarmupFinalizeOnly && !world.IsEnterLitGateActive())
+          {
+            UEnterLitDiagnostics::BeginSession();
+            world.BeginEnterLitGate();
+          }
           BeginPrepareEnter();
         }
         else
@@ -1719,23 +1923,141 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       if (StreamingWarmupTicks == 0)
       {
         WarnIfTerrainMeshesMissing(world, "PrepareView before spawn warmup");
+        StreamingWarmupWallStart = std::chrono::steady_clock::now();
+        StreamingWarmupPeakDebt = 0;
+        StreamingWarmupLastRawDebt = 0;
+        StreamingWarmupDisplayDebt = 0;
+        StreamingWarmupLitWarnLogged = false;
+        StreamingWarmupBestFovDebt = INT_MAX;
+        StreamingWarmupLitProgressAt = StreamingWarmupWallStart;
+        StreamingWarmupLitStallLogged = false;
+        if (!world.IsEnterLitGateActive())
+        {
+          UEnterLitDiagnostics::BeginSession();
+          world.BeginEnterLitGate();
+        }
       }
       TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
+      // Era41: light LitDrawable FOV on create bar (async Capture + workers).
+      world.TickEnterFovLitPass(
+          std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
       ++StreamingWarmupTicks;
+      bool underfeet_lit = false;
+      const int raw_debt = world.CountCreateNearFovWarmupDebt(&underfeet_lit);
+      const int fov_debt = world.CountEnterFovLitDebt();
+      if (fov_debt < StreamingWarmupBestFovDebt)
+      {
+        StreamingWarmupBestFovDebt = fov_debt;
+        StreamingWarmupLitProgressAt = std::chrono::steady_clock::now();
+      }
+      const auto &phys = world.GetPhysicsTelemetry();
+      const int debt = raw_debt + fov_debt + phys.FocusDarkMesh +
+                       phys.SoftDeferEmptyPlaceholderN;
+      if (debt > StreamingWarmupPeakDebt)
+      {
+        StreamingWarmupPeakDebt = debt;
+      }
+      // Era35 P3: monotonic display debt — only decreases, never jumps up.
+      if (StreamingWarmupTicks == 1)
+      {
+        StreamingWarmupDisplayDebt = debt;
+      }
+      else
+      {
+        StreamingWarmupDisplayDebt = std::min(StreamingWarmupDisplayDebt, debt);
+      }
+      StreamingWarmupLastRawDebt = debt;
       const bool spawn_settled = IsCreateSpawnWarmupSettled(world);
       const float prepare_view_base =
           CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup;
+      const int denom = std::max(1, StreamingWarmupPeakDebt);
       const float stream_inner =
           spawn_settled ? 1.0f
-                        : std::min(0.95f,
-                                   static_cast<float>(StreamingWarmupTicks) /
-                                       static_cast<float>(
-                                           kCreateSpawnWarmupMaxTicks));
+                        : (1.0f - CreateBarDebtFraction(
+                                      StreamingWarmupDisplayDebt, denom));
+      const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                    std::chrono::steady_clock::now() -
+                                    StreamingWarmupWallStart)
+                                    .count();
+      const double ms_since_lit_progress =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - StreamingWarmupLitProgressAt)
+              .count();
+      const bool lit_progress_stalled = EnterLitDebtProgressStalled(
+          fov_debt, StreamingWarmupBestFovDebt, underfeet_lit,
+          ms_since_lit_progress,
+          static_cast<double>(EnterLitProgressStallMs()), elapsed_ms,
+          static_cast<double>(CreateSpawnWarmupSoftWallMs()));
+      if (lit_progress_stalled && !StreamingWarmupLitStallLogged)
+      {
+        StreamingWarmupLitStallLogged = true;
+        std::cerr << "[LitRing] create lit progress-stall abort (" << elapsed_ms
+                  << "ms, lit=" << fov_debt
+                  << ", best=" << StreamingWarmupBestFovDebt << ")\n";
+      }
+      EnterLitSample lit_sample{};
+      UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
+      UEnterLitDiagnostics::MaybeLog(lit_sample, StreamingWarmupTicks);
+      std::string status;
+      if (spawn_settled)
+      {
+        status = "Preparing view...";
+      }
+      else if (fov_debt > 0)
+      {
+        status = "Lighting… " + std::to_string(fov_debt) + " left";
+      }
+      else
+      {
+        status = "Loading FOV… " +
+                 std::to_string(StreamingWarmupDisplayDebt) + " left";
+      }
       Report(sink, "prepare_view",
-             prepare_view_base + kCreateWeightPrepare * stream_inner,
-             spawn_settled ? "Preparing view..."
-                           : "Loading nearby terrain...");
-      if (!spawn_settled && StreamingWarmupTicks < kCreateSpawnWarmupMaxTicks)
+             prepare_view_base + kCreateWeightPrepare * stream_inner, status);
+      // LitRing C: RequireZero holds until debt clears OR progress stall / wall.
+      const bool require_zero = URuntimeTuning::Get().EnterLitRequireZero;
+      if (spawn_settled)
+      {
+        // fall through to Finalize
+      }
+      else if (fov_debt > 0)
+      {
+        if (!ShouldHoldEnterBarForFovLit(
+                fov_debt, elapsed_ms,
+                URuntimeTuning::Get().EnterFovLitHardWallMs, require_zero,
+                lit_progress_stalled))
+        {
+          std::cerr << "[LitRing] create lit leave (" << elapsed_ms
+                    << "ms, lit=" << fov_debt
+                    << ", stall=" << (lit_progress_stalled ? 1 : 0) << ")\n";
+        }
+        else
+        {
+          if (!StreamingWarmupLitWarnLogged &&
+              elapsed_ms >=
+                  static_cast<double>(
+                      URuntimeTuning::Get().EnterFovLitHardWallMs))
+          {
+            StreamingWarmupLitWarnLogged = true;
+            std::cerr << "[Era42] create lit still draining past warn wall ("
+                      << elapsed_ms << "ms, lit=" << fov_debt << ")\n";
+          }
+          break;
+        }
+      }
+      else if (ShouldSoftLeaveCreateSpawnWarmup(underfeet_lit, elapsed_ms))
+      {
+        std::cerr << "[Era34] create spawn soft-wall after underfeet lit ("
+                  << elapsed_ms << "ms, debt=" << debt << ")\n";
+      }
+      else if (ShouldHardLeaveCreateSpawnWarmup(elapsed_ms,
+                                                StreamingWarmupTicks))
+      {
+        std::cerr << "[Era34] create spawn hard ceiling (" << elapsed_ms
+                  << "ms, ticks=" << StreamingWarmupTicks << ", debt=" << debt
+                  << ")\n";
+      }
+      else
       {
         break;
       }
@@ -1743,13 +2065,342 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     else
     {
       WarnIfTerrainMeshesMissing(world, "PrepareView before warmup");
+      if (world.IsEnterLitGateActive())
+      {
+        if (StreamingWarmupTicks == 0)
+        {
+          StreamingWarmupWallStart = std::chrono::steady_clock::now();
+          StreamingWarmupPeakDebt = 0;
+          StreamingWarmupLastRawDebt = 0;
+          StreamingWarmupDisplayDebt = 0;
+          StreamingWarmupLitWarnLogged = false;
+          StreamingWarmupAbortDrainMode = false;
+          StreamingWarmupAbortLogged = false;
+          StreamingWarmupAbortCapLogged = false;
+          StreamingWarmupSettleLogged = false;
+          StreamingWarmupBestFovDebt = INT_MAX;
+          StreamingWarmupLitProgressAt = StreamingWarmupWallStart;
+          StreamingWarmupLitStallLogged = false;
+        }
+        EnterWarmupStepSample step_sample{};
+        const auto &phys_before = world.GetPhysicsTelemetry();
+        const int relight_completed_before = phys_before.RelightCompletedN;
+        const int gpu_finish_before = phys_before.GpuFinishN;
+        // Era46/47: shared enter drain frame (sets EnterLitQuiesce latch +
+        // DrainEnterGameMeshWarmup + TickEnterGateMeshDrain).
+        constexpr int kCoopEnterMeshBudget = EnterWarmupMeshBudgetDefault();
+        const int gate_iters =
+            std::max(1, URuntimeTuning::Get().EnterGateMeshDrainIterations);
+        {
+          const auto t0 = std::chrono::high_resolution_clock::now();
+          world.TickEnterWarmupDrainFrame(kCoopEnterMeshBudget, gate_iters,
+                                          12.0);
+          const double drain_frame_ms =
+              std::chrono::duration<double, std::milli>(
+                  std::chrono::high_resolution_clock::now() - t0)
+                  .count();
+          // Approximate split for profile (gate iters dominate when lit).
+          step_sample.drain_mesh_ms = drain_frame_ms * 0.35;
+          step_sample.gate_drain_ms = drain_frame_ms * 0.65;
+        }
+        {
+          const auto t0 = std::chrono::high_resolution_clock::now();
+          world.TickEnterFovLitPass(
+              std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
+          step_sample.lit_pass_ms =
+              std::chrono::duration<double, std::milli>(
+                  std::chrono::high_resolution_clock::now() - t0)
+                  .count();
+        }
+        ++StreamingWarmupTicks;
+        const int fov_debt = world.CountEnterFovLitDebt();
+        if (fov_debt < StreamingWarmupBestFovDebt)
+        {
+          StreamingWarmupBestFovDebt = fov_debt;
+          StreamingWarmupLitProgressAt = std::chrono::steady_clock::now();
+        }
+        const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                      std::chrono::steady_clock::now() -
+                                      StreamingWarmupWallStart)
+                                      .count();
+        const double ms_since_lit_progress =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - StreamingWarmupLitProgressAt)
+                .count();
+        EnterLitSample lit_sample{};
+        UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
+        UEnterLitDiagnostics::MaybeLog(lit_sample, StreamingWarmupTicks);
+        UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
+        const auto &phys_after = world.GetPhysicsTelemetry();
+        step_sample.relight_drain_ms = phys_after.RelightDrainMs;
+        step_sample.mesh_emerge_ms = phys_after.MeshEmergeMs;
+        step_sample.mesh_immediate_ms = phys_after.MeshImmediateMs;
+        step_sample.relight_completed_delta =
+            phys_after.RelightCompletedN - relight_completed_before;
+        step_sample.gpu_finish_delta =
+            phys_after.GpuFinishN - gpu_finish_before;
+        UEnterLitDiagnostics::RecordFrameSteps(step_sample);
+        const int combined_debt =
+            EnterWarmupCombinedDebt(lit_sample, fov_debt);
+        if (combined_debt > StreamingWarmupPeakDebt)
+        {
+          StreamingWarmupPeakDebt = combined_debt;
+        }
+        if (StreamingWarmupTicks == 1)
+        {
+          StreamingWarmupDisplayDebt = combined_debt;
+        }
+        else
+        {
+          StreamingWarmupDisplayDebt =
+              std::min(StreamingWarmupDisplayDebt, combined_debt);
+        }
+        StreamingWarmupLastRawDebt = combined_debt;
+        const float prepare_view_base =
+            ProceduralFillLoadPath
+                ? (ProceduralFillMeshProgressBase() +
+                   kProceduralFillWeightMeshWarmup)
+                : CooperativeLoadProgressAfterMesh();
+        const int denom = std::max(1, StreamingWarmupPeakDebt);
+        const bool ring_ready = world.IsSpawnMeshRingReady();
+        const bool visibility_ready = world.IsEnterVisibilityReady();
+        const int visibility_debt = lit_sample.visibility_debt;
+        const bool mesh_blockers_clear = !world.NeedsEnterGameMeshWarmup();
+        const bool underfeet_present = world.IsEnterUnderfeetPresentReady();
+        const glm::ivec3 underfeet_center =
+            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+        const int underfeet_gpu_pending =
+            world.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
+                underfeet_center, 1);
+        const bool underfeet_mesh_ok =
+            underfeet_present ||
+            !world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+                world.GetBlockWorld(),
+                glm::ivec3(underfeet_center.x, 0, underfeet_center.z), 1);
+        // Phase 5.7R4: UF Dirty carve before soft_force wall (existing budgets).
+        if (ShouldCarveUnderfeetBeforeSoftForce(
+                underfeet_present, elapsed_ms,
+                URuntimeTuning::Get().EnterForceInGameMs))
+        {
+          world.MarkSpawnRingUnfinishedDirty(8);
+        }
+        // Phase 5.4.1: no Quiesce bypass while visibility_debt>0.
+        const bool ring_ready_for_exit = EnterRingReadyForExit(
+            ring_ready, world.IsEnterSessionActive(), underfeet_present,
+            underfeet_gpu_pending, underfeet_mesh_ok, visibility_debt);
+        const bool visibility_ready_for_exit = EnterVisibilityReadyForExit(
+            visibility_ready, world.IsEnterSessionActive(), underfeet_present,
+            fov_debt, underfeet_gpu_pending, StreamingWarmupAbortDrainMode,
+            elapsed_ms, URuntimeTuning::Get().EnterMeshAbortMs,
+            visibility_debt);
+        const bool lit_progress_stalled = EnterLitDebtProgressStalled(
+            fov_debt, StreamingWarmupBestFovDebt, underfeet_present,
+            ms_since_lit_progress,
+            static_cast<double>(EnterLitProgressStallMs()), elapsed_ms,
+            static_cast<double>(CreateSpawnWarmupSoftWallMs()));
+        if (lit_progress_stalled && !StreamingWarmupLitStallLogged)
+        {
+          StreamingWarmupLitStallLogged = true;
+          LOG(WARNING) << "[LitRing] load lit progress-stall abort elapsed_ms="
+                       << elapsed_ms << " lit=" << fov_debt
+                       << " best=" << StreamingWarmupBestFovDebt;
+          CubatariumFlushLogs();
+        }
+        if (lit_progress_stalled)
+        {
+          StreamingWarmupAbortDrainMode = true;
+        }
+        const bool abort_underfeet_cap = ShouldReleaseEnterAfterAbortUnderfeetCap(
+            StreamingWarmupAbortDrainMode, elapsed_ms,
+            URuntimeTuning::Get().EnterForceInGameMs, underfeet_present,
+            underfeet_gpu_pending);
+        const bool soft_exit_cap = ShouldForceEnterLoadSoftExit(
+            StreamingWarmupAbortDrainMode, elapsed_ms,
+            URuntimeTuning::Get().EnterForceInGameMs, fov_debt);
+        const bool soft_clean_cap = ShouldForceEnterLoadSoftCleanDebt(
+            elapsed_ms, combined_debt, underfeet_present);
+        // LitRing C: stall with underfeet → settle with FOV holes OK (finite load).
+        // Phase5 S4: soft_exit_cap settles without underfeet (stuck missing mesh).
+        // Phase 5.2.0: soft_clean_cap settles when debt=0 + underfeet @12s.
+        // A35 R0: soft settle blocked while MeshService dirty residual high
+        // (EnterLit mesh_dirty can false-clear hinterland).
+        const size_t mesh_service_dirty_n =
+            world.MeshService ? world.MeshService->GetDirtyCount() : 0;
+        // Telemetry stamp MeshWarmupTimedOutWithDirty stays for AF; soft settle
+        // blocks only while residual dirty is still above cap (drain can clear).
+        const bool dirty_residual_blocks_soft =
+            EnterMeshDirtyResidualBlocksSoftSettle(mesh_service_dirty_n);
+        if (dirty_residual_blocks_soft &&
+            (soft_exit_cap || soft_clean_cap) &&
+            world.GetPhysicsTelemetryMutable()
+                    .EnterSoftSettleBlockedDirtyResidual == 0)
+        {
+          world.GetPhysicsTelemetryMutable()
+              .EnterSoftSettleBlockedDirtyResidual = 1;
+          world.GetPhysicsTelemetryMutable().EnterMeshDirtyResidualN =
+              static_cast<int>(std::min<size_t>(
+                  mesh_service_dirty_n, static_cast<size_t>(INT_MAX)));
+          LOG(WARNING) << "[EnterWarmup] soft_settle_blocked_dirty_residual n="
+                       << mesh_service_dirty_n
+                       << " warmup_timeout_dirty="
+                       << (MeshWarmupTimedOutWithDirty ? 1 : 0)
+                       << " elapsed_ms=" << elapsed_ms;
+          CubatariumFlushLogs();
+        }
+        const bool soft_exit_ok =
+            soft_exit_cap && !dirty_residual_blocks_soft;
+        const bool soft_clean_ok =
+            soft_clean_cap && !dirty_residual_blocks_soft;
+        const bool live_blockers_ok =
+            ring_ready_for_exit && visibility_ready_for_exit &&
+            mesh_blockers_clear;
+        const bool load_settled =
+            live_blockers_ok ||
+            (StreamingWarmupAbortDrainMode && underfeet_present &&
+             underfeet_gpu_pending <= 0 && fov_debt <= 0 &&
+             !dirty_residual_blocks_soft) ||
+            (lit_progress_stalled && underfeet_present &&
+             underfeet_gpu_pending <= 0 && !dirty_residual_blocks_soft) ||
+            (abort_underfeet_cap && underfeet_present &&
+             underfeet_gpu_pending <= 0 &&
+             (fov_debt <= 0 || lit_progress_stalled) &&
+             !dirty_residual_blocks_soft) ||
+            soft_clean_ok || soft_exit_ok;
+        if (load_settled && !StreamingWarmupSettleLogged)
+        {
+          StreamingWarmupSettleLogged = true;
+          const char *settle_reason = "live_blockers";
+          if (!live_blockers_ok)
+          {
+            if (soft_clean_ok)
+            {
+              settle_reason = "soft_clean";
+            }
+            else if (soft_exit_ok)
+            {
+              // Phase 5.7R5: soft_force settle_reason only with UF presentable.
+              settle_reason = ShouldAllowEnterSoftForceSettle(underfeet_present)
+                                  ? "soft_force"
+                                  : "force_ingame_no_uf";
+            }
+            else if (abort_underfeet_cap)
+            {
+              settle_reason = "abort_underfeet";
+            }
+            else if (lit_progress_stalled)
+            {
+              settle_reason = "lit_stall";
+            }
+            else
+            {
+              settle_reason = "abort_drain";
+            }
+          }
+          world.SetLastEnterSettleReason(settle_reason);
+          LOG(INFO) << "[EnterWarmup] settle_reason=" << settle_reason
+                    << " elapsed_ms=" << elapsed_ms
+                    << " combined_debt=" << combined_debt
+                    << " needs_mesh=" << (mesh_blockers_clear ? 0 : 1)
+                    << " mesh_service_dirty=" << mesh_service_dirty_n
+                    << " underfeet=" << (underfeet_present ? 1 : 0)
+                    << " ring_ready=" << (ring_ready ? 1 : 0)
+                    << " visibility_debt=" << visibility_debt;
+          if (std::strcmp(settle_reason, "soft_force") == 0 &&
+              visibility_debt > 0)
+          {
+            world.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 1;
+            world.BeginEnterGameMeshBurst(24);
+            world.MarkSpawnRingUnfinishedDirty(8);
+          }
+          else if (std::strcmp(settle_reason, "force_ingame_no_uf") == 0)
+          {
+            world.BeginEnterGameMeshBurst(24);
+            world.MarkSpawnRingUnfinishedDirty(16);
+          }
+          CubatariumFlushLogs();
+        }
+        if ((abort_underfeet_cap || lit_progress_stalled || soft_exit_ok ||
+             soft_clean_ok) &&
+            load_settled && !StreamingWarmupAbortCapLogged)
+        {
+          StreamingWarmupAbortCapLogged = true;
+          LOG(WARNING) << "[EnterWarmup] coop_abort_underfeet_cap elapsed_ms="
+                       << elapsed_ms << " ring_ready=" << (ring_ready ? 1 : 0)
+                       << " visibility_debt=" << visibility_debt
+                       << " lit_stall=" << (lit_progress_stalled ? 1 : 0)
+                       << " soft_exit=" << (soft_exit_ok ? 1 : 0)
+                       << " soft_clean=" << (soft_clean_ok ? 1 : 0)
+                       << " underfeet=" << (underfeet_present ? 1 : 0);
+          CubatariumFlushLogs();
+        }
+        if (!StreamingWarmupAbortDrainMode &&
+            ShouldForceEnterMeshAbort(fov_debt, ring_ready, elapsed_ms,
+                                      URuntimeTuning::Get().EnterMeshAbortMs))
+        {
+          StreamingWarmupAbortDrainMode = true;
+          if (!StreamingWarmupAbortLogged)
+          {
+            StreamingWarmupAbortLogged = true;
+            LOG(INFO) << "[EnterWarmup] coop_abort_drain elapsed_ms="
+                      << elapsed_ms << " dirty="
+                      << (lit_sample.mesh_dirty ? 1 : 0)
+                      << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
+                      << " fifo=" << lit_sample.fifo_n << " ring="
+                      << (ring_ready ? 1 : 0)
+                      << " visibility_debt=" << visibility_debt;
+            CubatariumFlushLogs();
+          }
+        }
+        // Era46 C: escalate GPU drain only after abort_drain ≥3 min — same
+        // pipeline, higher budget; does not weaken gate.
+        // Gate-active GPU consume is TickEnterGateMeshDrain only (one consume).
+        if (ShouldEscalateEnterWarmupGpuDrain(StreamingWarmupAbortDrainMode,
+                                              elapsed_ms) &&
+            world.NeedsEnterGameMeshWarmup() &&
+            !world.IsEnterLitGateActive())
+        {
+          world.DrainEnterGameMeshWarmup(kCoopEnterMeshBudget * 2);
+        }
+        const float stream_inner =
+            load_settled
+                ? 1.0f
+                : (1.0f - CreateBarDebtFraction(StreamingWarmupDisplayDebt,
+                                                denom));
+        const std::string status = BuildEnterWarmupStatus(
+            lit_sample, fov_debt, ring_ready, StreamingWarmupAbortDrainMode,
+            elapsed_ms, URuntimeTuning::Get().EnterFovLitHardWallMs,
+            visibility_debt);
+        Report(sink, "prepare_view",
+               prepare_view_base + kPhaseWeightPrepareView * stream_inner,
+               status);
+        if (!load_settled)
+        {
+          break;
+        }
+        UEnterLitDiagnostics::MaybeLogProfileSummary(lit_sample);
+      }
     }
     world.WarmupVisibleListAtCamera();
     WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");
+    // Mark before EndEnterLitGate — vis-ready uses the enter snapshot while
+    // the gate is still active. Consume happens after GpuWarmup.
     FinalizeCooperativeLoadForEnterGame(world, Kind);
+    if (world.IsEnterLitGateActive())
+    {
+      world.EndEnterLitGate();
+      UEnterLitDiagnostics::EndSession();
+    }
     CurrentPhase = Phase::Done;
     Active = false;
     StreamingWarmupTicks = 0;
+    StreamingWarmupPeakDebt = 0;
+    StreamingWarmupLastRawDebt = 0;
+    StreamingWarmupDisplayDebt = 0;
+    StreamingWarmupLitWarnLogged = false;
+    StreamingWarmupAbortDrainMode = false;
+    StreamingWarmupAbortLogged = false;
+    StreamingWarmupBestFovDebt = INT_MAX;
+    StreamingWarmupLitStallLogged = false;
     const float prepare_view_base =
         Kind == WorldCoopKind::Create
             ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)
@@ -1878,6 +2529,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::SaveMetadata:
   {
+    CubatariumLogInfo("Save", "save_metadata begin");
     world.GetChunkStorage().WriteStorageMarker(FolderPath);
     world.SaveUsers(FolderPath + "/users.json");
     world.SaveCreatures(FolderPath + "/creatures.json");
@@ -1886,10 +2538,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.ModifiedChunks.clear();
     if (ResumeStreamingAfterSave)
     {
+      CubatariumLogInfo("Save", "save_metadata resume_streaming");
       world.EnsureStreamingActiveAfterBackgroundQuiesce();
     }
     CurrentPhase = Phase::Done;
     Active = false;
+    CubatariumLogInfo("Save", "save_metadata end");
     Report(sink, "done", 1.f, "World saved.");
     break;
   }

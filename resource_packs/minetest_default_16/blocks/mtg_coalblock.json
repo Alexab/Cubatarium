@@ -1,6 +1,13 @@
 {
   "name": "mtg_coalblock",
   "id": 424,
+  "hardness": 5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

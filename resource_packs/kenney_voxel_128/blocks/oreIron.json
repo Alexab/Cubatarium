@@ -1,6 +1,13 @@
 {
   "name": "oreIron",
   "id": 77,
+  "hardness": 3,
+  "dig": {
+    "level": 1,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

@@ -3,7 +3,10 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
+#include "Blocks/BlockCatalogQueries.h"
 #include "Blocks/BlockRegistry.h"
+#include "World/Lighting/LightUtil.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <unordered_map>
@@ -13,6 +16,81 @@
 
 namespace cutum
 {
+
+/// PackedQuad has a 10-bit block field. Keep its value as a per-chunk palette
+/// index and preserve full 16-bit BlockIds in the side table used by draw
+/// ranges. Index zero is reserved for air so the compute grid's zero sentinel
+/// remains unambiguous.
+inline constexpr size_t kGpuBlockTypePaletteCapacity = 1u << 10u;
+
+inline bool BuildGpuBlockTypePalette(
+    const ChunkMeshSnapshot &snapshot, std::vector<BlockId> &block_palette,
+    std::vector<uint16_t> &block_palette_indices)
+{
+  block_palette.clear();
+  block_palette_indices.clear();
+  block_palette.reserve(kGpuBlockTypePaletteCapacity);
+
+  std::unordered_map<BlockId, uint16_t> indices_by_block;
+  indices_by_block.reserve(64);
+  block_palette.push_back(BLOCK_AIR);
+  for (BlockId id : snapshot.blocks)
+  {
+    if (id == BLOCK_AIR || indices_by_block.count(id) != 0)
+    {
+      continue;
+    }
+    if (block_palette.size() >= kGpuBlockTypePaletteCapacity)
+    {
+      block_palette.clear();
+      return false;
+    }
+    const uint16_t index = static_cast<uint16_t>(block_palette.size());
+    block_palette.push_back(id);
+    indices_by_block.emplace(id, index);
+  }
+
+  block_palette_indices.resize(snapshot.blocks.size(), 0u);
+  for (size_t i = 0; i < snapshot.blocks.size(); ++i)
+  {
+    const BlockId id = snapshot.blocks[i];
+    if (id == BLOCK_AIR)
+    {
+      continue;
+    }
+    const auto found = indices_by_block.find(id);
+    if (found == indices_by_block.end())
+    {
+      block_palette.clear();
+      block_palette_indices.clear();
+      return false;
+    }
+    block_palette_indices[i] = found->second;
+  }
+  return true;
+}
+
+inline bool TryResolveGpuBlockTypePaletteIndex(
+    const std::vector<BlockId> &block_palette, uint32_t palette_index,
+    BlockId &out_block_id)
+{
+  if (palette_index == 0 || palette_index >= block_palette.size())
+  {
+    return false;
+  }
+  out_block_id = block_palette[palette_index];
+  return out_block_id != BLOCK_AIR;
+}
+
+inline BlockId ResolveGpuBlockTypePaletteIndex(
+    const std::vector<BlockId> &block_palette, uint32_t palette_index)
+{
+  BlockId block_id = BLOCK_AIR;
+  return TryResolveGpuBlockTypePaletteIndex(block_palette, palette_index,
+                                            block_id)
+             ? block_id
+             : BLOCK_AIR;
+}
 
 /// CPU reference for G5 compute face extract: one unmerged quad per exposed
 /// Returns true for blocks that can be face-extracted on GPU. Solid opaque,
@@ -32,11 +110,35 @@ inline bool IsGpuFaceExtractEligible(UBlockRegistry &registry, BlockId id)
   return registry.IsSolid(id);
 }
 
+/// Q4 WorkerCompute: same eligibility from pinned catalog (no live registry).
+inline bool IsGpuFaceExtractEligible(const BlockDefinitionCatalog *catalog,
+                                     BlockId id)
+{
+  if (id == 0 || !catalog)
+  {
+    return false;
+  }
+  const BlockRenderStyle style = CatalogGetRenderStyle(catalog, id);
+  if (style == BlockRenderStyle::Fluid || style == BlockRenderStyle::Cross)
+  {
+    return false;
+  }
+  // IsSolid ≡ BlocksMovement on the registry path.
+  return CatalogBlocksMovement(catalog, id);
+}
+
 /// Legacy alias kept for callers that need the strict opaque-only check.
 inline bool IsOpaqueSolidForGpuExtract(UBlockRegistry &registry, BlockId id)
 {
   return IsGpuFaceExtractEligible(registry, id) &&
          !registry.IsTransparent(id);
+}
+
+inline bool IsOpaqueSolidForGpuExtract(const BlockDefinitionCatalog *catalog,
+                                       BlockId id)
+{
+  return IsGpuFaceExtractEligible(catalog, id) &&
+         !CatalogIsTransparent(catalog, id);
 }
 
 inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
@@ -49,6 +151,27 @@ inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
       continue;
     }
     if (!IsGpuFaceExtractEligible(registry, id))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
+                                         const BlockDefinitionCatalog *catalog)
+{
+  if (!catalog)
+  {
+    return false;
+  }
+  for (BlockId id : snap.blocks)
+  {
+    if (id == 0)
+    {
+      continue;
+    }
+    if (!IsGpuFaceExtractEligible(catalog, id))
     {
       return false;
     }
@@ -76,9 +199,36 @@ inline void BuildOccupancy(const ChunkMeshSnapshot &snap,
   }
 }
 
+/// Q4: occupancy from pinned catalog (main-thread GPU extract).
+inline void BuildOccupancy(const ChunkMeshSnapshot &snap,
+                           const BlockDefinitionCatalog *catalog,
+                           std::array<uint8_t, CHUNK_VOLUME> &occ)
+{
+  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  {
+    const BlockId id = snap.blocks[static_cast<size_t>(i)];
+    if (!IsGpuFaceExtractEligible(catalog, id))
+    {
+      occ[static_cast<size_t>(i)] = 0u;
+    }
+    else if (CatalogIsTransparent(catalog, id) ||
+             CatalogGetRenderStyle(catalog, id) == BlockRenderStyle::Cutout)
+    {
+      occ[static_cast<size_t>(i)] = 3u;
+    }
+    else
+    {
+      occ[static_cast<size_t>(i)] = 1u;
+    }
+  }
+}
+
 /// Padded (CHUNK_SIZE+2)^3 occupancy including one-block shell for GPU extract.
 inline constexpr int kGpuOccPad = CHUNK_SIZE + 2;
 inline constexpr int kGpuOccPadVolume = kGpuOccPad * kGpuOccPad * kGpuOccPad;
+inline constexpr int kGpuLightPad = CHUNK_SIZE + 4;
+inline constexpr int kGpuLightPadVolume =
+    kGpuLightPad * kGpuLightPad * kGpuLightPad;
 
 inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
                                  UBlockRegistry &registry,
@@ -118,11 +268,11 @@ inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
   }
 }
 
-/// Padded light: center + one-block shell (parity with FaceLightPacked air sample).
-inline void BuildPaddedLight(const ChunkMeshSnapshot &snap,
-                             std::vector<uint8_t> &lights)
+inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
+                                 const BlockDefinitionCatalog *catalog,
+                                 std::vector<uint8_t> &occ)
 {
-  lights.assign(static_cast<size_t>(kGpuOccPadVolume), 0);
+  occ.assign(static_cast<size_t>(kGpuOccPadVolume), 0);
   const int pad = kGpuOccPad;
   for (int y = -1; y <= CHUNK_SIZE; ++y)
   {
@@ -132,23 +282,81 @@ inline void BuildPaddedLight(const ChunkMeshSnapshot &snap,
       {
         const glm::ivec3 world = snap.ChunkOrigin() + glm::ivec3(x, y, z);
         const int pi = ((y + 1) * pad + (z + 1)) * pad + (x + 1);
+        if (ShouldSkipFaceForNeighbor(snap.GetNeighborLoadState(world)))
+        {
+          occ[static_cast<size_t>(pi)] = 2u;
+          continue;
+        }
+        const BlockId id = snap.GetBlock(world);
+        if (!IsGpuFaceExtractEligible(catalog, id))
+        {
+          occ[static_cast<size_t>(pi)] = 0u;
+        }
+        else if (CatalogIsTransparent(catalog, id) ||
+                 CatalogGetRenderStyle(catalog, id) == BlockRenderStyle::Cutout)
+        {
+          occ[static_cast<size_t>(pi)] = 3u;
+        }
+        else
+        {
+          occ[static_cast<size_t>(pi)] = 1u;
+        }
+      }
+    }
+  }
+}
+
+/// Padded light: center plus the radius-2 shell used by FaceLightPacked fallback.
+inline void BuildPaddedLight(const ChunkMeshSnapshot &snap,
+                             std::vector<uint8_t> &lights)
+{
+  lights.assign(static_cast<size_t>(kGpuLightPadVolume), 0);
+  const int pad = kGpuLightPad;
+  constexpr int halo = ChunkMeshSnapshot::kLightHaloRadius;
+  for (int y = -halo; y < CHUNK_SIZE + halo; ++y)
+  {
+    for (int z = -halo; z < CHUNK_SIZE + halo; ++z)
+    {
+      for (int x = -halo; x < CHUNK_SIZE + halo; ++x)
+      {
+        const glm::ivec3 world = snap.ChunkOrigin() + glm::ivec3(x, y, z);
+        const int pi = ((y + halo) * pad + (z + halo)) * pad + (x + halo);
         lights[static_cast<size_t>(pi)] = snap.GetLightPacked(world);
       }
     }
   }
 }
 
-/// Same rule as GreedyMesher::FaceLightPacked: prefer air-neighbor light.
+/// Same rule as GreedyMesher::FaceLightPacked: prefer air-neighbor light,
+/// then horizontal samples around the face (side-wall underside), then solid.
 inline uint8_t FaceLightPackedSnap(const ChunkMeshSnapshot &snap,
                                    glm::ivec3 local_solid, int axis, int sign)
 {
   glm::ivec3 air = local_solid;
   air[axis] += sign;
-  const uint8_t face =
-      snap.GetLightPacked(snap.ChunkOrigin() + air);
+  const glm::ivec3 world_air = snap.ChunkOrigin() + air;
+  const uint8_t face = snap.GetLightPacked(world_air);
   if (face != 0)
   {
     return face;
+  }
+  static constexpr glm::ivec3 kHoriz[] = {
+      {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+  uint8_t best = 0;
+  int best_sum = 0;
+  for (const glm::ivec3 &o : kHoriz)
+  {
+    const uint8_t packed = snap.GetLightPacked(world_air + o);
+    const int sum = UnpackSky(packed) + UnpackBlock(packed);
+    if (sum > best_sum)
+    {
+      best_sum = sum;
+      best = packed;
+    }
+  }
+  if (best != 0)
+  {
+    return best;
   }
   return snap.GetLightPacked(snap.ChunkOrigin() + local_solid);
 }
@@ -188,8 +396,8 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
     {
       for (int x = 0; x < n; ++x)
       {
-        const int li = (y * n + z) * n + x;
-        const BlockId id = snap.blocks[static_cast<size_t>(li)];
+        // ChunkMeshSnapshot blocks use Chunk::LocalIndex (x + n*y + n^2*z).
+        const BlockId id = snap.GetBlockLocal(glm::ivec3(x, y, z));
         if (!IsOpaqueSolidForGpuExtract(registry, id))
         {
           continue;
@@ -379,10 +587,12 @@ DecodeFaceMasks(const ChunkMeshSnapshot &snap, UBlockRegistry &registry,
     {
       continue;
     }
+    // The face-mask SSBO uses the GPU occupancy layout x + n*z + n^2*y.
+    // Recover that voxel coordinate, then fetch its block in chunk storage order.
     const int x = static_cast<int>(i % n);
     const int y = static_cast<int>(i / (n * n));
     const int z = static_cast<int>((i / n) % n);
-    const BlockId id = snap.blocks[i];
+    const BlockId id = snap.GetBlockLocal(glm::ivec3(x, y, z));
     auto emit = [&](int axis, int sign, uint32_t bit)
     {
       if ((m & bit) == 0)

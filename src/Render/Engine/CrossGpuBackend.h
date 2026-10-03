@@ -36,7 +36,8 @@ public:
   bool EnsureTemplateMesh();
   void RefreshPass(CrossGpuPassCache &cache,
                    const std::vector<CrossInstanceBatch> &batches,
-                   uint64_t mesh_revision, uint64_t cull_revision);
+                   uint64_t candidate_mesh_rev, uint64_t candidate_cull_rev,
+                   uint64_t expected_mesh_rev, uint64_t expected_cull_rev);
   void DestroyPass(CrossGpuPassCache &cache);
   void DestroyAll(CrossGpuPassCache &cache);
 

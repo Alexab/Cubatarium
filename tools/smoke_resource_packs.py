@@ -182,6 +182,10 @@ def check_objects() -> None:
     run([sys.executable, "tools/validate_worldgen_smoothness.py"])
 
 
+def check_content_completeness() -> None:
+    run([sys.executable, "tools/validate_content_completeness.py"])
+
+
 def main() -> int:
     print("=== resource pack smoke ===")
     check_worldgen_refs_drift()
@@ -191,6 +195,7 @@ def main() -> int:
     check_primary_audit()
     check_validate_primary()
     check_objects()
+    check_content_completeness()
     print("=== all smoke checks passed ===")
     return 0
 

@@ -1,7 +1,15 @@
 #ifndef CHUNKEMERGECOORDINATOR_H
 #define CHUNKEMERGECOORDINATOR_H
 
+#include "World/Chunks/ChunkManager.h"
+#include "World/Streaming/SoftDeferFramePolicy.h"
 #include "World/Streaming/StreamingPressure.h"
+
+#include <cstdint>
+#include <deque>
+#include <limits>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -46,6 +54,76 @@ public:
 
 private:
   FrameBudget LastBudget{};
+  void EnqueueFaceDebtRepair(glm::ivec3 coord);
+  void DrainFaceDebtRepairs(UWorld &world, int budget);
+  int DualLaneRrToken_{0};
+  /// A28 T1: DirtyDropped watermark for CapDirtyAdmitUnderThrash recent rate.
+  uint64_t LastDirtyDroppedForAdmit_{0};
+  int UndrawnForceCd{0};
+  int StuckSmokeCd{0};
+  int FocusScanCd{0};
+  int RimScanSkipStreak{0};
+  /// Stand witness full-column Dirty rate-limit (manual 131827 cy0–2 rim).
+  int StandWitnessColumnDirtyCd{0};
+  /// Stand nh≤3 sticky frames (Inflight must not reset; separate from cruise).
+  int StandRimStickyFrames{0};
+  int StandRimStickyCx{0};
+  int StandRimStickyCy{0};
+  int StandRimStickyCz{0};
+  /// Era22 I-M8: consecutive frames with FOV miss (~120f ≈ 1 period ≈2s).
+  int MissWitnessAgeFrames{0};
+  /// Era22 F2b: once-per-period self-heal scan for long miss witnesses.
+  int MissStuckSelfHealPeriod{0};
+  /// Era22 F2c: once-per-period FirstMesh pin after stuck age threshold.
+  int MissStuckForcePinPeriod{0};
+  /// I10-C1: consecutive frames miss stuck without schedule progress.
+  int MissStuckRunFrames{0};
+  /// I11-A2: consecutive frames miss stuck without drawable completion.
+  int MissCompletionStuckFrames{0};
+  /// Phase 5.7R2: empty-gpu remesh edge latch (clear when miss episode ends).
+  bool MissWitnessRemeshLatched{false};
+  /// Phase C: wall EMA for adaptive emerge cap on cruise.
+  double WallEmaMs{0.0};
+  /// Era51 F1a: adaptive stop-phase emerge budget with decay.
+  double StopIdleEmergeMs{20.0};
+  /// Era24 I-E4: SoftDefer empty / Hide⇒Ticket age (frames since first seen).
+  std::unordered_map<glm::ivec3, int, IVec3Hash> SoftDeferEmptyAgeFrames;
+  /// Era39: sticky SoftDefer empty ownership until healed.
+  std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyOwned;
+  /// Phase 5.7R3: last StreamingFrameEpoch SoftDefer underfeet MarkDirty.
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> SoftDeferUnderfeetMarkEpoch;
+  /// Era39: previous-frame SoftDefer empty set (hidden-neighbor seam).
+  std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyPrevSeen;
+  /// Era34 P1: rotate SoftDefer empty ownership when cap saturates.
+  int SoftDeferEmptyScanOffset{0};
+  /// Stable SoftDefer policy POD; Set*Fn installed once against this.
+  SoftDeferFramePolicy SoftDeferPolicy{};
+  bool SoftDeferCallbacksInstalled{false};
+  /// R06 E0: one sea-seam remesh dirty per peer column per emerge tick.
+  std::unordered_set<uint64_t> SeaSeamRemeshCoalesceCols;
+  /// Sysreset v5: FaceDebt already-known peer remesh cap (shared with BecameKnown).
+  int FaceDebtAlreadyKnownRemeshN{0};
+  /// Durable level-triggered retry for face debt, including late peer loads and
+  /// accepted-empty peers that do not emit a first-drawable callback.
+  std::deque<glm::ivec3> PendingFaceDebtRepairs_;
+  std::unordered_set<glm::ivec3, IVec3Hash>
+      PendingFaceDebtRepairSet_;
+  uint64_t FaceDebtWorldEpoch_{0};
+  /// Prior-frame FM enqueue / schedule baselines (was function-static).
+  int FmEnqueuePrior{0};
+  int ScheduleOkPrior{0};
+  int DirtyFmPrior{0};
+  int DirtyCountPrior{0};
+  int HeavyCadenceFocusX{std::numeric_limits<int>::min()};
+  int HeavyCadenceFocusZ{std::numeric_limits<int>::min()};
+  bool HeavyCadenceFocusValid{false};
+  uint32_t HeavyCadenceFrame{0};
+  int CruiseClearPeriods{0};
+  /// Phase 5.3.0: empty_batch_event rise/drop detector (steady_clock ms).
+  int EmptyBatchPrevBacklog{0};
+  int64_t EmptyBatchRiseT0Ms{0};
+  int EmptyBatchRisePeak{0};
+  int64_t EmptyBatchDropMarkMs{0};
 };
 
 } // namespace cutum

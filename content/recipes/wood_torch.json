@@ -1,0 +1,8 @@
+{
+  "id": "wood_torch",
+  "shapeless": true,
+  "inputs": [
+    { "id": "wood", "count": 1 }
+  ],
+  "output": { "id": "wood_torch", "count": 4 }
+}

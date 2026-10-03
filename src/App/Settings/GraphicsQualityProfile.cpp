@@ -83,10 +83,47 @@ LightingMode GraphicsQualityProfile::GetLightingMode() const
                                                   : LightingMode::Full;
 }
 
+LightingMode
+GraphicsQualityProfile::ResolveLightingMode(const RenderSettings &settings)
+{
+  if (settings.LightingModeExplicit)
+  {
+    return settings.Lighting;
+  }
+  return FromPreset(settings.Preset).GetLightingMode();
+}
+
+LightingMode
+GraphicsQualityProfile::ParseLightingModeString(const std::string &value)
+{
+  if (value == "flat")
+  {
+    return LightingMode::Flat;
+  }
+  return LightingMode::Full;
+}
+
+const char *GraphicsQualityProfile::ToLightingModeString(LightingMode mode)
+{
+  return mode == LightingMode::Flat ? "flat" : "full";
+}
+
+const char *GraphicsQualityProfile::LightingDisplayName(LightingMode mode)
+{
+  return mode == LightingMode::Flat ? "Flat (weak PCs)" : "Full";
+}
+
+LightingMode GraphicsQualityProfile::NextLightingMode(LightingMode mode)
+{
+  return mode == LightingMode::Full ? LightingMode::Flat : LightingMode::Full;
+}
+
 RenderSettings GraphicsQualityProfile::MakeRenderSettings() const
 {
   RenderSettings s;
   s.Preset = Preset;
+  s.Lighting = GetLightingMode();
+  s.LightingModeExplicit = false;
   switch (Preset)
   {
   case PerformancePreset::Performance:
@@ -120,6 +157,7 @@ RenderSettings GraphicsQualityProfile::MakeRenderSettings() const
   default:
     s = RenderSettings{};
     s.Preset = PerformancePreset::Balanced;
+    s.Lighting = GetLightingMode();
     break;
   }
   return s;

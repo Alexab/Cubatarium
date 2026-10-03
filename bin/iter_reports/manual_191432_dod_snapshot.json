@@ -1,0 +1,26 @@
+{
+  "source": "perf_20260806-191432_19484.jsonl",
+  "report": "bin/iter_reports/manual_latest_191432.json",
+  "dod": {
+    "holes_rate": 0.43478260869565216,
+    "miss_stuck_max_run_sec": 18.0,
+    "miss_end": 1.0,
+    "wall_ms_med": 154.899,
+    "wall_ms_no_holes_med": 76.884,
+    "wall_ms_fly_med": 115.7695,
+    "mesh_sync_fly_med": 0.0,
+    "post_stop_missing_max": 16.0,
+    "softdefer_capture_ticks_idle": 0.0,
+    "spike_count": 137,
+    "spike_max_wall": 1357.04,
+    "edit_immediate_max": 7.0,
+    "stop_mesh_prep_med": 20.9776,
+    "stop_emerge_med": 113.558,
+    "stop_stream_med": 79.3642,
+    "focus_end": [
+      -491,
+      66
+    ]
+  },
+  "vs_162944_note": "wall fly 116 vs 134; miss_stuck 18s; miss_end=1; sync=0"
+}

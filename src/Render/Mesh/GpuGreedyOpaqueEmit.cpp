@@ -80,15 +80,29 @@ struct GpuRect {
 layout(std430, binding = 3) buffer Rects { GpuRect rects[]; };
 layout(std430, binding = 4) buffer Counters { uint rectCount; };
 uniform uint side;
-uniform uint pad;
+uniform uint lightPad;
 uint readBlock(uint index) {
-  uint word = blocks[index >> 2u];
-  return (word >> ((index & 3u) * 8u)) & 0xFFu;
+  uint word = blocks[index >> 1u];
+  return (word >> ((index & 1u) * 16u)) & 0xFFFFu;
 }
 uint readLightPad(ivec3 local) {
-  int pi = ((local.y + 1) * int(pad) + (local.z + 1)) * int(pad) + (local.x + 1);
+  int pi = ((local.y + 2) * int(lightPad) + (local.z + 2)) * int(lightPad) + (local.x + 2);
   uint word = lights[uint(pi) >> 2u];
   return (word >> ((uint(pi) & 3u) * 8u)) & 0xFFu;
+}
+uint sampleFaceLight(ivec3 air, ivec3 solid) {
+  uint face = readLightPad(air);
+  if (face != 0u) return face;
+  const ivec3 horizontal[4] = ivec3[4](
+      ivec3(1,0,0), ivec3(-1,0,0), ivec3(0,0,1), ivec3(0,0,-1));
+  uint best = 0u;
+  uint bestSum = 0u;
+  for (int i = 0; i < 4; ++i) {
+    uint packed = readLightPad(air + horizontal[i]);
+    uint sum = (packed & 0x0Fu) + ((packed >> 4u) & 0x0Fu);
+    if (sum > bestSum) { bestSum = sum; best = packed; }
+  }
+  return best != 0u ? best : readLightPad(solid);
 }
 void main() {
   uint plane = gl_WorkGroupID.x;
@@ -108,15 +122,17 @@ void main() {
       local[uAxis] = u; local[vAxis] = v;
       uint val = 0u;
       if (local[axis] >= 0 && local[axis] < int(side)) {
-        int li = (local.y * int(side) + local.z) * int(side) + local.x;
+        // Face masks follow the padded occupancy buffer's x/z/y linear order.
+        int maskIndex = (local.y * int(side) + local.z) * int(side) + local.x;
+        // Block palettes follow Chunk::LocalIndex: x + side*y + side^2*z.
+        int blockIndex = (local.z * int(side) + local.y) * int(side) + local.x;
         uint bit = uint(axis) * 2u + (faceSign > 0 ? 1u : 0u);
-        if ((mask[li] & (1u << bit)) != 0u) {
-          uint bid = readBlock(uint(li));
+        if ((mask[maskIndex] & (1u << bit)) != 0u) {
+          uint bid = readBlock(uint(blockIndex));
           if (bid != 0u) {
             ivec3 air = local; air[axis] += faceSign;
-            uint fl = readLightPad(air);
-            uint sl = readLightPad(local);
-            val = bid | ((fl != 0u ? fl : sl) << 8u);
+            uint light = sampleFaceLight(air, local);
+            val = bid | (light << 10u);
           }
         }
       }
@@ -155,7 +171,7 @@ void main() {
       rects[idx].axis = axisU; rects[idx].faceSign = signIdx;
       rects[idx].slice = sliceU; rects[idx].u = uint(u); rects[idx].v = uint(v);
       rects[idx].width = uint(width); rects[idx].height = uint(height);
-      rects[idx].blockId = val & 0xFFu; rects[idx].lightPacked = (val >> 8u) & 0xFFu;
+      rects[idx].blockId = val & 0x3FFu; rects[idx].lightPacked = (val >> 10u) & 0xFFu;
     }
   }
 }
@@ -170,6 +186,7 @@ layout(std430, binding = 0) readonly buffer Rects { GpuRect rects[]; };
 layout(std430, binding = 1) writeonly buffer Vertices { float verts[]; };
 layout(std430, binding = 2) writeonly buffer Indices { uint inds[]; };
 uniform uint numRects;
+uniform uint lightPreview;
 uniform ivec3 chunkCoord;
 uniform uint side;
 int faceIndexFromGreedy(int axis, int faceSign) {
@@ -223,6 +240,7 @@ struct GpuRect {
 layout(std430, binding = 0) readonly buffer Rects { GpuRect rects[]; };
 layout(std430, binding = 1) writeonly buffer PackedQuads { uvec2 quads[]; };
 uniform uint numRects;
+uniform uint lightPreview;
 void main() {
   uint rid = gl_GlobalInvocationID.x;
   if (rid >= numRects) return;
@@ -249,7 +267,8 @@ void main() {
   uint blk = (r.lightPacked >> 4u) & 0x0Fu;
   uint w1 = (r.blockId & 0x3FFu)
           | (sky << 10u)
-          | (blk << 14u);
+          | (blk << 14u)
+          | ((lightPreview & 1u) << 24u);
   quads[rid] = uvec2(w0, w1);
 }
 )";
@@ -290,6 +309,17 @@ void PackBytes(const uint8_t *bytes, size_t count, std::vector<uint32_t> &out)
   for (size_t i = 0; i < count; ++i)
   {
     out[i >> 2] |= static_cast<uint32_t>(bytes[i]) << ((i & 3u) * 8u);
+  }
+}
+
+void PackHalfWords(const uint16_t *values, size_t count,
+                   std::vector<uint32_t> &out)
+{
+  out.assign((count + 1u) / 2u, 0u);
+  for (size_t i = 0; i < count; ++i)
+  {
+    out[i >> 1u] |= static_cast<uint32_t>(values[i])
+                    << (static_cast<unsigned>(i & 1u) * 16u);
   }
 }
 
@@ -350,7 +380,8 @@ bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state)
 bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
                                const ChunkMeshSnapshot &snapshot,
                                UBlockRegistry &registry, glm::ivec3 coord,
-                               std::vector<GreedyMeshBatch> &out_batches)
+                               std::vector<GreedyMeshBatch> &out_batches,
+                               const BlockDefinitionCatalog *catalog)
 {
   out_batches.clear();
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
@@ -358,6 +389,7 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   (void)snapshot;
   (void)registry;
   (void)coord;
+  (void)catalog;
   return false;
 #else
 #if defined(_WIN32)
@@ -366,28 +398,40 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
     return false;
   }
 #endif
-  if (!SnapshotIsGpuExtractEligible(snapshot, registry) ||
-      !EnsureGpuOpaqueEmit(state))
+  const bool eligible =
+      catalog ? SnapshotIsGpuExtractEligible(snapshot, catalog)
+              : SnapshotIsGpuExtractEligible(snapshot, registry);
+  if (!eligible || !EnsureGpuOpaqueEmit(state))
+  {
+    return false;
+  }
+
+  std::vector<BlockId> block_palette;
+  std::vector<uint16_t> block_palette_indices;
+  if (!BuildGpuBlockTypePalette(snapshot, block_palette,
+                                block_palette_indices))
   {
     return false;
   }
 
   std::vector<uint8_t> occ;
-  BuildPaddedOccupancy(snapshot, registry, occ);
+  if (catalog)
+  {
+    BuildPaddedOccupancy(snapshot, catalog, occ);
+  }
+  else
+  {
+    BuildPaddedOccupancy(snapshot, registry, occ);
+  }
   std::vector<uint32_t> occ_words;
   PackBytes(occ.data(), occ.size(), occ_words);
 
-  std::array<uint8_t, CHUNK_VOLUME> blocks{};
-  for (int i = 0; i < CHUNK_VOLUME; ++i)
-  {
-    blocks[static_cast<size_t>(i)] =
-        static_cast<uint8_t>(snapshot.blocks[static_cast<size_t>(i)]);
-  }
   std::vector<uint8_t> padded_lights;
   BuildPaddedLight(snapshot, padded_lights);
   std::vector<uint32_t> block_words;
   std::vector<uint32_t> light_words;
-  PackBytes(blocks.data(), blocks.size(), block_words);
+  PackHalfWords(block_palette_indices.data(), block_palette_indices.size(),
+                block_words);
   PackBytes(padded_lights.data(), padded_lights.size(), light_words);
 
   const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
@@ -431,8 +475,8 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, state.CountersSsbo);
   glUseProgram(state.GreedyProgram);
   glUniform1ui(glGetUniformLocation(state.GreedyProgram, "side"), side);
-  glUniform1ui(glGetUniformLocation(state.GreedyProgram, "pad"),
-               static_cast<uint32_t>(kGpuOccPad));
+  glUniform1ui(glGetUniformLocation(state.GreedyProgram, "lightPad"),
+               static_cast<uint32_t>(kGpuLightPad));
   glDispatchCompute(kGpuPlaneWorkgroups, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -495,7 +539,13 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
   for (uint32_t r = 0; r < rect_count; ++r)
   {
-    const BlockId id = static_cast<BlockId>(rects[r].blockId);
+    const BlockId id = ResolveGpuBlockTypePaletteIndex(
+        block_palette, rects[r].blockId);
+    if (id == BLOCK_AIR)
+    {
+      out_batches.clear();
+      return false;
+    }
     GreedyMeshBatch &batch = byBlockId[id];
     batch.blockId = id;
     batch.Transparent = registry.IsTransparent(id);

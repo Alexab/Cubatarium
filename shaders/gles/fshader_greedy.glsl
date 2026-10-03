@@ -57,6 +57,7 @@ uniform sampler2D uOpaqueDepthMap;
 uniform float uOpaqueDepthGuard;
 uniform vec2 uOpaqueDepthScreenSize;
 uniform float uOpaqueDepthBias;
+uniform float uDebugTransparentFragmentMarker;
 
 const int kCrossFaceIndex = 127;
 
@@ -275,6 +276,10 @@ void main()
         if (gl_FragCoord.z > opaqueDepth + uOpaqueDepthBias) {
             discard;
         }
+    }
+    if (uDebugTransparentFragmentMarker > 0.5) {
+        FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        return;
     }
     bool frag_underwater = false;
     vec3 underwater_fog_color = uFogColor;

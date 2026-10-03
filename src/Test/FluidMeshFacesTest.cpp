@@ -356,6 +356,157 @@ int main()
   Expect(stack_internal_top == 0,
          "stacked water hides internal horizontal face");
 
+  // R06 overlay: water|water across chunk seam with !drawable neighbor must not
+  // emit vertical walls (GetBlock=AIR but shellFluid remains).
+  {
+    cutum::UBlockWorld seam_world;
+    seam_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    seam_world.GetChunkManager().EnsureChunk(left_chunk);
+    seam_world.GetChunkManager().EnsureChunk(right_chunk);
+    // Edge cells on the shared X face (local x=15 left, x=0 right).
+    for (int y = 4; y < 8; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        const glm::ivec3 left_pos(15, y, z);
+        const glm::ivec3 right_pos(16, y, z);
+        seam_world.SetBlock(left_pos, kWater);
+        seam_world.SetFluidState(left_pos, cutum::FluidCellState::Source());
+        seam_world.SetBlock(right_pos, kWater);
+        seam_world.SetFluidState(right_pos, cutum::FluidCellState::Source());
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot overlay_snap = cutum::ChunkMeshSnapshot::Capture(
+        seam_world, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
+    Expect(overlay_snap.boundaryOverlay.active,
+           "overlay active when neighbors not drawable");
+    const std::vector<cutum::GreedyQuad> overlay_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(overlay_snap, registry);
+    int wall_faces = 0;
+    for (const cutum::GreedyQuad &quad : overlay_quads)
+    {
+      if (quad.Id == kWater && quad.axis == 0 && quad.faceSign > 0 &&
+          quad.slice == 15)
+      {
+        ++wall_faces;
+      }
+    }
+    Expect(wall_faces == 0,
+           "water|water + !drawable overlay hides vertical seam walls");
+  }
+
+  // R06 residual: deep seam + Source packs fluid=0 (Level/Kind unset).
+  {
+    cutum::UBlockWorld deep_world;
+    deep_world.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    deep_world.GetChunkManager().EnsureChunk(left_chunk);
+    deep_world.GetChunkManager().EnsureChunk(right_chunk);
+    for (int y = 1; y < 4; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        const glm::ivec3 left_pos(15, y, z);
+        const glm::ivec3 right_pos(16, y, z);
+        deep_world.SetBlock(left_pos, kWater);
+        deep_world.SetFluidState(left_pos, cutum::FluidCellState::Source());
+        deep_world.SetBlock(right_pos, kWater);
+        deep_world.SetFluidState(right_pos, cutum::FluidCellState::Source());
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot deep_snap = cutum::ChunkMeshSnapshot::Capture(
+        deep_world, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
+    Expect(deep_snap.boundaryOverlay.active,
+           "deep seam overlay active when neighbors not drawable");
+    const std::vector<cutum::GreedyQuad> deep_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(deep_snap, registry);
+    int deep_walls = 0;
+    for (const cutum::GreedyQuad &quad : deep_quads)
+    {
+      if (quad.Id == kWater && quad.axis == 0 && quad.faceSign > 0 &&
+          quad.slice == 15)
+      {
+        ++deep_walls;
+      }
+    }
+    Expect(deep_walls == 0,
+           "deep water|water fluid=0 + !drawable hides vertical walls");
+  }
+
+  // R06 residual: water | waterlogged permeable under overlay AIR.
+  {
+    cutum::UBlockWorld wl_seam_world;
+    wl_seam_world.SetFluidDefinitions(decor_definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    wl_seam_world.GetChunkManager().EnsureChunk(left_chunk);
+    wl_seam_world.GetChunkManager().EnsureChunk(right_chunk);
+    for (int y = 4; y < 8; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        const glm::ivec3 left_pos(15, y, z);
+        const glm::ivec3 right_pos(16, y, z);
+        wl_seam_world.SetBlock(left_pos, kWater);
+        wl_seam_world.SetFluidState(left_pos,
+                                    cutum::FluidCellState::Source());
+        wl_seam_world.SetBlock(right_pos, kTallGrass);
+        wl_seam_world.SetFluidState(right_pos,
+                                    cutum::FluidCellState::Flowing(2));
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot wl_snap = cutum::ChunkMeshSnapshot::Capture(
+        wl_seam_world, left_chunk, /*sourceRevision=*/1, drawable_false,
+        nullptr);
+    // SoftDefer peer: no overlay Missing (SeamVisibility); Unlit shell.
+    Expect(wl_snap.GetNeighborLoadState(glm::ivec3(16, 5, 5)) !=
+               cutum::NeighborLoadState::Unknown,
+           "waterlogged SoftDefer seam not Unknown");
+    const std::vector<cutum::GreedyQuad> wl_seam_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(wl_snap, decor_registry);
+    (void)wl_seam_quads;
+  }
+
+  // SoftDefer neighbor: solid emits toward Unlit (not Unknown hide).
+  {
+    cutum::UBlockWorld solid_seam;
+    solid_seam.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 left_chunk(0, 0, 0);
+    const glm::ivec3 right_chunk(1, 0, 0);
+    solid_seam.GetChunkManager().EnsureChunk(left_chunk);
+    solid_seam.GetChunkManager().EnsureChunk(right_chunk);
+    const cutum::BlockId kStone = 8;
+    for (int y = 4; y < 8; ++y)
+    {
+      for (int z = 4; z < 8; ++z)
+      {
+        solid_seam.SetBlock(glm::ivec3(15, y, z), kStone);
+        solid_seam.SetBlock(glm::ivec3(16, y, z), kWater);
+        solid_seam.SetFluidState(glm::ivec3(16, y, z),
+                                 cutum::FluidCellState::Source());
+      }
+    }
+    auto drawable_false = [](void *, glm::ivec3) { return false; };
+    cutum::ChunkMeshSnapshot solid_snap = cutum::ChunkMeshSnapshot::Capture(
+        solid_seam, left_chunk, /*sourceRevision=*/1, drawable_false, nullptr);
+    Expect(!solid_snap.boundaryOverlay.active ||
+               (solid_snap.boundaryOverlay.missingNeighborFaces &
+                static_cast<uint8_t>(1u << 1)) == 0,
+           "SoftDefer +X peer does not set overlay Missing");
+    Expect(solid_snap.GetNeighborLoadState(glm::ivec3(16, 5, 5)) !=
+               cutum::NeighborLoadState::Unknown,
+           "SoftDefer solid seam load-state not Unknown");
+    const std::vector<cutum::GreedyQuad> solid_quads =
+        cutum::UGreedyMesher::BuildChunkMesh(solid_snap, registry);
+    (void)solid_quads;
+  }
+
   std::cout << "fluid_mesh_faces_test: OK" << std::endl;
   return 0;
 }

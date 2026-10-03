@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -13,9 +14,65 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
 EXE = BIN / "Cubatarium.exe"
+# AF / product acceptance: Release (or RelWithDebInfo) only — RUNTIME_OUTPUT → bin/.
+# Debug lives under build/.../Debug with a separate worlds/ tree (no World_164) and
+# must never be selected for flight_sim (Creating world... / false cold).
+RELEASE_EXE = ROOT / "build" / "desktop-msvc" / "Release" / "Cubatarium.exe"
 ANALYZE = Path(__file__).with_name("flight_sim_analyze.py")
 DIAG = Path(__file__).with_name("flight_sim_diag.py")
 PHASE_HISTORY = BIN / "flight_sim_phase_history.jsonl"
+
+MANUAL_100645_PROXY_CLASS = {
+    "focus_missing_mesh_med_min": 1.0,
+    "miss_stuck_run_frames_tail_max_min": 100.0,
+    "fog_pull_in_rd_fly_med_min": 3.0,
+    "visible_black_focus_fly_med_min": 40.0,
+    # Manual 122212/100645 eye stays ~50–58; hold-space proxy climbed to ~300.
+    "player_y_late_med_min": 45.0,
+    "player_y_late_med_max": 70.0,
+    "player_y_delta_abs_max": 25.0,
+    # Manual west (7,3)→(−3,3); stuck spawn fails product class.
+    "focus_west_delta_cx_min": 3.0,
+}
+
+# Dual-lane upper stop-line (wall-diet / n01-rework). Adequacy alone is not merge-green.
+# A25: mid_fully_dark_stalled is DIAGNOSTIC only — never sole product PASS / merge_green.
+DUAL_LANE_STOP_LINE = {
+    "vb_fly_med_max": 84.5,
+    "stale_vl_fly_med_max": 84.5,
+    "unlit_max_cold": 15.0,
+    "unlit_max_warm": 19.0,
+    "mid_fully_dark_stalled_med_max": 5.0,
+}
+
+# A24/A25 safety stop-lines (holes-first; dirty_dropped thrash). Not merge_green alone.
+A24_SAFETY_STOP_LINE = {
+    "near_focus_holes_periods_gt0_max": 0,
+    "dirty_dropped_per_period_max": 800.0,
+    "mid_fully_dark_stalled_med_max": 0.0,  # diagnostic companion
+}
+
+# Eye-proxy thrash stop-line (N08). Mid-corridor SoT (same band as dual-lane stalled).
+# Fly-only med greenwashed autofly 095545 (fly stale=2, mid=17). Four merge signals:
+# adequacy / dual-lane / eye_proxy / operator eye. Adequacy alone is not merge-green.
+EYE_PROXY_STOP_LINE = {
+    # Post-N01: align with thrash ≤102527 class (mid stale≤8), not pre-fix 6.
+    "mesh_apply_stale_visual_mid_med_max": 8.0,
+    "mesh_apply_stale_visual_delta_med_max": 1.5,
+    "effective_holes_blink_rate_max": 0.05,
+    "transparent_cmd_reorder_mid_med_max": 1.0,
+    # N01 retain-storm: incomplete material mid med ≪ 134038 baseline (~40).
+    "publication_incomplete_material_mid_med_max": 5.0,
+    # Audit 2026-09-16 R10: absolute hole count is a gate (blink alone is not enough).
+    "near_focus_holes_mid_med_max": 0.0,
+    "visual_holes_mid_med_max": 0.0,
+}
+
+# Manual west (7,3)→(−3,3). Autofly that stops at cx≈2 is UNTESTED, not PASS coverage.
+WEST_COVERAGE_FOCUS_CX_MAX = -3.0
+# A31: west COVERED ≠ far-flight. Far checkpoints in world blocks (CHUNK_SIZE=16).
+FAR_DISTANCE_CHECKPOINTS_BLOCKS = (0, 1 << 13, 1 << 16, 1 << 19)
+CHUNK_SIZE_BLOCKS = 16
 
 
 def newest_perf(after_ts: float) -> Path | None:
@@ -32,6 +89,19 @@ def newest_perf(after_ts: float) -> Path | None:
     return max(cands, key=lambda p: p.stat().st_mtime)
 
 
+def resolve_exe() -> Path:
+    """Release-only for AF: bin/Cubatarium.exe (Release RUNTIME_OUTPUT).
+
+    Never prefer Debug — ExeDir/worlds under Debug lacks World_164 and triggers
+    NeedsCreateWorldOnStartup → Creating world... (invalid product evidence).
+    """
+    if EXE.is_file():
+        return EXE
+    if RELEASE_EXE.is_file():
+        return RELEASE_EXE
+    return EXE
+
+
 def load_best(path: Path) -> dict | None:
     if not path.is_file():
         return None
@@ -39,6 +109,813 @@ def load_best(path: Path) -> dict | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
+
+
+def compute_product_174657_input_adequacy(perf_path: Path) -> dict:
+    """A21 P0.4: product acceptance adequacy from *inputs* (route/load), not symptoms.
+
+    Symptom reproduction (miss_stuck/VB floors) is returned as diagnostic_only and
+    must not drive product acceptance or merge_green.
+    """
+    try:
+        rows = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") == "period":
+                rows.append(row)
+        fly = []
+        for row in rows:
+            try:
+                if float(row.get("movement_speed") or 0) > 2.0:
+                    fly.append(row)
+            except (TypeError, ValueError):
+                continue
+        use = fly if fly else rows
+
+        def values(key: str, subset: list[dict]) -> list[float]:
+            out: list[float] = []
+            for row in subset:
+                try:
+                    val = row.get(key)
+                    if val is not None:
+                        out.append(float(val))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        def median(key: str, subset: list[dict]) -> float | None:
+            xs = values(key, subset)
+            if not xs:
+                return None
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            if len(xs) % 2:
+                return xs[mid]
+            return (xs[mid - 1] + xs[mid]) / 2.0
+
+        def max_value(key: str, subset: list[dict]) -> float | None:
+            xs = values(key, subset)
+            return max(xs) if xs else None
+    except Exception as exc:  # pragma: no cover
+        return {
+            "adequacy_pass": False,
+            "adequacy_fails": [f"adequacy_analyze_failed:{exc}"],
+            "adequacy_mode": "input",
+        }
+
+    ys = values("player_y", use)
+    y_early = y_late = y_delta = None
+    if ys:
+        n = len(ys)
+        early_n = max(1, n // 10)
+
+        def _med_list(xs: list[float]) -> float:
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            if len(xs) % 2:
+                return xs[mid]
+            return (xs[mid - 1] + xs[mid]) / 2.0
+
+        y_early = _med_list(ys[:early_n])
+        y_late = _med_list(ys[-early_n:])
+        y_delta = y_late - y_early
+
+    fcx_all = values("focus_cx", rows)
+    focus_west_delta = None
+    if len(fcx_all) >= 2:
+        focus_west_delta = float(fcx_all[0]) - float(fcx_all[-1])
+
+    speeds = values("movement_speed", use)
+    duration_periods = len(rows)
+    requested = max_value("dirty_admitted_n", use) or max_value(
+        "mesh_dirty_schedule_ok_remesh_n", use
+    )
+
+    metrics = {
+        "adequacy_mode": "input",
+        "periods_n": duration_periods,
+        "fly_periods_n": len(fly),
+        "movement_speed_fly_med": median("movement_speed", use),
+        "player_y_early_med": y_early,
+        "player_y_late_med": y_late,
+        "player_y_delta": y_delta,
+        "focus_west_delta_cx": focus_west_delta,
+        "requested_chunks_proxy_max": requested,
+        "cache_mode": "warm" if any(
+            (r.get("warmup") or r.get("warm")) for r in rows
+        )
+        else "cold_or_unspecified",
+    }
+    fails: list[str] = []
+    # Input gates: route westward, altitude corridor, enough fly samples, motion.
+    if duration_periods < 5:
+        fails.append("route_too_short")
+    if len(fly) < 3 and (not speeds or max(speeds) <= 2.0):
+        fails.append("insufficient_motion_coverage")
+    if (
+        y_late is None
+        or float(y_late) < MANUAL_100645_PROXY_CLASS["player_y_late_med_min"]
+        or float(y_late) > MANUAL_100645_PROXY_CLASS["player_y_late_med_max"]
+    ):
+        fails.append("altitude_out_of_corridor")
+    if (
+        y_delta is not None
+        and abs(float(y_delta))
+        > MANUAL_100645_PROXY_CLASS["player_y_delta_abs_max"]
+    ):
+        fails.append("altitude_climb")
+    if (
+        focus_west_delta is None
+        or float(focus_west_delta)
+        < MANUAL_100645_PROXY_CLASS["focus_west_delta_cx_min"]
+    ):
+        fails.append("focus_not_west")
+    metrics["adequacy_pass"] = len(fails) == 0
+    metrics["adequacy_fails"] = fails
+
+    # Diagnostic-only symptom class (legacy proxy); never required for pass.
+    tail = use[-max(1, len(use) // 3) :] if use else []
+    symptom = {
+        "focus_missing_mesh_med": median("focus_missing_mesh", use),
+        "miss_stuck_run_frames_tail_max": max_value("miss_stuck_run_frames", tail),
+        "fog_pull_in_rd_fly_med": median("fog_pull_in_rd", use),
+        "visible_black_focus_fly_med": median("visible_black_focus_n", use),
+    }
+    symptom_fails: list[str] = []
+    if (
+        symptom["focus_missing_mesh_med"] is None
+        or float(symptom["focus_missing_mesh_med"])
+        < MANUAL_100645_PROXY_CLASS["focus_missing_mesh_med_min"]
+    ):
+        symptom_fails.append("focus_missing_too_low")
+    if (
+        symptom["miss_stuck_run_frames_tail_max"] is None
+        or float(symptom["miss_stuck_run_frames_tail_max"])
+        < MANUAL_100645_PROXY_CLASS["miss_stuck_run_frames_tail_max_min"]
+    ):
+        symptom_fails.append("miss_stuck_too_low")
+    if (
+        symptom["fog_pull_in_rd_fly_med"] is None
+        or float(symptom["fog_pull_in_rd_fly_med"])
+        < MANUAL_100645_PROXY_CLASS["fog_pull_in_rd_fly_med_min"]
+    ):
+        symptom_fails.append("fog_rd_collapsed")
+    if (
+        symptom["visible_black_focus_fly_med"] is None
+        or float(symptom["visible_black_focus_fly_med"])
+        < MANUAL_100645_PROXY_CLASS["visible_black_focus_fly_med_min"]
+    ):
+        symptom_fails.append("vb_too_low_for_product_class")
+    metrics["symptom_reproduction"] = {
+        **symptom,
+        "symptom_pass": len(symptom_fails) == 0,
+        "symptom_fails": symptom_fails,
+        "role": "diagnostic_only",
+    }
+    return metrics
+
+
+def compute_product_174657_proxy_adequacy(perf_path: Path) -> dict:
+    """Backward-compatible name: now input-based product adequacy (A21 P0.4)."""
+    return compute_product_174657_input_adequacy(perf_path)
+
+
+def compute_dual_lane_stop_line(
+    perf_path: Path, *, warm: bool = False
+) -> dict:
+    """Upper-bound regress vs dual-lane S1/S3 class (not adequacy)."""
+    try:
+        rows = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") == "period":
+                rows.append(row)
+        fly = []
+        for row in rows:
+            try:
+                if float(row.get("movement_speed") or 0) > 2.0:
+                    fly.append(row)
+            except (TypeError, ValueError):
+                continue
+        use = fly if fly else rows
+
+        def values(key: str) -> list[float]:
+            out: list[float] = []
+            for row in use:
+                try:
+                    val = row.get(key)
+                    if val is not None:
+                        out.append(float(val))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        def median(xs: list[float]) -> float | None:
+            if not xs:
+                return None
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            if len(xs) % 2:
+                return xs[mid]
+            return (xs[mid - 1] + xs[mid]) / 2.0
+
+        vb_xs = values("visible_black_focus_n")
+        # Prefer draw-oracle stale VL; fall back to dark_face_stale_near proxy.
+        stale_xs = values("draw_oracle_stale_vertex_light_n")
+        if not stale_xs:
+            stale_xs = values("dark_face_stale_near_n")
+        unlit_xs = values("chunk_meshed_unlit")
+        mid_third = use[len(use) // 3 : (2 * len(use) // 3)] if len(use) >= 3 else use
+        mid_focus = [
+            r
+            for r in mid_third
+            if r.get("focus_cx") is not None and 2.0 <= float(r["focus_cx"]) <= 5.0
+        ]
+        mid_subset = mid_focus if mid_focus else mid_third
+
+        def mid_values(key: str) -> list[float]:
+            out: list[float] = []
+            for row in mid_subset:
+                try:
+                    val = row.get(key)
+                    if val is not None:
+                        out.append(float(val))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        stalled_xs = mid_values("visible_black_fully_dark_stalled_n")
+        metrics = {
+            "vb_fly_med": median(vb_xs),
+            "stale_vl_fly_med": median(stale_xs),
+            "unlit_max": max(unlit_xs) if unlit_xs else None,
+            "mid_fully_dark_stalled_med": median(stalled_xs),
+            "warm": bool(warm),
+        }
+        fails: list[str] = []
+        vb_med = metrics["vb_fly_med"]
+        if vb_med is None or float(vb_med) > DUAL_LANE_STOP_LINE["vb_fly_med_max"]:
+            fails.append("vb_fly_med_above_dual_lane")
+        stale_med = metrics["stale_vl_fly_med"]
+        if stale_med is None or float(stale_med) > DUAL_LANE_STOP_LINE[
+            "stale_vl_fly_med_max"
+        ]:
+            fails.append("stale_vl_fly_med_above_dual_lane")
+        unlit_cap = (
+            DUAL_LANE_STOP_LINE["unlit_max_warm"]
+            if warm
+            else DUAL_LANE_STOP_LINE["unlit_max_cold"]
+        )
+        unlit_max = metrics["unlit_max"]
+        if unlit_max is None or float(unlit_max) > unlit_cap:
+            fails.append("unlit_max_above_dual_lane")
+        stalled_med = metrics["mid_fully_dark_stalled_med"]
+        if stalled_med is None or float(stalled_med) > DUAL_LANE_STOP_LINE[
+            "mid_fully_dark_stalled_med_max"
+        ]:
+            fails.append("mid_fully_dark_stalled_above_stop_line")
+        metrics["dual_lane_stop_line_pass"] = len(fails) == 0
+        metrics["dual_lane_stop_line_fails"] = fails
+        # Honesty: mid stall alone never implies product CLOSED.
+        metrics["mid_stalled_is_diagnostic_only"] = True
+        return metrics
+    except Exception as exc:  # pragma: no cover
+        return {
+            "dual_lane_stop_line_pass": False,
+            "dual_lane_stop_line_fails": [f"stop_line_analyze_failed:{exc}"],
+            "mid_stalled_is_diagnostic_only": True,
+        }
+
+
+def compute_a24_safety_stop_line(perf_path: Path) -> dict:
+    """A24/A25: holes + DirtyAdmit thrash stop-lines (before end-debt cosmetics)."""
+    try:
+        rows: list[dict] = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") == "period":
+                rows.append(row)
+        fly = [
+            r
+            for r in rows
+            if float(r.get("movement_speed") or 0) > 2.0
+        ]
+        use = fly if fly else rows
+        west = [
+            r
+            for r in use
+            if r.get("focus_cx") is not None
+            and float(r["focus_cx"]) <= 6.0
+            and float(r["focus_cx"]) >= -6.0
+        ]
+        corridor = west if west else use
+
+        def vals(key: str, subset: list[dict]) -> list[float]:
+            out: list[float] = []
+            for row in subset:
+                try:
+                    v = row.get(key)
+                    if v is not None:
+                        out.append(float(v))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        def median(xs: list[float]) -> float | None:
+            if not xs:
+                return None
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            return xs[mid] if len(xs) % 2 else (xs[mid - 1] + xs[mid]) / 2.0
+
+        # A31: whole-route mesh holes (telemetry near_focus_holes), not west-only.
+        whole_holes = vals("near_focus_holes", use if use else rows)
+        if not whole_holes:
+            whole_holes = vals("visual_holes", use if use else rows)
+        holes_xs = vals("near_focus_holes", corridor)
+        if not holes_xs:
+            holes_xs = vals("visual_holes", corridor)
+        # dirty_dropped in period rows is a lifetime cumulative counter.
+        # Gate uses per-period delta (consecutive samples in full period stream).
+        all_dropped = vals("dirty_dropped", use if use else rows)
+        dropped_deltas: list[float] = []
+        if len(all_dropped) >= 2:
+            for i in range(1, len(all_dropped)):
+                d = all_dropped[i] - all_dropped[i - 1]
+                if d >= 0:
+                    dropped_deltas.append(d)
+        # Align corridor to deltas via focus_cx membership of use/rows order.
+        corridor_deltas: list[float] = []
+        src_for_delta = use if use else rows
+        if dropped_deltas and len(src_for_delta) == len(all_dropped):
+            for i in range(1, len(src_for_delta)):
+                row = src_for_delta[i]
+                in_corridor = False
+                if row.get("focus_cx") is not None:
+                    try:
+                        cx = float(row["focus_cx"])
+                        in_corridor = -6.0 <= cx <= 6.0
+                    except (TypeError, ValueError):
+                        in_corridor = False
+                if not west:
+                    # No west corridor filter — all fly/use deltas count.
+                    in_corridor = True
+                if in_corridor:
+                    corridor_deltas.append(dropped_deltas[i - 1])
+        if not corridor_deltas:
+            corridor_deltas = dropped_deltas
+        mid_third = (
+            corridor[len(corridor) // 3 : (2 * len(corridor) // 3)]
+            if len(corridor) >= 3
+            else corridor
+        )
+        stalled_xs = vals("visible_black_fully_dark_stalled_n", mid_third)
+        holes_gt0_corridor = sum(1 for h in holes_xs if h > 0)
+        holes_gt0_whole = sum(1 for h in whole_holes if h > 0)
+        dropped_per = median(corridor_deltas) if corridor_deltas else None
+        # Admission breakdown (diagnostic; dirty_dropped alone ≠ correctness).
+        def last_or_none(key: str) -> float | None:
+            xs = vals(key, use if use else rows)
+            return xs[-1] if xs else None
+
+        metrics = {
+            "near_focus_holes_periods_gt0": holes_gt0_whole,
+            "near_focus_holes_periods_gt0_corridor": holes_gt0_corridor,
+            "near_focus_holes_scope": "whole_route_mesh_telemetry",
+            "dirty_dropped_per_period": dropped_per,
+            "dirty_dropped_per_period_mean": (
+                (sum(corridor_deltas) / float(len(corridor_deltas)))
+                if corridor_deltas
+                else None
+            ),
+            "dirty_dropped_metric": "period_delta_median",
+            "dirty_dropped_is_not_correctness": True,
+            "admit_denied_end": last_or_none("dirty_admit_denied"),
+            "admit_coalesced_end": last_or_none("dirty_admit_coalesced"),
+            "admit_admitted_end": last_or_none("dirty_admit_admitted"),
+            "mid_fully_dark_stalled_med": median(stalled_xs),
+            "ring_readiness_must_stay_off": True,
+            "prefer_kick_not_sole_heal_dod": True,
+            "operator_visual_required_for_merge_green": True,
+        }
+        fails: list[str] = []
+        # A31 primary: whole-route periods with mesh holes > 0.
+        if holes_gt0_whole > A24_SAFETY_STOP_LINE["near_focus_holes_periods_gt0_max"]:
+            fails.append("near_focus_holes_periods_gt0")
+        if dropped_per is None or float(dropped_per) > A24_SAFETY_STOP_LINE[
+            "dirty_dropped_per_period_max"
+        ]:
+            fails.append("dirty_dropped_per_period_above_800")
+        stalled_med = metrics["mid_fully_dark_stalled_med"]
+        if stalled_med is not None and float(stalled_med) > A24_SAFETY_STOP_LINE[
+            "mid_fully_dark_stalled_med_max"
+        ]:
+            # Diagnostic companion — recorded but does not alone fail A24 safety.
+            metrics["mid_stalled_diagnostic_warn"] = True
+        metrics["a24_safety_stop_line_pass"] = len(fails) == 0
+        metrics["a24_safety_stop_line_fails"] = fails
+        return metrics
+    except Exception as exc:  # pragma: no cover
+        return {
+            "a24_safety_stop_line_pass": False,
+            "a24_safety_stop_line_fails": [f"a24_safety_analyze_failed:{exc}"],
+        }
+
+
+def compute_west_route_coverage(perf_path: Path) -> dict:
+    """Full-west product coverage: min focus_cx must reach ≤−3. Else UNTESTED.
+
+    A31: COVERED is not a far-flight proof — also report world-block span and
+    whether any FAR_DISTANCE_CHECKPOINTS_BLOCKS threshold was reached.
+    """
+    try:
+        focus_cx: list[float] = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") != "period":
+                continue
+            try:
+                if row.get("focus_cx") is not None:
+                    focus_cx.append(float(row["focus_cx"]))
+            except (TypeError, ValueError):
+                continue
+        if not focus_cx:
+            return {
+                "west_route_coverage": "UNTESTED",
+                "focus_cx_min": None,
+                "focus_cx_max": None,
+                "west_route_coverage_reason": "no_period_focus_cx",
+                "far_flight": False,
+                "far_distance_blocks": None,
+                "far_checkpoints_reached": [],
+            }
+        cx_min = min(focus_cx)
+        cx_max = max(focus_cx)
+        covered = cx_min <= WEST_COVERAGE_FOCUS_CX_MAX
+        span_chunks = abs(cx_max - cx_min)
+        distance_blocks = span_chunks * float(CHUNK_SIZE_BLOCKS)
+        reached = [c for c in FAR_DISTANCE_CHECKPOINTS_BLOCKS if distance_blocks >= c]
+        # Far only if we hit at least 2^13 blocks of focus travel.
+        far = distance_blocks >= float(FAR_DISTANCE_CHECKPOINTS_BLOCKS[1])
+        return {
+            "west_route_coverage": "COVERED" if covered else "UNTESTED",
+            "focus_cx_min": cx_min,
+            "focus_cx_max": cx_max,
+            "west_route_coverage_reason": (
+                "reached_cx_le_minus3" if covered else "did_not_reach_cx_minus3"
+            ),
+            "west_covered_is_not_far_flight": True,
+            "far_flight": far,
+            "far_distance_blocks": distance_blocks,
+            "far_checkpoints_reached": reached,
+        }
+    except Exception as exc:  # pragma: no cover
+        return {
+            "west_route_coverage": "UNTESTED",
+            "focus_cx_min": None,
+            "focus_cx_max": None,
+            "west_route_coverage_reason": f"west_coverage_analyze_failed:{exc}",
+            "far_flight": False,
+            "far_distance_blocks": None,
+            "far_checkpoints_reached": [],
+        }
+
+
+def compute_post_stop_convergence(result: dict) -> dict:
+    """A31: post-stop gates from scorecard must participate in acceptance."""
+    gates = result.get("gates") or {}
+    metrics = result.get("metrics") or {}
+    required = (
+        "post_stop_missing_zero",
+        "post_stop_effective_holes_zero",
+        "post_stop_pending_falling",
+        "post_stop_not_ready_falling",
+        "post_stop_focus_dirty_falling",
+    )
+    fails: list[str] = []
+    for k in required:
+        if gates.get(k) is not True:
+            fails.append(k)
+    # A32 S2: when demand_stop_converged is present after stop, require true.
+    dsc = metrics.get("demand_stop_converged")
+    if dsc is None:
+        dsc = metrics.get("post_stop_demand_stop_converged")
+    if dsc is not None and not bool(dsc):
+        fails.append("demand_stop_converged")
+    return {
+        "post_stop_convergence_pass": len(fails) == 0,
+        "post_stop_convergence_fails": fails,
+        "demand_stop_converged": dsc,
+    }
+
+
+def compute_empty_world_stop_line(result: dict) -> dict:
+    """A34 P0: opaque_cmd_on_med==0 means empty terrain (creatures-only) — hard FAIL.
+
+    Binding stop-line for product-174657 family; must not close AF todos when empty.
+    opaque_on_min may be 0 early in the flight — diagnostic only, not a sole fail.
+    """
+    metrics = result.get("metrics") or {}
+    fails: list[str] = []
+    opaque_med = metrics.get("opaque_cmd_on_med")
+    opaque_min = metrics.get("opaque_on_min")
+    opaque_draw = metrics.get("opaque_draw_n_med")
+    if opaque_med is None:
+        opaque_med = metrics.get("opaque_cmd_on")
+    if opaque_med is not None and float(opaque_med) <= 0.0:
+        fails.append("opaque_cmd_on_med_eq_0")
+    if opaque_draw is not None and float(opaque_draw) <= 0.0:
+        fails.append("opaque_draw_n_med_eq_0")
+    # If analyzer omitted med but min is present and zero across all periods —
+    # treat as empty only when min is the sole opaque signal and == 0 with no med.
+    if opaque_med is None and opaque_min is not None and float(opaque_min) <= 0.0:
+        fails.append("opaque_on_min_eq_0_no_med")
+    return {
+        "empty_world_stop_line_pass": len(fails) == 0,
+        "empty_world_stop_line_fails": fails,
+        "opaque_cmd_on_med": opaque_med,
+        "opaque_on_min": opaque_min,
+        "opaque_draw_n_med": opaque_draw,
+        "ring_readiness_must_stay_off": True,
+    }
+
+
+def compute_enter_dirty_residual_stop_line(result: dict) -> dict:
+    """A35 R0/R1: MeshWarmup wall-timeout or soft settle with mesh_dirty residual.
+
+    EnterLit mesh_dirty=0 can false-clear while WorldLoad MeshService dirty≫0.
+    Binding FAIL when timeout stamp fires with residual>0.
+    """
+    metrics = result.get("metrics") or {}
+    fails: list[str] = []
+    timeout_dirty = metrics.get("mesh_warmup_timeout_dirty_residual")
+    blocked = metrics.get("enter_soft_settle_blocked_dirty_residual")
+    residual = metrics.get("enter_mesh_dirty_residual_n")
+    if timeout_dirty is not None and int(timeout_dirty) != 0:
+        fails.append("mesh_warmup_timeout_dirty_residual")
+    if residual is not None and float(residual) > 0 and (
+        (timeout_dirty is not None and int(timeout_dirty) != 0)
+        or (blocked is not None and int(blocked) != 0)
+    ):
+        fails.append("enter_wall_timeout_mesh_dirty_residual")
+    return {
+        "enter_dirty_residual_stop_line_pass": len(fails) == 0,
+        "enter_dirty_residual_stop_line_fails": fails,
+        "mesh_warmup_timeout_dirty_residual": timeout_dirty,
+        "enter_soft_settle_blocked_dirty_residual": blocked,
+        "enter_mesh_dirty_residual_n": residual,
+    }
+
+
+def compute_a31_progress_snapshot(result: dict, a24: dict | None, west: dict | None) -> dict:
+    """Compact progress fields for PR-to-PR comparison (A31)."""
+    metrics = result.get("metrics") or {}
+    gates = result.get("gates") or {}
+    a24 = a24 or result.get("a24_safety_stop_line") or {}
+    west = west or result.get("west_route_coverage") or {}
+    post = compute_post_stop_convergence(result)
+    return {
+        "near_focus_holes_periods_gt0": a24.get("near_focus_holes_periods_gt0"),
+        "visible_black_focus_n": metrics.get("visible_black_focus_n"),
+        "dirty_dropped_per_period": a24.get("dirty_dropped_per_period"),
+        "admit_denied_end": a24.get("admit_denied_end"),
+        "admit_coalesced_end": a24.get("admit_coalesced_end"),
+        "admit_admitted_end": a24.get("admit_admitted_end"),
+        "post_stop_convergence_pass": post.get("post_stop_convergence_pass"),
+        "post_stop_convergence_fails": post.get("post_stop_convergence_fails"),
+        "post_stop_missing_zero": gates.get("post_stop_missing_zero"),
+        "post_stop_effective_holes_zero": gates.get("post_stop_effective_holes_zero"),
+        "demand_stop_converged": post.get("demand_stop_converged")
+        if post.get("demand_stop_converged") is not None
+        else metrics.get("demand_stop_converged")
+        or metrics.get("post_stop_demand_stop_converged"),
+        "fluid_map_related": metrics.get("dominant_spike_class")
+        or metrics.get("dominant_heavy_spike_class"),
+        "spike_max_wall_holes": metrics.get("spike_max_wall_holes"),
+        "a24_safety_stop_line_pass": a24.get("a24_safety_stop_line_pass"),
+        "eye_proxy_stop_line_pass": result.get("eye_proxy_stop_line_pass"),
+        "eye_proxy_is_secondary_not_whole_route": True,
+        "dual_lane_stop_line_pass": result.get("dual_lane_stop_line_pass"),
+        "focus_cx_min": west.get("focus_cx_min")
+        if isinstance(west, dict)
+        else None,
+        "focus_cx_max": west.get("focus_cx_max")
+        if isinstance(west, dict)
+        else None,
+        "far_flight": west.get("far_flight") if isinstance(west, dict) else False,
+        "far_distance_blocks": west.get("far_distance_blocks")
+        if isinstance(west, dict)
+        else None,
+        "operator_visual": result.get("operator_visual", "UNTESTED"),
+        "operator_visual_is_not_pixel_oracle": True,
+        "empty_world_stop_line_pass": result.get("empty_world_stop_line_pass"),
+        "enter_dirty_residual_stop_line_pass": result.get(
+            "enter_dirty_residual_stop_line_pass"
+        ),
+        "opaque_cmd_on_med": metrics.get("opaque_cmd_on_med"),
+        "opaque_on_min": metrics.get("opaque_on_min"),
+    }
+
+
+def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
+    """B4 thrash proxies on mid-corridor (not fly-only). Not adequacy / not pixels."""
+    try:
+        rows: list[dict] = []
+        for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.startswith("{"):
+                continue
+            row = json.loads(line)
+            if row.get("kind") == "period":
+                rows.append(row)
+
+        mid_third = (
+            rows[len(rows) // 3 : (2 * len(rows)) // 3] if len(rows) >= 3 else rows
+        )
+        # Product mid-corridor is spatial focus_cx∈[2,5], not temporal mid_third.
+        # Full-west fly (7→≤−3) shifts temporal mid past that band — search all periods.
+        mid_focus: list[dict] = []
+        for row in rows:
+            try:
+                cx = float(row.get("focus_cx") or 0)
+            except (TypeError, ValueError):
+                continue
+            if 2.0 <= cx <= 5.0:
+                mid_focus.append(row)
+        fly: list[dict] = []
+        for row in rows:
+            try:
+                if float(row.get("movement_speed") or 0) > 2.0:
+                    fly.append(row)
+            except (TypeError, ValueError):
+                continue
+
+        # Audit R10: do not silently PASS on mid_third/stop fallback as product coverage.
+        coverage_status = "COVERED"
+        if mid_focus:
+            use = mid_focus
+            segment = "mid_corridor"
+            moving = [
+                r
+                for r in use
+                if float(r.get("movement_speed") or 0) > 2.0
+            ]
+            if len(use) > 0 and len(moving) * 2 < len(use):
+                coverage_status = "UNTESTED"
+        elif mid_third:
+            use = mid_third
+            segment = "mid_third"
+            coverage_status = "UNTESTED"
+        else:
+            use = fly if fly else rows
+            segment = "fly_fallback"
+            coverage_status = "UNTESTED"
+
+        def values(key: str) -> list[float]:
+            out: list[float] = []
+            for row in use:
+                try:
+                    val = row.get(key)
+                    if val is not None:
+                        out.append(float(val))
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        def field_present(key: str) -> bool:
+            return any(key in row and row.get(key) is not None for row in use)
+
+        def median(xs: list[float]) -> float | None:
+            if not xs:
+                return None
+            xs = sorted(xs)
+            mid = len(xs) // 2
+            if len(xs) % 2:
+                return xs[mid]
+            return (xs[mid - 1] + xs[mid]) / 2.0
+
+        stale_xs = values("mesh_apply_stale_visual")
+        if not stale_xs:
+            stale_xs = values("mesh_apply_stale")
+        deltas: list[float] = [
+            abs(stale_xs[i] - stale_xs[i - 1]) for i in range(1, len(stale_xs))
+        ]
+
+        hole_flags: list[float] = []
+        for row in use:
+            # N08: blink = missing-mesh holes only. unfinished_visual is SoftDefer/
+            # render-ready census and oscillates mid without near_focus_holes.
+            holes = float(row.get("near_focus_holes") or 0) > 0 or float(
+                row.get("visual_holes") or 0
+            ) > 0
+            hole_flags.append(1.0 if holes else 0.0)
+        blink_transitions = 0
+        for i in range(1, len(hole_flags)):
+            if hole_flags[i] != hole_flags[i - 1]:
+                blink_transitions += 1
+        blink_rate = (
+            blink_transitions / max(1, len(hole_flags) - 1)
+            if len(hole_flags) >= 2
+            else 0.0
+        )
+
+        holes_xs = values("near_focus_holes")
+        visual_holes_xs = values("visual_holes")
+        reorder_xs = values("transparent_cmd_reorder_n")
+        incomplete_xs = values("publication_incomplete_material_n")
+        oom_xs = values("publication_oom_retain_n")
+        stale_med = median(stale_xs)
+        holes_med = median(holes_xs)
+        visual_holes_med = median(visual_holes_xs)
+        delta_med = median(deltas)
+        reorder_med = median(reorder_xs)
+        incomplete_med = median(incomplete_xs)
+        oom_med = median(oom_xs)
+        west = compute_west_route_coverage(perf_path)
+
+        # Alias *_fly_* = mid values for one release (readers / old reports).
+        metrics = {
+            "source": "period_jsonl",
+            "perf_path": str(perf_path),
+            "eye_proxy_segment": segment,
+            "eye_proxy_coverage": coverage_status,
+            "mesh_apply_stale_visual_mid_med": stale_med,
+            "mesh_apply_stale_visual_fly_med": stale_med,
+            "mesh_apply_stale_visual_delta_med": delta_med,
+            "effective_holes_blink_rate": blink_rate,
+            "transparent_cmd_reorder_mid_med": reorder_med,
+            "transparent_cmd_reorder_fly_med": reorder_med,
+            "near_focus_holes_mid_med": holes_med,
+            "visual_holes_mid_med": visual_holes_med,
+            "publication_incomplete_material_mid_med": incomplete_med,
+            "publication_oom_retain_mid_med": oom_med,
+            "rows_used": len(use),
+            **west,
+        }
+        fails: list[str] = []
+        # Fail-closed: missing required fields are UNTESTED, never PASS.
+        if not field_present("near_focus_holes") and not field_present("visual_holes"):
+            fails.append("missing_holes_fields_untested")
+        if not field_present("publication_incomplete_material_n"):
+            fails.append("missing_publication_incomplete_field_untested")
+        if not stale_xs:
+            fails.append("missing_stale_visual_field_untested")
+        if stale_med is None or float(stale_med) > EYE_PROXY_STOP_LINE[
+            "mesh_apply_stale_visual_mid_med_max"
+        ]:
+            fails.append("mesh_apply_stale_visual_mid_med_above_eye_proxy")
+        if delta_med is None or float(delta_med) > EYE_PROXY_STOP_LINE[
+            "mesh_apply_stale_visual_delta_med_max"
+        ]:
+            fails.append("mesh_apply_stale_visual_delta_med_above_eye_proxy")
+        if float(blink_rate) > EYE_PROXY_STOP_LINE["effective_holes_blink_rate_max"]:
+            fails.append("effective_holes_blink_rate_above_eye_proxy")
+        if reorder_med is not None and float(reorder_med) > EYE_PROXY_STOP_LINE[
+            "transparent_cmd_reorder_mid_med_max"
+        ]:
+            fails.append("transparent_cmd_reorder_mid_med_above_eye_proxy")
+        if incomplete_med is not None and float(incomplete_med) > EYE_PROXY_STOP_LINE[
+            "publication_incomplete_material_mid_med_max"
+        ]:
+            fails.append("incomplete_material_mid_med_above_eye_proxy")
+        # Absolute hole counts: persistent holes must FAIL even when blink_rate=0.
+        if holes_med is not None and float(holes_med) > EYE_PROXY_STOP_LINE[
+            "near_focus_holes_mid_med_max"
+        ]:
+            fails.append("near_focus_holes_mid_med_above_eye_proxy")
+        if visual_holes_med is not None and float(visual_holes_med) > EYE_PROXY_STOP_LINE[
+            "visual_holes_mid_med_max"
+        ]:
+            fails.append("visual_holes_mid_med_above_eye_proxy")
+        # Holes telem = missing mesh only; thrash with holes==0 is still a defect.
+        if (
+            (holes_med is None or float(holes_med) == 0.0)
+            and (visual_holes_med is None or float(visual_holes_med) == 0.0)
+            and stale_med is not None
+            and float(stale_med)
+            > EYE_PROXY_STOP_LINE["mesh_apply_stale_visual_mid_med_max"]
+        ):
+            fails.append("stale_visual_without_hole_counters")
+        # Silent mid_third/fly_fallback must not look like a covered mid-corridor PASS.
+        if segment in ("mid_third", "fly_fallback"):
+            fails.append("eye_proxy_segment_coverage_untested")
+        metrics["eye_proxy_stop_line_pass"] = len(fails) == 0
+        metrics["eye_proxy_stop_line_fails"] = fails
+        return metrics
+    except Exception as exc:  # pragma: no cover
+        return {
+            "eye_proxy_stop_line_pass": False,
+            "eye_proxy_stop_line_fails": [f"eye_proxy_analyze_failed:{exc}"],
+            "eye_proxy_coverage": "UNTESTED",
+            "west_route_coverage": "UNTESTED",
+        }
 
 
 def kill_cubatarium_orphans() -> int:
@@ -56,12 +933,13 @@ def kill_cubatarium_orphans() -> int:
 
 def exe_writable(timeout_sec: float = 5.0) -> bool:
     """True if bin/Cubatarium.exe can be replaced (not locked)."""
-    if not EXE.is_file():
+    exe = resolve_exe()
+    if not exe.is_file():
         return True
     deadline = time.time() + timeout_sec
     while time.time() < deadline:
         try:
-            with open(EXE, "ab"):
+            with open(exe, "ab"):
                 return True
         except OSError:
             time.sleep(0.25)
@@ -218,6 +1096,24 @@ def main() -> int:
     )
     ap.add_argument("--fly-phase-sec", type=float, default=50.0)
     ap.add_argument("--stop-phase-sec", type=float, default=50.0)
+    ap.add_argument(
+        "--stop-after-blocked-sec",
+        type=float,
+        default=0.0,
+        help="end the diagnostic flight after sustained collision/ground contact",
+    )
+    ap.add_argument(
+        "--dive-phase-sec",
+        type=float,
+        default=0.0,
+        help="after fly, before stop: pitch-down underwater (AppRunner --dive-phase)",
+    )
+    ap.add_argument(
+        "--dive-pitch",
+        type=float,
+        default=-30.0,
+        help="pitch degrees during dive phase (default -30)",
+    )
     ap.add_argument("--idle-sec", type=float, default=8.0)
     ap.add_argument(
         "--warmup-sec",
@@ -262,6 +1158,17 @@ def main() -> int:
         action="store_true",
         help="replay World_164 manual profile: resume save pos (no teleport), "
         "level pitch, hold-space altitude, fly-stop",
+    )
+    ap.add_argument(
+        "--replay-manual-fly-heavy",
+        action="store_true",
+        help="replay-manual with fly-heavy timing: idle 20s, fly 120s, stop 30s "
+        "(less stop share for mesh fly gates)",
+    )
+    ap.add_argument(
+        "--segment-fly-only-analyze",
+        action="store_true",
+        help="pass --segment-fly-only to analyzer (ignore stop tail for fly medians)",
     )
     ap.add_argument(
         "--replay-edge",
@@ -322,6 +1229,13 @@ def main() -> int:
         help="hold Space while flying (climb / maintain altitude)",
     )
     ap.add_argument(
+        "--min-alt-above-sea",
+        type=float,
+        default=None,
+        help="AppRunner MinAltitudeAboveSea (ocean void telem needs ≤~12 so "
+        "DarkFaceVoidNearN sphere 24m sees sea faces; default exe 28)",
+    )
+    ap.add_argument(
         "--pitch",
         type=float,
         default=None,
@@ -344,6 +1258,11 @@ def main() -> int:
         help="do not kill orphan Cubatarium before run (debug only)",
     )
     ap.add_argument(
+        "--baseline-manual",
+        default="",
+        help="analyze --baseline-manual path for Era38 2x parity soft gate",
+    )
+    ap.add_argument(
         "--scenario",
         default="",
         choices=[
@@ -354,16 +1273,41 @@ def main() -> int:
             "visual-flicker",
             "visual-edge",
             "land-cruise",
+            "land-cruise-resume",
             "land-stand",
             "land-south",
             "land-south-short",
+            "idle-clean",
+            "idle-warm",
+            "idle-edit-smoke",
+            "fly-clean",
+            "ocean-cruise",
+            "ocean-cruise-enter",
+            "ocean-cruise-stress",
+            "ocean-cruise-short",
+            "fz-validate",
+            "fz-manual-parity",
+            "fz-manual-plateau",
+            "fz-manual-long",
+            "fz-cold-enter",
+            "fz-ne-frontier-stand",
+            "fz-frontier-stand-resume",
+            "fz-inring-cruise",
+            "product-174657",
+            "product-174657-dive",
+            "product-174657-far",
         ],
-        help="named scenario (break-stand / visual-* / land-cruise / land-stand / "
-        "land-south / land-south-short)",
+        help="named scenario (... / product-174657 west G1 / dive / far distance stress)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
     ap.add_argument("--yaw-sweep-sec", type=float, default=3.0)
+    ap.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="run scenario N times; write report, report_2..N, and report_agg.json",
+    )
     args = ap.parse_args()
 
     if args.scenario == "break-stand":
@@ -433,6 +1377,8 @@ def main() -> int:
 
     if args.scenario == "land-cruise":
         args.land_cruise = True
+    if args.scenario == "land-cruise-resume":
+        args.land_cruise_resume = True
     if args.scenario == "land-stand":
         args.land_stand = True
     if args.scenario == "land-south":
@@ -440,19 +1386,472 @@ def main() -> int:
     if args.scenario == "land-south-short":
         args.land_south_short = True
 
+    if args.scenario == "idle-clean":
+        # Clean idle perf: land −Z corridor, short fly, long stand (≥60s), no edit.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -483.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 54.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 20.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 20.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 60.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 60.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "idle-warm":
+        # Debtful stand near manual focus (-482,72): longer fly accumulates remesh.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        if "--resume" in sys.argv:
+            args.resume = True
+            args.teleport_cruise = False
+        else:
+            args.resume = False
+            args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            # South over land (same as land-cruise): yaw 270 gave opaque~4/blue.
+            args.yaw = 90.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -483.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 54.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 40.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 40.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 60.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 60.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "idle-edit-smoke":
+        # Stand + forced dig pulse for control-lag / physics_block regression.
+        args.world = args.world or "World_164"
+        args.no_fly = True
+        args.fly_stop = False
+        args.resume = True
+        args.teleport_cruise = False
+        args.hold_space = False
+        args.sprint = False
+        if args.pitch is None:
+            args.pitch = 55.0
+        args.idle_sec = max(args.idle_sec, 15.0)
+        args.break_phase_sec = max(args.break_phase_sec, 8.0)
+        args.break_interval_sec = min(args.break_interval_sec, 1.0)
+        # Idle → edit → post-edit stand (~30s) inside break window + tail.
+        min_edit = args.idle_sec + args.break_phase_sec + 30.0 + 5.0
+        if args.seconds < min_edit:
+            args.seconds = min_edit
+        args.warmup_sec = max(args.warmup_sec, 8.0)
+
+    if args.scenario == "fly-clean":
+        # Moving cruise stress: fly ≥40s; judge move-segment sync/wall, not stop.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -483.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 54.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 40.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 40.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 20.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 15.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    def _apply_ocean_cruise_base():
+        # Era31 void-debt parity: DarkFaceVoidNearN is a 24m sphere — sea+28 +
+        # HoldSpace climb made autofly blind (void_max=0) while manual saw 774+.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.sprint = False
+        args.hold_space = False
+        if args.min_alt_above_sea is None:
+            args.min_alt_above_sea = 10.0
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 180.0
+        # Manual SoT corridor 122032/153653 (−550…−555, ~110), not (−525,100).
+        if args.cruise_cx is None:
+            args.cruise_cx = -550.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 110.0
+
+    if args.scenario == "ocean-cruise":
+        # Ocean west cruise FillWater horizon heal stress (void/VB/fluid).
+        # No cruise_eye_y — AppRunner sea+min_alt clamp.
+        _apply_ocean_cruise_base()
+        args.resume = False
+        args.teleport_cruise = True
+        args.idle_sec = max(args.idle_sec, 8.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 65.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 60.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 10.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "ocean-cruise-enter":
+        # Full enter path (no teleport) — reproduces manual residency buildup.
+        _apply_ocean_cruise_base()
+        args.resume = False
+        args.teleport_cruise = False
+        args.idle_sec = max(args.idle_sec, 45.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 65.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 60.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 10.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "ocean-cruise-stress":
+        # Cold teleport + short idle + sprint — void/holes parity with manual.
+        # (Warm resume + idle≥12 + sea+28 hid void; OCEAN_CRUISE_STRESS DoD.)
+        _apply_ocean_cruise_base()
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = True
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 3.0
+        else:
+            args.idle_sec = max(args.idle_sec, 3.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 90.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 75.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 10.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        # Keep early void peak in fly segment (warmup 16 ate period 0–1).
+        if "--warmup-sec" not in sys.argv:
+            args.warmup_sec = 8.0
+        else:
+            args.warmup_sec = min(args.warmup_sec, 8.0)
+
+    if args.scenario == "ocean-cruise-short":
+        # Stop-debt snapshot (land_south_short lesson): shorter idle keeps void.
+        _apply_ocean_cruise_base()
+        args.resume = False
+        args.teleport_cruise = True
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 3.0
+        else:
+            args.idle_sec = max(args.idle_sec, 3.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 65.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 60.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 10.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario in ("product-174657", "product-174657-dive", "product-174657-far"):
+        # A36 S0 / A31 Gate 1: acceptance AF requires clean tree (override for local
+        # experiments via CUBA_ALLOW_DIRTY_AF=1).
+        allow_dirty = os.environ.get("CUBA_ALLOW_DIRTY_AF", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        if not allow_dirty:
+            try:
+                from a21_run_manifest import _dirty_diff_hash
+
+                dirty = _dirty_diff_hash()
+                if dirty and dirty != "clean":
+                    print(
+                        f"FAIL: {args.scenario} requires dirty_diff_hash=clean "
+                        f"(got {dirty[:12]}…); commit/stash or set "
+                        "CUBA_ALLOW_DIRTY_AF=1",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    return 2
+            except Exception as exc:  # noqa: BLE001
+                print(
+                    f"WARN: could not verify dirty_diff_hash ({exc})",
+                    flush=True,
+                )
+        # G1 product gate proxy: west 174657-class (yaw 180), not north replay-manual.
+        # See bin/suite_reports/g1_a10_relight/autofly_vs_manual_diff.md
+        # Pin resume locus to spawn-near (7,3) — drifted saves start mid-west and
+        # under-stress (fog_rd collapse → false VB PASS). Match manual 080455
+        # distance (~10 chunks west), not fly-heavy 120s to ocean.
+        # product-174657-dive: same base + dive phase + underwater stop (SoT 210431).
+        # product-174657-far: A31 distance stress — longer fly, still no-teleport.
+        dive_scenario = args.scenario == "product-174657-dive"
+        far_scenario = args.scenario == "product-174657-far"
+        if not args.visible:
+            if os.environ.get("CUBA_FLIGHT_REQUIRE_VISIBLE", "").strip() in (
+                "1",
+                "true",
+                "TRUE",
+                "yes",
+                "YES",
+            ):
+                print(
+                    f"FAIL: {args.scenario} requires --visible "
+                    "(CUBA_FLIGHT_REQUIRE_VISIBLE=1)",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return 2
+            print(
+                f"WARN: {args.scenario} without --visible uses hidden GLFW; "
+                "operator cannot eye the flight. Pass --visible for honest gates.",
+                flush=True,
+            )
+        args.replay_manual = True
+        args.replay_manual_fly_heavy = False
+        if args.yaw is None:
+            args.yaw = 180.0
+        if not (args.phase_id or "").strip():
+            if dive_scenario:
+                args.phase_id = "product_174657_dive_v1"
+            elif far_scenario:
+                args.phase_id = "product_174657_far_v1"
+            else:
+                args.phase_id = "product_174657_proxy_v3"
+        if args.teleport_cruise:
+            print(
+                f"WARN: {args.scenario} forces --no-teleport-cruise "
+                "(west 174657-class resume proxy)",
+                flush=True,
+            )
+            args.teleport_cruise = False
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 15.0
+        if "--fly-phase-sec" not in sys.argv:
+            # Far: longer west cruise to stress distance (still no teleport).
+            args.fly_phase_sec = 180.0 if far_scenario else 55.0
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 12.0 if dive_scenario else 20.0
+        if dive_scenario and "--dive-phase-sec" not in sys.argv:
+            args.dive_phase_sec = 12.0
+        if dive_scenario and "--dive-pitch" not in sys.argv:
+            args.dive_pitch = -30.0
+        if far_scenario:
+            # Keep longer fly from above; do not flip into generic fly-heavy bumps.
+            args.replay_manual_fly_heavy = False
+            # A37 H0: ~5 blk/s × scale × fly_sec ≥ 8192. Default scale 12 → ~10800.
+            if "--fly-phase-sec" not in sys.argv:
+                args.fly_phase_sec = max(args.fly_phase_sec, 300.0)
+            far_scale = os.environ.get("CUBA_FLIGHT_MOVE_SPEED_SCALE", "").strip()
+            if not far_scale:
+                # Keep visible diagnostic flights at normal camera speed. Far
+                # distance must come from a longer run, not an artificial speed
+                # multiplier that masks streaming/collision behavior.
+                os.environ["CUBA_FLIGHT_MOVE_SPEED_SCALE"] = "1"
+            # Far runs need headroom beyond default 600s soft_force timeout.
+            if args.process_timeout <= 0.0:
+                args.process_timeout = 900.0
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec
+            + args.fly_phase_sec
+            + args.dive_phase_sec
+            + args.stop_phase_sec
+            + 5.0,
+        )
+        if far_scenario:
+            # args.seconds now includes the selected fly/stop phases. Apply
+            # the wall-time grace after that expansion, or long explicit
+            # far-flight phases are still cut off at the 900s base timeout.
+            args.process_timeout = max(
+                float(args.process_timeout),
+                float(args.seconds) + 300.0,
+            )
+        # Focus (7,3) ≈ world (120, y, 56); pin eye Y to manual 122212/100645 (~56).
+        users = BIN / "worlds" / "World_164" / "users.json"
+        if users.is_file():
+            try:
+                data = json.loads(users.read_text(encoding="utf-8"))
+                user = data.get("Username") or data
+                y = 56.0
+                user["position"] = [120.0, y, 56.0]
+                user["yaw"] = 180.0
+                user["pitch"] = 0.0
+                users.write_text(
+                    json.dumps(data, indent=4) + "\n", encoding="utf-8"
+                )
+                print(
+                    f"INFO: {args.scenario} pinned World_164 locus to "
+                    f"[120, {y}, 56] yaw180 (focus~7,3)",
+                    flush=True,
+                )
+            except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+                print(f"WARN: {args.scenario} locus pin failed: {exc}", flush=True)
+        # Fog pull-in collapses RD and masks west VB/missing (manual keeps fog~3–4).
+        # Default AF pin OFF for dual-lane; sysreset / honest latch needs fog ON
+        # (CUBA_FLIGHT_FOG_ON=1).
+        cfg_path = BIN / "config.json"
+        args._product174657_cfg_restore = None  # type: ignore[attr-defined]
+        force_fog_on = os.environ.get("CUBA_FLIGHT_FOG_ON", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        if cfg_path.is_file():
+            try:
+                cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+                render = cfg.setdefault("render", {})
+                prev_fog = render.get("fog_pull_in_enabled", True)
+                args._product174657_cfg_restore = (cfg_path, prev_fog)  # type: ignore[attr-defined]
+                if force_fog_on:
+                    if prev_fog is not True:
+                        render["fog_pull_in_enabled"] = True
+                        cfg_path.write_text(
+                            json.dumps(cfg, indent=4) + "\n", encoding="utf-8"
+                        )
+                    print(
+                        f"INFO: {args.scenario} CUBA_FLIGHT_FOG_ON=1 → "
+                        f"fog_pull_in_enabled=true (was {prev_fog})",
+                        flush=True,
+                    )
+                elif prev_fog is not False:
+                    render["fog_pull_in_enabled"] = False
+                    cfg_path.write_text(
+                        json.dumps(cfg, indent=4) + "\n", encoding="utf-8"
+                    )
+                    print(
+                        f"INFO: {args.scenario} set render.fog_pull_in_enabled=false "
+                        f"(was {prev_fog})",
+                        flush=True,
+                    )
+            except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+                print(f"WARN: {args.scenario} fog pin failed: {exc}", flush=True)
+
+    if args.replay_manual_fly_heavy:
+        args.replay_manual = True
+
     if args.replay_manual:
         args.world = "World_164"
         args.fly_stop = True
         args.resume = True
-        # Resume save focus (manual 190126 ~-484) — do NOT teleport to (-47,5).
+        # Resume save focus (manual 190126 / 192816 ~-484) — do NOT teleport to (-47,5).
+        # --cruise-cx is ignored without teleport (AppRunner); pin requires land save.
         args.teleport_cruise = False
         args.sprint = False
         args.hold_space = True
         if args.pitch is None:
             args.pitch = 0.0
-        args.idle_sec = max(args.idle_sec, 45.0)
-        args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
-        args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        # Default north (+Z) smoke; product-174657 sets yaw 180 (west) before this.
+        if args.yaw is None:
+            args.yaw = 90.0
+        if args.scenario in (
+            "product-174657",
+            "product-174657-dive",
+            "product-174657-far",
+        ):
+            # Eye-level west parity with manual 122212/100645.
+            # HoldSpace climb made autofly Y ~76→300 and collapsed fog_rd/miss
+            # class (same lesson as ocean-cruise HoldSpace blindness).
+            # Without Space, free-move at y≈50 sticks in terrain (cold 124719:
+            # focus stayed (7,3)). CruiseEyeY unlocks land-eye floor
+            # (terrain+12 each frame, floor=CruiseEyeY, ceil=CruiseEyeY+16)
+            # without Space climb or Y ratchet into altitude-blind.
+            # Dive scenario: CruiseEyeY still used during fly; AppRunner disables
+            # clamp during --dive-phase so pitch-down can reach underwater stop.
+            args.hold_space = False
+            if args.min_alt_above_sea is None:
+                args.min_alt_above_sea = 0.0
+            if args.cruise_eye_y is None:
+                args.cruise_eye_y = 56.0
+            if args.pitch is None:
+                args.pitch = 0.0
+            # Timings already set above (idle15/fly55|180/stop…); do not bump to
+            # north smoke 45/90/90 or fly-heavy 20/120/30.
+            pass
+        elif args.replay_manual_fly_heavy:
+            args.idle_sec = max(args.idle_sec, 20.0)
+            args.fly_phase_sec = max(args.fly_phase_sec, 120.0)
+            args.stop_phase_sec = max(args.stop_phase_sec, 30.0)
+        else:
+            args.idle_sec = max(args.idle_sec, 45.0)
+            # Argparse default fly-phase=50 is too short at ~3 FPS (travel<3 → exit 1).
+            if "--fly-phase-sec" not in sys.argv:
+                args.fly_phase_sec = 90.0
+            else:
+                args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
 
     if args.land_cruise:
         # Inland corridor matching manual 084551…142306 (not ocean -47,5).
@@ -484,6 +1883,33 @@ def main() -> int:
         # Skip cold-spawn miss in analyze (land_fix_P1e: miss=1 for ~12s at
         # teleport). Do not raise idle — longer idle raised wall/dirty (P1f).
         args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if getattr(args, "land_cruise_resume", False):
+        # Era38 B1: gate of record — World_174 resume, no teleport, stand-before-fly.
+        # Do NOT default cruise_eye_y (keep save height unless CLI set --cruise-eye-y).
+        args.world = args.world or "World_174"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 90.0
+        # Optional corridor hints only (no teleport); unused when teleport=False.
+        if args.cruise_cx is None:
+            args.cruise_cx = 2.0
+        if args.cruise_cz is None:
+            args.cruise_cz = -10.0
+        args.idle_sec = max(args.idle_sec, 15.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 45.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
 
     if args.land_stand:
         # Forever-hole repro (manual 170154): short east fly then stand ≥60s.
@@ -557,6 +1983,243 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
+    if args.scenario == "fz-validate":
+        # FZ2.2 manual parity: land-south corridor, extended fly+stop (~195s).
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -483.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 54.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 15.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 90.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 90.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 90.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-manual-parity":
+        # FZ2.3 DoD: resume save, NO teleport — mimics manual land-south FZ flights.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        args.idle_sec = max(args.idle_sec, 45.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 90.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 90.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 90.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-manual-plateau":
+        # FZ2.4 DoD: resume no-teleport; stop before steady drain masks PL plateau.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        args.idle_sec = max(args.idle_sec, 45.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 45.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 15.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-manual-long":
+        # FZ2.4 C8 proxy: resume no-teleport; long fly+stop for drain + steady gates.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        args.idle_sec = max(args.idle_sec, 45.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 480.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 480.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 120.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 120.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-cold-enter":
+        # FZ2.3 PL enter stress: cold load, NO teleport (ocean-cruise-enter model).
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        args.idle_sec = max(args.idle_sec, 45.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 90.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 90.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 90.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-ne-frontier-stand":
+        # P14 SoftDefer thrash repro: World_164 cold spawn ~(118,86) (manual
+        # 205739 stand locus, keep=169). fly_phase=0 + long stop — any NE fly
+        # walks into ocean (keep~49) and invalidates SoftDefer standstill gates.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 30.0
+        else:
+            args.idle_sec = max(args.idle_sec, 15.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 0.0
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 120.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-frontier-stand-resume":
+        # Isolate SoftDefer standstill: resume save should already be near
+        # dense frontier (~118,86); short/no fly + long stop. Operator places
+        # save or chains after fz-ne-frontier-stand.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 10.0
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 15.0
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 10.0
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 90.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-inring-cruise":
+        # P16 in-ring holes vs manual 221516 corridor (118,86)->(-31,58).
+        # Cold World_164 save drifts after manuals; pin SoT locus via teleport.
+        # Engine yaw: 180=west (-X), 270=south (-Z) — south from (-31,58) hits
+        # ocean keep~49 (abort). Keep med must stay >=160 for hole audit.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        if args.cruise_cx is None:
+            args.cruise_cx = 118.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 86.0
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 180.0
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 15.0
+        else:
+            args.idle_sec = max(args.idle_sec, 10.0)
+        if "--fly-phase-sec" not in sys.argv:
+            # Keep land corridor: 60s west from (118,86) often exits keep→49.
+            args.fly_phase_sec = 35.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 20.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 120.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
     if args.replay_edge:
         args.world = "World_164"
         args.fly_stop = True
@@ -574,15 +2237,73 @@ def main() -> int:
             args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
         )
 
+    phase_id = (args.phase_id or "").strip()
+    if phase_id.startswith("mesh-") and args.teleport_cruise:
+        raise SystemExit(
+            "FAIL: teleport_cruise=true forbidden for mesh-* phase-id "
+            f"({phase_id!r}); use no-teleport replay-manual harness"
+        )
+    if args.scenario == "product-174657" and args.teleport_cruise:
+        raise SystemExit(
+            "FAIL: teleport_cruise=true forbidden for product-174657 "
+            "(west 174657-class resume proxy; use --no-teleport-cruise)"
+        )
+
+    # Phase 5.5 / 5.6 / 5.7: no-teleport gate; land-stand is teleport smoke only.
+    report_name = str(args.report).replace("\\", "/").lower()
+    phase55_gate = phase_id.startswith("phase55") or "/phase55_" in report_name
+    phase56_gate = phase_id.startswith("phase56") or "/phase56_" in report_name
+    phase57_gate = phase_id.startswith("phase57") or "/phase57_" in report_name
+    phase_no_teleport_gate = phase55_gate or phase56_gate or phase57_gate
+    if args.land_stand:
+        print(
+            "WARN: --land-stand forces teleport_cruise=True; "
+            "not a Phase55/56/57 / mesh no-teleport gate",
+            flush=True,
+        )
+    if phase_no_teleport_gate and args.teleport_cruise:
+        gate_name = (
+            "Phase57" if phase57_gate else ("Phase56" if phase56_gate else "Phase55")
+        )
+        raise SystemExit(
+            f"FAIL: teleport_cruise=true forbidden for {gate_name} gate "
+            f"(phase_id={phase_id!r} report={args.report}); "
+            "use --replay-manual[-fly-heavy] or --scenario fz-cold-enter"
+        )
+    if phase_no_teleport_gate and args.land_stand:
+        gate_name = (
+            "Phase57" if phase57_gate else ("Phase56" if phase56_gate else "Phase55")
+        )
+        raise SystemExit(
+            f"FAIL: --land-stand forbidden for {gate_name} gate "
+            "(teleport smoke only; use no-teleport replay-manual)"
+        )
+
+    # Phase55/56 / soft_force@150s: bump default timeout when operator left 0.
+    phase55_need_timeout = phase_no_teleport_gate or args.replay_manual or (
+        args.scenario in ("fz-cold-enter", "fz-manual-parity", "fz-manual-long")
+    )
+    if phase55_need_timeout and args.process_timeout <= 0.0:
+        args.process_timeout = 600.0
+        print(
+            "INFO: process-timeout defaulted to 600s "
+            "(soft_force@150s + fly/stop; Phase55/56/57 / replay-manual / fz-cold-enter)",
+            flush=True,
+        )
+
     if not args.skip_preflight:
         print("preflight: killing orphan Cubatarium.exe (if any)", flush=True)
         preflight_cleanup()
 
     if args.build:
+        # MSVC multi-config: Debug lands under build/*/Debug; flight-sim runs
+        # bin/Cubatarium.exe which is Release/RelWithDebInfo RUNTIME_OUTPUT.
         cmd = [
             "cmake",
             "--build",
             str(args.build_dir),
+            "--config",
+            "Release",
             "--parallel",
             "8",
             "-j7",
@@ -597,205 +2318,758 @@ def main() -> int:
             return rc
 
     if not EXE.is_file():
-        print(f"FAIL: missing {EXE}", file=sys.stderr)
+        print(
+            f"FAIL: missing Release {EXE} (Debug AF forbidden; "
+            "cmake --build --config Release --target Cubatarium)",
+            file=sys.stderr,
+        )
         return 2
 
     if args.fly_stop:
-        min_sec = args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0
+        min_sec = (
+            args.idle_sec
+            + args.fly_phase_sec
+            + args.dive_phase_sec
+            + args.stop_phase_sec
+            + 5.0
+        )
         if args.seconds < min_sec:
             args.seconds = min_sec
 
-    t0 = time.time()
-    sim_cmd = [
-        str(EXE),
-        "--flight-sim",
-        "--world",
-        args.world,
-        "--seconds",
-        str(args.seconds),
-        "--report",
-        str(BIN / "flight_sim_report.json"),
-    ]
-    if args.scenario == "break-stand" or args.scenario == "visual-dig":
-        sim_cmd.append("--break-stand")
-        sim_cmd.extend(["--break-phase", str(args.break_phase_sec)])
-        sim_cmd.extend(["--break-interval", str(args.break_interval_sec)])
-        sim_cmd.append("--no-fly")
-        sim_cmd.append("--no-hold-forward")
-    elif args.scenario == "visual-blue":
-        sim_cmd.append("--yaw-sweep")
-        sim_cmd.extend(["--yaw-sweep-sec", str(args.yaw_sweep_sec)])
-        sim_cmd.append("--no-fly")
-        sim_cmd.append("--no-hold-forward")
-    elif args.no_fly:
-        sim_cmd.append("--no-fly")
-        sim_cmd.append("--no-hold-forward")
-    else:
-        sim_cmd.extend(["--fly", "--hold-forward"])
-    if args.fly_stop and args.scenario not in (
-        "break-stand",
-        "visual-dig",
-        "visual-blue",
-    ):
-        sim_cmd.append("--fly-stop")
-        sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
-        sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
-    sim_cmd.extend(["--idle", str(args.idle_sec)])
-    if args.sprint:
-        sim_cmd.append("--sprint")
-    if args.hold_space:
-        sim_cmd.append("--hold-space")
-    if args.pitch is not None:
-        sim_cmd.extend(["--pitch", str(args.pitch)])
-    if args.yaw is not None:
-        sim_cmd.extend(["--yaw", str(args.yaw)])
-    if args.visible:
-        sim_cmd.append("--visible")
-    if args.teleport_cruise:
-        sim_cmd.append("--teleport-cruise")
-    else:
-        sim_cmd.append("--no-teleport-cruise")
-    if args.cruise_cx is not None:
-        sim_cmd.extend(["--cruise-cx", str(args.cruise_cx)])
-    if args.cruise_cz is not None:
-        sim_cmd.extend(["--cruise-cz", str(args.cruise_cz)])
-    if args.cruise_eye_y is not None:
-        sim_cmd.extend(["--cruise-eye-y", str(args.cruise_eye_y)])
+    repeats = max(1, int(args.repeat or 1))
+    base_report = args.report
+    last_rc = 0
+    run_reports: list[Path] = []
 
-    process_timeout = args.process_timeout
-    if process_timeout <= 0.0:
-        process_timeout = args.seconds + 120.0
-    if args.fly_stop:
-        process_timeout = max(process_timeout, 420.0)
-    if args.scenario in ("break-stand", "visual-dig", "visual-blue"):
-        process_timeout = max(process_timeout, args.seconds + 180.0)
+    for rep in range(1, repeats + 1):
+        if repeats > 1:
+            if rep == 1:
+                report_path = base_report
+            else:
+                stem = base_report.stem
+                report_path = base_report.with_name(f"{stem}_{rep}{base_report.suffix}")
+            args.report = report_path
+            print(f"=== repeat {rep}/{repeats} → {report_path} ===", flush=True)
+        else:
+            report_path = base_report
 
-    print("running:", " ".join(sim_cmd), flush=True)
-    rc = run_with_timeout(sim_cmd, BIN, process_timeout)
-    hang_killed = rc == 124
-    kill_cubatarium_orphans()
+        t0 = time.time()
+        if not args.skip_preflight:
+            kill_cubatarium_orphans()
 
-    perf = newest_perf(t0)
-    if perf is None:
-        report_path = BIN / "flight_sim_report.json"
+        # A37 H0: stamp warm periods before spawn so FramePerfMonitor sees env.
+        warm_protocol = os.environ.get("CUBA_WARM_PROTOCOL", "").strip()
+        if float(getattr(args, "warmup_sec", 0) or 0) > 0 and (
+            warm_protocol
+            or "warm" in str(getattr(args, "report", "")).lower()
+        ):
+            os.environ.setdefault("CUBA_WARM_PROTOCOL", warm_protocol or "warmup_sec_stamp")
+            os.environ["CUBA_FLIGHT_WARM"] = "1"
+
+        sim_cmd = [
+            str(resolve_exe()),
+            "--flight-sim",
+            "--world",
+            args.world,
+            "--seconds",
+            str(args.seconds),
+            "--report",
+            str(BIN / "flight_sim_report.json"),
+        ]
+        break_scenarios = ("break-stand", "visual-dig", "idle-edit-smoke")
+        if args.scenario in break_scenarios:
+            sim_cmd.append("--break-stand")
+            sim_cmd.extend(["--break-phase", str(args.break_phase_sec)])
+            sim_cmd.extend(["--break-interval", str(args.break_interval_sec)])
+            sim_cmd.append("--no-fly")
+            sim_cmd.append("--no-hold-forward")
+        elif args.scenario == "visual-blue":
+            sim_cmd.append("--yaw-sweep")
+            sim_cmd.extend(["--yaw-sweep-sec", str(args.yaw_sweep_sec)])
+            sim_cmd.append("--no-fly")
+            sim_cmd.append("--no-hold-forward")
+        elif args.no_fly:
+            sim_cmd.append("--no-fly")
+            sim_cmd.append("--no-hold-forward")
+        else:
+            sim_cmd.extend(["--fly", "--hold-forward"])
+        if args.fly_stop and args.scenario not in (
+            "break-stand",
+            "visual-dig",
+            "visual-blue",
+            "idle-edit-smoke",
+        ):
+            sim_cmd.append("--fly-stop")
+            sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
+            sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
+            if args.stop_after_blocked_sec > 0.0:
+                sim_cmd.extend(
+                    ["--stop-after-blocked", str(args.stop_after_blocked_sec)]
+                )
+            if args.dive_phase_sec > 0.0:
+                sim_cmd.extend(["--dive-phase", str(args.dive_phase_sec)])
+                sim_cmd.extend(["--dive-pitch", str(args.dive_pitch)])
+        sim_cmd.extend(["--idle", str(args.idle_sec)])
+        if args.sprint:
+            sim_cmd.append("--sprint")
+        if args.hold_space:
+            sim_cmd.append("--hold-space")
+        if args.pitch is not None:
+            sim_cmd.extend(["--pitch", str(args.pitch)])
+        if args.yaw is not None:
+            sim_cmd.extend(["--yaw", str(args.yaw)])
+        if args.visible:
+            sim_cmd.append("--visible")
+        if args.teleport_cruise:
+            sim_cmd.append("--teleport-cruise")
+        else:
+            sim_cmd.append("--no-teleport-cruise")
+        if args.cruise_cx is not None:
+            sim_cmd.extend(["--cruise-cx", str(args.cruise_cx)])
+        if args.cruise_cz is not None:
+            sim_cmd.extend(["--cruise-cz", str(args.cruise_cz)])
+        if args.cruise_eye_y is not None:
+            sim_cmd.extend(["--cruise-eye-y", str(args.cruise_eye_y)])
+        if args.min_alt_above_sea is not None:
+            sim_cmd.extend(["--min-alt-above-sea", str(args.min_alt_above_sea)])
+
+        process_timeout = args.process_timeout
+        if process_timeout <= 0.0:
+            process_timeout = args.seconds + 120.0
+        if args.fly_stop and args.scenario not in ("fz-manual-plateau",):
+            process_timeout = max(process_timeout, 420.0)
+        if args.scenario in (
+            "break-stand",
+            "visual-dig",
+            "visual-blue",
+            "idle-edit-smoke",
+            "ocean-cruise",
+            "ocean-cruise-enter",
+            "ocean-cruise-stress",
+            "ocean-cruise-short",
+        ):
+            process_timeout = max(process_timeout, args.seconds + 180.0)
+
+        print("running:", " ".join(sim_cmd), flush=True)
+        rc = run_with_timeout(sim_cmd, BIN, process_timeout)
+        hang_killed = rc == 124
+        kill_cubatarium_orphans()
+
+        perf = newest_perf(t0)
+        if perf is None:
+            flight_report = BIN / "flight_sim_report.json"
+            if flight_report.is_file():
+                data = json.loads(flight_report.read_text(encoding="utf-8"))
+                p = data.get("perf_jsonl") or ""
+                if p and Path(p).is_file():
+                    perf = Path(p)
+
+        ana = 1
+        if perf is None:
+            print("FAIL: no perf jsonl produced", file=sys.stderr)
+            append_phase_history(
+                {
+                    "phase": args.phase_id or "unspecified",
+                    "rc": rc,
+                    "hang_killed": hang_killed,
+                    "perf": None,
+                    "report": str(report_path),
+                    "repeat": rep,
+                }
+            )
+            last_rc = 3 if hang_killed else 1
+            if repeats == 1:
+                return last_rc
+            continue
+
+        print(f"analyzing {perf}", flush=True)
+        analyze_cmd = [
+            sys.executable,
+            str(ANALYZE),
+            str(perf),
+            "--report",
+            str(report_path),
+        ]
+        if getattr(args, "segment_fly_only_analyze", False):
+            analyze_cmd.append("--segment-fly-only")
+        if (
+            args.replay_manual
+            or args.fly_stop
+            or args.land_cruise
+            or args.land_stand
+            or args.land_south
+            or args.land_south_short
+            or args.scenario
+            in (
+                "idle-clean",
+                "idle-warm",
+                "idle-edit-smoke",
+                "fly-clean",
+                "ocean-cruise",
+                "fz-validate",
+                "fz-manual-parity",
+                "fz-manual-plateau",
+                "fz-manual-long",
+                "fz-cold-enter",
+                "fz-ne-frontier-stand",
+                "fz-frontier-stand-resume",
+                "fz-inring-cruise",
+            )
+            or (args.scenario or "").startswith("ocean-cruise")
+        ):
+            analyze_cmd.append("--manual-idle")
+        if getattr(args, "warmup_sec", None) is not None:
+            analyze_cmd.extend(["--warmup-sec", str(args.warmup_sec)])
+        if getattr(args, "baseline_manual", None):
+            analyze_cmd.extend(["--baseline-manual", str(args.baseline_manual)])
+        ana = subprocess.call(analyze_cmd)
+        info_log = None
+        if DIAG.is_file():
+            import importlib.util
+
+            spec = importlib.util.spec_from_file_location("flight_sim_diag", DIAG)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                info_log = mod.newest_info_log(t0)
+        annotate_report_run(report_path, hang_killed, rc, perf, info_log)
+        # Phase55 fidelity: expose teleport flag for AnalyzePhase55Scorecard.
         if report_path.is_file():
-            data = json.loads(report_path.read_text(encoding="utf-8"))
-            p = data.get("perf_jsonl") or ""
-            if p and Path(p).is_file():
-                perf = Path(p)
+            try:
+                _ann = json.loads(report_path.read_text(encoding="utf-8"))
+                _ann["teleport_cruise"] = bool(args.teleport_cruise)
+                _ann["process_timeout_s"] = float(process_timeout)
+                # A21 P0.1: bind report to binary/world/route identity.
+                try:
+                    from a21_run_manifest import build_run_manifest
 
-    ana = 1
-    if perf is None:
-        print("FAIL: no perf jsonl produced", file=sys.stderr)
+                    # A37 H0: warm only when explicit protocol + CUBA_FLIGHT_WARM stamp.
+                    warm_env = os.environ.get("CUBA_FLIGHT_WARM", "").strip().lower() in (
+                        "1",
+                        "true",
+                        "t",
+                        "yes",
+                    )
+                    warm_claimed = (
+                        float(getattr(args, "warmup_sec", 0) or 0) > 0
+                        and (
+                            warm_env
+                            or os.environ.get("CUBA_WARM_PROTOCOL", "").strip() != ""
+                        )
+                    )
+                    if warm_claimed and not warm_env:
+                        os.environ["CUBA_FLIGHT_WARM"] = "1"
+                        warm_env = True
+                    cold_warm = "warm" if warm_claimed and warm_env else "cold"
+                    if warm_claimed:
+                        os.environ.setdefault("CUBA_WARM_PROTOCOL", "warmup_sec_stamp")
+                    _ann["run_manifest"] = build_run_manifest(
+                        exe=resolve_exe(),
+                        world=getattr(args, "world", None),
+                        scenario=getattr(args, "scenario", None),
+                        cold_warm=cold_warm,
+                        extra={
+                            "perf_jsonl": str(perf) if perf else None,
+                            "schema_perf": "perf_jsonl.v2",
+                            "flight_move_speed_scale": os.environ.get(
+                                "CUBA_FLIGHT_MOVE_SPEED_SCALE", "1"
+                            ),
+                        },
+                    )
+                    from a21_run_manifest import manifest_acceptance_ok
+
+                    _ann["manifest_acceptance"] = manifest_acceptance_ok(
+                        _ann["run_manifest"],
+                        for_acceptance=args.scenario
+                        in (
+                            "product-174657",
+                            "product-174657-dive",
+                            "product-174657-far",
+                        ),
+                    )
+                except Exception as _manifest_exc:  # noqa: BLE001
+                    _ann["run_manifest_error"] = str(_manifest_exc)
+                report_path.write_text(
+                    json.dumps(_ann, indent=2) + "\n", encoding="utf-8"
+                )
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        metrics_summary: dict = {}
+        if report_path.is_file():
+            run_reports.append(report_path)
+            try:
+                result = json.loads(report_path.read_text(encoding="utf-8"))
+                if args.scenario in (
+                    "product-174657",
+                    "product-174657-dive",
+                    "product-174657-far",
+                ) and perf and Path(perf).is_file():
+                    adequacy = compute_product_174657_proxy_adequacy(Path(perf))
+                    result["proxy_adequacy"] = adequacy
+                    warm = "warm" in report_path.stem.lower()
+                    stop_line = compute_dual_lane_stop_line(Path(perf), warm=warm)
+                    result["dual_lane_stop_line"] = stop_line
+                    result["dual_lane_stop_line_pass"] = stop_line.get(
+                        "dual_lane_stop_line_pass"
+                    )
+                    result["dual_lane_stop_line_fails"] = stop_line.get(
+                        "dual_lane_stop_line_fails"
+                    )
+                    eye_proxy = compute_eye_proxy_stop_line(Path(perf))
+                    result["eye_proxy_stop_line"] = eye_proxy
+                    result["eye_proxy_stop_line_pass"] = eye_proxy.get(
+                        "eye_proxy_stop_line_pass"
+                    )
+                    result["eye_proxy_stop_line_fails"] = eye_proxy.get(
+                        "eye_proxy_stop_line_fails"
+                    )
+                    a24_safety = compute_a24_safety_stop_line(Path(perf))
+                    result["a24_safety_stop_line"] = a24_safety
+                    result["a24_safety_stop_line_pass"] = a24_safety.get(
+                        "a24_safety_stop_line_pass"
+                    )
+                    result["a24_safety_stop_line_fails"] = a24_safety.get(
+                        "a24_safety_stop_line_fails"
+                    )
+                    if args.scenario == "product-174657-dive":
+                        try:
+                            import importlib.util
+
+                            an_path = Path(__file__).resolve().parent / (
+                                "analyze_stop_hang_dive.py"
+                            )
+                            spec = importlib.util.spec_from_file_location(
+                                "analyze_stop_hang_dive", an_path
+                            )
+                            mod = importlib.util.module_from_spec(spec)
+                            assert spec and spec.loader
+                            spec.loader.exec_module(mod)
+                            dive_an = mod.analyze_one(
+                                Path(perf),
+                                sea=62.0,
+                                report=result,
+                                label=args.scenario,
+                            )
+                            result["dive_stop_hang"] = dive_an
+                            result["dive_stop_hang_untested"] = dive_an["coverage"][
+                                "untested"
+                            ]
+                            result["dive_stop_hang_score"] = dive_an["score"]
+                            print(
+                                "product-174657-dive stop-hang: "
+                                f"untested={dive_an['coverage']['untested']} "
+                                f"score={dive_an['score']:.1f} "
+                                f"stop_n={dive_an['segments']['stop_uw']['n']} "
+                                f"wall={dive_an['segments']['stop_uw']['max_wall_ms']:.1f}",
+                                flush=True,
+                            )
+                        except Exception as exc:  # noqa: BLE001
+                            print(
+                                f"WARN: dive stop-hang analyze failed: {exc}",
+                                flush=True,
+                            )
+                    west = compute_west_route_coverage(Path(perf))
+                    result["west_route_coverage"] = west
+                    post_stop = compute_post_stop_convergence(result)
+                    result["post_stop_convergence"] = post_stop
+                    result["post_stop_convergence_pass"] = post_stop.get(
+                        "post_stop_convergence_pass"
+                    )
+                    empty_world = compute_empty_world_stop_line(result)
+                    result["empty_world_stop_line"] = empty_world
+                    result["empty_world_stop_line_pass"] = empty_world.get(
+                        "empty_world_stop_line_pass"
+                    )
+                    result["empty_world_stop_line_fails"] = empty_world.get(
+                        "empty_world_stop_line_fails"
+                    )
+                    enter_dirty = compute_enter_dirty_residual_stop_line(result)
+                    result["enter_dirty_residual_stop_line"] = enter_dirty
+                    result["enter_dirty_residual_stop_line_pass"] = enter_dirty.get(
+                        "enter_dirty_residual_stop_line_pass"
+                    )
+                    result["enter_dirty_residual_stop_line_fails"] = enter_dirty.get(
+                        "enter_dirty_residual_stop_line_fails"
+                    )
+                    result["a31_progress_snapshot"] = compute_a31_progress_snapshot(
+                        result, a24_safety, west
+                    )
+                    # Warm honesty: reject cold_or_unspecified for warm reports.
+                    pad = result.get("proxy_adequacy") or {}
+                    if warm and str(pad.get("cache_mode", "")).startswith("cold"):
+                        pad = dict(pad)
+                        pad["warm_protocol_fail"] = True
+                        pad["adequacy_pass"] = False
+                        fails = list(pad.get("adequacy_fails") or [])
+                        fails.append("warm_claimed_but_cache_mode_cold_or_unspecified")
+                        pad["adequacy_fails"] = fails
+                        result["proxy_adequacy"] = pad
+                        adequacy = pad
+                    report_path.write_text(
+                        json.dumps(result, indent=2) + "\n", encoding="utf-8"
+                    )
+                    print(
+                        "product-174657 empty-world stop-line: "
+                        + (
+                            "PASS"
+                            if empty_world.get("empty_world_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {empty_world}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 enter-dirty-residual stop-line: "
+                        + (
+                            "PASS"
+                            if enter_dirty.get("enter_dirty_residual_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {enter_dirty}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 adequacy: "
+                        + ("PASS" if adequacy.get("adequacy_pass") else "FAIL")
+                        + f" {adequacy}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 dual-lane stop-line: "
+                        + (
+                            "PASS"
+                            if stop_line.get("dual_lane_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {stop_line}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 eye-proxy stop-line: "
+                        + (
+                            "PASS"
+                            if eye_proxy.get("eye_proxy_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {eye_proxy}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 A24 safety stop-line: "
+                        + (
+                            "PASS"
+                            if a24_safety.get("a24_safety_stop_line_pass")
+                            else "FAIL"
+                        )
+                        + f" {a24_safety}",
+                        flush=True,
+                    )
+                    print(
+                        "product-174657 west-route coverage: "
+                        + str(west.get("west_route_coverage"))
+                        + f" {west}",
+                        flush=True,
+                    )
+                metrics_summary = {
+                    "pass": result.get("pass"),
+                    "hang_killed": result.get("hang_killed"),
+                    "gates_pass_count": gates_pass_count(result),
+                    "gates_stop_pass_count": gates_stop_pass_count(result),
+                    "metrics": {
+                        k: (result.get("metrics") or {}).get(k)
+                        for k in (
+                            "pending_light_focus_med",
+                            "post_stop_pending_med",
+                            "post_stop_not_ready_end",
+                            "stop_not_ready_delta",
+                            "post_stop_black_sticky_max",
+                            "stop_wall_med",
+                            "calm_stop_wall_med",
+                            "calm_stop_emerge_med",
+                            "calm_stop_stream_med",
+                            "stop_mesh_prep_med",
+                            "chunks_traveled",
+                            "dominant_spike_class",
+                            "dominant_heavy_spike_class",
+                            "spike_max_world_extra",
+                            "spike_world_extra_dominant_rate",
+                            "break_complete_sum",
+                            "break_inflight_race_sum",
+                            "break_dark_face_sum",
+                            "wall_ms_med",
+                            "wall_ms_fly_med",
+                            "tick_env_fly_max",
+                            "world_extra_fly_max",
+                        )
+                    },
+                    "soft": {
+                        k: (result.get("soft") or {}).get(k)
+                        for k in (
+                            "dominant_spike_class",
+                            "dominant_heavy_spike_class",
+                            "soft_world_extra_ok",
+                            "spike_bucket_counts",
+                        )
+                    },
+                }
+                if result.get("proxy_adequacy") is not None:
+                    metrics_summary["proxy_adequacy"] = result["proxy_adequacy"]
+                if result.get("dual_lane_stop_line") is not None:
+                    metrics_summary["dual_lane_stop_line"] = result[
+                        "dual_lane_stop_line"
+                    ]
+                    metrics_summary["dual_lane_stop_line_pass"] = result.get(
+                        "dual_lane_stop_line_pass"
+                    )
+                if result.get("eye_proxy_stop_line") is not None:
+                    metrics_summary["eye_proxy_stop_line"] = result[
+                        "eye_proxy_stop_line"
+                    ]
+                    metrics_summary["eye_proxy_stop_line_pass"] = result.get(
+                        "eye_proxy_stop_line_pass"
+                    )
+                if result.get("a24_safety_stop_line") is not None:
+                    metrics_summary["a24_safety_stop_line"] = result[
+                        "a24_safety_stop_line"
+                    ]
+                    metrics_summary["a24_safety_stop_line_pass"] = result.get(
+                        "a24_safety_stop_line_pass"
+                    )
+                if result.get("post_stop_convergence") is not None:
+                    metrics_summary["post_stop_convergence"] = result[
+                        "post_stop_convergence"
+                    ]
+                    metrics_summary["post_stop_convergence_pass"] = result.get(
+                        "post_stop_convergence_pass"
+                    )
+                if result.get("empty_world_stop_line") is not None:
+                    metrics_summary["empty_world_stop_line"] = result[
+                        "empty_world_stop_line"
+                    ]
+                    metrics_summary["empty_world_stop_line_pass"] = result.get(
+                        "empty_world_stop_line_pass"
+                    )
+                if result.get("enter_dirty_residual_stop_line") is not None:
+                    metrics_summary["enter_dirty_residual_stop_line"] = result[
+                        "enter_dirty_residual_stop_line"
+                    ]
+                    metrics_summary["enter_dirty_residual_stop_line_pass"] = (
+                        result.get("enter_dirty_residual_stop_line_pass")
+                    )
+                if result.get("manifest_acceptance") is not None:
+                    metrics_summary["manifest_acceptance"] = result[
+                        "manifest_acceptance"
+                    ]
+                    metrics_summary["manifest_acceptance_pass"] = result[
+                        "manifest_acceptance"
+                    ].get("manifest_acceptance_pass")
+                if result.get("a31_progress_snapshot") is not None:
+                    metrics_summary["a31_progress_snapshot"] = result[
+                        "a31_progress_snapshot"
+                    ]
+                if result.get("dive_stop_hang") is not None:
+                    metrics_summary["dive_stop_hang"] = result["dive_stop_hang"]
+                    metrics_summary["dive_stop_hang_untested"] = result.get(
+                        "dive_stop_hang_untested"
+                    )
+                    metrics_summary["dive_stop_hang_score"] = result.get(
+                        "dive_stop_hang_score"
+                    )
+                if args.update_best and not hang_killed:
+                    if args.fly_stop:
+                        best_path = BIN / "flight_sim_gate_report_stop_best.json"
+                    else:
+                        best_path = BIN / "flight_sim_gate_report_west_best.json"
+                    best = load_best(best_path)
+                    if is_better(result, best):
+                        best_path.write_text(
+                            report_path.read_text(encoding="utf-8"), encoding="utf-8"
+                        )
+                        print(f"updated best: {best_path}", flush=True)
+            except (json.JSONDecodeError, OSError):
+                pass
+
         append_phase_history(
             {
                 "phase": args.phase_id or "unspecified",
                 "rc": rc,
+                "ana": ana,
                 "hang_killed": hang_killed,
-                "perf": None,
-                "report": str(args.report),
+                "perf": str(perf),
+                "report": str(report_path),
+                "repeat": rep,
+                "summary": metrics_summary,
             }
         )
-        return 3 if hang_killed else 1
 
-    print(f"analyzing {perf}", flush=True)
-    analyze_cmd = [
-        sys.executable,
-        str(ANALYZE),
-        str(perf),
-        "--report",
-        str(args.report),
-    ]
-    if args.replay_manual or args.fly_stop or args.land_cruise or args.land_stand or args.land_south or args.land_south_short:
-        analyze_cmd.append("--manual-idle")
-    if getattr(args, "warmup_sec", None) is not None:
-        analyze_cmd.extend(["--warmup-sec", str(args.warmup_sec)])
-    ana = subprocess.call(analyze_cmd)
-    info_log = None
-    if DIAG.is_file():
-        import importlib.util
+        if hang_killed:
+            print("flight-sim process HANG-KILLED exit=124", file=sys.stderr)
+            last_rc = 3
+        elif rc != 0:
+            print(f"flight-sim process exit={rc}", file=sys.stderr)
+            last_rc = rc
+        else:
+            last_rc = ana
+            if args.scenario in (
+                "product-174657",
+                "product-174657-dive",
+                "product-174657-far",
+            ) and metrics_summary.get(
+                "proxy_adequacy"
+            ):
+                if not metrics_summary.get("empty_world_stop_line_pass", True):
+                    print(
+                        f"flight-sim empty-world stop-line FAIL for {args.scenario} "
+                        f"(opaque_cmd_on==0 / creatures-only; "
+                        f"{metrics_summary.get('empty_world_stop_line')})",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get(
+                    "enter_dirty_residual_stop_line_pass", True
+                ):
+                    print(
+                        f"flight-sim enter-dirty-residual stop-line FAIL for "
+                        f"{args.scenario} "
+                        f"{metrics_summary.get('enter_dirty_residual_stop_line')}",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("manifest_acceptance_pass", True) and (
+                    os.environ.get("CUBA_ALLOW_DIRTY_AF", "").strip().lower()
+                    not in ("1", "true", "yes")
+                ):
+                    print(
+                        f"flight-sim manifest acceptance FAIL for {args.scenario} "
+                        f"{metrics_summary.get('manifest_acceptance')}",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary["proxy_adequacy"].get("adequacy_pass", False):
+                    print(
+                        f"flight-sim adequacy FAIL for {args.scenario} proxy",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("dual_lane_stop_line_pass", True):
+                    print(
+                        f"flight-sim dual-lane stop-line FAIL for {args.scenario} "
+                        "(adequacy alone is not merge-green)",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("eye_proxy_stop_line_pass", True):
+                    print(
+                        f"flight-sim eye-proxy stop-line FAIL for {args.scenario} "
+                        "(stale-visual thrash / holes blink; adequacy alone is not merge-green)",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("a24_safety_stop_line_pass", True):
+                    print(
+                        f"flight-sim A24 safety stop-line FAIL for {args.scenario} "
+                        "(whole-route holes / dirty_dropped; mid-stall diagnostic only; "
+                        "operator_visual still required for merge_green)",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif not metrics_summary.get("post_stop_convergence_pass", True):
+                    print(
+                        f"flight-sim post-stop convergence FAIL for {args.scenario} "
+                        f"{metrics_summary.get('post_stop_convergence')}",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
+                elif args.scenario == "product-174657-dive" and metrics_summary.get(
+                    "dive_stop_hang_untested", False
+                ):
+                    print(
+                        "flight-sim dive-stop UNTESTED "
+                        "(need underwater stop_uw coverage)",
+                        file=sys.stderr,
+                    )
+                    last_rc = 2
 
-        spec = importlib.util.spec_from_file_location("flight_sim_diag", DIAG)
-        if spec and spec.loader:
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            info_log = mod.newest_info_log(t0)
-    annotate_report_run(args.report, hang_killed, rc, perf, info_log)
+    if repeats > 1 and run_reports:
+        agg_path = base_report.with_name(f"{base_report.stem}_agg{base_report.suffix}")
+        write_repeat_aggregate(run_reports, agg_path)
+        print(f"wrote aggregate: {agg_path}", flush=True)
 
-    metrics_summary: dict = {}
-    if args.report.is_file():
+    restore = getattr(args, "_product174657_cfg_restore", None)
+    if restore:
+        cfg_path, prev_fog = restore
         try:
-            result = json.loads(args.report.read_text(encoding="utf-8"))
-            metrics_summary = {
-                "pass": result.get("pass"),
-                "hang_killed": result.get("hang_killed"),
-                "gates_pass_count": gates_pass_count(result),
-                "gates_stop_pass_count": gates_stop_pass_count(result),
-                "metrics": {
-                    k: (result.get("metrics") or {}).get(k)
-                    for k in (
-                        "pending_light_focus_med",
-                        "post_stop_pending_med",
-                        "post_stop_not_ready_end",
-                        "stop_not_ready_delta",
-                        "post_stop_black_sticky_max",
-                        "stop_wall_med",
-                        "chunks_traveled",
-                        "dominant_spike_class",
-                        "dominant_heavy_spike_class",
-                        "spike_max_world_extra",
-                        "spike_world_extra_dominant_rate",
-                        "break_complete_sum",
-                        "break_inflight_race_sum",
-                        "break_dark_face_sum",
-                        "wall_ms_med",
-                        "tick_env_fly_max",
-                        "world_extra_fly_max",
-                    )
-                },
-                "soft": {
-                    k: (result.get("soft") or {}).get(k)
-                    for k in (
-                        "dominant_spike_class",
-                        "dominant_heavy_spike_class",
-                        "soft_world_extra_ok",
-                        "spike_bucket_counts",
-                    )
-                },
-            }
-            if args.update_best and not hang_killed:
-                if args.fly_stop:
-                    best_path = BIN / "flight_sim_gate_report_stop_best.json"
-                else:
-                    best_path = BIN / "flight_sim_gate_report_west_best.json"
-                best = load_best(best_path)
-                if is_better(result, best):
-                    best_path.write_text(
-                        args.report.read_text(encoding="utf-8"), encoding="utf-8"
-                    )
-                    print(f"updated best: {best_path}", flush=True)
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+            # F1 SoT 185830: AF pins fog OFF for dual-lane; never leave operator
+            # config fog OFF after the run (W1 latch needs fog ON). Exception:
+            # explicit prev False + Performance/Fast quality profile.
+            preset = str(
+                cfg.get("render", {}).get("performance_preset", "")
+            ).lower()
+            keep_off = (
+                prev_fog is False
+                and preset in ("performance", "fast")
+            )
+            restore_fog = False if keep_off else True
+            cfg.setdefault("render", {})["fog_pull_in_enabled"] = restore_fog
+            cfg_path.write_text(json.dumps(cfg, indent=4) + "\n", encoding="utf-8")
+            print(
+                f"INFO: product-174657 restored render.fog_pull_in_enabled="
+                f"{restore_fog} (prev={prev_fog}, preset={preset or 'n/a'})",
+                flush=True,
+            )
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            print(f"WARN: product-174657 fog restore failed: {exc}", flush=True)
+
+    return last_rc
+
+
+AGG_METRIC_KEYS = (
+    "calm_stop_wall_med",
+    "calm_stop_emerge_med",
+    "calm_stop_stream_med",
+    "calm_stop_phys_med",
+    "stop_mesh_prep_med",
+    "stop_wall_med",
+    "wall_ms_med",
+    "wall_ms_fly_med",
+    "dirty_med",
+    "post_stop_focus_dirty_med",
+    "post_stop_black_sticky_max",
+    "post_stop_missing_max",
+    "physics_block_ms_p95",
+    "chunks_traveled",
+    "opaque_cmd_on_med",
+)
+
+
+def write_repeat_aggregate(reports: list[Path], out: Path) -> None:
+    import statistics
+
+    rows: list[dict] = []
+    for p in reports:
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            pass
-
-    append_phase_history(
-        {
-            "phase": args.phase_id or "unspecified",
-            "rc": rc,
-            "ana": ana,
-            "hang_killed": hang_killed,
-            "perf": str(perf),
-            "report": str(args.report),
-            "summary": metrics_summary,
-        }
-    )
-
-    if hang_killed:
-        print("flight-sim process HANG-KILLED exit=124", file=sys.stderr)
-        return 3
-    if rc != 0:
-        print(f"flight-sim process exit={rc}", file=sys.stderr)
-        return rc
-    return ana
+            continue
+        m = data.get("metrics") or {}
+        rows.append(
+            {
+                "report": str(p),
+                "pass": data.get("pass"),
+                **{k: m.get(k) for k in AGG_METRIC_KEYS},
+            }
+        )
+    agg: dict = {"n": len(rows), "runs": rows, "median": {}, "min": {}, "max": {}}
+    for k in AGG_METRIC_KEYS:
+        vals = [r[k] for r in rows if r.get(k) is not None]
+        if not vals:
+            continue
+        agg["median"][k] = statistics.median(vals)
+        agg["min"][k] = min(vals)
+        agg["max"][k] = max(vals)
+    out.write_text(json.dumps(agg, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

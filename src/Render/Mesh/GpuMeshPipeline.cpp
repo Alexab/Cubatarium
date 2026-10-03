@@ -2,9 +2,12 @@
 #include "Render/Mesh/PackedQuad.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
+#include "Render/Backend/RenderBackendCaps.h"
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <array>
+#include <chrono>
+#include <cstdlib>
 #include <cstring>
 
 namespace cutum
@@ -13,24 +16,36 @@ namespace
 {
 
 constexpr size_t kBlockTypeBuckets = 1024;
-constexpr size_t kSortCountsWords = kBlockTypeBuckets + 1; // + dark flag
+constexpr size_t kDarkFaceFlagIndex = kBlockTypeBuckets;
+constexpr size_t kLitFaceFlagIndex = kBlockTypeBuckets + 1;
+constexpr size_t kSortCountsWords = kBlockTypeBuckets + 2;
 
 /// BlockType is 10 bits → 1024 buckets. Stable counting sort (CPU fallback).
 void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
                                         std::vector<PackedQuad> &scratch,
                                         UBlockRegistry &registry,
+                                        const std::vector<BlockId> &block_palette,
                                         std::vector<GpuBlockDrawRange> *out_ranges,
-                                        bool *out_has_dark)
+                                        bool *out_has_dark,
+                                        bool *out_has_lit_drawable_face)
 {
   std::array<uint32_t, kBlockTypeBuckets> counts{};
   bool has_dark = false;
+  bool has_lit_drawable_face = false;
   for (const PackedQuad &q : quads)
   {
     ++counts[static_cast<size_t>(q.BlockType())];
-    if (!has_dark && q.Face() != 5 && q.SkyLight() <= 0 &&
-        q.BlockLight() <= 0)
+    if (q.Face() != 5)
     {
-      has_dark = true;
+      if (!has_dark && q.SkyLight() <= 0 && q.BlockLight() <= 0)
+      {
+        has_dark = true;
+      }
+      if (!has_lit_drawable_face &&
+          (q.SkyLight() > 0 || q.BlockLight() > 0))
+      {
+        has_lit_drawable_face = true;
+      }
     }
   }
   std::array<uint32_t, kBlockTypeBuckets> offsets{};
@@ -50,7 +65,13 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
       {
         continue;
       }
-      const BlockId bid = static_cast<BlockId>(b);
+      const BlockId bid =
+          ResolveGpuBlockTypePaletteIndex(block_palette,
+                                          static_cast<uint32_t>(b));
+      if (bid == BLOCK_AIR)
+      {
+        continue;
+      }
       GpuBlockDrawRange range;
       range.blockId = bid;
       range.quadOffset = offsets[b];
@@ -72,16 +93,21 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
   {
     *out_has_dark = has_dark;
   }
+  if (out_has_lit_drawable_face)
+  {
+    *out_has_lit_drawable_face = has_lit_drawable_face;
+  }
 }
 
-void BuildRangesFromHistogram(const uint32_t *counts,
+bool BuildRangesFromHistogram(const uint32_t *counts,
                               const uint32_t *exclusive_offsets,
                               UBlockRegistry &registry,
+                              const std::vector<BlockId> &block_palette,
                               std::vector<GpuBlockDrawRange> *out_ranges)
 {
   if (!out_ranges)
   {
-    return;
+    return true;
   }
   out_ranges->clear();
   out_ranges->reserve(32);
@@ -91,7 +117,13 @@ void BuildRangesFromHistogram(const uint32_t *counts,
     {
       continue;
     }
-    const BlockId bid = static_cast<BlockId>(b);
+    BlockId bid = BLOCK_AIR;
+    if (!TryResolveGpuBlockTypePaletteIndex(
+            block_palette, static_cast<uint32_t>(b), bid))
+    {
+      out_ranges->clear();
+      return false;
+    }
     GpuBlockDrawRange range;
     range.blockId = bid;
     range.quadOffset = exclusive_offsets[b];
@@ -101,16 +133,20 @@ void BuildRangesFromHistogram(const uint32_t *counts,
         registry.GetRenderStyle(bid) == BlockRenderStyle::Cutout;
     out_ranges->push_back(range);
   }
+  return true;
 }
 
 /// Build draw ranges from emit order without reordering GPU quads — skips
 /// full-slot glBufferSubData writeback after CPU readback (rim plan C1).
-void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
+bool BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
                                       UBlockRegistry &registry,
+                                      const std::vector<BlockId> &block_palette,
                                       std::vector<GpuBlockDrawRange> *out_ranges,
-                                      bool *out_has_dark)
+                                      bool *out_has_dark,
+                                      bool *out_has_lit_drawable_face)
 {
   bool has_dark = false;
+  bool has_lit_drawable_face = false;
   if (out_ranges)
   {
     out_ranges->clear();
@@ -122,11 +158,27 @@ void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
   for (uint32_t i = 0; i < static_cast<uint32_t>(quads.size()); ++i)
   {
     const PackedQuad &q = quads[i];
-    const BlockId bid = static_cast<BlockId>(q.BlockType());
-    if (!has_dark && q.Face() != 5 && q.SkyLight() <= 0 &&
-        q.BlockLight() <= 0)
+    BlockId bid = BLOCK_AIR;
+    if (!TryResolveGpuBlockTypePaletteIndex(
+            block_palette, static_cast<uint32_t>(q.BlockType()), bid))
     {
-      has_dark = true;
+      if (out_ranges)
+      {
+        out_ranges->clear();
+      }
+      return false;
+    }
+    if (q.Face() != 5)
+    {
+      if (!has_dark && q.SkyLight() <= 0 && q.BlockLight() <= 0)
+      {
+        has_dark = true;
+      }
+      if (!has_lit_drawable_face &&
+          (q.SkyLight() > 0 || q.BlockLight() > 0))
+      {
+        has_lit_drawable_face = true;
+      }
     }
     if (!have_run)
     {
@@ -169,6 +221,11 @@ void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
   {
     *out_has_dark = has_dark;
   }
+  if (out_has_lit_drawable_face)
+  {
+    *out_has_lit_drawable_face = has_lit_drawable_face;
+  }
+  return true;
 }
 
 bool ChunkHasTransparentOrCutout(const ChunkMeshSnapshot &snapshot,
@@ -216,7 +273,8 @@ GLuint CompileSortCompute(const char *src, const char *label)
   return prog;
 }
 
-// Histogram + dark flag. counts[0..1023]=BlockType hist, counts[1024]=dark.
+// Histogram + any-dark and any-lit surface flags.
+// counts[0..1023]=BlockType hist, counts[1024]=dark, counts[1025]=lit.
 const char *kSortHistCompute = R"(#version 430
 layout(local_size_x = 64) in;
 layout(std430, binding = 0) readonly buffer Quads { uvec2 quads[]; };
@@ -232,7 +290,10 @@ void main() {
   uint sky = (q.y >> 10u) & 0xFu;
   uint blk = (q.y >> 14u) & 0xFu;
   if (face != 5u && sky == 0u && blk == 0u) {
-    atomicOr(counts[1024], 1u);
+    atomicOr(counts[1024u], 1u);
+  }
+  if (face != 5u && (sky > 0u || blk > 0u)) {
+    atomicOr(counts[1025u], 1u);
   }
 }
 )";
@@ -308,6 +369,9 @@ bool UGpuMeshPipeline::Init(uint32_t max_slots)
   Ready = true;
   ScratchQuads.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
   ScratchQuadsSorted.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
+  ScratchOccWords.reserve(static_cast<size_t>((kGpuOccPadVolume + 3) / 4));
+  ScratchBlockWords.reserve(static_cast<size_t>((CHUNK_VOLUME + 3) / 4));
+  ScratchLightWords.reserve(static_cast<size_t>((kGpuLightPadVolume + 3) / 4));
   EnsureReadbackPbo();
   LOG(INFO) << "[GpuMeshPipeline] initialized with " << max_slots << " slots";
   return true;
@@ -375,11 +439,41 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
       kReadbackQuadsOffset +
       static_cast<GLsizeiptr>(UGpuMeshSlotAllocator::kMaxQuadsPerSlot *
                               sizeof(PackedQuad));
+  const bool persistent_mapping_supported =
+      GLEW_ARB_buffer_storage == GL_TRUE && glBufferStorage != nullptr;
+  int persistent_mapped_count = 0;
   for (int i = 0; i < kReadbackRing; ++i)
   {
     glGenBuffers(1, &ReadbackPbos[i]);
     glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
-    glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+    if (persistent_mapping_supported)
+    {
+      constexpr GLbitfield kPersistentReadbackFlags =
+          GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT |
+          GL_CLIENT_STORAGE_BIT;
+      glBufferStorage(GL_COPY_WRITE_BUFFER, bytes, nullptr,
+                      kPersistentReadbackFlags);
+      ReadbackMapped[i] = glMapBufferRange(
+          GL_COPY_WRITE_BUFFER, 0, bytes,
+          GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+      if (ReadbackMapped[i])
+      {
+        ++persistent_mapped_count;
+      }
+      else
+      {
+        // Immutable storage cannot be reallocated. Replace this slot with a
+        // mutable PBO so mapping failure does not disable GPU meshing.
+        glDeleteBuffers(1, &ReadbackPbos[i]);
+        glGenBuffers(1, &ReadbackPbos[i]);
+        glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
+        glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+      }
+    }
+    else
+    {
+      glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+    }
     ReadbackInUse[i] = false;
     glGenBuffers(1, &RectsHoldSsbo[i]);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, RectsHoldSsbo[i]);
@@ -388,6 +482,10 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
   }
   glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  LOG(INFO) << "[GpuMeshPipeline] persistent readback mapping "
+            << persistent_mapped_count << "/" << kReadbackRing
+            << " slots (ARB_buffer_storage="
+            << (persistent_mapping_supported ? "yes" : "no") << ")";
 #endif
 }
 
@@ -399,6 +497,12 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
   {
     if (ReadbackPbos[i])
     {
+      if (ReadbackMapped[i])
+      {
+        glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
+        glUnmapBuffer(GL_COPY_WRITE_BUFFER);
+        ReadbackMapped[i] = nullptr;
+      }
       glDeleteBuffers(1, &ReadbackPbos[i]);
       ReadbackPbos[i] = 0;
     }
@@ -409,6 +513,7 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
     }
     ReadbackInUse[i] = false;
   }
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
 #endif
 }
 
@@ -491,6 +596,12 @@ bool UGpuMeshPipeline::ReadCountersViaPbo(int pbo_index,
     // Do not Map after timeout (can block again). Caller remeshes.
     return false;
   }
+  if (ReadbackMapped[pbo_index])
+  {
+    std::memcpy(out_counters.data(), ReadbackMapped[pbo_index],
+                sizeof(out_counters));
+    return true;
+  }
   glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   void *mapped =
       glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
@@ -563,6 +674,14 @@ UGpuMeshPipeline::MapQuadsFromPbo(int pbo_index, uint32_t quad_count,
   const GLsizeiptr quad_bytes =
       static_cast<GLsizeiptr>(quad_count * sizeof(PackedQuad));
   ScratchQuads.resize(quad_count);
+  if (ReadbackMapped[pbo_index])
+  {
+    const auto *mapped =
+        static_cast<const unsigned char *>(ReadbackMapped[pbo_index]);
+    std::memcpy(ScratchQuads.data(), mapped + kReadbackQuadsOffset,
+                static_cast<size_t>(quad_bytes));
+    return GpuFinishStatus::Ready;
+  }
   glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   void *mapped = glMapBufferRange(GL_COPY_WRITE_BUFFER, kReadbackQuadsOffset,
                                   quad_bytes, GL_MAP_READ_BIT);
@@ -581,62 +700,209 @@ UGpuMeshPipeline::MapQuadsFromPbo(int pbo_index, uint32_t quad_count,
 bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
                                          UBlockRegistry &registry,
                                          glm::ivec3 coord, int slot_idx,
-                                         GpuApplyTicket &out_ticket)
+                                         GpuApplyTicket &out_ticket,
+                                         const BlockDefinitionCatalog *catalog,
+                                         ComputeKickProfile *profile)
 {
   out_ticket = {};
+  out_ticket.provisionalLightPreview = snapshot.provisionalLightPreview;
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)snapshot;
   (void)registry;
   (void)coord;
   (void)slot_idx;
+  (void)catalog;
+  (void)profile;
   return false;
 #else
-  if (!SnapshotIsGpuExtractEligible(snapshot, registry) ||
-      EmitState.PackedEmitProgram == 0)
+  using ProfileClock = std::chrono::steady_clock;
+  const auto eligibility_start = profile ? ProfileClock::now()
+                                         : ProfileClock::time_point{};
+  constexpr uint8_t kUnclassifiedBlock = 0xffu;
+  std::array<uint8_t, 1u << 16> block_occ_class{};
+  block_occ_class.fill(kUnclassifiedBlock);
+  block_occ_class[BLOCK_AIR] = 0u;
+  const auto occupancy_class = [&](BlockId id) -> uint8_t
+  {
+    uint8_t &cached = block_occ_class[static_cast<size_t>(id)];
+    if (cached != kUnclassifiedBlock)
+    {
+      return cached;
+    }
+    if (id == BLOCK_AIR)
+    {
+      cached = 0u;
+      return cached;
+    }
+    if (catalog)
+    {
+      if (!IsGpuFaceExtractEligible(catalog, id))
+      {
+        cached = 0u;
+        return cached;
+      }
+      const BlockRenderStyle style = CatalogGetRenderStyle(catalog, id);
+      cached = (CatalogIsTransparent(catalog, id) ||
+                style == BlockRenderStyle::Cutout)
+                   ? 3u
+                   : 1u;
+      return cached;
+    }
+    if (!IsGpuFaceExtractEligible(registry, id))
+    {
+      cached = 0u;
+      return cached;
+    }
+    const BlockRenderStyle style = registry.GetRenderStyle(id);
+    cached = (registry.IsTransparent(id) ||
+              style == BlockRenderStyle::Cutout)
+                 ? 3u
+                 : 1u;
+    return cached;
+  };
+  bool eligible = true;
+  for (BlockId id : snapshot.blocks)
+  {
+    if (id != BLOCK_AIR && occupancy_class(id) == 0u)
+    {
+      eligible = false;
+      break;
+    }
+  }
+  if (profile)
+  {
+    profile->eligibility_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - eligibility_start)
+            .count();
+  }
+  if (!eligible || EmitState.PackedEmitProgram == 0)
   {
     return false;
   }
 
+  std::vector<uint16_t> block_palette_indices;
+  if (!BuildGpuBlockTypePalette(snapshot, out_ticket.blockPalette,
+                                block_palette_indices))
+  {
+    out_ticket.blockPalette.clear();
+    return false;
+  }
+
+  const auto readback_slot_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   const int pbo_index = AcquireReadbackSlot();
+  if (profile)
+  {
+    profile->readback_slot_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - readback_slot_start)
+            .count();
+  }
   if (pbo_index < 0)
   {
     return false;
   }
 
-  std::vector<uint8_t> occ;
-  BuildPaddedOccupancy(snapshot, registry, occ);
-  std::vector<uint32_t> occ_words;
-  occ_words.assign((occ.size() + 3) / 4, 0);
-  for (size_t i = 0; i < occ.size(); ++i)
+  const auto cpu_prepare_start = profile ? ProfileClock::now()
+                                         : ProfileClock::time_point{};
+  auto &occ_words = ScratchOccWords;
+  occ_words.assign(static_cast<size_t>((kGpuOccPadVolume + 3) / 4), 0u);
+  const int occ_pad = kGpuOccPad;
+  const glm::ivec3 origin = snapshot.ChunkOrigin();
+  for (int y = -1; y <= CHUNK_SIZE; ++y)
   {
-    occ_words[i >> 2] |= static_cast<uint32_t>(occ[i]) << ((i & 3u) * 8u);
+    const bool inside_y = y >= 0 && y < CHUNK_SIZE;
+    for (int z = -1; z <= CHUNK_SIZE; ++z)
+    {
+      const bool inside_yz = inside_y && z >= 0 && z < CHUNK_SIZE;
+      for (int x = -1; x <= CHUNK_SIZE; ++x)
+      {
+        const int padded_index =
+            ((y + 1) * occ_pad + (z + 1)) * occ_pad + (x + 1);
+        uint8_t value = 0u;
+        if (inside_yz && x >= 0 && x < CHUNK_SIZE)
+        {
+          const size_t block_index =
+              static_cast<size_t>(x + CHUNK_SIZE * y +
+                                  CHUNK_SIZE * CHUNK_SIZE * z);
+          value = block_occ_class[
+              static_cast<size_t>(snapshot.blocks[block_index])];
+        }
+        else
+        {
+          const glm::ivec3 world = origin + glm::ivec3(x, y, z);
+          if (ShouldSkipFaceForNeighbor(snapshot.GetNeighborLoadState(world)))
+          {
+            value = 2u;
+          }
+          else
+          {
+            value = occupancy_class(snapshot.GetBlock(world));
+          }
+        }
+        occ_words[static_cast<size_t>(padded_index >> 2)] |=
+            static_cast<uint32_t>(value)
+            << (static_cast<unsigned>(padded_index & 3) * 8u);
+      }
+    }
   }
 
-  std::array<uint8_t, CHUNK_VOLUME> blocks{};
-  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  auto &block_words = ScratchBlockWords;
+  block_words.assign(static_cast<size_t>((CHUNK_VOLUME + 1) / 2), 0u);
+  for (size_t i = 0; i < block_palette_indices.size(); ++i)
   {
-    blocks[static_cast<size_t>(i)] =
-        static_cast<uint8_t>(snapshot.blocks[static_cast<size_t>(i)]);
+    block_words[i >> 1u] |=
+        static_cast<uint32_t>(block_palette_indices[i])
+        << (static_cast<unsigned>(i & 1u) * 16u);
   }
-  std::vector<uint8_t> padded_lights;
-  BuildPaddedLight(snapshot, padded_lights);
-  std::vector<uint32_t> block_words;
-  std::vector<uint32_t> light_words;
-  block_words.assign((blocks.size() + 3) / 4, 0);
-  for (size_t i = 0; i < blocks.size(); ++i)
+
+  auto &light_words = ScratchLightWords;
+  light_words.assign(static_cast<size_t>((kGpuLightPadVolume + 3) / 4), 0u);
+  constexpr int light_halo = ChunkMeshSnapshot::kLightHaloRadius;
+  const int light_pad = kGpuLightPad;
+  for (int y = -light_halo; y < CHUNK_SIZE + light_halo; ++y)
   {
-    block_words[i >> 2] |= static_cast<uint32_t>(blocks[i]) << ((i & 3u) * 8u);
-  }
-  light_words.assign((padded_lights.size() + 3) / 4, 0);
-  for (size_t i = 0; i < padded_lights.size(); ++i)
-  {
-    light_words[i >> 2] |=
-        static_cast<uint32_t>(padded_lights[i]) << ((i & 3u) * 8u);
+    const bool inside_y = y >= 0 && y < CHUNK_SIZE;
+    for (int z = -light_halo; z < CHUNK_SIZE + light_halo; ++z)
+    {
+      const bool inside_yz = inside_y && z >= 0 && z < CHUNK_SIZE;
+      for (int x = -light_halo; x < CHUNK_SIZE + light_halo; ++x)
+      {
+        const int padded_index =
+            ((y + light_halo) * light_pad + (z + light_halo)) * light_pad +
+            (x + light_halo);
+        uint8_t value = 0u;
+        if (inside_yz && x >= 0 && x < CHUNK_SIZE)
+        {
+          const size_t block_index =
+              static_cast<size_t>(x + CHUNK_SIZE * y +
+                                  CHUNK_SIZE * CHUNK_SIZE * z);
+          value = snapshot.light_packed[block_index];
+        }
+        else
+        {
+          value = snapshot.GetLightPacked(origin + glm::ivec3(x, y, z));
+        }
+        light_words[static_cast<size_t>(padded_index >> 2)] |=
+            static_cast<uint32_t>(value)
+            << (static_cast<unsigned>(padded_index & 3) * 8u);
+      }
+    }
   }
 
   const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
   const uint32_t side = static_cast<uint32_t>(CHUNK_SIZE);
+  if (profile)
+  {
+    profile->cpu_prepare_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - cpu_prepare_start)
+            .count();
+  }
 
+  const auto input_upload_start = profile ? ProfileClock::now()
+                                          : ProfileClock::time_point{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.OccSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(occ_words.size() * sizeof(uint32_t)),
@@ -653,7 +919,16 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(light_words.size() * sizeof(uint32_t)),
                light_words.data(), GL_DYNAMIC_DRAW);
+  if (profile)
+  {
+    profile->input_upload_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - input_upload_start)
+            .count();
+  }
 
+  const auto mask_dispatch_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, EmitState.OccSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, EmitState.MaskSsbo);
   glUseProgram(EmitState.MaskProgram);
@@ -663,14 +938,32 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
                static_cast<uint32_t>(kGpuOccPad));
   glDispatchCompute((volume + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  if (profile)
+  {
+    profile->mask_dispatch_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - mask_dispatch_start)
+            .count();
+  }
 
   const std::array<uint32_t, 4> zero_counters{0, 0, 0, 0};
+  const auto counter_reset_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(zero_counters),
                zero_counters.data(), GL_DYNAMIC_DRAW);
+  if (profile)
+  {
+    profile->counter_reset_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - counter_reset_start)
+            .count();
+  }
   const GLuint rects_ssbo = RectsHoldSsbo[pbo_index] != 0
                                 ? RectsHoldSsbo[pbo_index]
                                 : EmitState.RectsSsbo;
+  const auto greedy_dispatch_start = profile ? ProfileClock::now()
+                                              : ProfileClock::time_point{};
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, EmitState.MaskSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, EmitState.BlocksSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, EmitState.LightsSsbo);
@@ -678,12 +971,21 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, EmitState.CountersSsbo);
   glUseProgram(EmitState.GreedyProgram);
   glUniform1ui(glGetUniformLocation(EmitState.GreedyProgram, "side"), side);
-  glUniform1ui(glGetUniformLocation(EmitState.GreedyProgram, "pad"),
-               static_cast<uint32_t>(kGpuOccPad));
+  glUniform1ui(glGetUniformLocation(EmitState.GreedyProgram, "lightPad"),
+               static_cast<uint32_t>(kGpuLightPad));
   glDispatchCompute(102u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  if (profile)
+  {
+    profile->greedy_dispatch_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - greedy_dispatch_start)
+            .count();
+  }
 
   // Async counter poll (D3): copy+fence without ClientWait — TryComplete later.
+  const auto counter_copy_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   glBindBuffer(GL_COPY_READ_BUFFER, EmitState.CountersSsbo);
   glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
@@ -693,6 +995,13 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   GLsync counter_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
   glUseProgram(0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  if (profile)
+  {
+    profile->counter_copy_submit_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - counter_copy_start)
+            .count();
+  }
   if (!counter_fence)
   {
     // Fallback: sync read path.
@@ -738,6 +1047,9 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
     glUseProgram(EmitState.PackedEmitProgram);
     glUniform1ui(glGetUniformLocation(EmitState.PackedEmitProgram, "numRects"),
                  rect_count);
+    glUniform1ui(
+        glGetUniformLocation(EmitState.PackedEmitProgram, "lightPreview"),
+        out_ticket.provisionalLightPreview ? 1u : 0u);
     glDispatchCompute((rect_count + 63u) / 64u, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glUseProgram(0);
@@ -762,17 +1074,20 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   out_ticket.awaitingCounters = true;
   out_ticket.valid = true;
   out_ticket.quadCount = 0;
+  out_ticket.provisionalLightPreview = snapshot.provisionalLightPreview;
   return true;
 #endif
 }
 
 UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
-    GpuApplyTicket &ticket, UBlockRegistry &registry, uint64_t timeout_ns)
+    GpuApplyTicket &ticket, UBlockRegistry &registry, uint64_t timeout_ns,
+    CounterEmitProfile *profile)
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)ticket;
   (void)registry;
   (void)timeout_ns;
+  (void)profile;
   return GpuFinishStatus::Failed;
 #else
   if (!ticket.valid || !ticket.awaitingCounters)
@@ -784,8 +1099,17 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
     ticket.awaitingCounters = false;
     return GpuFinishStatus::Failed;
   }
+  using ProfileClock = std::chrono::steady_clock;
+  const auto fence_wait_start = profile ? ProfileClock::now()
+                                        : ProfileClock::time_point{};
   const GLenum wait =
       glClientWaitSync(ticket.fence, GL_SYNC_FLUSH_COMMANDS_BIT, timeout_ns);
+  if (profile)
+  {
+    profile->fence_wait_ms += std::chrono::duration<double, std::milli>(
+                                  ProfileClock::now() - fence_wait_start)
+                                  .count();
+  }
   if (wait == GL_TIMEOUT_EXPIRED)
   {
     return GpuFinishStatus::NotReady;
@@ -803,21 +1127,45 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
   ticket.fence = nullptr;
 
   std::array<uint32_t, 4> counters{};
-  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[ticket.pboIndex]);
-  void *mapped =
-      glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
-                       GL_MAP_READ_BIT);
-  if (!mapped)
+  const auto counter_readback_start = profile ? ProfileClock::now()
+                                              : ProfileClock::time_point{};
+  if (ReadbackMapped[ticket.pboIndex])
   {
-    glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
-    ReleaseReadbackSlot(ticket);
-    ticket.awaitingCounters = false;
-    ticket.valid = false;
-    return GpuFinishStatus::Failed;
+    std::memcpy(counters.data(), ReadbackMapped[ticket.pboIndex],
+                sizeof(counters));
   }
-  std::memcpy(counters.data(), mapped, sizeof(counters));
-  glUnmapBuffer(GL_COPY_WRITE_BUFFER);
-  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  else
+  {
+    glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[ticket.pboIndex]);
+    void *mapped =
+        glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
+                         GL_MAP_READ_BIT);
+    if (!mapped)
+    {
+      if (profile)
+      {
+        profile->counter_readback_ms +=
+            std::chrono::duration<double, std::milli>(
+                ProfileClock::now() - counter_readback_start)
+                .count();
+      }
+      glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+      ReleaseReadbackSlot(ticket);
+      ticket.awaitingCounters = false;
+      ticket.valid = false;
+      return GpuFinishStatus::Failed;
+    }
+    std::memcpy(counters.data(), mapped, sizeof(counters));
+    glUnmapBuffer(GL_COPY_WRITE_BUFFER);
+    glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  }
+  if (profile)
+  {
+    profile->counter_readback_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - counter_readback_start)
+            .count();
+  }
 
   ticket.awaitingCounters = false;
   const uint32_t rect_count = counters[0];
@@ -848,6 +1196,8 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
        RectsHoldSsbo[ticket.pboIndex] != 0)
           ? RectsHoldSsbo[ticket.pboIndex]
           : EmitState.RectsSsbo;
+  const auto packed_emit_start = profile ? ProfileClock::now()
+                                         : ProfileClock::time_point{};
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, rects_ssbo);
   glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 1, Allocator.GetQuadSsbo(),
                     static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
@@ -855,17 +1205,42 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
   glUseProgram(EmitState.PackedEmitProgram);
   glUniform1ui(glGetUniformLocation(EmitState.PackedEmitProgram, "numRects"),
                rect_count);
+  glUniform1ui(
+      glGetUniformLocation(EmitState.PackedEmitProgram, "lightPreview"),
+      ticket.provisionalLightPreview ? 1u : 0u);
   glDispatchCompute((rect_count + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
   glUseProgram(0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  if (profile)
+  {
+    profile->packed_emit_ms += std::chrono::duration<double, std::milli>(
+                                   ProfileClock::now() - packed_emit_start)
+                                   .count();
+  }
   Allocator.SetSlotQuadCount(ticket.slotIndex, rect_count);
   GLsync fence = nullptr;
+  const auto quad_copy_start = profile ? ProfileClock::now()
+                                       : ProfileClock::time_point{};
   if (!CopyQuadsToPbo(ticket.pboIndex, slot_offset, rect_count, &fence))
   {
+    if (profile)
+    {
+      profile->quad_readback_copy_ms +=
+          std::chrono::duration<double, std::milli>(
+              ProfileClock::now() - quad_copy_start)
+              .count();
+    }
     ReleaseReadbackSlot(ticket);
     ticket.valid = false;
     return GpuFinishStatus::Failed;
+  }
+  if (profile)
+  {
+    profile->quad_readback_copy_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - quad_copy_start)
+            .count();
   }
   ticket.quadCount = rect_count;
   ticket.slotOffsetQuads = slot_offset;
@@ -878,7 +1253,7 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
 UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
     GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
     std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
-    uint64_t timeout_ns)
+    bool *out_has_lit_drawable_face, uint64_t timeout_ns)
 {
   out_quad_count = 0;
   if (out_ranges)
@@ -888,6 +1263,10 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
   if (out_has_dark_face)
   {
     *out_has_dark_face = false;
+  }
+  if (out_has_lit_drawable_face)
+  {
+    *out_has_lit_drawable_face = false;
   }
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)ticket;
@@ -911,13 +1290,22 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
     return GpuFinishStatus::Ready;
   }
 
-  // GPU hist+scatter disabled on AMD (atomics raised emerge). Keep compiled.
-  constexpr uint32_t kGpuSortMinQuads =
-      UGpuMeshSlotAllocator::kMaxQuadsPerSlot + 1;
+  // GPU hist+scatter: default off (AMD atomics / emerge risk). Opt-in only via
+  // CUBATARIUM_GPU_OPAQUE_SORT=1 — no auto PreferGpuOpaqueCountingSort.
+  static const uint32_t kGpuSortMinQuads = []() -> uint32_t {
+    const char *env = std::getenv("CUBATARIUM_GPU_OPAQUE_SORT");
+    if (env && env[0] == '1' && env[1] == '\0')
+    {
+      return 256u;
+    }
+    return UGpuMeshSlotAllocator::kMaxQuadsPerSlot + 1u;
+  }();
   const bool sorted_gpu =
       ticket.quadCount >= kGpuSortMinQuads &&
       GpuSortSlotQuads(ticket.slotOffsetQuads, ticket.quadCount, registry,
-                       out_ranges, out_has_dark_face);
+                       ticket.blockPalette,
+                       out_ranges, out_has_dark_face,
+                       out_has_lit_drawable_face);
   if (sorted_gpu)
   {
     if (ticket.fence)
@@ -947,8 +1335,16 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
         ScratchQuads.data());
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   }
-  BuildRunLengthRangesFromUnsorted(ScratchQuads, registry, out_ranges,
-                                   out_has_dark_face);
+  if (!BuildRunLengthRangesFromUnsorted(
+          ScratchQuads, registry, ticket.blockPalette, out_ranges,
+          out_has_dark_face, out_has_lit_drawable_face))
+  {
+    LOG(ERROR) << "[GpuMeshPipeline] packed quad references invalid block "
+                  "palette index; rejecting GPU mesh coord=("
+               << ticket.coord.x << "," << ticket.coord.y << ","
+               << ticket.coord.z << ")";
+    return GpuFinishStatus::Failed;
+  }
   ReleaseReadbackSlot(ticket);
   return GpuFinishStatus::Ready;
 #endif
@@ -956,10 +1352,12 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
 
 bool UGpuMeshPipeline::FinishComputePasses(
     GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
-    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
+    bool *out_has_lit_drawable_face)
 {
   return TryFinishComputePasses(ticket, registry, out_quad_count, out_ranges,
                                 out_has_dark_face,
+                                out_has_lit_drawable_face,
                                 /*timeout_ns=*/100'000'000) ==
          GpuFinishStatus::Ready;
 }
@@ -969,7 +1367,8 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
                                         glm::ivec3 coord, int slot_idx,
                                         uint32_t &out_quad_count,
                                         std::vector<GpuBlockDrawRange> *out_ranges,
-                                        bool *out_has_dark_face)
+                                        bool *out_has_dark_face,
+                                        bool *out_has_lit_drawable_face)
 {
   GpuApplyTicket ticket;
   if (!KickComputePasses(snapshot, registry, coord, slot_idx, ticket))
@@ -996,13 +1395,15 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
     }
   }
   return FinishComputePasses(ticket, registry, out_quad_count, out_ranges,
-                             out_has_dark_face);
+                             out_has_dark_face, out_has_lit_drawable_face);
 }
 
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
 bool UGpuMeshPipeline::GpuSortSlotQuads(
     uint32_t slot_offset, uint32_t num_quads, UBlockRegistry &registry,
-    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+    const std::vector<BlockId> &block_palette,
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
+    bool *out_has_lit_drawable_face)
 {
   if (!SortHistProgram || !SortScatterProgram || num_quads == 0)
   {
@@ -1027,7 +1428,7 @@ bool UGpuMeshPipeline::GpuSortSlotQuads(
   glDispatchCompute((num_quads + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-  // Histogram + dark only (~4KB) — not the full quad payload.
+  // Histogram + two flags (~4KB) — not the full quad payload.
   std::array<uint32_t, kSortCountsWords> counts{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortCountsSsbo);
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(counts), counts.data());
@@ -1046,10 +1447,20 @@ bool UGpuMeshPipeline::GpuSortSlotQuads(
                  << " != numQuads " << num_quads;
     return false;
   }
-  BuildRangesFromHistogram(counts.data(), offsets.data(), registry, out_ranges);
+  if (!BuildRangesFromHistogram(counts.data(), offsets.data(), registry,
+                                block_palette, out_ranges))
+  {
+    LOG(ERROR) << "[GpuMeshPipeline] GPU histogram references invalid block "
+                  "palette index";
+    return false;
+  }
   if (out_has_dark_face)
   {
-    *out_has_dark_face = counts[kBlockTypeBuckets] != 0;
+    *out_has_dark_face = counts[kDarkFaceFlagIndex] != 0;
+  }
+  if (out_has_lit_drawable_face)
+  {
+    *out_has_lit_drawable_face = counts[kLitFaceFlagIndex] != 0;
   }
 
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortOffsetsSsbo);
@@ -1106,7 +1517,9 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
 
   uint32_t quad_count = 0;
   if (!RunComputePasses(snapshot, registry, coord, slot_idx, quad_count,
-                        &out_result.blockRanges, &out_result.hasFullyDarkFace))
+                        &out_result.blockRanges,
+                        &out_result.hasFullyDarkFace,
+                        &out_result.hasLitDrawableFace))
   {
     Allocator.FreeSlotByIndex(slot_idx);
     return false;
@@ -1116,6 +1529,7 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
   out_result.slotIndex = slot_idx;
   out_result.quadCount = quad_count;
   out_result.transparent = has_transparent;
+  out_result.provisionalLightPreview = snapshot.provisionalLightPreview;
   return true;
 #endif
 }

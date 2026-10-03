@@ -23,6 +23,8 @@ struct WorldViewSettings
   int IsoYawIndex{0};
   float IsoPitchDeg{35.264f};
   IsoViewPreset IsoBoomPreset{IsoViewPreset::Standard};
+  /// First-person hands / tool (Perspective only; isometric ignores).
+  bool ShowFpWield{true};
 
   void Validate();
   static WorldViewSettings FromJson(const nlohmann::json &root);
@@ -32,6 +34,12 @@ struct WorldViewSettings
 const char *WorldProjectionModeToString(WorldProjectionMode mode);
 bool WorldProjectionModeFromString(const std::string &value,
                                    WorldProjectionMode &out);
+
+inline bool ShouldDrawFpViewmodel(const WorldViewSettings &v)
+{
+  return v.ShowFpWield &&
+         v.Projection == WorldProjectionMode::Perspective;
+}
 
 } // namespace cutum
 

@@ -1,4 +1,5 @@
 #include "Game/GameSession.h"
+#include "Game/ModePolicy.h"
 #include "Game/Interfaces/IUGameContent.h"
 #include "App/Application.h"
 #include "Blocks/BlockDefinitionStorage.h"
@@ -12,6 +13,7 @@
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "Render/Camera/Camera.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/World.h"
@@ -73,6 +75,7 @@ void UGameSession::ReindexBlockCatalog(const IUGameContent &content)
 {
   ContentCatalog.IndexBlocks(content.Blocks());
   ContentCatalog.IndexObjects(content.Objects());
+  ContentCatalog.IndexItems(content.Items());
   if (World)
   {
     ContentCatalog.IndexCreatures(content.Creatures());
@@ -187,12 +190,14 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
   for (size_t i = 0; i < slots.size(); ++i)
   {
     const HotbarSlot &slot = bar.slots[i];
-    if (!slot.entry.Id.empty())
+    if (!slot.empty && !slot.entry.Id.empty())
     {
       slots[i].Id = slot.entry.Id;
       slots[i].label = HumanizeBlockName(slot.entry.Id);
       slots[i].entryKind = slot.entry.kind;
       slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
+      slots[i].wear = slot.entry.wear;
+      slots[i].broken = slot.entry.broken;
     }
     slots[i].selected = (barIndex == activeBar) && (i == activeIndex);
     if (barIndex == 0)
@@ -231,7 +236,34 @@ bool UGameSession::AssignSlot(size_t barIndex, size_t slotIndex,
     return false;
   }
   inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
-  return inv->AssignToHotbar(barIndex, slotIndex, entry);
+  const bool ok = inv->AssignToHotbar(barIndex, slotIndex, entry);
+  if (ok)
+  {
+    EnsureStorageForHotbarEntry(entry);
+  }
+  return ok;
+}
+
+void UGameSession::EnsureStorageForHotbarEntry(const InventoryEntryRef &entry)
+{
+  // Grant for any game mode: palette is mode-agnostic.
+  if (entry.kind != InventoryEntryKind::Item &&
+      entry.kind != InventoryEntryKind::Object &&
+      entry.kind != InventoryEntryKind::Block)
+  {
+    return;
+  }
+  UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv || entry.Id.empty())
+  {
+    return;
+  }
+  auto &storage = inv->GetStorageMutable();
+  const auto it = storage.find(entry.Id);
+  if (it == storage.end() || it->second == 0)
+  {
+    storage[entry.Id] = 1;
+  }
 }
 
 void UGameSession::BeginPendingAssignment(const InventoryEntryRef &entry)
@@ -282,6 +314,14 @@ bool SameSlotAddress(const SlotAddress &a, const SlotAddress &b)
   {
     return a.paletteKind == b.paletteKind && a.entryId == b.entryId;
   }
+  if (a.surface == SlotSurface::CharacterArmor)
+  {
+    return a.slot == b.slot;
+  }
+  if (a.surface == SlotSurface::CharacterOffhand)
+  {
+    return true;
+  }
   return true;
 }
 
@@ -318,6 +358,28 @@ InventoryEntryRef UGameSession::GetHotbarEntryRef(size_t barIndex,
   return slot.entry;
 }
 
+InventoryEntryRef UGameSession::GetArmorEntryRef(size_t armorSlot) const
+{
+  InventoryEntryRef entry;
+  const UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv || armorSlot >= 6)
+  {
+    return entry;
+  }
+  return inv->GetEquippedArmor(armorSlot);
+}
+
+InventoryEntryRef UGameSession::GetOffhandEntryRef() const
+{
+  InventoryEntryRef entry;
+  const UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
+  {
+    return entry;
+  }
+  return inv->GetEquippedOffhand();
+}
+
 void UGameSession::BeginDragFromSlot(const SlotAddress &source,
                                      const InventoryEntryRef &entry)
 {
@@ -325,6 +387,8 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
   {
     return;
   }
+  // A new drag supersedes click-to-assign pending state.
+  PendingAssignment.reset();
   Drag.Active = true;
   Drag.entry = entry;
   Drag.source = source;
@@ -332,12 +396,16 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
 
 bool UGameSession::IsDragging() const { return Drag.Active; }
 
-void UGameSession::CancelDrag() { Drag = DragState{}; }
+void UGameSession::CancelDrag()
+{
+  Drag = DragState{};
+}
 
 bool UGameSession::DropOnSlot(const SlotAddress &target)
 {
   if (!Drag.Active || target.surface == SlotSurface::None)
   {
+    CancelDrag();
     return false;
   }
   if (SameSlotAddress(target, Drag.source))
@@ -351,12 +419,10 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
 
   if (target.surface == SlotSurface::Hotbar)
   {
-    if (!CanAssignToHotbar(entry, target.bar, target.slot))
+    if (!CanAssignToHotbar(entry, target.bar, target.slot) ||
+        !AssignSlot(target.bar, target.slot, entry))
     {
-      return false;
-    }
-    if (!AssignSlot(target.bar, target.slot, entry))
-    {
+      CancelDrag();
       return false;
     }
     if (source.surface == SlotSurface::Hotbar &&
@@ -367,7 +433,90 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
         inv->ClearHotbarSlot(source.bar, source.slot);
       }
     }
+    if (source.surface == SlotSurface::CharacterArmor)
+    {
+      if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+      {
+        if (UItemDefinitionStorage *items =
+                World ? World->GetItemDefinitionStorage() : nullptr)
+        {
+          inv->UnequipArmor(source.slot, *items);
+        }
+      }
+    }
+    if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+      {
+        inv->UnequipOffhand();
+      }
+    }
     SelectSlot(target.bar, target.slot);
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::CharacterArmor)
+  {
+    UCreatureInventory *inv = GetControlledInventory(World.get());
+    UItemDefinitionStorage *items =
+        World ? World->GetItemDefinitionStorage() : nullptr;
+    if (!inv || !items || entry.kind != InventoryEntryKind::Item ||
+        !inv->EquipArmor(target.slot, entry, *items))
+    {
+      CancelDrag();
+      return false;
+    }
+    if (source.surface == SlotSurface::Hotbar)
+    {
+      inv->ClearHotbarSlot(source.bar, source.slot);
+    }
+    else if (source.surface == SlotSurface::CharacterArmor &&
+             source.slot != target.slot)
+    {
+      inv->UnequipArmor(source.slot, *items);
+    }
+    else if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      inv->UnequipOffhand();
+    }
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::CharacterOffhand)
+  {
+    UCreatureInventory *inv = GetControlledInventory(World.get());
+    if (!inv || (entry.kind != InventoryEntryKind::Item &&
+                 entry.kind != InventoryEntryKind::Block))
+    {
+      CancelDrag();
+      return false;
+    }
+    UItemDefinitionStorage *items =
+        World ? World->GetItemDefinitionStorage() : nullptr;
+    const bool ok =
+        items ? inv->EquipOffhand(entry, *items) : inv->EquipOffhand(entry);
+    if (!ok)
+    {
+      CancelDrag();
+      return false;
+    }
+    if (source.surface == SlotSurface::Hotbar)
+    {
+      inv->ClearHotbarSlot(source.bar, source.slot);
+    }
+    else if (source.surface == SlotSurface::CharacterArmor)
+    {
+      if (UItemDefinitionStorage *items =
+              World ? World->GetItemDefinitionStorage() : nullptr)
+      {
+        if (items)
+        {
+          inv->UnequipArmor(source.slot, *items);
+        }
+      }
+    }
     CancelDrag();
     return true;
   }
@@ -383,7 +532,41 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     return true;
   }
 
+  if (target.surface == SlotSurface::PaletteGrid &&
+      source.surface == SlotSurface::CharacterArmor)
+  {
+    if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+    {
+      if (UItemDefinitionStorage *items =
+              World ? World->GetItemDefinitionStorage() : nullptr)
+      {
+        inv->UnequipArmor(source.slot, *items);
+      }
+    }
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::PaletteGrid &&
+      source.surface == SlotSurface::CharacterOffhand)
+  {
+    if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+    {
+      inv->UnequipOffhand();
+    }
+    CancelDrag();
+    return true;
+  }
+
+  // PaletteGrid ← PaletteGrid (or other unsupported): cancel, do not assign.
+  CancelDrag();
   return false;
+}
+
+std::vector<InventoryGroupView>
+UGameSession::GetGroups(ContentKind tab) const
+{
+  return GetGroups(tab, GetInventoryMode());
 }
 
 std::vector<InventoryGroupView>
@@ -413,6 +596,12 @@ UGameSession::GetGroups(ContentKind tab, InventoryMode mode) const
 }
 
 std::vector<InventoryEntryView>
+UGameSession::GetEntries(ContentKind tab, const std::string &groupId) const
+{
+  return GetEntries(tab, groupId, GetInventoryMode());
+}
+
+std::vector<InventoryEntryView>
 UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
                          InventoryMode mode) const
 {
@@ -438,12 +627,44 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
     case ContentKind::Skin:
       ref.kind = InventoryEntryKind::Skin;
       break;
+    case ContentKind::Item:
+      ref.kind = InventoryEntryKind::Item;
+      break;
     }
     ref.Id = e.Id;
     ref.empty = false;
     if (tab == ContentKind::UCreature || tab == ContentKind::Skin)
     {
       ref.count = 1;
+      result.push_back({ref, e.displayName});
+      continue;
+    }
+    if (tab == ContentKind::Item)
+    {
+      ref.wear = 0.f;
+      ref.broken = false;
+
+      int count = 1;
+      if (mode == InventoryMode::Owned)
+      {
+        if (!inv)
+        {
+          continue;
+        }
+        const auto it = inv->find(e.Id);
+        if (it == inv->end() || it->second == 0)
+        {
+          continue;
+        }
+        count = it->second;
+        if (count < 0)
+        {
+          // Unlimited (should not happen for items in survival) — show as
+          // "1" to keep UI sane.
+          count = 1;
+        }
+      }
+      ref.count = count;
       result.push_back({ref, e.displayName});
       continue;
     }
@@ -456,7 +677,7 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
         ref.count = it->second;
       }
     }
-    if (mode == InventoryMode::Owned && ref.count <= 0)
+    if (mode == InventoryMode::Owned && ref.count == 0)
     {
       continue;
     }
@@ -475,34 +696,9 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
 bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
                                      size_t barIndex, size_t slotIndex) const
 {
-  if (entry.empty || slotIndex >= 10)
+  if (entry.empty || entry.Id.empty() || slotIndex >= 10)
   {
     return false;
-  }
-  if (World)
-  {
-    if (entry.kind == InventoryEntryKind::Block)
-    {
-      if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
-      {
-        std::cerr
-            << "GameSession: block not in registry, hotbar assign rejected: "
-            << entry.Id << std::endl;
-        return false;
-      }
-    }
-    else if (entry.kind == InventoryEntryKind::Object)
-    {
-      const auto entries =
-          ContentCatalog.GetEntries(ContentKind::Object, entry.Id);
-      if (entries.empty())
-      {
-        std::cerr
-            << "GameSession: prefab not in catalog, hotbar assign rejected: "
-            << entry.Id << std::endl;
-        return false;
-      }
-    }
   }
   const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
   if (!creatureInv)
@@ -515,13 +711,109 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
   {
     return false;
   }
-  if (ActiveInventoryMode == InventoryMode::Creative)
+
+  // Palette/hotbar validation uses derived inventory mode.
+  const InventoryMode inventoryMode = GetInventoryMode();
+  if (!World)
   {
+    return false;
+  }
+
+  switch (entry.kind)
+  {
+  case InventoryEntryKind::Block:
+    if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
+    {
+      std::cerr
+          << "GameSession: block not in registry, hotbar assign rejected: "
+          << entry.Id << std::endl;
+      return false;
+    }
+    if (inventoryMode == InventoryMode::Owned)
+    {
+      const auto &storage = creatureInv->GetStorage();
+      const auto it = storage.find(entry.Id);
+      return it != storage.end() && it->second != 0;
+    }
+    return true;
+
+  case InventoryEntryKind::Item:
+  {
+    const UItemDefinitionStorage *items = World->GetItemDefinitionStorage();
+    if (!items || items->Get(entry.Id) == nullptr)
+    {
+      return false;
+    }
+    if (inventoryMode == InventoryMode::Owned)
+    {
+      const auto &storage = creatureInv->GetStorage();
+      const auto it = storage.find(entry.Id);
+      return it != storage.end() && it->second != 0;
+    }
     return true;
   }
-  const auto &inv = creatureInv->GetStorage();
-  const auto it = inv.find(entry.Id);
-  return it != inv.end() && it->second > 0;
+
+  case InventoryEntryKind::Object:
+  {
+    bool inCatalog = false;
+    for (const auto &typeId : ContentCatalog.GetTypeIds(ContentKind::Object))
+    {
+      for (const auto &e :
+           ContentCatalog.GetEntries(ContentKind::Object, typeId))
+      {
+        if (e.Id == entry.Id)
+        {
+          inCatalog = true;
+          break;
+        }
+      }
+      if (inCatalog)
+      {
+        break;
+      }
+    }
+    if (!inCatalog)
+    {
+      return false;
+    }
+    if (inventoryMode == InventoryMode::Owned)
+    {
+      const auto &storage = creatureInv->GetStorage();
+      const auto it = storage.find(entry.Id);
+      return it != storage.end() && it->second != 0;
+    }
+    return true;
+  }
+
+  case InventoryEntryKind::UCreature:
+  case InventoryEntryKind::Skin:
+  {
+    if (inventoryMode == InventoryMode::Owned &&
+        !ModePolicy::AllowsMobSpawnFromPalette(ActiveWorldGameMode))
+    {
+      return false;
+    }
+    const ContentKind tab = (entry.kind == InventoryEntryKind::Skin)
+                                ? ContentKind::Skin
+                                : ContentKind::UCreature;
+    for (const auto &typeId : ContentCatalog.GetTypeIds(tab))
+    {
+      for (const auto &e : ContentCatalog.GetEntries(tab, typeId))
+      {
+        if (e.Id == entry.Id)
+        {
+          return true;
+        }
+      }
+    }
+    const auto &inv = creatureInv->GetStorage();
+    const auto it = inv.find(entry.Id);
+    return it != inv.end() && it->second != 0;
+  }
+
+  default:
+    return false;
+  }
 }
 
 bool UGameSession::AssignToHotbar(const InventoryEntryRef &entry,
@@ -551,12 +843,114 @@ UGameSession::GetCreatureSpawnBlockedHint(const std::string &speciesId) const
 
 InventoryMode UGameSession::GetInventoryMode() const
 {
-  return ActiveInventoryMode;
+  if (CheatCreativeInventory)
+  {
+    return InventoryMode::Creative;
+  }
+  if (!World)
+  {
+    return InventoryMode::Creative;
+  }
+  return World->GetGameMode() == WorldGameMode::Creative ? InventoryMode::Creative
+                                                         : InventoryMode::Owned;
 }
 
-void UGameSession::SetInventoryMode(InventoryMode mode)
+void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
 {
-  ActiveInventoryMode = mode;
+  const WorldGameMode previous = ActiveWorldGameMode;
+  ActiveWorldGameMode = mode;
+  if (World)
+  {
+    World->SetGameMode(mode);
+    World->ApplyGameModeLocomotionPolicy();
+    if (mode == WorldGameMode::Survival && previous == WorldGameMode::Creative)
+    {
+      if (UCreature *creature = World->GetControlledCreature())
+      {
+        creature->GetInventory().MigrateCreativeStorageToSurvival();
+      }
+    }
+  }
+  if (Application && previous != mode &&
+      !ModePolicy::AllowsCreativePalette(mode))
+  {
+    Application->CloseCreativePalette();
+  }
+}
+
+void UGameSession::SyncToWorldDifficulty(WorldDifficulty difficulty)
+{
+  ActiveWorldDifficulty = difficulty;
+  if (World)
+  {
+    World->SetDifficulty(difficulty);
+  }
+}
+
+CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
+{
+  CharacterStatsSnapshot snap;
+  snap.gameMode = ActiveWorldGameMode;
+  snap.difficulty = ActiveWorldDifficulty;
+  if (!World)
+  {
+    return snap;
+  }
+  const UCreature *creature = World->GetControlledCreature();
+  if (!creature)
+  {
+    return snap;
+  }
+  snap.valid = true;
+  snap.typeId = creature->GetTypeId();
+  snap.skinId = creature->GetSkinId();
+  snap.vitals = creature->GetVitals();
+  snap.attributes = creature->GetAttributes();
+
+  // Equipped armor (0..5) + active tool items (2 slots).
+  const UCreatureInventory &inv = creature->GetInventory();
+  for (size_t i = 0; i < 6; ++i)
+  {
+    const InventoryEntryRef &e = inv.GetEquippedArmor(i);
+    snap.equippedArmor[i].itemId = e.empty ? std::string() : e.Id;
+    snap.equippedArmor[i].wear = e.wear;
+    snap.equippedArmor[i].broken = e.broken;
+  }
+  for (size_t i = 0; i < 2; ++i)
+  {
+    snap.equippedTools[i] = CharacterStatsSnapshot::EquippedSlotSnapshot{};
+  }
+  {
+    const InventoryEntryRef *active = inv.GetActiveEntryRef();
+    if (active && !active->empty && !active->Id.empty() &&
+        (active->kind == InventoryEntryKind::Item ||
+         active->kind == InventoryEntryKind::Block))
+    {
+      snap.equippedTools[0].itemId = active->Id;
+      snap.equippedTools[0].wear = active->wear;
+      snap.equippedTools[0].broken = active->broken;
+      snap.equippedTools[0].isBlock = active->kind == InventoryEntryKind::Block;
+    }
+    const InventoryEntryRef &oh = inv.GetEquippedOffhand();
+    if (!oh.empty && !oh.Id.empty())
+    {
+      snap.equippedTools[1].itemId = oh.Id;
+      snap.equippedTools[1].wear = oh.wear;
+      snap.equippedTools[1].broken = oh.broken;
+      snap.equippedTools[1].isBlock = oh.kind == InventoryEntryKind::Block;
+    }
+  }
+
+  if (const CreatureDefinition *def =
+          World->GetCreatureDefinition(creature->GetTypeId()))
+  {
+    snap.displayName = def->displayName;
+  }
+  else
+  {
+    snap.displayName = creature->GetTypeId();
+  }
+  return snap;
 }
 
 CommandResult UGameSession::Execute(const std::vector<std::string> &args)

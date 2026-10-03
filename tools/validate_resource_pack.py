@@ -130,6 +130,15 @@ def validate_pack(pack_dir: Path) -> int:
             errors += 1
         names.add(name)
 
+        if "hardness" not in data:
+            err(f"{block_path}: missing hardness")
+            errors += 1
+        else:
+            hardness = data["hardness"]
+            if not isinstance(hardness, (int, float)) or hardness < 0:
+                err(f"{block_path}: hardness must be a number >= 0")
+                errors += 1
+
         textures = data.get("textures", [])
         if not isinstance(textures, list) or len(textures) not in (FACE_COUNT, 12):
             err(f"{block_path}: textures must have 6 or 12 entries")

@@ -1,9 +1,13 @@
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Backend/GpuHotPathFallback.h"
+#include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "glog/logging.h"
+#include <atomic>
+#include <cassert>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -14,11 +18,43 @@ namespace cutum
 namespace
 {
 
+uint64_t gCullStatsReadback = 0;
+uint64_t gCullStatsSyncReadN = 0;
+std::atomic<bool> gCullStatsReadbackOnce{false};
+
 enum class GpuCullMode
 {
   Aabb,
   Sphere,
   Cpu
+};
+
+class ScopedElapsedTimer
+{
+public:
+  explicit ScopedElapsedTimer(double &elapsed_ms)
+      : ElapsedMs(elapsed_ms), Begin(std::chrono::steady_clock::now())
+  {
+  }
+
+  ~ScopedElapsedTimer() { Stop(); }
+
+  void Stop()
+  {
+    if (!Active)
+    {
+      return;
+    }
+    ElapsedMs += std::chrono::duration<double, std::milli>(
+                     std::chrono::steady_clock::now() - Begin)
+                     .count();
+    Active = false;
+  }
+
+private:
+  double &ElapsedMs;
+  std::chrono::steady_clock::time_point Begin;
+  bool Active{true};
 };
 
 GpuCullMode ResolveGpuCullMode()
@@ -196,16 +232,232 @@ UMdiVertexPoolStore::~UMdiVertexPoolStore()
     glDeleteBuffers(1, &CullFrustumUbo);
     CullFrustumUbo = 0;
   }
-  if (CullAabbMaxSsbo)
-  {
-    glDeleteBuffers(1, &CullAabbMaxSsbo);
-    CullAabbMaxSsbo = 0;
-  }
   if (CullStatsSsbo)
   {
     glDeleteBuffers(1, &CullStatsSsbo);
     CullStatsSsbo = 0;
   }
+  DestroyCullStatsAsyncRing();
+  if (CullGpuTimeRing_.Initialized)
+  {
+    glDeleteQueries(GpuTimestampQueryRing::kSlots, CullGpuTimeRing_.Queries);
+    CullGpuTimeRing_.Initialized = false;
+  }
+}
+
+void UMdiVertexPoolStore::InitCullGpuTimingIfNeeded()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  CullGpuTimingAvailable_ = false;
+  return;
+#else
+  if (CullGpuTimeRing_.Initialized)
+  {
+    return;
+  }
+  glGenQueries(GpuTimestampQueryRing::kSlots, CullGpuTimeRing_.Queries);
+  CullGpuTimeRing_.Initialized = true;
+  CullGpuTimingAvailable_ = true;
+#endif
+}
+
+void UMdiVertexPoolStore::BeginCullGpuTimestamp()
+{
+  InitCullGpuTimingIfNeeded();
+}
+
+void UMdiVertexPoolStore::EndCullGpuTimestamp(const uint64_t frame_id)
+{
+  (void)frame_id;
+  PollCullGpuTimestampRing();
+}
+
+void UMdiVertexPoolStore::EnsureCullStatsAsyncRing()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return;
+#else
+  if (CullStatsAsync_.Initialized)
+  {
+    return;
+  }
+  glGenBuffers(CullStatsAsyncRing::kSlots, CullStatsAsync_.Staging);
+  for (int i = 0; i < CullStatsAsyncRing::kSlots; ++i)
+  {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsAsync_.Staging[i]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t), nullptr,
+                 GL_DYNAMIC_READ);
+    CullStatsAsync_.Fence[i] = nullptr;
+    CullStatsAsync_.Pending[i] = false;
+  }
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  CullStatsAsync_.WriteIdx = 0;
+  CullStatsAsync_.Initialized = true;
+#endif
+}
+
+void UMdiVertexPoolStore::DestroyCullStatsAsyncRing()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (!CullStatsAsync_.Initialized)
+  {
+    return;
+  }
+  for (int i = 0; i < CullStatsAsyncRing::kSlots; ++i)
+  {
+    if (CullStatsAsync_.Fence[i])
+    {
+      glDeleteSync(static_cast<GLsync>(CullStatsAsync_.Fence[i]));
+      CullStatsAsync_.Fence[i] = nullptr;
+    }
+    CullStatsAsync_.Pending[i] = false;
+  }
+  glDeleteBuffers(CullStatsAsyncRing::kSlots, CullStatsAsync_.Staging);
+  for (int i = 0; i < CullStatsAsyncRing::kSlots; ++i)
+  {
+    CullStatsAsync_.Staging[i] = 0;
+  }
+  CullStatsAsync_.Initialized = false;
+#endif
+}
+
+void UMdiVertexPoolStore::PollCullStatsAsyncRing()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return;
+#else
+  ScopedElapsedTimer poll_timer(LastCullStatsPollCpuMs_);
+  if (!CullStatsAsync_.Initialized)
+  {
+    return;
+  }
+  for (int i = 0; i < CullStatsAsyncRing::kSlots; ++i)
+  {
+    if (!CullStatsAsync_.Pending[i])
+    {
+      continue;
+    }
+    auto *fence = static_cast<GLsync>(CullStatsAsync_.Fence[i]);
+    if (!fence)
+    {
+      CullStatsAsync_.Pending[i] = false;
+      continue;
+    }
+    // Non-blocking: never ClientWait with timeout>0 on HUD path.
+    GLenum r = GL_WAIT_FAILED;
+    {
+      ScopedElapsedTimer fence_poll_timer(LastCullStatsFencePollCpuMs_);
+      r = glClientWaitSync(fence, 0, 0);
+    }
+    if (r == GL_TIMEOUT_EXPIRED)
+    {
+      continue;
+    }
+    if (r == GL_ALREADY_SIGNALED || r == GL_CONDITION_SATISFIED)
+    {
+      uint32_t visible = 0;
+      {
+        ScopedElapsedTimer buffer_read_timer(LastCullStatsBufferReadCpuMs_);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsAsync_.Staging[i]);
+        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t),
+                           &visible);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+      }
+      ++gCullStatsReadback;
+      // The fence is signaled, but the driver readback call can still stall CPU.
+      StagedCullStatsVisible_ = visible;
+      StagedCullStatsValid_ = true;
+    }
+    glDeleteSync(fence);
+    CullStatsAsync_.Fence[i] = nullptr;
+    CullStatsAsync_.Pending[i] = false;
+  }
+#endif
+}
+
+void UMdiVertexPoolStore::ArmCullStatsAsyncSample(GreedyGpuPassId pass_id)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return;
+#else
+  ScopedElapsedTimer arm_timer(LastCullStatsArmCpuMs_);
+  if (CullStatsSsbo == 0)
+  {
+    return;
+  }
+  EnsureCullStatsAsyncRing();
+  if (!CullStatsAsync_.Initialized)
+  {
+    return;
+  }
+  int slot = -1;
+  for (int offset = 0; offset < CullStatsAsyncRing::kSlots; ++offset)
+  {
+    const int candidate =
+        (CullStatsAsync_.WriteIdx + offset) % CullStatsAsyncRing::kSlots;
+    if (!CullStatsAsync_.Pending[candidate])
+    {
+      slot = candidate;
+      break;
+    }
+  }
+  if (slot < 0)
+  {
+    // Ring full — drop sample; HUD keeps last staged / CPU AABB.
+    return;
+  }
+  glBindBuffer(GL_COPY_READ_BUFFER, CullStatsSsbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, CullStatsAsync_.Staging[slot]);
+  // Audit R11: shader SSBO writes must be visible to buffer copy.
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
+                      sizeof(uint32_t));
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  CullStatsAsync_.Fence[slot] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  CullStatsAsync_.Pending[slot] = CullStatsAsync_.Fence[slot] != nullptr;
+  CullStatsAsync_.PassIds[slot] = pass_id;
+  CullStatsAsync_.FrameIds[slot] = CullGpuTimeRing_.NextSubmission;
+  CullStatsAsync_.WriteIdx = (slot + 1) % CullStatsAsyncRing::kSlots;
+#endif
+}
+
+void UMdiVertexPoolStore::PollCullGpuTimestampRing()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  LastCullGpuExecMs_ = -1.0;
+  CullGpuTimingAvailable_ = false;
+  return;
+#else
+  if (!CullGpuTimeRing_.Initialized)
+  {
+    LastCullGpuExecMs_ = -1.0;
+    return;
+  }
+  for (int read_idx = 0; read_idx < GpuTimestampQueryRing::kSlots; ++read_idx)
+  {
+    if (!CullGpuTimeRing_.Pending[read_idx]) continue;
+    GLuint available = 0;
+    glGetQueryObjectuiv(CullGpuTimeRing_.Queries[read_idx],
+                        GL_QUERY_RESULT_AVAILABLE, &available);
+    if (!available) continue;
+    GLuint64 elapsed_ns = 0;
+    glGetQueryObjectui64v(CullGpuTimeRing_.Queries[read_idx], GL_QUERY_RESULT,
+                          &elapsed_ns);
+    const size_t pass = static_cast<size_t>(CullGpuTimeRing_.PassIds[read_idx]);
+    if (pass < 4 && CullGpuTimeRing_.FrameIds[read_idx] > ReadyCullGpuSequence_[pass])
+    {
+      ReadyCullGpuMs_[pass] = static_cast<double>(elapsed_ns) / 1.0e6;
+      ReadyCullGpuSequence_[pass] = CullGpuTimeRing_.FrameIds[read_idx];
+    }
+    CullGpuTimeRing_.Pending[read_idx] = false;
+  }
+#endif
+}
+
+double UMdiVertexPoolStore::LastCullGpuExecMs() const
+{
+  return LastCullGpuExecMs_;
 }
 
 size_t UMdiVertexPoolStore::BuildIndirectCommandsRange(
@@ -428,6 +680,9 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
   (void)cache;
   return;
 #else
+#ifndef NDEBUG
+  assert(cache.passId != GreedyGpuPassId::Unknown);
+#endif
   // Resolve shader mode before packing aabb vs sphere primary buffer.
   (void)EnsureCullProgram();
   const size_t n = cache.batches.size();
@@ -516,17 +771,17 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
 
   if (!CullProgramIsSphere)
   {
-    if (CullAabbMaxSsbo == 0)
+    if (cache.CullAabbMaxSsbo == 0)
     {
-      glGenBuffers(1, &CullAabbMaxSsbo);
+      glGenBuffers(1, &cache.CullAabbMaxSsbo);
     }
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullAabbMaxSsbo);
-    if (sphere_bytes > CullAabbMaxCapacity)
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cache.CullAabbMaxSsbo);
+    if (sphere_bytes > cache.CullAabbMaxCapacity)
     {
       glBufferData(GL_SHADER_STORAGE_BUFFER,
                    static_cast<GLsizeiptr>(sphere_bytes), aabb_max.data(),
                    GL_DYNAMIC_DRAW);
-      CullAabbMaxCapacity = sphere_bytes;
+      cache.CullAabbMaxCapacity = sphere_bytes;
     }
     else
     {
@@ -547,6 +802,7 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
     cache.CullVisCapacity = vis_bytes;
   }
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  ++cache.batchTableRevision;
   cache.GpuCompactActive = true;
   cache.IndirectCullReady = false;
   cache.CompactVisCpuSynced = false;
@@ -556,15 +812,19 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
 void UMdiVertexPoolStore::RefreshPassRefs(
     GreedyGpuPassCache &cache, const UChunkMeshCache &meshCache,
     const std::vector<GreedyBatchRef> &refs, uint64_t mesh_revision,
-    uint64_t cull_revision, uint64_t sort_revision)
+    uint64_t cull_revision, uint64_t sort_revision, bool consume_dirty)
 {
   const bool geometry_refresh = !(cache.meshRevision == mesh_revision &&
                                   cache.sortRevision == sort_revision);
   // Single write path: parent RefreshPassRefs → GreedyVertexPool::Allocate
   // (glMapBufferRange). Do not stage a second MappedVbo copy (draw uses pool).
   UCpuStagingGpuStore::RefreshPassRefs(cache, meshCache, refs, mesh_revision,
-                                       cull_revision, sort_revision);
-  if (geometry_refresh && cache.usesVertexPool && !refs.empty())
+                                       cull_revision, sort_revision,
+                                       consume_dirty);
+  const bool cull_ssbo_stale =
+      cache.usesVertexPool && !refs.empty() && !cache.GpuCompactActive;
+  if ((geometry_refresh || cull_ssbo_stale) && cache.usesVertexPool &&
+      !refs.empty())
   {
     ++MappedUploadFrames;
     RebuildIndirectCmdTable(cache);
@@ -576,6 +836,7 @@ void UMdiVertexPoolStore::ApplyFrustumInstanceCull(
     const glm::vec3 &camera_pos, float max_cull_distance,
     bool horizontal_distance)
 {
+  ScopedElapsedTimer fallback_timer(LastCullFallbackCpuMs_);
   uint64_t on = 0;
   uint64_t total = 0;
   for (GreedyGpuBatch &b : cache.batches)
@@ -636,31 +897,160 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
                                               const Frustum &frustum,
                                               const glm::vec3 &camera_pos,
                                               float max_cull_distance,
-                                              bool horizontal_distance)
+                                              bool horizontal_distance,
+                                              int probe_period,
+                                              bool force_probe)
 {
   LastCullOpaqueTotal_ = 0;
   LastCullOpaqueOn_ = 0;
   LastCpuAabbWouldOn_ = 0;
+  LastCullSubmitCpuMs_ = 0.0;
+  LastCullTotalMs_ = 0.0;
+  LastCullAabbProbeCpuMs_ = 0.0;
+  LastCullFallbackCpuMs_ = 0.0;
+  LastCullSetupCpuMs_ = 0.0;
+  LastCullQueryPollCpuMs_ = 0.0;
+  LastCullPostSubmitCpuMs_ = 0.0;
+  LastCullStatsPollCpuMs_ = 0.0;
+  LastCullStatsFencePollCpuMs_ = 0.0;
+  LastCullStatsBufferReadCpuMs_ = 0.0;
+  LastCullStatsArmCpuMs_ = 0.0;
+  LastCullBatchStateCpuMs_ = 0.0;
+  LastCullPostSubmitOtherCpuMs_ = 0.0;
+  LastCullGpuExecMs_ = -1.0;
+  ScopedElapsedTimer total_timer(LastCullTotalMs_);
 
   uint64_t aabb_on = 0;
   uint64_t eligible = 0;
-  for (const GreedyGpuBatch &b : cache.batches)
+  bool any_degenerate = false;
+  // Phase 5.7.4 / 5.7R7: when GPU compact is healthy, probe AABB fail-open
+  // every probe_period calls (default 6 on cruise). Always probe while
+  // inactive, fail-open streak, or force_probe (underfeet / VB edge).
+  ++cache.FailOpenProbeTick;
+  const bool probe_fail_open = ShouldProbeFailOpenAabb(
+      cache.FailOpenProbeTick, cache.GpuCompactActive,
+      cache.ConsecutiveFailOpenN, probe_period > 0 ? probe_period : 6,
+      force_probe);
+  if (probe_fail_open)
   {
-    if (!b.pooled || b.indexCountGl <= 0)
+    ScopedElapsedTimer aabb_probe_timer(LastCullAabbProbeCpuMs_);
+    for (const GreedyGpuBatch &b : cache.batches)
     {
-      continue;
+      if (!b.pooled || b.indexCountGl <= 0)
+      {
+        continue;
+      }
+      ++eligible;
+      if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
+      {
+        any_degenerate = true;
+      }
+      const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1],
+                           b.cullAabbMin[2]);
+      const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1],
+                           b.cullAabbMax[2]);
+      if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
+                                      horizontal_distance))
+      {
+        ++aabb_on;
+      }
     }
-    ++eligible;
-    const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1], b.cullAabbMin[2]);
-    const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1], b.cullAabbMax[2]);
-    if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
-                                    horizontal_distance))
+    LastCpuAabbWouldOn_ = aabb_on;
+    LastCullOpaqueTotal_ = eligible;
+  }
+  else
+  {
+    ScopedElapsedTimer aabb_probe_timer(LastCullAabbProbeCpuMs_);
+    for (const GreedyGpuBatch &b : cache.batches)
     {
-      ++aabb_on;
+      if (b.pooled && b.indexCountGl > 0)
+      {
+        ++eligible;
+      }
+    }
+    LastCullOpaqueTotal_ = eligible;
+    LastCpuAabbWouldOn_ = cache.LastGoodCullOn;
+    aabb_on = cache.LastGoodCullOn > 0 ? cache.LastGoodCullOn : 1;
+  }
+
+  if (probe_fail_open &&
+      ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
+  {
+    ScopedElapsedTimer aabb_repair_timer(LastCullAabbProbeCpuMs_);
+    bool repaired = false;
+    for (GreedyGpuBatch &b : cache.batches)
+    {
+      if (!b.pooled || b.indexCountGl <= 0)
+      {
+        continue;
+      }
+      if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
+      {
+        FillChunkCullFields(b.chunkCoord, b.cullSphere, b.cullAabbMin,
+                            b.cullAabbMax);
+        repaired = true;
+      }
+    }
+    if (repaired)
+    {
+      aabb_on = 0;
+      any_degenerate = false;
+      for (const GreedyGpuBatch &b : cache.batches)
+      {
+        if (!b.pooled || b.indexCountGl <= 0)
+        {
+          continue;
+        }
+        if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
+        {
+          any_degenerate = true;
+        }
+        const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1],
+                             b.cullAabbMin[2]);
+        const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1],
+                             b.cullAabbMax[2]);
+        if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos,
+                                        max_cull_distance, horizontal_distance))
+        {
+          ++aabb_on;
+        }
+      }
+      LastCpuAabbWouldOn_ = aabb_on;
+      cache.GpuCompactActive = false;
     }
   }
-  LastCpuAabbWouldOn_ = aabb_on;
-  LastCullOpaqueTotal_ = eligible;
+  if (probe_fail_open &&
+      ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
+  {
+    ++cache.ConsecutiveFailOpenN;
+    // Reuse last GPU compact counts until N=3 consecutive fail-opens.
+    if (!ShouldThrottleFailOpenGpuCompact(cache.ConsecutiveFailOpenN) &&
+        cache.LastGoodCullOn > 0 && cache.GpuCompactActive)
+    {
+      LastCullOpaqueOn_ = cache.LastGoodCullOn;
+      LastCullOpaqueTotal_ = eligible;
+      return true;
+    }
+    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
+                             horizontal_distance);
+    if (LastCullOpaqueOn_ == 0 && eligible > 0)
+    {
+      for (GreedyGpuBatch &b : cache.batches)
+      {
+        if (b.pooled && b.indexCountGl > 0)
+        {
+          b.drawInstanceCount = 1;
+        }
+      }
+      LastCullOpaqueOn_ = eligible;
+      LastCpuAabbWouldOn_ = eligible;
+      cache.IndirectCullReady = true;
+      cache.GpuCompactActive = false;
+    }
+    cache.ConsecutiveFailOpenN = 0;
+    return false;
+  }
+  cache.ConsecutiveFailOpenN = 0;
 
   if (ResolveGpuCullMode() == GpuCullMode::Cpu)
   {
@@ -674,6 +1064,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
                            horizontal_distance);
   return false;
 #else
+  ScopedElapsedTimer setup_timer(LastCullSetupCpuMs_);
   if (!EnsureCullProgram() || cache.batches.empty())
   {
     if (!cache.batches.empty() && !cache.GpuCompactActive)
@@ -682,22 +1073,35 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
     }
     if (!cache.GpuCompactActive)
     {
+      setup_timer.Stop();
       ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
                                horizontal_distance);
     }
     return cache.GpuCompactActive;
   }
   if (!cache.GpuCompactActive || cache.IndirectCmdsBuffer == 0 ||
-      cache.BatchSphereSsbo == 0 || cache.CullVisSsbo == 0)
+      cache.BatchSphereSsbo == 0 || cache.CullVisSsbo == 0 ||
+      (!CullProgramIsSphere && cache.CullAabbMaxSsbo == 0))
   {
     RebuildIndirectCmdTable(cache);
   }
   if (!cache.GpuCompactActive)
   {
+    setup_timer.Stop();
     ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
                              horizontal_distance);
     return false;
   }
+
+#ifndef NDEBUG
+  assert(cache.passId != GreedyGpuPassId::Unknown);
+  assert(cache.batchTableRevision > 0);
+  if (!CullProgramIsSphere)
+  {
+    assert(cache.CullAabbMaxSsbo != 0);
+    assert(cache.BatchSphereSsbo != 0);
+  }
+#endif
 
   struct FrustumUboData
   {
@@ -738,36 +1142,94 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, CullStatsSsbo);
   }
-  if (!CullProgramIsSphere && CullAabbMaxSsbo != 0)
+  if (!CullProgramIsSphere && cache.CullAabbMaxSsbo != 0)
   {
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, CullAabbMaxSsbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, cache.CullAabbMaxSsbo);
   }
   glUseProgram(CullProgram);
+  setup_timer.Stop();
   const uint32_t n = ubo.batchCount;
+  ScopedElapsedTimer query_poll_timer(LastCullQueryPollCpuMs_);
+  InitCullGpuTimingIfNeeded();
+  PollCullGpuTimestampRing(); // Read older submissions, not the just-ended one.
+  const size_t timing_pass = static_cast<size_t>(cache.passId);
+  if (timing_pass < 4)
+  {
+    LastCullGpuExecMs_ = ReadyCullGpuMs_[timing_pass];
+    ReadyCullGpuMs_[timing_pass] = -1.0;
+  }
+  int gpu_slot = -1;
+  for (int offset = 0; offset < GpuTimestampQueryRing::kSlots; ++offset)
+  {
+    const int candidate = (CullGpuTimeRing_.WriteIdx + offset) % GpuTimestampQueryRing::kSlots;
+    if (!CullGpuTimeRing_.Pending[candidate]) { gpu_slot = candidate; break; }
+  }
+  const bool record_timing = CullGpuTimingAvailable_ && gpu_slot >= 0;
+  query_poll_timer.Stop();
+  const auto submit_t0 = std::chrono::steady_clock::now();
+  if (record_timing)
+  {
+    glBeginQuery(GL_TIME_ELAPSED, CullGpuTimeRing_.Queries[gpu_slot]);
+  }
   glDispatchCompute((n + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
-  glUseProgram(0);
-
-  uint32_t visible = 0;
-  if (CullStatsSsbo != 0)
+  if (record_timing)
   {
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsSsbo);
-    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &visible);
+    glEndQuery(GL_TIME_ELAPSED);
+    CullGpuTimeRing_.FrameIds[gpu_slot] = CullGpuTimeRing_.NextSubmission++;
+    CullGpuTimeRing_.PassIds[gpu_slot] = cache.passId;
+    CullGpuTimeRing_.Pending[gpu_slot] = true;
+    CullGpuTimeRing_.WriteIdx =
+        (gpu_slot + 1) % GpuTimestampQueryRing::kSlots;
   }
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  LastCullOpaqueOn_ = visible;
+  glUseProgram(0);
+  LastCullSubmitCpuMs_ = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - submit_t0)
+                             .count();
+
+  ScopedElapsedTimer post_submit_timer(LastCullPostSubmitCpuMs_);
+  // Q8: HUD/perf uses fence-delayed staging copy — no blocking SubData wait.
+  PollCullStatsAsyncRing();
+  const bool stats_enabled =
+      CullStatsReadbackEnabled_ ||
+      gCullStatsReadbackOnce.exchange(false, std::memory_order_relaxed);
+  if (stats_enabled)
+  {
+    ArmCullStatsAsyncSample(cache.passId);
+  }
+  if (stats_enabled && StagedCullStatsValid_)
+  {
+    LastCullOpaqueOn_ = StagedCullStatsVisible_;
+  }
+  else
+  {
+    LastCullOpaqueOn_ = LastCpuAabbWouldOn_;
+  }
 
   // No full vis readback: IndirectCmdsBuffer is authoritative for MultiDraw.
   // Keep CPU drawInstanceCount=1 so rare DrawElementsBaseVertex fallback still
   // draws (overdraw-only if compact culled); avoids N-uint GetBufferSubData.
-  for (GreedyGpuBatch &b : cache.batches)
   {
-    b.drawInstanceCount =
-        (b.pooled && b.indexCountGl > 0) ? 1u : 0u;
+    ScopedElapsedTimer batch_state_timer(LastCullBatchStateCpuMs_);
+    for (GreedyGpuBatch &b : cache.batches)
+    {
+      b.drawInstanceCount =
+          (b.pooled && b.indexCountGl > 0) ? 1u : 0u;
+    }
   }
   cache.IndirectCullReady = true;
   cache.GpuCompactActive = true;
   cache.CompactVisCpuSynced = false;
+  if (LastCullOpaqueOn_ > 0)
+  {
+    cache.LastGoodCullOn = LastCullOpaqueOn_;
+  }
+  post_submit_timer.Stop();
+  const double post_submit_attributed_ms =
+      LastCullStatsPollCpuMs_ + LastCullStatsArmCpuMs_ +
+      LastCullBatchStateCpuMs_;
+  LastCullPostSubmitOtherCpuMs_ =
+      (std::max)(0.0, LastCullPostSubmitCpuMs_ - post_submit_attributed_ms);
   return true;
 #endif
 }
@@ -835,6 +1297,25 @@ void UMdiVertexPoolStore::FlipBucketOwnership(MeshGpuBucketHandle handle)
   MappedHandle = {};
   StagingScratch.clear();
   MappedPtr = nullptr;
+}
+
+uint64_t ConsumeGpuCullStatsReadbackCount()
+{
+  const uint64_t v = gCullStatsReadback;
+  gCullStatsReadback = 0;
+  return v;
+}
+
+uint64_t ConsumeCullStatsSyncReadN()
+{
+  const uint64_t v = gCullStatsSyncReadN;
+  gCullStatsSyncReadN = 0;
+  return v;
+}
+
+void RequestCullStatsReadbackOnce()
+{
+  gCullStatsReadbackOnce.store(true, std::memory_order_relaxed);
 }
 
 } // namespace cutum

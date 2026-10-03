@@ -228,5 +228,23 @@
       32
     ],
     "animation_profile": "chicken"
+  },
+  "vitals": {
+    "max_health": 16,
+    "max_satiety": 100,
+    "max_thirst": 100,
+    "max_fatigue": 100,
+    "max_breath": 100,
+    "max_fatal_wounds": 1,
+    "armor": 0
+  },
+  "attributes": {
+    "strength": 4,
+    "agility": 12,
+    "endurance": 8,
+    "accuracy": 4,
+    "intelligence": 3,
+    "luck": 6,
+    "perception": 10
   }
 }

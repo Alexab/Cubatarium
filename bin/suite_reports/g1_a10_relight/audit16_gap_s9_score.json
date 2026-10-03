@@ -1,0 +1,21 @@
+{
+  "label": "audit16_gap_s9_acceptance",
+  "verdict": "OPEN-with-blockers",
+  "merge_green": false,
+  "cold": [
+    {"report": "audit16_gap_s9_c1_cold.json", "west": "COVERED", "eye": true, "incomplete": 0.0, "dual": false, "stalled_med": 53.0},
+    {"report": "audit16_gap_s9_c2_cold.json", "west": "COVERED", "eye": true, "incomplete": 0.0, "dual": false, "stalled_med": 52.5},
+    {"report": "audit16_gap_s9_c3_cold.json", "west": "COVERED", "eye": true, "incomplete": 0.0, "dual": false, "stalled_med": 53.0}
+  ],
+  "warm": [
+    {"report": "audit16_gap_s9_w1_warm.json", "west": "COVERED", "eye": true, "incomplete": 0.0, "dual": false, "stalled_med": 54.0},
+    {"report": "audit16_gap_s9_w2_warm.json", "west": "COVERED", "eye": true, "incomplete": 0.0, "dual": false, "stalled_med": 56.0},
+    {"report": "audit16_gap_s9_w3_warm.json", "west": "COVERED", "eye": true, "incomplete": 0.0, "dual": false, "stalled_med": 64.5}
+  ],
+  "blockers": [
+    "operator_visual UNTESTED",
+    "continuous 10-15min soak OPEN",
+    "dual-lane mid stalled OPEN",
+    "stop rim plateau <=2 OPEN"
+  ]
+}

@@ -214,6 +214,17 @@ bounded idle drain owner. Refresh/Admit×N не являются primary.
 | `mesh_schedule = min(..., 6)` on holes | `mesh_async≈2` while Dirty 300+ | **Async throughput floor** |
 | Fog pull-in / draw-hide as throughput fix | Masks unfinished | Cosmetics only |
 | Expect GPU packed to close SoftDefer holes | Cost path only | Stage SLA + Capture floor |
+| Calm-wall Imm as primary FirstMesh (`last_frame_ms≤40`) | `stand_rim_imm_n=0` (151212) | Dirty+async FirstMesh floor; Imm=edit only |
+| Stand vs cruise sticky Imm fork | Heal zoo / thrash | Single DesiredStage path |
+| Wall≤50 on stale-wave **enqueue** | `stale_repair_wave_n=0` under miss | Enqueue without wall; throttle cost only |
+| Stream/mesh nested in `DoMovement` | phys~170 with `physics_block≈0` | `TickWorldStreamingPhase` outside locomotion |
+
+### V4 status (Era14)
+
+V2/V3 contracts locked (RenderReady, seed-at-commit hook, ColumnFlow). **V4 is
+now primary execution** — not “after stabilization”: gap is frame contract +
+DesiredStage collapse of post-Era13 heal knobs. See
+[`ERA14_POSTMORTEM.md`](ERA14_POSTMORTEM.md), TD-ARCH-040..048.
 
 ### Target decisions (locked)
 

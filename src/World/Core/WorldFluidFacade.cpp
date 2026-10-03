@@ -1,4 +1,5 @@
 #include "World/Core/WorldFluidFacade.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include <unordered_set>
 
 #include "Blocks/BlockRegistry.h"
@@ -76,11 +77,21 @@ bool UWorldFluidFacade::TryAddFluidObject(UWorld &world, glm::ivec3 block_pos,
                                      liquid_id, place_state);
   ++world.CachedBlockCount;
   world.BlockWorldReady = true;
-  world.MarkBlockChunkDirty(block_pos);
+  world.MarkBlockChunkDirty(block_pos, /*sync_neighbor_chunks=*/true,
+                            /*sync_light_ring=*/false);
   world.PublishBlockPhysicsEvent(block_pos);
   world.PublishNeighborPhysicsEvents(block_pos);
   if (world.GetPhysicsFeatureFlags().EnableFluids)
   {
+    // Player place must enter the fluid queue immediately — TryEnqueue is
+    // gated by spread period and can miss a one-shot place off-phase.
+    // Force-enqueue source + face neighbors (air pull drives horizontal spread;
+    // source tick alone does not push sideways).
+    world.ForceEnqueueFluidAt(block_pos);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      world.ForceEnqueueFluidAt(block_pos + offset);
+    }
     EnqueueFluidFrontierAt(world, block_pos);
   }
   return true;
@@ -112,13 +123,14 @@ void UWorldFluidFacade::ApplyBreakSiteFluidFlood(
   UBlockWorld &block_world = world.GetBlockWorld();
   if (block_world.IsAir(block_pos) && world.BlockPhysicsService)
   {
-    world.TryEnqueueFluidAt(block_pos);
+    world.ForceEnqueueFluidAt(block_pos);
   }
   for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
   {
     const glm::ivec3 neighbor = block_pos + offset;
     if (registry.IsLiquid(block_world.GetBlock(neighbor)))
     {
+      world.ForceEnqueueFluidAt(neighbor);
       mesh_touch_blocks.push_back(neighbor);
     }
   }
@@ -166,7 +178,8 @@ void UWorldFluidFacade::MarkFluidRegionDirty(UWorld &world, glm::ivec3 center,
     }
     else
     {
-      world.MeshService->MarkDirty(chunk_coord);
+      world.MeshService->MarkDirty(chunk_coord,
+                                   MeshRevisionBumpReason::FluidWorldGeometry);
     }
   }
 }
@@ -210,7 +223,8 @@ void UWorldFluidFacade::MarkFluidFloodMeshDirty(
         continue;
       }
     }
-    world.MeshService->MarkDirty(chunk_coord);
+    world.MeshService->MarkDirty(chunk_coord,
+                                 MeshRevisionBumpReason::FluidWorldGeometry);
   }
 }
 

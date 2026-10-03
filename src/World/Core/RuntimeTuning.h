@@ -45,7 +45,15 @@ struct URuntimeTuning
   float CaptureSyncSkipWallMs{110.0f};
   float CaptureIdlePendingMaxWallMs{160.0f};
   /// Cruise max Captures/frame (TD-ARCH-015: worker Capture still backlog).
+  /// Keep at 1. Throughput 2–3 is DynamicCaptureMovingBgCap after cheap
+  /// center+edge Capture (drain med ≤8); do not raise this base.
   int CaptureMovingBgCap{1};
+
+  /// Phase 5.1 T3: hard wall for TickWorldStreamingPhase (ms). Default 5 —
+  /// kill-switch for enter quality (raise via JSON `streaming_phase_budget_ms`).
+  /// MissReservedMs / MissEmergeFloorMs carve-out unchanged — FirstMesh/emerge
+  /// heal still runs under near miss / underfeet.
+  float StreamingPhaseBudgetMs{5.0f};
 
   /// RebuildChunkImmediate hard budget (idle only; moving sync_cap=0).
   float ImmediateBudgetHotMs{3.0f};
@@ -85,6 +93,22 @@ struct URuntimeTuning
   int DirtyThrashAsyncMin{12};
   int PendingLightSoftCap{80};
   int RelightFifoSoftCap{96};
+  /// Cruise wall P0: remesh DirtyAdmit caps under Pressure/fifo thrash.
+  int DirtyAdmitCapRed{0};
+  int DirtyAdmitCapYellow{1};
+  float RelightFifoAdmitFrac{0.75f};
+  /// Cruise wall P2: miss FirstMesh/GPU reserved ms inside StreamingPhaseBudget.
+  /// Clamped to StreamingPhaseBudgetMs at apply time when larger than phase.
+  float MissReservedMs{2.0f};
+  /// Under miss/holes, never starve emerge below this when stream overruns general.
+  float MissEmergeFloorMs{2.0f};
+  /// Era19 kill-switch: SoftDefer Capture floor while VisibleBlack (Era18).
+  /// Default true = current Era18 behavior until miss-first budget owns it.
+  bool Era18VbCaptureFloor{true};
+  /// Era19 kill-switch: bg_budget floor while VisibleBlack (Era18).
+  bool Era18VbBgBudgetFloor{true};
+  /// Era19 P1: unified miss-first FrameStreamingBudget (default on).
+  bool MissFirstFrameBudget{true};
   int GpuVertexPoolReserveMb{64};
   int GpuVertexPoolMaxMb{256};
   int MaxKeepPrefetchMargin{4};
@@ -98,12 +122,62 @@ struct URuntimeTuning
   /// Cumulative buffer expand events (Completed rings / GPU Reserve).
   uint64_t BufferExpandEvents{0};
 
+  /// Era41b/Era42: Enter lit pass knobs (streaming_tune.json / defaults).
+  /// Warn threshold ms (force-abort only when EnterLitRequireZero=false).
+  int EnterFovLitHardWallMs{120000};
+  /// Captures per TickEnterFovLitPass frame (main-thread; workers parallelize).
+  int EnterFovLitCaptureBudget{16};
+  /// DrainAsyncRelightResults budget while enter lit is active.
+  int EnterFovLitApplyBudget{64};
+  /// Capture wall budget (ms) while EnterFovLitPassActive — feeds workers.
+  float EnterFovLitCaptureDrainMs{80.0f};
+  /// Inflight multiplier overlay during enter lit (× RelightThreadCount).
+  int EnterFovLitInflightMult{12};
+  /// Era42: hold progress bar until lit debt==0 (hard-wall does not abort).
+  bool EnterLitRequireZero{true};
+  /// Era43: debt = RD snapshot at gate begin (not global PendingLight.size).
+  bool EnterLitUseSnapshotDebt{true};
+  /// Era43: force enter after ms if ingress frozen (0 = disabled).
+  int EnterLitAbortMs{600000};
+  /// Era43f: force enter when mesh warmup stuck with fov_debt==0 (0 = disabled).
+  int EnterMeshAbortMs{120000};
+  /// Era44: TickEnterGateMeshDrain iterations per gpu_warmup frame.
+  int EnterGateMeshDrainIterations{6};
+  /// Era44: last-resort InGame after abort-drain (0 = disabled; default 150s).
+  int EnterForceInGameMs{150000};
+  /// Era49: strict Enter VisualReady (outcome gate; no Sticky/plateau shortcuts).
+  /// Enter blocking ≠ Cruise progressive — flag only affects enter exit path.
+  bool StrictEnterVisualReady{true};
+  /// FZ2.1-B3: gated lit-ring defer (false → legacy unconditional FullyDark skip).
+  bool Fz2DeferGated{true};
+  /// FZ2.2-C1a: lit-ring seed duplicate Enqueue+Note on terrain commit (false = off).
+  bool Fz2LitRingSeed{false};
+
+  /// Perf-root P3: disable diet/cadence/witness-pin heuristics for A/B.
+  /// Env CUBA_STREAM_SIMPLE=1 or streaming_tune.json "stream_simple": true.
+  bool StreamSimple{false};
+  /// Phase5.1 T2: allow schedule shed / deadline soft-exit with UV≤1 / nr≤1.
+  /// false restores legacy unfinished_protect (UV>0 || nr>0 blocks).
+  /// Env CUBA_SCHEDULE_SHED_UV1=0|1 or streaming_tune.json "schedule_shed_uv1".
+  bool ScheduleShedUv1{true};
+
+  /// SoT 210431: unload amortize mode 0..4 (U0..U-D). Bake-off winner = U-A (1).
+  int UnloadAmortizeMode{1};
+  /// SoT 210431: keep-shell amortize mode 0..4 (K0..K-D). Bake-off winner = K-B (2).
+  int KeepShellAmortizeMode{2};
+
+  /// A10 RelightReplace: MarkRelit sole Dirty owner for published FullyDark.
+  /// Default true (legacy). Sysreset bisect: CUBA_RELIGHT_REPLACE_OWNER=0.
+  bool RelightReplaceDirtyOwner{true};
+
   static URuntimeTuning &Get();
   static void ResetToDefaults();
   /// Apply low|med|high preset (keeps other knobs unless tier sets them).
   static void ApplyMemoryTier(const char *tier);
   /// Overlay knobs from bin/streaming_tune.json (flight_sim_iterate).
   static void LoadStreamingTuneFile(const char *path);
+  /// Apply CUBA_STREAM_SIMPLE / related env overrides (call after LoadStreamingTuneFile).
+  static void ApplyEnvOverrides();
 };
 
 } // namespace cutum

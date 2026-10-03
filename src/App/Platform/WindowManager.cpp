@@ -7,10 +7,15 @@
 #include "App/Platform/Log.h"
 #include "Blocks/Input/BlockInputController.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Influence/InfluenceApplier.h"
+#include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Player/User.h"
 #include "Game/CreatureVisualQaSpawner.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Game/WorldGameMode.h"
+#include "Game/ModePolicy.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Interfaces/IUInventoryViewModel.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -19,12 +24,20 @@
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image.h"
+#include "ThirdParty/stb_image_write.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Diagnostics/Profile.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "Core/Progress/IUProgressSink.h"
+#include "Core/FrameStageWatchdog.h"
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -84,6 +97,60 @@ void TrySetWindowIcon(GLFWwindow *window)
   }
 }
 
+bool CaptureFramebufferPng(GLFWwindow *window,
+                           const std::filesystem::path &path)
+{
+  if (!window)
+  {
+    return false;
+  }
+  int width = 0;
+  int height = 0;
+  glfwGetFramebufferSize(window, &width, &height);
+  if (width <= 0 || height <= 0)
+  {
+    return false;
+  }
+
+  GLint previous_read_framebuffer = 0;
+  GLint previous_read_buffer = GL_BACK;
+  GLint previous_pack_alignment = 4;
+  glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previous_read_framebuffer);
+  glGetIntegerv(GL_READ_BUFFER, &previous_read_buffer);
+  glGetIntegerv(GL_PACK_ALIGNMENT, &previous_pack_alignment);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+  glReadBuffer(GL_BACK);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+  const size_t row_bytes = static_cast<size_t>(width) * 4u;
+  std::vector<unsigned char> pixels(row_bytes * static_cast<size_t>(height));
+  glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+               pixels.data());
+
+  glPixelStorei(GL_PACK_ALIGNMENT, previous_pack_alignment);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER,
+                    static_cast<GLuint>(previous_read_framebuffer));
+  glReadBuffer(static_cast<GLenum>(previous_read_buffer));
+
+  // OpenGL returns the bottom row first; PNG image coordinates start at top.
+  std::vector<unsigned char> top_down(pixels.size());
+  for (int y = 0; y < height; ++y)
+  {
+    const size_t src = static_cast<size_t>(height - 1 - y) * row_bytes;
+    const size_t dst = static_cast<size_t>(y) * row_bytes;
+    std::memcpy(top_down.data() + dst, pixels.data() + src, row_bytes);
+  }
+
+  std::error_code ec;
+  std::filesystem::create_directories(path.parent_path(), ec);
+  if (ec)
+  {
+    return false;
+  }
+  return stbi_write_png(path.string().c_str(), width, height, 4,
+                        top_down.data(), static_cast<int>(row_bytes)) != 0;
+}
+
 } // namespace
 
 UWindowManager::UWindowManager()
@@ -113,6 +180,10 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
   {
     glfwDefaultWindowHints();
     glfwWindowHint(GLFW_VISIBLE, visible ? GLFW_TRUE : GLFW_FALSE);
+    if (visible)
+    {
+      glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
+    }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -188,6 +259,20 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
 
   // Input manager creation
   InputManager->Initialize(Window);
+
+  // Keep explicit flight-sim visibility reliable on Windows. The GLFW hint
+  // requests an initially visible window, but some launch paths create the
+  // context while the parent console is in the foreground. Re-show after GL
+  // initialization so the operator gets a real window to inspect.
+  if (visible)
+  {
+    glfwShowWindow(Window);
+    glfwFocusWindow(Window);
+    CubatariumLogInfo(
+        "Window", glfwGetWindowAttrib(Window, GLFW_VISIBLE) == GLFW_TRUE
+                      ? "Visible window shown"
+                      : "Visible window request did not take effect");
+  }
 
   IsInitialized = true;
   return true;
@@ -315,14 +400,19 @@ void UWindowManager::Run()
   ApplyPresentSettings();
   UFramePerfMonitor::EnsureSession();
 
-  while (!glfwWindowShouldClose(Window) && IsRunning)
+  while ((!glfwWindowShouldClose(Window) &&
+          !(Application && Application->IsQuitRequested())) &&
+         IsRunning)
   {
     const auto frame_begin = std::chrono::high_resolution_clock::now();
     DeltaTime =
         std::chrono::duration<double>(frame_begin - LastFrameTime).count();
     LastFrameTime = frame_begin;
 
-    glfwPollEvents();
+    {
+      UFrameStageWatchdog::Scope stage("window.poll_events");
+      glfwPollEvents();
+    }
 
     if (World)
     {
@@ -331,7 +421,10 @@ void UWindowManager::Run()
 
     // Input processing
     const auto input_begin = std::chrono::high_resolution_clock::now();
-    ProcessInput();
+    {
+      UFrameStageWatchdog::Scope stage("window.process_input");
+      ProcessInput();
+    }
     const double input_ms = std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() -
                                 input_begin)
@@ -339,6 +432,7 @@ void UWindowManager::Run()
     const auto app_begin = std::chrono::high_resolution_clock::now();
     if (Application)
     {
+      UFrameStageWatchdog::Scope stage("window.application_update");
       Application->Update(DeltaTime);
     }
     const double app_ms = std::chrono::duration<double, std::milli>(
@@ -348,7 +442,10 @@ void UWindowManager::Run()
 
     // Logic update (includes DoMovement → phys_ms)
     const auto world_begin = std::chrono::high_resolution_clock::now();
-    Update();
+    {
+      UFrameStageWatchdog::Scope stage("window.logic_update");
+      Update();
+    }
     const double world_ms = std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() -
                                 world_begin)
@@ -363,7 +460,10 @@ void UWindowManager::Run()
     // Outside world_ms so autosave Init/Ticks do not inflate world_extra.
     {
       const auto t_autosave = std::chrono::high_resolution_clock::now();
-      TickBudgetedAutosave();
+      {
+        UFrameStageWatchdog::Scope stage("window.autosave");
+        TickBudgetedAutosave();
+      }
       if (World)
       {
         World->SetLastAutosaveMs(
@@ -373,19 +473,69 @@ void UWindowManager::Run()
       }
     }
 
+    // Flight-sim stop: skip a final heavy render once the harness predicate fires.
+    bool stop_before_render = false;
+    {
+      UFrameStageWatchdog::Scope stage("window.stop_predicate");
+      stop_before_render = StopPredicate && StopPredicate();
+    }
+    if (stop_before_render)
+    {
+      IsRunning = false;
+      break;
+    }
+
     // Rendering
+    CUBA_FRAME_MARK;
     const auto render_begin = std::chrono::high_resolution_clock::now();
-    Render();
+    {
+      UFrameStageWatchdog::Scope stage("window.render");
+      Render();
+    }
     if (World)
     {
       World->SetLastRenderTotalMs(
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - render_begin)
-              .count());
+                .count());
+    }
+
+    // Opt-in visual evidence for visible flight-sim runs. Read the real
+    // default-framebuffer image before swap; keep the disabled path to one
+    // cached environment lookup and capture at a low cadence when enabled.
+    static const char *flight_capture_dir =
+        std::getenv("CUBA_FLIGHT_CAPTURE_DIR");
+    if (flight_capture_dir && flight_capture_dir[0] != '\0' && World &&
+        Application && Application->GetState() == AppState::InGame)
+    {
+      static auto next_capture = std::chrono::steady_clock::time_point{};
+      static uint32_t capture_index = 0;
+      const auto capture_now = std::chrono::steady_clock::now();
+      if (next_capture == std::chrono::steady_clock::time_point{} ||
+          capture_now >= next_capture)
+      {
+        next_capture = capture_now + std::chrono::seconds(15);
+        std::ostringstream filename;
+        filename << "frame_" << std::setw(3) << std::setfill('0')
+                 << capture_index++ << ".png";
+        {
+          UFrameStageWatchdog::Scope stage("window.frame_capture");
+          if (!CaptureFramebufferPng(
+                  Window, std::filesystem::path(flight_capture_dir) /
+                              filename.str()))
+          {
+            CubatariumLogInfo("FlightCapture",
+                              "Unable to capture framebuffer PNG");
+          }
+        }
+      }
     }
 
     const auto swap_begin = std::chrono::high_resolution_clock::now();
-    glfwSwapBuffers(Window);
+    {
+      UFrameStageWatchdog::Scope stage("window.swap_buffers");
+      glfwSwapBuffers(Window);
+    }
     const auto frame_end = std::chrono::high_resolution_clock::now();
     const double swap_wait_ms =
         std::chrono::duration<double, std::milli>(frame_end - swap_begin)
@@ -396,8 +546,6 @@ void UWindowManager::Run()
     if (World)
     {
       World->SetLastSwapWaitMs(swap_wait_ms);
-      // Same-frame wall for perf log (HUD still uses inter-frame DeltaTime).
-      World->SetWallFrameDelta(frame_wall_ms / 1000.0);
     }
     if (World && Application && Application->GetState() == AppState::InGame)
     {
@@ -406,12 +554,17 @@ void UWindowManager::Run()
       {
         interval = Core->GetUiSettings().PerfLogIntervalSec;
       }
-      UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval);
-      // Restore inter-frame delta for gameplay timing consistency next frame.
-      World->SetWallFrameDelta(DeltaTime);
+      UFrameStageWatchdog::Scope stage("window.perf_emit");
+      UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval,
+                                       frame_wall_ms);
     }
 
-    if (StopPredicate && StopPredicate())
+    bool stop_after_frame = false;
+    {
+      UFrameStageWatchdog::Scope stage("window.stop_predicate");
+      stop_after_frame = StopPredicate && StopPredicate();
+    }
+    if (stop_after_frame)
     {
       IsRunning = false;
     }
@@ -499,6 +652,26 @@ void UWindowManager::Update()
     PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
     tele.ViewsMs = 0.0;
     tele.DoMovementMs = 0.0;
+    tele.EnsureCollisionMs = 0.0;
+    tele.CreatureTickMs = 0.0;
+    tele.CameraDoMovementMs = 0.0;
+    tele.CameraGroundSupportMs = 0.0;
+    tele.CameraLocomotionMs = 0.0;
+    tele.CameraHorizMoveMs = 0.0;
+    tele.CameraSyncMs = 0.0;
+    tele.EnvironmentTickMs = 0.0;
+    tele.NpcIntentExecuteMs = 0.0;
+    tele.ControlledInfluenceMs = 0.0;
+    tele.VitalsTickMs = 0.0;
+    tele.StatusEffectsTickMs = 0.0;
+    tele.CreaturesTotal = 0;
+    tele.CreaturesAiTicked = 0;
+    tele.WorldCreaturesSkipped = 0;
+    tele.PlayerLocomotionBlockMs = 0.0;
+    tele.WorldAiAfterPlayerMs = 0.0;
+    tele.CreaturesAiBudget = 0;
+    tele.CreaturesAiDeferred = 0;
+    tele.WorldStreamingPhaseMs = 0.0;
     tele.BlockInputMs = 0.0;
     tele.TickEnvMs = 0.0;
     tele.BreakCompleteN = 0;
@@ -506,6 +679,13 @@ void UWindowManager::Update()
     tele.BreakDarkFaceN = 0;
     tele.PlaceCompleteN = 0;
     tele.PlaceEmissionN = 0;
+    tele.AutosaveDeferredN = 0;
+    tele.AutosaveSkippedTickN = 0;
+    tele.DigSeamPendingN = 0;
+    tele.DigSeamRemeshN = 0;
+    tele.StaleRepairWaveN = 0;
+    tele.StandRimDirtyN = 0;
+    tele.StandRimImmN = 0;
     tele.EditLightEmission = 0;
     tele.FastRelightMs = 0.0;
     tele.EditToFirstMeshMs = 0.0;
@@ -514,7 +694,10 @@ void UWindowManager::Update()
   if (Views)
   {
     const auto t0 = clock::now();
-    Views->UpdateFrameTime();
+    {
+      UFrameStageWatchdog::Scope stage("world.views_update");
+      Views->UpdateFrameTime();
+    }
     if (World)
     {
       World->GetPhysicsTelemetryMutable().ViewsMs =
@@ -526,10 +709,20 @@ void UWindowManager::Update()
   {
     {
       const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.do_movement");
       World->DoMovement();
       World->GetPhysicsTelemetryMutable().DoMovementMs =
           std::chrono::duration<double, std::milli>(clock::now() - t0).count();
     }
+    // Era14: stream/mesh outside DoMovement so phys_ms stays locomotion-only.
+    {
+      const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.streaming_phase");
+      World->TickWorldStreamingPhase();
+      World->GetPhysicsTelemetryMutable().WorldStreamingPhaseMs =
+          std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    }
+    UFrameStageWatchdog::Scope break_stage("world.post_streaming_logic");
     if (World->ConsumeFlightSimBreakRequest())
     {
       if (auto camera = World->GetCurrentUserCamera())
@@ -567,13 +760,34 @@ void UWindowManager::Update()
       }
       if (have_target)
       {
-        World->StartBreakSession(target);
-        World->CompleteBreakSession();
+        if (UCreature *controlled = World->GetControlledCreature())
+        {
+          CreatureIntent intent = controlled->GetIntent();
+          intent.attackTargetId = 0;
+          intent.Influence = InfluenceIntent{};
+          intent.Influence.Channel = InfluenceChannel::Dig;
+          intent.Influence.TargetBlockPos = target;
+          intent.Influence.HasTargetBlock = true;
+          controlled->SetIntent(intent);
+          InfluencePrediction pred = InfluenceResolver::Resolve(
+              *World, *controlled, World->GetGameMode(), nullptr);
+          InfluenceApplier::Apply(*World, pred, World->GetGameMode(),
+                                  /*dt=*/1.0e6f);
+          CreatureIntent cleared = controlled->GetIntent();
+          cleared.Influence = InfluenceIntent{};
+          controlled->SetIntent(cleared);
+        }
+        else
+        {
+          World->StartBreakSession(target);
+          World->CompleteBreakSession();
+        }
       }
     }
     if (BlockInput)
     {
       const auto t0 = clock::now();
+      UFrameStageWatchdog::Scope stage("world.block_input");
       BlockInputContext ctx;
       ctx.World = World;
       ctx.Geometries = Geometries.get();
@@ -583,6 +797,23 @@ void UWindowManager::Update()
       BlockInput->Tick(static_cast<float>(DeltaTime), ctx);
       World->GetPhysicsTelemetryMutable().BlockInputMs =
           std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    }
+    RefreshEditHotSticky();
+    // DigSeam after BlockInput so dig Immediate is visible and we do not stack
+    // a second Immediate on the dig frame (manual 215711).
+    {
+      PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
+      UWorldMeshService &mesh = World->GetMeshService();
+      UFrameStageWatchdog::Scope stage("world.dig_seam_drain");
+      mesh.TickDigSeamDrain(World->GetBlockWorld(), World->GetBlockRegistry(),
+                            &tele);
+      tele.DigSeamPendingN = mesh.GetLastDigSeamPendingN();
+      tele.DigSeamRemeshN = mesh.GetLastDigSeamRemeshN();
+      if (tele.DigSeamRemeshN > 0)
+      {
+        tele.MeshImmediateCount = mesh.GetLastMeshImmediateCount();
+        tele.MeshImmediateMs = mesh.GetLastMeshImmediateMs();
+      }
     }
   }
 
@@ -601,13 +832,50 @@ void UWindowManager::Update()
              std::chrono::duration<double>(now - LastAutosaveTime).count() >=
                  KAutosaveIntervalSec)
     {
+      // Do not advance LastAutosaveTime here — deferred Begin would burn the
+      // interval (dig hitch manual 215711).
       AutosaveRequested = true;
-      LastAutosaveTime = now;
     }
   }
   else
   {
     SeenInGameForAutosave = false;
+  }
+}
+
+bool UWindowManager::IsEditHotForAutosave() const
+{
+  if (!World)
+  {
+    return false;
+  }
+  const PhysicsTelemetry &tele = World->GetPhysicsTelemetry();
+  if (tele.BreakCompleteN > 0 || tele.PlaceCompleteN > 0)
+  {
+    return true;
+  }
+  // Use per-frame Immediate count only — LastEditImmediateN is last-edit policy
+  // size and stays non-zero across idle frames.
+  if (World->GetMeshService().GetLastMeshImmediateCount() > 0)
+  {
+    return true;
+  }
+  return std::chrono::steady_clock::now() < EditHotUntil;
+}
+
+void UWindowManager::RefreshEditHotSticky()
+{
+  if (!World)
+  {
+    return;
+  }
+  const PhysicsTelemetry &tele = World->GetPhysicsTelemetry();
+  if (tele.BreakCompleteN > 0 || tele.PlaceCompleteN > 0 ||
+      World->GetMeshService().GetLastMeshImmediateCount() > 0)
+  {
+    EditHotUntil = std::chrono::steady_clock::now() +
+                   std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                       std::chrono::duration<double>(KEditHotStickySec));
   }
 }
 
@@ -630,16 +898,24 @@ void UWindowManager::TickBudgetedAutosave()
     }
     return;
   }
+  PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
   if (AutosaveRequested && !AutosaveInProgress)
   {
-    AutosaveRequested = false;
+    if (IsEditHotForAutosave())
+    {
+      ++tele.AutosaveDeferredN;
+      return;
+    }
     const std::string folder = Core->GetActiveWorldFolder().string();
     if (folder.empty() || World->HasActiveCooperativeOperation())
     {
+      // Keep AutosaveRequested so we retry next frame.
       return;
     }
     World->BeginCooperativeSave(folder);
     AutosaveInProgress = true;
+    AutosaveRequested = false;
+    LastAutosaveTime = std::chrono::steady_clock::now();
   }
   if (!AutosaveInProgress)
   {
@@ -650,8 +926,13 @@ void UWindowManager::TickBudgetedAutosave()
     AutosaveInProgress = false;
     return;
   }
+  if (IsEditHotForAutosave())
+  {
+    ++tele.AutosaveSkippedTickN;
+    return;
+  }
   UNullProgressSink sink;
-  if (World->TickCooperativeSave(sink, /*chunkBudget=*/8))
+  if (World->TickCooperativeSave(sink, /*chunkBudget=*/1))
   {
     World->ResumeAfterSessionSave();
     AutosaveInProgress = false;
@@ -754,7 +1035,17 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     {
       if (auto camera = World->GetCurrentUserCamera())
       {
-        if (camera->TryToggleFlightOnDoubleSpace() && Geometries)
+        CreatureHabitat habitat = CreatureHabitat::Terrestrial;
+        if (UCreature *controlled = World->GetControlledCreature())
+        {
+          if (const CreatureDefinition *def =
+                  World->GetCreatureDefinition(controlled->GetTypeId()))
+          {
+            habitat = def->habitat;
+          }
+        }
+        if (ModePolicy::AllowsFlight(World->GetGameMode(), habitat) &&
+            camera->TryToggleFlightOnDoubleSpace() && Geometries)
         {
           const std::string msg =
               camera->GetFreeMove()
@@ -767,8 +1058,8 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     else if (key == KeyCode::Key_F12)
     {
 #ifndef __ANDROID__
-      if (Application && Application->GetGameSession().GetInventoryMode() ==
-                             InventoryMode::Creative)
+      if (Application && World &&
+          ModePolicy::AllowsQaSpawner(World->GetGameMode()))
       {
         UCreatureVisualQaSpawner spawner(*World);
         const bool batch = (Mods & GLFW_MOD_SHIFT) != 0;

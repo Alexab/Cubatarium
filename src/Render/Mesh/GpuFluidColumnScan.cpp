@@ -209,7 +209,9 @@ bool TryGpuScanFluidColumns(const uint8_t *fluid_flags, int height,
   }
   const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
 
-  // Desktop (GPF3): CPU scan on hot path — no sync GL readback on cruise.
+  // Desktop (GPF3): intentional CPU column scan on the hot path — NOT a GPU
+  // compute dispatch. Naming retained as TryGpu* for API stability; this branch
+  // avoids sync GL readback hitch on cruise. Android uses real GLES compute.
   if (caps.Platform == RenderPlatformKind::Desktop)
   {
     ScanFluidColumnsCpu(fluid_flags, height, out_top_y);

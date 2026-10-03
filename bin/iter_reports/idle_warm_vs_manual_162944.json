@@ -1,0 +1,67 @@
+{
+  "autofly": "bin\\iter_reports\\idle_warm_H1.json",
+  "manual": "bin\\iter_reports\\manual_latest_162944.json",
+  "mode": "idle-warm",
+  "rows": [
+    {
+      "key": "calm_stop_wall_med",
+      "autofly": 35.6628,
+      "manual": 124.838,
+      "ratio": 0.285672631730723
+    },
+    {
+      "key": "calm_stop_emerge_med",
+      "autofly": 8.66892,
+      "manual": 42.1583,
+      "ratio": 0.20562783603703186
+    },
+    {
+      "key": "calm_stop_stream_med",
+      "autofly": 10.1429,
+      "manual": 45.8936,
+      "ratio": 0.22100902958146668
+    },
+    {
+      "key": "stop_mesh_prep_med",
+      "autofly": 4.364649999999999,
+      "manual": 32.1025,
+      "ratio": 0.1359598162136905
+    },
+    {
+      "key": "dirty_med",
+      "autofly": 123.0,
+      "manual": 34.0,
+      "ratio": 3.6176470588235294
+    },
+    {
+      "key": "post_stop_focus_dirty_med",
+      "autofly": 100.0,
+      "manual": 95.0,
+      "ratio": 1.0526315789473684
+    },
+    {
+      "key": "opaque_cmd_on_med",
+      "autofly": 4.0,
+      "manual": 797.0,
+      "ratio": 0.005018820577164366
+    },
+    {
+      "key": "post_stop_black_sticky_max",
+      "autofly": 3.0,
+      "manual": 0.0,
+      "ratio": null
+    },
+    {
+      "key": "wall_ms_fly_med",
+      "autofly": 169.497,
+      "manual": 124.838,
+      "ratio": 1.3577356253704804
+    }
+  ],
+  "red_flags": [
+    "calm_stop_wall_med",
+    "stop_mesh_prep_med",
+    "calm_stop_stream_med"
+  ],
+  "pass": false
+}

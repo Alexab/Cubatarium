@@ -1,0 +1,29 @@
+﻿{
+  "phase": "product_174657_proxy_v3",
+  "adequacy_cold": "PASS",
+  "adequacy_warm": "PASS",
+  "cold_perf": "bin/logs/perf_20260914-125123_30808.jsonl",
+  "warm_perf": "bin/logs/perf_20260914-125331_45532.jsonl",
+  "cold": {
+    "vb_fly_med": 80.5,
+    "focus_missing_med": 1.0,
+    "miss_stuck_tail_max": 158.0,
+    "fog_rd": 4.0,
+    "player_y": "50->60",
+    "focus": "(7,3)->(2,3)",
+    "gpu_kick_fly_med": 1.0,
+    "gpu_kick_post_drain_max": 1.0
+  },
+  "warm": {
+    "vb_fly_med": 83.5,
+    "focus_missing_med": 1.0,
+    "miss_stuck_tail_max": 184.0,
+    "fog_rd": 4.0,
+    "player_y": "50->60",
+    "focus": "(7,3)->(2,3)",
+    "gpu_kick_fly_med": 1.0,
+    "gpu_kick_post_drain_max": 0.0
+  },
+  "product_g1": "OPEN",
+  "notes": "hold_space off + cruise_eye_y 56 reproduces miss-class; kick insufficient to clear stuck/VB"
+}

@@ -98,7 +98,17 @@ public:
   void ReloadAllCreatureVisuals();
 
   void TickActivity(class IUWorldPerception &perception,
-                    class UWorldCreatureActivitySink &sink, float dt);
+                    class UWorldCreatureActivitySink &sink, float dt,
+                    bool stress_tick = false);
+  void SyncCreatureSpatialIndex();
+  int GetLastActivityAgentsTicked() const
+  {
+    return ActivityDirector.GetLastAgentsTicked();
+  }
+  int GetLastActivityAgentsDeferred() const
+  {
+    return ActivityDirector.GetLastAgentsDeferred();
+  }
 
   bool CheckCreatureCollisionVolume(const CollisionVolume &vol,
                                     CreatureId skipCreatureId) const;
@@ -123,7 +133,6 @@ public:
   }
 
 private:
-  void SyncCreatureSpatialIndex();
 
   UWorld &Owner;
 

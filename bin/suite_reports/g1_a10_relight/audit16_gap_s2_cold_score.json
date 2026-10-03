@@ -1,0 +1,10 @@
+{
+  "label": "audit16_gap_s2_cold",
+  "perf_jsonl": "bin/logs/perf_20260917-112534_33872.jsonl",
+  "west_route_coverage": "COVERED",
+  "focus_cx_min": -8.0,
+  "eye_proxy_stop_line_pass": true,
+  "adequacy_pass": true,
+  "publication_incomplete_material_mid_med": 0.0,
+  "note": "RefreshPassRefs resident filter + I3t RetainedPrior; I3t policy still temporary KEEP"
+}

@@ -17,6 +17,11 @@
 #include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/SurvivalInventoryScreen.h"
+#include "Gui/Screens/CraftingScreen.h"
+#include "Gui/Screens/AnvilScreen.h"
+#include "Gui/Screens/DeathScreen.h"
+#include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
@@ -24,6 +29,7 @@
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -43,11 +49,14 @@ class UViewEngine;
 class UTextRenderer;
 class UShaderManager;
 class UGuiContext;
+class UGuiWidget;
 class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
 class UContentPreviewRenderer;
 class UCreaturePreviewRenderer;
+class UFpViewmodelRenderer;
+enum class FpSwingKind : uint8_t;
 class UMainMenuScreen;
 class UWorldResourcePacksScreen;
 
@@ -99,6 +108,11 @@ public:
   void Update(double dt);
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
+  void NotifyFpSwing(FpSwingKind kind);
+  void NotifyFpUseVisual(const std::string &presetId, bool hold);
+  void ClearFpHeldVisual();
+  void OpenCraftingScreen();
+  void OpenAnvilScreen();
   void SetViewportInsets(int left, int top, int right, int bottom);
   void SetKeyboardInsetBottom(int bottom);
   void SetUiScale(float scale);
@@ -149,6 +163,15 @@ public:
   void CreateNewWorldWithSettings(const ProceduralSettings &settings,
                                   const ResourcePackSelection &selection,
                                   const WorldViewSettings &view) override;
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const ResourcePackSelection &selection,
+                                  const WorldViewSettings &view,
+                                  WorldGameMode gameMode) override;
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const ResourcePackSelection &selection,
+                                  const WorldViewSettings &view,
+                                  WorldGameMode gameMode,
+                                  WorldDifficulty difficulty) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;
@@ -169,6 +192,7 @@ public:
   void ShowWorldSettings();
   void ShowNewWorld();
   void ShowLoadWorld();
+  void CloseCreativePalette();
   void BeginWorldOperation(WorldRunnerRequest request,
                            std::function<void()> onComplete = nullptr);
   void OnWorldOperationFinished();
@@ -194,6 +218,8 @@ private:
   bool BlocksGameMouseLook() const;
   bool TryRouteInGameOverlay(const GuiMouseEvent &event, bool Pressed);
   bool HasAnyOverlayCapture() const;
+  /// End inventory/overlay pointer gesture: drop or cancel drag, clear Pressed.
+  void FinishInventoryPointerGesture(const GuiMouseEvent &event);
   bool ResolveSlotAt(int x, int y, SlotAddress &out);
   void DrawDragGhost(int width, int height);
   void ClearGameplayKeyboard();
@@ -219,6 +245,11 @@ private:
   bool ConsoleOpen{false};
   bool PaletteOpen{false};
   bool WorldGenOpen{false};
+  bool CharacterSheetOpen{false};
+  bool SurvivalInventoryOpen{false};
+  bool CraftingOpen{false};
+  bool AnvilOpen{false};
+  bool DeathScreenOpen{false};
   bool FreeCursor{false};
   /// Подавить следующий glfw char после открытия консоли (символ
   /// клавиши-тоггла).
@@ -229,10 +260,17 @@ private:
     Palette,
     Console,
     Hud,
-    WorldGen
+    WorldGen,
+    CharacterSheet,
+    SurvivalInventory,
+    Crafting,
+    Anvil,
+    Death
   };
   static constexpr int kMaxOverlayPointers = 10;
   std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
+  /// Leaf widget that received overlay mouse-down (slot owner for teardown).
+  UGuiWidget *OverlayPressedWidget{nullptr};
   int NormalizeOverlayPointer(int PointerId) const;
   int DragCursorX{0};
   int DragCursorY{0};
@@ -254,9 +292,15 @@ private:
   std::unique_ptr<UGuiIconSource> IconSource;
   std::shared_ptr<UCreaturePreviewRenderer> CreaturePreviewRenderer;
   std::unique_ptr<UContentPreviewRenderer> ContentPreviewRenderer;
+  std::unique_ptr<UFpViewmodelRenderer> FpViewmodelRenderer;
   std::unique_ptr<UInGameHudScreen> HudScreen;
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
+  std::unique_ptr<USurvivalInventoryScreen> SurvivalInventoryScreen;
+  std::unique_ptr<UCraftingScreen> CraftingScreen;
+  std::unique_ptr<UAnvilScreen> AnvilScreen;
+  std::unique_ptr<UDeathScreen> DeathScreen;
+  std::unique_ptr<UCharacterSheetScreen> CharacterSheetScreen;
   std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;
   std::unique_ptr<IUGuiClipboard> Clipboard;
   std::unique_ptr<UGuiPopupMenu> OverlayPopup;

@@ -1,0 +1,414 @@
+schema_version: 1
+# Default `hardness` values for resource pack block JSON (Minecraft-like scale).
+#
+# Semantics (see docs/TECH_DEBT_BLOCK_BREAK.md, zone B):
+#   hardness == 0   -> unbreakable (bedrock, barrier, command block, end portal frame)
+#   hardness  > 0   -> bare-hand dig time scales with the value
+#   fluids get a deliberately high value so they are not dug like solids
+#
+# Lookup order used by tools/apply_block_hardness.py:
+#   1. `exact` map keyed by block name (file stem)
+#   2. `patterns` list, first fnmatch hit wins (order matters)
+#   3. `fallback`
+fallback: 1.0
+
+exact:
+  # --- Unbreakable -----------------------------------------------------------
+  barrier: 0
+  bedrock: 0
+  command_block: 0
+  end_portal_frame: 0
+  end_portal_frame_eye: 0
+  # Editor/UI helper block, never part of the world.
+  selection: 0
+
+  # --- Soil, sand, snow ------------------------------------------------------
+  clay: 0.6
+  dirt: 0.5
+  farmland_dry: 0.6
+  farmland_wet: 0.6
+  grass: 0.6
+  gravel: 0.5
+  hellsand: 0.5
+  mycelium: 0.6
+  sand: 0.5
+  snow: 0.5
+  snow_layer: 0.1
+
+  # --- Stone family ----------------------------------------------------------
+  brick: 2
+  hellrock: 0.4
+  nether_brick: 2
+  sandstone: 0.8
+  sandstone_carved: 0.8
+  sandstone_smooth: 0.8
+  stone: 1.5
+  stoneMoss: 2
+  stone_slab: 2
+  stone_slab_top: 2
+  stonebrick: 1.5
+  stonebricksmooth: 1.5
+  stonebricksmooth_carved: 1.5
+  stonebricksmooth_cracked: 1.5
+  stonebricksmooth_mossy: 1.5
+  whiteStone: 3
+  quartz_block: 0.8
+  quartz_chiseled: 0.8
+  quartz_pillar: 0.8
+  obsidian: 50
+
+  # --- Ores and mineral blocks ----------------------------------------------
+  nether_quartz_ore: 3
+  oreCoal: 3
+  oreDiamond: 3
+  oreEmerald: 3
+  oreGold: 3
+  oreIron: 3
+  oreLapis: 3
+  oreRedstone: 3
+  blockDiamond: 5
+  blockEmerald: 5
+  blockGold: 3
+  blockIron: 5
+  blockLapis: 3
+  blockRedstone: 5
+
+  # --- Wood ------------------------------------------------------------------
+  log_birch: 2
+  log_jungle: 2
+  log_spruce: 2
+  planks_birch: 2
+  planks_jungle: 2
+  planks_spruce: 2
+  tree_bark: 2
+  tree_birch: 2
+  tree_branch: 2
+  tree_log: 2
+  wood: 2
+  bookshelf: 1.5
+  crafting_table: 2.5
+  note_block: 2
+  jukebox: 2
+  trapdoor: 3
+  wooden_door: 3
+  wooden_door_upper: 3
+  ladder: 0.4
+
+  # --- Leaves and plants -----------------------------------------------------
+  leaves_jungle: 0.2
+  leaves_jungle_light: 0.2
+  leaves_spruce: 0.2
+  leaves_spruce_light: 0.2
+  leaves_transparent: 0.2
+  tree_leaves: 0.2
+  vines: 0.2
+  cocoa: 0.2
+  brown_mushroom_block: 0.2
+  red_mushroom_block: 0.2
+  mushroom_stem: 0.2
+  brown_mushroom: 0.05
+  red_mushroom: 0.05
+  cactus: 0.4
+  carrots: 0.05
+  deadbush: 0.05
+  fern: 0.05
+  flower: 0.05
+  flower_pot: 0.1
+  lily_pad: 0.1
+  melon: 1
+  melon_stem: 0.05
+  nether_wart: 0.05
+  potatoes: 0.05
+  pumpkin: 1
+  jack_o_lantern: 1
+  pumpkin_stem: 0.05
+  reeds: 0.05
+  rose: 0.05
+  sapling_birch: 0.05
+  sapling_jungle: 0.05
+  sapling_oak: 0.05
+  sapling_spruce: 0.05
+  tall_grass: 0.05
+  web: 4
+  wheat: 0.05
+
+  # --- Glass, ice, light -----------------------------------------------------
+  glass: 0.3
+  thin_glass: 0.3
+  ice: 0.3
+  glowstone: 0.3
+  redstone_lamp: 0.3
+  redstone_lamp_on: 0.3
+  beacon: 3
+
+  # --- Metal / utility blocks ------------------------------------------------
+  anvil: 5
+  anvil_slightly_damaged: 5
+  anvil_very_damaged: 5
+  brewing_stand: 0.5
+  cauldron: 2
+  daylight_sensor: 0.2
+  dispenser: 3.5
+  dragon_egg: 3
+  dropper: 3.5
+  enchantment_table: 5
+  furnace: 3.5
+  furnace_lit: 3.5
+  hopper: 3
+  iron_bars: 5
+  iron_door: 5
+  iron_door_upper: 5
+  item_frame: 0.25
+  mob_spawner: 5
+  piston: 0.5
+  piston_inner: 0.5
+  sticky_piston: 0.5
+  sponge: 0.6
+  tnt: 0.1
+
+  # --- Redstone wiring -------------------------------------------------------
+  activator_rail: 0.7
+  activator_rail_on: 0.7
+  detector_rail: 0.7
+  detector_rail_on: 0.7
+  golden_rail: 0.7
+  golden_rail_powered: 0.7
+  rail: 0.7
+  rail_curved: 0.7
+  comparator: 0.05
+  comparator_on: 0.05
+  repeater: 0.05
+  repeater_on: 0.05
+  lever: 0.5
+  redstone_dust: 0.05
+  redstone_dust_line: 0.05
+  redstone_torch: 0.05
+  redstone_torch_on: 0.05
+  torch: 0.05
+  tripwire: 0.05
+  tripwire_hook: 0.05
+  cake: 0.5
+
+  # --- Fluids and fire (not dug like solids) ---------------------------------
+  fire: 100
+  lava: 100
+  water: 100
+
+  # --- Wool ------------------------------------------------------------------
+  wool_0: 0.8
+  wool_1: 0.8
+  wool_2: 0.8
+  wool_3: 0.8
+  wool_4: 0.8
+  wool_5: 0.8
+  wool_6: 0.8
+  wool_7: 0.8
+  wool_8: 0.8
+  wool_9: 0.8
+  wool_10: 0.8
+  wool_11: 0.8
+  wool_12: 0.8
+  wool_13: 0.8
+  wool_14: 0.8
+  wool_15: 0.8
+
+  # --- Minetest-derived pack blocks (mtg_*) ----------------------------------
+  mtg_clay: 0.6
+  mtg_dirt: 0.5
+  mtg_dirt_with_coniferous_litter: 0.6
+  mtg_dirt_with_dry_grass: 0.6
+  mtg_dirt_with_grass: 0.6
+  mtg_dirt_with_grass_footsteps: 0.6
+  mtg_dirt_with_rainforest_litter: 0.6
+  mtg_dirt_with_snow: 0.5
+  mtg_dry_dirt: 0.5
+  mtg_dry_dirt_with_dry_grass: 0.6
+  mtg_gravel: 0.5
+  mtg_permafrost: 1.0
+  mtg_permafrost_with_moss: 1.0
+  mtg_permafrost_with_stones: 1.0
+  mtg_desert_sand: 0.5
+  mtg_sand: 0.5
+  mtg_sand_with_kelp: 0.5
+  mtg_silver_sand: 0.5
+  mtg_snow: 0.5
+  mtg_snowblock: 0.5
+  # Clouds are decorative sky blocks; soft rather than unbreakable.
+  mtg_cloud: 0.5
+
+  mtg_cobble: 2
+  mtg_mossycobble: 2
+  mtg_desert_cobble: 2
+  mtg_desert_stone: 1.5
+  mtg_desert_stone_block: 1.5
+  mtg_desert_stonebrick: 1.5
+  mtg_stone: 1.5
+  mtg_stone_block: 1.5
+  mtg_stonebrick: 1.5
+  mtg_desert_sandstone: 0.8
+  mtg_desert_sandstone_block: 0.8
+  mtg_desert_sandstone_brick: 0.8
+  mtg_sandstone: 0.8
+  mtg_sandstone_block: 0.8
+  mtg_sandstonebrick: 0.8
+  mtg_silver_sandstone: 0.8
+  mtg_silver_sandstone_block: 0.8
+  mtg_silver_sandstone_brick: 0.8
+  mtg_coral_brown: 1.5
+  mtg_coral_cyan: 1.5
+  mtg_coral_green: 1.5
+  mtg_coral_orange: 1.5
+  mtg_coral_pink: 1.5
+  mtg_coral_skeleton: 1.5
+
+  mtg_obsidian: 50
+  mtg_obsidian_block: 50
+  mtg_obsidianbrick: 50
+  # Obsidian glass is far easier to dig than solid obsidian in Minetest.
+  mtg_obsidian_glass: 3
+
+  mtg_stone_with_coal: 3
+  mtg_stone_with_copper: 3
+  mtg_stone_with_diamond: 3
+  mtg_stone_with_gold: 3
+  mtg_stone_with_iron: 3
+  mtg_stone_with_mese: 3
+  mtg_stone_with_tin: 3
+  mtg_bronzeblock: 5
+  mtg_coalblock: 5
+  mtg_copperblock: 5
+  mtg_diamondblock: 5
+  mtg_goldblock: 3
+  mtg_mese: 5
+  mtg_steelblock: 5
+  mtg_tinblock: 5
+  mtg_meselamp: 0.3
+
+  mtg_acacia_bush_stem: 2
+  mtg_acacia_tree: 2
+  mtg_acacia_wood: 2
+  mtg_aspen_tree: 2
+  mtg_aspen_wood: 2
+  mtg_bush_stem: 2
+  mtg_jungletree: 2
+  mtg_junglewood: 2
+  mtg_pine_bush_stem: 2
+  mtg_pine_tree: 2
+  mtg_pine_wood: 2
+  mtg_tree: 2
+  mtg_wood: 2
+  mtg_ladder_steel: 2
+  mtg_ladder_wood: 0.4
+
+  mtg_acacia_bush_leaves: 0.2
+  mtg_acacia_leaves: 0.2
+  mtg_aspen_leaves: 0.2
+  mtg_blueberry_bush_leaves: 0.2
+  mtg_blueberry_bush_leaves_with_berries: 0.2
+  mtg_bush_leaves: 0.2
+  mtg_jungleleaves: 0.2
+  mtg_leaves: 0.2
+  mtg_pine_bush_needles: 0.2
+  mtg_pine_needles: 0.2
+  mtg_acacia_bush_sapling: 0.05
+  mtg_acacia_sapling: 0.05
+  mtg_aspen_sapling: 0.05
+  mtg_blueberry_bush_sapling: 0.05
+  mtg_bush_sapling: 0.05
+  mtg_emergent_jungle_sapling: 0.05
+  mtg_junglesapling: 0.05
+  mtg_pine_bush_sapling: 0.05
+  mtg_pine_sapling: 0.05
+  mtg_sapling: 0.05
+  mtg_apple: 0.1
+  mtg_cactus: 0.4
+  mtg_large_cactus_seedling: 0.05
+  mtg_dry_grass_1: 0.05
+  mtg_dry_shrub: 0.05
+  mtg_fern_1: 0.05
+  mtg_grass_1: 0.05
+  mtg_junglegrass: 0.05
+  mtg_marram_grass_1: 0.05
+  mtg_papyrus: 0.05
+
+  mtg_cave_ice: 0.3
+  mtg_glass: 0.3
+  mtg_ice: 0.3
+  mtg_lava_flowing: 100
+  mtg_river_water_flowing: 100
+  mtg_water_flowing: 100
+
+# Safety net for pack-only names missing from `exact`. First match wins.
+patterns:
+- match: bedrock*
+  hardness: 0
+- match: barrier*
+  hardness: 0
+- match: command_block*
+  hardness: 0
+- match: end_portal_frame*
+  hardness: 0
+- match: '*water*'
+  hardness: 100
+- match: '*lava*'
+  hardness: 100
+- match: '*obsidian*'
+  hardness: 50
+- match: '*sapling*'
+  hardness: 0.05
+- match: '*seedling*'
+  hardness: 0.05
+- match: '*leaves*'
+  hardness: 0.2
+- match: '*needles*'
+  hardness: 0.2
+- match: '*vine*'
+  hardness: 0.2
+- match: '*mushroom_block*'
+  hardness: 0.2
+- match: '*flower*'
+  hardness: 0.05
+- match: '*shrub*'
+  hardness: 0.05
+- match: '*_grass_*'
+  hardness: 0.05
+- match: '*sandstone*'
+  hardness: 0.8
+- match: '*ore*'
+  hardness: 3
+- match: '*_with_coal*'
+  hardness: 3
+- match: '*_with_iron*'
+  hardness: 3
+- match: '*glass*'
+  hardness: 0.3
+- match: '*ice*'
+  hardness: 0.3
+- match: wool_*
+  hardness: 0.8
+- match: '*cobble*'
+  hardness: 2
+- match: '*stonebrick*'
+  hardness: 1.5
+- match: '*stone*'
+  hardness: 1.5
+- match: '*planks*'
+  hardness: 2
+- match: '*log*'
+  hardness: 2
+- match: '*wood*'
+  hardness: 2
+- match: '*tree*'
+  hardness: 2
+- match: '*grass*'
+  hardness: 0.6
+- match: '*dirt*'
+  hardness: 0.5
+- match: '*sand*'
+  hardness: 0.5
+- match: '*gravel*'
+  hardness: 0.5
+- match: '*snow*'
+  hardness: 0.5
+- match: '*wool*'
+  hardness: 0.8

@@ -1,6 +1,13 @@
 {
   "name": "note_block",
   "id": 661,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

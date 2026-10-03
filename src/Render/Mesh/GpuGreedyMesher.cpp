@@ -271,12 +271,17 @@ UGpuGreedyMesher::TryComputeExtract(const ChunkMeshSnapshot &snapshot,
 #endif
 }
 
-bool UGpuGreedyMesher::CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
-                                          UBlockRegistry &registry) const
+bool UGpuGreedyMesher::CanDeferGpuExtract(
+    const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+    const BlockDefinitionCatalog *catalog) const
 {
   if (GetActiveRenderBackendCaps().Platform != RenderPlatformKind::Desktop)
   {
     return false;
+  }
+  if (catalog)
+  {
+    return SnapshotIsGpuExtractEligible(snapshot, catalog);
   }
   return SnapshotIsGpuExtractEligible(snapshot, registry);
 }
@@ -284,10 +289,14 @@ bool UGpuGreedyMesher::CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
 bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
     const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
     glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches,
-    bool deferred_no_gpu_readback, bool greedy_merge_rects)
+    bool deferred_no_gpu_readback, bool greedy_merge_rects,
+    const BlockDefinitionCatalog *catalog)
 {
   out_batches.clear();
-  if (!SnapshotIsGpuExtractEligible(snapshot, registry))
+  const bool eligible =
+      catalog ? SnapshotIsGpuExtractEligible(snapshot, catalog)
+              : SnapshotIsGpuExtractEligible(snapshot, registry);
+  if (!eligible)
   {
     return false;
   }
@@ -295,7 +304,7 @@ bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
   if (!deferred_no_gpu_readback)
   {
     if (TryGpuOpaqueEmitToBatches(State->Emit, snapshot, registry, coord,
-                                   out_batches))
+                                   out_batches, catalog))
     {
       ++ComputeDispatches;
       ++gMeshVboDispatches;
@@ -354,7 +363,8 @@ uint64_t UGpuGreedyMesher::ConsumeMaskReadbackCount()
 std::vector<GreedyQuad>
 UGpuGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
                                  glm::ivec3 chunk_coord,
-                                 UBlockRegistry &registry)
+                                 UBlockRegistry &registry,
+                                 const BlockDefinitionCatalog *catalog)
 {
   const ChunkMeshSnapshot snap =
       ChunkMeshSnapshot::Capture(world, chunk_coord, /*rev*/ 0);
@@ -363,19 +373,20 @@ UGpuGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
   {
     return gpu;
   }
-  return Cpu.BuildChunkMesh(world, chunk_coord, registry);
+  return Cpu.BuildChunkMesh(world, chunk_coord, registry, catalog);
 }
 
 std::vector<GreedyQuad>
 UGpuGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-                                 UBlockRegistry &registry)
+                                 UBlockRegistry &registry,
+                                 const BlockDefinitionCatalog *catalog)
 {
   auto gpu = TryComputeExtract(snapshot, registry);
   if (!gpu.empty())
   {
     return gpu;
   }
-  return Cpu.BuildChunkMesh(snapshot, registry);
+  return Cpu.BuildChunkMesh(snapshot, registry, catalog);
 }
 
 } // namespace cutum

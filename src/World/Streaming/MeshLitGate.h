@@ -1,26 +1,46 @@
 #pragma once
 
+#include <cstdint>
+
 namespace cutum
 {
 
-/// Soft-defer / first-mesh gate (V2 RenderReady).
-/// First-mesh in focus/underfeet is never deferred (UnlitFirstMesh SoT) —
-/// SoftDefer only blocks remesh while PendingLight. land_fix miss=1 sticky
-/// runs came from deferring first-mesh until Capture cleared the gate.
+/// Soft-defer / first-mesh gate (V2 RenderReady / Era28 Visual Stage).
+/// Near FOV waits for light except for the explicitly selected nearest missing
+/// first mesh, which receives a provisional ambient preview. Far FOV may also
+/// preview through the allow flag. Remesh while PendingLight always deferred.
 /// Player dig/place does not set PendingLight.
 inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
                                         bool pending_light, bool in_focus,
                                         bool may_mesh_outside_focus,
-                                        bool allow_unlit_first_mesh = false)
+                                        bool allow_unlit_first_mesh = false,
+                                        bool allow_unlit_hole_preview = false)
 {
-  // Missing mesh: always allow in focus / underfeet / explicit unlit allow.
-  if (!has_mesh &&
-      (underfeet || in_focus || allow_unlit_first_mesh))
+  if (!has_mesh)
   {
-    return false;
+    // Era28 I-V1: Unlit preview only when explicitly allowed (far rim).
+    if (allow_unlit_first_mesh)
+    {
+      return false;
+    }
+    // Light debt → defer (Relight-before-draw); Unlit allow bypasses above.
+    if (pending_light)
+    {
+      return true;
+    }
+    if (underfeet || in_focus)
+    {
+      return false; // lit gate open → schedule FirstMesh
+    }
+    return !may_mesh_outside_focus;
   }
   if (pending_light)
   {
+    // Era37 P0: controlled unlit hole preview in LitDrawable ring under debt.
+    if (allow_unlit_hole_preview)
+    {
+      return false;
+    }
     return true;
   }
   if (underfeet || in_focus)
@@ -30,14 +50,72 @@ inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
   return !may_mesh_outside_focus;
 }
 
-/// Reject committing a mesh that has fully-dark faces when light is still
-/// pending, or when it would replace an already-lit mesh (dig/async race).
-/// Cave / UnlitFirstMesh first-mesh with light=0 is allowed (no lit predecessor).
-inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
-                                       bool defer_until_lit,
-                                       bool had_lit_mesh)
+/// Prior-lit hold: never let an unlit/FullyDark candidate become sole image
+/// when a lit CPU or live lit GPU predecessor exists (zero-in-frame / R05).
+/// Sysreset I3t: after converge_deadline_frames expire hold → allow publish
+/// or PublishedEmpty (no infinite prior_lit plateau).
+inline constexpr int kPriorLitConvergeDeadlineFrames = 90;
+
+inline bool ShouldExpirePriorLitHold(int hold_age_frames,
+                                     int converge_deadline_frames =
+                                         kPriorLitConvergeDeadlineFrames)
 {
-  if (!new_has_dark_face)
+  return hold_age_frames >= converge_deadline_frames;
+}
+
+inline bool ShouldRetainPriorLitOverUnlitCandidate(bool had_lit_mesh,
+                                                  bool had_live_lit_gpu,
+                                                  bool candidate_dark_or_unlit,
+                                                  int hold_age_frames = 0,
+                                                  int converge_deadline_frames =
+                                                      kPriorLitConvergeDeadlineFrames)
+{
+  if (!candidate_dark_or_unlit)
+  {
+    return false;
+  }
+  if (ShouldExpirePriorLitHold(hold_age_frames, converge_deadline_frames))
+  {
+    return false;
+  }
+  return had_lit_mesh || had_live_lit_gpu;
+}
+
+/// SoftDefer intentional empty must not erase / replace live lit GPU.
+/// Sysreset: expire prior-lit empty-avoid after converge deadline.
+inline bool ShouldAvoidEmptyPublishOverPriorLit(bool had_live_lit_gpu,
+                                               bool had_lit_mesh,
+                                               bool had_gpu_resident,
+                                               int hold_age_frames = 0,
+                                               int converge_deadline_frames =
+                                                   kPriorLitConvergeDeadlineFrames)
+{
+  if (ShouldExpirePriorLitHold(hold_age_frames, converge_deadline_frames))
+  {
+    return false;
+  }
+  if (had_live_lit_gpu)
+  {
+    return true;
+  }
+  return had_gpu_resident && had_lit_mesh;
+}
+
+/// Reject committing a surface mesh with no lit drawable face when light is
+/// pending, or when it would replace an already-lit mesh (dig/async race).
+/// Also reject dark over a live lit GPU SSBO (PendingReplace / SoftDefer empty
+/// with GpuResident lit — had_lit_mesh alone can miss that case).
+/// Cave / far UnlitFirstMesh first-mesh with light=0 is allowed (no lit predecessor).
+/// Sysreset v2: PriorLit TTL expire must NOT allow silent dark Replace — call
+/// site clears to PublishedEmpty + requeues MarkRelit instead.
+inline bool ShouldRejectDarkMeshCommit(bool new_surface_is_fully_dark,
+                                       bool defer_until_lit,
+                                       bool had_lit_mesh,
+                                       bool had_live_lit_gpu = false,
+                                       int hold_age_frames = 0)
+{
+  (void)hold_age_frames;
+  if (!new_surface_is_fully_dark)
   {
     return false;
   }
@@ -45,7 +123,84 @@ inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
   {
     return true;
   }
-  return had_lit_mesh;
+  return had_lit_mesh || had_live_lit_gpu;
+}
+
+/// A dark remesh may replace an older lit image only when this exact candidate
+/// satisfies current geometry and light demand, and that light revision has
+/// been explicitly settled for the same chunk incarnation. Column-level
+/// SoftDefer can remain active for another Y slice in the same column.
+inline bool MeshCandidateMatchesSettledDemand(
+    bool input_stamps_current, bool demand_identity_current,
+    bool has_settled_light, uint64_t source_geom_rev,
+    uint64_t current_geom_rev, uint64_t desired_geom_rev,
+    uint64_t source_light_rev, uint64_t field_light_rev,
+    uint64_t settled_light_rev, uint64_t desired_light_rev)
+{
+  return input_stamps_current && demand_identity_current &&
+         has_settled_light && source_geom_rev != 0 && source_light_rev != 0 &&
+         source_geom_rev == current_geom_rev &&
+         source_geom_rev == desired_geom_rev &&
+         source_light_rev == field_light_rev &&
+         source_light_rev == settled_light_rev &&
+         source_light_rev == desired_light_rev;
+}
+
+/// Sysreset v6: geom-stale Accept Retain must not keep a dark bake over prior
+/// lit (SoT 145008 black block faces). Caller: prior lit KEEP + one light-fresh
+/// RemeshAfterApply / DirtyPriority. Light Accept (non-geom) stays v3 D4.
+inline bool ShouldRejectDarkOnGeomStaleAccept(
+                                             bool new_surface_is_fully_dark,
+                                             bool accepted_geom_stale,
+                                             bool had_lit_mesh,
+                                             bool had_live_lit_gpu = false)
+{
+  if (!new_surface_is_fully_dark || !accepted_geom_stale)
+  {
+    return false;
+  }
+  return had_lit_mesh || had_live_lit_gpu;
+}
+
+/// After PriorLit TTL expire: clear sole image (PublishedEmpty) rather than
+/// accepting a dark wrong-material Replace.
+inline bool ShouldPublishedEmptyAfterPriorLitExpire(bool had_lit_mesh,
+                                                    bool had_live_lit_gpu,
+                                                    bool candidate_dark,
+                                                    int hold_age_frames,
+                                                    int converge_deadline_frames =
+                                                        kPriorLitConvergeDeadlineFrames)
+{
+  if (!candidate_dark || !(had_lit_mesh || had_live_lit_gpu))
+  {
+    return false;
+  }
+  return ShouldExpirePriorLitHold(hold_age_frames, converge_deadline_frames);
+}
+
+/// After keeping lit SSBO under dark CPU replace: do not PreferKick a pending
+/// dark/unknown GPU job over the live lit draw (ring thrash).
+inline bool ShouldPreferKickPendingGpuAfterLitKeep(bool kept_lit_gpu,
+                                                   bool new_mesh_fully_dark)
+{
+  if (!kept_lit_gpu)
+  {
+    return true;
+  }
+  return !new_mesh_fully_dark;
+}
+
+/// Era32: after SoftDefer-reject of a dark remesh, do not MarkDirty when a
+/// drawable already exists — MarkRelit owns the single requeue (ColPipe P5).
+inline bool ShouldMarkDirtyAfterDarkSoftDeferReject(bool remesh_after_apply,
+                                                    bool had_mesh)
+{
+  if (had_mesh)
+  {
+    return false;
+  }
+  (void)remesh_after_apply;
+  return true;
 }
 
 } // namespace cutum

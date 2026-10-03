@@ -1,6 +1,13 @@
 {
   "name": "sticky_piston",
   "id": 694,
+  "hardness": 0.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural"
   ],

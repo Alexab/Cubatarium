@@ -9,6 +9,7 @@ Ship set: **51 species** (1 player + 50 mobs) and **5 skins**, Luanti-style rigi
 | id | role | archetype | habitat | tags | notes |
 |----|------|-----------|---------|------|-------|
 | `human` | controlled_default | terrestrial_biped | — | humanoid | Player spawn; not in Creatures palette |
+| `bot` | bot | terrestrial_biped | terrestrial | humanoid, bot | Player-like NPC; `bot_player` agent; human skins |
 | `sheep` | mob | terrestrial_quadruped | terrestrial | mobs, passive | |
 | `wolf` | mob | terrestrial_quadruped | terrestrial | mobs, hostile | |
 | `pig` | mob | terrestrial_quadruped | terrestrial | mobs, passive | |
@@ -68,13 +69,14 @@ Regenerate glTF from b3d: `python tools/convert_creature_mesh_to_gltf.py --all-w
 
 - `id`, `display_name`
 - `catalog`: `tags`, `spawnable`, `sort_order`
-- `role`: `controlled_default` | `mob`
+- `role`: `controlled_default` | `mob` | `bot`
 - `bounds`, `eye_height`, `habitat`, `locomotion_archetype`, `locomotion`
 - `habitat`: `terrestrial` | `aquatic` | `aerial` | `amphibious` | `lava` — spawn zone and wander constraints (see [Habitat](#habitat))
 - `locomotion_archetype`: `terrestrial_biped` (default) | `terrestrial_quadruped` | `aerial` | `aquatic` | `serpentine` — выбор pose presenter и derive `LocomotionState`
 - `locomotion`: `can_fly`, `can_crouch`, `can_jump`, `jump_height` (feet rise in blocks; jump speed derived from shared gravity), `walk_speed` (m/s), `fly_speed` (m/s, defaults to `walk_speed`)
-- `behavior`: `none` | `wander` — см. [Activity agents](#activity-agents) ниже
-- `behavior_params`: `move_speed` (legacy wander fallback if `locomotion.walk_speed` omitted), `wander_interval_min`, `wander_interval_max`
+- `behavior`: `none` | `wander` | `flee` | `melee_attack` | `bot_player` — см. [Activity agents](#activity-agents) ниже
+- `behavior_params`: `move_speed`, `wander_interval_*`, `aggro_radius`, `attack_range`, `attack_cooldown`, …
+- `vitals` / `attributes` (optional): see [CREATURE_STATS.md](CREATURE_STATS.md)
 - `visual`: `backend` (`rigid_voxels` | `gltf_skeleton`), `texture_layout` (`player_skin_atlas` | `rigid_crop`), `animation` (`walk_cycle_hz`, `leg_swing_deg`, `arm_swing_deg`, `fly_body_pitch_deg`, `body_bob_blocks`, `tail_swing_deg`, `run_speed_multiplier`, `crouch_leg_bend_deg`, `wing_idle_swing_deg`), `default_texture`, `parts[]` (`id`, `offset`, `size`, `texture`, optional `pivot`, `limb`, `limb_axis`), `icon` (`mode`: `parts_preview`, `species_texture`, `color`)
 
 ### `skin.json`
@@ -206,9 +208,10 @@ python tools/generate_creature_assets.py
 | `wander` | `OnCreatureAdded` → **`WanderActivityAgent`** (таймер, направление в агенте) | Агент `SetIntent` в `DoMovement`, затем `Creature::ExecuteIntent` |
 | `flee` | **`FleeActivityAgent`** + `USimpleFsmBrain` | Убегание от controlled; navigation + steering |
 | `melee_attack` | **`MeleeAttackActivityAgent`** + `USimpleFsmBrain` | zombie, skeleton, dungeon_master — преследование и `attackTargetId` в intent |
+| `bot_player` | **`BotPlayerActivityAgent`** | follow controlled + melee hostiles; human skins |
 | `none` | Нет membership в директоре | Только `ExecuteIntent` (гравитация, коллизии; intent пустой, если не задан иначе) |
 
-Controlled (`human`, `controlled_default`) использует `behavior: none` и **не** тикается агентами; ввод — `Camera::DoMovement`.
+Controlled (`human`, `controlled_default`) использует `behavior: none` и **не** тикается агентами; ввод — `Camera::DoMovement`. Stats: [CREATURE_STATS.md](CREATURE_STATS.md).
 
 Параметры wander читаются агентом через `IUCreatureActivitySink::GetBehaviorSnapshot` (`wander_interval_*`, `locomotion.walk_speed` / `move_speed`).
 

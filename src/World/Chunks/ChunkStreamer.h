@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
+#include <deque>
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
@@ -19,6 +20,35 @@ namespace cutum
 class UBlockRegistry;
 class UBlockWorld;
 
+/// H1 SoT 185830: EnsureChunkLoaded never advances a full 256-subcol column in
+/// one Sync Update slice — budget matches collision sync.
+inline constexpr int kStreamerEnsureSyncSubColumns = 32;
+
+/// Load-loop stop before EnsureChunkLoaded (unit-tested with FrameDeadline).
+inline bool StreamerLoadLoopShouldBreak(bool frame_deadline_exhausted,
+                                        int load_ops, int max_load_ops,
+                                        double elapsed_ms, double soft_ms,
+                                        double hard_ms)
+{
+  if (frame_deadline_exhausted)
+  {
+    return true;
+  }
+  if (load_ops >= max_load_ops)
+  {
+    return true;
+  }
+  if (elapsed_ms >= soft_ms && load_ops > 0)
+  {
+    return true;
+  }
+  if (elapsed_ms >= hard_ms)
+  {
+    return true;
+  }
+  return false;
+}
+
 struct StreamingFrameStats
 {
   void Reset()
@@ -27,6 +57,8 @@ struct StreamingFrameStats
     unloadsThisFrame = 0;
     savesThisFrame = 0;
     asyncQueuedThisFrame = 0;
+    diskCompleteThisFrame = 0;
+    genCommitThisFrame = 0;
     ringGateBlocked = 0;
     nearLoadSkipped = 0;
     loadCandidates = 0;
@@ -39,6 +71,10 @@ struct StreamingFrameStats
   int savesThisFrame{0};
   /// Async column requests issued this frame (EnsureChunkLoaded queued work).
   int asyncQueuedThisFrame{0};
+  /// Era25: sync Ensure completed via OnLoadChunk (disk-hit honesty).
+  int diskCompleteThisFrame{0};
+  /// Era25: async gen commits applied this frame (scheduler Tick).
+  int genCommitThisFrame{0};
   /// Candidates that failed RingPrerequisitesMet this frame.
   int ringGateBlocked{0};
   /// Candidates skipped by NearLoadRadius clamp.
@@ -55,7 +91,8 @@ public:
   using SaveChunkFn = std::function<void(glm::ivec3)>;
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
-  using UnloadColumnFn = std::function<void(glm::ivec3 ground, int max_cy)>;
+  /// Return false to refuse unload this frame (chunks stay loaded).
+  using UnloadColumnFn = std::function<bool(glm::ivec3 ground, int max_cy)>;
   using GenerateColumnFn = std::function<void(int x, int z)>;
   using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
@@ -128,6 +165,11 @@ public:
     EffectiveUnloadOpsPerFrame = value;
   }
   void SetViewForward(glm::vec3 forward_xz) { ViewForwardXz = forward_xz; }
+  /// Era25 I-F5: under frontier_pressure, prefer view-forward load-ahead
+  /// (widen PrefetchAhead beyond NearLoad clamp; stronger view bias).
+  void SetFrontierLoadAhead(bool enabled) { FrontierLoadAhead = enabled; }
+  /// Prior-lit ring: skip PrefetchAhead ±1 lateral under soft FM/relight debt.
+  void SetShedPrefetchLateral(bool enabled) { ShedPrefetchLateral = enabled; }
   void SetRingGateEnabled(bool enabled) { RingGateEnabled = enabled; }
   void SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_chunks,
                               bool urgent);
@@ -140,9 +182,14 @@ public:
   void EnsureCollisionChunks(glm::ivec3 feetBlockPos);
   bool IsCollisionReady(glm::ivec3 feetBlockPos, int radiusChunks) const;
 
-  /// Full streaming pass after Movement: load/unload with per-frame budget.
+  /// Full streaming pass after Movement: load (unload is separate pass).
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               const PlayerCapsule &cap);
+  /// SoT 210431: unload pass timed separately from Update (FrameDeadline).
+  void UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
+                  const PlayerCapsule &cap);
+  /// Drain deferred save+unload queue (mode U-D) on calm frames.
+  void DrainDeferredUnloadSaves(int max_ops);
   void PrefetchAhead(glm::ivec3 feet_chunk, glm::vec3 view_forward_xz,
                      float movement_speed, float speed_threshold,
                      int *out_ops = nullptr);
@@ -154,12 +201,15 @@ public:
     return LastFrameStats;
   }
 
+  /// Cached terrain-column complete (invalidated on commit). R4.5.1 public for
+  /// Refresh / UpdateStreaming camera-complete reuse. Const: fills mutable cache.
+  bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord) const;
+
 private:
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false,
                          bool *out_async_queued = nullptr);
   bool AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord, int max_sub_columns,
                                       bool only_empty_columns);
-  bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
   void InvalidateTerrainCompleteCache(glm::ivec3 groundCoord);
   void UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
                            const glm::vec3 &eyePos, const PlayerCapsule &cap);
@@ -209,18 +259,31 @@ private:
   glm::ivec3 CollisionUrgentCenter{0};
   int CollisionUrgentRadius{0};
   glm::vec3 ViewForwardXz{0.0f, 0.0f, 1.0f};
+  bool FrontierLoadAhead{false};
+  bool ShedPrefetchLateral{false};
   ChunkLoadPriorityParams PriorityParams;
 
   std::unordered_set<glm::ivec3, IVec3Hash> ProcedurallyGenerated;
+  /// Columns whose current terrain revision already triggered the broad seam
+  /// remesh. Cleared whenever a chunk commit invalidates terrain completeness.
+  std::unordered_set<glm::ivec3, IVec3Hash> TerrainSeamRemeshNotified;
   struct ColumnGenState
   {
     int cursor{0};
     bool onlyEmptyColumns{false};
   };
   std::unordered_map<glm::ivec3, ColumnGenState, IVec3Hash> ColumnGenStates;
-  std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
+  mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
   glm::ivec3 LoadPriorityCenter{0};
   StreamingFrameStats LastFrameStats;
+  /// Amortized unload scan cursor into last columns snapshot.
+  std::vector<glm::ivec3> UnloadColumnSnapshot;
+  size_t UnloadScanCursor{0};
+  /// Amortized keep-shell annulus cursor (packed cx,cz relative scan index).
+  int KeepShellScanIndex{0};
+  /// U-D: save+unload deferred when Exhausted mid-pass.
+  std::deque<glm::ivec3> DeferredUnloadSaves;
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredUnloadSaveSet;
 };
 
 } // namespace cutum

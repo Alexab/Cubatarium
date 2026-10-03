@@ -6,6 +6,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Interfaces/IUWorldMeshSink.h"
+#include "World/Mesh/DigSeamQueue.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include <chrono>
 #include <functional>
@@ -51,20 +52,55 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
-  void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks,
+                           uint64_t frame_epoch = 0);
   void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy);
   void ClearMeshVerticalPriority();
   void SetMeshForwardBias(float bias_k, glm::vec2 forward_xz);
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
+  void SetIsLightRepairRemeshFn(std::function<bool(glm::ivec3)> fn);
+  void SetChunkResidentFn(std::function<bool(glm::ivec3)> fn);
+  int PruneGhostDirty(UBlockWorld &world, int cap);
+  void SetOnLitPendingNeededFn(std::function<void(glm::ivec3)> fn);
+  void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn);
+  void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn);
+  void SetOnFirstDrawableCoverageFn(std::function<void(glm::ivec3)> fn);
+  void SetOnBoundaryOverlayPublishedFn(
+      std::function<void(glm::ivec3, uint8_t)> fn);
+  void SetOnFaceDebtFn(std::function<void(glm::ivec3)> fn);
+  void SetOnFaceDebtDirtyFn(std::function<void(glm::ivec3)> fn);
+  void SetOnFaceDebtMaskFn(std::function<void(glm::ivec3, uint8_t)> fn);
+  void SetOnGpuPipelineProgressFn(std::function<void(glm::ivec3)> fn);
+  /// Cruise wall P3: MarkDirty / MarkDirtyPriority notify unfinished cache.
+  void SetOnMeshColumnDirtyFn(std::function<void(glm::ivec3)> fn);
+  /// P1: debug ownership — log MarkDirtyPriority outside ColumnFlow Contains.
+  void SetColumnFlowContainsFn(std::function<bool(glm::ivec2)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
   void SetStarveRemeshKeepHoriz(int keep_h);
   void SetMeshWorkAdmission(const MeshWorkAdmission &adm);
   const MeshWorkAdmission &GetMeshWorkAdmission() const;
+  /// Era47: EnterLitGate GPU quiesce drain (PreferKick-only RAA, no Normal throttle).
+  void SetEnterGpuQuiesceDrain(bool active);
+  bool IsEnterGpuQuiesceDrain() const;
+  void SetEnterLitQuiesce(bool active);
+  bool IsEnterLitQuiesce() const;
+  void HoldEnterTerminal(glm::ivec3 chunk_coord);
+  void ClearEnterTerminalHeld();
+  bool IsEnterTerminalHeld(glm::ivec3 chunk_coord) const;
+  size_t GetEnterTerminalHeldCount() const;
+  void SyncEnterGateDoneColumns(const std::vector<glm::ivec2> &done_cols);
+  size_t GetEnterGateDoneColumnCount() const;
+  void SetEnterVoidTelemLitReadyFn(std::function<bool(glm::ivec2)> fn);
+  int PruneEnterPhantomDirty(const UBlockWorld &world);
+  uint64_t GetEnterPhantomDirtyPrunedTotal() const;
   /// Consume one Dirty-admit slot for FirstMesh/Held/neighbor (false = deny).
   bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
                                   int keep_cy = -1, bool remesh_only = false);
+  int DropFarFirstMeshDirtyBeyondRadius(glm::ivec3 center_chunk,
+                                        int keep_radius, int keep_cy = -1);
+  int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk, int radius_chunks);
   void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMaxRearFocusMeshPerFrame(int count);
@@ -76,12 +112,40 @@ public:
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
+  void MarkDirty(glm::ivec3 chunk_coord, MeshRevisionBumpReason reason);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
+  void MarkDirtyPriority(glm::ivec3 chunk_coord,
+                         MeshRevisionBumpReason reason);
+  void RequeueDirtyPriority(glm::ivec3 chunk_coord,
+                            MeshRevisionBumpReason reason);
+  void QueueMeshDependencyInvalidations(
+      const UBlockWorld &world,
+      const std::vector<glm::ivec3> &changed_input_chunks);
+  void QueueMeshDependencyInvalidation(glm::ivec3 dependent_chunk);
+  void QueueStaleLightRemesh(glm::ivec3 chunk_coord);
+  int GetLastMeshDependencyQueuedN() const
+  {
+    return Cache.GetLastMeshDependencyQueuedN();
+  }
+  int GetLastMeshDependencyAppliedN() const
+  {
+    return Cache.GetLastMeshDependencyAppliedN();
+  }
+  int GetMeshDependencyInvalidationBacklogN() const
+  {
+    return Cache.GetMeshDependencyInvalidationBacklogN();
+  }
   void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
+  void PumpCaptureWorkerCommits();
   void PrefetchMeshCaptureBand(const UBlockWorld &world,
                                glm::ivec3 ground_chunk_coord, int min_y,
                                int max_y);
   void RequestRemeshAfterApply(glm::ivec3 chunk_coord);
+  size_t GetRemeshAfterApplyCount() const;
+  bool IsRemeshAfterApplyPending(glm::ivec3 chunk_coord) const;
+  bool FindFirstDirtyInHorizontalRadius(glm::ivec3 center_chunk,
+                                        int radius_chunks,
+                                        glm::ivec3 &out_coord) const;
   /// Invalidate fluid surface column cache when this block or a neighbor is liquid.
   void NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
                                       UBlockRegistry *registry,
@@ -97,15 +161,25 @@ public:
   void MarkTerrainChunkMeshDirtySeamed(glm::ivec3 ground_chunk_coord, int min_y,
                                        int max_y,
                                        bool include_horizontal_neighbors = true);
+  void MarkTerrainChunkMeshDirtySeamed(
+      glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+      bool include_horizontal_neighbors, MeshRevisionBumpReason reason);
   void MarkTerrainChunkMeshDirtyPriority(glm::ivec3 ground_chunk_coord, int min_y,
                                          int max_y);
   void MarkTerrainChunkMeshDirtySeamedPriority(
       glm::ivec3 ground_chunk_coord, int min_y, int max_y,
       bool include_horizontal_neighbors = true);
+  void MarkTerrainChunkMeshDirtySeamedPriority(
+      glm::ivec3 ground_chunk_coord, int min_y, int max_y,
+      bool include_horizontal_neighbors, MeshRevisionBumpReason reason);
   /// Dirty only solid slices in [min_y,max_y] that fail column-ready / not in-flight.
   int MarkMissingSlicesDirtyPriority(const UBlockWorld &world,
                                      glm::ivec3 ground_chunk_coord, int min_y,
                                      int max_y);
+  /// Enqueue missing solid slices below placed block for post-place DigSeam.
+  int EnqueueColumnMissingDigSeamBelow(const UBlockWorld &world,
+                                       glm::ivec3 block_pos,
+                                       int max_enqueue = 4);
 
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
@@ -125,23 +199,37 @@ public:
   void InvalidateEditMeshNeighborhood(
       const std::vector<glm::ivec3> &block_positions);
   void ResetImmediateMeshStats();
-  void BeginHoleQueryFrame();
+  void BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk);
+  void SetPendingLightFocusPressure(int n);
+  void SetVisibleBlackNoTicketPressure(int n);
+  void SetVisibleBlackFocusPressure(int n);
+  void SetEnterFovLitPressure(bool v);
+  void SetColumnLoadedNoMeshPressure(int n);
+  void SetEnterUnderfeetExitBlocked(bool v);
+  void SetFmDirtyEnqueueReserve(int n);
+  void SetFz2DeferGated(bool v);
   double GetLastMeshImmediateMs() const;
   int GetLastMeshImmediateCount() const;
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
   void CancelAsyncInFlightKeepDirty();
+  void CancelAsyncInFlightKeepDirty(glm::ivec3 focus_ground_chunk,
+                                    int keep_horiz_lease);
   void CancelInFlightOutsideHorizontalRadius(glm::ivec3 focus_ground_chunk,
-                                             int radius_chunks);
+                                             int radius_chunks,
+                                             int keep_horiz_lease = 1);
 
   bool HasPendingDirty() const;
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                       int radius_chunks) const;
   int CountDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                        int radius_chunks) const;
+  int GetLastFocusDirtyReconcileDelta() const;
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
+  bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                          int radius_chunks) const;
   size_t GetDirtyCount() const;
   void ReserveDirtyCapacity(size_t n);
   int MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk, size_t soft_cap,
@@ -152,11 +240,31 @@ public:
   uint64_t GetMeshCompletedDiscardedOverflow() const;
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
+  uint64_t GetMeshDiscardedLateEpochCount() const;
+  uint64_t GetMeshDiscardedLateJobMismatchCount() const;
   uint64_t GetMeshApplyStaleCount() const;
+  uint64_t GetMeshApplyStaleVisualCount() const;
+  uint64_t GetMeshApplyStaleGeomCount() const;
+  uint64_t GetMeshApplyStaleLightCount() const;
+  uint64_t GetMeshApplyStaleCatalogCount() const;
+  uint64_t GetMeshApplyStaleStampInvalidCount() const;
+  uint64_t GetMeshApplyStaleRevCount() const;
+  uint64_t GetMeshApplySupersededCount() const;
+  uint64_t GetMeshApplyDropNoActiveCount() const;
+  uint64_t GetMeshReplaceHoleAvoidedCount() const;
+  uint64_t GetPubRejectLightInvalidCount() const;
+  uint64_t GetPubRejectSourceMismatchCount() const;
+  uint64_t GetPubRejectOtherCount() const;
+  uint64_t GetPubAcceptFirstPublishCount() const;
+  uint64_t GetPriorLitHoldCount() const;
+  int GetPriorLitHoldAgeMax() const;
+  uint64_t GetSoftDeferEmptyPublishAvoidedCount() const;
   size_t GetPendingGpuAppliesCount() const;
   size_t GetPendingGpuQueuedCount() const;
   size_t GetPendingGpuKickedCount() const;
   int GetLastGpuKickN() const;
+  int GetLastGpuKickDebtForcedN() const;
+  const std::string &GetLastGpuKickDeferReason() const;
   int GetLastGpuFinishN() const;
   int GetLastGpuFinishNotReadyN() const;
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
@@ -166,23 +274,94 @@ public:
   double GetLastFlatRebuildMs() const;
   double GetLastMeshSyncMs() const;
   double GetLastMeshSnapshotMs() const;
+  const MeshSnapshotDeferStats &GetLastMeshSnapshotDeferStats() const
+  {
+    return Cache.GetLastMeshSnapshotDeferStats();
+  }
   double GetLastMeshDirtyTickMs() const;
+  double GetLastMeshDirtyPruneMs() const;
+  int GetLastMeshDirtyPruneN() const;
+  double GetLastMeshDirtySortMs() const;
+  double GetLastMeshDirtyDrainMs() const;
+  int GetLastMeshDirtyDrainN() const;
+  double GetLastMeshDirtyScheduleMs() const;
+  int GetLastMeshDirtyScheduleOkN() const;
+  int GetLastMeshDirtyScheduleOkFmN() const;
+  int GetLastMeshDirtyScheduleOkRemeshN() const;
+  int GetLastFirstMeshScheduleEffectiveCap() const;
+  int GetLastScheduleLaneStarveReason() const;
+  int GetLastMeshDirtyScheduleSkipN() const;
+  int GetLastMeshDirtyScheduleSkipPipelineN() const;
+  int GetLastMeshDirtyScheduleSkipSnapshotN() const;
+  int GetLastMeshDirtyScheduleSkipSoftDeferN() const;
+  int GetLastMeshDirtyScheduleSkipLockedN() const;
+  int GetLastMeshDirtyScheduleSkipOrphanN() const;
+  int GetLastMeshDirtyScheduleSkipRemeshStarveN() const;
+  int GetLastMeshDirtyScheduleSkipOtherN() const;
+  int GetLastMeshDirtyScheduleSkipOutsideFocusFmN() const;
+  int GetLastFmConsumerStarvedActive() const;
+  uint64_t GetFreeChunkLiveN() const;
+  double GetLastMeshDirtyGpuMs() const;
+  int GetLastMeshDirtyGpuN() const;
+  double GetLastMeshDirtySyncMs() const;
+  int GetLastMeshDirtySyncN() const;
+  double GetLastMeshGpuKickMs() const;
+  double GetLastMeshGpuFinishMs() const;
+  double GetLastMeshAsyncDrainMs() const;
+  int GetLastMeshCaptureStoreHitN() const;
+  int GetLastMeshCaptureStoreMissN() const;
+  int GetLastMeshPendingCaptureN() const;
+  int GetLastMeshScheduleRetryAfterCaptureN() const;
+  void ResetFrameCaptureRetryTelemetry();
+  int GetLastMeshWorkerInflightN() const;
+  int GetLastMeshPendingCaptureReadyN() const;
+  int GetLastMeshPendingCaptureStaleN() const;
+  int GetLastMeshPendingCaptureMaxAge() const;
+  int GetPendingCaptureCount() const;
+  int GetLastMeshDegradedCaptureN() const;
+  int GetLastDirtyTouchN() const;
+  int GetLastDirtyRevisitSameN() const;
+  int GetLastDirtyFmN() const;
+  int GetLiveDirtyFirstMeshCount() const;
+  int GetLastDirtyRemeshN() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   /// True only when cache has GPU quads or non-empty CPU batches (not empty
   /// placeholder entries that SoftDefer treated as "has mesh").
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// R06 R2: sticky BoundaryOverlay on last-applied greedy mesh.
+  bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
+  bool HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord, int face) const;
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
+  /// True when a resident slice has unpublished geometry/coverage work or
+  /// unresolved face coverage for the same incarnation.
+  bool HasGeometryPublicationDebt(glm::ivec3 chunk_coord,
+                                 uint64_t incarnation) const;
+  /// True when a new mesh publication can make progress without waiting for a
+  /// boundary-face repair owner. Active face debt may be backed by a published
+  /// boundary overlay and is handled by ChunkEmergeCoordinator's face-debt
+  /// queue; callers must not repeatedly mint geometry revisions for it.
+  bool HasScreenRayRepairableGeometryDebt(glm::ivec3 chunk_coord,
+                                          uint64_t incarnation) const;
   size_t GetSoftDeferHeldCount() const;
+  /// Era24: SoftDeferHeld membership for Hide⇒Ticket ownership.
+  bool IsSoftDeferHeld(glm::ivec3 chunk_coord) const;
+  /// Era22 I-S2: SoftDeferHeld slice in column (xz) for repair-progress honesty.
+  bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
+  void SetWitnessSwapGrace(glm::ivec2 prior_xz, int frames);
+  void TickWitnessSwapGrace();
   bool IsPendingGpuQueued(glm::ivec3 chunk_coord) const;
   bool IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const;
   bool PreferKickPendingGpuQueued(glm::ivec3 chunk_coord);
   bool DropQueuedPendingGpuApply(glm::ivec3 chunk_coord);
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
-                             const UBlockWorld &world) const;
+                              const UBlockWorld &world) const;
+  void FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
+                             UChunkMeshCache::LitApplyMeshProbe &out) const;
+  bool ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
@@ -246,6 +425,14 @@ public:
   void MarkChunksContainingBlockIds(const UBlockWorld &block_world,
                                     const std::vector<BlockId> &block_ids);
 
+  /// DigSeam: P2-demoted face Immediate → guaranteed remesh (manual 215711 X-ray).
+  void EnqueueDigSeam(glm::ivec3 chunk_coord);
+  size_t GetDigSeamPendingCount() const { return DigSeam.Size(); }
+  int GetLastDigSeamRemeshN() const { return LastDigSeamRemeshN; }
+  int GetLastDigSeamPendingN() const { return LastDigSeamPendingN; }
+  void TickDigSeamDrain(UBlockWorld &block_world, UBlockRegistry &registry,
+                        const PhysicsTelemetry *frame_tele);
+
   const std::vector<CrossInstanceBatch> &
   GetCrossRenderBatches(UBlockWorld &world, UBlockRegistry &registry,
                         const std::shared_ptr<UCamera> &camera);
@@ -261,6 +448,12 @@ private:
   uint64_t LastEditDirtyN{0};
   glm::ivec3 StickyNearestHoleCoord{0};
   int StickyNearestHoleFrames{0};
+
+  DigSeamQueue DigSeam;
+  int LastDigSeamRemeshN{0};
+  int LastDigSeamPendingN{0};
+  std::function<void(glm::ivec3)> OnMeshColumnDirtyFn;
+  std::function<bool(glm::ivec2)> ColumnFlowContainsFn;
 };
 
 } // namespace cutum

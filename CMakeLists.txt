@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 
 # Static vcpkg triplet on Windows hosts. /MT runtime is applied after project()
-# only for MSVC / clang-cl — GNU-style Clang (linux-ninja preset) must not get /Zc flags.
+# only for MSVC / clang-cl Р вЂћLL GNU-style Clang (linux-ninja preset) must not get /Zc flags.
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
     set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
@@ -13,6 +13,8 @@ if(WIN32)
 endif()
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
+
+enable_testing()
 
 # MSVC desktop static CRT (/MT). Skip for GNU-style Clang on Windows (e.g. linux-ninja preset).
 set(CUBATARIUM_MSVC_DESKTOP FALSE)
@@ -43,6 +45,24 @@ if(CUBATARIUM_ENABLE_TSAN)
     else()
         message(WARNING "CUBATARIUM_ENABLE_TSAN is only supported on Linux with Clang/GCC")
     endif()
+endif()
+
+option(CUBATARIUM_ENABLE_TRACY "Embed Tracy profiler client (zones + FrameMark)" OFF)
+if(CUBATARIUM_ENABLE_TRACY)
+    include(FetchContent)
+    set(TRACY_ENABLE ON CACHE BOOL "" FORCE)
+    set(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)
+    set(TRACY_CALLSTACK ON CACHE BOOL "" FORCE)
+    # Avoid Tracy GUI / capture tools in the game target; client only.
+    set(TRACY_STATIC ON CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        tracy
+        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+        GIT_TAG v0.11.1
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(tracy)
+    message(STATUS "CUBATARIUM_ENABLE_TRACY=ON — TracyClient linked into Cubatarium")
 endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/GetVersionFromGit.cmake)
@@ -121,6 +141,28 @@ set(SOURCES
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
     src/Creatures/Core/CreatureInventory.cpp
+    src/Creatures/Roles/CreatureRoleHandlerFactory.cpp
+    src/Creatures/Stats/CreatureStatsDefaults.cpp
+    src/Creatures/Stats/CreatureStatsJson.cpp
+    src/Creatures/Stats/CreatureVitalsSystem.cpp
+    src/Creatures/Combat/CreatureCombat.cpp
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemUseRegistry.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Items/ItemWieldRenderer.cpp
+    src/Items/FpViewmodelRenderer.cpp
+    src/Items/ItemGltfTextureCache.cpp
+    src/Items/ItemToolInfluenceProvider.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
+    src/Creatures/Influence/InfluenceHitMath.cpp
+    src/Creatures/Influence/BareHandToolInfluenceProvider.cpp
+    src/Creatures/Influence/InfluenceEvent.cpp
+    src/Creatures/Influence/InfluenceResolver.cpp
+    src/Creatures/Influence/InfluenceApplier.cpp
+    src/Creatures/Influence/StatusEffectCatalog.cpp
+    src/Creatures/Influence/StatusEffectSystem.cpp
+    src/Render/Effects/InfluenceFxSystem.cpp
+    src/Render/Effects/InfluenceFxPass.cpp
     src/Creatures/Player/Player.cpp
     src/Activity/CreatureActivityDirector.cpp
     src/Activity/WorldCreatureActivitySink.cpp
@@ -130,6 +172,7 @@ set(SOURCES
     src/Activity/Helpers/CreatureActivityNavigation.cpp
     src/Activity/Agents/FleeActivityAgent.cpp
     src/Activity/Agents/MeleeAttackActivityAgent.cpp
+    src/Activity/Agents/BotPlayerActivityAgent.cpp
     src/Activity/Brain/SimpleFsmBrain.cpp
     src/Navigation/WorldNavigationQueries.cpp
     src/Navigation/UNavigationPathfinder.cpp
@@ -151,6 +194,7 @@ set(SOURCES
     src/Creatures/Visual/CreatureRigidModelLoader.cpp
     src/Creatures/Visual/CreatureVisualRigid.cpp
     src/Creatures/Visual/CreatureVisualBoneSkeleton.cpp
+    src/Creatures/Visual/WornEquipmentDrawer.cpp
     src/Creatures/Visual/CreatureVisualGltf.cpp
     src/Creatures/Visual/CreatureVisualSprite.cpp
     src/Creatures/Visual/CreatureVisualFactory.cpp
@@ -181,6 +225,7 @@ set(SOURCES
     src/App/Settings/GraphicsQualityProfile.cpp
     src/App/Settings/UiSettings.cpp
     src/Blocks/Input/BlockInputController.cpp
+    src/Blocks/Input/PlayerInteractionRouter.cpp
     src/Render/Primitives/Cube.cpp
     src/Render/Primitives/CubeGL.cpp
     src/World/Objects/ObjectLibrary.cpp
@@ -189,6 +234,7 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Core/MarkRelitInstall.cpp
     src/World/Adapters/WorldRenderReadAdapter.cpp
     src/World/Core/WorldViewBinding.cpp
     src/World/Core/RuntimeTuning.cpp
@@ -221,9 +267,13 @@ set(SOURCES
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp
     src/World/Streaming/ColumnFlowExecutor.cpp
+    src/World/Streaming/ColumnRecordCoordinator.cpp
+    src/World/Streaming/EnterVisualGate.cpp
     src/World/Physics/WorldPhysicsScheduler.cpp
     src/World/Physics/WorldMovementPhysicsService.cpp
     src/World/Physics/WorldBlockPhysicsService.cpp
+    src/World/Interaction/BlockBreakService.cpp
+    src/World/Interaction/BlockPlacementService.cpp
     src/World/Physics/WorldChunkDirtyService.cpp
     src/World/Physics/ChunkRebuildQueue.cpp
     src/World/Physics/IUChunkDirtyService.cpp
@@ -253,6 +303,9 @@ set(SOURCES
     src/World/Physics/Replay/ReplayWorldFixture.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
     src/World/Diagnostics/FramePerfMonitor.cpp
+    src/World/Diagnostics/JobStageTrace.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp
+    src/World/Diagnostics/EnterLitDiagnostics.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
@@ -266,7 +319,9 @@ set(SOURCES
     src/Render/Engine/CreatureDrawPass.cpp
     src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp
+    src/Render/Engine/GreedyGpuPublication.cpp
     src/Render/Engine/GreedyVertexPool.cpp
+    src/Render/Engine/GreedyVertexPoolLifetime.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
@@ -300,6 +355,9 @@ set(SOURCES
     src/Render/Weather/WeatherParticleSystem.cpp
     src/Render/Weather/WeatherRenderPass.cpp
     src/Render/Weather/WeatherExposure.cpp
+    src/Render/Blocks/BlockCrackOverlayPass.cpp
+    src/Render/Blocks/BlockBreakParticleSystem.cpp
+    src/Render/Blocks/BlockBreakFxPass.cpp
     src/World/Math/GridMath.cpp
     src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp
@@ -381,9 +439,11 @@ set(SOURCES
     src/World/IO/ChunkStorageService.cpp
     src/Core/Jobs/JobThreadPool.cpp
     src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
     src/Core/Progress/LatestProgressSink.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureStore.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/App/Platform/InputManager.cpp
@@ -398,6 +458,8 @@ set(SOURCES
     src/App/Platform/CursorCapture.cpp
     src/Game/GameSession.cpp
     src/Game/CreatureVisualQaSpawner.cpp
+    src/Game/Economy/ResourceEconomy.cpp
+    src/Game/Crafting/RecipeRegistry.cpp
     src/Content/ContentTypeRegistry.cpp
     src/Commands/CommandRegistry.cpp
     src/Commands/WorldCommands.cpp
@@ -411,6 +473,7 @@ set(SOURCES
     src/Gui/Batch/UiTexturedQuadBatch.cpp
     src/Gui/Core/GuiIconSource.cpp
     src/Gui/Preview/ContentPreviewRenderer.cpp
+    src/Gui/Preview/ItemPreviewRenderer.cpp
     src/Gui/Preview/CreaturePreviewRenderer.cpp
     src/Gui/Preview/CreaturePreviewLayout.cpp
     src/Gui/Preview/ObjectPreviewLayout.cpp
@@ -418,6 +481,7 @@ set(SOURCES
     src/Gui/Layout/DockedOverlayLayout.cpp
     src/Gui/Cache/InventoryIconService.cpp
     src/Gui/Cache/ObjectIconCache.cpp
+    src/Gui/Cache/ItemIconCache.cpp
     src/Gui/Cache/CreatureIconCache.cpp
     src/Gui/Core/GuiInputRouter.cpp
     src/Gui/Core/GuiFocus.cpp
@@ -453,7 +517,12 @@ set(SOURCES
     src/Gui/Screens/WorldResourcePacksScreen.cpp
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
+    src/Gui/Screens/CharacterSheetScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
+    src/Gui/Screens/SurvivalInventoryScreen.cpp
+    src/Gui/Screens/DeathScreen.cpp
+    src/Gui/Screens/CraftingScreen.cpp
+    src/Gui/Screens/AnvilScreen.cpp
     src/Gui/Screens/WorldGenPaletteScreen.cpp
     src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
@@ -515,7 +584,11 @@ set(HEADERS
     src/World/Mesh/WorldMeshService.h
     src/App/Platform/WindowManager.h
     src/Blocks/Input/BlockInputController.h
+    src/Blocks/Input/PlayerInteractionRouter.h
     src/Render/Engine/GeometryEngine.h
+    src/Render/Blocks/BlockCrackOverlayPass.h
+    src/Render/Blocks/BlockBreakParticleSystem.h
+    src/Render/Blocks/BlockBreakFxPass.h
     src/Render/Engine/UnderwaterFogPass.h
     src/Render/Engine/GreedyGpuBackend.h
     src/Render/Engine/CrossGpuBackend.h
@@ -633,6 +706,10 @@ set(HEADERS
     src/Gui/Screens/ConsoleScreen.h
     src/Gui/Screens/WorldGenPaletteScreen.h
     src/Gui/Screens/CreativePaletteScreen.h
+    src/Gui/Screens/SurvivalInventoryScreen.h
+    src/Gui/Screens/DeathScreen.h
+    src/Gui/Screens/CraftingScreen.h
+    src/Gui/Screens/AnvilScreen.h
     src/Gui/Screens/WorldProgressScreen.h
     src/Core/Progress/ProgressTypes.h
     src/Core/Progress/IUProgressSink.h
@@ -847,6 +924,44 @@ target_include_directories(wander_interval_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(wander_interval_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(creature_stats_test
+    src/Creatures/Stats/CreatureStatsDefaults.cpp
+    src/Creatures/Stats/CreatureStatsJson.cpp
+    src/Creatures/Locomotion/LocomotionTypes.cpp
+    src/Creatures/Core/CreatureCatalogTypes.cpp
+    src/Creatures/Definition/CreatureDefinitionStorage.cpp
+    src/Creatures/Visual/CreatureRigidModelLoader.cpp
+    src/Test/CreatureStatsTest.cpp)
+target_include_directories(creature_stats_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_stats_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(influence_hit_math_test
+    src/Creatures/Influence/InfluenceHitMath.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Test/InfluenceHitMathTest.cpp)
+target_include_directories(influence_hit_math_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(influence_hit_math_test glm::glm)
+
+add_executable(tool_capabilities_test
+    src/Items/ToolCapabilities.cpp
+    src/Test/ToolCapabilitiesTest.cpp)
+target_include_directories(tool_capabilities_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(tool_capabilities_test glm::glm)
+
+add_executable(armor_equipment_test
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
+    src/Creatures/Core/CreatureInventory.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Test/ArmorEquipmentTest.cpp)
+target_include_directories(armor_equipment_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(armor_equipment_test glm::glm nlohmann_json::nlohmann_json)
+
+
 add_executable(creature_skinned_draw_test
     src/Creatures/Visual/CreatureBonePaletteGpu.cpp
     src/Test/CreatureSkinnedDrawTest.cpp)
@@ -882,6 +997,43 @@ set(PHYSICS_BLOCKWORLD_TEST_SOURCES
     src/World/Math/FluidCellState.cpp
     src/Blocks/BlockDefinitionStorage.cpp
     src/Blocks/BlockDefinition.cpp)
+
+add_executable(capture_worker_integration_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
+    src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
+    src/Test/CaptureWorkerIntegrationTest.cpp)
+target_include_directories(capture_worker_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(capture_worker_integration_test glm::glm)
+
+add_executable(capture_incremental_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Core/Jobs/PipelineAdmission.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureStore.cpp
+    src/Test/CaptureIncrementalTest.cpp)
+target_include_directories(capture_incremental_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(capture_incremental_test glm::glm)
+
+add_executable(capture_token_validation_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
+    src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureStore.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
+    src/Test/CaptureTokenValidationTest.cpp)
+target_include_directories(capture_token_validation_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(capture_token_validation_test glm::glm)
 
 set(PHYSICS_FLUID_SIM_SOURCES
     src/World/Core/RuntimeTuning.cpp
@@ -1079,10 +1231,74 @@ target_compile_definitions(block_light_emission_parse_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(block_light_emission_parse_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(block_hardness_parse_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Test/BlockHardnessParseTest.cpp)
+target_include_directories(block_hardness_parse_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(block_hardness_parse_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(block_hardness_parse_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(block_break_duration_test
+    src/Test/BlockBreakDurationTest.cpp)
+target_include_directories(block_break_duration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(block_break_duration_test glm::glm)
+
+add_executable(inventory_mode_test
+    src/Creatures/Core/CreatureInventory.cpp
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Test/InventoryModeTest.cpp)
+target_include_directories(inventory_mode_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(inventory_mode_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(influence_use_test
+    src/Items/ItemUseRegistry.cpp
+    src/Test/InfluenceUseTest.cpp)
+target_include_directories(influence_use_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(influence_use_test glm::glm)
+
+add_executable(recipe_registry_test
+    src/Creatures/Core/CreatureInventory.cpp
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Game/Crafting/RecipeRegistry.cpp
+    src/Test/RecipeRegistryTest.cpp)
+target_include_directories(recipe_registry_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(recipe_registry_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(resource_economy_test
+    src/Creatures/Core/CreatureInventory.cpp
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Game/Economy/ResourceEconomy.cpp
+    src/Test/ResourceEconomyTest.cpp)
+target_include_directories(resource_economy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(resource_economy_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(mode_policy_test
+    src/Test/ModePolicyTest.cpp)
+target_include_directories(mode_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mode_policy_test glm::glm)
+
+
 add_executable(chunk_lighting_propagation_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
+    src/World/Lighting/ChunkRelightSnapshot.cpp
     src/Test/GpuBlocklightFloodHostStub.cpp
     src/Test/GpuSkylightSeedHostStub.cpp
     src/Test/ChunkLightingPropagationTest.cpp)
@@ -1166,9 +1382,73 @@ add_executable(mesh_neighbor_policy_test
 target_include_directories(mesh_neighbor_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(mesh_publish_contract_test
+    src/Test/MeshPublishContractTest.cpp)
+target_include_directories(mesh_publish_contract_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_publish_contract_test glm::glm)
+
+add_executable(miss_first_mesh_class_test
+    src/Test/MissFirstMeshClassTest.cpp
+    src/World/Streaming/MemoryBudgetController.cpp)
+target_include_directories(miss_first_mesh_class_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(miss_first_mesh_class_test glm::glm)
+
+add_executable(mark_relit_characterization_test
+    src/Test/MarkRelitCharacterizationTest.cpp)
+target_include_directories(mark_relit_characterization_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mark_relit_characterization_test glm::glm)
+
+add_executable(mesh_light_stale_policy_test
+    src/Test/MeshLightStalePolicyTest.cpp)
+target_include_directories(mesh_light_stale_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(relight_install_planner_test
+    src/Test/RelightInstallPlannerTest.cpp)
+target_include_directories(relight_install_planner_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(relight_install_planner_test glm::glm)
+
+add_executable(chunk_render_demand_test
+    src/Test/ChunkRenderDemandTest.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp
+    src/World/Diagnostics/JobStageTrace.cpp)
+target_include_directories(chunk_render_demand_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_render_demand_test glm::glm)
+
+add_executable(relight_result_install_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/World/Lighting/LightUtil.cpp
+    src/World/Lighting/ChunkRelightSnapshot.cpp
+    src/Test/RelightResultInstallTest.cpp)
+target_include_directories(relight_result_install_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(relight_result_install_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(relight_result_install_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(mark_relit_integration_test
+    src/Test/MarkRelitIntegrationTest.cpp)
+target_include_directories(mark_relit_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mark_relit_integration_test glm::glm)
+
 add_executable(focus_ingress_policy_test
     src/Test/FocusIngressPolicyTest.cpp)
 target_include_directories(focus_ingress_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(frame_streaming_budget_test
+    src/Test/FrameStreamingBudgetTest.cpp)
+target_include_directories(frame_streaming_budget_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(idle_recovery_policy_test
+    src/Test/IdleRecoveryPolicyTest.cpp)
+target_include_directories(idle_recovery_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(seed_decision_policy_test
@@ -1176,10 +1456,85 @@ add_executable(seed_decision_policy_test
 target_include_directories(seed_decision_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(column_desired_stage_test
+    src/Test/ColumnDesiredStageTest.cpp)
+target_include_directories(column_desired_stage_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(cruise_sot_phase_test
+    src/Test/CruiseSoTPhaseTest.cpp
+    src/World/Streaming/ColumnRecordCoordinator.cpp)
+target_include_directories(cruise_sot_phase_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(cruise_sot_phase_test PRIVATE glm::glm glog::glog)
+
+add_executable(visible_black_attribution_test
+    src/Test/VisibleBlackAttributionTest.cpp)
+target_include_directories(visible_black_attribution_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(draw_oracle_gate_test
+    src/Test/DrawOracleGateTest.cpp)
+target_include_directories(draw_oracle_gate_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(block_catalog_queries_test
+    src/Test/BlockCatalogQueriesTest.cpp)
+target_include_directories(block_catalog_queries_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(block_catalog_queries_test PRIVATE glm::glm)
+
+add_executable(mesh_inputs_catalog_test
+    src/Test/MeshInputsCatalogTest.cpp)
+target_include_directories(mesh_inputs_catalog_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_inputs_catalog_test PRIVATE glm::glm)
+
+add_executable(normal_shutdown_test
+    src/Test/NormalShutdownTest.cpp
+    src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
+    src/Core/Jobs/JobThreadBudget.cpp)
+target_include_directories(normal_shutdown_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(frame_deadline_test
+    src/Test/FrameDeadlineTest.cpp)
+target_include_directories(frame_deadline_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(streamer_deadline_policy_test
+    src/Test/StreamerDeadlinePolicyTest.cpp)
+target_include_directories(streamer_deadline_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(streamer_deadline_policy_test PRIVATE glm::glm)
+
+add_executable(streamer_amortize_policy_test
+    src/Test/StreamerAmortizePolicyTest.cpp)
+target_include_directories(streamer_amortize_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(sticky_overlay_remesh_policy_test
+    src/Test/StickyOverlayRemeshPolicyTest.cpp)
+target_include_directories(sticky_overlay_remesh_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(column_emerge_bump_test
+    src/Test/ColumnEmergeBumpTest.cpp)
+target_include_directories(column_emerge_bump_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(column_emerge_bump_test glm::glm)
+
 add_executable(visual_ready_for_ring_policy_test
     src/Test/VisualReadyForRingPolicyTest.cpp)
 target_include_directories(visual_ready_for_ring_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(frustum_clip_test
+    src/Test/FrustumClipTest.cpp)
+target_include_directories(frustum_clip_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(frustum_clip_test glm::glm)
 
 add_executable(column_flow_scheduler_test
     src/Test/ColumnFlowSchedulerTest.cpp
@@ -1188,6 +1543,13 @@ target_include_directories(column_flow_scheduler_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(column_flow_scheduler_test glm::glm)
 
+add_executable(column_scheduler_audit_repro
+    tools/research/ColumnSchedulerAuditRepro.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp)
+target_include_directories(column_scheduler_audit_repro PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(column_scheduler_audit_repro glm::glm)
+
 add_executable(edit_mesh_remesh_policy_test
     src/Test/EditMeshRemeshPolicyTest.cpp
     src/World/Mesh/EditMeshRemeshPolicy.cpp
@@ -1195,6 +1557,12 @@ add_executable(edit_mesh_remesh_policy_test
 target_include_directories(edit_mesh_remesh_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(edit_mesh_remesh_policy_test glm::glm)
+
+add_executable(dig_seam_queue_test
+    src/Test/DigSeamQueueTest.cpp)
+target_include_directories(dig_seam_queue_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(dig_seam_queue_test glm::glm)
 
 add_executable(render_backend_factory_test
     src/Test/RenderBackendFactoryTest.cpp
@@ -1214,6 +1582,13 @@ target_link_libraries(android_gpu_policy_test PRIVATE glog::glog)
 add_executable(mesh_gpu_store_mdi_test
     src/Test/MeshGpuStoreMdiTest.cpp)
 target_include_directories(mesh_gpu_store_mdi_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_gpu_store_mdi_test PRIVATE glm::glm)
+
+add_executable(greedy_vertex_pool_lifetime_test
+    src/Test/GreedyVertexPoolLifetimeTest.cpp
+    src/Render/Engine/GreedyVertexPoolLifetime.cpp)
+target_include_directories(greedy_vertex_pool_lifetime_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(gpu_greedy_face_extract_test
@@ -1414,19 +1789,24 @@ add_executable(decor_mesh_integration_test
     src/Core/Jobs/JobThreadPool.cpp
     src/App/Platform/WorkerJobKind.cpp
     src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
     src/Render/Gl/ComputeProgram.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp
+    src/World/Diagnostics/JobStageTrace.cpp
     src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureStore.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
     src/Render/Mesh/GpuMeshPipeline.cpp
     src/Render/Mesh/GpuMeshSlotAllocator.cpp
+    src/Render/Backend/RenderBackendCaps.cpp
     src/Test/GpuFluidColumnScanHostStub.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
@@ -1443,6 +1823,24 @@ target_compile_definitions(decor_mesh_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json
     glog::glog OpenGL::GL GLEW::GLEW)
+
+add_executable(mesh_schedule_retry_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
+    src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
+    src/Test/MeshScheduleRetryTest.cpp)
+target_include_directories(mesh_schedule_retry_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_schedule_retry_test glm::glm)
+
+add_executable(column_job_graph_stage_test
+    src/Test/ColumnJobGraphStageTest.cpp)
+target_include_directories(column_job_graph_stage_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(fluid_worldgen_seal_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -2010,6 +2408,8 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp
     src/World/Streaming/ColumnFlowExecutor.cpp
+    src/World/Streaming/ColumnRecordCoordinator.cpp
+    src/World/Streaming/EnterVisualGate.cpp
     src/World/Lighting/CpuLightingSeedBackend.cpp
     src/World/Lighting/GpuLightingSeedBackend.cpp
     src/World/Lighting/LightingSeedBackendFactory.cpp
@@ -2106,6 +2506,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glog::glog
 )
 
+if(CUBATARIUM_ENABLE_TRACY)
+    target_link_libraries(${PROJECT_NAME} PRIVATE TracyClient)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE CUBATARIUM_ENABLE_TRACY)
+endif()
+
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE "WIN32" GLEW_STATIC)
     target_link_libraries(${PROJECT_NAME} PRIVATE dbghelp)
@@ -2120,8 +2525,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
+    # Release (and ship configs) → bin/ for flight-sim + IDE Run.
+    # Debug → build tree so Debug/Release never fight over bin/Cubatarium.exe.
     RUNTIME_OUTPUT_DIRECTORY ${CUBATARIUM_RUN_DIR}
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CUBATARIUM_RUN_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CUBATARIUM_RUN_DIR}
     RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CUBATARIUM_RUN_DIR}
     RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CUBATARIUM_RUN_DIR}
@@ -2235,3 +2642,126 @@ if(WIN32)
         VERBATIM
     )
 endif()
+
+add_custom_target(m4_ownership_lint
+    COMMAND python "${CMAKE_SOURCE_DIR}/bin/research_mesh_arch_20260901/scripts/m4_ownership_lint.py"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "M4 mesh ownership lint")
+
+# CTest registry (M01 / A14): unit/streaming/policy gates must run, not only build.
+add_executable(job_admission_lifetime_test
+  src/Test/JobAdmissionLifetimeTest.cpp
+  src/Core/Jobs/JobThreadPool.cpp src/Core/Jobs/JobThreadBudget.cpp
+  src/Core/Jobs/PipelineAdmission.cpp)
+target_include_directories(job_admission_lifetime_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(job_admission_lifetime_test PRIVATE Threads::Threads)
+add_executable(chunk_input_stamp_test src/Test/ChunkInputStampTest.cpp
+  src/World/Chunks/Chunk.cpp src/World/Math/FluidCellState.cpp)
+target_include_directories(chunk_input_stamp_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_input_stamp_test PRIVATE glm::glm)
+
+add_executable(inputs_still_valid_visual_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Test/InputsStillValidVisualTest.cpp)
+target_include_directories(inputs_still_valid_visual_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(inputs_still_valid_visual_test PRIVATE glm::glm
+    nlohmann_json::nlohmann_json)
+if(NOT ANDROID AND NOT CUBATARIUM_GLES)
+  add_executable(greedy_vertex_pool_production_test
+    src/Test/GreedyVertexPoolProductionTest.cpp
+    src/Test/GreedyVertexPoolDriverTest.cpp
+    src/Render/Engine/GreedyVertexPool.cpp
+    src/Render/Engine/GreedyGpuPublication.cpp
+    src/World/Diagnostics/JobStageTrace.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp)
+  target_include_directories(greedy_vertex_pool_production_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(greedy_vertex_pool_production_test PRIVATE
+    glm::glm GLEW::GLEW OpenGL::GL glog::glog glfw)
+  add_test(NAME greedy_vertex_pool_driver_test
+    COMMAND $<TARGET_FILE:greedy_vertex_pool_production_test> --driver)
+  set_tests_properties(greedy_vertex_pool_driver_test PROPERTIES
+    LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 30)
+  if(WIN32)
+    target_compile_definitions(greedy_vertex_pool_production_test PRIVATE GLEW_STATIC)
+  endif()
+  # Audit 2026-09-16 publication ownership counterexamples (R01–R04).
+  # WILL_FAIL until S1 (R01) + S2 (empty/reorder) land; still executes as stop-criterion.
+  add_executable(publication_audit
+    docs/streaming/audit_2026_09_16/PublicationRepro.cpp
+    src/Render/Engine/GreedyVertexPool.cpp
+    src/Render/Engine/GreedyGpuPublication.cpp
+    src/World/Diagnostics/JobStageTrace.cpp
+    src/World/Streaming/ChunkRenderDemand.cpp)
+  target_include_directories(publication_audit PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(publication_audit PRIVATE
+    glm::glm GLEW::GLEW OpenGL::GL glog::glog glfw)
+  if(WIN32)
+    target_compile_definitions(publication_audit PRIVATE GLEW_STATIC)
+  endif()
+  add_test(NAME publication_audit COMMAND $<TARGET_FILE:publication_audit>)
+  set_tests_properties(publication_audit PROPERTIES
+    LABELS "unit;streaming;audit" TIMEOUT 30)
+
+  # A21: CurrentContractRepro — remaining audit counters after P1/P2.
+  add_executable(current_contract_repro
+    docs/streaming/audit_2026_09_21/CurrentContractRepro.cpp
+    src/World/Core/BlockWorld.cpp
+    src/World/Core/IUBlockWriter.cpp
+    src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/Chunk.cpp
+    src/World/Chunks/ChunkBuffer.cpp
+    src/World/Math/GridMath.cpp
+    src/World/Math/FluidCellState.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Blocks/BlockDefinition.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureStore.cpp)
+  target_include_directories(current_contract_repro PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(current_contract_repro PRIVATE glm::glm)
+  add_test(NAME current_contract_repro COMMAND $<TARGET_FILE:current_contract_repro>)
+  set_tests_properties(current_contract_repro PROPERTIES
+    LABELS "unit;streaming;audit;a21"
+    TIMEOUT 60)
+endif()
+set(CUBATARIUM_CTEST_UNIT_TARGETS
+  job_admission_lifetime_test
+  chunk_input_stamp_test
+  inputs_still_valid_visual_test
+  visible_black_attribution_test
+  draw_oracle_gate_test
+  block_catalog_queries_test
+  mesh_inputs_catalog_test
+  normal_shutdown_test
+  frame_deadline_test
+  streamer_deadline_policy_test
+  streamer_amortize_policy_test
+  sticky_overlay_remesh_policy_test
+  greedy_vertex_pool_production_test
+  column_flow_scheduler_test
+  frustum_clip_test
+  column_scheduler_audit_repro
+  streaming_render_ready_invariants_test
+  miss_first_mesh_class_test
+  mesh_publish_contract_test
+  mesh_gpu_store_mdi_test
+  greedy_vertex_pool_lifetime_test
+  capture_token_validation_test
+  cruise_sot_phase_test
+  decor_mesh_integration_test
+  relight_result_install_test
+  mesh_neighbor_policy_test
+  mesh_light_stale_policy_test
+  column_emerge_bump_test
+  frame_streaming_budget_test
+  idle_recovery_policy_test
+  chunk_render_demand_test
+)
+foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
+  if(TARGET ${_t})
+    add_test(NAME ${_t} COMMAND $<TARGET_FILE:${_t}>)
+    set_tests_properties(${_t} PROPERTIES LABELS "unit;streaming")
+  endif()
+endforeach()

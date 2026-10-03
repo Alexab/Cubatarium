@@ -14,13 +14,17 @@ typedef float GLfloat;
 typedef int GLint;
 
 #include "App/Settings/RenderSettings.h"
+#include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Blocks/BlockBreakFxPass.h"
+#include "Render/Blocks/BlockCrackOverlayPass.h"
+#include "Render/Effects/InfluenceFxPass.h"
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/FluidSurfaceMap.h"
-#include "Render/Engine/IUFluidSurfaceProvider.h"
+#include "Render/Camera/CullInputKey.h"
 #include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/IUMeshGpuStore.h"
-#include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/SkyGradientPass.h"
 #include "Render/Engine/TextRenderer.h"
@@ -61,6 +65,30 @@ struct RenderBatch
   std::vector<glm::mat4> ModelMatrices; // Per-instance model (blocks)
   std::vector<float> faceIndices;
   std::vector<glm::vec2> quadSizes;
+};
+
+/// Per-chunk evidence for the last opaque packed fallback submission. The
+/// pixel probe uses this to distinguish packed residency from actual draw
+/// calls for a ray-mapped chunk.
+struct PackedOpaqueDrawTrace
+{
+  glm::ivec3 coord{0};
+  uint8_t selected{0};
+  uint8_t draw_path_ready{0};
+  uint8_t slot_present{0};
+  uint8_t slice_ready{0};
+  uint16_t opaque_range_count{0};
+  uint16_t texture_ready_range_count{0};
+  uint16_t draw_call_count{0};
+  uint16_t missing_texture_entry_count{0};
+  uint16_t zero_texture_id_range_count{0};
+  int32_t first_opaque_range_block_id{-1};
+  int32_t first_missing_texture_block_id{-1};
+  int32_t first_zero_texture_id_block_id{-1};
+  uint32_t slot_quad_count{0};
+  uint32_t opaque_range_quad_count{0};
+  uint32_t drawn_quad_count{0};
+  uint32_t drawn_index_count{0};
 };
 
 class UGeometryEngine : public IUGreedyTransparentBackend
@@ -287,6 +315,9 @@ private:
   USkyGradientPass SkyGradientPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;
   UWeatherRenderPass WeatherPass;
+  UBlockCrackOverlayPass BlockCrackPass;
+  UBlockBreakFxPass BlockBreakFx;
+  UInfluenceFxPass InfluenceFx;
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};
@@ -318,15 +349,43 @@ private:
   GreedyGpuPassCache GreedyGpuOpaque;
   GreedyGpuPassCache GreedyGpuCutout;
   GreedyGpuPassCache GreedyGpuTransparent;
+  std::vector<PackedOpaqueDrawTrace> LastOpaquePackedDrawTrace;
   CrossGpuPassCache CrossGpuPass;
   std::vector<GreedyBatchRef> CachedTransparentSortedRefs;
   uint64_t CachedTransparentSortRevision{0};
   uint64_t CachedTransparentMeshRevision{0};
   uint64_t CachedTransparentRefFingerprint{0};
+  /// Phase 5.1 T4: skip opaque by_block_id sort when draw set unchanged.
+  std::vector<GreedyBatchRef> CachedOpaqueSortedRefs;
+  uint64_t CachedOpaqueDrawFingerprint{0};
+  /// Phase 5.3.4 / audit M06: skip ApplyGpuCompactCull when CullInputKey stable.
+  CullInputKey CachedOpaqueCullInputKey{};
+  glm::ivec2 CachedOpaqueCullFocusXZ{0};
+  bool CachedOpaqueCullFocusValid{false};
+  uint32_t OpaqueCullFrameParity{0};
+  uint64_t CachedOpaqueCmdOn{0};
+  uint64_t CachedOpaqueCmdOnPrev{0};
+  bool CachedOpaqueCmdOnValid{false};
+  /// Phase 5.7R4: prior-frame VB for cull vb_edge transition (not plateau).
+  int CachedOpaqueCullVbFocusN{0};
+  int CachedOpaqueCullVbStalledN{0};
+  bool CachedOpaqueCullVbValid{false};
+  int CachedOpaqueCullVbDeltaStreak{0};
+  /// Phase 5.7R7.2 / audit M06: transparent compact-cull reuse caches.
+  CullInputKey CachedTransparentCullInputKey{};
+  glm::ivec2 CachedTransparentCullFocusXZ{0};
+  bool CachedTransparentCullFocusValid{false};
+  uint32_t TransparentCullFrameParity{0};
+  uint64_t CachedTransparentCmdOn{0};
+  uint64_t CachedTransparentCmdOnPrev{0};
+  bool CachedTransparentCmdOnValid{false};
+  /// Sysreset v4 hitch C: prior-frame transparent_cmd_reorder_n for resort skip.
+  int CachedTransparentPrevCmdReorderN{0};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();
   void EnsureRenderBackendsBound();
+  bool PackedRepresentationSwitchBound_{false};
   void DrawGreedyOpaqueBatches(
       const UChunkMeshCache &cache,
       const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,
@@ -340,17 +399,17 @@ private:
   void SetGreedyShaderMode(const std::shared_ptr<UShaderProgram> &shader,
                            bool alphaCutout, bool transparentPass,
                            GreedyShaderMode mode, float shellAlphaThreshold);
-  void DrawGreedyGpuBatches(const GreedyGpuPassCache &cache,
+  void DrawGreedyGpuBatches(GreedyGpuPassCache &cache,
                             const glm::mat4 &vp,
                             const std::map<size_t, UTextureCube> &textures,
                             bool alphaCutout, bool transparentPass,
                             GreedyShaderMode mode, float shellAlphaThreshold);
-  void DrawPackedGpuMeshes(const UChunkMeshCache &cache,
-                           const std::vector<GpuPackedChunkRef> &chunk_refs,
-                           const glm::mat4 &vp,
-                           const std::map<size_t, UTextureCube> &textures,
-                           bool transparent_pass, GreedyShaderMode mode,
-                           float shell_alpha);
+  size_t DrawPackedGpuMeshes(const UChunkMeshCache &cache,
+                             const std::vector<GpuPackedChunkRef> &chunk_refs,
+                             const glm::mat4 &vp,
+                             const std::map<size_t, UTextureCube> &textures,
+                             bool transparent_pass, GreedyShaderMode mode,
+                             float shell_alpha);
 
   const UChunkMeshCache *PreparedTransparentCache{nullptr};
 

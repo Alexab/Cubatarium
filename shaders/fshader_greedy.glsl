@@ -6,6 +6,7 @@ flat in int vFaceIndex;
 in float vSkyLight;
 in float vBlockLight;
 in float vWetness;
+flat in float vLightPreview;
 
 out vec4 FragColor;
 
@@ -44,6 +45,7 @@ uniform float uEnvNightFactor;
 uniform float uEnvSkyLightScale;
 uniform float uEnvLightDebug;
 uniform float uEnvLightDebugMode;
+uniform float uLightPreviewOverride;
 uniform float uEnvPrecipIntensity;
 uniform float uEnvWetness;
 uniform vec2 uFluidSurfaceOrigin;
@@ -57,6 +59,7 @@ uniform sampler2D uOpaqueDepthMap;
 uniform float uOpaqueDepthGuard;
 uniform vec2 uOpaqueDepthScreenSize;
 uniform float uOpaqueDepthBias;
+uniform float uDebugTransparentFragmentMarker;
 
 const int kCrossFaceIndex = 127;
 
@@ -250,6 +253,12 @@ void main()
     float blockStrength = mix(0.9, 0.35, daySky);
     float blockLit = mix(blockAmbientFloor, blockStrength, block01);
     float lit = clamp(max(skyLit, blockLit), 0.0, 1.0);
+    // Unsettled first meshes use an explicitly marked ambient presentation
+    // until the light solver publishes a replacement. Light debug remains raw.
+    if ((vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
+        uEnvLightDebugMode <= 0.5) {
+        lit = max(lit, 0.42);
+    }
     FragColor.rgb *= lit;
     if (uEnvLightDebugMode > 0.5) {
         if (uEnvLightDebugMode < 1.5) {
@@ -287,6 +296,10 @@ void main()
         if (gl_FragCoord.z > opaqueDepth + uOpaqueDepthBias) {
             discard;
         }
+    }
+    if (uDebugTransparentFragmentMarker > 0.5) {
+        FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        return;
     }
     bool frag_underwater = false;
     vec3 underwater_fog_color = uFogColor;

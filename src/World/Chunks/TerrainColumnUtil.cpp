@@ -37,18 +37,11 @@ int GetHighestNonAirChunkSlice(const UBlockWorld &world, glm::ivec3 groundCoord,
   {
     const UChunk *chunk = world.GetChunkManager().GetChunk(
         glm::ivec3(groundCoord.x, cy, groundCoord.z));
-    if (!chunk)
+    if (!chunk || chunk->GetNonAirCount() == 0)
     {
       continue;
     }
-    for (const BlockId block : chunk->GetData())
-    {
-      if (block != BLOCK_AIR)
-      {
-        highest = std::max(highest, cy);
-        break;
-      }
-    }
+    highest = std::max(highest, cy);
   }
   return highest;
 }

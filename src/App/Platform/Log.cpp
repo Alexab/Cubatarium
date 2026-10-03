@@ -621,6 +621,11 @@ void CubatariumLogError(const char *tag, const std::string &msg)
 #endif
 }
 
+void CubatariumFlushLogs()
+{
+  FlushLogsHard();
+}
+
 void CubatariumSetSuppressErrorDialogs(bool suppress)
 {
   SuppressErrorDialogsFlag().store(suppress, std::memory_order_relaxed);

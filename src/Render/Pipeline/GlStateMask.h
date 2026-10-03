@@ -49,6 +49,11 @@ inline constexpr GlStateMask kGlMaskOverlay2D =
 inline constexpr GlStateMask kGlMaskDrawCubeRestore =
     GlStateBit::DepthTest | GlStateBit::Blend | GlStateBit::CullFace;
 
+/// First-person viewmodel pass (default FB, clear depth, own projection).
+inline constexpr GlStateMask kGlMaskFpViewmodel3D =
+    GlStateBit::ViewportFb | GlStateBit::DepthTest | GlStateBit::DepthFunc |
+    GlStateBit::DepthMask | GlStateBit::Blend | GlStateBit::CullFace;
+
 } // namespace cutum
 
 #endif

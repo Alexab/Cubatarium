@@ -3,6 +3,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
+#include "Render/Mesh/MeshPublishContract.h"
 #include <cstddef>
 #include <glm/glm.hpp>
 #include <vector>
@@ -161,12 +162,32 @@ void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
 
 void UCrossGpuBackend::RefreshPass(
     CrossGpuPassCache &cache, const std::vector<CrossInstanceBatch> &batches,
-    uint64_t mesh_revision, uint64_t cull_revision)
+    uint64_t candidate_mesh_rev, uint64_t candidate_cull_rev,
+    uint64_t expected_mesh_rev, uint64_t expected_cull_rev)
 {
-  if (mesh_revision == cache.meshRevision &&
-      cull_revision == cache.cullRevision)
+  if (candidate_mesh_rev == cache.meshRevision &&
+      candidate_cull_rev == cache.cullRevision)
   {
     return;
+  }
+  // A37 H3: reject stale/backwards refresh.
+  if (cache.meshRevision != 0 && candidate_mesh_rev < cache.meshRevision)
+  {
+    return;
+  }
+  // A39 P5: got = candidate; expected = live desire (NOT a copy of got).
+  // Epochs left zero so TableEpochStale does not block intentional forward
+  // refresh; SourceMismatch rejects when candidate ≠ live desire.
+  {
+    const PublicationValidation v = ValidateCrossOrShellPublication(
+        /*got_geom=*/candidate_mesh_rev, /*got_light=*/candidate_cull_rev,
+        /*light_valid=*/true,
+        /*expected_geom=*/expected_mesh_rev,
+        /*expected_light=*/expected_cull_rev);
+    if (!PublicationCandidateAccepted(v))
+    {
+      return; // keep prior resident
+    }
   }
 
   size_t write_index = 0;
@@ -195,8 +216,8 @@ void UCrossGpuBackend::RefreshPass(
   cache.batches.resize(write_index);
 
   glBindBuffer(kArrayBuffer, 0);
-  cache.meshRevision = mesh_revision;
-  cache.cullRevision = cull_revision;
+  cache.meshRevision = candidate_mesh_rev;
+  cache.cullRevision = candidate_cull_rev;
 }
 
 void UCrossGpuBackend::DestroyPass(CrossGpuPassCache &cache)

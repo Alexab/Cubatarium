@@ -1,6 +1,13 @@
 {
   "name": "dropper",
   "id": 754,
+  "hardness": 3.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

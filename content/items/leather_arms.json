@@ -1,0 +1,22 @@
+{
+  "id": "leather_arms",
+  "displayName": "Leather Arm Guards",
+  "types": [
+    "armor",
+    "arms"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/leather_arms/model.gltf",
+  "armor": {
+    "slots": [
+      "arms"
+    ],
+    "armor_groups": {
+      "fleshy": 40
+    }
+  },
+  "visual": {
+    "wield_scale": 1.0
+  }
+}

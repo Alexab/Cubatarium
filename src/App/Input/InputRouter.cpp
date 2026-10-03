@@ -3,6 +3,8 @@
 #include "App/Application.h"
 #include "App/Settings/AppState.h"
 #include "Game/GameSession.h"
+#include "Game/ModePolicy.h"
+#include "Game/WorldGameMode.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
@@ -102,6 +104,50 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         app.ScreenNav.CloseWorldGenOverlay();
         return true;
       }
+      if (app.CharacterSheetOpen)
+      {
+        app.CharacterSheetOpen = false;
+        if (app.CharacterSheetScreen)
+        {
+          app.CharacterSheetScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
+      if (app.SurvivalInventoryOpen)
+      {
+        app.SurvivalInventoryOpen = false;
+        if (app.SurvivalInventoryScreen)
+        {
+          app.SurvivalInventoryScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
+      if (app.CraftingOpen)
+      {
+        app.CraftingOpen = false;
+        if (app.CraftingScreen)
+        {
+          app.CraftingScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
+      if (app.AnvilOpen)
+      {
+        app.AnvilOpen = false;
+        if (app.AnvilScreen)
+        {
+          app.AnvilScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
       app.ReturnToMainMenu();
       return true;
     }
@@ -190,6 +236,16 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.PaletteKey, key))
     {
+      if (!app.World ||
+          !ModePolicy::AllowsCreativePalette(app.World->GetGameMode()))
+      {
+        if (app.Geometry)
+        {
+          app.Geometry->ShowTransientMessage(
+              "Creative palette is not available in Survival mode", 2.5);
+        }
+        return true;
+      }
       const bool sameTabOpen = app.PaletteOpen && app.PaletteScreen &&
                                app.PaletteScreen->GetActiveMainTab() == 0;
       if (sameTabOpen)
@@ -225,6 +281,45 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.InventoryKey, key))
     {
+      const bool allowCreativePalette = app.World &&
+                                         ModePolicy::AllowsCreativePalette(
+                                             app.World->GetGameMode());
+
+      // Survival mode: InventoryKey toggles backpack UI.
+      if (!allowCreativePalette)
+      {
+        if (app.SurvivalInventoryOpen)
+        {
+          app.SurvivalInventoryOpen = false;
+          if (app.SurvivalInventoryScreen)
+          {
+            app.SurvivalInventoryScreen->SetVisible(false);
+          }
+          app.GuiContext->ClearInputState();
+        }
+        else
+        {
+          app.SurvivalInventoryOpen = true;
+          app.PaletteOpen = false;
+          app.WorldGenOpen = false;
+          if (app.PaletteScreen)
+          {
+            app.PaletteScreen->SetVisible(false);
+          }
+          if (app.WorldGenScreen)
+          {
+            app.WorldGenScreen->SetVisible(false);
+          }
+          if (app.SurvivalInventoryScreen)
+          {
+            app.SurvivalInventoryScreen->SetVisible(true);
+          }
+        }
+        app.SyncCursorVisibility();
+        return true;
+      }
+
+      // Creative mode: InventoryKey toggles the creative palette.
       if (app.PaletteOpen)
       {
         app.PaletteOpen = false;
@@ -263,9 +358,14 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       if (app.WorldGenOpen)
       {
         app.PaletteOpen = false;
+        app.CharacterSheetOpen = false;
         if (app.PaletteScreen)
         {
           app.PaletteScreen->SetVisible(false);
+        }
+        if (app.CharacterSheetScreen)
+        {
+          app.CharacterSheetScreen->SetVisible(false);
         }
       }
       else
@@ -275,6 +375,33 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       if (app.WorldGenScreen)
       {
         app.WorldGenScreen->SetVisible(app.WorldGenOpen);
+      }
+      app.SyncCursorVisibility();
+      return true;
+    }
+    if (!app.ConsoleOpen && KeyNameIs(app.Ui.CharacterKey, key))
+    {
+      app.CharacterSheetOpen = !app.CharacterSheetOpen;
+      if (app.CharacterSheetOpen)
+      {
+        app.PaletteOpen = false;
+        app.WorldGenOpen = false;
+        if (app.PaletteScreen)
+        {
+          app.PaletteScreen->SetVisible(false);
+        }
+        if (app.WorldGenScreen)
+        {
+          app.WorldGenScreen->SetVisible(false);
+        }
+      }
+      else
+      {
+        app.GuiContext->ClearInputState();
+      }
+      if (app.CharacterSheetScreen)
+      {
+        app.CharacterSheetScreen->SetVisible(app.CharacterSheetOpen);
       }
       app.SyncCursorVisibility();
       return true;
@@ -385,27 +512,14 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
   {
     app.DragCursorX = x;
     app.DragCursorY = y;
-    if (event.Button == GuiMouseButton::Left && !pressed && app.GameSession &&
-        app.GameSession->IsDragging())
+    if (event.Button == GuiMouseButton::Left && !pressed)
     {
-      SlotAddress target;
-      const bool hasTarget = app.ResolveSlotAt(x, y, target);
-      if (hasTarget)
+      if ((app.GameSession && app.GameSession->IsDragging()) ||
+          app.OverlayPressedWidget || app.HasAnyOverlayCapture())
       {
-        if (!app.GameSession->DropOnSlot(target))
-        {
-          app.GameSession->CancelDrag();
-        }
+        app.FinishInventoryPointerGesture(event);
+        return true;
       }
-      else
-      {
-        app.GameSession->CancelDrag();
-      }
-      if (app.HasAnyOverlayCapture())
-      {
-        app.TryRouteInGameOverlay(event, false);
-      }
-      return true;
     }
     if ((app.OverlayPopup && app.OverlayPopup->IsOpen()) || app.ConsoleOpen)
     {
@@ -458,6 +572,13 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
   {
     app.DragCursorX = x;
     app.DragCursorY = y;
+    // Deliver move to the pressed overlay leaf so GuiSlot can BeginDrag.
+    if (app.OverlayPressedWidget &&
+        !(app.GameSession && app.GameSession->IsDragging()))
+    {
+      app.OverlayPressedWidget->OnMouseMove(event);
+      return true;
+    }
     if (app.GameSession && app.GameSession->IsDragging())
     {
       return true;
@@ -494,6 +615,34 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
           return true;
         }
         break;
+      case UApplication::OverlayPointerCapture::CharacterSheet:
+        if (app.CharacterSheetOpen && app.CharacterSheetScreen &&
+            routeCapturedMove(app.CharacterSheetScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::SurvivalInventory:
+        if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen &&
+            routeCapturedMove(app.SurvivalInventoryScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::Crafting:
+        if (app.CraftingOpen && app.CraftingScreen &&
+            routeCapturedMove(app.CraftingScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::Anvil:
+        if (app.AnvilOpen && app.AnvilScreen &&
+            routeCapturedMove(app.AnvilScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
       default:
         break;
       }
@@ -526,6 +675,22 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
     if (app.WorldGenOpen)
     {
       handled |= routeMove(app.WorldGenScreen->GetRoot());
+    }
+    if (app.CharacterSheetOpen && app.CharacterSheetScreen)
+    {
+      handled |= routeMove(app.CharacterSheetScreen->GetRoot());
+    }
+    if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen)
+    {
+      handled |= routeMove(app.SurvivalInventoryScreen->GetRoot());
+    }
+    if (app.CraftingOpen && app.CraftingScreen)
+    {
+      handled |= routeMove(app.CraftingScreen->GetRoot());
+    }
+    if (app.AnvilOpen && app.AnvilScreen)
+    {
+      handled |= routeMove(app.AnvilScreen->GetRoot());
     }
     handled |= routeMove(app.HudScreen ? app.HudScreen->GetRoot() : nullptr);
     return handled;

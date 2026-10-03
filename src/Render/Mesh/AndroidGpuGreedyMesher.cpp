@@ -201,25 +201,32 @@ UAndroidGpuGreedyMesher::~UAndroidGpuGreedyMesher() = default;
 std::vector<GreedyQuad>
 UAndroidGpuGreedyMesher::BuildChunkMesh(const UBlockWorld &world,
                                         glm::ivec3 chunk_coord,
-                                        UBlockRegistry &registry)
+                                        UBlockRegistry &registry,
+                                        const BlockDefinitionCatalog *catalog)
 {
-  return Cpu.BuildChunkMesh(world, chunk_coord, registry);
+  return Cpu.BuildChunkMesh(world, chunk_coord, registry, catalog);
 }
 
 std::vector<GreedyQuad>
 UAndroidGpuGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-                                        UBlockRegistry &registry)
+                                        UBlockRegistry &registry,
+                                        const BlockDefinitionCatalog *catalog)
 {
-  return Cpu.BuildChunkMesh(snapshot, registry);
+  return Cpu.BuildChunkMesh(snapshot, registry, catalog);
 }
 
 bool UAndroidGpuGreedyMesher::CanDeferGpuExtract(
-    const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry) const
+    const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+    const BlockDefinitionCatalog *catalog) const
 {
   const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
   if (!caps.AllowAndroidGpu)
   {
     return false;
+  }
+  if (catalog)
+  {
+    return SnapshotIsGpuExtractEligible(snapshot, catalog);
   }
   return SnapshotIsGpuExtractEligible(snapshot, registry);
 }
@@ -227,10 +234,14 @@ bool UAndroidGpuGreedyMesher::CanDeferGpuExtract(
 bool UAndroidGpuGreedyMesher::TryExtractOpaqueToBatches(
     const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
     glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches,
-    bool deferred_no_gpu_readback, bool /*greedy_merge_rects*/)
+    bool deferred_no_gpu_readback, bool /*greedy_merge_rects*/,
+    const BlockDefinitionCatalog *catalog)
 {
   out_batches.clear();
-  if (!SnapshotIsGpuExtractEligible(snapshot, registry))
+  const bool eligible =
+      catalog ? SnapshotIsGpuExtractEligible(snapshot, catalog)
+              : SnapshotIsGpuExtractEligible(snapshot, registry);
+  if (!eligible)
   {
     return false;
   }

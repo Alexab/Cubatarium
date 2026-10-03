@@ -1,0 +1,21 @@
+{
+  "id": "copper_feet",
+  "format": "parts_v1",
+  "license": "CC0-1.0",
+  "attribution": "Cubatarium educational",
+  "parts": [
+    {
+      "texture": "white",
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        0.2,
+        0.2,
+        0.2
+      ]
+    }
+  ]
+}

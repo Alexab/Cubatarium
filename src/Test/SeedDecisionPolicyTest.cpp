@@ -34,7 +34,7 @@ int main()
     const auto d = EvaluateSeedDecision(in);
     Expect(d.try_sync_seed, "cruise+CanSeed+healthy → try_sync");
     Expect(d.cheap_seed, "cruise uses cheap seed");
-    Expect(d.budget_ms >= 1.5 && d.budget_ms <= 2.0, "cruise budget 1.5–2ms");
+    Expect(d.budget_ms >= 1.5 && d.budget_ms <= 2.5, "cruise budget 1.5–2.5ms");
   }
 
   {
@@ -59,7 +59,7 @@ int main()
     const auto d = EvaluateSeedDecision(in);
     Expect(d.try_sync_seed, "idle underfeet try_sync");
     Expect(!d.cheap_seed, "idle underfeet full Relight budget");
-    Expect(d.budget_ms == 3.0, "idle underfeet budget 3ms");
+    Expect(d.budget_ms == 3.5, "idle underfeet budget 3.5ms");
   }
 
   {
@@ -82,7 +82,55 @@ int main()
     in.frame_ms = 18.0;
     const auto d = EvaluateSeedDecision(in);
     Expect(d.try_sync_seed, "idle near_focus healthy frame try_sync");
-    Expect(d.budget_ms == 2.0, "idle near_focus budget 2ms");
+    Expect(d.budget_ms == 2.5, "idle near_focus budget 2.5ms");
+  }
+
+  {
+    // Era14: cruise cheap seed widens to frame_ms≤32.
+    SeedDecisionInput in;
+    in.near_focus = true;
+    in.can_seed = true;
+    in.moving_cruise = true;
+    in.frame_ms = 30.0;
+    const auto d = EvaluateSeedDecision(in);
+    Expect(d.try_sync_seed, "cruise frame≤32 try_sync cheap");
+    Expect(d.cheap_seed, "cruise cheap_seed");
+  }
+
+  {
+    // Visual holes: cruise seed cap widens to 40ms (163559 light_debt trail).
+    SeedDecisionInput in;
+    in.near_focus = true;
+    in.can_seed = true;
+    in.moving_cruise = true;
+    in.frame_ms = 36.0;
+    in.visual_holes = 1;
+    const auto d = EvaluateSeedDecision(in);
+    Expect(d.try_sync_seed, "holes cruise frame≤40 try_sync cheap");
+  }
+
+  {
+    SeedDecisionInput in;
+    in.near_focus = true;
+    in.can_seed = true;
+    in.moving_cruise = true;
+    in.pending_light_focus = 30;
+    in.frame_ms = 36.0;
+    const auto d = EvaluateSeedDecision(in);
+    Expect(d.try_sync_seed, "high pending cruise → cheap sync seed");
+    Expect(d.cheap_seed, "high pending uses cheap seed");
+  }
+
+  {
+    SeedDecisionInput in;
+    in.near_focus = true;
+    in.can_seed = true;
+    in.moving_cruise = true;
+    in.pending_light_focus = 18;
+    in.frame_ms = 36.0;
+    const auto d = EvaluateSeedDecision(in);
+    Expect(d.try_sync_seed, "LitRing B3: pending>16 cruise → cheap sync");
+    Expect(d.cheap_seed, "LitRing B3 pending path uses cheap seed");
   }
 
   if (gFails != 0)

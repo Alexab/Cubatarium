@@ -138,6 +138,23 @@ Migration execution: plan Streaming Arch E Complete (R0–R7).
 
 ---
 
+## Era14 V4 execution (2026-08)
+
+Primary path (see [`ERA14_POSTMORTEM.md`](ERA14_POSTMORTEM.md), TD-ARCH-040..048):
+
+| Phase | Status | Note |
+|-------|--------|------|
+| 0 Docs + TD skeleton | **done** | `56391cdf` |
+| Baseline autofly matrix | **done** | era14_* timeline; LAND baseline miss=48 |
+| 1 Frame extract `TickWorldStreamingPhase` | **done** | `0812c77f`; nest proof |
+| 2 DesiredStage / kill calm Imm | **partial** | code done; best LAND p2c miss=4 wall≤55 sticky=0; holes≈0.2 residual TD-043 |
+| 3 Commit seed + remesh-on-lit | **done** | `f9af0c16` + SeedDecision widen |
+| 4 Capture worker / trim knobs | **partial** | refresh budget trim; worker Capture deferred TD-046 |
+| 5 PREMERGE + full matrix | **partial** | FLY_CLEAN+IDLE_WARM GO; IDLE_CLEAN/LAND/ARCH_D3 residual TD-043/048 |
+
+Each code phase: autofly → analyze → gate → TD update → auto-commit checkpoint.
+Land (`ARCH_D3_LAND`) required from Phase 2.
+
 ## Статус (2026-07-21, после Era 11)
 
 ### Evidence regress

@@ -1,0 +1,22 @@
+{
+  "id": "iron_feet",
+  "displayName": "Iron Boots",
+  "types": [
+    "armor",
+    "feet"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/iron_feet/model.gltf",
+  "armor": {
+    "slots": [
+      "feet"
+    ],
+    "armor_groups": {
+      "fleshy": 90
+    }
+  },
+  "visual": {
+    "wield_scale": 1.0
+  }
+}

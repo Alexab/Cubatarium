@@ -13,16 +13,17 @@ public:
 
   std::vector<GreedyQuad>
   BuildChunkMesh(const UBlockWorld &world, glm::ivec3 chunk_coord,
-                 UBlockRegistry &registry) override
+                 UBlockRegistry &registry,
+                 const BlockDefinitionCatalog *catalog = nullptr) override
   {
-    return UGreedyMesher::BuildChunkMesh(world, chunk_coord, registry);
+    return UGreedyMesher::BuildChunkMesh(world, chunk_coord, registry, catalog);
   }
 
   std::vector<GreedyQuad>
-  BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-                 UBlockRegistry &registry) override
+  BuildChunkMesh(const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+                 const BlockDefinitionCatalog *catalog = nullptr) override
   {
-    return UGreedyMesher::BuildChunkMesh(snapshot, registry);
+    return UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog);
   }
 };
 

@@ -17,14 +17,21 @@ public:
   static void EnsureSession();
 
   /// Record one InGame frame. `swap_wait_ms` is wall time spent in SwapBuffers.
+  /// `frame_wall_ms` is same-frame wall (begin→after swap); does not mutate
+  /// World wall delta used for gameplay timing.
   /// `interval_sec` comes from UiSettings::PerfLogIntervalSec (default 2).
   static void OnInGameFrame(UWorld &world, double swap_wait_ms,
-                            double interval_sec);
+                            double interval_sec, double frame_wall_ms);
 
   static void Shutdown();
 
   /// Absolute path of the current/last perf_*.jsonl session (empty if none).
   static std::string GetLastSessionPath();
+
+  /// Last sampled process memory (updated every ~30 InGame frames). 0 until
+  /// first sample — MemoryBudget should fall back to a one-shot query.
+  static double GetLastPrivateMb();
+  static double GetLastRssMb();
 };
 
 } // namespace cutum

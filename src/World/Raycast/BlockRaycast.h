@@ -1,6 +1,8 @@
 #ifndef BLOCKRAYCAST_H
 #define BLOCKRAYCAST_H
 
+#include <cstdint>
+#include "World/Math/BlockTypes.h"
 #include <glm/glm.hpp>
 #include <optional>
 
@@ -9,12 +11,27 @@ namespace cutum
 
 class UBlockWorld;
 class UBlockRegistry;
+class UWorld;
 
 struct BlockRayHit
 {
   glm::ivec3 blockPos;
   glm::ivec3 faceNormal;
   float distance;
+};
+
+struct OpaqueVoxelRayWitness
+{
+  // 1=opaque cube, 2=unloaded chunk before an opaque cube, 3=none in range.
+  uint8_t state{0};
+  uint8_t entry_face{0xffu};
+  glm::ivec3 block{0};
+  glm::ivec3 unloaded_cell{0};
+  glm::ivec3 previous_block{0};
+  BlockId block_id{BLOCK_AIR};
+  BlockId previous_block_id{BLOCK_AIR};
+  float distance{-1.0f};
+  uint32_t known_air_unloaded_steps{0};
 };
 
 struct FluidPlacementHit
@@ -29,6 +46,12 @@ std::optional<BlockRayHit> RaycastSolidBlocks(const UBlockWorld &world,
                                               glm::vec3 origin,
                                               glm::vec3 direction,
                                               float maxDistance = 128.0f);
+
+/// Trace the first opaque cube using the renderer's voxel visibility rules.
+OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
+                                         const glm::vec3 &origin,
+                                         const glm::vec3 &direction,
+                                         float max_distance);
 
 glm::ivec3 InferPlacementNormal(const BlockRayHit &hit, glm::vec3 eye_pos);
 

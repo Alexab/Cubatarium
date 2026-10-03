@@ -1,5 +1,6 @@
 #include "Render/Mesh/GpuMeshSlotAllocator.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/MeshPublishContract.h"
 #include "glog/logging.h"
 
 namespace cutum
@@ -12,6 +13,7 @@ bool UGpuMeshSlotAllocator::Init(uint32_t max_slots)
   return false;
 #else
   MaxSlots = max_slots;
+  StagingAllocationFailureCount_ = 0;
   Slots.resize(max_slots);
   FreeList.reserve(max_slots);
   for (int i = static_cast<int>(max_slots) - 1; i >= 0; --i)
@@ -76,6 +78,8 @@ int UGpuMeshSlotAllocator::AllocateSlot(glm::ivec3 chunk_coord,
   slot.QuadCount = 0;
   slot.ChunkCoord = chunk_coord;
   slot.Transparent = transparent;
+  slot.generation = NextSlotGeneration();
+  slot.still_live_draw = true;
   ChunkToSlot[chunk_coord] = slot_idx;
   return slot_idx;
 }
@@ -84,6 +88,7 @@ int UGpuMeshSlotAllocator::AllocateStagingSlot(bool transparent)
 {
   if (FreeList.empty())
   {
+    ++StagingAllocationFailureCount_;
     return -1;
   }
   const int slot_idx = FreeList.back();
@@ -93,6 +98,8 @@ int UGpuMeshSlotAllocator::AllocateStagingSlot(bool transparent)
   slot.QuadCount = 0;
   slot.ChunkCoord = glm::ivec3(0);
   slot.Transparent = transparent;
+  slot.generation = NextSlotGeneration();
+  slot.still_live_draw = false;
   return slot_idx;
 }
 
@@ -109,16 +116,19 @@ void UGpuMeshSlotAllocator::BindCommittedSlot(glm::ivec3 chunk_coord,
     if (it->second == slot_index)
     {
       Slots[static_cast<size_t>(slot_index)].ChunkCoord = chunk_coord;
+      Slots[static_cast<size_t>(slot_index)].still_live_draw = true;
       return;
     }
     const int old_idx = it->second;
-    Slots[static_cast<size_t>(old_idx)].QuadCount = 0;
-    FreeList.push_back(old_idx);
     ChunkToSlot.erase(it);
+    Slots[static_cast<size_t>(old_idx)].still_live_draw = false;
+    // A28: immediate free after unbind (defer API kept for staging rejects).
+    FreeSlotByIndex(old_idx);
   }
-  ChunkToSlot[chunk_coord] = slot_index;
   GpuMeshSlot &slot = Slots[static_cast<size_t>(slot_index)];
   slot.ChunkCoord = chunk_coord;
+  slot.still_live_draw = true;
+  ChunkToSlot[chunk_coord] = slot_index;
 }
 
 void UGpuMeshSlotAllocator::FreeSlot(glm::ivec3 chunk_coord)
@@ -150,7 +160,48 @@ void UGpuMeshSlotAllocator::FreeSlotByIndex(int slot_index)
     }
   }
   Slots[static_cast<size_t>(slot_index)].QuadCount = 0;
+  Slots[static_cast<size_t>(slot_index)].still_live_draw = false;
   FreeList.push_back(slot_index);
+}
+
+bool UGpuMeshSlotAllocator::TryFreeSlotByIndex(int slot_index,
+                                               uint64_t fence_completed_generation,
+                                               uint64_t live_generation)
+{
+  if (slot_index < 0 || slot_index >= static_cast<int>(MaxSlots))
+  {
+    return true;
+  }
+  // Legacy / untracked fence watermark: keep previous free semantics.
+  if (fence_completed_generation == 0 && FenceCompletedGeneration_ == 0)
+  {
+    FreeSlotByIndex(slot_index);
+    return true;
+  }
+  const GpuMeshSlot &slot = Slots[static_cast<size_t>(slot_index)];
+  const uint64_t free_gen =
+      slot.generation != 0 ? slot.generation : live_generation;
+  if (ShouldDeferMeshRetirement(free_gen, live_generation,
+                                fence_completed_generation,
+                                slot.still_live_draw))
+  {
+    return false;
+  }
+  FreeSlotByIndex(slot_index);
+  return true;
+}
+
+uint64_t UGpuMeshSlotAllocator::NextSlotGeneration()
+{
+  return NextGeneration_++;
+}
+
+void UGpuMeshSlotAllocator::NoteFenceCompletedGeneration(uint64_t gen)
+{
+  if (gen > FenceCompletedGeneration_)
+  {
+    FenceCompletedGeneration_ = gen;
+  }
 }
 
 bool UGpuMeshSlotAllocator::HasSlot(glm::ivec3 chunk_coord) const

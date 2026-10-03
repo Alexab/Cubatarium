@@ -8,6 +8,12 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Game/GameSession.h"
+#include "Game/Crafting/RecipeRegistry.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/ModePolicy.h"
+#include "Game/WorldGameMode.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Items/ToolCapabilities.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
@@ -52,6 +58,68 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
 
   registry.Register("help", [&registry](const std::vector<std::string> &)
                     { return CommandResult{true, registry.FormatHelpText()}; });
+
+  registry.Register(
+      "gamemode",
+      [&session](const std::vector<std::string> &args)
+      {
+        if (args.size() < 2)
+        {
+          return CommandResult{false, "Usage: gamemode <creative|survival>"};
+        }
+        const WorldGameMode mode = WorldGameModeFromString(args[1]);
+        if (args[1] != "creative" && args[1] != "survival")
+        {
+          return CommandResult{false, "Unknown mode (creative|survival)"};
+        }
+        session.SyncToWorldGameMode(mode);
+        return CommandResult{true, std::string("Game mode: ") +
+                                       WorldGameModeToString(mode)};
+      });
+
+  registry.Register(
+      "cheat",
+      [&session](const std::vector<std::string> &args)
+      {
+        if (args.size() < 3 || args[1] != "inventory")
+        {
+          return CommandResult{
+              false, "Usage: cheat inventory creative <on|off>"};
+        }
+        if (args[2] != "creative")
+        {
+          return CommandResult{false, "Unknown cheat (inventory creative)"};
+        }
+        bool enable = true;
+        if (args.size() >= 4)
+        {
+          enable = args[3] == "on" || args[3] == "1" || args[3] == "true";
+        }
+        session.SetCheatCreativeInventory(enable);
+        return CommandResult{
+            true, enable ? "Creative inventory cheat ON" : "Creative inventory cheat OFF"};
+      });
+
+  registry.Register(
+      "difficulty",
+      [&session](const std::vector<std::string> &args)
+      {
+        if (args.size() < 2)
+        {
+          return CommandResult{
+              false, "Usage: difficulty <peaceful|easy|normal>"};
+        }
+        const std::string key = Lower(args[1]);
+        if (key != "peaceful" && key != "easy" && key != "normal")
+        {
+          return CommandResult{
+              false, "Unknown difficulty (peaceful|easy|normal)"};
+        }
+        const WorldDifficulty difficulty = WorldDifficultyFromString(key);
+        session.SyncToWorldDifficulty(difficulty);
+        return CommandResult{true, std::string("Difficulty: ") +
+                                       WorldDifficultyToString(difficulty)};
+      });
 
   registry.Register(
       "worldgen",
@@ -414,11 +482,28 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                     {
                       if (args.size() < 2)
                       {
-                        return CommandResult{false, "Usage: give <block>"};
+                        return CommandResult{false, "Usage: give <id>"};
                       }
                       if (UCreatureInventory *inv = GetCommandInventory(world))
                       {
-                        inv->AddToInventory(args[1]);
+                        const std::string &id = args[1];
+                        if (world->GetItemDefinitionStorage() &&
+                            world->GetItemDefinitionStorage()->Get(id))
+                        {
+                          inv->AddToInventory(id);
+                          InventoryEntryRef entry;
+                          entry.empty = false;
+                          entry.kind = InventoryEntryKind::Item;
+                          entry.Id = id;
+                          entry.count = 1;
+                          entry.wear = 0.f;
+                          entry.broken = false;
+                          const size_t bar = inv->GetActiveBarIndex();
+                          const size_t slot = inv->GetActiveSlotIndex();
+                          inv->AssignToHotbar(bar, slot, entry);
+                          return CommandResult{true, "Gave tool " + id};
+                        }
+                        inv->AddToInventory(id);
                       }
                       else
                       {
@@ -426,6 +511,79 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                       }
                       return CommandResult{true, "Added " + args[1]};
                     });
+
+  registry.Register(
+      "craft",
+      [world](const std::vector<std::string> &args)
+      {
+        if (args.size() < 2)
+        {
+          return CommandResult{false, "Usage: craft <recipe_id>"};
+        }
+        UCreatureInventory *inv = GetCommandInventory(world);
+        if (!inv)
+        {
+          return CommandResult{false, "No controlled creature"};
+        }
+        URecipeRegistry recipes;
+        if (!recipes.LoadFromDirectory("content/recipes"))
+        {
+          return CommandResult{false, "No recipes loaded"};
+        }
+        const RecipeDefinition *recipe = recipes.FindById(args[1]);
+        if (!recipe)
+        {
+          return CommandResult{false, "Unknown recipe: " + args[1]};
+        }
+        if (!recipes.TryCraft(*inv, *recipe))
+        {
+          return CommandResult{false, "Missing ingredients for " + args[1]};
+        }
+        return CommandResult{true, "Crafted " + recipe->Output.Id};
+      });
+
+  registry.Register(
+      "repair",
+      [world](const std::vector<std::string> &args)
+      {
+        (void)args;
+        UCreature *creature = world->GetControlledCreature();
+        if (!creature)
+        {
+          return CommandResult{false, "No controlled creature"};
+        }
+        UItemDefinitionStorage *items = world->GetItemDefinitionStorage();
+        if (!items)
+        {
+          return CommandResult{false, "No item definitions"};
+        }
+        auto &bars = creature->GetInventory().GetHotbarsMutable();
+        const size_t bar = creature->GetInventory().GetActiveBarIndex();
+        const size_t slot = creature->GetInventory().GetActiveSlotIndex();
+        if (bar >= bars.size() || slot >= bars[bar].slots.size() ||
+            bars[bar].slots[slot].empty)
+        {
+          return CommandResult{false, "Empty active slot"};
+        }
+        auto &entry = bars[bar].slots[slot].entry;
+        if (entry.kind != InventoryEntryKind::Item)
+        {
+          return CommandResult{false, "Active slot is not an item"};
+        }
+        const ItemDefinition *def = items->Get(entry.Id);
+        if (!def)
+        {
+          return CommandResult{false, "Unknown item"};
+        }
+        const std::string material =
+            def->Repair.Materials.empty() ? std::string{}
+                                          : def->Repair.Materials.front();
+        if (!TryRepairItem(entry, *def, material))
+        {
+          return CommandResult{false, "Repair failed"};
+        }
+        return CommandResult{true, "Repaired " + entry.Id};
+      });
 
   registry.Register(
       "tp",
@@ -467,6 +625,20 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       "fly",
       [world](const std::vector<std::string> &args)
       {
+        CreatureHabitat habitat = CreatureHabitat::Terrestrial;
+        if (UCreature *controlled = world->GetControlledCreature())
+        {
+          if (const CreatureDefinition *def =
+                  world->GetCreatureDefinition(controlled->GetTypeId()))
+          {
+            habitat = def->habitat;
+          }
+        }
+        if (!ModePolicy::AllowsFlight(world->GetGameMode(), habitat))
+        {
+          return CommandResult{false,
+                               "Creative fly disabled in Survival mode"};
+        }
         auto camera = world->GetCurrentUserCamera();
         if (!camera)
         {

@@ -1,4 +1,5 @@
 #pragma once
+// BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
 
 namespace cutum
 {
@@ -36,15 +37,30 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
       in.underfeet || (in.near_focus && in.pending_light_focus <= 20) ||
       (in.near_focus && in.can_seed);
 
-  // Cruise near-focus: cheap budgeted seed when frame has headroom (plan R1).
-  // Hot cruise → priority FIFO only (RelightTerrainColumn is 1–7s under load).
+  // Era14 TD-ARCH-044: widen cheap commit seed so PendingLight trail shrinks.
+  // Visual holes: allow slightly hotter frame budget for near sync seed.
+  // LitRing B3: lower pending trigger so LitDrawable ring seeds without FIFO.
+  const double cruise_seed_frame_cap =
+      in.visual_holes > 0 ? 40.0 : 32.0;
+  const int sync_pending_trigger = in.near_focus ? 16 : 24;
   if (in.moving_cruise)
   {
-    if (in.near_focus && in.can_seed && in.frame_ms <= 20.0)
+    // V3 optional: cheap sync seed under high pending_light to shrink FIFO trail.
+    if (in.can_seed && in.near_focus &&
+        in.pending_light_focus > sync_pending_trigger &&
+        in.frame_ms <= cruise_seed_frame_cap + 6.0)
     {
       out.try_sync_seed = true;
       out.cheap_seed = true;
-      out.budget_ms = in.underfeet ? 1.5 : 2.0;
+      out.budget_ms = 2.0;
+      return out;
+    }
+    if (in.can_seed && (in.underfeet || in.near_focus) &&
+        in.frame_ms <= cruise_seed_frame_cap)
+    {
+      out.try_sync_seed = true;
+      out.cheap_seed = true;
+      out.budget_ms = in.underfeet ? 2.0 : 2.5;
       return out;
     }
     out.enqueue_pending = true;
@@ -52,21 +68,19 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
     return out;
   }
 
-  // Idle underfeet: full sync seed (F2 cold).
-  if (in.underfeet && in.can_seed && in.frame_ms <= 16.0 &&
-      in.visual_holes == 0)
+  // Idle underfeet: prefer sync seed even with mild hitch / holes (F2 cold).
+  if (in.underfeet && in.can_seed && in.frame_ms <= 28.0)
   {
     out.try_sync_seed = true;
-    out.budget_ms = 3.0;
+    out.budget_ms = 3.5;
     return out;
   }
 
-  // Idle near-focus with neighborhood: budgeted sync only when frame has
-  // headroom. Unbounded near-focus Relight during load hung edge.
-  if (in.near_focus && in.can_seed && in.frame_ms <= 20.0)
+  // Idle near-focus with neighborhood.
+  if (in.near_focus && in.can_seed && in.frame_ms <= 28.0)
   {
     out.try_sync_seed = true;
-    out.budget_ms = in.underfeet ? 3.0 : 2.0;
+    out.budget_ms = in.underfeet ? 3.5 : 2.5;
     return out;
   }
 

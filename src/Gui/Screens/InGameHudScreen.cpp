@@ -1,7 +1,9 @@
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Game/WorldGameMode.h"
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Interfaces/IUCharacterStatsViewModel.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
@@ -10,6 +12,10 @@
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWidget.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "World/Core/World.h"
+#include <algorithm>
+#include <cstdio>
 
 #if defined(__ANDROID__)
 #include "Gui/Widgets/GuiTouchControls.h"
@@ -245,6 +251,11 @@ void UInGameHudScreen::EnsureHotbarWidgets()
   Tooltip = tip.get();
   RootPanel->AddChild(std::move(tip));
 
+  auto divider = std::make_unique<UGuiPanel>(Theme);
+  divider->SetDrawBackground(true);
+  HotbarDivider = divider.get();
+  RootPanel->AddChild(std::move(divider));
+
   HotbarBuilt = true;
   LayoutHotbar();
 }
@@ -260,19 +271,44 @@ void UInGameHudScreen::LayoutHotbar()
 
   const int slotSize = Theme->HotbarSlotSize;
   const int gap = Theme->HotbarSlotGap;
-  const int totalW = static_cast<int>(PrimarySlots.size()) * slotSize +
-                     (static_cast<int>(PrimarySlots.size()) - 1) * gap;
+  const int sectionGap = gap * 3 + std::max(2, Theme->BorderThickness * 2);
+  const int slotCount = static_cast<int>(PrimarySlots.size());
+  const int totalW =
+      slotCount * slotSize + std::max(0, slotCount - 1) * gap +
+      (slotCount > 5 ? sectionGap - gap : 0);
   const int startX = (ViewportW - totalW) / 2;
   const int rowY = ViewportH - Theme->HotbarMarginBottom - slotSize;
 
   int x = startX;
-  for (UGuiSlot *slot : PrimarySlots)
+  for (size_t i = 0; i < PrimarySlots.size(); ++i)
   {
+    UGuiSlot *slot = PrimarySlots[i];
     if (slot)
     {
       slot->SetBounds({x, rowY, slotSize, slotSize});
-      x += slotSize + gap;
+      x += slotSize;
+      if (i + 1 < PrimarySlots.size())
+      {
+        x += (i == 4) ? sectionGap : gap;
+      }
     }
+  }
+
+  if (HotbarDivider && PrimarySlots.size() > 5 && PrimarySlots[4] &&
+      PrimarySlots[5])
+  {
+    const GuiRect left = PrimarySlots[4]->GetBounds();
+    const GuiRect right = PrimarySlots[5]->GetBounds();
+    const int mid = (left.X + left.W + right.X) / 2;
+    const int divW = std::max(2, Theme->BorderThickness * 2);
+    const int divH = slotSize * 3 / 4;
+    HotbarDivider->SetVisible(true);
+    HotbarDivider->SetBounds(
+        {mid - divW / 2, rowY + (slotSize - divH) / 2, divW, divH});
+  }
+  else if (HotbarDivider)
+  {
+    HotbarDivider->SetVisible(false);
   }
 
   const bool showSecondary = Session->GetBarCount() > 1;
@@ -348,9 +384,17 @@ void UInGameHudScreen::SyncSlotIcons()
       case InventoryEntryKind::Skin:
         tex = Icons->GetSkinIconTexture(primary[i].Id);
         break;
+      case InventoryEntryKind::Item:
+        tex = Icons->GetItemIconTexture(primary[i].Id);
+        break;
       }
     }
     PrimarySlots[i]->SetIconTexture(tex);
+    PrimarySlots[i]->SetWearProgress(
+        primary[i].entryKind == InventoryEntryKind::Item ? primary[i].wear
+                                                         : 0.f);
+    PrimarySlots[i]->SetBroken(primary[i].entryKind == InventoryEntryKind::Item &&
+                               primary[i].broken);
   }
   const auto secondary = Session->GetBarSlots(1);
   for (size_t i = 0; i < SecondarySlots.size() && i < secondary.size(); ++i)
@@ -372,9 +416,18 @@ void UInGameHudScreen::SyncSlotIcons()
       case InventoryEntryKind::Skin:
         tex = Icons->GetSkinIconTexture(secondary[i].Id);
         break;
+      case InventoryEntryKind::Item:
+        tex = Icons->GetItemIconTexture(secondary[i].Id);
+        break;
       }
     }
     SecondarySlots[i]->SetIconTexture(tex);
+    SecondarySlots[i]->SetWearProgress(
+        secondary[i].entryKind == InventoryEntryKind::Item ? secondary[i].wear
+                                                           : 0.f);
+    SecondarySlots[i]->SetBroken(
+        secondary[i].entryKind == InventoryEntryKind::Item &&
+        secondary[i].broken);
   }
 }
 
@@ -407,12 +460,22 @@ void UInGameHudScreen::UpdateTooltips()
   {
     if (UGuiWidget *hit = RootPanel->HitTest(PointerX, PointerY))
     {
+      if (ModeBadge && hit == ModeBadge)
+      {
+        const bool survival =
+            Session->GetWorldGameMode() == WorldGameMode::Survival;
+        positionTip(survival
+                        ? "Survival — gather, craft, manage vitals"
+                        : "Creative — unlimited blocks, fly, no vitals",
+                    PointerX, PointerY);
+        return;
+      }
       for (size_t i = 0; i < PrimarySlots.size(); ++i)
       {
         if (hit == PrimarySlots[i] && i < primary.size() &&
             !primary[i].label.empty())
         {
-          positionTip(primary[i].label, PointerX, PointerY);
+          positionTip(FormatHotbarTooltip(primary[i]), PointerX, PointerY);
           return;
         }
       }
@@ -421,7 +484,7 @@ void UInGameHudScreen::UpdateTooltips()
         if (hit == SecondarySlots[i] && i < secondary.size() &&
             !secondary[i].label.empty())
         {
-          positionTip(secondary[i].label, PointerX, PointerY);
+          positionTip(FormatHotbarTooltip(secondary[i]), PointerX, PointerY);
           return;
         }
       }
@@ -433,7 +496,8 @@ void UInGameHudScreen::UpdateTooltips()
   {
     UGuiSlot *slot = PrimarySlots[activePrimary];
     const GuiRect b = slot ? slot->GetBounds() : GuiRect{};
-    positionTip(primary[activePrimary].label, b.X + b.W / 2, b.Y + b.H / 2);
+    positionTip(FormatHotbarTooltip(primary[activePrimary]), b.X + b.W / 2,
+                b.Y + b.H / 2);
     return;
   }
   const size_t activeSecondary = Session->GetSelectedSlot(1);
@@ -442,12 +506,26 @@ void UInGameHudScreen::UpdateTooltips()
   {
     UGuiSlot *slot = SecondarySlots[activeSecondary];
     const GuiRect b = slot ? slot->GetBounds() : GuiRect{};
-    positionTip(secondary[activeSecondary].label, b.X + b.W / 2,
-                b.Y + b.H / 2);
+    positionTip(FormatHotbarTooltip(secondary[activeSecondary]),
+                b.X + b.W / 2, b.Y + b.H / 2);
     return;
   }
 
   Tooltip->SetVisible(false);
+}
+
+std::string UInGameHudScreen::FormatHotbarTooltip(const HotbarSlotView &slot) const
+{
+  if (slot.entryKind != InventoryEntryKind::Item || slot.Id.empty() ||
+      !Session)
+  {
+    return slot.label;
+  }
+  const auto world = Session->GetWorld();
+  UItemDefinitionStorage *items =
+      world ? world->GetItemDefinitionStorage() : nullptr;
+  const ItemDefinition *def = items ? items->Get(slot.Id) : nullptr;
+  return BuildItemTooltipText(slot.label, def, slot.wear, slot.broken);
 }
 
 void UInGameHudScreen::Update(double /*dt*/)
@@ -457,8 +535,14 @@ void UInGameHudScreen::Update(double /*dt*/)
     return;
   }
   EnsureHotbarWidgets();
+  EnsureVitalWidgets();
+  EnsureModeBadge();
   LayoutHotbar();
+  LayoutVitals();
+  LayoutModeBadge();
   UpdateSlotData();
+  UpdateVitalBars();
+  UpdateModeBadge();
   UpdateTooltips();
 #if defined(__ANDROID__)
   if (TouchControls)
@@ -467,6 +551,145 @@ void UInGameHudScreen::Update(double /*dt*/)
                           GetContentOffsetY());
   }
 #endif
+}
+
+void UInGameHudScreen::EnsureModeBadge()
+{
+  if (ModeBadgeBuilt || !RootPanel || !Theme)
+  {
+    return;
+  }
+  auto badge = std::make_unique<UGuiLabel>(Theme, "");
+  badge->SetDrawBackground(true);
+  badge->SetTextAlign(GuiTextAlign::Center);
+  badge->SetVisible(true);
+  ModeBadge = badge.get();
+  RootPanel->AddChild(std::move(badge));
+  ModeBadgeBuilt = true;
+}
+
+void UInGameHudScreen::LayoutModeBadge()
+{
+  if (!ModeBadgeBuilt || !Theme || !ModeBadge)
+  {
+    return;
+  }
+  const int line = Theme->FontSizeBody + Theme->Padding;
+  const int pad = Theme->Padding;
+  const int w = std::max(Theme->FontSizeBody * 8, 88);
+  const int x = GetContentOffsetX() + ViewportW - pad - w;
+  const int y = pad + GetContentOffsetY();
+  ModeBadge->SetBounds({x, y, w, line});
+}
+
+void UInGameHudScreen::UpdateModeBadge()
+{
+  if (!ModeBadgeBuilt || !ModeBadge || !Session)
+  {
+    return;
+  }
+  const bool survival =
+      Session->GetWorldGameMode() == WorldGameMode::Survival;
+  ModeBadge->SetText(survival ? "Survival" : "Creative");
+  ModeBadge->SetVisible(true);
+}
+
+void UInGameHudScreen::EnsureVitalWidgets()
+{
+  if (VitalsBuilt || !RootPanel || !Theme)
+  {
+    return;
+  }
+  auto makeLabel = [this](UGuiLabel *&out) {
+    auto lab = std::make_unique<UGuiLabel>(Theme, "");
+    lab->SetDrawBackground(true);
+    lab->SetVisible(false);
+    out = lab.get();
+    RootPanel->AddChild(std::move(lab));
+  };
+  makeLabel(HealthLabel);
+  makeLabel(SatietyLabel);
+  makeLabel(ThirstLabel);
+  makeLabel(FatigueLabel);
+  makeLabel(BreathLabel);
+  VitalsBuilt = true;
+}
+
+void UInGameHudScreen::LayoutVitals()
+{
+  if (!VitalsBuilt || !Theme)
+  {
+    return;
+  }
+  // Theme metrics already include UI scale — do not hardcode 20px rows
+  // (FontSizeBody grows with scale and was taller than the bar on some displays).
+  const int line = Theme->FontSizeBody + Theme->Padding;
+  const int gap = std::max(2, Theme->Padding / 4);
+  const int pad = Theme->Padding;
+  const int w = std::max(Theme->FontSizeBody * 12, 120);
+  int y = pad + GetContentOffsetY();
+  const int x = pad + GetContentOffsetX();
+  UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel,
+                         BreathLabel};
+  for (UGuiLabel *lab : labels)
+  {
+    if (!lab)
+    {
+      continue;
+    }
+    lab->SetBounds({x, y, w, line});
+    y += line + gap;
+  }
+}
+
+void UInGameHudScreen::UpdateVitalBars()
+{
+  if (!VitalsBuilt || !Session)
+  {
+    return;
+  }
+  const bool survival =
+      Session->GetWorldGameMode() == WorldGameMode::Survival;
+  UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel,
+                         BreathLabel};
+  if (!survival)
+  {
+    for (UGuiLabel *lab : labels)
+    {
+      if (lab)
+      {
+        lab->SetVisible(false);
+      }
+    }
+    return;
+  }
+  const CharacterStatsSnapshot snap = Session->GetCharacterStatsSnapshot();
+  if (!snap.valid)
+  {
+    for (UGuiLabel *lab : labels)
+    {
+      if (lab)
+      {
+        lab->SetVisible(false);
+      }
+    }
+    return;
+  }
+  auto setBar = [](UGuiLabel *lab, const char *name, float cur, float max) {
+    if (!lab)
+    {
+      return;
+    }
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "%s %.0f/%.0f", name, cur, max);
+    lab->SetText(buf);
+    lab->SetVisible(true);
+  };
+  setBar(HealthLabel, "HP", snap.vitals.health, snap.vitals.maxHealth);
+  setBar(SatietyLabel, "Food", snap.vitals.satiety, snap.vitals.maxSatiety);
+  setBar(ThirstLabel, "Water", snap.vitals.thirst, snap.vitals.maxThirst);
+  setBar(FatigueLabel, "Fatigue", snap.vitals.fatigue, snap.vitals.maxFatigue);
+  setBar(BreathLabel, "Breath", snap.vitals.breath, snap.vitals.maxBreath);
 }
 
 } // namespace cutum

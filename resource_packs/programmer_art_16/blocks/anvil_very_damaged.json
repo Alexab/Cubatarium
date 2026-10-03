@@ -1,6 +1,13 @@
 {
   "name": "anvil_very_damaged",
   "id": 604,
+  "hardness": 5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

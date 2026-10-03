@@ -1,6 +1,13 @@
 {
   "name": "water",
   "id": 149,
+  "hardness": 100,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "fluid",
     "natural"

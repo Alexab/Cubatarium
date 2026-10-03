@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Core/Jobs/JobThreadPool.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include <atomic>
@@ -18,6 +20,15 @@ namespace cutum
 
 class UBlockRegistry;
 class IUChunkMesher;
+struct BlockDefinitionCatalog;
+
+enum class MeshEnqueueResult : uint8_t
+{
+  Accepted = 0,
+  WorkSlotRejected,
+  SnapshotBudgetRejected,
+  WorkerPoolRejected,
+};
 
 struct MeshBuildResult
 {
@@ -27,9 +38,20 @@ struct MeshBuildResult
   uint64_t sourceRevision{0};
   uint64_t jobId{0};
   uint64_t submitEpoch{0};
+  JobStageSpan stageTrace{};
   /// P5: worker deferred eligible opaque extract to main (GL) thread.
   bool GpuExtractPending{false};
+  bool ProvisionalLightPreview{false};
   std::unique_ptr<ChunkMeshSnapshot> PendingSnapshot;
+  std::unique_ptr<UPipelineCreditGuard> ResultCredit;
+  std::array<ChunkInputStamp, kChunkMeshInputStampCount> InputStamps{};
+  std::array<uint64_t, kChunkMeshNeighborStampCount>
+      InputLightHaloSignatures{};
+  bool InputStampsValid{false};
+  std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
+  /// W1: sticky overlay from capture — ApplyMeshResult must stamp CPU path too
+  /// (CommitGpu already got it via pending.snapshot).
+  BoundaryOverlayState BoundaryOverlay{};
 };
 
 class UAsyncMeshBuilder
@@ -40,7 +62,10 @@ public:
   void SetMesher(IUChunkMesher *mesher) { Mesher = mesher; }
   IUChunkMesher *GetMesher() const { return Mesher; }
 
-  void Enqueue(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
+  [[nodiscard]] bool Enqueue(ChunkMeshSnapshot snapshot,
+                             UBlockRegistry &registry);
+  [[nodiscard]] MeshEnqueueResult
+  EnqueueDetailed(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
   bool IsInFlight(glm::ivec3 coord) const;
   int GetInFlightCount() const;
@@ -50,6 +75,9 @@ public:
     return WorkerCount * kPipelineSlotsPerWorker;
   }
   bool HasPendingWork() const;
+  /// Era53: enter ring checks async only near spawn (not global pool depth).
+  bool HasInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                     int radius_chunks) const;
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
@@ -59,13 +87,21 @@ public:
   {
     return DiscardedLate.load(std::memory_order_relaxed);
   }
+  uint64_t GetDiscardedLateEpochCount() const
+  {
+    return DiscardedLateEpoch.load(std::memory_order_relaxed);
+  }
+  uint64_t GetDiscardedLateJobMismatchCount() const
+  {
+    return DiscardedLateJobMismatch.load(std::memory_order_relaxed);
+  }
   std::size_t GetCompletedSize() const { return Completed.Size(); }
   std::size_t GetCompletedCapacity() const { return Completed.Capacity(); }
   uint64_t GetCompletedDiscardedOverflow() const
   {
     return Completed.DiscardedOverflow();
   }
-  void SetCompletedCapacity(std::size_t cap) { Completed.SetCapacity(cap); }
+  void SetCompletedCapacity(std::size_t cap);
   /// Coords whose Completed mesh was dropped by overflow; remesh via Dirty.
   std::vector<glm::ivec3> TakeOverflowCoords();
   /// Coords discarded for stale epoch / jobId mismatch; remesh via Dirty.
@@ -76,17 +112,21 @@ private:
 
   int WorkerCount{1};
   IUChunkMesher *Mesher{nullptr};
-  UJobThreadPool Pool;
+  // Completed before Pool — pool joins first while completed queue stays valid (M08).
   UCompletedJobQueue<MeshBuildResult> Completed;
   mutable std::mutex InFlightMutex;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> InFlight;
   std::atomic<uint64_t> NextJobId{1};
   std::atomic<uint64_t> Epoch{1};
   std::atomic<uint64_t> DiscardedLate{0};
+  std::atomic<uint64_t> DiscardedLateEpoch{0};
+  std::atomic<uint64_t> DiscardedLateJobMismatch{0};
   mutable std::mutex OverflowMutex;
   std::vector<glm::ivec3> OverflowCoords;
   mutable std::mutex DiscardedMutex;
   std::vector<glm::ivec3> DiscardedCoords;
+  // Destroy first: callbacks access all the members above until workers join.
+  UJobThreadPool Pool;
 };
 
 } // namespace cutum

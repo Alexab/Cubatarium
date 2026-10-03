@@ -2,6 +2,7 @@
 
 #include "Core/Progress/IUProgressSink.h"
 #include <chrono>
+#include <climits>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <string>
@@ -38,11 +39,15 @@ public:
   void BeginCreate(UWorld &world, const std::string &world_name);
   /// @return true when the operation finished successfully.
   bool Tick(UWorld &world, IUProgressSink &sink, int chunkBudget);
+  /// Era31 I-T4: force-complete EnterGame load when visual cap reached.
+  bool ForceCapEnterGameVisual(UWorld &world, IUProgressSink &sink);
   void Cancel();
   void CancelBackgroundWorkers();
 
   /// When true, main-thread TickAsyncChunkSystems should not run (coop owns or quiesces workers).
   bool BlocksStreamingTick() const;
+  /// Load/create bar-side enter visual warmup (MeshWarmup..PrepareView).
+  bool IsEnterVisualWarmupActive() const;
 
 private:
   enum class Phase
@@ -119,6 +124,25 @@ private:
   size_t MeshWarmupProcessedMax{0};
   size_t MeshWarmupCompletedTotal{0};
   int StreamingWarmupTicks{0};
+  int StreamingWarmupPeakDebt{0};
+  /// Era35 P3: last raw debt for monotonic display.
+  int StreamingWarmupLastRawDebt{0};
+  /// Era35 P3: monotonic display debt (only decreases).
+  int StreamingWarmupDisplayDebt{0};
+  std::chrono::steady_clock::time_point StreamingWarmupWallStart{};
+  bool StreamingWarmupLitWarnLogged{false};
+  /// Era44b: abort-drain after enter_mesh_abort_ms (gate stays active).
+  bool StreamingWarmupAbortDrainMode{false};
+  bool StreamingWarmupAbortLogged{false};
+  bool StreamingWarmupAbortCapLogged{false};
+  /// Phase 5.2.0: one-shot settle_reason log for load PrepareView.
+  bool StreamingWarmupSettleLogged{false};
+  /// A35 R0: MeshWarmup wall/tick timeout left MeshService dirty residual.
+  bool MeshWarmupTimedOutWithDirty{false};
+  /// LitRing C: best (lowest) FOV lit debt seen; stall abort when no progress.
+  int StreamingWarmupBestFovDebt{INT_MAX};
+  std::chrono::steady_clock::time_point StreamingWarmupLitProgressAt{};
+  bool StreamingWarmupLitStallLogged{false};
 
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginBulkChunkRelightQueue(UWorld &world);

@@ -335,7 +335,8 @@ public:
     GuiRect labelRect = Bounds;
     labelRect.Y += Bounds.H / 2 - ScalePx(12, scale);
     labelRect.H = ScalePx(24, scale);
-    renderer.DrawTextCenteredInRect(labelRect, "Look", {0.92f, 0.92f, 0.95f});
+    renderer.DrawTextCenteredInRect(labelRect, "Drag look · Tap place",
+                                    {0.92f, 0.92f, 0.95f});
   }
 
   bool OnMouseDown(const GuiMouseEvent &event) override
@@ -473,7 +474,7 @@ void UGuiTouchControls::Build(UGuiPanel *parent)
   JoystickWidget = joystickWidget;
   Root->AddChild(std::move(joystick));
 
-  auto Jump = std::make_unique<UTouchHoldButton>(Theme, "Jump",
+  auto Jump = std::make_unique<UTouchHoldButton>(Theme, "Hold Jump",
                                                  KeyCode::Key_Space, Bridge,
                                                  [this]()
                                                  {
@@ -487,20 +488,20 @@ void UGuiTouchControls::Build(UGuiPanel *parent)
   JumpButton = jumpWidget;
   Root->AddChild(std::move(Jump));
 
-  auto Sneak = std::make_unique<UTouchHoldButton>(Theme, "Sneak",
+  auto Sneak = std::make_unique<UTouchHoldButton>(Theme, "Hold Sneak",
                                                   KeyCode::Key_Shift, Bridge);
   auto *sneakWidget = Sneak.get();
   Sneak->SetZOrder(kTouchControlsZOrder + 2);
   SneakButton = sneakWidget;
   Root->AddChild(std::move(Sneak));
 
-  auto Sprint = std::make_unique<UTouchToggleButton>(Theme, "Sprint", Bridge);
+  auto Sprint = std::make_unique<UTouchToggleButton>(Theme, "Tap Sprint", Bridge);
   auto *sprintWidget = Sprint.get();
   Sprint->SetZOrder(kTouchControlsZOrder + 2);
   SprintButton = sprintWidget;
   Root->AddChild(std::move(Sprint));
 
-  auto inventory = std::make_unique<UGuiButton>(Theme, "Inv");
+  auto inventory = std::make_unique<UGuiButton>(Theme, "Tap Inv");
   inventory->SetOnClick(
       [this]()
       {

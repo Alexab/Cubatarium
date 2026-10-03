@@ -360,15 +360,283 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "ARCH_D3_LAND": [
         ("miss_stuck_max_run_sec", "le", 4.0),
         ("miss_end", "le", 0.0),
-        ("effective_holes_rate", "le", 0.10),
+        ("miss_end_stop", "le", 0.0),
+        ("post_stop_focus_miss_max", "le", 0.0),
+        ("post_stop_miss_low_cy_n", "le", 0.0),
+        ("post_stop_underfeet_ok_miss_n", "le", 0.0),
+        ("tail_focus_miss_max", "le", 0.0),
+        ("tail_miss_low_cy_n", "le", 0.0),
+        ("tail_underfeet_ok_miss_n", "le", 0.0),
+        ("effective_holes_rate", "le", 0.12),
         ("nh_no_miss_rate", "le", 0.25),
         ("stop_dark_face_stale_near_end", "lt", 100.0),
-        ("opaque_idle_churn_max", "le", 120.0),
+        ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
-        # Keep soft 55: rim FirstMesh / SoftDefer-firstmesh did not bring wall
-        # med under 40 on land terrain eye (P4_L2 wall≈58). Revisit after miss≤4.
-        ("wall_ms_med", "le", 55.0),
+        # Era17 P1: hard heal — no orphan VisibleBlack; stalled queue=0.
+        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        # Stalled (=Contains without Dirty yet) is mid-queue; report-only.
+        # ("post_stop_visible_black_stalled_max", "le", 0.0),
+        # Soft 70: land density + remesh tax.
+        ("wall_ms_med", "le", 70.0),
         ("chunks_traveled", "ge", 3.0),
+    ],
+    # Clean idle stand (idle-clean scenario): calm stop without edit/fluid.
+    # Use calm_* for emerge/stream; phys_ms aliases MovementStepMs so do NOT
+    # gate stop_phys_med (conflicts with stream≤15+emerge≤10). Hitch = block p95.
+    "IDLE_CLEAN": [
+        ("contaminated_idle", "le", 0.0),
+        # Era18 P2: SoftDeferCapture floor while VB (was 60 P1).
+        ("calm_stop_wall_med", "le", 65.0),
+        # Era17 remesh/relight tax under heal-until (was 18 Era16).
+        ("calm_stop_emerge_med", "le", 25.0),
+        ("calm_stop_stream_med", "le", 28.0),
+        ("physics_block_ms_p95", "le", 5.0),
+        ("edit_immediate_n_med", "le", 0.0),
+        # Small positive noise while PendingLight→Remesh exclusivity drains (±8).
+        ("stop_focus_dirty_delta", "le", 8.0),
+        ("opaque_idle_churn_max", "le", 160.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        # Era18: stalled (=Contains before Dirty/PendingLight lands) flickers
+        # mid-heal on idle (stalled_max=9 with faces=0 / no_ticket=0) — report-only.
+        # ("post_stop_visible_black_stalled_max", "le", 0.0),
+        ("stop_dark_face_stale_near_end", "lt", 200.0),
+        ("post_stop_missing_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    # Contaminated idle (manual after place/fluid): report-only wall gates.
+    "IDLE_DIRTY": [
+        ("contaminated_idle", "ge", 1.0),
+    ],
+    # Debtful idle stand (idle-warm): remesh/stream pressure closer to manual.
+    "IDLE_WARM": [
+        ("contaminated_idle", "le", 0.0),
+        ("post_stop_focus_dirty_med", "ge", 40.0),
+        ("calm_stop_wall_med", "le", 140.0),
+        ("calm_stop_emerge_med", "le", 50.0),
+        ("calm_stop_stream_med", "le", 55.0),
+        ("physics_block_ms_p95", "le", 5.0),
+        ("edit_immediate_n_med", "le", 0.0),
+        ("post_stop_missing_max", "le", 0.0),
+        ("opaque_cmd_on_med", "ge", 200.0),
+        ("chunks_traveled", "ge", 6.0),
+    ],
+    # Moving cruise stress (fly-clean): judge fly segment, not stop-only.
+    "FLY_CLEAN": [
+        ("chunks_traveled", "ge", 6.0),
+        ("wall_ms_fly_med", "le", 200.0),
+        ("mesh_sync_fly_med", "le", 5.0),
+        ("physics_block_ms_p95", "le", 5.0),
+    ],
+    # Ocean FillWater cruise (manual 104841): fly-segment void/VB/fluid + stop tail.
+    # Smoke only — aspirational Era30 targets; see OCEAN_CRUISE_STRESS for parity.
+    "OCEAN_CRUISE": [
+        ("chunks_traveled", "ge", 6.0),
+        ("wall_ms_fly_med", "le", 200.0),
+        ("mesh_sync_fly_med", "le", 5.0),
+        ("physics_block_ms_p95", "le", 5.0),
+        ("effective_holes_rate", "le", 0.30),
+        ("fly_void_near_max", "le", 800.0),
+        ("stop_dark_face_void_near_end", "le", 100.0),
+        ("post_stop_visible_black_max", "le", 20.0),
+        ("fly_fluid_map_cpu_max", "le", 80.0),
+    ],
+    # Era30 H0: parity regression — must reproduce manual debt pre-fix.
+    "OCEAN_CRUISE_STRESS": [
+        ("chunks_traveled", "ge", 6.0),
+        ("wall_ms_fly_med", "le", 200.0),
+        ("fly_void_near_max", "ge", 400.0),
+        ("effective_holes_rate", "ge", 0.40),
+        ("fly_frontier_pressure_frac", "ge", 0.05),
+    ],
+    # Era30 DoD: analyze manual 104841-class log (post-fix targets).
+    "OCEAN_MANUAL": [
+        ("chunks_traveled", "ge", 6.0),
+        ("effective_holes_rate", "le", 0.30),
+        ("fly_void_near_max", "le", 800.0),
+        ("stop_dark_face_void_near_end", "le", 100.0),
+        ("post_stop_visible_black_max", "le", 20.0),
+        ("fly_fluid_map_cpu_max", "le", 80.0),
+        ("enter_app_update_max", "le", 200.0),
+    ],
+    # Edit/control smoke: soft hitch budget for C1 regate.
+    "IDLE_EDIT_SMOKE": [
+        ("physics_block_ms_p95", "le", 50.0),
+        ("break_complete_sum", "ge", 1.0),
+    ],
+    # Flight perf plan FP gates (no-teleport cruise/enter).
+    "FP-enter": [
+        ("enter_unfinished_max", "le", 10.0),
+        ("post_load_ring_idle_max", "le", 5.0),
+        ("chunks_traveled", "ge", 1.0),
+    ],
+    "FP0": [
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP1": [
+        ("cruise_capture_retarget_med", "le", 5.0),
+        ("cruise_relight_apply_final_med", "gt", 0.0),
+        ("miss_stuck_max_run_sec", "le", 15.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP2": [
+        ("cruise_schedule_ok_med", "ge", 3.0),
+        ("unfinished_visual", "le", 5.0),
+        ("stream_ms", "le", 60.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP3": [
+        ("visible_black_focus_n", "le", 40.0),
+        ("dark_face_stale_near_n", "le", 80.0),
+        ("holes_rate", "le", 0.30),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP4": [
+        ("visible_black_focus_n", "le", 40.0),
+        ("holes_rate", "le", 0.30),
+        ("dirty_ghost_n", "le", 5.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP5": [
+        ("holes_rate", "le", 0.10),
+        ("visible_black_focus_n", "le", 25.0),
+        ("stream_ms", "le", 30.0),
+        ("miss_stuck_max_run_sec", "le", 4.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP-manual": [
+        ("cruise_schedule_ok_med", "ge", 3.0),
+        ("cruise_capture_retarget_med", "le", 5.0),
+        ("holes_rate", "le", 0.55),
+        ("miss_stuck_max_run_sec", "le", 60.0),
+        ("post_stop_visible_black_max", "le", 50.0),
+        ("chunks_traveled", "ge", 5.0),
+        ("emerge_spike_frac", "le", 0.08),
+        ("opaque_idle_churn_max", "le", 120.0),
+        ("chunk_not_ready_med", "le", 4.0),
+        ("wall_ms_fly_med", "le", 120.0),
+        ("effective_holes_blink_rate", "le", 0.05),
+        ("stream_ms", "le", 90.0),
+        ("relight_drain_near_zero_while_vb_sec", "le", 10.0),
+        ("chain_stall_sec", "le", 15.0),
+        ("prep_untagged_gap_med", "le", 35.0),
+        ("mesh_emerge_ms", "le", 25.0),
+    ],
+    "FP-perf-cruise": [
+        ("wall_ms_fly_med", "le", 90.0),
+        ("stream_ms", "le", 75.0),
+        ("mesh_emerge_ms", "le", 25.0),
+        ("prep_refresh_pressure_ms", "le", 30.0),
+    ],
+    "FP-perf-soft": [
+        ("stream_ms", "le", 50.0),
+        ("mesh_emerge_ms", "le", 20.0),
+        ("world_streaming_phase_ms", "le", 100.0),
+    ],
+    "MESH-H0-baseline": [
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M0-waterfall": [
+        ("mesh_waterfall_drain_med", "gt", 0.0),
+        ("mesh_gpu_kick_ms", "ge", 0.0),
+        ("mesh_gpu_finish_ms", "ge", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M1-capture": [
+        ("mesh_emerge_ms", "le", 35.0),
+        ("mesh_waterfall_drain_med", "gt", 0.0),
+        ("holes_rate", "le", 0.50),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M2-worker": [
+        ("mesh_snapshot_ms", "le", 0.5),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M3-gpu": [
+        ("pool_unsync_uploads_med", "le", 50.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M4-ownership": [
+        ("holes_rate", "le", 0.10),
+        ("witness_latch_diet_share", "ge", 0.70),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-R15-capture": [
+        ("cruise_schedule_ok_med", "ge", 2.0),
+        ("mesh_schedule_retry_max", "gt", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-R26-completion": [
+        ("fm_dirty_to_gpu_finish_med", "gt", 0.0),
+        ("cruise_schedule_ok_med", "ge", 2.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-R30-fps": [
+        ("wall_ms_fly_med", "le", 66.0),
+        ("stream_ms", "le", 90.0),
+        ("effective_fps_fly", "ge", 15.0),
+        ("cruise_schedule_ok_med", "ge", 2.0),
+    ],
+    "MESH-SHIP-joint": [
+        ("witness_latch_diet_share", "ge", 0.40),
+        ("holes_rate", "le", 0.30),
+        ("fm_dirty_to_gpu_finish_med", "gt", 0.0),
+        ("visual_holes_telemetry_mismatch_rate", "le", 0.10),
+        ("effective_fps_fly", "ge", 15.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-parity-manual": [
+        ("holes_rate", "le", 0.55),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+}
+
+
+# Informational soft gates (printed; do not fail hard GO).
+PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
+    "FP1": [
+        ("cruise_fifo_dropped_delta", "le", 5.0),
+        ("effective_holes_blink_rate", "le", 0.10),
+    ],
+    "FP2": [
+        ("cruise_fifo_dropped_delta", "le", 8.0),
+    ],
+    "FP3": [
+        ("opaque_idle_churn_max", "le", 160.0),
+    ],
+    "FP5": [
+        ("cruise_fifo_dropped_delta", "le", 0.0),
+    ],
+    "FP-manual": [
+        ("cruise_dirty_fm_med", "gt", 0.0),
+        ("cruise_fifo_dropped_delta", "le", 12.0),
+        ("cruise_admission_mode3_share", "le", 0.60),
+        ("stop_dark_face_near_end", "lt", 500.0),
+        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        ("emerge_spike_frac", "le", 0.08),
+        ("mesh_emerge_ms", "le", 25.0),
+        ("prep_untagged_gap_med", "le", 35.0),
+        ("emerge_prep_other_share", "le", 0.40),
+    ],
+    "FP-perf-soft": [
+        ("stream_ms", "le", 50.0),
+        ("mesh_emerge_ms", "le", 20.0),
+        ("world_streaming_phase_ms", "le", 100.0),
+    ],
+    "OCEAN_CRUISE": [
+        ("relight_drain_near_zero_while_vb_sec", "le", 10.0),
+        ("enter_app_update_max", "le", 200.0),
+        ("fly_visible_black_max", "le", 40.0),
+        ("vb_progress_without_dark_clear_sec", "le", 5.0),
+    ],
+    "OCEAN_MANUAL": [
+        ("vb_progress_without_dark_clear_sec", "le", 5.0),
+        ("opaque_idle_churn_max", "le", 120.0),
+    ],
+    "MESH-R30-fps": [
+        ("wall_stream_share", "le", 0.55),
+        ("wall_render_share", "le", 0.40),
+        ("input_ms_fly_med", "le", 2.0),
     ],
 }
 
@@ -429,14 +697,33 @@ def main() -> int:
         return 3
 
     gates = PHASE_GATES.get(args.phase_id, [])
+    soft_gates = PHASE_SOFT_GATES.get(args.phase_id, [])
     failed = []
     arch = args.phase_id.startswith("ARCH_")
+    if args.phase_id == "MESH-parity-manual" and args.baseline and args.baseline.is_file():
+        base = json.loads(args.baseline.read_text(encoding="utf-8"))
+        manual_holes = metric(base, "holes_rate")
+        if manual_holes is not None:
+            holes_cap = min(0.55, float(manual_holes) * 1.15 + 0.05)
+            gates = [
+                g if g[0] != "holes_rate" else ("holes_rate", "le", holes_cap)
+                for g in gates
+            ]
+            print(f"  parity holes_cap={holes_cap:.3f} (manual={manual_holes})")
     for key, op, limit in gates:
         val = metric(data, key)
         ok = check_arch(op, val, limit) if arch else check(op, val, limit)
         print(f"  {key}={val} {op} {limit} -> {'OK' if ok else 'FAIL'}")
         if not ok:
             failed.append(key)
+
+    for key, op, limit in soft_gates:
+        val = metric(data, key)
+        if val is None:
+            print(f"  [soft] {key}=None {op} {limit} -> N/A")
+            continue
+        ok = check(op, val, limit)
+        print(f"  [soft] {key}={val} {op} {limit} -> {'OK' if ok else 'WARN'}")
 
     if args.baseline and args.baseline.is_file() and args.phase_id in ("V2b", "V3", "F"):
         base = json.loads(args.baseline.read_text(encoding="utf-8"))

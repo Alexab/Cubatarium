@@ -1,10 +1,14 @@
 #pragma once
 
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Lighting/LightUtil.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Streaming/WorkToken.h"
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include <vector>
@@ -26,6 +30,10 @@ struct RelightJobSpec
   uint64_t job_id{0};
   /// False while more Y-bands remain for this column (SoftDefer keeps Pending).
   bool finalize_pending_gate{true};
+  /// Renderer-rejected exact slice may remesh before the column gate finalizes.
+  bool visible_draw_gate_repair{false};
+  /// Terrain column FIFO: copy center column full + neighbor shell/light only.
+  bool column_center_only{false};
 };
 
 struct RelightChunkLightData
@@ -34,13 +42,43 @@ struct RelightChunkLightData
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
 };
 
+/// CheapRemesh C3: skip MarkRelit Dirty when Apply light equals current chunk.
+inline bool PrimaryLightUnchanged(
+    const std::array<uint8_t, CHUNK_VOLUME> &before,
+    const std::array<uint8_t, CHUNK_VOLUME> &after)
+{
+  return std::memcmp(before.data(), after.data(), CHUNK_VOLUME) == 0;
+}
+
+/// FZ2.7-B: after GPU sky seed, skip packed merge when block nibbles match.
+inline bool BlockLightUnchanged(
+    const std::array<uint8_t, CHUNK_VOLUME> &before,
+    const std::array<uint8_t, CHUNK_VOLUME> &after)
+{
+  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  {
+    if (UnpackBlock(before[static_cast<size_t>(i)]) !=
+        UnpackBlock(after[static_cast<size_t>(i)]))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
 struct RelightComputeResult
 {
   uint64_t job_id{0};
   uint64_t submitEpoch{0};
+  WorkToken work_token{};
+  DependencyStamp dependency_stamp{};
+  std::vector<ChunkInputStamp> read_set;
+  RelightJobSpec retry_spec;
+  std::shared_ptr<const BlockDefinitionCatalog> input_catalog;
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
   bool finalize_pending_gate{true};
+  bool visible_draw_gate_repair{false};
   bool include_skylight{true};
   bool include_block_light{true};
   std::vector<glm::ivec3> source_block_positions;
@@ -53,11 +91,27 @@ public:
   static UChunkRelightSnapshot Capture(const UBlockWorld &world,
                                        const RelightJobSpec &spec);
 
-  RelightComputeResult Compute(const UBlockRegistry &registry) const;
+  RelightComputeResult Compute(const UBlockRegistry &registry);
   uint64_t GetJobId() const { return Spec.job_id; }
+  const WorkToken &GetWorkToken() const { return CapturedWorkToken; }
+  const DependencyStamp &GetDependencyStamp() const
+  {
+    return CapturedDepStamp;
+  }
+  void SetSubmitContext(WorkToken token, DependencyStamp deps)
+  {
+    CapturedWorkToken = token;
+    CapturedDepStamp = deps;
+  }
+  int GetCapturedFullChunks() const { return CapturedFullChunks; }
+  int GetCapturedNeighborLightChunks() const
+  {
+    return CapturedNeighborLightChunks;
+  }
 
   BlockId GetBlock(glm::ivec3 world_pos) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
+  bool HasLight(glm::ivec3 chunk_coord) const;
   int GetSkyLight(glm::ivec3 world_pos) const;
   int GetBlockLight(glm::ivec3 world_pos) const;
   void WriteSkyLight(glm::ivec3 world_pos, int level);
@@ -75,6 +129,11 @@ private:
       Light;
   std::unordered_map<glm::ivec3, BlockId, IVec3Hash> ShellBlocks;
   RelightJobSpec Spec;
+  WorkToken CapturedWorkToken{};
+  DependencyStamp CapturedDepStamp{};
+  std::vector<ChunkInputStamp> ReadSet;
+  int CapturedFullChunks{0};
+  int CapturedNeighborLightChunks{0};
 };
 
 } // namespace cutum

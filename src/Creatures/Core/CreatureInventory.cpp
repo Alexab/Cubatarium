@@ -1,4 +1,5 @@
 #include "Creatures/Core/CreatureInventory.h"
+#include "Items/ItemDefinitionStorage.h"
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -7,6 +8,19 @@ namespace cutum
 namespace
 {
 constexpr size_t kHotbarSlots = 10;
+
+constexpr size_t kArmorSlots = 6;
+
+const char *ArmorSlotId(size_t slot)
+{
+  static constexpr const char *ids[kArmorSlots] = {"head",  "chest", "arms",
+                                                    "hands", "legs",  "feet"};
+  if (slot >= kArmorSlots)
+  {
+    return "";
+  }
+  return ids[slot];
+}
 
 void RemapLegacyHotbarEntryId(InventoryEntryRef &entry)
 {
@@ -55,19 +69,55 @@ void UCreatureInventory::InitCreativeDefaults()
   }
 }
 
+void UCreatureInventory::MigrateCreativeStorageToSurvival()
+{
+  for (auto it = Storage.begin(); it != Storage.end();)
+  {
+    if (it->second < 0)
+    {
+      it = Storage.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
+  }
+  for (auto &bar : Hotbars)
+  {
+    for (auto &slot : bar.slots)
+    {
+      if (slot.empty)
+      {
+        continue;
+      }
+      if (slot.entry.count < 0)
+      {
+        if (slot.entry.kind == InventoryEntryKind::Block ||
+            slot.entry.kind == InventoryEntryKind::Object)
+        {
+          slot.entry.count = 1;
+        }
+        else
+        {
+          slot.empty = true;
+          slot.entry = InventoryEntryRef{};
+        }
+      }
+    }
+  }
+}
+
 void UCreatureInventory::EnsureDefaultHotbar()
 {
   EnsureHotbarCount(1);
-  bool hotbarEmpty = true;
-  for (const auto &slot : GetHotbar(0).slots)
-  {
-    if (!slot.empty && !slot.entry.Id.empty())
-    {
-      hotbarEmpty = false;
-      break;
-    }
-  }
-  if (GetHotbar(0).slots[1].empty)
+
+  const auto woodIt = Storage.find("wood");
+  const bool creativeUnlimitedWood =
+      woodIt != Storage.end() && woodIt->second < 0;
+
+  // Creative-only stub: put unlimited wood in slot 1 when storage already has
+  // unlimited wood (InitCreativeDefaults). Survival starts with empty hands.
+  if (creativeUnlimitedWood)
   {
     bool hasBlock = false;
     for (const auto &slot : GetHotbar(0).slots)
@@ -79,7 +129,7 @@ void UCreatureInventory::EnsureDefaultHotbar()
         break;
       }
     }
-    if (!hasBlock)
+    if (!hasBlock && GetHotbar(0).slots[1].empty)
     {
       InventoryEntryRef wood;
       wood.kind = InventoryEntryKind::Block;
@@ -89,9 +139,62 @@ void UCreatureInventory::EnsureDefaultHotbar()
       AssignToHotbar(0, 1, wood);
     }
   }
+
+  // Owned / survival: drop hotbar ghosts that are not backed by storage, and
+  // convert leftover creative unlimited counts to owned stack sizes.
+  for (size_t slot = 0; slot < Hotbars[0].slots.size(); ++slot)
+  {
+    auto &s = Hotbars[0].slots[slot];
+    if (s.empty || s.entry.Id.empty())
+    {
+      continue;
+    }
+    if (s.entry.kind != InventoryEntryKind::Block &&
+        s.entry.kind != InventoryEntryKind::Object)
+    {
+      continue;
+    }
+    const auto it = Storage.find(s.entry.Id);
+    if (it == Storage.end() || it->second == 0)
+    {
+      ClearHotbarSlot(0, slot);
+      continue;
+    }
+    if (s.entry.count < 0 && it->second >= 0)
+    {
+      s.entry.count = it->second;
+    }
+  }
+
+  bool hotbarEmpty = true;
+  size_t firstFilled = 0;
+  bool foundFilled = false;
+  for (size_t slot = 0; slot < GetHotbar(0).slots.size(); ++slot)
+  {
+    const auto &s = GetHotbar(0).slots[slot];
+    if (!s.empty && !s.entry.Id.empty())
+    {
+      hotbarEmpty = false;
+      if (!foundFilled)
+      {
+        firstFilled = slot;
+        foundFilled = true;
+      }
+    }
+  }
+
   if (hotbarEmpty)
   {
-    SetActiveSlot(0, 1);
+    SetActiveSlot(0, 0);
+  }
+  else if (foundFilled)
+  {
+    const size_t active = GetActiveSlotIndex();
+    if (active >= GetHotbar(0).slots.size() ||
+        GetHotbar(0).slots[active].empty)
+    {
+      SetActiveSlot(0, firstFilled);
+    }
   }
 }
 
@@ -212,6 +315,214 @@ const InventoryEntryRef *UCreatureInventory::GetActiveEntryRef() const
   return &slot.entry;
 }
 
+InventoryEntryRef *UCreatureInventory::GetActiveEntryRef()
+{
+  return const_cast<InventoryEntryRef *>(
+      static_cast<const UCreatureInventory *>(this)->GetActiveEntryRef());
+}
+
+const InventoryEntryRef &UCreatureInventory::GetEquippedArmor(size_t slot) const
+{
+  static InventoryEntryRef kEmpty;
+  if (slot >= kArmorSlots)
+  {
+    return kEmpty;
+  }
+  return EquippedArmor[slot];
+}
+
+bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
+                                     const UItemDefinitionStorage &items)
+{
+  if (slot >= kArmorSlots)
+  {
+    return false;
+  }
+  if (entry.empty || entry.kind != InventoryEntryKind::Item || entry.Id.empty())
+  {
+    return false;
+  }
+
+  const ItemDefinition *def = items.Get(entry.Id);
+  if (!def || def->Armor.ArmorGroups.empty() || def->Armor.Slots.empty())
+  {
+    return false;
+  }
+
+  const char *slotId = ArmorSlotId(slot);
+  bool slotAllowed = false;
+  for (const std::string &s : def->Armor.Slots)
+  {
+    if (s == slotId)
+    {
+      slotAllowed = true;
+      break;
+    }
+  }
+  if (!slotAllowed)
+  {
+    return false;
+  }
+
+  EquippedArmor[slot] = entry;
+
+  // Recompute pre-aggregated armor groups.
+  EquippedArmorGroups.Ratings.clear();
+  for (size_t i = 0; i < kArmorSlots; ++i)
+  {
+    const InventoryEntryRef &e = EquippedArmor[i];
+    if (e.empty || e.kind != InventoryEntryKind::Item || e.Id.empty())
+    {
+      continue;
+    }
+    if (e.broken)
+    {
+      continue;
+    }
+    const ItemDefinition *ed = items.Get(e.Id);
+    if (!ed || ed->Armor.ArmorGroups.empty())
+    {
+      continue;
+    }
+    const char *sid = ArmorSlotId(i);
+    if (!ed->Armor.Slots.empty())
+    {
+      bool allowed = false;
+      for (const std::string &s : ed->Armor.Slots)
+      {
+        if (s == sid)
+        {
+          allowed = true;
+          break;
+        }
+      }
+      if (!allowed)
+      {
+        continue;
+      }
+    }
+    for (const auto &pair : ed->Armor.ArmorGroups)
+    {
+      EquippedArmorGroups.Ratings[pair.first] += pair.second;
+    }
+  }
+  return true;
+}
+
+void UCreatureInventory::UnequipArmor(size_t slot,
+                                       const UItemDefinitionStorage &items)
+{
+  if (slot >= kArmorSlots)
+  {
+    return;
+  }
+  EquippedArmor[slot] = InventoryEntryRef{};
+  EquippedArmorGroups.Ratings.clear();
+  for (size_t i = 0; i < kArmorSlots; ++i)
+  {
+    const InventoryEntryRef &e = EquippedArmor[i];
+    if (e.empty || e.kind != InventoryEntryKind::Item || e.Id.empty())
+    {
+      continue;
+    }
+    if (e.broken)
+    {
+      continue;
+    }
+    const ItemDefinition *ed = items.Get(e.Id);
+    if (!ed || ed->Armor.ArmorGroups.empty())
+    {
+      continue;
+    }
+    const char *sid = ArmorSlotId(i);
+    if (!ed->Armor.Slots.empty())
+    {
+      bool allowed = false;
+      for (const std::string &s : ed->Armor.Slots)
+      {
+        if (s == sid)
+        {
+          allowed = true;
+          break;
+        }
+      }
+      if (!allowed)
+      {
+        continue;
+      }
+    }
+    for (const auto &pair : ed->Armor.ArmorGroups)
+    {
+      EquippedArmorGroups.Ratings[pair.first] += pair.second;
+    }
+  }
+}
+
+const InventoryEntryRef &UCreatureInventory::GetEquippedOffhand() const
+{
+  return EquippedOffhand;
+}
+
+void UCreatureInventory::RecalcOffhandArmorGroups(
+    const UItemDefinitionStorage *items)
+{
+  OffhandArmorGroups.Ratings.clear();
+  if (!items || EquippedOffhand.empty || EquippedOffhand.broken ||
+      EquippedOffhand.kind != InventoryEntryKind::Item)
+  {
+    return;
+  }
+  const ItemDefinition *def = items->Get(EquippedOffhand.Id);
+  if (!def || def->Armor.ArmorGroups.empty())
+  {
+    return;
+  }
+  for (const auto &pair : def->Armor.ArmorGroups)
+  {
+    OffhandArmorGroups.Ratings[pair.first] += pair.second;
+  }
+}
+
+bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry)
+{
+  if (entry.empty || entry.Id.empty())
+  {
+    return false;
+  }
+  if (entry.kind != InventoryEntryKind::Item &&
+      entry.kind != InventoryEntryKind::Block)
+  {
+    return false;
+  }
+  EquippedOffhand = entry;
+  EquippedOffhand.empty = false;
+  OffhandArmorGroups.Ratings.clear();
+  return true;
+}
+
+bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry,
+                                      const UItemDefinitionStorage &items)
+{
+  if (!EquipOffhand(entry))
+  {
+    return false;
+  }
+  RecalcOffhandArmorGroups(&items);
+  return true;
+}
+
+void UCreatureInventory::UnequipOffhand()
+{
+  EquippedOffhand = InventoryEntryRef{};
+  OffhandArmorGroups.Ratings.clear();
+}
+
+void UCreatureInventory::UnequipOffhand(const UItemDefinitionStorage &items)
+{
+  (void)items;
+  UnequipOffhand();
+}
+
 void UCreatureInventory::EnsureHotbarCount(size_t count)
 {
   if (Hotbars.size() >= count)
@@ -264,9 +575,17 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
         case InventoryEntryKind::Skin:
           s["kind"] = "skin";
           break;
+        case InventoryEntryKind::Item:
+          s["kind"] = "item";
+          break;
         }
         s["id"] = slot.entry.Id;
         s["count"] = slot.entry.count;
+        if (slot.entry.kind == InventoryEntryKind::Item)
+        {
+          s["wear"] = slot.entry.wear;
+          s["broken"] = slot.entry.broken;
+        }
       }
       slots.push_back(s);
     }
@@ -275,6 +594,57 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
   out["hotbars"] = bars;
   out["active_bar"] = ActiveBarIndex;
   out["active_slot"] = ActiveSlotIndex;
+
+  nlohmann::json equipped = nlohmann::json::array();
+  for (size_t i = 0; i < kArmorSlots; ++i)
+  {
+    const InventoryEntryRef &e = EquippedArmor[i];
+    nlohmann::json s;
+    s["empty"] = e.empty;
+    if (!e.empty)
+    {
+      s["kind"] = "item";
+      s["id"] = e.Id;
+      s["wear"] = e.wear;
+      s["broken"] = e.broken;
+      s["count"] = e.count;
+    }
+    equipped.push_back(s);
+  }
+  out["equipped_armor"] = equipped;
+
+  {
+    nlohmann::json oh;
+    oh["empty"] = EquippedOffhand.empty;
+    if (!EquippedOffhand.empty)
+    {
+      switch (EquippedOffhand.kind)
+      {
+      case InventoryEntryKind::Block:
+        oh["kind"] = "block";
+        break;
+      case InventoryEntryKind::Item:
+      default:
+        oh["kind"] = "item";
+        break;
+      }
+      oh["id"] = EquippedOffhand.Id;
+      oh["count"] = EquippedOffhand.count;
+      if (EquippedOffhand.kind == InventoryEntryKind::Item)
+      {
+        oh["wear"] = EquippedOffhand.wear;
+        oh["broken"] = EquippedOffhand.broken;
+      }
+    }
+    out["equipped_offhand"] = oh;
+  }
+
+  nlohmann::json groups = nlohmann::json::object();
+  for (const auto &pair : EquippedArmorGroups.Ratings)
+  {
+    groups[pair.first] = pair.second;
+  }
+  out["equipped_armor_groups"] = groups;
 }
 
 void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
@@ -326,12 +696,18 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
             {
               bar.slots[si].entry.kind = InventoryEntryKind::Skin;
             }
+            else if (kind == "item")
+            {
+              bar.slots[si].entry.kind = InventoryEntryKind::Item;
+            }
             else
             {
               bar.slots[si].entry.kind = InventoryEntryKind::Block;
             }
             bar.slots[si].entry.Id = id;
             bar.slots[si].entry.count = slotJson.value("count", 0);
+            bar.slots[si].entry.wear = slotJson.value("wear", 0.f);
+            bar.slots[si].entry.broken = slotJson.value("broken", false);
             bar.slots[si].entry.empty = false;
             RemapLegacyHotbarEntryId(bar.slots[si].entry);
           }
@@ -351,6 +727,74 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
   if (ActiveSlotIndex >= kHotbarSlots)
   {
     ActiveSlotIndex = 0;
+  }
+
+  EquippedArmor = {};
+  EquippedArmorGroups.Ratings.clear();
+
+  if (data.contains("equipped_armor") && data["equipped_armor"].is_array())
+  {
+    const auto &arr = data["equipped_armor"];
+    const size_t n = std::min(static_cast<size_t>(arr.size()), kArmorSlots);
+    for (size_t i = 0; i < n; ++i)
+    {
+      const auto &ej = arr[i];
+      const bool empty = ej.value("empty", ej.value("id", std::string()).empty());
+      EquippedArmor[i].empty = empty;
+      if (!empty)
+      {
+        EquippedArmor[i].kind = InventoryEntryKind::Item;
+        EquippedArmor[i].Id = ej.value("id", "");
+        EquippedArmor[i].count = ej.value("count", 1);
+        EquippedArmor[i].wear = ej.value("wear", 0.f);
+        EquippedArmor[i].broken = ej.value("broken", false);
+        EquippedArmor[i].empty = EquippedArmor[i].Id.empty();
+      }
+    }
+  }
+
+  if (data.contains("equipped_armor_groups") &&
+      data["equipped_armor_groups"].is_object())
+  {
+    for (auto it = data["equipped_armor_groups"].begin();
+         it != data["equipped_armor_groups"].end(); ++it)
+    {
+      if (it.value().is_number_integer() || it.value().is_number_unsigned())
+      {
+        EquippedArmorGroups.Ratings[it.key()] = it.value().get<int>();
+      }
+      else if (it.value().is_number_float())
+      {
+        EquippedArmorGroups.Ratings[it.key()] =
+            static_cast<int>(std::lround(it.value().get<float>()));
+      }
+    }
+  }
+
+  EquippedOffhand = InventoryEntryRef{};
+  if (data.contains("equipped_offhand") && data["equipped_offhand"].is_object())
+  {
+    const auto &oh = data["equipped_offhand"];
+    const bool empty =
+        oh.value("empty", oh.value("id", std::string()).empty());
+    EquippedOffhand.empty = empty;
+    if (!empty)
+    {
+      const std::string kind = oh.value("kind", "item");
+      if (kind == "block")
+      {
+        EquippedOffhand.kind = InventoryEntryKind::Block;
+      }
+      else
+      {
+        EquippedOffhand.kind = InventoryEntryKind::Item;
+      }
+      EquippedOffhand.Id = oh.value("id", "");
+      EquippedOffhand.count = oh.value("count", 1);
+      EquippedOffhand.wear = oh.value("wear", 0.f);
+      EquippedOffhand.broken = oh.value("broken", false);
+      EquippedOffhand.empty = EquippedOffhand.Id.empty();
+    }
   }
 }
 

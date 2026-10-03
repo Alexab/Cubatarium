@@ -12,7 +12,8 @@ enum class ContentKind
   Block,
   Object,
   UCreature,
-  Skin
+  Skin,
+  Item
 };
 
 struct CatalogEntry

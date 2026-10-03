@@ -1,0 +1,44 @@
+{
+  "id": "iron_shield",
+  "displayName": "Iron Shield",
+  "types": [
+    "combat",
+    "utility"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "repair": {
+    "materials": [
+      "iron_ingot",
+      "iron"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.5,
+    "damage": {
+      "melee": 0,
+      "fleshy": 0
+    },
+    "punch_attack_uses": 200
+  },
+  "armor": {
+    "armor_groups": {
+      "fleshy": 25
+    }
+  },
+  "block": {
+    "enabled": true,
+    "damage_mul": 0.2,
+    "angle_deg": 120,
+    "passive_damage_mul": 0.8,
+    "block_uses": 200
+  },
+  "model": "models/items/iron_shield/model.gltf",
+  "visual": {
+    "wield_scale": 1.5,
+    "use": {
+      "block": "raise_shield"
+    }
+  }
+}

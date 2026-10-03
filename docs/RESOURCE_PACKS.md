@@ -81,6 +81,23 @@ Full block definition. The numeric `id` field is optional and ignored at runtime
 
 Face order for `textures` (6 entries): `[+Z, +X, -Z, -X, +Y, -Y]`
 
+### hardness
+
+Dig resistance. Cubatarium semantics (not identical to Minecraft):
+
+- `hardness = 0` — unbreakable in **Survival** (Creative still breaks instantly)
+- `hardness > 0` — bare-hand / wrong-tool dig time ≈ `hardness * 1.5` seconds (`BlockDigRules`)
+- With matching tool `groupcaps`, dig time uses `times[rating]` (hardness gates unbreakable; packs carry explicit `dig.groups`, `InferDigGroups` is fallback only)
+- Prefer `"dig": { "level", "groups" }` on blocks ([ITEMS_TOOLS.md](ITEMS_TOOLS.md)); dig via Influence Dig channel ([INTERACTION_ARCHITECTURE.md](INTERACTION_ARCHITECTURE.md))
+- Soft plants use small positives (`0.05`–`0.2`), never `0`
+
+Defaults are applied from [`tools/block_hardness_defaults.yaml`](../tools/block_hardness_defaults.yaml) via:
+
+```bash
+python tools/apply_block_hardness.py --dry-run
+python tools/apply_block_hardness.py
+```
+
 Fluid-related `physics` fields:
 
 - `fluid_permeable` (`bool`, optional): explicit waterlogging/permeability override for non-liquid blocks. If omitted, fallback remains render-style + occupancy (`cross`/`cutout` with occupancy `< 1`).
@@ -170,6 +187,12 @@ Legacy `"enabled": [...]` is read as `primary`. `worldgen_owner` defaults to `pr
 Base definitions live under `models/creatures/` and `models/skins/`. Enabled packs may overlay JSON and PNG from `creatures/` and `skins/` (later packs win). Example demo: `resource_packs/_example_creature_demo/` (secondary pack; add to world pack list to see pig rename).
 
 After pack apply, live creatures refresh visuals from the updated catalog.
+
+## Items overlay
+
+Base item defs live under `content/items/`. Enabled packs may overlay JSON from `resource_packs/<pack_id>/items/*.json` (loaded after base via `ResourcePackBootstrap`; later packs win). Models still resolve from the asset root (`models/items/...`); pack overlays typically change stats/`model` paths, not binary meshes.
+
+See also [`docs/ITEM_ASSETS.md`](ITEM_ASSETS.md) and [`docs/ITEMS_TOOLS.md`](ITEMS_TOOLS.md).
 
 ## Prefabs from packs
 

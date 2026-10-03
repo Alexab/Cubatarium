@@ -1,7 +1,10 @@
 #include "World/Core/RuntimeTuning.h"
 
+#include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Physics/FluidTuning.h"
 
+#include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -68,7 +71,7 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 4;
     t.MemoryExpandMaxRd = 6;
     t.DirtySoftCap = 1200;
-    t.DirtyThrashSoftCap = 320;
+    t.DirtyThrashSoftCap = 280;
     t.MaxResidentChunks = 0; // auto Keep footprint
   }
 }
@@ -188,10 +191,44 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.PendingLightSoftCap =
         j.value("pending_light_soft_cap", t.PendingLightSoftCap);
   }
+  if (j.contains("dirty_admit_cap_red"))
+  {
+    t.DirtyAdmitCapRed = j.value("dirty_admit_cap_red", t.DirtyAdmitCapRed);
+  }
+  if (j.contains("dirty_admit_cap_yellow"))
+  {
+    t.DirtyAdmitCapYellow =
+        j.value("dirty_admit_cap_yellow", t.DirtyAdmitCapYellow);
+  }
+  if (j.contains("relight_fifo_admit_frac"))
+  {
+    t.RelightFifoAdmitFrac =
+        j.value("relight_fifo_admit_frac", t.RelightFifoAdmitFrac);
+  }
+  if (j.contains("miss_reserved_ms"))
+  {
+    t.MissReservedMs = j.value("miss_reserved_ms", t.MissReservedMs);
+  }
+  if (j.contains("miss_emerge_floor_ms"))
+  {
+    t.MissEmergeFloorMs =
+        j.value("miss_emerge_floor_ms", t.MissEmergeFloorMs);
+  }
+  if (j.contains("streaming_phase_budget_ms"))
+  {
+    t.StreamingPhaseBudgetMs =
+        j.value("streaming_phase_budget_ms", t.StreamingPhaseBudgetMs);
+  }
   if (j.contains("relight_fifo_soft_cap"))
   {
     t.RelightFifoSoftCap =
         j.value("relight_fifo_soft_cap", t.RelightFifoSoftCap);
+    t.Era18VbCaptureFloor =
+        j.value("era18_vb_capture_floor", t.Era18VbCaptureFloor);
+    t.Era18VbBgBudgetFloor =
+        j.value("era18_vb_bg_budget_floor", t.Era18VbBgBudgetFloor);
+    t.MissFirstFrameBudget =
+        j.value("miss_first_frame_budget", t.MissFirstFrameBudget);
   }
   if (j.contains("gpu_vertex_pool_reserve_mb"))
   {
@@ -346,9 +383,120 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.FogPullInSevereWallMs =
         j.value("fog_pull_in_severe_wall_ms", t.FogPullInSevereWallMs);
   }
+  if (j.contains("enter_fov_lit_hard_wall_ms"))
+  {
+    t.EnterFovLitHardWallMs =
+        j.value("enter_fov_lit_hard_wall_ms", t.EnterFovLitHardWallMs);
+  }
+  if (j.contains("enter_fov_lit_capture_budget"))
+  {
+    t.EnterFovLitCaptureBudget =
+        j.value("enter_fov_lit_capture_budget", t.EnterFovLitCaptureBudget);
+  }
+  if (j.contains("enter_fov_lit_apply_budget"))
+  {
+    t.EnterFovLitApplyBudget =
+        j.value("enter_fov_lit_apply_budget", t.EnterFovLitApplyBudget);
+  }
+  if (j.contains("enter_fov_lit_capture_drain_ms"))
+  {
+    t.EnterFovLitCaptureDrainMs =
+        j.value("enter_fov_lit_capture_drain_ms", t.EnterFovLitCaptureDrainMs);
+  }
+  if (j.contains("enter_fov_lit_inflight_mult"))
+  {
+    t.EnterFovLitInflightMult =
+        j.value("enter_fov_lit_inflight_mult", t.EnterFovLitInflightMult);
+  }
+  if (j.contains("enter_lit_require_zero"))
+  {
+    t.EnterLitRequireZero =
+        j.value("enter_lit_require_zero", t.EnterLitRequireZero);
+  }
+  if (j.contains("enter_lit_debt_mode"))
+  {
+    const std::string mode = j.value("enter_lit_debt_mode", std::string("snapshot_rd"));
+    t.EnterLitUseSnapshotDebt = (mode != "live_global");
+  }
+  if (j.contains("enter_lit_abort_ms"))
+  {
+    t.EnterLitAbortMs = j.value("enter_lit_abort_ms", t.EnterLitAbortMs);
+  }
+  if (j.contains("enter_mesh_abort_ms"))
+  {
+    t.EnterMeshAbortMs = j.value("enter_mesh_abort_ms", t.EnterMeshAbortMs);
+  }
+  if (j.contains("enter_gate_mesh_drain_iterations"))
+  {
+    t.EnterGateMeshDrainIterations =
+        j.value("enter_gate_mesh_drain_iterations",
+                t.EnterGateMeshDrainIterations);
+  }
+  if (j.contains("enter_force_ingame_ms"))
+  {
+    t.EnterForceInGameMs =
+        j.value("enter_force_ingame_ms", t.EnterForceInGameMs);
+  }
+  if (j.contains("strict_enter_visual_ready"))
+  {
+    t.StrictEnterVisualReady =
+        j.value("strict_enter_visual_ready", t.StrictEnterVisualReady);
+  }
+  if (j.contains("fz2_defer_gated"))
+  {
+    t.Fz2DeferGated = j.value("fz2_defer_gated", t.Fz2DeferGated);
+  }
+  if (j.contains("fz2_lit_ring_seed"))
+  {
+    t.Fz2LitRingSeed = j.value("fz2_lit_ring_seed", t.Fz2LitRingSeed);
+  }
+  if (j.contains("stream_simple"))
+  {
+    t.StreamSimple = j.value("stream_simple", t.StreamSimple);
+  }
+  if (j.contains("schedule_shed_uv1"))
+  {
+    t.ScheduleShedUv1 = j.value("schedule_shed_uv1", t.ScheduleShedUv1);
+  }
+  if (j.contains("unload_amortize_mode"))
+  {
+    t.UnloadAmortizeMode =
+        std::clamp(j.value("unload_amortize_mode", t.UnloadAmortizeMode), 0, 4);
+  }
+  if (j.contains("keep_shell_amortize_mode"))
+  {
+    t.KeepShellAmortizeMode = std::clamp(
+        j.value("keep_shell_amortize_mode", t.KeepShellAmortizeMode), 0, 4);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;
+}
+
+void URuntimeTuning::ApplyEnvOverrides()
+{
+  URuntimeTuning &t = Get();
+  auto apply_bool_env = [](const char *name, bool &dst)
+  {
+    if (const char *env = std::getenv(name))
+    {
+      if (env[0] == '1' || env[0] == 't' || env[0] == 'T' || env[0] == 'y' ||
+          env[0] == 'Y')
+      {
+        dst = true;
+      }
+      else if (env[0] == '0' || env[0] == 'f' || env[0] == 'F' ||
+               env[0] == 'n' || env[0] == 'N')
+      {
+        dst = false;
+      }
+    }
+  };
+  apply_bool_env("CUBA_STREAM_SIMPLE", t.StreamSimple);
+  apply_bool_env("CUBA_SCHEDULE_SHED_UV1", t.ScheduleShedUv1);
+  apply_bool_env("CUBA_RELIGHT_REPLACE_OWNER", t.RelightReplaceDirtyOwner);
+  // Keep MeshApplyPolicy atomic in sync with tuning (AF bisect / streaming_tune).
+  SetRelightReplaceDirtyOwnerEnabled(t.RelightReplaceDirtyOwner);
 }
 
 } // namespace cutum

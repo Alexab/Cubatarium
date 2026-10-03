@@ -1,6 +1,13 @@
 {
   "name": "nether_brick",
   "id": 982,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

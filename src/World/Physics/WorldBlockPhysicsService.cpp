@@ -153,11 +153,27 @@ void UWorldBlockPhysicsService::WakeNearbyFluids(
 void UWorldBlockPhysicsService::ProcessFluidChange(
     UWorld &world, const FluidSpreadChange &change)
 {
-  world.MarkBlockChunkDirtyFromPhysics(change.BlockPos);
-  world.MarkBlockChunkDirtyFromPhysics(change.NeighborPos);
+  // Near the player: Immediate remesh so spread is visible without 3–5s SoftDefer
+  // / VisualRemesh starve. Far: keep budgeted physics remesh.
+  if (world.IsWithinLiquidUpdateRadius(change.BlockPos))
+  {
+    world.MarkBlockChunkDirty(change.BlockPos, /*sync_neighbor_chunks=*/true,
+                              /*sync_light_ring=*/false);
+    if (change.NeighborPos != change.BlockPos)
+    {
+      world.MarkBlockChunkDirty(change.NeighborPos,
+                                /*sync_neighbor_chunks=*/true,
+                                /*sync_light_ring=*/false);
+    }
+  }
+  else
+  {
+    world.MarkBlockChunkDirtyFromPhysics(change.BlockPos);
+    world.MarkBlockChunkDirtyFromPhysics(change.NeighborPos);
+  }
 
-  world.TryEnqueueFluidAt(change.BlockPos);
-  world.TryEnqueueFluidAt(change.NeighborPos);
+  world.ForceEnqueueFluidAt(change.BlockPos);
+  world.ForceEnqueueFluidAt(change.NeighborPos);
   WakeFluidAdjacency(world, change.BlockPos);
   if (change.NeighborPos != change.BlockPos)
   {
@@ -261,6 +277,10 @@ void UWorldBlockPhysicsService::TickBlockPhysics(UWorld &world)
     }
     const FluidSpreadStats stats = FluidSystem.Tick(world, pos);
     world.AccumulateFluidStats(stats);
+    if (stats.NeedsReschedule)
+    {
+      world.ForceEnqueueFluidAt(pos);
+    }
     for (const FluidSpreadChange &change : stats.Changes)
     {
       ProcessFluidChange(world, change);

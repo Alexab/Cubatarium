@@ -7,16 +7,24 @@
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Influence/InfluenceTypes.h"
+#include "Creatures/Influence/StatusEffectTypes.h"
+#include "Creatures/Stats/CreatureAttributes.h"
+#include "Creatures/Stats/CreatureVitals.h"
+#include "Creatures/Roles/ICreatureRoleHandler.h"
+#include <algorithm>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace cutum
 {
 
 class UWorld;
 class IUCreatureVisual;
+struct CreatureDefinition;
 
 class UCreature
 {
@@ -58,6 +66,79 @@ public:
   UCreatureInventory &GetInventory() { return Inventory; }
   const UCreatureInventory &GetInventory() const { return Inventory; }
 
+  CreatureVitals &GetVitals() { return Vitals; }
+  const CreatureVitals &GetVitals() const { return Vitals; }
+  CreatureAttributes &GetAttributes() { return Attributes; }
+  const CreatureAttributes &GetAttributes() const { return Attributes; }
+  void ApplyStatsFromDefinition(const CreatureDefinition &def);
+  bool NeedsNeedsTick() const { return NeedsTick; }
+  void SetNeedsNeedsTick(bool v) { NeedsTick = v; }
+
+  ArmorGroups &GetArmorGroups() { return Armor; }
+  const ArmorGroups &GetArmorGroups() const
+  {
+    // Total includes equipped armor contributions (pre-aggregated in
+    // CreatureInventory) plus offhand shield armor_groups.
+    TotalArmorGroups = Armor;
+    const ArmorGroups &eq = Inventory.GetEquippedArmorGroups();
+    for (const auto &pair : eq.Ratings)
+    {
+      TotalArmorGroups.Ratings[pair.first] += pair.second;
+    }
+    const InventoryEntryRef &off = Inventory.GetEquippedOffhand();
+    if (!off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
+    {
+      // Offhand groups resolved lazily via optional storage pointer is not
+      // available here; Inventory exposes cached offhand groups when set.
+      const ArmorGroups &offGroups = Inventory.GetOffhandArmorGroups();
+      for (const auto &pair : offGroups.Ratings)
+      {
+        TotalArmorGroups.Ratings[pair.first] += pair.second;
+      }
+    }
+    return TotalArmorGroups;
+  }
+  void SetArmorGroups(const ArmorGroups &g) { Armor = g; }
+  /// -1 = use strength formula for bare-hand fleshy damage.
+  int GetBareHandFleshyOverride() const { return BareHandFleshyOverride; }
+  float GetBareHandIntervalOverride() const { return BareHandIntervalOverride; }
+
+  float GetTimeSinceLastInfluenceSec() const
+  {
+    return TimeSinceLastInfluenceSec;
+  }
+  void AdvanceInfluenceCooldown(float dt)
+  {
+    TimeSinceLastInfluenceSec += std::max(0.f, dt);
+  }
+  void ResetInfluenceCooldown() { TimeSinceLastInfluenceSec = 0.f; }
+
+  bool IsBlocking() const { return Blocking; }
+  void SetBlocking(bool v) { Blocking = v; }
+
+  void AddHitFlash(float strength)
+  {
+    HitFlash01 = std::min(1.f, HitFlash01 + std::max(0.f, strength));
+  }
+  float GetHitFlash01() const { return HitFlash01; }
+  void TickHitFlash(float dt)
+  {
+    HitFlash01 = std::max(0.f, HitFlash01 - dt * 4.f);
+  }
+
+  void NotifyDamaged() { HealthBarVisibleSec = 2.f; }
+  void TickHealthBar(float dt)
+  {
+    HealthBarVisibleSec = std::max(0.f, HealthBarVisibleSec - std::max(0.f, dt));
+  }
+  float GetHealthBarVisibleSec() const { return HealthBarVisibleSec; }
+
+  std::vector<StatusEffectInstance> &GetStatusEffects() { return StatusEffects; }
+  const std::vector<StatusEffectInstance> &GetStatusEffects() const
+  {
+    return StatusEffects;
+  }
+
   CreatureIntent GetIntent() const { return Intent; }
   void SetIntent(const CreatureIntent &intent) { Intent = intent; }
   void ClearIntent() { Intent = CreatureIntent{}; }
@@ -86,15 +167,26 @@ public:
       float horizontalSpeedOverride = -1.0f,
       const UWorld *world = nullptr);
 
-  bool IsPlayerCharacter() const { return PlayerCharacter; }
-  void SetPlayerCharacter(bool v) { PlayerCharacter = v; }
-  bool IsPossessed() const { return Possessed; }
-  void SetPossessed(bool v) { Possessed = v; }
+  bool IsPlayerCharacter() const
+  {
+    return RoleHandler ? RoleHandler->IsPlayer() : PlayerCharacter;
+  }
+  void SetPlayerCharacter(bool v);
+  bool IsPossessed() const
+  {
+    return RoleHandler ? RoleHandler->IsExternallyControlled() : Possessed;
+  }
+  void SetPossessed(bool v);
 
-  virtual bool IsPlayer() const { return false; }
+  virtual bool IsPlayer() const
+  {
+    return RoleHandler ? RoleHandler->IsPlayer() : false;
+  }
+  ICreatureRoleHandler &GetRoleHandler();
+  const ICreatureRoleHandler &GetRoleHandler() const;
+  void SetRoleHandler(std::unique_ptr<ICreatureRoleHandler> handler);
+
   virtual void ExecuteIntent(UWorld &world, float dt);
-  virtual void UpdateControlled(UWorld &world, const CreatureInput &input,
-                                float dt);
 
   IUCreatureVisual *GetVisual() { return Visual.get(); }
   void SetVisual(std::unique_ptr<IUCreatureVisual> visual);
@@ -116,9 +208,22 @@ protected:
   CreatureBoundsState Bounds;
   UCreatureLocomotionController Locomotion;
   UCreatureInventory Inventory;
+  CreatureVitals Vitals{};
+  CreatureAttributes Attributes{};
+  ArmorGroups Armor{ArmorGroups::DefaultFleshy()};
+  mutable ArmorGroups TotalArmorGroups{};
+  int BareHandFleshyOverride{-1};
+  float BareHandIntervalOverride{-1.f};
+  float TimeSinceLastInfluenceSec{1000.f};
+  float HitFlash01{0.f};
+  float HealthBarVisibleSec{0.f};
+  bool Blocking{false};
+  std::vector<StatusEffectInstance> StatusEffects;
+  bool NeedsTick{false};
   CreatureIntent Intent{};
   bool PlayerCharacter{false};
   bool Possessed{false};
+  std::unique_ptr<ICreatureRoleHandler> RoleHandler;
   std::unique_ptr<IUCreatureVisual> Visual;
   LocomotionArchetype LocomotionArchetype{
       LocomotionArchetype::TerrestrialBiped};

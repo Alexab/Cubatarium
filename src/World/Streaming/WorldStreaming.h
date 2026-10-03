@@ -7,9 +7,12 @@
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "World/Streaming/StreamingPressure.h"
 #include "World/Streaming/MemoryBudgetController.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "World/Chunks/ChunkManager.h"
 #include <chrono>
+#include <climits>
+#include <cstdint>
 #include <deque>
 #include <glm/glm.hpp>
 #include <memory>
@@ -106,7 +109,10 @@ public:
 
 private:
   void InitChunkScheduler(UWorld &world);
-  void RefreshStreamingPressure(UWorld &world);
+  void RefreshStreamingPressure(
+      UWorld &world,
+      std::chrono::high_resolution_clock::time_point stream_t0,
+      double stream_budget_ms);
 
   std::unique_ptr<UChunkStreamer> Streamer;
   std::unique_ptr<UChunkEmergeCoordinator> EmergeCoordinator;
@@ -143,7 +149,73 @@ private:
   MemoryBudgetDecision LastMemoryDecision{};
   uint64_t LastMeshCompletedDiscarded{0};
   uint64_t LastRelightCompletedDiscarded{0};
+  uint64_t LastPubRejectSourceMismatch{0};
+  uint64_t LastGpuStagingAllocationFailure{0};
   int LastCompletedExpandFrame{-10000};
+  /// Era27 I-A1: SoftDefer Capture witness pin (cx, cz, cy) for T frames.
+  bool SoftDeferCapturePinValid{false};
+  int SoftDeferCapturePinCx{0};
+  int SoftDeferCapturePinCz{0};
+  int SoftDeferCapturePinCy{-1};
+  int SoftDeferCapturePinHoriz{0};
+  int SoftDeferCapturePinAge{0};
+  /// Pin length; Era29 enter sets EnterSpawnCapturePinFrames(), else Era27 T=8.
+  int SoftDeferCapturePinMaxAge{8};
+  /// MissOwn VB P2: consecutive frames pin has been drawable (flicker damp).
+  int SoftDeferCapturePinDrawableRun{0};
+  /// MissOwn VB P3: last frame age when PreferKick/Dirty fired on aged pin.
+  int SoftDeferCaptureLastAgedKickAge{-1};
+  /// I18-D1: hold prior column drawable briefly on witness column swap.
+  WitnessSwapGrace WitnessColumnGrace{};
+  /// R4.5.1: same-frame camera-column complete (UpdateStreaming → Refresh).
+  glm::ivec3 LastCameraTerrainCompleteGround{INT32_MAX, 0, INT32_MAX};
+  bool LastCameraTerrainComplete{false};
+  int LastCameraTerrainCompleteFrame{-1};
+
+  /// Perf-root P3: explicit cadence state (was function-static locals).
+  struct RefreshProbeState
+  {
+    int miss_probe_cd{0};
+    int screen_ray_sample_phase{0};
+    bool last_missing_near{false};
+    int miss_positive_hold{0};
+    glm::ivec2 last_sticky_focus_xz{INT_MAX, INT_MAX};
+    int last_sticky_keep_cols{-1};
+    int unfinished_reuse_age{0};
+    int prev_focus_pressure{0};
+    int focus_dirty_sample_cd{0};
+    int last_focus_dirty{0};
+    glm::ivec3 last_dirty_focus{0};
+    int last_dirty_radius{-1};
+    int unfinished_sample_cd{0};
+    int last_unfinished_visual{0};
+    glm::ivec3 last_unfinished_focus{0};
+    int last_unfinished_radius{-1};
+    int visible_black_sample_cd{0};
+    int vb_published{0};
+    int vb_pending_raw{0};
+    int vb_pending_stable{0};
+    int last_visible_black_no_ticket{0};
+    int last_visible_black_progress{0};
+    int last_visible_black_stalled{0};
+    int last_visible_black_stale_lit{0};
+    int last_visible_black_fully_dark_repair{0};
+    int last_visible_black_fully_dark_no_ticket{0};
+    int last_visible_black_fully_dark_stalled{0};
+    int last_visible_black_legal_dark{0};
+    int oldest_missing_resident_age_frames{0};
+    int oldest_stale_vertex_light_age_frames{0};
+    int prev_oracle_missing_resident_n{0};
+    int prev_oracle_stale_vertex_light_n{0};
+    int vb_focus_stable_frames{0};
+    int facing_sample_cd{0};
+    int last_ahead{0};
+    int last_behind{0};
+    bool uf_predicted_latched{false};
+    int uf_predicted_hold{0};
+    /// SoftDefer witness retarget baseline (was function-static).
+    uint64_t last_softdefer_witness_retarget{0};
+  } RefreshProbe{};
 };
 
 } // namespace cutum

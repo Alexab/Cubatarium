@@ -1,3 +1,5 @@
+#include "Render/Camera/GpuPassRefreshPolicy.h"
+
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -93,6 +95,23 @@ int main()
   Expect(cmds[1].firstIndex == 6 && cmds[1].baseVertex == 2, "cmd1 baseVertex");
   Expect(BuildRange(cache, 1, 2, cmds) == 1, "range single");
   Expect(cmds[0].baseVertex == 2, "range baseVertex");
+
+  using cutum::GpuPassHasMissingVisibleRefs;
+  using cutum::GpuPassVisibleDelta;
+  using cutum::GpuPassVisibleSetNeedsFullRebuild;
+  using cutum::GpuPassVisibleSetNeedsSync;
+  const GpuPassVisibleDelta ab_to_bc{2, 2, 1};
+  const GpuPassVisibleDelta bc_stable{2, 2, 0};
+  Expect(GpuPassHasMissingVisibleRefs(ab_to_bc),
+         "resident delta: {A,B}->{B,C} missing C");
+  Expect(GpuPassVisibleSetNeedsSync(ab_to_bc),
+         "resident delta: partial swap must sync");
+  Expect(!GpuPassVisibleSetNeedsSync(bc_stable),
+         "resident delta: stable visible set skips sync");
+  Expect(GpuPassVisibleSetNeedsFullRebuild(GpuPassVisibleDelta{2, 0, 2}),
+         "resident delta: empty GPU needs full rebuild");
+  Expect(!GpuPassVisibleSetNeedsFullRebuild(ab_to_bc),
+         "resident delta: partial overlap is incremental");
 
   if (gFails != 0)
   {

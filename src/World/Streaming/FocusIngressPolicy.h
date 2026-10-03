@@ -1,4 +1,5 @@
 #pragma once
+// BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
 
 #include <algorithm>
 
@@ -18,6 +19,10 @@ struct FocusIngressInput
   int unfinished_visual{0};
   /// Stale-dark faces near camera (mesh dark, field lit) — remesh/light debt.
   int stale_dark_near{0};
+  /// Era34 P1: SoftDefer empty placeholders in focus (FirstMesh admit floor).
+  int soft_defer_empty_n{0};
+  /// Dark void faces near camera — frontier gen/light imbalance.
+  int void_near{0};
 };
 
 struct FocusIngressDecision
@@ -37,12 +42,13 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   FocusIngressDecision out;
   // Frontier active: classic missing+pending, OR SoT unfinished, OR stale-dark
   // remesh debt near camera (manual 225337 rim wait with uv≈0 / dark high).
-  const bool classic =
-      in.moving && in.missing_mesh && in.pending_focus > 0;
+  // Era20: miss activates even when !moving (idle/stop miss stuck 214034).
+  const bool classic = in.missing_mesh && in.pending_focus > 0;
   const bool sot_frontier =
-      in.moving && (in.unfinished_visual > 0 || in.missing_mesh);
+      in.missing_mesh || (in.moving && in.unfinished_visual > 0) ||
+      (in.moving && in.soft_defer_empty_n > 0);
   const bool stale_frontier =
-      in.moving && in.stale_dark_near > 8 &&
+      (in.moving || in.missing_mesh) && in.stale_dark_near > 8 &&
       (in.pending_focus > 0 || in.unfinished_visual > 0 || in.missing_mesh);
   if (!classic && !sot_frontier && !stale_frontier)
   {
@@ -70,6 +76,13 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   {
     out.first_mesh_admit =
         std::max(out.first_mesh_admit, cold_pool ? 5 : 3);
+  }
+  // Era32 P3: empty∨miss FOV — guarantee ≥1 FirstMesh admit/frame
+  // (dual-debt must not starve HP FirstMesh under Relight pressure).
+  // Era34 P1: SoftDefer empty also floors FirstMesh admit.
+  if (in.missing_mesh || in.unfinished_visual > 0 || in.soft_defer_empty_n > 0)
+  {
+    out.first_mesh_admit = std::max(out.first_mesh_admit, 1);
   }
 
   // Capture() for a terrain column runs on the main thread inside Drain.
@@ -102,6 +115,14 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   // Spike guard: cold async + hole → no non-underfeet sync fill — except when
   // missing mesh (land rim: cold_pool alone left miss_stuck 16–24s).
   out.allow_sync_hole_fill = !cold_pool || in.missing_mesh;
+
+  // Frontier admission: gen must not outpace relight when void debt is high.
+  if (in.moving && in.void_near > 200 && in.pending_focus > 24)
+  {
+    out.first_mesh_admit = std::min(out.first_mesh_admit, 1);
+    out.relight_floor =
+        std::max(out.relight_floor, in.pending_focus > 48 ? 4 : 3);
+  }
   return out;
 }
 
@@ -110,6 +131,33 @@ inline bool AllowSyncHoleFillForColumn(const FocusIngressDecision &d,
                                        bool hole_underfeet)
 {
   return hole_underfeet || d.allow_sync_hole_fill;
+}
+
+/// Cruise time-budget B: never RebuildChunkImmediate while moving (Luanti:
+/// mesh off the main thread). Idle Imm still gated on pending light.
+/// P3: idle Imm also backs off when GPU apply queue or FIFO is already full.
+inline bool ShouldAllowImmediateMesh(bool moving, bool pending_light,
+                                     int pending_gpu_queued = 0, int fifo_n = 0,
+                                     int fifo_soft_cap = 0,
+                                     bool visual_holes = false)
+{
+  if (moving || pending_light)
+  {
+    return false;
+  }
+  if (pending_gpu_queued >= 32)
+  {
+    return false;
+  }
+  if (fifo_soft_cap > 0 && fifo_n >= fifo_soft_cap)
+  {
+    return false;
+  }
+  if (visual_holes && fifo_soft_cap > 0 && fifo_n >= (fifo_soft_cap * 3) / 4)
+  {
+    return false;
+  }
+  return true;
 }
 
 } // namespace cutum

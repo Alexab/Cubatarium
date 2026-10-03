@@ -2,6 +2,8 @@
 #include "Core/Sort/CatalogSortUtil.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Stats/CreatureStatsDefaults.h"
+#include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include <algorithm>
 #include <filesystem>
@@ -170,6 +172,66 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           bp.value("attack_range", def.behavior.attackRange);
       def.behavior.attackCooldown =
           bp.value("attack_cooldown", def.behavior.attackCooldown);
+    }
+    {
+      const auto tmpl = CreatureStatsDefaults::For(
+          def.role, def.catalog.tags, def.habitat, def.Id);
+      def.stats.vitalsTemplate = tmpl.vitals;
+      def.stats.attributes = tmpl.attributes;
+      def.stats.needsTick = tmpl.needsTick;
+      if (data.contains("vitals") && data["vitals"].is_object())
+      {
+        def.stats.hasVitalsOverride = true;
+        CreatureStatsJson::ReadVitalsTemplate(data["vitals"],
+                                              def.stats.vitalsTemplate);
+        def.stats.vitalsTemplate.ClampCurrents();
+        def.stats.vitalsTemplate.FillFull();
+      }
+      if (data.contains("attributes") && data["attributes"].is_object())
+      {
+        def.stats.hasAttributesOverride = true;
+        CreatureStatsJson::ReadAttributes(data["attributes"],
+                                          def.stats.attributes);
+      }
+      if (def.role == CreatureRole::ControlledDefault ||
+          def.role == CreatureRole::Bot)
+      {
+        def.stats.needsTick = true;
+      }
+      if (data.contains("armor_groups") && data["armor_groups"].is_object())
+      {
+        def.stats.hasArmorGroupsOverride = true;
+        def.stats.armorGroups.Ratings.clear();
+        for (auto it = data["armor_groups"].begin();
+             it != data["armor_groups"].end(); ++it)
+        {
+          if (it.value().is_number_integer() ||
+              it.value().is_number_unsigned())
+          {
+            def.stats.armorGroups.Ratings[it.key()] = it.value().get<int>();
+          }
+        }
+        if (def.stats.armorGroups.Ratings.empty())
+        {
+          def.stats.armorGroups = ArmorGroups::DefaultFleshy();
+        }
+      }
+      if (data.contains("bare_hand") && data["bare_hand"].is_object())
+      {
+        const auto &bh = data["bare_hand"];
+        def.stats.bareHand.hasOverride = true;
+        def.stats.bareHand.fullPunchInterval =
+            bh.value("full_punch_interval", 0.5f);
+        if (bh.contains("damage") && bh["damage"].is_object())
+        {
+          def.stats.bareHand.fleshyDamage =
+              bh["damage"].value("fleshy", bh["damage"].value("melee", 0));
+        }
+        else
+        {
+          def.stats.bareHand.fleshyDamage = bh.value("fleshy", 0);
+        }
+      }
     }
     if (data.contains("locomotion"))
     {

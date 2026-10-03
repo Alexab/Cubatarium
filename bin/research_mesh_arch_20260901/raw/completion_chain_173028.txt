@@ -1,0 +1,7 @@
+﻿spikes=593
+  schedule_starved: 240 (40.5%)
+  gpu_not_ready: 153 (25.8%)
+  empty_fm: 98 (16.5%)
+  async_inflight: 87 (14.7%)
+  complete: 15 (2.5%)
+dominant_stall_stage=schedule_starved

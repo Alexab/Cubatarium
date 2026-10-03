@@ -38,20 +38,68 @@ struct PhysicsTelemetry
   uint64_t AsyncRelightInflight{0};
   uint64_t RelightDiscardedLate{0};
   uint64_t MeshDiscardedLate{0};
+  uint64_t MeshDiscardedLateEpoch{0};
+  uint64_t MeshDiscardedLateJobMismatch{0};
   /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
   uint64_t MeshApplyStale{0};
+  /// 162400: InputsStillValid / catalog / stamp mismatch subset of MeshApplyStale.
+  uint64_t MeshApplyStaleVisual{0};
+  /// Post-N01: reason split (sum == MeshApplyStaleVisual).
+  uint64_t MeshApplyStaleGeom{0};
+  uint64_t MeshApplyStaleLight{0};
+  uint64_t MeshApplyStaleCatalog{0};
+  uint64_t MeshApplyStaleStampInvalid{0};
+  /// 162400: RemeshObsoleteTracked subset of MeshApplyStale.
+  uint64_t MeshApplyStaleRev{0};
+  /// N04 autopsy: accepted stale input commits (cumulative).
+  uint64_t MeshApplyStaleGeomAccepted{0};
+  uint64_t MeshApplyStaleLightAccepted{0};
+  uint64_t MeshApplyStaleAcceptedRefresh{0};
+  /// SoT 100303: I3t empty-spoof hold skipped (first-fill publish).
+  uint64_t I3tHoldEmptySpoofN{0};
+  /// DiscardOlderKeepActive — older async keep Active for newer in-flight.
+  uint64_t MeshApplySuperseded{0};
+  /// DropNoActive — apply with no Active tracking.
+  uint64_t MeshApplyDropNoActive{0};
+  /// Era15 TD-049: CPU replace published before FreeChunk when GPU-only drawable.
+  uint64_t MeshReplaceHoleAvoided{0};
+  /// A34: ArtifactManifest reject / first-accept (empty-world hot-fix).
+  uint64_t PubRejectLightInvalid{0};
+  uint64_t PubRejectSourceMismatch{0};
+  uint64_t PubRejectSourceMismatchDelta{0};
+  uint64_t PubRejectOther{0};
+  uint64_t PubAcceptFirstPublish{0};
+  /// Prior-lit hold: dark commit retained prior (not Completed publish).
+  uint64_t PriorLitHoldN{0};
+  /// Sysreset I3t: max PriorLit hold age observed (frames).
+  int PriorLitHoldAgeMax{0};
   /// Deferred GPU mesh applies waiting for ProcessPendingGpuMeshes.
   int PendingGpuAppliesN{0};
   /// Queued phase only (not yet Kick).
   int PendingGpuQueuedN{0};
   /// Kicked phase (fence outstanding); capped by readback ring.
   int PendingGpuKickedN{0};
+  int GpuMeshSlotMaxN{0};
+  int GpuMeshSlotFreeN{0};
+  int GpuMeshSlotBoundN{0};
+  int GpuMeshSlotUnboundAllocatedN{0};
+  uint64_t GpuStagingAllocationFailureN{0};
+  uint64_t GpuStagingAllocationFailureDelta{0};
+  uint64_t GpuMeshSlotEvictionN{0};
+  uint64_t GpuMeshSlotNoVictimN{0};
+  uint64_t GpuZeroQuadSlotReleaseN{0};
   /// Final mesh schedule/drain after TickMeshEmerge (MeshWorkAdmission SoT).
   int MeshScheduleFinal{0};
   int MeshDrainFinal{0};
   int MeshAdmissionMode{0};
   /// Kicks issued in last RebuildDirtyChunksWithStats tick.
   int GpuKickN{0};
+  int GpuKickDebtForcedN{0};
+  std::string GpuKickDeferReason;
+  /// Same-frame extra consume after DrainAsyncMeshResults repaired Queued timing.
+  int GpuKickPostDrainN{0};
+  /// Focus miss + debt but Queued still empty after DrainAsyncMeshResults.
+  int GpuKickSkipNoQueuedN{0};
   /// Successful Finish+Commit in last rebuild tick.
   int GpuFinishN{0};
   /// NotReady Finish polls in last rebuild tick.
@@ -62,10 +110,77 @@ struct PhysicsTelemetry
   int EnterGameWarmupMissingGreedy{0};
   /// Frames where SoftDefer FOV+pending applied a Capture budget floor (cumulative).
   uint64_t SoftDeferCaptureFloorHits{0};
+  /// SoftDefer/rim FirstMesh ticket retargeted from focus to MissCx/Cz (cumulative).
+  /// Legacy total = SoftDeferIngressWitnessN + SoftDeferCaptureRetargetN.
+  uint64_t SoftDeferWitnessRetarget{0};
+  /// FZ2.7-P15a: ingress Site A (witness≠focus enqueue) — observe only.
+  uint64_t SoftDeferIngressWitnessN{0};
+  /// FZ2.7-P15a: Capture floor real pin retarget (Site B) — observe only.
+  uint64_t SoftDeferCaptureRetargetN{0};
+  /// FP-A3: Site B retarget blocked by witness pin hold (per frame).
+  uint64_t SoftDeferCaptureRetargetBlockedN{0};
+  /// FP-A1: FirstMesh dirty enqueue sources (per frame).
+  int FmDirtyEnqueueN{0};
+  int FmDirtyEnqueueFromMarkRelitN{0};
+  int FmDirtyEnqueueFromColumnFlowN{0};
+  /// R1-A: AdmitFocusVisibleMissing candidates vs slices marked dirty.
+  int AdmitCandidatesN{0};
+  int AdmitMarkedN{0};
+  /// R1-B: worker capture pipeline telem.
+  int MeshPendingCaptureN{0};
+  int MeshScheduleRetryAfterCaptureN{0};
+  int MeshWorkerInflightN{0};
+  int MeshPendingCaptureReadyN{0};
+  int MeshPendingCaptureStaleN{0};
+  int MeshPendingCaptureMaxAge{0};
+  int MeshDegradedCaptureN{0};
+  /// R4-H1: cruise movement speed for parity gates (blocks/s).
+  float MovementSpeed{0.0f};
+  /// Camera horizontal movement totals per rendered update, in blocks.
+  double CameraMoveRequestedXz{0.0};
+  double CameraMoveAppliedXz{0.0};
+  int CameraMoveAttemptSubsteps{0};
+  int CameraMoveBlockedSubsteps{0};
+  int CameraMoveBlockedXSubsteps{0};
+  int CameraMoveBlockedZSubsteps{0};
+  int CameraFlightGroundContacts{0};
+  int CameraFreeMoveAtStart{0};
+  /// FP-D1: FirstMesh dirty consumed by schedule this frame.
+  int FmDirtyDrainN{0};
+  /// FP-B2: nh≤2 priority front-insert into relight FIFO.
+  int RelightFifoPriorityInsertN{0};
+  /// FP-B3: ColumnFlow ticketed VB consume enqueue count.
+  int TicketedVbConsumeN{0};
+  /// FP-A4: frames in cruise Warm carve-out from HoleDrain starvation.
+  int AdmissionCarveOutFrames{0};
+  /// FP-G0: per-frame carve-out flag (0/1), not cumulative.
+  int AdmissionCarveOut{0};
+  /// FP-C2: skylight seed at commit count.
+  int SeedAtCommitN{0};
+  /// FP-C2: StreamingPressure level 0=green 1=yellow 2=red.
+  int BackpressureLevel{0};
+  /// Last witness MissHoriz when SoftDeferWitnessRetarget fired (0 if focus).
+  int SoftDeferWitnessHoriz{0};
+  /// FZ2.7-P12 C0: SoftDefer Capture pin age (frames).
+  int SoftDeferCapturePinAge{0};
+  /// Miss Ownership SLA P1: consecutive hold frames on same undrawn witness.
+  int MissOwnerStableFrames{0};
+  /// Miss Ownership SLA P1: Capture witness hop count (session).
+  int MissOwnerHopN{0};
   /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
   int SoftDeferCaptureBudget{0};
+  /// Era19 FrameStreamingBudget soft ms SoT (bad-frame threshold).
+  int FrameBudgetMs{0};
+  /// 1 when Capture floor would spend on an already-hot frame.
+  int CaptureOverBudget{0};
+  /// 1 when VB Capture/bg heal was deferred for miss/hitch (I-B1/I-B2).
+  int HealDeferredForMiss{0};
+  /// Era19 P2: Remesh skipped because column is in PendingLight stage.
+  uint64_t StageSkipRemeshPendingLight{0};
   /// Empty SoftDefer placeholders seen by undrawn heal this frame (A2 smoke).
   int SoftDeferEmptyPlaceholderN{0};
+  /// Era38: SoftDefer empty coords with horiz<=2 (previous frame until scan).
+  int SoftDeferEmptyNearN{0};
   /// Stuck pattern: HasGreedy && !Drawable && !Dirty && horiz>1.
   int SoftDeferEmptyStuckN{0};
   int SoftDeferEmptyStuckCx{0};
@@ -73,8 +188,36 @@ struct PhysicsTelemetry
   int SoftDeferEmptyStuckCz{0};
   int SoftDeferEmptyStuckHoriz{0};
   int SoftDeferEmptyStuckDefer{0};
+  /// Era24: max SoftDefer empty age (frames) seen this tick.
+  int SoftDeferEmptyAgeMaxFrames{0};
+  /// Phase 5.3: empty-column backlog + abort/skip latches.
+  int EmptyBacklogN{0};
+  int PhaseAbortHeavy{0};
+  int SkipEmptyEmerge{0};
+  int AbortScheduleFinal{0};
+  int AbortDrainFinal{0};
+  /// Era24: SoftDefer empty coords with ColumnFlow FirstMesh Contains.
+  int SoftDeferEmptyOwnedN{0};
+  /// Phase 5.5.0b: SoftDeferEmptyOwned without PendingGpu (owned-without-progress).
+  int SoftDeferOwnedNoGpuN{0};
+  /// Phase 5.5.0b: sticky latch — soft_force settle with visibility_debt>0.
+  int EnterSettleSoftForceWithDebt{0};
+  /// A35 R0: MeshWarmup wall/tick timeout exited while MeshService dirty>0.
+  int MeshWarmupTimeoutDirtyResidual{0};
+  /// A35 R0: soft settle blocked because MeshService dirty residual high.
+  int EnterSoftSettleBlockedDirtyResidual{0};
+  /// A35 R0: dirty count sampled at MeshWarmup timeout / soft-settle block.
+  int EnterMeshDirtyResidualN{0};
+  /// Phase 5.6.1: sampled CountEnterVisibilityDebt for period FPM / latch timing.
+  int VisibilityDebt{0};
+  /// Phase 5.7.3: CountUnready outside R=4 (diagnose only; does not gate clear).
+  int VisibilityDebtHinterland{0};
+  /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket), cumulative.
+  uint64_t SoftDeferEmptyPublishAvoided{0};
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
   int SoftDeferHeldN{0};
+  /// R4.5.2: max SoftDeferHeldAge across Held set.
+  int SoftDeferHeldAgeMax{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
@@ -82,9 +225,45 @@ struct PhysicsTelemetry
   double CommitApplyMs{0.0};
   double CommitSealMs{0.0};
   /// Breakdown inside StreamMs (UpdateStreaming + TickAsyncChunkSystems).
+  /// StreamerUpdateMs = ChunkStreamer::Update load loop only (core).
   double StreamerUpdateMs{0.0};
+  double StreamerUnloadMs{0.0};
+  double StreamerKeepShellMs{0.0};
+  double StreamerPrefetchAheadMs{0.0};
+  /// Full UpdateStreaming wall (WorldViewBinding); not an overwrite of core.
+  double UpdateStreamingMs{0.0};
   double AsyncIoMs{0.0};
   double RelightDrainMs{0.0};
+  /// P2: Capture (DrainRelightQueues) vs Apply (DrainAsyncRelightResults).
+  double RelightCaptureMs{0.0};
+  double RelightApplyMs{0.0};
+  /// FZ2.6-Perf0: light merge only (telem for budget math).
+  double RelightApplyLightMs{0.0};
+  /// FZ2.6-Perf0: MarkRelit+Dirty within same atomic iteration.
+  double RelightApplyInstallMs{0.0};
+  double RelightApplyLightMsPrev{0.0};
+  double RelightApplyInstallMsPrev{0.0};
+  /// FZ2.7-B: DrainCompleted pop vs light merge (not billed as one light unit).
+  double RelightDrainCompletedMs{0.0};
+  double RelightMergeLightMs{0.0};
+  int RelightLightChunksN{0};
+  int RelightLightSkipN{0};
+  /// FZ2.7-A: smoothed cap_unit (not reset per frame).
+  double RelightCapUnitEma{0.0};
+  int RelightThroughputHoldN{0};
+  int RepairReticketDeferredN{0};
+  /// Previous frame (P2 apply budget / P5 dynamic bg_cap).
+  double RelightDrainMsPrev{0.0};
+  double RelightApplyMsPrev{0.0};
+  /// Prior-frame main-loop sim_ms (kill-switch for Capture/Apply boost).
+  double SimMsPrev{0.0};
+  /// Previous-frame Apply count (unit-cost estimator for cruise Apply budget).
+  int RelightApplyNPrev{0};
+  /// FZ2.6-Perf0: binding constraint driver (ApplyBinding enum).
+  int ApplyBinding{0};
+  int ApplyBindingPrev{0};
+  /// FZ2.6-P0-A: raw VB before hysteresis publish.
+  int VisibleBlackFocusRawN{0};
   double MeshSyncMs{0.0};
   double MeshSnapshotMs{0.0};
   /// Wall time spent in RebuildChunkImmediate this frame (inside MeshEmergeMs).
@@ -93,6 +272,15 @@ struct PhysicsTelemetry
   /// WindowManager::Update split (outside PhysicsStepMs).
   double ViewsMs{0.0};
   double DoMovementMs{0.0};
+  double EnsureCollisionMs{0.0};
+  double CreatureTickMs{0.0};
+  double CameraDoMovementMs{0.0};
+  double CameraGroundSupportMs{0.0};
+  double CameraLocomotionMs{0.0};
+  double CameraHorizMoveMs{0.0};
+  double CameraSyncMs{0.0};
+  /// Era14: TickWorldStreamingPhase wall (stream+emerge); outside DoMovementMs.
+  double WorldStreamingPhaseMs{0.0};
   double BlockInputMs{0.0};
   /// TickEnvironment wall inside DoMovement (before PhysicsStep timer).
   double TickEnvMs{0.0};
@@ -103,12 +291,293 @@ struct PhysicsTelemetry
   /// Place UX diagnostics (per-frame; reset each Update).
   int PlaceCompleteN{0};
   int PlaceEmissionN{0};
+  /// Autosave deferred Begin / skipped Tick while edit-hot (per-frame).
+  int AutosaveDeferredN{0};
+  int AutosaveSkippedTickN{0};
+  /// DigSeam: P2-demoted face remesh queue (per-frame after drain).
+  int DigSeamPendingN{0};
+  int DigSeamRemeshN{0};
+  /// Stand rim heal (manual 131827): stale-wave cols / Dirty / calm Imm.
+  int StaleRepairWaveN{0};
+  int StandRimDirtyN{0};
+  int StandRimImmN{0};
   /// Max light emission among blocks edited this frame (0 if none).
   int EditLightEmission{0};
   /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).
   double MeshDirtyTickMs{0.0};
+  /// Cruise wall A1: mesh_dirty_tick substages.
+  double MeshDirtyPruneMs{0.0};
+  int MeshDirtyPruneN{0};
+  double MeshDirtySortMs{0.0};
+  double MeshDirtyDrainMs{0.0};
+  int MeshDirtyDrainN{0};
+  double MeshDirtyScheduleMs{0.0};
+  /// Published neighbor meshes awaiting/remeshed after input dependency change.
+  int MeshDependencyQueuedN{0};
+  int MeshDependencyAppliedN{0};
+  int MeshDependencyBacklogN{0};
+  int MeshDirtyScheduleOkN{0};
+  int MeshDirtyScheduleOkFmN{0};
+  int MeshDirtyScheduleOkRemeshN{0};
+  int MeshDirtyScheduleSkipN{0};
+  /// FZ2.7-P9: Dirty schedule skip breakdown (locked ≈ inflight/gpu).
+  int MeshDirtyScheduleSkipPipelineN{0};
+  int MeshDirtyScheduleSkipSnapshotN{0};
+  int MeshSnapshotDeferTimeBudgetN{0};
+  int MeshSnapshotDeferRefreshBudgetN{0};
+  double MeshSnapshotBudgetMs{0.0};
+  double CaptureSnapshotCostEmaMs{0.0};
+  int MeshSnapshotRefreshCreditsInitialN{0};
+  int MeshSnapshotRefreshCreditsRemainingN{0};
+  int FirstMeshCaptureReserveRemainingN{0};
+  int LightRepairCaptureReserveRemainingN{0};
+  int MeshSnapshotFirstMeshRefreshDefersN{0};
+  int MeshSnapshotRemeshRefreshDefersN{0};
+  int MeshSnapshotDeferPipelineBytesN{0};
+  int MeshSnapshotDeferMissingBandN{0};
+  int MeshSnapshotDeferDependencyN{0};
+  int MeshSnapshotDeferPublicationN{0};
+  int MeshSnapshotDeferStoreCommitN{0};
+  int MeshDirtyScheduleSkipSoftDeferN{0};
+  int MeshDirtyScheduleSkipLockedN{0};
+  int MeshDirtyScheduleSkipOrphanN{0};
+  int MeshDirtyScheduleSkipRemeshStarveN{0};
+  int MeshDirtyScheduleSkipOtherN{0};
+  /// FZ2.7-P10: keep-ring shrink / FreeChunk-while-live.
+  int KeepRingShrinkN{0};
+  uint64_t FreeChunkLiveN{0};
+  double MeshDirtyGpuMs{0.0};
+  int MeshDirtyGpuN{0};
+  double MeshDirtySyncMs{0.0};
+  int MeshDirtySyncN{0};
+  /// M0 waterfall: GPU kick/finish wall inside ProcessPendingGpuMeshes.
+  double MeshGpuKickMs{0.0};
+  double MeshGpuFinishMs{0.0};
+  double MeshAsyncDrainMs{0.0};
+  int MeshCaptureStoreHitN{0};
+  int MeshCaptureStoreMissN{0};
+  int MeshCaptureStoreEntriesN{0};
+  uint64_t MeshCaptureStoreStaleEvictionsN{0};
+  uint64_t MeshCaptureStoreCapacityEvictionsN{0};
+  uint64_t MeshCaptureStorePressureEvictionsN{0};
+  uint64_t MeshSnapshotPendingBytes{0};
+  int DirtyTouchN{0};
+  int DirtyRevisitSameN{0};
+  int DirtyFmN{0};
+  int DirtyRemeshN{0};
+  /// Real CountUnfinishedVisualNear invocations this frame (not prep hooks).
+  int PrepUnfinishedCallsN{0};
+  /// Cruise wall P3: full O(R²) unfinished rescans vs incremental hits.
+  int PrepUnfinishedFullN{0};
+  int PrepUnfinishedIncrementalN{0};
+  /// UnfinishedVisualCache: pure hit (no dirty recheck) vs NoteDirty overflow.
+  int UnfinishedCacheHitN{0};
+  int UnfinishedCacheOverflowN{0};
+  /// MeshWorkAdmission caps after Finalize (pool util SoT).
+  int DirtyAdmitBudgetEnd{0};
+  int FirstMeshScheduleCap{0};
+  int FirstMeshScheduleEffectiveCap{0};
+  /// Components of the final output-pool fence around mesh scheduling.
+  int MeshPipelinePendingGpuN{0};
+  /// Legacy aggregate includes GpuExtractInFlight and overlaps PendingGpuN.
+  int MeshPipelineAsyncInFlightN{0};
+  int MeshPipelineAsyncBuilderInFlightN{0};
+  int MeshPipelineGpuExtractInFlightN{0};
+  int MeshPipelineCapturePendingN{0};
+  int MeshPipelineCompletedWaitingN{0};
+  int MeshPipelineOutstandingN{0};
+  int MeshPipelineOutputSlots{0};
+  int MeshPipelineOutputHeadroomN{0};
+  int MeshPipelineBackpressureActive{0};
+  /// Bit 0: near/at soft-threshold; bit 1: requested output exceeds pool.
+  int MeshPipelineBackpressureReason{0};
+  int MeshPipelineScheduleRequestedN{0};
+  int MeshPipelineAdmissionScheduleCapN{0};
+  int MeshPipelineAvailableScheduleCapN{0};
+  int MeshPipelineScheduleAfterCapN{0};
+  int MeshPipelineFirstMeshCapN{0};
+  int MeshPipelineRemeshCapN{0};
+  int FmDirtyEnqueueReserveN{0};
+  int RemeshScheduleCap{0};
+  /// Dual-lane Cap1 starve telem (0=None,1=Cap1YieldFm,2=Cap1YieldRemesh,3=NoDemand).
+  int ScheduleLaneStarveReason{0};
+  /// FZ2.7-P13 R5: lit-settle remesh protect armed this frame (0/1).
+  int RemeshProtectLitSettleN{0};
+  /// Per-frame TrimFarRelightFifo drops (not cumulative RelightFifoDropped).
+  int RelightTrimFarN{0};
+  /// P1: per-frame FIFO drops (overflow + trim) and pin keys skipped.
+  int RelightFifoDropN{0};
+  int RelightFifoOverflowDropN{0};
+  int RelightFifoProtectBlockN{0};
+  int RelightFifoPinSavedN{0};
+  int RelightFifoDropNPrev{0};
+  int RelightFifoPinDropNPrev{0};
+  /// Player block/world position for cruise SLA (perf jsonl).
+  float PlayerX{0.0f};
+  float PlayerY{0.0f};
+  float PlayerZ{0.0f};
+  /// Era14.1 phase budget: stream already over budget; miss carve-out active.
+  int PhaseBudgetOver{0};
+  int PhaseMissCarveOut{0};
+  /// Cruise wall P2: miss reserved / emerge cap from phase time-slice (ms).
+  double MissReservedMs{0.0};
+  double EmergeBudgetCapMs{0.0};
   /// TickMeshEmerge wall before RebuildDirtyChunksWithStats (prep/idle/cold).
   double MeshEmergePrepMs{0.0};
+  /// I5 prep sub-timers (ms) inside MeshEmergePrepMs.
+  double MeshEmergePrepMissingMs{0.0};
+  /// Legacy bucket name: SoftDefer setup + pending/dirty/black scans in emerge.
+  /// Prefer PrepPendingLightMs / PrepBlackStickyMs / PrepDirtyCountMs.
+  double MeshEmergePrepUnfinishedMs{0.0};
+  double MeshEmergePrepStickyMs{0.0};
+  double MeshEmergePrepDropDirtyMs{0.0};
+  double MeshEmergePrepOtherMs{0.0};
+  /// Perf-root P1: explicit prep self (total - accounted); OtherMs aliases this.
+  double MeshEmergePrepSelfMs{0.0};
+  /// R4.1: SyncFocusRing + recover inside emerge prep.
+  double PrepSyncFocusRingMs{0.0};
+  double PrepRecoverMs{0.0};
+  /// Arch roadmap: emerge prep sub-timers (inside prep_other breakdown).
+  double PrepAdmissionMs{0.0};
+  double PrepScheduleClampMs{0.0};
+  double PrepSoftdeferPolicyMs{0.0};
+  double PrepIsolatedMissMs{0.0};
+  double PrepRefreshPressureMs{0.0};
+  /// I9-A: RefreshStreamingPressure sub-timers (sum ≈ PrepRefreshPressureMs).
+  double PrepRefreshMissMs{0.0};
+  double PrepRefreshPendingMs{0.0};
+  double PrepRefreshStickyMs{0.0};
+  double PrepRefreshUnfinishedMs{0.0};
+  double PrepRefreshVbMs{0.0};
+  double PrepRefreshDarkfaceMs{0.0};
+  double PrepRefreshFacingMs{0.0};
+  /// I10-F1: underfeet block inside RefreshStreamingPressure.
+  double PrepRefreshUnderfeetMs{0.0};
+  /// I12-B1: RefreshStreamingPressure untimed sub-timers.
+  double PrepRefreshDirtyMs{0.0};
+  double PrepRefreshPressureEvalMs{0.0};
+  double PrepRefreshUnderfeetProbeMs{0.0};
+  /// I14b-A: ring sample miss (sticky full-walk only; not unfinished).
+  double PrepRefreshRingResyncMs{0.0};
+  /// I14b-A: CountVisibleBlackFocusMeshes full scan only.
+  double PrepRefreshVbRawMs{0.0};
+  /// I14b-A: PrepRefreshPressureMs minus sum(sub-timers).
+  /// Deprecated alias kept for JSON compat; prefer PrepRefreshSelfMs.
+  double PrepRefreshGapMs{0.0};
+  /// Perf-root P1: explicit parent self-time (total - accounted children).
+  double PrepRefreshSelfMs{0.0};
+  /// R4.2: HasMissingGreedyMesh walks in UpdateStreaming.
+  double PrepRefreshHasMissingMs{0.0};
+  /// R4.5.1: camera-column IsTerrainChunkComplete (Refresh).
+  double PrepRefreshCameraCompleteMs{0.0};
+  /// R4.5.1: Refresh body between unfinished and darkface (VB / pressure latch).
+  double PrepRefreshBodyMs{0.0};
+  /// Phase5 S0: untimed glue windows inside RefreshStreamingPressure.
+  double PrepRefreshSetupMs{0.0};
+  /// Phase5 setup micro-timers (sum ≈ PrepRefreshSetupMs).
+  double PrepRefreshSetupFocusMs{0.0};
+  double PrepRefreshSetupRingMs{0.0};
+  double PrepRefreshSetupCaptureMs{0.0};
+  double PrepRefreshSetupProbeMs{0.0};
+  double PrepRefreshInputFillMs{0.0};
+  double PrepRefreshDietFlagsMs{0.0};
+  /// Phase5 S0: emerge mid-body timers (inside MeshEmergePrepMs).
+  double PrepWarmupMs{0.0};
+  double PrepSoftdeferPreMs{0.0};
+  double PrepDirtyThrashMs{0.0};
+  double PrepSchedulePolicyMs{0.0};
+  /// Nested inside PrepSchedulePolicyMs: spawn ring query for enter seam suppress.
+  double PrepSpawnRingQueryMs{0.0};
+  /// Nested inside PrepSchedulePolicyMs: coalesced DropRemesh pass.
+  double PrepDropRemeshMs{0.0};
+  /// Nested inside PrepSchedulePolicyMs: CancelAsyncInFlightKeepDirty flush.
+  double PrepCancelAsyncMs{0.0};
+  double PrepPostAdmitDrainMs{0.0};
+  double PrepHoleForceMs{0.0};
+  /// Residual of PrepSchedulePolicyMs after attributed nested substages.
+  double PrepSchedOtherMs{0.0};
+  /// Phase5 S2/S3b: stream deadline cuts (Refresh / TickMeshEmerge prep).
+  int PrepRefreshDeadlineHit{0};
+  int PrepDeadlineHit{0};
+  /// Phase5 S3: coalesce counters (FindNearest / DrainIdle / DropRemesh requests).
+  int PrepFindNearestN{0};
+  int PrepDrainIdleN{0};
+  int PrepDropRemeshN{0};
+  int PrepCancelAsyncN{0};
+  /// 1 when cadence/force ran schedule heavy walks this frame.
+  int PrepHeavyWalkN{0};
+  /// Scene draw sub-timers (inside scene_ms / DrawCubeGeometry).
+  double SceneFilterReadyMs{0.0};
+  double SceneOpaqueSortMs{0.0};
+  double SceneOpaqueDrawMs{0.0};
+  /// Phase 5.2.1: opaque split (sum ≈ SceneOpaqueDrawMs minus Cross if Cross
+  /// timed separately at DrawCubeGeometry).
+  double SceneOpaqueRefreshMs{0.0};
+  double SceneOpaqueCullMs{0.0};
+  /// Phase 5.7.4: frames opaque cull reused last GPU compact (skip).
+  int OpaqueCullSkippedN{0};
+  /// Phase 5.7.4: CPU AABB fail-open after throttle.
+  int GpuCompactFailOpenN{0};
+  double SceneOpaqueGpuDrawMs{0.0};
+  double SceneOpaquePackedMs{0.0};
+  double SceneOpaqueCrossMs{0.0};
+  double SceneDepthCaptureMs{0.0};
+  double SceneTransparentMs{0.0};
+  double SceneOverlaysMs{0.0};
+  double SceneSelfMs{0.0};
+  /// I12-A7: focus dirty ring cache reconcile drift (audit).
+  int FocusDirtyReconcileDelta{0};
+  /// I12-A0: rim witness latched without visual holes.
+  int RimWitnessLatched{0};
+  /// R3.3: rim hole pressure SoT (separate from perf diet).
+  int RimHolePressure{0};
+  /// R3.3: rim perf diet active this frame.
+  int RimPerfDiet{0};
+  /// I12-D3: witness re-probe when pinned schedule stalls.
+  int MissWitnessRetargetN{0};
+  /// I10-A2: stop-phase VB drain telemetry.
+  int StopVbDrainFrames{0};
+  int StopVbBudgetActive{0};
+  int StopVbStuckFrames{0};
+  /// I10-C1: miss witness stuck runtime telemetry.
+  int MissWitnessAgeFramesReport{0};
+  int MissStuckRunFrames{0};
+  /// Phase 5.7.2: Dirty/FM remesh under miss when PendingGpu empty.
+  int MissWitnessRemeshN{0};
+  /// I11-A2: miss stuck with schedule_ok but no drawable witness.
+  int MissCompletionStuckFrames{0};
+  int MissSlaKickN{0};
+  /// I11-B1: relight→mesh completion chain (per-frame).
+  int RelightApplyToMarkRelitN{0};
+  int MarkRelitToFmDirtyN{0};
+  int FmDirtyToGpuFinishN{0};
+  /// I18-A4/F1: FM dirty GPU watch chain telem.
+  int FmDirtyGpuWatchN{0};
+  int FmDirtyGpuWatchMaxAge{0};
+  int FmDirtyGpuWatchTimeoutDelta{0};
+  int GpuFinishWatchRimN{0};
+  /// I18-F1: ingress debt governor level (0=Ok..3=ShedRim).
+  int IngressDebtLevel{0};
+  int IngressDebtStreak{0};
+  /// I18-C1: ColumnFlow drain inside emerge prep.
+  double PrepColumnFlowDrainMs{0.0};
+  /// I11-B3: EMA frames with MarkRelit→FM progress (for FIFO trim guard).
+  int MarkRelitChainProgressFrames{0};
+  /// I11-B2: post-apply mesh_drain floor for next emerge tick.
+  int PostRelightApplyMeshDrainFloor{0};
+  /// I10-D1: Pass1 skip outside focus FirstMesh walk.
+  int MeshDirtyScheduleSkipOutsideFocusFmN{0};
+  /// I10-D3: FM consumer starved soften active this frame.
+  int FmConsumerStarvedActive{0};
+  /// Closeout Phase A: split of former MeshEmergePrepUnfinishedMs.
+  double PrepPendingLightMs{0.0};
+  double PrepBlackStickyMs{0.0};
+  double PrepDirtyCountMs{0.0};
+  double PrepSoftdeferSetupMs{0.0};
+  /// SoftDefer empty candidate collect (after prep_softdefer_setup).
+  double SoftdeferEmptyScanMs{0.0};
+  /// SoftDefer empty seam remesh + ownership apply.
+  double SoftdeferEmptyOwnMs{0.0};
   int PrefetchVisualOps{0};
   int PrefetchKeepOps{0};
   int GenBacklogTotal{0};
@@ -118,9 +587,87 @@ struct PhysicsTelemetry
   /// Streaming gate diagnostics (filled each UpdateStreaming).
   int StreamLoads{0};
   int StreamAsyncQueued{0};
+  /// R4.6.2: loads + async_queued (honest ingress vs sync-only StreamLoads).
+  int StreamIngressOps{0};
+  /// Era25 I-F1: disk Ensure complete this frame (honest vs stream_loads).
+  int StreamDiskCompleteN{0};
+  /// Era25 I-F1: gen scheduler commits this frame.
+  int StreamGenCommitN{0};
+  /// Era25 I-F4: frontier_pressure predicate result (0/1).
+  int FrontierPressure{0};
   int StreamRingBlocked{0};
   int StreamNearSkipped{0};
   int StreamLoadCandidates{0};
+  /// Era51: procedural fill enabled (saved world + streaming).
+  int AllowProcFill{0};
+  /// Era51: columns in RD with terrain absent from BlockWorld (load backlog).
+  int ColumnAbsentInRdN{0};
+  /// Era51: columns in RD loaded but not render-ready (mesh/light debt).
+  int ColumnLoadedNoMeshN{0};
+  /// Focus-ring column census by authoritative visual-readiness reason.
+  int FocusVisualTerrainIncompleteN{0};
+  int FocusVisualPendingLightN{0};
+  int FocusVisualStickyRemeshN{0};
+  int FocusVisualStaleDarkN{0};
+  int FocusVisualMissingMeshN{0};
+  int FocusVisualGpuInFlightN{0};
+  int FocusVisualNotLoadedN{0};
+  int FocusVisualNotReadyStateN{0};
+  int FocusVisualFaceDebtN{0};
+  int FocusVisualReadyN{0};
+  /// Diagnostic voxel/mesh census; populated with CUBA_VISUAL_BLACK_TRACE.
+  int FocusDataCensusValid{0};
+  int FocusDataSolidSliceN{0};
+  int FocusDataAirSliceN{0};
+  int FocusDataAbsentSliceN{0};
+  int FocusDataNonAirVoxelN{0};
+  int FocusDataBandSolidSliceN{0};
+  int FocusDataBandSolidMeshN{0};
+  int FocusDataBandSolidNoDrawableN{0};
+  int FocusDataBandSolidSatisfyingN{0};
+  int FocusDataBandSolidAcceptedEmptyN{0};
+  int FocusDataBandSolidPendingMeshN{0};
+  int FocusDataBandSolidPendingWorkN{0};
+  int FocusDataBandSolidUnownedN{0};
+  int FocusDataCameraBandSolidSliceN{0};
+  int FocusDataCameraBandSolidNoDrawableN{0};
+  int FocusDataCameraBandSolidSatisfyingN{0};
+  int FocusDataCameraBandSolidPendingWorkN{0};
+  int FocusDataCameraBandSolidUnownedN{0};
+  int FocusDataBandSolidUnresolvedNoWorkN{0};
+  int FocusDataBandSolidDrawGateClosedN{0};
+  int FocusDataBandSolidDrawReadyN{0};
+  int FocusDataBandSolidGpuLiveN{0};
+  /// Exclusive ColumnEmergeState bump denials this frame (competing producer).
+  int ColumnBumpDenied{0};
+  /// ColPipe P1: ColumnFlow ExclusiveRank upgrades this frame.
+  int ColumnFlowUpgradeN{0};
+  /// ColumnFlow tickets actually dispatched by DrainBudget this frame.
+  int ColumnFlowDrainedN{0};
+  /// Tickets requeued because their work class exceeded the frame deadline.
+  int ColumnFlowDeferredN{0};
+  /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
+  /// Alias docs: emerge_fsm_* — not ColumnJobGraph stages.
+  int ColumnLightingN{0};
+  int ColumnMeshingN{0};
+  int ColumnRenderReadyN{0};
+  /// Focus-ring ColumnJobGraph census (pending light / meshing / gpu / ready).
+  int ColumnJobPendingLightN{0};
+  int ColumnJobMeshingN{0};
+  int ColumnJobGpuPendingN{0};
+  int ColumnJobRenderReadyN{0};
+  /// Q6 Decide* shadow parity (cumulative) — cutover SoT, not Sync stage spam.
+  int ColumnRecordShadowMismatchN{0};
+  /// Q6 last focus-ring sync: columns with legacy≠record stage (gauge 0..ring).
+  int ColumnRecordShadowStageDisagreeN{0};
+  /// A32 S2: UChunkRenderDemandStore::StopConverged (1=true, 0=false).
+  int DemandStopConverged{0};
+  /// A38 R1: unsatisfied demand class counts (last sample).
+  int DemandUnsatGeom{0};
+  int DemandUnsatLight{0};
+  int DemandUnsatFace{0};
+  int DemandUnsatCoverage{0};
+  int DemandUnsatRetain{0};
   int PendingLightCount{0};
   int FocusChunkX{0};
   int FocusChunkZ{0};
@@ -132,14 +679,24 @@ struct PhysicsTelemetry
   int UnderfeetPendingLight{0};
   /// ColumnRenderableState::BlockReason as int.
   int UnderfeetReason{0};
+  /// ColumnEmergeState as int for underfeet column.
+  int UnderfeetStage{0};
+  /// 1 if world LightingRelightDeferred is enabled this frame.
+  int LightingRelightDeferred{0};
   /// 1 when underfeet xz appears in filtered opaque draw refs this frame.
   int UnderfeetOpaquePresent{0};
+  /// FlickerZero V3: post-draw latch for streaming/perf SoT (prior frame).
+  int UnderfeetOpaquePresentLatched{0};
+  /// FZ2-R3: reconcile SoT for perf when draw_ok (streaming sample).
+  int UnderfeetOpaquePresentPredicted{0};
+  /// FZ2-R3: raw post-draw opaque pass witness (debug).
+  int UnderfeetOpaquePresentRaw{0};
   /// FogPullIn effective state (0 = disabled / unset).
   int FogPullInRd{0};
   int FogPullInMargin{0};
   float FogPullInStartRatio{0.0f};
   int FogHoleDebt{0};
-  /// Legacy OR latch (missing mesh OR pending light) — prefer VisualHoles.
+  /// Missing mesh in focus (alias of VisualHoles). Dark/light debt are separate.
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).
   int VisualHoles{0};
@@ -154,11 +711,53 @@ struct PhysicsTelemetry
   int MissCy{0};
   int MissCz{0};
   int MissHoriz{0};
+  /// Current miss witness came from a camera screen-ray opaque voxel hit.
+  int MissScreenRayCandidate{0};
   /// Count of focus columns with mesh but no sky light sample.
   int FocusDarkMesh{0};
+  /// Era39 A4: pending-dark (hidden until lit) vs sticky remesh (preview class).
+  int FocusDarkMeshHidden{0};
+  int FocusDarkMeshPreview{0};
+  /// Drawable first meshes shown with ambient fallback while light settles.
+  int FocusProvisionalLightPreview{0};
   /// Pending-light + sticky black preview columns in focus (subset of dark).
   int FocusPendingDark{0};
   int FocusStickyRemesh{0};
+  /// Era16 TD-052: focus columns with drawable stale/fully-dark mesh (user black).
+  int VisibleBlackFocusN{0};
+  /// Subset of VisibleBlackFocusN without Flow Contains / Progress / Sticky.
+  int VisibleBlackNoTicketN{0};
+  /// Era17: VB with Contains ∨ Dirty/Inflight/PendingLight ∨ Sticky.
+  int VisibleBlackProgressN{0};
+  /// Era17: VB with Contains but no Dirty/Inflight/PendingLight (queued stall).
+  int VisibleBlackStalledN{0};
+  /// Q2: VB attribution — stale dark mesh with lit field (not fully-dark column).
+  int VisibleBlackStaleLitN{0};
+  /// Q2: fully-dark column with ticket / progress / sticky repair activity.
+  int VisibleBlackFullyDarkRepairN{0};
+  /// Q2: fully-dark column without ticket (includes pending-light preview).
+  int VisibleBlackFullyDarkNoTicketN{0};
+  /// Q2: fully-dark column with ticket but no progress / sticky yet.
+  int VisibleBlackFullyDarkStalledN{0};
+  /// Q2: fully-dark column with no repair path (candidate legal cave).
+  int VisibleBlackLegalDarkN{0};
+  /// Q2: UnfinishedVisual==0 but VisibleBlackFocusN>0 at publish (census mismatch).
+  int VisibleBlackCensusMismatch{0};
+  /// G1/Q2b: DrawOracle class histogram from focus census (CPU stand-in).
+  int DrawOracleMissingResidentN{0};
+  int DrawOracleMissingCommandN{0};
+  int DrawOracleFalseNegCullN{0};
+  int DrawOracleStaleVertexLightN{0};
+  /// Revision-mismatch stale only (N04 split; source=cpu_census).
+  int DrawOracleStaleVlRevN{0};
+  int DrawOracleLegalDarkN{0};
+  int DrawOracleCorrectLitProxyN{0};
+  int DrawOracleFullyDarkDebtN{0};
+  int DrawOracleFaultN{0};
+  /// G1-P3 / A10: frames since MissingResident / StaleVertexLight debt last cleared.
+  int OldestMissingResidentAgeFrames{0};
+  int OldestStaleVertexLightAgeFrames{0};
+  int DebtAgeGrewWithScheduleN{0};
   /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
   /// Not pending+dirty pressure — see FocusPressure.
   int FocusNotRenderReady{0};
@@ -172,6 +771,8 @@ struct PhysicsTelemetry
   int FocusUnfinishedBehind{0};
   /// 0=Green, 1=Yellow, 2=Red (StreamingPressureLevel).
   int StreamPressure{0};
+  /// P3 soft flight integrity: multiply horizontal cruise (1 = off; ~0.55–0.7).
+  float StreamSpeedClampScale{1.0f};
   /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).
   int PendingLightFocus{0};
   /// Comma-separated (cx,cz) for focus pending columns (telemetry only).
@@ -183,12 +784,130 @@ struct PhysicsTelemetry
   int RelightCompletedN{0};
   int RelightCompletedCap{0};
   uint64_t RelightCompletedDiscarded{0};
+  /// P0: last DrainRelightQueues Capture (horiz of drained column, 0/1 finalize,
+  /// Y-span in chunk layers). RelightApplyN = DrainCompleted count this frame
+  /// (throughput; RelightCompletedN is ring occupancy at sample).
+  int RelightCaptureColHoriz{-1};
+  int RelightCaptureFinalize{0};
+  /// One async capture admitted despite hot-frame skip for draw-gated light debt.
+  int RelightCaptureHotSkipDrawGate{0};
+  /// Last DrainRelightQueues stop: 0=unset, 1=world gate, 2=no budget,
+  /// 3=column cap, 4=wall budget, 5=hot frame, 6=sync hot frame,
+  /// 7=async inflight ceiling, 8=empty FIFO, 9=duplicate inflight scan,
+  /// 10=admitted (overwritten by the loop's terminal reason if another pass ran).
+  int RelightCaptureStopReason{0};
+  int RelightCaptureInFlightN{0};
+  int RelightCaptureInFlightLimit{0};
+  int RelightCaptureInflightScanN{0};
+  int RelightCaptureBandCySpan{0};
+  int RelightCaptureFullN{0};
+  int RelightCaptureNeighborLightN{0};
+  int RelightWitnessHoldN{0};
+  int RelightApplyN{0};
+  /// Apply with finalize_pending_gate=false (partial Y-band; pending kept).
+  int RelightApplyPartialN{0};
+  /// Apply with finalize_pending_gate=true (pending gate may clear).
+  int RelightApplyFinalN{0};
   int DirtyN{0};
   int PendingLightN{0};
+  /// Era37 P1c: underground relight skip / false-clear counters.
+  uint64_t RelightSkippedUndergroundN{0};
+  uint64_t RelightFalseClearN{0};
+  uint64_t RelightSkippedNoOpEnqueueN{0};
+  uint64_t RelightDeferredFarEnqueueN{0};
+  int RelightDeferredFarPendingN{0};
+  /// FZ2.2-O1: NotePendingLight skipped (inflight or already pending).
+  uint64_t RelightNoteSkippedDupN{0};
+  /// FZ2.3-O2: Capture finalize skipped (same-column epoch dedup).
+  uint64_t RelightFinalizeDedupN{0};
+  /// FZ2.4-P0a: TryNote suppressed under PL plateau after nt=0.
+  uint64_t RelightNoteSuppressedPlateauN{0};
+  /// FZ2.4-P0b: Apply drain boosted under PL plateau after nt=0.
+  uint64_t RelightApplyPlateauBoostN{0};
+  /// Cruise Capture SoT: effective bg cap / Y-band cy this DrainRelightQueues.
+  int CaptureBgCapN{0};
+  int CaptureBandCy{0};
+  /// Disk lightmap trust (light_complete).
+  int DiskLightTrustedN{0};
+  int DiskLightRepairedN{0};
   int RelightFifoN{0};
+  /// Era45: MarkRelit RequestRemeshAfterApply calls (cumulative).
+  uint64_t MarkRelitRemeshAfterApplyN{0};
+  /// Era47 P0: MarkRelit PreferKickGpu decisions (cumulative).
+  uint64_t MarkRelitPreferKickN{0};
+  /// Era22 sticky-settle: per-frame MarkRelit ClassifyRemeshAfterLitApply decisions.
+  int MarkRelitSkipAlreadyDirtyN{0};
+  int MarkRelitSkipAlreadyRaaN{0};
+  int MarkRelitSkipInflightN{0};
+  int MarkRelitSkipEnterLitQuiesceN{0};
+  int MarkRelitScheduleN{0};
+  /// N04 autopsy I1: H2 ShouldRemeshTicketedFullyDarkStalled predicates.
+  int MarkRelitH2AttemptN{0};
+  int MarkRelitH2FireN{0};
+  int MarkRelitH2FailNoTicketN{0};
+  int MarkRelitH2FailProgressN{0};
+  int MarkRelitHitStalledN{0};
+  int MarkRelitForceStaleN{0};
+  /// N04 autopsy: sample of FullyDark stalled columns (≤8) ticket/PendingLight.
+  int StalledSampleN{0};
+  int StalledSampleHasTicketN{0};
+  int StalledSamplePendingLightN{0};
+  /// FZ2.7-P12 A1: ColumnFlow FirstMesh enqueue from LitApply plan.
+  int MarkRelitEnqueueFirstMeshN{0};
+  /// FZ2.7-P9: MarkRelitChunksForMesh entered (vs schedule Dirty count).
+  int MarkRelitInvokedN{0};
+  /// FZ2.7-P9: one-shot MarkMissing on LitReady slim path.
+  int MarkMissingPrimaryN{0};
+  /// FZ2.7-B5: PrimaryConsume path frames (MarkRelit refactor).
+  int MarkRelitPathPrimaryConsumeN{0};
+  /// FZ2.7-B5: ChunkHasStaleDarkFaces calls during Apply (target 0).
+  int StaleProbeCallsN{0};
+  /// FZ2.7-B1b: MarkRelit install sub-breakdown (spike telem).
+  double MarkRelitTotalMs{0.0};
+  double MarkRelitSetupMs{0.0};
+  double MarkRelitPrimaryColumnMs{0.0};
+  double MarkRelitSnapshotMs{0.0};
+  double MarkRelitPlanMs{0.0};
+  double MarkRelitExecMs{0.0};
+  double MarkRelitMarkDirtyMs{0.0};
+  double MarkRelitBandMs{0.0};
+  double MarkRelitFlowQueryMs{0.0};
+  double MarkRelitNeighborSeamMs{0.0};
+  double MarkRelitPrefetchMs{0.0};
+  double MarkRelitOrphanGroundMs{0.0};
+  double MarkRelitEmptyRelitMs{0.0};
+  int MarkRelitBandsN{0};
+  /// Schedule path suppressed by enter-settled gate (still classified Schedule).
+  int MarkRelitSuppressEnterSettledN{0};
+  /// StickyRemeshAfterLight insert/erase reasons (per frame).
+  int StickyInsertStaleAfterApplyN{0};
+  int StickyInsertSeamN{0};
+  int StickyInsertOtherN{0};
+  int StickyEraseDrawableN{0};
+  int StickyErasePendingClearN{0};
+  int StickyErasePrunedFarN{0};
+  int StickyEraseRemeshCommitN{0};
+  int StickyEraseOtherN{0};
+  /// Era46: RAA commit scheduled MarkDirty (not PreferKick).
+  uint64_t RaaCommitMarkDirtyN{0};
+  /// Era46: MarkDirty mid-flight deferred into RemeshAfterApply.
+  uint64_t MarkDirtyToRaaN{0};
+  /// Era47 P0: Dirty schedule skipped because async InFlight (cumulative).
+  uint64_t DirtyScheduleSkipInflightN{0};
   uint64_t DirtyDropped{0};
   uint64_t PendingLightDropped{0};
+  /// A21 P2: ChunkRenderDemand AlreadySatisfied skips (no false Dirty progress).
+  uint64_t DemandAlreadySatisfiedSkipN{0};
+  uint64_t DemandReconcileMismatchN{0};
+  uint64_t DemandShadowMismatchN{0};
+  uint64_t VisualObligationShadowSampleN{0};
+  uint64_t VisualObligationShadowMismatchN{0};
+  /// FZ2.7-P12 B0: PendingLight trim source breakdown (per-frame).
+  int PendingLightTrimEmergeN{0};
+  int PendingLightTrimMemoryN{0};
   uint64_t RelightFifoDropped{0};
+  /// P1: pin-key drops this frame (gate: stay 0).
+  int RelightFifoPinDropN{0};
   double GpuPoolUsedMb{0.0};
   double GpuPoolCapMb{0.0};
   /// Init-bound backend names (mesher/store/cull).
@@ -197,12 +916,34 @@ struct PhysicsTelemetry
   std::string BackendCull{"cpu_frustum"};
   uint64_t GpuDrawCmds{0};
   double GpuCullMs{0.0};
+  /// CPU wall around opaque compact GL command submission (not GPU execution).
+  double CullSubmitCpuMs{0.0};
+  /// Opaque MDI compact-cull CPU wall split into measured subphases.
+  double OpaqueMdiCullTotalMs{0.0};
+  double OpaqueMdiCullAabbProbeCpuMs{0.0};
+  double OpaqueMdiCullFallbackCpuMs{0.0};
+  double OpaqueMdiCullSetupCpuMs{0.0};
+  double OpaqueMdiCullQueryPollCpuMs{0.0};
+  double OpaqueMdiCullPostSubmitCpuMs{0.0};
+  double OpaqueMdiCullStatsPollCpuMs{0.0};
+  double OpaqueMdiCullStatsFencePollCpuMs{0.0};
+  double OpaqueMdiCullStatsBufferReadCpuMs{0.0};
+  double OpaqueMdiCullStatsArmCpuMs{0.0};
+  double OpaqueMdiCullBatchStateCpuMs{0.0};
+  double OpaqueMdiCullPostSubmitOtherCpuMs{0.0};
+  double OpaqueMdiCullUnattributedCpuMs{0.0};
+  /// Delayed GL_TIME_ELAPSED when available; <0 = unavailable sample.
+  double CullGpuExecMs{-1.0};
   double VertexPoolFill{0.0};
   /// 1 when opaque cull used GPU compact→indirect (no flat-ref rebuild).
   double GpuCullIndirect{0.0};
   /// Visual-debug: opaque MDI cmds after compact cull.
   uint64_t OpaqueCmdTotal{0};
   uint64_t OpaqueCmdOn{0};
+  /// GpuPacked opaque refs drawn this frame (separate from MDI).
+  uint64_t OpaqueGpuPackedN{0};
+  /// Draw SoT: OpaqueCmdOn + OpaqueGpuPackedN (honest opaque presence).
+  uint64_t OpaqueDrawN{0};
   /// Stage sizes before compact cull (diag for opaque collapse).
   uint64_t OpaqueRefsCpuVis{0};
   uint64_t OpaqueRefsRenderReady{0};
@@ -214,9 +955,50 @@ struct PhysicsTelemetry
   uint64_t EditNeighborPendingFrames{0};
   uint64_t PoolUnsyncUploads{0};
   double PoolFenceWaitMs{0.0};
+  /// A01 retire queue size after poll (pending+retired awaiting reclaim).
+  int PoolRetiredPendingN{0};
+  int PoolFreeSlotN{0};
+  /// Per-frame Consume* from vertex pools (reclaim/timeout/bump).
+  uint64_t PoolRetiredReclaimedN{0};
+  uint64_t PoolFenceTimeoutN{0};
+  uint64_t PoolReserveBumpN{0};
+  /// Q5: greedy whole-pass publish retained predecessor due to pool OOM.
+  uint64_t PublicationOverloadRetainN{0};
+  /// N01: incomplete material set on dirty publish (frustum/filtered refs class).
+  uint64_t PublicationIncompleteMaterialN{0};
+  /// N01: pool OOM retain (UploadBatch / group).
+  uint64_t PublicationOomRetainN{0};
+  /// N01 autopsy: publish table changed without any_fresh group commit.
+  uint64_t PubVerChangedWithoutFreshN{0};
+  /// N01 autopsy: max (mesh_revision_arg − cache.meshRevision) this frame.
+  uint64_t PassMeshRevLagMax{0};
+  /// N04 autopsy: packed leftovers drawn while MDI missed same coord (dual-draw).
+  /// Packed draw while coord absent from MDI resident + CPU opaque_draw.
+  /// Formerly misnamed PassMdiStaleGpuResidentN (audit S3).
+  int PassPackedWithoutMdiResidentN{0};
+  /// Audit R03 honest: packed about to draw while MDI resident still owns coord
+  /// (true dual-backend same surface). Not an alias of PassPackedWithoutMdi*.
+  int PassDualBackendSameCoordN{0};
+  /// Honest wrong-tex: Replace same geom size with different blockId this frame.
+  int PublicationMaterialBlockIdFlipN{0};
+  /// Q8: sync glGetBufferSubData reads of CullStatsSsbo (HUD/period only).
+  uint64_t CullStatsSyncReadN{0};
+  /// S1 transparent: 1 when sortRevision changed on PrepareTransparent refresh.
+  int TransparentSortRevChanged{0};
+  /// S1: upload_full invocations for transparent pass this frame.
+  int TransparentUploadFullN{0};
+  /// S1: order-only batch reorder (no VBO rewrite) this frame.
+  int TransparentCmdReorderN{0};
+  /// S1: TransparentOrderOnlyFailReason enum (0 ok … 8 mesh_rev_absorb).
+  int TransparentOrderOnlyFailReason{0};
+  /// S1: transparent GPU batch count after prepare.
+  int TransparentBatchN{0};
   /// Focus column split: meshed-but-culled vs not ready / unlit preview.
   uint64_t ChunkMeshedCulled0{0};
   uint64_t ChunkMeshedUnlit{0};
+  /// Era39 A4: Type A split — hidden (pending-dark) vs sticky preview.
+  uint64_t ChunkMeshedUnlitHidden{0};
+  uint64_t ChunkMeshedUnlitPreview{0};
   uint64_t ChunkNotReady{0};
   /// Nearest non-bottom greedy vertex with sky+block light==0 near camera (diag).
   int DarkFaceNearN{0};
@@ -254,6 +1036,20 @@ struct PhysicsTelemetry
   std::string AndroidGpuDenyReason{"n/a"};
   std::string GlVersion;
   std::string GlRenderer;
+  /// CreatureTick split (appended so existing offsets stay stable).
+  double EnvironmentTickMs{0.0};
+  double NpcIntentExecuteMs{0.0};
+  double ControlledInfluenceMs{0.0};
+  double VitalsTickMs{0.0};
+  double StatusEffectsTickMs{0.0};
+  int CreaturesTotal{0};
+  int CreaturesAiTicked{0};
+  int WorldCreaturesSkipped{0};
+  /// Input-first A1: player locomotion before world AI tail.
+  double PlayerLocomotionBlockMs{0.0};
+  double WorldAiAfterPlayerMs{0.0};
+  int CreaturesAiBudget{0};
+  int CreaturesAiDeferred{0};
 };
 
 } // namespace cutum

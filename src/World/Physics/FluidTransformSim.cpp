@@ -621,6 +621,9 @@ FluidSpreadStats UFluidTransformSim::TickBlock(
       !UFluidSpreadSystem::ShouldProcessFluidTick(physics_tick, block_pos,
                                                  spread_period))
   {
+    // Keep the cell alive until its viscosity phase; PopBudgeted already
+    // removed it from the queue.
+    stats.NeedsReschedule = true;
     return stats;
   }
 

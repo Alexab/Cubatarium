@@ -12,6 +12,11 @@ BlockId UBlockWorld::GetBlock(glm::ivec3 pos) const
   return Chunks.GetBlock(pos);
 }
 
+BlockQueryResult UBlockWorld::QueryBlock(glm::ivec3 pos) const
+{
+  return Chunks.QueryBlock(pos);
+}
+
 FluidCellState UBlockWorld::GetFluidState(glm::ivec3 pos) const
 {
   return Chunks.GetFluidState(pos);

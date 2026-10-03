@@ -89,5 +89,22 @@ int main()
            "to_string perspective");
   }
 
+  {
+    const WorldViewSettings defaults;
+    Expect(defaults.ShowFpWield == true, "default show_fp_wield on");
+  }
+
+  {
+    WorldViewSettings settings;
+    settings.ShowFpWield = false;
+    const nlohmann::json dumped = settings.ToJson();
+    Expect(dumped.contains("show_fp_wield") &&
+               dumped["show_fp_wield"].get<bool>() == false,
+           "show_fp_wield serialized");
+    const WorldViewSettings round_trip = WorldViewSettings::FromJson(dumped);
+    Expect(round_trip.ShowFpWield == false, "show_fp_wield round-trip");
+  }
+
+  std::cout << "world_view_settings_test OK\n";
   return 0;
 }

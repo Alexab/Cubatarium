@@ -1,0 +1,349 @@
+{
+  "source": "kaykit_rpg_tools",
+  "pack_root": "e:\\Work\\Home\\Cubatarium\\third_party\\asset_cache\\kaykit_rpg_tools",
+  "files": [
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/anvil.gltf",
+      "stem": "anvil",
+      "class": "tool",
+      "suggested_id": "anvil",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/axe.gltf",
+      "stem": "axe",
+      "class": "tool",
+      "suggested_id": "axe",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/blueprint.gltf",
+      "stem": "blueprint",
+      "class": "tool",
+      "suggested_id": "blueprint",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/blueprint_stacked.gltf",
+      "stem": "blueprint_stacked",
+      "class": "tool",
+      "suggested_id": "blueprint_stacked",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/bucket_metal.gltf",
+      "stem": "bucket_metal",
+      "class": "skip",
+      "suggested_id": "bucket_metal",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/chisel.gltf",
+      "stem": "chisel",
+      "class": "tool",
+      "suggested_id": "chisel",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/compass_base.gltf",
+      "stem": "compass_base",
+      "class": "skip",
+      "suggested_id": "compass_base",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/drafting_compass.gltf",
+      "stem": "drafting_compass",
+      "class": "skip",
+      "suggested_id": "drafting_compass",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/file.gltf",
+      "stem": "file",
+      "class": "skip",
+      "suggested_id": "file",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/grindstone.gltf",
+      "stem": "grindstone",
+      "class": "skip",
+      "suggested_id": "grindstone",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/hammer.gltf",
+      "stem": "hammer",
+      "class": "tool",
+      "suggested_id": "hammer",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/handdrill.gltf",
+      "stem": "handdrill",
+      "class": "skip",
+      "suggested_id": "handdrill",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/handplane.gltf",
+      "stem": "handplane",
+      "class": "skip",
+      "suggested_id": "handplane",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/journal_closed.gltf",
+      "stem": "journal_closed",
+      "class": "skip",
+      "suggested_id": "journal_closed",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/journal_open.gltf",
+      "stem": "journal_open",
+      "class": "skip",
+      "suggested_id": "journal_open",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/knife.gltf",
+      "stem": "knife",
+      "class": "weapon",
+      "suggested_id": "knife",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/lantern.gltf",
+      "stem": "lantern",
+      "class": "tool",
+      "suggested_id": "lantern",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/magnifying_glass.gltf",
+      "stem": "magnifying_glass",
+      "class": "skip",
+      "suggested_id": "magnifying_glass",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/mallet.gltf",
+      "stem": "mallet",
+      "class": "tool",
+      "suggested_id": "mallet",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/map.gltf",
+      "stem": "map",
+      "class": "skip",
+      "suggested_id": "map",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/map_empty.gltf",
+      "stem": "map_empty",
+      "class": "skip",
+      "suggested_id": "map_empty",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/map_rolled.gltf",
+      "stem": "map_rolled",
+      "class": "skip",
+      "suggested_id": "map_rolled",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/nail.gltf",
+      "stem": "nail",
+      "class": "skip",
+      "suggested_id": "nail",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/pencil_A_long.gltf",
+      "stem": "pencil_A_long",
+      "class": "skip",
+      "suggested_id": "pencil_a_long",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/pencil_A_short.gltf",
+      "stem": "pencil_A_short",
+      "class": "skip",
+      "suggested_id": "pencil_a_short",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/pencil_B_long.gltf",
+      "stem": "pencil_B_long",
+      "class": "skip",
+      "suggested_id": "pencil_b_long",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/pencil_B_short.gltf",
+      "stem": "pencil_B_short",
+      "class": "skip",
+      "suggested_id": "pencil_b_short",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/pickaxe.gltf",
+      "stem": "pickaxe",
+      "class": "tool",
+      "suggested_id": "pickaxe",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/rope_bundle_A.gltf",
+      "stem": "rope_bundle_A",
+      "class": "skip",
+      "suggested_id": "rope_bundle_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/rope_bundle_B.gltf",
+      "stem": "rope_bundle_B",
+      "class": "skip",
+      "suggested_id": "rope_bundle_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/saw.gltf",
+      "stem": "saw",
+      "class": "tool",
+      "suggested_id": "saw",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/scissors.gltf",
+      "stem": "scissors",
+      "class": "tool",
+      "suggested_id": "scissors",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screw_A.gltf",
+      "stem": "screw_A",
+      "class": "skip",
+      "suggested_id": "screw_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screw_B.gltf",
+      "stem": "screw_B",
+      "class": "skip",
+      "suggested_id": "screw_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screwdriver_A_long.gltf",
+      "stem": "screwdriver_A_long",
+      "class": "skip",
+      "suggested_id": "screwdriver_a_long",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screwdriver_A_long_color.gltf",
+      "stem": "screwdriver_A_long_color",
+      "class": "skip",
+      "suggested_id": "screwdriver_a_long_color",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screwdriver_A_short.gltf",
+      "stem": "screwdriver_A_short",
+      "class": "skip",
+      "suggested_id": "screwdriver_a_short",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screwdriver_A_short_color.gltf",
+      "stem": "screwdriver_A_short_color",
+      "class": "skip",
+      "suggested_id": "screwdriver_a_short_color",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screwdriver_B_long.gltf",
+      "stem": "screwdriver_B_long",
+      "class": "skip",
+      "suggested_id": "screwdriver_b_long",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screwdriver_B_long_color.gltf",
+      "stem": "screwdriver_B_long_color",
+      "class": "skip",
+      "suggested_id": "screwdriver_b_long_color",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screwdriver_B_short.gltf",
+      "stem": "screwdriver_B_short",
+      "class": "skip",
+      "suggested_id": "screwdriver_b_short",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/screwdriver_B_short_color.gltf",
+      "stem": "screwdriver_B_short_color",
+      "class": "skip",
+      "suggested_id": "screwdriver_b_short_color",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/shovel.gltf",
+      "stem": "shovel",
+      "class": "tool",
+      "suggested_id": "shovel",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/tongs.gltf",
+      "stem": "tongs",
+      "class": "tool",
+      "suggested_id": "tongs",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/torch.gltf",
+      "stem": "torch",
+      "class": "tool",
+      "suggested_id": "torch",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/torch_burnt.gltf",
+      "stem": "torch_burnt",
+      "class": "tool",
+      "suggested_id": "torch_burnt",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/trowel.gltf",
+      "stem": "trowel",
+      "class": "skip",
+      "suggested_id": "trowel",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/wrench_A.gltf",
+      "stem": "wrench_A",
+      "class": "tool",
+      "suggested_id": "wrench_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/wrench_B.gltf",
+      "stem": "wrench_B",
+      "class": "tool",
+      "suggested_id": "wrench_b",
+      "maps_to_existing": false
+    }
+  ]
+}

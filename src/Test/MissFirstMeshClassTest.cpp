@@ -1,0 +1,4562 @@
+#include "World/Streaming/MeshWorkAdmission.h"
+#include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/SoftDeferFramePolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
+#include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/MemoryBudgetController.h"
+#include "World/Streaming/CyOrderPolicy.h"
+#include "World/Streaming/EnterVisualGate.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/VisualObligationPolicy.h"
+#include "World/Streaming/EnterSessionPhase.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Streaming/ColumnJobGraph.h"
+#include "World/Streaming/ColumnVisualReadyPolicy.h"
+#include "World/Diagnostics/EnterLitDiagnostics.h"
+#include "World/Streaming/NearFovWorkPriority.h"
+#include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/StreamIngressPolicy.h"
+#include "World/Streaming/RelightInstallPlanner.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
+#include "World/Streaming/InputFirstPolicy.h"
+#include "World/Streaming/UnderfeetTelemetryPolicy.h"
+#include "World/Streaming/IdleRecoveryPolicy.h"
+#include "World/Streaming/FrontierStagePolicy.h"
+#include "World/Streaming/OceanFrontierPolicy.h"
+#include "Render/Camera/GpuPassRefreshPolicy.h"
+
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <array>
+#include <vector>
+
+namespace
+{
+
+int gFails = 0;
+
+void Expect(bool cond, const char *msg)
+{
+  if (!cond)
+  {
+    std::cerr << "FAIL: " << msg << "\n";
+    ++gFails;
+  }
+}
+
+} // namespace
+
+int main()
+{
+  using cutum::ComputeMeshWorkAdmission;
+  using cutum::IsMissFirstMeshClass;
+  using cutum::IsNearFocusMissUrgent;
+  using cutum::IsSoftDeferEmptyPlaceholder;
+  using cutum::MeshWorkAdmission;
+  using cutum::MeshWorkAdmissionInput;
+  using cutum::ShouldColdAsyncImmEscape;
+  using cutum::ShouldEnqueueSoftDeferEmptyFirstMesh;
+
+  Expect(IsMissFirstMeshClass(true, 0, 5), "cy0 tops class");
+  Expect(IsMissFirstMeshClass(true, 3, 5), "Era20: cy3 tops class");
+  Expect(IsMissFirstMeshClass(true, 5, 4), "Era20: mh4 tops class");
+  Expect(!IsMissFirstMeshClass(true, 5, 5), "cy5 mh5 outside class");
+  Expect(!IsMissFirstMeshClass(false, 0, 0), "no holes → no class");
+
+    Expect(IsNearFocusMissUrgent(true, false, 2), "nh2 near urgent");
+    Expect(IsNearFocusMissUrgent(true, false, 4), "P17: nh4 mid-rim urgent");
+    Expect(!IsNearFocusMissUrgent(true, false, 5), "nh5 rim not urgent");
+    Expect(IsNearFocusMissUrgent(true, true, 5), "underfeet urgent");
+    Expect(!IsNearFocusMissUrgent(false, false, 0), "no miss not urgent");
+
+  {
+    MeshWorkAdmissionInput near{};
+    near.visual_holes = true;
+    near.nearest_miss_horiz = 1;
+    near.nearest_miss_cy = 0;
+    near.pending_gpu = 28;
+    const MeshWorkAdmission a = ComputeMeshWorkAdmission(near);
+    Expect(a.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "near miss pending=28 stays HoleDrain not DeepBacklog");
+    Expect(a.max_schedule >= 8, "near miss keeps max_schedule≥8");
+    near.prev_mode =
+        static_cast<uint8_t>(MeshWorkAdmission::Mode::DeepBacklog);
+    const MeshWorkAdmission b = ComputeMeshWorkAdmission(near);
+    Expect(b.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "hysteresis does not force DeepBacklog on near miss");
+  }
+
+  {
+    MeshWorkAdmissionInput rim{};
+    rim.visual_holes = true;
+    rim.nearest_miss_horiz = 5;
+    rim.nearest_miss_cy = 5;
+    rim.unfinished_visual = 12;
+    rim.pending_gpu = 16;
+    const MeshWorkAdmission a = ComputeMeshWorkAdmission(rim);
+    Expect(a.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "rim visual_holes stays HoleDrain for K3 band");
+    Expect(a.mode != MeshWorkAdmission::Mode::DeepBacklog,
+           "rim-only pending=16 not DeepBacklog");
+  }
+
+  Expect(ShouldColdAsyncImmEscape(true, 0), "miss+async0 escape");
+  Expect(ShouldColdAsyncImmEscape(true, 1), "miss+async1 escape");
+  Expect(!ShouldColdAsyncImmEscape(true, 2), "async>=2 no escape");
+  Expect(!ShouldColdAsyncImmEscape(false, 0), "no miss no escape");
+
+  Expect(IsSoftDeferEmptyPlaceholder(true, false, false, false, false, true),
+         "empty SoftDefer placeholder");
+  Expect(!IsSoftDeferEmptyPlaceholder(true, true, false, false, false, true),
+         "drawable not empty");
+  Expect(!ShouldEnqueueSoftDeferEmptyFirstMesh(true, 2, false),
+         "no FM without miss or in_focus");
+  Expect(ShouldEnqueueSoftDeferEmptyFirstMesh(true, 2, false, true),
+         "Era32 P3: empty in_focus → FM");
+  Expect(ShouldEnqueueSoftDeferEmptyFirstMesh(true, 0, true),
+         "empty while miss → FM");
+  Expect(!ShouldEnqueueSoftDeferEmptyFirstMesh(false, 5, true),
+         "not placeholder → no FM");
+
+  // --- Era22 SoftDefer Heal SLA / VB ticket predicates ---
+  using cutum::AsyncScheduleFloorUnderMiss;
+  using cutum::ShouldEnqueueNearestVbNoTicket;
+  using cutum::ShouldMissTimeSlaKick;
+  using cutum::ShouldScheduleFirstMeshUnderSoftDefer;
+  using cutum::SoftDeferHeldCountsAsRepairProgress;
+  using cutum::VisibleBlackTicketCollectRadius;
+
+  Expect(ShouldScheduleFirstMeshUnderSoftDefer(false, true),
+         "Era22 I-S1: !Drawable + miss/focus → schedule FirstMesh");
+  Expect(!ShouldScheduleFirstMeshUnderSoftDefer(true, true),
+         "Era22 I-S1: drawable remesh stays SoftDefer-drop");
+  Expect(!ShouldScheduleFirstMeshUnderSoftDefer(false, false),
+         "Era22 I-S1: outside miss/focus → Held path, not force schedule");
+  Expect(ShouldScheduleFirstMeshUnderSoftDefer(false, false, 5, 8),
+         "P7: missing mesh nh=5 in protect ring schedules FirstMesh");
+  Expect(!ShouldScheduleFirstMeshUnderSoftDefer(false, false, 9, 8),
+         "P7: missing mesh beyond protect stays Held");
+  Expect(SoftDeferHeldCountsAsRepairProgress(true),
+         "Era22 I-S2: SoftDeferHeld ∈ repair progress");
+  Expect(!SoftDeferHeldCountsAsRepairProgress(false),
+         "Era22 I-S2: no Held → no progress credit");
+  Expect(VisibleBlackTicketCollectRadius(5, true, true) == 5,
+         "Era22 I-V3: no_ticket → full focus collect");
+  Expect(VisibleBlackTicketCollectRadius(5, true, false) == 2,
+         "Era22 I-V3: miss without no_ticket may keep r≤2");
+  Expect(VisibleBlackTicketCollectRadius(5, false, false) == 5,
+         "Era22 I-V3: !miss → full focus");
+  Expect(ShouldEnqueueNearestVbNoTicket(true, true),
+         "Era22 I-V3: no_ticket + async_ok → enqueue");
+  Expect(!ShouldEnqueueNearestVbNoTicket(true, false),
+         "Era22 I-V3: async saturated → skip nearest enqueue storm");
+  Expect(!ShouldEnqueueNearestVbNoTicket(false, true),
+         "Era22 I-V3: no orphan → no dedicated nearest enqueue");
+  Expect(ShouldMissTimeSlaKick(true, 2),
+         "Era22 I-M8: miss age ≥2 periods → PreferKick");
+  Expect(!ShouldMissTimeSlaKick(true, 1),
+         "Era22 I-M8: age < SLA → no PreferKick storm");
+  Expect(ShouldMissTimeSlaKick(true, 1, 2, 1, true),
+         "I9-D3: nh<=1 moving SLA at 1 period");
+  Expect(ShouldMissTimeSlaKick(true, 1, 2, 2, true),
+         "I10-C3: nh<=2 moving SLA at 1 period");
+  Expect(!ShouldMissTimeSlaKick(false, 10),
+         "Era22 I-M8: no miss → no time SLA");
+  Expect(AsyncScheduleFloorUnderMiss(true) == 0,
+         "Closeout F: AsyncScheduleFloor folded into pools");
+  Expect(AsyncScheduleFloorUnderMiss(false) == 0,
+         "Closeout F: AsyncScheduleFloor off when calm");
+
+  // --- Era23 Void Relight / rim miss / place-hole predicates ---
+  using cutum::ShouldForceFirstMeshOnPlaceHole;
+  using cutum::ShouldNotePendingLightOnVoidEnqueue;
+  using cutum::ShouldPreferKickMissWitnessEarly;
+  using cutum::ShouldPreferKickSoftDeferEmptyStuck;
+  using cutum::ShouldReserveVoidRelightSlots;
+  using cutum::SoftDeferHeldCountsAsVoidProgress;
+  using cutum::VoidRelightCollectCap;
+
+  Expect(!SoftDeferHeldCountsAsVoidProgress(true, true),
+         "Era23 I-V6: Held + fully-dark ⇒ not void progress");
+  Expect(SoftDeferHeldCountsAsVoidProgress(true, false),
+         "Era23 I-V6: Held without fully-dark still counts");
+  Expect(!SoftDeferHeldCountsAsVoidProgress(false, true),
+         "Era23 I-V6: no Held → no progress");
+  Expect(ShouldReserveVoidRelightSlots(250, 0, true),
+         "Era23 I-V4: void_n>T ⇒ Relight slots");
+  Expect(ShouldReserveVoidRelightSlots(250, 0, false),
+         "Era23 I-V4: void_n>T even without miss");
+  Expect(ShouldReserveVoidRelightSlots(40, 2, true),
+         "Era23 I-V4: miss + void faces ⇒ Relight slots");
+  // Era31 I-T1 / Era32 P1: VB reserves Relight (not RemeshSeam-as-heal).
+  Expect(ShouldReserveVoidRelightSlots(0, 3, true),
+         "Era31/32: miss + VB ⇒ Relight reserve");
+  Expect(ShouldReserveVoidRelightSlots(40, 2, false),
+         "Era31/32: idle VB ⇒ Relight reserve");
+  Expect(ShouldReserveVoidRelightSlots(0, 3, false),
+         "Era31/32: idle VB ⇒ Relight reserve");
+  Expect(!ShouldReserveVoidRelightSlots(50, 0, false),
+         "Era23 I-V4: calm void below T → no reserve");
+  Expect(VoidRelightCollectCap(2, true) >= 2,
+         "Era23 I-V4: void pressure keeps void_cap≥2");
+  Expect(VoidRelightCollectCap(1, true) >= 2,
+         "Era23 I-V4: void pressure floors cap at 2");
+  Expect(ShouldNotePendingLightOnVoidEnqueue(true),
+         "Era23 I-V5: fully-dark/no_sky ⇒ Note on enqueue");
+  Expect(!ShouldNotePendingLightOnVoidEnqueue(false),
+         "Era23 I-V5: lit remesh path → no void Note");
+  Expect(ShouldPreferKickMissWitnessEarly(true, true),
+         "Era23 I-M9: miss + FirstMesh class → PreferKick every frame");
+  Expect(!ShouldPreferKickMissWitnessEarly(true, false),
+         "Era23 I-M9: miss outside class → age SLA only");
+  Expect(ShouldPreferKickMissWitnessEarly(true, false, true),
+         "MissOwn P3: coverage sticky PreferKick outside class");
+  Expect(!ShouldPreferKickMissWitnessEarly(false, true),
+         "Era23 I-M9: no miss → no early PreferKick");
+
+  Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, true),
+         "Era23 P2: SoftDefer empty + Queued/Kicked ⇒ PreferKick");
+  Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, true, false),
+         "Era23 P2: empty without GPU stuck → no PreferKick");
+  Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, false, 15),
+         "P12 A3: empty age≥15 PreferKick even without GPU queue");
+  Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, false, true),
+         "Era23 P2: no miss → no SoftDefer PreferKick");
+
+  Expect(ShouldForceFirstMeshOnPlaceHole(true, true),
+         "Era23 I-P1: empty/undrawn near ⇒ FirstMesh");
+  Expect(!ShouldForceFirstMeshOnPlaceHole(true, false),
+         "Era23 I-P1: far empty → no force");
+  Expect(!ShouldForceFirstMeshOnPlaceHole(false, true),
+         "Era23 I-P1: drawable near → no force");
+
+  // --- Era24 SoftDefer empty FirstMesh-until-Drawable ---
+  using cutum::ShouldEscalateSoftDeferEmptyAge;
+  using cutum::SoftDeferEmptyHealKind;
+  using cutum::SoftDeferEmptyHealKindOf;
+  using cutum::SoftDeferEmptyNeedsFirstMeshOwnership;
+
+  Expect(SoftDeferEmptyNeedsFirstMeshOwnership(true, true),
+         "Era24 I-E2: empty + miss/focus ⇒ FirstMesh ownership");
+  Expect(!SoftDeferEmptyNeedsFirstMeshOwnership(true, false),
+         "Era24 I-E2: empty outside FOV → no ownership");
+  Expect(!SoftDeferEmptyNeedsFirstMeshOwnership(false, true),
+         "Era24 I-E2: not empty → no ownership");
+  Expect(!ShouldEscalateSoftDeferEmptyAge(14),
+         "Era33: age 14 < sla 15 → no escalate");
+  Expect(ShouldEscalateSoftDeferEmptyAge(15),
+         "Era33: age 15 ≥ sla → escalate");
+  Expect(ShouldEscalateSoftDeferEmptyAge(60, 45),
+         "Era32: explicit sla 45 still honored");
+  Expect(ShouldEscalateSoftDeferEmptyAge(44),
+         "Era33: default sla 15 → age 44 escalates");
+  using cutum::SoftDeferEmptyInvalidateOwnedWithoutProgress;
+  Expect(SoftDeferEmptyInvalidateOwnedWithoutProgress(true, false, 15, false),
+         "Phase5.5.2: owned+age+!gpu ⇒ invalidate");
+  Expect(!SoftDeferEmptyInvalidateOwnedWithoutProgress(true, true, 15, false),
+         "Phase5.5.2: gpu queued keeps ownership");
+  Expect(!SoftDeferEmptyInvalidateOwnedWithoutProgress(true, false, 15, true),
+         "Phase5.5.2: drawable no invalidate");
+  Expect(SoftDeferEmptyHealKindOf() == SoftDeferEmptyHealKind::FirstMesh,
+         "Era24 I-E3: SoftDefer empty heal is FirstMesh only");
+  Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, true),
+         "Era24 KEEP: PreferKick SoftDefer empty only Queued/Kicked");
+  Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, true, false),
+         "Era24 KEEP: idle SoftDefer empty → no PreferKick storm");
+
+  // --- Era25 Frontier Column Stage SLA ---
+  using cutum::FrontierColumnNeedsFirstMeshAfterLit;
+  using cutum::FrontierColumnNeedsLightTicket;
+  using cutum::FrontierNearLoadOpsFloor;
+  using cutum::IsFrontierPressure;
+
+  Expect(IsFrontierPressure(1, 0, true, 0),
+         "Era25 I-F4: gen_backlog + miss ⇒ frontier pressure");
+  Expect(IsFrontierPressure(0, 2, false, 250),
+         "Era25 I-F4: async_queued + void>T ⇒ frontier pressure");
+  Expect(IsFrontierPressure(0, 0, true, 999),
+         "Era30 I-O1: void>T without gen/async ⇒ ocean heal pressure");
+  Expect(IsFrontierPressure(0, 0, false, 50, 200, 3),
+         "Era30 I-O1: VB without gen/async ⇒ ocean heal pressure");
+  Expect(!IsFrontierPressure(3, 0, false, 50),
+         "Era25 I-F4: gen without miss/void → no pressure");
+  Expect(IsFrontierPressure(0, 0, false, 0, 200, 0, 5),
+         "sky-fix: moving absent columns ⇒ frontier pressure");
+  Expect(!IsFrontierPressure(0, 0, false, 0, 200, 0, 0),
+         "sky-fix: no absent/miss/void → no empty-gen pressure");
+  Expect(FrontierColumnNeedsLightTicket(true, true, false, false),
+         "Era25 I-F2: near + pending + !drawable ⇒ light ticket");
+  Expect(FrontierColumnNeedsLightTicket(true, true, true, true),
+         "Era25 I-F2: near + pending + fully-dark ⇒ light ticket");
+  Expect(!FrontierColumnNeedsLightTicket(true, true, true, false),
+         "Era25 I-F2: drawable lit → no light ticket");
+  Expect(!FrontierColumnNeedsLightTicket(false, true, false, true),
+         "Era25 I-F2: far → no light ticket");
+  Expect(FrontierColumnNeedsFirstMeshAfterLit(true, true, false, true),
+         "Era25 I-F3: near lit solid !drawable ⇒ FirstMesh");
+  Expect(!FrontierColumnNeedsFirstMeshAfterLit(true, true, true, true),
+         "Era25 I-F3: drawable → no FirstMesh");
+  Expect(!FrontierColumnNeedsFirstMeshAfterLit(true, false, false, true),
+         "Era25 I-F3: not lit → no FirstMesh yet");
+  Expect(FrontierNearLoadOpsFloor(true, true, 2) == 3,
+         "Era25 I-F5: frontier moving floor ops ≥3");
+  Expect(FrontierNearLoadOpsFloor(true, true, 5) == 5,
+         "Era25 I-F5: keep higher base ops");
+  Expect(FrontierNearLoadOpsFloor(false, true, 2) == 2,
+         "Era25 I-F5: no pressure → base ops");
+  using cutum::FrontierNearLoadRadius;
+  Expect(FrontierNearLoadRadius(true, true, 2, 4) == 4,
+         "Era25 I-F5: frontier NearLoad radius ≥ focus");
+  Expect(FrontierNearLoadRadius(false, true, 2, 4) == 2,
+         "Era25 I-F5: !frontier keeps NearLoad radius clamp");
+
+  // --- Era26 Ocean Dual-Debt ---
+  using cutum::CollectFullyDarkSkipsOnlyRelightOwnership;
+  using cutum::ShouldDrainPendingLightUnderMissMoving;
+  using cutum::ShouldPreserveVoidBgSlotsUnderRimSla;
+  using cutum::SoftDeferEmptyNeedsParallelVoidRelight;
+  using cutum::VoidRelightCollectRadius;
+
+  Expect(ShouldDrainPendingLightUnderMissMoving(true, true, 250, 0),
+         "Era26 I-O1: miss+moving+void>T ⇒ drain");
+  Expect(ShouldDrainPendingLightUnderMissMoving(true, true, 0, 5),
+         "Era26 I-O1: miss+moving+VB ⇒ drain");
+  Expect(!ShouldDrainPendingLightUnderMissMoving(true, true, 10, 0),
+         "Era26 I-O1: miss+moving void≤T no VB → no drain");
+  Expect(!ShouldDrainPendingLightUnderMissMoving(false, true, 500, 10),
+         "Era26 I-O1: !miss → no special drain");
+  Expect(!ShouldDrainPendingLightUnderMissMoving(true, false, 500, 10),
+         "Era26 I-O1: !moving → idle path owns drain");
+  Expect(VoidRelightCollectRadius(4, true, true, false) == 4,
+         "Era26 I-O1: void_pressure ⇒ full focus radius");
+  Expect(VoidRelightCollectRadius(4, true, false, false) == 2,
+         "Era26 I-O1: miss !void_pressure ⇒ clamp 2");
+  Expect(VoidRelightCollectRadius(4, false, false, false) == 4,
+         "Era26 I-O1: !miss ⇒ full radius");
+  Expect(CollectFullyDarkSkipsOnlyRelightOwnership(true),
+         "Era26 I-O3: Relight/Pending ⇒ skip Collect");
+  Expect(!CollectFullyDarkSkipsOnlyRelightOwnership(false),
+         "Era26 I-O3: FirstMesh-only/Dirty → no skip");
+  Expect(ShouldPreserveVoidBgSlotsUnderRimSla(true, true),
+         "Era26 I-O2: rim+void_slots ⇒ preserve bg");
+  Expect(!ShouldPreserveVoidBgSlotsUnderRimSla(true, false),
+         "Era26 I-O2: rim without void → normal clamp");
+  Expect(SoftDeferEmptyNeedsParallelVoidRelight(true, true),
+         "Era26 I-O4: empty+void ⇒ parallel Relight");
+  Expect(!SoftDeferEmptyNeedsParallelVoidRelight(true, false),
+         "Era26 I-O4: empty lit → no parallel Relight");
+  Expect(!SoftDeferEmptyNeedsParallelVoidRelight(false, true),
+         "Era26 I-O4: not empty → no parallel Relight");
+  {
+    int bmin = 40;
+    int bmax = 50;
+    cutum::FillWaterLateralRemeshBand(true, 3, 64, 256, bmin, bmax, 16);
+    Expect(bmin <= 48 && bmax >= 80,
+           "Era26 I-O5: FillWater lateral widens sea±CHUNK");
+    int keep_min = 40;
+    int keep_max = 50;
+    cutum::FillWaterLateralRemeshBand(true, 1, 64, 256, keep_min, keep_max, 16);
+    Expect(keep_min == 40 && keep_max == 50,
+           "Era26 I-O5: horiz≤1 leaves band to underfeet path");
+  }
+
+  // --- Era27 Anti-Flicker Ownership ---
+  using cutum::ShouldDampMarkRelitRemeshOnSoftDeferEmpty;
+  using cutum::ShouldHoldInflightSupersedeUnderMiss;
+  using cutum::ShouldRetargetSoftDeferCaptureWitness;
+  using cutum::SoftDeferEmptyAgeShouldReset;
+  using cutum::kSoftDeferCaptureWitnessPinFrames;
+
+  Expect(kSoftDeferCaptureWitnessPinFrames == 8, "Era27 I-A1: pin_T default 8");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(false, 0, 8, false, true),
+         "Era27 I-A1: !pin_valid ⇒ retarget");
+  Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 3, 8, false, true),
+         "Era27 I-A1: pin live + still empty ⇒ hold");
+  Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 8, 8, false, true),
+         "MissOwn P1: pin_age ≥ T + still empty ⇒ hold (pin-until-drawable)");
+  Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, true, true),
+         "CheapRemesh C4: better_horiz alone does not hop while age<T");
+  Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false),
+         "I13-A2: healed pin cooldown before retarget");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 4, 8, false, false),
+         "I13-A2: healed pin after cooldown retarget");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false, true),
+         "I13-A2: visual_holes bypass heal cooldown");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 1, 8, false, false, false,
+                                               4, 2, 3),
+         "I13-A1: frontier advance bypasses heal cooldown");
+  {
+    using cutum::ShouldHoldMissOwnerUntilDrawable;
+    using cutum::ShouldTreatPinAsStillMissingForHop;
+    Expect(ShouldHoldMissOwnerUntilDrawable(true, false, false),
+           "MissOwn P1: valid undrawn pin holds");
+    Expect(!ShouldHoldMissOwnerUntilDrawable(true, true, false),
+           "MissOwn P1: drawable pin may hop");
+    Expect(ShouldHoldMissOwnerUntilDrawable(true, false, false),
+           "MissOwn VB P2: visual_holes no longer unlocks undrawn hold");
+    Expect(!ShouldHoldMissOwnerUntilDrawable(true, false, true),
+           "MissOwn VB P2: emergency hop (nh≤1) may unlock");
+    Expect(ShouldTreatPinAsStillMissingForHop(false, 0),
+           "MissOwn VB P2: undrawn treated as still missing");
+    Expect(ShouldTreatPinAsStillMissingForHop(true, 3),
+           "MissOwn VB P2: brief drawable still missing for hop");
+    Expect(!ShouldTreatPinAsStillMissingForHop(true, 8),
+           "MissOwn VB P2: stable drawable may hop");
+    using cutum::ShouldKickAgedUndrawnPin;
+    Expect(ShouldKickAgedUndrawnPin(48, 48, -1),
+           "MissOwn VB P3: first aged kick at expire");
+    Expect(!ShouldKickAgedUndrawnPin(49, 48, 48),
+           "MissOwn VB P3: no kick until period elapses");
+    Expect(!ShouldKickAgedUndrawnPin(59, 48, 48),
+           "MissOwn VB P3: still inside period");
+    Expect(ShouldKickAgedUndrawnPin(60, 48, 48),
+           "MissOwn VB P3: kick again after period");
+  }
+  Expect(!SoftDeferEmptyAgeShouldReset(true, false),
+         "Era27 I-A2: still empty no progress ⇒ sticky age");
+  Expect(SoftDeferEmptyAgeShouldReset(false, false),
+         "Era27 I-A2: healed ⇒ reset age");
+  Expect(SoftDeferEmptyAgeShouldReset(true, true),
+         "Era27 I-A2: progress ⇒ reset age");
+  Expect(ShouldDampMarkRelitRemeshOnSoftDeferEmpty(true, false),
+         "Era27 I-A3: SoftDefer-empty owned !Drawable ⇒ damp remesh");
+  Expect(!ShouldDampMarkRelitRemeshOnSoftDeferEmpty(true, true),
+         "Era27 I-A3: Drawable lit⇒relit remesh KEEP");
+  Expect(!ShouldDampMarkRelitRemeshOnSoftDeferEmpty(false, false),
+         "Era27 I-A3: not SoftDefer-owned → no damp");
+  Expect(ShouldHoldInflightSupersedeUnderMiss(true, true, false),
+         "Era27 I-A4: miss+Inflight !Drawable ⇒ hold supersede");
+  Expect(!ShouldHoldInflightSupersedeUnderMiss(true, true, true),
+         "Era27 I-A4: Drawable → normal supersede OK");
+  Expect(!ShouldHoldInflightSupersedeUnderMiss(false, true, false),
+         "Era27 I-A4: !miss → no hold");
+
+  // --- Era39 SoftDefer anti-flicker + hidden-neighbor seam ---
+  {
+    using cutum::ShouldRemeshDrawableForHiddenNeighborSeam;
+    using cutum::SoftDeferEmptyShouldApplyOwnership;
+    using cutum::SoftDeferEmptyShouldKeepOwnership;
+    using cutum::SoftDeferEmptyShouldMarkDirtyAfterAvoid;
+    using cutum::IsSoftDeferHiddenNeighbor;
+
+    Expect(SoftDeferEmptyShouldKeepOwnership(true, true),
+           "Era39: sticky own while still empty");
+    Expect(!SoftDeferEmptyShouldKeepOwnership(false, true),
+           "Era39: drop own when healed");
+    Expect(!SoftDeferEmptyShouldKeepOwnership(true, false),
+           "Era39: no sticky without prior ownership");
+    Expect(!SoftDeferEmptyShouldMarkDirtyAfterAvoid(true, 0),
+           "Era39: damp Dirty while FM/pending after avoid");
+    Expect(!SoftDeferEmptyShouldMarkDirtyAfterAvoid(false, 2),
+           "Era39: damp Dirty until min_frames");
+    Expect(SoftDeferEmptyShouldMarkDirtyAfterAvoid(false, 4),
+           "Era39: Dirty OK after min_frames without ticket");
+    Expect(SoftDeferEmptyShouldMarkDirtyAfterAvoid(false, 0, 4, true),
+           "Phase5.7R2: underfeet Dirty immediately after avoid");
+    Expect(!SoftDeferEmptyShouldMarkDirtyAfterAvoid(true, 0, 4, true),
+           "Phase5.7R2: underfeet still damp while FM/pending");
+    Expect(SoftDeferEmptyShouldApplyOwnership(true),
+           "Era39: apply ownership when Cd ready");
+    Expect(!SoftDeferEmptyShouldApplyOwnership(false),
+           "Era39: count-only while Cd cooling");
+    Expect(ShouldRemeshDrawableForHiddenNeighborSeam(true, true, false),
+           "Era39: remesh drawable on SoftDefer-hidden enter");
+    Expect(ShouldRemeshDrawableForHiddenNeighborSeam(true, false, true),
+           "Era39: remesh drawable on SoftDefer-hidden leave/heal");
+    Expect(!ShouldRemeshDrawableForHiddenNeighborSeam(true, true, true),
+           "Era39: no remesh when hidden state unchanged");
+    Expect(!ShouldRemeshDrawableForHiddenNeighborSeam(false, true, false),
+           "Era39: skip remesh if self !Drawable");
+    Expect(IsSoftDeferHiddenNeighbor(true, false, true),
+           "Era39: loaded SoftDefer empty/held = hidden neighbor");
+    Expect(!IsSoftDeferHiddenNeighbor(true, true, true),
+           "Era39: drawable neighbor not hidden");
+    Expect(!IsSoftDeferHiddenNeighbor(false, false, true),
+           "Era39: unloaded → Unknown path, not SoftDefer-hidden");
+  }
+
+  // --- Era28 Visual Stage Gate ---
+  using cutum::ShouldAllowUnlitFirstMeshNearFov;
+  using cutum::ShouldPublishMeshToDraw;
+  using cutum::ShouldRelightBeforeDrawNear;
+  using cutum::ShouldRemeshAfterApplyOnlyWhileBuilding;
+  using cutum::SoftDeferEmptyShouldMarkDirty;
+  using cutum::kVisualStageNearFovHoriz;
+  using cutum::kVisualStageLitDrawableHoriz;
+  using cutum::ShouldHideFullyDarkUntilLitInRing;
+
+  Expect(kVisualStageNearFovHoriz == 2, "Era28 I-V1: near_r default 2");
+  Expect(kVisualStageLitDrawableHoriz == 4, "Era32 I-L1: lit ring default 4");
+  Expect(!ShouldAllowUnlitFirstMeshNearFov(false, true, 1, 2),
+         "Era28 I-V1: near horiz⇒ no Unlit");
+  Expect(!ShouldAllowUnlitFirstMeshNearFov(false, true, 2, 2),
+         "Era28 I-V1: horiz==near_r ⇒ no Unlit");
+  Expect(ShouldAllowUnlitFirstMeshNearFov(false, true, 3, 2),
+         "Era28 I-V1: far of near_r=2 ⇒ Unlit OK");
+  Expect(!ShouldAllowUnlitFirstMeshNearFov(
+             false, true, 3, kVisualStageLitDrawableHoriz),
+         "Era32: mid lit-ring ⇒ no Unlit");
+  Expect(ShouldAllowUnlitFirstMeshNearFov(
+             false, true, 5, kVisualStageLitDrawableHoriz),
+         "Era32: hinterland ⇒ Unlit OK");
+  Expect(!ShouldAllowUnlitFirstMeshNearFov(true, true, 5, 2),
+         "Era28 I-V1: has_mesh ⇒ no Unlit");
+  Expect(ShouldHideFullyDarkUntilLitInRing(3, true, false),
+         "Era32: fully-dark mid-ring hide without ocean_heal");
+  Expect(ShouldHideFullyDarkUntilLitInRing(4, true, false),
+         "Era32: fully-dark at ring edge hide");
+  Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false),
+         "Era32: hinterland fully-dark no ring hide");
+  Expect(ShouldHideFullyDarkUntilLitInRing(2, true, true),
+         "Era32: fully-dark never keep-prior (hole > black plug)");
+  using cutum::RelightHideStarveActive;
+  Expect(RelightHideStarveActive(16, 1), "Phase5.7R6: fifo BP is starve");
+  Expect(!RelightHideStarveActive(0, 0),
+         "Phase5.7R6: Apply idle alone is NOT starve");
+  Expect(!RelightHideStarveActive(0, 2), "Phase5.7R6: healthy Apply not starve");
+  Expect(!ShouldHideFullyDarkUntilLitInRing(3, true, false, 4, true, true),
+         "prior-lit hold: starve+prior_lit keeps published lit path");
+  Expect(ShouldHideFullyDarkUntilLitInRing(3, true, false, 4, true, false),
+         "prior-lit hold: starve alone still hides first FullyDark plug");
+  Expect(ShouldHideFullyDarkUntilLitInRing(3, true, false, 4, false, true),
+         "Phase5.7R6: without fifo starve still hide FullyDark in ring");
+  using cutum::ShouldRetainPriorLitOverUnlitCandidate;
+  Expect(ShouldRetainPriorLitOverUnlitCandidate(true, false, true),
+         "prior-lit: retain over dark when had lit mesh");
+  Expect(ShouldRetainPriorLitOverUnlitCandidate(false, true, true),
+         "prior-lit: retain over dark when live lit GPU");
+  Expect(!ShouldRetainPriorLitOverUnlitCandidate(false, false, true),
+         "prior-lit: no retain without prior (cave first mesh)");
+  Expect(!ShouldRetainPriorLitOverUnlitCandidate(true, true, false),
+         "prior-lit: lit candidate not retained-as-unlit");
+  using cutum::ShouldAvoidEmptyPublishOverPriorLit;
+  Expect(ShouldAvoidEmptyPublishOverPriorLit(true, false, true),
+         "prior-lit: avoid empty over live lit GPU");
+  Expect(ShouldAvoidEmptyPublishOverPriorLit(false, true, true),
+         "prior-lit: avoid empty over lit mesh+gpu resident");
+  Expect(!ShouldAvoidEmptyPublishOverPriorLit(false, false, true),
+         "prior-lit: empty OK when no lit prior");
+  using cutum::ShouldCarveFocusLitCompletion;
+  Expect(ShouldCarveFocusLitCompletion(0, true, 2, false),
+         "Phase5.7R6: carve focus miss when fifo drained");
+  Expect(ShouldCarveFocusLitCompletion(0, false, 2, true),
+         "Phase5.7R6: carve pending-light near when fifo drained");
+  Expect(!ShouldCarveFocusLitCompletion(16, true, 2, true),
+         "Phase5.7R6: no carve under fifo BP");
+  Expect(!ShouldCarveFocusLitCompletion(0, false, 5, false),
+         "Phase5.7R6: no carve far without miss/PL");
+  Expect(ShouldCarveFocusLitCompletion(0, true, 4, false),
+         "Phase5.7R6: carve nh<=4");
+  Expect(!ShouldCarveFocusLitCompletion(0, true, 5, false),
+         "Phase5.7R6: no carve nh>4 without PL");
+  using cutum::ShouldSoftDeferEmptyAllowParallelRelight;
+  Expect(!ShouldSoftDeferEmptyAllowParallelRelight(3, 0, true),
+         "Phase5.7R6: owned_no_gpu blocks SoftDefer parallel Relight");
+  Expect(!ShouldSoftDeferEmptyAllowParallelRelight(1, 0, false),
+         "Phase5.7R6: underfeet blocks SoftDefer parallel Relight");
+  Expect(!ShouldSoftDeferEmptyAllowParallelRelight(3, 16, false),
+         "Phase5.7R6: rim under fifo BP blocks parallel Relight");
+  Expect(ShouldSoftDeferEmptyAllowParallelRelight(3, 0, false),
+         "Phase5.7R6: rim + fifo OK + not stuck may Relight");
+  using cutum::ShouldSoftDeferFocusLitMarkCooldownOk;
+  Expect(ShouldSoftDeferFocusLitMarkCooldownOk(10, 12, true),
+         "Phase5.7R6: carve starved Mark cd 2f");
+  Expect(!ShouldSoftDeferFocusLitMarkCooldownOk(10, 11, true),
+         "Phase5.7R6: carve starved Mark cd not yet");
+  Expect(!ShouldSoftDeferFocusLitMarkCooldownOk(10, 12, false),
+         "Phase5.7R6: non-carve keeps 8f Mark cd");
+  using cutum::SoftDeferCaptureFloorWhenDepthFull;
+  Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 0, false, 0, 0) == 0,
+         "Phase5.7R6: Apply idle + SoftDefer hole does not raise CaptureFloor");
+  Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 1, false, 0, 2) == 1,
+         "Phase5.7R6: Apply progressing still SoftDefer floor");
+  Expect(!SoftDeferEmptyShouldMarkDirty(true, true, false),
+         "Era28 I-V2: FM ticket ⇒ no Dirty");
+  Expect(!SoftDeferEmptyShouldMarkDirty(true, false, true),
+         "Era28 I-V2: Inflight/Pending ⇒ no Dirty");
+  Expect(SoftDeferEmptyShouldMarkDirty(true, false, false),
+         "Era28 I-V2: dead ownership ⇒ MarkDirty");
+  Expect(!SoftDeferEmptyShouldMarkDirty(false, false, false),
+         "Era28 I-V2: not empty ⇒ no Dirty");
+  Expect(ShouldPublishMeshToDraw(true, false, true),
+         "Era28 I-V1: lit ⇒ publish");
+  Expect(ShouldPublishMeshToDraw(false, true, true),
+         "Era28 I-V1: keep-prior ⇒ publish");
+  Expect(!ShouldPublishMeshToDraw(false, false, true),
+         "Era28 I-V1: Unlit preview alone ⇒ no publish");
+  Expect(ShouldRelightBeforeDrawNear(true, true, false),
+         "Era28 I-V4: near+void !lit ⇒ Relight before draw");
+  Expect(!ShouldRelightBeforeDrawNear(true, true, true),
+         "Era28 I-V4: already lit ⇒ no Relight-before-draw");
+  Expect(ShouldRemeshAfterApplyOnlyWhileBuilding(true, false),
+         "Era28 I-V3: Building !lit ⇒ RemeshAfterApply only");
+  Expect(!ShouldRemeshAfterApplyOnlyWhileBuilding(true, true),
+         "Era28 I-V3: lit drawable ⇒ normal remesh OK");
+  using cutum::SoftDeferEmptyPreferKickAfterAgeOnly;
+  Expect(SoftDeferEmptyPreferKickAfterAgeOnly(true, true, true, true),
+         "Era28 P2: age SLA + Queued ⇒ PreferKick");
+  Expect(!SoftDeferEmptyPreferKickAfterAgeOnly(false, true, true, true),
+         "Era28 P2: before age SLA ⇒ no PreferKick");
+  Expect(!SoftDeferEmptyPreferKickAfterAgeOnly(true, true, true, false),
+         "Era28 P2: age SLA without GPU stuck ⇒ no PreferKick");
+
+  // --- Era29 Enter Visual Warmup ---
+  using cutum::EnterOpaqueChurnSoftMax;
+  using cutum::EnterSoftDeferEmptyNeedsFirstMesh;
+  using cutum::EnterSpawnCapturePinFrames;
+  using cutum::EnterUnderfeetNeedsLitDrawable;
+  using cutum::EnterVisualWarmupAppUpdateSoftMs;
+  using cutum::EnterVisualWarmupRadiusChunks;
+  using cutum::CollectFullyDarkShouldSkipForOwnership;
+  using cutum::ShouldDampFarUnlitRemeshOnLit;
+  using cutum::ShouldRemeshAfterApplyOnlyOnIdleDrawable;
+  using cutum::ShouldRunEnterStreamingWarmupDespiteSpawnPrepared;
+
+  Expect(EnterVisualWarmupRadiusChunks() == kVisualStageLitDrawableHoriz,
+         "Era33 P0: enter visual radius = LitDrawable ring 4");
+  Expect(EnterUnderfeetNeedsLitDrawable(false, false),
+         "Era29 I-E1: !lit !keep-prior ⇒ needs warmup");
+  Expect(!EnterUnderfeetNeedsLitDrawable(true, false),
+         "Era29 I-E1: lit drawable ⇒ ready");
+  Expect(!EnterUnderfeetNeedsLitDrawable(false, true),
+         "Era29 I-E1: keep-prior ⇒ ready");
+  Expect(EnterSoftDeferEmptyNeedsFirstMesh(true, true),
+         "Era29 I-E4: empty underfeet ⇒ FirstMesh");
+  Expect(!EnterSoftDeferEmptyNeedsFirstMesh(true, false),
+         "Era29 I-E4: empty far → no enter FirstMesh force");
+  Expect(ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(true),
+         "Era29 I-E2: always warmup despite coop prepare");
+  Expect(ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(false),
+         "Era29 I-E2: warmup when !prepared");
+  Expect(EnterVisualWarmupAppUpdateSoftMs() == 200,
+         "Era29 I-E5: enter_app soft ≤200");
+  Expect(EnterOpaqueChurnSoftMax() == 200,
+         "Era29 P4: opaque churn soft max 200");
+  Expect(EnterSpawnCapturePinFrames() == 16,
+         "Era29 P3: enter Capture pin 16 frames");
+  Expect(!CollectFullyDarkShouldSkipForOwnership(0, true),
+         "Era29 P3: near PendingLight ⇒ no CollectFullyDark skip");
+  Expect(CollectFullyDarkShouldSkipForOwnership(3, true),
+         "Era29 P3: far PendingLight ⇒ skip CollectFullyDark");
+  Expect(ShouldDampFarUnlitRemeshOnLit(true, 3),
+         "Era29 P3: far drawable Unlit ⇒ damp remesh-on-lit");
+  Expect(!ShouldDampFarUnlitRemeshOnLit(true, 1),
+         "Era29 P3: near drawable ⇒ no far damp");
+  Expect(ShouldRemeshAfterApplyOnlyOnIdleDrawable(true, true),
+         "Era29 P4: idle drawable ⇒ RemeshAfterApply");
+  Expect(!ShouldRemeshAfterApplyOnlyOnIdleDrawable(true, false),
+         "Era29 P4: idle !drawable ⇒ no RemeshAfterApply-only");
+
+  // --- Era30 Ocean Cruise SLA ---
+  using cutum::EnterVisualWarmupHardCapMs;
+  using cutum::FluidMapShouldThrottleCruise;
+  using cutum::IsOceanHealPressure;
+  using cutum::OceanCaptureWitnessPinFrames;
+  using cutum::OceanVoidRelightDrainCapMoving;
+  using cutum::ShouldDampOceanCaptureRetarget;
+  using cutum::ShouldDrainPendingLightUnderOceanVoid;
+  using cutum::ShouldFrontierPressureDespiteEmptyGen;
+  using cutum::ShouldSkipStaleRemeshForPendingVoid;
+
+  Expect(IsOceanHealPressure(false, 250, 0), "Era30 I-O1: void>T ⇒ heal pressure");
+  Expect(IsOceanHealPressure(false, 0, 2), "Era30 I-O1: VB ⇒ heal pressure");
+  Expect(!IsOceanHealPressure(false, 50, 0), "Era30 I-O1: calm void/VB");
+  Expect(ShouldFrontierPressureDespiteEmptyGen(true, true, true),
+         "Era30 I-O1: empty gen+async + ocean heal");
+  Expect(!ShouldFrontierPressureDespiteEmptyGen(true, true, false),
+         "Era30 I-O1: empty queues without heal");
+  Expect(OceanVoidRelightDrainCapMoving(true, 1) == 2,
+         "Era30 I-O2: void moving drain cap floor");
+  Expect(!ShouldSkipStaleRemeshForPendingVoid(true, true),
+         "Era30 I-O3: void column keeps Relight path");
+  Expect(ShouldSkipStaleRemeshForPendingVoid(true, false),
+         "Era30 I-O3: stale-only pending skips remesh");
+  Expect(FluidMapShouldThrottleCruise(40, 35.0, true, 250, 0),
+         "Era30 I-O4: cruise throttle under void heal");
+  Expect(!FluidMapShouldThrottleCruise(40, 35.0, false, 250, 0),
+         "Era30 I-O4: idle → no cruise throttle");
+  Expect(FluidMapShouldThrottleCruise(0, 55.0, true, 0, 0),
+         "ColdWall S4: moving wall>50 throttles without VB heal");
+  Expect(!FluidMapShouldThrottleCruise(20, 35.0, true, 0, 0),
+         "ColdWall S4: no heal + wall≤50 + pending≤24 → no throttle");
+  Expect(FluidMapShouldThrottleCruise(30, 35.0, true, 0, 5),
+         "ColdWall S4: VB heal + pending>24 → throttle");
+  Expect(EnterVisualWarmupHardCapMs() == 120000,
+         "Era42: enter lit warn wall default 120s");
+  Expect(OceanCaptureWitnessPinFrames() == 12,
+         "Era30 I-O5: ocean Capture pin 12 frames");
+  Expect(!ShouldDampOceanCaptureRetarget(true, 3, true),
+         "Era30 I-O5: damp horiz≥2 retarget on ocean heal");
+  Expect(ShouldDrainPendingLightUnderOceanVoid(true, 250, 0),
+         "Era30 I-O3: moving void drain without miss");
+
+  // --- Land frontier witness damp ---
+  using cutum::IsLandFrontierPressure;
+  using cutum::LandFrontierCaptureWitnessPinFrames;
+  using cutum::ShouldDampLandFrontierWitnessRetarget;
+
+  Expect(IsLandFrontierPressure(true, 250), "Land frontier: moving + void>T");
+  Expect(!IsLandFrontierPressure(false, 250), "Land frontier: idle");
+  Expect(LandFrontierCaptureWitnessPinFrames(600) == 18,
+         "Land frontier pin 18 @ void>500");
+  Expect(!ShouldDampLandFrontierWitnessRetarget(true, 3, true),
+         "Land frontier: damp nh≥2 retarget");
+  Expect(ShouldDampLandFrontierWitnessRetarget(true, 1, true),
+         "Land frontier: nh≤1 retarget OK");
+
+  // --- Era31 Ocean Heal Throughput ---
+  using cutum::OceanHealMeshEmergeBudgetMs;
+  using cutum::OceanHealMovingRelightDrainFloor;
+  using cutum::OceanHealRelightCarveOutMs;
+  using cutum::OceanHealVoidRelightNoteMinPerFrame;
+  using cutum::ShouldCountVisibleBlackProgress;
+  using cutum::ShouldForceEnterVisualCap;
+  using cutum::ShouldHideDrawableUntilLitNearRim;
+  using cutum::ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal;
+
+  Expect(OceanHealVoidRelightNoteMinPerFrame() == 2,
+         "Era31/32: void Note min 2/frame");
+  Expect(OceanHealMovingRelightDrainFloor(true, true, 250) == 2,
+         "Era31/32: moving void drain floor 2");
+  Expect(OceanHealMovingRelightDrainFloor(true, true, 50) == 1,
+         "Era31/32: moving VB-only drain floor 1");
+  Expect(OceanHealMeshEmergeBudgetMs() <= 16.0,
+         "Era31 I-T2: emerge cap ≤16ms");
+  Expect(OceanHealRelightCarveOutMs() >= 4.0,
+         "Era31 I-T2: Relight carve-out ≥4ms");
+  Expect(!ShouldCountVisibleBlackProgress(true, true, false),
+         "Era31 I-T3: fully-dark ⇒ no VB progress");
+  Expect(ShouldCountVisibleBlackProgress(true, true, true),
+         "Era31 I-T3: pending lit slot ⇒ progress OK");
+  Expect(ShouldCountVisibleBlackProgress(true, false, false),
+         "Era31 I-T3: not fully-dark ⇒ progress OK");
+  Expect(ShouldHideDrawableUntilLitNearRim(true, 1, true, false),
+         "Era32: near rim hide until lit (universal ring)");
+  Expect(ShouldHideDrawableUntilLitNearRim(false, 1, true, false),
+         "Era32: hide without ocean_heal");
+  Expect(ShouldHideDrawableUntilLitNearRim(true, 4, true, false),
+         "Era32: lit-ring edge hide");
+  Expect(!ShouldHideDrawableUntilLitNearRim(true, 5, true, false),
+         "Era32: hinterland no ring hide");
+  Expect(ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(true, true, true),
+         "Era31 I-T5: moving cruise heal ⇒ RemeshAfterApply-only");
+  Expect(!ShouldForceEnterVisualCap(250.0, false),
+         "Era41: 250ms without ready ⇒ no force (was load 200ms abort)");
+  Expect(ShouldForceEnterVisualCap(50.0, true),
+         "Era41: mesh soft ready ⇒ force cap");
+  Expect(!ShouldForceEnterVisualCap(50.0, false),
+         "Era41: early GpuWarmup without ready ⇒ no cap");
+  Expect(!ShouldForceEnterVisualCap(250.0, false, /*cold_create=*/true),
+         "Era41: cold create also waits FOV (same hard-wall)");
+  Expect(!ShouldForceEnterVisualCap(120000.0, false),
+         "Era42: require_zero ⇒ hard-wall does not force with debt");
+  Expect(!ShouldForceEnterVisualCap(120000.0, false, /*cold_create=*/true),
+         "Era42: require_zero holds cold create past warn wall");
+  Expect(ShouldForceEnterVisualCap(120000.0, false, /*cold_create=*/false,
+                                   /*hard_wall_ms=*/-1,
+                                   /*require_zero=*/false),
+         "Era42: require_zero=false ⇒ hard-wall abort for debug");
+  Expect(ShouldForceEnterVisualCap(250.0, true, /*cold_create=*/true),
+         "Era41: soft-ready ⇒ force regardless of create/load");
+
+  // --- FlickerZero V1/V4 / FZ2 ---
+  using cutum::FluidMapShouldThrottleEnter;
+  using cutum::ShouldFinalizeRelightUnderVbPressure;
+  using cutum::ShouldFinalizeRelightUnderVbSteadyPressure;
+  using cutum::ShouldRemoveAtRemeshDespitePlPressure;
+  using cutum::ShouldSkipDeferRemeshForLitRingFullyDark;
+  using cutum::ShouldSkipDeferRemeshUnderVbHealPressure;
+  using cutum::ShouldSuppressPendingLightNote;
+  using cutum::VisibleBlackNoTicketRepairCap;
+  using cutum::VisibleBlackNoTicketVoidCap;
+
+  Expect(VisibleBlackNoTicketRepairCap(0, 6, false) == 6,
+         "FlickerZero: zero no_ticket ⇒ repair_cap");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, false) >= 6,
+         "FlickerZero: enter idle no_ticket scales cap");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, true) >= 6,
+         "P15b: cruise no_ticket scales cap floor≥6");
+  Expect(VisibleBlackNoTicketRepairCap(30, 8, true) >= 8,
+         "P15b: moving no_ticket>24 floor≥8");
+  Expect(VisibleBlackNoTicketRepairCap(6, 6, false) == 6,
+         "FZ2: no_ticket≤8 idle ⇒ repair_cap decay");
+  Expect(VisibleBlackNoTicketVoidCap(20, 2, false) >= 2,
+         "FlickerZero: void cap scales under no_ticket");
+  Expect(ShouldFinalizeRelightUnderVbPressure(12, 3),
+         "FlickerZero: VB finalize horiz≤4");
+  Expect(!ShouldFinalizeRelightUnderVbPressure(5, 5),
+         "FlickerZero: VB finalize skips far ring");
+  Expect(ShouldFinalizeRelightUnderVbSteadyPressure(55, 20, 3),
+         "FZ2: steady VB+PL finalize lit ring");
+  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(24, 20, 3),
+         "FZ2.5-P1: steady VB below thresh 25 skips finalize");
+  Expect(ShouldFinalizeRelightUnderVbSteadyPressure(26, 20, 3),
+         "FZ2.5-P1: steady VB>25 finalize lit ring");
+  Expect(ShouldSkipDeferRemeshForLitRingFullyDark(2, true),
+         "FlickerZero: lit-ring FullyDark skip defer (legacy)");
+  {
+    using cutum::ShouldKeepRemeshUnderHoleStarve;
+    Expect(ShouldKeepRemeshUnderHoleStarve(1, 2, 8, false, false),
+           "G1: keep_horiz remesh kept under hole starve");
+    Expect(ShouldKeepRemeshUnderHoleStarve(5, 2, 8, false, true),
+           "G1: lit-ring FullyDark kept under hole starve");
+    Expect(ShouldKeepRemeshUnderHoleStarve(5, 2, 8, true, false),
+           "G1: lit-ring stale-dark kept under hole starve");
+    Expect(!ShouldKeepRemeshUnderHoleStarve(9, 2, 8, true, true),
+           "G1: beyond lit ring not kept for hole-starve remesh");
+  }
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0),
+         "FZ2: steady no_ticket=0 → defer allowed");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, true, 0),
+         "FZ2: enter_fov_lit → skip defer");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 9),
+         "FZ2.4: no_ticket=9 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 8),
+         "FZ2.4: no_ticket≤8 steady → defer allowed");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(5, true, false, 0),
+         "FZ2: hinterland no skip");
+  Expect(ShouldRemoveAtRemeshDespitePlPressure(2, true, true, 13),
+         "FZ2: PL leave-in RemoveAt under VB heal");
+  Expect(!ShouldRemoveAtRemeshDespitePlPressure(2, true, false, 0),
+         "FZ2: steady PL leave-in allowed");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 31,
+                                                  2),
+         "FZ2.4-C3b: steady VB>30 stable2 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 30,
+                                                   2),
+         "FZ2.4-C3b: VB=30 stable2 → defer allowed");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 9, 12, 8, 0, 0),
+         "FZ2.4-C3b: no_ticket=9 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 8, 12, 8, 0, 0),
+         "FZ2.4-C3b: no_ticket=8 → defer allowed");
+  // A40: plateau suppress OFF — only TryNote dup filter (IsPending/InFlight).
+  Expect(!ShouldSuppressPendingLightNote(0, 15, 41), "A40: nt0 PL15 VB41 no suppress");
+  Expect(!ShouldSuppressPendingLightNote(0, 14, 41), "A40: PL below thresh still no suppress");
+  Expect(!ShouldSuppressPendingLightNote(1, 20, 50), "A40: nt>0 no suppress");
+  Expect(!ShouldSuppressPendingLightNote(0, 20, 40), "A40: VB<=40 no suppress");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 41,
+                                                  2),
+         "FZ2.3-C3a: steady VB>40 stable2 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 55,
+                                                   1),
+         "FZ2.2-C3b: VB stable<2 frames → defer allowed");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, false, true) >= 6,
+         "FZ27-F: enter repair seed >=6");
+  Expect(ShouldFinalizeRelightUnderVbSteadyPressure(31, 11, 3),
+         "FZ2.2-C4b: steady finalize vb=31 pl=11");
+  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(24, 11, 3),
+         "FZ2.5-P1: vb≤24 skips finalize");
+  Expect(FluidMapShouldThrottleEnter(true, false, false, 0, 0),
+         "FlickerZero: enter_fov_lit throttles fluid");
+  Expect(FluidMapShouldThrottleEnter(false, true, false, 0, 0),
+         "FlickerZero: enter_lit_gate throttles fluid");
+  Expect(FluidMapShouldThrottleEnter(false, false, false, 50, 0),
+         "FZ2: VB>40 throttles fluid enter");
+  Expect(!FluidMapShouldThrottleEnter(false, false, false, 20, 100),
+         "FZ2: calm VB does not throttle fluid");
+
+  // --- Era41/Era42 Enter lit budgets / progress ---
+  {
+    using cutum::EnterFovLitHardWallMs;
+    using cutum::EnterFovLitProgressFraction;
+    using cutum::EnterFovRelightApplyBudget;
+    using cutum::EnterFovRelightCaptureBudget;
+    using cutum::ShouldHoldEnterBarForFovLit;
+    Expect(EnterFovLitHardWallMs() == 120000, "Era42: lit warn wall 120s");
+    Expect(EnterFovRelightCaptureBudget() >= 16, "Era42: Capture budget ≥16");
+    Expect(EnterFovRelightApplyBudget() >= 64, "Era42: apply budget ≥64");
+    Expect(EnterFovLitProgressFraction(0, 10) == 1.0f,
+           "Era41: zero debt ⇒ progress 1");
+    Expect(EnterFovLitProgressFraction(10, 10) == 0.0f,
+           "Era41: full debt ⇒ progress 0");
+    Expect(EnterFovLitProgressFraction(2, 10) >
+               EnterFovLitProgressFraction(8, 10),
+           "Era41: debt↓ ⇒ progress↑");
+    Expect(ShouldHoldEnterBarForFovLit(5, 1000.0),
+           "Era41: hold bar while FOV debt");
+    Expect(!ShouldHoldEnterBarForFovLit(0, 1000.0),
+           "Era41: no hold when debt cleared");
+    Expect(ShouldHoldEnterBarForFovLit(5, 120000.0),
+           "Era42: require_zero holds past warn wall");
+    Expect(!ShouldHoldEnterBarForFovLit(5, 120000.0, EnterFovLitHardWallMs(),
+                                       /*require_zero=*/false),
+           "Era42: require_zero=false releases past wall");
+    Expect(!ShouldHoldEnterBarForFovLit(5, 1000.0, EnterFovLitHardWallMs(),
+                                       /*require_zero=*/true,
+                                       /*progress_stalled=*/true),
+           "LitRing C: progress stall releases RequireZero");
+    using cutum::EnterLitDebtProgressStalled;
+    using cutum::EnterLitProgressStallMs;
+    Expect(EnterLitProgressStallMs() == 20000, "LitRing C: stall wall 20s");
+    Expect(EnterLitDebtProgressStalled(10, 10, true, 20000.0, 20000.0, 25000.0,
+                                       12000.0),
+           "LitRing C: stalled debt with underfeet → abort");
+    Expect(!EnterLitDebtProgressStalled(10, 10, false, 20000.0, 20000.0, 5000.0,
+                                        12000.0),
+           "LitRing C: no abort before soft wall without underfeet");
+    Expect(!EnterLitDebtProgressStalled(8, 10, true, 20000.0, 20000.0, 25000.0,
+                                        12000.0),
+           "LitRing C: debt improved below best ⇒ not stalled");
+  }
+
+  // --- Era43 Enter lit gate / snapshot ---
+  {
+    using cutum::ShouldBlockNotePendingOutsideSnapshot;
+    using cutum::ShouldSkipEnterStreamingWarmup;
+    Expect(ShouldSkipEnterStreamingWarmup(true),
+           "Era43: skip streaming when enter lit gate active");
+    Expect(!ShouldSkipEnterStreamingWarmup(false),
+           "Era43: streaming OK when gate inactive");
+    Expect(ShouldBlockNotePendingOutsideSnapshot(true, false),
+           "Era43: block NotePending outside snapshot");
+    Expect(!ShouldBlockNotePendingOutsideSnapshot(true, true),
+           "Era43: allow NotePending inside snapshot");
+    const std::vector<int> unresolved{0, 2};
+    int debt = 0;
+    for (int i = 0; i < 3; ++i)
+    {
+      if (std::find(unresolved.begin(), unresolved.end(), i) !=
+          unresolved.end())
+      {
+        ++debt;
+      }
+    }
+    Expect(debt == 2, "Era43: snapshot debt counts unresolved cols");
+  }
+
+  // --- Era43f/Era44 Enter mesh warmup drain / abort ---
+  {
+    using cutum::EnterGpuWarmupMonotonicProgress;
+    using cutum::EnterGpuWarmupProgressFraction;
+    using cutum::IsEnterGpuWarmupReady;
+    using cutum::ShouldContinueEnterMeshWarmupDrain;
+    using cutum::ShouldForceEnterInGameAfterAbortDrain;
+    using cutum::ShouldForceEnterMeshAbort;
+    Expect(!ShouldContinueEnterMeshWarmupDrain(false, false, 0),
+           "Era43f: no drain work when all clear");
+    Expect(ShouldContinueEnterMeshWarmupDrain(false, false, 3),
+           "Era43f: drain when gpu_pending remains");
+    Expect(ShouldContinueEnterMeshWarmupDrain(true, false, 0),
+           "Era43f: drain when spawn meshes pending");
+    Expect(ShouldForceEnterMeshAbort(0, false, 120000.0, 120000),
+           "Era44: mesh abort when lit done and ring not ready");
+    Expect(!ShouldForceEnterMeshAbort(5, false, 120000.0, 120000),
+           "Era44: no mesh abort while lit debt remains");
+    Expect(!ShouldForceEnterMeshAbort(0, true, 120000.0, 120000),
+           "Era44: no mesh abort when ring ready");
+    Expect(EnterGpuWarmupProgressFraction(0, 10, 0, 10, 0, 10, 0, 10) == 1.0f,
+           "Era44: zero debt ⇒ progress 1");
+    Expect(EnterGpuWarmupProgressFraction(10, 10, 10, 10, 10, 10, 10, 10) ==
+               0.0f,
+           "Era44: full debt ⇒ progress 0");
+    float display = 0.0f;
+    Expect(EnterGpuWarmupMonotonicProgress(0.2f, display) == 0.2f,
+           "Era44: monotonic progress increases");
+    Expect(EnterGpuWarmupMonotonicProgress(0.1f, display) == 0.2f,
+           "Era44: monotonic progress never regresses");
+    Expect(!IsEnterGpuWarmupReady(false, 0, true, true),
+           "Era44: not ready without ring");
+    Expect(IsEnterGpuWarmupReady(true, 0, true, true),
+           "Era44: ready when ring+mesh+lit+min frames");
+    Expect(!ShouldForceEnterInGameAfterAbortDrain(100000.0, 150000),
+           "Era44: force_ingame not before wall");
+    Expect(ShouldForceEnterInGameAfterAbortDrain(150000.0, 150000),
+           "Era44: force_ingame at wall");
+    using cutum::ShouldReleaseEnterAfterAbortUnderfeetCap;
+    using cutum::ShouldForceEnterLoadSoftExit;
+    Expect(ShouldReleaseEnterAfterAbortUnderfeetCap(true, 150000.0, 150000,
+                                                    true, 0),
+           "stabilize: abort underfeet cap when feet ready");
+    Expect(!ShouldReleaseEnterAfterAbortUnderfeetCap(true, 150000.0, 150000,
+                                                     false, 0),
+           "stabilize: abort cap blocked without underfeet");
+    Expect(ShouldForceEnterLoadSoftExit(true, 150000.0, 150000, 0),
+           "Phase5 S4: soft-exit at wall without underfeet");
+    Expect(!ShouldForceEnterLoadSoftExit(true, 100000.0, 150000, 0),
+           "Phase5 S4: soft-exit not before wall");
+    Expect(ShouldForceEnterLoadSoftExit(false, 150000.0, 150000, 0),
+           "Phase5.1: soft-exit without abort_drain when ring already ready");
+    Expect(ShouldForceEnterLoadSoftExit(true, 150000.0, 150000, 3),
+           "Phase5.4.1: soft-exit last-resort ignores sticky fov_debt");
+  }
+
+  // --- Era51 mesh warmup progress + cruise stabilize ---
+  {
+    using cutum::EnterLitSample;
+    using cutum::FormatMeshWarmupProgress;
+    using cutum::IsEnterGpuWarmupReady;
+    using cutum::MeshWarmupResolvedFraction;
+    using cutum::NeedsCruiseStabilize;
+    Expect(FormatMeshWarmupProgress(465, 100) ==
+               std::string("Building meshes... 365/465 (100 pending)"),
+           "Era51: progress uses queue depth");
+    Expect(MeshWarmupResolvedFraction(465, 100) > 0.78f,
+           "Era51: resolved fraction from pending");
+    EnterLitSample sample{};
+    Expect(!NeedsCruiseStabilize(sample, 0, false, 0),
+           "Era51: cruise ready when clean");
+    sample.mesh_dirty = true;
+    Expect(NeedsCruiseStabilize(sample, 0, false, 0),
+           "Era51: cruise needs mesh drain");
+    Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
+           "SOTA: enter ready is ring+lit+mesh+vis (no cruise extra gate)");
+    using cutum::ShouldResetRenderStateForGpuWarmup;
+    using cutum::ShouldDrainPreparedEnterWarmup;
+    Expect(!ShouldDrainPreparedEnterWarmup(true, false, true, true),
+           "prepared and currently ready skips redundant CPU drain");
+    Expect(ShouldDrainPreparedEnterWarmup(true, true, true, true),
+           "prepared must consume outstanding async completions");
+    Expect(ShouldDrainPreparedEnterWarmup(true, false, false, true),
+           "prepared cannot suppress visibility debt recovery");
+    Expect(ShouldDrainPreparedEnterWarmup(true, false, true, false),
+           "prepared cannot suppress missing underfeet recovery");
+    Expect(ShouldDrainPreparedEnterWarmup(false, false, true, true),
+           "unprepared world still runs normal warmup");
+    using cutum::ShouldWarmupGreedyGpuDuringEnter;
+    Expect(!ShouldResetRenderStateForGpuWarmup(true),
+           "Era51: skip GPU reset when coop prepared spawn");
+    Expect(ShouldResetRenderStateForGpuWarmup(false),
+           "Era51: reset GPU when spawn not coop-prepared");
+    Expect(!ShouldWarmupGreedyGpuDuringEnter(10, true, 0, 3),
+           "Era51: no early GPU draw before min frames");
+    Expect(ShouldWarmupGreedyGpuDuringEnter(10, true, 2, 3),
+           "Era51: early GPU draw when coop exits warmup early");
+    Expect(ShouldWarmupGreedyGpuDuringEnter(1, false, 23, 3),
+           "Era51: legacy last-frame GPU draw");
+  }
+
+  // --- Era44b/Era45 enter warmup status + R4 ownership ---
+  {
+    using cutum::BuildEnterWarmupStatus;
+    using cutum::ClassifyRemeshAfterLitApply;
+    using cutum::EnterWarmupStatusPrefersMeshOverFifo;
+    using cutum::RemeshAfterLitApplyDecision;
+    using cutum::ShouldSuppressRelightSeamDirtyForEnterGate;
+    cutum::EnterLitSample sample{};
+    sample.fifo_n = 10;
+    sample.inflight = 5;
+    sample.mesh_gpu_pending_near = 15;
+    sample.mesh_dirty = true;
+    Expect(EnterWarmupStatusPrefersMeshOverFifo(sample, 0, false, false),
+           "Era44b: mesh/gpu status beats fifo");
+    const std::string mesh_status =
+        BuildEnterWarmupStatus(sample, 0, false, false, 5000.0, 120000);
+    Expect(mesh_status.rfind("Building terrain", 0) == 0,
+           "Era44b: gpu_pending shows Building terrain");
+    cutum::EnterLitSample lit_only{};
+    lit_only.fifo_n = 8;
+    lit_only.inflight = 3;
+    const std::string lit_status =
+        BuildEnterWarmupStatus(lit_only, 2, true, false, 1000.0, 120000);
+    Expect(lit_status.rfind("Lighting queue", 0) == 0,
+           "Era44b: fifo-only shows Lighting queue");
+    Expect(ClassifyRemeshAfterLitApply(true, false, false, false) ==
+               RemeshAfterLitApplyDecision::SkipAlreadyDirty,
+           "Era45: dirty ⇒ skip RAA");
+    Expect(ClassifyRemeshAfterLitApply(false, true, false, false) ==
+               RemeshAfterLitApplyDecision::SkipAlreadyRaa,
+           "Era45: raa pending ⇒ skip");
+    Expect(ClassifyRemeshAfterLitApply(false, false, true, false) ==
+               RemeshAfterLitApplyDecision::PreferKickGpu,
+           "Era45: gpu pending ⇒ PreferKick");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, true) ==
+               RemeshAfterLitApplyDecision::SkipInflight,
+           "Era45: inflight ⇒ skip");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era45: clear ⇒ Schedule");
+    Expect(!ShouldSuppressRelightSeamDirtyForEnterGate(true, false, true),
+           "Era45 B5: enter gate !ring ⇒ no suppress");
+    Expect(ShouldSuppressRelightSeamDirtyForEnterGate(true, true, true),
+           "Era45 B5: ring ready ⇒ keep base suppress");
+    Expect(ShouldSuppressRelightSeamDirtyForEnterGate(false, false, true),
+           "D3.3: enter inactive ⇒ base_suppress only (ring unused)");
+    Expect(!ShouldSuppressRelightSeamDirtyForEnterGate(false, false, false),
+           "D3.3: enter inactive + !base ⇒ no suppress");
+    using cutum::ColumnHasRemeshOwner;
+    using cutum::ShouldEnqueueRemeshSeamAfterLit;
+    Expect(ColumnHasRemeshOwner(false, true, false, false),
+           "cruise: RAA owns remesh");
+    Expect(!ShouldEnqueueRemeshSeamAfterLit(true, false, true, false),
+           "cruise: drawable ⇒ no RemeshSeam");
+    Expect(ShouldEnqueueRemeshSeamAfterLit(true, false, false, false),
+           "cruise: undrawn hole may RemeshSeam");
+    Expect(!ShouldEnqueueRemeshSeamAfterLit(true, false, false, true),
+           "cruise: owned ⇒ no RemeshSeam");
+    using cutum::IsRelightReplaceDirtyOwnerEnabled;
+    using cutum::SetRelightReplaceDirtyOwnerEnabled;
+    using cutum::ShouldSkipSecondaryFullyDarkDirty;
+    Expect(IsRelightReplaceDirtyOwnerEnabled(),
+           "A10: RelightReplace Dirty owner default ON");
+    Expect(ShouldSkipSecondaryFullyDarkDirty(true),
+           "A10: skip secondary FullyDark Dirty when owner ON");
+    Expect(!ShouldSkipSecondaryFullyDarkDirty(false),
+           "A10: missing/undrawn still allowed");
+    SetRelightReplaceDirtyOwnerEnabled(false);
+    Expect(!ShouldSkipSecondaryFullyDarkDirty(true),
+           "A10: rollback OFF allows secondary FullyDark Dirty");
+    SetRelightReplaceDirtyOwnerEnabled(true);
+    using cutum::ClampCaptureMovingBgCapWithHoles;
+    using cutum::EffectiveRelightCaptureBandCy;
+    Expect(ClampCaptureMovingBgCapWithHoles(8, true, true, 2) == 2,
+           "cruise B: holes clamp bg to dynamic");
+    Expect(EffectiveRelightCaptureBandCy(4, true, true) == 3,
+           "cruise B: moving holes narrow band");
+    Expect(EffectiveRelightCaptureBandCy(1, true, true) == 1,
+           "cruise B: band floor 1");
+    using cutum::ShouldSkipRelightOnTrustedDiskLight;
+    using cutum::ShouldTrustDiskLightmap;
+    Expect(ShouldTrustDiskLightmap(true, true, false),
+           "cruise D: disk light trusted");
+    Expect(!ShouldTrustDiskLightmap(true, false, false),
+           "cruise D: incomplete not trusted");
+    Expect(ShouldSkipRelightOnTrustedDiskLight(true),
+           "cruise D: skip enqueue when trusted");
+    using cutum::ShouldSetLitReadyOnTrustedDisk;
+    Expect(!ShouldSetLitReadyOnTrustedDisk(false, false),
+           "flicker: no LitReady without lit drawable");
+    Expect(!ShouldSetLitReadyOnTrustedDisk(true, true),
+           "flicker: no LitReady while remesh in flight");
+    Expect(ShouldSetLitReadyOnTrustedDisk(true, false),
+           "flicker: LitReady after non-FullyDark drawable settle");
+  }
+
+  // --- Era46 enter warmup drain parity / RAA commit coalesce ---
+  {
+    using cutum::EnterWarmupDrainUsesGpuExplicitPath;
+    using cutum::EnterWarmupMeshBudgetDefault;
+    using cutum::EnterWarmupRingBlockerLabel;
+    using cutum::ShouldEscalateEnterWarmupGpuDrain;
+    using cutum::ShouldMarkDirtyAfterRemeshAfterApplyCommit;
+    using cutum::ShouldPreferKickAfterRemeshAfterApplyCommit;
+    Expect(EnterWarmupMeshBudgetDefault() == 8,
+           "Era46: default mesh budget matches Application");
+    Expect(EnterWarmupDrainUsesGpuExplicitPath(true),
+           "Era46: explicit GPU path when mesh warmup needed");
+    Expect(!EnterWarmupDrainUsesGpuExplicitPath(false),
+           "Era46: no explicit GPU path when blockers clear");
+    Expect(ShouldPreferKickAfterRemeshAfterApplyCommit(true),
+           "Era46: PreferKick when gpu pending after RAA erase");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, true),
+           "Era46: no MarkDirty when gpu pending after RAA erase");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false),
+           "Era46: MarkDirty when clear after RAA erase");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(true, false),
+           "Era46: skip MarkDirty if already dirty");
+    Expect(!ShouldEscalateEnterWarmupGpuDrain(false, 200000.0),
+           "Era46: no escalate without abort_drain");
+    Expect(!ShouldEscalateEnterWarmupGpuDrain(true, 100000.0),
+           "Era46: no escalate before 3 min");
+    Expect(ShouldEscalateEnterWarmupGpuDrain(true, 180000.0),
+           "Era46: escalate after abort_drain ≥3 min");
+    Expect(std::string(EnterWarmupRingBlockerLabel(true, 5, true, false)) ==
+               "dirty",
+           "Era46: ring_blocker prefers dirty");
+    Expect(std::string(EnterWarmupRingBlockerLabel(false, 5, true, false)) ==
+               "gpu",
+           "Era46: ring_blocker gpu when no dirty");
+    Expect(std::string(EnterWarmupRingBlockerLabel(false, 0, false, false,
+                                                   true)) == "visual",
+           "162400: ring_blocker visual_warmup when others clear");
+  }
+
+  // --- Era47 enter lit quiesce / PreferKick-only / admission ---
+  {
+    using cutum::ClassifyRemeshAfterLitApply;
+    using cutum::ComputeMeshWorkAdmission;
+    using cutum::EnterVisibilityReadyRadiusChunks;
+    using cutum::EnterVisibilityVoidNearMax;
+    using cutum::EnterVisibilityVoidReady;
+    using cutum::EnterVoidExitMax;
+    using cutum::IsEnterGpuWarmupReady;
+    using cutum::MeshWorkAdmission;
+    using cutum::MeshWorkAdmissionInput;
+    using cutum::RemeshAfterLitApplyDecision;
+    using cutum::ShouldMarkDirtyAfterRemeshAfterApplyCommit;
+    using cutum::ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce;
+    Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(false, true),
+           "no suppress without enter gate");
+    Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, false),
+           "no suppress while column not enter-settled");
+    Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, true, 3),
+           "fifo residual does not block suppress when column settled");
+    Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, true),
+           "suppress MarkRelit remesh only when column enter-settled");
+    // Latch semantics covered in World EnterLitQuiesceLatched (fifo blips).
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true, false,
+                                       /*visual_ready=*/true) ==
+               RemeshAfterLitApplyDecision::SkipEnterLitQuiesce,
+           "Era49: VisualReady under quiesce ⇒ Skip");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true, true,
+                                       /*visual_ready=*/true, false,
+                                       /*stale_field=*/true) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era22: VisualReady + stale field under quiesce ⇒ Schedule");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true, false,
+                                       /*visual_ready=*/false) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era49: not VisualReady under quiesce ⇒ Schedule");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true,
+                                       /*fully_dark=*/true, false,
+                                       /*light_delta=*/true) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "FullyDark under quiesce + light delta ⇒ Schedule");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true,
+                                       /*fully_dark=*/true, false,
+                                       /*light_delta=*/false) ==
+               RemeshAfterLitApplyDecision::SkipEnterLitQuiesce,
+           "FullyDark under quiesce without delta ⇒ no spin remesh");
+    Expect(ClassifyRemeshAfterLitApply(false, false, true, false, true,
+                                       /*fully_dark=*/true, false, false,
+                                       /*stale_field=*/true) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era22: stale FullyDark + gpu under quiesce ⇒ Schedule not PreferKick");
+    Expect(ClassifyRemeshAfterLitApply(false, false, true, false, true) ==
+               RemeshAfterLitApplyDecision::PreferKickGpu,
+           "Era47: gpu under quiesce ⇒ PreferKick");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, false) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era47: clear without quiesce ⇒ Schedule");
+    {
+      using cutum::ShouldLatchRemeshAfterApplyWhileOwned;
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                 RemeshAfterLitApplyDecision::SkipAlreadyDirty, true),
+             "ColPipe P2: Dirty already owns — no RAA latch");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                  RemeshAfterLitApplyDecision::SkipAlreadyDirty, false),
+             "ColPipe P2: lit Dirty does not latch RAA");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                 RemeshAfterLitApplyDecision::SkipInflight, true),
+             "ColPipe P2: Inflight owns — no RAA latch");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                 RemeshAfterLitApplyDecision::PreferKickGpu, true),
+             "ColPipe P2: PreferKick owns GPU — no RAA latch");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                  RemeshAfterLitApplyDecision::SkipAlreadyRaa, true),
+             "already-RAA does not re-latch");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                  RemeshAfterLitApplyDecision::SkipEnterLitQuiesce, true),
+             "quiesce skip does not latch RAA");
+    }
+    {
+      using cutum::RecoverWatchdogFramesForDarkNear;
+      using cutum::ShouldEnqueueRecoverRemeshSeamStorm;
+      using cutum::ShouldEnqueueUrgentDarkRelight;
+      Expect(RecoverWatchdogFramesForDarkNear(true) == 2,
+             "moving dark recover stays fast");
+      Expect(RecoverWatchdogFramesForDarkNear(false) >= 30,
+             "idle dark recover must not fire every 2 frames");
+      Expect(ShouldEnqueueRecoverRemeshSeamStorm(true, 500, 0),
+             "moving dark_n seam storm allowed");
+      Expect(!ShouldEnqueueRecoverRemeshSeamStorm(false, 5000, 0),
+             "idle dark_n alone must not RemeshSeam storm");
+      Expect(ShouldEnqueueRecoverRemeshSeamStorm(false, 0, 1),
+             "idle sticky still allows RemeshSeam");
+      Expect(!ShouldEnqueueUrgentDarkRelight(true, true, true),
+             "no RelightThenMesh re-enqueue when light already owned");
+      Expect(ShouldEnqueueUrgentDarkRelight(true, false, false),
+             "pending dark preview enqueues RelightThenMesh");
+    }
+    Expect(EnterVisibilityVoidReady(0, 999),
+           "Era48: no dark-face sample ⇒ void gate open");
+    Expect(EnterVisibilityVoidReady(100, 0),
+           "Era51: unfinished void==0 ⇒ ready");
+    Expect(!EnterVisibilityVoidReady(100, 1),
+           "Era51: unfinished void>0 ⇒ not ready");
+    Expect(EnterVisibilityVoidReady(100, 150, EnterVisibilityVoidNearMax()),
+           "Era51: cruise OceanHealVoidBias 200 still allows 150");
+    Expect(!EnterVisibilityVoidReady(100, 201, EnterVisibilityVoidNearMax()),
+           "Era51: cruise bias still rejects >200");
+    Expect(EnterVoidExitMax() == 0, "Era51: enter void exit max is 0");
+    using cutum::EnterVoidTelemFaceExcluded;
+    Expect(EnterVoidTelemFaceExcluded(true, false, true, true, true),
+           "Era52: terminal chunk excluded from void telem");
+    Expect(EnterVoidTelemFaceExcluded(false, true, true, true, false),
+           "Era52: gate Done column excluded from void telem");
+    Expect(EnterVoidTelemFaceExcluded(false, false, true, true, true),
+           "Era52: LitReady void-edge excluded under enter gate");
+    Expect(!EnterVoidTelemFaceExcluded(false, false, true, true, false),
+           "Era52: unlit void-edge still counts");
+    Expect(!EnterVoidTelemFaceExcluded(false, false, false, true, true),
+           "Era52: stale face not excluded by void-edge rule");
+    using cutum::ShouldLatchStaleFullyDarkAfterEnterGpuCommit;
+    using cutum::ShouldSkipMarkRelitAfterEnterStaleAttempt;
+    Expect(ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, true, false),
+           "legacy latch helper exists — not SoT for GPU commit/exit");
+    Expect(!ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, true, true),
+           "legacy latch helper: already terminal");
+    Expect(!ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, false, false),
+           "legacy latch helper: void-edge not latched");
+    Expect(ShouldSkipMarkRelitAfterEnterStaleAttempt(true, true, false),
+           "skip MarkRelit after attempt when mesh is no longer stale");
+    Expect(!ShouldSkipMarkRelitAfterEnterStaleAttempt(true, true, true),
+           "still-stale after attempt ⇒ another Dirty (delta)");
+    Expect(!ShouldSkipMarkRelitAfterEnterStaleAttempt(true, false, false),
+           "first stale MarkRelit still allowed");
+    using cutum::EnterFullyDarkDrawableAcceptedForWarmupExit;
+    Expect(EnterFullyDarkDrawableAcceptedForWarmupExit(true, true, false),
+           "legacy FullyDark-accept helper is not enter SoT (unused for exit)");
+    Expect(EnterFullyDarkDrawableAcceptedForWarmupExit(true, false, true),
+           "legacy FullyDark-accept helper is not enter SoT (unused for exit)");
+    Expect(!EnterFullyDarkDrawableAcceptedForWarmupExit(true, false, false),
+           "legacy helper: non-terminal FullyDark not accepted");
+    Expect(!EnterFullyDarkDrawableAcceptedForWarmupExit(false, true, true),
+           "legacy helper: lit drawable path unchanged");
+    using cutum::EnterSoftDeferBlocksWarmupExit;
+    using cutum::EnterVisualWarmupYieldsToGateRemaining;
+    Expect(EnterSoftDeferBlocksWarmupExit(true, true, false),
+           "SoftDefer underfeet still blocks without terminal");
+    Expect(!EnterSoftDeferBlocksWarmupExit(true, true, true),
+           "legacy terminal SoftDefer bypass exists — unused for exit");
+    Expect(!EnterSoftDeferBlocksWarmupExit(true, false, false),
+           "far SoftDefer still not enter FirstMesh");
+    Expect(EnterVisualWarmupYieldsToGateRemaining(true, 0, true),
+           "remaining==0 + underfeet present yields visual warmup");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 0, true, 8),
+           "remaining==0 still holds while underfeet GPU pending");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 0, false),
+           "remaining==0 alone does not yield without underfeet");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 3, true),
+           "remaining>0 keeps visual warmup");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(false, 0, true),
+           "no enter gate keeps visual warmup");
+    Expect(EnterVisibilityReadyRadiusChunks(8) == 8,
+           "Era48: visibility radius = RD");
+    Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
+           "Era48: ready when visibility ok");
+    Expect(!IsEnterGpuWarmupReady(true, 0, true, true, false),
+           "Era48: not ready while visibility debt");
+    // Latch semantics covered in World EnterLitQuiesceLatched (fifo blips).
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
+                                                       /*needs_first_mesh=*/false),
+           "Era47 P3: enter gate drawable ⇒ no RAA MarkDirty");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
+                                                      /*needs_first_mesh=*/true),
+           "sky-fix: enter gate !Drawable ⇒ RAA MarkDirty FirstMesh");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+               false, false, true, /*needs_first_mesh=*/false,
+               /*fully_dark_drawable=*/true),
+           "123647: enter FullyDark drawable ⇒ RAA MarkDirty");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, false),
+           "Era47: outside enter MarkDirty still allowed when clear");
+    MeshWorkAdmissionInput enter_in{};
+    enter_in.pending_gpu = 4;
+    enter_in.enter_lit_gate = true;
+    enter_in.ring_depth = 8;
+    const auto enter_adm = ComputeMeshWorkAdmission(enter_in);
+    Expect(enter_adm.mode != MeshWorkAdmission::Mode::Normal,
+           "Era47 P2: enter gate never Normal admission");
+  }
+
+  // --- Era49 Strict Enter VisualReady invariants (pure) ---
+  {
+    using cutum::ColumnQuiesceLatchAloneIsVisualReady;
+    using cutum::ColumnScheduleAloneIsVisualReady;
+    using cutum::ColumnVisualReadyFromFlags;
+    using cutum::EnterGateBlocksRaaMarkDirty;
+    using cutum::ShouldHideFullyDarkUntilLitInRing;
+    using cutum::ShouldMarkDirtyAfterRemeshAfterApplyCommit;
+    using cutum::StrictEnterVisualReadyDefault;
+    Expect(StrictEnterVisualReadyDefault(),
+           "Era49 P0: StrictEnterVisualReady default on");
+    Expect(!ColumnScheduleAloneIsVisualReady(true),
+           "Era49 P0: Sticky/schedule alone ⇏ VisualReady");
+    Expect(!ColumnQuiesceLatchAloneIsVisualReady(true),
+           "Era49 P0: Quiesce latch alone ⇏ VisualReady");
+    Expect(ColumnVisualReadyFromFlags(/*terrain*/ true, /*pending*/ false,
+                                      /*lit*/ true, /*fully_dark*/ false,
+                                      /*missing*/ false, /*soft_no_ticket*/ false),
+           "Era49 P0: lit terrain column ready");
+    Expect(!ColumnVisualReadyFromFlags(true, false, true, /*fully_dark*/ true,
+                                       false, false, /*sticky*/ true),
+           "Era49 P0: FullyDark + Sticky ⇏ ready");
+    Expect(!ColumnVisualReadyFromFlags(true, false, true, false, false,
+                                       /*soft_defer_empty*/ true),
+           "SoftDefer empty ⇏ VisualReady");
+    Expect(ColumnVisualReadyFromFlags(/*terrain*/ false, false, true, false,
+                                       false, false),
+           "Era49b: missing terrain band = N/A ready (not debt)");
+    Expect(ShouldHideFullyDarkUntilLitInRing(8, true, false, 8),
+           "legacy hide helper at horiz==ring");
+    Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false, 4),
+           "hide ring stays 4 (horiz 5 not hidden)");
+    Expect(!EnterGateBlocksRaaMarkDirty(false, false),
+           "Era49b: no enter ⇒ RAA MarkDirty allowed");
+    Expect(EnterGateBlocksRaaMarkDirty(false, true),
+           "Era49b: EnterGpuQuiesceDrain blocks RAA MarkDirty");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
+                                                       /*needs_first_mesh=*/false),
+           "Era49b: enter gate drawable ⇒ no RAA MarkDirty");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
+                                                      /*needs_first_mesh=*/true),
+           "sky-fix: enter !Drawable still MarkDirty");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+               false, false, true, false, /*fully_dark_drawable=*/true),
+           "123647: enter FullyDark still MarkDirty");
+  }
+
+  // --- Era50 EnterVisualGate completion FSM (pure) ---
+  {
+    using cutum::AdvanceEnterVisualItemStateMonotonic;
+    using cutum::ClassifyEnterVoidEdgeAction;
+    using cutum::ClassifyEnterVisualItemState;
+    using cutum::EnterLitQuiesceAllowed;
+    using cutum::EnterGpuQuiesceDrainAllowed;
+    using cutum::EnterVisibilityUnfinishedVoid;
+    using cutum::EnterVisualItemState;
+    using cutum::EnterVisualVoidEdgeAcceptsSoftDefer;
+    using cutum::EnterVoidEdgeAction;
+    using cutum::ShouldEscalateEnterWorklistGpuDrain;
+    using cutum::ShouldTreatMissingNeighborAsOpenSky;
+    Expect(EnterGpuQuiesceDrainAllowed(true),
+           "Era50: GpuQuiesceDrain on for whole gate");
+    Expect(!EnterLitQuiesceAllowed(true, 5),
+           "Era50: LitQuiesce off while remaining>0");
+    Expect(EnterLitQuiesceAllowed(true, 0),
+           "Era50: LitQuiesce only when remaining==0");
+    Expect(!EnterLitQuiesceAllowed(false, 0),
+           "Era50: LitQuiesce off without gate");
+    Expect(EnterVisibilityUnfinishedVoid(985, 800) == 185,
+           "Era50: unfinished void excludes SoftDefer placeholders");
+    Expect(EnterVisibilityUnfinishedVoid(100, 200) == 0,
+           "Era50: unfinished void floors at 0");
+    Expect(EnterVisualVoidEdgeAcceptsSoftDefer(true, false, true, false, true),
+           "Era50: void-edge SoftDefer+ticket accepted");
+    Expect(!EnterVisualVoidEdgeAcceptsSoftDefer(true, false, true, true, true),
+           "Era50: stale FullyDark not SoftDefer terminal");
+    Expect(ClassifyEnterVoidEdgeAction(true, true, false, false, false) ==
+               EnterVoidEdgeAction::RelightOnce,
+           "stale FullyDark without OpenSky ⇒ RelightOnce first");
+    Expect(ClassifyEnterVoidEdgeAction(true, false, false, false, false) ==
+               EnterVoidEdgeAction::RelightOnce,
+           "void-edge without OpenSky ⇒ RelightOnce (not SoftDefer/Done)");
+    Expect(ClassifyEnterVoidEdgeAction(true, true, false, false, true) ==
+               EnterVoidEdgeAction::RemeshStale,
+           "stale after OpenSky ⇒ remesh once");
+    Expect(ClassifyEnterVoidEdgeAction(true, false, false, true, true) ==
+               EnterVoidEdgeAction::None,
+           "void-edge relight inflight ⇒ wait Apply");
+    Expect(ClassifyEnterVoidEdgeAction(true, false, false, true, false) ==
+               EnterVoidEdgeAction::RelightOnce,
+           "OpenSky still required while relight is already owned");
+    Expect(ClassifyEnterVisualItemState(true, false, false, false) ==
+               EnterVisualItemState::NeedLight,
+           "Era50: pending ⇒ NeedLight");
+    Expect(ClassifyEnterVisualItemState(false, true, false, false) ==
+               EnterVisualItemState::NeedRemesh,
+           "Era50: stale dark ⇒ NeedRemesh");
+    Expect(ClassifyEnterVisualItemState(false, false, true, false) ==
+               EnterVisualItemState::NeedGpu,
+           "Era50: gpu busy ⇒ NeedGpu");
+    Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
+               EnterVisualItemState::Done,
+           "terminal_ready (lit or true-dark) ⇒ Done");
+    Expect(ClassifyEnterVisualItemState(false, false, false, false) ==
+               EnterVisualItemState::NeedRemesh,
+           "SoftDefer is not Done");
+    Expect(AdvanceEnterVisualItemStateMonotonic(EnterVisualItemState::Done,
+                                                EnterVisualItemState::NeedLight) ==
+               EnterVisualItemState::Done,
+           "Era50: Done sticky (monotonic debt)");
+    Expect(AdvanceEnterVisualItemStateMonotonic(EnterVisualItemState::Done,
+                                                EnterVisualItemState::Done) ==
+               EnterVisualItemState::Done,
+           "SoT: Done stays Done when still settled");
+    Expect(ShouldEscalateEnterWorklistGpuDrain(true, 10, 3, 90),
+           "Era50: escalate GPU when worklist stall + pending");
+    Expect(!ShouldEscalateEnterWorklistGpuDrain(true, 10, 3, 10),
+           "Era50: no escalate before stall frames");
+    Expect(ShouldTreatMissingNeighborAsOpenSky(false, true, true),
+           "Era51: missing neighbor under enter ⇒ OpenSky");
+    Expect(!ShouldTreatMissingNeighborAsOpenSky(false, false, true),
+           "Era51: OpenSky off outside enter gate");
+    Expect(!ShouldTreatMissingNeighborAsOpenSky(true, true, true),
+           "Era51: loaded neighbor ⇒ no OpenSky inject");
+    Expect(ClassifyEnterVoidEdgeAction(true, true, false, false, false) ==
+               EnterVoidEdgeAction::RelightOnce,
+           "Era51b: stale without OpenSky ⇒ RelightOnce");
+  }
+
+  // --- Enter column pipeline SoT (worklist r=4, remesh-if-delta) ---
+  {
+    using cutum::ClassifyEnterVisualItemState;
+    using cutum::EnterFullyDarkColumnSettled;
+    using cutum::EnterUnderfeetPresentReady;
+    using cutum::EnterUnderfeetSliceReady;
+    using cutum::EnterVisualItemState;
+    using cutum::EnterVisualWorkRadiusChunks;
+    using cutum::IsEnterGpuWarmupReady;
+    using cutum::ShouldHideEnterFullyDark;
+    using cutum::ShouldHideFullyDarkUntilLitInRing;
+    using cutum::FirstMeshPruneKeepHoriz;
+    using cutum::ShouldHideUncomputedFullyDarkInRing;
+    using cutum::UnderfeetNeedUrgent;
+    using cutum::ShouldRemeshAfterLightApply;
+    using cutum::ShouldSkipSpawnMeshWhileRelightDeferred;
+    using cutum::ShouldSpinFullyDarkRemesh;
+    Expect(EnterVisualWorkRadiusChunks() == 4, "enter work radius is 4");
+    Expect(ShouldSpinFullyDarkRemesh(true, false, false),
+           "FullyDark + no stale + no delta ⇒ spin (do not Schedule)");
+    Expect(!ShouldSpinFullyDarkRemesh(true, false, true),
+           "light delta ⇒ not a FullyDark spin");
+    Expect(ShouldRemeshAfterLightApply(true), "remesh after light apply");
+    Expect(!ShouldRemeshAfterLightApply(false), "no remesh without delta");
+    Expect(!EnterFullyDarkColumnSettled(false, false, true, false, false),
+           "OpenSky alone ≠ settled");
+    Expect(!EnterFullyDarkColumnSettled(true, false, true, true, false),
+           "OpenSky + stale ≠ settled");
+    Expect(EnterFullyDarkColumnSettled(true, false, true, false, false),
+           "OpenSky + !stale (true-dark) = settled");
+    Expect(EnterFullyDarkColumnSettled(false, false, true, true, true),
+           "lit drawable = settled");
+    Expect(!EnterFullyDarkColumnSettled(true, true, true, false, false),
+           "pending ⇒ not settled");
+    Expect(EnterFullyDarkColumnSettled(false, true, true, false, false, true),
+           "A40: legal_dark_settled overrides pending");
+    Expect(!EnterFullyDarkColumnSettled(false, false, true, true, false, true),
+           "A40: legal_dark_settled still requires !stale");
+    using cutum::ShouldClearPendingAfterRelightTerminal;
+    Expect(ShouldClearPendingAfterRelightTerminal(true, true, false),
+           "A40: clear pending when terminal");
+    Expect(!ShouldClearPendingAfterRelightTerminal(true, true, true),
+           "A40: no clear while still_stale");
+    using cutum::ClassifyVisualObligation;
+    using cutum::VisualObligation;
+    using cutum::NeedsOpenSkyEqualRevLightRepair;
+    using cutum::IsLegalDarkEqualRevFullyDark;
+    using cutum::SoftDeferHoldAllowedWithTicket;
+    Expect(ClassifyVisualObligation(true, true, false, true, false, false,
+                                    false) == VisualObligation::LitDrawable,
+           "A41: lit wins");
+    Expect(ClassifyVisualObligation(false, true, false, false, false, false,
+                                    false) == VisualObligation::LegalDark,
+           "A41: cave equal-rev FD → LegalDark");
+    Expect(ClassifyVisualObligation(false, true, false, true, false, false,
+                                    false) == VisualObligation::LightRepair,
+           "A41: open_sky equal-rev FD → LightRepair");
+    Expect(ClassifyVisualObligation(false, true, true, true, false, false,
+                                    false) == VisualObligation::LightRepair,
+           "A41: still_stale → LightRepair");
+    Expect(NeedsOpenSkyEqualRevLightRepair(true, false, true),
+           "A41: open_sky FD needs repair");
+    Expect(!NeedsOpenSkyEqualRevLightRepair(true, false, false),
+           "A41: cave FD no open_sky repair");
+    Expect(IsLegalDarkEqualRevFullyDark(true, false, false),
+           "A41: cave LegalDark predicate");
+    Expect(SoftDeferHoldAllowedWithTicket(true, true),
+           "A41: SoftDefer hold with ticket OK");
+    Expect(!SoftDeferHoldAllowedWithTicket(true, false),
+           "A41: SoftDefer hold without ticket rejected");
+    using cutum::SoftDeferAllowsLightRepairRemesh;
+    Expect(SoftDeferAllowsLightRepairRemesh(false, true,
+                                            VisualObligation::None),
+           "A42: SoftDefer inactive → schedule OK");
+    Expect(SoftDeferAllowsLightRepairRemesh(true, true,
+                                            VisualObligation::LightRepair),
+           "A42: LightRepair drawable remesh allowed under SoftDefer");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, false,
+                                             VisualObligation::LightRepair),
+           "A42: LightRepair without drawable ≠ remesh exempt");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, true,
+                                             VisualObligation::LegalDark),
+           "A42: LegalDark drawable still SoftDefer-blocked");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, true,
+                                             VisualObligation::None),
+           "A42: no obligation → SoftDefer RemoveAt path");
+    Expect(SoftDeferAllowsLightRepairRemesh(true, true,
+                                            VisualObligation::None, true),
+           "A42c: FullyDark drawable remesh allowed under SoftDefer");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, true,
+                                             VisualObligation::None, false),
+           "A42c: non-FD without LightRepair still blocked");
+    Expect(!SoftDeferAllowsLightRepairRemesh(true, true,
+                                             VisualObligation::LegalDark, true),
+           "A42c: LegalDark FullyDark stays SoftDefer-blocked");
+    Expect(SoftDeferAllowsLightRepairRemesh(true, true,
+                                            VisualObligation::None, false, true),
+           "A42d: StaleVL drawable remesh allowed under SoftDefer");
+    using cutum::ShouldRemintLightRepairDirty;
+    using cutum::StampLightRepairDeadlineMs;
+    Expect(ShouldRemintLightRepairDirty(true, false, 0, 0.0, 100.0),
+           "A41: first LightRepair mint");
+    Expect(!ShouldRemintLightRepairDirty(true, true, 0, 0.0, 100.0),
+           "A41: live pipeline blocks remint");
+    Expect(!ShouldRemintLightRepairDirty(true, false, 1, 5000.0, 1000.0),
+           "A41: before SLA no remint");
+    Expect(ShouldRemintLightRepairDirty(true, false, 1, 500.0, 1000.0),
+           "A41: after SLA remint");
+    Expect(ShouldRemintLightRepairDirty(true, false, 1, 0.0, 1000.0),
+           "A41: legacy deadline<=0 remints");
+    Expect(StampLightRepairDeadlineMs(1000.0) == 4000.0,
+           "A41: SLA stamp is absolute now+3000");
+    using cutum::EnterLitSnapshotResolvedByWorklistDone;
+    using cutum::EnterLitSnapshotResolvedByStickyRemesh;
+    using cutum::ShouldForceUnderfeetSolidFirstMeshDirty;
+    Expect(EnterLitSnapshotResolvedByWorklistDone(true, true, true),
+           "worklist Done resolves snapshot debt");
+    Expect(!EnterLitSnapshotResolvedByWorklistDone(true, true, false),
+           "unfinished worklist ≠ snapshot resolved");
+    Expect(EnterLitSnapshotResolvedByStickyRemesh(true, true, false, true),
+           "sticky remesh + lit resolves snapshot");
+    Expect(!EnterLitSnapshotResolvedByStickyRemesh(true, true, true, true),
+           "sticky + pending ≠ resolved");
+    Expect(ShouldForceUnderfeetSolidFirstMeshDirty(false, true, false, false,
+                                                   false, false, false),
+           "orphan solid SoftDefer empty may force Dirty");
+    Expect(!ShouldForceUnderfeetSolidFirstMeshDirty(false, true, true, false,
+                                                    false, false, false),
+           "already Dirty ⇒ no underfeet force");
+    Expect(!ShouldForceUnderfeetSolidFirstMeshDirty(false, true, false, true,
+                                                    false, false, false),
+           "SoftDeferHeld ⇒ no underfeet force");
+    using cutum::EnterLitQuiesceKeepSpawnUndrawnDirty;
+    Expect(EnterLitQuiesceKeepSpawnUndrawnDirty(true, false, 0),
+           "spawn SoftDefer empty keeps Dirty under quiesce");
+    Expect(EnterLitQuiesceKeepSpawnUndrawnDirty(true, false, 2),
+           "spawn r=2 undrawn keeps Dirty");
+    Expect(!EnterLitQuiesceKeepSpawnUndrawnDirty(true, false, 3),
+           "outside spawn parks SoftDefer empty");
+    Expect(!EnterLitQuiesceKeepSpawnUndrawnDirty(true, true, 0),
+           "drawable not kept as undrawn Dirty");
+    using cutum::EnterLitQuiesceLiftSpawnSoftDefer;
+    Expect(EnterLitQuiesceLiftSpawnSoftDefer(true, 0),
+           "quiesce lifts SoftDefer underfeet");
+    Expect(EnterLitQuiesceLiftSpawnSoftDefer(true, 2),
+           "quiesce lifts SoftDefer spawn r=2");
+    Expect(!EnterLitQuiesceLiftSpawnSoftDefer(true, 3),
+           "quiesce keeps SoftDefer outside spawn");
+    Expect(!EnterLitQuiesceLiftSpawnSoftDefer(false, 0),
+           "no quiesce ⇒ SoftDefer policy unchanged");
+    using cutum::EnterLitQuiesceMayLiftSpawnSoftDefer;
+    Expect(EnterLitQuiesceMayLiftSpawnSoftDefer(true, 0, false),
+           "lift SoftDefer when spawn !pending");
+    Expect(!EnterLitQuiesceMayLiftSpawnSoftDefer(true, 0, true),
+           "no SoftDefer lift while PendingLight");
+    Expect(EnterLitQuiesceMayLiftSpawnSoftDefer(true, 0, true, 2, true),
+           "FP-G1.2: underfeet exit lifts despite pending_light nh=0");
+    Expect(!EnterLitQuiesceMayLiftSpawnSoftDefer(true, 3, true, 2, true),
+           "FP-G1.2: underfeet override does not lift rim nh=3");
+    Expect(!EnterLitQuiesceMayLiftSpawnSoftDefer(true, 3, false),
+           "outside spawn no SoftDefer lift");
+    using cutum::EnterSpawnPresentableCyRange;
+    using cutum::EnterSpawnRingIgnoresHinterlandMeshDebt;
+    int cy0 = 0;
+    int cy1 = 0;
+    EnterSpawnPresentableCyRange(/*player*/ 6, /*sea*/ 4, true, 16, cy0, cy1);
+    Expect(cy0 <= 6 && cy1 >= 6, "presentable band covers player cy");
+    Expect(cy0 < 6 || cy0 == 5, "band includes below player");
+    Expect(EnterSpawnRingIgnoresHinterlandMeshDebt(true, 0, true),
+           "Done+underfeet ignores hinterland mesh debt");
+    Expect(!EnterSpawnRingIgnoresHinterlandMeshDebt(true, 1, true),
+           "visibility debt keeps full ring without near ready");
+    Expect(EnterSpawnRingIgnoresHinterlandMeshDebt(true, 81, true, true),
+           "Phase5.5.1: near presentable ready ignores hinterland with debt");
+    Expect(!EnterSpawnRingIgnoresHinterlandMeshDebt(true, 81, true, false),
+           "Phase5.5.1: debt+!near keeps full ring");
+    using cutum::EnterMeshAsyncBlockRadiusChunks;
+    Expect(EnterMeshAsyncBlockRadiusChunks(4) == 2,
+           "Phase5.5.1: async block radius clamps to near-band");
+    Expect(EnterMeshAsyncBlockRadiusChunks(1) == 1,
+           "Phase5.5.1: async block radius respects smaller spawn r");
+    using cutum::EnterRingReadyForExit;
+    using cutum::EnterVisDebtAllowsExitBypass;
+    using cutum::EnterVisibilityReadyForExit;
+    Expect(EnterVisDebtAllowsExitBypass(0), "debt0 allows exit bypass");
+    Expect(!EnterVisDebtAllowsExitBypass(81),
+           "Phase5.4.1: debt>0 forbids Quiesce-style bypass");
+    using cutum::EnterPresentableCatchUpClear;
+    using cutum::EnterCatchUpSkipMarkBecauseMeshOwned;
+    Expect(!EnterPresentableCatchUpClear(1, 0, 0, 0, 0, true),
+           "Phase5.6.1: soft owned-no-gpu blocks latch clear");
+    Expect(!EnterPresentableCatchUpClear(0, 1, 0, 0, 0, true),
+           "Phase5.6.1: soft stuck blocks latch clear");
+    Expect(EnterPresentableCatchUpClear(0, 0, 0, 5, 1, false),
+           "Phase5.6.1: debt0 clears latch");
+    Expect(!EnterPresentableCatchUpClear(0, 0, 81, 0, 0, false),
+           "Phase5.6.1: ring ready alone does not clear while debt>0");
+    Expect(EnterPresentableCatchUpClear(0, 0, 81, 5, 1, true),
+           "Phase5.7R4: real underfeet clears despite FocusMissingMesh");
+    Expect(!EnterPresentableCatchUpClear(0, 0, 81, 5, 1, false),
+           "Phase5.6.1: debt+miss keeps latch until remesh drains");
+    Expect(EnterPresentableCatchUpClear(0, 0, 81, 5, 0, true),
+           "Phase5.7R4: honest underfeet clears despite hinterland debt");
+    Expect(!EnterPresentableCatchUpClear(0, 0, 81, 5, 0, false),
+           "Phase5.7R4: no-miss without underfeet keeps latch");
+    using cutum::ShouldCarveUnderfeetBeforeSoftForce;
+    Expect(ShouldCarveUnderfeetBeforeSoftForce(false, 142000.0, 150000),
+           "Phase5.7R4: UF carve in lead window before soft_force");
+    Expect(!ShouldCarveUnderfeetBeforeSoftForce(true, 142000.0, 150000),
+           "Phase5.7R4: no UF carve when underfeet already OK");
+    Expect(!ShouldCarveUnderfeetBeforeSoftForce(false, 100000.0, 150000),
+           "Phase5.7R4: no UF carve before lead window");
+    using cutum::ShouldAllowEnterSoftForceSettle;
+    Expect(ShouldAllowEnterSoftForceSettle(true),
+           "Phase5.7R5: soft_force settle OK with underfeet");
+    Expect(!ShouldAllowEnterSoftForceSettle(false),
+           "Phase5.7R5: soft_force settle blocked without underfeet");
+    Expect(EnterCatchUpSkipMarkBecauseMeshOwned(true, false, true),
+           "Phase5.6.1: mesh+ready skips remesh");
+    Expect(!EnterCatchUpSkipMarkBecauseMeshOwned(true, false, false),
+           "Phase5.6.1: mesh+!VisualReady remeshes");
+    Expect(EnterCatchUpSkipMarkBecauseMeshOwned(true, true, false),
+           "Phase5.6.1: pending gpu skips remesh");
+    Expect(!EnterCatchUpSkipMarkBecauseMeshOwned(false, false, false),
+           "Phase5.6.1: no mesh continues mark path");
+    Expect(!EnterRingReadyForExit(false, true, true, 0, true, 81),
+           "ring exit blocked while vis_debt>0");
+    Expect(EnterRingReadyForExit(false, true, true, 0, true, 0),
+           "ring exit ok when debt cleared");
+    Expect(EnterRingReadyForExit(true, true, true, 0, true, 81),
+           "true ring_ready ignores debt");
+    Expect(!EnterVisibilityReadyForExit(false, true, true, 0, 0, false, 1000.0,
+                                        500, 81),
+           "vis exit blocked with debt even past abort_ms");
+    Expect(EnterVisibilityReadyForExit(false, true, true, 0, 0, true, 100.0,
+                                       500, 0),
+           "vis exit via abort_drain when debt0");
+    Expect(EnterVisibilityReadyForExit(true, true, true, 0, 0, false, 0.0, 500,
+                                       81),
+           "true visibility_ready ignores debt");
+    Expect(ShouldHideEnterFullyDark(true, false, true, false, false),
+           "LitRing: enter FullyDark hidden until lit/true-dark");
+    Expect(!ShouldHideEnterFullyDark(true, false, false, false, true),
+           "true-dark not hidden");
+    Expect(!ShouldHideEnterFullyDark(true, false, false, true, false),
+           "lit drawable not hidden");
+    Expect(EnterUnderfeetSliceReady(false, false, true),
+           "cave true-dark underfeet is ready");
+    Expect(!EnterUnderfeetSliceReady(false, true, true),
+           "pending light ⇒ underfeet not ready");
+    Expect(EnterUnderfeetSliceReady(true, false, false),
+           "lit drawable underfeet is ready");
+    Expect(EnterUnderfeetPresentReady(true, true),
+           "underfeet present needs opaque draw");
+    Expect(!EnterUnderfeetPresentReady(true, false),
+           "slice ready without opaque ≠ present");
+    Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
+           "exit ready without void==0 in the predicate");
+    Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false, 4),
+           "hide r=4 does not hide horiz 5");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false),
+           "pending light FullyDark hidden in r=4 when unpublished");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, true),
+           "LitRing: stale FullyDark → hole until lit remesh");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, false),
+           "FullyDark without true_dark flag stays hidden when unpublished");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, false, false, 4, true),
+           "baked true-dark draws (not hidden)");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(5, true, true, true),
+           "uncomputed hide stays r=4");
+    Expect(ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "LitRing: nh1 FullyDark → hole (no dark plug)");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false, 4, false,
+                                               false, true),
+           "LitRing: published FullyDark still hole until lit");
+    Expect(UnderfeetNeedUrgent(true, false, false),
+           "missing feet column ⇒ underfeet need");
+    Expect(UnderfeetNeedUrgent(false, true, false),
+           "pending feet ⇒ underfeet need");
+    Expect(!UnderfeetNeedUrgent(false, false, false),
+           "neighbor-only debt must not latch underfeet need");
+    Expect(UnderfeetNeedUrgent(false, false, true),
+           "undrawn feet ⇒ underfeet need");
+    {
+      using cutum::FeetColumnUnderfeetNeed;
+      Expect(FeetColumnUnderfeetNeed(true, false, false),
+             "feet need: incomplete camera column");
+      Expect(FeetColumnUnderfeetNeed(false, true, false),
+             "feet need: missing feet mesh");
+      Expect(FeetColumnUnderfeetNeed(false, false, true),
+             "feet need: pending feet light");
+      Expect(!FeetColumnUnderfeetNeed(false, false, false),
+             "feet need: all clear");
+    }
+    Expect(FirstMeshPruneKeepHoriz(5) >= 4,
+           "never prune FirstMesh inside LitDrawable ring");
+    Expect(FirstMeshPruneKeepHoriz(5, 4) == 4,
+           "prune keep = min(lit, focus)");
+    {
+      using cutum::MemoryBudgetSample;
+      using cutum::UMemoryBudgetController;
+      using cutum::URuntimeTuning;
+      URuntimeTuning tune{};
+      tune.MemoryBudgetMb = 1536;
+      tune.MemorySoftMb = 1152;
+      tune.MemoryExpandKeepMb = 768;
+      tune.MemoryGreenMaxWallMs = 28.0f;
+      tune.MaxKeepPrefetchMargin = 4;
+      tune.MemoryExpandMaxRd = 6;
+      MemoryBudgetSample green{};
+      green.private_mb = 400.0;
+      green.visual_holes = 0;
+      green.pending_light_focus = 0;
+      green.last_wall_ms = 10.0;
+      green.baseline_keep_margin = 2;
+      green.visual_rd = 5;
+      green.baseline_visual_rd = 5;
+      const auto g = UMemoryBudgetController::Evaluate(green, tune);
+      Expect(g.memory_pressure == 0, "green sample pressure 0");
+      Expect(g.max_effective_rd == 5,
+             "Green expands keep not mesh RD");
+      Expect(g.keep_margin == 3, "Green keep_margin baseline+1 at base RD");
+      Expect(g.allow_keep_prewarm, "Green allows keep prewarm");
+      MemoryBudgetSample demoted = green;
+      demoted.visual_rd = 4;
+      demoted.baseline_visual_rd = 5;
+      const auto dm = UMemoryBudgetController::Evaluate(demoted, tune);
+      Expect(dm.max_effective_rd == 4, "demoted Green max_rd = visual");
+      Expect(dm.keep_margin == 2,
+             "demoted Green freezes keep_margin at baseline");
+      Expect(dm.allow_keep_prewarm, "demoted Green still allows prewarm");
+      MemoryBudgetSample soft{};
+      soft.private_mb = 1200.0;
+      soft.visual_rd = 5;
+      soft.baseline_keep_margin = 2;
+      const auto s = UMemoryBudgetController::Evaluate(soft, tune);
+      Expect(s.memory_pressure >= 1, "soft sample pressure ≥1");
+      Expect(s.max_effective_rd == 5,
+             "pressure max_effective_rd stays visual_rd");
+      Expect(!s.allow_keep_prewarm, "pressure disables keep prewarm");
+    }
+    Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
+               EnterVisualItemState::Done,
+           "OpenSky≠Done: terminal_ready only for lit/true-dark");
+    Expect(ClassifyEnterVisualItemState(false, false, false, false) !=
+               EnterVisualItemState::Done,
+           "OpenSky≠Done: SoftDefer is not Done");
+    Expect(ShouldSkipSpawnMeshWhileRelightDeferred(true, 4),
+           "deferred relight parks spawn r=4 mesh");
+    Expect(!ShouldSkipSpawnMeshWhileRelightDeferred(true, 5),
+           "hinterland MeshWarmup continues while deferred");
+    Expect(!ShouldSkipSpawnMeshWhileRelightDeferred(false, 1),
+           "after deferred=false spawn may mesh");
+  }
+
+  // --- Era34 CreateBar debt / soft wall ---
+  {
+    using cutum::CreateBarDebtFraction;
+    using cutum::CreateNearFovSoftDeferRadiusChunks;
+    using cutum::CreateSpawnWarmupHardWallMs;
+    using cutum::CreateSpawnWarmupMaxTicks;
+    using cutum::CreateSpawnWarmupSoftWallMs;
+    using cutum::ShouldHardLeaveCreateSpawnWarmup;
+    using cutum::ShouldSoftLeaveCreateSpawnWarmup;
+
+    Expect(CreateNearFovSoftDeferRadiusChunks() == 2,
+           "Era34 P0: near-FOV SoftDefer radius 2");
+    Expect(CreateSpawnWarmupSoftWallMs() == 12000, "Era34 P0: soft wall 12s");
+    Expect(CreateSpawnWarmupHardWallMs() == 20000, "Era34 P0: hard wall 20s");
+    Expect(CreateSpawnWarmupMaxTicks() == 360, "Era34 P0: max ticks 360");
+    Expect(CreateBarDebtFraction(10, 10) == 1.0f,
+           "Era34 P0: full debt ⇒ fraction 1");
+    Expect(CreateBarDebtFraction(0, 10) == 0.0f,
+           "Era34 P0: zero debt ⇒ fraction 0");
+    Expect(CreateBarDebtFraction(5, 10) < CreateBarDebtFraction(8, 10),
+           "Era34 P0: debt↓ ⇒ fraction↓ (monotonic)");
+    const float p_hi = 1.0f - CreateBarDebtFraction(2, 10);
+    const float p_lo = 1.0f - CreateBarDebtFraction(8, 10);
+    Expect(p_hi > p_lo, "Era34 P0: debt↓ ⇒ progress↑");
+    Expect(!ShouldSoftLeaveCreateSpawnWarmup(false, 15000.0),
+           "Era34 P0: soft wall requires underfeet lit");
+    Expect(ShouldSoftLeaveCreateSpawnWarmup(true, 12000.0),
+           "Era34 P0: soft wall after underfeet + 12s");
+    Expect(!ShouldSoftLeaveCreateSpawnWarmup(true, 5000.0),
+           "Era34 P0: soft wall not before 12s");
+    Expect(ShouldHardLeaveCreateSpawnWarmup(20000.0, 1),
+           "Era34 P0: hard wall 20s");
+    Expect(ShouldHardLeaveCreateSpawnWarmup(1000.0, 360),
+           "Era34 P0: hard leave on tick ceiling");
+    Expect(!ShouldHardLeaveCreateSpawnWarmup(1000.0, 100),
+           "Era34 P0: no hard leave early");
+    // Near settle ≠ ring4: SoftDefer at horiz=3 is outside create SoftDefer r≤2.
+    Expect(CreateNearFovSoftDeferRadiusChunks() < kVisualStageLitDrawableHoriz,
+           "Era34 P0: near settle radius < LitDrawable ring4");
+  }
+
+  // --- Phase 5.2.0 SoftCleanDebt settle ---
+  {
+    using cutum::ShouldForceEnterLoadSoftCleanDebt;
+    Expect(!ShouldForceEnterLoadSoftCleanDebt(12000.0, 1, true),
+           "Phase5.2 SoftClean: debt>0 blocks");
+    Expect(!ShouldForceEnterLoadSoftCleanDebt(12000.0, 0, false),
+           "Phase5.2 SoftClean: needs underfeet");
+    Expect(!ShouldForceEnterLoadSoftCleanDebt(5000.0, 0, true),
+           "Phase5.2 SoftClean: not before soft wall");
+    Expect(ShouldForceEnterLoadSoftCleanDebt(12000.0, 0, true),
+           "Phase5.2 SoftClean: debt=0 + underfeet + 12s");
+  }
+
+  // --- Era36 B1 surface band clamp ---
+  {
+    using cutum::RelightSurfaceBandCy;
+    using cutum::RelightSurfaceBandMaxY;
+    using cutum::RelightSurfaceBandMinY;
+    Expect(RelightSurfaceBandMinY(64, 16, 0) == 48,
+           "Era36 B1: surface_y=64 clamps min_y from 0 to 48");
+    Expect(RelightSurfaceBandMinY(16, 16, 0) == 0,
+           "Era36 B1: surface_y=16 clamps to 0");
+    Expect(RelightSurfaceBandMinY(64, 16, 60) == 60,
+           "Era36 B1: original min_y=60 > surface_min=48, keeps 60");
+    Expect(RelightSurfaceBandMaxY(64, 16, 255, 255) == 127,
+           "Era36 B1: surface_y=64 caps max_y at cy7 top (127)");
+    Expect(RelightSurfaceBandMaxY(64, 16, 255, 100) == 100,
+           "Era36 B1: original max below band top keeps original");
+    const auto band = RelightSurfaceBandCy(64, 16, 15);
+    Expect(band.first == 3 && band.second == 7,
+           "Era36 B1: surface cy=4 -> band 3..7");
+  }
+
+  // --- P5 dynamic capture cap (threshold 15, cap <= 2) ---
+  {
+    using cutum::DynamicCaptureMovingBgCap;
+    Expect(DynamicCaptureMovingBgCap(5) == 1,
+           "P5: low pending -> base cap 1");
+    Expect(DynamicCaptureMovingBgCap(25) == 2,
+           "P5: pending=25 -> cap 2");
+    Expect(DynamicCaptureMovingBgCap(50) == 2,
+           "P5: pending=50 still capped at 2");
+    Expect(DynamicCaptureMovingBgCap(15) == 1,
+           "Era40: pending=15 (threshold) -> base cap");
+    Expect(DynamicCaptureMovingBgCap(16) == 2,
+           "Era40: pending=16 -> cap 2");
+    Expect(DynamicCaptureMovingBgCap(16, 1) == 2,
+           "P5: base cap stays 1; dynamic may rise to 2");
+  }
+
+  // --- Cruise time-budget A: physics debt drop ---
+  {
+    using cutum::DrainPhysicsAccumulator;
+    using cutum::IsStreamingPhysicsRed;
+    using cutum::PhysicsSubstepCap;
+    using cutum::kPhysicsSubstepCapRed;
+    const float dt = 1.0f / 60.0f;
+    const auto drained = DrainPhysicsAccumulator(0.200f, dt, 3);
+    Expect(drained.steps == 3, "A: 200ms + cap 3 -> exactly 3 steps");
+    Expect(drained.leftover < dt, "A: leftover debt dropped below dt");
+    Expect(IsStreamingPhysicsRed(true, false, 20.0), "A: phase over is red");
+    Expect(IsStreamingPhysicsRed(false, true, 20.0), "A: miss is red");
+    Expect(IsStreamingPhysicsRed(false, false, 150.0), "A: wall>100 is red");
+    Expect(!IsStreamingPhysicsRed(false, false, 50.0), "A: calm frame not red");
+    Expect(PhysicsSubstepCap(true) == kPhysicsSubstepCapRed,
+           "A: red cap is 3");
+    Expect(PhysicsSubstepCap(false) == 4, "A: calm cap is 4");
+    using cutum::PlayerPhysicsSubstepCap;
+    using cutum::ShouldTickWorldCreatures;
+    using cutum::DrainPlayerPhysicsAccumulator;
+    using cutum::kPhysicsPlayerCarryMaxSteps;
+    Expect(PlayerPhysicsSubstepCap(true) == 4,
+           "input-first: player cap stays 4 in red");
+    Expect(PlayerPhysicsSubstepCap(false) == 4,
+           "input-first: player cap stays 4 in calm");
+    Expect(!ShouldTickWorldCreatures(true, 150.0),
+           "input-first: skip world AI on red hitch");
+    Expect(ShouldTickWorldCreatures(true, 20.0),
+           "input-first: still tick world AI on red but calm wall");
+    Expect(ShouldTickWorldCreatures(false, 200.0),
+           "input-first: tick world AI when not red");
+    const auto player_drain = DrainPlayerPhysicsAccumulator(0.200f, dt, 3);
+    Expect(player_drain.steps == 3, "input-first: player still caps steps");
+    Expect(player_drain.leftover > dt,
+           "input-first: player leftover is carried");
+    Expect(player_drain.leftover <=
+               dt * static_cast<float>(kPhysicsPlayerCarryMaxSteps) + 1.0e-5f,
+           "input-first: player leftover clamped");
+    using cutum::MovementSpeedFromDisplacement;
+    const float dist = 3.0f * 4.3f / 60.0f;
+    const float slow_mo_speed =
+        MovementSpeedFromDisplacement(dist, 0.250f, 3, dt);
+    Expect(slow_mo_speed > 1.5f,
+           "B: 3-step hitch still reports walk speed above prefetch");
+    const float wall_speed =
+        MovementSpeedFromDisplacement(dist, 0.250f, 0, dt);
+    Expect(wall_speed < 1.5f,
+           "B: wall-dt fallback without substeps looks idle");
+  }
+
+  // --- Era36 B3 / Era40 land moving drain (threshold 15) ---
+  {
+    using cutum::LandMovingRelightDrainFloor;
+    using cutum::ShouldDrainPendingLightLandMoving;
+    Expect(!ShouldDrainPendingLightLandMoving(10),
+           "Era40: low pending -> no drain");
+    Expect(!ShouldDrainPendingLightLandMoving(15),
+           "Era40: pending=15 (threshold) -> no drain");
+    Expect(ShouldDrainPendingLightLandMoving(16),
+           "Era40: pending=16 -> drain");
+    Expect(ShouldDrainPendingLightLandMoving(50),
+           "Era40: high pending -> drain");
+    Expect(LandMovingRelightDrainFloor(true, 10) == 0,
+           "Closeout F: land drain floor folded away");
+    Expect(LandMovingRelightDrainFloor(true, 16) == 0,
+           "Closeout F: land drain floor always 0");
+    Expect(LandMovingRelightDrainFloor(false, 50) == 0,
+           "Closeout F: land drain floor 0 when idle");
+  }
+
+  // --- Era38 A0 near-FOV work score ---
+  {
+    using cutum::ColumnFlowFirstMeshPriority;
+    using cutum::ColumnFlowRelightPriorityUnderMiss;
+    using cutum::NearFovWorkScore;
+    using cutum::SoftDeferEmptyNearReserveSlots;
+    using cutum::StarveHinterlandUnlit;
+    Expect(NearFovWorkScore(0, 0.0f) < NearFovWorkScore(2, 0.0f),
+           "Era38 A0: underfeet sooner than side horiz2");
+    Expect(NearFovWorkScore(1, 1.0f) < NearFovWorkScore(1, 0.0f),
+           "Era38 A0: ahead beats side at same horiz");
+    Expect(NearFovWorkScore(2, 0.0f) == NearFovWorkScore(2, -1.0f),
+           "Era38 A0: behind gets no fwd credit (ties side)");
+    Expect(NearFovWorkScore(1, 1.0f) < NearFovWorkScore(0, 0.0f),
+           "Era38 A0: Admit mirror — ahead+1 can beat underfeet");
+    Expect(NearFovWorkScore(2, 1.0f) < NearFovWorkScore(5, 1.0f),
+           "Era38 A0: near ahead beats far ahead");
+    Expect(SoftDeferEmptyNearReserveSlots(12) == 6,
+           "Era38 A0: reserve half cap capped at 6");
+    Expect(SoftDeferEmptyNearReserveSlots(4) == 2,
+           "Era38 A0: reserve half of small cap");
+    Expect(SoftDeferEmptyNearReserveSlots(1) == 1,
+           "Era38 A0: reserve at least 1");
+    Expect(ColumnFlowFirstMeshPriority(105, 0, 4) == 109,
+           "Era38 A0: underfeet FirstMesh prio boost");
+    Expect(ColumnFlowFirstMeshPriority(105, 4, 4) == 105,
+           "Era38 A0: rim FirstMesh keeps base");
+    Expect(ColumnFlowRelightPriorityUnderMiss(55, 0, 4, true) == 59,
+           "Era38 A0: near Relight boost under miss");
+    Expect(ColumnFlowRelightPriorityUnderMiss(95, 0, 10, true) == 99,
+           "Era38 A0: Relight clamped to 99 under miss");
+    Expect(StarveHinterlandUnlit(1, 0),
+           "Era38 A0: starve when SoftDefer empty near");
+    Expect(StarveHinterlandUnlit(0, 16),
+           "Era38 A0: starve when pending debt");
+    Expect(!StarveHinterlandUnlit(0, 10),
+           "Era38 A0: no starve when clear");
+  }
+
+  // --- Era37 P0 unlit hole preview ---
+  {
+    using cutum::AllowUnlitDrawableUnderLightDebt;
+    Expect(!AllowUnlitDrawableUnderLightDebt(20, 5, 4, true, true, false),
+           "Era37 P0: fully-dark void rejected");
+    Expect(!AllowUnlitDrawableUnderLightDebt(20, 5, 4, false, false, false),
+           "Era37 P0: no greedy mesh rejected");
+    Expect(!AllowUnlitDrawableUnderLightDebt(20, 5, 4, false, true, true),
+           "Era37 P0: underfeet rejected");
+    Expect(!AllowUnlitDrawableUnderLightDebt(20, 5, 5, false, true, false),
+           "Era37 P0: outside LitDrawable ring rejected");
+    Expect(AllowUnlitDrawableUnderLightDebt(20, 5, 4, false, true, false),
+           "Era37 P0: pending debt allows ring preview");
+    Expect(AllowUnlitDrawableUnderLightDebt(10, 12, 3, false, true, false),
+           "Era37 P0: unlit_near threshold allows preview");
+    Expect(!AllowUnlitDrawableUnderLightDebt(10, 5, 3, false, true, false),
+           "Era37 P0: low debt blocks preview");
+  }
+
+  // --- Era37 P1b GPU apply floor ---
+  {
+    using cutum::LandRelightGpuApplyFloor;
+    Expect(LandRelightGpuApplyFloor(50, 10, 3) == 3,
+           "Era37 P1b: low pending keeps base");
+    Expect(LandRelightGpuApplyFloor(70, 16, 3) == 12,
+           "Era40: fifo+pendf>15 boost apply floor to 12");
+    Expect(LandRelightGpuApplyFloor(70, 15, 5) == 5,
+           "Era40: pendf=15 alone insufficient");
+  }
+
+  // --- Era37 P4 enter warmup ownership ---
+  {
+    using cutum::EnterWarmupSoftDeferOwnershipCap;
+    Expect(EnterWarmupSoftDeferOwnershipCap(12, 10, false) == 12,
+           "Era37 P4: inactive warmup keeps base");
+    Expect(EnterWarmupSoftDeferOwnershipCap(12, 10, true) == 18,
+           "Era37 P4: active warmup boosts cap");
+    Expect(EnterWarmupSoftDeferOwnershipCap(12, 3, true) == 12,
+           "Era37 P4: low empty keeps base");
+  }
+
+  // --- Era37 P5 per-column surface band ---
+  {
+    using cutum::RelightColumnSurfaceBlockY;
+    using cutum::RelightSurfaceBandForColumn;
+    Expect(RelightColumnSurfaceBlockY(64, 96) == 96,
+           "Era37 P5: column top overrides focus");
+    Expect(RelightColumnSurfaceBlockY(64, -1) == 64,
+           "Era37 P5: fallback to focus when no column top");
+    const auto hill = RelightSurfaceBandForColumn(64, 96, 16, 255, 0, 255);
+    Expect(hill.first == 80 && hill.second == 159,
+           "Era37 P5: hill column band uses column surface");
+  }
+
+  // --- SoftDefer empty incremental rim probe ---
+  {
+    using cutum::SoftDeferEmptyRimCellsPerFrame;
+    using cutum::SoftDeferEmptyShouldProbeCell;
+    Expect(SoftDeferEmptyShouldProbeCell(1, 2, 0, 100, 0, 48),
+           "near horiz always probed");
+    Expect(SoftDeferEmptyShouldProbeCell(2, 2, 99, 100, 0, 48),
+           "near-r=2 always probed");
+    Expect(SoftDeferEmptyShouldProbeCell(5, 2, 10, 100, 0, 48),
+           "rim idx in budget probed");
+    Expect(!SoftDeferEmptyShouldProbeCell(5, 2, 60, 100, 0, 48),
+           "rim idx outside budget skipped");
+    Expect(SoftDeferEmptyShouldProbeCell(5, 2, 60, 100, 50, 48),
+           "rim rotates with scan_offset");
+    Expect(SoftDeferEmptyRimCellsPerFrame(12, 25) >= 48,
+           "rim budget at least 48");
+  }
+
+  // --- Era35 P1 cy-window ---
+  {
+    using cutum::SoftDeferCyWindowNearTop;
+    Expect(SoftDeferCyWindowNearTop(10, 3, 1) == 10,
+           "Era35 P1: near-FOV (horiz=1) gets max_cy");
+    Expect(SoftDeferCyWindowNearTop(10, 3, 2) == 10,
+           "Era35 P1: near-FOV (horiz=2) gets max_cy");
+    Expect(SoftDeferCyWindowNearTop(10, 3, 3) == 5,
+           "Era35 P1: far (horiz=3) gets preferred+2");
+    Expect(SoftDeferCyWindowNearTop(10, 3, 5) == 5,
+           "Era35 P1: far (horiz=5) gets preferred+2");
+  }
+
+  // --- Era35 P2 dynamic ownership cap ---
+  {
+    using cutum::SoftDeferOwnershipCap;
+    Expect(SoftDeferOwnershipCap(0) == 12,
+           "Era35 P2: zero empty → cap=12");
+    Expect(SoftDeferOwnershipCap(48) == 24,
+           "Era35 P2: 48 empty → cap=24");
+    Expect(SoftDeferOwnershipCap(100) == 24,
+           "Era35 P2: 100 empty → cap clamped to 24");
+    Expect(SoftDeferOwnershipCap(20) == 17,
+           "Era35 P2: 20 empty → cap=17");
+  }
+
+  // --- Era35 P4 cruise catch-up ---
+  {
+    using cutum::CruiseCatchUpEmergeBudgetMs;
+    using cutum::CruiseCatchUpOwnershipCap;
+    Expect(CruiseCatchUpEmergeBudgetMs(14.0, 10, true) > 14.0,
+           "Era35 P4: moving with empty>5 → boosted budget");
+    Expect(CruiseCatchUpEmergeBudgetMs(14.0, 3, true) == 14.0,
+           "Era35 P4: moving with empty<=5 → no boost");
+    Expect(CruiseCatchUpEmergeBudgetMs(14.0, 10, false) == 14.0,
+           "Era35 P4: idle → no boost");
+    Expect(CruiseCatchUpOwnershipCap(12, 10, true) == 18,
+           "Era35 P4: moving with empty>5 → cap 18");
+    Expect(CruiseCatchUpOwnershipCap(12, 3, true) == 12,
+           "Era35 P4: moving with empty<=5 → cap unchanged");
+  }
+
+  // --- Era34 P2 FirstMesh bias ---
+  {
+    using cutum::ShouldBiasFirstMeshOverRemesh;
+    Expect(ShouldBiasFirstMeshOverRemesh(1, false, true),
+           "Era34 P2: SoftDefer empty moving ⇒ FM bias");
+    Expect(ShouldBiasFirstMeshOverRemesh(0, true, true),
+           "Era34 P2: holes moving ⇒ FM bias");
+    Expect(!ShouldBiasFirstMeshOverRemesh(1, true, false),
+           "Era34 P2: idle ⇒ no FM bias");
+  }
+
+  // --- Era33 P1 cy_order ---
+  {
+    using cutum::BuildMeshCyVisitOrder;
+    const auto land = BuildMeshCyVisitOrder(/*cy0=*/0, /*cy1=*/4, /*prefer=*/0,
+                                            /*sea=*/2, /*fill_water=*/false);
+    Expect(!land.empty() && land[0] == 0, "Era33 P1: land starts at ground");
+    Expect(land.size() >= 3 && land[1] == 1, "Era33 P1: land then +1");
+    Expect(land.size() >= 4 && land[2] == 2, "Era33 P1: land canopy after ±1");
+    const auto ocean = BuildMeshCyVisitOrder(0, 4, /*prefer=*/2, /*sea=*/2,
+                                             /*fill_water=*/true);
+    Expect(!ocean.empty() && ocean[0] == 2, "Era33 P1: ocean sea/prefer first");
+  }
+
+  {
+    MeshWorkAdmissionInput in;
+    in.pending_gpu = 6;
+    in.pending_gpu_queued = 0;
+    in.pending_gpu_kicked = 6;
+    in.visual_holes = true;
+    in.moving = true;
+    in.nearest_miss_cy = 3;
+    in.nearest_miss_horiz = 4;
+    in.ring_depth = 8;
+    in.prev_mode = static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    // P0 harness: predicate true; full remesh=0 wire lands in P1.
+    Expect(IsMissFirstMeshClass(true, in.nearest_miss_cy, in.nearest_miss_horiz),
+           "214034 witness is FirstMesh class");
+    in.remesh_queue_n = 0;
+    auto out0 = ComputeMeshWorkAdmission(in);
+    Expect(out0.remesh_schedule == 0,
+           "HoleDrain miss class + empty RemeshQ ⇒ remesh_schedule=0");
+    in.remesh_queue_n = 4;
+    auto out1 = ComputeMeshWorkAdmission(in);
+    Expect(out1.remesh_schedule >= 1,
+           "HoleDrain miss class + RemeshQ≠∅ ⇒ remesh_schedule≥1");
+  }
+
+  // --- Era40 Relight FIFO miss-rim pin ---
+  {
+    using cutum::RelightMissPinMaxHoriz;
+    using cutum::ShouldBoostRelightDrainUnderFifoMissStarve;
+    using cutum::ShouldForceMissColumnFifoEnqueue;
+    using cutum::ShouldPreferMissFinalizeBand;
+    using cutum::RelightFifoStuckSoftFail;
+    Expect(RelightMissPinMaxHoriz() == 4,
+           "Era40: miss pin max horiz = LitDrawable ring");
+    Expect(ShouldForceMissColumnFifoEnqueue(true, true, false),
+           "Era40: force enqueue miss+pending even if not in FIFO");
+    Expect(ShouldForceMissColumnFifoEnqueue(false, false, false, 12),
+           "FP-E1: miss_stuck>=10s force enqueue");
+    Expect(!ShouldForceMissColumnFifoEnqueue(true, true, true, 12),
+           "FP-E1: already in FIFO blocks miss_stuck force");
+    Expect(!ShouldForceMissColumnFifoEnqueue(true, true, true),
+           "Era40: already in FIFO -> force enqueue false");
+    Expect(!ShouldForceMissColumnFifoEnqueue(false, true, false),
+           "Era40: no force without miss");
+    Expect(!ShouldForceMissColumnFifoEnqueue(true, false, false),
+           "Era40: no force without pending/void");
+    Expect(ShouldPreferMissFinalizeBand(0),
+           "P2: underfeet prefer finalize");
+    Expect(ShouldPreferMissFinalizeBand(2),
+           "P2: nh2 prefer surface finalize");
+    Expect(!ShouldPreferMissFinalizeBand(4),
+           "P2: rim horiz4 keeps Y-band split");
+    Expect(!ShouldPreferMissFinalizeBand(5),
+           "P2: beyond near FOV no finalize prefer");
+    using cutum::ShouldFinalizeRelightUnderPlPressure;
+    using cutum::ShouldLeaveInDirtyUnderPlPressure;
+    using cutum::ShouldSkipDeferHeavyApplyUnderPl;
+    Expect(ShouldFinalizeRelightUnderPlPressure(30, 3, 6),
+           "ColdPL: PL>24 finalize focus ring");
+    Expect(!ShouldFinalizeRelightUnderPlPressure(20, 3, 6),
+           "ColdPL: low PL keeps split");
+    Expect(!ShouldFinalizeRelightUnderPlPressure(30, 8, 6),
+           "ColdPL: outside focus keeps split");
+    Expect(ShouldLeaveInDirtyUnderPlPressure(35),
+           "ColdPL: PL>30 leave-in remesh ownership");
+    Expect(!ShouldLeaveInDirtyUnderPlPressure(20),
+           "ColdPL: low PL RemoveAt path");
+    Expect(ShouldSkipDeferHeavyApplyUnderPl(35),
+           "ColdPL: skip defer side-effects when PL high");
+    Expect(!ShouldSkipDeferHeavyApplyUnderPl(20),
+           "ColdPL: allow defer when PL low");
+    using cutum::ShouldHoldPinnedRelightWitness;
+    using cutum::ShouldRetargetRelightWitness;
+    using cutum::ShouldFirstMeshSortBoost;
+    Expect(ShouldHoldPinnedRelightWitness(2, true),
+           "P1: hold nh2 pending witness");
+    Expect(!ShouldHoldPinnedRelightWitness(2, false),
+           "P1: release hold after lit+meshed");
+    Expect(ShouldHoldPinnedRelightWitness(2, false, true),
+           "C: hold nh2 missing even without pending");
+    Expect(!ShouldHoldPinnedRelightWitness(3, true, true),
+           "P1: rim nh3 is not the hold");
+    Expect(ShouldHoldPinnedRelightWitness(4, false, true, true),
+           "P12 C4: empty stuck holds LitDrawable nh≤4");
+    Expect(!ShouldHoldPinnedRelightWitness(5, false, true, true),
+           "P12 C4: nh>4 still not hold");
+    Expect(!ShouldRetargetRelightWitness(true, true),
+           "P1: hold blocks Era27 retarget");
+    Expect(ShouldRetargetRelightWitness(true, false),
+           "P1: without hold Era27 retarget stands");
+    Expect(ShouldFirstMeshSortBoost(0, false),
+           "P3: underfeet always boosted");
+    Expect(ShouldFirstMeshSortBoost(2, true),
+           "P3: just-relit nh2 boosted");
+    Expect(!ShouldFirstMeshSortBoost(3, true),
+           "P3: just-relit rim not boosted");
+    Expect(!ShouldFirstMeshSortBoost(2, false),
+           "P3: nh2 without just-relit not boosted");
+    Expect(ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, true, 0.0),
+           "Era40: fifo full + no inflight/apply -> boost");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, true, 2.0),
+           "Era22: no boost when apply ran last frame");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 2, true, 0.0),
+           "Era22: no boost when workers in flight");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, false, 0.0),
+           "Era40: no boost without miss");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(40, 96, 0, true, 0.0),
+           "Era40: no boost below soft-cap");
+    Expect(RelightFifoStuckSoftFail(96, 96, 0.0, 5, true),
+           "Era40: fifo stuck soft-fail when apply=0");
+    Expect(!RelightFifoStuckSoftFail(96, 96, 2.0, 5, true),
+           "Era40: no soft-fail when apply active");
+    using cutum::ShouldSkipNoOpTerrainRelightEnqueue;
+    Expect(ShouldSkipNoOpTerrainRelightEnqueue(false, true, false),
+           "F3b: lit settled + no dark surface -> skip");
+    Expect(!ShouldSkipNoOpTerrainRelightEnqueue(true, true, false),
+           "F3b: pending light -> no skip");
+    Expect(!ShouldSkipNoOpTerrainRelightEnqueue(false, false, false),
+           "F3b: not lit ready -> no skip");
+    using cutum::ShouldDeferFarRelightEnqueueOnFifoPressure;
+    Expect(ShouldDeferFarRelightEnqueueOnFifoPressure(6, 4, 80, 96, 0.75f),
+           "F3d: far + fifo pressure -> defer");
+    Expect(!ShouldDeferFarRelightEnqueueOnFifoPressure(3, 4, 80, 96, 0.75f),
+           "F3d: pin ring -> no defer");
+    Expect(!ShouldDeferFarRelightEnqueueOnFifoPressure(6, 4, 40, 96, 0.75f),
+           "F3d: fifo below threshold -> no defer");
+  }
+
+  // Cruise wall P0: remesh DirtyAdmit backpressure.
+  {
+    using cutum::ApplyRemeshAdmitBackpressure;
+    using cutum::RemeshAdmitBackpressureInput;
+    using cutum::ShouldApplyRemeshAdmitBackpressure;
+    RemeshAdmitBackpressureInput green{};
+    green.stream_pressure = 0;
+    green.fifo_n = 10;
+    green.dirty_n = 50;
+    Expect(!ShouldApplyRemeshAdmitBackpressure(green),
+           "P0: green low fifo/dirty -> no BP");
+    RemeshAdmitBackpressureInput red{};
+    red.stream_pressure = 2;
+    red.fifo_n = 10;
+    red.dirty_n = 50;
+    Expect(ShouldApplyRemeshAdmitBackpressure(red), "P0: Red -> BP");
+    MeshWorkAdmission adm{};
+    adm.dirty_admit_budget = 8;
+    adm.remesh_schedule = 3;
+    adm.allow_neighbor_dirty = true;
+    adm.first_mesh_schedule = 6;
+    adm.max_schedule = 9;
+    red.miss_active = true;
+    red.admit_cap_red = 0;
+    ApplyRemeshAdmitBackpressure(adm, red);
+    Expect(adm.dirty_admit_budget == 0, "P0: Red admit cap 0");
+    Expect(adm.remesh_schedule == 1, "P0: BP keeps remesh_schedule >= 1");
+    Expect(!adm.allow_neighbor_dirty, "P0: neighbor dirty off");
+    red.remesh_queue_n = 40;
+    MeshWorkAdmission adm_deep = adm;
+    adm_deep.remesh_schedule = 3;
+    ApplyRemeshAdmitBackpressure(adm_deep, red);
+    Expect(adm_deep.remesh_schedule == 3,
+           "100319 tail: deep RemeshQ + miss -> remesh cap 3");
+    RemeshAdmitBackpressureInput fifo{};
+    fifo.stream_pressure = 1;
+    fifo.fifo_n = 72;
+    fifo.relight_fifo_soft_cap = 96;
+    fifo.fifo_admit_frac = 0.75f;
+    fifo.dirty_n = 10;
+    fifo.admit_cap_yellow = 1;
+    fifo.miss_active = false;
+    Expect(ShouldApplyRemeshAdmitBackpressure(fifo),
+           "P0: fifo>=0.75 soft-cap -> BP");
+    MeshWorkAdmission adm_y{};
+    adm_y.dirty_admit_budget = 8;
+    adm_y.remesh_schedule = 3;
+    ApplyRemeshAdmitBackpressure(adm_y, fifo);
+    Expect(adm_y.dirty_admit_budget == 1, "P0: Yellow admit cap 1");
+    Expect(adm_y.remesh_schedule == 1, "P0: no-miss remesh_schedule min 1");
+  }
+
+  // Cruise wall P4: Red fifo light-drain predicate.
+  {
+    using cutum::ShouldCruiseRedFifoLightDrain;
+    Expect(ShouldCruiseRedFifoLightDrain(2, 72, 96, 0.75f, true, 5),
+           "P4: Red+fifo+holes+pendf -> drain");
+    Expect(!ShouldCruiseRedFifoLightDrain(1, 72, 96, 0.75f, true, 5),
+           "P4: Yellow no Red drain");
+    Expect(!ShouldCruiseRedFifoLightDrain(2, 72, 96, 0.75f, true, 0),
+           "P4: no pendf -> no drain");
+  }
+
+  // P1: ShouldProtectRelightFifoPinKey
+  {
+    using cutum::ShouldProtectRelightFifoPinKey;
+    Expect(ShouldProtectRelightFifoPinKey(10, 20, true, 10, 20),
+           "P1: valid pin protects matching victim");
+    Expect(!ShouldProtectRelightFifoPinKey(10, 20, true, 11, 20),
+           "P1: pin mismatch does not protect");
+    Expect(!ShouldProtectRelightFifoPinKey(10, 20, false, 10, 20),
+           "P1: invalid pin does not protect");
+    using cutum::RelightFifoTrimProtectHoriz;
+    using cutum::ShouldProtectRelightFifoTrimVictim;
+    Expect(RelightFifoTrimProtectHoriz() == 8,
+           "P6: trim protect horiz 8");
+    Expect(ShouldProtectRelightFifoTrimVictim(5, 0, false, 0, 0, true, 0, 0),
+           "P6: nh=5 ocean-in-view not dropped");
+    Expect(!ShouldProtectRelightFifoTrimVictim(9, 0, false, 0, 0, true, 0, 0),
+           "P6: nh=9 hinterland may trim");
+    Expect(ShouldProtectRelightFifoTrimVictim(9, 0, true, 9, 0, true, 0, 0),
+           "P6: pin key still protected far");
+  }
+
+  // P11: Capture hot bypass + fifo trim under consumer starve
+  {
+    using cutum::RelightFifoEffectiveTrimProtectHoriz;
+    using cutum::ShouldBypassCaptureHotSoftDeferClamp;
+    using cutum::ShouldCruiseRedFifoSecondTrim;
+    using cutum::kVisualStageLitDrawableHoriz;
+    Expect(ShouldBypassCaptureHotSoftDeferClamp(72, 96, 0),
+           "P11: fifo starve + completed=0 bypasses hot clamp");
+    Expect(!ShouldBypassCaptureHotSoftDeferClamp(72, 96, 2),
+           "P11: completed>0 keeps hot clamp path");
+    Expect(RelightFifoEffectiveTrimProtectHoriz(96, 96, 0) ==
+               kVisualStageLitDrawableHoriz,
+           "P11: starved consumer narrows trim protect to LitDrawable");
+    Expect(RelightFifoEffectiveTrimProtectHoriz(96, 96, 2) == 8,
+           "P11: completed>0 keeps full protect horiz");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 0),
+           "P11: no second trim when fifo<90 and completed=0");
+    Expect(ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0),
+           "I10-B2: consumer-starved trim when fifo>=90 and completed=0");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 2),
+           "I15-A3: chain progress blocks second trim");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 0, true,
+                                          3),
+           "I15-A3: consume VB blocks second trim");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 0, true,
+                                          0, 93),
+           "I15-B4: consume VB plateau blocks second trim");
+    Expect(ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 2),
+           "P11: second trim when completed>0");
+  }
+
+  // FZ2.7-P12: publication debt predicates + steal
+  {
+    using cutum::ShouldForceFirstMeshOnSkipAlreadyDirty;
+    using cutum::ShouldStealRemeshToFirstMesh;
+    using cutum::ShouldTrimPendingLightUnderHoles;
+    using cutum::ShouldSuppressDuplicatePendingLightWithoutMeshProgress;
+    using cutum::ShouldAllowBetterHorizWitnessRetarget;
+    using cutum::ShouldDampWitnessRetargetOnUnfinishedCruise;
+    using cutum::ShouldRetargetSoftDeferCaptureWitness;
+    using cutum::ApplyRemeshAdmitBackpressure;
+    using cutum::RemeshAdmitBackpressureInput;
+    Expect(ShouldForceFirstMeshOnSkipAlreadyDirty(true, false, false, false),
+           "P12 A1: dirty !drawable !greedy → force FM");
+    Expect(!ShouldForceFirstMeshOnSkipAlreadyDirty(true, true, false, false),
+           "P12 A1: drawable lit → skip not FM");
+    Expect(ShouldForceFirstMeshOnSkipAlreadyDirty(true, false, true, true),
+           "P12 A1: dirty greedy SoftDefer-empty → force FM");
+    Expect(ShouldStealRemeshToFirstMesh(true, 68, 16, 68),
+           "P12 A2: unfinished storm + fm/no_mesh<0.5 → steal");
+    Expect(!ShouldStealRemeshToFirstMesh(true, 20, 16, 68),
+           "P12 A2: unfinished≤30 no steal");
+    Expect(ShouldStealRemeshToFirstMesh(true, 20, 16, 68, true),
+           "MissOwn P3: coverage sticky steals without unfinished>30");
+    Expect(!ShouldStealRemeshToFirstMesh(true, 20, 40, 68, true),
+           "MissOwn P3: sticky but fm not starved vs no_mesh");
+    Expect(!ShouldStealRemeshToFirstMesh(true, 20, 16, 68, true, true),
+           "MissOwn VB P1: optional protect_vb arg blocks steal predicate");
+    {
+      using cutum::ShouldKeepRemeshProtectUnderVbStall;
+      Expect(ShouldKeepRemeshProtectUnderVbStall(false, 0),
+             "MissOwn VB P1: !consume keeps protect");
+      Expect(!ShouldKeepRemeshProtectUnderVbStall(true, 10),
+             "MissOwn VB P1: consume + low stall drops protect");
+      Expect(ShouldKeepRemeshProtectUnderVbStall(true, 40),
+             "MissOwn VB P1: consume + high stall keeps protect");
+    }
+    Expect(!ShouldTrimPendingLightUnderHoles(true, 68, 60),
+           "P12 B1: holes+unf → no PL trim");
+    Expect(ShouldTrimPendingLightUnderHoles(false, 68, 60),
+           "P12 B1: no holes → trim allowed");
+    Expect(ShouldSuppressDuplicatePendingLightWithoutMeshProgress(true, false),
+           "P12 B4: duplicate PL without mesh → suppress");
+    Expect(!ShouldAllowBetterHorizWitnessRetarget(40, 3, 4),
+           "P12 C2: Δhoriz=1 under unfinished storm blocked");
+    Expect(ShouldAllowBetterHorizWitnessRetarget(40, 2, 4),
+           "P12 C2: Δhoriz≥2 allowed");
+    Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 41),
+           "P12 C5: moving+unf>40 damps retarget");
+    Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 48, 24, false, true),
+           "MissOwn P1: hard expire age≥48 still holds while pinned_still");
+    Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 10, 24, false, true),
+           "P12 C1: pin live age<T holds");
+    Expect(ShouldRetargetSoftDeferCaptureWitness(true, 48, 24, false, false),
+           "MissOwn P1: hard expire hops when pin healed");
+
+    MeshWorkAdmissionInput in;
+    in.pending_gpu = 6;
+    in.pending_gpu_queued = 0;
+    in.pending_gpu_kicked = 6;
+    in.visual_holes = true;
+    in.moving = true;
+    in.nearest_miss_cy = 3;
+    in.nearest_miss_horiz = 4;
+    in.ring_depth = 8;
+    in.prev_mode = static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    in.unfinished_visual = 68;
+    in.dirty_fm_n = 16;
+    in.no_mesh_n = 68;
+    in.remesh_queue_n = 98;
+    auto steal = ComputeMeshWorkAdmission(in);
+    Expect(steal.remesh_schedule == 0, "P12 A2: steal remesh_schedule==0");
+    Expect(steal.first_mesh_schedule >= 6, "P12 A2: FM cap ≥6 after steal");
+    Expect(steal.steal_remesh_to_fm, "P12 A2: steal flag set");
+    RemeshAdmitBackpressureInput bp{};
+    bp.stream_pressure = 2;
+    bp.fifo_n = 96;
+    bp.dirty_n = 500;
+    bp.relight_fifo_soft_cap = 96;
+    bp.dirty_thrash_soft_cap = 400;
+    bp.fifo_admit_frac = 0.75f;
+    bp.miss_active = true;
+    bp.remesh_queue_n = 98;
+    ApplyRemeshAdmitBackpressure(steal, bp);
+    Expect(steal.remesh_schedule == 0,
+           "P12 A2: backpressure does not restore remesh floor");
+  }
+
+  // FZ2.7-P13: lit-settle remesh protect over steal
+  {
+    using cutum::ShouldProtectLitSettleRemesh;
+    using cutum::ApplyRemeshAdmitBackpressure;
+    using cutum::RemeshAdmitBackpressureInput;
+    Expect(ShouldProtectLitSettleRemesh(true, 3200, 23),
+           "P13 R1: holes+stale+RemeshQ → protect");
+    Expect(!ShouldProtectLitSettleRemesh(true, 100, 23),
+           "P13 R1: stale≤200 → no protect");
+    Expect(!ShouldProtectLitSettleRemesh(false, 3200, 23),
+           "P13 R1: !holes + no FullyDark debt → no protect");
+    Expect(!ShouldProtectLitSettleRemesh(true, 3200, 0),
+           "P13 R1: empty RemeshQ → no protect");
+    Expect(ShouldProtectLitSettleRemesh(true, 0, 10, 200, 40, 8),
+           "Q2b: FullyDark repair debt arms remesh protect");
+    Expect(!ShouldProtectLitSettleRemesh(true, 0, 10, 200, 5, 8),
+           "Q2b: FullyDark repair below thresh skips");
+    Expect(ShouldProtectLitSettleRemesh(false, 0, 65, 200, 14, 8),
+           "SoT 111310: FullyDark plugs protect remesh without SoftDefer holes");
+    Expect(!ShouldProtectLitSettleRemesh(false, 0, 65, 200, 3, 8),
+           "SoT 111310: low FullyDark repair without holes → no protect");
+
+    using cutum::ShouldReserveRemeshSnapshotSlice;
+    Expect(ShouldReserveRemeshSnapshotSlice(true, 120, 76),
+           "G1-P1: holes+RemeshQ+debt≥20 ⇒ remesh snapshot slice");
+    Expect(ShouldReserveRemeshSnapshotSlice(true, 1, 20),
+           "G1-P1: debt at thresh still reserves slice");
+    Expect(!ShouldReserveRemeshSnapshotSlice(true, 120, 19),
+           "G1-P1: debt below thresh → no slice");
+    Expect(!ShouldReserveRemeshSnapshotSlice(true, 0, 76),
+           "G1-P1: empty RemeshQ → no slice");
+    Expect(!ShouldReserveRemeshSnapshotSlice(false, 120, 76),
+           "G1-P1: no holes → no slice");
+
+    // Dual-lane / A11: focus miss must NOT flip remesh-snapshot-before-FM order
+    // (P3 ShouldDeferRemeshSnapshotForFocusMiss removed — regress 134914).
+    Expect(ShouldReserveRemeshSnapshotSlice(true, 12, 76),
+           "dual-lane: focus miss still reserves remesh snapshot when debt");
+
+    {
+      using cutum::ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark;
+      using cutum::ShouldForceDirtyAfterPreferKickStall;
+      using cutum::ShouldStopRemeshSnapshotForFmResidual;
+      using cutum::ShouldYieldRemeshSlotToFmUnderProtect;
+      using cutum::ColumnVisualAllowsPreferKick;
+      Expect(!ShouldStopRemeshSnapshotForFmResidual(false, 40, 1, 2, 3.0, 6.0),
+             "FullyDark P0: not starved → no stop");
+      Expect(!ShouldStopRemeshSnapshotForFmResidual(true, 40, 0, 2, 3.0, 6.0),
+             "FullyDark P0: allow first remesh");
+      Expect(!ShouldStopRemeshSnapshotForFmResidual(true, 40, 1, 2, 3.0, 6.0),
+             "FullyDark P0: under 65% budget continue");
+      Expect(ShouldStopRemeshSnapshotForFmResidual(true, 40, 1, 2, 4.0, 6.0),
+             "FullyDark P0: 65% budget stop");
+      Expect(ShouldStopRemeshSnapshotForFmResidual(true, 40, 2, 2, 1.0, 6.0),
+             "FullyDark P0: remesh_cap hit");
+      Expect(ShouldYieldRemeshSlotToFmUnderProtect(true, 40, 0, 2, 0),
+             "FullyDark P1: yield remesh to FM when starved");
+      Expect(!ShouldYieldRemeshSlotToFmUnderProtect(true, 40, 4, 2, 1),
+             "FullyDark P1: FM progressing → no yield");
+      Expect(!ShouldYieldRemeshSlotToFmUnderProtect(false, 40, 0, 2, 0),
+             "FullyDark P1: no protect → no yield");
+      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                  true, true, true, true, false),
+             "FullyDark P2: no PreferKick without Dirty progress (v3)");
+      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                 true, true, true, true, true),
+             "FullyDark P2: PreferKick when GPU+progress");
+      Expect(!ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                  true, true, true, false, true),
+             "FullyDark P2: no GPU → no PreferKick");
+      Expect(ShouldPreferKickOverRemeshDirtyOnTicketedFullyDark(
+                 false, true, true, true, true),
+             "lit-drain: PreferKick FD drawable+pending+progress");
+      Expect(ShouldForceDirtyAfterPreferKickStall(true, true, false, 8),
+             "stall escape: force Dirty after PreferKick without progress");
+      Expect(!ShouldForceDirtyAfterPreferKickStall(true, true, true, 8),
+             "stall escape: progress present → no force");
+      using cutum::ShouldForceDirtyWhenStuckDirtyNoPending;
+      Expect(ShouldForceDirtyWhenStuckDirtyNoPending(true, true, false, 8),
+             "v5: dirty∧!pending∧stall≥8 → ForceDirty");
+      Expect(!ShouldForceDirtyWhenStuckDirtyNoPending(true, true, true, 8),
+             "v5: pending GPU → no ForceDirty-no-pending");
+      Expect(!ShouldForceDirtyWhenStuckDirtyNoPending(true, true, false, 7),
+             "v5: stall under 8 → no ForceDirty");
+      Expect(!ShouldForceDirtyWhenStuckDirtyNoPending(true, false, false, 8),
+             "v5: not dirty → no ForceDirty-no-pending");
+      Expect(ColumnVisualAllowsPreferKick(
+                 cutum::ColumnVisualState::Publishing, true),
+             "ColumnVisual: PreferKick while Publishing+progress");
+      Expect(!ColumnVisualAllowsPreferKick(
+                  cutum::ColumnVisualState::NeedRemesh, true),
+             "ColumnVisual: no PreferKick outside Publishing");
+    }
+
+    using cutum::ClearFaceDebtMask;
+    using cutum::ColumnHasFaceDebt;
+    using cutum::ColumnVisualReadyRequiresNoFaceDebt;
+    using cutum::NoteFaceDebtMask;
+    {
+      uint8_t mask = 0;
+      Expect(!ColumnHasFaceDebt(mask), "FaceDebt: empty mask");
+      mask = NoteFaceDebtMask(mask, 0);
+      Expect(ColumnHasFaceDebt(mask), "FaceDebt: bit0 set");
+      Expect(!ColumnVisualReadyRequiresNoFaceDebt(
+                  cutum::ColumnVisualState::Ready, mask),
+             "FaceDebt: Ready blocked while debt");
+      mask = ClearFaceDebtMask(mask, 0);
+      Expect(!ColumnHasFaceDebt(mask), "FaceDebt: cleared");
+      Expect(ColumnVisualReadyRequiresNoFaceDebt(
+                 cutum::ColumnVisualState::Ready, mask),
+             "FaceDebt: Ready ok without debt");
+    }
+
+    using cutum::ComputeDualLaneSchedule;
+    using cutum::DualLaneScheduleInput;
+    using cutum::DualLaneStarveReason;
+    {
+      DualLaneScheduleInput both{};
+      both.schedule_cap = 4;
+      both.fm_q = 12;
+      both.remesh_q = 40;
+      both.focus_missing_or_holes = true;
+      both.fm_demand = true;
+      both.remesh_lit_demand = true;
+      both.prior_first_mesh_schedule = 2;
+      both.prior_remesh_schedule = 1;
+      both.miss_pressure = true;
+      const auto a = ComputeDualLaneSchedule(both);
+      Expect(a.first_mesh_schedule >= 1 && a.remesh_schedule >= 1,
+             "dual-lane: FM+RemeshLit cap≥2 ⇒ both ≥1");
+      Expect(a.remesh_snapshot_before_fm,
+             "dual-lane: focus miss does not flip remesh-before-FM");
+      Expect(a.first_mesh_schedule + a.remesh_schedule == 4,
+             "dual-lane: FM+Remesh fills cap");
+    }
+    {
+      DualLaneScheduleInput fm_only{};
+      fm_only.schedule_cap = 3;
+      fm_only.fm_demand = true;
+      fm_only.remesh_lit_demand = false;
+      const auto a = ComputeDualLaneSchedule(fm_only);
+      Expect(a.first_mesh_schedule == 3 && a.remesh_schedule == 0,
+             "dual-lane: FM-only ⇒ remesh min 0");
+    }
+    {
+      DualLaneScheduleInput rm_only{};
+      rm_only.schedule_cap = 3;
+      rm_only.fm_demand = false;
+      rm_only.remesh_lit_demand = true;
+      rm_only.remesh_q = 10;
+      const auto a = ComputeDualLaneSchedule(rm_only);
+      Expect(a.first_mesh_schedule == 0 && a.remesh_schedule == 3,
+             "dual-lane: RemeshLit-only ⇒ fm min 0");
+    }
+    {
+      DualLaneScheduleInput c1{};
+      c1.schedule_cap = 1;
+      c1.fm_demand = true;
+      c1.remesh_lit_demand = true;
+      c1.remesh_q = 5;
+      c1.rr_token = 0;
+      const auto a0 = ComputeDualLaneSchedule(c1);
+      Expect(a0.first_mesh_schedule == 1 && a0.remesh_schedule == 0,
+             "dual-lane: cap==1 token0 ⇒ FM");
+      Expect(a0.starve_reason == DualLaneStarveReason::Cap1YieldRemesh,
+             "dual-lane: cap==1 token0 starve remesh");
+      Expect(a0.next_rr_token == 1, "dual-lane: cap==1 advances token");
+      c1.rr_token = a0.next_rr_token;
+      const auto a1 = ComputeDualLaneSchedule(c1);
+      Expect(a1.first_mesh_schedule == 0 && a1.remesh_schedule >= 1,
+             "dual-lane: cap==1 token1 ⇒ Remesh");
+      Expect(a1.starve_reason == DualLaneStarveReason::Cap1YieldFm,
+             "dual-lane: cap==1 token1 starve FM");
+      Expect(a1.next_rr_token == 0, "dual-lane: cap==1 toggles back");
+    }
+    {
+      DualLaneScheduleInput steal_prot{};
+      steal_prot.schedule_cap = 4;
+      steal_prot.fm_demand = true;
+      steal_prot.remesh_lit_demand = true;
+      steal_prot.remesh_q = 20;
+      steal_prot.steal_remesh_to_fm = true;
+      steal_prot.protect_remesh_floor = 2;
+      steal_prot.prior_first_mesh_schedule = 2;
+      steal_prot.prior_remesh_schedule = 0;
+      const auto a = ComputeDualLaneSchedule(steal_prot);
+      Expect(a.remesh_schedule >= 1,
+             "dual-lane: steal+protect_floor>0 ⇒ remesh not zeroed");
+    }
+    {
+      DualLaneScheduleInput protect_over_cap{};
+      protect_over_cap.schedule_cap = 1;
+      protect_over_cap.fm_demand = false;
+      protect_over_cap.remesh_lit_demand = true;
+      protect_over_cap.remesh_q = 5;
+      protect_over_cap.protect_remesh_floor = 2;
+      const auto a = ComputeDualLaneSchedule(protect_over_cap);
+      Expect(a.remesh_schedule <= protect_over_cap.schedule_cap,
+             "dual-lane: protect_remesh_floor must not expand past cap");
+      Expect(a.remesh_schedule == 1, "dual-lane: remesh-only cap=1 ⇒ remesh=1");
+    }
+    {
+      DualLaneScheduleInput steal_bare{};
+      steal_bare.schedule_cap = 4;
+      steal_bare.fm_demand = true;
+      steal_bare.remesh_lit_demand = true;
+      steal_bare.remesh_q = 20;
+      steal_bare.steal_remesh_to_fm = true;
+      steal_bare.protect_remesh_floor = 0;
+      const auto a = ComputeDualLaneSchedule(steal_bare);
+      Expect(a.remesh_schedule == 0 && a.first_mesh_schedule == 4,
+             "dual-lane: steal+protect0 ⇒ remesh 0, FM gets cap");
+    }
+
+    using cutum::ShouldRunSecondGpuFinishPass;
+    Expect(ShouldRunSecondGpuFinishPass(true, false, 0, false),
+           "G1-P3b: hole_finish_bias alone ⇒ second Finish");
+    Expect(ShouldRunSecondGpuFinishPass(false, true, 1, true),
+           "G1-P3b: debt kick + focus miss ⇒ second Finish");
+    Expect(!ShouldRunSecondGpuFinishPass(false, true, 0, true),
+           "G1-P3b: no kick this tick ⇒ no second Finish");
+    Expect(!ShouldRunSecondGpuFinishPass(false, true, 1, false),
+           "G1-P3b: calm focus ⇒ no second Finish");
+    Expect(!ShouldRunSecondGpuFinishPass(false, false, 1, true),
+           "G1-P3b: no debt force ⇒ no second Finish");
+
+    using cutum::ShouldForceGpuKickUnderQueuedDebt;
+    Expect(ShouldForceGpuKickUnderQueuedDebt(2, true, 0),
+           "G1-P2: Queued+focus miss ⇒ force kick");
+    Expect(ShouldForceGpuKickUnderQueuedDebt(1, false, 20),
+           "G1-P2: Queued+stale debt ⇒ force kick");
+    Expect(!ShouldForceGpuKickUnderQueuedDebt(0, true, 76),
+           "G1-P2: no Queued ⇒ no force kick");
+    Expect(!ShouldForceGpuKickUnderQueuedDebt(2, false, 19),
+           "G1-P2: Queued without debt ⇒ no force");
+
+    using cutum::ShouldForceGpuKickPostDrain;
+    Expect(ShouldForceGpuKickPostDrain(2, true, 0, 0, 0),
+           "G1-N2: post-drain queued+focus miss ⇒ force kick");
+    Expect(ShouldForceGpuKickPostDrain(1, false, 30, 0, 0),
+           "G1-N2: post-drain queued+stale debt ⇒ force kick");
+    Expect(ShouldForceGpuKickPostDrain(2, false, 0, 1, 1),
+           "G1-N2: post-drain remesh scheduled + small debt ⇒ force kick");
+    Expect(!ShouldForceGpuKickPostDrain(0, true, 76, 0, 2),
+           "G1-N2: no Queued after drain ⇒ no force kick");
+    Expect(!ShouldForceGpuKickPostDrain(2, false, 0, 0, 0),
+           "G1-N2: queued calm ⇒ no force");
+
+    MeshWorkAdmissionInput in;
+    in.pending_gpu = 6;
+    in.pending_gpu_queued = 0;
+    in.pending_gpu_kicked = 6;
+    in.visual_holes = true;
+    in.moving = true;
+    in.nearest_miss_cy = 3;
+    in.nearest_miss_horiz = 4;
+    in.ring_depth = 8;
+    in.prev_mode = static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    in.unfinished_visual = 68;
+    in.dirty_fm_n = 16;
+    in.no_mesh_n = 68;
+    in.remesh_queue_n = 23;
+    in.dark_face_stale_near_n = 3200;
+    auto prot = ComputeMeshWorkAdmission(in);
+    Expect(prot.steal_remesh_to_fm, "P13 R2: steal still arms FM boost");
+    Expect(prot.protect_lit_settle_remesh, "P13 R2: protect flag set");
+    Expect(prot.remesh_schedule >= 2,
+           "P13 R2: steal+stale → remesh_schedule≥2");
+    Expect(prot.first_mesh_schedule >= 6, "P13 R2: FM cap retained");
+    RemeshAdmitBackpressureInput bp{};
+    bp.stream_pressure = 2;
+    bp.fifo_n = 96;
+    bp.dirty_n = 500;
+    bp.relight_fifo_soft_cap = 96;
+    bp.dirty_thrash_soft_cap = 400;
+    bp.fifo_admit_frac = 0.75f;
+    bp.miss_active = true;
+    bp.remesh_queue_n = 23;
+    bp.protect_lit_settle_remesh = prot.protect_lit_settle_remesh;
+    ApplyRemeshAdmitBackpressure(prot, bp);
+    Expect(prot.remesh_schedule >= 2,
+           "P13 R2: backpressure keeps lit-settle remesh floor");
+
+    in.dark_face_stale_near_n = 0;
+    auto steal_only = ComputeMeshWorkAdmission(in);
+    Expect(steal_only.remesh_schedule == 0,
+           "P13 R2: steal without stale still remesh=0");
+  }
+
+  // FZ2.7-P15c: MaxAge after retarget — decay, never ratchet on prev
+  {
+    using cutum::SoftDeferCapturePinMaxAgeAfterRetarget;
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(24, 8, false) == 8,
+           "P15c: !frontier decays to default 8 (no ratchet)");
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(8, 24, true) == 24,
+           "P15c: frontier/stuck raises to pin_T");
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(8, 40, true) == 24,
+           "P15c: hard cap 24");
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(24, 14, false) == 8,
+           "P15c: leaving frontier decays even if prev was 24");
+  }
+
+  // FZ2.7-P16: cruise underfeet pin + witness-owned FirstMesh
+  {
+    using cutum::ShouldPinIsolatedMissUnderfeet;
+    using cutum::ShouldEnqueueWitnessOwnedFirstMesh;
+    Expect(ShouldPinIsolatedMissUnderfeet(true, 0),
+           "P16 U1: nh=0 pin");
+    Expect(ShouldPinIsolatedMissUnderfeet(true, 1),
+           "P16 U1: nh=1 pin (cruise or idle)");
+    Expect(ShouldPinIsolatedMissUnderfeet(true, 2),
+           "P0.2: nh=2 near pin");
+    Expect(!ShouldPinIsolatedMissUnderfeet(true, 3),
+           "P16 U1: nh=3 no near pin");
+    Expect(!ShouldPinIsolatedMissUnderfeet(false, 0),
+           "P16 U1: !found → no pin");
+    using cutum::ShouldBurstHealPinnedMiss;
+    Expect(ShouldBurstHealPinnedMiss(true, 0, true, false),
+           "P0.2: burst heal nh=0");
+    Expect(!ShouldBurstHealPinnedMiss(true, 2, true, false),
+           "P0.2: nh=2 no burst heal");
+    Expect(!ShouldBurstHealPinnedMiss(false, 0, true, true),
+           "P0.2: !miss no burst heal");
+    using cutum::ShouldPinIsolatedMissSpawnRing;
+    Expect(ShouldPinIsolatedMissSpawnRing(true, true, 3),
+           "P0.2: spawn ring pin nh=3");
+    Expect(!ShouldPinIsolatedMissSpawnRing(false, true, 3),
+           "P0.2: !catch-up no spawn ring pin");
+    Expect(!ShouldPinIsolatedMissSpawnRing(true, true, 3, true),
+           "F2: enter session blocks spawn ring pin");
+    using cutum::ShouldUseEnterSpawnMissProbe;
+    using cutum::ShouldSkipParkSpawnRingForMissHeal;
+    Expect(ShouldUseEnterSpawnMissProbe(false, false, true, false),
+           "P0.2: idle catch-up uses enter miss probe");
+    Expect(!ShouldUseEnterSpawnMissProbe(false, false, true, true),
+           "P0.2: moving cruise keeps full-RD probe");
+    Expect(ShouldSkipParkSpawnRingForMissHeal(true, false, 0),
+           "P0.2: skip park during catch-up");
+    Expect(ShouldSkipParkSpawnRingForMissHeal(false, true, 3),
+           "P0.2: skip park on near miss");
+    Expect(!ShouldSkipParkSpawnRingForMissHeal(true, false, 0, true),
+           "F2: enter session does not skip park");
+    using cutum::ShouldRunSpawnRingCatchUpHeal;
+    Expect(ShouldRunSpawnRingCatchUpHeal(true, true, false),
+           "P0.2: catch-up heal while moving fly");
+    Expect(!ShouldRunSpawnRingCatchUpHeal(false, true, false),
+           "P0.2: no catch-up while moving cruise");
+    Expect(ShouldRunSpawnRingCatchUpHeal(false, true, true),
+           "P0.2: underfeet miss heal while moving");
+    Expect(!ShouldRunSpawnRingCatchUpHeal(true, true, false, true),
+           "F2: enter session blocks catch-up heal");
+    using cutum::EnterSessionPhase;
+    using cutum::IsEnterSessionActive;
+    Expect(IsEnterSessionActive(EnterSessionPhase::CooperativeLoad),
+           "F2: CooperativeLoad is active enter session");
+    Expect(IsEnterSessionActive(EnterSessionPhase::GpuWarmup),
+           "F2: GpuWarmup is active enter session");
+    Expect(!IsEnterSessionActive(EnterSessionPhase::Done),
+           "F2: Done is not active enter session");
+    Expect(!IsEnterSessionActive(EnterSessionPhase::None),
+           "F2: None is not active enter session");
+    Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 0, true),
+           "P16 U2: miss nh=0 !drawable → owned FM");
+    Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
+           "P16 U2: miss nh=2 !drawable → owned FM");
+    Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 4, true),
+           "P17: miss nh=4 !drawable → owned FM");
+    Expect(!ShouldEnqueueWitnessOwnedFirstMesh(true, 5, true),
+           "P17: nh=5 no owned FM");
+    Expect(!ShouldEnqueueWitnessOwnedFirstMesh(false, 1, true),
+           "P16 U2: !miss → no owned FM");
+    Expect(!ShouldEnqueueWitnessOwnedFirstMesh(true, 1, false),
+           "P16 U2: drawable → no owned FM");
+  }
+
+  // FZ2.7-P17: stand VB heal ownership hint
+  {
+    using cutum::ShouldPreferStandVbHealOwnership;
+    Expect(ShouldPreferStandVbHealOwnership(false, 99, 200, 1755),
+           "P17: stand VB+stale → heal ownership");
+    Expect(!ShouldPreferStandVbHealOwnership(true, 99, 200, 1755),
+           "P17: moving → no stand heal hint");
+    Expect(!ShouldPreferStandVbHealOwnership(false, 10, 200, 1755),
+           "P17: low VB → no stand heal hint");
+  }
+
+  // SRBR-P0: ghost Dirty gate + resident underfeet FirstMesh
+  {
+    using cutum::ShouldAdmitResidentDirty;
+    using cutum::ShouldPruneGhostDirtyCoord;
+    using cutum::GhostDirtyPruneCapPerTick;
+    using cutum::ShouldGuaranteeResidentWitnessFirstMesh;
+    using cutum::ShouldEnqueueWitnessOwnedFirstMesh;
+    Expect(ShouldAdmitResidentDirty(true), "P0: resident admits Dirty");
+    Expect(!ShouldAdmitResidentDirty(false), "P0: ghost does not admit Dirty");
+    Expect(ShouldPruneGhostDirtyCoord(false), "P0: !HasChunk prune");
+    Expect(!ShouldPruneGhostDirtyCoord(true), "P0: HasChunk keep Dirty");
+    Expect(GhostDirtyPruneCapPerTick(true) == 64, "P0: holes prune cap 64");
+    Expect(GhostDirtyPruneCapPerTick(false) == 24, "P0: no-holes prune cap 24");
+    Expect(ShouldGuaranteeResidentWitnessFirstMesh(true, true, 0),
+           "P0: nh=0 resident !drawable FM");
+    Expect(ShouldGuaranteeResidentWitnessFirstMesh(true, true, 1),
+           "P0: nh=1 resident !drawable FM");
+    Expect(!ShouldGuaranteeResidentWitnessFirstMesh(false, true, 0),
+           "P0: ghost miss no FM guarantee");
+    Expect(!ShouldGuaranteeResidentWitnessFirstMesh(true, false, 0),
+           "P0: drawable no FM guarantee");
+    Expect(!ShouldGuaranteeResidentWitnessFirstMesh(true, true, 2),
+           "P0: nh=2 not underfeet guarantee");
+    Expect(ShouldGuaranteeResidentWitnessFirstMesh(true, true, 3, true),
+           "I11-A3: nh=3 moving resident !drawable FM");
+    Expect(!ShouldGuaranteeResidentWitnessFirstMesh(true, true, 3, false),
+           "I11-A3: nh=3 stand no rim FM guarantee");
+    using cutum::ShouldEscalateMissWitnessCompletionDrain;
+    using cutum::ShouldSkipMissPinWhileGpuDrainOwns;
+    Expect(ShouldEscalateMissWitnessCompletionDrain(true, 3, 5, true, 90),
+           "I11-A1: completion drain when schedule_ok !drawable");
+    Expect(!ShouldEscalateMissWitnessCompletionDrain(true, 3, 0, true, 90),
+           "I11-A1: no completion drain without schedule_ok");
+    using cutum::ShouldRetireStaleRimMissWitness;
+    Expect(ShouldRetireStaleRimMissWitness(3, 0, false, 350, 0),
+           "I13-B1: retire stale rim witness at 300f+");
+    Expect(ShouldRetireStaleRimMissWitness(3, 2, false, 350, 0),
+           "I13-B1: retire with rim unfinished<=3");
+    Expect(!ShouldRetireStaleRimMissWitness(3, 1, false, 200, 0),
+           "I13-B1: no retire before age SLA");
+    Expect(!ShouldRetireStaleRimMissWitness(3, 5, false, 700, 0),
+           "I13-B1: no retire when unfinished high");
+    Expect(!ShouldRetireStaleRimMissWitness(2, 0, false, 700, 0),
+           "I12-A4: no retire underfeet nh");
+    Expect(ShouldSkipMissPinWhileGpuDrainOwns(true, true),
+           "I11-A1: skip pin when GPU owns slice");
+    Expect(!ShouldSkipMissPinWhileGpuDrainOwns(false, true),
+           "I11-A1: no skip when slice not owned");
+    Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
+           "P0 KEEP: U2 nh=2 still owned FM");
+    using cutum::MissSliceAlreadyOwned;
+    using cutum::MissSliceSoftDeferOwns;
+    using cutum::MissSlicePipelineOwns;
+    using cutum::ShouldPinIsolatedMissMarkDirty;
+    Expect(MissSliceAlreadyOwned(true, false, false, false, false, false),
+           "P0.2: Dirty owns");
+    using cutum::ShouldRemeshMissWitnessEmptyGpu;
+    using cutum::MissWitnessRemeshAgeSla;
+    using cutum::ShouldPreferKickMissWitnessGpu;
+    using cutum::ShouldRemeshMissWitnessEmptyGpuEdge;
+    using cutum::ShouldSoftDeferEmptyUnderfeetFastHeal;
+    Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 60, 60),
+           "Phase5.6.3: missing+!gpu+age remeshes");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(true, true, 60, 60),
+           "Phase5.6.3: pending gpu skips remesh");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 30, 60),
+           "Phase5.6.3: age below SLA skips remesh");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(false, false, 60, 60),
+           "Phase5.6.3: no miss skips remesh");
+    Expect(MissWitnessRemeshAgeSla(false) == 30,
+           "Phase5.7R: stand rim remesh SLA 30");
+    Expect(MissWitnessRemeshAgeSla(true) == 60,
+           "Phase5.7.2: cruise rim remesh SLA 60");
+    Expect(MissWitnessRemeshAgeSla(false, 1) == 8,
+           "Phase5.7R2: stand underfeet remesh SLA 8");
+    Expect(MissWitnessRemeshAgeSla(true, 1) == 15,
+           "Phase5.7R2: cruise underfeet remesh SLA 15");
+    Expect(MissWitnessRemeshAgeSla(true, 0) == 15,
+           "Phase5.7R2: cruise nh0 remesh SLA 15");
+    Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 30,
+                                           MissWitnessRemeshAgeSla(false)),
+           "Phase5.7R: stand age 30 remeshes");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
+                                            MissWitnessRemeshAgeSla(false)),
+           "Phase5.7R: stand age 15 below rim SLA");
+    Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
+                                           MissWitnessRemeshAgeSla(true, 1)),
+           "Phase5.7R2: cruise underfeet age 15 remeshes");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
+                                            MissWitnessRemeshAgeSla(true)),
+           "Phase5.7.2: cruise rim age 15 below SLA");
+    Expect(ShouldRemeshMissWitnessEmptyGpuEdge(true, false, 15, 15, false, false,
+                                               false),
+           "Phase5.7R2: edge remesh fires once");
+    Expect(!ShouldRemeshMissWitnessEmptyGpuEdge(true, false, 15, 15, false, false,
+                                                true),
+           "Phase5.7R2: edge remesh latched skip");
+    Expect(!ShouldRemeshMissWitnessEmptyGpuEdge(true, false, 15, 15, true, false,
+                                                false),
+           "Phase5.7R2: edge remesh Dirty-owned skip");
+    Expect(ShouldSoftDeferEmptyUnderfeetFastHeal(0),
+           "Phase5.7R2: underfeet SoftDefer fast heal nh0");
+    Expect(ShouldSoftDeferEmptyUnderfeetFastHeal(1),
+           "Phase5.7R2: underfeet SoftDefer fast heal nh1");
+    Expect(!ShouldSoftDeferEmptyUnderfeetFastHeal(2),
+           "Phase5.7R2: rim SoftDefer no fast heal");
+    using cutum::ShouldSoftDeferUnderfeetMarkCooldownOk;
+    Expect(ShouldSoftDeferUnderfeetMarkCooldownOk(0, 1),
+           "Phase5.7R3: first underfeet Mark always OK");
+    Expect(!ShouldSoftDeferUnderfeetMarkCooldownOk(10, 17),
+           "Phase5.7R3: underfeet Mark blocked before 8f");
+    Expect(ShouldSoftDeferUnderfeetMarkCooldownOk(10, 18),
+           "Phase5.7R3: underfeet Mark OK at 8f");
+    using cutum::ShouldSoftDeferRimRelightUnderFifoPressure;
+    Expect(ShouldSoftDeferRimRelightUnderFifoPressure(16, 2),
+           "Phase5.7R5: rim Relight blocked under fifo BP");
+    Expect(!ShouldSoftDeferRimRelightUnderFifoPressure(15, 2),
+           "Phase5.7R5: rim Relight OK below BP");
+    Expect(!ShouldSoftDeferRimRelightUnderFifoPressure(40, 1),
+           "Phase5.7R5: underfeet not rim-gated (UF FM path)");
+    using cutum::ShouldSkipStaleCollectOnVbPlateau;
+    Expect(ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, false, true),
+           "Phase5.7R2: VB plateau skip Collect");
+    Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, true, true),
+           "Phase5.7R2: VB dirty consume forces Collect");
+    Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, true, false),
+           "Phase5.7R2: VB consume overrides cooldown skip");
+    Expect(ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, false, false),
+           "Phase5.7R2: cooldown cools → skip Collect");
+    Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 9, 3, 3, false, true),
+           "Phase5.7R2: VB change forces Collect");
+    Expect(ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, true, true, 16),
+           "Phase5.7R4: fifo>=16 skips Collect even under vb_consume");
+    Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, true, true, 15),
+           "Phase5.7R4: fifo<16 keeps vb_consume Collect");
+    using cutum::ShouldRemeshMissWitnessStuck;
+    Expect(ShouldRemeshMissWitnessStuck(true, true, false, false, false, 60, 60),
+           "5.7R: stuck remesh when SLA+unowned");
+    Expect(ShouldRemeshMissWitnessStuck(true, true, false, false, false, 0, 60, 0),
+           "5.7R: stuck first frame remeshes");
+    using cutum::ShouldCadenceScheduleHeavyWalk;
+    Expect(ShouldCadenceScheduleHeavyWalk(false, 4, 1, 4, false),
+           "5.7R7: stand always runs heavy walk");
+    Expect(ShouldCadenceScheduleHeavyWalk(true, 0, 1, 4, false),
+           "5.7R7: schedule_ok=0 always heavy");
+    Expect(ShouldCadenceScheduleHeavyWalk(true, 4, 1, 4, true),
+           "5.7R7: force always heavy");
+    Expect(!ShouldCadenceScheduleHeavyWalk(true, 4, 1, 4, false),
+           "5.7R7: moving+ok>0 non-cadence frame skips heavy");
+    Expect(ShouldCadenceScheduleHeavyWalk(true, 4, 4, 4, false),
+           "5.7R7: moving+ok>0 cadence frame runs heavy");
+    using cutum::ShouldForceScheduleHeavyWalk;
+    Expect(ShouldForceScheduleHeavyWalk(true, 3, 8, false, 0.0),
+           "5.7R7.1: focus_missing forces heavy");
+    Expect(ShouldForceScheduleHeavyWalk(false, 2, 8, false, 0.0),
+           "5.7R7.1: miss_horiz<=2 forces heavy");
+    Expect(ShouldForceScheduleHeavyWalk(false, 3, 3, false, 0.0),
+           "5.7R7.1: schedule_ok<4 forces heavy");
+    Expect(!ShouldForceScheduleHeavyWalk(false, 3, 4, false, 0.0),
+           "5.7R7.1: healthy rim may cadence");
+    Expect(ShouldCadenceScheduleHeavyWalk(
+               true, 4, 1, 4,
+               ShouldForceScheduleHeavyWalk(false, 2, 8, false, 0.0)),
+           "5.7R7.1: nh=2 force overrides cadence skip");
+    Expect(!ShouldRemeshMissWitnessStuck(true, true, false, false, false, 15, 60,
+                                         5),
+           "5.7R: stuck below SLA after first");
+    Expect(ShouldPreferKickMissWitnessGpu(true),
+           "Phase5.7.2: PreferKick only with pending gpu");
+    Expect(!ShouldPreferKickMissWitnessGpu(false),
+           "Phase5.7.2: no PreferKick when !pending");
+    Expect(MissSliceAlreadyOwned(false, false, false, true, false, false),
+           "P0.2: SoftDeferHeld owns");
+    Expect(MissSliceAlreadyOwned(false, false, false, false, false, true),
+           "P0.2: FirstMesh ticket owns");
+    Expect(!MissSliceAlreadyOwned(false, true, false, false, false, false, false),
+           "arch: undrawn RAA not owned without ticket");
+    Expect(MissSliceSoftDeferOwns(true), "P0.2: SoftDefer owns Hide⇒Ticket");
+    Expect(MissSlicePipelineOwns(true, false, false, false),
+           "P0.2: Dirty is pipeline");
+    using cutum::ShouldTransferSoftDeferHeldToDirty;
+    Expect(ShouldTransferSoftDeferHeldToDirty(true, false),
+           "P0.2: SoftDefer lifted ⇒ transfer Dirty");
+    Expect(!ShouldTransferSoftDeferHeldToDirty(true, true),
+           "P0.2: SoftDefer active ⇒ ticket-only");
+    Expect(!ShouldTransferSoftDeferHeldToDirty(false, false),
+           "P0.2: no Held ⇒ no transfer");
+    using cutum::ShouldEnterSoftDeferEmptyTransferDirty;
+    Expect(ShouldEnterSoftDeferEmptyTransferDirty(true, true),
+           "P0.2: SoftDefer ON under enter ⇒ Dirty not Held park");
+    Expect(!ShouldEnterSoftDeferEmptyTransferDirty(true, false),
+           "P0.2: SoftDefer lifted ⇒ P17 publish fallthrough");
+    Expect(!ShouldEnterSoftDeferEmptyTransferDirty(false, false),
+           "P0.2: cruise SoftDefer empty KEEP");
+    Expect(!ShouldEnterSoftDeferEmptyTransferDirty(false, true),
+           "P0.2: cruise SoftDefer active KEEP avoid");
+    using cutum::IsIntentionalOccludedEmptyReady;
+    Expect(IsIntentionalOccludedEmptyReady(true, false, true, 0, false, false),
+           "intentional occluded empty ⇒ column ready");
+    Expect(!IsIntentionalOccludedEmptyReady(true, false, false, 0, false, false),
+           "SoftDefer empty !GpuResident ⇒ not ready");
+    Expect(!IsIntentionalOccludedEmptyReady(true, false, true, 0, true, false),
+           "SoftDeferHeld ⇒ not ready");
+    Expect(!IsIntentionalOccludedEmptyReady(true, false, true, 0, false, true),
+           "defer_until_lit ⇒ not ready");
+    Expect(!IsIntentionalOccludedEmptyReady(true, true, true, 0, false, false),
+           "drawable ⇒ not intentional-empty path");
+    using cutum::IsCpuPublishedOccludedEmptyReady;
+    Expect(IsCpuPublishedOccludedEmptyReady(true, false, true, false, false),
+           "CPU-published occluded empty ⇒ column ready");
+    Expect(!IsCpuPublishedOccludedEmptyReady(true, false, false, false, false),
+           "CPU non-empty ⇒ not cpu-published empty");
+    Expect(!IsCpuPublishedOccludedEmptyReady(true, false, true, true, false),
+           "SoftDeferHeld blocks cpu-published empty");
+    Expect(!IsCpuPublishedOccludedEmptyReady(true, false, true, false, true),
+           "defer_until_lit blocks cpu-published empty");
+    Expect(!ShouldPinIsolatedMissMarkDirty(true, true, false),
+           "P0.2: already owned ⇒ no MarkDirty");
+    Expect(ShouldPinIsolatedMissMarkDirty(true, false, false),
+           "P0.2: unowned resident ⇒ MarkDirty");
+    Expect(!ShouldPinIsolatedMissMarkDirty(false, false, false),
+           "P0.2: ghost ⇒ no MarkDirty");
+    using cutum::ShouldForceEnterHoleDirty;
+    Expect(ShouldForceEnterHoleDirty(true, false),
+           "P0.2: EnterLitQuiesce forces hole Dirty");
+    Expect(ShouldForceEnterHoleDirty(false, true),
+           "P0.2: EnterGpuQuiesceDrain forces hole Dirty");
+    Expect(!ShouldForceEnterHoleDirty(false, false),
+           "P0.2: outside enter ⇒ miss_undrawn RAA KEEP");
+    using cutum::ShouldKeepEnterHoleDirtyDespiteInflight;
+    Expect(ShouldKeepEnterHoleDirtyDespiteInflight(true, false),
+           "P0.2: enter !drawable keeps Dirty vs Inflight");
+    Expect(!ShouldKeepEnterHoleDirtyDespiteInflight(true, true),
+           "P0.2: drawable Inflight may RemoveAt Dirty");
+    Expect(!ShouldKeepEnterHoleDirtyDespiteInflight(false, false),
+           "P0.2: cruise Inflight RemoveAt KEEP");
+    // Keep-Dirty means wait on Inflight — never schedule-tick Invalidate.
+    using cutum::ShouldPruneEnterPhantomDirtyCoord;
+    Expect(ShouldPruneEnterPhantomDirtyCoord(true, true),
+           "P0.2: terminal Held is phantom");
+    Expect(ShouldPruneEnterPhantomDirtyCoord(false, false),
+           "P0.2: unloaded chunk is phantom");
+    Expect(!ShouldPruneEnterPhantomDirtyCoord(false, true),
+           "P0.2: resident FirstMesh hole Dirty KEEP");
+  }
+
+  // P1: ShouldForcePinColumnPriority
+  {
+    using cutum::ShouldForcePinColumnPriority;
+    Expect(ShouldForcePinColumnPriority(true, 2),
+           "P1: pin key nh<=2 forces priority");
+    Expect(ShouldForcePinColumnPriority(true, 0),
+           "P1: pin key nh=0 forces priority");
+    Expect(!ShouldForcePinColumnPriority(true, 3),
+           "P1: pin key nh=3 does not force priority");
+    Expect(ShouldForcePinColumnPriority(true, 3, 1),
+           "I10-B1: pin key nh=3 forces priority when witness hold");
+    Expect(!ShouldForcePinColumnPriority(false, 1),
+           "P1: non-pin key does not force priority");
+  }
+
+  // RateMatch R0: high-PL Apply floor (not Enter×64)
+  {
+    using cutum::ShouldUseHighPlCruiseApplyFloor;
+    using cutum::HighPlCruiseApplyFloorN;
+    using cutum::ShouldStopRelightApplySlice;
+    Expect(ShouldUseHighPlCruiseApplyFloor(true, 16),
+           "R0: moving+PL>=16 → high-PL Apply floor");
+    Expect(ShouldUseHighPlCruiseApplyFloor(true, 31),
+           "R0: moving+PL>30 still triggers Apply floor");
+    Expect(!ShouldUseHighPlCruiseApplyFloor(true, 15),
+           "R0: PL==15 does not trigger");
+    Expect(!ShouldUseHighPlCruiseApplyFloor(false, 100),
+           "R0: idle never uses high-PL floor");
+    Expect(HighPlCruiseApplyFloorN() == 4, "R0: floor N=4");
+    Expect(ShouldStopRelightApplySlice(8.0, 1, 8.0, false),
+           "R0: slice stop after ≥1 at MissReservedMs");
+    Expect(!ShouldStopRelightApplySlice(8.0, 0, 8.0, false),
+           "R0: no stop before first applied");
+    Expect(!ShouldStopRelightApplySlice(20.0, 2, 8.0, true),
+           "R0: enter pass exempt from slice");
+  }
+
+  // FZ2.5-Perf1: earned Apply cap + consume slice
+  {
+    using cutum::EarnedRelightApplyCap;
+    using cutum::ShouldConsumeTicketedVbDebt;
+    using cutum::ShouldStopRelightApplySlice;
+    Expect(EarnedRelightApplyCap(20, 8.0, 0.0, 2.5, true) >= 3,
+           "FZ25: earned cap >=3 at unit 2.5ms");
+    Expect(ShouldConsumeTicketedVbDebt(0, 81, 5),
+           "FZ25: ticketed debt when nt=0 VB>40");
+    Expect(ShouldConsumeTicketedVbDebt(6, 107, 0),
+           "SRBR-P1: soft nt≤8 still ticketed consume (112418)");
+    Expect(!ShouldConsumeTicketedVbDebt(10, 81, 0),
+           "FZ25: orphan nt>8 is not ticketed consume");
+    using cutum::ShouldConsumeUnlitTicketedVbStand;
+    using cutum::ShouldProtectRemeshUnderTicketedVbStand;
+    Expect(ShouldConsumeUnlitTicketedVbStand(false, 107, 6, 62, 62),
+           "SRBR-P1: stand unlit≈PL consume");
+    Expect(!ShouldConsumeUnlitTicketedVbStand(true, 107, 6, 62, 62),
+           "SRBR-P1: moving skips unlit consume");
+    Expect(ShouldProtectRemeshUnderTicketedVbStand(false, 107, 3, 48),
+           "SRBR-P1: remesh protect ticketed VB stand");
+    Expect(!ShouldProtectRemeshUnderTicketedVbStand(false, 107, 6, 0),
+           "SRBR-P1: no remesh protect empty RemeshQ");
+    using cutum::ShouldProtectRemeshUnderTicketedVbCruise;
+    Expect(ShouldProtectRemeshUnderTicketedVbCruise(true, 73, 6, 12),
+           "FP3: cruise ticketed VB remesh protect");
+    Expect(!ShouldProtectRemeshUnderTicketedVbCruise(false, 73, 6, 12),
+           "FP3: stand skips cruise protect");
+    using cutum::RelightWitnessPinHoldFrames;
+    Expect(RelightWitnessPinHoldFrames >= 48, "FP1: witness hold age extended");
+    using cutum::ShouldExtendWitnessPinHold;
+    using cutum::ShouldKickMissWitnessPin;
+    Expect(ShouldExtendWitnessPinHold(47, true),
+           "FP-A3: pinned_still extends hold before hard expire");
+    Expect(ShouldExtendWitnessPinHold(48, true),
+           "MissOwn P1: pinned_still holds past hard expire");
+    Expect(!ShouldExtendWitnessPinHold(200, false), "FP-A3: age-only release");
+    Expect(ShouldExtendWitnessPinHold(20, false, RelightWitnessPinHoldFrames, 3,
+                                      true),
+           "I10-B3: vb rising extends hold before hard expire");
+    Expect(!ShouldExtendWitnessPinHold(200, false, RelightWitnessPinHoldFrames, 3,
+                                       true),
+           "MissOwn P1: vb rising age release when !pinned_still");
+    Expect(ShouldKickMissWitnessPin(200, 0, 150, false),
+           "I18-P2: stuck miss kicks pin on stand");
+    Expect(!ShouldKickMissWitnessPin(200, 0, 150, true),
+           "I18-P2 hotfix: no kick while moving");
+    using cutum::ShouldComputeRimHolePressure;
+    using cutum::ShouldExitRimPerfDiet;
+    using cutum::ShouldReuseUnfinishedVisualSample;
+    using cutum::ShouldKickMissWitnessOnMeshingSla;
+    using cutum::ColumnJobStage;
+    Expect(ShouldComputeRimHolePressure(3, 1, 0, 0),
+           "R3.3: rim hole pressure on unfinished hint");
+    Expect(!ShouldComputeRimHolePressure(3, 0, 0, 0),
+           "R3.3: calm rim has no hole pressure");
+    Expect(!ShouldComputeRimHolePressure(3, 0, 50, 0),
+           "R3.6: focus_dirty alone is not hole pressure");
+    Expect(ShouldComputeRimHolePressure(3, 0, 0, 2),
+           "R3.6: column_no_mesh triggers hole pressure");
+    Expect(ShouldComputeRimHolePressure(3, 0, 0, 0, true),
+           "R4.6.2: focus_missing mh=3 is rim hole pressure");
+    Expect(!ShouldComputeRimHolePressure(5, 0, 0, 0, true),
+           "R4.6.2: focus_missing beyond mh4 needs unfinished/no_mesh");
+    Expect(ShouldExitRimPerfDiet(true, 0, false), "R3.3: hole pressure exits diet");
+    Expect(!ShouldExitRimPerfDiet(false, 10, false),
+           "R3.3: young reuse keeps diet");
+    Expect(ShouldReuseUnfinishedVisualSample(true, false, false, false, 8),
+           "R3.3: reuse when no hole pressure");
+    Expect(!ShouldReuseUnfinishedVisualSample(true, false, true, false, 8),
+           "R3.3: no reuse under hole pressure");
+    Expect(ShouldKickMissWitnessOnMeshingSla(ColumnJobStage::Meshing, 3600),
+           "R3.4: meshing SLA kick");
+    Expect(!ShouldKickMissWitnessOnMeshingSla(ColumnJobStage::GpuPending, 3600),
+           "R3.4: gpu pending not meshing kick");
+    Expect(!ShouldExtendWitnessPinHold(200, true, RelightWitnessPinHoldFrames, 3,
+                                       false, true),
+           "I18-P2: kick overrides pinned_still");
+    using cutum::ShouldMarkMissingOnCruiseMovingHoles;
+    Expect(ShouldMarkMissingOnCruiseMovingHoles(true, true, 3, 4),
+           "FP-A2: cruise moving holes mark missing nh=3");
+    using cutum::ShouldBypassRaAParkForCruiseFirstMesh;
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(true, 3),
+           "FP-A2: bypass RAA park HoleDrain nh=3");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, true, false, 1),
+           "FP-D1: fm_starvation bypass RAA park nh=3");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, true, 1),
+           "FP-G1: column_loaded_no_mesh bypass RAA park nh=3");
+    Expect(!ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, false, 2),
+           "I8-A1: schedule_ok<floor alone does not bypass RAA park");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, true, false, 1),
+           "I8-A1: fm_starvation + schedule_ok<floor bypass RAA park");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, false, 1, 4,
+                                                 true),
+           "I8-A1b: fm_consumer_starved bypass RAA park");
+    using cutum::ComputeFmDirtyEnqueueReserve;
+    using cutum::ComputeFirstMeshScheduleEffectiveCap;
+    Expect(ComputeFmDirtyEnqueueReserve(2, 0) == 2,
+           "arch: prior-frame reserve enqueue-schedule");
+    Expect(ComputeFmDirtyEnqueueReserve(4, 1) == 3,
+           "I8-C1: dirty_fm backlog reserve");
+    Expect(ComputeFmDirtyEnqueueReserve(0, 0) == 2,
+           "M1-4: empty_fm_queue guard reserve");
+    using cutum::ComputeKeepRingFmDirtyEnqueueReserve;
+    using cutum::PresentableBandEmptyPressure;
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, true, 0, false, 0, 0) == 2,
+           "Phase5.6.2: focus miss floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 5, false, 0, 0) == 2,
+           "Phase5.6.2: empty backlog floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 0, true, 0, 0) == 2,
+           "Phase5.6.2: latch floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 0, false, 1, 0) == 2,
+           "Phase5.6.2: SoftDefer stuck floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 0, false, 0, 3) == 2,
+           "Phase5.6.2: keep-ring empty floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 0, false, 0, 0) == 0,
+           "Phase5.6.2: no pressure keeps base reserve");
+    Expect(PresentableBandEmptyPressure(4, 2, 0, 4, 2, 1) == 4,
+           "Phase5.6.2: in-band uses max backlog");
+    Expect(PresentableBandEmptyPressure(20, 0, 0, 4, 9, 9) == 0,
+           "Phase5.6.2: far full-RD backlog ignored");
+    Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2) >= 2,
+           "arch: effective_cap after reserve");
+    Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2, 4, true, 1) >= 2,
+           "I10-D3: consumer-starved soften keeps schedule_ok+1");
+    // A29 U1: queue-sized reserve must not collapse cap to floor.
+    Expect(ComputeFirstMeshScheduleEffectiveCap(6, 300, 297) == 6,
+           "A29: huge reserve capped → keep base");
+    Expect(ComputeFirstMeshScheduleEffectiveCap(6, 300, 297, 4, true, 3) == 6,
+           "A29: starved large queue keeps base");
+    using cutum::ShouldRenewMovingNearMissFirstMesh;
+    Expect(ShouldRenewMovingNearMissFirstMesh(true, true, 1, true),
+           "I8-D1: moving nh=1 renew FirstMesh");
+    Expect(!ShouldRenewMovingNearMissFirstMesh(false, true, 1, true),
+           "I8-D1: stand skips renew");
+    using cutum::IsTicketedVbConsumeMode;
+    Expect(IsTicketedVbConsumeMode(64, 98, 0, false),
+           "FP-E0: unified consume nt=64 vb=98 stop");
+    Expect(IsTicketedVbConsumeMode(20, 30, 0, false),
+           "I8-D2: stop VB drain consume vb=30");
+    using cutum::ShouldAllowLatchRelightMoving;
+    using cutum::ShouldEnqueueLatchSideRelight;
+    Expect(ShouldAllowLatchRelightMoving(true, true, true, 1, 0),
+           "Phase5.7R3: latch+moving+miss nh1+fifo0 allows Relight");
+    Expect(ShouldAllowLatchRelightMoving(true, true, true, 0, 15),
+           "Phase5.7R3: fifo15 still under backpressure");
+    Expect(!ShouldAllowLatchRelightMoving(true, true, true, 1, 16),
+           "Phase5.7R3: fifo>=16 blocks latch Relight");
+    Expect(!ShouldAllowLatchRelightMoving(true, true, true, 2, 0),
+           "Phase5.7R3: rim miss nh2 blocks latch Relight");
+    Expect(!ShouldAllowLatchRelightMoving(true, true, false, 0, 0),
+           "Phase5.7R3: no focus_missing blocks latch Relight");
+    Expect(!ShouldAllowLatchRelightMoving(true, false, true, 0, 0),
+           "Phase5.7R3: stand uses separate latch path");
+    Expect(!ShouldEnqueueLatchSideRelight(true, true, false, 0, 0, false),
+           "Phase5.7R3: side Relight blocked under sticky latch without allow");
+    Expect(ShouldEnqueueLatchSideRelight(true, true, true, 1, 0, false),
+           "Phase5.7R3: side Relight allowed underfeet miss");
+    Expect(ShouldEnqueueLatchSideRelight(true, true, false, 0, 0, true),
+           "Phase5.7R4: vb_consume allows side Relight when fifo OK");
+    Expect(!ShouldEnqueueLatchSideRelight(true, true, false, 0, 16, true),
+           "Phase5.7R4: fifo>=16 blocks vb_consume side Relight");
+    Expect(!ShouldEnqueueLatchSideRelight(false, true, false, 0, 0, false),
+           "Phase5.7R4: !latch moving without underfeet miss blocked");
+    Expect(ShouldEnqueueLatchSideRelight(false, true, true, 1, 0, false),
+           "Phase5.7R4: !latch moving underfeet miss OK");
+    Expect(ShouldEnqueueLatchSideRelight(false, false, false, 0, 0, false),
+           "Phase5.7R4: !latch stand keeps side Relight open");
+    Expect(!ShouldEnqueueLatchSideRelight(false, false, false, 0, 16, false),
+           "Phase5.7R4: fifo>=16 blocks stand side Relight");
+    using cutum::RelightFifoBackpressured;
+    Expect(RelightFifoBackpressured(16), "Phase5.7R4: fifo 16 backpressured");
+    Expect(!RelightFifoBackpressured(15), "Phase5.7R4: fifo 15 not backpressured");
+    using cutum::ShouldAdmitRelightFifoEnqueue;
+    Expect(ShouldAdmitRelightFifoEnqueue(15, 5),
+           "Phase5.7R5: admit far when not backpressured");
+    Expect(!ShouldAdmitRelightFifoEnqueue(16, 5),
+           "Phase5.7R5: reject far under BP");
+    Expect(ShouldAdmitRelightFifoEnqueue(40, 1),
+           "Phase5.7R5: admit nh<=1 under BP");
+    Expect(ShouldAdmitRelightFifoEnqueue(40, 0),
+           "Phase5.7R5: admit underfeet under BP");
+    using cutum::IsFmConsumerStarved;
+    Expect(IsFmConsumerStarved(3, 1), "arch: fm consumer starved");
+    Expect(!IsFmConsumerStarved(0, 0), "arch: no fm no starve");
+    using cutum::DirtyRemeshScanCap;
+    Expect(DirtyRemeshScanCap(8) == 64, "5.7R7: scan cap max(48, schedule*8)");
+    Expect(DirtyRemeshScanCap(4) == 48, "5.7R7: scan cap floor 48");
+    Expect(DirtyRemeshScanCap(12) == 96, "5.7R7: scan cap scales with schedule");
+    using cutum::ShouldDeferFmDirtyEnqueueReserve;
+    Expect(ShouldDeferFmDirtyEnqueueReserve(true, false, false),
+           "FP-G1.1: defer reserve during enter_lit_gate");
+    Expect(ShouldDeferFmDirtyEnqueueReserve(false, true, false),
+           "FP-G1.1: defer reserve during enter_lit_quiesce");
+    Expect(ShouldDeferFmDirtyEnqueueReserve(false, false, true),
+           "FP-G1.1: defer reserve during enter_fov_lit");
+    Expect(!ShouldDeferFmDirtyEnqueueReserve(false, false, false),
+           "FP-G1.1: reserve active on cruise");
+    using cutum::ShouldSuppressFmAdmissionCarveOut;
+    Expect(!ShouldSuppressFmAdmissionCarveOut(8, 2, 0, 0),
+           "R1-D: FM-empty carve when unfinished>=4 + schedule_starved");
+    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 5, 0, 0),
+           "R1-D: FM-empty carve when clnm>=4 + schedule_starved");
+    Expect(ShouldSuppressFmAdmissionCarveOut(8, 2, 0, 1),
+           "FP-G2: suppress carve when unfinished>=4 and dirty_fm fed");
+    Expect(ShouldSuppressFmAdmissionCarveOut(2, 5, 0, 1),
+           "FP-G2: suppress carve when clnm>=4 and dirty_fm fed");
+    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 2, 1, 0),
+           "arch: mild schedule_ok=1 allows carve");
+    Expect(ShouldSuppressFmAdmissionCarveOut(2, 2, 4, 0),
+           "arch: suppress carve when schedule_ok>=floor");
+    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 2, 0, 0),
+           "FP-G2: allow carve when mild holes + schedule_ok=0");
+    using cutum::ShouldBlockWitnessCaptureRetarget;
+    Expect(ShouldBlockWitnessCaptureRetarget(true, true, true),
+           "FP-D3: block witness retarget when pin+hold");
+    Expect(!ShouldBlockWitnessCaptureRetarget(true, true, true, true),
+           "arch: underfeet miss allows retarget");
+    Expect(ShouldBlockWitnessCaptureRetarget(true, true, true, false, false, 48),
+           "MissOwn P1: hard expire still blocks pinned_still retarget");
+    Expect(ShouldBlockWitnessCaptureRetarget(true, true, true, false, false, 47),
+           "R4.6.2: before hard expire pinned_still still blocks");
+    using cutum::ShouldConsumeTicketedVbDebtHigh;
+    Expect(ShouldConsumeTicketedVbDebtHigh(12, 81),
+           "FP-E0: high VB debt consume when nt>=10");
+    using cutum::ShouldProtectRelightFifoMissRim;
+    Expect(ShouldProtectRelightFifoMissRim(5, 0, true, 7, 0),
+           "FP-E1: protect miss rim nh<=4 under pin");
+    Expect(!ShouldProtectRelightFifoMissRim(12, 0, true, 7, 0),
+           "FP-E1: rim nh=5 not protected");
+    using cutum::ShouldPreferMissFinalizeBand;
+    using cutum::kVisualStageLitDrawableHoriz;
+    Expect(ShouldPreferMissFinalizeBand(4, kVisualStageLitDrawableHoriz),
+           "FP-B1: finalize band nh=4 with lit drawable ring");
+    Expect(!ShouldPreferMissFinalizeBand(5, kVisualStageLitDrawableHoriz),
+           "FP-B1: rim nh=5 split");
+    using cutum::ShouldDampWitnessRetargetOnUnfinishedCruise;
+    Expect(!ShouldDampWitnessRetargetOnUnfinishedCruise(true, 7),
+           "arch: no damp retarget when unf=7");
+    Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 8),
+           "arch: damp retarget when unf>=8");
+    using cutum::ShouldDampWitnessRetargetOnRimIdleCruise;
+    Expect(ShouldDampWitnessRetargetOnRimIdleCruise(true, 3),
+           "I13-A3: rim idle damp nh=3");
+    Expect(!ShouldDampWitnessRetargetOnRimIdleCruise(false, 3),
+           "I13-A3: moving no rim idle damp");
+    using cutum::ShouldBlockCaptureRetargetForIngressGpuPending;
+    Expect(ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, false),
+           "I13-A3: block retarget during ingress GPU pending");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, true),
+           "I13-A3: visual_holes bypass ingress GPU block");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(false, 2, false),
+           "I13-A3: no GPU pending no block");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 3, false, 2, false),
+           "I13-A1: frontier advance bypasses ingress GPU block");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, false, 3,
+                                                            true),
+           "I13-A1: FM schedule starved bypasses ingress GPU block");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, false, -1,
+                                                            false, true),
+           "I14b-C: drawable bypasses ingress GPU block");
+    using cutum::ShouldDampWitnessRetargetOnIngressDrawable;
+    Expect(ShouldDampWitnessRetargetOnIngressDrawable(true, true, false, 3),
+           "I14b-C: damp ingress drawable nh=3");
+    Expect(!ShouldDampWitnessRetargetOnIngressDrawable(true, true, false, 5),
+           "I14b-C: no damp ingress drawable nh=5");
+    Expect(!ShouldDampWitnessRetargetOnIngressDrawable(true, false, false, 3),
+           "I14b-C: undrawn no ingress drawable damp");
+    using cutum::ShouldBlockWitnessRetargetForPinSla;
+    Expect(ShouldBlockWitnessRetargetForPinSla(10, 3, false, true),
+           "I14b-C: pin SLA blocks young pin");
+    Expect(!ShouldBlockWitnessRetargetForPinSla(50, 3, false, true),
+           "I14b-C: pin SLA allows aged pin");
+    using cutum::ShouldDampCruiseIngressSeamRemesh;
+    Expect(ShouldDampCruiseIngressSeamRemesh(true, false, 3),
+           "I14b-D: cruise ingress seam damp");
+    Expect(!ShouldDampCruiseIngressSeamRemesh(false, false, 3),
+           "I14b-D: idle no cruise ingress seam damp");
+    using cutum::ShouldDampMarkRelitRemeshOnSoftDeferEmpty;
+    Expect(ShouldDampMarkRelitRemeshOnSoftDeferEmpty(true, true, true),
+           "I14b-D: cruise ingress damp overrides drawable keep");
+    Expect(!ShouldDampMarkRelitRemeshOnSoftDeferEmpty(false, true, false),
+           "I14b-D: drawable keeps seam remesh without ingress damp");
+    Expect(!ShouldStopRelightApplySlice(8.0, 1, 8.0, false, true, 3, 2.5),
+           "FZ25: consume mode continues past 1@8ms when cap>=3");
+    Expect(ShouldStopRelightApplySlice(8.0, 3, 8.0, false, true, 3, 2.5),
+           "FZ25: consume mode stops at earned cap");
+    Expect(ShouldStopRelightApplySlice(8.0, 1, 8.0, false),
+           "FZ25: non-consume unchanged stop at 8ms");
+  }
+
+  // FZ2.5-P0b: force MarkRelit for stalled ticketed stale
+  {
+    using cutum::ShouldForceMarkRelitForTicketedStale;
+    using cutum::ShouldRemeshTicketedFullyDarkStalled;
+    Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, true, 2),
+           "FZ25-P0b: force stale ticket on lit ring");
+    Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, false, 2),
+           "N04: ticket + FullyDark forces even equal-rev");
+    Expect(!ShouldForceMarkRelitForTicketedStale(true, true, true, true, 5),
+           "FZ25-P0b: rim outside lit ring");
+    Expect(!ShouldForceMarkRelitForTicketedStale(true, false, true, false, 2),
+           "N04 H3: no ticket and not still_stale → no force");
+    Expect(ShouldForceMarkRelitForTicketedStale(true, false, true, true, 2),
+           "N04 H3: after ticket drain, still_stale FullyDark still forces");
+    Expect(ShouldForceMarkRelitForTicketedStale(false, true, true, false, 2),
+           "SoT 115048: ticketed FullyDark forces without consume");
+    Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, false, 2),
+           "N04: no consume no ticket → no force");
+    Expect(!ShouldForceMarkRelitForTicketedStale(false, false, true, true, 2),
+           "SoT 115048: still_stale alone still needs consume");
+    Expect(ShouldRemeshTicketedFullyDarkStalled(true, false, true, 2),
+           "N04 T2: ticketed FullyDark no progress → remesh");
+    Expect(!ShouldRemeshTicketedFullyDarkStalled(true, true, true, 2),
+           "N04 T2: progress present → no stalled remesh");
+    Expect(!ShouldRemeshTicketedFullyDarkStalled(false, false, true, 2),
+           "N04 T2: no ticket → no stalled remesh");
+    using cutum::ShouldRemeshFullyDarkWhenSkyPresent;
+    Expect(ShouldRemeshFullyDarkWhenSkyPresent(true, true),
+           "SoT 141300: FullyDark + sky → remesh");
+    Expect(!ShouldRemeshFullyDarkWhenSkyPresent(true, false),
+           "SoT 141300: FullyDark without sky → Note-only");
+    Expect(!ShouldRemeshFullyDarkWhenSkyPresent(false, true),
+           "SoT 141300: not FullyDark → no sky remesh carve");
+    using cutum::ShouldHealFullyDarkWithRemesh;
+    using cutum::ShouldHealFullyDarkWithRelightOnly;
+    Expect(ShouldHealFullyDarkWithRemesh(true, false),
+           "A23: any_sky → remesh heal");
+    Expect(ShouldHealFullyDarkWithRemesh(false, true),
+           "A23: stale_dark_faces → remesh heal");
+    Expect(!ShouldHealFullyDarkWithRemesh(false, false),
+           "A23: void no-stale → not remesh");
+    Expect(ShouldHealFullyDarkWithRelightOnly(true, false, false),
+           "A23: FullyDark void → Relight-only");
+    Expect(!ShouldHealFullyDarkWithRelightOnly(true, true, false),
+           "A23: FullyDark+sky → not Relight-only");
+    Expect(!ShouldHealFullyDarkWithRelightOnly(true, false, true),
+           "A23: FullyDark+stale → not Relight-only");
+    Expect(!ShouldHealFullyDarkWithRelightOnly(false, false, false),
+           "A23: not FullyDark → not Relight-only");
+    using cutum::ShouldDropPendingFullyDarkMesh;
+    Expect(!ShouldDropPendingFullyDarkMesh(true, true, false),
+           "A24 R1: never drop pending FullyDark without GPU");
+    Expect(!ShouldDropPendingFullyDarkMesh(true, true, true),
+           "A24 R1: never drop pending FullyDark with GPU");
+    Expect(!ShouldDropPendingFullyDarkMesh(false, true, false),
+           "A24 R1: helper stays false when not pending");
+    using cutum::ShouldCooldownForceEqualRevPendingFullyDark;
+    Expect(ShouldCooldownForceEqualRevPendingFullyDark(true, true, false, 2, 45),
+           "A24 R3: PL+FD equal-rev focus after cooldown → force");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(true, true, false, 2, 10),
+           "A24 R3: before cooldown → no force");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(true, true, true, 2, 45),
+           "A24 R3: light-rev ahead → planner remesh, no cooldown force");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(true, true, false, 9, 45),
+           "A24 R3: outside lit ring → no force");
+    Expect(!ShouldCooldownForceEqualRevPendingFullyDark(false, true, false, 2, 45),
+           "A24 R3: no PendingLight → no force");
+  }
+
+  // N04 autopsy I3t: hold prior draw across accepted-stale publish
+  {
+    using cutum::HadVisualPriorForI3tHold;
+    using cutum::IsI3tEmptySpoofHoldSkipped;
+    using cutum::ShouldHoldPriorDrawOnAcceptedStale;
+    using cutum::ShouldI3tHoldPriorOnAcceptedStale;
+    Expect(ShouldHoldPriorDrawOnAcceptedStale(true, true),
+           "N04 I3t: accepted stale + prior drawable → hold");
+    Expect(!ShouldHoldPriorDrawOnAcceptedStale(true, false),
+           "N04 I3t: accepted stale hole may publish");
+    Expect(!ShouldHoldPriorDrawOnAcceptedStale(false, true),
+           "N04 I3t: fresh input publishes normally");
+    // E1/111235: empty-spoof QuadCount=0 still has visual prior via HasGpuMesh.
+    Expect(HadVisualPriorForI3tHold(false, true, true),
+           "I3t visual prior: GpuResident+HasGpuMesh without drawable");
+    Expect(!HadVisualPriorForI3tHold(false, true, false),
+           "I3t visual prior: resident flag alone insufficient");
+    Expect(HadVisualPriorForI3tHold(true, false, false),
+           "I3t visual prior: drawable greedy counts");
+    // SoT 100303: hard-gate — no hold without drawable (first-fill publishes).
+    Expect(!ShouldI3tHoldPriorOnAcceptedStale(true, false, true, true),
+           "SoT 100303: empty spoof + resident+pipe must publish");
+    Expect(!ShouldI3tHoldPriorOnAcceptedStale(true, false, true, false),
+           "SoT 100303: resident alone never holds");
+    Expect(ShouldI3tHoldPriorOnAcceptedStale(true, true, false, false),
+           "SoT 100303: drawable + accepted stale → hold");
+    Expect(IsI3tEmptySpoofHoldSkipped(true, false, true, false),
+           "SoT 100303: empty spoof skip counted when resident alone");
+    Expect(IsI3tEmptySpoofHoldSkipped(true, false, false, true),
+           "SoT 100303: empty spoof skip counted when pipe alone");
+    Expect(!IsI3tEmptySpoofHoldSkipped(true, true, true, true),
+           "SoT 100303: drawable is not empty-spoof skip");
+  }
+
+  // FZ2.6: budget reality + consumer backpressure + mesh drain split
+  {
+    using cutum::ApplyBinding;
+    using cutum::ClassifyApplyBinding;
+    using cutum::EarnedRelightApplyCap;
+    using cutum::RelightConsumeSliceMs;
+    using cutum::ShouldPrioritizeMeshDrainForTicketedConsume;
+    using cutum::ShouldPrioritizeMeshScheduleForTicketedConsume;
+    using cutum::ShouldSuppressProducerBoostWhenConsumerBound;
+    Expect(RelightConsumeSliceMs(8.0, true, false) >= 16.0,
+           "FZ26: idle consume slice >=16ms");
+    Expect(RelightConsumeSliceMs(8.0, true, true) == 8.0,
+           "FZ26: moving consume keeps MissReservedMs");
+    Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 19.0, true, 0, 3.0) >= 5,
+           "FZ26: light-unit cap >> bundled cap");
+    Expect(ShouldSuppressProducerBoostWhenConsumerBound(
+               1, 63, 64, ApplyBinding::TimeSlice),
+           "FZ26: suppress producer when consumer-bound");
+    Expect(!ShouldSuppressProducerBoostWhenConsumerBound(
+               2, 63, 64, ApplyBinding::TimeSlice),
+           "FZ26: no suppress when apply_n>=2");
+    Expect(ShouldPrioritizeMeshDrainForTicketedConsume(true, 1, 5),
+           "FZ26-P0b: drain when mark_relit+stalled");
+    Expect(ShouldPrioritizeMeshDrainForTicketedConsume(true, 0, 1),
+           "I11-D1: drain on stalled without mark_relit");
+    Expect(ShouldPrioritizeMeshDrainForTicketedConsume(
+               true, 0, 0, 40, 2, 1, false),
+           "I11-D1: stop drain on VB progress+void");
+    Expect(!ShouldPrioritizeMeshScheduleForTicketedConsume(true, 81, 5, 1),
+           "FZ26-P0b: schedule off when drain active");
+    Expect(ClassifyApplyBinding(1, 5, true, false, 19.0, 8.0) ==
+               ApplyBinding::FatUnit,
+           "FZ26: fat unit binding");
+  }
+
+  // FZ2.7-P9: Completed-empty must not suppress Capture; Apply floor gated
+  {
+    using cutum::ApplyBinding;
+    using cutum::ShouldKillProducerBoostOnSimHot;
+    using cutum::ShouldLeaveInDirtyUnderPlForSchedule;
+    using cutum::ShouldMarkMissingOnceOnLitReady;
+    using cutum::ShouldRaiseApplyBudgetOnlyWhenReady;
+    using cutum::ShouldSuppressProducerBoostWhenConsumerBoundP9;
+    Expect(!ShouldSuppressProducerBoostWhenConsumerBoundP9(
+               1, 95, 96, ApplyBinding::TimeSlice, 2.0, 16.0, 0),
+           "P9: no suppress when completed empty + fifo starve");
+    Expect(ShouldSuppressProducerBoostWhenConsumerBoundP9(
+               1, 95, 96, ApplyBinding::TimeSlice, 2.0, 16.0, 3),
+           "P9: suppress still when completed has work");
+    Expect(ShouldKillProducerBoostOnSimHot(136.0), "P9: sim kill >135");
+    Expect(!ShouldKillProducerBoostOnSimHot(135.0), "P9: sim kill edge");
+    Expect(ShouldRaiseApplyBudgetOnlyWhenReady(1), "P9: ready≥1 raises");
+    Expect(!ShouldRaiseApplyBudgetOnlyWhenReady(0), "P9: ready=0 no raise");
+    Expect(ShouldMarkMissingOnceOnLitReady(true, true, 0, 4, true),
+           "P9: one-shot MarkMissing when schedule=0 + debt");
+    Expect(!ShouldMarkMissingOnceOnLitReady(true, true, 2, 4, true),
+           "P9: no MarkMissing when schedule>0");
+    Expect(!ShouldMarkMissingOnceOnLitReady(true, true, 0, 4, false),
+           "P9: no MarkMissing without no_mesh debt");
+    Expect(ShouldLeaveInDirtyUnderPlForSchedule(true, true),
+           "P9: leave-in only drawable");
+    Expect(!ShouldLeaveInDirtyUnderPlForSchedule(true, false),
+           "P9: !drawable never leave-in under PL");
+  }
+
+  // FZ2.7-B5: cap math uses light+install unit on consume
+  {
+    using cutum::EarnedRelightApplyCap;
+    using cutum::ShouldStopRelightApplySlice;
+    Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 20.0, true, 0, 3.0, 5.0) >= 2,
+           "FZ27: light+install cap >=2 in 16ms slice");
+    Expect(ShouldStopRelightApplySlice(10.0, 2, 16.0, false, true, 2, 9.0, 0,
+                                        3.0, 5.0),
+           "FZ27-A: stop at time_cap when unit fills slice");
+    Expect(!ShouldStopRelightApplySlice(10.0, 1, 16.0, false, true, 2, 19.0, 0,
+                                        1.0, 18.0),
+           "FZ27-B2: fat unit consume allows 2nd apply when earned_cap=2");
+  }
+
+  // FZ2.7-B2c: cheap-unit throughput latch (no defer_side hysteresis)
+  {
+    using cutum::CruiseRelightApplyBudget;
+    using cutum::EarnedRelightApplyCap;
+    using cutum::RelightApplyCapUnitMs;
+    using cutum::RelightThroughputSliceMs;
+    using cutum::ShouldUseThroughputApplyCap;
+    Expect(RelightApplyCapUnitMs(2.0, 1.0, 1.0) == 2.0,
+           "B2c: cap unit light+install");
+    Expect(ShouldUseThroughputApplyCap(false, false, false, 8.0, 2.0, 1.0, 1.0,
+                                       0, 50, 96, 10, 30),
+           "B2c: cheap unit latches throughput");
+    Expect(!ShouldUseThroughputApplyCap(false, false, false, 8.0, 12.0, 6.0, 6.0,
+                                        0, 10, 96, 10, 30),
+           "B2c: fat unit no latch without defer");
+    Expect(ShouldUseThroughputApplyCap(false, false, false, 8.0, 12.0, 6.0, 6.0,
+                                       2, 10, 96, 10, 30),
+           "B2c: ready>=2 latches throughput");
+    Expect(ShouldUseThroughputApplyCap(false, false, false, 8.0, 12.0, 6.0, 6.0,
+                                       0, 70, 96, 10, 30),
+           "B2c: fifo backlog latches throughput");
+    Expect(!ShouldUseThroughputApplyCap(false, false, true, 8.0, 1.0, 0.5, 0.5,
+                                        5, 70, 96, 10, 30),
+           "B2c: enter pass disables throughput");
+    Expect(RelightThroughputSliceMs(8.0, false, true, true, 2.0) >= 12.0,
+           "B2c: cruise throughput slice >=12ms");
+    Expect(RelightThroughputSliceMs(8.0, true, true, true, 2.0, 3) == 16.0,
+           "P2: cheap consume+ready widens moving slice to 16");
+    Expect(RelightThroughputSliceMs(8.0, true, true, true, 2.0, 1) == 8.0,
+           "P2: consume without ready stays MissReservedMs");
+    Expect(RelightThroughputSliceMs(8.0, true, true, true, 6.5, 3) == 8.0,
+           "P2: fat unit does not widen consume slice");
+    Expect(EarnedRelightApplyCap(20, 12.0, 0.0, 2.0, true, 0, 1.0, 1.0) >= 2,
+           "B2c: earned cap >=2 for 2ms unit in 12ms slice");
+    Expect(CruiseRelightApplyBudget(true, 2.0, 6, false, false, 1) >= 3,
+           "B2d: cheap unit budget >=3 without fifo_pin_stable");
+  }
+
+  // FZ2.7-B2d: min earned cap=3 when cheap unit + fifo backlog
+  {
+    using cutum::ApplyBinding;
+    using cutum::ClassifyApplyBinding;
+    using cutum::CruiseRelightApplyBudget;
+    using cutum::EarnedRelightApplyCap;
+    using cutum::RelightThroughputHasBacklog;
+    using cutum::RelightThroughputMinApplyCap;
+    using cutum::RelightThroughputSliceMs;
+    using cutum::ShouldStopRelightApplySlice;
+    using cutum::ShouldSuppressProducerBoostWhenConsumerBound;
+    Expect(RelightThroughputHasBacklog(0, 70, 96, 30),
+           "B2d: fifo 70/96 is backlog");
+    Expect(RelightThroughputMinApplyCap(true, 3.0, 16.0, 0, 0, 70, 96, 30) == 3,
+           "B2d: min_cap=3 cheap+backlog");
+    Expect(RelightThroughputMinApplyCap(true, 3.0, 16.0, 0, 0, 10, 96, 30) == 2,
+           "B2d: min_cap=2 cheap no backlog");
+    Expect(RelightThroughputMinApplyCap(true, 3.0, 16.0, 0, 0, 10, 96, 30, false,
+                                        true, /*fully_dark_repair*/ 38) == 3,
+           "G1: FullyDarkPendingRepair>=20 restores min_cap=3");
+    Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 3.0, true, 0, 2.5, 0.1, 0, 70,
+                                 96, 55) >= 3,
+           "B2d: earned cap >=3 for 2.6ms unit+backlog");
+    Expect(RelightThroughputSliceMs(8.0, false, true, true, 5.0) >= 15.0,
+           "B2d: slice widens to cap_unit*3");
+    Expect(RelightThroughputSliceMs(8.0, false, true, true, 5.0) <= 16.0,
+           "B2d: moving cruise slice capped at 16ms");
+    Expect(RelightThroughputMinApplyCap(true, 6.5, 16.0, 0, 0, 70, 96, 30) == 2,
+           "FZ27-A: 6.5ms unit is not cheap at slice/3");
+    Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 6.5, true, 1, 6.5, 0.05, 0, 70,
+                                 96, 32) == 2,
+           "FZ27-A: time_cap 2 wins over min_cap 3");
+    Expect(ClassifyApplyBinding(2, 5, true, true, 8.0, 16.0, 2) ==
+               ApplyBinding::CountCap,
+           "FZ27-A: cap-stop is CountCap even if wall≈slice");
+    Expect(CruiseRelightApplyBudget(true, 6.5, 6, false, false, 1) < 3,
+           "FZ27-A: unit>slice/3 does not force budget 3");
+    Expect(ShouldSuppressProducerBoostWhenConsumerBound(
+               1, 40, 96, ApplyBinding::CountCap, 6.5, 16.0),
+           "FZ27-C: suppress when light_unit > slice/3");
+  }
+
+  // ColdSupply S0: ClampRelightDrainN
+  {
+    using cutum::ClampRelightDrainN;
+    Expect(ClampRelightDrainN(64, 3) == 3, "S0: drain min(budget,ready)");
+    Expect(ClampRelightDrainN(2, 10) == 2, "S0: budget caps ready");
+    Expect(ClampRelightDrainN(0, 5) == 0, "S0: budget 0 → 0");
+    Expect(ClampRelightDrainN(8, 0) == 0, "S0: ready 0 → 0");
+  }
+
+  // ColdFix P1: queue-depth Capture admit
+  {
+    using cutum::ShouldAdmitRelightCapture;
+    using cutum::SoftDeferCaptureFloorWhenDepthFull;
+    Expect(ShouldAdmitRelightCapture(0, 0, 4),
+           "ColdFix P1: empty pipeline admits Capture");
+    Expect(!ShouldAdmitRelightCapture(3, 1, 4),
+           "ColdFix P1: completed+inflight >= cap → deny");
+    Expect(ShouldAdmitRelightCapture(2, 1, 4),
+           "ColdFix P1: depth under cap → admit");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0) == 1,
+           "ColdFix P1: SoftDefer floor keeps 1 when depth-full");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(false, 0) == 0,
+           "ColdFix P1: no SoftDefer → bg_cap stays 0");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 0, true, 16, 0) == 0,
+           "Phase5.7R5: BP+Apply0 does not raise CaptureFloor");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 0, false, 15, 0) == 0,
+           "Phase5.7R6: Apply idle + SoftDefer does not raise even below BP");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 1, false, 15, 2) == 1,
+           "Phase5.7R6: SoftDefer floor when Apply progressing");
+  }
+
+  // FZ2.7-C: Capture depth follows earned apply (manual 141417 fifo=55 ready=0)
+  {
+    using cutum::RelightCapturePipelineDepthCap;
+    using cutum::RelightThroughputHasBacklog;
+    Expect(RelightThroughputHasBacklog(0, 55, 96, 17),
+           "C: fifo 55/96 is backlog");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 1.0, 0.4, 0.5, 0, 55, 96,
+                                          17, false) >= 4,
+           "C: cheap+fifo depth >=4 not apply_n+1=2");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 1.0, 0.4, 0.5, 0, 55, 96,
+                                          17, false) <= 6,
+           "C: depth capped at 6");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 12.0, 6.5, 0.5, 0, 10, 96,
+                                          10, false) == 2,
+           "C: fat unit keeps base depth 2");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 1.0, 0.4, 0.5, 0, 59, 96,
+                                          78, true) >= 4,
+           "P6: fifo 59 ready 0 still depth>=4");
+    using cutum::RelightCaptureBgFloorForFifoStarve;
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 0.5) == 3,
+           "P6: cheap fifo starve lifts bg_cap 1→3");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 0.07) == 3,
+           "P7: GPU-sky unit 0.07 still lifts Capture");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 0.0) == 3,
+           "P7: unknown unit 0 still lifts fifo starve Capture");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 10, 96, 0, 0, 0.5) == 1,
+           "P6: no fifo starve keeps bg_cap");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 6.5) == 1,
+           "P6: fat unit does not lift Capture");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 8, 0.5) == 3,
+           "P10: completed=0 floors even if inflight high");
+    using cutum::ClampCaptureBgAfterSimKill;
+    using cutum::SoftDeferCaptureFloorWhenDepthFull;
+    Expect(ClampCaptureBgAfterSimKill(8, true, 0, 70) == 3,
+           "P10: sim kill keeps Completed-empty refill ≤3");
+    Expect(ClampCaptureBgAfterSimKill(8, true, 2, 70) == 1,
+           "P10: sim kill clamps boost when completed>0");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(false, 0, 0, true) == 3,
+           "P10: depth-full SoftDefer refill when completed empty");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 0.0, 0.0, 0.0, 0, 71, 96,
+                                          80, true) >= 4,
+           "P7: fifo 71 ready 0 unknown unit still depth>=4");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 1.0, 0.4, 0.5, 0, 10, 96,
+                                          10, true) >= 3,
+           "I15-A1: consume_mode depth boost");
+  }
+
+  // I15-B1 / I15-C1 / I15-D1 policy smoke
+  {
+    using cutum::ShouldExitStopVbHoleDrain;
+    using cutum::ShouldConsumeTicketedVbStopDrain;
+    using cutum::ShouldDampMarkRelitRemeshOnStandVbDebt;
+    using cutum::ShouldForceMissFinalizeOnTelemetryMismatch;
+    using cutum::ShouldForceMissFinalizeOnStandWitnessStuck;
+    using cutum::ShouldHoldHoleDrainForStopVbPlateau;
+    Expect(!ShouldExitStopVbHoleDrain(2000, 5, 80, true),
+           "I15-B1: consume keeps HoleDrain with vb_nt");
+    Expect(!ShouldExitStopVbHoleDrain(2000, 0, 80, true),
+           "I15-B4: ticketed plateau keeps HoleDrain when vb_focus high");
+    Expect(ShouldExitStopVbHoleDrain(2000, 0, 0, true),
+           "I15-B1: exit when VB cleared");
+    Expect(ShouldHoldHoleDrainForStopVbPlateau(false, 93, 0),
+           "I15-B4: stand VB plateau holds HoleDrain");
+    {
+      using cutum::ShouldHoldHoleDrainForCoverageSticky;
+      Expect(!ShouldHoldHoleDrainForCoverageSticky(0, 0, 0),
+             "MissOwn VB P0: bare clear coverage may exit");
+      Expect(!ShouldHoldHoleDrainForCoverageSticky(0, 0),
+             "MissOwn VB P0: bare miss (no args) does not hold HoleDrain");
+      Expect(ShouldHoldHoleDrainForCoverageSticky(5, 0, 0),
+             "MissOwn VB P0: clnm>0 holds HoleDrain");
+      Expect(ShouldHoldHoleDrainForCoverageSticky(0, 1, 0),
+             "MissOwn VB P0: SoftDeferEmptyOwned holds HoleDrain");
+      Expect(ShouldHoldHoleDrainForCoverageSticky(0, 0, 1),
+             "MissOwn VB P0: PostLoadRingNotReady holds HoleDrain");
+    }
+    {
+      using cutum::CruiseNearLoadRadiusCeiling;
+      using cutum::ShouldDeferPrefetchAheadForFmStarve;
+      using cutum::ShouldDripOutsideFocusMeshOnRimCruise;
+      using cutum::ShouldHoldHoleDrainForCoverageSticky;
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(false, 3, true, 1, 1),
+             "Rim ahead P0: idle no drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 1, true, 1, 1),
+             "Rim ahead P0: nh<2 no drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 5, true, 1, 1),
+             "Rim ahead P0: nh>4 no drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 0, 0),
+             "Rim ahead P0: no pressure no drip");
+      Expect(ShouldDripOutsideFocusMeshOnRimCruise(true, 3, true, 0, 0),
+             "Rim ahead P0: rim_hole drip");
+      Expect(ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 2, 0),
+             "Rim ahead P0: prefetch drip");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 2, 0, 0),
+             "prior-lit ring: no prefetch drip when schedule_ok=0");
+      Expect(ShouldDripOutsideFocusMeshOnRimCruise(true, 3, true, 2, 0, 0),
+             "prior-lit ring: rim_hole still drips under starve");
+      Expect(!ShouldDripOutsideFocusMeshOnRimCruise(true, 3, false, 0, 4),
+             "Rim ahead P0: dirty_fm alone no drip");
+      Expect(!ShouldHoldHoleDrainForCoverageSticky(0, 0, 0),
+             "Rim ahead P3: drip ≠ coverage sticky");
+      Expect(ShouldDeferPrefetchAheadForFmStarve(true, 3, 4, 0, 4),
+             "Rim ahead P1: hard-starved defer");
+      Expect(!ShouldDeferPrefetchAheadForFmStarve(true, 3, 4, 2, 4),
+             "Rim ahead P1: partial schedule keeps Prefetch");
+      Expect(!ShouldDeferPrefetchAheadForFmStarve(true, 3, 4, 4, 4),
+             "Rim ahead P1: fed ok");
+      Expect(!ShouldDeferPrefetchAheadForFmStarve(true, 3, 0, 0, 0),
+             "Rim ahead P1: no floor");
+      Expect(!ShouldDeferPrefetchAheadForFmStarve(false, 3, 4, 0, 4),
+             "Rim ahead P1: not HoleDrain");
+      Expect(CruiseNearLoadRadiusCeiling(8, 4, 4) == 6,
+             "Rim ahead P2: cruise ceiling focus/lit+2");
+      Expect(CruiseNearLoadRadiusCeiling(3, 4, 4) == 3,
+             "Rim ahead P2: cruise ceiling capped by VisualRD");
+      Expect(CruiseNearLoadRadiusCeiling(10, 6, 4) == 8,
+             "Rim ahead P2: cruise ceiling follows focus+2");
+      using cutum::ShouldClampIngressForLitConvergenceDebt;
+      using cutum::ShouldShedPrefetchLateralForLitDebt;
+      Expect(ShouldClampIngressForLitConvergenceDebt(true, 3, 4, 0, 0, 4),
+             "prior-lit ring: hard FM starve clamps ingress");
+      Expect(!ShouldClampIngressForLitConvergenceDebt(true, 3, 4, 2, 0, 4),
+             "prior-lit ring: soft under-floor alone no clamp (AF v2)");
+      Expect(ShouldClampIngressForLitConvergenceDebt(true, 3, 0, 4, 16, 0),
+             "prior-lit ring: relight FIFO BP clamps ingress");
+      Expect(!ShouldClampIngressForLitConvergenceDebt(true, 3, 4, 4, 0, 4),
+             "prior-lit ring: healthy schedule no clamp");
+      Expect(!ShouldClampIngressForLitConvergenceDebt(false, 3, 4, 0, 20, 4),
+             "prior-lit ring: not HoleDrain no clamp");
+      // Soft debt shed: hard defer false + clamp from relight BP
+      Expect(ShouldShedPrefetchLateralForLitDebt(true, false),
+             "prior-lit ring: soft debt sheds lateral only");
+      Expect(!ShouldShedPrefetchLateralForLitDebt(true, true),
+             "prior-lit ring: hard defer is full Prefetch kill");
+      Expect(!ShouldShedPrefetchLateralForLitDebt(false, false),
+             "prior-lit ring: no debt no lateral shed");
+    }
+    Expect(ShouldConsumeTicketedVbStopDrain(false, 20, 6),
+           "I15-B2: stop drain at focus 20 when vb_nt>=5");
+    Expect(ShouldConsumeTicketedVbStopDrain(false, 45, 0),
+           "I15-B4: stop drain at focus 45 without no_ticket");
+    Expect(!ShouldConsumeTicketedVbStopDrain(false, 10, 6),
+           "I15-B2: focus 10 below floor 15");
+    Expect(ShouldDampMarkRelitRemeshOnStandVbDebt(false, 3, 20),
+           "I15-C1: stand VB damp");
+    Expect(!ShouldDampMarkRelitRemeshOnStandVbDebt(true, 3, 20),
+           "I15-C1: moving no damp");
+    Expect(ShouldForceMissFinalizeOnTelemetryMismatch(true, false, 3, 31),
+           "I15-D1: mismatch kick");
+    Expect(!ShouldForceMissFinalizeOnTelemetryMismatch(true, true, 3, 31),
+           "I15-D1: visual_holes blocks kick");
+    Expect(ShouldForceMissFinalizeOnStandWitnessStuck(false, true, 200),
+           "I15-D2: stand witness stuck kick");
+  }
+
+  // I17 ingress throughput policy smoke
+  {
+    using cutum::IsBlinkTransition;
+    using cutum::RimIngressFmScheduleFloor;
+    using cutum::ShouldConsumeTicketedVbStalledCruise;
+    using cutum::ShouldDeferRimRevisionBumpForPendingGpu;
+    using cutum::ShouldRefreshRingResyncForFocusJump;
+    using cutum::UnfinishedSampleCooldownFrames;
+    using cutum::VbRawScanCadenceFrames;
+    Expect(IsBlinkTransition(0, 1), "I17-P0: 0→1 blink");
+    Expect(!IsBlinkTransition(1, 1), "I17-P0: stable not blink");
+    Expect(ShouldRefreshRingResyncForFocusJump(true, false, true, 0),
+           "I17-P1: focus jump resync");
+    Expect(!ShouldRefreshRingResyncForFocusJump(false, false, true, 2),
+           "I17-P1: reuse ring sample");
+    Expect(UnfinishedSampleCooldownFrames(1) >= UnfinishedSampleCooldownFrames(3),
+           "I17-P1: stable unfinished longer cadence");
+    Expect(VbRawScanCadenceFrames(true, 4, 20, 50) >=
+               VbRawScanCadenceFrames(true, 4, 5, 50),
+           "I17-P1: VB stalled plateau throttles scan");
+    Expect(RimIngressFmScheduleFloor(true, 3, 2) >= 2,
+           "I17-P2: rim FM floor");
+    Expect(ShouldDeferRimRevisionBumpForPendingGpu(true, 3, true, true),
+           "I17-P2: defer rim revision bump");
+    Expect(ShouldConsumeTicketedVbStalledCruise(true, 12, 0, 30),
+           "I17-P3: stalled cruise VB consume");
+  }
+
+  // I18 rim chain + witness comfort policy smoke
+  {
+    using cutum::DynamicKickCutBiasForFmWatch;
+    using cutum::EvaluateIngressDebt;
+    using cutum::IngressDebtInput;
+    using cutum::IngressDebtLevel;
+    using cutum::IsIngressChainStalled;
+    using cutum::IsRimIngressWatchCoord;
+    using cutum::RimChainStallKickFrames;
+    using cutum::ShouldAllowBetterHorizWitnessRetarget;
+    using cutum::ShouldHoldPriorColumnDrawableOnWitnessSwap;
+    using cutum::ShouldRateLimitWitnessRetargetUnderDebt;
+    using cutum::ShouldRefreshRingResyncForFocusJump;
+    using cutum::UnfinishedSampleCooldownFramesCruise;
+    using cutum::WitnessSwapGrace;
+    Expect(RimChainStallKickFrames(true) < RimChainStallKickFrames(false),
+           "I18-A2: schedule-starved faster kick");
+    Expect(RimChainStallKickFrames(false) >= 8, "I18 hotfix: default kick 8f");
+    IngressDebtInput stall_in{};
+    stall_in.dirty_fm_n = 2;
+    stall_in.fm_dirty_to_gpu_finish_n = 0;
+    stall_in.fm_dirty_gpu_watch_n = 3;
+    stall_in.fm_dirty_gpu_watch_max_age = 12;
+    Expect(IsIngressChainStalled(stall_in), "I18-P4: watch+no finish stall");
+    stall_in.fm_dirty_gpu_watch_max_age = 4;
+    stall_in.chain_progress_frames = 2;
+    Expect(!IsIngressChainStalled(stall_in), "I18-P4: young watch not stall");
+    Expect(DynamicKickCutBiasForFmWatch(3, 0.55) > 0.55,
+           "I18-F3: watch rim raises kick_cut");
+    Expect(IsRimIngressWatchCoord({2, 0, 1}, {0, 0, 0}),
+           "I18-A1: rim watch coord");
+    Expect(!ShouldRefreshRingResyncForFocusJump(false, false, true, 2, 1),
+           "I18-B3: witness hop alone no resync");
+    Expect(UnfinishedSampleCooldownFramesCruise(true, 3, 0) >= 32,
+           "I18-B4: cruise rim longer cadence");
+    Expect(ShouldHoldPriorColumnDrawableOnWitnessSwap(true, false, 3, 2),
+           "I18-D1: witness swap grace");
+    Expect(!ShouldAllowBetterHorizWitnessRetarget(5, 3, 4, true, 0, 2, 3),
+           "I18-B2: sched gate blocks better_horiz");
+    IngressDebtInput debt_in{};
+    debt_in.moving = true;
+    debt_in.dirty_fm_n = 2;
+    debt_in.chain_progress_frames = 0;
+    debt_in.fm_dirty_to_gpu_finish_n = 0;
+    debt_in.fm_dirty_gpu_watch_max_age = 12;
+    Expect(EvaluateIngressDebt(debt_in, 0) == IngressDebtLevel::Watch,
+           "I18-F1: chain stall watch");
+    Expect(EvaluateIngressDebt(debt_in, 3) >= IngressDebtLevel::ShedFar,
+           "I18-F1: chain stall shed");
+    Expect(ShouldRateLimitWitnessRetargetUnderDebt(
+               IngressDebtLevel::ShedFar, 10, false),
+           "I18-F5: rate limit under debt");
+    WitnessSwapGrace grace{{1, 2}, 2};
+    Expect(IsWitnessSwapGraceActive(grace, {1, 2}), "I18-D1: grace active");
+  }
+
+  // CheapRemesh C5 / prior-lit: keep live *lit* GPU; FullyDark plugs hide.
+  {
+    using cutum::ShouldKeepLiveGpuOpaqueDespiteFullyDark;
+    using cutum::RelightFifoTrimProtectHoriz;
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, true),
+           "C5: underfeet+live lit → keep opaque");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 3, true),
+           "C5: LitDrawable nh=3 → keep");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 4, true),
+           "C5: LitDrawable edge nh=4 → keep");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 5, true),
+           "P7: protect nh=5 live GPU keep");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 8, true),
+           "P7: protect nh=8 live GPU keep");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 9, true),
+           "P7: beyond protect ring → no keep");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, false),
+           "C5: no repair progress still keep when live lit GPU");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(false, 0, true),
+           "C5: no live GPU → no keep");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(
+               true, 4, true, RelightFifoTrimProtectHoriz(),
+               /*live_gpu_fully_dark=*/true),
+           "prior-lit: FullyDark live plug not kept opaque");
+    using cutum::ShouldHideFullyDarkOverLiveGpu;
+    Expect(ShouldHideFullyDarkOverLiveGpu(true, 4, true),
+           "prior-lit: FullyDark live GPU hidden in ring");
+    Expect(ShouldHideFullyDarkOverLiveGpu(true, 8, true),
+           "prior-lit: FullyDark live GPU hidden in protect");
+    Expect(ShouldHideFullyDarkOverLiveGpu(true, 9, true),
+           "P7: beyond protect may hide FullyDark");
+    Expect(ShouldHideFullyDarkOverLiveGpu(false, 2, true),
+           "P4: no live GPU may hide FullyDark");
+    Expect(!ShouldHideFullyDarkOverLiveGpu(true, 0, false),
+           "P4: not FullyDark → no hide");
+  }
+
+  // FZ2.7-P1: noop GPU apply still MarkRelit under repair debt
+  {
+    using cutum::ShouldForceMarkRelitOnUnchangedLight;
+    Expect(ShouldForceMarkRelitOnUnchangedLight(true, 0, false, false, 8),
+           "P1: ticketed consume forces MarkRelit");
+    Expect(ShouldForceMarkRelitOnUnchangedLight(false, 104, false, false, 8),
+           "P1: VB>40 forces MarkRelit");
+    Expect(ShouldForceMarkRelitOnUnchangedLight(false, 0, true, false, 5),
+           "P1: repair ticket forces MarkRelit");
+    Expect(ShouldForceMarkRelitOnUnchangedLight(false, 0, false, true, 4),
+           "P1: FullyDark LitDrawable forces MarkRelit");
+    Expect(!ShouldForceMarkRelitOnUnchangedLight(false, 10, false, false, 8),
+           "P1: hinterland noop may skip");
+    Expect(!ShouldForceMarkRelitOnUnchangedLight(false, 0, false, true, 5),
+           "P1: far FullyDark without ticket is not ring force");
+  }
+
+  // FZ2.7-P2: Drain min(ready,4) when cheap
+  {
+    using cutum::ClampCruiseDrainToReadyCheap;
+    using cutum::EarnedRelightApplyCap;
+    Expect(ClampCruiseDrainToReadyCheap(1, 3, 2.0) == 3,
+           "P2: cheap ready=3 lifts cruise budget 1");
+    Expect(ClampCruiseDrainToReadyCheap(1, 3, 0.07) == 3,
+           "P7: GPU-sky unit 0.07 lifts Drain");
+    Expect(ClampCruiseDrainToReadyCheap(1, 3, 0.0) == 3,
+           "P7: unknown unit + ready>=2 lifts Drain");
+    Expect(ClampCruiseDrainToReadyCheap(1, 3, 6.5) == 1,
+           "P2: fat unit does not lift budget");
+    Expect(ClampCruiseDrainToReadyCheap(1, 1, 2.0) == 1,
+           "P2: ready<2 no lift");
+    Expect(EarnedRelightApplyCap(20, 8.0, 0.0, 2.0, true, 0, 2.0, 0.1, 3, 70,
+                                 96, 55) >= 3,
+           "P2: earned >= min(ready,4) when cheap");
+  }
+
+  // FZ2.7-P3: FirstMesh never skip in-flight; far remesh coalesces
+  {
+    using cutum::ShouldSkipInFlightDirtyReschedule;
+    Expect(!ShouldSkipInFlightDirtyReschedule(true, true, 8, true),
+           "P3: FirstMesh hole never skip");
+    Expect(!ShouldSkipInFlightDirtyReschedule(true, true, 1, false),
+           "P3: near FullyDark remesh not skipped");
+    Expect(ShouldSkipInFlightDirtyReschedule(true, true, 8, false),
+           "P3: far remesh in-flight coalesces");
+    Expect(ShouldSkipInFlightDirtyReschedule(true, false, 1, false),
+           "P3: live remesh in-flight coalesces");
+    Expect(!ShouldSkipInFlightDirtyReschedule(false, true, 8, false),
+           "P3: not in-flight → no skip");
+  }
+
+  {
+    using cutum::ShouldBumpDirtyHeadForVisualHole;
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, true),
+           "P6: consume FullyDark dirty bumps when light rev ahead");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, false),
+           "A21: equal-rev FullyDark (!light_rev_ahead) does not bump at helper");
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, false, false, 9, true, false),
+           "P6: consume missing mesh bumps even far");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(true, false, true, 2, true),
+           "P6: lit drawable dirty does not bump");
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 8, false, true),
+           "P6: cruise FullyDark nh=8 bumps when light changed");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(true, true, true, 9, false, true),
+           "P6: hinterland FullyDark may skip");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(false, true, false, 1, true),
+           "P6: not dirty → no bump");
+    using cutum::ColumnChunkSnapshot;
+    using cutum::ShouldRemeshAfterLitApplyForHole;
+    ColumnChunkSnapshot dark{};
+    dark.has_drawable = true;
+    dark.fully_dark = true;
+    dark.meshed_light_rev = 3;
+    dark.light_field_rev = 3;
+    Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
+           "P7: FullyDark matching revs skip remesh when not still_stale");
+    dark.still_stale = true;
+    Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
+           "A21-07: FullyDark still_stale census alone does not remesh");
+    dark.still_stale = false;
+    dark.is_dirty = true;
+    Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
+           "A22 S1: equal-rev FullyDark+Dirty does not remesh alone");
+    dark.is_dirty = false;
+    Expect(ShouldRemeshAfterLitApplyForHole(dark, true),
+           "G1: force_stale_ticket remeshes FullyDark");
+    dark.light_field_rev = 4;
+    Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
+           "P7: light rev ahead remeshes FullyDark");
+    dark.light_field_rev = 3;
+    dark.has_drawable = false;
+    Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
+           "P7: missing mesh still FirstMesh");
+  }
+
+  // CheapRemesh C3: PrimaryLightUnchanged
+  {
+    using cutum::PrimaryLightUnchanged;
+    using cutum::CHUNK_VOLUME;
+    std::array<uint8_t, CHUNK_VOLUME> a{};
+    std::array<uint8_t, CHUNK_VOLUME> b{};
+    a.fill(0);
+    b.fill(0);
+    Expect(PrimaryLightUnchanged(a, b), "C3: equal packed → unchanged");
+    b[0] = 1;
+    Expect(!PrimaryLightUnchanged(a, b), "C3: differ → changed");
+  }
+
+  // P2: CruiseRelightApplyBudget (unit-cost; NPrev=0 ⇒ batch≈unit)
+  {
+    using cutum::CruiseRelightApplyBudget;
+    Expect(CruiseRelightApplyBudget(true, 10.0, 4, false) == 1,
+           "P2: moving caps to 1");
+    Expect(CruiseRelightApplyBudget(true, 0.07, 4, false, false, 1) >= 3,
+           "P7: GPU-sky unit 0.07 cruise floor 3");
+    Expect(CruiseRelightApplyBudget(true, 3.0, 4, true) == 4,
+           "LitRing: pin+apply<5 ⇒ cap 4 (requested 4)");
+    Expect(CruiseRelightApplyBudget(false, 10.0, 4, false) == 4,
+           "P2: idle returns requested");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 0, true) == 0,
+           "P2: requested 0 returns 0");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 8, false, true) == 1,
+           "P2: near pending does not bypass heavy apply");
+    Expect(CruiseRelightApplyBudget(true, 2.0, 12, true, true) == 6,
+           "LitRing: pin+apply<3 ⇒ cap 6");
+    Expect(CruiseRelightApplyBudget(true, 4.8, 12, true, false) == 4,
+           "LitRing: apply_ms≈4.8 ⇒ cap 4 (manual 093804)");
+    Expect(CruiseRelightApplyBudget(true, 4.8, 12, true, true) == 4,
+           "LitRing: near PL floor keeps cap≥4 at apply_ms≈4.8");
+    Expect(CruiseRelightApplyBudget(true, 6.0, 12, true, true) == 4,
+           "LitRing: near PL floor at apply_ms≈6");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 3, true, true) == 3,
+           "Flicker P1: N=1+batch≈10 pin+near-PL probe cap 3");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 12, true, false, 1) == 2,
+           "Flicker P1: NPrev=1 + batch≈10 pin probe cap 2");
+    Expect(CruiseRelightApplyBudget(true, 16.0, 12, true, false, 1) == 1,
+           "Flicker P1: hot batch>12 keeps cap 1 even with pin");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 12, false, false, 1) == 1,
+           "Flicker P1: unstable pin keeps cap 1");
+    Expect(CruiseRelightApplyBudget(true, 40.0, 12, true, true, 4) == 1,
+           "Flicker P1: unit_ms=10 with N>=2 ⇒ cap 1");
+    Expect(CruiseRelightApplyBudget(true, 16.0, 12, true, false, 4) == 4,
+           "Flicker P1: unit_ms=4 from batch/N ⇒ cap 4");
+    Expect(CruiseRelightApplyBudget(true, 16.0, 12, true, true, 4) == 4,
+           "Flicker P1: near-PL floor with unit_ms=4");
+  }
+
+  // P5 / RateMatch R1: DynamicCapture unit_ms + apply pace
+  {
+    using cutum::ShouldAllowDynamicCaptureMovingBgCap;
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 1, 5.0, 1, 0),
+           "P5: pin_drop>0 blocks dynamic cap");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 0, 9.0, 1, 0),
+           "S1: unit_ms>8 blocks dynamic cap");
+    Expect(ShouldAllowDynamicCaptureMovingBgCap(0, 0, 7.0, 1, 0),
+           "P5: stable cheap unit allows dynamic cap");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(1, 0, 5.0, 1, 0),
+           "P5: drop>0 blocks when PL low");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(1, 0, 6.0, 1, 31),
+           "R1: high PL + apply_n=1 does not raise Capture");
+    Expect(ShouldAllowDynamicCaptureMovingBgCap(1, 0, 6.0, 2, 31),
+           "R1: high PL + apply_n≥2 allows DynamicCapture");
+    Expect(ShouldAllowDynamicCaptureMovingBgCap(0, 0, 12.0, 2, 31),
+           "R1: unit_ms=6 from batch/N allows high PL");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 0, 20.0, 2, 31),
+           "R1: unit_ms=10 blocks even high PL");
+  }
+
+  // --- Input-first: underfeet reservation + speed clamp ---
+  {
+    using cutum::ApplyUnderfeetReservationFloors;
+    using cutum::ComputeStreamSpeedClampScale;
+    using cutum::EvaluateUnderfeetReservation;
+    using cutum::IsInputFirstSlaBroken;
+    using cutum::IsInputFirstPlayerSlaBroken;
+    using cutum::NearUnderfeetGpuApplyFloor;
+    using cutum::EvaluateIdleMeshDrainCap;
+    using cutum::IdleMeshDrainCapInput;
+    using cutum::StreamSpeedClampInput;
+    Expect(!IsInputFirstSlaBroken(100.0, 10.0),
+           "input-first: wall/phys under SLA");
+    Expect(!IsInputFirstPlayerSlaBroken(100.0, 10.0),
+           "input-first: player block under SLA");
+    Expect(IsInputFirstPlayerSlaBroken(100.0, 20.0),
+           "input-first: player block over SLA");
+    Expect(IsInputFirstSlaBroken(140.0, 10.0),
+           "input-first: wall over SLA");
+    Expect(IsInputFirstSlaBroken(100.0, 20.0),
+           "input-first: do_movement over SLA");
+    const auto idle = EvaluateUnderfeetReservation(false, false, 0);
+    Expect(!idle.active, "input-first: no reserve without underfeet_need");
+    const auto lit = EvaluateUnderfeetReservation(true, false, 4);
+    Expect(!lit.active, "input-first: no mesh reserve while pending_light");
+    const auto ready = EvaluateUnderfeetReservation(true, true, 0);
+    Expect(!ready.active, "input-first: no reserve when has_mesh");
+    const auto mesh = EvaluateUnderfeetReservation(true, false, 0);
+    Expect(mesh.active && mesh.mesh_drain_floor >= 8,
+           "input-first: reserve drain when mesh missing and lit");
+    int drain = 2;
+    int sched = 1;
+    ApplyUnderfeetReservationFloors(drain, sched, mesh);
+    Expect(drain >= 8 && sched >= 6, "input-first: floors applied");
+    IdleMeshDrainCapInput idle_in{};
+    idle_in.last_frame_ms = 60.0;
+    idle_in.mesh_drain = 2;
+    idle_in.mesh_schedule = 1;
+    const auto idle_cap = EvaluateIdleMeshDrainCap(idle_in);
+    int idle_drain = idle_cap.active ? idle_cap.mesh_drain : idle_in.mesh_drain;
+    int idle_sched =
+        idle_cap.active ? idle_cap.mesh_schedule : idle_in.mesh_schedule;
+    ApplyUnderfeetReservationFloors(idle_drain, idle_sched, mesh);
+    Expect(idle_drain >= 8 && idle_sched >= 6,
+           "input-first: reservation wins idle-cap");
+    Expect(NearUnderfeetGpuApplyFloor(true, 0, 0, 0) >= 1,
+           "B2: near underfeet apply floor");
+    Expect(NearUnderfeetGpuApplyFloor(true, 0, 4, 0) == 0,
+           "B2: no apply floor while pending_light");
+    using cutum::ApplyPhaseEmergeClamp;
+    using cutum::ShouldProtectNearEmergeFromPhaseClamp;
+    Expect(ShouldProtectNearEmergeFromPhaseClamp(true, 0, true),
+           "C: missing underfeet protects emerge");
+    Expect(ShouldProtectNearEmergeFromPhaseClamp(false, 1, true),
+           "C: nh<=1 protects emerge");
+    Expect(ShouldProtectNearEmergeFromPhaseClamp(false, 4, false),
+           "C: no underfeet mesh protects emerge");
+    Expect(!ShouldProtectNearEmergeFromPhaseClamp(false, 4, true),
+           "C: healed far miss may clamp emerge");
+    Expect(ApplyPhaseEmergeClamp(12.0, 1.47, true) == 12.0,
+           "C: protect skips leftover phase clamp");
+    Expect(ApplyPhaseEmergeClamp(12.0, 1.47, false) == 1.47,
+           "C: leftover clamp applies when not near");
+    Expect(ApplyPhaseEmergeClamp(12.0, 0.0, false) == 12.0,
+           "C: no phase cap leaves emerge");
+    using cutum::BatchCullAabbDegenerate;
+    using cutum::CullInputKeyAllowsCacheReuse;
+    using cutum::GpuPassHasMissingVisibleRefs;
+    using cutum::GpuPassVisibleDelta;
+    using cutum::GpuPassVisibleSetNeedsFullRebuild;
+    using cutum::GpuPassVisibleSetNeedsSync;
+    using cutum::MakeCullInputKey;
+    using cutum::ShouldFailOpenGpuCompactCull;
+    const float zmin[3]{0.f, 0.f, 0.f};
+    const float zmax[3]{0.f, 0.f, 0.f};
+    const float okmax[3]{16.f, 16.f, 16.f};
+    Expect(BatchCullAabbDegenerate(zmin, zmax),
+           "cull: zero AABB is degenerate");
+    Expect(!BatchCullAabbDegenerate(zmin, okmax),
+           "cull: chunk AABB is not degenerate");
+    const GpuPassVisibleDelta empty_gpu{551, 0, 551};
+    const GpuPassVisibleDelta partial_overlap{551, 551, 51};
+    const GpuPassVisibleDelta ab_to_bc{2, 2, 1};
+    const GpuPassVisibleDelta bc_stable{2, 2, 0};
+    Expect(GpuPassVisibleSetNeedsFullRebuild(empty_gpu),
+           "cull: empty GPU cache needs full rebuild");
+    Expect(!GpuPassVisibleSetNeedsFullRebuild(partial_overlap),
+           "cull: partial overlap is not full rebuild");
+    Expect(GpuPassHasMissingVisibleRefs(ab_to_bc),
+           "cull: {A,B}->{B,C} has missing ref C");
+    Expect(GpuPassVisibleSetNeedsSync(ab_to_bc),
+           "cull: {A,B}->{B,C} must sync visible set");
+    Expect(!GpuPassVisibleSetNeedsSync(bc_stable),
+           "cull: identical visible/resident needs no sync");
+    const glm::mat4 identity_vp(1.0f);
+    const cutum::CullInputKey cull_key =
+        MakeCullInputKey(cutum::CullPassId::OpaqueGpuCompact, 1, 2,
+                         glm::vec3(0.0f), identity_vp, 128.0f, false, true);
+    cutum::CullInputKey cull_key_moved = cull_key;
+    cull_key_moved.cameraPos.x = 1.0f;
+    cutum::CullInputKey cull_key_fov = cull_key;
+    cull_key_fov.viewProjHash ^= 1ull;
+    Expect(CullInputKeyAllowsCacheReuse(cull_key, cull_key),
+           "cull: identical CullInputKey reuses");
+    Expect(!CullInputKeyAllowsCacheReuse(cull_key, cull_key_moved),
+           "cull: sub-chunk camera move invalidates key");
+    Expect(!CullInputKeyAllowsCacheReuse(cull_key, cull_key_fov),
+           "cull: view-projection change invalidates key");
+    Expect(ShouldFailOpenGpuCompactCull(0, 551, true),
+           "cull: degenerate AABB fail-opens");
+    Expect(!ShouldFailOpenGpuCompactCull(0, 551, false),
+           "cull: valid far AABB after teleport does not fail-open");
+    Expect(!ShouldFailOpenGpuCompactCull(12, 551, true),
+           "cull: some on keeps compact");
+    using cutum::ShouldSkipOpaqueCullLightCruise;
+    using cutum::ShouldSkipOpaqueCullStable;
+    using cutum::ShouldSkipOpaqueCullHalfRate;
+    using cutum::ShouldReuseOpaqueCullCompact;
+    using cutum::ShouldThrottleFailOpenGpuCompact;
+    using cutum::OpaqueCullVbEdgeBlocks;
+    Expect(OpaqueCullVbEdgeBlocks(68, 68, 10, 10, 3, 3, true) == false,
+           "Phase5.7R4: rim VB plateau is not vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(68, 60, 10, 10, 3, 3, true),
+           "Phase5.7R4: large ΔVB_focus is vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(44, 43, 10, 10, 3, 3, true) == false,
+           "Phase5.7R5: micro ΔVB=1 without streak is not edge");
+    Expect(OpaqueCullVbEdgeBlocks(44, 43, 10, 10, 3, 3, true, 2),
+           "Phase5.7R5: micro ΔVB with streak>=2 is edge");
+    Expect(OpaqueCullVbEdgeBlocks(10, 10, 2, 0, 0, 1, true),
+           "Phase5.7R4: newly stalled underfeet is vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(10, 10, 2, 2, 0, 1, true) == false,
+           "Phase5.7R4: sustained underfeet stall plateau not edge");
+    Expect(OpaqueCullVbEdgeBlocks(10, 10, 0, 0, 8, 1, true),
+           "Phase5.7R4: nt>=8 underfeet is vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(10, 10, 0, 0, 8, 3, true) == false,
+           "Phase5.7R4: nt>=8 on rim is not vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(5, 0, 0, 0, 0, 0, false),
+           "Phase5.7R4: first sample treated as transition");
+    Expect(ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true, true,
+                                           0.4f, false, false),
+           "5.7.4: near-stand skip OK");
+    Expect(ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true, true,
+                                           1.4f, false, false),
+           "5.7R2: light-cruise ≤1.5 skip OK");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key_fov, true,
+                                            true, 1.4f, false, false),
+           "audit M06: light-cruise no skip when view changes");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true,
+                                            true, 0.4f, true, false),
+           "5.7.4: no skip under underfeet FocusMissing (nh default 0)");
+    Expect(ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true, true,
+                                           0.4f, true, false, 3),
+           "5.7R3: light-cruise skip OK under rim miss nh=3");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true,
+                                            true, 2.0f, false, false),
+           "5.7.4: no skip above light-cruise speed");
+    Expect(ShouldSkipOpaqueCullStable(true, cull_key, cull_key, true, true,
+                                      false, false),
+           "5.7.4: stable skip OK");
+    Expect(!ShouldSkipOpaqueCullStable(true, cull_key, cull_key, true, true,
+                                       true, false),
+           "5.7.4: stable no skip under underfeet miss");
+    Expect(ShouldSkipOpaqueCullStable(true, cull_key, cull_key, true, true,
+                                      true, false, 3),
+           "5.7R3: stable skip OK under rim miss nh=3");
+    Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
+           "5.7R: legacy half-rate API stays false");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true,
+                                            true, 5.8f, false, false),
+           "5.7R7: cruise spd~5.8 never light-cruise skips");
+    using cutum::ShouldProbeFailOpenAabb;
+    Expect(ShouldProbeFailOpenAabb(6, true, 0, 6, false),
+           "5.7R7: healthy probe on period tick");
+    Expect(!ShouldProbeFailOpenAabb(5, true, 0, 6, false),
+           "5.7R7: healthy skips AABB between period ticks");
+    Expect(ShouldProbeFailOpenAabb(5, true, 0, 6, true),
+           "5.7R7: force_probe always probes");
+    Expect(ShouldProbeFailOpenAabb(5, false, 0, 6, false),
+           "5.7R7: inactive compact always probes");
+    Expect(ShouldProbeFailOpenAabb(5, true, 1, 6, false),
+           "5.7R7: fail-open streak always probes");
+    Expect(ShouldProbeFailOpenAabb(10, true, 0, 10, false),
+           "5.7R7.2: healthy probe on period-10 tick");
+    Expect(!ShouldProbeFailOpenAabb(9, true, 0, 10, false),
+           "5.7R7.2: healthy skips AABB between period-10 ticks");
+    Expect(ShouldProbeFailOpenAabb(9, true, 0, 10, true),
+           "5.7R7.2: force_probe always probes at period 10");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true,
+                                            true, 5.8f, false, false),
+           "5.7R7.2: cruise spd~5.8 never light-cruise skips (lock)");
+    Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
+           "5.7R7.2: half-rate stays false (lock)");
+    Expect(ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                        false, false, 100, 100, 0),
+           "5.7R2: compact reuse even frame");
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                         false, false, 100, 100, 1),
+           "5.7R2: compact reuse odd frame runs cull");
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                         true, false, 100, 100, 0),
+           "5.7R2: compact reuse never under underfeet miss");
+    Expect(ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                        true, false, 100, 100, 0, 3),
+           "5.7R3: compact reuse OK under rim miss nh=3");
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                         true, false, 100, 100, 0, 1),
+           "5.7R3: compact reuse blocked underfeet nh=1");
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key_fov, true,
+                                         true, false, false, 100, 100, 0),
+           "audit M06: compact reuse invalidates on view change");
+    Expect(ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                        false, false, 100, 99, 0),
+           "5.7R3: compact reuse allows ±2% cmd_on hysteresis");
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                         false, false, 100, 97, 0),
+           "5.7R3: compact reuse blocks >2% cmd_on change");
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key_moved, true,
+                                         true, false, false, 100, 100, 0),
+           "audit M06: compact reuse invalidates on camera translation");
+    using cutum::ShouldDeferOpaqueCompactCullForDeadline;
+    using cutum::ShouldSkipTransparentFullResort;
+    Expect(ShouldDeferOpaqueCompactCullForDeadline(4.0, true, false, false, true,
+                                                   2),
+           "v4 hitch C: defer cull when leftover < cost-class");
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(12.0, true, false, false,
+                                                    true, 2),
+           "v4 hitch C: run cull when leftover healthy");
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, true, true, false, true,
+                                                    0),
+           "v4 hitch C: never defer underfeet miss");
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, false, false, false,
+                                                    true, 2),
+           "v4 hitch C: no prior mask → must run");
+    Expect(!ShouldDeferOpaqueCompactCullForDeadline(1.0, true, false, false,
+                                                    false, 2),
+           "A21-01: never defer when cull key forbids reuse");
+    Expect(ShouldSkipTransparentFullResort(true, true, 0, true),
+           "v4 hitch C: skip transparent resort when stable + reorder0");
+    Expect(!ShouldSkipTransparentFullResort(true, true, 3, true),
+           "v4 hitch C: resort when prior reorder>0");
+    Expect(!ShouldSkipTransparentFullResort(false, true, 0, true),
+           "v4 hitch C: resort when mesh/refs changed");
+    Expect(!ShouldSkipTransparentFullResort(true, true, 0, false),
+           "A21-01: resort when camera sort revision changed");
+    using cutum::OpaqueCullCmdOnStable;
+    Expect(OpaqueCullCmdOnStable(100, 100), "5.7R3: cmd equal stable");
+    Expect(OpaqueCullCmdOnStable(102, 100), "5.7R3: cmd +2% stable");
+    Expect(!OpaqueCullCmdOnStable(103, 100), "5.7R3: cmd +3% unstable");
+    Expect(ShouldThrottleFailOpenGpuCompact(3),
+           "5.7.4: fail-open after N=3");
+    Expect(!ShouldThrottleFailOpenGpuCompact(2),
+           "5.7.4: fail-open waits for N");
+    StreamSpeedClampInput cin{};
+    cin.moving = true;
+    cin.missing_underfeet = true;
+    Expect(ComputeStreamSpeedClampScale(cin) == 0.85f,
+           "input-first: ground underfeet clamp 0.85");
+    cin.airborne = true;
+    Expect(ComputeStreamSpeedClampScale(cin) == 0.95f,
+           "input-first: flight clamp softer");
+    cin.player_sla_broken = true;
+    Expect(ComputeStreamSpeedClampScale(cin) == 1.0f,
+           "input-first: SLA-broken disables clamp");
+    cin.player_sla_broken = false;
+    cin.moving = false;
+    Expect(ComputeStreamSpeedClampScale(cin) == 1.0f,
+           "input-first: idle no clamp");
+  }
+
+  {
+    using cutum::ColumnRenderableState;
+    using cutum::ReconcileUnderfeetBlockReason;
+    using cutum::UnderfeetColumnHasDrawable;
+    using cutum::UnderfeetOpaquePresentForPerf;
+    Expect(UnderfeetColumnHasDrawable(true, false, false, false),
+           "underfeet: slice drawable");
+    Expect(UnderfeetOpaquePresentForPerf(true, false, true) == 1,
+           "FZ2.1-B6: draw_ok monotonic max(latched,predicted)");
+    Expect(UnderfeetOpaquePresentForPerf(true, true, false) == 1,
+           "FZ2.1-B6: latched holds when predicted clears");
+    Expect(UnderfeetOpaquePresentForPerf(false, true, false) == 1,
+           "underfeet: !draw_ok uses latched");
+    Expect(UnderfeetColumnHasDrawable(false, false, false, true),
+           "underfeet: opaque in pass");
+    Expect(
+        ReconcileUnderfeetBlockReason(
+            ColumnRenderableState::BlockReason::NotReadyState, true, true,
+            false) == ColumnRenderableState::BlockReason::None,
+        "underfeet: NotReadyState→None when drawable");
+    Expect(
+        ReconcileUnderfeetBlockReason(
+            ColumnRenderableState::BlockReason::NotReadyState, false, false,
+            true) == ColumnRenderableState::BlockReason::GpuInFlight,
+        "underfeet: pending gpu→GpuInFlight");
+  }
+
+  {
+    using cutum::CruiseRelightApplyBudget;
+    Expect(CruiseRelightApplyBudget(true, 9.0, 4, true, false) == 2,
+           "apply budget probes 2 when last apply ~9 and pin stable");
+    Expect(CruiseRelightApplyBudget(true, 16.0, 4, true, false) == 1,
+           "apply budget stays 1 when last apply hot >12");
+  }
+
+  {
+    using cutum::ComputeStreamSpeedClampScale;
+    using cutum::StreamSpeedClampInput;
+    StreamSpeedClampInput cin{};
+    cin.moving = true;
+    cin.low_alt_frontier = true;
+    cin.airborne = false;
+    Expect(ComputeStreamSpeedClampScale(cin) == 0.7f,
+           "low-alt frontier ground clamp");
+  }
+
+  {
+    using cutum::ColumnJobStage;
+    using cutum::DeriveColumnJobStage;
+    Expect(DeriveColumnJobStage(true, false, true, false, false, false) ==
+               ColumnJobStage::LitReady,
+           "FP4: lit ready stage");
+    Expect(DeriveColumnJobStage(true, true, false, false, false, false) ==
+               ColumnJobStage::PendingLight,
+           "FP4: pending light stage");
+    Expect(DeriveColumnJobStage(true, false, false, false, false, true) ==
+               ColumnJobStage::RenderReady,
+           "FP4: render ready stage");
+  }
+
+  // R4.1/R4.3: protect-ring ShedFar exemption + SyncFocusRing shrink.
+  {
+    using cutum::IngressDebtLevel;
+    using cutum::IsProtectRingFocusMiss;
+    using cutum::SyncFocusRingRadiusUnderDebt;
+    Expect(IsProtectRingFocusMiss(1, 3, false), "protect nh=3 miss");
+    Expect(!IsProtectRingFocusMiss(1, 3, true), "underfeet not protect");
+    Expect(!IsProtectRingFocusMiss(1, 5, false), "mh>4 not protect");
+    Expect(!IsProtectRingFocusMiss(0, 3, false), "no focus miss");
+    Expect(SyncFocusRingRadiusUnderDebt(
+               9, static_cast<int>(IngressDebtLevel::ShedFar), false, 4,
+               false, false) == 2,
+           "ShedFar sync R<=2");
+    Expect(SyncFocusRingRadiusUnderDebt(9, 0, true, 4, false, false) == 2,
+           "phase_over sync R<=2");
+    Expect(SyncFocusRingRadiusUnderDebt(
+               9, static_cast<int>(IngressDebtLevel::ShedFar), false, 4, true,
+               false) == 9,
+           "underfeet keeps full sync R");
+    Expect(SyncFocusRingRadiusUnderDebt(9, 0, false, 4, false, false) == 9,
+           "calm keeps full sync R");
+  }
+
+  if (gFails != 0)
+  {
+    std::cerr << gFails << " failures\n";
+    return EXIT_FAILURE;
+  }
+  std::cout << "miss_first_mesh_class_test: OK\n";
+  return EXIT_SUCCESS;
+}

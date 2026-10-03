@@ -3,42 +3,85 @@
 
 #include "World/Chunks/ChunkManager.h"
 #include <glm/glm.hpp>
+#include <cstdint>
 #include <functional>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace cutum
 {
 
-/// Deduped queue of chunk coords pending mesh rebuild (used by UChunkMeshCache).
-/// Ordered each tick: missing-mesh class → effective horiz dist → preferred cy.
+/// Deduped dual queue of chunk coords pending mesh rebuild.
+/// FirstMeshQ ← MarkDirtyPriority; RemeshQ ← MarkDirty (Cruise wall P1).
+/// Unified Queue is rebuilt lazily for legacy begin()/end() iteration.
 class UChunkDirtySet
 {
 public:
   void MarkDirty(glm::ivec3 coord);
   void MarkDirtyPriority(glm::ivec3 coord);
+  /// Keep a visible repair ahead of generic remesh work, including when its
+  /// current build owns the chunk and the follow-up Dirty ticket is deferred.
+  bool PrioritizeRemesh(glm::ivec3 coord);
+  /// Keep a screen-ray-confirmed geometry hole at the head of visible repair
+  /// work, including across queue sorting and deferred RAA ownership.
+  bool PrioritizeScreenRayRemesh(glm::ivec3 coord);
+  /// Drop a deferred ray pin after its visual demand and debt are satisfied.
+  void ClearDeferredScreenRayRemesh(glm::ivec3 coord);
+  void AdvanceScheduleFrame() { ++ScheduleFrame; }
   void Erase(glm::ivec3 coord);
   void Clear();
   bool IsFirstMesh(glm::ivec3 coord) const
   {
     return FirstMeshSet.find(coord) != FirstMeshSet.end();
   }
+  bool IsPriorityRemesh(glm::ivec3 coord) const
+  {
+    return PriorityRemeshSet.find(coord) != PriorityRemeshSet.end();
+  }
+  bool IsScreenRayRemesh(glm::ivec3 coord) const
+  {
+    return ScreenRayRemeshSet.find(coord) != ScreenRayRemeshSet.end() ||
+           DeferredScreenRayRemeshSet.find(coord) !=
+               DeferredScreenRayRemeshSet.end();
+  }
+  uint64_t GetScheduleFrame() const { return ScheduleFrame; }
 
-  size_t GetCount() const { return Queue.size(); }
-  bool empty() const { return Queue.empty(); }
-  bool Contains(glm::ivec3 coord) const { return Set.find(coord) != Set.end(); }
+  size_t GetCount() const { return FirstMeshQ.size() + RemeshQ.size(); }
+  size_t GetFirstMeshCount() const { return FirstMeshQ.size(); }
+  size_t GetRemeshCount() const { return RemeshQ.size(); }
+  bool empty() const { return FirstMeshQ.empty() && RemeshQ.empty(); }
+  bool Contains(glm::ivec3 coord) const
+  {
+    return FirstMeshSet.count(coord) > 0 || RemeshSet.count(coord) > 0;
+  }
 
   using iterator = std::vector<glm::ivec3>::iterator;
   using const_iterator = std::vector<glm::ivec3>::const_iterator;
-  iterator begin() { return Queue.begin(); }
-  iterator end() { return Queue.end(); }
-  const_iterator begin() const { return Queue.begin(); }
-  const_iterator end() const { return Queue.end(); }
+  iterator begin()
+  {
+    EnsureUnified();
+    return Queue.begin();
+  }
+  iterator end()
+  {
+    EnsureUnified();
+    return Queue.end();
+  }
+  const_iterator begin() const
+  {
+    EnsureUnified();
+    return Queue.begin();
+  }
+  const_iterator end() const
+  {
+    EnsureUnified();
+    return Queue.end();
+  }
 
   iterator RemoveAt(iterator it);
 
-  /// Order: missing mesh first, then Chebyshev−forward_bias, then |cy−prefer|.
-  /// forward_bias_k / forward_xz: weak motion/view bias (0 = distance only).
+  /// Sort FirstMeshQ then RemeshQ independently, then refresh unified view.
   void SortByDistanceKey(glm::ivec3 focus_ground_chunk, int preferred_cy,
                          bool prefer_lower_cy, bool vertical_valid,
                          const std::function<bool(glm::ivec3)> &missing_mesh,
@@ -46,9 +89,20 @@ public:
                          glm::vec2 forward_xz = glm::vec2(0.0f),
                          int focus_radius_for_tail = -1);
 
-  /// Same key as SortByDistanceKey, but only the first `keep_front` entries are
-  /// ordered. Use when Dirty ≫ schedule budget so mesh_dirty_tick cannot pay
-  /// full O(n log n) every frame (manual: Dirty~650 → dirty_tick~100ms).
+  /// P3: stable-partition FirstMeshQ so underfeet / just-relit nh≤2 sit first.
+  void BoostJustRelitNear(glm::ivec3 focus_ground_chunk, glm::ivec2 relit_xz,
+                          int max_horiz);
+  /// Keep near-FOV work first, then promote only forward-facing approach
+  /// FirstMeshes inside a bounded horizontal and vertical camera band.
+  void BoostForwardApproachFirstMesh(glm::ivec3 focus_ground_chunk,
+                                     glm::vec2 forward_xz, int near_horiz,
+                                     int max_approach_horiz,
+                                     int max_vertical_delta,
+                                     size_t distance_sorted_prefix,
+                                     int preferred_cy, bool prefer_lower_cy,
+                                     bool vertical_valid,
+                                     float forward_bias_k);
+
   void PartialSortByDistanceKey(
       glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
       bool vertical_valid,
@@ -59,27 +113,79 @@ public:
   void PrioritizeChunksWithoutMesh(
       const std::function<bool(glm::ivec3)> &missing_mesh);
   void PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk, int radius_chunks);
+  void PrioritizeAgedNearHorizontal(glm::ivec3 focus_ground_chunk,
+                                    int radius_chunks,
+                                    uint64_t minimum_age_frames);
+  /// Promote only aged entries in the already-prioritized RemeshQ prefix.
+  void PrioritizeAgedPriorityRemeshNearHorizontal(
+      glm::ivec3 focus_ground_chunk, int radius_chunks,
+      uint64_t minimum_age_frames);
   void PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk, int radius_chunks,
                             int preferred_cy, bool prefer_lower_cy);
 
-  /// Drop farthest remesh entries until Size <= soft_cap. Never drops underfeet
-  /// (horiz <= min_keep_horiz) or missing-mesh entries when missing_mesh is set.
-  /// Returns number of dropped coords.
+  /// Drop farthest ordinary remesh entries until total Size <= soft_cap.
+  /// Never drops FirstMeshQ, priority visible repairs, or underfeet / missing
+  /// remesh when missing_mesh is set.
   int MaybeDropFarthest(glm::ivec3 focus_ground_chunk, size_t soft_cap,
                         int min_keep_horiz = 1,
                         const std::function<bool(glm::ivec3)> &missing_mesh = {});
 
   void ReserveCapacity(size_t n)
   {
+    FirstMeshQ.reserve(n);
+    RemeshQ.reserve(n);
+    FirstMeshSet.reserve(n);
+    RemeshSet.reserve(n);
     Queue.reserve(n);
-    Set.reserve(n);
+    DeferredPriorityRemeshSet.reserve(n);
+    ScreenRayRemeshSet.reserve(n);
+    DeferredScreenRayRemeshSet.reserve(n);
   }
 
+  const std::vector<glm::ivec3> &FirstMeshQueue() const { return FirstMeshQ; }
+  const std::vector<glm::ivec3> &RemeshQueue() const { return RemeshQ; }
+  std::vector<glm::ivec3> &FirstMeshQueueMutable()
+  {
+    InvalidateUnified();
+    return FirstMeshQ;
+  }
+  std::vector<glm::ivec3> &RemeshQueueMutable()
+  {
+    InvalidateUnified();
+    return RemeshQ;
+  }
+
+  /// Perf-root P2: O(R²) column-index lookup instead of O(|Dirty|) scan.
+  int CountWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                  int radius_chunks) const;
+  /// Number of scheduler frames since this coordinate entered its dirty lane.
+  /// Returns zero when it has no live dirty entry.
+  uint64_t GetEnqueueAgeFrames(glm::ivec3 coord) const;
+
 private:
-  std::vector<glm::ivec3> Queue;
-  std::unordered_set<glm::ivec3, IVec3Hash> Set;
-  /// TD-ARCH-029: first-mesh debt (MarkDirtyPriority); remesh uses MarkDirty.
+  void InvalidateUnified() const { UnifiedDirty = true; }
+  void EnsureUnified() const;
+  void NoteColumnAdd(glm::ivec3 coord);
+  void NoteColumnRemove(glm::ivec3 coord);
+
+  std::vector<glm::ivec3> FirstMeshQ;
+  std::vector<glm::ivec3> RemeshQ;
   std::unordered_set<glm::ivec3, IVec3Hash> FirstMeshSet;
+  std::unordered_set<glm::ivec3, IVec3Hash> RemeshSet;
+  std::unordered_set<glm::ivec3, IVec3Hash> PriorityRemeshSet;
+  /// Screen-ray hits form a stable sub-prefix ahead of other priority remesh.
+  std::unordered_set<glm::ivec3, IVec3Hash> ScreenRayRemeshSet;
+  /// Priority requested while a build/RAA owns the coord; consumed on enqueue.
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredPriorityRemeshSet;
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredScreenRayRemeshSet;
+  /// Lazy concat FirstMeshQ + RemeshQ for legacy iterators.
+  mutable std::vector<glm::ivec3> Queue;
+  mutable bool UnifiedDirty{true};
+  /// Packed (x,z) → dirty chunk count in that column (all cy).
+  std::unordered_map<uint64_t, int> ColumnCounts;
+  /// First insertion frame; repeated priority marks must not reset queue age.
+  uint64_t ScheduleFrame{0};
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> EnqueueFrameByCoord;
 };
 
 } // namespace cutum

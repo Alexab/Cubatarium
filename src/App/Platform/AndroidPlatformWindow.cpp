@@ -424,7 +424,22 @@ void UAndroidPlatformWindow::Update()
     {
       World->SetStepUpEnabled(true);
     }
-    World->DoMovement();
+    {
+      const auto t0 = std::chrono::steady_clock::now();
+      World->DoMovement();
+      World->GetPhysicsTelemetryMutable().DoMovementMs =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - t0)
+              .count();
+    }
+    {
+      const auto t0 = std::chrono::steady_clock::now();
+      World->TickWorldStreamingPhase();
+      World->GetPhysicsTelemetryMutable().WorldStreamingPhaseMs =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - t0)
+              .count();
+    }
     if (BlockInput)
     {
       BlockInputContext ctx;

@@ -74,7 +74,8 @@ int main()
     in.mesh_async = 0;
     in.frame_ms = 16.0;
     const auto d = EvaluateFocusIngress(in);
-    Expect(!d.active, "idle not cruise ingress");
+    Expect(d.active, "Era20: idle miss still activates ingress");
+    Expect(d.first_mesh_admit >= 2, "idle miss → FirstMesh admit");
   }
 
   {
@@ -126,6 +127,35 @@ int main()
     Expect(d.active, "rim SLA cold hole active");
     Expect(d.first_mesh_admit >= 5, "rim SLA boosts first_mesh admit");
     Expect(d.relight_floor <= 3, "rim SLA caps Capture floor");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = true;
+    in.pending_focus = 50;
+    in.void_near = 500;
+    in.mesh_async = 0;
+    in.frame_ms = 22.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(d.first_mesh_admit <= 1, "void frontier caps first_mesh admit");
+    Expect(d.relight_floor >= 4, "void frontier raises relight floor");
+  }
+
+  {
+    using cutum::ShouldAllowImmediateMesh;
+    Expect(!ShouldAllowImmediateMesh(true, false),
+           "B: moving never Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, true),
+           "B: pending never Immediate");
+    Expect(ShouldAllowImmediateMesh(false, false),
+           "B: idle without pending may Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, false, 32, 0, 0, false),
+           "P3: gpu_queued>=32 blocks Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, false, 0, 96, 96, false),
+           "P3: fifo at soft-cap blocks Immediate");
+    Expect(ShouldAllowImmediateMesh(false, false, 4, 10, 96, false),
+           "P3: idle low gpuq low fifo allows Immediate");
   }
 
   if (gFails != 0)

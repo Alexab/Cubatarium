@@ -7,6 +7,7 @@
 #include "World/View/ViewRayMath.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
 #include <algorithm>
 #include <cmath>
 #if defined(__ANDROID__)
@@ -342,9 +343,17 @@ void UCamera::ClearShiftKeyState()
 
 bool UCamera::OnSpacePressed()
 {
+  SpacePressedThisFrame = true;
   const bool toggled = Locomotion.OnSpacePressed();
   SyncFreeMoveFromController();
   return toggled;
+}
+
+bool UCamera::ConsumeSpacePressedThisFrame()
+{
+  const bool pressed = SpacePressedThisFrame;
+  SpacePressedThisFrame = false;
+  return pressed;
 }
 
 bool UCamera::TryToggleFlightOnDoubleSpace() { return OnSpacePressed(); }
@@ -535,6 +544,10 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
     speed = Locomotion.ResolveHorizontalSpeed(stepInput);
   }
 
+  const glm::vec3 requested(wish.x * speed * deltaTime, 0.0f,
+                            wish.z * speed * deltaTime);
+  const glm::vec3 start = Position;
+
   const CreatureMotorHorizontalResult motor = ApplyCreatureMotorHorizontal(
       *world, Position, Locomotion, wish, speed, deltaTime,
       world->GetMovementCollisionSkipId(), world->IsStepUpEnabled(),
@@ -554,8 +567,50 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
   {
     Position = motor.eyePos;
   }
+  if (!motor.wantsStepUpAnim)
+  {
+    RecordHorizontalMovement(requested, Position - start);
+  }
   UpdatePose();
   return motor.moved || stepped;
+}
+
+void UCamera::RecordHorizontalMovement(const glm::vec3 &requested,
+                                       const glm::vec3 &applied)
+{
+  const glm::vec2 requested_xz(requested.x, requested.z);
+  const glm::vec2 applied_xz(applied.x, applied.z);
+  const float requested_len = glm::length(requested_xz);
+  if (requested_len <= 1e-6)
+  {
+    return;
+  }
+
+  LastMoveRequestedXz += requested_len;
+  LastMoveAppliedXz += glm::dot(applied_xz, requested_xz / requested_len);
+  ++LastMoveAttemptSubsteps;
+  bool blocked = false;
+  constexpr float kBlockedMoveEpsilon = 0.001f;
+  const float applied_along_x =
+      applied.x * (requested.x > 0.0f ? 1.0f : -1.0f);
+  const float applied_along_z =
+      applied.z * (requested.z > 0.0f ? 1.0f : -1.0f);
+  if (std::abs(requested.x) > 1e-6f &&
+      applied_along_x + kBlockedMoveEpsilon < std::abs(requested.x))
+  {
+    ++LastMoveBlockedXSubsteps;
+    blocked = true;
+  }
+  if (std::abs(requested.z) > 1e-6f &&
+      applied_along_z + kBlockedMoveEpsilon < std::abs(requested.z))
+  {
+    ++LastMoveBlockedZSubsteps;
+    blocked = true;
+  }
+  if (blocked)
+  {
+    ++LastMoveBlockedSubsteps;
+  }
 }
 
 // Processes input received from any keyboard-like input system. Accepts input
@@ -566,7 +621,17 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
                               const PlayerCapsule &collisionCap)
 {
   const PlayerInput input = BuildPlayerInput(false);
-  const float speed = Locomotion.ResolveHorizontalSpeed(input);
+  float speed = Locomotion.ResolveHorizontalSpeed(input);
+  // P3: soft streaming integrity clamp (underfeet / near ahead miss).
+  if (world)
+  {
+    const float clamp =
+        world->GetPhysicsTelemetry().StreamSpeedClampScale;
+    if (clamp > 0.0f && clamp < 1.0f)
+    {
+      speed *= clamp;
+    }
+  }
   const float velocity = speed * deltaTime;
   glm::vec3 shift(0.0f);
 
@@ -606,6 +671,7 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
     return;
   }
 
+  const glm::vec3 start = Position;
   if (world)
   {
     glm::vec3 newPos = world->ResolveMovement(
@@ -616,6 +682,7 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
   {
     Position += shift;
   }
+  RecordHorizontalMovement(shift, Position - start);
   UpdatePose();
 }
 
@@ -836,6 +903,14 @@ void UCamera::UpdatePose()
 
 void UCamera::UpdateKeyStatus(size_t key_index, bool is_pressed)
 {
+  if (key_index == GLFW_KEY_SPACE && is_pressed)
+  {
+    const auto it = KeysStatus.find(key_index);
+    if (it == KeysStatus.end() || !it->second)
+    {
+      SpacePressedThisFrame = true;
+    }
+  }
   KeysStatus[key_index] = is_pressed;
 }
 
@@ -959,31 +1034,57 @@ void UCamera::SuspendFallThroughUnloadedChunks()
 
 bool UCamera::DoMovement(const UWorld *world)
 {
+  LastMoveRequestedXz = 0.0;
+  LastMoveAppliedXz = 0.0;
+  LastMoveAttemptSubsteps = 0;
+  LastMoveBlockedSubsteps = 0;
+  LastMoveBlockedXSubsteps = 0;
+  LastMoveBlockedZSubsteps = 0;
+  LastFlightGroundContacts = 0;
+  LastFreeMoveAtStart = false;
   const float frameDt = std::min(static_cast<float>(DeltaTime), kMaxFrameDelta);
   const PlayerCapsule flightCap = PlayerCapsule::Standing();
   if (!GetFreeMove() && Locomotion.ConsumeClearShiftRequest())
   {
     ClearShiftKeyState();
   }
-  const PlayerInput input = BuildPlayerInput(false);
+  const PlayerInput input = BuildPlayerInput(ConsumeSpacePressedThisFrame());
 
   bool is_moved(false);
   SyncFreeMoveFromController();
+  LastFreeMoveAtStart = GetFreeMove();
   LastPhysicsSubsteps = 0;
+  LastGroundSupportMs = 0.0;
+  LastLocomotionMs = 0.0;
+  LastHorizMoveMs = 0.0;
+  int substep_cap = kMaxPhysicsSubsteps;
+  if (world)
+  {
+    const PhysicsTelemetry &phys = world->GetPhysicsTelemetry();
+    substep_cap = std::min(kMaxPhysicsSubsteps,
+                           PlayerPhysicsSubstepCap(IsStreamingPhysicsRed(
+                               phys.PhaseBudgetOver != 0,
+                               phys.FocusMissingMesh != 0,
+                               world->GetWallFrameDelta() * 1000.0)));
+  }
 
   if (GetFreeMove())
   {
     PhysicsAccumulator += frameDt;
     while (PhysicsAccumulator >= kFixedPhysicsDt &&
-           LastPhysicsSubsteps < kMaxPhysicsSubsteps)
+           LastPhysicsSubsteps < substep_cap)
     {
       PhysicsAccumulator -= kFixedPhysicsDt;
       ++LastPhysicsSubsteps;
       const float dt = kFixedPhysicsDt;
+      const auto tgs0 = std::chrono::high_resolution_clock::now();
       const bool groundedInFlight =
           world && world->HasGroundSupport(Position, flightCap);
+      LastGroundSupportMs += std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - tgs0).count();
       if (groundedInFlight)
       {
+        ++LastFlightGroundContacts;
         if (IsShiftDown())
         {
           ClearShiftKeyState();
@@ -1033,7 +1134,7 @@ bool UCamera::DoMovement(const UWorld *world)
   {
     PhysicsAccumulator += frameDt;
     while (PhysicsAccumulator >= kFixedPhysicsDt &&
-           LastPhysicsSubsteps < kMaxPhysicsSubsteps)
+           LastPhysicsSubsteps < substep_cap)
     {
       PhysicsAccumulator -= kFixedPhysicsDt;
       ++LastPhysicsSubsteps;
@@ -1048,9 +1149,14 @@ bool UCamera::DoMovement(const UWorld *world)
         continue;
       }
 
-      if (ApplyHorizontalMovement(world, kFixedPhysicsDt))
       {
-        is_moved = true;
+        const auto th0 = std::chrono::high_resolution_clock::now();
+        if (ApplyHorizontalMovement(world, kFixedPhysicsDt))
+        {
+          is_moved = true;
+        }
+        LastHorizMoveMs += std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - th0).count();
       }
 
       if (Position.y < kMinReasonablePlayerY)
@@ -1058,11 +1164,23 @@ bool UCamera::DoMovement(const UWorld *world)
         break;
       }
 
-      Locomotion.UpdateLocomotion(world, Position, input, kFixedPhysicsDt,
-                                  world->GetMovementCollisionSkipId());
+      {
+        const auto tl0 = std::chrono::high_resolution_clock::now();
+        Locomotion.UpdateLocomotion(world, Position, input, kFixedPhysicsDt,
+                                    world->GetMovementCollisionSkipId());
+        LastLocomotionMs += std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - tl0).count();
+      }
       is_moved = true;
       UpdatePose();
     }
+  }
+
+  if (LastPhysicsSubsteps >= substep_cap &&
+      PhysicsAccumulator >= kFixedPhysicsDt)
+  {
+    PhysicsAccumulator =
+        ClampPlayerPhysicsCarry(PhysicsAccumulator, kFixedPhysicsDt);
   }
 
   return is_moved;

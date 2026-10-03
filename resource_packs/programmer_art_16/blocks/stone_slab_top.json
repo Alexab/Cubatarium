@@ -1,6 +1,13 @@
 {
   "name": "stone_slab_top",
   "id": 697,
+  "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

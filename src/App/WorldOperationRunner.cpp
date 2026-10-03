@@ -1,10 +1,19 @@
 #include "App/WorldOperationRunner.h"
+#include "World/Diagnostics/EnterLitDiagnostics.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "App/Core.h"
+#include "App/Platform/Log.h"
 #include "Core/Progress/ProgressTypes.h"
 #include "World/Core/World.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Mesh/WorldMeshService.h"
+#include "glog/logging.h"
 #include <chrono>
 #include <iostream>
+#include <string>
 
 namespace cutum
 {
@@ -34,7 +43,7 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
 
 constexpr int kChunkBudgetPerFrame = 16;
 constexpr int kEnterGameGpuWarmupMinFrames = 3;
-constexpr int kEnterGameGpuWarmupMaxFrames = 16;
+constexpr int kEnterGameGpuWarmupMaxFrames = 24;
 
 } // namespace
 
@@ -52,6 +61,8 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
   PendingWorldName.clear();
   SaveBeforeOp = false;
   PendingWorldOp = WorldRunnerOp::Load;
+  EnterLoadElapsedMs = 0.0;
+  EnterGameColdCreate = false;
 
   switch (Request.op)
   {
@@ -121,7 +132,10 @@ bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
     }
     if (!World.HasActiveCooperativeOperation())
     {
-      World.BeginCooperativeSave(folder);
+      // SaveThenCreate / SaveThenLoad tear the session down next — do not
+      // resume streaming (InitChunkScheduler join) after this preliminary save.
+      const bool resume_streaming = !SaveBeforeOp;
+      World.BeginCooperativeSave(folder, resume_streaming);
     }
     if (World.TickCooperativeSave(sink, budget))
     {
@@ -173,36 +187,331 @@ bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
 void UWorldOperationRunner::PrepareCreateWorld()
 {
   Core.ApplyNewWorldCreationRequest(Request.settings, Request.packs,
-                                    Request.view);
+                                    Request.view, Request.gameMode,
+                                    Request.difficulty);
   PendingWorldName = Core.SetupNewWorldForCreation();
 }
 
-bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink)
+void UWorldOperationRunner::AccumulateEnterLoadMs(double frame_ms)
+{
+  if (!Active || Request.op != WorldRunnerOp::EnterGame)
+  {
+    return;
+  }
+  if (frame_ms > 0.0)
+  {
+    EnterLoadElapsedMs += frame_ms;
+  }
+}
+
+bool UWorldOperationRunner::EnterVisualCapReached() const
+{
+  if (Request.op != WorldRunnerOp::EnterGame)
+  {
+    return false;
+  }
+  // Soft-ready only: do NOT key off EnterLoadElapsedMs here — that timer
+  // includes cooperative terrain load (seconds) and would abort/skip warmup
+  // after 200ms with an unfinished world (stuck on "World loaded" 100%).
+  return !World.NeedsEnterGameMeshWarmup() && World.IsSpawnMeshRingReady() &&
+         World.IsEnterVisibilityReady();
+}
+
+bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
+                                                      double frame_ms)
 {
   if (CurrentStage != Stage::EnterGameGpuWarmup)
   {
     return true;
   }
+  EnterGameGpuWarmupElapsedMs += frame_ms;
+  const auto &tune = URuntimeTuning::Get();
+  EnterLitSample lit_sample{};
+  UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs, lit_sample);
+  const int fov_debt = lit_sample.snapshot_debt;
+  if (fov_debt <= 0 &&
+      World.GetEnterSessionPhase() == EnterSessionPhase::GpuWarmup)
+  {
+    World.SetEnterSessionPhase(EnterSessionPhase::Quiesce);
+  }
+  if (fov_debt > EnterGameFovLitPeakDebt)
+  {
+    EnterGameFovLitPeakDebt = fov_debt;
+  }
+  EnterGameFifoPeak = std::max(EnterGameFifoPeak, lit_sample.fifo_n);
+  EnterGameGpuPeak =
+      std::max(EnterGameGpuPeak, lit_sample.mesh_gpu_pending_near);
+  EnterGameRingPeak = std::max(EnterGameRingPeak, lit_sample.ring_not_ready);
+  const int fifo_peak = std::max(1, EnterGameFifoPeak);
+  const int gpu_peak = std::max(1, EnterGameGpuPeak);
+  const int ring_peak = std::max(1, EnterGameRingPeak);
+  const int fov_peak = std::max(1, EnterGameFovLitPeakDebt);
+
+  const bool coop_prepared = World.IsSpawnAreaPreparedByCooperativeLoad();
+  const bool ring_ready =
+      coop_prepared || World.IsSpawnMeshRingReady();
+  const bool mesh_blockers_clear =
+      coop_prepared || !World.NeedsEnterGameMeshWarmup();
+  const bool fov_ready = coop_prepared || fov_debt <= 0;
+  const int visibility_debt = lit_sample.visibility_debt;
+  // Phase 5.4.1: coop_prepared alone must not ignore visibility_debt.
+  const bool visibility_ready =
+      World.IsEnterVisibilityReady() ||
+      (coop_prepared && EnterVisDebtAllowsExitBypass(visibility_debt));
+  const bool underfeet_present = World.IsEnterUnderfeetPresentReady();
+  const glm::ivec3 underfeet_center =
+      UChunkManager::WorldToChunk(World.GetPreferredLoadFocusBlock());
+  const int underfeet_gpu_pending =
+      World.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
+          underfeet_center, 1);
+  const bool underfeet_mesh_ok =
+      underfeet_present ||
+      !World.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+          World.GetBlockWorld(),
+          glm::ivec3(underfeet_center.x, 0, underfeet_center.z), 1);
+  const bool visibility_ready_for_exit = EnterVisibilityReadyForExit(
+      visibility_ready, World.IsEnterSessionActive(), underfeet_present,
+      fov_debt, underfeet_gpu_pending, EnterGameAbortDrainMode,
+      EnterGameGpuWarmupElapsedMs, tune.EnterMeshAbortMs, visibility_debt);
+  const bool ring_ready_for_exit = EnterRingReadyForExit(
+      ring_ready, World.IsEnterSessionActive(), underfeet_present,
+      underfeet_gpu_pending, underfeet_mesh_ok, visibility_debt);
+  const bool mesh_blockers_for_exit =
+      mesh_blockers_clear ||
+      (World.IsEnterSessionActive() && underfeet_present &&
+       underfeet_gpu_pending <= 0 && fov_debt <= 0 &&
+       (World.IsEnterLitQuiesceLatched() || EnterGameAbortDrainMode ||
+        EnterGameGpuWarmupElapsedMs >=
+            static_cast<double>(tune.EnterMeshAbortMs)));
+  const bool soft_ready =
+      mesh_blockers_for_exit && fov_ready && ring_ready_for_exit &&
+      visibility_ready_for_exit;
+
+  const bool cap_reached = ShouldForceEnterVisualCap(
+      EnterGameGpuWarmupElapsedMs, soft_ready, EnterGameColdCreate,
+      tune.EnterFovLitHardWallMs, tune.EnterLitRequireZero);
+  if (!cap_reached && (fov_debt > 0 || visibility_debt > 0) &&
+      EnterGameGpuWarmupElapsedMs >=
+          static_cast<double>(tune.EnterFovLitHardWallMs) &&
+      !EnterGameLitWarnLogged)
+  {
+    EnterGameLitWarnLogged = true;
+    std::cerr << "[Era42/48] enter lit/visibility still draining past warn wall ("
+              << EnterGameGpuWarmupElapsedMs << "ms, lit=" << fov_debt
+              << " vis=" << visibility_debt << ")\n";
+  }
+  // Era48: never EndEnterLitGate on lit abort while visibility debt remains —
+  // keep unified drain (log only).
+  if (!EnterGameForceLitAbort && tune.EnterLitRequireZero && fov_debt > 0 &&
+      tune.EnterLitAbortMs > 0 &&
+      EnterGameGpuWarmupElapsedMs >= static_cast<double>(tune.EnterLitAbortMs) &&
+      World.IsEnterLitGateActive())
+  {
+    EnterGameForceLitAbort = true;
+    std::cerr << "[Era43/48] enter lit abort wall after "
+              << EnterGameGpuWarmupElapsedMs << "ms, residual_lit=" << fov_debt
+              << " vis=" << visibility_debt
+              << " (continuing drain; no force InGame)\n";
+  }
+  if (!EnterGameAbortDrainMode &&
+      ShouldForceEnterMeshAbort(fov_debt, ring_ready, EnterGameGpuWarmupElapsedMs,
+                                tune.EnterMeshAbortMs))
+  {
+    EnterGameForceMeshAbort = true;
+    EnterGameAbortDrainMode = true;
+    if (!EnterGameAbortDrainLogged)
+    {
+      EnterGameAbortDrainLogged = true;
+      LOG(INFO) << "[EnterWarmup] abort_drain elapsed_ms="
+                << EnterGameGpuWarmupElapsedMs << " dirty="
+                << (lit_sample.mesh_dirty ? 1 : 0)
+                << " missing=" << (lit_sample.mesh_missing_greedy ? 1 : 0)
+                << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
+                << " async=" << (lit_sample.mesh_async_pending ? 1 : 0)
+                << " ring_not_ready=" << lit_sample.ring_not_ready
+                << " fifo=" << lit_sample.fifo_n
+                << " visibility_debt=" << visibility_debt;
+      CubatariumFlushLogs();
+    }
+  }
+
+  const float raw_prog = EnterGpuWarmupProgressFraction(
+      lit_sample.fifo_n, fifo_peak, lit_sample.mesh_gpu_pending_near, gpu_peak,
+      lit_sample.ring_not_ready, ring_peak,
+      fov_debt + visibility_debt, std::max(fov_peak, 1));
+  const float enter_prog =
+      EnterGpuWarmupMonotonicProgress(raw_prog, EnterGameDisplayProgress);
+  // Era48: hold bar under 100% until visibility ready.
+  const float capped_prog =
+      visibility_ready_for_exit ? enter_prog : std::min(enter_prog, 0.99f);
+  const float frac = 0.93f + 0.07f * capped_prog;
+  const std::string status = BuildEnterWarmupStatus(
+      lit_sample, fov_debt, ring_ready, EnterGameAbortDrainMode,
+      EnterGameGpuWarmupElapsedMs, tune.EnterFovLitHardWallMs, visibility_debt);
+  sink.Report("prepare_view", frac, status);
+
+  if (EnterGameGpuWarmupFramesLeft > 0)
+  {
+    --EnterGameGpuWarmupFramesLeft;
+  }
   const int frame_index =
       kEnterGameGpuWarmupMaxFrames - EnterGameGpuWarmupFramesLeft;
-  const float frac =
-      0.94f + 0.05f * (static_cast<float>(frame_index + 1) /
-                        static_cast<float>(kEnterGameGpuWarmupMaxFrames));
-  sink.Report("prepare_view", frac, "Uploading terrain...");
-  --EnterGameGpuWarmupFramesLeft;
+  UEnterLitDiagnostics::MaybeLog(lit_sample, frame_index);
+  UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
   const bool min_frames_done =
-      frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
-  const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
-  if (!mesh_ready)
+      frame_index >= kEnterGameGpuWarmupMinFrames;
+  if (!mesh_blockers_for_exit || !ring_ready_for_exit)
   {
-    World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
+    World.SetEnterGameWarmupMissingGreedy(lit_sample.ring_not_ready);
   }
-  // Do not block EnterGame on live streamer settle — cooperative load already
-  // prepared spawn; streaming continues in InGame.
-  if (EnterGameGpuWarmupFramesLeft > 0 &&
-      (!min_frames_done || !mesh_ready))
+  if (ring_ready_for_exit && mesh_blockers_for_exit && fov_ready &&
+      visibility_ready_for_exit)
+  {
+    UEnterLitDiagnostics::MaybeLogProfileSummary(lit_sample);
+  }
+
+  const bool underfeet_present_cap = World.IsEnterUnderfeetPresentReady();
+  const glm::ivec3 underfeet_center_cap =
+      UChunkManager::WorldToChunk(World.GetPreferredLoadFocusBlock());
+  const int underfeet_gpu_pending_cap =
+      World.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
+          underfeet_center_cap, 1);
+  // Phase 5.7R4: UF Dirty carve before soft_force wall (existing budgets).
+  if (ShouldCarveUnderfeetBeforeSoftForce(underfeet_present_cap,
+                                          EnterGameGpuWarmupElapsedMs,
+                                          tune.EnterForceInGameMs))
+  {
+    World.MarkSpawnRingUnfinishedDirty(8);
+  }
+  const bool abort_underfeet_cap = ShouldReleaseEnterAfterAbortUnderfeetCap(
+      EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
+      tune.EnterForceInGameMs, underfeet_present_cap, underfeet_gpu_pending_cap);
+  bool enter_ready = IsEnterGpuWarmupReady(
+      ring_ready_for_exit, fov_ready ? 0 : fov_debt, mesh_blockers_for_exit,
+      min_frames_done, visibility_ready_for_exit);
+  if (!enter_ready && abort_underfeet_cap)
+  {
+    enter_ready = min_frames_done && fov_ready && underfeet_present_cap &&
+                  underfeet_gpu_pending_cap <= 0;
+    if (enter_ready && !EnterGameForceInGameLogged)
+    {
+      EnterGameForceInGameLogged = true;
+      LOG(WARNING) << "[EnterWarmup] abort_underfeet_cap elapsed_ms="
+                   << EnterGameGpuWarmupElapsedMs << " ring_ready="
+                   << (ring_ready ? 1 : 0) << " visibility_debt="
+                   << visibility_debt << " residual_fov=" << fov_debt
+                   << " (underfeet present; residual vis may remain)";
+      CubatariumFlushLogs();
+    }
+  }
+  const int combined_debt = EnterWarmupCombinedDebt(lit_sample, fov_debt);
+  const bool soft_clean_cap = ShouldForceEnterLoadSoftCleanDebt(
+      EnterGameGpuWarmupElapsedMs, combined_debt, underfeet_present_cap);
+  if (soft_clean_cap && !enter_ready && min_frames_done)
+  {
+    enter_ready = true;
+    if (!EnterGameForceInGameLogged)
+    {
+      EnterGameForceInGameLogged = true;
+      World.SetLastEnterSettleReason("soft_clean");
+      LOG(INFO) << "[EnterWarmup] settle_reason=soft_clean elapsed_ms="
+                << EnterGameGpuWarmupElapsedMs
+                << " combined_debt=" << combined_debt
+                << " needs_mesh=" << (mesh_blockers_clear ? 0 : 1)
+                << " underfeet=" << (underfeet_present_cap ? 1 : 0)
+                << " ring_ready=" << (ring_ready ? 1 : 0)
+                << " visibility_debt=" << visibility_debt;
+      CubatariumFlushLogs();
+    }
+  }
+  const bool soft_exit_cap = ShouldForceEnterLoadSoftExit(
+      EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
+      tune.EnterForceInGameMs, fov_debt);
+  if (soft_exit_cap && !enter_ready && min_frames_done)
+  {
+    enter_ready = true;
+    if (!EnterGameForceInGameLogged)
+    {
+      EnterGameForceInGameLogged = true;
+      if (ShouldAllowEnterSoftForceSettle(underfeet_present_cap))
+      {
+        World.SetLastEnterSettleReason("soft_force");
+        LOG(WARNING) << "[EnterWarmup] settle_reason=soft_force soft_exit_cap elapsed_ms="
+                     << EnterGameGpuWarmupElapsedMs << " ring_ready="
+                     << (ring_ready ? 1 : 0) << " mesh_dirty="
+                     << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
+                     << lit_sample.mesh_gpu_pending_near << " ring="
+                     << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
+                     << " visibility_debt=" << visibility_debt
+                     << " underfeet=" << (underfeet_present_cap ? 1 : 0);
+        if (visibility_debt > 0)
+        {
+          World.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 1;
+          World.BeginEnterGameMeshBurst(24);
+          World.MarkSpawnRingUnfinishedDirty(8);
+        }
+      }
+      else
+      {
+        // Phase 5.7R5: wall exit without soft_force+UF=0 product event.
+        World.SetLastEnterSettleReason("force_ingame_no_uf");
+        LOG(WARNING) << "[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms="
+                     << EnterGameGpuWarmupElapsedMs << " ring_ready="
+                     << (ring_ready ? 1 : 0) << " visibility_debt="
+                     << visibility_debt << " underfeet=0 (no soft_force settle)";
+        World.BeginEnterGameMeshBurst(24);
+        World.MarkSpawnRingUnfinishedDirty(16);
+      }
+      CubatariumFlushLogs();
+    }
+  }
+  else if (EnterGameAbortDrainMode &&
+           ShouldForceEnterInGameAfterAbortDrain(EnterGameGpuWarmupElapsedMs,
+                                                 tune.EnterForceInGameMs) &&
+           !enter_ready && !EnterGameForceInGameLogged)
+  {
+    EnterGameForceInGameLogged = true;
+    LOG(WARNING) << "[EnterWarmup] force_ingame wall elapsed_ms="
+                 << EnterGameGpuWarmupElapsedMs << " ring_ready="
+                 << (ring_ready ? 1 : 0) << " mesh_dirty="
+                 << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
+                 << lit_sample.mesh_gpu_pending_near << " ring="
+                 << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
+                 << " visibility_debt=" << visibility_debt
+                 << " underfeet=" << (underfeet_present ? 1 : 0)
+                 << " (waiting for soft_exit / underfeet cap)";
+    CubatariumFlushLogs();
+  }
+
+  // Era48/49: InGame when visibility ready, abort underfeet, or soft-exit cap.
+  if (!enter_ready)
   {
     return false;
+  }
+  if (!EnterGameForceInGameLogged)
+  {
+    EnterGameForceInGameLogged = true;
+    World.SetLastEnterSettleReason("live_blockers");
+    LOG(INFO) << "[EnterWarmup] settle_reason=live_blockers elapsed_ms="
+              << EnterGameGpuWarmupElapsedMs
+              << " combined_debt=" << combined_debt
+              << " needs_mesh=" << (mesh_blockers_clear ? 0 : 1)
+              << " underfeet=" << (underfeet_present ? 1 : 0)
+              << " ring_ready=" << (ring_ready ? 1 : 0)
+              << " visibility_debt=" << visibility_debt;
+    CubatariumFlushLogs();
+  }
+  if (World.IsEnterLitGateActive())
+  {
+    World.EndEnterLitGate();
+    // 162400: sample after gate clears so enter_lit JSONL gets gate_end=1 and
+    // settle_reason before EndSession closes the file (AnalyzeEnterLit SoT).
+    EnterLitSample gate_end_sample{};
+    UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs,
+                                 gate_end_sample);
+    UEnterLitDiagnostics::MaybeLog(gate_end_sample, /*frame_index=*/0,
+                                   /*every_n_frames=*/1);
+    UEnterLitDiagnostics::EndSession();
   }
   CurrentStage = Stage::EnterGameFinalize;
   return false;
@@ -226,6 +535,24 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     sink.Report("prepare", 0.f, "Preparing new world...");
     return false;
 
+  case Stage::PreReplaceTerrain:
+    sink.Report("teardown", 0.05f, "Clearing previous world...");
+    World.AbandonTerrainForWorldReplace();
+    if (Request.op == WorldRunnerOp::SaveThenLoad)
+    {
+      Core.PrepareLoadWorld(PendingWorldName);
+      PendingWorldOp = WorldRunnerOp::Load;
+      CurrentStage = Stage::WorldOperation;
+      sink.Begin(WorldOperationKind::Load);
+      sink.Report("load", 0.f, "Loading world...");
+    }
+    else
+    {
+      PendingWorldOp = WorldRunnerOp::Create;
+      CurrentStage = Stage::PrepareCreate;
+    }
+    return false;
+
   case Stage::WorldOperation:
   {
     const WorldOperationKind kind =
@@ -247,18 +574,9 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
         (Request.op == WorldRunnerOp::SaveThenLoad ||
          Request.op == WorldRunnerOp::SaveThenCreate))
     {
-      if (Request.op == WorldRunnerOp::SaveThenLoad)
-      {
-        Core.PrepareLoadWorld(PendingWorldName);
-        PendingWorldOp = WorldRunnerOp::Load;
-        sink.Begin(WorldOperationKind::Load);
-        sink.Report("load", 0.f, "Loading world...");
-      }
-      else
-      {
-        PendingWorldOp = WorldRunnerOp::Create;
-        CurrentStage = Stage::PrepareCreate;
-      }
+      SaveBeforeOp = false;
+      CurrentStage = Stage::PreReplaceTerrain;
+      sink.Report("teardown", 0.f, "Clearing previous world...");
       return false;
     }
 
@@ -291,8 +609,27 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     }
     if (Request.op == WorldRunnerOp::EnterGame)
     {
+      if (EnterVisualCapReached())
+      {
+        CurrentStage = Stage::EnterGameFinalize;
+        return false;
+      }
       CurrentStage = Stage::EnterGameGpuWarmup;
+      World.SetEnterSessionPhase(EnterSessionPhase::GpuWarmup);
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
+      EnterGameGpuWarmupElapsedMs = 0.0;
+      EnterGameFovLitPeakDebt = 0;
+      EnterGameLitWarnLogged = false;
+      EnterGameForceLitAbort = false;
+      EnterGameForceMeshAbort = false;
+      EnterGameAbortDrainMode = false;
+      EnterGameAbortDrainLogged = false;
+      EnterGameForceInGameLogged = false;
+      EnterGameFifoPeak = 0;
+      EnterGameGpuPeak = 0;
+      EnterGameRingPeak = 0;
+      EnterGameDisplayProgress = 0.0f;
+      EnterGameColdCreate = false;
       return false;
     }
     Success = true;
@@ -331,10 +668,22 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     }
     if (Request.op == WorldRunnerOp::EnterGame)
     {
+      if (EnterVisualCapReached())
+      {
+        CurrentStage = Stage::EnterGameFinalize;
+        return false;
+      }
       CurrentStage = Stage::EnterGameGpuWarmup;
+      World.SetEnterSessionPhase(EnterSessionPhase::GpuWarmup);
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
+      EnterGameGpuWarmupElapsedMs = 0.0;
+      EnterGameFovLitPeakDebt = 0;
+      EnterGameLitWarnLogged = false;
+      EnterGameColdCreate = true;
       return false;
     }
+    // Create + enterGameAfter: PrepareView already settled LitDrawable ring;
+    // EnterGameAfterWorldChange runs from Application after Done.
     Success = true;
     Active = false;
     CurrentStage = Stage::Done;
@@ -345,6 +694,11 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     return false;
 
   case Stage::EnterGameFinalize:
+    if (World.IsEnterLitGateActive())
+    {
+      World.EndEnterLitGate();
+      UEnterLitDiagnostics::EndSession();
+    }
     Core.FinalizeEnterGameSession();
     Core.SaveConfigFile();
     Success = true;

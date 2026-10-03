@@ -2,6 +2,8 @@
 
 #include "App/Application.h"
 #include "App/Core.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "World/Objects/ObjectLibrary.h"
 #if !defined(__ANDROID__)
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/GlfwKeyCompat.h"
@@ -34,8 +36,10 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -66,6 +70,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
 
     auto object_library = std::make_shared<UObjectLibrary>();
+    auto item_definitions = std::make_shared<UItemDefinitionStorage>();
     auto view_engine = std::make_shared<UViewEngine>();
     auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
@@ -91,8 +96,8 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     }
 
     auto core = std::make_shared<UCore>(
-        texture_base_instance, texture_cube_instance, object_library, world,
-        geometry_engine, view_engine);
+        texture_base_instance, texture_cube_instance, object_library,
+        item_definitions, world, geometry_engine, view_engine);
     geometry_engine->SetGameContent(core.get());
 
     texture_cube_instance->SetBlockDefinitions(block_definitions);
@@ -162,6 +167,12 @@ int RunEnterGameSmoke(IUPlatformPaths &, int)
   return 1;
 }
 
+int RunAutoloadLastWorld(IUPlatformPaths &, const AutoloadLastWorldOptions &)
+{
+  CubatariumLogError("App", "autoload-last-world is desktop-only");
+  return 1;
+}
+
 int RunFlightSim(IUPlatformPaths &, const FlightSimOptions &)
 {
   CubatariumLogError("App", "flight-sim is desktop-only");
@@ -192,6 +203,7 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
         std::make_shared<UTextureCubeStorage>(texture_base_instance);
     auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
     auto object_library = std::make_shared<UObjectLibrary>();
+    auto item_definitions = std::make_shared<UItemDefinitionStorage>();
     auto view_engine = std::make_shared<UViewEngine>();
     auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
@@ -211,8 +223,8 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
     }
 
     auto core = std::make_shared<UCore>(
-        texture_base_instance, texture_cube_instance, object_library, world,
-        geometry_engine, view_engine);
+        texture_base_instance, texture_cube_instance, object_library,
+        item_definitions, world, geometry_engine, view_engine);
     geometry_engine->SetGameContent(core.get());
     texture_cube_instance->SetBlockDefinitions(block_definitions);
     world->SetBlockDefinitionStorage(block_definitions);
@@ -321,13 +333,204 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
   }
 }
 
+int RunAutoloadLastWorld(IUPlatformPaths &paths,
+                         const AutoloadLastWorldOptions &options)
+{
+  AutoloadLastWorldOptions opt = options;
+  if (opt.InGameFrames < 1)
+  {
+    opt.InGameFrames = 5;
+  }
+  if (opt.TimeoutSec <= 0.0)
+  {
+    opt.TimeoutSec = 600.0;
+  }
+
+  UDesktopPlatformWindow window;
+  const bool window_ok =
+      opt.VisibleWindow
+          ? window.Initialize(1280, 720, "Cubatarium autoload")
+          : window.InitializeHidden(1280, 720, "Cubatarium autoload");
+  if (!window_ok)
+  {
+    std::cerr << "autoload-last-world: failed to initialize window" << std::endl;
+    return 1;
+  }
+
+  std::string exit_reason = "unknown";
+  try
+  {
+    IUPlatformPaths::SetGlobal(
+        std::shared_ptr<IUPlatformPaths>(&paths, [](IUPlatformPaths *) {}));
+
+    auto texture_base_instance = std::make_shared<UTextureBaseStorage>();
+    auto texture_cube_instance =
+        std::make_shared<UTextureCubeStorage>(texture_base_instance);
+    auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
+    auto object_library = std::make_shared<UObjectLibrary>();
+    auto item_definitions = std::make_shared<UItemDefinitionStorage>();
+    auto view_engine = std::make_shared<UViewEngine>();
+    auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
+    auto text_renderer = std::make_shared<UTextRenderer>();
+    if (!text_renderer->Initialize(16))
+    {
+      std::cerr << "autoload-last-world: text renderer init failed" << std::endl;
+      return 1;
+    }
+    text_renderer->SetWindowSize(1280, 720);
+
+    auto geometry_engine = std::make_shared<UGeometryEngine>(
+        world, texture_base_instance, texture_cube_instance, text_renderer);
+    if (!geometry_engine->InitEngine())
+    {
+      std::cerr << "autoload-last-world: geometry engine init failed" << std::endl;
+      return 1;
+    }
+
+    auto core = std::make_shared<UCore>(
+        texture_base_instance, texture_cube_instance, object_library,
+        item_definitions, world, geometry_engine, view_engine);
+    geometry_engine->SetGameContent(core.get());
+    texture_cube_instance->SetBlockDefinitions(block_definitions);
+    world->SetBlockDefinitionStorage(block_definitions);
+
+    window.SetInstances(core, world, geometry_engine, view_engine);
+    window.SetTextRenderer(text_renderer);
+
+    auto application = std::make_shared<UApplication>(
+        core, world, geometry_engine, view_engine, text_renderer,
+        geometry_engine->GetShaderManager(), block_definitions);
+    window.SetApplication(application);
+
+    application->Startup(paths.ResolveWritable("config.json").string());
+    if (!application->StartupSucceeded())
+    {
+      std::cerr << "autoload-last-world: startup failed" << std::endl;
+      return 1;
+    }
+
+    if (!opt.WorldName.empty())
+    {
+      AppSettingsSnapshot settings = core->GetAppSettings();
+      settings.DefaultWorld = opt.WorldName;
+      core->ApplyAppSettings(settings);
+    }
+
+    UFramePerfMonitor::EnsureSession();
+    application->ScheduleEnterGame();
+
+    const auto started = std::chrono::steady_clock::now();
+    int ingame_frames_seen = 0;
+    bool loading_seen = false;
+    window.SetStopPredicate(
+        [&]()
+        {
+          const double elapsed_sec =
+              std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                            started)
+                  .count();
+          if (elapsed_sec >= opt.TimeoutSec)
+          {
+            exit_reason = "timeout";
+            return true;
+          }
+          if (application->GetState() == AppState::Loading)
+          {
+            loading_seen = true;
+          }
+          if (application->GetState() == AppState::InGame)
+          {
+            ++ingame_frames_seen;
+            if (ingame_frames_seen >= opt.InGameFrames)
+            {
+              exit_reason = "ingame_ok";
+              return true;
+            }
+          }
+          return false;
+        });
+
+    window.Run();
+
+    world->PrepareForShutdown();
+    LogWorldLoadDiag("autoload_last_world_end", *world);
+
+    UWorld::EnterGameMeshWarmupBlockers blockers{};
+    world->SampleEnterGameMeshWarmupBlockers(blockers);
+
+    int exit_code = 0;
+    if (!loading_seen)
+    {
+      exit_reason = "no_loading_screen";
+      exit_code = 1;
+    }
+    else if (ingame_frames_seen < opt.InGameFrames)
+    {
+      if (exit_reason == "unknown")
+      {
+        exit_reason = "stuck_loading";
+      }
+      exit_code = 1;
+    }
+
+    const std::filesystem::path report_path =
+        GetExecutableDirectory() / "logs" / "autoload_report.txt";
+    std::error_code ec;
+    std::filesystem::create_directories(report_path.parent_path(), ec);
+    std::ofstream report(report_path);
+    if (report)
+    {
+      const double elapsed_sec =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                        started)
+              .count();
+      report << "exit_code=" << exit_code << '\n'
+             << "exit_reason=" << exit_reason << '\n'
+             << "elapsed_sec=" << elapsed_sec << '\n'
+             << "loading_seen=" << (loading_seen ? 1 : 0) << '\n'
+             << "ingame_frames=" << ingame_frames_seen << '\n'
+             << "default_world=" << core->GetAppSettings().DefaultWorld << '\n'
+             << "mesh_dirty=" << (blockers.dirty ? 1 : 0) << '\n'
+             << "mesh_missing_greedy=" << (blockers.missing_greedy ? 1 : 0)
+             << '\n'
+             << "mesh_gpu_pending_near=" << blockers.gpu_pending_near << '\n'
+             << "mesh_async_pending=" << (blockers.async_mesh_pending ? 1 : 0)
+             << '\n'
+             << "mesh_visual_warmup=" << (blockers.visual_warmup ? 1 : 0)
+             << '\n'
+             << "ring_not_ready=" << world->CountPostLoadRingNotReady() << '\n'
+             << "spawn_mesh_ring_ready="
+             << (world->IsSpawnMeshRingReady() ? 1 : 0) << '\n';
+    }
+
+    if (exit_code == 0)
+    {
+      std::cout << "autoload-last-world: PASS ingame_frames="
+                << ingame_frames_seen << std::endl;
+    }
+    else
+    {
+      std::cerr << "autoload-last-world: FAIL reason=" << exit_reason
+                << " ingame_frames=" << ingame_frames_seen << std::endl;
+    }
+
+    UFramePerfMonitor::Shutdown();
+    return exit_code;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "autoload-last-world: exception: " << e.what() << std::endl;
+    return 1;
+  }
+}
+
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
 {
   double in_game_seconds = options.InGameSeconds;
   if (options.FlyStopMode)
   {
     in_game_seconds = options.IdleBeforeFlySec + options.FlyPhaseSec +
-                      options.StopPhaseSec;
+                      options.DivePhaseSec + options.StopPhaseSec;
   }
   if (options.BreakStandMode)
   {
@@ -372,6 +575,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         std::make_shared<UTextureCubeStorage>(texture_base_instance);
     auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
     auto object_library = std::make_shared<UObjectLibrary>();
+    auto item_definitions = std::make_shared<UItemDefinitionStorage>();
     auto view_engine = std::make_shared<UViewEngine>();
     auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
@@ -391,8 +595,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     }
 
     auto core = std::make_shared<UCore>(
-        texture_base_instance, texture_cube_instance, object_library, world,
-        geometry_engine, view_engine);
+        texture_base_instance, texture_cube_instance, object_library,
+        item_definitions, world, geometry_engine, view_engine);
     geometry_engine->SetGameContent(core.get());
     texture_cube_instance->SetBlockDefinitions(block_definitions);
     world->SetBlockDefinitionStorage(block_definitions);
@@ -430,36 +634,56 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     bool autopilot_armed = false;
     bool autopilot_flying = false;
     bool fly_stop_released = false;
+    bool dive_engaged = false;
     double last_break_request_sec = -1.0e9;
     int break_requests = 0;
     int ingame_frames_seen = 0;
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
-    // Land cruise: resolve eye from terrain once column is loaded
-    // (FindHighestSolidY + 12 for dark_stale stress; was +20 with stale=0).
-    // Fallback CruiseEyeY until solid ready.
-    float land_eye_y = options.CruiseEyeY;
-    bool land_eye_from_terrain = false;
-
-    auto resolve_land_eye_y = [&](UWorld &w, const glm::vec3 &pos) -> float {
-      if (options.CruiseEyeY <= 0.0f)
+    int heading_deviation_during_move_samples = 0;
+    float max_heading_yaw_delta_deg = 0.0f;
+    float max_heading_pitch_delta_deg = 0.0f;
+    bool collision_stop_triggered = false;
+    double collision_stop_elapsed_sec = 0.0;
+    std::chrono::steady_clock::time_point blocked_move_started{};
+    // Land cruise: follow column top + 12 along the route (was sticky-once,
+    // which pinned Y at spawn and stuck product-174657 west at focus_cx≈2).
+    // Apply every frame with floor/ceiling — lift-only ratcheted Y~70 and
+    // collapsed void_near (HoldSpace-blind class) on west autofly.
+    constexpr float kCruiseEyeCeilSlack = 16.0f;
+    auto resolve_cruise_eye_y = [&](UWorld &w, const glm::vec3 &pos,
+                                    float sea) -> float {
+      if (options.CruiseEyeY <= 0.0f && options.MinAltitudeAboveSea <= 0.0f)
       {
         return 0.0f;
       }
-      if (land_eye_from_terrain)
+      const float sea_floor = sea + options.MinAltitudeAboveSea;
+      float land_y = 0.0f;
+      if (options.CruiseEyeY > 0.0f)
       {
-        return land_eye_y;
+        const int wx = static_cast<int>(std::floor(pos.x));
+        const int wz = static_cast<int>(std::floor(pos.z));
+        if (const auto top = w.FindHighestSolidY(wx, wz))
+        {
+          land_y = static_cast<float>(*top) + 12.0f;
+        }
+        else
+        {
+          land_y = options.CruiseEyeY;
+        }
       }
-      const int wx = static_cast<int>(std::floor(pos.x));
-      const int wz = static_cast<int>(std::floor(pos.z));
-      if (const auto top = w.FindHighestSolidY(wx, wz))
+      const float y_floor =
+          (std::max)(options.CruiseEyeY > 0.0f ? options.CruiseEyeY : sea_floor,
+                     sea_floor);
+      float target = land_y > 0.0f ? land_y : y_floor;
+      target = (std::max)(target, y_floor);
+      if (options.CruiseEyeY > 0.0f)
       {
-        land_eye_y = static_cast<float>(*top) + 12.0f;
-        land_eye_from_terrain = true;
-        return land_eye_y;
+        const float y_ceil = options.CruiseEyeY + kCruiseEyeCeilSlack;
+        target = (std::min)(target, y_ceil);
       }
-      return options.CruiseEyeY;
+      return target;
     };
 
     window.SetStopPredicate(
@@ -512,15 +736,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 }
                 if (!options.BreakStandMode)
                 {
-                  // Land: terrain+20 when solid ready, else CruiseEyeY.
-                  // Ocean: sea + MinAltitudeAboveSea.
-                  const float land_y = resolve_land_eye_y(*world, pos);
-                  const float min_y = land_y > 0.0f
-                                          ? land_y
-                                          : (sea + options.MinAltitudeAboveSea);
-                  if (pos.y < min_y || options.TeleportToCruiseStart)
+                  // Land/ocean cruise eye: set every arm (floor/ceil).
+                  const float target_y =
+                      resolve_cruise_eye_y(*world, pos, sea);
+                  if (target_y > 0.0f &&
+                      (pos.y != target_y || options.TeleportToCruiseStart))
                   {
-                    pos.y = min_y;
+                    pos.y = target_y;
                   }
                 }
                 camera->SetPosition(pos);
@@ -548,6 +770,22 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 {
                   camera->SetFreeMove(true);
                 }
+                const double fly_end =
+                    options.IdleBeforeFlySec +
+                    (options.FlyStopMode ? options.FlyPhaseSec
+                                         : in_game_seconds);
+                const double dive_end = fly_end + options.DivePhaseSec;
+                const bool in_dive =
+                    options.FlyStopMode && options.DivePhaseSec > 0.0 &&
+                    ingame_sec >= fly_end && ingame_sec < dive_end;
+                if (in_dive && !dive_engaged)
+                {
+                  dive_engaged = true;
+                  window.SetAutopilotKey(KeyCode::Key_Space, false);
+                  std::cout << "flight-sim: dive phase pitch="
+                            << options.DivePitchDeg << " at t=" << ingame_sec
+                            << "s" << std::endl;
+                }
                 float yaw = options.FaceYawDeg;
                 if (options.YawSweepMode &&
                     ingame_sec >= options.IdleBeforeFlySec)
@@ -559,22 +797,78 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   static const float kYaws[4] = {0.f, 90.f, 180.f, 270.f};
                   yaw = kYaws[step & 3];
                 }
-                camera->SetOrientation(yaw, options.FacePitchDeg);
+                const float pitch =
+                    in_dive ? options.DivePitchDeg : options.FacePitchDeg;
+                if (autopilot_flying && !fly_stop_released &&
+                    camera->GetLastMoveAttemptSubsteps() > 0)
+                {
+                  const float yaw_delta = std::abs(
+                      std::remainder(camera->GetYaw() - yaw, 360.0f));
+                  const float pitch_delta =
+                      std::abs(camera->GetPitch() - pitch);
+                  max_heading_yaw_delta_deg =
+                      (std::max)(max_heading_yaw_delta_deg, yaw_delta);
+                  max_heading_pitch_delta_deg =
+                      (std::max)(max_heading_pitch_delta_deg, pitch_delta);
+                  constexpr float kHeadingOverrideEpsilonDeg = 0.25f;
+                  if (yaw_delta > kHeadingOverrideEpsilonDeg ||
+                      pitch_delta > kHeadingOverrideEpsilonDeg)
+                  {
+                    ++heading_deviation_during_move_samples;
+                  }
+                }
+                camera->SetOrientation(yaw, pitch);
+                if (options.StopAfterBlockedSec > 0.0 &&
+                    options.HoldForward && !options.BreakStandMode &&
+                    !options.YawSweepMode && autopilot_flying &&
+                    !fly_stop_released &&
+                    ingame_sec >= options.IdleBeforeFlySec)
+                {
+                  const bool blocked_or_landed =
+                      camera->GetLastMoveBlockedSubsteps() > 0 ||
+                      camera->GetLastFlightGroundContacts() > 0;
+                  if (blocked_or_landed)
+                  {
+                    if (blocked_move_started ==
+                        std::chrono::steady_clock::time_point{})
+                    {
+                      blocked_move_started = now;
+                    }
+                    collision_stop_elapsed_sec =
+                        std::chrono::duration<double>(now - blocked_move_started)
+                            .count();
+                    if (collision_stop_elapsed_sec >=
+                        options.StopAfterBlockedSec)
+                    {
+                      collision_stop_triggered = true;
+                      std::cout << "flight-sim: sustained collision stop after "
+                                << collision_stop_elapsed_sec << "s at t="
+                                << ingame_sec << "s" << std::endl;
+                      return true;
+                    }
+                  }
+                  else
+                  {
+                    blocked_move_started = {};
+                    collision_stop_elapsed_sec = 0.0;
+                  }
+                }
                 // Keep cruise altitude (manual holds Space / levels pitch).
-                if (!options.BreakStandMode && !options.YawSweepMode &&
+                // Set every frame (not lift-only) so rising canopy does not
+                // ratchet Y into altitude-blind void_near collapse.
+                // Dive: do NOT clamp Y — allow underwater stop (SoT 210431).
+                if (!options.BreakStandMode && !options.YawSweepMode && !in_dive &&
                     (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f ||
                      options.CruiseEyeY > 0.0f))
                 {
                   const float sea = static_cast<float>(
                       world->GetProceduralSettings().SeaLevel);
                   glm::vec3 pos = camera->GetPosition();
-                  const float land_y = resolve_land_eye_y(*world, pos);
-                  const float min_y = land_y > 0.0f
-                                          ? land_y
-                                          : (sea + options.MinAltitudeAboveSea);
-                  if (pos.y < min_y)
+                  const float target_y =
+                      resolve_cruise_eye_y(*world, pos, sea);
+                  if (target_y > 0.0f && pos.y != target_y)
                   {
-                    pos.y = min_y;
+                    pos.y = target_y;
                     camera->SetPosition(pos);
                     if (auto user = world->GetCurrentUser())
                     {
@@ -602,11 +896,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 else if (options.HoldForward &&
                          ingame_sec >= options.IdleBeforeFlySec)
                 {
-                  const double fly_end =
-                      options.IdleBeforeFlySec +
-                      (options.FlyStopMode ? options.FlyPhaseSec
-                                           : in_game_seconds);
-                  if (options.FlyStopMode && ingame_sec >= fly_end)
+                  // Stop begins after dive (or after fly when DivePhaseSec=0).
+                  const double move_end =
+                      options.FlyStopMode ? dive_end : in_game_seconds;
+                  if (options.FlyStopMode && ingame_sec >= move_end)
                   {
                     if (!fly_stop_released)
                     {
@@ -728,18 +1021,84 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::ofstream report(report_path);
       if (report)
       {
+        const auto json_escape = [](const std::string &s) -> std::string {
+          std::string out;
+          out.reserve(s.size() + 8);
+          for (const char c : s)
+          {
+            if (c == '\\' || c == '"')
+            {
+              out.push_back('\\');
+            }
+            out.push_back(c);
+          }
+          return out;
+        };
+        const char *git_sha = std::getenv("CUBATARIUM_GIT_SHA");
+        const std::string git_sha_str =
+            (git_sha && git_sha[0] != '\0') ? git_sha : "unknown";
+#if defined(NDEBUG)
+        const char *build_type = "Release";
+#else
+        const char *build_type = "Debug";
+#endif
+        const bool teleport_cruise = options.TeleportToCruiseStart;
+        const auto run_started = std::chrono::system_clock::now();
+        const auto run_t = std::chrono::system_clock::to_time_t(run_started);
+        std::tm run_tm{};
+#if defined(_WIN32)
+        localtime_s(&run_tm, &run_t);
+#else
+        localtime_r(&run_t, &run_tm);
+#endif
+        std::ostringstream run_id;
+        run_id << world_name << '_'
+               << std::put_time(&run_tm, "%Y%m%dT%H%M%S");
+        std::string perf_jsonl = perf_path;
+        for (char &c : perf_jsonl)
+        {
+          if (c == '\\')
+          {
+            c = '/';
+          }
+        }
         report << "{\n"
                << "  \"exit_code\": " << exit_code << ",\n"
                << "  \"loading_seen\": " << (loading_seen ? "true" : "false")
                << ",\n"
                << "  \"ingame_frames\": " << ingame_frames_seen << ",\n"
                << "  \"ingame_seconds_requested\": " << in_game_seconds << ",\n"
-               << "  \"world\": \"" << world_name << "\",\n"
+               << "  \"world\": \"" << json_escape(world_name) << "\",\n"
+               << "  \"teleport_cruise\": "
+               << (teleport_cruise ? "true" : "false") << ",\n"
+               << "  \"manifest\": {\n"
+               << "    \"git_sha\": \"" << json_escape(git_sha_str) << "\",\n"
+               << "    \"build_type\": \"" << build_type << "\",\n"
+               << "    \"route\": \"flight-sim\",\n"
+               << "    \"config_hash\": \"\",\n"
+               << "    \"frame_count\": " << ingame_frames_seen << ",\n"
+               << "    \"teleport_cruise\": "
+               << (teleport_cruise ? "true" : "false") << ",\n"
+               << "    \"run_id\": \"" << json_escape(run_id.str()) << "\"\n"
+               << "  },\n"
                << "  \"autopilot_armed\": "
                << (autopilot_armed ? "true" : "false") << ",\n"
                << "  \"autopilot_flying\": "
                << (autopilot_flying ? "true" : "false") << ",\n"
                << "  \"face_yaw_deg\": " << options.FaceYawDeg << ",\n"
+               << "  \"face_pitch_deg\": " << options.FacePitchDeg << ",\n"
+               << "  \"heading_deviation_during_move_samples\": "
+               << heading_deviation_during_move_samples << ",\n"
+               << "  \"max_heading_yaw_delta_deg\": "
+               << max_heading_yaw_delta_deg << ",\n"
+               << "  \"max_heading_pitch_delta_deg\": "
+               << max_heading_pitch_delta_deg << ",\n"
+               << "  \"stop_after_blocked_sec\": "
+               << options.StopAfterBlockedSec << ",\n"
+               << "  \"collision_stop_triggered\": "
+               << (collision_stop_triggered ? "true" : "false") << ",\n"
+               << "  \"collision_stop_elapsed_sec\": "
+               << collision_stop_elapsed_sec << ",\n"
                << "  \"idle_before_fly_sec\": " << options.IdleBeforeFlySec
                << ",\n"
                << "  \"start_focus\": [" << start_focus_cx << ", "
@@ -747,7 +1106,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"end_focus\": [" << end_focus_cx << ", " << end_focus_cz
                << "],\n"
                << "  \"chunks_traveled_cheb\": " << chunks_traveled << ",\n"
-               << "  \"perf_jsonl\": \"" << perf_path << "\",\n"
+               << "  \"perf_jsonl\": \"" << json_escape(perf_jsonl) << "\",\n"
                << "  \"analyze\": \"run tools/flight_sim_analyze.py on perf\"\n"
                << "}\n";
       }

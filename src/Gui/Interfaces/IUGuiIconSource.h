@@ -19,6 +19,7 @@ public:
   GetObjectIconTextureIfCached(const std::string &objectName) const = 0;
   virtual GLuint GetCreatureIconTexture(const std::string &speciesId) = 0;
   virtual GLuint GetSkinIconTexture(const std::string &skinId) = 0;
+  virtual GLuint GetItemIconTexture(const std::string &itemId) = 0;
 };
 
 } // namespace cutum

@@ -21,6 +21,7 @@
 #include <windows.h>
 #endif
 #include "App/Core.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "App/LegacyConfigAdapter.h"
 #include "App/Platform/Log.h"
 #include "App/RuntimeTuningConfig.h"
@@ -109,6 +110,16 @@ const UCreatureDefinitionStorage &UCore::Creatures() const
   return kEmpty;
 }
 
+const UItemDefinitionStorage &UCore::Items() const
+{
+  static const UItemDefinitionStorage kEmpty;
+  if (ItemDefinitionsInstance)
+  {
+    return *ItemDefinitionsInstance;
+  }
+  return kEmpty;
+}
+
 const WorldGenPack &UCore::ActiveWorldGenPack() const
 {
   return UWorldGenPack::Get();
@@ -132,12 +143,14 @@ std::filesystem::path GetExecutableDirectory()
 UCore::UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage_,
              std::shared_ptr<UTextureCubeStorage> texture_cube_storage_,
              std::shared_ptr<UObjectLibrary> object_library_,
+             std::shared_ptr<UItemDefinitionStorage> item_definitions_,
              std::shared_ptr<UWorld> World,
              std::shared_ptr<UGeometryEngine> Geometries,
              std::shared_ptr<UViewEngine> Views)
     : TextureBaseStorageInstance(texture_base_storage_),
       TextureCubeStorageInstance(texture_cube_storage_),
-      ObjectLibraryInstance(object_library_), WorldInstance(World),
+      ObjectLibraryInstance(object_library_),
+      ItemDefinitionsInstance(std::move(item_definitions_)), WorldInstance(World),
       GeometryEngineInstance(Geometries), ViewEngineInstance(Views)
 {
 }
@@ -389,6 +402,18 @@ void UCore::LoadConfig(const std::string &config_file_name)
         }
         Render.GreedyMeshing = r.value("greedy_meshing", Render.GreedyMeshing);
         Render.AsyncMeshing = r.value("async_meshing", Render.AsyncMeshing);
+        if (r.contains("lighting_mode") && r["lighting_mode"].is_string())
+        {
+          Render.Lighting = GraphicsQualityProfile::ParseLightingModeString(
+              r["lighting_mode"].get<std::string>());
+          Render.LightingModeExplicit = true;
+        }
+        else
+        {
+          Render.Lighting =
+              GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode();
+          Render.LightingModeExplicit = false;
+        }
         Render.GpuPackedMeshing =
             r.value("gpu_packed_meshing", Render.GpuPackedMeshing);
         Render.FaceQuads = r.value("face_quads", Render.FaceQuads);
@@ -724,6 +749,8 @@ void UCore::SaveConfigFile()
   json render_json;
   render_json["performance_preset"] =
       GraphicsQualityProfile::ToConfigString(Render.Preset);
+  render_json["lighting_mode"] =
+      GraphicsQualityProfile::ToLightingModeString(Render.Lighting);
   render_json["greedy_meshing"] = Render.GreedyMeshing;
   render_json["async_meshing"] = Render.AsyncMeshing;
   render_json["gpu_packed_meshing"] = Render.GpuPackedMeshing;
@@ -812,7 +839,11 @@ void UCore::SaveSystem(const std::string &config_file_name)
   }
 
   SaveConfigFile();
-  if (!WorldInstance->GetWorldName().empty() || !ActiveWorldFolder.empty())
+  // Cooperative ShutdownSave already persisted terrain. Re-entering
+  // SaveWorld/SaveSessionSnapshot here blocked 8–12s on quit (and could hang
+  // on InitChunkScheduler join). Skip when background work was quiesced.
+  if ((!WorldInstance->GetWorldName().empty() || !ActiveWorldFolder.empty()) &&
+      !WorldInstance->IsBackgroundQuiesceFinished())
   {
     SaveWorld(WorldInstance->GetWorldName());
   }
@@ -1087,10 +1118,11 @@ void UCore::CreateNewWorldWithSettings(
 
 void UCore::ApplyNewWorldCreationRequest(
     const ProceduralSettings &settings,
-    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view)
+    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view,
+    WorldGameMode gameMode, WorldDifficulty difficulty)
 {
   WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks,
-                                              view);
+                                              view, gameMode, difficulty);
 }
 
 WorldViewSettings UCore::GetCurrentWorldViewSettings() const

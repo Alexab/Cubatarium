@@ -5,6 +5,8 @@
 #include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "World/Core/World.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
 #include <functional>
 #include <string>
 
@@ -32,6 +34,8 @@ struct WorldRunnerRequest
   ProceduralSettings settings;
   ResourcePackSelection packs;
   WorldViewSettings view;
+  WorldGameMode gameMode{WorldGameMode::Creative};
+  WorldDifficulty difficulty{WorldDifficulty::Normal};
   bool enterGameAfter{false};
   bool saveConfigAfter{true};
   bool shutdownSaveSession{false};
@@ -65,13 +69,21 @@ public:
     return EnterGameGpuWarmupFramesLeft;
   }
   /// @return true when GPU warmup stage finished.
-  bool AdvanceEnterGameGpuWarmup(IUProgressSink &sink);
+  bool AdvanceEnterGameGpuWarmup(IUProgressSink &sink, double frame_ms = 0.0);
+  void AccumulateEnterLoadMs(double frame_ms);
+  bool IsEnterGameOperation() const
+  {
+    return Request.op == WorldRunnerOp::EnterGame;
+  }
+  bool EnterVisualCapReached() const;
+  bool IsEnterGameAbortDrainMode() const { return EnterGameAbortDrainMode; }
 
 private:
   enum class Stage
   {
     Idle,
     PrepareCreate,
+    PreReplaceTerrain,
     WorldOperation,
     PostLoadUsers,
     PostCreateUsers,
@@ -103,6 +115,27 @@ private:
   bool SaveBeforeOp{false};
   WorldRunnerOp PendingWorldOp{WorldRunnerOp::Load};
   int EnterGameGpuWarmupFramesLeft{0};
+  double EnterGameGpuWarmupElapsedMs{0.0};
+  double EnterLoadElapsedMs{0.0};
+  /// Era33: Create/SaveThenCreate must not force-cap GpuWarmup while visual debt.
+  bool EnterGameColdCreate{false};
+  /// Era41: peak FOV lit debt for monotonic progress on the bar.
+  int EnterGameFovLitPeakDebt{0};
+  /// Era42: one-shot warn when lit drain exceeds hard_wall_ms while holding.
+  bool EnterGameLitWarnLogged{false};
+  /// Era43: force enter after abort_ms while ingress frozen.
+  bool EnterGameForceLitAbort{false};
+  /// Era43f: mesh abort wall reached — Era44: continues unified drain.
+  bool EnterGameForceMeshAbort{false};
+  /// Era44: abort-drain mode (gate stays active until ring ready).
+  bool EnterGameAbortDrainMode{false};
+  bool EnterGameAbortDrainLogged{false};
+  bool EnterGameForceInGameLogged{false};
+  /// Era44: peak debt for honest combined progress bar.
+  int EnterGameFifoPeak{0};
+  int EnterGameGpuPeak{0};
+  int EnterGameRingPeak{0};
+  float EnterGameDisplayProgress{0.0f};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 

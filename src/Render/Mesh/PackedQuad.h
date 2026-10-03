@@ -50,6 +50,10 @@ struct PackedQuad
   int BlockLight() const { return static_cast<int>((word1 >> 14) & 0xF); }
 };
 
+/// word1 flag bit 24 is reserved for tagged first-mesh light previews.
+inline constexpr uint32_t kPackedQuadFlagLightPreview = 1u << 24u;
+
+/// True when any non-bottom surface quad has zero sky and block light.
 inline bool PackedQuadsHaveFullyDarkFace(const std::vector<PackedQuad> &quads)
 {
   for (const PackedQuad &q : quads)
@@ -59,6 +63,23 @@ inline bool PackedQuadsHaveFullyDarkFace(const std::vector<PackedQuad> &quads)
       continue;
     }
     if (q.SkyLight() <= 0 && q.BlockLight() <= 0)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool PackedQuadsHaveLitDrawableFace(
+    const std::vector<PackedQuad> &quads)
+{
+  for (const PackedQuad &q : quads)
+  {
+    if (q.Face() == 5)
+    {
+      continue;
+    }
+    if (q.SkyLight() > 0 || q.BlockLight() > 0)
     {
       return true;
     }
@@ -99,15 +120,18 @@ void main() {
   // face 0: +Z (front)   1: +X (right)  2: -Z (back)
   //      3: -X (left)    4: +Y (top)    5: -Y (bottom)
   // Axis normal, U tangent, V tangent:
-  vec3 pos = vec3(x, y, z);
+  // Match GreedyMeshEmitter's half-centered local face origin.
+  vec3 pos = vec3(x, y, z) - vec3(0.5);
   vec3 du, dv;
 
-  if (face == 0)      { pos.z += 1.0; du = vec3(1,0,0); dv = vec3(0,1,0); }
-  else if (face == 1) { pos.x += 1.0; du = vec3(0,0,1); dv = vec3(0,1,0); }
+  // Keep the packed shader's tangent axes aligned with the GPU greedy grid:
+  // u=(axis+1)%3 and v=(axis+2)%3. Width/height must follow du/dv exactly.
+  if (face == 0)      { pos.z += 1.0; du = vec3(1,0,0);  dv = vec3(0,1,0); }
+  else if (face == 1) { pos.x += 1.0; du = vec3(0,1,0);  dv = vec3(0,0,1); }
   else if (face == 2) { du = vec3(-1,0,0); dv = vec3(0,1,0); pos.x += qw; }
-  else if (face == 3) { du = vec3(0,0,-1); dv = vec3(0,1,0); pos.z += qw; }
-  else if (face == 4) { pos.y += 1.0; du = vec3(1,0,0); dv = vec3(0,0,1); }
-  else                { du = vec3(1,0,0); dv = vec3(0,0,-1); pos.z += qh; }
+  else if (face == 3) { du = vec3(0,-1,0); dv = vec3(0,0,1); pos.y += qw; }
+  else if (face == 4) { pos.y += 1.0; du = vec3(0,0,1);  dv = vec3(1,0,0); }
+  else                { du = vec3(0,0,-1); dv = vec3(1,0,0); pos.z += qw; }
 
   // 6 vertices per quad: 0-1-2, 0-2-3 (two triangles)
   // corners: 0=origin, 1=+du*w, 2=+du*w+dv*h, 3=+dv*h

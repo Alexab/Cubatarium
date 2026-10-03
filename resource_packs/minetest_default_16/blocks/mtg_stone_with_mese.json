@@ -1,6 +1,13 @@
 {
   "name": "mtg_stone_with_mese",
   "id": 510,
+  "hardness": 3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],

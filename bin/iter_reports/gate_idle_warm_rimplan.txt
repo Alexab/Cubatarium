@@ -1,0 +1,11 @@
+  contaminated_idle=0.0 le 0.0 -> OK
+  post_stop_focus_dirty_med=100.0 ge 40.0 -> OK
+  calm_stop_wall_med=39.4741 le 140.0 -> OK
+  calm_stop_emerge_med=6.78833 le 50.0 -> OK
+  calm_stop_stream_med=14.3594 le 55.0 -> OK
+  physics_block_ms_p95=0.0119 le 5.0 -> OK
+  edit_immediate_n_med=0.0 le 0.0 -> OK
+  post_stop_missing_max=0.0 le 0.0 -> OK
+  opaque_cmd_on_med=1152.0 ge 200.0 -> OK
+  chunks_traveled=10 ge 6.0 -> OK
+GO phase=IDLE_WARM

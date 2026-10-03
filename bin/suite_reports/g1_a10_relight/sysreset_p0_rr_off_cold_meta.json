@@ -1,0 +1,12 @@
+{
+  "label": "sysreset_p0_rr_off_cold",
+  "phase": "0",
+  "bisect": "CUBA_RELIGHT_REPLACE_OWNER=0",
+  "fog": "CUBA_FLIGHT_FOG_ON=1",
+  "sot_baseline": "perf_20260920-143831_55228.jsonl",
+  "sot_vb_fly": "45|52",
+  "sot_unfinished_max": 12,
+  "sot_prior_lit_med": 531,
+  "notes": "Phase0 evidence slot; scorecard filled after AF completes.",
+  "code_freeze_doc": "docs/streaming/REGRESS_143831_SYSTEMIC_PLAN.md"
+}

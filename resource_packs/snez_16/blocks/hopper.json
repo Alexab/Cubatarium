@@ -1,6 +1,13 @@
 {
   "name": "hopper",
   "id": 910,
+  "hardness": 3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

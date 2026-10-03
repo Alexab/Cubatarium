@@ -1,0 +1,566 @@
+{
+  "source": "kenney_survival_kit",
+  "pack_root": "third_party\\asset_cache\\kenney_survival_kit",
+  "files": [
+    {
+      "rel": "Models/GLB format/barrel-open.glb",
+      "stem": "barrel-open",
+      "class": "skip",
+      "suggested_id": "barrel_open",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/barrel.glb",
+      "stem": "barrel",
+      "class": "skip",
+      "suggested_id": "barrel",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/bedroll-frame.glb",
+      "stem": "bedroll-frame",
+      "class": "skip",
+      "suggested_id": "bedroll_frame",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/bedroll-packed.glb",
+      "stem": "bedroll-packed",
+      "class": "skip",
+      "suggested_id": "bedroll_packed",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/bedroll.glb",
+      "stem": "bedroll",
+      "class": "skip",
+      "suggested_id": "bedroll",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/bottle-large.glb",
+      "stem": "bottle-large",
+      "class": "skip",
+      "suggested_id": "bottle_large",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/bottle.glb",
+      "stem": "bottle",
+      "class": "skip",
+      "suggested_id": "bottle",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/box-large-open.glb",
+      "stem": "box-large-open",
+      "class": "skip",
+      "suggested_id": "box_large_open",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/box-large.glb",
+      "stem": "box-large",
+      "class": "skip",
+      "suggested_id": "box_large",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/box-open.glb",
+      "stem": "box-open",
+      "class": "skip",
+      "suggested_id": "box_open",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/box.glb",
+      "stem": "box",
+      "class": "skip",
+      "suggested_id": "box",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/bucket.glb",
+      "stem": "bucket",
+      "class": "skip",
+      "suggested_id": "bucket",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/campfire-fishing-stand.glb",
+      "stem": "campfire-fishing-stand",
+      "class": "skip",
+      "suggested_id": "campfire_fishing_stand",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/campfire-pit.glb",
+      "stem": "campfire-pit",
+      "class": "skip",
+      "suggested_id": "campfire_pit",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/campfire-stand.glb",
+      "stem": "campfire-stand",
+      "class": "skip",
+      "suggested_id": "campfire_stand",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/chest.glb",
+      "stem": "chest",
+      "class": "armor",
+      "suggested_id": "chest",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/fence-doorway.glb",
+      "stem": "fence-doorway",
+      "class": "skip",
+      "suggested_id": "fence_doorway",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/fence-fortified.glb",
+      "stem": "fence-fortified",
+      "class": "skip",
+      "suggested_id": "fence_fortified",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/fence.glb",
+      "stem": "fence",
+      "class": "skip",
+      "suggested_id": "fence",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/fish-large.glb",
+      "stem": "fish-large",
+      "class": "skip",
+      "suggested_id": "fish_large",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/fish.glb",
+      "stem": "fish",
+      "class": "skip",
+      "suggested_id": "fish",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/floor-hole.glb",
+      "stem": "floor-hole",
+      "class": "skip",
+      "suggested_id": "floor_hole",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/floor-old.glb",
+      "stem": "floor-old",
+      "class": "skip",
+      "suggested_id": "floor_old",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/floor.glb",
+      "stem": "floor",
+      "class": "skip",
+      "suggested_id": "floor",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/grass-large.glb",
+      "stem": "grass-large",
+      "class": "skip",
+      "suggested_id": "grass_large",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/grass.glb",
+      "stem": "grass",
+      "class": "skip",
+      "suggested_id": "grass",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/metal-panel-narrow.glb",
+      "stem": "metal-panel-narrow",
+      "class": "weapon",
+      "suggested_id": "metal_panel_narrow",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/metal-panel-screws-half.glb",
+      "stem": "metal-panel-screws-half",
+      "class": "skip",
+      "suggested_id": "metal_panel_screws_half",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/metal-panel-screws-narrow.glb",
+      "stem": "metal-panel-screws-narrow",
+      "class": "weapon",
+      "suggested_id": "metal_panel_screws_narrow",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/metal-panel-screws.glb",
+      "stem": "metal-panel-screws",
+      "class": "skip",
+      "suggested_id": "metal_panel_screws",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/metal-panel.glb",
+      "stem": "metal-panel",
+      "class": "skip",
+      "suggested_id": "metal_panel",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/patch-grass-large.glb",
+      "stem": "patch-grass-large",
+      "class": "skip",
+      "suggested_id": "patch_grass_large",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/patch-grass.glb",
+      "stem": "patch-grass",
+      "class": "skip",
+      "suggested_id": "patch_grass",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/resource-planks.glb",
+      "stem": "resource-planks",
+      "class": "skip",
+      "suggested_id": "resource_planks",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/resource-stone-large.glb",
+      "stem": "resource-stone-large",
+      "class": "skip",
+      "suggested_id": "resource_stone_large",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/resource-stone.glb",
+      "stem": "resource-stone",
+      "class": "skip",
+      "suggested_id": "resource_stone",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/resource-wood.glb",
+      "stem": "resource-wood",
+      "class": "skip",
+      "suggested_id": "resource_wood",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/rock-a.glb",
+      "stem": "rock-a",
+      "class": "skip",
+      "suggested_id": "rock_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/rock-b.glb",
+      "stem": "rock-b",
+      "class": "skip",
+      "suggested_id": "rock_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/rock-c.glb",
+      "stem": "rock-c",
+      "class": "skip",
+      "suggested_id": "rock_c",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/rock-flat-grass.glb",
+      "stem": "rock-flat-grass",
+      "class": "skip",
+      "suggested_id": "rock_flat_grass",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/rock-flat.glb",
+      "stem": "rock-flat",
+      "class": "skip",
+      "suggested_id": "rock_flat",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/rock-sand-a.glb",
+      "stem": "rock-sand-a",
+      "class": "skip",
+      "suggested_id": "rock_sand_a",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/rock-sand-b.glb",
+      "stem": "rock-sand-b",
+      "class": "skip",
+      "suggested_id": "rock_sand_b",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/rock-sand-c.glb",
+      "stem": "rock-sand-c",
+      "class": "skip",
+      "suggested_id": "rock_sand_c",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/signpost-single.glb",
+      "stem": "signpost-single",
+      "class": "skip",
+      "suggested_id": "signpost_single",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/signpost.glb",
+      "stem": "signpost",
+      "class": "skip",
+      "suggested_id": "signpost",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure-canvas.glb",
+      "stem": "structure-canvas",
+      "class": "skip",
+      "suggested_id": "structure_canvas",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure-floor.glb",
+      "stem": "structure-floor",
+      "class": "skip",
+      "suggested_id": "structure_floor",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure-metal-doorway.glb",
+      "stem": "structure-metal-doorway",
+      "class": "skip",
+      "suggested_id": "structure_metal_doorway",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure-metal-floor.glb",
+      "stem": "structure-metal-floor",
+      "class": "skip",
+      "suggested_id": "structure_metal_floor",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure-metal-roof.glb",
+      "stem": "structure-metal-roof",
+      "class": "skip",
+      "suggested_id": "structure_metal_roof",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure-metal-wall.glb",
+      "stem": "structure-metal-wall",
+      "class": "skip",
+      "suggested_id": "structure_metal_wall",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure-metal.glb",
+      "stem": "structure-metal",
+      "class": "skip",
+      "suggested_id": "structure_metal",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure-roof.glb",
+      "stem": "structure-roof",
+      "class": "skip",
+      "suggested_id": "structure_roof",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/structure.glb",
+      "stem": "structure",
+      "class": "skip",
+      "suggested_id": "structure",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tent-canvas-half.glb",
+      "stem": "tent-canvas-half",
+      "class": "skip",
+      "suggested_id": "tent_canvas_half",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tent-canvas.glb",
+      "stem": "tent-canvas",
+      "class": "skip",
+      "suggested_id": "tent_canvas",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tent.glb",
+      "stem": "tent",
+      "class": "skip",
+      "suggested_id": "tent",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-axe-upgraded.glb",
+      "stem": "tool-axe-upgraded",
+      "class": "tool",
+      "suggested_id": "tool_axe_upgraded",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-axe.glb",
+      "stem": "tool-axe",
+      "class": "tool",
+      "suggested_id": "tool_axe",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-hammer-upgraded.glb",
+      "stem": "tool-hammer-upgraded",
+      "class": "tool",
+      "suggested_id": "tool_hammer_upgraded",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-hammer.glb",
+      "stem": "tool-hammer",
+      "class": "tool",
+      "suggested_id": "tool_hammer",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-hoe-upgraded.glb",
+      "stem": "tool-hoe-upgraded",
+      "class": "tool",
+      "suggested_id": "tool_hoe_upgraded",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-hoe.glb",
+      "stem": "tool-hoe",
+      "class": "tool",
+      "suggested_id": "tool_hoe",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-pickaxe-upgraded.glb",
+      "stem": "tool-pickaxe-upgraded",
+      "class": "tool",
+      "suggested_id": "tool_pickaxe_upgraded",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-pickaxe.glb",
+      "stem": "tool-pickaxe",
+      "class": "tool",
+      "suggested_id": "tool_pickaxe",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-shovel-upgraded.glb",
+      "stem": "tool-shovel-upgraded",
+      "class": "tool",
+      "suggested_id": "tool_shovel_upgraded",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tool-shovel.glb",
+      "stem": "tool-shovel",
+      "class": "tool",
+      "suggested_id": "tool_shovel",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tree-autumn-tall.glb",
+      "stem": "tree-autumn-tall",
+      "class": "skip",
+      "suggested_id": "tree_autumn_tall",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tree-autumn-trunk.glb",
+      "stem": "tree-autumn-trunk",
+      "class": "skip",
+      "suggested_id": "tree_autumn_trunk",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tree-autumn.glb",
+      "stem": "tree-autumn",
+      "class": "skip",
+      "suggested_id": "tree_autumn",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tree-log-small.glb",
+      "stem": "tree-log-small",
+      "class": "skip",
+      "suggested_id": "tree_log_small",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tree-log.glb",
+      "stem": "tree-log",
+      "class": "skip",
+      "suggested_id": "tree_log",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tree-tall.glb",
+      "stem": "tree-tall",
+      "class": "skip",
+      "suggested_id": "tree_tall",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tree-trunk.glb",
+      "stem": "tree-trunk",
+      "class": "skip",
+      "suggested_id": "tree_trunk",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/tree.glb",
+      "stem": "tree",
+      "class": "skip",
+      "suggested_id": "tree",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/workbench-anvil.glb",
+      "stem": "workbench-anvil",
+      "class": "skip",
+      "suggested_id": "workbench_anvil",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/workbench-grind.glb",
+      "stem": "workbench-grind",
+      "class": "skip",
+      "suggested_id": "workbench_grind",
+      "maps_to_existing": false
+    },
+    {
+      "rel": "Models/GLB format/workbench.glb",
+      "stem": "workbench",
+      "class": "skip",
+      "suggested_id": "workbench",
+      "maps_to_existing": false
+    }
+  ]
+}

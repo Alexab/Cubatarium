@@ -21,6 +21,7 @@ enum class CreatureRole
 {
   Mob,
   ControlledDefault,
+  Bot,
   Unknown
 };
 
@@ -29,6 +30,10 @@ inline CreatureRole ParseCreatureRole(const std::string &role)
   if (role == "controlled_default")
   {
     return CreatureRole::ControlledDefault;
+  }
+  if (role == "bot")
+  {
+    return CreatureRole::Bot;
   }
   if (role == "mob")
   {
@@ -43,6 +48,8 @@ inline const char *CreatureRoleToString(CreatureRole role)
   {
   case CreatureRole::ControlledDefault:
     return "controlled_default";
+  case CreatureRole::Bot:
+    return "bot";
   case CreatureRole::Mob:
     return "mob";
   default:

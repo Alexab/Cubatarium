@@ -1,0 +1,173 @@
+{
+  "label": "a22_s1_cold",
+  "perf_jsonl": "bin\\logs\\perf_20260922-141133_29152.jsonl",
+  "periods": 0,
+  "operator_visual": "UNTESTED",
+  "mid_corridor": {
+    "focus_cx_band": "[2,5]",
+    "visible_black_focus_med": null,
+    "visible_black_legal_dark_med": null,
+    "stale_vertex_light_med": null,
+    "stale_vl_rev_med": null,
+    "fully_dark_census_med": null,
+    "fully_dark_stalled_med": null,
+    "near_focus_holes_med": null,
+    "unlit_max": null,
+    "mesh_apply_stale_visual_med": null,
+    "mesh_apply_stale_visual_delta_med": null,
+    "publication_incomplete_material_med": null,
+    "publication_oom_retain_med": null,
+    "publication_overload_retain_med": null,
+    "mesh_apply_stale_geom_delta_med": null,
+    "mesh_apply_stale_light_delta_med": null,
+    "mesh_apply_stale_catalog_delta_med": null,
+    "mesh_apply_stale_stamp_invalid_delta_med": null,
+    "rows_mid": 0,
+    "rows_mid_focus": 0
+  },
+  "proxy_adequacy": {
+    "adequacy_mode": "input",
+    "periods_n": 0,
+    "fly_periods_n": 0,
+    "movement_speed_fly_med": null,
+    "player_y_early_med": null,
+    "player_y_late_med": null,
+    "player_y_delta": null,
+    "focus_west_delta_cx": null,
+    "requested_chunks_proxy_max": null,
+    "cache_mode": "cold_or_unspecified",
+    "adequacy_pass": false,
+    "adequacy_fails": [
+      "route_too_short",
+      "insufficient_motion_coverage",
+      "altitude_out_of_corridor",
+      "focus_not_west"
+    ],
+    "symptom_reproduction": {
+      "focus_missing_mesh_med": null,
+      "miss_stuck_run_frames_tail_max": null,
+      "fog_pull_in_rd_fly_med": null,
+      "visible_black_focus_fly_med": null,
+      "symptom_pass": false,
+      "symptom_fails": [
+        "focus_missing_too_low",
+        "miss_stuck_too_low",
+        "fog_rd_collapsed",
+        "vb_too_low_for_product_class"
+      ],
+      "role": "diagnostic_only"
+    }
+  },
+  "input_adequacy": {
+    "adequacy_mode": "input",
+    "periods_n": 0,
+    "fly_periods_n": 0,
+    "movement_speed_fly_med": null,
+    "player_y_early_med": null,
+    "player_y_late_med": null,
+    "player_y_delta": null,
+    "focus_west_delta_cx": null,
+    "requested_chunks_proxy_max": null,
+    "cache_mode": "cold_or_unspecified",
+    "adequacy_pass": false,
+    "adequacy_fails": [
+      "route_too_short",
+      "insufficient_motion_coverage",
+      "altitude_out_of_corridor",
+      "focus_not_west"
+    ],
+    "symptom_reproduction": {
+      "focus_missing_mesh_med": null,
+      "miss_stuck_run_frames_tail_max": null,
+      "fog_pull_in_rd_fly_med": null,
+      "visible_black_focus_fly_med": null,
+      "symptom_pass": false,
+      "symptom_fails": [
+        "focus_missing_too_low",
+        "miss_stuck_too_low",
+        "fog_rd_collapsed",
+        "vb_too_low_for_product_class"
+      ],
+      "role": "diagnostic_only"
+    }
+  },
+  "symptom_reproduction": {
+    "focus_missing_mesh_med": null,
+    "miss_stuck_run_frames_tail_max": null,
+    "fog_pull_in_rd_fly_med": null,
+    "visible_black_focus_fly_med": null,
+    "symptom_pass": false,
+    "symptom_fails": [
+      "focus_missing_too_low",
+      "miss_stuck_too_low",
+      "fog_rd_collapsed",
+      "vb_too_low_for_product_class"
+    ],
+    "role": "diagnostic_only"
+  },
+  "dual_lane_stop_line_cold": {
+    "vb_fly_med": null,
+    "stale_vl_fly_med": null,
+    "unlit_max": null,
+    "mid_fully_dark_stalled_med": null,
+    "warm": false,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "vb_fly_med_above_dual_lane",
+      "stale_vl_fly_med_above_dual_lane",
+      "unlit_max_above_dual_lane",
+      "mid_fully_dark_stalled_above_stop_line"
+    ]
+  },
+  "dual_lane_stop_line_warm": {
+    "vb_fly_med": null,
+    "stale_vl_fly_med": null,
+    "unlit_max": null,
+    "mid_fully_dark_stalled_med": null,
+    "warm": true,
+    "dual_lane_stop_line_pass": false,
+    "dual_lane_stop_line_fails": [
+      "vb_fly_med_above_dual_lane",
+      "stale_vl_fly_med_above_dual_lane",
+      "unlit_max_above_dual_lane",
+      "mid_fully_dark_stalled_above_stop_line"
+    ]
+  },
+  "eye_proxy_stop_line": {
+    "source": "period_jsonl",
+    "perf_path": "bin\\logs\\perf_20260922-141133_29152.jsonl",
+    "eye_proxy_segment": "fly_fallback",
+    "eye_proxy_coverage": "UNTESTED",
+    "mesh_apply_stale_visual_mid_med": null,
+    "mesh_apply_stale_visual_fly_med": null,
+    "mesh_apply_stale_visual_delta_med": null,
+    "effective_holes_blink_rate": 0.0,
+    "transparent_cmd_reorder_mid_med": null,
+    "transparent_cmd_reorder_fly_med": null,
+    "near_focus_holes_mid_med": null,
+    "visual_holes_mid_med": null,
+    "publication_incomplete_material_mid_med": null,
+    "publication_oom_retain_mid_med": null,
+    "rows_used": 0,
+    "west_route_coverage": "UNTESTED",
+    "focus_cx_min": null,
+    "focus_cx_max": null,
+    "west_route_coverage_reason": "no_period_focus_cx",
+    "eye_proxy_stop_line_pass": false,
+    "eye_proxy_stop_line_fails": [
+      "missing_holes_fields_untested",
+      "missing_publication_incomplete_field_untested",
+      "missing_stale_visual_field_untested",
+      "mesh_apply_stale_visual_mid_med_above_eye_proxy",
+      "mesh_apply_stale_visual_delta_med_above_eye_proxy",
+      "eye_proxy_segment_coverage_untested"
+    ]
+  },
+  "mid_stalled_gate_pass": false,
+  "mid_stalled_gate_fails": [
+    "mid_stalled_med_missing"
+  ],
+  "merge_green": false,
+  "west_route_coverage": "UNTESTED",
+  "operator_visual_status": "UNTESTED"
+}

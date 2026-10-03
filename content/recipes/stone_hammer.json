@@ -1,0 +1,9 @@
+{
+  "id": "stone_hammer",
+  "shapeless": true,
+  "inputs": [
+    { "id": "stone", "count": 4 },
+    { "id": "wood", "count": 2 }
+  ],
+  "output": { "id": "stone_hammer", "count": 1 }
+}

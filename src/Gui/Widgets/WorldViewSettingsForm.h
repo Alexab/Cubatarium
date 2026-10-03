@@ -13,6 +13,7 @@ class UGuiPanel;
 class UGuiLabel;
 class UGuiListView;
 class UGuiTextInput;
+class UGuiCheckbox;
 
 class UWorldViewSettingsForm
 {
@@ -40,6 +41,7 @@ private:
   UGuiListView *ProjectionList{nullptr};
   UGuiLabel *OrthoSizeLabel{nullptr};
   UGuiTextInput *OrthoSizeInput{nullptr};
+  UGuiCheckbox *ShowFpWieldCheckbox{nullptr};
 };
 
 } // namespace cutum

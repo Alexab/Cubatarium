@@ -1,10 +1,12 @@
 #ifndef GREEDYVERTEXPOOL_H
 #define GREEDYVERTEXPOOL_H
 
+#include "Render/Engine/GreedyVertexPoolLifetime.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+#include <map>
 
 typedef unsigned int GLuint;
 typedef int GLsizei;
@@ -19,14 +21,10 @@ struct GreedyGpuPoolAllocation
   size_t vertexCount{0};
   size_t indexCount{0};
   GLsizei indexCountGl{0};
-};
-
-struct GreedyGpuPoolFreeSlot
-{
-  size_t vertexByteOffset{0};
-  size_t indexByteOffset{0};
-  size_t vertexBytes{0};
-  size_t indexBytes{0};
+  /// Monotone id assigned at Allocate; Free must match live handle exactly.
+  uint64_t allocationId{0};
+  /// Bumps when a physical range is reused from the free-list (R01 ledger).
+  uint32_t generation{0};
 };
 
 /// Cross-batch vertex/index arena for greedy mesh uploads (TD-CS-016).
@@ -35,10 +33,10 @@ class UGreedyVertexPool
 {
 public:
   GreedyGpuPoolAllocation Allocate(const GreedyMeshBatch &batch);
-  /// Return a prior allocation to the free-list (does not shrink GL buffers).
+  /// Retire an allocation until its last submitted draw completes.
   void Free(const GreedyGpuPoolAllocation &alloc);
-  /// Grow GPU buffers once per pass before batch uploads (avoids mid-pass orphan).
-  /// Returns false if request was clamped by MaxCapacity (partial/no grow).
+  /// Reserve and reset an empty arena; refuses while allocations remain live.
+  /// Returns false on capacity refusal or outstanding retired allocations.
   bool Reserve(size_t vertex_bytes, size_t index_bytes);
   /// Grow to at least these sizes without resetting used counters.
   bool EnsureMinCapacity(size_t vertex_bytes, size_t index_bytes);
@@ -57,9 +55,27 @@ public:
   size_t VertexUsedBytesValue() const { return VertexUsedBytes; }
   size_t VertexCapacityBytesValue() const { return VertexCapacityBytes; }
   size_t FreeSlotCount() const { return FreeList.size(); }
+  size_t RetiredSlotCount() const { return RetiredList.size(); }
+  size_t PendingRetireCount() const { return PendingRetireList.size(); }
+  uint64_t ConsumeDoubleFreeN()
+  {
+    const uint64_t v = DoubleFreeN_;
+    DoubleFreeN_ = 0;
+    return v;
+  }
+  /// Debug/test: Live offsets must not appear in Free or Retired slots.
+  bool DebugLiveFreeRetiredDisjoint() const;
   /// Soft ceiling for vertex+index combined (0 = unbounded grow).
   void SetMaxCapacityBytes(size_t max_bytes) { MaxCapacityBytes = max_bytes; }
   size_t GetMaxCapacityBytes() const { return MaxCapacityBytes; }
+  /// M3: per-frame unsync upload budget (0 = sync-only, no unsync maps).
+  void SetMaxUnsyncUploadsPerFrame(int n)
+  {
+    MaxUnsyncUploadsPerFrame = std::max(0, n);
+  }
+  void BeginUploadFrame();
+  /// Fence after the pass draw completes (M05/A01 default safety path).
+  void SignalDrawComplete();
   /// Opt-in (CUBATARIUM_POOL_SYNC=1): fence after a full upload pass.
   void SignalUploadComplete();
   uint64_t ConsumeUnsyncUploads()
@@ -74,12 +90,31 @@ public:
     FenceWaitMs = 0.0;
     return v;
   }
+  uint64_t ConsumeRetiredReclaimedN()
+  {
+    const uint64_t v = RetiredReclaimedN;
+    RetiredReclaimedN = 0;
+    return v;
+  }
+  uint64_t ConsumeFenceTimeoutN()
+  {
+    const uint64_t v = FenceTimeoutN;
+    FenceTimeoutN = 0;
+    return v;
+  }
+  uint64_t ConsumeReserveBumpN()
+  {
+    const uint64_t v = ReserveBumpN;
+    ReserveBumpN = 0;
+    return v;
+  }
 
 private:
   /// Returns false if growth was refused/clamped by MaxCapacityBytes.
   bool EnsureCapacity(size_t vertex_bytes, size_t index_bytes);
   bool TryAllocateFromFreeList(size_t vertex_bytes, size_t index_bytes,
                                GreedyGpuPoolAllocation &out);
+  void PollRetiredFences();
 
   GLuint VertexVbo{0};
   GLuint IndexEbo{0};
@@ -89,9 +124,43 @@ private:
   size_t IndexUsedBytes{0};
   size_t MaxCapacityBytes{0};
   std::vector<GreedyGpuPoolFreeSlot> FreeList;
+  struct RetiredSlot
+  {
+    GreedyGpuPoolFreeSlot slot;
+    uint64_t drawFenceToken{0};
+  };
+  std::vector<RetiredSlot> RetiredList;
+  std::vector<GreedyGpuPoolFreeSlot> PendingRetireList;
   void *UploadFence{nullptr};
+  std::map<uint64_t, void *> DrawFences;
+  uint64_t CompletedDrawFenceToken_{0};
+  size_t LiveAllocationCount{0};
+  /// Audit S1/R01: live handles — Free requires matching id+generation+offsets.
+  struct LiveHandle
+  {
+    size_t vertexByteOffset{0};
+    size_t indexByteOffset{0};
+    uint64_t allocationId{0};
+    uint32_t generation{0};
+  };
+  std::vector<LiveHandle> LiveHandles_;
+  /// Per physical (v,i) offset pair: last issued generation (reuse bumps).
+  std::map<std::pair<size_t, size_t>, uint32_t> OffsetGeneration_;
+  uint64_t NextAllocationId_{1};
+  uint64_t DoubleFreeN_{0};
+  uint64_t StorageReadyAfterToken_{0};
+  uint64_t LastDrawFenceToken_{0};
+  uint64_t ActiveDrawFenceToken_{0};
+  uint64_t NextFenceToken_{1};
   uint64_t UnsyncUploads{0};
+  uint64_t RetiredReclaimedN{0};
+  uint64_t FenceTimeoutN{0};
+  uint64_t ReserveBumpN{0};
   double FenceWaitMs{0.0};
+  int MaxUnsyncUploadsPerFrame{64};
+  int FrameUnsyncUploads{0};
+  void FlushPendingRetireWithDrawFence();
+  void WaitUntilRetireQueuesDrained();
 };
 
 } // namespace cutum

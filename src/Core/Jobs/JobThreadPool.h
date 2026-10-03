@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <mutex>
@@ -13,6 +15,10 @@
 
 namespace cutum
 {
+
+/// Default cap on queued (not yet running) jobs per pool. Worker count is unified
+/// via ComputeWorkerThreadCount(JobPoolKind, override); queue depth is separate.
+constexpr std::size_t kDefaultMaxPendingJobsPerPool = 256;
 
 class UJobThreadPool
 {
@@ -24,7 +30,11 @@ public:
   UJobThreadPool(const UJobThreadPool &) = delete;
   UJobThreadPool &operator=(const UJobThreadPool &) = delete;
 
+  /// Lossless legacy submission; no queue cap. New bounded producers must
+  /// handle TryEnqueue(false) without discarding their demand.
   void Enqueue(std::function<void()> job);
+  /// Returns false if the pending queue is at MaxPendingJobs (job not queued).
+  bool TryEnqueue(std::function<void()> job);
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPendingJobs();
@@ -33,6 +43,12 @@ public:
   void ShutdownForProcessExit(std::chrono::milliseconds timeout);
   std::size_t GetPendingJobCount() const;
   std::size_t GetActiveJobCount() const;
+  std::size_t GetMaxPendingJobCount() const { return MaxPendingJobs; }
+  uint64_t GetRejectedEnqueueCount() const { return RejectedEnqueues.load(); }
+  void SetMaxPendingJobCount(std::size_t cap)
+  {
+    MaxPendingJobs = cap > 0 ? cap : kDefaultMaxPendingJobsPerPool;
+  }
 
 private:
   void WorkerLoop();
@@ -42,6 +58,8 @@ private:
   std::condition_variable QueueCv;
   std::deque<std::function<void()>> Jobs;
   std::size_t ActiveJobs{0};
+  std::size_t MaxPendingJobs{kDefaultMaxPendingJobsPerPool};
+  std::atomic<uint64_t> RejectedEnqueues{0};
   bool Stop{false};
   std::string WorkerJobKind;
 };
@@ -49,15 +67,17 @@ private:
 template <typename T> class UCompletedJobQueue
 {
 public:
-  void SetCapacity(std::size_t cap)
+  // Return every evicted result so its owner can retire its token and retry.
+  std::vector<T> SetCapacity(std::size_t cap)
   {
     std::lock_guard<std::mutex> lock(Mutex);
     if (cap == Cap)
     {
-      return;
+      return {};
     }
     // Drain to linear vector, then rebuild ring at new capacity.
     std::vector<T> kept;
+    std::vector<T> dropped;
     kept.reserve(Count);
     for (std::size_t i = 0; i < Count; ++i)
     {
@@ -73,6 +93,9 @@ public:
       const std::size_t keep_n =
           (kept.size() > Cap) ? Cap : kept.size();
       const std::size_t drop_n = kept.size() - keep_n;
+      dropped.reserve(drop_n);
+      for (std::size_t i = 0; i < drop_n; ++i)
+        dropped.push_back(std::move(kept[i]));
       // Keep newest keep_n entries when shrinking.
       for (std::size_t i = drop_n; i < kept.size(); ++i)
       {
@@ -88,6 +111,7 @@ public:
       Items = std::move(kept);
       Count = Items.size();
     }
+    return dropped;
   }
 
   std::size_t Capacity() const
@@ -167,6 +191,24 @@ public:
   {
     std::lock_guard<std::mutex> lock(Mutex);
     return Count;
+  }
+
+  /// Peek without drain — e.g. near-radius enter ring vs far Completed.
+  template <typename Pred> bool Any(Pred &&pred) const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    if (Count == 0 || Items.empty())
+    {
+      return false;
+    }
+    for (std::size_t i = 0; i < Count; ++i)
+    {
+      if (pred(Items[(Head + i) % Items.size()]))
+      {
+        return true;
+      }
+    }
+    return false;
   }
 
 private:

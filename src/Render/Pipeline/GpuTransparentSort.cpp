@@ -19,6 +19,7 @@ namespace
 {
 
 uint64_t gTransparentSortGpu = 0;
+uint64_t gTransparentSortReadback = 0;
 
 constexpr uint32_t kMaxGpuSortKeys = 4096u;
 constexpr size_t kMinGpuSortRefs = 4u;
@@ -231,6 +232,7 @@ bool TryGpuSortTransparentGreedyBatches(
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
                      static_cast<GLsizeiptr>(keys.size() * sizeof(GpuSortKey)),
                      keys.data());
+  NoteGpuTransparentSortReadback();
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
   std::vector<GreedyBatchRef> ordered;
@@ -256,6 +258,15 @@ uint64_t ConsumeGpuTransparentSortCount()
 {
   const uint64_t v = gTransparentSortGpu;
   gTransparentSortGpu = 0;
+  return v;
+}
+
+void NoteGpuTransparentSortReadback() { ++gTransparentSortReadback; }
+
+uint64_t ConsumeGpuTransparentSortReadbackCount()
+{
+  const uint64_t v = gTransparentSortReadback;
+  gTransparentSortReadback = 0;
   return v;
 }
 

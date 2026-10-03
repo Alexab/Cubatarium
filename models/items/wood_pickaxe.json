@@ -1,0 +1,60 @@
+{
+  "id": "wood_pickaxe",
+  "format": "parts_v1",
+  "license": "CC0-1.0",
+  "attribution": "Cubatarium authored low-poly (educational). Visual language inspired by Kenney Survival Kit / KayKit RPG Tools Bits / Quaternius Fantasy Props (all CC0).",
+  "parts": [
+    {
+      "texture": "wood",
+      "offset": [
+        0,
+        -0.1,
+        0
+      ],
+      "size": [
+        0.05,
+        0.7,
+        0.05
+      ]
+    },
+    {
+      "texture": "wood",
+      "offset": [
+        0,
+        0.28,
+        0
+      ],
+      "size": [
+        0.36,
+        0.08,
+        0.06
+      ]
+    },
+    {
+      "texture": "wood",
+      "offset": [
+        0.16,
+        0.22,
+        0
+      ],
+      "size": [
+        0.06,
+        0.12,
+        0.06
+      ]
+    },
+    {
+      "texture": "wood",
+      "offset": [
+        -0.16,
+        0.22,
+        0
+      ],
+      "size": [
+        0.06,
+        0.12,
+        0.06
+      ]
+    }
+  ]
+}

@@ -22,6 +22,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 
@@ -176,6 +177,13 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   const auto populate_start = std::chrono::steady_clock::now();
   ChunkPopulateTiming timing{};
+  const bool audit_seal =
+      std::getenv("CUBATARIUM_WORLDGEN_SEAL_AUDIT") != nullptr;
+  double mudflow_ms = 0.0;
+  double pocket_seal_ms = 0.0;
+  double permeable_seal_ms = 0.0;
+  double pocket_reseal_ms = 0.0;
+  double vegetation_prune_ms = 0.0;
 
   ChunkPopulateResult result;
   result.coord = request.chunkCoord;
@@ -411,19 +419,45 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     };
     if (settings.Tuning.useMudflowErosion && !seal_cancelled())
     {
+      const auto stage_start = audit_seal
+                                   ? std::chrono::steady_clock::now()
+                                   : std::chrono::steady_clock::time_point{};
       ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
+      if (audit_seal)
+      {
+        mudflow_ms = ElapsedMs(stage_start);
+      }
     }
     // Pocket seal on worker (with shouldCancel). Main only drains cheap ShoreAir.
     if (settings.FillWater && !seal_cancelled())
     {
+      auto stage_start = audit_seal
+                             ? std::chrono::steady_clock::now()
+                             : std::chrono::steady_clock::time_point{};
       SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
-      if (!seal_cancelled() &&
-          SealFluidPermeableDecorInChunk(composable->GetContext(), base_x,
-                                         base_z))
+      if (audit_seal)
       {
-        if (!seal_cancelled())
+        pocket_seal_ms = ElapsedMs(stage_start);
+      }
+      if (!seal_cancelled())
+      {
+        stage_start = audit_seal ? std::chrono::steady_clock::now()
+                                 : std::chrono::steady_clock::time_point{};
+        const bool permeable_changed = SealFluidPermeableDecorInChunk(
+            composable->GetContext(), base_x, base_z);
+        if (audit_seal)
         {
+          permeable_seal_ms = ElapsedMs(stage_start);
+        }
+        if (permeable_changed && !seal_cancelled())
+        {
+          stage_start = audit_seal ? std::chrono::steady_clock::now()
+                                   : std::chrono::steady_clock::time_point{};
           SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+          if (audit_seal)
+          {
+            pocket_reseal_ms = ElapsedMs(stage_start);
+          }
         }
       }
       result.fluidSealed = !seal_cancelled();
@@ -441,7 +475,14 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       ChunkPopulateDiagnostics::Record(timing);
       return result;
     }
+    const auto prune_start = audit_seal
+                                 ? std::chrono::steady_clock::now()
+                                 : std::chrono::steady_clock::time_point{};
     PruneFloatingVegetationInChunk(composable->GetContext(), base_x, base_z);
+    if (audit_seal)
+    {
+      vegetation_prune_ms = ElapsedMs(prune_start);
+    }
     timing.sealMs = ElapsedMs(seal_start);
   }
 
@@ -471,7 +512,15 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
             " terrain_ms=" + std::to_string(timing.terrainMs) +
             " carve_ms=" + std::to_string(timing.carveMs) +
             " post_ms=" + std::to_string(timing.postMs) +
-            " seal_ms=" + std::to_string(timing.sealMs));
+            " seal_ms=" + std::to_string(timing.sealMs) +
+            (audit_seal
+                 ? (" mudflow_ms=" + std::to_string(mudflow_ms) +
+                    " pocket_ms=" + std::to_string(pocket_seal_ms) +
+                    " permeable_ms=" +
+                        std::to_string(permeable_seal_ms) +
+                    " reseal_ms=" + std::to_string(pocket_reseal_ms) +
+                    " prune_ms=" + std::to_string(vegetation_prune_ms))
+                 : std::string()));
     s_last_log_tp = now;
     s_last_log_ms = timing.totalMs;
   }

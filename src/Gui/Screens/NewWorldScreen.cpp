@@ -10,9 +10,12 @@
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/GuiLabel.h"
+#include "Gui/Widgets/GuiListView.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
 #include "Gui/Widgets/WorldViewSettingsForm.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
+#include "Game/WorldDifficulty.h"
+#include "Game/WorldGameMode.h"
 #include <algorithm>
 #include <iostream>
 
@@ -55,6 +58,8 @@ void UNewWorldScreen::OnCreate()
   const ProceduralSettings settings = WorldForm->ReadSettings();
   const WorldViewSettings view =
       ViewForm ? ViewForm->ReadSettings() : WorldViewSettings{};
+  const WorldGameMode gameMode = ReadSelectedGameMode();
+  const WorldDifficulty difficulty = ReadSelectedDifficulty();
   ResourcePackSelection packs =
       PackForm ? PackForm->ReadSelection() : ResourcePackSelection{};
   if (packs.Primary.empty())
@@ -73,9 +78,40 @@ void UNewWorldScreen::OnCreate()
   {
     packs.WorldgenOwner = packs.Primary.front();
   }
-  auto create = [this, settings, packs, view]()
-  { Host->CreateNewWorldWithSettings(settings, packs, view); };
+  auto create = [this, settings, packs, view, gameMode, difficulty]()
+  {
+    Host->CreateNewWorldWithSettings(settings, packs, view, gameMode,
+                                     difficulty);
+  };
   Host->SaveIfNeededAndProceed(create);
+}
+
+WorldGameMode UNewWorldScreen::ReadSelectedGameMode() const
+{
+  if (!GameModeList)
+  {
+    return WorldGameMode::Creative;
+  }
+  return GameModeList->GetSelectedIndex() == 1 ? WorldGameMode::Survival
+                                               : WorldGameMode::Creative;
+}
+
+WorldDifficulty UNewWorldScreen::ReadSelectedDifficulty() const
+{
+  if (!DifficultyList)
+  {
+    return WorldDifficulty::Normal;
+  }
+  switch (DifficultyList->GetSelectedIndex())
+  {
+  case 0:
+    return WorldDifficulty::Peaceful;
+  case 1:
+    return WorldDifficulty::Easy;
+  case 2:
+  default:
+    return WorldDifficulty::Normal;
+  }
 }
 
 void UNewWorldScreen::Build(UGuiContext &ctx)
@@ -121,6 +157,33 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   ViewForm->SetSettings(WorldViewSettings{});
   ViewForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
   ViewForm->BuildInto(*body);
+
+  auto modeSection = std::make_unique<UGuiLabel>(&theme, "Game mode:");
+  GameModeSectionLabel = modeSection.get();
+  body->AddChild(std::move(modeSection));
+  auto modeList = std::make_unique<UGuiListView>(&theme);
+  GameModeList = modeList.get();
+  GameModeList->SetItems({"Creative", "Survival"});
+  GameModeList->SetSelectedIndex(0);
+  GameModeList->SetVisibleRowCount(2);
+  body->AddChild(std::move(modeList));
+
+  auto modeDesc = std::make_unique<UGuiLabel>(
+      &theme, "Unlimited blocks, fly, no vitals drain.\n"
+              "Build freely from the creative palette.");
+  modeDesc->SetUseSecondaryColor(true);
+  GameModeDescLabel = modeDesc.get();
+  body->AddChild(std::move(modeDesc));
+
+  auto difficultySection = std::make_unique<UGuiLabel>(&theme, "Difficulty:");
+  DifficultySectionLabel = difficultySection.get();
+  body->AddChild(std::move(difficultySection));
+  auto difficultyList = std::make_unique<UGuiListView>(&theme);
+  DifficultyList = difficultyList.get();
+  DifficultyList->SetItems({"Peaceful", "Easy", "Normal"});
+  DifficultyList->SetSelectedIndex(2);
+  DifficultyList->SetVisibleRowCount(3);
+  body->AddChild(std::move(difficultyList));
 
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
@@ -179,6 +242,31 @@ void UNewWorldScreen::Update(double /*dt*/)
     NeedsBodyRelayout = false;
     BodyScroll->LayoutContent(0, 0);
   }
+  const bool survival = ReadSelectedGameMode() == WorldGameMode::Survival;
+  if (GameModeDescLabel)
+  {
+    GameModeDescLabel->SetText(
+        survival ? "Gather resources, craft, manage hunger and health.\n"
+                   "Blocks and items are limited — dig and loot to survive."
+                 : "Unlimited blocks, fly, no vitals drain.\n"
+                   "Build freely from the creative palette.");
+  }
+  if (DifficultySectionLabel)
+  {
+    DifficultySectionLabel->SetVisible(survival);
+  }
+  if (DifficultyList)
+  {
+    DifficultyList->SetVisible(survival);
+  }
+  if (survival != DifficultyVisibleCached)
+  {
+    DifficultyVisibleCached = survival;
+    if (BodyScroll)
+    {
+      BodyScroll->LayoutContent(0, 0);
+    }
+  }
 }
 
 void UNewWorldScreen::RequestBodyRelayout()
@@ -224,6 +312,19 @@ int UNewWorldScreen::MeasureWorldPageContentHeight(int width) const
   if (ViewForm && theme)
   {
     height += label_h + ViewForm->MeasureHeight(area) + section_gap;
+  }
+  if (GameModeList && theme)
+  {
+    height += label_h + GameModeList->GetPreferredHeight() + section_gap;
+  }
+  if (GameModeDescLabel && theme)
+  {
+    height += GameModeDescLabel->GetPreferredHeight() + section_gap;
+  }
+  if (DifficultyList && theme &&
+      ReadSelectedGameMode() == WorldGameMode::Survival)
+  {
+    height += label_h + DifficultyList->GetPreferredHeight() + section_gap;
   }
   if (WorldForm)
   {
@@ -276,6 +377,37 @@ void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
     const int viewH = ViewForm->MeasureHeight(area);
     ViewForm->Layout({area.X, y, area.W, viewH});
     y += viewH + section_gap;
+  }
+
+  if (GameModeList)
+  {
+    if (GameModeSectionLabel)
+    {
+      GameModeSectionLabel->SetBounds({area.X, y, area.W, label_h});
+      y += label_h;
+    }
+    const int modeH = GameModeList->GetPreferredHeight();
+    GameModeList->SetBounds({area.X, y, area.W, modeH});
+    y += modeH + section_gap;
+  }
+
+  if (GameModeDescLabel)
+  {
+    const int descH = GameModeDescLabel->GetPreferredHeight();
+    GameModeDescLabel->SetBounds({area.X, y, area.W, descH});
+    y += descH + section_gap;
+  }
+
+  if (DifficultyList && ReadSelectedGameMode() == WorldGameMode::Survival)
+  {
+    if (DifficultySectionLabel)
+    {
+      DifficultySectionLabel->SetBounds({area.X, y, area.W, label_h});
+      y += label_h;
+    }
+    const int difficultyH = DifficultyList->GetPreferredHeight();
+    DifficultyList->SetBounds({area.X, y, area.W, difficultyH});
+    y += difficultyH + section_gap;
   }
 
   if (WorldForm)

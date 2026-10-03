@@ -1,0 +1,95 @@
+Audit HEAD 2474265c46edb43b811596cb8efd874da6b16156
+Game/world not launched; only diagnostic executables rebuilt.
+
+Publication repro exit code: 1
+retained_batch_aliases_new_allocation=1 retained_bytes_overwritten=1
+repeated_omission_two_live_allocations_overlap=1
+empty_replacement_retains_ghost_and_dirty=1
+reordered_table_keeps_publication_epoch=1
+correctness_violations=4
+
+Gate repro exit code: 1
+persistent_100_holes: incorrect_PASS=True reasons=[]
+missing_holes_and_publication_fields: incorrect_PASS=True reasons=[]
+correctness_violations=2
+
+CTest exit code: 1
+Internal ctest changing into directory: E:/Work/Home/Cubatarium/build/desktop-msvc
+Test project E:/Work/Home/Cubatarium/build/desktop-msvc
+      Start  1: greedy_vertex_pool_driver_test
+ 1/27 Test  #1: greedy_vertex_pool_driver_test ...........   Passed    0.97 sec
+      Start  2: job_admission_lifetime_test
+ 2/27 Test  #2: job_admission_lifetime_test ..............   Passed    0.05 sec
+      Start  3: chunk_input_stamp_test
+ 3/27 Test  #3: chunk_input_stamp_test ...................   Passed    0.06 sec
+      Start  4: inputs_still_valid_visual_test
+ 4/27 Test  #4: inputs_still_valid_visual_test ...........   Passed    0.08 sec
+      Start  5: visible_black_attribution_test
+ 5/27 Test  #5: visible_black_attribution_test ...........   Passed    0.04 sec
+      Start  6: draw_oracle_gate_test
+ 6/27 Test  #6: draw_oracle_gate_test ....................***Failed    0.08 sec
+FAIL: G1-P3: lit publish restarts age
+1 test(s) failed
+
+      Start  7: block_catalog_queries_test
+ 7/27 Test  #7: block_catalog_queries_test ...............   Passed    0.10 sec
+      Start  8: mesh_inputs_catalog_test
+ 8/27 Test  #8: mesh_inputs_catalog_test .................   Passed    0.04 sec
+      Start  9: normal_shutdown_test
+ 9/27 Test  #9: normal_shutdown_test .....................   Passed    0.04 sec
+      Start 10: frame_deadline_test
+10/27 Test #10: frame_deadline_test ......................   Passed    0.07 sec
+      Start 11: greedy_vertex_pool_production_test
+11/27 Test #11: greedy_vertex_pool_production_test .......   Passed    0.10 sec
+      Start 12: column_flow_scheduler_test
+12/27 Test #12: column_flow_scheduler_test ...............   Passed    0.05 sec
+      Start 13: frustum_clip_test
+13/27 Test #13: frustum_clip_test ........................   Passed    0.04 sec
+      Start 14: column_scheduler_audit_repro
+14/27 Test #14: column_scheduler_audit_repro .............   Passed    0.04 sec
+      Start 15: streaming_render_ready_invariants_test
+15/27 Test #15: streaming_render_ready_invariants_test ...   Passed    0.04 sec
+      Start 16: miss_first_mesh_class_test
+16/27 Test #16: miss_first_mesh_class_test ...............   Passed    0.04 sec
+      Start 17: mesh_gpu_store_mdi_test
+17/27 Test #17: mesh_gpu_store_mdi_test ..................   Passed    0.05 sec
+      Start 18: greedy_vertex_pool_lifetime_test
+18/27 Test #18: greedy_vertex_pool_lifetime_test .........   Passed    0.05 sec
+      Start 19: capture_token_validation_test
+19/27 Test #19: capture_token_validation_test ............   Passed    0.04 sec
+      Start 20: cruise_sot_phase_test
+20/27 Test #20: cruise_sot_phase_test ....................   Passed    0.04 sec
+      Start 21: decor_mesh_integration_test
+21/27 Test #21: decor_mesh_integration_test ..............   Passed    0.08 sec
+      Start 22: relight_result_install_test
+22/27 Test #22: relight_result_install_test ..............   Passed    0.04 sec
+      Start 23: mesh_neighbor_policy_test
+23/27 Test #23: mesh_neighbor_policy_test ................   Passed    0.03 sec
+      Start 24: mesh_light_stale_policy_test
+24/27 Test #24: mesh_light_stale_policy_test .............   Passed    0.03 sec
+      Start 25: column_emerge_bump_test
+25/27 Test #25: column_emerge_bump_test ..................   Passed    0.03 sec
+      Start 26: frame_streaming_budget_test
+26/27 Test #26: frame_streaming_budget_test ..............   Passed    0.04 sec
+      Start 27: idle_recovery_policy_test
+27/27 Test #27: idle_recovery_policy_test ................   Passed    0.03 sec
+
+96% tests passed, 1 tests failed out of 27
+
+Label Time Summary:
+gpu            =   0.97 sec*proc (1 test)
+integration    =   0.97 sec*proc (1 test)
+streaming      =   1.35 sec*proc (26 tests)
+unit           =   1.35 sec*proc (26 tests)
+
+Total Test time (real) =   2.55 sec
+
+The following tests FAILED:
+	  6 - draw_oracle_gate_test (Failed)
+Errors while running CTest
+
+mark_relit_characterization_test: exit 0
+tools/test_eye_proxy_stop_line.py: exit 0; synthetic cases PASS; historical 095545/102527/121131 SKIPPED (raw logs absent).
+tools/test_q9_acceptance_suite.py: exit 0
+tools/test_AnalyzePhase57Scorecard.py: exit 0
+tools/audit/check_include_rules.py (-X utf8): exit 0; 41 legacy exceptions, 31 reverse edges

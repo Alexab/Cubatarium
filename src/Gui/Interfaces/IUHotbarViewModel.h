@@ -18,6 +18,8 @@ struct HotbarSlotView
   InventoryEntryKind entryKind{InventoryEntryKind::Block};
   bool selected{false};
   int hotkey{-1};
+  float wear{0.f};
+  bool broken{false};
 };
 
 class IUHotbarViewModel

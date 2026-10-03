@@ -52,6 +52,9 @@ UWorldCreatureActivitySink::GetBehaviorSnapshot(CreatureId Id) const
   snapshot.locomotion = def->locomotion;
   snapshot.habitat = def->habitat;
   snapshot.boundsSize = def->bounds.restSizeBlocks;
+  const float perceptionMul =
+      0.5f + static_cast<float>(creature->GetAttributes().perception) / 20.f;
+  snapshot.behavior.aggroRadius *= perceptionMul;
   return snapshot;
 }
 

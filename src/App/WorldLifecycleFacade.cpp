@@ -407,7 +407,8 @@ void UWorldLifecycleFacade::CreateNewWorldWithSettings(
 
 void UWorldLifecycleFacade::ApplyNewWorldCreationRequest(
     UCore &core, const ProceduralSettings &settings,
-    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view)
+    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view,
+    WorldGameMode gameMode, WorldDifficulty difficulty)
 {
   core.PendingNewWorldSettings = settings;
   core.PendingNewWorldSettings->Seed = settings.Seed;
@@ -423,6 +424,8 @@ void UWorldLifecycleFacade::ApplyNewWorldCreationRequest(
   core.PendingNewWorldPackSelection = resourcePacks;
   core.PendingNewWorldViewSettings = view;
   core.PendingNewWorldViewSettings.Validate();
+  core.PendingNewWorldGameMode = gameMode;
+  core.PendingNewWorldDifficulty = difficulty;
 }
 
 std::string UWorldLifecycleFacade::AllocateNextWorldName(const UCore &core) const
@@ -522,7 +525,11 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
   core.WorldInstance->SetProceduralSettings(worldSettings);
   core.WorldInstance->SetRenderSettings(core.Render);
   core.WorldInstance->SetViewSettings(core.PendingNewWorldViewSettings);
+  core.WorldInstance->SetGameMode(core.PendingNewWorldGameMode);
+  core.WorldInstance->SetDifficulty(core.PendingNewWorldDifficulty);
   core.PendingNewWorldViewSettings = WorldViewSettings{};
+  core.PendingNewWorldGameMode = WorldGameMode::Creative;
+  core.PendingNewWorldDifficulty = WorldDifficulty::Normal;
   return new_world_name;
 }
 

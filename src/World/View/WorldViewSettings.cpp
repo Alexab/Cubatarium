@@ -87,6 +87,7 @@ WorldViewSettings WorldViewSettings::FromJson(const nlohmann::json &root)
     settings.IsoBoomPreset =
         static_cast<IsoViewPreset>(std::clamp(preset, 0, 2));
   }
+  settings.ShowFpWield = root.value("show_fp_wield", settings.ShowFpWield);
   settings.Validate();
   return settings;
 }
@@ -101,6 +102,7 @@ nlohmann::json WorldViewSettings::ToJson() const
       {"iso_yaw_index", copy.IsoYawIndex},
       {"iso_pitch_deg", copy.IsoPitchDeg},
       {"iso_view_preset", static_cast<int>(copy.IsoBoomPreset)},
+      {"show_fp_wield", copy.ShowFpWield},
   };
 }
 

@@ -1,0 +1,31 @@
+{
+  "s3_cold": {
+    "perf": "see dual_lane_s3_cold.json",
+    "StaleVL": 84.5,
+    "VB": 84.5,
+    "unlit_max": 12,
+    "dirty_remesh": 54.5,
+    "adequacy": true,
+    "gate": "PASS vs 125123/133817"
+  },
+  "s3_warm_r1": {
+    "StaleVL": 83,
+    "VB": 84,
+    "unlit_max": 28,
+    "note": "unlit spike noise"
+  },
+  "s3_warm_r2": {
+    "StaleVL": 75,
+    "VB": 75,
+    "unlit_max": 16,
+    "dirty_remesh": 50,
+    "adequacy": true,
+    "gate": "PASS vs warm anchor 125331 unlit_max=19; cold-calibrated unlit<=15 nearly met"
+  },
+  "second_finish": "keep \u2014 no StaleVL/VB regress with ShouldRunSecondGpuFinishPass still armed",
+  "anchors": {
+    "125123_cold_StaleVL": 80,
+    "133817_StaleVL": 94.5,
+    "125331_warm_unlit_max": 19
+  }
+}

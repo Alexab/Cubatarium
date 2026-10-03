@@ -1,6 +1,13 @@
 {
   "name": "bedrock",
   "id": 342,
+  "hardness": 0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building",
     "natural"

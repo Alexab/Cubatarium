@@ -1,0 +1,22 @@
+{
+  "id": "apple",
+  "displayName": "Apple",
+  "types": [
+    "misc"
+  ],
+  "stack_max": 16,
+  "wear_end": "destroy",
+  "use_action": "eat",
+  "use": {
+    "action": "eat",
+    "satiety": 20,
+    "health": 2
+  },
+  "visual": {
+    "wield_scale": 0.95,
+    "use": {
+      "eat": "eat_hand"
+    }
+  },
+  "model": "models/items/apple/model.gltf"
+}

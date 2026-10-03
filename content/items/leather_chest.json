@@ -1,0 +1,22 @@
+{
+  "id": "leather_chest",
+  "displayName": "Leather Chestplate",
+  "types": [
+    "armor",
+    "chest"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/leather_chest/model.gltf",
+  "armor": {
+    "slots": [
+      "chest"
+    ],
+    "armor_groups": {
+      "fleshy": 50
+    }
+  },
+  "visual": {
+    "wield_scale": 1.0
+  }
+}

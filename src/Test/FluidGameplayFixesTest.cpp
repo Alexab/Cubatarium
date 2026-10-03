@@ -43,9 +43,12 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeGameplayDefinitions()
   cutum::BlockDefinition sand;
   sand.Name = "sand";
   sand.Physics = cutum::BlockPhysicsProfile::Solid();
+  sand.Physics.Falling = true;
   cutum::BlockDefinition grass_block;
   grass_block.Name = "grass";
   grass_block.Physics = cutum::BlockPhysicsProfile::Solid();
+  // Surface grass remains structural (not cascading); falling sand dig only
+  // removes falling/decor above.
   cutum::BlockDefinition lava;
   lava.Name = "lava";
   lava.Physics = cutum::BlockPhysicsProfile::FromPreset("lava");
@@ -96,23 +99,46 @@ static void TestBreakRemovesDecorAbove()
                     "ground untouched");
 }
 
-static void TestBreakSandRemovesGrassSurfaceAndDecor()
+static void TestBreakSandRemovesFallingAndDecor()
 {
   cutum::UBlockWorld world;
   cutum::UBlockRegistry registry(nullptr, MakeGameplayDefinitions());
   world.SetBlock(glm::ivec3(0, 10, 0), kStone);
   world.SetBlock(glm::ivec3(0, 11, 0), kSand);
-  world.SetBlock(glm::ivec3(0, 12, 0), kGrassBlock);
+  world.SetBlock(glm::ivec3(0, 12, 0), kSand);
   world.SetBlock(glm::ivec3(0, 13, 0), kTallGrass);
 
+  // DelBlockAt clears the dug cell before BreakUnsupportedBlocksAbove.
+  world.SetBlock(glm::ivec3(0, 11, 0), cutum::BLOCK_AIR);
   const std::vector<glm::ivec3> broken =
       cutum::BreakUnsupportedBlocksAbove(world, registry, glm::ivec3(0, 11, 0));
   FluidTest::Expect(broken.size() == 2, kTestName,
-                    "sand break removes grass surface and decor above");
+                    "sand break removes falling sand and decor above");
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 12, 0)) == cutum::BLOCK_AIR,
-                    kTestName, "grass surface removed with sand");
+                    kTestName, "upper sand removed");
   FluidTest::Expect(world.GetBlock(glm::ivec3(0, 13, 0)) == cutum::BLOCK_AIR,
                     kTestName, "decor removed with sand");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 10, 0)) == kStone, kTestName,
+                    "stone base untouched");
+}
+
+static void TestBreakStructuralColumnStays()
+{
+  cutum::UBlockWorld world;
+  cutum::UBlockRegistry registry(nullptr, MakeGameplayDefinitions());
+  world.SetBlock(glm::ivec3(0, 10, 0), kStone);
+  world.SetBlock(glm::ivec3(0, 11, 0), kStone);
+  world.SetBlock(glm::ivec3(0, 12, 0), kStone);
+
+  world.SetBlock(glm::ivec3(0, 10, 0), cutum::BLOCK_AIR);
+  const std::vector<glm::ivec3> broken =
+      cutum::BreakUnsupportedBlocksAbove(world, registry, glm::ivec3(0, 10, 0));
+  FluidTest::Expect(broken.empty(), kTestName,
+                    "structural column not cascaded");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 11, 0)) == kStone, kTestName,
+                    "mid stone remains");
+  FluidTest::Expect(world.GetBlock(glm::ivec3(0, 12, 0)) == kStone, kTestName,
+                    "top stone remains");
 }
 
 static void TestFloodBelowSeaUsesWaterDespiteLavaNeighbor(
@@ -120,8 +146,10 @@ static void TestFloodBelowSeaUsesWaterDespiteLavaNeighbor(
 {
   cutum::UBlockWorld world;
   world.SetFluidDefinitions(definitions.get());
-  world.SetBlock(glm::ivec3(0, 62, 0), kLava);
-  world.SetFluidState(glm::ivec3(0, 62, 0), cutum::FluidCellState::Source());
+  // Face-adjacent lava (not diagonal) so CellTouchesWet / wet-neighbor spill
+  // can see it; sea_level still forces water_id over lava.
+  world.SetBlock(glm::ivec3(0, 63, 0), kLava);
+  world.SetFluidState(glm::ivec3(0, 63, 0), cutum::FluidCellState::Source());
   world.SetBlock(glm::ivec3(1, 63, 0), cutum::BLOCK_AIR);
 
   cutum::FluidFloodOptions options = GameplayFloodOptions(kWater, 63);
@@ -160,8 +188,10 @@ static void TestFloodSpillBelowSeaUsesWaterDespiteLavaNeighbor(
   world.SetBlock(glm::ivec3(1, 64, 0), kTallGrass);
 
   cutum::FluidFloodOptions options = GameplayFloodOptions(kWater, 63);
+  // Break the air cell (face-adjacent to lava); permeable grass above is
+  // waterlogged by try_fill without replacing the decor block.
   cutum::UFluidSpreadSystem::FloodBreakSiteFromWetNeighbors(
-      world, *definitions, glm::ivec3(1, 64, 0), options);
+      world, *definitions, glm::ivec3(1, 63, 0), options);
   FluidTest::Expect(world.GetBlock(glm::ivec3(1, 63, 0)) == kWater, kTestName,
                     "spill below break site uses water not lava");
   FluidTest::Expect(world.GetBlock(glm::ivec3(1, 64, 0)) == kTallGrass,
@@ -269,14 +299,19 @@ static void TestBreakSiteDoesNotFillLargeAirPocket(
     const std::shared_ptr<cutum::UBlockDefinitionStorage> &definitions)
 {
   cutum::UBlockWorld world;
-  world.SetBlock(glm::ivec3(0, 10, 0), kWater);
-  world.SetFluidState(glm::ivec3(0, 10, 0), cutum::FluidCellState::Source());
+  world.SetFluidDefinitions(definitions.get());
+  world.SetBlock(glm::ivec3(2, 10, 0), kWater);
+  world.SetFluidState(glm::ivec3(2, 10, 0), cutum::FluidCellState::Source());
   for (int dx = 1; dx <= 6; ++dx)
   {
     for (int dy = 0; dy <= 4; ++dy)
     {
       for (int dz = -2; dz <= 2; ++dz)
       {
+        if (dx == 2 && dy == 0 && dz == 0)
+        {
+          continue;
+        }
         world.SetBlock(glm::ivec3(dx, 10 + dy, dz), cutum::BLOCK_AIR);
       }
     }
@@ -359,7 +394,8 @@ static void TestSourceFlowingMeshNoInternalFace(
 int main()
 {
   TestBreakRemovesDecorAbove();
-  TestBreakSandRemovesGrassSurfaceAndDecor();
+  TestBreakSandRemovesFallingAndDecor();
+  TestBreakStructuralColumnStays();
 
   const auto definitions = MakeGameplayDefinitions();
   cutum::UBlockRegistry registry(nullptr, definitions);

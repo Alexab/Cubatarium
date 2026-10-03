@@ -2,6 +2,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -18,6 +19,20 @@ std::string CoordStem(glm::ivec3 coord)
 {
   return std::to_string(coord.x) + "_" + std::to_string(coord.y) + "_" +
          std::to_string(coord.z);
+}
+
+bool TryParseInt(const std::string &text, int &out)
+{
+  try
+  {
+    size_t parsed = 0;
+    out = std::stoi(text, &parsed);
+    return parsed == text.size();
+  }
+  catch (const std::exception &)
+  {
+    return false;
+  }
 }
 
 bool HasExtensionFiles(const std::filesystem::path &chunks_dir,
@@ -70,6 +85,101 @@ std::string UChunkStorageService::ChunkFilePath(const std::string &worldFolder,
                               ? JsonSerializer.FileExtension()
                               : BinarySerializer.FileExtension();
   return ChunksDir(worldFolder) + "/" + CoordStem(coord) + ext;
+}
+
+std::string UChunkStorageService::HighestChunkSliceIndexKey(
+    const std::string &worldFolder) const
+{
+  return std::filesystem::path(ChunksDir(worldFolder))
+      .lexically_normal()
+      .string();
+}
+
+void UChunkStorageService::BuildHighestChunkSliceIndex(
+    const std::string &worldFolder, DiskTerrainColumnIndex &index) const
+{
+  const std::filesystem::path chunks_dir(ChunksDir(worldFolder));
+  if (!std::filesystem::exists(chunks_dir) ||
+      !std::filesystem::is_directory(chunks_dir))
+  {
+    index.initialized = true;
+    return;
+  }
+
+  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+  {
+    const std::string extension = entry.path().extension().string();
+    if (extension != JsonSerializer.FileExtension() &&
+        extension != BinarySerializer.FileExtension())
+    {
+      continue;
+    }
+    const std::string stem = entry.path().stem().string();
+    const size_t first_sep = stem.find('_');
+    const size_t last_sep = stem.rfind('_');
+    if (first_sep == std::string::npos || last_sep == first_sep)
+    {
+      continue;
+    }
+    int x = 0;
+    int cy = 0;
+    int z = 0;
+    if (!TryParseInt(stem.substr(0, first_sep), x) ||
+        !TryParseInt(stem.substr(first_sep + 1, last_sep - first_sep - 1), cy) ||
+        !TryParseInt(stem.substr(last_sep + 1), z))
+    {
+      continue;
+    }
+    const DiskTerrainColumnKey column{x, z};
+    auto [it, inserted] = index.highest_cy.emplace(column, cy);
+    if (!inserted)
+    {
+      it->second = std::max(it->second, cy);
+    }
+  }
+  index.initialized = true;
+}
+
+int UChunkStorageService::ScanHighestChunkSliceOnDisk(
+    const std::string &worldFolder, glm::ivec3 groundCoord) const
+{
+  const std::filesystem::path chunks_dir(ChunksDir(worldFolder));
+  if (!std::filesystem::exists(chunks_dir) ||
+      !std::filesystem::is_directory(chunks_dir))
+  {
+    return -1;
+  }
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  const std::string prefix = std::to_string(groundCoord.x) + "_";
+  const std::string suffix = "_" + std::to_string(groundCoord.z);
+  int highest = -1;
+  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+  {
+    const std::string extension = entry.path().extension().string();
+    if (extension != JsonSerializer.FileExtension() &&
+        extension != BinarySerializer.FileExtension())
+    {
+      continue;
+    }
+    const std::string stem = entry.path().stem().string();
+    if (stem.size() <= prefix.size() + suffix.size() ||
+        stem.compare(0, prefix.size(), prefix) != 0 ||
+        stem.compare(stem.size() - suffix.size(), suffix.size(), suffix) != 0)
+    {
+      continue;
+    }
+    int cy = 0;
+    const std::string cy_text = stem.substr(
+        prefix.size(), stem.size() - prefix.size() - suffix.size());
+    if (TryParseInt(cy_text, cy))
+    {
+      highest = std::max(highest, cy);
+    }
+  }
+  return highest;
 }
 
 ChunkDiskFormat
@@ -214,6 +324,26 @@ bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
     std::error_code ec;
     std::filesystem::remove(legacyJson, ec);
   }
+  const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
+  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
+  {
+    std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+    const auto folder_index = HighestChunkSliceIndexByFolder.find(cache_key);
+    if (folder_index != HighestChunkSliceIndexByFolder.end() &&
+        folder_index->second.initialized)
+    {
+      DiskTerrainColumnIndex &index = folder_index->second;
+      const DiskTerrainColumnKey column{ground.x, ground.z};
+      if (index.dirty_columns.count(column) == 0)
+      {
+        auto [cached, inserted] = index.highest_cy.emplace(column, chunkCoord.y);
+        if (!inserted)
+        {
+          cached->second = std::max(cached->second, chunkCoord.y);
+        }
+      }
+    }
+  }
   return true;
 }
 
@@ -247,51 +377,54 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
   {
     groundCoord.y = 0;
   }
-  const std::filesystem::path chunks_dir(ChunksDir(worldFolder));
-  if (!std::filesystem::exists(chunks_dir) ||
-      !std::filesystem::is_directory(chunks_dir))
+  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
+  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+  DiskTerrainColumnIndex &index = HighestChunkSliceIndexByFolder[cache_key];
+  if (!index.initialized)
   {
-    return -1;
+    BuildHighestChunkSliceIndex(worldFolder, index);
   }
-
-  const std::string prefix = std::to_string(groundCoord.x) + "_";
-  const std::string suffix = "_" + std::to_string(groundCoord.z);
-  int highest = -1;
-  for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
+  const DiskTerrainColumnKey column{groundCoord.x, groundCoord.z};
+  if (index.dirty_columns.erase(column) > 0)
   {
-    const std::string stem = entry.path().stem().string();
-    if (stem.size() <= prefix.size() + suffix.size())
+    const int highest = ScanHighestChunkSliceOnDisk(worldFolder, groundCoord);
+    if (highest >= 0)
     {
-      continue;
+      index.highest_cy[column] = highest;
     }
-    if (stem.compare(0, prefix.size(), prefix) != 0 ||
-        stem.compare(stem.size() - suffix.size(), suffix.size(), suffix) != 0)
+    else
     {
-      continue;
-    }
-    try
-    {
-      const std::string cy_text = stem.substr(
-          prefix.size(), stem.size() - prefix.size() - suffix.size());
-      const int cy = std::stoi(cy_text);
-      highest = std::max(highest, cy);
-    }
-    catch (const std::exception &)
-    {
+      index.highest_cy.erase(column);
     }
   }
-  return highest;
+  const auto cached = index.highest_cy.find(column);
+  return cached != index.highest_cy.end() ? cached->second : -1;
 }
 
 void UChunkStorageService::RemoveChunkSliceFromDisk(
     const std::string &worldFolder, glm::ivec3 chunkCoord) const
 {
+  const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
+  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
+  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
   for (const ChunkDiskFormat format :
        {ChunkDiskFormat::Binary, ChunkDiskFormat::Json})
   {
     const std::string filePath = ChunkFilePath(worldFolder, chunkCoord, format);
     std::error_code ec;
     std::filesystem::remove(filePath, ec);
+  }
+  const auto folder_index = HighestChunkSliceIndexByFolder.find(cache_key);
+  if (folder_index != HighestChunkSliceIndexByFolder.end() &&
+      folder_index->second.initialized)
+  {
+    const DiskTerrainColumnKey column{ground.x, ground.z};
+    const auto cached = folder_index->second.highest_cy.find(column);
+    if (cached != folder_index->second.highest_cy.end() &&
+        chunkCoord.y >= cached->second)
+    {
+      folder_index->second.dirty_columns.insert(column);
+    }
   }
 }
 

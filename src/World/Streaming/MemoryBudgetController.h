@@ -15,6 +15,18 @@ struct MemoryBudgetSample
   int dirty_chunks{0};
   int baseline_keep_margin{2};
   int visual_rd{4};
+  /// Altitude/config RD before Adaptive demotion. 0 = unknown (legacy Green
+  /// keep+1). When visual_rd < baseline_visual_rd, Green must not raise
+  /// keep_margin (Keep≫Visual → black beside path / wall, manual 153347).
+  int baseline_visual_rd{0};
+  /// FZ2.7-P10: Capture hard-cap must not starve Completed refill.
+  int relight_fifo_n{0};
+  int relight_completed_n{0};
+  int unfinished_visual{0};
+  /// I18-F2: ingress debt forces far capture shed.
+  int ingress_debt_level{0};
+  /// R4.3: ShedFar capture_hard_cap=1 only when miss is beyond protect ring.
+  int miss_horiz{99};
 };
 
 struct MemoryBudgetDecision

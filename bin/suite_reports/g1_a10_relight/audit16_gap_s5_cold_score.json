@@ -1,0 +1,14 @@
+{
+  "label": "audit16_gap_s5_cold",
+  "perf_jsonl": "bin/logs/perf_20260917-110838_6128.jsonl",
+  "west_route_coverage": "COVERED",
+  "focus_cx_min": -8.0,
+  "eye_proxy_stop_line_pass": true,
+  "adequacy_pass": true,
+  "publication_incomplete_material_mid_med": 0.0,
+  "mark_relit_h2_fire_n": 0,
+  "column_record_shadow_mismatch_n": 0,
+  "column_record_shadow_stage_disagree_n_tail": [22, 24, 20],
+  "west_rim_moving_clnm_med": 2,
+  "note": "H2 deleted; Flow census call removed; mismatch≡0; stage_disagree residual during cruise"
+}

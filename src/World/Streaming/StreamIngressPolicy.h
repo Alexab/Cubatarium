@@ -1,0 +1,476 @@
+#pragma once
+// BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
+
+#include <algorithm>
+#include <climits>
+#include <cstdint>
+#include <glm/glm.hpp>
+
+namespace cutum
+{
+
+/// I18 hotfix: Tier-2 witness comfort gated until Gate A passes on clean cruise.
+inline constexpr bool kI18WitnessComfortEnabled = false;
+/// I18 hotfix.4: narrow underfeet drawable hold (miss_horiz≤1) without full Tier-2.
+inline constexpr bool kI18UnderfeetGraceEnabled = true;
+inline constexpr int kI18UnderfeetGraceFrames = 2;
+
+/// I17-P1: ring resync only when focus/keep ring actually changed.
+inline bool ShouldRefreshRingResyncForFocusJump(bool focus_ground_jumped,
+                                                bool keep_cols_changed,
+                                                bool ring_sample_valid,
+                                                int frame_epoch_delta,
+                                                int witness_retarget_delta = 0,
+                                                int max_epoch_reuse = 4)
+{
+  if (witness_retarget_delta > 0 && !focus_ground_jumped && !keep_cols_changed)
+  {
+    return false;
+  }
+  if (focus_ground_jumped || keep_cols_changed || !ring_sample_valid)
+  {
+    return true;
+  }
+  return frame_epoch_delta > max_epoch_reuse;
+}
+
+/// I17-P1: cruise unfinished sample cadence (frames between full ring walks).
+inline int UnfinishedSampleCooldownFrames(int unfinished_visual)
+{
+  return unfinished_visual <= 1 ? 24 : 12;
+}
+
+/// I18-B4: restore I12 rim fast-path cadence when stable cruise rim.
+inline int UnfinishedSampleCooldownFramesCruise(bool diet_cruise, int miss_horiz,
+                                                int unfinished_visual)
+{
+  if (diet_cruise && miss_horiz >= 2 && miss_horiz <= 4 && unfinished_visual <= 1)
+  {
+    return 32;
+  }
+  return UnfinishedSampleCooldownFrames(unfinished_visual);
+}
+
+/// R3.3/R3.6: rim hole pressure — unfinished / no-mesh only.
+/// focus_dirty alone is remesh debt, not a hole (manual 085143 latch).
+inline bool ShouldComputeRimHolePressure(int miss_horiz, int unfinished_hint,
+                                         int /*focus_dirty_chunks*/,
+                                         int column_loaded_no_mesh_n,
+                                         bool focus_missing = false)
+{
+  if (miss_horiz < 3)
+  {
+    return false;
+  }
+  // R4.6.2: focus rim miss is heal pressure even when unfinished sample is 0
+  // (late 135644: mh=3 missing, unfinished=0, visual_holes=0 → false clear).
+  if (focus_missing && miss_horiz <= 4)
+  {
+    return true;
+  }
+  return unfinished_hint > 0 || column_loaded_no_mesh_n > 0;
+}
+
+/// R3.3: exit rim perf diet when hole pressure or stale/rising focus debt.
+inline bool ShouldExitRimPerfDiet(bool rim_hole_pressure,
+                                  int unfinished_sample_age,
+                                  bool focus_pressure_rising,
+                                  int max_reuse_age = 32)
+{
+  if (rim_hole_pressure)
+  {
+    return true;
+  }
+  if (unfinished_sample_age > max_reuse_age)
+  {
+    return true;
+  }
+  if (focus_pressure_rising)
+  {
+    return true;
+  }
+  return false;
+}
+
+/// I17-P1: reuse cached unfinished between sample ticks on cruise.
+inline bool ShouldReuseUnfinishedVisualSample(bool diet_cruise, bool visual_holes,
+                                              bool rim_hole_pressure,
+                                              bool pending_underfeet,
+                                              int sample_cd_remaining)
+{
+  return diet_cruise && !visual_holes && !rim_hole_pressure &&
+         !pending_underfeet && sample_cd_remaining > 0;
+}
+
+/// I18-P1: stand stable rim miss — throttle full ring unfinished walks.
+inline bool ShouldUseStandStablePrepDiet(bool moving, bool visual_holes,
+                                         int miss_horiz, int unfinished_visual)
+{
+  return !moving && !visual_holes && miss_horiz >= 2 && unfinished_visual <= 4;
+}
+
+inline int UnfinishedSampleCooldownFramesStandStable(int unfinished_visual)
+{
+  return unfinished_visual <= 1 ? 48 : 36;
+}
+
+/// I17-P1: VB raw scan cadence — throttle when stalled plateau stable.
+inline int VbRawScanCadenceFrames(bool diet_cruise, int vb_focus_stable_frames,
+                                  int vb_stalled_n, int vb_published)
+{
+  if (!diet_cruise)
+  {
+    return vb_focus_stable_frames >= 4 ? 10 : 4;
+  }
+  if (vb_stalled_n >= 15 && vb_focus_stable_frames >= 4)
+  {
+    return 16;
+  }
+  if (vb_published < 20)
+  {
+    return 8;
+  }
+  return 10;
+}
+
+/// I17-P2: defer revision bump on rim while GPU apply in flight (drawable held).
+inline bool ShouldDeferRimRevisionBumpForPendingGpu(bool focus_valid, int horiz,
+                                                  bool pending_gpu,
+                                                  bool has_drawable,
+                                                  bool witness_hop_window = false)
+{
+  if (witness_hop_window && focus_valid && has_drawable && horiz >= 0 &&
+      horiz <= 4)
+  {
+    return true;
+  }
+  return focus_valid && pending_gpu && has_drawable && horiz >= 0 && horiz <= 4;
+}
+
+/// I17-P2: cruise moving rim ingress FM schedule floor.
+inline int RimIngressFmScheduleFloor(bool moving, int miss_horiz, int dirty_fm_n)
+{
+  if (!moving || miss_horiz < 2 || miss_horiz > 4 || dirty_fm_n <= 0)
+  {
+    return 0;
+  }
+  return std::min(4, std::max(1, dirty_fm_n));
+}
+
+/// Rim ahead converge P0: allow MaxOutside≥1 under HoleDrain when load-ahead
+/// is feeding the rim but sticky coverage debt is still 0 (brief ahead black).
+/// NEVER arms coverage sticky; NEVER uses bare FocusMissing alone.
+/// dirty_fm alone omitted — AF v1/v2 showed permanent outside drip under
+/// HoleDrain raised mid wall without helping west coverage.
+/// Prior-lit ring: do not drip from stream/prefetch alone when schedule_ok==0
+/// (FM starved — ring clamp / manual 183457 lateral black).
+inline bool ShouldDripOutsideFocusMeshOnRimCruise(bool moving,
+                                                   int nearest_miss_horiz,
+                                                   bool rim_hole_pressure,
+                                                   int stream_or_prefetch_ops,
+                                                   int /*dirty_fm_n*/,
+                                                   int schedule_ok_n = 1)
+{
+  if (!moving)
+  {
+    return false;
+  }
+  if (nearest_miss_horiz < 2 || nearest_miss_horiz > 4)
+  {
+    return false;
+  }
+  if (rim_hole_pressure)
+  {
+    return true;
+  }
+  if (stream_or_prefetch_ops > 0 && schedule_ok_n > 0)
+  {
+    return true;
+  }
+  return false;
+}
+
+/// Prior-lit ring P1: clamp NearLoad/Prefetch/Adaptive while FM+relight cannot
+/// converge LitDrawable. Hard FM starve (schedule_ok==0) or relight FIFO BP.
+/// Soft under-floor omitted after AF v1 eye-proxy staleΔ regress.
+/// No FullyDark census / Dirty — ingress only.
+inline bool ShouldClampIngressForLitConvergenceDebt(
+    bool hole_drain_or_deep, int miss_horiz, int dirty_fm_n, int schedule_ok_n,
+    int relight_fifo_n, int fm_floor, int relight_bp = 16)
+{
+  (void)fm_floor;
+  if (!hole_drain_or_deep)
+  {
+    return false;
+  }
+  if (miss_horiz < 0 || miss_horiz > 4)
+  {
+    return false;
+  }
+  if (dirty_fm_n > 0 && schedule_ok_n <= 0)
+  {
+    return true;
+  }
+  if (relight_fifo_n >= relight_bp)
+  {
+    return true;
+  }
+  return false;
+}
+
+/// Soft debt: shed Prefetch lateral ±1 but keep center corridor (not full defer).
+inline bool ShouldShedPrefetchLateralForLitDebt(bool clamp_ingress_debt,
+                                                bool hard_defer_prefetch)
+{
+  return clamp_ingress_debt && !hard_defer_prefetch;
+}
+
+/// R08-lite / prior-lit: under lit-convergence ingress clamp, cap streamer
+/// MaxLoadOps so load+emerge do not stack on FIFO/FM debt. Underfeet KEEP
+/// (caller must skip this when underfeet_need / incomplete camera column).
+/// Cap=4 (not 2): AF stream_diet_p0_cold with cap=2 regressed eye blink.
+inline int LitConvergenceDebtLoadOpsCap()
+{
+  return 4;
+}
+
+inline int CapStreamerLoadOpsForLitConvergenceDebt(int load_ops,
+                                                   bool clamp_ingress_debt,
+                                                   bool underfeet_keep)
+{
+  if (!clamp_ingress_debt || underfeet_keep)
+  {
+    return load_ops;
+  }
+  return std::min(load_ops, LitConvergenceDebtLoadOpsCap());
+}
+
+/// Rim ahead converge P1: defer PrefetchAhead while FM consumer is hard-starved
+/// (schedule_ok==0) under RimIngress demand — not every under-floor tick
+/// (AF cold: soft <floor + sticky HoleDrain zeroed Prefetch/stream_loads).
+inline bool ShouldDeferPrefetchAheadForFmStarve(bool hole_drain_or_deep,
+                                                int miss_horiz, int dirty_fm_n,
+                                                int schedule_ok_n, int fm_floor)
+{
+  if (!hole_drain_or_deep)
+  {
+    return false;
+  }
+  if (miss_horiz < 0 || miss_horiz > 4)
+  {
+    return false;
+  }
+  if (fm_floor <= 0 || dirty_fm_n <= 0)
+  {
+    return false;
+  }
+  return schedule_ok_n <= 0;
+}
+
+/// I18-A2: chain stall kick threshold (frames). Hotfix: restore 8f default.
+inline int RimChainStallKickFrames(bool schedule_starved)
+{
+  return schedule_starved ? 4 : 8;
+}
+
+/// I18-F: ingress debt levels for coordinated load shedding.
+enum class IngressDebtLevel : uint8_t
+{
+  Ok = 0,
+  Watch = 1,
+  ShedFar = 2,
+  ShedRim = 3,
+};
+
+struct IngressDebtInput
+{
+  bool moving{false};
+  int chain_progress_frames{0};
+  int schedule_ok_n{0};
+  int dirty_fm_n{0};
+  int fm_dirty_gpu_watch_max_age{0};
+  int fm_dirty_gpu_watch_n{0};
+  int softdefer_witness_retarget_delta{0};
+  int miss_horiz{0};
+  int fm_dirty_to_gpu_finish_n{0};
+  int visible_black_focus_n{0};
+  int focus_missing_mesh{0};
+  bool underfeet_need{false};
+};
+
+/// R4.3: nh 2–4 focus miss must not enter ShedFar (protect-ring heal).
+inline bool IsProtectRingFocusMiss(int focus_missing_mesh, int miss_horiz,
+                                   bool underfeet_need)
+{
+  return focus_missing_mesh > 0 && miss_horiz >= 2 && miss_horiz <= 4 &&
+         !underfeet_need;
+}
+
+/// R4.1: SyncFocusRing under debt/overrun stays near R≤2 (far stages cadence).
+inline int SyncFocusRingRadiusUnderDebt(int streaming_r, int ingress_debt,
+                                        bool phase_budget_over, int miss_horiz,
+                                        bool underfeet, bool visual_holes_telem)
+{
+  const bool shed =
+      ingress_debt >= static_cast<int>(IngressDebtLevel::ShedFar) ||
+      phase_budget_over;
+  if (shed && miss_horiz >= 3 && !underfeet && !visual_holes_telem)
+  {
+    return std::min(std::max(1, streaming_r), 2);
+  }
+  return std::max(1, streaming_r);
+}
+
+/// I18-P4: chain stall predicate (watch + zero FM→GPU finish).
+inline bool IsIngressChainStalled(const IngressDebtInput &in)
+{
+  if (in.dirty_fm_n <= 0)
+  {
+    return false;
+  }
+  // MarkRelit progress frames are noisy — watch with no finish is the stall SoT.
+  if (in.fm_dirty_gpu_watch_n > 0 && in.fm_dirty_to_gpu_finish_n == 0 &&
+      in.fm_dirty_gpu_watch_max_age >= 8)
+  {
+    return true;
+  }
+  if (in.fm_dirty_to_gpu_finish_n == 0 &&
+      (in.chain_progress_frames == 0 || in.fm_dirty_gpu_watch_max_age >= 8))
+  {
+    return true;
+  }
+  return false;
+}
+
+/// I18-A1: FM dirty GPU watch coord on rim ingress ring.
+inline bool IsRimIngressWatchCoord(glm::ivec3 coord, glm::ivec3 focus_ground,
+                                  int max_horiz = 4)
+{
+  const int horiz =
+      std::max(std::abs(coord.x - focus_ground.x),
+               std::abs(coord.z - focus_ground.z));
+  return horiz >= 0 && horiz <= max_horiz;
+}
+
+/// I18-F3: dynamic kick_cut bias from FM watch depth on rim.
+inline double DynamicKickCutBiasForFmWatch(int watch_rim_n, double base_kick_cut)
+{
+  if (watch_rim_n <= 0)
+  {
+    return base_kick_cut;
+  }
+  const int capped = std::min(watch_rim_n, 4);
+  return std::max(base_kick_cut, 0.70 + 0.05 * static_cast<double>(capped));
+}
+
+/// I17-P3: consume ticketed VB on cruise when stalled plateau without PL debt.
+inline bool ShouldConsumeTicketedVbStalledCruise(bool moving, int vb_stalled_n,
+                                                 int pending_light_focus_n,
+                                                 int visible_black_focus_n,
+                                                 int stalled_floor = 10,
+                                                 int vb_focus_floor = 25)
+{
+  return moving && pending_light_focus_n == 0 &&
+         vb_stalled_n >= stalled_floor &&
+         visible_black_focus_n >= vb_focus_floor;
+}
+
+/// I17-P0: effective-holes blink transition detector.
+inline bool IsBlinkTransition(int prev_unfinished, int cur_unfinished)
+{
+  if (cur_unfinished <= 0)
+  {
+    return false;
+  }
+  if (prev_unfinished <= 0)
+  {
+    return true;
+  }
+  return cur_unfinished >= prev_unfinished + 2;
+}
+
+inline IngressDebtLevel EvaluateIngressDebt(const IngressDebtInput &in,
+                                            int watch_streak_periods)
+{
+  const bool ingress_pressure =
+      in.moving ||
+      (in.visible_black_focus_n >= 20 && in.dirty_fm_n > 0);
+  if (!ingress_pressure)
+  {
+    return IngressDebtLevel::Ok;
+  }
+  const bool chain_stall = IsIngressChainStalled(in);
+  if (!chain_stall)
+  {
+    return IngressDebtLevel::Ok;
+  }
+  if (watch_streak_periods < 2)
+  {
+    return IngressDebtLevel::Watch;
+  }
+  if (in.schedule_ok_n < 2 || in.fm_dirty_gpu_watch_max_age > 30)
+  {
+    if (in.softdefer_witness_retarget_delta > 0 && in.miss_horiz >= 2 &&
+        in.miss_horiz <= 4)
+    {
+      return IngressDebtLevel::ShedRim;
+    }
+    if (IsProtectRingFocusMiss(in.focus_missing_mesh, in.miss_horiz,
+                               in.underfeet_need))
+    {
+      return IngressDebtLevel::ShedRim;
+    }
+    return IngressDebtLevel::ShedFar;
+  }
+  if (in.softdefer_witness_retarget_delta > 0)
+  {
+    return IngressDebtLevel::ShedRim;
+  }
+  IngressDebtLevel far_debt = IngressDebtLevel::ShedFar;
+  if (IsProtectRingFocusMiss(in.focus_missing_mesh, in.miss_horiz,
+                             in.underfeet_need))
+  {
+    far_debt = IngressDebtLevel::ShedRim;
+  }
+  return far_debt;
+}
+
+/// I18-F5: rate limit better_horiz hops under ingress debt.
+inline bool ShouldRateLimitWitnessRetargetUnderDebt(
+    IngressDebtLevel debt, int periods_since_last_retarget, bool visual_holes,
+    int rate_limit_periods = 48)
+{
+  if (visual_holes)
+  {
+    return false;
+  }
+  if (debt < IngressDebtLevel::ShedFar)
+  {
+    return false;
+  }
+  return periods_since_last_retarget < rate_limit_periods;
+}
+
+/// I18-D1: hold prior column drawable briefly on witness column swap.
+struct WitnessSwapGrace
+{
+  glm::ivec2 prior_xz{INT_MAX, INT_MAX};
+  int frames_left{0};
+};
+
+inline bool ShouldHoldPriorColumnDrawableOnWitnessSwap(bool had_drawable,
+                                                     bool new_column_ready,
+                                                     int nh, int frames_left)
+{
+  return had_drawable && !new_column_ready && nh >= 0 && nh <= 4 &&
+         frames_left > 0;
+}
+
+inline bool IsWitnessSwapGraceActive(const WitnessSwapGrace &grace,
+                                   glm::ivec2 coord_xz)
+{
+  return grace.frames_left > 0 && grace.prior_xz.x == coord_xz.x &&
+         grace.prior_xz.y == coord_xz.y;
+}
+
+} // namespace cutum

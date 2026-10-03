@@ -13,6 +13,7 @@ flat out int vFaceIndex;
 out float vSkyLight;
 out float vBlockLight;
 out float vWetness;
+flat out float vLightPreview;
 
 uniform mat4 mvp_matrix;
 
@@ -26,4 +27,5 @@ void main()
     vSkyLight = aSkyLight;
     vBlockLight = aBlockLight;
     vWetness = 0.0;
+    vLightPreview = 0.0;
 }

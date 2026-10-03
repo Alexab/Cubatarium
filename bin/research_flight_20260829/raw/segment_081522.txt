@@ -1,0 +1,46 @@
+segment_medians perf_20260829-081522
+
+ENTER spikes n=0
+CRUISE spikes n=265
+
+## ENTER
+stream_ms: med=None max=0
+mesh_emerge_ms: med=None max=0
+mesh_dirty_tick_ms: med=None max=0
+relight_drain_ms: med=None max=0
+unfinished_visual: med=None max=0
+visible_black_focus_n: med=None max=0
+mesh_dirty_schedule_ok_n: med=None max=0
+softdefer_capture_retarget_n: med=None max=0
+relight_completed_n: med=None max=0
+mesh_dirty_schedule_skip_orphan_n: med=None max=0
+dark_face_stale_near_n: med=None max=0
+dark_face_void_near_n: med=None max=0
+
+## CRUISE
+stream_ms: med=87.9 max=135.287
+mesh_emerge_ms: med=34.62 max=56.3639
+mesh_dirty_tick_ms: med=0.29 max=25.2109
+relight_drain_ms: med=2.2 max=20.1178
+unfinished_visual: med=7.0 max=33.0
+visible_black_focus_n: med=73.0 max=97.0
+mesh_dirty_schedule_ok_n: med=1.0 max=8.0
+softdefer_capture_retarget_n: med=12.0 max=18.0
+relight_completed_n: med=0.0 max=5.0
+mesh_dirty_schedule_skip_orphan_n: med=0.0 max=0.0
+dark_face_stale_near_n: med=109.0 max=1316.0
+dark_face_void_near_n: med=515.0 max=1682.0
+
+## ALL
+stream_ms: med=87.9 max=135.287
+mesh_emerge_ms: med=34.62 max=56.3639
+mesh_dirty_tick_ms: med=0.29 max=25.2109
+relight_drain_ms: med=2.2 max=20.1178
+unfinished_visual: med=7.0 max=33.0
+visible_black_focus_n: med=73.0 max=97.0
+mesh_dirty_schedule_ok_n: med=1.0 max=8.0
+softdefer_capture_retarget_n: med=12.0 max=18.0
+relight_completed_n: med=0.0 max=5.0
+mesh_dirty_schedule_skip_orphan_n: med=0.0 max=0.0
+dark_face_stale_near_n: med=109.0 max=1316.0
+dark_face_void_near_n: med=515.0 max=1682.0

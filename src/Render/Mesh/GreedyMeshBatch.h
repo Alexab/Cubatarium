@@ -14,6 +14,8 @@ struct GreedyBatchRef
 {
   glm::ivec3 chunkCoord{0};
   uint16_t batchIndex{0};
+  /// Cached at ref build time so opaque sort avoids GreedyCache.find per compare.
+  BlockId blockId{BLOCK_AIR};
 };
 
 struct GreedyMeshBatch

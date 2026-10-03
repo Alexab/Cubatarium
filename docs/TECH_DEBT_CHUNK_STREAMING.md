@@ -66,11 +66,369 @@
 | TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | Architecture A–E landed. Autofly×2 `--replay-manual`: `manual_arch_era13_01/02.json`. **cold_relight=2≤3 OK**; holes/async OK on 02. **D3 NO-GO:** `wall_ms_med≈44` (need ≤30), `post_stop_black_sticky_max≈9`. Stop SoftDefer zoo after 2 iters. | in-progress |
 | TD-ARCH-033 | Era13/rim | Frontier first-mesh latency (manual 225337) | Stage SLA + UnlitFirstMesh + sync promote | partial — confirm on World_164 edge smoke |
 
+**2026-08-05 perf_opt3:** `NearFocusHoles` telemetry no longer ORs pending-light debt (kept in `LightDebt`); reduces false `nh_no_miss_rate` when SoftDefer remesh-until-lit with mesh present. Admission still uses pending-light urgency locally.
+
+**perf_opt3 closeout (2026-08-05):** P0–P2/P4 code landed. Residual gaps closed:
+`gpu_cull_gpu_ms`; cull-stats SubData once/period + ShowPerformance; frustum
+revision on flat-skip; idle FirstMesh admit=3 when missing. P3 ARCH_D3_LAND /
+cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
+
+### FOV/progressive plan (2026-08) — Closed (P4 validate)
+
+| ID | Added in | Item | Why deferred | Target |
+|----|----------|------|--------------|--------|
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix `9cfe265a`; smoke PASS; mid residual still needs fresh manual vs 215629 | **done** 2026-08-02 (mid residual open → user manual) |
+| TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | `b6b75a5f` + `2ef3711f`; smoke PASS | **done** 2026-08-02 |
+| TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | `bd4e0356`; smoke PASS | **done** 2026-08-02 |
+| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | `4abd8683` ×0.85 underfeet / HoleDrain nh≤1 ahead; smoke miss_end=0 | **done** 2026-08-02 |
+| TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | P4: autofly holes≈0.27 but mid `215629` rim_ok=false (nh≥4); no Fog knobs without miss≤0.45 **and** rim hold | **open** backlog |
+| TD-ARCH-039 | 2026-08 FOV plan | Sub-16 mesh brick | P2 closed visual progressive DoD without sub-16 | **wont-fix** 2026-08-02 |
+
+### TD-ARCH Era14 (V4) — Open
+
+> Executive: [`streaming/ROOT_CAUSE_2026-08.md`](streaming/ROOT_CAUSE_2026-08.md),
+> [`streaming/ERA14_POSTMORTEM.md`](streaming/ERA14_POSTMORTEM.md).
+> Evidence baseline: `manual_latest_151212` (wall~200, phys~172 nest, miss sticky~38s).
+
+| ID | Added in | Item | Why deferred | Target |
+|----|----------|------|--------------|--------|
+| TD-ARCH-040 | Era14 | Frame nest: stream/emerge inside `RunLegacyPhysicsFrame` / `do_movement_ms` | Nest proof fly-clean phys_med≈4.9 | **done 2026-08-07** `0812c77f` |
+| TD-ARCH-041 | Era14 | Deadlock calm-wall Imm / stale-wave enqueue (`wall≤40/50`) | Dirty/promote without wall; Imm stays budgeted; sticky remesh budget on hot wall | **done 2026-08-07** (Imm primary DISCARD) |
+| TD-ARCH-042 | Era14 | Stand/cruise sticky Imm fork zoo | Imm primary removed; Dirty@≥1–2 + PreferKick | **done 2026-08-07** |
+| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Era16 `era16_p2_land` holes≈0.04 miss_stuck=2 sticky=0 no_ticket=0 wall≈52 | **done 2026-08-08** ARCH_D3_LAND GO |
+| TD-ARCH-044 | Era14 | Commit-time seed coverage / PendingLight trail | SeedDecision cruise≤32 / idle≤28 cheap seed | **done 2026-08-07** `f9af0c16`+iterate |
+| TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | MarkRelit → NoteColumnRepairNeeded + RemeshSeam | **done 2026-08-07** `f9af0c16` |
+| TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | `UMeshCaptureWorker` on hot path; main `TakeOrRefresh` fallback only when worker disabled | **done 2026-09-01** `f62041bc` mesh arch M2 |
+| TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Sticky remesh wall-skip removed; IdleRecovery owns sync cost only | **done 2026-08-07** |
+| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Era17 ocean `era17_p3_ocean` wall≈126 holes≈0.48 (ARCH_D3 soft NO-GO); land ARCH_D3_LAND GO | **partial** — ocean wall/holes open |
+| TD-ARCH-049 | Era15 | MeshResidency: FreeChunk-before-replace flicker | CPU Apply/Immediate publish batches before FreeChunk; `mesh_replace_hole_avoided` telem; FLY_CLEAN GO `era15_p1_fly` | **done 2026-08-08** `327dd006`+ |
+| TD-ARCH-050 | Era15 | ColumnPublication Unlit→Lit + SoftDeferHeld∥ColumnFlow | LitPending on Unlit FirstMesh; sticky_r≠gate MarkRelit; SoftDeferHeld→FirstMesh ticket; DesiredStage lit_pending/unlit; IDLE_CLEAN/WARM GO | **done 2026-08-08** `327dd006`+ (LAND holes residual via 043/051) |
+| TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick Queued+Kicked; Era16 land holes≈0.04 ARCH_D3_LAND GO | **done 2026-08-08** via Era16 P2 |
+| TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark; Hide⇒Ticket RemeshSeam; IDLE_CLEAN+ARCH_D3_LAND no_ticket=0 | **done 2026-08-08** P0–P3 |
+| TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **done 2026-08-08** P0–P2 |
+| TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** light path OK; FPS/miss fixed via TD-055 autofly; manual eye pending |
+| TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly GO; manual `214034` still holes/black |
+| TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`→`102236`: wall↓ no_ticket=0 enter↓; FOV miss/VB/flicker residual | **partial 2026-08-09** manual eye better; TD-057 |
+| TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **partial 2026-08-09** autofly FLY/IDLE/WARM/LAND GO; manual `154049` eye → TD-058 |
+| TD-ARCH-058 | Era22 | SoftDefer Heal SLA + VB ticket radius | SoftDeferHeld/empty without FirstMesh SLA; VB collect r≤2 vs Count full focus orphans; miss heal latency | **partial 2026-08-09** autofly GO; manual `172232` eye → TD-059 |
+| TD-ARCH-059 | Era23 | Void Relight dual-queue + rim miss SLA | void_near≈596; Relight starve under miss; Held-as-progress masks Collect; miss PreferKick too late; place-hole fall | **partial 2026-08-09** autofly GO; manual `193059` blacks closed (void/dark=0); empty residual → TD-060 |
+| TD-ARCH-060 | Era24 | SoftDefer Empty FirstMesh-until-Drawable | SoftDefer empty FOV stick (`HasGreedy∧!Drawable`); empty_stuck≈8s; miss_end=1 on `193059` | **partial 2026-08-09** autofly GO; mid-corridor eye OK on `203144`; empty_stuck≈6; frontier void → TD-061 |
+| TD-ARCH-061 | Era25 | Frontier Column Stage SLA | Frontier gen→light→mesh lag; void_end≈412 on `203144` west; `stream_loads≡0` masks gen | **partial 2026-08-09** P0–P3 landed; autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `203144`-class |
+| TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **partial 2026-08-09** P0–P3 landed; FLY/WARM GO; IDLE soft wall/emerge; LAND soft miss; wait manual `214325` |
+| TD-ARCH-063 | Era27 | Anti-Flicker Ownership | SoftDefer Capture retarget thrash + MarkRelit remesh blink + discarded_late supersede after Era26 heal (`224912`) | **partial 2026-08-09** P0–P3 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual `224912` |
+| TD-ARCH-064 | Era28 | Visual Stage Gate | UnlitFirstMesh + SoftDefer Dirty thrash → black/empty/green flicker (`012208` opaque swing 658) | **partial 2026-08-10** P0–P3 landed; FLY/WARM GO; IDLE soft dirtyΔ; LAND soft miss; wait manual `012208` |
+| TD-ARCH-065 | Era29 | Enter Visual Warmup | Progress bar closes on greedy r≤2; SoftDefer/PendingLight/VB explode on ENTER (`091332`) | **partial 2026-08-10** P0–P4 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual ENTER eye |
+| TD-ARCH-066 | Era37 | Manual/Autofly Parity + Near-FOV Visual SLA | Era36 autofly GO but manual `161544` unchanged (FIFO~96, unlit~20); teleport vs resume incomparable | **partial 2026-08-11** P0–P5 landed; `land-cruise-resume` harness; wait manual+resume parity eye |
+| TD-ARCH-067 | Era38 | Near-FOV Work Priority + Resume Parity | SoftDefer ownership row-major+cap starves near; Unlit hinterland + rear slots; autofly≠manual | **partial 2026-08-11** A0–A3 + B harness; gate=`land-cruise-resume`; CLOSED only within 2× manual + eye |
+| TD-ARCH-068 | Era39 | SoftDefer Anti-Flicker + Hidden-Neighbor Seam | SoftDefer empty publish/withdraw flicker; ready-chunk faces X-ray when SoftDefer-hidden neighbor; FIFO residual | **partial 2026-08-11** P0–P2 + A4 (floor 12 + unlit telem split); wait manual eye |
+| TD-ARCH-069 | Era40 | Relight FIFO Unfreeze (miss rim) | SoftDefer pin horiz≤2 misses rim 3–4; floors silent at pendf≈15; fifo≈96 completed≈0 | **partial 2026-08-11** P0–P3 landed; resume fifo still ~95; wait manual rim eye |
+| TD-ARCH-070 | Era41/42/43 | Enter full lit on progress bar | Era42 stall 1h+ (global debt + ingress on bar) | **partial 2026-08-12** Era43 snapshot+freeze; wait manual eye |
+
+> **Era43 Enter Lit Gate (2026-08-12):** `BeginEnterLitGate` freezes streaming, captures
+> RD+1 snapshot debt; drain-only tick + one-shot enqueue; `enter_lit_debt_mode=snapshot_rd`;
+> `EnterLitDiagnostics` on bar; `enter_lit_abort_ms` safety. Fixes 1h42m stall (`073621`).
+
+> **Era42 Enter Full Lit (2026-08-11):** Global PendingLight debt — superseded by Era43
+> snapshot. Knobs: `enter_fov_lit_*`, `enter_lit_require_zero`.
+
+> **Era40 Relight FIFO Unfreeze (2026-08-11):** Miss/SoftDefer Relight pin covers
+> LitDrawable ring (`horiz≤4`); force Enqueue miss∧(PendingLight∨undrawn); miss
+> finalize band (no partial Y-split on rim); Trim protects pin ring; Capture floors
+> fire at pendf>15; soft-cap∧completed≈0∧miss raises `bg_budget` even after rim SLA.
+> Telem: `relight_false_clear_n` + analyze `relight_fifo_stuck_soft_fail`. Evidence:
+> `era40_land_resume` cruise_fifo_med≈95 (vs Era39 A4 same), completed_med=0,
+> miss_stuck 6s (≤12), holes≈0.04; soft fifo-stuck=true. Reject: LitDrawable ring
+> off; Unlit void; CLOSED without manual World_174 rim eye.
+
+> **Era39 SoftDefer Anti-Flicker + Seam (2026-08-11):** SoftDefer empty recount every
+> frame / ownership on Cd; near sticky ownership; PublishAvoided Dirty damp + keep
+> HasGreedy (no erase flash). Snapshot treats SoftDefer-hidden neighbor as Air;
+> remesh drawable face-neighbors on SoftDefer empty enter/leave. A4 after resume
+> debt gate: `LandRelightGpuApplyFloor` 8→12; `chunk_meshed_unlit_{hidden,preview}`.
+> Reject: LitDrawable ring off; Unlit void; CLOSED without manual eye.
+
+> **Era38 Near-FOV Work Priority (2026-08-11):** SoftDefer empty collect→`NearFovWorkScore`
+> sort→near-first ownership; starve hinterland Unlit / rear Pass1b while near empty or
+> pending>15; ColumnFlow FirstMesh/Relight `f(horiz)`; Relight pin SoftDefer-empty
+> `horiz≤2`. Harness: resume no eye-y override, idle≥15s stand; analyze enter/cruise
+> split + `parity_within_2x`. Evidence: `era38_land_resume` gates 20/23, pending/unlit
+> med=0, `parity_within_2x=true` vs manual `172314`; cruise_fifo_med≈74 (still high).
+> Manual eye + Type A residual still open (TD-066). Teleport `land-cruise` = smoke only.
+> Reject: LitDrawable ring removal; Unlit void; CLOSED on teleport-autofly alone.
+
+> **Era37 Manual/Autofly Parity (2026-08-11):** P0 unlit hole preview under light
+> debt (`AllowUnlitDrawableUnderLightDebt`); P1 false-clear pending fix +
+> `LandRelightGpuApplyFloor`; P2 VB ticket on surface-band skip; P3
+> `land-cruise-resume` scenario (World_174, no teleport); P4 enter debt +
+> warmup ownership boost; P5 per-column relight surface band. Reject: unlit preview
+> on fully-dark void; CLOSED on teleport-autofly without resume/manual eye.
+
+> **Era29 Enter Visual Warmup closeout (2026-08-10):** P0–P4 landed. Progress bar
+> always runs budgeted `TickEnterStreamingWarmup` (I-E2); enter gate adds underfeet
+> LitDrawable / SoftDefer empty / PendingLight (I-E1/E3/E4) with frame cap 24;
+> spawn Capture pin T=16; near CollectFullyDark honesty; far Unlit remesh-on-lit
+> RemeshAfterApply; idle drawable RemeshAfterApply + standing seam suppress dirty>48.
+> enter_app soft ≤200; opaque_churn soft ≤200. Autofly: `era29_p4_fly` FLY_CLEAN
+> (opaque=67); `era29_p4_warm` IDLE_WARM (opaque=42); `era29_p4_idle` IDLE_CLEAN
+> (opaque=103); `era29_p4_land` ARCH_D3_LAND soft post_stop miss. KEEP Era28
+> hide-until-lit / Dirty coalesce / PendingReplace. Reject RD+1 bar wait; Unlit
+> near on bar; MarkAllDirty warmup; CLOSED without manual ENTER eye (`091332`).
+
+> **Era29 Enter Visual Warmup (2026-08-10):** Manual `091332` after Era28: cruise
+> flicker OK; ENTER blink (VB~49 void~9k unlit↑ empty=6); FOV black/empty remain;
+> opaque_churn=880; wall med~103 (better). Root: bar gate greedy-only + skip
+> `TickEnterStreamingWarmup` after coop prepare. Fix: underfeet LitDrawable gate
+> on bar; always budgeted streaming/emerge; no RD+1 wait; enter_app soft ≤200.
+> KEEP Era28 hide-until-lit / Dirty coalesce / PendingReplace. Reject Unlit near
+> on bar; MarkAllDirty warmup; CLOSED without ENTER eye.
+
+> **Era28 Visual Stage Gate closeout (2026-08-10):** P0–P3 landed. SoftDefer Dirty
+> coalesce while FM/Inflight owned; near FOV hide-until-lit (`AllowUnlit` horiz>2);
+> PreferKick SoftDefer empty only after age SLA; MarkRelit RemeshAfterApply-only
+> while Building. Residency KEEP PendingReplace — **no new drawable cache**.
+> Autofly: `era28_p4_fly` FLY_CLEAN (opaque_idle_churn_max=52); `era28_p4_warm`
+> IDLE_WARM; `era28_p4_idle` IDLE_CLEAN soft `stop_focus_dirty_delta`;
+> `era28_p4_land` ARCH_D3_LAND soft miss. Opaque churn gate ≤120 GO on all.
+> TD-064 **partial** until manual `012208`-class: opaque≪658; VB/unlit near↓;
+> empty≤4s; miss_end=0; no black/empty/green blink eye.
+
+> **Era28 Visual Stage Gate (2026-08-10):** Manual `012208` after Era27: retarget/
+> discarded_late↓ but flicker↑ (`opaque_cmd_on` swing 658 vs 179; unlit med 24;
+> void_near med ~4666). Root: UnlitFirstMesh near FOV + SoftDefer MarkDirty every
+> scan while FirstMesh owned. SoT: draw only LitDrawable or keep-prior GPU near;
+> SoftDefer empty Hide+ticket without Dirty storm; Relight-before-draw near.
+> KEEP Era21–27 PendingReplace / Capture pin / Inflight hold. Reject Imm; second
+> cache; Unlit near «ради дыр»; knobs-as-DoD; CLOSED without manual eye.
+
+> **Era27 Anti-Flicker Ownership closeout (2026-08-09):** P0–P3 landed.
+> Capture witness pin T=8; SoftDefer empty age sticky; MarkRelit remesh damp
+> SoftDefer-empty owned; Inflight supersede hold (PendingReplace residency —
+> **no new drawable cache**). Autofly: `era27_p3_fly` FLY_CLEAN; `era27_p3_idle`
+> IDLE_CLEAN; `era27_p3_warm` IDLE_WARM; `era27_p3_land` ARCH_D3_LAND soft miss.
+> KEEP Era21–26. Reject Imm; SoftDefer knobs-as-DoD; PreferKick every empty every
+> frame; FreeChunk-before-Bind; second mesh cache; claim CLOSED while manual
+> blinks. TD-063 **partial** until manual `224912`-class: retarget/f≤1.5;
+> discarded_late cruise≤2; miss_end=0; no remesh-blink eye.
+
+> **Era27 Anti-Flicker Ownership (2026-08-09):** Manual `224912` after Era26: heal
+> faster (wall~165 vs ~268, empty~6s vs ~14s) but flicker — SoftDefer retarget
+> ~3.3/frame, Capture hits ~1.6/frame, discarded_late cruise~13, empty age max~7
+> (SLA 45 never reached), miss_end=1. Land remesh blink. Industry hold-until-bind
+> already SoT via PendingReplace / keep-GPU / Hide⇒Ticket / MeshLitGate — **no new
+> drawable cache**. Era27 = ownership anti-thrash: Capture witness pin T=8;
+> SoftDefer empty age sticky under ownership cap; MarkRelit remesh damp on
+> SoftDefer-empty !Drawable owned; Inflight supersede hold under miss. KEEP
+> Era21–26 PendingReplace / Capture FM-under-miss / SoftDefer Hide⇒Ticket /
+> Era26 void dual-debt. Reject Imm; SoftDefer knobs-as-DoD; PreferKick every
+> empty every frame; FreeChunk-before-Bind; wholesale Era26 Relight rollback;
+> second mesh cache beside GreedyCache. TD-063 **partial** until manual
+> `224912`-class: retarget/f≤1.5; discarded_late cruise≤2; miss_end=0; no remesh-blink.
+
+> **Era26 Ocean Dual-Debt closeout (2026-08-09):** P0–P3 landed.
+> Lateral Relight under miss (moving drain void_T/VB; VoidRelightCollectRadius;
+> rim preserve void bg; CollectFullyDark FM-only honesty); SoftDefer empty∥void
+> Relight ticket (Note only void_n>T); FillWater lateral Y + SoftDefer sea cy;
+> coop async RelightColumns (inflight RelightThreadCount×3, no frontier re-queue).
+> Autofly: `era26_p2_fly` FLY_CLEAN; `era26_p3_warm` IDLE_WARM; `era26_p3_idle2`
+> IDLE_CLEAN soft (calm wall/emerge); `era26_p3_land` ARCH_D3_LAND soft miss.
+> KEEP Era23–25. Reject Imm; SoftDefer knobs; Relight-steal-FirstMesh Capture;
+> live parallel RelightColumn; coop frontier re-queue. TD-062 **partial** until
+> manual ocean void_med≪249 / empty≤2 / miss_end=0 / wall≪268.
+
+> **Era26 Ocean Dual-Debt (2026-08-09):** Manual `214325` after Era25: ocean west
+> (−498,70)→(−511,68); wall~268; void max 1416 / med~249; VB 38/61; holes~84%;
+> SoftDefer empty stuck~14s horiz 2–5; Capture≡1 FM-only; fifo 66–97 /
+> completed≈0. Fix: lateral Relight under miss (moving drain + full-focus void
+> collect + rim preserve void bg slots); SoftDefer empty∥void parallel;
+> FillWater lateral Y; coop async RelightColumns. KEEP Era23–25 dual-queue /
+> Capture FM-under-miss. Reject Imm; SoftDefer knobs; Relight-steal-FirstMesh
+> Capture; live parallel RelightColumn; coop frontier re-queue.
+
+> **Era25 Frontier Column Stage SLA closeout (2026-08-09):** P0–P3 landed.
+> Disk/gen telem (`stream_disk_complete_n` / `stream_gen_commit_n` /
+> `frontier_pressure`); MC-style light ticket + FirstMesh on near-focus commit;
+> FrameStreamingBudget frontier_pressure dual-queue (Capture FM≥1 + void Relight
+> bg≥1); UE load-ahead NearLoadOps floor≥3 + NearLoad radius≥focus +
+> PrefetchAhead/view bias under frontier. Autofly: `era25_p3_fly` FLY_CLEAN;
+> `era25_p3_idle2` IDLE_CLEAN; `era25_p3_warm` IDLE_WARM; `era25_p3_land`
+> ARCH_D3_LAND soft (post_stop miss / miss_stuck residual; miss_end=0). KEEP
+> FrameStreamingBudget / Capture FM-under-miss / Era23–24 SoftDefer. Reject Imm
+> FOV; SoftDefer knobs-as-DoD; hitch Capture; Relight-steal-FirstMesh;
+> stream_loads-as-gen-progress. TD-061 remains **partial** until manual
+> `203144`-class: frontier void≪412; empty_stuck≤2; miss_end=0; wall≤120.
+
+> **Era25 Frontier Column Stage SLA (2026-08-09):** Manual `203144` after Era24:
+> mid-cruise void≈0 / empty sides OK; west frontier `cx≲−497` void→1000+,
+> dirty≈1190, gen commits while `stream_loads≡0`. Fix: disk/gen telem honesty;
+> MC-style light ticket + FirstMesh on near commit; FrameStreamingBudget
+> frontier_pressure dual-queue; UE load-ahead NearLoad floor. KEEP
+> FrameStreamingBudget / Capture FM-under-miss / Era23–24. Reject Imm;
+> SoftDefer knobs-as-DoD; hitch Capture; Relight-steal-FirstMesh.
+
+> **Era24 SoftDefer Empty closeout (2026-08-09):** P0–P3 landed. Hide⇒Ticket
+> (ProcessSnapshot/Immediate no idle SoftDefer undrawn publish); FirstMesh-
+> until-Drawable ownership + age SLA (45f PreferKick/Capture cy pin); miss_cy>1
+> FirstMesh pin. Autofly: `era24_p3_fly` FLY_CLEAN; `era24_p3_idle` IDLE_CLEAN;
+> `era24_p3_warm` IDLE_WARM; `era24_p3_land` ARCH_D3_LAND soft (post_stop miss /
+> miss_stuck residual; miss_end=0). empty_stuck≤2s on matrix; discarded_late
+> cruise soft residual on fly. KEEP FrameStreamingBudget / keep-GPU / Capture
+> FM-under-miss / Era23 void dual-queue. Reject Imm-as-empty-heal; SoftDefer
+> knobs-as-DoD; PreferKick every empty every frame; FreeChunk-before-Bind.
+> TD-060 remains **partial** until manual eye empty_stuck≤2 / miss_end=0.
+
+> **Era24 SoftDefer Empty (2026-08-09):** Manual `perf_20260809-193059` after
+> Era23: wall/fly≈86/84; void/dark stop=0 (blacks closed); SoftDefer empty
+> stuck≈8s; miss_stuck≈48s; miss_end=1. Fix: Hide⇒Ticket (no idle undrawn
+> GreedyCache publish); FirstMesh-until-Drawable ownership + age SLA.
+> KEEP FrameStreamingBudget / keep-GPU / Capture FM-under-miss / Era23 void
+> dual-queue. Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick
+> every empty every frame; FreeChunk-before-Bind.
+
+> **Era23 Void Relight / rim miss closeout (2026-08-09):** P0–P3 landed.
+> SoftDeferHeld ≠ void progress while fully-dark; Relight slots for void_n>T or
+> miss+void (not VB remesh-only steal); NotePendingLight on void enqueue under
+> void_pressure (cap 2, StickyRemesh clear); PreferKick FirstMesh-class every
+> miss-frame + SoftDefer empty Queued/Kicked stuck; place SoftDefer empty /
+> !Drawable ⇒ FirstMesh+Dirty; DigSeam !drawable Immediate; MarkDirtyPriority
+> keeps live InFlight (I-R2 / PendingReplace KEEP; discarded_late cruise≈0).
+> Autofly: `era23_p3_fly` FLY; `era23_p3_idle` IDLE_CLEAN; `era23_p3_warm`
+> IDLE_WARM; `era23_p2_land` ARCH_D3_LAND. KEEP FrameStreamingBudget / keep-GPU /
+> Capture FM-under-miss / Era22 SoftDefer !Drawable schedule. Reject Imm primary;
+> hitch VB Capture; Held-as-void-progress; Relight-steal-FirstMesh under
+> miss+VB remesh-only; SoftDefer knobs-as-fix. TD-059 remains **partial**
+> until manual eye.
+
+> **Era23 Void Relight / rim miss (2026-08-09):** Manual `perf_20260809-172232`
+> after Era22: wall≈96 KEEP; holes 0.30→0.50; miss_stuck 50→34; SoftDefer empty
+> 8→6; no_ticket 12→13; void_near stop 0→596; discarded_late cruise 0→3;
+> SoftDeferHeld=0 (Held-SLA unused). Fix: void Relight dual-queue under miss;
+> NotePendingLight on void enqueue; Held≠void progress for fully-dark; PreferKick
+> miss witness every FirstMesh-class frame; place-hole FirstMesh+collision.
+> KEEP FrameStreamingBudget / keep-GPU / Capture FM-under-miss / Era22 SoftDefer
+> !Drawable schedule. Reject Imm primary; hitch VB Capture; SoftDefer knobs;
+> Held-as-progress for fully-dark.
+
+> **Era22 SoftDefer Heal SLA closeout (2026-08-09):** P0–P3 landed.
+> SoftDefer !Drawable FirstMesh schedule under miss/focus; SoftDeferHeld ∈
+> ColumnHasRepairProgress + FirstMesh cy Contains refresh; VB collect full
+> focus when no_ticket; Relight drain≥1 while no_ticket; miss age PreferKick
+> (~2 periods); post-Finalize async schedule floor≥12 under miss|UV.
+> Autofly: `era22_p3_fly` FLY_CLEAN; `era22_p3_idle` IDLE_CLEAN;
+> `era22_p3_warm` IDLE_WARM; `era22_p3_land` ARCH_D3_LAND (no_ticket=0).
+> KEEP FrameStreamingBudget / keep-GPU / Capture FM-under-miss / unload Dirty>64.
+> Reject Imm primary; hitch VB Capture; SoftDeferHeld-without-Contains;
+> VB-collect≪Count; SoftDefer knobs-as-fix. TD-058 **partial** until manual
+> `154049`-class eye (miss_stuck≪50; SoftDefer empty≤2; no_ticket=0).
+
+> **Era22 SoftDefer Heal SLA (2026-08-09):** Manual `perf_20260809-154049` after Era21:
+> wall≈110 KEEP; flicker/stale_dark closed; enter≈41. Residual: miss_stuck
+> 34→50s; SoftDefer empty stuck 2→8s; no_ticket 0→12; place-to-reveal
+> (Immediate bypass SoftDefer Dirty prune). Fix: SoftDefer FirstMesh schedule
+> under miss/focus !Drawable; SoftDeferHeld ∈ repair progress + Contains SLA;
+> nearest VB tickets on full focus_radius; miss time PreferKick; async floor≥12
+> post-Finalize under miss|UV. KEEP FrameStreamingBudget / keep-GPU /
+> Capture FirstMesh-under-miss / unload Dirty>64. Reject Imm primary; Era18
+> hitch VB Capture storm; SoftDefer knobs-as-fix.
+
+> **Era21 Residency FOV closeout (2026-08-09):** P0–P3 landed.
+> Keep GPU until BindCommitted (no FreeChunk demote on remesh); ForceFlat on
+> residency demote; unload gated while Dirty>64 (FogPullIn unload spiral);
+> SoftDefer Capture FirstMesh-only under miss; RecoverUnlit Satisfying SoT;
+> UndrawnForceCd=2 under miss class; VB mid-floor 1 under miss+hot.
+> Autofly: `era21_p3_fly` FLY_CLEAN; `era21_p12_idle` IDLE_CLEAN;
+> `era21_p3_warm` IDLE_WARM; `era21_p12_land9` ARCH_D3_LAND (land flaky —
+> reuse best GO). TD-057 **partial** until manual `102236`-class eye.
+> KEEP FrameStreamingBudget. Reject FreeChunk-before-Bind;
+> Relight-ticket-blocks-miss-Capture; Imm primary; hitch VB Capture storm.
+
+> **Era21 Residency FOV (2026-08-09):** Manual `perf_20260809-102236` after Era20:
+> wall≈111 (was 246), no_ticket=0, enter≈584. Residual: drawable remesh flicker
+> (`discarded_late` ramp), FOV miss mh=4, VB 29–49 with progress. Fix: keep GPU
+> until BindCommitted; Capture FirstMesh-only under miss; Satisfying SoT.
+> KEEP FrameStreamingBudget. Reject Imm primary; FreeChunk-before-Bind; hitch floors.
+
+> **Era20 Manual Visual SLA closeout (2026-08-08):** P0–P3 landed.
+> Rim FirstMesh class cy≤3/mh≤4; cold-async Imm escape; SoftDeferEmpty→FM;
+> empty FreeChunk keep-prior; VB Relight floor when !miss hot; enter r≤2 gate
+> (`enter_app_update_max`≈100 vs baseline 2097). Autofly: `era20_p3_fly`
+> FLY_CLEAN; `era20_p3_idle` IDLE_CLEAN; `era20_p3_warm` IDLE_WARM;
+> `era20_p3_land3` ARCH_D3_LAND. TD-056 **partial** until manual `214034`-class
+> eye. KEEP FrameStreamingBudget. Reject Imm-off while async-dead under miss;
+> heal-floors-on-hitch; Imm primary zoo. Baseline SoT remains
+> `perf_20260808-214034` (holes 0.76 / no_ticket 16 / enter≈2097).
+
+> **Era19 FrameStreamingBudget closeout (2026-08-08):** Unified `FrameStreamingBudget`
+> (hot_frame_ms=80 shrink; miss-first Capture≤1 FirstMesh; calm pending mid-floor).
+> Kill-switches: `era18_vb_capture_floor`, `era18_vb_bg_budget_floor`,
+> `miss_first_frame_budget`. P2: PendingLight vs Remesh exclusivity.
+> Autofly: `era19_p3_fly`/`era19_p3_warm` FLY/IDLE_WARM GO; `era19_p3b_idle` /
+> `era19_p1c_idle` IDLE_CLEAN GO; `era19_p1_land2` ARCH_D3_LAND GO
+> (land matrix flaky opaque/miss — use land2 SoT). Baseline regression `191229`
+> (`heal_on_hot_sec` soft_fail). Gap CLOSED for autofly; **manual eye** on
+> 191229-class corridor still required before merge claim.
+> Keep NotePendingLight / Contains ticket / FirstMesh class. Reject heal-floors-on-hitch.
+
+> **Era19 FrameStreamingBudget (2026-08-08):** Manual `perf_20260808-191229` —
+> heal-on-hot SoT (`wall_med` 279, holes 0.57, miss_stuck 40s). Fixed by
+> FrameStreamingBudget; do not claim visual merge without new manual log.
+
+> **Era18 focus light-debt closeout (2026-08-08):** P0–P3 landed. Autofly
+> `era18_p3_fly`/`idle`/`warm`/`land` GO; ocean ARCH_D3 soft (TD-048).
+> Evidence: `era18_p1_idle`, `era18_p2_idle`, `era18_p3_*`.
+> Manual `191229` shows light-debt soft OK but **FPS/holes/miss regression** —
+> TD-054 stays **partial**; Gap Era18 honesty → regressed; fix via TD-055.
+
+> **Era18 focus light-debt (2026-08-08):** Manual `165953` — VB=53 plateau with
+> `pending_light_focus=0`, `relight_drain≈0`, `softdefer_capture_budget=0`, fifo frozen.
+> Ticket≠light debt. Autofly land GO ≠ visual merge.
+
+> **Era17 heal-until closeout (2026-08-08):** Contains-only ticket + Progress/Stalled;
+> continuous VB heal (void→RelightThenMesh, stale→MarkDirty); FirstMesh class cy≤1.
+> Evidence: `era17_p1_idle`/`land`, `era17_p2_land`. Manual `144227` class **partial** —
+> superseded residual `165953` (TD-054). Autofly ≠ sole visual merge SoT.
+
+> **Era16 VisibleBlack closeout (2026-08-08):** `black_sticky` ⊆ StickyRemeshAfterLight;
+> DoD = `VisibleBlackNoTicketN` / `post_stop_visible_black_no_ticket_max=0`.
+> P3 matrix: `era16_p3_fly` FLY_CLEAN GO; `era16_p3_idle`/`warm` IDLE GO;
+> `era16_p3_land` ARCH_D3_LAND GO (holes=0 no_ticket=0 wall≈66 soft≤70);
+> `era16_p3_ocean` ARCH_D3 soft NO-GO (TD-048 residual; no_ticket=0).
+
+> **Era16 VisibleBlack (2026-08-08 plan):** `black_sticky` only counts `StickyRemeshAfterLight` ∩ stale.
+> User-visible black = drawable stale/fully-dark columns (`VisibleBlackFocusN`); orphans =
+> `VisibleBlackNoTicketN`. Manual `perf_20260808-113932`: sticky=0 while stale≈4740.
+
+> **Era15 architecture-first (2026-08-08):** close visual residual (flicker / black / holes) via SoT
+> (MeshResidency, ColumnPublication Unlit→LitPending→LitReady, SoftDeferHeld→ColumnFlow,
+> FirstMesh-until-Drawable). Knobs ≠ DoD. DISCARD: Imm primary, wall-gate Dirty, SoftDefer zoo,
+> worker Capture TD-046. Baseline Era14.1 `f7d25446` + manual `perf_20260808-093701`.
+> Evidence: timeline `era15_p1_fly` / `era15_p3b_land` / `era15_p4_idle` / `era15_p4_warm`.
+> Commits: `195b22c4` docs; `327dd006` P1–P3 SoT; `d692d49b` LitPending FirstMesh-only.
+
+**Era14 execution log**
+
+| Date | Phase | Note | Commit |
+|------|-------|------|--------|
+| 2026-08-07 | 0 docs | Postmortem + TD-040..048 skeleton | `56391cdf` |
+| 2026-08-07 | baseline | FLY_CLEAN GO; IDLE_CLEAN/WARM GO; ARCH_D3_LAND NO-GO (miss_stuck=48); F2/ARCH_D3 NO-GO wall | timeline `era14_*` |
+| 2026-08-07 | Phase 1 | `TickWorldStreamingPhase`; nest proof fly-clean | `0812c77f` |
+| 2026-08-07 | Phase 2+3 | DesiredStage; kill calm Imm; seed+remesh-on-lit | `f9af0c16` |
+| 2026-08-07 | P2 iterate | Dirty-without-wall; sticky remesh hot; Capture refresh trim; best LAND `era14_p2c_land` (miss=4 wall≈55 sticky=0 holes=0.2 residual) | `7f268eb1` |
+| 2026-08-07 | Phase 5 matrix | FLY_CLEAN GO (`era14_p5_fly`); IDLE_WARM GO; IDLE_CLEAN NO-GO emerge/sticky; ARCH_D3_LAND residual holes TD-043 | `7f268eb1` |
+| 2026-08-07 | Era14.1 analyze | manual `202855` vs `151212`: nest fixed; root = SoftDeferHeld+pending light (54% miss frames held≥8∧pend≥12; p2c=0%); PreferKick late; period `world_streaming_phase_ms`=last-frame artifact | — |
+| 2026-08-07 | Era14.1 code | PreferKick tops HP; SoftDefer requeue floor under miss; phase budget 24ms miss carve-out; period phase avg; IDLE sticky/emerge; Android TickWorldStreamingPhase | working tree |
+| 2026-08-07 | Era14.1 matrix | FLY_CLEAN+IDLE_CLEAN+IDLE_WARM GO; ARCH_D3_LAND best `era14_1_land` miss=6 holes=0.2 wall≈53 sticky=0; ocean ARCH_D3 wall≈49 NO-GO; Capture TD-046 deferred | timeline `era14_1_*` |
+
+**Era14.1 root (manual `perf_20260807-202855_2064`):** pending_light~12–24 + SoftDeferHeld~18 under miss → DeepBacklog/HoleDrain + J2 softdefer_requeue clamp → nearest tops not PreferKicked every frame → miss sticky. DISCARD unchanged (no Imm primary / wall-gated Dirty). Period `world_streaming_phase_ms` now averaged (was last-frame artifact).
+
+P4 validate (`4abd8683` tip): unit `streaming_render_ready_invariants_test` PASS;
+`phase_P4_land_south_short.json` DoD miss_end=0 + post_stop_missing_zero.
+Anti-circle held: no pending_gpu drain cut, no kick_cut 0.55 under HoleDrain,
+no Imm expand, no Fog knobs, no SoftDefer predicate widen.
+TD-ARCH-032/033 unchanged (Era13 harness / rim latency — not plan blockers).
+
 Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
-- `manual_arch_td32b.json` / prior D3 live — **ARCH_D1** was GO before Era13 promote rewrite.
-- Era13 A–E on `arch/streaming-v2-v4`: AllowUnlitFirstMesh, FocusPressure, ColumnFlow `RunPromoteRelightNow`, FocusIngress Stage SLA, lit remesh clamp (softened). Units PASS. Autofly×2 NO-GO on wall/sticky — do not merge develop.
-- Remaining open: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 013b, 018; Android GLES.
+- Remaining open outside FOV plan: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 013b, 018; Android GLES.
 
 **Do not merge `arch/streaming-v2-v4` → develop until ARCH_D3 PASS + explicit request.**
 

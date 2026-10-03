@@ -86,6 +86,12 @@ struct BlockDefinition
   std::string Name;
   std::string DisplayName;
   BlockId Id{BLOCK_AIR};
+  /// Dig hardness. 0 = unbreakable in Survival (Creative still breaks instantly).
+  float Hardness{1.0f};
+  /// Optional dig groups (cracky/crumbly/choppy/snappy/…). Empty → tools infer from Types/Name.
+  std::unordered_map<std::string, int> DigGroups;
+  /// Node level for tool maxlevel gate (Luanti-style).
+  int DigLevel{0};
   BlockAnimationSpec Animation;
   BlockPhysicsProfile Physics;
   BlockRenderProfile Render;

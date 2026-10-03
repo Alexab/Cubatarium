@@ -25,10 +25,11 @@ public:
                        const UChunkMeshCache &meshCache,
                        const std::vector<GreedyBatchRef> &refs,
                        uint64_t mesh_revision, uint64_t cull_revision,
-                       uint64_t sort_revision) override
+                       uint64_t sort_revision,
+                       bool consume_dirty = true) override
   {
     Backend.RefreshPassRefs(cache, meshCache, refs, mesh_revision,
-                            cull_revision, sort_revision);
+                            cull_revision, sort_revision, consume_dirty);
   }
 
   void DestroyPass(GreedyGpuPassCache &cache) override
@@ -40,6 +41,11 @@ public:
                   GreedyGpuPassCache &transparent) override
   {
     Backend.DestroyAll(opaque, cutout, transparent);
+  }
+
+  void RemoveCoord(GreedyGpuPassCache &cache, glm::ivec3 coord) override
+  {
+    Backend.RemoveCoord(cache, coord);
   }
 
   UGreedyGpuBackend &GetBackend() { return Backend; }

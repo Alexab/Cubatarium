@@ -1,0 +1,26 @@
+{
+  "plan": "rim_hole_fps_next",
+  "gates": {
+    "IDLE_CLEAN": "GO",
+    "IDLE_WARM": "GO",
+    "FLY_CLEAN": "GO",
+    "IDLE_EDIT_SMOKE": "GO",
+    "ARCH_D3_LAND": "NO-GO (miss_end=0 miss_stuck=4 OK; holes_rate/sticky/wall remain)"
+  },
+  "q1_dod": {
+    "miss_end": 0,
+    "miss_stuck_max_run_sec": 4,
+    "witness_retarget_active": true,
+    "mesh_sync_fly": 0
+  },
+  "reports": [
+    "bin/iter_reports/manual_latest_191432.json",
+    "bin/iter_reports/rim_q1_land_south_short.json",
+    "bin/iter_reports/idle_clean_rimplan.json",
+    "bin/iter_reports/idle_warm_rimplan.json",
+    "bin/iter_reports/fly_clean_rimplan.json",
+    "bin/iter_reports/idle_edit_smoke_P2.json",
+    "bin/iter_reports/land_south_short_rimplan.json",
+    "bin/iter_reports/idle_warm_rimplan_vs_manual_191432.json"
+  ]
+}

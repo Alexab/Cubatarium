@@ -17,6 +17,9 @@ struct GpuMeshSlot
   uint32_t QuadCount{0};
   glm::ivec3 ChunkCoord{0};
   bool Transparent{false};
+  /// A27 S3: generation for deferred retirement / fence ownership.
+  uint64_t generation{0};
+  bool still_live_draw{false};
 };
 
 /// DrawElementsIndirectCommand for glMultiDrawElementsIndirect.
@@ -62,6 +65,15 @@ public:
   /// Free a slot by index (staging reject / failed ProcessSnapshot).
   void FreeSlotByIndex(int slot_index);
 
+  /// A27 S3: free only when fence/generation allows; returns false if deferred.
+  bool TryFreeSlotByIndex(int slot_index, uint64_t fence_completed_generation,
+                          uint64_t live_generation);
+
+  /// Bump allocator fence watermark after GPU sync completes.
+  void NoteFenceCompletedGeneration(uint64_t gen);
+  uint64_t FenceCompletedGeneration() const { return FenceCompletedGeneration_; }
+  uint64_t NextSlotGeneration();
+
   /// Returns true if the chunk has an allocated slot.
   bool HasSlot(glm::ivec3 chunk_coord) const;
 
@@ -94,6 +106,12 @@ public:
   GLuint GetQuadSsbo() const { return QuadSsbo; }
   GLuint GetIndirectBuffer() const { return IndirectBuffer; }
   uint32_t GetMaxSlots() const { return MaxSlots; }
+  size_t GetFreeSlotCount() const { return FreeList.size(); }
+  size_t GetBoundSlotCount() const { return ChunkToSlot.size(); }
+  uint64_t GetStagingAllocationFailureCount() const
+  {
+    return StagingAllocationFailureCount_;
+  }
 
 private:
   GLuint QuadSsbo{0};
@@ -112,6 +130,9 @@ private:
   std::unordered_map<glm::ivec3, int, IVec3Hash> ChunkToSlot;
   std::vector<DrawIndirectCmd> OpaqueCommands;
   std::vector<DrawIndirectCmd> TransparentCommands;
+  uint64_t NextGeneration_{1};
+  uint64_t FenceCompletedGeneration_{0};
+  uint64_t StagingAllocationFailureCount_{0};
 };
 
 } // namespace cutum

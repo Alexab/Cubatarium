@@ -178,6 +178,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                                int maxGenerationStartsPerFrame)
 {
   LastTickApplyMs = 0.0;
+  LastCommitsThisFrame = 0;
   int generationStarts = 0;
   while (!Queue.empty() && generationStarts < maxGenerationStartsPerFrame)
   {
@@ -253,6 +254,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                            .count();
     ++committed;
   }
+  LastCommitsThisFrame = committed;
 }
 
 bool UChunkLoadScheduler::IsCommitted(glm::ivec3 coord) const

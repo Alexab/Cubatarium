@@ -687,6 +687,12 @@ std::vector<glm::ivec3> BreakUnsupportedBlocksAbove(UBlockWorld &world,
     {
       break;
     }
+    // Structural solids (stone, bark, walls) stay even without support —
+    // only decor (!BlocksMovement) and falling blocks cascade.
+    if (registry.BlocksMovement(id) && !registry.IsFallingBlock(id))
+    {
+      break;
+    }
     if (registry.BlocksMovement(id) &&
         HasBlockSupportBelow(world, registry, pos))
     {

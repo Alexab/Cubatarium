@@ -3,6 +3,7 @@
 
 #include "Render/Engine/RenderFogSettings.h"
 #include "World/Chunks/ChunkManager.h"
+#include <climits>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <unordered_set>
@@ -44,7 +45,8 @@ public:
 
   bool Update(UBlockWorld &world, UBlockRegistry &registry, UChunkMeshCache &cache,
               glm::ivec3 cameraBlockXZ, int scanHintY, uint64_t meshRevision,
-              double lastWallMs = 0.0);
+              double lastWallMs = 0.0, bool cruise_throttle = false,
+              bool enter_throttle = false);
 
   void Bind(int surfaceYUnit, int fluidIndexUnit, int fluidBottomUnit) const;
 
@@ -60,7 +62,8 @@ public:
 private:
   bool RefreshStaging(UBlockWorld &world, UBlockRegistry &registry,
                       UChunkMeshCache &cache, glm::ivec3 cameraBlockXZ,
-                      int scanHintY, double lastWallMs);
+                      int scanHintY, double lastWallMs, bool cruise_throttle,
+                      bool enter_throttle = false);
   void UploadFullGpu();
   void UploadDirtyChunkGpu(glm::ivec3 groundChunk);
   void QueueGpuChunk(glm::ivec3 groundChunk);
@@ -83,6 +86,12 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> PendingGpuGroundChunks;
   std::vector<glm::ivec3> PendingRebuildGroundChunks;
   int PendingRebuildScanHintY{0};
+  /// FZ2-R5: incremental cold window seed (multi-frame queue fill).
+  int ColdSeedCx_{INT32_MAX};
+  int ColdSeedCz_{INT32_MAX};
+  int ColdSeedRenderDist_{0};
+  int ColdSeedGz_{INT32_MAX};
+  int ColdSeedGx_{INT32_MAX};
   FluidSurfaceMapFrameStats LastFrameStats{};
 };
 

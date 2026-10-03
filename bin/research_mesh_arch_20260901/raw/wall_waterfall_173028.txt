@@ -1,0 +1,11 @@
+﻿spikes=497 wall_med=329.22 effective_fps=3.04
+  stream_ms: med=205.31 share=62.4%
+  mesh_emerge_ms: med=78.14 share=23.7%
+  prep_refresh_pressure_ms: med=94.03 share=28.6%
+  mesh_async_ms: med=0.00 share=0.0%
+  swap_wait_ms: med=0.13 share=0.0%
+  block_input_ms: med=0.00 share=0.0%
+  world_extra_ms: med=0.00 share=0.0%
+dominant_wall_stage:
+  stream: 487 (98.0%)
+  emerge: 10 (2.0%)

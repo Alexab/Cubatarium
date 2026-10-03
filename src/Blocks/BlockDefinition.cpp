@@ -441,6 +441,32 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
   {
     out.Definition.Lighting = ParseLightingFromJson(j["lighting"]);
   }
+  if (j.contains("hardness"))
+  {
+    if (j["hardness"].is_number())
+    {
+      const float hardness = j["hardness"].get<float>();
+      out.Definition.Hardness = (hardness < 0.0f) ? 0.0f : hardness;
+    }
+  }
+  if (j.contains("dig") && j["dig"].is_object())
+  {
+    const auto &dig = j["dig"];
+    if (dig.contains("level") && dig["level"].is_number_integer())
+    {
+      out.Definition.DigLevel = dig["level"].get<int>();
+    }
+    if (dig.contains("groups") && dig["groups"].is_object())
+    {
+      for (auto it = dig["groups"].begin(); it != dig["groups"].end(); ++it)
+      {
+        if (it.value().is_number_integer())
+        {
+          out.Definition.DigGroups[it.key()] = it.value().get<int>();
+        }
+      }
+    }
+  }
   if (j.contains("types") && j["types"].is_array())
   {
     for (const auto &t : j["types"])

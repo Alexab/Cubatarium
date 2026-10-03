@@ -68,6 +68,39 @@ int main(int argc, char *argv[])
       }
       return cutum::RunEnterGameSmoke(*paths, in_game_frames);
     }
+    if (std::strcmp(argv[i], "--autoload-last-world") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      cutum::AutoloadLastWorldOptions opt;
+      for (int j = i + 1; j < argc; ++j)
+      {
+        if (std::strcmp(argv[j], "--visible") == 0)
+        {
+          opt.VisibleWindow = true;
+        }
+        else if (std::strcmp(argv[j], "--world") == 0 && j + 1 < argc)
+        {
+          opt.WorldName = argv[++j];
+        }
+        else if (std::strcmp(argv[j], "--timeout-sec") == 0 && j + 1 < argc)
+        {
+          opt.TimeoutSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--ingame-frames") == 0 && j + 1 < argc)
+        {
+          opt.InGameFrames = std::atoi(argv[++j]);
+        }
+        else if (argv[j][0] == '-')
+        {
+          break;
+        }
+      }
+      return cutum::RunAutoloadLastWorld(*paths, opt);
+    }
     if (std::strcmp(argv[i], "--flight-sim") == 0)
     {
 #ifdef _WIN32
@@ -167,6 +200,19 @@ int main(int argc, char *argv[])
         else if (std::strcmp(argv[j], "--stop-phase") == 0 && j + 1 < argc)
         {
           opt.StopPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--stop-after-blocked") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.StopAfterBlockedSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--dive-phase") == 0 && j + 1 < argc)
+        {
+          opt.DivePhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--dive-pitch") == 0 && j + 1 < argc)
+        {
+          opt.DivePitchDeg = static_cast<float>(std::atof(argv[++j]));
         }
         else if (std::strcmp(argv[j], "--visible") == 0)
         {
