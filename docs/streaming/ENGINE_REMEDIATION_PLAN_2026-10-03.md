@@ -49,6 +49,11 @@ terrain columns существующему AsyncChunkIO:
 последующем live entry gate завершился через 1,9 с с `settle_reason=live_blockers`.
 Свежий мир сохранён; данные и параметры прогона не удалять.
 
+Этот World_175 замерен в `2026-10-03 21:08`, до Release-пересборки в `21:52`
+и фикса async saved-world пути. Тайминги полезны как диагностический срез, но
+G1 требует повторить интерактивное создание на актуальном EXE до следующего
+дальнего acceptance.
+
 Прямой no-teleport диагностический участок World_164 (visible Release, scale 1,
 yaw 180) прошёл от focus `(7,3)` до `(-99,3)`: 106 chunk steps / 1 696 блоков,
 медианная скорость `5.999` блоков/с, heading deviation 0. В source trace было
@@ -145,12 +150,12 @@ move, но при сохраняющейся ground support камера ост�
 Для следующих far runs введён default watchdog `8 s`; `--stop-after-blocked-sec`
 остаётся явным переопределением.
 
-Следующий дальний повтор остаётся на World_164, из того же старта, без teleport и
-scale `1`, но с явной высотой `--cruise-eye-y 96`, чтобы пролететь над кронами.
-Отдельно сохранить low-eye/y56 маршрут как collision-sensitive diagnostic; не
-смешивать его результат с far-distance acceptance. Коммит `7bfc330c` сохраняет
-исходный `users.json` и повторно ставит pin перед каждым `--repeat`, а
-`19387103` включает watchdog по умолчанию для far-сценария.
+Коммит `7bfc330c` сохраняет исходный `users.json` и повторно ставит pin перед
+каждым `--repeat`, а `19387103` включает watchdog по умолчанию для far-сценария.
+M369 проверил y96 как безопасный для препятствий stress-маршрут, но этот уровень
+вне eye-level proxy corridor и не достиг дальнего checkpoint. Для следующего
+acceptance сначала нужен короткий collision probe на y68–70, затем — более длинная
+фаза движения. Low-eye/y56 остаётся collision-sensitive diagnostic.
 
 Отчёт: `bin/suite_reports/engine_refactor/g3_world164_far_diskfirst_20261003.json`;
 perf: `bin/logs/perf_20261003-220433_38772.jsonl`; AppRunner report:
@@ -162,6 +167,44 @@ perf: `bin/logs/perf_20261003-220433_38772.jsonl`; AppRunner report:
 не чистый, так как runner был изменён уже после запуска процесса. Использовать
 этот flight только как collision-limited diagnostic, не как чистый source commit
 acceptance.
+
+### Дальний World_164 y96 run: M369 — generation frontier и незакрытый долг
+
+Видимый no-teleport Release run прошёл на scale `1` от `[120,56,56]`, yaw
+`180°`, удержал `y=96` и не столкнулся. Фокус достиг `(-497,3)` от `(7,3)`:
+`504` чанка / `8 064` блока, на `128` блока меньше checkpoint `8 192`. M369 —
+длинный диагностический run, но не far-distance acceptance. Adequacy classifier
+текущего product proxy допускает eye-level `player_y=45..70`, поэтому M369
+провалил `altitude_out_of_corridor`. Симптом затемнения тоже не воспроизведён по
+proxy: `visible_black_focus` median `0`, max `18`; `fly_void_near_max=0`.
+
+Долг остался высоким: `holes_rate=0.93596` (`unfinished_visual` proxy, не доля
+чёрных пикселей), `dirty_med/max=1 071/1 779`, `wall_ms_fly_med=91.11 ms`,
+pressure red `75.8%` periods, `unlit_max=31`. `post_stop_convergence=false`:
+missing/effective holes не обнулились, pending/not-ready/focus-dirty не сошлись.
+Empty-world proxy прошёл с median `47` opaque draw commands, однако это не
+доказывает полноту геометрии или корректное освещение.
+
+Source trace зарегистрировал `1 917` disk completions, каждый с `disk_light=1`,
+затем `1 324` disk misses и `1 145` procedural commits. Для commit:
+`generation_ms` p50/p95/max `94.6/141.7/945` мс, `apply_ms`
+`5.5/9.5/28.6` мс, `queue_ms` `182.6/11 345/61 961` мс, `total_ms`
+`994/78 083/397 694` мс. Остаток `total - queue - generation - apply` оценивает
+интервал от завершения worker generation до применения: p50 `366` мс, p95 `49.94` с,
+max `389.74` с; `154` commits ждали более 10 с, `56` более 60 с и `9` более
+300 с. `gen_backlog_total` p95/max `51/67`, `gen_q` `12/36`. Значит, стоимость
+самой генерации и `ApplyTo` не объясняет большие latency; отдельно исследовать
+готовые результаты, лимит commits, priority aging и отбрасывание задач за камерой.
+
+Manifest чистый: `git_sha=d3be1310`, Release EXE SHA-256
+`1a2420a3ab678ae6669e96a51169f3a04131f4593545bc18eeb7ff93708d087a`,
+`teleport=false`; процесс завершился `rc=0`, но harness `pass=false`.
+Артефакты: `bin/suite_reports/engine_refactor/g3_world164_far_y96_diskfirst_20261003.json`,
+`bin/logs/perf_20261003-225116_32248.jsonl`, `bin/flight_sim_report.json`,
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-225112.32248`.
+
+M369 выполнен как продолжающаяся диагностика до повторного закрытия G1; он не
+заменяет повторное измерение загрузки и создания мира на актуальном Release.
 
 **G1 статус: частично закрыт.** Синхронный saved-world read измерен и заменён на
 bounded async apply; disk-first работает также на движущемся frontier. Интерактивное
@@ -193,9 +236,11 @@ speed multiplier; короткие round-trip/source probes допустимы �
 2. Контрольный сценарий: видимый Release, no-teleport,
    `product-174657-far`, World_164, одинаковые пользовательские настройки,
    освещение, стартовая позиция и версия мира. Всегда сохранять commit/EXE hash,
-   конфигурационные hashes, траекторию и метрики. После M368 far run должен явно
-   задавать безопасную высоту `--cruise-eye-y 96`; low-eye y56 остаётся отдельным
-   collision-sensitive control.
+   конфигурационные hashes, траекторию и метрики. M369 показал, что y96 обходит
+   деревья, но находится вне eye-level proxy corridor `y45..70` и не воспроизводит
+   продуктовый dark symptom. Для acceptance коротким no-teleport probe проверить
+   верхнюю границу `y68..70`; low-eye y56 оставить collision-sensitive control,
+   а y96 — отдельным high-altitude stress diagnostic.
 3. После каждого изменения повторять контрольный отрезок до задетой области;
    дальний acceptance не объявлять до достижения checkpoint 8 192 без collision
    shortfall или искусственного ускорения.
@@ -222,8 +267,9 @@ mesh warmup и prepare view. Отдельно измерить main-thread вр�
 
 **Gate:** есть фазовые cold/warm/new-world отчёты; известны p50/p95 и максимумы,
 main-thread hitch contribution, worker count и очередь; найденные блокирующие
-участки исправлены или доказано, что они не мешают загрузке/созданию. До этого
-дальние stress-маршруты не запускать.
+участки исправлены или доказано, что они не мешают загрузке/созданию. До
+следующего дальнего acceptance повторить G1 на текущем Release; M369 остаётся
+документированной диагностикой и не является базой сравнения улучшений.
 
 ### G2 — Разделить disk reload и procedural generation
 
@@ -232,6 +278,15 @@ main-thread hitch contribution, worker count и очередь; найденны
 инструментация фиксирует disk hit/miss, pending save, highest Y, valid disk light,
 retry, очередь/latency/apply для async disk load и очередь/generation/apply для
 procedural commit. Пока это не полная трасса до GPU publication и пикселя.
+M369 показал отдельный неразмеченный интервал между worker generation и
+main-thread apply: у 1 145 commits вычисленный p50/p95/max был
+`0.366/49.94/389.74` с; очередь запуска worker и само generation объясняют только
+часть полного latency. Добавить явные `worker_finished` и `apply_started` времена,
+oldest-ready age, completed-ready queue size, effective commit budget и число
+отброшенных/устаревших результатов. Затем выяснить, почему готовые результаты
+остаются за камерой на минуты, и дать актуальным near-visual колонкам гарантированное
+продвижение по demand/возрасту. Общий commit cap не повышать вслепую: `apply_ms`
+короткий, а wall time кадра уже выше `90` мс median.
 Продолжить координатную трассу жизненного цикла колонки:
 
 `request → persisted high-water/file hit → save-pending guard → disk read result

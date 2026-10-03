@@ -2893,12 +2893,16 @@ cap в `JobThreadBudget` — 4 на pool). Но CLI `--create-world` в
   M368 — 2 944 до остановки на дереве; оба не достигли 8 192, product holes и
   stop-convergence ворота красные.
 
-Следующие шаги: продолжить G1 cold/warm/new-world timeline, затем повторить
-World_164 на высоте y96 с collision watchdog; только после достижения checkpoint
-8 192 анализировать этот прогон как дальний acceptance. На выбранных координатах
-связывать disk/procedural source, light revision, mesh publication, MDI draw и
-framebuffer pixel. Подробные ворота и периодичность fresh-world исследований
-зафиксированы в [плане от 2026-10-03](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+Следующие шаги: повторить G1 замер создания свежего мира на актуальной Release
+сборке; предыдущий интерактивный World_175 замерен до последней пересборки.
+Для eye-level acceptance сначала подобрать no-teleport маршрут в коридоре
+y45–70: y56 остановилась на дереве, а y96 прошла далеко, но оказалась вне класса
+визуального proxy. Затем удлинить фазу полёта так, чтобы под нагрузкой реально
+перейти 8 192 блока. Для генерации добавить отдельную метрику ожидания завершённой
+работы до применения и устранить starvation актуальных колонок. На выбранных
+координатах связать disk/procedural source, light revision, mesh publication,
+MDI draw и framebuffer pixel. Подробные ворота и периодичность fresh-world
+исследований зафиксированы в [плане от 2026-10-03](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
 
 ## M368: World_164 far run остановился на дереве; после контакта остался render debt
 
@@ -2909,3 +2913,43 @@ framebuffer pixel. Подробные ворота и периодичность
 - По raw report `process_rc=0`, но harness `pass=false`; `collision_stop_triggered=false`, потому что этот запуск начался до default watchdog и имел `stop_after_blocked_sec=0`. Manifest фиксирует стартовый commit `aaff26c5` и Release EXE SHA-256 `1a2420a3ab678ae6669e96a51169f3a04131f4593545bc18eeb7ff93708d087a`. `dirty_diff_hash` не чистый: runner файл был изменён во время активного прогона; manifest acceptance этого отчёта считать недействительным.
 - После наблюдения добавлены два harness изменения: `7bfc330c` восстанавливает точный исходный `users.json` и заново задаёт pin между повторами; `19387103` завершает будущий `product-174657-far` через 8 секунд устойчивого контакта, сохраняя отчёт. Следующий длинный no-teleport повтор должен явно задавать `--cruise-eye-y 96`, оставить scale `1` и проверить маршрут над кронами. Низкий y56 сохранить отдельно для collision-sensitive диагностики.
 - Артефакты: [M368 report](../../bin/suite_reports/engine_refactor/g3_world164_far_diskfirst_20261003.json), [perf trace](../../bin/logs/perf_20261003-220433_38772.jsonl), [AppRunner report](../../bin/flight_sim_report.json), [INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-220428.38772).
+
+## M369: длинный World_164 y96 прошёл по фронтиру генерации, но не достиг far checkpoint
+
+- Видимый Release, no-teleport, scale `1`, старт `[120,56,56]`, yaw `180°`,
+  `y=96`, без смены курса. AppRunner зафиксировал focus `(7,3)→(-497,3)`,
+  `504` чанка / `8 064` блока — на `128` блоков меньше checkpoint `8 192`.
+  Скорость в движущихся periods `6.00586` блоков/с; collision contact не было.
+  Значит, это длинный streaming-stress sample, но не far-distance acceptance.
+- Текущий `product-174657-far` adequacy classifier допускает eye-level
+  `player_y=45..70`. M369 на `y96` провалил `altitude_out_of_corridor` и не
+  воспроизвёл продуктовый dark symptom: `visible_black_focus` median `0`, хотя
+  max был `18`; `fly_void_near_max=0`. Эти proxy не заменяют кадр/луч/пиксель.
+- Дальний долг остался высоким: `holes_rate=0.93596` (внутренний
+  `unfinished_visual`, не доля чёрных пикселей), `dirty_med/max=1 071/1 779`,
+  `wall_ms_fly_med=91.11 ms`, `red_rate=0.758`, `unlit_max=31`,
+  `fly_frontier_pressure_frac=0.747`. `post_stop_convergence=false`: за stop
+  segment не обнулились missing/effective holes и не падали pending/not-ready/
+  focus-dirty долги. При этом empty-world proxy прошёл с median `47` opaque
+  commands; это подтверждает наличие draw-команд, но не полноту чанковой
+  геометрии или корректный цвет.
+- Источник данных смешанный. Было `1 917` disk completions, каждый с
+  `disk_light=1`; затем зарегистрированы `1 324` disk miss и `1 145`
+  procedural commits. Это показывает переход с сохранённой зоны в свежую
+  генерацию, но само по себе не локализует визуальное затемнение.
+- Worker generation быстрый: `generation_ms` p50/p95/max `94.6/141.7/945` мс;
+  `apply_ms` `5.5/9.5/28.6` мс. Однако `queue_ms` равен `182.6/11 345/61 961`
+  мс, а полный request-to-commit `total_ms` — `994/78 083/397 694` мс. Разность
+  `total - queue - generation - apply` оценивает интервал после генерации до
+  применения: p50 `366` мс, p95 `49.94` с, max `389.74` с; `154` результатов
+  ждали более 10 с, `56` — более 60 с, `9` — более 300 с. В perf trace
+  `gen_backlog_total` p95/max `51/67`, `gen_q` `12/36`. Это сильнее указывает на
+  задержку допуска/применения готовых результатов, чем на стоимость самой
+  генерации; exact visible-coordinate impact ещё нужно связать по lifecycle.
+- Manifest чистый и пригоден для анализа этой диагностики: commit
+  `d3be1310`, Release EXE SHA-256
+  `1a2420a3ab678ae6669e96a51169f3a04131f4593545bc18eeb7ff93708d087a`,
+  `dirty_diff_hash=clean`, `teleport=false`. Процесс завершился `rc=0`, но
+  analyzer/harness `pass=false`; `run_outcome=success` означает только штатное
+  завершение приложения.
+- Артефакты: [M369 report](../../bin/suite_reports/engine_refactor/g3_world164_far_y96_diskfirst_20261003.json), [perf trace](../../bin/logs/perf_20261003-225116_32248.jsonl), [AppRunner report](../../bin/flight_sim_report.json), [INFO source trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-225112.32248).
