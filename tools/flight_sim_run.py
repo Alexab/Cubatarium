@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -73,6 +74,76 @@ WEST_COVERAGE_FOCUS_CX_MAX = -3.0
 # A31: west COVERED ≠ far-flight. Far checkpoints in world blocks (CHUNK_SIZE=16).
 FAR_DISTANCE_CHECKPOINTS_BLOCKS = (0, 1 << 13, 1 << 16, 1 << 19)
 CHUNK_SIZE_BLOCKS = 16
+
+
+def build_flight_route_identity(args: argparse.Namespace) -> dict:
+    """Return the readable, route-affecting inputs used for manifest hashing."""
+    product_scenarios = {
+        "product-174657",
+        "product-174657-dive",
+        "product-174657-far",
+    }
+    product_route = args.scenario in product_scenarios
+    force_fog_on = os.environ.get("CUBA_FLIGHT_FOG_ON", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    return {
+        "schema": "flight-route.v1",
+        "scenario": args.scenario,
+        "world": args.world,
+        "resume": bool(args.resume),
+        "teleport_cruise": bool(args.teleport_cruise),
+        "product_start_position": (
+            [float(v) for v in args.product_start_position]
+            if product_route
+            else None
+        ),
+        "cruise_chunk": [args.cruise_cx, args.cruise_cz],
+        "cruise_eye_y": args.cruise_eye_y,
+        "yaw_deg": args.yaw,
+        "pitch_deg": args.pitch,
+        "fly_phase_sec": args.fly_phase_sec,
+        "stop_phase_sec": args.stop_phase_sec,
+        "idle_sec": args.idle_sec,
+        "reverse_course_after_sec": args.reverse_course_after_sec,
+        "dive_phase_sec": args.dive_phase_sec,
+        "hold_space": bool(args.hold_space),
+        "sprint": bool(args.sprint),
+        "visible": bool(args.visible),
+        "move_speed_scale": os.environ.get(
+            "CUBA_FLIGHT_MOVE_SPEED_SCALE", "1"
+        ),
+        "fog_pull_in_enabled": (force_fog_on if product_route else None),
+    }
+
+
+def read_perf_runtime_identity(perf_path: Path | None) -> dict:
+    """Read the first GL identity sample without scanning a full flight log."""
+    if perf_path is None or not perf_path.is_file():
+        return {}
+    try:
+        with perf_path.open("r", encoding="utf-8") as stream:
+            for line in stream:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not row.get("gl_version") and not row.get("gl_renderer"):
+                    continue
+                return {
+                    "gl_capabilities": {
+                        "gl_version": row.get("gl_version"),
+                        "has_compute": row.get("caps_has_compute"),
+                        "has_ssbo": row.get("caps_has_ssbo"),
+                    },
+                    "gpu_driver": row.get("gl_renderer"),
+                }
+    except OSError:
+        return {}
+    return {}
 
 
 def newest_perf(after_ts: float) -> Path | None:
@@ -1762,9 +1833,13 @@ def main() -> int:
         # Focus (7,3) ≈ world (120, y, 56); pin eye Y to manual 122212/100645 (~56).
         users = BIN / "worlds" / "World_164" / "users.json"
         args._product174657_users_restore = None  # type: ignore[attr-defined]
+        args._product174657_users_sha256_before = None  # type: ignore[attr-defined]
         if users.is_file():
             try:
                 original_users = users.read_bytes()
+                args._product174657_users_sha256_before = hashlib.sha256(
+                    original_users
+                ).hexdigest()  # type: ignore[attr-defined]
                 data = json.loads(original_users.decode("utf-8"))
                 user = data.get("Username") or data
                 start_position = list(args.product_start_position)
@@ -1790,6 +1865,9 @@ def main() -> int:
         # (CUBA_FLIGHT_FOG_ON=1).
         cfg_path = BIN / "config.json"
         args._product174657_cfg_restore = None  # type: ignore[attr-defined]
+        args._product174657_config_sha256_before = None  # type: ignore[attr-defined]
+        args._product174657_config_sha256_effective = None  # type: ignore[attr-defined]
+        args._product174657_light_settings = None  # type: ignore[attr-defined]
         force_fog_on = os.environ.get("CUBA_FLIGHT_FOG_ON", "").strip().lower() in (
             "1",
             "true",
@@ -1798,7 +1876,11 @@ def main() -> int:
         )
         if cfg_path.is_file():
             try:
-                cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+                original_config_bytes = cfg_path.read_bytes()
+                args._product174657_config_sha256_before = hashlib.sha256(
+                    original_config_bytes
+                ).hexdigest()  # type: ignore[attr-defined]
+                cfg = json.loads(original_config_bytes.decode("utf-8"))
                 render = cfg.setdefault("render", {})
                 prev_fog = render.get("fog_pull_in_enabled", True)
                 args._product174657_cfg_restore = (cfg_path, prev_fog)  # type: ignore[attr-defined]
@@ -1823,6 +1905,22 @@ def main() -> int:
                         f"(was {prev_fog})",
                         flush=True,
                     )
+                effective_config_bytes = cfg_path.read_bytes()
+                args._product174657_config_sha256_effective = hashlib.sha256(
+                    effective_config_bytes
+                ).hexdigest()  # type: ignore[attr-defined]
+                args._product174657_light_settings = {  # type: ignore[attr-defined]
+                    "render_distance_chunks": cfg.get("render_distance_chunks"),
+                    "adaptive_render_distance": render.get(
+                        "adaptive_render_distance"
+                    ),
+                    "fog_pull_in_enabled": render.get("fog_pull_in_enabled"),
+                    "fog_rd_min": render.get("fog_rd_min"),
+                    "distance_fog_start_ratio": render.get(
+                        "distance_fog_start_ratio"
+                    ),
+                    "lighting_mode": render.get("lighting_mode"),
+                }
             except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
                 print(f"WARN: {args.scenario} fog pin failed: {exc}", flush=True)
 
@@ -2606,12 +2704,46 @@ def main() -> int:
                     cold_warm = "warm" if warm_claimed and warm_env else "cold"
                     if warm_claimed:
                         os.environ.setdefault("CUBA_WARM_PROTOCOL", "warmup_sec_stamp")
+                    _perf_runtime_identity = read_perf_runtime_identity(perf)
                     _ann["run_manifest"] = build_run_manifest(
                         exe=resolve_exe(),
                         world=getattr(args, "world", None),
                         scenario=getattr(args, "scenario", None),
                         cold_warm=cold_warm,
+                        route_hash=hashlib.sha256(
+                            json.dumps(
+                                build_flight_route_identity(args),
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ).encode("utf-8")
+                        ).hexdigest(),
                         extra={
+                            "route": build_flight_route_identity(args),
+                            "config_file_sha256_before": getattr(
+                                args, "_product174657_config_sha256_before", None
+                            ),
+                            "config_file_sha256_effective": getattr(
+                                args, "_product174657_config_sha256_effective", None
+                            ),
+                            "users_file_sha256_before": getattr(
+                                args, "_product174657_users_sha256_before", None
+                            ),
+                            "light_distance_settings": getattr(
+                                args, "_product174657_light_settings", None
+                            )
+                            or os.environ.get("CUBA_LIGHT_DISTANCE"),
+                            "visual_black_trace": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE", ""
+                            ).strip()
+                            not in ("", "0"),
+                            "world_column_source_trace": os.environ.get(
+                                "CUBA_WORLD_COLUMN_SOURCE_TRACE", ""
+                            ).strip()
+                            not in ("", "0"),
+                            "frame_capture_dir": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_DIR"
+                            ),
+                            **_perf_runtime_identity,
                             "perf_jsonl": str(perf) if perf else None,
                             "schema_perf": "perf_jsonl.v2",
                             "flight_move_speed_scale": os.environ.get(
