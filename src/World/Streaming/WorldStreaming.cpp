@@ -4796,6 +4796,25 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetAsyncCallbacks(
       [this, &world, &procedural](glm::ivec3 coord, int priority)
       {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        UWorldPersistence &persistence = *world.Persistence;
+        if (persistence.GetChunkStorage().IsColumnSavePending(ground) ||
+            persistence.IsTerrainColumnDiskLoadPending(ground) ||
+            (ChunkScheduler && ChunkScheduler->IsPending(ground)))
+        {
+          return;
+        }
+        // Async streaming used to jump straight to procedural generation,
+        // bypassing OnLoadChunk. Reuse the bounded disk worker first so a
+        // previously visited column is restored with its saved voxel/light data.
+        if (procedural.AsyncChunkIo)
+        {
+          persistence.RequestAsyncTerrainColumnLoad(world, ground);
+          if (persistence.IsTerrainColumnDiskLoadPending(ground))
+          {
+            return;
+          }
+        }
         if (ChunkScheduler)
         {
           glm::ivec2 column_origin(0);
@@ -4810,7 +4829,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             column_origin = glm::ivec2(feet_block.x, feet_block.z);
             has_origin = true;
           }
-          ChunkScheduler->RequestLoad(coord, priority, procedural, column_origin,
+          ChunkScheduler->RequestLoad(ground, priority, procedural, column_origin,
                                       has_origin);
         }
       },
@@ -4828,8 +4847,16 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                                       world.GetProceduralSettings().MaxHeight);
       });
   Streamer->SetColumnPendingCallback(
-      [&world](glm::ivec3 coord)
-      { return world.Persistence->IsTerrainColumnDiskLoadPending(coord); });
+      [this, &world](glm::ivec3 coord)
+      {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        if (world.Persistence->GetChunkStorage().IsColumnSavePending(ground) ||
+            world.Persistence->IsTerrainColumnDiskLoadPending(ground))
+        {
+          return true;
+        }
+        return ChunkScheduler && ChunkScheduler->IsPending(ground);
+      });
   Streamer->SetColumnPendingLightCallback(
       [&world](glm::ivec3 coord)
       {
