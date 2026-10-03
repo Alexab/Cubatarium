@@ -3707,6 +3707,8 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_opaque_surface_z
                << ",\"renderer_pixel_voxel_ray_state\":"
                << static_cast<int>(r.renderer_pixel_voxel_ray_state)
+               << ",\"renderer_pixel_voxel_known_air_steps\":"
+               << r.renderer_pixel_voxel_known_air_steps
                << ",\"renderer_pixel_voxel_ray_gap\":"
                << static_cast<int>(r.renderer_pixel_voxel_ray_gap)
                << ",\"renderer_pixel_voxel_unloaded_x\":"
@@ -4061,6 +4063,8 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"screen_ray_y\":" << r.screen_ray_y
                  << ",\"screen_ray_distance\":"
                  << r.screen_ray_distance
+                 << ",\"screen_ray_known_air_steps\":"
+                 << r.screen_ray_known_air_steps
                  << ",\"screen_ray_block_x\":" << r.screen_ray_block_x
                  << ",\"screen_ray_block_y\":" << r.screen_ray_block_y
                  << ",\"screen_ray_block_z\":" << r.screen_ray_block_z

@@ -31,6 +31,7 @@ struct OpaqueVoxelRayWitness
   BlockId block_id{BLOCK_AIR};
   BlockId previous_block_id{BLOCK_AIR};
   float distance{-1.0f};
+  uint32_t known_air_unloaded_steps{0};
 };
 
 struct FluidPlacementHit

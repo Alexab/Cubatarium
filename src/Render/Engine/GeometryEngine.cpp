@@ -1052,6 +1052,8 @@ void CaptureTransparentPixelProbe(
             world, camera_position, voxel_ray_direction,
             cache.MaxCullDistance());
         record.renderer_pixel_voxel_ray_state = voxel_witness.state;
+        record.renderer_pixel_voxel_known_air_steps =
+            voxel_witness.known_air_unloaded_steps;
         if (voxel_witness.state == 2)
         {
           record.renderer_pixel_voxel_unloaded_x =

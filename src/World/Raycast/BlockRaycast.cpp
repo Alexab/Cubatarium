@@ -6,6 +6,7 @@
 
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/BlockQuery.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Collision/VoxelDdaTraversal.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
@@ -18,6 +19,28 @@ namespace
 {
 
 constexpr float kHalfBlock = 0.5f;
+
+bool IsKnownAirTerrainSlice(const UWorld &world, glm::ivec3 chunk_coord)
+{
+  const int max_world_y = world.GetProceduralSettings().MaxHeight;
+  const int max_cy = (max_world_y + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  if (chunk_coord.y > max_cy)
+  {
+    return true;
+  }
+
+  // A missing slice is air only when terrain generation has completed the
+  // whole column and the slice is above its highest resident non-air slice.
+  // Incomplete columns retain the conservative unloaded witness.
+  const glm::ivec3 ground_coord(chunk_coord.x, 0, chunk_coord.z);
+  if (!world.IsTerrainColumnCompleteFast(ground_coord))
+  {
+    return false;
+  }
+  const int highest_non_air_cy = GetHighestNonAirChunkSlice(
+      world.GetBlockWorld(), ground_coord, max_world_y);
+  return chunk_coord.y > highest_non_air_cy;
+}
 
 float NextBoundaryT(const glm::vec3 &origin, const glm::vec3 &direction,
                     int blockCoord, int axis)
@@ -134,6 +157,8 @@ OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
   float entry_distance = 0.0f;
   int entered_axis = -1;
   int entered_step = 0;
+  glm::ivec3 last_unloaded_chunk(std::numeric_limits<int>::min());
+  bool last_unloaded_chunk_is_known_air = false;
   glm::ivec3 previous_cell = cell;
   BlockId previous_block_id = BLOCK_AIR;
   const int max_steps = std::max(32, static_cast<int>(max_distance * 2.0f) + 16);
@@ -142,10 +167,21 @@ OpaqueVoxelRayWitness TraceOpaqueVoxelRay(const UWorld &world,
     const BlockQueryResult query = chunks.QueryBlock(cell);
     if (query.IsUnloaded())
     {
-      result.state = 2;
-      result.unloaded_cell = cell;
-      result.distance = entry_distance;
-      return result;
+      const glm::ivec3 unloaded_chunk = UChunkManager::WorldToChunk(cell);
+      if (unloaded_chunk != last_unloaded_chunk)
+      {
+        last_unloaded_chunk = unloaded_chunk;
+        last_unloaded_chunk_is_known_air =
+            IsKnownAirTerrainSlice(world, unloaded_chunk);
+      }
+      if (!last_unloaded_chunk_is_known_air)
+      {
+        result.state = 2;
+        result.unloaded_cell = cell;
+        result.distance = entry_distance;
+        return result;
+      }
+      ++result.known_air_unloaded_steps;
     }
     if (query.IsSolid() &&
         registry.GetRenderStyle(query.id) == BlockRenderStyle::UCube &&

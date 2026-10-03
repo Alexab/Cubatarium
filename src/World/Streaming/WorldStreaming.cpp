@@ -824,6 +824,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             float screen_x{0.0f};
             float screen_y{0.0f};
             float distance{-1.0f};
+            uint32_t known_air_steps{0};
             uint8_t column{0};
             uint8_t row{0};
             uint8_t state{0};
@@ -906,6 +907,7 @@ void UWorldStreaming::RefreshStreamingPressure(
               const OpaqueVoxelRayWitness hit = TraceOpaqueVoxelRay(
                   world, ray_origin, ray_direction, max_distance);
               ray_trace.state = hit.state;
+              ray_trace.known_air_steps = hit.known_air_unloaded_steps;
               if (hit.state != 1)
               {
                 continue;
@@ -1074,6 +1076,7 @@ void UWorldStreaming::RefreshStreamingPressure(
               record.screen_ray_x = ray_trace.screen_x;
               record.screen_ray_y = ray_trace.screen_y;
               record.screen_ray_distance = ray_trace.distance;
+              record.screen_ray_known_air_steps = ray_trace.known_air_steps;
               record.screen_ray_block_x = ray_trace.block.x;
               record.screen_ray_block_y = ray_trace.block.y;
               record.screen_ray_block_z = ray_trace.block.z;

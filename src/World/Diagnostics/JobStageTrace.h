@@ -371,6 +371,7 @@ struct VisualBlackTraceRecord
   /// Opaque voxel DDA state: 0=not sampled, 1=opaque hit, 2=unloaded,
   /// 3=no opaque hit in range.
   uint8_t screen_ray_state{0};
+  uint32_t screen_ray_known_air_steps{0};
   uint8_t screen_ray_in_focus_radius{0};
   uint8_t screen_ray_in_height_band{0};
   uint8_t screen_ray_mesh_satisfying{0};
@@ -409,6 +410,7 @@ struct VisualBlackTraceRecord
   /// 3=no opaque cube within the renderer horizon.
   uint8_t renderer_pixel_voxel_ray_state{0};
   uint8_t renderer_pixel_voxel_ray_gap{0};
+  uint32_t renderer_pixel_voxel_known_air_steps{0};
   int32_t renderer_pixel_voxel_unloaded_x{0};
   int32_t renderer_pixel_voxel_unloaded_y{0};
   int32_t renderer_pixel_voxel_unloaded_z{0};
