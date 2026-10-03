@@ -1224,6 +1224,14 @@ def main() -> int:
         help="absolute eye Y for land cruise (overrides sea+alt when set)",
     )
     ap.add_argument(
+        "--product-start-position",
+        nargs=3,
+        type=float,
+        metavar=("X", "Y", "Z"),
+        default=(120.0, 56.0, 56.0),
+        help="resume pin XYZ for product-174657 scenarios (default: 120 56 56)",
+    )
+    ap.add_argument(
         "--yaw",
         type=float,
         default=None,
@@ -1759,8 +1767,8 @@ def main() -> int:
                 original_users = users.read_bytes()
                 data = json.loads(original_users.decode("utf-8"))
                 user = data.get("Username") or data
-                y = 56.0
-                user["position"] = [120.0, y, 56.0]
+                start_position = list(args.product_start_position)
+                user["position"] = start_position
                 user["yaw"] = 180.0
                 user["pitch"] = 0.0
                 pinned_users = json.dumps(data, indent=4) + "\n"
@@ -1772,7 +1780,7 @@ def main() -> int:
                 )
                 print(
                     f"INFO: {args.scenario} pinned World_164 locus to "
-                    f"[120, {y}, 56] yaw180 (focus~7,3)",
+                    f"{start_position} yaw180",
                     flush=True,
                 )
             except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
