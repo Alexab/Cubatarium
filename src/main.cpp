@@ -197,6 +197,11 @@ int main(int argc, char *argv[])
         {
           opt.FlyPhaseSec = std::atof(argv[++j]);
         }
+        else if (std::strcmp(argv[j], "--reverse-course-after") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.ReverseCourseAfterSec = std::atof(argv[++j]);
+        }
         else if (std::strcmp(argv[j], "--stop-phase") == 0 && j + 1 < argc)
         {
           opt.StopPhaseSec = std::atof(argv[++j]);

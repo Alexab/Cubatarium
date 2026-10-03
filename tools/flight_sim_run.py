@@ -1097,6 +1097,12 @@ def main() -> int:
     ap.add_argument("--fly-phase-sec", type=float, default=50.0)
     ap.add_argument("--stop-phase-sec", type=float, default=50.0)
     ap.add_argument(
+        "--reverse-course-after-sec",
+        type=float,
+        default=0.0,
+        help="reverse autopilot heading after N seconds of flight, without teleport",
+    )
+    ap.add_argument(
         "--stop-after-blocked-sec",
         type=float,
         default=0.0,
@@ -1710,9 +1716,11 @@ def main() -> int:
         if far_scenario:
             # Keep longer fly from above; do not flip into generic fly-heavy bumps.
             args.replay_manual_fly_heavy = False
-            # A37 H0: ~5 blk/s × scale × fly_sec ≥ 8192. Default scale 12 → ~10800.
+            # At normal speed (scale 1), 300s covered only 1696 blocks. The
+            # far acceptance checkpoint is 8192 blocks; use a 30-minute default
+            # with margin, without artificially accelerating camera movement.
             if "--fly-phase-sec" not in sys.argv:
-                args.fly_phase_sec = max(args.fly_phase_sec, 300.0)
+                args.fly_phase_sec = max(args.fly_phase_sec, 1800.0)
             far_scale = os.environ.get("CUBA_FLIGHT_MOVE_SPEED_SCALE", "").strip()
             if not far_scale:
                 # Keep visible diagnostic flights at normal camera speed. Far
@@ -2402,6 +2410,10 @@ def main() -> int:
             sim_cmd.append("--fly-stop")
             sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
             sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
+            if args.reverse_course_after_sec > 0.0:
+                sim_cmd.extend(
+                    ["--reverse-course-after", str(args.reverse_course_after_sec)]
+                )
             if args.stop_after_blocked_sec > 0.0:
                 sim_cmd.extend(
                     ["--stop-after-blocked", str(args.stop_after_blocked_sec)]

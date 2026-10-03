@@ -634,6 +634,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     bool autopilot_armed = false;
     bool autopilot_flying = false;
     bool fly_stop_released = false;
+    bool reverse_course_engaged = false;
+    bool reverse_course_logged = false;
     bool dive_engaged = false;
     double last_break_request_sec = -1.0e9;
     int break_requests = 0;
@@ -796,6 +798,24 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       sweep_t / (std::max)(0.1, options.YawSweepSec));
                   static const float kYaws[4] = {0.f, 90.f, 180.f, 270.f};
                   yaw = kYaws[step & 3];
+                }
+                const double reverse_at_sec =
+                    options.IdleBeforeFlySec + options.ReverseCourseAfterSec;
+                if (options.ReverseCourseAfterSec > 0.0 &&
+                    ingame_sec >= reverse_at_sec)
+                {
+                  yaw = std::remainder(yaw + 180.0f, 360.0f);
+                  if (yaw < 0.0f)
+                  {
+                    yaw += 360.0f;
+                  }
+                  reverse_course_engaged = true;
+                  if (!reverse_course_logged)
+                  {
+                    reverse_course_logged = true;
+                    std::cout << "flight-sim: reversed course yaw=" << yaw
+                              << " at t=" << ingame_sec << "s" << std::endl;
+                  }
                 }
                 const float pitch =
                     in_dive ? options.DivePitchDeg : options.FacePitchDeg;
@@ -1086,6 +1106,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"autopilot_flying\": "
                << (autopilot_flying ? "true" : "false") << ",\n"
                << "  \"face_yaw_deg\": " << options.FaceYawDeg << ",\n"
+               << "  \"reverse_course_after_sec\": "
+               << options.ReverseCourseAfterSec << ",\n"
+               << "  \"reverse_course_engaged\": "
+               << (reverse_course_engaged ? "true" : "false") << ",\n"
                << "  \"face_pitch_deg\": " << options.FacePitchDeg << ",\n"
                << "  \"heading_deviation_during_move_samples\": "
                << heading_deviation_during_move_samples << ",\n"

@@ -61,6 +61,9 @@ struct FlightSimOptions
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};
   double StopPhaseSec{35.0};
+  /// Reverse the autopilot heading after this many seconds of forward flight.
+  /// Zero disables the turn; useful for no-teleport disk-reload round trips.
+  double ReverseCourseAfterSec{0.0};
   /// Optional diagnostic guard: stop after sustained blocked/ground-contact
   /// movement during the active fly phase. Zero keeps the full requested run.
   double StopAfterBlockedSec{0.0};
