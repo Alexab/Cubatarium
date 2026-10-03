@@ -156,6 +156,10 @@ int main(int argc, char *argv[])
         {
           opt.HoldSpace = true;
         }
+        else if (std::strcmp(argv[j], "--level-forward") == 0)
+        {
+          opt.LevelForward = true;
+        }
         else if (std::strcmp(argv[j], "--teleport-cruise") == 0)
         {
           opt.TeleportToCruiseStart = true;

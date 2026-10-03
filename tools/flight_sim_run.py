@@ -111,6 +111,7 @@ def build_flight_route_identity(args: argparse.Namespace) -> dict:
         "reverse_course_after_sec": args.reverse_course_after_sec,
         "dive_phase_sec": args.dive_phase_sec,
         "hold_space": bool(args.hold_space),
+        "level_forward": bool(getattr(args, "level_forward", False)),
         "sprint": bool(args.sprint),
         "visible": bool(args.visible),
         "move_speed_scale": os.environ.get(
@@ -1312,6 +1313,11 @@ def main() -> int:
         "--hold-space",
         action="store_true",
         help="hold Space while flying (climb / maintain altitude)",
+    )
+    ap.add_argument(
+        "--level-forward",
+        action="store_true",
+        help="keep no-teleport flight horizontal while camera pitch controls the view",
     )
     ap.add_argument(
         "--min-alt-above-sea",
@@ -2555,6 +2561,8 @@ def main() -> int:
             sim_cmd.append("--sprint")
         if args.hold_space:
             sim_cmd.append("--hold-space")
+        if args.level_forward:
+            sim_cmd.append("--level-forward")
         if args.pitch is not None:
             sim_cmd.extend(["--pitch", str(args.pitch)])
         if args.yaw is not None:

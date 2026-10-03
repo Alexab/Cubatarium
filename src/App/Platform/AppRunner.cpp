@@ -722,6 +722,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     !options.YawSweepMode)
                 {
                   camera->SetFreeMove(true);
+                  camera->SetPlanarFreeMoveForward(options.LevelForward);
                 }
                 camera->SetOrientation(options.FaceYawDeg, options.FacePitchDeg);
                 const float sea =
@@ -757,6 +758,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                           << (options.Fly ? 1 : 0)
                           << " hold_forward=" << (options.HoldForward ? 1 : 0)
                           << " hold_space=" << (options.HoldSpace ? 1 : 0)
+                          << " level_forward=" << (options.LevelForward ? 1 : 0)
                           << " break_stand=" << (options.BreakStandMode ? 1 : 0)
                           << " yaw_sweep=" << (options.YawSweepMode ? 1 : 0)
                           << " teleport=" << (options.TeleportToCruiseStart ? 1 : 0)
@@ -771,6 +773,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     !options.YawSweepMode)
                 {
                   camera->SetFreeMove(true);
+                  camera->SetPlanarFreeMoveForward(options.LevelForward);
                 }
                 const double fly_end =
                     options.IdleBeforeFlySec +
@@ -1116,6 +1119,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"reverse_course_engaged\": "
                << (reverse_course_engaged ? "true" : "false") << ",\n"
                << "  \"face_pitch_deg\": " << options.FacePitchDeg << ",\n"
+               << "  \"level_forward\": "
+               << (options.LevelForward ? "true" : "false") << ",\n"
                << "  \"heading_deviation_during_move_samples\": "
                << heading_deviation_during_move_samples << ",\n"
                << "  \"max_heading_yaw_delta_deg\": "

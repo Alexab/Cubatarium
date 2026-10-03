@@ -48,6 +48,8 @@ struct FlightSimOptions
   float CruiseEyeY{0.0f};
   /// Hold Space while flying to maintain altitude (manual FreeMove climb).
   bool HoldSpace{false};
+  /// Keep the autopilot's forward vector horizontal while the camera looks up/down.
+  bool LevelForward{false};
   bool Sprint{false};
   /// Reset to a fixed ocean cruise start each run (matches World_164 manual).
   bool TeleportToCruiseStart{false};
