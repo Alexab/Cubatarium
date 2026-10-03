@@ -3006,6 +3006,62 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   пост-generation интервала (p95 около 49.94 s), но маршруты, длина и метод
   измерения отличаются; причинный эффект fix требует повторяемого длинного run.
 - Manifest фиксирует чистое дерево, commit `317b41a8`, Release EXE SHA-256
-  `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`. В нём ещё
-  пустые `world_seed_or_hash` и route fingerprint не включает реальный XYZ/yaw;
-  исправить manifest до следующего acceptance. Артефакты: [M371 report](../../bin/suite_reports/engine_refactor/m371_world164_z224_y70_route_probe_20261004.json), [perf](../../bin/logs/perf_20261004-000119_13088.jsonl), [AppRunner](../../bin/flight_sim_report.json), [INFO trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-000114.13088).
+  `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`. На этом
+  run manifest ещё не содержал seed и полного route fingerprint; исправлено перед
+  M372. Артефакты: [M371 report](../../bin/suite_reports/engine_refactor/m371_world164_z224_y70_route_probe_20261004.json), [perf](../../bin/logs/perf_20261004-000119_13088.jsonl), [AppRunner](../../bin/flight_sim_report.json), [INFO trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-000114.13088).
+
+## M372: длинный боковой run нашёл camera-band slices без владельца работы
+
+- Видимый Release/no-teleport `product-174657-far` на `World_164`, seed
+  `3650471197`, старт `[120,56,224]`, cruise `y=70`, yaw `180°`, pitch `0°`,
+  speed scale `1`. Маршрут прошёл `6 960` блоков до focus `(-428,14)` из `(7,14)`;
+  far checkpoint `8 192` не достигнут. Все `1 135` periods имеют нулевые
+  `camera_flight_ground_contacts` и `camera_move_blocked_substeps`; `1 119` летных
+  periods применяли запрошенное горизонтальное движение. Это не воспроизводит
+  остановку у дерева из низкого M368: наблюдение пользователя о дереве остаётся
+  привязано к низкому коридору, а боковой M372 — к длинной стриминговой диагностике.
+- Процесс штатно завершился (`process_rc=0`, `run_outcome=success`), анализатор
+  вернул `pass=false`. Манифест чистый: commit `5503ad9f`, Release EXE SHA-256
+  `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`, seed и
+  `flight-route.v1` fingerprint заполнены. Маршрут ограничен на `6 960` блоках,
+  поэтому его нельзя считать far-distance acceptance.
+- В 1 135 periods `focus_data_census_valid=1` в 898 сэмплах. Camera-band
+  `solid_no_drawable` имел median/p95/max `0/24/51`; `unowned` — `0/9/24`;
+  `pending_work` — `0/15/37`. Плотные срезы без геометрии встретились в 286
+  periods, без владельца работы — в 154. Пик отсутствующей геометрии был
+  `51` срез при `x=-4069`; пик unowned — `25` срезов при `x=-4271`.
+- На пике `x=-4271` census записал `35` camera-band срезов без drawable mesh,
+  `25` из них без владельца. Конкретный срез `(-266,3,19)` содержал `12` non-air
+  блоков, имел `focus_state=1`, `desired_geom_rev=1`, `published_geom_rev=0`,
+  `mesh_revision=0`, `active_stage=0`, `mesh_work_owner_flags=0`, пустые dirty
+  queue и repair ticket. Это прямой дефект состояния: resident voxel data без
+  drawable и без зарегистрированной работы, которая должна его опубликовать.
+  На другом пике `x=-4069` наблюдались `51` срез без drawable и `21` unowned.
+- Общий `unfinished_visual` proxy был ненулевым в `96.65%` periods; это не доля
+  чёрных пикселей. `chunk_not_ready` median/p95/max `26/60/75`,
+  `chunk_meshed_unlit` `6/29/51`, `visible_black_focus_n` `4/24/68`, dirty
+  median/max `255/834`, `fly_void_near_max=945`. Stop convergence не прошёл:
+  final missing `21`, visible-black stalled max `62`, pending-light end `47`.
+- Source trace: `886` disk requests / `415` completions, `2 957` disk misses и
+  `2 914` procedural commits. Для commits `queue_ms` p50/p95/max
+  `132/13 867/38 764` ms, generation `117/226/665` ms, `ready_wait_ms`
+  `272/3 696/34 209` ms, apply `6.4/23.4/54.8` ms, full `total_ms`
+  `658/17 305/62 690` ms. `217` queue wait и `40` ready wait превысили 10 s;
+  один total превысил 60 s. `max_commits_per_frame=1` во всех procedural commit
+  событиях. Это указывает на очередь и ожидание передачи результата как значимые
+  задержки, но другой длины маршрута недостаточно для причинного A/B с M371.
+- Flight analyzer: `wall_ms_fly_med=159.8 ms` (~`6.26` effective FPS),
+  `render_total_fly_med=93.5 ms`, `world_streaming_phase_ms` median/p95
+  `54.9/87.9 ms`; wall attribution: render `58.5%`, stream `20.4%`, emerge
+  `15.3%`. За маршрут записано `5 234` spikes, максимум `7 979.9 ms`, dominant
+  spike class `stream`. Редкое, но очень длинное зависание требует отдельного
+  расследования; median тоже далёк от target.
+- Кадры `frame_150`, `frame_156`, `frame_161` почти целиком показывают небо.
+  Это не доказательство отсутствия мира: маршрут держал pitch `0°` на y=`70`,
+  а free-move forward использует полный `Camera::Front`, поэтому установка
+  pitch-down меняет и вертикальную траекторию. В дальних pixel-ray группах
+  `x=-6433` и `x=-6842` все лучи встретили unknown unloaded chunk до opaque voxel;
+  при таком горизонтальном ракурсе эти лучи характеризуют дальний горизонт, а
+  не camera-band mesh. Для визуального acceptance нужно отделить угол обзора от
+  горизонтального перемещения и подтвердить поверхность opaque pixel probes.
+- Артефакты: [M372 report](../../bin/suite_reports/engine_refactor/m372_world164_z224_y70_long_20261004.json), [perf + trace](../../bin/logs/perf_20261004-002601_19304.jsonl), [кадры](../../bin/logs/m372_world164_z224_y70), [INFO/source trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-002557.19304).

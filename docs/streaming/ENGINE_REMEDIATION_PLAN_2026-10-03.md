@@ -1,6 +1,8 @@
-# План исправления стриминга и отображения мира — 3 октября 2026
+# План исправления стриминга и отображения мира — обновлён 4 октября 2026
 
-База: `develop` / `codex_audit2`, commit `185e2f08` (merge `codex_audit`).
+Исходная база: `develop` / `codex_audit2`, commit `185e2f08` (merge
+`codex_audit`). M372 manifest зафиксировал чистый кодовый checkout
+`codex_audit2` commit `5503ad9f`.
 Связанные документы: [аудит движка](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md),
 [архитектурные контракты](ENGINE_REMEDIATION_PLAN_2026-09-22.md),
 [каталог flight-экспериментов](FLIGHT_EXPERIMENT_SCRIPTS.md).
@@ -219,6 +221,50 @@ Manifest чистый: `git_sha=d3be1310`, Release EXE SHA-256
 M369 выполнен как продолжающаяся диагностика до повторного закрытия G1; он не
 заменяет повторное измерение загрузки и создания мира на актуальном Release.
 
+### Дальний World_164 side corridor: M372 — владелец mesh-work теряется на frontier
+
+M372 повторил no-teleport маршрут M371 по z=`224`, cruise y=`70`, pitch `0°`,
+Release, speed scale `1`. Видимый процесс завершился с `rc=0`, прошёл `6 960`
+блоков, но far checkpoint `8 192` не достиг. Heading/y/z оставались стабильны;
+ground-contact и blocked-substep counters нулевые. Это длинный streaming probe,
+а не доказательство, что низкий маршрут больше не встречает деревья.
+
+С `CUBA_VISUAL_BLACK_TRACE=1` census был валиден в 898/1 135 periods. В 154
+periods были resident solid camera-band срезы без drawable mesh и без владельца
+работы; максимум — 25 таких срезов при `x=-4271`. У образца `(-266,3,19)` есть
+12 non-air блоков и `desired_geom_rev=1`, но `mesh_revision=0`,
+`published_geom_rev=0`, `active_stage=0`, `mesh_work_owner_flags=0`, dirty queue и
+ColumnFlow repair ticket отсутствуют. Следующий кодовый шаг — найти, почему
+FirstMesh demand/repair не остаётся зарегистрированным для resident non-air
+camera-band slices, и закрыть инвариант «mesh ready либо явный owner/terminal
+reason с повторной попыткой». Не увеличивать commit budget, пока эта цепочка не
+разобрана.
+
+Источник трассы одновременно показывает queue/ready backlog: 2 914 procedural
+commits, `queue_ms` p95 13.87 s, `ready_wait_ms` p95 3.70 s, `generation_ms` p95
+226 ms и `apply_ms` p95 23 ms. Commit cap во всех событиях равнялся одному
+результату на frame. Полный `total_ms` p95 достиг 17.30 s; это не прямое сравнение
+с M371 из-за более длинной полосы и другого распределения disk/procedural work.
+У M372 median wall frame `159.8 ms`, renderer stage `93.5 ms`; dominant spike
+class — `stream`, max spike почти 8 s. Нужны queue age/owner transitions и отдельный
+warm/cold возврат к тем же колонкам.
+
+M372 не даёт валидной визуальной оценки поверхности: кадры почти полностью неба,
+поскольку `pitch=0°` при высоте y=`70`. В free-move камера перемещается по полному
+`Front`, поэтому простой pitch-down вызвал бы снижение траектории и риск
+столкновения. Перед следующим визуальным дальним прогоном harness должен уметь
+раздельно задавать горизонтальный курс и обзорный pitch; новый маршрут должен
+оставаться на прежнем z/y, смотреть вниз примерно на `5–6°`, иметь нулевые
+heading deviations и подтверждать поверхность opaque pixel probes. Сначала
+короткая проверка безопасности/видимости, затем длинный участок `>=8 192` блоков
+с stop convergence.
+
+Гейты M372 остались красными: `unfinished_visual` rate `96.65%` (внутренний proxy,
+не доля чёрных пикселей), `chunk_not_ready` median `26`, `unlit_max=51`,
+`visible_black_focus` median/max `4/68`, stop convergence=false. Анализатор
+сообщил `process_rc=0`, `pass=false`; манифест чистый, EXE Release hash совпал с
+M371. Подробные данные приведены в разделе M372 аудита.
+
 **G1 статус: частично закрыт.** Синхронный saved-world read измерен и заменён на
 bounded async apply; disk-first работает также на движущемся frontier.
 Интерактивный новый мир измерен на более раннем Release (World_175, M367), а M370
@@ -259,6 +305,10 @@ speed multiplier; короткие round-trip/source probes допустимы �
    полосе. M371 подтвердил z=224/y70 как collision-clear до `3 424` блоков, но
    render gates не прошёл и не достиг far checkpoint. Low-eye y56 оставить
    collision-sensitive control, а y96 — отдельным high-altitude stress diagnostic.
+   M372 достиг только `6 960` блоков и не закрыл checkpoint. Следующий визуальный
+   маршрут использует раздельные view pitch и горизонтальное перемещение; сначала
+   подтвердить поверхность в кадре на коротком участке, затем лететь не менее
+   `8 192` блоков без collision shortfall.
 3. После каждого изменения повторять контрольный отрезок до задетой области;
    дальний acceptance не объявлять до достижения checkpoint 8 192 без collision
    shortfall или искусственного ускорения.
@@ -335,13 +385,15 @@ debt/seam invalidation, mesh build/publication, MDI/texture state, shader lighti
 владение demand и безопасное retired-resource lifetime из архитектурного плана.
 
 Каждый patch проверять на одном и том же World_164 отрезке видимым no-teleport
-прогоном с framebuffer/ray/lifecycle evidence. M371 показал, что focus-data census
-остаётся выключенным без `CUBA_VISUAL_BLACK_TRACE`; следующий длинный y70/z224 run
-должен включить его, `CUBA_WORLD_COLUMN_SOURCE_TRACE` и низкочастотные framebuffer
-captures. Достичь 8 192 блока, проверить real voxel/mesh/light state в кадре и
-дождаться stop convergence. Этот инструментированный run использовать для
-локализации; отдельный uninstrumented повтор — для performance comparison. Пустой/чёрный proxy не считать
-исправленным только из-за меньшего счётчика или более короткого прогона.
+прогоном с framebuffer/ray/lifecycle evidence. M372 включил focus census,
+`CUBA_WORLD_COLUMN_SOURCE_TRACE` и кадры: это выявило unowned FirstMesh debt,
+но pitch `0°` не показал поверхность. Сначала создать level-forward view-pitch
+режим и подтвердить на коротком участке, что экран содержит terrain pixels,
+route y/z не дрейфуют и у каждого проверяемого pixel есть voxel/mesh/light
+witness. Затем повторить длинный коридор до `8 192` блоков и дождаться stop
+convergence. Инструментированный прогон использовать для локализации, отдельный
+uninstrumented повтор — для performance comparison. Пустой/чёрный proxy не
+считать исправленным из-за меньшего счётчика или более короткого прогона.
 
 **Gate:** контрольный маршрут проходит far checkpoint, нет необъяснённых
 невалидных/неопубликованных поверхностей в проверяемом коридоре, а stop convergence
@@ -384,6 +436,16 @@ target; Debug и тестовые targets в этой работе не запу
 - В Luanti очередь emerge объединяет запросы блока и ограничивает очередь; worker
   сначала проверяет память, затем диск, затем generation:
   [Emerge implementation](https://github.com/luanti-org/luanti/blob/master/src/emerge.cpp).
+- Geometry clipmaps поддерживают стабильный дальний terrain working set: вложенные
+  сетки центрируются на камере и сдвигаются инкрементально, давая steady render
+  rate и graceful degradation. Это применимо как отдельный terrain LOD/proxy слой,
+  а не как замена редактируемым voxel chunks:
+  [Asirvatham & Hoppe, GPU Gems 2](https://hhoppe.com/proj/gpugcm/).
+- Sparse voxel octrees показывают иерархическое хранение, ray traversal и
+  управление voxel data в памяти/на диске; для Cubatarium это ориентир для
+  дальнего volumetric LOD или sparse cache, но не аргумент заменять текущие chunks
+  без измерений и совместимого mutation path:
+  [Laine & Karras, NVIDIA Research](https://research.nvidia.com/sites/default/files/pubs/2010-02_Efficient-Sparse-Voxel/laine2010tr1_paper.pdf).
 
 Переносимый вывод для Cubatarium: источник данных — отдельный наблюдаемый результат
 до mesh readiness; очередь должна ограничивать дубликаты/запас работы, а disk I/O,
