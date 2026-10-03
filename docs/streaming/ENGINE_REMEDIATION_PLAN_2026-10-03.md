@@ -256,8 +256,9 @@ speed multiplier; короткие round-trip/source probes допустимы �
    деревья, но находится вне eye-level proxy corridor `y45..70` и не воспроизводит
    продуктовый dark symptom. Прямой y70 маршрут проходит через лес; для acceptance
    коротким no-teleport probe проверить верхнюю границу `y68..70` на сдвинутой по Z
-   полосе (предварительный кандидат z≈224). Low-eye y56 оставить collision-sensitive
-   control, а y96 — отдельным high-altitude stress diagnostic.
+   полосе. M371 подтвердил z=224/y70 как collision-clear до `3 424` блоков, но
+   render gates не прошёл и не достиг far checkpoint. Low-eye y56 оставить
+   collision-sensitive control, а y96 — отдельным high-altitude stress diagnostic.
 3. После каждого изменения повторять контрольный отрезок до задетой области;
    дальний acceptance не объявлять до достижения checkpoint 8 192 без collision
    shortfall или искусственного ускорения.
@@ -297,13 +298,17 @@ retry, очередь/latency/apply для async disk load и очередь/gen
 procedural commit. Пока это не полная трасса до GPU publication и пикселя.
 M369 показал отдельный неразмеченный интервал между worker generation и
 main-thread apply: у 1 145 commits вычисленный p50/p95/max был
-`0.366/49.94/389.74` с; очередь запуска worker и само generation объясняют только
-часть полного latency. Добавить явные `worker_finished` и `apply_started` времена,
-oldest-ready age, completed-ready queue size, effective commit budget и число
-отброшенных/устаревших результатов. Затем выяснить, почему готовые результаты
-остаются за камерой на минуты, и дать актуальным near-visual колонкам гарантированное
-продвижение по demand/возрасту. Общий commit cap не повышать вслепую: `apply_ms`
-короткий, а wall time кадра уже выше `90` мс median.
+`0.366/49.94/389.74` с. После инструментирования ready queue и fix
+FocusIngressBudget M371 записал точный `ready_wait_ms` для 1 633 commits:
+p50/p95/max `190/1 196/15 016` ms, `10` ожиданий выше 10 s, ни одного выше 60 s.
+В том же прогоне `queue_ms` p95 был 1.89 s, generation p95 182 ms, apply p95
+23 ms, full total p95 3.29 s. Это обнадёживающий результат, но не чистое A/B:
+маршрут M371 смещён по Z, короче M369 и выполнялся на другой высоте. Следующий
+повтор должен сохранить этот коридор и длинную дистанцию; не увеличивать общий
+commit cap вслепую. Основной незакрытый долг M371 переместился к render readiness:
+`chunk_not_ready` median 27, `unlit_max=37`, post-stop convergence=false.
+Продолжить метрику oldest-ready age, completed-ready count, effective commit
+budget и отброшенных/устаревших результатов вместе с координатным lifecycle.
 Продолжить координатную трассу жизненного цикла колонки:
 
 `request → persisted high-water/file hit → save-pending guard → disk read result
@@ -330,8 +335,12 @@ debt/seam invalidation, mesh build/publication, MDI/texture state, shader lighti
 владение demand и безопасное retired-resource lifetime из архитектурного плана.
 
 Каждый patch проверять на одном и том же World_164 отрезке видимым no-teleport
-прогоном с framebuffer/ray/lifecycle evidence; после серии исправлений повторить
-дальний маршрут и дождаться stop convergence. Пустой/чёрный proxy не считать
+прогоном с framebuffer/ray/lifecycle evidence. M371 показал, что focus-data census
+остаётся выключенным без `CUBA_VISUAL_BLACK_TRACE`; следующий длинный y70/z224 run
+должен включить его, `CUBA_WORLD_COLUMN_SOURCE_TRACE` и низкочастотные framebuffer
+captures. Достичь 8 192 блока, проверить real voxel/mesh/light state в кадре и
+дождаться stop convergence. Этот инструментированный run использовать для
+локализации; отдельный uninstrumented повтор — для performance comparison. Пустой/чёрный proxy не считать
 исправленным только из-за меньшего счётчика или более короткого прогона.
 
 **Gate:** контрольный маршрут проходит far checkpoint, нет необъяснённых

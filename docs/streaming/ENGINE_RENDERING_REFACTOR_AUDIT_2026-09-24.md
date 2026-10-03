@@ -2978,3 +2978,34 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`, commit
   `4ff3aa35`; запуск прошёл без второго параллельного `Cubatarium.exe`. Созданный
   мир сохранён для последующих seed-cohort проверок.
+
+## M371: боковой eye-level коридор прошёл прежнюю collision-зону, но render debt остался
+
+- Видимый Release, `product-174657-far`, no-teleport, speed scale `1`; runner
+  закрепил старт `[120,56,224]`, курс west/yaw `180°`, cruise `y=70`. Heading
+  deviation `0`, высота и Z не дрейфовали. За 700 s flight прошло `3 424` блока,
+  focus `(7,14)→(-207,14)`. У прежней точки дерева M368/M335 ground contacts и
+  blocked-substeps оставались нулевыми; collision watchdog не срабатывал. Это
+  подтверждает безопасный до этой глубины боковой маршрут, но не дальний acceptance.
+- Процесс завершился `rc=0`, `collision_stop_triggered=false`; анализатор вернул
+  `pass=false` из-за render/streaming gates. Input adequacy прошёл; симптом по
+  proxy не воспроизведён (`focus_missing_mesh` median `0`, visible-black focus
+  median `4`, max `24`), но это не заменяет операторский pixel/color verdict.
+  `holes_rate=1.0` — внутренний unfinished-visual proxy, `chunk_not_ready` median
+  `27`, `chunk_meshed_unlit` max `37`, dirty median/max `142/314`,
+  `fly_void_near_max=1 909`; stop convergence=false. Focus voxel census был
+  недоступен: `focus_data_census_valid=0`, так как `CUBA_VISUAL_BLACK_TRACE` не
+  включался. Значит, этот прогон не отвечает, содержал ли каждый визуально пустой
+  участок voxel data.
+- Новый trace точно измерил generation-finished → apply wait у `1 633` commits:
+  `ready_wait_ms` p50/p95/max `190/1 196/15 016` ms; `10` результатов ждали более
+  10 s, ни один не ждал более 60 s. `queue_ms` `97/1 887/18 818` ms,
+  `generation_ms` `115/182/355` ms, `apply_ms` `6.7/23.4/42.9` ms,
+  request-to-commit `total_ms` `451/3 288/30 390` ms. Было `392` disk completions
+  и `1 633` procedural commits. Это выглядит существенно лучше оценённого M369
+  пост-generation интервала (p95 около 49.94 s), но маршруты, длина и метод
+  измерения отличаются; причинный эффект fix требует повторяемого длинного run.
+- Manifest фиксирует чистое дерево, commit `317b41a8`, Release EXE SHA-256
+  `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`. В нём ещё
+  пустые `world_seed_or_hash` и route fingerprint не включает реальный XYZ/yaw;
+  исправить manifest до следующего acceptance. Артефакты: [M371 report](../../bin/suite_reports/engine_refactor/m371_world164_z224_y70_route_probe_20261004.json), [perf](../../bin/logs/perf_20261004-000119_13088.jsonl), [AppRunner](../../bin/flight_sim_report.json), [INFO trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-000114.13088).
