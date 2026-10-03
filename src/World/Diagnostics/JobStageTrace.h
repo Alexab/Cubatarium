@@ -376,6 +376,7 @@ struct VisualBlackTraceRecord
   uint8_t screen_ray_in_height_band{0};
   uint8_t screen_ray_mesh_satisfying{0};
   uint8_t screen_ray_geometry_debt{0};
+  uint8_t screen_ray_repairable_geometry_debt{0};
   uint8_t screen_ray_light_debt{0};
   uint8_t screen_ray_needs_refresh{0};
   uint8_t screen_ray_candidate{0};

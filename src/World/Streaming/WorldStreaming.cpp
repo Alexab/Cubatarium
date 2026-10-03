@@ -755,6 +755,7 @@ void UWorldStreaming::RefreshStreamingPressure(
                             prev_miss_cz);
     auto slice_still_missing = [&](glm::ivec3 coord,
                                    uint8_t *geometry_debt_out = nullptr,
+                                   uint8_t *repairable_geometry_debt_out = nullptr,
                                    uint8_t *mesh_satisfying_out = nullptr)
         -> bool
     {
@@ -771,6 +772,9 @@ void UWorldStreaming::RefreshStreamingPressure(
       }
       const bool geometry_debt =
           mesh.HasGeometryPublicationDebt(coord, ch->GetIncarnation());
+      const bool repairable_geometry_debt =
+          mesh.HasScreenRayRepairableGeometryDebt(coord,
+                                                  ch->GetIncarnation());
       const bool mesh_satisfying = mesh.HasMeshSatisfyingColumnReady(coord);
       if (geometry_debt_out)
       {
@@ -780,7 +784,12 @@ void UWorldStreaming::RefreshStreamingPressure(
       {
         *mesh_satisfying_out = mesh_satisfying ? 1u : 0u;
       }
-      if (mesh_satisfying && !geometry_debt)
+      if (repairable_geometry_debt_out)
+      {
+        *repairable_geometry_debt_out =
+            repairable_geometry_debt ? 1u : 0u;
+      }
+      if (mesh_satisfying && !repairable_geometry_debt)
       {
         return false;
       }
@@ -832,6 +841,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             uint8_t in_height_band{0};
             uint8_t mesh_satisfying{0};
             uint8_t geometry_debt{0};
+            uint8_t repairable_geometry_debt{0};
             uint8_t needs_light_repair{0};
             uint8_t needs_refresh{0};
             uint8_t candidate{0};
@@ -930,6 +940,7 @@ void UWorldStreaming::RefreshStreamingPressure(
               }
               ray_trace.needs_refresh =
                   slice_still_missing(coord, &ray_trace.geometry_debt,
+                                       &ray_trace.repairable_geometry_debt,
                                        &ray_trace.mesh_satisfying)
                       ? 1u
                       : 0u;
@@ -952,7 +963,8 @@ void UWorldStreaming::RefreshStreamingPressure(
               Candidate &candidate = candidates[candidate_index];
               ++candidate.sample_count;
               candidate.geometry_debt =
-                  candidate.geometry_debt || ray_trace.geometry_debt != 0;
+                  candidate.geometry_debt ||
+                  ray_trace.repairable_geometry_debt != 0;
               candidate.needs_first_mesh =
                   candidate.needs_first_mesh ||
                   ray_trace.mesh_satisfying == 0;
@@ -1089,6 +1101,8 @@ void UWorldStreaming::RefreshStreamingPressure(
               record.screen_ray_mesh_satisfying =
                   ray_trace.mesh_satisfying;
               record.screen_ray_geometry_debt = ray_trace.geometry_debt;
+              record.screen_ray_repairable_geometry_debt =
+                  ray_trace.repairable_geometry_debt;
               record.screen_ray_light_debt = ray_trace.needs_light_repair;
               record.screen_ray_needs_refresh = ray_trace.needs_refresh;
               record.screen_ray_candidate = ray_trace.candidate;
@@ -1238,6 +1252,9 @@ void UWorldStreaming::RefreshStreamingPressure(
             world.GetMeshService().IsPendingGpuApply(coord);
         const bool gpu_apply_queued =
             world.GetMeshService().IsPendingGpuQueued(coord);
+        const bool repairable_geometry_debt =
+            chunk && world.GetMeshService().HasScreenRayRepairableGeometryDebt(
+                         coord, chunk->GetIncarnation());
         const bool drawable =
             world.GetMeshService().HasDrawableGreedyMesh(coord);
         const bool provisional_light_preview =
@@ -1354,7 +1371,9 @@ void UWorldStreaming::RefreshStreamingPressure(
                 std::to_string(provisional_light_preview ? 1 : 0) +
                 " mesh_satisfying=" +
                 std::to_string(mesh_satisfying ? 1 : 0) +
-                " geometry_debt=" + std::to_string(geometry_debt ? 1 : 0));
+                " geometry_debt=" + std::to_string(geometry_debt ? 1 : 0) +
+                " repairable_geometry_debt=" +
+                std::to_string(repairable_geometry_debt ? 1 : 0));
       };
       bool screen_ray_preview_marked = false;
       const auto mark_direct_missing_slice = [&](glm::ivec3 coord)
@@ -1365,12 +1384,15 @@ void UWorldStreaming::RefreshStreamingPressure(
             mesh_service.HasInflightMeshBuild(coord) ||
             mesh_service.IsGpuExtractInFlight(coord) ||
             mesh_service.IsPendingGpuApply(coord) ||
-            mesh_service.IsPendingGpuQueued(coord);
+            mesh_service.IsPendingGpuQueued(coord) ||
+            mesh_service.IsPendingGpuKickedOrDispatched(coord) ||
+            mesh_service.GetCache().HasPendingCaptureWork(coord) ||
+            mesh_service.GetCache().WasScheduledThisFrame(coord);
         const UChunk *slice_chunk =
             world.GetBlockWorld().GetChunkManager().GetChunk(coord);
         const bool slice_needs_geometry =
             !mesh_service.HasMeshSatisfyingColumnReady(coord) ||
-            (slice_chunk && mesh_service.HasGeometryPublicationDebt(
+            (slice_chunk && mesh_service.HasScreenRayRepairableGeometryDebt(
                                 coord, slice_chunk->GetIncarnation()));
         if (slice_has_owner || !slice_needs_geometry)
         {
@@ -1402,7 +1424,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             world.GetBlockWorld().GetChunkManager().GetChunk(coord);
         if (!chunk ||
             !world.GetMeshService().HasDrawableGreedyMesh(coord) ||
-            !world.GetMeshService().HasGeometryPublicationDebt(
+            !world.GetMeshService().HasScreenRayRepairableGeometryDebt(
                 coord, chunk->GetIncarnation()))
         {
           return false;

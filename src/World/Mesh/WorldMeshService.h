@@ -333,10 +333,16 @@ public:
   bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
   bool HasActiveBoundaryOverlayFace(glm::ivec3 chunk_coord, int face) const;
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
-  /// True when a resident slice has a newer demanded geometry/coverage
-  /// revision than its currently published mesh for the same incarnation.
+  /// True when a resident slice has unpublished geometry/coverage work or
+  /// unresolved face coverage for the same incarnation.
   bool HasGeometryPublicationDebt(glm::ivec3 chunk_coord,
                                  uint64_t incarnation) const;
+  /// True when a new mesh publication can make progress without waiting for a
+  /// boundary-face repair owner. Active face debt may be backed by a published
+  /// boundary overlay and is handled by ChunkEmergeCoordinator's face-debt
+  /// queue; callers must not repeatedly mint geometry revisions for it.
+  bool HasScreenRayRepairableGeometryDebt(glm::ivec3 chunk_coord,
+                                          uint64_t incarnation) const;
   size_t GetSoftDeferHeldCount() const;
   /// Era24: SoftDeferHeld membership for Hide⇒Ticket ownership.
   bool IsSoftDeferHeld(glm::ivec3 chunk_coord) const;

@@ -646,10 +646,13 @@ int UWorldMeshService::MarkMissingSlicesDirtyPriority(
     const bool mesh_satisfying =
         chunk && HasMeshSatisfyingColumnReady(coord);
     const bool geometry_debt =
-        mesh_satisfying &&
-        HasGeometryPublicationDebt(coord, chunk->GetIncarnation());
+        mesh_satisfying && HasScreenRayRepairableGeometryDebt(
+                               coord, chunk->GetIncarnation());
     if (!chunk || (mesh_satisfying && !geometry_debt) ||
-        IsPendingGpuApply(coord) || HasInflightMeshBuild(coord))
+        IsPendingGpuApply(coord) || IsPendingGpuQueued(coord) ||
+        IsPendingGpuKickedOrDispatched(coord) || IsGpuExtractInFlight(coord) ||
+        HasInflightMeshBuild(coord) || Cache.HasPendingCaptureWork(coord) ||
+        Cache.WasScheduledThisFrame(coord))
     {
       continue;
     }
@@ -1469,6 +1472,32 @@ bool UWorldMeshService::HasGeometryPublicationDebt(
   return demand->desired_geom_rev > published.geom_rev ||
          demand->desired_coverage_gen > demand->published_coverage_gen ||
          demand->face_debt_mask != 0 || demand->retained_awaiting_successor;
+}
+
+bool UWorldMeshService::HasScreenRayRepairableGeometryDebt(
+    glm::ivec3 chunk_coord, uint64_t incarnation) const
+{
+  const ChunkRenderDemandRecord *demand =
+      UChunkRenderDemandStore::Get().Find(chunk_coord);
+  if (!demand || incarnation == 0 || demand->incarnation != incarnation)
+  {
+    return false;
+  }
+  const MeshPublishRevs published = Cache.GetMeshPublishRevs(chunk_coord);
+  if (demand->desired_geom_rev > published.geom_rev)
+  {
+    return true;
+  }
+  // Face debt has its own bounded owner. In particular, an active boundary
+  // overlay is a valid published fallback while its neighbor is unavailable;
+  // treating it as stale geometry causes the screen-ray path to re-dirty the
+  // same already-drawable slice after every publication.
+  if (demand->face_debt_mask != 0)
+  {
+    return false;
+  }
+  return demand->desired_coverage_gen > demand->published_coverage_gen ||
+         demand->retained_awaiting_successor;
 }
 
 size_t UWorldMeshService::GetSoftDeferHeldCount() const
