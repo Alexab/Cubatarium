@@ -1716,10 +1716,6 @@ def main() -> int:
             # Far runs need headroom beyond default 600s soft_force timeout.
             if args.process_timeout <= 0.0:
                 args.process_timeout = 900.0
-            args.process_timeout = max(
-                float(args.process_timeout),
-                float(args.seconds) + 300.0,
-            )
         args.seconds = max(
             args.seconds,
             args.idle_sec
@@ -1728,6 +1724,14 @@ def main() -> int:
             + args.stop_phase_sec
             + 5.0,
         )
+        if far_scenario:
+            # args.seconds now includes the selected fly/stop phases. Apply
+            # the wall-time grace after that expansion, or long explicit
+            # far-flight phases are still cut off at the 900s base timeout.
+            args.process_timeout = max(
+                float(args.process_timeout),
+                float(args.seconds) + 300.0,
+            )
         # Focus (7,3) ≈ world (120, y, 56); pin eye Y to manual 122212/100645 (~56).
         users = BIN / "worlds" / "World_164" / "users.json"
         if users.is_file():
