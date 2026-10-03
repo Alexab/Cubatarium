@@ -2889,10 +2889,23 @@ cap в `JobThreadBudget` — 4 на pool). Но CLI `--create-world` в
   проекты; основной MSVC target не имел `/MP`. `--parallel 8` само по себе не
   подтверждало параллельную компиляцию source files одного `Cubatarium.vcxproj`.
   Включение `/MP` и его подтверждение Release-сборкой записываются в плане.
-- Полный дальний acceptance остаётся FAIL/UNTESTED: M367 дошёл лишь до 1 792
-  блоков при пороге 8 192; продуктовые holes и stop-convergence ворота красные.
+- Полный дальний acceptance остаётся FAIL/UNTESTED: M367 прошёл 1 792 блока,
+  M368 — 2 944 до остановки на дереве; оба не достигли 8 192, product holes и
+  stop-convergence ворота красные.
 
-Следующий узкий implementation шаг: записать фазовые длительности load/create и
-координатное происхождение данных; сравнить sync spatial load с budgeted async
-path; затем менять узкие места. Подробные контрольные ворота и периодичность
-fresh-world исследований зафиксированы в плане от 2026-10-03.
+Следующие шаги: продолжить G1 cold/warm/new-world timeline, затем повторить
+World_164 на высоте y96 с collision watchdog; только после достижения checkpoint
+8 192 анализировать этот прогон как дальний acceptance. На выбранных координатах
+связывать disk/procedural source, light revision, mesh publication, MDI draw и
+framebuffer pixel. Подробные ворота и периодичность fresh-world исследований
+зафиксированы в [плане от 2026-10-03](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+
+## M368: World_164 far run остановился на дереве; после контакта остался render debt
+
+- Видимый Release, no-teleport, scale `1`, start `[120,56,56]`, yaw `180°`; пользователь визуально подтвердил столкновение с деревом. Heading deviation и max yaw/pitch delta равны `0`, поэтому случайное движение мыши не объясняет уход с курса.
+- Последний moving period был около `(-2826,67,56)` со скоростью `6.00586`; следующий перешёл к `(-2832,56,56)`. Затем `588` из `896` period samples имели `movement_speed=0` и постоянные координаты. AppRunner report: focus `(7,3)→(-177,3)`, `184` чанка / `2 944` блока. При нормальных `5.99853` blocks/s это collision-limited run, а не far-distance acceptance.
+- Камера фиксировала `camera_flight_ground_contacts=1` после остановки; `camera_move_blocked_substeps=0` в стабильном хвосте. `UCamera::DoMovement` при `HasGroundSupport` вызывает `OnLandedFromFlight` и выходит из physics step до обработки W. Это объясняет устойчивую остановку flight-sim на контакте и отсутствие автоматического обхода; точка столкновения «дерево» основана на наблюдении пользователя. Heading telemetry исключает случайный поворот, но блокирующийся substep отдельно не записался.
+- Рендеринговые proxy после остановки не сошлись: `holes_rate=1.0`, `dirty_med/max=1 672/1 792`, `chunk_not_ready_med=24`, `unlit_max=19`, `fly_visible_black_max=18`, `wall_ms_fly_med=73.68 ms`, `post_stop_convergence_pass=false`. В конечном INFO sample оставались примерно 1 670 dirty meshes, 52 pending lights и 20+ not-ready chunks. Это полезный фиксированный-camera stall sample, но не оценка загрузки новых дальних чанков после x≈−2832.
+- По raw report `process_rc=0`, но harness `pass=false`; `collision_stop_triggered=false`, потому что этот запуск начался до default watchdog и имел `stop_after_blocked_sec=0`. Manifest фиксирует стартовый commit `aaff26c5` и Release EXE SHA-256 `1a2420a3ab678ae6669e96a51169f3a04131f4593545bc18eeb7ff93708d087a`. `dirty_diff_hash` не чистый: runner файл был изменён во время активного прогона; manifest acceptance этого отчёта считать недействительным.
+- После наблюдения добавлены два harness изменения: `7bfc330c` восстанавливает точный исходный `users.json` и заново задаёт pin между повторами; `19387103` завершает будущий `product-174657-far` через 8 секунд устойчивого контакта, сохраняя отчёт. Следующий длинный no-teleport повтор должен явно задавать `--cruise-eye-y 96`, оставить scale `1` и проверить маршрут над кронами. Низкий y56 сохранить отдельно для collision-sensitive диагностики.
+- Артефакты: [M368 report](../../bin/suite_reports/engine_refactor/g3_world164_far_diskfirst_20261003.json), [perf trace](../../bin/logs/perf_20261003-220433_38772.jsonl), [AppRunner report](../../bin/flight_sim_report.json), [INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-220428.38772).

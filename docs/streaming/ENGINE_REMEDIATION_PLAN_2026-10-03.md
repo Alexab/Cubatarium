@@ -116,6 +116,53 @@ incomplete; все disk complete имели valid light flag.
 Это искусственный headless reference, а не оценка интерактивного создания.
 При обычной Release-сборке генерация мира уже идёт на 4 worker-потоках.
 
+### Дальний World_164 no-teleport run: остановка на дереве (M368)
+
+Видимый Release run начался из контрольной позиции `[120,56,56]`, yaw `180°`,
+прошёл на обычной скорости (median `5.99853` блоков/с) и не отклонял курс
+(heading deviation `0`). Пользователь увидел столкновение с деревом и остановку.
+Инструментальная трасса согласуется с этим: последний движущийся period был
+около `x=-2826,y=67,z=56`; следующий зафиксировал `x=-2832,y=56,z=56`, после чего
+все оставшиеся `588` из `896` period samples имели нулевую скорость. Итоговый
+focus сдвинулся `(7,3)→(-177,3)`, то есть `184` чанка / `2 944` блока — меньше
+checkpoint `8 192`. Перелёт не достиг far distance и не является acceptance.
+
+В этих хвостовых samples оставались `chunk_not_ready` median `24` (конец `23`),
+`dirty` median/max `1 672/1 792` (конец `1 666`), `pending_light=52` и
+`empty_backlog` конец `23`. В целом `holes_rate=1.0`, `fly_visible_black_max=18`,
+`unlit_max=19`, `wall_ms_fly_med=73.68 ms`; stop convergence не прошёл. Это
+показывает большой незакрытый render debt у остановившейся камеры, но не
+характеризует стриминг новых дальних территорий после точки столкновения.
+
+В perf telemetry `camera_flight_ground_contacts` остаётся положительным после
+контакта, а `movement_speed=0`; `camera_move_blocked_substeps` при этом не
+фиксирует длительную блокировку. В `UCamera::DoMovement` свободный полёт сначала
+проверяет `HasGroundSupport`; при контакте вызывает `OnLandedFromFlight` и
+пропускает обработку W в этом physics step. Flight-sim повторно включает free
+move, но при сохраняющейся ground support камера остаётся на месте. Это объясняет
+остановку маршрута, не указывая на ошибку движения мышью. По этому маршруту
+`stop_after_blocked_sec=0`, поэтому harness продолжал собирать метрики до таймера.
+Для следующих far runs введён default watchdog `8 s`; `--stop-after-blocked-sec`
+остаётся явным переопределением.
+
+Следующий дальний повтор остаётся на World_164, из того же старта, без teleport и
+scale `1`, но с явной высотой `--cruise-eye-y 96`, чтобы пролететь над кронами.
+Отдельно сохранить low-eye/y56 маршрут как collision-sensitive diagnostic; не
+смешивать его результат с far-distance acceptance. Коммит `7bfc330c` сохраняет
+исходный `users.json` и повторно ставит pin перед каждым `--repeat`, а
+`19387103` включает watchdog по умолчанию для far-сценария.
+
+Отчёт: `bin/suite_reports/engine_refactor/g3_world164_far_diskfirst_20261003.json`;
+perf: `bin/logs/perf_20261003-220433_38772.jsonl`; AppRunner report:
+`bin/flight_sim_report.json`; INFO log:
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-220428.38772`.
+Процесс завершился с `process_rc=0`, однако product gates `pass=false`. В manifest
+записан `git_sha=aaff26c5` и Release EXE
+`1a2420a3ab678ae6669e96a51169f3a04131f4593545bc18eeb7ff93708d087a`; dirty hash
+не чистый, так как runner был изменён уже после запуска процесса. Использовать
+этот flight только как collision-limited diagnostic, не как чистый source commit
+acceptance.
+
 **G1 статус: частично закрыт.** Синхронный saved-world read измерен и заменён на
 bounded async apply; disk-first работает также на движущемся frontier. Интерактивное
 создание измерено. Для закрытия G1 нужны повтор warm/cold входа и устранение либо
@@ -146,7 +193,9 @@ speed multiplier; короткие round-trip/source probes допустимы �
 2. Контрольный сценарий: видимый Release, no-teleport,
    `product-174657-far`, World_164, одинаковые пользовательские настройки,
    освещение, стартовая позиция и версия мира. Всегда сохранять commit/EXE hash,
-   конфигурационные hashes, траекторию и метрики.
+   конфигурационные hashes, траекторию и метрики. После M368 far run должен явно
+   задавать безопасную высоту `--cruise-eye-y 96`; low-eye y56 остаётся отдельным
+   collision-sensitive control.
 3. После каждого изменения повторять контрольный отрезок до задетой области;
    дальний acceptance не объявлять до достижения checkpoint 8 192 без collision
    shortfall или искусственного ускорения.
