@@ -4166,6 +4166,49 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       !active_demand ||
       (active_demand->world_epoch == world_epoch && chunk &&
        active_demand->incarnation == chunk->GetIncarnation());
+  if (chunk && active_demand && demand_identity_matches &&
+      active_demand->overlay_face_debt_mask != 0 &&
+      active_demand->peer_face_debt_mask == 0 &&
+      active_demand->face_debt_mask ==
+          active_demand->overlay_face_debt_mask &&
+      !active_demand->has_active_attempt &&
+      !active_demand->retained_awaiting_successor &&
+      !MeshService->IsSoftDeferHeld(coord) &&
+      !MeshService->HasDrawableGreedyMesh(coord) &&
+      MeshService->HasGreedyMesh(coord) &&
+      !MeshService->IsChunkMeshDirty(coord) &&
+      !MeshService->IsRemeshAfterApplyPending(coord) &&
+      !MeshService->HasInflightMeshBuild(coord) &&
+      !MeshService->IsGpuExtractInFlight(coord) &&
+      !MeshService->IsPendingGpuApply(coord) &&
+      mesh_revision != 0 && mesh_revision == published.geom_rev &&
+      active_demand->desired_geom_rev == published.geom_rev &&
+      active_demand->published_geom_rev == published.geom_rev &&
+      active_demand->desired_light_rev == published.light_rev &&
+      active_demand->published_light_rev == published.light_rev &&
+      chunk->GetLightFieldRevision() == published.light_rev &&
+      active_demand->desired_coverage_gen ==
+          active_demand->published_coverage_gen)
+  {
+    uint8_t published_overlay_mask = 0;
+    for (int face = 0; face < 6; ++face)
+    {
+      if (MeshService->GetCache().HasActiveBoundaryOverlayFace(coord, face))
+      {
+        published_overlay_mask = static_cast<uint8_t>(
+            published_overlay_mask | static_cast<uint8_t>(1u << face));
+      }
+    }
+    if (published_overlay_mask == active_demand->overlay_face_debt_mask)
+    {
+      // The accepted empty result already carries the current missing-neighbor
+      // overlay. Re-admitting it through generic FirstMesh repair cannot close
+      // that dependency; the face-debt queue retries only after peer identity,
+      // coverage, or target-light inputs change. Keep the visual obligation
+      // open, but avoid advancing the same geometry revision on every census.
+      return;
+    }
+  }
   const bool requeue_existing_target =
       chunk && demand_identity_matches && mesh_revision != 0 &&
       mesh_revision > published.geom_rev;
