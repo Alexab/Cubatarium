@@ -1716,6 +1716,11 @@ def main() -> int:
         if far_scenario:
             # Keep longer fly from above; do not flip into generic fly-heavy bumps.
             args.replay_manual_fly_heavy = False
+            if "--stop-after-blocked-sec" not in sys.argv:
+                # A far route that has hit a persistent obstacle is no longer
+                # measuring distance streaming. Stop early and preserve its
+                # report instead of spending the remaining flight budget idle.
+                args.stop_after_blocked_sec = 8.0
             # At normal speed (scale 1), 300s covered only 1696 blocks. The
             # far acceptance checkpoint is 8192 blocks; use a 30-minute default
             # with margin, without artificially accelerating camera movement.
