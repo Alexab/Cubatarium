@@ -123,6 +123,16 @@ int PixelProbeRows()
   return rows;
 }
 
+bool PixelProbeOnFocusChangeEnabled()
+{
+  static const bool enabled = []() {
+    const char *value =
+        std::getenv("CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
 int PixelProbeSampleY(int row, int height, int rows)
 {
   const int y0 = row * height / rows;
@@ -3050,14 +3060,25 @@ void UGeometryEngine::DrawCubeGeometry()
       // often so a 16-block chunk cannot fall between probes; retain the
       // lower-cost cadence everywhere else.
       const float probe_camera_x = camera->GetPosition().x;
+      const glm::ivec3 probe_focus = UChunkManager::WorldToChunk(
+          WorldPosToBlock(camera->GetPosition()));
+      static bool have_last_probe_focus = false;
+      static glm::ivec2 last_probe_focus(0);
+      const bool probe_on_focus_change = PixelProbeOnFocusChangeEnabled();
+      const bool focus_changed =
+          !have_last_probe_focus || last_probe_focus.x != probe_focus.x ||
+          last_probe_focus.y != probe_focus.z;
       const uint32_t probe_stride =
           ((probe_camera_x >= -290.0f && probe_camera_x <= -245.0f) ||
            (probe_camera_x >= -210.0f && probe_camera_x <= -120.0f))
               ? 60u
               : 120u;
-      if (render_probe_count % probe_stride == 0u)
+      if (render_probe_count % probe_stride == 0u ||
+          (probe_on_focus_change && focus_changed))
       {
         pixel_probe_capture.probe_id = render_probe_count;
+        last_probe_focus = glm::ivec2(probe_focus.x, probe_focus.z);
+        have_last_probe_focus = true;
       }
     }
     {
