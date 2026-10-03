@@ -152,6 +152,14 @@ struct Session
   int FramesSinceMemSample{30};
   double AccumPerfCollectMs{0.0};
   double AccumPerfEmitMs{0.0};
+  double AccumCameraMoveRequestedXz{0.0};
+  double AccumCameraMoveAppliedXz{0.0};
+  double AccumCameraMoveAttemptSubsteps{0.0};
+  double AccumCameraMoveBlockedSubsteps{0.0};
+  double AccumCameraMoveBlockedXSubsteps{0.0};
+  double AccumCameraMoveBlockedZSubsteps{0.0};
+  double AccumCameraFlightGroundContacts{0.0};
+  double AccumCameraFreeMoveShare{0.0};
 };
 
 Session &GetSession()
@@ -198,6 +206,7 @@ void OpenSessionLocked(Session &s)
            "\"spike\":\"single_frame\",\"blink\":\"event\","
            "\"shutdown\":\"session_avg\",\"job_trace\":\"ring_span\"},"
            "\"units\":{\"*_ms\":\"milliseconds\",\"*_n\":\"count\","
+           "\"camera_move_*_xz\":\"blocks per rendered update\","
            "\"census\":\"point_in_time\"},"
            "\"note\":\"period.wall_ms is interval mean; use spike/frame "
            "for per-frame percentiles\"}\n";
@@ -233,6 +242,14 @@ struct FrameNumbers
   double camera_ground_support_ms{0.0};
   double camera_locomotion_ms{0.0};
   double camera_horiz_move_ms{0.0};
+  double camera_move_requested_xz{0.0};
+  double camera_move_applied_xz{0.0};
+  double camera_move_attempt_substeps{0.0};
+  double camera_move_blocked_substeps{0.0};
+  double camera_move_blocked_x_substeps{0.0};
+  double camera_move_blocked_z_substeps{0.0};
+  double camera_flight_ground_contacts{0.0};
+  double camera_free_move_share{0.0};
   double camera_sync_ms{0.0};
   double environment_tick_ms{0.0};
   double npc_intent_ms{0.0};
@@ -983,6 +1000,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.camera_ground_support_ms = phys.CameraGroundSupportMs;
   n.camera_locomotion_ms = phys.CameraLocomotionMs;
   n.camera_horiz_move_ms = phys.CameraHorizMoveMs;
+  n.camera_move_requested_xz = phys.CameraMoveRequestedXz;
+  n.camera_move_applied_xz = phys.CameraMoveAppliedXz;
+  n.camera_move_attempt_substeps = phys.CameraMoveAttemptSubsteps;
+  n.camera_move_blocked_substeps = phys.CameraMoveBlockedSubsteps;
+  n.camera_move_blocked_x_substeps = phys.CameraMoveBlockedXSubsteps;
+  n.camera_move_blocked_z_substeps = phys.CameraMoveBlockedZSubsteps;
+  n.camera_flight_ground_contacts = phys.CameraFlightGroundContacts;
+  n.camera_free_move_share = phys.CameraFreeMoveAtStart;
   n.camera_sync_ms = phys.CameraSyncMs;
   n.environment_tick_ms = phys.EnvironmentTickMs;
   n.npc_intent_ms = phys.NpcIntentExecuteMs;
@@ -1838,6 +1863,20 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"camera_ground_support_ms\":" << n.camera_ground_support_ms
           << ",\"camera_locomotion_ms\":" << n.camera_locomotion_ms
           << ",\"camera_horiz_move_ms\":" << n.camera_horiz_move_ms
+          << ",\"camera_move_requested_xz\":"
+          << n.camera_move_requested_xz
+          << ",\"camera_move_applied_xz\":" << n.camera_move_applied_xz
+          << ",\"camera_move_attempt_substeps\":"
+          << n.camera_move_attempt_substeps
+          << ",\"camera_move_blocked_substeps\":"
+          << n.camera_move_blocked_substeps
+          << ",\"camera_move_blocked_x_substeps\":"
+          << n.camera_move_blocked_x_substeps
+          << ",\"camera_move_blocked_z_substeps\":"
+          << n.camera_move_blocked_z_substeps
+          << ",\"camera_flight_ground_contacts\":"
+          << n.camera_flight_ground_contacts
+          << ",\"camera_free_move_share\":" << n.camera_free_move_share
           << ",\"camera_sync_ms\":" << n.camera_sync_ms
           << ",\"environment_tick_ms\":" << n.environment_tick_ms
           << ",\"npc_intent_ms\":" << n.npc_intent_ms
@@ -2873,6 +2912,14 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumPhysMs += n.phys_ms;
   s.AccumPerfCollectMs += n.perf_collect_ms;
   s.AccumPerfEmitMs += n.perf_emit_ms;
+  s.AccumCameraMoveRequestedXz += n.camera_move_requested_xz;
+  s.AccumCameraMoveAppliedXz += n.camera_move_applied_xz;
+  s.AccumCameraMoveAttemptSubsteps += n.camera_move_attempt_substeps;
+  s.AccumCameraMoveBlockedSubsteps += n.camera_move_blocked_substeps;
+  s.AccumCameraMoveBlockedXSubsteps += n.camera_move_blocked_x_substeps;
+  s.AccumCameraMoveBlockedZSubsteps += n.camera_move_blocked_z_substeps;
+  s.AccumCameraFlightGroundContacts += n.camera_flight_ground_contacts;
+  s.AccumCameraFreeMoveShare += n.camera_free_move_share;
   s.AccumPrepRefreshPressureMs += n.prep_refresh_pressure_ms;
   s.AccumPrepRefreshMissMs += n.prep_refresh_miss_ms;
   s.AccumPrepRefreshPendingMs += n.prep_refresh_pending_ms;
@@ -2961,6 +3008,17 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.phys_ms = s.AccumPhysMs * inv;
   avg.perf_collect_ms = s.AccumPerfCollectMs * inv;
   avg.perf_emit_ms = s.AccumPerfEmitMs * inv;
+  avg.camera_move_requested_xz = s.AccumCameraMoveRequestedXz * inv;
+  avg.camera_move_applied_xz = s.AccumCameraMoveAppliedXz * inv;
+  avg.camera_move_attempt_substeps = s.AccumCameraMoveAttemptSubsteps * inv;
+  avg.camera_move_blocked_substeps = s.AccumCameraMoveBlockedSubsteps * inv;
+  avg.camera_move_blocked_x_substeps =
+      s.AccumCameraMoveBlockedXSubsteps * inv;
+  avg.camera_move_blocked_z_substeps =
+      s.AccumCameraMoveBlockedZSubsteps * inv;
+  avg.camera_flight_ground_contacts =
+      s.AccumCameraFlightGroundContacts * inv;
+  avg.camera_free_move_share = s.AccumCameraFreeMoveShare * inv;
   // R4.6.1: period avg/max for prep_refresh_* (was last-frame only → mid pressure=0).
   avg.prep_refresh_pressure_ms = s.AccumPrepRefreshPressureMs * inv;
   avg.prep_refresh_miss_ms = s.AccumPrepRefreshMissMs * inv;
@@ -3042,6 +3100,14 @@ void ResetAccum(Session &s)
   s.AccumPhysMs = 0.0;
   s.AccumPerfCollectMs = 0.0;
   s.AccumPerfEmitMs = 0.0;
+  s.AccumCameraMoveRequestedXz = 0.0;
+  s.AccumCameraMoveAppliedXz = 0.0;
+  s.AccumCameraMoveAttemptSubsteps = 0.0;
+  s.AccumCameraMoveBlockedSubsteps = 0.0;
+  s.AccumCameraMoveBlockedXSubsteps = 0.0;
+  s.AccumCameraMoveBlockedZSubsteps = 0.0;
+  s.AccumCameraFlightGroundContacts = 0.0;
+  s.AccumCameraFreeMoveShare = 0.0;
   s.AccumPrepRefreshPressureMs = 0.0;
   s.AccumPrepRefreshMissMs = 0.0;
   s.AccumPrepRefreshPendingMs = 0.0;

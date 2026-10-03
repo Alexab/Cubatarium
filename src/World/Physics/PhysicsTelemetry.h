@@ -136,6 +136,15 @@ struct PhysicsTelemetry
   int MeshDegradedCaptureN{0};
   /// R4-H1: cruise movement speed for parity gates (blocks/s).
   float MovementSpeed{0.0f};
+  /// Camera horizontal movement totals per rendered update, in blocks.
+  double CameraMoveRequestedXz{0.0};
+  double CameraMoveAppliedXz{0.0};
+  int CameraMoveAttemptSubsteps{0};
+  int CameraMoveBlockedSubsteps{0};
+  int CameraMoveBlockedXSubsteps{0};
+  int CameraMoveBlockedZSubsteps{0};
+  int CameraFlightGroundContacts{0};
+  int CameraFreeMoveAtStart{0};
   /// FP-D1: FirstMesh dirty consumed by schedule this frame.
   int FmDirtyDrainN{0};
   /// FP-B2: nh≤2 priority front-insert into relight FIFO.

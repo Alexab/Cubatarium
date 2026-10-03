@@ -544,6 +544,10 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
     speed = Locomotion.ResolveHorizontalSpeed(stepInput);
   }
 
+  const glm::vec3 requested(wish.x * speed * deltaTime, 0.0f,
+                            wish.z * speed * deltaTime);
+  const glm::vec3 start = Position;
+
   const CreatureMotorHorizontalResult motor = ApplyCreatureMotorHorizontal(
       *world, Position, Locomotion, wish, speed, deltaTime,
       world->GetMovementCollisionSkipId(), world->IsStepUpEnabled(),
@@ -563,8 +567,50 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
   {
     Position = motor.eyePos;
   }
+  if (!motor.wantsStepUpAnim)
+  {
+    RecordHorizontalMovement(requested, Position - start);
+  }
   UpdatePose();
   return motor.moved || stepped;
+}
+
+void UCamera::RecordHorizontalMovement(const glm::vec3 &requested,
+                                       const glm::vec3 &applied)
+{
+  const glm::vec2 requested_xz(requested.x, requested.z);
+  const glm::vec2 applied_xz(applied.x, applied.z);
+  const float requested_len = glm::length(requested_xz);
+  if (requested_len <= 1e-6)
+  {
+    return;
+  }
+
+  LastMoveRequestedXz += requested_len;
+  LastMoveAppliedXz += glm::dot(applied_xz, requested_xz / requested_len);
+  ++LastMoveAttemptSubsteps;
+  bool blocked = false;
+  constexpr float kBlockedMoveEpsilon = 0.001f;
+  const float applied_along_x =
+      applied.x * (requested.x > 0.0f ? 1.0f : -1.0f);
+  const float applied_along_z =
+      applied.z * (requested.z > 0.0f ? 1.0f : -1.0f);
+  if (std::abs(requested.x) > 1e-6f &&
+      applied_along_x + kBlockedMoveEpsilon < std::abs(requested.x))
+  {
+    ++LastMoveBlockedXSubsteps;
+    blocked = true;
+  }
+  if (std::abs(requested.z) > 1e-6f &&
+      applied_along_z + kBlockedMoveEpsilon < std::abs(requested.z))
+  {
+    ++LastMoveBlockedZSubsteps;
+    blocked = true;
+  }
+  if (blocked)
+  {
+    ++LastMoveBlockedSubsteps;
+  }
 }
 
 // Processes input received from any keyboard-like input system. Accepts input
@@ -625,6 +671,7 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
     return;
   }
 
+  const glm::vec3 start = Position;
   if (world)
   {
     glm::vec3 newPos = world->ResolveMovement(
@@ -635,6 +682,7 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
   {
     Position += shift;
   }
+  RecordHorizontalMovement(shift, Position - start);
   UpdatePose();
 }
 
@@ -986,6 +1034,14 @@ void UCamera::SuspendFallThroughUnloadedChunks()
 
 bool UCamera::DoMovement(const UWorld *world)
 {
+  LastMoveRequestedXz = 0.0;
+  LastMoveAppliedXz = 0.0;
+  LastMoveAttemptSubsteps = 0;
+  LastMoveBlockedSubsteps = 0;
+  LastMoveBlockedXSubsteps = 0;
+  LastMoveBlockedZSubsteps = 0;
+  LastFlightGroundContacts = 0;
+  LastFreeMoveAtStart = false;
   const float frameDt = std::min(static_cast<float>(DeltaTime), kMaxFrameDelta);
   const PlayerCapsule flightCap = PlayerCapsule::Standing();
   if (!GetFreeMove() && Locomotion.ConsumeClearShiftRequest())
@@ -996,6 +1052,7 @@ bool UCamera::DoMovement(const UWorld *world)
 
   bool is_moved(false);
   SyncFreeMoveFromController();
+  LastFreeMoveAtStart = GetFreeMove();
   LastPhysicsSubsteps = 0;
   LastGroundSupportMs = 0.0;
   LastLocomotionMs = 0.0;
@@ -1027,6 +1084,7 @@ bool UCamera::DoMovement(const UWorld *world)
           std::chrono::high_resolution_clock::now() - tgs0).count();
       if (groundedInFlight)
       {
+        ++LastFlightGroundContacts;
         if (IsShiftDown())
         {
           ClearShiftKeyState();

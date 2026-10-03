@@ -74,6 +74,14 @@ public:
   CreatureViewOrientation ResolveCreatureViewOrientation() const;
 
   bool GetFreeMove() const;
+  double GetLastMoveRequestedXz() const { return LastMoveRequestedXz; }
+  double GetLastMoveAppliedXz() const { return LastMoveAppliedXz; }
+  int GetLastMoveAttemptSubsteps() const { return LastMoveAttemptSubsteps; }
+  int GetLastMoveBlockedSubsteps() const { return LastMoveBlockedSubsteps; }
+  int GetLastMoveBlockedXSubsteps() const { return LastMoveBlockedXSubsteps; }
+  int GetLastMoveBlockedZSubsteps() const { return LastMoveBlockedZSubsteps; }
+  int GetLastFlightGroundContacts() const { return LastFlightGroundContacts; }
+  bool GetLastFreeMoveAtStart() const { return LastFreeMoveAtStart; }
   void SetFreeMove(bool value);
 
   bool TryToggleFlightOnDoubleSpace();
@@ -169,6 +177,8 @@ private:
   void UpdateMoveIntentFromKeys();
   glm::vec3 GetMoveIntentDir() const;
   bool ApplyHorizontalMovement(const UWorld *world, float deltaTime);
+  void RecordHorizontalMovement(const glm::vec3 &requested,
+                                const glm::vec3 &applied);
   bool TickStepUpAnimation(const UWorld *world, float dt);
   void ProcessKeyboard(const UWorld *world, Camera_Movement direction,
                        float deltaTime, const PlayerCapsule &collisionCap);
@@ -258,6 +268,14 @@ private:
   double LastGroundSupportMs{0.0};
   double LastLocomotionMs{0.0};
   double LastHorizMoveMs{0.0};
+  double LastMoveRequestedXz{0.0};
+  double LastMoveAppliedXz{0.0};
+  int LastMoveAttemptSubsteps{0};
+  int LastMoveBlockedSubsteps{0};
+  int LastMoveBlockedXSubsteps{0};
+  int LastMoveBlockedZSubsteps{0};
+  int LastFlightGroundContacts{0};
+  bool LastFreeMoveAtStart{false};
 public:
   double GetLastGroundSupportMs() const { return LastGroundSupportMs; }
   double GetLastLocomotionMs() const { return LastLocomotionMs; }

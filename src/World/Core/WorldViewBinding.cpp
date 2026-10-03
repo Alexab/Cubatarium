@@ -479,6 +479,21 @@ void UWorld::RunLegacyPhysicsFrame()
         camera->GetLastGroundSupportMs();
     PhysicsTelemetryData.CameraLocomotionMs = camera->GetLastLocomotionMs();
     PhysicsTelemetryData.CameraHorizMoveMs = camera->GetLastHorizMoveMs();
+    PhysicsTelemetryData.CameraMoveRequestedXz =
+        camera->GetLastMoveRequestedXz();
+    PhysicsTelemetryData.CameraMoveAppliedXz = camera->GetLastMoveAppliedXz();
+    PhysicsTelemetryData.CameraMoveAttemptSubsteps =
+        camera->GetLastMoveAttemptSubsteps();
+    PhysicsTelemetryData.CameraMoveBlockedSubsteps =
+        camera->GetLastMoveBlockedSubsteps();
+    PhysicsTelemetryData.CameraMoveBlockedXSubsteps =
+        camera->GetLastMoveBlockedXSubsteps();
+    PhysicsTelemetryData.CameraMoveBlockedZSubsteps =
+        camera->GetLastMoveBlockedZSubsteps();
+    PhysicsTelemetryData.CameraFlightGroundContacts =
+        camera->GetLastFlightGroundContacts();
+    PhysicsTelemetryData.CameraFreeMoveAtStart =
+        camera->GetLastFreeMoveAtStart() ? 1 : 0;
   }
   const auto t_sync = clock_t::now();
   static bool was_collision_ready = true;
