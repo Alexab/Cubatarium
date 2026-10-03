@@ -4166,12 +4166,26 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       !active_demand ||
       (active_demand->world_epoch == world_epoch && chunk &&
        active_demand->incarnation == chunk->GetIncarnation());
+  const bool unowned_created_attempt =
+      active_demand &&
+      (!active_demand->has_active_attempt ||
+       (active_demand->active_stage == JobStage::Created &&
+        active_demand->last_progress_ms <= 0.0));
+  const bool coverage_waits_only_on_overlay_debt =
+      active_demand &&
+      (active_demand->desired_coverage_gen ==
+           active_demand->published_coverage_gen ||
+       (active_demand->desired_coverage_gen >
+            active_demand->published_coverage_gen &&
+        active_demand->overlay_face_debt_mask != 0 &&
+        active_demand->face_debt_mask ==
+            active_demand->overlay_face_debt_mask));
   if (chunk && active_demand && demand_identity_matches &&
       active_demand->overlay_face_debt_mask != 0 &&
       active_demand->peer_face_debt_mask == 0 &&
       active_demand->face_debt_mask ==
           active_demand->overlay_face_debt_mask &&
-      !active_demand->has_active_attempt &&
+      unowned_created_attempt && coverage_waits_only_on_overlay_debt &&
       !active_demand->retained_awaiting_successor &&
       !MeshService->IsSoftDeferHeld(coord) &&
       !MeshService->HasDrawableGreedyMesh(coord) &&
@@ -4186,9 +4200,7 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       active_demand->published_geom_rev == published.geom_rev &&
       active_demand->desired_light_rev == published.light_rev &&
       active_demand->published_light_rev == published.light_rev &&
-      chunk->GetLightFieldRevision() == published.light_rev &&
-      active_demand->desired_coverage_gen ==
-          active_demand->published_coverage_gen)
+      chunk->GetLightFieldRevision() == published.light_rev)
   {
     uint8_t published_overlay_mask = 0;
     for (int face = 0; face < 6; ++face)
@@ -4202,10 +4214,12 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
     if (published_overlay_mask == active_demand->overlay_face_debt_mask)
     {
       // The accepted empty result already carries the current missing-neighbor
-      // overlay. Re-admitting it through generic FirstMesh repair cannot close
-      // that dependency; the face-debt queue retries only after peer identity,
-      // coverage, or target-light inputs change. Keep the visual obligation
-      // open, but avoid advancing the same geometry revision on every census.
+      // overlay. An unowned Created demand and coverage lag caused only by that
+      // overlay do not represent executable mesh work. Re-admitting this slice
+      // through generic FirstMesh repair cannot close the dependency; the
+      // face-debt queue retries after peer identity, coverage, or target-light
+      // inputs change. Keep the visual obligation open, but avoid advancing
+      // the same geometry revision on every census.
       return;
     }
   }
