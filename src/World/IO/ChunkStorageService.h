@@ -4,8 +4,11 @@
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/IO/JsonChunkSerializer.h"
+#include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace cutum
@@ -79,12 +82,54 @@ public:
   const IUChunkSerializer &GetWriteSerializer() const;
 
 private:
+  struct DiskTerrainColumnKey
+  {
+    int x{0};
+    int z{0};
+
+    bool operator==(const DiskTerrainColumnKey &other) const noexcept
+    {
+      return x == other.x && z == other.z;
+    }
+  };
+
+  struct DiskTerrainColumnKeyHash
+  {
+    size_t operator()(const DiskTerrainColumnKey &key) const noexcept
+    {
+      const uint64_t packed = (static_cast<uint64_t>(
+                                   static_cast<uint32_t>(key.x))
+                               << 32) |
+                              static_cast<uint32_t>(key.z);
+      return std::hash<uint64_t>{}(packed);
+    }
+  };
+
+  struct DiskTerrainColumnIndex
+  {
+    bool initialized{false};
+    std::unordered_map<DiskTerrainColumnKey, int,
+                       DiskTerrainColumnKeyHash>
+        highest_cy;
+    std::unordered_set<DiskTerrainColumnKey, DiskTerrainColumnKeyHash>
+        dirty_columns;
+  };
+
   IUChunkSerializer &MutableSerializer(ChunkDiskFormat format);
+
+  std::string HighestChunkSliceIndexKey(const std::string &worldFolder) const;
+  void BuildHighestChunkSliceIndex(const std::string &worldFolder,
+                                   DiskTerrainColumnIndex &index) const;
+  int ScanHighestChunkSliceOnDisk(const std::string &worldFolder,
+                                  glm::ivec3 groundCoord) const;
 
   ChunkStorageSettings Settings;
   UJsonChunkSerializer JsonSerializer;
   UBinaryChunkSerializer BinarySerializer;
   std::unordered_set<glm::ivec3, IVec3Hash> PendingSaveColumns;
+  mutable std::mutex HighestChunkSliceCacheMutex;
+  mutable std::unordered_map<std::string, DiskTerrainColumnIndex>
+      HighestChunkSliceIndexByFolder;
 };
 
 } // namespace cutum

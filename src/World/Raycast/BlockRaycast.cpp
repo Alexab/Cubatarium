@@ -10,6 +10,7 @@
 #include "World/Collision/VoxelDdaTraversal.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/IO/ChunkStorageService.h"
 #include "World/Math/GridMath.h"
 
 namespace cutum
@@ -37,9 +38,21 @@ bool IsKnownAirTerrainSlice(const UWorld &world, glm::ivec3 chunk_coord)
   {
     return false;
   }
-  const int highest_non_air_cy = GetHighestNonAirChunkSlice(
+  const std::string &world_folder = world.GetWorldFolderPath();
+  if (world_folder.empty())
+  {
+    return false;
+  }
+  const UChunkStorageService &storage = world.GetChunkStorage();
+  if (storage.IsColumnSavePending(ground_coord))
+  {
+    return false;
+  }
+  const int highest_resident_cy = GetHighestNonAirChunkSlice(
       world.GetBlockWorld(), ground_coord, max_world_y);
-  return chunk_coord.y > highest_non_air_cy;
+  const int highest_on_disk_cy =
+      storage.GetHighestChunkSliceOnDisk(world_folder, ground_coord);
+  return chunk_coord.y > std::max(highest_resident_cy, highest_on_disk_cy);
 }
 
 float NextBoundaryT(const glm::vec3 &origin, const glm::vec3 &direction,
