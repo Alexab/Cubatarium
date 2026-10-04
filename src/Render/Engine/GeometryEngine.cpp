@@ -949,6 +949,10 @@ void CaptureTransparentPixelProbe(
                 opaque_demand->has_settled_light ? 1u : 0u;
             record.renderer_pixel_opaque_demand_active_stage =
                 static_cast<uint8_t>(opaque_demand->active_stage);
+            record.renderer_pixel_opaque_demand_desired_geom_rev =
+                opaque_demand->desired_geom_rev;
+            record.renderer_pixel_opaque_demand_published_geom_rev =
+                opaque_demand->published_geom_rev;
             record.renderer_pixel_opaque_demand_desired_light_rev =
                 opaque_demand->desired_light_rev;
             record.renderer_pixel_opaque_demand_published_light_rev =

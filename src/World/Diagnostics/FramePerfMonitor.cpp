@@ -3937,12 +3937,36 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"renderer_pixel_opaque_demand_active_stage\":"
                  << static_cast<int>(
                         r.renderer_pixel_opaque_demand_active_stage)
+                 << ",\"renderer_pixel_opaque_demand_desired_geom_rev\":"
+                 << r.renderer_pixel_opaque_demand_desired_geom_rev
+                 << ",\"renderer_pixel_opaque_demand_published_geom_rev\":"
+                 << r.renderer_pixel_opaque_demand_published_geom_rev
                  << ",\"renderer_pixel_opaque_demand_desired_light_rev\":"
                  << r.renderer_pixel_opaque_demand_desired_light_rev
                  << ",\"renderer_pixel_opaque_demand_published_light_rev\":"
                  << r.renderer_pixel_opaque_demand_published_light_rev
                  << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
                  << r.renderer_pixel_opaque_demand_settled_light_rev
+                 << ",\"renderer_pixel_opaque_mesh_dirty_queue_kind\":"
+                 << static_cast<int>(r.mesh_dirty_queue_kind)
+                 << ",\"renderer_pixel_opaque_mesh_dirty_queue_index\":"
+                 << r.mesh_dirty_queue_index
+                 << ",\"renderer_pixel_opaque_mesh_dirty_queue_size\":"
+                 << r.mesh_dirty_queue_size
+                 << ",\"renderer_pixel_opaque_mesh_dirty_queue_age_frames\":"
+                 << r.mesh_dirty_queue_age_frames
+                 << ",\"renderer_pixel_opaque_mesh_work_owner_flags\":"
+                 << r.mesh_work_owner_flags
+                 << ",\"renderer_pixel_opaque_relight_owner_flags\":"
+                 << r.relight_owner_flags
+                 << ",\"renderer_pixel_opaque_relight_queue_kind\":"
+                 << static_cast<int>(r.relight_queue_kind)
+                 << ",\"renderer_pixel_opaque_relight_queue_index\":"
+                 << r.relight_queue_index
+                 << ",\"renderer_pixel_opaque_relight_queue_size\":"
+                 << r.relight_queue_size
+                 << ",\"renderer_pixel_opaque_column_emerge_stage\":"
+                 << static_cast<int>(r.column_emerge_stage)
                  << ",\"renderer_pixel_opaque_ref_flags\":"
                  << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
                  << ",\"renderer_pixel_opaque_drawable\":"

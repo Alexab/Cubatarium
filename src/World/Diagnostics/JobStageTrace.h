@@ -530,6 +530,8 @@ struct VisualBlackTraceRecord
   uint8_t renderer_pixel_opaque_demand_has_active_attempt{0};
   uint8_t renderer_pixel_opaque_demand_has_settled_light{0};
   uint8_t renderer_pixel_opaque_demand_active_stage{0};
+  uint64_t renderer_pixel_opaque_demand_desired_geom_rev{0};
+  uint64_t renderer_pixel_opaque_demand_published_geom_rev{0};
   uint64_t renderer_pixel_opaque_demand_desired_light_rev{0};
   uint64_t renderer_pixel_opaque_demand_published_light_rev{0};
   uint64_t renderer_pixel_opaque_demand_settled_light_rev{0};

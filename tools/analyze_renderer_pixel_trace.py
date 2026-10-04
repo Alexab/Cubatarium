@@ -119,6 +119,40 @@ def main() -> int:
                         "published_geom_revision": row.get(
                             "renderer_pixel_opaque_published_geom_rev"
                         ),
+                        "work_owner_flags": row.get(
+                            "renderer_pixel_opaque_mesh_work_owner_flags"
+                        ),
+                        "dirty_queue": {
+                            "kind": row.get(
+                                "renderer_pixel_opaque_mesh_dirty_queue_kind"
+                            ),
+                            "index": row.get(
+                                "renderer_pixel_opaque_mesh_dirty_queue_index"
+                            ),
+                            "size": row.get(
+                                "renderer_pixel_opaque_mesh_dirty_queue_size"
+                            ),
+                            "age_frames": row.get(
+                                "renderer_pixel_opaque_mesh_dirty_queue_age_frames"
+                            ),
+                        },
+                        "relight_owner_flags": row.get(
+                            "renderer_pixel_opaque_relight_owner_flags"
+                        ),
+                        "relight_queue": {
+                            "kind": row.get(
+                                "renderer_pixel_opaque_relight_queue_kind"
+                            ),
+                            "index": row.get(
+                                "renderer_pixel_opaque_relight_queue_index"
+                            ),
+                            "size": row.get(
+                                "renderer_pixel_opaque_relight_queue_size"
+                            ),
+                        },
+                        "column_emerge_stage": row.get(
+                            "renderer_pixel_opaque_column_emerge_stage"
+                        ),
                         "source_face": {
                             "valid": row.get("renderer_pixel_opaque_vertex_light_valid"),
                             "block_id": row.get(
@@ -238,6 +272,12 @@ def main() -> int:
                         ),
                         "demand_active_stage": row.get(
                             "renderer_pixel_opaque_demand_active_stage"
+                        ),
+                        "demand_desired_geom_revision": row.get(
+                            "renderer_pixel_opaque_demand_desired_geom_rev"
+                        ),
+                        "demand_published_geom_revision": row.get(
+                            "renderer_pixel_opaque_demand_published_geom_rev"
                         ),
                         "demand_desired_revision": row.get(
                             "renderer_pixel_opaque_demand_desired_light_rev"
@@ -368,8 +408,9 @@ def main() -> int:
         "interpretation_note": (
             "Voxel-ray source-face fields describe the DDA hit, which may differ from the "
             "framebuffer depth-hit surface (for example, with cutout geometry). The depth "
-            "surface has separate chunk, MDI, and source-light witnesses. These joins "
-            "localize mismatches but do not by themselves prove the responsible draw path."
+            "surface has separate chunk, MDI, source-light, dirty-queue, and work-owner "
+            "witnesses. These joins localize mismatches but do not by themselves prove the "
+            "responsible draw path."
         ),
     }
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
