@@ -3980,3 +3980,68 @@ Artifacts: [M391 report](../../bin/suite_reports/engine_refactor/m391_world164_m
 [source log part 2](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-194649.24660),
 [source log part 3](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-201249.24660),
 [GUI frames](../../bin/logs/m391_world164_m335_cancel_stale_loads).
+
+## M392: stale disk work is canceled, but completed results wait too long
+
+M392 repeated the visible Release/no-teleport M335 route on `World_164` with
+the established start, camera, daylight, and speed: `[120,56,56]`, eye y=70,
+yaw 180°, pitch −30°, scale 1, 2 800 seconds plus 20 seconds. The route
+manifest passed, the app returned code 0, and the harness restored
+`users.json` and `world_data.json` byte-for-byte. It crossed 623 west chunks
+(`9 968` blocks) at median `5.19287 blocks/s`. No collision stop or avoidance
+detour occurred; no camera or route parameter changed.
+
+The previous disk-cancellation fix is confirmed. There were `2 292` unique
+disk requests, `1 859` completions, and `433` explicit out-of-range cancellations;
+every queued coordinate had a terminal event. This replaces M391's 430
+unmatched coordinates with accounted cancellations. File reads remained fast
+(p95 `1.834 ms`) and worker queue p95 was `1.482 ms`. However, completed results
+still waited median `2.51 s`, p95 `100.84 s`, max `175.06 s`; ready loads reached
+median `16`, p95 `180`, max `458` slices, with no active or pending worker jobs
+at completion. Applying/deserializing each column's four slices cost median
+`7.48 ms` and p95 `12.78 ms`. The consumer is not draining completed work at the
+rate required by the request stream.
+
+Procedural source events show a related but distinct queue delay: `2 919` disk
+misses, `2 870` commits, and `22` cancellations. Generation duration was median
+`94.93 ms`, p95 `132.90 ms`; pre-worker queue wait was median `35.68 ms`, p95
+`25.14 s`, max `42.81 s`; ready-result wait was median `61.61 ms`, p95 `447 ms`.
+This points to admission/queue pressure, not expensive terrain generation by
+itself. The source analyzer preserves disk and procedural timings separately.
+
+Renderer acceptance did not improve enough to pass. Across `1 372` periods,
+median fly frame wall was `91.99 ms` (`10.87 FPS`), dirty median/max was
+`835/1 484`, Red pressure was active for the full flight, and streaming phase
+median was `49.52 ms`. The analyzer's maximum unfinished/void counts describe
+mesh/readiness census, not image area. Post-stop recovery was false: pending and
+focus-dirty work rose rather than converged.
+
+The saved screenshot at x≈−7 037 shows dark blue, chunk-shaped water regions;
+the same M335 route also shows the recurring shoreline wedges. Pixel analysis
+does not attribute those examples to a single layer. Of `32 768` probes, `129`
+were below luma 32, `658` below 64, and `1 076` below 96, compared with
+M391's `137/608/954`; the persisted chunk set differs, so treat this as a
+diagnostic comparison rather than a strict A/B. Every `<32` probe was on a
+drawable opaque MDI surface and none changed RGB during transparent composition.
+`91/129` had a current mesh revision newer than published geometry, and `14`
+had a provisional-light marker. One localized dark-blue probe at camera x
+`−7 114` was `RGB (13,38,89)`, unchanged by transparency, with `sky=0`, a
+provisional-light marker, and mesh/published geometry revisions `2/1`. This is
+evidence of one stale, preview-lit opaque surface. Across `<96`, `256` pixels
+changed during transparent composition, up from M391's `186`; the shoreline
+artifact still needs same-pixel depth/source attribution.
+
+The next code change should reserve a small time-bounded application slice for
+completed disk results after the main near-streaming budget is spent. A single
+slice per frame is the initial conservative bound; compare queue-age reduction,
+frame wall, dirty debt, and stop convergence on the unchanged M335 before
+increasing it. Keep provisional-light policy intact until traces establish that
+the application backlog is the direct owner of the screenshot pixels.
+
+Artifacts: [M392 flight report](../../bin/suite_reports/engine_refactor/m392_world164_m335_cancel_stale_disk_20261004.json),
+[pixel trace luma 96](../../bin/suite_reports/engine_refactor/m392_renderer_pixel_trace_l96_20261004.json),
+[world-column trace](../../bin/suite_reports/engine_refactor/m392_world_column_source_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-205500_34968.jsonl),
+[source logs](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-205456.34968),
+[GUI frames](../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_127.png,
+../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_145.png).

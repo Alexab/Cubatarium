@@ -1106,6 +1106,71 @@ Artifacts: [M391 analyzer report](../../bin/suite_reports/engine_refactor/m391_w
 [source logs](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-193050.24660),
 [GUI frames](../../bin/logs/m391_world164_m335_cancel_stale_loads).
 
+### M392 completed — stale disk owners are canceled, but result application still falls behind
+
+M392 used the same visible Release M335 on `World_164`: start `[120,56,56]`,
+eye y `70`, yaw `180°`, pitch `−30°`, fixed clear day, movement scale 1,
+no teleport, `2 800 s` flight plus `20 s` settle. It reached the `8 192`-block
+checkpoint and covered `9 968` blocks at median `5.19287 blocks/s`. The route
+manifest passed, process return code was zero, and the harness restored both
+`users.json` and `world_data.json` byte-for-byte. No obstacle bypass or collision
+stop was recorded. The analyzer still fails, so M335 remains the acceptance
+route without parameter changes.
+
+The cancellation change in `47b9ab04` accounts for all queued disk coordinates:
+`2 292` unique requests produced `1 859` complete outcomes and `433`
+`cancelled_out_of_range` outcomes, with zero queued coordinates lacking a
+terminal trace event. Worker queue p95 was `1.482 ms` and file-read p95
+`1.834 ms`; completed results still waited a median `2.51 s`, p95 `100.84 s`,
+and max `175.06 s`. The ready-load queue had median `16`, p95 `180`, and max
+`458` slices while the I/O workers were idle. Per-column deserialize/apply was
+median `7.48 ms` across its slices. This isolates the remaining disk path to
+main-thread result selection/application, not file-read time or abandoned
+out-of-range owners.
+
+Procedural work also has queue-tail pressure: `2 919` disk misses produced
+`2 870` commits and `22` out-of-range cancellations. Generation itself was
+median `94.93 ms` and p95 `132.90 ms`, while time waiting before a worker began
+was median `35.68 ms`, p95 `25.14 s`, max `42.81 s`. Ready-result wait was
+median `61.61 ms`, p95 `447 ms`. Keep producer-queue delay separate from the
+worker generation cost when tuning admission.
+
+The flight remained under Red streaming pressure for the whole route. There
+were `1 372` periods, median fly wall `91.99 ms` (`10.87 FPS`), dirty median/max
+`835/1 484`, and world-streaming phase median `49.52 ms`. The dominant wall
+stage was streaming; scheduling most often reported `empty_fm_queue`, with
+completion stall `gpu_not_ready`. `unfinished_visual` and `void_near` are
+readiness censuses, not screen-area measurements. Post-stop convergence failed:
+pending work and focus-dirty debt did not fall, and near-focus work remained.
+
+Pixel analysis collected `32 768` probes: `129` below luma 32, `658` below 64,
+and `1 076` below 96. M391 had `137/608/954` at the same thresholds; these are
+not strict A/B results because persisted chunk populations differ. Of M392's
+129 lowest-luma samples, every sample hit drawable opaque MDI geometry and none
+changed through transparent composition; `91` had a mesh revision newer than
+the published geometry revision and `14` had a provisional-light marker. One
+blue sample (`RGB 13,38,89`) had `sky=0`, provisional preview, and geometry
+revision `2` versus published `1`. Across all `<96` samples, transparent
+composition changed `256` pixels (M391: `186`), while stale geometry samples
+rose from `642` to `741`. This supports both stale publication/light debt and a
+separate transparent/shoreline symptom; it does not prove one cause for every
+dim region.
+
+Next implementation step: service a small, explicitly time-bounded slice of
+completed disk results even when the near-streaming budget is exhausted. Keep
+normal per-frame limits when the budget is available; measure whether a
+one-slice reserve lowers ready-result age without worsening frame wall. Repeat
+the exact M335 flight, then correlate screen probes, mesh publication revisions,
+light preview, disk/procedural source, and post-stop convergence before changing
+the renderer's preview policy.
+
+Artifacts: [M392 flight report](../../bin/suite_reports/engine_refactor/m392_world164_m335_cancel_stale_disk_20261004.json),
+[pixel trace luma 96](../../bin/suite_reports/engine_refactor/m392_renderer_pixel_trace_l96_20261004.json),
+[world-column source trace](../../bin/suite_reports/engine_refactor/m392_world_column_source_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-205500_34968.jsonl),
+[GUI frames](../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_127.png,
+../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_145.png).
+
 ### G5 — Сборка Release с параллельной компиляцией
 
 Текущая конфигурация использует Visual Studio 17 2022. Ранее запуск
