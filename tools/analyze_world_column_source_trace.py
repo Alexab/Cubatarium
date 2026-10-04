@@ -47,7 +47,9 @@ def coords(events: list[dict[str, str]]) -> set[str]:
     return result
 
 
-def summarize(paths: list[Path]) -> dict[str, Any]:
+def summarize(
+    paths: list[Path], focus_z: int | None = None, z_radius: int = 5
+) -> dict[str, Any]:
     events: list[dict[str, str]] = []
     files: list[dict[str, Any]] = []
     for path in paths:
@@ -140,6 +142,27 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
                 continue
             sample[field] = int(number) if number.is_integer() else round(number, 4)
         slow_procedural_queue_events.append(sample)
+    procedural_focus_z_band: dict[str, Any] | None = None
+    if focus_z is not None:
+        band_rows: list[dict[str, str]] = []
+        for event in procedural_commits:
+            match = COORD_RE.fullmatch(event.get("coord", ""))
+            if match and abs(int(match.group(2)) - focus_z) <= max(0, z_radius):
+                band_rows.append(event)
+        band_timings: dict[str, Any] = {}
+        for field in (
+            "queue_ms", "scheduler_queue_ms", "worker_pool_queue_ms",
+            "generation_ms", "ready_wait_ms", "apply_ms", "total_ms",
+        ):
+            summary = numeric(band_rows, field)
+            if summary is not None:
+                band_timings[field] = summary
+        procedural_focus_z_band = {
+            "focus_z": focus_z,
+            "z_radius": max(0, z_radius),
+            "count": len(band_rows),
+            "timings": band_timings,
+        }
     return {
         "schema": "world_column_source_trace.v1",
         "files": files,
@@ -150,6 +173,7 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
         },
         "by_source": by_source,
         "slow_procedural_queue_events": slow_procedural_queue_events,
+        "procedural_focus_z_band": procedural_focus_z_band,
         "unique_disk_coordinates": {
             "queued": len(disk_queued),
             "completed": len(disk_complete),
@@ -171,8 +195,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("info_logs", nargs="+", type=Path)
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument(
+        "--focus-z", type=int,
+        help="also summarize procedural latency within this chunk-coordinate Z band",
+    )
+    parser.add_argument(
+        "--z-radius", type=int, default=5,
+        help="half-width of the optional focus-Z band (default: 5 chunks)",
+    )
     args = parser.parse_args()
-    report = summarize(args.info_logs)
+    report = summarize(args.info_logs, args.focus_z, args.z_radius)
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
     if args.json_out:
         args.json_out.write_text(rendered + "\n", encoding="utf-8")
