@@ -304,14 +304,18 @@ speed multiplier; короткие round-trip/source probes допустимы �
    yaw=180°, pitch=−30°, speed scale 1. Камеру и коридор больше не калибровать.
    Запускать через `tools/flight_sim_fixed_day.py` с дневным временем 0.25 и clear
    weather; сравнивать commit/EXE/world/config hashes, маршрут, pixel/ray/source
-   traces. M377 прошёл 6 640 блоков за 1 800 s, M378 — 7 680 блоков за 2 400 s;
-   оба меньше 8 192. M378 не является визуальным acceptance, так как ночной цикл
-   менял яркость. Продлить тот же профиль до `>=8 192` блоков и сохранить daylight.
-   M368 остаётся отдельным collision-control: старый default product route
-   (`y56`, pitch=0°) остановился у дерева около x=−2 832. Избегание препятствий
-   должно кратко смещать траекторию и возвращать её на тот же курс; путь обхода
-   фиксировать в отчёте. M369/y96 и M371/M372 z224/pitch0 — только старые stress
-   diagnostics, не новые acceptance conditions.
+   traces. M377 прошёл 6 640 блоков за 1 800 s, M378 — 7 680 блоков за 2 400 s.
+   M379 на fixed daylight достиг 8 192, но render analyzer остался FAIL; далее
+   сравнивать отрезки только при неизменных условиях. M380 повторяет тот же M335
+   маршрут после исправления GPU pool reuse и packed fallback.
+   M368 остаётся отдельным collision-control: прежний default product route
+   (y56, pitch=0°) остановился у дерева около x=−2 832. В flight-sim уже
+   включён по умолчанию forward hazard probe с поиском свободных боковых
+   сегментов, попытками обхода и возвращением на линию; события обхода пишутся
+   в отчёт. Если контакт всё же мешает основному пролёту, исправлять этот
+   алгоритм и повторять тот же M335 профиль, не подбирать новый визуальный
+   маршрут. M369/y96 и M371/M372 z224/pitch0 — только старые stress diagnostics,
+   не новые acceptance conditions.
 3. После каждого изменения повторять контрольный отрезок до задетой области;
    дальний acceptance не объявлять до достижения checkpoint 8 192 без collision
    shortfall или искусственного ускорения.
@@ -403,13 +407,19 @@ debt/seam invalidation, mesh build/publication, MDI/texture state, shader lighti
 
 Каждый patch проверять на одном и том же World_164 профиле M335: видимый
 no-teleport Release, y=70/pitch=−30°/yaw=180°, fixed daylight, без смены Z.
-M378 включил source, dense pixel, screen-ray и focus traces. Он показал, что
-night-cycle затемняет реальные поверхности, а на процедурном фронтире одновременно
-растут geometry/readiness debts. Следующий M379 повторяет ровно профиль M335 под
-fixed daylight и теми же трассами; продолжительность увеличить так, чтобы пройти
-8 192 блока. Инструментированный прогон локализует дефект, отдельный
-uninstrumented повтор пригоден для performance comparison. Пустой/чёрный proxy не
-считать исправленным из-за меньшего счётчика или более короткого прогона.
+M379 уже прошёл checkpoint 8 192 и зафиксировал низколюминансные daylight pixels
+при valid voxel hits, но без opaque live-GPU/MDI batch на конкретном witness.
+Периоды также показывали около 2 000 aggregated publication OOM retains и
+полностью занятые 2 048 mesh slots при отсутствии staging allocation failures.
+Это делает pool fragmentation/capacity и условие packed fallback проверяемыми
+владельцами, не доказывая их единственной причиной. Commit 656fe5c6 добавил
+best-fit/free-range split/coalesce и разрешил packed predecessor до появления
+исполняемой MDI batch; M380 запущен на том же M335 daylight маршруте, чтобы
+сравнить OOM, pool use, camera-band drawable gaps и те же pixel witnesses.
+Harness autosave выключен, поэтому disk misses новых координат в этих прогонах
+не доказывают failure persistence. Инструментированный прогон локализует дефект,
+отдельный uninstrumented повтор пригоден для performance comparison. Пустой/чёрный
+proxy не считать исправленным из-за меньшего счётчика или более короткого прогона.
 
 **Gate:** контрольный маршрут проходит far checkpoint, нет необъяснённых
 невалидных/неопубликованных поверхностей в проверяемом коридоре, а stop convergence

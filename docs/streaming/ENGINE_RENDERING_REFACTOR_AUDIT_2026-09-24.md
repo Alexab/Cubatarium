@@ -3133,3 +3133,45 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   `x=−2 832`; эта проба не заменяет visual acceptance.
 
 - Артефакты M378: [report](../../bin/suite_reports/engine_refactor/m378_world164_canonical_y70_pitchm30_trace_20261004.json), [perf/pixel/ray trace](../../bin/logs/perf_20261004-025426_16928.jsonl), [captures](../../bin/logs/m378_world164_canonical_y70_pitchm30), [source INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-025421.16928).
+
+## M379–M380: фиксированный daylight подтвердил реальную draw/publication проблему; исправлены pool reuse и packed fallback
+
+- M379 был видимым no-teleport Release на том же M335 профиле: World_164,
+  start [120,56,56], eye y=70, yaw 180°, pitch −30°, scale 1, daylight
+  time_of_day=0.25. Он прошёл far checkpoint 8 192, но analyzer остался FAIL:
+  черновой/пустой видимый кадр и convergence debt сохранялись. Это важное
+  уточнение к M377/M378: короткая протяжённость не единственная причина
+  наблюдаемого дефекта.
+- На одном конкретном daylight pixel witness около x=−8 183 DDA нашёл grass
+  block 377, однако framebuffer sample был RGB (8,8,8)/(10,10,10). Источник
+  top-face был valid на CPU, но opaque live-GPU/MDI batch отсутствовал; в depth
+  census фигурировала нижняя грань того же блока. Цвет не коррелировал с ночью,
+  текстура была готова, а прозрачный проход не объяснял sample. Это указывает
+  на разрыв между voxel/source readiness и реальной opaque draw publication,
+  но один witness не устанавливает конкретный GPU механизм для всех пустых
+  пикселей.
+- M379 показал длительное давление на vertex pool: в периодах суммарный
+  publication OOM retain доходил примерно до 2 000; занято около 258.4/320 MiB,
+  все 2 048 GPU mesh slots были заняты, свободными оставались 101 slot,
+  retired pending был 0, staging allocation failures — 0. В camera band было
+  25–36 solid slices без drawable против 106 live GPU slices из 157. Это делает
+  фрагментацию/исчерпание pool сильной проверяемой гипотезой; агрегированный OOM
+  counter является суммой за период, а лимит 320 MiB объединяет бюджеты pass-ов.
+- В M379 autosave harness был выключен. Поэтому disk_miss на новых координатах
+  и их procedural regeneration ожидаемы; этот запуск не доказывает отказ
+  persistence/reload. Pixel census, CPU draw oracle и MDI witness имеют
+  различные границы наблюдения, и ни один из них нельзя выдавать за полную
+  framebuffer классификацию.
+- Commit 656fe5c6 исправляет две подозрительные ветви перед повтором M380:
+  GPU pool теперь выбирает подходящий free range, отдаёт остаток обратно в
+  free list и сливает соседние освобождённые диапазоны; packed predecessor больше
+  не скрывается за CPU opaque reference, пока нет исполняемой MDI batch.
+  Pixel trace сериализует фактические packed/MDI состояния. Изменение собрано
+  только как Release, затем запущен повтор M380 на том же M335 daylight профиле.
+  При первом наблюдении M380 камера двигалась без blocked substeps и ground
+  contacts; obstacle avoidance включён в flight-sim, но на этом участке ещё не
+  требовался. Итог M380 будет внесён после окончания прогона и разбора trace.
+- M379 report: [JSON](../../bin/suite_reports/engine_refactor/m379_world164_m335_fixed_day_20261004.json);
+  [perf/pixel/ray trace](../../bin/logs/perf_20261004-034949_9384.jsonl);
+  [frames](../../bin/logs/m379_world164_m335_fixed_day);
+  [source INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-034945.9384).
