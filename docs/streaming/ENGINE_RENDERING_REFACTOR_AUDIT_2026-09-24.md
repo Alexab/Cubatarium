@@ -3250,3 +3250,58 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   [perf/pixel/ray trace](../../bin/logs/perf_20261004-034949_9384.jsonl);
   [frames](../../bin/logs/m379_world164_m335_fixed_day);
   [source INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-034945.9384).
+
+## M380 follow-up: distant new columns and provisional-light preview
+
+- Source lookup separates the persistence question for this M335 flight. The
+  far frontier was not being read from disk: the exact column `(-550,0,3)` logged
+  a disk miss at 06:05:35.943 and a procedural commit at 06:05:36.121. Its total
+  source latency was `176.96 ms` (`queue=18.80`, `generation=81.55`,
+  `ready_wait=72.29`, `apply=4.31 ms`). This is expected for a new frontier
+  column; it does not indicate failed persistence. Nearby columns show a separate
+  queue tail, including a `23.91 s` generation-start queue wait for `(-542,0,3)`.
+- Across M380, source tracing recorded `1 883` disk completions, `2 987` disk
+  misses, and `2 945` procedural commits. For procedural commits, queue latency
+  was p50/p95/max `26.75/28 689.95/62 904.06 ms`; `530` exceeded 10 s.
+  Generation itself was `92.68/138.06/332.00 ms`; ready-result wait was
+  `349.37/7 303.55/32 001.96 ms` (`61` exceeded 10 s); apply p95 was `8.13 ms`.
+  The flight therefore confirms substantial request and ready-queue tails even
+  though per-result terrain generation is relatively quick. Their visible impact
+  must be joined to the camera ray and eventual mesh/light publication before
+  changing commit/admission limits.
+- The `(-550,3,3)` screen-ray witness is present later in the renderer-gate
+  samples, despite its watched-schedule attempt row being evicted. Near selection,
+  the camera was at `x=−8 722`; the ray hit block `x=−8 799` at `79.76` blocks,
+  and the slice had pending light with a provisional preview. A later sample at
+  camera `x=−8 804` showed field light revision `1` but older published light;
+  by camera `x=−8 805`, geom/light publication was current and preview was off.
+  This is an approximately `83`-block (`~16 s` at M380's median `5.19 blocks/s`)
+  route-local preview window. Geometry could be drawn while its light image was
+  still provisional, matching the user's description of dim rather than fully
+  black chunks more closely than a missing-GPU-mesh diagnosis.
+- The first `ScreenRayRepair` record for this slice found a `deferred_far` relight
+  and an existing Flow ticket. The selected-ray branch only promoted work already
+  in the ordinary relight FIFO; for a deferred-far key it relied on the Flow
+  ticket and did not invoke the bounded visible-relight admission API. A focused
+  change now calls `EnqueueVisibleRelight` for screen-ray-selected light debt
+  within the existing forward horizon (at most four selected columns), protects
+  sibling selected columns, preserves the exact slice Y band, and records the
+  visible admission outcome and any replaced victim in the source trace. The API
+  transfers deferred-far work into its bounded visible owner; this avoids raising
+  the global relight cap. Release build and same-profile M335 comparison are the
+  next acceptance steps.
+- M380's 191 low-luma `<32` probes were `0.583%` of its 32 768 samples, and all
+  had opaque MDI visibility. Depth-source block IDs were 572 (`tree_leaves`, 169),
+  573 (`tree_log`, 9), 597 (`tree_bark`, 3), and unknown/no source (10). All 181
+  valid face-light samples had sky light `1`; only four probes carried the
+  provisional-preview flag. The sample is dominated by dark foliage textures,
+  not by a broad set of missing chunks, and does not by itself explain the user's
+  larger muted patches. Among leaf samples, DDA/depth distance diverged by over
+  two blocks in 121/169 cases; cutout visibility can account for a meaningful
+  part of this mismatch, so pixel material and depth surface must remain separate
+  from opaque voxel DDA witnesses.
+- Collision review remains separate from renderer diagnosis: M380's tree hazard
+  triggered one completed right-side detour; blocked substeps and ground contacts
+  stayed zero and the westbound route continued. No collision code change is
+  needed for that recorded run. The established M335 start, eye height, yaw,
+  pitch, Z, seed, and speed remain fixed for the next renderer comparison.

@@ -437,31 +437,59 @@ proxy не считать исправленным из-за меньшего с
 fix устранил OOM retain в сопоставимом месте, но не исправил общий визуальный
 долг и задержки.
 
-Следующим изменением не увеличивать общий FirstMesh/relight/GPU cap. M380
-screen-ray выбрал solid chunk `(-550,3,3)` с отсутствующим satisfying mesh и
-light debt; в момент трассы FirstMesh ticket существовал, direct dirty slice
-стоял в очереди `0/5`, но ещё не был scheduled. Соседние drawable geometry-debt
-chunks сидели в dirty queue размером около 307. Нужно замкнуть один такой
-координатный witness через enqueue → scheduler → capture/build → GPU apply/publish
-в коротком адресном диагностическом окне: текущий watched-schedule ring вмещает
-512 событий и к концу 47-минутного пролёта вытесняет lifecycle ранних координат.
-Второй приоритет — проверить pixel/depth mapping. Все 191 low-luma samples имели
-opaque MDI pass; у 180 depth surfaces нашёлся source triangle ближе 0.1 блока,
-у 181 был валидный face-light sample. При этом среди 186 probes с valid DDA hit
-CPU voxel-ray distance совпал с depth в пределах 0.5 блока в 20 случаях, а у
-128 разошёлся более чем на 2 блока; у пяти оставшихся dark probes DDA hit не
-было. Поля `source_face_valid`/`gpu_face_command` относятся к DDA hit block и
-не гарантируют, что это тот же depth-hit surface. Нужно свести для одного pixel
-opaque depth-hit chunk/source triangle/light/MDI state к voxel DDA hit, учитывая
-opaque/cutout traversal, до правок lighting/streaming policy. Пять CPU no-hit и
-один no-source witness остаются полезными частными случаями. Screen-ray debt и
-`gpu_not_ready`/`empty_fm_queue` — диагностические классификаторы, а не причина.
-Промежуточный M379/M380 same-coordinate срез около x=−5 800 показывает
-publication OOM 213–229 → 0 и pool use 257/320 → 90/157 MiB; занятые slots
-почти одинаковы. Camera-band no-drawable равен 0 в обоих runs, но
-draw_oracle_missing_resident не снизился, а wall samples перекрываются. Считать
-это подтверждением исправления pool allocation pressure, но не закрытием render
-holes; M380 far pixel/depth witnesses и конечный analyzer уже приложены в аудите.
+Разбор M380 уточнил два разных источника визуальных задержек.
+
+1. Новый столбец `(-550,0,3)` не нашёлся на диске: источник записал
+   `procedural disk_miss`, затем commit с `generation_ms=81.55`,
+   `ready_wait_ms=72.29`, `apply_ms=4.31`, total около `177 ms`. Для соседних
+   новых столбцов были queue waits до `23.9 s`. По всей M380 source trace было
+   1 883 disk completions, 2 987 disk misses и 2 945 procedural commits.
+   Генерация отдельного результата была быстрой (p50/p95 `92.7/138.1 ms`), но
+   request queue p95/max составил `28.69/62.90 s` (530 commits ждали в этой
+   очереди больше 10 s), а generation-finished → apply p95/max —
+   `7.30/32.00 s` (61 результат ждал больше 10 s). Apply p95 был `8.13 ms`.
+   Эти хвосты важны для дальнего streaming и требуют отдельного causal trace
+   по queue priority, ready count и frame admission; не менять общий commit cap
+   только на основании одного p95.
+2. Renderer trace того же screen-ray свидетеля показал drawable mesh,
+   `fully_dark + pending_light + provisional_preview`. После того как field-light
+   revision стал актуальным, published light/mesh догнали его, а preview
+   выключился. Между точками камеры `x=−8 722` и `x=−8 805` прошло около 83
+   блоков (примерно 16 s на скорости M380); sampled voxel находился в 79.8
+   блоках впереди при выборе. Это объясняет, как chunk может некоторое время
+   выглядеть приглушённым до завершения relight, даже когда его геометрия уже
+   рисуется. Начальный source trace видел deferred-far FIFO и существующий Flow
+   ticket, но выбранный screen-ray путь сам не вызывал ограниченное visible FIFO
+   admission, которое умеет переносить эту работу из deferred-far в видимую
+   очередь.
+
+Исправление в работе: для выбранного screen-ray light-debt кандидата внутри
+forward horizon вызывать существующий `EnqueueVisibleRelight`, защищая остальные
+выбранные ray-колонки. Он остаётся bounded, переносит deferred-far band и
+фиксирует admission outcome/victim в `ScreenRayRepair`; за пределами горизонта
+остаётся прежний flow. Следующий M335 повтор должен сравнить расстояние/возраст
+от screen-ray admission до settled/published light и длительность preview,
+плюс source queue tails и основные render gates. Камеру, высоту, Z, pitch, seed
+и скорость M335 не менять. M380'овский обход дерева уже завершился успешно по
+телеметрии; collision counters и `detours_completed` продолжать проверять, но
+отдельные условия полёта ради картинки не подбирать.
+
+Классификация пикселей также уточнена. Из 191 low-luma sample M380 169 имели
+depth-source block id `572` (`tree_leaves`), 9 — `573` (`tree_log`), 3 — `597`
+(`tree_bark`); все 181 валидные face-light samples имели sky light `1`. Всего
+четыре low-luma pixels были помечены provisional preview. Значит, эта выборка
+плохо представляет приглушённые участки больших чанков и часто ловит тёмную
+текстуру листвы. DDA/depth distance расходился более чем на 2 блока у 121 из
+169 leaf surfaces, поэтому cutout surface mapping нужно учитывать; такое
+расхождение не доказывает отсутствующую геометрию. У каждого подозрительного
+участка по-прежнему сопоставлять материал, depth surface, lighting, readiness и
+кадр.
+
+M379/M380 same-coordinate pool slice около x=−5 800 по-прежнему подтверждает
+только устранение publication OOM (213–229 → 0) и снижение pool use
+(257/320 → 90/157 MiB); camera-band no-drawable равен 0, но
+draw_oracle_missing_resident не снизился, wall samples перекрываются. Это не
+закрывает render holes.
 
 **Gate:** контрольный маршрут проходит far checkpoint, нет необъяснённых
 невалидных/неопубликованных поверхностей в проверяемом коридоре, а stop convergence

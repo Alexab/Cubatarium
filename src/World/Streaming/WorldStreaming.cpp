@@ -1198,14 +1198,28 @@ void UWorldStreaming::RefreshStreamingPressure(
       }
       const bool missing_drawable =
           !world.GetMeshService().HasDrawableGreedyMesh(miss_coord);
+      std::vector<glm::ivec2> protected_screen_ray_columns;
+      protected_screen_ray_columns.reserve(screen_ray_repair_count);
+      for (size_t i = 0; i < screen_ray_repair_count; ++i)
+      {
+        const glm::ivec3 coord = screen_ray_repair_coords[i];
+        const glm::ivec2 column(coord.x, coord.z);
+        if (std::find(protected_screen_ray_columns.begin(),
+                      protected_screen_ray_columns.end(), column) ==
+            protected_screen_ray_columns.end())
+        {
+          protected_screen_ray_columns.push_back(column);
+        }
+      }
       const auto write_screen_ray_repair_trace =
-          [&](glm::ivec3 coord, bool screen_ray_selected,
-              const char *action, bool light_debt,
-              bool async_before, bool flow_before, bool flow_after,
-              bool visible_geometry_promoted,
-              const char *flow_kind,
-              const UWorldPersistence::TerrainColumnRelightQueueInfo &before,
-              const UWorldPersistence::TerrainColumnRelightQueueInfo &after)
+        [&](glm::ivec3 coord, bool screen_ray_selected,
+            const char *action, bool light_debt,
+            bool async_before, bool flow_before, bool flow_after,
+            bool visible_geometry_promoted,
+            const char *flow_kind, uint8_t visible_relight_outcome,
+            int visible_relight_victim_horiz,
+            const UWorldPersistence::TerrainColumnRelightQueueInfo &before,
+            const UWorldPersistence::TerrainColumnRelightQueueInfo &after)
       {
         if (!capture_screen_ray_trace || !screen_ray_selected)
         {
@@ -1321,6 +1335,10 @@ void UWorldStreaming::RefreshStreamingPressure(
                 " flow_before=" + std::to_string(flow_before ? 1 : 0) +
                 " flow_after=" +
                 std::to_string(flow_after ? 1 : 0) +
+                " visible_relight_outcome=" +
+                std::to_string(visible_relight_outcome) +
+                " visible_relight_victim_horiz=" +
+                std::to_string(visible_relight_victim_horiz) +
                 " visible_geometry_promoted=" +
                 std::to_string(visible_geometry_promoted ? 1 : 0) +
                 " flow_column_ticket=" +
@@ -1462,8 +1480,40 @@ void UWorldStreaming::RefreshStreamingPressure(
           bool flow_before = false;
           bool flow_after = false;
           const char *flow_kind = "none";
-          if (world.Persistence &&
-              world.Persistence->IsTerrainColumnRelightQueued(world_key))
+          uint8_t visible_relight_outcome = 0;
+          int visible_relight_victim_horiz = -1;
+          bool visible_relight_admitted = false;
+          if (screen_ray_selected && world.Persistence && !async_before)
+          {
+            const int min_world_y = std::max(0, coord.y * CHUNK_SIZE);
+            const int max_world_y = std::min(
+                world.GetProceduralSettings().MaxHeight,
+                min_world_y + CHUNK_SIZE - 1);
+            visible_relight_admitted =
+                world.Persistence->EnqueueVisibleRelight(
+                    world_key.x, world_key.y, min_world_y, max_world_y,
+                    focus_horiz, kVisualStageFirstMeshRelightForwardHoriz,
+                    protected_screen_ray_columns, &visible_relight_outcome,
+                    &visible_relight_victim_horiz);
+            if (visible_relight_admitted)
+            {
+              world.Persistence->NoteVisibleFirstMeshRelight(
+                  world_key, min_world_y, max_world_y);
+              flow_before = exec.Scheduler().Contains(
+                  column, ColumnWorkKind::RelightThenMesh);
+              flow_after = flow_before;
+              flow_kind = "screen_ray_visible_relight";
+              light_action = "screen_ray_visible_relight_admitted";
+            }
+          }
+          if (visible_relight_admitted)
+          {
+            // The exact screen-ray target now owns bounded visible FIFO work.
+            // Leave any existing Flow ticket alone; it will observe the FIFO
+            // owner when drained and cannot enqueue a duplicate relight.
+          }
+          else if (world.Persistence &&
+                   world.Persistence->IsTerrainColumnRelightQueued(world_key))
           {
             bool promoted = false;
             if (!async_before)
@@ -1518,8 +1568,9 @@ void UWorldStreaming::RefreshStreamingPressure(
           write_screen_ray_repair_trace(
               coord, screen_ray_selected, light_action, light_debt,
               async_before, flow_before, flow_after,
-              visible_geometry_promoted, flow_kind, queue_before,
-              queue_after_now());
+              visible_geometry_promoted, flow_kind,
+              visible_relight_outcome, visible_relight_victim_horiz,
+              queue_before, queue_after_now());
           return;
         }
         ColumnWorkItem fm{};
@@ -1551,8 +1602,8 @@ void UWorldStreaming::RefreshStreamingPressure(
                   : (flow_after ? "first_mesh_ticket_present"
                                 : "first_mesh_ticket_rejected"),
               light_debt, async_before, flow_before, flow_after,
-              visible_geometry_promoted, "first_mesh", queue_before,
-              queue_after_now());
+              visible_geometry_promoted, "first_mesh", 0, -1,
+              queue_before, queue_after_now());
         }
       };
       const bool primary_first_mesh_enqueued =
@@ -1594,7 +1645,7 @@ void UWorldStreaming::RefreshStreamingPressure(
                 world.IsAsyncRelightColumnInFlight(
                     glm::ivec2(coord.x, coord.z)),
                 false, false, visible_geometry_promoted,
-                "primary_first_mesh", queue_info, queue_info);
+                "primary_first_mesh", 0, -1, queue_info, queue_info);
           }
           continue;
         }
