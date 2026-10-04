@@ -3065,3 +3065,71 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   не camera-band mesh. Для визуального acceptance нужно отделить угол обзора от
   горизонтального перемещения и подтвердить поверхность opaque pixel probes.
 - Артефакты: [M372 report](../../bin/suite_reports/engine_refactor/m372_world164_z224_y70_long_20261004.json), [perf + trace](../../bin/logs/perf_20261004-002601_19304.jsonl), [кадры](../../bin/logs/m372_world164_z224_y70), [INFO/source trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-002557.19304).
+
+## M377–M378: возврат к проверенному профилю M335; ночной цикл смешал картину стриминга
+
+- M377 повторил видимый no-teleport Release маршрут M335: World_164 seed
+  `3650471197`, start `[120,56,56]`, cruise y=`70`, yaw=`180°`, pitch=`−30°`,
+  scale `1`. За `1 800 s` прошёл `6 640` блоков (`focus 7→−408`), collision
+  counters и route heading оставались стабильными; obstacle avoidance не
+  активировался. Это не far acceptance: `8 192` блоков не достигнуты, analyzer
+  `pass=false`, post-stop convergence=false. Median fly wall `85.54 ms`,
+  stream phase `38.66 ms`, emerge `18.32 ms`, scene `29.03 ms`; dirty median/max
+  `256/624`, not-ready median `24`, visible-black max `24`. Артефакт:
+  [M377 report](../../bin/suite_reports/engine_refactor/m377_world164_canonical_y70_pitchm30_obstacle_avoid_20261004.json).
+
+- M378 повторил тот же старт, y/pitch/yaw и scale без замены коридора, включив
+  dense renderer-pixel probes, screen-ray trace, focus census, source tracing и
+  captures раз в 15 s. За запрошенные `2 400 s` прошёл `7 680` блоков до focus
+  `−473`; far checkpoint `8 192` не достигнут. Процесс штатно завершился, но
+  analyzer `pass=false` (`15/39` gates), `far_flight=false`, post-stop convergence
+  false. Ни ground contact, blocked substep, ни обход препятствия не
+  зарегистрированы. Manifest: clean commit `6d06cef2`, Release EXE SHA-256
+  `86ae0818e771eb243a09e20a51c4266f1fa57fc18cfd6f485d85d5f2b995b65f`, seed
+  `3650471197`, исходный world metadata hash
+  `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+
+- Стриминг новых колонок на фронтире подтверждён source log: `2 227` disk
+  requests, `2 014` disk completions, `1 508` disk misses и `1 508` последующих
+  procedural commits. В активном диапазоне примерно `cx=−435…−475` каждый
+  столбец имел miss/commit-события на девяти соседних Z координатах; на одном из
+  этих участков focus census показывал `33–60` solid slices без render-ready
+  geometry. В периодах `chunk_not_ready` median/max `24/68`, dirty median/max
+  `462/1 260`, `fly_frontier_pressure_frac=0.909`, stop missing max `68`, конечный
+  not-ready `57`. Это связывает procedural-frontier область с растущим mesh/readiness
+  долгом, но не говорит, что каждый пусто выглядящий пиксель принадлежал этим
+  срезам.
+
+- В трассе сохранено `32 768` renderer-pixel probes и `8 192` screen-ray samples.
+  Среди pixel rays было `10 580` opaque voxel hits, `10 972` unloaded и `11 216`
+  no-hit-in-range; это разные состояния, не единая категория «пустой чанк».
+  Screen-ray selector увидел `3 930` opaque hits, `3 950` unloaded и `312` no-hit;
+  геометрический debt был у `289` записей, light debt у `409`, refresh candidate
+  у `175`, selected — у `161`.
+
+- M378 шёл без frozen daylight: World_164 имел 20-минутный день и `time_frozen=false`.
+  Скриншоты менялись от почти чёрной ночи до светлого неба/горизонта. Pixel probes
+  согласуются с этим: для day factor `0` и night factor `0.35` median luminance
+  был `21.7`, при этом среди записей были valid opaque surfaces с текстурой;
+  daylight samples с night factor `0.22` имели median `158.3` и ни одного sample
+  luminance `<40`. Значит, суточное освещение существенно объясняет «притушенный»
+  вид, который пользователь отмечал после долгого полёта. Это не закрывает mesh
+  debt и не доказывает, что любые визуально пустые участки исправны: M378 не даёт
+  дневного кадра на том же дальнем фронтире.
+
+- Median fly wall вырос до `104.25 ms` (`9.59` effective FPS); stream phase
+  `45.64 ms`, mesh emerge `21.95 ms`, scene `36.80 ms`, render total `67.95 ms`.
+  Dirty median `462`; max wall spike `8 211.58 ms`. Между M377 и M378 добавлены
+  тяжёлые traces/captures и изменился охват маршрута, поэтому рост нельзя считать
+  чистым performance A/B. Обе пробы оставили высокую streaming/render нагрузку,
+  а M378 доехал только до `7 680` блоков.
+
+- Решение по продолжению: использовать тот же уже принятый M335 профиль камеры,
+  не продолжать sweep pitch/height/Z. Для M379 закрепить ясный день с
+  `time_of_day=0.25`, сохранив исходные байты `world_data.json` после run.
+  Flight-only obstacle detour добавлен в `6d06cef2`, но M377/M378 его не проверили
+  (нет события опасности). Проверку выполнять отдельно на историческом
+  collision-control M368, где пользователь видел остановку у дерева около
+  `x=−2 832`; эта проба не заменяет visual acceptance.
+
+- Артефакты M378: [report](../../bin/suite_reports/engine_refactor/m378_world164_canonical_y70_pitchm30_trace_20261004.json), [perf/pixel/ray trace](../../bin/logs/perf_20261004-025426_16928.jsonl), [captures](../../bin/logs/m378_world164_canonical_y70_pitchm30), [source INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-025421.16928).
