@@ -1,8 +1,9 @@
-# План исправления стриминга и отображения мира — обновлён 4 октября 2026
+# План исправления стриминга и отображения мира — обновлён 5 октября 2026
 
 Исходная база: `develop` / `codex_audit2`, commit `185e2f08` (merge
-`codex_audit`). Последний длинный trace M378 использовал чистый Release commit
-`6d06cef2`; отчёт и сценарии перечислены ниже.
+`codex_audit`). Последний длинный trace M394 проверил Release commit
+`69f9d856` на зафиксированном M335. Изменение Red load cap откатил commit
+`820af493`; текущий Release target пересобран после отката.
 Связанные документы: [аудит движка](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md),
 [архитектурные контракты](ENGINE_REMEDIATION_PLAN_2026-09-22.md),
 [каталог flight-экспериментов](FLIGHT_EXPERIMENT_SCRIPTS.md).
@@ -14,6 +15,11 @@
 дальним маршрутом измерять загрузку сохранённого мира и создание процедурного
 мира. Периодически повторять ключевой сценарий на новых seed/мираx, чтобы
 проверять переносимость исправлений.
+
+Профиль M335 зафиксирован: World_164, start `[120,56,56]`, eye `70`, yaw
+`180°`, pitch `−30°`, scale `1`, fixed clear day, no teleport, полёт `2 800 s`
+и остановка `20 s`. Не подбирать новые условия съёмки. Обход препятствия может
+локально изменить траекторию только при предсказанной опасности или контакте.
 
 ## Текущая позиция и пределы доказательств
 
@@ -1260,6 +1266,78 @@ Artifacts: [M393 flight report](../../bin/suite_reports/engine_refactor/m393_wor
 [source logs](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-220017.37424,
 ../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-221153.37424,
 ../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-223419.37424).
+
+### M394 — профиль M335 сохранён, тест увеличения Red load cap не прошёл renderer gates
+
+M394 проверил commit `69f9d856` на том же видимом Release/no-teleport M335.
+Manifest подтверждает World_164, start `[120,56,56]`, eye `70`, yaw `180°`,
+pitch `−30°`, fixed clear day, scale `1`, без телепорта; маршрут достиг
+checkpoint `8 192` и прошёл `9 232` блока (`577` chunks) с медианной скоростью
+`5.18555 blocks/s`. Приложение завершилось с `process_rc=0`, без timeout/hang;
+runner вернул exit `1` из-за проваленных acceptance gates. Сохранённые данные
+мира восстановлены побайтно (SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).
+
+Flight-sim зафиксировал 3 предсказанные опасности; все 3 обхода начаты и
+завершены, `plan_failures=0`, `detour_replans=0`, `collision_stop_triggered=false`.
+Время событий: `592.4 s`, `600.2 s`, `2 412.4 s`. Текущий обход работает при
+зафиксированном профиле и для этого маршрута менять его не требуется.
+
+Renderer acceptance ухудшился по числу gates: `14/39` против M393 `22/39`.
+При этом несколько агрегатов разнонаправленные: dirty median/max `486/1 092`
+(M393 `556/832`), visible-black max `28` (M393 `48`), но Red pressure `100%`
+(M393 `69.1%`), `unfinished_visual` median `28` (M393 `27`), а fly wall
+median практически не изменился: `110.39 ms` против `110.93 ms`. `holes_rate`
+остался `1.0`; stop recovery не сошёлся.
+
+Pixel trace на `32 768` probes дал `<32/<64/<96` luma
+`269/1 069/1 673` (M393 `268/1 025/1 590`). Из `<32` samples все `269` попали
+в drawable opaque MDI surface, `151` имели CPU mesh revision новее опубликованной
+GPU geometry revision, `19` имели preview-light, ни один не менял RGB в
+transparent pass. Среди `<96`: `1 628/1 673` попали в drawable opaque MDI,
+`956` имели отставшую опубликованную geometry, `186` — preview-light,
+`159` менялись при transparent composition. Таким образом, одни и те же
+«тёмные чанки» нельзя свести к отсутствию данных или к прозрачному проходу.
+В срезах остаются отдельно unsettled voxel light/demand; required next step —
+связать точный surface с CPU mesh revision, GPU upload/fence и publish revision.
+
+Disk trace: `2 556/2 556` queued columns завершились; worker queue p95 `0.175 ms`,
+file read p95 `1.20 ms`, но result-wait median/p95/max `1.90/55.51/135.24 s`,
+ready-load p95/max `116/458`. Это очередь применения результатов, а не медленный
+диск. Procedural trace: `2 630` disk misses, `2 609` commits и `8` отмен вне
+retention. Request-to-worker-start wait median/p95/max `43 ms/29.03 s/51.88 s`,
+сама генерация `88/112 ms` median/p95. Длинный хвост находится перед выполнением
+генератора. Увеличение Red `max_load_ops_cap` с `2` до `4` не устранило его и не
+улучшило acceptance; оставлять этот quota bump как исправление оснований нет.
+
+Pool trace также не доказывает жёсткое исчерпание MDI slot capacity: в периоде
+максимального fill `gpu_mesh_slot_bound_n=146/2 048` и
+`publication_oom_retain_n=0`; медианный vertex-pool fill был `0.675`. Пик
+`used=cap=176.79 MB` показывает заполнение текущего выделенного arena, но не
+отказ публикации: настроенный med-tier ceiling — `256 MB`. Не увеличивать слот
+или memory limits без подтверждённого отказа и same-pixel причинной связи.
+
+**Обновлённые следующие шаги:**
+
+1. Сохранить Red `max_load_ops_cap=2` (восстановлен commit `820af493` после
+   M394); не возвращать увеличение без нового причинного замера.
+2. В MDI publication path проследить долгоживущие `mesh_revision >
+   published_geom_revision` через Dirty expansion, GPU batch upload, fence и
+   resident-table swap. Свести тот же координатный pixel-witness с source/light
+   revisions; не менять preview-light policy до этой связи.
+3. Для процедурных и disk очередей отдельно определить, где заявки ждут до
+   worker start и почему ready disk results ждут до `55 s` p95. Не увеличивать
+   число workers/load ops по одному общему `queue_ms`.
+4. После одного bounded pipeline fix собрать только Release и повторить точный
+   M335. Новые миры оставить периодическим переносимым исследованием после
+   улучшения repeatable World_164 gates.
+
+Artifacts: [M394 analysis report](../../bin/suite_reports/engine_refactor/m394_world164_m335_red_generation_cap_20261004.json),
+[flight/obstacle report](../../bin/suite_reports/engine_refactor/m394_flight_sim_20261005.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m394_renderer_pixel_trace_l96_20261005.json),
+[world-column source trace](../../bin/suite_reports/engine_refactor/m394_world_column_source_trace_20261005.json),
+[perf JSONL](../../bin/logs/perf_20261004-231440_30796.jsonl),
+[capture directory](../../bin/logs/m394_world164_m335_red_generation_cap).
 
 ### G5 — Сборка Release с параллельной компиляцией
 

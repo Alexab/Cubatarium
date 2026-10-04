@@ -4108,3 +4108,59 @@ Artifacts: [M393 flight report](../../bin/suite_reports/engine_refactor/m393_wor
 [world-column source trace](../../bin/suite_reports/engine_refactor/m393_world_column_source_trace_20261004.json),
 [perf trace](../../bin/logs/perf_20261004-220021_37424.jsonl),
 [GUI frame](../../bin/logs/m393_world164_m335_reserved_disk_apply/frame_128.png).
+
+## M394: obstacle bypass succeeds, renderer and source queues remain unresolved
+
+M394 tested `69f9d856` on the unchanged visible Release/no-teleport M335 in
+World_164. The manifest retained the established start, eye height, yaw, pitch,
+fixed clear day, scale, and route hash; it reached `9 232` blocks / `577` chunks
+at `5.18555 blocks/s` and the `8 192` checkpoint. The app exited 0 without a
+timeout or hang. The analysis runner exited 1 because acceptance gates failed,
+not because the application failed. World data was restored byte-for-byte.
+
+The requested flight-sim collision response is present and active: the run
+detected 3 predicted hazards, started and completed all 3 detours, and reported
+zero failed plans, replans, or collision stops. The three triggers were at
+`592.4 s`, `600.2 s`, and `2 412.4 s`. This run does not reproduce a physical
+stop against a tree; it does show the bypass code can route around predicted
+hazards without changing M335 recording settings.
+
+The four-load Red cap did not fix renderer acceptance. M394 passed `14/39`
+gates versus M393's `22/39`; fly wall median stayed near `110 ms`, Red pressure
+rose to `100%`, and `holes_rate` remained `1.0`. Dirty median improved
+`556→486` but max worsened `832→1 092`; visible-black max improved `48→28`,
+while unfinished-visual median was `28` versus `27`. This is mixed evidence,
+not a renderer fix.
+
+Dense pixel trace recorded `<32/<64/<96` luma counts `269/1 069/1 673`, against
+M393's `268/1 025/1 590`. At `<32`, all 269 samples hit drawable opaque MDI
+surfaces, 151 had mesh revision newer than published GPU geometry, 19 had a
+preview-light marker, and none changed in the transparent pass. At `<96`,
+`1 628/1 673` had drawable opaque MDI, `956` had stale published geometry,
+`186` had preview light, and `159` changed RGB during transparent composition.
+The pixel join separates at least three paths: published geometry freshness,
+light state, and transparent composition. It does not support treating all dark
+surfaces as absent voxel data.
+
+The source trace rules out slow storage I/O as the main wait: all `2 556` disk
+requests reached completion, worker queue p95 was `0.175 ms`, and file-read p95
+was `1.20 ms`; result-wait median/p95/max was `1.90/55.51/135.24 s`, with ready
+loads p95/max `116/458`. Procedural requests spent median/p95/max
+`43 ms/29.03 s/51.88 s` before worker start, while generation took
+`88/112 ms` median/p95. The long procedural tail is upstream of generation.
+Raising the Red load-start cap from 2 to 4 did not reduce it.
+
+The peak vertex arena sample reached `176.79/176.79 MB` of its current allocation,
+but had `publication_oom_retain_n=0`, only `146/2 048` MDI mesh slots bound,
+and the run median pool fill was `0.675`. This is not evidence of a hard slot
+limit; do not increase pool limits based on the peak fill alone. `gpu_not_ready`
+remains the dominant completion stall and `zero_fm_cap` the dominant classified
+schedule blocker, so the next audit should trace freshness and queue ownership
+through dirty admission, upload, fence completion, and draw publication.
+
+Artifacts: [M394 analysis report](../../bin/suite_reports/engine_refactor/m394_world164_m335_red_generation_cap_20261004.json),
+[flight/obstacle report](../../bin/suite_reports/engine_refactor/m394_flight_sim_20261005.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m394_renderer_pixel_trace_l96_20261005.json),
+[world-column source trace](../../bin/suite_reports/engine_refactor/m394_world_column_source_trace_20261005.json),
+[perf trace](../../bin/logs/perf_20261004-231440_30796.jsonl),
+[captures](../../bin/logs/m394_world164_m335_red_generation_cap).
