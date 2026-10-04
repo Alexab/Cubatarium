@@ -3876,3 +3876,53 @@ so these solid blue patches must not be counted as unlit chunks. The surrounding
 blank view may still contain true streaming holes; the fog-color match only
 classifies the tinted polygons. Keep camera, route, and time-of-day at M335 and
 record the fog settings alongside any later renderer comparison.
+
+### M390 completed: cold distant generation and stale queue owners
+
+M390 repeated the unchanged visible M335 route on World_164 for 2 800 s plus
+20 s settle. It reached focus x `−528` / 8 560 blocks at median `5.18555
+blocks/s`. The run had no collision (`attempts=0`, blocked substeps `0`, ground
+contacts `0`); the flight detour was enabled but did not need to act.
+
+The analyzer is red: 1 362 periods, flight wall median `109.06 ms`, renderer
+median `60.06 ms`, dirty median/max `723/1 313`, visible-black max `21`,
+void-near max `1 228`, and unlit max `41`. It records 210 route periods with
+near-focus holes and does not pass the post-stop stalled-visible-black gate.
+`unfinished_visual` is not a pixel-area rate. It stays separate from the 32 768
+dense pixel probes and exact depth/ray witnesses.
+
+The source trace has 1 706 procedural `disk_miss` outcomes. In world-distance
+band 6 000–8 000, the generation kernel has median `108.6 ms` / `p95 152.9 ms`,
+but generation-request queue wait has median `222.8 ms`, `p95 34.9 s`, max
+`60.2 s`; miss-to-commit reaches `60.7 s`. A delayed request was initially
+prioritized at `−435`, refreshed to `400`, then committed with its column 47
+chunks behind the final camera focus. Requests remain in scheduler state after
+leaving the streamer keep ring, so old work can later consume commit and mesh
+budget behind the camera. The first bounded fix cancels only procedural pending
+work outside the current visual/keep retention radius and invalidates active
+generation tokens. Validate it in a same-condition M335 Release rerun; this M390
+capture predates the fix.
+
+Offline pixel traces at threshold 32 found 119 dark samples out of 32 768; all
+119 had settled light demand and visible opaque MDI geometry, 3 carried a
+preview marker and 9 had pending voxel-light witnesses. At threshold 96, 994
+samples were dark; 900 were settled, 94 unsettled, 110 preview, and 153 pending.
+At least 93/994 changed RGB during transparent composition. These selected
+samples do not estimate screen coverage. For threshold 32, 70/119 voxel-ray
+distances differ from framebuffer depth by more than two blocks, which means the
+two probes often refer to different surfaces. A low-luma sample with a valid
+draw and settled light is not enough to call a chunk black or unloaded.
+
+Fog remains independently classified: RGB `(13,38,89)` matches configured
+fog `(0.05,0.15,0.35)`, with M335 fog reaching full blend at 36 blocks. The
+specific dark-blue polygons are fog; remaining focus-mesh/void telemetry still
+demonstrates streaming work that needs to converge.
+
+Artifacts: [M390 report](../../bin/suite_reports/engine_refactor/m390_world164_m335_relight_owners_20261004.json),
+[luma 32](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l32_20261004.json),
+[luma 64](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l64_20261004.json),
+[luma 96](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l96_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-182722_29104.jsonl),
+[source log part 1](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-182717.29104),
+[source log part 2](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-184711.29104),
+[GUI captures](../../bin/logs/m390_world164_m335_relight_owners).

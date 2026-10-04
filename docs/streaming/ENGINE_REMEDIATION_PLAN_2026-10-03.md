@@ -991,40 +991,64 @@ preset и настройками. На fresh-world run проверять соз
 **Gate:** исправление работает на исходном мире и как минимум на новом seed;
 параметры свежего мира фиксированы и результат можно повторить.
 
-### M390 interim — M335 retains route; fog horizon masks far surfaces
+### M390 completed — M335 exposes stale generation work and distant visual debt
 
-M390 is an in-progress visible Release run with the exact M335 route and timing:
-World_164, start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, 2 800 s
-flight plus 20 s settle. It adds relight-owner logging and dense pixel capture;
-camera, speed, world, and fixed-day settings remain unchanged. The run has passed
-the historical tree corridor near x≈`−2 826` with zero blocked substeps and zero
-flight-ground contacts so far; obstacle bypass stays enabled and has not needed
-to activate on this M335 line.
+M390 completed the same visible Release/no-teleport route: World_164, start
+`[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, fixed clear day, scale 1,
+2 800 s flight plus 20 s settle. It covered 8 560 blocks to focus x `−528`;
+median flight speed was `5.18555 blocks/s`. The obstacle detour was enabled, but
+no obstacle was encountered (`attempts=0`, blocked substeps `0`, ground contacts
+`0`).
 
-Frame inspection finds uniform dark-blue polygons at exactly RGB `(13,38,89)`,
-the configured fog color `(0.05,0.15,0.35)`. Existing render settings are
-distance fog on, RD 4 chunks, start ratio `0.48`, density `0.85`, end margin 28;
-that means fog reaches full blend at 36 blocks and begins at about 17.3 blocks.
-The route harness disables adaptive fog pull-in, not distance fog itself. This
-explains why far terrain becomes visually empty/blue in those captures without
-proving that it is missing. Treat exact fog-color polygons separately from
-screen holes, and retain the same M335 route when validating any renderer fix.
+This run is diagnostic and fails renderer acceptance. The suite report records
+flight wall median `109.06 ms`, renderer median `60.06 ms`, dirty median `723`
+(max `1 313`), visible-black max `21`, void-near max `1 228`, and unlit max `41`.
+Its `unfinished_visual` rate is a loaded-column/mesh-readiness census, not a
+screen-area measurement. The distant route must still be treated as a real
+streaming/rendering stress case: the report has 210 periods with near-focus
+holes somewhere along the route, and post-stop convergence did not clear all
+stalled visible-black debt.
 
-Reclassification of M389 `<96` framebuffer probes shows transparent composition
-in 306/1,032 samples; 271/281 unsettled-light and 144/177 preview-light samples
-are among them. The specific M389 sample at camera `(-7626,70,56)` is sand at
-y=46 beneath sea level 48 with visible MDI geometry and pending light, so there
-is real underwater light debt as well. In the unmodified-RGB subset, 10/726
-samples are unsettled and 33/726 carry the preview marker. These counts do not
-measure screen area and do not establish that transparency caused every sample.
-The earlier M389 dim-sample table overstated the evidence for broad dry-chunk
-light failure; prioritize the raw fog, transparent, depth, and light witnesses.
+Source tracing identifies cold generation plus a long tail of stale requests.
+There were 1 706 procedural disk misses. Across the 6 000–8 000 block route
+band, procedural generation itself had median `108.6 ms` (`p95 152.9 ms`), while
+request queue wait had median `222.8 ms`, `p95 34.9 s`, and max `60.2 s`; total
+miss-to-commit reached `60.7 s`. Several requests were first admitted near the
+camera, then their priority aged from `−435` to `400`, and they were committed
+when their columns were 47 chunks behind the final focus. The scheduler retained
+these queued/generating/ready owners after they left the streamer keep ring.
+Those late commits add obsolete terrain and first-mesh work while the cold
+frontier is still being filled.
 
-M390 is not yet a completed acceptance run. After it ends, inspect the flushed
-pixel trace and relight-owner log on the distant segment, record the final
-movement/collision counters, and only then select a bounded streaming/rendering
-change. Do not change M335 camera or route parameters to make its scene easier to
-capture.
+The source now has a bounded cancellation pass for procedural requests outside
+`max(visual render distance, keep distance + unload margin)`. It invalidates the
+generation token so workers can stop cooperatively and drops late ready results.
+The matching M335 Release rerun is the validation gate; compare stale-cancel
+events, queue/commit latency, focus missing meshes, dirty debt, and post-stop
+convergence. Camera, route, speed, and time-of-day remain unchanged.
+
+Pixel evidence separates genuine dark samples from fog. M390 retained RD 4,
+distance fog start ratio `0.48`, density `0.85`, and end margin `28`: fog reaches
+full blend at 36 blocks and begins at about 17.3 blocks. The uniform blue patches
+match the configured fog color `(13,38,89)` exactly. Of 32 768 sampled pixels,
+119 were below luma 32; all 119 had settled demand and visible opaque MDI, with
+3 preview markers and 9 voxel-pending witnesses. At luma `<96`, 994 samples were
+selected; 900 had settled demand, 94 unsettled, 110 preview markers, and 153
+voxel-pending witnesses. These are sampled pixels, not screen-area rates. Depth
+and voxel-ray witnesses often refer to different surfaces, so retain per-pixel
+joins before assigning a dark patch to light, transparency, fog, or geometry.
+
+The prior M389 transparent-composition result remains: 306/1 032 `<96` samples
+changed RGB during transparent composition; the pending underwater sand sample
+at y=46 is below sea level 48 and has visible MDI geometry. This does not make
+transparency the cause of every dark sample.
+
+Artifacts: [M390 analyzer report](../../bin/suite_reports/engine_refactor/m390_world164_m335_relight_owners_20261004.json),
+[pixel trace luma 32](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l32_20261004.json),
+[luma 64](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l64_20261004.json),
+[luma 96](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l96_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-182722_29104.jsonl),
+[GUI frames](../../bin/logs/m390_world164_m335_relight_owners).
 
 ### G5 — Сборка Release с параллельной компиляцией
 
