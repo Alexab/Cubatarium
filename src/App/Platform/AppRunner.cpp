@@ -645,6 +645,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
+    const bool route_line_tracking_enabled =
+        options.AvoidObstacles && options.Fly && options.HoldForward &&
+        !options.YawSweepMode && options.ReverseCourseAfterSec <= 0.0;
+    glm::vec3 route_line_origin(0.0f);
+    bool route_line_origin_captured = false;
+    float max_route_lateral_deviation_blocks = 0.0f;
+    float end_route_lateral_deviation_blocks = 0.0f;
     int heading_deviation_during_move_samples = 0;
     float max_heading_yaw_delta_deg = 0.0f;
     float max_heading_pitch_delta_deg = 0.0f;
@@ -932,6 +939,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       camera->GetLastMoveBlockedSubsteps();
                   const int flight_ground_contacts =
                       camera->GetLastFlightGroundContacts();
+                  constexpr float kDegreesToRadians =
+                      0.01745329251994329577f;
+                  const float yaw_rad = yaw * kDegreesToRadians;
+                  const glm::vec3 forward(std::cos(yaw_rad), 0.0f,
+                                          std::sin(yaw_rad));
+                  const glm::vec3 right(-std::sin(yaw_rad), 0.0f,
+                                        std::cos(yaw_rad));
 
                   // The world may publish collision data after a bypass was
                   // planned. If the camera becomes fully blocked while
@@ -966,17 +980,15 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
 
                   if (avoidance_phase != AvoidancePhase::None)
                   {
-                    constexpr float kWaypointTolerance = 0.45f;
-                    const auto horizontal_distance = [](const glm::vec3 &a,
-                                                        const glm::vec3 &b) {
-                      const float dx = a.x - b.x;
-                      const float dz = a.z - b.z;
-                      return std::sqrt(dx * dx + dz * dz);
-                    };
+                    constexpr float kWaypointTolerance = 0.75f;
+                    // Fixed movement steps can skip a small waypoint radius;
+                    // detect crossing the lateral target plane as arrival.
                     if (avoidance_phase == AvoidancePhase::MoveAside &&
-                        horizontal_distance(position,
-                                            avoidance_side_target) <=
-                            kWaypointTolerance)
+                        (std::abs(glm::dot(avoidance_side_target - position,
+                                          right)) <= kWaypointTolerance ||
+                         glm::dot(avoidance_side_target - position, right) *
+                                 static_cast<float>(avoidance_side) <=
+                             0.0f))
                     {
                       avoidance_phase = AvoidancePhase::PassObstacle;
                       std::cout << "flight-sim: obstacle bypass passing at t="
@@ -984,11 +996,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     }
                     if (avoidance_phase == AvoidancePhase::PassObstacle)
                     {
-                      const float dx = avoidance_pass_target.x - position.x;
-                      const float dz = avoidance_pass_target.z - position.z;
-                      const float remaining_forward =
-                          dx * std::cos(yaw * 0.01745329251994329577f) +
-                          dz * std::sin(yaw * 0.01745329251994329577f);
+                      const float remaining_forward = glm::dot(
+                          avoidance_pass_target - position, forward);
                       if (remaining_forward <= kWaypointTolerance)
                       {
                         avoidance_phase = AvoidancePhase::ReturnToRoute;
@@ -998,9 +1007,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       }
                     }
                     if (avoidance_phase == AvoidancePhase::ReturnToRoute &&
-                        horizontal_distance(position,
-                                            avoidance_return_target) <=
-                            kWaypointTolerance)
+                        (std::abs(glm::dot(avoidance_return_target - position,
+                                          right)) <= kWaypointTolerance ||
+                         glm::dot(avoidance_return_target - position, right) *
+                                 static_cast<float>(-avoidance_side) <=
+                             0.0f))
                     {
                       avoidance_phase = AvoidancePhase::None;
                       ++avoidance_detours_completed;
@@ -1018,11 +1029,6 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     // the established flight speed, including tree support
                     // that would otherwise make the camera land and stop.
                     float hazard_distance = 0.0f;
-                    const float yaw_rad = yaw * 0.01745329251994329577f;
-                    const glm::vec3 forward(std::cos(yaw_rad), 0.0f,
-                                            std::sin(yaw_rad));
-                    const glm::vec3 right(-std::sin(yaw_rad), 0.0f,
-                                          std::cos(yaw_rad));
                     for (float distance = 0.75f; distance <= 18.0f;
                          distance += 0.75f)
                     {
@@ -1151,11 +1157,15 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     const bool side_step =
                         avoidance_phase == AvoidancePhase::MoveAside ||
                         avoidance_phase == AvoidancePhase::ReturnToRoute;
-                    const bool move_right =
-                        (avoidance_phase == AvoidancePhase::MoveAside &&
-                         avoidance_side > 0) ||
-                        (avoidance_phase == AvoidancePhase::ReturnToRoute &&
-                         avoidance_side < 0);
+                    const glm::vec3 &side_target =
+                        avoidance_phase == AvoidancePhase::MoveAside
+                            ? avoidance_side_target
+                            : avoidance_return_target;
+                    // Recompute steering from actual cross-track error so an
+                    // overshoot reverses the side key instead of drifting on.
+                    const float lateral_error =
+                        glm::dot(side_target - position, right);
+                    const bool move_right = lateral_error > 0.0f;
                     window.SetAutopilotKey(KeyCode::Key_W, !side_step);
                     window.SetAutopilotKey(KeyCode::Key_A,
                                            side_step && !move_right);
@@ -1289,6 +1299,27 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 start_focus_cx = focus_chunk.x;
                 start_focus_cz = focus_chunk.z;
                 start_focus_captured = true;
+                if (route_line_tracking_enabled)
+                {
+                  route_line_origin = camera->GetPosition();
+                  route_line_origin_captured = true;
+                }
+              }
+              if (route_line_tracking_enabled && route_line_origin_captured)
+              {
+                constexpr float kDegreesToRadians =
+                    0.01745329251994329577f;
+                const float route_yaw_rad =
+                    options.FaceYawDeg * kDegreesToRadians;
+                const glm::vec3 route_right(-std::sin(route_yaw_rad), 0.0f,
+                                            std::cos(route_yaw_rad));
+                const glm::vec3 route_delta =
+                    camera->GetPosition() - route_line_origin;
+                end_route_lateral_deviation_blocks =
+                    std::abs(glm::dot(route_delta, route_right));
+                max_route_lateral_deviation_blocks =
+                    (std::max)(max_route_lateral_deviation_blocks,
+                               end_route_lateral_deviation_blocks);
               }
             }
             return ingame_sec >= in_game_seconds;
@@ -1491,6 +1522,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"end_focus\": [" << end_focus_cx << ", " << end_focus_cz
                << "],\n"
                << "  \"chunks_traveled_cheb\": " << chunks_traveled << ",\n"
+               << "  \"route_line_tracking\": {\n"
+               << "    \"enabled\": "
+               << (route_line_tracking_enabled ? "true" : "false") << ",\n"
+               << "    \"max_lateral_deviation_blocks\": "
+               << max_route_lateral_deviation_blocks << ",\n"
+               << "    \"end_lateral_deviation_blocks\": "
+               << end_route_lateral_deviation_blocks << "\n"
+               << "  },\n"
                << "  \"perf_jsonl\": \"" << json_escape(perf_jsonl) << "\",\n"
                << "  \"analyze\": \"run tools/flight_sim_analyze.py on perf\"\n"
                << "}\n";
