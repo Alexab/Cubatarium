@@ -928,6 +928,44 @@ drain на `moving_any`; проверить cap `<=3`, budget `12 ms`, multi-com
 всё ещё рисуется тёмным, перейти к владельцу relight/mesh-settlement для
 новосозданных дальних колонок, не к геометрическому draw gate.
 
+### Результат M389 — batching сработал, но warm disk повтора не было
+
+M389 повторил M335 без изменения старта, камеры, скорости и daylight: visible,
+no-teleport `World_164`, `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`,
+2 800 s fly + 20 s settle. Пройдено 9 168 блоков (`focus 7→−566`, median
+`5.18555 blocks/s`), checkpoint `8 192`, `process_rc=0`. Scheduler применил
+cap до трёх колонок и budget `12 ms` к 1 542 multi-ready records; telemetry
+зафиксировала 98 multi-commit periods с максимумом 3.
+
+Результат по графике смешанный, acceptance остаётся `FAIL`: flying wall median
+`104.60 ms`, stream `26.28 ms`, mesh emerge `29.16 ms`, visible-black max `20`,
+near-void max `3 032`, unlit max `45`, post-stop convergence false. Плотный
+pixel trace содержит 115/32 768 samples с luma `<32` (M388: 165), 8 provisional
+light samples и 2 unsettled demand. Большинство dark probes имеют валидную
+drawn surface и settled light revision, поэтому они не доказывают пустой или
+сломанный chunk. `unfinished_visual=97.51%` — широкий loaded-column/no-mesh
+census, не процент экрана. В отчёте dominant schedule blocker=`empty_fm_queue`,
+deferred far relight pending max=`678`, FIFO dropped delta=`1 313`; приоритет
+следующего кода — проверить owner/retention visible relight debt до mesh/GPU
+publication и трассировать выбранные screen pixels до material/light source.
+
+M389 не проверил тёплый disk path, несмотря на имя `persisted_drain`: точная
+колонка `(-522,0,3)` снова дала `disk_miss` и procedural commit через
+`247.66 ms`; flight-sim отключает periodic autosave, а wrapper восстанавливает
+`world_data.json`. Перепроверить warm persistence только после подтверждения
+наличия сохранённого column file и явного `disk_hit`; unload-save paths пока
+не считать неисправными или исправленными. Ускорить/перенаправлять M335 ради
+этого не нужно.
+
+Оператор также сообщил, что видел столкновение с деревом и остановку. Flight
+report M389 показывает нулевые obstacle attempts и `collision_stop=false`;
+связь наблюдения именно с этим run не установлена. Harness уже имеет forward
+hazard sweep, двусторонний bounded detour и replan после blocked movement или
+ground contact. Следующий M335 run должен сохранять кадры и collision counters
+одного process/session; менять для проверки маршрутные условия нельзя.
+
+Подробные метрики и артефакты: [аудит M389](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md#M389-bounded-drain-активен-повторы-дальних-колонок-всё-еще-cold).
+
 ### G4 — Новые миры как периодическая проверка переноса
 
 Основной цикл остаётся на детерминированном World_164: не менее трёх повторов на

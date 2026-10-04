@@ -3755,3 +3755,63 @@ Artifacts: [M388 report](../../bin/suite_reports/engine_refactor/m388_world164_m
 [perf trace](../../bin/logs/perf_20261004-154622_31036.jsonl),
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-154618.31036),
 [GUI frames](../../bin/logs/m388_world164_m335_scheduler_drain).
+
+## M389: bounded drain активен; повторы дальних колонок всё ещё cold
+
+M389 запущен на Release-сборке с тем же видимым/no-teleport M335 на
+`World_164`: `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, speed scale
+`1`, 2 800 s полёта и 20 s settle. Он прошёл 9 168 блоков (`focus 7→−566`,
+median speed `5.18555`) и checkpoint `8 192`; `process_rc=0`. `world_data.json`
+восстановлен wrapper. Наблюдение оператора о столкновении с деревом и остановке
+остаётся открытым: доступный flight report M389 указывает нулевые obstacle
+attempts и `collision_stop=false`, поэтому пока нельзя утверждать, что
+это был именно тот же процесс/участок. Сам обход в коде уже включает проверку
+коридора вперёд, поиск боковых сегментов и повторный выбор стороны при
+заблокированном waypoint. Сохранять screenshot и counters одного и того же
+процесса на следующем M335 повторе; профиль маршрута не менять.
+
+Результаты планировщика показывают, что исправление M388 реально работает:
+из 2 437 процедурных commit records у 1 542 ready batch превышал 1; cap был
+`1/2/3` для `895/1 297/245` records, а бюджет `12 ms` — для всех 1 542
+multi-ready records. По frame telemetry было 98 multi-commit periods, максимум
+3 применения за кадр. Средняя стоимость apply составила около `6.86 ms` на
+колонку. Условие по скорости теперь совпадает с M335 через существующий
+movement-prefetch threshold; параметры пролёта не менялись.
+
+Диагностическая трасса содержит 32 768 pixel probes, из них 115 с luma `<32`
+(против 165 в M388; это доля выбранных проб, не экранная доля). У всех 115
+валидная depth-поверхность, у 113 видна opaque MDI команда, у 107 совпал
+source-face witness. В 8 пробах был `light_preview=1`, только в 2 demand был
+unsettled; большинство тёмных проб (`82`) имели `sky=1`, `block=0`, совпадающие
+field/published light revisions и settled demand. Это совместимо с затенённой
+геометрией и не доказывает повреждение дальнего чанка. Требуется разбирать
+конкретный экранный участок и его исходный voxel/material, не повышать яркость
+shader вслепую.
+
+Общие ворота по-прежнему красные: analyzer `pass=false`, 1 368 periods, 5 397
+spikes, flying wall median `104.60 ms` (`9.56 FPS`), stream `26.28 ms`, mesh
+emerge `29.16 ms`, dirty median `844.5`, visible-black max `20`, near-void max
+`3 032`, unlit max `45`, stop convergence false. `unfinished_visual=97.51%`
+остаётся census loaded-column/no-mesh debt, а не screen hole rate. Scheduler
+drain уменьшил часть provisional/dark probes и видимый-black максимум, но
+общий frame budget, far-light debt и renderer acceptance остаются нерешёнными.
+Dominant schedule blocker в отчёте — `empty_fm_queue`; deferred far relight
+pending достигал `678`, а FIFO dropped delta — `1 313`. Следующий кодовый шаг
+должен проследить, почему visible relight очередь исчерпывается при большом
+far-pending debt, и сохранять ограниченные координатные transitions до mesh/GPU
+publication.
+
+M389 не проверил disk persistence: точная дальняя колонка `(-522,0,3)` снова
+получила `disk_miss`, а затем procedural commit через `247.66 ms`. Harness
+вызывает `SetAutosaveEnabled(false)`; значит, обозначение «persisted drain» в
+имени артефакта не является доказательством warm disk load. При этом вывод
+ограничен именно наблюдаемыми координатами: unload-save в остальных путях ещё
+не проверен. Следующий persistence контроль должен обеспечить сохранённый
+column file до повтора и подтвердить `disk_hit` source trace, сохранив M335
+условия съёмки.
+
+Artifacts: [M389 analyzer report](../../bin/suite_reports/engine_refactor/m389_world164_m335_persisted_drain_20261004.json),
+[pixel/light analysis](../../bin/suite_reports/engine_refactor/m389_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-165636_31704.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-165632.31704),
+[GUI frames](../../bin/logs/m389_world164_m335_persisted_drain).
