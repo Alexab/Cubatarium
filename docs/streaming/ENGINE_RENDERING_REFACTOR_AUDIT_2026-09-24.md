@@ -3412,17 +3412,70 @@ remained at dirty queue index `1/595` and was not scheduled that frame. Do not
 raise global commit caps from this evidence alone: median frame wall was already
 104 ms and rendering took 58% of the frame.
 
-**Next code change:** replace FIFO-only disk completion selection with a bounded
-near-focus drain and age-based fairness, while keeping per-frame apply limits.
-Repeat M335 and compare disk apply lag/result wait, route coverage, visual gates,
-and wall frame. Continue separate investigation of generator completion and
-visible geometry-debt scheduling.
+**Status:** the bounded near-focus disk completion drain with age-based fairness
+was implemented in `e9d999d9` and evaluated in M383. It reduced p95 completion
+wait and advanced the applied disk frontier, but left the worst tail, ready queue
+size, and renderer acceptance gates unresolved. The current next investigation is
+procedural request/ready queue service and multi-frame ownership of dirty geometry
+debt, with a bounded wall/apply cost.
 
 ### Next work from this run
 
-Keep the M335 conditions fixed. Add per-slice async I/O timings so multi-minute
-disk request-to-ready tails can be decomposed, then test a bounded focus-result
-drain because the current moving path holds every generation commit to one per
-frame despite a ready batch of up to 73. Preserve a wall/apply budget and compare
-the full Release run. Keep collision counters in the report; the current
-flight-sim detour completed successfully and needs no adjustment.
+Keep the M335 conditions fixed. The per-slice async I/O trace and near-focus disk
+result drain are now implemented. Next, decompose procedural request queueing,
+ready-result wait, and apply cost; separately trace a repairable screen-ray mesh
+witness through later scheduling frames. Preserve a wall/apply budget and compare
+the full Release run. Keep collision counters and final GUI frames: the operator
+reported a tree stop, while the M383 summary did not confirm a collision event.
+
+## M383: focus-prioritized disk completions help the frontier, not renderer gates
+
+M383 ran from clean Release commit `5b185435` with EXE SHA-256
+`612AE8480BD1AA30BBBF1A3070647F42492A60C34C7134EFF0C280C729AB4A1A`. It kept
+the established M335 conditions exactly: visible/no teleport, `World_164` seed
+`3650471197`, start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, scale 1,
+and 2 800 s flight plus 20 s settle. The process exited normally, reached the
+8 192-block checkpoint, and ended at focus `x=−588` (20 chunks short of M382).
+
+The near-focus disk result drain improved p95 result wait from `70.37 s` in M382
+to `26.05 s` in M383, and the furthest applied disk column moved from about
+`x=−256` to `x=−335`. Raw file reads remained fast. The maximum wait rose from
+`676.6 s` to `706.3 s`, and completed-ready queue max was effectively unchanged
+(`1 710→1 720`); this is a promising one-run shift in the latency distribution,
+not a closed backlog or a controlled proof of causal improvement.
+
+Renderer gates remained poor: unfinished visual debt appeared in `97.88%` of
+samples, longest run `798`, Dirty median/max `970/1 634`, visible-black max `28`,
+and post-stop convergence failed. Near-void max fell `4 462→1 237`, while
+visible-black max rose `23→28`; both runs fail and these one-repeat values should
+not be interpreted as overall quality improvement/regression.
+
+At the x≈−383 witness, output slots had headroom 4 while six mesh schedule slots
+were requested and four available. Among 259 ScreenRayRepair rows west of x=−400,
+252 contained repairable geometry debt and 231 promoted visible geometry; 254
+were sampled before a mesh schedule that frame. Queue-position median was 8 in a
+queue of median size 944. Many rejected FirstMesh tickets coexisted with an
+already-owned Dirty/Remesh item, so the snapshot alone does not establish queue
+starvation. Follow a stable witness over subsequent frames to determine whether
+the existing owner reaches scheduling, capture, completion, and publication.
+
+Procedural generation timings were usually short compared with request and ready
+queue waits. Queue p95 reached about 75 s in some route bands; generation and
+commit remain capped at one per frame. Separate request wait, ready wait, and
+apply cost before changing the cap, and preserve bounded frame wall/apply time.
+
+The operator reported seeing the camera hit a tree and stop. A captured M383 frame
+shows a nearby tree and large unfilled render regions, while the run later reached
+focus x=−588. The analyzer summary has no collision fields; available M383 summary
+did not confirm blocked movement or flight-ground contact. Keep the visual report
+as an unresolved observation and correlate final GUI frames with movement and
+collision counters on the next identical M335 run. The reactive flight fallback
+committed in `5b185435` retries the detour planner after a blocked substep or
+ground contact, alternates the preferred side, and widens clearances after a
+failed attempt; this run does not show that fallback being exercised.
+
+Artifacts: [M383 analyzer report](../../bin/suite_reports/engine_refactor/m383_world164_m335_focus_io_20261004.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m383_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-100630_31840.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-100625.31840),
+[GUI frames](../../bin/logs/m383_world164_m335_focus_io).
