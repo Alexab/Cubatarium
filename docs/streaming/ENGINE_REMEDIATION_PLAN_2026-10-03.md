@@ -648,20 +648,12 @@ planner уже повторно планирует после фактическ
 ground contact, меняет предпочитаемую сторону и расширяет отступы после
 неудачной попытки; M383 эту ветку не подтвердил как сработавшую.
 
-**Следующая задача G3:** сохранить M335 неизменным и исследовать
-путь повторной передачи актуального load priority. В M384 все 2 826 procedural
-commit rows имели `priority_at_commit == priority_at_schedule`; выяснилось, что
-`ChunkStreamer::EnsureChunkLoaded` завершает ветку при `OnIsColumnPending`, не
-вызывая request callback, а callback в `WorldStreaming` отдельно отбрасывает
-вызовы для `ChunkScheduler::IsPending`. Исправить оба short-circuit так, чтобы
-повторный запрос обновлял priority у уже ожидающего scheduler без повторного disk
-request. Добавить в source telemetry счётчик/поля фактического re-ranking и
-повторить Release M335. При review того же lifecycle также найдено, что stale
-worker result помечает `States[coord] = Ready` до token validation; защитить
-актуальное состояние колонки от результата старой generation. Затем отдельно
-вернуться к межкадровому lifecycle dirty mesh witness. Не повышать общий cap без
-ограниченного frame/apply cost; новые seed оставить периодическим контрольным
-тестом.
+**G3 выполнена частично:** M385 подтвердил, что повторный запрос теперь доходит до
+scheduler: у 801 из 2 705 procedural commits `priority_refresh_n > 0`, у 729
+priority изменился до старта генерации, а у 294 — после старта. Проверка token до
+смены состояния также включена. Одного повтора недостаточно, чтобы приписать
+изменению улучшение очереди или рендеринга; lifecycle грязных mesh witnesses
+остаётся открытым.
 
 ### Результат M384 — detour подтверждён, priority refresh не доходил до scheduler
 
@@ -689,6 +681,73 @@ Flight control подтвердил работу обхода: `1` hazard, `1` s
 right-side detour, side offset `3`, pass distance `7.25`, plan failures `0`;
 blocked substeps и ground contacts — `0`. Значит, обход препятствия теперь
 срабатывает в контрольном M335, не изменяя исходные параметры съёмки.
+
+### Результат M385 — приоритет обновляется; очередь готовых commit ограничена одним на кадр
+
+M385 использовал чистую Release-сборку `613296e6` с тем же видимым no-teleport
+M335 на `World_164`, seed `3650471197`: старт `[120,56,56]`, eye y `70`, yaw
+`180°`, pitch `−30°`, scale 1, 2 800 s полёта и 20 s settle. Процесс завершился
+штатно (`rc=0`), focus прошёл `7→−591`, дистанция составила 9 568 блоков,
+checkpoint 8 192 пересечён. В этом повторе обход препятствия не понадобился.
+
+Acceptance рендеринга по-прежнему FAIL: `unfinished_visual` ненулевой в 98.0%
+периодов (медиана 26, максимум 100), Dirty median/max `596/1 459`, wall median
+`105.61 ms`, near-void max `4 285`, visible-black max `28`, Red pressure `100%`,
+stop convergence false. `unfinished_visual` — широкий census
+`column_loaded_no_mesh_n`, а не доля пиксельных дыр: прямые `near_focus_holes` и
+`visual_holes` имели median 0, максимум 1 и были ненулевы в 16.8% периодов;
+`focus_missing_mesh` имел median 0 и максимум 1. Эти показатели следует
+разделять в оценке дальнейших прогонов.
+
+На 2 705 procedural commits request queue p50/p95/max составил
+`27 ms / 33.83 s / 80.85 s`, generation `91.9/128/305 ms`, ready wait
+`289 ms / 8.74 s / 65.05 s`, apply `5.38/8.14/34.22 ms`, полный request-to-apply
+`448 ms / 42.16/95.82 s`. У всех записей `max_commits_per_frame=1`, хотя
+`ready_batch_n` имел p50 3, p95 32 и максимум 55. Это измеряет ограничение слива
+готовых результатов; ослаблять его можно только с ограничением суммарной
+стоимости `ApplyTo + MarkDirty` на кадр. Priority refresh был активен: 801 commit
+имел ненулевой refresh counter, у 729 priority изменился до старта генерации,
+у 294 — после старта. Queue p95 оказался ниже M384 на ~2.1 s, но один повтор не
+доказывает причинность.
+
+M385 смешивает disk и procedural path: 2 291 disk requests, 1 845 disk
+completions, 2 710 disk misses и 2 705 procedural commits. Это не сопоставленный
+reload-тест и не объясняет затемнённые области. Среди 21 200 pixel probes было
+104 тёмных попадания; все имели depth и видимый MDI, большинство source-face
+совпадений относилось к листве с sampled sky light `1`. Это указывает на
+опубликованную геометрию в sampled pixels, но не позволяет считать большие
+затемнённые пятна нормальными и не исключает lighting/revision проблему.
+
+GPU mesh slots заполнялись до лимита 2 048: mid/late-flight bound median
+`2 045/2 046`, свободных слотов было `2/1`; к концу накопительный eviction
+counter достиг `2 427`. `gpu_mesh_slot_no_victim_n` оставался нулевым: allocator
+находил mesh вне guarded draw radius, поэтому один этот факт не объясняет holes.
+`mesh_async` median 12 (max 16), pending GPU median 10, pipeline schedule-skip
+median 0/p90 7 — это признаки backpressure; их следует коррелировать с focus
+witnesses, а не лечить простым увеличением slot capacity.
+
+**Следующий контрольный шаг G3:** оставить M335 неизменным и испытать
+time-budgeted drain уже готовых procedural results: при наличии backlog разрешать
+до трёх приоритетных commits за кадр с суммарным main-thread budget
+`ApplyTo + MarkDirty` в 12 ms; без готового backlog текущий лимит сохраняется.
+Записывать `ready_batch_n`, `ready_wait_ms`, фактические commits/apply ms на кадр,
+wall/stream time, near-focus holes и mesh completion. Это проверяет ограничение
+`max_commits_per_frame=1` из M385 и удерживает стоимость кадра; GPU slot capacity
+в этой итерации не менять. После изменения сделать минимум три одинаковых M335
+перед выводом о причинном результате. Новые миры остаются периодической проверкой
+переноса, не заменой `World_164`.
+
+Точная команда M385:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m385_world164_m335_priority_refresh_live'; python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m385_world164_m335_priority_refresh_live --report bin/suite_reports/engine_refactor/m385_world164_m335_priority_refresh_live_20261004.json --process-timeout 3000
+```
+
+Artifacts: [M385 analyzer report](../../bin/suite_reports/engine_refactor/m385_world164_m335_priority_refresh_live_20261004.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m385_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-122227_40432.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-122223.40432),
+[GUI frames](../../bin/logs/m385_world164_m335_priority_refresh_live).
 
 ### G4 — Новые миры как периодическая проверка переноса
 

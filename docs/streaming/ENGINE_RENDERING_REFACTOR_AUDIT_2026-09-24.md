@@ -3531,3 +3531,58 @@ Artifacts: [M384 analyzer report](../../bin/suite_reports/engine_refactor/m384_w
 [perf trace](../../bin/logs/perf_20261004-112008_7628.jsonl),
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-112004.7628),
 [GUI frames](../../bin/logs/m384_world164_m335_priority_refresh).
+
+## M385: priority refresh is live; ready-result drain is a measured throttle
+
+M385 repeated the same visible Release/no-teleport M335 on `World_164` with no
+camera, speed, daylight, route, or start changes. It finished normally (`rc=0`),
+covered 9 568 blocks from focus x `7` to `−591`, and crossed the 8 192-block
+checkpoint. Collision stop and detour counts were both zero in this run.
+
+The priority-refresh path now reaches the generation scheduler. Of 2 705
+procedural commits, 801 had at least one recorded priority refresh; 729 changed
+priority before generation started and 294 changed it while generation was
+running/ready. Request-queue p95 was `33.83 s` vs M384 `35.96 s`, but the queue
+max was still `80.85 s`; one run is not causal evidence of improved streaming.
+
+A separate throttle is visible in the same trace. Every procedural commit row
+reported `max_commits_per_frame=1`, while ready batches had p50 `3`, p95 `32`, and
+max `55`. Ready-result wait was p50/p95/max `289 ms / 8.74 s / 65.05 s`. Generation
+was comparatively short (`92/128/305 ms` p50/p95/max), and the main-thread
+`ApplyTo + MarkDirty` cost was `5.38/8.14/34.22 ms`. This gives a bounded next
+experiment: let focus-prioritized ready results drain up to three per frame, with
+a 12 ms accumulated apply budget and an unconditional first-commit allowance.
+Keep the existing cap if no ready backlog exists. This is a controlled test of
+throughput under a measured time bound; it does not justify a global unbounded
+commit increase.
+
+Analyzer `unfinished_visual` is not a literal pixel-hole percentage in this
+trace: it is closely tracking `column_loaded_no_mesh_n`, with median 26 and
+nonzero in 98% of periods. Direct `near_focus_holes`/`visual_holes` had median 0,
+max 1, and were nonzero in 16.8% of periods; `focus_missing_mesh` also had
+median 0, max 1. Renderer acceptance still failed: Dirty median/max `596/1 459`,
+wall median `105.61 ms`, near-void max `4 285`, visible-black max `28`, Red
+pressure `100%`, and post-stop convergence false. These fields describe distinct
+debts and must not be collapsed into a single “empty chunk” count.
+
+The route recorded 2 291 disk requests, 1 845 disk completions, 2 710 disk misses,
+and 2 705 procedural commits. Since there was no matched return pass over the
+same columns, this cannot determine whether a dark area came from disk reload or
+fresh generation. Of 21 200 pixel probes, 104 dark samples all had depth and a
+visible MDI draw. Most matched source faces were foliage with sampled sky light
+1. Geometry was present at those sampled pixels; the sparse sample does not
+resolve broad dark regions and still leaves lighting revision/shading to inspect.
+
+GPU mesh residency reached its fixed 2 048-slot limit: mid/late-flight bound
+median `2 045/2 046`, free slots `2/1`, and cumulative evictions reached `2 427`.
+The no-victim counter stayed zero, so the allocator found candidates outside its
+guarded draw region. Pending GPU was median 10 and mesh async median 12 (max 16),
+showing steady queue pressure without a demonstrated no-victim failure. Do not
+increase slot capacity in the same experiment; correlate a stable focus witness
+through enqueue, schedule, publication, and draw first.
+
+Artifacts: [M385 analyzer report](../../bin/suite_reports/engine_refactor/m385_world164_m335_priority_refresh_live_20261004.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m385_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-122227_40432.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-122223.40432),
+[GUI frames](../../bin/logs/m385_world164_m335_priority_refresh_live).
