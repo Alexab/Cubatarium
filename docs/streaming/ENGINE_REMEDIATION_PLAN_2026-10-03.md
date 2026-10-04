@@ -1317,14 +1317,28 @@ Pool trace также не доказывает жёсткое исчерпан�
 отказ публикации: настроенный med-tier ceiling — `256 MB`. Не увеличивать слот
 или memory limits без подтверждённого отказа и same-pixel причинной связи.
 
+Координатное соединение pixel/source trace показывает один и тот же симптом
+при обоих источниках данных. При камере `[-2804,70,55]` тёмные drawable pixels
+на slice `(-176,4,3)` видели CPU mesh revision `5` при GPU published geometry
+`4`; ground column `(-176,0,3)` был прочитан с диска (`file_read_ms=1.16`, весь
+source event `466.99 ms`). Рядом колонка `(-176,0,2)` была disk miss, но
+procedural request ждал `23.04 ms`, generation заняла `99.02 ms`, apply —
+`5.03 ms`. На камере `[-8213,70,55]` drawable slice `(-514,3,3)` снова отставал
+на одну geometry revision (`6/5`); ground column `(-514,0,3)` был создан с
+`queue_ms=29.04`, `generation_ms=90.74`, `ready_wait_ms=106.39` и
+`apply_ms=5.84`. Это не доказывает причину всех тёмных областей, но показывает,
+что медленные disk read или terrain generation не объясняют эти конкретные
+surface witnesses: источник данных уже был применён, а GPU-геометрия отставала.
+
 **Обновлённые следующие шаги:**
 
 1. Сохранить Red `max_load_ops_cap=2` (восстановлен commit `820af493` после
    M394); не возвращать увеличение без нового причинного замера.
-2. В MDI publication path проследить долгоживущие `mesh_revision >
-   published_geom_revision` через Dirty expansion, GPU batch upload, fence и
-   resident-table swap. Свести тот же координатный pixel-witness с source/light
-   revisions; не менять preview-light policy до этой связи.
+2. Для колонок `(-176,0,3)` и `(-514,0,3)` проследить те же вертикальные
+   surface slices от source revision через dirty admission, mesh job и geometry
+   revision к GPU batch upload/fence/resident-table swap. Найти стадию, где
+   образуется наблюдённый разрыв в одну revision; не менять preview-light policy
+   до проверки тех же координат.
 3. Для процедурных и disk очередей отдельно определить, где заявки ждут до
    worker start и почему ready disk results ждут до `55 s` p95. Не увеличивать
    число workers/load ops по одному общему `queue_ms`.
@@ -1373,6 +1387,16 @@ target; Debug и тестовые targets в этой работе не запу
   дальнего volumetric LOD или sparse cache, но не аргумент заменять текущие chunks
   без измерений и совместимого mutation path:
   [Laine & Karras, NVIDIA Research](https://research.nvidia.com/sites/default/files/pubs/2010-02_Efficient-Sparse-Voxel/laine2010tr1_paper.pdf).
+- Для изменяемых voxel worlds mesh является производным кешем: базовый разбор
+  greedy meshing исходит из того, что блоки меняются существенно реже, чем
+  рисуются, поэтому geometry rebuild и draw следует измерять отдельно:
+  [Meshing in a Minecraft Game, 0 FPS](https://0fps.net/2012/06/30/meshing-in-a-minecraft-game/).
+- Khronos описывает implicit synchronization при записи в GPU buffer ranges,
+  которые ещё могут использоваться draw-командами. Для текущего GL 3.3 backend
+  изменения upload path нужно проверять вместе с fence lifetime и безопасностью
+  повторного использования диапазонов:
+  [OpenGL Buffer Object Streaming](https://wikis.khronos.org/opengl/Buffer_Object_Streaming),
+  [OpenGL Synchronization](https://wikis.khronos.org/opengl/Synchronization).
 
 Переносимый вывод для Cubatarium: источник данных — отдельный наблюдаемый результат
 до mesh readiness; очередь должна ограничивать дубликаты/запас работы, а disk I/O,

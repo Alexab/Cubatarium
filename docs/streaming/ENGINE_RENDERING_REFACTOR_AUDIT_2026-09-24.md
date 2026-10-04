@@ -4158,6 +4158,22 @@ remains the dominant completion stall and `zero_fm_cap` the dominant classified
 schedule blocker, so the next audit should trace freshness and queue ownership
 through dirty admission, upload, fence completion, and draw publication.
 
+The coordinate join narrows this further. At camera `[-2804,70,55]`, dark
+drawable pixels on `(-176,4,3)` saw CPU mesh revision `5` and published GPU
+geometry revision `4`; its source column `(-176,0,3)` completed from disk in
+`467 ms`, including `1.16 ms` of file reads. At camera `[-8213,70,55]`, dark
+drawable pixels on `(-514,3,3)` saw revisions `6/5`; source column `(-514,0,3)`
+had a disk miss but generation finished in `90.74 ms` after `29.04 ms` in the
+queue. Nearby generated terrain `(-176,0,2)` took `99.02 ms` after `23.04 ms`
+in the queue. The samples span disk-backed and procedural columns but share the
+one-revision GPU freshness gap. This does not prove every dark patch has the
+same cause; it rules out slow disk/generation as the explanation for these
+specific surfaces. Follow those exact vertical slices through dirty admission,
+CPU mesh rebuild, GPU upload/fence, and resident-table swap.
+
+Voxel-engine practice treats meshes as derived cached data and measures rebuild
+separately from draw ([0 FPS greedy-meshing analysis](https://0fps.net/2012/06/30/meshing-in-a-minecraft-game/)). The upload audit must respect OpenGL's buffer-range and synchronization rules ([Khronos buffer streaming](https://wikis.khronos.org/opengl/Buffer_Object_Streaming), [Khronos synchronization](https://wikis.khronos.org/opengl/Synchronization)).
+
 Artifacts: [M394 analysis report](../../bin/suite_reports/engine_refactor/m394_world164_m335_red_generation_cap_20261004.json),
 [flight/obstacle report](../../bin/suite_reports/engine_refactor/m394_flight_sim_20261005.json),
 [pixel trace](../../bin/suite_reports/engine_refactor/m394_renderer_pixel_trace_l96_20261005.json),

@@ -114,6 +114,32 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
     disk_complete = coords(grouped.get(("disk", "complete"), []))
     disk_cancelled = coords(grouped.get(("disk", "cancelled_out_of_range"), []))
     proc_cancelled = coords(grouped.get(("procedural", "cancelled_out_of_range"), []))
+    procedural_commits = grouped.get(("procedural", "committed"), [])
+    slow_procedural_queue_events: list[dict[str, Any]] = []
+    for event in sorted(
+        procedural_commits,
+        key=lambda row: float(row.get("queue_ms", "0")),
+        reverse=True,
+    )[:20]:
+        sample: dict[str, Any] = {}
+        for field in (
+            "coord", "priority", "token", "queue_ms", "scheduler_queue_ms",
+            "worker_pool_queue_ms", "generation_ms", "ready_wait_ms", "apply_ms",
+            "total_ms", "priority_refresh_n", "request_queue_live_at_schedule",
+            "request_queue_heap_at_schedule", "worker_pending_at_submit",
+            "worker_active_at_submit", "worker_count",
+            "generation_start_cap_per_frame",
+        ):
+            value = event.get(field)
+            if value is None:
+                continue
+            try:
+                number = float(value)
+            except ValueError:
+                sample[field] = value
+                continue
+            sample[field] = int(number) if number.is_integer() else round(number, 4)
+        slow_procedural_queue_events.append(sample)
     return {
         "schema": "world_column_source_trace.v1",
         "files": files,
@@ -123,6 +149,7 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
             for (source, outcome), count in sorted(counts.items())
         },
         "by_source": by_source,
+        "slow_procedural_queue_events": slow_procedural_queue_events,
         "unique_disk_coordinates": {
             "queued": len(disk_queued),
             "completed": len(disk_complete),
