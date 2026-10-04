@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <queue>
 #include <unordered_map>
@@ -72,6 +73,7 @@ private:
     int priority{0};
     ChunkGenerationToken token;
     std::chrono::steady_clock::time_point requestedAt{};
+    uint64_t queueRevision{0};
     ProceduralSettings settings;
     glm::ivec2 columnOrigin{0};
     bool hasColumnOrigin{false};
@@ -97,6 +99,7 @@ private:
   };
 
   void ScheduleWorker(const PendingRequest &request);
+  void CompactRequestQueueIfStale();
 
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
@@ -108,9 +111,13 @@ private:
   std::priority_queue<PendingRequest, std::vector<PendingRequest>,
                       RequestCompare>
       Queue;
+  // Queue is a heap and cannot update an entry in place. Keep the current
+  // request separately so priority changes can invalidate old heap entries.
+  std::unordered_map<glm::ivec3, PendingRequest, IVec3Hash> QueuedRequests;
   std::unordered_map<glm::ivec3, ChunkLoadState, IVec3Hash> States;
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
   std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;
+  uint64_t NextRequestQueueRevision{1};
   double LastTickApplyMs{0.0};
   int LastCommitsThisFrame{0};
 };
