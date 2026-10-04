@@ -149,6 +149,12 @@ def main() -> int:
                         "chunk": [row.get("renderer_pixel_voxel_chunk_x"),
                                   row.get("renderer_pixel_voxel_chunk_y"),
                                   row.get("renderer_pixel_voxel_chunk_z")],
+                        "mesh_revision": row.get(
+                            "renderer_pixel_voxel_chunk_mesh_revision"
+                        ),
+                        "published_geom_revision": row.get(
+                            "renderer_pixel_voxel_chunk_published_geom_rev"
+                        ),
                         "render_flags": row.get(
                             "renderer_pixel_voxel_chunk_render_flags"
                         ),
@@ -159,6 +165,40 @@ def main() -> int:
                         "mdi_visible_index_count": row.get(
                             "renderer_pixel_voxel_chunk_mdi_visible_index_count"
                         ),
+                        "work_owner_flags": row.get(
+                            "renderer_pixel_voxel_chunk_work_owner_flags"
+                        ),
+                        "dirty_queue": {
+                            "kind": row.get(
+                                "renderer_pixel_voxel_chunk_dirty_queue_kind"
+                            ),
+                            "index": row.get(
+                                "renderer_pixel_voxel_chunk_dirty_queue_index"
+                            ),
+                            "size": row.get(
+                                "renderer_pixel_voxel_chunk_dirty_queue_size"
+                            ),
+                            "age_frames": row.get(
+                                "renderer_pixel_voxel_chunk_dirty_queue_age_frames"
+                            ),
+                        },
+                        "scheduled_this_frame": row.get(
+                            "renderer_pixel_voxel_chunk_scheduled_this_frame"
+                        ),
+                        "demand": {
+                            "present": row.get(
+                                "renderer_pixel_voxel_chunk_demand_present"
+                            ),
+                            "active_attempt": row.get(
+                                "renderer_pixel_voxel_chunk_demand_has_active_attempt"
+                            ),
+                            "active_stage": row.get(
+                                "renderer_pixel_voxel_chunk_demand_active_stage"
+                            ),
+                            "desired_geom_revision": row.get(
+                                "renderer_pixel_voxel_chunk_demand_desired_geom_rev"
+                            ),
+                        },
                     },
                     "pixel_shader": {
                         "min_ambient": row.get("renderer_pixel_shader_min_ambient"),
