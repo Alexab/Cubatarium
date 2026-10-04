@@ -55,7 +55,8 @@ public:
   void Invalidate(glm::ivec3 coord);
   void Tick(UBlockWorld &world, int maxCommitsPerFrame,
             int maxGenerationStartsPerFrame = 4,
-            double maxApplyMsPerFrame = 0.0);
+            double maxApplyMsPerFrame = 0.0,
+            bool allowBoundedReadyDrain = false);
   bool IsCommitted(glm::ivec3 coord) const;
   bool IsPending(glm::ivec3 coord) const;
   ChunkLoadState GetState(glm::ivec3 coord) const;

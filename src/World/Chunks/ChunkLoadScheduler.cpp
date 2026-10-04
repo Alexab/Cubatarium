@@ -254,7 +254,8 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
 
 void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                                int maxGenerationStartsPerFrame,
-                               double maxApplyMsPerFrame)
+                               double maxApplyMsPerFrame,
+                               bool allowBoundedReadyDrain)
 {
   LastTickApplyMs = 0.0;
   LastCommitsThisFrame = 0;
@@ -283,6 +284,20 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
   }
 
   std::vector<PendingResult> ready = Completed.DrainAll();
+  // During fast flight, use the actual drained batch rather than a racy queue
+  // snapshot taken by WorldStreaming before Tick. Bound both the result count
+  // and synchronous ApplyTo + MarkDirty time; one commit may exceed the target.
+  if (allowBoundedReadyDrain && ready.size() > 1)
+  {
+    constexpr int kReadyDrainMaxCommitsPerFrame = 3;
+    constexpr double kReadyDrainApplyBudgetMs = 12.0;
+    maxCommitsPerFrame = std::max(
+        maxCommitsPerFrame,
+        std::min(kReadyDrainMaxCommitsPerFrame,
+                 static_cast<int>(ready.size())));
+    maxApplyMsPerFrame = std::max(maxApplyMsPerFrame,
+                                  kReadyDrainApplyBudgetMs);
+  }
   std::sort(ready.begin(), ready.end(),
             [this](const PendingResult &a, const PendingResult &b)
             {
