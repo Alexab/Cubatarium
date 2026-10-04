@@ -2915,8 +2915,24 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         ApplyPressureCap(chunk_budget.MaxLoadOps, pressure.max_load_ops_cap);
     chunk_budget.MaxChunkCommits = ApplyPressureCap(
         chunk_budget.MaxChunkCommits, pressure.max_commits_cap);
+    double commit_apply_budget_ms = 0.0;
+    // When generation has already produced a ready-result backlog, drain a
+    // small priority-sorted batch instead of leaving the pressure/hitch cap at
+    // one. This does not admit more work; ApplyTo + MarkDirty has a per-frame
+    // time target and a strict result-count ceiling. A single synchronous
+    // commit cannot be preempted and may overshoot the target.
+    if (moving_fast && completed_ready > 1 &&
+        chunk_budget.MaxChunkCommits > 0)
+    {
+      constexpr int kReadyDrainMaxCommitsPerFrame = 3;
+      constexpr double kReadyDrainApplyBudgetMs = 12.0;
+      chunk_budget.MaxChunkCommits = std::max(
+          chunk_budget.MaxChunkCommits,
+          std::min(kReadyDrainMaxCommitsPerFrame, completed_ready));
+      commit_apply_budget_ms = kReadyDrainApplyBudgetMs;
+    }
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
-                         chunk_budget.MaxLoadOps);
+                         chunk_budget.MaxLoadOps, commit_apply_budget_ms);
     world.PhysicsTelemetryData.CommitApplyMs =
         ChunkScheduler->GetLastTickApplyMs();
   }

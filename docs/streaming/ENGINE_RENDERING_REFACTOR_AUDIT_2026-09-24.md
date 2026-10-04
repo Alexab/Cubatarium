@@ -3551,10 +3551,11 @@ max `55`. Ready-result wait was p50/p95/max `289 ms / 8.74 s / 65.05 s`. Generat
 was comparatively short (`92/128/305 ms` p50/p95/max), and the main-thread
 `ApplyTo + MarkDirty` cost was `5.38/8.14/34.22 ms`. This gives a bounded next
 experiment: let focus-prioritized ready results drain up to three per frame, with
-a 12 ms accumulated apply budget and an unconditional first-commit allowance.
-Keep the existing cap if no ready backlog exists. This is a controlled test of
-throughput under a measured time bound; it does not justify a global unbounded
-commit increase.
+a 12 ms accumulated apply-time target and an unconditional first-commit allowance.
+Stop before the next result after reaching the target; one synchronous commit may
+overshoot because it cannot be preempted. Keep the existing cap if no ready backlog
+exists. This is a controlled test of throughput under a measured apply-time target;
+it does not justify a global unbounded commit increase.
 
 Analyzer `unfinished_visual` is not a literal pixel-hole percentage in this
 trace: it is closely tracking `column_loaded_no_mesh_n`, with median 26 and

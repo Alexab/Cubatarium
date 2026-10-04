@@ -253,7 +253,8 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
 }
 
 void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
-                               int maxGenerationStartsPerFrame)
+                               int maxGenerationStartsPerFrame,
+                               double maxApplyMsPerFrame)
 {
   LastTickApplyMs = 0.0;
   LastCommitsThisFrame = 0;
@@ -318,7 +319,10 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       continue;
     }
     States[pending.result.coord] = ChunkLoadState::Ready;
-    if (committed >= maxCommitsPerFrame)
+    const bool apply_budget_exhausted =
+        committed > 0 && maxApplyMsPerFrame > 0.0 &&
+        LastTickApplyMs >= maxApplyMsPerFrame;
+    if (committed >= maxCommitsPerFrame || apply_budget_exhausted)
     {
       Completed.Push(std::move(pending));
       continue;
@@ -392,7 +396,8 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
           std::to_string(priorityAtCommit) + " priority_refresh_n=" +
           std::to_string(priorityRefreshCount) + " ready_batch_n=" +
           std::to_string(ready.size()) + " max_commits_per_frame=" +
-          std::to_string(maxCommitsPerFrame) + " apply_ms=" +
+          std::to_string(maxCommitsPerFrame) + " max_apply_budget_ms=" +
+          std::to_string(maxApplyMsPerFrame) + " apply_ms=" +
           std::to_string(apply_ms) + " total_ms=" + std::to_string(total_ms);
       CubatariumLogInfo("WorldColumnSource", message);
     }

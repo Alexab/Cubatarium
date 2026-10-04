@@ -728,8 +728,11 @@ witnesses, а не лечить простым увеличением slot capac
 
 **Следующий контрольный шаг G3:** оставить M335 неизменным и испытать
 time-budgeted drain уже готовых procedural results: при наличии backlog разрешать
-до трёх приоритетных commits за кадр с суммарным main-thread budget
-`ApplyTo + MarkDirty` в 12 ms; без готового backlog текущий лимит сохраняется.
+до трёх приоритетных commits за кадр с целевым суммарным main-thread временем
+`ApplyTo + MarkDirty` в 12 ms; перед следующим commit остановиться, если цель
+достигнута. Один синхронный commit не прерывается и может превысить цель; фактическое
+время нужно оценивать по `commit_apply_ms`. Без ready backlog текущий лимит
+сохраняется.
 Записывать `ready_batch_n`, `ready_wait_ms`, фактические commits/apply ms на кадр,
 wall/stream time, near-focus holes и mesh completion. Это проверяет ограничение
 `max_commits_per_frame=1` из M385 и удерживает стоимость кадра; GPU slot capacity
