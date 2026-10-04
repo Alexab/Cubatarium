@@ -995,6 +995,17 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       }
                     }
 
+                    // The predictive sweep can miss a contact when collision
+                    // geometry becomes available between probes. Treat actual
+                    // blocked movement or flight-ground contact as an
+                    // immediate hazard and run the same bounded bypass search.
+                    if (hazard_distance <= 0.0f &&
+                        (camera->GetLastMoveBlockedSubsteps() > 0 ||
+                         camera->GetLastFlightGroundContacts() > 0))
+                    {
+                      hazard_distance = 0.75f;
+                    }
+
                     if (hazard_distance > 0.0f)
                     {
                       ++avoidance_attempts;
@@ -1003,16 +1014,28 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       event.hazard_distance = hazard_distance;
                       bool found_plan = false;
                       float best_cost = std::numeric_limits<float>::max();
-                      const float offsets[] = {3.0f, 5.0f, 7.0f, 9.0f};
-                      const float clearances[] = {5.0f, 9.0f, 13.0f};
+                      const float offsets[] = {3.0f, 5.0f, 7.0f, 9.0f,
+                                                12.0f, 16.0f};
+                      const float clearances[] = {5.0f, 9.0f, 13.0f, 18.0f,
+                                                  24.0f};
+                      const int offset_count =
+                          avoidance_plan_failures > 0 ? 6 : 4;
+                      const int clearance_count =
+                          avoidance_plan_failures > 0 ? 5 : 3;
                       const int sides[] = {preferred_avoidance_side,
                                            -preferred_avoidance_side};
                       for (const int side : sides)
                       {
-                        for (const float offset : offsets)
+                        for (int offset_index = 0; offset_index < offset_count;
+                             ++offset_index)
                         {
-                          for (const float clearance : clearances)
+                          const float offset = offsets[offset_index];
+                          for (int clearance_index = 0;
+                               clearance_index < clearance_count;
+                               ++clearance_index)
                           {
+                            const float clearance =
+                                clearances[clearance_index];
                             const float pass_distance =
                                 hazard_distance + clearance;
                             const glm::vec3 side_target =
@@ -1065,8 +1088,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       else
                       {
                         ++avoidance_plan_failures;
+                        preferred_avoidance_side = -preferred_avoidance_side;
                         next_avoidance_probe =
-                            now + std::chrono::seconds(1);
+                            now + std::chrono::milliseconds(250);
                         std::cout << "flight-sim: no clear obstacle bypass at t="
                                   << ingame_sec << "s hazard="
                                   << event.hazard_distance << " attempt="
