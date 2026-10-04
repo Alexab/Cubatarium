@@ -3304,10 +3304,21 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
   }
 
-  if (!near_exhausted())
+  const bool near_stream_budget_exhausted = near_exhausted();
   {
     const auto io_t0 = std::chrono::high_resolution_clock::now();
-    world.Persistence->TickAsyncChunkIo(world);
+    if (near_stream_budget_exhausted)
+    {
+      // Keep completed disk results moving while near generation/mesh work is
+      // over budget. One result slice is a bounded fallback; the time target
+      // is checked between slices, so a single costly apply can exceed it.
+      world.Persistence->TickAsyncChunkIo(
+          world, /*max_slice_applies_override=*/1, /*max_apply_ms=*/2.5);
+    }
+    else
+    {
+      world.Persistence->TickAsyncChunkIo(world);
+    }
     world.PhysicsTelemetryData.AsyncIoMs +=
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - io_t0)
