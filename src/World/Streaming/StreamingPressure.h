@@ -197,7 +197,10 @@ EvaluateStreamingPressure(const StreamingPressureInput &in,
   case StreamingPressureLevel::Red:
     caps.allow_fly_load_boost = false;
     caps.allow_prefetch = false;
-    caps.max_load_ops_cap = 2;
+    // Keep asynchronous producers fed under Red without raising the main-thread
+    // commit allowance. The chunk-generation pool has four workers; limiting
+    // starts to two left request-to-worker queue tails in long M335 flights.
+    caps.max_load_ops_cap = 4;
     caps.max_commits_cap = 1;
     caps.recover_n_cap = (in.dirty > 800) ? 2 : 4;
     caps.mesh_fly_cap = URuntimeTuning::Get().MeshFlyCapRed;
