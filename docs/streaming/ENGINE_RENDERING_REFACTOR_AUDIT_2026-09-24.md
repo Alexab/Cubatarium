@@ -4180,3 +4180,57 @@ Artifacts: [M394 analysis report](../../bin/suite_reports/engine_refactor/m394_w
 [world-column source trace](../../bin/suite_reports/engine_refactor/m394_world_column_source_trace_20261005.json),
 [perf trace](../../bin/logs/perf_20261004-231440_30796.jsonl),
 [captures](../../bin/logs/m394_world164_m335_red_generation_cap).
+
+## M395: exact camera settings retained, but avoidance left the repeatable lane
+
+M395 used the established World_164 M335 Release/no-teleport setup unchanged:
+start `[120,56,56]`, cruise eye `70`, yaw `180°`, pitch `−30°`, scale `1`, fixed
+clear day. The application completed normally (`process_rc=0`, no hang), maintained
+the expected movement speed (`median 5.19287 blocks/s`), and recorded no heading
+deviation. `world_data.json` was restored byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+
+The flight did not remain on the established route: start focus `(7,3)`, end
+focus `(-424,129)`, camera Z `56→2065`, with only 306/1,368 period samples in the
+original `z=3±5` band. The camera advanced normally in X before and after spending
+hundreds of samples moving almost entirely sideways. This is not a camera speed
+or mouse-heading issue.
+
+Avoidance was enabled and active (`attempts=5`, `detours_started=5`,
+`detours_completed=4`, `detour_replans=1`, `plan_failures=0`,
+`collision_stop_triggered=false`). The route controller still had a fixed-direction
+waypoint bug: `MoveAside` and `ReturnToRoute` waited for full horizontal distance
+`<=0.45` blocks, and lateral input did not reverse when the camera passed that
+waypoint. At a measured flight speed near 5.2 blocks/s, a movement update can
+skip this narrow interval and leave A/D held. M394's 3/3 completion was a successful
+sample, not proof the steering converges across update timing. Both phases need
+signed cross-track steering and waypoint-crossing detection. Future reports should
+include maximum and final deviation from the original flight line.
+
+The renderer result is diagnostically useful but not a same-line M335 acceptance:
+`22/39` gates passed, `holes_rate=1.0`, fly wall median `114.33 ms`, dirty median/max
+`609/1,023`, `visible_black_max=35`, and stop convergence remained false. The
+32,768 pixel probes contained 2,643 luma-`<96` samples; 2,581 had drawable visible
+MDI depth surfaces, and 1,545 of those had current mesh revision newer than
+published geometry revision. However, the dense `renderer_pixel_probe` serializer
+omitted the generic dirty-owner and queue fields that `GeometryEngine` populated
+for the exact opaque depth-hit chunk. Their absence in the report means the
+responsible mesh stage remains unlocalized; add these exact-surface fields before
+the next same-route render comparison.
+
+The split source trace also exposes why the route deviation matters. The intended
+`z=3±5` band had 262 procedural commits with scheduler wait median/p95/max
+`7.7 ms/0.853 s/4.32 s`, worker-pool wait p95 `0.050 ms`, and generation p95
+`108 ms`. The accidental `z=129±5` band had 2,178 commits with scheduler wait
+p95 `30.26 s`, max `57.51 s`, worker-pool wait p95 `0.053 ms`, and generation
+p95 `120 ms`. Disk file-read p95 was `1.19 ms`, while result-wait p95 was
+`5.60 s`. These off-route queue results must not be attributed to the repeatable
+M335 corridor.
+
+Artifacts: [M395 renderer report](../../bin/suite_reports/engine_refactor/m395_world164_m335_generation_queue_split_20261005.json),
+[flight control report](../../bin/suite_reports/engine_refactor/m395_flight_control_report_20261005.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m395_renderer_pixel_trace_l96_20261005.json),
+[z=3 source trace](../../bin/suite_reports/engine_refactor/m395_world_column_source_z3_20261005.json),
+[z=129 source trace](../../bin/suite_reports/engine_refactor/m395_world_column_source_z129_20261005.json),
+[perf trace](../../bin/logs/perf_20261005-003751_40828.jsonl),
+[captures](../../bin/logs/m395_world164_m335_generation_queue_split).

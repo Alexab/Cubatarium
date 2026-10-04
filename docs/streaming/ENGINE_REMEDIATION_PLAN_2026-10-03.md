@@ -1,9 +1,11 @@
 # План исправления стриминга и отображения мира — обновлён 5 октября 2026
 
 Исходная база: `develop` / `codex_audit2`, commit `185e2f08` (merge
-`codex_audit`). Последний длинный trace M394 проверил Release commit
-`69f9d856` на зафиксированном M335. Изменение Red load cap откатил commit
-`820af493`; текущий Release target пересобран после отката.
+`codex_audit`). M395 проверил Release manifest `b1376932` на закреплённом
+профиле M335. Он выявил, что текущий обход препятствий может застрять в боковом
+шаге и увести камеру на другой Z-коридор; поэтому его pixel/source результаты
+нельзя считать повтором прежней M335 линии. Изменение Red load cap откатил
+commit `820af493`; quota bump не возвращать.
 Связанные документы: [аудит движка](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md),
 [архитектурные контракты](ENGINE_REMEDIATION_PLAN_2026-09-22.md),
 [каталог flight-экспериментов](FLIGHT_EXPERIMENT_SCRIPTS.md).
@@ -1280,8 +1282,9 @@ runner вернул exit `1` из-за проваленных acceptance gates. 
 
 Flight-sim зафиксировал 3 предсказанные опасности; все 3 обхода начаты и
 завершены, `plan_failures=0`, `detour_replans=0`, `collision_stop_triggered=false`.
-Время событий: `592.4 s`, `600.2 s`, `2 412.4 s`. Текущий обход работает при
-зафиксированном профиле и для этого маршрута менять его не требуется.
+Время событий: `592.4 s`, `600.2 s`, `2 412.4 s`. M395 позднее показал, что эта
+удачная последовательность не гарантирует сходимость бокового шага при другом
+межкадровом перемещении. См. M395 ниже; алгоритм обхода остаётся открытой задачей.
 
 Renderer acceptance ухудшился по числу gates: `14/39` против M393 `22/39`.
 При этом несколько агрегатов разнонаправленные: dirty median/max `486/1 092`
@@ -1352,6 +1355,69 @@ Artifacts: [M394 analysis report](../../bin/suite_reports/engine_refactor/m394_w
 [world-column source trace](../../bin/suite_reports/engine_refactor/m394_world_column_source_trace_20261005.json),
 [perf JSONL](../../bin/logs/perf_20261004-231440_30796.jsonl),
 [capture directory](../../bin/logs/m394_world164_m335_red_generation_cap).
+
+### M395 — боковой обход не вернулся на M335 линию; pixel owners не попали в compact trace
+
+M395 использовал тот же World_164 Release/no-teleport M335: start `[120,56,56]`,
+eye `70`, yaw `180°`, pitch `−30°`, fixed clear day и scale `1`. Скорость при
+движении сохранилась (`median 5.19287 blocks/s`), deviation по yaw/pitch была
+нулевая, процесс завершился без hang (`process_rc=0`), а `world_data.json`
+восстановлен с прежним SHA-256. Но камера ушла с ожидаемой линии: focus изменился
+`(7,3)→(-424,129)`, а Z позиции — `56→2065`; из 1 368 period samples только 306
+остались в исходной полосе `z=3±5`. На нескольких сотнях samples X почти не
+двигался, пока боковой шаг продолжал набирать Z. Это route-control регрессия,
+не изменение скорости или ручной сдвиг мыши.
+
+Обход был включён: `attempts=5`, `detours_started=5`, `detours_completed=4`,
+`detour_replans=1`, `plan_failures=0`, `collision_stop_triggered=false`. В первом
+событии waypoint находился всего в 3 блоках, а `MoveAside` удерживал A/D, пока
+горизонтальная дистанция не становилась меньше `0.45` блока. При пропуске такого
+узкого допуска fixed-direction шаг не корректировал знак боковой ошибки, поэтому
+камера продолжала идти в прежнюю сторону. `ReturnToRoute` использует тот же
+узкий distance test. Исправление должно рулить по фактической знаковой боковой
+ошибке, считать пересечение waypoint успешным и возвращаться к исходной линии;
+профиль съёмки, скорость и длину M335 менять нельзя. Для последующих flight
+reports добавить фактическое максимальное и конечное отклонение от исходной линии.
+
+Renderer report дал `22/39` gates при `holes_rate=1.0`; `fly wall median` —
+`114.33 ms`, dirty median/max — `609/1 023`, `visible_black_max=35`, а stop
+convergence не сошёлся. Pixel trace содержал 32 768 probes; при luma `<96`
+получено 2 643 dark samples, из них 2 581 имели drawable visible MDI depth-hit.
+У 1 545 таких samples CPU mesh revision превышал опубликованную geometry
+revision. Это наблюдение сделано в полосе, куда ошибочно ушёл обход, и само по
+себе не является M335 acceptance. Compact serializer не включал generic dirty
+owner и queue поля для exact opaque depth-hit, поэтому ownership этого разрыва
+нужно корректно сериализовать перед следующим same-route сравнением.
+
+Source trace разделил исходную полосу и ошибочно достигнутую полосу. Для
+`z=3±5` было 262 procedural commits с scheduler queue `median/p95/max`
+`7.7 ms/0.853 s/4.32 s`, worker-pool wait p95 `0.050 ms`, generation p95
+`108 ms`. В достигнутой полосе `z=129±5` было 2 178 commits с scheduler queue
+p95 `30.26 s` и max `57.51 s`; worker-pool wait p95 остался `0.053 ms`, а
+generation p95 — `120 ms`. Disk file-read p95 был `1.19 ms`, но result-wait p95
+составил `5.60 s`. Длинное ожидание находится до worker generation и в очереди
+готовых disk results, но M395 попал в этот коридор из-за ошибки обхода.
+
+Следующие шаги:
+
+1. Закрыть waypoint overshoot и измерять cross-track offset. Сначала собрать
+   Release и пройти прежний полный M335 до конца; принять полёт только если
+   detours завершаются, камера возвращается на исходную линию и достигает
+   checkpoint.
+2. В compact `renderer_pixel_probe` добавить work-owner, dirty-queue и relight
+   поля именно для framebuffer depth-hit chunk (generic fields уже заполняются
+   для него, но не сериализуются в dense pixel row). Rerun exact M335 и
+   сопоставить dark witnesses со стадией remesh/upload/publication.
+3. Разделять исходные z=3 данные и source/queue метрики любого обходного
+   участка; только после route-closure повторять выводы о дальнем render debt.
+4. Затем продолжить G3 по causal evidence в dirty admission → mesh result → GPU
+   upload/fence → resident draw table, без изменения камеры и условий света.
+
+Артефакты: [M395 renderer report](../../bin/suite_reports/engine_refactor/m395_world164_m335_generation_queue_split_20261005.json),
+[flight control](../../bin/suite_reports/engine_refactor/m395_flight_control_report_20261005.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m395_renderer_pixel_trace_l96_20261005.json),
+[z=3 source trace](../../bin/suite_reports/engine_refactor/m395_world_column_source_z3_20261005.json),
+[z=129 source trace](../../bin/suite_reports/engine_refactor/m395_world_column_source_z129_20261005.json).
 
 ### G5 — Сборка Release с параллельной компиляцией
 
