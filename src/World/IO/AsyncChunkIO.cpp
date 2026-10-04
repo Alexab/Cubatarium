@@ -20,8 +20,18 @@ bool IsAsyncChunkIoTraceEnabled()
 
 void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                 const std::string &worldFolder,
-                                ChunkGenerationToken token)
+                                ChunkGenerationToken token,
+                                std::shared_ptr<std::atomic<bool>> cancellation)
 {
+  const auto is_cancelled = [&]()
+  {
+    return cancellation &&
+           cancellation->load(std::memory_order_acquire);
+  };
+  if (is_cancelled())
+  {
+    return;
+  }
   const bool trace_io = IsAsyncChunkIoTraceEnabled();
   const auto detect_started = trace_io ? std::chrono::steady_clock::now()
                                        : std::chrono::steady_clock::time_point{};
@@ -38,6 +48,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
     AsyncChunkLoadResult result;
     result.coord = coord;
     result.token = token;
+    result.cancellation = cancellation;
     result.submittedAt = submitted_at;
     if (trace_io)
     {
@@ -52,11 +63,21 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
       storage.ChunkFilePath(worldFolder, coord, format);
   Pool.Enqueue(
       [this, coord, filePath, token, format, submitted_at,
-       format_detect_ms, trace_io]()
+       format_detect_ms, trace_io, cancellation]()
       {
+        const auto is_cancelled = [&]()
+        {
+          return cancellation &&
+                 cancellation->load(std::memory_order_acquire);
+        };
+        if (is_cancelled())
+        {
+          return;
+        }
         AsyncChunkLoadResult result;
         result.coord = coord;
         result.token = token;
+        result.cancellation = cancellation;
         result.format = format;
         result.submittedAt = submitted_at;
         result.formatDetectMs = format_detect_ms;
@@ -75,11 +96,23 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
         }
         if (!file.is_open())
         {
+          if (is_cancelled())
+          {
+            return;
+          }
           if (trace_io)
           {
             result.workerFinishedAt = std::chrono::steady_clock::now();
           }
           CompletedLoads.Push(std::move(result));
+          if (is_cancelled())
+          {
+            NoteLoadCancellation();
+          }
+          return;
+        }
+        if (is_cancelled())
+        {
           return;
         }
         const auto read_started =
@@ -95,11 +128,19 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                   .count();
         }
         result.success = !result.payload.empty();
+        if (is_cancelled())
+        {
+          return;
+        }
         if (trace_io)
         {
           result.workerFinishedAt = std::chrono::steady_clock::now();
         }
         CompletedLoads.Push(std::move(result));
+        if (is_cancelled())
+        {
+          NoteLoadCancellation();
+        }
       });
 }
 
@@ -187,6 +228,24 @@ bool UAsyncChunkIO::WaitIdleFor(const std::chrono::milliseconds timeout)
 void UAsyncChunkIO::CancelPending()
 {
   Pool.CancelPendingJobs();
+}
+
+void UAsyncChunkIO::NoteLoadCancellation()
+{
+  CancelledLoadSweepPending.store(true, std::memory_order_release);
+}
+
+std::size_t UAsyncChunkIO::DiscardCancelledLoads()
+{
+  if (!CancelledLoadSweepPending.exchange(false, std::memory_order_acq_rel))
+  {
+    return 0;
+  }
+  return CompletedLoads.EraseIf([](const AsyncChunkLoadResult &result)
+  {
+    return result.cancellation &&
+           result.cancellation->load(std::memory_order_acquire);
+  });
 }
 
 bool UAsyncChunkIO::CompletedLoadsEmpty() const

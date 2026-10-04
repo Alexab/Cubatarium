@@ -264,6 +264,63 @@ public:
     return false;
   }
 
+  /// Remove queued results which no longer have a live owner. Preserves the
+  /// relative order of retained entries and releases storage for erased ones.
+  template <typename Pred> std::size_t EraseIf(Pred &&pred)
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    if (Count == 0 || Items.empty())
+    {
+      return 0;
+    }
+
+    std::vector<T> kept;
+    kept.reserve(Count);
+    std::size_t removed = 0;
+    const std::size_t old_count = Count;
+    for (std::size_t i = 0; i < old_count; ++i)
+    {
+      T &item = Items[(Head + i) % Items.size()];
+      if (pred(item))
+      {
+        ++removed;
+      }
+      else
+      {
+        kept.push_back(std::move(item));
+      }
+    }
+    if (removed == 0)
+    {
+      for (std::size_t i = 0; i < kept.size(); ++i)
+      {
+        Items[(Head + i) % Items.size()] = std::move(kept[i]);
+      }
+      return 0;
+    }
+
+    if (Cap == 0)
+    {
+      Items = std::move(kept);
+      Head = 0;
+      Count = Items.size();
+      return removed;
+    }
+
+    const std::size_t kept_count = kept.size();
+    for (std::size_t i = 0; i < kept_count; ++i)
+    {
+      Items[i] = std::move(kept[i]);
+    }
+    for (std::size_t i = kept_count; i < old_count; ++i)
+    {
+      Items[i] = T{};
+    }
+    Head = 0;
+    Count = kept_count;
+    return removed;
+  }
+
 private:
   bool PushUnlocked(T &&item, T *dropped_out)
   {

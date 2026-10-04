@@ -3152,6 +3152,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     const int load_to_cy = state.highest_cy_on_disk;
     retry_state.remaining_results = load_to_cy + 1;
     retry_state.highest_cy_on_disk = state.highest_cy_on_disk;
+    retry_state.cancellation = state.cancellation;
     retry_state.requested_at = state.requested_at;
     retry_state.disk_discovery_ms = state.disk_discovery_ms;
     retry_state.retry_generation = state.retry_generation + 1;
@@ -3205,7 +3206,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     for (int cy : cy_order)
     {
       AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
-                                *ChunkStorage, WorldFolderPath, token);
+                                *ChunkStorage, WorldFolderPath, token,
+                                retry_state.cancellation);
     }
     return;
   }
@@ -3447,6 +3449,7 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
 
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
+    (void)AsyncChunkIo->DiscardCancelledLoads();
     const bool trace_async_io = IsWorldColumnSourceTraceEnabled();
     const double frame_ms = world.GetLastMovementFrameMs();
     std::size_t max_slice_applies = max_slice_applies_override;
@@ -3744,12 +3747,27 @@ void UWorldPersistence::AbortAsyncChunkIo()
 bool UWorldPersistence::AbortAsyncChunkIoFor(
     const std::chrono::milliseconds timeout)
 {
+  bool cancelled_loads = false;
+  for (auto &entry : PendingAsyncColumnLoadSlices)
+  {
+    if (entry.second.cancellation)
+    {
+      entry.second.cancellation->store(true, std::memory_order_release);
+      cancelled_loads = true;
+    }
+  }
+  if (cancelled_loads && AsyncChunkIo)
+  {
+    AsyncChunkIo->NoteLoadCancellation();
+    (void)AsyncChunkIo->DiscardCancelledLoads();
+  }
   PendingAsyncColumnLoadSlices.clear();
   PendingAsyncColumnSaveSlices.clear();
   if (!AsyncChunkIo)
   {
     return true;
   }
+  (void)AsyncChunkIo->DiscardCancelledLoads();
   (void)AsyncChunkIo->DrainLoads();
   (void)AsyncChunkIo->DrainSaves();
   AsyncChunkIo->CancelPending();
@@ -3758,6 +3776,7 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
     return true;
   }
   const bool idle = AsyncChunkIo->WaitIdleFor(timeout);
+  (void)AsyncChunkIo->DiscardCancelledLoads();
   (void)AsyncChunkIo->DrainLoads();
   (void)AsyncChunkIo->DrainSaves();
   return idle;
@@ -3803,6 +3822,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   }
   state.requested_at = std::chrono::steady_clock::now();
   state.remaining_results = state.highest_cy_on_disk + 1;
+  state.cancellation = std::make_shared<std::atomic<bool>>(false);
   PendingAsyncColumnLoadSlices[ground_coord] = state;
   LogWorldColumnSource(
       "disk", "queued", ground_coord,
@@ -3848,7 +3868,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   for (int cy : cy_order)
   {
     AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
-                              *ChunkStorage, WorldFolderPath, token);
+                              *ChunkStorage, WorldFolderPath, token,
+                              state.cancellation);
   }
 }
 
@@ -3919,7 +3940,82 @@ void UWorldPersistence::CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord)
   {
     ground_coord.y = 0;
   }
-  PendingAsyncColumnLoadSlices.erase(ground_coord);
+  const auto pending = PendingAsyncColumnLoadSlices.find(ground_coord);
+  if (pending == PendingAsyncColumnLoadSlices.end())
+  {
+    return;
+  }
+  const PendingAsyncColumnLoadState state = pending->second;
+  if (state.cancellation)
+  {
+    state.cancellation->store(true, std::memory_order_release);
+  }
+  PendingAsyncColumnLoadSlices.erase(pending);
+  if (AsyncChunkIo)
+  {
+    AsyncChunkIo->NoteLoadCancellation();
+    (void)AsyncChunkIo->DiscardCancelledLoads();
+  }
+  const double elapsed_ms =
+      state.requested_at == std::chrono::steady_clock::time_point{}
+          ? 0.0
+          : std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - state.requested_at)
+                .count();
+  LogWorldColumnSource(
+      "disk", "cancelled_unloaded", ground_coord,
+      "remaining_slices=" + std::to_string(state.remaining_results) +
+          " elapsed_ms=" + std::to_string(elapsed_ms));
+}
+
+int UWorldPersistence::CancelAsyncTerrainColumnLoadsOutsideRadius(
+    UWorld &world, glm::ivec3 center, int radius_chunks)
+{
+  center.y = 0;
+  const int radius = std::max(0, radius_chunks);
+  int cancelled = 0;
+  for (auto pending = PendingAsyncColumnLoadSlices.begin();
+       pending != PendingAsyncColumnLoadSlices.end();)
+  {
+    const glm::ivec3 ground = pending->first;
+    const int distance =
+        std::max(std::abs(ground.x - center.x), std::abs(ground.z - center.z));
+    if (distance <= radius)
+    {
+      ++pending;
+      continue;
+    }
+
+    const PendingAsyncColumnLoadState state = pending->second;
+    if (state.cancellation)
+    {
+      state.cancellation->store(true, std::memory_order_release);
+    }
+    pending = PendingAsyncColumnLoadSlices.erase(pending);
+    if (world.Streaming)
+    {
+      world.Streaming->GetChunkGenTokens().Bump(ground);
+    }
+    const double elapsed_ms =
+        state.requested_at == std::chrono::steady_clock::time_point{}
+            ? 0.0
+            : std::chrono::duration<double, std::milli>(
+                  std::chrono::steady_clock::now() - state.requested_at)
+                  .count();
+    LogWorldColumnSource(
+        "disk", "cancelled_out_of_range", ground,
+        "distance_chunks=" + std::to_string(distance) +
+            " radius_chunks=" + std::to_string(radius) +
+            " remaining_slices=" + std::to_string(state.remaining_results) +
+            " elapsed_ms=" + std::to_string(elapsed_ms));
+    ++cancelled;
+  }
+  if (cancelled > 0 && AsyncChunkIo)
+  {
+    AsyncChunkIo->NoteLoadCancellation();
+    (void)AsyncChunkIo->DiscardCancelledLoads();
+  }
+  return cancelled;
 }
 
 bool UWorldPersistence::IsTerrainColumnDiskLoadPending(

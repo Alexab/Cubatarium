@@ -5,6 +5,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include <atomic>
 #include <chrono>
 #include <deque>
 #include <glm/glm.hpp>
@@ -152,6 +153,9 @@ public:
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   void CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord);
+  int CancelAsyncTerrainColumnLoadsOutsideRadius(UWorld &world,
+                                                glm::ivec3 center,
+                                                int radius_chunks);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;
 
   int LoadTerrainColumn(glm::ivec3 coord, UBlockWorld &block_world,
@@ -179,6 +183,7 @@ private:
   {
     int remaining_results{0};
     int highest_cy_on_disk{-1};
+    std::shared_ptr<std::atomic<bool>> cancellation;
     std::chrono::steady_clock::time_point requested_at{};
     double disk_discovery_ms{0.0};
     int timing_slice_count{0};

@@ -5774,6 +5774,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         ChunkScheduler->CancelPendingOutsideRadius(
             focus_horiz, Streamer->GetAsyncRequestRetentionRadius());
       }
+      if (world.Persistence)
+      {
+        world.Persistence->CancelAsyncTerrainColumnLoadsOutsideRadius(
+            world, focus_horiz, Streamer->GetAsyncRequestRetentionRadius());
+      }
       world.PhysicsTelemetryData.StreamerUpdateMs +=
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - update_t0)

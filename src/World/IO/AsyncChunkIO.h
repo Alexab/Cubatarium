@@ -5,8 +5,10 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -21,6 +23,7 @@ struct AsyncChunkLoadResult
 {
   glm::ivec3 coord;
   ChunkGenerationToken token;
+  std::shared_ptr<std::atomic<bool>> cancellation;
   std::vector<uint8_t> payload;
   ChunkDiskFormat format{ChunkDiskFormat::Absent};
   bool success{false};
@@ -50,7 +53,8 @@ public:
   }
 
   void RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
-                   const std::string &worldFolder, ChunkGenerationToken token);
+                   const std::string &worldFolder, ChunkGenerationToken token,
+                   std::shared_ptr<std::atomic<bool>> cancellation);
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, const UBlockWorld &world,
                    UBlockRegistry &registry, ChunkGenerationToken token);
@@ -67,6 +71,8 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
+  void NoteLoadCancellation();
+  std::size_t DiscardCancelledLoads();
   bool CompletedLoadsEmpty() const;
   bool CompletedSavesEmpty() const;
   std::size_t GetPendingJobCount() const { return Pool.GetPendingJobCount(); }
@@ -80,6 +86,7 @@ private:
   UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
   UCompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
   UJobThreadPool Pool;
+  std::atomic<bool> CancelledLoadSweepPending{false};
 };
 
 UChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,
