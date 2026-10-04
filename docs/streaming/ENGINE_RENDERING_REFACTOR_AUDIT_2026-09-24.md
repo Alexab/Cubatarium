@@ -3738,10 +3738,11 @@ At camera x `−8 347`, the sampled depth chunk `(−522,4,3)` belongs to column
 procedural commit 24.63 seconds later (queue 24.50 s, generation 84 ms, ready
 batch 6, apply 5.62 ms). Two nearby sampled columns `(−353,0,2/3)` also missed
 disk before generation. Thus at least one captured dark surface was newly
-generated in an uncached far region, not loaded from persistence. M389 should
-revisit these same saved columns: disk hit plus settled/bright pixels points to
-cold generation/relight warmup; disk hit plus persistent provisional/dark light
-would implicate the persistence/light restoration contract.
+generated in an uncached far region, not loaded from persistence. M389 later
+observed `disk_miss` again at `(-522,0,3)`, so it did not test the saved-column
+path; the wrapper disables periodic autosave, and unload of those exact columns
+before revisit was not proven. Preserve this as cold-frontier evidence, not as a
+failure of disk light restoration.
 
 Overall analyzer `pass=false`: 1 364 periods, 5 049 spikes, flying wall median
 109.825 ms (9.11 FPS), stream 23.22 ms, mesh emerge 27.10 ms, broad
@@ -3815,3 +3816,37 @@ Artifacts: [M389 analyzer report](../../bin/suite_reports/engine_refactor/m389_w
 [perf trace](../../bin/logs/perf_20261004-165636_31704.jsonl),
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-165632.31704),
 [GUI frames](../../bin/logs/m389_world164_m335_persisted_drain).
+
+### M389 follow-up: wider luma thresholds capture dim surfaces
+
+The previous `luma <32` summary is useful for near-black samples, but it
+under-counts the user's dimmed patches. The same M388/M389 pixel trace was
+reprocessed offline at thresholds 64 and 96; camera, route, and captured frames
+did not change. At `<96`, M388 has 1 112 selected samples (219 provisional-light,
+257 unsettled demand); M389 has 1 032 (177 provisional-light, 281 unsettled
+demand). At `<64`, the counts are 700→657, provisional light 147→131, and
+unsettled demand 173→193. These are selected samples, not screen-area rates;
+the run-to-run differences are not a strict causal A/B because worker timing and
+cache state differ.
+
+For M389's `<96` samples, 973 have valid framebuffer depth, 966 have visible
+opaque MDI submission, and 883 have a source-face witness within 0.1. The
+source-face IDs map to `tree_leaves` (572: 504 probes), `sand` (549: 244),
+`grass` (377: 96), and `tree_log` (573: 77); 99 have no mapped source face. The
+sample set therefore mixes naturally dark materials with real unsettled or
+preview-light surfaces. It cannot classify a whole dim patch from one pixel,
+but the provisional share is large enough to keep light/mesh settlement on the
+critical path rather than dismissing every dim sample as foliage.
+
+The late route bins are especially useful for comparison. For M389 bins 6–8
+(approximately x `−6 000` through `−9 100`), unsettled dark samples were
+`83/109/81` and preview-light samples `49/67/34`; M388 had `47/74/39` unsettled
+and `45/33/70` preview. M389 lowered preview markers while unsettled status rose
+in the same corridor. Continue tracing exact selected pixels through light
+field revision, mesh publication revision, and voxel material at luma `<96` on
+the next unchanged M335 capture.
+
+Threshold summaries: [M388 luma 64](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_l64_20261004.json),
+[M388 luma 96](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_l96_20261004.json),
+[M389 luma 64](../../bin/suite_reports/engine_refactor/m389_renderer_pixel_trace_l64_20261004.json),
+[M389 luma 96](../../bin/suite_reports/engine_refactor/m389_renderer_pixel_trace_l96_20261004.json).

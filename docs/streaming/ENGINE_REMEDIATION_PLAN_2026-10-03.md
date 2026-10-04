@@ -911,10 +911,11 @@ ambient 0.12 и sky scale 0.972. Это свидетельствует, что s
 а затем procedural commit через `24.63 s`: очередь `24.50 s`, генерация `84 ms`,
 ready batch 6, apply `5.62 ms`. Значит, для этого свидетельства колонка была
 создана заново, а не прочитана с диска. Соседние sampled columns `(−353,0,2/3)`
-тоже дали disk miss перед генерацией. Повтор M389 на том же маршруте должен
-проверить эти координаты после сохранения: disk hit плюс settled light и обычная
-яркость подтвердят временный cold-generation/light-warmup дефект; повторный
-dark+unsettled draw укажет на сохранение/восстановление provisional state.
+тоже дали disk miss перед генерацией. M389 повторил тот же маршрут, но
+`(-522,0,3)` снова оказался disk miss; данный run не устанавливает поведение
+тёплой disk загрузки. Автосохранение в flight harness выключено, а выгрузка
+каждой целевой колонки до её повторного посещения не подтверждена. Сохранение и
+повторное чтение проверять только при наличии column file и явного `disk_hit`.
 
 Artifacts: [M388 analyzer report](../../bin/suite_reports/engine_refactor/m388_world164_m335_scheduler_drain_20261004.json),
 [pixel/light join](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_20261004.json),
@@ -922,11 +923,12 @@ Artifacts: [M388 analyzer report](../../bin/suite_reports/engine_refactor/m388_w
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-154618.31036),
 [GUI frames](../../bin/logs/m388_world164_m335_scheduler_drain).
 
-Следующий шаг: Release M389 с теми же M335 аргументами после переключения ready
-drain на `moving_any`; проверить cap `<=3`, budget `12 ms`, multi-commit frames,
-тот же disk-loaded far corridor и pixel/demand light revisions. Если saved hit
-всё ещё рисуется тёмным, перейти к владельцу relight/mesh-settlement для
-новосозданных дальних колонок, не к геометрическому draw gate.
+M389 проверил активацию ready drain и pixel/demand light revisions; результаты
+приведены ниже. Для отображения использовать также offline luma thresholds 64 и
+96, поскольку `<32` измеряет near-black и пропускает большую часть приглушённых
+поверхностей. Следующая итерация G3 должна связать видимые dark samples на этом
+широком диапазоне яркости с материалом, light field revision, mesh publication
+revision и точной колонкой; условия M335 остаются фиксированными.
 
 ### Результат M389 — batching сработал, но warm disk повтора не было
 
@@ -948,6 +950,16 @@ census, не процент экрана. В отчёте dominant schedule bloc
 deferred far relight pending max=`678`, FIFO dropped delta=`1 313`; приоритет
 следующего кода — проверить owner/retention visible relight debt до mesh/GPU
 publication и трассировать выбранные screen pixels до material/light source.
+
+Порог `<32` недооценивает приглушённые поверхности. Offline пересчёт тех же
+M388/M389 dense traces на `<96` дал `1 112→1 032` samples; provisional-light
+`219→177`, но unsettled-demand `257→281`. На `<64`: `700→657`, provisional
+`147→131`, unsettled `173→193`. Это одни и те же сохранённые пробы без смены
+камеры, но не строгий A/B из-за различий worker timing/cache. В M389 `<96`
+пробы `tree_leaves` 504, `sand` 244, `grass` 96, `tree_log` 77; 973 имели
+depth surface, 966 — видимую opaque MDI команду. Следовательно, набор содержит
+как нормальные тёмные материалы, так и видимые provisional/unsettled поверхности.
+См. [offline luma-анализ M389/M388](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md#M389-follow-up-wider-luma-thresholds-capture-dim-surfaces).
 
 M389 не проверил тёплый disk path, несмотря на имя `persisted_drain`: точная
 колонка `(-522,0,3)` снова дала `disk_miss` и procedural commit через
