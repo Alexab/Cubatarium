@@ -144,6 +144,10 @@ public:
   }
   int GetVisualRenderDistance() const { return VisualRenderDistance; }
   int GetKeepRenderDistance() const { return KeepRenderDistance; }
+  int GetAsyncRequestRetentionRadius() const
+  {
+    return std::max(VisualRenderDistance, KeepRenderDistance + UnloadMargin);
+  }
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }

@@ -44,6 +44,7 @@ public:
                    const ProceduralSettings &settings,
                    glm::ivec2 column_origin = glm::ivec2(0),
                    bool has_column_origin = false);
+  int CancelPendingOutsideRadius(glm::ivec3 center, int radius_chunks);
   void Cancel(glm::ivec3 coord);
   void CancelAllPending(std::chrono::milliseconds worker_wait =
                             std::chrono::milliseconds(2000));

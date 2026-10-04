@@ -5766,6 +5766,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     {
       const auto update_t0 = std::chrono::high_resolution_clock::now();
       Streamer->Update(WorldPosToBlock(eye), eye, cap);
+      if (ChunkScheduler)
+      {
+        // Requests which were once near the moving focus can otherwise remain
+        // in the generation queue after leaving the keep ring, eventually
+        // generating terrain far behind the camera and adding first-mesh work.
+        ChunkScheduler->CancelPendingOutsideRadius(
+            focus_horiz, Streamer->GetAsyncRequestRetentionRadius());
+      }
       world.PhysicsTelemetryData.StreamerUpdateMs +=
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - update_t0)

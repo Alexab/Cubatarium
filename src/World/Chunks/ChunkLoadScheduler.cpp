@@ -131,6 +131,71 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord)
   CompactRequestQueueIfStale();
 }
 
+int UChunkLoadScheduler::CancelPendingOutsideRadius(glm::ivec3 center,
+                                                     int radius_chunks)
+{
+  center.y = 0;
+  const int radius = std::max(0, radius_chunks);
+  std::vector<glm::ivec3> stale;
+  for (const auto &entry : ActiveTokens)
+  {
+    const glm::ivec3 coord = entry.first;
+    const int distance = std::max(std::abs(coord.x - center.x),
+                                  std::abs(coord.z - center.z));
+    if (distance > radius)
+    {
+      stale.push_back(coord);
+    }
+  }
+  if (stale.empty())
+  {
+    return 0;
+  }
+
+  const bool trace = IsWorldColumnSourceTraceEnabled();
+  for (const glm::ivec3 coord : stale)
+  {
+    const int distance = std::max(std::abs(coord.x - center.x),
+                                  std::abs(coord.z - center.z));
+    const auto state_it = States.find(coord);
+    const int state = state_it == States.end()
+                          ? static_cast<int>(ChunkLoadState::Absent)
+                          : static_cast<int>(state_it->second);
+    const auto priority_it = RequestPriorities.find(coord);
+    const int priority = priority_it == RequestPriorities.end()
+                             ? 0
+                             : priority_it->second;
+    const auto initial_it = InitialRequestPriorities.find(coord);
+    const int initial_priority = initial_it == InitialRequestPriorities.end()
+                                     ? priority
+                                     : initial_it->second;
+    if (trace)
+    {
+      CubatariumLogInfo(
+          "WorldColumnSource",
+          "source=procedural outcome=cancelled_out_of_range coord=(" +
+              std::to_string(coord.x) + ",0," + std::to_string(coord.z) +
+              ") distance_chunks=" + std::to_string(distance) +
+              " radius_chunks=" + std::to_string(radius) +
+              " state=" + std::to_string(state) +
+              " priority_initial=" + std::to_string(initial_priority) +
+              " priority_current=" + std::to_string(priority));
+    }
+    // Invalidate the token before removing the owner so active worldgen workers
+    // can stop at their next cancellation point instead of filling the ready
+    // queue with terrain the camera has already left behind.
+    Tokens.Bump(coord);
+    States.erase(coord);
+    ActiveTokens.erase(coord);
+    RequestPriorities.erase(coord);
+    InitialRequestPriorities.erase(coord);
+    RequestPriorityRefreshCounts.erase(coord);
+    QueuedRequests.erase(coord);
+  }
+  CompactRequestQueueIfStale();
+  return static_cast<int>(stale.size());
+}
+
 void UChunkLoadScheduler::CompactRequestQueueIfStale()
 {
   // Priority refreshes leave obsolete heap nodes behind. Compact only after
