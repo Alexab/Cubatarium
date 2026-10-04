@@ -817,6 +817,60 @@ $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-134102.19096),
 [GUI frames](../../bin/logs/m386_world164_m335_apply_budget).
 
+### Результат M387 — fast-flight backlog guard всё ещё пропускает ready batch
+
+M387 использовал чистый Release `64d09ce3` и те же visible/no-teleport M335
+условия на `World_164`: seed `3650471197`, старт `[120,56,56]`, eye y `70`, yaw
+`180°`, pitch `−30°`, scale `1`, 2 800 s fly + 20 s settle. Полёт завершился
+нормально: speed median `5.193` блока/с, focus `7→−626`, пройдено 10 128 блоков,
+checkpoint `8 192` пересечён. Flight analyzer получил `process_rc=0`, но
+renderer gates остались FAIL. Пролёт не встретил hazard: `attempts=0`,
+detours/replans `0`, `collision_stop_triggered=false`. Тем самым новый recovery
+для уже заблокированного обхода в M387 не проверялся; старые M380/M384 по-прежнему
+являются подтверждением обычного обхода.
+
+Из 2 946 procedural commits у 2 051 `ready_batch_n>1`; p50/p95/max batch был
+`3/31/59`. Однако все 2 946 событий записали
+`max_commits_per_frame=1`, `max_apply_budget_ms=0`. Даже после замены готового
+счётчика на общий `gen_backlog_total` snapshot остаётся слишком ранним/неполным:
+worker results успевают накопиться к моменту `Completed.DrainAll()`. M387 не
+проверил batching patch и устанавливает место для следующего исправления:
+передавать scheduler признак fast-flight, а максимальный drain до 3 результатов
+и целевые 12 ms включать внутри `UChunkLoadScheduler::Tick()` после
+`Completed.DrainAll()`, только когда локальный `ready.size()>1`. Так лимит
+определяется точным batch этого кадра и не увеличивает работу, когда результат
+один. Один синхронный `ApplyTo + MarkDirty` может превысить target.
+
+Source timings: queue p50/p95/max `34.6 ms / 31.86 s / 66.76 s`, generation
+`93/150/370 ms`, ready wait `288 ms / 9.07 s / 59.25 s`, apply
+`5.46/10.54/41.30 ms`, total `506 ms / 39.33/80.72 s`. Red pressure был `100%`,
+unfinished visual — `97.96%` периодов (longest run `804`, это широкий
+loaded-column/no-mesh census, не процент пустых экранных пикселей), Dirty
+median/max `430/1 086`, wall median `93.39 ms` (`92.81 ms` на пролёте),
+`chunk_not_ready` median `26`, near-void max `4 217`, visible-black max `31`.
+Прямой near-focus holes census был ненулевой в 222/1 377 periods, но лишь в двух
+periods visual corridor. Stop convergence не прошёл: pending/light/dirty debts
+сохранились после settle. Сравнение M386/M387 не причинное: реальная очередь
+saved/procedural колонок изменилась между повторениями.
+
+Кадры 148 и 167 показывают наблюдаемые тёмные угловатые участки/резкие границы.
+В sample `frame_epoch=30840`, camera x `−9 359`, trace имел только 4 scanlines
+на 20 колонок. Две scanlines, попавшие на поверхность, показывали drawable/MDI
+геометрию, opaque hit block `549`, sky light примерно `0.53–0.87` и не-чёрные
+RGB; две остальные были depth 1 / sky. В PNG тёмные участки лежат между этими
+scanlines, поэтому этот pixel join не попал в сам дефект и не позволяет объявить
+его ни корректно затенённой водой, ни пустым chunk. Для M388 включить штатный
+диагностический `CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS=1` (8 рядов вместо 4),
+сохранив M335, мир, seed, скорость и освещение. Это меняет плотность диагностики,
+а не условия пролёта. Сопоставить ближайшие pixel/depth/ray данные для тёмных
+пятен с draw residency, source block, light value/revision и mesh demand.
+
+Artifacts: [M387 analyzer report](../../bin/suite_reports/engine_refactor/m387_world164_m335_backlog_drain_20261004.json),
+[flight report](../../bin/flight_sim_report.json),
+[perf trace](../../bin/logs/perf_20261004-144425_7548.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-144420.7548),
+[GUI frames](../../bin/logs/m387_world164_m335_backlog_drain).
+
 ### G4 — Новые миры как периодическая проверка переноса
 
 Основной цикл остаётся на детерминированном World_164: не менее трёх повторов на

@@ -3650,3 +3650,54 @@ Artifacts: [M386 analyzer report](../../bin/suite_reports/engine_refactor/m386_w
 [perf trace](../../bin/logs/perf_20261004-134106_19096.jsonl),
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-134102.19096),
 [GUI frames](../../bin/logs/m386_world164_m335_apply_budget).
+
+## M387: ready batching is still serialized; low-resolution pixel rows missed the dark patch
+
+M387 ran a clean Release `64d09ce3` using the same visible/no-teleport M335 on
+`World_164`, seed `3650471197`, start `[120,56,56]`, cruise eye `70`, yaw `180°`,
+pitch `−30°`, speed scale `1`, and `2 800 s` flight plus `20 s` settle. It exited
+normally after 10 128 blocks (`focus 7→−626`, median movement speed `5.19287`),
+crossing the 8 192-block checkpoint. The report says `process_rc=0`; its render
+gates failed. No obstacle was detected (`attempts=0`, detours and replans `0`),
+so this repeat does not test the newly added collision replan. M380/M384 still
+prove the normal detour path.
+
+The ready-drain guard still never activated: 2 051 of 2 946 procedural commit
+events had `ready_batch_n>1` (p50/p95/max `3/31/59`), but all 2 946 logged
+`max_commits_per_frame=1` and `max_apply_budget_ms=0`. This proves that sampling
+`GetGenBacklogTotal()` before `Tick()` does not reliably predict the vector later
+returned by `Completed.DrainAll()`. The correct point to select a multi-result
+budget is inside `UChunkLoadScheduler::Tick()`, after the drain, using the actual
+ready vector size. Only fast movement plus `ready.size()>1` should enable a
+three-result cap and a 12 ms accumulated apply target. The result count and apply
+time remain bounded; a single synchronous result may overshoot the target.
+
+Queue p50/p95/max was `34.6 ms / 31.86 s / 66.76 s`, generation
+`93/150/370 ms`, ready wait `288 ms / 9.07 s / 59.25 s`, apply
+`5.46/10.54/41.30 ms`, and request-to-apply `506 ms / 39.33/80.72 s`.
+Renderer acceptance remained poor: unfinished visual census `97.96%` of periods
+(longest run `804`), Dirty median/max `430/1 086`, wall median `93.39 ms`
+(`92.81 ms` flying), Red pressure `100%`, chunk-not-ready median `26`, near-void
+max `4 217`, visible-black max `31`, and post-stop convergence false. Direct
+near-focus holes were nonzero in 222/1 377 periods, but only two were in the
+visual corridor. These are different scopes; the unfinished census is not a
+screen-pixel hole rate. Source queue and frame-wall differences against M386 are
+not causal evidence because cache/persistence state varies between long repeats.
+
+Visible frames 148 and 167 show dark polygon-like areas and sharp boundaries.
+At the closest dark-frame pixel trace (`frame_epoch=30840`, camera x about
+`−9 359`), only four screen scanlines were sampled across 20 columns. The two
+sample rows hitting surfaces had drawable/MDI geometry, first opaque block ID
+549, sky light approximately `0.53–0.87`, and non-black RGB; the other two rows
+were sky (`depth=1`, no opaque ray hit). The dark polygons fall between sampled
+rows, so these witnesses do not identify their cause. Use the existing
+`CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS=1` option on M388 to sample eight rows at
+the same M335 route and join the pixels falling inside those regions to depth,
+ray, MDI residency, source block, and light revisions. This increases diagnostic
+coverage only; do not alter camera/route/speed/daylight.
+
+Artifacts: [M387 analyzer report](../../bin/suite_reports/engine_refactor/m387_world164_m335_backlog_drain_20261004.json),
+[flight report](../../bin/flight_sim_report.json),
+[perf trace](../../bin/logs/perf_20261004-144425_7548.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-144420.7548),
+[GUI frames](../../bin/logs/m387_world164_m335_backlog_drain).
