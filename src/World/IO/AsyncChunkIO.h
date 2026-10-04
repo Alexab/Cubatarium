@@ -24,6 +24,12 @@ struct AsyncChunkLoadResult
   std::vector<uint8_t> payload;
   ChunkDiskFormat format{ChunkDiskFormat::Absent};
   bool success{false};
+  std::chrono::steady_clock::time_point submittedAt{};
+  std::chrono::steady_clock::time_point workerStartedAt{};
+  std::chrono::steady_clock::time_point workerFinishedAt{};
+  double formatDetectMs{0.0};
+  double fileOpenMs{0.0};
+  double fileReadMs{0.0};
 };
 
 struct AsyncChunkSaveRequest
@@ -57,6 +63,11 @@ public:
   void CancelPending();
   bool CompletedLoadsEmpty() const;
   bool CompletedSavesEmpty() const;
+  std::size_t GetPendingJobCount() const { return Pool.GetPendingJobCount(); }
+  std::size_t GetActiveJobCount() const { return Pool.GetActiveJobCount(); }
+  std::size_t GetWorkerCount() const { return Pool.GetWorkerCount(); }
+  std::size_t GetCompletedLoadCount() const { return CompletedLoads.Size(); }
+  std::size_t GetCompletedSaveCount() const { return CompletedSaves.Size(); }
 
 private:
   // Completion queues must outlive Pool (destroy order = reverse declaration).

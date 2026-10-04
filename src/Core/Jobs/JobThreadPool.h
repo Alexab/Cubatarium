@@ -43,6 +43,7 @@ public:
   void ShutdownForProcessExit(std::chrono::milliseconds timeout);
   std::size_t GetPendingJobCount() const;
   std::size_t GetActiveJobCount() const;
+  std::size_t GetWorkerCount() const { return Workers.size(); }
   std::size_t GetMaxPendingJobCount() const { return MaxPendingJobs; }
   uint64_t GetRejectedEnqueueCount() const { return RejectedEnqueues.load(); }
   void SetMaxPendingJobCount(std::size_t cap)
