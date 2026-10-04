@@ -57,6 +57,12 @@ public:
 
   std::vector<AsyncChunkLoadResult> DrainLoads();
   std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);
+  template <typename Compare>
+  std::vector<AsyncChunkLoadResult>
+  DrainLoadsBestUpTo(std::size_t max_count, Compare &&compare)
+  {
+    return CompletedLoads.DrainBestUpTo(max_count, compare);
+  }
   std::vector<AsyncChunkSaveRequest> DrainSaves();
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);

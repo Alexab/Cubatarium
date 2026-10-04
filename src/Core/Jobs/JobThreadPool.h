@@ -11,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace cutum
@@ -171,6 +172,57 @@ public:
     for (std::size_t i = 0; i < take; ++i)
     {
       drained.push_back(std::move(Items[(Head + i) % Items.size()]));
+    }
+    Head = (Head + take) % Items.size();
+    Count -= take;
+    if (Cap == 0 && Count == 0)
+    {
+      Items.clear();
+      Head = 0;
+    }
+    return drained;
+  }
+
+  /// Drain the best available entries without sorting or moving the rest of
+  /// the queue. Useful for bounded consumers whose priorities can change as
+  /// the focus moves (for example, disk results near the current camera).
+  template <typename Compare>
+  std::vector<T> DrainBestUpTo(std::size_t maxCount, Compare &&compare)
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    std::vector<T> drained;
+    if (maxCount == 0 || Count == 0 || Items.empty())
+    {
+      return drained;
+    }
+
+    const std::size_t take = std::min(maxCount, Count);
+    const auto item_at = [this](std::size_t offset) -> T &
+    { return Items[(Head + offset) % Items.size()]; };
+    // Selection sort only the bounded prefix. The completion queue can grow
+    // during long flights, while callers normally drain only a few results.
+    for (std::size_t selected = 0; selected < take; ++selected)
+    {
+      std::size_t best = selected;
+      for (std::size_t candidate = selected + 1; candidate < Count;
+           ++candidate)
+      {
+        if (compare(item_at(candidate), item_at(best)))
+        {
+          best = candidate;
+        }
+      }
+      if (best != selected)
+      {
+        using std::swap;
+        swap(item_at(selected), item_at(best));
+      }
+    }
+
+    drained.reserve(take);
+    for (std::size_t i = 0; i < take; ++i)
+    {
+      drained.push_back(std::move(item_at(i)));
     }
     Head = (Head + take) % Items.size();
     Count -= take;

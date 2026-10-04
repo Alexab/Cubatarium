@@ -40,6 +40,7 @@
 #include <cstdlib>
 #include <queue>
 #include <unordered_set>
+#include <utility>
 
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
@@ -3470,9 +3471,48 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
                  std::chrono::steady_clock::now() - apply_started)
                      .count() >= max_apply_ms;
     };
+    const glm::ivec3 focus_chunk =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    const auto result_selection_time = std::chrono::steady_clock::now();
+    const auto result_rank = [&](const AsyncChunkLoadResult &load)
+    {
+      const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
+      const bool has_pending_column =
+          PendingAsyncColumnLoadSlices.find(ground) !=
+          PendingAsyncColumnLoadSlices.end();
+      const int distance = (std::max)(
+          std::abs(load.coord.x - focus_chunk.x),
+          std::abs(load.coord.z - focus_chunk.z));
+      int age_bonus = 0;
+      if (load.submittedAt != std::chrono::steady_clock::time_point{} &&
+          result_selection_time > load.submittedAt)
+      {
+        const double age_sec = std::chrono::duration<double>(
+                                   result_selection_time - load.submittedAt)
+                                   .count();
+        age_bonus = (std::min)(256, static_cast<int>(age_sec / 5.0));
+      }
+      return std::pair<bool, int>{has_pending_column,
+                                  (std::max)(0, distance - age_bonus)};
+    };
     while (applied_slices < max_slice_applies)
     {
-      auto completed_loads = AsyncChunkIo->DrainLoadsUpTo(1);
+      auto completed_loads = AsyncChunkIo->DrainLoadsBestUpTo(
+          1, [&](const AsyncChunkLoadResult &a,
+                 const AsyncChunkLoadResult &b)
+          {
+            const auto rank_a = result_rank(a);
+            const auto rank_b = result_rank(b);
+            if (rank_a.first != rank_b.first)
+            {
+              return rank_a.first;
+            }
+            if (rank_a.second != rank_b.second)
+            {
+              return rank_a.second < rank_b.second;
+            }
+            return a.submittedAt < b.submittedAt;
+          });
       if (completed_loads.empty())
       {
         break;
