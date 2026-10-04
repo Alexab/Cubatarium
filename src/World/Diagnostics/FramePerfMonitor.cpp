@@ -3678,7 +3678,7 @@ void UFramePerfMonitor::Shutdown()
         }
         if (r.sample_kind == 9)
         {
-          // Pixel probes are captured as a dense 8x10 grid across the route.
+          // Pixel probes are captured as a dense 8x20 grid across the route.
           // The generic VisualBlackTraceRecord serializer repeats hundreds
           // of unrelated fields per point and made a single visible flight
           // write hundreds of MiB. Keep the pixel oracle's render, voxel,

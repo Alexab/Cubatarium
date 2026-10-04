@@ -284,9 +284,10 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
   }
 
   std::vector<PendingResult> ready = Completed.DrainAll();
-  // During fast flight, use the actual drained batch rather than a racy queue
-  // snapshot taken by WorldStreaming before Tick. Bound both the result count
-  // and synchronous ApplyTo + MarkDirty time; one commit may exceed the target.
+  // During intentional movement, use the actual drained batch rather than a
+  // racy queue snapshot taken by WorldStreaming before Tick. Bound both the
+  // result count and synchronous ApplyTo + MarkDirty time; one commit may
+  // exceed the target.
   if (allowBoundedReadyDrain && ready.size() > 1)
   {
     constexpr int kReadyDrainMaxCommitsPerFrame = 3;

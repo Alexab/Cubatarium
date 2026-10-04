@@ -2733,6 +2733,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     const bool moving_fast =
         world.LastMovementSpeed > procedural.MovementSpeedBoostThreshold;
+    const bool moving_any =
+        world.LastMovementSpeed >= procedural.MovementPrefetchThreshold;
     if (moving_fast &&
         (mesh_dirty > 16 || pending_bg > 8 || frame_ms > 20.0) &&
         !near_mesh_backlog)
@@ -2791,8 +2793,6 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       // Underfeet first when standing still. Any intentional travel (prefetch
       // threshold) must not clamp — radius=2 + near_skip carved holes mid-flight
       // when speed dipped below boost but player was still moving.
-      const bool moving_any =
-          world.LastMovementSpeed >= procedural.MovementPrefetchThreshold;
       if (moving_fast || moving_any)
       {
         Streamer->SetNearLoadRadius(-1);
@@ -2918,7 +2918,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     // Let Tick decide against the actual drained result batch. A ready-queue
     // snapshot here is stale by the time Completed.DrainAll() runs.
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
-                         chunk_budget.MaxLoadOps, 0.0, moving_fast);
+                         chunk_budget.MaxLoadOps, 0.0, moving_any);
     world.PhysicsTelemetryData.CommitApplyMs =
         ChunkScheduler->GetLastTickApplyMs();
   }
