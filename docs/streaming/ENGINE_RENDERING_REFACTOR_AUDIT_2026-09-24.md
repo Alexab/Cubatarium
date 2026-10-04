@@ -3701,3 +3701,57 @@ Artifacts: [M387 analyzer report](../../bin/suite_reports/engine_refactor/m387_w
 [perf trace](../../bin/logs/perf_20261004-144425_7548.jsonl),
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-144420.7548),
 [GUI frames](../../bin/logs/m387_world164_m335_backlog_drain).
+
+## M388: dark sampled regions contain drawn geometry with low or provisional light
+
+M388 used Release `0978a7a5` and the same visible/no-teleport M335 on `World_164`
+with fixed daytime. The only diagnostic change was eight pixel-probe rows instead
+of four; source tracing stayed enabled. It exited normally (`process_rc=0`) after
+9 104 blocks (`focus 7→−562`, median speed `5.18555`), crossing checkpoint 8 192.
+The GUI capture contains 189 images. No obstacle hazard occurred, so avoidance
+and collision-replan counters remained zero. The wrapper restored
+`world_data.json` to its original SHA-256 `0ade4041…`.
+
+The experiment also exposed why the previous ready-drain patch remained dormant.
+`World_164` sets `MovementSpeedBoostThreshold=6.0`, above M335's observed median
+speed, while its established `MovementPrefetchThreshold=1.5` recognizes travel.
+The worker drain itself does contain large batches: 1 486 of 2 402 procedural
+commit records had `ready_batch_n>1`, max 40. Yet every record logged
+`max_commits_per_frame=1` and `max_apply_budget_ms=0`; frame telemetry showed a
+commit count of one on 255/1 364 periods, zero on the remainder, never above one.
+The scheduling decision is now keyed to the prefetch movement signal and remains
+bounded by three results and 12 ms of accumulated `ApplyTo + MarkDirty` time.
+M389 must verify the gate in an actual M335 run.
+
+The dense trace contains 32 768 selected screen probes. Of the 165 points below
+luminance 32, all have valid opaque depth, a drawable chunk, and visible MDI
+submission; 148 have a source-face witness within 0.1 of the depth surface. All
+dark samples have block light 0 and sky light 0 or 1; 38 have `light_preview=1`,
+and 47 have unsettled chunk demand. Shader witnesses show day factor 1, ambient
+0.12, sky scale 0.972. This rules out missing opaque geometry for those sampled
+points and points at light initialization/settlement as the leading cause. It
+does not quantify the full screen area or prove that every visible dark polygon
+has the same cause.
+
+At camera x `−8 347`, the sampled depth chunk `(−522,4,3)` belongs to column
+`(−522,0,3)`. The persistence source log records `disk_miss`, followed by a
+procedural commit 24.63 seconds later (queue 24.50 s, generation 84 ms, ready
+batch 6, apply 5.62 ms). Two nearby sampled columns `(−353,0,2/3)` also missed
+disk before generation. Thus at least one captured dark surface was newly
+generated in an uncached far region, not loaded from persistence. M389 should
+revisit these same saved columns: disk hit plus settled/bright pixels points to
+cold generation/relight warmup; disk hit plus persistent provisional/dark light
+would implicate the persistence/light restoration contract.
+
+Overall analyzer `pass=false`: 1 364 periods, 5 049 spikes, flying wall median
+109.825 ms (9.11 FPS), stream 23.22 ms, mesh emerge 27.10 ms, broad
+`unfinished_visual` census 97.65% (not a screen-pixel hole rate), visible-black
+max 34, near-void max 7 317, unlit max 41, post-stop convergence false. The run
+therefore reproduces distant visual darkness but is not a renderer acceptance
+pass. `unfinished_visual` remains a loaded-column/no-mesh census.
+
+Artifacts: [M388 report](../../bin/suite_reports/engine_refactor/m388_world164_m335_scheduler_drain_20261004.json),
+[pixel/light analysis](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-154622_31036.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-154618.31036),
+[GUI frames](../../bin/logs/m388_world164_m335_scheduler_drain).

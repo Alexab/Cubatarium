@@ -28,6 +28,7 @@ def main() -> int:
 
     probe_count = 0
     ray_states: Counter[str] = Counter()
+    dark_light_states: Counter[str] = Counter()
     dark_pixels: list[dict[str, Any]] = []
     screen_rays_by_epoch: dict[int, Counter[str]] = {}
     max_oom_period: dict[str, Any] | None = None
@@ -159,8 +160,84 @@ def main() -> int:
                             "renderer_pixel_voxel_chunk_mdi_visible_index_count"
                         ),
                     },
+                    "pixel_shader": {
+                        "min_ambient": row.get("renderer_pixel_shader_min_ambient"),
+                        "day_factor": row.get("renderer_pixel_shader_day_factor"),
+                        "night_factor": row.get("renderer_pixel_shader_night_factor"),
+                        "sky_scale": row.get("renderer_pixel_shader_sky_scale"),
+                        "light_debug_mode": row.get(
+                            "renderer_pixel_shader_light_debug_mode"
+                        ),
+                    },
+                    "opaque_vertex_light": {
+                        "valid": row.get("renderer_pixel_opaque_vertex_light_valid"),
+                        "sky": row.get("renderer_pixel_opaque_vertex_sky_light"),
+                        "block": row.get("renderer_pixel_opaque_vertex_block_light"),
+                        "preview": row.get(
+                            "renderer_pixel_opaque_vertex_light_preview"
+                        ),
+                        "live_face_valid": row.get(
+                            "renderer_pixel_opaque_live_face_light_valid"
+                        ),
+                        "live_face_source": row.get(
+                            "renderer_pixel_opaque_live_face_light_source"
+                        ),
+                    },
+                    "opaque_chunk_light": {
+                        "published_revision": row.get(
+                            "renderer_pixel_opaque_published_light_rev"
+                        ),
+                        "field_revision": row.get(
+                            "renderer_pixel_opaque_field_light_rev"
+                        ),
+                        "demand_present": row.get(
+                            "renderer_pixel_opaque_demand_present"
+                        ),
+                        "demand_settled": row.get(
+                            "renderer_pixel_opaque_demand_has_settled_light"
+                        ),
+                        "demand_active_stage": row.get(
+                            "renderer_pixel_opaque_demand_active_stage"
+                        ),
+                        "demand_desired_revision": row.get(
+                            "renderer_pixel_opaque_demand_desired_light_rev"
+                        ),
+                        "demand_published_revision": row.get(
+                            "renderer_pixel_opaque_demand_published_light_rev"
+                        ),
+                    },
+                    "voxel_chunk_light": {
+                        "pending": row.get(
+                            "renderer_pixel_voxel_chunk_pending_light"
+                        ),
+                        "queue_kind": row.get(
+                            "renderer_pixel_voxel_chunk_relight_queue_kind"
+                        ),
+                        "ticket_flags": row.get(
+                            "renderer_pixel_voxel_chunk_flow_ticket_flags"
+                        ),
+                        "settled": row.get(
+                            "renderer_pixel_voxel_chunk_has_settled_light"
+                        ),
+                        "settled_revision": row.get(
+                            "renderer_pixel_voxel_chunk_settled_light_rev"
+                        ),
+                        "field_revision": row.get(
+                            "renderer_pixel_voxel_chunk_field_light_rev"
+                        ),
+                    },
                 }
                 dark_pixels.append(record)
+                light_state = {
+                    "preview": record["opaque_vertex_light"]["preview"],
+                    "sky": record["opaque_vertex_light"]["sky"],
+                    "block": record["opaque_vertex_light"]["block"],
+                    "demand_settled": record["opaque_chunk_light"][
+                        "demand_settled"
+                    ],
+                    "voxel_pending": record["voxel_chunk_light"]["pending"],
+                }
+                dark_light_states[json.dumps(light_state, sort_keys=True)] += 1
 
             elif kind == "screen_ray_candidate_trace":
                 epoch = int(row.get("frame_epoch", 0))
@@ -242,6 +319,7 @@ def main() -> int:
         "dark_threshold_luma": args.threshold,
         "dark_pixel_count": len(dark_pixels),
         "voxel_ray_state_counts": dict(ray_states),
+        "dark_pixel_light_state_counts": dict(dark_light_states),
         "screen_ray_frame_count": len(screen_rays_by_epoch),
         "dark_pixel_depth_join": dark_pixel_depth_join,
         "period_max_publication_oom": max_oom_period,

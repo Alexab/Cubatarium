@@ -871,6 +871,63 @@ Artifacts: [M387 analyzer report](../../bin/suite_reports/engine_refactor/m387_w
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-144420.7548),
 [GUI frames](../../bin/logs/m387_world164_m335_backlog_drain).
 
+### Результат M388 — пиксель попал в поверхность; scheduler gate не совпал с порогом M335
+
+M388 собран и запущен на Release `0978a7a5`, с тем же visible/no-teleport M335
+на `World_164`: старт `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`,
+scale `1`, 2 800 s fly + 20 s settle. Изменена только плотность диагностики:
+`CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS=1` (8×20 вместо 4×20 probes), сохранены
+source trace и 189 кадров GUI. Полёт завершился с `process_rc=0`, прошёл 9 104
+блока (`focus 7→−562`), median speed `5.18555` блока/с, checkpoint `8 192`
+пересечён. `collision_stop_triggered=false`; obstacle attempts/detours/replans
+все равны нулю. `world_data.json` восстановлен byte-for-byte, исходный SHA-256
+`0ade4041…`.
+
+Результат не удовлетворяет render gates: analyzer `pass=false`, 1 364 periods,
+5 049 spikes, wall median flying `109.825 ms` (`9.11 FPS`), stream `23.22 ms`,
+mesh emerge `27.10 ms`, `unfinished_visual=97.65%` периодов (широкий census,
+не экранная доля дыр), visible-black max `34`, near-void max `7 317`, `unlit`
+max `41`, stop convergence false. В M388 реально применилось не более одного
+column commit за кадр: `stream_gen_commit_n` равен 1 в 255/1 364 periods, 0 в
+остальных и никогда не превышает 1. Из 2 402 procedural commit events у 1 486
+`ready_batch_n>1` (max 40), однако все события по-прежнему записали cap 1 и
+budget 0 ms. Причина найдена в настройке именно этого мира: `MovementSpeedBoostThreshold=6.0`,
+тогда как контрольный M335 держит median `5.18555`; поэтому fast-flight bool
+ложен. `MovementPrefetchThreshold=1.5` уже распознаёт это перемещение. Drain
+переведён на этот существующий сигнал движения; сам маршрут и скорость не меняются.
+
+Плотный trace записал 32 768 экранных samples; 165 имели luma `<32` (это доля
+выбранных точек, не screen-pixel hole rate). У всех 165 был валидный depth surface,
+drawable chunk и видимая opaque MDI команда; у 148 source-face witness совпал с
+поверхностью в пределах 0.1. Все dark sample block-light значения были 0; у 100
+sky-light был 1, у остальных 0/1. 38 samples помечены `light_preview=1`, и у
+47 demand ещё не считался settled. Настройки shader показывали day factor 1,
+ambient 0.12 и sky scale 0.972. Это свидетельствует, что sampled тёмные места
+содержат отрисованную геометрию с низким/предварительным освещением; само по себе
+не объясняет все видимые полигоны и не является прямым pixel-area измерением.
+
+Для одного совпавшего с тёмной областью места (`camera x=−8 347`, depth chunk
+`(−522,4,3)`, column `(−522,0,3)`) persistence trace зафиксировал `disk_miss`,
+а затем procedural commit через `24.63 s`: очередь `24.50 s`, генерация `84 ms`,
+ready batch 6, apply `5.62 ms`. Значит, для этого свидетельства колонка была
+создана заново, а не прочитана с диска. Соседние sampled columns `(−353,0,2/3)`
+тоже дали disk miss перед генерацией. Повтор M389 на том же маршруте должен
+проверить эти координаты после сохранения: disk hit плюс settled light и обычная
+яркость подтвердят временный cold-generation/light-warmup дефект; повторный
+dark+unsettled draw укажет на сохранение/восстановление provisional state.
+
+Artifacts: [M388 analyzer report](../../bin/suite_reports/engine_refactor/m388_world164_m335_scheduler_drain_20261004.json),
+[pixel/light join](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-154622_31036.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-154618.31036),
+[GUI frames](../../bin/logs/m388_world164_m335_scheduler_drain).
+
+Следующий шаг: Release M389 с теми же M335 аргументами после переключения ready
+drain на `moving_any`; проверить cap `<=3`, budget `12 ms`, multi-commit frames,
+тот же disk-loaded far corridor и pixel/demand light revisions. Если saved hit
+всё ещё рисуется тёмным, перейти к владельцу relight/mesh-settlement для
+новосозданных дальних колонок, не к геометрическому draw gate.
+
 ### G4 — Новые миры как периодическая проверка переноса
 
 Основной цикл остаётся на детерминированном World_164: не менее трёх повторов на
