@@ -420,6 +420,12 @@ Harness autosave выключен, поэтому disk misses новых коо�
 не доказывают failure persistence. Инструментированный прогон локализует дефект,
 отдельный uninstrumented повтор пригоден для performance comparison. Пустой/чёрный
 proxy не считать исправленным из-за меньшего счётчика или более короткого прогона.
+Промежуточный M379/M380 same-coordinate срез около x=−5 800 уже показывает
+publication OOM 213–229 → 0 и pool use 257/320 → 90/157 MiB; занятые slots
+почти одинаковы. Camera-band no-drawable равен 0 в обоих runs, но
+draw_oracle_missing_resident не снизился, а wall samples перекрываются. Считать
+это подтверждением исправления pool allocation pressure, но не закрытием render
+holes; дождаться far pixel/depth witnesses и конечного analyzer отчёта M380.
 
 **Gate:** контрольный маршрут проходит far checkpoint, нет необъяснённых
 невалидных/неопубликованных поверхностей в проверяемом коридоре, а stop convergence

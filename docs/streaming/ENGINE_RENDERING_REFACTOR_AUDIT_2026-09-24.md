@@ -3171,6 +3171,16 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   При первом наблюдении M380 камера двигалась без blocked substeps и ground
   contacts; obstacle avoidance включён в flight-sim, но на этом участке ещё не
   требовался. Итог M380 будет внесён после окончания прогона и разбора trace.
+- Промежуточное same-coordinate сравнение около x=−5 800: M379 в соседних
+  периодах занимал 256.98/320 MiB и имел 213–229 publication OOM retains;
+  M380 — 89.36–89.58/156.91–157.10 MiB и 0 OOM retains. В обоих случаях было
+  занято 2 046/2 048 mesh slots, camera-band solid no-drawable равнялся 0,
+  false-negative cull равнялся 0. draw_oracle_missing_resident был 22–26 у M379
+  и 28–29 у M380 — этот proxy не улучшился. Wall samples составили около
+  98–110 ms у M379 и 86–124 ms у M380, то есть короткое сопоставление не
+  показывает стабильного FPS выигрыша. Уменьшение pool use/OOM — сильный эффект
+  patch; render acceptance пока открыт до завершения дальнего участка и pixel
+  witness разбора.
 - M379 report: [JSON](../../bin/suite_reports/engine_refactor/m379_world164_m335_fixed_day_20261004.json);
   [perf/pixel/ray trace](../../bin/logs/perf_20261004-034949_9384.jsonl);
   [frames](../../bin/logs/m379_world164_m335_fixed_day);
