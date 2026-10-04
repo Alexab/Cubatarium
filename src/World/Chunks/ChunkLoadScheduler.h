@@ -88,9 +88,16 @@ private:
     int priority{0};
     int maxHeight{256};
     std::chrono::steady_clock::time_point requestedAt{};
+    std::chrono::steady_clock::time_point scheduledAt{};
     std::chrono::steady_clock::time_point generationStartedAt{};
     std::chrono::steady_clock::time_point generationFinishedAt{};
     double generationMs{0.0};
+    std::size_t requestQueueLiveAtSchedule{0};
+    std::size_t requestQueueHeapAtSchedule{0};
+    std::size_t workerPendingAtSubmit{0};
+    std::size_t workerActiveAtSubmit{0};
+    std::size_t workerCount{0};
+    int generationStartCapPerFrame{0};
   };
 
   struct RequestCompare
@@ -101,7 +108,8 @@ private:
     }
   };
 
-  void ScheduleWorker(const PendingRequest &request);
+  void ScheduleWorker(const PendingRequest &request,
+                      int generation_start_cap_per_frame);
   void CompactRequestQueueIfStale();
 
   IUChunkPopulator &Populator;

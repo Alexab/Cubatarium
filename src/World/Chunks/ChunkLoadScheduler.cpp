@@ -281,7 +281,8 @@ void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
   Cancel(coord);
 }
 
-void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
+void UChunkLoadScheduler::ScheduleWorker(
+    const PendingRequest &request, const int generation_start_cap_per_frame)
 {
   States[request.coord] = ChunkLoadState::Generating;
   ChunkPopulateRequest populateRequest;
@@ -296,17 +297,38 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
   { return Tokens.Current(coord).sequence != start_sequence; };
   populateRequest.content = CaptureWorldGenContentSnapshot();
   const auto requested_at = request.requestedAt;
+  const auto scheduled_at = std::chrono::steady_clock::now();
   const int priority = request.priority;
   const int max_height = request.settings.MaxHeight;
+  const std::size_t request_queue_live_at_schedule =
+      QueuedRequests.empty() ? 0 : QueuedRequests.size() - 1;
+  const std::size_t request_queue_heap_at_schedule = Queue.size();
+  const std::size_t worker_pending_at_submit = Pool.GetPendingJobCount();
+  const std::size_t worker_active_at_submit = Pool.GetActiveJobCount();
+  const std::size_t worker_count = Pool.GetWorkerCount();
   Pool.Enqueue(
-      [this, populateRequest, requested_at, priority, max_height]()
+      [this, populateRequest, requested_at, scheduled_at, priority,
+       max_height, request_queue_live_at_schedule,
+       request_queue_heap_at_schedule, worker_pending_at_submit,
+       worker_active_at_submit, worker_count,
+       generation_start_cap_per_frame]()
       {
         PendingResult pending;
         pending.priority = priority;
         pending.maxHeight = max_height;
         pending.requestedAt = requested_at;
+        pending.scheduledAt = scheduled_at;
         pending.generationStartedAt = std::chrono::steady_clock::now();
         const auto generation_started = pending.generationStartedAt;
+        pending.requestQueueLiveAtSchedule =
+            request_queue_live_at_schedule;
+        pending.requestQueueHeapAtSchedule =
+            request_queue_heap_at_schedule;
+        pending.workerPendingAtSubmit = worker_pending_at_submit;
+        pending.workerActiveAtSubmit = worker_active_at_submit;
+        pending.workerCount = worker_count;
+        pending.generationStartCapPerFrame =
+            generation_start_cap_per_frame;
         pending.result = Populator.Populate(populateRequest);
         pending.generationFinishedAt = std::chrono::steady_clock::now();
         pending.generationMs = std::chrono::duration<double, std::milli>(
@@ -343,7 +365,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
     {
       continue;
     }
-    ScheduleWorker(next);
+    ScheduleWorker(next, maxGenerationStartsPerFrame);
     QueuedRequests.erase(queuedIt);
     ++generationStarts;
   }
@@ -459,6 +481,14 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                                   pending.generationStartedAt -
                                   pending.requestedAt)
                                   .count();
+      const double scheduler_queue_ms = std::chrono::duration<double, std::milli>(
+                                            pending.scheduledAt -
+                                            pending.requestedAt)
+                                            .count();
+      const double worker_pool_queue_ms = std::chrono::duration<double, std::milli>(
+                                              pending.generationStartedAt -
+                                              pending.scheduledAt)
+                                              .count();
       const double total_ms = std::chrono::duration<double, std::milli>(
                                   std::chrono::steady_clock::now() -
                                   pending.requestedAt)
@@ -469,7 +499,21 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
           std::to_string(pending.result.coord.z) + ") priority=" +
           std::to_string(pending.priority) + " token=" +
           std::to_string(pending.result.token.sequence) + " queue_ms=" +
-          std::to_string(queue_ms) + " generation_ms=" +
+          std::to_string(queue_ms) + " scheduler_queue_ms=" +
+          std::to_string(scheduler_queue_ms) + " worker_pool_queue_ms=" +
+          std::to_string(worker_pool_queue_ms) +
+          " request_queue_live_at_schedule=" +
+          std::to_string(pending.requestQueueLiveAtSchedule) +
+          " request_queue_heap_at_schedule=" +
+          std::to_string(pending.requestQueueHeapAtSchedule) +
+          " worker_pending_at_submit=" +
+          std::to_string(pending.workerPendingAtSubmit) +
+          " worker_active_at_submit=" +
+          std::to_string(pending.workerActiveAtSubmit) +
+          " worker_count=" + std::to_string(pending.workerCount) +
+          " generation_start_cap_per_frame=" +
+          std::to_string(pending.generationStartCapPerFrame) +
+          " generation_ms=" +
           std::to_string(pending.generationMs) + " ready_wait_ms=" +
           std::to_string(ready_wait_ms) + " priority_initial=" +
           std::to_string(initialPriority) + " priority_at_schedule=" +

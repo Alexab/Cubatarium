@@ -82,7 +82,8 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
                  "result_wait_ms", "deserialize_apply_ms", "disk_discovery_ms",
                  "format_detect_ms", "finalize_prelog_ms")
                 if source == "disk" and outcome == "complete"
-                else ("queue_ms", "generation_ms", "ready_wait_ms", "apply_ms", "total_ms")
+                else ("queue_ms", "scheduler_queue_ms", "worker_pool_queue_ms",
+                      "generation_ms", "ready_wait_ms", "apply_ms", "total_ms")
                 if source == "procedural" and outcome == "committed"
                 else ("elapsed_ms", "distance_chunks", "remaining_slices")
             )
@@ -98,7 +99,11 @@ def summarize(paths: list[Path]) -> dict[str, Any]:
                         entry[field] = summary
             if source == "procedural" and outcome == "committed":
                 for field in ("ready_batch_n", "max_commits_per_frame",
-                              "max_apply_budget_ms", "priority_refresh_n"):
+                              "max_apply_budget_ms", "priority_refresh_n",
+                              "request_queue_live_at_schedule",
+                              "request_queue_heap_at_schedule",
+                              "worker_pending_at_submit", "worker_active_at_submit",
+                              "worker_count", "generation_start_cap_per_frame"):
                     summary = numeric(rows, field)
                     if summary is not None:
                         entry[field] = summary
