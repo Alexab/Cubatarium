@@ -2916,19 +2916,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     chunk_budget.MaxChunkCommits = ApplyPressureCap(
         chunk_budget.MaxChunkCommits, pressure.max_commits_cap);
     double commit_apply_budget_ms = 0.0;
-    // When generation has already produced a ready-result backlog, drain a
-    // small priority-sorted batch instead of leaving the pressure/hitch cap at
-    // one. This does not admit more work; ApplyTo + MarkDirty has a per-frame
-    // time target and a strict result-count ceiling. A single synchronous
-    // commit cannot be preempted and may overshoot the target.
-    if (moving_fast && completed_ready > 1 &&
-        chunk_budget.MaxChunkCommits > 0)
+    // During fast movement, a generation backlog means another ready result
+    // can arrive between this snapshot and Tick's Completed.DrainAll(). Use
+    // the queue + in-flight + ready count as the signal, so a transient
+    // completed_ready==0/1 sample does not keep every frame at one commit.
+    // This does not admit more generation work; ApplyTo + MarkDirty has a
+    // per-frame time target and a strict result-count ceiling. A single
+    // synchronous commit cannot be preempted and may overshoot the target.
+    if (moving_fast && gen_backlog_total > 1)
     {
       constexpr int kReadyDrainMaxCommitsPerFrame = 3;
       constexpr double kReadyDrainApplyBudgetMs = 12.0;
       chunk_budget.MaxChunkCommits = std::max(
           chunk_budget.MaxChunkCommits,
-          std::min(kReadyDrainMaxCommitsPerFrame, completed_ready));
+          std::min(kReadyDrainMaxCommitsPerFrame, gen_backlog_total));
       commit_apply_budget_ms = kReadyDrainApplyBudgetMs;
     }
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,

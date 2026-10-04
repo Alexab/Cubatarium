@@ -715,10 +715,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int avoidance_attempts = 0;
     int avoidance_detours_started = 0;
     int avoidance_detours_completed = 0;
+    int avoidance_detour_replans = 0;
     int avoidance_plan_failures = 0;
     float avoidance_total_lateral_blocks = 0.0f;
     std::vector<AvoidanceEvent> avoidance_events;
     auto next_avoidance_probe = std::chrono::steady_clock::time_point{};
+    auto next_detour_replan = std::chrono::steady_clock::time_point{};
     auto apply_cruise_height = [&](glm::vec3 pos) {
       const float sea = static_cast<float>(
           world->GetProceduralSettings().SeaLevel);
@@ -924,6 +926,43 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 {
                   const glm::vec3 position = camera->GetPosition();
                   const PlayerCapsule capsule = camera->GetPlayerCapsule();
+                  const int move_attempt_substeps =
+                      camera->GetLastMoveAttemptSubsteps();
+                  const int move_blocked_substeps =
+                      camera->GetLastMoveBlockedSubsteps();
+                  const int flight_ground_contacts =
+                      camera->GetLastFlightGroundContacts();
+
+                  // The world may publish collision data after a bypass was
+                  // planned. If the camera becomes fully blocked while
+                  // following a waypoint, discard that stale plan and run
+                  // the normal bounded side/clearance search from the current
+                  // position. Cool down briefly to avoid processing the same
+                  // movement result twice (the harness predicate runs both
+                  // before and after rendering).
+                  const bool bypass_fully_blocked =
+                      move_attempt_substeps > 0 &&
+                      move_blocked_substeps >= move_attempt_substeps;
+                  const bool bypass_landed = flight_ground_contacts > 0;
+                  if (avoidance_phase != AvoidancePhase::None &&
+                      (bypass_fully_blocked || bypass_landed) &&
+                      now >= next_detour_replan)
+                  {
+                    ++avoidance_detour_replans;
+                    std::cout << "flight-sim: obstacle bypass blocked; "
+                                 "replanning from current position at t="
+                              << ingame_sec << "s blocked="
+                              << move_blocked_substeps << "/"
+                              << move_attempt_substeps << " ground_contacts="
+                              << flight_ground_contacts << std::endl;
+                    avoidance_phase = AvoidancePhase::None;
+                    preferred_avoidance_side = -avoidance_side;
+                    next_avoidance_probe = now;
+                    next_detour_replan =
+                        now + std::chrono::milliseconds(250);
+                    window.SetAutopilotKey(KeyCode::Key_A, false);
+                    window.SetAutopilotKey(KeyCode::Key_D, false);
+                  }
 
                   if (avoidance_phase != AvoidancePhase::None)
                   {
@@ -1076,6 +1115,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                         avoidance_total_lateral_blocks +=
                             2.0f * event.side_offset;
                         next_avoidance_probe = now;
+                        next_detour_replan =
+                            now + std::chrono::milliseconds(250);
                         std::cout << "flight-sim: obstacle bypass planned at t="
                                   << ingame_sec << "s hazard="
                                   << event.hazard_distance << " side="
@@ -1422,6 +1463,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << ",\n"
                << "    \"detours_completed\": "
                << avoidance_detours_completed << ",\n"
+               << "    \"detour_replans\": "
+               << avoidance_detour_replans << ",\n"
                << "    \"plan_failures\": " << avoidance_plan_failures
                << ",\n"
                << "    \"planned_lateral_blocks\": "
