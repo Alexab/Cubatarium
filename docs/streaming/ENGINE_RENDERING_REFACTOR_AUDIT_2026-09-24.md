@@ -4045,3 +4045,66 @@ Artifacts: [M392 flight report](../../bin/suite_reports/engine_refactor/m392_wor
 [source logs](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-205456.34968),
 [GUI frames](../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_127.png,
 ../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_145.png).
+
+## M393: servicing disk results helps queue age but does not repair rendered surfaces
+
+M393 tested commit `e186c63c` on the unchanged visible Release/no-teleport M335
+route in `World_164`. It retained `[120,56,56]`, eye y `70`, yaw `180°`, pitch
+`−30°`, fixed clear day, scale 1, and `2 800 s + 20 s`; route manifest passed,
+speed was `5.18555 blocks/s`, the application exited 0 without a hang, and world
+data restored byte-for-byte. Movement had no blocked substeps or ground contacts.
+The flight analyzer still failed renderer stop-lines (`22/39` gates passed).
+
+The one-result fallback achieved its intended queue effect: `2 556/2 556`
+unique queued disk coordinates completed, with no unmatched owners. Result-wait
+median/p95 fell `2.51/100.84 s → 1.92/48.21 s`; ready-load p95 fell
+`180 → 104` slices. Disk worker queue and reads remained negligible (p95
+`0.193 ms` and `3.304 ms`), while deserialize/apply median was `7.16 ms`.
+One outlier still waited `194.07 s`, and the maximum ready queue remained `458`.
+The main-thread consumer is still too slow for peak periods.
+
+This was not an overall acceptance improvement. Median fly wall worsened from
+`91.99` to `110.93 ms`; streaming-phase median moved `49.52 → 52.25 ms`. Red
+pressure eased from `100%` to `69.1%`, dirty median/max fell `835/1 484 →
+556/832`, and post-stop missing max fell `35 → 18`; post-stop demand still did
+not converge. The dominant completion stall remains `gpu_not_ready`, while
+spike classification now reports `zero_fm_cap` rather than `empty_fm_queue`.
+M393's renderer gates remain `22/39`, unchanged from M392.
+
+Pixel evidence got worse. With `32 768` probes in each run, dark luma
+`<32/<64/<96` rose `129/658/1 076 → 268/1 025/1 590`. All M393 `<32` pixels
+hit drawable opaque MDI geometry; none changed through transparent composition;
+`155/268` had a mesh revision newer than published geometry and `31` were
+preview-lit. Across `<96`, `1 559/1 590` hit drawable opaque MDI, `935` had
+newer mesh revision, `277` had preview light, and `157` changed during
+transparent composition. M392's equivalent counts were `1 027`, `741`, `166`,
+and `256`. This points more strongly to publication/lighting latency than to
+water composition as the primary dark-surface path, while not making every dark
+sample the same defect.
+
+Procedural source adds a separate queue finding. Across `2 670` disk misses,
+`2 613` commits and `2` out-of-range cancels were logged. Request-to-worker-start
+wait p95 was `25.44 s` (max `47.38 s`), but generation p95 was `121.60 ms` and
+ready wait p95 `280.75 ms`. `queue_ms` is request-to-worker-start, so the main
+delay is before generator execution; the scheduler's per-frame load-start cap
+and four-worker pool need separate attribution. At camera x around `−7 335`,
+dark pixel samples hit water block `549` with `sky=0`, preview light, and mesh /
+published revisions `2/1`; the corresponding columns logged procedural
+`disk_miss` and later commits after `14.31–20.53 s` queue waits. This is
+coordinate correlation, not a same-frame proof.
+
+M393 also shows GPU consumer pressure: queued GPU applies median/p95 `9/12`,
+`gpu_not_ready` is the dominant completion stall, and the publication pool
+reached capacity in four periods. First-mesh cap itself was median/p95 `6/12`
+over all periods; zero FM cap is prominent only within the classified spike
+subset. Follow the exact pixel's CPU revision through mesh scheduling, GPU
+apply, fence completion, pool capacity, and published geometry before changing
+preview-light policy. Fit any disk-result drain inside a shared frame deadline:
+its lower disk queue age is useful, but M393's wall and pixel regressions rule
+it out as a complete fix.
+
+Artifacts: [M393 flight report](../../bin/suite_reports/engine_refactor/m393_world164_m335_reserved_disk_apply_20261004.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m393_renderer_pixel_trace_l96_20261004.json),
+[world-column source trace](../../bin/suite_reports/engine_refactor/m393_world_column_source_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-220021_37424.jsonl),
+[GUI frame](../../bin/logs/m393_world164_m335_reserved_disk_apply/frame_128.png).

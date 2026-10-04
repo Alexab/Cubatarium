@@ -1171,6 +1171,96 @@ Artifacts: [M392 flight report](../../bin/suite_reports/engine_refactor/m392_wor
 [GUI frames](../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_127.png,
 ../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_145.png).
 
+### M393 completed — disk-result latency falls, but renderer acceptance regresses
+
+M393 validated commit `e186c63c` with the unchanged visible Release M335 on
+`World_164`: start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, fixed
+clear day, movement scale 1, no teleport, `2 800 s` flight plus `20 s` settle.
+The manifest and route passed, the app returned code 0 without a hang, and the
+harness restored the world data with SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`. It crossed
+the `8 192`-block checkpoint and covered `9 312` blocks at median
+`5.18555 blocks/s`; camera height stayed 70 and z stayed 56. There were no
+blocked movement substeps, ground contacts, collision stop, or detour. The
+runner itself exits 1 because renderer stop-lines fail; this is not an app
+crash. No route, camera, speed, or filming parameter changed.
+
+The reserved disk drain improved its target signal. All `2 556` queued disk
+coordinates completed with no unmatched requests. Completed-result wait fell
+from M392 median/p95 `2.51/100.84 s` to `1.92/48.21 s`; ready-load queue p95
+fell `180→104` slices, while the maximum remained `458` and one wait outlier
+rose to `194.07 s`. File read p95 was `3.30 ms`; deserialize/apply median/p95
+was `7.16/12.77 ms`. This confirms a main-thread result-consumption backlog,
+not slow file reads, but leaves a long tail.
+
+Procedural work remains delayed before generation starts: `2 670` disk misses,
+`2 613` commits, and `2` out-of-range cancellations. Request-to-worker-start
+wait was median `28.66 ms`, p95 `25.44 s`, max `47.38 s`; actual generation was
+median/p95 `91.91/121.60 ms`, followed by ready wait `68.73/280.75 ms` and
+apply `5.32 ms` median. `queue_ms` measures request-to-worker-start, so this
+large tail is admission/scheduler or worker-queue wait, not generator CPU time.
+The generation pool has four workers and starts are additionally limited by the
+frame's `MaxLoadOps` budget. A coordinate join near x `−7 355` found
+`disk_miss` for columns `(−459,0,3)` and `(−460,0,3)`, then commits after
+`20.53 s` and `14.31 s` queue waits with generation near `102–103 ms`. Pixel
+and source events are coordinate-correlated; the current logs do not prove an
+exact same-frame ordering.
+
+Overall rendering did not pass and was slower than M392: `1 372` steady
+periods, fly wall median `110.93 ms` (M392 `91.99 ms`), world-streaming phase
+median `52.25 ms` (M392 `49.52 ms`), Red pressure rate `69.1%` (M392 `100%`),
+dirty median/max `556/832` (M392 `835/1 484`), and `unfinished_visual` median
+`27` in both runs. The dominant wall stage remains streaming; the classified
+schedule blocker on spikes changed from `empty_fm_queue` to `zero_fm_cap`, and
+completion stalls remain `gpu_not_ready`. Stop convergence still fails, though
+post-stop missing max improved `35→18`. The route report has `22/39` gates
+passing, same as M392.
+
+The dense pixel trace is a regression signal under identical route conditions:
+of `32 768` probes, `<32/<64/<96` luma counts rose from M392
+`129/658/1 076` to `268/1 025/1 590`. Of M393's `<32` samples, all `268` hit
+drawable opaque MDI geometry, none changed through transparent composition,
+`155` had mesh revision newer than published geometry, and `31` carried a
+preview-light marker. Across `<96`, `1 559/1 590` hit drawable opaque MDI,
+`935` were newer than published geometry, `277` had preview light, and `157`
+changed during transparent composition (M392: `1 027/1 076`, `741`, `166`,
+and `256`). This shifts attention toward stale GPU publication and preview-light
+debt; transparent composition is a secondary, still separate symptom.
+
+The mesh/output path needs the next investigation: M393's `pending_gpu_queued_n`
+was median/p95 `9/12`, `gpu_finish_not_ready` owns the dominant completion
+stall, and the output pool reached its cap in four periods. Across all periods,
+first-mesh schedule cap was median/p95 `6/12` and dirty FirstMesh queue
+`12/137`; zero FM cap was not a whole-flight condition, but it dominated the
+classified spike set. The renderer spends median `61.96 ms` per fly period
+while the world-streaming phase spends `52.25 ms`, so optimization must respect
+both producer and GPU consumer budgets.
+
+**Updated next steps:**
+
+1. Trace the same stale pixel through CPU mesh revision, queued/kicked GPU apply,
+   output-pool capacity, fence readiness, and published revision; distinguish
+   a delayed producer from a GPU consumer that cannot publish on time.
+2. Review the final admission/backpressure decision for preserving current
+   visible FirstMesh work under output-pool pressure. Do not simply raise
+   generation or mesh quotas: M393 shows both main-thread wall cost and GPU
+   completion pressure.
+3. Keep the one-slice disk-result drain only as a measured partial improvement:
+   its queue-age and dirty-debt gains coexist with worse wall and pixel counts.
+   Revisit its place in the shared frame deadline before expanding it.
+4. Make one pipeline change, rebuild Release only, and repeat the exact M335
+   route. After a stable World_164 comparison passes its gates, run the planned
+   periodic fresh-world check without replacing the repeatable baseline.
+
+Artifacts: [M393 flight report](../../bin/suite_reports/engine_refactor/m393_world164_m335_reserved_disk_apply_20261004.json),
+[pixel trace luma 96](../../bin/suite_reports/engine_refactor/m393_renderer_pixel_trace_l96_20261004.json),
+[world-column source trace](../../bin/suite_reports/engine_refactor/m393_world_column_source_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-220021_37424.jsonl),
+[GUI frame near x −7 000](../../bin/logs/m393_world164_m335_reserved_disk_apply/frame_128.png),
+[source logs](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-220017.37424,
+../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-221153.37424,
+../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-223419.37424).
+
 ### G5 — Сборка Release с параллельной компиляцией
 
 Текущая конфигурация использует Visual Studio 17 2022. Ранее запуск
