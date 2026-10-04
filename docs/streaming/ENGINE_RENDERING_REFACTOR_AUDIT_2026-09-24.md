@@ -3587,3 +3587,66 @@ Artifacts: [M385 analyzer report](../../bin/suite_reports/engine_refactor/m385_w
 [perf trace](../../bin/logs/perf_20261004-122227_40432.jsonl),
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-122223.40432),
 [GUI frames](../../bin/logs/m385_world164_m335_priority_refresh_live).
+
+## M386: pre-Tick ready snapshot kept the commit budget at one
+
+M386 used the same visible Release/no-teleport M335 on `World_164`, seed
+`3650471197`, start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, speed
+scale `1`, and 2 800 s fly + 20 s settle. Commit `74be842f` completed normally:
+focus x moved from `7` to `−613`, distance was 9 920 blocks, the 8 192-block
+checkpoint passed, and there was no sustained collision stop.
+
+The bounded ready-result drain added in `74be842f` did not activate. Of 2 814
+procedural commits, every row still logged `max_commits_per_frame=1` and
+`max_apply_budget_ms=0`, although batches collected inside `Tick` had p50/p95/max
+`3/41/57`. `WorldStreaming` sampled `GetCompletedReadyCount()` before
+`UChunkLoadScheduler::Tick()` drained its completion queue. A worker could finish
+between these operations, so a pre-Tick count of zero or one left the commit cap
+at one even while `DrainAll()` observed a large batch. This run is not evidence
+for or against the intended batching policy.
+
+Procedural source timings for 2 814 commits were queue p50/p95/max
+`37.2 ms / 38.0 s / 74.6 s`, generation `99/197/733 ms`, ready wait
+`338 ms / 10.59 s / 62.61 s`, apply `5.36/11.34/81.73 ms`, and total
+`633 ms / 48.61/88.96 s`. Source event counts were 2 268 disk queued, 1 767 disk
+complete, 2 857 disk misses, and 2 814 procedural commits. This again places the
+longest measured source latency in queue/ready wait, not worker generation.
+
+Renderer gates still failed: `unfinished_visual` median 25 and longest run 801,
+Dirty median/max `229/1 212`, wall median `103.07 ms` (flight `102.57 ms`), stream
+phase median `47.69 ms`, Red pressure `100%`, near-void max `5 854`, visible-black
+max `31`, `chunk_not_ready` median 25, and post-stop convergence false. Direct
+near-focus holes were usually zero, but 221 of 1 377 periods were nonzero. Near
+x≈−7 465, the camera-band trace reported 13 missing-resident candidates beside
+12 opaque drawables even when `near_focus_holes=0`; the focus-only gate therefore
+misses part of camera-visible readiness debt.
+
+I also joined 720 renderer pixel probes around x≈−3 898, −4 663, −7 465 and
+−8 000. None was pure black. Unloaded-before-opaque ray witnesses occurred for
+160/160, 240/240, 80/160, and 72/160 pixels in those windows. Sample positions
+include sky and rays can continue past the visible surface, so this only shows
+unloaded world along some sampled rays. It does not prove that those cells caused
+the displayed blank regions. The next pixel audit must join ray distance,
+framebuffer depth, nearest opaque surface, MDI/draw residency, and pixel position
+for the same sample before assigning the visual cause.
+
+The next Release source change switches the fast-flight ready-drain eligibility
+from the racy pre-Tick ready count to the aggregate pending + in-flight + ready
+backlog. It permits up to three commits only during fast movement; `Tick` retains
+the count ceiling and 12 ms accumulated apply-time target. One synchronous apply
+may exceed the target. M387 must prove that the logged policy header becomes
+active before comparing throughput or render quality.
+
+Flight obstacle avoidance already probes an 18-block corridor, validates bounded
+side/pass/return paths and has been exercised successfully on M380/M384. Code
+review found that an already-planned detour was not invalidated if collision
+geometry became available later. The follow-up adds a bounded replan after a
+fully blocked movement substep or flight-ground contact while on a waypoint. It
+preserves the same M335 route and retries the opposite side from the current
+position; the flight report now includes a `detour_replans` count. It is
+diagnostic flight-sim behavior and does not change production locomotion.
+
+Artifacts: [M386 analyzer report](../../bin/suite_reports/engine_refactor/m386_world164_m335_apply_budget_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-134106_19096.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-134102.19096),
+[GUI frames](../../bin/logs/m386_world164_m335_apply_budget).

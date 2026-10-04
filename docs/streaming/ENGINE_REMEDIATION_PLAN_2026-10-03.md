@@ -752,6 +752,71 @@ Artifacts: [M385 analyzer report](../../bin/suite_reports/engine_refactor/m385_w
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-122223.40432),
 [GUI frames](../../bin/logs/m385_world164_m335_priority_refresh_live).
 
+### Результат M386 — ready drain не включился; pixel trace видит unloaded ray witnesses
+
+M386 повторил тот же видимый Release/no-teleport M335 на `World_164`, seed
+`3650471197`: старт `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, scale
+`1`, 2 800 s fly + 20 s settle. Сборка `74be842f` завершилась штатно, камера
+прошла 9 920 блоков от focus x `7` до `−613`, пересекла checkpoint 8 192 и не
+остановилась на коллизии. Детур в этом круге не потребовался.
+
+M386 не проверил запланированный drain: несмотря на `ready_batch_n` p50/p95/max
+`3/41/57`, все 2 814 commits по-прежнему записали
+`max_commits_per_frame=1` и `max_apply_budget_ms=0`. Причина — guard зависел от
+`GetCompletedReadyCount()` до `Tick()`, а между этим snapshot и
+`Completed.DrainAll()` результаты могли перейти в ready. Следующая версия
+разрешает лимит до трёх только во время быстрого движения и при общем backlog
+запросов/worker/ready; scheduler сам применяет не более трёх и останавливается
+перед следующим результатом после целевых 12 ms суммарного `ApplyTo + MarkDirty`.
+Один синхронный apply остаётся непрерываемым и может превысить цель. M387 должен
+подтвердить `max_apply_budget_ms=12` и фактические commits на кадр; до этой
+проверки M386 считается невалидным измерением эффекта drain.
+
+Процедурные source commits: 2 814; очередь p50/p95/max
+`37.2 ms / 38.0 s / 74.6 s`, генерация `99/197/733 ms`, ожидание ready
+`338 ms / 10.59 s / 62.61 s`, apply `5.36/11.34/81.73 ms`, полный
+request-to-apply `633 ms / 48.61/88.96 s`. Было 2 268 disk queued,
+1 767 disk complete и 2 857 disk miss. Большой ready wait остаётся основной
+измеренной задержкой источника; увеличение GPU slot capacity не является
+обоснованным следующим шагом.
+
+Renderer acceptance остался FAIL: `unfinished_visual` медиана 25, longest run
+801, Dirty median/max `229/1 212`, wall median `103.07 ms` (на пролёте
+`102.57 ms`), stream phase median `47.69 ms`, Red pressure `100%`, near-void max
+`5 854`, visible-black max `31`, `chunk_not_ready` median 25, stop convergence
+false. Прямые near-focus holes обычно были нулевыми, однако 221 период из 1 377
+имел ненулевой near-focus hole census. В срезе x≈−7 465 соответствующий
+camera-band trace одновременно показывал 13 drawable-missing residents и 12
+opaque drawables; near-focus hole gate этого не отражал. Это подтверждает
+недостаточность focus-centered gate, но само по себе не называет виновный этап
+mesh lifecycle.
+
+Из 720 pixel probes в узких окнах вокруг x≈−3 898, −4 663, −7 465 и −8 000
+видимый RGB не был чисто чёрным. CPU voxel ray сообщал неизвестный unloaded
+chunk перед opaque hit в 160/160, 240/240, 80/160 и 72/160 выбранных пикселей
+соответственно. Эти лучи включают небо и могут продолжаться за фактической
+поверхностью; результат доказывает наличие unloaded участков на части sampled
+лучей, но не является pixel-level доказательством, что именно они создают
+видимые пустоты. Требуется связать ray distance, framebuffer depth, nearest
+opaque surface, draw residency и sample position в одном пикселе.
+
+M335 параметры не менять. Сначала проверить M387 фактический ограниченный drain
+и collision replan на том же профиле; сравнить source ready-wait, commit apply,
+frame wall, missing-resident slice, pixel/ray witness и post-stop convergence.
+Затем повторить изменённую версию ещё дважды до вывода о влиянии. Случайные
+новые seed остаются отдельной периодической проверкой переноса.
+
+Команда M386:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m386_world164_m335_apply_budget'; python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m386_world164_m335_apply_budget --report bin/suite_reports/engine_refactor/m386_world164_m335_apply_budget_20261004.json --process-timeout 3000
+```
+
+Артефакты: [M386 report](../../bin/suite_reports/engine_refactor/m386_world164_m335_apply_budget_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-134106_19096.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-134102.19096),
+[GUI frames](../../bin/logs/m386_world164_m335_apply_budget).
+
 ### G4 — Новые миры как периодическая проверка переноса
 
 Основной цикл остаётся на детерминированном World_164: не менее трёх повторов на
