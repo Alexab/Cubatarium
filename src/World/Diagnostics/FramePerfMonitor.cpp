@@ -3814,6 +3814,44 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_voxel_chunk_published_geom_rev
                  << ",\"renderer_pixel_voxel_chunk_published_light_rev\":"
                  << r.renderer_pixel_voxel_chunk_published_light_rev
+                 << ",\"renderer_pixel_voxel_chunk_render_flags\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_chunk_render_flags)
+                 << ",\"renderer_pixel_voxel_chunk_ref_flags\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_chunk_ref_flags)
+                 << ",\"renderer_pixel_voxel_chunk_mdi_command_count\":"
+                 << r.renderer_pixel_voxel_chunk_mdi_command_count
+                 << ",\"renderer_pixel_voxel_chunk_mdi_visible_command_count\":"
+                 << r.renderer_pixel_voxel_chunk_mdi_visible_command_count
+                 << ",\"renderer_pixel_voxel_chunk_mdi_index_count\":"
+                 << r.renderer_pixel_voxel_chunk_mdi_index_count
+                 << ",\"renderer_pixel_voxel_chunk_mdi_visible_index_count\":"
+                 << r.renderer_pixel_voxel_chunk_mdi_visible_index_count
+                 << ",\"renderer_pixel_voxel_chunk_gpu_slot_quad_count\":"
+                 << r.renderer_pixel_voxel_chunk_gpu_slot_quad_count
+                 << ",\"renderer_pixel_voxel_chunk_source_index_count\":"
+                 << r.renderer_pixel_voxel_chunk_source_index_count
+                 << ",\"renderer_pixel_voxel_chunk_packed_draw_selected\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_packed_draw_selected)
+                 << ",\"renderer_pixel_voxel_chunk_packed_draw_path_ready\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_packed_draw_path_ready)
+                 << ",\"renderer_pixel_voxel_chunk_packed_slot_present\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_packed_slot_present)
+                 << ",\"renderer_pixel_voxel_chunk_packed_slice_ready\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_chunk_packed_slice_ready)
+                 << ",\"renderer_pixel_voxel_chunk_packed_opaque_range_count\":"
+                 << r.renderer_pixel_voxel_chunk_packed_opaque_range_count
+                 << ",\"renderer_pixel_voxel_chunk_packed_texture_ready_range_count\":"
+                 << r.renderer_pixel_voxel_chunk_packed_texture_ready_range_count
+                 << ",\"renderer_pixel_voxel_chunk_packed_draw_call_count\":"
+                 << r.renderer_pixel_voxel_chunk_packed_draw_call_count
+                 << ",\"renderer_pixel_voxel_chunk_packed_drawn_quad_count\":"
+                 << r.renderer_pixel_voxel_chunk_packed_drawn_quad_count
+                 << ",\"renderer_pixel_voxel_chunk_packed_drawn_index_count\":"
+                 << r.renderer_pixel_voxel_chunk_packed_drawn_index_count
                  << ",\"renderer_pixel_voxel_chunk_work_owner_flags\":"
                  << r.renderer_pixel_voxel_chunk_work_owner_flags
                  << ",\"renderer_pixel_voxel_chunk_dirty_queue_kind\":"

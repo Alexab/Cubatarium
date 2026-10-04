@@ -4614,21 +4614,27 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   };
   auto mdi_has_drawable_batch = [&](const glm::ivec3 &coord) -> bool
   {
-    for (const GreedyGpuBatch &gpu : GreedyGpuOpaque.batches)
+    const auto has_executable_batch = [&](const GreedyGpuPassCache &pass)
     {
-      if (gpu.chunkCoord == coord && gpu.pooled && gpu.indexCountGl > 0)
+      for (const GreedyGpuBatch &gpu : pass.batches)
       {
-        return true;
+        if (gpu.chunkCoord != coord || gpu.indexCountGl <= 0)
+        {
+          continue;
+        }
+        if (gpu.pooled && pass.poolVbo != 0 && pass.poolEbo != 0)
+        {
+          return true;
+        }
+        if (!gpu.pooled && gpu.vbo != 0 && gpu.ebo != 0)
+        {
+          return true;
+        }
       }
-    }
-    for (const GreedyGpuBatch &gpu : GreedyGpuCutout.batches)
-    {
-      if (gpu.chunkCoord == coord && gpu.pooled && gpu.indexCountGl > 0)
-      {
-        return true;
-      }
-    }
-    return false;
+      return false;
+    };
+    return has_executable_batch(GreedyGpuOpaque) ||
+           has_executable_batch(GreedyGpuCutout);
   };
   auto note_dual_if_packed_and_mdi = [&](const glm::ivec3 &coord)
   {
@@ -4649,24 +4655,10 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         continue;
       }
       bool found = false;
-      // Exclude packed only when an executable pooled MDI batch owns the
-      // chunk. A stale/unpooled zero-index table entry is not a drawable
-      // representation and must not hide valid packed GPU geometry.
-      if (mdi_has_drawable_batch(pref.chunkCoord))
-      {
-        found = true;
-      }
-      if (!found)
-      {
-        for (const GreedyBatchRef &r : opaque_draw)
-        {
-          if (r.chunkCoord == pref.chunkCoord)
-          {
-            found = true;
-            break;
-          }
-        }
-      }
+      // CPU refs are not proof that the current mesh is resident on the GPU.
+      // Keep the packed predecessor visible until an executable MDI batch has
+      // actually been published for this chunk.
+      found = mdi_has_drawable_batch(pref.chunkCoord);
       if (!found)
       {
         packed_opaque_draw.push_back(pref);
