@@ -70,6 +70,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
         updated.queueRevision = NextRequestQueueRevision++;
         queuedIt->second = updated;
         RequestPriorities[coord] = priority;
+        ++RequestPriorityRefreshCounts[coord];
         Queue.push(std::move(updated));
         CompactRequestQueueIfStale();
         return;
@@ -85,6 +86,13 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
       {
         return;
       }
+      if (InitialRequestPriorities.find(coord) ==
+          InitialRequestPriorities.end())
+      {
+        InitialRequestPriorities[coord] =
+            prioIt != RequestPriorities.end() ? prioIt->second : priority;
+      }
+      ++RequestPriorityRefreshCounts[coord];
       RequestPriorities[coord] = priority;
       return;
     }
@@ -105,6 +113,8 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   States[coord] = ChunkLoadState::Requested;
   ActiveTokens[coord] = pending.token;
   RequestPriorities[coord] = priority;
+  InitialRequestPriorities[coord] = priority;
+  RequestPriorityRefreshCounts[coord] = 0;
   QueuedRequests[coord] = pending;
   Queue.push(std::move(pending));
   CompactRequestQueueIfStale();
@@ -115,6 +125,8 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord)
   States.erase(coord);
   ActiveTokens.erase(coord);
   RequestPriorities.erase(coord);
+  InitialRequestPriorities.erase(coord);
+  RequestPriorityRefreshCounts.erase(coord);
   QueuedRequests.erase(coord);
   CompactRequestQueueIfStale();
 }
@@ -162,6 +174,8 @@ void UChunkLoadScheduler::CancelAllPending(
   States.clear();
   ActiveTokens.clear();
   RequestPriorities.clear();
+  InitialRequestPriorities.clear();
+  RequestPriorityRefreshCounts.clear();
   QueuedRequests.clear();
   Pool.CancelPendingJobs();
   (void)Completed.DrainAll();
@@ -285,17 +299,25 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
   int committed = 0;
   for (PendingResult &pending : ready)
   {
-    States[pending.result.coord] = ChunkLoadState::Ready;
     const auto tokenIt = ActiveTokens.find(pending.result.coord);
     if (tokenIt == ActiveTokens.end() ||
         !pending.result.token.IsValidFor(pending.result.coord,
-                                         tokenIt->second.sequence) ||
-        pending.result.discarded)
+                                         tokenIt->second.sequence))
     {
-      States.erase(pending.result.coord);
-      RequestPriorities.erase(pending.result.coord);
+      // A stale worker must not erase or overwrite state for a newer request
+      // at the same coordinate.
       continue;
     }
+    if (pending.result.discarded)
+    {
+      States.erase(pending.result.coord);
+      ActiveTokens.erase(tokenIt);
+      RequestPriorities.erase(pending.result.coord);
+      InitialRequestPriorities.erase(pending.result.coord);
+      RequestPriorityRefreshCounts.erase(pending.result.coord);
+      continue;
+    }
+    States[pending.result.coord] = ChunkLoadState::Ready;
     if (committed >= maxCommitsPerFrame)
     {
       Completed.Push(std::move(pending));
@@ -309,11 +331,25 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
     const int priorityAtCommit =
         livePriorityIt != RequestPriorities.end() ? livePriorityIt->second
                                                    : pending.priority;
+    const auto initialPriorityIt =
+        InitialRequestPriorities.find(pending.result.coord);
+    const int initialPriority =
+        initialPriorityIt != InitialRequestPriorities.end()
+            ? initialPriorityIt->second
+            : pending.priority;
+    const auto priorityRefreshIt =
+        RequestPriorityRefreshCounts.find(pending.result.coord);
+    const uint64_t priorityRefreshCount =
+        priorityRefreshIt != RequestPriorityRefreshCounts.end()
+            ? priorityRefreshIt->second
+            : 0;
     const auto apply_t0 = std::chrono::high_resolution_clock::now();
     pending.result.buffer.ApplyTo(world);
     States[pending.result.coord] = ChunkLoadState::Committed;
     ActiveTokens.erase(pending.result.coord);
     RequestPriorities.erase(pending.result.coord);
+    InitialRequestPriorities.erase(pending.result.coord);
+    RequestPriorityRefreshCounts.erase(pending.result.coord);
     int min_y = 0;
     int max_y = pending.maxHeight;
     if (pending.result.buffer.HasYBounds())
@@ -350,8 +386,11 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
           std::to_string(pending.result.token.sequence) + " queue_ms=" +
           std::to_string(queue_ms) + " generation_ms=" +
           std::to_string(pending.generationMs) + " ready_wait_ms=" +
-          std::to_string(ready_wait_ms) + " priority_at_commit=" +
-          std::to_string(priorityAtCommit) + " ready_batch_n=" +
+          std::to_string(ready_wait_ms) + " priority_initial=" +
+          std::to_string(initialPriority) + " priority_at_schedule=" +
+          std::to_string(pending.priority) + " priority_at_commit=" +
+          std::to_string(priorityAtCommit) + " priority_refresh_n=" +
+          std::to_string(priorityRefreshCount) + " ready_batch_n=" +
           std::to_string(ready.size()) + " max_commits_per_frame=" +
           std::to_string(maxCommitsPerFrame) + " apply_ms=" +
           std::to_string(apply_ms) + " total_ms=" + std::to_string(total_ms);

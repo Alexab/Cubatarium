@@ -417,6 +417,9 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       }
       if (OnIsColumnPending && OnIsColumnPending(chunkCoord))
       {
+        // The pending callback also refreshes a procedural request's priority
+        // as the focus moves. Persistence I/O and saves ignore this request.
+        OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
         return false;
       }
       OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
@@ -427,6 +430,10 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
 
   if (OnIsColumnPending && OnIsColumnPending(chunkCoord))
   {
+    if (!forceSync && AsyncGeneration && OnRequestAsyncChunk)
+    {
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+    }
     return IsTerrainChunkCompleteCached(chunkCoord);
   }
 

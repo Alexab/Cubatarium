@@ -4853,15 +4853,18 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const glm::ivec3 ground(coord.x, 0, coord.z);
         UWorldPersistence &persistence = *world.Persistence;
         if (persistence.GetChunkStorage().IsColumnSavePending(ground) ||
-            persistence.IsTerrainColumnDiskLoadPending(ground) ||
-            (ChunkScheduler && ChunkScheduler->IsPending(ground)))
+            persistence.IsTerrainColumnDiskLoadPending(ground))
         {
           return;
         }
+        const bool generation_pending =
+            ChunkScheduler && ChunkScheduler->IsPending(ground);
         // Async streaming used to jump straight to procedural generation,
         // bypassing OnLoadChunk. Reuse the bounded disk worker first so a
         // previously visited column is restored with its saved voxel/light data.
-        if (procedural.AsyncChunkIo)
+        // Do not issue a second disk load while a procedural request owns it;
+        // fall through so RequestLoad can refresh that request's priority.
+        if (procedural.AsyncChunkIo && !generation_pending)
         {
           persistence.RequestAsyncTerrainColumnLoad(world, ground);
           if (persistence.IsTerrainColumnDiskLoadPending(ground))

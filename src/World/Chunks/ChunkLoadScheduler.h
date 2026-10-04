@@ -117,6 +117,9 @@ private:
   std::unordered_map<glm::ivec3, ChunkLoadState, IVec3Hash> States;
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
   std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;
+  std::unordered_map<glm::ivec3, int, IVec3Hash> InitialRequestPriorities;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
+      RequestPriorityRefreshCounts;
   uint64_t NextRequestQueueRevision{1};
   double LastTickApplyMs{0.0};
   int LastCommitsThisFrame{0};
