@@ -3376,6 +3376,48 @@ Artifacts: [flight/report gates](../../bin/suite_reports/engine_refactor/m381_wo
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-072616.4616),
 [GUI frames](../../bin/logs/m381_world164_m335_visible_relight).
 
+## M382: completed I/O results lag far behind the repeated route
+
+M382 used the same visible no-teleport M335 on `World_164`, with matching start,
+camera, speed, daylight, and route hash. It exited on the planned phase boundary
+(`process_rc=0`, no hang kill); telemetry says `collision_stop_triggered=false`
+and obstacle attempts `0`. The operator reported seeing the camera stop at a tree.
+The saved movement telemetry does not confirm that as a collision stop, so the
+next visible run should preserve the final frames and correlate them with position
+and blocked-substep samples before classifying the event.
+
+The route ended at chunk x=−608 after 615 chunks, 31 fewer than M381. Median wall
+frame rose to `104.244 ms` and effective fly FPS was `9.62`; pressure was Red in
+all periods. `unfinished_visual` was present in `97.96%` of samples, with a
+longest run of 803 periods. Dirty median/max were `657/1265`, and near-void
+peaked at `4462`. The analyzer failed. A separate pixel trace found 101 dark
+probes among 21,920; 100 had valid depth and visible MDI, mostly foliage hits.
+That sparse evidence does not establish a broad geometry hole or dismiss the
+operator's muted-region report.
+
+The async stage trace rules out raw file reads as the dominant disk delay:
+`file_read_ms` p50/p95 were `0.92/1.21 ms`, worker queue p95 was `0.65 ms`, but
+completion result-wait p95 was `70.37 s`. Column finalization saw a ready queue
+of p50/p95/max `12/408/1710` slices. At the end of the route, the newest fully
+applied disk columns were only around x=−256 while the camera had reached −608.
+The queue drains FIFO at four slices per hitching frame, so older completed work
+ahead of the current corridor can account for the disk-loaded frontier lag.
+
+Procedural generation itself was generally `100–180 ms` p95; request queue and
+ready-result waiting dominated, reaching `54.93 s` and `11.48 s` p95 by route
+band. All 2,840 miss records were still applied with `max_commits_per_frame=1`
+despite ready batches up to 51. At the `(-550,0,3)` witness, queue/generation/
+ready-wait were `15.239 s / 94 ms / 327 ms`; the adjacent drawable geometry debt
+remained at dirty queue index `1/595` and was not scheduled that frame. Do not
+raise global commit caps from this evidence alone: median frame wall was already
+104 ms and rendering took 58% of the frame.
+
+**Next code change:** replace FIFO-only disk completion selection with a bounded
+near-focus drain and age-based fairness, while keeping per-frame apply limits.
+Repeat M335 and compare disk apply lag/result wait, route coverage, visual gates,
+and wall frame. Continue separate investigation of generator completion and
+visible geometry-debt scheduling.
+
 ### Next work from this run
 
 Keep the M335 conditions fixed. Add per-slice async I/O timings so multi-minute
