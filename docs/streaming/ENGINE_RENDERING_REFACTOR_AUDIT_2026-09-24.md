@@ -3479,3 +3479,55 @@ Artifacts: [M383 analyzer report](../../bin/suite_reports/engine_refactor/m383_w
 [perf trace](../../bin/logs/perf_20261004-100630_31840.jsonl),
 [source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-100625.31840),
 [GUI frames](../../bin/logs/m383_world164_m335_focus_io).
+
+## M384: tree detour verified; procedural priority refresh was not exercised
+
+M384 ran a clean Release `7e1f0607` with the same visible, no-teleport M335 on
+`World_164`: seed `3650471197`, start `[120,56,56]`, eye y `70`, yaw `180°`, pitch
+`−30°`, scale 1, 2 800 s flight and 20 s settle. It exited normally, covered
+9 824 blocks, reached focus x `−607`, and crossed the 8 192-block checkpoint.
+
+The renderer remained below acceptance: unfinished visual debt occurred in
+`97.96%` of periods (longest run `809`), Dirty median/max `715/1 346`, wall median
+`106.47 ms`, near-void max `1 553`, visible-black max `46`, Red pressure `100%`,
+and post-stop convergence failed. Against M383, Dirty and wall improved while
+holes remained essentially unchanged and near-void/visible-black worsened. This
+single-repeat mixed result does not close the rendering issue.
+
+The flight report confirms one hazard and one completed right-side detour at
+597.591 s (hazard 2.25 blocks, side offset 3, pass distance 7.25); there were no
+planner failures, blocked substeps, ground contacts, or collision stop. This
+validates obstacle bypass under the exact M335 profile.
+
+The scheduler patch in `7e1f0607` did not receive updated priorities during this
+run: all 2 826 procedural commit rows had equal `priority` at generation start and
+commit. Source review found why. `EnsureChunkLoaded` returns on
+`OnIsColumnPending` without calling the async request callback, and the
+`WorldStreaming` callback itself returns when `ChunkScheduler::IsPending` is true.
+Thus the updated bidirectional priority logic in the scheduler was unreachable for
+the queued/generating columns it was meant to re-rank. Keep the measured M384
+queue result as a baseline, not as evidence that reprioritization helped.
+
+Review of the stale completion path also found that `States[coord]` is set to
+`Ready` before the result token is checked. A canceled worker can therefore
+overwrite state belonging to a newer request for the same coordinate before the
+stale result is discarded. This is a code-level lifecycle hazard; M384 does not
+prove it occurred, but the token check must precede any state mutation.
+
+Procedural source p50/p95/max: request queue `25.5 ms / 35.96 s / 62.25 s`,
+generation `95.5/180.5 ms` p50/p95, ready wait p95 `9.06 s`, apply p95 `9.79 ms`,
+total p95 `43.63 s`. M383 queue p50/p95/max were `28.4 ms / 33.33 s / 88.58 s`;
+ready wait p95 `9.98 s`, apply p95 `8.16 ms`, total p95 `43.01 s`. The run-to-run
+differences are mixed and priority re-ranking was not instrumented/exercised.
+
+Next: forward refreshed priority through the pending path without issuing a second
+disk request, validate result tokens before mutating per-coordinate state, expose a
+re-ranking counter/priority history in source telemetry, then rebuild Release and
+repeat the exact M335. Continue the separate dirty-mesh witness lifecycle analysis
+after this path is verified.
+
+Artifacts: [M384 analyzer report](../../bin/suite_reports/engine_refactor/m384_world164_m335_priority_refresh_20261004.json),
+[flight report](../../bin/flight_sim_report.json),
+[perf trace](../../bin/logs/perf_20261004-112008_7628.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-112004.7628),
+[GUI frames](../../bin/logs/m384_world164_m335_priority_refresh).

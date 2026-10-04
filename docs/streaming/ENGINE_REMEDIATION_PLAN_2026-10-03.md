@@ -649,10 +649,46 @@ ground contact, меняет предпочитаемую сторону и ра
 неудачной попытки; M383 эту ветку не подтвердил как сработавшую.
 
 **Следующая задача G3:** сохранить M335 неизменным и исследовать
-focus/age-aware обслуживание процедурных request/ready очередей вместе с
-межкадровым lifecycle dirty mesh witness. Не повышать общий cap без ограниченного
-frame/apply cost. Принять изменение только после Release сборки и сравнимого
-повторного M335; затем периодически повторять на новом seed.
+путь повторной передачи актуального load priority. В M384 все 2 826 procedural
+commit rows имели `priority_at_commit == priority_at_schedule`; выяснилось, что
+`ChunkStreamer::EnsureChunkLoaded` завершает ветку при `OnIsColumnPending`, не
+вызывая request callback, а callback в `WorldStreaming` отдельно отбрасывает
+вызовы для `ChunkScheduler::IsPending`. Исправить оба short-circuit так, чтобы
+повторный запрос обновлял priority у уже ожидающего scheduler без повторного disk
+request. Добавить в source telemetry счётчик/поля фактического re-ranking и
+повторить Release M335. При review того же lifecycle также найдено, что stale
+worker result помечает `States[coord] = Ready` до token validation; защитить
+актуальное состояние колонки от результата старой generation. Затем отдельно
+вернуться к межкадровому lifecycle dirty mesh witness. Не повышать общий cap без
+ограниченного frame/apply cost; новые seed оставить периодическим контрольным
+тестом.
+
+### Результат M384 — detour подтверждён, priority refresh не доходил до scheduler
+
+M384 использовал чистую Release-сборку `7e1f0607` и неизменный M335: видимый
+no-teleport пролёт по `World_164`, seed `3650471197`, старт `[120,56,56]`, eye y
+`70`, yaw `180°`, pitch `−30°`, scale `1`, 2 800 s полёта и 20 s settle. Процесс
+штатно завершился (`rc=0`), прошёл 9 824 блока до focus `−607` и пересёк
+checkpoint 8 192.
+
+Renderer acceptance не улучшился: `unfinished_visual` — `97.96%` samples,
+longest run `809`, Dirty median/max `715/1 346`, wall median `106.47 ms`,
+near-void max `1 553`, visible-black max `46`, Red pressure `100%`, stop
+convergence false. Относительно M383 стали ниже Dirty и wall, но holes остались
+на том же уровне, а near-void и visible-black ухудшились. Это неустойчивое
+смешанное изменение на одно повторение; исправления renderer нет.
+
+Процедурные `WorldColumnSource` commits: `2 826`; request queue p50/p95/max
+`25.5 ms / 35.96 s / 62.25 s`, generation p50/p95 `95.5/180.5 ms`, ready wait
+p95 `9.06 s`, apply p95 `9.79 ms`, source-to-apply p95 `43.63 s`. У M383
+соответствующие overall queue p50/p95/max были `28.4 ms / 33.33 s / 88.58 s`;
+из-за одного повтора и отсутствия priority updates в telemetry изменение нельзя
+считать эффектом scheduler patch.
+
+Flight control подтвердил работу обхода: `1` hazard, `1` started/completed
+right-side detour, side offset `3`, pass distance `7.25`, plan failures `0`;
+blocked substeps и ground contacts — `0`. Значит, обход препятствия теперь
+срабатывает в контрольном M335, не изменяя исходные параметры съёмки.
 
 ### G4 — Новые миры как периодическая проверка переноса
 
