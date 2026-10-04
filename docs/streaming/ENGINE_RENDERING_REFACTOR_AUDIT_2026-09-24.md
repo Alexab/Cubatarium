@@ -3168,9 +3168,21 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   не скрывается за CPU opaque reference, пока нет исполняемой MDI batch.
   Pixel trace сериализует фактические packed/MDI состояния. Изменение собрано
   только как Release, затем запущен повтор M380 на том же M335 daylight профиле.
-  При первом наблюдении M380 камера двигалась без blocked substeps и ground
-  contacts; obstacle avoidance включён в flight-sim, но на этом участке ещё не
-  требовался. Итог M380 будет внесён после окончания прогона и разбора trace.
+  Прогон завершился штатно (`process_rc=0`, `hang_killed=false`), прошёл 10 080
+  блоков до focus `7→−623` и checkpoint 8 192. Скорость соответствовала M335
+  (`5.19287 blocks/s` median), yaw/pitch deviation был 0, teleport отсутствовал.
+  Это валидный дальний повтор, но не render acceptance: analyzer `pass=false`,
+  прошло 24 из 39 основных ворот, post-stop convergence также `false`.
+- M380 впервые проверил obstacle detour именно на известном дереве около
+  x≈−2 832: в `t=588.582 s` зарегистрирован hazard на `5.25` блока, запланирован
+  обход вправо с offset 3 и проходом 10.25 блока; один detour завершён, ошибок
+  плана не было. Кадр 40 показывает ствол очень близко справа, что визуально
+  похоже на столкновение. Однако в соседних интервалах requested/applied
+  movement совпадал, blocked substeps и ground contacts оставались 0; прогон
+  продолжил движение до x≈−9 968. Поэтому конкретно M380 не подтверждает
+  остановку у этого дерева: близкий кадр объясняет впечатление оператора, но
+  telemetry фиксирует успешный обход. В конце камера остановилась по заданному
+  времени фазы, а не из-за collision watchdog.
 - Промежуточное same-coordinate сравнение около x=−5 800: M379 в соседних
   периодах занимал 256.98/320 MiB и имел 213–229 publication OOM retains;
   M380 — 89.36–89.58/156.91–157.10 MiB и 0 OOM retains. В обоих случаях было
@@ -3179,8 +3191,61 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   и 28–29 у M380 — этот proxy не улучшился. Wall samples составили около
   98–110 ms у M379 и 86–124 ms у M380, то есть короткое сопоставление не
   показывает стабильного FPS выигрыша. Уменьшение pool use/OOM — сильный эффект
-  patch; render acceptance пока открыт до завершения дальнего участка и pixel
-  witness разбора.
+- Конечная трасса M380 показывает, что pool patch снял один источник отказа,
+  но не устранил незавершённую геометрию и задержки: median wall `97.83 ms`
+  (≈10.2 FPS), render total `72.91 ms`, stream phase `43.22 ms`, mesh emerge
+  `23.16 ms`, `chunk_not_ready` median 26, dirty median 265, max visible-black
+  27, max `fly_void_near` 1 228. Post-stop convergence оставил ненулевые missing,
+  effective holes и pending; `holes_rate=0.9825` — analyzer proxy
+  `unfinished_visual`, а не доля чёрных пикселей. Screen-ray trace содержит 749
+  geometry-debt, 512 repairable-geometry-debt и 737 light-debt наблюдений
+  (флаги могут пересекаться). Analyzer называет `empty_fm_queue` и
+  `gpu_not_ready` доминирующими диагностическими классами, но это классификация
+  симптомов, не доказанная единая причина.
+- Низколюминансная pixel-классификация M380: 191 из 32 768 probes ниже luma 32
+  (0.583%). Все 191 depth samples имели opaque MDI pass; в 180 samples depth
+  surface совпал с source-mesh triangle в пределах 0.1 блока, а в 181 был
+  валидный face-light sample (sky light 1). Это подтверждает, что в этих точках
+  framebuffer содержит реально отрисованную геометрию; низкая яркость сама по
+  себе не доказывает missing mesh.
+- CPU voxel-ray face поля относятся к block, найденному DDA, и не всегда к
+  поверхности depth buffer: среди 186 probes с valid DDA hit ray/depth distance
+  совпал в пределах 0.5 блока в 20 случаях, а у 128 расходился более чем на 2
+  блока. Пять оставшихся dark probes не имели DDA hit. Возможны различия
+  opaque/cutout traversal и выбор поверхности, это нужно проверить отдельно.
+  Поэтому счётчики `source_face_valid=185` и `gpu_face_command=185` нельзя
+  приписывать всем depth surfaces без такого join. Пять probes дали CPU
+  voxel-ray state «no hit», хотя depth показывал opaque поверхность; ещё один
+  probe имел state 1 без source face/command. Все samples имели voxel-ray gap 0,
+  прозрачный проход цвет не менял. Следующий шаг — свести block/material, DDA
+  hit, depth-hit chunk, opaque source triangle/light и MDI command для той же
+  точки, прежде чем менять lighting или streaming policy.
+- В source log около x≈−8 800 screen-ray repair выбрал chunk `(-550,3,3)`:
+  solid voxel был найден, удовлетворяющего mesh ещё не было, имелся light debt;
+  FirstMesh ticket присутствовал, direct dirty slice встал в очередь `0/5`, но
+  в момент снимка ещё не был scheduled. Соседние drawable debt chunks попадали в
+  dirty queue размера около 307. Конечный 512-записный watched-schedule ring уже
+  не содержит lifecycle этого раннего кандидата: его записи вытеснены до конца
+  47-минутного прогона. Следующий диагностический шаг — короткое адресное окно
+  записи lifecycle выбранных screen-ray координат через enqueue → scheduler →
+  capture/build → GPU apply/publish; не расширять глобальные caps по одному
+  агрегированному blocker label.
+- В финальных кадрах 186–188 камера смотрит в синее небо/дальний туман; кадр 188
+  почти целиком небо. Это не самостоятельное доказательство пустой геометрии.
+  Для оценки пустых чанков сопоставлять наземный видимый кадр, voxel/source
+  witness, depth и publication readiness в одной координате.
+- EXE SHA256 для M380:
+  `90ee8b8b8aeba6eb9a8a466bfad35cb916245cbb48d1a9258148baa3df60bcb8`; это
+  Release, собранный из code commit `656fe5c6`. Manifest M380 записал
+  `git_sha=68e06b27`, потому что документационные commits были сделаны, пока
+  процесс уже работал; код бинарника при этом не менялся. Harness восстановил
+  `world_data.json` побайтно (SHA256
+  `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).
+- M380 report: [JSON](../../bin/suite_reports/engine_refactor/m380_world164_m335_poolfix_20261004.json);
+  [pixel/ray summary](../../bin/suite_reports/engine_refactor/m380_renderer_pixel_trace_20261004.json);
+  [560 MB perf trace](../../bin/logs/perf_20261004-052750_14968.jsonl);
+  [frames](../../bin/logs/m380_world164_m335_poolfix);
+  [source INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-052746.14968).
 - M379 report: [JSON](../../bin/suite_reports/engine_refactor/m379_world164_m335_fixed_day_20261004.json);
   [perf/pixel/ray trace](../../bin/logs/perf_20261004-034949_9384.jsonl);
   [frames](../../bin/logs/m379_world164_m335_fixed_day);

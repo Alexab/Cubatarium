@@ -53,6 +53,16 @@ def main() -> int:
 
                 pre = unpack_rgb(int(row.get("renderer_pixel_pretransparent_rgba", 0)))
                 epoch = int(row.get("frame_epoch", 0))
+                voxel_distance = row.get("renderer_pixel_voxel_hit_distance")
+                depth_distance = row.get("renderer_pixel_opaque_hit_distance")
+                distance_delta = (
+                    abs(float(voxel_distance) - float(depth_distance))
+                    if voxel_distance is not None
+                    and depth_distance is not None
+                    and float(voxel_distance) >= 0.0
+                    and float(depth_distance) >= 0.0
+                    else None
+                )
                 record = {
                     "frame_epoch": epoch,
                     "pixel": [row.get("renderer_pixel_x"), row.get("renderer_pixel_y")],
@@ -70,6 +80,12 @@ def main() -> int:
                     "entry_face": row.get("renderer_pixel_voxel_entry_face"),
                     "voxel_distance": row.get("renderer_pixel_voxel_hit_distance"),
                     "depth_distance": row.get("renderer_pixel_opaque_hit_distance"),
+                    "voxel_depth_distance_delta": (
+                        round(distance_delta, 4) if distance_delta is not None else None
+                    ),
+                    "voxel_depth_same_surface_by_distance": (
+                        distance_delta <= 0.5 if distance_delta is not None else False
+                    ),
                     "source_face_valid": row.get("renderer_pixel_voxel_face_source_valid"),
                     "gpu_face_command": row.get("renderer_pixel_voxel_face_gpu_command"),
                     "gpu_face_index_count": row.get("renderer_pixel_voxel_face_gpu_index_count"),
@@ -84,6 +100,65 @@ def main() -> int:
                     "opaque_surface": [row.get("renderer_pixel_opaque_surface_x"),
                                         row.get("renderer_pixel_opaque_surface_y"),
                                         row.get("renderer_pixel_opaque_surface_z")],
+                    "depth_surface": {
+                        "valid": row.get("renderer_pixel_opaque_surface_valid"),
+                        "chunk": [row.get("renderer_pixel_opaque_chunk_x"),
+                                  row.get("renderer_pixel_opaque_chunk_y"),
+                                  row.get("renderer_pixel_opaque_chunk_z")],
+                        "opaque_mdi_visible_pass_flags": row.get(
+                            "renderer_pixel_opaque_mdi_visible_pass_flags"
+                        ),
+                        "opaque_mdi_visible_index_count": row.get(
+                            "renderer_pixel_opaque_mdi_visible_index_count"
+                        ),
+                        "drawable": row.get("renderer_pixel_opaque_drawable"),
+                        "draw_ready": row.get("renderer_pixel_opaque_draw_ready"),
+                        "live_gpu_marker": row.get("renderer_pixel_opaque_live_gpu"),
+                        "mesh_revision": row.get("renderer_pixel_opaque_mesh_revision"),
+                        "published_geom_revision": row.get(
+                            "renderer_pixel_opaque_published_geom_rev"
+                        ),
+                        "source_face": {
+                            "valid": row.get("renderer_pixel_opaque_vertex_light_valid"),
+                            "block_id": row.get(
+                                "renderer_pixel_opaque_vertex_light_block_id"
+                            ),
+                            "face": row.get(
+                                "renderer_pixel_opaque_vertex_light_face_index"
+                            ),
+                            "distance": row.get(
+                                "renderer_pixel_opaque_vertex_light_distance"
+                            ),
+                            "sky_light": row.get("renderer_pixel_opaque_vertex_sky_light"),
+                            "block_light": row.get(
+                                "renderer_pixel_opaque_vertex_block_light"
+                            ),
+                            "light_preview": row.get(
+                                "renderer_pixel_opaque_vertex_light_preview"
+                            ),
+                            "live_face_light_valid": row.get(
+                                "renderer_pixel_opaque_live_face_light_valid"
+                            ),
+                            "live_face_light_source": row.get(
+                                "renderer_pixel_opaque_live_face_light_source"
+                            ),
+                        },
+                    },
+                    "voxel_hit_surface": {
+                        "chunk": [row.get("renderer_pixel_voxel_chunk_x"),
+                                  row.get("renderer_pixel_voxel_chunk_y"),
+                                  row.get("renderer_pixel_voxel_chunk_z")],
+                        "render_flags": row.get(
+                            "renderer_pixel_voxel_chunk_render_flags"
+                        ),
+                        "ref_flags": row.get("renderer_pixel_voxel_chunk_ref_flags"),
+                        "mdi_visible_pass_flags": row.get(
+                            "renderer_pixel_voxel_chunk_mdi_visible_pass_flags"
+                        ),
+                        "mdi_visible_index_count": row.get(
+                            "renderer_pixel_voxel_chunk_mdi_visible_index_count"
+                        ),
+                    },
                 }
                 dark_pixels.append(record)
 
@@ -134,6 +209,33 @@ def main() -> int:
         ray_summary = screen_rays_by_epoch.get(pixel["frame_epoch"], Counter())
         pixel["same_frame_screen_rays"] = dict(ray_summary)
 
+    distance_deltas = [
+        float(pixel["voxel_depth_distance_delta"])
+        for pixel in dark_pixels
+        if pixel["voxel_depth_distance_delta"] is not None
+    ]
+    dark_pixel_depth_join = {
+        "depth_surface_valid_n": sum(
+            int(pixel["depth_surface"]["valid"] or 0) == 1
+            for pixel in dark_pixels
+        ),
+        "depth_surface_with_visible_mdi_pass_n": sum(
+            int(pixel["depth_surface"]["opaque_mdi_visible_pass_flags"] or 0) != 0
+            for pixel in dark_pixels
+        ),
+        "depth_source_face_within_0_1_n": sum(
+            pixel["depth_surface"]["source_face"]["valid"] == 1
+            and pixel["depth_surface"]["source_face"]["distance"] is not None
+            and float(pixel["depth_surface"]["source_face"]["distance"]) <= 0.1
+            for pixel in dark_pixels
+        ),
+        "voxel_depth_distance_delta_le_0_5_n": sum(
+            delta <= 0.5 for delta in distance_deltas
+        ),
+        "voxel_depth_distance_delta_gt_2_n": sum(
+            delta > 2.0 for delta in distance_deltas
+        ),
+    }
     report = {
         "perf_jsonl": str(args.perf_jsonl),
         "pixel_probe_count": probe_count,
@@ -141,12 +243,15 @@ def main() -> int:
         "dark_pixel_count": len(dark_pixels),
         "voxel_ray_state_counts": dict(ray_states),
         "screen_ray_frame_count": len(screen_rays_by_epoch),
+        "dark_pixel_depth_join": dark_pixel_depth_join,
         "period_max_publication_oom": max_oom_period,
         "period_max_pool_fill": max_pool_period,
         "dark_pixels": dark_pixels,
         "interpretation_note": (
-            "Pixel witnesses compare framebuffer color/depth with a CPU voxel ray. "
-            "They localize mismatches but do not by themselves prove the responsible draw path."
+            "Voxel-ray source-face fields describe the DDA hit, which may differ from the "
+            "framebuffer depth-hit surface (for example, with cutout geometry). The depth "
+            "surface has separate chunk, MDI, and source-light witnesses. These joins "
+            "localize mismatches but do not by themselves prove the responsible draw path."
         ),
     }
     rendered = json.dumps(report, ensure_ascii=False, indent=2)

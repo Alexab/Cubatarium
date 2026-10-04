@@ -306,15 +306,25 @@ speed multiplier; короткие round-trip/source probes допустимы �
    weather; сравнивать commit/EXE/world/config hashes, маршрут, pixel/ray/source
    traces. M377 прошёл 6 640 блоков за 1 800 s, M378 — 7 680 блоков за 2 400 s.
    M379 на fixed daylight достиг 8 192, но render analyzer остался FAIL; далее
-   сравнивать отрезки только при неизменных условиях. M380 повторяет тот же M335
-   маршрут после исправления GPU pool reuse и packed fallback.
+   сравнивать отрезки только при неизменных условиях. M380 повторил тот же M335
+   маршрут после исправления GPU pool reuse и packed fallback: видимый no-teleport
+   Release, скорость 5.19287 blocks/s, без ухода yaw/pitch, пройдено 10 080
+   блоков и checkpoint 8 192. Продуктовые ворота остались FAIL (24/39),
+   post-stop convergence=false. На историческом дереве около x≈−2 832 обход
+   зарегистрирован и завершён; близкий кадр выглядит как удар, но движение
+   продолжалось с нулевыми blocked substeps/ground contacts. M335 параметры и
+   коридор не менять; если следующий run покажет реальные blocked substeps,
+   корректировать именно обход и повторять тот же профиль.
    M368 остаётся отдельным collision-control: прежний default product route
    (y56, pitch=0°) остановился у дерева около x=−2 832. В flight-sim уже
    включён по умолчанию forward hazard probe с поиском свободных боковых
    сегментов, попытками обхода и возвращением на линию; события обхода пишутся
-   в отчёт. Если контакт всё же мешает основному пролёту, исправлять этот
-   алгоритм и повторять тот же M335 профиль, не подбирать новый визуальный
-   маршрут. M369/y96 и M371/M372 z224/pitch0 — только старые stress diagnostics,
+   в отчёт. M380 подтвердил один успешный обход дерева (`hazard=5.25`, right
+   offset 3, pass 10.25, completed=1), без collision stop; визуально близкий
+   пролёт не считать остановкой без movement/collision evidence. Если контакт
+   всё же мешает основному пролёту, исправлять именно этот алгоритм и повторять
+   тот же M335 профиль, не подбирать новый визуальный маршрут.
+   M369/y96 и M371/M372 z224/pitch0 — только старые stress diagnostics,
    не новые acceptance conditions.
 3. После каждого изменения повторять контрольный отрезок до задетой области;
    дальний acceptance не объявлять до достижения checkpoint 8 192 без collision
@@ -414,18 +424,44 @@ M379 уже прошёл checkpoint 8 192 и зафиксировал низко
 Это делает pool fragmentation/capacity и условие packed fallback проверяемыми
 владельцами, не доказывая их единственной причиной. Commit 656fe5c6 добавил
 best-fit/free-range split/coalesce и разрешил packed predecessor до появления
-исполняемой MDI batch; M380 запущен на том же M335 daylight маршруте, чтобы
-сравнить OOM, pool use, camera-band drawable gaps и те же pixel witnesses.
+исполняемой MDI batch. M380 на том же M335 daylight маршруте подтвердил
+same-coordinate OOM 213–229 → 0 и pool use 257/320 → 90/157 MiB; camera-band
+no-drawable остался 0, а draw_oracle_missing_resident не снизился.
 Harness autosave выключен, поэтому disk misses новых координат в этих прогонах
 не доказывают failure persistence. Инструментированный прогон локализует дефект,
 отдельный uninstrumented повтор пригоден для performance comparison. Пустой/чёрный
 proxy не считать исправленным из-за меньшего счётчика или более короткого прогона.
-Промежуточный M379/M380 same-coordinate срез около x=−5 800 уже показывает
+Финальный M380 остался FAIL (24/39): median wall `97.83 ms`, render total
+`72.91 ms`, stream `43.22 ms`, mesh emerge `23.16 ms`, `chunk_not_ready` median
+26, dirty median 265; post-stop convergence=false. Это подтверждает, что pool
+fix устранил OOM retain в сопоставимом месте, но не исправил общий визуальный
+долг и задержки.
+
+Следующим изменением не увеличивать общий FirstMesh/relight/GPU cap. M380
+screen-ray выбрал solid chunk `(-550,3,3)` с отсутствующим satisfying mesh и
+light debt; в момент трассы FirstMesh ticket существовал, direct dirty slice
+стоял в очереди `0/5`, но ещё не был scheduled. Соседние drawable geometry-debt
+chunks сидели в dirty queue размером около 307. Нужно замкнуть один такой
+координатный witness через enqueue → scheduler → capture/build → GPU apply/publish
+в коротком адресном диагностическом окне: текущий watched-schedule ring вмещает
+512 событий и к концу 47-минутного пролёта вытесняет lifecycle ранних координат.
+Второй приоритет — проверить pixel/depth mapping. Все 191 low-luma samples имели
+opaque MDI pass; у 180 depth surfaces нашёлся source triangle ближе 0.1 блока,
+у 181 был валидный face-light sample. При этом среди 186 probes с valid DDA hit
+CPU voxel-ray distance совпал с depth в пределах 0.5 блока в 20 случаях, а у
+128 разошёлся более чем на 2 блока; у пяти оставшихся dark probes DDA hit не
+было. Поля `source_face_valid`/`gpu_face_command` относятся к DDA hit block и
+не гарантируют, что это тот же depth-hit surface. Нужно свести для одного pixel
+opaque depth-hit chunk/source triangle/light/MDI state к voxel DDA hit, учитывая
+opaque/cutout traversal, до правок lighting/streaming policy. Пять CPU no-hit и
+один no-source witness остаются полезными частными случаями. Screen-ray debt и
+`gpu_not_ready`/`empty_fm_queue` — диагностические классификаторы, а не причина.
+Промежуточный M379/M380 same-coordinate срез около x=−5 800 показывает
 publication OOM 213–229 → 0 и pool use 257/320 → 90/157 MiB; занятые slots
 почти одинаковы. Camera-band no-drawable равен 0 в обоих runs, но
 draw_oracle_missing_resident не снизился, а wall samples перекрываются. Считать
 это подтверждением исправления pool allocation pressure, но не закрытием render
-holes; дождаться far pixel/depth witnesses и конечного analyzer отчёта M380.
+holes; M380 far pixel/depth witnesses и конечный analyzer уже приложены в аудите.
 
 **Gate:** контрольный маршрут проходит far checkpoint, нет необъяснённых
 невалидных/неопубликованных поверхностей в проверяемом коридоре, а stop convergence
