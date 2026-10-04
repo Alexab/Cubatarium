@@ -3850,3 +3850,29 @@ Threshold summaries: [M388 luma 64](../../bin/suite_reports/engine_refactor/m388
 [M388 luma 96](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_l96_20261004.json),
 [M389 luma 64](../../bin/suite_reports/engine_refactor/m389_renderer_pixel_trace_l64_20261004.json),
 [M389 luma 96](../../bin/suite_reports/engine_refactor/m389_renderer_pixel_trace_l96_20261004.json).
+
+### M389 luma follow-up: transparent composition and fog are separate causes
+
+Repartitioning the M389 `<96` samples by the captured pre-transparent and final
+RGB changes the earlier interpretation. Of 1,032 samples, 306 changed during
+transparent composition; 271 of the 281 unsettled-light samples and 144 of the
+177 preview-light samples are in that group. Among the 726 samples whose RGB did
+not change during transparent composition, only 10 have unsettled demand and 33
+carry the preview marker. These are sparse selected probes, not screen-area
+rates, and transparency alone does not prove water caused every change. The
+specific sample at camera `(-7626,70,56)` hits sand at `(-7646,46,37)`, below sea
+level 48, with a visible MDI surface and pending light; it is an underwater
+floor sample, not evidence that the corresponding chunk is empty.
+
+The M390 GUI capture also provides an exact renderer-color witness for the
+uniform dark-blue polygons. Pixel reads from those polygons are `(13,38,89)`,
+which matches the renderer's configured fog color `(0.05,0.15,0.35)` after
+8-bit conversion. Both M389 and M390 retained M335's `render_distance_chunks=4`,
+`distance_fog_start_ratio=0.48`, density `0.85`, and end margin `28`; the current
+fog horizon is therefore `64-28=36` blocks, with the start at about `17.3`
+blocks. Product flight setup disables fog pull-in, but it leaves distance fog
+enabled. Geometry beyond that short horizon is fully blended to the fog color,
+so these solid blue patches must not be counted as unlit chunks. The surrounding
+blank view may still contain true streaming holes; the fog-color match only
+classifies the tinted polygons. Keep camera, route, and time-of-day at M335 and
+record the fog settings alongside any later renderer comparison.

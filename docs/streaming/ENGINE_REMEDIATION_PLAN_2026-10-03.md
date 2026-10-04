@@ -991,6 +991,41 @@ preset и настройками. На fresh-world run проверять соз
 **Gate:** исправление работает на исходном мире и как минимум на новом seed;
 параметры свежего мира фиксированы и результат можно повторить.
 
+### M390 interim — M335 retains route; fog horizon masks far surfaces
+
+M390 is an in-progress visible Release run with the exact M335 route and timing:
+World_164, start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, 2 800 s
+flight plus 20 s settle. It adds relight-owner logging and dense pixel capture;
+camera, speed, world, and fixed-day settings remain unchanged. The run has passed
+the historical tree corridor near x≈`−2 826` with zero blocked substeps and zero
+flight-ground contacts so far; obstacle bypass stays enabled and has not needed
+to activate on this M335 line.
+
+Frame inspection finds uniform dark-blue polygons at exactly RGB `(13,38,89)`,
+the configured fog color `(0.05,0.15,0.35)`. Existing render settings are
+distance fog on, RD 4 chunks, start ratio `0.48`, density `0.85`, end margin 28;
+that means fog reaches full blend at 36 blocks and begins at about 17.3 blocks.
+The route harness disables adaptive fog pull-in, not distance fog itself. This
+explains why far terrain becomes visually empty/blue in those captures without
+proving that it is missing. Treat exact fog-color polygons separately from
+screen holes, and retain the same M335 route when validating any renderer fix.
+
+Reclassification of M389 `<96` framebuffer probes shows transparent composition
+in 306/1,032 samples; 271/281 unsettled-light and 144/177 preview-light samples
+are among them. The specific M389 sample at camera `(-7626,70,56)` is sand at
+y=46 beneath sea level 48 with visible MDI geometry and pending light, so there
+is real underwater light debt as well. In the unmodified-RGB subset, 10/726
+samples are unsettled and 33/726 carry the preview marker. These counts do not
+measure screen area and do not establish that transparency caused every sample.
+The earlier M389 dim-sample table overstated the evidence for broad dry-chunk
+light failure; prioritize the raw fog, transparent, depth, and light witnesses.
+
+M390 is not yet a completed acceptance run. After it ends, inspect the flushed
+pixel trace and relight-owner log on the distant segment, record the final
+movement/collision counters, and only then select a bounded streaming/rendering
+change. Do not change M335 camera or route parameters to make its scene easier to
+capture.
+
 ### G5 — Сборка Release с параллельной компиляцией
 
 Текущая конфигурация использует Visual Studio 17 2022. Ранее запуск
