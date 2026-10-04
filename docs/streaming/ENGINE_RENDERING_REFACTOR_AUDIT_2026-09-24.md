@@ -3305,3 +3305,82 @@ MDI draw и framebuffer pixel. Подробные ворота и периоди
   stayed zero and the westbound route continued. No collision code change is
   needed for that recorded run. The established M335 start, eye height, yaw,
   pitch, Z, seed, and speed remain fixed for the next renderer comparison.
+
+## M381: same M335 route confirms queue starvation; relight admission exercised
+
+M381 repeated the established World_164 daylight route in visible Release mode:
+start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, scale `1`, no
+teleport, 2 800 s flight. Manifest records code `b853570a`, Release executable
+SHA256 `75393A032B0AE31471C82E8DBC2CD722FA5DD042C4E0CCCBEC072772EF625FD8`, seed
+`3650471197`, and route hash `024a223f…c312`. It covered 646 chunks, focus
+`(7,3)→(−639,3)`, and ended normally. Collision stop was false; one hazard at
+601.194 s was bypassed to the right (hazard 2.25 blocks, offset 3, pass 7.25),
+detour completed, plan failures and heading deviation were zero. No camera or
+flight condition was changed.
+
+The full flight report remained FAIL: `22/39` gates, post-stop demand convergence
+false, fly wall median `90.92 ms` (`91.49 ms` overall), effective fly FPS `11.0`,
+dirty median/max `412/1 330`. `dominant_wall_stage=stream`,
+`dominant_schedule_blocker=empty_fm_queue`, `dominant_completion_stall=gpu_not_ready`;
+far periods still had extended `unfinished_visual`/void-near runs. At the end,
+post-stop visible-black max was `90` and stop convergence had not completed.
+
+### Source latency split
+
+- `1 851` disk columns completed with request-to-finalization latency p50/p95/max
+  `338 ms / 34.28 s / 516.28 s`; `396` exceeded 10 s, `71` exceeded 60 s and
+  `55` exceeded 120 s. The existing `elapsed_ms` clock starts at column request
+  and stops after all vertical slices are applied and the column is finalized;
+  it includes worker queueing, file work, deserialize/apply and main-thread
+  admission. It is not raw disk read time. At `(-244,0,2..5)`, requests around
+  07:40:13 completed 239–296 s later; the maximum run-wide latency was 516 s.
+  Add per-slice enqueue/start/open/read/decode/apply/finalize timings and shared
+  ChunkIo pending/active load/save counts before changing the I/O worker count.
+- `3 050` procedural commits had `queue_ms` p50/p95/max
+  `26.8 ms / 29.05 s / 71.69 s` (`576` above 10 s); `generation_ms`
+  `92.7 / 133.8 / 367.6 ms`; `ready_wait_ms` `252 ms / 7.47 s / 32.04 s`
+  (`96` above 10 s); `apply_ms` p95 `8.07 ms`; `total_ms` p95/max
+  `36.42/84.75 s`. Ready batch reached `73`, while all 3 050 records reported
+  `max_commits_per_frame=1`. This is a measurable drain-rate bottleneck candidate;
+  test an apply-time-budgeted near/focus drain while recording wall time. Do not
+  increase the global cap without a frame-time bound.
+- At fresh miss columns `(-390,0,z)` and `(-550,0,z)`, generation itself took
+  about `77–143 ms`, while request queue took up to `15.4 s` and result-ready
+  wait up to `8.2 s`; complete source-to-apply time reached `20–22 s`. The
+  `(-390)` interval coincided with a sustained `visual_holes=1` series and
+  `pending_dark` rising to `30`. This links a real frontier readiness episode
+  to pre/post-generation queue latency, not to slow terrain generation.
+
+### Visible relight and low-luma evidence
+
+M381 produced `397` `ScreenRayRepair` rows: 28 selected candidates had
+`light_debt=1`, 17 rows explicitly admitted screen-ray visible relight, with
+outcomes including normal admission, victim replacement, already-queued, and
+bounded reserve (`9`). At `(-513,3,3)`, reserve admission was followed by
+`light_debt=0` and preview-off about 18 s later. At `(-525,3,7)`, a direct
+admission cleared debt about 2 s later, while provisional preview remained in
+the sampled row. At the old M380 witness `(-550,3,3)`, M381 saw no light debt,
+so the new relight branch was not exercised at that exact coordinate. The patch
+is active, but these observations do not close the long-run renderer gates.
+
+The pixel analyzer processed `22 480` probes and found `101` luma-`<32` samples
+(0.45%). Every dark sample had a valid draw-ready depth surface and visible MDI
+pass. Source IDs included 85 `tree_leaves` (572), 3 `tree_log` (573), and 2
+`tree_bark` (597); 94 samples carried valid live-face-light state and 7 had a
+provisional preview. This shows the sampled dim foliage was being drawn; the
+sparse sample does not adjudicate larger muted patches elsewhere on screen.
+
+Artifacts: [flight/report gates](../../bin/suite_reports/engine_refactor/m381_world164_m335_visible_relight_20261004.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m381_renderer_pixel_trace_20261004.json),
+[perf JSONL](../../bin/logs/perf_20261004-072621_4616.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-072616.4616),
+[GUI frames](../../bin/logs/m381_world164_m335_visible_relight).
+
+### Next work from this run
+
+Keep the M335 conditions fixed. Add per-slice async I/O timings so multi-minute
+disk request-to-ready tails can be decomposed, then test a bounded focus-result
+drain because the current moving path holds every generation commit to one per
+frame despite a ready batch of up to 73. Preserve a wall/apply budget and compare
+the full Release run. Keep collision counters in the report; the current
+flight-sim detour completed successfully and needs no adjustment.

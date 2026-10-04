@@ -485,6 +485,62 @@ depth-source block id `572` (`tree_leaves`), 9 — `573` (`tree_log`), 3 — `59
 участка по-прежнему сопоставлять материал, depth surface, lighting, readiness и
 кадр.
 
+### Результат M381 — M335 повторён, очередь остаётся узким местом
+
+M381 запустил тот же visible no-teleport M335 на World_164, fixed daylight,
+Release `b853570a` (EXE SHA256
+`75393A032B0AE31471C82E8DBC2CD722FA5DD042C4E0CCCBEC072772EF625FD8`). Маршрут
+прошёл 646 чанков до focus `(-639,3)`, а renderer gates остались FAIL (`22/39`),
+post-stop demand convergence — false. `wall_ms` median составил `91.49 ms`,
+effective fly FPS — `11.0`, dirty median/max — `412/1 330`. На отдельных дальних
+отрезках `visual_holes`, `pending_dark` и `not_render_ready` росли вместе с
+`stream_ms`/`scene_ms`; замена условий полёта не требуется.
+
+Полный source trace разделяет генерацию и ожидание результата. Из `3 050`
+procedural commits queue p50/p95/max составил `26.8 ms / 29.05 s / 71.69 s`
+(`576` результатов ждали старта более 10 s). Сам `generation_ms` был
+`92.7 / 133.8 / 367.6 ms`; generation-finished → apply `ready_wait_ms` —
+`251.6 ms / 7.47 s / 32.04 s` (`96` более 10 s), apply p95 — `8.07 ms`,
+total p95/max — `36.42 / 84.75 s`. Все `3 050` commits имели
+`max_commits_per_frame=1`, при ready batch до `73` результатов. На новых
+колонках около X=−390 и на повторном witness X=−550 disk miss приводил к
+быстрой генерации (примерно `77–143 ms`), но request queue занимала до
+`6.8–15.4 s`, а ожидание commit — до `8.2 s`; полный срок достигал `20–22 s`.
+На тех же отрезках появлялись readiness holes. Следующий эксперимент должен
+проверить budget-aware drain готовых near/focus результатов и admission
+backpressure, измеряя отдельно кадр-время; общий cap вслепую не повышать.
+
+Disk-backed колонок было `1 851`; их `elapsed_ms` p50/p95/max —
+`338 ms / 34.28 s / 516.28 s`, `71` превысили минуту, `55` — две минуты. Этот
+таймер начинается при запросе колонки и заканчивается после получения срезов,
+decode/apply и финализации, поэтому это **request-to-ready latency**, а не
+измерение чистого времени чтения файла. Следующая доработка должна добавить
+раздельные метки worker-queue wait, file-open/read, deserialize, main-thread
+apply и finalization, вместе с pending/active read/save counts. После разложения
+выбрать исправление для I/O очереди или apply budget по фактическому владельцу
+задержки.
+
+Новая visible-relight admission была реально вызвана: в M381 записано `397`
+ScreenRayRepair строк, `28` screen-ray samples с `light_debt=1` и `17` явных
+visible-relight admissions. Для X=−513 outcome `9` (bounded visible-repair
+reserve) предшествовал переходу той же колонки `light_debt: 1 → 0` примерно за
+18 s; у другого кандидата X=−525 debt очистился примерно за 2 s, но
+provisional preview ещё оставался. На самом M380 witness X=−550 в M381
+`light_debt=0`, так что там исправление не активировалось. Это подтверждает
+путь admission, но не закрывает общую задержку lighting/readiness.
+
+В `22 480` pixel probes было `101` low-luma `<32` sample. Все `101` имели
+валидную depth surface, draw-ready drawable и видимый MDI pass; `85` source
+faces были `tree_leaves`, `3` — `tree_log`, `2` — `tree_bark`. Это не подтверждает
+отсутствующую геометрию в этих пикселях, но sparse low-luma выборка не закрывает
+жалобу на большие приглушённые области. Для подозрительного кадра продолжать
+pixel/depth/source/lifecycle join, не трактовать низкую яркость foliage как
+streaming hole.
+
+Collision telemetry M381: `collision_stop_triggered=false`, один planned и
+completed detour, zero plan failures, heading deviation zero. Flight-sim уже
+обходит препятствие по существующей логике; M335 остаётся control profile.
+
 M379/M380 same-coordinate pool slice около x=−5 800 по-прежнему подтверждает
 только устранение publication OOM (213–229 → 0) и снижение pool use
 (257/320 → 90/157 MiB); camera-band no-drawable равен 0, но
@@ -494,6 +550,14 @@ draw_oracle_missing_resident не снизился, wall samples перекры�
 **Gate:** контрольный маршрут проходит far checkpoint, нет необъяснённых
 невалидных/неопубликованных поверхностей в проверяемом коридоре, а stop convergence
 конечна. Операторская визуальная проверка остаётся отдельным условием.
+
+**Следующий шаг G3:** сохранить M335 без изменения камеры и сначала добавить
+раздельные worker/read/apply timing для async disk columns. Параллельно
+подготовить ограниченный near-result drain эксперимент: его гипотеза основана на
+`ready_batch_n=73` при commit cap `1/frame`, но acceptance должен учитывать
+wall/frame и queue latency, а не только уменьшение holes. После выбора поведения
+повторить тот же M335 Release run; новые seed остаются периодической проверкой
+переноса, не заменой baseline.
 
 ### G4 — Новые миры как периодическая проверка переноса
 
