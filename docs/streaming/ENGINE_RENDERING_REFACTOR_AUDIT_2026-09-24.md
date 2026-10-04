@@ -3926,3 +3926,57 @@ Artifacts: [M390 report](../../bin/suite_reports/engine_refactor/m390_world164_m
 [source log part 1](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-182717.29104),
 [source log part 2](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-184711.29104),
 [GUI captures](../../bin/logs/m390_world164_m335_relight_owners).
+
+## M391: pending disk loads become stale owners outside the retention ring
+
+M391 repeated the same visible Release/no-teleport M335 flight on World_164 for
+2 800 seconds plus the 20-second settle: start `[120,56,56]`, cruise eye y=70,
+yaw 180°, pitch −30°, fixed clear day, movement scale 1. It covered 8 800 blocks
+at median 5.18555 blocks/s. Blocked movement and ground-contact counters were
+zero; predictive obstacle avoidance was enabled by the flight harness, and no
+detour was required. The harness restored `world_data.json` byte-for-byte.
+
+The renderer analyzer still fails. It recorded 1 363 periods, median fly wall
+119.46 ms, dirty median/max 543/1 289, visible-black max 53, void-near max 9 362,
+and failed post-stop recovery. `unfinished_visual` is still a loaded-column/mesh
+readiness census, not screen-area coverage. This is not a strict M390 A/B because
+the runs encountered different persisted chunk-file populations.
+
+The source trace has 2 209 unique `disk/queued` columns and 1 779 columns with a
+`disk/complete` event. The other 430 queued coordinates have no matching complete
+event; at final focus they are all 188–379 chunks behind the camera. The log does
+not expose final owner-map membership, so this is a strong stale-work signature,
+not an exact pending-owner count. In the 4 000–6 000 block band, disk-column
+elapsed time was median 25.1 s, p95 619.8 s, max 789.7 s. Aggregate result-wait
+time was median 102.1 s and p95 2 479 s, while worker queue p95 was 0.68 ms and
+file-read p95 1.74 ms. The large delay is between worker completion and the
+game-thread column apply/finalize path, rather than device read time.
+
+Code inspection found that `CancelAsyncTerrainColumnLoad` erased only the
+pending-column map entry. Workers could still read full slice files and push
+results into `CompletedLoads`; the consumer gives pending owners precedence, so
+results for distant canceled coordinates could occupy memory and wait behind
+current demand. Commit `47b9ab04` adds a shared cancellation flag per column,
+cooperative worker checks, ready-queue pruning, token invalidation, and a
+retention-radius sweep for pending disk loads. The next unchanged M335 run (M392)
+is the validation gate. Its comparison must separate source cancellation and
+queue age from the screen evidence and distinguish this warmer persisted state.
+
+M391 pixel probes remain mixed evidence. Of 32 768 probes, 137 fell below luma
+32; all had an opaque MDI draw, 105 had settled light demand, 7 had a preview
+marker, and 51 had a pending voxel-light witness. Below luma 96 there were 954
+samples: 716 settled, 166 preview, 316 voxel-pending, and 186 changed RGB during
+transparent composition. The voxel DDA and framebuffer depth often point to
+different surfaces, so these counts do not classify a complete dark patch.
+The captured GUI frame near x −8 186 also shows sharp blue triangular patches
+across a sand/water shoreline. The sparse probe grid does not yet localize their
+depth layer or source chunk; retain this as a separate visual symptom for a
+same-frame opaque/transparent pixel join.
+
+Artifacts: [M391 report](../../bin/suite_reports/engine_refactor/m391_world164_m335_cancel_stale_loads_20261004.json),
+[luma 96 pixel trace](../../bin/suite_reports/engine_refactor/m391_renderer_pixel_trace_l96_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-193054_24660.jsonl),
+[source log part 1](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-193050.24660),
+[source log part 2](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-194649.24660),
+[source log part 3](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-201249.24660),
+[GUI frames](../../bin/logs/m391_world164_m335_cancel_stale_loads).

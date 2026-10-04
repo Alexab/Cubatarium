@@ -1050,6 +1050,62 @@ Artifacts: [M390 analyzer report](../../bin/suite_reports/engine_refactor/m390_w
 [perf trace](../../bin/logs/perf_20261004-182722_29104.jsonl),
 [GUI frames](../../bin/logs/m390_world164_m335_relight_owners).
 
+### M391 completed — disk-load owners also outlive the moving retention ring
+
+M391 repeated the identical visible Release/no-teleport M335 conditions on
+World_164: start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, fixed clear
+day, scale 1, `2 800 s` flight plus `20 s` settle. It reached focus x `−543`
+(`8 800` blocks) at median `5.18555 blocks/s`. Collision and ground-contact
+counters remained zero; the flight harness's default predictive avoidance was
+enabled, but no detour was needed. The harness restored `world_data.json`
+byte-for-byte. The same profile stays the acceptance condition.
+
+Renderer acceptance remains red: `1 363` periods, fly wall median `119.46 ms`,
+dirty median/max `543/1 289`, visible-black max `53`, void-near max `9 362`, and
+post-stop recovery false. `unfinished_visual` remains a loaded-column/mesh
+readiness census, not a screen-area rate. Relative to M390 this is not a clean
+A/B: M391 encountered a different persisted chunk-file population after prior
+flights.
+
+M391's source trace recorded `2 209` unique disk-column requests and `1 779`
+matching `complete` outcomes. The remaining `430` queued coordinates had no
+`complete` event in the log; by the final focus every such coordinate was
+188–379 chunks behind it, far outside the five-chunk retention radius. The log
+does not expose the final in-memory pending map, so treat this as a stale-work
+signature rather than a direct count of live owners. For disk completions in
+the 4 000–6 000 block band, per-column elapsed time had median `25.1 s`, p95
+`619.8 s`, max `789.7 s`; aggregated `result_wait_ms` had median `102.1 s`, p95
+`2 479 s`. Worker queue p95 was `0.68 ms`, and file-read p95 `1.74 ms`. This
+points to delayed admission/application of completed slices, not slow storage
+reads. The earlier unload callback only erased the owner map entry; it did not
+cancel worker reads or remove already completed results.
+
+Commit `47b9ab04` adds cancellation flags for disk-column owners, checks them in
+the I/O worker, removes canceled completions from the ready queue, invalidates
+generation tokens, and cancels owners outside the existing streamer retention
+radius. `M392` is validating this change on the unchanged M335 route. Compare
+`disk/cancelled_out_of_range`, outstanding ready work, disk result wait, focus
+missing/dark witnesses, frame wall, and stop convergence before changing the
+near-focus apply budget.
+
+Pixel traces still do not assign one cause to every dim patch. At luma `<32`,
+M391 recorded `137/32 768` selected samples: all had visible opaque MDI geometry,
+`105` had settled demand, `7` carried a preview marker, and `51` had a pending
+voxel-light witness. At luma `<96`, `954` samples included `716` settled demand,
+`166` preview markers, `316` pending voxel-light witnesses, and `186` whose RGB
+changed during transparent composition. Most voxel-ray and depth witnesses
+refer to different surfaces. A GUI frame near x `−8 186` also shows sharp blue
+triangular patches across a sand/water shoreline; the current sparse probe grid
+does not localize those triangles to a responsible layer. Keep them as a
+separate renderer symptom, and correlate exact screen pixels with opaque and
+transparent depth/source witnesses on the same M335 pass.
+
+Artifacts: [M391 analyzer report](../../bin/suite_reports/engine_refactor/m391_world164_m335_cancel_stale_loads_20261004.json),
+[pixel trace luma 96](../../bin/suite_reports/engine_refactor/m391_renderer_pixel_trace_l96_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-193054_24660.jsonl),
+[source logs](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-193050.24660),
+[GUI frames](../../bin/logs/m391_world164_m335_cancel_stale_loads).
+
 ### G5 — Сборка Release с параллельной компиляцией
 
 Текущая конфигурация использует Visual Studio 17 2022. Ранее запуск
