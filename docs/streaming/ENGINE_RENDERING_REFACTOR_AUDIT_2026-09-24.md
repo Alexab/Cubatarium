@@ -4423,3 +4423,10 @@ instead of reloaded from disk. It is a plausible contributor to long-run
 slowdown; the separate M402 app hang still has no established root cause. The
 remediation is a cursor-based unload/save budget with measurable progress under
 movement, without changing the M335 route.
+
+At 13:39:50 in the same M403 replay, Windows still reported the process as
+responsive and the camera had advanced to x=−5 168. However, successive
+periods averaged 107–113 ms/frame, resident memory was 1.15 GB, and telemetry
+recorded one visual hole. This is severe degradation rather than a confirmed
+app hang; preserve the process while its perf and source logs advance so the
+long-run failure can be captured.

@@ -1833,6 +1833,15 @@ flight profile. The M403 exact settings remain unchanged and the app is
 responsive at this checkpoint. Let the run finish unless it stops producing
 metrics; then capture final resident count, save outcomes, and shutdown I/O.
 
+At 13:39:50, Windows still reported the M403 process as responsive, the flight
+had advanced to x=−5 168 (cx=−323), and the perf file was growing. The latest
+periods averaged 107–113 ms/frame, with one visual hole, dirty=1 413,
+stream_pressure=2, and 1.15 GB working set. This rules out a complete
+process/message-loop hang at that instant, but confirms a severe slowdown that
+can look frozen on screen. Keep the run alive while it continues producing
+metrics; capture final resident count, save outcomes, and shutdown I/O when it
+ends.
+
 Next implementation step: give far-behind eviction a bounded, fair slice under
 movement, using the cursor scan and the existing near/keep-ring checks; reserve
 one small column-save unit at a time and drain deferred saves during motion when
