@@ -4494,3 +4494,38 @@ responsive and ended normally; low FPS was observed. Keep actual app hangs
 separate from low-rate rendering in the audit. Full counters, timings, source
 traces, and the M406 acceptance plan are in the
 [M405 remediation entry](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m405--save-storm-reduced-pending-work-still-pins-resident-columns-2026-10-05).
+
+## M406: bounded residency, but a long-flight window stall is confirmed
+
+M406 completed the established M335 route from Release commit `2f249a5a` with
+`process_rc=0` and `hang_killed=false`. In contrast to M405, Windows briefly
+reported `Responding=False` near the planned stop/exit phase. When the user
+reported a freeze earlier, the process was still `Responding=True` and
+captures/metrics advanced. The report therefore coincides with severe frame
+stalls, not a confirmed Windows-level hang. The late nonresponsive state did
+not lead to a forced kill; the process exited normally.
+
+The out-of-keep cancellation change removed the M405 veto pattern: M406 had
+289 candidates, no vetoes, 201 active-work invalidations, and 1,173 removed
+chunk slices. Resident count ended at 432 (peak 573), and 6,152 unique column
+saves produced 25,147 successful slice writes without duplicate queued
+columns or slice failures.
+
+M406 still failed rendering gates. Median wall time improved to 79.08 ms from
+M405's 114.75 ms, but unfinished visual work remained present in every steady
+period. Near-void proxy peak fell to 3,603 from 7,836; visible-dark proxy peak
+was 26 versus 29. Post-stop missing/effective-hole gates remained false. This
+supports improved residency and lower visual debt, not a claim that terrain
+pixels or lighting are fixed.
+
+The trace separates physical reads from service delay. Across 3,382 disk
+columns, read time was 1.04 ms median / 1.50 ms p95 / 7.43 ms maximum, while
+the per-column sum of completed-result wait was 400 ms median / 8.38 s p95.
+The ready-load queue peaked at 458. Decode-plus-world-apply was 6.35 ms median
+but reached 230.71 ms for one column. `TickAsyncChunkIo` also consumed 1.037 s
+in a 1.093 s spike. Separately, a 1.552 s spike had 1.265 s outside measured
+phase attribution, so the telemetry does not support assigning every freeze
+to storage, streaming, or rendering. The next audit step must make those
+stages independently visible and bound queue/application work.
+
+See the [M406 evidence and M407 sequence](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m406--residency-recovered-streaming-latency-and-visual-debt-remain-2026-10-05).

@@ -1958,3 +1958,89 @@ source events, dark/unfinished visual debt, and frame/stream/emerge timing. Do
 not call this visually fixed until sampled pixels improve and visual debt
 converges during the post-flight stop phase. Keep the periodic new-world check
 as a later secondary gate; it does not replace the repeatable M335 route.
+
+## M406 — residency recovered; streaming latency and visual debt remain (2026-10-05)
+
+M406 ran the same visible no-teleport M335 flight on Release commit
+`2f249a5a`. It completed successfully (`run_outcome=success`, `process_rc=0`,
+`hang_killed=false`) and restored `bin/worlds/World_164/world_data.json` to its
+baseline SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+At the time of the user's freeze report, Windows still reported the window
+responsive and captures/logs advanced. The process had frame spikes up to
+1.55 s, so the visible stop was real, but a Windows-level hang was not
+confirmed then. Windows briefly marked the window not responding only near
+the planned stop/exit phase; the process was not killed and exited with code
+0. This late signal is distinct from a permanent hang.
+
+The unload/residency change worked: across period rows M406 had 289 unload
+candidates, zero vetoes, 201 candidates that invalidated active work, and
+1,173 removed chunk slices. The resident chunk-count series ranged from 248 to
+573 (median/end 432), versus M405's 13,779 final and 13,841 peak slices. Save
+logging recorded 6,152 unique queued columns, 25,147 successful slice writes,
+no `slice_failed` events, and no repeated queued column. This closes the
+specific unbounded-residency/save-veto failure observed in M405.
+
+The visual/performance gates still fail. The analyzer saw 1,375 periods
+(1,373 steady), 79.082 ms median wall time, and a 67.36 ms median streaming
+phase. `unfinished_visual` remained nonzero in every steady period. The near
+void proxy peak fell from 7,836 in M405 to 3,603, and the visible-dark proxy
+peak moved from 29 to 26, but the stop gate still reported missing visual
+work and effective holes. These are readiness and draw-state signals; they do
+not prove that voxel data is absent.
+
+The source trace shows both persisted and new terrain: 3,382 disk loads were
+queued and completed, 2,884 requests missed disk, and 2,878 procedural
+columns committed. Physical reads were fast (median 1.04 ms, p95 1.50 ms,
+maximum 7.43 ms). Queue/application work was not: disk-result wait for one
+column was 400 ms median and 8.38 s p95 when summed across its slices; a
+single-slice wait had 2.09 s p95 and 24.90 s maximum. The completed-load queue
+had 24 entries at p95 and peaked at 458. Combined deserialize/apply cost was
+6.35 ms median, 11.63 ms p95, and 230.71 ms maximum (one slice reached
+224.68 ms). Thus “disk load” is not equivalent to slow physical reads: ready
+results can wait for main-thread consumption, and applying even one result can
+occasionally exceed a frame budget by a wide margin.
+
+Two separate long-frame signatures require work. A 1.093 s spike spent
+1.037 s in `TickAsyncChunkIo`; another 1.552 s spike attributed only 280 ms to
+the streaming phase (191 ms to unload) and left 1.265 s unaccounted by the
+current phase telemetry. The latter cannot be assigned to the renderer or
+storage from these logs. The Release report is
+[`m406_world164_m335_out_of_keep_cancel_20261005.json`](../../bin/suite_reports/engine_refactor/m406_world164_m335_out_of_keep_cancel_20261005.json);
+the raw perf stream is `bin/logs/perf_20261005-172424_2536.jsonl`, with rotated
+INFO logs for PID 2536 and captures in
+`bin/logs/m406_world164_m335_out_of_keep_cancel`.
+
+### M407 — bound and attribute the streaming pipeline
+
+1. Split load telemetry per frame into discovery/format lookup, file worker
+   queue, read, completion-queue wait/depth, decode, world apply, column
+   finalize, and light-flag persistence. Keep a separate wall-time residual;
+   do not infer a cause from overlapping aggregate fields.
+2. Bound completed work without losing ownership: cap or prioritize ready
+   results and define how evicted/canceled results retire their column token
+   and are retried. Replace repeated full-queue scans with a bounded priority
+   structure or another measured policy. Preserve near-focus ordering and
+   fairness for older work.
+3. Move chunk decode off the frame thread. M406 shows that current async I/O
+   workers read bytes, but `TickAsyncChunkIo` deserializes and mutates world
+   chunks on the main thread. Keep world mutation on the owning thread, with
+   per-frame admission measured in milliseconds and a safe plan for a single
+   expensive slice that exceeds the budget.
+4. Audit unload serialization separately. `RequestAsyncTerrainColumnSave`
+   serializes each chunk before queuing file writes, so the disk write is
+   asynchronous while part of the save cost is still synchronous. Capture an
+   immutable chunk snapshot safely, then serialize/write it in the worker;
+   validate that edits and eviction cannot race the snapshot.
+5. Trace the 1.265 s unexplained stall at finer granularity (including waits
+   outside the named streaming/render phases). Do not suppress it by labeling
+   it as I/O or GPU time without evidence.
+6. Build only Release and rerun the exact M335 route and GUI/capture settings.
+   Require lower long-frame tails, bounded completion depth/wait, continued
+   unload progress, and improving visual debt through stop. Keep a new-world
+   run secondary and periodic after the repeatable route passes.
+
+Only after frame-time and queue behavior are stable should the next change
+target the remaining lighting/mesh convergence debt; M406 still had 1,403
+relight FIFO drops and 49 false clears. Do not combine a queue fix with a
+lighting policy change in one experiment, or the repeated route will no longer
+isolate the cause.

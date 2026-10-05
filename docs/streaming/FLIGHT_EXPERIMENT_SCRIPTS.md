@@ -356,6 +356,35 @@ work-cancellation change is built. Compare candidate/veto/unload and
 active-work-invalidated counters, resident-set peak/end, and visual debt; do
 not select new flight parameters to improve the capture.
 
+### M406: out-of-keep cancellation verification and freeze capture
+
+M406 ran successfully on Release commit `2f249a5a` with the same route as
+M405. It recorded 289 unload candidates, zero vetoes, 201 active-work
+invalidations, 1,173 removed slices, 79.082 ms median wall time, and a 458
+ready-load queue peak. It also captured 1.093 s and 1.552 s frame spikes; the
+second had 1.265 s of wall time outside existing phase attribution. The
+analyzer still failed visual gates. See the
+[M406 analysis and M407 plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m406--residency-recovered-streaming-latency-and-visual-debt-remain-2026-10-05).
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m406_world164_m335_out_of_keep_cancel'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m406_world164_m335_out_of_keep_cancel --report bin/suite_reports/engine_refactor/m406_world164_m335_out_of_keep_cancel_20261005.json --process-timeout 3000
+```
+
+The report records `run_outcome=success`, `process_rc=0`, and
+`hang_killed=false`. At the user's report, Windows still considered the
+window responsive and captures/metrics advanced, although frame spikes were
+severe. `Responding=False` appeared only near the planned stop/exit phase; the
+app then exited normally. The fixed-day wrapper restored
+`bin/worlds/World_164/world_data.json` to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`. Perf
+data is `bin/logs/perf_20261005-172424_2536.jsonl`, rotated INFO logs use PID
+2536, and captures are in the directory above.
+
 ### Compare source mix and queue delay by route position
 
 Use this after M335 runs to distinguish stored column results from procedural
