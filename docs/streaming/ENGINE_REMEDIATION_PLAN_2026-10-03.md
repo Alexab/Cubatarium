@@ -1758,15 +1758,16 @@ from disk; it does not establish why the first run left no disk result.
 
 The harness disables periodic autosave, then takes the fast shutdown path and
 calls `_Exit`, so it does not run a final cooperative session snapshot. Normal
-streaming unloads are supposed to enqueue async column saves, but the current
-source trace does not report unload admission, save request, save completion,
-or file-write failure. Possible causes still include columns never reaching
-unload, a save request that remained pending at fast exit, a rejected/failed
-write, or a different active world path. These possibilities must be separated
-before calling this a persistence regression or assuming untouched terrain was
-never meant to be saved. The M335 dark-pixel symptom also cannot be attributed
-to source choice alone: illumination and mesh publication remain independent
-checks.
+streaming unloads are supposed to enqueue async column saves. The current
+Release source now records `WorldColumnSave` queue results, per-slice write
+success/failure, target paths, and pending-I/O counts at fast shutdown whenever
+`CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. Async save worker failures also return a
+completion instead of silently leaving the column permanently marked pending.
+The source-bin analyzer includes those events. A same-route Release run must
+now show whether the strip was skipped as incomplete, queued, fully written,
+or still pending at process exit. The M335 dark-pixel symptom still cannot be
+attributed to source choice alone: illumination and mesh publication remain
+independent checks.
 
 The transition is mixed rather than a single clean boundary. In
 `cx=[−360,−344)`, M400 and M401 each recorded 57 disk completions and 87

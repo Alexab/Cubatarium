@@ -127,6 +127,28 @@ void LogWorldColumnSource(const char *source, const char *outcome,
   std::cerr << "[WorldColumnSource] " << message << std::endl;
 }
 
+void LogWorldColumnSave(const char *outcome, glm::ivec3 coord,
+                        const std::string &details, bool always = false)
+{
+  if (!always && !IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      std::string("outcome=") + outcome + " coord=(" +
+      std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
+      std::to_string(coord.z) + ") " + details;
+  if (always)
+  {
+    CubatariumLogError("WorldColumnSave", message);
+  }
+  else
+  {
+    CubatariumLogInfo("WorldColumnSave", message);
+  }
+  std::cerr << "[WorldColumnSave] " << message << std::endl;
+}
+
 bool HasChunkDataFiles(const std::string &chunks_dir)
 {
   if (!std::filesystem::exists(chunks_dir) ||
@@ -3657,7 +3679,8 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
 
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
     {
-      if (ChunkStorage->GetSettings().writeFormat == ChunkWriteFormat::Binary &&
+      if (save.success &&
+          ChunkStorage->GetSettings().writeFormat == ChunkWriteFormat::Binary &&
           ChunkStorage->GetSettings().deleteLegacyJsonOnBinarySave)
       {
         const std::string legacy_json = ChunkStorage->ChunkFilePath(
@@ -3679,6 +3702,16 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
       {
         ChunkStorage->ClearColumnSavePending(save.groundCoord);
       }
+      const std::string outcome = save.success ? "slice_written" : "slice_failed";
+      const std::string details =
+          "file=" + save.filePath +
+          (save.error.empty() ? std::string{} : " error=" + save.error) +
+          " pending_columns=" +
+          std::to_string(PendingAsyncColumnSaveSlices.size()) +
+          " io_jobs=" + std::to_string(AsyncChunkIo->GetPendingJobCount()) +
+          " io_active=" + std::to_string(AsyncChunkIo->GetActiveJobCount());
+      LogWorldColumnSave(outcome.c_str(), save.coord, details,
+                         !save.success);
     }
   }
   SaveColumnLightFlagsIfDirty();
@@ -3697,6 +3730,29 @@ bool UWorldPersistence::IsAsyncChunkIoQuiescent() const
   }
   return AsyncChunkIo->CompletedLoadsEmpty() &&
          AsyncChunkIo->CompletedSavesEmpty();
+}
+
+void UWorldPersistence::TraceAsyncChunkIoShutdownState() const
+{
+  if (!IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      "outcome=shutdown_state pending_save_columns=" +
+      std::to_string(PendingAsyncColumnSaveSlices.size()) +
+      " pending_disk_columns=" +
+      std::to_string(PendingAsyncColumnLoadSlices.size()) +
+      " io_jobs=" +
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetPendingJobCount() : 0) +
+      " io_active=" +
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetActiveJobCount() : 0) +
+      " ready_saves=" +
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetCompletedSaveCount() : 0) +
+      " ready_loads=" +
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetCompletedLoadCount() : 0);
+  CubatariumLogInfo("WorldColumnSave", message);
+  std::cerr << "[WorldColumnSave] " << message << std::endl;
 }
 
 bool UWorldPersistence::TickDrainAsyncChunkIo(UWorld &world, int max_iterations)
@@ -3893,6 +3949,9 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   if (!IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height))
   {
     RemoveTerrainColumnFromDisk(ground_coord, max_height);
+    LogWorldColumnSave("discard_incomplete", ground_coord,
+                       "max_height=" + std::to_string(max_height) +
+                           " world_folder=" + WorldFolderPath);
     return;
   }
   const int max_cy = (max_height + CHUNK_SIZE - 1) / CHUNK_SIZE;
@@ -3903,6 +3962,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   int highest_to_save = std::max(highest_on_disk, highest_non_air);
   if (highest_to_save < 0)
   {
+    LogWorldColumnSave("skip_empty", ground_coord,
+                       "world_folder=" + WorldFolderPath);
     return;
   }
   highest_to_save = std::min(highest_to_save, max_cy);
@@ -3919,6 +3980,10 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   }
   ChunkStorage->MarkColumnSavePending(ground_coord);
   PendingAsyncColumnSaveSlices[ground_coord] = save_count;
+  LogWorldColumnSave("queued", ground_coord,
+                     "slices=" + std::to_string(save_count) +
+                         " highest_cy=" + std::to_string(highest_to_save) +
+                         " world_folder=" + WorldFolderPath);
   for (int cy = 0; cy <= highest_to_save; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);

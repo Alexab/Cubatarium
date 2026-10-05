@@ -153,6 +153,13 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
   const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
   if (!chunk)
   {
+    AsyncChunkSaveRequest failed;
+    failed.coord = coord;
+    failed.groundCoord = glm::ivec3(coord.x, 0, coord.z);
+    failed.filePath = storage.ChunkFilePath(
+        worldFolder, coord, ChunkDiskFormat::Binary);
+    failed.error = "chunk_missing_before_serialize";
+    CompletedSaves.Push(std::move(failed));
     return;
   }
   const SerializedChunk serialized =
@@ -164,38 +171,62 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
   Pool.Enqueue(
       [this, filePath, serialized, coord, ground]()
       {
+        AsyncChunkSaveRequest done;
+        done.coord = coord;
+        done.groundCoord = ground;
+        done.filePath = filePath;
+        done.format = serialized.format;
+        const auto finish = [this, &done](const std::string &error = {})
+        {
+          done.success = error.empty();
+          done.error = error;
+          CompletedSaves.Push(std::move(done));
+        };
+
+        std::error_code ec;
         std::filesystem::create_directories(
-            std::filesystem::path(filePath).parent_path());
+            std::filesystem::path(filePath).parent_path(), ec);
+        if (ec)
+        {
+          finish("create_directories: " + ec.message());
+          return;
+        }
         const std::string tempPath = filePath + ".tmp";
         {
           std::ofstream file(tempPath, std::ios::binary);
           if (!file.is_open())
           {
+            finish("open_temp_failed");
             return;
           }
           file.write(reinterpret_cast<const char *>(serialized.bytes.data()),
                      static_cast<std::streamsize>(serialized.bytes.size()));
+          file.close();
           if (!file.good())
           {
-            std::filesystem::remove(tempPath);
+            std::error_code cleanup_ec;
+            std::filesystem::remove(tempPath, cleanup_ec);
+            finish("write_temp_failed");
             return;
           }
         }
-        std::error_code ec;
+        ec.clear();
         std::filesystem::rename(tempPath, filePath, ec);
         if (ec)
         {
-          std::filesystem::remove(filePath, ec);
+          std::error_code remove_ec;
+          std::filesystem::remove(filePath, remove_ec);
           ec.clear();
           std::filesystem::rename(tempPath, filePath, ec);
         }
-        AsyncChunkSaveRequest done;
-        done.coord = coord;
-        done.groundCoord = ground;
-        done.payload = serialized.bytes;
-        done.filePath = filePath;
-        done.format = serialized.format;
-        CompletedSaves.Push(std::move(done));
+        if (ec)
+        {
+          std::error_code cleanup_ec;
+          std::filesystem::remove(tempPath, cleanup_ec);
+          finish("replace_failed: " + ec.message());
+          return;
+        }
+        finish();
       });
 }
 

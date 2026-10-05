@@ -304,6 +304,8 @@ The script reports file reads, ready-result waits, scheduler queue, worker wait,
 generation and apply independently. `procedural/disk_miss` means no disk source
 was found for that request; it does not prove whether the column was never
 saved, remained resident, or had a pending/failed save. The X bins aggregate Z,
-so use the exact `(cx,cz)` pairs and the active world's `chunks` directory when
-checking persistence. A safe save-lifecycle trace is still needed to identify
-why the M400/M401 repeated band was absent from disk.
+so use the exact `(cx,cz)` pairs in each bin. With the updated Release binary,
+`CUBA_WORLD_COLUMN_SOURCE_TRACE=1` also records async save queue results,
+per-slice write completions/failures, the target folder and fast-shutdown
+pending-I/O counts. The report joins those save events by `(cx,cz)`. Set the
+environment variable in the same shell that starts the fixed M335 runner.

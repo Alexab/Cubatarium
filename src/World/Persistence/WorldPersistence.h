@@ -87,6 +87,7 @@ public:
   void FlushAsyncChunkIo(UWorld &world);
   bool TickDrainAsyncChunkIo(UWorld &world, int max_iterations);
   bool IsAsyncChunkIoQuiescent() const;
+  void TraceAsyncChunkIoShutdownState() const;
   void AbortAsyncChunkIo();
   bool AbortAsyncChunkIoFor(std::chrono::milliseconds timeout);
   void EnqueueTerrainColumnRelight(int world_x, int world_z,

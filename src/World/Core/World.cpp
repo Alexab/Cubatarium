@@ -9675,6 +9675,10 @@ void UWorld::PrepareForShutdownFast()
     return;
   }
   ShutdownPrepared = true;
+  if (Persistence)
+  {
+    Persistence->TraceAsyncChunkIoShutdownState();
+  }
   if (CoopSession && CoopSession->Active)
   {
     CoopSession->Cancel();

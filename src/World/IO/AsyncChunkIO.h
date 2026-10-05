@@ -39,9 +39,10 @@ struct AsyncChunkSaveRequest
 {
   glm::ivec3 coord;
   glm::ivec3 groundCoord;
-  std::vector<uint8_t> payload;
   std::string filePath;
   ChunkDiskFormat format{ChunkDiskFormat::Binary};
+  bool success{false};
+  std::string error;
 };
 
 class UAsyncChunkIO
