@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <queue>
+#include <tuple>
 #include <unordered_set>
 #include <utility>
 
@@ -3572,32 +3573,27 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
                                    .count();
         age_bonus = (std::min)(256, static_cast<int>(age_sec / 5.0));
       }
-      return std::pair<bool, int>{has_pending_column,
-                                  (std::max)(0, distance - age_bonus)};
+      return std::tuple<int, int, std::chrono::steady_clock::time_point>{
+          has_pending_column ? 0 : 1, (std::max)(0, distance - age_bonus),
+          load.submittedAt};
     };
-    while (applied_slices < max_slice_applies)
+    // The load queue can contain hundreds of ready results. Select a small
+    // near-focus batch once per tick, then apply under the existing time and
+    // slice limits instead of rescanning the full queue after each slice.
+    constexpr std::size_t kMaxRankedLoadsPerTick = 4;
+    const std::size_t max_ranked_loads =
+        std::min(max_slice_applies, kMaxRankedLoadsPerTick);
+    auto completed_loads = AsyncChunkIo->DrainLoadsBestByKeyUpTo(
+        max_ranked_loads, result_rank);
+    std::size_t next_load = 0;
+    while (next_load < completed_loads.size() &&
+           applied_slices < max_slice_applies)
     {
-      auto completed_loads = AsyncChunkIo->DrainLoadsBestUpTo(
-          1, [&](const AsyncChunkLoadResult &a,
-                 const AsyncChunkLoadResult &b)
-          {
-            const auto rank_a = result_rank(a);
-            const auto rank_b = result_rank(b);
-            if (rank_a.first != rank_b.first)
-            {
-              return rank_a.first;
-            }
-            if (rank_a.second != rank_b.second)
-            {
-              return rank_a.second < rank_b.second;
-            }
-            return a.submittedAt < b.submittedAt;
-          });
-      if (completed_loads.empty())
+      if (apply_budget_expired())
       {
         break;
       }
-      AsyncChunkLoadResult &load = completed_loads.front();
+      AsyncChunkLoadResult &load = completed_loads[next_load++];
       ++applied_slices;
       const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
       auto pending_it = PendingAsyncColumnLoadSlices.find(ground);
@@ -3735,6 +3731,16 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
       {
         break;
       }
+    }
+    if (next_load < completed_loads.size())
+    {
+      std::vector<AsyncChunkLoadResult> deferred;
+      deferred.reserve(completed_loads.size() - next_load);
+      for (std::size_t i = next_load; i < completed_loads.size(); ++i)
+      {
+        deferred.push_back(std::move(completed_loads[i]));
+      }
+      AsyncChunkIo->RequeueLoads(std::move(deferred));
     }
 
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())

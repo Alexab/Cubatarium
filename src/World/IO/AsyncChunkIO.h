@@ -65,11 +65,21 @@ public:
 
   std::vector<AsyncChunkLoadResult> DrainLoads();
   std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);
+  void RequeueLoads(std::vector<AsyncChunkLoadResult> &&loads)
+  {
+    CompletedLoads.PushRange(std::move(loads));
+  }
   template <typename Compare>
   std::vector<AsyncChunkLoadResult>
   DrainLoadsBestUpTo(std::size_t max_count, Compare &&compare)
   {
     return CompletedLoads.DrainBestUpTo(max_count, compare);
+  }
+  template <typename KeyFn>
+  std::vector<AsyncChunkLoadResult>
+  DrainLoadsBestByKeyUpTo(std::size_t max_count, KeyFn &&key_fn)
+  {
+    return CompletedLoads.DrainBestByKeyUpTo(max_count, key_fn);
   }
   std::vector<AsyncChunkSaveRequest> DrainSaves();
   void WaitIdle();

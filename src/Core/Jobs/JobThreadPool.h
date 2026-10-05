@@ -11,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -133,6 +134,20 @@ public:
     PushUnlocked(std::move(value), nullptr);
   }
 
+  /// Requeue a batch while acquiring the queue lock only once.
+  void PushRange(std::vector<T> &&values)
+  {
+    if (values.empty())
+    {
+      return;
+    }
+    std::lock_guard<std::mutex> lock(Mutex);
+    for (T &value : values)
+    {
+      PushUnlocked(std::move(value), nullptr);
+    }
+  }
+
   /// Push with drop-oldest when Cap > 0 and full. Returns true if an item was
   /// discarded (moved into dropped_out when non-null).
   bool PushDropOldest(T &&item, T *dropped_out = nullptr)
@@ -217,6 +232,94 @@ public:
         using std::swap;
         swap(item_at(selected), item_at(best));
       }
+    }
+
+    drained.reserve(take);
+    for (std::size_t i = 0; i < take; ++i)
+    {
+      drained.push_back(std::move(item_at(i)));
+    }
+    Head = (Head + take) % Items.size();
+    Count -= take;
+    if (Cap == 0 && Count == 0)
+    {
+      Items.clear();
+      Head = 0;
+    }
+    return drained;
+  }
+
+  /// Drain a bounded best-first batch after computing one rank key per item.
+  /// This avoids recalculating distance/age state for every selection pass.
+  template <typename KeyFn>
+  std::vector<T> DrainBestByKeyUpTo(std::size_t maxCount, KeyFn &&key_fn)
+  {
+    using Key = std::decay_t<decltype(key_fn(std::declval<const T &>()))>;
+    struct RankedOffset
+    {
+      Key key;
+      std::size_t offset{0};
+    };
+
+    std::lock_guard<std::mutex> lock(Mutex);
+    std::vector<T> drained;
+    if (maxCount == 0 || Count == 0 || Items.empty())
+    {
+      return drained;
+    }
+
+    const std::size_t take = std::min(maxCount, Count);
+    const auto item_at = [this](std::size_t offset) -> T &
+    { return Items[(Head + offset) % Items.size()]; };
+    std::vector<RankedOffset> ranked;
+    ranked.reserve(Count);
+    for (std::size_t offset = 0; offset < Count; ++offset)
+    {
+      ranked.push_back(RankedOffset{key_fn(item_at(offset)), offset});
+    }
+    const auto ranked_before = [](const RankedOffset &a,
+                                  const RankedOffset &b)
+    {
+      if (a.key < b.key)
+      {
+        return true;
+      }
+      if (b.key < a.key)
+      {
+        return false;
+      }
+      // Preserve queue order when the caller's rank keys tie.
+      return a.offset < b.offset;
+    };
+    std::partial_sort(ranked.begin(), ranked.begin() + take, ranked.end(),
+                      ranked_before);
+
+    // Move the selected original offsets into a best-first prefix with at most
+    // `take` item swaps; the unselected entries stay queued and are not moved.
+    std::vector<std::size_t> original_at_position(Count);
+    std::vector<std::size_t> position_of_original(Count);
+    for (std::size_t i = 0; i < Count; ++i)
+    {
+      original_at_position[i] = i;
+      position_of_original[i] = i;
+    }
+    for (std::size_t selected = 0; selected < take; ++selected)
+    {
+      const std::size_t desired_original = ranked[selected].offset;
+      const std::size_t desired_position =
+          position_of_original[desired_original];
+      if (desired_position == selected)
+      {
+        continue;
+      }
+      using std::swap;
+      swap(item_at(selected), item_at(desired_position));
+      const std::size_t displaced_original =
+          original_at_position[selected];
+      original_at_position[selected] = desired_original;
+      original_at_position[desired_position] = displaced_original;
+      position_of_original[desired_original] = selected;
+      position_of_original[displaced_original] = desired_position;
     }
 
     drained.reserve(take);
