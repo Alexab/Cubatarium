@@ -2370,6 +2370,38 @@ Artifacts (ignored `bin/` outputs): [M410 acceptance report](../../bin/suite_rep
 and raw perf `bin/logs/perf_20261005-235830_42324.jsonl`. Captures are in
 `bin/logs/m410_world164_m335_async_disk_index/`.
 
+### M411 low-trace replay — diagnostics affect frame cost; readiness unchanged (2026-10-06)
+
+M411 repeated the same visible/no-teleport M335 route with pixel/source trace
+flags disabled, retaining ordinary flight metrics and 15-second GUI captures.
+The process completed 864 chunks (13,824 blocks), returned `process_rc=0`,
+was not killed, and saved 189 captures. `world_data.json` was restored to the
+same SHA256 as before the run. The GUI screenshots show nearby forest at the
+start and a blue, foggy ocean/distant silhouette at the mid-route and end;
+these selected frames contain no full-screen black render. This does not
+exclude a transient hole or explain every dim-region report.
+
+Median flight wall time was 52.94 ms, streaming phase 44.33 ms, and mesh
+emerge 17.99 ms. Relative to traced M410, these were lower by 3.96, 3.74 and
+2.23 ms respectively. The raw perf log was 50.25 MB versus M410's 424.48 MB,
+and the recorded spike count was 336 versus 924. The lower median and 8.4x
+smaller log are consistent with measurable dense-trace overhead, but do not
+isolate it from the changed persisted chunk mix and system file cache.
+
+The M335 acceptance still failed 12/39 gates. Median unfinished/not-ready
+debt stayed at 27, dirty median at 158, and stop convergence failed: stop-end
+not-ready was 27, focus-dirty 143, pending median 13, with pending delta +6.
+Lower trace overhead therefore did not resolve the streaming/readiness
+problem. Keep the lightweight replay for baseline performance, and run dense
+pixel/source traces only when a specific renderer attribution question
+requires them. Do not equate the readiness gate with a blank-pixel oracle.
+
+Artifacts (ignored `bin/` outputs): [M411 report](../../bin/suite_reports/engine_refactor/m411_world164_m335_low_trace_20261006.json),
+raw perf `bin/logs/perf_20261006-010419_12320.jsonl`, and 189 captures in
+`bin/logs/m411_world164_m335_low_trace/` (representative: [start](../../bin/logs/m411_world164_m335_low_trace/frame_000.png),
+[mid-route](../../bin/logs/m411_world164_m335_low_trace/frame_094.png),
+[end](../../bin/logs/m411_world164_m335_low_trace/frame_188.png)).
+
 Artifacts (ignored `bin/` outputs): [M409 acceptance report](../../bin/suite_reports/engine_refactor/m409_world164_m335_compact_screen_rays_20261005.json),
 [pixel trace <32](../../bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_20261005.json),
 [pixel trace <96](../../bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_l96_20261005.json),

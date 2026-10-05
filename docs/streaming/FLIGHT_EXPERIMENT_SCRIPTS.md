@@ -592,3 +592,25 @@ source-face joins mapped to `tree_leaves`. Do not infer missing terrain or
 bad light from low luma alone. The per-run report and captures are in
 `bin/suite_reports/engine_refactor/m410_world164_m335_async_disk_index_20261005.json`
 and `bin/logs/m410_world164_m335_async_disk_index/` respectively.
+
+### M411: low-trace M335 performance control
+
+Run the same visible, no-teleport M335 settings with only ordinary flight
+metrics and image captures. Do not set `CUBA_VISUAL_BLACK_TRACE` or
+`CUBA_WORLD_COLUMN_SOURCE_TRACE` for this control. Keep the machine awake so
+sleep/lock time cannot be mistaken for an engine stall:
+
+```powershell
+Start-Process -FilePath powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/flight_sim_keep_awake.ps1')
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m411_world164_m335_low_trace'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m411_world164_m335_low_trace --report bin/suite_reports/engine_refactor/m411_world164_m335_low_trace_20261006.json --process-timeout 3000
+```
+
+M411 exited normally (`process_rc=0`, `hang_killed=false`), reached 864
+chunks/13,824 blocks, and saved 189 images. The wrapper restored the original
+world metadata SHA256. The perf JSONL is 50.25 MB; median wall / streaming /
+mesh-emerge times were 52.94/44.33/17.99 ms. This is about 4 ms faster at the
+median than traced M410, but it is not a clean A/B because the disk chunk mix
+and file cache changed. The full report still fails 12/39 gates with median
+27 unfinished/not-ready items and failed stop convergence. Representative
+captures: `frame_000.png`, `frame_094.png`, `frame_188.png`.

@@ -4714,3 +4714,16 @@ M407's long pause was confirmed as system sleep/lock, not an engine hang.
 Keep dense probe volume separate from performance conclusions, retain
 periodic cold-world generation runs, and do not change lighting or queue
 budgets without a same-surface witness and a measured lifecycle bottleneck.
+
+M411 repeated M335 without dense pixel or per-column source tracing. It
+completed 864 chunks/13,824 blocks, captured 189 frames, and restored the
+world metadata byte-for-byte. The GUI samples show forest near the start and
+blue haze/ocean at mid-route and the endpoint, with no full-frame black scene
+in those samples. Median flight wall / streaming phase / mesh emerge fell
+from M410's 56.90/48.07/20.22 ms to 52.94/44.33/17.99 ms; perf output fell
+from 424.48 MB to 50.25 MB. This suggests the heavy diagnostic mode adds
+measurable cost, although persisted chunks and file-cache state prevent a
+strict A/B conclusion. The ordinary run still failed 12/39 gates and kept
+median readiness debt at 27; stop ended at not-ready 27 and dirty 143. The
+core streaming/readiness issue is therefore still open independently of the
+trace overhead.
