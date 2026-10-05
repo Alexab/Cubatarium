@@ -296,6 +296,35 @@ Reports: [flight gates and perf](../../bin/suite_reports/engine_refactor/m403_m3
 [source X bins versus M400–M402](../../bin/suite_reports/engine_refactor/m400_m401_m402_m403_world_column_sources_x_20261005.json).
 The corresponding raw perf and INFO logs remain in `bin/logs`.
 
+### M404: bounded-unload retry with pixel/source capture
+
+M404 kept the M335 world, camera, day, and no-teleport route unchanged. It ran
+the full 2,800-second flight and 20-second stop on Release commit `e9519c36`,
+with runtime unload mode 4. The analyzer failed at 163.0 ms median wall time
+(6.13 FPS), 4,240 resident chunk slices, and persistent unfinished-visual debt.
+Across rotated INFO logs it queued 17,365 saves for 1,189 unique columns and
+recorded 70,343 slice writes. A few perf records had nonzero unload counters,
+with 25 removals across seven period summaries; spike/blink rows overlap these
+summaries. The resident set still grew. See the
+[M404 findings and follow-up](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m404--bounded-unload-failed-repeated-save-before-veto-2026-10-05).
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m404_world164_m335_bounded_unload'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m404_world164_m335_bounded_unload --report bin/suite_reports/engine_refactor/m404_world164_m335_bounded_unload_20261005.json --process-timeout 3000
+```
+
+The wrapper restored `world_data.json` byte-for-byte, but the flight legitimately
+persisted distant terrain columns. M405 should use this same route and capture
+profile after the eviction-order follow-up is built, and should be compared
+with M403's source trace as a persisted-world run rather than a cold-generation
+repeat. The M404 perf file is `perf_20261005-143028_11792.jsonl`; the INFO log
+rotated to `Cubatarium.exe*.INFO.*.11792`; image captures are in the directory
+above.
+
 ### Compare source mix and queue delay by route position
 
 Use this after M335 runs to distinguish stored column results from procedural

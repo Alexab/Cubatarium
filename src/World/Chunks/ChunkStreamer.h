@@ -56,6 +56,8 @@ struct StreamingFrameStats
     loadsThisFrame = 0;
     unloadsThisFrame = 0;
     savesThisFrame = 0;
+    unloadCandidatesThisFrame = 0;
+    unloadVetoesThisFrame = 0;
     asyncQueuedThisFrame = 0;
     diskCompleteThisFrame = 0;
     genCommitThisFrame = 0;
@@ -69,6 +71,8 @@ struct StreamingFrameStats
   int loadsThisFrame{0};
   int unloadsThisFrame{0};
   int savesThisFrame{0};
+  int unloadCandidatesThisFrame{0};
+  int unloadVetoesThisFrame{0};
   /// Async column requests issued this frame (EnsureChunkLoaded queued work).
   int asyncQueuedThisFrame{0};
   /// Era25: sync Ensure completed via OnLoadChunk (disk-hit honesty).
@@ -200,7 +204,9 @@ public:
   void UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
                   const PlayerCapsule &cap);
   /// Drain deferred save+unload queue (mode U-D) within the caller's frame budget.
-  void DrainDeferredUnloadSaves(int max_ops);
+  void DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
+                                const glm::vec3 &eyePos,
+                                const PlayerCapsule &cap, int max_ops);
   void PrefetchAhead(glm::ivec3 feet_chunk, glm::vec3 view_forward_xz,
                      float movement_speed, float speed_threshold,
                      int *out_ops = nullptr);

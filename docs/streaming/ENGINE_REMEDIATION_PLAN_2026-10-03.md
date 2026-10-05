@@ -1840,17 +1840,54 @@ generation was 103 ms median. The waits sit in result/scheduler service, not
 the storage-device read itself. These queues and the permanently large dirty
 and unfinished-visual debts remain separate work after residency is bounded.
 
-The first remediation is now in the worktree: default to U-D, preserve a
-one-column unload budget during movement, run the cursor pass before the heavy
-stream/mesh discovery work consumes the shared deadline, and drain one queued
-save/unload unit at the start of a moving frame. Existing keep-ring and
-`ShouldKeepChunkLoaded` checks remain in force. Per-frame perf rows now expose
-`stream_unloads` and `stream_saves`. Release target `Cubatarium` builds
-successfully; M404 must verify that resident count plateaus and save events
-reach disk on the exact M335 camera/day/world profile. Pixel captures should be
-enabled for M404 using the already-established capture settings.
+## M404 — bounded unload failed: repeated save before veto (2026-10-05)
+
+The first bounded-unload change (`e9519c36`) did not pass M404. M404 used the
+exact visible, fixed-day M335 profile for 2,800 seconds plus its 20-second stop
+phase. The analyzer failed: 1,353 periods (1,351 steady), 163.0 ms median wall
+frame (6.13 FPS), 146.1 ms median world-streaming phase, and 136.9 ms in the
+stream metric. Streaming accounted for about 84% of wall time. Resident chunk
+slices reached 4,240; `unfinished_visual` stayed nonzero in every steady
+period (median 17), and the peak near-void proxy was 723. These counters show
+persistent readiness debt, not that voxel data was absent. The report recorded
+up to 18 visible dark/stale focus columns; sampled captures showed terrain as
+well as visually disconnected/low-detail regions, but the report's operator
+visual gate remains untested.
+
+The save/unload ordering explains the severe hitch. The run queued 17,365
+column saves across 1,189 unique columns; 16,176 queue events repeated a prior
+column, one column was queued up to 103 times, and 70,343 slice writes
+completed with no recorded write failures. Only a small number of perf records
+showed nonzero `stream_unloads` (period/spike/blink records overlap), while
+resident count kept growing. In `e9519c36`, saving ran before the active
+`ColumnRecord` eviction check, and a veto did not consume the unload attempt
+budget. The cursor could therefore serialize more candidates after an
+eviction refusal. Seven period summaries account for 25 removed slices;
+spike/blink records overlap those summaries and are not added as separate
+unloads. This is the direct source of the repeated work; it does not by itself
+explain every visual debt.
+
+The follow-up in the worktree now checks eviction before saving, counts a veto
+against the bounded attempt budget, and revalidates deferred candidates against
+the current keep ring and camera capsule. Async-load cancellation and token
+invalidation happen only after eviction is allowed, so a vetoed active visual
+job can finish. Per-frame JSONL now records `stream_unload_candidates` and
+`stream_unload_vetoes`. Next: build only the Release `Cubatarium` target, commit
+the fix and M404 finding, then run M405 with the same M335 route and capture
+settings. M404 persisted many columns, so M405 uses the same route and
+settings but a world whose farther columns are now present on disk; compare
+source traces explicitly rather than treating the two runs as a cold-state
+pair.
 
 Artifacts: [M403 perf analysis](../../bin/suite_reports/engine_refactor/m403_m335_source_unload_baseline_20261005.json),
 [column source trace](../../bin/suite_reports/engine_refactor/m403_world_column_source_trace_20261005.json),
 [M400–M403 X-bin comparison](../../bin/suite_reports/engine_refactor/m400_m401_m402_m403_world_column_sources_x_20261005.json),
 and local raw logs `perf_20261005-131808_9428.jsonl` / `Cubatarium.exe*.INFO.*.9428`.
+
+M404 artifacts: [analyzer report](../../bin/suite_reports/engine_refactor/m404_world164_m335_bounded_unload_20261005.json),
+perf JSONL `perf_20261005-143028_11792.jsonl`, rotated INFO logs
+`Cubatarium.exe*.INFO.*.11792`, and sampled frames in
+`bin/logs/m404_world164_m335_bounded_unload`. The fixed-day wrapper restored
+`world_data.json` byte-for-byte (`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).
+Windows briefly marked the process unresponsive during the final
+`renderer_pixel_probe`; the process then exited and the analyzer completed.

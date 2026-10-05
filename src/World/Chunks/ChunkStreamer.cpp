@@ -723,6 +723,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     {
       return true;
     }
+    ++LastFrameStats.unloadCandidatesThisFrame;
 
     if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
     {
@@ -734,18 +735,22 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
       return false;
     }
 
-    if (OnSaveChunk && savedColumns.insert(ground).second)
-    {
-      OnSaveChunk(ground);
-      ++LastFrameStats.savesThisFrame;
-    }
-
     if (OnUnloadColumn)
     {
       if (!OnUnloadColumn(ground, maxCy))
       {
+        ++LastFrameStats.unloadVetoesThisFrame;
+        // Count a veto as the frame's bounded unload attempt. Otherwise the
+        // scan keeps saving every active column without evicting any of them.
+        ++unloadOps;
         return true;
       }
+    }
+
+    if (OnSaveChunk && savedColumns.insert(ground).second)
+    {
+      OnSaveChunk(ground);
+      ++LastFrameStats.savesThisFrame;
     }
 
     for (int cy = 0; cy <= maxCy; ++cy)
@@ -807,7 +812,10 @@ void UChunkStreamer::UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyeP
   }
 }
 
-void UChunkStreamer::DrainDeferredUnloadSaves(int max_ops)
+void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
+                                               const glm::vec3 &eyePos,
+                                               const PlayerCapsule &cap,
+                                               int max_ops)
 {
   if (max_ops <= 0 || DeferredUnloadSaves.empty())
   {
@@ -818,6 +826,16 @@ void UChunkStreamer::DrainDeferredUnloadSaves(int max_ops)
     return;
   }
   const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
+  const int limit = KeepRenderDistance + UnloadMargin;
+  const int player_cy_min = UChunkManager::WorldToChunk(
+                                glm::ivec3(0, static_cast<int>(cap.feetY(eyePos)), 0))
+                                .y;
+  const int player_cy_max =
+      UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(eyePos.y), 0))
+          .y;
+  const int keep_cy_min = std::max(0, player_cy_min - 1);
+  const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
   int ops = 0;
   while (ops < max_ops && !DeferredUnloadSaves.empty())
   {
@@ -828,18 +846,44 @@ void UChunkStreamer::DrainDeferredUnloadSaves(int max_ops)
     const glm::ivec3 ground = DeferredUnloadSaves.front();
     DeferredUnloadSaves.pop_front();
     DeferredUnloadSaveSet.erase(ground);
-    if (OnSaveChunk)
+    ++LastFrameStats.unloadCandidatesThisFrame;
+
+    if (std::max(std::abs(ground.x - feetChunk.x),
+                 std::abs(ground.z - feetChunk.z)) <= limit)
     {
-      OnSaveChunk(ground);
-      ++LastFrameStats.savesThisFrame;
+      ++ops;
+      continue;
     }
+    bool keepColumn = false;
+    for (int cy = keep_cy_min; cy <= keep_cy_max; ++cy)
+    {
+      const glm::ivec3 slice(ground.x, cy, ground.z);
+      if (World.GetChunkManager().HasChunk(slice) &&
+          ShouldKeepChunkLoaded(slice, feetBlockPos, eyePos, cap))
+      {
+        keepColumn = true;
+        break;
+      }
+    }
+    if (keepColumn)
+    {
+      ++ops;
+      continue;
+    }
+
     if (OnUnloadColumn)
     {
       if (!OnUnloadColumn(ground, maxCy))
       {
+        ++LastFrameStats.unloadVetoesThisFrame;
         ++ops;
         continue;
       }
+    }
+    if (OnSaveChunk)
+    {
+      OnSaveChunk(ground);
+      ++LastFrameStats.savesThisFrame;
     }
     for (int cy = 0; cy <= maxCy; ++cy)
     {

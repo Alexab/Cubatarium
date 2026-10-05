@@ -4747,12 +4747,6 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       {
         UWorldPersistence &persistence = *world.Persistence;
         const glm::ivec3 ground(coord.x, 0, coord.z);
-        persistence.CancelAsyncTerrainColumnLoad(ground);
-        ChunkGenTokens.Bump(ground);
-        if (ChunkScheduler)
-        {
-          ChunkScheduler->Invalidate(ground);
-        }
         const auto t0 = std::chrono::high_resolution_clock::now();
         const ProceduralSettings &settings = world.GetProceduralSettings();
         if (settings.AsyncChunkIo)
@@ -4764,11 +4758,6 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           persistence.SaveTerrainColumn(ground, world.BlockWorld,
                                         *world.BlockRegistry,
                                         settings.MaxHeight);
-          ChunkGenTokens.Bump(ground);
-          if (ChunkScheduler)
-          {
-            ChunkScheduler->Invalidate(ground);
-          }
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
@@ -4844,6 +4833,15 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         if (!UColumnRecordCoordinator::DecideEvict(true, record_want, col))
         {
           return false;
+        }
+        // Keep source work alive while an active visual job vetoes eviction.
+        // Once eviction is allowed, cancel stale work before removing the
+        // column and queueing its persistence save.
+        world.Persistence->CancelAsyncTerrainColumnLoad(ground);
+        ChunkGenTokens.Bump(ground);
+        if (ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(ground);
         }
         world.ClearPendingLightBeforeMesh(col);
         world.ClearColumnEmergeState(col); // erases ColumnRecord
@@ -5098,7 +5096,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       const auto unload_t0 = std::chrono::high_resolution_clock::now();
       if (Streamer->HasDeferredUnloadSaves())
       {
-        Streamer->DrainDeferredUnloadSaves(1);
+        Streamer->DrainDeferredUnloadSaves(WorldPosToBlock(eye), eye, cap, 1);
       }
       else
       {
@@ -5837,6 +5835,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           frame_ms <= 12.0 && !UFrameDeadline::Get().Exhausted())
       {
         Streamer->DrainDeferredUnloadSaves(
+            WorldPosToBlock(eye), eye, cap,
             std::max(1, world.MaxUnloadOpsPerFrame));
       }
       world.PhysicsTelemetryData.StreamerUnloadMs +=
@@ -6028,6 +6027,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       world.PhysicsTelemetryData.StreamAsyncQueued = st->asyncQueuedThisFrame;
       world.PhysicsTelemetryData.StreamUnloads = st->unloadsThisFrame;
       world.PhysicsTelemetryData.StreamSaves = st->savesThisFrame;
+      world.PhysicsTelemetryData.StreamUnloadCandidates =
+          st->unloadCandidatesThisFrame;
+      world.PhysicsTelemetryData.StreamUnloadVetoes =
+          st->unloadVetoesThisFrame;
       // R4.6.2: sync+async ingress honesty (loads=0 alone ≠ idle).
       world.PhysicsTelemetryData.StreamIngressOps =
           st->loadsThisFrame + st->asyncQueuedThisFrame;

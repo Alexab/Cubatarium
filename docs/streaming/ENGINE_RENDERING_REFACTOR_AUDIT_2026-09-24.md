@@ -4426,4 +4426,29 @@ file read was 3.56 ms, compared with 2.20 s median disk-result wait and 69 ms
 median procedural scheduler wait (25.83 s p95). Resident growth, queue delay,
 and mesh/light publication are distinct measurements. The 2026-10-05
 [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m403--exact-m335-sourceunload-baseline-2026-10-05)
-records the source trace and the bounded U-D implementation awaiting M404.
+records the source trace and M404's failed bounded U-D attempt.
+
+M404 ran the same visible fixed-day M335 route for the full 2,800-second
+flight plus the 20-second stop. It ended at 4,240 resident chunk slices with a
+163.0 ms median frame (6.13 FPS); median world-streaming time was 146.1 ms,
+about 84% of wall time. The analyzer failed, with `unfinished_visual` present
+in every steady period (median 17), a peak near-void proxy of 723, and up to
+18 visible dark/stale focus columns. These are readiness/draw-state signals;
+they do not prove the underlying voxel column is empty. Sampled screenshots
+showed terrain and visually disconnected/low-detail regions, so pixel review
+remains an explicit acceptance step.
+
+The first U-D fix saved before the column-record eviction veto and allowed the
+cursor to continue scanning after a veto. M404 queued 17,365 saves across
+1,189 unique columns (16,176 repeated queue events; one column queued 103
+times), wrote 70,343 chunk slices without recorded write errors, and still
+showed only rare nonzero unload counters while resident count grew; seven
+period summaries account for 25 removed slices, and spike/blink records
+overlap them. The follow-up moves saving after a successful eviction decision,
+charges vetoes to the per-frame budget, rechecks deferred candidates against
+the current keep ring, and postpones cancellation/token invalidation until
+eviction is allowed.
+M405 must verify actual unload progress and disk-source behavior. M404 also
+persisted many distant columns, so the next run has the same route and settings
+but a warmer on-disk world state. Full M404 artifacts and interpretation are in
+the [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m404--bounded-unload-failed-repeated-save-before-veto-2026-10-05).
