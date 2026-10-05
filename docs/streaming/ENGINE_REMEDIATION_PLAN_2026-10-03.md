@@ -2162,3 +2162,55 @@ Artifacts (ignored `bin/` outputs): [M408 acceptance report](../../bin/suite_rep
 [source trace](../../bin/suite_reports/engine_refactor/m408_source_trace_20261005.json),
 and perf stream `bin/logs/perf_20261005-210152_32396.jsonl`. M408 used INFO
 logs rolled under PID 32396. The matching M407b reports are above.
+
+### M408 deep trace review — readiness is not draw evidence (2026-10-05)
+
+The raw perf stream contains 8,192 screen-ray rows: 5,258 hit resident opaque
+voxels, 2,534 reached an unloaded slice, and 400 found no opaque hit in range.
+The selector marked 1,171 resident-hit rows as repair candidates and selected
+816. Candidate creation requires an opaque hit (`hit.state == 1`); unloaded
+ray results are skipped. This trace measures repairs for known solid geometry.
+It cannot tell whether an unloaded region should contain terrain.
+
+The reported `draw_oracle_missing_resident_n` is not an independent rendering
+oracle. `AccumulateDrawOracleFromVbCensus()` assigns it directly from
+`unfinished_visual`, and `WorldStreaming.cpp` copies that value into
+`PhysicsTelemetryData.DrawOracleMissingResidentN`. Comparisons of those two
+fields repeat the same loaded-column/readiness census. Keep framebuffer,
+screen-depth, mesh-ownership, and readiness evidence separate until a real
+object-ID or expected-surface oracle is connected.
+
+The bounded frustum trace captured 256 examples, including 122 `no drawable`
+candidates and 126 ready refs sampled for their post-cull MDI state. These are
+candidate examples, not counts of missing screen pixels: chunk AABBs can
+intersect the frustum while their contents are occluded, and accepted-empty
+interior slices need no draw command. The 9 camera-band unowned peak samples
+are more actionable: at frame epoch 52,523 they were resident solid slices at
+`x=-821..-819`, `y=3..4`, with 1–32 non-air blocks, mesh revision 0, no dirty
+queue entry, no demand geometry revision, and no ColumnFlow ticket. They were
+lit-ready, but the one-frame peak trace does not establish that these
+coordinates caused a visible pixel defect.
+
+Reviewing captures also changes how empty-looking frames should be read.
+Frames 88 and 148 show mostly sky/ocean and a hazy horizon; frame 188 shows a
+nearby forest canopy, sand, and water. M335's established RD4 fog reaches full
+blend at roughly 36 blocks, so the distant blue field is consistent with the
+configured fog and is not by itself evidence of unloaded terrain. Dark foliage
+and sparse low-luminance probes need material/source-light correlation before
+they can be classified as a dark chunk.
+
+The reusable `tools/analyze_visual_coverage_trace.py` summarizes focus,
+screen-ray, frustum, and camera-band peak rows without loading the 500+ MiB
+JSONL file into memory. M409 keeps the exact visible/no-teleport M335 route and
+uses a compact serializer for sample-kind-10 screen rays. Functional
+remediation remains gated on an exact visible surface/depth mismatch; do not
+raise queue or lighting budgets based only on `unfinished_visual`.
+
+Reproduce the M408 deep-trace summary after shutdown with:
+
+```powershell
+py tools/analyze_visual_coverage_trace.py bin/logs/perf_20261005-210152_32396.jsonl --json-out bin/suite_reports/engine_refactor/m408_visual_coverage_trace_20261005.json
+```
+
+The helper's source and trace artifacts remain in ignored `bin/` paths; only
+the reusable analyzer and interpretation are tracked.

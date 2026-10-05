@@ -3786,6 +3786,53 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"flags\":" << r.flags << "}\n";
           return;
         }
+        if (r.sample_kind == 10)
+        {
+          // Screen-ray selection samples need only the ray, hit, and repair
+          // decision. The generic VisualBlackTraceRecord serializer repeats
+          // hundreds of unrelated renderer/light fields for each ray and
+          // made a single flight trace hundreds of MiB.
+          (*out) << "{\"kind\":\"screen_ray_candidate_trace\""
+                 << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
+                 << ",\"cz\":" << r.cz
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"screen_ray_x\":" << r.screen_ray_x
+                 << ",\"screen_ray_y\":" << r.screen_ray_y
+                 << ",\"screen_ray_distance\":"
+                 << r.screen_ray_distance
+                 << ",\"screen_ray_block_x\":" << r.screen_ray_block_x
+                 << ",\"screen_ray_block_y\":" << r.screen_ray_block_y
+                 << ",\"screen_ray_block_z\":" << r.screen_ray_block_z
+                 << ",\"screen_ray_column\":"
+                 << static_cast<int>(r.screen_ray_column)
+                 << ",\"screen_ray_row\":"
+                 << static_cast<int>(r.screen_ray_row)
+                 << ",\"screen_ray_state\":"
+                 << static_cast<int>(r.screen_ray_state)
+                 << ",\"screen_ray_known_air_steps\":"
+                 << r.screen_ray_known_air_steps
+                 << ",\"screen_ray_in_focus_radius\":"
+                 << static_cast<int>(r.screen_ray_in_focus_radius)
+                 << ",\"screen_ray_in_height_band\":"
+                 << static_cast<int>(r.screen_ray_in_height_band)
+                 << ",\"screen_ray_mesh_satisfying\":"
+                 << static_cast<int>(r.screen_ray_mesh_satisfying)
+                 << ",\"screen_ray_geometry_debt\":"
+                 << static_cast<int>(r.screen_ray_geometry_debt)
+                 << ",\"screen_ray_repairable_geometry_debt\":"
+                 << static_cast<int>(r.screen_ray_repairable_geometry_debt)
+                 << ",\"screen_ray_light_debt\":"
+                 << static_cast<int>(r.screen_ray_light_debt)
+                 << ",\"screen_ray_needs_refresh\":"
+                 << static_cast<int>(r.screen_ray_needs_refresh)
+                 << ",\"screen_ray_candidate\":"
+                 << static_cast<int>(r.screen_ray_candidate)
+                 << ",\"screen_ray_selected\":"
+                 << static_cast<int>(r.screen_ray_selected) << "}\n";
+          return;
+        }
         if (r.sample_kind == 9)
         {
           // Pixel probes are captured as a dense 8x20 grid across the route.

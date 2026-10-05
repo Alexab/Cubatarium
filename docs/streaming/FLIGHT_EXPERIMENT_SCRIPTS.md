@@ -484,3 +484,40 @@ M408 improved median flight wall time to 56.11 ms and streaming phase to
 47.33 ms, but retained a 27-item median missing-resident/readiness debt and
 failed zero-debt stop convergence (25 remained). Pixel probes had valid MDI
 surfaces even for all `<32` luminance samples. See the [plan's M408 analysis](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m408-results--faster-streaming-phase-visual-debt-remains-2026-10-05).
+
+### M408 deep-trace extraction and M409 compact screen-ray trace
+
+Re-summarize the M408 visual traces with the saved streaming analyzer:
+
+```powershell
+py tools/analyze_visual_coverage_trace.py bin/logs/perf_20261005-210152_32396.jsonl --json-out bin/suite_reports/engine_refactor/m408_visual_coverage_trace_20261005.json
+```
+
+M408 screen-ray rows show that the selector repaired known resident hits; it
+does not classify unloaded rays as expected terrain. The
+`draw_oracle_missing_resident_n` field is copied from `unfinished_visual`, so
+it is not a second draw oracle. Camera-band peak rows are exact loaded
+coordinates, but M408 did not record a same-frame pixel join for its nine
+ownerless samples. See the [deep-trace analysis](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m408-deep-trace-review--readiness-is-not-draw-evidence-2026-10-05).
+
+M409 changes trace serialization only; flight conditions stay on M335. The
+screen-ray record is reduced to its sampled pixel, hit coordinate, state,
+ownership/debt flags, and selection outcome. Run the existing analyzer after
+shutdown to confirm the records remain parseable and the output size is
+bounded. Keep the GUI visible and capture frames:
+
+```powershell
+Start-Process -FilePath powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/flight_sim_keep_awake.ps1')
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m409_world164_m335_compact_screen_rays'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m409_world164_m335_compact_screen_rays --report bin/suite_reports/engine_refactor/m409_world164_m335_compact_screen_rays_20261005.json --process-timeout 3000
+```
+
+After shutdown, run `tools/analyze_visual_coverage_trace.py` on the new perf
+JSONL and compare file size, screen-ray counts, route distance/speed, saved
+images, and renderer traces with M408. Do not interpret a smaller perf file as
+a rendering fix; this iteration validates the evidence pipeline before
+choosing the owning render or streaming stage.

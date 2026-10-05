@@ -4605,3 +4605,40 @@ Artifacts: [M408 report](../../bin/suite_reports/engine_refactor/m408_world164_m
 [source trace](../../bin/suite_reports/engine_refactor/m408_source_trace_20261005.json),
 and raw perf `bin/logs/perf_20261005-210152_32396.jsonl`. The full M408 capture
 set is in the ignored directory `bin/logs/m408_world164_m335_batch_ranked_disk_results/`.
+
+### M408 deep trace review: separate readiness, visible geometry, and fog
+
+The M408 screen-ray ring contains 5,258 resident opaque hits, 2,534 rays that
+reached an unloaded slice, and 400 rays with no opaque hit in range. Of 1,171
+resident-hit repair candidates, 816 were selected. `WorldStreaming.cpp` only
+creates candidates from `hit.state == 1`; unloaded-ray cases are not
+classified as missing terrain. The selector is evidence about repair of known
+voxel surfaces, not an oracle for what an unloaded region should contain.
+
+`draw_oracle_missing_resident_n` is currently an alias for `unfinished_visual`:
+`AccumulateDrawOracleFromVbCensus()` copies the latter into the former. It must
+not be counted as separate renderer corroboration. M408's independent evidence
+is the sparse framebuffer/depth probe, frustum/MDI sample, coordinate-level
+camera-band census, and captured PNGs; each describes a different sample and
+must remain labeled as such.
+
+The 9 camera-band unowned peak slices at epoch 52,523 had no mesh revision,
+dirty-queue entry, demand geometry revision, or ColumnFlow ticket. They contain
+only 1–32 non-air voxels each and are lit-ready. This is an actionable
+ownerless-first-mesh observation, but no same-frame pixel witness ties those
+coordinates to an exposed surface. The 122 sampled frustum entries with `no
+drawable` are not 122 holes: frustum candidates can be occluded or valid
+accepted-empty chunks.
+
+PNG review of frames 88, 148, and 188 shows different valid views: mostly
+sky/ocean and haze in the first two, nearby forest/sand/water in the third.
+The M335 RD4 fog reaches full blend around 36 blocks. This accounts for the
+blue/hazy distant field in those captures, but does not prove every long-range
+rendering symptom is fog or that streaming is fixed. Dark leaves and dim pixel
+samples require block-material and source-light correlation before being
+called under-lit chunks.
+
+M409 adds compact output for screen-ray records and the reusable
+`tools/analyze_visual_coverage_trace.py`. Keep readiness, visible surface,
+frustum/MDI, and camera-band ownership evidence separate. No queue or lighting
+policy change is justified by the M408 readiness proxy alone.
