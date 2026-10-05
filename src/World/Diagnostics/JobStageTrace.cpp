@@ -217,6 +217,14 @@ GetCameraBandUnownedPeakTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kFirstMeshFrontierTraceRingCapacity> &
+GetFirstMeshFrontierTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFirstMeshFrontierTraceRingCapacity> r;
+  return r;
+}
+
 template <size_t Capacity>
 void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
                      const VisualBlackTraceRecord &record)
@@ -465,6 +473,10 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetCameraBandUnownedPeakTraceRing(), record);
   }
+  else if (record.sample_kind == 14)
+  {
+    PushVisualTrace(GetFirstMeshFrontierTraceRing(), record);
+  }
   else if (record.sample_kind == 4 || record.sample_kind == 6)
   {
     PushVisualTrace(GetMeshScheduleTraceRing(), record);
@@ -514,6 +526,7 @@ void UJobStageTrace::ForEachVisualBlackNewest(
                            ctx);
   ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(), max_n, fn,
                            ctx);
+  ForEachVisualTraceNewest(GetFirstMeshFrontierTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);

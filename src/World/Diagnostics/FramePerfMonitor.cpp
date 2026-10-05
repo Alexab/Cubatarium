@@ -3619,8 +3619,94 @@ void UFramePerfMonitor::Shutdown()
         case 13:
           trace_kind = "camera_band_unowned_peak_slice_trace";
           break;
+        case 14:
+          trace_kind = "first_mesh_frontier_trace";
+          break;
         default:
           break;
+        }
+        if (r.sample_kind == 14)
+        {
+          // A bounded end-of-tick witness for an aged, nearby solid FirstMesh
+          // ticket that still has no drawable. Keep this row compact because
+          // it is emitted once per scheduler tick during opt-in flights.
+          (*out) << "{\"kind\":\"first_mesh_frontier_trace\""
+                 << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
+                 << ",\"cz\":" << r.cz
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"world_epoch\":" << r.world_epoch
+                 << ",\"incarnation\":" << r.incarnation
+                 << ",\"non_air_blocks\":" << r.non_air_blocks
+                 << ",\"mesh_dirty_queue_index\":"
+                 << r.mesh_dirty_queue_index
+                 << ",\"mesh_dirty_queue_size\":"
+                 << r.mesh_dirty_queue_size
+                 << ",\"mesh_dirty_queue_age_frames\":"
+                 << r.mesh_dirty_queue_age_frames
+                 << ",\"mesh_work_owner_flags\":"
+                 << r.mesh_work_owner_flags
+                 << ",\"mesh_revision\":" << r.mesh_revision
+                 << ",\"published_geom_rev\":" << r.published_geom_rev
+                 << ",\"published_light_rev\":" << r.published_light_rev
+                 << ",\"field_light_rev\":" << r.field_light_rev
+                 << ",\"attempt_id\":" << r.attempt_id
+                 << ",\"desired_geom_rev\":" << r.desired_geom_rev
+                 << ",\"desired_light_rev\":" << r.desired_light_rev
+                 << ",\"demand_published_geom_rev\":"
+                 << r.demand_published_geom_rev
+                 << ",\"demand_published_light_rev\":"
+                 << r.demand_published_light_rev
+                 << ",\"active_stage\":"
+                 << static_cast<int>(r.active_stage)
+                 << ",\"frontier_scan_limit\":"
+                 << r.frontier_scan_limit
+                 << ",\"frontier_focus_radius_chunks\":"
+                 << r.frontier_focus_radius_chunks
+                 << ",\"frontier_horiz_distance_chunks\":"
+                 << r.frontier_horiz_distance_chunks
+                 << ",\"frontier_vertical_distance_chunks\":"
+                 << r.frontier_vertical_distance_chunks
+                 << ",\"frontier_max_schedule\":"
+                 << r.frontier_max_schedule
+                 << ",\"frontier_first_mesh_cap_base\":"
+                 << r.frontier_first_mesh_cap_base
+                 << ",\"frontier_first_mesh_cap\":"
+                 << r.frontier_first_mesh_cap
+                 << ",\"frontier_pre_first_mesh_limit\":"
+                 << r.frontier_pre_first_mesh_limit
+                 << ",\"frontier_scheduled_this_tick\":"
+                 << r.frontier_scheduled_this_tick
+                 << ",\"frontier_pipeline_inflight\":"
+                 << r.frontier_pipeline_inflight
+                 << ",\"frontier_pipeline_cap\":"
+                 << r.frontier_pipeline_cap
+                 << ",\"frontier_snapshot_ms\":"
+                 << r.frontier_snapshot_ms
+                 << ",\"frontier_snapshot_budget_ms\":"
+                 << r.frontier_snapshot_budget_ms
+                 << ",\"frontier_snapshot_credits_left\":"
+                 << r.frontier_snapshot_credits_left
+                 << ",\"frontier_first_mesh_capture_reserve_left\":"
+                 << r.frontier_first_mesh_capture_reserve_left
+                 << ",\"frontier_capture_credits_initial\":"
+                 << r.frontier_capture_credits_initial
+                 << ",\"frontier_snapshot_time_defers\":"
+                 << r.frontier_snapshot_time_defers
+                 << ",\"frontier_snapshot_refresh_defers\":"
+                 << r.frontier_snapshot_refresh_defers
+                 << ",\"frontier_snapshot_pipeline_bytes_defers\":"
+                 << r.frontier_snapshot_pipeline_bytes_defers
+                 << ",\"frontier_snapshot_missing_band_defers\":"
+                 << r.frontier_snapshot_missing_band_defers
+                 << ",\"frontier_snapshot_dependency_defers\":"
+                 << r.frontier_snapshot_dependency_defers
+                 << ",\"frontier_snapshot_publication_defers\":"
+                 << r.frontier_snapshot_publication_defers
+                 << ",\"frontier_snapshot_store_commit_defers\":"
+                 << r.frontier_snapshot_store_commit_defers << "}\n";
+          return;
         }
         if (r.sample_kind == 12 || r.sample_kind == 13)
         {

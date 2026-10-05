@@ -215,7 +215,8 @@ struct VisualBlackTraceRecord
   /// to lifecycle/source-mesh state of the exact ray-mapped chunk slice,
   /// 10=CPU screen ray tested by the streaming miss selector,
   /// 11=watched mesh schedule, 12=camera-band no-drawable peak slice,
-  /// 13=camera-band unowned peak slice.
+  /// 13=camera-band unowned peak slice, 14=surviving near-focus FirstMesh
+  /// queue frontier with scheduler/capture budgets at the end of the tick.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   /// sample_kind=1: FocusColumnVisualClass ordinal, 255 when outside cache.
@@ -589,6 +590,32 @@ struct VisualBlackTraceRecord
   /// mark; 12 is no-drawable, 13 is unowned.
   uint32_t camera_band_solid_no_drawable_n{0};
   uint32_t camera_band_solid_unowned_n{0};
+  /// sample_kind=14: bounded FirstMesh survivor frontier snapshot. Queue scan
+  /// is limited to the first 64 items and emits at most one aged solid slice
+  /// per scheduling tick while opt-in visual tracing is enabled.
+  int32_t frontier_scan_limit{0};
+  int32_t frontier_focus_radius_chunks{0};
+  int32_t frontier_horiz_distance_chunks{0};
+  int32_t frontier_vertical_distance_chunks{0};
+  int32_t frontier_max_schedule{0};
+  int32_t frontier_first_mesh_cap_base{0};
+  int32_t frontier_first_mesh_cap{0};
+  int32_t frontier_pre_first_mesh_limit{0};
+  int32_t frontier_scheduled_this_tick{0};
+  int32_t frontier_pipeline_inflight{0};
+  int32_t frontier_pipeline_cap{0};
+  int32_t frontier_snapshot_credits_left{0};
+  int32_t frontier_first_mesh_capture_reserve_left{0};
+  int32_t frontier_capture_credits_initial{0};
+  int32_t frontier_snapshot_time_defers{0};
+  int32_t frontier_snapshot_refresh_defers{0};
+  int32_t frontier_snapshot_pipeline_bytes_defers{0};
+  int32_t frontier_snapshot_missing_band_defers{0};
+  int32_t frontier_snapshot_dependency_defers{0};
+  int32_t frontier_snapshot_publication_defers{0};
+  int32_t frontier_snapshot_store_commit_defers{0};
+  double frontier_snapshot_ms{0.0};
+  double frontier_snapshot_budget_ms{0.0};
   /// sample_kind=0 bits: ticket, progress, sticky, pending_replace,
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,
@@ -634,6 +661,7 @@ public:
   /// Preserve exact slice ownership only for the latest no-drawable/unowned
   /// camera-band high-water snapshots; the rings are cleared on each new peak.
   static constexpr size_t kCameraBandPeakTraceRingCapacity = 256;
+  static constexpr size_t kFirstMeshFrontierTraceRingCapacity = 512;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
       kVisualBlackTraceRingCapacity +
       kRendererGateTraceRingCapacity +
@@ -642,7 +670,8 @@ public:
       kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
       kPriorityRemeshTraceRingCapacity +
       kWatchedMeshScheduleTraceRingCapacity + kVisualPixelTraceRingCapacity +
-      kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity;
+      kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity +
+      kFirstMeshFrontierTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.
