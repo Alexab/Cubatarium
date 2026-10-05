@@ -1,0 +1,31 @@
+{
+  "schema": "m398_visible_remesh_budget_evidence.v1",
+  "source": "perf_20261005-050408_18220.jsonl",
+  "sample_kind": "mesh_watched_schedule_trace (watched drawable chunks)",
+  "all_sample_count": 512,
+  "cause_counts": {
+    "3": 49,
+    "13": 129,
+    "15": 334
+  },
+  "cause_3_meaning": "try_schedule rejected after total mesh-emerge tick budget; no FirstMesh-only reserve applies to drawable remesh.",
+  "aged_head_dirty_only_priority_remesh_denials": {
+    "count": 49,
+    "queue_index_min": 0,
+    "queue_index_max": 0,
+    "age_frames_min": 30,
+    "age_frames_max": 2519,
+    "within_5_chunks_of_sampled_focus": 40,
+    "focus_cx_range": [
+      -563,
+      -563
+    ],
+    "sampled_work_owner_flags": [
+      1
+    ],
+    "sampled_flags": [
+      11
+    ]
+  },
+  "interpretation": "These rows are direct evidence that drawable priority-remesh tickets can remain Dirty-only at queue head after tick-budget rejection, including aged samples close to focus. They do not prove each row corresponds to a specific dim pixel or that the visual failure has a single cause."
+}

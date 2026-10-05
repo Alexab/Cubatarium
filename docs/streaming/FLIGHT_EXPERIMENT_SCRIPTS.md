@@ -180,3 +180,27 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 ```
 
 Report: [renderer run summary](../../bin/suite_reports/engine_refactor/m397_world164_m335_firstmesh_frontier_20261005.json); [frontier trace](../../bin/suite_reports/engine_refactor/m397_firstmesh_frontier_trace_20261005.json); [pixel/depth join](../../bin/suite_reports/engine_refactor/m397_renderer_pixel_trace_20261005.json); [source-stage trace](../../bin/suite_reports/engine_refactor/m397_world_column_source_z3_20261005.json). The 512-entry frontier ring did not cover the last 330 scheduler frames, so its 63 exact scheduler joins diagnose only those samples. Strict-dark pixel probes hit rendered opaque geometry; they are not empty-chunk counts. Disk file reads were fast while disk result-wait and procedural scheduler-queue tails were long, a separate producer-stage follow-up.
+
+### M398: FirstMesh reserve и видимые drawable remesh отказы по budget
+
+M398 сохранял точные World_164/M335 параметры из предыдущих запусков. До запуска Release executable собирался на `bc32466b`; запуск завершился без collision block/detour. Первый mesh experiment снизил matched FirstMesh age `median/p95/max` с `75/259.45/279` до `11/33.65/40`, но renderer acceptance и stop convergence остались failed.
+
+Для анализа нужны compact artifacts из `bin/suite_reports/engine_refactor/`:
+
+- `m398_firstmesh_frontier_trace_20261005.json` сравнивает одинаковую focus-X полосу двух запусков.
+- `m398_renderer_pixel_trace_20261005.json` — summary без миллионов байт per-pixel samples; полные `*_full_tmp_*` остаются локальными и не коммитятся.
+- `m398_mesh_schedule_trace_20261005.json` фиксирует watched drawable priority-remesh tickets, которые остались Dirty-only после отказа общего tick budget.
+- `m398_world_column_source_z3_20261005.json` разделяет file-read, result-wait, procedural scheduler, worker, generation и apply.
+
+Pixel probes с luminance `<32` имели видимый opaque MDI depth surface, но у большинства stale samples CPU geometry rev опережала опубликованную и Dirty оставался единственным owner. Лума `<96` не является чёрным-chunk gate. В next iteration разрешён только один extra over-budget slot для aged near-focus screen-ray priority-remesh при наличии pipeline и snapshot capacity. Общий schedule cap и M335 camera/flight conditions остаются прежними.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m398_world164_m335_aged_firstmesh_reserve'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m398_world164_m335_aged_firstmesh_reserve --report bin/suite_reports/engine_refactor/m398_world164_m335_aged_firstmesh_reserve_20261005.json --process-timeout 3000
+```
+
+Control values: median speed `5.186 blocks/s`, focus X `7…−563`, 9 120 blocks. GUI captures and 605 MB raw perf log are local; world file was restored byte-for-byte. See the linked compact run, pixel, schedule, frontier, and source reports above.
