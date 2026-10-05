@@ -1603,3 +1603,65 @@ M400 собран в Release на `471e2aa279c3e622944a22254f463cf2ebfc61cc`, ex
 **Следующий шаг:** сохранить bounded свежий ScreenRay reserve как локально подтверждённую оптимизацию и разобрать загрузку/создание мира как отдельный producer path: кто держит 33–79 секундные очереди, как disk result и procedural request делят admission/ready-apply бюджеты, и почему фиксированное flight-time даёт разный west displacement при одинаковой активной скорости. Не менять M335 camera/world conditions и не поднимать глобальные schedule/pipeline caps. После source fix повторить M335 до полного far checkpoint; затем вновь проверить post-stop convergence и тот же пространственно совпадающий pixel corridor.
 
 Артефакты: [run report](../../bin/suite_reports/engine_refactor/m400_world164_m335_fresh_screenray_reserve_20261005.json), [pixel/depth summary](../../bin/suite_reports/engine_refactor/m400_renderer_pixel_trace_20261005.json), [M399/M400 matched corridor](../../bin/suite_reports/engine_refactor/m399_m400_matched_route_pixel_comparison_20261005.json), [ScreenRayRepair](../../bin/suite_reports/engine_refactor/m400_screen_ray_repair_trace_20261005.json), [scheduler trace](../../bin/suite_reports/engine_refactor/m400_mesh_schedule_trace_20261005.json), [source-stage trace](../../bin/suite_reports/engine_refactor/m400_world_column_source_z3_20261005.json). Raw perf JSONL, full pixel arrays and GUI captures остаются локальными.
+
+## M401 — same M335 after disk-slice apply fast path (2026-10-05)
+
+`UChunkBuffer::ApplyToChunk` теперь принимает уже известную координату чанка,
+находит его один раз и применяет блоки/жидкость/свет без поиска чанка на каждый
+элемент среза. Путь сохраняет семантику `SetBlock` и CaptureBuffer mirror.
+Release build: commit `1d0bcff1`, executable SHA-256
+`3BE599300B1D31C142953B7B324F03819D48AA75DB43D087B8EB95BDDCA83208`.
+
+M401 повторил M335 без изменения тестовых условий: World_164, start
+`[120,56,56]`, eye `70`, yaw `180°`, pitch `−30°`, ясный замороженный день,
+no teleport, scale `1`, 2 800 s полёта + 20 s остановки, видимый GUI и
+predictive avoidance. Run завершился `process_rc=0`, прошёл дальность 8 192
+блока, focus X достиг `−515` (8 352 блока). Acceptance рендера остался FAIL;
+изменение движения/коллизии не потребовалось.
+
+В пространственно общей полосе X `−8 192…−1 024` M401 улучшил медиану
+`async_io_ms` `37.90→36.37 ms`, streaming phase `73.03→70.81 ms`, mesh emerge
+`35.16→33.43 ms`, wall `134.46→127.54 ms` и dirty count `1 010→949` против
+M400. `render_total_ms` остался практически неизменным (`52.04→52.59 ms`), а
+общий визуальный gate не сошёлся. Это небольшая producer-side оптимизация, не
+исправление пустого/старого кадра.
+
+Source trace уточняет эффект fast path: disk `deserialize_apply_ms` median
+снизился `7.97→7.19 ms`, p95 `11.66→11.28 ms`; `file_read_ms` p95
+`12.35→3.79 ms` (cache state confounds this comparison). Ключевая задержка
+осталась: ready-result wait p95 `78.94→72.13 s`, готовая очередь p95
+`112→118`, max `462`. Procedural scheduler queue p95 улучшился лишь
+`33.84→32.13 s`, при worker-pool wait p95 `0.080→0.317 ms` и generation p95
+`131.12→151.63 ms`. Следовательно, надо разделять admission/backlog, полезность
+готового результата для текущего focus и время apply; нельзя сводить проблему
+к диску или количеству worker threads.
+
+Дальние pixel/depth пробы тоже не подтверждают «пустой чанк»: все `223/223`
+проб с luma `<32` имели валидную opaque depth surface и MDI draw. Во full-run
+pixel samples количество low-luma проб выросло против M400: `<32` `174→223`,
+`<96` `1 244→1 458`; доля revision-stale surfaces также стала выше.
+Pixel counts здесь относятся ко всему маршруту, не к точному corridor.
+`renderer_pixel` aggregate по всему run и endpoint различаются, поэтому перед
+выводами о spatial регрессии нужно пересчитать оба perf JSONL одинаковыми X-бинами.
+Для этого сохранён [`compare_renderer_pixel_routes.py`](../../tools/compare_renderer_pixel_routes.py).
+
+Стартовый gate также нужно считать отдельно от flight time. M401 и M402
+получили первый correct proxy за `21.69/17.18 ms`, около `491` resident chunks;
+enter-lit завершился за `197/181 ms` с `settle_reason=live_blockers` и
+`underfeet_present_ready=0`. Первая картинка появляется быстро, но стартовый
+readiness gate завершается при живом долге.
+
+**Следующий шаг:** оставить все M335 условия фиксированными; сопоставить M400 и
+M401 pixel witness по X-бинам и source-stage coordinates. Сначала отделить
+backlog колонок позади focus от колонок впереди/внутри focus; затем выбрать одно
+узкое изменение для ready-result admission или priority refresh. Не повышать
+общие quotas без доказательства, что отстаёт именно ближний frontier. После
+изменения повторить дальний M335, сравнить одни и те же X-бин и остановочную
+сходимость. Новый seed остаётся периодической переносимостной проверкой.
+
+Артефакты M401: [run](../../bin/suite_reports/engine_refactor/m401_world164_m335_chunk_apply_fastpath_20261005.json),
+[matched route metrics](../../bin/suite_reports/engine_refactor/m400_m401_matched_route_comparison_20261005.json),
+[source-stage report](../../bin/suite_reports/engine_refactor/m401_world_column_source_z3_20261005.json),
+[pixel luma 32](../../bin/suite_reports/engine_refactor/m401_renderer_pixel_trace_l32_20261005.json),
+[pixel luma 96](../../bin/suite_reports/engine_refactor/m401_renderer_pixel_trace_l96_20261005.json).
+Raw perf/capture data remain local.

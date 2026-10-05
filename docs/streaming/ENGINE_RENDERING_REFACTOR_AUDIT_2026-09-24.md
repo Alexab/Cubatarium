@@ -4349,3 +4349,24 @@ Screen-ray promotions обычно молоды (`437` drawable pins, age median
 Producer trace указывает отдельную активную задержку: все `2 556` disk запросов получили completion, file-read p95 `12.35 ms`, но result-wait p95 `78.94 s`; procedural scheduler queue p95 `33.84 s` при worker-pool wait p95 `0.080 ms` и generation p95 `131.12 ms`. Dominant wall stage `stream`, schedule blocker `zero_fm_cap`, completion stall `gpu_not_ready`. Следующий implementation focus — политика admission/ready-apply source data и фактическое продвижение за fixed flight-time; не менять M335, пока эти стадии не локализованы.
 
 Подробности: [план M400](ENGINE_REMEDIATION_PLAN_2026-10-03.md#-m400--свежий-screenray-reserve-срабатывает-но-дальний-прогон-короче-2026-10-05), [run](../../bin/suite_reports/engine_refactor/m400_world164_m335_fresh_screenray_reserve_20261005.json), [matched pixels](../../bin/suite_reports/engine_refactor/m399_m400_matched_route_pixel_comparison_20261005.json), [pixel summary](../../bin/suite_reports/engine_refactor/m400_renderer_pixel_trace_20261005.json), [mesh schedule](../../bin/suite_reports/engine_refactor/m400_mesh_schedule_trace_20261005.json), [source](../../bin/suite_reports/engine_refactor/m400_world_column_source_z3_20261005.json).
+
+## Update — M401 evidence and current focus (2026-10-05)
+
+The September audit remains the historical baseline; the active evidence is now
+in the [rolling remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md). M401
+repeated the established M335 World_164 flight and passed the 8 192-block
+checkpoint. A narrow disk-slice fast path reduced decode/apply time by less than
+1 ms median and modestly improved the matched corridor's stream and wall
+metrics, but renderer acceptance remained failed and the number of low-luma
+pixel probes increased. All strict `<32` probes still mapped to an opaque depth
+surface, so those counts do not establish empty chunks.
+
+The dominant producer symptom remains completed disk results waiting in the
+ready queue (p95 about 72 s) and procedural requests waiting in scheduler
+admission (p95 about 32 s), while worker-pool wait remains below 1 ms. This
+points to result selection/admission and distance-to-focus relevance; raw disk
+read speed is not the only suspect. The next audit increment compares M400 and
+M401 pixel witnesses in the same camera-X bins and ties source queue events to
+the advancing focus. Keep World_164/M335 unchanged for primary acceptance and
+use new seeds periodically for transfer checks. External design references and
+their application are documented in [streaming best practices](BEST_PRACTICES.md#research-update-for-long-route-streaming-2026-10-05).
