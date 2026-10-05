@@ -725,6 +725,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int avoidance_detour_replans = 0;
     int avoidance_plan_failures = 0;
     float avoidance_total_lateral_blocks = 0.0f;
+    // If no safe bypass is available yet, pause forward input while the
+    // bounded planner retries. Continuing into the hazard made a failed
+    // prediction indistinguishable from a collision stop.
+    bool avoidance_hazard_hold = false;
     std::vector<AvoidanceEvent> avoidance_events;
     auto next_avoidance_probe = std::chrono::steady_clock::time_point{};
     auto next_detour_replan = std::chrono::steady_clock::time_point{};
@@ -959,7 +963,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       move_blocked_substeps >= move_attempt_substeps;
                   const bool bypass_landed = flight_ground_contacts > 0;
                   if (avoidance_phase != AvoidancePhase::None &&
-                      (bypass_fully_blocked || bypass_landed) &&
+                      (bypass_fully_blocked || move_blocked_substeps > 0 ||
+                       bypass_landed) &&
                       now >= next_detour_replan)
                   {
                     ++avoidance_detour_replans;
@@ -970,6 +975,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                               << move_attempt_substeps << " ground_contacts="
                               << flight_ground_contacts << std::endl;
                     avoidance_phase = AvoidancePhase::None;
+                    avoidance_hazard_hold = true;
                     preferred_avoidance_side = -avoidance_side;
                     next_avoidance_probe = now;
                     next_detour_replan =
@@ -1060,13 +1066,18 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       bool found_plan = false;
                       float best_cost = std::numeric_limits<float>::max();
                       const float offsets[] = {3.0f, 5.0f, 7.0f, 9.0f,
-                                                12.0f, 16.0f};
+                                                12.0f, 16.0f, 24.0f, 32.0f,
+                                                40.0f};
                       const float clearances[] = {5.0f, 9.0f, 13.0f, 18.0f,
-                                                  24.0f};
+                                                  24.0f, 32.0f, 48.0f};
                       const int offset_count =
-                          avoidance_plan_failures > 0 ? 6 : 4;
+                          avoidance_plan_failures > 2
+                              ? 9
+                              : (avoidance_plan_failures > 0 ? 6 : 4);
                       const int clearance_count =
-                          avoidance_plan_failures > 0 ? 5 : 3;
+                          avoidance_plan_failures > 2
+                              ? 7
+                              : (avoidance_plan_failures > 0 ? 5 : 3);
                       const int sides[] = {preferred_avoidance_side,
                                            -preferred_avoidance_side};
                       for (const int side : sides)
@@ -1123,6 +1134,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                         next_avoidance_probe = now;
                         next_detour_replan =
                             now + std::chrono::milliseconds(250);
+                        avoidance_hazard_hold = false;
                         std::cout << "flight-sim: obstacle bypass planned at t="
                                   << ingame_sec << "s hazard="
                                   << event.hazard_distance << " side="
@@ -1135,6 +1147,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       else
                       {
                         ++avoidance_plan_failures;
+                        avoidance_hazard_hold = true;
                         preferred_avoidance_side = -preferred_avoidance_side;
                         next_avoidance_probe =
                             now + std::chrono::milliseconds(250);
@@ -1147,6 +1160,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     }
                     else
                     {
+                      // The route has become clear (or the previous collision
+                      // contact was transient); let the autopilot resume.
+                      avoidance_hazard_hold = false;
                       next_avoidance_probe =
                           now + std::chrono::milliseconds(250);
                     }
@@ -1166,7 +1182,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     const float lateral_error =
                         glm::dot(side_target - position, right);
                     const bool move_right = lateral_error > 0.0f;
-                    window.SetAutopilotKey(KeyCode::Key_W, !side_step);
+                    window.SetAutopilotKey(
+                        KeyCode::Key_W,
+                        !side_step && !avoidance_hazard_hold);
                     window.SetAutopilotKey(KeyCode::Key_A,
                                            side_step && !move_right);
                     window.SetAutopilotKey(KeyCode::Key_D,
