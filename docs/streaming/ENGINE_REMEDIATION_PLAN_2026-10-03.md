@@ -2102,18 +2102,63 @@ per-frame slice and millisecond budgets, and requeues any unconsumed results.
 World mutation remains on the owning thread. Compare streaming-phase p50/p95,
 ready queue and result-wait distributions, and stop-phase debt against M407b.
 
-M408 must use the same M335 route and visible capture settings, with
-`CUBA_FLIGHT_CAPTURE_DIR` set before app launch. M407b's new terrain slices
-mean its far segment now exercises persisted reads; use source logs by X to
-label the actual disk/procedural mix rather than trusting `cold_warm_mode`.
-Capture and inspect complete PNG frames before calling low-luminance pixels
-under-lit. Run the repeatable route as the primary gate; keep the periodic new
-world check secondary. A separate new-world run remains necessary to measure
-first-generation scheduling and is not replaced by M407b's mixed-source run.
+M408 used the same visible, no-teleport M335 route and capture settings, with
+`CUBA_FLIGHT_CAPTURE_DIR` set before app launch. Source logs, rather than the
+manifest's `cold_warm_mode`, determine the actual disk/procedural mix. A
+separate new-world run remains necessary to measure first-generation
+scheduling and stays secondary to the repeatable route.
 
-Artifacts: [`M407b acceptance report`](../../bin/suite_reports/engine_refactor/m407b_world164_m335_async_decode_budget_wake_guard_20261005.json),
-[`pixel trace`](../../bin/suite_reports/engine_refactor/m407b_renderer_pixel_trace_20261005.json),
-[`source trace`](../../bin/suite_reports/engine_refactor/m407b_source_trace_20261005.json),
-and perf stream `bin/logs/perf_20261005-193758_42096.jsonl`; rotated INFO logs
-use PID 42096. Raw reports live in ignored `bin/` output paths and are not
-committed.
+### M408 results — faster streaming phase, visual debt remains (2026-10-05)
+
+M408 ran Release commit `273c796f` for the full 2,800-second route and exited
+successfully (`process_rc=0`, `hang_killed=false`). The keep-awake helper ended
+with the app. The user confirmed that the earlier M407 34-minute pause came
+from system sleep/lock, not the engine. The route covered 13,264 blocks
+(about 4.74 blocks/s), close to M407b's 13,104 blocks, so the newer run did
+not reproduce the earlier super-fast-flight concern. It saved 189 PNGs.
+
+Batch ranking improved the measured frame path: median flight wall time fell
+from M407b's 64.37 ms to 56.11 ms (15.53 to 17.82 effective FPS), and the
+streaming phase fell from 56.69 ms to 47.33 ms. Mesh-emerge time also fell
+from 22.82 ms to 18.36 ms. These gains did not pass visual acceptance:
+`unfinished_visual` remained nonzero for every steady period, median
+`chunk_not_ready`/missing-resident debt was 27, and the 20-second stop ended
+with 25 unresolved items. The stop did drain debt (not-ready −53 and dirty
+mesh work −136), but did not converge to zero. `holes_rate=1.0` remains the
+readiness proxy documented above, not a literal claim that every framebuffer
+frame was blank.
+
+The source trace counted 7,377 disk slice completions and 198 procedural
+commits after disk misses. Disk reads were not the limiting stage: file-read
+time was 0.98 ms median / 2.49 ms p95; decode was 3.15 ms median and apply
+2.53 ms. Completed disk results still waited 585 ms median / 4.15 s p95, and
+the ready-load queue reached 446 entries. This is a mixed/persisted replay;
+the manifest's `cold` label does not supersede the source trace. The measured
+result-wait maximum (68.1 s) is accumulated per-column service delay, not one
+frame stall. The next change should not target file reads or decoder speed.
+
+Full-frame captures did not show a large all-black view on the sampled route
+segments. The pixel trace found 277/32,768 probes below luminance 32 (303 in
+M407b); every probe had a valid depth surface and visible MDI draw, and 257
+had sky light 1. At the broader 96 threshold, M408 had 1,840 dim probes versus
+1,781 in M407b; all still mapped to visible MDI surfaces. Near dark-face
+counters stayed at zero. This does not dismiss the reported dim appearance:
+these are sparse probes, several dark pixels do not join to a source face,
+and block material IDs have not yet been mapped to names.
+
+The next investigation is the gap between broad visual-debt counters and the
+actual camera band. In M408, `focus_visual_missing_mesh` had median 27 while
+`focus_data_camera_band_solid_no_drawable_n` had median 0 (maximum 2); the
+broader vertical band had median 90 solid slices without a drawable mesh.
+Before tuning another queue or light budget, M409 should record the coordinates
+and vertical slices behind the missing-resident census and correlate them with
+screen depth/coverage. Determine whether the persistent debt is in the camera
+band or in below-camera/occluded slices, then change the owning stage. Keep
+the exact M335 route, speed, visible GUI and stop parameters.
+
+Artifacts (ignored `bin/` outputs): [M408 acceptance report](../../bin/suite_reports/engine_refactor/m408_world164_m335_batch_ranked_disk_results_20261005.json),
+[pixel trace, luma <32](../../bin/suite_reports/engine_refactor/m408_renderer_pixel_trace_20261005.json),
+[pixel trace, luma <96](../../bin/suite_reports/engine_refactor/m408_renderer_pixel_trace_l96_20261005.json),
+[source trace](../../bin/suite_reports/engine_refactor/m408_source_trace_20261005.json),
+and perf stream `bin/logs/perf_20261005-210152_32396.jsonl`. M408 used INFO
+logs rolled under PID 32396. The matching M407b reports are above.

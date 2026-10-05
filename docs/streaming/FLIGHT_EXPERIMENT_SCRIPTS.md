@@ -453,3 +453,34 @@ not a substitute for full PNG review. Set `CUBA_FLIGHT_CAPTURE_DIR` before
 launch on subsequent runs. M407b generated new far-terrain slice files; the
 next M335 replay therefore has a different disk/procedural mix even though
 its route, camera and movement speed remain unchanged.
+
+### M408: ranked result batching with full-frame and source traces
+
+M408 used the same visible/no-teleport M335 route, Release commit `273c796f`,
+and confirmed `flight_move_speed_scale=1`. The run completed the full route and
+saved 189 PNG captures. Start keep-awake hidden and set all trace/capture
+variables before the wrapper launches the app:
+
+```powershell
+Start-Process -FilePath powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/flight_sim_keep_awake.ps1')
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m408_world164_m335_batch_ranked_disk_results'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m408_world164_m335_batch_ranked_disk_results --report bin/suite_reports/engine_refactor/m408_world164_m335_batch_ranked_disk_results_20261005.json --process-timeout 3000
+```
+
+After normal shutdown, analyze pixel rings at both the dark threshold and the
+broader dim-pixel threshold, plus all rotated INFO logs for the app PID:
+
+```powershell
+py tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261005-210152_32396.jsonl --json-out bin/suite_reports/engine_refactor/m408_renderer_pixel_trace_20261005.json
+py tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261005-210152_32396.jsonl --threshold 96 --json-out bin/suite_reports/engine_refactor/m408_renderer_pixel_trace_l96_20261005.json
+py tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-210148.32396 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-211326.32396 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-212617.32396 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-214102.32396 --focus-z 3 --z-radius 5 --json-out bin/suite_reports/engine_refactor/m408_source_trace_20261005.json
+```
+
+M408 improved median flight wall time to 56.11 ms and streaming phase to
+47.33 ms, but retained a 27-item median missing-resident/readiness debt and
+failed zero-debt stop convergence (25 remained). Pixel probes had valid MDI
+surfaces even for all `<32` luminance samples. See the [plan's M408 analysis](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m408-results--faster-streaming-phase-visual-debt-remains-2026-10-05).

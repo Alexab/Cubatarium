@@ -4555,3 +4555,53 @@ proxy rather than a literal framebuffer-hole count. M408 will capture full
 frames and compare the persisted-source replay against these M407b traces.
 
 See [M407b evidence and M408 plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m407b--full-route-source-and-pixel-evidence-batch-completion-selection-2026-10-05).
+
+## M408: ready-result batching improves frame cost, but focus debt remains
+
+M408 used Release commit `273c796f` and the same 2,800-second visible M335
+route. The process exited successfully with no forced kill; the keep-awake
+helper completed normally. The user confirmed that M407's long gap was caused
+by system sleep/lock. M408 covered 13,264 blocks (about 4.74 blocks/s), close
+to M407b's 13,104, so this run does not support a recurrence of the
+super-fast-flight regression.
+
+The batch-ranked ready-result change reduced median flight wall time from
+64.37 to 56.11 ms and median streaming phase from 56.69 to 47.33 ms. It also
+reduced median mesh-emerge time from 22.82 to 18.36 ms. The run still failed
+visual acceptance: missing-resident/`chunk_not_ready` median was 27; after the
+standard 20-second stop, 25 items remained and zero-debt convergence failed.
+The stop phase nevertheless drained 53 not-ready items and 136 units of dirty
+mesh work. Keep `unfinished_visual` documented as a readiness proxy, not a
+framebuffer-hole count.
+
+M408's source trace shows that file IO is not the bottleneck: 7,377 disk slice
+loads had 0.98 ms median file-read time, while completed results waited
+585 ms median / 4.15 s p95 and the ready queue reached 446 entries. There were
+198 procedural commits after disk misses. Result service improved modestly
+from M407b, but a queue maximum rose because this replay had many more persisted
+reads. The 68.1 s maximum is accumulated per-column wait and must not be read
+as one frame freeze.
+
+Pixel analysis found 277/32,768 probes below luminance 32 (303 in M407b).
+Every such sample had a depth surface and visible MDI draw; 257 had sky-light
+1. At threshold 96, M408 had 1,840 dim probes (M407b 1,781), again all with
+visible MDI surfaces. The near dark-face counters remained zero. This evidence
+does not prove the operator's dim-chunk report is fixed: the pixel trace is
+sparse, source-face joins are incomplete for some samples, and material IDs
+are not yet mapped to names.
+
+The census signals disagree in a way that should guide the next audit. M408
+had `focus_visual_missing_mesh` median 27, but camera-band solid slices without
+a drawable mesh had median 0 and maximum 2; the wider vertical band had median
+90 no-drawable solid slices. M409 should trace exact column/Y coordinates
+behind the missing-resident census and join them to screen-depth coverage
+before changing mesh admission or lighting. The repeatable M335 route remains
+the primary acceptance gate; new-world first-generation scheduling remains a
+periodic secondary run.
+
+Artifacts: [M408 report](../../bin/suite_reports/engine_refactor/m408_world164_m335_batch_ranked_disk_results_20261005.json),
+[pixel trace <32](../../bin/suite_reports/engine_refactor/m408_renderer_pixel_trace_20261005.json),
+[pixel trace <96](../../bin/suite_reports/engine_refactor/m408_renderer_pixel_trace_l96_20261005.json),
+[source trace](../../bin/suite_reports/engine_refactor/m408_source_trace_20261005.json),
+and raw perf `bin/logs/perf_20261005-210152_32396.jsonl`. The full M408 capture
+set is in the ignored directory `bin/logs/m408_world164_m335_batch_ranked_disk_results/`.
