@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -59,6 +60,8 @@ public:
                    UBlockRegistry &registry,
                    const std::string &worldFolder, ChunkGenerationToken token,
                    std::shared_ptr<std::atomic<bool>> cancellation);
+  void RequestDiskIndexWarmup(UChunkStorageService &storage,
+                              const std::string &worldFolder);
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, const UBlockWorld &world,
                    UBlockRegistry &registry, ChunkGenerationToken token);
@@ -101,6 +104,7 @@ private:
   UCompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
   UJobThreadPool Pool;
   std::atomic<bool> CancelledLoadSweepPending{false};
+  std::unordered_set<std::string> DiskIndexWarmupFolders;
 };
 
 UChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,

@@ -18,6 +18,18 @@ bool IsAsyncChunkIoTraceEnabled()
 }
 } // namespace
 
+void UAsyncChunkIO::RequestDiskIndexWarmup(
+    UChunkStorageService &storage, const std::string &worldFolder)
+{
+  if (worldFolder.empty() ||
+      !DiskIndexWarmupFolders.insert(worldFolder).second)
+  {
+    return;
+  }
+  Pool.Enqueue([&storage, worldFolder]()
+  { storage.PrepareHighestChunkSliceIndex(worldFolder); });
+}
+
 void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                 UBlockRegistry &registry,
                                 const std::string &worldFolder,

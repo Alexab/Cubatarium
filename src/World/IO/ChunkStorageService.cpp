@@ -401,6 +401,18 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
   return cached != index.highest_cy.end() ? cached->second : -1;
 }
 
+void UChunkStorageService::PrepareHighestChunkSliceIndex(
+    const std::string &worldFolder) const
+{
+  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
+  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+  DiskTerrainColumnIndex &index = HighestChunkSliceIndexByFolder[cache_key];
+  if (!index.initialized)
+  {
+    BuildHighestChunkSliceIndex(worldFolder, index);
+  }
+}
+
 void UChunkStorageService::RemoveChunkSliceFromDisk(
     const std::string &worldFolder, glm::ivec3 chunkCoord) const
 {

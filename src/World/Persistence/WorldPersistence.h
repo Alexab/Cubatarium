@@ -73,6 +73,8 @@ public:
     LightCompleteLoaded = false;
     if (!WorldFolderPath.empty())
     {
+      EnsureChunkIoInitialized();
+      AsyncChunkIo->RequestDiskIndexWarmup(*ChunkStorage, WorldFolderPath);
       LoadColumnLightFlags();
     }
   }
@@ -227,8 +229,10 @@ private:
                                              glm::ivec3 focus_ground,
                                              int radius_chunks, int scan_cap);
 
-  std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
+  // Storage outlives AsyncChunkIo's worker pool: warmup jobs retain its
+  // reference until the pool joins during destruction.
   std::unique_ptr<UChunkStorageService> ChunkStorage;
+  std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
   std::unordered_map<glm::ivec3, PendingAsyncColumnLoadState, IVec3Hash>
       PendingAsyncColumnLoadSlices;
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
