@@ -165,3 +165,18 @@ Flight-sim control summary: `bin/suite_reports/engine_refactor/m396_flight_contr
 Renderer/source compact reports are listed in the remediation plan. The app
 returned `process_rc=0`, but renderer acceptance failed; treat M396 as the latest
 same-line diagnostic baseline, not as a passing fix.
+
+### M397: unchanged M335 plus FirstMesh frontier diagnostics
+
+M397 used the same World_164 M335 camera, world, lighting, speed, and route duration as previous repeatable runs. It changed no capture conditions. The GUI flight completed at approximately `5.19 blocks/s`, reached x `−568` / `9 200` blocks, and did not stop on collision. Release build manifest is in the run report.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m397_world164_m335_firstmesh_frontier'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m397_world164_m335_firstmesh_frontier --report bin/suite_reports/engine_refactor/m397_world164_m335_firstmesh_frontier_20261005.json --process-timeout 3000
+```
+
+Report: [renderer run summary](../../bin/suite_reports/engine_refactor/m397_world164_m335_firstmesh_frontier_20261005.json); [frontier trace](../../bin/suite_reports/engine_refactor/m397_firstmesh_frontier_trace_20261005.json); [pixel/depth join](../../bin/suite_reports/engine_refactor/m397_renderer_pixel_trace_20261005.json); [source-stage trace](../../bin/suite_reports/engine_refactor/m397_world_column_source_z3_20261005.json). The 512-entry frontier ring did not cover the last 330 scheduler frames, so its 63 exact scheduler joins diagnose only those samples. Strict-dark pixel probes hit rendered opaque geometry; they are not empty-chunk counts. Disk file reads were fast while disk result-wait and procedural scheduler-queue tails were long, a separate producer-stage follow-up.

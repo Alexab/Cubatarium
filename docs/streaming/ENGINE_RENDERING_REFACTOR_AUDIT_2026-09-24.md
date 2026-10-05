@@ -4297,3 +4297,19 @@ Artifacts: [M396 renderer report](../../bin/suite_reports/engine_refactor/m396_w
 [source trace](../../bin/suite_reports/engine_refactor/m396_world_column_source_z3_20261005.json),
 [perf trace](../../bin/logs/perf_20261005-020105_13792.jsonl),
 [captures](../../bin/logs/m396_world164_m335_detour_closed_loop).
+
+## M397: evidence after FirstMesh frontier instrumentation (2026-10-05)
+
+M397 reran the unchanged M335 World_164 profile in the GUI: fixed clear day, start `[120,56,56]`, eye `70`, yaw `180°`, pitch `−30°`, no teleport, speed scale `1`, 2 800 s flight and 20 s settle. Release manifest names commit `fcf34c1e`, with a clean source tree. Median movement was `5.19 blocks/s`; the run reached focus x `−568` and checkpoint `9 200` blocks. No collision stop occurred.
+
+The renderer still failed acceptance (`22/39` gates): dirty median/max `681.5/1 099`, median frame wall `109.5 ms`, focus miss-stuck up to `216 s`, and no post-stop demand convergence. These aggregates do not count visibly empty chunks. In the depth-linked pixel sample, all `211/211` strict `<32` luminance probes hit visible opaque MDI geometry; `199/211` source faces had sky light `1` and `196/211` had settled demand light. `122/211` had CPU mesh revision newer than published geometry and `117/211` were owned only by Dirty (median age `14` frames). This is evidence of dark rendered surfaces plus mesh publication lag, not proof of empty voxel data.
+
+The new opt-in FirstMesh frontier ring retained `512` samples only (epochs `29563–30532`) and missed the final `330` scheduler frames and the reported `cx=-529` hotspot. Of `63` exact same-frame joins with scheduler decisions, all were `cause=3` (the total mesh-emerge tick budget had already elapsed). For those rows, pipeline was below its cap, snapshot time remained, and FirstMesh cap was nonzero. The finding is scoped to these joins; it does not explain every hole or the `cx=-529` miss.
+
+At the `cx=-529` source join, procedural column data arrived in roughly `221 ms` total. A sampled solid slice at y `32–47` remained with field-light revision `0`, desired geometry revision `6`, published geometry revision `1`; it repeatedly requested relight, while the adjacent `z=3` slice had settled current light and `stale_plan path=6` made no schedule request because its dark witness was false. That sample is not a visible-surface explanation by itself; treat it as an unresolved, possibly underground obligation and do not infer empty world from it.
+
+Independent source-stage evidence: all `2 556/2 556` disk requests completed, disk file-read p95 `1.18 ms` but result-wait p95 `61.10 s`; procedural worker-pool wait p95 `0.053 ms`, generation p95 `123.74 ms`, scheduler queue p95 `25.01 s`. Producer admission/result delivery remains a separate measured tail.
+
+Next, allow at most one extra over-budget FirstMesh schedule per frame only for a near-focus ticket aged at least `32` scheduler frames, with snapshot budget and pipeline capacity available. Keep the normal total cap, all flight conditions, and source/lighting policies unchanged. Compare M335 aged `cause=3`, wall/FPS, linked pixel evidence and stop convergence; revert if wall worsens without reducing ticket age. Then pursue the independently measured producer queue tails.
+
+Reports: [M397 run](../../bin/suite_reports/engine_refactor/m397_world164_m335_firstmesh_frontier_20261005.json), [frontier ring](../../bin/suite_reports/engine_refactor/m397_firstmesh_frontier_trace_20261005.json), [pixel join](../../bin/suite_reports/engine_refactor/m397_renderer_pixel_trace_20261005.json), [z=3 source trace](../../bin/suite_reports/engine_refactor/m397_world_column_source_z3_20261005.json).
