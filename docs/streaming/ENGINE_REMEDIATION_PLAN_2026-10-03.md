@@ -2402,6 +2402,18 @@ raw perf `bin/logs/perf_20261006-010419_12320.jsonl`, and 189 captures in
 [mid-route](../../bin/logs/m411_world164_m335_low_trace/frame_094.png),
 [end](../../bin/logs/m411_world164_m335_low_trace/frame_188.png)).
 
+### Readiness-count semantics exposed by the M410/M411 review
+
+`unfinished_visual` is a count of focus-ring columns classified by
+`ClassifyFocusColumnVisual`, not a count of missing screen pixels. In
+particular, `MissingMesh` remains unfinished until every resident solid slice
+in the presentable band has a first mesh. The render state is progressive: a
+drawable Y slice can keep part of a column visible while another resident
+slice still carries this first-mesh obligation. Such a column can therefore
+contribute to the readiness debt without being an all-blank column in the
+frame. Keep this invariant; report camera-band no-drawable slices separately
+and join only exact depth/pixel witnesses when assessing a visible hole.
+
 Artifacts (ignored `bin/` outputs): [M409 acceptance report](../../bin/suite_reports/engine_refactor/m409_world164_m335_compact_screen_rays_20261005.json),
 [pixel trace <32](../../bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_20261005.json),
 [pixel trace <96](../../bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_l96_20261005.json),

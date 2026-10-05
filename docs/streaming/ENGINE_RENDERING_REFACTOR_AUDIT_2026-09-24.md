@@ -4727,3 +4727,12 @@ strict A/B conclusion. The ordinary run still failed 12/39 gates and kept
 median readiness debt at 27; stop ended at not-ready 27 and dirty 143. The
 core streaming/readiness issue is therefore still open independently of the
 trace overhead.
+
+The source code clarifies why the readiness count persists without mapping
+one-to-one to visible blank terrain. `unfinished_visual` counts focus-ring
+columns; `MissingMesh` is unfinished until every resident solid slice in the
+presentable band has a first mesh. Progressive rendering may already draw
+another Y slice in the same column. Preserve that first-mesh obligation, but
+do not interpret the column count as a screen-hole count. Correlate
+camera-band no-drawable slices with same-frame depth/pixel evidence before
+choosing a streaming or rendering policy change.
