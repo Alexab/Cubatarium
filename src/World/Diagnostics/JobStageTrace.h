@@ -632,6 +632,8 @@ struct VisualBlackTraceRecord
   /// Bits 28..31 identify live ColumnFlow tickets by work kind.
   /// sample_kind=6: bit 14 marks a FirstMesh candidate attempted by the
   /// forward-facing mid-range schedule reservation.
+  /// sample_kind=4/6/7/11: bit 15 marks a queued ScreenRay remesh pin and bit
+  /// 16 marks a candidate admitted through the bounded over-budget reserve.
   uint32_t flags{0};
 };
 

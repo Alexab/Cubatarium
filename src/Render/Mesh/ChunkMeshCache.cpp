@@ -8607,6 +8607,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                         first_mesh_schedule_slot_reserve);
     bool first_mesh_forward_reserve_candidate = false;
     constexpr uint32_t kFirstMeshForwardReserveTraceFlag = 1u << 14;
+    constexpr uint32_t kScreenRayRemeshTraceFlag = 1u << 15;
+    constexpr uint32_t kScreenRayRemeshBudgetReserveTraceFlag = 1u << 16;
+    int focus_screen_ray_remesh_budget_reserve_used = 0;
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
     int rear_focus_scheduled = 0;
     const auto leave_in_under_pl = [&](const glm::ivec3 &c) {
@@ -8653,6 +8656,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           UJobStageTrace::IsVisualChunkWatched(
               schedule_coord.x, schedule_coord.y, schedule_coord.z);
       bool focus_first_mesh_budget_reserve_candidate = false;
+      bool focus_screen_ray_remesh_budget_reserve_candidate = false;
       const auto trace_visible_schedule =
           [&](uint8_t outcome, uint8_t detail,
               uint8_t enqueue_reject_reason = 0)
@@ -8741,6 +8745,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         {
           trace.flags |= kFirstMeshForwardReserveTraceFlag;
         }
+        if (Dirty.IsScreenRayRemesh(schedule_coord))
+        {
+          trace.flags |= kScreenRayRemeshTraceFlag;
+        }
+        if (focus_screen_ray_remesh_budget_reserve_candidate)
+        {
+          trace.flags |= kScreenRayRemeshBudgetReserveTraceFlag;
+        }
         trace.mesh_revision = MeshRevisions.Current(schedule_coord);
         const MeshPublishRevs published =
             GetMeshPublishRevs(schedule_coord);
@@ -8791,22 +8803,43 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - dirty_tick_t0)
                 .count();
-        const uint64_t first_mesh_queue_age_frames =
+        const uint64_t dirty_queue_age_frames =
             Dirty.GetEnqueueAgeFrames(schedule_coord);
+        const int focus_horiz =
+            MeshFocusValid
+                ? std::max(std::abs(schedule_coord.x - MeshFocusGroundChunk.x),
+                           std::abs(schedule_coord.z - MeshFocusGroundChunk.z))
+                : std::numeric_limits<int>::max();
+        const int over_budget_reserves_used =
+            focus_first_mesh_budget_reserve_used +
+            focus_screen_ray_remesh_budget_reserve_used;
         // Preserve the existing one-ticket over-budget escape hatch. A second
-        // slot is available only to an aged near-focus FirstMesh miss; total
-        // schedule, snapshot, and pipeline caps remain unchanged.
+        // slot is available only to an aged near-focus FirstMesh miss. Share
+        // two total bounded escapes with an aged renderer-confirmed remesh so
+        // neither repair class can bypass the tick budget without limit.
         const int focus_first_mesh_budget_reserve_limit =
-            first_mesh_queue_age_frames >= 32 ? 2 : 1;
+            dirty_queue_age_frames >= 32 ? 2 : 1;
         focus_first_mesh_budget_reserve_candidate =
             total_elapsed > MeshEmergeTotalBudgetMs && trace_first_mesh &&
             Dirty.IsFirstMesh(schedule_coord) &&
             !HasDrawableGreedyMesh(schedule_coord) &&
             focus_first_mesh_budget_reserve_used <
                 focus_first_mesh_budget_reserve_limit &&
+            over_budget_reserves_used < 2 &&
+            LastMeshSnapshotMs < kSnapshotBudgetMs;
+        focus_screen_ray_remesh_budget_reserve_candidate =
+            total_elapsed > MeshEmergeTotalBudgetMs && trace_visible_repair &&
+            Dirty.IsPriorityRemesh(schedule_coord) &&
+            Dirty.IsScreenRayRemesh(schedule_coord) &&
+            HasDrawableGreedyMesh(schedule_coord) && MeshFocusValid &&
+            focus_horiz <= std::max(2, MeshFocusRadiusChunks) &&
+            dirty_queue_age_frames >= 32 &&
+            focus_screen_ray_remesh_budget_reserve_used < 1 &&
+            over_budget_reserves_used < 2 &&
             LastMeshSnapshotMs < kSnapshotBudgetMs;
         if (total_elapsed > MeshEmergeTotalBudgetMs &&
-            !focus_first_mesh_budget_reserve_candidate)
+            !focus_first_mesh_budget_reserve_candidate &&
+            !focus_screen_ray_remesh_budget_reserve_candidate)
         {
           trace_visible_schedule(3, 0);
           ++LastMeshDirtyScheduleSkipN;
@@ -9037,6 +9070,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         {
           ++focus_first_mesh_budget_reserve_used;
         }
+        if (focus_screen_ray_remesh_budget_reserve_candidate)
+        {
+          ++focus_screen_ray_remesh_budget_reserve_used;
+        }
         ++LastMeshPendingCaptureN_;
         return std::next(it);
       }
@@ -9112,6 +9149,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (focus_first_mesh_budget_reserve_candidate)
       {
         ++focus_first_mesh_budget_reserve_used;
+      }
+      if (focus_screen_ray_remesh_budget_reserve_candidate)
+      {
+        ++focus_screen_ray_remesh_budget_reserve_used;
       }
       ActiveMeshSourceRevision[*it] = submitted_revision;
       trace_visible_schedule(
