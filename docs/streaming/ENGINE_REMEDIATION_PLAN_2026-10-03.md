@@ -1801,3 +1801,43 @@ worker, GPU publication, and a screen/depth witness. Separately, audit the disk
 ready-result queue in the mixed boundary bin. The source-bin report is
 [`m400_m401_m402_world_column_sources_x_20261005.json`](../../bin/suite_reports/engine_refactor/m400_m401_m402_world_column_sources_x_20261005.json);
 M402's underlying long INFO logs remain local.
+
+## M403 interim — movement disables all unload progress (2026-10-05)
+
+M403 is the fixed M335 profile with source/save tracing enabled. At the INFO
+checkpoint 13:25:48, the camera was at x=−3 361 (cx=−211), resident chunk_count
+was 8 418, dirty was 823, memory_pressure was 1, and streamer_unload_ms was
+0.0005 ms. No [WorldColumnSave] event had occurred. M402's last complete period
+at x=−6 949 had chunk_count=16 170, memory_pressure=1, and
+streamer_unload_ms=0.0004 ms. The renderer hang remains unexplained; this
+resident-set growth is a credible contributor, not a proven root cause.
+
+The admission code explains the absent save activity. WorldStreaming sets
+unload_ops=0 whenever moving_for_unload is true, and also on frame time over
+16 ms or dirty count over 64. The long no-teleport profile is continuously
+moving and spends most of its time above both pressure thresholds. The runtime
+unload_amortize_mode is 1 (U-A): it has a frame-deadline gate but no scan
+cursor. The deferred-save drain is only eligible while stationary and when the
+previous frame was at most 12 ms. Thus M335 can load/generate continuously while
+the far side of the resident ring never reaches unload/save. The fixed-day
+harness also disables autosave and uses fast _Exit shutdown, so it does not
+snapshot resident terrain at the end. That combination accounts for the same
+144 disk_miss columns in M400/M401 without invoking an image-decoding or disk
+read problem; the M402 visual darkness still has its independent missing-mesh
+and light-debt evidence.
+
+This behavior traces to the July 14 movement-hitch change (1b2232d5) and its
+July 26 dirty-queue gate (77197f6c): unload scans were suppressed to avoid
+large frame spikes, but a stable bounded cursor path was not enabled in the
+flight profile. The M403 exact settings remain unchanged and the app is
+responsive at this checkpoint. Let the run finish unless it stops producing
+metrics; then capture final resident count, save outcomes, and shutdown I/O.
+
+Next implementation step: give far-behind eviction a bounded, fair slice under
+movement, using the cursor scan and the existing near/keep-ring checks; reserve
+one small column-save unit at a time and drain deferred saves during motion when
+the frame has room. Track candidate, veto, evicted, queued, written, and
+failed counts. Acceptance is a resident chunk-count plateau, completed saves
+behind the camera, and disk completions on the same M335 replay, with no
+increase to the global load/mesh schedule quota. Do not change camera, speed,
+daylight, route, or world.

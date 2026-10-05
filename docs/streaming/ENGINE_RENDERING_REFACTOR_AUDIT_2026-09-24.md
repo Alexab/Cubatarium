@@ -4410,3 +4410,16 @@ second later still found no drawable mesh. Keep source persistence, scheduler
 admission, mesh publication, and light correctness as separate measurements.
 The [source-map report and next step](ENGINE_REMEDIATION_PLAN_2026-10-03.md#source-of-column-map--repeated-disk-misses-and-unresolved-save-fate-2026-10-05)
 record the exact bins and limitations.
+
+M403 provides the missing policy context while replaying the same M335 route:
+at x=−3 361 it had 8,418 resident chunk slices, dirty=823, memory pressure
+active, near-zero unload-phase time, and no save lifecycle events. M402 ended
+near x=−6 949 with 16,170 resident slices and the same near-zero unload time.
+WorldStreaming explicitly sets the unload budget to zero while moving, over
+16 ms frame time, or over 64 dirty meshes. With runtime unload mode U-A (1),
+the cursor scan and deferred-save drain are unavailable during cruise. This is
+sufficient to explain why far procedural terrain is repeatedly generated
+instead of reloaded from disk. It is a plausible contributor to long-run
+slowdown; the separate M402 app hang still has no established root cause. The
+remediation is a cursor-based unload/save budget with measurable progress under
+movement, without changing the M335 route.
