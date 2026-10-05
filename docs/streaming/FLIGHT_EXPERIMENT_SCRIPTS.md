@@ -204,3 +204,18 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 ```
 
 Control values: median speed `5.186 blocks/s`, focus X `7…−563`, 9 120 blocks. GUI captures and 605 MB raw perf log are local; world file was restored byte-for-byte. See the linked compact run, pixel, schedule, frontier, and source reports above.
+
+### M399: unchanged M335 with drawable ScreenRayRemesh reserve
+
+M399 использовал тот же World_164, start `[120,56,56]`, eye `70`, yaw `180°`, pitch `−30°`, fixed clear day, no teleport, scale `1`, 2 800 s flight + 20 s stop, видимый GUI и predictive obstacle avoidance. Release source commit — `a624dc5f`. Фактическая скорость около `5.19 blocks/s`, focus X `7…−583`; collision block и detour не потребовались. Run завершился с `process_rc=0`, но acceptance failed (`23/39`), stop convergence false.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m399_world164_m335_screenray_remesh_reserve'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m399_world164_m335_screenray_remesh_reserve --report bin/suite_reports/engine_refactor/m399_world164_m335_screenray_remesh_reserve_20261005.json --process-timeout 3000
+```
+
+Компактные артефакты: [run](../../bin/suite_reports/engine_refactor/m399_world164_m335_screenray_remesh_reserve_20261005.json), [pixel/depth](../../bin/suite_reports/engine_refactor/m399_renderer_pixel_trace_20261005.json), [ScreenRayRepair](../../bin/suite_reports/engine_refactor/m399_screen_ray_repair_trace_20261005.json), [scheduler](../../bin/suite_reports/engine_refactor/m399_mesh_schedule_trace_20261005.json), [source stage](../../bin/suite_reports/engine_refactor/m399_world_column_source_z3_20261005.json). Full pixel arrays, raw JSONL and captures are local; do not include them in the commit.

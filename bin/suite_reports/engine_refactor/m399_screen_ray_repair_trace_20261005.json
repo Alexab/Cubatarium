@@ -1,0 +1,26 @@
+{
+  "schema": "m399_screen_ray_repair_summary.v1",
+  "info_files": [
+    "Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-063201.29424",
+    "Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-064354.29424",
+    "Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-070657.29424"
+  ],
+  "screen_ray_repair_rows": 522,
+  "actions": {
+    "first_mesh_ticket_rejected|promoted=1": 327,
+    "first_mesh_ticket_present|promoted=1": 117,
+    "first_mesh_ticket_present|promoted=0": 10,
+    "first_mesh_slice_dirty_direct|promoted=0": 26,
+    "screen_ray_visible_relight_admitted|promoted=0": 6,
+    "screen_ray_visible_relight_admitted|promoted=1": 6,
+    "async_owner_without_fifo|promoted=1": 1,
+    "first_mesh_ticket_rejected|promoted=0": 19,
+    "relight_plus_unlit_preview_dirty|promoted=0": 10
+  },
+  "promoted_drawable_priority_remesh_rows": 437,
+  "promoted_queue_age_frames_median": 4,
+  "promoted_queue_age_frames_max": 221,
+  "promoted_queue_head_count": 62,
+  "sample_coord_minus554_3_1": "I20261005 07:15:39.752129 32664 Log.cpp:595] [ScreenRayRepair] frame=29970 coord=-554,3,1 world_epoch=4 incarnation=32495 light_debt=0 action=first_mesh_ticket_rejected async_before=0 fifo_before=deferred_far:-1/0 fifo_after=deferred_far:-1/0 flow=first_mesh flow_before=0 flow_after=0 visible_relight_outcome=0 visible_relight_victim_horiz=-1 visible_geometry_promoted=1 flow_column_ticket=0 record_stage=4 record_pending_token=37632 record_pending_stage=4 record_inflight_job=37632 column_emerge_state=5 column_mesh_dirty_slices=3 column_mesh_build_slices=0 column_gpu_pending_slices=0 mesh_dirty_queue_kind=2 mesh_dirty_queue_index=0/88 mesh_dirty_queue_age=2 mesh_scheduled_this_frame=0 mesh_revision=2 published_geom_rev=1 published_light_rev=1 mesh_build_inflight=0 mesh_dirty=1 gpu_extract_inflight=0 gpu_apply_pending=0 gpu_apply_queued=0 drawable=1 provisional_light_preview=1 mesh_satisfying=1 geometry_debt=1 repairable_geometry_debt=1",
+  "interpretation": "Screen-ray promotion itself records a drawable geometry repair obligation. The sampled (-554,3,1) ticket was young (age 2) and had no mesh/GPU owner when logged. This identifies an admission point, not proof of its later fate."
+}
