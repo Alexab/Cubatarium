@@ -2288,20 +2288,87 @@ unready or no-drawable samples and the long-flight stop still fails. Keep
 streaming debt as an open issue and do not turn the dim-pixel count into a
 missing-chunk count.
 
-The next implementation work is therefore split by evidence:
+The cold directory-index scan is now warmed asynchronously before world use
+(see the M410 result below). The next work remains evidence-led:
 
-1. Remove the synchronous cold directory scan from the live world tick, then
-   measure the world-entry hitch and disk index correctness on an existing
-   world. Do this before another long flight.
-2. Trace why the exact M409 depth surfaces produce low luma despite matching
-   geometry and settled sky light. Add material identity and shader/fog
-   contribution to a sparse same-pixel witness before changing light rules.
-3. For streaming, capture scheduler admission age, disk ready-queue age, and
-   cancellation/retention state together. Only then change the admission or
-   drain policy; do not increase quotas from `unfinished_visual` alone.
-4. Retain M335 unchanged as the repeated-world gate. Schedule a new-world
-   cold-generation run periodically after entry performance and trace size
-   are controlled.
+1. Verify the asynchronous index warmup on a second existing world and on a
+   world without a prebuilt index; keep legacy discovery correctness intact.
+2. M410 maps most sampled low-luminance depth surfaces to the actual
+   `tree_leaves` material. Do not relax light settlement or alter shader
+   lighting based on those samples. Compare leaf texture/albedo, fog and
+   neighboring opaque terrain against operator reports to distinguish
+   expected dark foliage from the remaining dim-region symptom.
+3. Streaming still has a long result-to-apply tail and stop convergence fails.
+   Instrument the age and ownership transitions from disk completion through
+   the main-thread apply and first drawable mesh, along with retention and
+   stale-result reasons. Make a queue-policy change only after that chain
+   identifies where work stops progressing; do not raise quotas from
+   `unfinished_visual` alone.
+4. Keep the exact visible/no-teleport M335 route on `World_164` as the primary
+   repeatable gate. Run the cold new-world generation case periodically as a
+   secondary workload.
+
+### M410 results — index hitch removed; streaming readiness still open (2026-10-06)
+
+M410 used the unchanged visible Release/no-teleport M335 route on `World_164`.
+It reached 13,488 blocks at 5.19653 blocks/s, saved 189 frames, exited with
+`process_rc=0`, and was not force-killed. The world metadata was restored
+byte-for-byte. The earlier M407 34-minute pause was confirmed by the user to
+be system sleep/lock, so it is not an engine-hang observation.
+
+The M409 cold directory-index hitch is fixed for this path. M409's first
+`GetHighestChunkSliceOnDisk()` call took 286.18 ms; after asynchronous index
+warmup M410 measured 0.0141 ms on first discovery. Across 7,578 discoveries,
+the median was 0.0135 ms, p95 0.0286 ms, max 0.2061 ms, with no calls over
+1 ms. This validates removal of the scan from the live request path; a second
+world and an unindexed-world case remain to be checked.
+
+The long-flight acceptance still fails 12/39 gates. Median flight wall time
+was 56.90 ms, streaming phase 48.07 ms, mesh emerge 20.22 ms, and median
+`unfinished_visual`/`chunk_not_ready` was 27. The stop phase ended with 26
+not-ready items and 140 focus-dirty chunks; pending/not-ready/dirty deltas
+were -5/-18/-122. The 10 stop samples did not converge, so the unchanged M335
+route remains a failing renderer/streaming gate. These counters describe
+unfinished readiness and work; they do not alone prove visible blank pixels.
+
+All 7,578 disk slices queued in M410 completed, with no cancellations. File
+read median/p95 was 0.98/1.32 ms; deserialize 3.18/4.02 ms; apply 2.66/5.12
+ms. Completed-result wait remained high at 627 ms median, 12.76 s p95 and
+62.18 s maximum; the ready-load queue peaked at 376. These are accumulated
+queue/service ages, not single-frame stalls. The 123 procedural misses had
+84.81 ms median generation and negligible worker-pool wait (0.03/0.084 ms
+median/p95); request-to-scheduler-start wait was 10.53 ms median, 155.18 ms
+p95 and 549 ms maximum. This points follow-up toward result ownership,
+admission and main-thread apply progress, not simply more worker threads.
+
+M410 sampled 261 pixels below luma 32. Every sample had a valid depth surface
+and visible MDI draw; 243 joined to a source face. Source-face IDs mapped 229
+to `tree_leaves` (`leaves_opaque.png`), 22 to `tree_log`, 2 to `tree_bark`,
+and 8 were unknown. The leaf samples had median luma 28.65. Many had settled
+sky light 1 and no preview marker. At luma below 96, 1,634 samples included
+1,492 source-face joins, led by leaves (1,138), grass (203), and logs (172).
+The sampled low-luminance signal therefore does not establish a missing chunk
+or unsettled lighting. It also does not disprove every operator-observed dim
+region; material identity needs to be compared with the affected views.
+
+Coverage traces recorded three unowned no-drawable slices at peak. Their X
+coordinates were five chunks behind focus, outside the five-chunk retention
+ring, so they are not evidence that the current camera view lacked terrain.
+Camera-band no-drawable peak was 17, mostly dirty queue-owned work. Frustum
+candidate rows remain samples, not counts of screen holes. Keep these
+evidence types separate from screenshot/pixel witnesses.
+
+The Release target build succeeded with
+`cmake --build bin --config Release --target Cubatarium --parallel 8`.
+No tests were run. The M410 route and analysis artifacts are linked below.
+
+Artifacts (ignored `bin/` outputs): [M410 acceptance report](../../bin/suite_reports/engine_refactor/m410_world164_m335_async_disk_index_20261005.json),
+[pixel trace <32](../../bin/suite_reports/engine_refactor/m410_renderer_pixel_trace_20261005.json),
+[pixel trace <96](../../bin/suite_reports/engine_refactor/m410_renderer_pixel_trace_l96_20261005.json),
+[visual coverage](../../bin/suite_reports/engine_refactor/m410_visual_coverage_trace_20261005.json),
+[source trace](../../bin/suite_reports/engine_refactor/m410_source_trace_20261005.json),
+and raw perf `bin/logs/perf_20261005-235830_42324.jsonl`. Captures are in
+`bin/logs/m410_world164_m335_async_disk_index/`.
 
 Artifacts (ignored `bin/` outputs): [M409 acceptance report](../../bin/suite_reports/engine_refactor/m409_world164_m335_compact_screen_rays_20261005.json),
 [pixel trace <32](../../bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_20261005.json),

@@ -546,7 +546,49 @@ py tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.
 ```
 
 The cold scan's p95 was only 0.0288 ms, but its 286.18 ms maximum came from
-the first request at `(7,0,3)` while the directory index was built. Move that
-scan to asynchronous world entry before starting another far route. Preserve
-the exact M335 capture conditions and keep the new-world cold-generation run
-periodic and secondary.
+the first request at `(7,0,3)` while the directory index was built. M410
+moved that work to asynchronous world-folder warmup; first-discovery latency
+fell to 0.0141 ms. Keep the exact M335 capture conditions and keep the
+new-world cold-generation run periodic and secondary.
+
+### M410: verify asynchronous disk-index warmup and trace dark surfaces
+
+Build the Release executable, then run the unchanged M335 route. The hidden
+keep-awake helper prevents a system sleep from being misread as an engine
+stall. `--visible` keeps the GUI available for operator review. The route
+wrapper restores `World_164` metadata after the run.
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+Start-Process -FilePath powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/flight_sim_keep_awake.ps1')
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m410_world164_m335_async_disk_index'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m410_world164_m335_async_disk_index --report bin/suite_reports/engine_refactor/m410_world164_m335_async_disk_index_20261005.json --process-timeout 3000
+```
+
+After shutdown, analyze the framebuffer/depth probes, camera-band ownership,
+and disk/procedural source events:
+
+```powershell
+py tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261005-235830_42324.jsonl --json-out bin/suite_reports/engine_refactor/m410_renderer_pixel_trace_20261005.json > $null
+py tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261005-235830_42324.jsonl --threshold 96 --json-out bin/suite_reports/engine_refactor/m410_renderer_pixel_trace_l96_20261005.json > $null
+py tools/analyze_visual_coverage_trace.py bin/logs/perf_20261005-235830_42324.jsonl --json-out bin/suite_reports/engine_refactor/m410_visual_coverage_trace_20261005.json
+py tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-235826.42324 --focus-z 3 --z-radius 5 --json-out bin/suite_reports/engine_refactor/m410_source_trace_20261005.json
+```
+
+M410 completed normally at 13,488 blocks and 5.19653 blocks/s, with 189
+captures, `process_rc=0`, and no forced kill. First disk discovery was
+0.0141 ms versus M409's 286.18 ms cold scan; all 7,578 calls remained under
+1 ms. Release build succeeded. Acceptance still failed 12/39 gates: median
+unfinished/not-ready debt was 27, and stop ended with 26 not-ready items and
+140 focus-dirty chunks. Disk reads were fast (0.98 ms median / 1.32 ms p95),
+while completed-result wait remained 627 ms median / 12.76 s p95 / 62.18 s
+maximum with ready-load high-water 376. These queue ages require lifecycle
+ownership tracing before a quota or ranking change.
+
+All 261 sampled pixels below luma 32 had visible depth and MDI geometry; 229
+source-face joins mapped to `tree_leaves`. Do not infer missing terrain or
+bad light from low luma alone. The per-run report and captures are in
+`bin/suite_reports/engine_refactor/m410_world164_m335_async_disk_index_20261005.json`
+and `bin/logs/m410_world164_m335_async_disk_index/` respectively.

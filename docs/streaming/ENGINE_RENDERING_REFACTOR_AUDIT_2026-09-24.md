@@ -4683,6 +4683,34 @@ coverage.
 Compact screen-ray serialization cut M409 perf output to 403.67 MiB from
 M408's 490.55 MiB, but dense pixel probes still consume 193.63 MiB. Keep the
 pixel sample count and report telemetry volume separately from engine
-performance. Next work should first remove the cold index scan from the live
-tick, then add material/shader evidence and streaming queue-age evidence
-before selecting a behavioral policy change.
+performance. M410 then removed the measured cold-index scan from the live
+request path. Its first discovery fell from M409's 286.18 ms to 0.0141 ms;
+all 7,578 M410 discovery calls stayed below 1 ms. The warmup still needs
+verification on a separate existing world and a world with no saved index.
+
+M410 did not clear the streaming/readiness gate: it failed 12/39 acceptance
+checks, with median 27 unfinished/not-ready items and stop-end 26 not-ready
+items plus 140 focus-dirty chunks. All 7,578 disk slice requests completed,
+but completed-result wait was 627 ms median / 12.76 s p95 / 62.18 s maximum
+and the ready-load queue peaked at 376. These measurements motivate tracing
+request/result ownership, age, retention and main-thread apply progress as
+one lifecycle before changing queue policy or quotas. Procedural generation
+worker wait remained negligible; scheduler-admission and disk-result age are
+the more relevant measured tails.
+
+The M410 dark-pixel attribution also changes the interpretation of earlier
+dim samples. All 261 samples below luma 32 had a valid depth surface and
+visible MDI draw; 243 joined to a source face. 229 source faces were
+`tree_leaves`, with settled sky light in most dark samples. The test therefore
+found real foliage surfaces, not proof of black or absent chunks. Keep the
+operator's dim-region report open and compare its locations with material,
+light, fog and exact screenshot/depth evidence. M410's three unowned
+no-drawable peak slices were five chunks behind focus, outside the retention
+ring. A camera-band count or readiness debt by itself is not a screen-hole
+oracle.
+
+The primary comparison remains the exact visible/no-teleport M335 route.
+M407's long pause was confirmed as system sleep/lock, not an engine hang.
+Keep dense probe volume separate from performance conclusions, retain
+periodic cold-world generation runs, and do not change lighting or queue
+budgets without a same-surface witness and a measured lifecycle bottleneck.
