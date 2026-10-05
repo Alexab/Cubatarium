@@ -219,3 +219,18 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 ```
 
 Компактные артефакты: [run](../../bin/suite_reports/engine_refactor/m399_world164_m335_screenray_remesh_reserve_20261005.json), [pixel/depth](../../bin/suite_reports/engine_refactor/m399_renderer_pixel_trace_20261005.json), [ScreenRayRepair](../../bin/suite_reports/engine_refactor/m399_screen_ray_repair_trace_20261005.json), [scheduler](../../bin/suite_reports/engine_refactor/m399_mesh_schedule_trace_20261005.json), [source stage](../../bin/suite_reports/engine_refactor/m399_world_column_source_z3_20261005.json). Full pixel arrays, raw JSONL and captures are local; do not include them in the commit.
+
+### M400: same M335 with age-free exact ScreenRay reserve
+
+M400 сохранён как точное повторение M335 на Release commit `471e2aa2`. Профиль не менялся. Процесс завершился с `process_rc=0`, acceptance false, и восстановил world data byte-for-byte. Предиктивный obstacle avoidance был включён; `camera_move_blocked_substeps=0`. Фактический endpoint — focus X `−501` / `8 128` блоков, поэтому far-distance gate не пройден; на этом run не делайте вывод о поведении за `−501`.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m400_world164_m335_fresh_screenray_reserve'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m400_world164_m335_fresh_screenray_reserve --report bin/suite_reports/engine_refactor/m400_world164_m335_fresh_screenray_reserve_20261005.json --process-timeout 3000
+```
+
+Run [summary](../../bin/suite_reports/engine_refactor/m400_world164_m335_fresh_screenray_reserve_20261005.json); source logs: `Cubatarium.exe*.INFO.*.28876`, perf log: `perf_20261005-084624_28876.jsonl`. Compact derivatives: [pixel/depth](../../bin/suite_reports/engine_refactor/m400_renderer_pixel_trace_20261005.json), [matched route pixels vs M399](../../bin/suite_reports/engine_refactor/m399_m400_matched_route_pixel_comparison_20261005.json), [screen-ray repair](../../bin/suite_reports/engine_refactor/m400_screen_ray_repair_trace_20261005.json), [schedule flags](../../bin/suite_reports/engine_refactor/m400_mesh_schedule_trace_20261005.json), [source-stage timing](../../bin/suite_reports/engine_refactor/m400_world_column_source_z3_20261005.json). Full pixel arrays, raw logs and GUI captures remain local.

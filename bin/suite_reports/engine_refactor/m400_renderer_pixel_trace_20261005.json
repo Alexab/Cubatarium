@@ -1,0 +1,51 @@
+{
+  "schema": "m400_renderer_pixel_summary.v1",
+  "source_reports": [
+    "m400_renderer_pixel_trace_l32_full_tmp_20261005.json",
+    "m400_renderer_pixel_trace_l96_full_tmp_20261005.json"
+  ],
+  "screen_ray_frame_count": 328,
+  "thresholds": [
+    {
+      "luma_threshold_exclusive": 32.0,
+      "probe_count": 32768,
+      "below_threshold_count": 174,
+      "depth_surface_valid": 174,
+      "visible_opaque_mdi": 174,
+      "depth_source_face_valid": 168,
+      "depth_source_face_within_0_1": 162,
+      "depth_source_face_sky_light_1": 167,
+      "depth_source_face_preview": 13,
+      "opaque_chunk_demand_settled": 171,
+      "voxel_chunk_light_pending": 22,
+      "transparent_composition_changed_rgb": 0,
+      "depth_mesh_cpu_revision_ahead_of_published_geometry": 102,
+      "stale_depth_mesh_owned_only_by_dirty": 100,
+      "stale_dirty_queue_age_frames_median": 24.0,
+      "stale_dirty_queue_age_frames_p95": 161,
+      "stale_dirty_queue_age_frames_max": 167,
+      "voxel_depth_delta_gt_2": 116
+    },
+    {
+      "luma_threshold_exclusive": 96.0,
+      "probe_count": 32768,
+      "below_threshold_count": 1244,
+      "depth_surface_valid": 1213,
+      "visible_opaque_mdi": 1205,
+      "depth_source_face_valid": 1151,
+      "depth_source_face_within_0_1": 1110,
+      "depth_source_face_sky_light_1": 1050,
+      "depth_source_face_preview": 124,
+      "opaque_chunk_demand_settled": 1084,
+      "voxel_chunk_light_pending": 246,
+      "transparent_composition_changed_rgb": 115,
+      "depth_mesh_cpu_revision_ahead_of_published_geometry": 741,
+      "stale_depth_mesh_owned_only_by_dirty": 716,
+      "stale_dirty_queue_age_frames_median": 23.0,
+      "stale_dirty_queue_age_frames_p95": 161,
+      "stale_dirty_queue_age_frames_max": 200,
+      "voxel_depth_delta_gt_2": 604
+    }
+  ],
+  "interpretation": "Low luminance is not a missing-chunk count. Every strict <32 probe had a valid depth surface and visible opaque MDI. The broader <96 threshold includes dark materials and fog. Stale CPU-to-published geometry revisions identify delayed mesh publication for sampled surfaces, not the cause of every dark pixel."
+}
