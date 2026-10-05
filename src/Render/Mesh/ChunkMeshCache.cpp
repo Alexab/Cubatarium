@@ -8514,7 +8514,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int overflow_scheduled = 0;
     int reserved_focus_scheduled = 0;
     int remesh_scheduled = 0;
-    bool focus_first_mesh_budget_reserve_used = false;
+    int focus_first_mesh_budget_reserve_used = 0;
     const int outside_focus_cap = MaxOutsideFocusMeshPerFrame;
     constexpr int kReservedFocusMissingSlots = 16;
     const MeshWorkAdmission &sched_adm = WorkAdmission;
@@ -8791,11 +8791,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - dirty_tick_t0)
                 .count();
+        const uint64_t first_mesh_queue_age_frames =
+            Dirty.GetEnqueueAgeFrames(schedule_coord);
+        // Preserve the existing one-ticket over-budget escape hatch. A second
+        // slot is available only to an aged near-focus FirstMesh miss; total
+        // schedule, snapshot, and pipeline caps remain unchanged.
+        const int focus_first_mesh_budget_reserve_limit =
+            first_mesh_queue_age_frames >= 32 ? 2 : 1;
         focus_first_mesh_budget_reserve_candidate =
             total_elapsed > MeshEmergeTotalBudgetMs && trace_first_mesh &&
             Dirty.IsFirstMesh(schedule_coord) &&
             !HasDrawableGreedyMesh(schedule_coord) &&
-            !focus_first_mesh_budget_reserve_used &&
+            focus_first_mesh_budget_reserve_used <
+                focus_first_mesh_budget_reserve_limit &&
             LastMeshSnapshotMs < kSnapshotBudgetMs;
         if (total_elapsed > MeshEmergeTotalBudgetMs &&
             !focus_first_mesh_budget_reserve_candidate)
@@ -9027,7 +9035,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         trace_visible_schedule(12, 0);
         if (focus_first_mesh_budget_reserve_candidate)
         {
-          focus_first_mesh_budget_reserve_used = true;
+          ++focus_first_mesh_budget_reserve_used;
         }
         ++LastMeshPendingCaptureN_;
         return std::next(it);
@@ -9103,7 +9111,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (focus_first_mesh_budget_reserve_candidate)
       {
-        focus_first_mesh_budget_reserve_used = true;
+        ++focus_first_mesh_budget_reserve_used;
       }
       ActiveMeshSourceRevision[*it] = submitted_revision;
       trace_visible_schedule(
@@ -10266,8 +10274,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         trace.frontier_scheduled_this_tick = scheduled;
         trace.frontier_pipeline_inflight = AsyncBuilder->GetInFlightCount();
         trace.frontier_pipeline_cap = max_pipeline;
+        trace.frontier_soft_defer =
+            DeferMeshUntilLit && DeferMeshUntilLit(selected_coord) ? 1 : 0;
         trace.frontier_snapshot_ms = LastMeshSnapshotMs;
         trace.frontier_snapshot_budget_ms = kSnapshotBudgetMs;
+        trace.frontier_tick_elapsed_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - dirty_tick_t0)
+                .count();
+        trace.frontier_tick_budget_ms = MeshEmergeTotalBudgetMs;
         trace.frontier_snapshot_credits_left = CaptureRefreshBudgetLeft;
         trace.frontier_first_mesh_capture_reserve_left =
             FirstMeshCaptureReserveLeft;

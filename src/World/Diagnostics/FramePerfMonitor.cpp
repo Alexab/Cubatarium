@@ -3682,10 +3682,16 @@ void UFramePerfMonitor::Shutdown()
                  << r.frontier_pipeline_inflight
                  << ",\"frontier_pipeline_cap\":"
                  << r.frontier_pipeline_cap
+                 << ",\"frontier_soft_defer\":"
+                 << r.frontier_soft_defer
                  << ",\"frontier_snapshot_ms\":"
                  << r.frontier_snapshot_ms
                  << ",\"frontier_snapshot_budget_ms\":"
                  << r.frontier_snapshot_budget_ms
+                 << ",\"frontier_tick_elapsed_ms\":"
+                 << r.frontier_tick_elapsed_ms
+                 << ",\"frontier_tick_budget_ms\":"
+                 << r.frontier_tick_budget_ms
                  << ",\"frontier_snapshot_credits_left\":"
                  << r.frontier_snapshot_credits_left
                  << ",\"frontier_first_mesh_capture_reserve_left\":"

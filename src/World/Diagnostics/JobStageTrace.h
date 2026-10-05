@@ -604,6 +604,7 @@ struct VisualBlackTraceRecord
   int32_t frontier_scheduled_this_tick{0};
   int32_t frontier_pipeline_inflight{0};
   int32_t frontier_pipeline_cap{0};
+  int32_t frontier_soft_defer{0};
   int32_t frontier_snapshot_credits_left{0};
   int32_t frontier_first_mesh_capture_reserve_left{0};
   int32_t frontier_capture_credits_initial{0};
@@ -616,6 +617,8 @@ struct VisualBlackTraceRecord
   int32_t frontier_snapshot_store_commit_defers{0};
   double frontier_snapshot_ms{0.0};
   double frontier_snapshot_budget_ms{0.0};
+  double frontier_tick_elapsed_ms{0.0};
+  double frontier_tick_budget_ms{0.0};
   /// sample_kind=0 bits: ticket, progress, sticky, pending_replace,
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,
@@ -661,7 +664,8 @@ public:
   /// Preserve exact slice ownership only for the latest no-drawable/unowned
   /// camera-band high-water snapshots; the rings are cleared on each new peak.
   static constexpr size_t kCameraBandPeakTraceRingCapacity = 256;
-  static constexpr size_t kFirstMeshFrontierTraceRingCapacity = 512;
+  /// Retain enough opt-in frontier samples to cover a complete M335 route.
+  static constexpr size_t kFirstMeshFrontierTraceRingCapacity = 4096;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
       kVisualBlackTraceRingCapacity +
       kRendererGateTraceRingCapacity +
