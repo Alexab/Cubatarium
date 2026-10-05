@@ -5014,6 +5014,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   {
     return;
   }
+  Streamer->BeginFrameStats();
   GetColumnFlowExecutor().BindDecideWorld(&world);
   if (kI18WitnessComfortEnabled && WitnessColumnGrace.frames_left > 0)
   {
@@ -5058,6 +5059,56 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     if (glm::length(forward) > 0.01f)
     {
       Streamer->SetViewForward(forward);
+    }
+    const ProceduralSettings &procedural = world.GetProceduralSettings();
+    const glm::vec3 delta = eye - lastCameraPosition;
+    const float dt = std::max(0.0001f, camera->GetDeltaTime());
+    lastMovementSpeed = MovementSpeedFromDisplacement(
+        glm::length(glm::vec3(delta.x, 0.0f, delta.z)), dt,
+        camera->GetLastPhysicsSubsteps(), kPhysicsFixedDt);
+    world.UpdateMotionState(lastMovementSpeed, dt);
+    {
+      glm::vec2 move_xz(delta.x, delta.z);
+      if (glm::length(move_xz) > 0.001f &&
+          lastMovementSpeed >= procedural.MovementPrefetchThreshold)
+      {
+        lastMovementDirXz = glm::normalize(move_xz);
+      }
+      else
+      {
+        glm::vec2 view_xz(forward.x, forward.z);
+        if (glm::length(view_xz) > 0.01f)
+        {
+          lastMovementDirXz = glm::normalize(view_xz);
+        }
+      }
+    }
+    lastCameraPosition = eye;
+    const bool moving_for_unload =
+        lastMovementSpeed >= procedural.MovementPrefetchThreshold;
+    const double frame_ms = world.GetLastMovementFrameMs();
+    const int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
+    bool unload_pass_early = false;
+    if (unload_mode >= kUnloadAmortizeUD && moving_for_unload)
+    {
+      // Give the cursor a chance before column discovery, loading, and mesh
+      // pressure work consume the shared streaming deadline.
+      Streamer->SetEffectiveUnloadOpsPerFrame(
+          std::min(world.MaxUnloadOpsPerFrame, 1));
+      const auto unload_t0 = std::chrono::high_resolution_clock::now();
+      if (Streamer->HasDeferredUnloadSaves())
+      {
+        Streamer->DrainDeferredUnloadSaves(1);
+      }
+      else
+      {
+        Streamer->UnloadPass(WorldPosToBlock(eye), eye, cap);
+      }
+      world.PhysicsTelemetryData.StreamerUnloadMs +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - unload_t0)
+              .count();
+      unload_pass_early = true;
     }
     if (render.AltitudeAdaptiveFog)
     {
@@ -5532,50 +5583,30 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       world.PhysicsTelemetryData.FogPullInStartRatio = fog_start_ratio;
     }
 
-    const float dt = std::max(0.0001f, camera->GetDeltaTime());
-    const glm::vec3 delta = eye - lastCameraPosition;
-    lastMovementSpeed = MovementSpeedFromDisplacement(
-        glm::length(glm::vec3(delta.x, 0.0f, delta.z)), dt,
-        camera->GetLastPhysicsSubsteps(), kPhysicsFixedDt);
-    world.UpdateMotionState(lastMovementSpeed, dt);
-    {
-      const ProceduralSettings &proc_for_dir = world.GetProceduralSettings();
-      glm::vec2 move_xz(delta.x, delta.z);
-      if (glm::length(move_xz) > 0.001f &&
-          lastMovementSpeed >= proc_for_dir.MovementPrefetchThreshold)
-      {
-        lastMovementDirXz = glm::normalize(move_xz);
-      }
-      else
-      {
-        glm::vec2 view_xz(forward.x, forward.z);
-        if (glm::length(view_xz) > 0.01f)
-        {
-          lastMovementDirXz = glm::normalize(view_xz);
-        }
-      }
-    }
-    lastCameraPosition = eye;
-
-    const ProceduralSettings &procedural = world.GetProceduralSettings();
-    const double frame_ms = world.GetLastMovementFrameMs();
     const size_t dirty_for_unload = meshService.GetDirtyCount();
     int unload_ops = world.MaxUnloadOpsPerFrame;
-    // Moving / dirty / hitch: skip unload ForEach (CB wall_no_holes streamer).
+    // Legacy unload modes still suppress full scans under movement, dirty, or
+    // hitch pressure; U-D uses an early cursor pass and one operation instead.
     // Era21: dirty>64 (same Adaptive RD shrink trigger) — dirty≈100 plateau
     // with FogPullIn VisualRD=1 let brief wall dips unload Keep while
     // near_mesh_backlog blocked reload (land opaque_idle_churn≈1300 / chunks
     // 1149→124). Era20 survived the same telem by luck of unload timing.
-    const bool moving_for_unload =
-        lastMovementSpeed >= procedural.MovementPrefetchThreshold;
-    const int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
     const bool unload_stop_skip =
         unload_mode >= kUnloadAmortizeUC &&
         ShouldSkipUnloadOnStopFrame(
             moving_for_unload, frame_ms, UFrameDeadline::Get().Exhausted(),
             static_cast<int>(dirty_for_unload));
-    if (moving_for_unload || frame_ms > 16.0 || dirty_for_unload > 64 ||
-        unload_stop_skip)
+    const bool unload_during_movement =
+        unload_mode >= kUnloadAmortizeUD && moving_for_unload;
+    if (unload_during_movement)
+    {
+      // Keep one bounded cursor/save unit progressing as the camera advances.
+      // The old hitch/dirty gates suppressed all far-side cleanup for the
+      // entire no-teleport flight, growing the resident world without bound.
+      unload_ops = std::min(unload_ops, 1);
+    }
+    else if (moving_for_unload || frame_ms > 16.0 || dirty_for_unload > 64 ||
+             unload_stop_skip)
     {
       unload_ops = 0;
     }
@@ -5798,7 +5829,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // SoT 210431: unload timed separately from load core (FrameDeadline).
     {
       const auto unload_t0 = std::chrono::high_resolution_clock::now();
-      Streamer->UnloadPass(WorldPosToBlock(eye), eye, cap);
+      if (!unload_pass_early)
+      {
+        Streamer->UnloadPass(WorldPosToBlock(eye), eye, cap);
+      }
       if (unload_mode >= kUnloadAmortizeUD && !moving_for_unload &&
           frame_ms <= 12.0 && !UFrameDeadline::Get().Exhausted())
       {
@@ -5992,6 +6026,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     {
       world.PhysicsTelemetryData.StreamLoads = st->loadsThisFrame;
       world.PhysicsTelemetryData.StreamAsyncQueued = st->asyncQueuedThisFrame;
+      world.PhysicsTelemetryData.StreamUnloads = st->unloadsThisFrame;
+      world.PhysicsTelemetryData.StreamSaves = st->savesThisFrame;
       // R4.6.2: sync+async ingress honesty (loads=0 alone ≠ idle).
       world.PhysicsTelemetryData.StreamIngressOps =
           st->loadsThisFrame + st->asyncQueuedThisFrame;

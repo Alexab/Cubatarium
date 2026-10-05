@@ -278,6 +278,24 @@ adequacy parsing. The exact framebuffer failure, frontier state and
 postmortem are documented in the [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m402--partial-m335-flight-zero-sized-framebuffer-then-hung-app-2026-10-05).
 The complete local capture and log paths are linked there.
 
+### M403: exact M335 source/unload baseline
+
+M403 is the same fixed-day visible M335 route and camera settings. Only source
+tracing was enabled; dense pixel capture was off. The process stayed responsive
+and exited 0 after 553 traveled chunks. It recorded 20,648 resident chunk
+slices, a 113.036 ms median frame, and no `WorldColumnSave` lifecycle events.
+The analyzer failed, so this is a failure baseline rather than acceptance.
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m403_world164_m335_column_save_trace --report bin/suite_reports/engine_refactor/m403_world164_m335_column_save_trace_20261005.json --process-timeout 3000
+```
+
+Reports: [flight gates and perf](../../bin/suite_reports/engine_refactor/m403_m335_source_unload_baseline_20261005.json),
+[source lifecycle](../../bin/suite_reports/engine_refactor/m403_world_column_source_trace_20261005.json),
+[source X bins versus M400–M402](../../bin/suite_reports/engine_refactor/m400_m401_m402_m403_world_column_sources_x_20261005.json).
+The corresponding raw perf and INFO logs remain in `bin/logs`.
+
 ### Compare source mix and queue delay by route position
 
 Use this after M335 runs to distinguish stored column results from procedural
@@ -295,11 +313,12 @@ python tools/compare_world_column_sources_by_x.py `
   --run M401=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-111747.37252 `
   --run M402=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-113816.36848 `
   --run M402=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-115345.36848 `
-  --min-chunk-x -520 --max-chunk-x -344 --bin-chunks 16 `
-  --json-out bin/suite_reports/engine_refactor/m400_m401_m402_world_column_sources_x_20261005.json
+  --run M403=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-131803.9428 `
+  --min-chunk-x -560 --max-chunk-x 8 --bin-chunks 16 `
+  --json-out bin/suite_reports/engine_refactor/m400_m401_m402_m403_world_column_sources_x_20261005.json
 ```
 
-The run output is in the [source-map report](../../bin/suite_reports/engine_refactor/m400_m401_m402_world_column_sources_x_20261005.json).
+The run output is in the [M400–M403 source-map report](../../bin/suite_reports/engine_refactor/m400_m401_m402_m403_world_column_sources_x_20261005.json).
 The script reports file reads, ready-result waits, scheduler queue, worker wait,
 generation and apply independently. `procedural/disk_miss` means no disk source
 was found for that request; it does not prove whether the column was never

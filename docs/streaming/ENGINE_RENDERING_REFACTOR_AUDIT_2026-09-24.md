@@ -4411,22 +4411,19 @@ admission, mesh publication, and light correctness as separate measurements.
 The [source-map report and next step](ENGINE_REMEDIATION_PLAN_2026-10-03.md#source-of-column-map--repeated-disk-misses-and-unresolved-save-fate-2026-10-05)
 record the exact bins and limitations.
 
-M403 provides the missing policy context while replaying the same M335 route:
-at x=−3 361 it had 8,418 resident chunk slices, dirty=823, memory pressure
-active, near-zero unload-phase time, and no save lifecycle events. M402 ended
-near x=−6 949 with 16,170 resident slices and the same near-zero unload time.
-WorldStreaming explicitly sets the unload budget to zero while moving, over
-16 ms frame time, or over 64 dirty meshes. With runtime unload mode U-A (1),
-the cursor scan and deferred-save drain are unavailable during cruise. This is
-sufficient to explain why far procedural terrain is repeatedly generated
-instead of reloaded from disk. It is a plausible contributor to long-run
-slowdown; the separate M402 app hang still has no established root cause. The
-remediation is a cursor-based unload/save budget with measurable progress under
-movement, without changing the M335 route.
+M403 completed the same M335 route with no collision stop and two successful
+obstacle detours. The window remained responsive, but the run ended at 20,648
+resident chunk slices with a 113.036 ms median frame (8.87 FPS), 1,098 median
+dirty count, and 1,228 peak near void debt. The analyzer failed; `unfinished_visual`
+was nonzero throughout the steady periods. Dense pixel capture was disabled,
+so this measures readiness debt and frame performance, not what every frame
+looked like to the user.
 
-At 13:39:50 in the same M403 replay, Windows still reported the process as
-responsive and the camera had advanced to x=−5 168. However, successive
-periods averaged 107–113 ms/frame, resident memory was 1.15 GB, and telemetry
-recorded one visual hole. This is severe degradation rather than a confirmed
-app hang; preserve the process while its perf and source logs advance so the
-long-run failure can be captured.
+The INFO trace contained zero `[WorldColumnSave]` events. Mode U-A plus the
+movement/dirty/hitch gates left no unload budget for the exact long-flight
+profile. Source timing separates that policy failure from disk speed: median
+file read was 3.56 ms, compared with 2.20 s median disk-result wait and 69 ms
+median procedural scheduler wait (25.83 s p95). Resident growth, queue delay,
+and mesh/light publication are distinct measurements. The 2026-10-05
+[remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m403--exact-m335-sourceunload-baseline-2026-10-05)
+records the source trace and the bounded U-D implementation awaiting M404.

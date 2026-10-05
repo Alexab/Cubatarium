@@ -519,6 +519,8 @@ struct FrameNumbers
   int dirty{0};
   int stream_loads{0};
   int stream_async_queued{0};
+  int stream_unloads{0};
+  int stream_saves{0};
   int stream_ingress_ops{0};
   int stream_disk_complete_n{0};
   int stream_gen_commit_n{0};
@@ -1320,6 +1322,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.dirty = md.dirtyChunksPending;
   n.stream_loads = phys.StreamLoads;
   n.stream_async_queued = phys.StreamAsyncQueued;
+  n.stream_unloads = phys.StreamUnloads;
+  n.stream_saves = phys.StreamSaves;
   n.stream_ingress_ops = phys.StreamIngressOps;
   n.stream_disk_complete_n = phys.StreamDiskCompleteN;
   n.stream_gen_commit_n = phys.StreamGenCommitN;
@@ -2216,6 +2220,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"dirty\":" << n.dirty
           << ",\"stream_loads\":" << n.stream_loads
           << ",\"stream_async_queued\":" << n.stream_async_queued
+          << ",\"stream_unloads\":" << n.stream_unloads
+          << ",\"stream_saves\":" << n.stream_saves
           << ",\"stream_ingress_ops\":" << n.stream_ingress_ops
           << ",\"stream_disk_complete_n\":" << n.stream_disk_complete_n
           << ",\"stream_gen_commit_n\":" << n.stream_gen_commit_n

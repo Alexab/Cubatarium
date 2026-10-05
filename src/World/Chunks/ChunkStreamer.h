@@ -189,10 +189,17 @@ public:
   /// Full streaming pass after Movement: load (unload is separate pass).
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               const PlayerCapsule &cap);
+  /// Reset the per-frame counters before early maintenance and load passes.
+  void BeginFrameStats()
+  {
+    LastFrameStats.Reset();
+    FrameStatsPrimed = true;
+  }
+  bool HasDeferredUnloadSaves() const { return !DeferredUnloadSaves.empty(); }
   /// SoT 210431: unload pass timed separately from Update (FrameDeadline).
   void UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
                   const PlayerCapsule &cap);
-  /// Drain deferred save+unload queue (mode U-D) on calm frames.
+  /// Drain deferred save+unload queue (mode U-D) within the caller's frame budget.
   void DrainDeferredUnloadSaves(int max_ops);
   void PrefetchAhead(glm::ivec3 feet_chunk, glm::vec3 view_forward_xz,
                      float movement_speed, float speed_threshold,
@@ -288,6 +295,7 @@ private:
   /// U-D: save+unload deferred when Exhausted mid-pass.
   std::deque<glm::ivec3> DeferredUnloadSaves;
   std::unordered_set<glm::ivec3, IVec3Hash> DeferredUnloadSaveSet;
+  bool FrameStatsPrimed{false};
 };
 
 } // namespace cutum

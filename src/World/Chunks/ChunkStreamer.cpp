@@ -799,7 +799,9 @@ void UChunkStreamer::UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyeP
       glm::ivec3(UChunkManager::WorldToChunk(feetBlockPos).x, 0,
                  UChunkManager::WorldToChunk(feetBlockPos).z);
   (void)cameraBlockPos;
-  if (MaxLoadOpsPerFrame > 2 && EffectiveUnloadOpsPerFrame > 0)
+  const int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
+  if ((MaxLoadOpsPerFrame > 2 || unload_mode >= kUnloadAmortizeUD) &&
+      EffectiveUnloadOpsPerFrame > 0)
   {
     UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
   }
@@ -868,7 +870,11 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     return;
   }
 
-  LastFrameStats.Reset();
+  if (!FrameStatsPrimed)
+  {
+    LastFrameStats.Reset();
+  }
+  FrameStatsPrimed = false;
 
   const glm::ivec3 centerChunk = UChunkManager::WorldToChunk(cameraBlockPos);
   const glm::ivec3 feetBlockPos =
