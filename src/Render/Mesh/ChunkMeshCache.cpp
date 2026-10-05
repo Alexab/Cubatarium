@@ -8827,13 +8827,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                 focus_first_mesh_budget_reserve_limit &&
             over_budget_reserves_used < 2 &&
             LastMeshSnapshotMs < kSnapshotBudgetMs;
+        // A screen-ray pin is direct evidence of drawable geometry debt on a
+        // currently sampled pixel. Unlike generic queue work, its age is not a
+        // useful urgency threshold: the witness can be only a few frames old
+        // and still be the surface the player sees now.
         focus_screen_ray_remesh_budget_reserve_candidate =
             total_elapsed > MeshEmergeTotalBudgetMs && trace_visible_repair &&
             Dirty.IsPriorityRemesh(schedule_coord) &&
             Dirty.IsScreenRayRemesh(schedule_coord) &&
             HasDrawableGreedyMesh(schedule_coord) && MeshFocusValid &&
             focus_horiz <= std::max(2, MeshFocusRadiusChunks) &&
-            dirty_queue_age_frames >= 32 &&
             focus_screen_ray_remesh_budget_reserve_used < 1 &&
             over_budget_reserves_used < 2 &&
             LastMeshSnapshotMs < kSnapshotBudgetMs;
