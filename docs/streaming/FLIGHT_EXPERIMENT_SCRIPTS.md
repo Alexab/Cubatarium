@@ -521,3 +521,32 @@ JSONL and compare file size, screen-ray counts, route distance/speed, saved
 images, and renderer traces with M408. Do not interpret a smaller perf file as
 a rendering fix; this iteration validates the evidence pipeline before
 choosing the owning render or streaming stage.
+
+M409 completed normally at 13,472 blocks and 5.19653 blocks/s; `process_rc=0`
+and no forced kill. The user confirmed the earlier M407 long pause was caused
+by system sleep/lock. M409 did not pass acceptance (`27/39` gates). It recorded
+7,467 disk completions, 225 procedural commits, a 292-result ready-queue high
+water, and a one-time 286.18 ms cold directory-index scan on the first disk
+request. Disk read p95 was 7.02 ms; procedural worker-pool wait was negligible
+while request-to-scheduler-start reached 255.89 ms p95. Pixel probes below
+luma 32 all had valid depth and visible MDI surfaces. Treat these as separate
+open items: entry hitch, aging in result/admission queues, and dim but drawable
+surfaces.
+
+The compact screen-ray serializer reduced M409's raw perf log to 403.67 MiB
+from M408's 490.55 MiB. Dense pixel probes still account for 193.63 MiB, so
+record telemetry volume when comparing future frame timings. Full M409
+analysis commands (suppress the analyzers' redundant stdout JSON):
+
+```powershell
+py tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261005-224948_35096.jsonl --json-out bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_20261005.json > $null
+py tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261005-224948_35096.jsonl --threshold 96 --json-out bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_l96_20261005.json > $null
+py tools/analyze_visual_coverage_trace.py bin/logs/perf_20261005-224948_35096.jsonl --json-out bin/suite_reports/engine_refactor/m409_visual_coverage_trace_20261005.json
+py tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-224944.35096 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-230113.35096 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-231339.35096 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-232827.35096 --focus-z 3 --z-radius 5 --json-out bin/suite_reports/engine_refactor/m409_source_trace_20261005.json
+```
+
+The cold scan's p95 was only 0.0288 ms, but its 286.18 ms maximum came from
+the first request at `(7,0,3)` while the directory index was built. Move that
+scan to asynchronous world entry before starting another far route. Preserve
+the exact M335 capture conditions and keep the new-world cold-generation run
+periodic and secondary.

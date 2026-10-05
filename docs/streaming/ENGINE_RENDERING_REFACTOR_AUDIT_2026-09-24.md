@@ -4642,3 +4642,47 @@ M409 adds compact output for screen-ray records and the reusable
 `tools/analyze_visual_coverage_trace.py`. Keep readiness, visible surface,
 frustum/MDI, and camera-band ownership evidence separate. No queue or lighting
 policy change is justified by the M408 readiness proxy alone.
+
+### M409 follow-up: disk service, dim surfaces, and the cold index path
+
+The unchanged M335 route completed 13,472 blocks at 5.19653 blocks/s. The
+process returned normally; the user's later confirmation attributes the
+34-minute M407 pause to system sleep/lock, so it is not an engine hang. M409
+still failed 12 of 39 acceptance gates and retained median 27 unfinished
+readiness items. The stop phase reduced debt without converging to zero.
+
+Disk work was not generally slow: 7,467 of 7,467 queued slices completed;
+file read median/p95 was 2.92/7.02 ms and deserialize/apply median was
+3.21/2.66 ms. Worker-queue wait was 9.64 ms median / 32.33 ms p95, while
+completed results waited 587 ms median / 3.09 s p95 before application (max
+61.79 s). The ready-load queue peaked at 292. These maxima are queue/service
+age observations, not a single frame freeze. Procedural generation also
+remains around 84 ms median, while its worker-pool queue is negligible; the
+larger tail is request-to-scheduler admission (9.36 ms median, 255.89 ms p95,
+3.06 s max). Investigate aging and retention before raising worker counts or
+per-frame quotas.
+
+One measured world-entry hitch has a separate cause: the first disk discovery
+at column `(7,0,3)` spent 286.18 ms enumerating the chunk directory inside
+`GetHighestChunkSliceOnDisk()`. Only two of 15,159 discovery calls exceeded
+1 ms, so this is a cold-index one-off, not a recurring far-flight stall. Move
+the initial index build out of the live world tick while retaining safe
+fallback behavior for legacy worlds.
+
+The low-luminance trace still does not prove missing terrain. All 269 M409
+samples below luma 32 had valid depth and visible MDI geometry; 245 joined to
+a source face. At the far endpoint, a representative RGB `(25,33,23)` sample
+had mesh/published geometry revision `11/11`, settled light revision `1`, sky
+light `1`, and no preview marker. Its voxel-ray hit did not describe the same
+depth surface. The renderer investigation needs material identity and a
+same-pixel shader/fog/albedo breakdown; do not fix this by relaxing light
+settlement. Separately, camera-band and focus traces still show readiness and
+no-drawable debt, which remains open until tied to visible depth or pixel
+coverage.
+
+Compact screen-ray serialization cut M409 perf output to 403.67 MiB from
+M408's 490.55 MiB, but dense pixel probes still consume 193.63 MiB. Keep the
+pixel sample count and report telemetry volume separately from engine
+performance. Next work should first remove the cold index scan from the live
+tick, then add material/shader evidence and streaming queue-age evidence
+before selecting a behavioral policy change.

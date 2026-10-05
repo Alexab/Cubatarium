@@ -2214,3 +2214,99 @@ py tools/analyze_visual_coverage_trace.py bin/logs/perf_20261005-210152_32396.js
 
 The helper's source and trace artifacts remain in ignored `bin/` paths; only
 the reusable analyzer and interpretation are tracked.
+
+### M409 results — trace volume fell, acceptance still fails (2026-10-05)
+
+M409 completed the same visible Release/no-teleport M335 route on
+`World_164`: 13,472 blocks, median speed 5.19653 blocks/s, 189 captures,
+`process_rc=0`, and no forced termination. The user later confirmed that the
+34-minute M407 pause was caused by system sleep/lock. It is not an engine-hang
+observation and must not be used as evidence for a streaming deadlock. M409
+itself completed normally. The saved `world_data.json` was restored byte for
+byte.
+
+M409 did not pass renderer acceptance (`27/39` gates). Median flight wall time
+was 58.12 ms, streaming phase 49.67 ms, and mesh emerge 19.49 ms. The
+readiness proxy remained nonzero in all steady periods (median 27); the stop
+phase drained pending/not-ready/dirty counts by 6/3/98 but did not reach zero.
+This is a real unfinished-work signal, not a measured fraction of blank
+pixels. M409's wall and streaming medians were slightly higher than M408's
+56.11/47.33 ms. This is not a policy A/B: M409 only changed trace
+serialization, and the persisted disk mix/system cache differ between runs.
+
+The compact screen-ray serializer reduced raw perf output from 490.55 MiB in
+M408 to 403.67 MiB in M409 (−86.88 MiB, 17.7%). Screen-ray rows alone fell
+from 81.61 MiB to a compact form. Dense `renderer_pixel_probe` rows still use
+193.63 MiB (48% of M409's log); `view_draw_gate_trace` adds 39.0 MiB. This is
+an instrumentation cost, not a rendering improvement. Preserve dense pixel
+coverage while making future serialization smaller or explicitly measuring
+the overhead.
+
+M409 recorded 7,467 queued disk slices and 7,467 completions, with no
+out-of-range cancellations. Typical storage work remains inexpensive:
+file-open median/p95 2.10/3.38 ms, file-read 2.92/7.02 ms, deserialize
+3.21/4.09 ms, and apply 2.66/4.59 ms. Worker-queue wait was 9.64/32.33 ms
+median/p95; completion-to-apply wait was 587 ms/3.09 s, with a 61.79 s
+maximum and a ready-load high-water of 292. Those tails show admission and
+result-service delay, not a generally slow disk. The maximum is accumulated
+column service time, not one 61-second frame stall. Compare the ready queue,
+result wait, and cancelled/stale work in the next repeat before changing the
+four-result ranking or apply budget.
+
+For the 225 procedural disk misses, terrain generation stayed stable at
+84.06 ms median / 118.88 ms p95. Worker-pool wait was only 0.029/0.053 ms,
+while request-to-scheduler-start wait reached 9.36 ms median, 255.89 ms p95,
+and 3.06 s maximum. The tail is before execution in the frame-driven
+`ChunkLoadScheduler`, not a shortage of generator worker threads. Do not raise
+worker count or generation concurrency based on the frame wall alone; first
+measure how often requests age while admission is throttled and whether they
+remain inside the moving retention ring.
+
+The source trace also caught one synchronous cold-index build: the first disk
+column request at `(7,0,3)` spent 286.18 ms in `GetHighestChunkSliceOnDisk()`
+while it enumerated the world's chunk directory. Only 2 of 15,159 column
+discovery calls exceeded 1 ms; p95 was 0.0288 ms. This is a one-time entry
+hitch, not the long-flight cause, but directory enumeration still runs on the
+world thread and should be moved into the existing asynchronous world-load
+phase (or replaced by a persisted/incremental index) before expanding the
+far-flight workload. Preserve correct handling of old worlds without an
+index.
+
+Dense pixel evidence does not connect M409's sampled dim pixels to absent
+terrain. All 269 probes below luma 32 had a valid depth surface and visible
+MDI draw; 245 joined to a source face. Of those dark probes, 200 had settled
+light with sky=1 and no preview marker, 18 had settled sky=0, and 41 used a
+preview marker. A representative far-route sample at camera `x=-13,346`
+showed RGB `(25,33,23)`, a depth surface in chunk `(-836,3,3)`, matching mesh
+and published geometry revision 11, settled light revision 1, sky light 1,
+and no preview. The voxel ray's hit was more than two blocks from the depth
+surface, so it cannot explain that pixel. This points the next investigation
+toward the exact surface material, shader albedo/light/fog factors, and
+same-pixel depth join; it does not prove that every operator-reported dim
+region is expected. At the same time, focus/frustum/camera-band traces retain
+unready or no-drawable samples and the long-flight stop still fails. Keep
+streaming debt as an open issue and do not turn the dim-pixel count into a
+missing-chunk count.
+
+The next implementation work is therefore split by evidence:
+
+1. Remove the synchronous cold directory scan from the live world tick, then
+   measure the world-entry hitch and disk index correctness on an existing
+   world. Do this before another long flight.
+2. Trace why the exact M409 depth surfaces produce low luma despite matching
+   geometry and settled sky light. Add material identity and shader/fog
+   contribution to a sparse same-pixel witness before changing light rules.
+3. For streaming, capture scheduler admission age, disk ready-queue age, and
+   cancellation/retention state together. Only then change the admission or
+   drain policy; do not increase quotas from `unfinished_visual` alone.
+4. Retain M335 unchanged as the repeated-world gate. Schedule a new-world
+   cold-generation run periodically after entry performance and trace size
+   are controlled.
+
+Artifacts (ignored `bin/` outputs): [M409 acceptance report](../../bin/suite_reports/engine_refactor/m409_world164_m335_compact_screen_rays_20261005.json),
+[pixel trace <32](../../bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_20261005.json),
+[pixel trace <96](../../bin/suite_reports/engine_refactor/m409_renderer_pixel_trace_l96_20261005.json),
+[visual coverage](../../bin/suite_reports/engine_refactor/m409_visual_coverage_trace_20261005.json),
+[source trace](../../bin/suite_reports/engine_refactor/m409_source_trace_20261005.json),
+and raw perf `bin/logs/perf_20261005-224948_35096.jsonl`. Captures are in
+`bin/logs/m409_world164_m335_compact_screen_rays/`.
