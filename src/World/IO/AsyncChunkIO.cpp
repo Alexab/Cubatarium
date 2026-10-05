@@ -19,6 +19,7 @@ bool IsAsyncChunkIoTraceEnabled()
 } // namespace
 
 void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
+                                UBlockRegistry &registry,
                                 const std::string &worldFolder,
                                 ChunkGenerationToken token,
                                 std::shared_ptr<std::atomic<bool>> cancellation)
@@ -61,9 +62,11 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
 
   const std::string filePath =
       storage.ChunkFilePath(worldFolder, coord, format);
+  const ChunkStorageSettings worker_storage_settings = storage.GetSettings();
   Pool.Enqueue(
       [this, coord, filePath, token, format, submitted_at,
-       format_detect_ms, trace_io, cancellation]()
+       format_detect_ms, trace_io, cancellation, &registry,
+       worker_storage_settings]()
       {
         const auto is_cancelled = [&]()
         {
@@ -127,9 +130,35 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                   read_started)
                                   .count();
         }
-        result.success = !result.payload.empty();
         if (is_cancelled())
         {
+          NoteLoadCancellation();
+          return;
+        }
+        result.success = !result.payload.empty();
+        if (result.success)
+        {
+          const auto deserialize_started = std::chrono::steady_clock::now();
+          try
+          {
+            UChunkStorageService worker_storage(worker_storage_settings);
+            result.decodedBuffer = worker_storage.DeserializeChunk(
+                result.payload, coord, format, registry);
+          }
+          catch (...)
+          {
+            result.success = false;
+            result.payload.clear();
+          }
+          result.deserializeMs = std::chrono::duration<double, std::milli>(
+                                    std::chrono::steady_clock::now() -
+                                    deserialize_started)
+                                    .count();
+          std::vector<uint8_t>().swap(result.payload);
+        }
+        if (is_cancelled())
+        {
+          NoteLoadCancellation();
           return;
         }
         if (trace_io)

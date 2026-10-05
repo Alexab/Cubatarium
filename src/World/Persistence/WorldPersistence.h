@@ -202,6 +202,10 @@ private:
     double disk_probe_max_ms{0.0};
     double result_wait_ms{0.0};
     double result_wait_max_ms{0.0};
+    double deserialize_ms{0.0};
+    double deserialize_max_ms{0.0};
+    double apply_ms{0.0};
+    double apply_max_ms{0.0};
     double deserialize_apply_ms{0.0};
     double deserialize_apply_max_ms{0.0};
     bool had_disk_read_failure{false};

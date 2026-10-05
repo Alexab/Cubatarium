@@ -81,8 +81,10 @@ def summarize(
             entry: dict[str, Any] = {"count": len(rows)}
             timing_fields = (
                 ("elapsed_ms", "worker_queue_ms", "file_open_ms", "file_read_ms",
-                 "result_wait_ms", "deserialize_apply_ms", "disk_discovery_ms",
-                 "format_detect_ms", "finalize_prelog_ms")
+                 "result_wait_ms", "result_wait_max_ms", "deserialize_ms",
+                 "deserialize_max_ms", "apply_ms", "apply_max_ms",
+                 "deserialize_apply_ms", "deserialize_apply_max_ms",
+                 "disk_discovery_ms", "format_detect_ms", "finalize_prelog_ms")
                 if source == "disk" and outcome == "complete"
                 else ("queue_ms", "scheduler_queue_ms", "worker_pool_queue_ms",
                       "generation_ms", "ready_wait_ms", "apply_ms", "total_ms")

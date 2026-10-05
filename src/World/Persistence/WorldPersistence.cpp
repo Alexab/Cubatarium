@@ -3163,6 +3163,11 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
            " result_wait_ms=" + std::to_string(state.result_wait_ms) +
            " result_wait_max_ms=" +
            std::to_string(state.result_wait_max_ms) +
+           " deserialize_ms=" + std::to_string(state.deserialize_ms) +
+           " deserialize_max_ms=" +
+           std::to_string(state.deserialize_max_ms) +
+           " apply_ms=" + std::to_string(state.apply_ms) +
+           " apply_max_ms=" + std::to_string(state.apply_max_ms) +
            " deserialize_apply_ms=" +
            std::to_string(state.deserialize_apply_ms) +
            " deserialize_apply_max_ms=" +
@@ -3230,6 +3235,10 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     retry_state.disk_probe_max_ms = state.disk_probe_max_ms;
     retry_state.result_wait_ms = state.result_wait_ms;
     retry_state.result_wait_max_ms = state.result_wait_max_ms;
+    retry_state.deserialize_ms = state.deserialize_ms;
+    retry_state.deserialize_max_ms = state.deserialize_max_ms;
+    retry_state.apply_ms = state.apply_ms;
+    retry_state.apply_max_ms = state.apply_max_ms;
     retry_state.deserialize_apply_ms = state.deserialize_apply_ms;
     retry_state.deserialize_apply_max_ms = state.deserialize_apply_max_ms;
     PendingAsyncColumnLoadSlices[ground_coord] = retry_state;
@@ -3269,7 +3278,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     for (int cy : cy_order)
     {
       AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
-                                *ChunkStorage, WorldFolderPath, token,
+                                *ChunkStorage, *world.BlockRegistry,
+                                WorldFolderPath, token,
                                 retry_state.cancellation);
     }
     return;
@@ -3528,14 +3538,18 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
         max_slice_applies = 6;
       }
     }
+    const double effective_apply_budget_ms =
+        max_apply_ms > 0.0
+            ? max_apply_ms
+            : (frame_ms > 24.0 ? 4.0 : (frame_ms > 16.0 ? 5.0 : 6.0));
     const auto apply_started = std::chrono::steady_clock::now();
     std::size_t applied_slices = 0;
     const auto apply_budget_expired = [&]()
     {
-      return max_apply_ms > 0.0 && applied_slices > 0 &&
+      return applied_slices > 0 &&
              std::chrono::duration<double, std::milli>(
                  std::chrono::steady_clock::now() - apply_started)
-                     .count() >= max_apply_ms;
+                     .count() >= effective_apply_budget_ms;
     };
     const glm::ivec3 focus_chunk =
         UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
@@ -3616,6 +3630,9 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
         state.file_read_ms += load.fileReadMs;
         state.file_read_max_ms =
             std::max(state.file_read_max_ms, load.fileReadMs);
+        state.deserialize_ms += load.deserializeMs;
+        state.deserialize_max_ms =
+            std::max(state.deserialize_max_ms, load.deserializeMs);
         if (load.workerFinishedAt != std::chrono::steady_clock::time_point{})
         {
           const double result_wait_ms =
@@ -3630,7 +3647,7 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
       // The requested format is already carried with a successful worker
       // result. Re-check the filesystem only after a read failure, where the
       // file may have disappeared between request and open.
-        ChunkDiskFormat disk_format = load.format;
+      ChunkDiskFormat disk_format = load.format;
       if (!load.success && load.format != ChunkDiskFormat::Absent)
       {
         const auto probe_started =
@@ -3655,13 +3672,12 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
               : load.token.sequence;
       const bool token_valid = load.token.IsValidFor(ground, current_sequence);
 
-      const auto deserialize_apply_started =
+      const auto apply_started_at =
           trace_async_io ? std::chrono::steady_clock::now()
                          : std::chrono::steady_clock::time_point{};
       if (load.success && token_valid && world.BlockRegistry)
       {
-        const UChunkBuffer buffer = ChunkStorage->DeserializeChunk(
-            load.payload, load.coord, load.format, *world.BlockRegistry);
+        const UChunkBuffer &buffer = load.decodedBuffer;
         if (!buffer.IsEmpty())
         {
           buffer.ApplyToChunk(world.BlockWorld, load.coord);
@@ -3689,10 +3705,13 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
       }
       if (trace_async_io)
       {
-        const double deserialize_apply_ms =
+        const double apply_ms =
             std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - deserialize_apply_started)
+                std::chrono::steady_clock::now() - apply_started_at)
                 .count();
+        state.apply_ms += apply_ms;
+        state.apply_max_ms = std::max(state.apply_max_ms, apply_ms);
+        const double deserialize_apply_ms = load.deserializeMs + apply_ms;
         state.deserialize_apply_ms += deserialize_apply_ms;
         state.deserialize_apply_max_ms =
             std::max(state.deserialize_apply_max_ms, deserialize_apply_ms);
@@ -3965,8 +3984,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   for (int cy : cy_order)
   {
     AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
-                              *ChunkStorage, WorldFolderPath, token,
-                              state.cancellation);
+                              *ChunkStorage, *world.BlockRegistry,
+                              WorldFolderPath, token, state.cancellation);
   }
 }
 

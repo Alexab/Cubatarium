@@ -25,6 +25,7 @@ struct AsyncChunkLoadResult
   ChunkGenerationToken token;
   std::shared_ptr<std::atomic<bool>> cancellation;
   std::vector<uint8_t> payload;
+  UChunkBuffer decodedBuffer;
   ChunkDiskFormat format{ChunkDiskFormat::Absent};
   bool success{false};
   std::chrono::steady_clock::time_point submittedAt{};
@@ -33,6 +34,7 @@ struct AsyncChunkLoadResult
   double formatDetectMs{0.0};
   double fileOpenMs{0.0};
   double fileReadMs{0.0};
+  double deserializeMs{0.0};
 };
 
 struct AsyncChunkSaveRequest
@@ -54,6 +56,7 @@ public:
   }
 
   void RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
+                   UBlockRegistry &registry,
                    const std::string &worldFolder, ChunkGenerationToken token,
                    std::shared_ptr<std::atomic<bool>> cancellation);
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
