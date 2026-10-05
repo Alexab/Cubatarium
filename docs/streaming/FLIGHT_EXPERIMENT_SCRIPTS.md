@@ -142,3 +142,26 @@
 - Анализаторы обычно читают уже созданные `bin/logs/perf_*.jsonl` и `bin/suite_reports/**`. Большие логи и отчёты в этот commit не включаются; каталог сохраняет код, но не подменяет отсутствующие входные данные.
 - Изменения исходников проверять на контрольном repeatable world; wrappers из архива не считать acceptance gate без актуального manifest и полного отчёта.
 - Новые seed/world запускать периодически по [плану рефакторинга](ENGINE_REMEDIATION_PLAN_2026-10-03.md), не заменяя ими повторяемую World_164 базу.
+
+### M396: полный M335 с включённым обходом препятствий
+
+Для M396 использовался `tools/flight_sim_fixed_day.py`, который временно задаёт
+фиксированный ясный день и восстанавливает `world_data.json` побайтно. Камера и
+условия остались прежними: World_164, `[120,56,56]`, eye `70`, yaw `180°`, pitch
+`−30°`, no teleport, speed scale `1`, 2 800 s полёта и 20 s остановки. Штатный
+predictive obstacle avoidance включён; в этом запуске он выполнил два детура и
+вернулся на исходную линию.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m396_world164_m335_detour_closed_loop'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m396_world164_m335_detour_closed_loop --report bin/suite_reports/engine_refactor/m396_world164_m335_detour_closed_loop_20261005.json --process-timeout 3000
+```
+
+Flight-sim control summary: `bin/suite_reports/engine_refactor/m396_flight_control_report_20261005.json`.
+Renderer/source compact reports are listed in the remediation plan. The app
+returned `process_rc=0`, but renderer acceptance failed; treat M396 as the latest
+same-line diagnostic baseline, not as a passing fix.

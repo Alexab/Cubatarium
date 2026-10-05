@@ -1,11 +1,11 @@
 # План исправления стриминга и отображения мира — обновлён 5 октября 2026
 
 Исходная база: `develop` / `codex_audit2`, commit `185e2f08` (merge
-`codex_audit`). M395 проверил Release manifest `b1376932` на закреплённом
-профиле M335. Он выявил, что текущий обход препятствий может застрять в боковом
-шаге и увести камеру на другой Z-коридор; поэтому его pixel/source результаты
-нельзя считать повтором прежней M335 линии. Изменение Red load cap откатил
-commit `820af493`; quota bump не возвращать.
+`codex_audit`). На 5 октября текущий чистый Release manifest — M396,
+commit `19007cc5`, на закреплённом профиле M335. M395 выявил ошибку сходимости
+обхода препятствий; она исправлена и проверена полным M396 по исходному
+Z-коридору. Red load cap из M394 откатил commit `820af493`; quota bump не
+возвращать без отдельного причинного сравнения.
 Связанные документы: [аудит движка](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md),
 [архитектурные контракты](ENGINE_REMEDIATION_PLAN_2026-09-22.md),
 [каталог flight-экспериментов](FLIGHT_EXPERIMENT_SCRIPTS.md).
@@ -1468,3 +1468,74 @@ target; Debug и тестовые targets в этой работе не запу
 до mesh readiness; очередь должна ограничивать дубликаты/запас работы, а disk I/O,
 decode/apply, generation, lighting и publication должны иметь отдельные latency и
 completion counters. Конкретные лимиты брать из измерений этого движка.
+
+### M396 — исходный маршрут и детуры восстановлены; render debt подтверждён
+
+M396 собран на чистом Release commit `19007cc5` (`Cubatarium.exe` SHA-256
+`3f78eaf3617edbc8c9039ecafee423d9c9513d05afe15efdf7fb1efc7543cb20`) и прошёл
+те же World_164/M335 условия: start `[120,56,56]`, eye `70`, yaw `180°`, pitch
+`−30°`, fixed clear day, scale `1`, no teleport, 2 800 s полёта и 20 s остановки.
+Условия камеры и съёмки не менялись. Обход включался только на двух
+предсказанных препятствиях: оба детура завершены, перепланирований и collision
+stop нет. Фокус прошёл `(7,3)→(−584,3)` / `9 456` блоков; максимальный уход от
+исходной линии составил `2.50` блока, конечный — `0.14` блока. Значит, результат
+можно сопоставлять с прежним M335 маршрутом.
+
+Renderer acceptance всё ещё красный: `15/39` gates, `holes_rate=1.0`, максимум
+`fly_visible_black=25`. На точке остановки focus miss сохранялся до `70 s`, в
+конце было `57` not-ready slices и `152` dirty focus slices; post-stop convergence
+не достигнута. Это измеренный render debt, а не доказательство, что каждый такой
+slice занимает большую часть экрана.
+
+Пиксельная трасса содержит `32 768` проб. Из `1 605` проб с luma `<96` на `1 532`
+нашёлся видимый opaque MDI depth-hit; `851` из них имели CPU mesh revision выше
+опубликованной geometry revision. У `822/851` был dirty owner: `792` стояли в
+priority-remesh очереди и `30` в обычной remesh очереди. Возраст этих dirty
+записей: median `24`, p95 `166`, max `212` кадров. Это локализует значительную
+часть stale drawable поверхности до новой сборки меша, но не доказывает причину
+всех затемнённых пикселей. Порог `<96` захватывает нормальные тёмные материалы:
+среди source-face samples `1 160/1 445` имели sky-light `1`; из `284` проб `<32`
+`220` также имели sky-light `1`, а preview-маркер был только у `35`. Поэтому эти
+пороговые количества — диагностическая выборка, не доля чёрных/пустых чанков.
+
+Coordinate join дал два разных примера:
+
+- Opaque pixel hit на `(-583,2,2)` относится к колонке `(-583,0,2)`. Для неё был
+  `procedural/disk_miss`; от запроса до worker start прошло `12.527 s`, сама
+  генерация заняла `94.37 ms`, apply — `5.05 ms`. Через `11.7 s` после commit
+  slice уже был drawable, но помечался `provisional_light_preview=1` при
+  `field_light_rev=0`, settlement `1:0` и публикации geom `1`. Это доказывает
+  новый procedural source для одного видимого sample и показывает отставание
+  admission/generation queue; само по себе не объясняет его цвет.
+- Колонка `(-578,0,3)` получила procedural commit за `178 ms` total (`73.6 ms`
+  генерация). Примерно через `25 s` её slice имел `4096` non-air блоков и
+  FirstMesh-ticket в начале dirty очереди (`index=0/17`), но ещё не имел drawable
+  mesh, capture, async build или GPU owner; dirty age была `16` кадров. Это
+  конкретное пустое покрытие после быстрого получения voxel data. На уровне всего
+  run miss stuck достигал `70 s`.
+
+В source trace маршрута: `2 719` procedural commits; request→worker scheduler
+wait median/p95/max `33 ms/30.90 s/64.71 s`, worker-pool wait p95 `0.049 ms`,
+generation p95 `120 ms`, ready-wait p95 `400 ms`, apply p95 `7.47 ms`. Для disk
+path завершились `2 554/2 556` queued columns; file-read p95 `8.19 ms`, но
+result-wait p95 `59.67 s`. Следовательно, на медленном procedural хвосте узкое
+место до worker, а на disk path — выдача/применение готового результата, не
+скорость самого файла. При этом конкретные `(-578,0,3)` и `(-583,0,2)` показывают,
+что быстрый источник всё ещё может оставлять FirstMesh/light publication debt.
+
+**Следующий этап рефакторинга:** сначала добавить bounded per-slice trace решения
+FirstMesh admission для ближних loaded/no-drawable slices: фактический lane cap,
+dirty queue index/age, focus distance, snapshot refresh/time budget, defer reason,
+и наличие pipeline owner. Нужен именно ответ, почему ticket у головы очереди не
+перешёл в capture, а не ещё один глобальный queue count. Затем разделить и
+исправлять два потока по измерению: source admission/ready-result apply и
+FirstMesh capture→worker→GPU publication. Не повышать Red load cap и не менять
+камеру. После одного source/render изменения повторить M335; затем, уже после
+стабилизации World_164, проверить переносимость на новом seed.
+
+Артефакты: [M396 renderer report](../../bin/suite_reports/engine_refactor/m396_world164_m335_detour_closed_loop_20261005.json),
+[flight control](../../bin/suite_reports/engine_refactor/m396_flight_control_report_20261005.json),
+[pixel/depth trace luma 96](../../bin/suite_reports/engine_refactor/m396_renderer_pixel_trace_l96_20261005.json),
+[z=3 source trace](../../bin/suite_reports/engine_refactor/m396_world_column_source_z3_20261005.json),
+[perf JSONL](../../bin/logs/perf_20261005-020105_13792.jsonl),
+[GUI captures](../../bin/logs/m396_world164_m335_detour_closed_loop).

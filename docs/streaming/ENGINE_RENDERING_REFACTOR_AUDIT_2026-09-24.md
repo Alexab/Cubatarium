@@ -4234,3 +4234,66 @@ Artifacts: [M395 renderer report](../../bin/suite_reports/engine_refactor/m395_w
 [z=129 source trace](../../bin/suite_reports/engine_refactor/m395_world_column_source_z129_20261005.json),
 [perf trace](../../bin/logs/perf_20261005-003751_40828.jsonl),
 [captures](../../bin/logs/m395_world164_m335_generation_queue_split).
+
+## M396: M335 trajectory restored; visible debt precedes GPU publication
+
+M396 ran from a clean Release manifest on commit `19007cc5`, with the same
+World_164 M335 start, eye height, yaw, pitch, fixed-day lighting, movement scale,
+and no-teleport mode as prior repeatable flights. No capture parameter was
+retuned. Two predicted obstacles triggered avoidance; both detours completed,
+with no replan or collision stop. Focus reached `(−584,3)` from `(7,3)` and
+passed the `8 192`-block checkpoint. Maximum and final lateral deviations were
+`2.50` and `0.14` blocks. This validates the signed cross-track waypoint fix
+from `19007cc5` on the full visual route; M395's Z=129 source results remain an
+off-route diagnostic only.
+
+Renderer acceptance remained false (`15/39` gates, `holes_rate=1.0`). At the end
+the focus miss remained stuck for up to `70 s`, with `57` not-ready and `152`
+dirty focus slices; post-stop convergence was false. The flight therefore gives
+a valid same-route failure sample, not a renderer fix.
+
+The exact opaque-depth pixel join retained the per-pixel mesh owner. Among 1,532
+dark-by-luma (`<96`) probes that hit visible opaque MDI, 851 had CPU mesh
+revision newer than published geometry. Of those, 822 were still owned by Dirty
+(792 priority-remesh, 30 ordinary-remesh) and had no build/upload owner in the
+serialized sample. Their queue-age distribution was median `24`, p95 `166`, max
+`212` frames. This points to delayed mesh admission/capture for many stale
+surfaces; it does not identify the queue decision that withheld each slice.
+
+The luma threshold is not a count of black chunks. Of 1,445 source-face samples,
+1,160 had sky-light 1. Even among 284 probes below luma 32, 220 had sky-light 1
+and only 35 carried the explicit provisional-preview marker. Preserve per-pixel
+depth/source joins and use strict black/fog/material classifications; do not
+infer a lighting regression from `<96` totals alone.
+
+Coordinate/source joins show two independent lifecycle delays. First, an opaque
+hit at `(-583,2,2)` came from procedural disk-miss column `(-583,0,2)`: request to
+worker start was `12.527 s`, actual generation `94.37 ms`, apply `5.05 ms`. About
+11.7 s after commit it was drawable, but with provisional light preview and
+light field/settlement revision `0`. Second, column `(-578,0,3)` generated in
+`178 ms` total; about 25 s later its solid slice still had no drawable mesh or
+active capture/build/GPU owner despite a FirstMesh ticket at Dirty queue head
+(`0/17`, age 16 frames). Fast voxel-data acquisition therefore does not guarantee
+mesh readiness.
+
+Across the route, procedural scheduler wait was `33 ms` median, `30.90 s` p95,
+and `64.71 s` max, while worker-pool wait p95 was `0.049 ms` and generation p95
+`120 ms`. Disk reads were also short (p95 `8.19 ms`), while completed-result
+wait p95 reached `59.67 s`. The source stage has separate scheduler admission
+and ready-result application tails. Neither explains the fast-generated
+`(-578,0,3)` FirstMesh ticket that remained unbuilt.
+
+Audit update: add per-slice FirstMesh admission-decision tracing for nearby
+loaded/no-drawable slices: actual lane cap, queue age/index, focus distance,
+snapshot refresh/time budget, defer reason, and active pipeline owner. Use it to
+locate the missing transition from ticket to capture before changing queue or
+GPU quotas. Then address procedural/disk producer latency and mesh publication
+as separate measured flows. Keep M335 conditions fixed and rerun after each
+source change.
+
+Artifacts: [M396 renderer report](../../bin/suite_reports/engine_refactor/m396_world164_m335_detour_closed_loop_20261005.json),
+[flight control](../../bin/suite_reports/engine_refactor/m396_flight_control_report_20261005.json),
+[pixel/depth trace](../../bin/suite_reports/engine_refactor/m396_renderer_pixel_trace_l96_20261005.json),
+[source trace](../../bin/suite_reports/engine_refactor/m396_world_column_source_z3_20261005.json),
+[perf trace](../../bin/logs/perf_20261005-020105_13792.jsonl),
+[captures](../../bin/logs/m396_world164_m335_detour_closed_loop).
