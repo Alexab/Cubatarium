@@ -90,7 +90,7 @@ def summarize(path: Path, min_x: float, max_x: float, bin_width: int) -> dict[st
                     "geometry_newer_than_published"
                 ],
                 "opaque_demand_unsettled": counters["opaque_demand_unsettled"],
-                "dark_luma_lt_96_top_opaque_block_ids": [
+                "dark_luma_lt_96_top_source_face_block_ids": [
                     {"block_id": int(block_id), "count": n}
                     for block_id, n in blocks.most_common(8)
                     if block_id.lstrip("-").isdigit()
