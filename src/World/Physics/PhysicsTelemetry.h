@@ -591,6 +591,7 @@ struct PhysicsTelemetry
   int StreamSaves{0};
   int StreamUnloadCandidates{0};
   int StreamUnloadVetoes{0};
+  int StreamUnloadActiveWorkInvalidated{0};
   /// R4.6.2: loads + async_queued (honest ingress vs sync-only StreamLoads).
   int StreamIngressOps{0};
   /// Era25 I-F1: disk Ensure complete this frame (honest vs stream_loads).

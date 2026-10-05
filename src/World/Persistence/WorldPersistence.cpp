@@ -2881,6 +2881,47 @@ bool UWorldPersistence::IsTerrainColumnRelightQueued(
   return PendingTerrainColumnRelightKeys.count(world_block_key) != 0;
 }
 
+int UWorldPersistence::CancelTerrainColumnRelight(
+    glm::ivec2 world_block_key)
+{
+  const glm::ivec2 ground_xz(FloorDiv(world_block_key.x, CHUNK_SIZE),
+                             FloorDiv(world_block_key.y, CHUNK_SIZE));
+  world_block_key = glm::ivec2(ground_xz.x * CHUNK_SIZE,
+                               ground_xz.y * CHUNK_SIZE);
+  int removed = 0;
+  const auto remove_from_queue = [&](std::deque<glm::ivec2> &queue)
+  {
+    for (auto it = queue.begin(); it != queue.end();)
+    {
+      if (it->x == world_block_key.x && it->y == world_block_key.y)
+      {
+        it = queue.erase(it);
+        ++removed;
+      }
+      else
+      {
+        ++it;
+      }
+    }
+  };
+  remove_from_queue(PendingTerrainColumnRelightsPriority);
+  remove_from_queue(PendingTerrainColumnRelights);
+  removed += PendingTerrainColumnRelightKeys.erase(world_block_key);
+  removed += PendingTerrainColumnRelightYBands.erase(world_block_key);
+  removed += PendingVisibleDrawGateRelightYBands.erase(world_block_key);
+  removed += PendingVisibleFirstMeshRelightYBands.erase(world_block_key);
+  removed += DeferredVisibleDrawGateRelightYBands.erase(world_block_key);
+  removed += RelightLastFinalizeEpoch_.erase(world_block_key);
+  removed += DeferredFarRelightColumns.erase(ground_xz);
+  if (RelightFifoPinValid && RelightFifoPinCx == ground_xz.x &&
+      RelightFifoPinCz == ground_xz.y)
+  {
+    RelightFifoPinValid = false;
+    ++removed;
+  }
+  return removed;
+}
+
 UWorldPersistence::TerrainColumnRelightQueueInfo
 UWorldPersistence::GetTerrainColumnRelightQueueInfo(
     glm::ivec2 world_block_key) const

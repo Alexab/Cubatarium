@@ -58,6 +58,7 @@ struct StreamingFrameStats
     savesThisFrame = 0;
     unloadCandidatesThisFrame = 0;
     unloadVetoesThisFrame = 0;
+    unloadActiveWorkInvalidatedThisFrame = 0;
     asyncQueuedThisFrame = 0;
     diskCompleteThisFrame = 0;
     genCommitThisFrame = 0;
@@ -73,6 +74,7 @@ struct StreamingFrameStats
   int savesThisFrame{0};
   int unloadCandidatesThisFrame{0};
   int unloadVetoesThisFrame{0};
+  int unloadActiveWorkInvalidatedThisFrame{0};
   /// Async column requests issued this frame (EnsureChunkLoaded queued work).
   int asyncQueuedThisFrame{0};
   /// Era25: sync Ensure completed via OnLoadChunk (disk-hit honesty).
@@ -167,6 +169,10 @@ public:
   void SetUnloadColumnCallback(UnloadColumnFn fn)
   {
     OnUnloadColumn = std::move(fn);
+  }
+  void NoteUnloadActiveWorkInvalidated()
+  {
+    ++LastFrameStats.unloadActiveWorkInvalidatedThisFrame;
   }
   void SetEffectiveUnloadOpsPerFrame(int value)
   {

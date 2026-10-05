@@ -61,6 +61,10 @@ public:
   static bool RecordWantsRelightEnqueue(const ColumnRecord &rec);
   static bool RecordWantsSeamEnqueue(const ColumnRecord &rec);
   static bool RecordWantsEvict(const ColumnRecord &rec);
+  /// Streamer candidates are already outside the keep ring and camera
+  /// capsule. In that case outstanding visual tickets are invalidated during
+  /// eviction and must not pin residency.
+  static bool RecordWantsEvictAfterInterestLoss(bool outside_keep_set);
 
   /// Decide*-path shadow mismatch (cutover SoT). Does NOT count Sync stage diffs.
   static void LogShadowMismatch(glm::ivec2 column, ColumnJobStage legacy_stage,

@@ -72,6 +72,9 @@ public:
                            ColumnWorkKind expected_kind);
   bool DrainOne(ColumnWorkItem &out);
   void Clear();
+  /// Forget queued work for a column that has left the streamer's keep set.
+  /// Heap entries become harmless tombstones and are discarded by DrainOne.
+  bool RemoveColumn(glm::ivec2 column);
 
   /// Live tickets only (excludes superseded heap entries).
   size_t LiveCount() const { return live_.size(); }

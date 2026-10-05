@@ -48,6 +48,54 @@ void UColumnFlowExecutor::BeginFrame()
   promote_column_ = glm::ivec2(0);
 }
 
+bool UColumnFlowExecutor::ForgetColumnWork(glm::ivec2 column)
+{
+  bool forgot_work = scheduler_.RemoveColumn(column);
+  const auto erase_column_cooldowns = [&](auto &entries)
+  {
+    for (auto it = entries.begin(); it != entries.end();)
+    {
+      if (it->first.x == column.x && it->first.z == column.y)
+      {
+        it = entries.erase(it);
+        forgot_work = true;
+      }
+      else
+      {
+        ++it;
+      }
+    }
+  };
+  erase_column_cooldowns(last_dispatch_frame_);
+  erase_column_cooldowns(relight_retry_after_frame_);
+  forgot_work = column_job_stage_.erase(ColumnKey(column)) != 0 || forgot_work;
+
+  if (promote_pending_ && promote_column_.x == column.x &&
+      promote_column_.y == column.y)
+  {
+    promote_pending_ = false;
+    promote_enqueued_ = false;
+    promote_priority_ = 0;
+    promote_column_ = glm::ivec2(0);
+    forgot_work = true;
+  }
+  if (promote_hold_valid_ && promote_hold_col_.x == column.x &&
+      promote_hold_col_.y == column.y)
+  {
+    promote_hold_valid_ = false;
+    forgot_work = true;
+  }
+  if (capture_pin_valid_ && capture_pin_col_.x == column.x &&
+      capture_pin_col_.y == column.y)
+  {
+    capture_pin_valid_ = false;
+    capture_pin_hold_ = false;
+    capture_pin_age_ = 0;
+    forgot_work = true;
+  }
+  return forgot_work;
+}
+
 void UColumnFlowExecutor::SetCaptureWitnessPin(glm::ivec2 column, bool valid,
                                                int age, bool hold)
 {

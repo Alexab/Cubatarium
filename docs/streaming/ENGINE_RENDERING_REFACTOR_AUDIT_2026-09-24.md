@@ -4452,3 +4452,45 @@ M405 must verify actual unload progress and disk-source behavior. M404 also
 persisted many distant columns, so the next run has the same route and settings
 but a warmer on-disk world state. Full M404 artifacts and interpretation are in
 the [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m404--bounded-unload-failed-repeated-save-before-veto-2026-10-05).
+
+## M405: no process hang, but the far-column eviction gate still fails (2026-10-05)
+
+The visible M335 run on `World_164` completed its 2,800-second flight and
+20-second stop phase from Release commit `927dafb1`. During the reported
+"freeze", Windows continued to report the window responsive, CPU use advanced,
+and captures progressed from frame 148 to frame 188. The final process result
+was 0 with `hang_killed=false`. Sampled wall time varied from roughly 100 to
+240 ms (about 4–10 FPS), which explains the freeze-like appearance in this run;
+this does not explain or disprove M402's separate hung-window event.
+
+M405 still failed the rendering/performance gates: 1,371 of 1,371 steady
+periods had nonzero `unfinished_visual`, median wall was 114.751 ms, the
+near-void proxy peaked at 7,836, and the visible-dark proxy peaked at 29. The
+resident chunk set ended at 13,779 slices. Do not translate these counters
+into a claim that terrain data was absent; they describe unfinished or
+undrawable visual work.
+
+The unload candidate/veto counters isolate the new residency issue. Of 1,346
+candidate rows, 1,241 were vetoed while a column record had active work. Only
+105 rows proceeded to unload, removing 405 chunk slices total. The M404 save
+storm was reduced to 1,827 save queue events across 1,827 unique columns and
+7,352 successful slice writes, with no failed writes. The pending-token
+veto now dominates instead: it protects jobs even after the streamer has
+classified their columns outside the keep ring and camera capsule. Those jobs
+can be invalidated at eviction if generation tokens, scheduler tickets, mesh
+builder/GPU state, collision caches, and queued relight state are all cleaned
+up. If relight is canceled, the persisted light-complete flag must be cleared
+so disk reload recomputes light.
+
+The same flight loaded both saved and fresh terrain: 2,591 disk completions,
+2,608 disk misses, and 2,590 procedural commits. A `disk_light=1` event only
+confirms bytes exist; trusted reuse also requires the column completion flag.
+The trace establishes mixed provenance but does not establish that disk or
+procedural columns caused the dark appearance. The separate `column_light.json`
+flag is the recovery contract when relight debt is abandoned at far eviction.
+
+For the user's current freeze report, this M405 process itself remained
+responsive and ended normally; low FPS was observed. Keep actual app hangs
+separate from low-rate rendering in the audit. Full counters, timings, source
+traces, and the M406 acceptance plan are in the
+[M405 remediation entry](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m405--save-storm-reduced-pending-work-still-pins-resident-columns-2026-10-05).

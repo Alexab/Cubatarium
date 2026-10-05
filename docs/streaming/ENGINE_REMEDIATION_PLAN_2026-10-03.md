@@ -1891,3 +1891,70 @@ perf JSONL `perf_20261005-143028_11792.jsonl`, rotated INFO logs
 `world_data.json` byte-for-byte (`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).
 Windows briefly marked the process unresponsive during the final
 `renderer_pixel_probe`; the process then exited and the analyzer completed.
+
+## M405 — save storm reduced, pending work still pins resident columns (2026-10-05)
+
+M405 used the same visible fixed-day M335 route on `World_164`, with no
+teleport, for 2,800 seconds plus the 20-second stop phase. It ran the Release
+binary from `927dafb1`. This run did not hang: Windows reported `Responding=True`,
+camera movement and captures continued through frame 188, and the process exited
+with code 0 (`hang_killed=false`). The low and variable frame rate (about 4–10
+FPS in sampled intervals) can look frozen; this does not rule out M402's
+separate zero-framebuffer/unresponsive incident.
+
+The analyzer failed its visual/performance gates: 1,373 periods (1,371 steady),
+114.751 ms median wall time (8.72 FPS), 63.13 ms median world-streaming phase,
+dirty median 972, and `unfinished_visual` nonzero in every steady period
+(median 27, maximum 91). `visible_black` reached 29 and the near-void proxy
+reached 7,836. The final resident count was 13,779 chunk slices (peak 13,841).
+These readiness and draw-state metrics do not establish that voxel data was
+missing. Stream accounted for 4,283 spike rows and emerge for 1,625; spike and
+period rows are separate observations and must not be summed as operations.
+
+M405 confirms that the M404 repeated-save bug was reduced: the INFO trace
+recorded 1,827 queued saves for 1,827 unique columns, 7,352 slice writes, no
+repeated queued columns, and no slice-write failures. Yet unload was still
+starved by the active-work veto: across `period` rows there were 1,346 unload
+candidates and 1,241 vetoes. The remaining 105 successful candidate rows
+removed 405 chunk slices. Thus the fix reduced redundant serialization, but a
+pending visual token still acts as a residency pin; it is not a safe long-flight
+eviction policy. M405 also reported 1,551 relight FIFO drops, 42 false clears,
+and 24 seconds where relight drain was near zero while visible-black work
+remained. Streaming/unload and light/mesh convergence are distinct remaining
+problems.
+
+The source trace recorded 2,591 disk-load completions and 2,608 disk misses
+followed by 2,590 procedural commits. This route therefore exercised both
+persisted columns and columns created from scratch; the manifest's `cold` label
+does not mean that no terrain was read from disk. `disk_light=1` means a saved
+light payload exists, not that the column is eligible for trusted-light reuse:
+that decision also checks the separate `column_light.json` completion flag.
+The data proves mixed provenance, not that either source caused the dark
+rendering. The fixed-day wrapper restored `World_164/world_data.json` to the
+pre-flight SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`;
+newly persisted terrain slice files are expected flight output.
+
+M405 artifacts: [analyzer report](../../bin/suite_reports/engine_refactor/m405_world164_m335_unload_veto_budget_20261005.json),
+perf JSONL `bin/logs/perf_20261005-154651_38480.jsonl`, rotated INFO logs
+`bin/logs/Cubatarium.exe*.INFO.*.38480`, and sampled frames in
+`bin/logs/m405_world164_m335_unload_veto_budget`.
+
+### M406 implementation and acceptance criteria
+
+The next change treats the streamer's existing keep-ring/capsule decision as
+the residency boundary. When a candidate leaves that set, it invalidates its
+generation, mesh/GPU, collision, ColumnFlow, disk-load, and queued relight
+owners, then saves/removes the column. If relight work is interrupted, it
+clears the persisted light-complete flag so a later disk load recomputes light
+instead of trusting an incomplete map. M406 records the number of evictions
+that invalidated active work. This replaces indefinite pending-token residency
+with explicit cancellation at the far boundary; in-flight relight results
+remain guarded by world epoch and chunk read-set/incarnation validation.
+
+Build only Release, then run M406 with the exact M335 route, day, camera,
+duration, and GUI capture profile used by M405. Compare unload candidates,
+vetoes, active-work invalidations, resident-set peak/end, disk/procedural
+source events, dark/unfinished visual debt, and frame/stream/emerge timing. Do
+not call this visually fixed until sampled pixels improve and visual debt
+converges during the post-flight stop phase. Keep the periodic new-world check
+as a later secondary gate; it does not replace the repeatable M335 route.

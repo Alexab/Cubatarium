@@ -317,13 +317,44 @@ $env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m404_world164_m33
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m404_world164_m335_bounded_unload --report bin/suite_reports/engine_refactor/m404_world164_m335_bounded_unload_20261005.json --process-timeout 3000
 ```
 
-The wrapper restored `world_data.json` byte-for-byte, but the flight legitimately
-persisted distant terrain columns. M405 should use this same route and capture
-profile after the eviction-order follow-up is built, and should be compared
-with M403's source trace as a persisted-world run rather than a cold-generation
-repeat. The M404 perf file is `perf_20261005-143028_11792.jsonl`; the INFO log
-rotated to `Cubatarium.exe*.INFO.*.11792`; image captures are in the directory
-above.
+The wrapper restored `World_164/world_data.json` byte-for-byte, but the flight
+legitimately persisted distant terrain columns. M405 used the same route and
+capture profile after the eviction-order follow-up was built. It must be read
+as a mixed persisted/procedural run, not a cold-generation repeat. The M404
+perf file is `perf_20261005-143028_11792.jsonl`; the INFO log rotated to
+`Cubatarium.exe*.INFO.*.11792`; image captures are in the directory above.
+
+### M405: bounded-save verification, mixed source run, and active-work veto
+
+M405 ran the established visible no-teleport M335 route on Release commit
+`927dafb1`, with runtime unload mode 4. It completed normally and produced
+1,373 periods; median wall time was 114.751 ms. Save logging recorded 1,827
+unique queued columns and 7,352 successful slice writes with no duplicate
+queued columns. Source logging recorded 2,591 disk completions, 2,608 disk
+misses, and 2,590 procedural commits. However, 1,241 of 1,346 unload candidate
+rows were vetoed by active visual work; resident chunks ended at 13,779 slices.
+See the [M405 audit](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m405--save-storm-reduced-pending-work-still-pins-resident-columns-2026-10-05).
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m405_world164_m335_unload_veto_budget'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m405_world164_m335_unload_veto_budget --report bin/suite_reports/engine_refactor/m405_world164_m335_unload_veto_budget_20261005.json --process-timeout 3000
+```
+
+The fixed-day wrapper restored `World_164/world_data.json` to its baseline
+SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`;
+the saved terrain slice files are intentional output. M405 perf data is
+`perf_20261005-154651_38480.jsonl`, rotated INFO logs are
+`Cubatarium.exe*.INFO.*.38480`, and captures are in
+`bin/logs/m405_world164_m335_unload_veto_budget`.
+
+M406 should repeat the exact route and capture profile after the out-of-keep
+work-cancellation change is built. Compare candidate/veto/unload and
+active-work-invalidated counters, resident-set peak/end, and visual debt; do
+not select new flight parameters to improve the capture.
 
 ### Compare source mix and queue delay by route position
 

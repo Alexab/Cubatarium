@@ -138,6 +138,10 @@ public:
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   int GetPendingTerrainColumnRelightCount() const;
   bool IsTerrainColumnRelightQueued(glm::ivec2 world_block_key) const;
+  /// Drop queued/deferred visual relight debt for a column being evicted.
+  /// Callers must invalidate its disk-light-complete flag when this abandons
+  /// unfinished lighting so a later disk load recomputes it.
+  int CancelTerrainColumnRelight(glm::ivec2 world_block_key);
   TerrainColumnRelightQueueInfo GetTerrainColumnRelightQueueInfo(
       glm::ivec2 world_block_key) const;
   int GetPendingPlayerRelightCount() const;

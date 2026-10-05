@@ -4824,19 +4824,67 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       [this, &world](glm::ivec3 ground, int max_cy) -> bool
       {
         const glm::ivec2 col(ground.x, ground.z);
-        // Record retains unload while active pending token exists (keep-until-
-        // replace). ShadowCompare still honors legacy (always unload).
+        const glm::ivec2 world_key(col.x * CHUNK_SIZE,
+                                   col.y * CHUNK_SIZE);
         const ColumnRecord *rec = world.GetColumnRecords().Find(col);
-        const ColumnRecord empty{};
+        // ChunkStreamer calls this only after the column is outside its keep
+        // ring and the camera capsule. At that point visual work is
+        // cancelable; a pending ticket must not pin resident terrain forever.
         const bool record_want =
-            UColumnRecordCoordinator::RecordWantsEvict(rec ? *rec : empty);
+            UColumnRecordCoordinator::RecordWantsEvictAfterInterestLoss(true);
         if (!UColumnRecordCoordinator::DecideEvict(true, record_want, col))
         {
           return false;
         }
-        // Keep source work alive while an active visual job vetoes eviction.
-        // Once eviction is allowed, cancel stale work before removing the
-        // column and queueing its persistence save.
+
+        UColumnFlowExecutor &flow = GetColumnFlowExecutor();
+        const auto &flow_scheduler = flow.Scheduler();
+        const bool flow_relight_ticket =
+            flow_scheduler.Contains(col, ColumnWorkKind::RelightThenMesh) ||
+            flow_scheduler.Contains(col, ColumnWorkKind::PromoteRelight);
+        const UWorldPersistence::TerrainColumnRelightQueueInfo relight_queue =
+            world.Persistence->GetTerrainColumnRelightQueueInfo(world_key);
+        const ColumnEmergeState emerge = world.GetColumnEmergeState(ground);
+        const bool needs_relight =
+            world.IsPendingLightBeforeMesh(col) ||
+            world.IsAsyncRelightColumnInFlight(col) ||
+            relight_queue.keyed || relight_queue.deferred_far ||
+            relight_queue.deferred_visible || flow_relight_ticket ||
+            emerge == ColumnEmergeState::Lighting ||
+            (rec && (rec->pending_light ||
+                     rec->visual == ColumnVisualState::NeedRelight ||
+                     rec->visual_obligation == VisualObligation::LightRepair));
+
+        bool active_work = needs_relight || flow.HasRepairTicket(col) ||
+                           (rec && ColumnHasActivePending(*rec)) ||
+                           world.Persistence->IsTerrainColumnDiskLoadPending(
+                               ground) ||
+                           (ChunkScheduler && ChunkScheduler->IsPending(ground));
+        const int highest_cy = std::max(0, max_cy);
+        const UWorldMeshService &mesh = world.GetMeshService();
+        for (int cy = 0; cy <= highest_cy; ++cy)
+        {
+          const glm::ivec3 slice(ground.x, cy, ground.z);
+          active_work = active_work || mesh.IsChunkMeshDirty(slice) ||
+                        mesh.HasInflightMeshBuild(slice) ||
+                        mesh.IsPendingGpuApply(slice) ||
+                        mesh.IsGpuExtractInFlight(slice) ||
+                        mesh.GetCache().HasPendingCaptureWork(slice);
+        }
+
+        // If we interrupt lighting, persist the column as light-incomplete.
+        // The next disk load will recompute light rather than trusting a
+        // partially updated lightmap saved with otherwise valid voxels.
+        if (needs_relight)
+        {
+          world.Persistence->ClearColumnLightComplete(col);
+        }
+
+        flow.ForgetColumnWork(col);
+        bool invalidated_work = active_work;
+        invalidated_work =
+            world.Persistence->CancelTerrainColumnRelight(world_key) > 0 ||
+            invalidated_work;
         world.Persistence->CancelAsyncTerrainColumnLoad(ground);
         ChunkGenTokens.Bump(ground);
         if (ChunkScheduler)
@@ -4844,9 +4892,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           ChunkScheduler->Invalidate(ground);
         }
         world.ClearPendingLightBeforeMesh(col);
-        world.ClearColumnEmergeState(col); // erases ColumnRecord
-        world.GetMeshService().RemoveColumn(ground, max_cy);
-        for (int cy = 0; cy <= max_cy; ++cy)
+        world.ClearColumnEmergeState(col); // erase the obsolete column record
+        world.GetMeshService().RemoveColumn(ground, highest_cy);
+        for (int cy = 0; cy <= highest_cy; ++cy)
         {
           world.Collision.RemoveChunkMovementSolidCache(
               glm::ivec3(ground.x, cy, ground.z));
@@ -4854,6 +4902,10 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         if (ChunkScheduler)
         {
           ChunkScheduler->Invalidate(ground);
+        }
+        if (invalidated_work)
+        {
+          Streamer->NoteUnloadActiveWorkInvalidated();
         }
         return true;
       });
@@ -6031,6 +6083,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           st->unloadCandidatesThisFrame;
       world.PhysicsTelemetryData.StreamUnloadVetoes =
           st->unloadVetoesThisFrame;
+      world.PhysicsTelemetryData.StreamUnloadActiveWorkInvalidated =
+          st->unloadActiveWorkInvalidatedThisFrame;
       // R4.6.2: sync+async ingress honesty (loads=0 alone ≠ idle).
       world.PhysicsTelemetryData.StreamIngressOps =
           st->loadsThisFrame + st->asyncQueuedThisFrame;

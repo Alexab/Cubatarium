@@ -44,6 +44,10 @@ public:
     promote_priority_ = 0;
   }
 
+  /// Drop queued/cooldown ownership for a column removed from streaming
+  /// interest. Async workers have separate stale-result validation.
+  bool ForgetColumnWork(glm::ivec2 column);
+
   /// Clear per-frame Promote coalesce (call at UpdateStreaming BeginFrame).
   void BeginFrame();
 
