@@ -4,6 +4,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
 #include <algorithm>
+#include <cassert>
 
 namespace cutum
 {
@@ -142,6 +143,67 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
     const glm::ivec3 local = UChunkManager::WorldToLocal(entry.first);
     chunk->GetLightDataMutable()[static_cast<size_t>(UChunk::LocalIndex(local))] =
         entry.second;
+  }
+}
+
+void UChunkBuffer::ApplyToChunk(UBlockWorld &world,
+                                glm::ivec3 chunkCoord) const
+{
+  if (IsEmpty())
+  {
+    return;
+  }
+
+  UChunkManager &chunks = world.GetChunkManager();
+  chunks.EnsureChunk(chunkCoord);
+  UChunk *chunk = chunks.GetChunk(chunkCoord);
+  if (!chunk)
+  {
+    return;
+  }
+
+  for (const auto &entry : Blocks)
+  {
+    assert(UChunkManager::WorldToChunk(entry.first) == chunkCoord);
+    world.SetBlockInChunk(*chunk, entry.first, entry.second);
+    const auto fluid_it = FluidPacked.find(entry.first);
+    if (fluid_it != FluidPacked.end() && fluid_it->second != 0)
+    {
+      world.SetFluidStateInChunk(
+          *chunk, entry.first, UnpackFluidCellState(fluid_it->second));
+    }
+  }
+
+  if (HasChunkLight)
+  {
+    assert(ChunkLightCoord == chunkCoord);
+    chunk->GetLightDataMutable() = ChunkLight;
+  }
+
+  std::array<uint8_t, CHUNK_VOLUME> *light_data = nullptr;
+  for (const auto &entry : LightPacked)
+  {
+    const glm::ivec3 entry_chunk = UChunkManager::WorldToChunk(entry.first);
+    assert(entry_chunk == chunkCoord);
+    if (entry_chunk != chunkCoord)
+    {
+      const glm::ivec3 fallback_chunk_coord = entry_chunk;
+      chunks.EnsureChunk(fallback_chunk_coord);
+      UChunk *fallback_chunk = chunks.GetChunk(fallback_chunk_coord);
+      if (fallback_chunk)
+      {
+        fallback_chunk->GetLightDataMutable()[static_cast<size_t>(
+            UChunk::LocalIndex(UChunkManager::WorldToLocal(entry.first)))] =
+            entry.second;
+      }
+      continue;
+    }
+    if (!light_data)
+    {
+      light_data = &chunk->GetLightDataMutable();
+    }
+    (*light_data)[static_cast<size_t>(UChunk::LocalIndex(
+        UChunkManager::WorldToLocal(entry.first)))] = entry.second;
   }
 }
 

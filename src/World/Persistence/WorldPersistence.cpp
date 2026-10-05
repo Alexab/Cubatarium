@@ -3601,7 +3601,7 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
             load.payload, load.coord, load.format, *world.BlockRegistry);
         if (!buffer.IsEmpty())
         {
-          buffer.ApplyTo(world.BlockWorld);
+          buffer.ApplyToChunk(world.BlockWorld, load.coord);
           if (buffer.HasChunkLightData())
           {
             state.had_disk_light = true;

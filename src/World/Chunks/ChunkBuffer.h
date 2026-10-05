@@ -39,6 +39,8 @@ public:
   int GetMinY() const { return MinY; }
   int GetMaxY() const { return MaxY; }
   void ApplyTo(UBlockWorld &world) const;
+  /// Fast path for buffers known to contain one chunk (disk slice loads).
+  void ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const;
   void Clear();
 
 private:
