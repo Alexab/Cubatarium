@@ -4389,3 +4389,24 @@ without drawable meshes, mostly still pending work but including an ownerless
 slice. No Windows hang/error event or process dump was available, so the
 unresponsive-app cause remains unknown. The full incident and exact paths are
 in the [M402 postmortem](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m402--partial-m335-flight-zero-sized-framebuffer-then-hung-app-2026-10-05).
+
+The source trace resolves which route source supplied these cells, but not why
+they were absent from storage: M400 and M401 both recorded procedural disk
+misses and commits for the same 144 columns in `cx=[−440,−424)`, `cz=[−1,8)`.
+Those exact `(cx,cz)` pairs currently have no slice files, although nearby X
+coordinates on other Z lanes do. Both flights later reached `cx=−501` and
+`cx=−515`, so this is not just a camera-frontier band at shutdown. However,
+flight-sim disables periodic autosave and exits through a fast `_Exit` path;
+streaming-unload save requests and their outcomes are not traced. The source
+evidence proves procedural regeneration on both routes, but cannot distinguish
+a save/unload defect from pending work lost at fast exit or a world-path issue.
+
+A mixed disk/procedural transition appears around `cx=[−360,−344)`. There, disk
+result-wait median was 52–95 seconds while file reads remained milliseconds. In
+the newly generated band, M400/M401 scheduler-queue p95 reached 37–50 seconds
+with worker wait below 0.1 ms. M402's column `(-436,0,3)` took 7.8 seconds in
+scheduler queue, then generated/applied in about 120 ms; a nearby audit one
+second later still found no drawable mesh. Keep source persistence, scheduler
+admission, mesh publication, and light correctness as separate measurements.
+The [source-map report and next step](ENGINE_REMEDIATION_PLAN_2026-10-03.md#source-of-column-map--repeated-disk-misses-and-unresolved-save-fate-2026-10-05)
+record the exact bins and limitations.

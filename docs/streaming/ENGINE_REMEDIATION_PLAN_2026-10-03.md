@@ -1738,3 +1738,65 @@ Artifacts: [curated M402 postmortem](../../bin/suite_reports/engine_refactor/m40
 [M402 perf JSONL](../../bin/logs/perf_20261005-113820_36848.jsonl).
 The fixed-day runner restored `world_data.json` byte-for-byte (SHA-256
 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).
+
+## Source-of-column map — repeated disk misses and unresolved save fate (2026-10-05)
+
+To answer whether the late M335 route loads old columns or creates a new area,
+[`compare_world_column_sources_by_x.py`](../../tools/compare_world_column_sources_by_x.py)
+groups `[WorldColumnSource]` events into 16-chunk X bins. An X bin aggregates
+multiple Z coordinates, so it is a route-position summary rather than a full
+spatial map. Inspecting the exact coordinates in `cx=[−440,−424)` shows that
+M400 and M401 each encountered the same 144 columns at `cz=[−1,8)` as
+`procedural/disk_miss`, then committed them procedurally; neither run recorded
+a disk completion for those coordinates. The current
+`bin/worlds/World_164/chunks` contains files at similar X values on other Z
+lanes, but no slice files for those exact 144 `(cx,cz)` pairs. M400 and M401
+ended much farther west, at focus `cx=−501` and `cx=−515` respectively, so
+this band was well behind the camera by the end of each route. For these cells,
+the evidence establishes repeated procedural regeneration rather than loading
+from disk; it does not establish why the first run left no disk result.
+
+The harness disables periodic autosave, then takes the fast shutdown path and
+calls `_Exit`, so it does not run a final cooperative session snapshot. Normal
+streaming unloads are supposed to enqueue async column saves, but the current
+source trace does not report unload admission, save request, save completion,
+or file-write failure. Possible causes still include columns never reaching
+unload, a save request that remained pending at fast exit, a rejected/failed
+write, or a different active world path. These possibilities must be separated
+before calling this a persistence regression or assuming untouched terrain was
+never meant to be saved. The M335 dark-pixel symptom also cannot be attributed
+to source choice alone: illumination and mesh publication remain independent
+checks.
+
+The transition is mixed rather than a single clean boundary. In
+`cx=[−360,−344)`, M400 and M401 each recorded 57 disk completions and 87
+procedural disk misses/commits across the 144 column coordinates. The stored
+columns have their own queue problem: disk `result_wait_ms` in that bin was
+median/p95 `95.1/109.7 s` in M400 and `52.0/177.8 s` in M401. File reads were
+milliseconds, not tens of seconds. Across the full runs, disk result-wait p95
+was `78.94→72.13 s`, while procedural scheduler-queue p95 was
+`33.84→32.13 s`; procedural worker-pool wait p95 remained `0.080→0.317 ms`
+and generation p95 was `131→152 ms`. Both stored-result admission and
+procedural scheduling need work, but they are separate bottlenecks.
+
+M402 provides a direct partial join at the frontier. For column
+`(-436,0,3)`, disk lookup missed at 12:10:29; procedural generation committed
+at 12:10:37 with `scheduler_queue_ms=7,794`, `worker_pool_queue_ms=0.041`,
+`generation_ms=113.6`, and `apply_ms=6.1`. The schedule snapshot had 61 live
+requests, 63 heap entries and a start cap of two. About one second later the
+RelightAudit still saw 4,096 non-air voxels with no installed drawable mesh.
+So the delay had two stages: the source request waited in the game-thread
+scheduler, then mesh publication had not yet made the loaded content drawable.
+M402 had an invalid/black display interval, so this is frontier-state telemetry,
+not a visual causation claim.
+
+This changes the next implementation focus: first add a bounded per-column
+save lifecycle trace (unload candidate/veto, request, queue, worker result,
+file path, and shutdown-pending count) and prove whether the exact band is
+evicted and persisted. Keep the M335 route and world fixed. Then trace and
+reduce age of the highest-priority near-frontier source request without raising
+a global quota; verify that same column progresses through FirstMesh capture,
+worker, GPU publication, and a screen/depth witness. Separately, audit the disk
+ready-result queue in the mixed boundary bin. The source-bin report is
+[`m400_m401_m402_world_column_sources_x_20261005.json`](../../bin/suite_reports/engine_refactor/m400_m401_m402_world_column_sources_x_20261005.json);
+M402's underlying long INFO logs remain local.

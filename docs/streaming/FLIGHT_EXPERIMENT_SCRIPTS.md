@@ -277,3 +277,33 @@ process termination. The last JSONL record is truncated and fails automatic
 adequacy parsing. The exact framebuffer failure, frontier state and
 postmortem are documented in the [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m402--partial-m335-flight-zero-sized-framebuffer-then-hung-app-2026-10-05).
 The complete local capture and log paths are linked there.
+
+### Compare source mix and queue delay by route position
+
+Use this after M335 runs to distinguish stored column results from procedural
+disk misses at the same chunk-X coordinates. Reuse rotated INFO logs under one
+run label. `M402` is partial and must be interpreted with its visible-window
+failure documented above.
+
+```powershell
+python tools/compare_world_column_sources_by_x.py `
+  --run M400=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-084619.28876 `
+  --run M400=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-090253.28876 `
+  --run M400=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-093314.28876 `
+  --run M401=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-103135.37252 `
+  --run M401=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-104836.37252 `
+  --run M401=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-111747.37252 `
+  --run M402=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-113816.36848 `
+  --run M402=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-115345.36848 `
+  --min-chunk-x -520 --max-chunk-x -344 --bin-chunks 16 `
+  --json-out bin/suite_reports/engine_refactor/m400_m401_m402_world_column_sources_x_20261005.json
+```
+
+The run output is in the [source-map report](../../bin/suite_reports/engine_refactor/m400_m401_m402_world_column_sources_x_20261005.json).
+The script reports file reads, ready-result waits, scheduler queue, worker wait,
+generation and apply independently. `procedural/disk_miss` means no disk source
+was found for that request; it does not prove whether the column was never
+saved, remained resident, or had a pending/failed save. The X bins aggregate Z,
+so use the exact `(cx,cz)` pairs and the active world's `chunks` directory when
+checking persistence. A safe save-lifecycle trace is still needed to identify
+why the M400/M401 repeated band was absent from disk.
