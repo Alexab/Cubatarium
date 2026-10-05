@@ -1,6 +1,7 @@
 #include "World/Diagnostics/JobStageTrace.h"
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <deque>
@@ -12,6 +13,8 @@ namespace cutum
 {
 namespace
 {
+
+std::atomic<uint64_t> LatestCameraBandPeakFrameEpoch{0};
 
 struct Ring
 {
@@ -425,12 +428,25 @@ bool UJobStageTrace::VisualBlackTraceEnabled()
   return enabled;
 }
 
+bool UJobStageTrace::HasCameraBandPeakTraceForFrame(uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestCameraBandPeakFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
 void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
 {
   // Renderer/focus samples are emitted at frame rate. Keep renderer candidates,
   // repair admission, repair scans, general mesh scheduling, and priority
   // remesh scheduling in separate rings so one workload cannot overwrite
   // another class of evidence.
+  if ((record.sample_kind == 12 || record.sample_kind == 13) &&
+      record.frame_epoch != 0)
+  {
+    LatestCameraBandPeakFrameEpoch.store(record.frame_epoch,
+                                         std::memory_order_release);
+  }
   if (record.sample_kind == 0)
   {
     // Per-column census attribution is the evidence behind the aggregate VB

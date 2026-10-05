@@ -3055,6 +3055,8 @@ void UGeometryEngine::DrawCubeGeometry()
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
     OpaquePixelProbeCapture pixel_probe_capture{};
+    const uint64_t pixel_probe_frame_epoch =
+        WorldInstance->GetStreamingFrameEpoch();
     if (UJobStageTrace::VisualBlackTraceEnabled())
     {
       // Take the pre-transparent color/depth on the same render frames as the
@@ -3070,7 +3072,12 @@ void UGeometryEngine::DrawCubeGeometry()
           WorldPosToBlock(camera->GetPosition()));
       static bool have_last_probe_focus = false;
       static glm::ivec2 last_probe_focus(0);
+      static uint64_t last_camera_band_peak_probe_epoch = 0;
       const bool probe_on_focus_change = PixelProbeOnFocusChangeEnabled();
+      const bool camera_band_peak_probe =
+          UJobStageTrace::HasCameraBandPeakTraceForFrame(
+              pixel_probe_frame_epoch) &&
+          last_camera_band_peak_probe_epoch != pixel_probe_frame_epoch;
       const bool focus_changed =
           !have_last_probe_focus || last_probe_focus.x != probe_focus.x ||
           last_probe_focus.y != probe_focus.z;
@@ -3080,9 +3087,13 @@ void UGeometryEngine::DrawCubeGeometry()
               ? 60u
               : 120u;
       if (render_probe_count % probe_stride == 0u ||
-          (probe_on_focus_change && focus_changed))
+          (probe_on_focus_change && focus_changed) || camera_band_peak_probe)
       {
         pixel_probe_capture.probe_id = render_probe_count;
+        if (camera_band_peak_probe)
+        {
+          last_camera_band_peak_probe_epoch = pixel_probe_frame_epoch;
+        }
         last_probe_focus = glm::ivec2(probe_focus.x, probe_focus.z);
         have_last_probe_focus = true;
       }

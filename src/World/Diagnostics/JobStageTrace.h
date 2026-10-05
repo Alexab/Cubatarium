@@ -708,6 +708,9 @@ public:
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static bool VisualBlackTraceEnabled();
   static void NoteVisualBlack(const VisualBlackTraceRecord &record);
+  /// True when a camera-band peak was recorded during this render epoch.
+  /// Lets the renderer take one synchronized sparse pixel/depth sample.
+  static bool HasCameraBandPeakTraceForFrame(uint64_t frame_epoch);
   /// Clear the latest high-water snapshot ring for sample_kind 12 or 13.
   static void ResetCameraBandPeakTrace(uint8_t sample_kind);
   /// Dump each trace class from its own bounded ring. max_n is applied per
