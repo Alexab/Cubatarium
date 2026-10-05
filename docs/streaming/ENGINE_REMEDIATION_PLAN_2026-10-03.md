@@ -2044,3 +2044,76 @@ target the remaining lighting/mesh convergence debt; M406 still had 1,403
 relight FIFO drops and 49 false clears. Do not combine a queue fix with a
 lighting policy change in one experiment, or the repeated route will no longer
 isolate the cause.
+
+## M407b — full-route source and pixel evidence; batch completion selection (2026-10-05)
+
+M407's apparent 34-minute in-frame gap was caused by Windows sleep/lock; the
+user confirmed that sleep or lock occurred. M407 ended after only about 13 minutes
+of active movement and did not reach the far-flight acceptance region. Do not
+classify it as an engine hang or a completed long-route run. M407b repeated the
+same visible, no-teleport M335 route on Release commit `fc71fa13`, with
+`flight_move_speed_scale=1`. It ran 2,800 flight seconds, produced 1,392 steady
+periods, exited successfully, and was not killed. No system-sleep-sized frame
+gap appeared. The fixed-day wrapper restored `world_data.json` to its baseline
+SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`;
+terrain slices generated beyond the previous route extent are expected saved
+output and make the next replay a mixed/warm-source run.
+
+M407b did not pass acceptance: median flight wall time was 64.37 ms
+(15.53 effective FPS), median streaming phase was 56.69 ms, and stop-phase
+visual work did not converge (25 unresolved/not-ready items remained; dirty
+mesh work ended at 138). The 20-second stop phase is too short to clear this
+debt. The source trace counted 6,153 completed disk slice loads and 1,332
+procedural commits after disk misses. Physical file reads were fast (3.01 ms
+median / 7.56 ms p95); decode was 3.41 ms median and apply 2.80 ms median.
+The slow part was service delay: completed-result wait was 692 ms median and
+5.55 s p95, with a 70.17 s maximum; the ready-load queue peaked at 318. New
+terrain generation took 90.68 ms median / 138.19 ms p95, while its scheduler
+queue reached 176 ms p95 and 9.77 s maximum. The worker-pool queue remained
+small (0.03 ms median / 0.15 ms p95) with four workers. This separates disk
+throughput from delayed result service and procedural request scheduling.
+
+The long flight's sampled framebuffer probes do not establish that the dark
+appearance is under-lighting: 303 of 32,768 samples were below luminance 32,
+but every one had a valid depth surface and visible MDI draw. 273 had a nearby
+source-face light join; most low-luminance voxel hits were grass or tree logs
+with sky light present. The ten opaque-DDA misses corresponded to cutout leaves,
+which `TraceOpaqueVoxelRay` intentionally skips. These are material and probe
+semantics, not evidence of ten missing chunks. No PNG capture directory was
+enabled for M407b, so the sampled points could not be reviewed against full
+frames. The analyzer's `holes_rate=1.0` uses `unfinished_visual` as a readiness
+proxy; it does not mean every frame or chunk was literally blank. New reports
+now identify that signal's semantics explicitly. Do not accept the visual
+issue as fixed from these samples.
+
+The route also recorded 963 relight-FIFO drops and 51 false-clear increments,
+but dark-face-near counters were zero and the sampled dark faces were mostly
+lit. Keep those light-policy counters as a separate lead; do not combine a
+light-policy change with the next load-queue change.
+
+### M408 — rank ready disk results once per tick
+
+M407b confirms the M407 issue with repeated completion-queue scans: the ready
+queue reached 318 entries while `TickAsyncChunkIo` repeatedly selected one
+best item at a time, rebuilding near-focus/age rank calculations on each scan.
+M408 computes one rank key per queued result, partially orders a maximum of
+four near-focus results in one locked batch, applies only within the existing
+per-frame slice and millisecond budgets, and requeues any unconsumed results.
+World mutation remains on the owning thread. Compare streaming-phase p50/p95,
+ready queue and result-wait distributions, and stop-phase debt against M407b.
+
+M408 must use the same M335 route and visible capture settings, with
+`CUBA_FLIGHT_CAPTURE_DIR` set before app launch. M407b's new terrain slices
+mean its far segment now exercises persisted reads; use source logs by X to
+label the actual disk/procedural mix rather than trusting `cold_warm_mode`.
+Capture and inspect complete PNG frames before calling low-luminance pixels
+under-lit. Run the repeatable route as the primary gate; keep the periodic new
+world check secondary. A separate new-world run remains necessary to measure
+first-generation scheduling and is not replaced by M407b's mixed-source run.
+
+Artifacts: [`M407b acceptance report`](../../bin/suite_reports/engine_refactor/m407b_world164_m335_async_decode_budget_wake_guard_20261005.json),
+[`pixel trace`](../../bin/suite_reports/engine_refactor/m407b_renderer_pixel_trace_20261005.json),
+[`source trace`](../../bin/suite_reports/engine_refactor/m407b_source_trace_20261005.json),
+and perf stream `bin/logs/perf_20261005-193758_42096.jsonl`; rotated INFO logs
+use PID 42096. Raw reports live in ignored `bin/` output paths and are not
+committed.

@@ -4529,3 +4529,29 @@ to storage, streaming, or rendering. The next audit step must make those
 stages independently visible and bound queue/application work.
 
 See the [M406 evidence and M407 sequence](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m406--residency-recovered-streaming-latency-and-visual-debt-remain-2026-10-05).
+
+## M407b: a complete far replay separates disk cost from queue delay
+
+The user confirmed that the M407 34-minute gap came from Windows sleep/lock;
+M407 was incomplete and was not an engine hang. M407b repeated the established
+visible M335 route for the full 2,800-second flight on Release commit
+`fc71fa13`, with no sleep-sized pause and no forced kill.
+
+On that route, disk reads were fast, but ready results waited 692 ms median
+(5.55 s p95) and the queue reached 318 entries. The run mixed 6,153 disk slice
+loads with 1,332 procedural commits after disk misses. Four worker threads
+were active; procedural worker-pool queue time was small, while scheduler queue
+wait reached 176 ms p95 and 9.77 s maximum. Median wall time was 64.37 ms and
+the streaming phase 56.69 ms. The next bounded change batches ready-result
+ranking while preserving near-focus priority, main-thread ownership, and the
+existing apply budget.
+
+Framebuffer probes found 303 low-luminance samples among 32,768, all with a
+visible depth surface and MDI draw. Most mapped to lit grass/tree-log hits;
+the ten opaque-DDA misses were cutout leaves intentionally skipped by that
+witness. This does not prove the reported darkened regions are visually fixed:
+M407b had no PNG capture directory, and `unfinished_visual` is a readiness
+proxy rather than a literal framebuffer-hole count. M408 will capture full
+frames and compare the persisted-source replay against these M407b traces.
+
+See [M407b evidence and M408 plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m407b--full-route-source-and-pixel-evidence-batch-completion-selection-2026-10-05).

@@ -417,3 +417,39 @@ so use the exact `(cx,cz)` pairs in each bin. With the updated Release binary,
 per-slice write completions/failures, the target folder and fast-shutdown
 pending-I/O counts. The report joins those save events by `(cx,cz)`. Set the
 environment variable in the same shell that starts the fixed M335 runner.
+
+### M407b: full-route async-decode replay and post-run probes
+
+M407's 34-minute timing anomaly was later confirmed by the user as Windows
+sleep or lock. M407b repeated the exact M335 route without changing speed, camera,
+world, or duration. A temporary inline keep-awake helper prevented another
+sleep. Its reusable counterpart is now `tools/flight_sim_keep_awake.ps1`;
+start it hidden before a long visible flight:
+
+```powershell
+Start-Process -FilePath powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/flight_sim_keep_awake.ps1')
+```
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m407b_world164_m335_async_decode_budget_wake_guard --report bin/suite_reports/engine_refactor/m407b_world164_m335_async_decode_budget_wake_guard_20261005.json --process-timeout 3000
+```
+
+The original M407b launch did not set `CUBA_FLIGHT_CAPTURE_DIR`. The
+renderer reads that setting during startup, so capture could not be enabled
+mid-flight. After normal shutdown, recover the pixel ring and column source
+events with:
+
+```powershell
+py tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261005-193758_42096.jsonl --json-out bin/suite_reports/engine_refactor/m407b_renderer_pixel_trace_20261005.json
+py tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-193754.42096 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-195018.42096 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-200408.42096 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-201733.42096 --json-out bin/suite_reports/engine_refactor/m407b_source_trace_20261005.json --focus-z 3 --z-radius 5
+```
+
+The pixel trace is a sparse framebuffer sample with world/draw/light joins,
+not a substitute for full PNG review. Set `CUBA_FLIGHT_CAPTURE_DIR` before
+launch on subsequent runs. M407b generated new far-terrain slice files; the
+next M335 replay therefore has a different disk/procedural mix even though
+its route, camera and movement speed remain unchanged.

@@ -238,6 +238,12 @@ def analyze(
             else "near_focus_holes"
         )
     )
+    hole_signal_semantics = (
+        "unfinished_visual is a visual-readiness/debt count; a nonzero value "
+        "does not by itself mean a blank or dark framebuffer pixel"
+        if hole_key == "unfinished_visual"
+        else "legacy visual-hole counter; correlate with framebuffer pixel evidence"
+    )
     holes = col(steady, hole_key)
     dark_sticky = col(steady, "black_sticky")
     if not dark_sticky and any("focus_dark_mesh" in r for r in steady):
@@ -508,6 +514,12 @@ def analyze(
     )
 
     holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
+    unfinished_visual_rate = (
+        sum(1 for value in unfinished_visual if value > 0) /
+        len(unfinished_visual)
+        if unfinished_visual
+        else None
+    )
     red_rate = (sum(1 for p in pressure if p >= 2) / len(pressure)) if pressure else 1.0
 
     focus_pts = [
@@ -2002,9 +2014,11 @@ def analyze(
         "steady_periods": len(steady),
         "spikes": len(spikes),
         "hole_key": hole_key,
+        "hole_signal_semantics": hole_signal_semantics,
         "unfinished_key": unfinished_key,
         "metrics": {
             "holes_rate": holes_rate,
+            "unfinished_visual_rate": unfinished_visual_rate,
             "effective_holes_rate": effective_holes_rate,
             "effective_holes_blink_rate": effective_holes_blink_rate,
             "effective_holes_blink_transitions": effective_holes_blink_transitions,
