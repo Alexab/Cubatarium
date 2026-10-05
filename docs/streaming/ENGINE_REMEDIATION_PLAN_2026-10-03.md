@@ -1665,3 +1665,76 @@ backlog колонок позади focus от колонок впереди/в�
 [pixel luma 32](../../bin/suite_reports/engine_refactor/m401_renderer_pixel_trace_l32_20261005.json),
 [pixel luma 96](../../bin/suite_reports/engine_refactor/m401_renderer_pixel_trace_l96_20261005.json).
 Raw perf/capture data remain local.
+
+## M401 spatial pixel comparison — no visible improvement (2026-10-05)
+
+The saved [`compare_renderer_pixel_routes.py`](../../tools/compare_renderer_pixel_routes.py)
+was run over the shared camera-X corridor `[-8192,-1024)` in 512-block bins.
+It joins samples by camera position so different route endpoints do not change
+the measured region. Across that corridor M400 had 27,520 probes and M401 had
+28,320. The low-luminance rates changed only slightly: `<32` was `0.632% →
+0.689%`, and `<96` was `4.455% → 4.555%`. Geometry revision newer than the
+published mesh was `9,904/27,520` (`36.0%`) in M400 and `10,297/28,320`
+(`36.4%`) in M401. These results show no material route-level rendering
+improvement from the disk-slice apply fast path. Low luminance remains a
+pixel/material/light witness, not a count of empty chunks.
+
+The compact bin report is
+[`m400_m401_pixel_x_bins_20261005.json`](../../bin/suite_reports/engine_refactor/m400_m401_pixel_x_bins_20261005.json).
+Its per-bin distribution is useful for selecting the next diagnostic joins;
+the aggregate differences do not justify a global quota increase or another
+camera/route change. Continue from the M401 source-stage plan: split source
+backlog by whether its columns are ahead of, at, or behind the current focus,
+then inspect admission and ready-result apply ownership separately.
+
+## M402 — partial M335 flight, zero-sized framebuffer, then hung app (2026-10-05)
+
+M402 used the exact M335 World_164 route and collision-safe flight-sim build
+from Release commit `5d8a091f`; executable SHA-256 was
+`C98F0F180873F0F4F640A38D42FD3258330B3384C938C54B757FE4C2F3C26BD6`. It
+reached player X `−6949` (about 7,069 blocks from the start; focus chunk
+`−435`) and did not reach the far checkpoint. Movement was not blocked and had
+no ground contacts at the last valid period, so collision was not the cause of
+this interruption.
+
+The run is not valid visual-render acceptance evidence. The INFO log recorded
+5,601 `RenderFrame skipped viewport: zero framebuffer size` messages between
+12:03:38 and 12:10:38. The final successful framebuffer capture before this
+interval was `frame_100.png` at 12:03:32; 28 scheduled captures then failed,
+and `frame_129.png` at 12:11:19 is fully black. M400/M401 had zero such
+warnings. Why GLFW returned a non-positive framebuffer dimension is unknown;
+the render path skips `RenderFrame` when either width or height is non-positive. This
+means the visible-render workload changed even while the simulation and
+streaming metrics continued. The Windows Application log had no matching
+Application Hang/Error entry. The process stopped responding, WM_CLOSE did not
+recover it, and the game process was force-terminated; no dump was collected,
+so the hang's root cause is not established. The wrapper report's generic
+`run_outcome=crash`/unsigned exit value reflects that forced termination, not
+evidence of an engine crash. Its final JSONL record is truncated; use only the
+939 complete period rows for partial diagnostics.
+
+Those rows still provide a useful frontier witness. At the final valid period
+the route had `40` solid slices in the focus band, `16` without drawable mesh,
+`15` with pending work and `1` without an owner; the visual terrain census
+reported `111` incomplete slices. Nearby `RelightAudit` entries for chunk
+`(-436,0,3)` showed non-air data with no installed drawable, and a stale-light
+debt backlog of `464`. This points to unresolved first-mesh/publication and
+admission debt in loaded content at the frontier; it does not show that the
+world data was absent or that storage alone caused the dark appearance.
+
+Before the next long visible acceptance run, reject the visual sample if the
+framebuffer remains zero across a capture interval and preserve the first
+zero-size transition in the report. Keep any continuing simulation metrics
+separately labeled as non-visible workload. For the engine investigation,
+inspect the M402 frontier's ownerless/no-drawable slices alongside M400/M401
+source traces; avoid changing flight conditions or broadening global budgets.
+On another unresponsive app, capture a process dump and wait-chain snapshot
+before forced termination so the application hang can be diagnosed.
+
+Artifacts: [curated M402 postmortem](../../bin/suite_reports/engine_refactor/m402_hang_postmortem_20261005.json),
+[partial M402 report](../../bin/suite_reports/engine_refactor/m402_world164_m335_safe_detour_hold_20261005.json),
+[M402 INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-115345.36848),
+[M402 captures](../../bin/logs/m402_world164_m335_safe_detour_hold),
+[M402 perf JSONL](../../bin/logs/perf_20261005-113820_36848.jsonl).
+The fixed-day runner restored `world_data.json` byte-for-byte (SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).

@@ -4370,3 +4370,22 @@ M401 pixel witnesses in the same camera-X bins and ties source queue events to
 the advancing focus. Keep World_164/M335 unchanged for primary acceptance and
 use new seeds periodically for transfer checks. External design references and
 their application are documented in [streaming best practices](BEST_PRACTICES.md#research-update-for-long-route-streaming-2026-10-05).
+
+## Update — matched pixels and M402 interruption (2026-10-05)
+
+The new M400/M401 camera-X comparison found no material low-luma improvement
+from the disk-slice fast path: `<32` rates were `0.632%/0.689%`, `<96` rates
+were `4.455%/4.555%`, and geometry-newer-than-published rates were
+`36.0%/36.4%` in the shared corridor. The exact bins and limits are recorded
+in the [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m401-spatial-pixel-comparison--no-visible-improvement-2026-10-05).
+
+M402 reached only about 7,069 blocks before becoming unresponsive. The last
+valid movement sample had no collision block. More importantly, its INFO log
+shows a non-positive framebuffer dimension for roughly seven minutes, with 5,601 skipped
+renders and 28 failed frame captures; the last capture is black. Treat M402 as
+partial streaming/frontier telemetry only, not as visible renderer acceptance.
+At the final complete period the focus band contained loaded solid slices
+without drawable meshes, mostly still pending work but including an ownerless
+slice. No Windows hang/error event or process dump was available, so the
+unresponsive-app cause remains unknown. The full incident and exact paths are
+in the [M402 postmortem](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m402--partial-m335-flight-zero-sized-framebuffer-then-hung-app-2026-10-05).

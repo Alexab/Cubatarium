@@ -1,0 +1,1100 @@
+{
+  "matched_camera_x": [
+    -8192.0,
+    -1024.0
+  ],
+  "bin_width_blocks": 512,
+  "runs": {
+    "M400": {
+      "perf_jsonl": "bin\\logs\\perf_20261005-084624_28876.jsonl",
+      "matched_camera_x": [
+        -8192.0,
+        -1024.0
+      ],
+      "bin_width_blocks": 512,
+      "ignored_zero_id_probe_rows": 0,
+      "matched_probe_count": 27520,
+      "matched_dark_luma_counts": {
+        "32": 174,
+        "64": 756,
+        "96": 1226
+      },
+      "matched_dark_luma_rates": {
+        "32": 0.006323,
+        "64": 0.027471,
+        "96": 0.044549
+      },
+      "matched_opaque_depth_valid": 12166,
+      "matched_geometry_newer_than_published": 9904,
+      "matched_opaque_demand_unsettled": 4103,
+      "bins": [
+        {
+          "camera_x": [
+            -8192.0,
+            -7680.0
+          ],
+          "probes": 1440,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 12,
+            "96": 35
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.008333,
+            "96": 0.024306
+          },
+          "opaque_depth_valid": 551,
+          "geometry_newer_than_published": 427,
+          "opaque_demand_unsettled": 18,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 377,
+              "count": 18
+            },
+            {
+              "block_id": 549,
+              "count": 7
+            },
+            {
+              "block_id": -1,
+              "count": 5
+            },
+            {
+              "block_id": 575,
+              "count": 2
+            },
+            {
+              "block_id": 572,
+              "count": 2
+            },
+            {
+              "block_id": 573,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -7680.0,
+            -7168.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 7,
+            "96": 11
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.003646,
+            "96": 0.005729
+          },
+          "opaque_depth_valid": 603,
+          "geometry_newer_than_published": 518,
+          "opaque_demand_unsettled": 44,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 549,
+              "count": 6
+            },
+            {
+              "block_id": 572,
+              "count": 5
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -7168.0,
+            -6656.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 28,
+            "96": 41
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.014583,
+            "96": 0.021354
+          },
+          "opaque_depth_valid": 529,
+          "geometry_newer_than_published": 423,
+          "opaque_demand_unsettled": 63,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 549,
+              "count": 25
+            },
+            {
+              "block_id": -1,
+              "count": 16
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -6656.0,
+            -6144.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 3,
+            "64": 31,
+            "96": 57
+          },
+          "dark_luma_rates": {
+            "32": 0.001442,
+            "64": 0.014904,
+            "96": 0.027404
+          },
+          "opaque_depth_valid": 755,
+          "geometry_newer_than_published": 627,
+          "opaque_demand_unsettled": 107,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 549,
+              "count": 21
+            },
+            {
+              "block_id": 572,
+              "count": 15
+            },
+            {
+              "block_id": -1,
+              "count": 13
+            },
+            {
+              "block_id": 377,
+              "count": 7
+            },
+            {
+              "block_id": 573,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -6144.0,
+            -5632.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 21,
+            "64": 101,
+            "96": 148
+          },
+          "dark_luma_rates": {
+            "32": 0.010937,
+            "64": 0.052604,
+            "96": 0.077083
+          },
+          "opaque_depth_valid": 688,
+          "geometry_newer_than_published": 531,
+          "opaque_demand_unsettled": 27,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 112
+            },
+            {
+              "block_id": 573,
+              "count": 12
+            },
+            {
+              "block_id": -1,
+              "count": 11
+            },
+            {
+              "block_id": 377,
+              "count": 8
+            },
+            {
+              "block_id": 549,
+              "count": 4
+            },
+            {
+              "block_id": 597,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -5632.0,
+            -5120.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 8,
+            "64": 48,
+            "96": 91
+          },
+          "dark_luma_rates": {
+            "32": 0.004167,
+            "64": 0.025,
+            "96": 0.047396
+          },
+          "opaque_depth_valid": 756,
+          "geometry_newer_than_published": 645,
+          "opaque_demand_unsettled": 316,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 55
+            },
+            {
+              "block_id": 377,
+              "count": 15
+            },
+            {
+              "block_id": 573,
+              "count": 7
+            },
+            {
+              "block_id": -1,
+              "count": 7
+            },
+            {
+              "block_id": 549,
+              "count": 6
+            },
+            {
+              "block_id": 597,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -5120.0,
+            -4608.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 34,
+            "64": 121,
+            "96": 200
+          },
+          "dark_luma_rates": {
+            "32": 0.016346,
+            "64": 0.058173,
+            "96": 0.096154
+          },
+          "opaque_depth_valid": 810,
+          "geometry_newer_than_published": 616,
+          "opaque_demand_unsettled": 267,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 149
+            },
+            {
+              "block_id": 377,
+              "count": 22
+            },
+            {
+              "block_id": 573,
+              "count": 18
+            },
+            {
+              "block_id": -1,
+              "count": 5
+            },
+            {
+              "block_id": 597,
+              "count": 3
+            },
+            {
+              "block_id": 549,
+              "count": 2
+            },
+            {
+              "block_id": 575,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -4608.0,
+            -4096.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 4,
+            "64": 22,
+            "96": 48
+          },
+          "dark_luma_rates": {
+            "32": 0.002083,
+            "64": 0.011458,
+            "96": 0.025
+          },
+          "opaque_depth_valid": 740,
+          "geometry_newer_than_published": 577,
+          "opaque_demand_unsettled": 340,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 35
+            },
+            {
+              "block_id": 377,
+              "count": 6
+            },
+            {
+              "block_id": -1,
+              "count": 4
+            },
+            {
+              "block_id": 573,
+              "count": 2
+            },
+            {
+              "block_id": 549,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -4096.0,
+            -3584.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 17,
+            "64": 79,
+            "96": 124
+          },
+          "dark_luma_rates": {
+            "32": 0.008173,
+            "64": 0.037981,
+            "96": 0.059615
+          },
+          "opaque_depth_valid": 1085,
+          "geometry_newer_than_published": 854,
+          "opaque_demand_unsettled": 391,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 90
+            },
+            {
+              "block_id": 573,
+              "count": 15
+            },
+            {
+              "block_id": 377,
+              "count": 9
+            },
+            {
+              "block_id": -1,
+              "count": 7
+            },
+            {
+              "block_id": 597,
+              "count": 2
+            },
+            {
+              "block_id": 549,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -3584.0,
+            -3072.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 0,
+            "96": 0
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.0,
+            "96": 0.0
+          },
+          "opaque_depth_valid": 962,
+          "geometry_newer_than_published": 834,
+          "opaque_demand_unsettled": 438,
+          "dark_luma_lt_96_top_source_face_block_ids": []
+        },
+        {
+          "camera_x": [
+            -3072.0,
+            -2560.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 80,
+            "64": 288,
+            "96": 428
+          },
+          "dark_luma_rates": {
+            "32": 0.038462,
+            "64": 0.138462,
+            "96": 0.205769
+          },
+          "opaque_depth_valid": 1278,
+          "geometry_newer_than_published": 878,
+          "opaque_demand_unsettled": 331,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 308
+            },
+            {
+              "block_id": 573,
+              "count": 49
+            },
+            {
+              "block_id": 377,
+              "count": 43
+            },
+            {
+              "block_id": -1,
+              "count": 23
+            },
+            {
+              "block_id": 597,
+              "count": 3
+            },
+            {
+              "block_id": 560,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -2560.0,
+            -2048.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 0,
+            "96": 1
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.0,
+            "96": 0.000521
+          },
+          "opaque_depth_valid": 1013,
+          "geometry_newer_than_published": 899,
+          "opaque_demand_unsettled": 500,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 377,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -2048.0,
+            -1536.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 7,
+            "64": 19,
+            "96": 42
+          },
+          "dark_luma_rates": {
+            "32": 0.003365,
+            "64": 0.009135,
+            "96": 0.020192
+          },
+          "opaque_depth_valid": 1171,
+          "geometry_newer_than_published": 1093,
+          "opaque_demand_unsettled": 716,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 32
+            },
+            {
+              "block_id": 377,
+              "count": 5
+            },
+            {
+              "block_id": 573,
+              "count": 3
+            },
+            {
+              "block_id": -1,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -1536.0,
+            -1024.0
+          ],
+          "probes": 2240,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 0,
+            "96": 0
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.0,
+            "96": 0.0
+          },
+          "opaque_depth_valid": 1225,
+          "geometry_newer_than_published": 982,
+          "opaque_demand_unsettled": 545,
+          "dark_luma_lt_96_top_source_face_block_ids": []
+        }
+      ]
+    },
+    "M401": {
+      "perf_jsonl": "bin\\logs\\perf_20261005-103140_37252.jsonl",
+      "matched_camera_x": [
+        -8192.0,
+        -1024.0
+      ],
+      "bin_width_blocks": 512,
+      "ignored_zero_id_probe_rows": 0,
+      "matched_probe_count": 28320,
+      "matched_dark_luma_counts": {
+        "32": 195,
+        "64": 814,
+        "96": 1290
+      },
+      "matched_dark_luma_rates": {
+        "32": 0.006886,
+        "64": 0.028743,
+        "96": 0.045551
+      },
+      "matched_opaque_depth_valid": 13031,
+      "matched_geometry_newer_than_published": 10297,
+      "matched_opaque_demand_unsettled": 3950,
+      "bins": [
+        {
+          "camera_x": [
+            -8192.0,
+            -7680.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 8,
+            "64": 59,
+            "96": 110
+          },
+          "dark_luma_rates": {
+            "32": 0.003846,
+            "64": 0.028365,
+            "96": 0.052885
+          },
+          "opaque_depth_valid": 894,
+          "geometry_newer_than_published": 706,
+          "opaque_demand_unsettled": 99,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 56
+            },
+            {
+              "block_id": 549,
+              "count": 23
+            },
+            {
+              "block_id": 377,
+              "count": 21
+            },
+            {
+              "block_id": 573,
+              "count": 5
+            },
+            {
+              "block_id": -1,
+              "count": 4
+            },
+            {
+              "block_id": 597,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -7680.0,
+            -7168.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 1,
+            "64": 18,
+            "96": 27
+          },
+          "dark_luma_rates": {
+            "32": 0.000521,
+            "64": 0.009375,
+            "96": 0.014063
+          },
+          "opaque_depth_valid": 684,
+          "geometry_newer_than_published": 575,
+          "opaque_demand_unsettled": 90,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 549,
+              "count": 12
+            },
+            {
+              "block_id": 572,
+              "count": 9
+            },
+            {
+              "block_id": -1,
+              "count": 4
+            },
+            {
+              "block_id": 377,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -7168.0,
+            -6656.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 16,
+            "96": 21
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.008333,
+            "96": 0.010937
+          },
+          "opaque_depth_valid": 605,
+          "geometry_newer_than_published": 441,
+          "opaque_demand_unsettled": 76,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 549,
+              "count": 14
+            },
+            {
+              "block_id": -1,
+              "count": 7
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -6656.0,
+            -6144.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 2,
+            "64": 63,
+            "96": 102
+          },
+          "dark_luma_rates": {
+            "32": 0.000962,
+            "64": 0.030288,
+            "96": 0.049038
+          },
+          "opaque_depth_valid": 778,
+          "geometry_newer_than_published": 557,
+          "opaque_demand_unsettled": 87,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 549,
+              "count": 45
+            },
+            {
+              "block_id": -1,
+              "count": 25
+            },
+            {
+              "block_id": 572,
+              "count": 17
+            },
+            {
+              "block_id": 377,
+              "count": 12
+            },
+            {
+              "block_id": 573,
+              "count": 2
+            },
+            {
+              "block_id": 597,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -6144.0,
+            -5632.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 18,
+            "64": 61,
+            "96": 97
+          },
+          "dark_luma_rates": {
+            "32": 0.009375,
+            "64": 0.031771,
+            "96": 0.050521
+          },
+          "opaque_depth_valid": 754,
+          "geometry_newer_than_published": 495,
+          "opaque_demand_unsettled": 55,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 65
+            },
+            {
+              "block_id": 377,
+              "count": 15
+            },
+            {
+              "block_id": -1,
+              "count": 12
+            },
+            {
+              "block_id": 573,
+              "count": 5
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -5632.0,
+            -5120.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 6,
+            "64": 26,
+            "96": 52
+          },
+          "dark_luma_rates": {
+            "32": 0.002885,
+            "64": 0.0125,
+            "96": 0.025
+          },
+          "opaque_depth_valid": 751,
+          "geometry_newer_than_published": 683,
+          "opaque_demand_unsettled": 432,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 34
+            },
+            {
+              "block_id": 377,
+              "count": 11
+            },
+            {
+              "block_id": 573,
+              "count": 4
+            },
+            {
+              "block_id": 549,
+              "count": 2
+            },
+            {
+              "block_id": -1,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -5120.0,
+            -4608.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 50,
+            "64": 149,
+            "96": 232
+          },
+          "dark_luma_rates": {
+            "32": 0.026042,
+            "64": 0.077604,
+            "96": 0.120833
+          },
+          "opaque_depth_valid": 858,
+          "geometry_newer_than_published": 618,
+          "opaque_demand_unsettled": 274,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 165
+            },
+            {
+              "block_id": 573,
+              "count": 26
+            },
+            {
+              "block_id": -1,
+              "count": 20
+            },
+            {
+              "block_id": 377,
+              "count": 17
+            },
+            {
+              "block_id": 597,
+              "count": 4
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -4608.0,
+            -4096.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 27,
+            "64": 106,
+            "96": 156
+          },
+          "dark_luma_rates": {
+            "32": 0.012981,
+            "64": 0.050962,
+            "96": 0.075
+          },
+          "opaque_depth_valid": 1045,
+          "geometry_newer_than_published": 796,
+          "opaque_demand_unsettled": 376,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 125
+            },
+            {
+              "block_id": 377,
+              "count": 12
+            },
+            {
+              "block_id": -1,
+              "count": 9
+            },
+            {
+              "block_id": 573,
+              "count": 9
+            },
+            {
+              "block_id": 560,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -4096.0,
+            -3584.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 5,
+            "64": 39,
+            "96": 73
+          },
+          "dark_luma_rates": {
+            "32": 0.002604,
+            "64": 0.020313,
+            "96": 0.038021
+          },
+          "opaque_depth_valid": 1013,
+          "geometry_newer_than_published": 784,
+          "opaque_demand_unsettled": 355,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 49
+            },
+            {
+              "block_id": 377,
+              "count": 13
+            },
+            {
+              "block_id": -1,
+              "count": 6
+            },
+            {
+              "block_id": 573,
+              "count": 5
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -3584.0,
+            -3072.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 0,
+            "96": 0
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.0,
+            "96": 0.0
+          },
+          "opaque_depth_valid": 956,
+          "geometry_newer_than_published": 751,
+          "opaque_demand_unsettled": 276,
+          "dark_luma_lt_96_top_source_face_block_ids": []
+        },
+        {
+          "camera_x": [
+            -3072.0,
+            -2560.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 73,
+            "64": 253,
+            "96": 384
+          },
+          "dark_luma_rates": {
+            "32": 0.035096,
+            "64": 0.121635,
+            "96": 0.184615
+          },
+          "opaque_depth_valid": 1190,
+          "geometry_newer_than_published": 846,
+          "opaque_demand_unsettled": 284,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 268
+            },
+            {
+              "block_id": 573,
+              "count": 47
+            },
+            {
+              "block_id": 377,
+              "count": 42
+            },
+            {
+              "block_id": -1,
+              "count": 24
+            },
+            {
+              "block_id": 597,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -2560.0,
+            -2048.0
+          ],
+          "probes": 2080,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 1,
+            "96": 1
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.000481,
+            "96": 0.000481
+          },
+          "opaque_depth_valid": 1089,
+          "geometry_newer_than_published": 963,
+          "opaque_demand_unsettled": 548,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 575,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -2048.0,
+            -1536.0
+          ],
+          "probes": 1920,
+          "dark_luma_counts": {
+            "32": 5,
+            "64": 23,
+            "96": 35
+          },
+          "dark_luma_rates": {
+            "32": 0.002604,
+            "64": 0.011979,
+            "96": 0.018229
+          },
+          "opaque_depth_valid": 1093,
+          "geometry_newer_than_published": 981,
+          "opaque_demand_unsettled": 307,
+          "dark_luma_lt_96_top_source_face_block_ids": [
+            {
+              "block_id": 572,
+              "count": 27
+            },
+            {
+              "block_id": 377,
+              "count": 4
+            },
+            {
+              "block_id": 573,
+              "count": 3
+            },
+            {
+              "block_id": 597,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "camera_x": [
+            -1536.0,
+            -1024.0
+          ],
+          "probes": 2400,
+          "dark_luma_counts": {
+            "32": 0,
+            "64": 0,
+            "96": 0
+          },
+          "dark_luma_rates": {
+            "32": 0.0,
+            "64": 0.0,
+            "96": 0.0
+          },
+          "opaque_depth_valid": 1321,
+          "geometry_newer_than_published": 1101,
+          "opaque_demand_unsettled": 691,
+          "dark_luma_lt_96_top_source_face_block_ids": []
+        }
+      ]
+    }
+  },
+  "interpretation_note": "Low luminance includes dark materials, lighting and fog; it is not an empty-chunk counter. Valid opaque depth indicates a rendered surface. A CPU mesh revision newer than its published geometry marks an update/publication lag witness."
+}

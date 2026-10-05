@@ -245,3 +245,35 @@ with zero blocked movement substeps. This is the first full M335 repeat after
 matched-corridor stream/apply timings modestly but did not clear the dark-pixel
 or source-result backlog. Full comparison and artifacts are recorded in the
 [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m401--same-m335-after-disk-slice-apply-fast-path-2026-10-05).
+
+The shared-corridor analyzer command and M401/M400 results are also recorded in
+the plan's spatial-pixel section. These luma rates are image witnesses; they do
+not count empty chunks.
+
+### M402: exact M335, obstacle hold available, visible run became invalid and hung
+
+M402 was built Release on commit `5d8a091f` and used the established M335
+settings unchanged. It ran to focus X `−435` / player X about `−6949`, with no
+blocked movement or ground contact at the final complete period. This was a
+partial streaming run and not renderer acceptance: the application framebuffer
+had a non-positive dimension for about seven minutes, scheduled PNG capture failed during that
+interval, and the final capture is black. The app later stopped responding and
+had to be force-terminated. The fixed-day wrapper restored `world_data.json`
+byte-for-byte. Preserve its streaming/frontier telemetry as partial diagnostics;
+do not treat it as a passing visible flight or as evidence that collision
+stopped the route.
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m402_world164_m335_safe_detour_hold'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m402_world164_m335_safe_detour_hold --report bin/suite_reports/engine_refactor/m402_world164_m335_safe_detour_hold_20261005.json --process-timeout 3000
+```
+
+The wrapper's generic `run_outcome=crash` is a consequence of the manual
+process termination. The last JSONL record is truncated and fails automatic
+adequacy parsing. The exact framebuffer failure, frontier state and
+postmortem are documented in the [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m402--partial-m335-flight-zero-sized-framebuffer-then-hung-app-2026-10-05).
+The complete local capture and log paths are linked there.
