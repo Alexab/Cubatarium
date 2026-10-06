@@ -139,6 +139,22 @@ def main() -> int:
                     "sampled_drawable_count": int(
                         record.get("sampled_drawable_count", 0)
                     ),
+                    "camera_band_no_drawable_peak_count": int(
+                        record.get("camera_band_no_drawable_peak_count", 0)
+                    ),
+                    "camera_band_no_drawable_peak_in_frustum_count": int(
+                        record.get(
+                            "camera_band_no_drawable_peak_in_frustum_count", 0
+                        )
+                    ),
+                    "camera_band_unowned_peak_count": int(
+                        record.get("camera_band_unowned_peak_count", 0)
+                    ),
+                    "camera_band_unowned_peak_in_frustum_count": int(
+                        record.get(
+                            "camera_band_unowned_peak_in_frustum_count", 0
+                        )
+                    ),
                     "pixel_probe_active": bool(
                         record.get("pixel_probe_active", False)
                     ),
@@ -234,7 +250,7 @@ def main() -> int:
         joined_by_kind[kind] = joined
 
     result = {
-        "schema": "camera_band_pixel_join.v3",
+        "schema": "camera_band_pixel_join.v4",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": "same frame_epoch and voxel-DDA hit chunk coordinate",
         "trace_counts": dict(kind_counts),

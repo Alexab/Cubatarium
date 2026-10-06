@@ -2031,6 +2031,40 @@ void NoteFrustumCoverageGaps(
   const uint32_t exact_frustum_candidate_count =
       static_cast<uint32_t>(candidates.size());
 
+  struct PeakFrustumSummary
+  {
+    const Frustum *frustum{nullptr};
+    const glm::vec3 *camera_position{nullptr};
+    uint16_t no_drawable_count{0};
+    uint16_t no_drawable_in_view_count{0};
+    uint16_t unowned_count{0};
+    uint16_t unowned_in_view_count{0};
+  } peak_frustum_summary{&frustum, &camera_position};
+  const auto count_peak_frustum_membership =
+      [](const VisualBlackTraceRecord &peak, void *opaque)
+  {
+    auto *summary = static_cast<PeakFrustumSummary *>(opaque);
+    if (!summary || !summary->frustum || !summary->camera_position)
+    {
+      return;
+    }
+    const glm::ivec3 coord(peak.cx, peak.cy, peak.cz);
+    const bool in_exact_frustum = summary->frustum->IntersectsAABB(
+        ChunkAABBMin(coord), ChunkAABBMax(coord), *summary->camera_position);
+    if (peak.sample_kind == 12)
+    {
+      ++summary->no_drawable_count;
+      summary->no_drawable_in_view_count += in_exact_frustum;
+    }
+    else if (peak.sample_kind == 13)
+    {
+      ++summary->unowned_count;
+      summary->unowned_in_view_count += in_exact_frustum;
+    }
+  };
+  UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
+      frame_epoch, count_peak_frustum_membership, &peak_frustum_summary);
+
   constexpr size_t kMaxFrustumCoverageTraces = 12;
   constexpr size_t kMaxFrustumCoverageTracesPerState = 3;
   std::sort(candidates.begin(), candidates.end(),
@@ -2080,6 +2114,13 @@ void NoteFrustumCoverageGaps(
       std::count_if(candidates.begin(), candidates.end(),
                     [](const Candidate &candidate)
                     { return candidate.drawable; }));
+  summary.frustum_peak_no_drawable_slice_count =
+      peak_frustum_summary.no_drawable_count;
+  summary.frustum_peak_no_drawable_in_view_count =
+      peak_frustum_summary.no_drawable_in_view_count;
+  summary.frustum_peak_unowned_slice_count = peak_frustum_summary.unowned_count;
+  summary.frustum_peak_unowned_in_view_count =
+      peak_frustum_summary.unowned_in_view_count;
   summary.flags = opaque_capture.active ? 1u : 0u;
   UJobStageTrace::NoteVisualBlack(summary);
 

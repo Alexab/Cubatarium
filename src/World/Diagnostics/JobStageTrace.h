@@ -299,6 +299,12 @@ struct VisualBlackTraceRecord
   /// candidates, quota-selected samples, and selected samples with drawable.
   uint32_t renderer_cpu_index_count{0};
   uint32_t renderer_gpu_quad_count{0};
+  /// sample_kind=15: camera-band peak slice counts, split by no-drawable /
+  /// unowned and exact-geometric-frustum intersection.
+  uint16_t frustum_peak_no_drawable_slice_count{0};
+  uint16_t frustum_peak_no_drawable_in_view_count{0};
+  uint16_t frustum_peak_unowned_slice_count{0};
+  uint16_t frustum_peak_unowned_in_view_count{0};
   /// sample_kind=2 flags 0..17; sample_kind=9 uses the same flags for the
   /// exact ray-mapped pixel chunk: drawable, satisfying, live GPU, fully dark,
   /// lit drawable, stale dark, dirty, mesh in-flight, GPU pending, extract
@@ -717,6 +723,9 @@ public:
   /// True when a camera-band peak was recorded during this render epoch.
   /// Lets the renderer take one synchronized sparse pixel/depth sample.
   static bool HasCameraBandPeakTraceForFrame(uint64_t frame_epoch);
+  static void ForEachCameraBandPeakTraceForFrame(
+      uint64_t frame_epoch,
+      void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx);
   /// Clear the latest high-water snapshot ring for sample_kind 12 or 13.
   static void ResetCameraBandPeakTrace(uint8_t sample_kind);
   /// Dump each trace class from its own bounded ring. max_n is applied per

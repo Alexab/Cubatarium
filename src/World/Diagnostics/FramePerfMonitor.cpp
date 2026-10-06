@@ -3666,6 +3666,14 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_mdi_command_count
                  << ",\"sampled_drawable_count\":"
                  << r.renderer_mdi_visible_command_count
+                 << ",\"camera_band_no_drawable_peak_count\":"
+                 << r.frustum_peak_no_drawable_slice_count
+                 << ",\"camera_band_no_drawable_peak_in_frustum_count\":"
+                 << r.frustum_peak_no_drawable_in_view_count
+                 << ",\"camera_band_unowned_peak_count\":"
+                 << r.frustum_peak_unowned_slice_count
+                 << ",\"camera_band_unowned_peak_in_frustum_count\":"
+                 << r.frustum_peak_unowned_in_view_count
                  << ",\"pixel_probe_active\":"
                  << ((r.flags & 1u) != 0 ? "true" : "false") << "}\n";
           return;

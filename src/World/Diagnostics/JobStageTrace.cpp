@@ -271,6 +271,23 @@ void ForEachVisualTraceNewest(
   }
 }
 
+struct CameraBandPeakFrameDispatch
+{
+  uint64_t frame_epoch{0};
+  void (*fn)(const VisualBlackTraceRecord &, void *){nullptr};
+  void *ctx{nullptr};
+};
+
+void DispatchCameraBandPeakFrameRecord(const VisualBlackTraceRecord &record,
+                                       void *opaque)
+{
+  auto *dispatch = static_cast<CameraBandPeakFrameDispatch *>(opaque);
+  if (dispatch && dispatch->fn && record.frame_epoch == dispatch->frame_epoch)
+  {
+    dispatch->fn(record, dispatch->ctx);
+  }
+}
+
 } // namespace
 
 void UJobStageTrace::Note(const JobStageSpan &span)
@@ -441,6 +458,23 @@ bool UJobStageTrace::HasCameraBandPeakTraceForFrame(uint64_t frame_epoch)
   return frame_epoch != 0 &&
          LatestCameraBandPeakFrameEpoch.load(std::memory_order_acquire) ==
              frame_epoch;
+}
+
+void UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
+    uint64_t frame_epoch,
+    void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
+{
+  if (frame_epoch == 0 || !fn)
+  {
+    return;
+  }
+  CameraBandPeakFrameDispatch dispatch{frame_epoch, fn, ctx};
+  ForEachVisualTraceNewest(GetCameraBandNoDrawablePeakTraceRing(),
+                           kCameraBandPeakTraceRingCapacity,
+                           DispatchCameraBandPeakFrameRecord, &dispatch);
+  ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(),
+                           kCameraBandPeakTraceRingCapacity,
+                           DispatchCameraBandPeakFrameRecord, &dispatch);
 }
 
 void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
