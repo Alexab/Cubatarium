@@ -848,3 +848,49 @@ Artifacts: [M418 flight report](../../bin/suite_reports/engine_refactor/m418_wor
 [M418 fog/pixel join](../../bin/suite_reports/engine_refactor/m418_camera_band_pixel_join_20261006.json),
 raw perf `bin/logs/perf_20261006-102124_22924.jsonl`, and 189 captures in
 `bin/logs/m418_world164_m335_fog_attribution/`.
+## M420 - M335 far route with ColumnFlow class telemetry (2026-10-06)
+
+Release build: `bin/Cubatarium.exe`, binary SHA-256
+`6e28736b2fbe055371eeb1449ac2f68921ea9f9df8b365466946e2510336bb57`, source
+commit `afe4192f96bb23253f2a73e587a298fb33da9a97`. The runner completed the
+no-teleport, visible 2,800-second M335 route at median `5.19653 blocks/s`,
+covering 13,472 blocks west (focus X 7 to -835); it recorded 1,393 periods and
+189 GUI captures. No collision was recorded. Windows briefly marked the app
+not responding as it exited; the app then closed normally, the runner was not
+killed, and the fixed-day wrapper restored `World_164/world_data.json`
+byte-for-byte (SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).
+
+This is a resident-world throughput baseline, not a cold storage or generation
+test: `stream_disk_complete_n` and `stream_gen_commit_n` were zero throughout.
+Median frame wall was 56.29 ms (17.76 FPS), world streaming phase 47.40 ms,
+mesh emergence 20.33 ms, and render 7.06 ms. `gpu_not_ready` was the dominant
+completion stall and `stream` the dominant wall stage. Toward the end, the
+streaming phase rose into the 60-90 ms range while the camera continued at the
+configured speed overall. Captures show terrain and trees nearby and a
+fog-dominated distant horizon; these samples do not prove every transient
+readiness signal was visually exposed.
+
+Readiness signals need careful interpretation. The report's hole-key is
+`unfinished_visual`, explicitly a readiness/debt count rather than a blank
+framebuffer pixel. Its raw hole-rate gate fails, while effective hole blink
+rate is 0, mid-corridor `visual_holes` median is 0, and visible-black median is
+0 (maximum 18). Near-focus mesh-miss signals occur transiently; pixel/depth
+evidence is still required before calling them exposed holes. ColumnFlow live
+Relight median was 21, its dispatched median 0, and total live queue median 26.
+This is a service/fairness risk, not yet a demonstrated cause of the captured
+appearance. Chunk-not-ready median was 27, but focus-not-loaded and post-stop
+focus-miss checks cleared.
+
+The report's manifest acceptance failed because source telemetry changes were
+made while this binary was running (`dirty_diff_hash` was not clean); process
+exit was 0 and route adequacy passed. The binary and source commit are pinned
+above, so these metrics remain useful as a baseline but are not a clean-tree
+acceptance run. Old `async_io_ms` values are not disk latency: the field was
+overwritten with the full `TickAsyncChunkSystems` wall time. The next build
+adds explicit phase and result-drain timings.
+
+Artifacts: [M420 acceptance report](../../bin/suite_reports/engine_refactor/m420_world164_m335_flow_kind_telemetry_20261006.json),
+[ColumnFlow windows](../../bin/suite_reports/engine_refactor/m420_columnflow_checkpoint_20261006.json),
+raw perf `bin/logs/perf_20261006-133528_32068.jsonl`, and captures in
+`bin/logs/m420_world164_m335_flow_kind_telemetry/` (for example
+`frame_182.png`).

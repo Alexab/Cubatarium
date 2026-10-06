@@ -4926,3 +4926,43 @@ See [the M418 flight record](FLIGHT_EXPERIMENT_SCRIPTS.md) and its ignored
 artifacts: [acceptance report](../../bin/suite_reports/engine_refactor/m418_world164_m335_fog_attribution_20261006.json),
 [fog/pixel join](../../bin/suite_reports/engine_refactor/m418_camera_band_pixel_join_20261006.json),
 and raw perf `bin/logs/perf_20261006-102124_22924.jsonl`.
+### M420 - longer resident-world route
+
+M420 completed 13,472 westward blocks at median 5.19653 blocks/s. The
+application stayed responsive for almost the whole visible run and closed
+normally after a short end-of-run not-responding mark. Median frame wall was
+56.29 ms, streaming phase 47.40 ms, mesh emergence 20.33 ms, and render 7.06
+ms; late streaming windows reached 60-90 ms. The dominant completion stall
+remained `gpu_not_ready`, with `stream` the dominant wall stage.
+
+The repeated route produced no disk-load or procedural-generation completion
+counters, so it does not explain cold-world I/O/generation behavior. It does
+show long-run readiness pressure: ColumnFlow live queue median 26 (Relight 21),
+with Relight dispatch median 0; this is a possible starvation mechanism but is
+not linked to a proven visible hole. The report's `unfinished_visual`-based
+raw hole gate must not be read as a framebuffer hole: effective hole blink
+rate was 0, mid-corridor visual-hole median was 0, and visible-black median
+was 0 (maximum 18). Screenshots show drawable terrain/trees and fog obscuring
+the far horizon. Continue correlating misses with same-frame pixel/depth and
+draw-readiness evidence.
+
+The M420 manifest marks the tree dirty because the explicit timing-field source
+edit was made after flight launch; the Release executable and source SHA are
+identified in the flight record. The report process exited 0 and fixed-day
+metadata restored to the recorded original SHA. `async_io_ms` is historically
+the full async-chunk-systems phase, not disk time. New
+`async_chunk_systems_ms` and `async_chunk_io_drain_ms` fields preserve this old
+alias while disambiguating future logs.
+
+### Cold-world gate before the next long repeated-world flight
+
+Prepare a fresh world from the same `World_164/world_data.json` settings, but
+with a new numeric seed and a new `world_name`. Do not copy its `chunks/` data
+or `chunks.json` storage marker: the marker alone makes an otherwise empty
+folder look like a persisted save and would confound the intended cold-path
+measurement. Enable `CUBA_WORLD_COLUMN_SOURCE_TRACE=1` and retain visible
+captures, so disk and procedural lifecycle events can be joined to the same
+M335 coordinates. Start with a 600-second no-teleport run to measure startup,
+streamed generation, and frame cost before deciding whether another 2,800-second
+flight is justified. If the first run saves the route, repeat the same segment
+to test disk reads separately.

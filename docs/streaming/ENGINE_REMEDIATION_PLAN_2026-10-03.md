@@ -2685,3 +2685,41 @@ M418 artifacts: [flight report](../../bin/suite_reports/engine_refactor/m418_wor
 [fog/pixel join](../../bin/suite_reports/engine_refactor/m418_camera_band_pixel_join_20261006.json),
 raw trace `bin/logs/perf_20261006-102124_22924.jsonl`; see the M418 section in
 `FLIGHT_EXPERIMENT_SCRIPTS.md` for command, full evidence, and captures.
+### M420 follow-up and revised order
+
+M420 used the pinned M335 visible no-teleport route for 2,800 seconds and
+covered 13,472 blocks at a median 5.19653 blocks/s. It confirms the long-run
+frame-cost trend (56.29 ms median wall, 47.40 ms streaming phase, 20.33 ms mesh
+emergence, 7.06 ms render), but recorded no disk-load or generation completion.
+Thus it is the repeated-world throughput gate only. `gpu_not_ready` and
+`stream` remain dominant; raising fog/view distance would hide the service
+problem and increase work.
+
+The per-kind trace found a live ColumnFlow queue median of 26 (Relight median
+21), while Relight dispatch median was 0. Treat this as a fairness/service
+risk to investigate with queue age and same-frame visible-light evidence, not
+as proof of a black chunk. The raw `unfinished_visual` gate counts readiness
+debt, not framebuffer holes; effective hole blink rate and mid-corridor
+visual-hole median were both 0, and sampled frames show nearby geometry.
+Do not relax deadlines or increase budgets until age, class, visible demand,
+and main-thread cost are separated.
+
+The existing `async_io_ms` sample was overwritten by the complete
+`TickAsyncChunkSystems` duration. Preserve it as a compatibility alias, and
+report explicit `async_chunk_systems_ms` plus
+`async_chunk_io_drain_ms` (main-thread time applying ready chunk-I/O results,
+not worker disk latency). Add both fields to the throughput analyzer. The
+M420 report is a valid Release baseline pinned to commit `afe4192f`, but its
+clean-tree manifest gate failed because this instrumentation edit was in the
+working tree after flight launch; future baselines must start after committing
+and building.
+
+Before another long repeated-world flight, run a 600-second M335 segment in a
+fresh seeded world to measure load/generation performance. Build it from the
+same `World_164` settings but omit `chunks/` and `chunks.json`: the marker alone
+can classify an empty folder as persisted and would muddle the cold-path
+control. Enable `CUBA_WORLD_COLUMN_SOURCE_TRACE=1` and screenshots. If that run
+shows material startup, generation, or frame-time problems, address them first.
+If the route is saved on exit, repeat the same segment on that world to measure
+disk reads. Then run the full 2,800-second repeated-world baseline on the
+committed Release build before changing ColumnFlow service policy.

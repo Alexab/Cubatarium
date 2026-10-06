@@ -3348,7 +3348,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       world.Persistence->TickAsyncChunkIo(world);
     }
-    world.PhysicsTelemetryData.AsyncIoMs +=
+    world.PhysicsTelemetryData.AsyncChunkIoDrainMs +=
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - io_t0)
             .count();

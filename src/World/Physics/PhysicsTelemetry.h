@@ -232,6 +232,12 @@ struct PhysicsTelemetry
   double StreamerPrefetchAheadMs{0.0};
   /// Full UpdateStreaming wall (WorldViewBinding); not an overwrite of core.
   double UpdateStreamingMs{0.0};
+  /// Main-thread duration of the full TickAsyncChunkSystems phase.
+  double AsyncChunkSystemsMs{0.0};
+  /// Main-thread time spent draining/applying completed async chunk-I/O results.
+  /// This does not measure disk-worker read/write latency.
+  double AsyncChunkIoDrainMs{0.0};
+  /// Legacy alias for AsyncChunkSystemsMs, retained for log compatibility.
   double AsyncIoMs{0.0};
   double RelightDrainMs{0.0};
   /// P2: Capture (DrainRelightQueues) vs Apply (DrainAsyncRelightResults).

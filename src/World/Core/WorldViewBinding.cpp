@@ -792,6 +792,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StreamerKeepShellMs = 0.0;
   PhysicsTelemetryData.StreamerPrefetchAheadMs = 0.0;
   PhysicsTelemetryData.UpdateStreamingMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkSystemsMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoDrainMs = 0.0;
   PhysicsTelemetryData.AsyncIoMs = 0.0;
   PhysicsTelemetryData.RelightDrainMsPrev = PhysicsTelemetryData.RelightDrainMs;
   PhysicsTelemetryData.RelightApplyMsPrev = PhysicsTelemetryData.RelightApplyMs;
@@ -1092,9 +1094,12 @@ void UWorld::TickWorldStreamingPhase()
   // UpdateStreaming — that hid unload/keep costs. Phase wall is separate.
   PhysicsTelemetryData.UpdateStreamingMs =
       std::chrono::duration<double, std::milli>(t_stream1 - t_stream0).count();
-  PhysicsTelemetryData.AsyncIoMs =
+  PhysicsTelemetryData.AsyncChunkSystemsMs =
       std::chrono::duration<double, std::milli>(t_after_stream - t_stream1)
           .count();
+  // Keep the historical field as an alias: prior logs report the entire
+  // TickAsyncChunkSystems wall time under async_io_ms, not disk-worker latency.
+  PhysicsTelemetryData.AsyncIoMs = PhysicsTelemetryData.AsyncChunkSystemsMs;
   // Cruise wall P2: real phase time-slice with miss reserved ms.
   // Stream spends general_budget; emerge gets reserved + remain(general).
   const double stream_elapsed_ms =
