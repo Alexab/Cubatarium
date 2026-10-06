@@ -2487,6 +2487,12 @@ void UWorldStreaming::RefreshStreamingPressure(
     world.PhysicsTelemetryData.ColumnFlowUpgradeN = 0;
     world.PhysicsTelemetryData.ColumnFlowDrainedN = 0;
     world.PhysicsTelemetryData.ColumnFlowDeferredN = 0;
+    world.PhysicsTelemetryData.ColumnFlowQueueLiveN = 0;
+    world.PhysicsTelemetryData.ColumnFlowQueueStaleHeapN = 0;
+    world.PhysicsTelemetryData.ColumnFlowProbedN = 0;
+    world.PhysicsTelemetryData.ColumnFlowCooldownDeferredN = 0;
+    world.PhysicsTelemetryData.ColumnFlowProbeBudgetHitN = 0;
+    world.PhysicsTelemetryData.ColumnFlowPostDeadlineUnitMsMax = 0.0;
     // SoT unfinished (held sample while cruise); not pending-proxy.
     world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
     world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;

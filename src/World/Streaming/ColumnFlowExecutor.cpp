@@ -632,11 +632,19 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   ++frame_counter_;
   int drained = 0;
   int deferred_n = 0;
+  int cooldown_deferred_n = 0;
   // A deadline-deferred high-priority item must not hide an eligible
   // FirstMesh/repair ticket behind it. Probe a small bounded slice of the
   // queue while counting only successfully dispatched work against n.
   const int probe_budget = std::clamp(std::max(n, 1) * 4, 4, 16);
   int probed = 0;
+  auto &telemetry = world.GetPhysicsTelemetryMutable();
+  telemetry.ColumnFlowQueueLiveN =
+      std::max(telemetry.ColumnFlowQueueLiveN,
+               static_cast<int>(scheduler_.LiveCount()));
+  telemetry.ColumnFlowQueueStaleHeapN =
+      std::max(telemetry.ColumnFlowQueueStaleHeapN,
+               static_cast<int>(scheduler_.StaleCount()));
   const int critical_units_at_entry =
       UFrameDeadline::Get().CriticalUnitsUsed();
   int critical_units_reserved_by_flow = 0;
@@ -656,6 +664,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
         if (frame_counter_ < retry_it->second)
         {
           deferred.push_back(work);
+          ++cooldown_deferred_n;
           continue;
         }
         relight_retry_after_frame_.erase(retry_it);
@@ -679,15 +688,19 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
          pt.DrawOracleStaleVertexLightN > 0);
     const bool critical =
         work.kind == ColumnWorkKind::FirstMesh || relight_critical;
-    // M118 showed a queue of stale-light RelightThenMesh tickets with no local
-    // mesh job while the shared deadline admitted at most one critical unit.
-    // Permit one measured second unit only when this Flow drain owns the whole
-    // post-deadline reserve; preserve the ordinary one-unit rule if another
-    // producer has already consumed it this frame.
-    const bool may_use_second_stale_repair_unit =
-        stale_light_repair && critical_units_at_entry == 0 &&
-        critical_units_reserved_by_flow < 2;
-    const int critical_unit_limit = may_use_second_stale_repair_unit ? 2 : 1;
+    // M118 showed stale-light repairs queued with no local mesh job while the
+    // shared deadline admitted only one critical unit. M418 exposed the same
+    // cap on FirstMesh: the drain requested >=2, but one unit was dispatched
+    // while up to 16 candidates were deferred. Let this drain use a second
+    // bounded unit for visible FirstMesh or stale-light repair only when no
+    // earlier producer spent the reserve. FrameDeadline still rejects a
+    // second unit when the previous critical unit exceeded its measured cap.
+    const bool flow_owns_critical_reserve =
+        critical_units_at_entry == 0 && critical_units_reserved_by_flow < 2;
+    const bool may_use_second_flow_unit =
+        flow_owns_critical_reserve &&
+        (work.kind == ColumnWorkKind::FirstMesh || stale_light_repair);
+    const int critical_unit_limit = may_use_second_flow_unit ? 2 : 1;
     const bool deadline_exhausted_before = UFrameDeadline::Get().Exhausted();
     const int critical_units_before = UFrameDeadline::Get().CriticalUnitsUsed();
     if (UFrameDeadline::ShouldDeferProducer(critical, critical_unit_limit))
@@ -704,6 +717,9 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
     {
       ++critical_units_reserved_by_flow;
       UFrameDeadline::NoteCriticalUnitFinished();
+      telemetry.ColumnFlowPostDeadlineUnitMsMax = std::max(
+          telemetry.ColumnFlowPostDeadlineUnitMsMax,
+          UFrameDeadline::Get().LastCriticalUnitMs());
     }
     ++drained;
   }
@@ -711,11 +727,17 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   {
     scheduler_.Enqueue(item);
   }
-  world.GetPhysicsTelemetryMutable().ColumnFlowDeferredN += deferred_n;
-  world.GetPhysicsTelemetryMutable().ColumnBumpDenied +=
+  telemetry.ColumnFlowProbedN = std::max(telemetry.ColumnFlowProbedN, probed);
+  telemetry.ColumnFlowCooldownDeferredN = std::max(
+      telemetry.ColumnFlowCooldownDeferredN, cooldown_deferred_n);
+  telemetry.ColumnFlowProbeBudgetHitN =
+      std::max(telemetry.ColumnFlowProbeBudgetHitN,
+               drained < n && probed >= probe_budget ? 1 : 0);
+  telemetry.ColumnFlowDeferredN += deferred_n;
+  telemetry.ColumnBumpDenied +=
       static_cast<int>(scheduler_.DeniedCount());
   scheduler_.ClearDeniedCount();
-  world.GetPhysicsTelemetryMutable().ColumnFlowUpgradeN +=
+  telemetry.ColumnFlowUpgradeN +=
       static_cast<int>(scheduler_.UpgradeCount());
   scheduler_.ClearUpgradeCount();
   return drained;

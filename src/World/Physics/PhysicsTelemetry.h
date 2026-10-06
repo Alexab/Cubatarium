@@ -651,6 +651,13 @@ struct PhysicsTelemetry
   int ColumnFlowDrainedN{0};
   /// Tickets requeued because their work class exceeded the frame deadline.
   int ColumnFlowDeferredN{0};
+  /// Peak queue pressure sampled at ColumnFlow drain entry this frame.
+  int ColumnFlowQueueLiveN{0};
+  int ColumnFlowQueueStaleHeapN{0};
+  int ColumnFlowProbedN{0};
+  int ColumnFlowCooldownDeferredN{0};
+  int ColumnFlowProbeBudgetHitN{0};
+  double ColumnFlowPostDeadlineUnitMsMax{0.0};
   /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
   /// Alias docs: emerge_fsm_* — not ColumnJobGraph stages.
   int ColumnLightingN{0};

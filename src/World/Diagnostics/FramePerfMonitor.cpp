@@ -570,6 +570,12 @@ struct FrameNumbers
   int column_flow_upgrade_n{0};
   int column_flow_drained_n{0};
   int column_flow_deferred_n{0};
+  int column_flow_queue_live_n{0};
+  int column_flow_queue_stale_heap_n{0};
+  int column_flow_probed_n{0};
+  int column_flow_cooldown_deferred_n{0};
+  int column_flow_probe_budget_hit_n{0};
+  double column_flow_post_deadline_unit_ms_max{0.0};
   int column_lighting_n{0};
   int column_meshing_n{0};
   int column_render_ready_n{0};
@@ -1387,6 +1393,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_flow_upgrade_n = phys.ColumnFlowUpgradeN;
   n.column_flow_drained_n = phys.ColumnFlowDrainedN;
   n.column_flow_deferred_n = phys.ColumnFlowDeferredN;
+  n.column_flow_queue_live_n = phys.ColumnFlowQueueLiveN;
+  n.column_flow_queue_stale_heap_n = phys.ColumnFlowQueueStaleHeapN;
+  n.column_flow_probed_n = phys.ColumnFlowProbedN;
+  n.column_flow_cooldown_deferred_n = phys.ColumnFlowCooldownDeferredN;
+  n.column_flow_probe_budget_hit_n = phys.ColumnFlowProbeBudgetHitN;
+  n.column_flow_post_deadline_unit_ms_max =
+      phys.ColumnFlowPostDeadlineUnitMsMax;
   n.column_lighting_n = phys.ColumnLightingN;
   n.column_meshing_n = phys.ColumnMeshingN;
   n.column_render_ready_n = phys.ColumnRenderReadyN;
@@ -2309,6 +2322,17 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"column_flow_upgrade_n\":" << n.column_flow_upgrade_n
           << ",\"column_flow_drained_n\":" << n.column_flow_drained_n
           << ",\"column_flow_deferred_n\":" << n.column_flow_deferred_n
+          << ",\"column_flow_queue_live_n\":"
+          << n.column_flow_queue_live_n
+          << ",\"column_flow_queue_stale_heap_n\":"
+          << n.column_flow_queue_stale_heap_n
+          << ",\"column_flow_probed_n\":" << n.column_flow_probed_n
+          << ",\"column_flow_cooldown_deferred_n\":"
+          << n.column_flow_cooldown_deferred_n
+          << ",\"column_flow_probe_budget_hit_n\":"
+          << n.column_flow_probe_budget_hit_n
+          << ",\"column_flow_post_deadline_unit_ms_max\":"
+          << n.column_flow_post_deadline_unit_ms_max
           << ",\"column_lighting_n\":" << n.column_lighting_n
           << ",\"column_meshing_n\":" << n.column_meshing_n
           << ",\"column_render_ready_n\":" << n.column_render_ready_n
