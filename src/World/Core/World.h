@@ -492,6 +492,10 @@ public:
     bool missing_greedy{false};
     int gpu_pending_near{0};
     bool async_mesh_pending{false};
+    bool async_mesh_raw_pending_near{false};
+    bool async_mesh_blocker_found{false};
+    glm::ivec3 async_mesh_blocker_coord{0};
+    bool async_mesh_blocker_completed{false};
     bool visual_warmup{false};
   };
   void SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out) const;

@@ -986,6 +986,22 @@ bool UWorldMeshService::HasAsyncInflightInHorizontalRadius(
                                                   radius_chunks);
 }
 
+bool UWorldMeshService::FindFirstUndrawableAsyncMeshInHorizontalBand(
+    glm::ivec3 center_ground_chunk, int radius_chunks, int min_cy, int max_cy,
+    glm::ivec3 &out_coord, bool &out_completed) const
+{
+  return Cache.FindFirstUndrawableAsyncMeshInHorizontalBand(
+      center_ground_chunk, radius_chunks, min_cy, max_cy, out_coord,
+      out_completed);
+}
+
+bool UWorldMeshService::HasUnsatisfiedDirtyInHorizontalRadiusBand(
+    glm::ivec3 center_chunk, int radius_chunks, int min_cy, int max_cy) const
+{
+  return Cache.HasUnsatisfiedDirtyInHorizontalRadiusBand(
+      center_chunk, radius_chunks, min_cy, max_cy);
+}
+
 size_t UWorldMeshService::GetDirtyCount() const
 {
   return Cache.GetDirtyCount();

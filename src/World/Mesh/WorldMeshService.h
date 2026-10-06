@@ -230,6 +230,12 @@ public:
   bool HasPendingAsyncMeshWork() const;
   bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                           int radius_chunks) const;
+  bool FindFirstUndrawableAsyncMeshInHorizontalBand(
+      glm::ivec3 center_ground_chunk, int radius_chunks, int min_cy, int max_cy,
+      glm::ivec3 &out_coord, bool &out_completed) const;
+  bool HasUnsatisfiedDirtyInHorizontalRadiusBand(glm::ivec3 center_chunk,
+                                                 int radius_chunks, int min_cy,
+                                                 int max_cy) const;
   size_t GetDirtyCount() const;
   void ReserveDirtyCapacity(size_t n);
   int MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk, size_t soft_cap,

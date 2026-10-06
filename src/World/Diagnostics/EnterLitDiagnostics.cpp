@@ -134,6 +134,33 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"mesh_missing_greedy\":" << (s.mesh_missing_greedy ? 1 : 0)
           << ",\"mesh_gpu_pending_near\":" << s.mesh_gpu_pending_near
           << ",\"mesh_async_pending\":" << (s.mesh_async_pending ? 1 : 0)
+          << ",\"mesh_async_raw_pending_near\":"
+          << (s.mesh_async_raw_pending_near ? 1 : 0)
+          << ",\"mesh_async_blocker_found\":"
+          << s.mesh_async_blocker_found
+          << ",\"mesh_async_blocker_cx\":" << s.mesh_async_blocker_cx
+          << ",\"mesh_async_blocker_cy\":" << s.mesh_async_blocker_cy
+          << ",\"mesh_async_blocker_cz\":" << s.mesh_async_blocker_cz
+          << ",\"mesh_async_blocker_completed\":"
+          << s.mesh_async_blocker_completed
+          << ",\"mesh_async_blocker_non_air_blocks\":"
+          << s.mesh_async_blocker_non_air_blocks
+          << ",\"mesh_async_blocker_dirty_queue_kind\":"
+          << s.mesh_async_blocker_dirty_queue_kind
+          << ",\"mesh_async_blocker_dirty_queue_index\":"
+          << s.mesh_async_blocker_dirty_queue_index
+          << ",\"mesh_async_blocker_dirty_queue_size\":"
+          << s.mesh_async_blocker_dirty_queue_size
+          << ",\"mesh_async_blocker_demand_active\":"
+          << s.mesh_async_blocker_demand_active
+          << ",\"mesh_async_blocker_demand_stage\":"
+          << s.mesh_async_blocker_demand_stage
+          << ",\"mesh_async_blocker_attempt_id\":"
+          << s.mesh_async_blocker_attempt_id
+          << ",\"mesh_async_blocker_desired_geom_rev\":"
+          << s.mesh_async_blocker_desired_geom_rev
+          << ",\"mesh_async_blocker_published_geom_rev\":"
+          << s.mesh_async_blocker_published_geom_rev
           << ",\"mesh_visual_warmup\":" << (s.mesh_visual_warmup ? 1 : 0)
           << ",\"ring_not_ready\":" << s.ring_not_ready
           << ",\"relight_completed_n\":" << s.relight_completed_n
@@ -398,10 +425,43 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   g_gate_was_active = out.enter_lit_gate_active;
   UWorld::EnterGameMeshWarmupBlockers blockers{};
   world.SampleEnterGameMeshWarmupBlockers(blockers);
+  const UWorldMeshService &mesh = world.GetMeshService();
   out.mesh_dirty = blockers.dirty;
   out.mesh_missing_greedy = blockers.missing_greedy;
   out.mesh_gpu_pending_near = blockers.gpu_pending_near;
   out.mesh_async_pending = blockers.async_mesh_pending;
+  out.mesh_async_raw_pending_near = blockers.async_mesh_raw_pending_near;
+  if (blockers.async_mesh_blocker_found)
+  {
+    const glm::ivec3 coord = blockers.async_mesh_blocker_coord;
+    out.mesh_async_blocker_found = 1;
+    out.mesh_async_blocker_cx = coord.x;
+    out.mesh_async_blocker_cy = coord.y;
+    out.mesh_async_blocker_cz = coord.z;
+    out.mesh_async_blocker_completed =
+        blockers.async_mesh_blocker_completed ? 1 : 0;
+    const UChunk *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+    if (chunk != nullptr)
+    {
+      out.mesh_async_blocker_non_air_blocks = chunk->GetNonAirCount();
+    }
+  const UChunkMeshCache &cache = mesh.GetCache();
+    out.mesh_async_blocker_dirty_queue_kind = cache.GetDirtyQueueTrace(
+        coord, out.mesh_async_blocker_dirty_queue_index,
+        out.mesh_async_blocker_dirty_queue_size);
+    if (const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(coord))
+    {
+      out.mesh_async_blocker_demand_active =
+          demand->has_active_attempt ? 1 : 0;
+      out.mesh_async_blocker_demand_stage =
+          static_cast<int>(demand->active_stage);
+      out.mesh_async_blocker_attempt_id = demand->active_attempt_id;
+      out.mesh_async_blocker_desired_geom_rev = demand->desired_geom_rev;
+      out.mesh_async_blocker_published_geom_rev =
+          demand->published_geom_rev;
+    }
+  }
   out.mesh_visual_warmup = blockers.visual_warmup;
   out.ring_not_ready = world.CountPostLoadRingNotReady();
   const FocusRingVisualCensus &focus_census = world.GetFocusRingVisualCensus();
@@ -452,7 +512,6 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.relight_fifo_dropped = phys.RelightFifoDropped;
   out.top_dirty_cx = phys.MissCx;
   out.top_dirty_cz = phys.MissCz;
-  const UWorldMeshService &mesh = world.GetMeshService();
   if (focus_census.data_mesh_valid &&
       focus_census.camera_band_solid_dirty_n > 0)
   {

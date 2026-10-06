@@ -9991,6 +9991,33 @@ int EnterGameMeshRadiusChunks(const UWorld &world)
   return 2;
 }
 
+void EnterSpawnMeshPresentableBand(const UWorld &world, int &out_cy0,
+                                   int &out_cy1)
+{
+  const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();
+  const auto &proc = world.GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy,
+                               out_cy0, out_cy1);
+}
+
+bool HasBlockingSpawnMeshDirty(const UWorld &world,
+                               const UWorldMeshService &mesh,
+                               glm::ivec3 center, int radius)
+{
+  if (!world.IsEnterLitGateActive() && !world.IsEnterSessionActive())
+  {
+    return mesh.HasDirtyWithinHorizontalRadius(center, radius);
+  }
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnMeshPresentableBand(world, cy0, cy1);
+  return mesh.HasUnsatisfiedDirtyInHorizontalRadiusBand(center, radius, cy0,
+                                                        cy1);
+}
+
 bool EnterMeshAsyncBlocksRing(const UWorld &world,
                               const UWorldMeshService &mesh,
                               glm::ivec3 center_ground_chunk, int radius_chunks)
@@ -10000,7 +10027,13 @@ bool EnterMeshAsyncBlocksRing(const UWorld &world,
   if (world.IsEnterLitGateActive() || world.IsEnterSessionActive())
   {
     const int near_r = EnterMeshAsyncBlockRadiusChunks(radius_chunks);
-    return mesh.HasAsyncInflightInHorizontalRadius(center_ground_chunk, near_r);
+    int cy0 = 0;
+    int cy1 = 0;
+    EnterSpawnMeshPresentableBand(world, cy0, cy1);
+    glm::ivec3 blocker{};
+    bool completed = false;
+    return mesh.FindFirstUndrawableAsyncMeshInHorizontalBand(
+        center_ground_chunk, near_r, cy0, cy1, blocker, completed);
   }
   return mesh.HasPendingAsyncMeshWork();
 }
@@ -10009,21 +10042,8 @@ bool HasDirtyWithinHorizontalRadiusBand(const UWorldMeshService &mesh,
                                         glm::ivec3 center, int radius, int cy0,
                                         int cy1)
 {
-  // HasDirtyInColumnBand takes block-Y and FloorDivs to cy.
-  const int band_min = cy0 * CHUNK_SIZE;
-  const int band_max = cy1 * CHUNK_SIZE + (CHUNK_SIZE - 1);
-  for (int dx = -radius; dx <= radius; ++dx)
-  {
-    for (int dz = -radius; dz <= radius; ++dz)
-    {
-      if (mesh.HasDirtyInColumnBand(glm::ivec2(center.x + dx, center.z + dz),
-                                    band_min, band_max))
-      {
-        return true;
-      }
-    }
-  }
-  return false;
+  return mesh.HasUnsatisfiedDirtyInHorizontalRadiusBand(center, radius, cy0,
+                                                        cy1);
 }
 
 bool FindFirstSpawnRingMissingGreedyImpl(const UWorld &world, glm::ivec3 &out_coord)
@@ -10119,7 +10139,7 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = EnterGameMeshRadiusChunks(*this);
   const bool spawn_meshes_pending =
-      mesh.HasDirtyWithinHorizontalRadius(center, radius) ||
+      HasBlockingSpawnMeshDirty(*this, mesh, center, radius) ||
       HasMissingGreedyMeshesNearFocus(*this);
   const bool async_mesh_pending =
       EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
@@ -10212,7 +10232,7 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
                                std::max(8.0, static_cast<double>(budget)));
   }
   return !HasMissingGreedyMeshesNearFocus(*this) &&
-         !mesh.HasDirtyWithinHorizontalRadius(center, radius) &&
+         !HasBlockingSpawnMeshDirty(*this, mesh, center, radius) &&
          !EnterMeshAsyncBlocksRing(*this, mesh, center, radius) &&
          mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) == 0;
 }
@@ -10434,9 +10454,11 @@ bool UWorld::IsSpawnMeshRingReady() const
                                cy1);
   const bool underfeet_present = IsEnterUnderfeetPresentReady();
   // Near presentable: underfeet + no near async/gpu (debt may remain hinterland).
-  const int near_async_r = EnterMeshAsyncBlockRadiusChunks(radius);
+  const bool enter_gate_active =
+      EnterLitGateActive || IsEnterSessionActive();
   const bool near_async =
-      MeshService->HasAsyncInflightInHorizontalRadius(center, near_async_r);
+      enter_gate_active &&
+      EnterMeshAsyncBlocksRing(*this, *MeshService, center, radius);
   const int near_gpu =
       MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
   const bool near_presentable_ready =
@@ -10713,8 +10735,18 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
     out.gpu_pending_near =
         mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1);
     // Near-band async only (EnterMeshAsyncBlocksRing already near-scoped).
+    out.async_mesh_raw_pending_near = mesh.HasAsyncInflightInHorizontalRadius(
+        center, EnterMeshAsyncBlockRadiusChunks(radius));
     out.async_mesh_pending =
         EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
+    if (out.async_mesh_pending)
+    {
+      out.async_mesh_blocker_found =
+          mesh.FindFirstUndrawableAsyncMeshInHorizontalBand(
+              center, EnterMeshAsyncBlockRadiusChunks(radius), cy0, cy1,
+              out.async_mesh_blocker_coord,
+              out.async_mesh_blocker_completed);
+    }
     return;
   }
   out.dirty = mesh.HasDirtyWithinHorizontalRadius(center, radius);

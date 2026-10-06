@@ -177,6 +177,12 @@ public:
   bool HasPendingAsyncMeshWork() const;
   bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                           int radius_chunks) const;
+  bool FindFirstUndrawableAsyncMeshInHorizontalBand(
+      glm::ivec3 center_ground_chunk, int radius_chunks, int min_cy, int max_cy,
+      glm::ivec3 &out_coord, bool &out_completed) const;
+  bool HasUnsatisfiedDirtyInHorizontalRadiusBand(glm::ivec3 center_chunk,
+                                                 int radius_chunks, int min_cy,
+                                                 int max_cy) const;
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();

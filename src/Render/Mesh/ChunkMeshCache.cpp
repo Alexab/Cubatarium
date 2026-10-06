@@ -595,6 +595,40 @@ bool UChunkMeshCache::HasAsyncInflightInHorizontalRadius(
                                                      radius_chunks);
 }
 
+bool UChunkMeshCache::FindFirstUndrawableAsyncMeshInHorizontalBand(
+    glm::ivec3 center_ground_chunk, int radius_chunks, int min_cy, int max_cy,
+    glm::ivec3 &out_coord, bool &out_completed) const
+{
+  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
+  {
+    return false;
+  }
+  return AsyncBuilder->FindFirstUndrawableInflightInHorizontalBand(
+      center_ground_chunk, radius_chunks, min_cy, max_cy,
+      [this](glm::ivec3 coord) { return HasDrawableGreedyMesh(coord); },
+      out_coord, out_completed);
+}
+
+bool UChunkMeshCache::HasUnsatisfiedDirtyInHorizontalRadiusBand(
+    glm::ivec3 center_chunk, int radius_chunks, int min_cy, int max_cy) const
+{
+  if (radius_chunks < 0 || min_cy > max_cy)
+  {
+    return false;
+  }
+  for (const glm::ivec3 coord : Dirty)
+  {
+    const int horiz = std::max(std::abs(coord.x - center_chunk.x),
+                               std::abs(coord.z - center_chunk.z));
+    if (horiz <= radius_chunks && coord.y >= min_cy && coord.y <= max_cy &&
+        !HasMeshSatisfyingColumnReady(coord))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 void UChunkMeshCache::WaitForAsyncMeshIdle()
 {
   if (Render.AsyncMeshing && Render.GreedyMeshing && AsyncBuilder)

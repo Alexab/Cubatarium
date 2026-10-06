@@ -36,6 +36,21 @@ struct EnterLitSample
   bool mesh_missing_greedy{false};
   int mesh_gpu_pending_near{0};
   bool mesh_async_pending{false};
+  bool mesh_async_raw_pending_near{false};
+  int mesh_async_blocker_found{0};
+  int mesh_async_blocker_cx{0};
+  int mesh_async_blocker_cy{0};
+  int mesh_async_blocker_cz{0};
+  int mesh_async_blocker_completed{0};
+  int mesh_async_blocker_non_air_blocks{-1};
+  int mesh_async_blocker_dirty_queue_kind{0};
+  int mesh_async_blocker_dirty_queue_index{-1};
+  int mesh_async_blocker_dirty_queue_size{0};
+  int mesh_async_blocker_demand_active{0};
+  int mesh_async_blocker_demand_stage{0};
+  uint64_t mesh_async_blocker_attempt_id{0};
+  uint64_t mesh_async_blocker_desired_geom_rev{0};
+  uint64_t mesh_async_blocker_published_geom_rev{0};
   bool mesh_visual_warmup{false};
   /// Era44: visual ring debt (CountPostLoadRingNotReady).
   int ring_not_ready{0};

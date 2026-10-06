@@ -10,6 +10,7 @@
 #include "World/Math/BlockTypes.h"
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_map>
@@ -78,6 +79,13 @@ public:
   /// Era53: enter ring checks async only near spawn (not global pool depth).
   bool HasInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                      int radius_chunks) const;
+  /// Finds queued/in-flight work in a presentable band that has no drawable
+  /// image to retain. The predicate must only inspect cache state; it must not
+  /// call back into this builder while its in-flight map is locked.
+  bool FindFirstUndrawableInflightInHorizontalBand(
+      glm::ivec3 center_ground_chunk, int radius_chunks, int min_cy, int max_cy,
+      const std::function<bool(glm::ivec3)> &has_drawable,
+      glm::ivec3 &out_coord, bool &out_completed) const;
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();

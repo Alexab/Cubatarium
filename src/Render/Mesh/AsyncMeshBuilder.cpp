@@ -445,6 +445,51 @@ bool UAsyncMeshBuilder::HasInflightInHorizontalRadius(
   return false;
 }
 
+bool UAsyncMeshBuilder::FindFirstUndrawableInflightInHorizontalBand(
+    glm::ivec3 center_ground_chunk, int radius_chunks, int min_cy, int max_cy,
+    const std::function<bool(glm::ivec3)> &has_drawable,
+    glm::ivec3 &out_coord, bool &out_completed) const
+{
+  if (radius_chunks < 0 || min_cy > max_cy || !has_drawable)
+  {
+    return false;
+  }
+  const auto blocks = [&](glm::ivec3 coord)
+  {
+    const int horiz = std::max(std::abs(coord.x - center_ground_chunk.x),
+                               std::abs(coord.z - center_ground_chunk.z));
+    return horiz <= radius_chunks && coord.y >= min_cy && coord.y <= max_cy &&
+           !has_drawable(coord);
+  };
+  // Completed work is first because it is ready to be drained/applied now.
+  if (Completed.Any(
+          [&](const MeshBuildResult &result)
+          {
+            if (!blocks(result.coord))
+            {
+              return false;
+            }
+            out_coord = result.coord;
+            out_completed = true;
+            return true;
+          }))
+  {
+    return true;
+  }
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  for (const auto &entry : InFlight)
+  {
+    if (!blocks(entry.first))
+    {
+      continue;
+    }
+    out_coord = entry.first;
+    out_completed = false;
+    return true;
+  }
+  return false;
+}
+
 void UAsyncMeshBuilder::WaitIdle() { Pool.WaitIdle(); }
 
 bool UAsyncMeshBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)
