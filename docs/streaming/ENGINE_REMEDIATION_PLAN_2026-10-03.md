@@ -3218,3 +3218,70 @@ record generation/source latency before the next long route.
 
 The M434 matched-band results, report semantics, and artifact paths are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m434---validate-250-ms-census-cadence-on-full-m335-route-2026-10-06).
+
+### M435 checkpoint — new-seed entry succeeds; generation queue tails remain
+
+M435 used a genuinely fresh metadata-only seed `3650479197` in
+`World_M435_Cold_20261007`, with the current Release binary and source commit
+`97d777f3`. The visible GUI stayed responsive. First-presentable output was
+recorded about 28.9 seconds into the EnterLit trace, and the runner then
+completed a 600-second no-teleport route at the established speed. This new
+seed did not reproduce M422's roughly 891-second EnterLit stall, although
+that single successful seed does not prove the cold-start defect is fixed
+across world seeds.
+
+Source tracing confirms the initial route was procedurally generated from
+disk misses: 1,800 miss events matched 1,800 procedural commits, with no disk
+load events. The scheduler reported four workers throughout and a generation
+start cap of two per frame. Procedural generation itself was 125 ms median /
+187 ms p95. The larger tail is queueing and readiness: scheduler-queue wait
+was 7.89 ms median / 129.60 ms p95, ready wait was 48.41 / 175.11 ms, and
+source-to-commit total was 240.77 / 446.80 ms. Maximum scheduler and ready
+waits were about 16.8 s and 14.6 s. Worker-pool wait median was only 0.03 ms.
+This points to scheduler/admission/ready-result delay as the next creation
+path investigation, not simply insufficient worker count.
+
+The run wrote 7,262 slice files from 1,771 queued terrain columns and reached
+a save backlog of four columns before draining to zero. Forty-three columns
+were logged as `discard_incomplete`; they were not queued or written later
+in this run. The save code removes those columns from disk when the full
+terrain column is incomplete. A repeat on this now-persisted world can show
+which coordinates load from disk and which are regenerated, directly testing
+the disk-versus-procedural hypothesis raised for far-route dim chunks.
+
+M435 route adequacy and the eye-proxy, empty-world, and EnterLit dirty-residual
+stop-lines passed. The analyzer still returned `pass=false`: post-stop
+convergence failed and the dual-lane gate saw max unlit 39. Internal
+`visible_black_focus_n` median was 5 with maximum 34, and it contained short
+nonzero candidate runs; no-ticket samples occurred briefly, but
+`visible_black_stalled_n` and fully-dark-stalled remained zero. The operator
+reports that visuals currently look acceptable. With no framebuffer samples
+this remains a streaming/readiness signal rather than visual proof. This was
+a 3,072-block fresh-world lane, not the full 14,000-block World_164 route.
+
+#### Current remaining work after M435
+
+1. Replay the same 600-second M335 settings on the now-persisted
+   `World_M435_Cold_20261007` with column-source tracing. Compare disk hits,
+   read latency, procedural regeneration of the 43 incomplete-save columns,
+   source queue tails, and black-focus ownership with M435. This warm replay
+   must remain labelled a disk-backed same-seed lane; do not call it another
+   cold-start run.
+2. Break down the remaining World_164 async/post-scheduler cost with
+   low-overhead timers. Keep policy and budgets unchanged while measuring
+   request admission/scheduler wait, completed-result dequeue/apply, I/O
+   drain, and relight/demand reconciliation separately.
+3. Choose one measured owner/policy change, then validate it first on the
+   matched World_164 route and on a fresh seed. Preserve old drawable geometry
+   until replacement publication is safe; do not loosen EnterLit or stop
+   convergence guards to make a report pass.
+4. Continue fresh-seed checks after major world-generation, persistence,
+   admission, or mesh-publication changes, while keeping the repeated
+   World_164 route as the primary performance control.
+5. Revisit stop convergence and visual evidence separately. If dark or blank
+   visuals return, capture sparse framebuffer probes on matched route
+   checkpoints and correlate those pixels with source, lighting, and mesh
+   publication events.
+
+M435 startup, route, and source-trace results are documented in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m435---cold-seed-generation-and-startup-trace-2026-10-07).

@@ -1420,3 +1420,70 @@ raw perf `bin/logs/perf_20261006-231755_26476.jsonl`, INFO log
 The report manifest records source `a5ae29b3`, the executable hash above,
 clean Release source, and the unchanged route. Keep these ignored run outputs
 with this tracked record.
+
+## M435 - cold-seed generation and startup trace (2026-10-07)
+
+M435 used a new metadata-only world, `World_M435_Cold_20261007`, numeric seed
+`3650479197`. It was prepared with the established spawn `[120,56,56]` and
+the same visible M335 camera and movement settings, but a 600-second flight
+phase because this was the separate cold-start lane. There were no chunk
+files or lighting cache at launch. Column-source tracing was enabled;
+visual-black/pixel capture was disabled. The Release binary is the unchanged
+M434 executable with SHA-256
+`66c712da62ffeec9cad98e60301a52461c49cf7cde4fc635164e6ad7c2b7654f`.
+
+The app stayed responsive and the cold seed became presentable in about
+`28.9 s` in the first EnterLit trace session. The route then ran at median
+`5.19653 blocks/s`, held player Y at `70`, covered 3,072 blocks, and recorded
+zero blocked movement substeps and zero ground contacts. The app exited
+normally (`process_rc=0`, `run_outcome=success`, `hang_killed=false`);
+the analyzer returned `pass=false` for product/readiness gates. The route
+does not satisfy the 8,192-block far-flight checkpoint, by design. Wall
+median was `28.94 ms`, there were 14 spikes, and the maximum wall sample was
+`586.63 ms` (stream classified). Eye-proxy, empty-world, and EnterLit
+dirty-residual gates passed; post-stop convergence failed and dual-lane
+readiness failed at max unlit `39`.
+
+The source analyzer saw 3,600 events: 1,800 procedural disk misses and 1,800
+procedural commits; there were no disk-read events because the world started
+without saved chunks. All commits reported four worker threads and generation
+start cap two per frame.
+
+| Procedural source metric | Median | p95 | Maximum |
+|---|---:|---:|---:|
+| Terrain generation | `125.29 ms` | `186.69 ms` | `260.95 ms` |
+| Scheduler queue wait | `7.89 ms` | `129.60 ms` | `16,807.53 ms` |
+| Worker-pool queue wait | `0.03 ms` | `124.01 ms` | `271.23 ms` |
+| Ready-result wait | `48.41 ms` | `175.11 ms` | `14,609.35 ms` |
+| Main-thread apply | `7.71 ms` | `30.12 ms` | `61.06 ms` |
+| Request-to-commit total | `240.77 ms` | `446.80 ms` | `17,693.23 ms` |
+
+The large maximums belong to source/ready queue waits, not procedural
+generation or worker-pool wait medians. This supports instrumenting scheduler
+admission and ready-result ownership before increasing worker count or
+changing generation budgets.
+
+Persistence emitted 1,771 queued column saves, 7,262 slice writes, and 43
+`discard_incomplete` outcomes. The save backlog peaked at four columns and
+ended at zero. None of the 43 discarded coordinates was later queued or
+written during this run; `RequestAsyncTerrainColumnSave()` calls
+`RemoveTerrainColumnFromDisk()` when `IsTerrainChunkComplete()` is false.
+The resulting world contains 7,262 `.cchunk` files and is now a disk-backed
+warm replay fixture, not a cold fixture. Replay it once with the same 600
+seconds and source trace to measure actual disk hits and whether those 43
+coordinates regenerate.
+
+The report's `visible_black_focus_n` median was `5`, maximum `34`, and
+blink rate `0.103`; short no-ticket candidates appeared, while
+`visible_black_stalled_n`, fully-dark-stalled, and black-sticky remained
+zero. The operator currently reports acceptable appearance, but M435 captured
+no framebuffer pixels. Treat these as candidate/readiness metrics, not proof
+of dark pixels or proof of visual correctness.
+
+Artifacts: [M435 flight report](../../bin/suite_reports/engine_refactor/m435_world_m435_cold_source_trace_20261007.json),
+[source report](../../bin/suite_reports/engine_refactor/m435_world_column_source_trace_20261007.json),
+raw perf `bin/logs/perf_20261007-001129_3520.jsonl`, INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-001126.3520`,
+and EnterLit traces `bin/logs/enter_lit_20261007-001132.jsonl` and
+`bin/logs/enter_lit_20261007-001206.jsonl`. The wrapper restored the new
+world's original `world_data.json` bytes and `users.json` after the run.
