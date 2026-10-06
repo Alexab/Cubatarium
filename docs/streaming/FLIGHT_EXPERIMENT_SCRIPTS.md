@@ -1038,3 +1038,91 @@ EnterLit traces `bin/logs/enter_lit_20261006-172658.jsonl`,
 `bin/logs/enter_lit_20261006-173422.jsonl`; M428 perf `bin/logs/perf_20261006-173407_30872.jsonl`.
 The next acceptance run is the unchanged visible, no-teleport M335 route on
 `World_164`; no cold-start result substitutes for it.
+
+## M429 - M335 long-run visual and disk-result audit (2026-10-06)
+
+M429 completed the established visible, no-teleport `product-174657-far` route
+on `World_164` with the committed clean Release build (`9b0c9d3f`, executable
+SHA-256 `d51a792c3cfa9fc2ebd5d7def730520fc5b679af906676c58d735f354a6d0c99`).
+The route kept the M335 start `[120,56,56]`, eye Y `70`, yaw `180`, pitch
+`-30`, speed scale `1`, and 2,800-second flight. The app exited normally
+(`process_rc=0`, `hang_killed=false`); route adequacy passed at 5.19653 blocks/s,
+focus X `7 -> -798`, 12,880 blocks, 1,390 periods, and 189 screenshots. One
+brief obstacle contact caused partial X blocking and a small Z deviation; the
+camera subsequently resumed the route. The runner restored
+`World_164/world_data.json` byte-for-byte (SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).
+
+Exact invocation (PowerShell, run from the repository root):
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m429_world164_m335_presentability'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m429_world164_m335_presentability --report bin/suite_reports/engine_refactor/m429_world164_m335_presentability_20261006.json --process-timeout 3000
+```
+
+The operator reports that the current appearance looks sufficiently good.
+This agrees with the sampled captures and pixels: no sampled point had mean
+RGB below 16; 294/32,768 points were below luminance 32, and all 294 had a
+valid opaque depth surface, drawable mesh, and visible MDI pass. Among those
+dark samples, 250 source-face witnesses were within 0.1 blocks of the depth
+surface; 265 had valid light samples, and 265 had matching light revisions.
+There were 1,922 additional samples below luminance 96, also all on draw-ready
+surfaces. These points were not fog-blackened (median fog factor 0; none of the
+<32 samples had fog factor >0.25). Sparse sampling cannot certify every screen
+pixel or exclude a brief defect between captures; the conclusion is “no
+sampled black hole, with observed scenes looking good,” not full framebuffer
+coverage. The retained 32,768-pixel ring covers only 205 late-route probes.
+
+The structural traces still show transient work: focus-slice samples were all
+terrain-complete, while the camera-band peak census recorded 16 solid
+no-drawable slices and 3 solid slices without a FirstMesh owner. Pixel samples
+at those peaks did not hit the target depth; the nearest sampled surfaces were
+in front of the targets. This is a readiness/ownership risk, not proof that the
+missing slices appeared as holes. Of 1,009 screen-ray repair candidates, 987
+had an already-satisfying drawable plus repairable geometry debt, so most
+candidate pressure was stale-mesh refresh rather than absent first mesh.
+
+`WorldColumnSource` recorded 2,175 unique disk queue/completion coordinates,
+zero procedural generation commits, and zero unmatched queued coordinates.
+File reads were fast (median/p95 1.09/1.68 ms). The worker queue was also modest
+at median/p95 2.53/132.46 ms, while the completed-result wait from worker finish
+until main-thread consumption was median/p95 655 ms/9.60 s, maximum 60.61 s.
+That `result_wait_ms` is accumulated across vertical slices for one column;
+the separate worst-single-slice field (`result_wait_max_ms`) had median/p95
+195/2,400 ms and maximum 15.20 s. At shutdown the source log still showed 28
+ready slices and 7 pending disk columns. The manifest's `cold_warm_mode` label
+is not an OS or storage-cache guarantee: the source trace confirms that this
+route exercised persisted chunks, not procedural generation. The measured
+delay is after worker completion and before main-thread application, not disk
+latency.
+
+Code review explains a plausible service constraint to measure next:
+`TickAsyncChunkIo` ranks the completed queue and drains at most four results per
+tick; on a frame above 24 ms it also uses a four-slice/4 ms budget, and the
+near-stream-over-budget fallback applies one result with a 2.5 ms target. M429
+reported median `async_chunk_io_drain_ms=9.97 ms` and median
+`async_chunk_systems_ms=26.52 ms`. One slice/finalization may overrun the target,
+and queue ranking/finalization are included in the drain wall time. This makes
+main-thread service/backlog a strong optimization candidate, but does not yet
+prove it caused the prior dim/empty appearance. Treat M429's 61.63 ms median
+frame wall as diagnostic-only because the run enabled dense pixel readback and
+per-column source logging.
+
+The runner's route and manifest checks passed, but the product quality report
+remains `pass=false`: post-stop convergence and multiple readiness/performance
+gates failed. Its `holes_rate=1.0` is keyed to `unfinished_visual`, so it is not
+a pixel-hole rate. Keep visual evidence, readiness debt, and frame cost as
+separate acceptance axes.
+
+Artifacts: [M429 report](../../bin/suite_reports/engine_refactor/m429_world164_m335_presentability_20261006.json),
+[pixel summary](../../bin/suite_reports/engine_refactor/m429_pixel_trace_summary_20261006.json),
+[camera-band/pixel join](../../bin/suite_reports/engine_refactor/m429_camera_band_pixel_join_20261006.json),
+[visual trace summary](../../bin/suite_reports/engine_refactor/m429_visual_coverage_20261006.json),
+[disk-source summary](../../bin/suite_reports/engine_refactor/m429_world_column_source_trace_20261006.json),
+raw perf `bin/logs/perf_20261006-174353_35164.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-174349.35164`,
+and captures in `bin/logs/m429_world164_m335_presentability/`.

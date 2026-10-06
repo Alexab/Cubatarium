@@ -4984,6 +4984,61 @@ last-frame-versus-interval comparison ambiguity.
 See [M421/M422 experiment record](FLIGHT_EXPERIMENT_SCRIPTS.md#m421m422---selecting-a-genuinely-cold-world-and-cold-start-stall-2026-10-06)
 and the [updated remediation order](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m421m422-cold-start-follow-up---prioritize-entry-convergence).
 
+### M429 - long-route visual checkpoint and remaining service backlog (2026-10-06)
+
+M429 completed the exact visible no-teleport M335 `World_164` route on the
+clean Release manifest at commit `9b0c9d3f`: 2,800 seconds, 12,880 blocks,
+focus X `7 -> -798`, median movement speed `5.19653 blocks/s`, 1,390 period
+rows and 189 screenshots. The app exited normally and the runner restored
+world metadata. The operator's current visual assessment is positive. In
+captured screenshots the long route shows continuous terrain, trees, coast,
+and water without obvious black/empty chunks. The dense probe ring retained
+32,768 samples from 205 late-route scans: zero had mean RGB below 16. Of 294
+points with luminance below 32, all had valid opaque depth, a drawable mesh,
+and a visible MDI pass; 250 had a source-face witness near the depth surface,
+and 265 had valid light samples with matching light revisions. Therefore the
+sampled dim points are rasterized geometry, not blank framebuffer pixels.
+This still cannot certify pixels between sparse samples or the unrecorded first
+part of the route.
+
+Structural readiness debt did not disappear: the peak camera-band census
+contained 16 solid no-drawable slices and 3 solid unowned slices, but no sparse
+pixel hit matched their target depth; observed hits were occluded by nearer
+surfaces. The screen-ray selector recorded 1,009 candidates, 987 of which had
+an already-satisfying drawable with repairable geometry debt. This supports a
+stale-remesh interpretation for most candidates but does not explain every
+transient no-drawable slice. Keep three verdicts separate: the user's perceived
+appearance is good, the sampled framebuffer contains no near-black point, and
+the scheduler still reports readiness/ownership debt.
+
+The storage trace demonstrates the persisted-chunk path: 2,175 disk
+queue/completion coordinates, zero procedural generation commits, and zero
+unmatched queued events. Median/p95 file read is 1.09/1.68 ms. In contrast,
+the time from worker completion to main-thread result consumption is 655 ms
+median, 9.60 seconds p95 and 60.61 seconds maximum; `result_wait_ms` sums the
+vertical-slice waits for a column. Its separate worst-slice field has median
+195 ms, p95 2.40 seconds and maximum 15.20 seconds. At shutdown, 28 ready
+result slices and 7 pending disk columns remained. M429 also reports
+`async_chunk_io_drain_ms=9.97 ms` median and `async_chunk_systems_ms=26.52 ms`
+median. Source inspection finds an at-most-four-result ranked drain per tick,
+a four-slice/4 ms default under >24 ms frames, and a one-slice/2.5 ms
+near-over-budget fallback. The drain wall time can exceed that target when one
+slice or finalization is expensive. This is the strongest current streaming
+optimization lead, not yet a proven visual-defect cause; dense pixel tracing
+and source logging also make M429 unsuitable as a clean performance baseline.
+
+The flight report has `run_outcome=success`, route adequacy PASS, and a clean
+Release manifest, but product `pass=false` and post-stop convergence FAIL. Its
+`holes_rate=1.0` is derived from `unfinished_visual`, a readiness proxy rather
+than a pixel-hole measurement. Cold-world convergence remains open: M422's
+fresh seed stalled in `EnterLit`, while M427/M428 did not validate the gate
+under an actual moving route. The plan is therefore ready for the next focused
+service-latency investigation, but not ready to close: obtain a low-instrument
+timing control, instrument and reduce completed-result wait without starving
+visible work, then validate cold entry/generation and repeat M335 after any
+policy change. See the [M429 experiment record](FLIGHT_EXPERIMENT_SCRIPTS.md#m429---m335-long-run-visual-and-disk-result-audit-2026-10-06)
+and the [updated plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m429-readiness-checkpoint---visual-evidence-is-better-service-and-cold-start-work-remain).
+
 ### Cold-world gate before the next long repeated-world flight
 
 Prepare a fresh world from the same `World_164/world_data.json` settings, but

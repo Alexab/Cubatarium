@@ -2855,3 +2855,65 @@ Next actions:
 
 M427-M428 limitations and exact metrics are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m427-m428---validate-the-presentability-gate-at-the-established-locus-2026-10-06).
+
+### M429 readiness checkpoint - visual evidence is better; service and cold-start work remain
+
+M429 has now completed the planned primary repeatable lane: visible Release,
+no teleport, unchanged M335 route on `World_164`, 2,800 seconds and 12,880
+blocks. Route adequacy, speed, process exit, and artifact capture all passed.
+The user reports that the world currently looks sufficiently good. Sparse
+framebuffer evidence supports that impression: none of 32,768 sampled points
+was near-black (<16 mean RGB); all 294 points below luminance 32 hit a valid
+depth surface on a drawable mesh with a visible MDI pass. This is positive
+visual evidence, but the pixel ring samples only the late part of the route and
+does not prove full-screen or continuous coverage.
+
+| Plan area | State after M429 | What still blocks closure |
+|---|---|---|
+| Repeatable long route | **Complete for this checkpoint.** M335 route and expected speed passed on the clean Release binary. | Repeat after any service-policy change; keep the route parameters fixed. |
+| Perceived rendering | **Promising, provisional.** User observation and sampled captures/pixels show no obvious black/empty regions. | Preserve route-wide pixel/capture evidence; samples are sparse and late-route only. Do not equate dark foliage/material with missing terrain. |
+| Disk streaming | **Measured, generation not covered.** 2,175 disk columns completed; file-read median/p95 was 1.09/1.68 ms; no procedural commit occurred. | The result queue had long worker-finished-to-main-thread waits (655 ms median, 9.60 s p95, 60.61 s max); shutdown showed 28 ready slices and 7 pending columns. Diagnose queue service and ensure route-relevant work drains. |
+| Cold-world entry/generation | **Open blocker.** M422 still has a reproducible `EnterLit` non-convergence; M427/M428 did not constitute a passing cold-route control. | Re-run fresh-seed entry after the `47088487` presentability change, preserving the no-drawable and underfeet safety gates; cover generation separately from saved-world reads. |
+| Performance | **Open, current M429 value is diagnostic-only.** Median wall 61.63 ms and streaming phase 51.91 ms; `async_chunk_io_drain_ms` median 9.97 ms. | Dense pixel readback and source logging perturb this run. Get a low-instrumentation baseline, then profile queue ranking, result application, and finalization before changing budgets. |
+| Plan readiness | **Ready to continue, not ready to close.** The next intervention target is specific enough to investigate. | Resolve post-worker result service and cold `EnterLit`; then re-run the established route and a periodic fresh seed. |
+
+#### Updated next actions
+
+1. **Separate queue wait, selection, and main-thread apply cost.** The source
+   trace times result wait from worker completion to application; disk reads are
+   fast, but p95 result wait is 9.60 seconds. `TickAsyncChunkIo` ranks the
+   completed queue and currently takes at most four results per tick. For frames
+   over 24 ms it uses a four-slice/4 ms target, and the near-stream-over-budget
+   fallback uses one result/2.5 ms. M429's per-column `result_wait_ms` sums
+   waits across slice results (655 ms median, 9.60 s p95, 60.61 s max); the
+   worst individual slice wait was 195 ms median, 2.40 s p95, 15.20 s max.
+   Median drain wall was 9.97 ms. Capture queue depth/oldest-ready age,
+   selected/applied slices, budget hits, rank time, per-result apply/finalize
+   time, and near/far priority at period boundaries. A single result or
+   finalization may exceed the time target.
+2. **Use the measurements to choose a bounded service design.** Check whether
+   full ready-queue ranking, per-slice application, or column finalization
+   dominates. If ranking is the cost, use a persistent priority structure or
+   bounded candidate set rather than rescanning the whole ready queue. If apply
+   dominates, split large column commits/finalization into incremental main-
+   thread work. Preserve near-camera priority and stale-token cancellation;
+   don't simply raise a global budget from one diagnostic run.
+3. **Get a low-instrumentation timing control.** Replay the same M335 route and
+   settings with dense pixel readback and verbose per-column source tracing
+   disabled. This is a performance control, not a replacement for pixel-level
+   visual diagnosis. Keep Release and collect the same phase timers.
+4. **Return to the cold-start lane.** Use a new metadata-only world/seed with no
+   `chunks/` directory or `chunks.json`, visible GUI, and the established M335
+   start/camera settings. Confirm `EnterLit` leaves with an actual
+   `first_presentable_ms`, then run a cold 600-second route to cover generation.
+   Do not bypass the ring or dirty-residual safety checks unless all
+   camera-presentable slices have a satisfying drawable or validated-empty
+   result.
+5. **Acceptance after a change:** Release-build, run the unchanged visible
+   M335 repeated-world route, check route/speed and collision response, compare
+   low-instrumentation frame phases, inspect captured visual samples, and then
+   run a separate periodic fresh seed. The run report must not use
+   `unfinished_visual` as a framebuffer-hole verdict.
+
+M429's full evidence and limitations are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m429---m335-long-run-visual-and-disk-result-audit-2026-10-06).
