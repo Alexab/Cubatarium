@@ -1997,12 +1997,14 @@ void NoteFrustumCoverageGaps(
   std::vector<Candidate> candidates;
   candidates.reserve(64);
   auto &chunks = world.GetBlockWorld().GetChunkManager();
+  uint32_t resident_non_air_chunk_count = 0;
   chunks.ForEachChunk([&](const UChunk &chunk)
   {
     if (chunk.IsAirOnly() || chunk.GetNonAirCount() == 0)
     {
       return;
     }
+    ++resident_non_air_chunk_count;
     const glm::ivec3 coord = chunk.GetCoord();
     // This probe answers whether geometry is actually inside the camera clip
     // volume. The runtime chunk culler intentionally skips near/top/bottom
@@ -2026,6 +2028,8 @@ void NoteFrustumCoverageGaps(
         {coord, state, drawable,
          glm::dot(center - camera_position, center - camera_position)});
   });
+  const uint32_t exact_frustum_candidate_count =
+      static_cast<uint32_t>(candidates.size());
 
   constexpr size_t kMaxFrustumCoverageTraces = 12;
   constexpr size_t kMaxFrustumCoverageTracesPerState = 3;
@@ -2057,9 +2061,28 @@ void NoteFrustumCoverageGaps(
     }
   }
   candidates = std::move(sampled_candidates);
-
   const glm::ivec3 focus = UChunkManager::WorldToChunk(
       world.GetPreferredLoadFocusBlock());
+
+  VisualBlackTraceRecord summary{};
+  summary.sample_kind = 15;
+  summary.focus_cx = focus.x;
+  summary.focus_cz = focus.z;
+  summary.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+  summary.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+  summary.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+  summary.frame_epoch = frame_epoch;
+  summary.renderer_cpu_index_count = resident_non_air_chunk_count;
+  summary.renderer_gpu_quad_count = exact_frustum_candidate_count;
+  summary.renderer_mdi_command_count =
+      static_cast<uint16_t>(candidates.size());
+  summary.renderer_mdi_visible_command_count = static_cast<uint16_t>(
+      std::count_if(candidates.begin(), candidates.end(),
+                    [](const Candidate &candidate)
+                    { return candidate.drawable; }));
+  summary.flags = opaque_capture.active ? 1u : 0u;
+  UJobStageTrace::NoteVisualBlack(summary);
+
   for (const Candidate &candidate : candidates)
   {
     const glm::ivec3 coord = candidate.coord;

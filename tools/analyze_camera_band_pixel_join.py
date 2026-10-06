@@ -21,6 +21,7 @@ TARGET_KINDS = {
     "camera_band_unowned_peak_slice_trace",
 }
 FRUSTUM_KIND = "view_frustum_coverage_trace"
+FRUSTUM_SUMMARY_KIND = "view_frustum_probe_summary"
 
 
 def key_for(frame_epoch: Any, cx: Any, cy: Any, cz: Any) -> tuple[int, int, int, int]:
@@ -88,6 +89,7 @@ def main() -> int:
     pixel_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     frustum_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     pixel_frame_stats: dict[int, dict[str, Any]] = {}
+    frustum_summaries: dict[int, dict[str, Any]] = {}
     pixel_probe_epochs: set[int] = set()
     frustum_probe_epochs: set[int] = set()
     kind_counts: Counter[str] = Counter()
@@ -122,6 +124,25 @@ def main() -> int:
                         record.get("renderer_mdi_visible_index_count", 0)
                     ),
                 })
+            elif kind == FRUSTUM_SUMMARY_KIND:
+                epoch = int(record.get("frame_epoch", 0))
+                frustum_summaries[epoch] = {
+                    "resident_non_air_chunk_count": int(
+                        record.get("resident_non_air_chunk_count", 0)
+                    ),
+                    "exact_frustum_candidate_count": int(
+                        record.get("exact_frustum_candidate_count", 0)
+                    ),
+                    "sampled_candidate_count": int(
+                        record.get("sampled_candidate_count", 0)
+                    ),
+                    "sampled_drawable_count": int(
+                        record.get("sampled_drawable_count", 0)
+                    ),
+                    "pixel_probe_active": bool(
+                        record.get("pixel_probe_active", False)
+                    ),
+                }
             elif kind == "renderer_pixel_probe":
                 epoch = int(record.get("frame_epoch", 0))
                 pixel_probe_epochs.add(epoch)
@@ -179,10 +200,14 @@ def main() -> int:
                 same_frame_pixels["depth_chunks"].get(tuple(target_key[1:]), 0)
                 if same_frame_pixels is not None else None
             )
+            same_frame_frustum_summary = frustum_summaries.get(target_key[0])
             joined.append({
                 "frame_epoch": target_key[0],
                 "pixel_probe_frame_present": target_key[0] in pixel_probe_epochs,
                 "frustum_probe_frame_present": target_key[0] in frustum_probe_epochs,
+                "frustum_probe_summary_present":
+                    same_frame_frustum_summary is not None,
+                "same_frame_frustum_summary": same_frame_frustum_summary,
                 "chunk": list(target_key[1:]),
                 "focus_chunk": [
                     int(trace.get("focus_cx", 0)),
@@ -209,12 +234,13 @@ def main() -> int:
         joined_by_kind[kind] = joined
 
     result = {
-        "schema": "camera_band_pixel_join.v2",
+        "schema": "camera_band_pixel_join.v3",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": "same frame_epoch and voxel-DDA hit chunk coordinate",
         "trace_counts": dict(kind_counts),
         "pixel_probe_frame_count": len(pixel_probe_epochs),
         "frustum_probe_frame_count": len(frustum_probe_epochs),
+        "frustum_probe_summary_frame_count": len(frustum_summaries),
         "joins": {
             kind: {
                 "trace_rows": len(rows),
@@ -246,6 +272,7 @@ def main() -> int:
             "A voxel DDA hit does not prove the sampled texel should be opaque; cutout geometry may intentionally reveal background.",
             "A nearer depth surface may occlude the target chunk; compare depth and voxel-hit distances and chunk coordinates.",
             "The pixel probes are sparse and only unmatched sampled rays are inconclusive.",
+            "A frustum summary with zero candidates means the census ran but found no intersecting resident solid chunk; compare its depth-surface samples before interpreting the scene as empty.",
         ],
     }
     rendered = json.dumps(result, indent=2, sort_keys=True)

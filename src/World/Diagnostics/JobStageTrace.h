@@ -295,6 +295,8 @@ struct VisualBlackTraceRecord
   /// sample_kind=2: 1=CPU opaque, 2=CPU transparent, 3=packed opaque,
   /// 4=packed transparent.
   uint8_t renderer_path{0};
+  /// sample_kind=15 aliases: resident non-air chunks scanned, exact-frustum
+  /// candidates, quota-selected samples, and selected samples with drawable.
   uint32_t renderer_cpu_index_count{0};
   uint32_t renderer_gpu_quad_count{0};
   /// sample_kind=2 flags 0..17; sample_kind=9 uses the same flags for the

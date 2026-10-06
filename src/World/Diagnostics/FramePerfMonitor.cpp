@@ -3640,8 +3640,35 @@ void UFramePerfMonitor::Shutdown()
         case 14:
           trace_kind = "first_mesh_frontier_trace";
           break;
+        case 15:
+          trace_kind = "view_frustum_probe_summary";
+          break;
         default:
           break;
+        }
+        if (r.sample_kind == 15)
+        {
+          // Emit a row even when the exact geometric-frustum census finds no
+          // non-air chunk. Absence of candidate examples must not look like
+          // absence of a probe.
+          (*out) << "{\"kind\":\"view_frustum_probe_summary\""
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"camera_x\":" << r.camera_x
+                 << ",\"camera_y\":" << r.camera_y
+                 << ",\"camera_z\":" << r.camera_z
+                 << ",\"resident_non_air_chunk_count\":"
+                 << r.renderer_cpu_index_count
+                 << ",\"exact_frustum_candidate_count\":"
+                 << r.renderer_gpu_quad_count
+                 << ",\"sampled_candidate_count\":"
+                 << r.renderer_mdi_command_count
+                 << ",\"sampled_drawable_count\":"
+                 << r.renderer_mdi_visible_command_count
+                 << ",\"pixel_probe_active\":"
+                 << ((r.flags & 1u) != 0 ? "true" : "false") << "}\n";
+          return;
         }
         if (r.sample_kind == 14)
         {
