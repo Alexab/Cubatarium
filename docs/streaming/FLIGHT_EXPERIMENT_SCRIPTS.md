@@ -1560,3 +1560,23 @@ raw perf `bin/logs/perf_20261007-002815_27528.jsonl`, INFO trace
 and EnterLit traces `bin/logs/enter_lit_20261007-002829.jsonl` and
 `bin/logs/enter_lit_20261007-002832.jsonl`. The wrapper restored
 `World_M435_Cold_20261007` metadata and user state after the run.
+
+### Reusable analyzer for async chunk-I/O phases
+
+`tools/analyze_async_chunk_io_perf.py` reads a `perf_*.jsonl` file and groups
+the established near, mid, far-east, and far-west focus bands. It reports
+legacy interval-mean wall/streaming fields separately from the new
+async-I/O subphase values. The subphase values in `kind=period` rows are
+point-in-time samples from the final frame of each period; they are useful for
+frequency and outlier inspection but are not interval means or true per-frame
+percentiles. `kind=spike` remains a single-frame record for frames over
+100 ms. `world_apply_ms` and `column_finalize_ms` are nested in
+`result_processing_ms`, so do not add them to that parent duration.
+
+Example for the live M437 recording:
+
+```powershell
+python tools/analyze_async_chunk_io_perf.py `
+  bin/logs/perf_20261007-010003_36844.jsonl `
+  --out bin/suite_reports/engine_refactor/m437_io_phase_summary.json
+```
