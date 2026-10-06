@@ -1362,3 +1362,61 @@ raw perf `bin/logs/perf_20261006-221915_29780.jsonl`, INFO log
 The manifest records source `5b6cce71`, the hash above, clean source, Release,
 the same route settings, and disabled optional traces/captures. The runner
 restored `world_data.json` byte-for-byte.
+
+## M434 - validate 250 ms census cadence on full M335 route (2026-10-06)
+
+M434 repeated the unchanged visible, no-teleport 2,800-second M335 profile on
+`World_164`, using Release source commit `a5ae29b3` and executable SHA-256
+`66c712da62ffeec9cad98e60301a52461c49cf7cde4fc635164e6ad7c2b7654f`.
+Settings remained start `[120,56,56]`, eye Y `70`, yaw `180`, pitch
+`-30`, speed scale `1`, 20-second stop, no teleport. Optional pixel,
+visual-black, and column-source traces were disabled.
+
+The app and route completed normally (`process_rc=0`,
+`run_outcome=success`, `hang_killed=false`); the analyzer returned
+`pass=false` for product/readiness gates. It recorded 1,402 periods (1,400
+steady; 1,385 fly), median movement speed `5.19653 blocks/s`, focus X
+`7 -> -886`, 14,288 blocks, player Y delta `0`, zero blocked movement
+substeps, and zero ground contacts. The manifest records clean source,
+Release, `World_164`, the same route hash, and disabled optional traces. The
+runner restored `world_data.json` byte-for-byte.
+
+| Focus band | Periods | Frame wall median / p95 | World-streaming median / p95 | Async systems median | Async post-scheduler median | I/O drain median | Mesh emerge median | Mesh post-telemetry median | Census amortized median | Census sample count / frame | Snapshot age median |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Near `x >= -200` | 329 | `33.66 / 41.31 ms` | `22.73 / 31.85 ms` | `11.84 ms` | `10.37 ms` | `8.24 ms` | `7.88 ms` | `1.41 ms` | `0.123` | `117 ms` |
+| Mid `-600 < x < -200` | 618 | `42.13 / 56.20 ms` | `33.73 / 47.56 ms` | `17.36 ms` | `15.14 ms` | `9.63 ms` | `13.10 ms` | `5.68 ms` | `0.159` | `115 ms` |
+| Far east `-740 < x <= -600` | 218 | `48.62 / 65.62 ms` | `42.94 / 58.66 ms` | `22.21 ms` | `19.66 ms` | `10.87 ms` | `16.75 ms` | `9.33 ms` | `0.178` | `115 ms` |
+| Far west `x <= -740` | 237 | `52.06 / 62.82 ms` | `45.74 / 55.37 ms` | `24.05 ms` | `21.43 ms` | `10.83 ms` | `18.32 ms` | `11.39 ms` | `0.186` | `116 ms` |
+
+Compared to matched M433 bands, frame-wall medians improved by approximately
+`2/9/12/15%` from near through far west. Full-route wall median dropped
+`47.63 -> 43.06 ms`, effective flying FPS rose `21.01 -> 23.25`, and
+spikes fell `87 -> 37`. Far-west census cost fell from `19.48 ms` per
+frame to `1.84 ms` amortized, with the same bounded demand maintenance still
+running each frame. Its sample-age median of `116 ms` is consistent with a
+250 ms interval. The enclosing mesh post-telemetry phase fell from `19.49`
+to `11.39 ms`.
+
+The next bottleneck is not yet isolated: far-west async post-scheduler remains
+`21.43 ms` median (M433: `21.32 ms`) and total world-streaming phase is
+`45.74 ms`. Analyzer spike maximum was `342.06 ms`, classified as stream.
+Do not change async scheduling or work budgets until its post-scheduler
+subphases are timed.
+
+Readiness remains open. Product adequacy passed and movement/collision control
+passed, but analyzer `pass=false`: post-stop convergence failed
+(`missing_zero`, effective holes zero, falling pending/dirty, and demand
+convergence); the dual-lane gate saw max unlit `41`; eye-proxy gates reported
+stale-visual and blink-proxy failures. The report's `holes_rate=1.0` is
+derived from `unfinished_visual` debt, not pixels. Internal
+`visible_black_focus_n` had median `0`, maximum `18`, and brief nonzero
+samples that returned to zero. The operator reports that visuals currently
+look acceptable. No framebuffer or source trace was collected, so this run
+neither proves nor disproves visible dark/blank pixels.
+
+Artifacts: [M434 report](../../bin/suite_reports/engine_refactor/m434_world164_m335_census_250ms_20261006.json),
+raw perf `bin/logs/perf_20261006-231755_26476.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-231752.26476`.
+The report manifest records source `a5ae29b3`, the executable hash above,
+clean Release source, and the unchanged route. Keep these ignored run outputs
+with this tracked record.

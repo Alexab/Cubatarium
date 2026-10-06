@@ -3136,3 +3136,85 @@ not capture pixels, and `holes_rate=1` still means `unfinished_visual` debt.
 
 M433 evidence is documented in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m433---remove-duplicate-census-and-measure-remaining-cost-2026-10-06).
+
+### M434 checkpoint — 250 ms census cadence validated; remaining gates stay open
+
+M434 completed the unchanged visible, no-teleport M335 route using Release
+source commit `a5ae29b3`. The runner exited successfully, the manifest was
+clean, and the established speed and collision controls passed. The route
+covered 14,288 blocks at a median 5.19653 blocks/s, held eye height at 70,
+and recorded zero blocked movement substeps and zero ground contacts. The
+operator's current visual assessment is acceptable.
+
+The 250 ms rate limit materially reduced the diagnostic census cost without
+changing streaming, lighting, or mesh budgets. In the far-west band,
+`column_emerge_stage_sample_ms` is 1.842 ms median per frame at a sample rate
+of 0.186 per frame; the snapshot age median is 116 ms. This is about a 90%
+reduction from M433's 19.48 ms per-frame census median. The enclosing
+`mesh_emerge_post_telemetry_ms` median fell from 19.48 to 11.39 ms. Across
+matched bands, M434 wall medians improved over M433 by approximately
+2/9/12/15% from near through far west. The far-west wall median is 52.06 ms,
+down from 61.05 ms. Full-route wall median is 43.06 ms, and spike count is
+37, down from M433's 47.63 ms and 87 spikes.
+
+This change did not resolve all streaming cost. Far-west
+`async_chunk_post_scheduler_ms` remains 21.43 ms median, effectively
+unchanged from M433's 21.32 ms; I/O drain also remains about 10.83 ms. Total
+far-west streaming phase is 45.74 ms median. The dominant spike class remains
+stream, with a maximum wall sample of 342.06 ms. The next performance change
+must first identify the work inside the remaining async/post-scheduler and
+world-streaming phases; do not change their budgets or admission policy based
+on phase totals alone.
+
+M434 is **ready for the next diagnostic step, not ready to close or merge as
+rendering-ready**. Process and route adequacy passed, but analyzer
+`pass=false`: stop recovery still does not converge; the dual-lane readiness
+gate fails at max unlit 41; and the eye-proxy gate reports stale-visual and
+blink-proxy failures. Route-wide `unfinished_visual` is 27 median, but the
+report explicitly uses it as readiness debt, not as framebuffer truth.
+`visible_black_focus_n` has median 0 and maximum 18, with short nonzero
+intervals that return to zero; no pixels were captured. Current user feedback
+is positive, so do not treat those internal counters as proof of a visible
+defect or spend timing runs on dense captures unless the symptom persists or
+returns. Conversely, do not claim visual acceptance from these counters.
+
+The cold-world lane remains independent and unproven on this revision.
+M422-M426 documented a repeatable cold EnterLit/presentability problem, while
+M434 reused persisted World_164. The census cadence affects diagnostic work
+only and is not expected to repair startup. Use a new isolated metadata-only
+seed to check whether the cold convergence problem still reproduces and to
+record generation/source latency before the next long route.
+
+#### Current remaining work
+
+1. Run a visible, source-traced cold-seed startup lane on a unique world name
+   with the current Release binary. Preserve the established M335 camera
+   locus; use a 600-second flight only if the enter/presentability gate opens,
+   and bound the process at 900 seconds. Record metadata, source lifecycle,
+   resident chunk/block counts, EnterLit snapshots, and resulting save state.
+   Keep this result separate from the World_164 repeatable-route control.
+2. Add low-overhead subphase timing around the non-census work in
+   `TickAsyncChunkSystems()` and its adjacent async-I/O/commit-result drain.
+   Time scheduler versus worker-queue wait, ready-result dequeue/apply,
+   relight/result reconciliation, and bounded demand maintenance separately;
+   keep these timers off the policy path. Then run an unchanged Release M335
+   repeat and compare the same four focus bands.
+3. Use those measurements to choose one owner/policy change. Preserve current
+   every-frame bounded demand reconciliation, do not loosen EnterLit or
+   post-stop safety gates, and retain old drawable geometry until replacement
+   publication is proven safe.
+4. After any world-generation, I/O, admission, or mesh-publication policy
+   change, repeat the established World_164 route and add a fresh-seed
+   startup check. Continue fresh-world checks periodically; they cannot
+   replace matched saved-world routes.
+5. Define post-stop convergence evidence from actual owners and monotonic
+   progress, then address the false-clear, dirty/unfinished and unlit gates.
+   Keep operator appearance, pixel evidence, render-readiness counters, and
+   route adequacy as separate acceptance dimensions.
+6. Close only after the repeated route has acceptable user-visible output,
+   unexplained far-route growth is removed or explicitly budgeted, the cold
+   startup path is understood, and stop convergence reaches a justified
+   pass/fail criterion.
+
+The M434 matched-band results, report semantics, and artifact paths are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m434---validate-250-ms-census-cadence-on-full-m335-route-2026-10-06).
