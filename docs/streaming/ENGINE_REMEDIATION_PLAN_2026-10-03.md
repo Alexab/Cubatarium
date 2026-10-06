@@ -2421,3 +2421,51 @@ Artifacts (ignored `bin/` outputs): [M409 acceptance report](../../bin/suite_rep
 [source trace](../../bin/suite_reports/engine_refactor/m409_source_trace_20261005.json),
 and raw perf `bin/logs/perf_20261005-224948_35096.jsonl`. Captures are in
 `bin/logs/m409_world164_m335_compact_screen_rays/`.
+
+### M412 peak-synchronized probe — readiness debt is not a screen-hole count (2026-10-06)
+
+M412 replayed the exact visible/no-teleport M335 route on `World_164` using
+the Release executable from `0a3ae7b0`. It completed 861 chunks, saved 189
+captures, returned `process_rc=0`, and was not force-killed. The world file
+was restored to SHA256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+The user confirmed that M407's earlier long gap was caused by system
+sleep/lock; keep-awake was enabled for M412.
+
+The long-flight gate remains open: M412 passed 28/39 checks, with median
+frame wall time 52.87 ms, streaming phase 44.24 ms, mesh emerge 18.65 ms,
+median unfinished readiness 27, and no stop convergence. One focus-column
+miss remained for 32 seconds (16 frames) at `(-706, 3)`. The report recorded
+zero `visible_black_focus_n`, but this is not a full-frame pixel oracle.
+
+The new epoch trigger captured both camera-band peaks on the same frames:
+17 no-drawable rows at epoch 46,021 and 8 unowned rows at epoch 38,725. Each
+frame had 80 pixel samples, 59 depth surfaces, and 53/54 voxel-ray hits. The
+frames had 11/2 samples below luma 32, all backed by sampled geometry; none
+of those dark samples had both valid depth and a voxel-ray hit. None of the
+target chunk coordinates had a depth-surface or voxel-ray hit. Most
+depth surfaces were in the camera/focus chunks. This is consistent with
+camera-band readiness samples that do not intersect the sampled screen area;
+it does not rule out holes between the sparse rays or explain every dim
+region.
+
+Neither peak frame produced a `view_frustum_coverage_trace` row, despite the
+same-frame pixel capture finding opaque depth surfaces in the scene. This is
+an unresolved diagnostic inconsistency, not proof that the view had no
+geometry. Before using frustum/camera-band counts to change queue policy,
+emit an explicit frustum-probe summary even when its candidate list is empty,
+then compare its AABB/plane decisions with the depth-surface chunk set. Keep
+first-mesh readiness, camera-band debt, geometric frustum results, and
+sampled pixels as separate signals.
+
+M412's `CUBA_VISUAL_BLACK_TRACE` log was 412.60 MB, while low-trace M411 was
+50.25 MB. Median frame wall time was similar, but the runs are not a clean
+trace-overhead A/B because their persisted chunk/cache mix differs. Use
+low-trace M335 for performance baselines and enable detailed probes only for
+targeted attribution. M412's report says `visible_black_focus_n=0`; this and
+the selected PNGs do not close the operator-reported dim-chunk issue.
+
+Artifacts (ignored `bin/` outputs): [M412 acceptance report](../../bin/suite_reports/engine_refactor/m412_world164_m335_peak_sync_20261006.json),
+[same-frame camera-band/pixel join](../../bin/suite_reports/engine_refactor/m412_camera_band_pixel_join_20261006.json),
+raw perf `bin/logs/perf_20261006-022416_22260.jsonl`, and 189 captures in
+`bin/logs/m412_world164_m335_peak_sync/` (representative: `frame_141.png`).

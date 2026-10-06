@@ -44,6 +44,7 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
         "rgb": rgb,
         "luminance": round(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2], 2),
         "voxel_hit_block_id": int(record.get("renderer_pixel_voxel_hit_block_id", -1)),
+        "voxel_ray_state": int(record.get("renderer_pixel_voxel_ray_state", 0)),
         "voxel_hit_distance": voxel_distance,
         "depth_surface_valid": depth_valid,
         "depth_chunk": [
@@ -60,6 +61,23 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def pixel_frame_summary(stats: dict[str, Any]) -> dict[str, Any]:
+    depth_chunks = stats["depth_chunks"]
+    return {
+        "sample_count": stats["sample_count"],
+        "dark_luma_lt_32": stats["dark_luma_lt_32"],
+        "dark_luma_lt_32_with_depth": stats["dark_luma_lt_32_with_depth"],
+        "dark_luma_lt_32_with_voxel_hit": stats["dark_luma_lt_32_with_voxel_hit"],
+        "dim_luma_lt_96": stats["dim_luma_lt_96"],
+        "depth_surface_sample_count": stats["depth_surface_sample_count"],
+        "voxel_ray_hit_count": stats["voxel_ray_hit_count"],
+        "depth_surface_chunks": [
+            {"chunk": list(coord), "sample_count": count}
+            for coord, count in depth_chunks.most_common(12)
+        ],
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("perf_jsonl", type=Path)
@@ -69,6 +87,7 @@ def main() -> int:
     traces: dict[str, list[dict[str, Any]]] = defaultdict(list)
     pixel_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     frustum_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
+    pixel_frame_stats: dict[int, dict[str, Any]] = {}
     pixel_probe_epochs: set[int] = set()
     frustum_probe_epochs: set[int] = set()
     kind_counts: Counter[str] = Counter()
@@ -104,7 +123,33 @@ def main() -> int:
                     ),
                 })
             elif kind == "renderer_pixel_probe":
-                pixel_probe_epochs.add(int(record.get("frame_epoch", 0)))
+                epoch = int(record.get("frame_epoch", 0))
+                pixel_probe_epochs.add(epoch)
+                sample = pixel_summary(record)
+                stats = pixel_frame_stats.setdefault(epoch, {
+                    "sample_count": 0,
+                    "dark_luma_lt_32": 0,
+                    "dark_luma_lt_32_with_depth": 0,
+                    "dark_luma_lt_32_with_voxel_hit": 0,
+                    "dim_luma_lt_96": 0,
+                    "depth_surface_sample_count": 0,
+                    "voxel_ray_hit_count": 0,
+                    "depth_chunks": Counter(),
+                })
+                stats["sample_count"] += 1
+                is_dark = sample["luminance"] < 32
+                stats["dark_luma_lt_32"] += is_dark
+                stats["dark_luma_lt_32_with_depth"] += (
+                    is_dark and sample["depth_surface_valid"]
+                )
+                stats["dark_luma_lt_32_with_voxel_hit"] += (
+                    is_dark and sample["voxel_ray_state"] == 1
+                )
+                stats["dim_luma_lt_96"] += sample["luminance"] < 96
+                stats["depth_surface_sample_count"] += sample["depth_surface_valid"]
+                stats["voxel_ray_hit_count"] += sample["voxel_ray_state"] == 1
+                if sample["depth_surface_valid"]:
+                    stats["depth_chunks"][tuple(sample["depth_chunk"])] += 1
                 if int(record.get("renderer_pixel_voxel_ray_state", 0)) != 1:
                     continue
                 voxel_key = key_for(
@@ -125,6 +170,15 @@ def main() -> int:
             )
             matched = pixel_hits.get(target_key, [])
             matched_frustum = frustum_hits.get(target_key, [])
+            same_frame_pixels = pixel_frame_stats.get(target_key[0])
+            same_frame_pixel_summary = (
+                pixel_frame_summary(same_frame_pixels)
+                if same_frame_pixels is not None else None
+            )
+            same_frame_depth_surface_samples_for_target_chunk = (
+                same_frame_pixels["depth_chunks"].get(tuple(target_key[1:]), 0)
+                if same_frame_pixels is not None else None
+            )
             joined.append({
                 "frame_epoch": target_key[0],
                 "pixel_probe_frame_present": target_key[0] in pixel_probe_epochs,
@@ -146,13 +200,16 @@ def main() -> int:
                 "published_geom_rev": int(trace.get("published_geom_rev", 0)),
                 "same_frame_voxel_pixel_hit_count": len(matched),
                 "pixel_hits": matched,
+                "same_frame_pixel_summary": same_frame_pixel_summary,
+                "same_frame_depth_surface_samples_for_target_chunk":
+                    same_frame_depth_surface_samples_for_target_chunk,
                 "same_frame_frustum_witness_count": len(matched_frustum),
                 "frustum_witnesses": matched_frustum,
             })
         joined_by_kind[kind] = joined
 
     result = {
-        "schema": "camera_band_pixel_join.v1",
+        "schema": "camera_band_pixel_join.v2",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": "same frame_epoch and voxel-DDA hit chunk coordinate",
         "trace_counts": dict(kind_counts),

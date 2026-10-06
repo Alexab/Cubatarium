@@ -614,3 +614,33 @@ median than traced M410, but it is not a clean A/B because the disk chunk mix
 and file cache changed. The full report still fails 12/39 gates with median
 27 unfinished/not-ready items and failed stop convergence. Representative
 captures: `frame_000.png`, `frame_094.png`, `frame_188.png`.
+
+### M412: sparse pixels synchronized to camera-band peaks
+
+This replays the same M335 route. `CUBA_VISUAL_BLACK_TRACE=1` enables
+diagnostics; dense pixels and source-column tracing stay disabled. The
+diagnostic code synchronizes one sparse pixel/depth probe to a camera-band
+peak, in addition to its regular low-rate samples.
+
+```powershell
+Start-Process -FilePath powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/flight_sim_keep_awake.ps1')
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m412_world164_m335_peak_sync'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m412_world164_m335_peak_sync --report bin/suite_reports/engine_refactor/m412_world164_m335_peak_sync_20261006.json --process-timeout 3000
+```
+
+Analyze peak rows against exact-frame voxel rays, depth surfaces, and frustum
+rows. The analyzer also summarizes all 80 pixels in each matching 4-by-20
+probe frame; an unmatched sparse sample remains inconclusive:
+
+```powershell
+py tools/analyze_camera_band_pixel_join.py bin/logs/perf_20261006-022416_22260.jsonl --json-out bin/suite_reports/engine_refactor/m412_camera_band_pixel_join_20261006.json > $null
+```
+
+M412 completed 861 chunks, returned `process_rc=0`, was not force-killed, and
+saved 189 images. It passed 28/39 acceptance gates and still had 27 median
+unfinished items plus failed stop convergence. The two peak frames each had
+59 depth samples and no sampled target-chunk surface. Neither emitted a
+frustum trace row, so add an explicit frustum sample summary on a future
+forensic flight before treating absent candidate rows as zero coverage. The
+raw log was 412.60 MB; use M411 low-trace runs for frame-time comparisons.

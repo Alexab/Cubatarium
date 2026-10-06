@@ -4736,3 +4736,41 @@ another Y slice in the same column. Preserve that first-mesh obligation, but
 do not interpret the column count as a screen-hole count. Correlate
 camera-band no-drawable slices with same-frame depth/pixel evidence before
 choosing a streaming or rendering policy change.
+
+### M412: synchronize screen probes with camera-band peaks
+
+M412 used the same visible/no-teleport M335 route and Release executable.
+The 861-chunk flight completed normally (`process_rc=0`, no forced kill),
+saved 189 GUI captures, and restored `World_164/world_data.json` byte-for-byte
+to SHA256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+The M407 pause was confirmed by the user as system sleep/lock.
+
+At the 17-row camera-band no-drawable peak (epoch 46,021) and the 8-row
+unowned peak (epoch 38,725), the synchronized 4-by-20 pixel sampler recorded
+80 pixels per frame. Each frame had 59 valid opaque depth surfaces and 53/54
+voxel-ray hits; none hit the target chunk coordinates. There were 11 and 2
+samples respectively below luma 32, and every one had depth and voxel-ray
+evidence. The highest-frequency depth chunks were around the camera focus.
+These data show
+that the peak rows were not witnessed as exposed screen holes by the sparse
+sampler; they do not establish what lies between samples.
+
+Neither synchronized epoch had a `view_frustum_coverage_trace` record even
+though the pixel probe found same-frame opaque surfaces. Therefore the
+frustum-census output cannot yet be used to classify these coordinates as
+visible or off-screen. Add a compact per-probe summary with candidate counts
+including zero, and verify the geometric frustum/AABB results against the
+sampled depth-surface chunks. Do not infer zero candidates from missing rows.
+
+The flight passed 28/39 acceptance gates, with 52.87 ms median wall time,
+44.24 ms streaming phase, 18.65 ms mesh emerge, 27 median unfinished items,
+and failed stop convergence. A focus-column miss persisted for 32 seconds at
+`(-706, 3)`. The renderer/streaming readiness issue is still open. M412's
+412.60 MB trace output also confirms that detailed visual tracing is expensive
+in storage; compare performance only against the low-trace control and label
+cache/persisted-chunk differences.
+
+Artifacts (ignored `bin/` outputs): [M412 report](../../bin/suite_reports/engine_refactor/m412_world164_m335_peak_sync_20261006.json),
+[peak pixel join](../../bin/suite_reports/engine_refactor/m412_camera_band_pixel_join_20261006.json),
+raw perf `bin/logs/perf_20261006-022416_22260.jsonl`, and captures in
+`bin/logs/m412_world164_m335_peak_sync/`.
