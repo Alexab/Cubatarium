@@ -1561,6 +1561,71 @@ and EnterLit traces `bin/logs/enter_lit_20261007-002829.jsonl` and
 `bin/logs/enter_lit_20261007-002832.jsonl`. The wrapper restored
 `World_M435_Cold_20261007` metadata and user state after the run.
 
+## M437 - full M335 route and async chunk-I/O timing (2026-10-07)
+
+M437 ran the unchanged 2,800-second visible, no-teleport M335 route on
+`World_164`, with the same start `[120,56,56]`, eye Y `70`, yaw `180`, pitch
+`-30`, speed scale `1`, 20-second stop phase, and 8-second blocked-stop
+threshold. It used the Release executable built from `d7c18cb3` (the later
+`39ea5c40` commit added only the analyzer and documentation), SHA-256
+`33111b36ea8b0b5d2bd6cd1598ac9a089b2b33bb61aef84a675f8fb3b7a9c7e4`.
+Async chunk-I/O phase counters were enabled; pixel/framebuffer, visual-black,
+column-source, and relight traces were disabled. The GUI was visible.
+
+The process exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`). It recorded 1,401 periods (1,399 steady), 89 frames over
+100 ms, focus `7 -> -886`, 14,288 blocks, and 5.10 blocks/s. The 0- and
+8,192-block checkpoints were reached. Movement telemetry recorded zero
+blocked substeps and zero ground contacts. Internal visible-black focus median
+was `0`, maximum `18`; no framebuffer pixels were recorded. The operator
+reported that visuals currently look acceptable.
+
+| Band | Periods | Wall median / p95 (ms) | Streaming median / p95 (ms) | Async post median (ms) | I/O drain median (ms) |
+|---|---:|---:|---:|---:|---:|
+| Near | 327 | 34.95 / 46.43 | 24.39 / 36.76 | 11.13 | 8.27 |
+| Mid | 620 | 43.78 / 57.68 | 35.81 / 49.48 | 15.93 | 9.57 |
+| Far east | 218 | 47.82 / 65.35 | 42.26 / 57.53 | 18.50 | 9.27 |
+| Far west | 236 | 52.65 / 69.13 | 46.13 / 61.62 | 20.99 | 9.96 |
+
+Band medians are broadly comparable with M434; far-west wall p95 rose by
+roughly 6 ms and the spike count rose from 37 to 89. Async post and I/O-drain
+medians did not show a broad worsening. The subphase values in period rows
+are point samples at the end of each period, not interval means; spike rows
+are single frames over 100 ms. `world_apply_ms` and `column_finalize_ms` are
+nested inside `result_processing_ms`.
+
+The main-thread `SaveColumnLightFlagsIfDirty()` writes the full
+`column_light.json` file synchronously. It took more than 10 ms on 79/89 spike
+frames, more than 20 ms on 17/89, with a maximum of 102.436 ms. This is a
+frequent, directly measured hitch contributor, but not the only source: some
+far-west spikes also contained 29-55 ms mesh-emerge work. Queue result selection
+exceeded 1 ms on 14/89 spikes; measure lock wait separately from ranking and
+dequeue before revisiting queue policy.
+
+The analyzer returned `pass=false` because post-stop missing/effective-hole,
+pending/not-ready/focus-dirty falling, and demand-stop convergence gates did
+not pass. The readiness debt counters are not pixel evidence. M437 did reach
+the far checkpoint and remained collision-free by its movement counters; it
+does not diagnose the earlier interactive report of a water fall. `cold` in
+the manifest is not proof of storage origin, and source tracing was disabled
+for this route.
+
+The repeatable invocation was:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m437_world164_m335_io_service_timing --report bin/suite_reports/engine_refactor/m437_world164_m335_io_service_timing_20261007.json --process-timeout 3000
+```
+
+Artifacts: [M437 flight report](../../bin/suite_reports/engine_refactor/m437_world164_m335_io_service_timing_20261007.json),
+phase summary `bin/suite_reports/engine_refactor/m437_io_phase_summary_20261007.json`,
+raw perf `bin/logs/perf_20261007-010003_36844.jsonl`, and INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-014729.36844`.
+
 ### Reusable analyzer for async chunk-I/O phases
 
 `tools/analyze_async_chunk_io_perf.py` reads a `perf_*.jsonl` file and groups

@@ -3328,7 +3328,7 @@ median was zero (maximum 30) and black-stalled/no-ticket maxima were zero;
 these counters are not framebuffer evidence. Current operator feedback stays
 positive.
 
-#### Current remaining work after M436
+#### Follow-up plan recorded after M436
 
 1. **Implemented for M437's diagnostic Release build:** `TickAsyncChunkIo()`
    now emits low-overhead timings for cancellation pruning, queue selection,
@@ -3354,7 +3354,7 @@ positive.
    user appearance, pixel probes, readiness debt, and route adequacy as
    distinct evidence.
 
-**Plan readiness:** ready for the next diagnostic run, not for closure or broad
+**Plan readiness at M436:** ready for the next diagnostic run, not for closure or broad
 acceptance. The operator reports that the current appearance looks acceptable,
 and M436's measured route was stable at the established speed with zero blocked
 substeps and ground contacts. M436 covered only 3,072 blocks and still failed
@@ -3365,3 +3365,73 @@ flight report identifies it.
 
 M436 route and source measurements are documented in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m436---same-seed-disk-backed-replay-2026-10-07).
+
+### M437 checkpoint — long-route timing and synchronous light-flag save spikes
+
+M437 ran the full, unchanged 2,800-second M335 no-teleport route on
+`World_164`. The process exited normally and the established cruise speed was
+preserved: 14,288 blocks, focus `7 -> -886`, and 5.10 blocks/s. Movement
+telemetry recorded zero blocked substeps and zero ground contacts, so this run
+does not reproduce the reported collision or water fall. The operator reports
+that the current appearance looks acceptable. M437 had no framebuffer capture,
+so that feedback remains the visual evidence for this run.
+
+The route recorded 89 single-frame spikes over 100 ms, compared with 37 in
+M434. The matched-band frame and streaming medians remained broadly comparable;
+far-east streaming median improved slightly and far-west wall p95 was about 6
+ms higher. The new async-I/O subphase fields on `kind=period` rows are point
+samples from each period's last frame, not period averages. Their medians do
+not show a broad slowdown in completed-result service or save drain. Queue
+selection occasionally cost over 1 ms, but only 14 of 89 spikes did so; split
+lock wait from ranking/dequeue before changing queue policy.
+
+The synchronous `SaveColumnLightFlagsIfDirty()` rewrites the entire
+`column_light.json` on the main frame path. Of 89 spike frames, 79 recorded
+more than 10 ms in this save; 17 exceeded 20 ms and the maximum was 102.436
+ms. This establishes frequent correlation and a direct avoidable hitch source,
+though it does not explain every spike. Far-west spikes also included mesh
+emerge costs. Move light-flag persistence to a coalescing background writer;
+keep JSON format compatibility, snapshot revisioning, retry-on-failure, and
+flush the latest snapshot on world switch and normal shutdown. Add separate
+timing for mesh emerge and remaining post-scheduler work before changing the
+streaming policy.
+
+M437 traversed the far checkpoint, but it still does not close the renderer
+investigation. Its internal visible-black median was zero and maximum 18, but
+no pixels were sampled. The analyzer remains `pass=false`: post-stop missing,
+effective-hole, pending-falling, not-ready-falling, focus-dirty-falling, and
+demand-stop convergence checks did not pass. Appearance, pixel correctness,
+readiness debt, and route adequacy remain separate gates. Continue the same-seed
+M335 route first, then periodically repeat on a fresh seed as an independent
+world-generation lane.
+
+#### Current remaining work after M437
+
+1. **Implement next:** replace main-thread full-file column light-flag writes
+   with a single-flight background save. Coalesce later mutations into the next
+   revision, ignore stale completions after a world switch, retry failed writes
+   without per-frame spinning, and include the latest write in normal shutdown
+   and world-switch drains.
+2. Build Release, then repeat the full M335 `World_164` route without changing
+   its established settings. Compare frame spikes, async-I/O phase data,
+   readiness tail, and the earlier M437 profile. Preserve the visible GUI and
+   no-teleport route.
+3. If spikes remain, instrument mesh emerge and post-scheduler subphases, plus
+   queue lock wait versus ranking/dequeue. Change one measured contributor at
+   a time.
+4. Keep the current operator visual assessment as positive but provisional;
+   only enable sparse framebuffer probes if dim/blank visuals return. Keep
+   post-stop/readiness convergence as explicit open criteria.
+5. After the matched-seed regression check, run the periodic fresh-seed route
+   to distinguish persisted-corridor behavior from procedural generation.
+
+**Plan readiness at M437:** implementation is ready to continue because the
+main-frame write cost has a direct measurement and a bounded refactor target.
+The plan is not ready for closure: the full far route now completes at the
+expected speed without collision counters, but readiness convergence failed,
+the long-tail spike count increased versus M434, and M437 did not capture
+pixels. Fresh-seed recurrence and the separate interactive report of a fall
+into water remain unverified by this route.
+
+M437 route and subphase measurements are documented in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m437---full-m335-route-and-async-chunk-io-timing-2026-10-07).
