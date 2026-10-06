@@ -2601,3 +2601,87 @@ Artifacts (ignored `bin/` outputs): [M416 acceptance report](../../bin/suite_rep
 [M416 camera-band/pixel join](../../bin/suite_reports/engine_refactor/m416_camera_band_pixel_join_20261006.json),
 raw perf `bin/logs/perf_20261006-065527_31132.jsonl`, and 189 captures in
 `bin/logs/m416_world164_m335_peak_screen_coverage/`.
+
+## M418 update — fog explains far fade; mesh service remains the readiness bottleneck
+
+M418 repeated the established 13,584-block M335 route on `World_164` after
+M417 was interrupted by Hibernate/reboot. It completed normally, restored the
+world file byte-for-byte, and retained all 189 captures and the full pixel
+trace. The report's process outcome is success; visual acceptance still fails
+12/39 gates and stop convergence fails 5/12. Do not read `unfinished_visual`
+or `effective_holes_rate` as direct pixel evidence: the report explicitly
+defines that signal as readiness debt.
+
+### What the new evidence separates
+
+- **Pale blue far views:** M335 disables adaptive FogPullIn, but the base
+  distance fog remains. The captured fog range was start 17.28 / end 36 blocks,
+  consistent with 4 effective render chunks and the 28-block end margin. Of
+  17,608 depth-valid pixel samples, 7,807 had fog factor above 0.9 and were
+  close to the captured fog color (median distance 8.58 RGB units; factor/color
+  distance correlation -0.837). Treat the distant pale/empty appearance as
+  fog-dominated on this route, not proof of missing chunks. First verify the
+  product render-distance target and effective-distance policy before changing
+  fog or streaming behavior.
+- **Sampled dark patches:** all 280 pixels below luma 32 and all 1,781 below
+  luma 96 had opaque depth and draw-ready geometry, with no pending-light work.
+  All available light witnesses matched revisions (256/256 dark, 1,679/1,679
+  dim). The 280 darkest probes had fog factor 0 and zero voxel-ray gaps; 244
+  were leaves (block 572). This does not reproduce a
+  dark missing chunk or stale-light patch; the low-luma sample is chiefly
+  rendered foliage/material color. Pre-fog base RGB is still not captured.
+- **Transient mesh readiness:** 18 no-drawable peak rows had resident non-air
+  data, a FirstMesh dirty owner, and exact-frustum intersection; 7 unowned peak
+  rows had no work owner. Same-epoch renderer probes found 17 still
+  non-drawable and one already drawable/satisfying with two visible MDI
+  commands, so peak and rendered state can straddle publication. Pixel
+  rectangles had samples in 119/144 peak probes, but no same-frame target-depth
+  sample or exact target voxel hit. Later route rays yielded 29 target hits:
+  11 matched target depth, 18 were occluded by nearer surfaces, and none showed
+  a farther-depth gap. These rows are readiness/ownership debt, not proof of an
+  exposed pixel hole.
+- **Long-route throughput:** first/middle/last 400-period median wall time was
+  40.19 / 56.98 / 67.72 ms. Stream phase rose 29.16 / 46.57 / 59.94 ms and
+  mesh emergence 10.87 / 19.14 / 26.85 ms, while GPU render time stayed near
+  5–7 ms. `column_loaded_no_mesh_n` stayed near 27 median, ColumnFlow deferred
+  about 15 items while draining about 1, and async mesh work stayed near 10 of
+  a 14-item peak. The dominant completion stall was `gpu_not_ready`, and the
+  dominant wall stage was stream. This points to mesh/stream service and
+  publication pressure as the current throughput work.
+- **Disk versus procedural generation:** all 1,393 repeated-route period rows
+  had zero disk-load completions and zero generator commits. M418 therefore
+  does not test cold persistence or generation. Retain `World_164` as the
+  primary deterministic gate, and run the same profile periodically on a
+  cold/new world to exercise those paths.
+
+### Revised work order
+
+1. **Pin the visibility contract.** Record configured and effective render
+   distance, fog end margin, and fog range in the report. Confirm whether four
+   chunks is intentional for product visuals. Do not increase view distance
+   until mesh/stream throughput is understood; a larger radius multiplies
+   mesh work and can worsen the measured late-route slowdown.
+2. **Make long-flight evidence crash-resilient.** M417 lost its in-memory
+   pixel/fog ring when Hibernate recovery ended in an unclean reboot (Windows
+   logged Kernel-Power 41). Add bounded, deduplicated periodic trace
+   checkpoints; avoid rewriting the entire ~445 MB ring on each checkpoint.
+3. **Trace ColumnFlow and mesh publication throughput.** For the same camera
+   band, record queue age/kind, drain/admission result, async build stage,
+   GPU-ready wait, owner transfer, and completion/apply. Explain why the
+   no-drawable ownerless slices lack an owner and why stream/mesh medians rise
+   with distance. Compare first, middle, and late route windows before changing
+   budgets or fairness.
+4. **Repair confirmed ownership lifecycle defects.** If a resident non-air
+   slice loses all FirstMesh/ColumnFlow/active-attempt owners before publication,
+   restore exactly one durable owner and verify it through GPU apply. Do not
+   change lighting based on the sampled foliage pixels.
+5. **Run the repeatable route, then cold-world controls.** Keep the M335
+   coordinates, yaw, pitch, time/weather, and speed unchanged for regression
+   comparisons. Add periodic new-world runs with the same flight parameters;
+   report disk-completion and generation-commit counts so persistence and
+   procedural creation are actually covered.
+
+M418 artifacts: [flight report](../../bin/suite_reports/engine_refactor/m418_world164_m335_fog_attribution_20261006.json),
+[fog/pixel join](../../bin/suite_reports/engine_refactor/m418_camera_band_pixel_join_20261006.json),
+raw trace `bin/logs/perf_20261006-102124_22924.jsonl`; see the M418 section in
+`FLIGHT_EXPERIMENT_SCRIPTS.md` for command, full evidence, and captures.

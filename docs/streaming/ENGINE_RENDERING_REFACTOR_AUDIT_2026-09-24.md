@@ -4865,3 +4865,64 @@ still candidates. M416 did not record fog factor at the opaque pixel. Extend
 the pixel trace to preserve fog parameters/factor, preview, precipitation, and
 wetness, then compare only under the unchanged M335 profile. Keep chunk mesh
 ownership work as a separate readiness track.
+
+## M418 update — separate fog visibility, dark material pixels, and mesh debt
+
+M418 completed the unchanged visible M335 route on `World_164` after M417's
+Hibernate/reboot interruption. The process exited normally, traveled 13,584
+blocks at 5.19653 blocks/s, saved 189 captures, wrote the complete bounded
+pixel/fog ring, and restored the original world-data SHA. Windows recorded an
+unclean shutdown (Kernel-Power 41) before M418; the failure was external to the
+game process.
+
+### Findings
+
+1. **The far blue wash is ordinary distance fog at very short range.** Pixel
+   probes captured air-fog start/end at 17.28/36 blocks, with an effective fog
+   render distance of four chunks and 28-block end margin. Among 17,608 pixels
+   with depth and a valid fog model, 7,807 had factor >0.9; their output RGB
+   approached the fog color (median distance 8.58, correlation -0.837).
+   This explains why distant terrain can look absent while near terrain remains
+   visible. It does not show that the four-chunk limit matches product intent.
+2. **The sampled low-luma pixels are not missing meshes or stale-light faces.**
+   All 280 pixels below luma 32 and 1,781 below 96 had opaque depth and a
+   draw-ready surface and none had pending light. All available light
+   witnesses matched revisions (256/256 dark and 1,679/1,679 dim). The darkest
+   group had fog factor zero and no voxel-ray gap; 244/280 came from leaves.
+   Pre-fog albedo is not captured, so do not infer the full
+   material-color cause from RGB-to-fog distance alone.
+3. **Camera-band debt remains, but is not yet an observed hole.** There were 18
+   resident, non-air, in-frustum no-drawable peak rows, all with a FirstMesh
+   dirty owner, plus 7 in-frustum unowned rows. Same-epoch renderer probes
+   showed 17 still non-drawable and one already drawable/satisfying with two
+   visible MDI commands, so peak telemetry can straddle publication. The 144
+   projected rectangles received sparse pixel samples in 119 cases and
+   target-chunk depth in zero. Same-frame target hits were zero. Later
+   target-ray samples yielded 11 exact depth matches and 18 nearer-depth
+   occlusions, with no farther-depth gap. This requires an ownership/service
+   investigation, not a culling fix from AABB intersection alone.
+4. **The repeated world is mesh/stream-throughput limited along distance.**
+   Across first/middle/last 400-period windows, median wall time rose
+   40.19/56.98/67.72 ms; stream phase rose 29.16/46.57/59.94 ms and mesh
+   emergence 10.87/19.14/26.85 ms, while render time stayed 5–7 ms. The full
+   route had zero disk-load completions and zero procedural-generation commits.
+   This is not a disk/generation benchmark; the dominant report stage was
+   `stream`, and completion was commonly waiting on `gpu_not_ready`.
+
+### Audit direction
+
+The symptom that currently looks like distant empty terrain is chiefly fogged
+out by the four-chunk horizon on this profile. The sampled dark foliage is
+drawn and current-lit. Keep the remaining mesh ownerless/readiness peaks as a
+separate unresolved correctness risk because sparse samples did not cover
+target depth. Confirm the intended render-distance contract, then profile and
+repair ColumnFlow/mesh publication throughput before raising the distance.
+Add periodic cold/new-world flights to measure disk and generation paths; keep
+the established M335 route as the primary repeatable baseline. Add
+deduplicated periodic visual-trace checkpoints before another long flight so
+an OS interruption cannot discard the entire in-memory ring.
+
+See [the M418 flight record](FLIGHT_EXPERIMENT_SCRIPTS.md) and its ignored
+artifacts: [acceptance report](../../bin/suite_reports/engine_refactor/m418_world164_m335_fog_attribution_20261006.json),
+[fog/pixel join](../../bin/suite_reports/engine_refactor/m418_camera_band_pixel_join_20261006.json),
+and raw perf `bin/logs/perf_20261006-102124_22924.jsonl`.

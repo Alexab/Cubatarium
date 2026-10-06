@@ -771,3 +771,80 @@ then removed the stale backup. The keep-awake helper was relaunched after
 restart; it prevents idle sleep while the game runs but cannot override an
 explicit Hibernate request. M418 repeats the same M335 route with new artifact
 names so the interrupted M417 captures remain intact.
+
+### M418: M335 replay with fog/pixel attribution after reboot
+
+M418 used the same Release executable and visible no-teleport route on
+`World_164`: start `(120,56,56)`, eye Y 70, yaw 180, pitch -30, 2,800-second
+flight phase, 20-second stop phase. It exited normally (`process_rc=0`,
+`hang_killed=false`), completed 13,584 blocks at 5.19653 blocks/s, saved 189
+captures, and restored `world_data.json` to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`. The
+Windows System log recorded Kernel-Power 41 at 10:08:15 before this replay,
+consistent with the reported forced restart after Hibernate. No tests were
+run and no Release rebuild was needed for this diagnostic replay.
+
+Reproduction command (keep-awake helper must be running):
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m418_world164_m335_fog_attribution'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m418_world164_m335_fog_attribution --report bin/suite_reports/engine_refactor/m418_world164_m335_fog_attribution_20261006.json --process-timeout 3000
+py tools/analyze_camera_band_pixel_join.py bin/logs/perf_20261006-102124_22924.jsonl --json-out bin/suite_reports/engine_refactor/m418_camera_band_pixel_join_20261006.json > $null
+```
+
+The route report has `run_outcome=success`, while the visual acceptance set
+still fails 12/39 gates and post-stop convergence fails 5/12. Keep those
+results separate: the report defines `unfinished_visual` as readiness/debt,
+not a blank framebuffer pixel. Median flight wall time was 55.91 ms (17.89
+effective FPS); stream phase was 47.24 ms and mesh emergence 19.61 ms. Across
+the first/middle/last 400 period rows, median wall time rose 40.19 → 56.98 →
+67.72 ms, stream phase 29.16 → 46.57 → 59.94 ms, and mesh emergence 10.87 →
+19.14 → 26.85 ms, while render time stayed near 5–7 ms. There were zero
+`stream_disk_complete_n` and zero `stream_gen_commit_n` rows in all 1,393
+periods. This repeated route diagnoses resident-world stream/mesh service,
+not cold disk loading or procedural generation.
+
+The captured air-distance fog uniforms had median start 17.28 blocks and end
+36 blocks (end was 36 in every sample; the effective fog render distance was
+4 chunks with the default 28-block end margin). Of 17,608 opaque depth samples
+with a valid fog factor, 7,807 had factor above 0.9; their median distance was
+53.71 blocks and median RGB distance to fog color was 8.58. The fog-factor to
+RGB-distance correlation was -0.837. This strongly supports ordinary distance
+fog as the cause of the pale blue, far “empty” views. It does not establish
+that the 4-chunk render distance is the desired product setting.
+
+Across 32,768 sparse pixel samples, 280 were below luma 32 and 1,781 below
+96. Every dark/dim sample had opaque depth, draw-ready geometry, and no pending
+light. Where a face-light witness was available, revisions matched (256/256
+dark and 1,679/1,679 dim). All 280 dark samples had fog factor 0, 279 voxel-ray
+hits, and zero ray gaps; 244 were sourced from block ID 572 (`tree_leaves`).
+Their median RGB distance from fog color was 265.84. The dim group's median
+fog factor was also 0; only 186/1,781 exceeded 0.25. Thus these
+sampled dark foliage pixels are not missing mesh, stale light, or fog-black
+pixels. The trace does not capture pre-fog material RGB, and sparse probes do
+not certify every visible surface.
+
+The camera-band join contains 18 no-drawable peak rows and 7 unowned peak rows,
+all resident non-air targets inside the geometric frustum. All 18 no-drawable
+trace rows had a FirstMesh dirty owner. In same-epoch renderer probes, 17 were
+still non-drawable, while one was already drawable/satisfying with two visible
+MDI commands; this is a state-transition/timing caveat for peak telemetry. The
+7 unowned rows had no mesh-work owner and mesh revision zero. Projected
+rectangles contained some pixel samples in 119/144 peak probes, but no
+same-frame sample had target-chunk depth or an exact target voxel hit. Across
+later route samples there were 29 target voxel-ray hits: 11 matched target
+depth and 18 were occluded by a nearer surface; none found a farther depth
+surface. This repeats the M416 limitation: transient non-drawable/ownerless
+data exists, but the sparse pixel evidence does not prove an exposed hole.
+
+The full trace is about 445 MB. The bounded visual/pixel ring was successfully
+written at normal shutdown, avoiding M417's data loss. Keep the M417
+interruption record and add deduplicated periodic trace checkpoints before the
+next long forensic run. Use the repeatable M335 route for regressions, then a
+periodic cold/new-world run to exercise disk reads and generation.
+
+Artifacts: [M418 flight report](../../bin/suite_reports/engine_refactor/m418_world164_m335_fog_attribution_20261006.json),
+[M418 fog/pixel join](../../bin/suite_reports/engine_refactor/m418_camera_band_pixel_join_20261006.json),
+raw perf `bin/logs/perf_20261006-102124_22924.jsonl`, and 189 captures in
+`bin/logs/m418_world164_m335_fog_attribution/`.
