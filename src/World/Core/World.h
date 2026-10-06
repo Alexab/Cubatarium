@@ -130,10 +130,16 @@ struct FocusRingVisualCensus
   int band_solid_accepted_empty_n{0};
   int band_solid_pending_mesh_n{0};
   int band_solid_pending_work_n{0};
+  int band_solid_dirty_n{0};
   int camera_band_solid_slice_n{0};
   int camera_band_solid_no_drawable_n{0};
   int camera_band_solid_satisfying_n{0};
   int camera_band_solid_pending_work_n{0};
+  int camera_band_solid_dirty_n{0};
+  uint64_t camera_band_solid_oldest_dirty_age_frames{0};
+  int camera_band_oldest_dirty_cx{0};
+  int camera_band_oldest_dirty_cy{0};
+  int camera_band_oldest_dirty_cz{0};
   /// No mesh-work in the direct pipeline and no relight/ColumnFlow owner.
   /// Mirrors focus_state=1 in the coordinate trace.
   int band_solid_unowned_n{0};

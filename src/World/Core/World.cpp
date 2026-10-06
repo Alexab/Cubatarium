@@ -3409,11 +3409,17 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     census.band_solid_accepted_empty_n = 0;
     census.band_solid_pending_mesh_n = 0;
     census.band_solid_pending_work_n = 0;
+    census.band_solid_dirty_n = 0;
     census.band_solid_unowned_n = 0;
     census.camera_band_solid_slice_n = 0;
     census.camera_band_solid_no_drawable_n = 0;
     census.camera_band_solid_satisfying_n = 0;
     census.camera_band_solid_pending_work_n = 0;
+    census.camera_band_solid_dirty_n = 0;
+    census.camera_band_solid_oldest_dirty_age_frames = 0;
+    census.camera_band_oldest_dirty_cx = 0;
+    census.camera_band_oldest_dirty_cy = 0;
+    census.camera_band_oldest_dirty_cz = 0;
     census.camera_band_solid_unowned_n = 0;
     census.band_solid_unresolved_no_work_n = 0;
     census.band_solid_draw_gate_closed_n = 0;
@@ -3512,6 +3518,23 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               remesh_after_apply || mesh_cache.IsPendingGpuQueued(coord) ||
               mesh_cache.IsPendingGpuKickedOrDispatched(coord) ||
               mesh_cache.HasPendingCaptureWork(coord);
+          if (dirty)
+          {
+            ++census.band_solid_dirty_n;
+            if (in_camera_band)
+            {
+              ++census.camera_band_solid_dirty_n;
+              const uint64_t age =
+                  mesh_cache.GetDirtyQueueAgeFrames(coord);
+              if (age > census.camera_band_solid_oldest_dirty_age_frames)
+              {
+                census.camera_band_solid_oldest_dirty_age_frames = age;
+                census.camera_band_oldest_dirty_cx = coord.x;
+                census.camera_band_oldest_dirty_cy = coord.y;
+                census.camera_band_oldest_dirty_cz = coord.z;
+              }
+            }
+          }
           bool work_pending = mesh_work_pending;
           if (!work_pending && !satisfying)
           {

@@ -7,7 +7,9 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Persistence/WorldPersistence.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/VisualObligationPolicy.h"
 #include "glog/logging.h"
 
 #include <algorithm>
@@ -143,6 +145,7 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"gate_miss_cx\":" << s.gate_miss_cx
           << ",\"gate_miss_cy\":" << s.gate_miss_cy
           << ",\"gate_miss_cz\":" << s.gate_miss_cz
+          << ",\"gate_miss_found\":" << s.gate_miss_found
           << ",\"gate_miss_soft_held\":" << s.gate_miss_soft_held
           << ",\"gate_miss_defer\":" << s.gate_miss_defer
           << ",\"gate_miss_inflight\":" << s.gate_miss_inflight
@@ -150,10 +153,45 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"gate_miss_drawable\":" << s.gate_miss_drawable
           << ",\"gate_miss_gpu_resident\":" << s.gate_miss_gpu_resident
           << ",\"gate_miss_gpu_quad\":" << s.gate_miss_gpu_quad
+          << ",\"gate_miss_satisfying\":" << s.gate_miss_satisfying
+          << ",\"gate_miss_dirty_queue_kind\":"
+          << static_cast<int>(s.gate_miss_dirty_queue_kind)
+          << ",\"gate_miss_dirty_queue_index\":"
+          << s.gate_miss_dirty_queue_index
+          << ",\"gate_miss_dirty_queue_size\":"
+          << s.gate_miss_dirty_queue_size
+          << ",\"gate_miss_dirty_age_frames\":"
+          << s.gate_miss_dirty_age_frames
+          << ",\"gate_miss_demand_active\":" << s.gate_miss_demand_active
+          << ",\"gate_miss_demand_stage\":" << s.gate_miss_demand_stage
+          << ",\"gate_miss_attempt_id\":" << s.gate_miss_attempt_id
+          << ",\"gate_miss_desired_geom_rev\":"
+          << s.gate_miss_desired_geom_rev
+          << ",\"gate_miss_published_geom_rev\":"
+          << s.gate_miss_published_geom_rev
+          << ",\"gate_miss_attempt_age_ms\":"
+          << s.gate_miss_attempt_age_ms
+          << ",\"gate_miss_progress_age_ms\":"
+          << s.gate_miss_progress_age_ms
           << ",\"remesh_after_apply_n\":" << s.remesh_after_apply_n
           << ",\"stuck_dirty_cx\":" << s.stuck_dirty_cx
           << ",\"stuck_dirty_cy\":" << s.stuck_dirty_cy
           << ",\"stuck_dirty_cz\":" << s.stuck_dirty_cz
+          << ",\"stuck_dirty_found\":" << s.stuck_dirty_found
+          << ",\"stuck_dirty_queue_kind\":"
+          << static_cast<int>(s.stuck_dirty_queue_kind)
+          << ",\"stuck_dirty_queue_index\":" << s.stuck_dirty_queue_index
+          << ",\"stuck_dirty_queue_size\":" << s.stuck_dirty_queue_size
+          << ",\"stuck_dirty_age_frames\":" << s.stuck_dirty_age_frames
+          << ",\"stuck_demand_active\":" << s.stuck_demand_active
+          << ",\"stuck_demand_stage\":" << s.stuck_demand_stage
+          << ",\"stuck_attempt_id\":" << s.stuck_attempt_id
+          << ",\"stuck_desired_geom_rev\":"
+          << s.stuck_desired_geom_rev
+          << ",\"stuck_published_geom_rev\":"
+          << s.stuck_published_geom_rev
+          << ",\"stuck_attempt_age_ms\":" << s.stuck_attempt_age_ms
+          << ",\"stuck_progress_age_ms\":" << s.stuck_progress_age_ms
           << ",\"suppress_relight_seam\":" << (s.suppress_relight_seam ? 1 : 0)
           << ",\"mark_relit_raa_total\":" << s.mark_relit_raa_total
           << ",\"ring_blocker\":\"" << (s.ring_blocker ? s.ring_blocker : "none")
@@ -178,7 +216,45 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"enter_phantom_dirty_pruned_n\":"
           << s.enter_phantom_dirty_pruned_n
           << ",\"underfeet_present_ready\":" << s.underfeet_present_ready
-          << ",\"spawn_mesh_ring_ready\":" << s.spawn_mesh_ring_ready;
+          << ",\"spawn_mesh_ring_ready\":" << s.spawn_mesh_ring_ready
+          << ",\"focus_data_census_valid\":"
+          << s.focus_data_census_valid
+          << ",\"focus_data_camera_band_solid_slice_n\":"
+          << s.focus_data_camera_band_solid_slice_n
+          << ",\"focus_data_camera_band_no_drawable_n\":"
+          << s.focus_data_camera_band_no_drawable_n
+          << ",\"focus_data_camera_band_satisfying_n\":"
+          << s.focus_data_camera_band_satisfying_n
+          << ",\"focus_data_camera_band_pending_work_n\":"
+          << s.focus_data_camera_band_pending_work_n
+          << ",\"focus_data_camera_band_unowned_n\":"
+          << s.focus_data_camera_band_unowned_n
+          << ",\"focus_data_camera_band_dirty_n\":"
+          << s.focus_data_camera_band_dirty_n
+          << ",\"focus_data_camera_band_oldest_dirty_age_frames\":"
+          << s.focus_data_camera_band_oldest_dirty_age_frames
+          << ",\"focus_data_camera_band_oldest_dirty_cx\":"
+          << s.focus_data_camera_band_oldest_dirty_cx
+          << ",\"focus_data_camera_band_oldest_dirty_cy\":"
+          << s.focus_data_camera_band_oldest_dirty_cy
+          << ",\"focus_data_camera_band_oldest_dirty_cz\":"
+          << s.focus_data_camera_band_oldest_dirty_cz
+          << ",\"focus_data_band_solid_no_drawable_n\":"
+          << s.focus_data_band_solid_no_drawable_n
+          << ",\"focus_data_band_solid_accepted_empty_n\":"
+          << s.focus_data_band_solid_accepted_empty_n
+          << ",\"focus_data_band_solid_pending_mesh_n\":"
+          << s.focus_data_band_solid_pending_mesh_n
+          << ",\"focus_data_band_solid_pending_work_n\":"
+          << s.focus_data_band_solid_pending_work_n
+          << ",\"focus_data_band_solid_dirty_n\":"
+          << s.focus_data_band_solid_dirty_n
+          << ",\"focus_data_band_solid_unowned_n\":"
+          << s.focus_data_band_solid_unowned_n
+          << ",\"focus_data_band_solid_draw_ready_n\":"
+          << s.focus_data_band_solid_draw_ready_n
+          << ",\"focus_data_band_solid_draw_gate_closed_n\":"
+          << s.focus_data_band_solid_draw_gate_closed_n;
   if (kind != nullptr)
   {
     g_jsonl << ",\"kind\":\"" << kind << "\"";
@@ -278,6 +354,39 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.mesh_async_pending = blockers.async_mesh_pending;
   out.mesh_visual_warmup = blockers.visual_warmup;
   out.ring_not_ready = world.CountPostLoadRingNotReady();
+  const FocusRingVisualCensus &focus_census = world.GetFocusRingVisualCensus();
+  out.focus_data_census_valid = focus_census.data_mesh_valid ? 1 : 0;
+  out.focus_data_camera_band_solid_slice_n =
+      focus_census.camera_band_solid_slice_n;
+  out.focus_data_camera_band_no_drawable_n =
+      focus_census.camera_band_solid_no_drawable_n;
+  out.focus_data_camera_band_satisfying_n =
+      focus_census.camera_band_solid_satisfying_n;
+  out.focus_data_camera_band_pending_work_n =
+      focus_census.camera_band_solid_pending_work_n;
+  out.focus_data_camera_band_unowned_n =
+      focus_census.camera_band_solid_unowned_n;
+  out.focus_data_camera_band_dirty_n = focus_census.camera_band_solid_dirty_n;
+  out.focus_data_camera_band_oldest_dirty_age_frames =
+      focus_census.camera_band_solid_oldest_dirty_age_frames;
+  out.focus_data_camera_band_oldest_dirty_cx =
+      focus_census.camera_band_oldest_dirty_cx;
+  out.focus_data_camera_band_oldest_dirty_cy =
+      focus_census.camera_band_oldest_dirty_cy;
+  out.focus_data_camera_band_oldest_dirty_cz =
+      focus_census.camera_band_oldest_dirty_cz;
+  out.focus_data_band_solid_no_drawable_n = focus_census.band_solid_no_drawable_n;
+  out.focus_data_band_solid_accepted_empty_n =
+      focus_census.band_solid_accepted_empty_n;
+  out.focus_data_band_solid_pending_mesh_n =
+      focus_census.band_solid_pending_mesh_n;
+  out.focus_data_band_solid_pending_work_n =
+      focus_census.band_solid_pending_work_n;
+  out.focus_data_band_solid_dirty_n = focus_census.band_solid_dirty_n;
+  out.focus_data_band_solid_unowned_n = focus_census.band_solid_unowned_n;
+  out.focus_data_band_solid_draw_ready_n = focus_census.band_solid_draw_ready_n;
+  out.focus_data_band_solid_draw_gate_closed_n =
+      focus_census.band_solid_draw_gate_closed_n;
   const auto &phys = world.GetPhysicsTelemetry();
   out.relight_completed_n = phys.RelightCompletedN;
   out.stage_skip_remesh_pending_light = phys.StageSkipRemeshPendingLight;
@@ -288,6 +397,7 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   glm::ivec3 gate_miss{};
   if (world.FindFirstSpawnRingMissingGreedy(gate_miss))
   {
+    out.gate_miss_found = 1;
     out.gate_miss_cx = gate_miss.x;
     out.gate_miss_cy = gate_miss.y;
     out.gate_miss_cz = gate_miss.z;
@@ -300,6 +410,33 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
     const UChunkMeshCache &cache = mesh.GetCache();
     out.gate_miss_gpu_resident = cache.QueryGreedyGpuResident(gate_miss) ? 1 : 0;
     out.gate_miss_gpu_quad = cache.QueryGreedyGpuQuadCount(gate_miss);
+    out.gate_miss_satisfying =
+        cache.HasMeshSatisfyingColumnReady(gate_miss) ? 1 : 0;
+    out.gate_miss_dirty_queue_kind = cache.GetDirtyQueueTrace(
+        gate_miss, out.gate_miss_dirty_queue_index,
+        out.gate_miss_dirty_queue_size);
+    out.gate_miss_dirty_age_frames = cache.GetDirtyQueueAgeFrames(gate_miss);
+    const ChunkRenderDemandRecord *demand =
+        UChunkRenderDemandStore::Get().Find(gate_miss);
+    if (demand != nullptr)
+    {
+      out.gate_miss_demand_active = demand->has_active_attempt ? 1 : 0;
+      out.gate_miss_demand_stage = static_cast<int>(demand->active_stage);
+      out.gate_miss_attempt_id = demand->active_attempt_id;
+      out.gate_miss_desired_geom_rev = demand->desired_geom_rev;
+      out.gate_miss_published_geom_rev = demand->published_geom_rev;
+      const double now_ms = VisualObligationNowMs();
+      if (demand->attempt_created_ms > 0.0)
+      {
+        out.gate_miss_attempt_age_ms =
+            std::max(0.0, now_ms - demand->attempt_created_ms);
+      }
+      if (demand->last_progress_ms > 0.0)
+      {
+        out.gate_miss_progress_age_ms =
+            std::max(0.0, now_ms - demand->last_progress_ms);
+      }
+    }
   }
   out.remesh_after_apply_n = static_cast<int>(mesh.GetRemeshAfterApplyCount());
   const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();
@@ -307,12 +444,38 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   glm::ivec3 stuck{};
   if (mesh.FindFirstDirtyInHorizontalRadius(focus_chunk, 4, stuck))
   {
+    out.stuck_dirty_found = 1;
     out.stuck_dirty_cx = stuck.x;
     out.stuck_dirty_cy = stuck.y;
     out.stuck_dirty_cz = stuck.z;
     out.stuck_has_chunk =
         world.GetBlockWorld().GetChunkManager().HasChunk(stuck) ? 1 : 0;
     out.stuck_has_drawable = mesh.HasDrawableGreedyMesh(stuck) ? 1 : 0;
+    const UChunkMeshCache &cache = mesh.GetCache();
+    out.stuck_dirty_queue_kind = cache.GetDirtyQueueTrace(
+        stuck, out.stuck_dirty_queue_index, out.stuck_dirty_queue_size);
+    out.stuck_dirty_age_frames = cache.GetDirtyQueueAgeFrames(stuck);
+    const ChunkRenderDemandRecord *demand =
+        UChunkRenderDemandStore::Get().Find(stuck);
+    if (demand != nullptr)
+    {
+      out.stuck_demand_active = demand->has_active_attempt ? 1 : 0;
+      out.stuck_demand_stage = static_cast<int>(demand->active_stage);
+      out.stuck_attempt_id = demand->active_attempt_id;
+      out.stuck_desired_geom_rev = demand->desired_geom_rev;
+      out.stuck_published_geom_rev = demand->published_geom_rev;
+      const double now_ms = VisualObligationNowMs();
+      if (demand->attempt_created_ms > 0.0)
+      {
+        out.stuck_attempt_age_ms =
+            std::max(0.0, now_ms - demand->attempt_created_ms);
+      }
+      if (demand->last_progress_ms > 0.0)
+      {
+        out.stuck_progress_age_ms =
+            std::max(0.0, now_ms - demand->last_progress_ms);
+      }
+    }
   }
   out.suppress_relight_seam = world.IsSuppressRelightSeamDirty();
   out.mark_relit_raa_total = phys.MarkRelitRemeshAfterApplyN;

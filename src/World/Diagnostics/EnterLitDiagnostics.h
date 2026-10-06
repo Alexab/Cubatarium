@@ -48,6 +48,7 @@ struct EnterLitSample
   int gate_miss_cx{0};
   int gate_miss_cy{0};
   int gate_miss_cz{0};
+  int gate_miss_found{0};
   int gate_miss_soft_held{0};
   int gate_miss_defer{0};
   int gate_miss_inflight{0};
@@ -55,11 +56,35 @@ struct EnterLitSample
   int gate_miss_drawable{0};
   int gate_miss_gpu_resident{0};
   int gate_miss_gpu_quad{0};
+  int gate_miss_satisfying{0};
+  uint8_t gate_miss_dirty_queue_kind{0};
+  int gate_miss_dirty_queue_index{-1};
+  int gate_miss_dirty_queue_size{0};
+  uint64_t gate_miss_dirty_age_frames{0};
+  int gate_miss_demand_active{0};
+  int gate_miss_demand_stage{0};
+  uint64_t gate_miss_attempt_id{0};
+  uint64_t gate_miss_desired_geom_rev{0};
+  uint64_t gate_miss_published_geom_rev{0};
+  double gate_miss_attempt_age_ms{0.0};
+  double gate_miss_progress_age_ms{0.0};
   /// Era45: R4 diagnostics.
   int remesh_after_apply_n{0};
   int stuck_dirty_cx{0};
   int stuck_dirty_cy{0};
   int stuck_dirty_cz{0};
+  int stuck_dirty_found{0};
+  uint8_t stuck_dirty_queue_kind{0};
+  int stuck_dirty_queue_index{-1};
+  int stuck_dirty_queue_size{0};
+  uint64_t stuck_dirty_age_frames{0};
+  int stuck_demand_active{0};
+  int stuck_demand_stage{0};
+  uint64_t stuck_attempt_id{0};
+  uint64_t stuck_desired_geom_rev{0};
+  uint64_t stuck_published_geom_rev{0};
+  double stuck_attempt_age_ms{0.0};
+  double stuck_progress_age_ms{0.0};
   bool suppress_relight_seam{false};
   uint64_t mark_relit_raa_total{0};
   /// Era46: ring blocker label (dirty|gpu|async|missing|none).
@@ -88,6 +113,25 @@ struct EnterLitSample
   /// Enter SoT: underfeet present (opaque draw), not underfeet_need.
   int underfeet_present_ready{0};
   int spawn_mesh_ring_ready{0};
+  int focus_data_census_valid{0};
+  int focus_data_camera_band_solid_slice_n{0};
+  int focus_data_camera_band_no_drawable_n{0};
+  int focus_data_camera_band_satisfying_n{0};
+  int focus_data_camera_band_pending_work_n{0};
+  int focus_data_camera_band_unowned_n{0};
+  int focus_data_camera_band_dirty_n{0};
+  uint64_t focus_data_camera_band_oldest_dirty_age_frames{0};
+  int focus_data_camera_band_oldest_dirty_cx{0};
+  int focus_data_camera_band_oldest_dirty_cy{0};
+  int focus_data_camera_band_oldest_dirty_cz{0};
+  int focus_data_band_solid_no_drawable_n{0};
+  int focus_data_band_solid_accepted_empty_n{0};
+  int focus_data_band_solid_pending_mesh_n{0};
+  int focus_data_band_solid_pending_work_n{0};
+  int focus_data_band_solid_dirty_n{0};
+  int focus_data_band_solid_unowned_n{0};
+  int focus_data_band_solid_draw_ready_n{0};
+  int focus_data_band_solid_draw_gate_closed_n{0};
 };
 
 /// Era44: per-frame step timings (deltas) inside gpu_warmup.
