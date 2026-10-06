@@ -70,6 +70,16 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
         fog_factor = round(max(factor**exponent, float(
             record.get("renderer_pixel_fog_min_blend", 0.0)
         )), 5)
+    fog_color = [
+        round(float(record.get("renderer_pixel_fog_color_r", 0.0)), 4),
+        round(float(record.get("renderer_pixel_fog_color_g", 0.0)), 4),
+        round(float(record.get("renderer_pixel_fog_color_b", 0.0)), 4),
+    ]
+    rgb_to_fog_color_distance = (
+        round(sum((rgb[index] - fog_color[index] * 255.0) ** 2
+                  for index in range(3)) ** 0.5, 3)
+        if fog_state_valid else None
+    )
     return {
         "frame_epoch": int(record.get("frame_epoch", 0)),
         "camera": [
@@ -136,11 +146,8 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
             record.get("renderer_pixel_underwater_fog_submerged", 0)
         ),
         "fog_distance": round(fog_distance, 4) if fog_distance >= 0 else None,
-        "fog_color": [
-            round(float(record.get("renderer_pixel_fog_color_r", 0.0)), 4),
-            round(float(record.get("renderer_pixel_fog_color_g", 0.0)), 4),
-            round(float(record.get("renderer_pixel_fog_color_b", 0.0)), 4),
-        ],
+        "fog_color": fog_color,
+        "rgb_to_fog_color_distance": rgb_to_fog_color_distance,
         "voxel_face_source_valid": int(
             record.get("renderer_pixel_voxel_face_source_valid", 0)
         ),
@@ -181,6 +188,11 @@ def summarize_pixel_render_evidence(pixel_frame_stats: dict[int, dict[str, Any]]
         fog_samples = [
             sample for sample in group if sample["fog_factor"] is not None
         ]
+        fog_color_distances = [
+            sample["rgb_to_fog_color_distance"]
+            for sample in group
+            if sample["rgb_to_fog_color_distance"] is not None
+        ]
         summary[label] = {
             "sample_count": len(group),
             "with_opaque_depth": sum(sample["depth_surface_valid"] for sample in group),
@@ -212,6 +224,12 @@ def summarize_pixel_render_evidence(pixel_frame_stats: dict[int, dict[str, Any]]
                     len(fog_samples) // 2
                 ], 5)
                 if fog_samples else None
+            ),
+            "median_rgb_to_fog_color_distance": (
+                round(sorted(fog_color_distances)[
+                    len(fog_color_distances) // 2
+                ], 3)
+                if fog_color_distances else None
             ),
             "valid_light_samples": len(light_samples),
             "light_revision_matches": sum(
@@ -574,21 +592,24 @@ def main() -> int:
     )
 
     result = {
-        "schema": "camera_band_pixel_join.v9",
+        "schema": "camera_band_pixel_join.v10",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": (
             "exact hit joins use same frame_epoch and voxel-DDA chunk; "
             "screen coverage joins sparse pixels to same-frame projected "
             "top-left chunk-AABB rectangles; route hit summaries join exact "
             "voxel-hit chunk coordinates across frames; global/air distance "
-            "fog factors use same-frame captured uniforms and opaque depth"
+            "fog factors use same-frame captured uniforms and opaque depth; "
+            "pixel-to-fog-color distance compares output RGB with captured fog RGB"
         ),
         "pixel_fog_model": {
             "global_distance": "3D opaque hit distance when uFogEnabled is active",
             "air_distance": "horizontal or 3D opaque hit distance per uFogHorizontal",
             "limitation": (
                 "the analyzer does not reconstruct per-fragment fluid-span "
-                "classification or the additional underwater fog blend"
+                "classification or the additional underwater fog blend; "
+                "base material RGB before fog is not captured, so color "
+                "distance alone does not establish fog causation"
             ),
         },
         "trace_counts": dict(kind_counts),
