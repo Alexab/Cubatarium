@@ -1319,6 +1319,9 @@ public:
   void ClearColumnEmergeState(glm::ivec2 ground_xz);
   /// Count Lighting / Meshing / RenderReady columns into PhysicsTelemetry.
   void SampleColumnEmergeStageTelemetry();
+  /// Run the bounded demand-store upkeep independently of telemetry census.
+  void MaintainChunkRenderDemandStore();
+  void MaintainChunkRenderDemandStore(double now_ms);
   /// True when column has left the light gate (LitReady / Meshing / RenderReady).
   bool IsColumnLitReady(glm::ivec3 ground) const;
   /// True when column may unlock outer streaming rings (LitReady+).

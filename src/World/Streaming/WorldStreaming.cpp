@@ -3117,7 +3117,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           static_cast<int>(world.GetMeshService().GetDirtyCount());
       world.PhysicsTelemetryData.PendingLightN =
           static_cast<int>(world.GetPendingLightBeforeMeshCount());
-      world.SampleColumnEmergeStageTelemetry();
+      // Keep demand-store upkeep at the async stage, but defer the full
+      // logger-only census to the post-emerge sample below.
+      world.MaintainChunkRenderDemandStore();
       world.PhysicsTelemetryData.RelightFifoN =
           world.Persistence
               ? world.Persistence->GetPendingTerrainColumnRelightCount()

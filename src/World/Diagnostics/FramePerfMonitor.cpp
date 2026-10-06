@@ -74,6 +74,7 @@ struct Session
   double AccumMeshEmergeCoordinatorMs{0.0};
   double AccumMeshEmergePostTelemetryMs{0.0};
   double AccumMeshEmergePlayerRelightBurstMs{0.0};
+  double AccumColumnEmergeStageSampleMs{0.0};
   double AccumAsyncIoMs{0.0};
   double AccumSceneMs{0.0};
   double AccumPhysMs{0.0};
@@ -240,6 +241,7 @@ struct FrameNumbers
   double mesh_emerge_coordinator_ms{0.0};
   double mesh_emerge_post_telemetry_ms{0.0};
   double mesh_emerge_player_relight_burst_ms{0.0};
+  double column_emerge_stage_sample_ms{0.0};
   double scene_ms{0.0};
   double view_ms{0.0};
   double flat_ms{0.0};
@@ -1050,6 +1052,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_emerge_post_telemetry_ms = phys.MeshEmergePostTelemetryMs;
   n.mesh_emerge_player_relight_burst_ms =
       phys.MeshEmergePlayerRelightBurstMs;
+  n.column_emerge_stage_sample_ms = phys.ColumnEmergeStageSampleMs;
   n.scene_ms = world.GetDurationDrawSceneMks() / 1000.0;
   n.view_ms = world.GetDurationViewUpdateMks() / 1000.0;
   // Era14: DoMovement is locomotion-only; stream/emerge live in
@@ -2326,6 +2329,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mesh_emerge_post_telemetry_ms
           << ",\"mesh_emerge_player_relight_burst_ms\":"
           << n.mesh_emerge_player_relight_burst_ms
+          << ",\"column_emerge_stage_sample_ms\":"
+          << n.column_emerge_stage_sample_ms
           << ",\"scene_ms\":" << n.scene_ms
           << ",\"view_ms\":" << n.view_ms << ",\"flat_ms\":" << n.flat_ms
           << ",\"gen_q\":" << n.gen_q << ",\"mesh_async\":" << n.mesh_async
@@ -3120,6 +3125,7 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumMeshEmergePostTelemetryMs += n.mesh_emerge_post_telemetry_ms;
   s.AccumMeshEmergePlayerRelightBurstMs +=
       n.mesh_emerge_player_relight_burst_ms;
+  s.AccumColumnEmergeStageSampleMs += n.column_emerge_stage_sample_ms;
   s.AccumWorldStreamingPhaseMs += n.world_streaming_phase_ms;
   s.AccumAsyncChunkSystemsMs += n.async_chunk_systems_ms;
   s.AccumAsyncChunkPreSchedulerMs += n.async_chunk_pre_scheduler_ms;
@@ -3228,6 +3234,8 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
       s.AccumMeshEmergePostTelemetryMs * inv;
   avg.mesh_emerge_player_relight_burst_ms =
       s.AccumMeshEmergePlayerRelightBurstMs * inv;
+  avg.column_emerge_stage_sample_ms =
+      s.AccumColumnEmergeStageSampleMs * inv;
   avg.world_streaming_phase_ms = s.AccumWorldStreamingPhaseMs * inv;
   avg.async_chunk_systems_ms = s.AccumAsyncChunkSystemsMs * inv;
   avg.async_chunk_pre_scheduler_ms =
@@ -3332,6 +3340,7 @@ void ResetAccum(Session &s)
   s.AccumMeshEmergeCoordinatorMs = 0.0;
   s.AccumMeshEmergePostTelemetryMs = 0.0;
   s.AccumMeshEmergePlayerRelightBurstMs = 0.0;
+  s.AccumColumnEmergeStageSampleMs = 0.0;
   s.AccumWorldStreamingPhaseMs = 0.0;
   s.AccumAsyncChunkSystemsMs = 0.0;
   s.AccumAsyncChunkPreSchedulerMs = 0.0;

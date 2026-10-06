@@ -18,6 +18,7 @@ struct PhysicsTelemetry
   double MeshEmergeCoordinatorMs{0.0};
   double MeshEmergePostTelemetryMs{0.0};
   double MeshEmergePlayerRelightBurstMs{0.0};
+  double ColumnEmergeStageSampleMs{0.0};
   double BlockStepMs{0.0};
   double DrainStepMs{0.0};
   double FluidStepMs{0.0};

@@ -2441,8 +2441,26 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
   }
 }
 
+void UWorld::MaintainChunkRenderDemandStore()
+{
+  MaintainChunkRenderDemandStore(VisualObligationNowMs());
+}
+
+void UWorld::MaintainChunkRenderDemandStore(double now_ms)
+{
+  if (!kChunkDemandShadow())
+  {
+    return;
+  }
+  (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
+                                                            now_ms);
+  (void)UChunkRenderDemandStore::Get().CancelOrphanActiveAttempts(
+      /*max_n=*/64, now_ms);
+}
+
 void UWorld::SampleColumnEmergeStageTelemetry()
 {
+  const auto sample_t0 = std::chrono::high_resolution_clock::now();
   int lighting = 0;
   int meshing = 0;
   int render_ready = 0;
@@ -2491,15 +2509,13 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
         UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
   }
-  // A32/A37/A38: production StopConverged + stop-plateau reconcile/orphan cancel.
+  // A32/A37/A38: bounded demand-store upkeep is stateful and remains separate
+  // from the diagnostic census so callers can preserve its frame cadence.
   {
     const double now_ms = VisualObligationNowMs();
+    MaintainChunkRenderDemandStore(now_ms);
     if (kChunkDemandShadow())
     {
-      (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
-                                                                now_ms);
-      (void)UChunkRenderDemandStore::Get().CancelOrphanActiveAttempts(
-          /*max_n=*/64, now_ms);
       const auto br =
           UChunkRenderDemandStore::Get().CountUnsatisfiedBreakdown();
       PhysicsTelemetryData.DemandUnsatGeom = br.geom;
@@ -2517,6 +2533,10 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     PhysicsTelemetryData.VisualObligationShadowMismatchN =
         shadow.draw_mismatches;
   }
+  PhysicsTelemetryData.ColumnEmergeStageSampleMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - sample_t0)
+          .count();
 }
 
 ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
