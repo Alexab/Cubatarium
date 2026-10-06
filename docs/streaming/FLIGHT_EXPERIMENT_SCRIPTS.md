@@ -1242,3 +1242,67 @@ Optional trace flags were false and frame-capture directory was null in the
 manifest. The report/manifest and executable should be retained with the
 existing ignored `bin/` artifacts; the tracked documentation is the portable
 record of settings and conclusions.
+
+## M432 - full M335 timing resample with phase timers (2026-10-06)
+
+M432 repeated the same visible, no-teleport 2,800-second M335 route on
+`World_164`, using the Release build from `cc94e562` and the `product-174657-far`
+scenario. Start `[120,56,56]`, eye Y `70`, yaw `180`, pitch `-30`, speed scale
+`1`, normal 20-second stop, no teleport. Optional pixel/source traces and
+captures were disabled. The executable SHA-256 was
+`51ad3dc79e90317450add103e698a1472c01d10f50c083324995e1d74ddc6b06`.
+
+The app exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`). The report contains 1,397 periods (1,395 steady), median
+movement speed `5.19653 blocks/s`, focus X `7 -> -857`, 864 route chunks / 13,824
+blocks, and both route checkpoints. Blocked movement substeps and ground
+contacts were zero. The runner returned nonzero because product/readiness gates
+remain red (`pass=false`); this was not a crash or route failure.
+
+Raw `kind=period` rows are interval means. The more distant half is split into
+two bands to expose the additional westward growth that a single far median
+would hide:
+
+| Focus band | Periods | Frame wall median / p95 | World-streaming median / p95 | Async systems median / p95 | Async post-scheduler median | I/O drain median | Mesh emerge median | Mesh post-telemetry median |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Near `x >= -200` | 322 | `37.06 / 53.03 ms` | `26.48 / 43.65 ms` | `13.76 / 20.88 ms` | `12.28 ms` | `8.94 ms` | `9.04 ms` | `2.13 ms` |
+| Mid `-600 < x < -200` | 624 | `53.65 / 70.52 ms` | `46.42 / 61.83 ms` | `23.38 / 29.10 ms` | `21.12 ms` | `10.23 ms` | `18.53 ms` | `10.20 ms` |
+| Far east `-740 < x <= -600` | 230 | `64.84 / 89.90 ms` | `58.57 / 80.48 ms` | `29.02 / 36.08 ms` | `26.41 ms` | `9.51 ms` | `24.66 ms` | `16.33 ms` |
+| Far west `x <= -740` | 205 | `72.83 / 95.94 ms` | `65.88 / 87.61 ms` | `33.07 / 44.32 ms` | `30.85 ms` | `10.40 ms` | `28.17 ms` | `19.99 ms` |
+
+From near to far west, wall median grows `35.77 ms`; async post-scheduler
+grows `18.57 ms`, while I/O drain grows `1.46 ms`. Mesh post-telemetry grows
+`17.86 ms`. The actual chunk scheduler tick is near zero at the median across
+all bands (`0.00 ms`); therefore, the broad post-scheduler phase is not the
+`ChunkLoadScheduler::Tick` itself. The full-run analyzer reports wall median
+`55.466 ms`, effective flying FPS `18.04`, and max wall `316.746 ms`.
+
+This run shows a strong source-level candidate for duplicated hot-path
+diagnostics. `SampleColumnEmergeStageTelemetry()` is called once from
+`TickAsyncChunkSystems()` and again from `TickMeshEmerge()` in the same frame.
+It walks `ColumnEmergeStates`, queries the focus-ring job stages, and scans the
+chunk-demand records for unsatisfied work and stop convergence. The source
+search found those sampled counters used by performance telemetry/tests, not by
+production policy. The sample also runs bounded demand-store reconciliation
+and orphan cancellation, which mutate state; a cleanup must preserve those
+two maintenance opportunities while removing only the duplicate census. The
+growing `column_lighting_n` median (`17` near, `142` mid, `220` far east, `246`
+far west) tracks the same direction as the post-telemetry time. This is a
+well-supported optimization hypothesis, not yet a causal measurement; the
+next build will time the remaining single census explicitly.
+
+The user's current visual assessment is positive. M432 itself collected no
+pixels. Internal `visible_black_focus_n` median was 0 / max 18 and
+`unfinished_visual` median was 28; neither substitutes for framebuffer
+evidence. The analyzer's `holes_rate=1.0` still uses `unfinished_visual`, and
+post-stop convergence remains false. No new visual defect was reported during
+this run, so future full timing controls should keep expensive pixel capture
+off unless the symptom returns.
+
+Artifacts: [M432 report](../../bin/suite_reports/engine_refactor/m432_world164_m335_phase_timing_20261006.json),
+raw perf `bin/logs/perf_20261006-211058_31136.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-211054.31136`.
+The manifest records source `cc94e562`, the executable hash above, clean source,
+Release, no teleport, and disabled optional traces/captures. The runner restored
+`world_data.json` byte-for-byte. Keep these ignored artifacts and this tracked
+record together.

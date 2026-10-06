@@ -5262,3 +5262,62 @@ readiness, source lifecycle, and performance as separate acceptance axes.
 
 The updated ordered actions are in the [M431 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m431-readiness-checkpoint---the-late-route-cost-is-real-disk-drain-is-not-the-whole-cause)
 and the [M431 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m431---full-m335-low-instrumentation-control-and-generation-frontier-2026-10-06).
+
+### M432 - split the far slowdown and update readiness (2026-10-06)
+
+M432 completed the same visible, no-teleport full M335 route on `World_164`.
+The Release process exited 0, the runner classified the route as successful,
+and speed/coverage passed at median `5.19653 blocks/s`, focus X `7 -> -857`,
+13,824 blocks. Blocked movement substeps and ground contacts were zero. The
+runner's product result remained false because performance and visual-readiness
+gates did not converge; this is separate from the successful process/flight.
+
+The distance split makes the slowdown progression clearer than a single
+far-band median:
+
+| Band | Periods | Wall median / p95 | World stream median / p95 | Async post-scheduler median | I/O drain median | Mesh emerge median | Mesh post-telemetry median |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Near `x >= -200` | 322 | `37.06 / 53.03 ms` | `26.48 / 43.65 ms` | `12.28 ms` | `8.94 ms` | `9.04 ms` | `2.13 ms` |
+| Mid `-600 < x < -200` | 624 | `53.65 / 70.52 ms` | `46.42 / 61.83 ms` | `21.12 ms` | `10.23 ms` | `18.53 ms` | `10.20 ms` |
+| Far east `-740 < x <= -600` | 230 | `64.84 / 89.90 ms` | `58.57 / 80.48 ms` | `26.41 ms` | `9.51 ms` | `24.66 ms` | `16.33 ms` |
+| Far west `x <= -740` | 205 | `72.83 / 95.94 ms` | `65.88 / 87.61 ms` | `30.85 ms` | `10.40 ms` | `28.17 ms` | `19.99 ms` |
+
+The far-west wall median is almost double the near median. I/O drain rises only
+`1.46 ms`, while async post-scheduler rises `18.57 ms` and mesh post-telemetry
+rises `17.86 ms`. The scheduler tick itself is effectively zero at the median;
+these broad post phases need further decomposition. M432's full-route analyzer
+reports wall median `55.466 ms`, effective flying FPS `18.04`, and max interval
+wall `316.746 ms`. This confirms that the cost growth is material even though
+the user's present visual assessment is positive.
+
+Source inspection identified an avoidable duplicate in the telemetry hot path:
+`UWorld::SampleColumnEmergeStageTelemetry()` is called from both
+`UWorldStreaming::TickAsyncChunkSystems()` and
+`UWorldStreaming::TickMeshEmerge()` during a normal frame. It walks the
+`ColumnEmergeStates` map, samples focus-ring job stages, and computes
+`CountUnsatisfiedBreakdown()` and `StopConverged()` over demand records. The
+sampled values are consumed by performance logging/tests, not production
+policy. It also runs bounded demand reconciliation and orphan cancellation,
+which do mutate state and must keep their two opportunities per frame. The
+growing `column_lighting_n` median (17 near to 246 far west) is consistent with
+state-size-related diagnostic cost. This strongly supports removing the
+duplicate census while preserving both bounded maintenance calls, and adding
+a single-census timer to verify impact. It does not yet prove this accounts for
+all measured async/mesh residuals.
+
+The operator says the current image looks sufficiently good. M432 had no pixel
+capture or source trace; `visible_black_focus_n` median was zero and
+`unfinished_visual` median 28, while post-stop convergence still failed.
+`holes_rate=1.0` is not a framebuffer result. Therefore visual status is
+currently **operator-positive / not independently sampled on M432**; no new
+visual defect was reported. Routine long timing runs should stay low-instrumented
+until a visual symptom returns. M432 found 47 `ChunkPopulate` INFO records,
+but with source tracing disabled this cannot establish disk-vs-procedural source
+or request/result queue delay. A fresh-world/source-traced lane remains needed.
+
+Plan readiness is **ready for a bounded performance refactor; not ready for
+closure**. Remaining issues are late-route main-thread cost, failed stop
+convergence/readiness signals, and uncharacterized fresh-world creation/load.
+The stable flight speed and collision counters mean route behavior no longer
+blocks streaming analysis. See the [M432 plan update](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m432-readiness-checkpoint---route-controlled-far-hot-path-census-identified)
+and [M432 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m432---full-m335-timing-resample-with-phase-timers-2026-10-06).

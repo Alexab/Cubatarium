@@ -3031,3 +3031,60 @@ with 26 items not ready at the end. The `holes_rate=1` gate is based on
 
 M431 artifacts and exact run settings are documented in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m431---full-m335-low-instrumentation-control-and-generation-frontier-2026-10-06).
+
+### M432 readiness checkpoint - route controlled; far hot-path census identified
+
+M432 repeated the complete visible M335 route on the same world/build class.
+The app and flight completed normally at `5.19653 blocks/s`, covering 13,824
+blocks with zero collision blocks or ground contacts. The operator currently
+reports that visuals look sufficiently good. This makes the repeatable route a
+usable control and puts immediate effort on performance and readiness debt;
+M432 had no pixel capture, so this flight does not independently certify the
+newest route segment.
+
+The new near/mid/far-east/far-west split shows steady late-route cost growth:
+frame-wall medians are `37.06/53.65/64.84/72.83 ms`; async post-scheduler
+medians are `12.28/21.12/26.41/30.85 ms`; mesh post-telemetry medians are
+`2.13/10.20/16.33/19.99 ms`. I/O drain changes only `8.94 -> 10.40 ms`, and
+the actual chunk scheduler tick remains near zero. The likely repeated census
+inside `SampleColumnEmergeStageTelemetry()` is now a bounded target for
+measurement and cleanup. It is invoked twice per frame and performs growing
+map/record scans; preserve its two bounded demand maintenance passes while
+avoiding duplicate diagnostic census. This is still a hypothesis for the
+reported subphase growth until an explicit census timer confirms its cost.
+
+Current plan status: **ready to implement and evaluate the bounded census
+change; not ready to close**. The long repeatable flight, expected speed,
+collision control, and positive operator visual observation are established.
+Still open are late-route frame cost, the post-stop convergence/readiness
+gates, and whether cold world creation/loading has different bottlenecks. The
+flight analyzer's `holes_rate=1` remains a readiness proxy based on
+`unfinished_visual`, not a pixel-hole verdict.
+
+#### Remaining work, in order
+
+1. Split demand-store maintenance from the telemetry census. Keep the current
+   maintenance cadence, sample the full column/job/demand census once, and add
+   a low-overhead per-period timer for that sample and its residual. Do not
+   change streaming, lighting, or mesh budgets in this diagnostic change.
+2. Build **Release only** and repeat the unchanged full M335 `World_164` route.
+   Compare four distance bands (near, mid, far east, far west), route speed,
+   zero-collision counters, user-visible output, phase timing, and post-stop
+   readiness against M432. Commit the source change before the run so the
+   manifest is attributable to one revision.
+3. Run the planned separate 600-second fresh-seed startup/generation lane with
+   source tracing, recording world/save metadata before and after. Compare with
+   saved-world evidence; do not interpret M431/M432 `World_164` as cold
+   generation because the west edge has been persisted and source tracing was
+   off.
+4. Keep pixel/source capture out of routine timing flights while the operator
+   sees no visual defect. If dim/blank geometry returns, capture sparse samples
+   on the same established route at the M429 probes and the M431/M432 western
+   segment, then separate pixel evidence from readiness counters.
+5. Close only after the route remains visually acceptable, far-route frame
+   costs no longer show unexplained growth (or have an explicit accepted
+   budget), the fresh-world path is understood, and stop convergence has a
+   justified pass/fail criterion.
+
+The M432 raw values, source finding, and caveats are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m432---full-m335-timing-resample-with-phase-timers-2026-10-06).
