@@ -660,6 +660,9 @@ public:
   static constexpr size_t kScreenRayTraceRingCapacity = 8192;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
   static constexpr size_t kFrustumCoverageTraceRingCapacity = 256;
+  /// Preserve each sparse per-frame geometric-frustum census independently
+  /// from high-rate generic visual traces.
+  static constexpr size_t kFrustumProbeSummaryTraceRingCapacity = 1024;
   static constexpr size_t kVisualBlackAttributionTraceRingCapacity = 1024;
   static constexpr size_t kVisualRepairTraceRingCapacity = 2048;
   static constexpr size_t kMeshScheduleTraceRingCapacity = 1024;
@@ -674,6 +677,7 @@ public:
       kVisualBlackTraceRingCapacity +
       kRendererGateTraceRingCapacity +
       kFrustumCoverageTraceRingCapacity +
+      kFrustumProbeSummaryTraceRingCapacity +
       kVisualBlackAttributionTraceRingCapacity +
       kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
       kPriorityRemeshTraceRingCapacity +

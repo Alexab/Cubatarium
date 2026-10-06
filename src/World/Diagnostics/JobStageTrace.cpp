@@ -166,6 +166,14 @@ GetFrustumCoverageTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kFrustumProbeSummaryTraceRingCapacity> &
+GetFrustumProbeSummaryTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFrustumProbeSummaryTraceRingCapacity> r;
+  return r;
+}
+
 VisualBlackTraceRing<UJobStageTrace::kVisualBlackAttributionTraceRingCapacity> &
 GetVisualBlackAttributionTraceRing()
 {
@@ -493,6 +501,10 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetFirstMeshFrontierTraceRing(), record);
   }
+  else if (record.sample_kind == 15)
+  {
+    PushVisualTrace(GetFrustumProbeSummaryTraceRing(), record);
+  }
   else if (record.sample_kind == 4 || record.sample_kind == 6)
   {
     PushVisualTrace(GetMeshScheduleTraceRing(), record);
@@ -534,6 +546,7 @@ void UJobStageTrace::ForEachVisualBlackNewest(
                            ctx);
   ForEachVisualTraceNewest(GetRendererGateTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetFrustumCoverageTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetFrustumProbeSummaryTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualRepairTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);
