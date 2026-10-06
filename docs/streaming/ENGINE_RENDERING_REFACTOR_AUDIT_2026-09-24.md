@@ -4846,3 +4846,22 @@ approximately 412 MB diagnostic trace. The same captures show triangular
 shoreline/water artifacts around frame 120, a separate rendering issue from
 missing drawable meshes. M407's long pause is excluded from engine-hang
 evidence because the user confirmed system sleep/lock.
+
+The M416 v8 route join follows exact voxel-ray hits across later frames for the
+same target coordinate. For `(-173,3,2)`, 11/13 target hits had a closer GPU
+depth surface and 2/13 matched the target depth within 0.003 blocks; none had
+a farther depth surface or renderer gap. By epoch 16,500 this slice had a
+drawable satisfying mesh but still carried a priority-remesh revision debt at
+queue index 13/252 (age 41). This shows recovery from the no-drawable snapshot
+and a remaining remesh backlog, but does not establish an exposed hole.
+
+The route sampled 32,768 pixels: 287 below luma 32 and 1,815 below 96. All
+low-luma samples had an opaque, draw-ready surface and zero pending-light
+owner. Every valid light witness in those groups matched the field revision,
+with median sky light 1.0. Source IDs were dominated by `tree_leaves` (572)
+and `tree_log` (573). The sampled muted color therefore remains
+unattributed to streaming or light debt; texture and per-fragment fog are
+still candidates. M416 did not record fog factor at the opaque pixel. Extend
+the pixel trace to preserve fog parameters/factor, preview, precipitation, and
+wetness, then compare only under the unchanged M335 profile. Keep chunk mesh
+ownership work as a separate readiness track.

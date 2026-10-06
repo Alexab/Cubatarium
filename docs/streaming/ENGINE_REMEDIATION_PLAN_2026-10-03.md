@@ -2561,6 +2561,31 @@ fog/sea and faint terrain at the start and endpoint; frame 120 also shows
 large triangular shoreline/water artifacts, which should remain a separate
 renderer defect to investigate.
 
+The v8 pixel join also checks later probe frames for the same chunk coordinate.
+For `(-173,3,2)`, 13 later CPU voxel-ray samples hit the target chunk: in 11,
+GPU depth belonged to a nearer surface (by 3.1–21.7 blocks); in 2, the depth
+hit matched the target chunk and DDA distance within 0.003 blocks; none had a
+farther depth surface or a renderer gap. A `ScreenRayRepair` row at epoch
+16,500 reported that same slice drawable and mesh-satisfying (mesh revision 5,
+published geometry revision 4) with geometry debt promoted into priority
+RemeshQ at index 13/252, age 41 frames. The earlier missing drawable therefore
+resolved at least to a drawable predecessor; that observed period does not
+prove an exposed missing pixel.
+
+Photometric evidence is separate. Of 32,768 same-route pixel samples, 287
+were below luma 32 and 1,815 below 96. Every one had opaque depth and a
+draw-ready drawable surface; none had pending light. All 251/251 dark samples
+and 1,670/1,670 dim samples with a valid face-light witness had matching
+published/field light revisions; median sampled sky light was 1.0. There were
+zero voxel-ray gaps among the 280 dark-sample ray hits and 2 among 1,764 dim
+sample ray hits. The low-luma source IDs were led by `tree_leaves` (572: 229
+very dark, 1,283 dim) and `tree_log` (573: 18 very dark, 159 dim). This agrees
+with earlier M380/M381 pixel audits: most sampled dark foliage is drawn, lit
+geometry, not a missing mesh or outstanding light repair. M416 did not record
+the actual per-fragment fog factor, so texture-versus-fog attribution remains
+open; add fog state/factor, preview, precipitation, and wetness to the pixel
+trace before changing visual policy.
+
 **Next:** trace the same target coordinates through demand creation, concrete
 owner acquisition, scheduler dequeue, snapshot admission/defer, build attempt,
 completion validation, GPU apply, and owner release. Include queue age/index,

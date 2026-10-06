@@ -41,12 +41,24 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
         else None
     )
     return {
+        "frame_epoch": int(record.get("frame_epoch", 0)),
+        "camera": [
+            int(record.get("camera_x", 0)),
+            int(record.get("camera_y", 0)),
+            int(record.get("camera_z", 0)),
+        ],
         "pixel": [int(record.get("renderer_pixel_x", 0)),
                   int(record.get("renderer_pixel_y", 0))],
         "rgb": rgb,
         "luminance": round(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2], 2),
         "voxel_hit_block_id": int(record.get("renderer_pixel_voxel_hit_block_id", -1)),
         "voxel_ray_state": int(record.get("renderer_pixel_voxel_ray_state", 0)),
+        "voxel_chunk": [
+            int(record.get("renderer_pixel_voxel_chunk_x", 0)),
+            int(record.get("renderer_pixel_voxel_chunk_y", 0)),
+            int(record.get("renderer_pixel_voxel_chunk_z", 0)),
+        ],
+        "voxel_ray_gap": int(record.get("renderer_pixel_voxel_ray_gap", 0)),
         "voxel_hit_distance": voxel_distance,
         "depth_surface_valid": depth_valid,
         "depth_chunk": [
@@ -57,6 +69,21 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
         "depth_hit_distance": depth_distance if depth_valid else None,
         "depth_minus_voxel_distance": distance_delta,
         "depth_ref_flags": int(record.get("renderer_pixel_opaque_ref_flags", 0)),
+        "opaque_drawable": int(record.get("renderer_pixel_opaque_drawable", 0)),
+        "opaque_draw_ready": int(record.get("renderer_pixel_opaque_draw_ready", 0)),
+        "opaque_pending_light": int(
+            record.get("renderer_pixel_opaque_chunk_pending_light", 0)
+        ),
+        "light_sample_valid": int(
+            record.get("renderer_pixel_opaque_vertex_light_valid", 0)
+        ),
+        "sky_light": float(
+            record.get("renderer_pixel_opaque_vertex_sky_light", -1.0)
+        ),
+        "light_revisions_match": (
+            int(record.get("renderer_pixel_opaque_published_light_rev", -1))
+            == int(record.get("renderer_pixel_opaque_field_light_rev", -2))
+        ),
         "voxel_face_source_valid": int(
             record.get("renderer_pixel_voxel_face_source_valid", 0)
         ),
@@ -78,6 +105,42 @@ def pixel_frame_summary(stats: dict[str, Any]) -> dict[str, Any]:
             for coord, count in depth_chunks.most_common(12)
         ],
     }
+
+
+def summarize_pixel_render_evidence(pixel_frame_stats: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    samples = [
+        sample
+        for frame in pixel_frame_stats.values()
+        for sample in frame["samples"]
+    ]
+    summary: dict[str, Any] = {"sample_count": len(samples)}
+    for label, predicate in (
+        ("dark_luma_lt_32", lambda sample: sample["luminance"] < 32),
+        ("dim_luma_lt_96", lambda sample: sample["luminance"] < 96),
+    ):
+        group = [sample for sample in samples if predicate(sample)]
+        voxel_hits = [sample for sample in group if sample["voxel_ray_state"] == 1]
+        light_samples = [sample for sample in group if sample["light_sample_valid"]]
+        summary[label] = {
+            "sample_count": len(group),
+            "with_opaque_depth": sum(sample["depth_surface_valid"] for sample in group),
+            "with_drawable_surface": sum(sample["opaque_drawable"] for sample in group),
+            "draw_ready": sum(sample["opaque_draw_ready"] for sample in group),
+            "voxel_ray_hits": len(voxel_hits),
+            "voxel_ray_gaps": sum(sample["voxel_ray_gap"] for sample in voxel_hits),
+            "pending_light": sum(sample["opaque_pending_light"] for sample in group),
+            "valid_light_samples": len(light_samples),
+            "light_revision_matches": sum(
+                sample["light_revisions_match"] for sample in light_samples
+            ),
+            "median_sky_light": (
+                round(sorted(sample["sky_light"] for sample in light_samples)[
+                    len(light_samples) // 2
+                ], 4)
+                if light_samples else None
+            ),
+        }
+    return summary
 
 
 def screen_rect_pixel_coverage(
@@ -141,6 +204,7 @@ def main() -> int:
 
     traces: dict[str, list[dict[str, Any]]] = defaultdict(list)
     pixel_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
+    pixel_hits_by_chunk: dict[tuple[int, int, int], list[dict[str, Any]]] = defaultdict(list)
     frustum_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     peak_render_probes: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     pixel_frame_stats: dict[int, dict[str, Any]] = {}
@@ -301,13 +365,15 @@ def main() -> int:
                     stats["depth_chunks"][tuple(sample["depth_chunk"])] += 1
                 if int(record.get("renderer_pixel_voxel_ray_state", 0)) != 1:
                     continue
-                voxel_key = key_for(
-                    record.get("frame_epoch", 0),
-                    record.get("renderer_pixel_voxel_chunk_x", 0),
-                    record.get("renderer_pixel_voxel_chunk_y", 0),
-                    record.get("renderer_pixel_voxel_chunk_z", 0),
+                voxel_chunk = (
+                    int(record.get("renderer_pixel_voxel_chunk_x", 0)),
+                    int(record.get("renderer_pixel_voxel_chunk_y", 0)),
+                    int(record.get("renderer_pixel_voxel_chunk_z", 0)),
                 )
-                pixel_hits[voxel_key].append(pixel_summary(record))
+                hit = pixel_summary(record)
+                voxel_key = key_for(record.get("frame_epoch", 0), *voxel_chunk)
+                pixel_hits[voxel_key].append(hit)
+                pixel_hits_by_chunk[voxel_chunk].append(hit)
 
     joined_by_kind: dict[str, list[dict[str, Any]]] = {}
     for kind in sorted(TARGET_KINDS):
@@ -318,6 +384,26 @@ def main() -> int:
                 trace.get("cy", 0), trace.get("cz", 0),
             )
             matched = pixel_hits.get(target_key, [])
+            route_hits = pixel_hits_by_chunk.get(target_key[1:], [])
+            target_depth_route_hits = sum(
+                hit["depth_surface_valid"]
+                and hit["depth_chunk"] == list(target_key[1:])
+                and hit["depth_minus_voxel_distance"] is not None
+                and abs(hit["depth_minus_voxel_distance"]) <= 1.0
+                for hit in route_hits
+            )
+            nearer_depth_route_hits = sum(
+                hit["depth_surface_valid"]
+                and hit["depth_minus_voxel_distance"] is not None
+                and hit["depth_minus_voxel_distance"] < -1.0
+                for hit in route_hits
+            )
+            farther_depth_route_hits = sum(
+                hit["depth_surface_valid"]
+                and hit["depth_minus_voxel_distance"] is not None
+                and hit["depth_minus_voxel_distance"] > 1.0
+                for hit in route_hits
+            )
             matched_frustum = frustum_hits.get(target_key, [])
             matched_peak_render_probes = peak_render_probes.get(target_key, [])
             same_frame_pixels = pixel_frame_stats.get(target_key[0])
@@ -361,6 +447,11 @@ def main() -> int:
                 "published_geom_rev": int(trace.get("published_geom_rev", 0)),
                 "same_frame_voxel_pixel_hit_count": len(matched),
                 "pixel_hits": matched,
+                "route_voxel_pixel_hit_count": len(route_hits),
+                "route_target_depth_match_count": target_depth_route_hits,
+                "route_nearer_depth_surface_count": nearer_depth_route_hits,
+                "route_farther_depth_surface_count": farther_depth_route_hits,
+                "route_pixel_hits": route_hits,
                 "same_frame_pixel_summary": same_frame_pixel_summary,
                 "same_frame_depth_surface_samples_for_target_chunk":
                     same_frame_depth_surface_samples_for_target_chunk,
@@ -399,15 +490,19 @@ def main() -> int:
     )
 
     result = {
-        "schema": "camera_band_pixel_join.v6",
+        "schema": "camera_band_pixel_join.v8",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": (
             "exact hit joins use same frame_epoch and voxel-DDA chunk; "
             "screen coverage joins sparse pixels to same-frame projected "
-            "top-left chunk-AABB rectangles"
+            "top-left chunk-AABB rectangles; route hit summaries join exact "
+            "voxel-hit chunk coordinates across frames"
         ),
         "trace_counts": dict(kind_counts),
         "pixel_probe_frame_count": len(pixel_probe_epochs),
+        "pixel_render_evidence": summarize_pixel_render_evidence(
+            pixel_frame_stats
+        ),
         "frustum_probe_frame_count": len(frustum_probe_epochs),
         "frustum_probe_summary_frame_count": len(frustum_summaries),
         "peak_render_probe_count": sum(
@@ -456,6 +551,7 @@ def main() -> int:
             "A nearer depth surface may occlude the target chunk; compare depth and voxel-hit distances and chunk coordinates.",
             "The pixel probes are sparse and only unmatched sampled rays are inconclusive.",
             "Projected chunk-AABB rectangles are conservative bounds, not exact opaque surface coverage; pixel coordinates assume a viewport origin of (0, 0).",
+            "Cross-frame voxel-hit joins are follow-up evidence for the same resident chunk coordinate, not a match to the earlier target snapshot; a closer depth surface can occlude that voxel.",
             "A frustum summary with zero candidates means the census ran but found no intersecting resident solid chunk; compare its depth-surface samples before interpreting the scene as empty.",
         ],
     }

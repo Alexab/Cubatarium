@@ -720,3 +720,18 @@ Artifacts: [run report](../../bin/suite_reports/engine_refactor/m416_world164_m3
 [pixel/rectangle join](../../bin/suite_reports/engine_refactor/m416_camera_band_pixel_join_20261006.json),
 raw perf `bin/logs/perf_20261006-065527_31132.jsonl`, and captures in
 `bin/logs/m416_world164_m335_peak_screen_coverage/`.
+
+The v8 join also follows the exact target chunk across later frames. For
+`(-173,3,2)`, 13 later voxel-ray hits had either a nearer opaque depth surface
+(11) or a same-chunk depth hit matching within 0.003 blocks (2); none showed
+a farther surface or ray gap. By epoch 16,500 the slice was drawable and
+mesh-satisfying, though geometry revision 5 was still ahead of published
+revision 4 and its priority remesh entry was at index 13/252 with age 41.
+
+Across all 32,768 sparse pixel samples, 287 were below luma 32 and 1,815 below
+96. Every one had opaque depth and a draw-ready drawable; none reported
+pending light. All valid light witnesses for these dark/dim pixels had current
+published light revisions and median sky light 1.0. The low-luma sources were
+mostly `tree_leaves` (572) and `tree_log` (573). This does not explain the
+reported muted patches; future probes should record the fragment fog factor,
+light-preview flag, precipitation, and wetness before interpreting the color.
