@@ -1487,3 +1487,76 @@ raw perf `bin/logs/perf_20261007-001129_3520.jsonl`, INFO trace
 and EnterLit traces `bin/logs/enter_lit_20261007-001132.jsonl` and
 `bin/logs/enter_lit_20261007-001206.jsonl`. The wrapper restored the new
 world's original `world_data.json` bytes and `users.json` after the run.
+
+## M436 - same-seed disk-backed replay (2026-10-07)
+
+M436 repeated the M435 600-second visible, no-teleport route on
+`World_M435_Cold_20261007` after M435 had written its generated columns.
+World seed, start `[120,56,56]`, eye Y `70`, yaw `180`, pitch `-30`,
+speed scale `1`, and stop settings were unchanged. The executable was still
+the Release binary with SHA-256
+`66c712da62ffeec9cad98e60301a52461c49cf7cde4fc635164e6ad7c2b7654f`.
+Column-source trace remained enabled; pixel, visual-black, and framebuffer
+capture remained disabled.
+
+The app exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`). It recorded 316 periods (314 steady), median speed
+`5.19653 blocks/s`, focus `7 -> -185`, 3,072 blocks, stable player Y, zero
+blocked movement substeps, and zero ground contacts. Wall median was
+`24.31 ms`, effective flying FPS `41.50`, and there were six spikes (maximum
+wall sample `434.34 ms`). The analyzer still returned `pass=false` for
+product/readiness gates; post-stop convergence and dual-lane/eye-proxy/A24
+readiness did not pass. The route intentionally does not satisfy the
+8,192-block far-flight checkpoint.
+
+The first M436 EnterLit session recorded first-presentable at `134 ms`;
+M435's first cold-generation session recorded it at `28.9 s`. This is a
+within-session diagnostic timing, not launch-to-first-frame time, but it is
+consistent with saved columns making startup presentable sooner.
+
+This was a disk-backed route, as proven by the source trace: 1,733 disk
+coordinates were queued and all 1,733 completed, with zero unmatched disk
+requests. The route also encountered 143 coordinates without saved data;
+all 143 became procedural commits. The M435 save report had 1,771 queued
+columns, so M436 reloaded 1,733 of those; 38 persisted columns were not
+requested on the repeated path. The 43 M435 `discard_incomplete` coordinates
+were not among M436's 143 procedural misses.
+
+| Disk-column metric | Median | p95 | Maximum |
+|---|---:|---:|---:|
+| End-to-end column load | `172.87 ms` | `8,983.28 ms` | `9,395.70 ms` |
+| Worker-queue wait (sum across slices) | `9.55 ms` | `2,124.21 ms` | `31,464.21 ms` |
+| Physical file read | `0.96 ms` | `1.23 ms` | `3.92 ms` |
+| Completed-result wait (sum across slices) | `610.18 ms` | `23,376.02 ms` | `44,635.55 ms` |
+| Deserialize plus apply | `6.18 ms` | `9.84 ms` | `29.63 ms` |
+
+Disk discovery was `0.016/0.032 ms` median/p95. The actual file reads are
+fast; long tails occur in worker queueing and after results become available.
+The source trace reported four I/O workers. Its result-wait field sums
+vertical slices for each column, so it is not one slice's latency. There were
+1,733 queued and 1,733 completed disk coordinates and no unmatched requests
+at shutdown.
+
+On the same 3,072-block path, M435 fresh generation had wall median
+`28.94 ms`, visible-black focus median `5`, and blink rate `0.103`.
+M436's disk-backed pass had `24.31 ms`, median visible-black focus `0`,
+and blink rate `0.019`. M436's maximum visible-black focus was `30`, but
+black-sticky, no-ticket, and stalled maxima were zero. This is consistent with
+the saved corridor behaving better than first-time generation, but both runs
+lack framebuffer evidence and therefore cannot prove the visible appearance
+or establish causation.
+
+The manifest says `cold_warm_mode=cold` and `warm_protocol=null` because
+this invocation did not claim the runner's explicit warm protocol. That field
+does not mean there were no files: M436 source events prove persisted
+`.cchunk` data was loaded. It also makes no claim about the OS page cache.
+Use source outcomes, not this protocol label, to distinguish disk from
+procedural data in this pair.
+
+Artifacts: [M436 flight report](../../bin/suite_reports/engine_refactor/m436_world_m435_disk_replay_20261007.json),
+[source report](../../bin/suite_reports/engine_refactor/m436_world_column_source_trace_20261007.json),
+raw perf `bin/logs/perf_20261007-002815_27528.jsonl`, INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-002811.27528`,
+and EnterLit traces `bin/logs/enter_lit_20261007-002829.jsonl` and
+`bin/logs/enter_lit_20261007-002832.jsonl`. The wrapper restored
+`World_M435_Cold_20261007` metadata and user state after the run.

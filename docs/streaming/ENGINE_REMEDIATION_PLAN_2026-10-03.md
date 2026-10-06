@@ -3285,3 +3285,71 @@ a 3,072-block fresh-world lane, not the full 14,000-block World_164 route.
 
 M435 startup, route, and source-trace results are documented in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m435---cold-seed-generation-and-startup-trace-2026-10-07).
+
+### M436 checkpoint — persisted-column path verified; async queue tails dominate
+
+M436 replayed the same 600-second M335 route on the world created by M435.
+Source tracing confirms that this was a disk-backed route regardless of the
+manifest's `cold_warm_mode=cold` label: the runner had no explicit warm-protocol
+stamp, while the source trace recorded 1,733 disk-column queue/completion
+pairs, all terminal, plus 143 new procedural misses/commits. There were zero
+disk requests left unmatched at the end. The route loaded the persisted
+portion and generated only columns outside the previously saved corridor.
+
+On the matched 3,072-block path, wall median improved from 28.94 ms on M435's
+fresh-generation pass to 24.31 ms on M436's disk-backed replay. The internal
+visible-black focus median fell from 5 to 0 and blink rate from 10.3% to 1.9%;
+neither run sampled framebuffer pixels. This is consistent with persisted
+columns improving the observed route, but it does not prove that disk loading
+caused the previous dim appearance. The route did not reach the far-flight
+8,192-block checkpoint.
+
+Disk discovery and physical file reading were fast: discovery median/p95 was
+0.016/0.032 ms and file read was 0.955/1.233 ms. The complete disk-column load
+latency was 173 ms median / 8.98 s p95. Worker-queue wait was 9.55 ms median /
+2.12 s p95 (31.46 s max); result wait accumulated across vertical slices was
+610 ms median / 23.38 s p95 (44.64 s max). Deserialization and apply together
+were 6.18 ms median / 9.84 ms p95. All four I/O workers were active in the
+trace. This shifts the main hypothesis from slow storage reads to queueing and
+main-thread result service. M429 had already found a four-result per-tick
+drain and small time budget; M436 reinforces measuring that service path
+before changing worker count or I/O policy.
+
+The manifest's `cold_warm_mode` is an explicit warm-protocol stamp, not a
+reliable statement that chunk files existed or were loaded. M436 is
+source-proven disk-backed despite that field saying cold. Continue to classify
+storage origin from source outcomes and do not use this stamp as an OS-cache
+claim.
+
+M436 process and route controls passed, but analyzer `pass=false` remains:
+post-stop convergence, dual-lane unlit, eye-proxy, and A24 safety gates failed.
+The route was collision-free at the expected speed. Internal black-focus
+median was zero (maximum 30) and black-stalled/no-ticket maxima were zero;
+these counters are not framebuffer evidence. Current operator feedback stays
+positive.
+
+#### Current remaining work after M436
+
+1. Add low-overhead timers inside `TickAsyncChunkIo()` and the completed
+   column-load/mesh-result drain, separating queue wait from time waiting for
+   main-thread consumption, result sorting/dequeue, deserialize/apply,
+   finalize/relight, and per-tick drain-budget exhaustion. Preserve the
+   current policy and budgets for this diagnostic build.
+2. Add the corresponding small breakdown for
+   `TickAsyncChunkSystems()` post-scheduler work. Release-build and run the
+   unchanged full M335 World_164 route so the same four distance bands remain
+   comparable. Attribute source worker queue and result-wait samples to
+   visible coordinates where possible.
+3. Use M435/M436 as a cold-generation versus persisted-data pair; then run the
+   full 2,800-second M335 route on this same seed after the measured queue
+   work is addressed. Its first saved 3,072-block segment and later procedural
+   frontier can test the disk-to-generation transition on one world.
+4. Make one data-supported queue/service-policy change, preserving stale
+   drawable geometry and the EnterLit/post-stop safety guards. Validate it on
+   World_164 and a fresh seed before broad acceptance.
+5. Keep per-pixel evidence conditional on visual symptoms; continue to keep
+   user appearance, pixel probes, readiness debt, and route adequacy as
+   distinct evidence.
+
+M436 route and source measurements are documented in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m436---same-seed-disk-backed-replay-2026-10-07).
