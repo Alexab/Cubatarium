@@ -66,6 +66,9 @@ struct Session
   double AccumStreamMs{0.0};
   double AccumMeshEmergeMs{0.0};
   double AccumWorldStreamingPhaseMs{0.0};
+  double AccumAsyncChunkSystemsMs{0.0};
+  double AccumAsyncChunkIoDrainMs{0.0};
+  double AccumAsyncIoMs{0.0};
   double AccumSceneMs{0.0};
   double AccumPhysMs{0.0};
   double AccumPrepRefreshPressureMs{0.0};
@@ -3083,6 +3086,9 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumStreamMs += n.stream_ms;
   s.AccumMeshEmergeMs += n.mesh_emerge_ms;
   s.AccumWorldStreamingPhaseMs += n.world_streaming_phase_ms;
+  s.AccumAsyncChunkSystemsMs += n.async_chunk_systems_ms;
+  s.AccumAsyncChunkIoDrainMs += n.async_chunk_io_drain_ms;
+  s.AccumAsyncIoMs += n.async_io_ms;
   s.AccumSceneMs += n.scene_ms;
   s.AccumPhysMs += n.phys_ms;
   s.AccumPerfCollectMs += n.perf_collect_ms;
@@ -3179,6 +3185,9 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.stream_ms = s.AccumStreamMs * inv;
   avg.mesh_emerge_ms = s.AccumMeshEmergeMs * inv;
   avg.world_streaming_phase_ms = s.AccumWorldStreamingPhaseMs * inv;
+  avg.async_chunk_systems_ms = s.AccumAsyncChunkSystemsMs * inv;
+  avg.async_chunk_io_drain_ms = s.AccumAsyncChunkIoDrainMs * inv;
+  avg.async_io_ms = s.AccumAsyncIoMs * inv;
   avg.scene_ms = s.AccumSceneMs * inv;
   avg.phys_ms = s.AccumPhysMs * inv;
   avg.perf_collect_ms = s.AccumPerfCollectMs * inv;
@@ -3271,6 +3280,9 @@ void ResetAccum(Session &s)
   s.AccumStreamMs = 0.0;
   s.AccumMeshEmergeMs = 0.0;
   s.AccumWorldStreamingPhaseMs = 0.0;
+  s.AccumAsyncChunkSystemsMs = 0.0;
+  s.AccumAsyncChunkIoDrainMs = 0.0;
+  s.AccumAsyncIoMs = 0.0;
   s.AccumSceneMs = 0.0;
   s.AccumPhysMs = 0.0;
   s.AccumPerfCollectMs = 0.0;

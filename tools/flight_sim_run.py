@@ -1837,7 +1837,7 @@ def main() -> int:
                 float(args.seconds) + 300.0,
             )
         # Focus (7,3) ≈ world (120, y, 56); pin eye Y to manual 122212/100645 (~56).
-        users = BIN / "worlds" / "World_164" / "users.json"
+        users = BIN / "worlds" / args.world / "users.json"
         args._product174657_users_restore = None  # type: ignore[attr-defined]
         args._product174657_users_sha256_before = None  # type: ignore[attr-defined]
         if users.is_file():
@@ -1860,7 +1860,7 @@ def main() -> int:
                     pinned_users,
                 )
                 print(
-                    f"INFO: {args.scenario} pinned World_164 locus to "
+                    f"INFO: {args.scenario} pinned {args.world} locus to "
                     f"{start_position} yaw180",
                     flush=True,
                 )
@@ -1934,7 +1934,11 @@ def main() -> int:
         args.replay_manual = True
 
     if args.replay_manual:
-        args.world = "World_164"
+        # The historical replay profile defaults to World_164 through argparse,
+        # but product diagnostics may explicitly select an isolated world.
+        # Preserve that selection so cold-world runs cannot silently use the
+        # warm baseline's users, chunks, and persistence cache.
+        args.world = args.world or "World_164"
         args.fly_stop = True
         args.resume = True
         # Resume save focus (manual 190126 / 192816 ~-484) — do NOT teleport to (-47,5).
@@ -3222,7 +3226,7 @@ def main() -> int:
             # restored after the app has exited.
             users_path.write_bytes(original_users)
             print(
-                "INFO: product-174657 restored World_164 users.json after run",
+                f"INFO: product-174657 restored {args.world} users.json after run",
                 flush=True,
             )
         except OSError as exc:
