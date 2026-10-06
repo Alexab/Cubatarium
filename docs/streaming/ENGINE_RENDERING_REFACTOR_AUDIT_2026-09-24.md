@@ -5321,3 +5321,44 @@ convergence/readiness signals, and uncharacterized fresh-world creation/load.
 The stable flight speed and collision counters mean route behavior no longer
 blocks streaming analysis. See the [M432 plan update](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m432-readiness-checkpoint---route-controlled-far-hot-path-census-identified)
 and [M432 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m432---full-m335-timing-resample-with-phase-timers-2026-10-06).
+
+### M433 - validate duplicate-census removal and revise remaining work (2026-10-06)
+
+M433 used the same visible, no-teleport full M335 route on `World_164`, with
+Release source `5b6cce71`; optional traces/captures were off. The app exited 0,
+the route passed adequacy at median `5.19653 blocks/s`, and blocked movement
+and ground contacts remained zero. Product gates still returned false, which
+is distinct from route/process success. M433 reached focus X `-882` / 14,224
+blocks; its total distance differs from M432 despite the same settings, so
+focus bands are the controlled comparison.
+
+| Band | M432 wall median | M433 wall median | Change | M433 async post median | M433 census median |
+|---|---:|---:|---:|---:|---:|
+| Near `x >= -200` | `37.06 ms` | `34.31 ms` | `-7%` | `10.35 ms` | `1.89 ms` |
+| Mid `-600 < x < -200` | `53.65 ms` | `46.51 ms` | `-13%` | `16.14 ms` | `9.31 ms` |
+| Far east `-740 < x <= -600` | `64.84 ms` | `55.50 ms` | `-14%` | `19.21 ms` | `15.95 ms` |
+| Far west `x <= -740` | `72.83 ms` | `61.05 ms` | `-16%` | `21.32 ms` | `19.48 ms` |
+
+The reduction is consistent with removing the first of two same-frame census
+passes: far-west async post-scheduler fell about `9.5 ms` while async I/O drain
+remained approximately `10.4 ms`. Overall wall median fell `55.47 -> 47.63 ms`
+and analyzer spike count `663 -> 87`. Movement speed, camera, world, and
+optional instrumentation were controlled; the route covered farther west in
+M433, not less.
+
+The retained census explains essentially all of `mesh_emerge_post_telemetry`
+in M433: both medians were about `19.5 ms` in far west. Since its count outputs
+are telemetry/test inputs rather than production policy, every-frame O(N)
+sampling has no behavior requirement. Keep the two stateful demand-maintenance
+passes every frame, but sample the full census every 250 ms and report count
+and freshness. The remaining async post-scheduler median (`21.32 ms` far west)
+is still significant and should be split further only after the census change
+is measured.
+
+Appearance is operator-positive; M433 had no direct pixel capture. Internal
+`visible_black_focus_n` median remained 0, `unfinished_visual` median 27, and
+post-stop convergence still failed. Continue to treat those signals
+separately. The cold-world path also remains open because M433 did not enable
+source tracing. Plan status is **ready for another bounded perf change, not
+ready for closure**; see the [M433 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m433-readiness-checkpoint---duplicate-removed-one-per-frame-census-remains-costly)
+and [M433 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m433---remove-duplicate-census-and-measure-remaining-cost-2026-10-06).

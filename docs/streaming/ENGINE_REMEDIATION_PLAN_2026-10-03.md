@@ -3088,3 +3088,51 @@ flight analyzer's `holes_rate=1` remains a readiness proxy based on
 
 The M432 raw values, source finding, and caveats are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m432---full-m335-timing-resample-with-phase-timers-2026-10-06).
+
+### M433 readiness checkpoint - duplicate removed; one-per-frame census remains costly
+
+M433 repeated the same visible M335 profile after commit `5b6cce71`. Process
+and route succeeded at the expected median speed with no blocked movement or
+ground contacts. Across matched distance bands, wall medians improved by
+`7/13/14/16%` from near through far west; the far-west wall median fell from
+`72.83` to `61.05 ms`. Async post-scheduler fell from `30.85` to `21.32 ms`
+without a corresponding I/O-drain reduction. This supports the duplicate
+census removal as a real, useful perf fix.
+
+The new timer shows that the remaining single census consumes `19.48 ms`
+median in far west, almost exactly the complete mesh post-telemetry phase. The
+sample is diagnostic-only for production behavior and scans growing column and
+demand state. Preserve both demand-store maintenance calls every frame, but
+reduce the full census to a 250 ms time cadence and expose sample count/age.
+Async post-scheduler still has roughly `21 ms` far-west median after the
+duplicate was removed, so a separate async-policy breakdown remains an open
+follow-up if it stays material after the census cadence change.
+
+Readiness remains **ready for another bounded perf step; not ready to close**.
+The route and movement confounders are controlled; the operator's visual
+assessment is positive; and frame cost is measurably better. Remaining work is
+the single-sample hot path, residual async-phase work, failed post-stop
+convergence, and a fresh-world source-traced startup/generation lane. M433 did
+not capture pixels, and `holes_rate=1` still means `unfinished_visual` debt.
+
+#### Next work
+
+1. Rate-limit only the diagnostic column/job/demand census to one sample per
+   250 ms. Keep the existing two bounded demand reconciliation/orphan-cancel
+   calls every frame. Log sample count and snapshot age; do not change streaming
+   or mesh budgets.
+2. Build **Release only**, commit before running, and repeat full M335 on
+   `World_164`. Compare the same four distance bands, speed/collision control,
+   census amortized and per-sample cost, async post-scheduler, and stop-tail
+   readiness against M433.
+3. If far-route cost remains high, add targeted subphase timing to the
+   non-census work inside `TickAsyncChunkSystems()` before changing its policy.
+4. Run a separate fresh-seed 600-second lane with column-source tracing and
+   metadata/store-state checks; do not treat persisted `World_164` as cold
+   generation evidence.
+5. Keep dense pixel/source capture disabled while appearance remains positive;
+   if a dim/blank symptom returns, probe the established route at the M429
+   locations and the western edge.
+
+M433 evidence is documented in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m433---remove-duplicate-census-and-measure-remaining-cost-2026-10-06).

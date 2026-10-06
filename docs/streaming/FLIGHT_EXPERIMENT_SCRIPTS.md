@@ -1306,3 +1306,59 @@ The manifest records source `cc94e562`, the executable hash above, clean source,
 Release, no teleport, and disabled optional traces/captures. The runner restored
 `world_data.json` byte-for-byte. Keep these ignored artifacts and this tracked
 record together.
+
+## M433 - remove duplicate census and measure remaining cost (2026-10-06)
+
+M433 repeated the same visible, no-teleport 2,800-second M335 setup on
+`World_164`, now using source commit `5b6cce71` and a Release executable with
+SHA-256 `8332dd59d09d8cd7f27633f196bcb83cf365f24e343c6cc38d1d1ac8b90325ad`.
+Route settings were unchanged: start `[120,56,56]`, eye Y `70`, yaw `180`,
+pitch `-30`, speed scale `1`, daylight preset, 20-second stop, no teleport.
+Optional visual/source traces and captures remained disabled.
+
+The app exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`). The route analyzer still returned `pass=false` because
+product/readiness gates did not converge. It recorded 1,400 periods (1,398
+steady), median speed `5.19653 blocks/s`, focus X `7 -> -882`, 14,224 blocks,
+zero blocked movement substeps, and zero ground contacts. Total traveled
+distance varied from M432 despite identical settings, so the comparison below
+uses focus-distance bands rather than total blocks.
+
+| Focus band | Periods | Frame wall median / p95 | World-streaming median / p95 | Async systems median | Async post-scheduler median | I/O drain median | Mesh emerge median | Census sample median |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Near `x >= -200` | 322 | `34.31 / 42.90 ms` | `23.26 / 33.70 ms` | `11.86 ms` | `10.35 ms` | `8.38 ms` | `8.22 ms` | `1.89 ms` |
+| Mid `-600 < x < -200` | 618 | `46.51 / 61.85 ms` | `39.17 / 53.15 ms` | `18.38 ms` | `16.14 ms` | `10.31 ms` | `16.76 ms` | `9.31 ms` |
+| Far east `-740 < x <= -600` | 220 | `55.50 / 72.38 ms` | `49.56 / 65.08 ms` | `21.80 ms` | `19.21 ms` | `10.41 ms` | `23.96 ms` | `15.95 ms` |
+| Far west `x <= -740` | 224 | `61.05 / 73.32 ms` | `54.72 / 66.59 ms` | `23.76 ms` | `21.32 ms` | `10.54 ms` | `27.29 ms` | `19.48 ms` |
+
+Against M432's matching bands, frame-wall medians improved by about
+`2.75/7.14/9.34/11.78 ms` near through far west (approximately
+`7/13/14/16%`). In far west, async post-scheduler fell from `30.85` to
+`21.32 ms`, while I/O drain was effectively unchanged (`10.40 -> 10.54 ms`).
+Full-route wall median fell from `55.466` to `47.634 ms`, effective flying FPS
+rose from `18.04` to `21.01`, and analyzer spike count fell from `663` to `87`.
+The repeat therefore confirms a material improvement from removing the
+duplicate full census while retaining both demand-maintenance passes.
+
+The new `column_emerge_stage_sample_ms` field confirms the remaining mesh cost:
+its median is `19.48 ms` in far west and nearly equals the enclosing
+`mesh_emerge_post_telemetry_ms` (`19.49 ms`). It grows with the active column
+map and explains nearly the entire post-telemetry subphase. Because sampled
+counts are read by telemetry/tests rather than production policy, running this
+full O(N) census every frame is unnecessary. The next bounded step is a
+time-based 250 ms census cadence, while keeping both bounded reconciliation
+and orphan-cancel calls at their existing every-frame cadence. Log sample count
+and age so the cached snapshot's freshness remains visible.
+
+The current visual assessment remains positive. M433 had no screenshots or
+pixel probes; its internal `visible_black_focus_n` median was 0 / max 18 and
+`unfinished_visual` median 27. The analyzer still uses `unfinished_visual` for
+`holes_rate`, and post-stop convergence remained false. No fresh-world source
+trace was enabled; the cold-generation lane remains separate.
+
+Artifacts: [M433 report](../../bin/suite_reports/engine_refactor/m433_world164_m335_census_cleanup_20261006.json),
+raw perf `bin/logs/perf_20261006-221915_29780.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-221911.29780`.
+The manifest records source `5b6cce71`, the hash above, clean source, Release,
+the same route settings, and disabled optional traces/captures. The runner
+restored `world_data.json` byte-for-byte.
