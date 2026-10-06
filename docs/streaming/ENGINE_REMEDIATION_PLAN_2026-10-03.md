@@ -3330,26 +3330,38 @@ positive.
 
 #### Current remaining work after M436
 
-1. Add low-overhead timers inside `TickAsyncChunkIo()` and the completed
-   column-load/mesh-result drain, separating queue wait from time waiting for
-   main-thread consumption, result sorting/dequeue, deserialize/apply,
-   finalize/relight, and per-tick drain-budget exhaustion. Preserve the
-   current policy and budgets for this diagnostic build.
-2. Add the corresponding small breakdown for
-   `TickAsyncChunkSystems()` post-scheduler work. Release-build and run the
-   unchanged full M335 World_164 route so the same four distance bands remain
-   comparable. Attribute source worker queue and result-wait samples to
-   visible coordinates where possible.
-3. Use M435/M436 as a cold-generation versus persisted-data pair; then run the
-   full 2,800-second M335 route on this same seed after the measured queue
-   work is addressed. Its first saved 3,072-block segment and later procedural
-   frontier can test the disk-to-generation transition on one world.
+1. **Implemented for M437's diagnostic Release build:** `TickAsyncChunkIo()`
+   now emits low-overhead timings for cancellation pruning, queue selection,
+   completed-result processing, block/chunk mutation, column finalization,
+   requeue, save drain, and light-flag persistence. It also records ready and
+   selected counts, processed/requeued slices, and whether the apply time
+   budget was hit. Block mutation and finalization are nested inside the
+   result-processing duration. The queue policy, batch size, ordering, and
+   budgets are unchanged. The completed mesh-result path and the rest of
+   `TickAsyncChunkSystems()` are not yet split into subphases.
+2. Release-build and run the unchanged full M335 World_164 route with these
+   counters. Compare the same four distance bands, and check whether I/O result
+   service explains the broad post-scheduler cost. If not, instrument the
+   remaining post-scheduler stages before changing policy.
+3. Use M435/M436 as a fresh-generation versus persisted-data pair; then run the
+   full 2,800-second M335 route on this same seed after the queue/service work
+   is understood. Its saved 3,072-block segment and later procedural frontier
+   can test the disk-to-generation transition on one world.
 4. Make one data-supported queue/service-policy change, preserving stale
    drawable geometry and the EnterLit/post-stop safety guards. Validate it on
    World_164 and a fresh seed before broad acceptance.
 5. Keep per-pixel evidence conditional on visual symptoms; continue to keep
    user appearance, pixel probes, readiness debt, and route adequacy as
    distinct evidence.
+
+**Plan readiness:** ready for the next diagnostic run, not for closure or broad
+acceptance. The operator reports that the current appearance looks acceptable,
+and M436's measured route was stable at the established speed with zero blocked
+substeps and ground contacts. M436 covered only 3,072 blocks and still failed
+post-stop/readiness analyzer gates; it did not verify the far checkpoint. The
+reported water fall is not represented by M436's movement counters, so it
+must be treated as a separate interactive-flight observation unless a matching
+flight report identifies it.
 
 M436 route and source measurements are documented in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m436---same-seed-disk-backed-replay-2026-10-07).

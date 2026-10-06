@@ -329,6 +329,22 @@ struct FrameNumbers
   double async_chunk_scheduler_tick_ms{0.0};
   double async_chunk_post_scheduler_ms{0.0};
   double async_chunk_io_drain_ms{0.0};
+  double async_chunk_io_discard_cancelled_ms{0.0};
+  double async_chunk_io_result_selection_ms{0.0};
+  double async_chunk_io_result_processing_ms{0.0};
+  double async_chunk_io_world_apply_ms{0.0};
+  double async_chunk_io_column_finalize_ms{0.0};
+  double async_chunk_io_result_requeue_ms{0.0};
+  double async_chunk_io_save_drain_ms{0.0};
+  double async_chunk_io_light_flags_save_ms{0.0};
+  int async_chunk_io_cancelled_discard_n{0};
+  int async_chunk_io_ready_loads_before_n{0};
+  int async_chunk_io_selected_loads_n{0};
+  int async_chunk_io_processed_loads_n{0};
+  int async_chunk_io_requeued_loads_n{0};
+  int async_chunk_io_applied_slices_n{0};
+  int async_chunk_io_saves_processed_n{0};
+  int async_chunk_io_apply_time_budget_hit{0};
   double async_io_ms{0.0};
   double relight_drain_ms{0.0};
   double relight_capture_ms{0.0};
@@ -1162,6 +1178,28 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.async_chunk_scheduler_tick_ms = phys.AsyncChunkSchedulerTickMs;
   n.async_chunk_post_scheduler_ms = phys.AsyncChunkPostSchedulerMs;
   n.async_chunk_io_drain_ms = phys.AsyncChunkIoDrainMs;
+  n.async_chunk_io_discard_cancelled_ms =
+      phys.AsyncChunkIoDiscardCancelledMs;
+  n.async_chunk_io_result_selection_ms =
+      phys.AsyncChunkIoResultSelectionMs;
+  n.async_chunk_io_result_processing_ms =
+      phys.AsyncChunkIoResultProcessingMs;
+  n.async_chunk_io_world_apply_ms = phys.AsyncChunkIoWorldApplyMs;
+  n.async_chunk_io_column_finalize_ms = phys.AsyncChunkIoColumnFinalizeMs;
+  n.async_chunk_io_result_requeue_ms = phys.AsyncChunkIoResultRequeueMs;
+  n.async_chunk_io_save_drain_ms = phys.AsyncChunkIoSaveDrainMs;
+  n.async_chunk_io_light_flags_save_ms = phys.AsyncChunkIoLightFlagsSaveMs;
+  n.async_chunk_io_cancelled_discard_n =
+      phys.AsyncChunkIoCancelledDiscardN;
+  n.async_chunk_io_ready_loads_before_n =
+      phys.AsyncChunkIoReadyLoadsBeforeN;
+  n.async_chunk_io_selected_loads_n = phys.AsyncChunkIoSelectedLoadsN;
+  n.async_chunk_io_processed_loads_n = phys.AsyncChunkIoProcessedLoadsN;
+  n.async_chunk_io_requeued_loads_n = phys.AsyncChunkIoRequeuedLoadsN;
+  n.async_chunk_io_applied_slices_n = phys.AsyncChunkIoAppliedSlicesN;
+  n.async_chunk_io_saves_processed_n = phys.AsyncChunkIoSavesProcessedN;
+  n.async_chunk_io_apply_time_budget_hit =
+      phys.AsyncChunkIoApplyTimeBudgetHit;
   n.async_io_ms = phys.AsyncIoMs;
   n.relight_drain_ms = phys.RelightDrainMs;
   n.relight_capture_ms = phys.RelightCaptureMs;
@@ -2072,6 +2110,38 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"async_chunk_post_scheduler_ms\":"
           << n.async_chunk_post_scheduler_ms
           << ",\"async_chunk_io_drain_ms\":" << n.async_chunk_io_drain_ms
+          << ",\"async_chunk_io_discard_cancelled_ms\":"
+          << n.async_chunk_io_discard_cancelled_ms
+          << ",\"async_chunk_io_result_selection_ms\":"
+          << n.async_chunk_io_result_selection_ms
+          << ",\"async_chunk_io_result_processing_ms\":"
+          << n.async_chunk_io_result_processing_ms
+          << ",\"async_chunk_io_world_apply_ms\":"
+          << n.async_chunk_io_world_apply_ms
+          << ",\"async_chunk_io_column_finalize_ms\":"
+          << n.async_chunk_io_column_finalize_ms
+          << ",\"async_chunk_io_result_requeue_ms\":"
+          << n.async_chunk_io_result_requeue_ms
+          << ",\"async_chunk_io_save_drain_ms\":"
+          << n.async_chunk_io_save_drain_ms
+          << ",\"async_chunk_io_light_flags_save_ms\":"
+          << n.async_chunk_io_light_flags_save_ms
+          << ",\"async_chunk_io_cancelled_discard_n\":"
+          << n.async_chunk_io_cancelled_discard_n
+          << ",\"async_chunk_io_ready_loads_before_n\":"
+          << n.async_chunk_io_ready_loads_before_n
+          << ",\"async_chunk_io_selected_loads_n\":"
+          << n.async_chunk_io_selected_loads_n
+          << ",\"async_chunk_io_processed_loads_n\":"
+          << n.async_chunk_io_processed_loads_n
+          << ",\"async_chunk_io_requeued_loads_n\":"
+          << n.async_chunk_io_requeued_loads_n
+          << ",\"async_chunk_io_applied_slices_n\":"
+          << n.async_chunk_io_applied_slices_n
+          << ",\"async_chunk_io_saves_processed_n\":"
+          << n.async_chunk_io_saves_processed_n
+          << ",\"async_chunk_io_apply_time_budget_hit\":"
+          << n.async_chunk_io_apply_time_budget_hit
           << ",\"async_io_ms\":" << n.async_io_ms
           << ",\"relight_drain_ms\":" << n.relight_drain_ms
           << ",\"relight_capture_ms\":" << n.relight_capture_ms

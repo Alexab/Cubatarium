@@ -31,6 +31,27 @@ class UBlockRegistry;
 class UBlockWorld;
 class UWorld;
 
+struct AsyncChunkIoTickMetrics
+{
+  double discard_cancelled_ms{0.0};
+  double result_selection_ms{0.0};
+  double result_processing_ms{0.0};
+  // Nested in result_processing_ms; measures only block-buffer/chunk mutation.
+  double world_apply_ms{0.0};
+  double column_finalize_ms{0.0};
+  double result_requeue_ms{0.0};
+  double save_drain_ms{0.0};
+  double light_flags_save_ms{0.0};
+  std::size_t cancelled_discard_n{0};
+  std::size_t ready_loads_before_n{0};
+  std::size_t selected_loads_n{0};
+  std::size_t processed_loads_n{0};
+  std::size_t requeued_loads_n{0};
+  std::size_t applied_slices_n{0};
+  std::size_t saves_processed_n{0};
+  bool apply_time_budget_hit{false};
+};
+
 class UWorldPersistence
 {
 public:
@@ -84,8 +105,9 @@ public:
   void LoadWorldData(UWorld &world, const std::string &file_name);
   void SaveWorldData(UWorld &world, const std::string &file_name);
 
-  void TickAsyncChunkIo(UWorld &world, std::size_t max_slice_applies = 0,
-                        double max_apply_ms = 0.0);
+  AsyncChunkIoTickMetrics
+  TickAsyncChunkIo(UWorld &world, std::size_t max_slice_applies = 0,
+                   double max_apply_ms = 0.0);
   void FlushAsyncChunkIo(UWorld &world);
   bool TickDrainAsyncChunkIo(UWorld &world, int max_iterations);
   bool IsAsyncChunkIoQuiescent() const;

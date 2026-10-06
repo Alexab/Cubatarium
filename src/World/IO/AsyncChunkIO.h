@@ -80,9 +80,11 @@ public:
   }
   template <typename KeyFn>
   std::vector<AsyncChunkLoadResult>
-  DrainLoadsBestByKeyUpTo(std::size_t max_count, KeyFn &&key_fn)
+  DrainLoadsBestByKeyUpTo(std::size_t max_count, KeyFn &&key_fn,
+                          std::size_t *available_count = nullptr)
   {
-    return CompletedLoads.DrainBestByKeyUpTo(max_count, key_fn);
+    return CompletedLoads.DrainBestByKeyUpTo(max_count, key_fn,
+                                             available_count);
   }
   std::vector<AsyncChunkSaveRequest> DrainSaves();
   void WaitIdle();

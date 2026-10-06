@@ -3351,22 +3351,50 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const bool near_stream_budget_exhausted = near_exhausted();
   {
     const auto io_t0 = std::chrono::high_resolution_clock::now();
+    AsyncChunkIoTickMetrics io_metrics;
     if (near_stream_budget_exhausted)
     {
       // Keep completed disk results moving while near generation/mesh work is
       // over budget. One result slice is a bounded fallback; the time target
       // is checked between slices, so a single costly apply can exceed it.
-      world.Persistence->TickAsyncChunkIo(
+      io_metrics = world.Persistence->TickAsyncChunkIo(
           world, /*max_slice_applies_override=*/1, /*max_apply_ms=*/2.5);
     }
     else
     {
-      world.Persistence->TickAsyncChunkIo(world);
+      io_metrics = world.Persistence->TickAsyncChunkIo(world);
     }
     world.PhysicsTelemetryData.AsyncChunkIoDrainMs +=
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - io_t0)
             .count();
+    auto &io_telem = world.PhysicsTelemetryData;
+    io_telem.AsyncChunkIoDiscardCancelledMs +=
+        io_metrics.discard_cancelled_ms;
+    io_telem.AsyncChunkIoResultSelectionMs += io_metrics.result_selection_ms;
+    io_telem.AsyncChunkIoResultProcessingMs +=
+        io_metrics.result_processing_ms;
+    io_telem.AsyncChunkIoWorldApplyMs += io_metrics.world_apply_ms;
+    io_telem.AsyncChunkIoColumnFinalizeMs += io_metrics.column_finalize_ms;
+    io_telem.AsyncChunkIoResultRequeueMs += io_metrics.result_requeue_ms;
+    io_telem.AsyncChunkIoSaveDrainMs += io_metrics.save_drain_ms;
+    io_telem.AsyncChunkIoLightFlagsSaveMs += io_metrics.light_flags_save_ms;
+    io_telem.AsyncChunkIoCancelledDiscardN +=
+        static_cast<int>(io_metrics.cancelled_discard_n);
+    io_telem.AsyncChunkIoReadyLoadsBeforeN +=
+        static_cast<int>(io_metrics.ready_loads_before_n);
+    io_telem.AsyncChunkIoSelectedLoadsN +=
+        static_cast<int>(io_metrics.selected_loads_n);
+    io_telem.AsyncChunkIoProcessedLoadsN +=
+        static_cast<int>(io_metrics.processed_loads_n);
+    io_telem.AsyncChunkIoRequeuedLoadsN +=
+        static_cast<int>(io_metrics.requeued_loads_n);
+    io_telem.AsyncChunkIoAppliedSlicesN +=
+        static_cast<int>(io_metrics.applied_slices_n);
+    io_telem.AsyncChunkIoSavesProcessedN +=
+        static_cast<int>(io_metrics.saves_processed_n);
+    io_telem.AsyncChunkIoApplyTimeBudgetHit +=
+        io_metrics.apply_time_budget_hit ? 1 : 0;
   }
   const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
   int player_budget = pending_player > 0 ? 2 : 0;

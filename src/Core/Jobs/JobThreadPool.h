@@ -252,7 +252,8 @@ public:
   /// Drain a bounded best-first batch after computing one rank key per item.
   /// This avoids recalculating distance/age state for every selection pass.
   template <typename KeyFn>
-  std::vector<T> DrainBestByKeyUpTo(std::size_t maxCount, KeyFn &&key_fn)
+  std::vector<T> DrainBestByKeyUpTo(std::size_t maxCount, KeyFn &&key_fn,
+                                    std::size_t *availableCount = nullptr)
   {
     using Key = std::decay_t<decltype(key_fn(std::declval<const T &>()))>;
     struct RankedOffset
@@ -263,6 +264,10 @@ public:
 
     std::lock_guard<std::mutex> lock(Mutex);
     std::vector<T> drained;
+    if (availableCount)
+    {
+      *availableCount = Count;
+    }
     if (maxCount == 0 || Count == 0 || Items.empty())
     {
       return drained;

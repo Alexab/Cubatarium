@@ -252,6 +252,24 @@ struct PhysicsTelemetry
   /// Main-thread time spent draining/applying completed async chunk-I/O results.
   /// This does not measure disk-worker read/write latency.
   double AsyncChunkIoDrainMs{0.0};
+  /// Subphases and counts from TickAsyncChunkIo; world-apply/finalize are
+  /// nested inside result processing, while other phase times are sequential.
+  double AsyncChunkIoDiscardCancelledMs{0.0};
+  double AsyncChunkIoResultSelectionMs{0.0};
+  double AsyncChunkIoResultProcessingMs{0.0};
+  double AsyncChunkIoWorldApplyMs{0.0};
+  double AsyncChunkIoColumnFinalizeMs{0.0};
+  double AsyncChunkIoResultRequeueMs{0.0};
+  double AsyncChunkIoSaveDrainMs{0.0};
+  double AsyncChunkIoLightFlagsSaveMs{0.0};
+  int AsyncChunkIoCancelledDiscardN{0};
+  int AsyncChunkIoReadyLoadsBeforeN{0};
+  int AsyncChunkIoSelectedLoadsN{0};
+  int AsyncChunkIoProcessedLoadsN{0};
+  int AsyncChunkIoRequeuedLoadsN{0};
+  int AsyncChunkIoAppliedSlicesN{0};
+  int AsyncChunkIoSavesProcessedN{0};
+  int AsyncChunkIoApplyTimeBudgetHit{0};
   /// Legacy alias for AsyncChunkSystemsMs, retained for log compatibility.
   double AsyncIoMs{0.0};
   double RelightDrainMs{0.0};

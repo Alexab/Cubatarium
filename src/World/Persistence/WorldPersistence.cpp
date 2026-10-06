@@ -3512,18 +3512,24 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);
 }
 
-void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
-                                         std::size_t max_slice_applies_override,
-                                         double max_apply_ms)
+AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
+    UWorld &world, std::size_t max_slice_applies_override,
+    double max_apply_ms)
 {
+  AsyncChunkIoTickMetrics metrics;
   if (!ChunkStorage)
   {
-    return;
+    return metrics;
   }
 
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
-    (void)AsyncChunkIo->DiscardCancelledLoads();
+    const auto discard_started = std::chrono::steady_clock::now();
+    metrics.cancelled_discard_n = AsyncChunkIo->DiscardCancelledLoads();
+    metrics.discard_cancelled_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - discard_started)
+            .count();
     const bool trace_async_io = IsWorldColumnSourceTraceEnabled();
     const double frame_ms = world.GetLastMovementFrameMs();
     std::size_t max_slice_applies = max_slice_applies_override;
@@ -3547,10 +3553,13 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
     std::size_t applied_slices = 0;
     const auto apply_budget_expired = [&]()
     {
-      return applied_slices > 0 &&
-             std::chrono::duration<double, std::milli>(
-                 std::chrono::steady_clock::now() - apply_started)
-                     .count() >= effective_apply_budget_ms;
+      const bool expired =
+          applied_slices > 0 &&
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - apply_started)
+                  .count() >= effective_apply_budget_ms;
+      metrics.apply_time_budget_hit = metrics.apply_time_budget_hit || expired;
+      return expired;
     };
     const glm::ivec3 focus_chunk =
         UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
@@ -3584,7 +3593,13 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
     const std::size_t max_ranked_loads =
         std::min(max_slice_applies, kMaxRankedLoadsPerTick);
     auto completed_loads = AsyncChunkIo->DrainLoadsBestByKeyUpTo(
-        max_ranked_loads, result_rank);
+        max_ranked_loads, result_rank, &metrics.ready_loads_before_n);
+    metrics.result_selection_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - result_selection_time)
+            .count();
+    metrics.selected_loads_n = completed_loads.size();
+    const auto result_apply_started = std::chrono::steady_clock::now();
     std::size_t next_load = 0;
     while (next_load < completed_loads.size() &&
            applied_slices < max_slice_applies)
@@ -3668,6 +3683,7 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
               : load.token.sequence;
       const bool token_valid = load.token.IsValidFor(ground, current_sequence);
 
+      const auto world_apply_started = std::chrono::steady_clock::now();
       const auto apply_started_at =
           trace_async_io ? std::chrono::steady_clock::now()
                          : std::chrono::steady_clock::time_point{};
@@ -3699,6 +3715,10 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
       {
         state.had_disk_read_failure = true;
       }
+      metrics.world_apply_ms +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - world_apply_started)
+              .count();
       if (trace_async_io)
       {
         const double apply_ms =
@@ -3725,15 +3745,28 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
 
       const PendingAsyncColumnLoadState finished = state;
       PendingAsyncColumnLoadSlices.erase(pending_it);
+      const auto finalize_started = std::chrono::steady_clock::now();
       FinalizeAsyncTerrainColumnLoad(world, ground, finished);
+      metrics.column_finalize_ms +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - finalize_started)
+              .count();
 
       if (apply_budget_expired())
       {
         break;
       }
     }
+    metrics.processed_loads_n = next_load;
+    metrics.applied_slices_n = applied_slices;
+    metrics.requeued_loads_n = completed_loads.size() - next_load;
+    metrics.result_processing_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - result_apply_started)
+            .count();
     if (next_load < completed_loads.size())
     {
+      const auto requeue_started = std::chrono::steady_clock::now();
       std::vector<AsyncChunkLoadResult> deferred;
       deferred.reserve(completed_loads.size() - next_load);
       for (std::size_t i = next_load; i < completed_loads.size(); ++i)
@@ -3741,10 +3774,16 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
         deferred.push_back(std::move(completed_loads[i]));
       }
       AsyncChunkIo->RequeueLoads(std::move(deferred));
+      metrics.result_requeue_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - requeue_started)
+              .count();
     }
 
+    const auto save_drain_started = std::chrono::steady_clock::now();
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
     {
+      ++metrics.saves_processed_n;
       if (save.success &&
           ChunkStorage->GetSettings().writeFormat == ChunkWriteFormat::Binary &&
           ChunkStorage->GetSettings().deleteLegacyJsonOnBinarySave)
@@ -3779,8 +3818,18 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world,
       LogWorldColumnSave(outcome.c_str(), save.coord, details,
                          !save.success);
     }
+    metrics.save_drain_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - save_drain_started)
+            .count();
   }
+  const auto light_flags_save_started = std::chrono::steady_clock::now();
   SaveColumnLightFlagsIfDirty();
+  metrics.light_flags_save_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - light_flags_save_started)
+          .count();
+  return metrics;
 }
 
 bool UWorldPersistence::IsAsyncChunkIoQuiescent() const
