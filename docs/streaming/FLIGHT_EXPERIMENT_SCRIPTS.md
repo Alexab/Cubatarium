@@ -894,3 +894,41 @@ Artifacts: [M420 acceptance report](../../bin/suite_reports/engine_refactor/m420
 raw perf `bin/logs/perf_20261006-133528_32068.jsonl`, and captures in
 `bin/logs/m420_world164_m335_flow_kind_telemetry/` (for example
 `frame_182.png`).
+
+## M421/M422 - selecting a genuinely cold world and cold-start stall (2026-10-06)
+
+M421 was invoked with `--world World_M421_Cold_20261006`, but the
+`product-174657-far` replay path silently replaced it with `World_164`. Its
+manifest proves the actual world was `World_164` (seed `3650471197`), so treat
+the 600-second, 3,008-block, `5.19653 blocks/s` route as a short repeated-world
+control only. It is not evidence about cold disk or procedural generation.
+The run nevertheless caught a harness defect: the product replay now preserves
+an explicitly selected world and pins/restores that world's `users.json`.
+
+M422 exercised the corrected path with `World_M421_Cold_20261006`, numeric seed
+`3650472197`, spawn `[120,56,56]`, no `chunks/`, `chunks.json`, or `users.json`,
+and the established M335 camera settings. The Release manifest is pinned to
+`afbd2572` and confirms the selected cold world. Metadata load and procedural
+terrain fill completed; the log reports 2,310,487 non-air blocks and 805
+resident chunks. However, the world never left cooperative `EnterLit` within
+about 891 seconds. The runner returned `process_rc=1`, `run_outcome=harness_fail`,
+and zero flight periods/captures; do not classify this as a flight regression.
+
+The persisted `enter_lit` trace has 626 rows. Dirty count began at 31, peaked at
+208, then remained about 85-121; the soft-enter fallback first reported 106 at
+150 seconds and requires the residual to fall to 32 or less. At the end,
+`underfeet_present_ready=1` and `visibility_debt=0`, but
+`spawn_mesh_ring_ready=0`, `ring_not_ready=31-46`, `first_presentable_ms=-1`,
+and `gate_elapsed_ms` was about 890 seconds. GPU kick/finish continued, while
+the same dirty/ring state recurred. The app window remained responsive. This
+confirms a cold-start convergence stall before the camera can fly; the fixed
+global dirty cap is the exit blocker, not yet the proven origin of the dirty
+work. Preserve the safety gate until the outstanding mesh/column owners and
+empty-mesh outcomes are identified.
+
+M422 artifacts: [flight report](../../bin/suite_reports/engine_refactor/m422_world_m335_cold_streaming_20261006.json),
+raw perf header `bin/logs/perf_20261006-150113_33632.jsonl` (no periods),
+enter trace `bin/logs/enter_lit_20261006-150116.jsonl`, and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-150109.33632`.
+The fixed-day wrapper restored `world_data.json` byte-for-byte. The generated
+`column_light.json` remains in the isolated diagnostic world.

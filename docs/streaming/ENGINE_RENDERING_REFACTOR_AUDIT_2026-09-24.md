@@ -4954,6 +4954,36 @@ the full async-chunk-systems phase, not disk time. New
 `async_chunk_systems_ms` and `async_chunk_io_drain_ms` fields preserve this old
 alias while disambiguating future logs.
 
+### M421/M422 follow-up - cold-start convergence blocks the new-world route
+
+M421 was intended as a fresh-world control, but `product-174657-far` forced its
+requested world back to `World_164`. The manifest identifies seed `3650471197`
+and the repeated save. The run is a short M335 warm-world control (3,008 blocks
+at `5.19653 blocks/s`), not cold-path evidence. Commit `afbd2572` fixes the
+runner to honor an explicit world and to pin/restore user state in that world.
+
+The corrected M422 manifest confirms `World_M421_Cold_20261006`, seed
+`3650472197`, and cold mode. Startup generated 2,310,487 non-air blocks across
+805 resident chunks, then failed to converge `EnterLit` for about 891 seconds.
+The process stayed responsive but ended with no period rows, flight movement,
+or GUI captures. The saved EnterLit trace shows dirty count peaking at 208 and
+then remaining around 85-121; `ring_not_ready` stayed 31-46. Underfeet readiness
+was true and visibility debt zero, yet the spawn mesh ring never became ready
+and `first_presentable_ms` remained unset. The fallback blocked at dirty count
+106 because it requires `<=32` before leaving the load screen.
+
+This establishes a cold-world startup/convergence defect ahead of the distant
+streaming symptom. It does not establish that the residual dirty cap itself is
+wrong: bypassing it could expose empty or missing chunks. Next trace exact dirty
+coordinates, age, ownership and accepted-empty status; then verify whether
+presentable ring slices keep acquiring/reacquiring FirstMesh work or whether a
+validated empty mesh is never accepted. The Release timer aggregation fix also
+aligns async subphase values with period means, correcting the prior
+last-frame-versus-interval comparison ambiguity.
+
+See [M421/M422 experiment record](FLIGHT_EXPERIMENT_SCRIPTS.md#m421m422---selecting-a-genuinely-cold-world-and-cold-start-stall-2026-10-06)
+and the [updated remediation order](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m421m422-cold-start-follow-up---prioritize-entry-convergence).
+
 ### Cold-world gate before the next long repeated-world flight
 
 Prepare a fresh world from the same `World_164/world_data.json` settings, but

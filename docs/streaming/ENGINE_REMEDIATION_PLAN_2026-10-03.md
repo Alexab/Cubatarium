@@ -2723,3 +2723,56 @@ shows material startup, generation, or frame-time problems, address them first.
 If the route is saved on exit, repeat the same segment on that world to measure
 disk reads. Then run the full 2,800-second repeated-world baseline on the
 committed Release build before changing ColumnFlow service policy.
+
+### M421/M422 cold-start follow-up - prioritize entry convergence
+
+M421 did not use its requested fresh world: the product replay path overwrote
+`args.world` with `World_164`. M422 corrected and verified this in the report
+manifest. The updated Release run loaded a genuinely cold metadata-only world
+and generated 2,310,487 non-air blocks in memory, but spent about 891 seconds
+inside `EnterLit` and ended before the route or first flight telemetry row.
+The GUI remained responsive; this is an entry convergence stall, not a frozen
+process or far-flight result.
+
+During M422, total mesh dirty count peaked at 208 and remained roughly 85-121.
+The 150-second fallback was intentionally blocked at dirty residual 106 because
+the safety threshold is 32. At the last samples, underfeet was present and
+visibility debt was zero, but the spawn mesh ring was still not ready; no
+presentable timestamp was ever recorded. The repeated queue/GPU activity did
+not make measurable convergence. Do not raise the cap or force InGame as a
+standalone fix: that can hide actual missing near-camera geometry.
+
+Revised immediate order:
+
+1. **Instrument the stalled owner lifecycle in EnterLit.** Capture the dirty
+   coordinate set or a bounded histogram by chunk Y/distance and age, plus
+   FirstMesh/ColumnFlow ticket, active build, GPU publication, soft-defer, and
+   validated-empty outcome. Record the same set at regular checkpoints so
+   growth, drain, and re-enqueue can be separated. Add a terminal reason and a
+   bounded checkpoint even when the world operation never enters gameplay.
+2. **Find why the camera ring never becomes presentable on a fresh seed.**
+   Correlate M422 `dirty_n`, `ring_not_ready`, `gate_miss_*`, `gate_done_n`, and
+   relight/GPU counters with `CountPostLoadRingNotReady`,
+   `IsSpawnMeshRingReady`, `HasMeshSatisfyingColumnReady`, and the column work
+   owner. Specifically verify whether resident solid slices producing a
+   validated zero-quad mesh are treated as completed empty results or remain
+   FirstMesh dirty forever. Do not infer a render hole from readiness debt
+   alone.
+3. **Repair one proven lifecycle defect at a time.** Preserve the dirty-residual
+   safety check until the ring has a correct presentability contract. After a
+   fix, run a short visible cold-world M335-start control first, verify the
+   manifest's world/seed and that EnterLit exits with a measured
+   `first_presentable_ms`, then run a cold route segment. Only after that should
+   the full 2,800-second `World_164` repeated route resume as the primary
+   streaming/rendering regression gate.
+4. **Keep the two evidence lanes separate.** M421 is a valid short repeated
+   `World_164` route control (the report manifest's `cold` label is not a cache
+   state claim). M422 is a cold world-start failure with zero route periods.
+   Neither substitutes for the other; retain periodic fresh-seed checks after
+   each established-baseline pass.
+
+The harness and period-timer correction is committed as `afbd2572` and built
+Release-only. Its new timer fields now use the same interval-mean aggregation
+as `world_streaming_phase_ms`, so future phase comparisons are temporally
+aligned. M422 artifacts and exact counts are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m421m422---selecting-a-genuinely-cold-world-and-cold-start-stall-2026-10-06).
