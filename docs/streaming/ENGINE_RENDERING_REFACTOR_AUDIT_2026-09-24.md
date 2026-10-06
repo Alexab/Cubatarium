@@ -5173,3 +5173,92 @@ per-pixel census, chunk source, relight/publication revisions, and mesh
 readiness. Keep cold-start/fresh-seed experiments in a separate lane. Full
 M427/M428 artifacts and caveats are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m427-m428---validate-the-presentability-gate-at-the-established-locus-2026-10-06).
+
+### M431 - full low-instrumentation M335 and newly generated west frontier (2026-10-06)
+
+M431 ran the established visible, no-teleport M335 flight for 2,800 seconds
+plus the normal stop/settle phase on Release commit `0a963e14`. Route settings
+and the `World_164` metadata matched the prior M335 lane. All optional visual,
+dense-pixel, source-column, relight-audit, and screenshot-capture flags were
+off. The executable SHA-256 was
+`d51a792c3cfa9fc2ebd5d7def730520fc5b679af906676c58d735f354a6d0c99`; the
+manifest recorded a clean tracked tree. The app returned normally with
+`process_rc=0`, while product acceptance remained `pass=false` (`27/39`
+overall gates; `10/12` stop gates). These are distinct outcomes.
+
+Route adequacy passed: 1,399 periods / 1,397 steady periods, 1,382 fly
+periods, median movement speed `5.19653 blocks/s`, focus X `7 -> -864`, 871
+chunks / 13,936 blocks, and the 8,192-block checkpoint. No blocked movement
+substeps or ground contacts were recorded. This run therefore rules out the
+known super-fast-flight and collision/stop confounders for this sample.
+
+#### Performance by route distance
+
+Raw period rows grouped by focus X show a gradual and substantial increase,
+despite the disabled high-cost diagnostic flags:
+
+| Focus band | Periods | Frame wall median / p95 | World-streaming phase median / p95 | Async chunk systems median | I/O drain median | Mesh emerge median |
+|---|---:|---:|---:|---:|---:|---:|
+| Near `x >= -200` | 330 | `34.95 / 48.36 ms` | `23.85 / 38.21 ms` | `12.10 ms` | `7.85 ms` | `8.82 ms` |
+| Mid `-600 < x < -200` | 620 | `50.50 / 64.62 ms` | `42.86 / 56.92 ms` | `21.36 ms` | `9.62 ms` | `17.00 ms` |
+| Far `x <= -600` | 449 | `67.78 / 89.88 ms` | `61.58 / 82.34 ms` | `30.36 ms` | `10.29 ms` | `26.10 ms` |
+
+The far-minus-near median increase is about `32.8 ms` for frame wall. About
+`18.3 ms` comes from `async_chunk_systems_ms` and `17.3 ms` from
+`mesh_emerge_ms`; their combined increase is slightly larger than wall growth
+because the fields are nested/overlapping phase views. Async chunk-I/O drain
+increases only `2.44 ms`, and `update_streaming_ms` only `0.49 ms`. Thus the
+M429 result-wait/I/O-service issue remains a valid queue-health finding, but
+it is not a sufficient explanation for late-route slowdown. The next code
+diagnostic should split the remaining wall inside the async chunk and mesh
+emergence phases and validate that subtimer totals reconcile with their
+enclosing timers.
+
+Selected existing mesh subtimers also leave a material residual at far focus:
+`mesh_emerge_prep_ms` median `1.18 ms`, dirty tick `3.40 ms`, snapshot
+`1.69 ms`, dirty schedule `1.77 ms`, GPU kick `1.27 ms`, GPU finish `0.61 ms`,
+and async mesh drain `0.34 ms`, compared with the enclosing mesh-emergence
+median `26.10 ms`. These fields are not all necessarily disjoint, so the
+residual must be computed from an explicit timing tree before attributing it.
+Within async chunk systems, I/O drain is `10.29 ms`, relight drain `1.31 ms`,
+and streaming-pressure refresh `1.33 ms`; the remaining work is not yet
+resolved by the present report.
+
+#### Appearance, readiness, and world-source evidence
+
+The operator reports that the current image looks sufficiently good. M431 has
+no screenshot or pixel trace, so it cannot verify appearance on the newly
+covered west segment. During M431, `visible_black_focus_n` median was 0 and
+maximum 22, `visual_holes` was usually 0 (p95/max 1), `unfinished_visual`
+median 27 / p95 63 / max 83, and `chunk_not_ready` median 27. Internal missing,
+unfinished, dark-face, and hole counters are not pixel truth. The report's
+`holes_rate=1.0` specifically uses `unfinished_visual`; post-stop convergence
+also failed with maximum 26 not-ready items. M429's sparse late-route pixel
+samples remain positive direct visual evidence, but cover only 205 probes and
+end before M431's farthest segment.
+
+The INFO log records 171 `ChunkPopulate` calls in the newly crossed columns
+`x=-850..-868` (19 columns x 9 z positions). Per-call worker timing was
+`total_ms` median/p95/max `95.27/128.32/250.12`; sample `18.26/21.26 ms`,
+terrain `6.76/8.18 ms`, post-processing `30.38/40.92 ms`, and sealing
+`32.72/56.24 ms` for median/p95. These costs ran on generation workers and
+must not be added to main-thread frame time. No world-column source trace was
+enabled, so this run cannot show request queueing, worker-pool delay, result
+wait, disk-vs-procedural commit mix, or a per-period causal relationship.
+M431 expanded/persisted `World_164`; later replays may load these coordinates
+from disk, so repeat-world and cold-generation evidence now refer to different
+storage states.
+
+#### Readiness and next diagnostic
+
+The plan is ready for targeted phase attribution, not ready for closure. The
+primary repeated route, expected speed, normal app exit, and collision
+telemetry are controlled; operator-observed appearance is positive; and M429
+has sparse pixel confirmation over part of the long route. Still open are the
+late-route performance regression, unexplained async/mesh phase residuals,
+post-stop/readiness debt, a source-traced fresh-world generation lane, and
+pixel evidence beyond M429's end coordinate. Keep visible appearance, internal
+readiness, source lifecycle, and performance as separate acceptance axes.
+
+The updated ordered actions are in the [M431 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m431-readiness-checkpoint---the-late-route-cost-is-real-disk-drain-is-not-the-whole-cause)
+and the [M431 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m431---full-m335-low-instrumentation-control-and-generation-frontier-2026-10-06).

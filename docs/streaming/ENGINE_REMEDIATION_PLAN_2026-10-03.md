@@ -2954,3 +2954,80 @@ Updated next actions:
 
 M430 artifacts and the full caveats are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m430---low-instrumentation-m335-near-route-control-2026-10-06).
+
+### M431 readiness checkpoint - the late-route cost is real; disk drain is not the whole cause
+
+M431 completed the full visible, no-teleport M335 Release route on
+`World_164` with optional visual/source traces and screenshots disabled. Route
+speed and coverage passed: median `5.19653 blocks/s`, focus X `7 -> -864`,
+`13,936` blocks, and the `8,192`-block checkpoint was crossed. The app exited
+normally (`process_rc=0`, `run_outcome=success`, `hang_killed=false`); the
+runner returned nonzero because product gates remain red (`27/39`, stop gates
+`10/12`). Movement telemetry showed no blocked substeps or ground contacts.
+
+The user's current positive visual assessment remains useful evidence. M431
+itself had no screenshots or pixel probes, so it cannot confirm appearance at
+the additional westward segment. Its `visible_black_focus_n`, `visual_holes`,
+`unfinished_visual`, and `chunk_not_ready` fields are internal readiness or
+candidate signals, not framebuffer measurements. M429's sparse pixel samples
+remain the direct pixel evidence, and only cover late-route probes through a
+shorter segment. Keep those evidence types separate.
+
+The low-instrumentation phase breakdown shows that late-route cost is not a
+dense-trace artifact. Grouped by focus X (`near >= -200`, `mid -600..-201`,
+`far <= -600`), median frame wall was `34.95/50.50/67.78 ms`; world-streaming
+phase was `23.85/42.86/61.58 ms`. The two largest growing components were
+`async_chunk_systems_ms` (`12.10/21.36/30.36 ms`) and `mesh_emerge_ms`
+(`8.82/17.00/26.10 ms`). By comparison, async chunk-I/O drain rose only from
+`7.85` to `10.29 ms`; `update_streaming_ms` rose from `2.37` to `2.86 ms`.
+This rejects the narrow claim that the late frame growth is explained mainly
+by disk-result application. It does not identify the unaccounted work inside
+the two larger phases or prove that performance caused a visible defect.
+
+M431 also crossed into terrain absent from M429's route extent. The INFO log
+contains 171 worker-side `ChunkPopulate` records at X `-850..-868`, with
+`total_ms` median/p95/max `95.27/128.32/250.12`. The recorded costs are on
+generation workers and cannot be added directly to main-thread frame time.
+Because M431 did not enable `CUBA_WORLD_COLUMN_SOURCE_TRACE`, it cannot join
+those calls to queue age, source selection, commit timing, or exact frame
+pressure. The route also persisted new world state, so the next `World_164`
+repeat may follow a different disk/generation mix.
+
+Plan readiness is **ready for a targeted phase-breakdown change, not ready to
+close**. The repeatable long route, speed, normal process exit, and collision
+telemetry are now controlled. User-observed appearance is positive, but the
+farther segment lacks pixel evidence; cold-world entry/generation remains a
+separate open lane; and product readiness/post-stop convergence still fail
+with 26 items not ready at the end. The `holes_rate=1` gate is based on
+`unfinished_visual`, not an image-hole rate.
+
+#### Next work, in order
+
+1. **Split the unexplained main-thread phase costs.** Add low-overhead
+   cumulative timers and interval aggregates for the major subphases inside
+   `UWorldStreaming::TickAsyncChunkSystems` and `UWorldStreaming::TickMeshEmerge`.
+   Existing counters already isolate `TickAsyncChunkIo`, relight drain/capture,
+   selected mesh snapshot/scheduling/GPU stages, but those subtimers do not
+   account for the far-route medians: `async_chunk_systems_ms` grows by about
+   18 ms and `mesh_emerge_ms` by about 17 ms from near to far, while their
+   currently exposed individual stages grow by much less. Preserve a residual
+   bucket so timer sums can be checked against the enclosing phase.
+2. Build **Release only**, then repeat the same full M335 route with optional
+   dense pixel/source traces off to verify that the breakdown itself remains
+   low overhead. Compare near/mid/far bands against M431; don't tune budgets
+   until a dominant subphase is identified.
+3. Use a separate fresh-seed world for the cold 600-second startup/generation
+   lane with source tracing. Record metadata and chunk-store state before and
+   after; do not let the newly generated M431 west edge stand in for a cold
+   world. Repeat a saved-data segment separately to compare persistence.
+4. If the user's dim/empty observation returns, capture the same established
+   route with the sparse pixel/source diagnostics around both the M429
+   previously sampled segment and M431's new west edge. Do not change route or
+   camera conditions to improve presentation.
+5. After a measured implementation change, rerun full M335, inspect the image
+   evidence, check the post-stop residual, and periodically repeat the separate
+   fresh-seed lane. Close the plan only when the image evidence, readiness,
+   far-route performance, and cold entry are independently acceptable.
+
+M431 artifacts and exact run settings are documented in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m431---full-m335-low-instrumentation-control-and-generation-frontier-2026-10-06).

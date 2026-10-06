@@ -1164,3 +1164,81 @@ Release executable SHA-256
 `d51a792c3cfa9fc2ebd5d7def730520fc5b679af906676c58d735f354a6d0c99`, no
 optional traces, no teleport, and a clean source tree. `World_164/world_data.json`
 was restored byte-for-byte.
+
+## M431 - full M335 low-instrumentation control and generation frontier (2026-10-06)
+
+M431 extended the exact visible, no-teleport M335 setup from M430 to the full
+2,800-second flight on `World_164`. Scenario `product-174657-far`; start
+`[120,56,56]`, eye Y `70`, yaw `180`, pitch `-30`, speed scale `1`, daylight,
+normal 20-second stop phase, no teleport. All optional visual-black, dense
+pixel, world-column source, relight audit, and screenshot-capture flags were
+unset. Build was Release at source `0a963e14`, with executable SHA-256
+`d51a792c3cfa9fc2ebd5d7def730520fc5b679af906676c58d735f354a6d0c99`.
+
+The run manifest reports `process_rc=0`, `run_outcome=success`,
+`hang_killed=false`, and route adequacy PASS. It covered 1,399 periods (1,397
+steady), 1,382 fly periods, median speed `5.19653 blocks/s`, focus X
+`7 -> -864`, and 13,936 blocks, crossing the 8,192-block checkpoint. There
+were zero blocked movement substeps and zero ground contacts. The flight
+runner itself returned exit code 1 because product gates were not met: report
+`pass=false`, 27/39 gates and 10/12 stop gates passed. Do not interpret that as
+an app crash or as a route failure.
+
+### Matched route-distance timing
+
+These medians are computed from raw `kind=period` rows grouped by `focus_cx`;
+period rows are interval means, not individual-frame percentiles:
+
+| Focus band | Periods | Frame wall median / p95 | World-streaming phase median / p95 | Async chunk systems median | Async I/O drain median | Mesh emerge median |
+|---|---:|---:|---:|---:|---:|---:|
+| Near `x >= -200` | 330 | `34.95 / 48.36 ms` | `23.85 / 38.21 ms` | `12.10 ms` | `7.85 ms` | `8.82 ms` |
+| Mid `-600 < x < -200` | 620 | `50.50 / 64.62 ms` | `42.86 / 56.92 ms` | `21.36 ms` | `9.62 ms` | `17.00 ms` |
+| Far `x <= -600` | 449 | `67.78 / 89.88 ms` | `61.58 / 82.34 ms` | `30.36 ms` | `10.29 ms` | `26.10 ms` |
+
+The late-route slowdown persists with low instrumentation. From near to far,
+the median frame wall rises about `32.84 ms`; async chunk systems rises
+`18.26 ms` and mesh emergence rises `17.27 ms`. The I/O drain rises only
+`2.44 ms`; `update_streaming_ms` rises `0.49 ms`. This indicates that the
+M429 disk-result wait is not by itself the late-route performance cause.
+Selected mesh subtimers (prep `1.18`, dirty tick `3.40`, snapshot `1.69`,
+schedule `1.77`, GPU kick `1.27`, GPU finish `0.61`, async drain `0.34 ms`
+median in the far band) do not explain the enclosing `26.10 ms` median. Existing
+async subfields also leave most of its `30.36 ms` unresolved after I/O drain
+`10.29`, relight drain `1.31`, and pressure refresh `1.33 ms`. Some subtimers
+can overlap or nest; add an explicit timing tree before summing them.
+
+### Visual and acceptance caveats
+
+No screenshots or pixel probes were collected in M431. `visible_black_focus_n`
+median 0 / max 22, `visual_holes` p95/max 1, `unfinished_visual` median 27 /
+p95 63 / max 83, and `chunk_not_ready` median 27 are internal candidates or
+readiness debt, not framebuffer coverage. The analyzer's `holes_rate=1.0` is
+based on `unfinished_visual`. The user reports that visuals now look
+sufficiently good; M429's sparse pixel evidence is compatible with that but
+covers only part of the route. M431 cannot certify the newly reached segment.
+
+### Newly generated coordinates and interpretation
+
+The INFO log contains 171 worker-side `ChunkPopulate` records at X
+`-850..-868` (19 X columns by 9 Z columns), beyond M429's endpoint. Per-call
+`total_ms` was median/p95/max `95.27/128.32/250.12`; sample median/p95
+`18.26/21.26`, terrain `6.76/8.18`, post-processing `30.38/40.92`, and sealing
+`32.72/56.24 ms`. These are worker timings, not direct frame costs. With
+`CUBA_WORLD_COLUMN_SOURCE_TRACE` off, the run cannot join generation with
+request queue, worker pool, result application, disk source, or frame cost.
+The route persisted newly created west-edge data, so subsequent `World_164`
+replays may exercise disk reads there; cold generation must be checked on a
+separate fresh seed/world.
+
+The report failed product acceptance despite a successful app/route. It ended
+with post-stop convergence false and 26 not-ready items. Preserve three
+separate verdicts: user's positive visible assessment; readiness telemetry
+that remains unresolved; and a reproducible late-route performance increase.
+
+Artifacts: [M431 report](../../bin/suite_reports/engine_refactor/m431_world164_m335_full_low_instrumentation_20261006.json),
+raw perf `bin/logs/perf_20261006-195246_18892.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-195242.18892`.
+Optional trace flags were false and frame-capture directory was null in the
+manifest. The report/manifest and executable should be retained with the
+existing ignored `bin/` artifacts; the tracked documentation is the portable
+record of settings and conclusions.
