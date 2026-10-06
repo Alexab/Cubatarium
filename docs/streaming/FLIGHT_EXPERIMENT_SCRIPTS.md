@@ -1126,3 +1126,41 @@ Artifacts: [M429 report](../../bin/suite_reports/engine_refactor/m429_world164_m
 raw perf `bin/logs/perf_20261006-174353_35164.jsonl`, INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-174349.35164`,
 and captures in `bin/logs/m429_world164_m335_presentability/`.
+
+## M430 - low-instrumentation M335 near-route control (2026-10-06)
+
+M430 replayed the same visible, no-teleport Release M335 start, yaw, pitch,
+eye height, and speed on `World_164`, with a 600-second flight phase. All
+optional visual-black, dense-pixel, source-column, relight-audit, and screenshot
+capture environment flags were unset. The app exited normally
+(`run_outcome=success`, `process_rc=0`, `hang_killed=false`); the report's
+product-quality gates still returned `pass=false`. The route passed movement
+adequacy at 5.19653 blocks/s, focus X `7 -> -185`, 192 chunks / 3,072 blocks,
+315 periods. There were zero blocked movement substeps and zero ground
+contacts. This is a low-instrumentation near-route timing control, not a far
+route acceptance run: it did not reach the 8,192-block checkpoint and has no
+pixel trace or screenshot coverage.
+
+The first-locus timing was lower than the heavily instrumented M429 run:
+median/p95 frame wall was 34.76/45.34 ms, world streaming phase 23.93/35.65 ms,
+async chunk systems 12.18/18.39 ms, and mesh emergence 8.73/15.27 ms. The
+main-thread async chunk-I/O drain still cost median/p95 7.97/11.62 ms, with a
+14.46 ms maximum, even with source logging and dense pixel readback disabled.
+This confirms that the M429 drain cost is not solely caused by its opt-in pixel
+sampling, but M430's shorter, near-start segment cannot be compared directly
+with M429's 12,880-block route or used to explain M429's far-route timing.
+
+Visual readiness remained distinct from actual black pixels: the report's
+`unfinished_visual` median was 27 and `chunk_not_ready` median 27, while
+`visible_black_focus_n` median was 0 and maximum 18. No pixel capture was
+enabled, so these are internal candidates/debt only. Post-stop convergence
+remained false with 27 missing/readiness items; do not treat M430 as proof of a
+pixel hole or of a fully settled renderer. Its failed `holes_rate` gate is
+still driven by `unfinished_visual`.
+
+Artifacts: [M430 report](../../bin/suite_reports/engine_refactor/m430_world164_m335_low_instrumentation_20261006.json),
+raw perf `bin/logs/perf_20261006-193728_26092.jsonl`. The manifest records
+Release executable SHA-256
+`d51a792c3cfa9fc2ebd5d7def730520fc5b679af906676c58d735f354a6d0c99`, no
+optional traces, no teleport, and a clean source tree. `World_164/world_data.json`
+was restored byte-for-byte.

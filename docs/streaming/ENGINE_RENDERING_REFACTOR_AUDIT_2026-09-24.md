@@ -5039,6 +5039,36 @@ visible work, then validate cold entry/generation and repeat M335 after any
 policy change. See the [M429 experiment record](FLIGHT_EXPERIMENT_SCRIPTS.md#m429---m335-long-run-visual-and-disk-result-audit-2026-10-06)
 and the [updated plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m429-readiness-checkpoint---visual-evidence-is-better-service-and-cold-start-work-remain).
 
+### M430 - timing control without forensic tracing (2026-10-06)
+
+M430 used the same visible Release/no-teleport M335 start and movement
+parameters, but only for 600 seconds / 3,072 blocks (focus X `7 -> -185`).
+All opt-in pixel and source tracing and screenshot capture were disabled. The
+process completed normally, route speed was `5.19653 blocks/s`, and collision
+telemetry had zero blocked substeps and zero ground contacts. Thus route
+execution is valid, but it is not a far-route streaming acceptance replay.
+
+The low-instrumentation median/p95 frame wall was `34.76/45.34 ms`; streaming
+phase `23.93/35.65 ms`; async chunk systems `12.18/18.39 ms`; mesh emergence
+`8.73/15.27 ms`; and async chunk-I/O drain `7.97/11.62 ms` (14.46 ms max).
+The drain remains substantial without dense pixel readback or per-column source
+logging. M429's much higher late-route phase times cannot yet be attributed to
+that instrumentation because it covers 12,880 blocks while M430 covers only
+the first 3,072. The next baseline should therefore be a full 2,800-second
+M335 repeat with optional tracing disabled before the policy is changed.
+
+M430 had `visible_black_focus_n` median 0/max 18, but no pixel probes; these are
+internal candidates, not a visual verdict. `unfinished_visual` and
+`chunk_not_ready` medians were both 27, and post-stop missing/readiness debt was
+27. The runner reported route success but product `pass=false` (27/39 gates;
+8/12 stop gates), with the hole gate still keyed to the readiness proxy.
+Together with M429, current plan readiness is **good for continuing the focused
+I/O service investigation, not ready to close**: user-perceived visuals and
+sampled pixels are positive, but far-route low-instrumentation performance,
+completed-result service, and cold-world entry remain open. See the [M430
+experiment record](FLIGHT_EXPERIMENT_SCRIPTS.md#m430---low-instrumentation-m335-near-route-control-2026-10-06)
+and [updated plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m430-update---isolate-instrumentation-cost-before-changing-streaming-policy).
+
 ### Cold-world gate before the next long repeated-world flight
 
 Prepare a fresh world from the same `World_164/world_data.json` settings, but

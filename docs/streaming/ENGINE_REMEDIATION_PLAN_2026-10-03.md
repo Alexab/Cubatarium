@@ -2917,3 +2917,40 @@ does not prove full-screen or continuous coverage.
 
 M429's full evidence and limitations are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m429---m335-long-run-visual-and-disk-result-audit-2026-10-06).
+
+### M430 update - isolate instrumentation cost before changing streaming policy
+
+M430 ran the unchanged visible Release route for 600 seconds with all optional
+tracing and captures disabled. It completed normally at the configured
+5.19653 blocks/s, reached focus X `-185` / 3,072 blocks, and had no blocked
+movement substeps or ground contacts. Its median frame wall was 34.76 ms and
+world-streaming phase 23.93 ms. `async_chunk_io_drain_ms` was still 7.97 ms
+median, 11.62 ms p95, and 14.46 ms maximum. This verifies that a material
+main-thread I/O-drain cost persists without M429's pixel readback or per-column
+source logging.
+
+M430 is deliberately only a near-route timing control: it stops before the
+8,192-block checkpoint, has no pixel captures, and cannot establish late-route
+streaming behavior. Its route and speed gates pass, but report `pass=false`
+because product readiness/performance gates remain red; `holes_rate` still
+means `unfinished_visual` debt. M429 remains the long visual-evidence run.
+
+Updated next actions:
+
+1. **Keep the policy unchanged and obtain a full low-instrumentation M335
+   control.** Repeat the same route for 2,800 seconds with optional pixel and
+   source traces disabled. This will show whether the drain cost and frame-time
+   growth persist at far checkpoints without expensive forensic capture. Keep
+   Release, speed, camera and world constant.
+2. **Then instrument the result-service phases.** Add period counters for ready
+   queue depth before/after drain, selected/applied slices, time-budget hits,
+   queue-ranking time, result application and column finalization. Include the
+   worst ready-result age if it can be sampled without scanning/locking the
+   queue on the hot path. Use these measurements to choose between reducing
+   queue-rank overhead and splitting expensive main-thread application.
+3. After a bounded service change, compare both the unchanged long M335 route
+   and a separate fresh-seed entry/generation run. Keep the M422 cold `EnterLit`
+   blocker and current user-positive visual assessment as separate evidence.
+
+M430 artifacts and the full caveats are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m430---low-instrumentation-m335-near-route-control-2026-10-06).
