@@ -9460,11 +9460,16 @@ void UWorld::TickMeshEmerge()
     UFrameStageWatchdog::Scope tick_stage("streaming.world_streaming_tick");
     Streaming->TickMeshEmerge(*this);
   }
+  const auto player_burst_t0 = std::chrono::high_resolution_clock::now();
   {
     UFrameStageWatchdog::Scope burst_stage(
         "streaming.player_relight_mesh_burst");
     TickPlayerRelightMeshBurst();
   }
+  PhysicsTelemetryData.MeshEmergePlayerRelightBurstMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - player_burst_t0)
+          .count();
 }
 
 void UWorld::RefreshStreamerSettings()

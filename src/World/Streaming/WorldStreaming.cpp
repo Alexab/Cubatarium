@@ -2657,6 +2657,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   world.PhysicsTelemetryData.CommitSealMs = 0.0;
   world.PhysicsTelemetryData.CommitPhysicsMs = 0.0;
   world.PhysicsTelemetryData.IdlePrefetchMs = 0.0;
+  world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs = 0.0;
+  world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs = 0.0;
+  world.PhysicsTelemetryData.AsyncChunkPostSchedulerMs = 0.0;
   // StreamerUpdate / AsyncIo / RelightDrain accumulate for this tick; do not
   // clear RelightDrainMs here — DrainAsyncRelightResults already timed in World.
 
@@ -2684,6 +2687,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         !world.IsEnterLitGateActive() && !world.IsEnterSessionActive() &&
         !protect_near)
     {
+      world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs = elapsed_main_ms();
       return;
     }
   }
@@ -2758,6 +2762,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     return elapsed_main_ms() >= (near_budget_ms + kFarStreamingBudgetMs);
   };
 
+  const auto before_scheduler_t0 = std::chrono::high_resolution_clock::now();
   if (ChunkScheduler && procedural.AsyncChunkGeneration)
   {
     const bool moving_fast =
@@ -2946,11 +2951,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         chunk_budget.MaxChunkCommits, pressure.max_commits_cap);
     // Let Tick decide against the actual drained result batch. A ready-queue
     // snapshot here is stale by the time Completed.DrainAll() runs.
+    const auto scheduler_t0 = std::chrono::high_resolution_clock::now();
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
                          chunk_budget.MaxLoadOps, 0.0, moving_any);
+    world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - scheduler_t0)
+            .count();
     world.PhysicsTelemetryData.CommitApplyMs =
         ChunkScheduler->GetLastTickApplyMs();
   }
+  world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs =
+      std::chrono::duration<double, std::milli>(before_scheduler_t0 - main_t0)
+          .count();
 
   auto finish_telemetry = [&]()
   {
@@ -4485,6 +4498,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     world.PhysicsTelemetryData.RelightDrainMs += capture_ms;
   }
   finish_telemetry();
+  const double async_elapsed_ms = elapsed_main_ms();
+  world.PhysicsTelemetryData.AsyncChunkPostSchedulerMs = std::max(
+      0.0, async_elapsed_ms -
+               world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs -
+               world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs);
 }
 
 void UWorldStreaming::QuiesceBackgroundWork(
@@ -4574,10 +4592,22 @@ void UWorldStreaming::ResumeStreamerAfterQuiesce()
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
   CUBA_ZONE("TickMeshEmerge");
+  const auto emerge_function_t0 = std::chrono::high_resolution_clock::now();
+  auto emerge_elapsed_ms = [&]()
+  {
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - emerge_function_t0)
+        .count();
+  };
+  const auto coordinator_t0 = std::chrono::high_resolution_clock::now();
   {
     UFrameStageWatchdog::Scope stage("streaming.emerge_scheduler_tick");
     EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
   }
+  world.PhysicsTelemetryData.MeshEmergeCoordinatorMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - coordinator_t0)
+          .count();
   UFrameStageWatchdog::Scope telemetry_stage("streaming.emerge_post_tick");
   // MeshWorkAdmission SoT lands in LastBudget at end of TickMeshEmerge.
   // finish_telemetry in TickAsyncChunkSystems runs *before* emerge — write
@@ -4710,6 +4740,9 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
                world.GetMeshService().GetLiveDirtyFirstMeshCount());
   world.PhysicsTelemetryData.DirtyRemeshN =
       world.GetMeshService().GetLastDirtyRemeshN();
+  world.PhysicsTelemetryData.MeshEmergePostTelemetryMs = std::max(
+      0.0, emerge_elapsed_ms() -
+               world.PhysicsTelemetryData.MeshEmergeCoordinatorMs);
 }
 
 void UWorldStreaming::InitStreamerCallbacks(UWorld &world)

@@ -793,6 +793,9 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StreamerPrefetchAheadMs = 0.0;
   PhysicsTelemetryData.UpdateStreamingMs = 0.0;
   PhysicsTelemetryData.AsyncChunkSystemsMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkPreSchedulerMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkSchedulerTickMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkPostSchedulerMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoDrainMs = 0.0;
   PhysicsTelemetryData.AsyncIoMs = 0.0;
   PhysicsTelemetryData.RelightDrainMsPrev = PhysicsTelemetryData.RelightDrainMs;
@@ -887,6 +890,9 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StickyEraseOtherN = 0;
   PhysicsTelemetryData.SoftDeferHeldAgeMax = 0;
   PhysicsTelemetryData.MeshEmergeMs = 0.0;
+  PhysicsTelemetryData.MeshEmergeCoordinatorMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostTelemetryMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePlayerRelightBurstMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepUnfinishedMs = 0.0;

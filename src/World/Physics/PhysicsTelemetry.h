@@ -13,6 +13,11 @@ struct PhysicsTelemetry
   double MovementStepMs{0.0};
   double StreamMs{0.0};
   double MeshEmergeMs{0.0};
+  /// Partition of MeshEmergeMs into coordinator work, telemetry closeout,
+  /// and the player-relight mesh burst.
+  double MeshEmergeCoordinatorMs{0.0};
+  double MeshEmergePostTelemetryMs{0.0};
+  double MeshEmergePlayerRelightBurstMs{0.0};
   double BlockStepMs{0.0};
   double DrainStepMs{0.0};
   double FluidStepMs{0.0};
@@ -234,6 +239,13 @@ struct PhysicsTelemetry
   double UpdateStreamingMs{0.0};
   /// Main-thread duration of the full TickAsyncChunkSystems phase.
   double AsyncChunkSystemsMs{0.0};
+  /// Partition of WorldStreaming::TickAsyncChunkSystems wall time.
+  /// PreScheduler includes pressure refresh and policy/budget selection.
+  double AsyncChunkPreSchedulerMs{0.0};
+  /// Full ChunkLoadScheduler::Tick wall, including its queues.
+  double AsyncChunkSchedulerTickMs{0.0};
+  /// Remaining WorldStreaming async work after scheduler Tick through closeout.
+  double AsyncChunkPostSchedulerMs{0.0};
   /// Main-thread time spent draining/applying completed async chunk-I/O results.
   /// This does not measure disk-worker read/write latency.
   double AsyncChunkIoDrainMs{0.0};

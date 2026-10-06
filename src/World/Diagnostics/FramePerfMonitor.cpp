@@ -67,7 +67,13 @@ struct Session
   double AccumMeshEmergeMs{0.0};
   double AccumWorldStreamingPhaseMs{0.0};
   double AccumAsyncChunkSystemsMs{0.0};
+  double AccumAsyncChunkPreSchedulerMs{0.0};
+  double AccumAsyncChunkSchedulerTickMs{0.0};
+  double AccumAsyncChunkPostSchedulerMs{0.0};
   double AccumAsyncChunkIoDrainMs{0.0};
+  double AccumMeshEmergeCoordinatorMs{0.0};
+  double AccumMeshEmergePostTelemetryMs{0.0};
+  double AccumMeshEmergePlayerRelightBurstMs{0.0};
   double AccumAsyncIoMs{0.0};
   double AccumSceneMs{0.0};
   double AccumPhysMs{0.0};
@@ -231,6 +237,9 @@ struct FrameNumbers
   double phys_ms{0.0};
   double stream_ms{0.0};
   double mesh_emerge_ms{0.0};
+  double mesh_emerge_coordinator_ms{0.0};
+  double mesh_emerge_post_telemetry_ms{0.0};
+  double mesh_emerge_player_relight_burst_ms{0.0};
   double scene_ms{0.0};
   double view_ms{0.0};
   double flat_ms{0.0};
@@ -310,6 +319,9 @@ struct FrameNumbers
   double streamer_prefetch_ahead_ms{0.0};
   double update_streaming_ms{0.0};
   double async_chunk_systems_ms{0.0};
+  double async_chunk_pre_scheduler_ms{0.0};
+  double async_chunk_scheduler_tick_ms{0.0};
+  double async_chunk_post_scheduler_ms{0.0};
   double async_chunk_io_drain_ms{0.0};
   double async_io_ms{0.0};
   double relight_drain_ms{0.0};
@@ -1034,6 +1046,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.phys_ms = phys.PhysicsStepMs;
   n.stream_ms = phys.StreamMs;
   n.mesh_emerge_ms = phys.MeshEmergeMs;
+  n.mesh_emerge_coordinator_ms = phys.MeshEmergeCoordinatorMs;
+  n.mesh_emerge_post_telemetry_ms = phys.MeshEmergePostTelemetryMs;
+  n.mesh_emerge_player_relight_burst_ms =
+      phys.MeshEmergePlayerRelightBurstMs;
   n.scene_ms = world.GetDurationDrawSceneMks() / 1000.0;
   n.view_ms = world.GetDurationViewUpdateMks() / 1000.0;
   // Era14: DoMovement is locomotion-only; stream/emerge live in
@@ -1131,6 +1147,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.streamer_prefetch_ahead_ms = phys.StreamerPrefetchAheadMs;
   n.update_streaming_ms = phys.UpdateStreamingMs;
   n.async_chunk_systems_ms = phys.AsyncChunkSystemsMs;
+  n.async_chunk_pre_scheduler_ms = phys.AsyncChunkPreSchedulerMs;
+  n.async_chunk_scheduler_tick_ms = phys.AsyncChunkSchedulerTickMs;
+  n.async_chunk_post_scheduler_ms = phys.AsyncChunkPostSchedulerMs;
   n.async_chunk_io_drain_ms = phys.AsyncChunkIoDrainMs;
   n.async_io_ms = phys.AsyncIoMs;
   n.relight_drain_ms = phys.RelightDrainMs;
@@ -2035,6 +2054,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"streamer_prefetch_ahead_ms\":" << n.streamer_prefetch_ahead_ms
           << ",\"update_streaming_ms\":" << n.update_streaming_ms
           << ",\"async_chunk_systems_ms\":" << n.async_chunk_systems_ms
+          << ",\"async_chunk_pre_scheduler_ms\":"
+          << n.async_chunk_pre_scheduler_ms
+          << ",\"async_chunk_scheduler_tick_ms\":"
+          << n.async_chunk_scheduler_tick_ms
+          << ",\"async_chunk_post_scheduler_ms\":"
+          << n.async_chunk_post_scheduler_ms
           << ",\"async_chunk_io_drain_ms\":" << n.async_chunk_io_drain_ms
           << ",\"async_io_ms\":" << n.async_io_ms
           << ",\"relight_drain_ms\":" << n.relight_drain_ms
@@ -2295,6 +2320,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gen_backlog_total\":" << n.gen_backlog_total
           << ",\"phys_ms\":" << n.phys_ms << ",\"stream_ms\":" << n.stream_ms
           << ",\"mesh_emerge_ms\":" << n.mesh_emerge_ms
+          << ",\"mesh_emerge_coordinator_ms\":"
+          << n.mesh_emerge_coordinator_ms
+          << ",\"mesh_emerge_post_telemetry_ms\":"
+          << n.mesh_emerge_post_telemetry_ms
+          << ",\"mesh_emerge_player_relight_burst_ms\":"
+          << n.mesh_emerge_player_relight_burst_ms
           << ",\"scene_ms\":" << n.scene_ms
           << ",\"view_ms\":" << n.view_ms << ",\"flat_ms\":" << n.flat_ms
           << ",\"gen_q\":" << n.gen_q << ",\"mesh_async\":" << n.mesh_async
@@ -3085,8 +3116,15 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumFluidGpuMs += n.fluid_map_gpu_ms;
   s.AccumStreamMs += n.stream_ms;
   s.AccumMeshEmergeMs += n.mesh_emerge_ms;
+  s.AccumMeshEmergeCoordinatorMs += n.mesh_emerge_coordinator_ms;
+  s.AccumMeshEmergePostTelemetryMs += n.mesh_emerge_post_telemetry_ms;
+  s.AccumMeshEmergePlayerRelightBurstMs +=
+      n.mesh_emerge_player_relight_burst_ms;
   s.AccumWorldStreamingPhaseMs += n.world_streaming_phase_ms;
   s.AccumAsyncChunkSystemsMs += n.async_chunk_systems_ms;
+  s.AccumAsyncChunkPreSchedulerMs += n.async_chunk_pre_scheduler_ms;
+  s.AccumAsyncChunkSchedulerTickMs += n.async_chunk_scheduler_tick_ms;
+  s.AccumAsyncChunkPostSchedulerMs += n.async_chunk_post_scheduler_ms;
   s.AccumAsyncChunkIoDrainMs += n.async_chunk_io_drain_ms;
   s.AccumAsyncIoMs += n.async_io_ms;
   s.AccumSceneMs += n.scene_ms;
@@ -3184,8 +3222,20 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.fluid_map_gpu_ms = s.AccumFluidGpuMs * inv;
   avg.stream_ms = s.AccumStreamMs * inv;
   avg.mesh_emerge_ms = s.AccumMeshEmergeMs * inv;
+  avg.mesh_emerge_coordinator_ms =
+      s.AccumMeshEmergeCoordinatorMs * inv;
+  avg.mesh_emerge_post_telemetry_ms =
+      s.AccumMeshEmergePostTelemetryMs * inv;
+  avg.mesh_emerge_player_relight_burst_ms =
+      s.AccumMeshEmergePlayerRelightBurstMs * inv;
   avg.world_streaming_phase_ms = s.AccumWorldStreamingPhaseMs * inv;
   avg.async_chunk_systems_ms = s.AccumAsyncChunkSystemsMs * inv;
+  avg.async_chunk_pre_scheduler_ms =
+      s.AccumAsyncChunkPreSchedulerMs * inv;
+  avg.async_chunk_scheduler_tick_ms =
+      s.AccumAsyncChunkSchedulerTickMs * inv;
+  avg.async_chunk_post_scheduler_ms =
+      s.AccumAsyncChunkPostSchedulerMs * inv;
   avg.async_chunk_io_drain_ms = s.AccumAsyncChunkIoDrainMs * inv;
   avg.async_io_ms = s.AccumAsyncIoMs * inv;
   avg.scene_ms = s.AccumSceneMs * inv;
@@ -3279,8 +3329,14 @@ void ResetAccum(Session &s)
   s.AccumFluidGpuMs = 0.0;
   s.AccumStreamMs = 0.0;
   s.AccumMeshEmergeMs = 0.0;
+  s.AccumMeshEmergeCoordinatorMs = 0.0;
+  s.AccumMeshEmergePostTelemetryMs = 0.0;
+  s.AccumMeshEmergePlayerRelightBurstMs = 0.0;
   s.AccumWorldStreamingPhaseMs = 0.0;
   s.AccumAsyncChunkSystemsMs = 0.0;
+  s.AccumAsyncChunkPreSchedulerMs = 0.0;
+  s.AccumAsyncChunkSchedulerTickMs = 0.0;
+  s.AccumAsyncChunkPostSchedulerMs = 0.0;
   s.AccumAsyncChunkIoDrainMs = 0.0;
   s.AccumAsyncIoMs = 0.0;
   s.AccumSceneMs = 0.0;
