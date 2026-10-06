@@ -658,6 +658,29 @@ struct PhysicsTelemetry
   int ColumnFlowCooldownDeferredN{0};
   int ColumnFlowProbeBudgetHitN{0};
   double ColumnFlowPostDeadlineUnitMsMax{0.0};
+  int ColumnFlowDrainRequestN{0};
+  int ColumnFlowCriticalUnitsAtEntryN{0};
+  int ColumnFlowCriticalUnitsAtExitN{0};
+  int ColumnFlowLiveFirstMeshN{0};
+  int ColumnFlowLiveRelightN{0};
+  int ColumnFlowLiveSeamN{0};
+  int ColumnFlowLivePromoteN{0};
+  int ColumnFlowProbedFirstMeshN{0};
+  int ColumnFlowProbedRelightN{0};
+  int ColumnFlowProbedSeamN{0};
+  int ColumnFlowProbedPromoteN{0};
+  int ColumnFlowDeferredFirstMeshN{0};
+  int ColumnFlowDeferredRelightN{0};
+  int ColumnFlowDeferredSeamN{0};
+  int ColumnFlowDeferredPromoteN{0};
+  int ColumnFlowDispatchedFirstMeshN{0};
+  int ColumnFlowDispatchedRelightN{0};
+  int ColumnFlowDispatchedSeamN{0};
+  int ColumnFlowDispatchedPromoteN{0};
+  double ColumnFlowDispatchFirstMeshMsMax{0.0};
+  double ColumnFlowDispatchRelightMsMax{0.0};
+  double ColumnFlowDispatchSeamMsMax{0.0};
+  double ColumnFlowDispatchPromoteMsMax{0.0};
   /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
   /// Alias docs: emerge_fsm_* — not ColumnJobGraph stages.
   int ColumnLightingN{0};

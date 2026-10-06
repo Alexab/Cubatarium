@@ -78,6 +78,15 @@ public:
 
   /// Live tickets only (excludes superseded heap entries).
   size_t LiveCount() const { return live_.size(); }
+  size_t LiveCount(ColumnWorkKind kind) const
+  {
+    size_t count = 0;
+    for (const auto &entry : live_)
+    {
+      count += entry.second.kind == kind ? 1U : 0U;
+    }
+    return count;
+  }
   size_t HeapCount() const { return static_cast<size_t>(heap_.size()); }
   size_t StaleCount() const
   {

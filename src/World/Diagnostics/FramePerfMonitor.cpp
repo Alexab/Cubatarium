@@ -576,6 +576,29 @@ struct FrameNumbers
   int column_flow_cooldown_deferred_n{0};
   int column_flow_probe_budget_hit_n{0};
   double column_flow_post_deadline_unit_ms_max{0.0};
+  int column_flow_drain_request_n{0};
+  int column_flow_critical_units_at_entry_n{0};
+  int column_flow_critical_units_at_exit_n{0};
+  int column_flow_live_first_mesh_n{0};
+  int column_flow_live_relight_n{0};
+  int column_flow_live_seam_n{0};
+  int column_flow_live_promote_n{0};
+  int column_flow_probed_first_mesh_n{0};
+  int column_flow_probed_relight_n{0};
+  int column_flow_probed_seam_n{0};
+  int column_flow_probed_promote_n{0};
+  int column_flow_deferred_first_mesh_n{0};
+  int column_flow_deferred_relight_n{0};
+  int column_flow_deferred_seam_n{0};
+  int column_flow_deferred_promote_n{0};
+  int column_flow_dispatched_first_mesh_n{0};
+  int column_flow_dispatched_relight_n{0};
+  int column_flow_dispatched_seam_n{0};
+  int column_flow_dispatched_promote_n{0};
+  double column_flow_dispatch_first_mesh_ms_max{0.0};
+  double column_flow_dispatch_relight_ms_max{0.0};
+  double column_flow_dispatch_seam_ms_max{0.0};
+  double column_flow_dispatch_promote_ms_max{0.0};
   int column_lighting_n{0};
   int column_meshing_n{0};
   int column_render_ready_n{0};
@@ -1400,6 +1423,35 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_flow_probe_budget_hit_n = phys.ColumnFlowProbeBudgetHitN;
   n.column_flow_post_deadline_unit_ms_max =
       phys.ColumnFlowPostDeadlineUnitMsMax;
+  n.column_flow_drain_request_n = phys.ColumnFlowDrainRequestN;
+  n.column_flow_critical_units_at_entry_n =
+      phys.ColumnFlowCriticalUnitsAtEntryN;
+  n.column_flow_critical_units_at_exit_n =
+      phys.ColumnFlowCriticalUnitsAtExitN;
+  n.column_flow_live_first_mesh_n = phys.ColumnFlowLiveFirstMeshN;
+  n.column_flow_live_relight_n = phys.ColumnFlowLiveRelightN;
+  n.column_flow_live_seam_n = phys.ColumnFlowLiveSeamN;
+  n.column_flow_live_promote_n = phys.ColumnFlowLivePromoteN;
+  n.column_flow_probed_first_mesh_n = phys.ColumnFlowProbedFirstMeshN;
+  n.column_flow_probed_relight_n = phys.ColumnFlowProbedRelightN;
+  n.column_flow_probed_seam_n = phys.ColumnFlowProbedSeamN;
+  n.column_flow_probed_promote_n = phys.ColumnFlowProbedPromoteN;
+  n.column_flow_deferred_first_mesh_n = phys.ColumnFlowDeferredFirstMeshN;
+  n.column_flow_deferred_relight_n = phys.ColumnFlowDeferredRelightN;
+  n.column_flow_deferred_seam_n = phys.ColumnFlowDeferredSeamN;
+  n.column_flow_deferred_promote_n = phys.ColumnFlowDeferredPromoteN;
+  n.column_flow_dispatched_first_mesh_n =
+      phys.ColumnFlowDispatchedFirstMeshN;
+  n.column_flow_dispatched_relight_n = phys.ColumnFlowDispatchedRelightN;
+  n.column_flow_dispatched_seam_n = phys.ColumnFlowDispatchedSeamN;
+  n.column_flow_dispatched_promote_n = phys.ColumnFlowDispatchedPromoteN;
+  n.column_flow_dispatch_first_mesh_ms_max =
+      phys.ColumnFlowDispatchFirstMeshMsMax;
+  n.column_flow_dispatch_relight_ms_max =
+      phys.ColumnFlowDispatchRelightMsMax;
+  n.column_flow_dispatch_seam_ms_max = phys.ColumnFlowDispatchSeamMsMax;
+  n.column_flow_dispatch_promote_ms_max =
+      phys.ColumnFlowDispatchPromoteMsMax;
   n.column_lighting_n = phys.ColumnLightingN;
   n.column_meshing_n = phys.ColumnMeshingN;
   n.column_render_ready_n = phys.ColumnRenderReadyN;
@@ -2333,6 +2385,52 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.column_flow_probe_budget_hit_n
           << ",\"column_flow_post_deadline_unit_ms_max\":"
           << n.column_flow_post_deadline_unit_ms_max
+          << ",\"column_flow_drain_request_n\":"
+          << n.column_flow_drain_request_n
+          << ",\"column_flow_critical_units_at_entry_n\":"
+          << n.column_flow_critical_units_at_entry_n
+          << ",\"column_flow_critical_units_at_exit_n\":"
+          << n.column_flow_critical_units_at_exit_n
+          << ",\"column_flow_live_first_mesh_n\":"
+          << n.column_flow_live_first_mesh_n
+          << ",\"column_flow_live_relight_n\":"
+          << n.column_flow_live_relight_n
+          << ",\"column_flow_live_seam_n\":"
+          << n.column_flow_live_seam_n
+          << ",\"column_flow_live_promote_n\":"
+          << n.column_flow_live_promote_n
+          << ",\"column_flow_probed_first_mesh_n\":"
+          << n.column_flow_probed_first_mesh_n
+          << ",\"column_flow_probed_relight_n\":"
+          << n.column_flow_probed_relight_n
+          << ",\"column_flow_probed_seam_n\":"
+          << n.column_flow_probed_seam_n
+          << ",\"column_flow_probed_promote_n\":"
+          << n.column_flow_probed_promote_n
+          << ",\"column_flow_deferred_first_mesh_n\":"
+          << n.column_flow_deferred_first_mesh_n
+          << ",\"column_flow_deferred_relight_n\":"
+          << n.column_flow_deferred_relight_n
+          << ",\"column_flow_deferred_seam_n\":"
+          << n.column_flow_deferred_seam_n
+          << ",\"column_flow_deferred_promote_n\":"
+          << n.column_flow_deferred_promote_n
+          << ",\"column_flow_dispatched_first_mesh_n\":"
+          << n.column_flow_dispatched_first_mesh_n
+          << ",\"column_flow_dispatched_relight_n\":"
+          << n.column_flow_dispatched_relight_n
+          << ",\"column_flow_dispatched_seam_n\":"
+          << n.column_flow_dispatched_seam_n
+          << ",\"column_flow_dispatched_promote_n\":"
+          << n.column_flow_dispatched_promote_n
+          << ",\"column_flow_dispatch_first_mesh_ms_max\":"
+          << n.column_flow_dispatch_first_mesh_ms_max
+          << ",\"column_flow_dispatch_relight_ms_max\":"
+          << n.column_flow_dispatch_relight_ms_max
+          << ",\"column_flow_dispatch_seam_ms_max\":"
+          << n.column_flow_dispatch_seam_ms_max
+          << ",\"column_flow_dispatch_promote_ms_max\":"
+          << n.column_flow_dispatch_promote_ms_max
           << ",\"column_lighting_n\":" << n.column_lighting_n
           << ",\"column_meshing_n\":" << n.column_meshing_n
           << ",\"column_render_ready_n\":" << n.column_render_ready_n
