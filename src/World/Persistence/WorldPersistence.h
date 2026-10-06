@@ -81,24 +81,7 @@ public:
   const UChunkStorageService &GetChunkStorage() const { return *ChunkStorage; }
 
   const std::string &GetWorldFolderPath() const { return WorldFolderPath; }
-  void SetWorldFolderPath(const std::string &path)
-  {
-    if (WorldFolderPath == path)
-    {
-      return;
-    }
-    SaveColumnLightFlagsIfDirty();
-    WorldFolderPath = path;
-    LightCompleteColumns.clear();
-    LightCompleteDirty = false;
-    LightCompleteLoaded = false;
-    if (!WorldFolderPath.empty())
-    {
-      EnsureChunkIoInitialized();
-      AsyncChunkIo->RequestDiskIndexWarmup(*ChunkStorage, WorldFolderPath);
-      LoadColumnLightFlags();
-    }
-  }
+  void SetWorldFolderPath(const std::string &path);
 
   void LoadUsers(UWorld &world, const std::string &file_name);
   void SaveUsers(UWorld &world, const std::string &file_name);
@@ -250,6 +233,8 @@ private:
   bool PrioritizeNearestTerrainColumnRelight(UWorld &world,
                                              glm::ivec3 focus_ground,
                                              int radius_chunks, int scan_cap);
+  void ProcessColumnLightFlagSaveResults();
+  bool FlushColumnLightFlagsForWorldSwitch();
 
   // Storage outlives AsyncChunkIo's worker pool: warmup jobs retain its
   // reference until the pool joins during destruction.
@@ -295,6 +280,12 @@ private:
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
   bool LightCompleteDirty{false};
   bool LightCompleteLoaded{false};
+  uint64_t LightCompleteRevision{0};
+  bool LightCompleteSaveInFlight{false};
+  std::string LightCompleteSaveWorldFolder;
+  uint64_t LightCompleteSaveRevision{0};
+  unsigned int LightCompleteSaveFailures{0};
+  std::chrono::steady_clock::time_point LightCompleteSaveRetryAt{};
   std::string WorldFolderPath;
   bool RelightFifoPinValid{false};
   int RelightFifoPinCx{0};

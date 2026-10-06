@@ -59,6 +59,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+#include <thread>
 #include <vector>
 
 using json = nlohmann::json;
@@ -175,6 +176,38 @@ UWorldPersistence::UWorldPersistence()
   ChunkStorage = std::make_unique<UChunkStorageService>();
 }
 
+void UWorldPersistence::SetWorldFolderPath(const std::string &path)
+{
+  if (WorldFolderPath == path)
+  {
+    return;
+  }
+
+  SaveColumnLightFlagsIfDirty();
+  if (!FlushColumnLightFlagsForWorldSwitch())
+  {
+    const std::string message =
+        "outcome=light_flags_flush_timeout folder=" + WorldFolderPath +
+        " revision=" + std::to_string(LightCompleteRevision);
+    CubatariumLogInfo("WorldColumnSave", message);
+    std::cerr << "[WorldColumnSave] " << message << std::endl;
+  }
+
+  WorldFolderPath = path;
+  LightCompleteColumns.clear();
+  LightCompleteDirty = false;
+  LightCompleteLoaded = false;
+  ++LightCompleteRevision;
+  LightCompleteSaveFailures = 0;
+  LightCompleteSaveRetryAt = {};
+  if (!WorldFolderPath.empty())
+  {
+    EnsureChunkIoInitialized();
+    AsyncChunkIo->RequestDiskIndexWarmup(*ChunkStorage, WorldFolderPath);
+    LoadColumnLightFlags();
+  }
+}
+
 bool UWorldPersistence::HasPersistedTerrainOnDisk(
     const std::string &world_folder_path)
 {
@@ -248,6 +281,7 @@ void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
     if (LightCompleteColumns.insert(ground_xz).second)
     {
       LightCompleteDirty = true;
+      ++LightCompleteRevision;
     }
   }
   else
@@ -261,6 +295,7 @@ void UWorldPersistence::ClearColumnLightComplete(glm::ivec2 ground_xz)
   if (LightCompleteColumns.erase(ground_xz) > 0)
   {
     LightCompleteDirty = true;
+    ++LightCompleteRevision;
   }
 }
 
@@ -306,32 +341,121 @@ void UWorldPersistence::LoadColumnLightFlags()
 
 void UWorldPersistence::SaveColumnLightFlagsIfDirty()
 {
-  if (!LightCompleteDirty || WorldFolderPath.empty())
+  if (!LightCompleteDirty || WorldFolderPath.empty() ||
+      LightCompleteSaveInFlight ||
+      std::chrono::steady_clock::now() < LightCompleteSaveRetryAt)
   {
     return;
   }
-  try
+
+  EnsureChunkIoInitialized();
+  if (!AsyncChunkIo)
   {
-    std::filesystem::create_directories(WorldFolderPath);
-    json data;
-    data["format_version"] = 1;
-    json complete = json::array();
-    for (const glm::ivec2 &col : LightCompleteColumns)
+    return;
+  }
+
+  std::vector<glm::ivec2> complete_columns;
+  complete_columns.reserve(LightCompleteColumns.size());
+  for (const glm::ivec2 &col : LightCompleteColumns)
+  {
+    complete_columns.push_back(col);
+  }
+  LightCompleteSaveWorldFolder = WorldFolderPath;
+  LightCompleteSaveRevision = LightCompleteRevision;
+  LightCompleteSaveInFlight = true;
+  AsyncChunkIo->RequestSaveColumnLightFlags(
+      LightCompleteSaveWorldFolder, LightCompleteSaveRevision,
+      std::move(complete_columns));
+}
+
+void UWorldPersistence::ProcessColumnLightFlagSaveResults()
+{
+  if (!AsyncChunkIo)
+  {
+    return;
+  }
+  for (AsyncColumnLightFlagsSaveResult &result :
+       AsyncChunkIo->DrainColumnLightFlagsSaves())
+  {
+    LightCompleteSaveInFlight = false;
+    LightCompleteSaveWorldFolder.clear();
+    LightCompleteSaveRevision = 0;
+    LightCompleteSaveRetryAt = {};
+
+    if (result.success)
     {
-      complete.push_back(json::array({col.x, col.y}));
+      LightCompleteSaveFailures = 0;
+      if (result.worldFolder == WorldFolderPath &&
+          result.revision == LightCompleteRevision)
+      {
+        LightCompleteDirty = false;
+      }
+      continue;
     }
-    data["complete"] = std::move(complete);
-    const std::string path = WorldFolderPath + "/column_light.json";
-    std::ofstream file(path, std::ios::trunc);
-    if (file.is_open())
+
+    if (result.worldFolder == WorldFolderPath)
     {
-      file << data.dump();
-      LightCompleteDirty = false;
+      LightCompleteDirty = true;
+      ++LightCompleteSaveFailures;
+      const unsigned int exponent =
+          std::min<unsigned int>(LightCompleteSaveFailures - 1, 6);
+      const auto retry_delay = std::chrono::milliseconds(
+          std::min<int>(30000, 250 * (1 << exponent)));
+      LightCompleteSaveRetryAt =
+          std::chrono::steady_clock::now() + retry_delay;
+    }
+    const std::string message =
+        "outcome=light_flags_write_failed folder=" + result.worldFolder +
+        " revision=" + std::to_string(result.revision) +
+        " error=" + result.error;
+    CubatariumLogInfo("WorldColumnSave", message);
+    std::cerr << "[WorldColumnSave] " << message << std::endl;
+  }
+}
+
+bool UWorldPersistence::FlushColumnLightFlagsForWorldSwitch()
+{
+  if (!LightCompleteDirty || WorldFolderPath.empty())
+  {
+    return true;
+  }
+  EnsureChunkIoInitialized();
+  if (!AsyncChunkIo)
+  {
+    return false;
+  }
+
+  constexpr auto kFlushTimeout = std::chrono::seconds(10);
+  const auto deadline = std::chrono::steady_clock::now() + kFlushTimeout;
+  while (std::chrono::steady_clock::now() < deadline)
+  {
+    ProcessColumnLightFlagSaveResults();
+    SaveColumnLightFlagsIfDirty();
+    if (!LightCompleteDirty && !LightCompleteSaveInFlight)
+    {
+      return true;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    if (LightCompleteSaveInFlight)
+    {
+      const auto remaining = std::chrono::duration_cast<
+          std::chrono::milliseconds>(deadline - now);
+      (void)AsyncChunkIo->WaitForColumnLightFlagsSaveIdleFor(
+          std::min(remaining, std::chrono::milliseconds(100)));
+    }
+    else if (LightCompleteSaveRetryAt > now)
+    {
+      const auto remaining = std::chrono::duration_cast<
+          std::chrono::milliseconds>(deadline - now);
+      const auto retry_wait = std::chrono::duration_cast<
+          std::chrono::milliseconds>(LightCompleteSaveRetryAt - now);
+      std::this_thread::sleep_for(std::min(
+          remaining, std::min(retry_wait, std::chrono::milliseconds(100))));
     }
   }
-  catch (const json::exception &)
-  {
-  }
+  ProcessColumnLightFlagSaveResults();
+  return !LightCompleteDirty && !LightCompleteSaveInFlight;
 }
 
 void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
@@ -3522,6 +3646,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     return metrics;
   }
 
+  ProcessColumnLightFlagSaveResults();
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
     const auto discard_started = std::chrono::steady_clock::now();
@@ -3835,7 +3960,8 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
 bool UWorldPersistence::IsAsyncChunkIoQuiescent() const
 {
   if (!PendingAsyncColumnLoadSlices.empty() ||
-      !PendingAsyncColumnSaveSlices.empty())
+      !PendingAsyncColumnSaveSlices.empty() || LightCompleteSaveInFlight ||
+      (!WorldFolderPath.empty() && LightCompleteDirty))
   {
     return false;
   }
@@ -3844,7 +3970,8 @@ bool UWorldPersistence::IsAsyncChunkIoQuiescent() const
     return true;
   }
   return AsyncChunkIo->CompletedLoadsEmpty() &&
-         AsyncChunkIo->CompletedSavesEmpty();
+         AsyncChunkIo->CompletedSavesEmpty() &&
+         AsyncChunkIo->CompletedColumnLightFlagsSavesEmpty();
 }
 
 void UWorldPersistence::TraceAsyncChunkIoShutdownState() const
@@ -3865,7 +3992,11 @@ void UWorldPersistence::TraceAsyncChunkIoShutdownState() const
       " ready_saves=" +
       std::to_string(AsyncChunkIo ? AsyncChunkIo->GetCompletedSaveCount() : 0) +
       " ready_loads=" +
-      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetCompletedLoadCount() : 0);
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetCompletedLoadCount() : 0) +
+      " light_flags_in_flight=" +
+      std::to_string(LightCompleteSaveInFlight ? 1 : 0) +
+      " light_flags_dirty=" +
+      std::to_string(LightCompleteDirty ? 1 : 0);
   CubatariumLogInfo("WorldColumnSave", message);
   std::cerr << "[WorldColumnSave] " << message << std::endl;
 }
@@ -3891,23 +4022,29 @@ bool UWorldPersistence::TickDrainAsyncChunkIo(UWorld &world, int max_iterations)
 
 void UWorldPersistence::FlushAsyncChunkIo(UWorld &world)
 {
-  if (!AsyncChunkIo)
+  if (AsyncChunkIo)
   {
-    return;
-  }
-  constexpr int kMaxDrainIterations = 4096;
-  for (int i = 0; i < kMaxDrainIterations; ++i)
-  {
-    if (TickDrainAsyncChunkIo(world, 1))
+    constexpr int kMaxDrainIterations = 4096;
+    for (int i = 0; i < kMaxDrainIterations; ++i)
     {
-      AsyncChunkIo->WaitIdle();
-      if (IsAsyncChunkIoQuiescent())
+      if (TickDrainAsyncChunkIo(world, 1))
       {
-        break;
+        AsyncChunkIo->WaitIdle();
+        if (IsAsyncChunkIoQuiescent())
+        {
+          break;
+        }
       }
     }
   }
-  SaveColumnLightFlagsIfDirty();
+  if (!FlushColumnLightFlagsForWorldSwitch())
+  {
+    const std::string message =
+        "outcome=light_flags_flush_timeout folder=" + WorldFolderPath +
+        " revision=" + std::to_string(LightCompleteRevision);
+    CubatariumLogInfo("WorldColumnSave", message);
+    std::cerr << "[WorldColumnSave] " << message << std::endl;
+  }
 }
 
 void UWorldPersistence::AbortAsyncChunkIo()

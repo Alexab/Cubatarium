@@ -6,9 +6,20 @@
 #include "World/IO/JsonChunkSerializer.h"
 #include <cstdlib>
 #include <fstream>
+#include <nlohmann/json.hpp>
+#include <system_error>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 namespace cutum
 {
+using json = nlohmann::json;
+
 namespace
 {
 bool IsAsyncChunkIoTraceEnabled()
@@ -17,6 +28,111 @@ bool IsAsyncChunkIoTraceEnabled()
   return value && value[0] == '1';
 }
 } // namespace
+
+void UAsyncChunkIO::RequestSaveColumnLightFlags(
+    std::string worldFolder, const uint64_t revision,
+    std::vector<glm::ivec2> completeColumns)
+{
+  ColumnLightFlagsPool.Enqueue(
+      [this, worldFolder = std::move(worldFolder), revision,
+       completeColumns = std::move(completeColumns)]() mutable
+      {
+        AsyncColumnLightFlagsSaveResult result;
+        result.worldFolder = worldFolder;
+        result.revision = revision;
+        try
+        {
+          std::sort(completeColumns.begin(), completeColumns.end(),
+                    [](const glm::ivec2 &a, const glm::ivec2 &b)
+                    {
+                      return a.x < b.x || (a.x == b.x && a.y < b.y);
+                    });
+          json data;
+          data["format_version"] = 1;
+          json complete = json::array();
+          for (const glm::ivec2 &col : completeColumns)
+          {
+            complete.push_back(json::array({col.x, col.y}));
+          }
+          data["complete"] = std::move(complete);
+          const std::string encoded = data.dump();
+
+          const std::filesystem::path target =
+              std::filesystem::path(worldFolder) / "column_light.json";
+          const std::filesystem::path temp = target.string() + ".tmp";
+          std::error_code ec;
+          std::filesystem::create_directories(target.parent_path(), ec);
+          if (ec)
+          {
+            result.error = "create_directories: " + ec.message();
+          }
+          else
+          {
+            {
+              std::ofstream file(temp, std::ios::binary | std::ios::trunc);
+              if (!file.is_open())
+              {
+                result.error = "open_temp_failed";
+              }
+              else
+              {
+                file.write(encoded.data(),
+                           static_cast<std::streamsize>(encoded.size()));
+                file.flush();
+                if (!file.good())
+                {
+                  result.error = "write_temp_failed";
+                }
+                file.close();
+                if (result.error.empty() && !file.good())
+                {
+                  result.error = "close_temp_failed";
+                }
+              }
+            }
+
+            if (result.error.empty())
+            {
+#ifdef _WIN32
+              if (!MoveFileExW(temp.c_str(), target.c_str(),
+                               MOVEFILE_REPLACE_EXISTING |
+                                   MOVEFILE_WRITE_THROUGH))
+              {
+                result.error =
+                    "replace_failed: " +
+                    std::system_category().message(
+                        static_cast<int>(GetLastError()));
+              }
+#else
+              std::filesystem::rename(temp, target, ec);
+              if (ec)
+              {
+                result.error = "replace_failed: " + ec.message();
+              }
+#endif
+            }
+            if (!result.error.empty())
+            {
+              std::error_code cleanup_ec;
+              std::filesystem::remove(temp, cleanup_ec);
+            }
+            else
+            {
+              result.success = true;
+            }
+          }
+        }
+        catch (const std::exception &e)
+        {
+          result.error = std::string("exception: ") + e.what();
+        }
+        catch (...)
+        {
+          result.error = "unknown_exception";
+        }
+        CompletedColumnLightFlagsSaves.Push(std::move(result));
+      });
+}
 
 void UAsyncChunkIO::RequestDiskIndexWarmup(
     UChunkStorageService &storage, const std::string &worldFolder)
@@ -285,6 +401,28 @@ std::vector<AsyncChunkLoadResult> UAsyncChunkIO::DrainLoadsUpTo(
 std::vector<AsyncChunkSaveRequest> UAsyncChunkIO::DrainSaves()
 {
   return CompletedSaves.DrainAll();
+}
+
+std::vector<AsyncColumnLightFlagsSaveResult>
+UAsyncChunkIO::DrainColumnLightFlagsSaves()
+{
+  return CompletedColumnLightFlagsSaves.DrainAll();
+}
+
+bool UAsyncChunkIO::WaitForColumnLightFlagsSaveIdleFor(
+    const std::chrono::milliseconds timeout)
+{
+  return ColumnLightFlagsPool.WaitIdleFor(timeout);
+}
+
+void UAsyncChunkIO::WaitForColumnLightFlagsSaveIdle()
+{
+  ColumnLightFlagsPool.WaitIdle();
+}
+
+bool UAsyncChunkIO::CompletedColumnLightFlagsSavesEmpty() const
+{
+  return CompletedColumnLightFlagsSaves.Empty();
 }
 
 void UAsyncChunkIO::WaitIdle()

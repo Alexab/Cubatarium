@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <glm/glm.hpp>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -48,6 +49,14 @@ struct AsyncChunkSaveRequest
   std::string error;
 };
 
+struct AsyncColumnLightFlagsSaveResult
+{
+  std::string worldFolder;
+  uint64_t revision{0};
+  bool success{false};
+  std::string error;
+};
+
 class UAsyncChunkIO
 {
 public:
@@ -65,6 +74,9 @@ public:
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, const UBlockWorld &world,
                    UBlockRegistry &registry, ChunkGenerationToken token);
+  void RequestSaveColumnLightFlags(
+      std::string worldFolder, uint64_t revision,
+      std::vector<glm::ivec2> completeColumns);
 
   std::vector<AsyncChunkLoadResult> DrainLoads();
   std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);
@@ -87,6 +99,10 @@ public:
                                              available_count);
   }
   std::vector<AsyncChunkSaveRequest> DrainSaves();
+  std::vector<AsyncColumnLightFlagsSaveResult> DrainColumnLightFlagsSaves();
+  bool WaitForColumnLightFlagsSaveIdleFor(std::chrono::milliseconds timeout);
+  void WaitForColumnLightFlagsSaveIdle();
+  bool CompletedColumnLightFlagsSavesEmpty() const;
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
@@ -105,6 +121,11 @@ private:
   UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
   UCompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
   UJobThreadPool Pool;
+  // Light-completion metadata is rare and coalesced by WorldPersistence. Keep
+  // it off the chunk-I/O pool so terrain cancellation cannot drop its writer.
+  UCompletedJobQueue<AsyncColumnLightFlagsSaveResult>
+      CompletedColumnLightFlagsSaves;
+  UJobThreadPool ColumnLightFlagsPool{1, "ColumnLightFlagsSave"};
   std::atomic<bool> CancelledLoadSweepPending{false};
   std::unordered_set<std::string> DiskIndexWarmupFolders;
 };
