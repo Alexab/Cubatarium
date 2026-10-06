@@ -19,6 +19,8 @@ struct PhysicsTelemetry
   double MeshEmergePostTelemetryMs{0.0};
   double MeshEmergePlayerRelightBurstMs{0.0};
   double ColumnEmergeStageSampleMs{0.0};
+  int ColumnEmergeStageSampleCount{0};
+  double ColumnEmergeStageSampleAgeMs{0.0};
   double BlockStepMs{0.0};
   double DrainStepMs{0.0};
   double FluidStepMs{0.0};

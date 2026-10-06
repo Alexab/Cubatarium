@@ -2460,6 +2460,23 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
 
 void UWorld::SampleColumnEmergeStageTelemetry()
 {
+  const double now_ms = VisualObligationNowMs();
+  // Preserve the existing stateful demand-maintenance cadence independently
+  // of this logger-only census.
+  MaintainChunkRenderDemandStore(now_ms);
+  PhysicsTelemetryData.ColumnEmergeStageSampleAgeMs =
+      LastColumnEmergeTelemetrySampleMs > 0.0
+          ? std::max(0.0, now_ms - LastColumnEmergeTelemetrySampleMs)
+          : 0.0;
+  constexpr double kSampleIntervalMs = 250.0;
+  if (NextColumnEmergeTelemetrySampleMs > now_ms)
+  {
+    return;
+  }
+  NextColumnEmergeTelemetrySampleMs = now_ms + kSampleIntervalMs;
+  LastColumnEmergeTelemetrySampleMs = now_ms;
+  PhysicsTelemetryData.ColumnEmergeStageSampleAgeMs = 0.0;
+  ++PhysicsTelemetryData.ColumnEmergeStageSampleCount;
   const auto sample_t0 = std::chrono::high_resolution_clock::now();
   int lighting = 0;
   int meshing = 0;
@@ -2509,11 +2526,7 @@ void UWorld::SampleColumnEmergeStageTelemetry()
     PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
         UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
   }
-  // A32/A37/A38: bounded demand-store upkeep is stateful and remains separate
-  // from the diagnostic census so callers can preserve its frame cadence.
   {
-    const double now_ms = VisualObligationNowMs();
-    MaintainChunkRenderDemandStore(now_ms);
     if (kChunkDemandShadow())
     {
       const auto br =

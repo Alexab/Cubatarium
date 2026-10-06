@@ -1317,7 +1317,7 @@ public:
   void SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state);
   ColumnEmergeState GetColumnEmergeState(glm::ivec3 ground) const;
   void ClearColumnEmergeState(glm::ivec2 ground_xz);
-  /// Count Lighting / Meshing / RenderReady columns into PhysicsTelemetry.
+  /// Sample logger-only column/job/demand census at a bounded time cadence.
   void SampleColumnEmergeStageTelemetry();
   /// Run the bounded demand-store upkeep independently of telemetry census.
   void MaintainChunkRenderDemandStore();
@@ -1664,6 +1664,9 @@ private:
   std::unordered_set<glm::ivec2, GroundColumnHash> AsyncRelightColumnsInFlight;
   std::unordered_map<glm::ivec2, ColumnEmergeState, GroundColumnHash>
       ColumnEmergeStates;
+  /// Full telemetry census is diagnostic; demand maintenance stays per frame.
+  double NextColumnEmergeTelemetrySampleMs{0.0};
+  double LastColumnEmergeTelemetrySampleMs{0.0};
   /// Phase 2: dual-write SoT store (mirrors emerge / desired / revs).
   UColumnRecordStore ColumnRecords;
   WorldBorderConfig WorldBorder;
