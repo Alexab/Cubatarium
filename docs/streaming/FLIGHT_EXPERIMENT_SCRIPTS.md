@@ -1003,3 +1003,38 @@ then follow demand/revision transitions for the oldest dirty and first
 unpresentable camera-band slices. Keep the residual guard until those slices
 are proven presentable or their work is shown to be safely retain-old-image
 background remeshing.
+
+## M427-M428 - validate the presentability gate at the established locus (2026-10-06)
+
+M427 used a metadata-only seed but had no per-world `users.json`, so the
+M335-start camera locus was not pinned. It stayed at focus `(2,-2)` with zero
+chunks traveled. Treat it only as an EnterLit diagnostic, not a reproducible
+M335-locus check; the nearby tree and the run's timeout do not indicate that
+the route collided or failed.
+
+M428 repeated the cold-start check with a per-world user at `[120,56,56]`,
+yaw `180`, pitch `-30`, and visible GUI. It ran 30 telemetry periods on seed
+`3650478197`; `player_x/y/z` stayed at `(120,47,56)`, and requested/applied
+horizontal movement stayed at zero. Thus the log contains no player movement
+or flight, despite the operator observing an object in water during the run.
+Keep that observation separate from route-collision evidence until a moving
+M335 report captures it.
+
+The M428 cold start produced `first_presentable_ms=5168.17` in one EnterLit
+trace, while a later EnterLit trace ended with `live_blockers`,
+`underfeet_present_ready=0`, `spawn_mesh_ring_ready=0`, and visibility debt 15.
+The run report says `success`, but its route scenario is empty and it is not an
+acceptance replay. The report's `unfinished_visual` stayed nonzero (60 at the
+end); this is readiness debt, not proof of blank pixels. In its sampled
+periods, fully-dark and black-sticky counts remained zero, while the trace
+recorded 16 stale-lit visible-black candidates. Keep the distinction between
+not-ready, stale-light, and measured fully-dark output in later attribution.
+
+Artifacts: [M427 report](../../bin/suite_reports/engine_refactor/m427_world_cold_presentability_20261006.json),
+[M428 report](../../bin/suite_reports/engine_refactor/m428_world_cold_m335_locus_20261006.json),
+EnterLit traces `bin/logs/enter_lit_20261006-172658.jsonl`,
+`bin/logs/enter_lit_20261006-172710.jsonl`,
+`bin/logs/enter_lit_20261006-173410.jsonl`, and
+`bin/logs/enter_lit_20261006-173422.jsonl`; M428 perf `bin/logs/perf_20261006-173407_30872.jsonl`.
+The next acceptance run is the unchanged visible, no-teleport M335 route on
+`World_164`; no cold-start result substitutes for it.

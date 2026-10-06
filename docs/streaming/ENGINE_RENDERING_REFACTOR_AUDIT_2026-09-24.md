@@ -5061,3 +5061,30 @@ Validate it first on a cold EnterLit control past 150 seconds, then on the
 unchanged visible no-teleport M335 route in `World_164`; continue separate
 fresh-seed runs periodically. M423-M426 records and artifacts are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m423-m426---cold-enterlit-owners-and-soft-settle-boundary-2026-10-06).
+
+### M427-M428 - presentability-gate follow-up and next regression lane
+
+The `47088487` change now blocks EnterLit on unsatisfied mesh work in the
+presentable camera band; it continues to block absent drawables and pending
+GPU/underfeet output. M427 did not pin the established user locus and is not a
+M335-start comparison. M428 did pin `[120,56,56]` (yaw 180, pitch -30) and
+telemetry confirms the player stayed at `(120,47,56)` with zero requested and
+applied horizontal motion. That report cannot substantiate a player collision
+or fall, although the operator observed an object in water.
+
+M428 is mixed startup evidence: one EnterLit trace first became presentable at
+5.17 seconds, while a later trace ended with live blockers, no ready underfeet
+or spawn ring, and visibility debt 15. Its report has 30 periods and
+`unfinished_visual=60`, but the route scenario is empty. Period telemetry had
+zero fully-dark/sticky counts and 16 stale-lit visible-black candidates. The
+measurements must remain separate: startup readiness debt is not a visual
+black-pixel measurement, and stale-lit candidates are not confirmed fully-dark
+chunks.
+
+The next decisive check is the unchanged visible, no-teleport M335 flight on
+`World_164` using Release commit `47088487`. Track route progress and collisions
+from actual movement telemetry; at suspected visual defects align screenshots,
+per-pixel census, chunk source, relight/publication revisions, and mesh
+readiness. Keep cold-start/fresh-seed experiments in a separate lane. Full
+M427/M428 artifacts and caveats are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m427-m428---validate-the-presentability-gate-at-the-established-locus-2026-10-06).

@@ -2826,3 +2826,32 @@ have valid census traces. See the experiment archive for exact reports, seeds,
 limits, and logs. The M422/M423-M426 evidence and new ordering are reflected in
 [`ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md`](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md#m423-m426---classify-cold-start-missing-meshes-versus-retained-dirty-work-2026-10-06)
 and [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m423-m426---cold-enterlit-owners-and-soft-settle-boundary-2026-10-06).
+
+### M427-M428 update - return to the primary repeated-world gate
+
+Commit `47088487` narrowed EnterLit's mesh blockers to unsatisfied,
+camera-presentable work, while retaining fail-closed handling for missing
+drawables and pending GPU/underfeet work. M427 was not at the M335 locus because
+it lacked a per-world player file. M428 pinned the known start and stayed
+stationary by telemetry, but its empty scenario and multiple EnterLit traces
+make it a startup diagnostic rather than route acceptance. One trace records
+first presentability at 5.17 seconds; a later trace still reports live
+blockers and visibility debt, so the gate needs confirmation under the normal
+route lifecycle.
+
+Next actions:
+
+1. Replay the unchanged visible, no-teleport M335 route on `World_164`, using
+   the committed Release binary. Preserve the exact route, speed, start,
+   yaw/pitch, capture configuration, and collision-detour defaults.
+2. Classify any dark/empty-looking regions by aligned route position, black
+   pixel census, visible-black candidates, relight state, chunk source
+   (disk/generation/resident), and mesh readiness. Do not label the
+   `unfinished_visual` counter as a framebuffer hole by itself.
+3. If the route confirms this gate and the existing presentation is stable,
+   retain the fix and periodically run a separate cold seed. If M335 regresses,
+   correlate the exact coordinate and lifecycle counters before changing
+   scheduling or startup safety policy again.
+
+M427-M428 limitations and exact metrics are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m427-m428---validate-the-presentability-gate-at-the-established-locus-2026-10-06).
