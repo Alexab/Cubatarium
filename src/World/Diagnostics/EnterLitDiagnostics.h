@@ -49,6 +49,9 @@ struct EnterLitSample
   int gate_miss_cy{0};
   int gate_miss_cz{0};
   int gate_miss_found{0};
+  int gate_miss_chunk_resident{0};
+  int gate_miss_non_air_blocks{-1};
+  uint64_t gate_miss_content_revision{0};
   int gate_miss_soft_held{0};
   int gate_miss_defer{0};
   int gate_miss_inflight{0};
@@ -114,6 +117,13 @@ struct EnterLitSample
   int underfeet_present_ready{0};
   int spawn_mesh_ring_ready{0};
   int focus_data_census_valid{0};
+  int focus_data_resident_solid_slice_n{0};
+  int focus_data_resident_air_slice_n{0};
+  int focus_data_absent_slice_n{0};
+  uint64_t focus_data_non_air_voxel_n{0};
+  int focus_data_band_solid_slice_n{0};
+  int focus_data_band_solid_mesh_n{0};
+  int focus_data_band_solid_gpu_live_n{0};
   int focus_data_camera_band_solid_slice_n{0};
   int focus_data_camera_band_no_drawable_n{0};
   int focus_data_camera_band_satisfying_n{0};

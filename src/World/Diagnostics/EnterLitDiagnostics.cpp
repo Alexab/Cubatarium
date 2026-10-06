@@ -146,6 +146,12 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"gate_miss_cy\":" << s.gate_miss_cy
           << ",\"gate_miss_cz\":" << s.gate_miss_cz
           << ",\"gate_miss_found\":" << s.gate_miss_found
+          << ",\"gate_miss_chunk_resident\":"
+          << s.gate_miss_chunk_resident
+          << ",\"gate_miss_non_air_blocks\":"
+          << s.gate_miss_non_air_blocks
+          << ",\"gate_miss_content_revision\":"
+          << s.gate_miss_content_revision
           << ",\"gate_miss_soft_held\":" << s.gate_miss_soft_held
           << ",\"gate_miss_defer\":" << s.gate_miss_defer
           << ",\"gate_miss_inflight\":" << s.gate_miss_inflight
@@ -219,6 +225,20 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"spawn_mesh_ring_ready\":" << s.spawn_mesh_ring_ready
           << ",\"focus_data_census_valid\":"
           << s.focus_data_census_valid
+          << ",\"focus_data_resident_solid_slice_n\":"
+          << s.focus_data_resident_solid_slice_n
+          << ",\"focus_data_resident_air_slice_n\":"
+          << s.focus_data_resident_air_slice_n
+          << ",\"focus_data_absent_slice_n\":"
+          << s.focus_data_absent_slice_n
+          << ",\"focus_data_non_air_voxel_n\":"
+          << s.focus_data_non_air_voxel_n
+          << ",\"focus_data_band_solid_slice_n\":"
+          << s.focus_data_band_solid_slice_n
+          << ",\"focus_data_band_solid_mesh_n\":"
+          << s.focus_data_band_solid_mesh_n
+          << ",\"focus_data_band_solid_gpu_live_n\":"
+          << s.focus_data_band_solid_gpu_live_n
           << ",\"focus_data_camera_band_solid_slice_n\":"
           << s.focus_data_camera_band_solid_slice_n
           << ",\"focus_data_camera_band_no_drawable_n\":"
@@ -356,6 +376,15 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.ring_not_ready = world.CountPostLoadRingNotReady();
   const FocusRingVisualCensus &focus_census = world.GetFocusRingVisualCensus();
   out.focus_data_census_valid = focus_census.data_mesh_valid ? 1 : 0;
+  out.focus_data_resident_solid_slice_n =
+      focus_census.resident_solid_slice_n;
+  out.focus_data_resident_air_slice_n = focus_census.resident_air_slice_n;
+  out.focus_data_absent_slice_n = focus_census.absent_slice_n;
+  out.focus_data_non_air_voxel_n =
+      static_cast<uint64_t>(std::max(0, focus_census.non_air_voxel_n));
+  out.focus_data_band_solid_slice_n = focus_census.band_solid_slice_n;
+  out.focus_data_band_solid_mesh_n = focus_census.band_solid_mesh_n;
+  out.focus_data_band_solid_gpu_live_n = focus_census.band_solid_gpu_live_n;
   out.focus_data_camera_band_solid_slice_n =
       focus_census.camera_band_solid_slice_n;
   out.focus_data_camera_band_no_drawable_n =
@@ -401,6 +430,14 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
     out.gate_miss_cx = gate_miss.x;
     out.gate_miss_cy = gate_miss.y;
     out.gate_miss_cz = gate_miss.z;
+    const UChunk *gate_chunk =
+        world.GetBlockWorld().GetChunkManager().GetChunk(gate_miss);
+    if (gate_chunk != nullptr)
+    {
+      out.gate_miss_chunk_resident = 1;
+      out.gate_miss_non_air_blocks = gate_chunk->GetNonAirCount();
+      out.gate_miss_content_revision = gate_chunk->GetContentRevision();
+    }
     out.gate_miss_soft_held = mesh.IsSoftDeferHeld(gate_miss) ? 1 : 0;
     out.gate_miss_defer =
         mesh.GetCache().IsDeferMeshUntilLit(gate_miss) ? 1 : 0;
