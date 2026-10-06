@@ -735,3 +735,39 @@ published light revisions and median sky light 1.0. The low-luma sources were
 mostly `tree_leaves` (572) and `tree_log` (573). This does not explain the
 reported muted patches; future probes should record the fragment fog factor,
 light-preview flag, precipitation, and wetness before interpreting the color.
+
+### M417: fog-attribution replay interrupted by Hibernate and forced reboot
+
+M417 reused the same visible, no-teleport M335 profile, `World_164`, Release
+executable, and route parameters as M416. It was intended to capture the
+fragment fog factor/color alongside sparse screen pixels. The user observed
+the screen near capture 100 and reported no black holes or empty chunks; this
+is useful qualitative evidence for that interval, but does not replace the
+pixel/depth and streaming counters.
+
+The computer entered Hibernate, then hung and required a forced restart. The
+user confirmed the system sleep/lock event. Treat M417 as externally
+interrupted: the game process was terminated by reboot, so the absent final
+flight report and missing shutdown dump are not evidence of an engine hang.
+The preserved capture directory is
+`bin/logs/m417_world164_m335_fog_attribution_interrupted_reboot/` (106 PNGs,
+`frame_000` through `frame_105`). Its partial performance log is
+`bin/logs/perf_20261006-084144_42920.jsonl` (6,931,430 bytes at recovery).
+The generic `bin/flight_sim_report.json` was stale from M416; do not attribute
+it to M417.
+
+The reboot exposed a diagnostic durability gap: pixel/fog and visual-black
+records live in a bounded in-memory ring and are serialized by
+`FramePerfMonitor::Shutdown()`. They therefore did not reach the partial M417
+perf file. A visible flight capture can survive while its high-value
+pixel/fog trace is lost on abnormal termination. Add periodic, deduplicated
+trace checkpoints before relying on this trace for another long flight.
+
+The fixed-day wrapper left its backup
+`bin/worlds/World_164/world_data.json.fixed-day-backup`. Recovery restored the
+world metadata byte-for-byte from that backup, verified against the original
+SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`,
+then removed the stale backup. The keep-awake helper was relaunched after
+restart; it prevents idle sleep while the game runs but cannot override an
+explicit Hibernate request. M418 repeats the same M335 route with new artifact
+names so the interrupted M417 captures remain intact.
