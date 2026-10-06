@@ -22,6 +22,7 @@ TARGET_KINDS = {
 }
 FRUSTUM_KIND = "view_frustum_coverage_trace"
 FRUSTUM_SUMMARY_KIND = "view_frustum_probe_summary"
+PEAK_RENDER_KIND = "camera_band_peak_render_probe"
 
 
 def key_for(frame_epoch: Any, cx: Any, cy: Any, cz: Any) -> tuple[int, int, int, int]:
@@ -88,6 +89,7 @@ def main() -> int:
     traces: dict[str, list[dict[str, Any]]] = defaultdict(list)
     pixel_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     frustum_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
+    peak_render_probes: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     pixel_frame_stats: dict[int, dict[str, Any]] = {}
     frustum_summaries: dict[int, dict[str, Any]] = {}
     pixel_probe_epochs: set[int] = set()
@@ -159,6 +161,58 @@ def main() -> int:
                         record.get("pixel_probe_active", False)
                     ),
                 }
+            elif kind == PEAK_RENDER_KIND:
+                peak_key = key_for(
+                    record.get("frame_epoch", 0), record.get("cx", 0),
+                    record.get("cy", 0), record.get("cz", 0),
+                )
+                peak_render_probes[peak_key].append({
+                    "peak_kind": int(record.get("peak_kind", 0)),
+                    "target_resident": bool(record.get("target_resident", 0)),
+                    "non_air_blocks": int(record.get("non_air_blocks", 0)),
+                    "mesh_revision": int(record.get("mesh_revision", 0)),
+                    "exact_frustum_intersects": bool(
+                        record.get("exact_frustum_intersects", 0)
+                    ),
+                    "screen_rect_valid": bool(record.get("screen_rect_valid", 0)),
+                    "screen_rect": record.get("screen_rect"),
+                    "viewport": record.get("viewport"),
+                    "projected_corner_count": int(
+                        record.get("projected_corner_count", 0)
+                    ),
+                    "renderer_state": int(record.get("renderer_state", 0)),
+                    "drawable": bool(record.get("drawable", 0)),
+                    "mesh_satisfying": bool(record.get("mesh_satisfying", 0)),
+                    "live_gpu_mesh": bool(record.get("live_gpu_mesh", 0)),
+                    "cpu_draw_ref": bool(record.get("cpu_draw_ref", 0)),
+                    "render_ready_ref": bool(record.get("render_ready_ref", 0)),
+                    "packed_draw_ref": bool(record.get("packed_draw_ref", 0)),
+                    "draw_gate_ready": bool(record.get("draw_gate_ready", 0)),
+                    "runtime_cull_visible": bool(
+                        record.get("runtime_cull_visible", 0)
+                    ),
+                    "column_draw_ok": bool(record.get("column_draw_ok", 0)),
+                    "gpu_resident_marker": bool(
+                        record.get("gpu_resident_marker", 0)
+                    ),
+                    "gpu_slot_quad_count": int(
+                        record.get("gpu_slot_quad_count", 0)
+                    ),
+                    "mdi_resident_pass_flags": int(
+                        record.get("mdi_resident_pass_flags", 0)
+                    ),
+                    "mdi_visible_pass_flags": int(
+                        record.get("mdi_visible_pass_flags", 0)
+                    ),
+                    "mdi_command_count": int(record.get("mdi_command_count", 0)),
+                    "mdi_visible_command_count": int(
+                        record.get("mdi_visible_command_count", 0)
+                    ),
+                    "mdi_index_count": int(record.get("mdi_index_count", 0)),
+                    "mdi_visible_index_count": int(
+                        record.get("mdi_visible_index_count", 0)
+                    ),
+                })
             elif kind == "renderer_pixel_probe":
                 epoch = int(record.get("frame_epoch", 0))
                 pixel_probe_epochs.add(epoch)
@@ -207,6 +261,7 @@ def main() -> int:
             )
             matched = pixel_hits.get(target_key, [])
             matched_frustum = frustum_hits.get(target_key, [])
+            matched_peak_render_probes = peak_render_probes.get(target_key, [])
             same_frame_pixels = pixel_frame_stats.get(target_key[0])
             same_frame_pixel_summary = (
                 pixel_frame_summary(same_frame_pixels)
@@ -246,17 +301,24 @@ def main() -> int:
                     same_frame_depth_surface_samples_for_target_chunk,
                 "same_frame_frustum_witness_count": len(matched_frustum),
                 "frustum_witnesses": matched_frustum,
+                "same_frame_peak_render_probe_count": len(
+                    matched_peak_render_probes
+                ),
+                "same_frame_peak_render_probes": matched_peak_render_probes,
             })
         joined_by_kind[kind] = joined
 
     result = {
-        "schema": "camera_band_pixel_join.v4",
+        "schema": "camera_band_pixel_join.v5",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": "same frame_epoch and voxel-DDA hit chunk coordinate",
         "trace_counts": dict(kind_counts),
         "pixel_probe_frame_count": len(pixel_probe_epochs),
         "frustum_probe_frame_count": len(frustum_probe_epochs),
         "frustum_probe_summary_frame_count": len(frustum_summaries),
+        "peak_render_probe_count": sum(
+            len(rows) for rows in peak_render_probes.values()
+        ),
         "joins": {
             kind: {
                 "trace_rows": len(rows),
@@ -279,6 +341,12 @@ def main() -> int:
                 ),
                 "same_frame_frustum_records": sum(
                     row["same_frame_frustum_witness_count"] for row in rows
+                ),
+                "matched_peak_render_probe_rows": sum(
+                    row["same_frame_peak_render_probe_count"] > 0 for row in rows
+                ),
+                "same_frame_peak_render_probe_records": sum(
+                    row["same_frame_peak_render_probe_count"] for row in rows
                 ),
                 "rows": rows,
             }

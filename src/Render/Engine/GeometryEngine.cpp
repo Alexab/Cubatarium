@@ -70,6 +70,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -1984,6 +1985,11 @@ void NoteFrustumCoverageGaps(
     }
   }
 
+  struct PeakTarget
+  {
+    glm::ivec3 coord{0};
+    uint8_t sample_kind{0};
+  };
   struct Candidate
   {
     glm::ivec3 coord{0};
@@ -1991,50 +1997,23 @@ void NoteFrustumCoverageGaps(
     // 3=CPU/packed ref rejected by render-ready gate, 4=ready ref sampled to
     // inspect its actual MDI command after culling.
     uint8_t state{0};
+    uint8_t peak_kind{0};
     bool drawable{false};
+    bool exact_frustum{false};
+    bool resident{true};
     float distance_sq{0.0f};
   };
   std::vector<Candidate> candidates;
   candidates.reserve(64);
   auto &chunks = world.GetBlockWorld().GetChunkManager();
   uint32_t resident_non_air_chunk_count = 0;
-  chunks.ForEachChunk([&](const UChunk &chunk)
-  {
-    if (chunk.IsAirOnly() || chunk.GetNonAirCount() == 0)
-    {
-      return;
-    }
-    ++resident_non_air_chunk_count;
-    const glm::ivec3 coord = chunk.GetCoord();
-    // This probe answers whether geometry is actually inside the camera clip
-    // volume. The runtime chunk culler intentionally skips near/top/bottom
-    // planes and may admit by distance, which is useful for avoiding false
-    // negatives in draw submission but too permissive for a visual-gap census.
-    if (!frustum.IntersectsAABB(ChunkAABBMin(coord), ChunkAABBMax(coord),
-                                camera_position))
-    {
-      return;
-    }
-    const bool drawable = cache.HasDrawableGreedyMesh(coord);
-    const glm::vec3 center =
-        (ChunkAABBMin(coord) + ChunkAABBMax(coord)) * 0.5f;
-    const bool in_draw_refs = draw_refs.count(coord) != 0;
-    const bool in_ready_refs = ready_refs.count(coord) != 0;
-    const uint8_t state = in_ready_refs ? 4u
-                            : in_draw_refs ? 3u
-                            : drawable ? 2u
-                                        : 1u;
-    candidates.push_back(
-        {coord, state, drawable,
-         glm::dot(center - camera_position, center - camera_position)});
-  });
-  const uint32_t exact_frustum_candidate_count =
-      static_cast<uint32_t>(candidates.size());
+  uint32_t exact_frustum_candidate_count = 0;
 
   struct PeakFrustumSummary
   {
     const Frustum *frustum{nullptr};
     const glm::vec3 *camera_position{nullptr};
+    std::vector<PeakTarget> targets;
     uint16_t no_drawable_count{0};
     uint16_t no_drawable_in_view_count{0};
     uint16_t unowned_count{0};
@@ -2061,9 +2040,81 @@ void NoteFrustumCoverageGaps(
       ++summary->unowned_count;
       summary->unowned_in_view_count += in_exact_frustum;
     }
+    const auto existing = std::find_if(
+        summary->targets.begin(), summary->targets.end(),
+        [&](const PeakTarget &target) { return target.coord == coord; });
+    if (existing == summary->targets.end())
+    {
+      summary->targets.push_back({coord, peak.sample_kind});
+    }
+    else if (existing->sample_kind != 12 && peak.sample_kind == 12)
+    {
+      existing->sample_kind = peak.sample_kind;
+    }
   };
   UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
       frame_epoch, count_peak_frustum_membership, &peak_frustum_summary);
+
+  chunks.ForEachChunk([&](const UChunk &chunk)
+  {
+    if (chunk.IsAirOnly() || chunk.GetNonAirCount() == 0)
+    {
+      return;
+    }
+    ++resident_non_air_chunk_count;
+    const glm::ivec3 coord = chunk.GetCoord();
+    // This probe answers whether geometry is actually inside the camera clip
+    // volume. The runtime chunk culler intentionally skips near/top/bottom
+    // planes and may admit by distance, which is useful for avoiding false
+    // negatives in draw submission but too permissive for a visual-gap census.
+    const bool exact_frustum = frustum.IntersectsAABB(
+        ChunkAABBMin(coord), ChunkAABBMax(coord), camera_position);
+    const auto peak_target = std::find_if(
+        peak_frustum_summary.targets.begin(), peak_frustum_summary.targets.end(),
+        [&](const PeakTarget &target) { return target.coord == coord; });
+    const uint8_t peak_kind = peak_target == peak_frustum_summary.targets.end()
+                                 ? 0u
+                                 : peak_target->sample_kind;
+    if (!exact_frustum && peak_kind == 0)
+    {
+      return;
+    }
+    if (exact_frustum)
+    {
+      ++exact_frustum_candidate_count;
+    }
+    const bool drawable = cache.HasDrawableGreedyMesh(coord);
+    const glm::vec3 center =
+        (ChunkAABBMin(coord) + ChunkAABBMax(coord)) * 0.5f;
+    const bool in_draw_refs = draw_refs.count(coord) != 0;
+    const bool in_ready_refs = ready_refs.count(coord) != 0;
+    const uint8_t state = in_ready_refs ? 4u
+                            : in_draw_refs ? 3u
+                            : drawable ? 2u
+                                        : 1u;
+    candidates.push_back({coord, state, peak_kind, drawable, exact_frustum,
+                          true,
+                          glm::dot(center - camera_position,
+                                   center - camera_position)});
+  });
+  for (const PeakTarget &target : peak_frustum_summary.targets)
+  {
+    const bool already_added = std::any_of(
+        candidates.begin(), candidates.end(),
+        [&](const Candidate &candidate) { return candidate.coord == target.coord; });
+    if (already_added)
+    {
+      continue;
+    }
+    const glm::vec3 center =
+        (ChunkAABBMin(target.coord) + ChunkAABBMax(target.coord)) * 0.5f;
+    candidates.push_back(
+        {target.coord, 0u, target.sample_kind, false,
+         frustum.IntersectsAABB(ChunkAABBMin(target.coord),
+                                ChunkAABBMax(target.coord), camera_position),
+         false,
+         glm::dot(center - camera_position, center - camera_position)});
+  }
 
   constexpr size_t kMaxFrustumCoverageTraces = 12;
   constexpr size_t kMaxFrustumCoverageTracesPerState = 3;
@@ -2075,9 +2126,24 @@ void NoteFrustumCoverageGaps(
   // voxel data has no drawable mesh at all.
   std::array<size_t, 5> sampled_per_state{};
   std::vector<Candidate> sampled_candidates;
-  sampled_candidates.reserve(kMaxFrustumCoverageTraces);
+  sampled_candidates.reserve(kMaxFrustumCoverageTraces +
+                              peak_frustum_summary.targets.size());
+  size_t sampled_peak_target_count = 0;
   for (const Candidate &candidate : candidates)
   {
+    if (candidate.peak_kind == 0)
+    {
+      continue;
+    }
+    sampled_candidates.push_back(candidate);
+    ++sampled_peak_target_count;
+  }
+  for (const Candidate &candidate : candidates)
+  {
+    if (candidate.peak_kind != 0)
+    {
+      continue;
+    }
     if (candidate.state == 0 || candidate.state >= sampled_per_state.size())
     {
       continue;
@@ -2089,14 +2155,73 @@ void NoteFrustumCoverageGaps(
     }
     ++state_count;
     sampled_candidates.push_back(candidate);
-    if (sampled_candidates.size() >= kMaxFrustumCoverageTraces)
+    if (sampled_candidates.size() - sampled_peak_target_count >=
+        kMaxFrustumCoverageTraces)
     {
       break;
     }
   }
-  candidates = std::move(sampled_candidates);
+  const size_t sampled_generic_candidate_count =
+      sampled_candidates.size() - sampled_peak_target_count;
   const glm::ivec3 focus = UChunkManager::WorldToChunk(
       world.GetPreferredLoadFocusBlock());
+
+  GLint viewport[4] = {0, 0, 0, 0};
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  const auto fill_projected_screen_rect = [&](const glm::ivec3 &coord,
+                                               VisualBlackTraceRecord &record)
+  {
+    record.renderer_viewport_width = viewport[2];
+    record.renderer_viewport_height = viewport[3];
+    const glm::vec3 aabb_min = ChunkAABBMin(coord);
+    const glm::vec3 aabb_max = ChunkAABBMax(coord);
+    float min_ndc_x = std::numeric_limits<float>::max();
+    float min_ndc_y = std::numeric_limits<float>::max();
+    float max_ndc_x = std::numeric_limits<float>::lowest();
+    float max_ndc_y = std::numeric_limits<float>::lowest();
+    for (int corner = 0; corner < 8; ++corner)
+    {
+      const glm::vec3 point((corner & 1) ? aabb_max.x : aabb_min.x,
+                            (corner & 2) ? aabb_max.y : aabb_min.y,
+                            (corner & 4) ? aabb_max.z : aabb_min.z);
+      const glm::vec4 clip = view_projection * glm::vec4(point, 1.0f);
+      if (!(clip.w > 1.0e-5f))
+      {
+        continue;
+      }
+      const float ndc_x = clip.x / clip.w;
+      const float ndc_y = clip.y / clip.w;
+      if (!std::isfinite(ndc_x) || !std::isfinite(ndc_y))
+      {
+        continue;
+      }
+      ++record.renderer_projected_corner_count;
+      min_ndc_x = std::min(min_ndc_x, ndc_x);
+      min_ndc_y = std::min(min_ndc_y, ndc_y);
+      max_ndc_x = std::max(max_ndc_x, ndc_x);
+      max_ndc_y = std::max(max_ndc_y, ndc_y);
+    }
+    if (record.renderer_projected_corner_count == 0 || viewport[2] <= 0 ||
+        viewport[3] <= 0 || max_ndc_x < -1.0f || min_ndc_x > 1.0f ||
+        max_ndc_y < -1.0f || min_ndc_y > 1.0f)
+    {
+      return;
+    }
+    min_ndc_x = std::clamp(min_ndc_x, -1.0f, 1.0f);
+    max_ndc_x = std::clamp(max_ndc_x, -1.0f, 1.0f);
+    min_ndc_y = std::clamp(min_ndc_y, -1.0f, 1.0f);
+    max_ndc_y = std::clamp(max_ndc_y, -1.0f, 1.0f);
+    record.renderer_projected_screen_min_x = viewport[0] + static_cast<int>(
+        std::floor((min_ndc_x * 0.5f + 0.5f) * viewport[2]));
+    record.renderer_projected_screen_max_x = viewport[0] + static_cast<int>(
+        std::ceil((max_ndc_x * 0.5f + 0.5f) * viewport[2]));
+    // Captured PNG coordinates use a top-left origin.
+    record.renderer_projected_screen_min_y = viewport[1] + static_cast<int>(
+        std::floor((1.0f - (max_ndc_y * 0.5f + 0.5f)) * viewport[3]));
+    record.renderer_projected_screen_max_y = viewport[1] + static_cast<int>(
+        std::ceil((1.0f - (min_ndc_y * 0.5f + 0.5f)) * viewport[3]));
+    record.renderer_projected_screen_rect_valid = 1u;
+  };
 
   VisualBlackTraceRecord summary{};
   summary.sample_kind = 15;
@@ -2108,12 +2233,12 @@ void NoteFrustumCoverageGaps(
   summary.frame_epoch = frame_epoch;
   summary.renderer_cpu_index_count = resident_non_air_chunk_count;
   summary.renderer_gpu_quad_count = exact_frustum_candidate_count;
-  summary.renderer_mdi_command_count =
-      static_cast<uint16_t>(candidates.size());
+  summary.renderer_mdi_command_count = static_cast<uint16_t>(
+      std::min<size_t>(sampled_generic_candidate_count, 0xffffu));
   summary.renderer_mdi_visible_command_count = static_cast<uint16_t>(
-      std::count_if(candidates.begin(), candidates.end(),
+      std::count_if(sampled_candidates.begin(), sampled_candidates.end(),
                     [](const Candidate &candidate)
-                    { return candidate.drawable; }));
+                    { return candidate.peak_kind == 0 && candidate.drawable; }));
   summary.frustum_peak_no_drawable_slice_count =
       peak_frustum_summary.no_drawable_count;
   summary.frustum_peak_no_drawable_in_view_count =
@@ -2124,12 +2249,33 @@ void NoteFrustumCoverageGaps(
   summary.flags = opaque_capture.active ? 1u : 0u;
   UJobStageTrace::NoteVisualBlack(summary);
 
-  for (const Candidate &candidate : candidates)
+  for (const Candidate &candidate : sampled_candidates)
   {
     const glm::ivec3 coord = candidate.coord;
     const UChunk *chunk = chunks.GetChunk(coord);
     if (!chunk)
     {
+      if (candidate.peak_kind != 0)
+      {
+        VisualBlackTraceRecord record{};
+        record.sample_kind = 16;
+        record.focus_state = candidate.state;
+        record.camera_band_peak_kind = candidate.peak_kind;
+        record.cx = coord.x;
+        record.cy = coord.y;
+        record.cz = coord.z;
+        record.focus_cx = focus.x;
+        record.focus_cz = focus.z;
+        record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+        record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+        record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+        record.frame_epoch = frame_epoch;
+        record.renderer_target_resident = 0u;
+        record.renderer_exact_frustum_intersects =
+            candidate.exact_frustum ? 1u : 0u;
+        fill_projected_screen_rect(coord, record);
+        UJobStageTrace::NoteVisualBlack(record);
+      }
       continue;
     }
     const glm::ivec2 column(coord.x, coord.z);
@@ -2142,8 +2288,12 @@ void NoteFrustumCoverageGaps(
         world.GetColumnRenderableState(column);
 
     VisualBlackTraceRecord record{};
-    record.sample_kind = 8;
+    record.sample_kind = candidate.peak_kind == 0 ? 8u : 16u;
     record.focus_state = candidate.state;
+    record.camera_band_peak_kind = candidate.peak_kind;
+    record.renderer_target_resident = 1u;
+    record.renderer_exact_frustum_intersects =
+        candidate.exact_frustum ? 1u : 0u;
     record.cx = coord.x;
     record.cy = coord.y;
     record.cz = coord.z;
@@ -2153,6 +2303,10 @@ void NoteFrustumCoverageGaps(
     record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
     record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
     record.frame_epoch = frame_epoch;
+    if (candidate.peak_kind != 0)
+    {
+      fill_projected_screen_rect(coord, record);
+    }
     record.non_air_blocks = chunk->GetNonAirCount();
     record.chunk_content_revision = chunk->GetContentRevision();
     record.incarnation = chunk->GetIncarnation();
@@ -2207,7 +2361,8 @@ void NoteFrustumCoverageGaps(
     collect_mdi_state(mdi_opaque_pass, 1u << 0);
     collect_mdi_state(mdi_cutout_pass, 1u << 1);
     collect_mdi_state(mdi_transparent_pass, 1u << 2);
-    if (record.renderer_mdi_first_block_id != 0xffffu)
+    if (candidate.peak_kind == 0 &&
+        record.renderer_mdi_first_block_id != 0xffffu)
     {
       const auto texture_it = textures.find(
           static_cast<size_t>(record.renderer_mdi_first_block_id));

@@ -216,7 +216,9 @@ struct VisualBlackTraceRecord
   /// 10=CPU screen ray tested by the streaming miss selector,
   /// 11=watched mesh schedule, 12=camera-band no-drawable peak slice,
   /// 13=camera-band unowned peak slice, 14=surviving near-focus FirstMesh
-  /// queue frontier with scheduler/capture budgets at the end of the tick.
+  /// queue frontier with scheduler/capture budgets at the end of the tick,
+  /// 15=frustum probe summary, 16=peak-slice render and screen-projection
+  /// witness.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   /// sample_kind=1: FocusColumnVisualClass ordinal, 255 when outside cache.
@@ -305,6 +307,18 @@ struct VisualBlackTraceRecord
   uint16_t frustum_peak_no_drawable_in_view_count{0};
   uint16_t frustum_peak_unowned_slice_count{0};
   uint16_t frustum_peak_unowned_in_view_count{0};
+  /// sample_kind=16: bounded target-specific camera projection witness.
+  uint8_t camera_band_peak_kind{0};
+  uint8_t renderer_target_resident{0};
+  uint8_t renderer_exact_frustum_intersects{0};
+  uint8_t renderer_projected_screen_rect_valid{0};
+  uint8_t renderer_projected_corner_count{0};
+  int32_t renderer_projected_screen_min_x{0};
+  int32_t renderer_projected_screen_min_y{0};
+  int32_t renderer_projected_screen_max_x{0};
+  int32_t renderer_projected_screen_max_y{0};
+  int32_t renderer_viewport_width{0};
+  int32_t renderer_viewport_height{0};
   /// sample_kind=2 flags 0..17; sample_kind=9 uses the same flags for the
   /// exact ray-mapped pixel chunk: drawable, satisfying, live GPU, fully dark,
   /// lit drawable, stale dark, dirty, mesh in-flight, GPU pending, extract
@@ -669,6 +683,9 @@ public:
   /// Preserve each sparse per-frame geometric-frustum census independently
   /// from high-rate generic visual traces.
   static constexpr size_t kFrustumProbeSummaryTraceRingCapacity = 1024;
+  /// Preserve projected renderer-state witnesses for every retained
+  /// camera-band peak slice independently from per-frame candidate samples.
+  static constexpr size_t kCameraBandPeakRenderProbeTraceRingCapacity = 256;
   static constexpr size_t kVisualBlackAttributionTraceRingCapacity = 1024;
   static constexpr size_t kVisualRepairTraceRingCapacity = 2048;
   static constexpr size_t kMeshScheduleTraceRingCapacity = 1024;
@@ -684,6 +701,7 @@ public:
       kRendererGateTraceRingCapacity +
       kFrustumCoverageTraceRingCapacity +
       kFrustumProbeSummaryTraceRingCapacity +
+      kCameraBandPeakRenderProbeTraceRingCapacity +
       kVisualBlackAttributionTraceRingCapacity +
       kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
       kPriorityRemeshTraceRingCapacity +

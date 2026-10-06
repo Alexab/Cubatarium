@@ -3643,6 +3643,9 @@ void UFramePerfMonitor::Shutdown()
         case 15:
           trace_kind = "view_frustum_probe_summary";
           break;
+        case 16:
+          trace_kind = "camera_band_peak_render_probe";
+          break;
         default:
           break;
         }
@@ -3676,6 +3679,77 @@ void UFramePerfMonitor::Shutdown()
                  << r.frustum_peak_unowned_in_view_count
                  << ",\"pixel_probe_active\":"
                  << ((r.flags & 1u) != 0 ? "true" : "false") << "}\n";
+          return;
+        }
+        if (r.sample_kind == 16)
+        {
+          // One compact row per retained camera-band peak slice. This joins
+          // exact render submission state to a conservative projected AABB.
+          (*out) << "{\"kind\":\"camera_band_peak_render_probe\""
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"peak_kind\":"
+                 << static_cast<int>(r.camera_band_peak_kind)
+                 << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
+                 << ",\"cz\":" << r.cz
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"camera_x\":" << r.camera_x
+                 << ",\"camera_y\":" << r.camera_y
+                 << ",\"camera_z\":" << r.camera_z
+                 << ",\"target_resident\":"
+                 << static_cast<int>(r.renderer_target_resident)
+                 << ",\"non_air_blocks\":" << r.non_air_blocks
+                 << ",\"chunk_content_revision\":"
+                 << r.chunk_content_revision
+                 << ",\"incarnation\":" << r.incarnation
+                 << ",\"mesh_revision\":" << r.mesh_revision
+                 << ",\"exact_frustum_intersects\":"
+                 << static_cast<int>(r.renderer_exact_frustum_intersects)
+                 << ",\"screen_rect_valid\":"
+                 << static_cast<int>(r.renderer_projected_screen_rect_valid)
+                 << ",\"projected_corner_count\":"
+                 << static_cast<int>(r.renderer_projected_corner_count)
+                 << ",\"viewport\":[" << r.renderer_viewport_width << ','
+                 << r.renderer_viewport_height << ']'
+                 << ",\"screen_rect\":["
+                 << r.renderer_projected_screen_min_x << ','
+                 << r.renderer_projected_screen_min_y << ','
+                 << r.renderer_projected_screen_max_x << ','
+                 << r.renderer_projected_screen_max_y << ']'
+                 << ",\"renderer_state\":"
+                 << static_cast<int>(r.focus_state)
+                 << ",\"drawable\":" << ((r.renderer_gate_flags & 1u) ? 1 : 0)
+                 << ",\"mesh_satisfying\":"
+                 << ((r.renderer_gate_flags & (1u << 1)) ? 1 : 0)
+                 << ",\"live_gpu_mesh\":"
+                 << ((r.renderer_gate_flags & (1u << 2)) ? 1 : 0)
+                 << ",\"cpu_draw_ref\":"
+                 << ((r.renderer_gate_flags & (1u << 3)) ? 1 : 0)
+                 << ",\"render_ready_ref\":"
+                 << ((r.renderer_gate_flags & (1u << 4)) ? 1 : 0)
+                 << ",\"packed_draw_ref\":"
+                 << ((r.renderer_gate_flags & (1u << 5)) ? 1 : 0)
+                 << ",\"draw_gate_ready\":"
+                 << static_cast<int>(r.draw_gate_ready)
+                 << ",\"runtime_cull_visible\":"
+                 << static_cast<int>(r.renderer_runtime_cull_visible)
+                 << ",\"column_draw_ok\":"
+                 << static_cast<int>(r.renderer_column_draw_ok)
+                 << ",\"gpu_resident_marker\":"
+                 << static_cast<int>(r.renderer_gpu_resident_marker)
+                 << ",\"gpu_slot_quad_count\":"
+                 << r.renderer_gpu_slot_quad_count
+                 << ",\"mdi_resident_pass_flags\":"
+                 << static_cast<int>(r.renderer_mdi_resident_pass_flags)
+                 << ",\"mdi_visible_pass_flags\":"
+                 << static_cast<int>(r.renderer_mdi_visible_pass_flags)
+                 << ",\"mdi_command_count\":"
+                 << r.renderer_mdi_command_count
+                 << ",\"mdi_visible_command_count\":"
+                 << r.renderer_mdi_visible_command_count
+                 << ",\"mdi_index_count\":" << r.renderer_mdi_index_count
+                 << ",\"mdi_visible_index_count\":"
+                 << r.renderer_mdi_visible_index_count << "}\n";
           return;
         }
         if (r.sample_kind == 14)
