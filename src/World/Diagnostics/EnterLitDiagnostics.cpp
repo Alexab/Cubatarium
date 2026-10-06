@@ -259,6 +259,36 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << s.focus_data_camera_band_oldest_dirty_cy
           << ",\"focus_data_camera_band_oldest_dirty_cz\":"
           << s.focus_data_camera_band_oldest_dirty_cz
+          << ",\"focus_data_oldest_dirty_found\":"
+          << s.focus_data_oldest_dirty_found
+          << ",\"focus_data_oldest_dirty_queue_kind\":"
+          << s.focus_data_oldest_dirty_queue_kind
+          << ",\"focus_data_oldest_dirty_queue_index\":"
+          << s.focus_data_oldest_dirty_queue_index
+          << ",\"focus_data_oldest_dirty_queue_size\":"
+          << s.focus_data_oldest_dirty_queue_size
+          << ",\"focus_data_oldest_dirty_chunk_resident\":"
+          << s.focus_data_oldest_dirty_chunk_resident
+          << ",\"focus_data_oldest_dirty_non_air_blocks\":"
+          << s.focus_data_oldest_dirty_non_air_blocks
+          << ",\"focus_data_oldest_dirty_drawable\":"
+          << s.focus_data_oldest_dirty_drawable
+          << ",\"focus_data_oldest_dirty_satisfying\":"
+          << s.focus_data_oldest_dirty_satisfying
+          << ",\"focus_data_oldest_dirty_demand_active\":"
+          << s.focus_data_oldest_dirty_demand_active
+          << ",\"focus_data_oldest_dirty_demand_stage\":"
+          << s.focus_data_oldest_dirty_demand_stage
+          << ",\"focus_data_oldest_dirty_attempt_id\":"
+          << s.focus_data_oldest_dirty_attempt_id
+          << ",\"focus_data_oldest_dirty_desired_geom_rev\":"
+          << s.focus_data_oldest_dirty_desired_geom_rev
+          << ",\"focus_data_oldest_dirty_published_geom_rev\":"
+          << s.focus_data_oldest_dirty_published_geom_rev
+          << ",\"focus_data_oldest_dirty_attempt_age_ms\":"
+          << s.focus_data_oldest_dirty_attempt_age_ms
+          << ",\"focus_data_oldest_dirty_progress_age_ms\":"
+          << s.focus_data_oldest_dirty_progress_age_ms
           << ",\"focus_data_band_solid_no_drawable_n\":"
           << s.focus_data_band_solid_no_drawable_n
           << ",\"focus_data_band_solid_accepted_empty_n\":"
@@ -423,6 +453,54 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.top_dirty_cx = phys.MissCx;
   out.top_dirty_cz = phys.MissCz;
   const UWorldMeshService &mesh = world.GetMeshService();
+  if (focus_census.data_mesh_valid &&
+      focus_census.camera_band_solid_dirty_n > 0)
+  {
+    out.focus_data_oldest_dirty_found = 1;
+    const glm::ivec3 oldest_dirty(
+        focus_census.camera_band_oldest_dirty_cx,
+        focus_census.camera_band_oldest_dirty_cy,
+        focus_census.camera_band_oldest_dirty_cz);
+    const UChunkMeshCache &cache = mesh.GetCache();
+    out.focus_data_oldest_dirty_queue_kind = cache.GetDirtyQueueTrace(
+        oldest_dirty, out.focus_data_oldest_dirty_queue_index,
+        out.focus_data_oldest_dirty_queue_size);
+    const UChunk *chunk =
+        world.GetBlockWorld().GetChunkManager().GetChunk(oldest_dirty);
+    if (chunk != nullptr)
+    {
+      out.focus_data_oldest_dirty_chunk_resident = 1;
+      out.focus_data_oldest_dirty_non_air_blocks = chunk->GetNonAirCount();
+    }
+    out.focus_data_oldest_dirty_drawable =
+        cache.HasDrawableGreedyMesh(oldest_dirty) ? 1 : 0;
+    out.focus_data_oldest_dirty_satisfying =
+        cache.HasMeshSatisfyingColumnReady(oldest_dirty) ? 1 : 0;
+    if (const ChunkRenderDemandRecord *demand =
+            UChunkRenderDemandStore::Get().Find(oldest_dirty))
+    {
+      out.focus_data_oldest_dirty_demand_active =
+          demand->has_active_attempt ? 1 : 0;
+      out.focus_data_oldest_dirty_demand_stage =
+          static_cast<int>(demand->active_stage);
+      out.focus_data_oldest_dirty_attempt_id = demand->active_attempt_id;
+      out.focus_data_oldest_dirty_desired_geom_rev =
+          demand->desired_geom_rev;
+      out.focus_data_oldest_dirty_published_geom_rev =
+          demand->published_geom_rev;
+      const double now_ms = VisualObligationNowMs();
+      if (demand->attempt_created_ms > 0.0)
+      {
+        out.focus_data_oldest_dirty_attempt_age_ms =
+            std::max(0.0, now_ms - demand->attempt_created_ms);
+      }
+      if (demand->last_progress_ms > 0.0)
+      {
+        out.focus_data_oldest_dirty_progress_age_ms =
+            std::max(0.0, now_ms - demand->last_progress_ms);
+      }
+    }
+  }
   glm::ivec3 gate_miss{};
   if (world.FindFirstSpawnRingMissingGreedy(gate_miss))
   {
