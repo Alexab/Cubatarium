@@ -2469,3 +2469,53 @@ Artifacts (ignored `bin/` outputs): [M412 acceptance report](../../bin/suite_rep
 [same-frame camera-band/pixel join](../../bin/suite_reports/engine_refactor/m412_camera_band_pixel_join_20261006.json),
 raw perf `bin/logs/perf_20261006-022416_22260.jsonl`, and 189 captures in
 `bin/logs/m412_world164_m335_peak_sync/` (representative: `frame_141.png`).
+
+### M413–M415: exact-frustum membership still needs screen-space attribution (2026-10-06)
+
+M413 repeated M335 with the first explicit per-frame frustum summary. The
+flight itself completed normally (860 chunks/13,760 blocks, 189 captures,
+5.19653 blocks/s, `process_rc=0`, no forced kill, and byte-for-byte world
+restore), but only one summary epoch survived. The summary had been written
+to the high-rate generic visual ring and was overwritten. M414 moved summaries
+to their own bounded ring; its run retained 499 summaries and 43 frames with
+sampled candidate rows. M414 completed 860 chunks/13,760 blocks at the same
+speed, with median wall/stream/mesh-emerge times 52.06/42.83/18.01 ms. It
+still failed the M335 acceptance report (27/39 gates, stop convergence
+failed).
+
+M415 added exact-geometric-frustum membership counts for each camera-band
+high-water snapshot and replayed the same visible Release M335 route. It
+completed 861 chunks/13,776 blocks at 5.19653 blocks/s, returned
+`process_rc=0`, saved 189 captures, and restored the original world-data hash
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+The long-flight report remains FAIL (27/39 gates): median wall/stream/
+mesh-emerge was 52.08/43.42/18.38 ms, median unfinished readiness was 27,
+and stop convergence did not pass. The traced perf log was 392.63 MB, so its
+timings are diagnostic-run measurements, not a low-trace performance control.
+
+At the no-drawable peak (18 slices, epoch 50,110), all 18 target AABBs
+intersected the exact camera frustum. At the unowned peak (8 slices, epoch
+46,306), all 8 intersected it. Each matching frame had 80 sampled pixels;
+the target chunks had zero sampled opaque-depth hits and zero voxel-DDA hits.
+There were 5 dark pixels in the first frame (all with depth and DDA hits) and
+none in the second. The view contained 506/428 resident non-air chunks and
+214/173 exact-frustum candidates respectively. This rules out the simple
+“all these peak slices were outside the camera volume” explanation, but does
+not prove a visible hole: an AABB can be occluded, and the 4-by-20 sampler can
+miss the projected area.
+
+Next, emit one compact target-specific trace row for each peak slice, including
+its projected screen rectangle and same-frame drawable, render-ready, CPU /
+packed reference, MDI resident/visible, and runtime-cull state. Compare the
+rectangle with the captured pixels or a target-directed screen probe. Use that
+evidence to separate absent mesh, draw submission/culling, occlusion, and
+sparse-sampler miss before changing streaming quotas, retention, or lighting.
+Keep the exact M335 route as the primary repeatable gate and continue periodic
+cold new-world checks.
+
+Artifacts (ignored `bin/` outputs): [M413 report](../../bin/suite_reports/engine_refactor/m413_world164_m335_frustum_summary_20261006.json),
+[M414 report](../../bin/suite_reports/engine_refactor/m414_world164_m335_frustum_ring_20261006.json),
+[M415 report](../../bin/suite_reports/engine_refactor/m415_world164_m335_peak_frustum_membership_20261006.json),
+[M415 camera-band/pixel join](../../bin/suite_reports/engine_refactor/m415_camera_band_pixel_join_20261006.json),
+raw perf `bin/logs/perf_20261006-054508_8136.jsonl`, and 189 captures in
+`bin/logs/m415_world164_m335_peak_frustum_membership/`.

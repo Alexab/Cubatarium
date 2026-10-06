@@ -644,3 +644,36 @@ unfinished items plus failed stop convergence. The two peak frames each had
 frustum trace row, so add an explicit frustum sample summary on a future
 forensic flight before treating absent candidate rows as zero coverage. The
 raw log was 412.60 MB; use M411 low-trace runs for frame-time comparisons.
+
+### M413–M415: per-frame frustum summaries and peak membership
+
+Use the established visible M335 command on `World_164`; M413–M415 changed
+only the phase, report, and capture names. Keep the machine awake. M415's
+targeted run settings were:
+
+```powershell
+Start-Process -FilePath powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/flight_sim_keep_awake.ps1')
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m415_world164_m335_peak_frustum_membership'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m415_world164_m335_peak_frustum_membership --report bin/suite_reports/engine_refactor/m415_world164_m335_peak_frustum_membership_20261006.json --process-timeout 3000
+```
+
+Join the retained peak coordinates with exact-frame pixel and geometric
+frustum witnesses:
+
+```powershell
+py tools/analyze_camera_band_pixel_join.py bin/logs/perf_20261006-054508_8136.jsonl --json-out bin/suite_reports/engine_refactor/m415_camera_band_pixel_join_20261006.json > $null
+```
+
+M413's summary was initially written into the generic ring and mostly
+overwritten; `6287d297` gave summaries their own ring, validated by M414 (499
+summary epochs, 43 sampled-candidate frames). M415 then found that all 18
+no-drawable and all 8 unowned peak chunks intersected the exact frustum, while
+none had a sampled depth or voxel-ray hit in their coordinates. This narrows
+the next diagnostic to the projected screen rectangle and exact renderer
+submission/cull state for each target. It does not establish that the target
+pixels are exposed; the existing 4-by-20 sample can miss them. M415 completed
+861 chunks/13,776 blocks at 5.19653 blocks/s, captured 189 images, restored
+the world file byte-for-byte, and returned normally, but the acceptance
+report still failed 12/39 gates. Its visual trace was 392.63 MB; use the
+low-trace M335 profile for performance comparisons.

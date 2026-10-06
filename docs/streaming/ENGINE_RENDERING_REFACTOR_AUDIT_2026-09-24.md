@@ -4774,3 +4774,43 @@ Artifacts (ignored `bin/` outputs): [M412 report](../../bin/suite_reports/engine
 [peak pixel join](../../bin/suite_reports/engine_refactor/m412_camera_band_pixel_join_20261006.json),
 raw perf `bin/logs/perf_20261006-022416_22260.jsonl`, and captures in
 `bin/logs/m412_world164_m335_peak_sync/`.
+
+### M413–M415: peak chunks are inside the frustum, but not yet tied to pixels
+
+M413's first summary trace could not retain its history because it shared the
+generic high-rate ring. A separate ring fixed that in M414, which retained 499
+summary epochs and 43 sampled-candidate frames. This also illustrates why a
+missing trace row must not be interpreted as a zero measurement.
+
+M415 recorded whether each exact camera-band high-water coordinate's chunk
+AABB intersected the current geometric frustum. All 18/18 no-drawable slices
+and all 8/8 unowned slices intersected it at their respective peak epochs.
+However, the synchronized 80-pixel samples yielded zero depth-surface and zero
+voxel-DDA hits in those target chunks. The no-drawable peak frame had 5 dark
+samples, all with depth and DDA evidence; the unowned peak frame had none.
+Thus these are on-screen-volume candidates, not proven exposed pixels or
+confirmed missing terrain. The broad AABB may be occluded, or the sparse
+sampler may not cover its projected footprint.
+
+The exact visible M335 Release replay completed 861 chunks/13,776 blocks at
+5.19653 blocks/s, with 189 captures, `process_rc=0`, no force kill, and the
+world-data file restored byte-for-byte. It still failed 12/39 acceptance
+gates. Median wall/stream/mesh-emerge time was 52.08/43.42/18.38 ms, median
+unfinished readiness 27, and stop convergence failed. The 392.63 MB visual
+trace is too expensive for a clean performance comparison; use M411's low-
+trace control for that purpose. The user confirmed M407's 34-minute gap was
+system sleep/lock, not a renderer hang.
+
+The next diagnostic should carry the exact target coordinates through screen
+projection and renderer submission: projected pixel rectangle, drawable and
+ready state, CPU/packed refs, MDI resident/visible command, and runtime cull
+decision. A target-directed pixel/depth probe or screenshot review can then
+establish whether the projected area is covered, occluded, or missing geometry.
+Do not change light or streaming policy from frustum intersection alone.
+
+Artifacts: [M413 report](../../bin/suite_reports/engine_refactor/m413_world164_m335_frustum_summary_20261006.json),
+[M414 report](../../bin/suite_reports/engine_refactor/m414_world164_m335_frustum_ring_20261006.json),
+[M415 report](../../bin/suite_reports/engine_refactor/m415_world164_m335_peak_frustum_membership_20261006.json),
+[M415 coordinate/pixel join](../../bin/suite_reports/engine_refactor/m415_camera_band_pixel_join_20261006.json),
+perf `bin/logs/perf_20261006-054508_8136.jsonl`, and route captures in
+`bin/logs/m415_world164_m335_peak_frustum_membership/`.
