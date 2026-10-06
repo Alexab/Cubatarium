@@ -1626,6 +1626,78 @@ phase summary `bin/suite_reports/engine_refactor/m437_io_phase_summary_20261007.
 raw perf `bin/logs/perf_20261007-010003_36844.jsonl`, and INFO trace
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-014729.36844`.
 
+## M438 - async light-flags writer, full M335 route (2026-10-07)
+
+M438 repeated the same visible, no-teleport 2,800-second route on
+`World_164`, after M437 had exercised the async column-light-flags writer.
+The manifest records Release, commit `bc7cb09adc1d2e7552c2aa776deb4c3409b0ebb9`,
+clean tree, and executable SHA-256
+`e48c4d4df9480abfc3d83ba8fb1ce5e53b97922fe3039833a9d1747ae997c275`.
+Route, start `[120,56,56]`, eye Y `70`, yaw `180`, pitch `-30`, speed scale
+`1`, stop duration, and blocked-stop threshold matched M437. GUI was visible;
+teleport and visual/source/framebuffer traces were off.
+
+The executable exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`), recording 1,403 periods (1,401 steady), 129 frames over
+100 ms, and 14,272 blocks. Median cruise speed was `5.19653 blocks/s`, focus
+`[7,3] -> [-885,3]`; player Y stayed at 70. Movement telemetry recorded zero
+blocked substeps and zero ground contacts. The 0- and 8,192-block checkpoints
+were reached. Internal visible-black focus median was `0`, maximum `18`;
+these are not pixel samples. The operator's current visual assessment remains
+positive.
+
+| Band | Periods | Wall median / p95 (ms) | Streaming median / p95 (ms) | Async post median (ms) | I/O drain median (ms) |
+|---|---:|---:|---:|---:|---:|
+| Near | 328 | 28.58 / 40.50 | 17.02 / 29.78 | 3.68 | 1.25 |
+| Mid | 622 | 38.76 / 51.48 | 28.63 / 41.97 | 8.03 | 1.41 |
+| Far east | 217 | 42.74 / 59.04 | 35.15 / 51.09 | 11.23 | 1.56 |
+| Far west | 236 | 45.35 / 60.81 | 37.73 / 52.88 | 12.81 | 1.45 |
+
+Against the matched M437 bands, wall medians improved by about 5.0–7.3 ms;
+async-I/O drain medians fell from 8.27–9.96 ms to 1.25–1.56 ms. The
+main-thread light-flags snapshot field is a point sample, not writer I/O time.
+Its maximum on period-end samples was 3.32 ms. Among 129 individual spike
+frames only one exceeded 10 ms (11.77 ms); M437 had 79/89 above 10 ms, with
+102.436 ms maximum. This confirms that the synchronous full-file write no
+longer drives the common spikes.
+
+The full-run tail nevertheless worsened: 129 spikes versus 89 in M437,
+maximum wall sample `505.797 ms` versus `296.277 ms`. The worst M438 frame near
+`x=-5,863` spent `490.05 ms` in streaming, `400.39 ms` in relight capture and
+apply, and `71.92 ms` in mesh emergence; light-flags save was `0.84 ms`. A
+later cluster near `x=-10,700` combined relight/emergence with one
+`11.77 ms` point-sampled snapshot. `spike_bucket_counts` classified 111 as
+stream, 17 as emerge, and one as other. These timings identify the next
+instrumentation target but do not by themselves justify changing budgets.
+
+The analyzer returned `pass=false`. Stop convergence failed for missing and
+effective holes, pending/not-ready/focus-dirty fall, and demand-stop. Dual-lane
+`unlit_max` reached 24; eye-proxy stale-visual/blink checks and A24's
+near-focus-hole check also failed. `unfinished_visual`/void counters are
+readiness debt, not proof of blank pixels. M438 did not capture the framebuffer.
+
+The manifest says `cold`, but column-source tracing was disabled, so classify
+neither disk nor procedural origin from this route. After shutdown, the writer
+left valid `format_version: 1` JSON with 8,742 complete columns (81,062 bytes)
+and no `.tmp` file. The runner restored `world_data.json` and `users.json` to
+their recorded pre-run SHA-256 hashes.
+
+The repeated invocation was:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m438_world164_async_light_flags_save --report bin/suite_reports/engine_refactor/m438_world164_async_light_flags_save_20261007.json --process-timeout 3000
+```
+
+Artifacts: [M438 flight report](../../bin/suite_reports/engine_refactor/m438_world164_async_light_flags_save_20261007.json),
+phase summary `bin/suite_reports/engine_refactor/m438_io_phase_summary_20261007.json`,
+raw perf `bin/logs/perf_20261007-015927_21788.jsonl`, and final
+`bin/worlds/World_164/column_light.json`.
+
 ### Reusable analyzer for async chunk-I/O phases
 
 `tools/analyze_async_chunk_io_perf.py` reads a `perf_*.jsonl` file and groups

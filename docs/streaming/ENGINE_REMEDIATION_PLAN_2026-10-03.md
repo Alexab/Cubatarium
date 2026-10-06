@@ -3405,7 +3405,7 @@ readiness debt, and route adequacy remain separate gates. Continue the same-seed
 M335 route first, then periodically repeat on a fresh seed as an independent
 world-generation lane.
 
-#### Current remaining work after M437
+#### Follow-up plan recorded after M437
 
 1. **Implement next:** replace main-thread full-file column light-flag writes
    with a single-flight background save. Coalesce later mutations into the next
@@ -3435,3 +3435,79 @@ into water remain unverified by this route.
 
 M437 route and subphase measurements are documented in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m437---full-m335-route-and-async-chunk-io-timing-2026-10-07).
+
+### M438 checkpoint — async light-flag save validated; relight tails remain
+
+M438 used the newly built Release binary from commit `bc7cb09a` on the same
+visible, no-teleport M335 route and `World_164`. The executable exited
+normally (`process_rc=0`, `hang_killed=false`) after 1,403 periods. It covered
+14,272 blocks at the established median speed of 5.1965 blocks/s, held player
+Y at 70, and recorded zero blocked movement substeps and ground contacts. It
+reached the 8,192-block checkpoint. The existing appearance assessment is
+positive; M438 still did not capture framebuffer pixels.
+
+The async writer saved `column_light.json` as valid version-1 JSON with 8,742
+complete columns (81,062 bytes); no temporary file remained after shutdown.
+The route wrapper restored both `world_data.json` and `users.json` byte-for-byte
+to their pre-run hashes. The manifest calls storage mode `cold`, but source
+tracing was disabled, so M438 cannot classify individual columns as disk or
+procedural. Do not use that manifest field as storage provenance.
+
+All four matched-band medians improved against M437, and the main-thread
+async-I/O drain dropped from 8–10 ms to 1.25–1.56 ms median. The remaining
+point-sampled light-flag snapshot cost was at most 3.32 ms in period-end rows;
+among 129 spike rows, just one exceeded 10 ms (11.77 ms), compared with 79/89
+M437 spikes and a 102.436 ms maximum. This validates removal of the frequent
+synchronous full-file write from the frame path.
+
+Overall long-tail performance did not improve: M438 had 129 spikes over
+100 ms (versus 89 in M437), maximum 505.797 ms (versus 296.277 ms). Its largest
+sample near `x=-5,863` spent 490 ms in streaming, including 400 ms in relight
+capture/apply and 72 ms in mesh emergence; the light-flag snapshot cost was
+under 1 ms. A later cluster near `x=-10,700` had 105–154 ms frames composed
+of relight, emergence, and occasional snapshot-copy cost. Most of the new
+heavy tail is therefore in main-thread relight/emergence work, not filesystem
+serialization. Because M438 traversed a more persisted world than M437 and
+had no source trace, this is a measured correlation, not proof that disk
+loading caused the relight work.
+
+The analyzer remains `pass=false`. Its stop-convergence gates for missing and
+effective holes, pending/not-ready/focus-dirty fall, and demand-stop convergence
+failed. Dual-lane `unlit_max` reached 24, eye-proxy stale-visual/blink gates
+failed, and A24 saw near-focus hole periods. Visible-black focus median was 0
+and maximum 18, but those are internal proxies, not pixel samples. Readiness
+debt and pixel correctness remain separate questions.
+
+#### Current remaining work after M438
+
+1. **Instrument the measured tail before changing policy.** Break down
+   `UAsyncRelightBuilder::EnqueueJob()` into capture-lock wait, snapshot copy,
+   dependency-stamp build, and enqueue. Split `DrainAsyncRelightResults()` into
+   validation, merge/install, and residual work; current merge/install timers
+   do not explain 100–400 ms apply durations. Split `TickMeshEmerge()` around
+   its selection, capture, scheduling, and GPU handoff stages. Keep queue and
+   capture/apply budgets unchanged during this diagnostic build.
+2. Release-build that instrumentation and repeat the exact 2,800-second M335
+   `World_164` route. Compare matched-band medians and every >100 ms frame by
+   relight/emerge subphase. Record provenance on a separate source-trace lane;
+   keep the main performance route's established parameters unchanged.
+3. If the `column_light.json` snapshot-copy cost again exceeds 10 ms, replace
+   full-set copying with a bounded, versioned snapshot representation. Preserve
+   coalescing, atomic replacement, retries, and latest-revision flush behavior.
+4. Preserve the periodic fresh-seed lane, after the matched-world diagnostic,
+   to compare cold generation against the persisted corridor. Continue to use
+   source events, not `cold_warm_mode`, for disk/procedural classification.
+5. Keep post-stop/readiness gates open. Since the operator reports acceptable
+   appearance, only enable framebuffer probes if dim or blank visuals return;
+   use pixels if a claim about actual on-screen holes is required.
+
+**Plan readiness at M438:** the light-flag hitch target has been implemented
+and measured on the full route. The engine plan is not ready for closure: the
+long-tail spike count and maximum worsened, readiness/eye-proxy stop lines
+remain red, and per-pixel evidence and per-column storage provenance were not
+collected. The next safe action is diagnostic instrumentation of relight and
+mesh emergence, followed by another unchanged long route; no scheduling policy
+change is justified by the current data alone.
+
+M438 route, band comparisons, and output checks are documented in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m438---async-light-flags-writer-full-m335-route-2026-10-07).
