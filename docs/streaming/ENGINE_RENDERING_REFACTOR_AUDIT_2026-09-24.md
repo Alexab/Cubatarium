@@ -4814,3 +4814,35 @@ Artifacts: [M413 report](../../bin/suite_reports/engine_refactor/m413_world164_m
 [M415 coordinate/pixel join](../../bin/suite_reports/engine_refactor/m415_camera_band_pixel_join_20261006.json),
 perf `bin/logs/perf_20261006-054508_8136.jsonl`, and route captures in
 `bin/logs/m415_world164_m335_peak_frustum_membership/`.
+
+## M416 update: screen rectangles and mesh ownership (2026-10-06)
+
+M416 added same-frame projected AABBs and render-submission state for retained
+camera-band peak chunks. Across 91 route-wide probes, every target was resident
+and in the geometric frustum; 79 projected rectangles overlapped the sparse
+pixel sample grid and 39 contained depth samples. No sampled depth or exact
+voxel-ray hit belonged to its target chunk. This still does not prove an
+exposed hole because AABBs are conservative, targets can be occluded, and the
+probe is sparse.
+
+The stronger code-level signal is ownership. At the latest no-drawable peak,
+11/15 resident non-air slices had a FirstMesh dirty entry, but one remained at
+index 73; four had no dirty entry or ColumnFlow mesh ticket. At the latest
+unowned peak, all five slices had non-air data but no mesh revision, dirty
+entry, or flow ticket. A broad `work_pending` bit can be set by relight or
+post-dispatch cooldown and must not be treated as an executable mesh owner.
+This supports an admission/ownership lifecycle gap plus service backlog; it
+does not yet identify whether work was never admitted, was dropped, or stalled
+between capture and publication. Trace target identity through each owner
+transfer before changing mesh quotas. Keep the M335 route as the stable
+regression gate; test performance on a low-trace run and continue cold-world
+checks periodically.
+
+M416 completed the 2,800-second route at 5.19653 blocks/s (863 chunks,
+13,808 blocks, 189 captures), with normal process exit and exact world-data
+restore. Acceptance remained 28/39 and stop convergence failed. Median wall,
+stream-phase, and mesh-emerge times were 51.65 / 43.13 / 17.65 ms under an
+approximately 412 MB diagnostic trace. The same captures show triangular
+shoreline/water artifacts around frame 120, a separate rendering issue from
+missing drawable meshes. M407's long pause is excluded from engine-hang
+evidence because the user confirmed system sleep/lock.

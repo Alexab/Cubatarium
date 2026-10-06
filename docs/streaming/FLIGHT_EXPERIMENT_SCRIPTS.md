@@ -677,3 +677,46 @@ pixels are exposed; the existing 4-by-20 sample can miss them. M415 completed
 the world file byte-for-byte, and returned normally, but the acceptance
 report still failed 12/39 gates. Its visual trace was 392.63 MB; use the
 low-trace M335 profile for performance comparisons.
+
+### M416: projected screen coverage and exact target render state
+
+Build only the Release executable, then repeat the established visible,
+no-teleport M335 settings on `World_164`. The opt-in visual trace adds one
+projected-AABB/render-state row per retained camera-band peak coordinate; the
+camera-band pixel join checks which sparse pixel/depth samples fall inside
+each projected rectangle. Keep the machine awake. M407's earlier 34-minute
+pause was confirmed by the user as system sleep/lock.
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 8
+Start-Process -FilePath powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/flight_sim_keep_awake.ps1')
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m416_world164_m335_peak_screen_coverage'
+py tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m416_world164_m335_peak_screen_coverage --report bin/suite_reports/engine_refactor/m416_world164_m335_peak_screen_coverage_20261006.json --process-timeout 3000
+py tools/analyze_camera_band_pixel_join.py bin/logs/perf_20261006-065527_31132.jsonl --json-out bin/suite_reports/engine_refactor/m416_camera_band_pixel_join_20261006.json > $null
+```
+
+The Release build and static executable verification passed; no tests were run.
+The visible flight completed 863 chunks / 13,808 blocks at 5.19653 blocks/s,
+with 189 captures, `process_rc=0`, no force kill, and byte-for-byte world-data
+restore. Acceptance remained FAIL (28/39 gates) and post-stop convergence
+failed. Median wall / stream-phase / mesh-emerge times were 51.65 / 43.13 /
+17.65 ms; median unfinished readiness was 27. The detailed trace was about
+412 MB and should not be used as a low-trace performance baseline.
+
+The join contains 91 route-wide peak render probes. All target AABBs were
+resident, inside the geometric frustum, and projected to valid screen
+rectangles. Pixel probes overlapped 79/91 rectangles; 39 rectangles contained
+depth-surface samples, but none of those samples or exact voxel-ray hits were
+attributed to the target chunk. At the latest no-drawable peak, 11/15 targets
+had a FirstMesh dirty entry (one at queue index 73) and 4/15 had neither a
+dirty entry nor ColumnFlow mesh ticket. The latest five unowned targets had no
+dirty entry, flow ticket, or mesh revision. Treat this as evidence of missing
+mesh ownership/service for resident solid chunks, not proof of exposed pixels:
+projected chunk AABBs are conservative and sampled depth may belong to a nearer
+chunk. Frame 120 also shows triangular shoreline/water artifacts.
+
+Artifacts: [run report](../../bin/suite_reports/engine_refactor/m416_world164_m335_peak_screen_coverage_20261006.json),
+[pixel/rectangle join](../../bin/suite_reports/engine_refactor/m416_camera_band_pixel_join_20261006.json),
+raw perf `bin/logs/perf_20261006-065527_31132.jsonl`, and captures in
+`bin/logs/m416_world164_m335_peak_screen_coverage/`.

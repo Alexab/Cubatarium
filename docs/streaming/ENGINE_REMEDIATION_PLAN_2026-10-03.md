@@ -2519,3 +2519,60 @@ Artifacts (ignored `bin/` outputs): [M413 report](../../bin/suite_reports/engine
 [M415 camera-band/pixel join](../../bin/suite_reports/engine_refactor/m415_camera_band_pixel_join_20261006.json),
 raw perf `bin/logs/perf_20261006-054508_8136.jsonl`, and 189 captures in
 `bin/logs/m415_world164_m335_peak_frustum_membership/`.
+
+### M416 — projected peak chunks overlap pixel probes but have no target mesh (2026-10-06)
+
+M416 kept the established visible/no-teleport M335 route and added a bounded
+per-target projected-AABB probe. The Release build and static executable check
+passed. The 2,800-second flight completed 863 chunks / 13,808 blocks at
+5.19653 blocks/s, saved 189 captures, returned `process_rc=0`, was not killed,
+and restored the world-data hash to
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`. The
+acceptance report still failed 11/39 gates and post-stop convergence failed.
+Median wall / streaming-phase / mesh-emerge times were 51.65 / 43.13 / 17.65
+ms, unfinished visual readiness was 27, dirty count was 157 (maximum 404),
+and the miss-stuck maximum was 28 seconds. The approximately 412 MB detailed
+trace is forensic evidence, not a low-trace performance control. No tests were
+run. The user confirmed M407's long pause was system sleep/lock.
+
+The join retained 91 target-specific render probes across the route. All 91
+targets were resident, intersected the exact geometric frustum, and had a
+valid projected AABB rectangle. The 4-by-20 pixel sampler landed inside 79
+rectangles; 39 contained at least one opaque depth sample, but zero samples
+were attributed to the target chunk and there were zero exact target voxel-ray
+hits. At the latest no-drawable peak, 15 slices had 58 sampler hits and 26
+depth surfaces in their rectangles; at the latest unowned peak, 5 slices had
+21 hits and 10 depth surfaces. These measurements show that the sampler looked
+inside most projected rectangles, but neither AABB overlap nor a neighboring
+depth surface proves that a target surface should be visible there.
+
+The ownership trace narrows the streaming/rendering failure. At the latest
+no-drawable peak, every target had non-air data; 11/15 had a FirstMesh dirty
+queue owner, including a representative at queue index 73, while 4/15 had no
+dirty queue or ColumnFlow mesh ticket. At the latest unowned peak, all 5/5 had
+no dirty queue, no ColumnFlow ticket, and mesh revision zero. Some rows still
+reported the broad `work_pending` state because it includes relight or
+post-dispatch repair cooldown; that state is not proof of an active mesh owner.
+The bounded `first_mesh_frontier_trace` did not include these exact target
+coordinates. This points to an ownership/admission or service-lifecycle gap
+alongside a FirstMesh backlog, rather than a frustum/culler rejection. It does
+not yet prove that each rectangle is an exposed visual hole. Captures showed
+fog/sea and faint terrain at the start and endpoint; frame 120 also shows
+large triangular shoreline/water artifacts, which should remain a separate
+renderer defect to investigate.
+
+**Next:** trace the same target coordinates through demand creation, concrete
+owner acquisition, scheduler dequeue, snapshot admission/defer, build attempt,
+completion validation, GPU apply, and owner release. Include queue age/index,
+admission rejection reason, active attempt/stage, relight cooldown state, and
+world/incarnation/revision identity so a temporary cooldown cannot masquerade
+as a live owner. Compare the queued and ownerless targets before changing
+quotas. If ownership disappears without publication, repair that lifecycle;
+if queue entries remain starved, make one narrowly scoped fairness change and
+repeat M335. Keep repeatable `World_164` flights as the primary gate and retain
+periodic cold-world checks.
+
+Artifacts (ignored `bin/` outputs): [M416 acceptance report](../../bin/suite_reports/engine_refactor/m416_world164_m335_peak_screen_coverage_20261006.json),
+[M416 camera-band/pixel join](../../bin/suite_reports/engine_refactor/m416_camera_band_pixel_join_20261006.json),
+raw perf `bin/logs/perf_20261006-065527_31132.jsonl`, and 189 captures in
+`bin/logs/m416_world164_m335_peak_screen_coverage/`.

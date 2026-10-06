@@ -80,6 +80,59 @@ def pixel_frame_summary(stats: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def screen_rect_pixel_coverage(
+    probe: dict[str, Any],
+    pixel_stats: dict[str, Any] | None,
+    target_chunk: tuple[int, int, int],
+    exact_voxel_hits: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Join GL bottom-left pixel probes to the projected top-left rect."""
+    rect = probe.get("screen_rect")
+    viewport = probe.get("viewport") or [0, 0]
+    if not probe.get("screen_rect_valid") or not rect or len(rect) != 4:
+        return {
+            "screen_rect_sample_count": None,
+            "screen_rect_depth_surface_sample_count": None,
+            "screen_rect_target_depth_sample_count": None,
+            "screen_rect_depth_chunks": [],
+            "screen_rect_pixels": [],
+            "same_frame_target_voxel_hit_count": len(exact_voxel_hits),
+        }
+
+    min_x, min_y, max_x, max_y = (int(value) for value in rect)
+    viewport_height = int(viewport[1]) if len(viewport) > 1 else 0
+    inside: list[dict[str, Any]] = []
+    if pixel_stats and viewport_height > 0:
+        for sample in pixel_stats["samples"]:
+            pixel_x, pixel_y_gl = sample["pixel"]
+            pixel_y_top = viewport_height - 1 - pixel_y_gl
+            if min_x <= pixel_x <= max_x and min_y <= pixel_y_top <= max_y:
+                inside.append({**sample, "pixel": [pixel_x, pixel_y_top]})
+
+    depth_chunks: Counter[tuple[int, int, int]] = Counter()
+    target_depth_sample_count = 0
+    depth_sample_count = 0
+    for sample in inside:
+        if not sample["depth_surface_valid"]:
+            continue
+        depth_sample_count += 1
+        depth_chunk = tuple(sample["depth_chunk"])
+        depth_chunks[depth_chunk] += 1
+        target_depth_sample_count += depth_chunk == target_chunk
+
+    return {
+        "screen_rect_sample_count": len(inside),
+        "screen_rect_depth_surface_sample_count": depth_sample_count,
+        "screen_rect_target_depth_sample_count": target_depth_sample_count,
+        "screen_rect_depth_chunks": [
+            {"chunk": list(coord), "sample_count": count}
+            for coord, count in depth_chunks.most_common(8)
+        ],
+        "screen_rect_pixels": [sample["pixel"] for sample in inside],
+        "same_frame_target_voxel_hit_count": len(exact_voxel_hits),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("perf_jsonl", type=Path)
@@ -166,7 +219,9 @@ def main() -> int:
                     record.get("frame_epoch", 0), record.get("cx", 0),
                     record.get("cy", 0), record.get("cz", 0),
                 )
-                peak_render_probes[peak_key].append({
+                peak_probe = {
+                    "frame_epoch": peak_key[0],
+                    "chunk": list(peak_key[1:]),
                     "peak_kind": int(record.get("peak_kind", 0)),
                     "target_resident": bool(record.get("target_resident", 0)),
                     "non_air_blocks": int(record.get("non_air_blocks", 0)),
@@ -212,7 +267,8 @@ def main() -> int:
                     "mdi_visible_index_count": int(
                         record.get("mdi_visible_index_count", 0)
                     ),
-                })
+                }
+                peak_render_probes[peak_key].append(peak_probe)
             elif kind == "renderer_pixel_probe":
                 epoch = int(record.get("frame_epoch", 0))
                 pixel_probe_epochs.add(epoch)
@@ -226,7 +282,9 @@ def main() -> int:
                     "depth_surface_sample_count": 0,
                     "voxel_ray_hit_count": 0,
                     "depth_chunks": Counter(),
+                    "samples": [],
                 })
+                stats["samples"].append(sample)
                 stats["sample_count"] += 1
                 is_dark = sample["luminance"] < 32
                 stats["dark_luma_lt_32"] += is_dark
@@ -263,6 +321,13 @@ def main() -> int:
             matched_frustum = frustum_hits.get(target_key, [])
             matched_peak_render_probes = peak_render_probes.get(target_key, [])
             same_frame_pixels = pixel_frame_stats.get(target_key[0])
+            for peak_probe in matched_peak_render_probes:
+                peak_probe.update(screen_rect_pixel_coverage(
+                    peak_probe,
+                    same_frame_pixels,
+                    target_key[1:],
+                    matched,
+                ))
             same_frame_pixel_summary = (
                 pixel_frame_summary(same_frame_pixels)
                 if same_frame_pixels is not None else None
@@ -308,10 +373,39 @@ def main() -> int:
             })
         joined_by_kind[kind] = joined
 
+    all_peak_render_probes: list[dict[str, Any]] = []
+    for rows in peak_render_probes.values():
+        for peak_probe in rows:
+            if "screen_rect_sample_count" not in peak_probe:
+                peak_key = key_for(
+                    peak_probe["frame_epoch"], *peak_probe["chunk"]
+                )
+                peak_probe.update(screen_rect_pixel_coverage(
+                    peak_probe,
+                    pixel_frame_stats.get(peak_key[0]),
+                    peak_key[1:],
+                    pixel_hits.get(peak_key, []),
+                ))
+            all_peak_render_probes.append(peak_probe)
+    peak_probe_rects_with_samples = sum(
+        probe.get("screen_rect_sample_count") is not None
+        and probe["screen_rect_sample_count"] > 0
+        for probe in all_peak_render_probes
+    )
+    peak_probe_rects_with_target_depth = sum(
+        probe.get("screen_rect_target_depth_sample_count") is not None
+        and probe["screen_rect_target_depth_sample_count"] > 0
+        for probe in all_peak_render_probes
+    )
+
     result = {
-        "schema": "camera_band_pixel_join.v5",
+        "schema": "camera_band_pixel_join.v6",
         "perf_jsonl": str(args.perf_jsonl),
-        "join_definition": "same frame_epoch and voxel-DDA hit chunk coordinate",
+        "join_definition": (
+            "exact hit joins use same frame_epoch and voxel-DDA chunk; "
+            "screen coverage joins sparse pixels to same-frame projected "
+            "top-left chunk-AABB rectangles"
+        ),
         "trace_counts": dict(kind_counts),
         "pixel_probe_frame_count": len(pixel_probe_epochs),
         "frustum_probe_frame_count": len(frustum_probe_epochs),
@@ -319,6 +413,11 @@ def main() -> int:
         "peak_render_probe_count": sum(
             len(rows) for rows in peak_render_probes.values()
         ),
+        "peak_render_probe_screen_coverage": {
+            "rectangles_with_pixel_samples": peak_probe_rects_with_samples,
+            "rectangles_with_target_depth_samples": peak_probe_rects_with_target_depth,
+            "rows": all_peak_render_probes,
+        },
         "joins": {
             kind: {
                 "trace_rows": len(rows),
@@ -356,6 +455,7 @@ def main() -> int:
             "A voxel DDA hit does not prove the sampled texel should be opaque; cutout geometry may intentionally reveal background.",
             "A nearer depth surface may occlude the target chunk; compare depth and voxel-hit distances and chunk coordinates.",
             "The pixel probes are sparse and only unmatched sampled rays are inconclusive.",
+            "Projected chunk-AABB rectangles are conservative bounds, not exact opaque surface coverage; pixel coordinates assume a viewport origin of (0, 0).",
             "A frustum summary with zero candidates means the census ran but found no intersecting resident solid chunk; compare its depth-surface samples before interpreting the scene as empty.",
         ],
     }
