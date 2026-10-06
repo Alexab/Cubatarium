@@ -418,6 +418,26 @@ struct VisualBlackTraceRecord
   float renderer_pixel_shader_precipitation{0.0f};
   float renderer_pixel_shader_wetness{0.0f};
   float renderer_pixel_shader_light_debug_mode{0.0f};
+  uint8_t renderer_pixel_fog_state_valid{0};
+  uint8_t renderer_pixel_fog_enabled{0};
+  uint8_t renderer_pixel_air_fog_enabled{0};
+  uint8_t renderer_pixel_fog_horizontal{0};
+  uint8_t renderer_pixel_underwater_fog_enabled{0};
+  uint8_t renderer_pixel_underwater_fog_submerged{0};
+  float renderer_pixel_camera_pos_x{0.0f};
+  float renderer_pixel_camera_pos_y{0.0f};
+  float renderer_pixel_camera_pos_z{0.0f};
+  float renderer_pixel_fog_start{0.0f};
+  float renderer_pixel_fog_end{1000.0f};
+  float renderer_pixel_fog_min_blend{0.0f};
+  float renderer_pixel_fog_density{1.0f};
+  float renderer_pixel_fog_env_multiplier{1.0f};
+  float renderer_pixel_fog_color_r{0.05f};
+  float renderer_pixel_fog_color_g{0.15f};
+  float renderer_pixel_fog_color_b{0.35f};
+  float renderer_pixel_underwater_fog_start{0.0f};
+  float renderer_pixel_underwater_fog_end{9.0f};
+  float renderer_pixel_underwater_fog_min_blend{0.5f};
   uint8_t renderer_pixel_marker_visible{0};
   /// Valid bit plus seven-bit marker occupancy on the sampled scanline.
   uint8_t renderer_pixel_surface_valid{0};

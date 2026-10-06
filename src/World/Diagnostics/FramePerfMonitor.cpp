@@ -3980,8 +3980,52 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_shader_night_factor
                  << ",\"renderer_pixel_shader_sky_scale\":"
                  << r.renderer_pixel_shader_sky_scale
+                 << ",\"renderer_pixel_shader_precipitation\":"
+                 << r.renderer_pixel_shader_precipitation
+                 << ",\"renderer_pixel_shader_wetness\":"
+                 << r.renderer_pixel_shader_wetness
                  << ",\"renderer_pixel_shader_light_debug_mode\":"
                  << r.renderer_pixel_shader_light_debug_mode
+                 << ",\"renderer_pixel_fog_state_valid\":"
+                 << static_cast<int>(r.renderer_pixel_fog_state_valid)
+                 << ",\"renderer_pixel_fog_enabled\":"
+                 << static_cast<int>(r.renderer_pixel_fog_enabled)
+                 << ",\"renderer_pixel_air_fog_enabled\":"
+                 << static_cast<int>(r.renderer_pixel_air_fog_enabled)
+                 << ",\"renderer_pixel_fog_horizontal\":"
+                 << static_cast<int>(r.renderer_pixel_fog_horizontal)
+                 << ",\"renderer_pixel_underwater_fog_enabled\":"
+                 << static_cast<int>(r.renderer_pixel_underwater_fog_enabled)
+                 << ",\"renderer_pixel_underwater_fog_submerged\":"
+                 << static_cast<int>(r.renderer_pixel_underwater_fog_submerged)
+                 << ",\"renderer_pixel_camera_pos_x\":"
+                 << r.renderer_pixel_camera_pos_x
+                 << ",\"renderer_pixel_camera_pos_y\":"
+                 << r.renderer_pixel_camera_pos_y
+                 << ",\"renderer_pixel_camera_pos_z\":"
+                 << r.renderer_pixel_camera_pos_z
+                 << ",\"renderer_pixel_fog_start\":"
+                 << r.renderer_pixel_fog_start
+                 << ",\"renderer_pixel_fog_end\":"
+                 << r.renderer_pixel_fog_end
+                 << ",\"renderer_pixel_fog_min_blend\":"
+                 << r.renderer_pixel_fog_min_blend
+                 << ",\"renderer_pixel_fog_density\":"
+                 << r.renderer_pixel_fog_density
+                 << ",\"renderer_pixel_fog_env_multiplier\":"
+                 << r.renderer_pixel_fog_env_multiplier
+                 << ",\"renderer_pixel_fog_color_r\":"
+                 << r.renderer_pixel_fog_color_r
+                 << ",\"renderer_pixel_fog_color_g\":"
+                 << r.renderer_pixel_fog_color_g
+                 << ",\"renderer_pixel_fog_color_b\":"
+                 << r.renderer_pixel_fog_color_b
+                 << ",\"renderer_pixel_underwater_fog_start\":"
+                 << r.renderer_pixel_underwater_fog_start
+                 << ",\"renderer_pixel_underwater_fog_end\":"
+                 << r.renderer_pixel_underwater_fog_end
+                 << ",\"renderer_pixel_underwater_fog_min_blend\":"
+                 << r.renderer_pixel_underwater_fog_min_blend
                  << ",\"renderer_pixel_surface_valid\":"
                  << static_cast<int>(r.renderer_pixel_surface_valid)
                  << ",\"renderer_pixel_surface_x\":"

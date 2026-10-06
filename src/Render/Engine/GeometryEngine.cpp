@@ -661,7 +661,8 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
 }
 
 void CaptureTransparentPixelProbe(
-    UWorld &world, const UChunkMeshCache &cache,
+    UWorld &world, const UUnderwaterFogPass &fog_pass,
+    const UChunkMeshCache &cache,
     const std::vector<GreedyBatchRef> &opaque_refs,
     const std::vector<GreedyBatchRef> &transparent_refs,
     const GreedyGpuPassCache &mdi_opaque_pass,
@@ -795,6 +796,51 @@ void CaptureTransparentPixelProbe(
       record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
       record.focus_cx = focus_chunk.x;
       record.focus_cz = focus_chunk.z;
+      const UWorld::EnvironmentState &shader_env =
+          world.GetEnvironmentState();
+      const UWorld::LightingSettings &shader_lighting =
+          world.GetLightingSettings();
+      record.renderer_pixel_shader_min_ambient = shader_lighting.MinAmbient;
+      record.renderer_pixel_shader_day_factor = shader_env.DayNightFactor;
+      record.renderer_pixel_shader_night_factor = shader_env.MoonNightFactor;
+      record.renderer_pixel_shader_sky_scale =
+          EnvironmentSkyLightScale(shader_env);
+      record.renderer_pixel_shader_precipitation =
+          shader_env.PrecipitationIntensity;
+      record.renderer_pixel_shader_wetness = shader_env.SurfaceWetness;
+      record.renderer_pixel_shader_light_debug_mode =
+          shader_lighting.DebugMode;
+      const glm::vec3 &pixel_fog_color = fog_pass.GetFogColor();
+      record.renderer_pixel_fog_state_valid = 1;
+      record.renderer_pixel_fog_enabled =
+          fog_pass.GetFogEnabled() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_air_fog_enabled =
+          fog_pass.GetAirFogEnabled() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_fog_horizontal =
+          fog_pass.GetFogHorizontal() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_underwater_fog_enabled =
+          fog_pass.GetUnderwaterFogEnabled() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_underwater_fog_submerged =
+          fog_pass.GetUnderwaterFogSubmerged() > 0.5f ? 1u : 0u;
+      record.renderer_pixel_camera_pos_x = camera_position.x;
+      record.renderer_pixel_camera_pos_y = camera_position.y;
+      record.renderer_pixel_camera_pos_z = camera_position.z;
+      record.renderer_pixel_fog_start = fog_pass.GetFogStart();
+      record.renderer_pixel_fog_end = fog_pass.GetFogEnd();
+      record.renderer_pixel_fog_min_blend =
+          fog_pass.GetFogMinBlend();
+      record.renderer_pixel_fog_density = fog_pass.GetFogDensity();
+      record.renderer_pixel_fog_env_multiplier =
+          shader_env.WeatherFogMultiplier;
+      record.renderer_pixel_fog_color_r = pixel_fog_color.r;
+      record.renderer_pixel_fog_color_g = pixel_fog_color.g;
+      record.renderer_pixel_fog_color_b = pixel_fog_color.b;
+      record.renderer_pixel_underwater_fog_start =
+          fog_pass.GetUnderwaterFogStart();
+      record.renderer_pixel_underwater_fog_end =
+          fog_pass.GetUnderwaterFogEnd();
+      record.renderer_pixel_underwater_fog_min_blend =
+          fog_pass.GetUnderwaterFogMinBlend();
 
       const float ndc_x =
           (static_cast<float>(local_x) + 0.5f) / static_cast<float>(width) *
@@ -1408,24 +1454,6 @@ void CaptureTransparentPixelProbe(
             record.renderer_pixel_surface_x = surface_point.x;
             record.renderer_pixel_surface_y = surface_point.y;
             record.renderer_pixel_surface_z = surface_point.z;
-            const UWorld::EnvironmentState &shader_env =
-                world.GetEnvironmentState();
-            const UWorld::LightingSettings &shader_lighting =
-                world.GetLightingSettings();
-            record.renderer_pixel_shader_min_ambient =
-                shader_lighting.MinAmbient;
-            record.renderer_pixel_shader_day_factor =
-                shader_env.DayNightFactor;
-            record.renderer_pixel_shader_night_factor =
-                shader_env.MoonNightFactor;
-            record.renderer_pixel_shader_sky_scale =
-                EnvironmentSkyLightScale(shader_env);
-            record.renderer_pixel_shader_precipitation =
-                shader_env.PrecipitationIntensity;
-            record.renderer_pixel_shader_wetness =
-                shader_env.SurfaceWetness;
-            record.renderer_pixel_shader_light_debug_mode =
-                shader_lighting.DebugMode;
             const glm::ivec3 surface_cell(
                 static_cast<int>(std::floor(surface_point.x)),
                 static_cast<int>(std::floor(surface_point.y)),
@@ -1892,7 +1920,8 @@ void CaptureTransparentPixelProbe(
 }
 
 void NoteFrustumCoverageGaps(
-    UWorld &world, const UChunkMeshCache &cache, const Frustum &frustum,
+    UWorld &world, const UUnderwaterFogPass &fog_pass,
+    const UChunkMeshCache &cache, const Frustum &frustum,
     const glm::vec3 &camera_position,
     const std::vector<GreedyBatchRef> &opaque_refs,
     const std::vector<GreedyBatchRef> &transparent_refs,
@@ -1921,7 +1950,8 @@ void NoteFrustumCoverageGaps(
     mdi_store->SyncCompactVisToCpu(mdi_cutout_pass);
     mdi_store->SyncCompactVisToCpu(mdi_transparent_pass);
   }
-  CaptureTransparentPixelProbe(world, cache, opaque_refs, transparent_refs,
+  CaptureTransparentPixelProbe(world, fog_pass, cache, opaque_refs,
+                               transparent_refs,
                                mdi_opaque_pass, mdi_cutout_pass,
                                mdi_transparent_pass, textures,
                                view_projection, camera_position, frame_epoch,
@@ -3368,7 +3398,7 @@ void UGeometryEngine::DrawCubeGeometry()
       const glm::mat4 coverage_vp =
           camera->GetProjection() * camera->GetViewMatrix();
       NoteFrustumCoverageGaps(
-          *WorldInstance, draw.cache,
+          *WorldInstance, UnderwaterFogPass_, draw.cache,
           Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
           draw.opaqueCutoutRefs, draw.transparentRefs, filtered_opaque,
           filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,

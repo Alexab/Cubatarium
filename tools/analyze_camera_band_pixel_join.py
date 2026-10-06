@@ -40,6 +40,36 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
         if depth_valid and voxel_distance >= 0.0 and depth_distance >= 0.0
         else None
     )
+    fog_state_valid = int(record.get("renderer_pixel_fog_state_valid", 0)) == 1
+    fog_horizontal = int(record.get("renderer_pixel_fog_horizontal", 0)) == 1
+    fog_enabled = int(record.get("renderer_pixel_fog_enabled", 0)) == 1
+    air_fog_enabled = int(record.get("renderer_pixel_air_fog_enabled", 0)) == 1
+    fog_mode = "global_distance" if fog_enabled else (
+        "air_distance" if air_fog_enabled else "none"
+    )
+    fog_distance = depth_distance
+    if fog_mode == "air_distance" and fog_horizontal and depth_valid:
+        dx = float(record.get("renderer_pixel_opaque_surface_x", 0.0)) - float(
+            record.get("renderer_pixel_camera_pos_x", 0.0)
+        )
+        dz = float(record.get("renderer_pixel_opaque_surface_z", 0.0)) - float(
+            record.get("renderer_pixel_camera_pos_z", 0.0)
+        )
+        fog_distance = (dx * dx + dz * dz) ** 0.5
+    fog_factor = None
+    if fog_state_valid and depth_valid and fog_mode != "none":
+        fog_start = float(record.get("renderer_pixel_fog_start", 0.0))
+        fog_end = float(record.get("renderer_pixel_fog_end", 1000.0))
+        fog_density = float(record.get("renderer_pixel_fog_density", 1.0))
+        env_multiplier = float(
+            record.get("renderer_pixel_fog_env_multiplier", 1.0)
+        )
+        fog_range = max(fog_end - fog_start, 0.001)
+        factor = min(1.0, max(0.0, (fog_distance - fog_start) / fog_range))
+        exponent = max(fog_density * max(env_multiplier, 0.05), 0.1)
+        fog_factor = round(max(factor**exponent, float(
+            record.get("renderer_pixel_fog_min_blend", 0.0)
+        )), 5)
     return {
         "frame_epoch": int(record.get("frame_epoch", 0)),
         "camera": [
@@ -51,6 +81,9 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
                   int(record.get("renderer_pixel_y", 0))],
         "rgb": rgb,
         "luminance": round(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2], 2),
+        "source_block_id": int(
+            record.get("renderer_pixel_opaque_vertex_light_block_id", -1)
+        ),
         "voxel_hit_block_id": int(record.get("renderer_pixel_voxel_hit_block_id", -1)),
         "voxel_ray_state": int(record.get("renderer_pixel_voxel_ray_state", 0)),
         "voxel_chunk": [
@@ -74,6 +107,9 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
         "opaque_pending_light": int(
             record.get("renderer_pixel_opaque_chunk_pending_light", 0)
         ),
+        "light_preview": float(
+            record.get("renderer_pixel_opaque_vertex_light_preview", 0.0)
+        ),
         "light_sample_valid": int(
             record.get("renderer_pixel_opaque_vertex_light_valid", 0)
         ),
@@ -84,6 +120,27 @@ def pixel_summary(record: dict[str, Any]) -> dict[str, Any]:
             int(record.get("renderer_pixel_opaque_published_light_rev", -1))
             == int(record.get("renderer_pixel_opaque_field_light_rev", -2))
         ),
+        "precipitation": float(
+            record.get("renderer_pixel_shader_precipitation", 0.0)
+        ),
+        "wetness": float(record.get("renderer_pixel_shader_wetness", 0.0)),
+        "fog_state_valid": fog_state_valid,
+        "fog_mode": fog_mode,
+        "fog_factor": fog_factor,
+        "fog_enabled": int(fog_enabled),
+        "air_fog_enabled": int(air_fog_enabled),
+        "underwater_fog_enabled": int(
+            record.get("renderer_pixel_underwater_fog_enabled", 0)
+        ),
+        "underwater_fog_submerged": int(
+            record.get("renderer_pixel_underwater_fog_submerged", 0)
+        ),
+        "fog_distance": round(fog_distance, 4) if fog_distance >= 0 else None,
+        "fog_color": [
+            round(float(record.get("renderer_pixel_fog_color_r", 0.0)), 4),
+            round(float(record.get("renderer_pixel_fog_color_g", 0.0)), 4),
+            round(float(record.get("renderer_pixel_fog_color_b", 0.0)), 4),
+        ],
         "voxel_face_source_valid": int(
             record.get("renderer_pixel_voxel_face_source_valid", 0)
         ),
@@ -121,6 +178,9 @@ def summarize_pixel_render_evidence(pixel_frame_stats: dict[int, dict[str, Any]]
         group = [sample for sample in samples if predicate(sample)]
         voxel_hits = [sample for sample in group if sample["voxel_ray_state"] == 1]
         light_samples = [sample for sample in group if sample["light_sample_valid"]]
+        fog_samples = [
+            sample for sample in group if sample["fog_factor"] is not None
+        ]
         summary[label] = {
             "sample_count": len(group),
             "with_opaque_depth": sum(sample["depth_surface_valid"] for sample in group),
@@ -129,6 +189,30 @@ def summarize_pixel_render_evidence(pixel_frame_stats: dict[int, dict[str, Any]]
             "voxel_ray_hits": len(voxel_hits),
             "voxel_ray_gaps": sum(sample["voxel_ray_gap"] for sample in voxel_hits),
             "pending_light": sum(sample["opaque_pending_light"] for sample in group),
+            "light_preview": sum(sample["light_preview"] > 0.5 for sample in group),
+            "fog_state_valid": sum(sample["fog_state_valid"] for sample in group),
+            "fog_samples": len(fog_samples),
+            "global_fog_samples": sum(
+                sample["fog_mode"] == "global_distance" for sample in group
+            ),
+            "air_fog_samples": sum(
+                sample["fog_mode"] == "air_distance" for sample in group
+            ),
+            "fog_factor_gt_0_25": sum(
+                sample["fog_factor"] > 0.25 for sample in fog_samples
+            ),
+            "underwater_fog_enabled_samples": sum(
+                sample["underwater_fog_enabled"] for sample in group
+            ),
+            "camera_submerged_samples": sum(
+                sample["underwater_fog_submerged"] for sample in group
+            ),
+            "median_fog_factor": (
+                round(sorted(sample["fog_factor"] for sample in fog_samples)[
+                    len(fog_samples) // 2
+                ], 5)
+                if fog_samples else None
+            ),
             "valid_light_samples": len(light_samples),
             "light_revision_matches": sum(
                 sample["light_revisions_match"] for sample in light_samples
@@ -490,14 +574,23 @@ def main() -> int:
     )
 
     result = {
-        "schema": "camera_band_pixel_join.v8",
+        "schema": "camera_band_pixel_join.v9",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": (
             "exact hit joins use same frame_epoch and voxel-DDA chunk; "
             "screen coverage joins sparse pixels to same-frame projected "
             "top-left chunk-AABB rectangles; route hit summaries join exact "
-            "voxel-hit chunk coordinates across frames"
+            "voxel-hit chunk coordinates across frames; global/air distance "
+            "fog factors use same-frame captured uniforms and opaque depth"
         ),
+        "pixel_fog_model": {
+            "global_distance": "3D opaque hit distance when uFogEnabled is active",
+            "air_distance": "horizontal or 3D opaque hit distance per uFogHorizontal",
+            "limitation": (
+                "the analyzer does not reconstruct per-fragment fluid-span "
+                "classification or the additional underwater fog blend"
+            ),
+        },
         "trace_counts": dict(kind_counts),
         "pixel_probe_frame_count": len(pixel_probe_epochs),
         "pixel_render_evidence": summarize_pixel_render_evidence(

@@ -31,6 +31,18 @@ public:
 
   const glm::vec3 &GetSkyTint() const { return SmoothedSkyTint; }
   const glm::vec3 &GetFogColor() const { return SmoothedFogColor; }
+  float GetFogStart() const { return FogStart; }
+  float GetFogEnd() const { return FogEnd; }
+  float GetFogMinBlend() const { return FogMinBlend; }
+  float GetFogDensity() const { return FogDensity; }
+  float GetFogEnabled() const { return FogEnabled; }
+  float GetFogHorizontal() const { return FogHorizontal; }
+  float GetAirFogEnabled() const { return AirFogEnabled; }
+  float GetUnderwaterFogEnabled() const { return UnderwaterFogEnabled; }
+  float GetUnderwaterFogStart() const { return UnderwaterFogStart; }
+  float GetUnderwaterFogEnd() const { return UnderwaterFogEnd; }
+  float GetUnderwaterFogMinBlend() const { return UnderwaterFogMinBlend; }
+  float GetUnderwaterFogSubmerged() const { return UnderwaterFogSubmerged; }
   float GetFogHorizonBlend() const { return FogHorizonBlend; }
   /// Sky horizon band elevation (lower = thicker fog band near horizon).
   float GetFogHorizonElevation() const { return FogHorizonElevation; }
