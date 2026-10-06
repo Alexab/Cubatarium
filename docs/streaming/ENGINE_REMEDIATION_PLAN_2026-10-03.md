@@ -2776,3 +2776,53 @@ Release-only. Its new timer fields now use the same interval-mean aggregation
 as `world_streaming_phase_ms`, so future phase comparisons are temporally
 aligned. M422 artifacts and exact counts are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m421m422---selecting-a-genuinely-cold-world-and-cold-start-stall-2026-10-06).
+
+### M423-M426 follow-up - split presentability debt from retained remesh work
+
+The new EnterLit samples show why neither global fast-exit nor simply waiting on
+all queued work is adequate. M424/M426 have persistent camera-band no-drawable
+slices with active/pending owners and dirty residuals near 100; the 150-second
+fallback correctly remains closed under the current safety rule. M425 reaches a
+different state: the sampled 52 solid camera-band slices are drawable and
+satisfying, no camera-band mesh work is pending, yet the ring stays unready with
+26-27 total dirty entries and an intermittent near-async blocker. Its oldest
+dirty entry is itself drawable/satisfying while a priority remesh is active.
+M425 ended before the 150-second fallback, so do not claim that it would exit
+or that the cap would be the only blocker.
+
+The next work is diagnostic plus a narrowly scoped readiness review:
+
+1. **Identify exact near async blockers.** Extend the EnterLit checkpoint to
+   record the coordinate, chunk Y, owner type (in-flight versus completed),
+   dirty/queue trace, demand stage/revisions, and whether an existing drawable
+   satisfies the slice for every async item that blocks the radius-2 spawn
+   ring. Current `async_mesh_pending` is only a boolean; in M425 it toggled
+   while the camera-band census reported no unpresentable or pending slice.
+2. **Explain persistent no-drawable work in M424/M426.** For the exact
+   camera-band no-drawable chunks, persist demand transition/attempt ids,
+   queue age/index, `desired_geom_rev - published_geom_rev`, and terminal or
+   rejection reason at checkpoints. Compare the oldest dirty owner with the
+   current gate miss; they are not guaranteed to be the same chunk.
+3. **Review the ring predicate against the existing retained-image contract.**
+   `HasMeshSatisfyingColumnReady()` deliberately accepts an already drawable
+   image while a replacement is being built, but the near-ring code also
+   checks aggregate async and raw dirty state. Determine whether those raw
+   blockers include out-of-band or already-satisfying slices. If so, narrow
+   only those blockers to actual presentable unsatisfied slices; keep pending
+   GPU/underfeet safety and keep no-drawable slices fail-closed. Do not change
+   the 32-item residual fallback until the revised presentability predicate is
+   proven on both the M425 and M426 shapes.
+4. **Validate in stages.** First replay a fresh world beyond 150 seconds so a
+   dirty residual below 32 can exercise soft settle naturally. Then use a fresh
+   seed with residual above 32 to verify that unresolved camera-band slices
+   still block exit and converge. After that, run the unchanged visible
+   no-teleport M335 `World_164` route as the primary streaming/rendering gate;
+   continue periodic fresh-seed checks as a separate lane.
+
+M423-M426 traces were collected with visible GUI and no camera movement while
+EnterLit was closed; they are startup diagnostics, not long-flight acceptance.
+M423 omitted `CUBA_VISUAL_BLACK_TRACE` and is occupancy-incomplete. M424-M426
+have valid census traces. See the experiment archive for exact reports, seeds,
+limits, and logs. The M422/M423-M426 evidence and new ordering are reflected in
+[`ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md`](ENGINE_RENDERING_REFACTOR_AUDIT_2026-09-24.md#m423-m426---classify-cold-start-missing-meshes-versus-retained-dirty-work-2026-10-06)
+and [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m423-m426---cold-enterlit-owners-and-soft-settle-boundary-2026-10-06).

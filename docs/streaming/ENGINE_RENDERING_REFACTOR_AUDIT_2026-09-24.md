@@ -4996,3 +4996,68 @@ M335 coordinates. Start with a 600-second no-teleport run to measure startup,
 streamed generation, and frame cost before deciding whether another 2,800-second
 flight is justified. If the first run saves the route, repeat the same segment
 to test disk reads separately.
+
+### M423-M426 - classify cold-start missing meshes versus retained dirty work (2026-10-06)
+
+M423-M426 instrumented the path that M422 could only describe with aggregate
+dirty counts. M423 confirmed a stable zero-quad GPU mesh can still be the spawn
+gate miss while the source chunk is not known; that run omitted the trace flag,
+so it does not distinguish valid occlusion from missing geometry. M424 enabled
+the census and showed one repeated gate candidate `(2,2,4)` with 4,096 non-air
+blocks, zero GPU quads, and a one-revision desired/published gap. The slice was
+still present in FirstMesh's dirty queue. This disproves “the voxel chunk is
+empty” for that sample, but does not prove its faces should be exposed: a
+fully enclosed solid chunk can legitimately produce no faces.
+
+M424's last census had 116 solid slices in the camera band, 12 without a
+drawable mesh, 10 with pending work, none without an owner, 62 dirty, and a
+302-frame oldest dirty age at `(3,2,2)`. The first-pass queue looked busy but
+did not drain the ring into readiness by 197 seconds. The `focus_data_band_*`
+counts include lower FillWater/sea-level slices; the narrower
+`focus_data_camera_band_*` fields are the relevant vertical subset. Neither
+set is a pixel oracle.
+
+M425 exposed the opposite state. By 120 seconds, all 52 camera-band solid
+slices had drawable/satisfying meshes and there were no camera-band missing
+meshes or pending work, but 20 remained dirty, `ring_not_ready` was 16, and
+`spawn_mesh_ring_ready` remained false. The oldest dirty slice itself was
+drawable and satisfying while a priority-remesh demand was active. A near async
+blocker alternated between 0 and 1. The run ended before the 150-second soft
+settle, so it does not show whether startup would then exit. This is evidence
+that raw Dirty/async state can block a visually complete retained-image ring;
+it is not yet proof that every blocker in the larger spawn ring is irrelevant.
+
+M426 then exercised the existing fallback through 150 seconds on a separate
+fresh seed. It logged `soft_settle_blocked_dirty_residual n=100`; at 191
+seconds the gate was still closed with dirty 99, underfeet present, visibility
+debt 0, and 12 camera-band solid slices without drawable output (10 still had
+pending work, none were unowned). This confirms the residual cap is the
+immediate blocker for that cold-start seed, while also showing why disabling
+the cap globally would risk exposing missing geometry. The finding is not
+“cap 32 is too small” in isolation. There are at least two states to separate:
+unpresentable camera-band slices with active/recurrent work (M424/M426) and
+already drawable/satisfying slices retained while a remesh is dirty (M425).
+
+### Audit conclusion and next evidence step
+
+The previously planned dirty-age trace is now present, including demand stage
+and geometry revision for both the oldest camera-band dirty entry and current
+gate miss. The next missing diagnostic is the **exact coordinate and vertical
+class of the near-radius async item** returned by
+`HasAsyncInflightInHorizontalRadius`, plus whether that coordinate already has
+a satisfying drawable. Also persist per-coordinate demand/revision transitions
+for the first no-drawable camera-band slices so repeated re-enqueue can be
+distinguished from worker starvation, stale publication, and legitimate
+occlusion.
+
+Do not raise the dirty cap or skip all dirty/async work in `IsSpawnMeshRingReady`
+yet. The code intentionally retains a prior drawable mesh while a newer
+geometry attempt runs, but the current ring test still consults aggregate
+dirty/async flags; exact owner data is needed to establish which work is safe
+to treat as background. A candidate policy should require satisfying drawable
+or validated-empty output for the actual presentable slices, preserve GPU
+readiness for underfeet, and keep unresolved/no-drawable slices fail-closed.
+Validate it first on a cold EnterLit control past 150 seconds, then on the
+unchanged visible no-teleport M335 route in `World_164`; continue separate
+fresh-seed runs periodically. M423-M426 records and artifacts are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m423-m426---cold-enterlit-owners-and-soft-settle-boundary-2026-10-06).

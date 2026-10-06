@@ -932,3 +932,74 @@ enter trace `bin/logs/enter_lit_20261006-150116.jsonl`, and INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-150109.33632`.
 The fixed-day wrapper restored `world_data.json` byte-for-byte. The generated
 `column_light.json` remains in the isolated diagnostic world.
+
+## M423-M426 - cold EnterLit owners and soft-settle boundary (2026-10-06)
+
+The next step added three diagnostic commits: `a06174a6` records the first
+spawn-ring miss and full camera-band census; `960b178d` records non-air count
+and content revision at the exact gate-miss coordinate; `a1958820` records the
+oldest camera-band dirty entry's queue index, chunk data, drawable/satisfying
+state, and render-demand lifecycle. Release executable SHA-256 for M424-M426:
+`d18fc8336eeebc0debe1e29fcf8e04914d3f9cdc27292a22f5239ede1cbb66ef`.
+
+M423 used a genuinely cold metadata-only world with seed `3650473197`, visible
+GUI, the M335 start/yaw/pitch/eye settings, and no teleport. This was the
+product replay wrapper but the environment omitted
+`CUBA_VISUAL_BLACK_TRACE=1`; the manifest correctly says `visual_black_trace`
+false. The app stayed in EnterLit until the 420-second harness limit, with no
+route periods. At about 120 seconds, the first gate miss repeatedly returned
+`(1,2,3)`: its GPU buffer was resident but had zero quads, and its published
+geometry revision lagged desired by one. This run cannot classify whether that
+chunk's zero-quad image was valid occlusion because its occupancy census was
+disabled. Report: [M423](../../bin/suite_reports/engine_refactor/m423_world_cold_enter_diagnostic_20261006.json);
+EnterLit JSONL: `bin/logs/enter_lit_20261006-155333.jsonl`.
+
+M424 repeated on cold seed `3650474197`, with visible GUI and both visual-black
+and column-source traces enabled. It ran no-flight/no-teleport for the startup
+diagnostic and reached the 210-second process limit with the gate still closed.
+At the last sample (197 seconds), 116 solid slices were in the camera band;
+12 lacked drawable meshes, 10 had pending work, none were unowned, and 62 were
+dirty. The oldest visible dirty age was 302 frames. A sampled gate miss at
+`(2,2,4)` had 4,096 non-air blocks, a zero-quad GPU mesh, and desired geometry
+revision one newer than published; its FirstMesh dirty entry was still present.
+Therefore this particular empty mesh was not an empty voxel chunk. The trace
+does not prove that the full-solid slice should draw: it may be fully enclosed.
+Report: [M424](../../bin/suite_reports/engine_refactor/m424_world_cold_enter_census_20261006.json);
+EnterLit JSONL: `bin/logs/enter_lit_20261006-161818.jsonl`.
+
+M425 used cold seed `3650475197`, visual-black trace, no flight movement, and a
+140-second harness limit. At 120 seconds, underfeet was present, visibility
+debt was zero, all 52 camera-band solid slices had drawable/satisfying output,
+and the camera-band census had no missing mesh or pending work. Still,
+`spawn_mesh_ring_ready=0`, `ring_not_ready=16`, and 26-27 total dirty slices
+remained. The oldest dirty slice was a drawable, satisfying chunk with an
+active priority-remesh attempt and desired revision one above published; the
+near async blocker toggled between zero and one. This is evidence that dirty
+and async state can outlive a fully drawable camera band. The run ended before
+the ~150-second soft-settle check, so it did not test whether the existing
+32-dirty cap would allow exit. The harness had already saved a `chunks/`
+directory under this test world; do not reuse M425 as a cold seed. Report:
+[M425](../../bin/suite_reports/engine_refactor/m425_world_cold_oldest_dirty_20261006.json);
+EnterLit JSONL: `bin/logs/enter_lit_20261006-164200.jsonl`.
+
+M426 used another metadata-only world (seed `3650476197`) and ran through the
+soft-settle threshold. At 150 seconds the engine logged
+`soft_settle_blocked_dirty_residual n=100`; at the last saved sample (191
+seconds), dirty was 99, underfeet was present, visibility debt was zero, and
+the camera band still had 12 no-drawable slices, 10 pending slices, and zero
+unowned slices. The gate remained closed and the harness ended the run at 210
+seconds. This validates the 32-item check as the immediate exit blocker for
+this seed, while the persistent camera-band misses mean removing that check
+would be unsafe. Report: [M426](../../bin/suite_reports/engine_refactor/m426_world_cold_softsettle_20261006.json);
+EnterLit JSONL: `bin/logs/enter_lit_20261006-165005.jsonl`; INFO record is in
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261006-164956.24252`.
+
+These are cold-start diagnostics, not long no-teleport flight acceptance runs:
+M423/M424/M426 produced zero route periods; M425 produced four diagnostic
+periods but no camera movement. None changes the established M335 route
+parameters or replaces the `World_164` repeated-world regression lane. The
+next experiment should persist exact near-async coordinates and vertical band,
+then follow demand/revision transitions for the oldest dirty and first
+unpresentable camera-band slices. Keep the residual guard until those slices
+are proven presentable or their work is shown to be safely retain-old-image
+background remeshing.
