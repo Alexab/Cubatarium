@@ -5,6 +5,7 @@ param(
     [switch]$Configure,
     [switch]$Reconfigure,
     [int]$Jobs = 8,
+    [int]$ClMpCount = 0,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$CMakeBuildArgs
 )
@@ -39,6 +40,20 @@ $buildArgs = @(
 )
 if ($CMakeBuildArgs) {
     $buildArgs += $CMakeBuildArgs
+}
+
+# CMake's Visual Studio backend sets CL_MPCount=1 when --parallel is used,
+# which serializes /MP compilation inside this single project. Preserve the
+# requested worker budget for translation units as well as MSBuild projects.
+$generatorLine = Select-String -Path $cacheFile -Pattern '^CMAKE_GENERATOR:INTERNAL=' -ErrorAction SilentlyContinue
+if ($generatorLine -and $generatorLine.Line -match 'Visual Studio') {
+    if ($ClMpCount -le 0) {
+        $ClMpCount = $Jobs
+    }
+    if ($ClMpCount -le 0) {
+        throw 'ClMpCount must be greater than zero for Visual Studio builds.'
+    }
+    $buildArgs += @('--', "/p:CL_MPCount=$ClMpCount")
 }
 
 Write-Host ">> build ($Config): $CMake $($buildArgs -join ' ')"
