@@ -281,7 +281,8 @@ private:
 
   std::unordered_map<glm::ivec3, ChunkRenderDemandRecord, IVec3Hash> Records_;
   uint64_t NextAttemptId_{1};
-  size_t ReconcileCursor_{0};
+  glm::ivec3 ReconcileCursorCoord_{0};
+  bool ReconcileCursorValid_{false};
   uint64_t AlreadySatisfiedSkipN_{0};
   uint64_t CoalesceN_{0};
   uint64_t NewDemandN_{0};

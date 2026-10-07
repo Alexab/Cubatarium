@@ -2490,10 +2490,10 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
     return;
   }
   const auto maintenance_t0 = std::chrono::high_resolution_clock::now();
+  // ReconcileMaintenance visits at most 128 records and performs the orphan
+  // cancellation while it walks them. Avoid a second full-map orphan scan.
   (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
                                                             now_ms);
-  (void)UChunkRenderDemandStore::Get().CancelOrphanActiveAttempts(
-      /*max_n=*/64, now_ms);
   PhysicsTelemetryData.ChunkDemandMaintenanceMs +=
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - maintenance_t0)

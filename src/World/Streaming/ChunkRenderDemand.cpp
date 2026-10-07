@@ -204,8 +204,11 @@ void UChunkRenderDemandStore::Remove(glm::ivec3 coord)
   {
     UpdateCachedUnsatisfiedBreakdown(SnapshotDemand(it->second), {});
     Records_.erase(it);
+    if (ReconcileCursorValid_ && coord == ReconcileCursorCoord_)
+    {
+      ReconcileCursorValid_ = false;
+    }
   }
-  ReconcileCursor_ = 0;
 }
 
 bool UChunkRenderDemandStore::CoverageSatisfied(
@@ -733,16 +736,29 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
   {
     return stats;
   }
-  if (ReconcileCursor_ >= Records_.size())
-  {
-    ReconcileCursor_ = 0;
-  }
   auto it = Records_.begin();
-  std::advance(it, static_cast<std::ptrdiff_t>(
-                       std::min(ReconcileCursor_, Records_.size())));
-  int n = 0;
-  while (n < max_n && it != Records_.end())
+  if (ReconcileCursorValid_)
   {
+    const auto cursor = Records_.find(ReconcileCursorCoord_);
+    if (cursor != Records_.end())
+    {
+      it = std::next(cursor);
+      if (it == Records_.end())
+      {
+        it = Records_.begin();
+      }
+    }
+    else
+    {
+      ReconcileCursorValid_ = false;
+    }
+  }
+  const size_t max_checked =
+      std::min(static_cast<size_t>(max_n), Records_.size());
+  size_t checked = 0;
+  while (checked < max_checked && it != Records_.end())
+  {
+    const auto current = it;
     ChunkRenderDemandRecord &rec = it->second;
     ++stats.checked;
     if (rec.desired_geom_rev != rec.published_geom_rev ||
@@ -809,13 +825,14 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
     {
       ++stats.retained_awaiting;
     }
+    ReconcileCursorCoord_ = current->first;
+    ReconcileCursorValid_ = true;
     ++it;
-    ++n;
-    ++ReconcileCursor_;
+    ++checked;
   }
   if (it == Records_.end())
   {
-    ReconcileCursor_ = 0;
+    ReconcileCursorValid_ = false;
   }
   return stats;
 }
@@ -943,7 +960,7 @@ void UChunkRenderDemandStore::Clear()
 {
   Records_.clear();
   CachedUnsatisfiedBreakdown_ = {};
-  ReconcileCursor_ = 0;
+  ReconcileCursorValid_ = false;
 }
 
 } // namespace cutum
