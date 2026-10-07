@@ -4730,3 +4730,54 @@ completed-save queue or worker serialization.
 M454's run, per-row attribution, and exact reproduction command are recorded
 in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m454-immutable-snapshots-worker-serialization-clean-full-m335-route-2026-10-07).
+
+### M455 checkpoint — synchronous stale-slice deletion confirmed (2026-10-07)
+
+M455 completed the exact full M335 route on the Release executable from
+`cdbe58de`, with the same route hash as M454. It reached 14,320 blocks and
+`focus_cx=-888`; the app exited normally without being killed. Analyzer
+acceptance remained false (28/39 general gates, 9/12 stop gates), and no
+framebuffer was captured. The route and analyzer outcome are distinct: route
+adequacy passed, while visual-readiness/post-stop gates did not. Proxy counters
+do not override the operator's report that the visible world currently looks
+good.
+
+M455 timed the suspected persistence phases directly. Five high-slice cleanup
+operations each removed five stale paths on the game thread. The slowest took
+67.56 ms; the complete save callback took 68.25 ms. Other measured save
+subphases were each below 0.1 ms in that case. Similar cleanup stalls were
+26.30–48.94 ms in four other columns. Therefore this is not merely a possible
+source: synchronous stale-file deletion is a reproduced unload hitch and
+matches M454's remaining callback stalls.
+
+The trace itself writes detailed records synchronously and inflates enclosing
+callback/stream timings variably. M455 remains useful for attribution but is
+not a clean aggregate performance baseline. It also shows why source-level
+phase timing must be recorded separately from the total callback.
+
+### Next implementation after M455
+
+1. **Move high-slice stale-path cleanup off the main thread.** Snapshot and
+   enqueue the existing `cy > highest_to_save` cleanup onto the background I/O
+   lane. Keep `ColumnSavePending` ownership until both slice writes and the
+   cleanup job finish, so a subsequent disk load or save cannot race the
+   deletion. Have the worker call `RemoveChunkSliceFromDisk` so the existing
+   highest-slice index is invalidated under its current lock. Add an explicit
+   cleanup completion result; never treat cleanup as a successful chunk save
+   or record a removed slice as present on disk.
+2. **Move incomplete-column deletion through the same lane.** When a column is
+   incomplete, its full on-disk removal currently also runs synchronously.
+   Mark the column pending before enqueueing removal and clear it only after
+   the completion result has been consumed. Preserve error reporting and
+   abort/world-switch draining semantics.
+3. Build Release and rerun capture-disabled M335 with source tracing disabled.
+   Compare unload-spike rows, clean `streamer_unload_ms`, save-result drain,
+   queue depth, route completion, and stop behavior against M454. Then run a
+   separate traced pass only if another attribution question remains.
+4. Continue the operator's visual review as the pixel-level gate. Readiness,
+   unfinished-visual, and visible-black counters remain diagnostic proxies.
+   After repeated-world streaming is stable, resume the cold world-create/load
+   performance check and periodic fresh-seed routes.
+
+M455's detailed measurements and reproduction command are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m455-unload-phase-trace-on-the-full-m335-route-2026-10-07).

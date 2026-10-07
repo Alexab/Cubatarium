@@ -2774,3 +2774,73 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Raw output remains under ignored `bin` data and must not be staged. M454 is
 also documented in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m454-checkpoint--immutable-save-snapshots-and-a-new-tail-unload-stall-2026-10-07).
+
+## M455 — unload phase trace on the full M335 route (2026-10-07)
+
+M455 ran the unchanged visible, no-teleport M335 route on `World_164` with
+`CUBA_WORLD_COLUMN_SOURCE_TRACE=1`, using Release executable from commit
+`cdbe58de` (SHA-256
+`3efb4b6bf222ed68ac61e71a65fc106d58b90a5bb8c96501997e06e19b3d6f24`). The
+route hash remained
+`024a223f5827926f85b7ccfb030d9456d2515e1373f35faba620ce59e040c312`.
+The app exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`) after 14,320 blocks (`focus_cx=7 -> -888`), above the
+14,300-block minimum. The wrapper returned 1 because analyzer acceptance was
+false (28/39 general gates and 9/12 stop gates); post-stop convergence did
+not pass. No framebuffer capture was enabled. These visual-readiness and
+visible-black values are telemetry proxies, not pixel evidence; the operator
+had previously reported that the world currently looked good.
+
+The phase trace identified a remaining synchronous filesystem operation in
+the unload save callback. `RequestAsyncTerrainColumnSave` removes stale slice
+files (`cy > highest_to_save`) on the main thread. Although completeness scan,
+disk-index lookup, highest-nonair scan, materialization, and snapshot enqueue
+were each below 0.1 ms in the cited cases, stale-path cleanup took:
+
+| Column | Stale slices | Main-thread cleanup |
+| --- | ---: | ---: |
+| `(-6, 0, 4)` | 5 | 36.07 ms |
+| `(-319, 0, 1)` | 5 | 26.30 ms |
+| `(-417, 0, 0)` | 5 | 48.94 ms |
+| `(-418, 0, 4)` | 5 | 47.78 ms |
+| `(-436, 0, 4)` | 5 | 67.56 ms |
+
+At `(-436, 0, 4)`, the full save callback took 68.25 ms, matching the 67.56
+ms stale cleanup. The four other subphases together were under 0.14 ms. This
+directly confirms filesystem deletion as a source of unload hitches and
+explains the synchronous tail identified in M454. The incomplete-column
+branch also performs a synchronous full-column deletion and must be included
+in the same ownership-safe refactor.
+
+With tracing enabled, diagnostic log writes themselves add variable callback
+time: for example, the measured internal unload-column phases sum to 0.38 ms
+at `(-634, 0, 1)` while the wrapped callback took 12.27 ms. Treat wrapper
+durations from M455 as instrumented values; the timed filesystem-removal
+subphase remains direct evidence. M455's analyzer reported 26 spike rows,
+median fly frame 25.33 ms, median world-streaming phase 12.44 ms, and maximum
+frame 295.57 ms. Those aggregate values are not a clean comparison because
+the trace writes synchronously.
+
+Artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m455_world164_m335_unload_phase_trace_20261007.json`
+- Perf log: `bin/logs/perf_20261007-221940_24328.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-221936.24328`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m455_world164_m335_unload_phase_trace --report bin/suite_reports/engine_refactor/m455_world164_m335_unload_phase_trace_20261007.json --process-timeout 7200
+```
+
+Raw output remains under ignored `bin` data and must not be staged. The
+result and the updated next step are recorded in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m455-checkpoint--synchronous-stale-slice-deletion-confirmed-2026-10-07).
