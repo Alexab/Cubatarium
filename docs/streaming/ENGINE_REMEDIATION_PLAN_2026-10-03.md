@@ -4541,3 +4541,125 @@ internal visible-black proxies as proof of blank pixels.
 M452's route, per-band comparisons, unaccounted-time breakdown, raw artifacts,
 and exact invocation are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m452---completed-result-queue-ring-optimization-clean-m335-route-2026-10-07).
+
+### M453 checkpoint — queued chunk handles and full M335 route (2026-10-07)
+
+M453 tested Release commit `8482aed10db9c41c2de1a00b5898a4d23d5917d0`
+(executable SHA-256
+`eaabe85b7efa808a493295116f9df82506d8b31641f233a58cc646f318775aea`) on the
+same visible no-teleport M335 route. It completed 14,304 blocks, reached
+`focus_cx=-887`, and reported the expected median movement speed of 5.19653
+blocks/s. The app exited successfully (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`) and route completion passed. The wrapper returned 1
+because the product analyzer's separate stop-line/readiness gates failed; its
+report had 25/39 general gates and 8/12 stop gates. M453 had no framebuffer
+capture, so its readiness and visible-black proxies are not pixel evidence.
+The operator currently reports no visible black or empty chunks. The
+longstanding fog/water silhouette behavior remains an independent unresolved
+question; this M335 protocol disables `FogPullIn`.
+
+M453's report median frame time was 28.1772 ms and median streaming phase
+13.9223 ms, versus 26.61/13.46 ms in M452. It recorded 82 spike rows and a
+429.728 ms maximum frame, versus M452's 80 and 443.19 ms. The queue-lock
+change did remove the M452-sized lock waits: on spike rows, result-selection
+wait p95/max was 0.0006/0.0008 ms, requeue wait max 0.0027 ms, and producer
+push wait/hold maxima were 0.0124/0.0234 ms. This shows that the queue mutex
+is no longer the principal source of the remaining stalls. Result selection
+and requeue lock time should remain monitored, but further queue redesign is
+not the next highest-value change.
+
+M453 exposed several separate remaining costs:
+
+1. At `focus_cx=-275`, the frame took 233.1 ms, `update_streaming_ms` took
+   95.96 ms, and `streamer_unload_ms` took 82.70 ms. Source inspection found
+   that unload calls `RequestAsyncTerrainColumnSave`; its disk writes are
+   queued, but each chunk is serialized synchronously in
+   `UAsyncChunkIO::RequestSave` before the worker is enqueued. The save request
+   also synchronously checks column completeness, scans for the highest
+   non-air slice, and removes higher stale slice files. Thus “async save” did
+   not move all expensive work off the game thread.
+2. At `-86`, one frame spent 62.94 ms inside `ChunkStreamer::Update` and
+   66.48 ms in `update_streaming`. At `-261`, the async pre-scheduler took
+   68.54 ms while async I/O itself was 0.02 ms. These identify additional
+   streaming scheduler/update work that still needs named subphase
+   attribution.
+3. At `-80`, `light_flags_save_ms` took 29.71 ms while the actual JSON/file
+   write is assigned to a background worker. The main-thread call still
+   copies every completed-column coordinate into a new vector. At `-237`,
+   save-result drain took 26.74 ms; at `-576`, applying one decoded chunk took
+   16.89 ms. Bound and profile these separately.
+4. At `-73`, async I/O took 48.28 ms, of which result processing was 1.64 ms,
+   save-result drain 15.79 ms, and light-flags submission 5.99 ms; the new
+   timer reported a 24.84 ms remainder. Producer and consumer queue-lock
+   timers were negligible. This remainder can include descheduling or
+   blocking, so a thread-CPU timer is needed before assigning it to code.
+5. The 429.73 ms frame at `-160` contained 230.29 ms of swap wait and
+   199.37 ms of simulation; its streaming phase was 89.22 ms. It is a mixed
+   whole-frame hitch, not a 430 ms chunk-streaming stall. Treat swap/GPU
+   pacing separately from streaming and disk work.
+
+The period rows in the M453 perf file average only fields registered with the
+session accumulator; the newly added inner-tick timings are last-frame values
+in those period rows. Spike rows contain per-frame timings. Do not compare a
+period average such as `async_chunk_io_drain_ms` directly with a last-frame
+`async_chunk_io_tick_wall_ms`. Add matching period accumulators for the new
+timings before using period rows for trend claims.
+
+#### Voxel-engine practice research and consequences
+
+The public Godot Voxel Tools documentation describes block streaming and
+saving as asynchronous specifically to avoid main-thread stutters, and warns
+that background work must be drained before switching the stream/world.
+Its engine also runs generation/meshing tasks in a pool and applies completed
+results through an explicit result phase. See
+[`streaming and asynchronous saves`](https://github.com/Zylann/godot_voxel/blob/master/doc/source/streams.md)
+and the [`VoxelEngine task/result loop`](https://github.com/Zylann/godot_voxel/blob/master/engine/voxel_engine.cpp).
+Luanti's source similarly queues emerge work under a bounded, synchronized
+queue and assigns it to worker threads
+([`EmergeManager::enqueueBlockEmergeEx`](https://github.com/luanti-org/luanti/blob/master/src/emerge.cpp)).
+These sources support an architectural rule for this engine: keep mutable
+world ownership on the main thread, pass immutable chunk snapshots to
+background serialization/storage tasks, and explicitly drain/fence those
+tasks on world teardown. This is an application of the cited designs to our
+current code, not a claim that their implementations are drop-in replacements.
+
+#### Plan readiness after M453
+
+1. **First: remove unload-time serialization from the main thread.** Snapshot
+   the chunk's block/fluid/light arrays while it is safely world-owned, then
+   serialize and atomically write that immutable snapshot on the I/O worker.
+   Preserve save ordering, pending-column state, binary/legacy cleanup,
+   cancellation behavior, and world-switch/shutdown draining. Include
+   high-slice stale-file deletion in the background save operation when the
+   persistence index can be updated safely there. Instrument snapshot-copy,
+   serialization, file write, and remove timings separately.
+2. **Bound metadata work on the game thread.** Measure
+   `LightCompleteColumns.size()` and vector-copy time. Replace full-set copies
+   or repeated full JSON snapshots with a revisioned/delta or immutable
+   snapshot scheme, keeping atomic replacement and failed-write retry
+   semantics.
+3. **Keep save-result bookkeeping cheap.** Determine whether the 26.74 ms
+   save-result drain is file deletion, directory/index maintenance, logging,
+   or scheduler descheduling. Move filesystem cleanup onto workers and bound
+   main-thread result processing if that is confirmed as the source.
+4. **Bound a single load apply.** Profile the 16.89 ms `ApplyToChunk` slice.
+   Consider a compact contiguous decoded representation or resumable apply
+   cursor so one chunk cannot exceed the per-tick budget. Preserve atomic
+   visual publication: do not expose a partially applied chunk as complete.
+5. **Attribute `ChunkStreamer::Update`, unload, and async pre-scheduler
+   separately.** Capture candidate scan/sort, completeness checks, save
+   snapshot, stale-file cleanup, collision/keep checks, cancellation and
+   policy times. Add current-thread CPU time alongside wall time to split
+   computation from blocking/descheduling. Analyze swap wait/GPU pacing in a
+   parallel frame lane.
+6. Rebuild Release and repeat exact M335 before judging the save refactor.
+   Compare M449–M453 at the same distance bands, then run a separate
+   `CUBA_WORLD_COLUMN_SOURCE_TRACE` pass to correlate disk source, immutable
+   save/read results, and publication. Keep the operator's visual review as
+   the pixel-level acceptance gate.
+7. After repeat-world behavior stabilizes, refresh cold world-creation and
+   load timing, and run periodic fresh-seed checks separately from M335.
+
+M453 artifacts, detailed spike attribution, exact invocation, and acceptance
+semantics are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m453---queued-chunk-handles-clean-full-m335-route-2026-10-07).

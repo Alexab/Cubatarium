@@ -2614,3 +2614,89 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Raw output remains under ignored `bin` data and must not be staged. M452 is
 also documented in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m452-checkpoint--bounded-completed-result-queue-work-2026-10-07).
+
+## M453 — queued chunk handles, clean full M335 route (2026-10-07)
+
+M453 ran the established visible, no-teleport route on `World_164` using
+Release commit `8482aed10db9c41c2de1a00b5898a4d23d5917d0` (executable
+SHA-256 `eaabe85b7efa808a493295116f9df82506d8b31641f233a58cc646f318775aea`).
+The route completed 14,304 blocks (`focus_cx=7 -> -887`) and its distance and
+speed gates passed (`movement_speed_fly_med=5.19653`). The app exited
+successfully (`process_rc=0`, `run_outcome=success`, `hang_killed=false`). The
+flight wrapper returned code 1 because product acceptance failed 25/39
+general gates and 8/12 stop gates; this is separate from app and route
+completion. No frames were captured. The user reports that the world
+currently looks normal. Analyzer hole/readiness and visible-black counters
+are not framebuffer proof.
+
+Report median frame time was 28.1772 ms, median streaming time 13.9223 ms,
+and there were 82 spike rows with a 429.728 ms maximum. M452 had 26.61 ms,
+13.46 ms, 80 spikes, and 443.19 ms max. The M453 queue instrumentation
+showed small locks: across spike rows, selection wait p95/max was
+0.0006/0.0008 ms, requeue wait max 0.0027 ms, and producer-push wait/hold
+maxima were 0.0124/0.0234 ms. The M452 multi-tens-of-milliseconds queue
+waits were not repeated. This supports keeping the ring and ranking
+optimization, while moving the next fix to other work on the frame.
+
+Notable per-frame spikes from `kind=spike` rows:
+
+- `focus_cx=-275`: 233.1 ms wall, 147.55 ms streaming, 95.96 ms
+  `update_streaming_ms`, including 82.70 ms `streamer_unload_ms`.
+- `-86`: 163.64 ms wall and 62.94 ms `streamer_update_ms`.
+- `-261`: 172.12 ms wall; async pre-scheduler was 68.54 ms while async I/O
+  drain was 0.02 ms.
+- `-80`: 229.13 ms wall; `light_flags_save_ms` was 29.71 ms even though the
+  actual metadata serialization/file write runs on its own worker.
+- `-237`: 155.48 ms wall; `streamer_update_ms` was 53.47 ms and I/O
+  save-result drain was 26.74 ms.
+- `-576`: 201.09 ms wall; one loaded chunk took 16.89 ms in world apply.
+- `-73`: I/O drain was 48.28 ms; measured result application 1.64 ms, save
+  result drain 15.79 ms, light-flags submission 5.99 ms, and an internal
+  remainder of 24.84 ms. Queue locks were negligible.
+- `-160`: largest whole frame, 429.73 ms, included 230.29 ms swap wait and
+  199.37 ms simulation. Its 89.22 ms streaming phase explains only part of
+  the event, so do not label the full stall as a streaming hitch.
+
+Source inspection after the run found why the unload path can still stall:
+`UChunkStreamer` calls the persistence save callback before removing a
+column. That callback invokes `RequestAsyncTerrainColumnSave`, which queues
+file writes but calls `UChunkStorageService::SerializeChunk` synchronously
+for each slice before enqueueing the worker. It also performs completeness
+and highest-slice scans and synchronously removes stale higher slices. The
+next save refactor should copy an immutable `UChunk` snapshot on the world
+thread, then serialize, write, and clean up on a worker. The worker must be
+fenced before world/persistence teardown. This is consistent with
+[Godot Voxel Tools' asynchronous block-stream save design](https://github.com/Zylann/godot_voxel/blob/master/doc/source/streams.md)
+and its [threaded task/result phase](https://github.com/Zylann/godot_voxel/blob/master/engine/voxel_engine.cpp);
+the application to our ownership model is an inference from those sources
+and our current code.
+
+The period rows average only selected session fields; new inner-tick fields
+are last-frame values in `kind=period` rows. For direct attribution use
+`kind=spike` rows, and do not compare a period-average outer drain to a
+last-frame inner tick. Add matching accumulators before making period-level
+claims from these new fields.
+
+Artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m453_world164_m335_queued_buffer_handle_20261007.json`
+- Perf log: `bin/logs/perf_20261007-201931_35124.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-201926.35124`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m453_world164_m335_queued_buffer_handle --report bin/suite_reports/engine_refactor/m453_world164_m335_queued_buffer_handle_20261007.json --process-timeout 7200
+```
+
+Raw output remains under ignored `bin` data and must not be staged. M453 is
+also documented in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m453-checkpoint--queued-chunk-handles-and-full-m335-route-2026-10-07).
