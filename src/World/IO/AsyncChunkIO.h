@@ -59,9 +59,34 @@ struct AsyncColumnLightFlagsSaveResult
 
 class UAsyncChunkIO
 {
+private:
+  static std::size_t ChunkIoWorkerBudget()
+  {
+    return ComputeWorkerThreadCount(JobPoolKind::ChunkIo);
+  }
+
+  static std::size_t LoadWorkerBudget()
+  {
+    const std::size_t total = ChunkIoWorkerBudget();
+    // Keep one worker available for saves/index maintenance whenever the
+    // configured pool has spare capacity. A single-worker machine retains the
+    // original shared lane rather than losing all write progress.
+    return total > 1 ? total - 1 : total;
+  }
+
+  static std::unique_ptr<UJobThreadPool> CreateBackgroundIoPool()
+  {
+    if (ChunkIoWorkerBudget() <= 1)
+    {
+      return {};
+    }
+    return std::make_unique<UJobThreadPool>(1, "ChunkIoBackground");
+  }
+
 public:
   UAsyncChunkIO()
-      : Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkIo), "ChunkIo")
+      : LoadPool(LoadWorkerBudget(), "ChunkIoLoad"),
+        BackgroundIoPool(CreateBackgroundIoPool())
   {
   }
 
@@ -110,24 +135,73 @@ public:
   std::size_t DiscardCancelledLoads();
   bool CompletedLoadsEmpty() const;
   bool CompletedSavesEmpty() const;
-  std::size_t GetPendingJobCount() const { return Pool.GetPendingJobCount(); }
-  std::size_t GetActiveJobCount() const { return Pool.GetActiveJobCount(); }
-  std::size_t GetWorkerCount() const { return Pool.GetWorkerCount(); }
+  std::size_t GetPendingJobCount() const
+  {
+    return LoadPool.GetPendingJobCount() +
+           (BackgroundIoPool ? BackgroundIoPool->GetPendingJobCount() : 0);
+  }
+  std::size_t GetActiveJobCount() const
+  {
+    return LoadPool.GetActiveJobCount() +
+           (BackgroundIoPool ? BackgroundIoPool->GetActiveJobCount() : 0);
+  }
+  std::size_t GetWorkerCount() const
+  {
+    return LoadPool.GetWorkerCount() +
+           (BackgroundIoPool ? BackgroundIoPool->GetWorkerCount() : 0);
+  }
+  std::size_t GetLoadPendingJobCount() const
+  {
+    return LoadPool.GetPendingJobCount();
+  }
+  std::size_t GetBackgroundPendingJobCount() const
+  {
+    return BackgroundIoPool ? BackgroundIoPool->GetPendingJobCount() : 0;
+  }
+  std::size_t GetLoadActiveJobCount() const
+  {
+    return LoadPool.GetActiveJobCount();
+  }
+  std::size_t GetBackgroundActiveJobCount() const
+  {
+    return BackgroundIoPool ? BackgroundIoPool->GetActiveJobCount() : 0;
+  }
+  std::size_t GetLoadWorkerCount() const { return LoadPool.GetWorkerCount(); }
+  std::size_t GetBackgroundWorkerCount() const
+  {
+    return BackgroundIoPool ? BackgroundIoPool->GetWorkerCount() : 0;
+  }
   std::size_t GetCompletedLoadCount() const { return CompletedLoads.Size(); }
   std::size_t GetCompletedSaveCount() const { return CompletedSaves.Size(); }
 
 private:
-  // Completion queues must outlive Pool (destroy order = reverse declaration).
+  void EnqueueBackgroundIo(std::function<void()> job)
+  {
+    if (BackgroundIoPool)
+    {
+      BackgroundIoPool->Enqueue(std::move(job));
+    }
+    else
+    {
+      LoadPool.Enqueue(std::move(job));
+    }
+  }
+
+  // Queues and task-visible state must outlive all worker pools (reverse
+  // declaration order controls destruction).
   UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
   UCompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
-  UJobThreadPool Pool;
-  // Light-completion metadata is rare and coalesced by WorldPersistence. Keep
-  // it off the chunk-I/O pool so terrain cancellation cannot drop its writer.
   UCompletedJobQueue<AsyncColumnLightFlagsSaveResult>
       CompletedColumnLightFlagsSaves;
-  UJobThreadPool ColumnLightFlagsPool{1, "ColumnLightFlagsSave"};
   std::atomic<bool> CancelledLoadSweepPending{false};
   std::unordered_set<std::string> DiskIndexWarmupFolders;
+  // Reads have a reserved lane; writes/index warmup share one background
+  // worker so save traffic cannot occupy every reader.
+  UJobThreadPool LoadPool;
+  std::unique_ptr<UJobThreadPool> BackgroundIoPool;
+  // Light-completion metadata is rare and coalesced by WorldPersistence. Keep
+  // it separate from terrain saves and cancellable terrain reads.
+  UJobThreadPool ColumnLightFlagsPool{1, "ColumnLightFlagsSave"};
 };
 
 UChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,

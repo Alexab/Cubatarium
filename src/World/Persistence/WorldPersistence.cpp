@@ -3299,10 +3299,22 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
            " finalize_prelog_ms=" + std::to_string(finalize_prelog_ms) +
            " chunkio_workers=" +
            std::to_string(AsyncChunkIo->GetWorkerCount()) +
+           " chunkio_load_workers=" +
+           std::to_string(AsyncChunkIo->GetLoadWorkerCount()) +
+           " chunkio_background_workers=" +
+           std::to_string(AsyncChunkIo->GetBackgroundWorkerCount()) +
            " chunkio_pending_jobs=" +
            std::to_string(AsyncChunkIo->GetPendingJobCount()) +
            " chunkio_active_jobs=" +
            std::to_string(AsyncChunkIo->GetActiveJobCount()) +
+           " chunkio_load_pending_jobs=" +
+           std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
+           " chunkio_background_pending_jobs=" +
+           std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount()) +
+           " chunkio_load_active_jobs=" +
+           std::to_string(AsyncChunkIo->GetLoadActiveJobCount()) +
+           " chunkio_background_active_jobs=" +
+           std::to_string(AsyncChunkIo->GetBackgroundActiveJobCount()) +
            " chunkio_ready_loads=" +
            std::to_string(AsyncChunkIo->GetCompletedLoadCount()) +
            " chunkio_ready_saves=" +
@@ -3938,7 +3950,11 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
           " pending_columns=" +
           std::to_string(PendingAsyncColumnSaveSlices.size()) +
           " io_jobs=" + std::to_string(AsyncChunkIo->GetPendingJobCount()) +
-          " io_active=" + std::to_string(AsyncChunkIo->GetActiveJobCount());
+          " io_active=" + std::to_string(AsyncChunkIo->GetActiveJobCount()) +
+          " io_load_jobs=" +
+          std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
+          " io_background_jobs=" +
+          std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount());
       LogWorldColumnSave(outcome.c_str(), save.coord, details,
                          !save.success);
     }

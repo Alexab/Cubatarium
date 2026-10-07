@@ -142,7 +142,7 @@ void UAsyncChunkIO::RequestDiskIndexWarmup(
   {
     return;
   }
-  Pool.Enqueue([&storage, worldFolder]()
+  EnqueueBackgroundIo([&storage, worldFolder]()
   { storage.PrepareHighestChunkSliceIndex(worldFolder); });
 }
 
@@ -191,7 +191,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
   const std::string filePath =
       storage.ChunkFilePath(worldFolder, coord, format);
   const ChunkStorageSettings worker_storage_settings = storage.GetSettings();
-  Pool.Enqueue(
+  LoadPool.Enqueue(
       [this, coord, filePath, token, format, submitted_at,
        format_detect_ms, trace_io, cancellation, &registry,
        worker_storage_settings]()
@@ -325,7 +325,7 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
       storage.ChunkFilePath(worldFolder, coord, serialized.format);
   const glm::ivec3 ground(coord.x, 0, coord.z);
   (void)token;
-  Pool.Enqueue(
+  EnqueueBackgroundIo(
       [this, filePath, serialized, coord, ground]()
       {
         AsyncChunkSaveRequest done;
@@ -427,17 +427,39 @@ bool UAsyncChunkIO::CompletedColumnLightFlagsSavesEmpty() const
 
 void UAsyncChunkIO::WaitIdle()
 {
-  Pool.WaitIdle();
+  LoadPool.WaitIdle();
+  if (BackgroundIoPool)
+  {
+    BackgroundIoPool->WaitIdle();
+  }
 }
 
 bool UAsyncChunkIO::WaitIdleFor(const std::chrono::milliseconds timeout)
 {
-  return Pool.WaitIdleFor(timeout);
+  const auto deadline = std::chrono::steady_clock::now() + timeout;
+  if (!LoadPool.WaitIdleFor(timeout))
+  {
+    return false;
+  }
+  if (!BackgroundIoPool)
+  {
+    return true;
+  }
+  const auto now = std::chrono::steady_clock::now();
+  const auto remaining = now < deadline
+                             ? std::chrono::duration_cast<
+                                   std::chrono::milliseconds>(deadline - now)
+                             : std::chrono::milliseconds(0);
+  return BackgroundIoPool->WaitIdleFor(remaining);
 }
 
 void UAsyncChunkIO::CancelPending()
 {
-  Pool.CancelPendingJobs();
+  LoadPool.CancelPendingJobs();
+  if (BackgroundIoPool)
+  {
+    BackgroundIoPool->CancelPendingJobs();
+  }
 }
 
 void UAsyncChunkIO::NoteLoadCancellation()
