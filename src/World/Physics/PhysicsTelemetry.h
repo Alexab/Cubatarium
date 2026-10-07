@@ -31,6 +31,7 @@ struct PhysicsTelemetry
   double ColumnEmergeShadowCensusMs{0.0};
   double ColumnEmergeDemandBreakdownMs{0.0};
   double ColumnEmergeDemandStopMs{0.0};
+  double ChunkDemandMaintenanceMs{0.0};
   int ColumnEmergeStageSampleCount{0};
   double ColumnEmergeStageSampleAgeMs{0.0};
   double BlockStepMs{0.0};

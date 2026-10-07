@@ -2489,18 +2489,22 @@ void UWorld::MaintainChunkRenderDemandStore(double now_ms)
   {
     return;
   }
+  const auto maintenance_t0 = std::chrono::high_resolution_clock::now();
   (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
                                                             now_ms);
   (void)UChunkRenderDemandStore::Get().CancelOrphanActiveAttempts(
       /*max_n=*/64, now_ms);
+  PhysicsTelemetryData.ChunkDemandMaintenanceMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - maintenance_t0)
+          .count();
 }
 
 void UWorld::SampleColumnEmergeStageTelemetry()
 {
   const double now_ms = VisualObligationNowMs();
-  // Preserve the existing stateful demand-maintenance cadence independently
-  // of this logger-only census.
-  MaintainChunkRenderDemandStore(now_ms);
+  // Demand-store upkeep is owned by TickAsyncChunkSystems each frame. Keep
+  // this post-emerge sample limited to the rate-limited diagnostic census.
   PhysicsTelemetryData.ColumnEmergeStageSampleAgeMs =
       LastColumnEmergeTelemetrySampleMs > 0.0
           ? std::max(0.0, now_ms - LastColumnEmergeTelemetrySampleMs)

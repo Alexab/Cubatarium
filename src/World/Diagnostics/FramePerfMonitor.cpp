@@ -92,6 +92,7 @@ struct Session
   double AccumColumnEmergeShadowCensusMs{0.0};
   double AccumColumnEmergeDemandBreakdownMs{0.0};
   double AccumColumnEmergeDemandStopMs{0.0};
+  double AccumChunkDemandMaintenanceMs{0.0};
   double AccumColumnEmergeStageSampleCount{0.0};
   double AccumColumnEmergeStageSampleAgeMs{0.0};
   double AccumAsyncIoMs{0.0};
@@ -271,6 +272,7 @@ struct FrameNumbers
   double column_emerge_shadow_census_ms{0.0};
   double column_emerge_demand_breakdown_ms{0.0};
   double column_emerge_demand_stop_ms{0.0};
+  double chunk_demand_maintenance_ms{0.0};
   double column_emerge_stage_sample_n{0.0};
   double column_emerge_stage_sample_age_ms{0.0};
   double scene_ms{0.0};
@@ -1118,6 +1120,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_emerge_demand_breakdown_ms =
       phys.ColumnEmergeDemandBreakdownMs;
   n.column_emerge_demand_stop_ms = phys.ColumnEmergeDemandStopMs;
+  n.chunk_demand_maintenance_ms = phys.ChunkDemandMaintenanceMs;
   n.column_emerge_stage_sample_n =
       static_cast<double>(phys.ColumnEmergeStageSampleCount);
   n.column_emerge_stage_sample_age_ms =
@@ -2495,6 +2498,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.column_emerge_demand_breakdown_ms
           << ",\"column_emerge_demand_stop_ms\":"
           << n.column_emerge_demand_stop_ms
+          << ",\"chunk_demand_maintenance_ms\":"
+          << n.chunk_demand_maintenance_ms
           << ",\"column_emerge_stage_sample_n\":"
           << n.column_emerge_stage_sample_n
           << ",\"column_emerge_stage_sample_age_ms\":"
@@ -3305,6 +3310,7 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumColumnEmergeDemandBreakdownMs +=
       n.column_emerge_demand_breakdown_ms;
   s.AccumColumnEmergeDemandStopMs += n.column_emerge_demand_stop_ms;
+  s.AccumChunkDemandMaintenanceMs += n.chunk_demand_maintenance_ms;
   s.AccumColumnEmergeStageSampleCount += n.column_emerge_stage_sample_n;
   s.AccumColumnEmergeStageSampleAgeMs += n.column_emerge_stage_sample_age_ms;
   s.AccumWorldStreamingPhaseMs += n.world_streaming_phase_ms;
@@ -3444,6 +3450,8 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
       s.AccumColumnEmergeDemandBreakdownMs * inv;
   avg.column_emerge_demand_stop_ms =
       s.AccumColumnEmergeDemandStopMs * inv;
+  avg.chunk_demand_maintenance_ms =
+      s.AccumChunkDemandMaintenanceMs * inv;
   avg.column_emerge_stage_sample_n =
       s.AccumColumnEmergeStageSampleCount * inv;
   avg.column_emerge_stage_sample_age_ms =
@@ -3573,6 +3581,7 @@ void ResetAccum(Session &s)
   s.AccumColumnEmergeShadowCensusMs = 0.0;
   s.AccumColumnEmergeDemandBreakdownMs = 0.0;
   s.AccumColumnEmergeDemandStopMs = 0.0;
+  s.AccumChunkDemandMaintenanceMs = 0.0;
   s.AccumColumnEmergeStageSampleCount = 0.0;
   s.AccumColumnEmergeStageSampleAgeMs = 0.0;
   s.AccumWorldStreamingPhaseMs = 0.0;
