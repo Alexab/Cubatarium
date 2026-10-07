@@ -630,8 +630,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     application->ScheduleEnterGame();
 
     const auto started = std::chrono::steady_clock::now();
+    auto last_clock_sample = started;
     std::chrono::steady_clock::time_point ingame_started{};
     bool ingame_clock_started = false;
+    double excluded_clock_gap_sec = 0.0;
+    double excluded_before_ingame_sec = 0.0;
+    int excluded_clock_gap_count = 0;
     bool loading_seen = false;
     bool autopilot_armed = false;
     bool autopilot_flying = false;
@@ -657,7 +661,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     float max_heading_pitch_delta_deg = 0.0f;
     bool collision_stop_triggered = false;
     double collision_stop_elapsed_sec = 0.0;
-    std::chrono::steady_clock::time_point blocked_move_started{};
+    double blocked_move_started_ingame_sec = -1.0;
     // Land cruise: follow column top + 12 along the route (was sticky-once,
     // which pinned Y at spawn and stuck product-174657 west at focus_cx≈2).
     // Apply every frame with floor/ceiling — lift-only ratcheted Y~70 and
@@ -769,8 +773,26 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         [&]()
         {
           const auto now = std::chrono::steady_clock::now();
-          const double elapsed_sec =
-              std::chrono::duration<double>(now - started).count();
+          const double clock_gap_sec =
+              std::chrono::duration<double>(now - last_clock_sample).count();
+          last_clock_sample = now;
+          // Windows' steady_clock uses QueryPerformanceCounter, which advances
+          // while the machine is suspended. Exclude long frame-loop gaps from
+          // route phase clocks; this also prevents a long stall from burning
+          // the requested active flight duration.
+          constexpr double kExcludedClockGapThresholdSec = 5.0;
+          if (clock_gap_sec >= kExcludedClockGapThresholdSec)
+          {
+            excluded_clock_gap_sec += clock_gap_sec;
+            ++excluded_clock_gap_count;
+            std::cout << "flight-sim: excluded long clock gap="
+                      << clock_gap_sec << "s total="
+                      << excluded_clock_gap_sec << "s" << std::endl;
+          }
+          const double elapsed_sec = (std::max)(
+              0.0,
+              std::chrono::duration<double>(now - started).count() -
+                  excluded_clock_gap_sec);
           if (elapsed_sec > safety_timeout)
           {
             return true;
@@ -785,10 +807,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             if (!ingame_clock_started)
             {
               ingame_started = now;
+              excluded_before_ingame_sec = excluded_clock_gap_sec;
               ingame_clock_started = true;
             }
-            const double ingame_sec =
-                std::chrono::duration<double>(now - ingame_started).count();
+            const double ingame_sec = (std::max)(
+                0.0,
+                std::chrono::duration<double>(now - ingame_started).count() -
+                    (excluded_clock_gap_sec -
+                     excluded_before_ingame_sec));
             if (auto camera = world->GetCurrentUserCamera())
             {
               if (!autopilot_armed &&
@@ -1202,14 +1228,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       camera->GetLastFlightGroundContacts() > 0;
                   if (blocked_or_landed)
                   {
-                    if (blocked_move_started ==
-                        std::chrono::steady_clock::time_point{})
+                    if (blocked_move_started_ingame_sec < 0.0)
                     {
-                      blocked_move_started = now;
+                      blocked_move_started_ingame_sec = ingame_sec;
                     }
-                    collision_stop_elapsed_sec =
-                        std::chrono::duration<double>(now - blocked_move_started)
-                            .count();
+                    collision_stop_elapsed_sec = (std::max)(
+                        0.0,
+                        ingame_sec - blocked_move_started_ingame_sec);
                     if (collision_stop_elapsed_sec >=
                         options.StopAfterBlockedSec)
                     {
@@ -1222,7 +1247,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   }
                   else
                   {
-                    blocked_move_started = {};
+                    blocked_move_started_ingame_sec = -1.0;
                     collision_stop_elapsed_sec = 0.0;
                   }
                 }
@@ -1440,6 +1465,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         const char *build_type = "Debug";
 #endif
         const bool teleport_cruise = options.TeleportToCruiseStart;
+        const auto run_finished = std::chrono::steady_clock::now();
+        const double wall_elapsed_sec =
+            std::chrono::duration<double>(run_finished - started).count();
+        const double active_elapsed_sec =
+            (std::max)(0.0, wall_elapsed_sec - excluded_clock_gap_sec);
         const auto run_started = std::chrono::system_clock::now();
         const auto run_t = std::chrono::system_clock::to_time_t(run_started);
         std::tm run_tm{};
@@ -1465,6 +1495,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << ",\n"
                << "  \"ingame_frames\": " << ingame_frames_seen << ",\n"
                << "  \"ingame_seconds_requested\": " << in_game_seconds << ",\n"
+               << "  \"wall_elapsed_sec\": " << wall_elapsed_sec << ",\n"
+               << "  \"active_elapsed_sec\": " << active_elapsed_sec << ",\n"
+               << "  \"excluded_clock_gap_sec\": "
+               << excluded_clock_gap_sec << ",\n"
+               << "  \"excluded_clock_gap_count\": "
+               << excluded_clock_gap_count
+               << ",\n"
                << "  \"world\": \"" << json_escape(world_name) << "\",\n"
                << "  \"teleport_cruise\": "
                << (teleport_cruise ? "true" : "false") << ",\n"

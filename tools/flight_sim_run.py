@@ -1339,6 +1339,12 @@ def main() -> int:
         help="max wall seconds for Cubatarium (0 = seconds + 120 grace)",
     )
     ap.add_argument(
+        "--minimum-travel-blocks",
+        type=float,
+        default=0.0,
+        help="fail analysis when focus travel is shorter than this distance",
+    )
+    ap.add_argument(
         "--phase-id",
         default="",
         help="optional label written to flight_sim_phase_history.jsonl",
@@ -2870,6 +2876,31 @@ def main() -> int:
                             )
                     west = compute_west_route_coverage(Path(perf))
                     result["west_route_coverage"] = west
+                    if args.minimum_travel_blocks > 0.0:
+                        observed_blocks = west.get("far_distance_blocks")
+                        route_complete = (
+                            observed_blocks is not None
+                            and float(observed_blocks) >= args.minimum_travel_blocks
+                        )
+                        result["route_completion"] = {
+                            "minimum_travel_blocks": args.minimum_travel_blocks,
+                            "observed_travel_blocks": observed_blocks,
+                            "route_completion_pass": route_complete,
+                            "route_completion_fails": (
+                                []
+                                if route_complete
+                                else ["travel_distance_below_minimum"]
+                            ),
+                        }
+                        result["route_completion_pass"] = route_complete
+                        if not route_complete:
+                            result["pass"] = False
+                            print(
+                                "flight-sim route completion: FAIL "
+                                f"observed={observed_blocks} blocks "
+                                f"required={args.minimum_travel_blocks}",
+                                flush=True,
+                            )
                     post_stop = compute_post_stop_convergence(result)
                     result["post_stop_convergence"] = post_stop
                     result["post_stop_convergence_pass"] = post_stop.get(
@@ -3014,6 +3045,13 @@ def main() -> int:
                 }
                 if result.get("proxy_adequacy") is not None:
                     metrics_summary["proxy_adequacy"] = result["proxy_adequacy"]
+                if result.get("route_completion") is not None:
+                    metrics_summary["route_completion"] = result[
+                        "route_completion"
+                    ]
+                    metrics_summary["route_completion_pass"] = result.get(
+                        "route_completion_pass"
+                    )
                 if result.get("dual_lane_stop_line") is not None:
                     metrics_summary["dual_lane_stop_line"] = result[
                         "dual_lane_stop_line"
@@ -3189,6 +3227,14 @@ def main() -> int:
                         file=sys.stderr,
                     )
                     last_rc = 2
+
+            if metrics_summary.get("route_completion_pass") is False:
+                print(
+                    "flight-sim route completion FAIL: "
+                    f"{metrics_summary.get('route_completion')}",
+                    file=sys.stderr,
+                )
+                last_rc = 2
 
     if repeats > 1 and run_reports:
         agg_path = base_report.with_name(f"{base_report.stem}_agg{base_report.suffix}")
