@@ -4234,3 +4234,82 @@ acceptance is positive. The next steps are:
 
 M442 route, timing bands, artifacts, exact command, and analyzer caveats are
 recorded in [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m442---post-tick-attribution-full-m335-route-2026-10-07).
+
+### M449 checkpoint — split chunk-I/O lanes (2026-10-07)
+
+M449 measured commit `ab7d2d85` (Release EXE SHA-256
+`0d8212eb7abf240efbcfbe24096f44ee35c873b4a2b556d07a606bb880cfa3e6`). The
+change kept the configured four-worker ChunkIo budget, assigning three workers
+to disk loads and one to saves/index warmup. The visible no-teleport M335
+flight ran on `World_164` with the established settings. The application and
+wrapper exited normally, but the 14,300-block route gate missed by 12 blocks:
+focus `7 -> -886`, 14,288 blocks, median movement speed 5.19653 blocks/s. The
+flight used 183,214 in-game frames, took 2,856.24 seconds wall and active time,
+and excluded zero clock gaps. Four planned obstacle detours completed; there
+were no blocked movement substeps, ground contacts, heading drift, or collision
+stop. `world_data.json` and `users.json` were restored. The run did not capture
+framebuffer pixels.
+
+M449 is not a streaming/rendering acceptance pass. The analyzer passed 25/39
+general gates and 10/12 stop gates; route completion failed by 12 blocks. The
+stop-tail still did not converge, as it also did on M447. Compared with M447
+on the same route, M449 median wall time rose from 26.76 to 30.43 ms (+13.7%),
+median streaming phase from 14.02 to 15.58 ms (+11.1%), and median render total
+from 11.01 to 18.48 ms. Spike events rose from 63 to 158; the largest was
+676.32 ms at `focus_cx=-151`, with 658.64 ms in the streaming phase and
+521.64 ms inside `TickMeshEmerge`. A second 585.87 ms event at `-601` included
+411.54 ms in `update_streaming`. The first event's separately measured chunk
+I/O drain was 7.62 ms, so these outliers are not explained by file-read time
+alone. Keep the large, still unattributed `TickMeshEmerge` body and streaming
+update as explicit profiling targets before changing their budgets.
+
+Appearance proxies are mixed. Overall visible-black blink rate fell from
+2.56% to 1.85% and transitions from 36 to 26, but the longest black run rose
+from 27 to 42 periods; maximum visible-black count remained 18. Near-focus
+hole-telemetry periods rose from 84 to 110, relight partial-capture rate from
+35.3% to 38.1%, and deferred far-relight maximum from 45 to 54. In the
+disk-backed source bin `[-836,-820)`, M449 reported black focus in 27/27
+periods (median 5, max 9), versus 15/27 on M447 (median 3, max 9). Neither run
+recorded a fully-dark chunk without a ticket there. The M448 source trace
+records all 144 columns in that bin as disk-complete, with median file read
+near 1 ms. This locates the symptom on persisted terrain and is consistent
+with a post-load mesh/relight delay; the counters are not pixel evidence.
+
+The analyzer selected `unfinished_visual` as its hole signal; its rate of 1.0
+means visual-readiness debt, not a blank framebuffer. It also failed the
+eye-proxy stop line for stale visual debt and stale visual without hole
+counters. No screenshot was captured, so retain the operator-visible
+appearance as unverified for M449. The close proxy signals and large
+`TickMeshEmerge` stalls justify targeted follow-up, not a claim that the
+captured image was black or empty.
+
+#### Plan readiness after M449
+
+The four-worker `3 load + 1 background` split is not accepted as an improvement:
+it reduces some black-proxy incidence in portions of the route but materially
+slows the full run and worsens other readiness/relight signals. Keep M335 as
+the repeated control and proceed in this order:
+
+1. Preserve load/write isolation while restoring four load workers on the
+current 8-logical-processor host; use one additional background worker only
+where the hardware budget leaves headroom. Add low-overhead per-lane pending
+and active queue counts. Do not change main-thread result-apply budgets in the
+same experiment. Compare the exact full M335 route and distance bands.
+2. Split `TickMeshEmerge` and `update_streaming` into low-overhead subphase
+timings around the 676 ms `-151` and 586 ms `-601` stalls. The existing
+coordinator timer covers a very large body; its normal subphase counters do not
+account for the worst stall. Use the results before changing scheduler policy.
+3. Capture the real framebuffer in the next visual diagnostic pass, and align
+those frames with black/repair and readiness counters. Mark capture frames and
+exclude their synchronous capture cost from performance acceptance; keep a
+separate capture-disabled M335 run for the clean performance comparison.
+4. Confirm the stop-tail against visual evidence and a product convergence
+requirement; do not tune solely to analyzer counters. Keep cold-start/load
+preflight and periodic fresh-seed runs as separate lanes after this repeated
+world diagnosis.
+5. Preserve Release-only builds and the established no-teleport route. Keep
+collision handling separate: this run completed all four detours without a
+movement collision.
+
+M449 route, metrics, source-bin comparison, exact command, and artifacts are
+recorded in [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m449---full-m335-after-chunk-io-lane-split-2026-10-07).

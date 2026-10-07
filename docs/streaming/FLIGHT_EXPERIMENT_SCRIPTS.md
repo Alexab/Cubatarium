@@ -2317,3 +2317,79 @@ X-bin summary
 perf `bin/logs/perf_20261007-130758_32208.jsonl`, and INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-130753.32208`.
 Generated logs and world data stay under `bin`; do not stage them.
+
+## M449 — full M335 after chunk-I/O lane split (2026-10-07)
+
+M449 is the full visible, no-teleport M335 measurement for commit `ab7d2d85`
+(Release EXE SHA-256
+`0d8212eb7abf240efbcfbe24096f44ee35c873b4a2b556d07a606bb880cfa3e6`). The
+I/O code used three load workers plus one save/index worker. The fixed-day
+wrapper and route exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`) and restored `world_data.json` and `users.json`.
+
+The flight report records start focus `[7,3]`, end focus `[-886,3]`, travel of
+14,288 blocks, and median movement speed `5.19653 blocks/s`. The route gate
+required 14,300 blocks, so this run is near-complete but does not pass route
+acceptance. It ran for 2,856.24 seconds wall and active time with
+`excluded_clock_gap_sec=0` and `excluded_clock_gap_count=0`; there was no
+hibernate/suspend pause inside this run. Four obstacle detours started and
+completed with zero replans/failures; blocked movement, ground contacts,
+collision stop, and heading deviation were all zero.
+
+The report contains 1,406 periods (1,404 steady) and 158 spike events. Median
+wall time was `30.42995 ms` (`30.3593 ms` in flight), median streaming phase
+`15.57895 ms`, median render total `18.4793 ms`, and effective flight FPS
+`32.94`. Analyzer `pass=false`: 25/39 general gates and 10/12 stop gates
+passed; route completion missed its minimum by 12 blocks. Compared with M447
+on matched M335 conditions, wall median increased from `26.7576 ms` to
+`30.42995 ms`, streaming phase from `14.0182 ms` to `15.57895 ms`, and render
+total from `11.0142 ms` to `18.4793 ms`. Spike count rose from 63 to 158.
+
+The largest spike event was `676.322 ms` at focus `[-151,3]`, of which the
+streaming phase was `658.644 ms` and `mesh_emerge_ms` was `521.637 ms` inside
+`TickMeshEmerge`; `async_chunk_io_drain_ms` was `7.6225 ms`. A separate
+`585.868 ms` event at focus `[-601,3]` included `411.537 ms` in
+`update_streaming_ms`. The event timings identify the affected broad stages,
+not a complete attribution for those very large stalls.
+
+Appearance telemetry is mixed. Visible-black blink rate was `0.01853` (26
+transitions, longest run 42 periods, max count 18), versus `0.02564` (36
+transitions, longest run 27, same max count) on M447. Near-focus
+hole-telemetry was positive in 110 periods, versus 84 on M447; the eye-proxy
+stop line failed for stale visual debt and stale visual without hole counters.
+The analyzer's `hole_key` is `unfinished_visual`, whose nonzero rate reports
+readiness/work debt rather than a blank pixel. Framebuffer capture was
+disabled, so these are not pixel findings. The post-stop convergence gate
+remained false; M447 also failed it.
+
+The black-proxy signal recurred at stable coordinates over saved terrain.
+For `focus_cx` in `[-836,-820)`, M449 had black focus in 27/27 periods (median
+5, max 9), versus 15/27 on M447 (median 3, max 9). Both had zero
+`visible_black_fully_dark_no_ticket_n` in this bin. M448's source trace reports
+all 144 columns in `[-836,-820)` as disk-complete; the overall trace's median
+`file_read_ms` was about 1 ms. M449 does not support missing disk source as the
+cause; active repair and post-load mesh/relight timing remain candidates.
+
+Key artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m449_world164_m335_io_load_lane_20261007.json`
+- Preserved app flight report: `bin/suite_reports/engine_refactor/m449_world164_m335_io_load_lane_flight_20261007.json`
+- Perf log: `bin/logs/perf_20261007-141440_38260.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-141436.38260`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m449_world164_m335_io_load_lane --report bin/suite_reports/engine_refactor/m449_world164_m335_io_load_lane_20261007.json --process-timeout 7200
+```
+
+Raw reports and logs remain under `bin`; do not stage them. M449's full report
+and comparison update are in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m449-checkpoint--split-chunk-io-lanes-2026-10-07).
