@@ -11,6 +11,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_set>
 #include <vector>
 
@@ -67,16 +68,17 @@ private:
 
   static std::size_t LoadWorkerBudget()
   {
-    const std::size_t total = ChunkIoWorkerBudget();
-    // Keep one worker available for saves/index maintenance whenever the
-    // configured pool has spare capacity. A single-worker machine retains the
-    // original shared lane rather than losing all write progress.
-    return total > 1 ? total - 1 : total;
+    return ChunkIoWorkerBudget();
   }
 
   static std::unique_ptr<UJobThreadPool> CreateBackgroundIoPool()
   {
-    if (ChunkIoWorkerBudget() <= 1)
+    const std::size_t load_workers = ChunkIoWorkerBudget();
+    const std::size_t hardware_workers = std::thread::hardware_concurrency();
+    // Preserve the full load budget and add one save/index worker only when
+    // at least one logical processor remains available for the rest of the
+    // application and operating system.
+    if (hardware_workers <= load_workers + 1)
     {
       return {};
     }
@@ -204,8 +206,8 @@ private:
       CompletedColumnLightFlagsSaves;
   std::atomic<bool> CancelledLoadSweepPending{false};
   std::unordered_set<std::string> DiskIndexWarmupFolders;
-  // Reads have a reserved lane; writes/index warmup share one background
-  // worker so save traffic cannot occupy every reader.
+  // Reads retain their full configured budget; writes/index warmup use an
+  // extra background worker when the machine has spare logical capacity.
   UJobThreadPool LoadPool;
   std::unique_ptr<UJobThreadPool> BackgroundIoPool;
   // Light-completion metadata is rare and coalesced by WorldPersistence. Keep
