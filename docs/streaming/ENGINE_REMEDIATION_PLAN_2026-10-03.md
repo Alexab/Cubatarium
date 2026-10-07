@@ -95,6 +95,73 @@ M443 подтвердил эффективность разделения teleme
 воспроизведении видимого дефекта. Автоматические прокси сами по себе не должны
 переопределять позитивную операторскую оценку изображения.
 
+### M444: проверка bounded upkeep на M335
+
+После commit `38dbc516` выполнена ещё одна полная видимая no-teleport поездка по
+тому же M335. Manifest принят, source commit чистый, Release EXE SHA-256
+`5af2c387…ac1bf7ce`; приложение завершилось с `process_rc=0`, без kill. Пройдено
+`14 304` блока до focus `-887`, median movement speed `5,19653` блока/с,
+blocked substeps и ground contacts — ноль. Доступный пользователю кадр не
+захватывался; прежняя положительная визуальная оценка остаётся единственным
+операторским pixel-свидетельством.
+
+EXE собран только в `Release` командой:
+`cmake --build bin --config Release --target Cubatarium --parallel 8`. Static
+Windows dependency check прошёл; сборка использовала 8 параллельных jobs.
+
+M444 показывает ожидаемый эффект именно на обслуживании demand-store:
+
+| Область M335 | Wall median: M443 → M444 | Demand maintenance median: M443 → M444 | Async post-scheduler median: M443 → M444 |
+|---|---:|---:|---:|
+| Near | `27,02 → 25,87 ms` | `1,264 → 0,025 ms` | `3,38 → 1,77 ms` |
+| Mid | `32,16 → 26,20 ms` | `5,268 → 0,026 ms` | `7,52 → 1,97 ms` |
+| Far west | `36,31 → 25,96 ms` | `10,037 → 0,026 ms` | `12,29 → 1,95 ms` |
+
+У bounded upkeep на far-west p95 оказался `0,034 ms`, максимум обычного period
+`0,109 ms`; прежние M443 значения — `12,843 ms` и `24,347 ms`. В spike-сэмплах
+maintenance упал с M443 max `120,965 ms` до M444 max `1,311 ms`. Это подтверждает
+устранение полного per-frame прохода из production path. Общая wall-медиана
+снизилась с `32,37` до `26,03 ms`, но весь её выигрыш нельзя приписывать коду:
+M444 запущен по `World_164` после M443, wrapper сохраняет метаданные и users, а
+не terrain database; часть ранее созданных колонок могла читаться с диска. В
+обоих маршрутах source trace выключен, поэтому manifest-поле `cold` не доказывает
+источник конкретной колонки. Следующий чистый вывод о cold-generation требует
+отдельного сохранённого world snapshot или нового seed с включённым источником.
+
+M444 не закрывает frame-hitch работу. 26 spike-сэмплов включают разные причины:
+
+- При `focus=-816` `mesh_gpu_finish_ms=178,68 ms` внутри
+  `mesh_dirty_tick_ms=179,11 ms`; snapshot/schedule занимали около `1,5/0,7 ms`,
+  upkeep — `0,033 ms`. Следующий diagnostic run должен включить существующий
+  `CUBA_GPU_PROCESS_PROFILE`, чтобы разделить fence/map/readback, CPU range build
+  и commit.
+- При `focus=-142` кадр занял `559,16 ms`: `prep_sync_focus_ring_ms=274,05 ms`,
+  `creature_tick_ms=145,91 ms`, async pre-scheduler около `69,76 ms`. Эти фазы
+  входят в более крупные интервалы, их нельзя складывать. При том же focus был
+  отдельный `147,58 ms` кадр, где `mesh_snapshot_ms` и dirty schedule заняли около
+  `118 ms`. Проверить частоту/стоимость поколоночного sync и capture budget.
+- При `focus=-368` async I/O drain занимал около `66,19 ms`, при `focus=-705`
+  отдельная GPU kick/finish работа добавила десятки миллисекунд. Сохранение,
+  выборку результата, snapshot и GPU finish разбирать отдельно.
+- Максимальный raw wall sample `1 005,32 ms` при `focus=-367` имел
+  `sim_ms=61,25` и `unaccounted_ms=925,96`. Источник этого интервала не установлен;
+  пока это нельзя считать измеренной стоимостью renderer или world streaming.
+
+Целевые proxy stop-lines остались красными: whole-route `visual_holes_rate=1`,
+`visible_black_focus_n` median `0`, `fly_visible_black_max=18`,
+`fly_void_near_max=1 071`, `unlit_max=39`; A24 сообщает near-focus holes в 88
+периодах (3 в corridor), а post-stop demand/visual convergence не завершилась.
+Это метрики readiness/debt, не пиксельная маска. Они показывают незавершённые
+обязательства рендера и хвост после остановки, но сами не опровергают то, что
+пользователь сейчас видит приемлемый мир. Общая wall median `26,03 ms` также выше
+строгой цели `25 ms`.
+
+**Статус после M444:** bounded demand upkeep закрыт по Release-коду и дальнему
+повтору; collision/speed regression не воспроизведена. Планы по coordinator/GPU
+hitches, актуальному saved/new-world preflight и периодическим свежим seed остаются
+открыты. Основной M335 маршрут сохраняется; новый мир будет дополнительным
+переносимым срезом, а не заменой этой линии.
+
 ## Цель
 
 Устранить тёмные и визуально пустые участки мира на длинных перемещениях,
