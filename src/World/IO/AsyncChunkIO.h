@@ -58,6 +58,7 @@ struct AsyncChunkSaveRequest
 {
   glm::ivec3 coord;
   glm::ivec3 groundCoord;
+  std::string worldFolder;
   std::string filePath;
   ChunkDiskFormat format{ChunkDiskFormat::Binary};
   bool success{false};

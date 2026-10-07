@@ -324,6 +324,13 @@ bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
     std::error_code ec;
     std::filesystem::remove(legacyJson, ec);
   }
+  RecordChunkSliceSaved(worldFolder, chunkCoord);
+  return true;
+}
+
+void UChunkStorageService::RecordChunkSliceSaved(
+    const std::string &worldFolder, glm::ivec3 chunkCoord) const
+{
   const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
   const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
   {
@@ -344,7 +351,6 @@ bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
       }
     }
   }
-  return true;
 }
 
 int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,

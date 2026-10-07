@@ -3935,14 +3935,9 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
     {
       ++metrics.saves_processed_n;
-      if (save.success &&
-          ChunkStorage->GetSettings().writeFormat == ChunkWriteFormat::Binary &&
-          ChunkStorage->GetSettings().deleteLegacyJsonOnBinarySave)
+      if (save.success)
       {
-        const std::string legacy_json = ChunkStorage->ChunkFilePath(
-            WorldFolderPath, save.coord, ChunkDiskFormat::Json);
-        std::error_code ec;
-        std::filesystem::remove(legacy_json, ec);
+        ChunkStorage->RecordChunkSliceSaved(save.worldFolder, save.coord);
       }
       auto pending_it = PendingAsyncColumnSaveSlices.find(save.groundCoord);
       if (pending_it != PendingAsyncColumnSaveSlices.end())

@@ -314,26 +314,28 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
     AsyncChunkSaveRequest failed;
     failed.coord = coord;
     failed.groundCoord = glm::ivec3(coord.x, 0, coord.z);
+    failed.worldFolder = worldFolder;
     failed.filePath = storage.ChunkFilePath(
         worldFolder, coord, ChunkDiskFormat::Binary);
     failed.error = "chunk_missing_before_serialize";
     CompletedSaves.Push(std::move(failed));
     return;
   }
-  const SerializedChunk serialized =
-      storage.SerializeChunk(coord, *chunk, registry);
-  const std::string filePath =
-      storage.ChunkFilePath(worldFolder, coord, serialized.format);
+  // The world owns and mutates chunks on the main thread. Take a compact,
+  // immutable snapshot here, then do palette/RLE/JSON serialization on the
+  // I/O worker so unloading a column does not serialize every vertical slice
+  // inside the streaming update.
+  const auto snapshot = std::make_shared<UChunk>(*chunk);
+  const ChunkStorageSettings settings = storage.GetSettings();
   const glm::ivec3 ground(coord.x, 0, coord.z);
   (void)token;
   EnqueueBackgroundIo(
-      [this, filePath, serialized, coord, ground]()
+      [this, snapshot, settings, worldFolder, coord, ground, &registry]()
       {
         AsyncChunkSaveRequest done;
         done.coord = coord;
         done.groundCoord = ground;
-        done.filePath = filePath;
-        done.format = serialized.format;
+        done.worldFolder = worldFolder;
         const auto finish = [this, &done](const std::string &error = {})
         {
           done.success = error.empty();
@@ -341,50 +343,78 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
           CompletedSaves.Push(std::move(done));
         };
 
-        std::error_code ec;
-        std::filesystem::create_directories(
-            std::filesystem::path(filePath).parent_path(), ec);
-        if (ec)
+        try
         {
-          finish("create_directories: " + ec.message());
-          return;
-        }
-        const std::string tempPath = filePath + ".tmp";
-        {
-          std::ofstream file(tempPath, std::ios::binary);
-          if (!file.is_open())
+          UChunkStorageService worker_storage(settings);
+          const SerializedChunk serialized =
+              worker_storage.SerializeChunk(coord, *snapshot, registry);
+          done.format = serialized.format;
+          done.filePath = worker_storage.ChunkFilePath(
+              worldFolder, coord, serialized.format);
+
+          std::error_code ec;
+          std::filesystem::create_directories(
+              std::filesystem::path(done.filePath).parent_path(), ec);
+          if (ec)
           {
-            finish("open_temp_failed");
+            finish("create_directories: " + ec.message());
             return;
           }
-          file.write(reinterpret_cast<const char *>(serialized.bytes.data()),
-                     static_cast<std::streamsize>(serialized.bytes.size()));
-          file.close();
-          if (!file.good())
+          const std::string tempPath = done.filePath + ".tmp";
+          {
+            std::ofstream file(tempPath, std::ios::binary);
+            if (!file.is_open())
+            {
+              finish("open_temp_failed");
+              return;
+            }
+            file.write(reinterpret_cast<const char *>(serialized.bytes.data()),
+                       static_cast<std::streamsize>(serialized.bytes.size()));
+            file.close();
+            if (!file.good())
+            {
+              std::error_code cleanup_ec;
+              std::filesystem::remove(tempPath, cleanup_ec);
+              finish("write_temp_failed");
+              return;
+            }
+          }
+          ec.clear();
+          std::filesystem::rename(tempPath, done.filePath, ec);
+          if (ec)
+          {
+            std::error_code remove_ec;
+            std::filesystem::remove(done.filePath, remove_ec);
+            ec.clear();
+            std::filesystem::rename(tempPath, done.filePath, ec);
+          }
+          if (ec)
           {
             std::error_code cleanup_ec;
             std::filesystem::remove(tempPath, cleanup_ec);
-            finish("write_temp_failed");
+            finish("replace_failed: " + ec.message());
             return;
           }
+
+          if (serialized.format == ChunkDiskFormat::Binary &&
+              settings.writeFormat == ChunkWriteFormat::Binary &&
+              settings.deleteLegacyJsonOnBinarySave)
+          {
+            const std::string legacy_json = worker_storage.ChunkFilePath(
+                worldFolder, coord, ChunkDiskFormat::Json);
+            std::error_code cleanup_ec;
+            std::filesystem::remove(legacy_json, cleanup_ec);
+          }
+          finish();
         }
-        ec.clear();
-        std::filesystem::rename(tempPath, filePath, ec);
-        if (ec)
+        catch (const std::exception &e)
         {
-          std::error_code remove_ec;
-          std::filesystem::remove(filePath, remove_ec);
-          ec.clear();
-          std::filesystem::rename(tempPath, filePath, ec);
+          finish(std::string("serialize_or_write_exception: ") + e.what());
         }
-        if (ec)
+        catch (...)
         {
-          std::error_code cleanup_ec;
-          std::filesystem::remove(tempPath, cleanup_ec);
-          finish("replace_failed: " + ec.message());
-          return;
+          finish("serialize_or_write_unknown_exception");
         }
-        finish();
       });
 }
 

@@ -45,6 +45,9 @@ public:
 
   int GetHighestChunkSliceOnDisk(const std::string &worldFolder,
                                  glm::ivec3 groundCoord) const;
+  /// Update the initialized disk index after an asynchronous slice write.
+  void RecordChunkSliceSaved(const std::string &worldFolder,
+                             glm::ivec3 chunkCoord) const;
   /// Build the per-world directory index before terrain streaming starts.
   /// Call from a background I/O job; later lookups are constant-time.
   void PrepareHighestChunkSliceIndex(const std::string &worldFolder) const;
