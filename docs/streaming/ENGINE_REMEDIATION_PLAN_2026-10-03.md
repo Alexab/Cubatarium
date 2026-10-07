@@ -4664,7 +4664,7 @@ M453 artifacts, detailed spike attribution, exact invocation, and acceptance
 semantics are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m453---queued-chunk-handles-clean-full-m335-route-2026-10-07).
 
-### M454 checkpoint — immutable save snapshots and a new tail unload stall (2026-10-07)
+### M454 checkpoint — immutable save snapshots; corrected unload measurements (2026-10-07)
 
 M454 tested Release commit `776c48e1a8b7bf790c4905d1770c601d75c1f49c`
 (executable SHA-256
@@ -4687,14 +4687,15 @@ save-result drain max from 49.07 to 0.145 ms. The worker queue peaked at 21
 pending tasks but drained; queue depth did not remain elevated.
 
 The specific M453 `cx=-275` unload spike (82.70 ms) and `cx=-576`
-world-apply stall did not recur. M454 instead recorded two late-route
-unload spikes: `cx=-878` had 76.99 ms in `streamer_unload_ms`, and
-`cx=-883` had 106.44 ms, for full-frame times of 126.22 and 152.45 ms.
-Each row had one unload candidate, one save request, and four removed
-vertical slices. Corresponding async I/O drain was 1.01/1.04 ms and save
-result drain was 0.088/0.078 ms, with background pending depth 9/2. Therefore
-the remaining cost is synchronous work in the unload callback path, not the
-completed-save queue or worker serialization.
+world-apply stall did not recur. A later audit cross-checking the M454 raw
+JSONL found that the previously reported late-route unload spikes at
+`cx=-878`/`-883` (76.99/106.44 ms) were misattributed: those values are not in
+M454's log. Its route-wide `streamer_unload_ms` maximum was 12.758 ms at
+`cx=-280`; the cited late-route samples were in the low single-digit
+milliseconds. M454's maximum `UpdateStreaming` was 26.582 ms at `cx=-150`,
+not a 49.27 ms event near `cx=-756`. Therefore M454 does not establish a
+late-route unload regression. The separate M455 traced run did directly
+reproduce expensive synchronous stale-path cleanup; see the M455 checkpoint.
 
 #### Next work after M454
 
@@ -4705,8 +4706,9 @@ completed-save queue or worker serialization.
    cleanup, `OnSaveChunk`, and resident `ChunkManager::RemoveChunk` calls.
    Add per-request save timings for completeness scan, disk highest-slice
    lookup, highest-non-air scan, slice materialization/snapshot enqueue, and
-   stale-file cleanup. The two M454 spikes must be attributed before deciding
-   which operation to defer or amortize.
+   stale-file cleanup. The cited M454 late-route spikes were later found to
+   be misattributed; M455 independently supplied the cleanup trace that drove
+   the async cleanup change.
 2. **Remove remaining synchronous persistence cleanup from streaming.**
    Stale slice deletion after `highest_to_save` still calls filesystem removal
    from the main thread. If phase timing shows measurable cost, queue cleanup
@@ -4747,8 +4749,9 @@ operations each removed five stale paths on the game thread. The slowest took
 67.56 ms; the complete save callback took 68.25 ms. Other measured save
 subphases were each below 0.1 ms in that case. Similar cleanup stalls were
 26.30–48.94 ms in four other columns. Therefore this is not merely a possible
-source: synchronous stale-file deletion is a reproduced unload hitch and
-matches M454's remaining callback stalls.
+source: synchronous stale-file deletion is a reproduced unload hitch. The
+earlier claim that these events matched large M454 callback stalls was based
+on a cross-run/log misattribution.
 
 The trace itself writes detailed records synchronously and inflates enclosing
 callback/stream timings variably. M455 remains useful for attribution but is
@@ -4782,7 +4785,7 @@ phase timing must be recorded separately from the total callback.
 M455's detailed measurements and reproduction command are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m455-unload-phase-trace-on-the-full-m335-route-2026-10-07).
 
-### M456 checkpoint — asynchronous stale-slice cleanup verified; hidden streaming-phase work found (2026-10-08)
+### M456 checkpoint — asynchronous stale-slice cleanup verified; cruise scans bounded (2026-10-08)
 
 M456 ran the unchanged visible, no-teleport M335 route on `World_164` with
 the Release executable from `58e9bc6b9709b6de1c8489669a8a2304f1c61961`.
@@ -4794,21 +4797,24 @@ framebuffer capture. Readiness, holes, and black counters remain telemetry
 proxies and do not override the operator's report that the world currently
 looks good.
 
-The M455 unload-cleanup change removed the measured long synchronous deletion
-from the route: M456 had three spike rows, and the late-route unload times in
-the two relevant frames were 0.389 ms and 0.0029 ms. Five background cleanup
-jobs were pending at the 0.389 ms sample. This is consistent with the stale
-slice cleanup no longer blocking the game thread. It is not a guarantee that
-all unload paths are hitch-free, but M454's 76.99 ms / 106.44 ms unload stalls
-did not recur.
+M455's direct trace confirmed that stale-path cleanup could block the game
+thread: five high-slice cleanup operations each removed five paths, with a
+67.56 ms maximum cleanup and a 68.25 ms enclosing save callback. Its raw
+period log's `streamer_unload_ms` maximum was 73.557 ms at `cx=-450`; these
+instrumented aggregate values include synchronous trace overhead and should
+not be treated as a clean baseline. M456's raw log then showed a maximum
+`streamer_unload_ms` of 0.571 ms, consistent with removing that known blocking
+operation. This supports the targeted cleanup fix, while not proving every
+unload path is hitch-free.
 
-M456 exposed a separate, unattributed-within-phase streaming stall. At `focus_cx=-763`, one
-frame took 101.328 ms, of which `UpdateStreaming` took 76.9695 ms and the
-combined stream timing took 79.5268 ms. In that frame the core streamer update
-took 0.0121 ms, unload took 0.0029 ms, and load/unload/ingress counters were
-zero. The frame immediately before and after returned to ordinary streaming
-times. M454 had a similar frame at `focus_cx=-756`: `UpdateStreaming` took
-49.2721 ms while streamer update and unload together were below 0.02 ms.
+A later raw-log audit invalidated the M456 streaming-stall claim previously
+recorded here. At `focus_cx=-763`, M456's `UpdateStreaming` samples were about
+2.52 ms, not 76.97 ms; its route-wide maximum was 27.474 ms at `cx=-594`.
+M454's samples around `cx=-756` were about 3.39 ms, not 49.27 ms; its route
+maximum was 26.582 ms at `cx=-150`. The reported 101.328 ms M456 frame and
+the associated neighboring-frame narrative do not match the linked raw log.
+Treat these former values and their cross-run comparison as an audit
+misattribution, not engine behavior.
 
 Code inspection found three unbudgeted readiness scans in this hot path:
 
@@ -4820,15 +4826,13 @@ Code inspection found three unbudgeted readiness scans in this hot path:
 3. A diagnostic-only `CountUnreadyColumns(..., 8)` walked as many as 289
    columns every eight fast frames, also on the game thread.
 
-M456 did not time these calls individually, so they are a strong code-level
-candidate for the 49–77 ms frames, not yet a measured causal attribution. The
-M456 spike row had nonzero inner-ring readiness counts, and its broad
-`UpdateStreaming` timer is the owner containing these scans. The next change
-uses the prior async-cycle readiness result for the moving catch-up decision
-(one frame of bounded latency), samples enter debt only while the enter or
-soft-force latch is active, and removes the diagnostic R=8 scan from the
-runtime loop. It adds a call timer and sample-valid bits so the next run can
-verify both the cost and when the diagnostic is unavailable.
+These scans were real code paths, but the M454/M456 raw data no longer provides
+evidence that they caused 49–77 ms stalls. The follow-up change still removes
+unbounded readiness work from the cruise path as a bounded-cost design
+improvement. It uses the prior async-cycle readiness result for moving
+catch-up (one frame of bounded latency), samples enter debt only while the
+enter or soft-force latch is active, removes the diagnostic R=8 scan from the
+runtime loop, and records call time/sample-validity fields.
 
 #### Next after M456
 
@@ -4853,7 +4857,7 @@ M456 details and the exact reproduction command are in
 
 M457 used Release executable `51A3BF1471B6B515DF7BE2A849451692E682A621C65B05C708FD2CB3432B803B`, built from `cc75e339`. The unchanged visible, no-teleport M335 route passed its manifest and route-adequacy gates: 14,320 blocks (`focus_cx=7 -> -888`), median movement speed 5.1965 blocks/s, and constant eye height 70. The process exited normally (`process_rc=0`, `run_outcome=success`, `hang_killed=false`). The wrapper returned 1 because the analyzer did not accept the run: 27/39 general gates and 9/12 stop gates passed.
 
-The M456 hot-path change is consistent with lower cruise streaming cost, though it does not prove which removed scan caused M456's outliers. In the final M457 log, `streamer_update_ms` was 0.0104 ms median, 0.0284 ms p95, and 7.663 ms max; `update_streaming_ms` was 1.8291 ms median, 4.1322 ms p95, and 26.4119 ms max. No `Streamer::Update` sample approached 121 ms. The reported 301.013 ms maximum wall frame was at route entry, where `UpdateStreaming` was 5.2865 ms and the streaming phase was 25.1715 ms; the maximum `UpdateStreaming` sample was 26.4119 ms at `focus_cx=-61`. This does not support the earlier live hypothesis that a 121 ms `GetHighestChunkSliceOnDisk` call caused a far-route streamer stall; that attribution is withdrawn. The disk-index path remains a code-level risk only if a future trace measures it.
+The M454/M456/M457 raw period logs do not support the previously reported 49–77 ms cruise `UpdateStreaming` stalls; those were cross-run/log misattributions corrected in the M456 checkpoint. M457's `update_streaming_ms` median/p95/max were 1.8291/4.1322/26.4119 ms, versus 2.170/6.265/27.474 ms in M456. However, M457's overall wall and streaming-phase medians were higher (26.411 vs 24.806 ms and 12.735 vs 12.198 ms). The timer distributions therefore show a modest improvement in that one subphase, but no overall performance win or causal proof. `streamer_update_ms` in M457 was 0.0104 ms median, 0.0284 ms p95, and 7.663 ms max. No `Streamer::Update` sample approached 121 ms. The 301.013 ms maximum wall frame was at route entry, where `UpdateStreaming` was 5.2865 ms and the streaming phase was 25.1715 ms; maximum `UpdateStreaming` occurred at `focus_cx=-61`. The earlier hypothesis that a 121 ms `GetHighestChunkSliceOnDisk` call caused a far-route stall is withdrawn; the disk-index path remains a code-level risk only if a future trace measures it.
 
 This analyzer's `hole_key` is `unfinished_visual`, whose report explicitly defines it as a visual-readiness/debt count, not a blank or dark framebuffer pixel. It remained nonzero on all 1,406 steady samples (median 27, max 83), so the derived 100% `effective_holes_rate` and the generic holes gate do not establish a visual hole. The route-level symptom-reproduction gate was itself false: `focus_missing_mesh` median 0 and `visible_black_focus` median 0. In the covered mid-corridor segment, `near_focus_holes` and `visual_holes` were zero, as was `dark_face_stale_near_n`. No image or pixel/object-ID capture was collected.
 
