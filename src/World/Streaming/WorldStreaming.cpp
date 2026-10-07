@@ -67,6 +67,7 @@
 #include <climits>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <limits>
 #include <string>
 #ifdef _WIN32
@@ -93,6 +94,26 @@ constexpr int kRelightBacklogStuckWindowMs = 1500;
 constexpr int kRelightBgClampCooldownMs = 400;
 constexpr int kAdaptiveRdMin = 3;
 constexpr double kAdaptiveRdHysteresisSec = 2.5;
+
+bool IsWorldColumnSourceTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+  return value && value[0] == '1';
+}
+
+void LogWorldColumnSource(const char *source, const char *outcome,
+                          glm::ivec3 ground, const std::string &details)
+{
+  if (!IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      std::string("source=") + source + " outcome=" + outcome +
+      " coord=(" + std::to_string(ground.x) + ",0," +
+      std::to_string(ground.z) + ") " + details;
+  CubatariumLogInfo("WorldColumnSource", message);
+}
 
 /// SoftDefer / rim FirstMesh repair anchor: nearest miss witness when present.
 /// Manual 191432 exit stuck miss_horiz=2–3 while tickets stayed on focus_xz.
@@ -4997,6 +5018,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetUnloadColumnCallback(
       [this, &world](glm::ivec3 ground, int max_cy) -> bool
       {
+        const auto unload_started = std::chrono::steady_clock::now();
+        const bool trace_unload = IsWorldColumnSourceTraceEnabled();
         const glm::ivec2 col(ground.x, ground.z);
         const glm::ivec2 world_key(col.x * CHUNK_SIZE,
                                    col.y * CHUNK_SIZE);
@@ -5006,11 +5029,29 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         // cancelable; a pending ticket must not pin resident terrain forever.
         const bool record_want =
             UColumnRecordCoordinator::RecordWantsEvictAfterInterestLoss(true);
-        if (!UColumnRecordCoordinator::DecideEvict(true, record_want, col))
+        const bool may_evict =
+            UColumnRecordCoordinator::DecideEvict(true, record_want, col);
+        const double decision_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - unload_started)
+                .count();
+        if (!may_evict)
         {
+          if (trace_unload)
+          {
+            LogWorldColumnSource(
+                "unload_column", "vetoed", ground,
+                "decision_ms=" + std::to_string(decision_ms) +
+                    " total_ms=" +
+                    std::to_string(std::chrono::duration<double, std::milli>(
+                                       std::chrono::steady_clock::now() -
+                                       unload_started)
+                                       .count()));
+          }
           return false;
         }
 
+        const auto ownership_started = std::chrono::steady_clock::now();
         UColumnFlowExecutor &flow = GetColumnFlowExecutor();
         const auto &flow_scheduler = flow.Scheduler();
         const bool flow_relight_ticket =
@@ -5034,8 +5075,13 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                            world.Persistence->IsTerrainColumnDiskLoadPending(
                                ground) ||
                            (ChunkScheduler && ChunkScheduler->IsPending(ground));
+        const double ownership_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - ownership_started)
+                .count();
         const int highest_cy = std::max(0, max_cy);
         const UWorldMeshService &mesh = world.GetMeshService();
+        const auto mesh_scan_started = std::chrono::steady_clock::now();
         for (int cy = 0; cy <= highest_cy; ++cy)
         {
           const glm::ivec3 slice(ground.x, cy, ground.z);
@@ -5045,15 +5091,25 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                         mesh.IsGpuExtractInFlight(slice) ||
                         mesh.GetCache().HasPendingCaptureWork(slice);
         }
+        const double mesh_scan_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - mesh_scan_started)
+                .count();
 
         // If we interrupt lighting, persist the column as light-incomplete.
         // The next disk load will recompute light rather than trusting a
         // partially updated lightmap saved with otherwise valid voxels.
+        const auto light_flags_started = std::chrono::steady_clock::now();
         if (needs_relight)
         {
           world.Persistence->ClearColumnLightComplete(col);
         }
+        const double light_flags_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - light_flags_started)
+                .count();
 
+        const auto invalidation_started = std::chrono::steady_clock::now();
         flow.ForgetColumnWork(col);
         bool invalidated_work = active_work;
         invalidated_work =
@@ -5067,12 +5123,22 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         }
         world.ClearPendingLightBeforeMesh(col);
         world.ClearColumnEmergeState(col); // erase the obsolete column record
+        const auto mesh_remove_started = std::chrono::steady_clock::now();
         world.GetMeshService().RemoveColumn(ground, highest_cy);
+        const double mesh_remove_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - mesh_remove_started)
+                .count();
+        const auto collision_cleanup_started = std::chrono::steady_clock::now();
         for (int cy = 0; cy <= highest_cy; ++cy)
         {
           world.Collision.RemoveChunkMovementSolidCache(
               glm::ivec3(ground.x, cy, ground.z));
         }
+        const double collision_cleanup_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - collision_cleanup_started)
+                .count();
         if (ChunkScheduler)
         {
           ChunkScheduler->Invalidate(ground);
@@ -5080,6 +5146,32 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         if (invalidated_work)
         {
           Streamer->NoteUnloadActiveWorkInvalidated();
+        }
+        if (trace_unload)
+        {
+          const double invalidation_ms =
+              std::chrono::duration<double, std::milli>(
+                  mesh_remove_started - invalidation_started)
+                  .count();
+          LogWorldColumnSource(
+              "unload_column", "evicted", ground,
+              "max_cy=" + std::to_string(highest_cy) +
+                  " needs_relight=" + std::to_string(needs_relight) +
+                  " active_work=" + std::to_string(active_work) +
+                  " invalidated_work=" + std::to_string(invalidated_work) +
+                  " decision_ms=" + std::to_string(decision_ms) +
+                  " ownership_ms=" + std::to_string(ownership_ms) +
+                  " mesh_scan_ms=" + std::to_string(mesh_scan_ms) +
+                  " light_flags_ms=" + std::to_string(light_flags_ms) +
+                  " invalidation_ms=" + std::to_string(invalidation_ms) +
+                  " mesh_remove_ms=" + std::to_string(mesh_remove_ms) +
+                  " collision_cleanup_ms=" +
+                  std::to_string(collision_cleanup_ms) +
+                  " total_ms=" +
+                  std::to_string(std::chrono::duration<double, std::milli>(
+                                     std::chrono::steady_clock::now() -
+                                     unload_started)
+                                     .count()));
         }
         return true;
       });

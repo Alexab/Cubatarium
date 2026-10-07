@@ -1,4 +1,5 @@
 #include "World/Chunks/ChunkStreamer.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/FrameDeadline.h"
 #include "World/Chunks/Chunk.h"
@@ -12,6 +13,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 
 namespace cutum
 {
@@ -21,6 +23,22 @@ namespace
 
 constexpr int kCollisionSyncSubColumnsPerFrame = kStreamerEnsureSyncSubColumns;
 constexpr int kTerrainSubColumnsPerChunk = CHUNK_SIZE * CHUNK_SIZE;
+
+bool IsStreamerUnloadTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+  return value && value[0] == '1';
+}
+
+void LogStreamerUnloadPhase(const char *phase, glm::ivec3 ground,
+                            const std::string &details)
+{
+  const std::string message =
+      std::string("phase=") + phase + " coord=(" +
+      std::to_string(ground.x) + ",0," + std::to_string(ground.z) + ") " +
+      details;
+  CubatariumLogInfo("StreamerUnloadPhase", message);
+}
 
 bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
                                const PlayerCapsule &cap)
@@ -657,6 +675,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
   const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
 
   const bool use_cursor = UnloadModeUsesScanCursor(mode);
+  const bool trace_unload = IsStreamerUnloadTraceEnabled();
   if (!use_cursor || UnloadColumnSnapshot.empty() ||
       UnloadScanCursor >= UnloadColumnSnapshot.size())
   {
@@ -694,6 +713,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
 
   auto try_unload_column = [&](const glm::ivec3 &ground) -> bool
   {
+    const auto candidate_started = std::chrono::steady_clock::now();
     if (UnloadModeRespectsExhausted(mode) && UFrameDeadline::Get().Exhausted())
     {
       return false;
@@ -737,7 +757,25 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
 
     if (OnUnloadColumn)
     {
-      if (!OnUnloadColumn(ground, maxCy))
+      const auto unload_callback_started = std::chrono::steady_clock::now();
+      const bool unload_allowed = OnUnloadColumn(ground, maxCy);
+      const double unload_callback_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - unload_callback_started)
+              .count();
+      if (trace_unload)
+      {
+        LogStreamerUnloadPhase(
+            unload_allowed ? "column_callback" : "column_callback_veto",
+            ground, "duration_ms=" + std::to_string(unload_callback_ms) +
+                        " candidate_preflight_ms=" +
+                        std::to_string(std::chrono::duration<double,
+                                                             std::milli>(
+                                           unload_callback_started -
+                                           candidate_started)
+                                           .count()));
+      }
+      if (!unload_allowed)
       {
         ++LastFrameStats.unloadVetoesThisFrame;
         // Count a veto as the frame's bounded unload attempt. Otherwise the
@@ -749,10 +787,23 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
 
     if (OnSaveChunk && savedColumns.insert(ground).second)
     {
+      const auto save_callback_started = std::chrono::steady_clock::now();
       OnSaveChunk(ground);
+      if (trace_unload)
+      {
+        LogStreamerUnloadPhase(
+            "save_callback", ground,
+            "duration_ms=" +
+                std::to_string(std::chrono::duration<double, std::milli>(
+                                   std::chrono::steady_clock::now() -
+                                   save_callback_started)
+                                   .count()));
+      }
       ++LastFrameStats.savesThisFrame;
     }
 
+    const auto remove_chunks_started = std::chrono::steady_clock::now();
+    int removed_slices = 0;
     for (int cy = 0; cy <= maxCy; ++cy)
     {
       const glm::ivec3 slice(ground.x, cy, ground.z);
@@ -767,6 +818,19 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
       }
       LastFrameStats.unloadedCoords.push_back(slice);
       ++LastFrameStats.unloadsThisFrame;
+      ++removed_slices;
+    }
+    if (trace_unload)
+    {
+      LogStreamerUnloadPhase(
+          "chunk_remove", ground,
+          "duration_ms=" +
+              std::to_string(std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() -
+                                 remove_chunks_started)
+                                 .count()) +
+              " removed_slices=" + std::to_string(removed_slices) +
+              " max_cy=" + std::to_string(maxCy));
     }
     ProcedurallyGenerated.erase(ground);
     InvalidateTerrainCompleteCache(ground);

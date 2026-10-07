@@ -4253,6 +4253,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
 void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
                                                       glm::ivec3 ground_coord)
 {
+  const auto request_started = std::chrono::steady_clock::now();
   if (!AsyncChunkIo || !ChunkStorage || !world.BlockRegistry)
   {
     return;
@@ -4267,19 +4268,54 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     return;
   }
   const int max_height = world.ProceduralTemplate.MaxHeight;
-  if (!IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height))
+  const auto completeness_started = std::chrono::steady_clock::now();
+  const bool complete =
+      IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height);
+  const double completeness_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - completeness_started)
+          .count();
+  if (!complete)
   {
+    const auto cleanup_started = std::chrono::steady_clock::now();
     RemoveTerrainColumnFromDisk(ground_coord, max_height);
-    LogWorldColumnSave("discard_incomplete", ground_coord,
-                       "max_height=" + std::to_string(max_height) +
-                           " world_folder=" + WorldFolderPath);
+    const double stale_cleanup_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - cleanup_started)
+            .count();
+    if (IsWorldColumnSourceTraceEnabled())
+    {
+      LogWorldColumnSave("discard_incomplete", ground_coord,
+                         "max_height=" + std::to_string(max_height) +
+                             " complete_ms=" +
+                             std::to_string(completeness_ms) +
+                             " stale_cleanup_ms=" +
+                             std::to_string(stale_cleanup_ms) +
+                             " total_ms=" +
+                             std::to_string(
+                                 std::chrono::duration<double, std::milli>(
+                                     std::chrono::steady_clock::now() -
+                                     request_started)
+                                     .count()) +
+                             " world_folder=" + WorldFolderPath);
+    }
     return;
   }
   const int max_cy = (max_height + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const auto disk_index_started = std::chrono::steady_clock::now();
   const int highest_on_disk =
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
+  const double disk_index_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - disk_index_started)
+          .count();
+  const auto highest_non_air_started = std::chrono::steady_clock::now();
   const int highest_non_air =
       GetHighestNonAirChunkSlice(world.BlockWorld, ground_coord, max_height);
+  const double highest_non_air_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - highest_non_air_started)
+          .count();
   int highest_to_save = std::max(highest_on_disk, highest_non_air);
   if (highest_to_save < 0)
   {
@@ -4289,6 +4325,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   }
   highest_to_save = std::min(highest_to_save, max_cy);
 
+  const auto materialize_started = std::chrono::steady_clock::now();
   int save_count = 0;
   for (int cy = 0; cy <= highest_to_save; ++cy)
   {
@@ -4299,12 +4336,13 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     }
     ++save_count;
   }
+  const double materialize_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - materialize_started)
+          .count();
   ChunkStorage->MarkColumnSavePending(ground_coord);
   PendingAsyncColumnSaveSlices[ground_coord] = save_count;
-  LogWorldColumnSave("queued", ground_coord,
-                     "slices=" + std::to_string(save_count) +
-                         " highest_cy=" + std::to_string(highest_to_save) +
-                         " world_folder=" + WorldFolderPath);
+  const auto enqueue_started = std::chrono::steady_clock::now();
   for (int cy = 0; cy <= highest_to_save; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
@@ -4313,10 +4351,40 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
         *world.BlockRegistry,
         world.Streaming->GetChunkGenTokens().Current(ground_coord));
   }
+  const double snapshot_enqueue_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - enqueue_started)
+          .count();
+  const auto stale_cleanup_started = std::chrono::steady_clock::now();
+  int stale_slice_count = 0;
   for (int cy = highest_to_save + 1; cy <= max_cy; ++cy)
   {
     ChunkStorage->RemoveChunkSliceFromDisk(
         WorldFolderPath, glm::ivec3(ground_coord.x, cy, ground_coord.z));
+    ++stale_slice_count;
+  }
+  const double stale_cleanup_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - stale_cleanup_started)
+          .count();
+  if (IsWorldColumnSourceTraceEnabled())
+  {
+    LogWorldColumnSave(
+        "queued", ground_coord,
+        "slices=" + std::to_string(save_count) +
+            " highest_cy=" + std::to_string(highest_to_save) +
+            " stale_slices=" + std::to_string(stale_slice_count) +
+            " complete_ms=" + std::to_string(completeness_ms) +
+            " disk_index_ms=" + std::to_string(disk_index_ms) +
+            " highest_non_air_ms=" + std::to_string(highest_non_air_ms) +
+            " materialize_ms=" + std::to_string(materialize_ms) +
+            " snapshot_enqueue_ms=" + std::to_string(snapshot_enqueue_ms) +
+            " stale_cleanup_ms=" + std::to_string(stale_cleanup_ms) +
+            " total_ms=" +
+            std::to_string(std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now() - request_started)
+                               .count()) +
+            " world_folder=" + WorldFolderPath);
   }
 }
 
