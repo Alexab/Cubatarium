@@ -22,6 +22,13 @@ namespace cutum
 /// via ComputeWorkerThreadCount(JobPoolKind, override); queue depth is separate.
 constexpr std::size_t kDefaultMaxPendingJobsPerPool = 256;
 
+struct JobThreadPoolSnapshot
+{
+  std::size_t pending{0};
+  std::size_t active{0};
+  std::size_t workers{0};
+};
+
 class UJobThreadPool
 {
 public:
@@ -45,6 +52,11 @@ public:
   void ShutdownForProcessExit(std::chrono::milliseconds timeout);
   std::size_t GetPendingJobCount() const;
   std::size_t GetActiveJobCount() const;
+  JobThreadPoolSnapshot GetSnapshot() const
+  {
+    std::lock_guard<std::mutex> lock(QueueMutex);
+    return JobThreadPoolSnapshot{Jobs.size(), ActiveJobs, Workers.size()};
+  }
   std::size_t GetWorkerCount() const { return Workers.size(); }
   std::size_t GetMaxPendingJobCount() const { return MaxPendingJobs; }
   uint64_t GetRejectedEnqueueCount() const { return RejectedEnqueues.load(); }

@@ -282,6 +282,14 @@ struct PhysicsTelemetry
   int AsyncChunkIoRequeuedLoadsN{0};
   int AsyncChunkIoAppliedSlicesN{0};
   int AsyncChunkIoSavesProcessedN{0};
+  int AsyncChunkIoLoadPendingJobsN{0};
+  int AsyncChunkIoLoadActiveJobsN{0};
+  int AsyncChunkIoLoadWorkersN{0};
+  int AsyncChunkIoBackgroundPendingJobsN{0};
+  int AsyncChunkIoBackgroundActiveJobsN{0};
+  int AsyncChunkIoBackgroundWorkersN{0};
+  int AsyncChunkIoLoadResultQueueDepthN{0};
+  int AsyncChunkIoSaveResultQueueDepthN{0};
   int AsyncChunkIoApplyTimeBudgetHit{0};
   /// Legacy alias for AsyncChunkSystemsMs, retained for log compatibility.
   double AsyncIoMs{0.0};

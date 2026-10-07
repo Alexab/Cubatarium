@@ -3316,9 +3316,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
            " chunkio_background_active_jobs=" +
            std::to_string(AsyncChunkIo->GetBackgroundActiveJobCount()) +
            " chunkio_ready_loads=" +
-           std::to_string(AsyncChunkIo->GetCompletedLoadCount()) +
+           std::to_string(AsyncChunkIo->GetLoadResultQueueDepth()) +
            " chunkio_ready_saves=" +
-           std::to_string(AsyncChunkIo->GetCompletedSaveCount()) +
+           std::to_string(AsyncChunkIo->GetSaveResultQueueDepth()) +
            " pending_disk_columns=" +
            std::to_string(PendingAsyncColumnLoadSlices.size());
   };
@@ -3969,6 +3969,22 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - light_flags_save_started)
           .count();
+  if (AsyncChunkIo)
+  {
+    const JobThreadPoolSnapshot load = AsyncChunkIo->GetLoadPoolSnapshot();
+    const JobThreadPoolSnapshot background =
+        AsyncChunkIo->GetBackgroundPoolSnapshot();
+    metrics.load_pending_jobs_n = load.pending;
+    metrics.load_active_jobs_n = load.active;
+    metrics.load_workers_n = load.workers;
+    metrics.background_pending_jobs_n = background.pending;
+    metrics.background_active_jobs_n = background.active;
+    metrics.background_workers_n = background.workers;
+    metrics.load_result_queue_depth_n =
+        AsyncChunkIo->GetLoadResultQueueDepth();
+    metrics.save_result_queue_depth_n =
+        AsyncChunkIo->GetSaveResultQueueDepth();
+  }
   return metrics;
 }
 
@@ -4005,9 +4021,13 @@ void UWorldPersistence::TraceAsyncChunkIoShutdownState() const
       " io_active=" +
       std::to_string(AsyncChunkIo ? AsyncChunkIo->GetActiveJobCount() : 0) +
       " ready_saves=" +
-      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetCompletedSaveCount() : 0) +
+      std::to_string(AsyncChunkIo
+                         ? AsyncChunkIo->GetSaveResultQueueDepth()
+                         : 0) +
       " ready_loads=" +
-      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetCompletedLoadCount() : 0) +
+      std::to_string(AsyncChunkIo
+                         ? AsyncChunkIo->GetLoadResultQueueDepth()
+                         : 0) +
       " light_flags_in_flight=" +
       std::to_string(LightCompleteSaveInFlight ? 1 : 0) +
       " light_flags_dirty=" +

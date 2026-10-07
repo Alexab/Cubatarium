@@ -49,6 +49,14 @@ struct AsyncChunkIoTickMetrics
   std::size_t requeued_loads_n{0};
   std::size_t applied_slices_n{0};
   std::size_t saves_processed_n{0};
+  std::size_t load_pending_jobs_n{0};
+  std::size_t load_active_jobs_n{0};
+  std::size_t load_workers_n{0};
+  std::size_t background_pending_jobs_n{0};
+  std::size_t background_active_jobs_n{0};
+  std::size_t background_workers_n{0};
+  std::size_t load_result_queue_depth_n{0};
+  std::size_t save_result_queue_depth_n{0};
   bool apply_time_budget_hit{false};
 };
 

@@ -3393,6 +3393,22 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         static_cast<int>(io_metrics.applied_slices_n);
     io_telem.AsyncChunkIoSavesProcessedN +=
         static_cast<int>(io_metrics.saves_processed_n);
+    io_telem.AsyncChunkIoLoadPendingJobsN =
+        static_cast<int>(io_metrics.load_pending_jobs_n);
+    io_telem.AsyncChunkIoLoadActiveJobsN =
+        static_cast<int>(io_metrics.load_active_jobs_n);
+    io_telem.AsyncChunkIoLoadWorkersN =
+        static_cast<int>(io_metrics.load_workers_n);
+    io_telem.AsyncChunkIoBackgroundPendingJobsN =
+        static_cast<int>(io_metrics.background_pending_jobs_n);
+    io_telem.AsyncChunkIoBackgroundActiveJobsN =
+        static_cast<int>(io_metrics.background_active_jobs_n);
+    io_telem.AsyncChunkIoBackgroundWorkersN =
+        static_cast<int>(io_metrics.background_workers_n);
+    io_telem.AsyncChunkIoLoadResultQueueDepthN =
+        static_cast<int>(io_metrics.load_result_queue_depth_n);
+    io_telem.AsyncChunkIoSaveResultQueueDepthN =
+        static_cast<int>(io_metrics.save_result_queue_depth_n);
     io_telem.AsyncChunkIoApplyTimeBudgetHit +=
         io_metrics.apply_time_budget_hit ? 1 : 0;
   }

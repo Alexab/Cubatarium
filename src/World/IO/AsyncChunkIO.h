@@ -166,13 +166,22 @@ public:
   {
     return BackgroundIoPool ? BackgroundIoPool->GetActiveJobCount() : 0;
   }
+  JobThreadPoolSnapshot GetLoadPoolSnapshot() const
+  {
+    return LoadPool.GetSnapshot();
+  }
+  JobThreadPoolSnapshot GetBackgroundPoolSnapshot() const
+  {
+    return BackgroundIoPool ? BackgroundIoPool->GetSnapshot()
+                            : JobThreadPoolSnapshot{};
+  }
   std::size_t GetLoadWorkerCount() const { return LoadPool.GetWorkerCount(); }
   std::size_t GetBackgroundWorkerCount() const
   {
     return BackgroundIoPool ? BackgroundIoPool->GetWorkerCount() : 0;
   }
-  std::size_t GetCompletedLoadCount() const { return CompletedLoads.Size(); }
-  std::size_t GetCompletedSaveCount() const { return CompletedSaves.Size(); }
+  std::size_t GetLoadResultQueueDepth() const { return CompletedLoads.Size(); }
+  std::size_t GetSaveResultQueueDepth() const { return CompletedSaves.Size(); }
 
 private:
   void EnqueueBackgroundIo(std::function<void()> job)

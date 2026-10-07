@@ -373,6 +373,14 @@ struct FrameNumbers
   int async_chunk_io_requeued_loads_n{0};
   int async_chunk_io_applied_slices_n{0};
   int async_chunk_io_saves_processed_n{0};
+  int async_chunk_io_load_pending_jobs_n{0};
+  int async_chunk_io_load_active_jobs_n{0};
+  int async_chunk_io_load_workers_n{0};
+  int async_chunk_io_background_pending_jobs_n{0};
+  int async_chunk_io_background_active_jobs_n{0};
+  int async_chunk_io_background_workers_n{0};
+  int async_chunk_io_load_result_queue_depth_n{0};
+  int async_chunk_io_save_result_queue_depth_n{0};
   int async_chunk_io_apply_time_budget_hit{0};
   double async_io_ms{0.0};
   double relight_drain_ms{0.0};
@@ -1247,6 +1255,20 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.async_chunk_io_requeued_loads_n = phys.AsyncChunkIoRequeuedLoadsN;
   n.async_chunk_io_applied_slices_n = phys.AsyncChunkIoAppliedSlicesN;
   n.async_chunk_io_saves_processed_n = phys.AsyncChunkIoSavesProcessedN;
+  n.async_chunk_io_load_pending_jobs_n =
+      phys.AsyncChunkIoLoadPendingJobsN;
+  n.async_chunk_io_load_active_jobs_n = phys.AsyncChunkIoLoadActiveJobsN;
+  n.async_chunk_io_load_workers_n = phys.AsyncChunkIoLoadWorkersN;
+  n.async_chunk_io_background_pending_jobs_n =
+      phys.AsyncChunkIoBackgroundPendingJobsN;
+  n.async_chunk_io_background_active_jobs_n =
+      phys.AsyncChunkIoBackgroundActiveJobsN;
+  n.async_chunk_io_background_workers_n =
+      phys.AsyncChunkIoBackgroundWorkersN;
+  n.async_chunk_io_load_result_queue_depth_n =
+      phys.AsyncChunkIoLoadResultQueueDepthN;
+  n.async_chunk_io_save_result_queue_depth_n =
+      phys.AsyncChunkIoSaveResultQueueDepthN;
   n.async_chunk_io_apply_time_budget_hit =
       phys.AsyncChunkIoApplyTimeBudgetHit;
   n.async_io_ms = phys.AsyncIoMs;
@@ -2197,6 +2219,22 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.async_chunk_io_applied_slices_n
           << ",\"async_chunk_io_saves_processed_n\":"
           << n.async_chunk_io_saves_processed_n
+          << ",\"async_chunk_io_load_pending_jobs_n\":"
+          << n.async_chunk_io_load_pending_jobs_n
+          << ",\"async_chunk_io_load_active_jobs_n\":"
+          << n.async_chunk_io_load_active_jobs_n
+          << ",\"async_chunk_io_load_workers_n\":"
+          << n.async_chunk_io_load_workers_n
+          << ",\"async_chunk_io_background_pending_jobs_n\":"
+          << n.async_chunk_io_background_pending_jobs_n
+          << ",\"async_chunk_io_background_active_jobs_n\":"
+          << n.async_chunk_io_background_active_jobs_n
+          << ",\"async_chunk_io_background_workers_n\":"
+          << n.async_chunk_io_background_workers_n
+          << ",\"async_chunk_io_load_result_queue_depth_n\":"
+          << n.async_chunk_io_load_result_queue_depth_n
+          << ",\"async_chunk_io_save_result_queue_depth_n\":"
+          << n.async_chunk_io_save_result_queue_depth_n
           << ",\"async_chunk_io_apply_time_budget_hit\":"
           << n.async_chunk_io_apply_time_budget_hit
           << ",\"async_io_ms\":" << n.async_io_ms
