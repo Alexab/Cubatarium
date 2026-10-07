@@ -331,6 +331,73 @@ evidence; изображение M446 не снималось и пользов�
 5. Сохранить M335 как контроль; кадры захватывать только при возврате видимого
    дефекта или когда нужна независимая pixel-проверка.
 
+### M447 checkpoint — complete M335 without suspend (2026-10-07)
+
+M447 завершил полный видимый no-teleport M335 на `World_164` с Release EXE,
+собранным из `c7a4f76d` (SHA-256
+`f9d9c84e14baf986c3ada43b445ffa39f6ba7b42e02b88140f248a92d1581098`). Manifest
+принят, приложение завершилось штатно. Пройдено `14 320` блоков
+(`focus 7 -> -888`), median скорости `5,19653 blocks/s`; active/wall elapsed
+составили `2853,47 s`, исключённых clock gaps не было. Автообход обнаружил и
+завершил 4 detour; blocked substeps, ground contacts и collision stop равны
+нулю. Это полный маршрут без сна, пригодный для сравнения.
+
+Получено 1 407 периодов (1 405 steady), 63 spike samples. Median wall —
+`26,76 ms` (`26,73 ms` в полёте); median `world_streaming_phase_ms` —
+`14,02 ms`. Startup sample достиг `331,49 ms`; из поздних выбросов выделяются
+`68,34 ms` при `focus=-702` (`41,37 ms` streaming phase), `50,72 ms` около
+`-511` и `53,78 ms` на endpoint. На прежнем M446 hotspot `-474..-479` в M447
+не повторились тяжёлые snapshot выбросы: около `-474..-486` snapshot держался
+примерно `3..5 ms`, wall — `32..37 ms`. Это ослабляет гипотезу о постоянной
+проблеме именно этого участка; профиль M446 был дополнительно осложнён
+hibernate и включённым GPU profiler.
+
+Анализатор вернул `pass=false` (28/39 общих и 9/12 stop gates). Он выбрал
+`unfinished_visual` как сигнал holes: он ненулевой во всех steady-периодах,
+поэтому `visual_holes_rate=1`. Это счётчик незавершённой visual-readiness
+работы, а не свидетельство пустого framebuffer. В отдельной телеметрии
+`visible_black_focus_n` имел median `0`, max `18`, 36 переходов за 1 405
+steady samples; `near_focus_holes>0` отмечено в 84 периодах маршрута, но лишь
+в 2 corridor samples. Эти прокси требуют расследования, однако M447 не
+снимал framebuffer, а свежей оценки пользователя для этого запуска нет.
+Post-stop convergence также не достигнута: счётчики missing/not-ready/dirty
+не сошлись с заданными воротами. Это не следует трактовать как подтверждение
+видимых пустых чанков.
+
+M447 оставил диагностические сигналы для проверки, а не готовый диагноз:
+максимум `visible_black_focus_n=18`, 42 s видимого-black прокси без pending
+light focus, 12 s почти без relight drain при таком прокси, 14 s chain stall,
+1 064 cumulative FIFO drops и 72 false-clear events. Они не доказывают, что
+FIFO drops вызвали тёмное изображение: сначала нужно связать точные координаты
+и состояния источника, mesh publication и освещения. Async queue/load и
+render readiness остаются разными стадиями.
+
+#### Очередность после M447
+
+1. Повторить тот же M335 как M448 с включённым только column-source tracing.
+   Сопоставить координаты и X/Z полосы позднего маршрута с `disk complete`,
+   `disk miss/procedural commit`, save queue/write и shutdown-pending events.
+   Не использовать его frame-time как чистое сравнение: трассировка добавляет
+   диагностическую нагрузку; маршрут/погоду/скорость оставить без изменений.
+2. Для M448 проверить, объясняет ли повторная генерация или disk-result wait
+   дальние visual/readiness долги. Если источники смешаны, сравнивать точные
+   координаты и стадии, не `cold_warm_mode` из manifest: M436 доказал, что этот
+   label не сообщает наличие сохранённых `.cchunk` файлов.
+3. Отдельно разобрать повторяющиеся 50–70 ms stream/emerge выбросы по фазовым
+   таймерам и координатам. Пока не менять scheduler quotas/FIFO на основании
+   readiness gate или одного не-повторившегося M446 snapshot пика.
+4. Затем обновить saved/new-world G1 load/create preflight на текущем Release
+   source и записать фактическое число I/O workers; M435/M436 остаются полезной
+   парой, но относятся к более раннему engine revision. После этого продолжать
+   периодические fresh-seed проверки отдельно от M335.
+5. Framebuffer capture включать, если оператор снова видит тёмные/пустые
+   участки либо требуется проверить соответствие proxy реальным пикселям.
+   Сохранить пользовательское наблюдение отдельно от telemetry pass/fail.
+
+M447 route, report, точные параметры, ограничения метрик и следующая
+source-trace команда записаны в
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m447---complete-m335-with-suspend-aware-runner-2026-10-07).
+
 ## Цель
 
 Устранить тёмные и визуально пустые участки мира на длинных перемещениях,

@@ -2174,3 +2174,68 @@ perf `bin/logs/perf_20261007-111339_32128.jsonl`, GPU profile
 Raw outputs remain under `bin`; do not stage them. For future full-route
 comparisons, require the expected endpoint or at least 14,300 travel blocks in
 addition to normal process exit.
+
+## M447 — complete M335 with suspend-aware runner (2026-10-07)
+
+M447 repeated the established visible Release/no-teleport M335 profile on
+`World_164`, with the hibernate-aware flight clock and a hard
+`--minimum-travel-blocks 14300` acceptance gate. It used commit `c7a4f76d`,
+EXE SHA-256
+`f9d9c84e14baf986c3ada43b445ffa39f6ba7b42e02b88140f248a92d1581098`.
+Manifest was accepted; process exit was normal (`process_rc=0`,
+`run_outcome=success`, `hang_killed=false`). It reached focus `7 -> -888`,
+traveled 14,320 blocks, and measured `5.19653 blocks/s`. Wall and active elapsed
+were both `2853.47 s`; no clock gap was excluded. Four predicted obstacle
+detours completed; there were no blocked movement substeps, ground contacts,
+or collision stop.
+
+The report contains 1,407 periods (1,405 steady) and 63 spike samples. Median
+wall was `26.7576 ms`, median flight wall `26.7274 ms`, and median streaming
+phase `14.0182 ms`. Startup reached `331.486 ms`. Route spikes included
+`68.3369 ms` at focus `-702` (`41.366 ms` streaming phase), `50.7185 ms` near
+`-511`, and `53.7772 ms` at endpoint `-888`. The M446 `-474..-479` snapshot
+cluster did not recur as a large spike: M447 snapshot was about `3..5 ms` over
+`-474..-486`, with wall around `32..37 ms`.
+
+Analyzer acceptance remained FAIL: 28/39 general gates and 9/12 stop gates
+passed. `unfinished_visual` was selected as the analyzer's hole key and stayed
+nonzero throughout; its `visual_holes_rate=1` is a readiness/work-debt signal,
+not pixel evidence. Separate proxies recorded median/max visible-black focus
+`0/18`, 36 transitions across 1,405 steady samples, and `near_focus_holes>0`
+in 84 route periods (2 in the eye-proxy corridor). There was no framebuffer
+capture and no operator visual verdict for M447. Do not describe these values
+as proof that every frame or chunk looked blank.
+
+The run report also records 42 seconds of visible-black proxy without pending
+light focus, 12 seconds with near-zero relight drain during that proxy, 14
+seconds of chain stall, 1,064 cumulative FIFO drops, and 72 false-clear events.
+These are candidate lifecycle/ownership signals; the flight does not prove
+that FIFO drops caused an image defect. Trace exact coordinates and source,
+mesh-publication, and lighting states before changing queue policy.
+
+The wrapper restores `world_data.json` and `users.json`, but does not clear or
+restore terrain-column storage. The manifest's `cold_warm_mode=cold` is not
+evidence that requested columns were generated rather than read from disk.
+Source tracing, relight audit, visual-black tracing, dense pixel trace, GPU
+profile, and framebuffer capture were all disabled; the runner did not use
+pixel evidence.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m447_world164_suspend_aware_full_m335 --report bin/suite_reports/engine_refactor/m447_world164_suspend_aware_full_m335_20261007.json --process-timeout 7200
+```
+
+Artifacts: report
+`bin/suite_reports/engine_refactor/m447_world164_suspend_aware_full_m335_20261007.json`,
+raw perf `bin/logs/perf_20261007-121505_38948.jsonl`, and flight report
+`bin/flight_sim_report.json`. Generated artifacts remain under `bin`; do not
+stage them. Use a separate source-trace lane next; do not treat its wall-time
+as an uninstrumented performance comparison.
