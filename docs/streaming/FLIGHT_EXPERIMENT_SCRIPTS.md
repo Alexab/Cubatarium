@@ -1729,3 +1729,119 @@ python tools/analyze_async_chunk_io_perf.py `
   bin/logs/perf_20261007-010003_36844.jsonl `
   --out bin/suite_reports/engine_refactor/m437_io_phase_summary.json
 ```
+
+## M439 - clean full M335 route and census baseline (2026-10-07)
+
+M439 repeated the established visible, no-teleport M335 route on `World_164`
+with the Release executable from commit `2cdf80c5`, SHA-256
+`8ef9e1c625cb57f3b6a58b11aeb9f66e5c1d9a670b622cb729b8653401869cfd`. The
+route settings matched M437-M438: start `[120,56,56]`, eye Y `70`, yaw `180`,
+pitch `-30`, speed scale `1`, 2,800-second cruise, 20-second stop, and
+8-second blocked-stop threshold. GUI was visible, teleport and detailed
+visual/source/framebuffer traces were off, and the manifest recorded
+`relight_audit=false`. The INFO log had zero `[RelightAudit]` lines.
+
+The process exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`) and manifest acceptance passed. It recorded 1,404 periods
+(1,402 steady), 23 frames over 100 ms, 14,320 blocks, focus `[7,3] ->
+[-888,3]`, median speed 5.1965 blocks/s, and player Y 70. It reached the
+8,192-block checkpoint; blocked movement substeps and ground contacts were
+both zero. Median wall time was 39.06 ms and median fly wall time was 38.96
+ms. Analyzer `pass=false` (26/39 general gates, 9/12 stop gates) reflects
+readiness and convergence thresholds, not a process failure. User appearance
+feedback was positive; no framebuffer pixels were captured.
+
+| Band | M439 wall median / p95 (ms) | Streaming median / p95 (ms) |
+|---|---:|---:|
+| Near | 27.02 / 35.67 | 15.28 / 23.83 |
+| Mid | 38.36 / 48.96 | 27.00 / 39.43 |
+| Far east | 42.51 / 53.87 | 34.67 / 45.70 |
+| Far west | 46.37 / 57.64 | 38.84 / 49.28 |
+
+The phase census is stored in `m439_emerge_census_summary_20261007.json`.
+Per-census cost is estimated by dividing period-average cost by the
+period-average sample count; the ratio is a period mean, not a percentile of
+individual calls. Far-west total census cost was about 10.92 ms median and
+13.20 ms p95. The largest direct sampled census frame was about 46.99 ms at
+`focus_cx=-775`. M439 did not yet split the census into per-component costs,
+so this outlier was not attributed to a specific scan. This was diagnostic
+overhead and did not justify changing demand policy.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m439_world164_clean_audit_relighttelemetry --report bin/suite_reports/engine_refactor/m439_world164_clean_audit_relighttelemetry_20261007.json --process-timeout 3000
+```
+
+Artifacts: [M439 flight report](../../bin/suite_reports/engine_refactor/m439_world164_clean_audit_relighttelemetry_20261007.json),
+phase summary `bin/suite_reports/engine_refactor/m439_io_phase_summary_20261007.json`,
+census summary `bin/suite_reports/engine_refactor/m439_emerge_census_summary_20261007.json`,
+raw perf `bin/logs/perf_20261007-030343_8152.jsonl`, and INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-030339.8152`.
+
+## M440 - incremental emerge-stage census (2026-10-07)
+
+M440 repeated the same full M335 route with the Release executable from commit
+`d96a52be`, SHA-256
+`709a45adfaa9402b138f8aff1cca7aaa5b451f2857e22aaa34c255f46de9d9fa`. The
+change maintained Lighting/Meshing/RenderReady census counts as stage records
+changed, avoiding a full `ColumnEmergeStates` map walk on each 250 ms sample.
+It did not alter chunk scheduling, publication, or render policy. GUI was
+visible and all optional visual, source, and relight traces were off; manifest
+acceptance passed and `[RelightAudit]` count was zero.
+
+The process exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`). It recorded 1,404 periods (1,402 steady), 29 frames over
+100 ms, 14,304 blocks, focus `[7,3] -> [-887,3]`, and about 5.2 blocks/s.
+The 0- and 8,192-block checkpoints were reached. Movement telemetry again
+recorded zero blocked substeps and ground contacts. Median wall time was
+39.77 ms; analyzer `pass=false` (25/39 general gates, 10/12 stop gates).
+This differs from M439 by normal route variance and is not a performance
+claim. User appearance feedback remained positive; this run also captured no
+framebuffer pixels.
+
+The incremental emerge-stage census was not the dominant measured cost. Its
+far-west total was about 10.74 ms median / 12.81 ms p95; demand breakdown was
+10.59 / 12.68 ms. A directly sampled far-west frame reached 31.18 ms total
+census, 30.61 ms of which was demand breakdown. Commit `48d6a4c7` changes
+that read to a cached counter updated on record transitions; M441 measures
+that follow-up on the same route. M440 also contained one isolated
+approximately 94 ms transparent-pass sample near the far route, with 682
+batches and a changed sort revision. This does not prove the sort caused it.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m440_world164_incremental_emerge_census --report bin/suite_reports/engine_refactor/m440_world164_incremental_emerge_census_20261007.json --process-timeout 3000
+```
+
+Artifacts: [M440 flight report](../../bin/suite_reports/engine_refactor/m440_world164_incremental_emerge_census_20261007.json),
+I/O phase summary `bin/suite_reports/engine_refactor/m440_io_phase_summary_20261007.json`,
+census summary `bin/suite_reports/engine_refactor/m440_emerge_census_summary_20261007.json`,
+raw perf `bin/logs/perf_20261007-040227_17840.jsonl`, and INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-040224.17840`.
+
+### Emerge census analyzer
+
+`tools/analyze_emerge_census_perf.py` groups census measurements by the
+established near, mid, far-east, and far-west bands. For `kind=period` rows it
+divides average cost by average census count to estimate mean cost per census;
+that is not a percentile of individual calls. `kind=spike` rows report direct
+single-frame cost and are sorted by total census duration. Fields absent from
+older perf files are omitted from the band summary.
+
+```powershell
+python tools/analyze_emerge_census_perf.py `
+  bin/logs/perf_20261007-040227_17840.jsonl `
+  --out bin/suite_reports/engine_refactor/m440_emerge_census_summary.json
+```

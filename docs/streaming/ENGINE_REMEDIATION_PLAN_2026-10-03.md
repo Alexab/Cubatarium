@@ -3525,3 +3525,83 @@ justified until its phase measurements are reviewed.
 
 M438 route, band comparisons, and output checks are documented in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m438---async-light-flags-writer-full-m335-route-2026-10-07).
+
+### M439-M440 checkpoint — clean long-route baseline and telemetry census cost
+
+M439 repeated the exact visible, no-teleport M335 route on `World_164` with
+`CUBATARIUM_RELIGHT_AUDIT=0` correctly disabled. It exited normally, covered
+14,320 blocks (`focus 7 -> -888`) at 5.1965 blocks/s, reached the 8,192-block
+checkpoint, and recorded no blocked movement substeps or ground contacts.
+The run had 23 frames above 100 ms and 39.06 ms median wall time. User
+appearance feedback remains positive. No framebuffer was captured, so the
+internal `unfinished_visual`, hole, and black-focus counters remain renderer
+proxies rather than pixel evidence.
+
+M439 restored a clean baseline after the relight-audit flag issue in M437/M438.
+It still returned `pass=false` (26/39 general gates and 9/12 stop gates),
+mainly on readiness, frame-time, ring, and convergence thresholds. The route
+and process controls passed. Those gates measure internal readiness and
+convergence; they do not override the operator's current acceptable visual
+assessment. Do not tune scheduling policy just to make proxy counters pass
+unless a reproducible visible symptom or a sound product requirement supports
+that change.
+
+M440 repeated the same route after replacing the periodic full-map
+`ColumnEmergeStates` stage census with maintained counts. It exited normally,
+covered 14,304 blocks at about 5.2 blocks/s, reached the far checkpoint, and
+again recorded zero blocked substeps and ground contacts. It had 29 frames
+above 100 ms and 39.77 ms median wall time; matched distance-band medians were
+about 1-2 ms higher than M439. This is not evidence of a route-performance
+gain or regression by itself.
+
+The phase census shows why a second diagnostic optimization is warranted:
+the per-call demand-breakdown scan reached 30.61 ms in one far-west frame and
+was about 10.59 ms median per 250 ms sample in the far-west band. The
+incremental `ColumnEmergeStates` counts did not remove that cost. Commit
+`48d6a4c7` now maintains the demand breakdown on record changes, making the
+periodic query constant-time without changing demand scheduling or rendering
+policy. M441 is the matched full-route measurement for that change.
+
+M440 also recorded one isolated transparent-pass spike of about 94 ms near
+the far route. It coincided with a sort-revision change and 682 batches, but
+does not yet identify the slow operation. The transparent comparator's
+distance-tolerance ordering deserves a correctness review because tolerance
+comparisons can be non-transitive; this is a separate investigation and is
+not yet established as the spike's cause.
+
+#### Plan readiness after M440
+
+The plan is ready for the current measurement and the remaining tasks are
+bounded. The basic long-route controls are reliable: fixed M335 conditions,
+visible GUI, no teleport, expected speed, far checkpoint, restored world and
+user metadata, and zero collision counters on M439-M440. The user reports
+that the world currently looks acceptable, so pixel capture is not a current
+acceptance prerequisite. Continue to record it as missing evidence and turn
+it on if dim, black, or empty-looking chunks recur.
+
+The plan is not ready to close. M441 must confirm whether the cached census
+removes its measured frame-thread cost without changing reported counts or
+route behavior. After that:
+
+1. Review M441 against M439-M440 by matched distance band, census sample,
+   >100 ms spikes, speed, movement contacts, and post-stop tail. Do not treat
+   analyzer exit code 1 alone as a process failure; inspect `process_rc`,
+   `run_outcome`, `hang_killed`, and manifest acceptance separately.
+2. Keep the next engine change evidence-led. If long frames persist, first
+   isolate the transparent-pass stage split and review its sort comparator;
+   do not alter mesh, relight, or queue budgets based on a single outlier.
+3. Preserve the established `World_164` M335 route as the primary repeated
+   control. Keep periodic fresh-seed generation runs as a separate lane, with
+   source-event provenance when comparing disk-backed and procedural columns.
+   M435/M436 already show that disk queue wait and result service can dominate
+   otherwise fast file reads; re-measure those stages before changing worker
+   count or storage policy.
+4. Retain cold-start world creation/load timing as a preflight for long
+   flights, rather than making the main route shorter or changing its locus.
+5. Treat a reported fall into water or collision as an interactive flight
+   issue unless the matching route has nonzero movement-contact counters.
+   M439-M440 do not reproduce it; revisit flight input isolation or collision
+   response if a controlled run reproduces the stop.
+
+M439-M440 route reports, raw metrics, and commands are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m439---clean-full-m335-route-and-census-baseline-2026-10-07).
