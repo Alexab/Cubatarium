@@ -17,6 +17,14 @@ struct PhysicsTelemetry
   /// and the player-relight mesh burst.
   double MeshEmergeCoordinatorMs{0.0};
   double MeshEmergePostTelemetryMs{0.0};
+  /// Subdivision of post-tick telemetry closeout. The remainder captures
+  /// closeout work not assigned to one of the measured snapshot groups.
+  double MeshEmergePostStageSampleMs{0.0};
+  double MeshEmergePostGpuCountsMs{0.0};
+  double MeshEmergePostMeshSnapshotMs{0.0};
+  double MeshEmergePostCaptureStoreMs{0.0};
+  double MeshEmergePostTailSnapshotMs{0.0};
+  double MeshEmergePostUnattributedMs{0.0};
   double MeshEmergePlayerRelightBurstMs{0.0};
   double ColumnEmergeStageSampleMs{0.0};
   double ColumnEmergeFocusJobsMs{0.0};

@@ -4642,6 +4642,7 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
   // MeshWorkAdmission SoT lands in LastBudget at end of TickMeshEmerge.
   // finish_telemetry in TickAsyncChunkSystems runs *before* emerge — write
   // final schedule/drain/mode here so periods see HoleDrain under miss.
+  auto post_stage_sample_t0 = std::chrono::high_resolution_clock::now();
   {
     const auto &budget = EmergeCoordinator->GetLastBudget();
     world.PhysicsTelemetryData.MeshScheduleFinal = budget.MaxMeshSchedule;
@@ -4649,6 +4650,12 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
     world.PhysicsTelemetryData.MeshAdmissionMode = budget.AdmissionMode;
   }
   world.SampleColumnEmergeStageTelemetry();
+  world.PhysicsTelemetryData.MeshEmergePostStageSampleMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_stage_sample_t0)
+          .count();
+
+  auto post_gpu_counts_t0 = std::chrono::high_resolution_clock::now();
   world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
       world.GetMeshService().GetPendingGpuAppliesCount());
   world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(
@@ -4665,6 +4672,12 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastGpuFinishN();
   world.PhysicsTelemetryData.GpuFinishNotReadyN =
       world.GetMeshService().GetLastGpuFinishNotReadyN();
+  world.PhysicsTelemetryData.MeshEmergePostGpuCountsMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_gpu_counts_t0)
+          .count();
+
+  auto post_mesh_snapshot_t0 = std::chrono::high_resolution_clock::now();
   world.PhysicsTelemetryData.MeshSyncMs =
       world.GetMeshService().GetLastMeshSyncMs();
   world.PhysicsTelemetryData.MeshSnapshotMs =
@@ -4732,6 +4745,12 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastMeshCaptureStoreHitN();
   world.PhysicsTelemetryData.MeshCaptureStoreMissN =
       world.GetMeshService().GetLastMeshCaptureStoreMissN();
+  world.PhysicsTelemetryData.MeshEmergePostMeshSnapshotMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_mesh_snapshot_t0)
+          .count();
+
+  auto post_capture_store_t0 = std::chrono::high_resolution_clock::now();
   {
     const auto &capture_store =
         world.GetMeshService().GetCache().GetCaptureStore();
@@ -4747,6 +4766,12 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
     telemetry.MeshSnapshotPendingBytes = static_cast<uint64_t>(
         UPipelineAdmission::Get().SnapshotPendingBytes());
   }
+  world.PhysicsTelemetryData.MeshEmergePostCaptureStoreMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_capture_store_t0)
+          .count();
+
+  auto post_tail_snapshot_t0 = std::chrono::high_resolution_clock::now();
   world.PhysicsTelemetryData.MeshPendingCaptureN =
       world.GetMeshService().GetLastMeshPendingCaptureN();
   world.PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN =
@@ -4770,9 +4795,23 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
                world.GetMeshService().GetLiveDirtyFirstMeshCount());
   world.PhysicsTelemetryData.DirtyRemeshN =
       world.GetMeshService().GetLastDirtyRemeshN();
-  world.PhysicsTelemetryData.MeshEmergePostTelemetryMs = std::max(
+  world.PhysicsTelemetryData.MeshEmergePostTailSnapshotMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - post_tail_snapshot_t0)
+          .count();
+
+  const double post_telemetry_ms = std::max(
       0.0, emerge_elapsed_ms() -
                world.PhysicsTelemetryData.MeshEmergeCoordinatorMs);
+  const double measured_post_ms =
+      world.PhysicsTelemetryData.MeshEmergePostStageSampleMs +
+      world.PhysicsTelemetryData.MeshEmergePostGpuCountsMs +
+      world.PhysicsTelemetryData.MeshEmergePostMeshSnapshotMs +
+      world.PhysicsTelemetryData.MeshEmergePostCaptureStoreMs +
+      world.PhysicsTelemetryData.MeshEmergePostTailSnapshotMs;
+  world.PhysicsTelemetryData.MeshEmergePostTelemetryMs = post_telemetry_ms;
+  world.PhysicsTelemetryData.MeshEmergePostUnattributedMs =
+      std::max(0.0, post_telemetry_ms - measured_post_ms);
 }
 
 void UWorldStreaming::InitStreamerCallbacks(UWorld &world)

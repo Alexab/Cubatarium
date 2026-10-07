@@ -80,6 +80,12 @@ struct Session
   double AccumRelightApplyValidationMs{0.0};
   double AccumMeshEmergeCoordinatorMs{0.0};
   double AccumMeshEmergePostTelemetryMs{0.0};
+  double AccumMeshEmergePostStageSampleMs{0.0};
+  double AccumMeshEmergePostGpuCountsMs{0.0};
+  double AccumMeshEmergePostMeshSnapshotMs{0.0};
+  double AccumMeshEmergePostCaptureStoreMs{0.0};
+  double AccumMeshEmergePostTailSnapshotMs{0.0};
+  double AccumMeshEmergePostUnattributedMs{0.0};
   double AccumMeshEmergePlayerRelightBurstMs{0.0};
   double AccumColumnEmergeStageSampleMs{0.0};
   double AccumColumnEmergeFocusJobsMs{0.0};
@@ -253,6 +259,12 @@ struct FrameNumbers
   double mesh_emerge_ms{0.0};
   double mesh_emerge_coordinator_ms{0.0};
   double mesh_emerge_post_telemetry_ms{0.0};
+  double mesh_emerge_post_stage_sample_ms{0.0};
+  double mesh_emerge_post_gpu_counts_ms{0.0};
+  double mesh_emerge_post_mesh_snapshot_ms{0.0};
+  double mesh_emerge_post_capture_store_ms{0.0};
+  double mesh_emerge_post_tail_snapshot_ms{0.0};
+  double mesh_emerge_post_unattributed_ms{0.0};
   double mesh_emerge_player_relight_burst_ms{0.0};
   double column_emerge_stage_sample_ms{0.0};
   double column_emerge_focus_jobs_ms{0.0};
@@ -1092,6 +1104,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_emerge_ms = phys.MeshEmergeMs;
   n.mesh_emerge_coordinator_ms = phys.MeshEmergeCoordinatorMs;
   n.mesh_emerge_post_telemetry_ms = phys.MeshEmergePostTelemetryMs;
+  n.mesh_emerge_post_stage_sample_ms = phys.MeshEmergePostStageSampleMs;
+  n.mesh_emerge_post_gpu_counts_ms = phys.MeshEmergePostGpuCountsMs;
+  n.mesh_emerge_post_mesh_snapshot_ms = phys.MeshEmergePostMeshSnapshotMs;
+  n.mesh_emerge_post_capture_store_ms = phys.MeshEmergePostCaptureStoreMs;
+  n.mesh_emerge_post_tail_snapshot_ms = phys.MeshEmergePostTailSnapshotMs;
+  n.mesh_emerge_post_unattributed_ms = phys.MeshEmergePostUnattributedMs;
   n.mesh_emerge_player_relight_burst_ms =
       phys.MeshEmergePlayerRelightBurstMs;
   n.column_emerge_stage_sample_ms = phys.ColumnEmergeStageSampleMs;
@@ -2453,6 +2471,18 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mesh_emerge_coordinator_ms
           << ",\"mesh_emerge_post_telemetry_ms\":"
           << n.mesh_emerge_post_telemetry_ms
+          << ",\"mesh_emerge_post_stage_sample_ms\":"
+          << n.mesh_emerge_post_stage_sample_ms
+          << ",\"mesh_emerge_post_gpu_counts_ms\":"
+          << n.mesh_emerge_post_gpu_counts_ms
+          << ",\"mesh_emerge_post_mesh_snapshot_ms\":"
+          << n.mesh_emerge_post_mesh_snapshot_ms
+          << ",\"mesh_emerge_post_capture_store_ms\":"
+          << n.mesh_emerge_post_capture_store_ms
+          << ",\"mesh_emerge_post_tail_snapshot_ms\":"
+          << n.mesh_emerge_post_tail_snapshot_ms
+          << ",\"mesh_emerge_post_unattributed_ms\":"
+          << n.mesh_emerge_post_unattributed_ms
           << ",\"mesh_emerge_player_relight_burst_ms\":"
           << n.mesh_emerge_player_relight_burst_ms
           << ",\"column_emerge_stage_sample_ms\":"
@@ -3261,6 +3291,12 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumMeshEmergeMs += n.mesh_emerge_ms;
   s.AccumMeshEmergeCoordinatorMs += n.mesh_emerge_coordinator_ms;
   s.AccumMeshEmergePostTelemetryMs += n.mesh_emerge_post_telemetry_ms;
+  s.AccumMeshEmergePostStageSampleMs += n.mesh_emerge_post_stage_sample_ms;
+  s.AccumMeshEmergePostGpuCountsMs += n.mesh_emerge_post_gpu_counts_ms;
+  s.AccumMeshEmergePostMeshSnapshotMs += n.mesh_emerge_post_mesh_snapshot_ms;
+  s.AccumMeshEmergePostCaptureStoreMs += n.mesh_emerge_post_capture_store_ms;
+  s.AccumMeshEmergePostTailSnapshotMs += n.mesh_emerge_post_tail_snapshot_ms;
+  s.AccumMeshEmergePostUnattributedMs += n.mesh_emerge_post_unattributed_ms;
   s.AccumMeshEmergePlayerRelightBurstMs +=
       n.mesh_emerge_player_relight_burst_ms;
   s.AccumColumnEmergeStageSampleMs += n.column_emerge_stage_sample_ms;
@@ -3384,6 +3420,18 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
       s.AccumMeshEmergeCoordinatorMs * inv;
   avg.mesh_emerge_post_telemetry_ms =
       s.AccumMeshEmergePostTelemetryMs * inv;
+  avg.mesh_emerge_post_stage_sample_ms =
+      s.AccumMeshEmergePostStageSampleMs * inv;
+  avg.mesh_emerge_post_gpu_counts_ms =
+      s.AccumMeshEmergePostGpuCountsMs * inv;
+  avg.mesh_emerge_post_mesh_snapshot_ms =
+      s.AccumMeshEmergePostMeshSnapshotMs * inv;
+  avg.mesh_emerge_post_capture_store_ms =
+      s.AccumMeshEmergePostCaptureStoreMs * inv;
+  avg.mesh_emerge_post_tail_snapshot_ms =
+      s.AccumMeshEmergePostTailSnapshotMs * inv;
+  avg.mesh_emerge_post_unattributed_ms =
+      s.AccumMeshEmergePostUnattributedMs * inv;
   avg.mesh_emerge_player_relight_burst_ms =
       s.AccumMeshEmergePlayerRelightBurstMs * inv;
   avg.column_emerge_stage_sample_ms =
@@ -3513,6 +3561,12 @@ void ResetAccum(Session &s)
   s.AccumMeshEmergeMs = 0.0;
   s.AccumMeshEmergeCoordinatorMs = 0.0;
   s.AccumMeshEmergePostTelemetryMs = 0.0;
+  s.AccumMeshEmergePostStageSampleMs = 0.0;
+  s.AccumMeshEmergePostGpuCountsMs = 0.0;
+  s.AccumMeshEmergePostMeshSnapshotMs = 0.0;
+  s.AccumMeshEmergePostCaptureStoreMs = 0.0;
+  s.AccumMeshEmergePostTailSnapshotMs = 0.0;
+  s.AccumMeshEmergePostUnattributedMs = 0.0;
   s.AccumMeshEmergePlayerRelightBurstMs = 0.0;
   s.AccumColumnEmergeStageSampleMs = 0.0;
   s.AccumColumnEmergeFocusJobsMs = 0.0;
