@@ -17,6 +17,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Core/FrameStageWatchdog.h"
+#include "Core/Environment.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -128,6 +129,16 @@ namespace cutum
 {
 namespace
 {
+
+void AccumulateRelightEnqueueTimings(
+    PhysicsTelemetry &telemetry, const AsyncRelightEnqueueTimings &timings)
+{
+  telemetry.RelightCaptureLockWaitMs += timings.capture_lock_wait_ms;
+  telemetry.RelightSnapshotCopyMs += timings.snapshot_copy_ms;
+  telemetry.RelightDependencyStampMs += timings.dependency_stamp_ms;
+  telemetry.RelightSubmitSetupMs += timings.submit_setup_ms;
+  telemetry.RelightQueueSubmitMs += timings.queue_submit_ms;
+}
 
 bool ChunkSliceHasCurrentLightSettlement(const UWorld &world,
                                          glm::ivec3 coord)
@@ -1011,7 +1022,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
   const int visible_band_max =
       std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
   const bool audit_relight =
-      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   // Preserve already-visible holes when pending first-mesh columns need to
   // enter the bounded visible relight lane under FIFO backpressure.
   std::vector<glm::ivec2> protected_visible_columns;
@@ -1899,7 +1910,7 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
     return;
   }
   const bool audit_relight =
-      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   const glm::ivec2 key(ground.x, ground.z);
   if (EnterLitGateActive && EnterLitSnapshotCaptured &&
       URuntimeTuning::Get().EnterLitUseSnapshotDebt)
@@ -2226,7 +2237,7 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
       !IsAsyncRelightColumnInFlight(col_xz) && !flow_owned)
   {
-    if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+    if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
     {
       CubatariumLogInfo(
           "RelightAudit",
@@ -4844,7 +4855,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                   owner_after ? kUnownedGeometryOwnerRetryCooldownMs
                               : kUnownedGeometryDeniedRetryCooldownMs;
             }
-            if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+            if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
             {
               const auto &cache = MeshService->GetCache();
               const ChunkRenderDemandRecord *preview_demand =
@@ -5360,7 +5371,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
     }
   }
-  if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
   {
     static auto audit_window_start = std::chrono::steady_clock::now();
     static uint64_t audit_calls = 0;
@@ -8115,7 +8126,9 @@ void UWorld::EnqueueAsyncPlayerRelight(
   spec.include_block_light = true;
   spec.frontier_iterations = kRelightFrontierIterationsEdit;
   spec.job_id = ++NextAsyncRelightJobId;
-  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+  AccumulateRelightEnqueueTimings(
+      PhysicsTelemetryData,
+      AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry));
 }
 
 void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
@@ -8153,7 +8166,9 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
   spec.finalize_pending_gate = finalize_pending_gate;
   spec.visible_draw_gate_repair = visible_draw_gate_repair;
   spec.column_center_only = true;
-  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+  AccumulateRelightEnqueueTimings(
+      PhysicsTelemetryData,
+      AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry));
   PhysicsTelemetryData.RelightCaptureFullN =
       AsyncRelight->GetLastCaptureFullChunks();
   PhysicsTelemetryData.RelightCaptureNeighborLightN =
@@ -8190,7 +8205,9 @@ void UWorld::EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord,
   spec.include_block_light = include_block_light;
   spec.frontier_iterations = frontier_iterations;
   spec.job_id = ++NextAsyncRelightJobId;
-  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+  AccumulateRelightEnqueueTimings(
+      PhysicsTelemetryData,
+      AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry));
 }
 
 int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
@@ -8201,7 +8218,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     return 0;
   }
   int relight_apply_cap = max_per_frame;
-  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   if (audit_relight)
   {
     CubatariumLogInfo("RelightAudit",
@@ -8327,6 +8345,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   }
   // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
+  PhysicsTelemetryData.RelightApplyPolicyMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - t0)
+          .count();
   bool stopped_by_time = false;
   bool stopped_by_cap = false;
   int examined = 0;
@@ -8350,6 +8372,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     RelightComputeResult &result = batch.front();
     ++examined; // Rejected work consumes drain budget as well.
+    const auto validation_started = std::chrono::high_resolution_clock::now();
     bool reject_stale = false;
     const ChunkInputStamp *stale_input = nullptr;
     if (result.work_token.world_epoch != 0 &&
@@ -8369,6 +8392,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           break;
         }
     }
+    PhysicsTelemetryData.RelightApplyValidationMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - validation_started)
+            .count();
     if (reject_stale)
     {
       if (audit_relight)
@@ -8391,7 +8418,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       // Preserve exact Y band / light domains / finalization semantics, not a
       // generic terrain request. InFlight stays occupied by the replacement.
       result.retry_spec.job_id = ++NextAsyncRelightJobId;
-      AsyncRelight->EnqueueJob(BlockWorld, std::move(result.retry_spec), *BlockRegistry);
+      AccumulateRelightEnqueueTimings(
+          PhysicsTelemetryData,
+          AsyncRelight->EnqueueJob(BlockWorld, std::move(result.retry_spec),
+                                   *BlockRegistry));
       continue;
     }
     ++applied;

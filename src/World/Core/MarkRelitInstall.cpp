@@ -1,6 +1,7 @@
 #include "World/Core/World.h"
 
 #include "App/Platform/Log.h"
+#include "Core/Environment.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Diagnostics/JobStageTrace.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -109,7 +110,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     return;
   }
   UWorldMeshService *const mesh = MeshService.get();
-  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   ColumnRecord &col_rec = GetColumnRecords().GetOrCreate(column);
   for (const glm::ivec3 &coord : plan.prefer_kick_gpu)
   {
@@ -897,7 +899,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
       const auto plan_t0 = Clock::now();
       LitApplyPlan plan = PlanColumnInstall(in);
-      if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+      if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
       {
         for (const ColumnChunkSnapshot &snap : in.relit_chunks)
         {

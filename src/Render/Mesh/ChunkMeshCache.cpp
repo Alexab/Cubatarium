@@ -2,6 +2,7 @@
 #include "Render/Engine/GreedyPassBatchRefs.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Environment.h"
 #include "Core/FrameDeadline.h"
 #include "Core/Jobs/PipelineAdmission.h"
 #include "Render/Camera/Frustum.h"
@@ -730,7 +731,7 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
   const int stale_light_lease =
       std::max(radius_chunks, RelightFifoTrimProtectHoriz());
   const bool audit_relight =
-      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   const auto keep_stale_light_debt = [&](glm::ivec3 coord, int horiz,
                                          const char *stage)
   {
@@ -3428,7 +3429,7 @@ void UChunkMeshCache::QueueStaleLightRemesh(glm::ivec3 chunk_coord)
   {
     return;
   }
-  if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
   {
     CubatariumLogInfo(
         "RelightAudit",
@@ -3529,7 +3530,7 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(
   }
 
   const bool audit_relight =
-      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   const UChunkManager &chunks = world.GetChunkManager();
   // A denied far repair remains durable but must not be injected into Dirty
   // ahead of the normal admission budget. Activate it only in the lit-drawable

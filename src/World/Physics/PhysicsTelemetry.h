@@ -275,7 +275,17 @@ struct PhysicsTelemetry
   double RelightDrainMs{0.0};
   /// P2: Capture (DrainRelightQueues) vs Apply (DrainAsyncRelightResults).
   double RelightCaptureMs{0.0};
+  /// Synchronous enqueue work split into global-lock wait, snapshot copy,
+  /// dependency stamps, and submission/handoff.
+  double RelightCaptureLockWaitMs{0.0};
+  double RelightSnapshotCopyMs{0.0};
+  double RelightDependencyStampMs{0.0};
+  double RelightSubmitSetupMs{0.0};
+  double RelightQueueSubmitMs{0.0};
   double RelightApplyMs{0.0};
+  /// Apply-side pre-loop policy and input-validation work.
+  double RelightApplyPolicyMs{0.0};
+  double RelightApplyValidationMs{0.0};
   /// FZ2.6-Perf0: light merge only (telem for budget math).
   double RelightApplyLightMs{0.0};
   /// FZ2.6-Perf0: MarkRelit+Dirty within same atomic iteration.

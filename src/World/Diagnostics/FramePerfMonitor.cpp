@@ -71,6 +71,13 @@ struct Session
   double AccumAsyncChunkSchedulerTickMs{0.0};
   double AccumAsyncChunkPostSchedulerMs{0.0};
   double AccumAsyncChunkIoDrainMs{0.0};
+  double AccumRelightCaptureLockWaitMs{0.0};
+  double AccumRelightSnapshotCopyMs{0.0};
+  double AccumRelightDependencyStampMs{0.0};
+  double AccumRelightSubmitSetupMs{0.0};
+  double AccumRelightQueueSubmitMs{0.0};
+  double AccumRelightApplyPolicyMs{0.0};
+  double AccumRelightApplyValidationMs{0.0};
   double AccumMeshEmergeCoordinatorMs{0.0};
   double AccumMeshEmergePostTelemetryMs{0.0};
   double AccumMeshEmergePlayerRelightBurstMs{0.0};
@@ -348,7 +355,14 @@ struct FrameNumbers
   double async_io_ms{0.0};
   double relight_drain_ms{0.0};
   double relight_capture_ms{0.0};
+  double relight_capture_lock_wait_ms{0.0};
+  double relight_snapshot_copy_ms{0.0};
+  double relight_dependency_stamp_ms{0.0};
+  double relight_submit_setup_ms{0.0};
+  double relight_queue_submit_ms{0.0};
   double relight_apply_ms{0.0};
+  double relight_apply_policy_ms{0.0};
+  double relight_apply_validation_ms{0.0};
   double relight_apply_light_ms{0.0};
   double relight_apply_install_ms{0.0};
   double relight_drain_completed_ms{0.0};
@@ -1203,7 +1217,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.async_io_ms = phys.AsyncIoMs;
   n.relight_drain_ms = phys.RelightDrainMs;
   n.relight_capture_ms = phys.RelightCaptureMs;
+  n.relight_capture_lock_wait_ms = phys.RelightCaptureLockWaitMs;
+  n.relight_snapshot_copy_ms = phys.RelightSnapshotCopyMs;
+  n.relight_dependency_stamp_ms = phys.RelightDependencyStampMs;
+  n.relight_submit_setup_ms = phys.RelightSubmitSetupMs;
+  n.relight_queue_submit_ms = phys.RelightQueueSubmitMs;
   n.relight_apply_ms = phys.RelightApplyMs;
+  n.relight_apply_policy_ms = phys.RelightApplyPolicyMs;
+  n.relight_apply_validation_ms = phys.RelightApplyValidationMs;
   n.relight_apply_light_ms = phys.RelightApplyLightMs;
   n.relight_apply_install_ms = phys.RelightApplyInstallMs;
   n.relight_drain_completed_ms = phys.RelightDrainCompletedMs;
@@ -2145,7 +2166,21 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"async_io_ms\":" << n.async_io_ms
           << ",\"relight_drain_ms\":" << n.relight_drain_ms
           << ",\"relight_capture_ms\":" << n.relight_capture_ms
+          << ",\"relight_capture_lock_wait_ms\":"
+          << n.relight_capture_lock_wait_ms
+          << ",\"relight_snapshot_copy_ms\":"
+          << n.relight_snapshot_copy_ms
+          << ",\"relight_dependency_stamp_ms\":"
+          << n.relight_dependency_stamp_ms
+          << ",\"relight_submit_setup_ms\":"
+          << n.relight_submit_setup_ms
+          << ",\"relight_queue_submit_ms\":"
+          << n.relight_queue_submit_ms
           << ",\"relight_apply_ms\":" << n.relight_apply_ms
+          << ",\"relight_apply_policy_ms\":"
+          << n.relight_apply_policy_ms
+          << ",\"relight_apply_validation_ms\":"
+          << n.relight_apply_validation_ms
           << ",\"relight_apply_light_ms\":" << n.relight_apply_light_ms
           << ",\"relight_apply_install_ms\":" << n.relight_apply_install_ms
           << ",\"relight_drain_completed_ms\":" << n.relight_drain_completed_ms
@@ -3216,6 +3251,13 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumAsyncChunkSchedulerTickMs += n.async_chunk_scheduler_tick_ms;
   s.AccumAsyncChunkPostSchedulerMs += n.async_chunk_post_scheduler_ms;
   s.AccumAsyncChunkIoDrainMs += n.async_chunk_io_drain_ms;
+  s.AccumRelightCaptureLockWaitMs += n.relight_capture_lock_wait_ms;
+  s.AccumRelightSnapshotCopyMs += n.relight_snapshot_copy_ms;
+  s.AccumRelightDependencyStampMs += n.relight_dependency_stamp_ms;
+  s.AccumRelightSubmitSetupMs += n.relight_submit_setup_ms;
+  s.AccumRelightQueueSubmitMs += n.relight_queue_submit_ms;
+  s.AccumRelightApplyPolicyMs += n.relight_apply_policy_ms;
+  s.AccumRelightApplyValidationMs += n.relight_apply_validation_ms;
   s.AccumAsyncIoMs += n.async_io_ms;
   s.AccumSceneMs += n.scene_ms;
   s.AccumPhysMs += n.phys_ms;
@@ -3333,6 +3375,16 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.async_chunk_post_scheduler_ms =
       s.AccumAsyncChunkPostSchedulerMs * inv;
   avg.async_chunk_io_drain_ms = s.AccumAsyncChunkIoDrainMs * inv;
+  avg.relight_capture_lock_wait_ms =
+      s.AccumRelightCaptureLockWaitMs * inv;
+  avg.relight_snapshot_copy_ms = s.AccumRelightSnapshotCopyMs * inv;
+  avg.relight_dependency_stamp_ms =
+      s.AccumRelightDependencyStampMs * inv;
+  avg.relight_submit_setup_ms = s.AccumRelightSubmitSetupMs * inv;
+  avg.relight_queue_submit_ms = s.AccumRelightQueueSubmitMs * inv;
+  avg.relight_apply_policy_ms = s.AccumRelightApplyPolicyMs * inv;
+  avg.relight_apply_validation_ms =
+      s.AccumRelightApplyValidationMs * inv;
   avg.async_io_ms = s.AccumAsyncIoMs * inv;
   avg.scene_ms = s.AccumSceneMs * inv;
   avg.phys_ms = s.AccumPhysMs * inv;
@@ -3437,6 +3489,13 @@ void ResetAccum(Session &s)
   s.AccumAsyncChunkSchedulerTickMs = 0.0;
   s.AccumAsyncChunkPostSchedulerMs = 0.0;
   s.AccumAsyncChunkIoDrainMs = 0.0;
+  s.AccumRelightCaptureLockWaitMs = 0.0;
+  s.AccumRelightSnapshotCopyMs = 0.0;
+  s.AccumRelightDependencyStampMs = 0.0;
+  s.AccumRelightSubmitSetupMs = 0.0;
+  s.AccumRelightQueueSubmitMs = 0.0;
+  s.AccumRelightApplyPolicyMs = 0.0;
+  s.AccumRelightApplyValidationMs = 0.0;
   s.AccumAsyncIoMs = 0.0;
   s.AccumSceneMs = 0.0;
   s.AccumPhysMs = 0.0;

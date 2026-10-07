@@ -15,14 +15,24 @@ namespace cutum
 class UBlockRegistry;
 class UBlockWorld;
 
+struct AsyncRelightEnqueueTimings
+{
+  double capture_lock_wait_ms{0.0};
+  double snapshot_copy_ms{0.0};
+  double dependency_stamp_ms{0.0};
+  double submit_setup_ms{0.0};
+  double queue_submit_ms{0.0};
+};
+
 class UAsyncRelightBuilder
 {
 public:
   explicit UAsyncRelightBuilder(std::size_t thread_count = 2);
 
   void Enqueue(UChunkRelightSnapshot snapshot, const UBlockRegistry &registry);
-  void EnqueueJob(const UBlockWorld &world, RelightJobSpec spec,
-                  const UBlockRegistry &registry);
+  AsyncRelightEnqueueTimings EnqueueJob(const UBlockWorld &world,
+                                        RelightJobSpec spec,
+                                        const UBlockRegistry &registry);
   std::vector<RelightComputeResult> DrainCompleted(int max_per_frame);
   bool HasPendingWork() const;
   int GetInFlightCount() const;

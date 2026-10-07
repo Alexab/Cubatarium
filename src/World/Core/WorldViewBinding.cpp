@@ -827,7 +827,14 @@ void UWorld::TickWorldStreamingPhase()
       PhysicsTelemetryData.RelightFifoPinDropN;
   PhysicsTelemetryData.RelightDrainMs = 0.0;
   PhysicsTelemetryData.RelightCaptureMs = 0.0;
+  PhysicsTelemetryData.RelightCaptureLockWaitMs = 0.0;
+  PhysicsTelemetryData.RelightSnapshotCopyMs = 0.0;
+  PhysicsTelemetryData.RelightDependencyStampMs = 0.0;
+  PhysicsTelemetryData.RelightSubmitSetupMs = 0.0;
+  PhysicsTelemetryData.RelightQueueSubmitMs = 0.0;
   PhysicsTelemetryData.RelightApplyMs = 0.0;
+  PhysicsTelemetryData.RelightApplyPolicyMs = 0.0;
+  PhysicsTelemetryData.RelightApplyValidationMs = 0.0;
   PhysicsTelemetryData.RelightApplyLightMs = 0.0;
   PhysicsTelemetryData.RelightApplyInstallMs = 0.0;
   PhysicsTelemetryData.RelightDrainCompletedMs = 0.0;

@@ -1,4 +1,5 @@
 #include "World/Persistence/WorldPersistence.h"
+#include "Core/Environment.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -1111,11 +1112,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   auto &telem = world.GetPhysicsTelemetryMutable();
   telem.RelightDeferredFarPendingN =
       static_cast<int>(DeferredFarRelightColumns.size());
-  static const bool audit_admission = []()
-  {
-    const char *value = std::getenv("CUBATARIUM_RELIGHT_AUDIT");
-    return value != nullptr && value[0] != '\0' && value[0] != '0';
-  }();
+  static const bool audit_admission =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   static auto last_admission_audit = std::chrono::steady_clock::time_point{};
   const auto audit_now = std::chrono::steady_clock::now();
   if (audit_admission &&
@@ -1526,7 +1524,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                            int max_bg_columns)
 {
   auto &capture_telem = world.GetPhysicsTelemetryMutable();
-  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   auto log_capture_state = [&](const char *phase, int cap, int drained)
   {
     if (!audit_relight)

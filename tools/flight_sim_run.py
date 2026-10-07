@@ -2760,6 +2760,10 @@ def main() -> int:
                                 "CUBA_WORLD_COLUMN_SOURCE_TRACE", ""
                             ).strip()
                             not in ("", "0"),
+                            "relight_audit": os.environ.get(
+                                "CUBATARIUM_RELIGHT_AUDIT", ""
+                            ).strip().lower()
+                            not in ("", "0", "false", "no", "off"),
                             "frame_capture_dir": os.environ.get(
                                 "CUBA_FLIGHT_CAPTURE_DIR"
                             ),
