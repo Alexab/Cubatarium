@@ -2700,3 +2700,77 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Raw output remains under ignored `bin` data and must not be staged. M453 is
 also documented in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m453-checkpoint--queued-chunk-handles-and-full-m335-route-2026-10-07).
+
+## M454 — immutable snapshots, worker serialization, clean full M335 route (2026-10-07)
+
+M454 ran the same visible, no-teleport M335 route on `World_164`, with the
+same route hash as M453 (`024a223f5827926f85b7ccfb030d9456d2515e1373f35faba620ce59e040c312`).
+It used the Release executable from commit `776c48e1`
+(`AD9DA6B91DCC8689DDC3CEE7CB806333E835F93BE4EBA41D8F0FBEF2CC439443`).
+The app exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`); route completion passed at 14,320 blocks and
+`focus_cx=7 -> -888`, above the 14,300-block minimum. The wrapper returned
+1 because analyzer acceptance remained false (27/39 general gates, 9/12
+stop gates; post-stop convergence failed). Those internal visual-readiness
+proxies are not framebuffer evidence. M454 captured no frames; the operator
+had reported that the world looked good.
+
+The targeted code change copies each chunk to an immutable main-thread
+snapshot, performs serialization and atomic file writes on the background
+I/O pool, moves legacy-JSON cleanup to that worker, and updates the disk-slice
+index on the main thread when the save result is consumed. Common-route
+metrics improved relative to M453: median fly frame time was 25.674 ms vs
+28.138 ms; median streaming phase was 12.186 ms vs 13.922 ms; spike rows
+fell from 82 to 22. M454's `async_chunk_io_drain_ms` spike maximum was
+5.08 ms vs 61.80 ms in M453, and save-result drain maximum was 0.145 ms vs
+49.07 ms. The background queue briefly reached 21 pending tasks, but it
+drained and did not remain continuously backlogged.
+
+The former M453 unload hotspot near `cx=-275` (82.70 ms) did not repeat in
+M454. The prior `cx=-576` world-apply stall also did not repeat. However,
+two new tail spikes show that the complete unload path is not yet fixed:
+
+- At `cx=-878`, a 126.22 ms frame spent 76.99 ms in `streamer_unload_ms`.
+- At `cx=-883`, a 152.45 ms frame spent 106.44 ms in `streamer_unload_ms`.
+
+Each spike had one unload candidate, four unloaded chunk slices, and one
+save request. Async I/O drain was only 1.01/1.04 ms, save-result drain
+0.088/0.078 ms, and background pending depth 9/2. This localizes the new
+tail cost to synchronous work inside the unload-column/save callbacks, not
+to completed-result draining. The current `RequestAsyncTerrainColumnSave`
+still performs a full column-completeness check, highest-slice bookkeeping,
+slice materialization, and removal of stale higher slice paths on the main
+thread. `SetUnloadColumnCallback` also synchronously walks per-slice mesh,
+relight, scheduler, persistence, and GPU-cache state. The next M455 pass
+must time those phases independently before changing their ownership or
+budgeting; do not label these two spikes as serialization regressions.
+
+Other analyzer metrics changed in both directions: `dirty_med/max` was
+109/395 vs 121/427 and `fly_visible_black_max` was 18 vs 25, while
+`fly_void_near_max` increased from 1,084 to 1,201. These are internal
+telemetry counters, not proof of rendered blank pixels. Keep the user's
+visual observation separate from the product analyzer gates.
+
+Artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m454_world164_m335_async_save_serialize_20261007.json`
+- Perf log: `bin/logs/perf_20261007-212333_31428.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-212329.31428`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m454_world164_m335_async_save_serialize --report bin/suite_reports/engine_refactor/m454_world164_m335_async_save_serialize_20261007.json --process-timeout 7200
+```
+
+Raw output remains under ignored `bin` data and must not be staged. M454 is
+also documented in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m454-checkpoint--immutable-save-snapshots-and-a-new-tail-unload-stall-2026-10-07).

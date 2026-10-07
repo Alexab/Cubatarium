@@ -4663,3 +4663,70 @@ current code, not a claim that their implementations are drop-in replacements.
 M453 artifacts, detailed spike attribution, exact invocation, and acceptance
 semantics are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m453---queued-chunk-handles-clean-full-m335-route-2026-10-07).
+
+### M454 checkpoint — immutable save snapshots and a new tail unload stall (2026-10-07)
+
+M454 tested Release commit `776c48e1a8b7bf790c4905d1770c601d75c1f49c`
+(executable SHA-256
+`ad9da6b91dcc8689ddc3cee7cb806333e835f93be4eba41d8f0fbef2cc439443`)
+on the exact M335 route. Its route hash matched M453. It completed 14,320
+blocks (`focus_cx=7 -> -888`) with `process_rc=0`, no kill, and route gate
+pass. The wrapper returned 1 because analyzer acceptance remained false
+(27/39 general, 9/12 stop; post-stop convergence failed). No framebuffer
+capture was enabled. Readiness/void/visible-black counters remain proxies,
+and the operator had reported that current visuals looked good.
+
+The M454 implementation copies an immutable `UChunk` snapshot while the
+world is main-thread-owned and moves chunk serialization, atomic file write,
+and legacy JSON deletion to the I/O worker. A successful result updates the
+highest-slice disk index before clearing pending-column state. Compared with
+M453, M454 median fly frame time improved from 28.138 to 25.674 ms; median
+streaming phase improved from 13.922 to 12.186 ms; spike rows fell from 82
+to 22. Spike `async_chunk_io_drain_ms` max fell from 61.80 to 5.08 ms and
+save-result drain max from 49.07 to 0.145 ms. The worker queue peaked at 21
+pending tasks but drained; queue depth did not remain elevated.
+
+The specific M453 `cx=-275` unload spike (82.70 ms) and `cx=-576`
+world-apply stall did not recur. M454 instead recorded two late-route
+unload spikes: `cx=-878` had 76.99 ms in `streamer_unload_ms`, and
+`cx=-883` had 106.44 ms, for full-frame times of 126.22 and 152.45 ms.
+Each row had one unload candidate, one save request, and four removed
+vertical slices. Corresponding async I/O drain was 1.01/1.04 ms and save
+result drain was 0.088/0.078 ms, with background pending depth 9/2. Therefore
+the remaining cost is synchronous work in the unload callback path, not the
+completed-save queue or worker serialization.
+
+#### Next work after M454
+
+1. **Instrument the one-column unload call before more tuning.** In the same
+   capture-disabled M335 lane, measure `OnUnloadColumn` subphases separately:
+   ownership/interest decision, repair/relight ticket queries and cancellation,
+   scheduler invalidation, `WorldMeshService::RemoveColumn`, collision-cache
+   cleanup, `OnSaveChunk`, and resident `ChunkManager::RemoveChunk` calls.
+   Add per-request save timings for completeness scan, disk highest-slice
+   lookup, highest-non-air scan, slice materialization/snapshot enqueue, and
+   stale-file cleanup. The two M454 spikes must be attributed before deciding
+   which operation to defer or amortize.
+2. **Remove remaining synchronous persistence cleanup from streaming.**
+   Stale slice deletion after `highest_to_save` still calls filesystem removal
+   from the main thread. If phase timing shows measurable cost, queue cleanup
+   with the column save's pending ownership so reload cannot race it; preserve
+   disk-index invalidation and failure reporting.
+3. **Review unload-cache retirement.** `RemoveColumn` currently loops the
+   complete vertical range and calls render-sink invalidation per slice.
+   Measure whether GPU-pool retirement, map cleanup, or cache invalidation is
+   material. If it dominates, replace the per-slice synchronous teardown with
+   a bounded/deferred retirement path that immediately makes stale geometry
+   non-drawable and safely fences in-flight mesh work.
+4. Rebuild Release and rerun the same M335 route after each accepted change.
+   Compare common-case medians, unload/save phase spikes, worker queue depth,
+   stop behavior, and collision/route completion. Do not treat analyzer
+   readiness or visible-black proxy values as pixel-level acceptance without
+   a targeted framebuffer capture or operator review.
+5. Continue the separate fixed-camera fog/water silhouette investigation and,
+   after repeated-world behavior stabilizes, update cold world-creation and
+   periodic fresh-seed checks as planned above.
+
+M454's run, per-row attribution, and exact reproduction command are recorded
+in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m454-immutable-snapshots-worker-serialization-clean-full-m335-route-2026-10-07).
