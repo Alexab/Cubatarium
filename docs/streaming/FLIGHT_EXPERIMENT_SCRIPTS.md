@@ -2489,3 +2489,55 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 All raw artifacts remain under ignored `bin` data and must not be staged. M450
 is also documented in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m450-checkpoint--stage-and-framebuffer-diagnostic-2026-10-07).
+
+## M451 — four load workers, clean M335 route (2026-10-07)
+
+M451 is the capture-disabled comparator for M449. It ran the established
+visible, no-teleport M335 route on `World_164`, with four load workers and one
+background worker. The manifest matched M449's route hash, world metadata,
+effective render config, user settings, fog-off setting, and speed scale. It
+completed 14,304 blocks at median speed 5.19653 blocks/s. The app exited
+normally and the route gate passed. The analyzer returned `pass=false` (27/39
+general and 9/12 stop gates), so this is route completion, not product
+acceptance.
+
+Frame median was 30.96 ms versus 30.43 ms in M449; streaming median was 16.02
+ms versus 15.58 ms. M451 reported 134 spikes, fewer than M449's 158, while its
+largest whole-frame sample was 1,177.5 ms versus 676.32 ms. Its largest spike
+was mostly outside measured subphases. Completed-result selection had a 6.91
+ms p95 and 95.35 ms maximum, and requeue had a 12.82 ms p95 and 68.44 ms
+maximum across period and spike rows. Those timers include mutex wait. Source
+review found that partial drain/requeue can compact an unbounded queue despite
+free ring slots; the next pass should measure queue lock wait separately and
+verify that avoiding this compaction reduces the tails.
+
+M451 recorded no framebuffer frames. The user reports that the world currently
+looks good, without visible black or empty chunks. Intermittent readiness and
+visible-black counters are therefore recorded as diagnostic signals only.
+The slow distant silhouettes through fog or water are longstanding and
+unexplained; M335 disables `FogPullIn`, so this run cannot establish their
+cause.
+
+Key artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m451_world164_m335_four_load_one_background_clean_20261007.json`
+- Perf log: `bin/logs/perf_20261007-164247_23548.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-164240.23548`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m451_world164_m335_four_load_one_background_clean --report bin/suite_reports/engine_refactor/m451_world164_m335_four_load_one_background_clean_20261007.json --process-timeout 7200
+```
+
+Raw output remains under ignored `bin` data and must not be staged. M451 is
+also documented in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m451-checkpoint--four-load-workers-clean-full-m335-route-2026-10-07).

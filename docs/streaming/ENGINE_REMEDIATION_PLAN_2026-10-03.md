@@ -4373,34 +4373,106 @@ investigations.
 
 #### Plan readiness after M450
 
-The plan is ready for a controlled worker-budget comparison and another
-low-overhead attribution pass, not closure. The next steps are:
+M451 has now completed the controlled worker-budget comparison. The remaining
+work is to localize the queue and streaming stalls, then validate any change
+on the unchanged M335 route:
 
-1. M451 restores four load workers and adds one save/index worker only when
-   the machine has spare logical capacity. Run the same visible M335 route
-   without image capture or the aggressive watchdog. Compare matching focus
-   bands, full-route distance, per-lane queue snapshots, and frame/streaming
-   percentiles with M449/M450. Keep the established route settings unchanged;
-   interpret an unmet route-distance gate as a short measurement rather than
-   silently changing the conditions.
-2. Split the outer `TickAsyncChunkIo` wall interval into result-save handling,
+1. Split the outer `TickAsyncChunkIo` wall interval into result-save handling,
    cancellation sweep, queue selection, result processing, light-flags save,
-   and final worker-snapshot reads. Compare nested wall timers and, if the large
-   gap recurs, distinguish main-thread CPU time from time descheduled or
-   blocked. Separately attribute the 100–170 ms `update_streaming` spikes.
-3. After the worker comparison, run a separate `CUBA_WORLD_COLUMN_SOURCE_TRACE`
-   pass for the same far bins. Correlate source, worker queue, file-read,
-   result-wait, and eventual mesh/relight publication. M450's one failed
-   metadata replace is a reason to retain write-result tracing, not evidence
-   of a terrain load failure.
-4. Keep a capture-disabled route as the performance acceptance lane and use
-   occasional captures only to validate a concrete user-reported symptom.
-   Compare fog silhouettes at a fixed location and orientation before treating
-   their slow changes as a streaming regression.
-5. Once the repeated-world path is understood, refresh cold world-creation/load
-   timing and schedule periodic fresh-seed checks. Keep those as separate
-   checks from M335.
+   and final worker-snapshot reads. Measure queue mutex wait separately from
+   time inside the queue, and distinguish main-thread CPU time from time
+   descheduled or blocked. Separately attribute the `update_streaming` spikes.
+2. Run a separate `CUBA_WORLD_COLUMN_SOURCE_TRACE` pass for the same far bins.
+   Correlate source, worker queue, file-read, result-wait, and eventual
+   mesh/relight publication. M450's one failed metadata replace is a reason to
+   retain write-result tracing, not evidence of a terrain load failure.
+3. Keep a capture-disabled route as the performance comparison lane and use
+   occasional captures only to validate a concrete user-reported image
+   symptom. The user currently sees no black or empty chunks. Keep the
+   long-standing fog/water silhouette behavior separate until it reproduces at
+   a fixed camera position and orientation.
+4. Once the repeated-world path is understood, refresh cold world-creation/load
+   timing and schedule periodic fresh-seed checks as a separate lane from M335.
 
 M450 route, screenshots, spike details, persistence warning, exact command,
 and analyzer semantics are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m450---stage-and-framebuffer-diagnostic-m335-route-2026-10-07).
+
+### M451 checkpoint — four load workers, clean full M335 route (2026-10-07)
+
+M451 used the Release executable from `1665c3c9` (SHA-256
+`f2c9640e2a25663cd9f1a137d6a3ffcd378fde28594a0ba5631a1bb19764e67d`) on
+`World_164`. It ran the established visible, no-teleport M335 route with four
+load workers and one background worker, without frame capture or the stage
+watchdog. The route completed 14,304 blocks (`focus_cx=7 -> -887`) against the
+14,300-block minimum at the expected median speed of 5.19653 blocks/s. The
+application and wrapper exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`), and manifest acceptance passed. The analyzer still
+returned `pass=false` (27/39 general gates and 9/12 stop gates); route coverage
+and analyzer acceptance are separate outcomes.
+
+M451 and M449 have the same route hash, world metadata hash, effective config
+hash, user settings hash, fog-off M335 inputs, and no-capture protocol. The
+world's terrain files may have changed between runs, so this is a strong route
+and configuration comparison, not a bit-for-bit cold-disk replay. M451's
+frame median was 30.96 ms versus 30.43 ms in M449, and its streaming median
+was 16.02 ms versus 15.58 ms. The worker increase therefore did not improve
+the median. M451 recorded 134 spikes versus 158 in M449, but its largest
+whole-frame sample was 1,177.5 ms versus 676.32 ms; the largest M451 event was
+classified as `other`, with at most 168.19 ms attributed to the streaming
+phase. The old `TickMeshEmerge` and `update_streaming` stalls were not repeated
+at the same scale, but other streaming and unattributed spikes remain.
+
+The added queue telemetry exposes another pressure point. Across period and
+spike rows, M451's completed-load result-selection time had a 6.91 ms p95 and
+95.35 ms maximum; result requeue had a 12.82 ms p95 and 68.44 ms maximum. M449
+measured 3.15 ms and 75.96 ms for selection, and 8.76 ms and 80.31 ms for
+requeue. The completed-result queue depth after the tick had a p95 of 18 in
+M451; the four-result selected batch was often reduced to one or two
+applications by the existing time budget. These call timers include mutex
+wait, so they do not establish whether delay comes from lock contention, queue
+rearrangement, or main-thread descheduling. Source inspection also found that
+each partial drain followed by requeue can compact an unbounded vector even
+when its ring storage has recently freed slots. Measure lock wait and in-lock
+work separately, then remove avoidable compaction and full-queue ranking work.
+
+The analyzer continues to report `unfinished_visual` in every period, but
+labels it as visual-readiness debt rather than evidence of blank pixels. The
+mid-route corridor had zero periods with `near_focus_holes`; whole-route
+hole/readiness and visible-black counters were intermittently positive, and
+the M451 eye-proxy and safety gates still failed. M451 did not capture pixels.
+The user's current visual inspection reports no black or empty chunks and
+describes the slow distant silhouette changes through fog/water as longstanding
+and unrelated to these edits. Keep that behavior as a separate unresolved
+fog/render question; do not use internal proxies as pixel proof or as grounds
+for changing the proven M335 route.
+
+#### Plan readiness after M451
+
+1. Add separate lock-wait and critical-section timings to completed-load
+   selection and result requeue. Optimize the unbounded completed queue so a
+   partial drain/requeue uses available ring slots instead of compacting the
+   entire queue. Reduce per-tick ranking scratch work while preserving
+   near-focus ordering and stable tie behavior. Rebuild Release and run the
+   same clean M335 route before accepting the change.
+2. Split `TickAsyncChunkIo` and `update_streaming` into named subphases. The
+   queue timers are only one component; M451's largest frame stall remains
+   mostly unattributed. Distinguish CPU work, mutex wait, and time descheduled
+   before changing scheduler budgets.
+3. Compare exact M335 distance bands with M449 and M451, including ready queue
+   depth, results applied per tick, mesh/relight publication, and frame p95/p99.
+   Do not treat analyzer acceptance as visual acceptance. Use a capture-enabled
+   pass only when it answers a specific image symptom, and keep its capture
+   overhead out of performance acceptance.
+4. For the historical fog/water silhouettes, capture the same object from a
+   fixed camera position and orientation while recording effective render
+   distance, fog start/end, underwater state, and `FogPullIn` inputs. The
+   current M335 route disables `FogPullIn`, so it cannot explain that behavior.
+   Keep this investigation separate from route regressions until reproduced.
+5. After the repeated-world path stabilizes, refresh cold world-creation and
+   loading measurements and schedule periodic fresh-seed checks separately
+   from M335.
+
+M451 route, metrics, analyzer semantics, worker comparison, and exact command
+are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m451---four-load-workers-clean-m335-route-2026-10-07).
