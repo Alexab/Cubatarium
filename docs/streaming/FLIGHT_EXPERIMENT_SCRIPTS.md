@@ -1626,6 +1626,11 @@ phase summary `bin/suite_reports/engine_refactor/m437_io_phase_summary_20261007.
 raw perf `bin/logs/perf_20261007-010003_36844.jsonl`, and INFO trace
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-014729.36844`.
 
+Retrospective caveat: this invocation set `CUBATARIUM_RELIGHT_AUDIT=0`, but
+several engine sites treated variable presence as enabled; this INFO trace has
+1,042 `[RelightAudit]` lines. M437's timing and readiness data are therefore
+instrumented and are not a clean ordinary-runtime baseline.
+
 ## M438 - async light-flags writer, full M335 route (2026-10-07)
 
 M438 repeated the same visible, no-teleport 2,800-second route on
@@ -1636,6 +1641,13 @@ clean tree, and executable SHA-256
 Route, start `[120,56,56]`, eye Y `70`, yaw `180`, pitch `-30`, speed scale
 `1`, stop duration, and blocked-stop threshold matched M437. GUI was visible;
 teleport and visual/source/framebuffer traces were off.
+
+Retrospective caveat: `CUBATARIUM_RELIGHT_AUDIT=0` also enabled presence-based
+audit checks in this build. The process INFO log contains 74,600
+`[RelightAudit]` lines. Treat the global timing distributions, spike counts,
+and readiness gates below as instrumented observations; they cannot establish
+the ordinary-runtime effect of the async writer. Commit `6771b44e` fixes the
+false-value handling, and the M439 manifest records the resolved audit state.
 
 The executable exited normally (`process_rc=0`, `run_outcome=success`,
 `hang_killed=false`), recording 1,403 periods (1,401 steady), 129 frames over
