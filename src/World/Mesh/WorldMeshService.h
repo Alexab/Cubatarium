@@ -285,6 +285,7 @@ public:
     return Cache.GetLastMeshSnapshotDeferStats();
   }
   double GetLastMeshDirtyTickMs() const;
+  double GetLastMeshDirtyPrePruneMs() const;
   double GetLastMeshDirtyPruneMs() const;
   int GetLastMeshDirtyPruneN() const;
   double GetLastMeshDirtySortMs() const;

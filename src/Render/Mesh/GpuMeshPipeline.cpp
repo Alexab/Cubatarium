@@ -716,6 +716,23 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   return false;
 #else
   using ProfileClock = std::chrono::steady_clock;
+  const auto profile_total_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
+  struct ProfileTotalScope
+  {
+    ComputeKickProfile *profile;
+    ProfileClock::time_point start;
+    ~ProfileTotalScope()
+    {
+      if (profile)
+      {
+        profile->total_ms +=
+            std::chrono::duration<double, std::milli>(ProfileClock::now() -
+                                                       start)
+                .count();
+      }
+    }
+  } profile_total_scope{profile, profile_total_start};
   const auto eligibility_start = profile ? ProfileClock::now()
                                          : ProfileClock::time_point{};
   constexpr uint8_t kUnclassifiedBlock = 0xffu;
@@ -782,11 +799,20 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   }
 
   std::vector<uint16_t> block_palette_indices;
+  const auto palette_build_start = profile ? ProfileClock::now()
+                                           : ProfileClock::time_point{};
   if (!BuildGpuBlockTypePalette(snapshot, out_ticket.blockPalette,
                                 block_palette_indices))
   {
     out_ticket.blockPalette.clear();
     return false;
+  }
+  if (profile)
+  {
+    profile->palette_build_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - palette_build_start)
+            .count();
   }
 
   const auto readback_slot_start = profile ? ProfileClock::now()
@@ -807,6 +833,8 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   const auto cpu_prepare_start = profile ? ProfileClock::now()
                                          : ProfileClock::time_point{};
   auto &occ_words = ScratchOccWords;
+  const auto occupancy_pack_start = profile ? ProfileClock::now()
+                                            : ProfileClock::time_point{};
   occ_words.assign(static_cast<size_t>((kGpuOccPadVolume + 3) / 4), 0u);
   const int occ_pad = kGpuOccPad;
   const glm::ivec3 origin = snapshot.ChunkOrigin();
@@ -847,8 +875,17 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
       }
     }
   }
+  if (profile)
+  {
+    profile->occupancy_pack_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - occupancy_pack_start)
+            .count();
+  }
 
   auto &block_words = ScratchBlockWords;
+  const auto block_pack_start = profile ? ProfileClock::now()
+                                        : ProfileClock::time_point{};
   block_words.assign(static_cast<size_t>((CHUNK_VOLUME + 1) / 2), 0u);
   for (size_t i = 0; i < block_palette_indices.size(); ++i)
   {
@@ -856,8 +893,17 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
         static_cast<uint32_t>(block_palette_indices[i])
         << (static_cast<unsigned>(i & 1u) * 16u);
   }
+  if (profile)
+  {
+    profile->block_pack_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - block_pack_start)
+            .count();
+  }
 
   auto &light_words = ScratchLightWords;
+  const auto light_pack_start = profile ? ProfileClock::now()
+                                        : ProfileClock::time_point{};
   light_words.assign(static_cast<size_t>((kGpuLightPadVolume + 3) / 4), 0u);
   constexpr int light_halo = ChunkMeshSnapshot::kLightHaloRadius;
   const int light_pad = kGpuLightPad;
@@ -889,6 +935,13 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
             << (static_cast<unsigned>(padded_index & 3) * 8u);
       }
     }
+  }
+  if (profile)
+  {
+    profile->light_pack_ms +=
+        std::chrono::duration<double, std::milli>(
+            ProfileClock::now() - light_pack_start)
+            .count();
   }
 
   const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);

@@ -5564,10 +5564,22 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   double gpu_profile_packed_emit_ms = 0.0;
   double gpu_profile_quad_readback_copy_ms = 0.0;
   double gpu_profile_quad_finish_ms = 0.0;
+  double gpu_profile_quad_finish_max_ms = 0.0;
+  glm::ivec3 gpu_profile_quad_finish_max_coord(0);
+  bool gpu_profile_quad_finish_max_coord_valid = false;
   double gpu_profile_kick_dispatch_ms = 0.0;
+  double gpu_profile_kick_dispatch_max_ms = 0.0;
+  glm::ivec3 gpu_profile_kick_dispatch_max_coord(0);
+  bool gpu_profile_kick_dispatch_max_coord_valid = false;
+  double gpu_profile_kick_pipeline_total_ms = 0.0;
+  double gpu_profile_kick_pipeline_unattributed_ms = 0.0;
   double gpu_profile_kick_eligibility_ms = 0.0;
+  double gpu_profile_kick_palette_build_ms = 0.0;
   double gpu_profile_kick_readback_slot_ms = 0.0;
   double gpu_profile_kick_cpu_prepare_ms = 0.0;
+  double gpu_profile_kick_occupancy_pack_ms = 0.0;
+  double gpu_profile_kick_block_pack_ms = 0.0;
+  double gpu_profile_kick_light_pack_ms = 0.0;
   double gpu_profile_kick_input_upload_ms = 0.0;
   double gpu_profile_kick_mask_dispatch_ms = 0.0;
   double gpu_profile_kick_counter_reset_ms = 0.0;
@@ -6129,12 +6141,21 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         pending_ref.ticket, registry, quad_count, &gpu_result.blockRanges,
         &gpu_result.hasFullyDarkFace, &gpu_result.hasLitDrawableFace,
         /*timeout_ns=*/0);
+    const double quad_finish_call_ms =
+        gpu_process_profile_sample
+            ? std::chrono::duration<double, std::milli>(
+                  GpuProfileClock::now() - quad_finish_profile_t0)
+                  .count()
+            : 0.0;
     if (gpu_process_profile_sample)
     {
-      gpu_profile_quad_finish_ms +=
-          std::chrono::duration<double, std::milli>(
-              GpuProfileClock::now() - quad_finish_profile_t0)
-              .count();
+      gpu_profile_quad_finish_ms += quad_finish_call_ms;
+      if (quad_finish_call_ms > gpu_profile_quad_finish_max_ms)
+      {
+        gpu_profile_quad_finish_max_ms = quad_finish_call_ms;
+        gpu_profile_quad_finish_max_coord = pending_ref.coord;
+        gpu_profile_quad_finish_max_coord_valid = true;
+      }
     }
     if (st == UGpuMeshPipeline::GpuFinishStatus::Ready)
     {
@@ -6471,13 +6492,33 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         pinned, gpu_process_profile_sample ? &kick_stages : nullptr);
     if (gpu_process_profile_sample)
     {
-      gpu_profile_kick_dispatch_ms +=
+      const double kick_dispatch_call_ms =
           std::chrono::duration<double, std::milli>(
               GpuProfileClock::now() - kick_profile_t0)
               .count();
+      gpu_profile_kick_dispatch_ms += kick_dispatch_call_ms;
+      if (kick_dispatch_call_ms > gpu_profile_kick_dispatch_max_ms)
+      {
+        gpu_profile_kick_dispatch_max_ms = kick_dispatch_call_ms;
+        gpu_profile_kick_dispatch_max_coord = pending.coord;
+        gpu_profile_kick_dispatch_max_coord_valid = true;
+      }
+      gpu_profile_kick_pipeline_total_ms += kick_stages.total_ms;
+      const double kick_pipeline_attributed_ms =
+          kick_stages.eligibility_ms + kick_stages.palette_build_ms +
+          kick_stages.readback_slot_ms + kick_stages.cpu_prepare_ms +
+          kick_stages.input_upload_ms + kick_stages.mask_dispatch_ms +
+          kick_stages.counter_reset_ms + kick_stages.greedy_dispatch_ms +
+          kick_stages.counter_copy_submit_ms;
+      gpu_profile_kick_pipeline_unattributed_ms +=
+          std::max(0.0, kick_stages.total_ms - kick_pipeline_attributed_ms);
       gpu_profile_kick_eligibility_ms += kick_stages.eligibility_ms;
+      gpu_profile_kick_palette_build_ms += kick_stages.palette_build_ms;
       gpu_profile_kick_readback_slot_ms += kick_stages.readback_slot_ms;
       gpu_profile_kick_cpu_prepare_ms += kick_stages.cpu_prepare_ms;
+      gpu_profile_kick_occupancy_pack_ms += kick_stages.occupancy_pack_ms;
+      gpu_profile_kick_block_pack_ms += kick_stages.block_pack_ms;
+      gpu_profile_kick_light_pack_ms += kick_stages.light_pack_ms;
       gpu_profile_kick_input_upload_ms += kick_stages.input_upload_ms;
       gpu_profile_kick_mask_dispatch_ms += kick_stages.mask_dispatch_ms;
       gpu_profile_kick_counter_reset_ms += kick_stages.counter_reset_ms;
@@ -6590,16 +6631,25 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       const auto quad_finish_profile_t0 =
           gpu_process_profile_sample ? GpuProfileClock::now()
                                      : GpuProfileClock::time_point{};
-    const auto st = pipeline->TryFinishComputePasses(
+      const auto st = pipeline->TryFinishComputePasses(
           pending_ref.ticket, registry, quad_count, &gpu_result.blockRanges,
           &gpu_result.hasFullyDarkFace, &gpu_result.hasLitDrawableFace,
           /*timeout_ns=*/0);
+      const double quad_finish_call_ms =
+          gpu_process_profile_sample
+              ? std::chrono::duration<double, std::milli>(
+                    GpuProfileClock::now() - quad_finish_profile_t0)
+                    .count()
+              : 0.0;
       if (gpu_process_profile_sample)
       {
-        gpu_profile_quad_finish_ms +=
-            std::chrono::duration<double, std::milli>(
-                GpuProfileClock::now() - quad_finish_profile_t0)
-                .count();
+        gpu_profile_quad_finish_ms += quad_finish_call_ms;
+        if (quad_finish_call_ms > gpu_profile_quad_finish_max_ms)
+        {
+          gpu_profile_quad_finish_max_ms = quad_finish_call_ms;
+          gpu_profile_quad_finish_max_coord = pending_ref.coord;
+          gpu_profile_quad_finish_max_coord_valid = true;
+        }
       }
       if (st == UGpuMeshPipeline::GpuFinishStatus::Ready)
       {
@@ -6731,6 +6781,39 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         << gpu_profile_kick_stop_reason << "\""
         << ",\"kicked\":" << kicked << ",\"finished\":" << finished
         << ",\"finish_attempts\":" << finish_attempts
+        << ",\"max_kick_dispatch_ms\":"
+        << gpu_profile_kick_dispatch_max_ms
+        << ",\"max_kick_dispatch_coord_valid\":"
+        << (gpu_profile_kick_dispatch_max_coord_valid ? 1 : 0)
+        << ",\"max_kick_dispatch_coord\":";
+    if (gpu_profile_kick_dispatch_max_coord_valid)
+    {
+      *gpu_process_profile_sink << "[" << gpu_profile_kick_dispatch_max_coord.x
+                                << "," << gpu_profile_kick_dispatch_max_coord.y
+                                << "," << gpu_profile_kick_dispatch_max_coord.z
+                                << "]";
+    }
+    else
+    {
+      *gpu_process_profile_sink << "null";
+    }
+    *gpu_process_profile_sink
+        << ",\"max_quad_finish_ms\":" << gpu_profile_quad_finish_max_ms
+        << ",\"max_quad_finish_coord_valid\":"
+        << (gpu_profile_quad_finish_max_coord_valid ? 1 : 0)
+        << ",\"max_quad_finish_coord\":";
+    if (gpu_profile_quad_finish_max_coord_valid)
+    {
+      *gpu_process_profile_sink << "[" << gpu_profile_quad_finish_max_coord.x
+                                << "," << gpu_profile_quad_finish_max_coord.y
+                                << "," << gpu_profile_quad_finish_max_coord.z
+                                << "]";
+    }
+    else
+    {
+      *gpu_process_profile_sink << "null";
+    }
+    *gpu_process_profile_sink
         << ",\"counter_ready_n\":" << gpu_profile_counter_ready_n
         << ",\"counter_not_ready_n\":" << gpu_profile_counter_not_ready_n
         << ",\"counter_failed_n\":" << gpu_profile_counter_failed_n
@@ -6750,11 +6833,21 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         << gpu_profile_quad_readback_copy_ms
         << ",\"quad_finish\":" << gpu_profile_quad_finish_ms
         << ",\"kick_dispatch\":" << gpu_profile_kick_dispatch_ms
+        << ",\"kick_pipeline_total\":"
+        << gpu_profile_kick_pipeline_total_ms
+        << ",\"kick_pipeline_unattributed\":"
+        << gpu_profile_kick_pipeline_unattributed_ms
         << ",\"kick_eligibility\":"
         << gpu_profile_kick_eligibility_ms
+        << ",\"kick_palette_build\":"
+        << gpu_profile_kick_palette_build_ms
         << ",\"kick_readback_slot\":"
         << gpu_profile_kick_readback_slot_ms
         << ",\"kick_cpu_prepare\":" << gpu_profile_kick_cpu_prepare_ms
+        << ",\"kick_occupancy_pack\":"
+        << gpu_profile_kick_occupancy_pack_ms
+        << ",\"kick_block_pack\":" << gpu_profile_kick_block_pack_ms
+        << ",\"kick_light_pack\":" << gpu_profile_kick_light_pack_ms
         << ",\"kick_input_upload\":" << gpu_profile_kick_input_upload_ms
         << ",\"kick_mask_dispatch\":"
         << gpu_profile_kick_mask_dispatch_ms
@@ -7869,6 +7962,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshSyncMs = 0.0;
   LastMeshSnapshotMs = 0.0;
   LastMeshDirtyTickMs = 0.0;
+  LastMeshDirtyPrePruneMs = 0.0;
   LastMeshDirtyPruneMs = 0.0;
   LastMeshDirtyPruneN = 0;
   LastMeshDirtySortMs = 0.0;
@@ -8003,6 +8097,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   CaptureStore.SetNeighborVisualDrawableFn(CacheNeighborVisuallyDrawable, this);
   AgeSoftDeferEmptyAvoidFrames();
   RequeueSoftDeferHeld();
+
+  // Keep setup/reconciliation costs separate from the policy-prune passes.
+  // The prior first take_seg_ms() ran only after this prefix and mislabeled it
+  // as mesh_dirty_prune_ms.
+  LastMeshDirtyPrePruneMs = std::chrono::duration<double, std::milli>(
+                                std::chrono::high_resolution_clock::now() -
+                                dirty_tick_t0)
+                                .count();
+  seg_t0 = std::chrono::high_resolution_clock::now();
 
   // Era47: lit-quiesce Dirty prune runs before sort/schedule — sticky
   // SoftDefer/orphan (!HasChunk) otherwise block IsSpawnMeshRingReady

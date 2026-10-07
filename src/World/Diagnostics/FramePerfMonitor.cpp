@@ -403,6 +403,7 @@ struct FrameNumbers
   double mesh_immediate_ms{0.0};
   int mesh_immediate_count{0};
   double mesh_dirty_tick_ms{0.0};
+  double mesh_dirty_pre_prune_ms{0.0};
   double mesh_dirty_prune_ms{0.0};
   int mesh_dirty_prune_n{0};
   double mesh_dirty_sort_ms{0.0};
@@ -1277,6 +1278,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_immediate_ms = phys.MeshImmediateMs;
   n.mesh_immediate_count = phys.MeshImmediateCount;
   n.mesh_dirty_tick_ms = phys.MeshDirtyTickMs;
+  n.mesh_dirty_pre_prune_ms = phys.MeshDirtyPrePruneMs;
   n.mesh_dirty_prune_ms = phys.MeshDirtyPruneMs;
   n.mesh_dirty_prune_n = phys.MeshDirtyPruneN;
   n.mesh_dirty_sort_ms = phys.MeshDirtySortMs;
@@ -2235,6 +2237,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_immediate_ms\":" << n.mesh_immediate_ms
           << ",\"mesh_immediate_count\":" << n.mesh_immediate_count
           << ",\"mesh_dirty_tick_ms\":" << n.mesh_dirty_tick_ms
+          << ",\"mesh_dirty_pre_prune_ms\":"
+          << n.mesh_dirty_pre_prune_ms
           << ",\"mesh_dirty_prune_ms\":" << n.mesh_dirty_prune_ms
           << ",\"mesh_dirty_prune_n\":" << n.mesh_dirty_prune_n
           << ",\"mesh_dirty_sort_ms\":" << n.mesh_dirty_sort_ms

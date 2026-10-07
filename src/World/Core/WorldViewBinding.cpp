@@ -1036,6 +1036,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepSoftdeferSetupMs = 0.0;
   PhysicsTelemetryData.SoftdeferEmptyScanMs = 0.0;
   PhysicsTelemetryData.SoftdeferEmptyOwnMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyPrePruneMs = 0.0;
   PhysicsTelemetryData.MeshDirtyPruneMs = 0.0;
   PhysicsTelemetryData.MeshDirtyPruneN = 0;
   PhysicsTelemetryData.MeshDirtySortMs = 0.0;
@@ -1243,6 +1244,8 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshImmediateCount();
   PhysicsTelemetryData.MeshDirtyTickMs =
       GetMeshService().GetLastMeshDirtyTickMs();
+  PhysicsTelemetryData.MeshDirtyPrePruneMs =
+      GetMeshService().GetLastMeshDirtyPrePruneMs();
   PhysicsTelemetryData.MeshDirtyPruneMs =
       GetMeshService().GetLastMeshDirtyPruneMs();
   PhysicsTelemetryData.MeshDirtyPruneN =

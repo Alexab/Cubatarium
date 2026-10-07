@@ -367,7 +367,9 @@ struct PhysicsTelemetry
   int EditLightEmission{0};
   /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).
   double MeshDirtyTickMs{0.0};
-  /// Cruise wall A1: mesh_dirty_tick substages.
+  /// Time before the policy-prune passes inside RebuildDirtyChunksWithStats.
+  double MeshDirtyPrePruneMs{0.0};
+  /// Cruise wall A1: time inside dirty policy-prune passes.
   double MeshDirtyPruneMs{0.0};
   int MeshDirtyPruneN{0};
   double MeshDirtySortMs{0.0};

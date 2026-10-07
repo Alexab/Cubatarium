@@ -228,6 +228,7 @@ public:
   }
   double GetLastMeshDirtyTickMs() const { return LastMeshDirtyTickMs; }
   /// Cruise wall A1: substages inside RebuildDirtyChunksWithStats (ms / ops).
+  double GetLastMeshDirtyPrePruneMs() const { return LastMeshDirtyPrePruneMs; }
   double GetLastMeshDirtyPruneMs() const { return LastMeshDirtyPruneMs; }
   int GetLastMeshDirtyPruneN() const { return LastMeshDirtyPruneN; }
   double GetLastMeshDirtySortMs() const { return LastMeshDirtySortMs; }
@@ -1306,6 +1307,7 @@ private:
   double LastMeshSyncMs{0.0};
   double LastMeshSnapshotMs{0.0};
   double LastMeshDirtyTickMs{0.0};
+  double LastMeshDirtyPrePruneMs{0.0};
   double LastMeshDirtyPruneMs{0.0};
   int LastMeshDirtyPruneN{0};
   double LastMeshDirtySortMs{0.0};

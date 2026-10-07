@@ -1219,6 +1219,11 @@ double UWorldMeshService::GetLastMeshDirtyTickMs() const
   return Cache.GetLastMeshDirtyTickMs();
 }
 
+double UWorldMeshService::GetLastMeshDirtyPrePruneMs() const
+{
+  return Cache.GetLastMeshDirtyPrePruneMs();
+}
+
 double UWorldMeshService::GetLastMeshDirtyPruneMs() const
 {
   return Cache.GetLastMeshDirtyPruneMs();

@@ -4707,6 +4707,8 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
           (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshPreview));
   world.PhysicsTelemetryData.MeshDirtyTickMs =
       world.GetMeshService().GetLastMeshDirtyTickMs();
+  world.PhysicsTelemetryData.MeshDirtyPrePruneMs =
+      world.GetMeshService().GetLastMeshDirtyPrePruneMs();
   world.PhysicsTelemetryData.MeshDirtyPruneMs =
       world.GetMeshService().GetLastMeshDirtyPruneMs();
   world.PhysicsTelemetryData.MeshDirtyPruneN =
