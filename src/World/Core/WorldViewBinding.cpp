@@ -917,6 +917,10 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshEmergePostTelemetryMs = 0.0;
   PhysicsTelemetryData.MeshEmergePlayerRelightBurstMs = 0.0;
   PhysicsTelemetryData.ColumnEmergeStageSampleMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeFocusJobsMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeShadowCensusMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeDemandBreakdownMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeDemandStopMs = 0.0;
   PhysicsTelemetryData.ColumnEmergeStageSampleCount = 0;
   PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;

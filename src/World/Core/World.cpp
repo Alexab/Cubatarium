@@ -2439,7 +2439,14 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
   {
     return;
   }
-  ColumnEmergeStates[glm::ivec2(ground.x, ground.z)] = state;
+  const glm::ivec2 ground_xz(ground.x, ground.z);
+  const auto existing = ColumnEmergeStates.find(ground_xz);
+  if (existing != ColumnEmergeStates.end())
+  {
+    AdjustColumnEmergeTelemetryCount(existing->second, -1);
+  }
+  ColumnEmergeStates[ground_xz] = state;
+  AdjustColumnEmergeTelemetryCount(state, 1);
   // Phase 2 dual-write: ColumnRecord mirrors emerge SoT.
   ColumnRecords.SetEmerge(glm::ivec2(ground.x, ground.z), state);
   // Emerge state participates in the focus-column readiness classification.
@@ -2455,6 +2462,25 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
 void UWorld::MaintainChunkRenderDemandStore()
 {
   MaintainChunkRenderDemandStore(VisualObligationNowMs());
+}
+
+void UWorld::AdjustColumnEmergeTelemetryCount(ColumnEmergeState state,
+                                             int delta)
+{
+  switch (state)
+  {
+  case ColumnEmergeState::Lighting:
+    ColumnLightingTelemetryN += delta;
+    break;
+  case ColumnEmergeState::Meshing:
+    ColumnMeshingTelemetryN += delta;
+    break;
+  case ColumnEmergeState::RenderReady:
+    ColumnRenderReadyTelemetryN += delta;
+    break;
+  default:
+    break;
+  }
 }
 
 void UWorld::MaintainChunkRenderDemandStore(double now_ms)
@@ -2489,29 +2515,9 @@ void UWorld::SampleColumnEmergeStageTelemetry()
   PhysicsTelemetryData.ColumnEmergeStageSampleAgeMs = 0.0;
   ++PhysicsTelemetryData.ColumnEmergeStageSampleCount;
   const auto sample_t0 = std::chrono::high_resolution_clock::now();
-  int lighting = 0;
-  int meshing = 0;
-  int render_ready = 0;
-  for (const auto &kv : ColumnEmergeStates)
-  {
-    switch (kv.second)
-    {
-    case ColumnEmergeState::Lighting:
-      ++lighting;
-      break;
-    case ColumnEmergeState::Meshing:
-      ++meshing;
-      break;
-    case ColumnEmergeState::RenderReady:
-      ++render_ready;
-      break;
-    default:
-      break;
-    }
-  }
-  PhysicsTelemetryData.ColumnLightingN = lighting;
-  PhysicsTelemetryData.ColumnMeshingN = meshing;
-  PhysicsTelemetryData.ColumnRenderReadyN = render_ready;
+  PhysicsTelemetryData.ColumnLightingN = ColumnLightingTelemetryN;
+  PhysicsTelemetryData.ColumnMeshingN = ColumnMeshingTelemetryN;
+  PhysicsTelemetryData.ColumnRenderReadyN = ColumnRenderReadyTelemetryN;
 
   // Focus-ring job graph census (distinct from emerge FSM above).
   const glm::ivec3 focus = GetPreferredLoadFocusBlock();
@@ -2521,13 +2527,19 @@ void UWorld::SampleColumnEmergeStageTelemetry()
   int job_mesh = 0;
   int job_gpu = 0;
   int job_ready = 0;
+  auto stage_t0 = std::chrono::high_resolution_clock::now();
   GetColumnFlowExecutor().CountFocusRingJobStages(focus_ground, 4, job_pl,
                                                   job_mesh, job_gpu, job_ready);
+  PhysicsTelemetryData.ColumnEmergeFocusJobsMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - stage_t0)
+          .count();
   PhysicsTelemetryData.ColumnJobPendingLightN = job_pl;
   PhysicsTelemetryData.ColumnJobMeshingN = job_mesh;
   PhysicsTelemetryData.ColumnJobGpuPendingN = job_gpu;
   PhysicsTelemetryData.ColumnJobRenderReadyN = job_ready;
   {
+    stage_t0 = std::chrono::high_resolution_clock::now();
     const uint64_t shadow_n =
         UColumnRecordCoordinator::ShadowMismatchCount();
     PhysicsTelemetryData.ColumnRecordShadowMismatchN =
@@ -2536,8 +2548,17 @@ void UWorld::SampleColumnEmergeStageTelemetry()
             : static_cast<int>(shadow_n);
     PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
         UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
+    const auto &shadow = GetVisualObligationShadowCounters();
+    PhysicsTelemetryData.VisualObligationShadowSampleN = shadow.samples;
+    PhysicsTelemetryData.VisualObligationShadowMismatchN =
+        shadow.draw_mismatches;
+    PhysicsTelemetryData.ColumnEmergeShadowCensusMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - stage_t0)
+            .count();
   }
   {
+    stage_t0 = std::chrono::high_resolution_clock::now();
     if (kChunkDemandShadow())
     {
       const auto br =
@@ -2548,14 +2569,17 @@ void UWorld::SampleColumnEmergeStageTelemetry()
       PhysicsTelemetryData.DemandUnsatCoverage = br.coverage;
       PhysicsTelemetryData.DemandUnsatRetain = br.retain;
     }
+    PhysicsTelemetryData.ColumnEmergeDemandBreakdownMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - stage_t0)
+            .count();
+    stage_t0 = std::chrono::high_resolution_clock::now();
     PhysicsTelemetryData.DemandStopConverged =
         UChunkRenderDemandStore::Get().StopConverged(now_ms) ? 1 : 0;
-  }
-  {
-    const auto &shadow = GetVisualObligationShadowCounters();
-    PhysicsTelemetryData.VisualObligationShadowSampleN = shadow.samples;
-    PhysicsTelemetryData.VisualObligationShadowMismatchN =
-        shadow.draw_mismatches;
+    PhysicsTelemetryData.ColumnEmergeDemandStopMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - stage_t0)
+            .count();
   }
   PhysicsTelemetryData.ColumnEmergeStageSampleMs +=
       std::chrono::duration<double, std::milli>(
@@ -2585,7 +2609,12 @@ ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
 
 void UWorld::ClearColumnEmergeState(glm::ivec2 ground_xz)
 {
-  ColumnEmergeStates.erase(ground_xz);
+  const auto it = ColumnEmergeStates.find(ground_xz);
+  if (it != ColumnEmergeStates.end())
+  {
+    AdjustColumnEmergeTelemetryCount(it->second, -1);
+    ColumnEmergeStates.erase(it);
+  }
   ColumnRecords.Erase(ground_xz);
 }
 

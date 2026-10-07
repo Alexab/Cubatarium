@@ -82,6 +82,10 @@ struct Session
   double AccumMeshEmergePostTelemetryMs{0.0};
   double AccumMeshEmergePlayerRelightBurstMs{0.0};
   double AccumColumnEmergeStageSampleMs{0.0};
+  double AccumColumnEmergeFocusJobsMs{0.0};
+  double AccumColumnEmergeShadowCensusMs{0.0};
+  double AccumColumnEmergeDemandBreakdownMs{0.0};
+  double AccumColumnEmergeDemandStopMs{0.0};
   double AccumColumnEmergeStageSampleCount{0.0};
   double AccumColumnEmergeStageSampleAgeMs{0.0};
   double AccumAsyncIoMs{0.0};
@@ -251,6 +255,10 @@ struct FrameNumbers
   double mesh_emerge_post_telemetry_ms{0.0};
   double mesh_emerge_player_relight_burst_ms{0.0};
   double column_emerge_stage_sample_ms{0.0};
+  double column_emerge_focus_jobs_ms{0.0};
+  double column_emerge_shadow_census_ms{0.0};
+  double column_emerge_demand_breakdown_ms{0.0};
+  double column_emerge_demand_stop_ms{0.0};
   double column_emerge_stage_sample_n{0.0};
   double column_emerge_stage_sample_age_ms{0.0};
   double scene_ms{0.0};
@@ -1087,6 +1095,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_emerge_player_relight_burst_ms =
       phys.MeshEmergePlayerRelightBurstMs;
   n.column_emerge_stage_sample_ms = phys.ColumnEmergeStageSampleMs;
+  n.column_emerge_focus_jobs_ms = phys.ColumnEmergeFocusJobsMs;
+  n.column_emerge_shadow_census_ms = phys.ColumnEmergeShadowCensusMs;
+  n.column_emerge_demand_breakdown_ms =
+      phys.ColumnEmergeDemandBreakdownMs;
+  n.column_emerge_demand_stop_ms = phys.ColumnEmergeDemandStopMs;
   n.column_emerge_stage_sample_n =
       static_cast<double>(phys.ColumnEmergeStageSampleCount);
   n.column_emerge_stage_sample_age_ms =
@@ -2444,6 +2457,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mesh_emerge_player_relight_burst_ms
           << ",\"column_emerge_stage_sample_ms\":"
           << n.column_emerge_stage_sample_ms
+          << ",\"column_emerge_focus_jobs_ms\":"
+          << n.column_emerge_focus_jobs_ms
+          << ",\"column_emerge_shadow_census_ms\":"
+          << n.column_emerge_shadow_census_ms
+          << ",\"column_emerge_demand_breakdown_ms\":"
+          << n.column_emerge_demand_breakdown_ms
+          << ",\"column_emerge_demand_stop_ms\":"
+          << n.column_emerge_demand_stop_ms
           << ",\"column_emerge_stage_sample_n\":"
           << n.column_emerge_stage_sample_n
           << ",\"column_emerge_stage_sample_age_ms\":"
@@ -3243,6 +3264,11 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumMeshEmergePlayerRelightBurstMs +=
       n.mesh_emerge_player_relight_burst_ms;
   s.AccumColumnEmergeStageSampleMs += n.column_emerge_stage_sample_ms;
+  s.AccumColumnEmergeFocusJobsMs += n.column_emerge_focus_jobs_ms;
+  s.AccumColumnEmergeShadowCensusMs += n.column_emerge_shadow_census_ms;
+  s.AccumColumnEmergeDemandBreakdownMs +=
+      n.column_emerge_demand_breakdown_ms;
+  s.AccumColumnEmergeDemandStopMs += n.column_emerge_demand_stop_ms;
   s.AccumColumnEmergeStageSampleCount += n.column_emerge_stage_sample_n;
   s.AccumColumnEmergeStageSampleAgeMs += n.column_emerge_stage_sample_age_ms;
   s.AccumWorldStreamingPhaseMs += n.world_streaming_phase_ms;
@@ -3362,6 +3388,14 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
       s.AccumMeshEmergePlayerRelightBurstMs * inv;
   avg.column_emerge_stage_sample_ms =
       s.AccumColumnEmergeStageSampleMs * inv;
+  avg.column_emerge_focus_jobs_ms =
+      s.AccumColumnEmergeFocusJobsMs * inv;
+  avg.column_emerge_shadow_census_ms =
+      s.AccumColumnEmergeShadowCensusMs * inv;
+  avg.column_emerge_demand_breakdown_ms =
+      s.AccumColumnEmergeDemandBreakdownMs * inv;
+  avg.column_emerge_demand_stop_ms =
+      s.AccumColumnEmergeDemandStopMs * inv;
   avg.column_emerge_stage_sample_n =
       s.AccumColumnEmergeStageSampleCount * inv;
   avg.column_emerge_stage_sample_age_ms =
@@ -3481,6 +3515,10 @@ void ResetAccum(Session &s)
   s.AccumMeshEmergePostTelemetryMs = 0.0;
   s.AccumMeshEmergePlayerRelightBurstMs = 0.0;
   s.AccumColumnEmergeStageSampleMs = 0.0;
+  s.AccumColumnEmergeFocusJobsMs = 0.0;
+  s.AccumColumnEmergeShadowCensusMs = 0.0;
+  s.AccumColumnEmergeDemandBreakdownMs = 0.0;
+  s.AccumColumnEmergeDemandStopMs = 0.0;
   s.AccumColumnEmergeStageSampleCount = 0.0;
   s.AccumColumnEmergeStageSampleAgeMs = 0.0;
   s.AccumWorldStreamingPhaseMs = 0.0;

@@ -1441,6 +1441,8 @@ public:
   friend class UBlockBreakService;
 
 private:
+  void AdjustColumnEmergeTelemetryCount(ColumnEmergeState state, int delta);
+
   /// Requeue a live per-slice visual demand without minting another mesh revision.
   void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
 
@@ -1664,6 +1666,11 @@ private:
   std::unordered_set<glm::ivec2, GroundColumnHash> AsyncRelightColumnsInFlight;
   std::unordered_map<glm::ivec2, ColumnEmergeState, GroundColumnHash>
       ColumnEmergeStates;
+  /// Incremental mirror for the logger-only stage counts; avoids a periodic
+  /// full walk of ColumnEmergeStates on the frame thread.
+  int ColumnLightingTelemetryN{0};
+  int ColumnMeshingTelemetryN{0};
+  int ColumnRenderReadyTelemetryN{0};
   /// Full telemetry census is diagnostic; demand maintenance stays per frame.
   double NextColumnEmergeTelemetrySampleMs{0.0};
   double LastColumnEmergeTelemetrySampleMs{0.0};
