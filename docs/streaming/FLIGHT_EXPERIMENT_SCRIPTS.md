@@ -2541,3 +2541,76 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Raw output remains under ignored `bin` data and must not be staged. M451 is
 also documented in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m451-checkpoint--four-load-workers-clean-full-m335-route-2026-10-07).
+
+## M452 — completed-result queue ring optimization, clean M335 route (2026-10-07)
+
+M452 is the capture-disabled follow-up to M449 and M451. It ran on
+`World_164` using the Release executable from `ed9201d9` (SHA-256
+`029968c9e098bf889e567d456af509f637c7088c7fd9795867364040a2b56ae5`), with
+four load workers and one background worker. Route/configuration inputs and
+M335 protocol match the prior lane. It completed 14,304 blocks (`focus_cx=7
+-> -887`) at median speed 5.19653 blocks/s; the route gate passed and the
+process exited normally. The analyzer returned `pass=false` (27/39 general,
+9/12 stop gates). No framebuffer capture was enabled. The user reports that
+the current world looks normal, without visible black or empty chunks.
+
+The bounded ranking and ring-slot reuse implementation improved the normal
+path. Report median frame time was 26.61 ms and median streaming time was
+13.46 ms, compared with 30.43/15.58 ms in M449 and 30.96/16.02 ms in M451.
+On raw period/spike rows, M452 had 80 spike rows and 443.19 ms maximum wall
+time; M449 had 158/676.32 ms and M451 134/1,177.5 ms. Result-selection p95
+was 0.03 ms and requeue p95 0.01 ms, down from 6.91/12.82 ms in M451.
+The analyzer's `unfinished_visual`, `near_focus_holes`, and visible-black
+proxies remain telemetry only; this no-capture run is not pixel evidence.
+
+Important residuals by focus band:
+
+- At `focus_cx=-163`, outer `async_chunk_io_drain_ms` was 407.42 ms, but
+  cancellation (0.001), selection (0.032), result processing (3.911), requeue
+  (0), save drain (2.891), and light-flags save (0.465) account for only
+  about 7.30 ms. Approximately 400 ms remains unassigned inside the call.
+- At `-195`, outer drain was 90.50 ms; selection mutex wait was 60.51 ms and
+  requeue mutex hold was 28.69 ms. A separate requeue at `-463` held the
+  mutex 9.63 ms. The ring can still compact when producers refill freed slots
+  before the consumer's requeued batch arrives.
+- At `-193`, selection wait reached 41.03 ms. At `-687`, it reached 66.36
+  ms while the measured selection critical section held the mutex only
+  0.035 ms. This points to wait/descheduling or another queue-lock owner,
+  rather than ranking cost alone. Producer push-lock timing is not yet
+  measured.
+- Other high drain rows were dominated by result processing at `-194`,
+  `-531`, and `-258`, and save-result cleanup at `-200`. These are separate
+  from the unassigned `-163` event and the queue lock symptoms.
+
+The corresponding M449 hotspots were not repeated at the same scale in the
+same distance regions: M452's `-505..-480` band had at most 2.50 ms world
+apply and 2.72 ms result processing; `-555..-540` had at most 3 ms async-I/O
+drain; `-625..-595` had 2.55 ms max async-I/O drain; `-744..-726` had 2.36
+ms. Separate whole-frame stalls still appeared with low async-I/O cost, such
+as `-729` and `-791..-772`; for example the latter included a 68.29 ms
+`update_streaming_ms`. The result queue change is beneficial for common-case
+cost but does not resolve every intermittent frame stall.
+
+Artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m452_world164_m335_completed_result_queue_ring_20261007.json`
+- Perf log: `bin/logs/perf_20261007-174613_4508.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-174609.4508`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m452_world164_m335_completed_result_queue_ring --report bin/suite_reports/engine_refactor/m452_world164_m335_completed_result_queue_ring_20261007.json --process-timeout 7200
+```
+
+Raw output remains under ignored `bin` data and must not be staged. M452 is
+also documented in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m452-checkpoint--bounded-completed-result-queue-work-2026-10-07).

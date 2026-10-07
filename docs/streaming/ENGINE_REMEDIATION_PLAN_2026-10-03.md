@@ -4476,3 +4476,68 @@ for changing the proven M335 route.
 M451 route, metrics, analyzer semantics, worker comparison, and exact command
 are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m451---four-load-workers-clean-m335-route-2026-10-07).
+
+### M452 checkpoint — bounded completed-result queue work (2026-10-07)
+
+M452 ran the same visible, no-teleport M335 route on `World_164`, with four
+load workers and one background worker, using the Release executable from
+`ed9201d9` (SHA-256
+`029968c9e098bf889e567d456af509f637c7088c7fd9795867364040a2b56ae5`). It
+completed 14,304 blocks (`focus_cx=7 -> -887`) at the expected median speed
+of 5.19653 blocks/s; route and process acceptance passed. The analyzer still
+returned `pass=false`; it counts readiness and stop-tail conditions, not
+pixel-level proof. No frames were captured, and the user reports that the
+world currently looks normal without visible black or empty chunks.
+
+The completed-result queue change improved ordinary performance against the
+prior M449/M451 lane: report median frame time was 26.61 ms, versus 30.43 ms
+and 30.96 ms; median streaming time was 13.46 ms, versus 15.58 ms and 16.02
+ms. Across raw period/spike rows, M452 had 80 spike rows and a 443.19 ms
+maximum whole-frame sample, compared with 158/676.32 ms in M449 and
+134/1,177.5 ms in M451. M452 also reduced the result-selection p95 from
+6.91 ms to 0.03 ms and requeue p95 from 12.82 ms to 0.01 ms. This supports
+the bounded-ranking and ring-slot reuse change for the common case; it does
+not establish that the rare long stalls are fixed.
+
+The remaining stalls have several distinct signatures. At `focus_cx=-195`,
+selection mutex wait was 60.51 ms and requeue mutex hold was 28.69 ms; source
+inspection ties the latter to a full wrapped ring being compacted while
+producers refill freed slots. At `-193`, selection wait was 41.03 ms; at
+`-687`, it was 66.36 ms while selection held the mutex for only 0.035 ms,
+which indicates waiting/descheduling rather than expensive ranking. Other
+large I/O-drain rows were dominated by result processing (`-194`, `-531`,
+`-258`) or save-result cleanup (`-200`). At `-163`, the outer I/O drain was
+407.42 ms, but measured cancellation, selection, processing, requeue, save
+drain, and light-flags save account for only about 7.30 ms. The remaining
+roughly 400 ms is not attributed by current subphase telemetry. Thus M452
+identifies both queue-lock contention and independent main-thread stalls; it
+does not show that disk reads themselves were slow.
+
+M335 keeps `FogPullIn` disabled and does not answer the separate longstanding
+question about distant silhouettes slowly appearing/disappearing through
+fog or water. Continue to treat that as an unresolved fixed-camera rendering
+investigation. Do not interpret `unfinished_visual`, `near_focus_holes`, or
+internal visible-black proxies as proof of blank pixels.
+
+#### Plan readiness after M452
+
+1. Remove large inline chunk-buffer payloads from completed queue entries so
+   producer pushes, bounded selection swaps, and wrapped-ring compaction move
+   small handles rather than a `UChunkBuffer` containing a full chunk-light
+   array. Keep decoded data ownership explicit and preserve apply semantics.
+2. Add timings for the initial column-light-save result drain, final pool and
+   queue snapshots, and the unaccounted remainder of `TickAsyncChunkIo`.
+   Record whether producer queue pushes wait for the same mutex. Rebuild
+   Release and repeat the exact M335 route before accepting the change.
+3. Attribute each long frame to its measured phase. Keep result-processing
+   spikes, save cleanup, lock wait, lock-held work, and unexplained outer
+   time as separate hypotheses. Do not treat one favorable full-route median
+   as resolution of intermittent stalls.
+4. Compare exact distance bands and queue state with M449–M452. Follow with
+   a separate column-source trace only if the next low-overhead run still
+   shows a terrain-read question. After repeated-world behavior stabilizes,
+   refresh cold world-creation/loading timings and periodic fresh-seed checks.
+
+M452's route, per-band comparisons, unaccounted-time breakdown, raw artifacts,
+and exact invocation are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m452---completed-result-queue-ring-optimization-clean-m335-route-2026-10-07).
