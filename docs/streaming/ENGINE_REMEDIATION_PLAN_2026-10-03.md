@@ -4313,3 +4313,94 @@ movement collision.
 
 M449 route, metrics, source-bin comparison, exact command, and artifacts are
 recorded in [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m449---full-m335-after-chunk-io-lane-split-2026-10-07).
+
+### M450 checkpoint — stage and framebuffer diagnostic (2026-10-07)
+
+M450 measured the Release executable from `b10fd8b2` (SHA-256
+`0cdae339ef8d6a416146d864a21eb3c77ae5b83c99118c024ea766945d1a0df0`) on the
+established visible, no-teleport M335 route. Frame capture ran every 15
+seconds and a 75 ms stage watchdog was enabled, so this is a diagnostic run,
+not a clean performance comparator. The app and wrapper exited normally and
+restored the world metadata, but the route gate missed by 316 blocks:
+13,984/14,300, focus `7 -> -867`, median speed 5.19653 blocks/s. The far
+8,192-block checkpoint was reached. Movement blocking and ground contacts
+were zero.
+
+The operator reports that distant silhouettes fading in and out through fog
+or water have been present for a long time and are not a regression from this
+work. M450's captured frames around the largest visible-black proxy show
+low-contrast distant forms near a blue fog/water horizon, not an obvious black
+or empty chunk. This route does not hold the camera on the same objects, so it
+does not explain the slow silhouette changes. Keep that historical behavior
+as a separate, unresolved render/fog question. Do not count the analyzer's
+readiness census as pixel proof: `unfinished_visual` was nonzero throughout,
+but the user symptom-reproduction gate failed for insufficient black/missing
+focus signal, the visible-black focus median was zero, and near-focus-hole
+periods were zero in the mid-route corridor.
+
+The diagnostic image pass produced 189 screenshots. Median frame wall time
+was 32.82 ms (32.85 ms in flight), with 381 reported spikes. The largest
+whole-frame sample was 895.54 ms at `focus_cx=-820`; the analyzer classed the
+heavy spikes as `other`, and the measured render and streaming subphases do
+not explain most of that sample. A separate stream stall at `-548` measured
+390.41 ms wall, 376.46 ms streaming, 354.49 ms in async chunk systems, and
+345.83 ms in `TickAsyncChunkIo`. Its load queues and completed-load queue were
+empty at the end of the call; measured selection, apply, and requeue phases
+were effectively zero, and the light-flags save phase accounted for only
+10.89 ms. The remaining interval is unaccounted inside the current timing
+breakdown. Similar 120–206 ms async-I/O drain spikes appeared at `-732`,
+`-782`, `-810`, and `-848`. Another 169.75 ms `update_streaming` spike
+appeared at `-217`. This renews the need to split the outer `TickAsyncChunkIo`
+and streaming-update intervals; it does not yet identify slow disk reads.
+
+The configured `3 load + 1 background` pools had zero median pending work.
+Across the run, maxima were 6 pending/3 active load jobs, 10 pending/1 active
+background jobs, 33 completed loads, and 7 completed saves. The relight queue
+drop counter reached 1,122 and `RelightFalseClearN` reached 70; source review
+shows the latter counts a cleanup path that clears an obsolete light obligation
+when no surface band still needs relighting. Treat both as policy/diagnostic
+counters, not confirmed visual defects. One `column_light.json` atomic replace
+failed with `Access is denied` at revision 102102; the persistence code kept
+the data dirty and scheduled a retry. M450 had no column-source trace, so it
+cannot establish whether distant terrain was read from disk or regenerated.
+
+The analyzer passed 25/39 general gates and 7/12 stop gates, including
+readiness and stop-tail proxies that the operator does not currently see as
+display defects. The run did not pass the route gate or product acceptance.
+The captured frames confirm that fog silhouettes should not be called blank
+chunks, but they do not close the separate internal readiness and hitch
+investigations.
+
+#### Plan readiness after M450
+
+The plan is ready for a controlled worker-budget comparison and another
+low-overhead attribution pass, not closure. The next steps are:
+
+1. M451 restores four load workers and adds one save/index worker only when
+   the machine has spare logical capacity. Run the same visible M335 route
+   without image capture or the aggressive watchdog. Compare matching focus
+   bands, full-route distance, per-lane queue snapshots, and frame/streaming
+   percentiles with M449/M450. Keep the established route settings unchanged;
+   interpret an unmet route-distance gate as a short measurement rather than
+   silently changing the conditions.
+2. Split the outer `TickAsyncChunkIo` wall interval into result-save handling,
+   cancellation sweep, queue selection, result processing, light-flags save,
+   and final worker-snapshot reads. Compare nested wall timers and, if the large
+   gap recurs, distinguish main-thread CPU time from time descheduled or
+   blocked. Separately attribute the 100–170 ms `update_streaming` spikes.
+3. After the worker comparison, run a separate `CUBA_WORLD_COLUMN_SOURCE_TRACE`
+   pass for the same far bins. Correlate source, worker queue, file-read,
+   result-wait, and eventual mesh/relight publication. M450's one failed
+   metadata replace is a reason to retain write-result tracing, not evidence
+   of a terrain load failure.
+4. Keep a capture-disabled route as the performance acceptance lane and use
+   occasional captures only to validate a concrete user-reported symptom.
+   Compare fog silhouettes at a fixed location and orientation before treating
+   their slow changes as a streaming regression.
+5. Once the repeated-world path is understood, refresh cold world-creation/load
+   timing and schedule periodic fresh-seed checks. Keep those as separate
+   checks from M335.
+
+M450 route, screenshots, spike details, persistence warning, exact command,
+and analyzer semantics are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m450---stage-and-framebuffer-diagnostic-m335-route-2026-10-07).

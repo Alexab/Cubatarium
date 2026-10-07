@@ -2393,3 +2393,99 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Raw reports and logs remain under `bin`; do not stage them. M449's full report
 and comparison update are in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m449-checkpoint--split-chunk-io-lanes-2026-10-07).
+
+## M450 — stage and framebuffer diagnostic M335 route (2026-10-07)
+
+M450 used the Release executable from `b10fd8b2` (SHA-256
+`0cdae339ef8d6a416146d864a21eb3c77ae5b83c99118c024ea766945d1a0df0`) on
+`World_164`. It kept the established visible, no-teleport M335 inputs and
+captured the framebuffer every 15 seconds. A low 75 ms stage-watchdog
+threshold was also enabled, so frame-time values from this run are diagnostic
+and should not serve as a clean performance acceptance result. The manifest
+records render distance 4 and a distance-fog start ratio of 0.48. Its
+`cold_warm_mode=cold` means no warm protocol was requested; with source tracing
+off, it does not prove how each route column was populated.
+
+The app exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`) and the wrapper restored `world_data.json` byte-for-byte
+and restored `users.json`. The route gate missed by 316 blocks: focus `7 ->
+-867`, 13,984 observed against 14,300 required. The 8,192-block far checkpoint
+was reached. Median measured movement speed was 5.19653 blocks/s. No blocked
+movement substeps or ground contacts were recorded. The analyzer returned
+`pass=false` (25/39 general gates and 7/12 stop gates passed); its separate
+route gate also failed.
+
+The 189 captured PNGs are in
+`bin/suite_reports/engine_refactor/m450_world164_frames_20261007/`. Frames
+73–75 show faint, low-contrast distant shapes through blue haze above water;
+frames 139–141 around `focus_cx=-649` show forest/coast transitioning to
+water, without an obvious black patch. The user's observation is that slow
+silhouette visibility changes have existed for a long time and are unrelated
+to these edits. This flight moves between locations, so it cannot explain
+whether one fixed distant object changes visibility. Record the silhouettes as
+a separate unresolved fog/water/render behavior; these frames do not establish
+missing or empty chunks.
+
+The analyzer's `unfinished_visual` readiness signal was positive in all
+periods (`holes_rate=1.0`), but its description explicitly says that this is
+readiness debt rather than a blank framebuffer. `visible_black_focus_fly_med`
+and the mid-corridor `near_focus_holes` median were both zero; symptom
+reproduction failed for too little focus-missing/black signal. Whole-route
+`near_focus_holes` was positive in 99 periods, while the corridor count was
+zero. `draw_oracle_missing_resident_n` peaked at 84 near `-647`; it is still a
+readiness census, not an independent pixel or terrain-occupancy test.
+
+The run reported 1,400 periods (1,398 steady), median wall time 32.8237 ms
+(32.8504 ms in flight), effective flight FPS 30.44, and 381 spikes. The
+largest whole-frame sample was 895.535 ms near `-820`; measured streaming was
+79.4 ms and mesh emerge 49.23 ms, with the remainder classified as
+unattributed/`other`. The largest isolated async-I/O stall was at `-548`:
+390.414 ms wall, 376.462 ms world streaming, 354.492 ms async chunk systems,
+and 345.83 ms in the outer `TickAsyncChunkIo` interval. At that point the
+load and background job queues and completed-load queue were empty. The
+nested selection/apply/requeue timers were near zero, while light-flags save
+took 10.887 ms; roughly 335 ms of the outer interval has no current
+subphase attribution. Related async drain spikes were 165.918 ms at `-732`,
+205.814 ms at `-782`, 180.401 ms at `-810`, and 113.009 ms at `-848`. The
+largest `update_streaming` spikes were 169.749 ms at `-217`, and 157.865 ms at
+`-806`. These timings are a concrete attribution target; they do not yet
+identify file-read latency.
+
+The actual I/O pool counts were 3 load workers plus 1 background worker.
+Maximum snapshots were 6 pending/3 active load jobs, 10 pending/1 active
+background jobs, 33 completed loads, and 7 completed saves; all corresponding
+medians were zero. The relight FIFO drop counter reached 1,122. The cumulative
+`RelightFalseClearN` count reached 70; source review shows it is incremented
+when cleanup finds no remaining surface band requiring that light obligation,
+so the name alone does not prove a correctness bug. One save of
+`column_light.json` failed at revision 102102 with `Access is denied`; the
+code kept the state dirty and scheduled a retry. This is an isolated metadata
+write failure and does not show that terrain reads failed.
+
+Key artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m450_world164_m335_stage_and_pixel_diagnostic_20261007.json`
+- Perf log: `bin/logs/perf_20261007-154024_18688.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-154020.18688`
+- Stage watchdog: `bin/logs/m450_world164_stage_watchdog_20261007.log`
+- PNG frames: `bin/suite_reports/engine_refactor/m450_world164_frames_20261007/`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\suite_reports\engine_refactor\m450_world164_frames_20261007'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH='E:\Work\Home\Cubatarium\bin\logs\m450_world164_stage_watchdog_20261007.log'
+$env:CUBA_STAGE_WATCHDOG_THRESHOLD_MS='75'
+$env:CUBA_STAGE_WATCHDOG_INTERVAL_MS='25'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m450_world164_m335_stage_and_pixel_diagnostic --report bin/suite_reports/engine_refactor/m450_world164_m335_stage_and_pixel_diagnostic_20261007.json --process-timeout 7200
+```
+
+All raw artifacts remain under ignored `bin` data and must not be staged. M450
+is also documented in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m450-checkpoint--stage-and-framebuffer-diagnostic-2026-10-07).
