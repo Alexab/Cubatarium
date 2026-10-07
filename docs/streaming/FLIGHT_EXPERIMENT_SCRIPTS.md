@@ -2006,3 +2006,112 @@ census summary `bin/suite_reports/engine_refactor/m442_emerge_census_summary_202
 raw perf `bin/logs/perf_20261007-055840_36308.jsonl`, and INFO trace
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-055836.36308`.
 Keep the generated raw artifacts under `bin`; do not stage them.
+
+## M443 — single demand upkeep full M335 route (2026-10-07)
+
+M443 measured the removal of duplicate post-emerge demand-store upkeep. It used
+the visible no-teleport M335 route on `World_164` with Release executable
+SHA-256 `a1a2cb9a38288a9e87c7dfb6a6e95683be0086f1aecdfea32d36156c963ccc49`;
+the accepted manifest identifies source `c390532d`. The process succeeded
+(`process_rc=0`), while analyzer gates remained red (`pass=false`). It recorded
+1,406 periods (1,404 steady), 52 spikes, 14,320 blocks (`focus 7 -> -888`),
+5.19653 blocks/s, and zero blocked movement substeps or ground contacts.
+Whole-route wall median was 32.37 ms. The distance-growing post-tick closeout
+interval fell to 0.086 ms p95. Demand maintenance remained expensive: far-west
+period median / p95 / max was 10.037 / 12.843 / 24.347 ms, and the maximum
+spike sample was 120.965 ms. This run motivated the bounded traversal change.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m443_world164_single_demand_upkeep --report bin/suite_reports/engine_refactor/m443_world164_single_demand_upkeep_20261007.json --process-timeout 3000
+```
+
+Artifacts: report `bin/suite_reports/engine_refactor/m443_world164_single_demand_upkeep_20261007.json`,
+raw perf `bin/logs/perf_20261007-065526_34736.jsonl`. The wrapper restores
+`world_data.json` and `users.json`, but not the terrain database; source trace
+was off. The manifest's `cold` label is not column-source provenance.
+
+## M444 — bounded demand maintenance full M335 route (2026-10-07)
+
+M444 verified commit `38dbc516`'s stable keyed reconciliation cursor and
+removal of the second full-map orphan scan. Release executable SHA-256 was
+`5af2c387443382b44cd0d6b764f7a0c18b704b9ce72573e50aa10d48ac1bf7ce`.
+Manifest accepted; process succeeded (`process_rc=0`); analyzer `pass=false`.
+It recorded 1,408 periods (1,406 steady), 26 spikes, 14,304 blocks
+(`focus 7 -> -887`), 5.19653 blocks/s, and zero blocked substeps or ground
+contacts. Whole-route wall median was 26.028 ms. Far-west demand maintenance
+fell to 0.026 ms median, 0.034 ms p95, and 0.109 ms maximum ordinary period;
+its maximum spike sample was 1.311 ms. Overall wall-time improvement from M443
+is not fully causal because the wrapper does not restore terrain state and
+source tracing was disabled.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m444_world164_bounded_demand_maintenance --report bin/suite_reports/engine_refactor/m444_world164_bounded_demand_maintenance_20261007.json --process-timeout 3000
+```
+
+Artifacts: report `bin/suite_reports/engine_refactor/m444_world164_bounded_demand_maintenance_20261007.json`,
+raw perf `bin/logs/perf_20261007-084709_30824.jsonl`. See the remediation plan
+for the focus `-816` GPU-finish outlier and its limits.
+
+## M445 — GPU process profile full M335 route (2026-10-07)
+
+M445 repeated M335 from commit `427f375a`, using the same Release executable
+hash as M444. The manifest was accepted, the visible process exited normally
+(`process_rc=0`, `hang_killed=false`), and the analyzer returned `pass=false`
+(27/39 general gates). It recorded 1,408 periods (1,406 steady), 34 spikes,
+14,320 blocks (`focus 7 -> -888`), and 5.19653 blocks/s. Movement collision
+counters remained zero. Whole-route wall median was 26.0489 ms. Visual readiness
+proxies remained red (`unfinished_visual_rate=1` and `visual_holes_rate=1`),
+while visible-black focus median was 0 and maximum 22; there was no framebuffer
+capture, so these are not pixel findings.
+
+The diagnostic env flag sampled every eighth eligible
+`ProcessPendingGpuMeshes()` call and wrote 30,375 rows. Seven profile samples
+exceeded 10 ms and two exceeded 20 ms. Maximum total was 33.281 ms, with
+32.467 ms in CPU input preparation; the maximum `quad_finish` subphase was
+0.357 ms. One 26.811 ms `KickComputePasses()` sample was not explained by the
+currently recorded inner phases. Profile rows have sequence but no timestamp or
+chunk coordinate, so they cannot yet be matched exactly to a frame spike.
+Profiling overhead makes this a diagnostic run rather than a clean performance
+acceptance run.
+
+At the M444 `focus=-816` region, M445's wall maximum across `-812..-820` was
+40.19 ms and GPU finish maximum was 7.58 ms; the old 178.68 ms GPU-finish peak
+did not recur. Other far-route frames still reached 197.05 ms at `-823`
+(60.40 ms mesh-dirty tick, 25.41 ms GPU finish), and 157.42 ms at `-824`
+(51.50 ms async I/O drain, including 46.82 ms save drain). A separate
+`focus=-635` spike had 95.79 ms GPU kick; at `-704` dirty tick reached 99.12
+ms, with snapshot and scheduling intervals around 91 ms. These phase scopes can
+be nested and must not be summed. See the plan for the complete interpretation.
+
+Exact invocation (the long-route parameters are unchanged):
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='1'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH='E:\Work\Home\Cubatarium\bin\logs\m445_gpu_process_profile_20261007.jsonl'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m445_world164_gpu_process_profile --report bin/suite_reports/engine_refactor/m445_world164_gpu_process_profile_20261007.json --process-timeout 3000
+```
+
+Artifacts: report `bin/suite_reports/engine_refactor/m445_world164_gpu_process_profile_20261007.json`,
+raw perf `bin/logs/perf_20261007-094250_32276.jsonl`, GPU profile
+`bin/logs/m445_gpu_process_profile_20261007.jsonl`, and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-094247.32276`.
+These generated artifacts remain under `bin`; do not stage raw logs.
