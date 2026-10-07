@@ -140,10 +140,32 @@ public:
     return Discarded.load(std::memory_order_relaxed);
   }
 
-  void Push(T value)
+  void Push(T value, double *mutex_wait_ms = nullptr,
+            double *mutex_held_ms = nullptr)
   {
-    std::lock_guard<std::mutex> lock(Mutex);
+    if (!mutex_wait_ms && !mutex_held_ms)
+    {
+      std::lock_guard<std::mutex> lock(Mutex);
+      PushUnlocked(std::move(value), nullptr);
+      return;
+    }
+
+    const auto lock_wait_started = std::chrono::steady_clock::now();
+    std::unique_lock<std::mutex> lock(Mutex);
+    const auto lock_acquired = std::chrono::steady_clock::now();
+    if (mutex_wait_ms)
+    {
+      *mutex_wait_ms = std::chrono::duration<double, std::milli>(
+                           lock_acquired - lock_wait_started)
+                           .count();
+    }
     PushUnlocked(std::move(value), nullptr);
+    if (mutex_held_ms)
+    {
+      *mutex_held_ms = std::chrono::duration<double, std::milli>(
+                           std::chrono::steady_clock::now() - lock_acquired)
+                           .count();
+    }
   }
 
   /// Requeue a batch while acquiring the queue lock only once.

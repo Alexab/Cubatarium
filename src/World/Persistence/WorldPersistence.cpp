@@ -3651,13 +3651,24 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     UWorld &world, std::size_t max_slice_applies_override,
     double max_apply_ms)
 {
+  const auto tick_started = std::chrono::steady_clock::now();
   AsyncChunkIoTickMetrics metrics;
   if (!ChunkStorage)
   {
+    metrics.tick_wall_ms = std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now() - tick_started)
+                               .count();
+    metrics.unattributed_ms = metrics.tick_wall_ms;
     return metrics;
   }
 
+  const auto light_flags_result_drain_started =
+      std::chrono::steady_clock::now();
   ProcessColumnLightFlagSaveResults();
+  metrics.light_flags_result_drain_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - light_flags_result_drain_started)
+          .count();
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
     const auto discard_started = std::chrono::steady_clock::now();
@@ -3827,11 +3838,11 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
                          : std::chrono::steady_clock::time_point{};
       if (load.success && token_valid && world.BlockRegistry)
       {
-        const UChunkBuffer &buffer = load.decodedBuffer;
-        if (!buffer.IsEmpty())
+        const UChunkBuffer *buffer = load.decodedBuffer.get();
+        if (buffer && !buffer->IsEmpty())
         {
-          buffer.ApplyToChunk(world.BlockWorld, load.coord);
-          if (buffer.HasChunkLightData())
+          buffer->ApplyToChunk(world.BlockWorld, load.coord);
+          if (buffer->HasChunkLightData())
           {
             state.had_disk_light = true;
           }
@@ -3973,6 +3984,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - light_flags_save_started)
           .count();
+  const auto queue_snapshot_started = std::chrono::steady_clock::now();
   if (AsyncChunkIo)
   {
     const JobThreadPoolSnapshot load = AsyncChunkIo->GetLoadPoolSnapshot();
@@ -3988,7 +4000,30 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         AsyncChunkIo->GetLoadResultQueueDepth();
     metrics.save_result_queue_depth_n =
         AsyncChunkIo->GetSaveResultQueueDepth();
+    const AsyncChunkLoadQueuePushMetrics push_metrics =
+        AsyncChunkIo->TakeLoadResultPushMetrics();
+    metrics.load_result_push_mutex_wait_ms = push_metrics.mutex_wait_ms;
+    metrics.load_result_push_mutex_held_ms = push_metrics.mutex_held_ms;
+    metrics.load_result_push_mutex_wait_max_ms =
+        push_metrics.mutex_wait_max_ms;
+    metrics.load_result_push_mutex_held_max_ms =
+        push_metrics.mutex_held_max_ms;
+    metrics.load_result_push_n = push_metrics.push_count;
   }
+  metrics.queue_snapshot_ms = std::chrono::duration<double, std::milli>(
+                                  std::chrono::steady_clock::now() -
+                                  queue_snapshot_started)
+                                  .count();
+  metrics.tick_wall_ms = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - tick_started)
+                             .count();
+  const double attributed_ms =
+      metrics.light_flags_result_drain_ms + metrics.discard_cancelled_ms +
+      metrics.result_selection_ms + metrics.result_processing_ms +
+      metrics.result_requeue_ms + metrics.save_drain_ms +
+      metrics.light_flags_save_ms + metrics.queue_snapshot_ms;
+  metrics.unattributed_ms =
+      (std::max)(0.0, metrics.tick_wall_ms - attributed_ms);
   return metrics;
 }
 

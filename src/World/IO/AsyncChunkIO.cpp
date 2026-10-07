@@ -184,7 +184,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
       result.workerFinishedAt = std::chrono::steady_clock::now();
     }
     result.formatDetectMs = format_detect_ms;
-    CompletedLoads.Push(std::move(result));
+    PushCompletedLoad(std::move(result));
     return;
   }
 
@@ -235,7 +235,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
           {
             result.workerFinishedAt = std::chrono::steady_clock::now();
           }
-          CompletedLoads.Push(std::move(result));
+          PushCompletedLoad(std::move(result));
           if (is_cancelled())
           {
             NoteLoadCancellation();
@@ -270,8 +270,9 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
           try
           {
             UChunkStorageService worker_storage(worker_storage_settings);
-            result.decodedBuffer = worker_storage.DeserializeChunk(
-                result.payload, coord, format, registry);
+            result.decodedBuffer = std::make_unique<UChunkBuffer>(
+                worker_storage.DeserializeChunk(result.payload, coord, format,
+                                                registry));
           }
           catch (...)
           {
@@ -293,7 +294,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
         {
           result.workerFinishedAt = std::chrono::steady_clock::now();
         }
-        CompletedLoads.Push(std::move(result));
+        PushCompletedLoad(std::move(result));
         if (is_cancelled())
         {
           NoteLoadCancellation();

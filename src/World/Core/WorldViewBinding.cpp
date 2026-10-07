@@ -797,6 +797,10 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.AsyncChunkSchedulerTickMs = 0.0;
   PhysicsTelemetryData.AsyncChunkPostSchedulerMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoDrainMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoTickWallMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoUnattributedMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsResultDrainMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoQueueSnapshotMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoDiscardCancelledMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoResultSelectionMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoResultSelectionMutexWaitMs = 0.0;
@@ -807,8 +811,13 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.AsyncChunkIoResultRequeueMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoResultRequeueMutexWaitMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoResultRequeueMutexHeldMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexHeldMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexWaitMaxMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexHeldMaxMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoSaveDrainMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoLightFlagsSaveMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushN = 0;
   PhysicsTelemetryData.AsyncChunkIoCancelledDiscardN = 0;
   PhysicsTelemetryData.AsyncChunkIoReadyLoadsBeforeN = 0;
   PhysicsTelemetryData.AsyncChunkIoSelectedLoadsN = 0;

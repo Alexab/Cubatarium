@@ -5,8 +5,10 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <memory>
@@ -28,7 +30,10 @@ struct AsyncChunkLoadResult
   ChunkGenerationToken token;
   std::shared_ptr<std::atomic<bool>> cancellation;
   std::vector<uint8_t> payload;
-  UChunkBuffer decodedBuffer;
+  // Keep the large chunk-light array out of the completion queue's inline
+  // ring entries. Queue ranking, requeue, and ring growth should move a small
+  // handle rather than copying a full UChunkBuffer.
+  std::unique_ptr<UChunkBuffer> decodedBuffer;
   ChunkDiskFormat format{ChunkDiskFormat::Absent};
   bool success{false};
   std::chrono::steady_clock::time_point submittedAt{};
@@ -38,6 +43,15 @@ struct AsyncChunkLoadResult
   double fileOpenMs{0.0};
   double fileReadMs{0.0};
   double deserializeMs{0.0};
+};
+
+struct AsyncChunkLoadQueuePushMetrics
+{
+  double mutex_wait_ms{0.0};
+  double mutex_held_ms{0.0};
+  double mutex_wait_max_ms{0.0};
+  double mutex_held_max_ms{0.0};
+  uint64_t push_count{0};
 };
 
 struct AsyncChunkSaveRequest
@@ -189,8 +203,61 @@ public:
   }
   std::size_t GetLoadResultQueueDepth() const { return CompletedLoads.Size(); }
   std::size_t GetSaveResultQueueDepth() const { return CompletedSaves.Size(); }
+  AsyncChunkLoadQueuePushMetrics TakeLoadResultPushMetrics()
+  {
+    constexpr double kNanosecondsToMilliseconds = 1.0e-6;
+    AsyncChunkLoadQueuePushMetrics metrics;
+    metrics.mutex_wait_ms = static_cast<double>(
+                                LoadResultPushWaitNs.exchange(
+                                    0, std::memory_order_relaxed)) *
+                            kNanosecondsToMilliseconds;
+    metrics.mutex_held_ms = static_cast<double>(
+                                LoadResultPushHeldNs.exchange(
+                                    0, std::memory_order_relaxed)) *
+                            kNanosecondsToMilliseconds;
+    metrics.mutex_wait_max_ms = static_cast<double>(
+                                    LoadResultPushWaitMaxNs.exchange(
+                                        0, std::memory_order_relaxed)) *
+                                kNanosecondsToMilliseconds;
+    metrics.mutex_held_max_ms = static_cast<double>(
+                                    LoadResultPushHeldMaxNs.exchange(
+                                        0, std::memory_order_relaxed)) *
+                                kNanosecondsToMilliseconds;
+    metrics.push_count =
+        LoadResultPushCount.exchange(0, std::memory_order_relaxed);
+    return metrics;
+  }
 
 private:
+  static void AccumulateMaximum(std::atomic<uint64_t> &target,
+                                uint64_t value)
+  {
+    uint64_t observed = target.load(std::memory_order_relaxed);
+    while (observed < value &&
+           !target.compare_exchange_weak(observed, value,
+                                         std::memory_order_relaxed,
+                                         std::memory_order_relaxed))
+    {
+    }
+  }
+
+  void PushCompletedLoad(AsyncChunkLoadResult &&result)
+  {
+    double wait_ms = 0.0;
+    double held_ms = 0.0;
+    CompletedLoads.Push(std::move(result), &wait_ms, &held_ms);
+    constexpr double kMillisecondsToNanoseconds = 1.0e6;
+    const auto wait_ns = static_cast<uint64_t>(
+        (std::max)(0.0, wait_ms) * kMillisecondsToNanoseconds);
+    const auto held_ns = static_cast<uint64_t>(
+        (std::max)(0.0, held_ms) * kMillisecondsToNanoseconds);
+    LoadResultPushWaitNs.fetch_add(wait_ns, std::memory_order_relaxed);
+    LoadResultPushHeldNs.fetch_add(held_ns, std::memory_order_relaxed);
+    AccumulateMaximum(LoadResultPushWaitMaxNs, wait_ns);
+    AccumulateMaximum(LoadResultPushHeldMaxNs, held_ns);
+    LoadResultPushCount.fetch_add(1, std::memory_order_relaxed);
+  }
+
   void EnqueueBackgroundIo(std::function<void()> job)
   {
     if (BackgroundIoPool)
@@ -206,6 +273,11 @@ private:
   // Queues and task-visible state must outlive all worker pools (reverse
   // declaration order controls destruction).
   UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
+  std::atomic<uint64_t> LoadResultPushWaitNs{0};
+  std::atomic<uint64_t> LoadResultPushHeldNs{0};
+  std::atomic<uint64_t> LoadResultPushWaitMaxNs{0};
+  std::atomic<uint64_t> LoadResultPushHeldMaxNs{0};
+  std::atomic<uint64_t> LoadResultPushCount{0};
   UCompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
   UCompletedJobQueue<AsyncColumnLightFlagsSaveResult>
       CompletedColumnLightFlagsSaves;

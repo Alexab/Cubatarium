@@ -3369,6 +3369,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             std::chrono::high_resolution_clock::now() - io_t0)
             .count();
     auto &io_telem = world.PhysicsTelemetryData;
+    io_telem.AsyncChunkIoTickWallMs += io_metrics.tick_wall_ms;
+    io_telem.AsyncChunkIoUnattributedMs += io_metrics.unattributed_ms;
+    io_telem.AsyncChunkIoLightFlagsResultDrainMs +=
+        io_metrics.light_flags_result_drain_ms;
+    io_telem.AsyncChunkIoQueueSnapshotMs += io_metrics.queue_snapshot_ms;
     io_telem.AsyncChunkIoDiscardCancelledMs +=
         io_metrics.discard_cancelled_ms;
     io_telem.AsyncChunkIoResultSelectionMs += io_metrics.result_selection_ms;
@@ -3385,8 +3390,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         io_metrics.result_requeue_mutex_wait_ms;
     io_telem.AsyncChunkIoResultRequeueMutexHeldMs +=
         io_metrics.result_requeue_mutex_held_ms;
+    io_telem.AsyncChunkIoLoadResultPushMutexWaitMs +=
+        io_metrics.load_result_push_mutex_wait_ms;
+    io_telem.AsyncChunkIoLoadResultPushMutexHeldMs +=
+        io_metrics.load_result_push_mutex_held_ms;
+    io_telem.AsyncChunkIoLoadResultPushMutexWaitMaxMs =
+        (std::max)(io_telem.AsyncChunkIoLoadResultPushMutexWaitMaxMs,
+                   io_metrics.load_result_push_mutex_wait_max_ms);
+    io_telem.AsyncChunkIoLoadResultPushMutexHeldMaxMs =
+        (std::max)(io_telem.AsyncChunkIoLoadResultPushMutexHeldMaxMs,
+                   io_metrics.load_result_push_mutex_held_max_ms);
     io_telem.AsyncChunkIoSaveDrainMs += io_metrics.save_drain_ms;
     io_telem.AsyncChunkIoLightFlagsSaveMs += io_metrics.light_flags_save_ms;
+    io_telem.AsyncChunkIoLoadResultPushN +=
+        static_cast<int>(io_metrics.load_result_push_n);
     io_telem.AsyncChunkIoCancelledDiscardN +=
         static_cast<int>(io_metrics.cancelled_discard_n);
     io_telem.AsyncChunkIoReadyLoadsBeforeN +=

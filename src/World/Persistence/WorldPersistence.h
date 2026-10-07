@@ -33,6 +33,10 @@ class UWorld;
 
 struct AsyncChunkIoTickMetrics
 {
+  double tick_wall_ms{0.0};
+  double unattributed_ms{0.0};
+  double light_flags_result_drain_ms{0.0};
+  double queue_snapshot_ms{0.0};
   double discard_cancelled_ms{0.0};
   double result_selection_ms{0.0};
   double result_selection_mutex_wait_ms{0.0};
@@ -44,8 +48,13 @@ struct AsyncChunkIoTickMetrics
   double result_requeue_ms{0.0};
   double result_requeue_mutex_wait_ms{0.0};
   double result_requeue_mutex_held_ms{0.0};
+  double load_result_push_mutex_wait_ms{0.0};
+  double load_result_push_mutex_held_ms{0.0};
+  double load_result_push_mutex_wait_max_ms{0.0};
+  double load_result_push_mutex_held_max_ms{0.0};
   double save_drain_ms{0.0};
   double light_flags_save_ms{0.0};
+  uint64_t load_result_push_n{0};
   std::size_t cancelled_discard_n{0};
   std::size_t ready_loads_before_n{0};
   std::size_t selected_loads_n{0};
