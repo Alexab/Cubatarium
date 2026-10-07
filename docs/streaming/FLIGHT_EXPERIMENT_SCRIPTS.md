@@ -2115,3 +2115,62 @@ raw perf `bin/logs/perf_20261007-094250_32276.jsonl`, GPU profile
 `bin/logs/m445_gpu_process_profile_20261007.jsonl`, and INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-094247.32276`.
 These generated artifacts remain under `bin`; do not stage raw logs.
+
+## M446 — GPU and dirty/snapshot attribution after hibernate (2026-10-07)
+
+M446 used the same M335 arguments and Release EXE from clean commit `5443c6ae`
+(SHA-256 `0c9f511243ad5b6c7c6c48e3d1afd9c8dbd9e43d099f8779240a5876d93aed60`).
+The process returned normally, but this was not a full-route comparison. INFO
+period logging has an `806.08 s` gap from `11:39:05` to `11:52:31` while focus
+remained `-473`, consistent with the operator-confirmed hibernate. The app later
+ended the configured timed flight at focus `-615`, x=`-9828`: `9952` blocks
+traveled versus the full-M335 `14320`; endpoint `-888` was not reached. The
+8,192-block coverage checkpoint passed, which is insufficient to establish a
+complete M335 run. The harness currently reports success by process exit and
+does not invalidate the timed route when sleep consumes part of its duration.
+
+There are 1,000 periods (998 steady) and 510 spike samples. Movement speed proxy
+was `5.19287 blocks/s`; blocked substeps and ground contacts were zero. Analyzer
+returned `pass=false` (14/39 general and 5/12 stop gates). The `30.78 ms` median
+is not directly comparable with M445's `26.05 ms`: M446 had GPU/CPU profiling
+enabled and lost about 806 seconds of active travel to hibernate. Visual proxies
+remain readiness indicators only; no framebuffer was captured. Column source
+tracing was disabled, and terrain storage was not cleared by the wrapper.
+
+The corrected dirty-stage timers show policy pruning is not the broad hot path:
+pre-prune median/p95/max `0.322/1.038/13.541 ms`; actual prune
+`0.036/0.328/12.663 ms`. Snapshot and scheduling remain more concerning:
+schedule median/p95/max `1.929/11.000/85.901 ms`, snapshot
+`1.736/9.453/82.747 ms`. At `focus=-477`, dirty tick was `86.63 ms`, schedule
+`85.90 ms`, snapshot `82.75 ms`; other 50–70 ms snapshots clustered around
+`-474..-479`. These intervals are nested and cannot be summed.
+
+The GPU process profile sampled every eighth eligible call and wrote 17,636
+records. 51 rows had `total_ms>10`, 8 had `total_ms>20`; the maximum process
+call was `67.57 ms`, including `65.75 ms` revision validation. Maximum kick was
+`49.60 ms` for chunk `[-475,1,2]`, almost all CPU occupancy packing
+(`49.32 ms`). A second `20.12 ms` kick at `[-488,1,-1]` was mostly block packing.
+Maximum `quad_finish` was `0.971 ms`. Async I/O drain median/p95/max was
+`1.58/3.86/15.05 ms`; the M445 51.50 ms save-drain event did not recur.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='1'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH='E:\Work\Home\Cubatarium\bin\logs\m446_gpu_process_profile_attributed_20261007.jsonl'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m446_world164_gpu_process_profile_attributed --report bin/suite_reports/engine_refactor/m446_world164_gpu_process_profile_attributed_20261007.json --process-timeout 3000
+```
+
+Artifacts: report
+`bin/suite_reports/engine_refactor/m446_world164_gpu_process_profile_attributed_20261007.json`,
+perf `bin/logs/perf_20261007-111339_32128.jsonl`, GPU profile
+`bin/logs/m446_gpu_process_profile_attributed_20261007.jsonl`, and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-111336.32128`.
+Raw outputs remain under `bin`; do not stage them. For future full-route
+comparisons, require the expected endpoint or at least 14,300 travel blocks in
+addition to normal process exit.
