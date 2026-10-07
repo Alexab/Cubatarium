@@ -4848,3 +4848,25 @@ verify both the cost and when the diagnostic is unavailable.
 
 M456 details and the exact reproduction command are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m456-async-stale-slice-cleanup-full-m335-verification-2026-10-08).
+
+### M457 checkpoint — cruise readiness rescans bounded; far-end light debt remains (2026-10-08)
+
+M457 used Release executable `51A3BF1471B6B515DF7BE2A849451692E682A621C65B05C708FD2CB3432B803B`, built from `cc75e339`. The unchanged visible, no-teleport M335 route passed its manifest and route-adequacy gates: 14,320 blocks (`focus_cx=7 -> -888`), median movement speed 5.1965 blocks/s, and constant eye height 70. The process exited normally (`process_rc=0`, `run_outcome=success`, `hang_killed=false`). The wrapper returned 1 because the analyzer did not accept the run: 27/39 general gates and 9/12 stop gates passed.
+
+The M456 hot-path change is consistent with lower cruise streaming cost, though it does not prove which removed scan caused M456's outliers. In the final M457 log, `streamer_update_ms` was 0.0104 ms median, 0.0284 ms p95, and 7.663 ms max; `update_streaming_ms` was 1.8291 ms median, 4.1322 ms p95, and 26.4119 ms max. No `Streamer::Update` sample approached 121 ms. The reported 301.013 ms maximum wall frame was at route entry, where `UpdateStreaming` was 5.2865 ms and the streaming phase was 25.1715 ms; the maximum `UpdateStreaming` sample was 26.4119 ms at `focus_cx=-61`. This does not support the earlier live hypothesis that a 121 ms `GetHighestChunkSliceOnDisk` call caused a far-route streamer stall; that attribution is withdrawn. The disk-index path remains a code-level risk only if a future trace measures it.
+
+This analyzer's `hole_key` is `unfinished_visual`, whose report explicitly defines it as a visual-readiness/debt count, not a blank or dark framebuffer pixel. It remained nonzero on all 1,406 steady samples (median 27, max 83), so the derived 100% `effective_holes_rate` and the generic holes gate do not establish a visual hole. The route-level symptom-reproduction gate was itself false: `focus_missing_mesh` median 0 and `visible_black_focus` median 0. In the covered mid-corridor segment, `near_focus_holes` and `visual_holes` were zero, as was `dark_face_stale_near_n`. No image or pixel/object-ID capture was collected.
+
+The far end still has an internal light/render debt worth isolating. On 27 samples from `focus_cx=-877` through `-888`, the ring-level `visible_black_stale_lit_n` was 1–7. During the 12 sampled stop periods it remained at 6, and `oldest_stale_vertex_light_age_frames` rose to 623. At the same endpoint, the nearest-dark-face probe classified its 70 sampled faces as void-lit (both baked and field light dark), with zero stale faces in that local radius; this is not proof that the ring-level stale meshes were in view. Dirty geometry ended around 140 and pending light around 1. The stop gate failed missing-zero, readiness-hole-zero, and falling-dirty checks; pending and not-ready counts did fall. Keep this separate from the user's long-standing fog/water silhouette behavior until a fixed-camera image or pixel witness ties a stale mesh to the screen.
+
+The analyzer also reports a 26.411 ms median fly frame (37.95 FPS), versus its 16.6 ms target, with median streaming phase 12.735 ms. The low core streamer median means this is not a reason to return to unbudgeted readiness scans. A targeted performance split should first distinguish the remainder of streaming phase, mesh emerge, rendering, and their wall-time overlap. Existing cumulative relight FIFO trim/drop and false-clear counters also remain policy/diagnostic evidence, not standalone proof of a rendered defect.
+
+#### Next work after M457
+
+1. Preserve M335's route, speed, height, and GUI settings. Add a bounded visual witness at the unchanged far-route endpoint: capture a frame and the available dark-face/mesh-light witness while stationary, then test whether any ring-level stale coordinate is actually in the view. Keep the trace/capture lane separate from the capture-disabled performance baseline.
+2. If the witness intersects the camera view, trace that exact chunk through light-field revision, relight ownership, dirty scheduling, mesh publish, and GPU residency. The current stop tail (six stale-lit columns, rising stale age, roughly 140 dirty chunks) is the concrete lead; do not fix it by globally remeshing all ring debt.
+3. Continue performance attribution from the 26.4 ms median frame and 12.7 ms streaming phase using stage timers that are comparable to wall time. Do not infer a disk-read bottleneck from the discarded 121 ms attribution.
+4. Keep the already planned cold world-create/load profile and periodic fresh-seed routes after the repeated-world issue has a pixel-level classification.
+
+M457 measurements and exact command are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m457-catch-up-probe-budget-check-on-the-full-m335-route-2026-10-08).

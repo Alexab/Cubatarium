@@ -2917,3 +2917,69 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Raw output stays under ignored `bin` data and must not be staged. M456's
 analysis and next action are also recorded in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m456-checkpoint--asynchronous-stale-slice-cleanup-verified-hidden-streaming-phase-work-found-2026-10-08).
+
+## M457 — catch-up probe budget check on the full M335 route (2026-10-08)
+
+M457 verifies commit `cc75e339` on the unchanged visible, no-teleport M335
+route. The Release executable SHA256 was
+`51A3BF1471B6B515DF7BE2A849451692E682A621C65B05C708FD2CB3432B803B`.
+Tracing, screenshot capture, GPU process profiling, and stage watchdog were
+disabled to preserve the established performance lane.
+
+The 1,408-period run passed manifest acceptance and route adequacy, traveling
+14,320 blocks from `focus_cx=7` to `-888` at median 5.19653 blocks/s and eye
+height 70. The app exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`). The wrapper returned 1 because analyzer acceptance was
+false: 27/39 general gates and 9/12 stop gates passed. The route's measured
+median frame was 26.411 ms (37.95 FPS); the streaming phase median was 12.735
+ms. `streamer_update_ms` was 0.0104 ms median / 0.0284 ms p95 / 7.663 ms max;
+`update_streaming_ms` was 1.8291 ms median / 4.1322 ms p95 / 26.4119 ms max.
+The maximum wall frame was 301.013 ms at route entry, but its streaming phase
+was 25.1715 ms and `UpdateStreaming` was 5.2865 ms. No 121 ms core streamer
+stall exists in this final JSONL; the earlier live attribution to synchronous
+disk-slice discovery is withdrawn.
+
+The analyzer names `unfinished_visual` as its hole signal and reports its
+semantics explicitly: it is a visual-readiness/debt count, not framebuffer
+evidence. It stayed nonzero in every steady sample (median 27, maximum 83),
+which produces `effective_holes_rate=1.0` and a red generic holes gate. The
+route-level symptom gate did not reproduce its required black/missing signal
+(`focus_missing_mesh` median 0; visible-black median 0). In the covered
+mid-corridor, `near_focus_holes`, `visual_holes`, and stale-dark-near counters
+were zero. No screenshot or pixel/object-ID witness was captured.
+
+The far endpoint has a narrower investigation lead: at `focus_cx=-877..-888`,
+the ring-level `visible_black_stale_lit_n` was nonzero in 27 samples (1–7
+columns). It remained 6 through the 12 sampled stop periods while oldest stale
+vertex-light age rose to 623 frames. At `cx=-888`, the nearest-dark-face probe
+found 70 void-light faces and 0 stale-light faces within its local radius;
+those nearby legal-dark faces do not establish whether the separate
+ring-level stale meshes entered the camera view. At stop end, dirty geometry
+was about 140 and pending light about 1. Stop gates failed missing-zero,
+readiness-hole-zero, and falling-dirty checks, while pending/not-ready counts
+fell. Do not merge these internal counters with the user's long-standing
+fog/water silhouette behavior without a fixed-camera visual witness.
+
+Artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m457_world164_m335_catchup_probe_budget_20261008.json`
+- Perf log: `bin/logs/perf_20261008-004108_38488.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-004104.38488`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m457_world164_m335_catchup_probe_budget --report bin/suite_reports/engine_refactor/m457_world164_m335_catchup_probe_budget_20261008.json --process-timeout 7200
+```
+
+Raw output remains under ignored `bin` data. M457 findings and the next
+diagnostic pass are in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m457-checkpoint--cruise-readiness-rescans-bounded-far-end-light-debt-remains-2026-10-08).
