@@ -3372,11 +3372,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     io_telem.AsyncChunkIoDiscardCancelledMs +=
         io_metrics.discard_cancelled_ms;
     io_telem.AsyncChunkIoResultSelectionMs += io_metrics.result_selection_ms;
+    io_telem.AsyncChunkIoResultSelectionMutexWaitMs +=
+        io_metrics.result_selection_mutex_wait_ms;
+    io_telem.AsyncChunkIoResultSelectionMutexHeldMs +=
+        io_metrics.result_selection_mutex_held_ms;
     io_telem.AsyncChunkIoResultProcessingMs +=
         io_metrics.result_processing_ms;
     io_telem.AsyncChunkIoWorldApplyMs += io_metrics.world_apply_ms;
     io_telem.AsyncChunkIoColumnFinalizeMs += io_metrics.column_finalize_ms;
     io_telem.AsyncChunkIoResultRequeueMs += io_metrics.result_requeue_ms;
+    io_telem.AsyncChunkIoResultRequeueMutexWaitMs +=
+        io_metrics.result_requeue_mutex_wait_ms;
+    io_telem.AsyncChunkIoResultRequeueMutexHeldMs +=
+        io_metrics.result_requeue_mutex_held_ms;
     io_telem.AsyncChunkIoSaveDrainMs += io_metrics.save_drain_ms;
     io_telem.AsyncChunkIoLightFlagsSaveMs += io_metrics.light_flags_save_ms;
     io_telem.AsyncChunkIoCancelledDiscardN +=

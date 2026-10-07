@@ -799,10 +799,14 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.AsyncChunkIoDrainMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoDiscardCancelledMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoResultSelectionMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultSelectionMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultSelectionMutexHeldMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoResultProcessingMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoWorldApplyMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoColumnFinalizeMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoResultRequeueMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultRequeueMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultRequeueMutexHeldMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoSaveDrainMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoLightFlagsSaveMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoCancelledDiscardN = 0;

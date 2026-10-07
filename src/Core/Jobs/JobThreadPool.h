@@ -147,16 +147,39 @@ public:
   }
 
   /// Requeue a batch while acquiring the queue lock only once.
-  void PushRange(std::vector<T> &&values)
+  void PushRange(std::vector<T> &&values, double *mutex_wait_ms = nullptr,
+                 double *mutex_held_ms = nullptr)
   {
     if (values.empty())
     {
+      if (mutex_wait_ms)
+      {
+        *mutex_wait_ms = 0.0;
+      }
+      if (mutex_held_ms)
+      {
+        *mutex_held_ms = 0.0;
+      }
       return;
     }
-    std::lock_guard<std::mutex> lock(Mutex);
+    const auto lock_wait_started = std::chrono::steady_clock::now();
+    std::unique_lock<std::mutex> lock(Mutex);
+    const auto lock_acquired = std::chrono::steady_clock::now();
+    if (mutex_wait_ms)
+    {
+      *mutex_wait_ms = std::chrono::duration<double, std::milli>(
+                           lock_acquired - lock_wait_started)
+                           .count();
+    }
     for (T &value : values)
     {
       PushUnlocked(std::move(value), nullptr);
+    }
+    if (mutex_held_ms)
+    {
+      *mutex_held_ms = std::chrono::duration<double, std::milli>(
+                           std::chrono::steady_clock::now() - lock_acquired)
+                           .count();
     }
   }
 
@@ -265,7 +288,9 @@ public:
   /// This avoids recalculating distance/age state for every selection pass.
   template <typename KeyFn>
   std::vector<T> DrainBestByKeyUpTo(std::size_t maxCount, KeyFn &&key_fn,
-                                    std::size_t *availableCount = nullptr)
+                                    std::size_t *availableCount = nullptr,
+                                    double *mutex_wait_ms = nullptr,
+                                    double *mutex_held_ms = nullptr)
   {
     using Key = std::decay_t<decltype(key_fn(std::declval<const T &>()))>;
     struct RankedOffset
@@ -274,7 +299,15 @@ public:
       std::size_t offset{0};
     };
 
-    std::lock_guard<std::mutex> lock(Mutex);
+    const auto lock_wait_started = std::chrono::steady_clock::now();
+    std::unique_lock<std::mutex> lock(Mutex);
+    const auto lock_acquired = std::chrono::steady_clock::now();
+    if (mutex_wait_ms)
+    {
+      *mutex_wait_ms = std::chrono::duration<double, std::milli>(
+                           lock_acquired - lock_wait_started)
+                           .count();
+    }
     std::vector<T> drained;
     if (availableCount)
     {
@@ -282,6 +315,12 @@ public:
     }
     if (maxCount == 0 || Count == 0 || Items.empty())
     {
+      if (mutex_held_ms)
+      {
+        *mutex_held_ms = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - lock_acquired)
+                             .count();
+      }
       return drained;
     }
 
@@ -289,11 +328,6 @@ public:
     const auto item_at = [this](std::size_t offset) -> T &
     { return Items[(Head + offset) % Items.size()]; };
     std::vector<RankedOffset> ranked;
-    ranked.reserve(Count);
-    for (std::size_t offset = 0; offset < Count; ++offset)
-    {
-      ranked.push_back(RankedOffset{key_fn(item_at(offset)), offset});
-    }
     const auto ranked_before = [](const RankedOffset &a,
                                   const RankedOffset &b)
     {
@@ -308,35 +342,43 @@ public:
       // Preserve queue order when the caller's rank keys tie.
       return a.offset < b.offset;
     };
-    std::partial_sort(ranked.begin(), ranked.begin() + take, ranked.end(),
-                      ranked_before);
-
-    // Move the selected original offsets into a best-first prefix with at most
-    // `take` item swaps; the unselected entries stay queued and are not moved.
-    std::vector<std::size_t> original_at_position(Count);
-    std::vector<std::size_t> position_of_original(Count);
-    for (std::size_t i = 0; i < Count; ++i)
+    ranked.reserve(take);
+    for (std::size_t offset = 0; offset < Count; ++offset)
     {
-      original_at_position[i] = i;
-      position_of_original[i] = i;
+      RankedOffset candidate{key_fn(item_at(offset)), offset};
+      if (ranked.size() < take)
+      {
+        ranked.push_back(std::move(candidate));
+        std::push_heap(ranked.begin(), ranked.end(), ranked_before);
+      }
+      else if (ranked_before(candidate, ranked.front()))
+      {
+        std::pop_heap(ranked.begin(), ranked.end(), ranked_before);
+        ranked.back() = std::move(candidate);
+        std::push_heap(ranked.begin(), ranked.end(), ranked_before);
+      }
     }
+    std::sort(ranked.begin(), ranked.end(), ranked_before);
+
+    // Move selected items into a best-first prefix using at most `take`
+    // swaps. Track only selected offsets; avoid two scratch arrays sized to
+    // the entire ready queue.
     for (std::size_t selected = 0; selected < take; ++selected)
     {
-      const std::size_t desired_original = ranked[selected].offset;
-      const std::size_t desired_position =
-          position_of_original[desired_original];
+      const std::size_t desired_position = ranked[selected].offset;
       if (desired_position == selected)
       {
         continue;
       }
       using std::swap;
       swap(item_at(selected), item_at(desired_position));
-      const std::size_t displaced_original =
-          original_at_position[selected];
-      original_at_position[selected] = desired_original;
-      original_at_position[desired_position] = displaced_original;
-      position_of_original[desired_original] = selected;
-      position_of_original[displaced_original] = desired_position;
+      for (std::size_t pending = selected + 1; pending < take; ++pending)
+      {
+        if (ranked[pending].offset == selected)
+        {
+          ranked[pending].offset = desired_position;
+        }
+      }
     }
 
     drained.reserve(take);
@@ -350,6 +392,12 @@ public:
     {
       Items.clear();
       Head = 0;
+    }
+    if (mutex_held_ms)
+    {
+      *mutex_held_ms = std::chrono::duration<double, std::milli>(
+                           std::chrono::steady_clock::now() - lock_acquired)
+                           .count();
     }
     return drained;
   }
@@ -471,7 +519,16 @@ private:
       ++Count;
       return false;
     }
-    // Unbounded (Cap==0): grow vector from Head==0 layout.
+    // Unbounded queues keep ring storage after a partial drain. Reuse those
+    // free slots before compacting the active range.
+    if (Count < Items.size())
+    {
+      const std::size_t slot = (Head + Count) % Items.size();
+      Items[slot] = std::move(item);
+      ++Count;
+      return false;
+    }
+    // Grow a full wrapped ring from its logical Head==0 order.
     if (Head != 0)
     {
       std::vector<T> linear;

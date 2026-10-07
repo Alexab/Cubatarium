@@ -3729,7 +3729,9 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     const std::size_t max_ranked_loads =
         std::min(max_slice_applies, kMaxRankedLoadsPerTick);
     auto completed_loads = AsyncChunkIo->DrainLoadsBestByKeyUpTo(
-        max_ranked_loads, result_rank, &metrics.ready_loads_before_n);
+        max_ranked_loads, result_rank, &metrics.ready_loads_before_n,
+        &metrics.result_selection_mutex_wait_ms,
+        &metrics.result_selection_mutex_held_ms);
     metrics.result_selection_ms =
         std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - result_selection_time)
@@ -3909,7 +3911,9 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       {
         deferred.push_back(std::move(completed_loads[i]));
       }
-      AsyncChunkIo->RequeueLoads(std::move(deferred));
+      AsyncChunkIo->RequeueLoads(
+          std::move(deferred), &metrics.result_requeue_mutex_wait_ms,
+          &metrics.result_requeue_mutex_held_ms);
       metrics.result_requeue_ms =
           std::chrono::duration<double, std::milli>(
               std::chrono::steady_clock::now() - requeue_started)

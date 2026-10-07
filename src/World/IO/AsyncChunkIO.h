@@ -107,9 +107,11 @@ public:
 
   std::vector<AsyncChunkLoadResult> DrainLoads();
   std::vector<AsyncChunkLoadResult> DrainLoadsUpTo(std::size_t max_count);
-  void RequeueLoads(std::vector<AsyncChunkLoadResult> &&loads)
+  void RequeueLoads(std::vector<AsyncChunkLoadResult> &&loads,
+                    double *mutex_wait_ms = nullptr,
+                    double *mutex_held_ms = nullptr)
   {
-    CompletedLoads.PushRange(std::move(loads));
+    CompletedLoads.PushRange(std::move(loads), mutex_wait_ms, mutex_held_ms);
   }
   template <typename Compare>
   std::vector<AsyncChunkLoadResult>
@@ -120,10 +122,13 @@ public:
   template <typename KeyFn>
   std::vector<AsyncChunkLoadResult>
   DrainLoadsBestByKeyUpTo(std::size_t max_count, KeyFn &&key_fn,
-                          std::size_t *available_count = nullptr)
+                          std::size_t *available_count = nullptr,
+                          double *mutex_wait_ms = nullptr,
+                          double *mutex_held_ms = nullptr)
   {
     return CompletedLoads.DrainBestByKeyUpTo(max_count, key_fn,
-                                             available_count);
+                                             available_count, mutex_wait_ms,
+                                             mutex_held_ms);
   }
   std::vector<AsyncChunkSaveRequest> DrainSaves();
   std::vector<AsyncColumnLightFlagsSaveResult> DrainColumnLightFlagsSaves();

@@ -358,12 +358,16 @@ struct FrameNumbers
   double async_chunk_scheduler_tick_ms{0.0};
   double async_chunk_post_scheduler_ms{0.0};
   double async_chunk_io_drain_ms{0.0};
-  double async_chunk_io_discard_cancelled_ms{0.0};
-  double async_chunk_io_result_selection_ms{0.0};
-  double async_chunk_io_result_processing_ms{0.0};
+   double async_chunk_io_discard_cancelled_ms{0.0};
+   double async_chunk_io_result_selection_ms{0.0};
+   double async_chunk_io_result_selection_mutex_wait_ms{0.0};
+   double async_chunk_io_result_selection_mutex_held_ms{0.0};
+   double async_chunk_io_result_processing_ms{0.0};
   double async_chunk_io_world_apply_ms{0.0};
-  double async_chunk_io_column_finalize_ms{0.0};
-  double async_chunk_io_result_requeue_ms{0.0};
+   double async_chunk_io_column_finalize_ms{0.0};
+   double async_chunk_io_result_requeue_ms{0.0};
+   double async_chunk_io_result_requeue_mutex_wait_ms{0.0};
+   double async_chunk_io_result_requeue_mutex_held_ms{0.0};
   double async_chunk_io_save_drain_ms{0.0};
   double async_chunk_io_light_flags_save_ms{0.0};
   int async_chunk_io_cancelled_discard_n{0};
@@ -1237,13 +1241,21 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.async_chunk_io_drain_ms = phys.AsyncChunkIoDrainMs;
   n.async_chunk_io_discard_cancelled_ms =
       phys.AsyncChunkIoDiscardCancelledMs;
-  n.async_chunk_io_result_selection_ms =
-      phys.AsyncChunkIoResultSelectionMs;
+   n.async_chunk_io_result_selection_ms =
+       phys.AsyncChunkIoResultSelectionMs;
+   n.async_chunk_io_result_selection_mutex_wait_ms =
+       phys.AsyncChunkIoResultSelectionMutexWaitMs;
+   n.async_chunk_io_result_selection_mutex_held_ms =
+       phys.AsyncChunkIoResultSelectionMutexHeldMs;
   n.async_chunk_io_result_processing_ms =
       phys.AsyncChunkIoResultProcessingMs;
   n.async_chunk_io_world_apply_ms = phys.AsyncChunkIoWorldApplyMs;
   n.async_chunk_io_column_finalize_ms = phys.AsyncChunkIoColumnFinalizeMs;
-  n.async_chunk_io_result_requeue_ms = phys.AsyncChunkIoResultRequeueMs;
+   n.async_chunk_io_result_requeue_ms = phys.AsyncChunkIoResultRequeueMs;
+   n.async_chunk_io_result_requeue_mutex_wait_ms =
+       phys.AsyncChunkIoResultRequeueMutexWaitMs;
+   n.async_chunk_io_result_requeue_mutex_held_ms =
+       phys.AsyncChunkIoResultRequeueMutexHeldMs;
   n.async_chunk_io_save_drain_ms = phys.AsyncChunkIoSaveDrainMs;
   n.async_chunk_io_light_flags_save_ms = phys.AsyncChunkIoLightFlagsSaveMs;
   n.async_chunk_io_cancelled_discard_n =
@@ -2193,6 +2205,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.async_chunk_io_discard_cancelled_ms
           << ",\"async_chunk_io_result_selection_ms\":"
           << n.async_chunk_io_result_selection_ms
+          << ",\"async_chunk_io_result_selection_mutex_wait_ms\":"
+          << n.async_chunk_io_result_selection_mutex_wait_ms
+          << ",\"async_chunk_io_result_selection_mutex_held_ms\":"
+          << n.async_chunk_io_result_selection_mutex_held_ms
           << ",\"async_chunk_io_result_processing_ms\":"
           << n.async_chunk_io_result_processing_ms
           << ",\"async_chunk_io_world_apply_ms\":"
@@ -2201,6 +2217,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.async_chunk_io_column_finalize_ms
           << ",\"async_chunk_io_result_requeue_ms\":"
           << n.async_chunk_io_result_requeue_ms
+          << ",\"async_chunk_io_result_requeue_mutex_wait_ms\":"
+          << n.async_chunk_io_result_requeue_mutex_wait_ms
+          << ",\"async_chunk_io_result_requeue_mutex_held_ms\":"
+          << n.async_chunk_io_result_requeue_mutex_held_ms
           << ",\"async_chunk_io_save_drain_ms\":"
           << n.async_chunk_io_save_drain_ms
           << ",\"async_chunk_io_light_flags_save_ms\":"

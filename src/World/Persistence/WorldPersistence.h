@@ -35,11 +35,15 @@ struct AsyncChunkIoTickMetrics
 {
   double discard_cancelled_ms{0.0};
   double result_selection_ms{0.0};
+  double result_selection_mutex_wait_ms{0.0};
+  double result_selection_mutex_held_ms{0.0};
   double result_processing_ms{0.0};
   // Nested in result_processing_ms; measures only block-buffer/chunk mutation.
   double world_apply_ms{0.0};
   double column_finalize_ms{0.0};
   double result_requeue_ms{0.0};
+  double result_requeue_mutex_wait_ms{0.0};
+  double result_requeue_mutex_held_ms{0.0};
   double save_drain_ms{0.0};
   double light_flags_save_ms{0.0};
   std::size_t cancelled_discard_n{0};

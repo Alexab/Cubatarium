@@ -269,10 +269,14 @@ struct PhysicsTelemetry
   /// nested inside result processing, while other phase times are sequential.
   double AsyncChunkIoDiscardCancelledMs{0.0};
   double AsyncChunkIoResultSelectionMs{0.0};
+  double AsyncChunkIoResultSelectionMutexWaitMs{0.0};
+  double AsyncChunkIoResultSelectionMutexHeldMs{0.0};
   double AsyncChunkIoResultProcessingMs{0.0};
   double AsyncChunkIoWorldApplyMs{0.0};
   double AsyncChunkIoColumnFinalizeMs{0.0};
   double AsyncChunkIoResultRequeueMs{0.0};
+  double AsyncChunkIoResultRequeueMutexWaitMs{0.0};
+  double AsyncChunkIoResultRequeueMutexHeldMs{0.0};
   double AsyncChunkIoSaveDrainMs{0.0};
   double AsyncChunkIoLightFlagsSaveMs{0.0};
   int AsyncChunkIoCancelledDiscardN{0};
