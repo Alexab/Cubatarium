@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
@@ -60,8 +61,12 @@ struct AsyncChunkSaveRequest
   glm::ivec3 groundCoord;
   std::string worldFolder;
   std::string filePath;
+  std::string cleanupOperation;
   ChunkDiskFormat format{ChunkDiskFormat::Binary};
   bool success{false};
+  bool cleanupOnly{false};
+  int cleanupSliceCount{0};
+  double cleanupMs{0.0};
   std::string error;
 };
 
@@ -116,6 +121,12 @@ public:
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, const UBlockWorld &world,
                    UBlockRegistry &registry, ChunkGenerationToken token);
+  void RequestRemoveChunkSlices(glm::ivec3 groundCoord, int firstCy,
+                                int lastCy, UChunkStorageService &storage,
+                                const std::string &worldFolder);
+  void RequestRemoveTerrainColumn(glm::ivec3 groundCoord, int maxWorldY,
+                                  UChunkStorageService &storage,
+                                  const std::string &worldFolder);
   void RequestSaveColumnLightFlags(
       std::string worldFolder, uint64_t revision,
       std::vector<glm::ivec2> completeColumns);
@@ -230,6 +241,16 @@ public:
   }
 
 private:
+  using StorageCleanupJob = std::function<bool(
+      UChunkStorageService &, const std::string &, std::string &)>;
+
+  void EnqueueStorageCleanup(glm::ivec3 groundCoord, glm::ivec3 resultCoord,
+                             UChunkStorageService &storage,
+                             const std::string &worldFolder,
+                             std::string cleanupOperation,
+                             int cleanupSliceCount,
+                             StorageCleanupJob cleanup);
+
   static void AccumulateMaximum(std::atomic<uint64_t> &target,
                                 uint64_t value)
   {

@@ -3934,8 +3934,11 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     const auto save_drain_started = std::chrono::steady_clock::now();
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
     {
-      ++metrics.saves_processed_n;
-      if (save.success)
+      if (!save.cleanupOnly)
+      {
+        ++metrics.saves_processed_n;
+      }
+      if (save.success && !save.cleanupOnly)
       {
         ChunkStorage->RecordChunkSliceSaved(save.worldFolder, save.coord);
       }
@@ -3953,18 +3956,34 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       {
         ChunkStorage->ClearColumnSavePending(save.groundCoord);
       }
-      const std::string outcome = save.success ? "slice_written" : "slice_failed";
-      const std::string details =
-          "file=" + save.filePath +
-          (save.error.empty() ? std::string{} : " error=" + save.error) +
-          " pending_columns=" +
-          std::to_string(PendingAsyncColumnSaveSlices.size()) +
-          " io_jobs=" + std::to_string(AsyncChunkIo->GetPendingJobCount()) +
-          " io_active=" + std::to_string(AsyncChunkIo->GetActiveJobCount()) +
-          " io_load_jobs=" +
-          std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
-          " io_background_jobs=" +
-          std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount());
+      std::string outcome;
+      std::string details;
+      if (save.cleanupOnly)
+      {
+        outcome = save.success ? "stale_cleanup_done" : "stale_cleanup_failed";
+        details = "operation=" + save.cleanupOperation +
+                  " slices=" + std::to_string(save.cleanupSliceCount) +
+                  " duration_ms=" + std::to_string(save.cleanupMs);
+      }
+      else
+      {
+        outcome = save.success ? "slice_written" : "slice_failed";
+        details = "file=" + save.filePath;
+      }
+      if (!save.error.empty())
+      {
+        details += " error=" + save.error;
+      }
+      details += " pending_columns=" +
+                 std::to_string(PendingAsyncColumnSaveSlices.size()) +
+                 " io_jobs=" +
+                 std::to_string(AsyncChunkIo->GetPendingJobCount()) +
+                 " io_active=" +
+                 std::to_string(AsyncChunkIo->GetActiveJobCount()) +
+                 " io_load_jobs=" +
+                 std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
+                 " io_background_jobs=" +
+                 std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount());
       LogWorldColumnSave(outcome.c_str(), save.coord, details,
                          !save.success);
     }
@@ -4277,20 +4296,17 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
           .count();
   if (!complete)
   {
-    const auto cleanup_started = std::chrono::steady_clock::now();
-    RemoveTerrainColumnFromDisk(ground_coord, max_height);
-    const double stale_cleanup_ms =
-        std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - cleanup_started)
-            .count();
+    ChunkStorage->MarkColumnSavePending(ground_coord);
+    PendingAsyncColumnSaveSlices[ground_coord] = 1;
+    AsyncChunkIo->RequestRemoveTerrainColumn(
+        ground_coord, max_height, *ChunkStorage, WorldFolderPath);
     if (IsWorldColumnSourceTraceEnabled())
     {
-      LogWorldColumnSave("discard_incomplete", ground_coord,
+      LogWorldColumnSave("discard_incomplete_queued", ground_coord,
                          "max_height=" + std::to_string(max_height) +
                              " complete_ms=" +
                              std::to_string(completeness_ms) +
-                             " stale_cleanup_ms=" +
-                             std::to_string(stale_cleanup_ms) +
+                             " cleanup_operation=full_column" +
                              " total_ms=" +
                              std::to_string(
                                  std::chrono::duration<double, std::milli>(
@@ -4340,8 +4356,17 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - materialize_started)
           .count();
+  const int stale_slice_count =
+      std::max(0, max_cy - highest_to_save);
+  const int cleanup_operation_count = stale_slice_count > 0 ? 1 : 0;
+  const auto pending_started = std::chrono::steady_clock::now();
   ChunkStorage->MarkColumnSavePending(ground_coord);
-  PendingAsyncColumnSaveSlices[ground_coord] = save_count;
+  PendingAsyncColumnSaveSlices[ground_coord] =
+      save_count + cleanup_operation_count;
+  const double pending_setup_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - pending_started)
+          .count();
   const auto enqueue_started = std::chrono::steady_clock::now();
   for (int cy = 0; cy <= highest_to_save; ++cy)
   {
@@ -4355,17 +4380,16 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - enqueue_started)
           .count();
-  const auto stale_cleanup_started = std::chrono::steady_clock::now();
-  int stale_slice_count = 0;
-  for (int cy = highest_to_save + 1; cy <= max_cy; ++cy)
+  const auto cleanup_enqueue_started = std::chrono::steady_clock::now();
+  if (cleanup_operation_count > 0)
   {
-    ChunkStorage->RemoveChunkSliceFromDisk(
-        WorldFolderPath, glm::ivec3(ground_coord.x, cy, ground_coord.z));
-    ++stale_slice_count;
+    AsyncChunkIo->RequestRemoveChunkSlices(
+        ground_coord, highest_to_save + 1, max_cy, *ChunkStorage,
+        WorldFolderPath);
   }
-  const double stale_cleanup_ms =
+  const double cleanup_enqueue_ms =
       std::chrono::duration<double, std::milli>(
-          std::chrono::steady_clock::now() - stale_cleanup_started)
+          std::chrono::steady_clock::now() - cleanup_enqueue_started)
           .count();
   if (IsWorldColumnSourceTraceEnabled())
   {
@@ -4379,7 +4403,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
             " highest_non_air_ms=" + std::to_string(highest_non_air_ms) +
             " materialize_ms=" + std::to_string(materialize_ms) +
             " snapshot_enqueue_ms=" + std::to_string(snapshot_enqueue_ms) +
-            " stale_cleanup_ms=" + std::to_string(stale_cleanup_ms) +
+            " pending_setup_ms=" + std::to_string(pending_setup_ms) +
+            " cleanup_enqueue_ms=" + std::to_string(cleanup_enqueue_ms) +
             " total_ms=" +
             std::to_string(std::chrono::duration<double, std::milli>(
                                std::chrono::steady_clock::now() - request_started)

@@ -418,6 +418,109 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
       });
 }
 
+void UAsyncChunkIO::RequestRemoveChunkSlices(
+    glm::ivec3 groundCoord, const int firstCy, const int lastCy,
+    UChunkStorageService &storage, const std::string &worldFolder)
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  if (firstCy > lastCy)
+  {
+    return;
+  }
+  const int sliceCount = lastCy - firstCy + 1;
+  const glm::ivec3 resultCoord(groundCoord.x, firstCy, groundCoord.z);
+  EnqueueStorageCleanup(
+      groundCoord, resultCoord, storage, worldFolder, "slice_range",
+      sliceCount,
+      [groundCoord, firstCy, lastCy](UChunkStorageService &worker_storage,
+                                     const std::string &folder,
+                                     std::string &error)
+      {
+        bool success = true;
+        for (int cy = firstCy; cy <= lastCy; ++cy)
+        {
+          std::string remove_error;
+          if (!worker_storage.RemoveChunkSliceFromDisk(
+                  folder, glm::ivec3(groundCoord.x, cy, groundCoord.z),
+                  &remove_error))
+          {
+            success = false;
+            if (!error.empty())
+            {
+              error += "; ";
+            }
+            error += remove_error;
+          }
+        }
+        return success;
+      });
+}
+
+void UAsyncChunkIO::RequestRemoveTerrainColumn(
+    glm::ivec3 groundCoord, const int maxWorldY,
+    UChunkStorageService &storage, const std::string &worldFolder)
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  EnqueueStorageCleanup(
+      groundCoord, groundCoord, storage, worldFolder, "full_column", -1,
+      [groundCoord, maxWorldY](UChunkStorageService &worker_storage,
+                               const std::string &folder, std::string &error)
+      {
+        return worker_storage.RemoveTerrainColumnFromDisk(
+            folder, groundCoord, maxWorldY, &error);
+      });
+}
+
+void UAsyncChunkIO::EnqueueStorageCleanup(
+    glm::ivec3 groundCoord, glm::ivec3 resultCoord,
+    UChunkStorageService &storage, const std::string &worldFolder,
+    std::string cleanupOperation, const int cleanupSliceCount,
+    StorageCleanupJob cleanup)
+{
+  if (groundCoord.y != 0)
+  {
+    groundCoord.y = 0;
+  }
+  EnqueueBackgroundIo(
+      [this, &storage, groundCoord, resultCoord, worldFolder,
+       cleanupOperation = std::move(cleanupOperation), cleanupSliceCount,
+       cleanup = std::move(cleanup)]() mutable
+      {
+        AsyncChunkSaveRequest done;
+        done.coord = resultCoord;
+        done.groundCoord = groundCoord;
+        done.worldFolder = worldFolder;
+        done.cleanupOperation = std::move(cleanupOperation);
+        done.cleanupOnly = true;
+        done.cleanupSliceCount = cleanupSliceCount;
+        const auto started = std::chrono::steady_clock::now();
+        try
+        {
+          done.success = cleanup(storage, worldFolder, done.error);
+        }
+        catch (const std::exception &e)
+        {
+          done.success = false;
+          done.error = std::string("cleanup_exception: ") + e.what();
+        }
+        catch (...)
+        {
+          done.success = false;
+          done.error = "cleanup_unknown_exception";
+        }
+        done.cleanupMs = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - started)
+                             .count();
+        CompletedSaves.Push(std::move(done));
+      });
+}
+
 std::vector<AsyncChunkLoadResult> UAsyncChunkIO::DrainLoads()
 {
   return CompletedLoads.DrainAll();
