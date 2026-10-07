@@ -398,6 +398,68 @@ M447 route, report, точные параметры, ограничения ме
 source-trace команда записаны в
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m447---complete-m335-with-suspend-aware-runner-2026-10-07).
 
+### M448 checkpoint — источник колонок на M335 (2026-10-07)
+
+M448 включил `CUBA_WORLD_COLUMN_SOURCE_TRACE=1` на том же видимом M335 в
+Release, без pixel capture и без GPU profiler. Перелёт дошёл до focus `-877`
+и прошёл `14 144` блока; process exit был 0 и hibernate gaps не было, но
+обязательный порог `14 300` не достигнут. Поэтому это почти полный source
+диагностический маршрут, но не полный performance comparison. Накопилось 354
+spike samples против 63 на чистом M447; source/save tracing синхронно пишет в
+INFO и stderr, поэтому эти frame-time нельзя трактовать как обычную скорость
+движка. При `focus=-832` wall достиг `891 ms`; в том же периоде
+`async_chunk_io_drain_ms=678 ms`, а `async_chunk_io_save_drain_ms=822 ms` при
+пяти обработанных результатах сохранения. Обработка каждого save result в
+измеряемом цикле вызывает trace logging, так что эта пара таймеров смешивает
+engine work и стоимость диагностики.
+
+Source trace зарегистрировал `8 061` disk column queued/completed, без
+unmatched или отменённых disk-координат, и только 9 procedural disk miss,
+которые стали procedural commits в конце маршрута около `x=-881` (corridor
+`z=-1..7`). В бинах вокруг ранних proxy-сигналов (`x=-116`, `-324..-308`,
+`-372..-356`, `-836..-820`) видны disk completions; в `[-836,-820)` их 144 и
+нет procedural misses. Следовательно, почти весь проверенный путь был
+сохранён на диске; только крайний фронтир дорос процедурной генерацией. Это
+не доказывает pixel symptom и не означает, что из disk-loaded voxel сразу
+получился готовый освещённый mesh.
+
+На disk reads физический `file_read_ms` составил median/p95/max
+`1,00/1,66/38,95 ms`; `worker_queue_ms` — `1,41/59,02/15 335 ms`. Задержка
+ожидания результата для одной колонки суммирует ожидания её вертикальных
+срезов: `result_wait_ms` median/p95/max `656,87/1 613,10/48 526 ms`, тогда как
+`result_wait_max_ms` для самого медленного среза — `179,28/393,30/12 132 ms`.
+Эти метрики указывают на очереди/обслуживание результатов, а не на медленное
+физическое чтение файла. В `UAsyncChunkIO` один FIFO pool из 4 worker threads
+обслуживает `RequestLoad`, `RequestSave` и disk-index warmup. За M448 было
+7962 уникальных save-колонки и 32 543 записанных среза; у всех 7962 колонок
+все ожидаемые срезы записаны. Сохранения разгружаемых колонок конкурируют за
+те же workers, которые читают передний фронт. Это конкретная архитектурная
+причина для следующей проверки: выделить отдельную квоту load workers и
+сохранить фоновую write-квоту, удержав общий budget в 4 threads; отдельно
+наблюдать readiness results, чтобы не смешивать worker queue и главный поток.
+
+Отдельно 9 раз не удалось атомарно заменить `column_light.json`:
+`MoveFileExW` вернул `ERROR_ACCESS_DENIED` (`replace_failed: Access is denied`).
+В ACL файла есть `Modify`, файл в конце был обновлён и содержал 9 118 complete
+columns; явных ошибок записи terrain slices не было. Источник отказа (ACL или
+временная блокировка другим открытым handle) пока не установлен. Документация
+Windows указывает, что замена зависит от ACL и допустимого sharing для уже
+открытого target; нельзя считать конкретную блокировку доказанной только по
+error 5 ([MoveFileExW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw),
+[Moving and Replacing Files](https://learn.microsoft.com/en-us/windows/win32/fileio/moving-and-replacing-files)).
+Повторы в persistence-коде в итоге восстановили запись, но временно старый
+набор lighting-complete flags мог оставаться на диске. Не маскировать это
+удалением target: сначала определить владельца блокировки и проверить
+последствия при следующей загрузке.
+
+Результаты и точная команда M448 находятся в
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m448---m335-column-source-trace-2026-10-07).
+Следующий шаг — разделить load и save очереди при прежнем суммарном worker
+budget, собрать чистый Release M335 без трассировки и сравнить с M447. Затем
+обновить отдельный cold/new-world G1 preflight на текущем Release source;
+periodic fresh-seed run остаётся дополнительной проверкой, основной маршрут
+не меняется.
+
 ## Цель
 
 Устранить тёмные и визуально пустые участки мира на длинных перемещениях,

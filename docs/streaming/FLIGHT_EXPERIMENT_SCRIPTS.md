@@ -2239,3 +2239,81 @@ raw perf `bin/logs/perf_20261007-121505_38948.jsonl`, and flight report
 `bin/flight_sim_report.json`. Generated artifacts remain under `bin`; do not
 stage them. Use a separate source-trace lane next; do not treat its wall-time
 as an uninstrumented performance comparison.
+
+## M448 — M335 column-source trace (2026-10-07)
+
+M448 used the exact visible, fixed-day, no-teleport M335 settings on
+`World_164` with only `CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. Release EXE was from
+`c7a4f76d`, SHA-256
+`f9d9c84e14baf986c3ada43b445ffa39f6ba7b42e02b88140f248a92d1581098`. It
+reached focus `7 -> -877`, traveled 14,144 blocks, and measured
+`5.19653 blocks/s`; three predicted detours completed, with no blocked
+substeps, ground contacts, or collision stop. Active and wall elapsed were
+both `2845.79 s`, with no excluded clock gaps. The app returned 0, but the
+14,300-block route-completion gate failed by 156 blocks; treat this as a
+near-complete source diagnosis, not a full M335 acceptance run.
+
+Source tracing added substantial synchronous logging. The analyzer found
+1,405 periods (1,403 steady) and 354 spikes, compared with 63 on uninstrumented
+M447. Median wall was `27.7143 ms`; it is not a clean performance comparison.
+At focus `-832`, one frame reached `891.346 ms`, including
+`async_chunk_io_drain_ms=677.923` and `async_chunk_io_save_drain_ms=822.449`
+with five save completions processed. `WorldPersistence.cpp` emits each save
+completion through INFO and stderr within the measured loop, so use these
+values to identify the affected diagnostic path, not to characterize the
+normal flight.
+
+The trace recorded 8,061 disk columns queued and completed, zero unmatched or
+out-of-range cancellations, and 9 procedural misses followed by commits near
+the unexplored endpoint (`x=-881`, `z=-1..7`). For the X bin `[-836,-820)`
+around focus `-832`, all 144 observed columns completed from disk; the earlier
+proxy locations `-116`, `-310`, `-361`, and `-643` also fall in disk-loaded
+bins. Thus this route mostly used persisted terrain and only generated a few
+columns at the frontier. Disk reads were fast: median/p95/max `file_read_ms`
+`1.0022/1.6625/38.9546`. Worker queue wait was
+`1.413/59.0184/15335.4872 ms`. `result_wait_ms` sums waits across vertical
+slices per column: median/p95/max `656.8746/1613.0976/48526.2604 ms`; the
+single slowest slice's `result_wait_max_ms` was
+`179.2811/393.2978/12132.3458 ms`. Do not add these nested timings.
+
+The route also queued 7,962 unique column saves and wrote 32,543 terrain
+slices. All saved columns had their expected slices; no terrain slice write
+failure was recorded. Nine lighting metadata updates to `column_light.json`
+failed replacement with `ERROR_ACCESS_DENIED` (`replace_failed: Access is
+denied`), while the file was updated by the end of the process. No root cause
+for those transient replace failures was proven. Windows replacement behavior
+depends on ACLs and compatible sharing for an open target; inspect the exact
+file access before changing persistence semantics. See [MoveFileExW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw)
+and [Moving and Replacing Files](https://learn.microsoft.com/en-us/windows/win32/fileio/moving-and-replacing-files).
+
+The code review found that the same four-worker FIFO in `UAsyncChunkIO`
+currently accepts disk reads, terrain-slice saves, and disk-index warmup jobs.
+M448's 8,061 disk columns and 7,962 saved columns make worker contention a
+plausible contributor to read queue tails, separate from the completed-result
+wait on the main thread. Next, keep the total ChunkIo worker budget at four,
+reserve a load lane and a background save/index lane, and verify with a clean
+M335 run. Do not raise the global worker count or the main-thread result-apply
+budget at the same time.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m448_world164_m335_column_source_trace --report bin/suite_reports/engine_refactor/m448_world164_m335_column_source_trace_20261007.json --process-timeout 7200
+```
+
+Artifacts: flight report
+`bin/suite_reports/engine_refactor/m448_world164_m335_column_source_trace_20261007.json`,
+source summary
+`bin/suite_reports/engine_refactor/m448_world164_column_source_trace_z3_20261007.json`,
+X-bin summary
+`bin/suite_reports/engine_refactor/m448_world164_source_by_x_20261007.json`,
+perf `bin/logs/perf_20261007-130758_32208.jsonl`, and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-130753.32208`.
+Generated logs and world data stay under `bin`; do not stage them.
