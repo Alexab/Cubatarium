@@ -3605,3 +3605,98 @@ route behavior. After that:
 
 M439-M440 route reports, raw metrics, and commands are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m439---clean-full-m335-route-and-census-baseline-2026-10-07).
+
+### M441 checkpoint — cached demand census and current plan readiness
+
+M441 completed the same visible, no-teleport M335 route on `World_164` using
+the Release build from `bfe8f5f5` (executable SHA-256
+`f1aa8077b47ffe89144aca47319a787fb29a58e5a3ba47ca1d1627c7c7715fbf`). The
+manifest was accepted, the GUI process exited normally, and the INFO log had
+zero `[RelightAudit]` lines. The run covered 14,304 blocks (`focus 7 -> -887`)
+at 5.1965 blocks/s, reached the 8,192-block checkpoint, and recorded zero
+blocked movement substeps and ground contacts. It had 1,403 periods, 29 frames
+over 100 ms, a 40.95 ms median wall time, and 40.88 ms median during cruise.
+The 295.94 ms maximum was the first near-start sample; the largest later spikes
+were 119.65 ms near `focus_cx=-385` and 118.42 ms near `-653`.
+
+The cached demand-breakdown query worked as intended. Its far-west estimate
+fell from M440's 10.59 ms median per periodic census to 0.00107 ms in M441
+(about 9,900 times lower). The cached query no longer explains long stream
+frames. The remaining demand-stop census measured 0.063 ms median / 0.308 ms
+p95 in far west and 0.185 / 0.754 ms in far east. The full far-zone census
+medians were 0.090 / 0.331 ms far west and 0.211 / 0.780 ms far east. These
+are periodic sample-cost estimates, not individual-call percentiles.
+
+| Band | M439 wall median (ms) | M440 wall median (ms) | M441 wall median (ms) | M441 streaming median / p95 (ms) |
+|---|---:|---:|---:|---:|
+| Near | 27.02 | 28.66 | 29.26 | 16.92 / 24.46 |
+| Mid | 38.36 | 38.82 | 40.02 | 29.40 / 41.80 |
+| Far east | 42.51 | 43.35 | 46.19 | 38.58 / 56.33 |
+| Far west | 46.37 | 47.48 | 45.98 | 38.54 / 49.48 |
+
+M441 is mixed against M440: near, mid, and far east are modestly slower while
+far west is faster. The runs use the same route, but do not record which
+individual columns came from disk versus procedural generation, so this is
+not evidence that the cached counter changed end-to-end performance. The
+manifest's `cold_warm_mode` is not source provenance.
+
+Large frame time remains concentrated in streaming/emerge. At `focus_cx=-653`,
+an 118.42 ms frame included 41.86 ms of mesh emerge: 15.90 ms in the
+coordinator and 25.95 ms in post-tick telemetry, while the stage sampler took
+0.069 ms and the demand-breakdown query 0.0007 ms. Other far-route samples
+showed post-tick telemetry up to 39.11 ms. Existing metrics further subdivide
+the coordinator into prep, dirty scheduling, snapshot, and GPU work, but the
+post-tick telemetry interval still groups several snapshots and getters. Add
+low-overhead phase timing around that closeout before changing scheduling or
+queue budgets. The 94 ms transparent-pass spike seen once in M440 did not
+recur; M441's transparent samples were generally small. Keep the comparator
+correctness review separate and lower priority than the repeatable streaming
+cost.
+
+The analyzer returned `pass=false` (24/39 general and 8/12 stop gates). Its
+proxy metrics report `unfinished_visual=27`, `visible_black_focus_n` median 0,
+and a 0.017 visible-black blink rate. The operator currently reports that the
+world looks acceptable. There was no framebuffer capture, so retain the
+distinction: current appearance is accepted by observation; internal readiness
+and hole counters remain unresolved and do not demonstrate visible blank
+pixels. Do not run pixel capture unless the visual symptom returns or a claim
+about exact pixels is needed.
+
+#### Plan readiness after M441
+
+The plan is ready for the next targeted diagnostic change, but not ready to
+close. The established route is repeatable enough for comparative evidence,
+speed is correct, the visible GUI and process controls pass, and collision
+telemetry stayed clear. The demand-breakdown scan optimization is verified.
+The user's visual assessment is currently positive. Remaining work is:
+
+1. **Instrument the post-tick telemetry closeout.** Split stage sampling,
+   pending-GPU counts, mesh metric snapshots, and capture-store/tail snapshots
+   into recorded durations, with an unattributed remainder. Build Release and
+   repeat M335 before changing scheduler or mesh budgets.
+2. **Explain recurring long stream frames.** Compare the new closeout timings
+   with existing emerge-prep, dirty, snapshot, schedule, GPU, async-I/O, and
+   relight fields. Continue to classify startup separately from route spikes.
+3. **Add storage-source provenance to a separate diagnostic lane.** M441 did
+   not enable source tracing; only actual disk/procedural events can answer
+   whether late-route lighting or mesh work differs by persisted versus newly
+   generated columns. Keep the main M335 route unchanged.
+4. **Refresh world-creation/load preflight.** M435/M436 identified queue and
+   result-service tails, but do not establish the current release's cold-start
+   behavior. Re-measure startup/load stages before considering worker-count or
+   persistence changes; keep periodic fresh-seed runs separate from the main
+   matched-world route.
+5. **Revisit convergence only against a product requirement or reproduced
+   symptom.** The stop gates and eye/readiness proxies remain open, but user
+   observation currently accepts the appearance. Avoid tuning budgets solely
+   to satisfy internal thresholds.
+6. **Keep transparent ordering as an isolated correctness task.** Review the
+   comparator's strict-weak-ordering contract and add internal sort timing if
+   transparent outliers recur. M441 does not link this path to the stream
+   hitches.
+7. **Keep collision handling separate.** M441 had no blocked substeps or
+   ground contacts. If a later controlled route stops or falls, use movement
+   telemetry to distinguish collision response from focus/input changes.
+
+M441 route, outputs, command, and analyzer semantics are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m441---cached-demand-census-full-m335-route-2026-10-07).

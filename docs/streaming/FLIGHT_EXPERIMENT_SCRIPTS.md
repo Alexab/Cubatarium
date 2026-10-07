@@ -1845,3 +1845,84 @@ python tools/analyze_emerge_census_perf.py `
   bin/logs/perf_20261007-040227_17840.jsonl `
   --out bin/suite_reports/engine_refactor/m440_emerge_census_summary.json
 ```
+
+## M441 - cached demand census full M335 route (2026-10-07)
+
+M441 measured commit `bfe8f5f5` with Release executable SHA-256
+`f1aa8077b47ffe89144aca47319a787fb29a58e5a3ba47ca1d1627c7c7715fbf`. It
+repeated the visible, no-teleport M335 route on `World_164`: start
+`[120,56,56]`, eye Y `70`, yaw `180`, pitch `-30`, speed scale `1`, 2,800-second
+cruise, 20-second stop, and 8-second blocked-stop threshold. Visual, source,
+relight, and framebuffer traces were disabled. The INFO log contained zero
+`[RelightAudit]` lines. Manifest acceptance passed; `cold_warm_mode=cold`
+does not identify whether individual columns were loaded from disk or
+generated, because source tracing was disabled.
+
+The GUI process exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`). It recorded 1,403 periods (1,401 steady), 29 frames over
+100 ms, 14,304 blocks, focus `[7,3] -> [-887,3]`, and 5.1965 blocks/s. It
+reached the 8,192-block checkpoint and recorded zero blocked movement
+substeps and ground contacts. Median wall time was 40.95 ms, including 40.88
+ms during cruise. The largest wall sample was 295.94 ms at route start; the
+largest later samples were 119.65 ms at `focus_cx=-385` and 118.42 ms at
+`-653`. The run wrapper returned code 1 because the analyzer's product gates
+failed; this was not an application or flight-process failure.
+
+| Band | Wall median / p95 (ms) | Streaming median / p95 (ms) | Async post-scheduler median / p95 (ms) | I/O drain median / p95 (ms) |
+|---|---:|---:|---:|---:|
+| Near | 29.26 / 36.57 | 16.92 / 24.46 | 3.48 / 5.79 | 1.52 / 2.89 |
+| Mid | 40.02 / 51.18 | 29.40 / 41.80 | 8.45 / 13.33 | 1.73 / 3.74 |
+| Far east | 46.19 / 65.46 | 38.58 / 56.33 | 12.87 / 18.21 | 1.95 / 3.92 |
+| Far west | 45.98 / 58.05 | 38.54 / 49.48 | 13.72 / 17.47 | 1.77 / 3.31 |
+
+The cached demand-breakdown census reduced its far-west estimate from M440's
+10.59 ms median to 0.00107 ms (approximately 9,900 times). In M441, far-west
+demand-stop cost was 0.063 / 0.308 ms median / p95; far-east was 0.185 / 0.754
+ms. This means the query scan cost was removed, but the overall route does not
+show a consistent frame-time gain: near, mid, and far-east medians rose
+slightly against M440, while far west fell. Storage source was not recorded,
+so do not attribute this mixed change to the cache.
+
+At `focus_cx=-653`, an 118.42 ms frame spent 41.86 ms in mesh emerge, split
+into 15.90 ms coordinator and 25.95 ms post-tick telemetry. The stage sampler
+accounted for only 0.069 ms and demand breakdown for 0.0007 ms. A separate
+far-route spike had 39.11 ms post-tick telemetry. This narrows the next
+diagnostic task to the post-tick snapshots/getters; do not adjust queue or
+mesh budgets from these observations alone. M441 did not reproduce M440's
+isolated 94 ms transparent-pass sample.
+
+The analyzer returned `pass=false` (24/39 general gates and 8/12 stop gates),
+including readiness, hole-proxy, wall-time, and post-stop convergence gates.
+The operator reports that the current appearance is acceptable. No pixels
+were captured, so the report's hole and visible-black values remain internal
+renderer proxies rather than evidence of actual blank pixels.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m441_world164_cached_demand_census --report bin/suite_reports/engine_refactor/m441_world164_cached_demand_census_20261007.json --process-timeout 3000
+```
+
+Artifacts: [M441 flight report](../../bin/suite_reports/engine_refactor/m441_world164_cached_demand_census_20261007.json),
+I/O phase summary `bin/suite_reports/engine_refactor/m441_io_phase_summary_20261007.json`,
+census summary `bin/suite_reports/engine_refactor/m441_emerge_census_summary_20261007.json`,
+raw perf `bin/logs/perf_20261007-050000_36260.jsonl`, and INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-045956.36260`.
+These generated artifacts are kept under `bin`; do not add raw perf logs to Git.
+
+Analyzer commands:
+
+```powershell
+python tools/analyze_emerge_census_perf.py `
+  bin/logs/perf_20261007-050000_36260.jsonl `
+  --out bin/suite_reports/engine_refactor/m441_emerge_census_summary_20261007.json
+
+python tools/analyze_async_chunk_io_perf.py `
+  bin/logs/perf_20261007-050000_36260.jsonl `
+  --out bin/suite_reports/engine_refactor/m441_io_phase_summary_20261007.json
+```
