@@ -3700,3 +3700,87 @@ The user's visual assessment is currently positive. Remaining work is:
 
 M441 route, outputs, command, and analyzer semantics are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m441---cached-demand-census-full-m335-route-2026-10-07).
+
+### M442 checkpoint — post-tick timing and duplicate upkeep
+
+M442 repeated M335 on `World_164` with the Release build from
+`b804c940` (executable SHA-256
+`0da2d21e44095def692726b166324404d6d6f137b57051427c414969e0647220`).
+Manifest acceptance passed. The application exited normally and the wrapper
+restored `world_data.json` and `users.json`; analyzer `pass=false` is a failed
+readiness/product gate, not a process failure. It recorded 1,404 periods
+(1,402 steady), 10 frames above 100 ms, 14,320 blocks, focus `[7,3] ->
+[-888,3]`, speed 5.19653 blocks/s, and the 8,192-block checkpoint. Blocked
+movement substeps and ground contacts were zero. Median wall time was 38.87
+ms (38.82 ms in cruise). The largest sample was 303.27 ms at startup; the
+largest route samples were 126.95 ms at `-198`, 108.54 ms at `-691`, and
+107.90 ms at `-515`.
+
+The new closeout timers isolate the dominant post-tick cost. Median
+`mesh_emerge_post_stage_sample_ms` rose with distance: 1.62 ms near, 6.00 ms
+mid-route, 9.15 ms far east, and 10.82 ms far west (p95 3.10, 8.28, 10.54,
+and 13.84 ms). The other four measured snapshot groups together were about
+0.01 ms median per band; unattributed time was about 0.001 ms. At `-198`, the
+126.95 ms frame spent 27.80 ms inside the stage-sample wrapper, while its
+measured snapshots and remainder were under 0.01 ms. At the final `-888`
+sample, the 100.80 ms frame spent 40.83 ms in that same wrapper. The internal
+`column_emerge_stage_sample_ms` census timer was zero on both frames: most of
+the wrapper time occurs before the rate-limited diagnostic census begins.
+
+History identifies the work in that interval. `5b6cce71` moved the once-per-
+frame `MaintainChunkRenderDemandStore()` upkeep to `TickAsyncChunkSystems()`
+and moved the full census to post-emerge. `a5ae29b3` then called the upkeep
+again at the start of `SampleColumnEmergeStageTelemetry()`, before its 250 ms
+sampling gate. M442 measures that second call in the post-stage-sample
+interval. It adds roughly 1.6 ms per frame near the start, growing to 10.8 ms
+far west, and accounts for the large `-198` and `-888` samples. Remove this
+duplicate call while keeping upkeep in the async stage; keep the new timer to
+verify the async-stage cost.
+
+Separate async-stage spikes remain. At `-115`, two roughly 100 ms frames spent
+68.5-80.8 ms in async post-scheduler work, including 30.5-38.5 ms result
+selection and 55.9-65.6 ms I/O drain (these subphases are nested and must not
+be summed). At `-515`, one 107.90 ms frame spent 45.65 ms in async
+post-scheduler work, including 38.00 ms I/O drain and 13.26 ms result
+selection. M442 does not attribute those waits to demand upkeep. Preserve
+these as a separate I/O/result-service investigation.
+
+The analyzer returned `pass=false` (26/39 general and 9/12 stop gates), mainly
+on internal visual-readiness/hole and frame-time thresholds. The operator's
+current visual assessment is acceptable; visible-black focus median was 0,
+and no framebuffer pixels were captured. Keep the visual acceptance and
+readiness-proxy results distinct. M442 did not enable column-source tracing,
+so its manifest's `cold_warm_mode=cold` cannot tell us which route columns
+came from disk. Its wall-time medians are slightly better than M441, but this
+is not a controlled performance gain: persisted route data/source mix changed
+between runs.
+
+#### Plan readiness after M442
+
+The plan remains ready for targeted work, not closure. M441 verified the
+cached census change; M442 localized a distance-growing duplicate upkeep cost
+and exposed independent async-I/O tails. The repeatable route, correct speed,
+visible window, far checkpoint, and collision counters all pass. User visual
+acceptance is positive. The next steps are:
+
+1. Remove only the post-emerge duplicate upkeep call; keep the async-stage
+   owner and report direct demand-maintenance timing. Release-build and repeat
+   the exact M335 route as M443 to confirm post-stage time falls and assess the
+   remaining async-stage cost.
+2. Review M443 async post-scheduler subphases. If queue selection or drain
+   continues to dominate long frames, separate worker readiness, result
+   selection, budget deferral, and world-apply time before changing worker or
+   I/O budgets. Keep nested timings distinct.
+3. Add disk/procedural source-event tracing to a separate lane and schedule
+   periodic fresh-seed world checks; do not change M335 conditions.
+4. Refresh cold world-creation/load preflight on the current Release build.
+   Existing M435/M436 evidence is useful for hypotheses, but not a current
+   cold-start baseline.
+5. Keep the post-stop proxy gates open but do not tune to them without a
+   reproducible visual problem or a product requirement. Capture pixels only
+   if the operator reports the symptom again or pixel-level proof is needed.
+6. Continue the isolated transparent comparator correctness review; M442
+   does not connect transparent sorting to the observed streaming hitches.
+
+M442 route, timing bands, artifacts, exact command, and analyzer caveats are
+recorded in [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m442---post-tick-attribution-full-m335-route-2026-10-07).

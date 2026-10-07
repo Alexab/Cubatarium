@@ -1926,3 +1926,83 @@ python tools/analyze_async_chunk_io_perf.py `
   bin/logs/perf_20261007-050000_36260.jsonl `
   --out bin/suite_reports/engine_refactor/m441_io_phase_summary_20261007.json
 ```
+
+## M442 - post-tick attribution full M335 route (2026-10-07)
+
+M442 used the Release executable from commit `b804c940`, SHA-256
+`0da2d21e44095def692726b166324404d6d6f137b57051427c414969e0647220`. It
+repeated the same visible, no-teleport M335 route on `World_164`: start
+`[120,56,56]`, eye Y `70`, yaw `180`, pitch `-30`, speed scale `1`, 2,800-second
+cruise, 20-second stop, and 8-second blocked-stop threshold. Source, visual,
+relight, and framebuffer traces were off. The manifest was accepted and the
+INFO log had zero `[RelightAudit]` lines. The `cold_warm_mode` manifest value
+is not disk/procedural provenance when source tracing is disabled.
+
+The app exited normally (`process_rc=0`, `run_outcome=success`,
+`hang_killed=false`); the runner's code 1 was due to failed analyzer gates.
+The route recorded 1,404 periods (1,402 steady), 10 frames over 100 ms,
+14,320 blocks, focus `[7,3] -> [-888,3]`, speed 5.19653 blocks/s, and reached
+the 8,192-block checkpoint. Blocked movement substeps and ground contacts
+were zero. Median wall time was 38.87 ms, with 38.82 ms during cruise. The
+303.27 ms maximum was at startup; route maxima were 126.95 ms at `-198`,
+108.54 ms at `-691`, and 107.90 ms at `-515`. The wrapper restored
+`world_data.json` and `users.json` after the run.
+
+The Release build adds six `mesh_emerge_post_*_ms` fields to JSONL:
+`stage_sample`, `gpu_counts`, `mesh_snapshot`, `capture_store`, `tail_snapshot`,
+and `unattributed`. These are per-frame closeout durations; period rows are
+period means and spike rows are individual frames. The stage-sample wrapper
+includes work before the rate-limited 250 ms census, while
+`column_emerge_stage_sample_ms` times the census itself.
+
+| Band | Post-stage sample median / p95 (ms) | Other measured snapshots combined, median (ms) | Async post-scheduler median / p95 (ms) | Wall median / p95 (ms) |
+|---|---:|---:|---:|---:|
+| Near | 1.62 / 3.10 | ~0.006 | 3.54 / 6.02 | 28.58 / 37.86 |
+| Mid | 6.00 / 8.28 | ~0.010 | 7.93 / 11.09 | 37.86 / 48.73 |
+| Far east | 9.15 / 10.54 | ~0.011 | 11.70 / 14.78 | 42.26 / 55.53 |
+| Far west | 10.82 / 13.84 | ~0.014 | 13.22 / 16.29 | 44.82 / 61.30 |
+
+Post-stage timing is almost entirely in the first interval: the GPU, mesh,
+capture-store, tail, and unattributed fields are each only around 0.001-0.005
+ms median. At `-198`, a 126.95 ms frame spent 27.80 ms in
+`mesh_emerge_post_stage_sample_ms`, with 0 ms in the internal census timer.
+At `-888`, a 100.80 ms frame spent 40.83 ms in that same interval. History
+shows why: `5b6cce71` moved `MaintainChunkRenderDemandStore()` to the async
+stage and made the post-emerge call telemetry-only; `a5ae29b3` then added the
+maintenance call again before the census's 250 ms sampling gate. The duplicate
+upkeep is therefore charged every frame, not every 250 ms. M443 removes this
+second call and measures the remaining async-stage upkeep directly.
+
+Some large frames have an independent I/O profile. At `-115`, two ~100 ms
+frames spent 68.5-80.8 ms in async post-scheduler work; result selection took
+30.5-38.5 ms and I/O drain 55.9-65.6 ms. At `-515`, one 107.90 ms frame had
+45.65 ms in async post-scheduler work, including 38.00 ms I/O drain and 13.26
+ms result selection. These I/O subphases are nested; do not sum them. M442
+does not establish a storage-source cause because source events were not
+enabled.
+
+Analyzer `pass=false` (26/39 general gates, 9/12 stop gates) reported internal
+readiness/hole and frame-time failures. The operator's current visual
+assessment is acceptable; `visible_black_focus_n` median was 0. No pixels were
+captured, so readiness fields remain proxies and not proof of on-screen
+blankness. M442 had slightly lower overall median wall time than M441, but
+different persisted world data/source mix is uncontrolled; do not attribute
+that difference to the instrumentation or a renderer improvement.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m442_world164_post_telemetry_attribution --report bin/suite_reports/engine_refactor/m442_world164_post_telemetry_attribution_20261007.json --process-timeout 3000
+```
+
+Artifacts: [M442 flight report](../../bin/suite_reports/engine_refactor/m442_world164_post_telemetry_attribution_20261007.json),
+I/O phase summary `bin/suite_reports/engine_refactor/m442_io_phase_summary_20261007.json`,
+census summary `bin/suite_reports/engine_refactor/m442_emerge_census_summary_20261007.json`,
+raw perf `bin/logs/perf_20261007-055840_36308.jsonl`, and INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-055836.36308`.
+Keep the generated raw artifacts under `bin`; do not stage them.
