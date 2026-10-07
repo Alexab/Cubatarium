@@ -231,8 +231,17 @@ struct PhysicsTelemetry
   int EnterMeshDirtyResidualN{0};
   /// Phase 5.6.1: sampled CountEnterVisibilityDebt for period FPM / latch timing.
   int VisibilityDebt{0};
+  /// True while VisibilityDebt contains a sample from the active enter/catch-up path.
+  int VisibilityDebtSampleValid{0};
   /// Phase 5.7.3: CountUnready outside R=4 (diagnose only; does not gate clear).
   int VisibilityDebtHinterland{0};
+  /// Kept invalid in the runtime streaming loop; the old R=8 diagnostic scan
+  /// was an unbudgeted O(R^2) world walk on the game thread.
+  int VisibilityDebtHinterlandSampleValid{0};
+  /// Cost of a CountEnterVisibilityDebt sample, when the enter latch needs it.
+  double VisibilityDebtProbeMs{0.0};
+  /// Cost of the NeedsSpawnRingCatchUp decision (includes any readiness scan).
+  double SpawnCatchUpProbeMs{0.0};
   /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket), cumulative.
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).

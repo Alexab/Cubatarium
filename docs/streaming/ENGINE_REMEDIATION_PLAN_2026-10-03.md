@@ -4781,3 +4781,70 @@ phase timing must be recorded separately from the total callback.
 
 M455's detailed measurements and reproduction command are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m455-unload-phase-trace-on-the-full-m335-route-2026-10-07).
+
+### M456 checkpoint — asynchronous stale-slice cleanup verified; hidden streaming-phase work found (2026-10-08)
+
+M456 ran the unchanged visible, no-teleport M335 route on `World_164` with
+the Release executable from `58e9bc6b9709b6de1c8489669a8a2304f1c61961`.
+The route hash was unchanged, movement reached 14,320 blocks
+(`focus_cx=7 -> -888`), and the process exited normally (`process_rc=0`,
+`run_outcome=success`, `hang_killed=false`). The analyzer remained red: 29/39
+general gates and 9/12 stop gates passed; route adequacy passed. There was no
+framebuffer capture. Readiness, holes, and black counters remain telemetry
+proxies and do not override the operator's report that the world currently
+looks good.
+
+The M455 unload-cleanup change removed the measured long synchronous deletion
+from the route: M456 had three spike rows, and the late-route unload times in
+the two relevant frames were 0.389 ms and 0.0029 ms. Five background cleanup
+jobs were pending at the 0.389 ms sample. This is consistent with the stale
+slice cleanup no longer blocking the game thread. It is not a guarantee that
+all unload paths are hitch-free, but M454's 76.99 ms / 106.44 ms unload stalls
+did not recur.
+
+M456 exposed a separate, unattributed-within-phase streaming stall. At `focus_cx=-763`, one
+frame took 101.328 ms, of which `UpdateStreaming` took 76.9695 ms and the
+combined stream timing took 79.5268 ms. In that frame the core streamer update
+took 0.0121 ms, unload took 0.0029 ms, and load/unload/ingress counters were
+zero. The frame immediately before and after returned to ordinary streaming
+times. M454 had a similar frame at `focus_cx=-756`: `UpdateStreaming` took
+49.2721 ms while streamer update and unload together were below 0.02 ms.
+
+Code inspection found three unbudgeted readiness scans in this hot path:
+
+1. `NeedsSpawnRingCatchUp()` walked the visual ring while moving. If the
+   camera focus changed since the cached readiness sample, this could fall
+   through to a full `CountUnfinishedVisualNear()` rebuild on the game thread.
+2. The streaming loop sampled `CountEnterVisibilityDebt()` every four fast
+   frames even after the enter/catch-up latch had cleared.
+3. A diagnostic-only `CountUnreadyColumns(..., 8)` walked as many as 289
+   columns every eight fast frames, also on the game thread.
+
+M456 did not time these calls individually, so they are a strong code-level
+candidate for the 49–77 ms frames, not yet a measured causal attribution. The
+M456 spike row had nonzero inner-ring readiness counts, and its broad
+`UpdateStreaming` timer is the owner containing these scans. The next change
+uses the prior async-cycle readiness result for the moving catch-up decision
+(one frame of bounded latency), samples enter debt only while the enter or
+soft-force latch is active, and removes the diagnostic R=8 scan from the
+runtime loop. It adds a call timer and sample-valid bits so the next run can
+verify both the cost and when the diagnostic is unavailable.
+
+#### Next after M456
+
+1. Build only Release and rerun the same visible M335 route with tracing and
+   capture disabled. Compare `UpdateStreaming`, `spawn_catchup_probe_ms`, the
+   readiness-sample validity fields, frame spikes, and route completion to
+   M456/M454. Treat a lower `UpdateStreaming` tail as confirmation only when
+   the counters show the expensive scans were not running; if the high tail
+   persists, add stage-level timing inside the remaining policy path.
+2. Preserve the current interpretation boundary: the analyzer still reports
+   readiness and post-stop failures, but M456 has no pixel evidence and the
+   operator sees no current blank/dark chunks. Do not classify fog silhouettes
+   as a streaming regression without new visual evidence.
+3. After repeated-world long-flight behavior and stop drain are understood,
+   continue with cold world-create/load profiling and periodic fresh-seed
+   routes as already required by the plan.
+
+M456 details and the exact reproduction command are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m456-async-stale-slice-cleanup-full-m335-verification-2026-10-08).

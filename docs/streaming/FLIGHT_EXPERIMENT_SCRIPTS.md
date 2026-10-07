@@ -2844,3 +2844,76 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Raw output remains under ignored `bin` data and must not be staged. The
 result and the updated next step are recorded in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m455-checkpoint--synchronous-stale-slice-deletion-confirmed-2026-10-07).
+
+## M456 — async stale-slice cleanup, full M335 verification (2026-10-08)
+
+M456 ran the same visible, no-teleport M335 route on `World_164` with source
+tracing and framebuffer capture disabled. The Release executable was built
+from `58e9bc6b9709b6de1c8489669a8a2304f1c61961` (SHA-256
+`2f6136a2068497f63840e59d355dcd6232c24a37ae997594588a0f06da8be6b6`). The
+route hash remained
+`024a223f5827926f85b7ccfb030d9456d2515e1373f35faba620ce59e040c312`.
+It reached 14,320 blocks (`focus_cx=7 -> -888`), passed route adequacy, and
+exited normally (`process_rc=0`, `run_outcome=success`, `hang_killed=false`).
+The wrapper returned 1 because analyzer acceptance was false: 29/39 general
+gates and 9/12 stop gates passed. There was no framebuffer capture; counters
+are readiness proxies, not pixel evidence.
+
+The late-route stale-cleanup unload hitches seen in M454/M455 did not recur.
+M456's two late-route spike rows had `streamer_unload_ms=0.389` and
+`0.0029` ms, while five background cleanup jobs were pending in the first
+row. The highest stream-related outlier was different: at `focus_cx=-763`,
+`wall_ms=101.328`, `update_streaming_ms=76.9695`, `stream_ms=79.5268`,
+`streamer_update_ms=0.0121`, and `streamer_unload_ms=0.0029`. Stream load,
+unload, and ingress counters were zero. Normal times resumed on the adjacent
+samples. M454 had a comparable non-unload `UpdateStreaming` outlier of
+49.2721 ms at `focus_cx=-756`.
+
+The broad timer does not identify the individual caller. Inspection of
+`UpdateStreaming` found an unconditional moving catch-up readiness walk, an
+R=4 enter-visibility walk every four fast frames, and an R=8 diagnostic walk
+every eight frames. Focus changes invalidate the visual cache, so the first
+walk can perform a complete cache rebuild. M456 did not have subphase timers
+for these calls; this is a plausible attribution, not proof of how much each
+call contributed.
+
+The follow-up patch uses the prior async-cycle `PostLoadRingNotReady` sample
+for the moving catch-up decision, retaining at most one frame of latency. It
+limits the R=4 debt scan to active enter/burst/soft-force latch work, removes
+the telemetry-only R=8 scan from the runtime loop, and records the catch-up
+and enter-debt call time plus sample-validity bits. The next M335 checks
+whether these paths explain the long `UpdateStreaming` tail.
+
+Run summary:
+
+- `wall_ms_fly_med=24.778`; `world_streaming_phase_ms=12.1834`.
+- Three spike rows: startup `wall_ms=294.467`; two late-route rows at
+  100.492 ms and 101.328 ms. The 100.492 ms row's unload took 0.389 ms; the
+  101.328 ms row was dominated by unattributed work inside `UpdateStreaming`.
+- Analyzer gates: 29/39 general, 9/12 stop; post-stop convergence failed.
+- The operator had reported that the world looked good. No screenshots were
+  collected, so the run does not prove a pixel-level visual result.
+
+Artifacts:
+
+- Analyzer report: `bin/suite_reports/engine_refactor/m456_world164_m335_async_stale_slice_cleanup_20261007.json`
+- Perf log: `bin/logs/perf_20261007-232332_37432.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261007-232329.37432`
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m456_world164_m335_async_stale_slice_cleanup --report bin/suite_reports/engine_refactor/m456_world164_m335_async_stale_slice_cleanup_20261007.json --process-timeout 7200
+```
+
+Raw output stays under ignored `bin` data and must not be staged. M456's
+analysis and next action are also recorded in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m456-checkpoint--asynchronous-stale-slice-cleanup-verified-hidden-streaming-phase-work-found-2026-10-08).

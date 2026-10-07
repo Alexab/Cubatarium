@@ -6828,10 +6828,22 @@ bool UWorld::NeedsSpawnRingCatchUp() const
     // between samples and leaves black columns at LitDrawable edge.
     constexpr uint64_t kCatchUpRecheckFrames = 8;
     const bool cruise_moving = PhysicsTelemetryData.MovementSpeed > 2.0f;
+    if (cruise_moving)
+    {
+      // TickAsyncChunkSystems publishes this readiness count every frame.
+      // Rewalking the full visual ring here used to miss the UnfinishedVisual
+      // cache whenever the camera crossed a chunk boundary, potentially
+      // repeating the full scan inside UpdateStreaming. One frame of telemetry
+      // latency is preferable to blocking the movement/streaming thread.
+      const bool need = PhysicsTelemetryData.PostLoadRingNotReady > 0;
+      CachedNeedsSpawnRingCatchUp = need;
+      SpawnCatchUpSampleEpoch = StreamingFrameEpoch;
+      return need;
+    }
     const bool telemetry_clear =
         PhysicsTelemetryData.PostLoadRingNotReady <= 0 &&
         PhysicsTelemetryData.UnfinishedVisual <= 0;
-    if (!cruise_moving && telemetry_clear && !CachedNeedsSpawnRingCatchUp &&
+    if (telemetry_clear && !CachedNeedsSpawnRingCatchUp &&
         SpawnCatchUpSampleEpoch != UINT64_MAX)
     {
       const uint64_t age = StreamingFrameEpoch - SpawnCatchUpSampleEpoch;

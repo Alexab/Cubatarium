@@ -353,6 +353,8 @@ struct FrameNumbers
   double streamer_keep_shell_ms{0.0};
   double streamer_prefetch_ahead_ms{0.0};
   double update_streaming_ms{0.0};
+  double visibility_debt_probe_ms{0.0};
+  double spawn_catchup_probe_ms{0.0};
   double async_chunk_systems_ms{0.0};
   double async_chunk_pre_scheduler_ms{0.0};
   double async_chunk_scheduler_tick_ms{0.0};
@@ -907,6 +909,8 @@ struct FrameNumbers
   int enter_mesh_dirty_residual_n{0};
   int visibility_debt{0};
   int visibility_debt_hinterland{0};
+  int visibility_debt_sample_valid{0};
+  int visibility_debt_hinterland_sample_valid{0};
   uint64_t softdefer_empty_publish_avoided{0};
   int softdefer_held_n{0};
   int softdefer_held_age_max{0};
@@ -1243,6 +1247,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.streamer_keep_shell_ms = phys.StreamerKeepShellMs;
   n.streamer_prefetch_ahead_ms = phys.StreamerPrefetchAheadMs;
   n.update_streaming_ms = phys.UpdateStreamingMs;
+  n.visibility_debt_probe_ms = phys.VisibilityDebtProbeMs;
+  n.spawn_catchup_probe_ms = phys.SpawnCatchUpProbeMs;
   n.async_chunk_systems_ms = phys.AsyncChunkSystemsMs;
   n.async_chunk_pre_scheduler_ms = phys.AsyncChunkPreSchedulerMs;
   n.async_chunk_scheduler_tick_ms = phys.AsyncChunkSchedulerTickMs;
@@ -1871,6 +1877,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.enter_mesh_dirty_residual_n = phys.EnterMeshDirtyResidualN;
   n.visibility_debt = phys.VisibilityDebt;
   n.visibility_debt_hinterland = phys.VisibilityDebtHinterland;
+  n.visibility_debt_sample_valid = phys.VisibilityDebtSampleValid;
+  n.visibility_debt_hinterland_sample_valid =
+      phys.VisibilityDebtHinterlandSampleValid;
   n.softdefer_empty_publish_avoided = phys.SoftDeferEmptyPublishAvoided;
   n.softdefer_held_n = phys.SoftDeferHeldN;
   n.softdefer_held_age_max = phys.SoftDeferHeldAgeMax;
@@ -2216,6 +2225,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"streamer_keep_shell_ms\":" << n.streamer_keep_shell_ms
           << ",\"streamer_prefetch_ahead_ms\":" << n.streamer_prefetch_ahead_ms
           << ",\"update_streaming_ms\":" << n.update_streaming_ms
+          << ",\"visibility_debt_probe_ms\":"
+          << n.visibility_debt_probe_ms
+          << ",\"spawn_catchup_probe_ms\":"
+          << n.spawn_catchup_probe_ms
           << ",\"async_chunk_systems_ms\":" << n.async_chunk_systems_ms
           << ",\"async_chunk_pre_scheduler_ms\":"
           << n.async_chunk_pre_scheduler_ms
@@ -3041,6 +3054,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.enter_mesh_dirty_residual_n
           << ",\"visibility_debt\":" << n.visibility_debt
           << ",\"visibility_debt_hinterland\":" << n.visibility_debt_hinterland
+          << ",\"visibility_debt_sample_valid\":"
+          << n.visibility_debt_sample_valid
+          << ",\"visibility_debt_hinterland_sample_valid\":"
+          << n.visibility_debt_hinterland_sample_valid
           << ",\"softdefer_empty_publish_avoided\":"
           << n.softdefer_empty_publish_avoided
           << ",\"softdefer_held_n\":" << n.softdefer_held_n

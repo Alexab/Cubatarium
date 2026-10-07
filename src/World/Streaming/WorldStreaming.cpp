@@ -5331,6 +5331,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     return;
   }
   Streamer->BeginFrameStats();
+  world.PhysicsTelemetryData.VisibilityDebtProbeMs = 0.0;
+  world.PhysicsTelemetryData.SpawnCatchUpProbeMs = 0.0;
+  world.PhysicsTelemetryData.VisibilityDebtSampleValid = 0;
+  world.PhysicsTelemetryData.VisibilityDebtHinterlandSampleValid = 0;
   GetColumnFlowExecutor().BindDecideWorld(&world);
   if (kI18WitnessComfortEnabled && WitnessColumnGrace.frames_left > 0)
   {
@@ -6246,7 +6250,12 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - keep_t0)
             .count();
+    const auto spawn_catch_up_t0 = std::chrono::high_resolution_clock::now();
     const bool spawn_catch_up = world.NeedsSpawnRingCatchUp();
+    world.PhysicsTelemetryData.SpawnCatchUpProbeMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - spawn_catch_up_t0)
+            .count();
     const bool underfeet_miss_sla =
         world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
         world.PhysicsTelemetryData.MissHoriz <= 1;
@@ -6255,27 +6264,38 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // (skip Mark under cruise latch — catch-up on stop/idle only).
     {
       auto &pt = world.GetPhysicsTelemetryMutable();
-      // Phase 5.7R: VisibilityDebt probe cadence under cruise (O(R²) CountUnready).
+      // CountEnterVisibilityDebt is needed to release the enter-settle latch,
+      // not as a cruise-time readiness oracle. Its R=4 scan was unbudgeted and
+      // could coincide with the catch-up scan at a chunk boundary.
       static int vis_debt_cd = 0;
       static int cached_vis_debt = 0;
-      if (--vis_debt_cd <= 0)
+      const bool need_visibility_debt =
+          world.IsEnterSessionActive() ||
+          world.GetEnterGameMeshBurstFrames() > 0 ||
+          pt.EnterSettleSoftForceWithDebt != 0;
+      if (need_visibility_debt && --vis_debt_cd <= 0)
       {
+        const auto vis_debt_t0 = std::chrono::high_resolution_clock::now();
         cached_vis_debt = world.CountEnterVisibilityDebt();
+        pt.VisibilityDebtProbeMs =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - vis_debt_t0)
+                .count();
         vis_debt_cd = moving_fast ? 4 : 1;
       }
-      const int vis_debt = cached_vis_debt;
-      pt.VisibilityDebt = vis_debt;
-      const glm::ivec3 focus_chunk =
-          UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-      // Phase 5.7R: hinterland CountUnready is diagnose-only — cadence 8–16f.
-      static int hinterland_cd = 0;
-      static int hinterland_debt_r8 = 0;
-      if (--hinterland_cd <= 0)
+      else if (!need_visibility_debt)
       {
-        hinterland_debt_r8 = world.CountUnreadyColumns(focus_chunk, 8);
-        hinterland_cd = moving_fast ? 8 : 16;
+        vis_debt_cd = 0;
+        cached_vis_debt = 0;
       }
-      pt.VisibilityDebtHinterland = std::max(0, hinterland_debt_r8 - vis_debt);
+      const int vis_debt = need_visibility_debt ? cached_vis_debt : 0;
+      pt.VisibilityDebt = vis_debt;
+      pt.VisibilityDebtSampleValid = need_visibility_debt ? 1 : 0;
+      // The old R=8 hinterland scan was telemetry-only and walked up to 289
+      // columns on the game thread. Leave the sample invalid; the bounded
+      // focus-ring readiness counters remain available for cruise diagnosis.
+      pt.VisibilityDebtHinterland = 0;
+      pt.VisibilityDebtHinterlandSampleValid = 0;
       if (pt.EnterSettleSoftForceWithDebt != 0 &&
           EnterPresentableCatchUpClear(
               pt.SoftDeferOwnedNoGpuN, pt.SoftDeferEmptyStuckN, vis_debt,
