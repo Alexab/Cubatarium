@@ -249,18 +249,46 @@ public:
 private:
   UChunkRenderDemandStore() = default;
 
+  struct DemandSnapshot
+  {
+    uint64_t world_epoch{0};
+    uint64_t incarnation{0};
+    uint64_t attempt_id{0};
+    uint64_t desired_geom_rev{0};
+    uint64_t desired_light_rev{0};
+    uint64_t desired_coverage_gen{0};
+    uint64_t published_geom_rev{0};
+    uint64_t published_light_rev{0};
+    uint64_t published_coverage_gen{0};
+    JobStage stage{JobStage::Created};
+    bool has_active_attempt{false};
+    bool retained_awaiting_successor{false};
+    uint8_t face_debt_mask{0};
+  };
+
+  static DemandSnapshot SnapshotDemand(const ChunkRenderDemandRecord &rec);
+  static UnsatisfiedBreakdown BreakdownFor(const DemandSnapshot &snapshot);
+  void UpdateCachedUnsatisfiedBreakdown(const DemandSnapshot &before,
+                                       const DemandSnapshot &after);
+  void TraceDemandTransition(glm::ivec3 coord, const DemandSnapshot &before,
+                             const ChunkRenderDemandRecord &after,
+                             DemandTransitionKind kind,
+                             double event_ms = 0.0, uint8_t result = 0);
+
   static bool CoverageSatisfied(const ChunkRenderDemandRecord &rec,
                                 uint64_t desired_coverage_gen);
   static bool PublishedMeetsDesired(const ChunkRenderDemandRecord &rec);
 
   std::unordered_map<glm::ivec3, ChunkRenderDemandRecord, IVec3Hash> Records_;
   uint64_t NextAttemptId_{1};
-  size_t ReconcileCursor_{0};
+  glm::ivec3 ReconcileCursorCoord_{0};
+  bool ReconcileCursorValid_{false};
   uint64_t AlreadySatisfiedSkipN_{0};
   uint64_t CoalesceN_{0};
   uint64_t NewDemandN_{0};
   uint64_t ShadowMismatchN_{0};
   uint64_t RetainSuccessorNoteN_{0};
+  UnsatisfiedBreakdown CachedUnsatisfiedBreakdown_{};
 };
 
 /// Active attempt id from demand record when has_active_attempt; else 0.

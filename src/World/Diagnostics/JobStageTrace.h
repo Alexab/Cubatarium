@@ -215,7 +215,10 @@ struct VisualBlackTraceRecord
   /// to lifecycle/source-mesh state of the exact ray-mapped chunk slice,
   /// 10=CPU screen ray tested by the streaming miss selector,
   /// 11=watched mesh schedule, 12=camera-band no-drawable peak slice,
-  /// 13=camera-band unowned peak slice.
+  /// 13=camera-band unowned peak slice, 14=surviving near-focus FirstMesh
+  /// queue frontier with scheduler/capture budgets at the end of the tick,
+  /// 15=frustum probe summary, 16=peak-slice render and screen-projection
+  /// witness.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   /// sample_kind=1: FocusColumnVisualClass ordinal, 255 when outside cache.
@@ -294,8 +297,28 @@ struct VisualBlackTraceRecord
   /// sample_kind=2: 1=CPU opaque, 2=CPU transparent, 3=packed opaque,
   /// 4=packed transparent.
   uint8_t renderer_path{0};
+  /// sample_kind=15 aliases: resident non-air chunks scanned, exact-frustum
+  /// candidates, quota-selected samples, and selected samples with drawable.
   uint32_t renderer_cpu_index_count{0};
   uint32_t renderer_gpu_quad_count{0};
+  /// sample_kind=15: camera-band peak slice counts, split by no-drawable /
+  /// unowned and exact-geometric-frustum intersection.
+  uint16_t frustum_peak_no_drawable_slice_count{0};
+  uint16_t frustum_peak_no_drawable_in_view_count{0};
+  uint16_t frustum_peak_unowned_slice_count{0};
+  uint16_t frustum_peak_unowned_in_view_count{0};
+  /// sample_kind=16: bounded target-specific camera projection witness.
+  uint8_t camera_band_peak_kind{0};
+  uint8_t renderer_target_resident{0};
+  uint8_t renderer_exact_frustum_intersects{0};
+  uint8_t renderer_projected_screen_rect_valid{0};
+  uint8_t renderer_projected_corner_count{0};
+  int32_t renderer_projected_screen_min_x{0};
+  int32_t renderer_projected_screen_min_y{0};
+  int32_t renderer_projected_screen_max_x{0};
+  int32_t renderer_projected_screen_max_y{0};
+  int32_t renderer_viewport_width{0};
+  int32_t renderer_viewport_height{0};
   /// sample_kind=2 flags 0..17; sample_kind=9 uses the same flags for the
   /// exact ray-mapped pixel chunk: drawable, satisfying, live GPU, fully dark,
   /// lit drawable, stale dark, dirty, mesh in-flight, GPU pending, extract
@@ -395,6 +418,26 @@ struct VisualBlackTraceRecord
   float renderer_pixel_shader_precipitation{0.0f};
   float renderer_pixel_shader_wetness{0.0f};
   float renderer_pixel_shader_light_debug_mode{0.0f};
+  uint8_t renderer_pixel_fog_state_valid{0};
+  uint8_t renderer_pixel_fog_enabled{0};
+  uint8_t renderer_pixel_air_fog_enabled{0};
+  uint8_t renderer_pixel_fog_horizontal{0};
+  uint8_t renderer_pixel_underwater_fog_enabled{0};
+  uint8_t renderer_pixel_underwater_fog_submerged{0};
+  float renderer_pixel_camera_pos_x{0.0f};
+  float renderer_pixel_camera_pos_y{0.0f};
+  float renderer_pixel_camera_pos_z{0.0f};
+  float renderer_pixel_fog_start{0.0f};
+  float renderer_pixel_fog_end{1000.0f};
+  float renderer_pixel_fog_min_blend{0.0f};
+  float renderer_pixel_fog_density{1.0f};
+  float renderer_pixel_fog_env_multiplier{1.0f};
+  float renderer_pixel_fog_color_r{0.05f};
+  float renderer_pixel_fog_color_g{0.15f};
+  float renderer_pixel_fog_color_b{0.35f};
+  float renderer_pixel_underwater_fog_start{0.0f};
+  float renderer_pixel_underwater_fog_end{9.0f};
+  float renderer_pixel_underwater_fog_min_blend{0.5f};
   uint8_t renderer_pixel_marker_visible{0};
   /// Valid bit plus seven-bit marker occupancy on the sampled scanline.
   uint8_t renderer_pixel_surface_valid{0};
@@ -530,6 +573,8 @@ struct VisualBlackTraceRecord
   uint8_t renderer_pixel_opaque_demand_has_active_attempt{0};
   uint8_t renderer_pixel_opaque_demand_has_settled_light{0};
   uint8_t renderer_pixel_opaque_demand_active_stage{0};
+  uint64_t renderer_pixel_opaque_demand_desired_geom_rev{0};
+  uint64_t renderer_pixel_opaque_demand_published_geom_rev{0};
   uint64_t renderer_pixel_opaque_demand_desired_light_rev{0};
   uint64_t renderer_pixel_opaque_demand_published_light_rev{0};
   uint64_t renderer_pixel_opaque_demand_settled_light_rev{0};
@@ -587,6 +632,35 @@ struct VisualBlackTraceRecord
   /// mark; 12 is no-drawable, 13 is unowned.
   uint32_t camera_band_solid_no_drawable_n{0};
   uint32_t camera_band_solid_unowned_n{0};
+  /// sample_kind=14: bounded FirstMesh survivor frontier snapshot. Queue scan
+  /// is limited to the first 64 items and emits at most one aged solid slice
+  /// per scheduling tick while opt-in visual tracing is enabled.
+  int32_t frontier_scan_limit{0};
+  int32_t frontier_focus_radius_chunks{0};
+  int32_t frontier_horiz_distance_chunks{0};
+  int32_t frontier_vertical_distance_chunks{0};
+  int32_t frontier_max_schedule{0};
+  int32_t frontier_first_mesh_cap_base{0};
+  int32_t frontier_first_mesh_cap{0};
+  int32_t frontier_pre_first_mesh_limit{0};
+  int32_t frontier_scheduled_this_tick{0};
+  int32_t frontier_pipeline_inflight{0};
+  int32_t frontier_pipeline_cap{0};
+  int32_t frontier_soft_defer{0};
+  int32_t frontier_snapshot_credits_left{0};
+  int32_t frontier_first_mesh_capture_reserve_left{0};
+  int32_t frontier_capture_credits_initial{0};
+  int32_t frontier_snapshot_time_defers{0};
+  int32_t frontier_snapshot_refresh_defers{0};
+  int32_t frontier_snapshot_pipeline_bytes_defers{0};
+  int32_t frontier_snapshot_missing_band_defers{0};
+  int32_t frontier_snapshot_dependency_defers{0};
+  int32_t frontier_snapshot_publication_defers{0};
+  int32_t frontier_snapshot_store_commit_defers{0};
+  double frontier_snapshot_ms{0.0};
+  double frontier_snapshot_budget_ms{0.0};
+  double frontier_tick_elapsed_ms{0.0};
+  double frontier_tick_budget_ms{0.0};
   /// sample_kind=0 bits: ticket, progress, sticky, pending_replace,
   /// column_light_revs_match, drawable, any_dark_face, dirty,
   /// remesh_after_apply, gpu_pending, inflight, column_has_stale_dark,
@@ -600,6 +674,8 @@ struct VisualBlackTraceRecord
   /// Bits 28..31 identify live ColumnFlow tickets by work kind.
   /// sample_kind=6: bit 14 marks a FirstMesh candidate attempted by the
   /// forward-facing mid-range schedule reservation.
+  /// sample_kind=4/6/7/11: bit 15 marks a queued ScreenRay remesh pin and bit
+  /// 16 marks a candidate admitted through the bounded over-budget reserve.
   uint32_t flags{0};
 };
 
@@ -613,17 +689,22 @@ public:
   static constexpr size_t kDemandTransitionRingCapacity = 16384;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
-  // M352 showed that 2,048 samples retained only the last 26 focus scans.
-  // At 80 pixels per scan, 32,768 records retain 409 scans across a full
-  // no-teleport route, including the focus-change and periodic captures.
-  static constexpr size_t kVisualPixelTraceRingCapacity = 32768;
-  /// Retain a complete opt-in history of bounded streaming screen-ray probes.
-  // The screen-ray selector rotates through four horizontal phases. Keeping
-  // the opt-in audit trace at 15-frame cadence retains all phases for a full
-  // visible flight without overwriting the route's opening samples.
-  static constexpr size_t kScreenRayTraceRingCapacity = 8192;
+  // M466 filled 65,536 pixel rows and retained only the last ~40.8k frame
+  // epochs. Keep room for the full M335 route's synchronized 5x20 samples and
+  // its periodic 4x20 probes, with headroom for focus/peak captures.
+  static constexpr size_t kVisualPixelTraceRingCapacity = 196608;
+  /// Retain a full opt-in history of bounded streaming screen-ray probes.
+  // M466 filled 8,192 rows at focus -550..-836, covering only about a third
+  // of M335. Four times that observed history covers a complete route pass.
+  static constexpr size_t kScreenRayTraceRingCapacity = 32768;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
   static constexpr size_t kFrustumCoverageTraceRingCapacity = 256;
+  /// Preserve each sparse per-frame geometric-frustum census independently
+  /// from high-rate generic visual traces.
+  static constexpr size_t kFrustumProbeSummaryTraceRingCapacity = 1024;
+  /// Preserve projected renderer-state witnesses for every retained
+  /// camera-band peak slice independently from per-frame candidate samples.
+  static constexpr size_t kCameraBandPeakRenderProbeTraceRingCapacity = 256;
   static constexpr size_t kVisualBlackAttributionTraceRingCapacity = 1024;
   static constexpr size_t kVisualRepairTraceRingCapacity = 2048;
   static constexpr size_t kMeshScheduleTraceRingCapacity = 1024;
@@ -632,15 +713,20 @@ public:
   /// Preserve exact slice ownership only for the latest no-drawable/unowned
   /// camera-band high-water snapshots; the rings are cleared on each new peak.
   static constexpr size_t kCameraBandPeakTraceRingCapacity = 256;
+  /// Retain enough opt-in frontier samples to cover a complete M335 route.
+  static constexpr size_t kFirstMeshFrontierTraceRingCapacity = 4096;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
       kVisualBlackTraceRingCapacity +
       kRendererGateTraceRingCapacity +
       kFrustumCoverageTraceRingCapacity +
+      kFrustumProbeSummaryTraceRingCapacity +
+      kCameraBandPeakRenderProbeTraceRingCapacity +
       kVisualBlackAttributionTraceRingCapacity +
       kVisualRepairTraceRingCapacity + kMeshScheduleTraceRingCapacity +
       kPriorityRemeshTraceRingCapacity +
       kWatchedMeshScheduleTraceRingCapacity + kVisualPixelTraceRingCapacity +
-      kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity;
+      kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity +
+      kFirstMeshFrontierTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.
@@ -671,6 +757,15 @@ public:
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static bool VisualBlackTraceEnabled();
   static void NoteVisualBlack(const VisualBlackTraceRecord &record);
+  /// True when a camera-band peak was recorded during this render epoch.
+  /// Lets the renderer take one synchronized sparse pixel/depth sample.
+  static bool HasCameraBandPeakTraceForFrame(uint64_t frame_epoch);
+  /// True when the streaming screen-ray grid was recorded during this render
+  /// epoch. Lets an opt-in diagnostic pixel probe sample the same coordinates.
+  static bool HasScreenRayTraceForFrame(uint64_t frame_epoch);
+  static void ForEachCameraBandPeakTraceForFrame(
+      uint64_t frame_epoch,
+      void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx);
   /// Clear the latest high-water snapshot ring for sample_kind 12 or 13.
   static void ResetCameraBandPeakTrace(uint8_t sample_kind);
   /// Dump each trace class from its own bounded ring. max_n is applied per

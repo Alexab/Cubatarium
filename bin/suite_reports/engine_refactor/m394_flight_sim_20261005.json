@@ -1,0 +1,51 @@
+{
+  "exit_code": 0,
+  "loading_seen": true,
+  "ingame_frames": 62092,
+  "ingame_seconds_requested": 2835,
+  "world": "World_164",
+  "teleport_cruise": false,
+  "manifest": {
+    "git_sha": "unknown",
+    "build_type": "Release",
+    "route": "flight-sim",
+    "config_hash": "",
+    "frame_count": 62092,
+    "teleport_cruise": false,
+    "obstacle_avoidance_enabled": true,
+    "run_id": "World_164_20261005T000218"
+  },
+  "autopilot_armed": true,
+  "autopilot_flying": true,
+  "face_yaw_deg": 180,
+  "reverse_course_after_sec": 0,
+  "reverse_course_engaged": false,
+  "face_pitch_deg": -30,
+  "level_forward": false,
+  "heading_deviation_during_move_samples": 0,
+  "max_heading_yaw_delta_deg": 0,
+  "max_heading_pitch_delta_deg": 0,
+  "stop_after_blocked_sec": 8,
+  "collision_stop_triggered": false,
+  "collision_stop_elapsed_sec": 0,
+  "obstacle_avoidance": {
+    "enabled": true,
+    "attempts": 3,
+    "detours_started": 3,
+    "detours_completed": 3,
+    "detour_replans": 0,
+    "plan_failures": 0,
+    "planned_lateral_blocks": 18,
+    "events": [
+      {"at_sec": 592.403, "hazard_distance": 18, "planned": true, "side": 1, "side_offset": 3, "pass_distance": 23},
+      {"at_sec": 600.206, "hazard_distance": 16.5, "planned": true, "side": -1, "side_offset": 3, "pass_distance": 21.5},
+      {"at_sec": 2412.43, "hazard_distance": 18, "planned": true, "side": 1, "side_offset": 3, "pass_distance": 23}
+    ]
+  },
+  "idle_before_fly_sec": 15,
+  "start_focus": [7, 3],
+  "end_focus": [-570, 3],
+  "chunks_traveled_cheb": 577,
+  "perf_jsonl": "E:/Work/Home/Cubatarium/bin/logs/perf_20261004-231440_30796.jsonl",
+  "analyze": "run tools/flight_sim_analyze.py on perf"
+}

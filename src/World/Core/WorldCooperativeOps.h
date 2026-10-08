@@ -79,6 +79,7 @@ private:
 
   void Report(IUProgressSink &sink, const std::string &phaseId, float fraction,
               const std::string &message) const;
+  void RecordPhaseTiming(const UWorld &world);
   void ScanChunkFiles(UWorld &world);
   void ScanSaveChunkCoords(UWorld &world);
   void InitGenerationGrid(UWorld &world, bool center_on_load_focus = false);
@@ -87,6 +88,9 @@ private:
   bool AdvanceGeneration(UWorld &world, int budget);
 
   Phase CurrentPhase{Phase::Init};
+  std::string TimedPhaseId;
+  std::chrono::steady_clock::time_point OperationStartedAt{};
+  std::chrono::steady_clock::time_point PhaseStartedAt{};
   std::string FolderPath;
   std::string TargetWorldName;
 
@@ -102,8 +106,10 @@ private:
 
   int SpatialRadius{0};
   glm::ivec3 SpatialCenter{0};
-  int SpatialDx{0};
-  int SpatialDz{0};
+  std::vector<glm::ivec3> SpatialColumnQueue;
+  size_t SpatialColumnQueueIndex{0};
+  std::vector<glm::ivec3> SpatialAsyncColumns;
+  size_t SpatialColumnsVisited{0};
   int MeshWarmupTicks{0};
   std::chrono::steady_clock::time_point MeshWarmupStartedAt{};
   std::chrono::steady_clock::time_point RelightColumnsStartedAt{};

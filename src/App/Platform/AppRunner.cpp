@@ -41,7 +41,9 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
+#include <vector>
 
 namespace cutum
 {
@@ -628,12 +630,18 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     application->ScheduleEnterGame();
 
     const auto started = std::chrono::steady_clock::now();
+    auto last_clock_sample = started;
     std::chrono::steady_clock::time_point ingame_started{};
     bool ingame_clock_started = false;
+    double excluded_clock_gap_sec = 0.0;
+    double excluded_before_ingame_sec = 0.0;
+    int excluded_clock_gap_count = 0;
     bool loading_seen = false;
     bool autopilot_armed = false;
     bool autopilot_flying = false;
     bool fly_stop_released = false;
+    bool reverse_course_engaged = false;
+    bool reverse_course_logged = false;
     bool dive_engaged = false;
     double last_break_request_sec = -1.0e9;
     int break_requests = 0;
@@ -641,12 +649,19 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
+    const bool route_line_tracking_enabled =
+        options.AvoidObstacles && options.Fly && options.HoldForward &&
+        !options.YawSweepMode && options.ReverseCourseAfterSec <= 0.0;
+    glm::vec3 route_line_origin(0.0f);
+    bool route_line_origin_captured = false;
+    float max_route_lateral_deviation_blocks = 0.0f;
+    float end_route_lateral_deviation_blocks = 0.0f;
     int heading_deviation_during_move_samples = 0;
     float max_heading_yaw_delta_deg = 0.0f;
     float max_heading_pitch_delta_deg = 0.0f;
     bool collision_stop_triggered = false;
     double collision_stop_elapsed_sec = 0.0;
-    std::chrono::steady_clock::time_point blocked_move_started{};
+    double blocked_move_started_ingame_sec = -1.0;
     // Land cruise: follow column top + 12 along the route (was sticky-once,
     // which pinned Y at spawn and stuck product-174657 west at focus_cx≈2).
     // Apply every frame with floor/ceiling — lift-only ratcheted Y~70 and
@@ -686,12 +701,98 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       return target;
     };
 
+    enum class AvoidancePhase
+    {
+      None,
+      MoveAside,
+      PassObstacle,
+      ReturnToRoute
+    };
+    struct AvoidanceEvent
+    {
+      double at_sec{0.0};
+      float hazard_distance{0.0f};
+      float side_offset{0.0f};
+      float pass_distance{0.0f};
+      int side{0}; // -1 = left, +1 = right, 0 = no clear path found.
+      bool planned{false};
+    };
+    AvoidancePhase avoidance_phase = AvoidancePhase::None;
+    glm::vec3 avoidance_side_target(0.0f);
+    glm::vec3 avoidance_pass_target(0.0f);
+    glm::vec3 avoidance_return_target(0.0f);
+    int avoidance_side = 0;
+    int preferred_avoidance_side = 1;
+    int avoidance_attempts = 0;
+    int avoidance_detours_started = 0;
+    int avoidance_detours_completed = 0;
+    int avoidance_detour_replans = 0;
+    int avoidance_plan_failures = 0;
+    float avoidance_total_lateral_blocks = 0.0f;
+    // If no safe bypass is available yet, pause forward input while the
+    // bounded planner retries. Continuing into the hazard made a failed
+    // prediction indistinguishable from a collision stop.
+    bool avoidance_hazard_hold = false;
+    std::vector<AvoidanceEvent> avoidance_events;
+    auto next_avoidance_probe = std::chrono::steady_clock::time_point{};
+    auto next_detour_replan = std::chrono::steady_clock::time_point{};
+    auto apply_cruise_height = [&](glm::vec3 pos) {
+      const float sea = static_cast<float>(
+          world->GetProceduralSettings().SeaLevel);
+      const float target_y = resolve_cruise_eye_y(*world, pos, sea);
+      if (target_y > 0.0f)
+      {
+        pos.y = target_y;
+      }
+      return pos;
+    };
+    auto is_flight_hazard = [&](const glm::vec3 &candidate,
+                                const PlayerCapsule &capsule) {
+      const glm::vec3 at_height = apply_cruise_height(candidate);
+      return world->CheckCollision(at_height, capsule) ||
+             world->HasGroundSupport(at_height, capsule);
+    };
+    auto segment_is_clear = [&](const glm::vec3 &from, const glm::vec3 &to,
+                                const PlayerCapsule &capsule) {
+      const glm::vec3 delta = to - from;
+      const float span = glm::length(delta);
+      const int samples = (std::max)(1, static_cast<int>(std::ceil(span / 0.4f)));
+      for (int sample = 1; sample <= samples; ++sample)
+      {
+        const float t = static_cast<float>(sample) /
+                        static_cast<float>(samples);
+        if (is_flight_hazard(from + delta * t, capsule))
+        {
+          return false;
+        }
+      }
+      return true;
+    };
+
     window.SetStopPredicate(
         [&]()
         {
           const auto now = std::chrono::steady_clock::now();
-          const double elapsed_sec =
-              std::chrono::duration<double>(now - started).count();
+          const double clock_gap_sec =
+              std::chrono::duration<double>(now - last_clock_sample).count();
+          last_clock_sample = now;
+          // Windows' steady_clock uses QueryPerformanceCounter, which advances
+          // while the machine is suspended. Exclude long frame-loop gaps from
+          // route phase clocks; this also prevents a long stall from burning
+          // the requested active flight duration.
+          constexpr double kExcludedClockGapThresholdSec = 5.0;
+          if (clock_gap_sec >= kExcludedClockGapThresholdSec)
+          {
+            excluded_clock_gap_sec += clock_gap_sec;
+            ++excluded_clock_gap_count;
+            std::cout << "flight-sim: excluded long clock gap="
+                      << clock_gap_sec << "s total="
+                      << excluded_clock_gap_sec << "s" << std::endl;
+          }
+          const double elapsed_sec = (std::max)(
+              0.0,
+              std::chrono::duration<double>(now - started).count() -
+                  excluded_clock_gap_sec);
           if (elapsed_sec > safety_timeout)
           {
             return true;
@@ -706,10 +807,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             if (!ingame_clock_started)
             {
               ingame_started = now;
+              excluded_before_ingame_sec = excluded_clock_gap_sec;
               ingame_clock_started = true;
             }
-            const double ingame_sec =
-                std::chrono::duration<double>(now - ingame_started).count();
+            const double ingame_sec = (std::max)(
+                0.0,
+                std::chrono::duration<double>(now - ingame_started).count() -
+                    (excluded_clock_gap_sec -
+                     excluded_before_ingame_sec));
             if (auto camera = world->GetCurrentUserCamera())
             {
               if (!autopilot_armed &&
@@ -720,6 +825,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     !options.YawSweepMode)
                 {
                   camera->SetFreeMove(true);
+                  camera->SetPlanarFreeMoveForward(options.LevelForward);
                 }
                 camera->SetOrientation(options.FaceYawDeg, options.FacePitchDeg);
                 const float sea =
@@ -755,6 +861,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                           << (options.Fly ? 1 : 0)
                           << " hold_forward=" << (options.HoldForward ? 1 : 0)
                           << " hold_space=" << (options.HoldSpace ? 1 : 0)
+                          << " level_forward=" << (options.LevelForward ? 1 : 0)
                           << " break_stand=" << (options.BreakStandMode ? 1 : 0)
                           << " yaw_sweep=" << (options.YawSweepMode ? 1 : 0)
                           << " teleport=" << (options.TeleportToCruiseStart ? 1 : 0)
@@ -769,6 +876,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     !options.YawSweepMode)
                 {
                   camera->SetFreeMove(true);
+                  camera->SetPlanarFreeMoveForward(options.LevelForward);
                 }
                 const double fly_end =
                     options.IdleBeforeFlySec +
@@ -797,9 +905,39 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   static const float kYaws[4] = {0.f, 90.f, 180.f, 270.f};
                   yaw = kYaws[step & 3];
                 }
+                const double reverse_at_sec =
+                    options.IdleBeforeFlySec + options.ReverseCourseAfterSec;
+                const bool reverse_course_requested =
+                    options.ReverseCourseAfterSec > 0.0 &&
+                    ingame_sec >= reverse_at_sec;
+                const bool intentional_course_turn =
+                    reverse_course_requested && !reverse_course_engaged;
+                if (reverse_course_requested)
+                {
+                  yaw = std::remainder(yaw + 180.0f, 360.0f);
+                  if (yaw < 0.0f)
+                  {
+                    yaw += 360.0f;
+                  }
+                  reverse_course_engaged = true;
+                  if (!reverse_course_logged)
+                  {
+                    reverse_course_logged = true;
+                    std::cout << "flight-sim: reversed course yaw=" << yaw
+                              << " at t=" << ingame_sec << "s" << std::endl;
+                  }
+                  if (intentional_course_turn &&
+                      avoidance_phase != AvoidancePhase::None)
+                  {
+                    avoidance_phase = AvoidancePhase::None;
+                    window.SetAutopilotKey(KeyCode::Key_A, false);
+                    window.SetAutopilotKey(KeyCode::Key_D, false);
+                  }
+                }
                 const float pitch =
                     in_dive ? options.DivePitchDeg : options.FacePitchDeg;
                 if (autopilot_flying && !fly_stop_released &&
+                    !intentional_course_turn &&
                     camera->GetLastMoveAttemptSubsteps() > 0)
                 {
                   const float yaw_delta = std::abs(
@@ -818,6 +956,267 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   }
                 }
                 camera->SetOrientation(yaw, pitch);
+                if (options.AvoidObstacles && options.Fly &&
+                    options.HoldForward && autopilot_flying &&
+                    !fly_stop_released && !in_dive &&
+                    !options.BreakStandMode && !options.YawSweepMode)
+                {
+                  const glm::vec3 position = camera->GetPosition();
+                  const PlayerCapsule capsule = camera->GetPlayerCapsule();
+                  const int move_attempt_substeps =
+                      camera->GetLastMoveAttemptSubsteps();
+                  const int move_blocked_substeps =
+                      camera->GetLastMoveBlockedSubsteps();
+                  const int flight_ground_contacts =
+                      camera->GetLastFlightGroundContacts();
+                  constexpr float kDegreesToRadians =
+                      0.01745329251994329577f;
+                  const float yaw_rad = yaw * kDegreesToRadians;
+                  const glm::vec3 forward(std::cos(yaw_rad), 0.0f,
+                                          std::sin(yaw_rad));
+                  const glm::vec3 right(-std::sin(yaw_rad), 0.0f,
+                                        std::cos(yaw_rad));
+
+                  // The world may publish collision data after a bypass was
+                  // planned. If the camera becomes fully blocked while
+                  // following a waypoint, discard that stale plan and run
+                  // the normal bounded side/clearance search from the current
+                  // position. Cool down briefly to avoid processing the same
+                  // movement result twice (the harness predicate runs both
+                  // before and after rendering).
+                  const bool bypass_fully_blocked =
+                      move_attempt_substeps > 0 &&
+                      move_blocked_substeps >= move_attempt_substeps;
+                  const bool bypass_landed = flight_ground_contacts > 0;
+                  if (avoidance_phase != AvoidancePhase::None &&
+                      (bypass_fully_blocked || move_blocked_substeps > 0 ||
+                       bypass_landed) &&
+                      now >= next_detour_replan)
+                  {
+                    ++avoidance_detour_replans;
+                    std::cout << "flight-sim: obstacle bypass blocked; "
+                                 "replanning from current position at t="
+                              << ingame_sec << "s blocked="
+                              << move_blocked_substeps << "/"
+                              << move_attempt_substeps << " ground_contacts="
+                              << flight_ground_contacts << std::endl;
+                    avoidance_phase = AvoidancePhase::None;
+                    avoidance_hazard_hold = true;
+                    preferred_avoidance_side = -avoidance_side;
+                    next_avoidance_probe = now;
+                    next_detour_replan =
+                        now + std::chrono::milliseconds(250);
+                    window.SetAutopilotKey(KeyCode::Key_A, false);
+                    window.SetAutopilotKey(KeyCode::Key_D, false);
+                  }
+
+                  if (avoidance_phase != AvoidancePhase::None)
+                  {
+                    constexpr float kWaypointTolerance = 0.75f;
+                    // Fixed movement steps can skip a small waypoint radius;
+                    // detect crossing the lateral target plane as arrival.
+                    if (avoidance_phase == AvoidancePhase::MoveAside &&
+                        (std::abs(glm::dot(avoidance_side_target - position,
+                                          right)) <= kWaypointTolerance ||
+                         glm::dot(avoidance_side_target - position, right) *
+                                 static_cast<float>(avoidance_side) <=
+                             0.0f))
+                    {
+                      avoidance_phase = AvoidancePhase::PassObstacle;
+                      std::cout << "flight-sim: obstacle bypass passing at t="
+                                << ingame_sec << "s" << std::endl;
+                    }
+                    if (avoidance_phase == AvoidancePhase::PassObstacle)
+                    {
+                      const float remaining_forward = glm::dot(
+                          avoidance_pass_target - position, forward);
+                      if (remaining_forward <= kWaypointTolerance)
+                      {
+                        avoidance_phase = AvoidancePhase::ReturnToRoute;
+                        std::cout
+                            << "flight-sim: obstacle bypass rejoining at t="
+                            << ingame_sec << "s" << std::endl;
+                      }
+                    }
+                    if (avoidance_phase == AvoidancePhase::ReturnToRoute &&
+                        (std::abs(glm::dot(avoidance_return_target - position,
+                                          right)) <= kWaypointTolerance ||
+                         glm::dot(avoidance_return_target - position, right) *
+                                 static_cast<float>(-avoidance_side) <=
+                             0.0f))
+                    {
+                      avoidance_phase = AvoidancePhase::None;
+                      ++avoidance_detours_completed;
+                      preferred_avoidance_side = -avoidance_side;
+                      std::cout << "flight-sim: obstacle bypass complete at t="
+                                << ingame_sec << "s completed="
+                                << avoidance_detours_completed << std::endl;
+                    }
+                  }
+
+                  if (avoidance_phase == AvoidancePhase::None &&
+                      now >= next_avoidance_probe)
+                  {
+                    // Check far enough ahead to make a lateral lane change at
+                    // the established flight speed, including tree support
+                    // that would otherwise make the camera land and stop.
+                    float hazard_distance = 0.0f;
+                    for (float distance = 0.75f; distance <= 18.0f;
+                         distance += 0.75f)
+                    {
+                      if (is_flight_hazard(position + forward * distance,
+                                           capsule))
+                      {
+                        hazard_distance = distance;
+                        break;
+                      }
+                    }
+
+                    // The predictive sweep can miss a contact when collision
+                    // geometry becomes available between probes. Treat actual
+                    // blocked movement or flight-ground contact as an
+                    // immediate hazard and run the same bounded bypass search.
+                    if (hazard_distance <= 0.0f &&
+                        (camera->GetLastMoveBlockedSubsteps() > 0 ||
+                         camera->GetLastFlightGroundContacts() > 0))
+                    {
+                      hazard_distance = 0.75f;
+                    }
+
+                    if (hazard_distance > 0.0f)
+                    {
+                      ++avoidance_attempts;
+                      AvoidanceEvent event;
+                      event.at_sec = ingame_sec;
+                      event.hazard_distance = hazard_distance;
+                      bool found_plan = false;
+                      float best_cost = std::numeric_limits<float>::max();
+                      const float offsets[] = {3.0f, 5.0f, 7.0f, 9.0f,
+                                                12.0f, 16.0f, 24.0f, 32.0f,
+                                                40.0f};
+                      const float clearances[] = {5.0f, 9.0f, 13.0f, 18.0f,
+                                                  24.0f, 32.0f, 48.0f};
+                      const int offset_count =
+                          avoidance_plan_failures > 2
+                              ? 9
+                              : (avoidance_plan_failures > 0 ? 6 : 4);
+                      const int clearance_count =
+                          avoidance_plan_failures > 2
+                              ? 7
+                              : (avoidance_plan_failures > 0 ? 5 : 3);
+                      const int sides[] = {preferred_avoidance_side,
+                                           -preferred_avoidance_side};
+                      for (const int side : sides)
+                      {
+                        for (int offset_index = 0; offset_index < offset_count;
+                             ++offset_index)
+                        {
+                          const float offset = offsets[offset_index];
+                          for (int clearance_index = 0;
+                               clearance_index < clearance_count;
+                               ++clearance_index)
+                          {
+                            const float clearance =
+                                clearances[clearance_index];
+                            const float pass_distance =
+                                hazard_distance + clearance;
+                            const glm::vec3 side_target =
+                                position + right * (static_cast<float>(side) *
+                                                    offset);
+                            const glm::vec3 pass_target =
+                                side_target + forward * pass_distance;
+                            const glm::vec3 return_target =
+                                position + forward * pass_distance;
+                            const float cost = 2.0f * offset + pass_distance;
+                            if (cost >= best_cost ||
+                                !segment_is_clear(position, side_target,
+                                                  capsule) ||
+                                !segment_is_clear(side_target, pass_target,
+                                                  capsule) ||
+                                !segment_is_clear(pass_target, return_target,
+                                                  capsule))
+                            {
+                              continue;
+                            }
+                            best_cost = cost;
+                            found_plan = true;
+                            avoidance_side = side;
+                            avoidance_side_target = side_target;
+                            avoidance_pass_target = pass_target;
+                            avoidance_return_target = return_target;
+                            event.side_offset = offset;
+                            event.pass_distance = pass_distance;
+                          }
+                        }
+                      }
+                      event.planned = found_plan;
+                      if (found_plan)
+                      {
+                        event.side = avoidance_side;
+                        avoidance_phase = AvoidancePhase::MoveAside;
+                        ++avoidance_detours_started;
+                        avoidance_total_lateral_blocks +=
+                            2.0f * event.side_offset;
+                        next_avoidance_probe = now;
+                        next_detour_replan =
+                            now + std::chrono::milliseconds(250);
+                        avoidance_hazard_hold = false;
+                        std::cout << "flight-sim: obstacle bypass planned at t="
+                                  << ingame_sec << "s hazard="
+                                  << event.hazard_distance << " side="
+                                  << (event.side < 0 ? "left" : "right")
+                                  << " offset=" << event.side_offset
+                                  << " pass=" << event.pass_distance
+                                  << " attempt=" << avoidance_attempts
+                                  << std::endl;
+                      }
+                      else
+                      {
+                        ++avoidance_plan_failures;
+                        avoidance_hazard_hold = true;
+                        preferred_avoidance_side = -preferred_avoidance_side;
+                        next_avoidance_probe =
+                            now + std::chrono::milliseconds(250);
+                        std::cout << "flight-sim: no clear obstacle bypass at t="
+                                  << ingame_sec << "s hazard="
+                                  << event.hazard_distance << " attempt="
+                                  << avoidance_attempts << std::endl;
+                      }
+                      avoidance_events.push_back(event);
+                    }
+                    else
+                    {
+                      // The route has become clear (or the previous collision
+                      // contact was transient); let the autopilot resume.
+                      avoidance_hazard_hold = false;
+                      next_avoidance_probe =
+                          now + std::chrono::milliseconds(250);
+                    }
+                  }
+
+                  if (autopilot_flying && !fly_stop_released)
+                  {
+                    const bool side_step =
+                        avoidance_phase == AvoidancePhase::MoveAside ||
+                        avoidance_phase == AvoidancePhase::ReturnToRoute;
+                    const glm::vec3 &side_target =
+                        avoidance_phase == AvoidancePhase::MoveAside
+                            ? avoidance_side_target
+                            : avoidance_return_target;
+                    // Recompute steering from actual cross-track error so an
+                    // overshoot reverses the side key instead of drifting on.
+                    const float lateral_error =
+                        glm::dot(side_target - position, right);
+                    const bool move_right = lateral_error > 0.0f;
+                    window.SetAutopilotKey(
+                        KeyCode::Key_W,
+                        !side_step && !avoidance_hazard_hold);
+                    window.SetAutopilotKey(KeyCode::Key_A,
+                                           side_step && !move_right);
+                    window.SetAutopilotKey(KeyCode::Key_D,
+                                           side_step && move_right);
+                  }
+                }
                 if (options.StopAfterBlockedSec > 0.0 &&
                     options.HoldForward && !options.BreakStandMode &&
                     !options.YawSweepMode && autopilot_flying &&
@@ -829,14 +1228,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       camera->GetLastFlightGroundContacts() > 0;
                   if (blocked_or_landed)
                   {
-                    if (blocked_move_started ==
-                        std::chrono::steady_clock::time_point{})
+                    if (blocked_move_started_ingame_sec < 0.0)
                     {
-                      blocked_move_started = now;
+                      blocked_move_started_ingame_sec = ingame_sec;
                     }
-                    collision_stop_elapsed_sec =
-                        std::chrono::duration<double>(now - blocked_move_started)
-                            .count();
+                    collision_stop_elapsed_sec = (std::max)(
+                        0.0,
+                        ingame_sec - blocked_move_started_ingame_sec);
                     if (collision_stop_elapsed_sec >=
                         options.StopAfterBlockedSec)
                     {
@@ -849,7 +1247,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   }
                   else
                   {
-                    blocked_move_started = {};
+                    blocked_move_started_ingame_sec = -1.0;
                     collision_stop_elapsed_sec = 0.0;
                   }
                 }
@@ -904,7 +1302,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     if (!fly_stop_released)
                     {
                       fly_stop_released = true;
+                      avoidance_phase = AvoidancePhase::None;
                       window.SetAutopilotKey(KeyCode::Key_W, false);
+                      window.SetAutopilotKey(KeyCode::Key_A, false);
+                      window.SetAutopilotKey(KeyCode::Key_D, false);
                       if (options.Sprint)
                       {
                         window.SetAutopilotKey(KeyCode::Key_Ctrl, false);
@@ -941,6 +1342,27 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 start_focus_cx = focus_chunk.x;
                 start_focus_cz = focus_chunk.z;
                 start_focus_captured = true;
+                if (route_line_tracking_enabled)
+                {
+                  route_line_origin = camera->GetPosition();
+                  route_line_origin_captured = true;
+                }
+              }
+              if (route_line_tracking_enabled && route_line_origin_captured)
+              {
+                constexpr float kDegreesToRadians =
+                    0.01745329251994329577f;
+                const float route_yaw_rad =
+                    options.FaceYawDeg * kDegreesToRadians;
+                const glm::vec3 route_right(-std::sin(route_yaw_rad), 0.0f,
+                                            std::cos(route_yaw_rad));
+                const glm::vec3 route_delta =
+                    camera->GetPosition() - route_line_origin;
+                end_route_lateral_deviation_blocks =
+                    std::abs(glm::dot(route_delta, route_right));
+                max_route_lateral_deviation_blocks =
+                    (std::max)(max_route_lateral_deviation_blocks,
+                               end_route_lateral_deviation_blocks);
               }
             }
             return ingame_sec >= in_game_seconds;
@@ -1043,6 +1465,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         const char *build_type = "Debug";
 #endif
         const bool teleport_cruise = options.TeleportToCruiseStart;
+        const auto run_finished = std::chrono::steady_clock::now();
+        const double wall_elapsed_sec =
+            std::chrono::duration<double>(run_finished - started).count();
+        const double active_elapsed_sec =
+            (std::max)(0.0, wall_elapsed_sec - excluded_clock_gap_sec);
         const auto run_started = std::chrono::system_clock::now();
         const auto run_t = std::chrono::system_clock::to_time_t(run_started);
         std::tm run_tm{};
@@ -1068,6 +1495,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << ",\n"
                << "  \"ingame_frames\": " << ingame_frames_seen << ",\n"
                << "  \"ingame_seconds_requested\": " << in_game_seconds << ",\n"
+               << "  \"wall_elapsed_sec\": " << wall_elapsed_sec << ",\n"
+               << "  \"active_elapsed_sec\": " << active_elapsed_sec << ",\n"
+               << "  \"excluded_clock_gap_sec\": "
+               << excluded_clock_gap_sec << ",\n"
+               << "  \"excluded_clock_gap_count\": "
+               << excluded_clock_gap_count
+               << ",\n"
                << "  \"world\": \"" << json_escape(world_name) << "\",\n"
                << "  \"teleport_cruise\": "
                << (teleport_cruise ? "true" : "false") << ",\n"
@@ -1079,6 +1513,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "    \"frame_count\": " << ingame_frames_seen << ",\n"
                << "    \"teleport_cruise\": "
                << (teleport_cruise ? "true" : "false") << ",\n"
+               << "    \"obstacle_avoidance_enabled\": "
+               << (options.AvoidObstacles ? "true" : "false") << ",\n"
                << "    \"run_id\": \"" << json_escape(run_id.str()) << "\"\n"
                << "  },\n"
                << "  \"autopilot_armed\": "
@@ -1086,7 +1522,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"autopilot_flying\": "
                << (autopilot_flying ? "true" : "false") << ",\n"
                << "  \"face_yaw_deg\": " << options.FaceYawDeg << ",\n"
+               << "  \"reverse_course_after_sec\": "
+               << options.ReverseCourseAfterSec << ",\n"
+               << "  \"reverse_course_engaged\": "
+               << (reverse_course_engaged ? "true" : "false") << ",\n"
                << "  \"face_pitch_deg\": " << options.FacePitchDeg << ",\n"
+               << "  \"level_forward\": "
+               << (options.LevelForward ? "true" : "false") << ",\n"
                << "  \"heading_deviation_during_move_samples\": "
                << heading_deviation_during_move_samples << ",\n"
                << "  \"max_heading_yaw_delta_deg\": "
@@ -1099,6 +1541,35 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << (collision_stop_triggered ? "true" : "false") << ",\n"
                << "  \"collision_stop_elapsed_sec\": "
                << collision_stop_elapsed_sec << ",\n"
+               << "  \"obstacle_avoidance\": {\n"
+               << "    \"enabled\": "
+               << (options.AvoidObstacles ? "true" : "false") << ",\n"
+               << "    \"attempts\": " << avoidance_attempts << ",\n"
+               << "    \"detours_started\": " << avoidance_detours_started
+               << ",\n"
+               << "    \"detours_completed\": "
+               << avoidance_detours_completed << ",\n"
+               << "    \"detour_replans\": "
+               << avoidance_detour_replans << ",\n"
+               << "    \"plan_failures\": " << avoidance_plan_failures
+               << ",\n"
+               << "    \"planned_lateral_blocks\": "
+               << avoidance_total_lateral_blocks << ",\n"
+               << "    \"events\": [\n";
+        for (size_t i = 0; i < avoidance_events.size(); ++i)
+        {
+          const AvoidanceEvent &event = avoidance_events[i];
+          report << "      {\"at_sec\": " << event.at_sec
+                 << ", \"hazard_distance\": " << event.hazard_distance
+                 << ", \"planned\": "
+                 << (event.planned ? "true" : "false")
+                 << ", \"side\": " << event.side
+                 << ", \"side_offset\": " << event.side_offset
+                 << ", \"pass_distance\": " << event.pass_distance << "}"
+                 << (i + 1 < avoidance_events.size() ? "," : "") << "\n";
+        }
+        report << "    ]\n"
+               << "  },\n"
                << "  \"idle_before_fly_sec\": " << options.IdleBeforeFlySec
                << ",\n"
                << "  \"start_focus\": [" << start_focus_cx << ", "
@@ -1106,6 +1577,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"end_focus\": [" << end_focus_cx << ", " << end_focus_cz
                << "],\n"
                << "  \"chunks_traveled_cheb\": " << chunks_traveled << ",\n"
+               << "  \"route_line_tracking\": {\n"
+               << "    \"enabled\": "
+               << (route_line_tracking_enabled ? "true" : "false") << ",\n"
+               << "    \"max_lateral_deviation_blocks\": "
+               << max_route_lateral_deviation_blocks << ",\n"
+               << "    \"end_lateral_deviation_blocks\": "
+               << end_route_lateral_deviation_blocks << "\n"
+               << "  },\n"
                << "  \"perf_jsonl\": \"" << json_escape(perf_jsonl) << "\",\n"
                << "  \"analyze\": \"run tools/flight_sim_analyze.py on perf\"\n"
                << "}\n";

@@ -1,0 +1,94 @@
+{
+  "schema": "flight-run-interruption-postmortem.v1",
+  "run_id": "m402_world164_m335_safe_detour_hold",
+  "date": "2026-10-05",
+  "status": "incomplete_manual_termination",
+  "acceptance": {
+    "visible_render": "invalid",
+    "far_checkpoint_reached": false,
+    "reason": "The app framebuffer had a non-positive dimension during the run, scheduled captures failed, and the app later stopped responding."
+  },
+  "build": {
+    "configuration": "Release",
+    "git_sha": "5d8a091f16944626630d991e1d63f3703ab5a45d",
+    "git_branch": "codex_audit2",
+    "dirty_diff_hash": "clean",
+    "executable_sha256": "c98f0f180873f0f4f640a38d42fd3258330b3384c938c54b757fe4c2f3c26bd6"
+  },
+  "route": {
+    "world": "World_164",
+    "scenario": "product-174657-far",
+    "teleport": false,
+    "visible": true,
+    "start_xyz": [120, 56, 56],
+    "cruise_eye_y": 70,
+    "yaw_deg": 180,
+    "pitch_deg": -30,
+    "fly_phase_sec": 2800,
+    "stop_phase_sec": 20,
+    "move_speed_scale": 1
+  },
+  "partial_progress": {
+    "complete_period_rows": 939,
+    "spike_rows": 3336,
+    "last_player_x": -6949,
+    "last_focus_chunk_x": -435,
+    "displacement_from_start_blocks": 7069,
+    "last_period": {
+      "wall_ms": 51.8263,
+      "world_streaming_phase_ms": 48.4692,
+      "mesh_emerge_ms": 30.4925,
+      "render_total_ms": 0.949,
+      "camera_move_blocked_substeps": 0,
+      "camera_flight_ground_contacts": 0,
+      "focus_visual_terrain_incomplete_n": 111,
+      "focus_data_band_solid_slice_n": 40,
+      "focus_data_band_solid_no_drawable_n": 16,
+      "focus_data_band_solid_pending_work_n": 15,
+      "focus_data_band_solid_unowned_n": 1
+    },
+    "nearby_relight_audit": {
+      "chunk_xyz": [-436, 0, 3],
+      "non_air_voxels": 4096,
+      "installed": false,
+      "drawable": false,
+      "stale_light_debt_backlog": 464
+    }
+  },
+  "framebuffer_and_capture": {
+    "first_zero_size_warning_local_time": "2026-10-05 12:03:38",
+    "last_zero_size_warning_local_time": "2026-10-05 12:10:38",
+    "zero_size_warning_count": 5601,
+    "failed_scheduled_capture_count": 28,
+    "last_successful_capture": {
+      "file": "frame_100.png",
+      "local_time": "2026-10-05 12:03:32"
+    },
+    "last_capture": {
+      "file": "frame_129.png",
+      "local_time": "2026-10-05 12:11:19",
+      "all_black": true
+    },
+    "m400_zero_size_warning_count": 0,
+    "m401_zero_size_warning_count": 0
+  },
+  "hang_observation": {
+    "window_responding": false,
+    "wm_close_recovered": false,
+    "game_process_force_terminated": true,
+    "windows_application_log_matches": 0,
+    "process_dump_collected": false,
+    "root_cause": "unknown"
+  },
+  "cleanup": {
+    "world_data_restored_byte_for_byte": true,
+    "world_data_sha256": "0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344"
+  },
+  "artifact_paths": {
+    "wrapper_report": "bin/suite_reports/engine_refactor/m402_world164_m335_safe_detour_hold_20261005.json",
+    "perf_jsonl": "bin/logs/perf_20261005-113820_36848.jsonl",
+    "info_log": "bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-115345.36848",
+    "capture_dir": "bin/logs/m402_world164_m335_safe_detour_hold"
+  },
+  "interpretation": "Streaming/frontier telemetry is partial and useful for follow-up. The run is not visual acceptance evidence. The wrapper labels its forced-termination exit as a crash; there is no evidence here of an engine crash or a diagnosed hang cause. The final JSONL record is truncated."
+}

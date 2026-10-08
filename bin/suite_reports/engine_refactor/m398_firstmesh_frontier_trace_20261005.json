@@ -1,0 +1,37 @@
+{
+  "schema": "m398_firstmesh_frontier_compare.v1",
+  "comparison": "M397 vs M398 matched M335 far focus band",
+  "focus_cx_band_inclusive": [
+    -563,
+    -537
+  ],
+  "m397": {
+    "samples": 512,
+    "focus_cx_range": [
+      -563,
+      -542
+    ],
+    "candidate_cx_range": [
+      -566,
+      -537
+    ],
+    "age_frames_median": 75.0,
+    "age_frames_p95": 259.45,
+    "age_frames_max": 279
+  },
+  "m398": {
+    "samples": 408,
+    "focus_cx_range": [
+      -563,
+      -539
+    ],
+    "candidate_cx_range": [
+      -566,
+      -535
+    ],
+    "age_frames_median": 11.0,
+    "age_frames_p95": 33.65,
+    "age_frames_max": 40
+  },
+  "interpretation": "M398 substantially reduced FirstMesh dirty-ticket age in this matched band. The captured visual hole/stale-surface failure remains; this comparison does not establish end-to-end rendering recovery."
+}

@@ -8,6 +8,7 @@
 #include "App/Platform/Log.h"
 #include <cstdlib>
 #include <climits>
+#include <chrono>
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
 #include "Items/ToolCapabilities.h"
@@ -17,6 +18,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Core/FrameStageWatchdog.h"
+#include "Core/Environment.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -128,6 +130,16 @@ namespace cutum
 {
 namespace
 {
+
+void AccumulateRelightEnqueueTimings(
+    PhysicsTelemetry &telemetry, const AsyncRelightEnqueueTimings &timings)
+{
+  telemetry.RelightCaptureLockWaitMs += timings.capture_lock_wait_ms;
+  telemetry.RelightSnapshotCopyMs += timings.snapshot_copy_ms;
+  telemetry.RelightDependencyStampMs += timings.dependency_stamp_ms;
+  telemetry.RelightSubmitSetupMs += timings.submit_setup_ms;
+  telemetry.RelightQueueSubmitMs += timings.queue_submit_ms;
+}
 
 bool ChunkSliceHasCurrentLightSettlement(const UWorld &world,
                                          glm::ivec3 coord)
@@ -1011,7 +1023,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
   const int visible_band_max =
       std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
   const bool audit_relight =
-      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   // Preserve already-visible holes when pending first-mesh columns need to
   // enter the bounded visible relight lane under FIFO backpressure.
   std::vector<glm::ivec2> protected_visible_columns;
@@ -1899,7 +1911,7 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y,
     return;
   }
   const bool audit_relight =
-      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   const glm::ivec2 key(ground.x, ground.z);
   if (EnterLitGateActive && EnterLitSnapshotCaptured &&
       URuntimeTuning::Get().EnterLitUseSnapshotDebt)
@@ -2226,7 +2238,7 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   if (!Persistence->IsTerrainColumnRelightQueued(world_block_key) &&
       !IsAsyncRelightColumnInFlight(col_xz) && !flow_owned)
   {
-    if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+    if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
     {
       CubatariumLogInfo(
           "RelightAudit",
@@ -2428,7 +2440,14 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
   {
     return;
   }
-  ColumnEmergeStates[glm::ivec2(ground.x, ground.z)] = state;
+  const glm::ivec2 ground_xz(ground.x, ground.z);
+  const auto existing = ColumnEmergeStates.find(ground_xz);
+  if (existing != ColumnEmergeStates.end())
+  {
+    AdjustColumnEmergeTelemetryCount(existing->second, -1);
+  }
+  ColumnEmergeStates[ground_xz] = state;
+  AdjustColumnEmergeTelemetryCount(state, 1);
   // Phase 2 dual-write: ColumnRecord mirrors emerge SoT.
   ColumnRecords.SetEmerge(glm::ivec2(ground.x, ground.z), state);
   // Emerge state participates in the focus-column readiness classification.
@@ -2441,31 +2460,69 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
   }
 }
 
+void UWorld::MaintainChunkRenderDemandStore()
+{
+  MaintainChunkRenderDemandStore(VisualObligationNowMs());
+}
+
+void UWorld::AdjustColumnEmergeTelemetryCount(ColumnEmergeState state,
+                                             int delta)
+{
+  switch (state)
+  {
+  case ColumnEmergeState::Lighting:
+    ColumnLightingTelemetryN += delta;
+    break;
+  case ColumnEmergeState::Meshing:
+    ColumnMeshingTelemetryN += delta;
+    break;
+  case ColumnEmergeState::RenderReady:
+    ColumnRenderReadyTelemetryN += delta;
+    break;
+  default:
+    break;
+  }
+}
+
+void UWorld::MaintainChunkRenderDemandStore(double now_ms)
+{
+  if (!kChunkDemandShadow())
+  {
+    return;
+  }
+  const auto maintenance_t0 = std::chrono::high_resolution_clock::now();
+  // ReconcileMaintenance visits at most 128 records and performs the orphan
+  // cancellation while it walks them. Avoid a second full-map orphan scan.
+  (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
+                                                            now_ms);
+  PhysicsTelemetryData.ChunkDemandMaintenanceMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - maintenance_t0)
+          .count();
+}
+
 void UWorld::SampleColumnEmergeStageTelemetry()
 {
-  int lighting = 0;
-  int meshing = 0;
-  int render_ready = 0;
-  for (const auto &kv : ColumnEmergeStates)
+  const double now_ms = VisualObligationNowMs();
+  // Demand-store upkeep is owned by TickAsyncChunkSystems each frame. Keep
+  // this post-emerge sample limited to the rate-limited diagnostic census.
+  PhysicsTelemetryData.ColumnEmergeStageSampleAgeMs =
+      LastColumnEmergeTelemetrySampleMs > 0.0
+          ? std::max(0.0, now_ms - LastColumnEmergeTelemetrySampleMs)
+          : 0.0;
+  constexpr double kSampleIntervalMs = 250.0;
+  if (NextColumnEmergeTelemetrySampleMs > now_ms)
   {
-    switch (kv.second)
-    {
-    case ColumnEmergeState::Lighting:
-      ++lighting;
-      break;
-    case ColumnEmergeState::Meshing:
-      ++meshing;
-      break;
-    case ColumnEmergeState::RenderReady:
-      ++render_ready;
-      break;
-    default:
-      break;
-    }
+    return;
   }
-  PhysicsTelemetryData.ColumnLightingN = lighting;
-  PhysicsTelemetryData.ColumnMeshingN = meshing;
-  PhysicsTelemetryData.ColumnRenderReadyN = render_ready;
+  NextColumnEmergeTelemetrySampleMs = now_ms + kSampleIntervalMs;
+  LastColumnEmergeTelemetrySampleMs = now_ms;
+  PhysicsTelemetryData.ColumnEmergeStageSampleAgeMs = 0.0;
+  ++PhysicsTelemetryData.ColumnEmergeStageSampleCount;
+  const auto sample_t0 = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.ColumnLightingN = ColumnLightingTelemetryN;
+  PhysicsTelemetryData.ColumnMeshingN = ColumnMeshingTelemetryN;
+  PhysicsTelemetryData.ColumnRenderReadyN = ColumnRenderReadyTelemetryN;
 
   // Focus-ring job graph census (distinct from emerge FSM above).
   const glm::ivec3 focus = GetPreferredLoadFocusBlock();
@@ -2475,13 +2532,19 @@ void UWorld::SampleColumnEmergeStageTelemetry()
   int job_mesh = 0;
   int job_gpu = 0;
   int job_ready = 0;
+  auto stage_t0 = std::chrono::high_resolution_clock::now();
   GetColumnFlowExecutor().CountFocusRingJobStages(focus_ground, 4, job_pl,
                                                   job_mesh, job_gpu, job_ready);
+  PhysicsTelemetryData.ColumnEmergeFocusJobsMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - stage_t0)
+          .count();
   PhysicsTelemetryData.ColumnJobPendingLightN = job_pl;
   PhysicsTelemetryData.ColumnJobMeshingN = job_mesh;
   PhysicsTelemetryData.ColumnJobGpuPendingN = job_gpu;
   PhysicsTelemetryData.ColumnJobRenderReadyN = job_ready;
   {
+    stage_t0 = std::chrono::high_resolution_clock::now();
     const uint64_t shadow_n =
         UColumnRecordCoordinator::ShadowMismatchCount();
     PhysicsTelemetryData.ColumnRecordShadowMismatchN =
@@ -2490,16 +2553,19 @@ void UWorld::SampleColumnEmergeStageTelemetry()
             : static_cast<int>(shadow_n);
     PhysicsTelemetryData.ColumnRecordShadowStageDisagreeN =
         UColumnRecordCoordinator::ShadowStageDisagreeFocusN();
+    const auto &shadow = GetVisualObligationShadowCounters();
+    PhysicsTelemetryData.VisualObligationShadowSampleN = shadow.samples;
+    PhysicsTelemetryData.VisualObligationShadowMismatchN =
+        shadow.draw_mismatches;
+    PhysicsTelemetryData.ColumnEmergeShadowCensusMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - stage_t0)
+            .count();
   }
-  // A32/A37/A38: production StopConverged + stop-plateau reconcile/orphan cancel.
   {
-    const double now_ms = VisualObligationNowMs();
+    stage_t0 = std::chrono::high_resolution_clock::now();
     if (kChunkDemandShadow())
     {
-      (void)UChunkRenderDemandStore::Get().ReconcileMaintenance(/*max_n=*/128,
-                                                                now_ms);
-      (void)UChunkRenderDemandStore::Get().CancelOrphanActiveAttempts(
-          /*max_n=*/64, now_ms);
       const auto br =
           UChunkRenderDemandStore::Get().CountUnsatisfiedBreakdown();
       PhysicsTelemetryData.DemandUnsatGeom = br.geom;
@@ -2508,15 +2574,22 @@ void UWorld::SampleColumnEmergeStageTelemetry()
       PhysicsTelemetryData.DemandUnsatCoverage = br.coverage;
       PhysicsTelemetryData.DemandUnsatRetain = br.retain;
     }
+    PhysicsTelemetryData.ColumnEmergeDemandBreakdownMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - stage_t0)
+            .count();
+    stage_t0 = std::chrono::high_resolution_clock::now();
     PhysicsTelemetryData.DemandStopConverged =
         UChunkRenderDemandStore::Get().StopConverged(now_ms) ? 1 : 0;
+    PhysicsTelemetryData.ColumnEmergeDemandStopMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - stage_t0)
+            .count();
   }
-  {
-    const auto &shadow = GetVisualObligationShadowCounters();
-    PhysicsTelemetryData.VisualObligationShadowSampleN = shadow.samples;
-    PhysicsTelemetryData.VisualObligationShadowMismatchN =
-        shadow.draw_mismatches;
-  }
+  PhysicsTelemetryData.ColumnEmergeStageSampleMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - sample_t0)
+          .count();
 }
 
 ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
@@ -2541,7 +2614,12 @@ ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
 
 void UWorld::ClearColumnEmergeState(glm::ivec2 ground_xz)
 {
-  ColumnEmergeStates.erase(ground_xz);
+  const auto it = ColumnEmergeStates.find(ground_xz);
+  if (it != ColumnEmergeStates.end())
+  {
+    AdjustColumnEmergeTelemetryCount(it->second, -1);
+    ColumnEmergeStates.erase(it);
+  }
   ColumnRecords.Erase(ground_xz);
 }
 
@@ -3393,6 +3471,41 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   }
   ++UnfinishedVisualCache.prep_calls_n;
   auto &cache = UnfinishedVisualCache;
+  const char *detail_trace_env = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+  const bool detail_trace = detail_trace_env && detail_trace_env[0] == '1';
+  const auto detail_trace_started = std::chrono::steady_clock::now();
+  auto note_detail_trace = [&](const char *path, std::size_t work_n,
+                               std::size_t source_n, std::size_t dirty_n)
+  {
+    if (!detail_trace)
+    {
+      return;
+    }
+    const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() -
+                                 detail_trace_started)
+                                 .count();
+    if (elapsed_ms < 5.0)
+    {
+      return;
+    }
+    const int ring_width = 2 * radius_chunks + 1;
+    const int max_cy = std::max(
+        0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+    const std::string message =
+        std::string("detail=unfinished_visual path=") + path +
+        " focus=(" + std::to_string(focus_ground_chunk.x) + "," +
+        std::to_string(focus_ground_chunk.z) + ") radius=" +
+        std::to_string(radius_chunks) + " ring_columns=" +
+        std::to_string(ring_width * ring_width) + " max_cy=" +
+        std::to_string(max_cy) + " work_n=" + std::to_string(work_n) +
+        " source_n=" + std::to_string(source_n) + " dirty_n=" +
+        std::to_string(dirty_n) + " unfinished_n=" +
+        std::to_string(cache.count) + " mesh_census=" +
+        (cache.readiness.data_mesh_valid ? "1" : "0") +
+        " elapsed_ms=" + std::to_string(elapsed_ms);
+    CubatariumLogInfo("StreamingDetail", message);
+  };
   auto refresh_data_mesh_census = [&]()
   {
     FocusRingVisualCensus &census = cache.readiness;
@@ -3409,11 +3522,17 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     census.band_solid_accepted_empty_n = 0;
     census.band_solid_pending_mesh_n = 0;
     census.band_solid_pending_work_n = 0;
+    census.band_solid_dirty_n = 0;
     census.band_solid_unowned_n = 0;
     census.camera_band_solid_slice_n = 0;
     census.camera_band_solid_no_drawable_n = 0;
     census.camera_band_solid_satisfying_n = 0;
     census.camera_band_solid_pending_work_n = 0;
+    census.camera_band_solid_dirty_n = 0;
+    census.camera_band_solid_oldest_dirty_age_frames = 0;
+    census.camera_band_oldest_dirty_cx = 0;
+    census.camera_band_oldest_dirty_cy = 0;
+    census.camera_band_oldest_dirty_cz = 0;
     census.camera_band_solid_unowned_n = 0;
     census.band_solid_unresolved_no_work_n = 0;
     census.band_solid_draw_gate_closed_n = 0;
@@ -3512,6 +3631,23 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
               remesh_after_apply || mesh_cache.IsPendingGpuQueued(coord) ||
               mesh_cache.IsPendingGpuKickedOrDispatched(coord) ||
               mesh_cache.HasPendingCaptureWork(coord);
+          if (dirty)
+          {
+            ++census.band_solid_dirty_n;
+            if (in_camera_band)
+            {
+              ++census.camera_band_solid_dirty_n;
+              const uint64_t age =
+                  mesh_cache.GetDirtyQueueAgeFrames(coord);
+              if (age > census.camera_band_solid_oldest_dirty_age_frames)
+              {
+                census.camera_band_solid_oldest_dirty_age_frames = age;
+                census.camera_band_oldest_dirty_cx = coord.x;
+                census.camera_band_oldest_dirty_cy = coord.y;
+                census.camera_band_oldest_dirty_cz = coord.z;
+              }
+            }
+          }
           bool work_pending = mesh_work_pending;
           if (!work_pending && !satisfying)
           {
@@ -4022,6 +4158,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     ++cache.prep_incremental_n;
     LastUnfinishedVisualSample = cache.count;
     LastUnfinishedVisualSampleValid = true;
+    note_detail_trace("cache_hit", 0, cache.unfinished_keys.size(), 0);
     return cache.count;
   }
   // Incremental: recheck dirty columns ∪ rim±1 and adjust cached count/set.
@@ -4030,6 +4167,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   if (cache.valid && cache.focus == focus_ground_chunk &&
       cache.radius == radius_chunks && !cache.dirty_cols.empty())
   {
+    const std::size_t dirty_source_n = cache.dirty_cols.size();
     if (static_cast<int>(cache.dirty_cols.size()) > kIncrementalDirtyMax)
     {
       // Truncate oldest dirty; keep cache.valid (Phase 1a: no full wipe).
@@ -4103,6 +4241,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     refresh_data_mesh_census();
     LastUnfinishedVisualSample = cache.count;
     LastUnfinishedVisualSampleValid = true;
+    note_detail_trace("incremental", recheck.size(), dirty_source_n,
+                      dirty_source_n);
     return cache.count;
   }
   int unfinished = 0;
@@ -4114,6 +4254,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   cache.unfinished_keys.reserve(static_cast<size_t>((2 * radius_chunks + 1) *
                                                     (2 * radius_chunks + 1) /
                                                     4));
+  std::size_t classified_columns = 0;
   for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
   {
     for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
@@ -4122,6 +4263,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           focus_ground_chunk.x + dx, focus_ground_chunk.z + dz);
       const FocusColumnVisualClass visual_class =
           ClassifyFocusColumnVisual(*this, focus_ground_chunk, dx, dz);
+      ++classified_columns;
       ++cache.readiness.counts[static_cast<size_t>(visual_class)];
       cache.readiness_by_column.emplace(key, visual_class);
       if (IsUnfinishedFocusColumnVisual(visual_class))
@@ -4140,6 +4282,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   refresh_data_mesh_census();
   LastUnfinishedVisualSample = unfinished;
   LastUnfinishedVisualSampleValid = true;
+  note_detail_trace("full", classified_columns, classified_columns, 0);
   return unfinished;
 }
 
@@ -4788,7 +4931,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                   owner_after ? kUnownedGeometryOwnerRetryCooldownMs
                               : kUnownedGeometryDeniedRetryCooldownMs;
             }
-            if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+            if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
             {
               const auto &cache = MeshService->GetCache();
               const ChunkRenderDemandRecord *preview_demand =
@@ -5304,7 +5447,7 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
       }
     }
   }
-  if (std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr)
+  if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
   {
     static auto audit_window_start = std::chrono::steady_clock::now();
     static uint64_t audit_calls = 0;
@@ -6728,10 +6871,22 @@ bool UWorld::NeedsSpawnRingCatchUp() const
     // between samples and leaves black columns at LitDrawable edge.
     constexpr uint64_t kCatchUpRecheckFrames = 8;
     const bool cruise_moving = PhysicsTelemetryData.MovementSpeed > 2.0f;
+    if (cruise_moving)
+    {
+      // TickAsyncChunkSystems publishes this readiness count every frame.
+      // Rewalking the full visual ring here used to miss the UnfinishedVisual
+      // cache whenever the camera crossed a chunk boundary, potentially
+      // repeating the full scan inside UpdateStreaming. One frame of telemetry
+      // latency is preferable to blocking the movement/streaming thread.
+      const bool need = PhysicsTelemetryData.PostLoadRingNotReady > 0;
+      CachedNeedsSpawnRingCatchUp = need;
+      SpawnCatchUpSampleEpoch = StreamingFrameEpoch;
+      return need;
+    }
     const bool telemetry_clear =
         PhysicsTelemetryData.PostLoadRingNotReady <= 0 &&
         PhysicsTelemetryData.UnfinishedVisual <= 0;
-    if (!cruise_moving && telemetry_clear && !CachedNeedsSpawnRingCatchUp &&
+    if (telemetry_clear && !CachedNeedsSpawnRingCatchUp &&
         SpawnCatchUpSampleEpoch != UINT64_MAX)
     {
       const uint64_t age = StreamingFrameEpoch - SpawnCatchUpSampleEpoch;
@@ -6803,8 +6958,18 @@ std::string UWorld::FormatPendingLightFocusColumns(
 }
 
 int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                        int radius_chunks) const
+                                        int radius_chunks,
+                                        std::size_t *out_scanned_columns,
+                                        std::size_t *out_y_slice_checks) const
 {
+  if (out_scanned_columns)
+  {
+    *out_scanned_columns = 0;
+  }
+  if (out_y_slice_checks)
+  {
+    *out_y_slice_checks = 0;
+  }
   if (!MeshService || radius_chunks < 0 || StickyRemeshAfterLight.empty())
   {
     return 0;
@@ -6825,6 +6990,10 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
   int sticky = 0;
   for (const glm::ivec2 &key : StickyRemeshAfterLight)
   {
+    if (out_scanned_columns)
+    {
+      ++*out_scanned_columns;
+    }
     const int dist =
         std::max(std::abs(key.x - focus_ground_chunk.x),
                  std::abs(key.y - focus_ground_chunk.z));
@@ -6842,6 +7011,10 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
     }
     for (int cy = cy0; cy <= cy1; ++cy)
     {
+      if (out_y_slice_checks)
+      {
+        ++*out_y_slice_checks;
+      }
       const glm::ivec3 coord(key.x, cy, key.y);
       // I6: sticky set can linger after lit remesh; only count black/stale debt.
       if (MeshService->HasGreedyMesh(coord) &&
@@ -6856,8 +7029,13 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
 }
 
 int UWorld::CountProvisionalLightPreviewFocusMeshes(
-    glm::ivec3 focus_ground_chunk, int radius_chunks) const
+    glm::ivec3 focus_ground_chunk, int radius_chunks,
+    std::size_t *out_scanned_mesh_entries) const
 {
+  if (out_scanned_mesh_entries)
+  {
+    *out_scanned_mesh_entries = 0;
+  }
   if (!MeshService || radius_chunks < 0)
   {
     return 0;
@@ -6888,7 +7066,8 @@ int UWorld::CountProvisionalLightPreviewFocusMeshes(
       focus_ground_chunk, radius_chunks, FloorDiv(band_min, CHUNK_SIZE),
       FloorDiv(band_max, CHUNK_SIZE),
       [this](glm::ivec3 coord)
-      { return ShouldDrawProvisionalLightPreview(coord); });
+      { return ShouldDrawProvisionalLightPreview(coord); },
+      out_scanned_mesh_entries);
 }
 
 int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
@@ -7388,8 +7567,18 @@ bool UWorld::ShouldDeferRepairReticketUntilGpuApplied(
 }
 
 int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                        int radius_chunks) const
+                                        int radius_chunks,
+                                        std::size_t *out_scanned_columns,
+                                        std::size_t *out_y_slice_checks) const
 {
+  if (out_scanned_columns)
+  {
+    *out_scanned_columns = 0;
+  }
+  if (out_y_slice_checks)
+  {
+    *out_y_slice_checks = 0;
+  }
   // Soft-defer first mesh under PendingLight: terrain exists but is black.
   // Separate from StickyRemeshAfterLight so SyncIdle is not spuriously opened.
   if (!MeshService || radius_chunks < 0 || PendingLightBeforeMesh.empty())
@@ -7412,6 +7601,10 @@ int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
   int dark = 0;
   for (const auto &entry : PendingLightBeforeMesh)
   {
+    if (out_scanned_columns)
+    {
+      ++*out_scanned_columns;
+    }
     const glm::ivec2 &key = entry.first;
     const int dist =
         std::max(std::abs(key.x - focus_ground_chunk.x),
@@ -7422,6 +7615,10 @@ int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
     }
     for (int cy = cy0; cy <= cy1; ++cy)
     {
+      if (out_y_slice_checks)
+      {
+        ++*out_y_slice_checks;
+      }
       if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
       {
         ++dark;
@@ -8059,7 +8256,9 @@ void UWorld::EnqueueAsyncPlayerRelight(
   spec.include_block_light = true;
   spec.frontier_iterations = kRelightFrontierIterationsEdit;
   spec.job_id = ++NextAsyncRelightJobId;
-  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+  AccumulateRelightEnqueueTimings(
+      PhysicsTelemetryData,
+      AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry));
 }
 
 void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
@@ -8097,7 +8296,9 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
   spec.finalize_pending_gate = finalize_pending_gate;
   spec.visible_draw_gate_repair = visible_draw_gate_repair;
   spec.column_center_only = true;
-  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+  AccumulateRelightEnqueueTimings(
+      PhysicsTelemetryData,
+      AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry));
   PhysicsTelemetryData.RelightCaptureFullN =
       AsyncRelight->GetLastCaptureFullChunks();
   PhysicsTelemetryData.RelightCaptureNeighborLightN =
@@ -8134,7 +8335,9 @@ void UWorld::EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord,
   spec.include_block_light = include_block_light;
   spec.frontier_iterations = frontier_iterations;
   spec.job_id = ++NextAsyncRelightJobId;
-  AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+  AccumulateRelightEnqueueTimings(
+      PhysicsTelemetryData,
+      AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry));
 }
 
 int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
@@ -8145,7 +8348,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     return 0;
   }
   int relight_apply_cap = max_per_frame;
-  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   if (audit_relight)
   {
     CubatariumLogInfo("RelightAudit",
@@ -8271,6 +8475,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   }
   // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
+  PhysicsTelemetryData.RelightApplyPolicyMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - t0)
+          .count();
   bool stopped_by_time = false;
   bool stopped_by_cap = false;
   int examined = 0;
@@ -8294,6 +8502,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     RelightComputeResult &result = batch.front();
     ++examined; // Rejected work consumes drain budget as well.
+    const auto validation_started = std::chrono::high_resolution_clock::now();
     bool reject_stale = false;
     const ChunkInputStamp *stale_input = nullptr;
     if (result.work_token.world_epoch != 0 &&
@@ -8313,6 +8522,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           break;
         }
     }
+    PhysicsTelemetryData.RelightApplyValidationMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - validation_started)
+            .count();
     if (reject_stale)
     {
       if (audit_relight)
@@ -8335,7 +8548,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       // Preserve exact Y band / light domains / finalization semantics, not a
       // generic terrain request. InFlight stays occupied by the replacement.
       result.retry_spec.job_id = ++NextAsyncRelightJobId;
-      AsyncRelight->EnqueueJob(BlockWorld, std::move(result.retry_spec), *BlockRegistry);
+      AccumulateRelightEnqueueTimings(
+          PhysicsTelemetryData,
+          AsyncRelight->EnqueueJob(BlockWorld, std::move(result.retry_spec),
+                                   *BlockRegistry));
       continue;
     }
     ++applied;
@@ -9437,11 +9653,16 @@ void UWorld::TickMeshEmerge()
     UFrameStageWatchdog::Scope tick_stage("streaming.world_streaming_tick");
     Streaming->TickMeshEmerge(*this);
   }
+  const auto player_burst_t0 = std::chrono::high_resolution_clock::now();
   {
     UFrameStageWatchdog::Scope burst_stage(
         "streaming.player_relight_mesh_burst");
     TickPlayerRelightMeshBurst();
   }
+  PhysicsTelemetryData.MeshEmergePlayerRelightBurstMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - player_burst_t0)
+          .count();
 }
 
 void UWorld::RefreshStreamerSettings()
@@ -9675,6 +9896,10 @@ void UWorld::PrepareForShutdownFast()
     return;
   }
   ShutdownPrepared = true;
+  if (Persistence)
+  {
+    Persistence->TraceAsyncChunkIoShutdownState();
+  }
   if (CoopSession && CoopSession->Active)
   {
     CoopSession->Cancel();
@@ -9964,6 +10189,33 @@ int EnterGameMeshRadiusChunks(const UWorld &world)
   return 2;
 }
 
+void EnterSpawnMeshPresentableBand(const UWorld &world, int &out_cy0,
+                                   int &out_cy1)
+{
+  const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();
+  const auto &proc = world.GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy,
+                               out_cy0, out_cy1);
+}
+
+bool HasBlockingSpawnMeshDirty(const UWorld &world,
+                               const UWorldMeshService &mesh,
+                               glm::ivec3 center, int radius)
+{
+  if (!world.IsEnterLitGateActive() && !world.IsEnterSessionActive())
+  {
+    return mesh.HasDirtyWithinHorizontalRadius(center, radius);
+  }
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnMeshPresentableBand(world, cy0, cy1);
+  return mesh.HasUnsatisfiedDirtyInHorizontalRadiusBand(center, radius, cy0,
+                                                        cy1);
+}
+
 bool EnterMeshAsyncBlocksRing(const UWorld &world,
                               const UWorldMeshService &mesh,
                               glm::ivec3 center_ground_chunk, int radius_chunks)
@@ -9973,7 +10225,13 @@ bool EnterMeshAsyncBlocksRing(const UWorld &world,
   if (world.IsEnterLitGateActive() || world.IsEnterSessionActive())
   {
     const int near_r = EnterMeshAsyncBlockRadiusChunks(radius_chunks);
-    return mesh.HasAsyncInflightInHorizontalRadius(center_ground_chunk, near_r);
+    int cy0 = 0;
+    int cy1 = 0;
+    EnterSpawnMeshPresentableBand(world, cy0, cy1);
+    glm::ivec3 blocker{};
+    bool completed = false;
+    return mesh.FindFirstUndrawableAsyncMeshInHorizontalBand(
+        center_ground_chunk, near_r, cy0, cy1, blocker, completed);
   }
   return mesh.HasPendingAsyncMeshWork();
 }
@@ -9982,21 +10240,8 @@ bool HasDirtyWithinHorizontalRadiusBand(const UWorldMeshService &mesh,
                                         glm::ivec3 center, int radius, int cy0,
                                         int cy1)
 {
-  // HasDirtyInColumnBand takes block-Y and FloorDivs to cy.
-  const int band_min = cy0 * CHUNK_SIZE;
-  const int band_max = cy1 * CHUNK_SIZE + (CHUNK_SIZE - 1);
-  for (int dx = -radius; dx <= radius; ++dx)
-  {
-    for (int dz = -radius; dz <= radius; ++dz)
-    {
-      if (mesh.HasDirtyInColumnBand(glm::ivec2(center.x + dx, center.z + dz),
-                                    band_min, band_max))
-      {
-        return true;
-      }
-    }
-  }
-  return false;
+  return mesh.HasUnsatisfiedDirtyInHorizontalRadiusBand(center, radius, cy0,
+                                                        cy1);
 }
 
 bool FindFirstSpawnRingMissingGreedyImpl(const UWorld &world, glm::ivec3 &out_coord)
@@ -10092,7 +10337,7 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = EnterGameMeshRadiusChunks(*this);
   const bool spawn_meshes_pending =
-      mesh.HasDirtyWithinHorizontalRadius(center, radius) ||
+      HasBlockingSpawnMeshDirty(*this, mesh, center, radius) ||
       HasMissingGreedyMeshesNearFocus(*this);
   const bool async_mesh_pending =
       EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
@@ -10185,7 +10430,7 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
                                std::max(8.0, static_cast<double>(budget)));
   }
   return !HasMissingGreedyMeshesNearFocus(*this) &&
-         !mesh.HasDirtyWithinHorizontalRadius(center, radius) &&
+         !HasBlockingSpawnMeshDirty(*this, mesh, center, radius) &&
          !EnterMeshAsyncBlocksRing(*this, mesh, center, radius) &&
          mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) == 0;
 }
@@ -10407,9 +10652,11 @@ bool UWorld::IsSpawnMeshRingReady() const
                                cy1);
   const bool underfeet_present = IsEnterUnderfeetPresentReady();
   // Near presentable: underfeet + no near async/gpu (debt may remain hinterland).
-  const int near_async_r = EnterMeshAsyncBlockRadiusChunks(radius);
+  const bool enter_gate_active =
+      EnterLitGateActive || IsEnterSessionActive();
   const bool near_async =
-      MeshService->HasAsyncInflightInHorizontalRadius(center, near_async_r);
+      enter_gate_active &&
+      EnterMeshAsyncBlocksRing(*this, *MeshService, center, radius);
   const int near_gpu =
       MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
   const bool near_presentable_ready =
@@ -10686,8 +10933,18 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
     out.gpu_pending_near =
         mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1);
     // Near-band async only (EnterMeshAsyncBlocksRing already near-scoped).
+    out.async_mesh_raw_pending_near = mesh.HasAsyncInflightInHorizontalRadius(
+        center, EnterMeshAsyncBlockRadiusChunks(radius));
     out.async_mesh_pending =
         EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
+    if (out.async_mesh_pending)
+    {
+      out.async_mesh_blocker_found =
+          mesh.FindFirstUndrawableAsyncMeshInHorizontalBand(
+              center, EnterMeshAsyncBlockRadiusChunks(radius), cy0, cy1,
+              out.async_mesh_blocker_coord,
+              out.async_mesh_blocker_completed);
+    }
     return;
   }
   out.dirty = mesh.HasDirtyWithinHorizontalRadius(center, radius);

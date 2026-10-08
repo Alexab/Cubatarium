@@ -1,0 +1,215 @@
+{
+  "schema": "world_column_source_trace.v1",
+  "files": [
+    {
+      "path": "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-231437.30796",
+      "events": 4026
+    },
+    {
+      "path": "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-232636.30796",
+      "events": 4907
+    },
+    {
+      "path": "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-235025.30796",
+      "events": 1426
+    }
+  ],
+  "event_count": 10359,
+  "event_counts": {
+    "disk/complete": 2556,
+    "disk/queued": 2556,
+    "procedural/cancelled_out_of_range": 8,
+    "procedural/committed": 2609,
+    "procedural/disk_miss": 2630
+  },
+  "by_source": {
+    "disk": {
+      "complete": {
+        "count": 2556,
+        "elapsed_ms": {
+          "count": 2556,
+          "median": 543.7561,
+          "p95": 13627.2261,
+          "max": 27380.8256,
+          "sum": 6253998.1001
+        },
+        "worker_queue_ms": {
+          "count": 2556,
+          "median": 0.0906,
+          "p95": 0.1748,
+          "max": 2.6084,
+          "sum": 277.5602
+        },
+        "file_open_ms": {
+          "count": 2556,
+          "median": 1.3859,
+          "p95": 1.863,
+          "max": 3.5243,
+          "sum": 3631.756
+        },
+        "file_read_ms": {
+          "count": 2556,
+          "median": 0.9505,
+          "p95": 1.2015,
+          "max": 2.6689,
+          "sum": 2481.9066
+        },
+        "result_wait_ms": {
+          "count": 2556,
+          "median": 1904.8813,
+          "p95": 55514.8238,
+          "max": 135237.3337,
+          "sum": 24850763.3559
+        },
+        "deserialize_apply_ms": {
+          "count": 2556,
+          "median": 7.1085,
+          "p95": 11.8501,
+          "max": 33.5606,
+          "sum": 19676.2751
+        },
+        "disk_discovery_ms": {
+          "count": 2556,
+          "median": 0.0192,
+          "p95": 0.0364,
+          "max": 123.5043,
+          "sum": 176.6493
+        },
+        "format_detect_ms": {
+          "count": 2556,
+          "median": 1.1214,
+          "p95": 1.4838,
+          "max": 2.1389,
+          "sum": 2922.1083
+        },
+        "finalize_prelog_ms": {
+          "count": 2556,
+          "median": 0.0878,
+          "p95": 0.1008,
+          "max": 0.8654,
+          "sum": 230.3556
+        },
+        "chunkio_ready_loads": {
+          "count": 2556,
+          "median": 16.0,
+          "p95": 116.0,
+          "max": 458.0,
+          "sum": 75512.0
+        },
+        "chunkio_pending_jobs": {
+          "count": 2556,
+          "median": 0.0,
+          "p95": 0.0,
+          "max": 0.0,
+          "sum": 0.0
+        },
+        "chunkio_active_jobs": {
+          "count": 2556,
+          "median": 0.0,
+          "p95": 0.0,
+          "max": 0.0,
+          "sum": 0.0
+        },
+        "pending_disk_columns": {
+          "count": 2556,
+          "median": 4.0,
+          "p95": 29.0,
+          "max": 113.0,
+          "sum": 18635.0
+        }
+      },
+      "queued": {
+        "count": 2556
+      }
+    },
+    "procedural": {
+      "cancelled_out_of_range": {
+        "count": 8,
+        "distance_chunks": {
+          "count": 8,
+          "median": 6.0,
+          "p95": 6.0,
+          "max": 6.0,
+          "sum": 48.0
+        }
+      },
+      "committed": {
+        "count": 2609,
+        "queue_ms": {
+          "count": 2609,
+          "median": 43.2681,
+          "p95": 29030.7485,
+          "max": 51876.505,
+          "sum": 16113325.2806
+        },
+        "generation_ms": {
+          "count": 2609,
+          "median": 88.4692,
+          "p95": 111.9943,
+          "max": 159.4267,
+          "sum": 230184.447
+        },
+        "ready_wait_ms": {
+          "count": 2609,
+          "median": 77.2146,
+          "p95": 415.8826,
+          "max": 20829.1941,
+          "sum": 732821.7107
+        },
+        "apply_ms": {
+          "count": 2609,
+          "median": 5.3833,
+          "p95": 8.683,
+          "max": 47.3661,
+          "sum": 15476.752
+        },
+        "total_ms": {
+          "count": 2609,
+          "median": 252.6019,
+          "p95": 29553.041,
+          "max": 52035.3327,
+          "sum": 17091827.1834
+        },
+        "ready_batch_n": {
+          "count": 2609,
+          "median": 2.0,
+          "p95": 3.0,
+          "max": 6.0,
+          "sum": 4539.0
+        },
+        "max_commits_per_frame": {
+          "count": 2609,
+          "median": 2.0,
+          "p95": 3.0,
+          "max": 3.0,
+          "sum": 4478.0
+        },
+        "max_apply_budget_ms": {
+          "count": 2609,
+          "median": 12.0,
+          "p95": 12.0,
+          "max": 12.0,
+          "sum": 20208.0
+        },
+        "priority_refresh_n": {
+          "count": 2609,
+          "median": 0.0,
+          "p95": 4.0,
+          "max": 7.0,
+          "sum": 2054.0
+        }
+      },
+      "disk_miss": {
+        "count": 2630
+      }
+    }
+  },
+  "unique_disk_coordinates": {
+    "queued": 2556,
+    "completed": 2556,
+    "cancelled_out_of_range": 0,
+    "queued_without_terminal_event": 0
+  },
+  "unique_procedural_cancelled_out_of_range": 8,
+  "note": "Queued coordinates without a completion or cancellation log are an unmatched-event count; they do not prove a live pending owner. Timing values are source-log observations, not framebuffer-area metrics."
+}

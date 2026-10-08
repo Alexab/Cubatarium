@@ -1,0 +1,49 @@
+{
+  "schema": "m399_renderer_pixel_summary.v1",
+  "source_reports": [
+    "m399_renderer_pixel_trace_l32_full_tmp_20261005.json",
+    "m399_renderer_pixel_trace_l96_full_tmp_20261005.json"
+  ],
+  "screen_ray_frame_count": 328,
+  "thresholds": [
+    {
+      "luma_threshold_exclusive": 32.0,
+      "probe_count": 32768,
+      "below_threshold_count": 286,
+      "depth_surface_valid": 286,
+      "visible_opaque_mdi": 286,
+      "depth_source_face_valid": 269,
+      "depth_source_face_within_0_1": 264,
+      "depth_source_face_sky_light_1": 217,
+      "depth_source_face_preview": 66,
+      "opaque_chunk_demand_settled": 197,
+      "voxel_chunk_light_pending": 86,
+      "transparent_composition_changed_rgb": 0,
+      "depth_mesh_cpu_revision_ahead_of_published_geometry": 213,
+      "stale_depth_mesh_owned_only_by_dirty": 206,
+      "stale_dirty_queue_age_frames_median": 15.5,
+      "stale_dirty_queue_age_frames_p95": 170.0,
+      "stale_dirty_queue_age_frames_max": 199
+    },
+    {
+      "luma_threshold_exclusive": 96.0,
+      "probe_count": 32768,
+      "below_threshold_count": 1774,
+      "depth_surface_valid": 1733,
+      "visible_opaque_mdi": 1728,
+      "depth_source_face_valid": 1631,
+      "depth_source_face_within_0_1": 1584,
+      "depth_source_face_sky_light_1": 1342,
+      "depth_source_face_preview": 296,
+      "opaque_chunk_demand_settled": 1301,
+      "voxel_chunk_light_pending": 464,
+      "transparent_composition_changed_rgb": 220,
+      "depth_mesh_cpu_revision_ahead_of_published_geometry": 1190,
+      "stale_depth_mesh_owned_only_by_dirty": 1132,
+      "stale_dirty_queue_age_frames_median": 10.0,
+      "stale_dirty_queue_age_frames_p95": 154.35,
+      "stale_dirty_queue_age_frames_max": 199
+    }
+  ],
+  "interpretation": "Low luminance is not a missing-chunk count. Every strict <32 probe has a valid depth surface and visible opaque MDI. Many sampled depth meshes have newer CPU geometry than published GPU geometry and Dirty as their only work owner. The <96 threshold also includes dark materials and transparent-composition samples; see per-pixel full reports retained locally."
+}

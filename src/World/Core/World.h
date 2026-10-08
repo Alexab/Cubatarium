@@ -130,10 +130,16 @@ struct FocusRingVisualCensus
   int band_solid_accepted_empty_n{0};
   int band_solid_pending_mesh_n{0};
   int band_solid_pending_work_n{0};
+  int band_solid_dirty_n{0};
   int camera_band_solid_slice_n{0};
   int camera_band_solid_no_drawable_n{0};
   int camera_band_solid_satisfying_n{0};
   int camera_band_solid_pending_work_n{0};
+  int camera_band_solid_dirty_n{0};
+  uint64_t camera_band_solid_oldest_dirty_age_frames{0};
+  int camera_band_oldest_dirty_cx{0};
+  int camera_band_oldest_dirty_cy{0};
+  int camera_band_oldest_dirty_cz{0};
   /// No mesh-work in the direct pipeline and no relight/ColumnFlow owner.
   /// Mirrors focus_state=1 in the coordinate trace.
   int band_solid_unowned_n{0};
@@ -486,6 +492,10 @@ public:
     bool missing_greedy{false};
     int gpu_pending_near{0};
     bool async_mesh_pending{false};
+    bool async_mesh_raw_pending_near{false};
+    bool async_mesh_blocker_found{false};
+    glm::ivec3 async_mesh_blocker_coord{0};
+    bool async_mesh_blocker_completed{false};
     bool visual_warmup{false};
   };
   void SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out) const;
@@ -1270,9 +1280,12 @@ public:
                                              int max_cols = 12) const;
   /// Focus columns with GreedyMesh and PendingLightBeforeMesh (sticky black).
   int CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                  int radius_chunks) const;
+                                  int radius_chunks,
+                                  std::size_t *out_scanned_columns = nullptr,
+                                  std::size_t *out_y_slice_checks = nullptr) const;
   int CountProvisionalLightPreviewFocusMeshes(
-      glm::ivec3 focus_ground_chunk, int radius_chunks) const;
+      glm::ivec3 focus_ground_chunk, int radius_chunks,
+      std::size_t *out_scanned_mesh_entries = nullptr) const;
   /// Era16 TD-052: focus columns with drawable dark/stale mesh (user-visible
   /// black), independent of StickyRemeshAfterLight.
   /// out_no_ticket = VB ∧ ¬Contains ∧ ¬Progress ∧ ¬Sticky.
@@ -1294,7 +1307,9 @@ public:
   bool ShouldDeferRepairReticketUntilGpuApplied(glm::ivec2 ground_xz) const;
   /// PendingLight columns that already have a greedy mesh (dark preview).
   int CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                  int radius_chunks) const;
+                                  int radius_chunks,
+                                  std::size_t *out_scanned_columns = nullptr,
+                                  std::size_t *out_y_slice_checks = nullptr) const;
   /// Re-queue priority relight for PendingLightBeforeMesh columns under focus.
   int PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks);
@@ -1307,8 +1322,11 @@ public:
   void SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state);
   ColumnEmergeState GetColumnEmergeState(glm::ivec3 ground) const;
   void ClearColumnEmergeState(glm::ivec2 ground_xz);
-  /// Count Lighting / Meshing / RenderReady columns into PhysicsTelemetry.
+  /// Sample logger-only column/job/demand census at a bounded time cadence.
   void SampleColumnEmergeStageTelemetry();
+  /// Run the bounded demand-store upkeep independently of telemetry census.
+  void MaintainChunkRenderDemandStore();
+  void MaintainChunkRenderDemandStore(double now_ms);
   /// True when column has left the light gate (LitReady / Meshing / RenderReady).
   bool IsColumnLitReady(glm::ivec3 ground) const;
   /// True when column may unlock outer streaming rings (LitReady+).
@@ -1428,6 +1446,8 @@ public:
   friend class UBlockBreakService;
 
 private:
+  void AdjustColumnEmergeTelemetryCount(ColumnEmergeState state, int delta);
+
   /// Requeue a live per-slice visual demand without minting another mesh revision.
   void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
 
@@ -1651,6 +1671,14 @@ private:
   std::unordered_set<glm::ivec2, GroundColumnHash> AsyncRelightColumnsInFlight;
   std::unordered_map<glm::ivec2, ColumnEmergeState, GroundColumnHash>
       ColumnEmergeStates;
+  /// Incremental mirror for the logger-only stage counts; avoids a periodic
+  /// full walk of ColumnEmergeStates on the frame thread.
+  int ColumnLightingTelemetryN{0};
+  int ColumnMeshingTelemetryN{0};
+  int ColumnRenderReadyTelemetryN{0};
+  /// Full telemetry census is diagnostic; demand maintenance stays per frame.
+  double NextColumnEmergeTelemetrySampleMs{0.0};
+  double LastColumnEmergeTelemetrySampleMs{0.0};
   /// Phase 2: dual-write SoT store (mirrors emerge / desired / revs).
   UColumnRecordStore ColumnRecords;
   WorldBorderConfig WorldBorder;

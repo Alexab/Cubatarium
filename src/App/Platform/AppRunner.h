@@ -48,6 +48,10 @@ struct FlightSimOptions
   float CruiseEyeY{0.0f};
   /// Hold Space while flying to maintain altitude (manual FreeMove climb).
   bool HoldSpace{false};
+  /// Keep the autopilot's forward vector horizontal while the camera looks up/down.
+  bool LevelForward{false};
+  /// Flight-sim-only predictive obstacle bypass. Production locomotion is unchanged.
+  bool AvoidObstacles{true};
   bool Sprint{false};
   /// Reset to a fixed ocean cruise start each run (matches World_164 manual).
   bool TeleportToCruiseStart{false};
@@ -61,6 +65,9 @@ struct FlightSimOptions
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};
   double StopPhaseSec{35.0};
+  /// Reverse the autopilot heading after this many seconds of forward flight.
+  /// Zero disables the turn; useful for no-teleport disk-reload round trips.
+  double ReverseCourseAfterSec{0.0};
   /// Optional diagnostic guard: stop after sustained blocked/ground-contact
   /// movement during the active fly phase. Zero keeps the full requested run.
   double StopAfterBlockedSec{0.0};

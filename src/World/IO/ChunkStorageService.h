@@ -45,12 +45,19 @@ public:
 
   int GetHighestChunkSliceOnDisk(const std::string &worldFolder,
                                  glm::ivec3 groundCoord) const;
-  void RemoveChunkSliceFromDisk(const std::string &worldFolder,
-                                glm::ivec3 chunkCoord) const;
+  /// Update the initialized disk index after an asynchronous slice write.
+  void RecordChunkSliceSaved(const std::string &worldFolder,
+                             glm::ivec3 chunkCoord) const;
+  /// Build the per-world directory index before terrain streaming starts.
+  /// Call from a background I/O job; later lookups are constant-time.
+  void PrepareHighestChunkSliceIndex(const std::string &worldFolder) const;
+  bool RemoveChunkSliceFromDisk(const std::string &worldFolder,
+                                glm::ivec3 chunkCoord,
+                                std::string *outError = nullptr) const;
   /// Delete all Y-slices for a ground column (stale/incomplete purge).
-  void RemoveTerrainColumnFromDisk(const std::string &worldFolder,
-                                   glm::ivec3 groundCoord,
-                                   int maxWorldY) const;
+  bool RemoveTerrainColumnFromDisk(const std::string &worldFolder,
+                                   glm::ivec3 groundCoord, int maxWorldY,
+                                   std::string *outError = nullptr) const;
 
   void SaveTerrainColumn(glm::ivec3 groundCoord, const UBlockWorld &world,
                          const std::string &worldFolder,

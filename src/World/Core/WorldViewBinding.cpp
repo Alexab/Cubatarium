@@ -792,6 +792,48 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StreamerKeepShellMs = 0.0;
   PhysicsTelemetryData.StreamerPrefetchAheadMs = 0.0;
   PhysicsTelemetryData.UpdateStreamingMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkSystemsMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkPreSchedulerMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkSchedulerTickMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkPostSchedulerMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoDrainMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoTickWallMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoUnattributedMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsResultDrainMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoQueueSnapshotMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoDiscardCancelledMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultSelectionMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultSelectionMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultSelectionMutexHeldMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultProcessingMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoWorldApplyMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoColumnFinalizeMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultRequeueMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultRequeueMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoResultRequeueMutexHeldMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexWaitMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexHeldMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexWaitMaxMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexHeldMaxMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoSaveDrainMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsSaveMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultPushN = 0;
+  PhysicsTelemetryData.AsyncChunkIoCancelledDiscardN = 0;
+  PhysicsTelemetryData.AsyncChunkIoReadyLoadsBeforeN = 0;
+  PhysicsTelemetryData.AsyncChunkIoSelectedLoadsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoProcessedLoadsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoRequeuedLoadsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoAppliedSlicesN = 0;
+  PhysicsTelemetryData.AsyncChunkIoSavesProcessedN = 0;
+  PhysicsTelemetryData.AsyncChunkIoLoadPendingJobsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoLoadActiveJobsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoLoadWorkersN = 0;
+  PhysicsTelemetryData.AsyncChunkIoBackgroundPendingJobsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoBackgroundActiveJobsN = 0;
+  PhysicsTelemetryData.AsyncChunkIoBackgroundWorkersN = 0;
+  PhysicsTelemetryData.AsyncChunkIoLoadResultQueueDepthN = 0;
+  PhysicsTelemetryData.AsyncChunkIoSaveResultQueueDepthN = 0;
+  PhysicsTelemetryData.AsyncChunkIoApplyTimeBudgetHit = 0;
   PhysicsTelemetryData.AsyncIoMs = 0.0;
   PhysicsTelemetryData.RelightDrainMsPrev = PhysicsTelemetryData.RelightDrainMs;
   PhysicsTelemetryData.RelightApplyMsPrev = PhysicsTelemetryData.RelightApplyMs;
@@ -806,7 +848,14 @@ void UWorld::TickWorldStreamingPhase()
       PhysicsTelemetryData.RelightFifoPinDropN;
   PhysicsTelemetryData.RelightDrainMs = 0.0;
   PhysicsTelemetryData.RelightCaptureMs = 0.0;
+  PhysicsTelemetryData.RelightCaptureLockWaitMs = 0.0;
+  PhysicsTelemetryData.RelightSnapshotCopyMs = 0.0;
+  PhysicsTelemetryData.RelightDependencyStampMs = 0.0;
+  PhysicsTelemetryData.RelightSubmitSetupMs = 0.0;
+  PhysicsTelemetryData.RelightQueueSubmitMs = 0.0;
   PhysicsTelemetryData.RelightApplyMs = 0.0;
+  PhysicsTelemetryData.RelightApplyPolicyMs = 0.0;
+  PhysicsTelemetryData.RelightApplyValidationMs = 0.0;
   PhysicsTelemetryData.RelightApplyLightMs = 0.0;
   PhysicsTelemetryData.RelightApplyInstallMs = 0.0;
   PhysicsTelemetryData.RelightDrainCompletedMs = 0.0;
@@ -885,6 +934,22 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StickyEraseOtherN = 0;
   PhysicsTelemetryData.SoftDeferHeldAgeMax = 0;
   PhysicsTelemetryData.MeshEmergeMs = 0.0;
+  PhysicsTelemetryData.MeshEmergeCoordinatorMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostTelemetryMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostStageSampleMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostGpuCountsMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostMeshSnapshotMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostCaptureStoreMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostTailSnapshotMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePostUnattributedMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePlayerRelightBurstMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeStageSampleMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeFocusJobsMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeShadowCensusMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeDemandBreakdownMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeDemandStopMs = 0.0;
+  PhysicsTelemetryData.ChunkDemandMaintenanceMs = 0.0;
+  PhysicsTelemetryData.ColumnEmergeStageSampleCount = 0;
   PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepUnfinishedMs = 0.0;
@@ -992,6 +1057,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepSoftdeferSetupMs = 0.0;
   PhysicsTelemetryData.SoftdeferEmptyScanMs = 0.0;
   PhysicsTelemetryData.SoftdeferEmptyOwnMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyPrePruneMs = 0.0;
   PhysicsTelemetryData.MeshDirtyPruneMs = 0.0;
   PhysicsTelemetryData.MeshDirtyPruneN = 0;
   PhysicsTelemetryData.MeshDirtySortMs = 0.0;
@@ -1092,9 +1158,12 @@ void UWorld::TickWorldStreamingPhase()
   // UpdateStreaming — that hid unload/keep costs. Phase wall is separate.
   PhysicsTelemetryData.UpdateStreamingMs =
       std::chrono::duration<double, std::milli>(t_stream1 - t_stream0).count();
-  PhysicsTelemetryData.AsyncIoMs =
+  PhysicsTelemetryData.AsyncChunkSystemsMs =
       std::chrono::duration<double, std::milli>(t_after_stream - t_stream1)
           .count();
+  // Keep the historical field as an alias: prior logs report the entire
+  // TickAsyncChunkSystems wall time under async_io_ms, not disk-worker latency.
+  PhysicsTelemetryData.AsyncIoMs = PhysicsTelemetryData.AsyncChunkSystemsMs;
   // Cruise wall P2: real phase time-slice with miss reserved ms.
   // Stream spends general_budget; emerge gets reserved + remain(general).
   const double stream_elapsed_ms =
@@ -1196,6 +1265,8 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshImmediateCount();
   PhysicsTelemetryData.MeshDirtyTickMs =
       GetMeshService().GetLastMeshDirtyTickMs();
+  PhysicsTelemetryData.MeshDirtyPrePruneMs =
+      GetMeshService().GetLastMeshDirtyPrePruneMs();
   PhysicsTelemetryData.MeshDirtyPruneMs =
       GetMeshService().GetLastMeshDirtyPruneMs();
   PhysicsTelemetryData.MeshDirtyPruneN =

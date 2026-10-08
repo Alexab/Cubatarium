@@ -18,23 +18,26 @@ bool StageIsMonotonic(JobStage prev, JobStage next)
   return static_cast<uint8_t>(next) >= static_cast<uint8_t>(prev);
 }
 
-struct DemandSnapshot
+double DemandEventTimeMs(double requested_ms = 0.0)
 {
-  uint64_t world_epoch{0};
-  uint64_t incarnation{0};
-  uint64_t attempt_id{0};
-  uint64_t desired_geom_rev{0};
-  uint64_t desired_light_rev{0};
-  uint64_t desired_coverage_gen{0};
-  uint64_t published_geom_rev{0};
-  uint64_t published_light_rev{0};
-  uint64_t published_coverage_gen{0};
-  JobStage stage{JobStage::Created};
-  bool has_active_attempt{false};
-  bool retained_awaiting_successor{false};
-};
+  // Callers may pass World/flight-relative timestamps. Keep this trace's sort
+  // key on one monotonic process-wide clock instead of mixing time domains.
+  (void)requested_ms;
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
 
-DemandSnapshot SnapshotDemand(const ChunkRenderDemandRecord &rec)
+} // namespace
+
+UChunkRenderDemandStore &UChunkRenderDemandStore::Get()
+{
+  static UChunkRenderDemandStore instance;
+  return instance;
+}
+
+UChunkRenderDemandStore::DemandSnapshot
+UChunkRenderDemandStore::SnapshotDemand(const ChunkRenderDemandRecord &rec)
 {
   return {rec.world_epoch,
           rec.incarnation,
@@ -47,25 +50,62 @@ DemandSnapshot SnapshotDemand(const ChunkRenderDemandRecord &rec)
           rec.published_coverage_gen,
           rec.active_stage,
           rec.has_active_attempt,
-          rec.retained_awaiting_successor};
+          rec.retained_awaiting_successor,
+          rec.face_debt_mask};
 }
 
-double DemandEventTimeMs(double requested_ms = 0.0)
+UChunkRenderDemandStore::UnsatisfiedBreakdown
+UChunkRenderDemandStore::BreakdownFor(const DemandSnapshot &snapshot)
 {
-  // Callers may pass World/flight-relative timestamps. Keep this trace's sort
-  // key on one monotonic process-wide clock instead of mixing time domains.
-  (void)requested_ms;
-  return std::chrono::duration<double, std::milli>(
-             std::chrono::steady_clock::now().time_since_epoch())
-      .count();
+  UnsatisfiedBreakdown breakdown{};
+  if (snapshot.desired_geom_rev != 0 &&
+      snapshot.published_geom_rev != snapshot.desired_geom_rev)
+  {
+    ++breakdown.geom;
+  }
+  if (snapshot.desired_light_rev != 0 &&
+      snapshot.published_light_rev != snapshot.desired_light_rev)
+  {
+    ++breakdown.light;
+  }
+  if (snapshot.face_debt_mask != 0)
+  {
+    ++breakdown.face;
+  }
+  if (snapshot.desired_coverage_gen != 0 &&
+      snapshot.published_coverage_gen < snapshot.desired_coverage_gen)
+  {
+    ++breakdown.coverage;
+  }
+  if (snapshot.retained_awaiting_successor)
+  {
+    ++breakdown.retain;
+  }
+  return breakdown;
 }
 
-void TraceDemandTransition(glm::ivec3 coord,
-                           const DemandSnapshot &before,
-                           const ChunkRenderDemandRecord &after,
-                           DemandTransitionKind kind, double event_ms = 0.0,
-                           uint8_t result = 0)
+void UChunkRenderDemandStore::UpdateCachedUnsatisfiedBreakdown(
+    const DemandSnapshot &before, const DemandSnapshot &after)
 {
+  const UnsatisfiedBreakdown old_breakdown = BreakdownFor(before);
+  const UnsatisfiedBreakdown new_breakdown = BreakdownFor(after);
+  CachedUnsatisfiedBreakdown_.geom += new_breakdown.geom - old_breakdown.geom;
+  CachedUnsatisfiedBreakdown_.light +=
+      new_breakdown.light - old_breakdown.light;
+  CachedUnsatisfiedBreakdown_.face += new_breakdown.face - old_breakdown.face;
+  CachedUnsatisfiedBreakdown_.coverage +=
+      new_breakdown.coverage - old_breakdown.coverage;
+  CachedUnsatisfiedBreakdown_.retain +=
+      new_breakdown.retain - old_breakdown.retain;
+}
+
+void UChunkRenderDemandStore::TraceDemandTransition(
+    glm::ivec3 coord, const DemandSnapshot &before,
+    const ChunkRenderDemandRecord &after, DemandTransitionKind kind,
+    double event_ms, uint8_t result)
+{
+  UpdateCachedUnsatisfiedBreakdown(before, SnapshotDemand(after));
+
   DemandTransitionSpan span{};
   span.cx = coord.x;
   span.cy = coord.y;
@@ -96,13 +136,6 @@ void TraceDemandTransition(glm::ivec3 coord,
       after.retained_awaiting_successor ? 1 : 0;
   span.event_ms = DemandEventTimeMs(event_ms);
   UJobStageTrace::NoteDemandTransition(span);
-}
-} // namespace
-
-UChunkRenderDemandStore &UChunkRenderDemandStore::Get()
-{
-  static UChunkRenderDemandStore instance;
-  return instance;
 }
 
 ChunkRenderDemandRecord *UChunkRenderDemandStore::Find(glm::ivec3 coord)
@@ -166,8 +199,16 @@ void UChunkRenderDemandStore::BindIdentity(glm::ivec3 coord,
 
 void UChunkRenderDemandStore::Remove(glm::ivec3 coord)
 {
-  Records_.erase(coord);
-  ReconcileCursor_ = 0;
+  const auto it = Records_.find(coord);
+  if (it != Records_.end())
+  {
+    UpdateCachedUnsatisfiedBreakdown(SnapshotDemand(it->second), {});
+    Records_.erase(it);
+    if (ReconcileCursorValid_ && coord == ReconcileCursorCoord_)
+    {
+      ReconcileCursorValid_ = false;
+    }
+  }
 }
 
 bool UChunkRenderDemandStore::CoverageSatisfied(
@@ -500,6 +541,7 @@ void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
     face_mask = 0x3Fu;
   }
   ChunkRenderDemandRecord &rec = GetOrCreate(chunk_xyz);
+  const DemandSnapshot before = SnapshotDemand(rec);
   rec.peer_face_debt_mask =
       static_cast<uint8_t>(rec.peer_face_debt_mask | face_mask);
   rec.face_debt_mask = static_cast<uint8_t>(
@@ -517,6 +559,7 @@ void UChunkRenderDemandStore::NoteFaceDebt(glm::ivec3 chunk_xyz,
       }
     }
   }
+  UpdateCachedUnsatisfiedBreakdown(before, SnapshotDemand(rec));
 }
 
 void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
@@ -527,6 +570,7 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
     return;
   }
   ChunkRenderDemandRecord &rec = GetOrCreate(chunk_xyz);
+  const DemandSnapshot before = SnapshotDemand(rec);
   const uint8_t newly_missing = static_cast<uint8_t>(
       face_mask & static_cast<uint8_t>(~rec.overlay_face_debt_mask));
   rec.overlay_face_debt_mask = static_cast<uint8_t>(
@@ -545,6 +589,7 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayDebt(
   }
   rec.face_debt_mask = static_cast<uint8_t>(
       rec.peer_face_debt_mask | rec.overlay_face_debt_mask);
+  UpdateCachedUnsatisfiedBreakdown(before, SnapshotDemand(rec));
 }
 
 void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
@@ -555,6 +600,7 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
   {
     return;
   }
+  const DemandSnapshot before = SnapshotDemand(*rec);
   missing_face_mask = static_cast<uint8_t>(missing_face_mask & 0x3Fu);
   rec->overlay_face_debt_mask = missing_face_mask;
   rec->overlay_repair_attempted_mask = static_cast<uint8_t>(
@@ -582,6 +628,7 @@ void UChunkRenderDemandStore::NoteBoundaryOverlayPublished(
   {
     rec->published_coverage_gen = rec->desired_coverage_gen;
   }
+  UpdateCachedUnsatisfiedBreakdown(before, SnapshotDemand(*rec));
 }
 
 bool UChunkRenderDemandStore::CanBeginBoundaryOverlayRepair(
@@ -636,6 +683,7 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
   {
     return;
   }
+  const DemandSnapshot before = SnapshotDemand(*rec);
   if (face_mask == 0)
   {
     face_mask = 0x3Fu;
@@ -677,6 +725,7 @@ void UChunkRenderDemandStore::NoteFaceDebtSatisfied(glm::ivec3 chunk_xyz,
   {
     rec->published_coverage_gen = rec->desired_coverage_gen;
   }
+  UpdateCachedUnsatisfiedBreakdown(before, SnapshotDemand(*rec));
 }
 
 UChunkRenderDemandStore::ReconcileStats
@@ -687,16 +736,29 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
   {
     return stats;
   }
-  if (ReconcileCursor_ >= Records_.size())
-  {
-    ReconcileCursor_ = 0;
-  }
   auto it = Records_.begin();
-  std::advance(it, static_cast<std::ptrdiff_t>(
-                       std::min(ReconcileCursor_, Records_.size())));
-  int n = 0;
-  while (n < max_n && it != Records_.end())
+  if (ReconcileCursorValid_)
   {
+    const auto cursor = Records_.find(ReconcileCursorCoord_);
+    if (cursor != Records_.end())
+    {
+      it = std::next(cursor);
+      if (it == Records_.end())
+      {
+        it = Records_.begin();
+      }
+    }
+    else
+    {
+      ReconcileCursorValid_ = false;
+    }
+  }
+  const size_t max_checked =
+      std::min(static_cast<size_t>(max_n), Records_.size());
+  size_t checked = 0;
+  while (checked < max_checked && it != Records_.end())
+  {
+    const auto current = it;
     ChunkRenderDemandRecord &rec = it->second;
     ++stats.checked;
     if (rec.desired_geom_rev != rec.published_geom_rev ||
@@ -763,13 +825,14 @@ UChunkRenderDemandStore::ReconcileMaintenance(int max_n, double now_ms)
     {
       ++stats.retained_awaiting;
     }
+    ReconcileCursorCoord_ = current->first;
+    ReconcileCursorValid_ = true;
     ++it;
-    ++n;
-    ++ReconcileCursor_;
+    ++checked;
   }
   if (it == Records_.end())
   {
-    ReconcileCursor_ = 0;
+    ReconcileCursorValid_ = false;
   }
   return stats;
 }
@@ -834,40 +897,7 @@ int UChunkRenderDemandStore::CountUnsatisfiedDemands() const
 UChunkRenderDemandStore::UnsatisfiedBreakdown
 UChunkRenderDemandStore::CountUnsatisfiedBreakdown() const
 {
-  UnsatisfiedBreakdown b{};
-  for (const auto &kv : Records_)
-  {
-    const ChunkRenderDemandRecord &rec = kv.second;
-    if (rec.desired_geom_rev == 0 && rec.desired_light_rev == 0 &&
-        rec.desired_coverage_gen == 0 && rec.face_debt_mask == 0 &&
-        !rec.retained_awaiting_successor)
-    {
-      continue;
-    }
-    if (rec.desired_geom_rev != 0 &&
-        rec.published_geom_rev != rec.desired_geom_rev)
-    {
-      ++b.geom;
-    }
-    if (rec.desired_light_rev != 0 &&
-        rec.published_light_rev != rec.desired_light_rev)
-    {
-      ++b.light;
-    }
-    if (rec.face_debt_mask != 0)
-    {
-      ++b.face;
-    }
-    if (!CoverageSatisfied(rec, 0))
-    {
-      ++b.coverage;
-    }
-    if (rec.retained_awaiting_successor)
-    {
-      ++b.retain;
-    }
-  }
-  return b;
+  return CachedUnsatisfiedBreakdown_;
 }
 
 bool UChunkRenderDemandStore::StopConverged(double now_ms) const
@@ -929,7 +959,8 @@ bool UChunkRenderDemandStore::StopConverged(double now_ms) const
 void UChunkRenderDemandStore::Clear()
 {
   Records_.clear();
-  ReconcileCursor_ = 0;
+  CachedUnsatisfiedBreakdown_ = {};
+  ReconcileCursorValid_ = false;
 }
 
 } // namespace cutum

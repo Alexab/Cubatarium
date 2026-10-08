@@ -124,6 +124,11 @@ void UColumnFlowScheduler::Clear()
   live_.clear();
 }
 
+bool UColumnFlowScheduler::RemoveColumn(glm::ivec2 column)
+{
+  return live_.erase(ColumnCoord(column)) != 0;
+}
+
 bool UColumnFlowScheduler::Contains(glm::ivec2 column,
                                     ColumnWorkKind kind) const
 {

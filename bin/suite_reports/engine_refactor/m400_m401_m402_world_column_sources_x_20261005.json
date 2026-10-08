@@ -1,0 +1,2234 @@
+{
+  "schema": "world-column-source-x-bins.v2",
+  "matched_chunk_x": [
+    -520,
+    -344
+  ],
+  "bin_chunks": 16,
+  "runs": {
+    "M400": {
+      "info_logs": [
+        "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-084619.28876",
+        "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-090253.28876",
+        "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-093314.28876"
+      ],
+      "matched_chunk_x": [
+        -520,
+        -344
+      ],
+      "bin_chunks": 16,
+      "malformed_source_lines": 0,
+      "malformed_save_lines": 0,
+      "summary": {
+        "event_counts": {
+          "disk/complete": 57,
+          "disk/queued": 57,
+          "procedural/committed": 1354,
+          "procedural/disk_miss": 1401
+        },
+        "unique_columns_by_source_outcome": {
+          "disk/complete": 57,
+          "disk/queued": 57,
+          "procedural/committed": 1354,
+          "procedural/disk_miss": 1386
+        },
+        "timings_ms": {
+          "procedural/committed": {
+            "queue_ms": {
+              "count": 1354,
+              "median": 206.4257,
+              "p95": 39780.7799,
+              "max": 62074.9922
+            },
+            "scheduler_queue_ms": {
+              "count": 1354,
+              "median": 206.3849,
+              "p95": 39780.7422,
+              "max": 62074.9479
+            },
+            "worker_pool_queue_ms": {
+              "count": 1354,
+              "median": 0.0363,
+              "p95": 0.0706,
+              "max": 1.9458
+            },
+            "generation_ms": {
+              "count": 1354,
+              "median": 97.2615,
+              "p95": 131.3175,
+              "max": 332.357
+            },
+            "ready_wait_ms": {
+              "count": 1354,
+              "median": 116.3658,
+              "p95": 1223.8203,
+              "max": 20504.6467
+            },
+            "apply_ms": {
+              "count": 1354,
+              "median": 6.0522,
+              "p95": 15.0124,
+              "max": 45.478
+            },
+            "total_ms": {
+              "count": 1354,
+              "median": 536.7108,
+              "p95": 40582.4931,
+              "max": 62681.499
+            }
+          },
+          "disk/complete": {
+            "elapsed_ms": {
+              "count": 57,
+              "median": 23915.9228,
+              "p95": 27312.3661,
+              "max": 27672.3983
+            },
+            "result_wait_ms": {
+              "count": 57,
+              "median": 95139.2875,
+              "p95": 109714.155,
+              "max": 129314.4972
+            },
+            "file_read_ms": {
+              "count": 57,
+              "median": 4.528,
+              "p95": 18.8577,
+              "max": 55.0334
+            },
+            "deserialize_apply_ms": {
+              "count": 57,
+              "median": 8.1424,
+              "p95": 11.5029,
+              "max": 13.6374
+            }
+          }
+        }
+      },
+      "save_summary": {
+        "event_counts": {},
+        "unique_columns_with_save_events": 0,
+        "world_folders": [],
+        "columns": []
+      },
+      "shutdown_state_events": [],
+      "bins": [
+        {
+          "chunk_x": [
+            -520,
+            -504
+          ],
+          "event_counts": {
+            "procedural/disk_miss": 9
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/disk_miss": 9
+          },
+          "timings_ms": {},
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -504,
+            -488
+          ],
+          "event_counts": {
+            "procedural/committed": 121,
+            "procedural/disk_miss": 156
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 121,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 121,
+                "median": 69.0072,
+                "p95": 16585.7682,
+                "max": 19836.6447
+              },
+              "scheduler_queue_ms": {
+                "count": 121,
+                "median": 68.97,
+                "p95": 16585.747,
+                "max": 19836.6029
+              },
+              "worker_pool_queue_ms": {
+                "count": 121,
+                "median": 0.0375,
+                "p95": 0.0661,
+                "max": 0.1188
+              },
+              "generation_ms": {
+                "count": 121,
+                "median": 85.6294,
+                "p95": 108.3252,
+                "max": 127.1302
+              },
+              "ready_wait_ms": {
+                "count": 121,
+                "median": 115.6504,
+                "p95": 207.4144,
+                "max": 19979.9438
+              },
+              "apply_ms": {
+                "count": 121,
+                "median": 5.415,
+                "p95": 7.5498,
+                "max": 19.9358
+              },
+              "total_ms": {
+                "count": 121,
+                "median": 430.1118,
+                "p95": 17265.0863,
+                "max": 20096.4676
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -488,
+            -472
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 27.3055,
+                "p95": 27645.8876,
+                "max": 28922.8
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 27.2405,
+                "p95": 27645.864,
+                "max": 28922.7672
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0364,
+                "p95": 0.0669,
+                "max": 0.1908
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 84.7562,
+                "p95": 112.9832,
+                "max": 138.5075
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 113.2878,
+                "p95": 178.277,
+                "max": 608.487
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.6243,
+                "p95": 9.5652,
+                "max": 27.1863
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 238.936,
+                "p95": 27858.0444,
+                "max": 29153.5348
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -472,
+            -456
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 13071.8749,
+                "p95": 48231.9592,
+                "max": 54751.0768
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 13071.8471,
+                "p95": 48231.8635,
+                "max": 54751.0442
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.037,
+                "p95": 0.0747,
+                "max": 0.1903
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 98.7273,
+                "p95": 130.2049,
+                "max": 157.6982
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 155.0672,
+                "p95": 1764.8037,
+                "max": 13671.1847
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.9628,
+                "p95": 17.0994,
+                "max": 28.6097
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 13425.7615,
+                "p95": 49932.1029,
+                "max": 56602.8408
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -456,
+            -440
+          ],
+          "event_counts": {
+            "procedural/committed": 138,
+            "procedural/disk_miss": 141
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 138,
+            "procedural/disk_miss": 138
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 138,
+                "median": 34.8672,
+                "p95": 57020.0807,
+                "max": 59254.2225
+              },
+              "scheduler_queue_ms": {
+                "count": 138,
+                "median": 34.8215,
+                "p95": 57020.0366,
+                "max": 59254.1954
+              },
+              "worker_pool_queue_ms": {
+                "count": 138,
+                "median": 0.0369,
+                "p95": 0.08,
+                "max": 1.9034
+              },
+              "generation_ms": {
+                "count": 138,
+                "median": 99.5917,
+                "p95": 135.8125,
+                "max": 195.5397
+              },
+              "ready_wait_ms": {
+                "count": 138,
+                "median": 141.2238,
+                "p95": 1595.4457,
+                "max": 7080.6665
+              },
+              "apply_ms": {
+                "count": 138,
+                "median": 7.0068,
+                "p95": 18.2738,
+                "max": 45.478
+              },
+              "total_ms": {
+                "count": 138,
+                "median": 304.6073,
+                "p95": 58034.8377,
+                "max": 60965.7378
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -440,
+            -424
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 20225.4689,
+                "p95": 49798.8737,
+                "max": 56837.7069
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 20225.4405,
+                "p95": 49798.8405,
+                "max": 56837.6757
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0353,
+                "p95": 0.0766,
+                "max": 0.4885
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 101.3014,
+                "p95": 137.8138,
+                "max": 293.6156
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 305.2365,
+                "p95": 5958.055,
+                "max": 20504.6467
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 6.46,
+                "p95": 19.5546,
+                "max": 40.1259
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 22704.8332,
+                "p95": 50956.8213,
+                "max": 57115.4828
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -424,
+            -408
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 48.5027,
+                "p95": 26837.8319,
+                "max": 62074.9922
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 48.4173,
+                "p95": 26837.8057,
+                "max": 62074.9479
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0373,
+                "p95": 0.0741,
+                "max": 0.1756
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 97.3537,
+                "p95": 118.7311,
+                "max": 129.7276
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 101.6863,
+                "p95": 406.0979,
+                "max": 1214.6252
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 6.0927,
+                "p95": 9.3393,
+                "max": 39.0889
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 345.7794,
+                "p95": 27048.9204,
+                "max": 62681.499
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -408,
+            -392
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 3726.3157,
+                "p95": 29013.2262,
+                "max": 40864.972
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 3726.2853,
+                "p95": 29013.1823,
+                "max": 40864.83
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0351,
+                "p95": 0.0693,
+                "max": 0.2088
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 95.3139,
+                "p95": 114.9888,
+                "max": 131.9506
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 99.6274,
+                "p95": 372.3303,
+                "max": 11437.5342
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.8643,
+                "p95": 14.4569,
+                "max": 39.6052
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 4000.0416,
+                "p95": 36387.233,
+                "max": 41060.4422
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -392,
+            -376
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 32.7575,
+                "p95": 39464.2165,
+                "max": 41659.2296
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 32.7235,
+                "p95": 39464.1861,
+                "max": 41659.0799
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0364,
+                "p95": 0.0696,
+                "max": 1.9458
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 96.1757,
+                "p95": 132.1139,
+                "max": 332.357
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 92.9125,
+                "p95": 443.7055,
+                "max": 11933.68
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.9257,
+                "p95": 9.3571,
+                "max": 38.6032
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 240.3956,
+                "p95": 39658.8806,
+                "max": 41907.313
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -376,
+            -360
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 11557.3193,
+                "p95": 33895.3408,
+                "max": 36723.8517
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 11557.2941,
+                "p95": 33895.3187,
+                "max": 36723.8168
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0347,
+                "p95": 0.0552,
+                "max": 0.1301
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 110.5225,
+                "p95": 145.3804,
+                "max": 174.9391
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 124.4382,
+                "p95": 1634.6747,
+                "max": 10889.5447
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 6.2361,
+                "p95": 23.8622,
+                "max": 40.4109
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 11747.7767,
+                "p95": 35005.4317,
+                "max": 36900.7097
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -360,
+            -344
+          ],
+          "event_counts": {
+            "disk/complete": 57,
+            "disk/queued": 57,
+            "procedural/committed": 87,
+            "procedural/disk_miss": 87
+          },
+          "unique_columns_by_source_outcome": {
+            "disk/complete": 57,
+            "disk/queued": 57,
+            "procedural/committed": 87,
+            "procedural/disk_miss": 87
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 87,
+                "median": 39.8778,
+                "p95": 38434.0466,
+                "max": 40464.4343
+              },
+              "scheduler_queue_ms": {
+                "count": 87,
+                "median": 39.8381,
+                "p95": 38434.0136,
+                "max": 40464.3902
+              },
+              "worker_pool_queue_ms": {
+                "count": 87,
+                "median": 0.0357,
+                "p95": 0.0791,
+                "max": 0.2471
+              },
+              "generation_ms": {
+                "count": 87,
+                "median": 104.2985,
+                "p95": 163.3838,
+                "max": 199.2801
+              },
+              "ready_wait_ms": {
+                "count": 87,
+                "median": 104.3845,
+                "p95": 1359.919,
+                "max": 2835.2361
+              },
+              "apply_ms": {
+                "count": 87,
+                "median": 6.2008,
+                "p95": 14.7163,
+                "max": 37.1671
+              },
+              "total_ms": {
+                "count": 87,
+                "median": 290.3812,
+                "p95": 39726.2888,
+                "max": 41552.6659
+              }
+            },
+            "disk/complete": {
+              "elapsed_ms": {
+                "count": 57,
+                "median": 23915.9228,
+                "p95": 27312.3661,
+                "max": 27672.3983
+              },
+              "result_wait_ms": {
+                "count": 57,
+                "median": 95139.2875,
+                "p95": 109714.155,
+                "max": 129314.4972
+              },
+              "file_read_ms": {
+                "count": 57,
+                "median": 4.528,
+                "p95": 18.8577,
+                "max": 55.0334
+              },
+              "deserialize_apply_ms": {
+                "count": 57,
+                "median": 8.1424,
+                "p95": 11.5029,
+                "max": 13.6374
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        }
+      ]
+    },
+    "M401": {
+      "info_logs": [
+        "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-103135.37252",
+        "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-104836.37252",
+        "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-111747.37252"
+      ],
+      "matched_chunk_x": [
+        -520,
+        -344
+      ],
+      "bin_chunks": 16,
+      "malformed_source_lines": 0,
+      "malformed_save_lines": 0,
+      "summary": {
+        "event_counts": {
+          "disk/complete": 57,
+          "disk/queued": 57,
+          "procedural/committed": 1493,
+          "procedural/disk_miss": 1515
+        },
+        "unique_columns_by_source_outcome": {
+          "disk/complete": 57,
+          "disk/queued": 57,
+          "procedural/committed": 1493,
+          "procedural/disk_miss": 1512
+        },
+        "timings_ms": {
+          "procedural/committed": {
+            "queue_ms": {
+              "count": 1493,
+              "median": 194.4435,
+              "p95": 37082.1659,
+              "max": 50626.2513
+            },
+            "scheduler_queue_ms": {
+              "count": 1493,
+              "median": 194.4117,
+              "p95": 37082.1266,
+              "max": 50626.2121
+            },
+            "worker_pool_queue_ms": {
+              "count": 1493,
+              "median": 0.0411,
+              "p95": 0.0798,
+              "max": 3.0628
+            },
+            "generation_ms": {
+              "count": 1493,
+              "median": 98.4018,
+              "p95": 130.4847,
+              "max": 314.0453
+            },
+            "ready_wait_ms": {
+              "count": 1493,
+              "median": 95.1611,
+              "p95": 412.2384,
+              "max": 16237.2499
+            },
+            "apply_ms": {
+              "count": 1493,
+              "median": 5.917,
+              "p95": 9.1719,
+              "max": 46.2014
+            },
+            "total_ms": {
+              "count": 1493,
+              "median": 410.3472,
+              "p95": 37266.9147,
+              "max": 51146.4461
+            }
+          },
+          "disk/complete": {
+            "elapsed_ms": {
+              "count": 57,
+              "median": 13243.1782,
+              "p95": 40885.9944,
+              "max": 41932.4591
+            },
+            "result_wait_ms": {
+              "count": 57,
+              "median": 52024.512,
+              "p95": 177843.489,
+              "max": 202927.0678
+            },
+            "file_read_ms": {
+              "count": 57,
+              "median": 3.4506,
+              "p95": 9.7889,
+              "max": 81.6835
+            },
+            "deserialize_apply_ms": {
+              "count": 57,
+              "median": 7.1342,
+              "p95": 9.6791,
+              "max": 10.3164
+            }
+          }
+        }
+      },
+      "save_summary": {
+        "event_counts": {},
+        "unique_columns_with_save_events": 0,
+        "world_folders": [],
+        "columns": []
+      },
+      "shutdown_state_events": [],
+      "bins": [
+        {
+          "chunk_x": [
+            -520,
+            -504
+          ],
+          "event_counts": {
+            "procedural/committed": 111,
+            "procedural/disk_miss": 130
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 111,
+            "procedural/disk_miss": 130
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 111,
+                "median": 30.8224,
+                "p95": 12120.291,
+                "max": 15860.1128
+              },
+              "scheduler_queue_ms": {
+                "count": 111,
+                "median": 30.785,
+                "p95": 12120.2717,
+                "max": 15860.0828
+              },
+              "worker_pool_queue_ms": {
+                "count": 111,
+                "median": 0.0426,
+                "p95": 0.0715,
+                "max": 1.2556
+              },
+              "generation_ms": {
+                "count": 111,
+                "median": 92.2028,
+                "p95": 123.2982,
+                "max": 153.535
+              },
+              "ready_wait_ms": {
+                "count": 111,
+                "median": 123.4847,
+                "p95": 176.5482,
+                "max": 599.637
+              },
+              "apply_ms": {
+                "count": 111,
+                "median": 5.7132,
+                "p95": 8.1435,
+                "max": 16.3564
+              },
+              "total_ms": {
+                "count": 111,
+                "median": 262.0273,
+                "p95": 12323.2233,
+                "max": 16091.5627
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -504,
+            -488
+          ],
+          "event_counts": {
+            "procedural/committed": 143,
+            "procedural/disk_miss": 143
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 143,
+            "procedural/disk_miss": 143
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 143,
+                "median": 24.1665,
+                "p95": 38906.9848,
+                "max": 39653.8544
+              },
+              "scheduler_queue_ms": {
+                "count": 143,
+                "median": 24.131,
+                "p95": 38906.9617,
+                "max": 39653.8306
+              },
+              "worker_pool_queue_ms": {
+                "count": 143,
+                "median": 0.0419,
+                "p95": 0.0712,
+                "max": 0.2833
+              },
+              "generation_ms": {
+                "count": 143,
+                "median": 86.8187,
+                "p95": 105.8599,
+                "max": 183.6255
+              },
+              "ready_wait_ms": {
+                "count": 143,
+                "median": 105.4677,
+                "p95": 196.2754,
+                "max": 12968.6515
+              },
+              "apply_ms": {
+                "count": 143,
+                "median": 5.4623,
+                "p95": 7.192,
+                "max": 8.5488
+              },
+              "total_ms": {
+                "count": 143,
+                "median": 231.6374,
+                "p95": 39118.0224,
+                "max": 39874.7727
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -488,
+            -472
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 32.3889,
+                "p95": 23427.487,
+                "max": 27495.2699
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 32.3464,
+                "p95": 23427.4497,
+                "max": 27495.2479
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0413,
+                "p95": 0.1026,
+                "max": 1.3537
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 93.4704,
+                "p95": 131.0289,
+                "max": 230.1179
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 108.6091,
+                "p95": 386.3722,
+                "max": 805.085
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 6.0602,
+                "p95": 9.7132,
+                "max": 46.2014
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 265.7908,
+                "p95": 23623.3399,
+                "max": 27954.9529
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -472,
+            -456
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 32.0131,
+                "p95": 39394.0601,
+                "max": 41023.7187
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 31.9761,
+                "p95": 39393.9673,
+                "max": 41023.695
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0411,
+                "p95": 0.0756,
+                "max": 0.2252
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 90.174,
+                "p95": 108.7792,
+                "max": 119.5782
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 94.5035,
+                "p95": 402.5052,
+                "max": 12656.6212
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.5126,
+                "p95": 7.2586,
+                "max": 8.39
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 235.2683,
+                "p95": 39591.7252,
+                "max": 41245.7304
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -456,
+            -440
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 147
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 9884.7815,
+                "p95": 27722.7515,
+                "max": 40630.7609
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 9884.7504,
+                "p95": 27722.7031,
+                "max": 40630.7227
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0402,
+                "p95": 0.0791,
+                "max": 0.5165
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 102.4431,
+                "p95": 118.902,
+                "max": 138.648
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 97.3066,
+                "p95": 429.8031,
+                "max": 12063.2834
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 6.3634,
+                "p95": 8.8857,
+                "max": 17.4107
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 10276.8514,
+                "p95": 35717.8585,
+                "max": 40848.0328
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -440,
+            -424
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 32.246,
+                "p95": 37202.6677,
+                "max": 38970.4258
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 32.2116,
+                "p95": 37202.6275,
+                "max": 38970.3646
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0433,
+                "p95": 0.0839,
+                "max": 0.1638
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 97.047,
+                "p95": 109.9555,
+                "max": 132.6523
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 83.7311,
+                "p95": 199.7662,
+                "max": 11323.5936
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.864,
+                "p95": 8.1885,
+                "max": 11.8541
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 230.5977,
+                "p95": 37403.2858,
+                "max": 39153.6774
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -424,
+            -408
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 7178.9291,
+                "p95": 32377.9698,
+                "max": 39504.2119
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 7178.9023,
+                "p95": 32377.8994,
+                "max": 39504.1848
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0403,
+                "p95": 0.0682,
+                "max": 0.1953
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 101.5434,
+                "p95": 117.8876,
+                "max": 127.5218
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 94.433,
+                "p95": 182.6557,
+                "max": 16237.2499
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.9653,
+                "p95": 7.9458,
+                "max": 11.6791
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 9196.7482,
+                "p95": 34417.0827,
+                "max": 39712.9787
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -408,
+            -392
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 2807.4149,
+                "p95": 49447.9001,
+                "max": 50626.2513
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 2807.3764,
+                "p95": 49447.8697,
+                "max": 50626.2121
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0406,
+                "p95": 0.0825,
+                "max": 1.802
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 101.8645,
+                "p95": 150.3513,
+                "max": 220.8995
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 92.8893,
+                "p95": 526.179,
+                "max": 10773.7845
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.7466,
+                "p95": 15.4858,
+                "max": 34.4927
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 3119.1429,
+                "p95": 49630.9702,
+                "max": 51146.4461
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -392,
+            -376
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 6907.5775,
+                "p95": 34980.2422,
+                "max": 39881.4296
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 6907.5541,
+                "p95": 34980.2122,
+                "max": 39881.3912
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0398,
+                "p95": 0.0979,
+                "max": 0.4997
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 106.5015,
+                "p95": 136.9184,
+                "max": 146.7295
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 79.5354,
+                "p95": 457.4614,
+                "max": 15179.4815
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 6.4117,
+                "p95": 11.8231,
+                "max": 20.3778
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 8741.6722,
+                "p95": 35216.1296,
+                "max": 40066.754
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -376,
+            -360
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 199.0496,
+                "p95": 21172.3294,
+                "max": 24615.9193
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 199.0053,
+                "p95": 21172.3017,
+                "max": 24615.8787
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0392,
+                "p95": 0.0768,
+                "max": 3.0628
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 100.6389,
+                "p95": 143.801,
+                "max": 314.0453
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 76.5237,
+                "p95": 370.2927,
+                "max": 1746.1386
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.9345,
+                "p95": 9.0219,
+                "max": 13.33
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 396.6642,
+                "p95": 21565.3455,
+                "max": 24803.0089
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -360,
+            -344
+          ],
+          "event_counts": {
+            "disk/complete": 57,
+            "disk/queued": 57,
+            "procedural/committed": 87,
+            "procedural/disk_miss": 87
+          },
+          "unique_columns_by_source_outcome": {
+            "disk/complete": 57,
+            "disk/queued": 57,
+            "procedural/committed": 87,
+            "procedural/disk_miss": 87
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 87,
+                "median": 7889.2058,
+                "p95": 43734.4639,
+                "max": 45046.7837
+              },
+              "scheduler_queue_ms": {
+                "count": 87,
+                "median": 7889.1518,
+                "p95": 43734.3581,
+                "max": 45046.7472
+              },
+              "worker_pool_queue_ms": {
+                "count": 87,
+                "median": 0.0415,
+                "p95": 0.0739,
+                "max": 0.1058
+              },
+              "generation_ms": {
+                "count": 87,
+                "median": 101.6395,
+                "p95": 147.9858,
+                "max": 196.609
+              },
+              "ready_wait_ms": {
+                "count": 87,
+                "median": 85.5058,
+                "p95": 354.9437,
+                "max": 12129.5375
+              },
+              "apply_ms": {
+                "count": 87,
+                "median": 5.9632,
+                "p95": 10.2602,
+                "max": 18.1327
+              },
+              "total_ms": {
+                "count": 87,
+                "median": 8226.4286,
+                "p95": 44138.6212,
+                "max": 45245.2718
+              }
+            },
+            "disk/complete": {
+              "elapsed_ms": {
+                "count": 57,
+                "median": 13243.1782,
+                "p95": 40885.9944,
+                "max": 41932.4591
+              },
+              "result_wait_ms": {
+                "count": 57,
+                "median": 52024.512,
+                "p95": 177843.489,
+                "max": 202927.0678
+              },
+              "file_read_ms": {
+                "count": 57,
+                "median": 3.4506,
+                "p95": 9.7889,
+                "max": 81.6835
+              },
+              "deserialize_apply_ms": {
+                "count": 57,
+                "median": 7.1342,
+                "p95": 9.6791,
+                "max": 10.3164
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        }
+      ]
+    },
+    "M402": {
+      "info_logs": [
+        "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-113816.36848",
+        "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-115345.36848"
+      ],
+      "matched_chunk_x": [
+        -520,
+        -344
+      ],
+      "bin_chunks": 16,
+      "malformed_source_lines": 0,
+      "malformed_save_lines": 0,
+      "summary": {
+        "event_counts": {
+          "disk/complete": 57,
+          "disk/queued": 57,
+          "procedural/cancelled_out_of_range": 53,
+          "procedural/committed": 681,
+          "procedural/disk_miss": 780
+        },
+        "unique_columns_by_source_outcome": {
+          "disk/complete": 57,
+          "disk/queued": 57,
+          "procedural/cancelled_out_of_range": 53,
+          "procedural/committed": 681,
+          "procedural/disk_miss": 780
+        },
+        "timings_ms": {
+          "procedural/committed": {
+            "queue_ms": {
+              "count": 681,
+              "median": 279.6554,
+              "p95": 20695.7297,
+              "max": 25200.1523
+            },
+            "scheduler_queue_ms": {
+              "count": 681,
+              "median": 279.6171,
+              "p95": 20695.7052,
+              "max": 25200.1302
+            },
+            "worker_pool_queue_ms": {
+              "count": 681,
+              "median": 0.0318,
+              "p95": 0.0918,
+              "max": 3.6154
+            },
+            "generation_ms": {
+              "count": 681,
+              "median": 114.6002,
+              "p95": 150.9506,
+              "max": 444.4362
+            },
+            "ready_wait_ms": {
+              "count": 681,
+              "median": 72.6685,
+              "p95": 3268.0929,
+              "max": 17789.6376
+            },
+            "apply_ms": {
+              "count": 681,
+              "median": 6.2656,
+              "p95": 16.8711,
+              "max": 223.3033
+            },
+            "total_ms": {
+              "count": 681,
+              "median": 585.7008,
+              "p95": 21596.2316,
+              "max": 26499.5913
+            }
+          },
+          "disk/complete": {
+            "elapsed_ms": {
+              "count": 57,
+              "median": 5918.6803,
+              "p95": 15649.0133,
+              "max": 17436.5545
+            },
+            "result_wait_ms": {
+              "count": 57,
+              "median": 23113.8368,
+              "p95": 73713.9753,
+              "max": 79744.62
+            },
+            "file_read_ms": {
+              "count": 57,
+              "median": 0.9768,
+              "p95": 1.703,
+              "max": 2.806
+            },
+            "deserialize_apply_ms": {
+              "count": 57,
+              "median": 7.4459,
+              "p95": 18.2962,
+              "max": 33.2188
+            }
+          }
+        }
+      },
+      "save_summary": {
+        "event_counts": {},
+        "unique_columns_with_save_events": 0,
+        "world_folders": [],
+        "columns": []
+      },
+      "shutdown_state_events": [],
+      "bins": [
+        {
+          "chunk_x": [
+            -440,
+            -424
+          ],
+          "event_counts": {
+            "procedural/cancelled_out_of_range": 37,
+            "procedural/committed": 34,
+            "procedural/disk_miss": 117
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/cancelled_out_of_range": 37,
+            "procedural/committed": 34,
+            "procedural/disk_miss": 117
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 34,
+                "median": 7753.5413,
+                "p95": 14851.805,
+                "max": 14928.0766
+              },
+              "scheduler_queue_ms": {
+                "count": 34,
+                "median": 7753.4964,
+                "p95": 14851.749,
+                "max": 14928.0314
+              },
+              "worker_pool_queue_ms": {
+                "count": 34,
+                "median": 0.0347,
+                "p95": 0.1238,
+                "max": 0.2417
+              },
+              "generation_ms": {
+                "count": 34,
+                "median": 111.4505,
+                "p95": 427.5308,
+                "max": 444.4362
+              },
+              "ready_wait_ms": {
+                "count": 34,
+                "median": 580.8869,
+                "p95": 15669.8356,
+                "max": 17789.6376
+              },
+              "apply_ms": {
+                "count": 34,
+                "median": 6.2744,
+                "p95": 42.7912,
+                "max": 223.3033
+              },
+              "total_ms": {
+                "count": 34,
+                "median": 9775.0093,
+                "p95": 20077.8211,
+                "max": 23183.0692
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -424,
+            -408
+          ],
+          "event_counts": {
+            "procedural/cancelled_out_of_range": 16,
+            "procedural/committed": 128,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/cancelled_out_of_range": 16,
+            "procedural/committed": 128,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 128,
+                "median": 60.3969,
+                "p95": 23073.6165,
+                "max": 24150.5987
+              },
+              "scheduler_queue_ms": {
+                "count": 128,
+                "median": 60.3462,
+                "p95": 23073.5901,
+                "max": 24150.5656
+              },
+              "worker_pool_queue_ms": {
+                "count": 128,
+                "median": 0.0318,
+                "p95": 0.0524,
+                "max": 1.6493
+              },
+              "generation_ms": {
+                "count": 128,
+                "median": 116.5054,
+                "p95": 155.623,
+                "max": 197.1661
+              },
+              "ready_wait_ms": {
+                "count": 128,
+                "median": 82.117,
+                "p95": 3493.081,
+                "max": 7269.277
+              },
+              "apply_ms": {
+                "count": 128,
+                "median": 7.0059,
+                "p95": 16.2453,
+                "max": 37.3335
+              },
+              "total_ms": {
+                "count": 128,
+                "median": 301.49,
+                "p95": 23462.0279,
+                "max": 25256.2801
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -408,
+            -392
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 167.6903,
+                "p95": 20983.2212,
+                "max": 25200.1523
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 167.6463,
+                "p95": 20983.2073,
+                "max": 25200.1302
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0301,
+                "p95": 0.0823,
+                "max": 3.6154
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 112.518,
+                "p95": 140.4882,
+                "max": 153.4589
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 41.5053,
+                "p95": 287.2875,
+                "max": 4926.3338
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 5.7167,
+                "p95": 13.7235,
+                "max": 29.8392
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 367.1849,
+                "p95": 21341.7896,
+                "max": 25362.69
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -392,
+            -376
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 749.8284,
+                "p95": 23795.9237,
+                "max": 25164.8751
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 749.7925,
+                "p95": 23795.9021,
+                "max": 25164.8534
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0332,
+                "p95": 0.1883,
+                "max": 2.4061
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 119.6012,
+                "p95": 149.4972,
+                "max": 162.1434
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 90.5169,
+                "p95": 1262.0476,
+                "max": 5454.9188
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 6.1075,
+                "p95": 17.6853,
+                "max": 40.5959
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 961.697,
+                "p95": 24100.4347,
+                "max": 26499.5913
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -376,
+            -360
+          ],
+          "event_counts": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "unique_columns_by_source_outcome": {
+            "procedural/committed": 144,
+            "procedural/disk_miss": 144
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 144,
+                "median": 2605.4814,
+                "p95": 16348.5976,
+                "max": 18468.7877
+              },
+              "scheduler_queue_ms": {
+                "count": 144,
+                "median": 2605.4599,
+                "p95": 16348.5781,
+                "max": 18468.776
+              },
+              "worker_pool_queue_ms": {
+                "count": 144,
+                "median": 0.0309,
+                "p95": 0.0836,
+                "max": 0.3138
+              },
+              "generation_ms": {
+                "count": 144,
+                "median": 110.6329,
+                "p95": 146.1084,
+                "max": 184.0727
+              },
+              "ready_wait_ms": {
+                "count": 144,
+                "median": 91.7113,
+                "p95": 1016.5197,
+                "max": 10606.1304
+              },
+              "apply_ms": {
+                "count": 144,
+                "median": 6.8046,
+                "p95": 20.2981,
+                "max": 51.0755
+              },
+              "total_ms": {
+                "count": 144,
+                "median": 3955.2034,
+                "p95": 16479.6548,
+                "max": 19084.2858
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        },
+        {
+          "chunk_x": [
+            -360,
+            -344
+          ],
+          "event_counts": {
+            "disk/complete": 57,
+            "disk/queued": 57,
+            "procedural/committed": 87,
+            "procedural/disk_miss": 87
+          },
+          "unique_columns_by_source_outcome": {
+            "disk/complete": 57,
+            "disk/queued": 57,
+            "procedural/committed": 87,
+            "procedural/disk_miss": 87
+          },
+          "timings_ms": {
+            "procedural/committed": {
+              "queue_ms": {
+                "count": 87,
+                "median": 160.2145,
+                "p95": 21052.8559,
+                "max": 21948.2891
+              },
+              "scheduler_queue_ms": {
+                "count": 87,
+                "median": 159.2696,
+                "p95": 21052.8327,
+                "max": 21948.2407
+              },
+              "worker_pool_queue_ms": {
+                "count": 87,
+                "median": 0.033,
+                "p95": 0.0746,
+                "max": 3.1698
+              },
+              "generation_ms": {
+                "count": 87,
+                "median": 115.4275,
+                "p95": 161.6165,
+                "max": 227.3428
+              },
+              "ready_wait_ms": {
+                "count": 87,
+                "median": 64.5766,
+                "p95": 527.6395,
+                "max": 3364.6406
+              },
+              "apply_ms": {
+                "count": 87,
+                "median": 6.3904,
+                "p95": 17.3941,
+                "max": 33.8652
+              },
+              "total_ms": {
+                "count": 87,
+                "median": 372.457,
+                "p95": 21721.2497,
+                "max": 22483.1516
+              }
+            },
+            "disk/complete": {
+              "elapsed_ms": {
+                "count": 57,
+                "median": 5918.6803,
+                "p95": 15649.0133,
+                "max": 17436.5545
+              },
+              "result_wait_ms": {
+                "count": 57,
+                "median": 23113.8368,
+                "p95": 73713.9753,
+                "max": 79744.62
+              },
+              "file_read_ms": {
+                "count": 57,
+                "median": 0.9768,
+                "p95": 1.703,
+                "max": 2.806
+              },
+              "deserialize_apply_ms": {
+                "count": 57,
+                "median": 7.4459,
+                "p95": 18.2962,
+                "max": 33.2188
+              }
+            }
+          },
+          "save": {
+            "event_counts": {},
+            "unique_columns_with_save_events": 0,
+            "world_folders": [],
+            "columns": []
+          }
+        }
+      ]
+    }
+  },
+  "interpretation_note": "disk/complete means a stored column supplied a source result; procedural/disk_miss followed by procedural/committed means the column was generated after no disk source was found. Timing fields measure source service and queue delay, not visual readiness by themselves. WorldColumnSave queued/written/failed events trace save admission and slice writes only when the source trace is enabled; a final shutdown_state reports outstanding IO."
+}

@@ -60,9 +60,14 @@ public:
   };
   struct ComputeKickProfile
   {
+    double total_ms{0.0};
     double eligibility_ms{0.0};
+    double palette_build_ms{0.0};
     double readback_slot_ms{0.0};
     double cpu_prepare_ms{0.0};
+    double occupancy_pack_ms{0.0};
+    double block_pack_ms{0.0};
+    double light_pack_ms{0.0};
     double input_upload_ms{0.0};
     double mask_dispatch_ms{0.0};
     double counter_reset_ms{0.0};

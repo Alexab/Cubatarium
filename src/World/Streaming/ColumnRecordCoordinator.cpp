@@ -212,6 +212,12 @@ bool UColumnRecordCoordinator::RecordWantsEvict(const ColumnRecord &rec)
   return !ColumnHasActivePending(rec);
 }
 
+bool UColumnRecordCoordinator::RecordWantsEvictAfterInterestLoss(
+    bool outside_keep_set)
+{
+  return outside_keep_set;
+}
+
 void UColumnRecordCoordinator::LogShadowMismatch(glm::ivec2 column,
                                                ColumnJobStage legacy_stage,
                                                ColumnJobStage record_stage)

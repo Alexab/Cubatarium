@@ -1,4 +1,5 @@
 #include "World/Persistence/WorldPersistence.h"
+#include "Core/Environment.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -39,7 +40,9 @@
 #include <algorithm>
 #include <cstdlib>
 #include <queue>
+#include <tuple>
 #include <unordered_set>
+#include <utility>
 
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
@@ -57,6 +60,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+#include <thread>
 #include <vector>
 
 using json = nlohmann::json;
@@ -105,6 +109,55 @@ bool ColumnSurfaceBandNeedsRelight(const UWorld &world, glm::ivec2 ground_xz,
 constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
 
+bool IsWorldColumnSourceTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+  return value && value[0] == '1';
+}
+
+bool IsStreamingDetailTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+  return value && value[0] == '1';
+}
+
+void LogWorldColumnSource(const char *source, const char *outcome,
+                          glm::ivec3 ground, const std::string &details)
+{
+  if (!IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      std::string("source=") + source + " outcome=" + outcome + " coord=(" +
+      std::to_string(ground.x) + ",0," + std::to_string(ground.z) + ") " +
+      details;
+  CubatariumLogInfo("WorldColumnSource", message);
+  std::cerr << "[WorldColumnSource] " << message << std::endl;
+}
+
+void LogWorldColumnSave(const char *outcome, glm::ivec3 coord,
+                        const std::string &details, bool always = false)
+{
+  if (!always && !IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      std::string("outcome=") + outcome + " coord=(" +
+      std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
+      std::to_string(coord.z) + ") " + details;
+  if (always)
+  {
+    CubatariumLogError("WorldColumnSave", message);
+  }
+  else
+  {
+    CubatariumLogInfo("WorldColumnSave", message);
+  }
+  std::cerr << "[WorldColumnSave] " << message << std::endl;
+}
+
 bool HasChunkDataFiles(const std::string &chunks_dir)
 {
   if (!std::filesystem::exists(chunks_dir) ||
@@ -128,6 +181,38 @@ bool HasChunkDataFiles(const std::string &chunks_dir)
 UWorldPersistence::UWorldPersistence()
 {
   ChunkStorage = std::make_unique<UChunkStorageService>();
+}
+
+void UWorldPersistence::SetWorldFolderPath(const std::string &path)
+{
+  if (WorldFolderPath == path)
+  {
+    return;
+  }
+
+  SaveColumnLightFlagsIfDirty();
+  if (!FlushColumnLightFlagsForWorldSwitch())
+  {
+    const std::string message =
+        "outcome=light_flags_flush_timeout folder=" + WorldFolderPath +
+        " revision=" + std::to_string(LightCompleteRevision);
+    CubatariumLogInfo("WorldColumnSave", message);
+    std::cerr << "[WorldColumnSave] " << message << std::endl;
+  }
+
+  WorldFolderPath = path;
+  LightCompleteColumns.clear();
+  LightCompleteDirty = false;
+  LightCompleteLoaded = false;
+  ++LightCompleteRevision;
+  LightCompleteSaveFailures = 0;
+  LightCompleteSaveRetryAt = {};
+  if (!WorldFolderPath.empty())
+  {
+    EnsureChunkIoInitialized();
+    AsyncChunkIo->RequestDiskIndexWarmup(*ChunkStorage, WorldFolderPath);
+    LoadColumnLightFlags();
+  }
 }
 
 bool UWorldPersistence::HasPersistedTerrainOnDisk(
@@ -203,6 +288,7 @@ void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
     if (LightCompleteColumns.insert(ground_xz).second)
     {
       LightCompleteDirty = true;
+      ++LightCompleteRevision;
     }
   }
   else
@@ -216,6 +302,7 @@ void UWorldPersistence::ClearColumnLightComplete(glm::ivec2 ground_xz)
   if (LightCompleteColumns.erase(ground_xz) > 0)
   {
     LightCompleteDirty = true;
+    ++LightCompleteRevision;
   }
 }
 
@@ -261,32 +348,135 @@ void UWorldPersistence::LoadColumnLightFlags()
 
 void UWorldPersistence::SaveColumnLightFlagsIfDirty()
 {
-  if (!LightCompleteDirty || WorldFolderPath.empty())
+  if (!LightCompleteDirty || WorldFolderPath.empty() ||
+      LightCompleteSaveInFlight ||
+      std::chrono::steady_clock::now() < LightCompleteSaveRetryAt)
   {
     return;
   }
-  try
+
+  EnsureChunkIoInitialized();
+  if (!AsyncChunkIo)
   {
-    std::filesystem::create_directories(WorldFolderPath);
-    json data;
-    data["format_version"] = 1;
-    json complete = json::array();
-    for (const glm::ivec2 &col : LightCompleteColumns)
+    return;
+  }
+
+  std::vector<glm::ivec2> complete_columns;
+  complete_columns.reserve(LightCompleteColumns.size());
+  for (const glm::ivec2 &col : LightCompleteColumns)
+  {
+    complete_columns.push_back(col);
+  }
+  LightCompleteSaveWorldFolder = WorldFolderPath;
+  LightCompleteSaveRevision = LightCompleteRevision;
+  LightCompleteSaveInFlight = true;
+  AsyncChunkIo->RequestSaveColumnLightFlags(
+      LightCompleteSaveWorldFolder, LightCompleteSaveRevision,
+      std::move(complete_columns));
+}
+
+void UWorldPersistence::ProcessColumnLightFlagSaveResults(
+    double *queue_mutex_wait_ms, double *queue_mutex_held_ms,
+    std::size_t *result_count)
+{
+  if (queue_mutex_wait_ms)
+  {
+    *queue_mutex_wait_ms = 0.0;
+  }
+  if (queue_mutex_held_ms)
+  {
+    *queue_mutex_held_ms = 0.0;
+  }
+  if (result_count)
+  {
+    *result_count = 0;
+  }
+  if (!AsyncChunkIo)
+  {
+    return;
+  }
+  std::vector<AsyncColumnLightFlagsSaveResult> results =
+      AsyncChunkIo->DrainColumnLightFlagsSaves(queue_mutex_wait_ms,
+                                               queue_mutex_held_ms);
+  if (result_count)
+  {
+    *result_count = results.size();
+  }
+  for (AsyncColumnLightFlagsSaveResult &result : results)
+  {
+    LightCompleteSaveInFlight = false;
+    LightCompleteSaveWorldFolder.clear();
+    LightCompleteSaveRevision = 0;
+    LightCompleteSaveRetryAt = {};
+
+    if (result.success)
     {
-      complete.push_back(json::array({col.x, col.y}));
+      LightCompleteSaveFailures = 0;
+      if (result.worldFolder == WorldFolderPath &&
+          result.revision == LightCompleteRevision)
+      {
+        LightCompleteDirty = false;
+      }
+      continue;
     }
-    data["complete"] = std::move(complete);
-    const std::string path = WorldFolderPath + "/column_light.json";
-    std::ofstream file(path, std::ios::trunc);
-    if (file.is_open())
+
+    if (result.worldFolder == WorldFolderPath)
     {
-      file << data.dump();
-      LightCompleteDirty = false;
+      LightCompleteDirty = true;
+      ++LightCompleteSaveFailures;
+      const unsigned int exponent =
+          std::min<unsigned int>(LightCompleteSaveFailures - 1, 6);
+      const auto retry_delay = std::chrono::milliseconds(
+          std::min<int>(30000, 250 * (1 << exponent)));
+      LightCompleteSaveRetryAt =
+          std::chrono::steady_clock::now() + retry_delay;
     }
   }
-  catch (const json::exception &)
+}
+
+bool UWorldPersistence::FlushColumnLightFlagsForWorldSwitch()
+{
+  if (!LightCompleteDirty || WorldFolderPath.empty())
   {
+    return true;
   }
+  EnsureChunkIoInitialized();
+  if (!AsyncChunkIo)
+  {
+    return false;
+  }
+
+  constexpr auto kFlushTimeout = std::chrono::seconds(10);
+  const auto deadline = std::chrono::steady_clock::now() + kFlushTimeout;
+  while (std::chrono::steady_clock::now() < deadline)
+  {
+    ProcessColumnLightFlagSaveResults();
+    SaveColumnLightFlagsIfDirty();
+    if (!LightCompleteDirty && !LightCompleteSaveInFlight)
+    {
+      return true;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    if (LightCompleteSaveInFlight)
+    {
+      const auto remaining = std::chrono::duration_cast<
+          std::chrono::milliseconds>(deadline - now);
+      (void)AsyncChunkIo->WaitForColumnLightFlagsSaveIdleFor(
+          std::min(remaining, std::chrono::milliseconds(100)));
+    }
+    else if (LightCompleteSaveRetryAt > now)
+    {
+      const auto remaining = std::chrono::duration_cast<
+          std::chrono::milliseconds>(deadline - now);
+      const auto retry_wait = std::chrono::duration_cast<
+          std::chrono::milliseconds>(LightCompleteSaveRetryAt - now);
+      std::this_thread::sleep_for(std::min(
+          remaining, std::min(retry_wait, std::chrono::milliseconds(100))));
+    }
+  }
+  ProcessColumnLightFlagSaveResults();
+  return !LightCompleteDirty && !LightCompleteSaveInFlight;
 }
 
 void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
@@ -942,11 +1132,8 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
   auto &telem = world.GetPhysicsTelemetryMutable();
   telem.RelightDeferredFarPendingN =
       static_cast<int>(DeferredFarRelightColumns.size());
-  static const bool audit_admission = []()
-  {
-    const char *value = std::getenv("CUBATARIUM_RELIGHT_AUDIT");
-    return value != nullptr && value[0] != '\0' && value[0] != '0';
-  }();
+  static const bool audit_admission =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   static auto last_admission_audit = std::chrono::steady_clock::time_point{};
   const auto audit_now = std::chrono::steady_clock::now();
   if (audit_admission &&
@@ -1357,7 +1544,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                            int max_bg_columns)
 {
   auto &capture_telem = world.GetPhysicsTelemetryMutable();
-  const bool audit_relight = std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+  const bool audit_relight =
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   auto log_capture_state = [&](const char *phase, int cap, int drained)
   {
     if (!audit_relight)
@@ -2837,6 +3025,47 @@ bool UWorldPersistence::IsTerrainColumnRelightQueued(
   return PendingTerrainColumnRelightKeys.count(world_block_key) != 0;
 }
 
+int UWorldPersistence::CancelTerrainColumnRelight(
+    glm::ivec2 world_block_key)
+{
+  const glm::ivec2 ground_xz(FloorDiv(world_block_key.x, CHUNK_SIZE),
+                             FloorDiv(world_block_key.y, CHUNK_SIZE));
+  world_block_key = glm::ivec2(ground_xz.x * CHUNK_SIZE,
+                               ground_xz.y * CHUNK_SIZE);
+  int removed = 0;
+  const auto remove_from_queue = [&](std::deque<glm::ivec2> &queue)
+  {
+    for (auto it = queue.begin(); it != queue.end();)
+    {
+      if (it->x == world_block_key.x && it->y == world_block_key.y)
+      {
+        it = queue.erase(it);
+        ++removed;
+      }
+      else
+      {
+        ++it;
+      }
+    }
+  };
+  remove_from_queue(PendingTerrainColumnRelightsPriority);
+  remove_from_queue(PendingTerrainColumnRelights);
+  removed += PendingTerrainColumnRelightKeys.erase(world_block_key);
+  removed += PendingTerrainColumnRelightYBands.erase(world_block_key);
+  removed += PendingVisibleDrawGateRelightYBands.erase(world_block_key);
+  removed += PendingVisibleFirstMeshRelightYBands.erase(world_block_key);
+  removed += DeferredVisibleDrawGateRelightYBands.erase(world_block_key);
+  removed += RelightLastFinalizeEpoch_.erase(world_block_key);
+  removed += DeferredFarRelightColumns.erase(ground_xz);
+  if (RelightFifoPinValid && RelightFifoPinCx == ground_xz.x &&
+      RelightFifoPinCz == ground_xz.y)
+  {
+    RelightFifoPinValid = false;
+    ++removed;
+  }
+  return removed;
+}
+
 UWorldPersistence::TerrainColumnRelightQueueInfo
 UWorldPersistence::GetTerrainColumnRelightQueueInfo(
     glm::ivec2 world_block_key) const
@@ -3047,10 +3276,72 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     UWorld &world, glm::ivec3 ground_coord,
     PendingAsyncColumnLoadState state)
 {
+  const auto finalize_started = std::chrono::steady_clock::now();
   if (ground_coord.y != 0)
   {
     ground_coord.y = 0;
   }
+  const auto async_io_trace_details = [&]()
+  {
+    if (!IsWorldColumnSourceTraceEnabled() || !AsyncChunkIo)
+    {
+      return std::string{};
+    }
+    const double finalize_prelog_ms = std::chrono::duration<double, std::milli>(
+                                          std::chrono::steady_clock::now() -
+                                          finalize_started)
+                                          .count();
+    return " timing_slices=" + std::to_string(state.timing_slice_count) +
+           " disk_discovery_ms=" +
+           std::to_string(state.disk_discovery_ms) +
+           " format_detect_ms=" + std::to_string(state.format_detect_ms) +
+           " worker_queue_ms=" + std::to_string(state.worker_queue_ms) +
+           " worker_queue_max_ms=" +
+           std::to_string(state.worker_queue_max_ms) +
+           " file_open_ms=" + std::to_string(state.file_open_ms) +
+           " file_read_ms=" + std::to_string(state.file_read_ms) +
+           " file_read_max_ms=" + std::to_string(state.file_read_max_ms) +
+           " disk_probe_ms=" + std::to_string(state.disk_probe_ms) +
+           " disk_probe_max_ms=" +
+           std::to_string(state.disk_probe_max_ms) +
+           " result_wait_ms=" + std::to_string(state.result_wait_ms) +
+           " result_wait_max_ms=" +
+           std::to_string(state.result_wait_max_ms) +
+           " deserialize_ms=" + std::to_string(state.deserialize_ms) +
+           " deserialize_max_ms=" +
+           std::to_string(state.deserialize_max_ms) +
+           " apply_ms=" + std::to_string(state.apply_ms) +
+           " apply_max_ms=" + std::to_string(state.apply_max_ms) +
+           " deserialize_apply_ms=" +
+           std::to_string(state.deserialize_apply_ms) +
+           " deserialize_apply_max_ms=" +
+           std::to_string(state.deserialize_apply_max_ms) +
+           " finalize_prelog_ms=" + std::to_string(finalize_prelog_ms) +
+           " chunkio_workers=" +
+           std::to_string(AsyncChunkIo->GetWorkerCount()) +
+           " chunkio_load_workers=" +
+           std::to_string(AsyncChunkIo->GetLoadWorkerCount()) +
+           " chunkio_background_workers=" +
+           std::to_string(AsyncChunkIo->GetBackgroundWorkerCount()) +
+           " chunkio_pending_jobs=" +
+           std::to_string(AsyncChunkIo->GetPendingJobCount()) +
+           " chunkio_active_jobs=" +
+           std::to_string(AsyncChunkIo->GetActiveJobCount()) +
+           " chunkio_load_pending_jobs=" +
+           std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
+           " chunkio_background_pending_jobs=" +
+           std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount()) +
+           " chunkio_load_active_jobs=" +
+           std::to_string(AsyncChunkIo->GetLoadActiveJobCount()) +
+           " chunkio_background_active_jobs=" +
+           std::to_string(AsyncChunkIo->GetBackgroundActiveJobCount()) +
+           " chunkio_ready_loads=" +
+           std::to_string(AsyncChunkIo->GetLoadResultQueueDepth()) +
+           " chunkio_ready_saves=" +
+           std::to_string(AsyncChunkIo->GetSaveResultQueueDepth()) +
+           " pending_disk_columns=" +
+           std::to_string(PendingAsyncColumnLoadSlices.size());
+  };
   const int max_height = world.ProceduralTemplate.MaxHeight;
   MaterializeRequiredTerrainColumnSlices(world.BlockWorld, ground_coord,
                                          max_height, state.highest_cy_on_disk);
@@ -3061,15 +3352,51 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   const bool should_retry =
       has_disk &&
       (state.had_disk_read_failure || state.had_invalid_token || !complete);
+  const double load_ms =
+      state.requested_at == std::chrono::steady_clock::time_point{}
+          ? 0.0
+          : std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - state.requested_at)
+                .count();
 
   if (should_retry && state.retry_generation < kMaxAsyncColumnLoadRetries)
   {
+    LogWorldColumnSource(
+        "disk", "retry",
+        ground_coord,
+        "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+            " retry=" + std::to_string(state.retry_generation + 1) +
+            " read_failed=" + (state.had_disk_read_failure ? "1" : "0") +
+            " token_invalid=" + (state.had_invalid_token ? "1" : "0") +
+            " complete=" + (complete ? "1" : "0") +
+            " elapsed_ms=" + std::to_string(load_ms) +
+            async_io_trace_details());
     ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height);
     PendingAsyncColumnLoadState retry_state;
     const int load_to_cy = state.highest_cy_on_disk;
     retry_state.remaining_results = load_to_cy + 1;
     retry_state.highest_cy_on_disk = state.highest_cy_on_disk;
+    retry_state.cancellation = state.cancellation;
+    retry_state.requested_at = state.requested_at;
+    retry_state.disk_discovery_ms = state.disk_discovery_ms;
     retry_state.retry_generation = state.retry_generation + 1;
+    retry_state.timing_slice_count = state.timing_slice_count;
+    retry_state.format_detect_ms = state.format_detect_ms;
+    retry_state.worker_queue_ms = state.worker_queue_ms;
+    retry_state.worker_queue_max_ms = state.worker_queue_max_ms;
+    retry_state.file_open_ms = state.file_open_ms;
+    retry_state.file_read_ms = state.file_read_ms;
+    retry_state.file_read_max_ms = state.file_read_max_ms;
+    retry_state.disk_probe_ms = state.disk_probe_ms;
+    retry_state.disk_probe_max_ms = state.disk_probe_max_ms;
+    retry_state.result_wait_ms = state.result_wait_ms;
+    retry_state.result_wait_max_ms = state.result_wait_max_ms;
+    retry_state.deserialize_ms = state.deserialize_ms;
+    retry_state.deserialize_max_ms = state.deserialize_max_ms;
+    retry_state.apply_ms = state.apply_ms;
+    retry_state.apply_max_ms = state.apply_max_ms;
+    retry_state.deserialize_apply_ms = state.deserialize_apply_ms;
+    retry_state.deserialize_apply_max_ms = state.deserialize_apply_max_ms;
     PendingAsyncColumnLoadSlices[ground_coord] = retry_state;
     const glm::ivec3 focus =
         UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
@@ -3107,13 +3434,23 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     for (int cy : cy_order)
     {
       AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
-                                *ChunkStorage, WorldFolderPath, token);
+                                *ChunkStorage, *world.BlockRegistry,
+                                WorldFolderPath, token,
+                                retry_state.cancellation);
     }
     return;
   }
 
   if (!complete)
   {
+    LogWorldColumnSource(
+        "disk", "incomplete", ground_coord,
+        "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+            " retry=" + std::to_string(state.retry_generation) +
+            " read_failed=" + (state.had_disk_read_failure ? "1" : "0") +
+            " token_invalid=" + (state.had_invalid_token ? "1" : "0") +
+            " elapsed_ms=" + std::to_string(load_ms) +
+            async_io_trace_details());
     if (has_disk)
     {
       ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height);
@@ -3121,6 +3458,14 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     }
     return;
   }
+
+  LogWorldColumnSource(
+      has_disk ? "disk" : "empty-disk-column", "complete", ground_coord,
+      "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+          " disk_light=" + (state.had_disk_light ? "1" : "0") +
+          " retry=" + std::to_string(state.retry_generation) +
+          " elapsed_ms=" + std::to_string(load_ms) +
+          async_io_trace_details());
 
   if (!world.Streaming || !world.Streaming->GetStreamer())
   {
@@ -3322,52 +3667,225 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);
 }
 
-void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
+AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
+    UWorld &world, std::size_t max_slice_applies_override,
+    double max_apply_ms)
 {
+  const auto tick_started = std::chrono::steady_clock::now();
+  AsyncChunkIoTickMetrics metrics;
   if (!ChunkStorage)
   {
-    return;
+    metrics.tick_wall_ms = std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now() - tick_started)
+                               .count();
+    metrics.unattributed_ms = metrics.tick_wall_ms;
+    return metrics;
   }
 
+  const auto light_flags_result_drain_started =
+      std::chrono::steady_clock::now();
+  ProcessColumnLightFlagSaveResults(
+      &metrics.light_flags_result_queue_mutex_wait_ms,
+      &metrics.light_flags_result_queue_mutex_held_ms,
+      &metrics.light_flags_result_count);
+  metrics.light_flags_result_drain_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - light_flags_result_drain_started)
+          .count();
+  if (IsStreamingDetailTraceEnabled() &&
+      (metrics.light_flags_result_drain_ms >= 25.0 ||
+       metrics.light_flags_result_queue_mutex_wait_ms >= 2.0 ||
+       metrics.light_flags_result_queue_mutex_held_ms >= 2.0))
+  {
+    const double other_ms = (std::max)(
+        0.0, metrics.light_flags_result_drain_ms -
+                 metrics.light_flags_result_queue_mutex_wait_ms -
+                 metrics.light_flags_result_queue_mutex_held_ms);
+    const std::string message =
+        "detail=light_flags_result_drain elapsed_ms=" +
+        std::to_string(metrics.light_flags_result_drain_ms) +
+        " queue_wait_ms=" +
+        std::to_string(metrics.light_flags_result_queue_mutex_wait_ms) +
+        " queue_held_ms=" +
+        std::to_string(metrics.light_flags_result_queue_mutex_held_ms) +
+        " result_processing_ms=" + std::to_string(other_ms) +
+        " results_n=" + std::to_string(metrics.light_flags_result_count);
+    CubatariumLogInfo("StreamingDetail", message);
+  }
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
+    const auto discard_started = std::chrono::steady_clock::now();
+    metrics.cancelled_discard_n = AsyncChunkIo->DiscardCancelledLoads();
+    metrics.discard_cancelled_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - discard_started)
+            .count();
+    const bool trace_async_io = IsWorldColumnSourceTraceEnabled();
     const double frame_ms = world.GetLastMovementFrameMs();
-    std::size_t max_slice_applies = 10;
-    if (frame_ms > 24.0)
+    std::size_t max_slice_applies = max_slice_applies_override;
+    if (max_slice_applies == 0)
     {
-      max_slice_applies = 4;
+      max_slice_applies = 10;
+      if (frame_ms > 24.0)
+      {
+        max_slice_applies = 4;
+      }
+      else if (frame_ms > 16.0)
+      {
+        max_slice_applies = 6;
+      }
     }
-    else if (frame_ms > 16.0)
+    const double effective_apply_budget_ms =
+        max_apply_ms > 0.0
+            ? max_apply_ms
+            : (frame_ms > 24.0 ? 4.0 : (frame_ms > 16.0 ? 5.0 : 6.0));
+    const auto apply_started = std::chrono::steady_clock::now();
+    std::size_t applied_slices = 0;
+    const auto apply_budget_expired = [&]()
     {
-      max_slice_applies = 6;
-    }
-    for (AsyncChunkLoadResult &load :
-         AsyncChunkIo->DrainLoadsUpTo(max_slice_applies))
+      const bool expired =
+          applied_slices > 0 &&
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - apply_started)
+                  .count() >= effective_apply_budget_ms;
+      metrics.apply_time_budget_hit = metrics.apply_time_budget_hit || expired;
+      return expired;
+    };
+    const glm::ivec3 focus_chunk =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    const auto result_selection_time = std::chrono::steady_clock::now();
+    const auto result_rank = [&](const AsyncChunkLoadResult &load)
     {
+      const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
+      const bool has_pending_column =
+          PendingAsyncColumnLoadSlices.find(ground) !=
+          PendingAsyncColumnLoadSlices.end();
+      const int distance = (std::max)(
+          std::abs(load.coord.x - focus_chunk.x),
+          std::abs(load.coord.z - focus_chunk.z));
+      int age_bonus = 0;
+      if (load.submittedAt != std::chrono::steady_clock::time_point{} &&
+          result_selection_time > load.submittedAt)
+      {
+        const double age_sec = std::chrono::duration<double>(
+                                   result_selection_time - load.submittedAt)
+                                   .count();
+        age_bonus = (std::min)(256, static_cast<int>(age_sec / 5.0));
+      }
+      return std::tuple<int, int, std::chrono::steady_clock::time_point>{
+          has_pending_column ? 0 : 1, (std::max)(0, distance - age_bonus),
+          load.submittedAt};
+    };
+    // The load queue can contain hundreds of ready results. Select a small
+    // near-focus batch once per tick, then apply under the existing time and
+    // slice limits instead of rescanning the full queue after each slice.
+    constexpr std::size_t kMaxRankedLoadsPerTick = 4;
+    const std::size_t max_ranked_loads =
+        std::min(max_slice_applies, kMaxRankedLoadsPerTick);
+    auto completed_loads = AsyncChunkIo->DrainLoadsBestByKeyUpTo(
+        max_ranked_loads, result_rank, &metrics.ready_loads_before_n,
+        &metrics.result_selection_mutex_wait_ms,
+        &metrics.result_selection_mutex_held_ms);
+    metrics.result_selection_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - result_selection_time)
+            .count();
+    metrics.selected_loads_n = completed_loads.size();
+    const auto result_apply_started = std::chrono::steady_clock::now();
+    std::size_t next_load = 0;
+    while (next_load < completed_loads.size() &&
+           applied_slices < max_slice_applies)
+    {
+      if (apply_budget_expired())
+      {
+        break;
+      }
+      AsyncChunkLoadResult &load = completed_loads[next_load++];
+      ++applied_slices;
       const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
       auto pending_it = PendingAsyncColumnLoadSlices.find(ground);
       if (pending_it == PendingAsyncColumnLoadSlices.end())
       {
+        if (apply_budget_expired())
+        {
+          break;
+        }
         continue;
       }
 
       PendingAsyncColumnLoadState &state = pending_it->second;
-      const ChunkDiskFormat disk_format =
-          ChunkStorage->DetectFormatOnDisk(WorldFolderPath, load.coord);
+      if (trace_async_io)
+      {
+        ++state.timing_slice_count;
+        state.format_detect_ms += load.formatDetectMs;
+        if (load.workerStartedAt != std::chrono::steady_clock::time_point{} &&
+            load.submittedAt != std::chrono::steady_clock::time_point{})
+        {
+          const double worker_queue_ms =
+              std::chrono::duration<double, std::milli>(load.workerStartedAt -
+                                                        load.submittedAt)
+                  .count();
+          state.worker_queue_ms += worker_queue_ms;
+          state.worker_queue_max_ms =
+              std::max(state.worker_queue_max_ms, worker_queue_ms);
+        }
+        state.file_open_ms += load.fileOpenMs;
+        state.file_read_ms += load.fileReadMs;
+        state.file_read_max_ms =
+            std::max(state.file_read_max_ms, load.fileReadMs);
+        state.deserialize_ms += load.deserializeMs;
+        state.deserialize_max_ms =
+            std::max(state.deserialize_max_ms, load.deserializeMs);
+        if (load.workerFinishedAt != std::chrono::steady_clock::time_point{})
+        {
+          const double result_wait_ms =
+              std::chrono::duration<double, std::milli>(
+                  std::chrono::steady_clock::now() - load.workerFinishedAt)
+                  .count();
+          state.result_wait_ms += result_wait_ms;
+          state.result_wait_max_ms =
+              std::max(state.result_wait_max_ms, result_wait_ms);
+        }
+      }
+      // The requested format is already carried with a successful worker
+      // result. Re-check the filesystem only after a read failure, where the
+      // file may have disappeared between request and open.
+      ChunkDiskFormat disk_format = load.format;
+      if (!load.success && load.format != ChunkDiskFormat::Absent)
+      {
+        const auto probe_started =
+            trace_async_io ? std::chrono::steady_clock::now()
+                           : std::chrono::steady_clock::time_point{};
+        disk_format =
+            ChunkStorage->DetectFormatOnDisk(WorldFolderPath, load.coord);
+        if (trace_async_io)
+        {
+          const double probe_ms = std::chrono::duration<double, std::milli>(
+                                      std::chrono::steady_clock::now() -
+                                      probe_started)
+                                      .count();
+          state.disk_probe_ms += probe_ms;
+          state.disk_probe_max_ms =
+              std::max(state.disk_probe_max_ms, probe_ms);
+        }
+      }
       const uint64_t current_sequence =
           world.Streaming
               ? world.Streaming->GetChunkGenTokens().Current(ground).sequence
               : load.token.sequence;
       const bool token_valid = load.token.IsValidFor(ground, current_sequence);
 
+      const auto world_apply_started = std::chrono::steady_clock::now();
+      const auto apply_started_at =
+          trace_async_io ? std::chrono::steady_clock::now()
+                         : std::chrono::steady_clock::time_point{};
       if (load.success && token_valid && world.BlockRegistry)
       {
-        const UChunkBuffer buffer = ChunkStorage->DeserializeChunk(
-            load.payload, load.coord, load.format, *world.BlockRegistry);
-        if (!buffer.IsEmpty())
+        const UChunkBuffer *buffer = load.decodedBuffer.get();
+        if (buffer && !buffer->IsEmpty())
         {
-          buffer.ApplyTo(world.BlockWorld);
-          if (buffer.HasChunkLightData())
+          buffer->ApplyToChunk(world.BlockWorld, load.coord);
+          if (buffer->HasChunkLightData())
           {
             state.had_disk_light = true;
           }
@@ -3389,27 +3907,83 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
       {
         state.had_disk_read_failure = true;
       }
+      metrics.world_apply_ms +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - world_apply_started)
+              .count();
+      if (trace_async_io)
+      {
+        const double apply_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - apply_started_at)
+                .count();
+        state.apply_ms += apply_ms;
+        state.apply_max_ms = std::max(state.apply_max_ms, apply_ms);
+        const double deserialize_apply_ms = load.deserializeMs + apply_ms;
+        state.deserialize_apply_ms += deserialize_apply_ms;
+        state.deserialize_apply_max_ms =
+            std::max(state.deserialize_apply_max_ms, deserialize_apply_ms);
+      }
 
       --state.remaining_results;
       if (state.remaining_results > 0)
       {
+        if (apply_budget_expired())
+        {
+          break;
+        }
         continue;
       }
 
       const PendingAsyncColumnLoadState finished = state;
       PendingAsyncColumnLoadSlices.erase(pending_it);
+      const auto finalize_started = std::chrono::steady_clock::now();
       FinalizeAsyncTerrainColumnLoad(world, ground, finished);
+      metrics.column_finalize_ms +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - finalize_started)
+              .count();
+
+      if (apply_budget_expired())
+      {
+        break;
+      }
+    }
+    metrics.processed_loads_n = next_load;
+    metrics.applied_slices_n = applied_slices;
+    metrics.requeued_loads_n = completed_loads.size() - next_load;
+    metrics.result_processing_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - result_apply_started)
+            .count();
+    if (next_load < completed_loads.size())
+    {
+      const auto requeue_started = std::chrono::steady_clock::now();
+      std::vector<AsyncChunkLoadResult> deferred;
+      deferred.reserve(completed_loads.size() - next_load);
+      for (std::size_t i = next_load; i < completed_loads.size(); ++i)
+      {
+        deferred.push_back(std::move(completed_loads[i]));
+      }
+      AsyncChunkIo->RequeueLoads(
+          std::move(deferred), &metrics.result_requeue_mutex_wait_ms,
+          &metrics.result_requeue_mutex_held_ms);
+      metrics.result_requeue_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - requeue_started)
+              .count();
     }
 
+    const auto save_drain_started = std::chrono::steady_clock::now();
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
     {
-      if (ChunkStorage->GetSettings().writeFormat == ChunkWriteFormat::Binary &&
-          ChunkStorage->GetSettings().deleteLegacyJsonOnBinarySave)
+      if (!save.cleanupOnly)
       {
-        const std::string legacy_json = ChunkStorage->ChunkFilePath(
-            WorldFolderPath, save.coord, ChunkDiskFormat::Json);
-        std::error_code ec;
-        std::filesystem::remove(legacy_json, ec);
+        ++metrics.saves_processed_n;
+      }
+      if (save.success && !save.cleanupOnly)
+      {
+        ChunkStorage->RecordChunkSliceSaved(save.worldFolder, save.coord);
       }
       auto pending_it = PendingAsyncColumnSaveSlices.find(save.groundCoord);
       if (pending_it != PendingAsyncColumnSaveSlices.end())
@@ -3425,15 +3999,96 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
       {
         ChunkStorage->ClearColumnSavePending(save.groundCoord);
       }
+      std::string outcome;
+      std::string details;
+      if (save.cleanupOnly)
+      {
+        outcome = save.success ? "stale_cleanup_done" : "stale_cleanup_failed";
+        details = "operation=" + save.cleanupOperation +
+                  " slices=" + std::to_string(save.cleanupSliceCount) +
+                  " duration_ms=" + std::to_string(save.cleanupMs);
+      }
+      else
+      {
+        outcome = save.success ? "slice_written" : "slice_failed";
+        details = "file=" + save.filePath;
+      }
+      if (!save.error.empty())
+      {
+        details += " error=" + save.error;
+      }
+      details += " pending_columns=" +
+                 std::to_string(PendingAsyncColumnSaveSlices.size()) +
+                 " io_jobs=" +
+                 std::to_string(AsyncChunkIo->GetPendingJobCount()) +
+                 " io_active=" +
+                 std::to_string(AsyncChunkIo->GetActiveJobCount()) +
+                 " io_load_jobs=" +
+                 std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
+                 " io_background_jobs=" +
+                 std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount());
+      LogWorldColumnSave(outcome.c_str(), save.coord, details,
+                         !save.success);
     }
+    metrics.save_drain_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - save_drain_started)
+            .count();
   }
+  const auto light_flags_save_started = std::chrono::steady_clock::now();
   SaveColumnLightFlagsIfDirty();
+  metrics.light_flags_save_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - light_flags_save_started)
+          .count();
+  const auto queue_snapshot_started = std::chrono::steady_clock::now();
+  if (AsyncChunkIo)
+  {
+    const JobThreadPoolSnapshot load = AsyncChunkIo->GetLoadPoolSnapshot();
+    const JobThreadPoolSnapshot background =
+        AsyncChunkIo->GetBackgroundPoolSnapshot();
+    metrics.load_pending_jobs_n = load.pending;
+    metrics.load_active_jobs_n = load.active;
+    metrics.load_workers_n = load.workers;
+    metrics.background_pending_jobs_n = background.pending;
+    metrics.background_active_jobs_n = background.active;
+    metrics.background_workers_n = background.workers;
+    metrics.load_result_queue_depth_n =
+        AsyncChunkIo->GetLoadResultQueueDepth();
+    metrics.save_result_queue_depth_n =
+        AsyncChunkIo->GetSaveResultQueueDepth();
+    const AsyncChunkLoadQueuePushMetrics push_metrics =
+        AsyncChunkIo->TakeLoadResultPushMetrics();
+    metrics.load_result_push_mutex_wait_ms = push_metrics.mutex_wait_ms;
+    metrics.load_result_push_mutex_held_ms = push_metrics.mutex_held_ms;
+    metrics.load_result_push_mutex_wait_max_ms =
+        push_metrics.mutex_wait_max_ms;
+    metrics.load_result_push_mutex_held_max_ms =
+        push_metrics.mutex_held_max_ms;
+    metrics.load_result_push_n = push_metrics.push_count;
+  }
+  metrics.queue_snapshot_ms = std::chrono::duration<double, std::milli>(
+                                  std::chrono::steady_clock::now() -
+                                  queue_snapshot_started)
+                                  .count();
+  metrics.tick_wall_ms = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - tick_started)
+                             .count();
+  const double attributed_ms =
+      metrics.light_flags_result_drain_ms + metrics.discard_cancelled_ms +
+      metrics.result_selection_ms + metrics.result_processing_ms +
+      metrics.result_requeue_ms + metrics.save_drain_ms +
+      metrics.light_flags_save_ms + metrics.queue_snapshot_ms;
+  metrics.unattributed_ms =
+      (std::max)(0.0, metrics.tick_wall_ms - attributed_ms);
+  return metrics;
 }
 
 bool UWorldPersistence::IsAsyncChunkIoQuiescent() const
 {
   if (!PendingAsyncColumnLoadSlices.empty() ||
-      !PendingAsyncColumnSaveSlices.empty())
+      !PendingAsyncColumnSaveSlices.empty() || LightCompleteSaveInFlight ||
+      (!WorldFolderPath.empty() && LightCompleteDirty))
   {
     return false;
   }
@@ -3442,7 +4097,39 @@ bool UWorldPersistence::IsAsyncChunkIoQuiescent() const
     return true;
   }
   return AsyncChunkIo->CompletedLoadsEmpty() &&
-         AsyncChunkIo->CompletedSavesEmpty();
+         AsyncChunkIo->CompletedSavesEmpty() &&
+         AsyncChunkIo->CompletedColumnLightFlagsSavesEmpty();
+}
+
+void UWorldPersistence::TraceAsyncChunkIoShutdownState() const
+{
+  if (!IsWorldColumnSourceTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      "outcome=shutdown_state pending_save_columns=" +
+      std::to_string(PendingAsyncColumnSaveSlices.size()) +
+      " pending_disk_columns=" +
+      std::to_string(PendingAsyncColumnLoadSlices.size()) +
+      " io_jobs=" +
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetPendingJobCount() : 0) +
+      " io_active=" +
+      std::to_string(AsyncChunkIo ? AsyncChunkIo->GetActiveJobCount() : 0) +
+      " ready_saves=" +
+      std::to_string(AsyncChunkIo
+                         ? AsyncChunkIo->GetSaveResultQueueDepth()
+                         : 0) +
+      " ready_loads=" +
+      std::to_string(AsyncChunkIo
+                         ? AsyncChunkIo->GetLoadResultQueueDepth()
+                         : 0) +
+      " light_flags_in_flight=" +
+      std::to_string(LightCompleteSaveInFlight ? 1 : 0) +
+      " light_flags_dirty=" +
+      std::to_string(LightCompleteDirty ? 1 : 0);
+  CubatariumLogInfo("WorldColumnSave", message);
+  std::cerr << "[WorldColumnSave] " << message << std::endl;
 }
 
 bool UWorldPersistence::TickDrainAsyncChunkIo(UWorld &world, int max_iterations)
@@ -3466,23 +4153,29 @@ bool UWorldPersistence::TickDrainAsyncChunkIo(UWorld &world, int max_iterations)
 
 void UWorldPersistence::FlushAsyncChunkIo(UWorld &world)
 {
-  if (!AsyncChunkIo)
+  if (AsyncChunkIo)
   {
-    return;
-  }
-  constexpr int kMaxDrainIterations = 4096;
-  for (int i = 0; i < kMaxDrainIterations; ++i)
-  {
-    if (TickDrainAsyncChunkIo(world, 1))
+    constexpr int kMaxDrainIterations = 4096;
+    for (int i = 0; i < kMaxDrainIterations; ++i)
     {
-      AsyncChunkIo->WaitIdle();
-      if (IsAsyncChunkIoQuiescent())
+      if (TickDrainAsyncChunkIo(world, 1))
       {
-        break;
+        AsyncChunkIo->WaitIdle();
+        if (IsAsyncChunkIoQuiescent())
+        {
+          break;
+        }
       }
     }
   }
-  SaveColumnLightFlagsIfDirty();
+  if (!FlushColumnLightFlagsForWorldSwitch())
+  {
+    const std::string message =
+        "outcome=light_flags_flush_timeout folder=" + WorldFolderPath +
+        " revision=" + std::to_string(LightCompleteRevision);
+    CubatariumLogInfo("WorldColumnSave", message);
+    std::cerr << "[WorldColumnSave] " << message << std::endl;
+  }
 }
 
 void UWorldPersistence::AbortAsyncChunkIo()
@@ -3493,12 +4186,27 @@ void UWorldPersistence::AbortAsyncChunkIo()
 bool UWorldPersistence::AbortAsyncChunkIoFor(
     const std::chrono::milliseconds timeout)
 {
+  bool cancelled_loads = false;
+  for (auto &entry : PendingAsyncColumnLoadSlices)
+  {
+    if (entry.second.cancellation)
+    {
+      entry.second.cancellation->store(true, std::memory_order_release);
+      cancelled_loads = true;
+    }
+  }
+  if (cancelled_loads && AsyncChunkIo)
+  {
+    AsyncChunkIo->NoteLoadCancellation();
+    (void)AsyncChunkIo->DiscardCancelledLoads();
+  }
   PendingAsyncColumnLoadSlices.clear();
   PendingAsyncColumnSaveSlices.clear();
   if (!AsyncChunkIo)
   {
     return true;
   }
+  (void)AsyncChunkIo->DiscardCancelledLoads();
   (void)AsyncChunkIo->DrainLoads();
   (void)AsyncChunkIo->DrainSaves();
   AsyncChunkIo->CancelPending();
@@ -3507,6 +4215,7 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
     return true;
   }
   const bool idle = AsyncChunkIo->WaitIdleFor(timeout);
+  (void)AsyncChunkIo->DiscardCancelledLoads();
   (void)AsyncChunkIo->DrainLoads();
   (void)AsyncChunkIo->DrainSaves();
   return idle;
@@ -3515,6 +4224,7 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
 void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
                                                       glm::ivec3 ground_coord)
 {
+  EnsureChunkIoInitialized();
   if (!AsyncChunkIo || !ChunkStorage || !world.BlockRegistry)
   {
     return;
@@ -3529,14 +4239,35 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
     return;
   }
   PendingAsyncColumnLoadState state;
+  const bool trace_async_io = IsWorldColumnSourceTraceEnabled();
+  const auto disk_discovery_started =
+      trace_async_io ? std::chrono::steady_clock::now()
+                     : std::chrono::steady_clock::time_point{};
   state.highest_cy_on_disk =
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
+  if (trace_async_io)
+  {
+    state.disk_discovery_ms = std::chrono::duration<double, std::milli>(
+                                  std::chrono::steady_clock::now() -
+                                  disk_discovery_started)
+                                  .count();
+  }
   if (state.highest_cy_on_disk < 0)
   {
+    LogWorldColumnSource("procedural", "disk_miss", ground_coord,
+                         "highest_cy=-1 pending_save=0 discovery_ms=" +
+                             std::to_string(state.disk_discovery_ms));
     return;
   }
+  state.requested_at = std::chrono::steady_clock::now();
   state.remaining_results = state.highest_cy_on_disk + 1;
+  state.cancellation = std::make_shared<std::atomic<bool>>(false);
   PendingAsyncColumnLoadSlices[ground_coord] = state;
+  LogWorldColumnSource(
+      "disk", "queued", ground_coord,
+      "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+          " slices=" + std::to_string(state.remaining_results) +
+          " discovery_ms=" + std::to_string(state.disk_discovery_ms));
 
   // I/O order: player cy / sea surface first, then expand. Finalize still waits
   // for the full column, but near-surface slices land in RAM sooner and mesh
@@ -3576,13 +4307,15 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   for (int cy : cy_order)
   {
     AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
-                              *ChunkStorage, WorldFolderPath, token);
+                              *ChunkStorage, *world.BlockRegistry,
+                              WorldFolderPath, token, state.cancellation);
   }
 }
 
 void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
                                                       glm::ivec3 ground_coord)
 {
+  const auto request_started = std::chrono::steady_clock::now();
   if (!AsyncChunkIo || !ChunkStorage || !world.BlockRegistry)
   {
     return;
@@ -3597,23 +4330,61 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     return;
   }
   const int max_height = world.ProceduralTemplate.MaxHeight;
-  if (!IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height))
+  const auto completeness_started = std::chrono::steady_clock::now();
+  const bool complete =
+      IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height);
+  const double completeness_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - completeness_started)
+          .count();
+  if (!complete)
   {
-    RemoveTerrainColumnFromDisk(ground_coord, max_height);
+    ChunkStorage->MarkColumnSavePending(ground_coord);
+    PendingAsyncColumnSaveSlices[ground_coord] = 1;
+    AsyncChunkIo->RequestRemoveTerrainColumn(
+        ground_coord, max_height, *ChunkStorage, WorldFolderPath);
+    if (IsWorldColumnSourceTraceEnabled())
+    {
+      LogWorldColumnSave("discard_incomplete_queued", ground_coord,
+                         "max_height=" + std::to_string(max_height) +
+                             " complete_ms=" +
+                             std::to_string(completeness_ms) +
+                             " cleanup_operation=full_column" +
+                             " total_ms=" +
+                             std::to_string(
+                                 std::chrono::duration<double, std::milli>(
+                                     std::chrono::steady_clock::now() -
+                                     request_started)
+                                     .count()) +
+                             " world_folder=" + WorldFolderPath);
+    }
     return;
   }
   const int max_cy = (max_height + CHUNK_SIZE - 1) / CHUNK_SIZE;
+  const auto disk_index_started = std::chrono::steady_clock::now();
   const int highest_on_disk =
       ChunkStorage->GetHighestChunkSliceOnDisk(WorldFolderPath, ground_coord);
+  const double disk_index_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - disk_index_started)
+          .count();
+  const auto highest_non_air_started = std::chrono::steady_clock::now();
   const int highest_non_air =
       GetHighestNonAirChunkSlice(world.BlockWorld, ground_coord, max_height);
+  const double highest_non_air_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - highest_non_air_started)
+          .count();
   int highest_to_save = std::max(highest_on_disk, highest_non_air);
   if (highest_to_save < 0)
   {
+    LogWorldColumnSave("skip_empty", ground_coord,
+                       "world_folder=" + WorldFolderPath);
     return;
   }
   highest_to_save = std::min(highest_to_save, max_cy);
 
+  const auto materialize_started = std::chrono::steady_clock::now();
   int save_count = 0;
   for (int cy = 0; cy <= highest_to_save; ++cy)
   {
@@ -3624,8 +4395,22 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     }
     ++save_count;
   }
+  const double materialize_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - materialize_started)
+          .count();
+  const int stale_slice_count =
+      std::max(0, max_cy - highest_to_save);
+  const int cleanup_operation_count = stale_slice_count > 0 ? 1 : 0;
+  const auto pending_started = std::chrono::steady_clock::now();
   ChunkStorage->MarkColumnSavePending(ground_coord);
-  PendingAsyncColumnSaveSlices[ground_coord] = save_count;
+  PendingAsyncColumnSaveSlices[ground_coord] =
+      save_count + cleanup_operation_count;
+  const double pending_setup_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - pending_started)
+          .count();
+  const auto enqueue_started = std::chrono::steady_clock::now();
   for (int cy = 0; cy <= highest_to_save; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
@@ -3634,10 +4419,40 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
         *world.BlockRegistry,
         world.Streaming->GetChunkGenTokens().Current(ground_coord));
   }
-  for (int cy = highest_to_save + 1; cy <= max_cy; ++cy)
+  const double snapshot_enqueue_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - enqueue_started)
+          .count();
+  const auto cleanup_enqueue_started = std::chrono::steady_clock::now();
+  if (cleanup_operation_count > 0)
   {
-    ChunkStorage->RemoveChunkSliceFromDisk(
-        WorldFolderPath, glm::ivec3(ground_coord.x, cy, ground_coord.z));
+    AsyncChunkIo->RequestRemoveChunkSlices(
+        ground_coord, highest_to_save + 1, max_cy, *ChunkStorage,
+        WorldFolderPath);
+  }
+  const double cleanup_enqueue_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - cleanup_enqueue_started)
+          .count();
+  if (IsWorldColumnSourceTraceEnabled())
+  {
+    LogWorldColumnSave(
+        "queued", ground_coord,
+        "slices=" + std::to_string(save_count) +
+            " highest_cy=" + std::to_string(highest_to_save) +
+            " stale_slices=" + std::to_string(stale_slice_count) +
+            " complete_ms=" + std::to_string(completeness_ms) +
+            " disk_index_ms=" + std::to_string(disk_index_ms) +
+            " highest_non_air_ms=" + std::to_string(highest_non_air_ms) +
+            " materialize_ms=" + std::to_string(materialize_ms) +
+            " snapshot_enqueue_ms=" + std::to_string(snapshot_enqueue_ms) +
+            " pending_setup_ms=" + std::to_string(pending_setup_ms) +
+            " cleanup_enqueue_ms=" + std::to_string(cleanup_enqueue_ms) +
+            " total_ms=" +
+            std::to_string(std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now() - request_started)
+                               .count()) +
+            " world_folder=" + WorldFolderPath);
   }
 }
 
@@ -3647,7 +4462,82 @@ void UWorldPersistence::CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord)
   {
     ground_coord.y = 0;
   }
-  PendingAsyncColumnLoadSlices.erase(ground_coord);
+  const auto pending = PendingAsyncColumnLoadSlices.find(ground_coord);
+  if (pending == PendingAsyncColumnLoadSlices.end())
+  {
+    return;
+  }
+  const PendingAsyncColumnLoadState state = pending->second;
+  if (state.cancellation)
+  {
+    state.cancellation->store(true, std::memory_order_release);
+  }
+  PendingAsyncColumnLoadSlices.erase(pending);
+  if (AsyncChunkIo)
+  {
+    AsyncChunkIo->NoteLoadCancellation();
+    (void)AsyncChunkIo->DiscardCancelledLoads();
+  }
+  const double elapsed_ms =
+      state.requested_at == std::chrono::steady_clock::time_point{}
+          ? 0.0
+          : std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - state.requested_at)
+                .count();
+  LogWorldColumnSource(
+      "disk", "cancelled_unloaded", ground_coord,
+      "remaining_slices=" + std::to_string(state.remaining_results) +
+          " elapsed_ms=" + std::to_string(elapsed_ms));
+}
+
+int UWorldPersistence::CancelAsyncTerrainColumnLoadsOutsideRadius(
+    UWorld &world, glm::ivec3 center, int radius_chunks)
+{
+  center.y = 0;
+  const int radius = std::max(0, radius_chunks);
+  int cancelled = 0;
+  for (auto pending = PendingAsyncColumnLoadSlices.begin();
+       pending != PendingAsyncColumnLoadSlices.end();)
+  {
+    const glm::ivec3 ground = pending->first;
+    const int distance =
+        std::max(std::abs(ground.x - center.x), std::abs(ground.z - center.z));
+    if (distance <= radius)
+    {
+      ++pending;
+      continue;
+    }
+
+    const PendingAsyncColumnLoadState state = pending->second;
+    if (state.cancellation)
+    {
+      state.cancellation->store(true, std::memory_order_release);
+    }
+    pending = PendingAsyncColumnLoadSlices.erase(pending);
+    if (world.Streaming)
+    {
+      world.Streaming->GetChunkGenTokens().Bump(ground);
+    }
+    const double elapsed_ms =
+        state.requested_at == std::chrono::steady_clock::time_point{}
+            ? 0.0
+            : std::chrono::duration<double, std::milli>(
+                  std::chrono::steady_clock::now() - state.requested_at)
+                  .count();
+    LogWorldColumnSource(
+        "disk", "cancelled_out_of_range", ground,
+        "distance_chunks=" + std::to_string(distance) +
+            " radius_chunks=" + std::to_string(radius) +
+            " remaining_slices=" + std::to_string(state.remaining_results) +
+            " elapsed_ms=" + std::to_string(elapsed_ms));
+    ++cancelled;
+  }
+  if (cancelled > 0 && AsyncChunkIo)
+  {
+    AsyncChunkIo->NoteLoadCancellation();
+    (void)AsyncChunkIo->DiscardCancelledLoads();
+  }
+  return cancelled;
 }
 
 bool UWorldPersistence::IsTerrainColumnDiskLoadPending(

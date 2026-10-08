@@ -33,7 +33,12 @@ public:
   BlockQueryResult QueryBlock(glm::ivec3 pos) const;
   FluidCellState GetFluidState(glm::ivec3 pos) const;
   void SetBlock(glm::ivec3 pos, BlockId Id);
+  /// Apply a block when the owning chunk is already known by the caller.
+  /// This avoids repeating the chunk-coordinate hash lookup for bulk chunk IO.
+  void SetBlockInChunk(UChunk &chunk, glm::ivec3 pos, BlockId Id);
   void SetFluidState(glm::ivec3 pos, FluidCellState state);
+  void SetFluidStateInChunk(UChunk &chunk, glm::ivec3 pos,
+                            FluidCellState state);
   void ClearFluidState(glm::ivec3 pos);
   bool IsAir(glm::ivec3 pos) const;
   void Clear();

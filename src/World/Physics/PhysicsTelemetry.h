@@ -13,6 +13,27 @@ struct PhysicsTelemetry
   double MovementStepMs{0.0};
   double StreamMs{0.0};
   double MeshEmergeMs{0.0};
+  /// Partition of MeshEmergeMs into coordinator work, telemetry closeout,
+  /// and the player-relight mesh burst.
+  double MeshEmergeCoordinatorMs{0.0};
+  double MeshEmergePostTelemetryMs{0.0};
+  /// Subdivision of post-tick telemetry closeout. The remainder captures
+  /// closeout work not assigned to one of the measured snapshot groups.
+  double MeshEmergePostStageSampleMs{0.0};
+  double MeshEmergePostGpuCountsMs{0.0};
+  double MeshEmergePostMeshSnapshotMs{0.0};
+  double MeshEmergePostCaptureStoreMs{0.0};
+  double MeshEmergePostTailSnapshotMs{0.0};
+  double MeshEmergePostUnattributedMs{0.0};
+  double MeshEmergePlayerRelightBurstMs{0.0};
+  double ColumnEmergeStageSampleMs{0.0};
+  double ColumnEmergeFocusJobsMs{0.0};
+  double ColumnEmergeShadowCensusMs{0.0};
+  double ColumnEmergeDemandBreakdownMs{0.0};
+  double ColumnEmergeDemandStopMs{0.0};
+  double ChunkDemandMaintenanceMs{0.0};
+  int ColumnEmergeStageSampleCount{0};
+  double ColumnEmergeStageSampleAgeMs{0.0};
   double BlockStepMs{0.0};
   double DrainStepMs{0.0};
   double FluidStepMs{0.0};
@@ -210,8 +231,17 @@ struct PhysicsTelemetry
   int EnterMeshDirtyResidualN{0};
   /// Phase 5.6.1: sampled CountEnterVisibilityDebt for period FPM / latch timing.
   int VisibilityDebt{0};
+  /// True while VisibilityDebt contains a sample from the active enter/catch-up path.
+  int VisibilityDebtSampleValid{0};
   /// Phase 5.7.3: CountUnready outside R=4 (diagnose only; does not gate clear).
   int VisibilityDebtHinterland{0};
+  /// Kept invalid in the runtime streaming loop; the old R=8 diagnostic scan
+  /// was an unbudgeted O(R^2) world walk on the game thread.
+  int VisibilityDebtHinterlandSampleValid{0};
+  /// Cost of a CountEnterVisibilityDebt sample, when the enter latch needs it.
+  double VisibilityDebtProbeMs{0.0};
+  /// Cost of the NeedsSpawnRingCatchUp decision (includes any readiness scan).
+  double SpawnCatchUpProbeMs{0.0};
   /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket), cumulative.
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
@@ -232,11 +262,80 @@ struct PhysicsTelemetry
   double StreamerPrefetchAheadMs{0.0};
   /// Full UpdateStreaming wall (WorldViewBinding); not an overwrite of core.
   double UpdateStreamingMs{0.0};
+  /// Coarse disjoint wall partitions around Streamer::Update and its cancels.
+  double UpdateStreamingPreCoreMs{0.0};
+  double UpdateStreamingPostCoreMs{0.0};
+  /// Time spent finding the terrain surface for altitude-adaptive fog.
+  double AltitudeSurfaceQueryMs{0.0};
+  /// Main-thread duration of the full TickAsyncChunkSystems phase.
+  double AsyncChunkSystemsMs{0.0};
+  /// Partition of WorldStreaming::TickAsyncChunkSystems wall time.
+  /// PreScheduler includes pressure refresh and policy/budget selection.
+  double AsyncChunkPreSchedulerMs{0.0};
+  /// Full ChunkLoadScheduler::Tick wall, including its queues.
+  double AsyncChunkSchedulerTickMs{0.0};
+  /// Remaining WorldStreaming async work after scheduler Tick through closeout.
+  double AsyncChunkPostSchedulerMs{0.0};
+  /// Main-thread time spent draining/applying completed async chunk-I/O results.
+  /// This does not measure disk-worker read/write latency.
+  double AsyncChunkIoDrainMs{0.0};
+  /// Internal wall time and unassigned remainder of TickAsyncChunkIo.
+  double AsyncChunkIoTickWallMs{0.0};
+  double AsyncChunkIoUnattributedMs{0.0};
+  double AsyncChunkIoLightFlagsResultDrainMs{0.0};
+  double AsyncChunkIoQueueSnapshotMs{0.0};
+  /// Subphases and counts from TickAsyncChunkIo; world-apply/finalize are
+  /// nested inside result processing, while other phase times are sequential.
+  double AsyncChunkIoDiscardCancelledMs{0.0};
+  double AsyncChunkIoResultSelectionMs{0.0};
+  double AsyncChunkIoResultSelectionMutexWaitMs{0.0};
+  double AsyncChunkIoResultSelectionMutexHeldMs{0.0};
+  double AsyncChunkIoResultProcessingMs{0.0};
+  double AsyncChunkIoWorldApplyMs{0.0};
+  double AsyncChunkIoColumnFinalizeMs{0.0};
+  double AsyncChunkIoResultRequeueMs{0.0};
+  double AsyncChunkIoResultRequeueMutexWaitMs{0.0};
+  double AsyncChunkIoResultRequeueMutexHeldMs{0.0};
+  /// Worker-side completed-load queue Push lock timings since the last tick.
+  double AsyncChunkIoLoadResultPushMutexWaitMs{0.0};
+  double AsyncChunkIoLoadResultPushMutexHeldMs{0.0};
+  double AsyncChunkIoLoadResultPushMutexWaitMaxMs{0.0};
+  double AsyncChunkIoLoadResultPushMutexHeldMaxMs{0.0};
+  double AsyncChunkIoSaveDrainMs{0.0};
+  double AsyncChunkIoLightFlagsSaveMs{0.0};
+  int AsyncChunkIoLoadResultPushN{0};
+  int AsyncChunkIoCancelledDiscardN{0};
+  int AsyncChunkIoReadyLoadsBeforeN{0};
+  int AsyncChunkIoSelectedLoadsN{0};
+  int AsyncChunkIoProcessedLoadsN{0};
+  int AsyncChunkIoRequeuedLoadsN{0};
+  int AsyncChunkIoAppliedSlicesN{0};
+  int AsyncChunkIoSavesProcessedN{0};
+  int AsyncChunkIoLoadPendingJobsN{0};
+  int AsyncChunkIoLoadActiveJobsN{0};
+  int AsyncChunkIoLoadWorkersN{0};
+  int AsyncChunkIoBackgroundPendingJobsN{0};
+  int AsyncChunkIoBackgroundActiveJobsN{0};
+  int AsyncChunkIoBackgroundWorkersN{0};
+  int AsyncChunkIoLoadResultQueueDepthN{0};
+  int AsyncChunkIoSaveResultQueueDepthN{0};
+  int AsyncChunkIoApplyTimeBudgetHit{0};
+  /// Legacy alias for AsyncChunkSystemsMs, retained for log compatibility.
   double AsyncIoMs{0.0};
   double RelightDrainMs{0.0};
   /// P2: Capture (DrainRelightQueues) vs Apply (DrainAsyncRelightResults).
   double RelightCaptureMs{0.0};
+  /// Synchronous enqueue work split into global-lock wait, snapshot copy,
+  /// dependency stamps, and submission/handoff.
+  double RelightCaptureLockWaitMs{0.0};
+  double RelightSnapshotCopyMs{0.0};
+  double RelightDependencyStampMs{0.0};
+  double RelightSubmitSetupMs{0.0};
+  double RelightQueueSubmitMs{0.0};
   double RelightApplyMs{0.0};
+  /// Apply-side pre-loop policy and input-validation work.
+  double RelightApplyPolicyMs{0.0};
+  double RelightApplyValidationMs{0.0};
   /// FZ2.6-Perf0: light merge only (telem for budget math).
   double RelightApplyLightMs{0.0};
   /// FZ2.6-Perf0: MarkRelit+Dirty within same atomic iteration.
@@ -305,7 +404,9 @@ struct PhysicsTelemetry
   int EditLightEmission{0};
   /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).
   double MeshDirtyTickMs{0.0};
-  /// Cruise wall A1: mesh_dirty_tick substages.
+  /// Time before the policy-prune passes inside RebuildDirtyChunksWithStats.
+  double MeshDirtyPrePruneMs{0.0};
+  /// Cruise wall A1: time inside dirty policy-prune passes.
   double MeshDirtyPruneMs{0.0};
   int MeshDirtyPruneN{0};
   double MeshDirtySortMs{0.0};
@@ -445,6 +546,11 @@ struct PhysicsTelemetry
   double PrepRefreshPressureMs{0.0};
   /// I9-A: RefreshStreamingPressure sub-timers (sum ≈ PrepRefreshPressureMs).
   double PrepRefreshMissMs{0.0};
+  /// Nested miss-path timings to attribute focus-boundary readiness spikes.
+  double PrepRefreshMissRadiusQueryMs{0.0};
+  double PrepRefreshScreenRayProbeMs{0.0};
+  double PrepRefreshFindNearestMs{0.0};
+  double PrepRefreshMissOtherMs{0.0};
   double PrepRefreshPendingMs{0.0};
   double PrepRefreshStickyMs{0.0};
   double PrepRefreshUnfinishedMs{0.0};
@@ -587,6 +693,11 @@ struct PhysicsTelemetry
   /// Streaming gate diagnostics (filled each UpdateStreaming).
   int StreamLoads{0};
   int StreamAsyncQueued{0};
+  int StreamUnloads{0};
+  int StreamSaves{0};
+  int StreamUnloadCandidates{0};
+  int StreamUnloadVetoes{0};
+  int StreamUnloadActiveWorkInvalidated{0};
   /// R4.6.2: loads + async_queued (honest ingress vs sync-only StreamLoads).
   int StreamIngressOps{0};
   /// Era25 I-F1: disk Ensure complete this frame (honest vs stream_loads).
@@ -646,6 +757,36 @@ struct PhysicsTelemetry
   int ColumnFlowDrainedN{0};
   /// Tickets requeued because their work class exceeded the frame deadline.
   int ColumnFlowDeferredN{0};
+  /// Peak queue pressure sampled at ColumnFlow drain entry this frame.
+  int ColumnFlowQueueLiveN{0};
+  int ColumnFlowQueueStaleHeapN{0};
+  int ColumnFlowProbedN{0};
+  int ColumnFlowCooldownDeferredN{0};
+  int ColumnFlowProbeBudgetHitN{0};
+  double ColumnFlowPostDeadlineUnitMsMax{0.0};
+  int ColumnFlowDrainRequestN{0};
+  int ColumnFlowCriticalUnitsAtEntryN{0};
+  int ColumnFlowCriticalUnitsAtExitN{0};
+  int ColumnFlowLiveFirstMeshN{0};
+  int ColumnFlowLiveRelightN{0};
+  int ColumnFlowLiveSeamN{0};
+  int ColumnFlowLivePromoteN{0};
+  int ColumnFlowProbedFirstMeshN{0};
+  int ColumnFlowProbedRelightN{0};
+  int ColumnFlowProbedSeamN{0};
+  int ColumnFlowProbedPromoteN{0};
+  int ColumnFlowDeferredFirstMeshN{0};
+  int ColumnFlowDeferredRelightN{0};
+  int ColumnFlowDeferredSeamN{0};
+  int ColumnFlowDeferredPromoteN{0};
+  int ColumnFlowDispatchedFirstMeshN{0};
+  int ColumnFlowDispatchedRelightN{0};
+  int ColumnFlowDispatchedSeamN{0};
+  int ColumnFlowDispatchedPromoteN{0};
+  double ColumnFlowDispatchFirstMeshMsMax{0.0};
+  double ColumnFlowDispatchRelightMsMax{0.0};
+  double ColumnFlowDispatchSeamMsMax{0.0};
+  double ColumnFlowDispatchPromoteMsMax{0.0};
   /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
   /// Alias docs: emerge_fsm_* — not ColumnJobGraph stages.
   int ColumnLightingN{0};

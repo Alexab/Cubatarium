@@ -15,6 +15,85 @@
 
 Рекомендация: оставить рабочими версионный async builder, immutable mesh snapshots, старый published mesh до успешной замены, CPU worker pool и уже защищённые camera/sort cache keys. Перестроить вокруг них lifecycle одного chunk-slice: единый demand/ticket, валидируемые входные версии, атомарная публикация, гарантированный ограниченный прогресс. Не добавлять новый слой readiness/watchdog поверх существующих.
 
+## Актуализация аудита 2026-10-03
+
+Этот документ сохраняет исторический срез аудита от 24 сентября. Текущая ветка
+`codex_audit2` основана на merge `185e2f08`; актуальные замеры и последовательность
+работ ведутся в [плане от 3 октября](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+
+Для сохранённого World_164 первоначальный вход синхронно читал все 121 стартовую
+колонку с диска и занимал 35,28 с в фазе `spatial_chunks`. После переиспользования
+AsyncChunkIO та же фаза заняла 1,56 с; все 121 колонки пришли с диска с валидным
+`disk_light=1`, а общий вход до `prepare_view` сократился примерно с 39,12 до
+5,70 с. Следовательно, на этом этапе мир действительно загружался с диска, а
+задержка была в синхронном начальном чтении. Это не доказывает, откуда позднее
+поступают колонки на дальнем маршруте.
+
+На интерактивном новом мире генерация заняла 6,08 с на четырёх worker-потоках,
+затем mesh warmup — 10,66 с, а `prepare_view` — ещё 31,11 с. Диагностика около
+конца prepare-view показывала необнулённые visibility/mesh долги и неготовый
+spawn ring. Значит, ускорение disk load не решает старт свежего мира. Отдельно
+проверено, что CLI create принудительно отключает async и потому не подходит для
+оценки штатной генерации.
+
+Включена необязательная трасса источника колонки через
+`CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. Она позволяет различить disk hit/miss и
+procedural commit с координатой и стадиями очереди, чтения/генерации и apply.
+Пока нет сквозной привязки к mesh source revision, GPU публикации и цвету пикселя.
+Поэтому потемнение после длительного полёта нельзя объяснить выгрузкой на диск
+или генерацией «с нуля» на основании только этих startup-прогонов. Предыдущий
+M367 evidence по тёмным пикселям указывал на существующую opaque геометрию,
+валидные face indices и MDI-команду, то есть отдельно остаётся гипотеза о свете,
+неактуальном mesh или состоянии публикации. Причину должен установить дальний
+coordinate-correlated run.
+
+Контрольный прямой run 3 октября прошёл 1 696 блоков на обычной скорости и
+показал 121 стартовый disk load плюс 947 процедурных commit на движущемся
+фронтире. Медианная скорость около 6 блоков/с; за 300 с прежнего `far` сценария
+checkpoint 8 192 недостижим. Параметр `--reverse-course-after-sec` теперь даёт
+способ без teleport вернуться по уже пройденному пути и увидеть, загружаются ли
+выселенные колонки с диска. Его результат ещё не получен.
+
+На прямом участке visual proxies остались красными (`unfinished_visual=27`,
+`unlit_max=40`, `chunk_not_ready_med=27`, stop convergence false), хотя
+`dark_face_stale_near_n=0` и медиана visible-black focus была 6. Это несовпадение
+подтверждает, что старые агрегаты не локализуют тусклую картинку. Участки с
+rendering debt нужно связывать с pixel/ray coordinate и `WorldColumnSource`.
+
+## Подтверждённый persistence bypass и исправление 2026-10-03
+
+Сравнили два одинаковых visible no-teleport круговых прогона на World_164. До
+исправления async `UChunkStreamer::EnsureChunkLoaded` передавал внешние колонки
+напрямую в `ChunkLoadScheduler`; эта ветка не вызывала `OnLoadChunk` и игнорировала
+уже существующие `.cchunk` файлы. Трасса дала 121 disk load только в стартовом
+кольце и 461 procedural commit на последующем круге. Между прогонами мы убедились,
+что колонные файлы этого коридора созданы.
+
+После добавления bounded `RequestAsyncTerrainColumnLoad` перед procedural fallback
+тот же участок дал 508 disk completions (121 стартовый + 387 в коридоре) и 46
+`disk_miss → procedural commit`. Координатное пересечение с прежним маршрутом:
+387 из ранее procedural колонок были прочитаны с диска. Все 508 загрузок завершены
+без retry/incomplete и с `disk_light=1`. Это подтверждает, что повторный проход
+может восстановить и voxel/light data из сохранения, а прежний async streaming
+этого не делал.
+
+Остались 46 координат, которые предыдущая версия генерировала, но в момент нового
+прохода файлов для них не было. Следует проверить, были ли они пустыми/незавершёнными
+или потеряли save при unload. Disk load p50/p95/max был 220/969/15 110 мс; максимум
+включает ожидание очереди, так что нужна отдельная latency-разбивка по приоритету.
+
+После фикса render gates остаются красными (`holes_rate=1.0`,
+`unfinished_visual=23`, `unlit_max=37`, stop convergence=false). Это закрывает один
+доказанный source-selection defect, но не всю проблему тёмных/пустых chunk views.
+Проверенный круг завершился в исходном focus, с `heading_deviation=0`; mouse drift
+в этом контролируемом сценарии не было. Повторить far маршрут ≥8 192 блоков после
+дальнейшего сокращения render debt.
+
+Сборка Visual Studio была фактически многопоточной: включён MSVC `/MP`, Release
+собран с `--parallel 8`, а интерактивное создание использовало четыре генераторных
+worker-потока. Полные экспериментальные скрипты и назначение каждого сохранены в
+[каталоге полётов](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
 ## Состояние репозитория и качество доказательств
 
 - HEAD — 40a9a56c, ветка на один коммит впереди origin/cursor_audit7_impl. Tracked-файлы не изменены; есть 948 untracked entries, включая .cursor/plans, полётные JSON/JSONL и временные анализаторы. Их не удалял и не редактировал.
@@ -2745,3 +2824,2607 @@ VisualObligation следует сделать derived state/policy для эт�
 - M367 оставил продуктовые ворота красными: `holes_rate=1.0`, near-focus hole periods >0 — `7` (corridor `2`), `fly_visible_black_max=22`, dirty median/max `108/215`, post-stop convergence=false; маршрут `7→−105`, 112 чанков / 1,792 блока, far checkpoint `8,192` не достигнут. Перелёт был видимым Release no-teleport, `process_rc=0`, без hang-kill, скорость median `5.19607` блока/с; collision counters по маршруту нулевые. Manifest SHA — commit `63426798`, EXE `6c6214e95a5ab02162c246327af0b58d5e7575263aa295ffec85f75fd19696cf`. Настройки после runner восстановлены к прежним SHA для config/users/world_data.
 - Вывод ограниченный: overlay-only повторные generic retries у выбранной incarnation существенно сократились, а следующий drawable publication подтверждён MDI и screen-ray/pixel probes; общий дефект графики не закрыт, и крупный маршрут остаётся с устойчивыми holes proxy и плохой stop convergence. Следующий шаг — записывать ground-column trigger в trace для `streamer_commit_sea_seam` и связывать draw-gate transitions с framebuffer pixel probes в окне target-координаты. Сравнение black samples должно учитывать валидность opaque surface, shader light, GPU face source и MDI command, а не только luminance.
 - Артефакты: [M366 report](../../bin/suite_reports/engine_refactor/m366_overlay_mask_tolerant_20261003.json), [M366 perf trace](../../bin/logs/perf_20261003-190115_15524.jsonl), [M367 report](../../bin/suite_reports/engine_refactor/m367_face_debt_owner_20261003.json), [210 MB M367 perf/pixel/slice trace](../../bin/logs/perf_20261003-191210_30056.jsonl).
+
+## Перепроверка после merge в develop: disk reload, generation и стартовая загрузка
+
+База: `develop` / `codex_audit2`, HEAD `185e2f08` (merge `codex_audit`), 2026-10-03.
+Обновлённый порядок работ: [план от 2026-10-03](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+
+### Ответ на гипотезу о тёмных чанках
+
+В движке существуют оба предполагаемых пути, и длинный пролёт способен пройти по
+обоим:
+
+1. При выгрузке колонок callback streamer ставит сохранение в `UAsyncChunkIO`, если
+   `AsyncChunkIo` включён. При возвращении `EnsureChunkLoaded` сначала пытается
+   прочитать колонку с диска; запрос получает high-water mark сохранённых slices и
+   асинхронно читает найденные файлы.
+2. Если сохранённой колонки нет (`highest_cy_on_disk < 0`), callback не загружает
+   диск, после чего колонка ставится в `UChunkLoadScheduler` и генерируется
+   процедурно. При обычном создании мира используются настройки по умолчанию:
+   `AsyncChunkGeneration=true`, `AsyncChunkIo=true`, `AsyncRelight=true`.
+3. Disk read и готовность для рендера — разные этапы: worker читает bytes, но
+   `TickAsyncChunkIo` на игровом потоке десериализует и применяет буферы. Затем
+   следуют relight, mesh capture/build, GPU publication и draw gate. Поэтому
+   disk-hit сам по себе не доказывает, что свет и mesh уже пригодны для кадра.
+
+Зона, которую пользователь впервые достигает, обычно пойдёт через generation; уже
+посещённая и выгруженная зона может прийти с диска, если сохранение завершилось.
+Для M367 источник данных тёмных областей не трассировался до координаты и кадра.
+Следовательно, выбрать одну из гипотез по этому прогону нельзя. Предыдущие pixel
+probes M367 дополнительно показывают, что отдельные очень тёмные пиксели были
+реальными валидными непрозрачными поверхностями с GPU indices, а не пустой
+геометрией.
+
+### Найденный риск загрузки/создания мира
+
+Кооперативный load-path для сохранённого streaming мира не сканирует все chunk
+files, но фаза `SpatialChunks` синхронно вызывает `LoadTerrainColumn` на главном
+потоке для каждой колонки в начальном радиусе. Пер-frame лимит — число колонок
+(`chunkBudget`), а не фактическое время. Значит, тяжёлая колонка может превысить
+бюджет кадра, несмотря на включённый `AsyncChunkIo`. В runtime-path чтение bytes
+асинхронное, а deserialize/apply остаются на игровом потоке с лимитом 4–10 slices
+за тик. Это конкретные места для замера и ограничения; фактическая длительность
+начального load/create пока не записывалась в фазовый timeline.
+
+Создание мира при обычном приложении может генерировать параллельно: отдельный
+`CoopGeneration` pool получает до 4 workers на этой машине-конфигурации (верхний
+cap в `JobThreadBudget` — 4 на pool). Но CLI `--create-world` в
+`WorldLifecycleFacade.cpp` принудительно отключает `AsyncChunkGeneration` и
+`AsyncChunkIo`, поэтому его elapsed time нельзя выдавать за меру интерактивного
+создания мира.
+
+### Обновлённый вывод аудита
+
+- Чёрные/приглушённые участки нельзя автоматически приписать выгрузке на диск или
+  пустым voxel chunks. В предыдущем M367 наблюдался valid geometry с очень низким
+  светом; дальний незнакомый участок при этом обычно начинает с procedural path.
+- Высокая стоимость стриминга подтверждена M367: `world_streaming_phase_ms`
+  median `40.2582`, `mesh_emerge_ms` median `19.1426`, wall median `59.606 ms` на
+  полёте. Это runtime flight cost, не cold load/create cost.
+- Для cold saved-world entry выявлен синхронный disk load начальной spatial
+  области. До дальнего стресс-маршрута нужно получить длительности фаз cold/warm
+  load и нового мира, а затем устранить главные main-thread stalls.
+- Сборка была много-target-параллельной только если граф содержал независимые
+  проекты; основной MSVC target не имел `/MP`. `--parallel 8` само по себе не
+  подтверждало параллельную компиляцию source files одного `Cubatarium.vcxproj`.
+  Включение `/MP` и его подтверждение Release-сборкой записываются в плане.
+- Полный дальний acceptance остаётся FAIL/UNTESTED: M367 прошёл 1 792 блока,
+  M368 — 2 944 до остановки на дереве; оба не достигли 8 192, product holes и
+  stop-convergence ворота красные.
+
+Следующие шаги: повторить G1 замер создания свежего мира на актуальной Release
+сборке; предыдущий интерактивный World_175 замерен до последней пересборки.
+Для eye-level acceptance сначала подобрать no-teleport маршрут в коридоре
+y45–70: y56 остановилась на дереве, а y96 прошла далеко, но оказалась вне класса
+визуального proxy. Затем удлинить фазу полёта так, чтобы под нагрузкой реально
+перейти 8 192 блока. Для генерации добавить отдельную метрику ожидания завершённой
+работы до применения и устранить starvation актуальных колонок. На выбранных
+координатах связать disk/procedural source, light revision, mesh publication,
+MDI draw и framebuffer pixel. Подробные ворота и периодичность fresh-world
+исследований зафиксированы в [плане от 2026-10-03](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+
+## M368: World_164 far run остановился на дереве; после контакта остался render debt
+
+- Видимый Release, no-teleport, scale `1`, start `[120,56,56]`, yaw `180°`; пользователь визуально подтвердил столкновение с деревом. Heading deviation и max yaw/pitch delta равны `0`, поэтому случайное движение мыши не объясняет уход с курса.
+- Последний moving period был около `(-2826,67,56)` со скоростью `6.00586`; следующий перешёл к `(-2832,56,56)`. Затем `588` из `896` period samples имели `movement_speed=0` и постоянные координаты. AppRunner report: focus `(7,3)→(-177,3)`, `184` чанка / `2 944` блока. При нормальных `5.99853` blocks/s это collision-limited run, а не far-distance acceptance.
+- Камера фиксировала `camera_flight_ground_contacts=1` после остановки; `camera_move_blocked_substeps=0` в стабильном хвосте. `UCamera::DoMovement` при `HasGroundSupport` вызывает `OnLandedFromFlight` и выходит из physics step до обработки W. Это объясняет устойчивую остановку flight-sim на контакте и отсутствие автоматического обхода; точка столкновения «дерево» основана на наблюдении пользователя. Heading telemetry исключает случайный поворот, но блокирующийся substep отдельно не записался.
+- Рендеринговые proxy после остановки не сошлись: `holes_rate=1.0`, `dirty_med/max=1 672/1 792`, `chunk_not_ready_med=24`, `unlit_max=19`, `fly_visible_black_max=18`, `wall_ms_fly_med=73.68 ms`, `post_stop_convergence_pass=false`. В конечном INFO sample оставались примерно 1 670 dirty meshes, 52 pending lights и 20+ not-ready chunks. Это полезный фиксированный-camera stall sample, но не оценка загрузки новых дальних чанков после x≈−2832.
+- По raw report `process_rc=0`, но harness `pass=false`; `collision_stop_triggered=false`, потому что этот запуск начался до default watchdog и имел `stop_after_blocked_sec=0`. Manifest фиксирует стартовый commit `aaff26c5` и Release EXE SHA-256 `1a2420a3ab678ae6669e96a51169f3a04131f4593545bc18eeb7ff93708d087a`. `dirty_diff_hash` не чистый: runner файл был изменён во время активного прогона; manifest acceptance этого отчёта считать недействительным.
+- После наблюдения добавлены два harness изменения: `7bfc330c` восстанавливает точный исходный `users.json` и заново задаёт pin между повторами; `19387103` завершает будущий `product-174657-far` через 8 секунд устойчивого контакта, сохраняя отчёт. M369 на y96 проверил маршрут над кронами без контакта, но высота вышла из eye-level proxy коридора. Повторять тот же XY-коридор на y70 не следует: M335 уже упирался там в лес около x=-2759. Предварительный просмотр сохранённых `.cchunk` вдоль соседней полосы z≈224 не нашёл непустых voxels в z±2 и y64..76, но это лишь проверка имеющихся файлов: она не гарантирует, что все маршрутные колонки сохранены или что runtime collision будет отсутствовать. Следующий шаг — поддержать явный стартовый XYZ в flight runner и выполнить короткий видимый no-teleport collision probe на y68–70 со сдвигом z; при контакте маршрут менять, collision response оставить включённым.
+- Артефакты: [M368 report](../../bin/suite_reports/engine_refactor/g3_world164_far_diskfirst_20261003.json), [perf trace](../../bin/logs/perf_20261003-220433_38772.jsonl), [AppRunner report](../../bin/flight_sim_report.json), [INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-220428.38772).
+
+## M369: длинный World_164 y96 прошёл по фронтиру генерации, но не достиг far checkpoint
+
+- Видимый Release, no-teleport, scale `1`, старт `[120,56,56]`, yaw `180°`,
+  `y=96`, без смены курса. AppRunner зафиксировал focus `(7,3)→(-497,3)`,
+  `504` чанка / `8 064` блока — на `128` блоков меньше checkpoint `8 192`.
+  Скорость в движущихся periods `6.00586` блоков/с; collision contact не было.
+  Значит, это длинный streaming-stress sample, но не far-distance acceptance.
+- Текущий `product-174657-far` adequacy classifier допускает eye-level
+  `player_y=45..70`. M369 на `y96` провалил `altitude_out_of_corridor` и не
+  воспроизвёл продуктовый dark symptom: `visible_black_focus` median `0`, хотя
+  max был `18`; `fly_void_near_max=0`. Эти proxy не заменяют кадр/луч/пиксель.
+- Дальний долг остался высоким: `holes_rate=0.93596` (внутренний
+  `unfinished_visual`, не доля чёрных пикселей), `dirty_med/max=1 071/1 779`,
+  `wall_ms_fly_med=91.11 ms`, `red_rate=0.758`, `unlit_max=31`,
+  `fly_frontier_pressure_frac=0.747`. `post_stop_convergence=false`: за stop
+  segment не обнулились missing/effective holes и не падали pending/not-ready/
+  focus-dirty долги. При этом empty-world proxy прошёл с median `47` opaque
+  commands; это подтверждает наличие draw-команд, но не полноту чанковой
+  геометрии или корректный цвет.
+- Источник данных смешанный. Было `1 917` disk completions, каждый с
+  `disk_light=1`; затем зарегистрированы `1 324` disk miss и `1 145`
+  procedural commits. Это показывает переход с сохранённой зоны в свежую
+  генерацию, но само по себе не локализует визуальное затемнение.
+- Worker generation быстрый: `generation_ms` p50/p95/max `94.6/141.7/945` мс;
+  `apply_ms` `5.5/9.5/28.6` мс. Однако `queue_ms` равен `182.6/11 345/61 961`
+  мс, а полный request-to-commit `total_ms` — `994/78 083/397 694` мс. Разность
+  `total - queue - generation - apply` оценивает интервал после генерации до
+  применения: p50 `366` мс, p95 `49.94` с, max `389.74` с; `154` результатов
+  ждали более 10 с, `56` — более 60 с, `9` — более 300 с. В perf trace
+  `gen_backlog_total` p95/max `51/67`, `gen_q` `12/36`. Это сильнее указывает на
+  задержку допуска/применения готовых результатов, чем на стоимость самой
+  генерации; exact visible-coordinate impact ещё нужно связать по lifecycle.
+- Manifest чистый и пригоден для анализа этой диагностики: commit
+  `d3be1310`, Release EXE SHA-256
+  `1a2420a3ab678ae6669e96a51169f3a04131f4593545bc18eeb7ff93708d087a`,
+  `dirty_diff_hash=clean`, `teleport=false`. Процесс завершился `rc=0`, но
+  analyzer/harness `pass=false`; `run_outcome=success` означает только штатное
+  завершение приложения.
+- Артефакты: [M369 report](../../bin/suite_reports/engine_refactor/g3_world164_far_y96_diskfirst_20261003.json), [perf trace](../../bin/logs/perf_20261003-225116_32248.jsonl), [AppRunner report](../../bin/flight_sim_report.json), [INFO source trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-225112.32248).
+
+## M370: новый seed на текущем Release показывает длинный prepare_view в CLI create
+
+- Чистый последовательный Release CLI запуск создал `CI_3650471212` для seed
+  `3650471212`, preset `balanced`, radius `5`, `809` chunk files. Фазовый лог:
+  [INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261003-234806.4692),
+  JSON [create report](../../bin/create_world_3650471212.json), каталог мира
+  `bin/worlds/CI_3650471212`.
+- `WorldLoadPerf`: `generate_columns=23.021 s`, `post_create=5.138 s`, relight
+  columns `0.434 s`, emissive relight `0.020 s`, `mesh_warmup=13.970 s`,
+  `prepare_view=25.346 s`, cumulative operation `67.962 s`. `prepare_view` завершил
+  фазу с ещё неготовым рендер-долгом: в конце лога `mesh_dirty=290`,
+  `mesh_in_flight=1`; EnterLit на frame30 фиксировал `debt=10`, `ring=30`,
+  `mesh_missing=1`.
+- Этот CLI режим намеренно принудительно отключает `AsyncChunkGeneration` и
+  `AsyncChunkIo`; в логе `generation_workers=1`. Поэтому это чистый новый-seed
+  замер фаз генерации и view preparation, но не оценка обычного интерактивного
+  запуска с четырьмя workers и не проверка исправления очереди completed results.
+  Интерактивный World_175 sample от 21:08 всё ещё устарел относительно текущего
+  Release. Доступного native GUI окна для повторения через computer-use сейчас не
+  было; G1 остаётся открытым.
+- Бинарь — Release SHA-256
+  `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`, commit
+  `4ff3aa35`; запуск прошёл без второго параллельного `Cubatarium.exe`. Созданный
+  мир сохранён для последующих seed-cohort проверок.
+
+## M371: боковой eye-level коридор прошёл прежнюю collision-зону, но render debt остался
+
+- Видимый Release, `product-174657-far`, no-teleport, speed scale `1`; runner
+  закрепил старт `[120,56,224]`, курс west/yaw `180°`, cruise `y=70`. Heading
+  deviation `0`, высота и Z не дрейфовали. За 700 s flight прошло `3 424` блока,
+  focus `(7,14)→(-207,14)`. У прежней точки дерева M368/M335 ground contacts и
+  blocked-substeps оставались нулевыми; collision watchdog не срабатывал. Это
+  подтверждает безопасный до этой глубины боковой маршрут, но не дальний acceptance.
+- Процесс завершился `rc=0`, `collision_stop_triggered=false`; анализатор вернул
+  `pass=false` из-за render/streaming gates. Input adequacy прошёл; симптом по
+  proxy не воспроизведён (`focus_missing_mesh` median `0`, visible-black focus
+  median `4`, max `24`), но это не заменяет операторский pixel/color verdict.
+  `holes_rate=1.0` — внутренний unfinished-visual proxy, `chunk_not_ready` median
+  `27`, `chunk_meshed_unlit` max `37`, dirty median/max `142/314`,
+  `fly_void_near_max=1 909`; stop convergence=false. Focus voxel census был
+  недоступен: `focus_data_census_valid=0`, так как `CUBA_VISUAL_BLACK_TRACE` не
+  включался. Значит, этот прогон не отвечает, содержал ли каждый визуально пустой
+  участок voxel data.
+- Новый trace точно измерил generation-finished → apply wait у `1 633` commits:
+  `ready_wait_ms` p50/p95/max `190/1 196/15 016` ms; `10` результатов ждали более
+  10 s, ни один не ждал более 60 s. `queue_ms` `97/1 887/18 818` ms,
+  `generation_ms` `115/182/355` ms, `apply_ms` `6.7/23.4/42.9` ms,
+  request-to-commit `total_ms` `451/3 288/30 390` ms. Было `392` disk completions
+  и `1 633` procedural commits. Это выглядит существенно лучше оценённого M369
+  пост-generation интервала (p95 около 49.94 s), но маршруты, длина и метод
+  измерения отличаются; причинный эффект fix требует повторяемого длинного run.
+- Manifest фиксирует чистое дерево, commit `317b41a8`, Release EXE SHA-256
+  `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`. На этом
+  run manifest ещё не содержал seed и полного route fingerprint; исправлено перед
+  M372. Артефакты: [M371 report](../../bin/suite_reports/engine_refactor/m371_world164_z224_y70_route_probe_20261004.json), [perf](../../bin/logs/perf_20261004-000119_13088.jsonl), [AppRunner](../../bin/flight_sim_report.json), [INFO trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-000114.13088).
+
+## M372: длинный боковой run нашёл camera-band slices без владельца работы
+
+- Видимый Release/no-teleport `product-174657-far` на `World_164`, seed
+  `3650471197`, старт `[120,56,224]`, cruise `y=70`, yaw `180°`, pitch `0°`,
+  speed scale `1`. Маршрут прошёл `6 960` блоков до focus `(-428,14)` из `(7,14)`;
+  far checkpoint `8 192` не достигнут. Все `1 135` periods имеют нулевые
+  `camera_flight_ground_contacts` и `camera_move_blocked_substeps`; `1 119` летных
+  periods применяли запрошенное горизонтальное движение. Это не воспроизводит
+  остановку у дерева из низкого M368: наблюдение пользователя о дереве остаётся
+  привязано к низкому коридору, а боковой M372 — к длинной стриминговой диагностике.
+- Процесс штатно завершился (`process_rc=0`, `run_outcome=success`), анализатор
+  вернул `pass=false`. Манифест чистый: commit `5503ad9f`, Release EXE SHA-256
+  `1c7b36de7cf3b09f4f624a87920385d10eb5c198ce00a8cdfcc97d515e339e8c`, seed и
+  `flight-route.v1` fingerprint заполнены. Маршрут ограничен на `6 960` блоках,
+  поэтому его нельзя считать far-distance acceptance.
+- В 1 135 periods `focus_data_census_valid=1` в 898 сэмплах. Camera-band
+  `solid_no_drawable` имел median/p95/max `0/24/51`; `unowned` — `0/9/24`;
+  `pending_work` — `0/15/37`. Плотные срезы без геометрии встретились в 286
+  periods, без владельца работы — в 154. Пик отсутствующей геометрии был
+  `51` срез при `x=-4069`; пик unowned — `25` срезов при `x=-4271`.
+- На пике `x=-4271` census записал `35` camera-band срезов без drawable mesh,
+  `25` из них без владельца. Конкретный срез `(-266,3,19)` содержал `12` non-air
+  блоков, имел `focus_state=1`, `desired_geom_rev=1`, `published_geom_rev=0`,
+  `mesh_revision=0`, `active_stage=0`, `mesh_work_owner_flags=0`, пустые dirty
+  queue и repair ticket. Это прямой дефект состояния: resident voxel data без
+  drawable и без зарегистрированной работы, которая должна его опубликовать.
+  На другом пике `x=-4069` наблюдались `51` срез без drawable и `21` unowned.
+- Общий `unfinished_visual` proxy был ненулевым в `96.65%` periods; это не доля
+  чёрных пикселей. `chunk_not_ready` median/p95/max `26/60/75`,
+  `chunk_meshed_unlit` `6/29/51`, `visible_black_focus_n` `4/24/68`, dirty
+  median/max `255/834`, `fly_void_near_max=945`. Stop convergence не прошёл:
+  final missing `21`, visible-black stalled max `62`, pending-light end `47`.
+- Source trace: `886` disk requests / `415` completions, `2 957` disk misses и
+  `2 914` procedural commits. Для commits `queue_ms` p50/p95/max
+  `132/13 867/38 764` ms, generation `117/226/665` ms, `ready_wait_ms`
+  `272/3 696/34 209` ms, apply `6.4/23.4/54.8` ms, full `total_ms`
+  `658/17 305/62 690` ms. `217` queue wait и `40` ready wait превысили 10 s;
+  один total превысил 60 s. `max_commits_per_frame=1` во всех procedural commit
+  событиях. Это указывает на очередь и ожидание передачи результата как значимые
+  задержки, но другой длины маршрута недостаточно для причинного A/B с M371.
+- Flight analyzer: `wall_ms_fly_med=159.8 ms` (~`6.26` effective FPS),
+  `render_total_fly_med=93.5 ms`, `world_streaming_phase_ms` median/p95
+  `54.9/87.9 ms`; wall attribution: render `58.5%`, stream `20.4%`, emerge
+  `15.3%`. За маршрут записано `5 234` spikes, максимум `7 979.9 ms`, dominant
+  spike class `stream`. Редкое, но очень длинное зависание требует отдельного
+  расследования; median тоже далёк от target.
+- Кадры `frame_150`, `frame_156`, `frame_161` почти целиком показывают небо.
+  Это не доказательство отсутствия мира: маршрут держал pitch `0°` на y=`70`,
+  а free-move forward использует полный `Camera::Front`, поэтому установка
+  pitch-down меняет и вертикальную траекторию. В дальних pixel-ray группах
+  `x=-6433` и `x=-6842` все лучи встретили unknown unloaded chunk до opaque voxel;
+  при таком горизонтальном ракурсе эти лучи характеризуют дальний горизонт, а
+  не camera-band mesh. Для визуального acceptance нужно отделить угол обзора от
+  горизонтального перемещения и подтвердить поверхность opaque pixel probes.
+- Артефакты: [M372 report](../../bin/suite_reports/engine_refactor/m372_world164_z224_y70_long_20261004.json), [perf + trace](../../bin/logs/perf_20261004-002601_19304.jsonl), [кадры](../../bin/logs/m372_world164_z224_y70), [INFO/source trace](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-002557.19304).
+
+## M377–M378: возврат к проверенному профилю M335; ночной цикл смешал картину стриминга
+
+- M377 повторил видимый no-teleport Release маршрут M335: World_164 seed
+  `3650471197`, start `[120,56,56]`, cruise y=`70`, yaw=`180°`, pitch=`−30°`,
+  scale `1`. За `1 800 s` прошёл `6 640` блоков (`focus 7→−408`), collision
+  counters и route heading оставались стабильными; obstacle avoidance не
+  активировался. Это не far acceptance: `8 192` блоков не достигнуты, analyzer
+  `pass=false`, post-stop convergence=false. Median fly wall `85.54 ms`,
+  stream phase `38.66 ms`, emerge `18.32 ms`, scene `29.03 ms`; dirty median/max
+  `256/624`, not-ready median `24`, visible-black max `24`. Артефакт:
+  [M377 report](../../bin/suite_reports/engine_refactor/m377_world164_canonical_y70_pitchm30_obstacle_avoid_20261004.json).
+
+- M378 повторил тот же старт, y/pitch/yaw и scale без замены коридора, включив
+  dense renderer-pixel probes, screen-ray trace, focus census, source tracing и
+  captures раз в 15 s. За запрошенные `2 400 s` прошёл `7 680` блоков до focus
+  `−473`; far checkpoint `8 192` не достигнут. Процесс штатно завершился, но
+  analyzer `pass=false` (`15/39` gates), `far_flight=false`, post-stop convergence
+  false. Ни ground contact, blocked substep, ни обход препятствия не
+  зарегистрированы. Manifest: clean commit `6d06cef2`, Release EXE SHA-256
+  `86ae0818e771eb243a09e20a51c4266f1fa57fc18cfd6f485d85d5f2b995b65f`, seed
+  `3650471197`, исходный world metadata hash
+  `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+
+- Стриминг новых колонок на фронтире подтверждён source log: `2 227` disk
+  requests, `2 014` disk completions, `1 508` disk misses и `1 508` последующих
+  procedural commits. В активном диапазоне примерно `cx=−435…−475` каждый
+  столбец имел miss/commit-события на девяти соседних Z координатах; на одном из
+  этих участков focus census показывал `33–60` solid slices без render-ready
+  geometry. В периодах `chunk_not_ready` median/max `24/68`, dirty median/max
+  `462/1 260`, `fly_frontier_pressure_frac=0.909`, stop missing max `68`, конечный
+  not-ready `57`. Это связывает procedural-frontier область с растущим mesh/readiness
+  долгом, но не говорит, что каждый пусто выглядящий пиксель принадлежал этим
+  срезам.
+
+- В трассе сохранено `32 768` renderer-pixel probes и `8 192` screen-ray samples.
+  Среди pixel rays было `10 580` opaque voxel hits, `10 972` unloaded и `11 216`
+  no-hit-in-range; это разные состояния, не единая категория «пустой чанк».
+  Screen-ray selector увидел `3 930` opaque hits, `3 950` unloaded и `312` no-hit;
+  геометрический debt был у `289` записей, light debt у `409`, refresh candidate
+  у `175`, selected — у `161`.
+
+- M378 шёл без frozen daylight: World_164 имел 20-минутный день и `time_frozen=false`.
+  Скриншоты менялись от почти чёрной ночи до светлого неба/горизонта. Pixel probes
+  согласуются с этим: для day factor `0` и night factor `0.35` median luminance
+  был `21.7`, при этом среди записей были valid opaque surfaces с текстурой;
+  daylight samples с night factor `0.22` имели median `158.3` и ни одного sample
+  luminance `<40`. Значит, суточное освещение существенно объясняет «притушенный»
+  вид, который пользователь отмечал после долгого полёта. Это не закрывает mesh
+  debt и не доказывает, что любые визуально пустые участки исправны: M378 не даёт
+  дневного кадра на том же дальнем фронтире.
+
+- Median fly wall вырос до `104.25 ms` (`9.59` effective FPS); stream phase
+  `45.64 ms`, mesh emerge `21.95 ms`, scene `36.80 ms`, render total `67.95 ms`.
+  Dirty median `462`; max wall spike `8 211.58 ms`. Между M377 и M378 добавлены
+  тяжёлые traces/captures и изменился охват маршрута, поэтому рост нельзя считать
+  чистым performance A/B. Обе пробы оставили высокую streaming/render нагрузку,
+  а M378 доехал только до `7 680` блоков.
+
+- Решение по продолжению: использовать тот же уже принятый M335 профиль камеры,
+  не продолжать sweep pitch/height/Z. Для M379 закрепить ясный день с
+  `time_of_day=0.25`, сохранив исходные байты `world_data.json` после run.
+  Flight-only obstacle detour добавлен в `6d06cef2`, но M377/M378 его не проверили
+  (нет события опасности). Проверку выполнять отдельно на историческом
+  collision-control M368, где пользователь видел остановку у дерева около
+  `x=−2 832`; эта проба не заменяет visual acceptance.
+
+- Артефакты M378: [report](../../bin/suite_reports/engine_refactor/m378_world164_canonical_y70_pitchm30_trace_20261004.json), [perf/pixel/ray trace](../../bin/logs/perf_20261004-025426_16928.jsonl), [captures](../../bin/logs/m378_world164_canonical_y70_pitchm30), [source INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-025421.16928).
+
+## M379–M380: фиксированный daylight подтвердил реальную draw/publication проблему; исправлены pool reuse и packed fallback
+
+- M379 был видимым no-teleport Release на том же M335 профиле: World_164,
+  start [120,56,56], eye y=70, yaw 180°, pitch −30°, scale 1, daylight
+  time_of_day=0.25. Он прошёл far checkpoint 8 192, но analyzer остался FAIL:
+  черновой/пустой видимый кадр и convergence debt сохранялись. Это важное
+  уточнение к M377/M378: короткая протяжённость не единственная причина
+  наблюдаемого дефекта.
+- На одном конкретном daylight pixel witness около x=−8 183 DDA нашёл grass
+  block 377, однако framebuffer sample был RGB (8,8,8)/(10,10,10). Источник
+  top-face был valid на CPU, но opaque live-GPU/MDI batch отсутствовал; в depth
+  census фигурировала нижняя грань того же блока. Цвет не коррелировал с ночью,
+  текстура была готова, а прозрачный проход не объяснял sample. Это указывает
+  на разрыв между voxel/source readiness и реальной opaque draw publication,
+  но один witness не устанавливает конкретный GPU механизм для всех пустых
+  пикселей.
+- M379 показал длительное давление на vertex pool: в периодах суммарный
+  publication OOM retain доходил примерно до 2 000; занято около 258.4/320 MiB,
+  все 2 048 GPU mesh slots были заняты, свободными оставались 101 slot,
+  retired pending был 0, staging allocation failures — 0. В camera band было
+  25–36 solid slices без drawable против 106 live GPU slices из 157. Это делает
+  фрагментацию/исчерпание pool сильной проверяемой гипотезой; агрегированный OOM
+  counter является суммой за период, а лимит 320 MiB объединяет бюджеты pass-ов.
+- В M379 autosave harness был выключен. Поэтому disk_miss на новых координатах
+  и их procedural regeneration ожидаемы; этот запуск не доказывает отказ
+  persistence/reload. Pixel census, CPU draw oracle и MDI witness имеют
+  различные границы наблюдения, и ни один из них нельзя выдавать за полную
+  framebuffer классификацию.
+- Commit 656fe5c6 исправляет две подозрительные ветви перед повтором M380:
+  GPU pool теперь выбирает подходящий free range, отдаёт остаток обратно в
+  free list и сливает соседние освобождённые диапазоны; packed predecessor больше
+  не скрывается за CPU opaque reference, пока нет исполняемой MDI batch.
+  Pixel trace сериализует фактические packed/MDI состояния. Изменение собрано
+  только как Release, затем запущен повтор M380 на том же M335 daylight профиле.
+  Прогон завершился штатно (`process_rc=0`, `hang_killed=false`), прошёл 10 080
+  блоков до focus `7→−623` и checkpoint 8 192. Скорость соответствовала M335
+  (`5.19287 blocks/s` median), yaw/pitch deviation был 0, teleport отсутствовал.
+  Это валидный дальний повтор, но не render acceptance: analyzer `pass=false`,
+  прошло 24 из 39 основных ворот, post-stop convergence также `false`.
+- M380 впервые проверил obstacle detour именно на известном дереве около
+  x≈−2 832: в `t=588.582 s` зарегистрирован hazard на `5.25` блока, запланирован
+  обход вправо с offset 3 и проходом 10.25 блока; один detour завершён, ошибок
+  плана не было. Кадр 40 показывает ствол очень близко справа, что визуально
+  похоже на столкновение. Однако в соседних интервалах requested/applied
+  movement совпадал, blocked substeps и ground contacts оставались 0; прогон
+  продолжил движение до x≈−9 968. Поэтому конкретно M380 не подтверждает
+  остановку у этого дерева: близкий кадр объясняет впечатление оператора, но
+  telemetry фиксирует успешный обход. В конце камера остановилась по заданному
+  времени фазы, а не из-за collision watchdog.
+- Промежуточное same-coordinate сравнение около x=−5 800: M379 в соседних
+  периодах занимал 256.98/320 MiB и имел 213–229 publication OOM retains;
+  M380 — 89.36–89.58/156.91–157.10 MiB и 0 OOM retains. В обоих случаях было
+  занято 2 046/2 048 mesh slots, camera-band solid no-drawable равнялся 0,
+  false-negative cull равнялся 0. draw_oracle_missing_resident был 22–26 у M379
+  и 28–29 у M380 — этот proxy не улучшился. Wall samples составили около
+  98–110 ms у M379 и 86–124 ms у M380, то есть короткое сопоставление не
+  показывает стабильного FPS выигрыша. Уменьшение pool use/OOM — сильный эффект
+- Конечная трасса M380 показывает, что pool patch снял один источник отказа,
+  но не устранил незавершённую геометрию и задержки: median wall `97.83 ms`
+  (≈10.2 FPS), render total `72.91 ms`, stream phase `43.22 ms`, mesh emerge
+  `23.16 ms`, `chunk_not_ready` median 26, dirty median 265, max visible-black
+  27, max `fly_void_near` 1 228. Post-stop convergence оставил ненулевые missing,
+  effective holes и pending; `holes_rate=0.9825` — analyzer proxy
+  `unfinished_visual`, а не доля чёрных пикселей. Screen-ray trace содержит 749
+  geometry-debt, 512 repairable-geometry-debt и 737 light-debt наблюдений
+  (флаги могут пересекаться). Analyzer называет `empty_fm_queue` и
+  `gpu_not_ready` доминирующими диагностическими классами, но это классификация
+  симптомов, не доказанная единая причина.
+- Низколюминансная pixel-классификация M380: 191 из 32 768 probes ниже luma 32
+  (0.583%). Все 191 depth samples имели opaque MDI pass; в 180 samples depth
+  surface совпал с source-mesh triangle в пределах 0.1 блока, а в 181 был
+  валидный face-light sample (sky light 1). Это подтверждает, что в этих точках
+  framebuffer содержит реально отрисованную геометрию; низкая яркость сама по
+  себе не доказывает missing mesh.
+- CPU voxel-ray face поля относятся к block, найденному DDA, и не всегда к
+  поверхности depth buffer: среди 186 probes с valid DDA hit ray/depth distance
+  совпал в пределах 0.5 блока в 20 случаях, а у 128 расходился более чем на 2
+  блока. Пять оставшихся dark probes не имели DDA hit. Возможны различия
+  opaque/cutout traversal и выбор поверхности, это нужно проверить отдельно.
+  Поэтому счётчики `source_face_valid=185` и `gpu_face_command=185` нельзя
+  приписывать всем depth surfaces без такого join. Пять probes дали CPU
+  voxel-ray state «no hit», хотя depth показывал opaque поверхность; ещё один
+  probe имел state 1 без source face/command. Все samples имели voxel-ray gap 0,
+  прозрачный проход цвет не менял. Следующий шаг — свести block/material, DDA
+  hit, depth-hit chunk, opaque source triangle/light и MDI command для той же
+  точки, прежде чем менять lighting или streaming policy.
+- В source log около x≈−8 800 screen-ray repair выбрал chunk `(-550,3,3)`:
+  solid voxel был найден, удовлетворяющего mesh ещё не было, имелся light debt;
+  FirstMesh ticket присутствовал, direct dirty slice встал в очередь `0/5`, но
+  в момент снимка ещё не был scheduled. Соседние drawable debt chunks попадали в
+  dirty queue размера около 307. Конечный 512-записный watched-schedule ring уже
+  не содержит lifecycle этого раннего кандидата: его записи вытеснены до конца
+  47-минутного прогона. Следующий диагностический шаг — короткое адресное окно
+  записи lifecycle выбранных screen-ray координат через enqueue → scheduler →
+  capture/build → GPU apply/publish; не расширять глобальные caps по одному
+  агрегированному blocker label.
+- В финальных кадрах 186–188 камера смотрит в синее небо/дальний туман; кадр 188
+  почти целиком небо. Это не самостоятельное доказательство пустой геометрии.
+  Для оценки пустых чанков сопоставлять наземный видимый кадр, voxel/source
+  witness, depth и publication readiness в одной координате.
+- EXE SHA256 для M380:
+  `90ee8b8b8aeba6eb9a8a466bfad35cb916245cbb48d1a9258148baa3df60bcb8`; это
+  Release, собранный из code commit `656fe5c6`. Manifest M380 записал
+  `git_sha=68e06b27`, потому что документационные commits были сделаны, пока
+  процесс уже работал; код бинарника при этом не менялся. Harness восстановил
+  `world_data.json` побайтно (SHA256
+  `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`).
+- M380 report: [JSON](../../bin/suite_reports/engine_refactor/m380_world164_m335_poolfix_20261004.json);
+  [pixel/ray summary](../../bin/suite_reports/engine_refactor/m380_renderer_pixel_trace_20261004.json);
+  [560 MB perf trace](../../bin/logs/perf_20261004-052750_14968.jsonl);
+  [frames](../../bin/logs/m380_world164_m335_poolfix);
+  [source INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-052746.14968).
+- M379 report: [JSON](../../bin/suite_reports/engine_refactor/m379_world164_m335_fixed_day_20261004.json);
+  [perf/pixel/ray trace](../../bin/logs/perf_20261004-034949_9384.jsonl);
+  [frames](../../bin/logs/m379_world164_m335_fixed_day);
+  [source INFO](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-034945.9384).
+
+## M380 follow-up: distant new columns and provisional-light preview
+
+- Source lookup separates the persistence question for this M335 flight. The
+  far frontier was not being read from disk: the exact column `(-550,0,3)` logged
+  a disk miss at 06:05:35.943 and a procedural commit at 06:05:36.121. Its total
+  source latency was `176.96 ms` (`queue=18.80`, `generation=81.55`,
+  `ready_wait=72.29`, `apply=4.31 ms`). This is expected for a new frontier
+  column; it does not indicate failed persistence. Nearby columns show a separate
+  queue tail, including a `23.91 s` generation-start queue wait for `(-542,0,3)`.
+- Across M380, source tracing recorded `1 883` disk completions, `2 987` disk
+  misses, and `2 945` procedural commits. For procedural commits, queue latency
+  was p50/p95/max `26.75/28 689.95/62 904.06 ms`; `530` exceeded 10 s.
+  Generation itself was `92.68/138.06/332.00 ms`; ready-result wait was
+  `349.37/7 303.55/32 001.96 ms` (`61` exceeded 10 s); apply p95 was `8.13 ms`.
+  The flight therefore confirms substantial request and ready-queue tails even
+  though per-result terrain generation is relatively quick. Their visible impact
+  must be joined to the camera ray and eventual mesh/light publication before
+  changing commit/admission limits.
+- The `(-550,3,3)` screen-ray witness is present later in the renderer-gate
+  samples, despite its watched-schedule attempt row being evicted. Near selection,
+  the camera was at `x=−8 722`; the ray hit block `x=−8 799` at `79.76` blocks,
+  and the slice had pending light with a provisional preview. A later sample at
+  camera `x=−8 804` showed field light revision `1` but older published light;
+  by camera `x=−8 805`, geom/light publication was current and preview was off.
+  This is an approximately `83`-block (`~16 s` at M380's median `5.19 blocks/s`)
+  route-local preview window. Geometry could be drawn while its light image was
+  still provisional, matching the user's description of dim rather than fully
+  black chunks more closely than a missing-GPU-mesh diagnosis.
+- The first `ScreenRayRepair` record for this slice found a `deferred_far` relight
+  and an existing Flow ticket. The selected-ray branch only promoted work already
+  in the ordinary relight FIFO; for a deferred-far key it relied on the Flow
+  ticket and did not invoke the bounded visible-relight admission API. A focused
+  change now calls `EnqueueVisibleRelight` for screen-ray-selected light debt
+  within the existing forward horizon (at most four selected columns), protects
+  sibling selected columns, preserves the exact slice Y band, and records the
+  visible admission outcome and any replaced victim in the source trace. The API
+  transfers deferred-far work into its bounded visible owner; this avoids raising
+  the global relight cap. Release build and same-profile M335 comparison are the
+  next acceptance steps.
+- M380's 191 low-luma `<32` probes were `0.583%` of its 32 768 samples, and all
+  had opaque MDI visibility. Depth-source block IDs were 572 (`tree_leaves`, 169),
+  573 (`tree_log`, 9), 597 (`tree_bark`, 3), and unknown/no source (10). All 181
+  valid face-light samples had sky light `1`; only four probes carried the
+  provisional-preview flag. The sample is dominated by dark foliage textures,
+  not by a broad set of missing chunks, and does not by itself explain the user's
+  larger muted patches. Among leaf samples, DDA/depth distance diverged by over
+  two blocks in 121/169 cases; cutout visibility can account for a meaningful
+  part of this mismatch, so pixel material and depth surface must remain separate
+  from opaque voxel DDA witnesses.
+- Collision review remains separate from renderer diagnosis: M380's tree hazard
+  triggered one completed right-side detour; blocked substeps and ground contacts
+  stayed zero and the westbound route continued. No collision code change is
+  needed for that recorded run. The established M335 start, eye height, yaw,
+  pitch, Z, seed, and speed remain fixed for the next renderer comparison.
+
+## M381: same M335 route confirms queue starvation; relight admission exercised
+
+M381 repeated the established World_164 daylight route in visible Release mode:
+start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, scale `1`, no
+teleport, 2 800 s flight. Manifest records code `b853570a`, Release executable
+SHA256 `75393A032B0AE31471C82E8DBC2CD722FA5DD042C4E0CCCBEC072772EF625FD8`, seed
+`3650471197`, and route hash `024a223f…c312`. It covered 646 chunks, focus
+`(7,3)→(−639,3)`, and ended normally. Collision stop was false; one hazard at
+601.194 s was bypassed to the right (hazard 2.25 blocks, offset 3, pass 7.25),
+detour completed, plan failures and heading deviation were zero. No camera or
+flight condition was changed.
+
+The full flight report remained FAIL: `22/39` gates, post-stop demand convergence
+false, fly wall median `90.92 ms` (`91.49 ms` overall), effective fly FPS `11.0`,
+dirty median/max `412/1 330`. `dominant_wall_stage=stream`,
+`dominant_schedule_blocker=empty_fm_queue`, `dominant_completion_stall=gpu_not_ready`;
+far periods still had extended `unfinished_visual`/void-near runs. At the end,
+post-stop visible-black max was `90` and stop convergence had not completed.
+
+### Source latency split
+
+- `1 851` disk columns completed with request-to-finalization latency p50/p95/max
+  `338 ms / 34.28 s / 516.28 s`; `396` exceeded 10 s, `71` exceeded 60 s and
+  `55` exceeded 120 s. The existing `elapsed_ms` clock starts at column request
+  and stops after all vertical slices are applied and the column is finalized;
+  it includes worker queueing, file work, deserialize/apply and main-thread
+  admission. It is not raw disk read time. At `(-244,0,2..5)`, requests around
+  07:40:13 completed 239–296 s later; the maximum run-wide latency was 516 s.
+  Add per-slice enqueue/start/open/read/decode/apply/finalize timings and shared
+  ChunkIo pending/active load/save counts before changing the I/O worker count.
+- `3 050` procedural commits had `queue_ms` p50/p95/max
+  `26.8 ms / 29.05 s / 71.69 s` (`576` above 10 s); `generation_ms`
+  `92.7 / 133.8 / 367.6 ms`; `ready_wait_ms` `252 ms / 7.47 s / 32.04 s`
+  (`96` above 10 s); `apply_ms` p95 `8.07 ms`; `total_ms` p95/max
+  `36.42/84.75 s`. Ready batch reached `73`, while all 3 050 records reported
+  `max_commits_per_frame=1`. This is a measurable drain-rate bottleneck candidate;
+  test an apply-time-budgeted near/focus drain while recording wall time. Do not
+  increase the global cap without a frame-time bound.
+- At fresh miss columns `(-390,0,z)` and `(-550,0,z)`, generation itself took
+  about `77–143 ms`, while request queue took up to `15.4 s` and result-ready
+  wait up to `8.2 s`; complete source-to-apply time reached `20–22 s`. The
+  `(-390)` interval coincided with a sustained `visual_holes=1` series and
+  `pending_dark` rising to `30`. This links a real frontier readiness episode
+  to pre/post-generation queue latency, not to slow terrain generation.
+
+### Visible relight and low-luma evidence
+
+M381 produced `397` `ScreenRayRepair` rows: 28 selected candidates had
+`light_debt=1`, 17 rows explicitly admitted screen-ray visible relight, with
+outcomes including normal admission, victim replacement, already-queued, and
+bounded reserve (`9`). At `(-513,3,3)`, reserve admission was followed by
+`light_debt=0` and preview-off about 18 s later. At `(-525,3,7)`, a direct
+admission cleared debt about 2 s later, while provisional preview remained in
+the sampled row. At the old M380 witness `(-550,3,3)`, M381 saw no light debt,
+so the new relight branch was not exercised at that exact coordinate. The patch
+is active, but these observations do not close the long-run renderer gates.
+
+The pixel analyzer processed `22 480` probes and found `101` luma-`<32` samples
+(0.45%). Every dark sample had a valid draw-ready depth surface and visible MDI
+pass. Source IDs included 85 `tree_leaves` (572), 3 `tree_log` (573), and 2
+`tree_bark` (597); 94 samples carried valid live-face-light state and 7 had a
+provisional preview. This shows the sampled dim foliage was being drawn; the
+sparse sample does not adjudicate larger muted patches elsewhere on screen.
+
+Artifacts: [flight/report gates](../../bin/suite_reports/engine_refactor/m381_world164_m335_visible_relight_20261004.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m381_renderer_pixel_trace_20261004.json),
+[perf JSONL](../../bin/logs/perf_20261004-072621_4616.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-072616.4616),
+[GUI frames](../../bin/logs/m381_world164_m335_visible_relight).
+
+## M382: completed I/O results lag far behind the repeated route
+
+M382 used the same visible no-teleport M335 on `World_164`, with matching start,
+camera, speed, daylight, and route hash. It exited on the planned phase boundary
+(`process_rc=0`, no hang kill); telemetry says `collision_stop_triggered=false`
+and obstacle attempts `0`. The operator reported seeing the camera stop at a tree.
+The saved movement telemetry does not confirm that as a collision stop, so the
+next visible run should preserve the final frames and correlate them with position
+and blocked-substep samples before classifying the event.
+
+The route ended at chunk x=−608 after 615 chunks, 31 fewer than M381. Median wall
+frame rose to `104.244 ms` and effective fly FPS was `9.62`; pressure was Red in
+all periods. `unfinished_visual` was present in `97.96%` of samples, with a
+longest run of 803 periods. Dirty median/max were `657/1265`, and near-void
+peaked at `4462`. The analyzer failed. A separate pixel trace found 101 dark
+probes among 21,920; 100 had valid depth and visible MDI, mostly foliage hits.
+That sparse evidence does not establish a broad geometry hole or dismiss the
+operator's muted-region report.
+
+The async stage trace rules out raw file reads as the dominant disk delay:
+`file_read_ms` p50/p95 were `0.92/1.21 ms`, worker queue p95 was `0.65 ms`, but
+completion result-wait p95 was `70.37 s`. Column finalization saw a ready queue
+of p50/p95/max `12/408/1710` slices. At the end of the route, the newest fully
+applied disk columns were only around x=−256 while the camera had reached −608.
+The queue drains FIFO at four slices per hitching frame, so older completed work
+ahead of the current corridor can account for the disk-loaded frontier lag.
+
+Procedural generation itself was generally `100–180 ms` p95; request queue and
+ready-result waiting dominated, reaching `54.93 s` and `11.48 s` p95 by route
+band. All 2,840 miss records were still applied with `max_commits_per_frame=1`
+despite ready batches up to 51. At the `(-550,0,3)` witness, queue/generation/
+ready-wait were `15.239 s / 94 ms / 327 ms`; the adjacent drawable geometry debt
+remained at dirty queue index `1/595` and was not scheduled that frame. Do not
+raise global commit caps from this evidence alone: median frame wall was already
+104 ms and rendering took 58% of the frame.
+
+**Status:** the bounded near-focus disk completion drain with age-based fairness
+was implemented in `e9d999d9` and evaluated in M383. It reduced p95 completion
+wait and advanced the applied disk frontier, but left the worst tail, ready queue
+size, and renderer acceptance gates unresolved. The current next investigation is
+procedural request/ready queue service and multi-frame ownership of dirty geometry
+debt, with a bounded wall/apply cost.
+
+### Next work from this run
+
+Keep the M335 conditions fixed. The per-slice async I/O trace and near-focus disk
+result drain are now implemented. Next, decompose procedural request queueing,
+ready-result wait, and apply cost; separately trace a repairable screen-ray mesh
+witness through later scheduling frames. Preserve a wall/apply budget and compare
+the full Release run. Keep collision counters and final GUI frames: the operator
+reported a tree stop, while the M383 summary did not confirm a collision event.
+
+## M383: focus-prioritized disk completions help the frontier, not renderer gates
+
+M383 ran from clean Release commit `5b185435` with EXE SHA-256
+`612AE8480BD1AA30BBBF1A3070647F42492A60C34C7134EFF0C280C729AB4A1A`. It kept
+the established M335 conditions exactly: visible/no teleport, `World_164` seed
+`3650471197`, start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, scale 1,
+and 2 800 s flight plus 20 s settle. The process exited normally, reached the
+8 192-block checkpoint, and ended at focus `x=−588` (20 chunks short of M382).
+
+The near-focus disk result drain improved p95 result wait from `70.37 s` in M382
+to `26.05 s` in M383, and the furthest applied disk column moved from about
+`x=−256` to `x=−335`. Raw file reads remained fast. The maximum wait rose from
+`676.6 s` to `706.3 s`, and completed-ready queue max was effectively unchanged
+(`1 710→1 720`); this is a promising one-run shift in the latency distribution,
+not a closed backlog or a controlled proof of causal improvement.
+
+Renderer gates remained poor: unfinished visual debt appeared in `97.88%` of
+samples, longest run `798`, Dirty median/max `970/1 634`, visible-black max `28`,
+and post-stop convergence failed. Near-void max fell `4 462→1 237`, while
+visible-black max rose `23→28`; both runs fail and these one-repeat values should
+not be interpreted as overall quality improvement/regression.
+
+At the x≈−383 witness, output slots had headroom 4 while six mesh schedule slots
+were requested and four available. Among 259 ScreenRayRepair rows west of x=−400,
+252 contained repairable geometry debt and 231 promoted visible geometry; 254
+were sampled before a mesh schedule that frame. Queue-position median was 8 in a
+queue of median size 944. Many rejected FirstMesh tickets coexisted with an
+already-owned Dirty/Remesh item, so the snapshot alone does not establish queue
+starvation. Follow a stable witness over subsequent frames to determine whether
+the existing owner reaches scheduling, capture, completion, and publication.
+
+Procedural generation timings were usually short compared with request and ready
+queue waits. Queue p95 reached about 75 s in some route bands; generation and
+commit remain capped at one per frame. Separate request wait, ready wait, and
+apply cost before changing the cap, and preserve bounded frame wall/apply time.
+
+The operator reported seeing the camera hit a tree and stop. A captured M383 frame
+shows a nearby tree and large unfilled render regions, while the run later reached
+focus x=−588. The analyzer summary has no collision fields; available M383 summary
+did not confirm blocked movement or flight-ground contact. Keep the visual report
+as an unresolved observation and correlate final GUI frames with movement and
+collision counters on the next identical M335 run. The reactive flight fallback
+committed in `5b185435` retries the detour planner after a blocked substep or
+ground contact, alternates the preferred side, and widens clearances after a
+failed attempt; this run does not show that fallback being exercised.
+
+Artifacts: [M383 analyzer report](../../bin/suite_reports/engine_refactor/m383_world164_m335_focus_io_20261004.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m383_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-100630_31840.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-100625.31840),
+[GUI frames](../../bin/logs/m383_world164_m335_focus_io).
+
+## M384: tree detour verified; procedural priority refresh was not exercised
+
+M384 ran a clean Release `7e1f0607` with the same visible, no-teleport M335 on
+`World_164`: seed `3650471197`, start `[120,56,56]`, eye y `70`, yaw `180°`, pitch
+`−30°`, scale 1, 2 800 s flight and 20 s settle. It exited normally, covered
+9 824 blocks, reached focus x `−607`, and crossed the 8 192-block checkpoint.
+
+The renderer remained below acceptance: unfinished visual debt occurred in
+`97.96%` of periods (longest run `809`), Dirty median/max `715/1 346`, wall median
+`106.47 ms`, near-void max `1 553`, visible-black max `46`, Red pressure `100%`,
+and post-stop convergence failed. Against M383, Dirty and wall improved while
+holes remained essentially unchanged and near-void/visible-black worsened. This
+single-repeat mixed result does not close the rendering issue.
+
+The flight report confirms one hazard and one completed right-side detour at
+597.591 s (hazard 2.25 blocks, side offset 3, pass distance 7.25); there were no
+planner failures, blocked substeps, ground contacts, or collision stop. This
+validates obstacle bypass under the exact M335 profile.
+
+The scheduler patch in `7e1f0607` did not receive updated priorities during this
+run: all 2 826 procedural commit rows had equal `priority` at generation start and
+commit. Source review found why. `EnsureChunkLoaded` returns on
+`OnIsColumnPending` without calling the async request callback, and the
+`WorldStreaming` callback itself returns when `ChunkScheduler::IsPending` is true.
+Thus the updated bidirectional priority logic in the scheduler was unreachable for
+the queued/generating columns it was meant to re-rank. Keep the measured M384
+queue result as a baseline, not as evidence that reprioritization helped.
+
+Review of the stale completion path also found that `States[coord]` is set to
+`Ready` before the result token is checked. A canceled worker can therefore
+overwrite state belonging to a newer request for the same coordinate before the
+stale result is discarded. This is a code-level lifecycle hazard; M384 does not
+prove it occurred, but the token check must precede any state mutation.
+
+Procedural source p50/p95/max: request queue `25.5 ms / 35.96 s / 62.25 s`,
+generation `95.5/180.5 ms` p50/p95, ready wait p95 `9.06 s`, apply p95 `9.79 ms`,
+total p95 `43.63 s`. M383 queue p50/p95/max were `28.4 ms / 33.33 s / 88.58 s`;
+ready wait p95 `9.98 s`, apply p95 `8.16 ms`, total p95 `43.01 s`. The run-to-run
+differences are mixed and priority re-ranking was not instrumented/exercised.
+
+Next: forward refreshed priority through the pending path without issuing a second
+disk request, validate result tokens before mutating per-coordinate state, expose a
+re-ranking counter/priority history in source telemetry, then rebuild Release and
+repeat the exact M335. Continue the separate dirty-mesh witness lifecycle analysis
+after this path is verified.
+
+Artifacts: [M384 analyzer report](../../bin/suite_reports/engine_refactor/m384_world164_m335_priority_refresh_20261004.json),
+[flight report](../../bin/flight_sim_report.json),
+[perf trace](../../bin/logs/perf_20261004-112008_7628.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-112004.7628),
+[GUI frames](../../bin/logs/m384_world164_m335_priority_refresh).
+
+## M385: priority refresh is live; ready-result drain is a measured throttle
+
+M385 repeated the same visible Release/no-teleport M335 on `World_164` with no
+camera, speed, daylight, route, or start changes. It finished normally (`rc=0`),
+covered 9 568 blocks from focus x `7` to `−591`, and crossed the 8 192-block
+checkpoint. Collision stop and detour counts were both zero in this run.
+
+The priority-refresh path now reaches the generation scheduler. Of 2 705
+procedural commits, 801 had at least one recorded priority refresh; 729 changed
+priority before generation started and 294 changed it while generation was
+running/ready. Request-queue p95 was `33.83 s` vs M384 `35.96 s`, but the queue
+max was still `80.85 s`; one run is not causal evidence of improved streaming.
+
+A separate throttle is visible in the same trace. Every procedural commit row
+reported `max_commits_per_frame=1`, while ready batches had p50 `3`, p95 `32`, and
+max `55`. Ready-result wait was p50/p95/max `289 ms / 8.74 s / 65.05 s`. Generation
+was comparatively short (`92/128/305 ms` p50/p95/max), and the main-thread
+`ApplyTo + MarkDirty` cost was `5.38/8.14/34.22 ms`. This gives a bounded next
+experiment: let focus-prioritized ready results drain up to three per frame, with
+a 12 ms accumulated apply-time target and an unconditional first-commit allowance.
+Stop before the next result after reaching the target; one synchronous commit may
+overshoot because it cannot be preempted. Keep the existing cap if no ready backlog
+exists. This is a controlled test of throughput under a measured apply-time target;
+it does not justify a global unbounded commit increase.
+
+Analyzer `unfinished_visual` is not a literal pixel-hole percentage in this
+trace: it is closely tracking `column_loaded_no_mesh_n`, with median 26 and
+nonzero in 98% of periods. Direct `near_focus_holes`/`visual_holes` had median 0,
+max 1, and were nonzero in 16.8% of periods; `focus_missing_mesh` also had
+median 0, max 1. Renderer acceptance still failed: Dirty median/max `596/1 459`,
+wall median `105.61 ms`, near-void max `4 285`, visible-black max `28`, Red
+pressure `100%`, and post-stop convergence false. These fields describe distinct
+debts and must not be collapsed into a single “empty chunk” count.
+
+The route recorded 2 291 disk requests, 1 845 disk completions, 2 710 disk misses,
+and 2 705 procedural commits. Since there was no matched return pass over the
+same columns, this cannot determine whether a dark area came from disk reload or
+fresh generation. Of 21 200 pixel probes, 104 dark samples all had depth and a
+visible MDI draw. Most matched source faces were foliage with sampled sky light
+1. Geometry was present at those sampled pixels; the sparse sample does not
+resolve broad dark regions and still leaves lighting revision/shading to inspect.
+
+GPU mesh residency reached its fixed 2 048-slot limit: mid/late-flight bound
+median `2 045/2 046`, free slots `2/1`, and cumulative evictions reached `2 427`.
+The no-victim counter stayed zero, so the allocator found candidates outside its
+guarded draw region. Pending GPU was median 10 and mesh async median 12 (max 16),
+showing steady queue pressure without a demonstrated no-victim failure. Do not
+increase slot capacity in the same experiment; correlate a stable focus witness
+through enqueue, schedule, publication, and draw first.
+
+Artifacts: [M385 analyzer report](../../bin/suite_reports/engine_refactor/m385_world164_m335_priority_refresh_live_20261004.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m385_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-122227_40432.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-122223.40432),
+[GUI frames](../../bin/logs/m385_world164_m335_priority_refresh_live).
+
+## M386: pre-Tick ready snapshot kept the commit budget at one
+
+M386 used the same visible Release/no-teleport M335 on `World_164`, seed
+`3650471197`, start `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, speed
+scale `1`, and 2 800 s fly + 20 s settle. Commit `74be842f` completed normally:
+focus x moved from `7` to `−613`, distance was 9 920 blocks, the 8 192-block
+checkpoint passed, and there was no sustained collision stop.
+
+The bounded ready-result drain added in `74be842f` did not activate. Of 2 814
+procedural commits, every row still logged `max_commits_per_frame=1` and
+`max_apply_budget_ms=0`, although batches collected inside `Tick` had p50/p95/max
+`3/41/57`. `WorldStreaming` sampled `GetCompletedReadyCount()` before
+`UChunkLoadScheduler::Tick()` drained its completion queue. A worker could finish
+between these operations, so a pre-Tick count of zero or one left the commit cap
+at one even while `DrainAll()` observed a large batch. This run is not evidence
+for or against the intended batching policy.
+
+Procedural source timings for 2 814 commits were queue p50/p95/max
+`37.2 ms / 38.0 s / 74.6 s`, generation `99/197/733 ms`, ready wait
+`338 ms / 10.59 s / 62.61 s`, apply `5.36/11.34/81.73 ms`, and total
+`633 ms / 48.61/88.96 s`. Source event counts were 2 268 disk queued, 1 767 disk
+complete, 2 857 disk misses, and 2 814 procedural commits. This again places the
+longest measured source latency in queue/ready wait, not worker generation.
+
+Renderer gates still failed: `unfinished_visual` median 25 and longest run 801,
+Dirty median/max `229/1 212`, wall median `103.07 ms` (flight `102.57 ms`), stream
+phase median `47.69 ms`, Red pressure `100%`, near-void max `5 854`, visible-black
+max `31`, `chunk_not_ready` median 25, and post-stop convergence false. Direct
+near-focus holes were usually zero, but 221 of 1 377 periods were nonzero. Near
+x≈−7 465, the camera-band trace reported 13 missing-resident candidates beside
+12 opaque drawables even when `near_focus_holes=0`; the focus-only gate therefore
+misses part of camera-visible readiness debt.
+
+I also joined 720 renderer pixel probes around x≈−3 898, −4 663, −7 465 and
+−8 000. None was pure black. Unloaded-before-opaque ray witnesses occurred for
+160/160, 240/240, 80/160, and 72/160 pixels in those windows. Sample positions
+include sky and rays can continue past the visible surface, so this only shows
+unloaded world along some sampled rays. It does not prove that those cells caused
+the displayed blank regions. The next pixel audit must join ray distance,
+framebuffer depth, nearest opaque surface, MDI/draw residency, and pixel position
+for the same sample before assigning the visual cause.
+
+The next Release source change switches the fast-flight ready-drain eligibility
+from the racy pre-Tick ready count to the aggregate pending + in-flight + ready
+backlog. It permits up to three commits only during fast movement; `Tick` retains
+the count ceiling and 12 ms accumulated apply-time target. One synchronous apply
+may exceed the target. M387 must prove that the logged policy header becomes
+active before comparing throughput or render quality.
+
+Flight obstacle avoidance already probes an 18-block corridor, validates bounded
+side/pass/return paths and has been exercised successfully on M380/M384. Code
+review found that an already-planned detour was not invalidated if collision
+geometry became available later. The follow-up adds a bounded replan after a
+fully blocked movement substep or flight-ground contact while on a waypoint. It
+preserves the same M335 route and retries the opposite side from the current
+position; the flight report now includes a `detour_replans` count. It is
+diagnostic flight-sim behavior and does not change production locomotion.
+
+Artifacts: [M386 analyzer report](../../bin/suite_reports/engine_refactor/m386_world164_m335_apply_budget_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-134106_19096.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-134102.19096),
+[GUI frames](../../bin/logs/m386_world164_m335_apply_budget).
+
+## M387: ready batching is still serialized; low-resolution pixel rows missed the dark patch
+
+M387 ran a clean Release `64d09ce3` using the same visible/no-teleport M335 on
+`World_164`, seed `3650471197`, start `[120,56,56]`, cruise eye `70`, yaw `180°`,
+pitch `−30°`, speed scale `1`, and `2 800 s` flight plus `20 s` settle. It exited
+normally after 10 128 blocks (`focus 7→−626`, median movement speed `5.19287`),
+crossing the 8 192-block checkpoint. The report says `process_rc=0`; its render
+gates failed. No obstacle was detected (`attempts=0`, detours and replans `0`),
+so this repeat does not test the newly added collision replan. M380/M384 still
+prove the normal detour path.
+
+The ready-drain guard still never activated: 2 051 of 2 946 procedural commit
+events had `ready_batch_n>1` (p50/p95/max `3/31/59`), but all 2 946 logged
+`max_commits_per_frame=1` and `max_apply_budget_ms=0`. This proves that sampling
+`GetGenBacklogTotal()` before `Tick()` does not reliably predict the vector later
+returned by `Completed.DrainAll()`. The correct point to select a multi-result
+budget is inside `UChunkLoadScheduler::Tick()`, after the drain, using the actual
+ready vector size. Only fast movement plus `ready.size()>1` should enable a
+three-result cap and a 12 ms accumulated apply target. The result count and apply
+time remain bounded; a single synchronous result may overshoot the target.
+
+Queue p50/p95/max was `34.6 ms / 31.86 s / 66.76 s`, generation
+`93/150/370 ms`, ready wait `288 ms / 9.07 s / 59.25 s`, apply
+`5.46/10.54/41.30 ms`, and request-to-apply `506 ms / 39.33/80.72 s`.
+Renderer acceptance remained poor: unfinished visual census `97.96%` of periods
+(longest run `804`), Dirty median/max `430/1 086`, wall median `93.39 ms`
+(`92.81 ms` flying), Red pressure `100%`, chunk-not-ready median `26`, near-void
+max `4 217`, visible-black max `31`, and post-stop convergence false. Direct
+near-focus holes were nonzero in 222/1 377 periods, but only two were in the
+visual corridor. These are different scopes; the unfinished census is not a
+screen-pixel hole rate. Source queue and frame-wall differences against M386 are
+not causal evidence because cache/persistence state varies between long repeats.
+
+Visible frames 148 and 167 show dark polygon-like areas and sharp boundaries.
+At the closest dark-frame pixel trace (`frame_epoch=30840`, camera x about
+`−9 359`), only four screen scanlines were sampled across 20 columns. The two
+sample rows hitting surfaces had drawable/MDI geometry, first opaque block ID
+549, sky light approximately `0.53–0.87`, and non-black RGB; the other two rows
+were sky (`depth=1`, no opaque ray hit). The dark polygons fall between sampled
+rows, so these witnesses do not identify their cause. Use the existing
+`CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS=1` option on M388 to sample eight rows at
+the same M335 route and join the pixels falling inside those regions to depth,
+ray, MDI residency, source block, and light revisions. This increases diagnostic
+coverage only; do not alter camera/route/speed/daylight.
+
+Artifacts: [M387 analyzer report](../../bin/suite_reports/engine_refactor/m387_world164_m335_backlog_drain_20261004.json),
+[flight report](../../bin/flight_sim_report.json),
+[perf trace](../../bin/logs/perf_20261004-144425_7548.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-144420.7548),
+[GUI frames](../../bin/logs/m387_world164_m335_backlog_drain).
+
+## M388: dark sampled regions contain drawn geometry with low or provisional light
+
+M388 used Release `0978a7a5` and the same visible/no-teleport M335 on `World_164`
+with fixed daytime. The only diagnostic change was eight pixel-probe rows instead
+of four; source tracing stayed enabled. It exited normally (`process_rc=0`) after
+9 104 blocks (`focus 7→−562`, median speed `5.18555`), crossing checkpoint 8 192.
+The GUI capture contains 189 images. No obstacle hazard occurred, so avoidance
+and collision-replan counters remained zero. The wrapper restored
+`world_data.json` to its original SHA-256 `0ade4041…`.
+
+The experiment also exposed why the previous ready-drain patch remained dormant.
+`World_164` sets `MovementSpeedBoostThreshold=6.0`, above M335's observed median
+speed, while its established `MovementPrefetchThreshold=1.5` recognizes travel.
+The worker drain itself does contain large batches: 1 486 of 2 402 procedural
+commit records had `ready_batch_n>1`, max 40. Yet every record logged
+`max_commits_per_frame=1` and `max_apply_budget_ms=0`; frame telemetry showed a
+commit count of one on 255/1 364 periods, zero on the remainder, never above one.
+The scheduling decision is now keyed to the prefetch movement signal and remains
+bounded by three results and 12 ms of accumulated `ApplyTo + MarkDirty` time.
+M389 must verify the gate in an actual M335 run.
+
+The dense trace contains 32 768 selected screen probes. Of the 165 points below
+luminance 32, all have valid opaque depth, a drawable chunk, and visible MDI
+submission; 148 have a source-face witness within 0.1 of the depth surface. All
+dark samples have block light 0 and sky light 0 or 1; 38 have `light_preview=1`,
+and 47 have unsettled chunk demand. Shader witnesses show day factor 1, ambient
+0.12, sky scale 0.972. This rules out missing opaque geometry for those sampled
+points and points at light initialization/settlement as the leading cause. It
+does not quantify the full screen area or prove that every visible dark polygon
+has the same cause.
+
+At camera x `−8 347`, the sampled depth chunk `(−522,4,3)` belongs to column
+`(−522,0,3)`. The persistence source log records `disk_miss`, followed by a
+procedural commit 24.63 seconds later (queue 24.50 s, generation 84 ms, ready
+batch 6, apply 5.62 ms). Two nearby sampled columns `(−353,0,2/3)` also missed
+disk before generation. Thus at least one captured dark surface was newly
+generated in an uncached far region, not loaded from persistence. M389 later
+observed `disk_miss` again at `(-522,0,3)`, so it did not test the saved-column
+path; the wrapper disables periodic autosave, and unload of those exact columns
+before revisit was not proven. Preserve this as cold-frontier evidence, not as a
+failure of disk light restoration.
+
+Overall analyzer `pass=false`: 1 364 periods, 5 049 spikes, flying wall median
+109.825 ms (9.11 FPS), stream 23.22 ms, mesh emerge 27.10 ms, broad
+`unfinished_visual` census 97.65% (not a screen-pixel hole rate), visible-black
+max 34, near-void max 7 317, unlit max 41, post-stop convergence false. The run
+therefore reproduces distant visual darkness but is not a renderer acceptance
+pass. `unfinished_visual` remains a loaded-column/no-mesh census.
+
+Artifacts: [M388 report](../../bin/suite_reports/engine_refactor/m388_world164_m335_scheduler_drain_20261004.json),
+[pixel/light analysis](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-154622_31036.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-154618.31036),
+[GUI frames](../../bin/logs/m388_world164_m335_scheduler_drain).
+
+## M389: bounded drain активен; повторы дальних колонок всё ещё cold
+
+M389 запущен на Release-сборке с тем же видимым/no-teleport M335 на
+`World_164`: `[120,56,56]`, eye y `70`, yaw `180°`, pitch `−30°`, speed scale
+`1`, 2 800 s полёта и 20 s settle. Он прошёл 9 168 блоков (`focus 7→−566`,
+median speed `5.18555`) и checkpoint `8 192`; `process_rc=0`. `world_data.json`
+восстановлен wrapper. Наблюдение оператора о столкновении с деревом и остановке
+остаётся открытым: доступный flight report M389 указывает нулевые obstacle
+attempts и `collision_stop=false`, поэтому пока нельзя утверждать, что
+это был именно тот же процесс/участок. Сам обход в коде уже включает проверку
+коридора вперёд, поиск боковых сегментов и повторный выбор стороны при
+заблокированном waypoint. Сохранять screenshot и counters одного и того же
+процесса на следующем M335 повторе; профиль маршрута не менять.
+
+Результаты планировщика показывают, что исправление M388 реально работает:
+из 2 437 процедурных commit records у 1 542 ready batch превышал 1; cap был
+`1/2/3` для `895/1 297/245` records, а бюджет `12 ms` — для всех 1 542
+multi-ready records. По frame telemetry было 98 multi-commit periods, максимум
+3 применения за кадр. Средняя стоимость apply составила около `6.86 ms` на
+колонку. Условие по скорости теперь совпадает с M335 через существующий
+movement-prefetch threshold; параметры пролёта не менялись.
+
+Диагностическая трасса содержит 32 768 pixel probes, из них 115 с luma `<32`
+(против 165 в M388; это доля выбранных проб, не экранная доля). У всех 115
+валидная depth-поверхность, у 113 видна opaque MDI команда, у 107 совпал
+source-face witness. В 8 пробах был `light_preview=1`, только в 2 demand был
+unsettled; большинство тёмных проб (`82`) имели `sky=1`, `block=0`, совпадающие
+field/published light revisions и settled demand. Это совместимо с затенённой
+геометрией и не доказывает повреждение дальнего чанка. Требуется разбирать
+конкретный экранный участок и его исходный voxel/material, не повышать яркость
+shader вслепую.
+
+Общие ворота по-прежнему красные: analyzer `pass=false`, 1 368 periods, 5 397
+spikes, flying wall median `104.60 ms` (`9.56 FPS`), stream `26.28 ms`, mesh
+emerge `29.16 ms`, dirty median `844.5`, visible-black max `20`, near-void max
+`3 032`, unlit max `45`, stop convergence false. `unfinished_visual=97.51%`
+остаётся census loaded-column/no-mesh debt, а не screen hole rate. Scheduler
+drain уменьшил часть provisional/dark probes и видимый-black максимум, но
+общий frame budget, far-light debt и renderer acceptance остаются нерешёнными.
+Dominant schedule blocker в отчёте — `empty_fm_queue`; deferred far relight
+pending достигал `678`, а FIFO dropped delta — `1 313`. Следующий кодовый шаг
+должен проследить, почему visible relight очередь исчерпывается при большом
+far-pending debt, и сохранять ограниченные координатные transitions до mesh/GPU
+publication.
+
+M389 не проверил disk persistence: точная дальняя колонка `(-522,0,3)` снова
+получила `disk_miss`, а затем procedural commit через `247.66 ms`. Harness
+вызывает `SetAutosaveEnabled(false)`; значит, обозначение «persisted drain» в
+имени артефакта не является доказательством warm disk load. При этом вывод
+ограничен именно наблюдаемыми координатами: unload-save в остальных путях ещё
+не проверен. Следующий persistence контроль должен обеспечить сохранённый
+column file до повтора и подтвердить `disk_hit` source trace, сохранив M335
+условия съёмки.
+
+Artifacts: [M389 analyzer report](../../bin/suite_reports/engine_refactor/m389_world164_m335_persisted_drain_20261004.json),
+[pixel/light analysis](../../bin/suite_reports/engine_refactor/m389_renderer_pixel_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-165636_31704.jsonl),
+[source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-165632.31704),
+[GUI frames](../../bin/logs/m389_world164_m335_persisted_drain).
+
+### M389 follow-up: wider luma thresholds capture dim surfaces
+
+The previous `luma <32` summary is useful for near-black samples, but it
+under-counts the user's dimmed patches. The same M388/M389 pixel trace was
+reprocessed offline at thresholds 64 and 96; camera, route, and captured frames
+did not change. At `<96`, M388 has 1 112 selected samples (219 provisional-light,
+257 unsettled demand); M389 has 1 032 (177 provisional-light, 281 unsettled
+demand). At `<64`, the counts are 700→657, provisional light 147→131, and
+unsettled demand 173→193. These are selected samples, not screen-area rates;
+the run-to-run differences are not a strict causal A/B because worker timing and
+cache state differ.
+
+For M389's `<96` samples, 973 have valid framebuffer depth, 966 have visible
+opaque MDI submission, and 883 have a source-face witness within 0.1. The
+source-face IDs map to `tree_leaves` (572: 504 probes), `sand` (549: 244),
+`grass` (377: 96), and `tree_log` (573: 77); 99 have no mapped source face. The
+sample set therefore mixes naturally dark materials with real unsettled or
+preview-light surfaces. It cannot classify a whole dim patch from one pixel,
+but the provisional share is large enough to keep light/mesh settlement on the
+critical path rather than dismissing every dim sample as foliage.
+
+The late route bins are especially useful for comparison. For M389 bins 6–8
+(approximately x `−6 000` through `−9 100`), unsettled dark samples were
+`83/109/81` and preview-light samples `49/67/34`; M388 had `47/74/39` unsettled
+and `45/33/70` preview. M389 lowered preview markers while unsettled status rose
+in the same corridor. Continue tracing exact selected pixels through light
+field revision, mesh publication revision, and voxel material at luma `<96` on
+the next unchanged M335 capture.
+
+Threshold summaries: [M388 luma 64](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_l64_20261004.json),
+[M388 luma 96](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_l96_20261004.json),
+[M389 luma 64](../../bin/suite_reports/engine_refactor/m389_renderer_pixel_trace_l64_20261004.json),
+[M389 luma 96](../../bin/suite_reports/engine_refactor/m389_renderer_pixel_trace_l96_20261004.json).
+
+### M389 luma follow-up: transparent composition and fog are separate causes
+
+Repartitioning the M389 `<96` samples by the captured pre-transparent and final
+RGB changes the earlier interpretation. Of 1,032 samples, 306 changed during
+transparent composition; 271 of the 281 unsettled-light samples and 144 of the
+177 preview-light samples are in that group. Among the 726 samples whose RGB did
+not change during transparent composition, only 10 have unsettled demand and 33
+carry the preview marker. These are sparse selected probes, not screen-area
+rates, and transparency alone does not prove water caused every change. The
+specific sample at camera `(-7626,70,56)` hits sand at `(-7646,46,37)`, below sea
+level 48, with a visible MDI surface and pending light; it is an underwater
+floor sample, not evidence that the corresponding chunk is empty.
+
+The M390 GUI capture also provides an exact renderer-color witness for the
+uniform dark-blue polygons. Pixel reads from those polygons are `(13,38,89)`,
+which matches the renderer's configured fog color `(0.05,0.15,0.35)` after
+8-bit conversion. Both M389 and M390 retained M335's `render_distance_chunks=4`,
+`distance_fog_start_ratio=0.48`, density `0.85`, and end margin `28`; the current
+fog horizon is therefore `64-28=36` blocks, with the start at about `17.3`
+blocks. Product flight setup disables fog pull-in, but it leaves distance fog
+enabled. Geometry beyond that short horizon is fully blended to the fog color,
+so these solid blue patches must not be counted as unlit chunks. The surrounding
+blank view may still contain true streaming holes; the fog-color match only
+classifies the tinted polygons. Keep camera, route, and time-of-day at M335 and
+record the fog settings alongside any later renderer comparison.
+
+### M390 completed: cold distant generation and stale queue owners
+
+M390 repeated the unchanged visible M335 route on World_164 for 2 800 s plus
+20 s settle. It reached focus x `−528` / 8 560 blocks at median `5.18555
+blocks/s`. The run had no collision (`attempts=0`, blocked substeps `0`, ground
+contacts `0`); the flight detour was enabled but did not need to act.
+
+The analyzer is red: 1 362 periods, flight wall median `109.06 ms`, renderer
+median `60.06 ms`, dirty median/max `723/1 313`, visible-black max `21`,
+void-near max `1 228`, and unlit max `41`. It records 210 route periods with
+near-focus holes and does not pass the post-stop stalled-visible-black gate.
+`unfinished_visual` is not a pixel-area rate. It stays separate from the 32 768
+dense pixel probes and exact depth/ray witnesses.
+
+The source trace has 1 706 procedural `disk_miss` outcomes. In world-distance
+band 6 000–8 000, the generation kernel has median `108.6 ms` / `p95 152.9 ms`,
+but generation-request queue wait has median `222.8 ms`, `p95 34.9 s`, max
+`60.2 s`; miss-to-commit reaches `60.7 s`. A delayed request was initially
+prioritized at `−435`, refreshed to `400`, then committed with its column 47
+chunks behind the final camera focus. Requests remain in scheduler state after
+leaving the streamer keep ring, so old work can later consume commit and mesh
+budget behind the camera. The first bounded fix cancels only procedural pending
+work outside the current visual/keep retention radius and invalidates active
+generation tokens. Validate it in a same-condition M335 Release rerun; this M390
+capture predates the fix.
+
+Offline pixel traces at threshold 32 found 119 dark samples out of 32 768; all
+119 had settled light demand and visible opaque MDI geometry, 3 carried a
+preview marker and 9 had pending voxel-light witnesses. At threshold 96, 994
+samples were dark; 900 were settled, 94 unsettled, 110 preview, and 153 pending.
+At least 93/994 changed RGB during transparent composition. These selected
+samples do not estimate screen coverage. For threshold 32, 70/119 voxel-ray
+distances differ from framebuffer depth by more than two blocks, which means the
+two probes often refer to different surfaces. A low-luma sample with a valid
+draw and settled light is not enough to call a chunk black or unloaded.
+
+Fog remains independently classified: RGB `(13,38,89)` matches configured
+fog `(0.05,0.15,0.35)`, with M335 fog reaching full blend at 36 blocks. The
+specific dark-blue polygons are fog; remaining focus-mesh/void telemetry still
+demonstrates streaming work that needs to converge.
+
+Artifacts: [M390 report](../../bin/suite_reports/engine_refactor/m390_world164_m335_relight_owners_20261004.json),
+[luma 32](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l32_20261004.json),
+[luma 64](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l64_20261004.json),
+[luma 96](../../bin/suite_reports/engine_refactor/m390_renderer_pixel_trace_l96_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-182722_29104.jsonl),
+[source log part 1](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-182717.29104),
+[source log part 2](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-184711.29104),
+[GUI captures](../../bin/logs/m390_world164_m335_relight_owners).
+
+## M391: pending disk loads become stale owners outside the retention ring
+
+M391 repeated the same visible Release/no-teleport M335 flight on World_164 for
+2 800 seconds plus the 20-second settle: start `[120,56,56]`, cruise eye y=70,
+yaw 180°, pitch −30°, fixed clear day, movement scale 1. It covered 8 800 blocks
+at median 5.18555 blocks/s. Blocked movement and ground-contact counters were
+zero; predictive obstacle avoidance was enabled by the flight harness, and no
+detour was required. The harness restored `world_data.json` byte-for-byte.
+
+The renderer analyzer still fails. It recorded 1 363 periods, median fly wall
+119.46 ms, dirty median/max 543/1 289, visible-black max 53, void-near max 9 362,
+and failed post-stop recovery. `unfinished_visual` is still a loaded-column/mesh
+readiness census, not screen-area coverage. This is not a strict M390 A/B because
+the runs encountered different persisted chunk-file populations.
+
+The source trace has 2 209 unique `disk/queued` columns and 1 779 columns with a
+`disk/complete` event. The other 430 queued coordinates have no matching complete
+event; at final focus they are all 188–379 chunks behind the camera. The log does
+not expose final owner-map membership, so this is a strong stale-work signature,
+not an exact pending-owner count. In the 4 000–6 000 block band, disk-column
+elapsed time was median 25.1 s, p95 619.8 s, max 789.7 s. Aggregate result-wait
+time was median 102.1 s and p95 2 479 s, while worker queue p95 was 0.68 ms and
+file-read p95 1.74 ms. The large delay is between worker completion and the
+game-thread column apply/finalize path, rather than device read time.
+
+Code inspection found that `CancelAsyncTerrainColumnLoad` erased only the
+pending-column map entry. Workers could still read full slice files and push
+results into `CompletedLoads`; the consumer gives pending owners precedence, so
+results for distant canceled coordinates could occupy memory and wait behind
+current demand. Commit `47b9ab04` adds a shared cancellation flag per column,
+cooperative worker checks, ready-queue pruning, token invalidation, and a
+retention-radius sweep for pending disk loads. The next unchanged M335 run (M392)
+is the validation gate. Its comparison must separate source cancellation and
+queue age from the screen evidence and distinguish this warmer persisted state.
+
+M391 pixel probes remain mixed evidence. Of 32 768 probes, 137 fell below luma
+32; all had an opaque MDI draw, 105 had settled light demand, 7 had a preview
+marker, and 51 had a pending voxel-light witness. Below luma 96 there were 954
+samples: 716 settled, 166 preview, 316 voxel-pending, and 186 changed RGB during
+transparent composition. The voxel DDA and framebuffer depth often point to
+different surfaces, so these counts do not classify a complete dark patch.
+The captured GUI frame near x −8 186 also shows sharp blue triangular patches
+across a sand/water shoreline. The sparse probe grid does not yet localize their
+depth layer or source chunk; retain this as a separate visual symptom for a
+same-frame opaque/transparent pixel join.
+
+Artifacts: [M391 report](../../bin/suite_reports/engine_refactor/m391_world164_m335_cancel_stale_loads_20261004.json),
+[luma 96 pixel trace](../../bin/suite_reports/engine_refactor/m391_renderer_pixel_trace_l96_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-193054_24660.jsonl),
+[source log part 1](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-193050.24660),
+[source log part 2](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-194649.24660),
+[source log part 3](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-201249.24660),
+[GUI frames](../../bin/logs/m391_world164_m335_cancel_stale_loads).
+
+## M392: stale disk work is canceled, but completed results wait too long
+
+M392 repeated the visible Release/no-teleport M335 route on `World_164` with
+the established start, camera, daylight, and speed: `[120,56,56]`, eye y=70,
+yaw 180°, pitch −30°, scale 1, 2 800 seconds plus 20 seconds. The route
+manifest passed, the app returned code 0, and the harness restored
+`users.json` and `world_data.json` byte-for-byte. It crossed 623 west chunks
+(`9 968` blocks) at median `5.19287 blocks/s`. No collision stop or avoidance
+detour occurred; no camera or route parameter changed.
+
+The previous disk-cancellation fix is confirmed. There were `2 292` unique
+disk requests, `1 859` completions, and `433` explicit out-of-range cancellations;
+every queued coordinate had a terminal event. This replaces M391's 430
+unmatched coordinates with accounted cancellations. File reads remained fast
+(p95 `1.834 ms`) and worker queue p95 was `1.482 ms`. However, completed results
+still waited median `2.51 s`, p95 `100.84 s`, max `175.06 s`; ready loads reached
+median `16`, p95 `180`, max `458` slices, with no active or pending worker jobs
+at completion. Applying/deserializing each column's four slices cost median
+`7.48 ms` and p95 `12.78 ms`. The consumer is not draining completed work at the
+rate required by the request stream.
+
+Procedural source events show a related but distinct queue delay: `2 919` disk
+misses, `2 870` commits, and `22` cancellations. Generation duration was median
+`94.93 ms`, p95 `132.90 ms`; pre-worker queue wait was median `35.68 ms`, p95
+`25.14 s`, max `42.81 s`; ready-result wait was median `61.61 ms`, p95 `447 ms`.
+This points to admission/queue pressure, not expensive terrain generation by
+itself. The source analyzer preserves disk and procedural timings separately.
+
+Renderer acceptance did not improve enough to pass. Across `1 372` periods,
+median fly frame wall was `91.99 ms` (`10.87 FPS`), dirty median/max was
+`835/1 484`, Red pressure was active for the full flight, and streaming phase
+median was `49.52 ms`. The analyzer's maximum unfinished/void counts describe
+mesh/readiness census, not image area. Post-stop recovery was false: pending and
+focus-dirty work rose rather than converged.
+
+The saved screenshot at x≈−7 037 shows dark blue, chunk-shaped water regions;
+the same M335 route also shows the recurring shoreline wedges. Pixel analysis
+does not attribute those examples to a single layer. Of `32 768` probes, `129`
+were below luma 32, `658` below 64, and `1 076` below 96, compared with
+M391's `137/608/954`; the persisted chunk set differs, so treat this as a
+diagnostic comparison rather than a strict A/B. Every `<32` probe was on a
+drawable opaque MDI surface and none changed RGB during transparent composition.
+`91/129` had a current mesh revision newer than published geometry, and `14`
+had a provisional-light marker. One localized dark-blue probe at camera x
+`−7 114` was `RGB (13,38,89)`, unchanged by transparency, with `sky=0`, a
+provisional-light marker, and mesh/published geometry revisions `2/1`. This is
+evidence of one stale, preview-lit opaque surface. Across `<96`, `256` pixels
+changed during transparent composition, up from M391's `186`; the shoreline
+artifact still needs same-pixel depth/source attribution.
+
+The next code change should reserve a small time-bounded application slice for
+completed disk results after the main near-streaming budget is spent. A single
+slice per frame is the initial conservative bound; compare queue-age reduction,
+frame wall, dirty debt, and stop convergence on the unchanged M335 before
+increasing it. Keep provisional-light policy intact until traces establish that
+the application backlog is the direct owner of the screenshot pixels.
+
+Artifacts: [M392 flight report](../../bin/suite_reports/engine_refactor/m392_world164_m335_cancel_stale_disk_20261004.json),
+[pixel trace luma 96](../../bin/suite_reports/engine_refactor/m392_renderer_pixel_trace_l96_20261004.json),
+[world-column trace](../../bin/suite_reports/engine_refactor/m392_world_column_source_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-205500_34968.jsonl),
+[source logs](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-205456.34968),
+[GUI frames](../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_127.png,
+../../bin/logs/m392_world164_m335_cancel_stale_loads/frame_145.png).
+
+## M393: servicing disk results helps queue age but does not repair rendered surfaces
+
+M393 tested commit `e186c63c` on the unchanged visible Release/no-teleport M335
+route in `World_164`. It retained `[120,56,56]`, eye y `70`, yaw `180°`, pitch
+`−30°`, fixed clear day, scale 1, and `2 800 s + 20 s`; route manifest passed,
+speed was `5.18555 blocks/s`, the application exited 0 without a hang, and world
+data restored byte-for-byte. Movement had no blocked substeps or ground contacts.
+The flight analyzer still failed renderer stop-lines (`22/39` gates passed).
+
+The one-result fallback achieved its intended queue effect: `2 556/2 556`
+unique queued disk coordinates completed, with no unmatched owners. Result-wait
+median/p95 fell `2.51/100.84 s → 1.92/48.21 s`; ready-load p95 fell
+`180 → 104` slices. Disk worker queue and reads remained negligible (p95
+`0.193 ms` and `3.304 ms`), while deserialize/apply median was `7.16 ms`.
+One outlier still waited `194.07 s`, and the maximum ready queue remained `458`.
+The main-thread consumer is still too slow for peak periods.
+
+This was not an overall acceptance improvement. Median fly wall worsened from
+`91.99` to `110.93 ms`; streaming-phase median moved `49.52 → 52.25 ms`. Red
+pressure eased from `100%` to `69.1%`, dirty median/max fell `835/1 484 →
+556/832`, and post-stop missing max fell `35 → 18`; post-stop demand still did
+not converge. The dominant completion stall remains `gpu_not_ready`, while
+spike classification now reports `zero_fm_cap` rather than `empty_fm_queue`.
+M393's renderer gates remain `22/39`, unchanged from M392.
+
+Pixel evidence got worse. With `32 768` probes in each run, dark luma
+`<32/<64/<96` rose `129/658/1 076 → 268/1 025/1 590`. All M393 `<32` pixels
+hit drawable opaque MDI geometry; none changed through transparent composition;
+`155/268` had a mesh revision newer than published geometry and `31` were
+preview-lit. Across `<96`, `1 559/1 590` hit drawable opaque MDI, `935` had
+newer mesh revision, `277` had preview light, and `157` changed during
+transparent composition. M392's equivalent counts were `1 027`, `741`, `166`,
+and `256`. This points more strongly to publication/lighting latency than to
+water composition as the primary dark-surface path, while not making every dark
+sample the same defect.
+
+Procedural source adds a separate queue finding. Across `2 670` disk misses,
+`2 613` commits and `2` out-of-range cancels were logged. Request-to-worker-start
+wait p95 was `25.44 s` (max `47.38 s`), but generation p95 was `121.60 ms` and
+ready wait p95 `280.75 ms`. `queue_ms` is request-to-worker-start, so the main
+delay is before generator execution; the scheduler's per-frame load-start cap
+and four-worker pool need separate attribution. At camera x around `−7 335`,
+dark pixel samples hit water block `549` with `sky=0`, preview light, and mesh /
+published revisions `2/1`; the corresponding columns logged procedural
+`disk_miss` and later commits after `14.31–20.53 s` queue waits. This is
+coordinate correlation, not a same-frame proof.
+
+M393 also shows GPU consumer pressure: queued GPU applies median/p95 `9/12`,
+`gpu_not_ready` is the dominant completion stall, and the publication pool
+reached capacity in four periods. First-mesh cap itself was median/p95 `6/12`
+over all periods; zero FM cap is prominent only within the classified spike
+subset. Follow the exact pixel's CPU revision through mesh scheduling, GPU
+apply, fence completion, pool capacity, and published geometry before changing
+preview-light policy. Fit any disk-result drain inside a shared frame deadline:
+its lower disk queue age is useful, but M393's wall and pixel regressions rule
+it out as a complete fix.
+
+Artifacts: [M393 flight report](../../bin/suite_reports/engine_refactor/m393_world164_m335_reserved_disk_apply_20261004.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m393_renderer_pixel_trace_l96_20261004.json),
+[world-column source trace](../../bin/suite_reports/engine_refactor/m393_world_column_source_trace_20261004.json),
+[perf trace](../../bin/logs/perf_20261004-220021_37424.jsonl),
+[GUI frame](../../bin/logs/m393_world164_m335_reserved_disk_apply/frame_128.png).
+
+## M394: obstacle bypass succeeds, renderer and source queues remain unresolved
+
+M394 tested `69f9d856` on the unchanged visible Release/no-teleport M335 in
+World_164. The manifest retained the established start, eye height, yaw, pitch,
+fixed clear day, scale, and route hash; it reached `9 232` blocks / `577` chunks
+at `5.18555 blocks/s` and the `8 192` checkpoint. The app exited 0 without a
+timeout or hang. The analysis runner exited 1 because acceptance gates failed,
+not because the application failed. World data was restored byte-for-byte.
+
+The requested flight-sim collision response is present and active: the run
+detected 3 predicted hazards, started and completed all 3 detours, and reported
+zero failed plans, replans, or collision stops. The three triggers were at
+`592.4 s`, `600.2 s`, and `2 412.4 s`. This run does not reproduce a physical
+stop against a tree; it does show the bypass code can route around predicted
+hazards without changing M335 recording settings.
+
+The four-load Red cap did not fix renderer acceptance. M394 passed `14/39`
+gates versus M393's `22/39`; fly wall median stayed near `110 ms`, Red pressure
+rose to `100%`, and `holes_rate` remained `1.0`. Dirty median improved
+`556→486` but max worsened `832→1 092`; visible-black max improved `48→28`,
+while unfinished-visual median was `28` versus `27`. This is mixed evidence,
+not a renderer fix.
+
+Dense pixel trace recorded `<32/<64/<96` luma counts `269/1 069/1 673`, against
+M393's `268/1 025/1 590`. At `<32`, all 269 samples hit drawable opaque MDI
+surfaces, 151 had mesh revision newer than published GPU geometry, 19 had a
+preview-light marker, and none changed in the transparent pass. At `<96`,
+`1 628/1 673` had drawable opaque MDI, `956` had stale published geometry,
+`186` had preview light, and `159` changed RGB during transparent composition.
+The pixel join separates at least three paths: published geometry freshness,
+light state, and transparent composition. It does not support treating all dark
+surfaces as absent voxel data.
+
+The source trace rules out slow storage I/O as the main wait: all `2 556` disk
+requests reached completion, worker queue p95 was `0.175 ms`, and file-read p95
+was `1.20 ms`; result-wait median/p95/max was `1.90/55.51/135.24 s`, with ready
+loads p95/max `116/458`. Procedural requests spent median/p95/max
+`43 ms/29.03 s/51.88 s` before worker start, while generation took
+`88/112 ms` median/p95. The long procedural tail is upstream of generation.
+Raising the Red load-start cap from 2 to 4 did not reduce it.
+
+The peak vertex arena sample reached `176.79/176.79 MB` of its current allocation,
+but had `publication_oom_retain_n=0`, only `146/2 048` MDI mesh slots bound,
+and the run median pool fill was `0.675`. This is not evidence of a hard slot
+limit; do not increase pool limits based on the peak fill alone. `gpu_not_ready`
+remains the dominant completion stall and `zero_fm_cap` the dominant classified
+schedule blocker, so the next audit should trace freshness and queue ownership
+through dirty admission, upload, fence completion, and draw publication.
+
+The coordinate join narrows this further. At camera `[-2804,70,55]`, dark
+drawable pixels on `(-176,4,3)` saw CPU mesh revision `5` and published GPU
+geometry revision `4`; its source column `(-176,0,3)` completed from disk in
+`467 ms`, including `1.16 ms` of file reads. At camera `[-8213,70,55]`, dark
+drawable pixels on `(-514,3,3)` saw revisions `6/5`; source column `(-514,0,3)`
+had a disk miss but generation finished in `90.74 ms` after `29.04 ms` in the
+queue. Nearby generated terrain `(-176,0,2)` took `99.02 ms` after `23.04 ms`
+in the queue. The samples span disk-backed and procedural columns but share the
+one-revision GPU freshness gap. This does not prove every dark patch has the
+same cause; it rules out slow disk/generation as the explanation for these
+specific surfaces. Follow those exact vertical slices through dirty admission,
+CPU mesh rebuild, GPU upload/fence, and resident-table swap.
+
+Voxel-engine practice treats meshes as derived cached data and measures rebuild
+separately from draw ([0 FPS greedy-meshing analysis](https://0fps.net/2012/06/30/meshing-in-a-minecraft-game/)). The upload audit must respect OpenGL's buffer-range and synchronization rules ([Khronos buffer streaming](https://wikis.khronos.org/opengl/Buffer_Object_Streaming), [Khronos synchronization](https://wikis.khronos.org/opengl/Synchronization)).
+
+Artifacts: [M394 analysis report](../../bin/suite_reports/engine_refactor/m394_world164_m335_red_generation_cap_20261004.json),
+[flight/obstacle report](../../bin/suite_reports/engine_refactor/m394_flight_sim_20261005.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m394_renderer_pixel_trace_l96_20261005.json),
+[world-column source trace](../../bin/suite_reports/engine_refactor/m394_world_column_source_trace_20261005.json),
+[perf trace](../../bin/logs/perf_20261004-231440_30796.jsonl),
+[captures](../../bin/logs/m394_world164_m335_red_generation_cap).
+
+## M395: exact camera settings retained, but avoidance left the repeatable lane
+
+M395 used the established World_164 M335 Release/no-teleport setup unchanged:
+start `[120,56,56]`, cruise eye `70`, yaw `180°`, pitch `−30°`, scale `1`, fixed
+clear day. The application completed normally (`process_rc=0`, no hang), maintained
+the expected movement speed (`median 5.19287 blocks/s`), and recorded no heading
+deviation. `world_data.json` was restored byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+
+The flight did not remain on the established route: start focus `(7,3)`, end
+focus `(-424,129)`, camera Z `56→2065`, with only 306/1,368 period samples in the
+original `z=3±5` band. The camera advanced normally in X before and after spending
+hundreds of samples moving almost entirely sideways. This is not a camera speed
+or mouse-heading issue.
+
+Avoidance was enabled and active (`attempts=5`, `detours_started=5`,
+`detours_completed=4`, `detour_replans=1`, `plan_failures=0`,
+`collision_stop_triggered=false`). The route controller still had a fixed-direction
+waypoint bug: `MoveAside` and `ReturnToRoute` waited for full horizontal distance
+`<=0.45` blocks, and lateral input did not reverse when the camera passed that
+waypoint. At a measured flight speed near 5.2 blocks/s, a movement update can
+skip this narrow interval and leave A/D held. M394's 3/3 completion was a successful
+sample, not proof the steering converges across update timing. Both phases need
+signed cross-track steering and waypoint-crossing detection. Future reports should
+include maximum and final deviation from the original flight line.
+
+The renderer result is diagnostically useful but not a same-line M335 acceptance:
+`22/39` gates passed, `holes_rate=1.0`, fly wall median `114.33 ms`, dirty median/max
+`609/1,023`, `visible_black_max=35`, and stop convergence remained false. The
+32,768 pixel probes contained 2,643 luma-`<96` samples; 2,581 had drawable visible
+MDI depth surfaces, and 1,545 of those had current mesh revision newer than
+published geometry revision. However, the dense `renderer_pixel_probe` serializer
+omitted the generic dirty-owner and queue fields that `GeometryEngine` populated
+for the exact opaque depth-hit chunk. Their absence in the report means the
+responsible mesh stage remains unlocalized; add these exact-surface fields before
+the next same-route render comparison.
+
+The split source trace also exposes why the route deviation matters. The intended
+`z=3±5` band had 262 procedural commits with scheduler wait median/p95/max
+`7.7 ms/0.853 s/4.32 s`, worker-pool wait p95 `0.050 ms`, and generation p95
+`108 ms`. The accidental `z=129±5` band had 2,178 commits with scheduler wait
+p95 `30.26 s`, max `57.51 s`, worker-pool wait p95 `0.053 ms`, and generation
+p95 `120 ms`. Disk file-read p95 was `1.19 ms`, while result-wait p95 was
+`5.60 s`. These off-route queue results must not be attributed to the repeatable
+M335 corridor.
+
+Artifacts: [M395 renderer report](../../bin/suite_reports/engine_refactor/m395_world164_m335_generation_queue_split_20261005.json),
+[flight control report](../../bin/suite_reports/engine_refactor/m395_flight_control_report_20261005.json),
+[pixel trace](../../bin/suite_reports/engine_refactor/m395_renderer_pixel_trace_l96_20261005.json),
+[z=3 source trace](../../bin/suite_reports/engine_refactor/m395_world_column_source_z3_20261005.json),
+[z=129 source trace](../../bin/suite_reports/engine_refactor/m395_world_column_source_z129_20261005.json),
+[perf trace](../../bin/logs/perf_20261005-003751_40828.jsonl),
+[captures](../../bin/logs/m395_world164_m335_generation_queue_split).
+
+## M396: M335 trajectory restored; visible debt precedes GPU publication
+
+M396 ran from a clean Release manifest on commit `19007cc5`, with the same
+World_164 M335 start, eye height, yaw, pitch, fixed-day lighting, movement scale,
+and no-teleport mode as prior repeatable flights. No capture parameter was
+retuned. Two predicted obstacles triggered avoidance; both detours completed,
+with no replan or collision stop. Focus reached `(−584,3)` from `(7,3)` and
+passed the `8 192`-block checkpoint. Maximum and final lateral deviations were
+`2.50` and `0.14` blocks. This validates the signed cross-track waypoint fix
+from `19007cc5` on the full visual route; M395's Z=129 source results remain an
+off-route diagnostic only.
+
+Renderer acceptance remained false (`15/39` gates, `holes_rate=1.0`). At the end
+the focus miss remained stuck for up to `70 s`, with `57` not-ready and `152`
+dirty focus slices; post-stop convergence was false. The flight therefore gives
+a valid same-route failure sample, not a renderer fix.
+
+The exact opaque-depth pixel join retained the per-pixel mesh owner. Among 1,532
+dark-by-luma (`<96`) probes that hit visible opaque MDI, 851 had CPU mesh
+revision newer than published geometry. Of those, 822 were still owned by Dirty
+(792 priority-remesh, 30 ordinary-remesh) and had no build/upload owner in the
+serialized sample. Their queue-age distribution was median `24`, p95 `166`, max
+`212` frames. This points to delayed mesh admission/capture for many stale
+surfaces; it does not identify the queue decision that withheld each slice.
+
+The luma threshold is not a count of black chunks. Of 1,445 source-face samples,
+1,160 had sky-light 1. Even among 284 probes below luma 32, 220 had sky-light 1
+and only 35 carried the explicit provisional-preview marker. Preserve per-pixel
+depth/source joins and use strict black/fog/material classifications; do not
+infer a lighting regression from `<96` totals alone.
+
+Coordinate/source joins show two independent lifecycle delays. First, an opaque
+hit at `(-583,2,2)` came from procedural disk-miss column `(-583,0,2)`: request to
+worker start was `12.527 s`, actual generation `94.37 ms`, apply `5.05 ms`. About
+11.7 s after commit it was drawable, but with provisional light preview and
+light field/settlement revision `0`. Second, column `(-578,0,3)` generated in
+`178 ms` total; about 25 s later its solid slice still had no drawable mesh or
+active capture/build/GPU owner despite a FirstMesh ticket at Dirty queue head
+(`0/17`, age 16 frames). Fast voxel-data acquisition therefore does not guarantee
+mesh readiness.
+
+Across the route, procedural scheduler wait was `33 ms` median, `30.90 s` p95,
+and `64.71 s` max, while worker-pool wait p95 was `0.049 ms` and generation p95
+`120 ms`. Disk reads were also short (p95 `8.19 ms`), while completed-result
+wait p95 reached `59.67 s`. The source stage has separate scheduler admission
+and ready-result application tails. Neither explains the fast-generated
+`(-578,0,3)` FirstMesh ticket that remained unbuilt.
+
+Audit update: add per-slice FirstMesh admission-decision tracing for nearby
+loaded/no-drawable slices: actual lane cap, queue age/index, focus distance,
+snapshot refresh/time budget, defer reason, and active pipeline owner. Use it to
+locate the missing transition from ticket to capture before changing queue or
+GPU quotas. Then address procedural/disk producer latency and mesh publication
+as separate measured flows. Keep M335 conditions fixed and rerun after each
+source change.
+
+Artifacts: [M396 renderer report](../../bin/suite_reports/engine_refactor/m396_world164_m335_detour_closed_loop_20261005.json),
+[flight control](../../bin/suite_reports/engine_refactor/m396_flight_control_report_20261005.json),
+[pixel/depth trace](../../bin/suite_reports/engine_refactor/m396_renderer_pixel_trace_l96_20261005.json),
+[source trace](../../bin/suite_reports/engine_refactor/m396_world_column_source_z3_20261005.json),
+[perf trace](../../bin/logs/perf_20261005-020105_13792.jsonl),
+[captures](../../bin/logs/m396_world164_m335_detour_closed_loop).
+
+## M397: evidence after FirstMesh frontier instrumentation (2026-10-05)
+
+M397 reran the unchanged M335 World_164 profile in the GUI: fixed clear day, start `[120,56,56]`, eye `70`, yaw `180°`, pitch `−30°`, no teleport, speed scale `1`, 2 800 s flight and 20 s settle. Release manifest names commit `fcf34c1e`, with a clean source tree. Median movement was `5.19 blocks/s`; the run reached focus x `−568` and checkpoint `9 200` blocks. No collision stop occurred.
+
+The renderer still failed acceptance (`22/39` gates): dirty median/max `681.5/1 099`, median frame wall `109.5 ms`, focus miss-stuck up to `216 s`, and no post-stop demand convergence. These aggregates do not count visibly empty chunks. In the depth-linked pixel sample, all `211/211` strict `<32` luminance probes hit visible opaque MDI geometry; `199/211` source faces had sky light `1` and `196/211` had settled demand light. `122/211` had CPU mesh revision newer than published geometry and `117/211` were owned only by Dirty (median age `14` frames). This is evidence of dark rendered surfaces plus mesh publication lag, not proof of empty voxel data.
+
+The new opt-in FirstMesh frontier ring retained `512` samples only (epochs `29563–30532`) and missed the final `330` scheduler frames and the reported `cx=-529` hotspot. Of `63` exact same-frame joins with scheduler decisions, all were `cause=3` (the total mesh-emerge tick budget had already elapsed). For those rows, pipeline was below its cap, snapshot time remained, and FirstMesh cap was nonzero. The finding is scoped to these joins; it does not explain every hole or the `cx=-529` miss.
+
+At the `cx=-529` source join, procedural column data arrived in roughly `221 ms` total. A sampled solid slice at y `32–47` remained with field-light revision `0`, desired geometry revision `6`, published geometry revision `1`; it repeatedly requested relight, while the adjacent `z=3` slice had settled current light and `stale_plan path=6` made no schedule request because its dark witness was false. That sample is not a visible-surface explanation by itself; treat it as an unresolved, possibly underground obligation and do not infer empty world from it.
+
+Independent source-stage evidence: all `2 556/2 556` disk requests completed, disk file-read p95 `1.18 ms` but result-wait p95 `61.10 s`; procedural worker-pool wait p95 `0.053 ms`, generation p95 `123.74 ms`, scheduler queue p95 `25.01 s`. Producer admission/result delivery remains a separate measured tail.
+
+Next, allow at most one extra over-budget FirstMesh schedule per frame only for a near-focus ticket aged at least `32` scheduler frames, with snapshot budget and pipeline capacity available. Keep the normal total cap, all flight conditions, and source/lighting policies unchanged. Compare M335 aged `cause=3`, wall/FPS, linked pixel evidence and stop convergence; revert if wall worsens without reducing ticket age. Then pursue the independently measured producer queue tails.
+
+Reports: [M397 run](../../bin/suite_reports/engine_refactor/m397_world164_m335_firstmesh_frontier_20261005.json), [frontier ring](../../bin/suite_reports/engine_refactor/m397_firstmesh_frontier_trace_20261005.json), [pixel join](../../bin/suite_reports/engine_refactor/m397_renderer_pixel_trace_20261005.json), [z=3 source trace](../../bin/suite_reports/engine_refactor/m397_world_column_source_z3_20261005.json).
+
+## Актуализация по M398 (2026-10-05)
+
+Следующий после M397 Release-прогон оставил все параметры M335 без изменений. Over-budget резерв M398 резко уменьшил возраст FirstMesh в matched far-focus band (`75/259.45/279` → `11/33.65/40` median/p95/max), но общие gates не прошёл (`22/39`, `holes_rate≈0.9993`, post-stop convergence=false). Это подтверждает локальную полезность изменения, но исключает вывод, что именно FirstMesh frontier был единственным источником визуальных дефектов.
+
+Пиксельная выборка `<32` вся имела depth surface и видимый opaque MDI geometry. При этом `159/257` depth-срезов имели CPU mesh revision выше GPU-published geometry revision, и `152` из них были owned только Dirty. Большая часть source-face samples в этой выборке была sky-lit и demand-settled. Значит, наблюдаемые тусклые фрагменты чаще требуют проверки mesh update/publication и материалов, а не автоматического вывода об отсутствии чанка. Threshold `<96` намного шире и включает обычные тёмные материалы и прозрачную композицию.
+
+M398 scheduler trace показывает конкретную дополнительную брешь: 49 watched drawable priority-remesh попыток получили `cause=3` после исчерпания общего mesh-emerge tick budget. Каждая sampled запись оставалась в Dirty-only owner state на queue head, возрастом от 30 до 2 519 кадров; 40 записей были в пределах пяти чанков от focus. При этом бюджетный reserve специально разрешает over-budget schedule только FirstMesh, не drawable remesh. Это новое подтверждённое направление для ограниченного изменения: один обслуживаемый over-budget слот для состарившейся renderer-visible priority-remesh заявки, с сохранением общего schedule/pipeline/snapshot cap.
+
+В точке miss-stuck `cx=−518` ScreenRayRepair фиксировал drawable геометрию с geometry debt и priority queue positions `2…21` при размерах очереди `234…244`, без in-flight или GPU owner. `first_mesh_ticket_rejected` здесь описывает отказ/отсутствие колонного Flow FirstMesh ticket, но сам remesh уже имел Dirty ownership; этот trace tag не следует трактовать как отказ источника данных.
+
+Producer delay остаётся отдельным: disk read p95 `1.18 ms` против result-wait p95 `73.75 s`; procedural scheduler queue p95 `27.95 s` при generation p95 `117.68 ms`. После ограниченного remesh-сервиса нужно повторить тот же M335, затем выбирать следующий bottleneck по capture→worker→GPU trace. Репрезентативный новый seed остаётся периодическим переносимостным контролем, а не заменой World_164 repeatable profile.
+
+Подробные результаты: [план M398](ENGINE_REMEDIATION_PLAN_2026-10-03.md#-m398--bounded-firstmesh-reserve-очередь-улучшилась-видимый-remesh-остаётся-заблокирован-2026-10-05), [run report](../../bin/suite_reports/engine_refactor/m398_world164_m335_aged_firstmesh_reserve_20261005.json), [pixel summary](../../bin/suite_reports/engine_refactor/m398_renderer_pixel_trace_20261005.json), [mesh schedule trace](../../bin/suite_reports/engine_refactor/m398_mesh_schedule_trace_20261005.json).
+
+## Актуализация по M399 (2026-10-05)
+
+M399 проверил ограниченный over-budget reserve для drawable ScreenRayRemesh на том же M335 маршруте. Общие gates остались failed (`23/39`, `holes_rate=1.0`, stop convergence=false); dirty median улучшился до `217`, wall median до `107.00 ms`, но visible-black blink вырос до `0.05535`. Pixel/depth join показывает существующую opaque поверхность во всех строгих тёмных probes (`286/286`); у `206/213` stale samples Dirty оставался единственным владельцем mesh repair. Эти затемнения нельзя приравнивать к отсутствующим voxel chunks.
+
+Screen-ray promotions обычно молоды (`437` drawable pins, age median `4`), хотя max age достигает `221`. В примере `(-554,3,1)` видимый geometry debt имел только Dirty owner при age `2`. Текущий over-budget ScreenRay reserve M399 требует `age≥32`, поэтому не допускает свежий renderer witness в этот путь. В late scheduler ring не записаны reserve flags, но выборка ограничена последними `1 024` событиями и не доказывает отсутствие срабатывания за весь маршрут.
+
+Следующая гипотеза — сохранить один bounded over-budget слот, focus-radius, drawable, exact ScreenRay pin, свободные pipeline/snapshot ресурсы и общий максимум двух escapes, но убрать возрастной порог только для ScreenRay. M400 должен показать переход заявки по mesh stages и влияние на связанный pixel sample. Если reservation flags останутся нулевыми, трассировать admission до `try_schedule`. M335 остаётся неизменным; M399 прошёл без collision stop или detour.
+
+Артефакты: [план M399](ENGINE_REMEDIATION_PLAN_2026-10-03.md#-m399--screen-ray-reserve-не-изменил-сходимость-2026-10-05), [run report](../../bin/suite_reports/engine_refactor/m399_world164_m335_screenray_remesh_reserve_20261005.json), [pixel/depth](../../bin/suite_reports/engine_refactor/m399_renderer_pixel_trace_20261005.json), [screen-ray](../../bin/suite_reports/engine_refactor/m399_screen_ray_repair_trace_20261005.json), [schedule](../../bin/suite_reports/engine_refactor/m399_mesh_schedule_trace_20261005.json), [source](../../bin/suite_reports/engine_refactor/m399_world_column_source_z3_20261005.json).
+
+## Актуализация по M400 (2026-10-05)
+
+Убрали минимальный возраст `32` только для drawable priority-remesh с точным ScreenRay pin; общий escape остаётся один ScreenRay слот на кадр и не повышает общий schedule/pipeline/snapshot cap. M400 показал работу этого пути: в retained scheduler trace есть `62` уникальные ScreenRay reserve admission samples с outcome `cause=15` и queue age `0…8` кадров. На общем spatial pixel corridor `x=−8 192…−1 024` доля luma `<96` снизилась `5.34%→4.45%`, доля depth geometry с CPU revision выше GPU published — `69.49%→60.11%`. Это локальный положительный сигнал для устаревшей drawable поверхности.
+
+Он не закрывает системную проблему. Все M400 пробы `<32` имели valid depth surface и visible opaque MDI; при этом `102/174` surfaces имели stale geometry, и у `100` owner был только Dirty. Порог `<96` также захватывает материалы и fog. Тёмные пиксели не являются свидетельством отсутствия voxel data.
+
+Полный M400 прогон не достиг прежнего M335 far endpoint: `x=−501` / `8 128` блоков против M399 `x=−583` / `9 440`; route hash, длительность, input speed, yaw/pitch, eye height и world были теми же. Блокированных movement substeps нет; камера оставалась в прежнем Z-коридоре. Поэтому далёкий последний сегмент и полную остановочную сходимость этот run не проверил. При этом acceptance `21/39`, dirty median `976`, wall median `128.26 ms`, stream phase `68.43 ms`; M400 хуже M399 в aggregate, несмотря на улучшение matched-pixel диапазона.
+
+Producer trace указывает отдельную активную задержку: все `2 556` disk запросов получили completion, file-read p95 `12.35 ms`, но result-wait p95 `78.94 s`; procedural scheduler queue p95 `33.84 s` при worker-pool wait p95 `0.080 ms` и generation p95 `131.12 ms`. Dominant wall stage `stream`, schedule blocker `zero_fm_cap`, completion stall `gpu_not_ready`. Следующий implementation focus — политика admission/ready-apply source data и фактическое продвижение за fixed flight-time; не менять M335, пока эти стадии не локализованы.
+
+Подробности: [план M400](ENGINE_REMEDIATION_PLAN_2026-10-03.md#-m400--свежий-screenray-reserve-срабатывает-но-дальний-прогон-короче-2026-10-05), [run](../../bin/suite_reports/engine_refactor/m400_world164_m335_fresh_screenray_reserve_20261005.json), [matched pixels](../../bin/suite_reports/engine_refactor/m399_m400_matched_route_pixel_comparison_20261005.json), [pixel summary](../../bin/suite_reports/engine_refactor/m400_renderer_pixel_trace_20261005.json), [mesh schedule](../../bin/suite_reports/engine_refactor/m400_mesh_schedule_trace_20261005.json), [source](../../bin/suite_reports/engine_refactor/m400_world_column_source_z3_20261005.json).
+
+## Update — M401 evidence and current focus (2026-10-05)
+
+The September audit remains the historical baseline; the active evidence is now
+in the [rolling remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md). M401
+repeated the established M335 World_164 flight and passed the 8 192-block
+checkpoint. A narrow disk-slice fast path reduced decode/apply time by less than
+1 ms median and modestly improved the matched corridor's stream and wall
+metrics, but renderer acceptance remained failed and the number of low-luma
+pixel probes increased. All strict `<32` probes still mapped to an opaque depth
+surface, so those counts do not establish empty chunks.
+
+The dominant producer symptom remains completed disk results waiting in the
+ready queue (p95 about 72 s) and procedural requests waiting in scheduler
+admission (p95 about 32 s), while worker-pool wait remains below 1 ms. This
+points to result selection/admission and distance-to-focus relevance; raw disk
+read speed is not the only suspect. The next audit increment compares M400 and
+M401 pixel witnesses in the same camera-X bins and ties source queue events to
+the advancing focus. Keep World_164/M335 unchanged for primary acceptance and
+use new seeds periodically for transfer checks. External design references and
+their application are documented in [streaming best practices](BEST_PRACTICES.md#research-update-for-long-route-streaming-2026-10-05).
+
+## Update — matched pixels and M402 interruption (2026-10-05)
+
+The new M400/M401 camera-X comparison found no material low-luma improvement
+from the disk-slice fast path: `<32` rates were `0.632%/0.689%`, `<96` rates
+were `4.455%/4.555%`, and geometry-newer-than-published rates were
+`36.0%/36.4%` in the shared corridor. The exact bins and limits are recorded
+in the [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m401-spatial-pixel-comparison--no-visible-improvement-2026-10-05).
+
+M402 reached only about 7,069 blocks before becoming unresponsive. The last
+valid movement sample had no collision block. More importantly, its INFO log
+shows a non-positive framebuffer dimension for roughly seven minutes, with 5,601 skipped
+renders and 28 failed frame captures; the last capture is black. Treat M402 as
+partial streaming/frontier telemetry only, not as visible renderer acceptance.
+At the final complete period the focus band contained loaded solid slices
+without drawable meshes, mostly still pending work but including an ownerless
+slice. No Windows hang/error event or process dump was available, so the
+unresponsive-app cause remains unknown. The full incident and exact paths are
+in the [M402 postmortem](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m402--partial-m335-flight-zero-sized-framebuffer-then-hung-app-2026-10-05).
+
+The source trace resolves which route source supplied these cells, but not why
+they were absent from storage: M400 and M401 both recorded procedural disk
+misses and commits for the same 144 columns in `cx=[−440,−424)`, `cz=[−1,8)`.
+Those exact `(cx,cz)` pairs currently have no slice files, although nearby X
+coordinates on other Z lanes do. Both flights later reached `cx=−501` and
+`cx=−515`, so this is not just a camera-frontier band at shutdown. However,
+flight-sim disables periodic autosave and exits through a fast `_Exit` path;
+streaming-unload save requests and their outcomes are not traced. The source
+evidence proves procedural regeneration on both routes, but cannot distinguish
+a save/unload defect from pending work lost at fast exit or a world-path issue.
+
+A mixed disk/procedural transition appears around `cx=[−360,−344)`. There, disk
+result-wait median was 52–95 seconds while file reads remained milliseconds. In
+the newly generated band, M400/M401 scheduler-queue p95 reached 37–50 seconds
+with worker wait below 0.1 ms. M402's column `(-436,0,3)` took 7.8 seconds in
+scheduler queue, then generated/applied in about 120 ms; a nearby audit one
+second later still found no drawable mesh. Keep source persistence, scheduler
+admission, mesh publication, and light correctness as separate measurements.
+The [source-map report and next step](ENGINE_REMEDIATION_PLAN_2026-10-03.md#source-of-column-map--repeated-disk-misses-and-unresolved-save-fate-2026-10-05)
+record the exact bins and limitations.
+
+M403 completed the same M335 route with no collision stop and two successful
+obstacle detours. The window remained responsive, but the run ended at 20,648
+resident chunk slices with a 113.036 ms median frame (8.87 FPS), 1,098 median
+dirty count, and 1,228 peak near void debt. The analyzer failed; `unfinished_visual`
+was nonzero throughout the steady periods. Dense pixel capture was disabled,
+so this measures readiness debt and frame performance, not what every frame
+looked like to the user.
+
+The INFO trace contained zero `[WorldColumnSave]` events. Mode U-A plus the
+movement/dirty/hitch gates left no unload budget for the exact long-flight
+profile. Source timing separates that policy failure from disk speed: median
+file read was 3.56 ms, compared with 2.20 s median disk-result wait and 69 ms
+median procedural scheduler wait (25.83 s p95). Resident growth, queue delay,
+and mesh/light publication are distinct measurements. The 2026-10-05
+[remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m403--exact-m335-sourceunload-baseline-2026-10-05)
+records the source trace and M404's failed bounded U-D attempt.
+
+M404 ran the same visible fixed-day M335 route for the full 2,800-second
+flight plus the 20-second stop. It ended at 4,240 resident chunk slices with a
+163.0 ms median frame (6.13 FPS); median world-streaming time was 146.1 ms,
+about 84% of wall time. The analyzer failed, with `unfinished_visual` present
+in every steady period (median 17), a peak near-void proxy of 723, and up to
+18 visible dark/stale focus columns. These are readiness/draw-state signals;
+they do not prove the underlying voxel column is empty. Sampled screenshots
+showed terrain and visually disconnected/low-detail regions, so pixel review
+remains an explicit acceptance step.
+
+The first U-D fix saved before the column-record eviction veto and allowed the
+cursor to continue scanning after a veto. M404 queued 17,365 saves across
+1,189 unique columns (16,176 repeated queue events; one column queued 103
+times), wrote 70,343 chunk slices without recorded write errors, and still
+showed only rare nonzero unload counters while resident count grew; seven
+period summaries account for 25 removed slices, and spike/blink records
+overlap them. The follow-up moves saving after a successful eviction decision,
+charges vetoes to the per-frame budget, rechecks deferred candidates against
+the current keep ring, and postpones cancellation/token invalidation until
+eviction is allowed.
+M405 must verify actual unload progress and disk-source behavior. M404 also
+persisted many distant columns, so the next run has the same route and settings
+but a warmer on-disk world state. Full M404 artifacts and interpretation are in
+the [remediation plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m404--bounded-unload-failed-repeated-save-before-veto-2026-10-05).
+
+## M405: no process hang, but the far-column eviction gate still fails (2026-10-05)
+
+The visible M335 run on `World_164` completed its 2,800-second flight and
+20-second stop phase from Release commit `927dafb1`. During the reported
+"freeze", Windows continued to report the window responsive, CPU use advanced,
+and captures progressed from frame 148 to frame 188. The final process result
+was 0 with `hang_killed=false`. Sampled wall time varied from roughly 100 to
+240 ms (about 4–10 FPS), which explains the freeze-like appearance in this run;
+this does not explain or disprove M402's separate hung-window event.
+
+M405 still failed the rendering/performance gates: 1,371 of 1,371 steady
+periods had nonzero `unfinished_visual`, median wall was 114.751 ms, the
+near-void proxy peaked at 7,836, and the visible-dark proxy peaked at 29. The
+resident chunk set ended at 13,779 slices. Do not translate these counters
+into a claim that terrain data was absent; they describe unfinished or
+undrawable visual work.
+
+The unload candidate/veto counters isolate the new residency issue. Of 1,346
+candidate rows, 1,241 were vetoed while a column record had active work. Only
+105 rows proceeded to unload, removing 405 chunk slices total. The M404 save
+storm was reduced to 1,827 save queue events across 1,827 unique columns and
+7,352 successful slice writes, with no failed writes. The pending-token
+veto now dominates instead: it protects jobs even after the streamer has
+classified their columns outside the keep ring and camera capsule. Those jobs
+can be invalidated at eviction if generation tokens, scheduler tickets, mesh
+builder/GPU state, collision caches, and queued relight state are all cleaned
+up. If relight is canceled, the persisted light-complete flag must be cleared
+so disk reload recomputes light.
+
+The same flight loaded both saved and fresh terrain: 2,591 disk completions,
+2,608 disk misses, and 2,590 procedural commits. A `disk_light=1` event only
+confirms bytes exist; trusted reuse also requires the column completion flag.
+The trace establishes mixed provenance but does not establish that disk or
+procedural columns caused the dark appearance. The separate `column_light.json`
+flag is the recovery contract when relight debt is abandoned at far eviction.
+
+For the user's current freeze report, this M405 process itself remained
+responsive and ended normally; low FPS was observed. Keep actual app hangs
+separate from low-rate rendering in the audit. Full counters, timings, source
+traces, and the M406 acceptance plan are in the
+[M405 remediation entry](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m405--save-storm-reduced-pending-work-still-pins-resident-columns-2026-10-05).
+
+## M406: bounded residency, but a long-flight window stall is confirmed
+
+M406 completed the established M335 route from Release commit `2f249a5a` with
+`process_rc=0` and `hang_killed=false`. In contrast to M405, Windows briefly
+reported `Responding=False` near the planned stop/exit phase. When the user
+reported a freeze earlier, the process was still `Responding=True` and
+captures/metrics advanced. The report therefore coincides with severe frame
+stalls, not a confirmed Windows-level hang. The late nonresponsive state did
+not lead to a forced kill; the process exited normally.
+
+The out-of-keep cancellation change removed the M405 veto pattern: M406 had
+289 candidates, no vetoes, 201 active-work invalidations, and 1,173 removed
+chunk slices. Resident count ended at 432 (peak 573), and 6,152 unique column
+saves produced 25,147 successful slice writes without duplicate queued
+columns or slice failures.
+
+M406 still failed rendering gates. Median wall time improved to 79.08 ms from
+M405's 114.75 ms, but unfinished visual work remained present in every steady
+period. Near-void proxy peak fell to 3,603 from 7,836; visible-dark proxy peak
+was 26 versus 29. Post-stop missing/effective-hole gates remained false. This
+supports improved residency and lower visual debt, not a claim that terrain
+pixels or lighting are fixed.
+
+The trace separates physical reads from service delay. Across 3,382 disk
+columns, read time was 1.04 ms median / 1.50 ms p95 / 7.43 ms maximum, while
+the per-column sum of completed-result wait was 400 ms median / 8.38 s p95.
+The ready-load queue peaked at 458. Decode-plus-world-apply was 6.35 ms median
+but reached 230.71 ms for one column. `TickAsyncChunkIo` also consumed 1.037 s
+in a 1.093 s spike. Separately, a 1.552 s spike had 1.265 s outside measured
+phase attribution, so the telemetry does not support assigning every freeze
+to storage, streaming, or rendering. The next audit step must make those
+stages independently visible and bound queue/application work.
+
+See the [M406 evidence and M407 sequence](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m406--residency-recovered-streaming-latency-and-visual-debt-remain-2026-10-05).
+
+## M407b: a complete far replay separates disk cost from queue delay
+
+The user confirmed that the M407 34-minute gap came from Windows sleep/lock;
+M407 was incomplete and was not an engine hang. M407b repeated the established
+visible M335 route for the full 2,800-second flight on Release commit
+`fc71fa13`, with no sleep-sized pause and no forced kill.
+
+On that route, disk reads were fast, but ready results waited 692 ms median
+(5.55 s p95) and the queue reached 318 entries. The run mixed 6,153 disk slice
+loads with 1,332 procedural commits after disk misses. Four worker threads
+were active; procedural worker-pool queue time was small, while scheduler queue
+wait reached 176 ms p95 and 9.77 s maximum. Median wall time was 64.37 ms and
+the streaming phase 56.69 ms. The next bounded change batches ready-result
+ranking while preserving near-focus priority, main-thread ownership, and the
+existing apply budget.
+
+Framebuffer probes found 303 low-luminance samples among 32,768, all with a
+visible depth surface and MDI draw. Most mapped to lit grass/tree-log hits;
+the ten opaque-DDA misses were cutout leaves intentionally skipped by that
+witness. This does not prove the reported darkened regions are visually fixed:
+M407b had no PNG capture directory, and `unfinished_visual` is a readiness
+proxy rather than a literal framebuffer-hole count. M408 will capture full
+frames and compare the persisted-source replay against these M407b traces.
+
+See [M407b evidence and M408 plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m407b--full-route-source-and-pixel-evidence-batch-completion-selection-2026-10-05).
+
+## M408: ready-result batching improves frame cost, but focus debt remains
+
+M408 used Release commit `273c796f` and the same 2,800-second visible M335
+route. The process exited successfully with no forced kill; the keep-awake
+helper completed normally. The user confirmed that M407's long gap was caused
+by system sleep/lock. M408 covered 13,264 blocks (about 4.74 blocks/s), close
+to M407b's 13,104, so this run does not support a recurrence of the
+super-fast-flight regression.
+
+The batch-ranked ready-result change reduced median flight wall time from
+64.37 to 56.11 ms and median streaming phase from 56.69 to 47.33 ms. It also
+reduced median mesh-emerge time from 22.82 to 18.36 ms. The run still failed
+visual acceptance: missing-resident/`chunk_not_ready` median was 27; after the
+standard 20-second stop, 25 items remained and zero-debt convergence failed.
+The stop phase nevertheless drained 53 not-ready items and 136 units of dirty
+mesh work. Keep `unfinished_visual` documented as a readiness proxy, not a
+framebuffer-hole count.
+
+M408's source trace shows that file IO is not the bottleneck: 7,377 disk slice
+loads had 0.98 ms median file-read time, while completed results waited
+585 ms median / 4.15 s p95 and the ready queue reached 446 entries. There were
+198 procedural commits after disk misses. Result service improved modestly
+from M407b, but a queue maximum rose because this replay had many more persisted
+reads. The 68.1 s maximum is accumulated per-column wait and must not be read
+as one frame freeze.
+
+Pixel analysis found 277/32,768 probes below luminance 32 (303 in M407b).
+Every such sample had a depth surface and visible MDI draw; 257 had sky-light
+1. At threshold 96, M408 had 1,840 dim probes (M407b 1,781), again all with
+visible MDI surfaces. The near dark-face counters remained zero. This evidence
+does not prove the operator's dim-chunk report is fixed: the pixel trace is
+sparse, source-face joins are incomplete for some samples, and material IDs
+are not yet mapped to names.
+
+The census signals disagree in a way that should guide the next audit. M408
+had `focus_visual_missing_mesh` median 27, but camera-band solid slices without
+a drawable mesh had median 0 and maximum 2; the wider vertical band had median
+90 no-drawable solid slices. M409 should trace exact column/Y coordinates
+behind the missing-resident census and join them to screen-depth coverage
+before changing mesh admission or lighting. The repeatable M335 route remains
+the primary acceptance gate; new-world first-generation scheduling remains a
+periodic secondary run.
+
+Artifacts: [M408 report](../../bin/suite_reports/engine_refactor/m408_world164_m335_batch_ranked_disk_results_20261005.json),
+[pixel trace <32](../../bin/suite_reports/engine_refactor/m408_renderer_pixel_trace_20261005.json),
+[pixel trace <96](../../bin/suite_reports/engine_refactor/m408_renderer_pixel_trace_l96_20261005.json),
+[source trace](../../bin/suite_reports/engine_refactor/m408_source_trace_20261005.json),
+and raw perf `bin/logs/perf_20261005-210152_32396.jsonl`. The full M408 capture
+set is in the ignored directory `bin/logs/m408_world164_m335_batch_ranked_disk_results/`.
+
+### M408 deep trace review: separate readiness, visible geometry, and fog
+
+The M408 screen-ray ring contains 5,258 resident opaque hits, 2,534 rays that
+reached an unloaded slice, and 400 rays with no opaque hit in range. Of 1,171
+resident-hit repair candidates, 816 were selected. `WorldStreaming.cpp` only
+creates candidates from `hit.state == 1`; unloaded-ray cases are not
+classified as missing terrain. The selector is evidence about repair of known
+voxel surfaces, not an oracle for what an unloaded region should contain.
+
+`draw_oracle_missing_resident_n` is currently an alias for `unfinished_visual`:
+`AccumulateDrawOracleFromVbCensus()` copies the latter into the former. It must
+not be counted as separate renderer corroboration. M408's independent evidence
+is the sparse framebuffer/depth probe, frustum/MDI sample, coordinate-level
+camera-band census, and captured PNGs; each describes a different sample and
+must remain labeled as such.
+
+The 9 camera-band unowned peak slices at epoch 52,523 had no mesh revision,
+dirty-queue entry, demand geometry revision, or ColumnFlow ticket. They contain
+only 1–32 non-air voxels each and are lit-ready. This is an actionable
+ownerless-first-mesh observation, but no same-frame pixel witness ties those
+coordinates to an exposed surface. The 122 sampled frustum entries with `no
+drawable` are not 122 holes: frustum candidates can be occluded or valid
+accepted-empty chunks.
+
+PNG review of frames 88, 148, and 188 shows different valid views: mostly
+sky/ocean and haze in the first two, nearby forest/sand/water in the third.
+The M335 RD4 fog reaches full blend around 36 blocks. This accounts for the
+blue/hazy distant field in those captures, but does not prove every long-range
+rendering symptom is fog or that streaming is fixed. Dark leaves and dim pixel
+samples require block-material and source-light correlation before being
+called under-lit chunks.
+
+M409 adds compact output for screen-ray records and the reusable
+`tools/analyze_visual_coverage_trace.py`. Keep readiness, visible surface,
+frustum/MDI, and camera-band ownership evidence separate. No queue or lighting
+policy change is justified by the M408 readiness proxy alone.
+
+### M409 follow-up: disk service, dim surfaces, and the cold index path
+
+The unchanged M335 route completed 13,472 blocks at 5.19653 blocks/s. The
+process returned normally; the user's later confirmation attributes the
+34-minute M407 pause to system sleep/lock, so it is not an engine hang. M409
+still failed 12 of 39 acceptance gates and retained median 27 unfinished
+readiness items. The stop phase reduced debt without converging to zero.
+
+Disk work was not generally slow: 7,467 of 7,467 queued slices completed;
+file read median/p95 was 2.92/7.02 ms and deserialize/apply median was
+3.21/2.66 ms. Worker-queue wait was 9.64 ms median / 32.33 ms p95, while
+completed results waited 587 ms median / 3.09 s p95 before application (max
+61.79 s). The ready-load queue peaked at 292. These maxima are queue/service
+age observations, not a single frame freeze. Procedural generation also
+remains around 84 ms median, while its worker-pool queue is negligible; the
+larger tail is request-to-scheduler admission (9.36 ms median, 255.89 ms p95,
+3.06 s max). Investigate aging and retention before raising worker counts or
+per-frame quotas.
+
+One measured world-entry hitch has a separate cause: the first disk discovery
+at column `(7,0,3)` spent 286.18 ms enumerating the chunk directory inside
+`GetHighestChunkSliceOnDisk()`. Only two of 15,159 discovery calls exceeded
+1 ms, so this is a cold-index one-off, not a recurring far-flight stall. Move
+the initial index build out of the live world tick while retaining safe
+fallback behavior for legacy worlds.
+
+The low-luminance trace still does not prove missing terrain. All 269 M409
+samples below luma 32 had valid depth and visible MDI geometry; 245 joined to
+a source face. At the far endpoint, a representative RGB `(25,33,23)` sample
+had mesh/published geometry revision `11/11`, settled light revision `1`, sky
+light `1`, and no preview marker. Its voxel-ray hit did not describe the same
+depth surface. The renderer investigation needs material identity and a
+same-pixel shader/fog/albedo breakdown; do not fix this by relaxing light
+settlement. Separately, camera-band and focus traces still show readiness and
+no-drawable debt, which remains open until tied to visible depth or pixel
+coverage.
+
+Compact screen-ray serialization cut M409 perf output to 403.67 MiB from
+M408's 490.55 MiB, but dense pixel probes still consume 193.63 MiB. Keep the
+pixel sample count and report telemetry volume separately from engine
+performance. M410 then removed the measured cold-index scan from the live
+request path. Its first discovery fell from M409's 286.18 ms to 0.0141 ms;
+all 7,578 M410 discovery calls stayed below 1 ms. The warmup still needs
+verification on a separate existing world and a world with no saved index.
+
+M410 did not clear the streaming/readiness gate: it failed 12/39 acceptance
+checks, with median 27 unfinished/not-ready items and stop-end 26 not-ready
+items plus 140 focus-dirty chunks. All 7,578 disk slice requests completed,
+but completed-result wait was 627 ms median / 12.76 s p95 / 62.18 s maximum
+and the ready-load queue peaked at 376. These measurements motivate tracing
+request/result ownership, age, retention and main-thread apply progress as
+one lifecycle before changing queue policy or quotas. Procedural generation
+worker wait remained negligible; scheduler-admission and disk-result age are
+the more relevant measured tails.
+
+The M410 dark-pixel attribution also changes the interpretation of earlier
+dim samples. All 261 samples below luma 32 had a valid depth surface and
+visible MDI draw; 243 joined to a source face. 229 source faces were
+`tree_leaves`, with settled sky light in most dark samples. The test therefore
+found real foliage surfaces, not proof of black or absent chunks. Keep the
+operator's dim-region report open and compare its locations with material,
+light, fog and exact screenshot/depth evidence. M410's three unowned
+no-drawable peak slices were five chunks behind focus, outside the retention
+ring. A camera-band count or readiness debt by itself is not a screen-hole
+oracle.
+
+The primary comparison remains the exact visible/no-teleport M335 route.
+M407's long pause was confirmed as system sleep/lock, not an engine hang.
+Keep dense probe volume separate from performance conclusions, retain
+periodic cold-world generation runs, and do not change lighting or queue
+budgets without a same-surface witness and a measured lifecycle bottleneck.
+
+M411 repeated M335 without dense pixel or per-column source tracing. It
+completed 864 chunks/13,824 blocks, captured 189 frames, and restored the
+world metadata byte-for-byte. The GUI samples show forest near the start and
+blue haze/ocean at mid-route and the endpoint, with no full-frame black scene
+in those samples. Median flight wall / streaming phase / mesh emerge fell
+from M410's 56.90/48.07/20.22 ms to 52.94/44.33/17.99 ms; perf output fell
+from 424.48 MB to 50.25 MB. This suggests the heavy diagnostic mode adds
+measurable cost, although persisted chunks and file-cache state prevent a
+strict A/B conclusion. The ordinary run still failed 12/39 gates and kept
+median readiness debt at 27; stop ended at not-ready 27 and dirty 143. The
+core streaming/readiness issue is therefore still open independently of the
+trace overhead.
+
+The source code clarifies why the readiness count persists without mapping
+one-to-one to visible blank terrain. `unfinished_visual` counts focus-ring
+columns; `MissingMesh` is unfinished until every resident solid slice in the
+presentable band has a first mesh. Progressive rendering may already draw
+another Y slice in the same column. Preserve that first-mesh obligation, but
+do not interpret the column count as a screen-hole count. Correlate
+camera-band no-drawable slices with same-frame depth/pixel evidence before
+choosing a streaming or rendering policy change.
+
+### M412: synchronize screen probes with camera-band peaks
+
+M412 used the same visible/no-teleport M335 route and Release executable.
+The 861-chunk flight completed normally (`process_rc=0`, no forced kill),
+saved 189 GUI captures, and restored `World_164/world_data.json` byte-for-byte
+to SHA256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+The M407 pause was confirmed by the user as system sleep/lock.
+
+At the 17-row camera-band no-drawable peak (epoch 46,021) and the 8-row
+unowned peak (epoch 38,725), the synchronized 4-by-20 pixel sampler recorded
+80 pixels per frame. Each frame had 59 valid opaque depth surfaces and 53/54
+voxel-ray hits; none hit the target chunk coordinates. There were 11 and 2
+samples respectively below luma 32, and every one had depth and voxel-ray
+evidence. The highest-frequency depth chunks were around the camera focus.
+These data show
+that the peak rows were not witnessed as exposed screen holes by the sparse
+sampler; they do not establish what lies between samples.
+
+Neither synchronized epoch had a `view_frustum_coverage_trace` record even
+though the pixel probe found same-frame opaque surfaces. Therefore the
+frustum-census output cannot yet be used to classify these coordinates as
+visible or off-screen. Add a compact per-probe summary with candidate counts
+including zero, and verify the geometric frustum/AABB results against the
+sampled depth-surface chunks. Do not infer zero candidates from missing rows.
+
+The flight passed 28/39 acceptance gates, with 52.87 ms median wall time,
+44.24 ms streaming phase, 18.65 ms mesh emerge, 27 median unfinished items,
+and failed stop convergence. A focus-column miss persisted for 32 seconds at
+`(-706, 3)`. The renderer/streaming readiness issue is still open. M412's
+412.60 MB trace output also confirms that detailed visual tracing is expensive
+in storage; compare performance only against the low-trace control and label
+cache/persisted-chunk differences.
+
+Artifacts (ignored `bin/` outputs): [M412 report](../../bin/suite_reports/engine_refactor/m412_world164_m335_peak_sync_20261006.json),
+[peak pixel join](../../bin/suite_reports/engine_refactor/m412_camera_band_pixel_join_20261006.json),
+raw perf `bin/logs/perf_20261006-022416_22260.jsonl`, and captures in
+`bin/logs/m412_world164_m335_peak_sync/`.
+
+### M413–M415: peak chunks are inside the frustum, but not yet tied to pixels
+
+M413's first summary trace could not retain its history because it shared the
+generic high-rate ring. A separate ring fixed that in M414, which retained 499
+summary epochs and 43 sampled-candidate frames. This also illustrates why a
+missing trace row must not be interpreted as a zero measurement.
+
+M415 recorded whether each exact camera-band high-water coordinate's chunk
+AABB intersected the current geometric frustum. All 18/18 no-drawable slices
+and all 8/8 unowned slices intersected it at their respective peak epochs.
+However, the synchronized 80-pixel samples yielded zero depth-surface and zero
+voxel-DDA hits in those target chunks. The no-drawable peak frame had 5 dark
+samples, all with depth and DDA evidence; the unowned peak frame had none.
+Thus these are on-screen-volume candidates, not proven exposed pixels or
+confirmed missing terrain. The broad AABB may be occluded, or the sparse
+sampler may not cover its projected footprint.
+
+The exact visible M335 Release replay completed 861 chunks/13,776 blocks at
+5.19653 blocks/s, with 189 captures, `process_rc=0`, no force kill, and the
+world-data file restored byte-for-byte. It still failed 12/39 acceptance
+gates. Median wall/stream/mesh-emerge time was 52.08/43.42/18.38 ms, median
+unfinished readiness 27, and stop convergence failed. The 392.63 MB visual
+trace is too expensive for a clean performance comparison; use M411's low-
+trace control for that purpose. The user confirmed M407's 34-minute gap was
+system sleep/lock, not a renderer hang.
+
+The next diagnostic should carry the exact target coordinates through screen
+projection and renderer submission: projected pixel rectangle, drawable and
+ready state, CPU/packed refs, MDI resident/visible command, and runtime cull
+decision. A target-directed pixel/depth probe or screenshot review can then
+establish whether the projected area is covered, occluded, or missing geometry.
+Do not change light or streaming policy from frustum intersection alone.
+
+Artifacts: [M413 report](../../bin/suite_reports/engine_refactor/m413_world164_m335_frustum_summary_20261006.json),
+[M414 report](../../bin/suite_reports/engine_refactor/m414_world164_m335_frustum_ring_20261006.json),
+[M415 report](../../bin/suite_reports/engine_refactor/m415_world164_m335_peak_frustum_membership_20261006.json),
+[M415 coordinate/pixel join](../../bin/suite_reports/engine_refactor/m415_camera_band_pixel_join_20261006.json),
+perf `bin/logs/perf_20261006-054508_8136.jsonl`, and route captures in
+`bin/logs/m415_world164_m335_peak_frustum_membership/`.
+
+## M416 update: screen rectangles and mesh ownership (2026-10-06)
+
+M416 added same-frame projected AABBs and render-submission state for retained
+camera-band peak chunks. Across 91 route-wide probes, every target was resident
+and in the geometric frustum; 79 projected rectangles overlapped the sparse
+pixel sample grid and 39 contained depth samples. No sampled depth or exact
+voxel-ray hit belonged to its target chunk. This still does not prove an
+exposed hole because AABBs are conservative, targets can be occluded, and the
+probe is sparse.
+
+The stronger code-level signal is ownership. At the latest no-drawable peak,
+11/15 resident non-air slices had a FirstMesh dirty entry, but one remained at
+index 73; four had no dirty entry or ColumnFlow mesh ticket. At the latest
+unowned peak, all five slices had non-air data but no mesh revision, dirty
+entry, or flow ticket. A broad `work_pending` bit can be set by relight or
+post-dispatch cooldown and must not be treated as an executable mesh owner.
+This supports an admission/ownership lifecycle gap plus service backlog; it
+does not yet identify whether work was never admitted, was dropped, or stalled
+between capture and publication. Trace target identity through each owner
+transfer before changing mesh quotas. Keep the M335 route as the stable
+regression gate; test performance on a low-trace run and continue cold-world
+checks periodically.
+
+M416 completed the 2,800-second route at 5.19653 blocks/s (863 chunks,
+13,808 blocks, 189 captures), with normal process exit and exact world-data
+restore. Acceptance remained 28/39 and stop convergence failed. Median wall,
+stream-phase, and mesh-emerge times were 51.65 / 43.13 / 17.65 ms under an
+approximately 412 MB diagnostic trace. The same captures show triangular
+shoreline/water artifacts around frame 120, a separate rendering issue from
+missing drawable meshes. M407's long pause is excluded from engine-hang
+evidence because the user confirmed system sleep/lock.
+
+The M416 v8 route join follows exact voxel-ray hits across later frames for the
+same target coordinate. For `(-173,3,2)`, 11/13 target hits had a closer GPU
+depth surface and 2/13 matched the target depth within 0.003 blocks; none had
+a farther depth surface or renderer gap. By epoch 16,500 this slice had a
+drawable satisfying mesh but still carried a priority-remesh revision debt at
+queue index 13/252 (age 41). This shows recovery from the no-drawable snapshot
+and a remaining remesh backlog, but does not establish an exposed hole.
+
+The route sampled 32,768 pixels: 287 below luma 32 and 1,815 below 96. All
+low-luma samples had an opaque, draw-ready surface and zero pending-light
+owner. Every valid light witness in those groups matched the field revision,
+with median sky light 1.0. Source IDs were dominated by `tree_leaves` (572)
+and `tree_log` (573). The sampled muted color therefore remains
+unattributed to streaming or light debt; texture and per-fragment fog are
+still candidates. M416 did not record fog factor at the opaque pixel. Extend
+the pixel trace to preserve fog parameters/factor, preview, precipitation, and
+wetness, then compare only under the unchanged M335 profile. Keep chunk mesh
+ownership work as a separate readiness track.
+
+## M418 update — separate fog visibility, dark material pixels, and mesh debt
+
+M418 completed the unchanged visible M335 route on `World_164` after M417's
+Hibernate/reboot interruption. The process exited normally, traveled 13,584
+blocks at 5.19653 blocks/s, saved 189 captures, wrote the complete bounded
+pixel/fog ring, and restored the original world-data SHA. Windows recorded an
+unclean shutdown (Kernel-Power 41) before M418; the failure was external to the
+game process.
+
+### Findings
+
+1. **The far blue wash is ordinary distance fog at very short range.** Pixel
+   probes captured air-fog start/end at 17.28/36 blocks, with an effective fog
+   render distance of four chunks and 28-block end margin. Among 17,608 pixels
+   with depth and a valid fog model, 7,807 had factor >0.9; their output RGB
+   approached the fog color (median distance 8.58, correlation -0.837).
+   This explains why distant terrain can look absent while near terrain remains
+   visible. It does not show that the four-chunk limit matches product intent.
+2. **The sampled low-luma pixels are not missing meshes or stale-light faces.**
+   All 280 pixels below luma 32 and 1,781 below 96 had opaque depth and a
+   draw-ready surface and none had pending light. All available light
+   witnesses matched revisions (256/256 dark and 1,679/1,679 dim). The darkest
+   group had fog factor zero and no voxel-ray gap; 244/280 came from leaves.
+   Pre-fog albedo is not captured, so do not infer the full
+   material-color cause from RGB-to-fog distance alone.
+3. **Camera-band debt remains, but is not yet an observed hole.** There were 18
+   resident, non-air, in-frustum no-drawable peak rows, all with a FirstMesh
+   dirty owner, plus 7 in-frustum unowned rows. Same-epoch renderer probes
+   showed 17 still non-drawable and one already drawable/satisfying with two
+   visible MDI commands, so peak telemetry can straddle publication. The 144
+   projected rectangles received sparse pixel samples in 119 cases and
+   target-chunk depth in zero. Same-frame target hits were zero. Later
+   target-ray samples yielded 11 exact depth matches and 18 nearer-depth
+   occlusions, with no farther-depth gap. This requires an ownership/service
+   investigation, not a culling fix from AABB intersection alone.
+4. **The repeated world is mesh/stream-throughput limited along distance.**
+   Across first/middle/last 400-period windows, median wall time rose
+   40.19/56.98/67.72 ms; stream phase rose 29.16/46.57/59.94 ms and mesh
+   emergence 10.87/19.14/26.85 ms, while render time stayed 5–7 ms. The full
+   route had zero disk-load completions and zero procedural-generation commits.
+   This is not a disk/generation benchmark; the dominant report stage was
+   `stream`, and completion was commonly waiting on `gpu_not_ready`.
+
+### Audit direction
+
+The symptom that currently looks like distant empty terrain is chiefly fogged
+out by the four-chunk horizon on this profile. The sampled dark foliage is
+drawn and current-lit. Keep the remaining mesh ownerless/readiness peaks as a
+separate unresolved correctness risk because sparse samples did not cover
+target depth. Confirm the intended render-distance contract, then profile and
+repair ColumnFlow/mesh publication throughput before raising the distance.
+Add periodic cold/new-world flights to measure disk and generation paths; keep
+the established M335 route as the primary repeatable baseline. Add
+deduplicated periodic visual-trace checkpoints before another long flight so
+an OS interruption cannot discard the entire in-memory ring.
+
+See [the M418 flight record](FLIGHT_EXPERIMENT_SCRIPTS.md) and its ignored
+artifacts: [acceptance report](../../bin/suite_reports/engine_refactor/m418_world164_m335_fog_attribution_20261006.json),
+[fog/pixel join](../../bin/suite_reports/engine_refactor/m418_camera_band_pixel_join_20261006.json),
+and raw perf `bin/logs/perf_20261006-102124_22924.jsonl`.
+### M420 - longer resident-world route
+
+M420 completed 13,472 westward blocks at median 5.19653 blocks/s. The
+application stayed responsive for almost the whole visible run and closed
+normally after a short end-of-run not-responding mark. Median frame wall was
+56.29 ms, streaming phase 47.40 ms, mesh emergence 20.33 ms, and render 7.06
+ms; late streaming windows reached 60-90 ms. The dominant completion stall
+remained `gpu_not_ready`, with `stream` the dominant wall stage.
+
+The repeated route produced no disk-load or procedural-generation completion
+counters, so it does not explain cold-world I/O/generation behavior. It does
+show long-run readiness pressure: ColumnFlow live queue median 26 (Relight 21),
+with Relight dispatch median 0; this is a possible starvation mechanism but is
+not linked to a proven visible hole. The report's `unfinished_visual`-based
+raw hole gate must not be read as a framebuffer hole: effective hole blink
+rate was 0, mid-corridor visual-hole median was 0, and visible-black median
+was 0 (maximum 18). Screenshots show drawable terrain/trees and fog obscuring
+the far horizon. Continue correlating misses with same-frame pixel/depth and
+draw-readiness evidence.
+
+The M420 manifest marks the tree dirty because the explicit timing-field source
+edit was made after flight launch; the Release executable and source SHA are
+identified in the flight record. The report process exited 0 and fixed-day
+metadata restored to the recorded original SHA. `async_io_ms` is historically
+the full async-chunk-systems phase, not disk time. New
+`async_chunk_systems_ms` and `async_chunk_io_drain_ms` fields preserve this old
+alias while disambiguating future logs.
+
+### M421/M422 follow-up - cold-start convergence blocks the new-world route
+
+M421 was intended as a fresh-world control, but `product-174657-far` forced its
+requested world back to `World_164`. The manifest identifies seed `3650471197`
+and the repeated save. The run is a short M335 warm-world control (3,008 blocks
+at `5.19653 blocks/s`), not cold-path evidence. Commit `afbd2572` fixes the
+runner to honor an explicit world and to pin/restore user state in that world.
+
+The corrected M422 manifest confirms `World_M421_Cold_20261006`, seed
+`3650472197`, and cold mode. Startup generated 2,310,487 non-air blocks across
+805 resident chunks, then failed to converge `EnterLit` for about 891 seconds.
+The process stayed responsive but ended with no period rows, flight movement,
+or GUI captures. The saved EnterLit trace shows dirty count peaking at 208 and
+then remaining around 85-121; `ring_not_ready` stayed 31-46. Underfeet readiness
+was true and visibility debt zero, yet the spawn mesh ring never became ready
+and `first_presentable_ms` remained unset. The fallback blocked at dirty count
+106 because it requires `<=32` before leaving the load screen.
+
+This establishes a cold-world startup/convergence defect ahead of the distant
+streaming symptom. It does not establish that the residual dirty cap itself is
+wrong: bypassing it could expose empty or missing chunks. Next trace exact dirty
+coordinates, age, ownership and accepted-empty status; then verify whether
+presentable ring slices keep acquiring/reacquiring FirstMesh work or whether a
+validated empty mesh is never accepted. The Release timer aggregation fix also
+aligns async subphase values with period means, correcting the prior
+last-frame-versus-interval comparison ambiguity.
+
+See [M421/M422 experiment record](FLIGHT_EXPERIMENT_SCRIPTS.md#m421m422---selecting-a-genuinely-cold-world-and-cold-start-stall-2026-10-06)
+and the [updated remediation order](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m421m422-cold-start-follow-up---prioritize-entry-convergence).
+
+### M429 - long-route visual checkpoint and remaining service backlog (2026-10-06)
+
+M429 completed the exact visible no-teleport M335 `World_164` route on the
+clean Release manifest at commit `9b0c9d3f`: 2,800 seconds, 12,880 blocks,
+focus X `7 -> -798`, median movement speed `5.19653 blocks/s`, 1,390 period
+rows and 189 screenshots. The app exited normally and the runner restored
+world metadata. The operator's current visual assessment is positive. In
+captured screenshots the long route shows continuous terrain, trees, coast,
+and water without obvious black/empty chunks. The dense probe ring retained
+32,768 samples from 205 late-route scans: zero had mean RGB below 16. Of 294
+points with luminance below 32, all had valid opaque depth, a drawable mesh,
+and a visible MDI pass; 250 had a source-face witness near the depth surface,
+and 265 had valid light samples with matching light revisions. Therefore the
+sampled dim points are rasterized geometry, not blank framebuffer pixels.
+This still cannot certify pixels between sparse samples or the unrecorded first
+part of the route.
+
+Structural readiness debt did not disappear: the peak camera-band census
+contained 16 solid no-drawable slices and 3 solid unowned slices, but no sparse
+pixel hit matched their target depth; observed hits were occluded by nearer
+surfaces. The screen-ray selector recorded 1,009 candidates, 987 of which had
+an already-satisfying drawable with repairable geometry debt. This supports a
+stale-remesh interpretation for most candidates but does not explain every
+transient no-drawable slice. Keep three verdicts separate: the user's perceived
+appearance is good, the sampled framebuffer contains no near-black point, and
+the scheduler still reports readiness/ownership debt.
+
+The storage trace demonstrates the persisted-chunk path: 2,175 disk
+queue/completion coordinates, zero procedural generation commits, and zero
+unmatched queued events. Median/p95 file read is 1.09/1.68 ms. In contrast,
+the time from worker completion to main-thread result consumption is 655 ms
+median, 9.60 seconds p95 and 60.61 seconds maximum; `result_wait_ms` sums the
+vertical-slice waits for a column. Its separate worst-slice field has median
+195 ms, p95 2.40 seconds and maximum 15.20 seconds. At shutdown, 28 ready
+result slices and 7 pending disk columns remained. M429 also reports
+`async_chunk_io_drain_ms=9.97 ms` median and `async_chunk_systems_ms=26.52 ms`
+median. Source inspection finds an at-most-four-result ranked drain per tick,
+a four-slice/4 ms default under >24 ms frames, and a one-slice/2.5 ms
+near-over-budget fallback. The drain wall time can exceed that target when one
+slice or finalization is expensive. This is the strongest current streaming
+optimization lead, not yet a proven visual-defect cause; dense pixel tracing
+and source logging also make M429 unsuitable as a clean performance baseline.
+
+The flight report has `run_outcome=success`, route adequacy PASS, and a clean
+Release manifest, but product `pass=false` and post-stop convergence FAIL. Its
+`holes_rate=1.0` is derived from `unfinished_visual`, a readiness proxy rather
+than a pixel-hole measurement. Cold-world convergence remains open: M422's
+fresh seed stalled in `EnterLit`, while M427/M428 did not validate the gate
+under an actual moving route. The plan is therefore ready for the next focused
+service-latency investigation, but not ready to close: obtain a low-instrument
+timing control, instrument and reduce completed-result wait without starving
+visible work, then validate cold entry/generation and repeat M335 after any
+policy change. See the [M429 experiment record](FLIGHT_EXPERIMENT_SCRIPTS.md#m429---m335-long-run-visual-and-disk-result-audit-2026-10-06)
+and the [updated plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m429-readiness-checkpoint---visual-evidence-is-better-service-and-cold-start-work-remain).
+
+### M430 - timing control without forensic tracing (2026-10-06)
+
+M430 used the same visible Release/no-teleport M335 start and movement
+parameters, but only for 600 seconds / 3,072 blocks (focus X `7 -> -185`).
+All opt-in pixel and source tracing and screenshot capture were disabled. The
+process completed normally, route speed was `5.19653 blocks/s`, and collision
+telemetry had zero blocked substeps and zero ground contacts. Thus route
+execution is valid, but it is not a far-route streaming acceptance replay.
+
+The low-instrumentation median/p95 frame wall was `34.76/45.34 ms`; streaming
+phase `23.93/35.65 ms`; async chunk systems `12.18/18.39 ms`; mesh emergence
+`8.73/15.27 ms`; and async chunk-I/O drain `7.97/11.62 ms` (14.46 ms max).
+The drain remains substantial without dense pixel readback or per-column source
+logging. M429's much higher late-route phase times cannot yet be attributed to
+that instrumentation because it covers 12,880 blocks while M430 covers only
+the first 3,072. The next baseline should therefore be a full 2,800-second
+M335 repeat with optional tracing disabled before the policy is changed.
+
+M430 had `visible_black_focus_n` median 0/max 18, but no pixel probes; these are
+internal candidates, not a visual verdict. `unfinished_visual` and
+`chunk_not_ready` medians were both 27, and post-stop missing/readiness debt was
+27. The runner reported route success but product `pass=false` (27/39 gates;
+8/12 stop gates), with the hole gate still keyed to the readiness proxy.
+Together with M429, current plan readiness is **good for continuing the focused
+I/O service investigation, not ready to close**: user-perceived visuals and
+sampled pixels are positive, but far-route low-instrumentation performance,
+completed-result service, and cold-world entry remain open. See the [M430
+experiment record](FLIGHT_EXPERIMENT_SCRIPTS.md#m430---low-instrumentation-m335-near-route-control-2026-10-06)
+and [updated plan](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m430-update---isolate-instrumentation-cost-before-changing-streaming-policy).
+
+### Cold-world gate before the next long repeated-world flight
+
+Prepare a fresh world from the same `World_164/world_data.json` settings, but
+with a new numeric seed and a new `world_name`. Do not copy its `chunks/` data
+or `chunks.json` storage marker: the marker alone makes an otherwise empty
+folder look like a persisted save and would confound the intended cold-path
+measurement. Enable `CUBA_WORLD_COLUMN_SOURCE_TRACE=1` and retain visible
+captures, so disk and procedural lifecycle events can be joined to the same
+M335 coordinates. Start with a 600-second no-teleport run to measure startup,
+streamed generation, and frame cost before deciding whether another 2,800-second
+flight is justified. If the first run saves the route, repeat the same segment
+to test disk reads separately.
+
+### M423-M426 - classify cold-start missing meshes versus retained dirty work (2026-10-06)
+
+M423-M426 instrumented the path that M422 could only describe with aggregate
+dirty counts. M423 confirmed a stable zero-quad GPU mesh can still be the spawn
+gate miss while the source chunk is not known; that run omitted the trace flag,
+so it does not distinguish valid occlusion from missing geometry. M424 enabled
+the census and showed one repeated gate candidate `(2,2,4)` with 4,096 non-air
+blocks, zero GPU quads, and a one-revision desired/published gap. The slice was
+still present in FirstMesh's dirty queue. This disproves “the voxel chunk is
+empty” for that sample, but does not prove its faces should be exposed: a
+fully enclosed solid chunk can legitimately produce no faces.
+
+M424's last census had 116 solid slices in the camera band, 12 without a
+drawable mesh, 10 with pending work, none without an owner, 62 dirty, and a
+302-frame oldest dirty age at `(3,2,2)`. The first-pass queue looked busy but
+did not drain the ring into readiness by 197 seconds. The `focus_data_band_*`
+counts include lower FillWater/sea-level slices; the narrower
+`focus_data_camera_band_*` fields are the relevant vertical subset. Neither
+set is a pixel oracle.
+
+M425 exposed the opposite state. By 120 seconds, all 52 camera-band solid
+slices had drawable/satisfying meshes and there were no camera-band missing
+meshes or pending work, but 20 remained dirty, `ring_not_ready` was 16, and
+`spawn_mesh_ring_ready` remained false. The oldest dirty slice itself was
+drawable and satisfying while a priority-remesh demand was active. A near async
+blocker alternated between 0 and 1. The run ended before the 150-second soft
+settle, so it does not show whether startup would then exit. This is evidence
+that raw Dirty/async state can block a visually complete retained-image ring;
+it is not yet proof that every blocker in the larger spawn ring is irrelevant.
+
+M426 then exercised the existing fallback through 150 seconds on a separate
+fresh seed. It logged `soft_settle_blocked_dirty_residual n=100`; at 191
+seconds the gate was still closed with dirty 99, underfeet present, visibility
+debt 0, and 12 camera-band solid slices without drawable output (10 still had
+pending work, none were unowned). This confirms the residual cap is the
+immediate blocker for that cold-start seed, while also showing why disabling
+the cap globally would risk exposing missing geometry. The finding is not
+“cap 32 is too small” in isolation. There are at least two states to separate:
+unpresentable camera-band slices with active/recurrent work (M424/M426) and
+already drawable/satisfying slices retained while a remesh is dirty (M425).
+
+### Audit conclusion and next evidence step
+
+The previously planned dirty-age trace is now present, including demand stage
+and geometry revision for both the oldest camera-band dirty entry and current
+gate miss. The next missing diagnostic is the **exact coordinate and vertical
+class of the near-radius async item** returned by
+`HasAsyncInflightInHorizontalRadius`, plus whether that coordinate already has
+a satisfying drawable. Also persist per-coordinate demand/revision transitions
+for the first no-drawable camera-band slices so repeated re-enqueue can be
+distinguished from worker starvation, stale publication, and legitimate
+occlusion.
+
+Do not raise the dirty cap or skip all dirty/async work in `IsSpawnMeshRingReady`
+yet. The code intentionally retains a prior drawable mesh while a newer
+geometry attempt runs, but the current ring test still consults aggregate
+dirty/async flags; exact owner data is needed to establish which work is safe
+to treat as background. A candidate policy should require satisfying drawable
+or validated-empty output for the actual presentable slices, preserve GPU
+readiness for underfeet, and keep unresolved/no-drawable slices fail-closed.
+Validate it first on a cold EnterLit control past 150 seconds, then on the
+unchanged visible no-teleport M335 route in `World_164`; continue separate
+fresh-seed runs periodically. M423-M426 records and artifacts are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m423-m426---cold-enterlit-owners-and-soft-settle-boundary-2026-10-06).
+
+### M427-M428 - presentability-gate follow-up and next regression lane
+
+The `47088487` change now blocks EnterLit on unsatisfied mesh work in the
+presentable camera band; it continues to block absent drawables and pending
+GPU/underfeet output. M427 did not pin the established user locus and is not a
+M335-start comparison. M428 did pin `[120,56,56]` (yaw 180, pitch -30) and
+telemetry confirms the player stayed at `(120,47,56)` with zero requested and
+applied horizontal motion. That report cannot substantiate a player collision
+or fall, although the operator observed an object in water.
+
+M428 is mixed startup evidence: one EnterLit trace first became presentable at
+5.17 seconds, while a later trace ended with live blockers, no ready underfeet
+or spawn ring, and visibility debt 15. Its report has 30 periods and
+`unfinished_visual=60`, but the route scenario is empty. Period telemetry had
+zero fully-dark/sticky counts and 16 stale-lit visible-black candidates. The
+measurements must remain separate: startup readiness debt is not a visual
+black-pixel measurement, and stale-lit candidates are not confirmed fully-dark
+chunks.
+
+The next decisive check is the unchanged visible, no-teleport M335 flight on
+`World_164` using Release commit `47088487`. Track route progress and collisions
+from actual movement telemetry; at suspected visual defects align screenshots,
+per-pixel census, chunk source, relight/publication revisions, and mesh
+readiness. Keep cold-start/fresh-seed experiments in a separate lane. Full
+M427/M428 artifacts and caveats are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m427-m428---validate-the-presentability-gate-at-the-established-locus-2026-10-06).
+
+### M431 - full low-instrumentation M335 and newly generated west frontier (2026-10-06)
+
+M431 ran the established visible, no-teleport M335 flight for 2,800 seconds
+plus the normal stop/settle phase on Release commit `0a963e14`. Route settings
+and the `World_164` metadata matched the prior M335 lane. All optional visual,
+dense-pixel, source-column, relight-audit, and screenshot-capture flags were
+off. The executable SHA-256 was
+`d51a792c3cfa9fc2ebd5d7def730520fc5b679af906676c58d735f354a6d0c99`; the
+manifest recorded a clean tracked tree. The app returned normally with
+`process_rc=0`, while product acceptance remained `pass=false` (`27/39`
+overall gates; `10/12` stop gates). These are distinct outcomes.
+
+Route adequacy passed: 1,399 periods / 1,397 steady periods, 1,382 fly
+periods, median movement speed `5.19653 blocks/s`, focus X `7 -> -864`, 871
+chunks / 13,936 blocks, and the 8,192-block checkpoint. No blocked movement
+substeps or ground contacts were recorded. This run therefore rules out the
+known super-fast-flight and collision/stop confounders for this sample.
+
+#### Performance by route distance
+
+Raw period rows grouped by focus X show a gradual and substantial increase,
+despite the disabled high-cost diagnostic flags:
+
+| Focus band | Periods | Frame wall median / p95 | World-streaming phase median / p95 | Async chunk systems median | I/O drain median | Mesh emerge median |
+|---|---:|---:|---:|---:|---:|---:|
+| Near `x >= -200` | 330 | `34.95 / 48.36 ms` | `23.85 / 38.21 ms` | `12.10 ms` | `7.85 ms` | `8.82 ms` |
+| Mid `-600 < x < -200` | 620 | `50.50 / 64.62 ms` | `42.86 / 56.92 ms` | `21.36 ms` | `9.62 ms` | `17.00 ms` |
+| Far `x <= -600` | 449 | `67.78 / 89.88 ms` | `61.58 / 82.34 ms` | `30.36 ms` | `10.29 ms` | `26.10 ms` |
+
+The far-minus-near median increase is about `32.8 ms` for frame wall. About
+`18.3 ms` comes from `async_chunk_systems_ms` and `17.3 ms` from
+`mesh_emerge_ms`; their combined increase is slightly larger than wall growth
+because the fields are nested/overlapping phase views. Async chunk-I/O drain
+increases only `2.44 ms`, and `update_streaming_ms` only `0.49 ms`. Thus the
+M429 result-wait/I/O-service issue remains a valid queue-health finding, but
+it is not a sufficient explanation for late-route slowdown. The next code
+diagnostic should split the remaining wall inside the async chunk and mesh
+emergence phases and validate that subtimer totals reconcile with their
+enclosing timers.
+
+Selected existing mesh subtimers also leave a material residual at far focus:
+`mesh_emerge_prep_ms` median `1.18 ms`, dirty tick `3.40 ms`, snapshot
+`1.69 ms`, dirty schedule `1.77 ms`, GPU kick `1.27 ms`, GPU finish `0.61 ms`,
+and async mesh drain `0.34 ms`, compared with the enclosing mesh-emergence
+median `26.10 ms`. These fields are not all necessarily disjoint, so the
+residual must be computed from an explicit timing tree before attributing it.
+Within async chunk systems, I/O drain is `10.29 ms`, relight drain `1.31 ms`,
+and streaming-pressure refresh `1.33 ms`; the remaining work is not yet
+resolved by the present report.
+
+#### Appearance, readiness, and world-source evidence
+
+The operator reports that the current image looks sufficiently good. M431 has
+no screenshot or pixel trace, so it cannot verify appearance on the newly
+covered west segment. During M431, `visible_black_focus_n` median was 0 and
+maximum 22, `visual_holes` was usually 0 (p95/max 1), `unfinished_visual`
+median 27 / p95 63 / max 83, and `chunk_not_ready` median 27. Internal missing,
+unfinished, dark-face, and hole counters are not pixel truth. The report's
+`holes_rate=1.0` specifically uses `unfinished_visual`; post-stop convergence
+also failed with maximum 26 not-ready items. M429's sparse late-route pixel
+samples remain positive direct visual evidence, but cover only 205 probes and
+end before M431's farthest segment.
+
+The INFO log records 171 `ChunkPopulate` calls in the newly crossed columns
+`x=-850..-868` (19 columns x 9 z positions). Per-call worker timing was
+`total_ms` median/p95/max `95.27/128.32/250.12`; sample `18.26/21.26 ms`,
+terrain `6.76/8.18 ms`, post-processing `30.38/40.92 ms`, and sealing
+`32.72/56.24 ms` for median/p95. These costs ran on generation workers and
+must not be added to main-thread frame time. No world-column source trace was
+enabled, so this run cannot show request queueing, worker-pool delay, result
+wait, disk-vs-procedural commit mix, or a per-period causal relationship.
+M431 expanded/persisted `World_164`; later replays may load these coordinates
+from disk, so repeat-world and cold-generation evidence now refer to different
+storage states.
+
+#### Readiness and next diagnostic
+
+The plan is ready for targeted phase attribution, not ready for closure. The
+primary repeated route, expected speed, normal app exit, and collision
+telemetry are controlled; operator-observed appearance is positive; and M429
+has sparse pixel confirmation over part of the long route. Still open are the
+late-route performance regression, unexplained async/mesh phase residuals,
+post-stop/readiness debt, a source-traced fresh-world generation lane, and
+pixel evidence beyond M429's end coordinate. Keep visible appearance, internal
+readiness, source lifecycle, and performance as separate acceptance axes.
+
+The updated ordered actions are in the [M431 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m431-readiness-checkpoint---the-late-route-cost-is-real-disk-drain-is-not-the-whole-cause)
+and the [M431 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m431---full-m335-low-instrumentation-control-and-generation-frontier-2026-10-06).
+
+### M432 - split the far slowdown and update readiness (2026-10-06)
+
+M432 completed the same visible, no-teleport full M335 route on `World_164`.
+The Release process exited 0, the runner classified the route as successful,
+and speed/coverage passed at median `5.19653 blocks/s`, focus X `7 -> -857`,
+13,824 blocks. Blocked movement substeps and ground contacts were zero. The
+runner's product result remained false because performance and visual-readiness
+gates did not converge; this is separate from the successful process/flight.
+
+The distance split makes the slowdown progression clearer than a single
+far-band median:
+
+| Band | Periods | Wall median / p95 | World stream median / p95 | Async post-scheduler median | I/O drain median | Mesh emerge median | Mesh post-telemetry median |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Near `x >= -200` | 322 | `37.06 / 53.03 ms` | `26.48 / 43.65 ms` | `12.28 ms` | `8.94 ms` | `9.04 ms` | `2.13 ms` |
+| Mid `-600 < x < -200` | 624 | `53.65 / 70.52 ms` | `46.42 / 61.83 ms` | `21.12 ms` | `10.23 ms` | `18.53 ms` | `10.20 ms` |
+| Far east `-740 < x <= -600` | 230 | `64.84 / 89.90 ms` | `58.57 / 80.48 ms` | `26.41 ms` | `9.51 ms` | `24.66 ms` | `16.33 ms` |
+| Far west `x <= -740` | 205 | `72.83 / 95.94 ms` | `65.88 / 87.61 ms` | `30.85 ms` | `10.40 ms` | `28.17 ms` | `19.99 ms` |
+
+The far-west wall median is almost double the near median. I/O drain rises only
+`1.46 ms`, while async post-scheduler rises `18.57 ms` and mesh post-telemetry
+rises `17.86 ms`. The scheduler tick itself is effectively zero at the median;
+these broad post phases need further decomposition. M432's full-route analyzer
+reports wall median `55.466 ms`, effective flying FPS `18.04`, and max interval
+wall `316.746 ms`. This confirms that the cost growth is material even though
+the user's present visual assessment is positive.
+
+Source inspection identified an avoidable duplicate in the telemetry hot path:
+`UWorld::SampleColumnEmergeStageTelemetry()` is called from both
+`UWorldStreaming::TickAsyncChunkSystems()` and
+`UWorldStreaming::TickMeshEmerge()` during a normal frame. It walks the
+`ColumnEmergeStates` map, samples focus-ring job stages, and computes
+`CountUnsatisfiedBreakdown()` and `StopConverged()` over demand records. The
+sampled values are consumed by performance logging/tests, not production
+policy. It also runs bounded demand reconciliation and orphan cancellation,
+which do mutate state and must keep their two opportunities per frame. The
+growing `column_lighting_n` median (17 near to 246 far west) is consistent with
+state-size-related diagnostic cost. This strongly supports removing the
+duplicate census while preserving both bounded maintenance calls, and adding
+a single-census timer to verify impact. It does not yet prove this accounts for
+all measured async/mesh residuals.
+
+The operator says the current image looks sufficiently good. M432 had no pixel
+capture or source trace; `visible_black_focus_n` median was zero and
+`unfinished_visual` median 28, while post-stop convergence still failed.
+`holes_rate=1.0` is not a framebuffer result. Therefore visual status is
+currently **operator-positive / not independently sampled on M432**; no new
+visual defect was reported. Routine long timing runs should stay low-instrumented
+until a visual symptom returns. M432 found 47 `ChunkPopulate` INFO records,
+but with source tracing disabled this cannot establish disk-vs-procedural source
+or request/result queue delay. A fresh-world/source-traced lane remains needed.
+
+Plan readiness is **ready for a bounded performance refactor; not ready for
+closure**. Remaining issues are late-route main-thread cost, failed stop
+convergence/readiness signals, and uncharacterized fresh-world creation/load.
+The stable flight speed and collision counters mean route behavior no longer
+blocks streaming analysis. See the [M432 plan update](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m432-readiness-checkpoint---route-controlled-far-hot-path-census-identified)
+and [M432 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m432---full-m335-timing-resample-with-phase-timers-2026-10-06).
+
+### M433 - validate duplicate-census removal and revise remaining work (2026-10-06)
+
+M433 used the same visible, no-teleport full M335 route on `World_164`, with
+Release source `5b6cce71`; optional traces/captures were off. The app exited 0,
+the route passed adequacy at median `5.19653 blocks/s`, and blocked movement
+and ground contacts remained zero. Product gates still returned false, which
+is distinct from route/process success. M433 reached focus X `-882` / 14,224
+blocks; its total distance differs from M432 despite the same settings, so
+focus bands are the controlled comparison.
+
+| Band | M432 wall median | M433 wall median | Change | M433 async post median | M433 census median |
+|---|---:|---:|---:|---:|---:|
+| Near `x >= -200` | `37.06 ms` | `34.31 ms` | `-7%` | `10.35 ms` | `1.89 ms` |
+| Mid `-600 < x < -200` | `53.65 ms` | `46.51 ms` | `-13%` | `16.14 ms` | `9.31 ms` |
+| Far east `-740 < x <= -600` | `64.84 ms` | `55.50 ms` | `-14%` | `19.21 ms` | `15.95 ms` |
+| Far west `x <= -740` | `72.83 ms` | `61.05 ms` | `-16%` | `21.32 ms` | `19.48 ms` |
+
+The reduction is consistent with removing the first of two same-frame census
+passes: far-west async post-scheduler fell about `9.5 ms` while async I/O drain
+remained approximately `10.4 ms`. Overall wall median fell `55.47 -> 47.63 ms`
+and analyzer spike count `663 -> 87`. Movement speed, camera, world, and
+optional instrumentation were controlled; the route covered farther west in
+M433, not less.
+
+The retained census explains essentially all of `mesh_emerge_post_telemetry`
+in M433: both medians were about `19.5 ms` in far west. Since its count outputs
+are telemetry/test inputs rather than production policy, every-frame O(N)
+sampling has no behavior requirement. Keep the two stateful demand-maintenance
+passes every frame, but sample the full census every 250 ms and report count
+and freshness. The remaining async post-scheduler median (`21.32 ms` far west)
+is still significant and should be split further only after the census change
+is measured.
+
+Appearance is operator-positive; M433 had no direct pixel capture. Internal
+`visible_black_focus_n` median remained 0, `unfinished_visual` median 27, and
+post-stop convergence still failed. Continue to treat those signals
+separately. The cold-world path also remains open because M433 did not enable
+source tracing. Plan status is **ready for another bounded perf change, not
+ready for closure**; see the [M433 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m433-readiness-checkpoint---duplicate-removed-one-per-frame-census-remains-costly)
+and [M433 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m433---remove-duplicate-census-and-measure-remaining-cost-2026-10-06).
+
+### M463 follow-up — geometry-repair demand needs pixel attribution (2026-10-08)
+
+The M335 route remains visually operator-positive, and the valid endpoint
+capture shows a populated scene without an obvious chunk-sized hole. M463's
+sparse screen-ray trace found 92 repair-candidate samples at 90 unique chunk
+coordinates, 70 coinciding with near-focus holes. A later predicate review
+clarified that these are mixed states: an opaque ray intersects resident solid
+data and the bounded repair predicate accepts either a missing satisfying mesh
+or repairable geometry revision debt, including cases where an existing
+drawable already satisfies readiness. Treat the rows as source-confirmed
+repair demand, not as proof of absent geometry or of a framebuffer gap. The
+trace covers only 5/20 horizontal tiles and five vertical rows with rotating
+phases.
+
+The ray misses coincided with mesh pipeline backpressure in 74/75 near-focus
+periods (requested schedule median 16, output headroom 9). This makes mesh
+admission/publication/completion the primary next trace chain, but it does not
+establish GPU saturation or implicate terrain disk loading. No disk completion
+or generation commit coincided with these samples. Stop convergence remains
+unproven, and two stationary endpoint periods are insufficient as a convergence
+test.
+
+M463 enabled detail logging and recorded 380 per-result light-flag messages,
+including 104 reported `Access is denied` atomic-replace failures. M464 moved
+these result diagnostics to a worker and turned detail tracing off. The
+dedicated result-drain metric measured 0.0039 ms median, 0.0075 ms p95, and
+7.13 ms max, while general async I/O drain still reached 64.12 ms. The worker
+continued to report rate-limited replace failures, so persistence remains an
+independent open issue. The logging refactor removed the known main-thread
+per-result log path; it did not resolve every I/O drain cost.
+
+M464 traced 856 candidate samples at 321 chunk coordinates. Of these, 840 had
+a mesh satisfying column readiness but with repairable geometry revision debt;
+16 had no satisfying mesh (10 with no geometry-debt flag, six with repairable
+debt). Thus only 1.9% of these ray samples lacked a satisfying mesh. The
+analyzer joined 101 candidates to pixel readbacks at the same frame and sample
+position. All 101 had pre-transparent depth below 1 and a valid opaque surface;
+zero were clear-depth. In 89/101, the pixel-ray-mapped chunk also had positive
+visible MDI indices. Seventy-four CPU pixel-ray hits matched the streaming
+ray's exact block, 16 hit a different block, and 11 had no opaque CPU-ray hit
+despite having a valid depth surface. These joins directly explain why M464's
+readiness “hole” gates can fail while the sampled picture looks filled. They
+cover only 101/856 candidates, so they do not prove the entire frame or route
+has no visible holes. Of the joined candidates, 64 were at or before the
+36-block fog end and 37 were beyond it.
+
+The ray distance p50 was 31.11 blocks, p95 74.57; 332 samples were beyond
+M335's approximately 36-block full-blend fog distance. Other samples still
+need same-frame occlusion, depth, and pixel classification. M464's trace is
+instrumentation-heavy (32,768 pixel-ring probes plus 8,192 rays), so its 25.34
+ms flight-wall median is diagnostic-only. The report explicitly sets
+`hole_key=unfinished_visual` and `unfinished_key=unfinished_visual`, and says a
+nonzero visual-readiness/debt count is not itself a blank or dark framebuffer
+pixel. The all-period `holes_rate=1` and `effective_holes_rate=1` follow that
+proxy semantics; `visual_holes_telemetry_mismatch_rate=0` means the same proxy
+signals agree with each other, not that framebuffer holes were observed.
+
+The route passed adequacy at 14,304 blocks and 5.19653 blocks/s, with process
+exit 0; analyzer quality passed 28/39 gates, and stop convergence failed after
+11 periods (`post_stop_not_ready_end=31`, `post_stop_focus_dirty_end=135`). A
+valid capture at `cx=-636` shows connected forest and near terrain; fog/water
+dominated frames are inconclusive. This agrees with the operator's current
+visual assessment without closing the internal readiness-debt investigation.
+Continue from the [M464 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m464-checkpoint--worker-logging-isolated-screen-ray-debt-reclassified-2026-10-08)
+and [M464 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m464--m335-worker-side-light-flag-result-logging-2026-10-08).

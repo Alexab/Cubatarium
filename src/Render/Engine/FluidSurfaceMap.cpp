@@ -472,7 +472,10 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
     const int processed = drain_pending_rebuild(budget);
     LastFrameStats.DirtyChunksProcessed = processed;
     LastFrameStats.FullRebuild = !PendingRebuildGroundChunks.empty();
-    NeedFullGpuUpload = PendingRebuildGroundChunks.empty();
+    // The CPU staging window has moved, but the existing GPU texels are still
+    // in the old window coordinates. Upload the shifted overlap immediately;
+    // newly exposed strips continue to be patched from the budgeted rebuild.
+    NeedFullGpuUpload = true;
     LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);
     LastMeshRevision = cache.GetMeshRevision();
     finish_cpu();
@@ -534,31 +537,54 @@ void UFluidSurfaceMap::UploadFullGpu()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, SizeBlocks, SizeBlocks, 0, GL_RED,
-               GL_FLOAT, SurfaceStaging.data());
+  if (reallocate)
+  {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, SizeBlocks, SizeBlocks, 0, GL_RED,
+                 GL_FLOAT, SurfaceStaging.data());
+  }
+  else
+  {
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SizeBlocks, SizeBlocks, GL_RED,
+                    GL_FLOAT, SurfaceStaging.data());
+  }
 
   glBindTexture(GL_TEXTURE_2D, FluidIndexTex);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SizeBlocks, SizeBlocks, 0, GL_RED,
-               GL_UNSIGNED_BYTE, FluidIndexStaging.data());
+  if (reallocate)
+  {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SizeBlocks, SizeBlocks, 0, GL_RED,
+                 GL_UNSIGNED_BYTE, FluidIndexStaging.data());
+  }
+  else
+  {
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SizeBlocks, SizeBlocks, GL_RED,
+                    GL_UNSIGNED_BYTE, FluidIndexStaging.data());
+  }
 
   glBindTexture(GL_TEXTURE_2D, FluidBottomTex);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, SizeBlocks, SizeBlocks, 0, GL_RED,
-               GL_FLOAT, FluidBottomStaging.data());
+  if (reallocate)
+  {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, SizeBlocks, SizeBlocks, 0, GL_RED,
+                 GL_FLOAT, FluidBottomStaging.data());
+  }
+  else
+  {
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SizeBlocks, SizeBlocks, GL_RED,
+                    GL_FLOAT, FluidBottomStaging.data());
+  }
 
   glBindTexture(GL_TEXTURE_2D, 0);
   GpuSizeBlocks = SizeBlocks;
   Valid = true;
   NeedFullGpuUpload = false;
   PendingGpuGroundChunks.clear();
-  (void)reallocate;
 }
 
 void UFluidSurfaceMap::UploadDirtyChunkGpu(glm::ivec3 groundChunk)

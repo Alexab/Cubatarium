@@ -324,6 +324,13 @@ bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
     std::error_code ec;
     std::filesystem::remove(legacyJson, ec);
   }
+  RecordChunkSliceSaved(worldFolder, chunkCoord);
+  return true;
+}
+
+void UChunkStorageService::RecordChunkSliceSaved(
+    const std::string &worldFolder, glm::ivec3 chunkCoord) const
+{
   const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
   const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
   {
@@ -344,7 +351,6 @@ bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
       }
     }
   }
-  return true;
 }
 
 int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
@@ -401,36 +407,74 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
   return cached != index.highest_cy.end() ? cached->second : -1;
 }
 
-void UChunkStorageService::RemoveChunkSliceFromDisk(
-    const std::string &worldFolder, glm::ivec3 chunkCoord) const
+void UChunkStorageService::PrepareHighestChunkSliceIndex(
+    const std::string &worldFolder) const
+{
+  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
+  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+  DiskTerrainColumnIndex &index = HighestChunkSliceIndexByFolder[cache_key];
+  if (!index.initialized)
+  {
+    BuildHighestChunkSliceIndex(worldFolder, index);
+  }
+}
+
+bool UChunkStorageService::RemoveChunkSliceFromDisk(
+    const std::string &worldFolder, glm::ivec3 chunkCoord,
+    std::string *outError) const
 {
   const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
   const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
-  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+  const DiskTerrainColumnKey column{ground.x, ground.z};
+  const auto invalidate_cached_highest = [&]()
+  {
+    std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+    const auto folder_index = HighestChunkSliceIndexByFolder.find(cache_key);
+    if (folder_index != HighestChunkSliceIndexByFolder.end() &&
+        folder_index->second.initialized)
+    {
+      const auto cached = folder_index->second.highest_cy.find(column);
+      if (cached != folder_index->second.highest_cy.end() &&
+          chunkCoord.y >= cached->second)
+      {
+        folder_index->second.dirty_columns.insert(column);
+      }
+    }
+  };
+
+  // Invalidate both before and after filesystem work. A concurrent lookup may
+  // consume the first dirty mark and scan while removals are in progress; the
+  // second mark forces the next lookup to see the completed disk state. Never
+  // hold the global index mutex while the filesystem can block.
+  invalidate_cached_highest();
+  bool success = true;
+  std::string first_error;
   for (const ChunkDiskFormat format :
        {ChunkDiskFormat::Binary, ChunkDiskFormat::Json})
   {
     const std::string filePath = ChunkFilePath(worldFolder, chunkCoord, format);
     std::error_code ec;
     std::filesystem::remove(filePath, ec);
-  }
-  const auto folder_index = HighestChunkSliceIndexByFolder.find(cache_key);
-  if (folder_index != HighestChunkSliceIndexByFolder.end() &&
-      folder_index->second.initialized)
-  {
-    const DiskTerrainColumnKey column{ground.x, ground.z};
-    const auto cached = folder_index->second.highest_cy.find(column);
-    if (cached != folder_index->second.highest_cy.end() &&
-        chunkCoord.y >= cached->second)
+    if (ec)
     {
-      folder_index->second.dirty_columns.insert(column);
+      success = false;
+      if (first_error.empty())
+      {
+        first_error = filePath + ": " + ec.message();
+      }
     }
   }
+  invalidate_cached_highest();
+  if (outError && !success)
+  {
+    *outError = std::move(first_error);
+  }
+  return success;
 }
 
-void UChunkStorageService::RemoveTerrainColumnFromDisk(
+bool UChunkStorageService::RemoveTerrainColumnFromDisk(
     const std::string &worldFolder, glm::ivec3 groundCoord,
-    int maxWorldY) const
+    int maxWorldY, std::string *outError) const
 {
   if (groundCoord.y != 0)
   {
@@ -439,11 +483,27 @@ void UChunkStorageService::RemoveTerrainColumnFromDisk(
   const int maxCy = (maxWorldY + CHUNK_SIZE - 1) / CHUNK_SIZE;
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
   const int toCy = std::max(maxCy, highestOnDisk);
+  bool success = true;
+  std::string first_error;
   for (int cy = 0; cy <= toCy; ++cy)
   {
-    RemoveChunkSliceFromDisk(worldFolder,
-                             glm::ivec3(groundCoord.x, cy, groundCoord.z));
+    std::string remove_error;
+    if (!RemoveChunkSliceFromDisk(
+            worldFolder, glm::ivec3(groundCoord.x, cy, groundCoord.z),
+            &remove_error))
+    {
+      success = false;
+      if (first_error.empty())
+      {
+        first_error = std::move(remove_error);
+      }
+    }
   }
+  if (outError && !success)
+  {
+    *outError = std::move(first_error);
+  }
+  return success;
 }
 
 void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,

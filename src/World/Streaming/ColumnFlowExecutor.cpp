@@ -48,6 +48,54 @@ void UColumnFlowExecutor::BeginFrame()
   promote_column_ = glm::ivec2(0);
 }
 
+bool UColumnFlowExecutor::ForgetColumnWork(glm::ivec2 column)
+{
+  bool forgot_work = scheduler_.RemoveColumn(column);
+  const auto erase_column_cooldowns = [&](auto &entries)
+  {
+    for (auto it = entries.begin(); it != entries.end();)
+    {
+      if (it->first.x == column.x && it->first.z == column.y)
+      {
+        it = entries.erase(it);
+        forgot_work = true;
+      }
+      else
+      {
+        ++it;
+      }
+    }
+  };
+  erase_column_cooldowns(last_dispatch_frame_);
+  erase_column_cooldowns(relight_retry_after_frame_);
+  forgot_work = column_job_stage_.erase(ColumnKey(column)) != 0 || forgot_work;
+
+  if (promote_pending_ && promote_column_.x == column.x &&
+      promote_column_.y == column.y)
+  {
+    promote_pending_ = false;
+    promote_enqueued_ = false;
+    promote_priority_ = 0;
+    promote_column_ = glm::ivec2(0);
+    forgot_work = true;
+  }
+  if (promote_hold_valid_ && promote_hold_col_.x == column.x &&
+      promote_hold_col_.y == column.y)
+  {
+    promote_hold_valid_ = false;
+    forgot_work = true;
+  }
+  if (capture_pin_valid_ && capture_pin_col_.x == column.x &&
+      capture_pin_col_.y == column.y)
+  {
+    capture_pin_valid_ = false;
+    capture_pin_hold_ = false;
+    capture_pin_age_ = 0;
+    forgot_work = true;
+  }
+  return forgot_work;
+}
+
 void UColumnFlowExecutor::SetCaptureWitnessPin(glm::ivec2 column, bool valid,
                                                int age, bool hold)
 {
@@ -268,6 +316,11 @@ void UColumnFlowExecutor::FlushPromoteRequest()
 
 namespace
 {
+size_t ColumnFlowKindIndex(ColumnWorkKind kind)
+{
+  return static_cast<size_t>(kind);
+}
+
 const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
 {
   if (const ColumnRecord *rec = world.GetColumnRecords().Find(column))
@@ -584,20 +637,53 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   ++frame_counter_;
   int drained = 0;
   int deferred_n = 0;
+  int cooldown_deferred_n = 0;
   // A deadline-deferred high-priority item must not hide an eligible
   // FirstMesh/repair ticket behind it. Probe a small bounded slice of the
   // queue while counting only successfully dispatched work against n.
   const int probe_budget = std::clamp(std::max(n, 1) * 4, 4, 16);
   int probed = 0;
+  auto &telemetry = world.GetPhysicsTelemetryMutable();
+  telemetry.ColumnFlowQueueLiveN =
+      std::max(telemetry.ColumnFlowQueueLiveN,
+               static_cast<int>(scheduler_.LiveCount()));
+  telemetry.ColumnFlowQueueStaleHeapN =
+      std::max(telemetry.ColumnFlowQueueStaleHeapN,
+               static_cast<int>(scheduler_.StaleCount()));
   const int critical_units_at_entry =
       UFrameDeadline::Get().CriticalUnitsUsed();
+  telemetry.ColumnFlowDrainRequestN = std::max(
+      telemetry.ColumnFlowDrainRequestN, n);
+  telemetry.ColumnFlowCriticalUnitsAtEntryN = std::max(
+      telemetry.ColumnFlowCriticalUnitsAtEntryN, critical_units_at_entry);
+  telemetry.ColumnFlowLiveFirstMeshN = std::max(
+      telemetry.ColumnFlowLiveFirstMeshN,
+      static_cast<int>(scheduler_.LiveCount(ColumnWorkKind::FirstMesh)));
+  telemetry.ColumnFlowLiveRelightN = std::max(
+      telemetry.ColumnFlowLiveRelightN,
+      static_cast<int>(scheduler_.LiveCount(ColumnWorkKind::RelightThenMesh)));
+  telemetry.ColumnFlowLiveSeamN = std::max(
+      telemetry.ColumnFlowLiveSeamN,
+      static_cast<int>(scheduler_.LiveCount(ColumnWorkKind::RemeshSeam)));
+  telemetry.ColumnFlowLivePromoteN = std::max(
+      telemetry.ColumnFlowLivePromoteN,
+      static_cast<int>(scheduler_.LiveCount(ColumnWorkKind::PromoteRelight)));
   int critical_units_reserved_by_flow = 0;
+  int probed_by_kind[4]{};
+  int deferred_by_kind[4]{};
+  int dispatched_by_kind[4]{};
+  double dispatch_ms_max_by_kind[4]{};
   std::vector<ColumnWorkItem> deferred;
   deferred.reserve(static_cast<size_t>(probe_budget));
   ColumnWorkItem work{};
   while (drained < n && probed < probe_budget && scheduler_.DrainOne(work))
   {
     ++probed;
+    const size_t kind_index = ColumnFlowKindIndex(work.kind);
+    if (kind_index < 4)
+    {
+      ++probed_by_kind[kind_index];
+    }
     const CooldownKey retry_key =
         MakeCooldownKey(work.column, ColumnWorkKind::RelightThenMesh);
     if (work.kind == ColumnWorkKind::RelightThenMesh)
@@ -608,6 +694,11 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
         if (frame_counter_ < retry_it->second)
         {
           deferred.push_back(work);
+          if (kind_index < 4)
+          {
+            ++deferred_by_kind[kind_index];
+          }
+          ++cooldown_deferred_n;
           continue;
         }
         relight_retry_after_frame_.erase(retry_it);
@@ -631,31 +722,53 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
          pt.DrawOracleStaleVertexLightN > 0);
     const bool critical =
         work.kind == ColumnWorkKind::FirstMesh || relight_critical;
-    // M118 showed a queue of stale-light RelightThenMesh tickets with no local
-    // mesh job while the shared deadline admitted at most one critical unit.
-    // Permit one measured second unit only when this Flow drain owns the whole
-    // post-deadline reserve; preserve the ordinary one-unit rule if another
-    // producer has already consumed it this frame.
-    const bool may_use_second_stale_repair_unit =
-        stale_light_repair && critical_units_at_entry == 0 &&
-        critical_units_reserved_by_flow < 2;
-    const int critical_unit_limit = may_use_second_stale_repair_unit ? 2 : 1;
+    // M118 showed stale-light repairs queued with no local mesh job while the
+    // shared deadline admitted only one critical unit. M418 exposed the same
+    // cap on FirstMesh: the drain requested >=2, but one unit was dispatched
+    // while up to 16 candidates were deferred. Let this drain use a second
+    // bounded unit for visible FirstMesh or stale-light repair only when no
+    // earlier producer spent the reserve. FrameDeadline still rejects a
+    // second unit when the previous critical unit exceeded its measured cap.
+    const bool flow_owns_critical_reserve =
+        critical_units_at_entry == 0 && critical_units_reserved_by_flow < 2;
+    const bool may_use_second_flow_unit =
+        flow_owns_critical_reserve &&
+        (work.kind == ColumnWorkKind::FirstMesh || stale_light_repair);
+    const int critical_unit_limit = may_use_second_flow_unit ? 2 : 1;
     const bool deadline_exhausted_before = UFrameDeadline::Get().Exhausted();
     const int critical_units_before = UFrameDeadline::Get().CriticalUnitsUsed();
     if (UFrameDeadline::ShouldDeferProducer(critical, critical_unit_limit))
     {
       deferred.push_back(work);
+      if (kind_index < 4)
+      {
+        ++deferred_by_kind[kind_index];
+      }
       ++deferred_n;
       continue;
     }
     const bool reserved_post_deadline_unit =
         deadline_exhausted_before && critical &&
         UFrameDeadline::Get().CriticalUnitsUsed() > critical_units_before;
+    const auto dispatch_started = std::chrono::steady_clock::now();
     AdvanceColumn(world, work, focus_ground_horiz, focus_radius, admit_batch);
+    const double dispatch_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - dispatch_started)
+            .count();
+    if (kind_index < 4)
+    {
+      ++dispatched_by_kind[kind_index];
+      dispatch_ms_max_by_kind[kind_index] = std::max(
+          dispatch_ms_max_by_kind[kind_index], dispatch_ms);
+    }
     if (reserved_post_deadline_unit)
     {
       ++critical_units_reserved_by_flow;
       UFrameDeadline::NoteCriticalUnitFinished();
+      telemetry.ColumnFlowPostDeadlineUnitMsMax = std::max(
+          telemetry.ColumnFlowPostDeadlineUnitMsMax,
+          UFrameDeadline::Get().LastCriticalUnitMs());
     }
     ++drained;
   }
@@ -663,11 +776,52 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   {
     scheduler_.Enqueue(item);
   }
-  world.GetPhysicsTelemetryMutable().ColumnFlowDeferredN += deferred_n;
-  world.GetPhysicsTelemetryMutable().ColumnBumpDenied +=
+  telemetry.ColumnFlowProbedN = std::max(telemetry.ColumnFlowProbedN, probed);
+  telemetry.ColumnFlowCooldownDeferredN = std::max(
+      telemetry.ColumnFlowCooldownDeferredN, cooldown_deferred_n);
+  telemetry.ColumnFlowProbeBudgetHitN =
+      std::max(telemetry.ColumnFlowProbeBudgetHitN,
+               drained < n && probed >= probe_budget ? 1 : 0);
+  telemetry.ColumnFlowCriticalUnitsAtExitN = std::max(
+      telemetry.ColumnFlowCriticalUnitsAtExitN,
+      UFrameDeadline::Get().CriticalUnitsUsed());
+  telemetry.ColumnFlowProbedFirstMeshN = std::max(
+      telemetry.ColumnFlowProbedFirstMeshN, probed_by_kind[1]);
+  telemetry.ColumnFlowProbedRelightN = std::max(
+      telemetry.ColumnFlowProbedRelightN, probed_by_kind[0]);
+  telemetry.ColumnFlowProbedSeamN = std::max(
+      telemetry.ColumnFlowProbedSeamN, probed_by_kind[2]);
+  telemetry.ColumnFlowProbedPromoteN = std::max(
+      telemetry.ColumnFlowProbedPromoteN, probed_by_kind[3]);
+  telemetry.ColumnFlowDeferredFirstMeshN = std::max(
+      telemetry.ColumnFlowDeferredFirstMeshN, deferred_by_kind[1]);
+  telemetry.ColumnFlowDeferredRelightN = std::max(
+      telemetry.ColumnFlowDeferredRelightN, deferred_by_kind[0]);
+  telemetry.ColumnFlowDeferredSeamN = std::max(
+      telemetry.ColumnFlowDeferredSeamN, deferred_by_kind[2]);
+  telemetry.ColumnFlowDeferredPromoteN = std::max(
+      telemetry.ColumnFlowDeferredPromoteN, deferred_by_kind[3]);
+  telemetry.ColumnFlowDispatchedFirstMeshN = std::max(
+      telemetry.ColumnFlowDispatchedFirstMeshN, dispatched_by_kind[1]);
+  telemetry.ColumnFlowDispatchedRelightN = std::max(
+      telemetry.ColumnFlowDispatchedRelightN, dispatched_by_kind[0]);
+  telemetry.ColumnFlowDispatchedSeamN = std::max(
+      telemetry.ColumnFlowDispatchedSeamN, dispatched_by_kind[2]);
+  telemetry.ColumnFlowDispatchedPromoteN = std::max(
+      telemetry.ColumnFlowDispatchedPromoteN, dispatched_by_kind[3]);
+  telemetry.ColumnFlowDispatchFirstMeshMsMax = std::max(
+      telemetry.ColumnFlowDispatchFirstMeshMsMax, dispatch_ms_max_by_kind[1]);
+  telemetry.ColumnFlowDispatchRelightMsMax = std::max(
+      telemetry.ColumnFlowDispatchRelightMsMax, dispatch_ms_max_by_kind[0]);
+  telemetry.ColumnFlowDispatchSeamMsMax = std::max(
+      telemetry.ColumnFlowDispatchSeamMsMax, dispatch_ms_max_by_kind[2]);
+  telemetry.ColumnFlowDispatchPromoteMsMax = std::max(
+      telemetry.ColumnFlowDispatchPromoteMsMax, dispatch_ms_max_by_kind[3]);
+  telemetry.ColumnFlowDeferredN += deferred_n;
+  telemetry.ColumnBumpDenied +=
       static_cast<int>(scheduler_.DeniedCount());
   scheduler_.ClearDeniedCount();
-  world.GetPhysicsTelemetryMutable().ColumnFlowUpgradeN +=
+  telemetry.ColumnFlowUpgradeN +=
       static_cast<int>(scheduler_.UpgradeCount());
   scheduler_.ClearUpgradeCount();
   return drained;

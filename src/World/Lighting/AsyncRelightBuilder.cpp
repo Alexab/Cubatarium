@@ -1,6 +1,7 @@
 #include "World/Lighting/AsyncRelightBuilder.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Core/Environment.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "Core/Jobs/PipelineAdmission.h"
 #include "World/Core/BlockWorld.h"
@@ -78,12 +79,13 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                });
 }
 
-void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
-                                      RelightJobSpec spec,
-                                      const UBlockRegistry &registry)
+AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
+    const UBlockWorld &world, RelightJobSpec spec,
+    const UBlockRegistry &registry)
 {
+  AsyncRelightEnqueueTimings timings;
   const bool audit_relight =
-      std::getenv("CUBATARIUM_RELIGHT_AUDIT") != nullptr;
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT");
   const auto capture_started = std::chrono::steady_clock::now();
   const uint64_t submit_epoch = Epoch.load(std::memory_order_acquire);
   const uint64_t job_id =
@@ -93,8 +95,19 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
 
   UChunkRelightSnapshot snapshot;
   {
-    std::lock_guard<std::mutex> capture_lock(gRelightCaptureMutex);
+    const auto lock_wait_started = std::chrono::steady_clock::now();
+    std::unique_lock<std::mutex> capture_lock(gRelightCaptureMutex);
+    const auto lock_acquired = std::chrono::steady_clock::now();
     snapshot = UChunkRelightSnapshot::Capture(world, spec);
+    const auto snapshot_captured = std::chrono::steady_clock::now();
+    timings.capture_lock_wait_ms =
+        std::chrono::duration<double, std::milli>(lock_acquired -
+                                                  lock_wait_started)
+            .count();
+    timings.snapshot_copy_ms =
+        std::chrono::duration<double, std::milli>(snapshot_captured -
+                                                  lock_acquired)
+            .count();
   }
   LastCaptureFullN = snapshot.GetCapturedFullChunks();
   LastCaptureNeighborLightN = snapshot.GetCapturedNeighborLightChunks();
@@ -103,6 +116,7 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
   work_token.domain = WorkDomain::Relight;
   work_token.generation = job_id;
   DependencyStamp deps;
+  const auto dependency_started = std::chrono::steady_clock::now();
   if (!spec.block_positions.empty())
   {
     const glm::ivec3 chunk =
@@ -111,6 +125,11 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
     work_token.chunk_incarnation = ChunkIncarnationAt(world, chunk);
     deps = BuildRelightDependencyStamp(world, chunk, registry);
   }
+  const auto dependency_complete = std::chrono::steady_clock::now();
+  timings.dependency_stamp_ms =
+      std::chrono::duration<double, std::milli>(dependency_complete -
+                                                dependency_started)
+          .count();
   snapshot.SetSubmitContext(work_token, deps);
   const double capture_ms = std::chrono::duration<double, std::milli>(
                                 std::chrono::steady_clock::now() - capture_started)
@@ -166,6 +185,7 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
     gRelightWorkSlotBypassN.fetch_add(1, std::memory_order_relaxed);
   }
 
+  const auto submit_started = std::chrono::steady_clock::now();
   Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
                 catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
                 work_slot = std::move(work_slot), audit_relight,
@@ -208,6 +228,16 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
                    NoteCompletedOverflow(std::move(dropped));
                  }
                });
+  const auto submit_complete = std::chrono::steady_clock::now();
+  timings.queue_submit_ms =
+      std::chrono::duration<double, std::milli>(submit_complete -
+                                                submit_started)
+          .count();
+  timings.submit_setup_ms =
+      std::chrono::duration<double, std::milli>(submit_started -
+                                                dependency_complete)
+          .count();
+  return timings;
 }
 
 std::vector<RelightComputeResult>

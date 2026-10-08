@@ -833,6 +833,9 @@ if(WIN32 AND EXISTS "${CUBATARIUM_WIN_RC}")
 endif()
 
 add_executable(${PROJECT_NAME} ${CUBATARIUM_DESKTOP_SOURCES})
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /MP)
+endif()
 
 add_executable(chunk_load_priority_test
     src/World/Chunks/ChunkLoadPriority.cpp

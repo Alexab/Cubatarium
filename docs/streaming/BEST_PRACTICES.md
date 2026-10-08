@@ -374,6 +374,42 @@ Relight-steal-FirstMesh. TD-061 **partial** until manual frontier void≪412.
 frontier void_end≈412. Reject Imm; SoftDefer knobs-as-DoD; hitch Capture;
 Relight-steal-FirstMesh.
 
+## Streaming and persistence practices reviewed 2026-10-03
+
+The rendering audit now treats persisted data, generated data, lighting, mesh
+publication, and final pixels as distinct stages. This follows two useful
+open-source voxel-engine patterns:
+
+- Godot Voxel's stream contract loads and saves voxel blocks in chunks, keeps only
+  the viewer's working set resident, saves modified blocks on unload, and performs
+  stream reads asynchronously. Its generator API also treats block generation as
+  independent parallel work and requires thread-safe generator state. See
+  [Streams](https://github.com/Zylann/godot_voxel/blob/master/doc/source/streams.md),
+  [Generators](https://github.com/Zylann/godot_voxel/blob/master/doc/source/generators.md),
+  and [Performance](https://github.com/Zylann/godot_voxel/blob/master/doc/source/performance.md).
+- Luanti's emerge path merges duplicate block requests and bounds pending work;
+  workers check resident memory, then disk, then generation. See the
+  [upstream emerge implementation](https://github.com/luanti-org/luanti/blob/master/src/emerge.cpp).
+
+Application to Cubatarium:
+
+1. Record `disk hit/miss`, pending save, generation request/commit, and the world
+   epoch on each terrain-column lifecycle. A successful async read is not yet
+   drawable: deserialize/apply, light, mesh, GPU publication, and visibility each
+   need their own completion evidence.
+2. Bound admission and main-thread application separately. A thread doing file I/O
+   does not make decode/apply non-blocking, and a worker pool does not guarantee
+   useful throughput if every stage waits for one serial owner.
+3. Size worker pools from measurements and leave main-thread headroom. Cubatarium
+   currently caps most pools at four workers; preserve that cap until queue age,
+   utilization, memory and frame cost demonstrate a safe increase.
+4. Test both kinds of column: a previously visited column that was saved/unloaded,
+   and an untouched location that must be generated. Compare source, light
+   validity, mesh inputs and pixels at the same coordinates.
+5. Keep deterministic-world regressions as the frequent control and add fresh
+   seeds at milestone gates. A new seed is a transfer check, not a substitute for
+   a repeatable route.
+
 ## Gap После Era19 plan (2026-08-08) — autofly CLOSED; **manual superseded by 214034**
 
 | Практика | Industry | Cubatarium | Era19 SoT |
@@ -432,3 +468,48 @@ ocean ARCH_D3 soft residual TD-048 (`era16_p3_ocean` wall≈226, no_ticket=0).
 5. **Hide⇒RepairTicket** — никогда не прятать геометрию без job в ColumnFlow.
 6. **Async throughput floor** при unfinished FOV; cap только Immediate/sync.
 7. **FirstMesh ≠ Remesh** в dirty admission.
+
+## Research update for long-route streaming (2026-10-05)
+
+External engine and paper sources support a few practices directly relevant to
+the current failure signatures:
+
+- **Prioritize by task class and viewer relevance.** Voxel Plugin documents
+  asynchronous worker pools, task categories, distance-to-viewer ordering, and
+  priority refresh as the viewer moves. That is a useful model for separating
+  voxel source, first drawable mesh, visible remesh, lighting, collision, and
+  foliage work instead of making one FIFO carry every kind of work.
+- **Bound main-thread publication separately from worker production.** Voxel
+  Plugin's profiling notes show that frequent global priority recomputation can
+  itself become expensive at very large task counts. Cubatarium should measure
+  queue wait, age, queue size, and selector cost independently before changing
+  worker count or priority refresh cadence.
+- **Keep first-visible latency and final mesh quality as separate goals.** The
+  0fps meshing analysis explicitly treats update latency as a requirement and
+  suggests a fast provisional mesh followed by a later high-quality replacement
+  when necessary. In Cubatarium this must retain the old published mesh until a
+  valid replacement is ready; a preview is not evidence that the column is
+  settled.
+- **For large worlds, stream spatial representations and diagnose visual versus
+  collision readiness independently.** Voxel Tools exposes viewer-driven load
+  distance, LOD levels, threaded updates, and separate debug views for loaded
+  versus active visual/collision blocks. Aokana (ACM 2025) combines LOD and
+  streaming to avoid keeping an entire large voxel scene resident. These are
+  longer-term options; the current block-world route still needs a correct
+  near-field frontier before an LOD redesign.
+
+The M400/M401 measurements reinforce the ordering of work: reducing disk-slice
+apply median by about `0.8 ms` did not materially drain a `72 s` disk result-wait
+p95, and procedural scheduler wait remained above `32 s` while worker-pool wait
+was sub-millisecond. Instrument admission age and whether a completed result is
+still ahead of the current focus before increasing parallelism. Also retain the
+pixel-to-depth join: a dark pixel over valid opaque geometry is a stale-light,
+material, fog, or published-mesh investigation; it does not establish missing
+voxel data.
+
+### Sources
+
+- [Voxel Plugin 1.2 — Performance and Profiling](https://docs.voxelplugin.com/1.2/technical-notes/performance-and-profiling)
+- [0fps — Meshing in a Minecraft Game](https://0fps.net/2012/06/30/meshing-in-a-minecraft-game/)
+- [Voxel Tools — VoxelLodTerrain API](https://voxel-tools.readthedocs.io/en/latest/api/VoxelLodTerrain/)
+- [Fang et al., Aokana: A GPU-Driven Voxel Rendering Framework for Open World Games, PACMCGIT 2025](https://doi.org/10.1145/3728299)

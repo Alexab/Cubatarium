@@ -5,6 +5,8 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
+#include <limits>
 namespace cutum
 {
 namespace
@@ -148,7 +150,7 @@ void UGreedyVertexPool::PollRetiredFences()
     const auto &entry = RetiredList[i];
     if (entry.drawFenceToken <= CompletedDrawFenceToken_)
     {
-      FreeList.push_back(entry.slot);
+      AddFreeSlot(entry.slot);
       ++RetiredReclaimedN;
     }
     else
@@ -232,18 +234,85 @@ bool UGreedyVertexPool::TryAllocateFromFreeList(size_t vertex_bytes,
                                                 size_t index_bytes,
                                                 GreedyGpuPoolAllocation &out)
 {
+  size_t best = FreeList.size();
+  size_t best_waste = (std::numeric_limits<size_t>::max)();
   for (size_t i = 0; i < FreeList.size(); ++i)
   {
-    GreedyGpuPoolFreeSlot &slot = FreeList[i];
+    const GreedyGpuPoolFreeSlot &slot = FreeList[i];
     if (slot.vertexBytes >= vertex_bytes && slot.indexBytes >= index_bytes)
     {
-      out.vertexByteOffset = slot.vertexByteOffset;
-      out.indexByteOffset = slot.indexByteOffset;
-      FreeList.erase(FreeList.begin() + static_cast<std::ptrdiff_t>(i));
-      return true;
+      const size_t waste = (slot.vertexBytes - vertex_bytes) +
+                           (slot.indexBytes - index_bytes);
+      if (waste < best_waste)
+      {
+        best = i;
+        best_waste = waste;
+      }
     }
   }
-  return false;
+  if (best == FreeList.size())
+  {
+    return false;
+  }
+
+  GreedyGpuPoolFreeSlot slot = FreeList[best];
+  out.vertexByteOffset = slot.vertexByteOffset;
+  out.indexByteOffset = slot.indexByteOffset;
+  FreeList.erase(FreeList.begin() + static_cast<std::ptrdiff_t>(best));
+
+  // Keep the unused tail when a larger freed batch is reused for a smaller
+  // mesh. Dropping this remainder made the bump allocator leak capacity over
+  // long flights even though many retired ranges had been reclaimed.
+  slot.vertexByteOffset += vertex_bytes;
+  slot.indexByteOffset += index_bytes;
+  slot.vertexBytes -= vertex_bytes;
+  slot.indexBytes -= index_bytes;
+  if (slot.vertexBytes > 0 && slot.indexBytes > 0)
+  {
+    AddFreeSlot(slot);
+  }
+  return true;
+}
+
+void UGreedyVertexPool::AddFreeSlot(GreedyGpuPoolFreeSlot slot)
+{
+  if (slot.vertexBytes == 0 || slot.indexBytes == 0)
+  {
+    return;
+  }
+  const auto it = std::lower_bound(
+      FreeList.begin(), FreeList.end(), slot.vertexByteOffset,
+      [](const GreedyGpuPoolFreeSlot &entry, size_t offset)
+      { return entry.vertexByteOffset < offset; });
+  size_t index = static_cast<size_t>(std::distance(FreeList.begin(), it));
+  FreeList.insert(it, slot);
+
+  const auto merges_before = [](const GreedyGpuPoolFreeSlot &left,
+                                const GreedyGpuPoolFreeSlot &right)
+  {
+    return left.vertexByteOffset + left.vertexBytes ==
+               right.vertexByteOffset &&
+           left.indexByteOffset + left.indexBytes == right.indexByteOffset;
+  };
+
+  // Ranges are paired in allocation order. Coalesce only when both backing
+  // buffers are contiguous in that same order; otherwise keep the ranges
+  // separate so neither live allocation can be overlapped.
+  if (index > 0 && merges_before(FreeList[index - 1], FreeList[index]))
+  {
+    FreeList[index - 1].vertexBytes += FreeList[index].vertexBytes;
+    FreeList[index - 1].indexBytes += FreeList[index].indexBytes;
+    FreeList.erase(FreeList.begin() + static_cast<std::ptrdiff_t>(index));
+    --index;
+  }
+  while (index + 1 < FreeList.size() &&
+         merges_before(FreeList[index], FreeList[index + 1]))
+  {
+    FreeList[index].vertexBytes += FreeList[index + 1].vertexBytes;
+    FreeList[index].indexBytes += FreeList[index + 1].indexBytes;
+    FreeList.erase(FreeList.begin() +
+                   static_cast<std::ptrdiff_t>(index + 1));
+  }
 }
 void UGreedyVertexPool::Free(const GreedyGpuPoolAllocation &alloc)
 {
@@ -278,10 +347,10 @@ void UGreedyVertexPool::Free(const GreedyGpuPoolAllocation &alloc)
   if (LiveAllocationCount > 0)
     --LiveAllocationCount;
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  FreeList.push_back(slot); // GLES uses synchronized SubData.
+  AddFreeSlot(slot); // GLES uses synchronized SubData.
 #else
   if (LastDrawFenceToken_ <= CompletedDrawFenceToken_)
-    FreeList.push_back(slot);
+    AddFreeSlot(slot);
   else
     RetiredList.push_back({slot, LastDrawFenceToken_});
 #endif

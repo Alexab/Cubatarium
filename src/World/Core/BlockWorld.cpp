@@ -54,9 +54,53 @@ void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
   }
 }
 
+void UBlockWorld::SetBlockInChunk(UChunk &chunk, glm::ivec3 pos, BlockId Id)
+{
+  const glm::ivec3 local = UChunkManager::WorldToLocal(pos);
+  if (Id == BLOCK_AIR)
+  {
+    chunk.SetBlockLocal(local, BLOCK_AIR);
+    chunk.ClearFluidLocal(local);
+    if (CaptureBuffer)
+    {
+      CaptureBuffer->SetBlock(pos, BLOCK_AIR);
+    }
+    return;
+  }
+  chunk.SetBlockLocal(local, Id);
+  if (FluidDefinitions != nullptr)
+  {
+    if (const BlockDefinition *def = FluidDefinitions->GetById(Id))
+    {
+      if (def->Physics.IsLiquid)
+      {
+        const FluidKind kind = FluidKindFromDefinition(def);
+        chunk.SetFluidLocal(local, FluidCellState::Source().WithKind(kind));
+      }
+    }
+  }
+  if (CaptureBuffer)
+  {
+    CaptureBuffer->SetBlock(pos, Id);
+    CaptureBuffer->SetFluidPacked(
+        pos, PackFluidCellState(chunk.GetFluidLocal(local)));
+  }
+}
+
 void UBlockWorld::SetFluidState(glm::ivec3 pos, FluidCellState state)
 {
   Chunks.SetFluidState(pos, state);
+  if (CaptureBuffer)
+  {
+    CaptureBuffer->SetFluidPacked(pos, PackFluidCellState(state));
+  }
+}
+
+void UBlockWorld::SetFluidStateInChunk(UChunk &chunk, glm::ivec3 pos,
+                                       FluidCellState state)
+{
+  const glm::ivec3 local = UChunkManager::WorldToLocal(pos);
+  chunk.SetFluidLocal(local, state);
   if (CaptureBuffer)
   {
     CaptureBuffer->SetFluidPacked(pos, PackFluidCellState(state));

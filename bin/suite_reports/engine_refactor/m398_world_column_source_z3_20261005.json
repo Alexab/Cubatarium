@@ -1,0 +1,698 @@
+{
+  "schema": "world_column_source_trace.v1",
+  "files": [
+    {
+      "path": "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-050404.18220",
+      "events": 4007
+    },
+    {
+      "path": "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-051600.18220",
+      "events": 4934
+    },
+    {
+      "path": "bin\\logs\\Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261005-054042.18220",
+      "events": 1335
+    }
+  ],
+  "event_count": 10276,
+  "event_counts": {
+    "disk/complete": 2556,
+    "disk/queued": 2556,
+    "procedural/committed": 2571,
+    "procedural/disk_miss": 2593
+  },
+  "by_source": {
+    "disk": {
+      "complete": {
+        "count": 2556,
+        "elapsed_ms": {
+          "count": 2556,
+          "median": 533.3302,
+          "p95": 18103.5962,
+          "max": 27782.1905,
+          "sum": 7322388.2358
+        },
+        "worker_queue_ms": {
+          "count": 2556,
+          "median": 0.0889,
+          "p95": 0.1818,
+          "max": 6.5595,
+          "sum": 281.6933
+        },
+        "file_open_ms": {
+          "count": 2556,
+          "median": 1.3648,
+          "p95": 1.839,
+          "max": 3.1403,
+          "sum": 3569.455
+        },
+        "file_read_ms": {
+          "count": 2556,
+          "median": 0.9404,
+          "p95": 1.1844,
+          "max": 1.5677,
+          "sum": 2465.0546
+        },
+        "result_wait_ms": {
+          "count": 2556,
+          "median": 1899.2287,
+          "p95": 73750.1246,
+          "max": 137292.2171,
+          "sum": 29029004.7729
+        },
+        "deserialize_apply_ms": {
+          "count": 2556,
+          "median": 7.2173,
+          "p95": 13.3609,
+          "max": 32.0832,
+          "sum": 20475.8089
+        },
+        "disk_discovery_ms": {
+          "count": 2556,
+          "median": 0.0206,
+          "p95": 0.0361,
+          "max": 123.8247,
+          "sum": 179.614
+        },
+        "format_detect_ms": {
+          "count": 2556,
+          "median": 1.1036,
+          "p95": 1.4422,
+          "max": 15.4259,
+          "sum": 2935.0666
+        },
+        "finalize_prelog_ms": {
+          "count": 2556,
+          "median": 0.088,
+          "p95": 0.1002,
+          "max": 2.4167,
+          "sum": 232.3753
+        },
+        "chunkio_ready_loads": {
+          "count": 2556,
+          "median": 12.0,
+          "p95": 112.0,
+          "max": 458.0,
+          "sum": 75910.0
+        },
+        "chunkio_pending_jobs": {
+          "count": 2556,
+          "median": 0.0,
+          "p95": 0.0,
+          "max": 0.0,
+          "sum": 0.0
+        },
+        "chunkio_active_jobs": {
+          "count": 2556,
+          "median": 0.0,
+          "p95": 0.0,
+          "max": 0.0,
+          "sum": 0.0
+        },
+        "pending_disk_columns": {
+          "count": 2556,
+          "median": 3.0,
+          "p95": 28.0,
+          "max": 113.0,
+          "sum": 18732.0
+        }
+      },
+      "queued": {
+        "count": 2556
+      }
+    },
+    "procedural": {
+      "committed": {
+        "count": 2571,
+        "queue_ms": {
+          "count": 2571,
+          "median": 32.093,
+          "p95": 27951.5573,
+          "max": 56334.4374,
+          "sum": 15525956.1549
+        },
+        "scheduler_queue_ms": {
+          "count": 2571,
+          "median": 32.064,
+          "p95": 27951.5367,
+          "max": 56334.4066,
+          "sum": 15525857.8716
+        },
+        "worker_pool_queue_ms": {
+          "count": 2571,
+          "median": 0.0365,
+          "p95": 0.0549,
+          "max": 3.9931,
+          "sum": 98.2833
+        },
+        "generation_ms": {
+          "count": 2571,
+          "median": 92.377,
+          "p95": 117.6833,
+          "max": 200.3228,
+          "sum": 236563.4377
+        },
+        "ready_wait_ms": {
+          "count": 2571,
+          "median": 70.8205,
+          "p95": 557.2766,
+          "max": 35336.4507,
+          "sum": 752710.7048
+        },
+        "apply_ms": {
+          "count": 2571,
+          "median": 5.2477,
+          "p95": 10.3255,
+          "max": 49.6653,
+          "sum": 15341.9019
+        },
+        "total_ms": {
+          "count": 2571,
+          "median": 239.7386,
+          "p95": 28751.6411,
+          "max": 57725.6552,
+          "sum": 16530590.4546
+        },
+        "ready_batch_n": {
+          "count": 2571,
+          "median": 2.0,
+          "p95": 3.0,
+          "max": 16.0,
+          "sum": 5044.0
+        },
+        "max_commits_per_frame": {
+          "count": 2571,
+          "median": 2.0,
+          "p95": 3.0,
+          "max": 3.0,
+          "sum": 4356.0
+        },
+        "max_apply_budget_ms": {
+          "count": 2571,
+          "median": 12.0,
+          "p95": 12.0,
+          "max": 12.0,
+          "sum": 19296.0
+        },
+        "priority_refresh_n": {
+          "count": 2571,
+          "median": 0.0,
+          "p95": 4.0,
+          "max": 7.0,
+          "sum": 2085.0
+        },
+        "request_queue_live_at_schedule": {
+          "count": 2571,
+          "median": 1.0,
+          "p95": 38.0,
+          "max": 64.0,
+          "sum": 21502.0
+        },
+        "request_queue_heap_at_schedule": {
+          "count": 2571,
+          "median": 1.0,
+          "p95": 96.0,
+          "max": 162.0,
+          "sum": 45534.0
+        },
+        "worker_pending_at_submit": {
+          "count": 2571,
+          "median": 0.0,
+          "p95": 1.0,
+          "max": 1.0,
+          "sum": 666.0
+        },
+        "worker_active_at_submit": {
+          "count": 2571,
+          "median": 0.0,
+          "p95": 1.0,
+          "max": 3.0,
+          "sum": 235.0
+        },
+        "worker_count": {
+          "count": 2571,
+          "median": 4.0,
+          "p95": 4.0,
+          "max": 4.0,
+          "sum": 10284.0
+        },
+        "generation_start_cap_per_frame": {
+          "count": 2571,
+          "median": 2.0,
+          "p95": 2.0,
+          "max": 8.0,
+          "sum": 5111.0
+        }
+      },
+      "disk_miss": {
+        "count": 2593
+      }
+    }
+  },
+  "slow_procedural_queue_events": [
+    {
+      "coord": "(-361,0,7)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 56334.4374,
+      "scheduler_queue_ms": 56334.4066,
+      "worker_pool_queue_ms": 0.0308,
+      "generation_ms": 89.6032,
+      "ready_wait_ms": 1296.62,
+      "apply_ms": 4.9888,
+      "total_ms": 57725.6552,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 3,
+      "request_queue_heap_at_schedule": 3,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-361,0,1)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 56144.9046,
+      "scheduler_queue_ms": 56144.8761,
+      "worker_pool_queue_ms": 0.0285,
+      "generation_ms": 75.3913,
+      "ready_wait_ms": 1428.852,
+      "apply_ms": 5.4007,
+      "total_ms": 57654.5545,
+      "priority_refresh_n": 6,
+      "request_queue_live_at_schedule": 6,
+      "request_queue_heap_at_schedule": 6,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-361,0,5)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 56038.7829,
+      "scheduler_queue_ms": 56038.7419,
+      "worker_pool_queue_ms": 0.041,
+      "generation_ms": 82.663,
+      "ready_wait_ms": 1427.2611,
+      "apply_ms": 5.0356,
+      "total_ms": 57553.7484,
+      "priority_refresh_n": 6,
+      "request_queue_live_at_schedule": 7,
+      "request_queue_heap_at_schedule": 7,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-361,0,6)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 55723.2082,
+      "scheduler_queue_ms": 55723.1786,
+      "worker_pool_queue_ms": 0.0296,
+      "generation_ms": 67.0458,
+      "ready_wait_ms": 1461.2928,
+      "apply_ms": 4.4033,
+      "total_ms": 57255.9562,
+      "priority_refresh_n": 5,
+      "request_queue_live_at_schedule": 8,
+      "request_queue_heap_at_schedule": 8,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-361,0,0)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 55173.2663,
+      "scheduler_queue_ms": 55173.2339,
+      "worker_pool_queue_ms": 0.0324,
+      "generation_ms": 93.7465,
+      "ready_wait_ms": 1636.4464,
+      "apply_ms": 5.0839,
+      "total_ms": 56908.5496,
+      "priority_refresh_n": 5,
+      "request_queue_live_at_schedule": 15,
+      "request_queue_heap_at_schedule": 15,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-361,0,-1)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 54854.0536,
+      "scheduler_queue_ms": 54854.031,
+      "worker_pool_queue_ms": 0.0226,
+      "generation_ms": 77.7886,
+      "ready_wait_ms": 1710.9409,
+      "apply_ms": 8.8225,
+      "total_ms": 56651.6159,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 16,
+      "request_queue_heap_at_schedule": 16,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-362,0,1)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 51096.5226,
+      "scheduler_queue_ms": 51096.4905,
+      "worker_pool_queue_ms": 0.0321,
+      "generation_ms": 117.8515,
+      "ready_wait_ms": 1286.2165,
+      "apply_ms": 6.6,
+      "total_ms": 52507.1987,
+      "priority_refresh_n": 6,
+      "request_queue_live_at_schedule": 5,
+      "request_queue_heap_at_schedule": 5,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-362,0,5)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 50992.6976,
+      "scheduler_queue_ms": 50992.6758,
+      "worker_pool_queue_ms": 0.0218,
+      "generation_ms": 114.5344,
+      "ready_wait_ms": 1123.7519,
+      "apply_ms": 5.1945,
+      "total_ms": 52236.1843,
+      "priority_refresh_n": 6,
+      "request_queue_live_at_schedule": 4,
+      "request_queue_heap_at_schedule": 4,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-362,0,7)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 50898.0289,
+      "scheduler_queue_ms": 50898.0013,
+      "worker_pool_queue_ms": 0.0276,
+      "generation_ms": 89.0011,
+      "ready_wait_ms": 1104.5173,
+      "apply_ms": 5.4956,
+      "total_ms": 52097.0498,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 2,
+      "request_queue_heap_at_schedule": 2,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-362,0,-1)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 50067.9223,
+      "scheduler_queue_ms": 50067.8893,
+      "worker_pool_queue_ms": 0.033,
+      "generation_ms": 123.4031,
+      "ready_wait_ms": 1607.7966,
+      "apply_ms": 5.216,
+      "total_ms": 51804.3438,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 11,
+      "request_queue_heap_at_schedule": 11,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-362,0,0)",
+      "priority": 300,
+      "token": 0,
+      "queue_ms": 48095.7458,
+      "scheduler_queue_ms": 48095.7198,
+      "worker_pool_queue_ms": 0.026,
+      "generation_ms": 96.2891,
+      "ready_wait_ms": 2681.3281,
+      "apply_ms": 15.9746,
+      "total_ms": 50889.347,
+      "priority_refresh_n": 5,
+      "request_queue_live_at_schedule": 24,
+      "request_queue_heap_at_schedule": 44,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-362,0,6)",
+      "priority": 300,
+      "token": 0,
+      "queue_ms": 47612.6093,
+      "scheduler_queue_ms": 47612.5871,
+      "worker_pool_queue_ms": 0.0222,
+      "generation_ms": 103.9746,
+      "ready_wait_ms": 2879.5139,
+      "apply_ms": 21.3575,
+      "total_ms": 50617.4664,
+      "priority_refresh_n": 5,
+      "request_queue_live_at_schedule": 26,
+      "request_queue_heap_at_schedule": 47,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-363,0,-1)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 45801.0205,
+      "scheduler_queue_ms": 45800.9981,
+      "worker_pool_queue_ms": 0.0224,
+      "generation_ms": 97.3736,
+      "ready_wait_ms": 1096.7109,
+      "apply_ms": 4.7811,
+      "total_ms": 46999.8916,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 0,
+      "request_queue_heap_at_schedule": 0,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-449,0,2)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 45039.2202,
+      "scheduler_queue_ms": 45039.1938,
+      "worker_pool_queue_ms": 0.0264,
+      "generation_ms": 105.7657,
+      "ready_wait_ms": 97.7655,
+      "apply_ms": 6.2287,
+      "total_ms": 45248.9859,
+      "priority_refresh_n": 7,
+      "request_queue_live_at_schedule": 3,
+      "request_queue_heap_at_schedule": 3,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 1,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-363,0,7)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 44147.4621,
+      "scheduler_queue_ms": 44147.4226,
+      "worker_pool_queue_ms": 0.0395,
+      "generation_ms": 93.5645,
+      "ready_wait_ms": 1630.796,
+      "apply_ms": 5.4183,
+      "total_ms": 45877.2501,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 14,
+      "request_queue_heap_at_schedule": 14,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-449,0,1)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 43848.8614,
+      "scheduler_queue_ms": 43848.8178,
+      "worker_pool_queue_ms": 0.0436,
+      "generation_ms": 83.0606,
+      "ready_wait_ms": 88.4019,
+      "apply_ms": 6.6628,
+      "total_ms": 44026.9942,
+      "priority_refresh_n": 6,
+      "request_queue_live_at_schedule": 0,
+      "request_queue_heap_at_schedule": 0,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-449,0,4)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 43668.843,
+      "scheduler_queue_ms": 43668.8018,
+      "worker_pool_queue_ms": 0.0412,
+      "generation_ms": 111.0413,
+      "ready_wait_ms": 75.428,
+      "apply_ms": 6.8861,
+      "total_ms": 43862.2049,
+      "priority_refresh_n": 7,
+      "request_queue_live_at_schedule": 2,
+      "request_queue_heap_at_schedule": 2,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-449,0,-1)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 43370.9882,
+      "scheduler_queue_ms": 43370.9623,
+      "worker_pool_queue_ms": 0.0259,
+      "generation_ms": 106.4679,
+      "ready_wait_ms": 73.9439,
+      "apply_ms": 5.785,
+      "total_ms": 43557.1909,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 1,
+      "request_queue_heap_at_schedule": 1,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-510,0,7)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 43234.2947,
+      "scheduler_queue_ms": 43234.2714,
+      "worker_pool_queue_ms": 0.0233,
+      "generation_ms": 132.4965,
+      "ready_wait_ms": 66.2587,
+      "apply_ms": 5.2766,
+      "total_ms": 43438.3327,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 0,
+      "request_queue_heap_at_schedule": 0,
+      "worker_pending_at_submit": 1,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    },
+    {
+      "coord": "(-449,0,7)",
+      "priority": 400,
+      "token": 0,
+      "queue_ms": 42990.3904,
+      "scheduler_queue_ms": 42990.349,
+      "worker_pool_queue_ms": 0.0414,
+      "generation_ms": 100.9912,
+      "ready_wait_ms": 87.7903,
+      "apply_ms": 6.3111,
+      "total_ms": 43185.4891,
+      "priority_refresh_n": 4,
+      "request_queue_live_at_schedule": 6,
+      "request_queue_heap_at_schedule": 6,
+      "worker_pending_at_submit": 0,
+      "worker_active_at_submit": 0,
+      "worker_count": 4,
+      "generation_start_cap_per_frame": 2
+    }
+  ],
+  "procedural_focus_z_band": {
+    "focus_z": 3,
+    "z_radius": 5,
+    "count": 2570,
+    "timings": {
+      "queue_ms": {
+        "count": 2570,
+        "median": 32.2278,
+        "p95": 27951.5573,
+        "max": 56334.4374,
+        "sum": 15525936.4707
+      },
+      "scheduler_queue_ms": {
+        "count": 2570,
+        "median": 32.1917,
+        "p95": 27951.5367,
+        "max": 56334.4066,
+        "sum": 15525838.2518
+      },
+      "worker_pool_queue_ms": {
+        "count": 2570,
+        "median": 0.0365,
+        "p95": 0.0549,
+        "max": 3.9931,
+        "sum": 98.2189
+      },
+      "generation_ms": {
+        "count": 2570,
+        "median": 92.3826,
+        "p95": 117.6833,
+        "max": 200.3228,
+        "sum": 236500.1886
+      },
+      "ready_wait_ms": {
+        "count": 2570,
+        "median": 70.8201,
+        "p95": 554.4872,
+        "max": 35336.4507,
+        "sum": 737690.2582
+      },
+      "apply_ms": {
+        "count": 2570,
+        "median": 5.2485,
+        "p95": 10.3255,
+        "max": 49.6653,
+        "sum": 15338.176
+      },
+      "total_ms": {
+        "count": 2570,
+        "median": 239.7017,
+        "p95": 28751.6411,
+        "max": 57725.6552,
+        "sum": 16515483.3437
+      }
+    }
+  },
+  "unique_disk_coordinates": {
+    "queued": 2556,
+    "completed": 2556,
+    "cancelled_out_of_range": 0,
+    "queued_without_terminal_event": 0
+  },
+  "unique_procedural_cancelled_out_of_range": 0,
+  "note": "Queued coordinates without a completion or cancellation log are an unmatched-event count; they do not prove a live pending owner. Timing values are source-log observations, not framebuffer-area metrics."
+}

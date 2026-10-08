@@ -5,6 +5,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include <atomic>
 #include <chrono>
 #include <deque>
 #include <glm/glm.hpp>
@@ -29,6 +30,51 @@ struct IVec2Hash
 class UBlockRegistry;
 class UBlockWorld;
 class UWorld;
+
+struct AsyncChunkIoTickMetrics
+{
+  double tick_wall_ms{0.0};
+  double unattributed_ms{0.0};
+  double light_flags_result_drain_ms{0.0};
+  double light_flags_result_queue_mutex_wait_ms{0.0};
+  double light_flags_result_queue_mutex_held_ms{0.0};
+  std::size_t light_flags_result_count{0};
+  double queue_snapshot_ms{0.0};
+  double discard_cancelled_ms{0.0};
+  double result_selection_ms{0.0};
+  double result_selection_mutex_wait_ms{0.0};
+  double result_selection_mutex_held_ms{0.0};
+  double result_processing_ms{0.0};
+  // Nested in result_processing_ms; measures only block-buffer/chunk mutation.
+  double world_apply_ms{0.0};
+  double column_finalize_ms{0.0};
+  double result_requeue_ms{0.0};
+  double result_requeue_mutex_wait_ms{0.0};
+  double result_requeue_mutex_held_ms{0.0};
+  double load_result_push_mutex_wait_ms{0.0};
+  double load_result_push_mutex_held_ms{0.0};
+  double load_result_push_mutex_wait_max_ms{0.0};
+  double load_result_push_mutex_held_max_ms{0.0};
+  double save_drain_ms{0.0};
+  double light_flags_save_ms{0.0};
+  uint64_t load_result_push_n{0};
+  std::size_t cancelled_discard_n{0};
+  std::size_t ready_loads_before_n{0};
+  std::size_t selected_loads_n{0};
+  std::size_t processed_loads_n{0};
+  std::size_t requeued_loads_n{0};
+  std::size_t applied_slices_n{0};
+  std::size_t saves_processed_n{0};
+  std::size_t load_pending_jobs_n{0};
+  std::size_t load_active_jobs_n{0};
+  std::size_t load_workers_n{0};
+  std::size_t background_pending_jobs_n{0};
+  std::size_t background_active_jobs_n{0};
+  std::size_t background_workers_n{0};
+  std::size_t load_result_queue_depth_n{0};
+  std::size_t save_result_queue_depth_n{0};
+  bool apply_time_budget_hit{false};
+};
 
 class UWorldPersistence
 {
@@ -59,32 +105,20 @@ public:
   const UChunkStorageService &GetChunkStorage() const { return *ChunkStorage; }
 
   const std::string &GetWorldFolderPath() const { return WorldFolderPath; }
-  void SetWorldFolderPath(const std::string &path)
-  {
-    if (WorldFolderPath == path)
-    {
-      return;
-    }
-    SaveColumnLightFlagsIfDirty();
-    WorldFolderPath = path;
-    LightCompleteColumns.clear();
-    LightCompleteDirty = false;
-    LightCompleteLoaded = false;
-    if (!WorldFolderPath.empty())
-    {
-      LoadColumnLightFlags();
-    }
-  }
+  void SetWorldFolderPath(const std::string &path);
 
   void LoadUsers(UWorld &world, const std::string &file_name);
   void SaveUsers(UWorld &world, const std::string &file_name);
   void LoadWorldData(UWorld &world, const std::string &file_name);
   void SaveWorldData(UWorld &world, const std::string &file_name);
 
-  void TickAsyncChunkIo(UWorld &world);
+  AsyncChunkIoTickMetrics
+  TickAsyncChunkIo(UWorld &world, std::size_t max_slice_applies = 0,
+                   double max_apply_ms = 0.0);
   void FlushAsyncChunkIo(UWorld &world);
   bool TickDrainAsyncChunkIo(UWorld &world, int max_iterations);
   bool IsAsyncChunkIoQuiescent() const;
+  void TraceAsyncChunkIoShutdownState() const;
   void AbortAsyncChunkIo();
   bool AbortAsyncChunkIoFor(std::chrono::milliseconds timeout);
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
@@ -135,6 +169,10 @@ public:
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   int GetPendingTerrainColumnRelightCount() const;
   bool IsTerrainColumnRelightQueued(glm::ivec2 world_block_key) const;
+  /// Drop queued/deferred visual relight debt for a column being evicted.
+  /// Callers must invalidate its disk-light-complete flag when this abandons
+  /// unfinished lighting so a later disk load recomputes it.
+  int CancelTerrainColumnRelight(glm::ivec2 world_block_key);
   TerrainColumnRelightQueueInfo GetTerrainColumnRelightQueueInfo(
       glm::ivec2 world_block_key) const;
   int GetPendingPlayerRelightCount() const;
@@ -151,6 +189,9 @@ public:
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   void CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord);
+  int CancelAsyncTerrainColumnLoadsOutsideRadius(UWorld &world,
+                                                glm::ivec3 center,
+                                                int radius_chunks);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;
 
   int LoadTerrainColumn(glm::ivec3 coord, UBlockWorld &block_world,
@@ -178,6 +219,26 @@ private:
   {
     int remaining_results{0};
     int highest_cy_on_disk{-1};
+    std::shared_ptr<std::atomic<bool>> cancellation;
+    std::chrono::steady_clock::time_point requested_at{};
+    double disk_discovery_ms{0.0};
+    int timing_slice_count{0};
+    double format_detect_ms{0.0};
+    double worker_queue_ms{0.0};
+    double worker_queue_max_ms{0.0};
+    double file_open_ms{0.0};
+    double file_read_ms{0.0};
+    double file_read_max_ms{0.0};
+    double disk_probe_ms{0.0};
+    double disk_probe_max_ms{0.0};
+    double result_wait_ms{0.0};
+    double result_wait_max_ms{0.0};
+    double deserialize_ms{0.0};
+    double deserialize_max_ms{0.0};
+    double apply_ms{0.0};
+    double apply_max_ms{0.0};
+    double deserialize_apply_ms{0.0};
+    double deserialize_apply_max_ms{0.0};
     bool had_disk_read_failure{false};
     bool had_invalid_token{false};
     bool had_disk_light{false};
@@ -196,9 +257,16 @@ private:
   bool PrioritizeNearestTerrainColumnRelight(UWorld &world,
                                              glm::ivec3 focus_ground,
                                              int radius_chunks, int scan_cap);
+  void ProcessColumnLightFlagSaveResults(
+      double *queue_mutex_wait_ms = nullptr,
+      double *queue_mutex_held_ms = nullptr,
+      std::size_t *result_count = nullptr);
+  bool FlushColumnLightFlagsForWorldSwitch();
 
-  std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
+  // Storage outlives AsyncChunkIo's worker pool: warmup jobs retain its
+  // reference until the pool joins during destruction.
   std::unique_ptr<UChunkStorageService> ChunkStorage;
+  std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
   std::unordered_map<glm::ivec3, PendingAsyncColumnLoadState, IVec3Hash>
       PendingAsyncColumnLoadSlices;
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
@@ -239,6 +307,12 @@ private:
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
   bool LightCompleteDirty{false};
   bool LightCompleteLoaded{false};
+  uint64_t LightCompleteRevision{0};
+  bool LightCompleteSaveInFlight{false};
+  std::string LightCompleteSaveWorldFolder;
+  uint64_t LightCompleteSaveRevision{0};
+  unsigned int LightCompleteSaveFailures{0};
+  std::chrono::steady_clock::time_point LightCompleteSaveRetryAt{};
   std::string WorldFolderPath;
   bool RelightFifoPinValid{false};
   int RelightFifoPinCx{0};

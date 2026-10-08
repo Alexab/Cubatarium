@@ -162,7 +162,7 @@ struct URuntimeTuning
   bool ScheduleShedUv1{true};
 
   /// SoT 210431: unload amortize mode 0..4 (U0..U-D). Bake-off winner = U-A (1).
-  int UnloadAmortizeMode{1};
+  int UnloadAmortizeMode{4};
   /// SoT 210431: keep-shell amortize mode 0..4 (K0..K-D). Bake-off winner = K-B (2).
   int KeepShellAmortizeMode{2};
 

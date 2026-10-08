@@ -1,0 +1,49 @@
+{
+  "schema": "m398_renderer_pixel_summary.v1",
+  "source_reports": [
+    "m398_renderer_pixel_trace_l32_full_tmp_20261005.json",
+    "m398_renderer_pixel_trace_l96_full_tmp_20261005.json"
+  ],
+  "screen_ray_frame_count": 328,
+  "thresholds": [
+    {
+      "luma_threshold_exclusive": 32.0,
+      "probe_count": 32768,
+      "below_threshold_count": 257,
+      "depth_surface_valid": 257,
+      "visible_opaque_mdi": 257,
+      "depth_source_face_valid": 240,
+      "depth_source_face_within_0_1": 236,
+      "depth_source_face_sky_light_1": 237,
+      "depth_source_face_preview": 23,
+      "opaque_chunk_demand_settled": 249,
+      "voxel_chunk_light_pending": 35,
+      "transparent_composition_changed_rgb": 0,
+      "depth_mesh_cpu_revision_ahead_of_published_geometry": 159,
+      "stale_depth_mesh_owned_only_by_dirty": 152,
+      "stale_dirty_queue_age_frames_median": 7.0,
+      "stale_dirty_queue_age_frames_p95": 161.45,
+      "stale_dirty_queue_age_frames_max": 204
+    },
+    {
+      "luma_threshold_exclusive": 96.0,
+      "probe_count": 32768,
+      "below_threshold_count": 1817,
+      "depth_surface_valid": 1758,
+      "visible_opaque_mdi": 1741,
+      "depth_source_face_valid": 1637,
+      "depth_source_face_within_0_1": 1597,
+      "depth_source_face_sky_light_1": 1436,
+      "depth_source_face_preview": 252,
+      "opaque_chunk_demand_settled": 1600,
+      "voxel_chunk_light_pending": 422,
+      "transparent_composition_changed_rgb": 221,
+      "depth_mesh_cpu_revision_ahead_of_published_geometry": 1094,
+      "stale_depth_mesh_owned_only_by_dirty": 1042,
+      "stale_dirty_queue_age_frames_median": 9.0,
+      "stale_dirty_queue_age_frames_p95": 166.0,
+      "stale_dirty_queue_age_frames_max": 227
+    }
+  ],
+  "interpretation": "Low luminance is not a missing-chunk count. Every strict <32 probe has an opaque MDI depth surface; many surfaces have a CPU geometry revision newer than the published GPU revision and Dirty as their only owner. Source-face light, chunk demand light, and the DDA voxel hit refer to distinct observations and must not be conflated. The <96 threshold includes dark materials and 221 samples changed during transparent composition."
+}

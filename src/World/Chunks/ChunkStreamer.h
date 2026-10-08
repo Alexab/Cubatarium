@@ -56,6 +56,9 @@ struct StreamingFrameStats
     loadsThisFrame = 0;
     unloadsThisFrame = 0;
     savesThisFrame = 0;
+    unloadCandidatesThisFrame = 0;
+    unloadVetoesThisFrame = 0;
+    unloadActiveWorkInvalidatedThisFrame = 0;
     asyncQueuedThisFrame = 0;
     diskCompleteThisFrame = 0;
     genCommitThisFrame = 0;
@@ -69,6 +72,9 @@ struct StreamingFrameStats
   int loadsThisFrame{0};
   int unloadsThisFrame{0};
   int savesThisFrame{0};
+  int unloadCandidatesThisFrame{0};
+  int unloadVetoesThisFrame{0};
+  int unloadActiveWorkInvalidatedThisFrame{0};
   /// Async column requests issued this frame (EnsureChunkLoaded queued work).
   int asyncQueuedThisFrame{0};
   /// Era25: sync Ensure completed via OnLoadChunk (disk-hit honesty).
@@ -144,6 +150,10 @@ public:
   }
   int GetVisualRenderDistance() const { return VisualRenderDistance; }
   int GetKeepRenderDistance() const { return KeepRenderDistance; }
+  int GetAsyncRequestRetentionRadius() const
+  {
+    return std::max(VisualRenderDistance, KeepRenderDistance + UnloadMargin);
+  }
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
@@ -159,6 +169,10 @@ public:
   void SetUnloadColumnCallback(UnloadColumnFn fn)
   {
     OnUnloadColumn = std::move(fn);
+  }
+  void NoteUnloadActiveWorkInvalidated()
+  {
+    ++LastFrameStats.unloadActiveWorkInvalidatedThisFrame;
   }
   void SetEffectiveUnloadOpsPerFrame(int value)
   {
@@ -185,11 +199,20 @@ public:
   /// Full streaming pass after Movement: load (unload is separate pass).
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               const PlayerCapsule &cap);
+  /// Reset the per-frame counters before early maintenance and load passes.
+  void BeginFrameStats()
+  {
+    LastFrameStats.Reset();
+    FrameStatsPrimed = true;
+  }
+  bool HasDeferredUnloadSaves() const { return !DeferredUnloadSaves.empty(); }
   /// SoT 210431: unload pass timed separately from Update (FrameDeadline).
   void UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
                   const PlayerCapsule &cap);
-  /// Drain deferred save+unload queue (mode U-D) on calm frames.
-  void DrainDeferredUnloadSaves(int max_ops);
+  /// Drain deferred save+unload queue (mode U-D) within the caller's frame budget.
+  void DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
+                                const glm::vec3 &eyePos,
+                                const PlayerCapsule &cap, int max_ops);
   void PrefetchAhead(glm::ivec3 feet_chunk, glm::vec3 view_forward_xz,
                      float movement_speed, float speed_threshold,
                      int *out_ops = nullptr);
@@ -284,6 +307,7 @@ private:
   /// U-D: save+unload deferred when Exhausted mid-pass.
   std::deque<glm::ivec3> DeferredUnloadSaves;
   std::unordered_set<glm::ivec3, IVec3Hash> DeferredUnloadSaveSet;
+  bool FrameStatsPrimed{false};
 };
 
 } // namespace cutum

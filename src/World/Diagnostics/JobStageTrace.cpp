@@ -1,6 +1,7 @@
 #include "World/Diagnostics/JobStageTrace.h"
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <deque>
@@ -12,6 +13,9 @@ namespace cutum
 {
 namespace
 {
+
+std::atomic<uint64_t> LatestCameraBandPeakFrameEpoch{0};
+std::atomic<uint64_t> LatestScreenRayTraceFrameEpoch{0};
 
 struct Ring
 {
@@ -163,6 +167,23 @@ GetFrustumCoverageTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kFrustumProbeSummaryTraceRingCapacity> &
+GetFrustumProbeSummaryTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFrustumProbeSummaryTraceRingCapacity> r;
+  return r;
+}
+
+VisualBlackTraceRing<
+    UJobStageTrace::kCameraBandPeakRenderProbeTraceRingCapacity> &
+GetCameraBandPeakRenderProbeTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakRenderProbeTraceRingCapacity> r;
+  return r;
+}
+
 VisualBlackTraceRing<UJobStageTrace::kVisualBlackAttributionTraceRingCapacity> &
 GetVisualBlackAttributionTraceRing()
 {
@@ -217,6 +238,14 @@ GetCameraBandUnownedPeakTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<UJobStageTrace::kFirstMeshFrontierTraceRingCapacity> &
+GetFirstMeshFrontierTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kFirstMeshFrontierTraceRingCapacity> r;
+  return r;
+}
+
 template <size_t Capacity>
 void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
                      const VisualBlackTraceRecord &record)
@@ -249,6 +278,23 @@ void ForEachVisualTraceNewest(
   {
     const size_t abs = (ring.write + capacity - 1 - i) % capacity;
     fn(ring.slots[abs], ctx);
+  }
+}
+
+struct CameraBandPeakFrameDispatch
+{
+  uint64_t frame_epoch{0};
+  void (*fn)(const VisualBlackTraceRecord &, void *){nullptr};
+  void *ctx{nullptr};
+};
+
+void DispatchCameraBandPeakFrameRecord(const VisualBlackTraceRecord &record,
+                                       void *opaque)
+{
+  auto *dispatch = static_cast<CameraBandPeakFrameDispatch *>(opaque);
+  if (dispatch && dispatch->fn && record.frame_epoch == dispatch->frame_epoch)
+  {
+    dispatch->fn(record, dispatch->ctx);
   }
 }
 
@@ -417,12 +463,54 @@ bool UJobStageTrace::VisualBlackTraceEnabled()
   return enabled;
 }
 
+bool UJobStageTrace::HasCameraBandPeakTraceForFrame(uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestCameraBandPeakFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
+bool UJobStageTrace::HasScreenRayTraceForFrame(uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestScreenRayTraceFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
+void UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
+    uint64_t frame_epoch,
+    void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
+{
+  if (frame_epoch == 0 || !fn)
+  {
+    return;
+  }
+  CameraBandPeakFrameDispatch dispatch{frame_epoch, fn, ctx};
+  ForEachVisualTraceNewest(GetCameraBandNoDrawablePeakTraceRing(),
+                           kCameraBandPeakTraceRingCapacity,
+                           DispatchCameraBandPeakFrameRecord, &dispatch);
+  ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(),
+                           kCameraBandPeakTraceRingCapacity,
+                           DispatchCameraBandPeakFrameRecord, &dispatch);
+}
+
 void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
 {
   // Renderer/focus samples are emitted at frame rate. Keep renderer candidates,
   // repair admission, repair scans, general mesh scheduling, and priority
   // remesh scheduling in separate rings so one workload cannot overwrite
   // another class of evidence.
+  if ((record.sample_kind == 12 || record.sample_kind == 13) &&
+      record.frame_epoch != 0)
+  {
+    LatestCameraBandPeakFrameEpoch.store(record.frame_epoch,
+                                          std::memory_order_release);
+  }
+  if (record.sample_kind == 10 && record.frame_epoch != 0)
+  {
+    LatestScreenRayTraceFrameEpoch.store(record.frame_epoch,
+                                         std::memory_order_release);
+  }
   if (record.sample_kind == 0)
   {
     // Per-column census attribution is the evidence behind the aggregate VB
@@ -465,6 +553,18 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetCameraBandUnownedPeakTraceRing(), record);
   }
+  else if (record.sample_kind == 14)
+  {
+    PushVisualTrace(GetFirstMeshFrontierTraceRing(), record);
+  }
+  else if (record.sample_kind == 15)
+  {
+    PushVisualTrace(GetFrustumProbeSummaryTraceRing(), record);
+  }
+  else if (record.sample_kind == 16)
+  {
+    PushVisualTrace(GetCameraBandPeakRenderProbeTraceRing(), record);
+  }
   else if (record.sample_kind == 4 || record.sample_kind == 6)
   {
     PushVisualTrace(GetMeshScheduleTraceRing(), record);
@@ -506,6 +606,9 @@ void UJobStageTrace::ForEachVisualBlackNewest(
                            ctx);
   ForEachVisualTraceNewest(GetRendererGateTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetFrustumCoverageTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetFrustumProbeSummaryTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetCameraBandPeakRenderProbeTraceRing(), max_n, fn,
+                           ctx);
   ForEachVisualTraceNewest(GetVisualRepairTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetMeshScheduleTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetPriorityRemeshTraceRing(), max_n, fn, ctx);
@@ -514,6 +617,7 @@ void UJobStageTrace::ForEachVisualBlackNewest(
                            ctx);
   ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(), max_n, fn,
                            ctx);
+  ForEachVisualTraceNewest(GetFirstMeshFrontierTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualBlackTraceRing(), max_n, fn, ctx);

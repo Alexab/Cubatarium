@@ -634,20 +634,18 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
   }
   const float velocity = speed * deltaTime;
   glm::vec3 shift(0.0f);
+  const glm::vec3 horizontal_forward(
+      std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw)));
+  const glm::vec3 forward =
+      FreeMove && !PlanarFreeMoveForward ? Front : horizontal_forward;
 
   if (direction == FORWARD)
   {
-    shift += FreeMove ? Front * velocity
-                      : glm::vec3(std::cos(radians(Yaw)), 0.0f,
-                                  std::sin(radians(Yaw))) *
-                            velocity;
+    shift += forward * velocity;
   }
   else if (direction == BACKWARD)
   {
-    shift -= FreeMove ? Front * velocity
-                      : glm::vec3(std::cos(radians(Yaw)), 0.0f,
-                                  std::sin(radians(Yaw))) *
-                            velocity;
+    shift -= forward * velocity;
   }
   else if (direction == LEFT)
   {

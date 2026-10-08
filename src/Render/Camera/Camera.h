@@ -83,6 +83,7 @@ public:
   int GetLastFlightGroundContacts() const { return LastFlightGroundContacts; }
   bool GetLastFreeMoveAtStart() const { return LastFreeMoveAtStart; }
   void SetFreeMove(bool value);
+  void SetPlanarFreeMoveForward(bool value) { PlanarFreeMoveForward = value; }
 
   bool TryToggleFlightOnDoubleSpace();
   bool OnSpacePressed();
@@ -212,6 +213,7 @@ private:
   glm::vec3 WorldUp;
 
   bool FreeMove;
+  bool PlanarFreeMoveForward{false};
 
   float Yaw;
   float Pitch;

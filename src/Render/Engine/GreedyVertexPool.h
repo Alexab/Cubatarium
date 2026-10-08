@@ -114,6 +114,7 @@ private:
   bool EnsureCapacity(size_t vertex_bytes, size_t index_bytes);
   bool TryAllocateFromFreeList(size_t vertex_bytes, size_t index_bytes,
                                GreedyGpuPoolAllocation &out);
+  void AddFreeSlot(GreedyGpuPoolFreeSlot slot);
   void PollRetiredFences();
 
   GLuint VertexVbo{0};

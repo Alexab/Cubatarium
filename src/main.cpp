@@ -156,6 +156,10 @@ int main(int argc, char *argv[])
         {
           opt.HoldSpace = true;
         }
+        else if (std::strcmp(argv[j], "--level-forward") == 0)
+        {
+          opt.LevelForward = true;
+        }
         else if (std::strcmp(argv[j], "--teleport-cruise") == 0)
         {
           opt.TeleportToCruiseStart = true;
@@ -196,6 +200,11 @@ int main(int argc, char *argv[])
         else if (std::strcmp(argv[j], "--fly-phase") == 0 && j + 1 < argc)
         {
           opt.FlyPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--reverse-course-after") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.ReverseCourseAfterSec = std::atof(argv[++j]);
         }
         else if (std::strcmp(argv[j], "--stop-phase") == 0 && j + 1 < argc)
         {

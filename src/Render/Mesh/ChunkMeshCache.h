@@ -177,6 +177,12 @@ public:
   bool HasPendingAsyncMeshWork() const;
   bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                           int radius_chunks) const;
+  bool FindFirstUndrawableAsyncMeshInHorizontalBand(
+      glm::ivec3 center_ground_chunk, int radius_chunks, int min_cy, int max_cy,
+      glm::ivec3 &out_coord, bool &out_completed) const;
+  bool HasUnsatisfiedDirtyInHorizontalRadiusBand(glm::ivec3 center_chunk,
+                                                 int radius_chunks, int min_cy,
+                                                 int max_cy) const;
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
@@ -222,6 +228,7 @@ public:
   }
   double GetLastMeshDirtyTickMs() const { return LastMeshDirtyTickMs; }
   /// Cruise wall A1: substages inside RebuildDirtyChunksWithStats (ms / ops).
+  double GetLastMeshDirtyPrePruneMs() const { return LastMeshDirtyPrePruneMs; }
   double GetLastMeshDirtyPruneMs() const { return LastMeshDirtyPruneMs; }
   int GetLastMeshDirtyPruneN() const { return LastMeshDirtyPruneN; }
   double GetLastMeshDirtySortMs() const { return LastMeshDirtySortMs; }
@@ -466,7 +473,9 @@ public:
                                         int radius_chunks, int min_cy,
                                         int max_cy,
                                         const std::function<bool(glm::ivec3)> &
-                                            is_dynamic_preview = {}) const;
+                                            is_dynamic_preview = {},
+                                        std::size_t *out_scanned_entries =
+                                            nullptr) const;
   /// R06 R2: last-applied BoundaryOverlay still active (sticky closing faces).
   bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
   /// True if overlay missing-face bit for shell face 0..5 is set.
@@ -1300,6 +1309,7 @@ private:
   double LastMeshSyncMs{0.0};
   double LastMeshSnapshotMs{0.0};
   double LastMeshDirtyTickMs{0.0};
+  double LastMeshDirtyPrePruneMs{0.0};
   double LastMeshDirtyPruneMs{0.0};
   int LastMeshDirtyPruneN{0};
   double LastMeshDirtySortMs{0.0};

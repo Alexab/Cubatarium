@@ -85,8 +85,11 @@ def build_run_manifest(
     exe_hash = _sha256_file(exe_path) if exe_path else None
 
     world_hash = None
+    world_seed: str | int | None = None
+    world_metadata_hash: str | None = None
     if world:
-        # Prefer a compact hash of world metadata / first MB of save if present.
+        # Prefer the stable generator seed; keep metadata hash beside it so edits
+        # to world settings are still visible in a repeated-run comparison.
         candidates = [
             ROOT / "bin" / "worlds" / world,
             ROOT / "worlds" / world,
@@ -97,9 +100,24 @@ def build_run_manifest(
                 world_hash = _sha256_file(c, max_bytes=1 << 20)
                 break
             if c.is_dir():
-                meta = c / "world.json"
-                if meta.is_file():
-                    world_hash = _sha256_file(meta)
+                for meta in (c / "world_data.json", c / "world.json"):
+                    if not meta.is_file():
+                        continue
+                    world_metadata_hash = _sha256_file(meta)
+                    try:
+                        metadata = json.loads(meta.read_text(encoding="utf-8"))
+                    except (OSError, json.JSONDecodeError):
+                        metadata = {}
+                    candidate_seed = metadata.get("world_seed") or metadata.get(
+                        "world_seed_text"
+                    ) or metadata.get("seed")
+                    if isinstance(candidate_seed, (str, int)) and str(
+                        candidate_seed
+                    ).strip():
+                        world_seed = candidate_seed
+                    world_hash = world_seed or world_metadata_hash
+                    break
+                if world_hash:
                     break
 
     manifest: dict[str, Any] = {
@@ -121,6 +139,7 @@ def build_run_manifest(
         "light_distance_settings": os.environ.get("CUBA_LIGHT_DISTANCE"),
         "world": world,
         "world_seed_or_hash": world_hash,
+        "world_metadata_hash": world_metadata_hash,
         "scenario": scenario,
         "route_hash": route_hash
         or (
