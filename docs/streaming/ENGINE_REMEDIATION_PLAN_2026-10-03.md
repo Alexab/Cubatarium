@@ -5379,13 +5379,13 @@ change draw policy based only on `unfinished_visual`, `visible_black`, or
 
 #### Current work order after M466
 
-1. **Extend spatial coverage without changing M335 conditions.** The 8,192-row
-   screen-ray ring retained only the latter route segment (`focus -550..-836`).
-   Increase/rotate ray-history retention enough to cover the full established
-   route while keeping the 65,536-row pixel ring and the same 20-column,
-   five-scanline capture. Require the 14,300-block route gate and record
-   checkpoints across the path; do not add dense probes that alter the run's
-   cost without a specific question.
+1. **M467: extend spatial coverage without changing M335 conditions.** M466
+   filled the 8,192-row screen-ray ring and 65,536-row pixel ring. The code now
+   retains 32,768 ray rows and 196,608 pixel rows, sized from M466's observed
+   route-window spans to cover a full flight with margin. Build Release and
+   repeat the established route; verify full-path ray epochs, exact pixel
+   joins, no ring truncation, and the 14,300-block route gate. Do not add dense
+   probes that alter the run's cost without a specific question.
 2. **Separate geometry presence from freshness debt.** For recurring sampled
    candidates, follow the exact chunk incarnation and desired/published
    geometry revisions through admission, FirstMesh/dirty ownership, worker

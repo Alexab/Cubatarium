@@ -689,15 +689,14 @@ public:
   static constexpr size_t kDemandTransitionRingCapacity = 16384;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
-  // M352 showed that 2,048 samples retained only the last 26 focus scans.
-  // The five-row screen-ray-aligned probe adds 100 samples per synchronized
-  // scan; retain the candidate history alongside periodic and peak probes.
-  static constexpr size_t kVisualPixelTraceRingCapacity = 65536;
-  /// Retain a complete opt-in history of bounded streaming screen-ray probes.
-  // The screen-ray selector rotates through four horizontal phases. Keeping
-  // the opt-in audit trace at 15-frame cadence retains all phases for a full
-  // visible flight without overwriting the route's opening samples.
-  static constexpr size_t kScreenRayTraceRingCapacity = 8192;
+  // M466 filled 65,536 pixel rows and retained only the last ~40.8k frame
+  // epochs. Keep room for the full M335 route's synchronized 5x20 samples and
+  // its periodic 4x20 probes, with headroom for focus/peak captures.
+  static constexpr size_t kVisualPixelTraceRingCapacity = 196608;
+  /// Retain a full opt-in history of bounded streaming screen-ray probes.
+  // M466 filled 8,192 rows at focus -550..-836, covering only about a third
+  // of M335. Four times that observed history covers a complete route pass.
+  static constexpr size_t kScreenRayTraceRingCapacity = 32768;
   static constexpr size_t kRendererGateTraceRingCapacity = 4096;
   static constexpr size_t kFrustumCoverageTraceRingCapacity = 256;
   /// Preserve each sparse per-frame geometric-frustum census independently
