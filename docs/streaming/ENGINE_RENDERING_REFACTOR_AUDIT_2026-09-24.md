@@ -5363,16 +5363,19 @@ source tracing. Plan status is **ready for another bounded perf change, not
 ready for closure**; see the [M433 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m433-readiness-checkpoint---duplicate-removed-one-per-frame-census-remains-costly)
 and [M433 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m433---remove-duplicate-census-and-measure-remaining-cost-2026-10-06).
 
-### M463 follow-up — ray-confirmed geometry publication debt (2026-10-08)
+### M463 follow-up — geometry-repair demand needs pixel attribution (2026-10-08)
 
 The M335 route remains visually operator-positive, and the valid endpoint
-capture shows a populated scene without an obvious chunk-sized hole. However,
-M463's sparse screen-ray trace found repeated cases where an opaque voxel ray
-hit a resident non-air column whose mesh publication did not satisfy readiness:
-92 candidate period samples at 90 unique miss coordinates, 70 coinciding with
-near-focus holes. This is source-confirmed geometry debt at sampled screen-ray
-locations, not a measurement of whole-frame pixel coverage. Sampling covers
-only 5/20 horizontal tiles and five vertical rows with rotating phases.
+capture shows a populated scene without an obvious chunk-sized hole. M463's
+sparse screen-ray trace found 92 repair-candidate samples at 90 unique chunk
+coordinates, 70 coinciding with near-focus holes. A later predicate review
+clarified that these are mixed states: an opaque ray intersects resident solid
+data and the bounded repair predicate accepts either a missing satisfying mesh
+or repairable geometry revision debt, including cases where an existing
+drawable already satisfies readiness. Treat the rows as source-confirmed
+repair demand, not as proof of absent geometry or of a framebuffer gap. The
+trace covers only 5/20 horizontal tiles and five vertical rows with rotating
+phases.
 
 The ray misses coincided with mesh pipeline backpressure in 74/75 near-focus
 periods (requested schedule median 16, output headroom 9). This makes mesh
@@ -5382,11 +5385,46 @@ or generation commit coincided with these samples. Stop convergence remains
 unproven, and two stationary endpoint periods are insufficient as a convergence
 test.
 
-M463 enabled detail logging, which emitted 380 per-result light-flag records,
-including 104 `Access is denied` atomic-replace failures. The completion queue's
-mutex wait/hold was negligible in a long drain sample, so synchronous per-result
-formatting/log writes are a measurement contaminant and an avoidable main-thread
-cost. The next bounded change is to remove that per-result hot-path log I/O
-while retaining dirty-state retry behavior and actionable aggregated failure
-diagnostics. See the [M463 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m463-checkpoint--screen-ray-witnesses-identify-mesh-publication-debt-2026-10-08)
-and [M463 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m463--m335-screen-ray-readiness-and-scroll-map-fix-2026-10-08).
+M463 enabled detail logging and recorded 380 per-result light-flag messages,
+including 104 reported `Access is denied` atomic-replace failures. M464 moved
+these result diagnostics to a worker and turned detail tracing off. The
+dedicated result-drain metric measured 0.0039 ms median, 0.0075 ms p95, and
+7.13 ms max, while general async I/O drain still reached 64.12 ms. The worker
+continued to report rate-limited replace failures, so persistence remains an
+independent open issue. The logging refactor removed the known main-thread
+per-result log path; it did not resolve every I/O drain cost.
+
+M464 traced 856 candidate samples at 321 chunk coordinates. Of these, 840 had
+a mesh satisfying column readiness but with repairable geometry revision debt;
+16 had no satisfying mesh (10 with no geometry-debt flag, six with repairable
+debt). Thus only 1.9% of these ray samples lacked a satisfying mesh. The
+analyzer joined 101 candidates to pixel readbacks at the same frame and sample
+position. All 101 had pre-transparent depth below 1 and a valid opaque surface;
+zero were clear-depth. In 89/101, the pixel-ray-mapped chunk also had positive
+visible MDI indices. Seventy-four CPU pixel-ray hits matched the streaming
+ray's exact block, 16 hit a different block, and 11 had no opaque CPU-ray hit
+despite having a valid depth surface. These joins directly explain why M464's
+readiness “hole” gates can fail while the sampled picture looks filled. They
+cover only 101/856 candidates, so they do not prove the entire frame or route
+has no visible holes. Of the joined candidates, 64 were at or before the
+36-block fog end and 37 were beyond it.
+
+The ray distance p50 was 31.11 blocks, p95 74.57; 332 samples were beyond
+M335's approximately 36-block full-blend fog distance. Other samples still
+need same-frame occlusion, depth, and pixel classification. M464's trace is
+instrumentation-heavy (32,768 pixel-ring probes plus 8,192 rays), so its 25.34
+ms flight-wall median is diagnostic-only. The report explicitly sets
+`hole_key=unfinished_visual` and `unfinished_key=unfinished_visual`, and says a
+nonzero visual-readiness/debt count is not itself a blank or dark framebuffer
+pixel. The all-period `holes_rate=1` and `effective_holes_rate=1` follow that
+proxy semantics; `visual_holes_telemetry_mismatch_rate=0` means the same proxy
+signals agree with each other, not that framebuffer holes were observed.
+
+The route passed adequacy at 14,304 blocks and 5.19653 blocks/s, with process
+exit 0; analyzer quality passed 28/39 gates, and stop convergence failed after
+11 periods (`post_stop_not_ready_end=31`, `post_stop_focus_dirty_end=135`). A
+valid capture at `cx=-636` shows connected forest and near terrain; fog/water
+dominated frames are inconclusive. This agrees with the operator's current
+visual assessment without closing the internal readiness-debt investigation.
+Continue from the [M464 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m464-checkpoint--worker-logging-isolated-screen-ray-debt-reclassified-2026-10-08)
+and [M464 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m464--m335-worker-side-light-flag-result-logging-2026-10-08).

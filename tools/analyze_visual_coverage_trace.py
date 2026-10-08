@@ -8,6 +8,8 @@ import collections
 import json
 from pathlib import Path
 
+SCREEN_RAY_ROWS = (0.125, 0.375, 0.5625, 0.625, 0.875)
+
 
 def add(counter: collections.Counter, value: object) -> None:
     counter[str(value)] += 1
@@ -17,6 +19,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("perf_jsonl", type=Path)
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument(
+        "--fog-end-distance",
+        type=float,
+        help=(
+            "optional full-blend fog distance in blocks; reports how many "
+            "ray candidates fall beyond it, without treating them as visible"
+        ),
+    )
     args = parser.parse_args()
 
     trace_counts: collections.Counter[str] = collections.Counter()
@@ -25,6 +35,10 @@ def main() -> int:
     screen_selected_by_state: collections.Counter[str] = collections.Counter()
     screen_combos: collections.Counter[str] = collections.Counter()
     screen_examples: list[dict[str, object]] = []
+    screen_candidate_distances: list[float] = []
+    screen_candidate_coords: set[tuple[int, int, int]] = set()
+    screen_candidate_rows: list[dict[str, object]] = []
+    pixel_probe_rows: list[dict[str, object]] = []
     focus_states: collections.Counter[str] = collections.Counter()
     focus_visual_classes: collections.Counter[str] = collections.Counter()
     focus_terrain_complete: collections.Counter[str] = collections.Counter()
@@ -119,7 +133,21 @@ def main() -> int:
                 selected = int(row.get("screen_ray_selected", 0) or 0)
                 add(screen_state, state)
                 if candidate:
+                    screen_candidate_rows.append(row)
                     add(screen_candidates_by_state, state)
+                    screen_candidate_coords.add(
+                        (
+                            int(row.get("cx", 0)),
+                            int(row.get("cy", 0)),
+                            int(row.get("cz", 0)),
+                        )
+                    )
+                    try:
+                        distance = float(row.get("screen_ray_distance", -1.0))
+                    except (TypeError, ValueError):
+                        distance = -1.0
+                    if distance >= 0.0:
+                        screen_candidate_distances.append(distance)
                     combo = (
                         state,
                         int(row.get("screen_ray_mesh_satisfying", 0) or 0),
@@ -144,6 +172,27 @@ def main() -> int:
                             ) if field in row}
                         )
 
+            elif kind == "renderer_pixel_probe":
+                pixel_fields = (
+                    "frame_epoch",
+                    "renderer_pixel_x",
+                    "renderer_pixel_y",
+                    "renderer_pixel_rgba",
+                    "renderer_pixel_pretransparent_depth",
+                    "renderer_pixel_fog_start",
+                    "renderer_pixel_fog_end",
+                    "renderer_pixel_opaque_surface_valid",
+                    "renderer_pixel_voxel_ray_state",
+                    "renderer_pixel_voxel_hit_x",
+                    "renderer_pixel_voxel_hit_y",
+                    "renderer_pixel_voxel_hit_z",
+                    "renderer_pixel_voxel_face_source_valid",
+                    "renderer_pixel_voxel_chunk_mdi_visible_index_count",
+                )
+                pixel_probe_rows.append(
+                    {field: row[field] for field in pixel_fields if field in row}
+                )
+
             elif kind == "view_frustum_coverage_trace":
                 state = str(row.get("focus_state", 0))
                 add(frustum_states, state)
@@ -161,6 +210,213 @@ def main() -> int:
     def sorted_counter(counter: collections.Counter[str]) -> dict[str, int]:
         return dict(sorted(counter.items(), key=lambda item: item[0]))
 
+    ordered_candidate_distances = sorted(screen_candidate_distances)
+
+    def quantile(q: float) -> float | None:
+        if not ordered_candidate_distances:
+            return None
+        index = round((len(ordered_candidate_distances) - 1) * q)
+        return ordered_candidate_distances[index]
+
+    candidate_distance = {
+        "sample_count": len(ordered_candidate_distances),
+        "min_blocks": quantile(0.0),
+        "p50_blocks": quantile(0.50),
+        "p95_blocks": quantile(0.95),
+        "max_blocks": quantile(1.0),
+        "unique_candidate_coords": len(screen_candidate_coords),
+    }
+    if args.fog_end_distance is not None:
+        within_fog_end = sum(
+            distance <= args.fog_end_distance
+            for distance in ordered_candidate_distances
+        )
+        candidate_distance["fog_end_distance_blocks"] = args.fog_end_distance
+        candidate_distance["at_or_before_fog_end"] = within_fog_end
+        candidate_distance["beyond_fog_end"] = (
+            len(ordered_candidate_distances) - within_fog_end
+        )
+        candidate_distance["beyond_fog_end_rate"] = (
+            (len(ordered_candidate_distances) - within_fog_end)
+            / len(ordered_candidate_distances)
+            if ordered_candidate_distances
+            else None
+        )
+
+    pixel_xs = sorted(
+        {int(row["renderer_pixel_x"]) for row in pixel_probe_rows
+         if "renderer_pixel_x" in row}
+    )
+    pixel_ys = sorted(
+        {int(row["renderer_pixel_y"]) for row in pixel_probe_rows
+         if "renderer_pixel_y" in row}
+    )
+    pixel_probe_by_ray_sample: dict[tuple[int, int, int], dict[str, object]] = {}
+    pixel_join_mapping_available = len(pixel_xs) == 20 and len(pixel_ys) in (4, 8)
+    pixel_join_mapping_reason = None
+    if pixel_join_mapping_available:
+        # Pixel probes use GL bottom-left framebuffer coordinates. Infer the
+        # viewport grid from the regular 20-column and 4/8-row sample centers,
+        # then map them onto the streaming probe's screen-ray grid.
+        viewport_height = (pixel_ys[-1] - pixel_ys[0]) * len(pixel_ys) / (
+            len(pixel_ys) - 1
+        )
+        viewport_y = pixel_ys[0] - viewport_height / (2 * len(pixel_ys))
+        pixel_y_to_ray_row: dict[int, int] = {}
+        for pixel_y in pixel_ys:
+            top_y = viewport_height - (pixel_y - viewport_y) - 0.5
+            normalized_y = top_y / viewport_height
+            nearest_row = min(
+                range(len(SCREEN_RAY_ROWS)),
+                key=lambda index: abs(SCREEN_RAY_ROWS[index] - normalized_y),
+            )
+            if abs(SCREEN_RAY_ROWS[nearest_row] - normalized_y) * viewport_height <= 1.0:
+                pixel_y_to_ray_row[pixel_y] = nearest_row
+        pixel_x_to_column = {x: index for index, x in enumerate(pixel_xs)}
+        for pixel in pixel_probe_rows:
+            pixel_x = int(pixel.get("renderer_pixel_x", -1))
+            pixel_y = int(pixel.get("renderer_pixel_y", -1))
+            column = pixel_x_to_column.get(pixel_x)
+            ray_row = pixel_y_to_ray_row.get(pixel_y)
+            if column is None or ray_row is None:
+                continue
+            key = (int(pixel.get("frame_epoch", 0)), column, ray_row)
+            pixel_probe_by_ray_sample[key] = pixel
+    else:
+        pixel_join_mapping_reason = (
+            f"expected 20 pixel columns and 4 or 8 pixel rows; found "
+            f"{len(pixel_xs)} columns and {len(pixel_ys)} rows"
+        )
+
+    pixel_join_pairs: list[tuple[dict[str, object], dict[str, object]]] = []
+    if pixel_join_mapping_available:
+        for ray in screen_candidate_rows:
+            key = (
+                int(ray.get("frame_epoch", 0)),
+                int(ray.get("screen_ray_column", -1)),
+                int(ray.get("screen_ray_row", -1)),
+            )
+            pixel = pixel_probe_by_ray_sample.get(key)
+            if pixel is not None:
+                pixel_join_pairs.append((ray, pixel))
+
+    def pixel_hit_matches(ray: dict[str, object], pixel: dict[str, object]) -> bool:
+        return (
+            int(pixel.get("renderer_pixel_voxel_ray_state", 0) or 0) == 1
+            and tuple(
+                int(ray.get(field, 0) or 0)
+                for field in (
+                    "screen_ray_block_x",
+                    "screen_ray_block_y",
+                    "screen_ray_block_z",
+                )
+            )
+            == tuple(
+                int(pixel.get(field, 0) or 0)
+                for field in (
+                    "renderer_pixel_voxel_hit_x",
+                    "renderer_pixel_voxel_hit_y",
+                    "renderer_pixel_voxel_hit_z",
+                )
+            )
+        )
+
+    pixel_depths = [
+        float(pixel.get("renderer_pixel_pretransparent_depth", 1.0) or 0.0)
+        for _, pixel in pixel_join_pairs
+    ]
+    pixel_voxel_states: collections.Counter[str] = collections.Counter()
+    for _, pixel in pixel_join_pairs:
+        add(pixel_voxel_states, pixel.get("renderer_pixel_voxel_ray_state", 0))
+    pixel_join = {
+        "mapping_available": pixel_join_mapping_available,
+        "mapping_reason": pixel_join_mapping_reason,
+        "candidate_samples": len(screen_candidate_rows),
+        "same_frame_same_sample_matches": len(pixel_join_pairs),
+        "candidate_samples_without_pixel_probe": (
+            len(screen_candidate_rows) - len(pixel_join_pairs)
+        ),
+        "opaque_surface_valid": sum(
+            int(pixel.get("renderer_pixel_opaque_surface_valid", 0) or 0) == 1
+            for _, pixel in pixel_join_pairs
+        ),
+        "pretransparent_depth_has_surface": sum(depth < 0.999999 for depth in pixel_depths),
+        "pretransparent_depth_clear": sum(depth >= 0.999999 for depth in pixel_depths),
+        "voxel_ray_state_counts": sorted_counter(pixel_voxel_states),
+        "voxel_hit_same_block_as_stream_ray": sum(
+            pixel_hit_matches(ray, pixel) for ray, pixel in pixel_join_pairs
+        ),
+        "voxel_hit_different_block_from_stream_ray": sum(
+            int(pixel.get("renderer_pixel_voxel_ray_state", 0) or 0) == 1
+            and not pixel_hit_matches(ray, pixel)
+            for ray, pixel in pixel_join_pairs
+        ),
+        "voxel_face_source_valid": sum(
+            int(pixel.get("renderer_pixel_voxel_face_source_valid", 0) or 0) == 1
+            for _, pixel in pixel_join_pairs
+        ),
+        "pixel_chunk_visible_mdi_indices_positive": sum(
+            int(pixel.get("renderer_pixel_voxel_chunk_mdi_visible_index_count", 0) or 0) > 0
+            for _, pixel in pixel_join_pairs
+        ),
+        "matched_candidates_at_or_before_fog_end": (
+            sum(
+                float(ray.get("screen_ray_distance", -1.0) or -1.0)
+                <= args.fog_end_distance
+                for ray, _ in pixel_join_pairs
+            )
+            if args.fog_end_distance is not None
+            else None
+        ),
+        "matched_candidates_beyond_fog_end": (
+            sum(
+                float(ray.get("screen_ray_distance", -1.0) or -1.0)
+                > args.fog_end_distance
+                for ray, _ in pixel_join_pairs
+            )
+            if args.fog_end_distance is not None
+            else None
+        ),
+        "samples": [
+            {
+                "frame_epoch": ray.get("frame_epoch"),
+                "chunk": [ray.get("cx"), ray.get("cy"), ray.get("cz")],
+                "block": [
+                    ray.get("screen_ray_block_x"),
+                    ray.get("screen_ray_block_y"),
+                    ray.get("screen_ray_block_z"),
+                ],
+                "distance": ray.get("screen_ray_distance"),
+                "mesh_satisfying": ray.get("screen_ray_mesh_satisfying"),
+                "repairable_geometry_debt": ray.get(
+                    "screen_ray_repairable_geometry_debt"
+                ),
+                "pixel_depth": pixel.get("renderer_pixel_pretransparent_depth"),
+                "pixel_rgba": pixel.get("renderer_pixel_rgba"),
+                "pixel_fog_start": pixel.get("renderer_pixel_fog_start"),
+                "pixel_fog_end": pixel.get("renderer_pixel_fog_end"),
+                "pixel_opaque_surface_valid": pixel.get(
+                    "renderer_pixel_opaque_surface_valid"
+                ),
+                "pixel_voxel_ray_state": pixel.get(
+                    "renderer_pixel_voxel_ray_state"
+                ),
+                "pixel_voxel_hit": [
+                    pixel.get("renderer_pixel_voxel_hit_x"),
+                    pixel.get("renderer_pixel_voxel_hit_y"),
+                    pixel.get("renderer_pixel_voxel_hit_z"),
+                ],
+                "pixel_voxel_face_source_valid": pixel.get(
+                    "renderer_pixel_voxel_face_source_valid"
+                ),
+                "pixel_chunk_visible_mdi_indices": pixel.get(
+                    "renderer_pixel_voxel_chunk_mdi_visible_index_count"
+                ),
+            }
+            for ray, pixel in pixel_join_pairs[:32]
+        ],
+    }
+
     result = {
         "perf_jsonl": str(args.perf_jsonl),
         "trace_counts": dict(sorted(trace_counts.items())),
@@ -174,7 +430,9 @@ def main() -> int:
             "candidate_counts_by_state": sorted_counter(screen_candidates_by_state),
             "selected_counts_by_state": sorted_counter(screen_selected_by_state),
             "candidate_issue_combinations": sorted_counter(screen_combos),
+            "candidate_distance": candidate_distance,
             "candidate_samples": screen_examples,
+            "same_frame_pixel_join": pixel_join,
         },
         "view_frustum": {
             "sample_states": sorted_counter(frustum_states),

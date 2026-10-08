@@ -5090,7 +5090,7 @@ fog pull-in, so it does not reproduce normal weather or adaptive-fog changes.
 The raw command, report, log, and capture paths are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m462--detail-trace-timing-with-m335-2026-10-08).
 
-#### M463 checkpoint — screen-ray witnesses identify mesh publication debt (2026-10-08)
+#### M463 checkpoint — screen-ray repair candidates need pixel attribution (2026-10-08)
 
 M463 completed the exact visible/no-teleport M335 route and passed its distance
 gate: focus `7 -> -888`, 14,320 blocks at 5.2 blocks/s median. The process
@@ -5099,14 +5099,17 @@ Product gates still failed 9/39 checks and stop convergence did not pass. The
 run used a source-matched Release executable at `8a726f52`.
 
 Sparse screen-ray evidence confirms that some readiness misses are not merely
-generic counters: an opaque voxel ray hit a resident, non-air column whose
-geometry publication did not satisfy readiness. There were 92 candidate
-period samples at 90 unique miss coordinates; 70 overlapped the 75 near-focus
-hole samples. The trace samples 5/20 horizontal tiles and five vertical rows
-with rotating phases, so it identifies recurrence but does not estimate the
-full framebuffer coverage. The endpoint screenshot is a populated scene with
-no obvious chunk-sized hole; only three endpoint frames were inspected and
-nearby fog is not classified as missing geometry.
+generic counters: an opaque voxel ray hit a resident solid column that met the
+bounded geometry-repair candidate predicate. There were 92 candidate period
+samples at 90 unique chunk coordinates; 70 overlapped the 75 near-focus hole
+samples. Review of the predicate in M464 clarified that it includes both a
+slice with no mesh satisfying column readiness and an existing satisfying
+drawable mesh with repairable geometry revision debt. Thus these rows establish
+ray-confirmed maintenance demand, not uniformly absent publication. The trace
+samples 5/20 horizontal tiles and five vertical rows with rotating phases, so
+it does not estimate full framebuffer coverage. The endpoint screenshot is a
+populated scene with no obvious chunk-sized hole; only three endpoint frames
+were inspected and nearby fog is not classified as missing geometry.
 
 Near-hole samples show a credible meshing/publication throughput lead: pipeline
 backpressure was active in 74/75, with median requested work 16 and output
@@ -5117,12 +5120,81 @@ budgets. No disk load completion or generation commit coincided with these
 ray-confirmed samples, so current evidence points downstream of resident voxel
 availability for these particular misses.
 
-The M463 timing is contaminated by synchronous per-result light-flag logging:
-the detail trace recorded 380 results including 104 `Access is denied` replace
-failures. Drain mutex timings were negligible while the measured result drain
-was often long. Remove per-result log I/O from the main-thread drain, preserve
-retry semantics and failure observability, and compare with detail trace off.
-Do not infer that the transient Windows replace error caused a rendering hole.
+The M463 timing was contaminated by synchronous per-result light-flag logging:
+the detail trace recorded 380 result messages including 104 reported
+`Access is denied` replace failures. Drain mutex timings were negligible while
+the measured result drain was often long. M464 moved the per-result reporting
+to its worker and disabled detail tracing; the dedicated result-drain metric
+then measured 0.0039 ms median, 0.0075 ms p95, and 7.13 ms maximum. The broader
+async I/O drain still reached 64.12 ms and needs separate attribution. The
+worker continues to report rate-limited replace failures, so the underlying
+intermittent Windows failure remains open. Do not infer that a replace error
+caused a rendering hole.
+
+#### M464 checkpoint — worker logging isolated; screen-ray debt reclassified (2026-10-08)
+
+M464 repeated the fixed visible/no-teleport M335 route on `World_164` with a
+manifest-matched Release build (`f706bb65`, executable SHA-256
+`DD75B30690A5D8F4A3D060495FD09E6DC02EBE1CD46191753033FEF3B46B0C35`). The
+route passed: focus `7 -> -887`, 14,304 blocks, 5.19653 blocks/s median, process
+exit 0. Analyzer quality gates passed 28/39. Stop convergence still failed
+after 11 stop periods (`post_stop_not_ready_end=31`,
+`post_stop_focus_dirty_end=135`).
+
+The 8,192 sparse ray trace rows contained 856 candidates at 321 distinct chunk
+coordinates. The candidate classification is important: 840/856 samples had
+a mesh satisfying column readiness and simultaneously had repairable geometry
+revision debt; 16/856 had no satisfying mesh (10 without a geometry-debt flag,
+six with repairable debt). This revises M463's initial broad interpretation.
+The candidate ray intersects solid world data and requests bounded mesh
+maintenance, but does not prove that the current drawable is absent, that a
+framebuffer pixel is uncovered, or that the affected chunk is visually
+exposed. M335 fog reaches full blend at about 36 blocks: 332/856 ray samples
+were farther than that; the other 524 are not automatically visible because
+fog attenuation, occlusion, and pixel coverage still matter.
+
+The M464 analyzer matched 101 candidate samples to a pixel readback from the
+same frame, horizontal sample, and vertical row. Every matched sample had
+pre-transparent depth `<1` and a valid opaque surface reconstructed from that
+depth; none was clear-depth. In 89/101 samples the pixel-ray-mapped chunk also
+reported visible MDI indices. Seventy-four pixel CPU rays hit the same block as
+the streaming ray and 16 hit a different block; 11 had no opaque CPU-ray hit,
+but their pre-transparent pixels still had valid depth surfaces. This explains
+why the route's internal gate can say “holes” while the sampled image looks
+filled: the gate tracks readiness debt, and sampled pixels show rendered
+opaque coverage at those candidate points. It is not a whole-screen proof:
+755/856 candidates had no same-frame pixel probe because the readback cadence
+is sparse. Of the 101 joined candidate samples, 64 were at or before the
+36-block fog end and 37 were beyond it.
+
+Valid captures at `cx=-636` and the endpoint show connected terrain/forest with
+no obvious chunk-sized opening. Other route captures are fog- or
+water-dominated and inconclusive. The operator reports the world looks good;
+keep that observation separate from the unresolved readiness counters and the
+longstanding fog/water silhouettes. The trace run itself is not a clean timing
+baseline: although dense-pixel mode was off, 32,768 pixel-ring samples and
+8,192 ray rows were recorded. Flight median wall was 25.34 ms, streaming phase
+12.35 ms, and mesh emerge 7.18 ms; use those only as instrumented diagnostics.
+
+The M463 hot-path logging change is validated narrowly. With detail tracing
+off, the main-thread INFO log contained zero `detail=light_flags_save_result`
+rows. The dedicated result-drain metric fell to 0.0039 ms median (0.0075 ms
+p95, 7.13 ms max). General `async_chunk_io_drain_ms` remained 0.85 ms median,
+1.79 ms p95, and 64.12 ms max. The worker still emitted 25 throttled
+`outcome=light_flags_write_failed` messages, with `replace_failed: Access is
+denied` still present; track that persistence symptom separately.
+
+The screen-ray candidate-distance distribution was 3.48 / 31.11 / 74.57 /
+95.61 blocks (min/p50/p95/max); 332 candidates were beyond the 36-block
+full-blend fog horizon. The rest require same-frame pixel/depth evidence before
+being called visible gaps. The 101 exact joins found no clear-depth samples;
+extend the joined coverage to recurring candidate coordinates and the 16
+samples without a satisfying mesh before claiming that a visual hole is
+reproduced. Screen-ray tracing remains sparse (5/20 horizontal tiles, five
+rows, rotating phases), so this route does not measure missing screen area.
+
+Artifacts and exact route command are recorded in the
+[`M464 run record`](FLIGHT_EXPERIMENT_SCRIPTS.md#m464--m335-worker-side-light-flag-result-logging-2026-10-08).
 
 #### Separate legacy fog/water investigation lead
 
@@ -5174,32 +5246,39 @@ verify this hypothesis. The current M335 logs also do not record weather/fog
 uniform inputs. Keep both weather and fluid-map effects in this separate fog
 track; do not use them as evidence of streaming holes.
 
-#### Current work order
+#### Current work order after M464
 
-1. Remove synchronous per-result light-flag diagnostic output from
-   `ProcessColumnLightFlagSaveResults`. Preserve dirty-state tracking, retry
-   backoff, and enough bounded failure diagnostics to explain save errors.
-   Avoid doing formatting and log-file writes while the main thread drains the
-   completion queue.
-2. Build Release and repeat the exact visible/no-teleport M335 route as M464
-   with `CUBA_STREAMING_DETAIL_TRACE=0`; keep route, camera, speed, time, and
-   14,300-block adequacy gate unchanged. Collect bounded screen-ray witness
-   traces to correlate miss coordinates with mesh admission, FirstMesh tickets,
-   publication, and completion. Keep dense per-pixel tracing disabled.
-3. Compare clean-period and ray-miss streaming phases plus true wall-frame
-   costs. Track `column_light.json` errors separately from terrain load and
-   mesh readiness. If ray-confirmed holes persist, follow the exact demand to
-   job admission, worker completion, GPU upload, and ready-state publication;
-   repair the stalled transition before tuning quotas or backpressure limits.
-4. Repeat `World_164` under the same controlled M335 profile until the mesh
-   debt and stop-convergence behavior are understood. Then resume cold
-   world-create/load profiling and periodic fresh-seed runs as a secondary
-   workload. Keep the fixed repeated-world route as the primary regression
-   control.
-5. Keep the long-standing fog/water silhouette transition investigation
-   separate. The current user report says this behavior predates the renderer
-   changes; M335 disables auto-weather, and fog appearance alone is not proof
-   of an unloaded or empty chunk.
+1. Extend the same-frame pixel/depth join across repeated M335 passes, focusing
+   on recurring candidates and the 16 samples with no satisfying mesh. Keep
+   the 840 already-satisfying drawables with revision debt in a separate class.
+   No clear-depth samples appeared in the 101 M464 joins; require a direct
+   pixel/depth witness before calling the readiness gate a visible hole.
+2. Follow candidate and near-focus debt through admission, FirstMesh/dirty
+   ownership, worker completion, GPU publication, and readiness transition.
+   M464 showed a mix of `first_mesh_ticket_present`, rejected tickets, direct
+   dirty fallback, and a small number of async-owner-without-FIFO cases; do
+   not infer a stuck transition from one sampled queue state. Measure repeat
+   ownership age and completion for the same chunk incarnation/revision.
+3. Keep M335 fixed and repeat `World_164` after a targeted diagnostic or code
+   change. Preserve visible/no-teleport route, camera, speed, time, and route
+   distance. Require adequate route completion and a meaningful stationary
+   convergence window. Do not use visual-probe timings as a clean performance
+   baseline.
+4. Profile the remaining `async_chunk_io_drain_ms` spikes independently from
+   light-flag result logging. Investigate the intermittent
+   `column_light.json` replace failures on the worker path without conflating
+   them with terrain loading or mesh readiness.
+5. Continue cold world-create/load profiling and periodic fresh-world runs as
+   secondary lanes; retain the repeated-world M335 route as the primary
+   regression control. Keep the established fog/water silhouette investigation
+   separate and require a same-pose pixel/depth/fog join before attributing it
+   to map coverage or streaming.
 
-M463 artifacts and the exact command are in
-[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m463--m335-screen-ray-readiness-and-scroll-map-fix-2026-10-08).
+M464 artifacts and command are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m464--m335-worker-side-light-flag-result-logging-2026-10-08).
+Plan readiness is **ready for a bounded performance refactor; not ready for
+closure**. The M464 flight did not demonstrate a visible blank pixel in its
+101 matched samples; remaining work includes broader matched coverage,
+draining geometry-revision debt, stop convergence, the general I/O-drain tail,
+and uncharacterized fresh-world creation/load.
+Route speed and collisions do not currently block the streaming investigation.

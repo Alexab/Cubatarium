@@ -3296,12 +3296,15 @@ M463 enabled `CUBA_STREAMING_DETAIL_TRACE=1`. It also recorded sparse screen-ray
 readiness witnesses: 92 ray-candidate period samples at 90 unique miss
 coordinates, with 70 samples coinciding with near-focus holes. There were 75
 near-focus samples and 75 unique focus positions. These witnesses are stronger
-than generic `visible_black_focus` or `effective_holes` counters: the code first
-traces an opaque voxel ray and then confirms that the resident column has
-non-air data but lacks geometry publication satisfying column readiness.
-Sampling covers only 5 of 20 horizontal tiles and five vertical rows with
-rotating phases, so the counts establish repeated mesh-publication debt, not
-full-frame hole coverage or a pixel-area rate.
+than generic `visible_black_focus` or `effective_holes` counters because an
+opaque voxel ray intersects a resident solid column that meets the bounded
+repair-candidate predicate. That predicate includes both a slice with no mesh
+satisfying column readiness and a slice whose existing drawable mesh satisfies
+readiness but has repairable geometry revision debt. Therefore the 92 samples
+show repeated ray-confirmed geometry maintenance demand; they do not all mean
+that published geometry is absent. Sampling covers only 5 of 20 horizontal
+tiles and five vertical rows with rotating phases, so the counts do not
+estimate full-frame hole coverage or pixel-area rate.
 
 In the near-hole periods, median wall time was 30.12 ms versus 24.05 ms in clean
 periods; streaming phase was 16.24 versus 11.87 ms and mesh emerge 9.80 versus
@@ -3341,4 +3344,97 @@ Exact M463 invocation:
 ```powershell
 $env:CUBA_STREAMING_DETAIL_TRACE='1'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m463_world164_m335_scroll_alignment_fix --report bin/suite_reports/engine_refactor/m463_world164_m335_scroll_alignment_fix_20261008.json --process-timeout 7200
+```
+
+## M464 — M335 worker-side light-flag result logging (2026-10-08)
+
+M464 repeated the exact visible/no-teleport M335 route on `World_164` after
+moving light-flag result diagnostics off the main-thread result drain. The
+Release source and executable matched commit `f706bb65a895e21bb29c6f129fb371fa8feec628`;
+executable SHA-256 was
+`DD75B30690A5D8F4A3D060495FD09E6DC02EBE1CD46191753033FEF3B46B0C35`. The
+manifest passed (resolution remains untested). The route passed its 14,300
+block adequacy gate: focus `7 -> -887`, 14,304 blocks, median speed 5.19653
+blocks/s. The process and wrapper completed normally, and world settings were
+restored. Product gates passed 28/39; post-stop convergence failed after 11
+stop periods.
+
+The run used `CUBA_STREAMING_DETAIL_TRACE=0`,
+`CUBA_VISUAL_BLACK_TRACE=1`, `CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS=0`, and
+disabled focus probes, source tracing, relight audit, GPU profiling, and frame
+capture. Dense per-pixel logging was off, though the visual-black trace still
+filled its four-row pixel-probe ring (32,768 probes). The resulting 85,003-row
+trace contains 8,192 sparse screen-ray rows and 32,768 pixel probes; the
+diagnostics materially perturb timing, so do not use this run as a clean
+performance benchmark.
+
+The screen-ray analyzer found 856 repair candidates at 321 distinct chunk
+coordinates. Of these samples, 840 (98.1%) had a mesh currently satisfying
+column readiness while also carrying repairable geometry revision debt; 16
+samples had no satisfying mesh (10 with no geometry-debt flag and six with
+repairable debt). This corrects the broad interpretation of candidate rows in
+the M463 entry: most candidates do not represent a complete absence of a
+drawable mesh. They are bounded maintenance targets. The analyzer also joined
+101 candidate rows to the pixel probe from the same frame, column, and sampled
+row. All 101 had pre-transparent depth below 1 and a valid opaque surface;
+none had clear depth. In 89/101 the ray-mapped chunk also had a positive
+visible-MDI index count. Of the matched samples, 64 were at or before the
+36-block fog end and 37 were beyond it. This is direct evidence that those
+sampled candidate locations had rendered opaque coverage, even though their
+chunks carried repair debt. The join is sparse: 755 candidates had no same-frame
+pixel probe, so it cannot establish full-screen coverage. Candidate ray distance was 3.48 /
+31.11 / 74.57 / 95.61 blocks (min / p50 / p95 / max). Using the M335
+distance-fog full-blend end of 36 blocks, 332/856 samples (38.8%) were beyond
+that distance and therefore fog-dominated; 524 were at or before the fog end,
+which still does not prove visible pixel coverage.
+
+Captures at `cx=-636` show dense, connected forest and near terrain without an
+obvious chunk-sized gap. Captures at `cx=-563`, `-710`, and the approach/end
+are dominated by fog or water silhouettes and cannot classify distant
+geometry. The stationary endpoint shows connected terrain and trees. These
+images support the user's observation that the route currently looks good,
+while leaving sparse geometry revision debt and stop convergence open. Keep the
+longstanding slow fog/water silhouette transition in its separate track.
+
+With detail tracing disabled, no `detail=light_flags_save_result` rows were
+written to the main-thread INFO path. The per-frame
+`async_chunk_io_light_flags_result_drain_ms` median was 0.0039 ms, p95 0.0075
+ms, and max 7.13 ms across 1,815 perf rows. The broader
+`async_chunk_io_drain_ms` remained distinct (median 0.85 ms, p95 1.79 ms, max
+64.12 ms), so other result-drain work still merits separate profiling. The
+worker emitted 25 rate-limited `outcome=light_flags_write_failed` messages;
+the latest observed error remained `replace_failed: Access is denied`. The
+underlying intermittent file-replace failure is unresolved and is not evidence
+of a terrain-read or rendering failure.
+
+The analyzer reports 28/39 gates, median flight wall time 25.34 ms, median
+world-streaming phase 12.35 ms, and mesh-emerge median 7.18 ms. The report's
+`hole_key` and `unfinished_key` are both `unfinished_visual`, a readiness/debt
+count; all three reported hole rates were 1.0 because that proxy stayed
+nonzero, not because pixel readback found blank chunks. The visual-black focus
+median was zero. The route is complete, but stop convergence failed
+(`post_stop_not_ready_end=31`, `post_stop_focus_dirty_end=135`).
+
+Artifacts:
+
+- Flight report: `bin/suite_reports/engine_refactor/m464_world164_m335_worker_log_isolation_20261008.json`
+- Visual-trace summary: `bin/suite_reports/engine_refactor/m464_visual_coverage_trace_20261008.json`
+- Perf: `bin/logs/perf_20261008-073618_31764.jsonl`
+- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-073614.31764`
+- Frames: `bin/suite_reports/engine_refactor/m464_world164_m335_worker_log_isolation_frames_20261008/`
+
+Exact M464 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m464_world164_m335_worker_log_isolation --report bin/suite_reports/engine_refactor/m464_world164_m335_worker_log_isolation_20261008.json --process-timeout 7200
 ```
