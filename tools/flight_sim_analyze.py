@@ -229,6 +229,7 @@ def analyze(
         if any("unfinished_visual" in r for r in steady)
         else None
     )
+    # Keep the strict readiness/debt signal separate from missing-mesh holes.
     hole_key = (
         "unfinished_visual"
         if unfinished_key
@@ -240,10 +241,46 @@ def analyze(
     )
     hole_signal_semantics = (
         "unfinished_visual is a visual-readiness/debt count; a nonzero value "
-        "does not by itself mean a blank or dark framebuffer pixel"
+        "does not by itself mean a blank or dark framebuffer pixel; this key "
+        "is used for readiness-debt diagnostics, not the visual-hole rate"
         if hole_key == "unfinished_visual"
-        else "legacy visual-hole counter; correlate with framebuffer pixel evidence"
+        else "legacy mesh-hole counter; correlate with framebuffer pixel evidence"
     )
+    visual_hole_key = (
+        "visual_holes"
+        if any("visual_holes" in r for r in steady)
+        else (
+            "near_focus_holes"
+            if any("near_focus_holes" in r for r in steady)
+            else None
+        )
+    )
+    visual_hole_signal_semantics = (
+        "missing greedy mesh in the near focus; this is a mesh-coverage proxy, "
+        "not direct framebuffer-pixel evidence"
+        if visual_hole_key is not None
+        else "not emitted; visual holes are unmeasured in this perf schema"
+    )
+    visual_hole_flags = [
+        1.0 if float(r.get(visual_hole_key) or 0) > 0 else 0.0
+        for r in steady
+        if visual_hole_key is not None and visual_hole_key in r
+    ]
+    visual_hole_sample_coverage = (
+        len(visual_hole_flags) / len(steady) if steady else 0.0
+    )
+    visual_holes_rate = (
+        sum(visual_hole_flags) / len(visual_hole_flags)
+        if visual_hole_flags
+        else None
+    )
+    (
+        visual_holes_blink_transitions,
+        visual_holes_blink_rate,
+        visual_holes_longest_run,
+        visual_holes_longest_clear_run,
+    ) = binary_transition_stats(visual_hole_flags)
+    # `holes` retains the legacy readiness-key series for existing diagnostics.
     holes = col(steady, hole_key)
     dark_sticky = col(steady, "black_sticky")
     if not dark_sticky and any("focus_dark_mesh" in r for r in steady):
@@ -513,13 +550,15 @@ def analyze(
         else 0.0
     )
 
-    holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
     unfinished_visual_rate = (
         sum(1 for value in unfinished_visual if value > 0) /
         len(unfinished_visual)
         if unfinished_visual
         else None
     )
+    # Compatibility field: this is the strict readiness-debt signal selected by
+    # `hole_key`, not the actual near-focus missing-mesh rate.
+    holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
     red_rate = (sum(1 for p in pressure if p >= 2) / len(pressure)) if pressure else 1.0
 
     focus_pts = [
@@ -868,7 +907,14 @@ def analyze(
         median(col(fly_segment, "mesh_sync_ms")) if fly_segment else None
     )
     gates = {
-        "visual_holes_rate_le_0_10": effective_holes_rate <= 0.10,
+        "visual_holes_sample_coverage_ge_0_95": (
+            visual_hole_sample_coverage >= 0.95
+        ),
+        "visual_holes_rate_le_0_10": (
+            visual_holes_rate is not None
+            and visual_hole_sample_coverage >= 0.95
+            and visual_holes_rate <= 0.10
+        ),
         "dirty_med_le_400": ok_med(median(dirty), 400),
         "dirty_not_plateau_gt800_10s": dirty_high_sec <= 10.0,
         "pending_light_focus_med_le_15": ok_med(median(pending_f), 15),
@@ -984,6 +1030,22 @@ def analyze(
         post_stop_longest_hole_run,
         post_stop_longest_clear_run,
     ) = binary_transition_stats(stop_effective)
+    post_stop_visual_hole_flags = [
+        1.0 if float(r.get(visual_hole_key) or 0) > 0 else 0.0
+        for r in stop_tail
+        if visual_hole_key is not None and visual_hole_key in r
+    ]
+    post_stop_visual_hole_coverage = (
+        len(post_stop_visual_hole_flags) / len(stop_tail) if stop_tail else 0.0
+    )
+    post_stop_visual_holes_rate = (
+        sum(post_stop_visual_hole_flags) / len(post_stop_visual_hole_flags)
+        if post_stop_visual_hole_flags
+        else None
+    )
+    post_stop_visual_holes_max = (
+        max(post_stop_visual_hole_flags) if post_stop_visual_hole_flags else None
+    )
     post_stop_relight_med = median(relight_stop)
     post_stop_not_ready_med = median(not_ready_stop) if not_ready_stop else None
     post_stop_not_ready_end = (
@@ -1844,6 +1906,11 @@ def analyze(
         ),
         "post_stop_missing_zero": post_stop_missing_max is not None
         and post_stop_missing_max <= 0.5,
+        "post_stop_visual_holes_zero": (
+            post_stop_visual_holes_rate is not None
+            and post_stop_visual_hole_coverage >= 0.95
+            and post_stop_visual_holes_max <= 0.5
+        ),
         "post_stop_effective_holes_zero": post_stop_effective_holes_rate <= 0.05,
         "post_stop_pending_falling": already_clean_stop
         or (
@@ -1883,6 +1950,7 @@ def analyze(
         "black_proxy_rate": black_proxy_rate,
         "black_proxy_soft_fail": black_proxy_rate >= 0.25,
         "holes_rate_raw": holes_rate,
+        "visual_holes_rate_raw": visual_holes_rate,
         "mesh_async_stuck_sec": mesh_async_stuck_sec,
         "cold_relight_holes_sec": cold_relight_holes_sec,
         # Perf-root P4 → Phase5 S5: FPS + attribution promoted to hard `gates`.
@@ -1971,7 +2039,7 @@ def analyze(
             cur_m = {
                 "fly_void_near_max": fly_void_near_max,
                 "effective_holes_rate": effective_holes_rate,
-                "holes_rate": effective_holes_rate,
+                "holes_rate": holes_rate,
                 "wall_ms_fly_med": wall_fly_med,
                 "stream_ms": stream_ms_med,
                 "mesh_emerge_ms": mesh_emerge_ms_med,
@@ -2015,10 +2083,21 @@ def analyze(
         "spikes": len(spikes),
         "hole_key": hole_key,
         "hole_signal_semantics": hole_signal_semantics,
+        "readiness_debt_key": hole_key,
+        "visual_hole_key": visual_hole_key,
+        "visual_hole_signal_semantics": visual_hole_signal_semantics,
         "unfinished_key": unfinished_key,
         "metrics": {
             "holes_rate": holes_rate,
+            "visual_holes_rate": visual_holes_rate,
+            "visual_holes_sample_coverage": visual_hole_sample_coverage,
+            "visual_holes_blink_rate": visual_holes_blink_rate,
+            "visual_holes_blink_transitions": visual_holes_blink_transitions,
+            "visual_holes_longest_run": visual_holes_longest_run,
+            "visual_holes_longest_clear_run": visual_holes_longest_clear_run,
             "unfinished_visual_rate": unfinished_visual_rate,
+            "readiness_debt_rate": effective_holes_rate,
+            "readiness_debt_blink_rate": effective_holes_blink_rate,
             "effective_holes_rate": effective_holes_rate,
             "effective_holes_blink_rate": effective_holes_blink_rate,
             "effective_holes_blink_transitions": effective_holes_blink_transitions,
@@ -2221,6 +2300,11 @@ def analyze(
             "post_stop_visible_black_progress_min": post_stop_visible_black_progress_min,
             "post_stop_visible_black_stalled_max": post_stop_visible_black_stalled_max,
             "post_stop_missing_max": post_stop_missing_max,
+            "post_stop_visual_holes_rate": post_stop_visual_holes_rate,
+            "post_stop_visual_holes_sample_coverage": (
+                post_stop_visual_hole_coverage
+            ),
+            "post_stop_visual_holes_max": post_stop_visual_holes_max,
             "post_stop_effective_holes_rate": post_stop_effective_holes_rate,
             "post_stop_effective_holes_blink_rate": post_stop_effective_holes_blink_rate,
             "post_stop_effective_holes_blink_transitions": post_stop_effective_holes_blink_transitions,

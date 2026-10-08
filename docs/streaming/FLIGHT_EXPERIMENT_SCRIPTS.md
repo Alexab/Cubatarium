@@ -6,7 +6,7 @@
 
 - [`tools/flight_sim_run.py`](../../tools/flight_sim_run.py) — единственный общий запускатель. Он настраивает flight-sim, сохраняет perf JSONL/manifest/report, восстанавливает временно изменённые `config.json` и исходный `users.json`, повторно выставляет контрольную позицию перед каждым `--repeat` и вызывает анализатор.
 - [`tools/flight_sim_fixed_day.py`](../../tools/flight_sim_fixed_day.py) — контролируемый дневной запуск поверх общего runner. Временно задаёт `time_of_day=0.25`, `time_frozen=true`, clear weather, нулевую облачность и выключенную авто-погоду; в `finally` восстанавливает исходный `world_data.json` побайтно. Аргументы маршрута передаются после `--`. Пример: `python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m379_world164_m335_fixed_day --report bin/suite_reports/engine_refactor/m379_world164_m335_fixed_day.json`. Не менять профиль камеры ради «более красивого» кадра.
-- [`tools/flight_sim_analyze.py`](../../tools/flight_sim_analyze.py) — расчёт агрегатов и ворот из JSONL.
+- [`tools/flight_sim_analyze.py`](../../tools/flight_sim_analyze.py) — расчёт агрегатов и ворот из JSONL. `unfinished_visual` публикуется как readiness debt; `visual_holes` / `near_focus_holes` отдельно считаются mesh-coverage proxy и не являются доказательством пустого framebuffer-пикселя.
 - [`tools/analyze_renderer_pixel_trace.py`](../../tools/analyze_renderer_pixel_trace.py) — сводит pixel/ray witnesses, draw-state, pool OOM, screen-ray debt и для dark samples сохраняет отдельные DDA и framebuffer depth-hit evidence, включая mesh revisions, MDI draw state, dirty-queue ownership/age, work-owner flags и light/demand state; запускается как `python tools/analyze_renderer_pixel_trace.py bin/logs/perf_<run>.jsonl --threshold 96 --json-out bin/suite_reports/engine_refactor/<run>_renderer_pixel_trace.json`. M380 сохранил 32 768 pixel probes, 191 samples ниже luma 32; M388 сохранил 32 768 dense probes и связал sampled dark pixels с drawable MDI surface и low/provisional light: [M388 pixel/light analysis](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_20261004.json).
 - [`tools/compare_renderer_pixel_routes.py`](../../tools/compare_renderer_pixel_routes.py) — потоково сравнивает два или больше perf JSONL по одинаковым диапазонам camera X и пространственным бинам; считает несколько luma порогов, валидный opaque depth, stale published geometry, unsettled light demand и block IDs тёмных поверхностей. Нулевые sentinel probe IDs исключаются. Пример для M400/M401: `python tools/compare_renderer_pixel_routes.py --label M400 --perf-jsonl bin/logs/perf_20261005-084624_28876.jsonl --label M401 --perf-jsonl bin/logs/perf_20261005-103140_37252.jsonl --min-x -8192 --max-x -1024 --bin-width 512 --json-out bin/suite_reports/engine_refactor/m400_m401_pixel_x_bins_20261005.json`. Низкая яркость не считается пустым чанком без DDA/depth corroboration.
 - [`tools/analyze_world_column_source_trace.py`](../../tools/analyze_world_column_source_trace.py) — сводит `WorldColumnSource` INFO events отдельно для disk и procedural lifecycle: cancellations, completion, worker/read/apply latency, unmatched coordinates, top slow requests и раздельные `scheduler_queue_ms` / `worker_pool_queue_ms`. Использовать все INFO log parts одного PID. Для повторяемого маршрута добавлять `--focus-z 3 --z-radius 5`: summary содержит procedural latency только для этого горизонтального коридора, чтобы дальние фоновые coordinates не искажали вывод о видимых чанках. Пример исторического M392: `python tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-205456.34968 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-211013.34968 bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261004-212859.34968 --json-out bin/suite_reports/engine_refactor/m392_world_column_source_trace_20261004.json`. Queued без completion нельзя считать живым владельцем без явного cancel event.
@@ -3669,3 +3669,67 @@ $env:CUBA_GPU_PROCESS_PROFILE_PATH=''
 $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m467_world164_m335_full_pixel_ray_history --report bin/suite_reports/engine_refactor/m467_world164_m335_full_pixel_ray_history_20261008.json --process-timeout 7200
 ```
+
+## M468 — M335 readiness-vs-hole metric split (2026-10-08)
+
+M468 repeated the established visible/no-teleport M335 settings on `World_164`:
+eye height 70, yaw 180°, pitch -30°, and normal movement scale. The Release
+executable came from clean commit `7138be1045e0292abb11f199b54dd01338a9b4c5`
+with SHA-256 `3d45b7515fd72bd64b4ad5b852bb4bf101e4f356984ed45ba22ca0175d3c91ed`.
+Measured Y stayed at 70 and median movement speed was 5.19653 blocks/s. The app
+exited 0, but covered 14,224/14,300 required blocks, so the strict route gate
+failed by 76 blocks. Source tracing was disabled; this run cannot distinguish
+disk cache reads from procedural world generation.
+
+The flight recorded 1,405 periods, 1,403 steady periods, 353 spikes, 29.71 ms
+median wall time, and a 611.74 ms maximum spike. Its perf JSONL is 1,257,669,592
+bytes because the renderer pixel trace sampled 147,320 pixels. Keep these
+timings out of routine performance baselines; use the pixel profile only for
+diagnostic evidence and run a separate uninstrumented M335 for latency.
+
+The flight wrapper's embedded legacy `holes_rate=1.0` selects
+`unfinished_visual`, which represents readiness debt. A corrected analyzer run
+separates that from actual `visual_holes`: the latter is a near-focus
+missing-greedy-mesh proxy with 100% sample coverage, 7.20% nonzero periods, a
+four-period longest run, and zero at post-stop. Readiness debt remained 100%
+of flight periods and 27 items at stop. Neither proxy is pixel proof.
+
+The renderer-pixel analysis found 1,659 samples below luma 32; all had opaque
+depth and visible MDI indices, and none were below luma 10. The camera-band
+pixel join found 18 no-drawable peaks (nine unowned), but its 129 projected
+rectangles had zero target-depth samples; it remains inconclusive about actual
+visible empty space. No full-frame capture was saved. The user reported that
+the world looked good.
+
+Artifacts (generated reports and large traces are local, ignored run output;
+do not add the raw 1.26 GB perf trace to Git):
+
+- Flight report: `bin/suite_reports/engine_refactor/m468_world164_m335_clean_host_20261008.json`
+- Corrected flight analysis: `bin/suite_reports/engine_refactor/m468_world164_m335_analyzer_v2_20261008.json`
+- Renderer pixel summary: `bin/suite_reports/engine_refactor/m468_renderer_pixel_trace_20261008.json`
+- Camera-band/pixel join: `bin/suite_reports/engine_refactor/m468_camera_band_pixel_join_20261008.json`
+- Perf trace: `bin/logs/perf_20261008-142435_22496.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-142431.22496`
+
+Exact M468 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m468_world164_m335_clean_host --report bin/suite_reports/engine_refactor/m468_world164_m335_clean_host_20261008.json --process-timeout 7200
+```
+
+The metric correction was checked by re-running the analyzer on the saved
+M468 JSONL; `visual_holes_rate_le_0_10`, sample coverage, and post-stop
+visual-hole gates pass, while the run as a whole still fails route,
+performance/readiness, and convergence gates. The old readiness-debt alias is
+retained for compatibility and should not be presented as a visual-hole rate.

@@ -5482,3 +5482,92 @@ within fog end and both trace rings cover nearly the entire route without
 saturation; visual holes remain unconfirmed, latency/route completion may be
 contaminated by a concurrent host task, and persistent readiness/revision debt
 still needs causal classification.**
+
+#### M468 checkpoint — M335 repeat and readiness-vs-hole metric split (2026-10-08)
+
+M468 repeated the standard visible/no-teleport M335 flight on `World_164` with
+`cruise_eye_y=70`, yaw 180°, pitch -30°, and the existing movement scale. The
+measured player Y median was 70 at both the start and end, and median movement
+speed was 5.19653 blocks/s. The flight was not accidentally high or too fast.
+The app exited 0 and the run outcome was `success`, but traveled 14,224 blocks
+against the 14,300-block route gate, so route completion remains a strict FAIL
+by 76 blocks. Treat this as a near-complete diagnostic run, not a completed
+route acceptance.
+
+This was a heavily instrumented run: 1,405 periods (1,403 steady), 353 spikes,
+29.71 ms median wall time, and a 611.74 ms maximum spike. The retained perf
+JSONL is 1,257,669,592 bytes. These timings are diagnostic only; do not use
+them as the clean M335 performance baseline or enable the pixel-probe profile
+for routine performance comparisons. Source tracing was disabled, so M468
+does not distinguish disk reload latency from procedural generation or a
+source/admission queue delay.
+
+M468 exposed a metric-semantics bug in `flight_sim_analyze.py`: the legacy
+`holes_rate` series selected `unfinished_visual` whenever present. That field
+is a persistent readiness/FirstMesh debt counter, not a count of empty screen
+pixels. Therefore the old `holes_rate=1.0` and its derived effective-hole
+aliases overstated evidence for visible holes. The analyzer now reports that
+series explicitly as readiness debt and separately reads `visual_holes` (or
+the legacy `near_focus_holes`) as a near-focus missing-greedy-mesh proxy. The
+proxy is still not direct framebuffer evidence; pixel/depth joins remain the
+visual correctness witness. The revised analyzer was run against the M468
+trace and produced 100% sample coverage, `visual_holes_rate=0.0720`, a maximum
+run of four periods, and zero visual-hole proxy samples in the post-stop tail.
+Readiness debt remained present in every flight sample and was 27 at stop.
+
+The pass gates remain unsatisfied. M468 recorded 101 periods with nonzero
+near-focus mesh-hole telemetry (one in the selected corridor), 27 unresolved
+readiness items at stop, median `chunk_not_ready=27`, median wall time above
+the 25 ms target, and an emerge-dominated spike fraction of 0.397. The largest
+completion stall class was `gpu_not_ready`; the dominant wall stage was
+`emerge`. These signals justify tracing the mesh-publication and producer
+queues, but do not independently establish a blank rendered chunk.
+
+Pixel/depth evidence argues against treating dark color as an empty chunk:
+the trace sampled 147,320 renderer pixels, including 1,659 below luma 32 and
+none below luma 10. All 1,659 dark samples had valid opaque depth and visible
+opaque MDI indices. The separate camera-band join found 18 no-drawable peaks,
+including nine unowned peaks; its 129 projected rectangles had no target-depth
+pixel sample. That join is inconclusive for actual screen coverage. The
+operator's report that the world currently looks good remains consistent with
+this bounded evidence, but no full-frame screenshot was saved.
+
+#### Current work order after M468
+
+1. **Correct the measurement contract first.** In reports, gates, and follow-up
+   comparisons, keep readiness debt (`unfinished_visual`) distinct from the
+   mesh-hole proxy (`visual_holes` / `near_focus_holes`) and both distinct from
+   framebuffer pixel/depth evidence. Do not compare old `holes_rate` values to
+   the new `visual_holes_rate` as if they were the same metric.
+2. **Trace source and publication stages with bounded instrumentation.** On
+   repeated M335 positions, correlate chunk incarnation and coordinates with
+   disk-cache hit/miss, procedural request/worker completion, admission age,
+   first mesh, upload, GPU publication, and the first drawable frame. Keep
+   source tracing in a separately measured diagnostic lane because its cost
+   can contaminate throughput. This is the missing evidence for the disk
+   reload vs. regenerate question.
+3. **Re-run M335 without pixel tracing on a known-idle host** for performance
+   and route acceptance. Keep the pixel/depth profile as a separate correctness
+   lane. Extend the flight window enough to clear the 14,300-block route gate
+   without changing route geometry, speed, or height; require the full route
+   and post-stop convergence before comparing performance.
+4. **Reduce the specific queue/stall causes only after attribution.** Focus on
+   `gpu_not_ready`, the `emerge` wall stage, dirty/FirstMesh ownership, and
+   producer backlog. Change one bounded admission or publication policy at a
+   time, then repeat the same M335 and compare the same route corridor,
+   stop-tail behavior, wall/FPS, and pixel witnesses. Do not raise global
+   quotas based only on readiness counters.
+5. Keep repeated-world `World_164` M335 as the primary control. Continue cold
+   world-create/load profiling and periodic new-world/fresh-seed flights as
+   secondary coverage. Keep the historic fog/water silhouette behavior
+   separate unless a same-pose pixel/depth/fog capture ties it to missing
+   geometry.
+
+M468 reports, joins, and exact command are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m468--m335-readiness-vs-hole-metric-split-2026-10-08).
+Plan status: **not ready for closure. The standard flight height and speed are
+confirmed, the sampled dark pixels are rendered surfaces, and the new mesh-hole
+proxy is zero at stop; however, the route missed its distance gate, sampled
+near-focus mesh-hole telemetry occurred during flight, persistent readiness
+debt and stop non-convergence remain, source provenance is unmeasured, and
+performance is not accepted.**
