@@ -404,20 +404,6 @@ void UWorldPersistence::ProcessColumnLightFlagSaveResults(
   }
   for (AsyncColumnLightFlagsSaveResult &result : results)
   {
-    if (IsStreamingDetailTraceEnabled() &&
-        (!result.success || result.worker_queue_wait_ms >= 10.0 ||
-         result.worker_service_ms >= 50.0))
-    {
-      const std::string message =
-          "detail=light_flags_save_result revision=" +
-          std::to_string(result.revision) + " success=" +
-          (result.success ? "1" : "0") + " worker_queue_wait_ms=" +
-          std::to_string(result.worker_queue_wait_ms) +
-          " worker_service_ms=" +
-          std::to_string(result.worker_service_ms) + " error=" +
-          (result.error.empty() ? "none" : result.error);
-      CubatariumLogInfo("StreamingDetail", message);
-    }
     LightCompleteSaveInFlight = false;
     LightCompleteSaveWorldFolder.clear();
     LightCompleteSaveRevision = 0;
@@ -445,12 +431,6 @@ void UWorldPersistence::ProcessColumnLightFlagSaveResults(
       LightCompleteSaveRetryAt =
           std::chrono::steady_clock::now() + retry_delay;
     }
-    const std::string message =
-        "outcome=light_flags_write_failed folder=" + result.worldFolder +
-        " revision=" + std::to_string(result.revision) +
-        " error=" + result.error;
-    CubatariumLogInfo("WorldColumnSave", message);
-    std::cerr << "[WorldColumnSave] " << message << std::endl;
   }
 }
 

@@ -7,6 +7,7 @@
 #include "App/Platform/Log.h"
 #include <cstdlib>
 #include <fstream>
+#include <mutex>
 #include <nlohmann/json.hpp>
 #include <system_error>
 
@@ -33,6 +34,61 @@ bool IsStreamingDetailTraceEnabled()
 {
   const char *value = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
   return value && value[0] == '1';
+}
+
+void LogColumnLightFlagsSaveResult(
+    const AsyncColumnLightFlagsSaveResult &result)
+{
+  const bool trace_detail =
+      IsStreamingDetailTraceEnabled() &&
+      (result.worker_queue_wait_ms >= 10.0 ||
+       result.worker_service_ms >= 50.0);
+  if (result.success && !trace_detail)
+  {
+    return;
+  }
+
+  struct LogThrottle
+  {
+    std::mutex mutex;
+    std::chrono::steady_clock::time_point next_log_at{};
+    uint64_t suppressed{0};
+  };
+  static LogThrottle throttle;
+
+  // Result diagnostics run on the dedicated save worker, and repeated failures
+  // are rate-limited so a broken target cannot flood the log or stall saves.
+  uint64_t suppressed = 0;
+  {
+    std::lock_guard<std::mutex> lock(throttle.mutex);
+    const auto now = std::chrono::steady_clock::now();
+    if (now < throttle.next_log_at)
+    {
+      ++throttle.suppressed;
+      return;
+    }
+    suppressed = throttle.suppressed;
+    throttle.suppressed = 0;
+    throttle.next_log_at = now + std::chrono::seconds(1);
+  }
+
+  const std::string message = result.success
+      ? "detail=light_flags_save_result revision=" +
+            std::to_string(result.revision) + " folder=" + result.worldFolder +
+            " success=1 worker_queue_wait_ms=" +
+            std::to_string(result.worker_queue_wait_ms) +
+            " worker_service_ms=" +
+            std::to_string(result.worker_service_ms) +
+            " suppressed_since_previous=" + std::to_string(suppressed)
+      : "outcome=light_flags_write_failed folder=" + result.worldFolder +
+            " revision=" + std::to_string(result.revision) +
+            " error=" + result.error + " worker_queue_wait_ms=" +
+            std::to_string(result.worker_queue_wait_ms) +
+            " worker_service_ms=" +
+            std::to_string(result.worker_service_ms) +
+            " suppressed_since_previous=" + std::to_string(suppressed);
+  CubatariumLogInfo(result.success ? "StreamingDetail" : "WorldColumnSave",
+                    message);
 }
 } // namespace
 
@@ -146,6 +202,7 @@ void UAsyncChunkIO::RequestSaveColumnLightFlags(
                                        std::chrono::steady_clock::now() -
                                        worker_started)
                                        .count();
+        LogColumnLightFlagsSaveResult(result);
         const uint64_t result_revision = result.revision;
         double publish_wait_ms = 0.0;
         double publish_held_ms = 0.0;
