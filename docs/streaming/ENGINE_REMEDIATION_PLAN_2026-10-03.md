@@ -5090,6 +5090,40 @@ fog pull-in, so it does not reproduce normal weather or adaptive-fog changes.
 The raw command, report, log, and capture paths are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m462--detail-trace-timing-with-m335-2026-10-08).
 
+#### M463 checkpoint — screen-ray witnesses identify mesh publication debt (2026-10-08)
+
+M463 completed the exact visible/no-teleport M335 route and passed its distance
+gate: focus `7 -> -888`, 14,320 blocks at 5.2 blocks/s median. The process
+exited normally and the fixed-day wrapper restored `World_164` byte-for-byte.
+Product gates still failed 9/39 checks and stop convergence did not pass. The
+run used a source-matched Release executable at `8a726f52`.
+
+Sparse screen-ray evidence confirms that some readiness misses are not merely
+generic counters: an opaque voxel ray hit a resident, non-air column whose
+geometry publication did not satisfy readiness. There were 92 candidate
+period samples at 90 unique miss coordinates; 70 overlapped the 75 near-focus
+hole samples. The trace samples 5/20 horizontal tiles and five vertical rows
+with rotating phases, so it identifies recurrence but does not estimate the
+full framebuffer coverage. The endpoint screenshot is a populated scene with
+no obvious chunk-sized hole; only three endpoint frames were inspected and
+nearby fog is not classified as missing geometry.
+
+Near-hole samples show a credible meshing/publication throughput lead: pipeline
+backpressure was active in 74/75, with median requested work 16 and output
+headroom 9. Median mesh-emerge time was 9.80 ms versus 7.15 ms in clean
+periods. This does not prove GPU saturation; inspect the exact mesh admission,
+FirstMesh ticket, publication, and completion transitions before changing
+budgets. No disk load completion or generation commit coincided with these
+ray-confirmed samples, so current evidence points downstream of resident voxel
+availability for these particular misses.
+
+The M463 timing is contaminated by synchronous per-result light-flag logging:
+the detail trace recorded 380 results including 104 `Access is denied` replace
+failures. Drain mutex timings were negligible while the measured result drain
+was often long. Remove per-result log I/O from the main-thread drain, preserve
+retry semantics and failure observability, and compare with detail trace off.
+Do not infer that the transient Windows replace error caused a rendering hole.
+
 #### Separate legacy fog/water investigation lead
 
 Code/history review found a plausible long-standing source for underwater
@@ -5142,25 +5176,30 @@ track; do not use them as evidence of streaming holes.
 
 #### Current work order
 
-1. `CUBA_STREAMING_DETAIL_TRACE=1` now reports unfinished-scan work,
-   ring-resync subcalls, and light-flag queue/worker timing. The M462 executable
-   predates the log-volume fix in `8bc56125`; build current source as Release
-   before the next run so routine light-flag completions are not logged.
-2. Correct fluid-map GPU/CPU alignment on window scroll and build Release.
-   Then repeat the exact M335 route as M463 with the same route parameters and
-   sparse detail trace. Use a verified full-window capture before treating any
-   screenshot as pixel evidence. Keep the 14,300-block gate unchanged and report
-   if the route again falls short.
-3. Analyze M463's unfinished scan, ring resync, light-flag queue timing, and
-   repeated `cx=-343..-354`/`cx=-376..-391` frame clusters. Treat M462's
-   per-result drain measurements as contaminated and its multi-second
-   unaccounted gaps as external pauses until attributed.
-4. Keep M335 streaming and the slow fog/water silhouette issue separate. The
-   fixed-day run disables auto-weather and fog pull-in; add weather and fluid-map
-   state telemetry only when the normal-gameplay fog hypothesis is pursued.
-5. After the repeated-world render symptom has pixel-level classification,
-   resume cold world-create/load profiling and periodic fresh-seed runs from the
-   existing plan. Neither replaces the fixed M335 regression route.
+1. Remove synchronous per-result light-flag diagnostic output from
+   `ProcessColumnLightFlagSaveResults`. Preserve dirty-state tracking, retry
+   backoff, and enough bounded failure diagnostics to explain save errors.
+   Avoid doing formatting and log-file writes while the main thread drains the
+   completion queue.
+2. Build Release and repeat the exact visible/no-teleport M335 route as M464
+   with `CUBA_STREAMING_DETAIL_TRACE=0`; keep route, camera, speed, time, and
+   14,300-block adequacy gate unchanged. Collect bounded screen-ray witness
+   traces to correlate miss coordinates with mesh admission, FirstMesh tickets,
+   publication, and completion. Keep dense per-pixel tracing disabled.
+3. Compare clean-period and ray-miss streaming phases plus true wall-frame
+   costs. Track `column_light.json` errors separately from terrain load and
+   mesh readiness. If ray-confirmed holes persist, follow the exact demand to
+   job admission, worker completion, GPU upload, and ready-state publication;
+   repair the stalled transition before tuning quotas or backpressure limits.
+4. Repeat `World_164` under the same controlled M335 profile until the mesh
+   debt and stop-convergence behavior are understood. Then resume cold
+   world-create/load profiling and periodic fresh-seed runs as a secondary
+   workload. Keep the fixed repeated-world route as the primary regression
+   control.
+5. Keep the long-standing fog/water silhouette transition investigation
+   separate. The current user report says this behavior predates the renderer
+   changes; M335 disables auto-weather, and fog appearance alone is not proof
+   of an unloaded or empty chunk.
 
-M458/M459 artifacts, commands, and M460's diagnostic setup are in
-[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m459-targeted-far-end-frames-without-capture-heavy-flight-2026-10-08).
+M463 artifacts and the exact command are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m463--m335-screen-ray-readiness-and-scroll-map-fix-2026-10-08).

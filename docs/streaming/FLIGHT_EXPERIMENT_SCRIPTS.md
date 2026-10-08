@@ -1,6 +1,6 @@
 # Experimental flight and analysis scripts
 
-Обновлено: 2026-10-05. Цель каталога — сохранить и объяснить поддерживаемые flight tools и одноразовые анализаторы, которые накопились в рабочем дереве во время streaming/rendering расследований.
+Обновлено: 2026-10-08. Цель каталога — сохранить и объяснить поддерживаемые flight tools и одноразовые анализаторы, которые накопились в рабочем дереве во время streaming/rendering расследований.
 
 ## Поддерживаемый поток
 
@@ -3274,4 +3274,71 @@ $env:CUBA_GPU_PROCESS_PROFILE='0'
 $env:CUBA_GPU_PROCESS_PROFILE_PATH=''
 $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m462_world164_m335_detail_timing --report bin/suite_reports/engine_refactor/m462_world164_m335_detail_timing_20261008.json --process-timeout 7200
+```
+
+## M463 — M335 screen-ray readiness and scroll-map fix (2026-10-08)
+
+M463 used the visible, no-teleport M335 route on `World_164` with the exact
+established camera and distance settings. Release source was commit
+`8a726f523096f58ff02caa13e94afc924b42de53`; the executable SHA-256 was
+`246698E70D9AACD3DE04834F683A98C7DFCE0AD6C52E78144E1E93FC960A69B1`.
+The manifest matched that source and binary, and the fixed-day wrapper restored
+`world_data.json` to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+
+The process and flight runner completed normally. Focus X moved `7 -> -888`
+(14,320 blocks), passing the 14,300-block route gate; median flight wall time
+was 24.19 ms and median speed 5.2 blocks/s. Product/analyzer status was still
+FAIL (30/39 gates), including stop convergence. Two endpoint periods are not a
+full convergence window.
+
+M463 enabled `CUBA_STREAMING_DETAIL_TRACE=1`. It also recorded sparse screen-ray
+readiness witnesses: 92 ray-candidate period samples at 90 unique miss
+coordinates, with 70 samples coinciding with near-focus holes. There were 75
+near-focus samples and 75 unique focus positions. These witnesses are stronger
+than generic `visible_black_focus` or `effective_holes` counters: the code first
+traces an opaque voxel ray and then confirms that the resident column has
+non-air data but lacks geometry publication satisfying column readiness.
+Sampling covers only 5 of 20 horizontal tiles and five vertical rows with
+rotating phases, so the counts establish repeated mesh-publication debt, not
+full-frame hole coverage or a pixel-area rate.
+
+In the near-hole periods, median wall time was 30.12 ms versus 24.05 ms in clean
+periods; streaming phase was 16.24 versus 11.87 ms and mesh emerge 9.80 versus
+7.15 ms. The mesh pipeline backpressure flag was set in 74/75 near-hole
+periods; median requested schedule was 16 with output headroom 9. This points
+to meshing/publication pressure, but does not alone prove that GPU slot capacity
+is saturated. No disk completion or generation commit coincided with those
+near-hole samples. Across the run there were 785 load candidates, 119 async
+queued, zero terrain stream loads/disk completions, two generation commits,
+133 saves, and 546 unloads.
+
+The run is not a clean logging-performance benchmark. The detail trace still
+caused 380 per-result light-flag records; 104 failures all reported
+`replace_failed: Access is denied`. Result-drain samples had 42.46 ms median,
+134.28 ms p95, and 169.72 ms maximum; queue mutex wait/hold were negligible in
+the worst sample. Synchronous per-result logging on the main-thread drain can
+inflate streaming time. The transient Windows replace failure's external cause
+is unknown; the file ACL and single-process check did not identify a persistent
+permission problem.
+
+The three endpoint captures are valid full-window game images. The approach
+frames are fog-heavy and low contrast; the stationary endpoint shows populated
+sandy terrain, a hill, and trees, with no obvious chunk-sized hole. These three
+frames do not classify the whole route. Keep the user's longstanding slow
+fog/water silhouette changes in the separate fog track.
+
+Artifacts:
+
+- Analyzer: `bin/suite_reports/engine_refactor/m463_world164_m335_scroll_alignment_fix_20261008.json`
+- Perf: `bin/logs/perf_20261008-063939_38604.jsonl`
+- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-063935.38604`
+- Frames: `bin/suite_reports/engine_refactor/m463_world164_m335_scroll_alignment_fix_frames_20261008/`
+- Source: `8a726f523096f58ff02caa13e94afc924b42de53`; Release executable SHA-256 as above.
+
+Exact M463 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m463_world164_m335_scroll_alignment_fix --report bin/suite_reports/engine_refactor/m463_world164_m335_scroll_alignment_fix_20261008.json --process-timeout 7200
 ```

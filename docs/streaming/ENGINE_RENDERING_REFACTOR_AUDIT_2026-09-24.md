@@ -5362,3 +5362,31 @@ separately. The cold-world path also remains open because M433 did not enable
 source tracing. Plan status is **ready for another bounded perf change, not
 ready for closure**; see the [M433 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m433-readiness-checkpoint---duplicate-removed-one-per-frame-census-remains-costly)
 and [M433 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m433---remove-duplicate-census-and-measure-remaining-cost-2026-10-06).
+
+### M463 follow-up — ray-confirmed geometry publication debt (2026-10-08)
+
+The M335 route remains visually operator-positive, and the valid endpoint
+capture shows a populated scene without an obvious chunk-sized hole. However,
+M463's sparse screen-ray trace found repeated cases where an opaque voxel ray
+hit a resident non-air column whose mesh publication did not satisfy readiness:
+92 candidate period samples at 90 unique miss coordinates, 70 coinciding with
+near-focus holes. This is source-confirmed geometry debt at sampled screen-ray
+locations, not a measurement of whole-frame pixel coverage. Sampling covers
+only 5/20 horizontal tiles and five vertical rows with rotating phases.
+
+The ray misses coincided with mesh pipeline backpressure in 74/75 near-focus
+periods (requested schedule median 16, output headroom 9). This makes mesh
+admission/publication/completion the primary next trace chain, but it does not
+establish GPU saturation or implicate terrain disk loading. No disk completion
+or generation commit coincided with these samples. Stop convergence remains
+unproven, and two stationary endpoint periods are insufficient as a convergence
+test.
+
+M463 enabled detail logging, which emitted 380 per-result light-flag records,
+including 104 `Access is denied` atomic-replace failures. The completion queue's
+mutex wait/hold was negligible in a long drain sample, so synchronous per-result
+formatting/log writes are a measurement contaminant and an avoidable main-thread
+cost. The next bounded change is to remove that per-result hot-path log I/O
+while retaining dirty-state retry behavior and actionable aggregated failure
+diagnostics. See the [M463 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m463-checkpoint--screen-ray-witnesses-identify-mesh-publication-debt-2026-10-08)
+and [M463 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m463--m335-screen-ray-readiness-and-scroll-map-fix-2026-10-08).
