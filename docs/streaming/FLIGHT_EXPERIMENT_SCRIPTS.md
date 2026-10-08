@@ -3938,7 +3938,7 @@ $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1325 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m471_world164_m335_underwater_light_witness --report bin/suite_reports/engine_refactor/m471_world164_m335_underwater_light_witness_20261008.json --process-timeout 7200
 ```
 
-## M472 — bounded full-frame underwater-light capture (planned)
+## M472 — bounded full-frame underwater-light capture (planned, 2026-10-08)
 
 M472 will keep the M335 world, route, speed, height, yaw, pitch, visible GUI,
 and no-teleport settings unchanged. It will save full framebuffer PNGs only
@@ -3946,3 +3946,34 @@ inside a narrow X window around the M470 observation, at a sub-second
 interval. This supplements the sparse M471 pixel/depth witnesses and should
 show an actual square if it recurs. Capture timing is diagnostic and must not
 be compared to M470's clean performance run.
+
+The capture helper landed in `5520ae889c8c3bba83d92595f458756b2cb857d1` and
+was built as Release target `Cubatarium`; executable SHA-256 is
+`D6D0420A1887974CFB6014E01FF0D59014990392205DDFBB040D40E37621F200`. The new
+environment variables are recorded in the run manifest. Omitted interval and
+X bounds preserve the old 15-second, unbounded behavior.
+
+Exact M472 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m472_underwater_light_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1325 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m472_world164_m335_underwater_capture --report bin/suite_reports/engine_refactor/m472_world164_m335_underwater_capture_20261008.json --process-timeout 7200
+```
+
+Expected PNGs and the flight report are local experimental artifacts and
+should not be staged with source changes.
