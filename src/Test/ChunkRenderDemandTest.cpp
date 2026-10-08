@@ -190,7 +190,8 @@ int main()
   const auto recon = store.ReconcileMaintenance(8);
   Expect(recon.checked >= 1, "reconcile scanned");
 
-  // A25/A31: orphan Created+no-progress is counted; A31 remints desire.
+  // A40: maintenance cancels an ownerless Created attempt; the next real
+  // producer re-admits the unchanged desired revisions with a fresh attempt.
   {
     store.Clear();
     const glm::ivec3 orphan{9, 0, 9};
@@ -202,10 +203,17 @@ int main()
     const auto r2 = store.ReconcileMaintenance(16);
     Expect(r2.orphan_active >= 1, "orphan counted");
     orec = store.Find(orphan);
-    Expect(orec && orec->has_active_attempt, "A31 remints orphan desire");
-    Expect(store.CancelOrphanActiveAttempts(16) >= 1, "orphan hard-cancelled");
+    const uint64_t cancelled_attempt_id = orec ? orec->active_attempt_id : 0;
+    Expect(orec && !orec->has_active_attempt,
+           "reconcile cancels orphan without an admission owner");
+    Expect(store.CancelOrphanActiveAttempts(16) == 0,
+           "reconcile leaves no orphan for secondary cleanup");
+    Expect(store.NoteDemand(orphan, 1, 2) == DemandResult::NewDemand,
+           "real producer re-admits unchanged desire");
     orec = store.Find(orphan);
-    Expect(orec && !orec->has_active_attempt, "orphan cancelled");
+    Expect(orec && orec->has_active_attempt &&
+               orec->active_attempt_id != cancelled_attempt_id,
+           "re-admitted desire owns a fresh attempt");
   }
 
   // A25 R1: unload/reload — CancelledSuperseded then new desire.

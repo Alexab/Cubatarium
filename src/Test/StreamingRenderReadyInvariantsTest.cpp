@@ -122,7 +122,8 @@ int main()
   Expect(!ShouldMarkDirtyAfterDarkSoftDeferReject(true, true),
          "ColPipe P5: RemeshAfterApply+had_mesh → no Dirty (MarkRelit owns)");
 
-  // Era28 AllowUnlitFirstMesh: LitDrawable ring (default 4) no Unlit; hinterland OK.
+  // LitDrawable ring (default 4) waits for light, except for the single nearest
+  // missing slice whose provisional preview prevents a leading visible hole.
   Expect(!AllowUnlitFirstMesh(false, 2, false, true),
          "Era32: ring horiz≤4 → no AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(false, 1, false, true),
@@ -139,8 +140,8 @@ int main()
          "hinterland FOV missing → AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(false, 5, false, false),
          "outside focus → no AllowUnlitFirstMesh");
-  Expect(!AllowUnlitFirstMesh(false, 1, true, true),
-         "Era28: near FOV never Unlit FirstMesh");
+  Expect(AllowUnlitFirstMesh(false, 1, true, true),
+         "nearest missing lit-ring slice may use provisional preview");
   Expect(!AllowUnlitFirstMesh(false, 4, false, true),
          "Era32: lit-ring missing waits Relight-before-draw");
   {
@@ -148,9 +149,10 @@ int main()
            "LitRing: nh1 FullyDark → hole (no dark plug)");
     Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
            "Era28: near missing+pending SoftDefer (no Unlit-near)");
-    Expect(!AllowUnlitFirstMesh(false, 1, true, true) &&
-               ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
-           "compose: Unlit-near rejected; nh1 FullyDark hole until lit");
+    Expect(AllowUnlitFirstMesh(false, 1, true, true),
+           "nearest missing slice preview is independent of dark-mesh hiding");
+    Expect(ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "existing FullyDark mesh remains hidden until lit");
   }
   Expect(FirstMeshPruneKeepHoriz(8) == kVisualStageLitDrawableHoriz,
          "FM prune keeps LitDrawable ring, not nh<=2");
@@ -269,7 +271,8 @@ int main()
     MeshWorkAdmissionInput hole{};
     hole.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     hole.pending_gpu = 14;
-    hole.pending_gpu_queued = 10;
+    hole.pending_gpu_queued = 4;
+    hole.pending_gpu_kicked = 10;
     hole.visual_holes = true;
     hole.moving = true;
     const auto a2 = ComputeMeshWorkAdmission(hole);
@@ -292,6 +295,7 @@ int main()
     MeshWorkAdmissionInput warm_hole{};
     warm_hole.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     warm_hole.pending_gpu = 18;
+    warm_hole.pending_gpu_kicked = 18;
     warm_hole.visual_holes = true;
     warm_hole.moving = true;
     const auto a3 = ComputeMeshWorkAdmission(warm_hole);
@@ -304,6 +308,7 @@ int main()
     MeshWorkAdmissionInput deep{};
     deep.dirty_fm_n = 16; // These quota scenarios have outstanding first-mesh demand.
     deep.pending_gpu = 30;
+    deep.pending_gpu_kicked = 30;
     deep.visual_holes = true;
     const auto a4 = ComputeMeshWorkAdmission(deep);
     Expect(a4.mode == MeshWorkAdmission::Mode::DeepBacklog, "pending>=24 → Deep");

@@ -79,6 +79,7 @@ int main()
     near.nearest_miss_horiz = 1;
     near.nearest_miss_cy = 0;
     near.pending_gpu = 28;
+    near.pending_gpu_kicked = 28;
     const MeshWorkAdmission a = ComputeMeshWorkAdmission(near);
     Expect(a.mode == MeshWorkAdmission::Mode::HoleDrain,
            "near miss pending=28 stays HoleDrain not DeepBacklog");
