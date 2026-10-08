@@ -3733,3 +3733,80 @@ M468 JSONL; `visual_holes_rate_le_0_10`, sample coverage, and post-stop
 visual-hole gates pass, while the run as a whole still fails route,
 performance/readiness, and convergence gates. The old readiness-debt alias is
 retained for compatibility and should not be presented as a visual-hole rate.
+
+## M469 — M335 source trace on full route (2026-10-08)
+
+M469 used the established visible/no-teleport M335 settings on `World_164`,
+with the flight window extended to 2,900 seconds to pass the existing route
+distance gate. Camera eye height remained the fixed absolute world coordinate
+Y=70; yaw was 180°, pitch -30°, and speed scale 1. The Release executable was
+built from commit `9ee1205759feb6269c9536064fb71daaae031532` and had SHA-256
+`3d45b7515fd72bd64b4ad5b852bb4bf101e4f356984ed45ba22ca0175d3c91ed`.
+
+The app exited normally (`process_rc=0`, `run_outcome=success`) and the route
+gate passed at 14,304/14,300 blocks (focus X 7 to -887). Median speed was
+5.19653 blocks/s, and the measured eye height stayed at Y=70. The flight
+contained 1,444 periods (1,442 steady), 769 spikes, 31.69 ms median wall time,
+and a 3,178.83 ms maximum spike. These timings are not a performance baseline:
+source tracing was enabled and successful save and detailed unload events were
+also coupled to the same flag, causing synchronous trace volume. The 667 MB
+perf JSONL must remain local and must not be committed.
+
+Corrected analyzer values: `visual_holes_rate=0.07212`, 100% sample coverage,
+longest run 6 periods, post-stop visual-hole proxy gate passed, and
+`unfinished_visual=26` at stop. This mesh-hole proxy is not framebuffer pixel
+proof. The full flight report failed other readiness/convergence gates.
+
+Source analysis found 8,061 disk requests and 8,061 completions, 99 procedural
+disk misses, and 8,052 evicted columns. Disk file-read time was p50 0.964 ms,
+p95 1.640 ms, max 46.6 ms. Recorded result-wait time was p50 469 ms, p95
+7.76 s, max 62.28 s, with up to 456 ready loads. These wait values are
+contaminated by synchronous logging and reflect result-queue delay as well as
+disk completion. At X≈-11,225, `visual_holes=1` coincided with 35 ready disk
+results and 31 remaining after four applications; this is a correlation, not
+proof of a blank rendered region. The x-bin analyzer also labels many unload
+events malformed because its parser expects only `disk` and `procedural`
+sources; this is a parser-accounting quirk, not missing log data.
+
+A separate perf sample near X≈-12,497 recorded a 248 ms wall frame, about
+218 ms in `streamer_unload`, and no async I/O. The cursor snapshot rebuild
+currently traverses every resident vertical slice and then sorts/deduplicates
+the repeated column coordinates. This is a plausible unload hitch source;
+snapshot-build time was not isolated in M469.
+
+Artifacts (reports and raw traces are generated, ignored local run output):
+
+- Flight report: `bin/suite_reports/engine_refactor/m469_world164_m335_source_trace_current_20261008.json`
+- Source trace summary: `bin/suite_reports/engine_refactor/m469_world164_column_source_trace_z3_20261008.json`
+- Source-by-X report: `bin/suite_reports/engine_refactor/m469_world164_source_by_x_20261008.json`
+- Perf trace: `bin/logs/perf_20261008-153433_29948.jsonl` (667,265,436 bytes)
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-153429.29948` (30,707,207 bytes)
+
+Exact M469 invocation (source trace was enabled; no pixel probe was enabled):
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2900 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m469_world164_m335_source_trace_current --report bin/suite_reports/engine_refactor/m469_world164_m335_source_trace_current_20261008.json --process-timeout 7200
+```
+
+Post-flight source analysis:
+
+```powershell
+python tools/analyze_world_column_source_trace.py bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-153429.29948 --focus-z 3 --z-radius 5 --json-out bin/suite_reports/engine_refactor/m469_world164_column_source_trace_z3_20261008.json
+python tools/compare_world_column_sources_by_x.py --run M469=bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-153429.29948 --min-chunk-x -900 --max-chunk-x 16 --bin-chunks 16 --json-out bin/suite_reports/engine_refactor/m469_world164_source_by_x_20261008.json
+```
+
+Treat M469 source wait and performance numbers as trace-contaminated. The next
+source run should use independent source/save/unload trace flags after the
+instrumentation split; performance acceptance requires a capture-disabled,
+source-trace-disabled M335 run.

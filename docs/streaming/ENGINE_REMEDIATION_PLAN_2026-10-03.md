@@ -5571,3 +5571,89 @@ proxy is zero at stop; however, the route missed its distance gate, sampled
 near-focus mesh-hole telemetry occurred during flight, persistent readiness
 debt and stop non-convergence remain, source provenance is unmeasured, and
 performance is not accepted.**
+
+#### M469 checkpoint — source trace on the full M335 route (2026-10-08)
+
+M469 kept the established visible/no-teleport M335 route, including absolute
+camera eye Y=70, yaw 180°, pitch -30°, and normal movement scale. Only the
+flight window was extended to 2,900 seconds so the unchanged route could clear
+its 14,300-block acceptance distance. The Release executable was built from
+`9ee12057` (SHA-256
+`3d45b7515fd72bd64b4ad5b852bb4bf101e4f356984ed45ba22ca0175d3c91ed`). It
+exited normally and passed the route gate: 14,304 blocks, focus X 7 to -887,
+median speed 5.19653 blocks/s, with constant camera eye Y=70. This confirms the
+profile is a fixed absolute altitude, not terrain-following. The flight window
+and route geometry were not otherwise changed.
+
+This was a source-tracing diagnostic, not a clean performance run. Its 667 MB
+perf trace had 1,444 periods, 769 spikes, 31.69 ms median wall time, and a
+3,178.83 ms maximum spike. Source/save/unload tracing was synchronous and
+emitted large numbers of lines, so source-result wait and frame wall latency
+are contaminated by the instrumentation itself. Do not treat these timings as
+an uninstrumented baseline.
+
+The source log recorded 8,061 disk-load requests and 8,061 completions; 99
+columns reached procedural generation after a disk miss, and 8,052 columns
+were evicted. Disk file-read time was modest (p50 0.96 ms, p95 1.64 ms,
+maximum 46.6 ms). The recorded result-wait time was much longer (p50 469 ms,
+p95 7.76 s, maximum 62.3 s), but is trace-contaminated and includes time
+waiting for the caller to drain worker results. In the far-route bins,
+procedural misses clustered at the route frontier. Near focus X≈-702, disk
+results were present and file reads remained fast, while the trace showed
+long result waits; this points toward admission/result-application backlog as
+a stronger candidate than slow disk reads, but does not yet prove the cause.
+
+The corrected flight analysis reported `visual_holes_rate=0.0721` with full
+sample coverage and a longest run of six periods. This is the near-focus
+missing-mesh proxy, not a pixel-level hole witness. The flight had 104 periods
+with a nonzero proxy, including one in the selected corridor; visible-black
+proxy peaked at 18. At a sample near X≈-11,225 the proxy was 1 while 35 disk
+load results were ready and 31 remained after four applications. The
+correlation is worth investigating, but source tracing and the proxy do not
+establish an actually blank rendered region. The post-stop visual-hole proxy
+gate passed; readiness debt remained at stop and other convergence gates
+failed. The user's current visual assessment remains that the world looks
+good.
+
+M469 also exposed a separate unload-frame cost candidate: a 248 ms sample near
+X≈-12,497 had about 218 ms attributed to `streamer_unload` while async I/O was
+zero. The cursor snapshot rebuild currently walks every resident vertical
+chunk slice, appends repeated `(x,0,z)` column coordinates, sorts the full list,
+and removes duplicates. This is an avoidable scan/sort multiplier, but the
+capture did not split snapshot construction from the rest of unload work, so
+the causal attribution remains provisional.
+
+#### Current work order after M469
+
+1. **Remove diagnostic self-interference.** Separate source, successful-save,
+   and detailed-unload trace flags. Keep save failures visible, but do not emit
+   per-save or per-unload INFO rows in a source-only run. Remove duplicate
+   synchronous stderr writes for those trace rows. Repeat source tracing only
+   after this change and mark all trace runs diagnostic.
+2. **Make unload snapshot construction proportional to columns.** Maintain a
+   resident-column count/index in `UChunkManager`, update it on chunk insert,
+   remove, and clear, and expose unique resident columns to the streamer.
+   Preserve deterministic ordering and cursor behavior. Add a narrow timing
+   witness for snapshot rebuilds so the M469 unload spike can be attributed.
+3. **Inspect the ready-result application backlog.** At repeated M335
+   positions, compare ready-result depth, queued age, apply count/budget hits,
+   mesh/relight publication age, and the same-frame visual proxy. Avoid
+   increasing global apply quotas until measurements identify which stage
+   owns the delay.
+4. Build Release and repeat the full, capture-disabled M335 route on an idle
+   host for performance and convergence. Keep source tracing and any pixel
+   witness in separate diagnostic runs. Preserve the standard route, speed,
+   and fixed eye Y=70.
+5. Continue cold world-create/load profiling and periodic new-world/fresh-seed
+   flights as secondary lanes; repeated `World_164` M335 remains the primary
+   comparison. Keep historic fog/water silhouettes separate unless same-pose
+   pixel/depth evidence ties them to missing geometry.
+
+M469 reports, source summaries, trace sizes, and exact invocation are recorded
+in [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m469--m335-source-trace-on-full-route-2026-10-08).
+Plan status: **route profile and distance gate pass. Disk reads are fast in
+this trace, but source/result wait is contaminated by synchronous logging;
+ready-result backlog and a redundant unload snapshot rebuild are concrete
+follow-up targets. No pixel-level empty-world witness was captured, the
+post-stop readiness debt remains, and clean performance/convergence are not
+accepted.**
