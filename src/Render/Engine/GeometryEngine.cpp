@@ -164,16 +164,29 @@ bool PixelProbeOnScreenRayEnabled()
 int PixelProbeSampleY(int row, int height, int rows,
                       bool screen_ray_aligned_rows = false)
 {
-  if (screen_ray_aligned_rows && rows == kScreenRayAlignedPixelRows)
+  if (screen_ray_aligned_rows)
   {
-    // Match the five top-left normalized rows used by the streaming ray
-    // sampler, ordered bottom-to-top for OpenGL readback.
+    // Keep the five streaming-ray rows exactly represented. Dense mode adds
+    // three interleaved rows, still ordered bottom-to-top for GL readback.
     constexpr std::array<float, kScreenRayAlignedPixelRows> kScreenRows = {
         0.875f, 0.625f, 0.5625f, 0.375f, 0.125f};
-    return std::clamp(
-        static_cast<int>((1.0f - kScreenRows[static_cast<size_t>(row)]) *
-                         static_cast<float>(height)),
-        0, height - 1);
+    constexpr std::array<float, kPixelProbeDenseRows> kDenseScreenRows = {
+        0.875f, 0.75f, 0.625f, 0.5625f, 0.5f, 0.375f, 0.25f, 0.125f};
+    if (rows == kScreenRayAlignedPixelRows)
+    {
+      return std::clamp(
+          static_cast<int>((1.0f - kScreenRows[static_cast<size_t>(row)]) *
+                           static_cast<float>(height)),
+          0, height - 1);
+    }
+    if (rows == kPixelProbeDenseRows)
+    {
+      return std::clamp(
+          static_cast<int>(
+              (1.0f - kDenseScreenRows[static_cast<size_t>(row)]) *
+              static_cast<float>(height)),
+          0, height - 1);
+    }
   }
   const int y0 = row * height / rows;
   const int y1 = (row + 1) * height / rows;
@@ -3407,8 +3420,10 @@ void UGeometryEngine::DrawCubeGeometry()
            screen_ray_probe))
       {
         pixel_probe_capture.probe_id = render_probe_count;
-        pixel_probe_capture.rows =
-            screen_ray_probe ? kScreenRayAlignedPixelRows : PixelProbeRows();
+        pixel_probe_capture.rows = screen_ray_probe
+                                       ? std::max(kScreenRayAlignedPixelRows,
+                                                  PixelProbeRows())
+                                       : PixelProbeRows();
         pixel_probe_capture.screen_ray_aligned_rows = screen_ray_probe;
         if (camera_band_peak_probe)
         {
