@@ -4926,9 +4926,16 @@ unattributed policy work instead of changing fog behavior.
 
 The first partial M460 periods show ordinary query cost around 0.015–0.022 ms.
 One 9.03 ms maximum occurred near the route start (`cx=-2`); this is an early
-single-window result, not the full-route distribution. It is already too small
-to explain M459's 83.61 ms `UpdateStreaming` peak by itself, but the M460
-comparison near `cx=-198` remains pending.
+single-window result, not the full-route distribution. By `cx=-195..-205`, 17
+period records contain no `kind=spike` rows. Their mean `UpdateStreaming`
+window average is 2.30 ms (largest window average 7.22 ms); mean terrain-query
+time is 0.019 ms and the largest within-window query maximum is 0.387 ms. The
+largest `UpdateStreaming` window is accounted for largely by
+`streamer_update_ms=5.38 ms`, while all four visible-black counters remain
+zero. This makes the altitude terrain query an implausible explanation for
+M459's 83.61 ms single-frame peak at `cx=-198`. It does not explain why that
+M459 outlier occurred; finish M460 before deciding whether to instrument the
+unattributed policy remainder.
 
 #### Separate legacy fog/water investigation lead
 
@@ -4961,9 +4968,11 @@ avoid exposing a partially shifted GPU map during window scroll.
 
 #### Current work order
 
-1. Finish M460 and assess the new query timer against the full route, especially
-   the M459 peak region near `cx=-198`; retain the visible GUI and capture only
-   the endpoint so the performance lane stays comparable.
+1. Finish M460 and assess the new query timer against the full route; the
+   comparison across `cx=-195..-205` has ruled out the terrain query as a
+   likely cause of the M459 peak, but full-route classification and endpoint
+   convergence remain pending. Retain the visible GUI and capture only the
+   endpoint so the performance lane stays comparable.
 2. If that query does not explain a meaningful fraction of the spike, split the
    remaining `UpdateStreaming` work into coarse, non-overlapping timings before
    changing policies. Keep the existing streamer, unload and mesh-emerge timers

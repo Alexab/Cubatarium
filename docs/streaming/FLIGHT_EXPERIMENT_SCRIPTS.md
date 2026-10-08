@@ -3058,7 +3058,14 @@ and period `max_altitude_surface_query_ms` without changing the query or fog
 behavior. The app was built with `cmake --build bin --config Release --target
 Cubatarium --parallel 8`. M460 is the unchanged M335 route, capture disabled,
 with only phase/report names changed; final readings and route outcome will be
-added after completion. The first partial periods show typical query cost near
-0.02 ms and one 9.03 ms maximum near `focus_cx=-2`; this does not explain the
-M459 83.61 ms `UpdateStreaming` spike by itself. The route has not yet reached
-the M459 peak region (`focus_cx≈-198`).
+added after completion. Partial results through `focus_cx=-205` include 17
+period records across `-195..-205`, with no spike rows. Their mean
+`update_streaming_ms` is 2.30 ms and maximum window average is 7.22 ms; the
+terrain query mean is 0.019 ms and largest within-window maximum is 0.387 ms.
+All four visible-black counters were zero in this interval. One earlier
+9.03 ms query maximum near `focus_cx=-2` is still a single-window observation.
+The near-peak interval makes the terrain query an implausible cause of
+M459's 83.61 ms single-frame `UpdateStreaming` peak, but does not identify the
+source of that isolated outlier. The 14,300-block route and endpoint
+convergence are still pending; raw log:
+`bin/logs/perf_20261008-033019_35884.jsonl`.
