@@ -5043,6 +5043,53 @@ must not be treated as evidence of a new streaming regression.
 Full M461 metrics, report, route command, and capture paths are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m461--nested-miss-and-updatestreaming-timing-completed-2026-10-08).
 
+#### M462 checkpoint — detail trace contaminated IO timing; route nearly complete (2026-10-08)
+
+M462 used the exact visible, no-teleport M335 route with
+`CUBA_STREAMING_DETAIL_TRACE=1`. The runner exited normally and restored
+`World_164/world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`. It
+recorded 1,406 periods (1,404 steady), a median flight speed of 5.1965 blocks/s,
+and median flight wall time of 27.175 ms. The endpoint was `focus_cx=-886`
+(start `7`), or 14,288 blocks; this missed the configured 14,300-block
+completion gate by 12 blocks, so route completion is FAIL even though the
+camera reached the endpoint stop phase. Keep the M335 parameters unchanged on
+the next repeat; do not relabel this as a complete route.
+
+This run is not a valid IO-drain benchmark. The executable was built at
+`d0991e9e`; commit `8bc56125` with the trace-log threshold fix was committed
+after the build and was not in the executable. Its INFO log contains 66,149
+`light_flags_save_result` lines. The per-result logging runs inside the measured
+light-flag result drain, inflating both the drain timer and the trace-heavy
+streaming frames. For example, the `cx=-376` 101.8 ms frame attributes 24.05 ms
+to that drain while queue mutex wait/hold are negligible. Treat M462 drain and
+unattributed IO timing as contaminated; use the 8bc threshold fix in the next
+Release build before drawing conclusions about storage or queue performance.
+
+The report counted 48 spike events. Its largest samples at `cx=-352/-343` had
+2,025.7/1,540.3 ms wall time, of which 1,942.3/1,457.9 ms were unaccounted;
+there were no blocked movement substeps. These look like process/system pauses,
+not identified renderer work. The earlier question about sleep/lock during the
+pause remains unanswered, so leave its cause unknown. Separately, 4 period rows
+exceeded 100 ms; these include mesh-emerge/streaming work but are also affected
+by the trace logger.
+
+The analyzer passed 28/39 overall gates and did not pass the stop-convergence
+gate. Its `unfinished_visual` and `effective_holes` readings remain readiness
+debt, not pixel evidence; flight `visible_black_focus_n` median was zero, and
+black-sticky remained zero. The endpoint watcher produced three 1944x1139 PNGs,
+but inspection shows a desktop capture with only a narrow slice of the game
+window. Reject them as invalid visual evidence; do not infer endpoint rendering
+quality from M462 captures.
+
+M462's run manifest reports HEAD `8bc56125`, but its executable hash
+`21b5f32d4a36d89d31803f3e673329c69f90a107e9244cec2b3d04f633066d3a` is the
+Release binary built at `d0991e9e`. Preserve that source/binary mismatch in the
+artifact notes. The run used the fixed-day wrapper and the route runner disabled
+fog pull-in, so it does not reproduce normal weather or adaptive-fog changes.
+The raw command, report, log, and capture paths are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m462--detail-trace-timing-with-m335-2026-10-08).
+
 #### Separate legacy fog/water investigation lead
 
 Code/history review found a plausible long-standing source for underwater
@@ -5072,25 +5119,46 @@ is confirmed, the repair should distinguish **allocated texture** from
 **known texel coverage**, retain a safe fog fallback for unknown cells, and
 avoid exposing a partially shifted GPU map during window scroll.
 
+History review found a concrete GPU consistency defect in the same map:
+`e23dae04` shifted the CPU staging window and required a full GPU upload.
+`3f86d6fe` added incremental GPU chunk patches, but kept that full upload on a
+scroll. Then `2104326d` made the full upload conditional on the exposed-strip
+rebuild queue being empty. During a partial scroll,
+the CPU staging arrays are shifted and `OriginBlockXZ` advances, but the GPU
+textures' overlapping texels are not shifted. Only patched chunks are uploaded,
+while `Valid` remains true. This leaves old map values at the wrong world
+coordinates until overwritten and can produce spatially incorrect per-column
+underwater fog while moving near water. Force a full aligned upload on a scroll
+(using subimage upload when the texture size is unchanged). This code-level
+defect is not yet proven to be the user's visual toggle cause.
+
+Normal gameplay has an independent slow input: auto-weather episodes last
+3–12 minutes and transition for 45 seconds, and weather changes the fog exponent
+and atmospheric color. That timing fits the reported slow silhouette changes.
+M335 fixed-day mode sets clear weather and disables auto-weather, so it cannot
+verify this hypothesis. The current M335 logs also do not record weather/fog
+uniform inputs. Keep both weather and fluid-map effects in this separate fog
+track; do not use them as evidence of streaming holes.
+
 #### Current work order
 
-1. The no-behavior detail trace is now implemented behind
-   `CUBA_STREAMING_DETAIL_TRACE=1`. It logs slow unfinished-visual calls with
-   call path and work size, splits ring resync into sticky/pending/provisional
-   subcalls with scan counts, and records light-flag result queue wait/hold,
-   result count, and worker queue/service/publish timing. Only slow scans and
-   anomalous drains are logged; the environment variable stays off in normal
-   runs.
-2. Build only Release and repeat the exact M335 route as M462. Check whether
-   the M461 unfinished scan, ring resync, or light-flag queue-drain anomalies
-   recur; retain current rendering policy until a stable cost and correctness
-   connection are established. Keep the isolated M459/M460
-   `UpdateStreaming` spikes separate unless a repeat ties them together.
-3. Keep repeated-world M335 and the reported fog/water silhouette effect as
-   separate evidence tracks. A fog investigation needs repeated images at one
-   stationary camera pose plus effective fog inputs/underwater state; no visual
-   defect should be inferred from `unfinished_visual` or ring-level counters.
-4. After the repeated-world render symptom has pixel-level classification,
+1. `CUBA_STREAMING_DETAIL_TRACE=1` now reports unfinished-scan work,
+   ring-resync subcalls, and light-flag queue/worker timing. The M462 executable
+   predates the log-volume fix in `8bc56125`; build current source as Release
+   before the next run so routine light-flag completions are not logged.
+2. Correct fluid-map GPU/CPU alignment on window scroll and build Release.
+   Then repeat the exact M335 route as M463 with the same route parameters and
+   sparse detail trace. Use a verified full-window capture before treating any
+   screenshot as pixel evidence. Keep the 14,300-block gate unchanged and report
+   if the route again falls short.
+3. Analyze M463's unfinished scan, ring resync, light-flag queue timing, and
+   repeated `cx=-343..-354`/`cx=-376..-391` frame clusters. Treat M462's
+   per-result drain measurements as contaminated and its multi-second
+   unaccounted gaps as external pauses until attributed.
+4. Keep M335 streaming and the slow fog/water silhouette issue separate. The
+   fixed-day run disables auto-weather and fog pull-in; add weather and fluid-map
+   state telemetry only when the normal-gameplay fog hypothesis is pursued.
+5. After the repeated-world render symptom has pixel-level classification,
    resume cold world-create/load profiling and periodic fresh-seed runs from the
    existing plan. Neither replaces the fixed M335 regression route.
 

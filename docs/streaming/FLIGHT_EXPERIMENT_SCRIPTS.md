@@ -3226,3 +3226,52 @@ $env:CUBA_GPU_PROCESS_PROFILE_PATH=''
 $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m461_world164_m335_miss_path_instrumentation --report bin/suite_reports/engine_refactor/m461_world164_m335_miss_path_instrumentation_20261008.json --process-timeout 7200
 ```
+
+## M462 — detail trace timing with M335 (2026-10-08)
+
+M462 used the same visible, no-teleport, fixed-day route as M461, with the
+unfinished/ring-resync/light-flag detail trace enabled. It completed the flight
+process normally and restored `world_data.json`, but traveled 14,288 blocks
+against the 14,300 minimum (focus `7 -> -886`), so route completion failed by
+12 blocks. Median flight speed was 5.1965 blocks/s; median flight wall time was
+27.175 ms. The report passed 28/39 gates and stop convergence remained false.
+The readiness-debt counters are not pixel-level evidence.
+
+Do not use M462's light-flag IO timing as a benchmark. The executable was built
+at `d0991e9e` before `8bc56125` reduced detail-log volume. Its INFO log contains
+66,149 `light_flags_save_result` lines, which inflate the measured result-drain
+and streaming times. The same run contains a 2,025.7 ms spike at `cx=-352`,
+with 1,942.3 ms unaccounted, and a 1,540.3 ms spike at `cx=-343`, with 1,457.9
+ms unaccounted. These are unclassified process/system pauses, with no blocked
+movement substeps; do not attribute them to disk loading. The existing question
+about sleep/lock during the pause was not answered.
+
+M462's three endpoint PNGs are not valid game captures: they show a desktop and
+only a narrow slice of the game window. Reject them for visual classification.
+The process used AMD Radeon(TM) Graphics / desktop GL 3.3. The manifest says
+HEAD `8bc56125`, while executable SHA-256
+`21b5f32d4a36d89d31803f3e673329c69f90a107e9244cec2b3d04f633066d3a` is from the
+Release build at `d0991e9e`; this is a source/binary timing mismatch, not a
+reproducible binary identity.
+
+Artifacts:
+
+- Analyzer: `bin/suite_reports/engine_refactor/m462_world164_m335_detail_timing_20261008.json`
+- Perf log: `bin/logs/perf_20261008-054424_36928.jsonl`
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-054420.36928`
+- Captures (invalid): `bin/suite_reports/engine_refactor/m462_world164_m335_detail_timing_frames_20261008/`
+
+Exact M462 invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_STREAMING_DETAIL_TRACE='1'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m462_world164_m335_detail_timing --report bin/suite_reports/engine_refactor/m462_world164_m335_detail_timing_20261008.json --process-timeout 7200
+```
