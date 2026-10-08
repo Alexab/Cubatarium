@@ -66,6 +66,9 @@ struct Session
   double AccumStreamMs{0.0};
   double AccumMeshEmergeMs{0.0};
   double AccumWorldStreamingPhaseMs{0.0};
+  double AccumUpdateStreamingMs{0.0};
+  double AccumUpdateStreamingPreCoreMs{0.0};
+  double AccumUpdateStreamingPostCoreMs{0.0};
   double AccumAltitudeSurfaceQueryMs{0.0};
   double AccumAsyncChunkSystemsMs{0.0};
   double AccumAsyncChunkPreSchedulerMs{0.0};
@@ -154,6 +157,9 @@ struct Session
   double MaxPrepRefreshBodyMs{0.0};
   double MaxWallMs{0.0};
   double MaxStreamMs{0.0};
+  double MaxUpdateStreamingMs{0.0};
+  double MaxUpdateStreamingPreCoreMs{0.0};
+  double MaxUpdateStreamingPostCoreMs{0.0};
   double MaxAltitudeSurfaceQueryMs{0.0};
   double MaxMeshEmergeMs{0.0};
   double MaxPhysMs{0.0};
@@ -359,6 +365,8 @@ struct FrameNumbers
   double streamer_keep_shell_ms{0.0};
   double streamer_prefetch_ahead_ms{0.0};
   double update_streaming_ms{0.0};
+  double update_streaming_pre_core_ms{0.0};
+  double update_streaming_post_core_ms{0.0};
   double altitude_surface_query_ms{0.0};
   double visibility_debt_probe_ms{0.0};
   double spawn_catchup_probe_ms{0.0};
@@ -1122,6 +1130,9 @@ struct FrameNumbers
   std::string pending_cols;
   double max_wall_ms{0.0};
   double max_stream_ms{0.0};
+  double max_update_streaming_ms{0.0};
+  double max_update_streaming_pre_core_ms{0.0};
+  double max_update_streaming_post_core_ms{0.0};
   double max_altitude_surface_query_ms{0.0};
   double max_mesh_emerge_ms{0.0};
   double max_phys_ms{0.0};
@@ -1259,6 +1270,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.streamer_keep_shell_ms = phys.StreamerKeepShellMs;
   n.streamer_prefetch_ahead_ms = phys.StreamerPrefetchAheadMs;
   n.update_streaming_ms = phys.UpdateStreamingMs;
+  n.update_streaming_pre_core_ms = phys.UpdateStreamingPreCoreMs;
+  n.update_streaming_post_core_ms = phys.UpdateStreamingPostCoreMs;
   n.altitude_surface_query_ms = phys.AltitudeSurfaceQueryMs;
   n.visibility_debt_probe_ms = phys.VisibilityDebtProbeMs;
   n.spawn_catchup_probe_ms = phys.SpawnCatchUpProbeMs;
@@ -2245,6 +2258,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"streamer_keep_shell_ms\":" << n.streamer_keep_shell_ms
           << ",\"streamer_prefetch_ahead_ms\":" << n.streamer_prefetch_ahead_ms
           << ",\"update_streaming_ms\":" << n.update_streaming_ms
+          << ",\"update_streaming_pre_core_ms\":"
+          << n.update_streaming_pre_core_ms
+          << ",\"update_streaming_post_core_ms\":"
+          << n.update_streaming_post_core_ms
           << ",\"visibility_debt_probe_ms\":"
           << n.visibility_debt_probe_ms
           << ",\"spawn_catchup_probe_ms\":"
@@ -3372,6 +3389,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms
+          << ",\"max_update_streaming_ms\":"
+          << n.max_update_streaming_ms
+          << ",\"max_update_streaming_pre_core_ms\":"
+          << n.max_update_streaming_pre_core_ms
+          << ",\"max_update_streaming_post_core_ms\":"
+          << n.max_update_streaming_post_core_ms
           << ",\"max_altitude_surface_query_ms\":"
           << n.max_altitude_surface_query_ms
           << ",\"max_mesh_emerge_ms\":" << n.max_mesh_emerge_ms
@@ -3464,6 +3487,9 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumColumnEmergeStageSampleCount += n.column_emerge_stage_sample_n;
   s.AccumColumnEmergeStageSampleAgeMs += n.column_emerge_stage_sample_age_ms;
   s.AccumWorldStreamingPhaseMs += n.world_streaming_phase_ms;
+  s.AccumUpdateStreamingMs += n.update_streaming_ms;
+  s.AccumUpdateStreamingPreCoreMs += n.update_streaming_pre_core_ms;
+  s.AccumUpdateStreamingPostCoreMs += n.update_streaming_post_core_ms;
   s.AccumAltitudeSurfaceQueryMs += n.altitude_surface_query_ms;
   s.AccumAsyncChunkSystemsMs += n.async_chunk_systems_ms;
   s.AccumAsyncChunkPreSchedulerMs += n.async_chunk_pre_scheduler_ms;
@@ -3552,6 +3578,14 @@ void Accumulate(Session &s, const FrameNumbers &n)
       (std::max)(s.MaxPrepRefreshBodyMs, n.prep_refresh_body_ms);
   s.MaxWallMs = (std::max)(s.MaxWallMs, n.wall_ms);
   s.MaxStreamMs = (std::max)(s.MaxStreamMs, n.stream_ms);
+  s.MaxUpdateStreamingMs =
+      (std::max)(s.MaxUpdateStreamingMs, n.update_streaming_ms);
+  s.MaxUpdateStreamingPreCoreMs =
+      (std::max)(s.MaxUpdateStreamingPreCoreMs,
+                 n.update_streaming_pre_core_ms);
+  s.MaxUpdateStreamingPostCoreMs =
+      (std::max)(s.MaxUpdateStreamingPostCoreMs,
+                 n.update_streaming_post_core_ms);
   s.MaxAltitudeSurfaceQueryMs =
       (std::max)(s.MaxAltitudeSurfaceQueryMs, n.altitude_surface_query_ms);
   s.MaxMeshEmergeMs = (std::max)(s.MaxMeshEmergeMs, n.mesh_emerge_ms);
@@ -3616,6 +3650,11 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.column_emerge_stage_sample_age_ms =
       s.AccumColumnEmergeStageSampleAgeMs * inv;
   avg.world_streaming_phase_ms = s.AccumWorldStreamingPhaseMs * inv;
+  avg.update_streaming_ms = s.AccumUpdateStreamingMs * inv;
+  avg.update_streaming_pre_core_ms =
+      s.AccumUpdateStreamingPreCoreMs * inv;
+  avg.update_streaming_post_core_ms =
+      s.AccumUpdateStreamingPostCoreMs * inv;
   avg.altitude_surface_query_ms = s.AccumAltitudeSurfaceQueryMs * inv;
   avg.async_chunk_systems_ms = s.AccumAsyncChunkSystemsMs * inv;
   avg.async_chunk_pre_scheduler_ms =
@@ -3707,6 +3746,9 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.prep_sched_other_ms = s.AccumPrepSchedOtherMs * inv;
   avg.max_wall_ms = s.MaxWallMs;
   avg.max_stream_ms = s.MaxStreamMs;
+  avg.max_update_streaming_ms = s.MaxUpdateStreamingMs;
+  avg.max_update_streaming_pre_core_ms = s.MaxUpdateStreamingPreCoreMs;
+  avg.max_update_streaming_post_core_ms = s.MaxUpdateStreamingPostCoreMs;
   avg.max_altitude_surface_query_ms = s.MaxAltitudeSurfaceQueryMs;
   avg.max_mesh_emerge_ms = s.MaxMeshEmergeMs;
   avg.max_phys_ms = s.MaxPhysMs;
@@ -3753,6 +3795,9 @@ void ResetAccum(Session &s)
   s.AccumColumnEmergeStageSampleCount = 0.0;
   s.AccumColumnEmergeStageSampleAgeMs = 0.0;
   s.AccumWorldStreamingPhaseMs = 0.0;
+  s.AccumUpdateStreamingMs = 0.0;
+  s.AccumUpdateStreamingPreCoreMs = 0.0;
+  s.AccumUpdateStreamingPostCoreMs = 0.0;
   s.AccumAltitudeSurfaceQueryMs = 0.0;
   s.AccumAsyncChunkSystemsMs = 0.0;
   s.AccumAsyncChunkPreSchedulerMs = 0.0;
@@ -3834,6 +3879,9 @@ void ResetAccum(Session &s)
   s.MaxPrepRefreshBodyMs = 0.0;
   s.MaxWallMs = 0.0;
   s.MaxStreamMs = 0.0;
+  s.MaxUpdateStreamingMs = 0.0;
+  s.MaxUpdateStreamingPreCoreMs = 0.0;
+  s.MaxUpdateStreamingPostCoreMs = 0.0;
   s.MaxAltitudeSurfaceQueryMs = 0.0;
   s.MaxMeshEmergeMs = 0.0;
   s.MaxPhysMs = 0.0;

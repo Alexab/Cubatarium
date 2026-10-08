@@ -3059,10 +3059,11 @@ behavior. The app was built with `cmake --build bin --config Release --target
 Cubatarium --parallel 8`. M460 is the unchanged M335 route, capture disabled,
 with only phase/report names changed; final readings and route outcome will be
 added after completion. Partial results through `focus_cx=-205` include 17
-period records across `-195..-205`, with no spike rows. Their mean
-`update_streaming_ms` is 2.30 ms and maximum window average is 7.22 ms; the
-terrain query mean is 0.019 ms and largest within-window maximum is 0.387 ms.
-All four visible-black counters were zero in this interval. One earlier
+period records across `-195..-205`, with no spike rows. In the current period
+format `update_streaming_ms` is a last-sample snapshot, not an average; these
+snapshots range from 1.62 to 7.22 ms. Terrain-query period averages range from
+0.017 to 0.025 ms, and the explicit per-period maximum reached 0.387 ms. All four
+visible-black counters were zero in this interval. One earlier
 9.03 ms query maximum near `focus_cx=-2` is still a single-window observation.
 The near-peak interval makes the terrain query an implausible cause of
 M459's 83.61 ms single-frame `UpdateStreaming` peak, but does not identify the

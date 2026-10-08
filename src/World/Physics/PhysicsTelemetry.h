@@ -262,6 +262,9 @@ struct PhysicsTelemetry
   double StreamerPrefetchAheadMs{0.0};
   /// Full UpdateStreaming wall (WorldViewBinding); not an overwrite of core.
   double UpdateStreamingMs{0.0};
+  /// Coarse disjoint wall partitions around Streamer::Update and its cancels.
+  double UpdateStreamingPreCoreMs{0.0};
+  double UpdateStreamingPostCoreMs{0.0};
   /// Time spent finding the terrain surface for altitude-adaptive fog.
   double AltitudeSurfaceQueryMs{0.0};
   /// Main-thread duration of the full TickAsyncChunkSystems phase.

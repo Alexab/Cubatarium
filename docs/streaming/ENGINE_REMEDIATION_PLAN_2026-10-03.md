@@ -4927,14 +4927,16 @@ unattributed policy work instead of changing fog behavior.
 The first partial M460 periods show ordinary query cost around 0.015–0.022 ms.
 One 9.03 ms maximum occurred near the route start (`cx=-2`); this is an early
 single-window result, not the full-route distribution. By `cx=-195..-205`, 17
-period records contain no `kind=spike` rows. Their mean `UpdateStreaming`
-window average is 2.30 ms (largest window average 7.22 ms); mean terrain-query
-time is 0.019 ms and the largest within-window query maximum is 0.387 ms. The
-largest `UpdateStreaming` window is accounted for largely by
-`streamer_update_ms=5.38 ms`, while all four visible-black counters remain
-zero. This makes the altitude terrain query an implausible explanation for
-M459's 83.61 ms single-frame peak at `cx=-198`; that isolated outlier remains
-unexplained.
+period records contain no `kind=spike` rows. The current period format carries
+the last `update_streaming_ms` sample rather than its average or maximum; those
+snapshots range from 1.62 to 7.22 ms and cannot establish a per-frame maximum.
+Terrain-query period averages range from 0.017 to 0.025 ms, while the explicit
+per-period `max_altitude_surface_query_ms` peaks at 0.387 ms. All four
+visible-black counters were zero in those records. This makes the altitude
+terrain query an implausible explanation for M459's 83.61 ms single-frame peak
+at `cx=-198`; that isolated outlier remains unexplained. M461 will add an
+explicit average and maximum for `UpdateStreaming` and its pre/core/post
+segments.
 
 M460 has since recorded two additional long-route streaming hitches. At
 `cx=-207`, one 131.654 ms frame spent 105.328 ms in the world streaming phase;

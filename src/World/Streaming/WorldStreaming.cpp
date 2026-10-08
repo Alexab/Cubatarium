@@ -5341,10 +5341,15 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                                       glm::vec2 &lastMovementDirXz)
 {
   CUBA_ZONE("UpdateStreaming");
+  world.PhysicsTelemetryData.UpdateStreamingPreCoreMs = 0.0;
+  world.PhysicsTelemetryData.UpdateStreamingPostCoreMs = 0.0;
   if (!Streamer || !StreamingEnabled)
   {
     return;
   }
+  const auto update_pre_core_t0 = std::chrono::high_resolution_clock::now();
+  auto update_post_core_t0 = update_pre_core_t0;
+  bool update_core_ran = false;
   Streamer->BeginFrameStats();
   world.PhysicsTelemetryData.VisibilityDebtProbeMs = 0.0;
   world.PhysicsTelemetryData.SpawnCatchUpProbeMs = 0.0;
@@ -6150,6 +6155,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     }
     {
       const auto update_t0 = std::chrono::high_resolution_clock::now();
+      world.PhysicsTelemetryData.UpdateStreamingPreCoreMs =
+          std::chrono::duration<double, std::milli>(
+              update_t0 - update_pre_core_t0)
+              .count();
       Streamer->Update(WorldPosToBlock(eye), eye, cap);
       if (ChunkScheduler)
       {
@@ -6164,10 +6173,12 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         world.Persistence->CancelAsyncTerrainColumnLoadsOutsideRadius(
             world, focus_horiz, Streamer->GetAsyncRequestRetentionRadius());
       }
+      update_post_core_t0 = std::chrono::high_resolution_clock::now();
       world.PhysicsTelemetryData.StreamerUpdateMs +=
-          std::chrono::duration<double, std::milli>(
-              std::chrono::high_resolution_clock::now() - update_t0)
+          std::chrono::duration<double, std::milli>(update_post_core_t0 -
+                                                    update_t0)
               .count();
+      update_core_ran = true;
     }
     // SoT 210431: unload timed separately from load core (FrameDeadline).
     {
@@ -6445,6 +6456,13 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     world.PhysicsTelemetryData.PendingFocusCols =
         world.FormatPendingLightFocusColumns(focus_horiz, focus_radius, 12);
     // StreamPressure / PendingLightFocus already set in RefreshStreamingPressure.
+  }
+  if (update_core_ran)
+  {
+    world.PhysicsTelemetryData.UpdateStreamingPostCoreMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - update_post_core_t0)
+            .count();
   }
 }
 
