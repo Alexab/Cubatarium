@@ -5823,3 +5823,75 @@ showed no pending light or effective preview-floor lift. The saved frames look
 like low-contrast silhouettes through fog, but are not conclusive for a brief
 or smaller patch. Preserve the evidence and only change rendering after a
 denser coordinate-bound pixel witness identifies the responsible chunk.**
+
+#### M476-M477 checkpoint — overlay repair churn reduced; readiness closeout remains open (2026-10-08)
+
+The operator deprioritized the intermittently reported underwater light square
+because it is poorly reproducible and the world currently looks acceptable.
+Accordingly, do not spend more runs on lighting-only pixel probes or change the
+light/fog shader without a new, repeatable visual report. Keep M470-M475 as
+historical evidence, not as the active workstream. The face-debt bit 32 in
+these traces means the `+Z` neighbor face (mask order `-X,+X,-Y,+Y,-Z,+Z`);
+it is not a bottom-face finding.
+
+M476 showed repeated `PriorityWorldCoreRepair` revision bumps for chunks whose
+only remaining obligation was overlay face debt, while the chunk identity,
+geometry/light revisions, and published mesh were already current and no
+concrete work owner existed. The first guard reduced this overlay-only class
+from 2,312 events in M475 to 209 in M476, but most remaining events carried a
+demand stage of `Admitted`. M477 therefore treated lifecycle stage as
+insufficient evidence of owned work and kept the guard based on actual Dirty,
+in-flight, capture, and GPU owners plus current local revisions. On the same
+Release M335 route, overlay-only core-repair bumps fell from 209 in M476 to 1
+in M477 (about 99.5%); total core-repair bumps fell from 323 to 227. The
+formerly hot west-route overlay coordinates had no overlay-only repeats in
+M477. The second guard is committed in `05def3e1`.
+
+M477 completed the visible no-teleport route: 7,392 blocks, focus X `7 ->
+-455`, eye Y stayed at 70, median movement speed was 5.19287 blocks/s, and the
+application exited normally. The dual-lane stop line and route gate passed.
+This is not an accepted engine baseline: the eye-proxy stop line failed on
+stale mesh-apply/effective-hole telemetry, A24 failed because near-focus mesh
+holes occurred in 23 periods (one in the eye corridor), and post-stop
+convergence failed. At stop, `unfinished_visual` was 27 and `not_ready` stayed
+at 23 through the short 20-second idle; pending had a median of 6 and did not
+fall. Meanwhile post-stop `visual_holes` was zero. This split is a reminder
+that readiness/effective-hole counters are not framebuffer evidence and must
+be interpreted separately from the mesh-hole and operator-visible checks.
+M477's 429 ms max spike and 87 spikes also prevent treating the run as a clean
+performance acceptance, although the median fly wall time was 24.62 ms.
+
+The current closeout order is:
+
+1. **Resolve or correctly classify stale mesh apply and near-focus hole
+   telemetry.** Trace the publication/apply revision ownership that drives the
+   eye-proxy failures and near-focus mesh-hole periods. Preserve the route and
+   camera settings. Where an indicator is only a proxy, document its exact
+   semantics and do not claim a visual defect without a matching frame or
+   direct mesh-coverage witness.
+2. **Restore stop-time demand convergence.** Explain why M477 retained 23
+   not-ready items and a plateaued pending count after the fly stopped, while
+   the visual-hole proxy was zero. Follow the owning scheduler/ticket and
+   publication lifecycle to a stable, measurable terminal state; avoid
+   increasing retry frequency without identifying the missing owner.
+3. **Finish repeated-world acceptance on World_164/M335.** Use the same visible
+   no-teleport route and Release build. Require route/speed/height gates,
+   the applicable streaming/rendering safety gates, and post-stop convergence.
+   Review any remaining performance-gate failures separately from rendering
+   correctness; M477's diagnostic overlays mean its timing is not a clean
+   baseline.
+4. **Run the secondary cold/new-world check.** After the repeated-world lane
+   is stable, validate first-load world creation/streaming and a fresh seed.
+   Keep this periodic and secondary to reproducible M335 comparisons.
+5. **Close with a plan/status reconciliation.** Retire only gates whose
+   telemetry is shown to be redundant or invalid, with evidence and corrected
+   definitions. Keep raw captures/reports as local artifacts; commit code and
+   documentation only.
+
+M476/M477 exact commands, artifact locations, and bounded outcomes are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m476m477--overlay-repair-churn-validation-2026-10-08).
+Plan status: **the repeated overlay-only repair churn is effectively removed
+and the M335 route gate passes. Refactor closeout remains open: stale-apply and
+near-focus quality proxies fail, stop-time readiness does not converge, and
+M477 is not a clean performance acceptance. The rare underwater light symptom
+is parked unless it becomes repeatable again.**

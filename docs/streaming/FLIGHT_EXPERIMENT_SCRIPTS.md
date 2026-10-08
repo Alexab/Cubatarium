@@ -4066,3 +4066,99 @@ reported square as not reproduced, not disproven. The next useful capture is a
 denser on-screen pixel witness restricted to this same X interval, retaining
 the hit chunk's light revisions and preview flag for every candidate pixel.
 Do not stage the PNGs, raw logs, or run report as source changes.
+
+## M476/M477 — overlay repair churn validation (2026-10-08)
+
+These runs checked a narrow repair-scheduler change on the established visible,
+no-teleport World_164/M335 flight. Route parameters remained fixed: start at
+`(120,56,56)`, eye Y=70, yaw 180°, pitch -30°, movement scale 1, 1,455-second
+flight, 20-second stop, and at least 6,400 blocks. Dense pixel/capture tracing
+was enabled to preserve comparable diagnostics; the captures are historical
+artifacts, not grounds for further lighting-only investigation.
+
+M476 ran Release executable SHA-256
+`7A402A8471EE4C1B4ACBC5F24EEC621210CDEFCD3CAF3865D9E10A44F9EB5EB8`, after
+commit `19912bc6`. Its report is
+`bin/suite_reports/engine_refactor/m476_world164_m335_overlay_debt_repair_20261008.json`,
+raw log `bin/logs/perf_20261008-214459_30676.jsonl`, and 56 screenshots are in
+`bin/flight_captures/m476_overlay_debt_repair_20261008`. It completed 7,344
+blocks with normal app exit and route pass. Core repair bumps fell from 2,324
+in M475 to 323; overlay-only bumps fell from 2,312 to 209. Most of the
+remaining overlay-only bumps had lifecycle stage `Admitted`, exposing that the
+first guard still treated a non-owning lifecycle label as a reason to retry.
+The quality and stop-convergence gates remained red.
+
+Exact M476 invocation (the trace settings match M477; artifact names differ):
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-6460'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-6400'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m476_overlay_debt_repair_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m476_world164_m335_overlay_debt_repair --report bin/suite_reports/engine_refactor/m476_world164_m335_overlay_debt_repair_20261008.json --process-timeout 7200
+```
+
+M477 tested the follow-up guard in Release executable SHA-256
+`935DD89C9223AFAF525ACAA3A39080205E0DCB4C19D4A59F5C50A15676EB04F`, after
+commit `05def3e1`. It completed 7,392 blocks (focus X `7 -> -455`) at median
+5.19287 blocks/s; the app exited 0 and the route gate passed. Overlay-only
+core-repair bumps fell from 209 to 1, and all 226 other repair bumps had zero
+face/overlay/peer debt masks. Total core-repair bumps were 227. The previous
+hot west-route overlay coordinates had no overlay-only repeats.
+
+M477 passed the dual-lane stop line, but is not an acceptance pass. The
+eye-proxy gate failed on stale-apply/effective-hole signals; A24 recorded
+near-focus mesh holes in 23 periods (one in its eye corridor); stop convergence
+failed with `unfinished_visual=27`, `not_ready=23`, pending median 6 and no
+pending decline. Post-stop `visual_holes` itself was zero. These counters
+describe different readiness/coverage signals and do not by themselves prove
+that the user saw blank terrain. M477's 87 spikes and 429.049 ms maximum also
+make its timing diagnostic rather than a clean baseline; median fly wall time
+was 24.62 ms.
+
+Exact M477 invocation and diagnostic environment:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-6460'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-6400'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m477_overlay_debt_owner_guard_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m477_world164_m335_overlay_debt_owner_guard --report bin/suite_reports/engine_refactor/m477_world164_m335_overlay_debt_owner_guard_20261008.json --process-timeout 7200
+```
+
+The paired M476 and M477 runs used the same flight settings and trace profile.
+The report and raw log for M477 are
+`bin/suite_reports/engine_refactor/m477_world164_m335_overlay_debt_owner_guard_20261008.json`
+and `bin/logs/perf_20261008-221655_4784.jsonl`; 46 screenshots are in
+`bin/flight_captures/m477_overlay_debt_owner_guard_20261008`. Do not stage
+captures, reports, or raw logs. The next active work is stale-apply/coverage
+ownership and stop-time readiness convergence, then a clean repeated-world
+acceptance run; the rare light-square investigation is parked unless it recurs.
