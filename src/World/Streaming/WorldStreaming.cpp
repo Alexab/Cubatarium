@@ -639,6 +639,10 @@ void UWorldStreaming::RefreshStreamingPressure(
   };
   auto &pt = world.GetPhysicsTelemetryMutable();
   pt.PrepRefreshMissMs = 0.0;
+  pt.PrepRefreshMissRadiusQueryMs = 0.0;
+  pt.PrepRefreshScreenRayProbeMs = 0.0;
+  pt.PrepRefreshFindNearestMs = 0.0;
+  pt.PrepRefreshMissOtherMs = 0.0;
   pt.PrepRefreshPendingMs = 0.0;
   pt.PrepRefreshStickyMs = 0.0;
   pt.PrepRefreshUnfinishedMs = 0.0;
@@ -731,9 +735,12 @@ void UWorldStreaming::RefreshStreamingPressure(
       (!moving_for_telemetry && !rim_probe_throttle);
   if (run_miss_probe)
   {
+    const auto miss_radius_query_t0 =
+        std::chrono::high_resolution_clock::now();
     missing_near =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), focus_ground, miss_probe_radius);
+    pt.PrepRefreshMissRadiusQueryMs += lap_ms(miss_radius_query_t0);
     if ((moving_for_telemetry || rim_probe_throttle) && !enter_miss_probe)
     {
       rp.miss_probe_cd = missing_near ? 0 : 8;
@@ -904,6 +911,8 @@ void UWorldStreaming::RefreshStreamingPressure(
             cy_scan_lo = std::max(0, focus_ground.y - 1);
             cy_scan_hi = std::min(48, focus_ground.y + 1);
           }
+          const auto screen_ray_probe_t0 =
+              std::chrono::high_resolution_clock::now();
           for (size_t row_index = 0; row_index < kScreenRows.size();
                ++row_index)
           {
@@ -1002,6 +1011,7 @@ void UWorldStreaming::RefreshStreamingPressure(
                   std::min(candidate.nearest_distance, hit.distance);
             }
           }
+          pt.PrepRefreshScreenRayProbeMs += lap_ms(screen_ray_probe_t0);
           std::array<size_t, kScreenSampleCount> candidate_order{};
           for (size_t i = 0; i < candidate_count; ++i)
           {
@@ -1153,11 +1163,13 @@ void UWorldStreaming::RefreshStreamingPressure(
       found = true;
     }
     // R4.5.1: when miss probe is throttled, keep pin — do not FindNearest.
-    if (!found && run_miss_probe &&
-        world.GetMeshService().FindNearestMissingGreedyMesh(
-            world.GetBlockWorld(), focus_ground, miss_probe_radius, miss_coord))
+    if (!found && run_miss_probe)
     {
-      found = true;
+      const auto find_nearest_t0 =
+          std::chrono::high_resolution_clock::now();
+      found = world.GetMeshService().FindNearestMissingGreedyMesh(
+          world.GetBlockWorld(), focus_ground, miss_probe_radius, miss_coord);
+      pt.PrepRefreshFindNearestMs += lap_ms(find_nearest_t0);
     }
     if (found)
     {
@@ -1689,6 +1701,9 @@ void UWorldStreaming::RefreshStreamingPressure(
     }
   }
   pt.PrepRefreshMissMs = lap_ms(miss_t0);
+  pt.PrepRefreshMissOtherMs = std::max(
+      0.0, pt.PrepRefreshMissMs - pt.PrepRefreshMissRadiusQueryMs -
+               pt.PrepRefreshScreenRayProbeMs - pt.PrepRefreshFindNearestMs);
   const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
   const auto camera_complete_t0 = std::chrono::high_resolution_clock::now();
   bool incomplete_camera_column = false;

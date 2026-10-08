@@ -101,6 +101,10 @@ struct Session
   double AccumPhysMs{0.0};
   double AccumPrepRefreshPressureMs{0.0};
   double AccumPrepRefreshMissMs{0.0};
+  double AccumPrepRefreshMissRadiusQueryMs{0.0};
+  double AccumPrepRefreshScreenRayProbeMs{0.0};
+  double AccumPrepRefreshFindNearestMs{0.0};
+  double AccumPrepRefreshMissOtherMs{0.0};
   double AccumPrepRefreshPendingMs{0.0};
   double AccumPrepRefreshStickyMs{0.0};
   double AccumPrepRefreshUnfinishedMs{0.0};
@@ -523,6 +527,10 @@ struct FrameNumbers
   double prep_isolated_miss_ms{0.0};
   double prep_refresh_pressure_ms{0.0};
   double prep_refresh_miss_ms{0.0};
+  double prep_refresh_miss_radius_query_ms{0.0};
+  double prep_refresh_screen_ray_probe_ms{0.0};
+  double prep_refresh_find_nearest_ms{0.0};
+  double prep_refresh_miss_other_ms{0.0};
   double prep_refresh_pending_ms{0.0};
   double prep_refresh_sticky_ms{0.0};
   double prep_refresh_unfinished_ms{0.0};
@@ -1454,6 +1462,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_isolated_miss_ms = phys.PrepIsolatedMissMs;
   n.prep_refresh_pressure_ms = phys.PrepRefreshPressureMs;
   n.prep_refresh_miss_ms = phys.PrepRefreshMissMs;
+  n.prep_refresh_miss_radius_query_ms =
+      phys.PrepRefreshMissRadiusQueryMs;
+  n.prep_refresh_screen_ray_probe_ms = phys.PrepRefreshScreenRayProbeMs;
+  n.prep_refresh_find_nearest_ms = phys.PrepRefreshFindNearestMs;
+  n.prep_refresh_miss_other_ms = phys.PrepRefreshMissOtherMs;
   n.prep_refresh_pending_ms = phys.PrepRefreshPendingMs;
   n.prep_refresh_sticky_ms = phys.PrepRefreshStickyMs;
   n.prep_refresh_unfinished_ms = phys.PrepRefreshUnfinishedMs;
@@ -2486,6 +2499,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_isolated_miss_ms\":" << n.prep_isolated_miss_ms
           << ",\"prep_refresh_pressure_ms\":" << n.prep_refresh_pressure_ms
           << ",\"prep_refresh_miss_ms\":" << n.prep_refresh_miss_ms
+          << ",\"prep_refresh_miss_radius_query_ms\":"
+          << n.prep_refresh_miss_radius_query_ms
+          << ",\"prep_refresh_screen_ray_probe_ms\":"
+          << n.prep_refresh_screen_ray_probe_ms
+          << ",\"prep_refresh_find_nearest_ms\":"
+          << n.prep_refresh_find_nearest_ms
+          << ",\"prep_refresh_miss_other_ms\":"
+          << n.prep_refresh_miss_other_ms
           << ",\"prep_refresh_pending_ms\":" << n.prep_refresh_pending_ms
           << ",\"prep_refresh_sticky_ms\":" << n.prep_refresh_sticky_ms
           << ",\"prep_refresh_unfinished_ms\":" << n.prep_refresh_unfinished_ms
@@ -3471,6 +3492,12 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumCameraFreeMoveShare += n.camera_free_move_share;
   s.AccumPrepRefreshPressureMs += n.prep_refresh_pressure_ms;
   s.AccumPrepRefreshMissMs += n.prep_refresh_miss_ms;
+  s.AccumPrepRefreshMissRadiusQueryMs +=
+      n.prep_refresh_miss_radius_query_ms;
+  s.AccumPrepRefreshScreenRayProbeMs +=
+      n.prep_refresh_screen_ray_probe_ms;
+  s.AccumPrepRefreshFindNearestMs += n.prep_refresh_find_nearest_ms;
+  s.AccumPrepRefreshMissOtherMs += n.prep_refresh_miss_other_ms;
   s.AccumPrepRefreshPendingMs += n.prep_refresh_pending_ms;
   s.AccumPrepRefreshStickyMs += n.prep_refresh_sticky_ms;
   s.AccumPrepRefreshUnfinishedMs += n.prep_refresh_unfinished_ms;
@@ -3627,6 +3654,13 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   // R4.6.1: period avg/max for prep_refresh_* (was last-frame only → mid pressure=0).
   avg.prep_refresh_pressure_ms = s.AccumPrepRefreshPressureMs * inv;
   avg.prep_refresh_miss_ms = s.AccumPrepRefreshMissMs * inv;
+  avg.prep_refresh_miss_radius_query_ms =
+      s.AccumPrepRefreshMissRadiusQueryMs * inv;
+  avg.prep_refresh_screen_ray_probe_ms =
+      s.AccumPrepRefreshScreenRayProbeMs * inv;
+  avg.prep_refresh_find_nearest_ms =
+      s.AccumPrepRefreshFindNearestMs * inv;
+  avg.prep_refresh_miss_other_ms = s.AccumPrepRefreshMissOtherMs * inv;
   avg.prep_refresh_pending_ms = s.AccumPrepRefreshPendingMs * inv;
   avg.prep_refresh_sticky_ms = s.AccumPrepRefreshStickyMs * inv;
   avg.prep_refresh_unfinished_ms = s.AccumPrepRefreshUnfinishedMs * inv;
@@ -3747,6 +3781,10 @@ void ResetAccum(Session &s)
   s.AccumCameraFreeMoveShare = 0.0;
   s.AccumPrepRefreshPressureMs = 0.0;
   s.AccumPrepRefreshMissMs = 0.0;
+  s.AccumPrepRefreshMissRadiusQueryMs = 0.0;
+  s.AccumPrepRefreshScreenRayProbeMs = 0.0;
+  s.AccumPrepRefreshFindNearestMs = 0.0;
+  s.AccumPrepRefreshMissOtherMs = 0.0;
   s.AccumPrepRefreshPendingMs = 0.0;
   s.AccumPrepRefreshStickyMs = 0.0;
   s.AccumPrepRefreshUnfinishedMs = 0.0;

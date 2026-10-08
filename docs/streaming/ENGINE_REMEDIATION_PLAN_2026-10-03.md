@@ -4933,9 +4933,28 @@ time is 0.019 ms and the largest within-window query maximum is 0.387 ms. The
 largest `UpdateStreaming` window is accounted for largely by
 `streamer_update_ms=5.38 ms`, while all four visible-black counters remain
 zero. This makes the altitude terrain query an implausible explanation for
-M459's 83.61 ms single-frame peak at `cx=-198`. It does not explain why that
-M459 outlier occurred; finish M460 before deciding whether to instrument the
-unattributed policy remainder.
+M459's 83.61 ms single-frame peak at `cx=-198`; that isolated outlier remains
+unexplained.
+
+M460 has since recorded two additional long-route streaming hitches. At
+`cx=-207`, one 131.654 ms frame spent 105.328 ms in the world streaming phase;
+81.929 ms was `async_chunk_pre_scheduler_ms`, including 81.515 ms in
+`prep_refresh_miss_ms`. The same frame's `UpdateStreaming` was 1.925 ms and
+`streamer_update_ms` was 0.011 ms. Its visible-black counters were zero. The
+miss timer covers several operations; one candidate is
+`HasMissingGreedyMeshInHorizontalRadius` in `ChunkMeshCache.cpp`, which scans
+the resident chunk collection on a hole-query cache miss. That is a plausible
+focus-boundary cost, not yet a proven attribution. A second frame at `cx=-262`
+spent 27.045 ms in the already-instrumented `CountUnfinishedVisualByFacing`
+probe (`prep_refresh_facing_ms`); it also had a 35.44 ms transparent-scene
+pass. These are separate cost centers from M459's `UpdateStreaming` spike.
+
+The current source adds nested per-frame timers for the miss-radius query,
+screen-ray probe, nearest-missing fallback, and residual miss-path work. The
+running M460 executable predates these timers. After M460 completes, build only
+Release and repeat the same M335 route as M461 to identify which miss substage
+caused the `cx=-207` hitch. Do not change probe behavior until that attribution
+is available.
 
 #### Separate legacy fog/water investigation lead
 
@@ -4968,15 +4987,12 @@ avoid exposing a partially shifted GPU map during window scroll.
 
 #### Current work order
 
-1. Finish M460 and assess the new query timer against the full route; the
-   comparison across `cx=-195..-205` has ruled out the terrain query as a
-   likely cause of the M459 peak, but full-route classification and endpoint
-   convergence remain pending. Retain the visible GUI and capture only the
-   endpoint so the performance lane stays comparable.
-2. If that query does not explain a meaningful fraction of the spike, split the
-   remaining `UpdateStreaming` work into coarse, non-overlapping timings before
-   changing policies. Keep the existing streamer, unload and mesh-emerge timers
-   separate to avoid attributing their costs twice.
+1. Finish M460 and capture only its endpoint; full-route classification and
+   endpoint convergence remain pending.
+2. Build the miss-path timing instrumentation in Release and run M461 with the
+   same M335 route. Identify the `cx=-207` miss-path outlier before changing
+   policy or mesh-hole semantics. Keep M459's `UpdateStreaming` spike as a
+   separate, unreproduced issue.
 3. Keep repeated-world M335 and the reported fog/water silhouette effect as
    separate evidence tracks. A fog investigation needs repeated images at one
    stationary camera pose plus effective fog inputs/underwater state; no visual

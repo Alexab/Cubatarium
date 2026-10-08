@@ -543,6 +543,11 @@ struct PhysicsTelemetry
   double PrepRefreshPressureMs{0.0};
   /// I9-A: RefreshStreamingPressure sub-timers (sum ≈ PrepRefreshPressureMs).
   double PrepRefreshMissMs{0.0};
+  /// Nested miss-path timings to attribute focus-boundary readiness spikes.
+  double PrepRefreshMissRadiusQueryMs{0.0};
+  double PrepRefreshScreenRayProbeMs{0.0};
+  double PrepRefreshFindNearestMs{0.0};
+  double PrepRefreshMissOtherMs{0.0};
   double PrepRefreshPendingMs{0.0};
   double PrepRefreshStickyMs{0.0};
   double PrepRefreshUnfinishedMs{0.0};

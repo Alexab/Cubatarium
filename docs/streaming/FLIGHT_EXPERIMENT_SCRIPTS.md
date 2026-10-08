@@ -3069,3 +3069,32 @@ M459's 83.61 ms single-frame `UpdateStreaming` peak, but does not identify the
 source of that isolated outlier. The 14,300-block route and endpoint
 convergence are still pending; raw log:
 `bin/logs/perf_20261008-033019_35884.jsonl`.
+
+Further M460 progress: one spike at `focus_cx=-207` measured
+`wall_ms=131.654`, `async_chunk_pre_scheduler_ms=81.9294`, and
+`prep_refresh_miss_ms=81.5154`; `update_streaming_ms` was 1.925 ms and
+`streamer_update_ms` 0.0109 ms. `chunk_count=460`, `miss_horiz=4`, and all
+visible-black counters were zero. The same miss block includes a full resident
+chunk iteration in `HasMissingGreedyMeshInHorizontalRadius`, a screen-ray
+repair probe, and an optional nearest-missing search, so the present log does
+not isolate the call responsible. A separate spike at `focus_cx=-262` measured
+`prep_refresh_facing_ms=27.0451` and `scene_transparent_ms=35.439`; its
+`update_streaming_ms` was 0.817 ms. The current source now records separate
+miss-radius, screen-ray, nearest-search, and residual timings. M460's already
+running Release binary does not contain those additions; after it finishes,
+build Release and repeat the same route as M461.
+
+M460's exact route invocation (same M335 settings as M459, with the added
+terrain-query timing):
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m460_world164_m335_altitude_surface_query_timing --report bin/suite_reports/engine_refactor/m460_world164_m335_altitude_surface_query_timing_20261008.json --process-timeout 7200
+```
