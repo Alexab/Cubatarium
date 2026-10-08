@@ -5418,13 +5418,30 @@ pixel; it does not settle whether material color or lighting is correct.
 
 Focus-slice telemetry still classified 820 sampled slices as `MissingMesh`
 and 204 as `GpuInFlight`. These are work/readiness classifications, not direct
-screen-space coverage. `unfinished_visual`, `visible_black`, and near-focus
-hole counters remain unsuitable as standalone proof of a visible hole. The
-wrapper's product gates were not all green: the route gate missed by 28
-blocks; dual-lane failed `unlit_max`; the eye-proxy checks failed on stale
-visual/blink evidence; A24 recorded near-focus-hole periods. Interpret these as
-separate diagnostic debt while retaining the stronger fact that none of the
-1,140 sampled in-fog candidate pixels had clear depth.
+screen-space coverage. In `GetColumnRenderableState`, a missing solid Y-slice
+can coexist with `draw_ok=true` when a sibling slice is drawable or GPU-owned;
+`ClassifyFocusColumnVisual` still reports that column as `MissingMesh` to
+retain per-slice FirstMesh debt. Similarly, `HasScreenRayRepairableGeometryDebt`
+checks a matching chunk incarnation and returns true for a desired-vs-published
+geometry revision gap, or (when no face debt owns the work) a coverage
+publication gap or `retained_awaiting_successor`. It is not an absent-mesh
+predicate.
+
+This is visible in M467's own candidate distribution: 1,944/1,970 candidates
+(98.7%) had an opaque DDA hit, `mesh_satisfying=1`, geometry debt and
+repairable geometry debt set, no light debt, and `needs_refresh=1`. Their
+same-frame pixels also had opaque depth within fog. Thus the dominant candidate
+class is currently drawable geometry selected for publication-freshness repair,
+not an empty chunk. The remaining 26 candidates include some without a
+satisfying mesh; distinguish those separately in any follow-up.
+
+`unfinished_visual`, `visible_black`, and near-focus hole counters remain
+unsuitable as standalone proof of a visible hole. The wrapper's product gates
+were not all green: the route gate missed by 28 blocks; dual-lane failed
+`unlit_max`; the eye-proxy checks failed on stale visual/blink evidence; A24
+recorded near-focus-hole periods. Interpret these as separate diagnostic debt
+while retaining the stronger fact that none of the 1,140 sampled in-fog
+candidate pixels had clear depth.
 
 No full-frame screenshot was saved. M467 therefore improves on M466 by
 retaining sparse ray-correlated evidence across the route without ring
@@ -5439,9 +5456,10 @@ fog remain a distinct unresolved rendering question.
    chunk incarnations, join the exact pixel sample to desired/published
    geometry revisions, admission, FirstMesh/dirty ownership, worker completion,
    upload, and GPU publication. The same sample can be visibly covered while
-   telemetry still says repairable geometry debt; establish the lifetime and
-   meaning of that state before changing quotas, draw policy, or repair
-   priority.
+   telemetry still says repairable geometry debt. Split that flag into its
+   geometry-revision, coverage-generation, and successor-retention causes;
+   follow each cause's age, owner, and clearing publication before changing
+   quotas, draw policy, or repair priority.
 2. **Separate renderer correctness from latency under host contention.**
    Treat M467 timing as contaminated because the concurrent task's overlap is
    unknown. When the host is available, rerun the same M335 profile before

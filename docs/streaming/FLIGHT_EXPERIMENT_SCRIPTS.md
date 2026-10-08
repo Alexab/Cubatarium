@@ -3618,6 +3618,18 @@ clear-depth candidates were beyond fog end, at 67.26–95.43 blocks; all sampled
 the fog background RGB `(117,163,233)`. This is evidence against an empty
 pixel in the sampled in-fog positions, not full-screen proof.
 
+The source flags clarify what most ray candidates represent. In 1,944/1,970
+cases (98.7%) the ray state was an opaque hit and `mesh_satisfying=1`, while
+geometry debt, repairable geometry debt, and `needs_refresh` were set and light
+debt was clear. `HasScreenRayRepairableGeometryDebt` means the same chunk
+incarnation has a desired-vs-published geometry revision gap, or a coverage
+publication gap / retained successor after face debt is excluded. It does not
+mean no mesh is drawable. `MissingMesh` is also a per-slice FirstMesh
+obligation: `GetColumnRenderableState` can return `draw_ok=true` because a
+sibling Y-slice is already drawable while still reporting that some resident
+solid slice needs a mesh. These flags describe real work debt but do not prove
+an empty screen pixel.
+
 The renderer-pixel analyzer found 9,920 samples below luma 96 and 1,623 below
 luma 32. Every sample below luma 32 had valid opaque depth and visible MDI
 indices. Of the 9,920 dark samples, 9,895 had valid opaque depth; one of these
