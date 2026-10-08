@@ -3018,7 +3018,11 @@ cannot explain the user's longstanding slow silhouette toggling through
 fog/water. The ring's stale-lit proxy reached nine at stop (oldest age 666
 frames), but that does not prove those chunks were visible. A separate
 nearest-dark-face probe found five stale-light faces at stop, but the capture
-does not map them to projected coordinates.
+does not map them to projected coordinates. At `focus_cx=-198`, one spike row
+had `UpdateStreaming=83.6144 ms`, `world_streaming_phase=90.5611 ms`, and
+`wall=101.246 ms`, while `streamer_update=0.0099 ms` and
+`streamer_unload=0.0025 ms`. The same period's `max_wall_ms=172.032` was a
+different frame.
 
 Artifacts:
 
@@ -3054,4 +3058,7 @@ and period `max_altitude_surface_query_ms` without changing the query or fog
 behavior. The app was built with `cmake --build bin --config Release --target
 Cubatarium --parallel 8`. M460 is the unchanged M335 route, capture disabled,
 with only phase/report names changed; final readings and route outcome will be
-added after completion.
+added after completion. The first partial periods show typical query cost near
+0.02 ms and one 9.03 ms maximum near `focus_cx=-2`; this does not explain the
+M459 83.61 ms `UpdateStreaming` spike by itself. The route has not yet reached
+the M459 peak region (`focus_cx≈-198`).

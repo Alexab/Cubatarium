@@ -4887,11 +4887,12 @@ M459 disabled in-app capture and used only a few external window captures. It
 completed 14,320 blocks (`focus_cx=7 -> -888`) with zero blocked movement
 substeps, `process_rc=0`, and no kill. The analyzer still failed its renderer
 and post-stop gates. Fly wall median was 26.95 ms; streaming-phase median was
-13.81 ms. One rare `UpdateStreaming` maximum of 83.61 ms was recorded near
-`focus_cx=-198`; the associated period's max wall was 172.03 ms, while that
-period's averaged wall and streaming timings were lower. `streamer_update`
-and unload work remained small in the period averages, so this is not evidence
-for a slow core streamer or a disk unload stall.
+13.81 ms. The `focus_cx=-198` spike row with `UpdateStreaming=83.61 ms` had
+`world_streaming_phase=90.56 ms` and `wall=101.25 ms`; its core
+`streamer_update` and unload were only 0.0099 and 0.0025 ms. The same period's
+maximum wall of 172.03 ms was a different frame. This is not evidence for a
+slow core streamer or disk unload stall; it is a real, mostly unassigned
+`UpdateStreaming` spike.
 
 The targeted images are stronger than readiness counters for classifying the
 far endpoint. The two moving approach captures (`cx=-877` and `-883`) show
@@ -4928,6 +4929,35 @@ One 9.03 ms maximum occurred near the route start (`cx=-2`); this is an early
 single-window result, not the full-route distribution. It is already too small
 to explain M459's 83.61 ms `UpdateStreaming` peak by itself, but the M460
 comparison near `cx=-198` remains pending.
+
+#### Separate legacy fog/water investigation lead
+
+Code/history review found a plausible long-standing source for underwater
+silhouette changes, independent of M460. Commit `3f86d6fe` made
+`FluidSurfaceMap` staging and GPU publication incremental; commit `4f0a794d`
+later added global underwater-fog fallback when the map is “missing”. The
+current `map_ready` input is `surface_map.IsValid()`, which means the GPU
+texture exists, not that its per-column texels are complete. On initial/size
+rebuild the code can upload partially seeded staging while
+`PendingRebuildGroundChunks` remains nonempty. On a scroll, exposed texels are
+set to no-surface sentinels and repatched under a bounded chunk budget. The
+fragment shader applies per-column fog only when a sampled fluid surface and
+fluid id are present; missing/sentinel cells do not receive that fog. Yet the
+global fallback is disabled as soon as `IsValid()` becomes true. This can
+temporarily change the appearance of underwater geometry as map cells are
+rebuilt. It matches the class of the user's longstanding fog/water report, but
+has not been correlated with a same-pose image, and should not be called a
+streaming-renderer regression from M459.
+
+The map's global `Valid` bit is usually sticky after first upload, so a slow
+toggle is more likely to come from partial per-cell coverage or fog inputs
+than repeated global valid/invalid transitions. A targeted follow-up should
+capture one repeated M335 view near water while logging camera-submerged state,
+map texture validity, rebuild/dirty counts, per-column/global fog selection,
+effective fog start/end, and the same frame's screenshot. If the visual effect
+is confirmed, the repair should distinguish **allocated texture** from
+**known texel coverage**, retain a safe fog fallback for unknown cells, and
+avoid exposing a partially shifted GPU map during window scroll.
 
 #### Current work order
 
