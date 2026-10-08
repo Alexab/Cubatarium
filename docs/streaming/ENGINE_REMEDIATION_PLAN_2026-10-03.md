@@ -5657,3 +5657,81 @@ ready-result backlog and a redundant unload snapshot rebuild are concrete
 follow-up targets. No pixel-level empty-world witness was captured, the
 post-stop readiness debt remains, and clean performance/convergence are not
 accepted.**
+
+#### M470 checkpoint — clean full-route validation after unload-index change (2026-10-08)
+
+M470 was a visible, no-teleport run of the established World_164/M335 route at
+absolute eye Y=70, yaw 180°, pitch -30°, and movement scale 1. It used the
+Release executable from `4d57b2332a2e3c4de863af11d007dd7757ffe549`
+(SHA-256 `e7c09f8adeec4e1003355899e042dd3e4dbefbe557c79249af64b551d74d08d2`).
+The app exited normally and the route gate passed: 14,784 blocks, focus X
+`7 -> -917`, median speed 5.19653 blocks/s, and camera Y stayed at 70.
+
+This was the first clean full-route performance run after the resident-column
+unload index and trace-flag split. With all trace flags off, wall time was
+25.9237 ms median / 37.5732 ms p95, with a 302.259 ms maximum period and
+405.626 ms maximum single-frame spike. `streamer_unload_ms` was 0.0717 ms
+median, 0.3769 ms p95, and 21.5208 ms maximum. The prior M469 values are not a
+clean control because source/save/unload event logging was synchronous and
+contaminated its 667 MB trace; do not attribute a numeric speedup solely to the
+code change. M469's largest unload samples were nevertheless at X≈-6,401,
+near the area where M470 later produced clean sub-millisecond unload samples.
+
+The app and distance gates passed, but the product run did not converge at
+stop. The missing-mesh proxy measured 0.06392 over the flight and zero in the
+post-stop sample window; `unfinished_visual` was 27 at stop and readiness,
+relight, and other stop gates failed. The run also had 177 period spikes and a
+405.626 ms maximum single-frame spike. These are diagnostic outcomes, not
+proof that the operator saw blank terrain: `visual_holes` is a near-focus mesh
+coverage proxy, and `unfinished_visual` is readiness debt.
+
+The operator reported a lighter square passing beneath the camera underwater
+at about 17:23 local time. The flight had no screenshot or pixel/depth probe,
+so the visible patch cannot be matched to a framebuffer sample. The nearest
+2-second telemetry intervals (rows 645-646) were at player X=-6,425 and
+-6,436, focus chunks -402 and -403, Z focus 3, and Y=70. Each had exactly one
+`chunk_meshed_unlit` / `chunk_meshed_unlit_hidden` item and one
+`pending_light_focus`; both had `visual_holes=0` and `near_focus_holes=0`. The
+following interval returned the unlit count and pending-light focus count to
+zero. A final relight apply was recorded in the latter interval. This is a
+close temporal/spatial correlation with an unfinished-light state, not proof
+that the state was the observed square or that it was underwater; these counts
+are focus-ring aggregates without a pixel coordinate or exact chunk identity.
+
+M471 is therefore a targeted witness run on the same M335 route and through
+this corridor. It enables the existing screen-ray-aligned pixel/depth probe
+and leaves source/save/unload tracing off. The diagnostic capture has a sparse
+20-column/five-row view and only activates on selected screen-ray frames; it
+cannot prove full-frame coverage. Its purpose is to tie a visible pixel to
+opaque depth, voxel-hit chunk, published mesh/light revisions, pending relight
+state, and underwater fog/shader inputs where the sampled ray crosses the
+suspect corridor. Instrumented timing is not a performance baseline.
+
+Current follow-up order:
+
+1. Finish M471 and join screen-ray and pixel/depth records at X≈-6.4k. Check
+   whether any sampled underwater pixel has opaque geometry and whether its
+   voxel-hit chunk is pending light, has old published-light revision, or is
+   otherwise ready. Record the limits imposed by sparse sampling.
+2. If M471 captures the event, trace that exact chunk's relight ownership,
+   queue age, merge/apply/publication revisions, and water/fog path before
+   changing lighting behavior. If it misses the patch, repeat the same M335
+   corridor with the same camera parameters; do not alter the established
+   route to chase a visual-only condition.
+3. Keep M470 as the clean full-route performance run after the unload change.
+   Run a separate detailed-unload trace only if the clean measurements or a
+   repeated spike justify it. Do not combine per-save/source logging with the
+   clean performance lane.
+4. Keep World_164/M335 as the repeated-world primary lane. Continue periodic
+   new-world/fresh-seed and cold world-create/load checks as secondary lanes.
+   The current visual assessment is generally good; keep fog/water silhouettes
+   separate unless same-frame evidence ties them to renderer debt.
+
+M470 reports, logs, and exact invocation are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m470--m335-clean-route-after-resident-column-unload-index-2026-10-08).
+Plan status: **the unload optimization has a clean full-route measurement and
+the M335 route/speed/height gates pass. Visual assessment remains good, and
+post-stop mesh-hole proxy is zero. The run still has readiness/relight debt at
+stop, a nonzero in-flight mesh-hole proxy, and 177 spikes. A brief operator-
+visible underwater light patch correlated with two pending-light focus samples;
+no pixel-level witness exists yet. M471 is in progress.**

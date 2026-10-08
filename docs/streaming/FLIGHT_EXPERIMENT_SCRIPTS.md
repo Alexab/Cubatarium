@@ -3810,3 +3810,94 @@ Treat M469 source wait and performance numbers as trace-contaminated. The next
 source run should use independent source/save/unload trace flags after the
 instrumentation split; performance acceptance requires a capture-disabled,
 source-trace-disabled M335 run.
+
+## M470 — M335 clean route after resident-column unload index (2026-10-08)
+
+M470 ran the established visible, no-teleport World_164/M335 route with
+absolute eye Y=70, yaw 180°, pitch -30°, and speed scale 1. The Release app
+was built from `4d57b2332a2e3c4de863af11d007dd7757ffe549`, SHA-256
+`e7c09f8adeec4e1003355899e042dd3e4dbefbe557c79249af64b551d74d08d2`. The
+app exited normally, traveled 14,784 blocks (focus X `7 -> -917`), and held
+median speed 5.19653 blocks/s. Measured camera eye Y stayed at 70.
+
+All diagnostic trace flags were off. The product report had 1,457 periods
+(1,455 steady), 177 spikes, wall median 25.9237 ms / p95 37.5732 ms, and a
+405.626 ms maximum single-frame spike. Unload time was 0.0717 ms median,
+0.3769 ms p95, and 21.5208 ms maximum. M469's comparison is instrumentation
+contaminated: its synchronous source/save/unload trace rows were coupled and
+filled a 667 MB log. M470 is a clean performance sample, but not a controlled
+A/B measurement of the unload-index change.
+
+Analyzer outcomes: `visual_holes_rate=0.0639175` with full sample coverage,
+longest proxy run 10 periods, and zero post-stop mesh-hole proxy. This is not
+framebuffer pixel evidence. `unfinished_visual=27` remained at stop, and the
+product run failed readiness/relight/convergence gates even though the route
+and app succeeded.
+
+Operator observation during the flight: a lighter square appeared underwater
+and passed beneath the camera, resembling unfinished lighting. M470 had no
+pixel/depth capture, so the appearance could not be tied to a rendered pixel.
+The nearest telemetry rows (645-646, approximately 2-second aggregates) were
+at X=-6,425/-6,436, focus CX=-402/-403, Y=70. Both showed
+`chunk_meshed_unlit=1`, `chunk_meshed_unlit_hidden=1`, and
+`pending_light_focus=1`; both showed `visual_holes=0` and
+`near_focus_holes=0`. The next period returned the unlit and pending-focus
+counts to zero. One final relight apply occurred in the latter interval. This
+is a temporal/spatial correlation only: aggregate focus counts do not identify
+the exact mesh, pixel, underwater state, or visible cause.
+
+Artifacts (raw reports and traces are local run outputs):
+
+- Flight report: `bin/suite_reports/engine_refactor/m470_world164_m335_uninstrumented_20261008.json`
+- Perf JSONL: `bin/logs/perf_20261008-170152_5632.jsonl` (55,606,457 bytes)
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-170148.5632` (956,271 bytes)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2900 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m470_world164_m335_uninstrumented --report bin/suite_reports/engine_refactor/m470_world164_m335_uninstrumented_20261008.json --process-timeout 7200
+```
+
+## M471 — M335 underwater light witness (in progress, 2026-10-08)
+
+M471 repeats the same start, eye height, yaw, pitch, movement scale, world,
+and no-teleport behavior, and runs through X≈-6.4k. It enables
+`CUBA_VISUAL_BLACK_TRACE=1` and
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY=1`, with dense/focus probes and
+source/save/unload traces off. On selected screen-ray frames, this captures
+same-frame color/depth at a 20-column by five-row grid and records the aligned
+streaming ray/renderer pixel diagnostics. This is sparse sampling, not a full
+screenshot; the captured route is a diagnostic, not a clean performance
+baseline. Awaiting the app/report/metric logs before interpreting any result.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1325 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m471_world164_m335_underwater_light_witness --report bin/suite_reports/engine_refactor/m471_world164_m335_underwater_light_witness_20261008.json --process-timeout 7200
+```
