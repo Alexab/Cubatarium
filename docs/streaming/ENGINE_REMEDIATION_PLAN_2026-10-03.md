@@ -5765,21 +5765,37 @@ between sampled pixels or existed only briefly. M471 also showed recurring
 aggregate relight/mesh debt elsewhere on the route; those focus counts do not
 identify what was rendered.
 
-The next diagnostic should preserve M335's flight profile and save full
-framebuffer PNGs only within the observed X interval (about -6,4k), at a
-sub-second cadence. This is preferable to increasing full-route pixel logs:
-one actual screenshot can show whether the patch is water color/fog, a
-surface-light discontinuity, or a mesh boundary. If it recurs, join its saved
-frame to the existing M471 light/depth fields before changing renderer or
-lighting behavior. Keep M470 as the clean performance lane and retain
-World_164/M335 as the repeated-world control; new-world/cold-start checks stay
-secondary.
+M472 added bounded framebuffer capture and completed without an application
+error, but its 1,325-second route ended at X≈-5,912 after 6,032 blocks, short
+of the 6,400-block minimum. No capture window was entered and no PNG was saved.
+The readiness/mesh-hole proxy was nonzero during the route; it does not prove
+that the underwater patch was visually incomplete.
+
+M473 kept the same route, height, speed, and capture bounds, with a 1,455-second
+fly phase to reach the observation window. Windows entered sleep about four
+minutes after launch following a Button/Lid power event and resumed about an
+hour later. The application then stopped before the target area, with its last
+complete movement record at X=-2,347; the run has no final report or PNGs. The
+partial telemetry has zero blocked substeps, but the near-focus mesh-hole
+proxy reached 1 in 57 records and visible-black focus reached 18 in 137
+records. These are not framebuffer observations and do not cover the reported
+patch. The fixed-day wrapper was interrupted before its cleanup;
+`world_data.json` was restored from the exact backup and
+verified against SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+`users.json` still matched its preflight SHA-256.
+
+Next, repeat the full M335 route with the same narrow capture window and enough
+continuous awake time to enter it. A result is valid only if route completion
+reaches the target corridor and saved frames are present. Join each frame to
+M471's pixel/depth fields before deciding whether the patch is water/fog color,
+a surface-light discontinuity, or a mesh boundary. Keep M470 as the clean
+performance lane and World_164/M335 as the repeated-world control; new-world
+and cold-start checks stay secondary.
 
 M471 reports, summaries, raw logs, and exact invocation are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m471--m335-underwater-light-witness-2026-10-08).
-Plan status: **M470's pending-light correlation remains plausible, but M471
-found no light debt on 264 sampled corridor pixel hits and no same-area ray
-candidate. This is inconclusive because the capture was sparse and had no
-screenshots. Add bounded full-frame capture, repeat the corridor, then decide
-whether the patch belongs to lighting, fluid/fog rendering, or normal world
-variation.**
+Plan status: **M470's pending-light correlation remains plausible. M471 found
+no light debt on 264 sampled corridor pixel hits; M472 fell short of the
+capture corridor, and M473 was interrupted by system sleep. There is still no
+full-frame evidence of the reported square. Complete the bounded capture run
+before changing rendering or lighting behavior.**

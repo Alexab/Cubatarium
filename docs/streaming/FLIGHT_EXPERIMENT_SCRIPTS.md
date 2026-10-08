@@ -3938,14 +3938,12 @@ $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1325 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m471_world164_m335_underwater_light_witness --report bin/suite_reports/engine_refactor/m471_world164_m335_underwater_light_witness_20261008.json --process-timeout 7200
 ```
 
-## M472 — bounded full-frame underwater-light capture (planned, 2026-10-08)
+## M472 — bounded full-frame underwater-light capture (executed, incomplete, 2026-10-08)
 
-M472 will keep the M335 world, route, speed, height, yaw, pitch, visible GUI,
-and no-teleport settings unchanged. It will save full framebuffer PNGs only
-inside a narrow X window around the M470 observation, at a sub-second
-interval. This supplements the sparse M471 pixel/depth witnesses and should
-show an actual square if it recurs. Capture timing is diagnostic and must not
-be compared to M470's clean performance run.
+M472 kept the M335 world, route, speed, height, yaw, pitch, visible GUI, and
+no-teleport settings unchanged. It was intended to save framebuffer PNGs only
+inside the X window around the M470 observation. Capture timing is diagnostic
+and must not be compared to M470's clean performance run.
 
 The capture helper landed in `5520ae889c8c3bba83d92595f458756b2cb857d1` and
 was built as Release target `Cubatarium`; executable SHA-256 is
@@ -3975,5 +3973,50 @@ $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1325 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m472_world164_m335_underwater_capture --report bin/suite_reports/engine_refactor/m472_world164_m335_underwater_capture_20261008.json --process-timeout 7200
 ```
 
-Expected PNGs and the flight report are local experimental artifacts and
-should not be staged with source changes.
+M472 exited successfully, but traveled only 6,032 blocks (focus X `7 -> -370`,
+camera X≈-5,912) against the 6,400-block minimum. The capture window
+[-6,460,-6,400] was never entered, so no PNG was saved. The report is
+`bin/suite_reports/engine_refactor/m472_world164_m335_underwater_capture_20261008.json`;
+the raw perf log is `bin/logs/perf_20261008-183133_24632.jsonl`. Its mesh-hole
+proxy was nonzero, which is not framebuffer evidence.
+
+## M473 — extended M335 capture interrupted by sleep (2026-10-08)
+
+M473 kept M472's world, start, eye height, yaw, pitch, scale, visible GUI, and
+capture window. Only the fly phase increased from 1,325 to 1,455 seconds so the
+route could reach the target corridor.
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m473_underwater_light_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_SAVE_TRACE='0'
+$env:CUBA_UNLOAD_TRACE='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m473_world164_m335_underwater_capture --report bin/suite_reports/engine_refactor/m473_world164_m335_underwater_capture_20261008.json --process-timeout 7200
+```
+
+Windows entered sleep about four minutes after launch due to a Button/Lid
+event and resumed about an hour later. The app stopped before the capture
+window at X=-2,347. The perf log
+`bin/logs/perf_20261008-185605_40568.jsonl` has 808 complete rows and one
+truncated row; there is no final flight report or PNG. On the partial rows,
+blocked substeps stayed at zero; the near-focus mesh-hole proxy reached 1 in
+57 records and visible-black focus reached 18 in 137 records. These are
+readiness/proxy values rather than framebuffer samples and do not cover the
+reported square.
+
+The fixed-day wrapper did not reach its cleanup after the interruption. The
+original `world_data.json` was restored from its backup and verified byte for
+byte (SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`). The
+`users.json` hash matched its preflight state. The wrapper now recovers a stale
+backup only when the current world metadata exactly matches the expected
+fixed-day payload; divergent data still stops for inspection.
+
+Repeat this capture on the same M335 route when a continuous awake session can
+reach the X window. A valid result requires both route completion and saved
+frames. Keep this diagnostic separate from performance baselines. Captures and
+flight reports are local artifacts and should not be staged with source changes.
