@@ -252,16 +252,20 @@ def main() -> int:
          if "renderer_pixel_y" in row}
     )
     pixel_probe_by_ray_sample: dict[tuple[int, int, int], dict[str, object]] = {}
-    pixel_join_mapping_available = len(pixel_xs) == 20 and len(pixel_ys) in (4, 8)
+    pixel_join_mapping_available = len(pixel_xs) == 20 and len(pixel_ys) in (4, 5, 8)
     pixel_join_mapping_reason = None
     if pixel_join_mapping_available:
-        # Pixel probes use GL bottom-left framebuffer coordinates. Infer the
-        # viewport grid from the regular 20-column and 4/8-row sample centers,
-        # then map them onto the streaming probe's screen-ray grid.
-        viewport_height = (pixel_ys[-1] - pixel_ys[0]) * len(pixel_ys) / (
-            len(pixel_ys) - 1
-        )
-        viewport_y = pixel_ys[0] - viewport_height / (2 * len(pixel_ys))
+        # Pixel probes use GL bottom-left framebuffer coordinates. Synchronized
+        # five-row probes add the .5625 screen-ray scanline to the regular four
+        # rows; infer that viewport from the .125/.875 endpoint spacing.
+        if len(pixel_ys) == 5:
+            viewport_height = (pixel_ys[-1] - pixel_ys[0]) / 0.75
+            viewport_y = pixel_ys[0] + 0.5 - viewport_height * 0.125
+        else:
+            viewport_height = (pixel_ys[-1] - pixel_ys[0]) * len(pixel_ys) / (
+                len(pixel_ys) - 1
+            )
+            viewport_y = pixel_ys[0] - viewport_height / (2 * len(pixel_ys))
         pixel_y_to_ray_row: dict[int, int] = {}
         for pixel_y in pixel_ys:
             top_y = viewport_height - (pixel_y - viewport_y) - 0.5
@@ -284,7 +288,7 @@ def main() -> int:
             pixel_probe_by_ray_sample[key] = pixel
     else:
         pixel_join_mapping_reason = (
-            f"expected 20 pixel columns and 4 or 8 pixel rows; found "
+            f"expected 20 pixel columns and 4, 5, or 8 pixel rows; found "
             f"{len(pixel_xs)} columns and {len(pixel_ys)} rows"
         )
 

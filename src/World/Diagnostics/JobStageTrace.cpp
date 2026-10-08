@@ -15,6 +15,7 @@ namespace
 {
 
 std::atomic<uint64_t> LatestCameraBandPeakFrameEpoch{0};
+std::atomic<uint64_t> LatestScreenRayTraceFrameEpoch{0};
 
 struct Ring
 {
@@ -469,6 +470,13 @@ bool UJobStageTrace::HasCameraBandPeakTraceForFrame(uint64_t frame_epoch)
              frame_epoch;
 }
 
+bool UJobStageTrace::HasScreenRayTraceForFrame(uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestScreenRayTraceFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
 void UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
     uint64_t frame_epoch,
     void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
@@ -496,6 +504,11 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
       record.frame_epoch != 0)
   {
     LatestCameraBandPeakFrameEpoch.store(record.frame_epoch,
+                                          std::memory_order_release);
+  }
+  if (record.sample_kind == 10 && record.frame_epoch != 0)
+  {
+    LatestScreenRayTraceFrameEpoch.store(record.frame_epoch,
                                          std::memory_order_release);
   }
   if (record.sample_kind == 0)

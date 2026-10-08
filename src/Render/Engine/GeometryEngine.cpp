@@ -109,6 +109,7 @@ bool DebugTransparentFragmentMarkerEnabled()
 constexpr int kPixelProbeColumns = 20;
 constexpr int kPixelProbeDefaultRows = 4;
 constexpr int kPixelProbeDenseRows = 8;
+constexpr int kScreenRayAlignedPixelRows = 5;
 constexpr size_t kPixelProbeSampleCount =
     static_cast<size_t>(kPixelProbeColumns * kPixelProbeDenseRows);
 constexpr float kOpaqueVertexLightMatchDistance = 0.25f;
@@ -134,8 +135,30 @@ bool PixelProbeOnFocusChangeEnabled()
   return enabled;
 }
 
-int PixelProbeSampleY(int row, int height, int rows)
+bool PixelProbeOnScreenRayEnabled()
 {
+  static const bool enabled = []() {
+    const char *value = std::getenv(
+        "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+int PixelProbeSampleY(int row, int height, int rows,
+                      bool screen_ray_aligned_rows = false)
+{
+  if (screen_ray_aligned_rows && rows == kScreenRayAlignedPixelRows)
+  {
+    // Match the five top-left normalized rows used by the streaming ray
+    // sampler, ordered bottom-to-top for OpenGL readback.
+    constexpr std::array<float, kScreenRayAlignedPixelRows> kScreenRows = {
+        0.875f, 0.625f, 0.5625f, 0.375f, 0.125f};
+    return std::clamp(
+        static_cast<int>((1.0f - kScreenRows[static_cast<size_t>(row)]) *
+                         static_cast<float>(height)),
+        0, height - 1);
+  }
   const int y0 = row * height / rows;
   const int y1 = (row + 1) * height / rows;
   return std::clamp((y0 + y1) / 2, 0, height - 1);
@@ -145,6 +168,8 @@ struct OpaquePixelProbeCapture
 {
   bool active{false};
   uint64_t probe_id{0};
+  int rows{0};
+  bool screen_ray_aligned_rows{false};
   std::array<uint32_t, kPixelProbeSampleCount> rgba{};
   std::array<float, kPixelProbeSampleCount> depth{};
 };
@@ -159,7 +184,7 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
   {
     return;
   }
-  const int rows = PixelProbeRows();
+  const int rows = capture.rows > 0 ? capture.rows : PixelProbeRows();
 
   // Read one full-width scanline in each vertical band. Dense diagnostic mode
   // adds rows where the full-frame captures showed bounded water-color
@@ -169,7 +194,8 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
   std::vector<GLfloat> depths(static_cast<size_t>(width) * rows);
   for (int row = 0; row < rows; ++row)
   {
-    const int local_y = PixelProbeSampleY(row, height, rows);
+    const int local_y = PixelProbeSampleY(
+        row, height, rows, capture.screen_ray_aligned_rows);
     glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
                  GL_UNSIGNED_BYTE,
                  pixels.data() + static_cast<size_t>(row) * width * 4u);
@@ -683,13 +709,17 @@ void CaptureTransparentPixelProbe(
   {
     return;
   }
-  const int rows = PixelProbeRows();
+  const int rows = opaque_capture.rows > 0 ? opaque_capture.rows
+                                           : PixelProbeRows();
+  const bool screen_ray_aligned_rows =
+      opaque_capture.screen_ray_aligned_rows;
 
   // Match the opaque-depth probe's active scanlines across the view.
   std::vector<GLubyte> pixels(static_cast<size_t>(width) * rows * 4u);
   for (int row = 0; row < rows; ++row)
   {
-    const int local_y = PixelProbeSampleY(row, height, rows);
+    const int local_y =
+        PixelProbeSampleY(row, height, rows, screen_ray_aligned_rows);
     glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
                  GL_UNSIGNED_BYTE,
                  pixels.data() + static_cast<size_t>(row) * width * 4u);
@@ -731,7 +761,8 @@ void CaptureTransparentPixelProbe(
 
   for (int row = 0; row < rows; ++row)
   {
-    const int local_y = PixelProbeSampleY(row, height, rows);
+    const int local_y =
+        PixelProbeSampleY(row, height, rows, screen_ray_aligned_rows);
     for (int column = 0; column < kPixelProbeColumns; ++column)
     {
       const int x0 = column * width / kPixelProbeColumns;
@@ -3322,11 +3353,18 @@ void UGeometryEngine::DrawCubeGeometry()
       static bool have_last_probe_focus = false;
       static glm::ivec2 last_probe_focus(0);
       static uint64_t last_camera_band_peak_probe_epoch = 0;
+      static uint64_t last_screen_ray_probe_epoch = 0;
       const bool probe_on_focus_change = PixelProbeOnFocusChangeEnabled();
+      const bool probe_on_screen_ray = PixelProbeOnScreenRayEnabled();
       const bool camera_band_peak_probe =
           UJobStageTrace::HasCameraBandPeakTraceForFrame(
               pixel_probe_frame_epoch) &&
           last_camera_band_peak_probe_epoch != pixel_probe_frame_epoch;
+      const bool screen_ray_probe =
+          probe_on_screen_ray &&
+          UJobStageTrace::HasScreenRayTraceForFrame(
+              pixel_probe_frame_epoch) &&
+          last_screen_ray_probe_epoch != pixel_probe_frame_epoch;
       const bool focus_changed =
           !have_last_probe_focus || last_probe_focus.x != probe_focus.x ||
           last_probe_focus.y != probe_focus.z;
@@ -3336,12 +3374,20 @@ void UGeometryEngine::DrawCubeGeometry()
               ? 60u
               : 120u;
       if (render_probe_count % probe_stride == 0u ||
-          (probe_on_focus_change && focus_changed) || camera_band_peak_probe)
+          (probe_on_focus_change && focus_changed) || camera_band_peak_probe ||
+          screen_ray_probe)
       {
         pixel_probe_capture.probe_id = render_probe_count;
+        pixel_probe_capture.rows =
+            screen_ray_probe ? kScreenRayAlignedPixelRows : PixelProbeRows();
+        pixel_probe_capture.screen_ray_aligned_rows = screen_ray_probe;
         if (camera_band_peak_probe)
         {
           last_camera_band_peak_probe_epoch = pixel_probe_frame_epoch;
+        }
+        if (screen_ray_probe)
+        {
+          last_screen_ray_probe_epoch = pixel_probe_frame_epoch;
         }
         last_probe_focus = glm::ivec2(probe_focus.x, probe_focus.z);
         have_last_probe_focus = true;

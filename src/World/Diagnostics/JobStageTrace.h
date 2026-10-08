@@ -690,9 +690,9 @@ public:
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   // M352 showed that 2,048 samples retained only the last 26 focus scans.
-  // At 80 pixels per scan, 32,768 records retain 409 scans across a full
-  // no-teleport route, including the focus-change and periodic captures.
-  static constexpr size_t kVisualPixelTraceRingCapacity = 32768;
+  // The five-row screen-ray-aligned probe adds 100 samples per synchronized
+  // scan; retain those alongside the periodic four-row captures.
+  static constexpr size_t kVisualPixelTraceRingCapacity = 40960;
   /// Retain a complete opt-in history of bounded streaming screen-ray probes.
   // The screen-ray selector rotates through four horizontal phases. Keeping
   // the opt-in audit trace at 15-frame cadence retains all phases for a full
@@ -761,6 +761,9 @@ public:
   /// True when a camera-band peak was recorded during this render epoch.
   /// Lets the renderer take one synchronized sparse pixel/depth sample.
   static bool HasCameraBandPeakTraceForFrame(uint64_t frame_epoch);
+  /// True when the streaming screen-ray grid was recorded during this render
+  /// epoch. Lets an opt-in diagnostic pixel probe sample the same coordinates.
+  static bool HasScreenRayTraceForFrame(uint64_t frame_epoch);
   static void ForEachCameraBandPeakTraceForFrame(
       uint64_t frame_epoch,
       void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx);
