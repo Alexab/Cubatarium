@@ -404,7 +404,9 @@ void UWorldPersistence::ProcessColumnLightFlagSaveResults(
   }
   for (AsyncColumnLightFlagsSaveResult &result : results)
   {
-    if (IsStreamingDetailTraceEnabled())
+    if (IsStreamingDetailTraceEnabled() &&
+        (!result.success || result.worker_queue_wait_ms >= 10.0 ||
+         result.worker_service_ms >= 50.0))
     {
       const std::string message =
           "detail=light_flags_save_result revision=" +
@@ -3711,7 +3713,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
           std::chrono::steady_clock::now() - light_flags_result_drain_started)
           .count();
   if (IsStreamingDetailTraceEnabled() &&
-      (metrics.light_flags_result_drain_ms >= 5.0 ||
+      (metrics.light_flags_result_drain_ms >= 25.0 ||
        metrics.light_flags_result_queue_mutex_wait_ms >= 2.0 ||
        metrics.light_flags_result_queue_mutex_held_ms >= 2.0))
   {
