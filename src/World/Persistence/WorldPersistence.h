@@ -36,6 +36,9 @@ struct AsyncChunkIoTickMetrics
   double tick_wall_ms{0.0};
   double unattributed_ms{0.0};
   double light_flags_result_drain_ms{0.0};
+  double light_flags_result_queue_mutex_wait_ms{0.0};
+  double light_flags_result_queue_mutex_held_ms{0.0};
+  std::size_t light_flags_result_count{0};
   double queue_snapshot_ms{0.0};
   double discard_cancelled_ms{0.0};
   double result_selection_ms{0.0};
@@ -254,7 +257,10 @@ private:
   bool PrioritizeNearestTerrainColumnRelight(UWorld &world,
                                              glm::ivec3 focus_ground,
                                              int radius_chunks, int scan_cap);
-  void ProcessColumnLightFlagSaveResults();
+  void ProcessColumnLightFlagSaveResults(
+      double *queue_mutex_wait_ms = nullptr,
+      double *queue_mutex_held_ms = nullptr,
+      std::size_t *result_count = nullptr);
   bool FlushColumnLightFlagsForWorldSwitch();
 
   // Storage outlives AsyncChunkIo's worker pool: warmup jobs retain its

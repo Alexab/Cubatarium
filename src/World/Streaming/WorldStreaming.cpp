@@ -1821,6 +1821,14 @@ void UWorldStreaming::RefreshStreamingPressure(
   int sticky_remesh = 0;
   int pending_dark = 0;
   int provisional_light_preview = 0;
+  double sticky_black_ms = 0.0;
+  double pending_dark_ms = 0.0;
+  double provisional_preview_ms = 0.0;
+  std::size_t sticky_scanned_columns = 0;
+  std::size_t sticky_y_slice_checks = 0;
+  std::size_t pending_scanned_columns = 0;
+  std::size_t pending_y_slice_checks = 0;
+  std::size_t provisional_scanned_meshes = 0;
   if (cruise_ring_reuse && !sticky_ring_resync)
   {
     sticky_remesh = ring_sample_prev.black_sticky;
@@ -1830,17 +1838,59 @@ void UWorldStreaming::RefreshStreamingPressure(
   }
   else
   {
+    auto helper_t0 = std::chrono::high_resolution_clock::now();
     sticky_remesh =
-        world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
+        world.CountBlackStickyFocusMeshes(focus_ground, focus_radius,
+                                          &sticky_scanned_columns,
+                                          &sticky_y_slice_checks);
+    sticky_black_ms = lap_ms(helper_t0);
+    helper_t0 = std::chrono::high_resolution_clock::now();
     pending_dark =
-        world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+        world.CountPendingDarkFocusMeshes(focus_ground, focus_radius,
+                                          &pending_scanned_columns,
+                                          &pending_y_slice_checks);
+    pending_dark_ms = lap_ms(helper_t0);
+    helper_t0 = std::chrono::high_resolution_clock::now();
     provisional_light_preview = world.CountProvisionalLightPreviewFocusMeshes(
-        focus_ground, focus_radius);
+        focus_ground, focus_radius, &provisional_scanned_meshes);
+    provisional_preview_ms = lap_ms(helper_t0);
     rp.last_sticky_focus_xz = glm::ivec2(focus_ground.x, focus_ground.z);
     rp.last_sticky_keep_cols = keep_cols_now;
     pt.PrepRefreshRingResyncMs += lap_ms(sticky_t0);
   }
   pt.PrepRefreshStickyMs = lap_ms(sticky_t0);
+  if (pt.PrepRefreshRingResyncMs >= 5.0)
+  {
+    const char *detail_trace_env =
+        std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+    if (detail_trace_env && detail_trace_env[0] == '1')
+    {
+      const std::string message =
+          "detail=ring_resync focus=(" +
+          std::to_string(focus_ground.x) + "," +
+          std::to_string(focus_ground.z) + ") radius=" +
+          std::to_string(focus_radius) + " elapsed_ms=" +
+          std::to_string(pt.PrepRefreshRingResyncMs) + " sticky_ms=" +
+          std::to_string(sticky_black_ms) + " pending_dark_ms=" +
+          std::to_string(pending_dark_ms) + " provisional_ms=" +
+          std::to_string(provisional_preview_ms) + " sticky_set_n=" +
+          std::to_string(world.StickyRemeshAfterLight.size()) +
+          " sticky_scanned_n=" + std::to_string(sticky_scanned_columns) +
+          " sticky_y_checks_n=" + std::to_string(sticky_y_slice_checks) +
+          " sticky_match_n=" + std::to_string(sticky_remesh) +
+          " pending_set_n=" +
+          std::to_string(world.PendingLightBeforeMesh.size()) +
+          " pending_scanned_n=" +
+          std::to_string(pending_scanned_columns) +
+          " pending_y_checks_n=" +
+          std::to_string(pending_y_slice_checks) + " pending_match_n=" +
+          std::to_string(pending_dark) + " preview_mesh_scan_n=" +
+          std::to_string(provisional_scanned_meshes) +
+          " preview_match_n=" +
+          std::to_string(provisional_light_preview);
+      CubatariumLogInfo("StreamingDetail", message);
+    }
+  }
   const int dark_preview = sticky_remesh + pending_dark;
   // Cruise: CountUnfinishedVisualNear/ByFacing walk the whole focus ring with
   // IsTerrainChunkComplete + IsColumnRenderReady — ~5–9ms of stream_ms on

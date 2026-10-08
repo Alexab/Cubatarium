@@ -213,20 +213,46 @@ public:
     return PushUnlocked(std::move(item), dropped_out);
   }
 
-  std::vector<T> DrainAll()
+  std::vector<T> DrainAll(double *mutex_wait_ms = nullptr,
+                          double *mutex_held_ms = nullptr)
   {
-    std::lock_guard<std::mutex> lock(Mutex);
-    std::vector<T> drained;
-    drained.reserve(Count);
-    for (std::size_t i = 0; i < Count; ++i)
+    auto drain_unlocked = [&]()
     {
-      drained.push_back(std::move(Items[(Head + i) % Items.size()]));
+      std::vector<T> drained;
+      drained.reserve(Count);
+      for (std::size_t i = 0; i < Count; ++i)
+      {
+        drained.push_back(std::move(Items[(Head + i) % Items.size()]));
+      }
+      Head = 0;
+      Count = 0;
+      if (Cap == 0)
+      {
+        Items.clear();
+      }
+      return drained;
+    };
+    if (!mutex_wait_ms && !mutex_held_ms)
+    {
+      std::lock_guard<std::mutex> lock(Mutex);
+      return drain_unlocked();
     }
-    Head = 0;
-    Count = 0;
-    if (Cap == 0)
+
+    const auto lock_wait_started = std::chrono::steady_clock::now();
+    std::unique_lock<std::mutex> lock(Mutex);
+    const auto lock_acquired = std::chrono::steady_clock::now();
+    if (mutex_wait_ms)
     {
-      Items.clear();
+      *mutex_wait_ms = std::chrono::duration<double, std::milli>(
+                           lock_acquired - lock_wait_started)
+                           .count();
+    }
+    std::vector<T> drained = drain_unlocked();
+    if (mutex_held_ms)
+    {
+      *mutex_held_ms = std::chrono::duration<double, std::milli>(
+                           std::chrono::steady_clock::now() - lock_acquired)
+                           .count();
     }
     return drained;
   }

@@ -76,6 +76,8 @@ struct AsyncColumnLightFlagsSaveResult
   uint64_t revision{0};
   bool success{false};
   std::string error;
+  double worker_queue_wait_ms{0.0};
+  double worker_service_ms{0.0};
 };
 
 class UAsyncChunkIO
@@ -157,7 +159,8 @@ public:
                                              mutex_held_ms);
   }
   std::vector<AsyncChunkSaveRequest> DrainSaves();
-  std::vector<AsyncColumnLightFlagsSaveResult> DrainColumnLightFlagsSaves();
+  std::vector<AsyncColumnLightFlagsSaveResult> DrainColumnLightFlagsSaves(
+      double *mutex_wait_ms = nullptr, double *mutex_held_ms = nullptr);
   bool WaitForColumnLightFlagsSaveIdleFor(std::chrono::milliseconds timeout);
   void WaitForColumnLightFlagsSaveIdle();
   bool CompletedColumnLightFlagsSavesEmpty() const;

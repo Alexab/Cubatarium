@@ -4,6 +4,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/JsonChunkSerializer.h"
+#include "App/Platform/Log.h"
 #include <cstdlib>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -27,19 +28,30 @@ bool IsAsyncChunkIoTraceEnabled()
   const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
   return value && value[0] == '1';
 }
+
+bool IsStreamingDetailTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+  return value && value[0] == '1';
+}
 } // namespace
 
 void UAsyncChunkIO::RequestSaveColumnLightFlags(
     std::string worldFolder, const uint64_t revision,
     std::vector<glm::ivec2> completeColumns)
 {
+  const auto enqueue_started = std::chrono::steady_clock::now();
   ColumnLightFlagsPool.Enqueue(
       [this, worldFolder = std::move(worldFolder), revision,
-       completeColumns = std::move(completeColumns)]() mutable
+       completeColumns = std::move(completeColumns), enqueue_started]() mutable
       {
+        const auto worker_started = std::chrono::steady_clock::now();
         AsyncColumnLightFlagsSaveResult result;
         result.worldFolder = worldFolder;
         result.revision = revision;
+        result.worker_queue_wait_ms = std::chrono::duration<double, std::milli>(
+                                          worker_started - enqueue_started)
+                                          .count();
         try
         {
           std::sort(completeColumns.begin(), completeColumns.end(),
@@ -130,7 +142,26 @@ void UAsyncChunkIO::RequestSaveColumnLightFlags(
         {
           result.error = "unknown_exception";
         }
-        CompletedColumnLightFlagsSaves.Push(std::move(result));
+        result.worker_service_ms = std::chrono::duration<double, std::milli>(
+                                       std::chrono::steady_clock::now() -
+                                       worker_started)
+                                       .count();
+        const uint64_t result_revision = result.revision;
+        double publish_wait_ms = 0.0;
+        double publish_held_ms = 0.0;
+        CompletedColumnLightFlagsSaves.Push(std::move(result),
+                                             &publish_wait_ms,
+                                             &publish_held_ms);
+        if (IsStreamingDetailTraceEnabled() &&
+            (publish_wait_ms >= 1.0 || publish_held_ms >= 1.0))
+        {
+          const std::string message =
+              "detail=light_flags_result_publish revision=" +
+              std::to_string(result_revision) + " queue_wait_ms=" +
+              std::to_string(publish_wait_ms) + " queue_held_ms=" +
+              std::to_string(publish_held_ms);
+          CubatariumLogInfo("StreamingDetail", message);
+        }
       });
 }
 
@@ -538,9 +569,11 @@ std::vector<AsyncChunkSaveRequest> UAsyncChunkIO::DrainSaves()
 }
 
 std::vector<AsyncColumnLightFlagsSaveResult>
-UAsyncChunkIO::DrainColumnLightFlagsSaves()
+UAsyncChunkIO::DrainColumnLightFlagsSaves(double *mutex_wait_ms,
+                                          double *mutex_held_ms)
 {
-  return CompletedColumnLightFlagsSaves.DrainAll();
+  return CompletedColumnLightFlagsSaves.DrainAll(mutex_wait_ms,
+                                                  mutex_held_ms);
 }
 
 bool UAsyncChunkIO::WaitForColumnLightFlagsSaveIdleFor(

@@ -473,7 +473,9 @@ public:
                                         int radius_chunks, int min_cy,
                                         int max_cy,
                                         const std::function<bool(glm::ivec3)> &
-                                            is_dynamic_preview = {}) const;
+                                            is_dynamic_preview = {},
+                                        std::size_t *out_scanned_entries =
+                                            nullptr) const;
   /// R06 R2: last-applied BoundaryOverlay still active (sticky closing faces).
   bool HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const;
   /// True if overlay missing-face bit for shell face 0..5 is set.

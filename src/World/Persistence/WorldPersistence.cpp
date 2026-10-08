@@ -115,6 +115,12 @@ bool IsWorldColumnSourceTraceEnabled()
   return value && value[0] == '1';
 }
 
+bool IsStreamingDetailTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+  return value && value[0] == '1';
+}
+
 void LogWorldColumnSource(const char *source, const char *outcome,
                           glm::ivec3 ground, const std::string &details)
 {
@@ -369,15 +375,47 @@ void UWorldPersistence::SaveColumnLightFlagsIfDirty()
       std::move(complete_columns));
 }
 
-void UWorldPersistence::ProcessColumnLightFlagSaveResults()
+void UWorldPersistence::ProcessColumnLightFlagSaveResults(
+    double *queue_mutex_wait_ms, double *queue_mutex_held_ms,
+    std::size_t *result_count)
 {
+  if (queue_mutex_wait_ms)
+  {
+    *queue_mutex_wait_ms = 0.0;
+  }
+  if (queue_mutex_held_ms)
+  {
+    *queue_mutex_held_ms = 0.0;
+  }
+  if (result_count)
+  {
+    *result_count = 0;
+  }
   if (!AsyncChunkIo)
   {
     return;
   }
-  for (AsyncColumnLightFlagsSaveResult &result :
-       AsyncChunkIo->DrainColumnLightFlagsSaves())
+  std::vector<AsyncColumnLightFlagsSaveResult> results =
+      AsyncChunkIo->DrainColumnLightFlagsSaves(queue_mutex_wait_ms,
+                                               queue_mutex_held_ms);
+  if (result_count)
   {
+    *result_count = results.size();
+  }
+  for (AsyncColumnLightFlagsSaveResult &result : results)
+  {
+    if (IsStreamingDetailTraceEnabled())
+    {
+      const std::string message =
+          "detail=light_flags_save_result revision=" +
+          std::to_string(result.revision) + " success=" +
+          (result.success ? "1" : "0") + " worker_queue_wait_ms=" +
+          std::to_string(result.worker_queue_wait_ms) +
+          " worker_service_ms=" +
+          std::to_string(result.worker_service_ms) + " error=" +
+          (result.error.empty() ? "none" : result.error);
+      CubatariumLogInfo("StreamingDetail", message);
+    }
     LightCompleteSaveInFlight = false;
     LightCompleteSaveWorldFolder.clear();
     LightCompleteSaveRevision = 0;
@@ -3664,11 +3702,34 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
 
   const auto light_flags_result_drain_started =
       std::chrono::steady_clock::now();
-  ProcessColumnLightFlagSaveResults();
+  ProcessColumnLightFlagSaveResults(
+      &metrics.light_flags_result_queue_mutex_wait_ms,
+      &metrics.light_flags_result_queue_mutex_held_ms,
+      &metrics.light_flags_result_count);
   metrics.light_flags_result_drain_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - light_flags_result_drain_started)
           .count();
+  if (IsStreamingDetailTraceEnabled() &&
+      (metrics.light_flags_result_drain_ms >= 5.0 ||
+       metrics.light_flags_result_queue_mutex_wait_ms >= 2.0 ||
+       metrics.light_flags_result_queue_mutex_held_ms >= 2.0))
+  {
+    const double other_ms = (std::max)(
+        0.0, metrics.light_flags_result_drain_ms -
+                 metrics.light_flags_result_queue_mutex_wait_ms -
+                 metrics.light_flags_result_queue_mutex_held_ms);
+    const std::string message =
+        "detail=light_flags_result_drain elapsed_ms=" +
+        std::to_string(metrics.light_flags_result_drain_ms) +
+        " queue_wait_ms=" +
+        std::to_string(metrics.light_flags_result_queue_mutex_wait_ms) +
+        " queue_held_ms=" +
+        std::to_string(metrics.light_flags_result_queue_mutex_held_ms) +
+        " result_processing_ms=" + std::to_string(other_ms) +
+        " results_n=" + std::to_string(metrics.light_flags_result_count);
+    CubatariumLogInfo("StreamingDetail", message);
+  }
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
     const auto discard_started = std::chrono::steady_clock::now();

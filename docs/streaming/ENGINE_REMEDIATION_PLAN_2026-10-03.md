@@ -4984,9 +4984,8 @@ The six frame spikes include a 131.654 ms frame at `cx=-207` with 81.515 ms in
 `prep_refresh_facing_ms` plus 35.439 ms in transparent-scene work. Far-end
 frames at `cx=-885/-887` were 111.657/105.213 ms, while `UpdateStreaming` was
 only 1.35/1.43 ms; mesh-emerge/streaming-phase work dominates those samples.
-M461 should first establish which nested miss substage owns the `-207` cost,
-then correlate the far-end mesh-emerge spikes with existing mesh waterfall
-stage metrics before any behavior change.
+M461 did not reproduce the `-207` miss-path cost; its other leads are recorded
+in the following checkpoint.
 
 #### M461 checkpoint — miss-query spike not reproduced; pressure, ring resync, and IO remain (2026-10-08)
 
@@ -5075,11 +5074,13 @@ avoid exposing a partially shifted GPU map during window scroll.
 
 #### Current work order
 
-1. Add no-behavior diagnostics for M461 `CountUnfinishedVisualNear`
-   (call kind/cache path/work size), split the three ring-resync subcalls and
-   record candidate counts, and split light-flag result-drain queue-lock
-   wait/hold/result count from worker enqueue/service/publish timing. Keep the
-   diagnostics sampled so they do not materially change the M335 baseline.
+1. The no-behavior detail trace is now implemented behind
+   `CUBA_STREAMING_DETAIL_TRACE=1`. It logs slow unfinished-visual calls with
+   call path and work size, splits ring resync into sticky/pending/provisional
+   subcalls with scan counts, and records light-flag result queue wait/hold,
+   result count, and worker queue/service/publish timing. Only slow scans and
+   anomalous drains are logged; the environment variable stays off in normal
+   runs.
 2. Build only Release and repeat the exact M335 route as M462. Check whether
    the M461 unfinished scan, ring resync, or light-flag queue-drain anomalies
    recur; retain current rendering policy until a stable cost and correctness

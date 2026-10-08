@@ -8,6 +8,7 @@
 #include "App/Platform/Log.h"
 #include <cstdlib>
 #include <climits>
+#include <chrono>
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
 #include "Items/ToolCapabilities.h"
@@ -3470,6 +3471,41 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   }
   ++UnfinishedVisualCache.prep_calls_n;
   auto &cache = UnfinishedVisualCache;
+  const char *detail_trace_env = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
+  const bool detail_trace = detail_trace_env && detail_trace_env[0] == '1';
+  const auto detail_trace_started = std::chrono::steady_clock::now();
+  auto note_detail_trace = [&](const char *path, std::size_t work_n,
+                               std::size_t source_n, std::size_t dirty_n)
+  {
+    if (!detail_trace)
+    {
+      return;
+    }
+    const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() -
+                                 detail_trace_started)
+                                 .count();
+    if (elapsed_ms < 5.0)
+    {
+      return;
+    }
+    const int ring_width = 2 * radius_chunks + 1;
+    const int max_cy = std::max(
+        0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+    const std::string message =
+        std::string("detail=unfinished_visual path=") + path +
+        " focus=(" + std::to_string(focus_ground_chunk.x) + "," +
+        std::to_string(focus_ground_chunk.z) + ") radius=" +
+        std::to_string(radius_chunks) + " ring_columns=" +
+        std::to_string(ring_width * ring_width) + " max_cy=" +
+        std::to_string(max_cy) + " work_n=" + std::to_string(work_n) +
+        " source_n=" + std::to_string(source_n) + " dirty_n=" +
+        std::to_string(dirty_n) + " unfinished_n=" +
+        std::to_string(cache.count) + " mesh_census=" +
+        (cache.readiness.data_mesh_valid ? "1" : "0") +
+        " elapsed_ms=" + std::to_string(elapsed_ms);
+    CubatariumLogInfo("StreamingDetail", message);
+  };
   auto refresh_data_mesh_census = [&]()
   {
     FocusRingVisualCensus &census = cache.readiness;
@@ -4122,6 +4158,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     ++cache.prep_incremental_n;
     LastUnfinishedVisualSample = cache.count;
     LastUnfinishedVisualSampleValid = true;
+    note_detail_trace("cache_hit", 0, cache.unfinished_keys.size(), 0);
     return cache.count;
   }
   // Incremental: recheck dirty columns ∪ rim±1 and adjust cached count/set.
@@ -4130,6 +4167,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   if (cache.valid && cache.focus == focus_ground_chunk &&
       cache.radius == radius_chunks && !cache.dirty_cols.empty())
   {
+    const std::size_t dirty_source_n = cache.dirty_cols.size();
     if (static_cast<int>(cache.dirty_cols.size()) > kIncrementalDirtyMax)
     {
       // Truncate oldest dirty; keep cache.valid (Phase 1a: no full wipe).
@@ -4203,6 +4241,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     refresh_data_mesh_census();
     LastUnfinishedVisualSample = cache.count;
     LastUnfinishedVisualSampleValid = true;
+    note_detail_trace("incremental", recheck.size(), dirty_source_n,
+                      dirty_source_n);
     return cache.count;
   }
   int unfinished = 0;
@@ -4214,6 +4254,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   cache.unfinished_keys.reserve(static_cast<size_t>((2 * radius_chunks + 1) *
                                                     (2 * radius_chunks + 1) /
                                                     4));
+  std::size_t classified_columns = 0;
   for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
   {
     for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
@@ -4222,6 +4263,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           focus_ground_chunk.x + dx, focus_ground_chunk.z + dz);
       const FocusColumnVisualClass visual_class =
           ClassifyFocusColumnVisual(*this, focus_ground_chunk, dx, dz);
+      ++classified_columns;
       ++cache.readiness.counts[static_cast<size_t>(visual_class)];
       cache.readiness_by_column.emplace(key, visual_class);
       if (IsUnfinishedFocusColumnVisual(visual_class))
@@ -4240,6 +4282,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   refresh_data_mesh_census();
   LastUnfinishedVisualSample = unfinished;
   LastUnfinishedVisualSampleValid = true;
+  note_detail_trace("full", classified_columns, classified_columns, 0);
   return unfinished;
 }
 
@@ -6915,8 +6958,18 @@ std::string UWorld::FormatPendingLightFocusColumns(
 }
 
 int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                        int radius_chunks) const
+                                        int radius_chunks,
+                                        std::size_t *out_scanned_columns,
+                                        std::size_t *out_y_slice_checks) const
 {
+  if (out_scanned_columns)
+  {
+    *out_scanned_columns = 0;
+  }
+  if (out_y_slice_checks)
+  {
+    *out_y_slice_checks = 0;
+  }
   if (!MeshService || radius_chunks < 0 || StickyRemeshAfterLight.empty())
   {
     return 0;
@@ -6937,6 +6990,10 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
   int sticky = 0;
   for (const glm::ivec2 &key : StickyRemeshAfterLight)
   {
+    if (out_scanned_columns)
+    {
+      ++*out_scanned_columns;
+    }
     const int dist =
         std::max(std::abs(key.x - focus_ground_chunk.x),
                  std::abs(key.y - focus_ground_chunk.z));
@@ -6954,6 +7011,10 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
     }
     for (int cy = cy0; cy <= cy1; ++cy)
     {
+      if (out_y_slice_checks)
+      {
+        ++*out_y_slice_checks;
+      }
       const glm::ivec3 coord(key.x, cy, key.y);
       // I6: sticky set can linger after lit remesh; only count black/stale debt.
       if (MeshService->HasGreedyMesh(coord) &&
@@ -6968,8 +7029,13 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
 }
 
 int UWorld::CountProvisionalLightPreviewFocusMeshes(
-    glm::ivec3 focus_ground_chunk, int radius_chunks) const
+    glm::ivec3 focus_ground_chunk, int radius_chunks,
+    std::size_t *out_scanned_mesh_entries) const
 {
+  if (out_scanned_mesh_entries)
+  {
+    *out_scanned_mesh_entries = 0;
+  }
   if (!MeshService || radius_chunks < 0)
   {
     return 0;
@@ -7000,7 +7066,8 @@ int UWorld::CountProvisionalLightPreviewFocusMeshes(
       focus_ground_chunk, radius_chunks, FloorDiv(band_min, CHUNK_SIZE),
       FloorDiv(band_max, CHUNK_SIZE),
       [this](glm::ivec3 coord)
-      { return ShouldDrawProvisionalLightPreview(coord); });
+      { return ShouldDrawProvisionalLightPreview(coord); },
+      out_scanned_mesh_entries);
 }
 
 int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
@@ -7500,8 +7567,18 @@ bool UWorld::ShouldDeferRepairReticketUntilGpuApplied(
 }
 
 int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
-                                        int radius_chunks) const
+                                        int radius_chunks,
+                                        std::size_t *out_scanned_columns,
+                                        std::size_t *out_y_slice_checks) const
 {
+  if (out_scanned_columns)
+  {
+    *out_scanned_columns = 0;
+  }
+  if (out_y_slice_checks)
+  {
+    *out_y_slice_checks = 0;
+  }
   // Soft-defer first mesh under PendingLight: terrain exists but is black.
   // Separate from StickyRemeshAfterLight so SyncIdle is not spuriously opened.
   if (!MeshService || radius_chunks < 0 || PendingLightBeforeMesh.empty())
@@ -7524,6 +7601,10 @@ int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
   int dark = 0;
   for (const auto &entry : PendingLightBeforeMesh)
   {
+    if (out_scanned_columns)
+    {
+      ++*out_scanned_columns;
+    }
     const glm::ivec2 &key = entry.first;
     const int dist =
         std::max(std::abs(key.x - focus_ground_chunk.x),
@@ -7534,6 +7615,10 @@ int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
     }
     for (int cy = cy0; cy <= cy1; ++cy)
     {
+      if (out_y_slice_checks)
+      {
+        ++*out_y_slice_checks;
+      }
       if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
       {
         ++dark;
