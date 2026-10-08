@@ -33,12 +33,14 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Core/FrameStageWatchdog.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <vector>
@@ -149,6 +151,22 @@ bool CaptureFramebufferPng(GLFWwindow *window,
   }
   return stbi_write_png(path.string().c_str(), width, height, 4,
                         top_down.data(), static_cast<int>(row_bytes)) != 0;
+}
+
+float ReadFlightCaptureEnvFloat(const char *name, float fallback)
+{
+  const char *value = std::getenv(name);
+  if (!value || value[0] == '\0')
+  {
+    return fallback;
+  }
+  char *end = nullptr;
+  const float parsed = std::strtof(value, &end);
+  if (end == value || *end != '\0' || !std::isfinite(parsed))
+  {
+    return fallback;
+  }
+  return parsed;
 }
 
 } // namespace
@@ -508,24 +526,58 @@ void UWindowManager::Run()
     if (flight_capture_dir && flight_capture_dir[0] != '\0' && World &&
         Application && Application->GetState() == AppState::InGame)
     {
+      static const float capture_interval_seconds = std::clamp(
+          ReadFlightCaptureEnvFloat("CUBA_FLIGHT_CAPTURE_INTERVAL_SEC", 15.0f),
+          0.1f, 3600.0f);
+      static const float capture_min_x = ReadFlightCaptureEnvFloat(
+          "CUBA_FLIGHT_CAPTURE_MIN_X", -std::numeric_limits<float>::infinity());
+      static const float capture_max_x = ReadFlightCaptureEnvFloat(
+          "CUBA_FLIGHT_CAPTURE_MAX_X", std::numeric_limits<float>::infinity());
       static auto next_capture = std::chrono::steady_clock::time_point{};
       static uint32_t capture_index = 0;
       const auto capture_now = std::chrono::steady_clock::now();
-      if (next_capture == std::chrono::steady_clock::time_point{} ||
-          capture_now >= next_capture)
+      const auto camera = World->GetCurrentUserCamera();
+      const float camera_x = camera
+                                 ? camera->GetPosition().x
+                                 : std::numeric_limits<float>::quiet_NaN();
+      const bool inside_capture_x_range =
+          camera_x >= capture_min_x && camera_x <= capture_max_x;
+      if (!inside_capture_x_range)
       {
-        next_capture = capture_now + std::chrono::seconds(15);
+        // Capture immediately on each entry into the selected X interval.
+        next_capture = std::chrono::steady_clock::time_point{};
+      }
+      else if (next_capture == std::chrono::steady_clock::time_point{} ||
+               capture_now >= next_capture)
+      {
+        next_capture = capture_now +
+                       std::chrono::duration_cast<
+                           std::chrono::steady_clock::duration>(
+                           std::chrono::duration<double>(
+                               capture_interval_seconds));
         std::ostringstream filename;
         filename << "frame_" << std::setw(3) << std::setfill('0')
                  << capture_index++ << ".png";
+        const std::filesystem::path capture_path =
+            std::filesystem::path(flight_capture_dir) / filename.str();
         {
           UFrameStageWatchdog::Scope stage("window.frame_capture");
-          if (!CaptureFramebufferPng(
-                  Window, std::filesystem::path(flight_capture_dir) /
-                              filename.str()))
+          if (!CaptureFramebufferPng(Window, capture_path))
           {
             CubatariumLogInfo("FlightCapture",
-                              "Unable to capture framebuffer PNG");
+                              "Unable to capture framebuffer PNG index=" +
+                                  std::to_string(capture_index - 1) +
+                                  " camera_x=" + std::to_string(camera_x));
+          }
+          else
+          {
+            CubatariumLogInfo(
+                "FlightCapture",
+                "index=" + std::to_string(capture_index - 1) +
+                    " camera_x=" + std::to_string(camera_x) +
+                    " camera_y=" +
+                    std::to_string(camera->GetPosition().y) + " path=" +
+                    capture_path.string());
           }
         }
       }

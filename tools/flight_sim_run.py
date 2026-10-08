@@ -2777,6 +2777,15 @@ def main() -> int:
                             "frame_capture_dir": os.environ.get(
                                 "CUBA_FLIGHT_CAPTURE_DIR"
                             ),
+                            "frame_capture_interval_sec": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_INTERVAL_SEC", "15"
+                            ),
+                            "frame_capture_min_x": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_MIN_X"
+                            ),
+                            "frame_capture_max_x": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_MAX_X"
+                            ),
                             **_perf_runtime_identity,
                             "perf_jsonl": str(perf) if perf else None,
                             "schema_perf": "perf_jsonl.v2",
