@@ -4936,8 +4936,8 @@ visible-black counters were zero in those records. This makes the altitude
 terrain query an implausible explanation for M459's 83.61 ms single-frame peak
 at `cx=-198`; that isolated outlier remains unexplained. Commits `469cb5d2` and
 `90408242` add miss-path stage timings and explicit average/maximum values for
-`UpdateStreaming` and its pre/core/post segments. M461 will validate those
-fields on the same route.
+`UpdateStreaming` and its pre/core/post segments. M461 validated these fields
+on the same route; see its checkpoint below.
 
 M460 has since recorded two additional long-route streaming hitches. At
 `cx=-207`, one 131.654 ms frame spent 105.328 ms in the world streaming phase;
@@ -4953,10 +4953,10 @@ probe (`prep_refresh_facing_ms`); it also had a 35.44 ms transparent-scene
 pass. These are separate cost centers from M459's `UpdateStreaming` spike.
 
 The current source adds nested per-frame timers for the miss-radius query,
-screen-ray probe, nearest-missing fallback, and residual miss-path work. The
-M460 executable predates these timers. Build only Release and repeat the same
-M335 route as M461 to identify which miss substage caused the `cx=-207` hitch.
-Do not change probe behavior until that attribution is available.
+screen-ray probe, nearest-missing fallback, and residual miss-path work. M461
+did not reproduce the `cx=-207` hitch: miss-path time stayed below 0.865 ms
+across 32 samples at `cx=-195..-215`. Do not change probe behavior based on
+the single M460 spike.
 
 #### M460 final route and endpoint readout
 
@@ -4987,6 +4987,62 @@ only 1.35/1.43 ms; mesh-emerge/streaming-phase work dominates those samples.
 M461 should first establish which nested miss substage owns the `-207` cost,
 then correlate the far-end mesh-emerge spikes with existing mesh waterfall
 stage metrics before any behavior change.
+
+#### M461 checkpoint — miss-query spike not reproduced; pressure, ring resync, and IO remain (2026-10-08)
+
+M461 rebuilt the timing instrumentation in Release and repeated the exact
+visible, no-teleport M335 route with capture disabled. The route completed
+14,320 blocks (`focus_cx=7 -> -888`) at a 5.197 blocks/s median and exited
+normally. Manifest and route completion passed; quality gates and stop
+convergence did not. As in earlier runs, `unfinished_visual` and
+`effective_holes` are readiness/debt proxies, not framebuffer-pixel evidence.
+
+The M460 `cx=-207` 81.5 ms miss-path hitch was not reproduced. M461 recorded
+32 periods at `cx=-195..-215` with no >100 ms spike; nested miss timing peaked
+at 0.865 ms total, including 0.825 ms screen-ray work and only 0.021 ms for the
+resident-radius query. Maximum `UpdateStreaming` in this corridor was 32.15 ms.
+This weakens the hypothesis that the horizontal missing-mesh scan is a
+repeatable far-flight stall, but it does not erase the M460 sample.
+
+Two other pressure-refresh paths are concrete performance leads. At
+`cx=-172`, a 131.0 ms wall frame spent 28.65 ms in
+`CountUnfinishedVisualNear` (`prep_refresh_unfinished_ms`) and only 0.42 ms in
+the miss path. At `cx=-175`, a 100.4 ms wall frame spent 29.34 ms in ring
+resync; its three sticky/pending/provisional count helpers are still combined
+in the existing timer. The same frame also had 24.33 ms mesh-emerge and
+29.57 ms opaque-GPU timings, so causal overlap is unknown. Next instrumentation
+should report the unfinished-scan path/work size and split the three
+ring-resync helper timings and candidate counts. Do not alter scan cadence or
+readiness policy until the actual cost center and its correctness role are
+established.
+
+At `cx=-762`, M461 recorded 149.6 ms wall and 104.1 ms in
+`ProcessColumnLightFlagSaveResults` while draining async column light-flag save
+results. Load-result queues and active/pending loads were empty in the sampled
+state, and direct light-flag save work was 0.001 ms. Current telemetry cannot
+separate completion-queue mutex wait from time holding it, result processing,
+or OS scheduling delay. Add queue-drain wait/hold/result-count metrics and
+worker enqueue/service/publish timing before considering persistence or
+streaming behavior changes. This observation does not show that disk terrain
+loading caused a visual defect.
+
+M461's six >100 ms frames were startup (297.4 ms), the `cx=-172` unfinished
+scan (131.0 ms), another `cx=-172` mesh-emerge/streaming frame (103.1 ms),
+`cx=-175` ring resync (100.4 ms), an otherwise unaccounted `cx=-225` frame
+(119.8 ms), and the `cx=-762` async IO drain (149.6 ms). The old M446 hotspot
+at `cx=-474..-479` also did not recur in its 11-sample M461 window: maximum
+wall was 35.45 ms and maximum `UpdateStreaming` 17.30 ms. Treat isolated hitch
+locations as intermittent pending repeat evidence.
+
+The external endpoint captures show heavy blue fog at `cx=-877/-883` and a
+coherent, lit stationary endpoint at `cx=-888`; the `-883` capture has several
+thin dark marks with unknown origin. These views do not classify all route
+pixels and were taken before full stop convergence. The user's longstanding
+slow fog/water silhouette transitions remain a separate investigation and
+must not be treated as evidence of a new streaming regression.
+
+Full M461 metrics, report, route command, and capture paths are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m461--nested-miss-and-updatestreaming-timing-completed-2026-10-08).
 
 #### Separate legacy fog/water investigation lead
 
@@ -5019,15 +5075,21 @@ avoid exposing a partially shifted GPU map during window scroll.
 
 #### Current work order
 
-1. Build the committed timing instrumentation in Release and run M461 with the
-   same M335 route. Identify the `cx=-207` miss-path outlier before changing
-   policy or mesh-hole semantics. Keep M459's `UpdateStreaming` spike as a
-   separate, unreproduced issue.
-2. Keep repeated-world M335 and the reported fog/water silhouette effect as
+1. Add no-behavior diagnostics for M461 `CountUnfinishedVisualNear`
+   (call kind/cache path/work size), split the three ring-resync subcalls and
+   record candidate counts, and split light-flag result-drain queue-lock
+   wait/hold/result count from worker enqueue/service/publish timing. Keep the
+   diagnostics sampled so they do not materially change the M335 baseline.
+2. Build only Release and repeat the exact M335 route as M462. Check whether
+   the M461 unfinished scan, ring resync, or light-flag queue-drain anomalies
+   recur; retain current rendering policy until a stable cost and correctness
+   connection are established. Keep the isolated M459/M460
+   `UpdateStreaming` spikes separate unless a repeat ties them together.
+3. Keep repeated-world M335 and the reported fog/water silhouette effect as
    separate evidence tracks. A fog investigation needs repeated images at one
    stationary camera pose plus effective fog inputs/underwater state; no visual
    defect should be inferred from `unfinished_visual` or ring-level counters.
-3. After the repeated-world render symptom has pixel-level classification,
+4. After the repeated-world render symptom has pixel-level classification,
    resume cold world-create/load profiling and periodic fresh-seed runs from the
    existing plan. Neither replaces the fixed M335 regression route.
 

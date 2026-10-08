@@ -3139,3 +3139,90 @@ $env:CUBA_GPU_PROCESS_PROFILE_PATH=''
 $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m460_world164_m335_altitude_surface_query_timing --report bin/suite_reports/engine_refactor/m460_world164_m335_altitude_surface_query_timing_20261008.json --process-timeout 7200
 ```
+
+## M461 — nested miss and `UpdateStreaming` timing (completed, 2026-10-08)
+
+M461 rebuilt Release after commits `469cb5d2` and `90408242` added nested
+miss-path timing and average/maximum `UpdateStreaming` phase fields. The
+executable SHA-256 was
+`7462ea77dba8c413187192d424a9438d83b127a1c81c7b30261fbb54f3c47add`; it ran
+on desktop GL with AMD Radeon(TM) Graphics. M461 repeated the visible,
+no-teleport M335 route with in-app capture and source/GPU tracing disabled. It
+completed normally (`process_rc=0`, 14,320 blocks, `focus_cx=7 -> -888`, median
+speed 5.1965 blocks/s). Route and manifest passed. Analyzer quality remained
+red: 27/39 general gates passed, symptom reproduction was false, and stop
+convergence was false. `unfinished_visual` / `effective_holes` remain
+readiness-debt proxies, not pixel-level holes.
+
+M461 did **not** reproduce M460's `cx=-207` miss-query hitch. Across 32 samples
+at `focus_cx=-195..-215`, there were no >100 ms spike frames;
+`prep_refresh_miss_ms` peaked at 0.865 ms (radius query 0.021 ms, screen ray
+0.825 ms, nearest search 0.019 ms, residual 0.036 ms). `UpdateStreaming`
+peaked at 32.15 ms in this interval, with a period wall maximum of 34.43 ms.
+The per-segment pre/core/post maxima can come from different frames. The
+81.5 ms miss query remains an unreproduced M460 outlier, not a sustained query
+cost.
+
+The six M461 spike frames exposed different costs:
+
+- Startup at `cx=7`: 297.437 ms wall.
+- `cx=-172`: 131.006 ms wall, including 31.114 ms pre-scheduler pressure
+  refresh; `prep_refresh_unfinished_ms=28.647 ms`. The miss query was only
+  0.417 ms.
+- A second `cx=-172` frame: 103.109 ms wall, `mesh_emerge_ms=38.949 ms` and
+  `world_streaming_phase_ms=46.340 ms`.
+- `cx=-175`: 100.365 ms wall; pressure refresh took 30.630 ms, including
+  29.343 ms in `prep_refresh_ring_resync_ms` and `prep_refresh_sticky_ms`.
+  The same frame had 24.329 ms mesh emerge and 29.569 ms opaque GPU scene
+  work; these simultaneous timings do not establish causality.
+- `cx=-225`: 119.778 ms wall, while the recorded async pre-scheduler,
+  `UpdateStreaming`, mesh-emerge, and opaque-GPU stages were small; most of
+  this frame remains unattributed.
+- `cx=-762`: 149.600 ms wall and 121.044 ms streaming phase; post-scheduler
+  async IO was 105.462 ms, including 104.109 ms IO drain and 104.083 ms
+  `ProcessColumnLightFlagSaveResults`. At the sample point load-result queue
+  depth and load pending/active counts were zero; direct light-flag save work
+  was 0.001 ms. Current metrics cannot distinguish result-queue mutex wait,
+  time holding that mutex, result processing, or a scheduling pause. This is a
+  persistence/IO timing lead, not evidence of terrain-load latency or a
+  rendered hole.
+
+The old M446 `cx=-474..-479` hotspot also did not recur: 11 M461 periods had
+no >100 ms spike, maximum period wall 35.45 ms, and maximum per-frame
+`UpdateStreaming` 17.30 ms. These repeats reduce confidence in both old
+single-run hotspots as stable bottlenecks.
+
+The endpoint watcher saved three full-window frames:
+
+- `bin/suite_reports/engine_refactor/m461_world164_m335_miss_path_instrumentation_frames_20261008/approach_cx-877.png`
+- `bin/suite_reports/engine_refactor/m461_world164_m335_miss_path_instrumentation_frames_20261008/approach_cx-883.png`
+- `bin/suite_reports/engine_refactor/m461_world164_m335_miss_path_instrumentation_frames_20261008/stop_cx-888.png`
+
+The approach images show blue fog and faint terrain; `cx=-883` also has a few
+thin dark marks of unknown origin. The stationary endpoint is a coherent lit
+hill and vegetation without an obvious chunk-sized hole. It was captured
+before stop convergence passed, and these three views do not rule out defects
+elsewhere on the route. Keep the user's longstanding slow fog/water silhouette
+transitions in their separate, still-unexplained track.
+
+Artifacts:
+
+- Analyzer: `bin/suite_reports/engine_refactor/m461_world164_m335_miss_path_instrumentation_20261008.json`
+- Perf log: `bin/logs/perf_20261008-043414_2668.jsonl`
+- Frames directory: `bin/suite_reports/engine_refactor/m461_world164_m335_miss_path_instrumentation_frames_20261008/`
+- Manifest source: commit `4a0c2a0c`, branch `codex_audit2`, clean diff; the
+  fixed-day wrapper restored world data and fog.
+
+Exact M461 route invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m461_world164_m335_miss_path_instrumentation --report bin/suite_reports/engine_refactor/m461_world164_m335_miss_path_instrumentation_20261008.json --process-timeout 7200
+```
