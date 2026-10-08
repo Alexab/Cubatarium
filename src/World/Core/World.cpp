@@ -4309,11 +4309,6 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       !active_demand ||
       (active_demand->world_epoch == world_epoch && chunk &&
        active_demand->incarnation == chunk->GetIncarnation());
-  const bool unowned_created_attempt =
-      active_demand &&
-      (!active_demand->has_active_attempt ||
-       (active_demand->active_stage == JobStage::Created &&
-        active_demand->last_progress_ms <= 0.0));
   const bool coverage_waits_only_on_overlay_debt =
       active_demand &&
       (active_demand->desired_coverage_gen ==
@@ -4328,7 +4323,7 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       active_demand->peer_face_debt_mask == 0 &&
       active_demand->face_debt_mask ==
           active_demand->overlay_face_debt_mask &&
-      unowned_created_attempt && coverage_waits_only_on_overlay_debt &&
+      coverage_waits_only_on_overlay_debt &&
       !active_demand->retained_awaiting_successor &&
       !MeshService->IsSoftDeferHeld(coord) &&
       MeshService->HasGreedyMesh(coord) &&
@@ -4349,10 +4344,13 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
     // state. A current published mesh (drawable or not) with coverage lag caused
     // only by overlay debt has no changed mesh input to consume. Re-admitting it
     // through generic FirstMesh repair cannot close that dependency while peer
-    // inputs are unchanged. Keep the visual obligation open, but avoid advancing
-    // the same geometry revision on every census. A peer incarnation/coverage
-    // change is still handled by RepairFaceDebt; local geometry or light changes
-    // fail the revision checks above and admit a real rebuild.
+    // inputs are unchanged. A lifecycle stage such as Admitted is not itself a
+    // concrete mesh owner; the Dirty, in-flight, capture, and GPU checks above
+    // determine whether executable work exists. Keep the visual obligation
+    // open, but avoid advancing the same geometry revision on every census. A
+    // peer incarnation/coverage change is still handled by RepairFaceDebt; local
+    // geometry or light changes fail the revision checks above and admit a real
+    // rebuild.
     return;
   }
   const bool requeue_existing_target =
