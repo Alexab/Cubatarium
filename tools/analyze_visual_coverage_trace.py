@@ -175,9 +175,11 @@ def main() -> int:
             elif kind == "renderer_pixel_probe":
                 pixel_fields = (
                     "frame_epoch",
+                    "renderer_pixel_probe_id",
                     "renderer_pixel_x",
                     "renderer_pixel_y",
                     "renderer_pixel_rgba",
+                    "renderer_pixel_pretransparent_rgba",
                     "renderer_pixel_pretransparent_depth",
                     "renderer_pixel_fog_start",
                     "renderer_pixel_fog_end",
@@ -329,6 +331,58 @@ def main() -> int:
         float(pixel.get("renderer_pixel_pretransparent_depth", 1.0) or 0.0)
         for _, pixel in pixel_join_pairs
     ]
+    unmatched_candidate_rows = [
+        ray
+        for ray in screen_candidate_rows
+        if (
+            int(ray.get("frame_epoch", 0)),
+            int(ray.get("screen_ray_column", -1)),
+            int(ray.get("screen_ray_row", -1)),
+        )
+        not in pixel_probe_by_ray_sample
+    ]
+    clear_depth_pairs = [
+        (ray, pixel)
+        for ray, pixel in pixel_join_pairs
+        if float(pixel.get("renderer_pixel_pretransparent_depth", 1.0) or 0.0)
+        >= 0.999999
+    ]
+
+    def candidate_distance_summary(
+        samples: list[dict[str, object]],
+    ) -> dict[str, object]:
+        distances = sorted(
+            float(ray.get("screen_ray_distance", -1.0) or -1.0)
+            for ray in samples
+        )
+
+        def sample_quantile(q: float) -> float | None:
+            if not distances:
+                return None
+            return distances[round((len(distances) - 1) * q)]
+
+        summary: dict[str, object] = {
+            "sample_count": len(distances),
+            "min_blocks": sample_quantile(0.0),
+            "p50_blocks": sample_quantile(0.50),
+            "p95_blocks": sample_quantile(0.95),
+            "max_blocks": sample_quantile(1.0),
+        }
+        if args.fog_end_distance is not None:
+            within = sum(distance <= args.fog_end_distance for distance in distances)
+            summary["at_or_before_fog_end"] = within
+            summary["beyond_fog_end"] = len(distances) - within
+        return summary
+
+    def unpack_pixel_rgba(pixel: dict[str, object], field: str) -> list[int]:
+        value = int(pixel.get(field, 0) or 0)
+        return [
+            (value >> 24) & 0xFF,
+            (value >> 16) & 0xFF,
+            (value >> 8) & 0xFF,
+            value & 0xFF,
+        ]
+
     pixel_voxel_states: collections.Counter[str] = collections.Counter()
     for _, pixel in pixel_join_pairs:
         add(pixel_voxel_states, pixel.get("renderer_pixel_voxel_ray_state", 0))
@@ -340,12 +394,94 @@ def main() -> int:
         "candidate_samples_without_pixel_probe": (
             len(screen_candidate_rows) - len(pixel_join_pairs)
         ),
+        "candidate_samples_without_pixel_probe_at_or_before_fog_end": (
+            sum(
+                float(ray.get("screen_ray_distance", -1.0) or -1.0)
+                <= args.fog_end_distance
+                for ray in unmatched_candidate_rows
+            )
+            if args.fog_end_distance is not None
+            else None
+        ),
+        "candidate_samples_without_pixel_probe_beyond_fog_end": (
+            sum(
+                float(ray.get("screen_ray_distance", -1.0) or -1.0)
+                > args.fog_end_distance
+                for ray in unmatched_candidate_rows
+            )
+            if args.fog_end_distance is not None
+            else None
+        ),
+        "unmatched_candidate_distance": candidate_distance_summary(
+            unmatched_candidate_rows
+        ),
+        "unmatched_candidate_focus_chunk_range": (
+            [
+                min(int(ray.get("focus_cx", 0)) for ray in unmatched_candidate_rows),
+                max(int(ray.get("focus_cx", 0)) for ray in unmatched_candidate_rows),
+            ]
+            if unmatched_candidate_rows
+            else None
+        ),
         "opaque_surface_valid": sum(
             int(pixel.get("renderer_pixel_opaque_surface_valid", 0) or 0) == 1
             for _, pixel in pixel_join_pairs
         ),
         "pretransparent_depth_has_surface": sum(depth < 0.999999 for depth in pixel_depths),
         "pretransparent_depth_clear": sum(depth >= 0.999999 for depth in pixel_depths),
+        "clear_depth_candidates_at_or_before_fog_end": (
+            sum(
+                float(ray.get("screen_ray_distance", -1.0) or -1.0)
+                <= args.fog_end_distance
+                for ray, _ in clear_depth_pairs
+            )
+            if args.fog_end_distance is not None
+            else None
+        ),
+        "clear_depth_candidates_beyond_fog_end": (
+            sum(
+                float(ray.get("screen_ray_distance", -1.0) or -1.0)
+                > args.fog_end_distance
+                for ray, _ in clear_depth_pairs
+            )
+            if args.fog_end_distance is not None
+            else None
+        ),
+        "clear_depth_samples": [
+            {
+                "frame_epoch": ray.get("frame_epoch"),
+                "focus_chunk": [ray.get("focus_cx"), ray.get("focus_cz")],
+                "pixel_xy": [
+                    pixel.get("renderer_pixel_x"),
+                    pixel.get("renderer_pixel_y"),
+                ],
+                "candidate_chunk": [ray.get("cx"), ray.get("cy"), ray.get("cz")],
+                "candidate_block": [
+                    ray.get("screen_ray_block_x"),
+                    ray.get("screen_ray_block_y"),
+                    ray.get("screen_ray_block_z"),
+                ],
+                "distance_blocks": ray.get("screen_ray_distance"),
+                "mesh_satisfying": ray.get("screen_ray_mesh_satisfying"),
+                "geometry_debt": ray.get("screen_ray_geometry_debt"),
+                "pixel_depth": pixel.get("renderer_pixel_pretransparent_depth"),
+                "pixel_rgba_pretransparent": unpack_pixel_rgba(
+                    pixel, "renderer_pixel_pretransparent_rgba"
+                ),
+                "pixel_rgba_posttransparent": unpack_pixel_rgba(
+                    pixel, "renderer_pixel_rgba"
+                ),
+                "pixel_fog_start": pixel.get("renderer_pixel_fog_start"),
+                "pixel_fog_end": pixel.get("renderer_pixel_fog_end"),
+                "opaque_surface_valid": pixel.get(
+                    "renderer_pixel_opaque_surface_valid"
+                ),
+                "pixel_chunk_visible_mdi_indices": pixel.get(
+                    "renderer_pixel_voxel_chunk_mdi_visible_index_count"
+                ),
+            }
+            for ray, pixel in clear_depth_pairs
+        ],
         "voxel_ray_state_counts": sorted_counter(pixel_voxel_states),
         "voxel_hit_same_block_as_stream_ray": sum(
             pixel_hit_matches(ray, pixel) for ray, pixel in pixel_join_pairs
@@ -397,6 +533,9 @@ def main() -> int:
                 ),
                 "pixel_depth": pixel.get("renderer_pixel_pretransparent_depth"),
                 "pixel_rgba": pixel.get("renderer_pixel_rgba"),
+                "pixel_rgba_pretransparent": unpack_pixel_rgba(
+                    pixel, "renderer_pixel_pretransparent_rgba"
+                ),
                 "pixel_fog_start": pixel.get("renderer_pixel_fog_start"),
                 "pixel_fog_end": pixel.get("renderer_pixel_fog_end"),
                 "pixel_opaque_surface_valid": pixel.get(

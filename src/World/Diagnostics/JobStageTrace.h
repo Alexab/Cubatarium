@@ -691,8 +691,8 @@ public:
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
   // M352 showed that 2,048 samples retained only the last 26 focus scans.
   // The five-row screen-ray-aligned probe adds 100 samples per synchronized
-  // scan; retain those alongside the periodic four-row captures.
-  static constexpr size_t kVisualPixelTraceRingCapacity = 40960;
+  // scan; retain the candidate history alongside periodic and peak probes.
+  static constexpr size_t kVisualPixelTraceRingCapacity = 65536;
   /// Retain a complete opt-in history of bounded streaming screen-ray probes.
   // The screen-ray selector rotates through four horizontal phases. Keeping
   // the opt-in audit trace at 15-frame cadence retains all phases for a full

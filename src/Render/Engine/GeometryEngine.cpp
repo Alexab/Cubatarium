@@ -186,9 +186,10 @@ void CaptureOpaquePixelProbe(OpaquePixelProbeCapture &capture)
   }
   const int rows = capture.rows > 0 ? capture.rows : PixelProbeRows();
 
-  // Read one full-width scanline in each vertical band. Dense diagnostic mode
-  // adds rows where the full-frame captures showed bounded water-color
-  // discontinuities, while the normal trace retains four vertical bands.
+  // Read one full-width scanline per sampled row. Normal probes use four
+  // vertical bands; screen-ray-aligned probes use the exact five ray rows.
+  // Dense mode adds rows where full-frame captures showed bounded
+  // water-color discontinuities.
   std::vector<GLubyte> pixels(static_cast<size_t>(width) * rows *
                               4u);
   std::vector<GLfloat> depths(static_cast<size_t>(width) * rows);
