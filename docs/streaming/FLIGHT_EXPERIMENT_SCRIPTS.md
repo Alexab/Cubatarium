@@ -3438,3 +3438,73 @@ $env:CUBA_GPU_PROCESS_PROFILE_PATH=''
 $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m464_world164_m335_worker_log_isolation --report bin/suite_reports/engine_refactor/m464_world164_m335_worker_log_isolation_20261008.json --process-timeout 7200
 ```
+
+## M465 — M335 screen-ray-aligned pixel/depth evidence (2026-10-08)
+
+M465 enabled `CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY=1` on the exact
+visible/no-teleport M335 route. On screen-ray trace frames the renderer captured
+the existing 20-column pixel/depth grid on all five exact ray rows; other
+periodic probes retained the normal four-row grid. The 40,960-record pixel
+trace ring filled and evicted some early samples, which the M466 follow-up
+addresses. Dense pixels, focus-change probes, source trace, relight audit, GPU
+profile, and frame captures stayed off. The instrumented timings are not a
+clean performance comparison.
+
+The Release executable matched clean commit `12dbdf2ca11e69eb90715137c1d6c780f5671f01`
+and SHA-256
+`5a6cbe203e1d75fd24b35b0ff6c10ed9e83f06b205f95b2c30789d39e4ad8dc2`. The
+manifest passed (resolution remains untested). The app process exited 0 and
+the route passed its 14,300-block adequacy gate: focus `7 -> -888`, 14,320
+blocks, median speed 5.19653 blocks/s. The wrapper returned 1 because the
+product dual-lane stop-line failed; post-stop convergence also failed after 11
+periods. This is a gate result, not a failed flight.
+
+There were 8,192 retained screen-ray samples and 787 candidate rows at 353
+unique chunk coordinates. The analyzer matched 514 candidates to same-frame,
+same-column, same-row pixel/depth samples. In 512/514 matched locations the
+opaque pass wrote depth `<1` and reconstructed a valid opaque surface. The
+other two samples had clear depth and no opaque surface; both candidate rays
+hit geometry farther than the 36-block full-blend fog horizon (70.16 and
+76.98 blocks). There were no clear-depth matched samples inside that horizon.
+The matched samples therefore do not establish a visible gap.
+
+The remaining 273 candidates had no matching pixel record because the ring
+evicted older captures. There were 173 such candidates at or before the fog
+horizon, so these must remain unclassified. This is a retention loss rather
+than a pixel-grid mapping issue: the five screen-ray rows were present and the
+ray/pixel key matched exactly for retained frames. Candidate distance was
+4.03 / 30.64 / 76.78 / 95.64 blocks (min / p50 / p95 / max), with 505/787 at
+or before the full-blend fog end. These rays still sample sparse locations,
+not the whole framebuffer.
+
+The report had 1,408 periods (1,406 steady), 54 spikes, 29/39 product gates,
+median wall 25.25 ms, and a 458.08 ms maximum spike. `unfinished_visual` stayed
+nonzero and its hole-rate aliases were 1.0; this is readiness/debt telemetry.
+Visible-black focus median was 0. The dual-lane line failed on `unlit_max`,
+eye-proxy failed on stale visual evidence/blink rate, and A24 found near-focus
+mesh telemetry holes in 78 periods (one cruise-corridor period). These gates
+remain distinct from the pixel/depth witnesses. No M465 screenshot was saved.
+
+Artifacts:
+
+- Flight report: `bin/suite_reports/engine_refactor/m465_world164_m335_pixel_ray_sync_20261008.json`
+- Visual-trace summary: `bin/suite_reports/engine_refactor/m465_visual_coverage_trace_20261008.json`
+- Perf: `bin/logs/perf_20261008-094118_26160.jsonl`
+- INFO: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-094115.26160`
+
+Exact M465 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m465_world164_m335_pixel_ray_sync --report bin/suite_reports/engine_refactor/m465_world164_m335_pixel_ray_sync_20261008.json --process-timeout 7200
+```

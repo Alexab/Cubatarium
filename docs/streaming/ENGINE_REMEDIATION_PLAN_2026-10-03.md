@@ -5282,3 +5282,75 @@ closure**. The M464 flight did not demonstrate a visible blank pixel in its
 draining geometry-revision debt, stop convergence, the general I/O-drain tail,
 and uncharacterized fresh-world creation/load.
 Route speed and collisions do not currently block the streaming investigation.
+
+#### M465 checkpoint — screen-ray-aligned pixel/depth evidence (2026-10-08)
+
+M465 added an opt-in same-frame pixel/depth probe on the exact five vertical
+scanlines used by the streaming screen-ray sampler. The visible/no-teleport M335
+route completed on `World_164`: focus `7 -> -888`, 14,320 blocks, median speed
+5.19653 blocks/s, process rc 0, manifest accepted for clean source
+`12dbdf2c` and Release executable SHA-256
+`5a6cbe203e1d75fd24b35b0ff6c10ed9e83f06b205f95b2c30789d39e4ad8dc2`. The
+flight wrapper returned 1 because product stop-lines failed; this was not an
+app/route failure. It recorded 1,408 periods (1,406 steady), 54 spikes, and
+failed stop convergence after 11 periods. The instrumented median wall time
+was 25.25 ms and is not a clean performance baseline.
+
+The trace retained 8,192 screen-ray rows, including 787 repair candidates at
+353 distinct chunk coordinates. Pixel samples matched 514/787 candidates
+(65.3%), up from 101/856 in M464. Of those matches, 512 had opaque depth and
+valid opaque surfaces; two had clear depth. Both clear-depth pixels were 70.16
+and 76.98 blocks from the camera, beyond M335's 36-block full-blend fog end.
+There were no clear-depth matches at or before that fog horizon. This still
+does not prove full-screen coverage: 273 candidates had no pixel sample because
+the pixel trace ring filled at 40,960 records and evicted older samples. Of
+these unmatched candidates, 173 were within the fog horizon and remain
+unclassified. The 5-row/20-column pixel coordinates and screen-ray frame/sample
+mapping matched; the loss is ring retention, not a coordinate mismatch.
+
+The 787 candidate rays were 4.03 / 30.64 / 76.78 / 95.64 blocks (min / p50 /
+p95 / max); 505 were at or before the fog end and 282 farther away. The two
+clear-depth examples were both beyond fog end. Thus the observed clear-depth
+samples do not establish a visible hole, but the 173 unmatched near-horizon
+samples must be retained for the next pass. Candidate/readiness rates remain
+maintenance proxies, not pixel classifications. The operator's prior report
+that the world currently looks good remains consistent with these sparse
+samples, but the M465 run did not save screenshots.
+
+Other gates remain separate: `unfinished_visual` was nonzero throughout;
+median visible-black focus count was zero. The dual-lane stop-line failed on
+`unlit_max`, the eye-proxy line failed on stale visual evidence/blink rate, and
+A24 found near-focus mesh telemetry holes in 78 periods (one in the cruise
+corridor). These are not interchangeable measurements and do not override the
+pixel/depth result. The user-visible dark-chunk symptom is still not reproduced
+by a same-pose screenshot.
+
+#### Current work order after M465
+
+1. **M466: retain all ray-correlated samples.** Increase the opt-in pixel trace
+   ring to 65,536 records so same-frame candidates in the `focus -626..-645`
+   segment are not evicted. Keep the M335 route and all capture rows fixed.
+   The analyzer should report unmatched in-fog candidates and clear-depth
+   witnesses explicitly. Require all candidate frames within retained
+   screen-ray history to have an exact pixel/depth join before interpreting
+   the remaining samples.
+2. **Classify direct witnesses.** For every clear-depth match, retain the
+   coordinate, candidate voxel/chunk, fog distance, and RGB/depth values.
+   A clear depth beyond full fog blend is not a visible opening. Any clear
+   depth at or before fog end needs a saved same-frame capture and follow-up
+   renderer/mesh publication trace.
+3. **Follow repeatable near-fog candidates through ownership and publication.**
+   Trace admission, FirstMesh/dirty ownership, worker completion, GPU
+   publication, and readiness transition for the same chunk incarnation and
+   geometry revision. Only then decide whether a bounded repair-policy change
+   is warranted; do not raise streaming quotas from proxy counts alone.
+4. Keep M335, settings, route and collision behavior unchanged; demand adequate
+   route completion and stop window. Treat trace-run timing as diagnostic.
+   Preserve regular cold world-create/load profiling and fresh-seed checks as
+   secondary tracks, and keep the longstanding fog/water silhouette question
+   separate.
+
+M465 artifacts and exact command are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m465--m335-screen-ray-aligned-pixel-depth-evidence-2026-10-08).
+Plan status: **the diagnostic path works; visual-hole classification is
+incomplete until M466 retains the missing 173 near-fog candidates.**
