@@ -3871,7 +3871,7 @@ $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2900 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m470_world164_m335_uninstrumented --report bin/suite_reports/engine_refactor/m470_world164_m335_uninstrumented_20261008.json --process-timeout 7200
 ```
 
-## M471 — M335 underwater light witness (in progress, 2026-10-08)
+## M471 — M335 underwater light witness (2026-10-08)
 
 M471 repeats the same start, eye height, yaw, pitch, movement scale, world,
 and no-teleport behavior, and runs through X≈-6.4k. It enables
@@ -3881,7 +3881,43 @@ source/save/unload traces off. On selected screen-ray frames, this captures
 same-frame color/depth at a 20-column by five-row grid and records the aligned
 streaming ray/renderer pixel diagnostics. This is sparse sampling, not a full
 screenshot; the captured route is a diagnostic, not a clean performance
-baseline. Awaiting the app/report/metric logs before interpreting any result.
+baseline. The app exited 0, was not killed, and the 6,400-block minimum route
+gate passed. It traveled 6,704 blocks (focus X `7 -> -412`) at median speed
+5.19287 blocks/s with camera eye Y=70. The dual-lane product stop-line failed
+because near-focus mesh-hole proxy periods and stop convergence remain; that
+does not invalidate the app/route success.
+
+The trace retained 72,740 pixel probes and 10,625 screen-ray rows. Six pixel
+frames at camera X=-6,458, -6,451, -6,439, -6,434, -6,420, and -6,404
+contained 264 valid opaque voxel/depth hits. All 264 had matching published
+and current light revisions and none had pending-light ownership. 258 also
+matched a fluid triangle. Underwater fog was enabled in these frames while
+the camera `submerged` flag was false. In the same X interval, 60 screen-ray
+rows were opaque hits, with zero geometry/light-debt candidates. This is
+evidence that the sampled surfaces were drawn with settled light; it does not
+prove the user's exact square was absent because the pixel grid was sparse and
+no screenshot was captured. The M470 focus-ring light debt is still an
+unresolved correlation.
+
+The flight had 674 periods (672 steady), 164 spikes, median wall time
+26.86685 ms, and `visual_holes_rate=0.047619` with full sample coverage. These
+instrumented timings are not a performance baseline. The missing-mesh value is
+a near-focus proxy, not direct pixel proof.
+
+Analysis commands:
+
+```powershell
+python tools/analyze_visual_coverage_trace.py bin/logs/perf_20261008-175658_29548.jsonl --fog-end-distance 36 --json-out bin/suite_reports/engine_refactor/m471_visual_coverage_20261008.json
+python tools/analyze_renderer_pixel_trace.py bin/logs/perf_20261008-175658_29548.jsonl --threshold 96 --json-out bin/suite_reports/engine_refactor/m471_renderer_pixel_20261008.json
+```
+
+Artifacts (generated raw output stays local):
+
+- Flight report: `bin/suite_reports/engine_refactor/m471_world164_m335_underwater_light_witness_20261008.json`
+- Visual-coverage summary: `bin/suite_reports/engine_refactor/m471_visual_coverage_20261008.json`
+- Renderer-pixel summary: `bin/suite_reports/engine_refactor/m471_renderer_pixel_20261008.json`
+- Perf JSONL: `bin/logs/perf_20261008-175658_29548.jsonl` (695,766,395 bytes)
+- INFO log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-175652.29548` (828,605 bytes)
 
 Exact invocation:
 
@@ -3901,3 +3937,12 @@ $env:CUBA_GPU_PROCESS_PROFILE_PATH=''
 $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1325 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m471_world164_m335_underwater_light_witness --report bin/suite_reports/engine_refactor/m471_world164_m335_underwater_light_witness_20261008.json --process-timeout 7200
 ```
+
+## M472 — bounded full-frame underwater-light capture (planned)
+
+M472 will keep the M335 world, route, speed, height, yaw, pitch, visible GUI,
+and no-teleport settings unchanged. It will save full framebuffer PNGs only
+inside a narrow X window around the M470 observation, at a sub-second
+interval. This supplements the sparse M471 pixel/depth witnesses and should
+show an actual square if it recurs. Capture timing is diagnostic and must not
+be compared to M470's clean performance run.

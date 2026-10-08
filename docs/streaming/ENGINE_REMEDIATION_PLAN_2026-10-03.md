@@ -5731,7 +5731,55 @@ M470 reports, logs, and exact invocation are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m470--m335-clean-route-after-resident-column-unload-index-2026-10-08).
 Plan status: **the unload optimization has a clean full-route measurement and
 the M335 route/speed/height gates pass. Visual assessment remains good, and
-post-stop mesh-hole proxy is zero. The run still has readiness/relight debt at
-stop, a nonzero in-flight mesh-hole proxy, and 177 spikes. A brief operator-
-visible underwater light patch correlated with two pending-light focus samples;
-no pixel-level witness exists yet. M471 is in progress.**
+post-stop mesh-hole proxy is zero. M470 had readiness/relight debt at stop, a
+nonzero in-flight mesh-hole proxy, and 177 spikes. Its brief operator-visible
+underwater light patch correlated with two pending-light focus samples. M471
+sampled the same area but did not find pending light on its pixel-hit chunks;
+the exact visible patch remains unclassified because no full-frame image was
+saved.**
+
+#### M471 checkpoint — pixel/depth follow-up on underwater light observation (2026-10-08)
+
+M471 repeated the standard visible/no-teleport World_164/M335 route at eye
+Y=70, yaw 180°, pitch -30°, and scale 1, through the prior observation area.
+It traveled 6,704 blocks (focus X `7 -> -412`) at median 5.19287 blocks/s.
+The app exited 0 and was not killed. The minimum route gate passed; the
+product dual-lane stop-line still failed on near-focus mesh-hole periods and
+stop convergence. This instrumented run is not a performance baseline.
+
+The run produced 72,740 renderer pixel probes and 10,625 screen-ray rows. At
+camera X=-6,458 through -6,404, six sampled frames contained 264 opaque voxel
+hits with valid framebuffer depth. All 264 hit chunks had matching published
+and current light revisions; none had pending light. 258 hits matched fluid
+triangles. The underwater-fog path was enabled, but the camera's submerged
+flag was false. In the same corridor, 60 screen-ray rows were opaque hits and
+none was a missing-geometry or light-debt candidate. Thus M471 did not
+reproduce unfinished light on the sampled visible surfaces. The user did not
+report seeing the patch again during M471, and no full-frame images were saved.
+
+This does not invalidate the M470 observation or its temporal correlation:
+M470 saw one pending-light/unlit focus mesh during two adjacent 2-second
+periods, while M471's sparse pixel grid samples only 20 horizontal positions
+and five vertical bands on selected frames. The patch could have passed
+between sampled pixels or existed only briefly. M471 also showed recurring
+aggregate relight/mesh debt elsewhere on the route; those focus counts do not
+identify what was rendered.
+
+The next diagnostic should preserve M335's flight profile and save full
+framebuffer PNGs only within the observed X interval (about -6,4k), at a
+sub-second cadence. This is preferable to increasing full-route pixel logs:
+one actual screenshot can show whether the patch is water color/fog, a
+surface-light discontinuity, or a mesh boundary. If it recurs, join its saved
+frame to the existing M471 light/depth fields before changing renderer or
+lighting behavior. Keep M470 as the clean performance lane and retain
+World_164/M335 as the repeated-world control; new-world/cold-start checks stay
+secondary.
+
+M471 reports, summaries, raw logs, and exact invocation are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m471--m335-underwater-light-witness-2026-10-08).
+Plan status: **M470's pending-light correlation remains plausible, but M471
+found no light debt on 264 sampled corridor pixel hits and no same-area ray
+candidate. This is inconclusive because the capture was sparse and had no
+screenshots. Add bounded full-frame capture, repeat the corridor, then decide
+whether the patch belongs to lighting, fluid/fog rendering, or normal world
+variation.**
