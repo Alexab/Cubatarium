@@ -3049,16 +3049,20 @@ The endpoint watcher used the perf log above and saved to the `m459_*_frames`
 directory. It captured at `focus_cx<=-877`, `<=-883`, then after stationary
 samples at the route endpoint.
 
-## M460 — altitude terrain-query timing (in progress, 2026-10-08)
+## M460 — altitude terrain-query timing (completed, 2026-10-08)
 
 `UpdateStreaming` calls `FindTopSolidSurfaceY` for altitude-adaptive fog once
 per update. Before M460 its synchronous downward scan from `MaxHeight` had no
 dedicated timer. Commit `fe0a9718` adds per-sample `altitude_surface_query_ms`
 and period `max_altitude_surface_query_ms` without changing the query or fog
 behavior. The app was built with `cmake --build bin --config Release --target
-Cubatarium --parallel 8`. M460 is the unchanged M335 route, capture disabled,
-with only phase/report names changed; final readings and route outcome will be
-added after completion. Partial results through `focus_cx=-205` include 17
+Cubatarium --parallel 8`. M460 was the unchanged M335 route, capture disabled,
+with only phase/report names changed. It completed with `process_rc=0`, reached
+`focus_cx=-888`, and traveled 14,320 blocks against the 14,300 minimum. The
+fixed-day wrapper restored `world_data.json` byte-for-byte and restored the
+fog setting. The analyzer's overall result is FAIL because quality and
+post-stop convergence gates did not pass; process and route completion passed.
+Partial results through `focus_cx=-205` include 17
 period records across `-195..-205`, with no spike rows. In the current period
 format `update_streaming_ms` is a last-sample snapshot, not an average; these
 snapshots range from 1.62 to 7.22 ms. Terrain-query period averages range from
@@ -3067,8 +3071,7 @@ visible-black counters were zero in this interval. One earlier
 9.03 ms query maximum near `focus_cx=-2` is still a single-window observation.
 The near-peak interval makes the terrain query an implausible cause of
 M459's 83.61 ms single-frame `UpdateStreaming` peak, but does not identify the
-source of that isolated outlier. The 14,300-block route and endpoint
-convergence are still pending; raw log:
+source of that isolated outlier. Raw log:
 `bin/logs/perf_20261008-033019_35884.jsonl`.
 
 Further M460 progress: one spike at `focus_cx=-207` measured
@@ -3081,9 +3084,46 @@ repair probe, and an optional nearest-missing search, so the present log does
 not isolate the call responsible. A separate spike at `focus_cx=-262` measured
 `prep_refresh_facing_ms=27.0451` and `scene_transparent_ms=35.439`; its
 `update_streaming_ms` was 0.817 ms. The current source now records separate
-miss-radius, screen-ray, nearest-search, and residual timings. M460's already
-running Release binary does not contain those additions; after it finishes,
-build Release and repeat the same route as M461.
+miss-radius, screen-ray, nearest-search, and residual timings. M460's Release
+binary did not contain those additions; M461 will repeat the same route after
+a Release-only rebuild.
+
+M460 completed 1,408 periods (1,406 steady cruise periods) with six spike
+frames. The route speed median was 5.197 blocks/s; median flight wall time was
+25.96 ms and effective flight rate 38.53 FPS. The largest measured spikes were
+292.6 ms during startup (`cx=7`), 144.7 ms at `cx=-175`, 131.7 ms at `cx=-207`,
+104.0 ms at `cx=-262`, then 111.7/105.2 ms at `cx=-885/-887`. The `cx=-207`
+and `cx=-262` stage attribution above remains the actionable timing result;
+the two far-end spikes were dominated by mesh-emerge/streaming-phase work, not
+`UpdateStreaming` itself (`1.35/1.43 ms`).
+
+The analyzer reports `unfinished_visual_rate=1.0` and
+`effective_holes_rate=1.0`, but its declared `hole_key` is
+`unfinished_visual`, a readiness/debt proxy rather than framebuffer pixels.
+`visible_black_focus_n` is also a ring census, not screen-ray visibility.
+Across the flight, `visible_black_blink_rate` was 2.7%; this does not establish
+that a dark patch was on screen. The analyzer found no focus-missing median
+signal in the flight segment and marked symptom reproduction as failed for
+too-low focus-missing and visible-black inputs. Post-stop convergence also
+failed: `post_stop_missing_max=24`, `post_stop_not_ready_end=24`, and
+`demand_stop_converged=false`, while black-sticky,
+visible-black-no-ticket, and visible-black-stalled stop maxima were zero.
+These internal readiness signals remain useful for follow-up, but are not
+evidence of a visible hole by themselves.
+
+The endpoint watcher saved three full-window frames:
+`bin/suite_reports/engine_refactor/m460_world164_m335_altitude_surface_query_frames_20261008/approach_cx-877.png`,
+`bin/suite_reports/engine_refactor/m460_world164_m335_altitude_surface_query_frames_20261008/approach_cx-883.png`,
+and
+`bin/suite_reports/engine_refactor/m460_world164_m335_altitude_surface_query_frames_20261008/stop_cx-888.png`.
+The `-877` frame shows only distant terrain through fog. The `-883` frame has
+terrain and trees plus some isolated thin dark marks whose source is not
+identified. The stationary `-888` frame shows a coherent, well-lit sandy hill and vegetation through fog,
+with no obvious chunk-sized black holes or empty patches. These samples
+support the operator's report that the scene currently looks acceptable, but
+do not explain the longstanding slow silhouette changes at the fog/water
+boundary. The stop image was taken after two stationary periods, not after
+full post-stop convergence.
 
 M460's exact route invocation (same M335 settings as M459, with the added
 terrain-query timing):

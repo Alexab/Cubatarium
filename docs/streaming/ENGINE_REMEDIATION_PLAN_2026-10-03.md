@@ -4918,11 +4918,11 @@ altitude-adaptive fog calls `FindTopSolidSurfaceY` synchronously on each update,
 scanning downward from procedural `MaxHeight` through `GetBlock` calls. This is
 an O(world-height) column query and was absent from M459's stage telemetry. It
 is a measurement gap, not a claimed root cause. Commit `fe0a9718` adds its
-average and maximum duration to perf JSONL. M460 is now running the exact M335
-route with that observation enabled; the next step is to compare the query
-maximum with `UpdateStreaming` spikes near the same coordinates. If the query
-is small when a large spike occurs, rule it out and instrument the remaining
-unattributed policy work instead of changing fog behavior.
+average and maximum duration to perf JSONL. M460 ran the exact M335 route with
+that observation enabled and completed all 14,320 blocks. The query's low cost
+near the earlier `UpdateStreaming` peak rules it out as that spike's cause;
+continue instrumenting the remaining policy work instead of changing fog
+behavior.
 
 The first partial M460 periods show ordinary query cost around 0.015–0.022 ms.
 One 9.03 ms maximum occurred near the route start (`cx=-2`); this is an early
@@ -4934,9 +4934,10 @@ Terrain-query period averages range from 0.017 to 0.025 ms, while the explicit
 per-period `max_altitude_surface_query_ms` peaks at 0.387 ms. All four
 visible-black counters were zero in those records. This makes the altitude
 terrain query an implausible explanation for M459's 83.61 ms single-frame peak
-at `cx=-198`; that isolated outlier remains unexplained. M461 will add an
-explicit average and maximum for `UpdateStreaming` and its pre/core/post
-segments.
+at `cx=-198`; that isolated outlier remains unexplained. Commits `469cb5d2` and
+`90408242` add miss-path stage timings and explicit average/maximum values for
+`UpdateStreaming` and its pre/core/post segments. M461 will validate those
+fields on the same route.
 
 M460 has since recorded two additional long-route streaming hitches. At
 `cx=-207`, one 131.654 ms frame spent 105.328 ms in the world streaming phase;
@@ -4953,10 +4954,39 @@ pass. These are separate cost centers from M459's `UpdateStreaming` spike.
 
 The current source adds nested per-frame timers for the miss-radius query,
 screen-ray probe, nearest-missing fallback, and residual miss-path work. The
-running M460 executable predates these timers. After M460 completes, build only
-Release and repeat the same M335 route as M461 to identify which miss substage
-caused the `cx=-207` hitch. Do not change probe behavior until that attribution
-is available.
+M460 executable predates these timers. Build only Release and repeat the same
+M335 route as M461 to identify which miss substage caused the `cx=-207` hitch.
+Do not change probe behavior until that attribution is available.
+
+#### M460 final route and endpoint readout
+
+M460 produced 1,408 periods (1,406 steady), six spike frames, and a complete
+route from `focus_cx=7` to `-888` at a median 5.197 blocks/s. Median flight
+wall time was 25.96 ms; the wrapper completed with `process_rc=0`, restored the
+fixed-day world data byte-for-byte, and restored the fog setting. Analyzer
+quality gates still failed (27/39 overall); route completion passed. The
+stop-line did not converge: `post_stop_missing_max=24`,
+`post_stop_not_ready_end=24`, and `demand_stop_converged=false`. Black-sticky,
+visible-black-no-ticket, and visible-black-stalled stop maxima were zero.
+
+Do not equate `unfinished_visual_rate=1` or `effective_holes_rate=1` with
+visible empty pixels: the analyzer's `hole_key` is a readiness/debt proxy.
+The flight symptom-reproduction subcheck failed because focus-missing and
+visible-black inputs were too low. Endpoint screenshots at `-877`, `-883`, and
+`-888` show fogged terrain and, at the stop, a coherent lit hill; no obvious
+chunk-sized black hole or empty patch is present in these samples. The
+`-883` image contains isolated thin dark marks of unknown source. The stop
+image was taken after two stationary periods, before full convergence. Keep
+the operator's longstanding fog/water silhouette observation separate.
+
+The six frame spikes include a 131.654 ms frame at `cx=-207` with 81.515 ms in
+`prep_refresh_miss_ms`, and a 103.953 ms frame at `cx=-262` with 27.045 ms in
+`prep_refresh_facing_ms` plus 35.439 ms in transparent-scene work. Far-end
+frames at `cx=-885/-887` were 111.657/105.213 ms, while `UpdateStreaming` was
+only 1.35/1.43 ms; mesh-emerge/streaming-phase work dominates those samples.
+M461 should first establish which nested miss substage owns the `-207` cost,
+then correlate the far-end mesh-emerge spikes with existing mesh waterfall
+stage metrics before any behavior change.
 
 #### Separate legacy fog/water investigation lead
 
@@ -4989,17 +5019,15 @@ avoid exposing a partially shifted GPU map during window scroll.
 
 #### Current work order
 
-1. Finish M460 and capture only its endpoint; full-route classification and
-   endpoint convergence remain pending.
-2. Build the miss-path timing instrumentation in Release and run M461 with the
+1. Build the committed timing instrumentation in Release and run M461 with the
    same M335 route. Identify the `cx=-207` miss-path outlier before changing
    policy or mesh-hole semantics. Keep M459's `UpdateStreaming` spike as a
    separate, unreproduced issue.
-3. Keep repeated-world M335 and the reported fog/water silhouette effect as
+2. Keep repeated-world M335 and the reported fog/water silhouette effect as
    separate evidence tracks. A fog investigation needs repeated images at one
    stationary camera pose plus effective fog inputs/underwater state; no visual
    defect should be inferred from `unfinished_visual` or ring-level counters.
-4. After the repeated-world render symptom has pixel-level classification,
+3. After the repeated-world render symptom has pixel-level classification,
    resume cold world-create/load profiling and periodic fresh-seed runs from the
    existing plan. Neither replaces the fixed M335 regression route.
 
