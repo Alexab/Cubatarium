@@ -26,7 +26,7 @@ constexpr int kTerrainSubColumnsPerChunk = CHUNK_SIZE * CHUNK_SIZE;
 
 bool IsStreamerUnloadTraceEnabled()
 {
-  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
+  const char *value = std::getenv("CUBA_STREAMER_UNLOAD_TRACE");
   return value && value[0] == '1';
 }
 
@@ -679,15 +679,12 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
   if (!use_cursor || UnloadColumnSnapshot.empty() ||
       UnloadScanCursor >= UnloadColumnSnapshot.size())
   {
+    const auto snapshot_started = std::chrono::steady_clock::now();
+    const UChunkManager &chunk_manager = World.GetChunkManager();
     UnloadColumnSnapshot.clear();
-    UnloadColumnSnapshot.reserve(256);
-    World.GetChunkManager().ForEachChunk(
-        [&](const UChunk &chunk)
-        {
-          const glm::ivec3 coord = chunk.GetCoord();
-          UnloadColumnSnapshot.push_back(glm::ivec3(coord.x, 0, coord.z));
-        });
-    // Unique columns (ForEach yields every cy slice).
+    UnloadColumnSnapshot.reserve(chunk_manager.GetResidentColumnCount());
+    chunk_manager.ForEachColumn([&](const glm::ivec3 &ground)
+                                { UnloadColumnSnapshot.push_back(ground); });
     std::sort(UnloadColumnSnapshot.begin(), UnloadColumnSnapshot.end(),
               [](const glm::ivec3 &a, const glm::ivec3 &b)
               {
@@ -697,10 +694,21 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
                 }
                 return a.z < b.z;
               });
-    UnloadColumnSnapshot.erase(
-        std::unique(UnloadColumnSnapshot.begin(), UnloadColumnSnapshot.end()),
-        UnloadColumnSnapshot.end());
     UnloadScanCursor = 0;
+    if (trace_unload)
+    {
+      LogStreamerUnloadPhase(
+          "snapshot_rebuild", glm::ivec3(0),
+          "duration_ms=" +
+              std::to_string(std::chrono::duration<double, std::milli>(
+                                 std::chrono::steady_clock::now() -
+                                 snapshot_started)
+                                 .count()) +
+              " resident_chunks=" +
+              std::to_string(chunk_manager.GetResidentChunkCount()) +
+              " resident_columns=" +
+              std::to_string(UnloadColumnSnapshot.size()));
+    }
   }
 
   int unloadOps = 0;

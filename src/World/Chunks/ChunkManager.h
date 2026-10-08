@@ -43,8 +43,16 @@ public:
   void EnsureChunk(glm::ivec3 chunk_coord);
   void RemoveChunk(glm::ivec3 chunk_coord);
   void ForEachChunk(const std::function<void(const UChunk &)> &fn) const;
+  /// Iterate each resident horizontal column once (coordinate Y is always 0).
+  void ForEachColumn(
+      const std::function<void(const glm::ivec3 &)> &fn) const;
   /// O(1) resident chunk count (loaded map size, not free-list).
   size_t GetResidentChunkCount() const { return Chunks.size(); }
+  /// O(1) count of unique horizontal columns with one or more resident slices.
+  size_t GetResidentColumnCount() const
+  {
+    return ResidentColumnChunkCounts.size();
+  }
   /// Cap recycled chunks retained after unload (0 = destroy immediately).
   void SetMaxFreeListChunks(size_t cap) { MaxFreeListChunks = cap; }
   size_t GetFreeListSize() const { return FreeList.size(); }
@@ -56,6 +64,7 @@ private:
   UChunk &GetOrCreateChunk(glm::ivec3 chunk_coord);
 
   std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
+  std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;
   size_t MaxFreeListChunks{256};
 };

@@ -101,6 +101,12 @@ bool IsWorldColumnSourceTraceEnabled()
   return value && value[0] == '1';
 }
 
+bool IsStreamerUnloadTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_STREAMER_UNLOAD_TRACE");
+  return value && value[0] == '1';
+}
+
 void LogWorldColumnSource(const char *source, const char *outcome,
                           glm::ivec3 ground, const std::string &details)
 {
@@ -110,6 +116,20 @@ void LogWorldColumnSource(const char *source, const char *outcome,
   }
   const std::string message =
       std::string("source=") + source + " outcome=" + outcome +
+      " coord=(" + std::to_string(ground.x) + ",0," +
+      std::to_string(ground.z) + ") " + details;
+  CubatariumLogInfo("WorldColumnSource", message);
+}
+
+void LogWorldColumnUnload(const char *outcome, glm::ivec3 ground,
+                          const std::string &details)
+{
+  if (!IsStreamerUnloadTraceEnabled())
+  {
+    return;
+  }
+  const std::string message =
+      std::string("source=unload_column outcome=") + outcome +
       " coord=(" + std::to_string(ground.x) + ",0," +
       std::to_string(ground.z) + ") " + details;
   CubatariumLogInfo("WorldColumnSource", message);
@@ -5084,7 +5104,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       [this, &world](glm::ivec3 ground, int max_cy) -> bool
       {
         const auto unload_started = std::chrono::steady_clock::now();
-        const bool trace_unload = IsWorldColumnSourceTraceEnabled();
+        const bool trace_unload = IsStreamerUnloadTraceEnabled();
         const glm::ivec2 col(ground.x, ground.z);
         const glm::ivec2 world_key(col.x * CHUNK_SIZE,
                                    col.y * CHUNK_SIZE);
@@ -5104,8 +5124,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           if (trace_unload)
           {
-            LogWorldColumnSource(
-                "unload_column", "vetoed", ground,
+            LogWorldColumnUnload(
+                "vetoed", ground,
                 "decision_ms=" + std::to_string(decision_ms) +
                     " total_ms=" +
                     std::to_string(std::chrono::duration<double, std::milli>(
@@ -5218,8 +5238,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
               std::chrono::duration<double, std::milli>(
                   mesh_remove_started - invalidation_started)
                   .count();
-          LogWorldColumnSource(
-              "unload_column", "evicted", ground,
+          LogWorldColumnUnload(
+              "evicted", ground,
               "max_cy=" + std::to_string(highest_cy) +
                   " needs_relight=" + std::to_string(needs_relight) +
                   " active_work=" + std::to_string(active_work) +

@@ -115,6 +115,12 @@ bool IsWorldColumnSourceTraceEnabled()
   return value && value[0] == '1';
 }
 
+bool IsWorldColumnSaveTraceEnabled()
+{
+  const char *value = std::getenv("CUBA_WORLD_COLUMN_SAVE_TRACE");
+  return value && value[0] == '1';
+}
+
 bool IsStreamingDetailTraceEnabled()
 {
   const char *value = std::getenv("CUBA_STREAMING_DETAIL_TRACE");
@@ -133,13 +139,12 @@ void LogWorldColumnSource(const char *source, const char *outcome,
       std::to_string(ground.x) + ",0," + std::to_string(ground.z) + ") " +
       details;
   CubatariumLogInfo("WorldColumnSource", message);
-  std::cerr << "[WorldColumnSource] " << message << std::endl;
 }
 
 void LogWorldColumnSave(const char *outcome, glm::ivec3 coord,
                         const std::string &details, bool always = false)
 {
-  if (!always && !IsWorldColumnSourceTraceEnabled())
+  if (!always && !IsWorldColumnSaveTraceEnabled())
   {
     return;
   }
@@ -155,7 +160,6 @@ void LogWorldColumnSave(const char *outcome, glm::ivec3 coord,
   {
     CubatariumLogInfo("WorldColumnSave", message);
   }
-  std::cerr << "[WorldColumnSave] " << message << std::endl;
 }
 
 bool HasChunkDataFiles(const std::string &chunks_dir)
@@ -197,7 +201,6 @@ void UWorldPersistence::SetWorldFolderPath(const std::string &path)
         "outcome=light_flags_flush_timeout folder=" + WorldFolderPath +
         " revision=" + std::to_string(LightCompleteRevision);
     CubatariumLogInfo("WorldColumnSave", message);
-    std::cerr << "[WorldColumnSave] " << message << std::endl;
   }
 
   WorldFolderPath = path;
@@ -4129,7 +4132,6 @@ void UWorldPersistence::TraceAsyncChunkIoShutdownState() const
       " light_flags_dirty=" +
       std::to_string(LightCompleteDirty ? 1 : 0);
   CubatariumLogInfo("WorldColumnSave", message);
-  std::cerr << "[WorldColumnSave] " << message << std::endl;
 }
 
 bool UWorldPersistence::TickDrainAsyncChunkIo(UWorld &world, int max_iterations)
@@ -4174,7 +4176,6 @@ void UWorldPersistence::FlushAsyncChunkIo(UWorld &world)
         "outcome=light_flags_flush_timeout folder=" + WorldFolderPath +
         " revision=" + std::to_string(LightCompleteRevision);
     CubatariumLogInfo("WorldColumnSave", message);
-    std::cerr << "[WorldColumnSave] " << message << std::endl;
   }
 }
 
@@ -4343,7 +4344,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
     PendingAsyncColumnSaveSlices[ground_coord] = 1;
     AsyncChunkIo->RequestRemoveTerrainColumn(
         ground_coord, max_height, *ChunkStorage, WorldFolderPath);
-    if (IsWorldColumnSourceTraceEnabled())
+    if (IsWorldColumnSaveTraceEnabled())
     {
       LogWorldColumnSave("discard_incomplete_queued", ground_coord,
                          "max_height=" + std::to_string(max_height) +
@@ -4434,7 +4435,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - cleanup_enqueue_started)
           .count();
-  if (IsWorldColumnSourceTraceEnabled())
+  if (IsWorldColumnSaveTraceEnabled())
   {
     LogWorldColumnSave(
         "queued", ground_coord,

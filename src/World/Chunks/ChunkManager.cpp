@@ -74,6 +74,7 @@ void UChunkManager::ClearFluidState(glm::ivec3 worldPos)
 void UChunkManager::Clear()
 {
   Chunks.clear();
+  ResidentColumnChunkCounts.clear();
   FreeList.clear();
 }
 
@@ -140,6 +141,15 @@ void UChunkManager::ForEachChunk(
   }
 }
 
+void UChunkManager::ForEachColumn(
+    const std::function<void(const glm::ivec3 &)> &fn) const
+{
+  for (const auto &entry : ResidentColumnChunkCounts)
+  {
+    fn(entry.first);
+  }
+}
+
 void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
 {
   auto it = Chunks.find(chunkCoord);
@@ -149,6 +159,19 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
   }
   std::unique_ptr<UChunk> chunk = std::move(it->second);
   Chunks.erase(it);
+  const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
+  auto columnIt = ResidentColumnChunkCounts.find(groundCoord);
+  if (columnIt != ResidentColumnChunkCounts.end())
+  {
+    if (columnIt->second <= 1)
+    {
+      ResidentColumnChunkCounts.erase(columnIt);
+    }
+    else
+    {
+      --columnIt->second;
+    }
+  }
   if (chunk && FreeList.size() < MaxFreeListChunks)
   {
     FreeList.push_back(std::move(chunk));
@@ -178,9 +201,13 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   {
     chunk = std::make_unique<UChunk>(chunkCoord);
   }
-  UChunk &ref = *chunk;
-  Chunks.emplace(chunkCoord, std::move(chunk));
-  return ref;
+  const auto inserted = Chunks.emplace(chunkCoord, std::move(chunk));
+  const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
+  if (inserted.second)
+  {
+    ++ResidentColumnChunkCounts[groundCoord];
+  }
+  return *inserted.first->second;
 }
 
 } // namespace cutum
