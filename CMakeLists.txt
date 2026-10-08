@@ -418,6 +418,7 @@ set(SOURCES
     src/WorldGen/Core/PipelineChunkPopulator.cpp
     src/WorldGen/Core/ProceduralWorldGenFactory.cpp
     src/World/Raycast/BlockRaycast.cpp
+    src/World/Raycast/OpaqueVoxelRayTrace.cpp
     src/World/Chunks/Chunk.cpp
     src/World/Chunks/ChunkManager.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
@@ -1384,6 +1385,7 @@ add_executable(mesh_neighbor_policy_test
     src/Test/MeshNeighborPolicyTest.cpp)
 target_include_directories(mesh_neighbor_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_neighbor_policy_test PRIVATE glm::glm)
 
 add_executable(mesh_publish_contract_test
     src/Test/MeshPublishContractTest.cpp)
@@ -1521,6 +1523,7 @@ add_executable(sticky_overlay_remesh_policy_test
     src/Test/StickyOverlayRemeshPolicyTest.cpp)
 target_include_directories(sticky_overlay_remesh_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(sticky_overlay_remesh_policy_test PRIVATE glm::glm)
 
 add_executable(column_emerge_bump_test
     src/Test/ColumnEmergeBumpTest.cpp)
@@ -1819,6 +1822,7 @@ add_executable(decor_mesh_integration_test
     src/World/Physics/FluidTransformSim.cpp
     src/World/Physics/FluidBlockResolver.cpp
     src/World/Physics/LiquidDebugTrace.cpp
+    src/App/Platform/Log.cpp
     src/Test/DecorMeshIntegrationTest.cpp)
 target_include_directories(decor_mesh_integration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1826,6 +1830,9 @@ target_compile_definitions(decor_mesh_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json
     glog::glog OpenGL::GL GLEW::GLEW)
+if(WIN32)
+    target_link_libraries(decor_mesh_integration_test dbghelp)
+endif()
 
 add_executable(mesh_schedule_retry_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
@@ -2677,6 +2684,7 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     src/Test/GreedyVertexPoolDriverTest.cpp
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/GreedyGpuPublication.cpp
+    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/World/Diagnostics/JobStageTrace.cpp
     src/World/Streaming/ChunkRenderDemand.cpp)
   target_include_directories(greedy_vertex_pool_production_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -2695,6 +2703,7 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     docs/streaming/audit_2026_09_16/PublicationRepro.cpp
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/GreedyGpuPublication.cpp
+    src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/World/Diagnostics/JobStageTrace.cpp
     src/World/Streaming/ChunkRenderDemand.cpp)
   target_include_directories(publication_audit PRIVATE ${CMAKE_SOURCE_DIR}/src)

@@ -762,7 +762,10 @@ public:
   {
     return Dirty.GetEnqueueAgeFrames(chunk_coord);
   }
-  uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
+  uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const
+  {
+    return MeshRevisions.Current(chunk_coord);
+  }
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
   /// Drop stale async apply for this chunk (revision bump + clear RemeshAfterApply).
   void InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord);

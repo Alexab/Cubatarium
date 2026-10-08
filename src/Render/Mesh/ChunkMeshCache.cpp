@@ -1810,11 +1810,6 @@ int UChunkMeshCache::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
       [this](glm::ivec3 c) { return !HasGreedyMesh(c); });
 }
 
-uint64_t UChunkMeshCache::GetChunkMeshRevision(glm::ivec3 chunk_coord) const
-{
-  return MeshRevisions.Current(chunk_coord);
-}
-
 bool UChunkMeshCache::HasInflightMeshBuild(glm::ivec3 chunk_coord) const
 {
   return ActiveMeshSourceRevision.find(chunk_coord) !=
