@@ -4020,3 +4020,49 @@ Repeat this capture on the same M335 route when a continuous awake session can
 reach the X window. A valid result requires both route completion and saved
 frames. Keep this diagnostic separate from performance baselines. Captures and
 flight reports are local artifacts and should not be staged with source changes.
+
+## M474 — completed M335 underwater-light capture (2026-10-08)
+
+M474 repeated the M335 route with enough flight time to reach the corridor and
+saved a full-frame PNG every 0.5 seconds while camera X was in
+`[-6460, -6400]`. It reused M473's longer flight phase, capture bounds, and
+route parameters.
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m474_underwater_light_20261008'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-6460'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-6400'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m474_world164_m335_underwater_capture --report bin/suite_reports/engine_refactor/m474_world164_m335_underwater_capture_20261008.json --process-timeout 7200
+```
+
+The Release application exited 0 and passed the route gate after 7,344 blocks
+(focus X `7 -> -452`, camera Y remained 70). It saved 49 frames from
+`frame_000.png` through `frame_048.png`, spanning camera X=-6,400.16 to
+-6,459.62. The images show low-contrast block silhouettes through blue
+underwater fog. No isolated bright square is apparent in the reviewed frames;
+this does not rule out a brief or smaller event between captures.
+
+The report is
+`bin/suite_reports/engine_refactor/m474_world164_m335_underwater_capture_20261008.json`;
+the perf log is `bin/logs/perf_20261008-202037_41976.jsonl`; INFO log is
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261008-202032.41976`.
+The dual-lane stop line passed, while the eye-proxy stop line failed on stale
+visual/apply and effective-hole-blink counters. Median fly wall time was
+29.66 ms and is diagnostic only because screenshots were enabled. Treat the
+reported square as not reproduced, not disproven. The next useful capture is a
+denser on-screen pixel witness restricted to this same X interval, retaining
+the hit chunk's light revisions and preview flag for every candidate pixel.
+Do not stage the PNGs, raw logs, or run report as source changes.

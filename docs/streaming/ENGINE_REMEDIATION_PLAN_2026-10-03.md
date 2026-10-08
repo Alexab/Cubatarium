@@ -5784,18 +5784,42 @@ patch. The fixed-day wrapper was interrupted before its cleanup;
 verified against SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
 `users.json` still matched its preflight SHA-256.
 
-Next, repeat the full M335 route with the same narrow capture window and enough
-continuous awake time to enter it. A result is valid only if route completion
-reaches the target corridor and saved frames are present. Join each frame to
-M471's pixel/depth fields before deciding whether the patch is water/fog color,
-a surface-light discontinuity, or a mesh boundary. Keep M470 as the clean
-performance lane and World_164/M335 as the repeated-world control; new-world
-and cold-start checks stay secondary.
+M474 completed the full route: 7,344 blocks, process exit 0, route gate passed,
+and 49 PNGs were saved from camera X=-6,400.16 through -6,459.62 at Y=70. The
+screenshots show the familiar low-contrast block silhouettes through blue
+underwater fog; they do not clearly show an isolated brighter square. This is
+visual evidence, not proof that the transient reported earlier never happened.
+The overall report still fails its quality gates, including the eye-proxy
+stale-visual/holes-blink checks, so M474 is not a green engine baseline.
+
+In the 13 periodic samples through that corridor, `chunk_meshed_unlit`,
+`focus_visual_pending_light_n`, `pending_light_focus`, `focus_pending_dark`, and
+`near_focus_holes` were all zero. `visible_black_focus_n` was 1 in the first
+six samples and then zero; `focus_provisional_light_preview` ranged from 44 to
+77. These are focus aggregates and do not identify the chunk under a specific
+screen pixel.
+
+Joining the existing M471 probes to the same X corridor gives 560 sampled
+pixels, 264 voxel-ray hits, and 317 valid opaque-depth surfaces. Those surfaces
+had matching published/current light revisions and no pending-light flag.
+158 of the 317 carried the preview tag, but their sampled sky light was at
+least 0.4667. The shader's preview floor is 0.42, so it could not have raised
+the sampled surfaces' brightness. The preview path remains a candidate for an
+unsampled, lower-lit pixel, but the available evidence does not tie it to the
+reported square. M470's two adjacent unlit/pending-light periods remain a
+plausible transient, not a reproduced fault.
+
+Do not change the light shader from this evidence. If the square recurs, retain
+the exact M335 route and capture its full frame plus a denser, bounded pixel
+sample carrying the hit chunk's preview flag and light revisions. Keep M470 as
+the clean performance lane and World_164/M335 as the repeated-world control;
+new-world and cold-start checks stay secondary.
 
 M471 reports, summaries, raw logs, and exact invocation are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m471--m335-underwater-light-witness-2026-10-08).
-Plan status: **M470's pending-light correlation remains plausible. M471 found
-no light debt on 264 sampled corridor pixel hits; M472 fell short of the
-capture corridor, and M473 was interrupted by system sleep. There is still no
-full-frame evidence of the reported square. Complete the bounded capture run
-before changing rendering or lighting behavior.**
+Plan status: **M470's pending-light correlation remains plausible but was not
+reproduced by M474. M474 captured the full corridor, and M471's sampled hits
+showed no pending light or effective preview-floor lift. The saved frames look
+like low-contrast silhouettes through fog, but are not conclusive for a brief
+or smaller patch. Preserve the evidence and only change rendering after a
+denser coordinate-bound pixel witness identifies the responsible chunk.**
