@@ -2766,6 +2766,12 @@ def main() -> int:
                                 "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY", ""
                             ).strip()
                             not in ("", "0"),
+                            "visual_pixel_probe_min_x": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X"
+                            ),
+                            "visual_pixel_probe_max_x": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X"
+                            ),
                             "world_column_source_trace": os.environ.get(
                                 "CUBA_WORLD_COLUMN_SOURCE_TRACE", ""
                             ).strip()

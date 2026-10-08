@@ -114,6 +114,22 @@ constexpr size_t kPixelProbeSampleCount =
     static_cast<size_t>(kPixelProbeColumns * kPixelProbeDenseRows);
 constexpr float kOpaqueVertexLightMatchDistance = 0.25f;
 
+float ReadPixelProbeEnvFloat(const char *name, float fallback)
+{
+  const char *value = std::getenv(name);
+  if (value == nullptr || value[0] == '\0')
+  {
+    return fallback;
+  }
+  char *end = nullptr;
+  const float parsed = std::strtof(value, &end);
+  if (end == value || *end != '\0' || !std::isfinite(parsed))
+  {
+    return fallback;
+  }
+  return parsed;
+}
+
 int PixelProbeRows()
 {
   static const int rows = []() {
@@ -3357,6 +3373,17 @@ void UGeometryEngine::DrawCubeGeometry()
       static uint64_t last_screen_ray_probe_epoch = 0;
       const bool probe_on_focus_change = PixelProbeOnFocusChangeEnabled();
       const bool probe_on_screen_ray = PixelProbeOnScreenRayEnabled();
+      // Optional camera-space bounds limit framebuffer readback without
+      // changing the world streaming trace or its screen-ray scheduling.
+      static const float pixel_probe_min_x = ReadPixelProbeEnvFloat(
+          "CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X",
+          -std::numeric_limits<float>::infinity());
+      static const float pixel_probe_max_x = ReadPixelProbeEnvFloat(
+          "CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X",
+          std::numeric_limits<float>::infinity());
+      const bool pixel_probe_in_x_range =
+          probe_camera_x >= pixel_probe_min_x &&
+          probe_camera_x <= pixel_probe_max_x;
       const bool camera_band_peak_probe =
           UJobStageTrace::HasCameraBandPeakTraceForFrame(
               pixel_probe_frame_epoch) &&
@@ -3374,9 +3401,10 @@ void UGeometryEngine::DrawCubeGeometry()
            (probe_camera_x >= -210.0f && probe_camera_x <= -120.0f))
               ? 60u
               : 120u;
-      if (render_probe_count % probe_stride == 0u ||
-          (probe_on_focus_change && focus_changed) || camera_band_peak_probe ||
-          screen_ray_probe)
+      if (pixel_probe_in_x_range &&
+          (render_probe_count % probe_stride == 0u ||
+           (probe_on_focus_change && focus_changed) || camera_band_peak_probe ||
+           screen_ray_probe))
       {
         pixel_probe_capture.probe_id = render_probe_count;
         pixel_probe_capture.rows =
