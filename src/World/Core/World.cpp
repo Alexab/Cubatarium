@@ -4331,7 +4331,6 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       unowned_created_attempt && coverage_waits_only_on_overlay_debt &&
       !active_demand->retained_awaiting_successor &&
       !MeshService->IsSoftDeferHeld(coord) &&
-      !MeshService->HasDrawableGreedyMesh(coord) &&
       MeshService->HasGreedyMesh(coord) &&
       !MeshService->IsChunkMeshDirty(coord) &&
       !MeshService->IsRemeshAfterApplyPending(coord) &&
@@ -4345,13 +4344,15 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       active_demand->published_light_rev == published.light_rev &&
       chunk->GetLightFieldRevision() == published.light_rev)
   {
-    // The demand record carries the target-local missing-neighbor obligation;
+    // The demand record carries a target-local missing-neighbor obligation;
     // RepairFaceDebt reconciles it against the published cache overlay and peer
-    // state. An unowned Created demand and coverage lag caused only by overlay
-    // debt are not executable mesh work. Re-admitting through generic FirstMesh
-    // repair cannot close that dependency while its peer inputs are unchanged.
-    // Keep the visual obligation open, but avoid advancing the same geometry
-    // revision on every census.
+    // state. A current published mesh (drawable or not) with coverage lag caused
+    // only by overlay debt has no changed mesh input to consume. Re-admitting it
+    // through generic FirstMesh repair cannot close that dependency while peer
+    // inputs are unchanged. Keep the visual obligation open, but avoid advancing
+    // the same geometry revision on every census. A peer incarnation/coverage
+    // change is still handled by RepairFaceDebt; local geometry or light changes
+    // fail the revision checks above and admit a real rebuild.
     return;
   }
   const bool requeue_existing_target =
