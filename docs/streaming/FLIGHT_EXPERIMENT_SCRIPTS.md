@@ -3508,3 +3508,81 @@ $env:CUBA_GPU_PROCESS_PROFILE_PATH=''
 $env:CUBA_STAGE_WATCHDOG_PATH=''
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m465_world164_m335_pixel_ray_sync --report bin/suite_reports/engine_refactor/m465_world164_m335_pixel_ray_sync_20261008.json --process-timeout 7200
 ```
+
+## M466 — M335 retained ray-correlated pixel/depth evidence (2026-10-08)
+
+M466 repeated the exact visible/no-teleport M335 conditions and enabled the
+same-frame renderer pixel probe on the screen-ray sampler's five vertical
+scanlines. The pixel ring was 65,536 records. Dense pixels, focus-change
+probes, source tracing, relight audit, GPU profile, and frame captures stayed
+off. The user reported a heavy concurrent host task during part of the run,
+approximately focus `-340..-365`; treat M466 latency and route completion as
+host-load contaminated.
+
+The Release executable matched clean commit
+`c2e9b5f4b9f2ffd94351a5587a1241cd8f2e5c96`, SHA-256
+`247c86aad30cc82a1890272ecd98bc907e4674cdc7cf97148c41e89e31827d6a`. The app
+exited 0, `run_outcome=success`, and manifest acceptance passed. It traveled
+13,744 blocks at median 5.19653 blocks/s; this missed the 14,300-block route
+gate by 556 blocks, so the wrapper and product stop-lines reported FAIL. The
+log has 1,395 periods, 1,393 steady periods, and 688 spikes. Median wall time
+was 28.94 ms and effective FPS was 34.55; neither is a clean baseline because
+of the concurrent host load and trace instrumentation.
+
+At shutdown, the trace rings dumped 8,192 screen-ray rows and 65,536 pixel
+rows, both at their configured caps. The retained ray history spans focus
+chunks `-550..-836`, candidate block X `-8,797..-13,427`, 120 candidate
+epochs, and 968 repair candidates. It covers the far part of M335, not the
+entire route. Every retained candidate joined to the exact same-frame,
+same-column, same-row pixel probe (968/968; zero unmatched). Of the 611
+candidates at or before the 36-block full-blend fog horizon, all 611 had valid
+opaque depth and an opaque surface; there were zero clear-depth candidates
+within fog. Of 357 candidates beyond fog, 355 had opaque surfaces. The two
+clear-depth samples were at 79.86 and 82.07 blocks and both were fog background
+RGB `(117,163,233)`.
+
+The renderer-pixel analyzer found 5,957 samples below luma 96 and 945 below
+luma 32 among the 65,536 probes. Every dark sample still had a valid opaque
+depth surface and visible MDI indices; 5,693 had settled light demand. The
+transparent pass changed none of the dark samples' RGB values. These are dark
+rendered surfaces, not blank pixel witnesses. The trace does not alone prove
+their lighting or material color is correct.
+
+`unfinished_visual` stayed nonzero throughout and its hole-rate alias was 1.0.
+All 1,024 retained focus-column classifications were `MissingMesh` (enum value
+5). `CountUnfinishedVisualNear` counts per-slice FirstMesh debt at column
+level even though other ready slices can be drawn progressively, and
+`draw_oracle_missing_resident_n` directly aliases that counter. The associated
+readiness gates are not independent framebuffer evidence. Do not treat these
+counters as proof of empty chunks without a pixel/depth witness.
+
+The screen-ray history ring reached its 8,192-row cap, so earlier route
+segments were evicted even though every retained candidate has pixel data.
+M466 therefore improves the correlation evidence over M465 and resolves its
+unmatched retained candidates, but does not prove whole-route or full-screen
+coverage. The user-visible report that the world looked good is consistent
+with these sampled points; no full-frame screenshots were saved.
+
+Artifacts:
+
+- Flight report: `bin/suite_reports/engine_refactor/m466_world164_m335_pixel_ray_sync_retention_20261008.json`
+- Visual-coverage summary: `bin/suite_reports/engine_refactor/m466_visual_coverage_trace_20261008.json`
+- Renderer-pixel summary: `bin/suite_reports/engine_refactor/m466_renderer_pixel_trace_20261008.json`
+- Perf trace: `bin/logs/perf_20261008-104720_17708.jsonl`
+
+Exact M466 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m466_world164_m335_pixel_ray_sync_retention --report bin/suite_reports/engine_refactor/m466_world164_m335_pixel_ray_sync_retention_20261008.json --process-timeout 7200
+```

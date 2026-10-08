@@ -5325,32 +5325,85 @@ corridor). These are not interchangeable measurements and do not override the
 pixel/depth result. The user-visible dark-chunk symptom is still not reproduced
 by a same-pose screenshot.
 
-#### Current work order after M465
+#### M466 checkpoint — retained ray-correlated pixel/depth evidence (2026-10-08)
 
-1. **M466: retain all ray-correlated samples.** Increase the opt-in pixel trace
-   ring to 65,536 records so same-frame candidates in the `focus -626..-645`
-   segment are not evicted. Keep the M335 route and all capture rows fixed.
-   The analyzer should report unmatched in-fog candidates and clear-depth
-   witnesses explicitly. Require all candidate frames within retained
-   screen-ray history to have an exact pixel/depth join before interpreting
-   the remaining samples.
-2. **Classify direct witnesses.** For every clear-depth match, retain the
-   coordinate, candidate voxel/chunk, fog distance, and RGB/depth values.
-   A clear depth beyond full fog blend is not a visible opening. Any clear
-   depth at or before fog end needs a saved same-frame capture and follow-up
-   renderer/mesh publication trace.
-3. **Follow repeatable near-fog candidates through ownership and publication.**
-   Trace admission, FirstMesh/dirty ownership, worker completion, GPU
-   publication, and readiness transition for the same chunk incarnation and
-   geometry revision. Only then decide whether a bounded repair-policy change
-   is warranted; do not raise streaming quotas from proxy counts alone.
-4. Keep M335, settings, route and collision behavior unchanged; demand adequate
-   route completion and stop window. Treat trace-run timing as diagnostic.
-   Preserve regular cold world-create/load profiling and fresh-seed checks as
-   secondary tracks, and keep the longstanding fog/water silhouette question
-   separate.
+M466 used the same visible, no-teleport M335 route and Release executable from
+clean commit `c2e9b5f4b9f2ffd94351a5587a1241cd8f2e5c96` (SHA-256
+`247c86aad30cc82a1890272ecd98bc907e4674cdc7cf97148c41e89e31827d6a`). The app
+exited 0, `run_outcome=success`, and the manifest was accepted. It covered
+13,744 blocks at median 5.19653 blocks/s, short of the 14,300-block route gate
+by 556 blocks; the wrapper and product gates therefore failed despite the
+successful app run. The report contains 1,395 periods and 688 spikes. The user
+reported a heavy concurrent host task, overlapping approximately focus
+`-340..-365`; mark those and the overall latency distribution as contaminated,
+not as a clean performance comparison.
 
-M465 artifacts and exact command are in
-[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m465--m335-screen-ray-aligned-pixel-depth-evidence-2026-10-08).
-Plan status: **the diagnostic path works; visual-hole classification is
-incomplete until M466 retains the missing 173 near-fog candidates.**
+Both evidence rings reached their configured caps: 8,192 screen-ray rows and
+65,536 renderer-pixel rows. The retained screen-ray history contains 968
+repair candidates over 120 epochs, spanning focus chunks `-550..-836` and
+candidate block X `-8,797..-13,427`. This is the far portion of the route, not
+the complete flight history. Every one of the 968 retained candidates joined
+to the exact same-frame, same-column, same-row pixel probe; there were no
+unmatched retained candidates. Of the 611 candidates at or before M335's
+36-block full-blend fog distance, all 611 had opaque depth and a valid opaque
+surface. There were no clear-depth matches within that fog horizon. Of 357
+candidates beyond it, 355 had opaque depth and two had clear depth at 79.86
+and 82.07 blocks; both pixels were the fog background color `(117,163,233)`.
+Those two distant samples are not evidence of a visible opening.
+
+The full pixel-probe analysis classified 5,957/65,536 samples below luma 96,
+including 945 below luma 32. Every one of these sampled dark pixels had a valid
+opaque depth surface and visible MDI indices; 5,693 also had settled light
+demand, and the transparent pass changed none of their RGB values. A low-luma
+threshold therefore finds dark rendered surfaces, not empty framebuffer
+locations. It does not by itself establish whether their material color or
+lighting is correct.
+
+`unfinished_visual` stayed nonzero throughout and the hole-rate aliases stayed
+at 1.0. The retained focus trace classified all 1,024 sampled columns as
+`MissingMesh` (class 5). This counter is not an eye-space coverage test:
+`ClassifyFocusColumnVisual` retains missing per-slice FirstMesh work even when
+sibling slices in the column can already draw progressively, while
+`draw_oracle_missing_resident_n` is assigned directly from `unfinished_visual`.
+The persistent readiness debt and its derived gates are not independent
+framebuffer witnesses. They still identify work to explain, but cannot be
+reported as a user-visible hole without pixel/depth evidence.
+
+M466 did not reproduce a clear framebuffer sample within the fog horizon in
+its retained far-route screen-ray candidates. This is bounded evidence, not
+full closure: the ray history ring capped at 8,192 rows, excludes the earlier
+route, the pixel grid is sparse, and no full-frame screenshot was saved. The
+run also missed its route-distance gate. Do not increase streaming quotas or
+change draw policy based only on `unfinished_visual`, `visible_black`, or
+`void_near` counters.
+
+#### Current work order after M466
+
+1. **Extend spatial coverage without changing M335 conditions.** The 8,192-row
+   screen-ray ring retained only the latter route segment (`focus -550..-836`).
+   Increase/rotate ray-history retention enough to cover the full established
+   route while keeping the 65,536-row pixel ring and the same 20-column,
+   five-scanline capture. Require the 14,300-block route gate and record
+   checkpoints across the path; do not add dense probes that alter the run's
+   cost without a specific question.
+2. **Separate geometry presence from freshness debt.** For recurring sampled
+   candidates, follow the exact chunk incarnation and desired/published
+   geometry revisions through admission, FirstMesh/dirty ownership, worker
+   completion, and GPU publication. M466 candidates frequently carried
+   repairable geometry-debt flags while their same-frame pixels had opaque
+   surfaces. Identify what those flags mean before proposing a repair-policy
+   change.
+3. **Investigate dim surfaces as a separate light/material question.** Join
+   low-luma probes with material ID, face, light values, fog, and same-pose
+   framebuffer captures. Do not equate naturally dark block colors, underwater
+   appearance, or fog silhouettes with missing terrain.
+4. Preserve the cold world-create/load profile and periodic fresh-seed runs as
+   secondary lanes. Keep the repeatable `World_164` M335 route primary, and
+   retain the longstanding weather/fog/water silhouette question separately.
+
+M466 artifacts and exact command are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m466--m335-retained-ray-correlated-pixel-depth-evidence-2026-10-08).
+Plan status: **the sampled far-route points have no in-fog clear-depth witness;
+the visual-hole claim is unconfirmed, the route and ray-history coverage are
+incomplete, and the remaining readiness/revision debt still needs causal
+classification.**
