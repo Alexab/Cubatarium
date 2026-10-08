@@ -2988,3 +2988,70 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Raw output remains under ignored `bin` data. M457 findings and the next
 diagnostic pass are in
 [`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m457-checkpoint--cruise-readiness-rescans-bounded-far-end-light-debt-remains-2026-10-08).
+
+## M458 — capture-heavy endpoint attempt (2026-10-08)
+
+M458 kept the M335 world/start/camera/speed/route, but enabled in-app frame
+capture every 15 seconds. The app returned 0, yet covered only 14,080 blocks
+(`focus_cx=7 -> -873`) against the required 14,300; do not compare this as a
+completed long-route result. The extra capture load may have slowed the run,
+but this single result does not prove causality. Report:
+`bin/suite_reports/engine_refactor/m458_world164_m335_far_endpoint_frame_capture_20261008.json`.
+
+## M459 — targeted far-end frames without capture-heavy flight (2026-10-08)
+
+M459 reran the established visible, no-teleport M335 route with all in-app
+capture and source/GPU tracing disabled. A few early manual captures were
+discarded because they showed the desktop behind the game; the DPI-aware
+window-capture tool was corrected and verified. The endpoint watcher then
+captured two approach frames and one stationary frame without adding repeated
+capture load to the route. Reusable tools are
+[`capture_flight_sim_window.ps1`](../../tools/capture_flight_sim_window.ps1)
+and [`watch_m335_endpoint_capture.ps1`](../../tools/watch_m335_endpoint_capture.ps1).
+
+The run completed 14,320 blocks (`focus_cx=7 -> -888`), `process_rc=0`, with
+no movement-blocked substeps. It did not pass analyzer acceptance or
+post-stop-convergence. The moving frames show heavy blue haze/low-contrast
+silhouettes; the stopped endpoint shows lit terrain and trees, without an
+obvious black/empty chunk. The frames are at different camera positions and
+cannot explain the user's longstanding slow silhouette toggling through
+fog/water. The ring's stale-lit proxy reached nine at stop (oldest age 666
+frames), but that does not prove those chunks were visible. A separate
+nearest-dark-face probe found five stale-light faces at stop, but the capture
+does not map them to projected coordinates.
+
+Artifacts:
+
+- Analyzer: `bin/suite_reports/engine_refactor/m459_world164_m335_capture_disabled_full_route_20261008.json`
+- Perf log: `bin/logs/perf_20261008-022251_13416.jsonl`
+- Frames: `bin/suite_reports/engine_refactor/m459_world164_m335_far_endpoint_frames_20261008/`
+- M459's raw artifacts are local ignored `bin` data and are not committed.
+
+Exact route invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 14300 --phase-id m459_world164_m335_capture_disabled_full_route --report bin/suite_reports/engine_refactor/m459_world164_m335_capture_disabled_full_route_20261008.json --process-timeout 7200
+```
+
+The endpoint watcher used the perf log above and saved to the `m459_*_frames`
+directory. It captured at `focus_cx<=-877`, `<=-883`, then after stationary
+samples at the route endpoint.
+
+## M460 — altitude terrain-query timing (in progress, 2026-10-08)
+
+`UpdateStreaming` calls `FindTopSolidSurfaceY` for altitude-adaptive fog once
+per update. Before M460 its synchronous downward scan from `MaxHeight` had no
+dedicated timer. Commit `fe0a9718` adds per-sample `altitude_surface_query_ms`
+and period `max_altitude_surface_query_ms` without changing the query or fog
+behavior. The app was built with `cmake --build bin --config Release --target
+Cubatarium --parallel 8`. M460 is the unchanged M335 route, capture disabled,
+with only phase/report names changed; final readings and route outcome will be
+added after completion.

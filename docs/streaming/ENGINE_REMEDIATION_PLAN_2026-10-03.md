@@ -4874,3 +4874,77 @@ The analyzer also reports a 26.411 ms median fly frame (37.95 FPS), versus its 1
 
 M457 measurements and exact command are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m457-catch-up-probe-budget-check-on-the-full-m335-route-2026-10-08).
+
+### M458–M460 checkpoint — visual witness and uninstrumented fog query (2026-10-08)
+
+M458 added an in-app framebuffer capture every 15 seconds to the unchanged
+M335 route. The app exited normally, but travelled 14,080 blocks and reached
+only `focus_cx=-873`, short of the 14,300-block route gate. This is not a valid
+full-route comparison. Frequent capture is a plausible source of extra load,
+but M458 alone does not prove that it caused the shortfall.
+
+M459 disabled in-app capture and used only a few external window captures. It
+completed 14,320 blocks (`focus_cx=7 -> -888`) with zero blocked movement
+substeps, `process_rc=0`, and no kill. The analyzer still failed its renderer
+and post-stop gates. Fly wall median was 26.95 ms; streaming-phase median was
+13.81 ms. One rare `UpdateStreaming` maximum of 83.61 ms was recorded near
+`focus_cx=-198`; the associated period's max wall was 172.03 ms, while that
+period's averaged wall and streaming timings were lower. `streamer_update`
+and unload work remained small in the period averages, so this is not evidence
+for a slow core streamer or a disk unload stall.
+
+The targeted images are stronger than readiness counters for classifying the
+far endpoint. The two moving approach captures (`cx=-877` and `-883`) show
+heavy blue haze and low-contrast terrain silhouettes; the stopped endpoint
+capture (`cx=-888`) shows lit ground and trees with no obvious black or empty
+chunk. These images are from different camera positions, so they do not prove
+or disprove the user's separate report that the distant silhouette through
+fog/water slowly toggles at a fixed view. The user reports that effect predates
+these changes; track it as a separate, still-unexplained fog/water behavior,
+not as a streaming regression. M335 itself disables fog pull-in, but retains
+altitude-adaptive fog.
+
+At the stopped endpoint, an internal ring proxy counted nine stale-lit
+columns, with oldest stale vertex-light age rising from 214 to 666 frames.
+The endpoint screenshot nevertheless shows lit nearby terrain. This mismatch
+means the ring proxy does not establish a visible defect; if this lead is
+revisited, the stale coordinate must first be tied to a screen ray/frame. A
+separate nearest-dark-face probe reported five stale-light faces at stop, but
+the available image does not map them to projected coordinates.
+
+Code inspection found one more unmeasured `UpdateStreaming` operation:
+altitude-adaptive fog calls `FindTopSolidSurfaceY` synchronously on each update,
+scanning downward from procedural `MaxHeight` through `GetBlock` calls. This is
+an O(world-height) column query and was absent from M459's stage telemetry. It
+is a measurement gap, not a claimed root cause. Commit `fe0a9718` adds its
+average and maximum duration to perf JSONL. M460 is now running the exact M335
+route with that observation enabled; the next step is to compare the query
+maximum with `UpdateStreaming` spikes near the same coordinates. If the query
+is small when a large spike occurs, rule it out and instrument the remaining
+unattributed policy work instead of changing fog behavior.
+
+The first partial M460 periods show ordinary query cost around 0.015–0.022 ms.
+One 9.03 ms maximum occurred near the route start (`cx=-2`); this is an early
+single-window result, not the full-route distribution. It is already too small
+to explain M459's 83.61 ms `UpdateStreaming` peak by itself, but the M460
+comparison near `cx=-198` remains pending.
+
+#### Current work order
+
+1. Finish M460 and assess the new query timer against the full route, especially
+   the M459 peak region near `cx=-198`; retain the visible GUI and capture only
+   the endpoint so the performance lane stays comparable.
+2. If that query does not explain a meaningful fraction of the spike, split the
+   remaining `UpdateStreaming` work into coarse, non-overlapping timings before
+   changing policies. Keep the existing streamer, unload and mesh-emerge timers
+   separate to avoid attributing their costs twice.
+3. Keep repeated-world M335 and the reported fog/water silhouette effect as
+   separate evidence tracks. A fog investigation needs repeated images at one
+   stationary camera pose plus effective fog inputs/underwater state; no visual
+   defect should be inferred from `unfinished_visual` or ring-level counters.
+4. After the repeated-world render symptom has pixel-level classification,
+   resume cold world-create/load profiling and periodic fresh-seed runs from the
+   existing plan. Neither replaces the fixed M335 regression route.
+
+M458/M459 artifacts, commands, and M460's diagnostic setup are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m459-targeted-far-end-frames-without-capture-heavy-flight-2026-10-08).
