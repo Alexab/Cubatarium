@@ -5347,6 +5347,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   URuntimeTuning::LoadStreamingTuneFile("streaming_tune.json");
   URuntimeTuning::ApplyEnvOverrides();
   world.PhysicsTelemetryData.PrepRefreshHasMissingMs = 0.0;
+  world.PhysicsTelemetryData.AltitudeSurfaceQueryMs = 0.0;
   // Explicit Completed caps from tune (stress / low-mem). slots=0 keeps
   // constructor default and allows CompletedExpandEnabled growth.
   {
@@ -5436,9 +5437,16 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       altitudeParams.RenderDistancePenaltyPerChunk = 1;
       altitudeParams.FogStartRatioBoost =
           std::max(0.15f, render.AltitudeFogPenaltyPer16Blocks * 4.0f);
-      const float ground_y = render.AltitudeUseTerrainSurface
-                                 ? QueryTerrainSurfaceWorldY(world, eye)
-                                 : cap.feetY(eye);
+      float ground_y = cap.feetY(eye);
+      if (render.AltitudeUseTerrainSurface)
+      {
+        const auto surface_query_t0 = std::chrono::steady_clock::now();
+        ground_y = QueryTerrainSurfaceWorldY(world, eye);
+        world.PhysicsTelemetryData.AltitudeSurfaceQueryMs =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - surface_query_t0)
+                .count();
+      }
       world.SetAltitudeAboveTerrain(std::max(0.0f, eye.y - ground_y));
       meshService.SetAltitudeCullState(world.GetAltitudeAboveTerrain(),
                                        render.AltitudeFogThresholdBlocks);
