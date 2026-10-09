@@ -6184,3 +6184,78 @@ Raw artifacts remain local. Plan status: **M335 speed/height/distance passed;
 no exact pixel mesh/depth gap reproduced; GPU bytes remain untested; camera
 band was fully mesh-satisfying at stop, while lower-band readiness debt and
 cold/new-world acceptance remain open.**
+
+#### M482 checkpoint — second repeat and capture-path cost (2026-10-09)
+
+M482 repeated the same visible no-teleport M335 route on `World_164` with the
+same Release executable and the gap-only GPU witness enabled. The application
+exited normally (`process_rc=0`, `hang_killed=false`); route adequacy passed at
+5.19653 blocks/s, eye Y=70, and 6,432 observed blocks. The route-distance gate
+passed by only 32 blocks. The wrapper returned 1 because the overall
+eye-proxy/A24 and stop-tail gates remain red.
+
+The target window produced 5,760 pixel probes and 9,875 screen-ray candidates.
+The legacy voxel-ray proxy raised nine candidates, while 4,009 exact
+ray/triangle intersections (3,522 interior) yielded **zero exact mesh/depth
+gaps**. The GPU readback therefore again had no qualifying candidate. Together
+M481 and M482 provide 11,680 probes without reproducing M480's four exact gaps.
+This classifies that signal as rare and unresolved; it does not prove correct
+GPU delivery. Do not add a speculative renderer fix or run another heavy
+pixel-probe repeat until the capture overhead is removed.
+
+M482 did have one near-focus `visual_holes=1` sample at the beginning of the
+stop tail. Its camera-band census showed one solid slice without a drawable
+mesh and one pending-work owner; the next period cleared that miss, and the
+following 12 stop periods had zero camera-band no-drawable/pending/unowned
+slices. At the stable stop, all 106 solid slices in the current camera band
+were satisfying. The broader visual band retained 23–24 unowned slices, as in
+M481. Since pixel probes were restricted to the earlier X window, there is no
+direct framebuffer sample of that brief stop-tail event. Keep the transient
+visible-mesh proxy failure separate from the stable camera-band census and
+confirm it with a low-impact capture before changing streaming policy.
+
+M482's visual-hole proxy rate was 0.11157 (above its 0.10 gate), and
+post-stop `visual_holes` rate was 0.6 with max 1. Readiness debt stayed at 1.0;
+post-stop readiness max was 51 and ended at 47. This means M482 is not a clean
+visual-acceptance pass even though the transient camera-band miss cleared.
+The captured route frames showed ordinary continuous forest/shore scenery in
+the established fog. No full-route framebuffer oracle was recorded.
+
+The run also exposed a test-instrumentation bottleneck. Within the pixel/camera
+capture window, 112 period records had median `wall_ms=438.161` and p90
+649.589 ms; outside it the median was 24.421 ms. Movement had zero blocked
+substeps in both areas. The opt-in capture path in `WindowManager.cpp` performs
+full-frame `glReadPixels`, image row flipping, PNG compression, and file output
+synchronously on the render thread every 0.5 seconds. This strongly explains
+the localized slowdown and the route's narrow distance margin; M482 performance
+and route geography are not valid timing controls. Make framebuffer capture
+asynchronous before further long pixel-probe runs.
+
+#### Updated remaining work after M482
+
+1. Move opt-in framebuffer readback and PNG writing off the render critical
+   path; retain a bounded queue and make capture drops explicit. Verify in
+   Release on the same M335 route that the capture window no longer produces
+   the M482 frame-time jump.
+2. Repeat the same route with the repaired capture path. Keep the dense pixel
+   witness only if its own measured overhead remains bounded; otherwise
+   decimate/batch it before using its route or timing results.
+3. Revisit M480's four exact ray/depth candidates only if an exact gap recurs.
+   M481 and M482 had zero exact gaps and zero GPU readback attempts; actual GPU
+   bytes/MDI command remain unverified.
+4. Report camera-band stop-tail presentability independently from wider-band
+   readiness debt. Preserve M482's brief one-sample miss and 23–24 unowned
+   lower/wider-band slices as separate unresolved diagnostics.
+5. Run the periodic cold/new-world lane after the low-impact repeated-world
+   route result is available. Keep the same no-teleport M335 motion conditions.
+6. Reconcile and close the plan only after the capture-path control, repeated
+   route, stop-tail contract, and cold/new-world lane have explicit outcomes.
+
+M482 command, report, perf log, app log, and captures are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m482--exact-route-gpu-range-witness-repeat-2026-10-09).
+Raw outputs remain local. Plan status: **M480's exact pixel event was not
+reproduced in two repeats; no GPU storage readback occurred. M335 motion passed
+the distance gate, but synchronous framebuffer capture made the diagnostic
+window strongly perturb wall time. One brief stop-tail mesh miss cleared; its
+pixel visibility remains unmeasured. Async capture, a clean repeated route,
+camera-band acceptance semantics, and cold/new-world coverage remain open.**
