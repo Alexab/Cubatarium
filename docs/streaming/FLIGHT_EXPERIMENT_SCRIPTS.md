@@ -4527,3 +4527,41 @@ app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-150753.1
 captures: `bin/flight_captures/m483_m335_async_capture_20261009` (101 frames).
 The closest frame to the exact ray event is `frame_009.png`. Keep raw artifacts
 local and out of Git.
+
+### M484 — capture-disabled M335 timing attempt (2026-10-09)
+
+M484 ran the same visible Release/no-teleport start, heading, pitch, and cruise
+height with screenshots and pixel tracing disabled. The app report has
+`exit_code=0`, 1,496.06 active seconds, eye Y=70, and 397 chunks / about 6,352
+blocks traveled. It ended just short of the established 6,400-block adequacy
+gate, so this is not a complete route control. The app recorded two predicted
+obstacles; both detours completed, with zero blocked movement substeps and zero
+ground contacts.
+
+This run is not a clean performance comparison. Its app clock excluded five
+gaps totalling 35.63 seconds. Median/p90 wall time was 46.785/99.169 ms versus
+M483's 23.303/36.270 ms; streaming-phase median/p90 was 22.996/50.612 ms versus
+10.109/20.321 ms. Async I/O drain median/p90 was 0.998/3.565 ms, while render
+median/p90 was 6.589/42.185 ms. The capture-disabled path therefore still had
+large frame-time tails, but the clock gaps and missing route distance prevent
+attributing that difference to a renderer or streaming regression.
+
+The analyzer's near-focus `visual_holes_rate` was 0.07735 with full sample
+coverage; it stayed below the 0.10 proxy gate. Post-stop visual-hole and mesh-
+missing proxies were zero, while broad readiness debt remained 25 and
+stop-convergence gates failed. These readiness counters do not establish a
+visible framebuffer hole. No screenshots or pixel probes were collected.
+
+The supervision script disappeared before the app; the visible app continued
+and exited with code 0. Its raw report was copied here from the app report, and
+the temporary clear-day override was restored from the saved backup and
+verified byte-for-byte (SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`). For the
+next timing control, keep the same route but use the existing keep-awake helper,
+set an explicit 6,400-block minimum and 7,200-second process timeout, and retain
+runner stdout/stderr so both app and analysis reports are finalized.
+
+Artifacts: [app report](../../bin/suite_reports/engine_refactor/m484_world164_m335_clean_timing_control_20261009.json),
+[analyzer report](../../bin/suite_reports/engine_refactor/m484_world164_m335_clean_timing_analysis_20261009.json),
+and [perf trace](../../bin/logs/perf_20261009-180906_1820.jsonl). Raw artifacts
+remain local and out of Git.
