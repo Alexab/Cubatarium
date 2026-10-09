@@ -5895,3 +5895,66 @@ and the M335 route gate passes. Refactor closeout remains open: stale-apply and
 near-focus quality proxies fail, stop-time readiness does not converge, and
 M477 is not a clean performance acceptance. The rare underwater light symptom
 is parked unless it becomes repeatable again.**
+
+#### M478 checkpoint — clean route, stable stop queues, geometry witness still needed (2026-10-09)
+
+M478 repeated the established visible/no-teleport World_164/M335 route on the
+same Release executable as M477 with all diagnostic traces disabled. It
+traveled 7,440 blocks at the expected 5.19287 blocks/s, held eye Y=70, exited
+normally, and passed the dual-lane route/stop line. Median fly wall time was
+22.44 ms, but the run is not full acceptance: 40 spikes reached 333.4 ms,
+median streaming phase was 9.29 ms, and several performance/diagnostic gates
+remain red.
+
+There were 22 brief in-flight `visual_holes` periods. Their nearest mesh
+witnesses were 0–2 horizontal chunks from focus, and 21 periods carried
+`miss_screen_ray_candidate=1`. This prevents treating them as only far-horizon
+readiness debt. It still does not prove a missing framebuffer pixel: the
+telemetry flag records a candidate found by a screen-ray sample, not a saved
+pixel's final depth/color. M477's detailed ray probe sampled a different route
+interval and does not resolve M478's repeated cluster. M479 is now repeating
+the same full M335 path with geometry-only pixel/ray diagnostics and captures
+bounded around X `[-2920,-2670]`; lighting-only analysis remains parked.
+
+The stop tail improved over M477: pending-light median is 0, the pending
+plateau is 0 seconds, focus-dirty fell by 88 to zero, `focus_missing_mesh` and
+`visual_holes` are zero, and `focus_not_render_ready` fell by nine. Yet 23
+not-ready items remain at the end of the short stop tail. Several analyzer
+gate names still conflate `unfinished_visual` readiness debt with a missing
+mesh or effective visual hole. M478's report now records that semantic issue;
+correct it in tooling while retaining a distinct, explicit readiness-debt
+gate. Do not waive readiness debt solely because the operator's view looked
+good, and do not claim it is a displayed hole without pixel evidence.
+
+Updated closeout order:
+
+1. **Classify the M478 near-focus candidates.** Finish M479 and determine
+   whether the captured candidate pixels have drawable geometry/depth. If a
+   real missing-mesh pixel appears, trace its chunk's load/admit/capture/GPU
+   publication owner and fix that path. If captures show complete geometry,
+   preserve the evidence and narrow the proxy to the viewable/renderable band.
+2. **Separate readiness debt from displayed coverage in analysis.** Make
+   `focus_missing_mesh`/`visual_holes`, `unfinished_visual`, and black/stale
+   proxies distinct in report names and stop gates. Preserve strict readiness
+   tracking; do not silently convert a readiness debt into a visual-hole pass.
+3. **Close stop-tail convergence.** Pending and dirty queues now drain on
+   M478, but the remaining 23-item readiness debt has not reached a stable
+   explainable terminal classification. Identify its coordinates and whether
+   those chunks are required by the active view/draw range.
+4. **Finish repeated-world acceptance and performance attribution.** Use a
+   clean, uninstrumented full M335 Release run after any renderer/streaming
+   fix. Address the remaining material spike and streaming-phase gates without
+   conflating them with pixel correctness.
+5. **Refresh the secondary cold/new-world lane.** Existing M422-M428 evidence
+   still has an unresolved cold `EnterLit` convergence failure; repeat on a
+   unique metadata-only world only after the repeated-world path is classified,
+   retaining the underfeet and drawable-mesh safety gates.
+6. **Reconcile and close the plan.** Update the remaining audit milestones and
+   keep raw reports, captures, and logs local; commit code and maintained docs.
+
+M478 metrics and M479's exact invocation are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m478--clean-m335-route-after-overlay-repair-guard-2026-10-09).
+Plan status: **M335 route, speed, height, application exit, and stop pending/
+dirty queue drainage pass. Near-focus ray candidates still require a direct
+geometry witness; the broad readiness residual and performance gates remain
+open. The cold/new-world lane remains a secondary unresolved check.**

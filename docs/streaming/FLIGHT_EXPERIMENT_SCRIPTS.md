@@ -4162,3 +4162,49 @@ and `bin/logs/perf_20261008-221655_4784.jsonl`; 46 screenshots are in
 captures, reports, or raw logs. The next active work is stale-apply/coverage
 ownership and stop-time readiness convergence, then a clean repeated-world
 acceptance run; the rare light-square investigation is parked unless it recurs.
+
+## M478 — clean M335 route after overlay-repair guard (2026-10-09)
+
+M478 is the uninstrumented Release timing control for the current code
+(`05def3e1`, executable SHA-256
+`935DD89C9223AFAF525ACAA3A39080205E0DCB4C19D4A59F5C50A15676EB04F`). It used
+the exact established visible, no-teleport M335 route and left detailed visual,
+pixel, source, unload, and relight traces disabled. The app exited normally
+(`process_rc=0`, `hang_killed=false`), traveled 7,440 blocks (focus X `7 ->
+-458`) at median 5.19287 blocks/s and eye Y=70. Median fly wall time was
+22.4419 ms; median streaming phase was 9.2916 ms. This is a clean timing
+measurement, though it does not pass every acceptance/performance gate.
+
+The dual-lane route/stop line passed. There were 22 short periods with
+`visual_holes=1` (2.98% of steady samples, longest run two periods). The
+nearest missing-mesh witness was 0–2 horizontal chunks away; 21 of the 22
+periods also had `miss_screen_ray_candidate=1`. This is stronger evidence than
+a broad-ring readiness count, but it still does not prove a hole in the final
+frame: the candidate flag means a bounded screen ray selected a mesh-repair
+candidate, not that the framebuffer pixel was blank. The earlier M477 ray
+capture covered a different, far-west interval and cannot classify these
+M478 coordinates.
+
+At the end/stop, `visual_holes=0`, `focus_missing_mesh=0`, black-sticky was
+zero, pending-light median was zero, dirty focus count fell by 88, and
+`focus_not_render_ready` fell by nine to 23. `unfinished_visual` remained 27
+median/23 at the end. The analyzer's legacy `post_stop_missing_max` and
+`effective_holes` still inherit this readiness debt, so their names must not be
+read as framebuffer or direct missing-mesh measurements. The M478 report
+passes 31/40 steady gates and 9/13 stop gates; outstanding gates include
+render-readiness debt, streaming/emerge spikes, idle opaque churn, and several
+performance/attribution policy checks. The 40 spikes (maximum 333.437 ms) are
+not hidden by the good median. Do not call M478 a full refactor acceptance.
+
+Exact clean invocation:
+
+```powershell
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m478_world164_m335_clean_overlay_guard --report bin/suite_reports/engine_refactor/m478_world164_m335_clean_overlay_guard_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m478_world164_m335_clean_overlay_guard_20261009.json`;
+raw performance log: `bin/logs/perf_20261009-093823_4340.jsonl`. The current
+follow-up M479 repeats the same route with geometry probes and full-frame
+captures limited to X `[-2920,-2670]`, the first repeated near-focus candidate
+cluster. It is diagnostic, not a timing baseline; inspect geometry/pixel
+evidence only, not lighting fields.
