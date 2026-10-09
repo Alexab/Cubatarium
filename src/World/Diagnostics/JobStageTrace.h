@@ -482,6 +482,33 @@ struct VisualBlackTraceRecord
   uint8_t renderer_pixel_voxel_mesh_ray_interior{0};
   uint8_t renderer_pixel_voxel_mesh_ray_gap{0};
   float renderer_pixel_voxel_mesh_ray_distance{-1.0f};
+  /// Optional, gap-only readback validating the exact source triangle against
+  /// the pooled GPU bytes and authoritative indirect command slot.
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_witness_attempted{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_batch_found{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_compact_active{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_command_readable{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_command_match{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_indices_readable{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_indices_match{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_vertices_readable{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_vertices_match{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_batch_index{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_slot{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_source_index_offset{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_source_index0{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_source_index1{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_source_index2{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_actual_index0{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_actual_index1{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_actual_index2{0};
+  uint64_t renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset{0};
+  uint64_t renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_count{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_instances{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_first_index{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex{0};
+  float renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta{-1.0f};
   uint8_t renderer_pixel_voxel_face_batch_ref{0};
   uint8_t renderer_pixel_voxel_face_gpu_command{0};
   uint8_t renderer_pixel_voxel_face_gpu_pooled{0};

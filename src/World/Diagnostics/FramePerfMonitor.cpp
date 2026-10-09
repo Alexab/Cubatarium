@@ -4766,6 +4766,65 @@ void UFramePerfMonitor::Shutdown()
                  << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
                  << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
                  << r.renderer_pixel_voxel_mesh_ray_distance
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_found\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_batch_found)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_compact_active\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_compact_active)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_readable\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_command_readable)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_match\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_command_match)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_readable\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_indices_readable)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_match\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_indices_match)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_readable\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_vertices_readable)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_match\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_gpu_vertices_match)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_index\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_batch_index
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_slot\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_slot
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index_offset\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_source_index_offset
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index0\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_source_index0
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index1\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_source_index1
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index2\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_source_index2
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index0\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index0
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index1\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index1
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index2\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index2
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_count\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_count
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_instances\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_instances
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_first_index\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_first_index
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex
+                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta
                  << ",\"renderer_pixel_voxel_face_batch_ref\":"
                  << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
                  << ",\"renderer_pixel_voxel_face_gpu_command\":"
@@ -5214,6 +5273,65 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
                << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
                << r.renderer_pixel_voxel_mesh_ray_distance
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_found\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_batch_found)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_compact_active\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_compact_active)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_readable\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_command_readable)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_match\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_command_match)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_readable\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_indices_readable)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_indices_match\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_indices_match)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_readable\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_vertices_readable)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertices_match\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_gpu_vertices_match)
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_index\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_batch_index
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_slot\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_command_slot
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index_offset\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_source_index_offset
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index0\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_source_index0
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index1\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_source_index1
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_source_index2\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_source_index2
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index0\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index0
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index1\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index1
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_actual_index2\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_actual_index2
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_count\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_command_count
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_instances\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_command_instances
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_first_index\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_command_first_index
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex
+               << ",\"renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta\":"
+               << r.renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta
                << ",\"renderer_pixel_voxel_face_batch_ref\":"
                << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
                << ",\"renderer_pixel_voxel_face_gpu_command\":"

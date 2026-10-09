@@ -321,6 +321,194 @@ bool IntersectRayTriangle(const glm::vec3 &origin,
   return true;
 }
 
+bool PixelProbeGpuRangeWitnessEnabled()
+{
+  static const bool enabled = []()
+  {
+    const char *value =
+        std::getenv("CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
+void CaptureGpuRangeWitness(
+    const GreedyGpuPassCache &pass, const glm::ivec3 &chunk_coord,
+    BlockId block_id, uint16_t batch_index, const GreedyMeshBatch &source,
+    size_t triangle_index_offset, const std::array<uint32_t, 3> &source_indices,
+    VisualBlackTraceRecord &record)
+{
+  record.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted = 1;
+  record.renderer_pixel_voxel_mesh_ray_gpu_batch_index = batch_index;
+  record.renderer_pixel_voxel_mesh_ray_gpu_compact_active =
+      pass.GpuCompactActive ? 1u : 0u;
+  if (triangle_index_offset > std::numeric_limits<uint32_t>::max())
+  {
+    return;
+  }
+  record.renderer_pixel_voxel_mesh_ray_gpu_source_index_offset =
+      static_cast<uint32_t>(triangle_index_offset);
+  record.renderer_pixel_voxel_mesh_ray_gpu_source_index0 = source_indices[0];
+  record.renderer_pixel_voxel_mesh_ray_gpu_source_index1 = source_indices[1];
+  record.renderer_pixel_voxel_mesh_ray_gpu_source_index2 = source_indices[2];
+
+  size_t command_slot = pass.batches.size();
+  const GreedyGpuBatch *gpu_batch = nullptr;
+  for (size_t index = 0; index < pass.batches.size(); ++index)
+  {
+    const GreedyGpuBatch &candidate = pass.batches[index];
+    if (candidate.chunkCoord == chunk_coord &&
+        candidate.batchIndex == batch_index &&
+        candidate.blockId == block_id)
+    {
+      command_slot = index;
+      gpu_batch = &candidate;
+      break;
+    }
+  }
+  if (!gpu_batch)
+  {
+    return;
+  }
+  record.renderer_pixel_voxel_mesh_ray_gpu_batch_found = 1;
+  record.renderer_pixel_voxel_mesh_ray_gpu_command_slot =
+      static_cast<uint32_t>(command_slot);
+  record.renderer_pixel_voxel_mesh_ray_gpu_vbo_byte_offset =
+      static_cast<uint64_t>(gpu_batch->vboByteOffset);
+  record.renderer_pixel_voxel_mesh_ray_gpu_ebo_byte_offset =
+      static_cast<uint64_t>(gpu_batch->eboByteOffset);
+
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)source;
+  (void)source_indices;
+  (void)pass;
+  return;
+#else
+  if (!gpu_batch->pooled || pass.poolVbo == 0 || pass.poolEbo == 0)
+  {
+    return;
+  }
+
+  GLint previous_copy_read_buffer = 0;
+  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &previous_copy_read_buffer);
+  const auto buffer_contains = [](GLuint buffer, uint64_t offset,
+                                  size_t byte_count)
+  {
+    GLint64 size_bytes = 0;
+    glBindBuffer(GL_COPY_READ_BUFFER, buffer);
+    glGetBufferParameteri64v(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &size_bytes);
+    return size_bytes >= 0 &&
+           offset <= static_cast<uint64_t>(size_bytes) &&
+           byte_count <= static_cast<uint64_t>(size_bytes) - offset;
+  };
+
+  const uint64_t ebo_triangle_offset =
+      static_cast<uint64_t>(gpu_batch->eboByteOffset) +
+      static_cast<uint64_t>(triangle_index_offset) * sizeof(uint32_t);
+  std::array<uint32_t, 3> gpu_indices{};
+  if (buffer_contains(pass.poolEbo, ebo_triangle_offset,
+                      sizeof(gpu_indices)))
+  {
+    glGetBufferSubData(GL_COPY_READ_BUFFER,
+                       static_cast<GLintptr>(ebo_triangle_offset),
+                       static_cast<GLsizeiptr>(sizeof(gpu_indices)),
+                       gpu_indices.data());
+    record.renderer_pixel_voxel_mesh_ray_gpu_indices_readable = 1;
+    record.renderer_pixel_voxel_mesh_ray_gpu_actual_index0 = gpu_indices[0];
+    record.renderer_pixel_voxel_mesh_ray_gpu_actual_index1 = gpu_indices[1];
+    record.renderer_pixel_voxel_mesh_ray_gpu_actual_index2 = gpu_indices[2];
+    record.renderer_pixel_voxel_mesh_ray_gpu_indices_match =
+        gpu_indices == source_indices ? 1u : 0u;
+  }
+
+  bool vertex_ranges_readable = true;
+  bool vertices_match = true;
+  float max_position_delta = 0.0f;
+  for (size_t vertex = 0; vertex < source_indices.size(); ++vertex)
+  {
+    const uint32_t source_index = source_indices[vertex];
+    if (source_index >= source.vertices.size())
+    {
+      vertex_ranges_readable = false;
+      vertices_match = false;
+      break;
+    }
+    const uint64_t vbo_vertex_offset =
+        static_cast<uint64_t>(gpu_batch->vboByteOffset) +
+        static_cast<uint64_t>(source_index) * sizeof(GreedyMeshVertex);
+    GreedyMeshVertex gpu_vertex{};
+    if (!buffer_contains(pass.poolVbo, vbo_vertex_offset,
+                         sizeof(GreedyMeshVertex)))
+    {
+      vertex_ranges_readable = false;
+      vertices_match = false;
+      break;
+    }
+    glGetBufferSubData(GL_COPY_READ_BUFFER,
+                       static_cast<GLintptr>(vbo_vertex_offset),
+                       static_cast<GLsizeiptr>(sizeof(GreedyMeshVertex)),
+                       &gpu_vertex);
+    const GreedyMeshVertex &source_vertex = source.vertices[source_index];
+    max_position_delta =
+        std::max(max_position_delta,
+                 std::max(std::abs(gpu_vertex.px - source_vertex.px),
+                          std::max(std::abs(gpu_vertex.py - source_vertex.py),
+                                   std::abs(gpu_vertex.pz - source_vertex.pz))));
+    vertices_match = vertices_match &&
+                     std::memcmp(&gpu_vertex, &source_vertex,
+                                 sizeof(GreedyMeshVertex)) == 0;
+  }
+  if (vertex_ranges_readable)
+  {
+    record.renderer_pixel_voxel_mesh_ray_gpu_vertices_readable = 1;
+    record.renderer_pixel_voxel_mesh_ray_gpu_vertices_match =
+        vertices_match ? 1u : 0u;
+    record.renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta =
+        max_position_delta;
+  }
+
+  if (pass.GpuCompactActive && pass.IndirectCmdsBuffer != 0 &&
+      command_slot <= std::numeric_limits<uint32_t>::max())
+  {
+    const uint64_t command_offset =
+        static_cast<uint64_t>(command_slot) *
+        sizeof(DrawElementsIndirectCommand);
+    DrawElementsIndirectCommand gpu_command{};
+    if (buffer_contains(pass.IndirectCmdsBuffer, command_offset,
+                        sizeof(gpu_command)))
+    {
+      glGetBufferSubData(GL_COPY_READ_BUFFER,
+                         static_cast<GLintptr>(command_offset),
+                         static_cast<GLsizeiptr>(sizeof(gpu_command)),
+                         &gpu_command);
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_readable = 1;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_count =
+          gpu_command.count;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_instances =
+          gpu_command.instanceCount;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_first_index =
+          gpu_command.firstIndex;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex =
+          gpu_command.baseVertex;
+      const bool command_matches =
+          gpu_command.count ==
+              static_cast<uint32_t>(std::max(0, gpu_batch->indexCountGl)) &&
+          gpu_command.instanceCount == gpu_batch->drawInstanceCount &&
+          gpu_command.firstIndex ==
+              gpu_batch->eboByteOffset / sizeof(uint32_t) &&
+          gpu_command.baseVertex ==
+              static_cast<int32_t>(gpu_batch->vboByteOffset /
+                                   sizeof(GreedyMeshVertex)) &&
+          gpu_command.baseInstance == 0;
+      record.renderer_pixel_voxel_mesh_ray_gpu_command_match =
+          command_matches ? 1u : 0u;
+    }
+  }
+  glBindBuffer(GL_COPY_READ_BUFFER,
+               static_cast<GLuint>(previous_copy_read_buffer));
+#endif
+}
+
 struct CurrentFaceLightSample
 {
   bool valid{false};
@@ -1246,6 +1434,11 @@ void CaptureTransparentPixelProbe(
             float voxel_mesh_ray_distance =
                 std::numeric_limits<float>::infinity();
             float voxel_mesh_ray_edge_margin = -1.0f;
+            size_t voxel_mesh_ray_index_offset =
+                std::numeric_limits<size_t>::max();
+            uint16_t voxel_mesh_ray_batch_index = 0;
+            const GreedyMeshBatch *voxel_mesh_ray_source_batch = nullptr;
+            std::array<uint32_t, 3> voxel_mesh_ray_source_indices{};
             for (const GreedyBatchRef &ref : opaque_refs)
             {
               if (ref.chunkCoord != voxel_chunk ||
@@ -1298,6 +1491,10 @@ void CaptureTransparentPixelProbe(
                         std::min(ray_hit.barycentric.x,
                                  std::min(ray_hit.barycentric.y,
                                           ray_hit.barycentric.z));
+                    voxel_mesh_ray_index_offset = index;
+                    voxel_mesh_ray_batch_index = ref.batchIndex;
+                    voxel_mesh_ray_source_batch = batch;
+                    voxel_mesh_ray_source_indices = {ia, ib, ic};
                   }
                 }
                 ConsiderGreedyVertexLightTriangle(
@@ -1368,6 +1565,18 @@ void CaptureTransparentPixelProbe(
                                voxel_mesh_ray_distance + 0.75f)
                       ? 1u
                       : 0u;
+              if (record.renderer_pixel_voxel_mesh_ray_gap &&
+                  PixelProbeGpuRangeWitnessEnabled() &&
+                  voxel_mesh_ray_source_batch &&
+                  voxel_mesh_ray_index_offset !=
+                      std::numeric_limits<size_t>::max())
+              {
+                CaptureGpuRangeWitness(
+                    mdi_opaque_pass, voxel_chunk, voxel_witness.block_id,
+                    voxel_mesh_ray_batch_index, *voxel_mesh_ray_source_batch,
+                    voxel_mesh_ray_index_offset,
+                    voxel_mesh_ray_source_indices, record);
+              }
             }
           }
           record.renderer_pixel_voxel_chunk_x = voxel_chunk.x;
