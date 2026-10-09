@@ -4643,6 +4643,15 @@ reported high background CPU load for this run; unrelated active processes
 were observed, so its frame/stream timings are contextual and not a clean
 performance baseline.
 
+The final five `focus_slice_trace` epochs each retained 16 samples, all at
+vertical chunk `cy=1` while the camera was at Y=70 and focus `(-458,3)` in X/Z.
+The end period had `visual_holes=0`, `focus_missing_mesh=0`, and
+`underfeet_pending_light=0`; `focus_visual_missing_mesh_n` was 23 and broad
+`unfinished_visual` was 24. These records point to lower-band readiness debt,
+not a demonstrated camera-band hole. Because this is a capped sample rather
+than a complete frustum census, view membership remains to be verified before
+changing stop-line acceptance.
+
 The M483 pixel coordinates use the OpenGL lower-left origin. Its closest
 saved frame, `frame_009.png`, corresponds near PNG pixel `(224,629)` rather
 than `(224,90)`; that location is dark gray within continuous ground/tree

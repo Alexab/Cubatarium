@@ -6399,6 +6399,12 @@ long-run defects.
    camera-band drawable/missing mesh and visible-pixel evidence separately
    from wider-band unfinished visual and pending-light debt. M486's user-facing
    proxy is clean, while the existing readiness stop-line does not converge.
+   The last five bounded `focus_slice_trace` epochs each retained 16 slices,
+   all at `cy=1` while the camera was at Y=70; end-of-run `visual_holes`,
+   `focus_missing_mesh`, and `underfeet_pending_light` were zero. This narrows
+   the debt to lower slices in the sampled census, but the samples are capped
+   and not an exact-frustum proof, so keep the broad readiness signal visible
+   until those slices are classified by view membership.
 5. Run the periodic cold/new-world lane with explicit metadata, generation,
    first-presentable, and post-entry timing. This supplements, and never
    replaces, repeatable M335 on `World_164`.
