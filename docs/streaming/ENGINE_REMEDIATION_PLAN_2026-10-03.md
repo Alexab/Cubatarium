@@ -6259,3 +6259,87 @@ the distance gate, but synchronous framebuffer capture made the diagnostic
 window strongly perturb wall time. One brief stop-tail mesh miss cleared; its
 pixel visibility remains unmeasured. Async capture, a clean repeated route,
 camera-band acceptance semantics, and cold/new-world coverage remain open.**
+
+#### M483 checkpoint — asynchronous capture and an exact GPU witness (2026-10-09)
+
+M483 validates commit `4cc13c73` in Release (executable SHA-256
+`7A6CD44670B9ADFFC7DD7DB2E63E3F0D0A1C984E15B690F19179E87E5E4FAFE1`). The
+opt-in capture now submits framebuffer reads through three pixel-pack buffers,
+polls fences without waiting during normal frames, and hands completed images
+to a bounded four-item PNG worker queue. Shutdown waits for outstanding GPU
+copies while the context is still current and drains the writer. The existing
+M335 capture window produced 101 queued and 101 saved frames; the app log has
+no queue, readback, or file-write failures.
+
+The unchanged visible/no-teleport M335 route completed normally on `World_164`:
+`process_rc=0`, `hang_killed=false`, 5.19287 blocks/s, eye Y=70, and 7,424
+observed blocks against the 6,400 minimum. The route passed its adequacy gate
+with no collision substeps or flight-ground contacts. The full analyzer still
+returns `pass=false`: the eye-proxy and A24 stop-lines remain red, and the
+20-second stop tail did not converge. This must not be reported as a capture
+or process failure. The full-run near-focus mesh-coverage proxy was 0.03252
+with complete sample coverage (the 0.10 gate passed); post-stop visual holes
+were zero, while broad readiness debt remained 22 and post-stop mesh-missing
+was zero.
+
+The capture-path slowdown is sharply reduced in the matched X window
+`[-2920,-2670]`. M482 had 112 periods with median/p90/max wall time
+438.161/649.589/803.505 ms; M483 had 26 periods at 37.412/44.462/69.304 ms.
+Outside that window M483 measured 23.018/34.483 ms versus M482's
+24.421/36.968 ms. The remaining in-window overhead includes synchronous dense
+pixel and screen-ray diagnostics, so 37 ms is not a capture-only cost or a
+clean performance acceptance result. Full-run fly median was 23.356 ms. One
+530 ms startup spike was classified as emerge work, outside the capture
+window. A saved frame near the exact witness shows ordinary forest through
+the established fog, without a large visible hole.
+
+M483 also produced one exact interior ray/triangle/depth gap among 6,240 pixel
+probes and 10,225 screen-ray candidates. The ray hit log block `(−2701,52,75)`
+at distance 27.2945 from camera `(−2693.6,70,55.9646)`; the opaque depth was
+about 30.2514 blocks. The chunk had desired/published geometry revision 8/8
+and settled light revision 1. The gap-only GPU witness read the active compact
+draw command and actual pooled data: MDI command fields matched, source and GPU
+indices were `56,59,58`, and the maximum vertex-position difference was zero.
+This rules out a stale or mismatched uploaded range for this particular event.
+It does **not** yet prove the triangle reached rasterization or passed depth
+and cull state. Continue at the draw-state/rasterization boundary: verify the
+face winding/front-face convention, cull mode, command execution path, viewport
+and depth test for this batch. Do not change mesh publication based on this
+event.
+
+#### Updated remaining work after M483
+
+1. Trace the exact M483 tree-log triangle through the final opaque draw. Join
+   its batch and MDI slot to front-face/cull state, viewport, depth function,
+   and the draw path actually issued. The GPU command/indices/vertices match;
+   the fault, if real, is downstream of range publication. Check whether the
+   adjacent screenshot pixel at the same camera position agrees with the
+   pretransparent pixel readback before labeling it an operator-visible hole.
+2. Keep the asynchronous capture path and its bounded/drop counters. The
+   M483 matched-window wall-time improvement is large, but dense pixel/ray
+   readbacks remain measurable overhead. Use the same M335 route for the clean
+   capture-disabled timing control; keep exact pixel diagnostics only for
+   targeted geometry witnesses.
+3. Reconcile the red A24/eye-proxy gates against direct pixel evidence. M483
+   had near-focus mesh-hole telemetry in 24 periods but only one covered
+   corridor period; the exact GPU witness occurred once. Preserve these
+   telemetry gates until their scope is understood, but do not equate them
+   with broad framebuffer holes. The stop tail had zero visual-hole and
+   camera mesh-missing proxies, yet readiness stayed at 22 and convergence
+   failed; keep camera-band presentation and wider-band readiness separate.
+4. Run the periodic cold/new-world lane after the draw-state question is
+   classified. Retain the same no-teleport motion profile and add explicit
+   load/generation timing evidence; M335 on the existing world is still the
+   repeatable primary lane.
+5. Close the plan only after the exact draw witness, clean timing control,
+   stop-tail contract, and secondary cold/new-world lane have recorded
+   outcomes.
+
+M483's exact command and raw artifact locations are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m483--async-capture-and-gpu-range-witness-2026-10-09).
+All raw reports, logs, and PNGs remain local. Plan status: **async capture is
+implemented and its matched-window stall is removed; M335 route adequacy
+passed. One rare exact pixel/depth gap now has matching GPU command and mesh
+bytes, so inspect raster/depth state. The analyzer's A24/eye-proxy and
+stop-convergence gates remain unresolved; clean timing and cold-world coverage
+remain open.**

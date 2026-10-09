@@ -4469,3 +4469,61 @@ perf log: `bin/logs/perf_20261009-125540_18680.jsonl` (about 262 MB);
 app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-125536.18680`;
 captures: `bin/flight_captures/m482_m335_gpu_range_witness_20261009` (436
 frames). Keep raw artifacts local and out of Git.
+
+### M483 — async capture and GPU range witness (2026-10-09)
+
+M483 validates Release commit `4cc13c73` (SHA-256
+`7A6CD44670B9ADFFC7DD7DB2E63E3F0D0A1C984E15B690F19179E87E5E4FAFE1`) with
+the unchanged visible/no-teleport M335 route. Route adequacy passed: 7,424
+blocks, 5.19287 blocks/s, eye Y=70, process exit 0, no hang, collision, or
+ground contact. Overall analyzer acceptance remains false because the
+eye-proxy/A24 and stop-convergence gates are unresolved.
+
+The exact gap-only GPU witness fired once during 6,240 pixel probes. For the
+tree-log block at `(−2701,52,75)`, it confirmed an active compact MDI command,
+matching command fields and indices (`56,59,58`), and matching pooled vertex
+positions (max delta 0). The target triangle ray distance was 27.2945; sampled
+opaque depth represented a farther surface at about 30.2514. Geometry revision
+was desired/published 8/8 with settled light revision 1. This candidate needs
+draw-state/rasterization/depth inspection; it is not evidence of a bad GPU
+upload. The nearby saved frame shows continuous forest/shore scenery through
+the route fog, without an obvious large hole.
+
+The asynchronous capture produced 101 queued and 101 saved PNGs, with no
+readback, queue, or write failures. In the capture X window, 26 perf periods
+had median/p90/max wall time 37.412/44.462/69.304 ms. M482 had
+438.161/649.589/803.505 ms in the same window. Outside it M483 measured
+23.018/34.483 ms. Dense pixel and screen-ray instrumentation remains enabled,
+so this is not the clean capture-disabled performance control.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m483_m335_async_capture_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m483_world164_m335_async_capture --report bin/suite_reports/engine_refactor/m483_world164_m335_async_capture_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m483_world164_m335_async_capture_20261009.json`;
+perf trace: `bin/logs/perf_20261009-150758_1408.jsonl`;
+app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-150753.1408`;
+captures: `bin/flight_captures/m483_m335_async_capture_20261009` (101 frames).
+The closest frame to the exact ray event is `frame_009.png`. Keep raw artifacts
+local and out of Git.
