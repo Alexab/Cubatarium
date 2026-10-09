@@ -3892,6 +3892,99 @@ void ResetAccum(Session &s)
   s.FrameCount = 0;
 }
 
+void WriteGpuDrawStateJson(std::ostream &out,
+                           const VisualBlackTraceRecord &r)
+{
+  if (!r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_valid)
+  {
+    out << ",\"renderer_pixel_voxel_mesh_ray_gpu_draw_state\":null";
+    return;
+  }
+  out << ",\"renderer_pixel_voxel_mesh_ray_gpu_draw_state\":{"
+      << "\"matched\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match)
+      << ",\"submitted\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_submitted)
+      << ",\"path\":"
+      << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_path)
+      << ",\"depth_test\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_test)
+      << ",\"depth_write\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_write)
+      << ",\"depth_func\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_func
+      << ",\"cull\":"
+      << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull)
+      << ",\"cull_mode\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull_mode
+      << ",\"front_face\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_front_face
+      << ",\"scissor\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor)
+      << ",\"stencil\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil)
+      << ",\"stencil_func\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_func
+      << ",\"stencil_ref\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_ref
+      << ",\"stencil_value_mask\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_value_mask
+      << ",\"stencil_write_mask\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_write_mask
+      << ",\"rasterizer_discard\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_rasterizer_discard)
+      << ",\"polygon_offset\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset)
+      << ",\"polygon_offset_factor\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_factor
+      << ",\"polygon_offset_units\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_units
+      << ",\"blend\":"
+      << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_blend)
+      << ",\"color_mask\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_color_mask)
+      << ",\"depth_range\":["
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_near << ','
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_far
+      << "],\"viewport\":["
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_viewport[0] << ','
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_viewport[1] << ','
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_viewport[2] << ','
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_viewport[3]
+      << "],\"scissor_box\":["
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor_box[0] << ','
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor_box[1] << ','
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor_box[2] << ','
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor_box[3]
+      << "],\"framebuffer\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_framebuffer
+      << ",\"program\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_program
+      << ",\"vao\":" << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vao
+      << ",\"array_buffer\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_array_buffer
+      << ",\"element_buffer\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_element_buffer
+      << ",\"texture_2d\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_2d
+      << ",\"indirect_buffer\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_indirect_buffer
+      << ",\"polygon_mode\":["
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_front
+      << ','
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_back
+      << "]}";
+}
+
 } // namespace
 
 void UFramePerfMonitor::EnsureSession()
@@ -4323,6 +4416,9 @@ void UFramePerfMonitor::Shutdown()
         case 16:
           trace_kind = "camera_band_peak_render_probe";
           break;
+        case 17:
+          trace_kind = "renderer_gpu_draw_state_probe";
+          break;
         default:
           break;
         }
@@ -4427,6 +4523,27 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"mdi_index_count\":" << r.renderer_mdi_index_count
                  << ",\"mdi_visible_index_count\":"
                  << r.renderer_mdi_visible_index_count << "}\n";
+          return;
+        }
+        if (r.sample_kind == 17)
+        {
+          (*out) << "{\"kind\":\"renderer_gpu_draw_state_probe\""
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"camera_x\":" << r.camera_x
+                 << ",\"camera_y\":" << r.camera_y
+                 << ",\"camera_z\":" << r.camera_z
+                 << ",\"chunk\":[" << r.cx << ',' << r.cy << ',' << r.cz
+                 << "]"
+                 << ",\"block\":[" << r.renderer_pixel_voxel_hit_x << ','
+                 << r.renderer_pixel_voxel_hit_y << ','
+                 << r.renderer_pixel_voxel_hit_z << ','
+                 << r.renderer_pixel_voxel_hit_block_id << ']'
+                 << ",\"batch_index\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_batch_index
+                 << ",\"command_slot\":"
+                 << r.renderer_pixel_voxel_mesh_ray_gpu_command_slot;
+          WriteGpuDrawStateJson(*out, r);
+          (*out) << "}\n";
           return;
         }
         if (r.sample_kind == 14)
@@ -4765,8 +4882,9 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
                  << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
                  << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
-                 << r.renderer_pixel_voxel_mesh_ray_distance
-                 << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
+                 << r.renderer_pixel_voxel_mesh_ray_distance;
+          WriteGpuDrawStateJson(*out, r);
+          (*out) << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
                  << static_cast<int>(
                         r.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted)
                  << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_found\":"
@@ -5272,8 +5390,9 @@ void UFramePerfMonitor::Shutdown()
                << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
                << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
                << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
-               << r.renderer_pixel_voxel_mesh_ray_distance
-               << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
+               << r.renderer_pixel_voxel_mesh_ray_distance;
+          WriteGpuDrawStateJson(*out, r);
+          (*out) << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
                << static_cast<int>(
                       r.renderer_pixel_voxel_mesh_ray_gpu_witness_attempted)
                << ",\"renderer_pixel_voxel_mesh_ray_gpu_batch_found\":"

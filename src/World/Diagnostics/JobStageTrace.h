@@ -218,7 +218,7 @@ struct VisualBlackTraceRecord
   /// 13=camera-band unowned peak slice, 14=surviving near-focus FirstMesh
   /// queue frontier with scheduler/capture budgets at the end of the tick,
   /// 15=frustum probe summary, 16=peak-slice render and screen-projection
-  /// witness.
+  /// witness, 17=targeted opaque GPU draw-state snapshot.
   uint8_t sample_kind{0};
   uint8_t focus_state{0};
   /// sample_kind=1: FocusColumnVisualClass ordinal, 255 when outside cache.
@@ -509,6 +509,44 @@ struct VisualBlackTraceRecord
   uint32_t renderer_pixel_voxel_mesh_ray_gpu_command_first_index{0};
   int32_t renderer_pixel_voxel_mesh_ray_gpu_command_base_vertex{0};
   float renderer_pixel_voxel_mesh_ray_gpu_vertex_position_max_delta{-1.0f};
+  /// Opt-in snapshot of the opaque draw state for the exact M483 ray/triangle
+  /// witness. draw_path: 1=GPU-resident MDI, 2=CPU-built MDI,
+  /// 3=glDrawElementsBaseVertex fallback, 4=direct glDrawElements fallback.
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_valid{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_match{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_submitted{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_path{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_test{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_write{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_rasterizer_discard{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_blend{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_color_mask{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_func{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull_mode{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_front_face{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_viewport[4]{};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor_box[4]{};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_framebuffer{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_program{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_vao{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_array_buffer{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_element_buffer{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_2d{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_func{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_ref{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_value_mask{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_write_mask{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_front{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_back{0};
+  uint32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_indirect_buffer{0};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_near{0.0f};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_far{1.0f};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_factor{0.0f};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_units{0.0f};
   uint8_t renderer_pixel_voxel_face_batch_ref{0};
   uint8_t renderer_pixel_voxel_face_gpu_command{0};
   uint8_t renderer_pixel_voxel_face_gpu_pooled{0};
@@ -723,6 +761,8 @@ public:
   static constexpr size_t kDemandTransitionRingCapacity = 16384;
   static constexpr size_t kCullDecisionRingCapacity = 64;
   static constexpr size_t kVisualBlackTraceRingCapacity = 1024;
+  /// Keep the narrow opt-in M483 draw-state window independently bounded.
+  static constexpr size_t kGpuDrawStateTraceRingCapacity = 512;
   // M466 filled 65,536 pixel rows and retained only the last ~40.8k frame
   // epochs. Keep room for the full M335 route's synchronized 5x20 samples and
   // its periodic 4x20 probes, with headroom for focus/peak captures.
@@ -760,7 +800,7 @@ public:
       kPriorityRemeshTraceRingCapacity +
       kWatchedMeshScheduleTraceRingCapacity + kVisualPixelTraceRingCapacity +
       kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity +
-      kFirstMeshFrontierTraceRingCapacity;
+      kFirstMeshFrontierTraceRingCapacity + kGpuDrawStateTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.

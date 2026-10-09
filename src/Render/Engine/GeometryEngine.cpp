@@ -332,6 +332,209 @@ bool PixelProbeGpuRangeWitnessEnabled()
   return enabled;
 }
 
+struct GpuOpaqueDrawStateWitness
+{
+  bool valid{false};
+  bool submitted{false};
+  uint8_t path{0};
+  glm::ivec3 chunk_coord{0};
+  int32_t block_id{-1};
+  uint32_t batch_index{0};
+  uint32_t command_slot{0};
+  uint32_t indirect_buffer{0};
+  uint8_t depth_test{0};
+  uint8_t depth_write{0};
+  uint8_t cull{0};
+  uint8_t scissor{0};
+  uint8_t stencil{0};
+  uint8_t rasterizer_discard{0};
+  uint8_t polygon_offset{0};
+  uint8_t blend{0};
+  uint8_t color_mask{0};
+  int32_t depth_func{0};
+  int32_t cull_mode{0};
+  int32_t front_face{0};
+  std::array<int32_t, 4> viewport{};
+  std::array<int32_t, 4> scissor_box{};
+  int32_t framebuffer{0};
+  int32_t program{0};
+  int32_t vao{0};
+  int32_t array_buffer{0};
+  int32_t element_buffer{0};
+  int32_t texture_2d{0};
+  int32_t stencil_func{0};
+  int32_t stencil_ref{0};
+  int32_t stencil_value_mask{0};
+  int32_t stencil_write_mask{0};
+  int32_t polygon_mode_front{0};
+  int32_t polygon_mode_back{0};
+  float depth_range_near{0.0f};
+  float depth_range_far{1.0f};
+  float polygon_offset_factor{0.0f};
+  float polygon_offset_units{0.0f};
+};
+
+thread_local GpuOpaqueDrawStateWitness g_gpu_opaque_draw_state_witness;
+
+bool IsM483DrawStateTarget(const GreedyGpuBatch &batch, size_t command_slot,
+                           const glm::vec3 &camera_position)
+{
+  if (!PixelProbeGpuRangeWitnessEnabled() || batch.chunkCoord.x != -169 ||
+      batch.chunkCoord.y != 3 || batch.chunkCoord.z != 4 ||
+      static_cast<int32_t>(batch.blockId) != 573 || batch.batchIndex != 3 ||
+      command_slot != 281u)
+  {
+    return false;
+  }
+  const glm::vec3 delta =
+      camera_position - glm::vec3(-2693.6f, 70.0f, 55.9646f);
+  return glm::dot(delta, delta) <= 64.0f;
+}
+
+void CaptureGpuOpaqueDrawState(const GreedyGpuPassCache &pass,
+                               size_t batch_index, uint8_t path)
+{
+  if (batch_index >= pass.batches.size())
+  {
+    return;
+  }
+  GpuOpaqueDrawStateWitness witness{};
+  const GreedyGpuBatch &batch = pass.batches[batch_index];
+  witness.valid = true;
+  witness.path = path;
+  witness.chunk_coord = batch.chunkCoord;
+  witness.block_id = static_cast<int32_t>(batch.blockId);
+  witness.batch_index = batch.batchIndex;
+  witness.command_slot = static_cast<uint32_t>(batch_index);
+  witness.indirect_buffer = pass.IndirectCmdsBuffer;
+
+  GLboolean enabled = GL_FALSE;
+  glGetBooleanv(GL_DEPTH_TEST, &enabled);
+  witness.depth_test = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_DEPTH_WRITEMASK, &enabled);
+  witness.depth_write = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_CULL_FACE, &enabled);
+  witness.cull = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_SCISSOR_TEST, &enabled);
+  witness.scissor = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_STENCIL_TEST, &enabled);
+  witness.stencil = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_RASTERIZER_DISCARD, &enabled);
+  witness.rasterizer_discard = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_POLYGON_OFFSET_FILL, &enabled);
+  witness.polygon_offset = enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_BLEND, &enabled);
+  witness.blend = enabled == GL_TRUE ? 1u : 0u;
+
+  GLboolean color_mask[4] = {GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE};
+  glGetBooleanv(GL_COLOR_WRITEMASK, color_mask);
+  witness.color_mask =
+      (color_mask[0] == GL_TRUE ? 1u : 0u) |
+      (color_mask[1] == GL_TRUE ? 2u : 0u) |
+      (color_mask[2] == GL_TRUE ? 4u : 0u) |
+      (color_mask[3] == GL_TRUE ? 8u : 0u);
+
+  GLint value = 0;
+  glGetIntegerv(GL_DEPTH_FUNC, &value);
+  witness.depth_func = value;
+  glGetIntegerv(GL_CULL_FACE_MODE, &value);
+  witness.cull_mode = value;
+  glGetIntegerv(GL_FRONT_FACE, &value);
+  witness.front_face = value;
+  glGetIntegerv(GL_VIEWPORT, witness.viewport.data());
+  glGetIntegerv(GL_SCISSOR_BOX, witness.scissor_box.data());
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &witness.framebuffer);
+  glGetIntegerv(GL_CURRENT_PROGRAM, &witness.program);
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &witness.vao);
+  glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &witness.array_buffer);
+  glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &witness.element_buffer);
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &witness.texture_2d);
+  glGetIntegerv(GL_STENCIL_FUNC, &witness.stencil_func);
+  glGetIntegerv(GL_STENCIL_REF, &witness.stencil_ref);
+  glGetIntegerv(GL_STENCIL_VALUE_MASK, &witness.stencil_value_mask);
+  glGetIntegerv(GL_STENCIL_WRITEMASK, &witness.stencil_write_mask);
+  GLdouble depth_range[2] = {0.0, 1.0};
+  glGetDoublev(GL_DEPTH_RANGE, depth_range);
+  witness.depth_range_near = static_cast<float>(depth_range[0]);
+  witness.depth_range_far = static_cast<float>(depth_range[1]);
+  glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &witness.polygon_offset_factor);
+  glGetFloatv(GL_POLYGON_OFFSET_UNITS, &witness.polygon_offset_units);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  GLint polygon_mode[2] = {0, 0};
+  glGetIntegerv(GL_POLYGON_MODE, polygon_mode);
+  witness.polygon_mode_front = polygon_mode[0];
+  witness.polygon_mode_back = polygon_mode[1];
+#endif
+  g_gpu_opaque_draw_state_witness = witness;
+}
+
+void CopyGpuOpaqueDrawStateWitness(const GpuOpaqueDrawStateWitness &witness,
+                                   VisualBlackTraceRecord &record)
+{
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_valid =
+      witness.valid ? 1u : 0u;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_submitted =
+      witness.submitted ? 1u : 0u;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_path = witness.path;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_test =
+      witness.depth_test;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_write =
+      witness.depth_write;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull = witness.cull;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor = witness.scissor;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil = witness.stencil;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_rasterizer_discard =
+      witness.rasterizer_discard;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset =
+      witness.polygon_offset;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_blend = witness.blend;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_color_mask =
+      witness.color_mask;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_func =
+      witness.depth_func;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_cull_mode =
+      witness.cull_mode;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_front_face =
+      witness.front_face;
+  std::copy(witness.viewport.begin(), witness.viewport.end(),
+            record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_viewport);
+  std::copy(witness.scissor_box.begin(), witness.scissor_box.end(),
+            record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_scissor_box);
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_framebuffer =
+      witness.framebuffer;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_program =
+      witness.program;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vao = witness.vao;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_array_buffer =
+      witness.array_buffer;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_element_buffer =
+      witness.element_buffer;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_2d =
+      witness.texture_2d;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_func =
+      witness.stencil_func;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_ref =
+      witness.stencil_ref;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_value_mask =
+      witness.stencil_value_mask;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_write_mask =
+      witness.stencil_write_mask;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_front =
+      witness.polygon_mode_front;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_back =
+      witness.polygon_mode_back;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_indirect_buffer =
+      witness.indirect_buffer;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_near =
+      witness.depth_range_near;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_far =
+      witness.depth_range_far;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_factor =
+      witness.polygon_offset_factor;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_units =
+      witness.polygon_offset_units;
+}
+
 void CaptureGpuRangeWitness(
     const GreedyGpuPassCache &pass, const glm::ivec3 &chunk_coord,
     BlockId block_id, uint16_t batch_index, const GreedyMeshBatch &source,
@@ -351,6 +554,26 @@ void CaptureGpuRangeWitness(
   record.renderer_pixel_voxel_mesh_ray_gpu_source_index0 = source_indices[0];
   record.renderer_pixel_voxel_mesh_ray_gpu_source_index1 = source_indices[1];
   record.renderer_pixel_voxel_mesh_ray_gpu_source_index2 = source_indices[2];
+
+  const std::array<uint32_t, 3> expected_m483_indices = {56u, 59u, 58u};
+  const bool exact_m483_gap =
+      chunk_coord == glm::ivec3(-169, 3, 4) &&
+      static_cast<int32_t>(block_id) == 573 && batch_index == 3 &&
+      triangle_index_offset == 84u && source_indices == expected_m483_indices &&
+      record.renderer_pixel_voxel_hit_x == -2701 &&
+      record.renderer_pixel_voxel_hit_y == 52 &&
+      record.renderer_pixel_voxel_hit_z == 75;
+  const GpuOpaqueDrawStateWitness &draw_state =
+      g_gpu_opaque_draw_state_witness;
+  if (exact_m483_gap && draw_state.valid &&
+      draw_state.chunk_coord == chunk_coord &&
+      draw_state.block_id == static_cast<int32_t>(block_id) &&
+      draw_state.batch_index == batch_index &&
+      draw_state.command_slot == 281u)
+  {
+    record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match = 1;
+    CopyGpuOpaqueDrawStateWitness(draw_state, record);
+  }
 
   size_t command_slot = pass.batches.size();
   const GreedyGpuBatch *gpu_batch = nullptr;
@@ -3528,6 +3751,10 @@ void UGeometryEngine::Paint(int width_size, int height_size,
 void UGeometryEngine::DrawCubeGeometry()
 {
   CUBA_ZONE("DrawCubeGeometry");
+  // This frame-local handoff joins an opaque draw snapshot to a later
+  // post-transparent pixel/ray trace. It is populated only by the opt-in,
+  // M483-targeted GPU witness path.
+  g_gpu_opaque_draw_state_witness = {};
   auto t_begin = std::chrono::high_resolution_clock::now();
   double filter_ms = 0.0;
   double opaque_ms = 0.0;
@@ -4269,6 +4496,69 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   const bool use_mdi = store.SupportsMultiDrawIndirect() &&
                        cache.usesVertexPool && cache.poolVbo != 0 &&
                        cache.poolEbo != 0;
+  glm::vec3 draw_witness_camera_position(0.0f);
+  bool gpu_draw_witness_window = !transparentPass &&
+                                 mode == GreedyShaderMode::TransparentColor &&
+                                 PixelProbeGpuRangeWitnessEnabled();
+  if (gpu_draw_witness_window && WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      draw_witness_camera_position = camera->GetPosition();
+    }
+    else
+    {
+      gpu_draw_witness_window = false;
+    }
+  }
+  else
+  {
+    gpu_draw_witness_window = false;
+  }
+  if (gpu_draw_witness_window)
+  {
+    const glm::vec3 delta =
+        draw_witness_camera_position - glm::vec3(-2693.6f, 70.0f, 55.9646f);
+    gpu_draw_witness_window = glm::dot(delta, delta) <= 64.0f;
+  }
+  const auto is_m483_draw_witness_batch = [&](size_t batch_index)
+  {
+    return gpu_draw_witness_window &&
+           batch_index < cache.batches.size() &&
+           IsM483DrawStateTarget(cache.batches[batch_index], batch_index,
+                                 draw_witness_camera_position);
+  };
+  const auto note_m483_draw_state = [&]()
+  {
+    if (!g_gpu_opaque_draw_state_witness.valid ||
+        !UJobStageTrace::VisualBlackTraceEnabled() || !WorldInstance)
+    {
+      return;
+    }
+    VisualBlackTraceRecord trace{};
+    trace.sample_kind = 17;
+    trace.frame_epoch = WorldInstance->GetStreamingFrameEpoch();
+    trace.cx = g_gpu_opaque_draw_state_witness.chunk_coord.x;
+    trace.cy = g_gpu_opaque_draw_state_witness.chunk_coord.y;
+    trace.cz = g_gpu_opaque_draw_state_witness.chunk_coord.z;
+    trace.camera_x = static_cast<int32_t>(
+        std::floor(draw_witness_camera_position.x));
+    trace.camera_y = static_cast<int32_t>(
+        std::floor(draw_witness_camera_position.y));
+    trace.camera_z = static_cast<int32_t>(
+        std::floor(draw_witness_camera_position.z));
+    trace.renderer_pixel_voxel_hit_x = -2701;
+    trace.renderer_pixel_voxel_hit_y = 52;
+    trace.renderer_pixel_voxel_hit_z = 75;
+    trace.renderer_pixel_voxel_hit_block_id = 573;
+    trace.renderer_pixel_voxel_mesh_ray_gpu_batch_index =
+        g_gpu_opaque_draw_state_witness.batch_index;
+    trace.renderer_pixel_voxel_mesh_ray_gpu_command_slot =
+        g_gpu_opaque_draw_state_witness.command_slot;
+    trace.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match = 1;
+    CopyGpuOpaqueDrawStateWitness(g_gpu_opaque_draw_state_witness, trace);
+    UJobStageTrace::NoteVisualBlack(trace);
+  };
   if (use_mdi)
   {
     // Local indices + baseVertex: attribs at buffer origin once.
@@ -4337,47 +4627,101 @@ void UGeometryEngine::DrawGreedyGpuBatches(
                              light_preview ? 1.0f : 0.0f);
       glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
       // P2: prefer GPU-resident 1:1 cmd table (instanceCount from compact).
-      if (store.SubmitIndirectCommandsGpuRange(cache, i, j))
+      size_t witness_batch_index = cache.batches.size();
+      if (gpu_draw_witness_window)
       {
-        ++draw_cmds;
+        for (size_t k = i; k < j; ++k)
+        {
+          if (is_m483_draw_witness_batch(k))
+          {
+            witness_batch_index = k;
+            break;
+          }
+        }
       }
-      else if (store.BuildIndirectCommandsRange(cache, i, j, cmds) > 0 &&
-               store.SubmitIndirectCommands(cmds))
+      const bool has_draw_witness_batch =
+          witness_batch_index < cache.batches.size();
+      if (has_draw_witness_batch)
       {
-        NoteGpuHotPathFallback();
+        CaptureGpuOpaqueDrawState(cache, witness_batch_index, 1);
+      }
+      const bool gpu_range_submitted =
+          store.SubmitIndirectCommandsGpuRange(cache, i, j);
+      if (has_draw_witness_batch)
+      {
+        g_gpu_opaque_draw_state_witness.submitted = gpu_range_submitted;
+      }
+      if (gpu_range_submitted)
+      {
         ++draw_cmds;
       }
       else
       {
-        NoteGpuHotPathFallback();
-        for (size_t k = i; k < j; ++k)
+        const size_t cpu_command_count =
+            store.BuildIndirectCommandsRange(cache, i, j, cmds);
+        bool cpu_range_submitted = false;
+        if (cpu_command_count > 0)
         {
-          const GreedyGpuBatch &gpu = cache.batches[k];
-          if (gpu.drawInstanceCount == 0)
+          if (has_draw_witness_batch)
           {
-            continue;
+            CaptureGpuOpaqueDrawState(cache, witness_batch_index, 2);
           }
-          const GLint base_vertex = static_cast<GLint>(
-              gpu.vboByteOffset / sizeof(GreedyMeshVertex));
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-          // GLES 3.1 core has no glDrawElementsBaseVertex (desktop MDI
-          // fallback only). Staging store avoids this path at runtime.
-          (void)base_vertex;
-          continue;
-#else
-          glDrawElementsBaseVertex(
-              GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
-              reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
-          ++draw_cmds;
-#endif
+          cpu_range_submitted = store.SubmitIndirectCommands(cmds);
+          if (has_draw_witness_batch)
+          {
+            g_gpu_opaque_draw_state_witness.submitted = cpu_range_submitted;
+          }
         }
+        if (cpu_command_count > 0 && cpu_range_submitted)
+        {
+          NoteGpuHotPathFallback();
+          ++draw_cmds;
+        }
+        else
+        {
+          NoteGpuHotPathFallback();
+          for (size_t k = i; k < j; ++k)
+          {
+            const GreedyGpuBatch &gpu = cache.batches[k];
+            if (gpu.drawInstanceCount == 0)
+            {
+              continue;
+            }
+            const GLint base_vertex = static_cast<GLint>(
+                gpu.vboByteOffset / sizeof(GreedyMeshVertex));
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+            // GLES 3.1 core has no glDrawElementsBaseVertex (desktop MDI
+            // fallback only). Staging store avoids this path at runtime.
+            (void)base_vertex;
+            continue;
+#else
+            if (has_draw_witness_batch && k == witness_batch_index)
+            {
+              CaptureGpuOpaqueDrawState(cache, k, 3);
+            }
+            glDrawElementsBaseVertex(
+                GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+                reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
+            if (has_draw_witness_batch && k == witness_batch_index)
+            {
+              g_gpu_opaque_draw_state_witness.submitted = true;
+            }
+            ++draw_cmds;
+#endif
+          }
+        }
+      }
+      if (has_draw_witness_batch)
+      {
+        note_m483_draw_state();
       }
       i = j;
     }
 
     // Non-pooled leftovers (should be rare when usesVertexPool).
-    for (const GreedyGpuBatch &gpu : cache.batches)
+    for (size_t gpu_index = 0; gpu_index < cache.batches.size(); ++gpu_index)
     {
+      const GreedyGpuBatch &gpu = cache.batches[gpu_index];
       if (gpu.pooled || gpu.indexCountGl <= 0)
       {
         continue;
@@ -4427,15 +4771,26 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           6, 1, GL_FLOAT, GL_FALSE, kStride,
           reinterpret_cast<void *>(offsetof(GreedyMeshVertex, lightPreview)));
       glEnableVertexAttribArray(6);
+      const bool witness_target = is_m483_draw_witness_batch(gpu_index);
+      if (witness_target)
+      {
+        CaptureGpuOpaqueDrawState(cache, gpu_index, 4);
+      }
       glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+      if (witness_target)
+      {
+        g_gpu_opaque_draw_state_witness.submitted = true;
+        note_m483_draw_state();
+      }
       NoteGpuHotPathFallback();
       ++draw_cmds;
     }
   }
   else
   {
-    for (const GreedyGpuBatch &gpu : cache.batches)
+    for (size_t gpu_index = 0; gpu_index < cache.batches.size(); ++gpu_index)
     {
+      const GreedyGpuBatch &gpu = cache.batches[gpu_index];
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
       if (gpu.indexCountGl <= 0)
       {
@@ -4500,9 +4855,19 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
                                    offsetof(GreedyMeshVertex, lightPreview)));
       glEnableVertexAttribArray(6);
+      const bool witness_target = is_m483_draw_witness_batch(gpu_index);
+      if (witness_target)
+      {
+        CaptureGpuOpaqueDrawState(cache, gpu_index, 4);
+      }
       glDrawElements(
           GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
           reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+      if (witness_target)
+      {
+        g_gpu_opaque_draw_state_witness.submitted = true;
+        note_m483_draw_state();
+      }
       NoteGpuHotPathFallback();
       ++draw_cmds;
     }
