@@ -281,6 +281,46 @@ struct ClosestTrianglePoint
   glm::vec3 barycentric{0.0f};
 };
 
+struct RayTriangleHit
+{
+  float distance{std::numeric_limits<float>::infinity()};
+  glm::vec3 barycentric{0.0f};
+};
+
+bool IntersectRayTriangle(const glm::vec3 &origin,
+                          const glm::vec3 &direction,
+                          const glm::vec3 &a, const glm::vec3 &b,
+                          const glm::vec3 &c, RayTriangleHit &hit)
+{
+  const glm::vec3 edge1 = b - a;
+  const glm::vec3 edge2 = c - a;
+  const glm::vec3 p = glm::cross(direction, edge2);
+  const float determinant = glm::dot(edge1, p);
+  if (std::abs(determinant) <= 1e-7f)
+  {
+    return false;
+  }
+  const float inverse_determinant = 1.0f / determinant;
+  const glm::vec3 tvec = origin - a;
+  const float u = glm::dot(tvec, p) * inverse_determinant;
+  const glm::vec3 q = glm::cross(tvec, edge1);
+  const float v = glm::dot(direction, q) * inverse_determinant;
+  constexpr float kBarycentricTolerance = 1e-5f;
+  if (u < -kBarycentricTolerance || v < -kBarycentricTolerance ||
+      u + v > 1.0f + kBarycentricTolerance)
+  {
+    return false;
+  }
+  const float distance = glm::dot(edge2, q) * inverse_determinant;
+  if (!std::isfinite(distance) || distance < 0.0f)
+  {
+    return false;
+  }
+  hit.distance = distance;
+  hit.barycentric = glm::vec3(1.0f - u - v, u, v);
+  return true;
+}
+
 struct CurrentFaceLightSample
 {
   bool valid{false};
@@ -1203,6 +1243,9 @@ void CaptureTransparentPixelProbe(
                 glm::vec3(GreedyFaceNormal(voxel_witness.entry_face)) * 0.5f;
             GreedyVertexLightMatch voxel_face_source{};
             int matched_batch_index = -1;
+            float voxel_mesh_ray_distance =
+                std::numeric_limits<float>::infinity();
+            float voxel_mesh_ray_edge_margin = -1.0f;
             for (const GreedyBatchRef &ref : opaque_refs)
             {
               if (ref.chunkCoord != voxel_chunk ||
@@ -1228,6 +1271,34 @@ void CaptureTransparentPixelProbe(
                     ic >= batch->vertices.size())
                 {
                   continue;
+                }
+                const GreedyMeshVertex &vertex_a = batch->vertices[ia];
+                const GreedyMeshVertex &vertex_b = batch->vertices[ib];
+                const GreedyMeshVertex &vertex_c = batch->vertices[ic];
+                const int triangle_face = static_cast<int>(std::lround(
+                    (vertex_a.faceIndex + vertex_b.faceIndex +
+                     vertex_c.faceIndex) /
+                    3.0f));
+                if (triangle_face ==
+                    static_cast<int>(voxel_witness.entry_face))
+                {
+                  RayTriangleHit ray_hit{};
+                  if (IntersectRayTriangle(
+                          camera_position, voxel_ray_direction,
+                          glm::vec3(vertex_a.px, vertex_a.py, vertex_a.pz),
+                          glm::vec3(vertex_b.px, vertex_b.py, vertex_b.pz),
+                          glm::vec3(vertex_c.px, vertex_c.py, vertex_c.pz),
+                          ray_hit) &&
+                      std::abs(ray_hit.distance - voxel_witness.distance) <=
+                          0.05f &&
+                      ray_hit.distance < voxel_mesh_ray_distance)
+                  {
+                    voxel_mesh_ray_distance = ray_hit.distance;
+                    voxel_mesh_ray_edge_margin =
+                        std::min(ray_hit.barycentric.x,
+                                 std::min(ray_hit.barycentric.y,
+                                          ray_hit.barycentric.z));
+                  }
                 }
                 ConsiderGreedyVertexLightTriangle(
                     expected_face_point, *batch, batch->vertices[ia],
@@ -1277,6 +1348,26 @@ void CaptureTransparentPixelProbe(
                     gpu.drawInstanceCount;
                 break;
               }
+            }
+            if (std::isfinite(voxel_mesh_ray_distance))
+            {
+              record.renderer_pixel_voxel_mesh_ray_intersects = 1;
+              record.renderer_pixel_voxel_mesh_ray_distance =
+                  voxel_mesh_ray_distance;
+              const glm::ivec3 face_normal =
+                  GreedyFaceNormal(voxel_witness.entry_face);
+              const bool camera_facing =
+                  glm::dot(voxel_ray_direction,
+                           glm::vec3(face_normal)) < -1e-5f;
+              record.renderer_pixel_voxel_mesh_ray_interior =
+                  camera_facing && voxel_mesh_ray_edge_margin >= 0.02f;
+              record.renderer_pixel_voxel_mesh_ray_gap =
+                  record.renderer_pixel_voxel_mesh_ray_interior &&
+                          (opaque_hit_distance < 0.0f ||
+                           opaque_hit_distance >
+                               voxel_mesh_ray_distance + 0.75f)
+                      ? 1u
+                      : 0u;
             }
           }
           record.renderer_pixel_voxel_chunk_x = voxel_chunk.x;

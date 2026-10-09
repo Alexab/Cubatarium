@@ -4757,6 +4757,15 @@ void UFramePerfMonitor::Shutdown()
                  << static_cast<int>(r.renderer_pixel_voxel_face_source_valid)
                  << ",\"renderer_pixel_voxel_face_source_distance\":"
                  << r.renderer_pixel_voxel_face_source_distance
+                 << ",\"renderer_pixel_voxel_mesh_ray_intersects\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_intersects)
+                 << ",\"renderer_pixel_voxel_mesh_ray_interior\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_interior)
+                 << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
+                 << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
+                 << r.renderer_pixel_voxel_mesh_ray_distance
                  << ",\"renderer_pixel_voxel_face_batch_ref\":"
                  << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
                  << ",\"renderer_pixel_voxel_face_gpu_command\":"
@@ -5197,6 +5206,14 @@ void UFramePerfMonitor::Shutdown()
                << static_cast<int>(r.renderer_pixel_voxel_face_source_valid)
                << ",\"renderer_pixel_voxel_face_source_distance\":"
                << r.renderer_pixel_voxel_face_source_distance
+               << ",\"renderer_pixel_voxel_mesh_ray_intersects\":"
+               << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_intersects)
+               << ",\"renderer_pixel_voxel_mesh_ray_interior\":"
+               << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_interior)
+               << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
+               << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
+               << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
+               << r.renderer_pixel_voxel_mesh_ray_distance
                << ",\"renderer_pixel_voxel_face_batch_ref\":"
                << static_cast<int>(r.renderer_pixel_voxel_face_batch_ref)
                << ",\"renderer_pixel_voxel_face_gpu_command\":"

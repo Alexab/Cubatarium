@@ -475,6 +475,13 @@ struct VisualBlackTraceRecord
   /// the CPU greedy source and its current opaque GPU command/material.
   uint8_t renderer_pixel_voxel_face_source_valid{0};
   float renderer_pixel_voxel_face_source_distance{-1.0f};
+  /// Exact ray/triangle witness for the same exposed face. A mesh-ray gap is
+  /// only raised when the screen ray crosses the triangle interior but the
+  /// sampled opaque depth is behind it (or absent).
+  uint8_t renderer_pixel_voxel_mesh_ray_intersects{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_interior{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gap{0};
+  float renderer_pixel_voxel_mesh_ray_distance{-1.0f};
   uint8_t renderer_pixel_voxel_face_batch_ref{0};
   uint8_t renderer_pixel_voxel_face_gpu_command{0};
   uint8_t renderer_pixel_voxel_face_gpu_pooled{0};
