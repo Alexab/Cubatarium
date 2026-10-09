@@ -4285,3 +4285,74 @@ Run this as a Release-only build and the same M335 route; if a ray crosses the
 triangle interior but no corresponding depth is written, trace culling,
 submission, and publication for that slice. If not, correct the diagnostic
 classification before changing the renderer.
+
+## M480 — exact mesh-ray witness (2026-10-09)
+
+M480 used the Release binary built from `bb1fe1f2`, SHA-256
+`51203C00EEBA81300F67CDF1F1C48142E30D355436546B504AB967EBFC5CDCDD`. It ran
+the established visible/no-teleport World_164/M335 route with probes and
+framebuffer captures limited to X `[-2920,-2670]`. The app exited normally
+(`process_rc=0`, `hang_killed=false`), held eye Y=70, and measured a median
+5.19607 blocks/s. The route traveled 6,032 of the required 6,400 blocks, so the
+wrapper returned failure for route completion. This was a dense diagnostic,
+not a timing acceptance: median fly wall time was 49.0109 ms, effective fly
+rate 20.4 FPS, and 1,772 spikes reached 1,414.21 ms.
+
+The ray/depth analysis sampled 18,261 screen rays: the legacy voxel/depth proxy
+flagged 19; exact ray/triangle intersections numbered 4,215, with 3,757
+interior hits; four interior hits had opaque depth more than 0.75 blocks behind
+the mesh triangle. Three of the four were inside the 36-block horizontal
+air-fog end:
+
+| Camera X | Hit block | Horizontal distance | Triangle / opaque depth | Mesh state |
+| ---: | --- | ---: | ---: | --- |
+| -2914.22 | sand (549), `(-2926,41,81)` | 27.53 | 39.570 / 40.684 | desired geom 4, published 2; dirty owner age 7 |
+| -2763.86 | tree log (573), `(-2783,69,50)` | 19.84 | 20.211 / 21.245 | desired/published 2/2; no dirty owner; visible MDI range 3,108 indices |
+| -2763.86 | tree log (573), `(-2778,66,35)` | 24.67 | 24.898 / 33.431 | desired/published 2/2; no dirty owner; visible MDI range 2,046 indices |
+| -2676.89 | grass (377), `(-2718,52,44)` | 42.83 | 46.575 / 49.374 | beyond air fog end 36 |
+
+The first in-fog sample points to a stale mesh revision. The two tree-log
+samples are more concerning because their CPU mesh revisions match desired
+geometry and their MDI ranges are marked visible. Their sampled colors are
+not black; captured frames show continuous forest/ocean scenery and no
+obvious large hole. Exact intersection plus a behind-surface depth is a
+pixel-level mismatch witness, but the trace does not yet prove the corresponding
+GPU buffer bytes or indirect-command offsets are correct. Continue by
+comparing the source triangle to the uploaded vertex/index range and the
+submitted `firstIndex`/`baseVertex` for those exact candidates. Keep that
+readback opt-in and triggered only by a confirmed interior gap.
+
+At stop, `visual_holes_rate=0.07862` at full sample coverage, while
+`post_stop_visual_holes_rate=0` and `post_stop_mesh_missing_max=0`.
+`readiness_debt_rate=1.0` and `post_stop_readiness_debt_max=27` remain a separate
+broad readiness signal. Do not treat it as displayed-hole evidence.
+
+Exact M480 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m480_m335_triangle_witness_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m480_world164_m335_triangle_witness --report bin/suite_reports/engine_refactor/m480_world164_m335_triangle_witness_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m480_world164_m335_triangle_witness_20261009.json`;
+perf log: `bin/logs/perf_20261009-113003_10124.jsonl` (about 277 MB);
+app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-112949.10124`;
+captures: `bin/flight_captures/m480_m335_triangle_witness_20261009` (326
+frames). Keep all artifacts local and out of Git.

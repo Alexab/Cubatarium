@@ -6037,3 +6037,88 @@ readiness debt remains but is off-camera in the captured tail. Six candidates
 within horizontal air-fog range still need exact triangle classification.
 No runtime rendering fix is justified until that witness confirms a draw
 failure. The cold/new-world lane and clean performance acceptance remain.**
+
+#### M480 checkpoint — exact mesh-ray witness and GPU submission follow-up (2026-10-09)
+
+M480 built and ran the diagnostic changes on the Release configuration
+(`bb1fe1f2`, executable SHA-256
+`51203C00EEBA81300F67CDF1F1C48142E30D355436546B504AB967EBFC5CDCDD`). The
+visible, no-teleport World_164/M335 profile used the established start, yaw,
+pitch, eye height, and phase durations. The app exited normally and was not
+hang-killed. It held eye Y=70 and recorded 5.19607 blocks/s, matching the
+expected speed. It traveled 6,032 blocks against the 6,400-block minimum, so
+the long-route coverage gate failed. Do not count M480 as far-route acceptance.
+
+The dense diagnostic sampled 18,261 screen rays. The legacy voxel/depth proxy
+flagged 19 candidates; the exact CPU greedy-triangle witness found four rays
+that crossed a triangle interior while the pretransparent opaque depth was
+behind it. Three were within the 36-block *horizontal* air-fog range:
+
+* Sand block 549 at camera X=-2914.22: horizontal distance 27.53, ray/depth
+  39.57/40.68 blocks. Its chunk had desired geometry revision 4 but published
+  revision 2, with an active dirty owner. This is consistent with a transient
+  stale publication; it still needs the draw/depth path checked.
+* Tree-log block 573 at camera X=-2763.86: horizontal distance 19.84,
+  ray/depth 20.21/21.25. Its target chunk had desired/published geometry
+  revision 2/2, no dirty owner, and a visible MDI range of 3,108 indices.
+* A second tree-log block 573 at the same camera position: horizontal distance
+  24.67, ray/depth 24.90/33.43. Its target chunk also had desired/published
+  geometry revision 2/2, no dirty owner, and a visible MDI range of 2,046
+  indices. This is the strongest mismatch and requires checking the actual GPU
+  vertex/index and indirect-command ranges.
+
+The fourth exact witness was grass block 377 at horizontal distance 42.83,
+beyond the active air-fog end, so it is not evidence of a visible corridor
+defect. The three in-fog witnesses had nonblack sampled pixel colors. The 326
+saved frames show continuous forest and ocean scenery with no visually obvious
+large holes. These facts limit the claim to rare pixel-level geometry/depth
+mismatches; they do not explain a persistent black or empty chunk, and they do
+not clear the renderer path.
+
+M480's full-run `visual_holes_rate` was 0.0786 with complete sample coverage;
+the post-stop visual-hole proxy rate and direct focus missing-mesh maximum
+were both zero. The broad readiness-debt rate remained 1.0 and its post-stop
+count was 27. Keep this separate from displayed coverage. Performance is not
+an acceptance result: dense tracing and framebuffer capture raised median fly
+wall time to 49.01 ms (20.4 FPS) and produced 1,772 recorded spikes, with a
+1,414 ms maximum.
+
+The exact triangle witness proves the CPU source mesh contains the front-face
+triangle, but `drawInstanceCount`, published mesh revision, and visible MDI
+index totals do not prove that the indirect command buffer used the correct
+`firstIndex`/`baseVertex` or that the GPU vertex/index pool contains the same
+triangle. The current status is therefore **unclassified**, not a confirmed
+runtime fix or a false alarm.
+
+Updated closeout order:
+
+1. **Trace the actual GPU ranges for the three in-fog witnesses.** On the
+   sampled triangle, record its source batch/index, pool offsets, indirect
+   command fields, compact-cull visibility, and uploaded vertex/index bytes.
+   Keep this expensive readback gated to exact interior-ray gaps. If the GPU
+   bytes or command range differ from the CPU source, repair publication/store
+   ownership; if they match, trace raster state and depth-write behavior.
+2. **Resolve the stale sand witness separately.** Follow its desired-versus-
+   published geometry revision and active dirty owner through remesh and GPU
+   apply. A current visible command count alone does not explain the depth
+   mismatch.
+3. **Repeat the exact M335 route after any confirmed renderer fix.** Require
+   at least 6,400 observed blocks; M480's shortfall means its tail cannot close
+   far-flight acceptance. Keep capture/probe overhead out of the final timing
+   control.
+4. **Close stop-tail readiness with coordinates and ownership.** M480 ends
+   with 27 readiness items but zero direct focus-mesh misses and zero visual
+   coverage proxy. Determine which items are outside the camera band and
+   whether their ownership debt belongs in the presentable-world contract.
+5. **Run the periodic cold/new-world lane after repeated-world geometry is
+   classified.** Keep this secondary and retain the existing underfeet and
+   drawable-mesh safety gates.
+6. **Reconcile and close the plan only after both route and GPU evidence pass.**
+
+M480 command, report, perf log, app log, and capture directory are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m480--exact-mesh-ray-witness-2026-10-09).
+Keep all raw outputs local. Plan status: **speed and eye height match the
+established route; distance coverage failed. Four exact pixel/depth witnesses
+exist, three within active air fog, including two on current tree-log CPU
+meshes. Actual GPU data/command delivery remains unverified. No runtime fix is
+committed yet. Broad readiness and cold/new-world acceptance remain open.**
