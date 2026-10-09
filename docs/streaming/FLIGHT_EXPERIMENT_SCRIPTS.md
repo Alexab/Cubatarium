@@ -4599,3 +4599,79 @@ pattern. Artifacts: [flight/analyzer report](../../bin/suite_reports/engine_refa
 [app report](../../bin/flight_sim_report.json), [perf trace](../../bin/logs/perf_20261009-184634_6168.jsonl),
 and [runner output](../../bin/logs/m485_runner_20261009.stdout.log). Keep all
 raw artifacts local and out of Git.
+
+### M486 — exact M335 draw-state follow-up (2026-10-09)
+
+M486 used the same visible Release/no-teleport M335 profile on `World_164`
+with dense pixel and screen-ray probes limited to camera X `[-2702,-2685]`.
+The built commit was `5cd8665b` (executable SHA-256
+`474753D80FAD94BED46B64CE3920FDBDE8757FF7FC7EBF8C2E2C0150231A7C20`), and
+the run manifest reports a clean source tree. It exited normally
+(`run_outcome=success`, `process_rc=0`, `hang_killed=false`), passed the
+6,400-block route gate with 7,440 blocks, held eye Y=70, and measured
+5.19287 blocks/s. `world_data.json` was restored byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+
+The targeted trace recorded 800 pixel rows in five probe epochs and 9,900
+screen-ray candidates. M483's exact ray/triangle/depth gap did not recur.
+At the same OpenGL pixel `(224,90)` and nearby camera positions, M486 traced
+solid sand geometry at distances `30.2265` and `30.3636`; reconstructed opaque
+depth distances were `30.1929` and `30.3425` (differences of 0.0336 and 0.0211
+blocks). Both pixels had non-black opaque colors, matching mesh/published
+geometry revision `5`, settled light revision `1`, a visible pooled MDI
+command, and a ready texture. This is positive evidence for those two sampled
+frames, not a replay of M483's exact tree-log triangle or proof that every
+frame is correct.
+
+One `renderer_gpu_draw_state_probe` captured the M483 target tree-log batch in
+epoch 22400 at camera X `-2687`: chunk `(-169,3,4)`, log block
+`(-2701,52,75)`, batch `3`, command slot `281`, GPU-resident MDI path, and
+successful submission. Depth test/write were enabled with `LESS`; culling,
+scissor, stencil, rasterizer discard, and polygon offset were disabled; the
+viewport was `1280x720` on framebuffer 0. This state sample did not share an
+epoch with a pixel probe, so it does not establish which pixels the batch
+rasterized. The emitted polygon-mode pair `[6914,0]` is internally suspect
+and is excluded from interpretation.
+
+M486's analyzer remains red. The near-focus `visual_holes_rate` was `0.03528`
+at full sample coverage and the post-stop visual-hole and camera-band missing
+mesh proxies were zero. In contrast, broad `unfinished_visual`/readiness debt
+remained high, the stop tail did not converge, and A24/eye-proxy gates stayed
+open. Treat those as unresolved lifecycle/telemetry signals; they do not
+override the pixel evidence or establish a visible black hole. The user had
+reported high background CPU load for this run; unrelated active processes
+were observed, so its frame/stream timings are contextual and not a clean
+performance baseline.
+
+The M483 pixel coordinates use the OpenGL lower-left origin. Its closest
+saved frame, `frame_009.png`, corresponds near PNG pixel `(224,629)` rather
+than `(224,90)`; that location is dark gray within continuous ground/tree
+geometry. The capture camera differs from the exact ray event by about 0.143
+blocks, so this visual check is supportive, not same-frame proof.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2702'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2685'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m486_world164_m335_draw_state_20261009 --report bin/suite_reports/engine_refactor/m486_world164_m335_draw_state_20261009.json --process-timeout 7200
+```
+
+Report: [M486 flight/analyzer report](../../bin/suite_reports/engine_refactor/m486_world164_m335_draw_state_20261009.json);
+perf trace: [JSONL](../../bin/logs/perf_20261009-204326_40832.jsonl);
+runner output: `bin/logs/m486_world164_m335_draw_state_20261009.stdout.log`.
+Raw artifacts remain local and out of Git.

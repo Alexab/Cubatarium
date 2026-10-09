@@ -6351,3 +6351,67 @@ gaps and missed the route gate. One rare exact pixel/depth gap has matching GPU
 command and mesh bytes, so inspect raster/depth state. The analyzer's
 A24/eye-proxy and stop-convergence gates remain unresolved; a quiet-machine
 timing control and cold-world coverage remain open.**
+
+#### M486 checkpoint — pixel-aligned repeat and target draw state (2026-10-09)
+
+M486 repeated the unchanged M335 route in Release and passed the route gate:
+7,440 blocks at 5.19287 blocks/s, eye Y=70, no teleport, successful process
+exit, and byte-for-byte restoration of the fixed-day world metadata. Dense
+pixel and screen-ray diagnostics were restricted to X `[-2702,-2685]`.
+Across 800 pixel samples and 9,900 screen-ray candidates, the exact M483
+tree-log ray/depth gap did not recur.
+
+Two samples at the same OpenGL pixel `(224,90)` traced published sand geometry
+and settled light, with visible MDI commands and ready textures. CPU
+ray/triangle and opaque-depth distances differed by only 0.021–0.034 blocks;
+the pixel colors were not black. This checks the same pixel coordinate near
+the old camera position, but the hit blocks differ from M483's tree log, so it
+does not close the exact-event question. The trace also captured the old log's
+batch on a separate frame: GPU-resident MDI submitted successfully, depth test
+and writes used `LESS`, face culling and other raster-discarding tests were
+disabled, and the full viewport was active. No obvious state explains the old
+sample. The row is not same-frame pixel evidence; the reported polygon-mode
+pair was malformed and ignored.
+
+M486's measured framebuffer proxy stayed below its threshold (`0.03528`,
+full coverage), with zero post-stop visual-hole and camera-band missing-mesh
+proxies. Broad unfinished-visual/readiness debt and A24/eye-proxy/stop-tail
+gates remain red. User-facing evidence and those wider lifecycle counters
+must remain separate. Background CPU activity was high, so M486 does not count
+as a timing control. The result supports the user's observation that the
+current presentation looks sound; it does not prove an absence of rare
+long-run defects.
+
+#### Updated remaining work after M486
+
+1. Keep the async capture fix. M482's synchronous PNG path was the confirmed
+   measurement defect; M483 reduced its matched-window frame-time spike.
+2. Do not change geometry publication or raster state based on M483 alone.
+   The exact gap did not recur in M486, and the nearby pixel/depth samples
+   agree. If it recurs, capture a full framebuffer image in the same frame and
+   correlate its pixel using the OpenGL lower-left origin (`PNG y = height
+   - 1 - GL y`). Record GPU draw state and actual command/triangle for that frame.
+3. Run one capture-disabled, low-instrumentation M335 timing control when the
+   host is quiet. Keep the established route, speed, clear-day wrapper,
+   distance minimum, and timeout; exclude periods with sleep, clock gaps, or
+   material unrelated CPU load.
+4. Resolve the stop-tail contract without merging signal meanings: report
+   camera-band drawable/missing mesh and visible-pixel evidence separately
+   from wider-band unfinished visual and pending-light debt. M486's user-facing
+   proxy is clean, while the existing readiness stop-line does not converge.
+5. Run the periodic cold/new-world lane with explicit metadata, generation,
+   first-presentable, and post-entry timing. This supplements, and never
+   replaces, repeatable M335 on `World_164`.
+6. Reconcile the plan after the quiet timing control, stop-tail interpretation,
+   and one cold/new-world result. Do not mark streaming/rendering complete from
+   analyzer `pass` alone or from readiness counters alone.
+
+The exact M486 invocation and raw artifact paths are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m486--exact-m335-draw-state-follow-up-2026-10-09).
+Plan status: **the capture-path regression is fixed; the established M335
+route and obstacle avoidance remain adequate; the M483 exact pixel gap is
+unconfirmed and not visibly reproduced. M486's draw-state sample found no
+obvious cull/depth/viewport fault, but it was not same-frame with a pixel
+sample. High background load invalidates timing comparisons. A quiet timing
+control, precise stop-tail signal interpretation, and periodic cold/new-world
+coverage remain.**
