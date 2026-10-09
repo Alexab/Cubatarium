@@ -4208,3 +4208,80 @@ follow-up M479 repeats the same route with geometry probes and full-frame
 captures limited to X `[-2920,-2670]`, the first repeated near-focus candidate
 cluster. It is diagnostic, not a timing baseline; inspect geometry/pixel
 evidence only, not lighting fields.
+
+## M479 — geometry-pixel witness (2026-10-09)
+
+M479 repeated the visible/no-teleport World_164/M335 route using the Release
+binary from `05def3e1`, SHA-256
+`935DD89C9223AFAF525ACAA3A39080205E0DCB4C19D4A59F5C50A15676EB04F`. The
+route exited normally, traveled 6,944 blocks at 5.19287 blocks/s, and held eye
+Y=70. This was a diagnostic run: detailed probes generated 308 spikes with a
+730.6 ms maximum, so its timing is not an acceptance baseline. The route and
+post-stop convergence lines failed.
+
+The CPU-voxel/depth comparison emitted 21 candidates. The air-fog shader uses
+horizontal distance; after correcting the initial 3D-distance classification,
+six candidates were within the 36-block air-fog range. Fifteen were beyond
+that horizontal range or on the underwater-fog path, and five samples had no
+opaque depth. The five no-depth samples were outside the applicable visible
+fog range. None of these counters alone proves a framebuffer gap. The six
+in-range cases still need an exact ray/triangle intersection to distinguish a
+missing rendered surface from a voxel-ray/rasterization mismatch. One sand
+candidate had stale published geometry revision with an active dirty owner,
+while adjacent samples from the same chunk matched depth. Captures show
+continuous scenery; do not patch the draw path based on this candidate alone.
+
+At the stop, `visual_holes=0`, `focus_missing_mesh=0`, pending light=0, and
+focus dirty=0. The camera band had 90 solid slices, all satisfying, with zero
+camera-band missing drawable slices, unowned slices, or pending work. The
+broader vertical census retained 26 readiness items and 25 unowned slices;
+the final captured slice witnesses were at `cy=1` (Y=16–31), below the camera
+at Y=70. Keep this as an off-camera readiness/ownership residual, separate
+from displayed coverage.
+
+Re-analysis now exposes `readiness_debt_rate`,
+`post_stop_readiness_debt_max/rate`, and `post_stop_mesh_missing_max` beside
+`visual_holes_rate`. Legacy `holes_rate` and `post_stop_missing_max` remain
+compatibility aliases. M479 values are readiness debt rate 1.0, visual mesh
+coverage proxy rate 0.0666, post-stop readiness count 26, post-stop focus mesh
+missing 0, and post-stop visual-hole proxy rate 0. The measured full-run
+`visual_holes` periods are transient near-focus coverage signals, not
+framebuffer-hole counts.
+
+Exact M479 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m479_m335_geometry_witness_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m479_world164_m335_geometry_witness --report bin/suite_reports/engine_refactor/m479_world164_m335_geometry_witness_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m479_world164_m335_geometry_witness_20261009.json`;
+perf log: `bin/logs/perf_20261009-100805_41032.jsonl`; app log:
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-100802.41032`;
+captures: `bin/flight_captures/m479_m335_geometry_witness_20261009` (284 frames).
+Keep these artifacts local; do not commit them.
+
+The next run adds an exact screen-ray/greedy-triangle witness to the same
+bounded probe. It will preserve the legacy voxel/depth flag for comparison and
+report intersection, triangle-interior, and depth-gap results separately.
+Run this as a Release-only build and the same M335 route; if a ray crosses the
+triangle interior but no corresponding depth is written, trace culling,
+submission, and publication for that slice. If not, correct the diagnostic
+classification before changing the renderer.

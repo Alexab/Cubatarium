@@ -5958,3 +5958,82 @@ Plan status: **M335 route, speed, height, application exit, and stop pending/
 dirty queue drainage pass. Near-focus ray candidates still require a direct
 geometry witness; the broad readiness residual and performance gates remain
 open. The cold/new-world lane remains a secondary unresolved check.**
+
+#### M479 checkpoint — geometry-pixel probe and readiness-band classification (2026-10-09)
+
+M479 repeated the full visible/no-teleport World_164/M335 route on the Release
+binary from `05def3e1` (SHA-256
+`935DD89C9223AFAF525ACAA3A39080205E0DCB4C19D4A59F5C50A15676EB04F`) with
+geometry-pixel probes and captures limited to X `[-2920,-2670]`. It completed
+normally (`process_rc=0`, `hang_killed=false`), traveled 6,944 blocks at the
+expected 5.19287 blocks/s, and held eye Y=70. This was a heavily instrumented
+diagnostic run, not a timing acceptance: it recorded 308 spikes (maximum
+730.6 ms); median fly wall time was 22.30 ms. The dual-lane and post-stop
+convergence lines did not pass.
+
+The trace recorded 21 CPU-voxel/depth discrepancy candidates. The shader uses
+horizontal distance for air fog, so comparing 3D ray distance with `fog_end`
+was incorrect. By the recorded horizontal distance, six candidates are within
+the 36-block air-fog range; the other 15 are outside it or on the underwater
+fog path. Five of the 21 had no opaque depth, all outside the applicable
+visible fog range. These samples do not prove displayed holes. The captured
+frames remain visually continuous, and this probe version did not test
+whether the exact screen ray crossed the corresponding greedy mesh triangle.
+One in-range sand candidate coincided with a stale published geometry
+revision and an active dirty owner, but neighboring rays in that chunk had
+matching depth. Do not classify it as a defect without the exact triangle
+witness.
+
+At the endpoint, `visual_holes=0`, `focus_missing_mesh=0`, pending-light and
+focus-dirty were zero. The bounded census contained 90 camera-band solid
+slices: all 90 were satisfying, with zero camera-band slices lacking a
+drawable mesh, zero camera-band unowned slices, and zero camera-band pending
+work. The broad census still had 26 unresolved readiness items and 25
+unowned slices across its larger vertical band; the captured tail samples were
+in `cy=1` (world Y 16–31), while the camera was at Y=70. This is a real
+off-camera readiness/work-ownership residual, but it does not establish a
+visible rendering defect in the M335 view.
+
+The analyzer now emits `readiness_debt_rate`,
+`post_stop_readiness_debt_max/rate`, and `post_stop_mesh_missing_max`
+separately from `visual_holes_rate`. Legacy `holes_rate`,
+`effective_holes_rate`, and `post_stop_missing_max` remain as documented
+aliases for old reports. Phase gates now name the readiness signal directly;
+the compatibility resolver still reads reports produced by earlier tooling.
+Re-analysis of M479 therefore reports `readiness_debt_rate=1.0`,
+`visual_holes_rate=0.0666`, `post_stop_readiness_debt_max=26`,
+`post_stop_mesh_missing_max=0`, and `post_stop_visual_holes_rate=0` without
+changing the underlying acceptance thresholds.
+
+Updated closeout order:
+
+1. **Replace the CPU-voxel/depth candidate with an exact mesh witness.** The
+   next Release diagnostic records whether the same screen ray intersects the
+   exposed entry-face triangle, whether the hit is inside the triangle rather
+   than on a rasterization edge, and the triangle/depth distance delta. Keep
+   the raw voxel/depth candidate for comparison. If the ray misses the mesh or
+   only touches an edge, classify the old flag as a proxy mismatch. If it
+   crosses the triangle interior but opaque depth is behind it, follow the
+   renderer submission/publication path and fix that defect.
+2. **Keep camera-band quality and broad readiness as separate acceptance
+   lines.** M479 shows a clean camera-band endpoint alongside persistent
+   off-band missing-mesh work. Retain strict readiness accounting; do not
+   present it as a framebuffer-hole verdict. Identify why the 25 off-band
+   slices remain unowned and decide whether they are required by the
+   presentable-world contract.
+3. **Run a clean full M335 Release acceptance after any rendering fix.** The
+   instrumented M479 timing is unusable as a baseline. Preserve route, speed,
+   height, no-teleport, and stop settings.
+4. **Run the secondary cold/new-world lane after repeated-world geometry is
+   classified.** Preserve the underfeet/drawable-mesh checks and keep this lane
+   periodic and secondary.
+5. **Reconcile the final plan.** Retire a proxy only with its direct witness
+   and keep raw reports, captures, and logs local.
+
+M479 artifacts, exact invocation, and the next Release diagnostic command are
+recorded in [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m479--geometry-pixel-witness-2026-10-09).
+Plan status: **route and endpoint camera band are clean; broad vertical
+readiness debt remains but is off-camera in the captured tail. Six candidates
+within horizontal air-fog range still need exact triangle classification.
+No runtime rendering fix is justified until that witness confirms a draw
+failure. The cold/new-world lane and clean performance acceptance remain.**
