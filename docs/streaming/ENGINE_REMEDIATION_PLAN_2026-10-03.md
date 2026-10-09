@@ -6317,13 +6317,14 @@ event.
    pretransparent pixel readback before labeling it an operator-visible hole.
 2. Keep the asynchronous capture path and its bounded/drop counters. The
    M483 matched-window wall-time improvement is large, but dense pixel/ray
-   readbacks remain measurable overhead. M484 disabled those probes, but five
-   clock gaps totalled 35.63 seconds and the route ended at about 6,352 blocks,
-   below the 6,400-block gate. Repeat the same M335 route with the existing
-   keep-awake helper, explicit minimum travel of 6,400 blocks, and a 7,200-
-   second runner timeout. Preserve runner output and require the app report,
-   analyzer report, and route gate before comparing timing. Keep exact pixel
-   diagnostics only for targeted geometry witnesses.
+   readbacks remain measurable overhead. M484 disabled those probes but had
+   five clock gaps totalling 35.63 seconds and stopped at about 6,352 blocks.
+   M485 then passed the unchanged 6,400-block M335 gate using the keep-awake
+   helper and a detached runner, but the user reported high background CPU load.
+   Therefore the route is validated while timing remains inconclusive. Repeat
+   the capture-disabled timing control only under a quiet CPU, keeping the
+   route, 6,400-block gate, 7,200-second timeout, and runner output unchanged.
+   Keep exact pixel diagnostics only for targeted geometry witnesses.
 3. Reconcile the red A24/eye-proxy gates against direct pixel evidence. M483
    had near-focus mesh-hole telemetry in 24 periods but only one covered
    corridor period; the exact GPU witness occurred once. Preserve these
@@ -6343,8 +6344,10 @@ M483's exact command and raw artifact locations are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m483--async-capture-and-gpu-range-witness-2026-10-09).
 All raw reports, logs, and PNGs remain local. Plan status: **async capture is
 implemented and its matched-window stall is removed; M335 route adequacy
-passed in M483. M484 confirms no collision and two completed detours, but its
-clock gaps and 6,352-block route make it an invalid clean timing control. One
-rare exact pixel/depth gap has matching GPU command and mesh bytes, so inspect
-raster/depth state. The analyzer's A24/eye-proxy and stop-convergence gates
-remain unresolved; a clean timing control and cold-world coverage remain open.**
+passed in M483 and M485. M485 ran at the correct speed and height, with two
+completed detours and no collisions; its timing is inconclusive under high
+background CPU load. M484 is invalid as a timing control because it had clock
+gaps and missed the route gate. One rare exact pixel/depth gap has matching GPU
+command and mesh bytes, so inspect raster/depth state. The analyzer's
+A24/eye-proxy and stop-convergence gates remain unresolved; a quiet-machine
+timing control and cold-world coverage remain open.**

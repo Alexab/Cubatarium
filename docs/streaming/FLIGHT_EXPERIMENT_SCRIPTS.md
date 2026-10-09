@@ -4565,3 +4565,37 @@ Artifacts: [app report](../../bin/suite_reports/engine_refactor/m484_world164_m3
 [analyzer report](../../bin/suite_reports/engine_refactor/m484_world164_m335_clean_timing_analysis_20261009.json),
 and [perf trace](../../bin/logs/perf_20261009-180906_1820.jsonl). Raw artifacts
 remain local and out of Git.
+
+### M485 — full capture-disabled M335 with background CPU load (2026-10-09)
+
+M485 used the exact visible Release/no-teleport M335 setup and passed the
+6,400-block route gate: 7,216 blocks at the established 5.19287 blocks/s,
+eye Y=70, yaw 180°, pitch −30°, no teleport. App exit and runner outcome were
+successful, with no clock gaps. Two predicted obstacles produced two completed
+detours; there were no collision stops, blocked movement substeps, or ground
+contacts. The stop tail completed, and `world_data.json` was restored to its
+original SHA-256. The user reported high background CPU load during this run,
+so its performance figures are contextual only, not a clean engine baseline.
+
+The full-run median/p90 wall time was 32.917/52.406 ms; streaming phase was
+16.854/33.899 ms, async chunk systems 4.572/10.136 ms, and I/O drain
+1.068/2.540 ms. At the same X window sampled with probes/captures in M483
+(`−2920..−2670`), M485 had median/p90 wall 43.319/50.211 ms and streaming
+29.913/36.350 ms; M483 measured 37.412/44.462 and 20.322/30.636 ms. Since the
+background CPU load differs and M483's instrumentation was active, neither
+comparison isolates renderer or streaming cost.
+
+The analyzer reports `visual_holes_rate=0.05730` with full sample coverage,
+below the 0.10 near-focus mesh-coverage proxy threshold. Post-stop visual-hole
+and mesh-missing proxies were zero; broad readiness debt was 27 and
+stop-convergence, eye-proxy, and A24 gates remained red. M485 had no pixel
+probes or screenshots, so it provides no direct framebuffer-hole evidence.
+Keep these readiness and presentation signals separate.
+
+The existing `flight_sim_keep_awake.ps1` ran alongside the visible app. The
+runner was started detached with stdout/stderr files so its post-run analyzer
+and restoration completed normally. This is the preferred long-flight launch
+pattern. Artifacts: [flight/analyzer report](../../bin/suite_reports/engine_refactor/m485_world164_m335_clean_timing_control_20261009.json),
+[app report](../../bin/flight_sim_report.json), [perf trace](../../bin/logs/perf_20261009-184634_6168.jsonl),
+and [runner output](../../bin/logs/m485_runner_20261009.stdout.log). Keep all
+raw artifacts local and out of Git.
