@@ -4356,3 +4356,60 @@ perf log: `bin/logs/perf_20261009-113003_10124.jsonl` (about 277 MB);
 app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-112949.10124`;
 captures: `bin/flight_captures/m480_m335_triangle_witness_20261009` (326
 frames). Keep all artifacts local and out of Git.
+
+### M481 — exact-route GPU-range witness repeat (2026-10-09)
+
+Repeated the established M335 `World_164` route without teleport, using the
+same Release executable as commit `9f78cd47`. Enabled the opt-in GPU buffer and
+indirect-command readback, which only runs after an exact interior mesh/depth
+gap. The route passed speed/height/distance checks: 5.19287 blocks/s, eye Y=70,
+6,896 blocks traveled. The app exited normally (`process_rc=0`, not killed);
+the analysis wrapper returned 1 because the overall stop-line acceptance
+remains open.
+
+This run recorded 5,920 pixel probes and 10,200 screen-ray candidates. Twelve
+legacy voxel-ray gap candidates were not confirmed by the exact triangle test;
+there were 4,032 ray/triangle intersections, 3,593 interior intersections,
+zero interior mesh/depth gaps, and no GPU readback attempt. M480's four exact
+gaps therefore did not recur. The GPU storage and indirect command remain
+unverified until a qualifying pixel occurs.
+
+At stop, all 90 resident solid slices in the current camera band were
+mesh-satisfying, with zero camera-band no-drawable/pending/unowned slices. The
+wider visual/water band still had 25 unowned and two pending solid slices; the
+last retained unresolved samples were `cy=1`, below the current camera band,
+with overlay-only face-coverage debt. M481 ended with 26 broad readiness items,
+but zero stop-tail visual-hole proxy, zero camera-band mesh misses, and zero
+visible-black counters. The wrapper's red result must be read alongside these
+separate metrics.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-2920'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-2670'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m481_m335_gpu_range_witness_20261009'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='0.5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-2920'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-2670'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m481_world164_m335_gpu_range_witness --report bin/suite_reports/engine_refactor/m481_world164_m335_gpu_range_witness_20261009.json --process-timeout 7200
+```
+
+Report: `bin/suite_reports/engine_refactor/m481_world164_m335_gpu_range_witness_20261009.json`;
+perf log: `bin/logs/perf_20261009-122220_39956.jsonl` (about 260 MB);
+app log: `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261009-122216.39956`;
+captures: `bin/flight_captures/m481_m335_gpu_range_witness_20261009` (297
+frames). Keep raw artifacts local and out of Git.

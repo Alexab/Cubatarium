@@ -6122,3 +6122,65 @@ established route; distance coverage failed. Four exact pixel/depth witnesses
 exist, three within active air fog, including two on current tree-log CPU
 meshes. Actual GPU data/command delivery remains unverified. No runtime fix is
 committed yet. Broad readiness and cold/new-world acceptance remain open.**
+
+#### M481 checkpoint — exact-route repeat and camera-band readiness (2026-10-09)
+
+M481 repeated the established visible, no-teleport M335 route on `World_164`
+with the Release executable from `9f78cd47`. The route manifest passed,
+`process_rc=0`, `hang_killed=false`, measured fly speed was 5.19287 blocks/s,
+eye height stayed at 70, and observed travel was 6,896 blocks (the 6,400-block
+route gate passed). The wrapper still exited 1 because the overall analyzer
+has unresolved readiness and other stop-line gates; this was not a process or
+route-completion failure.
+
+The pixel trace covered camera X `[-2917.79,-2674.8]` with 5,920 probes and
+10,200 screen-ray candidates. The older voxel-ray proxy raised 12 candidates;
+the exact mesh-ray check found 4,032 triangle intersections, 3,593 interior
+intersections, and **zero interior mesh/depth gaps**. Therefore the optional
+GPU VBO/EBO/indirect-command readback did not trigger. M480's four exact gaps
+were not reproduced, so the GPU delivery question remains unclassified rather
+than disproved. Captured frames showed continuous fog/ocean/terrain, without
+an obvious large hole. No runtime renderer change is justified by this repeat.
+
+The stop-tail census explains the broad readiness count better than M480 did.
+At the stable camera band, all 90 resident solid slices were mesh-satisfying;
+there were zero camera-band solid slices without a drawable mesh, pending mesh
+work, or an unowned mesh obligation. In the wider water/visual band, 25 solid
+slices were counted as unowned and two as pending. The retained focus-slice
+examples at the last epoch were at `cy=1`, below the camera band for eye Y=70;
+they carried overlay-only face-coverage debt and no mesh-work owner. This
+accounts for why the broad `unfinished_visual`/`chunk_not_ready` value stayed
+at 26 while stop-tail `visual_holes`, camera-band missing meshes, black-sticky,
+and visible-black counters were zero. Keep this lower-band debt visible in
+diagnostics, but do not label it a framebuffer hole on the established route.
+
+M481's full-route `visual_holes_rate` was 0.06939 at complete sample coverage
+(M480: 0.07862); both stop tails had zero visual-hole coverage proxy. The broad
+readiness-debt rate remained 1.0. M481 had 325 spikes and a maximum 713.33 ms
+frame; its 23.55 ms median fly frame is diagnostic only, not a performance
+acceptance result. Period telemetry recorded no blocked camera substeps or
+flight-ground contacts.
+
+#### Updated remaining work after M481
+
+1. Repeat the same M335 route once (M482) with the gap-only GPU readback still
+   enabled. A repeated exact interior gap should read the actual pooled vertex,
+   index, and MDI command bytes; otherwise leave the M480 pixel event as rare
+   and unresolved, without a speculative runtime patch.
+2. Revisit the stale-sand and tree-log witnesses only if the exact mesh/depth
+   signal recurs. M481 did not produce a GPU witness to inspect.
+3. Refine stop-tail acceptance so it reports camera-band presentability and
+   wider-band readiness debt separately. Preserve the 25 unowned low-band
+   slices as an explicit diagnostic until their face-coverage/ownership policy
+   is decided; do not simply discard the counter.
+4. Run the periodic cold/new-world lane after the repeated-world pixel
+   mismatch is classified. Keep it secondary to the established route.
+5. Reconcile the plan only after the repeated-world geometry result, camera-band
+   stop-tail contract, and cold/new-world lane have explicit outcomes.
+
+M481 command, report, perf log, app log, and capture directory are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m481--exact-route-gpu-range-witness-repeat-2026-10-09).
+Raw artifacts remain local. Plan status: **M335 speed/height/distance passed;
+no exact pixel mesh/depth gap reproduced; GPU bytes remain untested; camera
+band was fully mesh-satisfying at stop, while lower-band readiness debt and
+cold/new-world acceptance remain open.**
