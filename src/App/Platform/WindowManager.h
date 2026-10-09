@@ -24,6 +24,7 @@ class UViewEngine;
 class UInputManager;
 class UApplication;
 class UBlockInputController;
+class UFlightCaptureService;
 
 class UWindowManager
 {
@@ -115,6 +116,7 @@ private: // Instances of core systems
   std::shared_ptr<UApplication> Application;
 
   std::unique_ptr<UBlockInputController> BlockInput;
+  std::unique_ptr<UFlightCaptureService> FlightCapture;
 
 private: // Window and rendering state
   GLFWwindow *Window;
@@ -127,7 +129,8 @@ private: // Window and rendering state
 
   std::chrono::high_resolution_clock::time_point LastFrameTime;
   std::chrono::steady_clock::time_point LastAutosaveTime;
-  /// Dig/place Immediate must not collide with cooperative save (manual 215711).
+  /// Dig/place Immediate must not collide with cooperative save (manual
+  /// 215711).
   static constexpr double KAutosaveIntervalSec = 180.0;
   static constexpr double KEditHotStickySec = 1.5;
   /// Budgeted cooperative autosave (avoids multi-second hitch in Update).
