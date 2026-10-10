@@ -6054,6 +6054,52 @@ Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyConti
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m519_world164_front_back_water_endpoint_20261011 --report bin/suite_reports/engine_refactor/m519_world164_front_back_water_endpoint_20261011.json --process-timeout 900
 ```
 
+### M520 — repeat the endpoint route and inspect the long-flight symptom coordinate
+
+M520 repeated the same 240-block route and conditions after commit `6313bab8`.
+The app exited 0 and all 40 `GL_BACK`/`GL_FRONT` pairs matched pixel-for-pixel.
+At `frame_013`, camera X was `−7273.60`, near M495's navy-water symptom; the
+frame still shows textured water across the lower view. Endpoint `frame_039`
+at X=`−7447.94` also shows water. This short flight began directly at X=`−7215`
+and does not reproduce the long M335 streaming history, so it does not close
+the intermittent long-flight issue. The analyzer returned `pass=false` on
+readiness/performance and post-stop convergence gates, with zero near-focus
+mesh-hole proxy; those gates are not a water-pixel verdict.
+
+A Windows Graphics Capture attempt missed the live window: it closed between
+window enumeration and capture (`window id not found`). M520 therefore has no
+independent live-window/desktop capture.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m520_world164_window_capture_endpoint_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-004014_48064.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-004010.48064)
+- [symptom-coordinate GL_BACK frame 013](../../bin/flight_captures/m520_world164_window_capture_endpoint_20261011/frame_013.png)
+- [endpoint GL_BACK frame 039](../../bin/flight_captures/m520_world164_window_capture_endpoint_20261011/frame_039.png)
+
+### Exact M520 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m520_world164_window_capture_endpoint_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m520_world164_window_capture_endpoint_20261011 --report bin/suite_reports/engine_refactor/m520_world164_window_capture_endpoint_20261011.json --process-timeout 900
+```
+
 ### Exact M518 invocation
 
 ```powershell

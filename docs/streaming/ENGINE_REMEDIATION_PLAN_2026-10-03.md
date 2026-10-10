@@ -7426,6 +7426,26 @@ RGBA после transparent pass отличался от pre-transparent RGBA. �
 При этом две ближайшие, но не exact, fluid associations сами по себе не
 доказывают покрытие конкретного пикселя.
 
+M520 повторил тот же короткий no-teleport маршрут после Release-сборки
+`6313bab8` (SHA-256 EXE
+`d78da45f4d1dc8ec60dc77c533f594f461c45bcca806bd05813004fa9739648d`). Все
+40 пар `GL_BACK`/`GL_FRONT` снова совпали по всем RGBA пикселям. В `frame_013` на
+X=`−7273,60` видна текстурированная синяя водная поверхность; endpoint
+`frame_039` на X=`−7447,94` также показывает воду. Большой плоский navy-регион
+из M495 на этом коротком повторе не воспроизвёлся; через туман по-прежнему
+видны тёмные силуэты, но эта трасса не подтверждает их связь с water defect.
+M520 стартовал непосредственно с X=`−7215` и прошёл 240 блоков: это не замена
+M335, где та же область достигается после длинного последовательного
+стриминга. Анализатор снова вернул `pass=false` по readiness/performance и
+post-stop convergence, при нулевом mesh-hole proxy; это не pixel verdict.
+
+Попытка получить отдельный кадр живого окна через Windows Graphics Capture
+опоздала: окно исчезло между enumeration и `get_window`, который вернул
+`window id not found`; обновлённый список уже не содержал игру. Поэтому M520
+сравнивает только два framebuffer buffer приложения и не проверяет
+desktop/window presentation. Для следующего M335 повтора capture окна нужно
+планировать до окончания stop/idle, а не после route completion.
+
 Причина ограничения подтверждена порядком в `GeometryEngine`: opaque
 color/depth снимается до transparent pipeline, а цветовые transparent passes
 не пишут depth. Поэтому `renderer_pixel_voxel_ray_gap` сейчас означает
