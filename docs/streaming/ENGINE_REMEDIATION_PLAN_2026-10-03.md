@@ -7308,7 +7308,7 @@ M512 passed route adequacy at `5.18555 blocks/s` for 240 blocks and the process
 exited 0. The strict product analyzer returned 1 because readiness, eye-proxy,
 performance, and stop-recovery gates remain open. See the [M512 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m512--water-endpoint-post-stop-direct-framebuffer-probe-2026-10-10).
 
-#### M513–M517 checkpoint — исправлена численная ошибка pixel-ray witness (2026-10-10)
+#### M513–M518 checkpoint — ray witness и повторная проверка воды (2026-10-10)
 
 M513–M517 продолжили ограниченный видимый no-teleport маршрут по `World_164`:
 старт `(-5500,56,56)`, eye Y=70, yaw 180°, pitch −30°, 45 секунд полёта,
@@ -7350,17 +7350,30 @@ near-focus mesh-hole telemetry в четырёх периодах, а wall media
 Оператор сообщил о повторно испорченной воде в самом конце предыдущего видимого
 запуска. M512 находил совпадающие water triangles и изменение цвета после
 transparent pass в собственном framebuffer, но этот результат не разрешает
-наблюдаемое расхождение: desktop captures уже известны как ненадёжное отражение
-окна, а выборочные readback не проверяют весь видимый кадр, анимационный кадр и
-точную причину неправильного вида. Водный симптом остаётся открытым.
+наблюдаемое расхождение: пользователь также сообщал о чужом тексте в некоторых
+сохранённых кадрах, но источник тех кадров не установлен. Не смешивать их с
+текущим `CUBA_FLIGHT_CAPTURE`: M518 подтвердил, что этот путь читает `GL_BACK`
+до swap. Выборочные readback не проверяют весь кадр, каждый анимационный кадр
+и точную причину «испорченного» вида. Водный симптом остаётся открытым.
+
+M518 повторил ocean endpoint с новым camera-space ray. На post-stop позиции
+camera X `−7448,21` 11 probe-проходов покрыли 36 уникальных экранных точек:
+все 396 попаданий луча в block `575` fluid triangles изменили цвет после
+transparent pass. В остановочных period-сэмплах на focus `−466` было 94 fluid
+refs / 2 982 source indices и 75 fluid draw calls (25 shell-depth, 50 color).
+Сохранённый `frame_038.png` получен из `GL_BACK` до `SwapBuffers` через PBO,
+содержит только игровой framebuffer и показывает воду в нижней части сцены.
+Таким образом, полное отсутствие поверхности на этих endpoint-сэмплах не
+воспроизвелось. Это не объясняет, что именно оператор назвал «испорченной»
+водой, и не проверяет каждый пиксель/анимационный кадр; дефект пока нельзя
+закрыть или приписать renderer.
 
 **Обновлённый порядок работ:**
 
-1. Повторить установленный ocean endpoint `[-7500,-7190]` с fluid
-   source/submission/readback и сохранить самую последнюю позицию после stop.
-   Новый M518 провести уже с camera-space лучом; отдельно проверить texture/
-   animation frame и итоговые пиксели на самой последней позиции. Desktop capture
-   использовать только как ориентир, не как ground truth.
+1. Если оператор снова наблюдает повреждённую воду, синхронизировать её точную
+   позицию/момент с raw `GL_BACK` capture и fluid sample; M518 уже подтвердил
+   surface draws на прежнем post-stop endpoint, поэтому не менять fluid pipeline
+   без нового несовпадения. Уточнить provenance старых кадров с чужим текстом.
 2. Считать прежний opaque-raster GPU-range анализ условным. M517 не оставил
    исправленных ray-gap событий; повторять M510 GPU-range/alpha witness только
    если новый corrected-ray или синхронное наблюдение оператора даст реальный
@@ -7373,5 +7386,5 @@ transparent pass в собственном framebuffer, но этот резул
    конкретных дефектов повторить длинный Release-пролёт и периодический
    короткий прогон на новом seed с source-generation/save trace.
 
-Подробные команды, manifests и артефакты M513–M517 добавлены в
-[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m513m517--camera-space-ray-witness-и-opaque-pixel-autopsy-2026-10-10).
+Подробные команды, manifests и артефакты M513–M518 добавлены в
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m513m518--camera-space-ray-witness-и-opaque-pixel-autopsy-2026-10-10).

@@ -5912,7 +5912,7 @@ small variation. The direct readback did not reproduce a missing surface;
 these engine-buffer metrics do not establish that the desktop image matched
 the user-visible symptom.
 
-## M513–M517 — camera-space ray witness and opaque-pixel autopsy (2026-10-10)
+## M513–M518 — camera-space ray witness and opaque-pixel autopsy (2026-10-10)
 
 These were bounded, visible, no-teleport Release flights on the established
 `World_164` `product-174657-far` profile. The route was held constant: start
@@ -5940,13 +5940,73 @@ submission, or water rendering. Since M517 left zero corrected-ray gap rows,
 repeat M510's same-frame GPU-range/alpha witness only if a corrected-ray run or
 operator observation reproduces an actual pixel mismatch.
 
-Readiness metrics stayed red in all five reports. They remain readiness and
+Readiness metrics stayed red in all six reports. They remain readiness and
 coverage signals, not direct black framebuffer pixels. The most recent report
 also had `post_stop_mesh_missing_max=0` and `post_stop_visual_holes_rate=0`
 alongside `readiness_debt_rate=0.842` and `post_stop_effective_holes_rate=1`.
 The operator's report that water looked corrupted at the end of a visible run
-remains open despite M512 detecting fluid geometry and framebuffer color
-changes in its selected endpoint samples.
+remains open despite the endpoint repetitions in M512 and M518.
+
+### M518 — corrected-ray water endpoint repeat
+
+M518 repeated the M512 visible/no-teleport ocean route from `-7215 56 56` with
+the same camera/speed/phase settings and expanded bounds `[-7500,-7190]`. It
+used the M517 camera-space ray and enabled `CUBA_FLUID_RENDER_TRACE`. The
+route passed adequacy at `5.18555 blocks/s` over 240 blocks; process exit was 0.
+The product analyzer returned 1 because readiness, eye-proxy, and performance
+gates remained open. Manifest source commit is `c841b824` (documentation-only
+change after the build); the Release EXE hash is identical to M517's build,
+`eaa8dc7bf996f01b9d57dd50fa31d8b21a84ce1bd91ca86535c0987884b15452`, and the
+manifest's tracked diff hash is clean.
+
+At post-stop camera X `-7448.21`, each of 11 pixel probes found the same 36
+sample positions intersecting fluid block `575`: 396/396 fluid-triangle hits
+changed the selected framebuffer color after the transparent pass. Period telemetry
+at focus chunk `-466` reported 94 fluid refs, 2,982 source indices, and 75
+fluid draw calls (25 shell-depth + 50 color-pass submissions). The readiness
+report still has `readiness_debt_rate=1`, while `visible_black_focus_n=0`,
+`post_stop_mesh_missing_max=0`, and `post_stop_visual_holes_rate=0`.
+
+The application capture is a full `GL_BACK` readback queued before
+`glfwSwapBuffers`, completed from a PBO, then written as PNG by
+`UFlightCaptureService`; it is not a desktop screenshot. [M518 frame 038](../../bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010/frame_038.png)
+was queued at camera X `-7448.21` and shows the water plane in the lower scene.
+This means complete water-surface loss did not reproduce in that framebuffer
+view. It does not resolve the operator's report of corrupted appearance because
+the observation's exact pixels/visual characteristic are unknown and these
+selected samples do not characterize every water pixel or animation frame. The
+operator previously saw foreign application text in some saved frames; their
+capture provenance is unresolved and should not be attributed to this internal
+`GL_BACK` PNG path without checking those specific files.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m518_world164_camera_space_water_endpoint_20261010.json)
+- [perf JSONL](../../bin/logs/perf_20261010-235410_47764.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-235406.47764)
+- [endpoint frame 038](../../bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010/frame_038.png)
+- [all flight captures](../../bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010)
+
+### Exact M518 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m518_world164_camera_space_water_endpoint_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m518_world164_camera_space_water_endpoint_20261010 --report bin/suite_reports/engine_refactor/m518_world164_camera_space_water_endpoint_20261010.json --process-timeout 900
+```
 
 ### Exact M516 invocation
 
@@ -5988,5 +6048,6 @@ Artifacts:
 
 - M516 captures: `bin/flight_captures/m516_world164_ray_origin_direction_20261010`
 - M517 captures: `bin/flight_captures/m517_world164_camera_space_ray_20261010`
+- M518 captures: `bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010`
 - M516 manifest: clean Release, commit `d0567510`, EXE SHA-256 `541475ac68d4552c880b323b5d6a4df22278177b22f892616272e725868540f0`
 - M517 manifest: clean Release, commit `d712b9b3`, EXE SHA-256 `eaa8dc7bf996f01b9d57dd50fa31d8b21a84ce1bd91ca86535c0987884b15452`
