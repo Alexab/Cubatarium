@@ -5516,3 +5516,42 @@ $env:CUBA_FLIGHT_CAPTURE_MIN_X='-7440'
 $env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m503_world164_tail_stop_drain_20261010 --report bin/suite_reports/engine_refactor/m503_world164_tail_stop_drain_20261010.json --process-timeout 900
 ```
+
+## M504 — peer-debt guard and endpoint water capture (2026-10-10)
+
+M504 used the same visible Release local segment as M503, on source commit
+`d84d7cdf` and executable SHA-256
+`e1fb46744c9d28cfe93f99a515d443e2c9f82d66b3b7cd7010903243e04b7c52`. It
+traveled 240 blocks at `5.18555` blocks/s and exited 0. The `PriorityWorldCoreRepair`
+revision-bump count fell from 519 in M503 (517 peer-debt bumps from three
+slices) to zero. All 60 stop periods had no visual-hole samples, but
+post-stop convergence still failed: pending GPU applies plateaued at 9, the
+last queue had 9 queued/0 kicked, focus not-ready was 32–33, and face debt was
+222.
+
+The capture range included the final stopped position and produced 65 frames.
+Frame 064 shows a visible blue water surface and island with no large solid
+navy patch. It contains 11 exact `(13,38,89)` pixels; this local run does not
+reproduce the end-of-run water report and does not replace the full M335 run.
+
+Artifacts:
+
+- [M504 report](../../bin/suite_reports/engine_refactor/m504_world164_tail_peer_debt_guard_20261010.json)
+- [M504 perf](../../bin/logs/perf_20261010-200051_45980.jsonl)
+- [M504 app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-200047.45980)
+- [M504 frame 064](../../bin/flight_captures/m504_world164_tail_peer_debt_guard_20261010/frame_064.png), [all captures](../../bin/flight_captures/m504_world164_tail_peer_debt_guard_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m504_world164_tail_peer_debt_guard_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7400'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m504_world164_tail_peer_debt_guard_20261010 --report bin/suite_reports/engine_refactor/m504_world164_tail_peer_debt_guard_20261010.json --process-timeout 900
+```

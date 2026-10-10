@@ -6995,3 +6995,35 @@ Next work: verify the peer-debt guard on the same local segment, capture its
 last stopped frames, then preserve the established full M335 route for
 long-distance rendering/streaming acceptance. Keep outer-shell face debt and
 camera-band presentation as separate readiness measures.
+
+#### M504 checkpoint — peer-debt guard and endpoint water capture (2026-10-10)
+
+M504 repeated M503's 45-second visible no-teleport segment and 120-second stop
+on the same route. It traveled 240 blocks at `5.18555` blocks/s, exited 0, and
+used the Release executable from `d84d7cdf` (SHA-256
+`e1fb46744c9d28cfe93f99a515d443e2c9f82d66b3b7cd7010903243e04b7c52`). The
+paired trace contained **zero** `PriorityWorldCoreRepair` revision bumps,
+compared with 519 total in M503, including the 517 peer-debt bumps from the
+three repeated slices. The targeted remesh churn is eliminated in this
+segment.
+
+The long-stop gate remains open. All 60 stop periods had zero `visual_holes`,
+but pending GPU applies settled at 9 and stayed there; the queue ended with 9
+queued and 0 kicked, while `focus_not_render_ready` was 32–33 and face debt was
+222. `demand_stop_converged` remained false. M504's period trace also shows
+other repair sources (notably 225 `priority_chunk_emerge_repair` bumps), so the
+remaining plateau needs its own ownership/throughput analysis rather than
+reopening the peer-debt fix.
+
+Unlike M503, M504 captured through the final stopped X interval. Its last
+frame (064) shows the blue water surface around the island, without a large
+solid fog-navy patch. The exact `(13,38,89)` count was 11 pixels in that frame;
+this isolated local repeat does not reproduce the reported water failure and
+does not rule out an intermittent defect on the full-distance route.
+
+M504 report, performance log, capture, and invocation are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m504--peer-debt-guard-and-endpoint-water-capture-2026-10-10).
+Next: run the unchanged full M335 no-teleport Release route with captures over
+the established tail interval and stop. Keep the 120-second local segment as a
+separate targeted drain check; do not treat its visual-hole pass as full-route
+acceptance.
