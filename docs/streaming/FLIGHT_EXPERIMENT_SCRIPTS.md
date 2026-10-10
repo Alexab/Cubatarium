@@ -6100,6 +6100,44 @@ $env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m520_world164_window_capture_endpoint_20261011 --report bin/suite_reports/engine_refactor/m520_world164_window_capture_endpoint_20261011.json --process-timeout 900
 ```
 
+### M521 — retry live-window capture on the endpoint route
+
+M521 used the same Release binary, 240-block route, tracing bounds, 2-second
+paired framebuffer captures, and normal transparent pipeline as M520. The
+route exited 0. All 40 `GL_BACK`/`GL_FRONT` pairs matched pixel-for-pixel;
+`frame_013` at camera X=`−7273.60` and endpoint `frame_039` at
+X=`−7447.94` show textured water in the lower view. The analyzer returned
+`pass=false`: readiness debt was 45 after stop and one of 38 steady periods
+had `visual_holes=1`; the longest proxy run was one period, and the post-stop
+mesh-missing and visual-hole proxies were both zero. This proxy is not a
+water-specific pixel finding.
+
+An independent app-window capture was attempted while the visible window was
+running. `get_window_state` first returned `FrameArrived timed out`; after
+refreshing the returned window, `get_window` returned `window id not found`.
+No live-window or desktop image was obtained. This is a capture-tool failure,
+not a run failure.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m521_world164_live_window_endpoint_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-005215_4740.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-005212.4740)
+- [symptom-coordinate GL_BACK frame 013](../../bin/flight_captures/m521_world164_live_window_endpoint_20261011/frame_013.png)
+- [endpoint GL_BACK frame 039](../../bin/flight_captures/m521_world164_live_window_endpoint_20261011/frame_039.png)
+
+Exact environment and route were the same as M520, with the following
+phase/report/capture paths:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m521_world164_live_window_endpoint_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m521_world164_live_window_endpoint_20261011 --report bin/suite_reports/engine_refactor/m521_world164_live_window_endpoint_20261011.json --process-timeout 900
+```
+
 ### Exact M518 invocation
 
 ```powershell
