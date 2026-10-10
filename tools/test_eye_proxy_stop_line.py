@@ -15,7 +15,7 @@ CASES = [
     (
         ROOT / "bin/logs/perf_20260915-095545_41740.jsonl",
         "095545",
-        True,  # must FAIL (mid stale ~17)
+        True,  # must FAIL (mid-corridor stale activity exceeds the interval gate)
     ),
     (
         ROOT / "bin/logs/perf_20260915-102527_35348.jsonl",
@@ -83,12 +83,14 @@ def main() -> int:
         if expect_fail and passed:
             print(f"FAIL {label}: expected eye_proxy FAIL")
             failures += 1
-        if expect_fail and "stale_visual_without_hole_counters" not in fails:
-            # 095545/121131 have holes≈0 and stale mid>8
-            if stale is not None and float(stale) > 8.0:
+        if expect_fail and "stale_visual_activity_without_hole_counters" not in fails:
+            # The cumulative stale counter is diagnostic only; the failure must
+            # be justified by activity within the selected telemetry interval.
+            delta = m.get("mesh_apply_stale_visual_delta_med")
+            if delta is not None and float(delta) > 1.5:
                 print(
-                    f"FAIL {label}: missing stale_visual_without_hole_counters "
-                    f"(stale_mid={stale})"
+                    f"FAIL {label}: missing stale_visual_activity_without_hole_counters "
+                    f"(interval_delta={delta}, cumulative_mid={stale})"
                 )
                 failures += 1
         if not expect_fail and not passed:
@@ -99,6 +101,49 @@ def main() -> int:
             failures += 1
 
     with tempfile.TemporaryDirectory() as tmp:
+        cumulative = Path(tmp) / "cumulative_stale_low_activity.jsonl"
+        high_activity = Path(tmp) / "cumulative_stale_high_activity.jsonl"
+
+        def write_stale_fixture(path: Path, interval_delta: float) -> None:
+            rows = []
+            for i in range(10):
+                rows.append(
+                    {
+                        "kind": "period",
+                        "focus_cx": 3.0,
+                        "movement_speed": 6.0,
+                        "mesh_apply_stale_visual": 10.0 + i * 2,
+                        "mesh_apply_stale_delta": interval_delta,
+                        "near_focus_holes": 0,
+                        "visual_holes": 0,
+                        "transparent_cmd_reorder_n": 0,
+                        "publication_incomplete_material_n": 0,
+                        "publication_oom_retain_n": 0,
+                    }
+                )
+            path.write_text(
+                "\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8"
+            )
+
+        write_stale_fixture(cumulative, 1.0)
+        cumulative_metrics = compute_eye_proxy_stop_line(cumulative)
+        if not cumulative_metrics.get("eye_proxy_stop_line_pass"):
+            print(
+                "FAIL cumulative fixture: lifetime count must not fail the gate "
+                f"by itself: {cumulative_metrics.get('eye_proxy_stop_line_fails')}"
+            )
+            failures += 1
+
+        write_stale_fixture(high_activity, 2.0)
+        high_activity_metrics = compute_eye_proxy_stop_line(high_activity)
+        high_activity_fails = high_activity_metrics.get("eye_proxy_stop_line_fails") or []
+        if "stale_visual_activity_without_hole_counters" not in high_activity_fails:
+            print(
+                "FAIL high-activity fixture: interval stale activity without holes "
+                f"must fail: {high_activity_fails}"
+            )
+            failures += 1
+
         high = Path(tmp) / "incomplete_high.jsonl"
         _write_synthetic_incomplete(high, 40.0)
         m = compute_eye_proxy_stop_line(high)

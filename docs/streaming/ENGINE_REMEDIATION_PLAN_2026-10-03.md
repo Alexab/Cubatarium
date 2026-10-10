@@ -7486,6 +7486,18 @@ presentation во время M522 не получен, а внутренний f
 содержат туманные дальние силуэты; известное переключение их видимости не
 классифицируется этим замером как водная регрессия.
 
+Проверка analyzer выявила некорректный eye-proxy gate: `mesh_apply_stale_visual`
+в коде — process-lifetime counter, но прежняя оценка сравнивала его
+mid-corridor cumulative median `15` с порогом `8` и тем же условием дублировала
+`stale_visual_without_hole_counters`. В `FramePerfMonitor` уже есть точный
+interval counter `mesh_apply_stale_delta`; в семи M522 mid-corridor periods его
+median равен `2` (порог `1,5`), при `near_focus_holes=0` и `visual_holes=0`.
+Следовательно, M522 подтверждает умеренную stale-apply активность выше этого
+порога, но не hole и не водный дефект. Gate исправлен: абсолютный cumulative
+счётчик остаётся диагностикой, а оценка идёт по interval delta. Старые отчёты,
+в которых единственным основанием stale-failure было cumulative median,
+требуют повторной оценки исходных JSONL.
+
 **Обновлённый порядок работ:**
 
 1. Не менять water/fluid pipeline без нового sample-level доказательства:

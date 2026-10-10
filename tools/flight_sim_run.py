@@ -54,11 +54,12 @@ A24_SAFETY_STOP_LINE = {
 }
 
 # Eye-proxy thrash stop-line (N08). Mid-corridor SoT (same band as dual-lane stalled).
-# Fly-only med greenwashed autofly 095545 (fly stale=2, mid=17). Four merge signals:
-# adequacy / dual-lane / eye_proxy / operator eye. Adequacy alone is not merge-green.
+# Cumulative stale totals are diagnostic only; interval activity and hole signals
+# are interpreted separately. Four merge signals: adequacy / dual-lane / eye_proxy
+# / operator eye. Adequacy alone is not merge-green.
 EYE_PROXY_STOP_LINE = {
-    # Post-N01: align with thrash ≤102527 class (mid stale≤8), not pre-fix 6.
-    "mesh_apply_stale_visual_mid_med_max": 8.0,
+    # mesh_apply_stale_visual is process-lifetime cumulative. Gate the exact
+    # per-period delta instead; an absolute mid-run median depends on flight age.
     "mesh_apply_stale_visual_delta_med_max": 1.5,
     "effective_holes_blink_rate_max": 0.05,
     "transparent_cmd_reorder_mid_med_max": 1.0,
@@ -876,9 +877,18 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         stale_xs = values("mesh_apply_stale_visual")
         if not stale_xs:
             stale_xs = values("mesh_apply_stale")
-        deltas: list[float] = [
-            abs(stale_xs[i] - stale_xs[i - 1]) for i in range(1, len(stale_xs))
-        ]
+        # FramePerfMonitor emits an exact interval delta for this process-lifetime
+        # counter. Use it directly; differencing averaged snapshots loses events
+        # and makes the result depend on sample cadence. Older logs can fall back
+        # to adjacent counter differences.
+        stale_delta_xs = values("mesh_apply_stale_delta")
+        stale_delta_source = "mesh_apply_stale_delta"
+        if not stale_delta_xs:
+            stale_delta_source = "adjacent_counter_difference"
+            stale_delta_xs = [
+                max(0.0, stale_xs[i] - stale_xs[i - 1])
+                for i in range(1, len(stale_xs))
+            ]
 
         hole_flags: list[float] = []
         for row in use:
@@ -903,10 +913,10 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
         reorder_xs = values("transparent_cmd_reorder_n")
         incomplete_xs = values("publication_incomplete_material_n")
         oom_xs = values("publication_oom_retain_n")
-        stale_med = median(stale_xs)
+        stale_cumulative_med = median(stale_xs)
         holes_med = median(holes_xs)
         visual_holes_med = median(visual_holes_xs)
-        delta_med = median(deltas)
+        delta_med = median(stale_delta_xs)
         reorder_med = median(reorder_xs)
         incomplete_med = median(incomplete_xs)
         oom_med = median(oom_xs)
@@ -918,9 +928,13 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "perf_path": str(perf_path),
             "eye_proxy_segment": segment,
             "eye_proxy_coverage": coverage_status,
-            "mesh_apply_stale_visual_mid_med": stale_med,
-            "mesh_apply_stale_visual_fly_med": stale_med,
+            # Keep legacy keys for report readers, but document that these are
+            # cumulative diagnostics and are no longer a quality gate.
+            "mesh_apply_stale_visual_mid_med": stale_cumulative_med,
+            "mesh_apply_stale_visual_fly_med": stale_cumulative_med,
+            "mesh_apply_stale_visual_cumulative_mid_med": stale_cumulative_med,
             "mesh_apply_stale_visual_delta_med": delta_med,
+            "mesh_apply_stale_visual_delta_source": stale_delta_source,
             "effective_holes_blink_rate": blink_rate,
             "transparent_cmd_reorder_mid_med": reorder_med,
             "transparent_cmd_reorder_fly_med": reorder_med,
@@ -937,12 +951,8 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             fails.append("missing_holes_fields_untested")
         if not field_present("publication_incomplete_material_n"):
             fails.append("missing_publication_incomplete_field_untested")
-        if not stale_xs:
+        if not stale_xs and not stale_delta_xs:
             fails.append("missing_stale_visual_field_untested")
-        if stale_med is None or float(stale_med) > EYE_PROXY_STOP_LINE[
-            "mesh_apply_stale_visual_mid_med_max"
-        ]:
-            fails.append("mesh_apply_stale_visual_mid_med_above_eye_proxy")
         if delta_med is None or float(delta_med) > EYE_PROXY_STOP_LINE[
             "mesh_apply_stale_visual_delta_med_max"
         ]:
@@ -966,15 +976,17 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "visual_holes_mid_med_max"
         ]:
             fails.append("visual_holes_mid_med_above_eye_proxy")
-        # Holes telem = missing mesh only; thrash with holes==0 is still a defect.
+        # Holes telem = missing mesh only; stale apply activity without holes is
+        # still worth reporting, but base it on per-period activity, not a
+        # process-lifetime total.
         if (
             (holes_med is None or float(holes_med) == 0.0)
             and (visual_holes_med is None or float(visual_holes_med) == 0.0)
-            and stale_med is not None
-            and float(stale_med)
-            > EYE_PROXY_STOP_LINE["mesh_apply_stale_visual_mid_med_max"]
+            and delta_med is not None
+            and float(delta_med)
+            > EYE_PROXY_STOP_LINE["mesh_apply_stale_visual_delta_med_max"]
         ):
-            fails.append("stale_visual_without_hole_counters")
+            fails.append("stale_visual_activity_without_hole_counters")
         # Silent mid_third/fly_fallback must not look like a covered mid-corridor PASS.
         if segment in ("mid_third", "fly_fallback"):
             fails.append("eye_proxy_segment_coverage_untested")
