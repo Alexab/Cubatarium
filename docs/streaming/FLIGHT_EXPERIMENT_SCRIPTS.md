@@ -5286,3 +5286,64 @@ Next run: add fluid-specific occupancy → mesh faces/revision → transparent
 batch → per-pass submitted draw/state → framebuffer-coverage evidence before
 changing water, fog, or `Unknown`-neighbor rules. Keep the same M335 route and
 default desktop-shell path for the visual baseline.
+
+### M496 — fluid framebuffer witness on M335 (2026-10-10)
+
+M496 repeated M335 on `World_164` with the same visible, no-teleport route,
+Release build, clear fixed-day profile, start, eye height, yaw, pitch, and
+speed. Fluid diagnostics were spatially gated to camera X `[-7440,-7190]` so
+the long cruise remained visually unchanged. The application exited normally
+(`process_rc=0`, `run_outcome=success`, `hang_killed=false`), traveled 7,408
+blocks at `5.19287 blocks/s`, and held eye Y=70. The analyzer returned
+`pass=false` on separate readiness/near-focus mesh-coverage gates (740 periods,
+217 spikes); do not interpret that result as a water-pixel verdict.
+
+Frame 097 at camera X `-7215.170898` has 531,812 pure-magenta pixels (57.71%
+of the 1280×720 image). Frame 098 at camera X `-7283.620117` and frame 099 at
+the same stop position have no magenta pixels; frame 098 contains 122,339
+pixels at fog navy `(13,38,89)`. The symptom coordinate is close to M495 frame
+097 (`-7269.958984`), which also has a large fog-navy region. M496 perf samples
+around focus `cx=-456` nevertheless report 76 fluid refs, 1,194 fluid indices,
+2,365 `fluid_gpu_batch_n`, 87 fluid draw calls, 29 shell-depth calls, and 58
+aggregated color-pass calls. These are submission counters; they do not mean
+each submitted GPU batch emitted visible pixels.
+
+Interpretation: water-style fragments demonstrably reach the framebuffer at
+the preceding view. At the navy symptom view, instrumented fluid draw counts
+continue but the shader witness is absent. Since the marker follows alpha and
+opaque-depth rejection, this points to a later-view visibility/rejection issue
+or an affected path outside the marker's coverage. It does not yet prove the
+opaque-depth guard is the cause; stencil/state, indirect visibility, and a
+separate fluid draw path remain candidates. The next experiment is a short,
+visible local A/B near X `-7284`, changing only
+`CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD=1`, with the marker and default
+desktop-shell path retained. If marker pixels return, audit the depth capture
+and coordinate/bias comparison. If not, inspect stencil/color-pass state,
+indirect command visibility, and GPU fluid-surface path coverage. No fog or
+`Unknown` liquid-neighbor behavior should change before this classification.
+
+Artifacts:
+
+- [M496 report](../../bin/suite_reports/engine_refactor/m496_world164_m335_fluid_witness_20261010.json)
+- [M496 perf JSONL](../../bin/logs/perf_20261010-174912_27460.jsonl)
+- [M496 app INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-174907.27460)
+- [M496 frame 097 — marker visible](../../bin/flight_captures/m496_world164_m335_fluid_witness_20261010/frame_097.png)
+- [M496 frame 098 — symptom view, no marker](../../bin/flight_captures/m496_world164_m335_fluid_witness_20261010/frame_098.png)
+- [M495 frame 097 — normal-render symptom reference](../../bin/flight_captures/m495_world164_capture_compare_20261010/frame_097.png)
+
+The runner restored `World_164/world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+Raw logs and images remain local and out of Git.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m496_world164_m335_fluid_witness_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='15'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m496_world164_m335_fluid_witness_20261010 --report bin/suite_reports/engine_refactor/m496_world164_m335_fluid_witness_20261010.json --process-timeout 7200
+```

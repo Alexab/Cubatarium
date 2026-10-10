@@ -6818,3 +6818,49 @@ separate open items.**
 
 M495 artifacts and exact invocation are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m495--final-segment-water-appearance-and-capture-comparison-2026-10-10).
+
+#### M496 checkpoint — fluid draw to framebuffer witness (2026-10-10)
+
+M496 repeated the visible Release/no-teleport M335 on the same saved world and
+route profile with fluid counters and an opaque magenta marker enabled only for
+camera X `[-7440,-7190]`. The executable was built from `344de1d1`; SHA-256 is
+`41ae74d595b793e8312dfba16de7c037a1b2e009a1fb739b204f4a8668c87a94`. The
+application exited normally (`process_rc=0`, no hang kill), traveled 7,408
+blocks at `5.19287` blocks/s, and kept eye Y=70. The analyzer still returned
+`pass=false` for the separate readiness/mesh-coverage gates (740 periods,
+217 spikes); this is not a water-specific failure classification.
+
+The paired captures narrow the water symptom. M496 frame 097 at camera X
+`-7215.17` contains exactly 531,812 magenta pixels (57.71% of the 1280×720
+frame), proving fluid-style fragments pass the shader's alpha and opaque-depth
+checks and reach the color framebuffer at that preceding view. Frame 098 at
+camera X `-7283.62`, close to M495's changed view at `-7269.96`, contains no
+magenta pixels and 122,339 pixels at fog RGB `(13,38,89)`; frame 099 holds the
+same camera position and pixel counts. Yet fluid-side telemetry around focus
+`cx=-456` remains nonzero: 76 transparent fluid refs, 1,194 fluid indices,
+2,365 reported GPU batches, 87 fluid draw calls, and 58 aggregated fluid color
+pass calls (with 29 shell-depth calls). These are submission counters, not a
+claim that 2,365 distinct batches rasterized pixels.
+
+The shader places the magenta witness after alpha/shell discards and the opaque
+depth guard. Thus the failure view is not explained by a wholly absent fluid
+reference or a completely missing GPU submission. No witness pixels at
+`X=-7283.62` means the instrumented fluid fragments are either rejected or
+occluded before that shader point, or the affected surface uses a draw path
+that the marker does not instrument. This materially narrows the next audit;
+it does not yet distinguish a bad opaque-depth comparison from stencil/state,
+GPU command visibility, or a separate fluid-surface path. Do not change fog or
+liquid-neighbor policy yet.
+
+Next perform one controlled local A/B at the symptom coordinates on
+`World_164`, with the same eye height, heading, pitch, default desktop-shell
+transparent path, and marker. Disable only `CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD`
+in the comparison run. If the marker returns, audit opaque-depth capture,
+coordinate mapping, and bias; if it remains absent, inspect stencil/color-pass
+state, indirect command visibility, and whether the GPU fluid surface bypasses
+the instrumented greedy shader. Then repeat the unchanged full M335 baseline
+after the responsible stage is fixed. Keep readiness debt, M335 pixel evidence,
+and periodic cold/new-world coverage as separate acceptance lanes.
+
+M496 details, exact command, and raw artifact links are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m496--fluid-framebuffer-witness-on-m335-2026-10-10).
