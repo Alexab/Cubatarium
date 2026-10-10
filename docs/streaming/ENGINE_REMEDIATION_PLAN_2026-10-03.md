@@ -7004,8 +7004,9 @@ used the Release executable from `d84d7cdf` (SHA-256
 `e1fb46744c9d28cfe93f99a515d443e2c9f82d66b3b7cd7010903243e04b7c52`). The
 paired trace contained **zero** `PriorityWorldCoreRepair` revision bumps,
 compared with 519 total in M503, including the 517 peer-debt bumps from the
-three repeated slices. The targeted remesh churn is eliminated in this
-segment.
+three repeated slices. This eliminates that producer's contribution only;
+M505 confirms that coordinator repair admissions still repeat on peer-debt
+slices.
 
 The long-stop gate remains open. All 60 stop periods had zero `visual_holes`,
 but pending GPU applies settled at 9 and stayed there; the queue ended with 9
@@ -7023,7 +7024,52 @@ does not rule out an intermittent defect on the full-distance route.
 
 M504 report, performance log, capture, and invocation are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m504--peer-debt-guard-and-endpoint-water-capture-2026-10-10).
-Next: run the unchanged full M335 no-teleport Release route with captures over
-the established tail interval and stop. Keep the 120-second local segment as a
-separate targeted drain check; do not treat its visual-hole pass as full-route
-acceptance.
+M505 then ran the unchanged full M335 no-teleport Release route with captures
+over the established tail interval and stop.
+
+#### M505 checkpoint — full M335 after the WorldCore peer-debt guard (2026-10-10)
+
+M505 completed the visible, cold, no-teleport M335 route on `World_164` using
+the Release executable built from `d84d7cdf` (manifest source `8b16cf5a`, docs
+only) with SHA-256
+`e1fb46744c9d28cfe93f99a515d443e2c9f82d66b3b7cd7010903243e04b7c52`. It
+traveled 7,392 blocks at `5.19287` blocks/s and the app exited 0. The suite
+returned `pass=false`: 29 of 738 steady periods had `visual_holes=1`, grouped
+in several spans between X `-2722` and `-6324`. This field is a mesh-coverage
+proxy, not pixel evidence; the middle eye-proxy corridor had zero hole samples.
+The full-route A24 gate still fails on those 29 periods.
+
+At each sampled hole, the recorded nearest-miss witness often reported a
+drawable and satisfying mesh. That does not prove the hole signal false: the
+radius scan can find a different slice than the stale/nearest witness. It does
+show that current telemetry does not identify the actual missing slice well
+enough to map these events to the framebuffer. The next diagnostic flight must
+enable the opt-in occupancy census and retain the miss coordinate/ownership
+trace across the same route.
+
+The final 19 sparse captures show blue water texture in the endpoint area,
+including the last stopped frame; fluid draw calls were present near the end.
+This run did not reproduce the reported broken-water appearance in its
+framebuffer readback. It does not settle the operator-visible discrepancy
+because prior reports established that saved captures can differ from the
+desktop-composited image. Keep the water symptom open pending a capture path
+that can be compared with the live game window.
+
+Stop-time missing-mesh and visual-hole counts were zero, but the run did not
+converge: not-ready/readiness debt ended at 23 and pending-light idle debt at
+32. Performance gates also failed: flight median wall time was 24.59 ms,
+mesh-emerge median 5.34 ms, and 153 emergence-classified spikes reached
+878 ms; schedule, FIFO, and witness gates remained open. Route completion and
+proxy adequacy passed. This is progress on route control and water rendering,
+not a renderer acceptance pass.
+
+M504 only eliminated `PriorityWorldCoreRepair` bumps. The M504 trace review shows
+the parallel `PriorityChunkEmergeRepair` path can still repeatedly admit First
+Mesh work for stable peer-debt slices. The next code change should share the
+WorldCore stable-published-face-debt predicate with the coordinator and stop
+those redundant admissions while leaving peer-change repair intact. Then pair
+the fix on the same 45-second/120-second local segment before another full
+route.
+
+Artifacts and exact route/capture settings are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m505--full-m335-after-the-worldcore-peer-debt-guard-2026-10-10).

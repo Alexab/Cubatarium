@@ -5555,3 +5555,60 @@ Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
 Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m504_world164_tail_peer_debt_guard_20261010 --report bin/suite_reports/engine_refactor/m504_world164_tail_peer_debt_guard_20261010.json --process-timeout 900
 ```
+
+## M505 — full M335 after the WorldCore peer-debt guard (2026-10-10)
+
+Visible Release run on cold `World_164`, the established no-teleport M335
+route: start `[120,56,56]`, eye Y=70, yaw 180°, pitch -30°, 1,455-second
+flight, 20-second stop, 15-second pre-idle. Source `d84d7cdf` (manifest SHA
+`8b16cf5a`, docs only), executable SHA-256
+`e1fb46744c9d28cfe93f99a515d443e2c9f82d66b3b7cd7010903243e04b7c52`.
+The app exited 0 and traveled 7,392 blocks at `5.19287` blocks/s. The suite
+returned `pass=false` on route/stop/performance gates.
+
+There were 740 telemetry periods (738 steady; 12 stop-idle). The full route
+had 29 periods with `visual_holes=1` and 29 with `near_focus_holes=1`, grouped
+at X ranges `-209`, `-2401`, `-2722..-2839`, `-4050..-4226`,
+`-4674..-4851`, `-5090`, `-5556..-5683`, and `-6153..-6324`. These are
+mesh-coverage proxy events. The eye-proxy corridor subrange had zero such
+samples. In the sampled hole periods, the recorded nearest witness often had a
+drawable and satisfying mesh, so it did not identify the missing slice. M505
+did not enable the expensive opt-in occupancy census; a follow-up route should
+enable it and preserve coordinate-level ownership evidence.
+
+Tail captures show a blue textured water surface, including stopped frame 018;
+fluid draw calls were recorded near the tail. This framebuffer readback did
+not reproduce the reported water defect. The operator-visible result remains
+open because the previous capture comparison showed that framebuffer readback
+and desktop-composited window images can differ. Do not use these captures as
+proof that the user's reported water appearance was false.
+
+At stop, `visual_holes=0` and mesh-missing max was 0, while not-ready debt
+remained 23 and pending-light idle debt was 32; convergence failed. Flight
+median wall time was 24.59 ms, mesh-emerge median 5.34 ms, 153
+emergence-classified spikes were counted, and maximum spike wall time was
+878.321 ms. Route completion and proxy adequacy passed; 11 other route gates
+and three stop gates failed.
+
+Artifacts:
+
+- [M505 report](../../bin/suite_reports/engine_refactor/m505_world164_m335_peer_debt_fix_tail_20261010.json)
+- [M505 perf log](../../bin/logs/perf_20261010-200703_28216.jsonl)
+- [M505 app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-200659.28216)
+- [M505 final stopped frame](../../bin/flight_captures/m505_world164_m335_peer_debt_fix_tail_20261010/frame_018.png), [captures](../../bin/flight_captures/m505_world164_m335_peer_debt_fix_tail_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m505_world164_m335_peer_debt_fix_tail_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7440'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m505_world164_m335_peer_debt_fix_tail_20261010 --report bin/suite_reports/engine_refactor/m505_world164_m335_peer_debt_fix_tail_20261010.json --process-timeout 7200
+```
