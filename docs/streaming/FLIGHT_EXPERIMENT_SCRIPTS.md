@@ -5767,3 +5767,48 @@ without identifying the failure. `World_164` and `bin/config.json` both select
 so alpha cutout is not a plausible cause for these four samples. M509 did not
 cover the ocean endpoint and therefore does not settle the user's latest water
 report. The run is diagnostic, not a clean performance baseline.
+
+### M510 — same-frame MDI draw-state witness at hotspot (2026-10-10)
+
+Visible local no-teleport Release diagnostic on `World_164`, source
+`4350f0af`, executable SHA-256
+`EDAA57E843974A260492F91EA9AA5868AE61E5A025317FF243A82DFAE34B2DEA`.
+Start `-5500 56 56`, eye Y=70, yaw 180, pitch -30; 45 s flight, 20 s stop,
+15 s idle, and minimum travel 150 blocks. It completed 224 blocks at the
+established `5.18555 blocks/s`; application exit was 0 and route outcome was
+success. The strict analyzer still failed performance, scheduling, and
+stop-recovery gates.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m510_world164_hotspot_same_frame_draw_state_20261010.json)
+- [perf JSONL, 164.6 MB](../../bin/logs/perf_20261010-222920_46396.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-222916.46396)
+- [40 captures](../../bin/flight_captures/m510_world164_hotspot_same_frame_draw_state_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-5750'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-5480'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m510_world164_hotspot_same_frame_draw_state_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-5750'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-5480'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -5500 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m510_world164_hotspot_same_frame_draw_state_20261010 --report bin/suite_reports/engine_refactor/m510_world164_hotspot_same_frame_draw_state_20261010.json --process-timeout 900
+```
+
+Six pixel rows had a source-mesh-to-depth gap: five hit `tree_log` block 573,
+one hit block 549 and matched a fluid triangle. All five tree-log rows had a
+same-frame nested draw-state witness with `matched=1`, `submitted=1`, GPU MDI
+path, depth test/write enabled, `GL_LESS`, culling/scissor/stencil/discard
+disabled, and framebuffer 0 with viewport 1280×720. For those same five,
+the GPU command, indices, and vertex positions matched the CPU source. This
+rules out a missing or stale mesh range and disabled depth state for the
+sampled rows; it does not establish fragment coverage or actual sampled atlas
+alpha. The analyzer's visual-hole proxy rate was 3/38 (0.07895), readiness
+debt 1.0, and near-black proxy rate 0. Water was outside this local segment.

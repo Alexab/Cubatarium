@@ -7219,3 +7219,38 @@ M335 route; the M508 1.18-GB trace and analyzer memory use make that wasteful.
 
 Artifacts and the exact M509 command are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m509--bounded-gpu-range-replay-at-the-m508-hotspot-2026-10-10).
+
+#### M510 checkpoint — same-frame MDI draw-state witness (2026-10-10)
+
+M510 repeated the same bounded visible/no-teleport hotspot route on Release
+with `World_164`; speed, eye height, and 224-block travel matched the accepted
+profile. It joined five source-mesh-to-depth gap pixels for block `573`
+(`tree_log`) to the exact same-frame GPU command and GL state. In every row,
+the source command, EBO indices, and GPU vertex positions matched; the MDI
+command was submitted with `instanceCount=1`, depth test and depth writes
+enabled (`GL_LESS`), culling/scissor/stencil/rasterizer discard disabled, and
+the expected 1280×720 viewport/framebuffer. Thus these samples are not
+explained by missing chunk data, an unpublished mesh, a stale pooled range, or
+disabled depth state. They still do not prove that the fragment shader
+generated a fragment at the pixel center; alpha sampling, interpolated UV,
+clip/raster coverage, and disagreement between the CPU ray and actual sample
+remain to be separated.
+
+M510 had six source-mesh-to-depth gap rows total: five tree logs and one
+different block (`549`) whose sample matched a fluid triangle. Restrict any
+opaque-geometry conclusion to the five tree-log rows; do not attribute the
+sixth row to the tree mesh. The tree texture PNGs remain fully opaque, but
+runtime atlas sampling is not yet witnessed. A narrowly gated shader coverage
+marker or actual atlas readback is the next decisive diagnostic. No renderer
+fix is justified from this run alone.
+
+The local analyzer reported 3/38 visual-hole-proxy periods, readiness debt
+1.0, and zero near-black proxy rate. The route and process succeeded, while
+performance, scheduling, and stop-recovery gates remained red. M510 did not
+cover the ocean tail and does not address the user's report that water looked
+corrupted at the end of the preceding run. Run the bounded endpoint-water
+probe as a separate lane, keeping direct engine-framebuffer evidence distinct
+from desktop screenshots.
+
+Artifacts and the exact M510 command are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m510--same-frame-mdi-draw-state-witness-at-hotspot-2026-10-10).
