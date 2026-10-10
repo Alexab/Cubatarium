@@ -1421,7 +1421,8 @@ void CaptureTransparentPixelProbe(
     const GreedyGpuPassCache &mdi_cutout_pass,
     const GreedyGpuPassCache &mdi_transparent_pass,
     const std::map<size_t, UTextureCube> &textures,
-    const glm::mat4 &view_projection, const glm::vec3 &camera_position,
+    const glm::mat4 &view_projection, const glm::mat4 &view,
+    const glm::mat4 &projection, const glm::vec3 &camera_position,
     uint64_t frame_epoch, const OpaquePixelProbeCapture &opaque_capture,
     const std::vector<PackedOpaqueDrawTrace> &packed_draw_trace)
 {
@@ -1451,6 +1452,8 @@ void CaptureTransparentPixelProbe(
                  pixels.data() + static_cast<size_t>(row) * width * 4u);
   }
   const glm::mat4 inverse_view_projection = glm::inverse(view_projection);
+  const glm::mat4 inverse_view = glm::inverse(view);
+  const glm::mat4 inverse_projection = glm::inverse(projection);
   const float sea_plane_y =
       static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
@@ -1607,17 +1610,37 @@ void CaptureTransparentPixelProbe(
           (static_cast<float>(local_y) + 0.5f) / static_cast<float>(height) *
               2.0f -
           1.0f;
-      // Match UCamera::TryGetViewRayAtScreen: the sampled ray originates at
-      // the unprojected near plane. GetPosition() is the player's eye anchor
-      // and may differ from the render camera position in third person.
-      const glm::vec4 voxel_ray_near_h =
-          inverse_view_projection * glm::vec4(ndc_x, ndc_y, -1.0f, 1.0f);
+      // Construct the actual witness ray in camera space. Inverting only the
+      // projection gives a well-conditioned view-space direction; inverse(view)
+      // supplies the rendered camera position (which differs from the player
+      // eye anchor in third-person mode). This avoids magnifying float
+      // cancellation at a near plane translated thousands of blocks from the
+      // world origin.
       glm::vec3 voxel_ray_origin = camera_position;
-      if (std::abs(voxel_ray_near_h.w) > 1e-6f)
+      const glm::vec4 camera_origin_h =
+          inverse_view * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+      if (std::abs(camera_origin_h.w) > 1e-6f)
       {
         voxel_ray_origin =
-            glm::vec3(voxel_ray_near_h) / voxel_ray_near_h.w;
+            glm::vec3(camera_origin_h) / camera_origin_h.w;
       }
+      glm::vec3 view_ray_direction(0.0f, 0.0f, -1.0f);
+      float voxel_ray_near_distance = 0.0f;
+      const glm::vec4 view_near_h =
+          inverse_projection * glm::vec4(ndc_x, ndc_y, -1.0f, 1.0f);
+      if (std::abs(view_near_h.w) > 1e-6f)
+      {
+        const glm::vec3 view_near_point =
+            glm::vec3(view_near_h) / view_near_h.w;
+        const float near_distance = glm::length(view_near_point);
+        if (near_distance > 1e-6f)
+        {
+          view_ray_direction = glm::normalize(view_near_point);
+          voxel_ray_near_distance = near_distance;
+        }
+      }
+      const glm::vec3 voxel_ray_direction = glm::normalize(
+          glm::mat3(inverse_view) * view_ray_direction);
       const float opaque_depth = opaque_capture.depth[sample];
       float opaque_hit_distance = -1.0f;
       if (std::isfinite(opaque_depth) && opaque_depth >= 0.0f &&
@@ -1859,14 +1882,8 @@ void CaptureTransparentPixelProbe(
           collect_depth_mdi_state(mdi_transparent_pass, 1u << 2);
         }
       }
-      const glm::vec4 voxel_ray_far_h =
-          inverse_view_projection * glm::vec4(ndc_x, ndc_y, 1.0f, 1.0f);
-      if (std::abs(voxel_ray_far_h.w) > 1e-6f)
+      if (glm::length(voxel_ray_direction) > 1e-6f)
       {
-        const glm::vec3 voxel_ray_far =
-            glm::vec3(voxel_ray_far_h) / voxel_ray_far_h.w;
-        const glm::vec3 voxel_ray_direction =
-            glm::normalize(voxel_ray_far - voxel_ray_origin);
         const OpaqueVoxelRayWitness voxel_witness = TraceOpaqueVoxelRay(
             world, voxel_ray_origin, voxel_ray_direction,
             cache.MaxCullDistance());
@@ -2058,11 +2075,13 @@ void CaptureTransparentPixelProbe(
                     delta_y = projected_y - sample_y;
                   };
               record_ray_projection_delta(
-                  voxel_ray_origin,
+                  voxel_ray_origin +
+                      voxel_ray_direction * voxel_ray_near_distance,
                   record.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x,
                   record.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y);
               record_ray_projection_delta(
-                  voxel_ray_origin + voxel_ray_direction,
+                  voxel_ray_origin +
+                      voxel_ray_direction * (voxel_ray_near_distance + 1.0f),
                   record.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x,
                   record.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y);
               const glm::vec3 mesh_ray_hit_point =
@@ -2852,7 +2871,8 @@ void NoteFrustumCoverageGaps(
     GreedyGpuPassCache &mdi_transparent_pass,
     UMdiVertexPoolStore *mdi_store,
     const std::map<size_t, UTextureCube> &textures,
-    const glm::mat4 &view_projection,
+    const glm::mat4 &view_projection, const glm::mat4 &view,
+    const glm::mat4 &projection,
     const OpaquePixelProbeCapture &opaque_capture,
     const std::vector<PackedOpaqueDrawTrace> &packed_draw_trace)
 {
@@ -2874,7 +2894,8 @@ void NoteFrustumCoverageGaps(
                                transparent_refs,
                                mdi_opaque_pass, mdi_cutout_pass,
                                mdi_transparent_pass, textures,
-                               view_projection, camera_position, frame_epoch,
+                               view_projection, view, projection,
+                               camera_position, frame_epoch,
                                opaque_capture, packed_draw_trace);
 
   std::unordered_set<glm::ivec3, IVec3Hash> draw_refs;
@@ -4354,8 +4375,9 @@ void UGeometryEngine::DrawCubeGeometry()
     }
     if (UJobStageTrace::VisualBlackTraceEnabled())
     {
-      const glm::mat4 coverage_vp =
-          camera->GetProjection() * camera->GetViewMatrix();
+      const glm::mat4 coverage_view = camera->GetViewMatrix();
+      const glm::mat4 coverage_projection = camera->GetProjection();
+      const glm::mat4 coverage_vp = coverage_projection * coverage_view;
       NoteFrustumCoverageGaps(
           *WorldInstance, UnderwaterFogPass_, draw.cache,
           Frustum::FromViewProjection(coverage_vp), camera->GetPosition(),
@@ -4363,7 +4385,8 @@ void UGeometryEngine::DrawCubeGeometry()
           filtered_transparent, GreedyGpuOpaque, GreedyGpuCutout,
           GreedyGpuTransparent,
           dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()), textures,
-          coverage_vp, pixel_probe_capture, LastOpaquePackedDrawTrace);
+          coverage_vp, coverage_view, coverage_projection,
+          pixel_probe_capture, LastOpaquePackedDrawTrace);
     }
     if (cullWasEnabled)
     {
