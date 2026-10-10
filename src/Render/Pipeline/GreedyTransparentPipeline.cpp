@@ -96,10 +96,10 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
   }
 
   // The desktop shell algorithm relies on the first pass writing stencil=1
-  // and the color passes testing against it. If the active framebuffer has no
-  // stencil attachment, those color passes reject every fragment. Keep water
-  // visible with the same no-stencil path used on GLES instead of silently
-  // drawing nothing.
+  // and the color passes testing against it. With no stencil attachment,
+  // OpenGL treats stencil tests as passing and ignores stencil writes, so the
+  // shell mask is unavailable and the multipass blend is not meaningful. Use
+  // the explicit no-stencil path instead.
   if (stencil_bits <= 0)
   {
     DrawTransparentSinglePass(backend, settings);
