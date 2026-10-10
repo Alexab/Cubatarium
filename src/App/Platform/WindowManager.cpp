@@ -121,6 +121,12 @@ float ReadFlightCaptureEnvFloat(const char *name, float fallback)
   return parsed;
 }
 
+bool ReadFlightCaptureEnvBool(const char *name)
+{
+  const char *value = std::getenv(name);
+  return value && value[0] == '1' && value[1] == '\0';
+}
+
 } // namespace
 
 /// Opt-in evidence capture. GPU readback is pipelined through pixel-pack
@@ -201,7 +207,8 @@ public:
   }
 
   bool QueueCapture(GLFWwindow *window, const std::filesystem::path &path,
-                    uint32_t index, float camera_x, float camera_y)
+                    uint32_t index, float camera_x, float camera_y,
+                    GLenum source_buffer)
   {
     if (!window || !EnsurePboBuffers())
     {
@@ -247,7 +254,7 @@ public:
     glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    glReadBuffer(GL_BACK);
+    glReadBuffer(source_buffer);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, slot->Buffer);
     glBufferData(GL_PIXEL_PACK_BUFFER, static_cast<GLsizeiptr>(byte_count),
@@ -272,7 +279,8 @@ public:
       return false;
     }
 
-    slot->Payload = Frame{width, height, path, index, camera_x, camera_y, {}};
+    slot->Payload = Frame{width, height, path, index, camera_x, camera_y,
+                          source_buffer, {}};
     slot->Fence = fence;
     slot->Busy = true;
     return true;
@@ -325,6 +333,7 @@ private:
     uint32_t Index{};
     float CameraX{};
     float CameraY{};
+    GLenum SourceBuffer{GL_BACK};
     std::vector<unsigned char> Pixels;
   };
 
@@ -497,6 +506,9 @@ private:
       CubatariumLogInfo("FlightCapture",
                         std::string(saved ? "saved" : "write failed") +
                             " index=" + std::to_string(frame.Index) +
+                            " source=" +
+                            (frame.SourceBuffer == GL_FRONT ? "GL_FRONT"
+                                                            : "GL_BACK") +
                             " camera_x=" + std::to_string(frame.CameraX) +
                             " camera_y=" + std::to_string(frame.CameraY) +
                             " path=" + frame.Path.string());
@@ -861,11 +873,18 @@ void UWindowManager::Run()
               .count());
     }
 
-    // Opt-in visual evidence for visible flight-sim runs. Queue a default
-    // framebuffer readback before swap; PBO completion and PNG output are
-    // handled asynchronously so evidence capture does not stall the flight.
+    // Opt-in visual evidence for visible flight-sim runs. Queue a back-buffer
+    // readback before swap; PBO completion and PNG output are handled
+    // asynchronously so evidence capture does not stall the flight.
+    bool capture_front_after_swap = false;
+    std::filesystem::path front_capture_path;
+    uint32_t front_capture_index = 0;
+    float front_capture_camera_x = 0.0f;
+    float front_capture_camera_y = 0.0f;
     static const char *flight_capture_dir =
         std::getenv("CUBA_FLIGHT_CAPTURE_DIR");
+    static const bool flight_capture_front_after_swap =
+        ReadFlightCaptureEnvBool("CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP");
     if (flight_capture_dir && flight_capture_dir[0] != '\0' && World &&
         Application && Application->GetState() == AppState::InGame)
     {
@@ -914,20 +933,33 @@ void UWindowManager::Run()
                                      ? camera->GetPosition().y
                                      : std::numeric_limits<float>::quiet_NaN();
           if (!FlightCapture->QueueCapture(Window, capture_path, frame_index,
-                                           camera_x, camera_y))
+                                           camera_x, camera_y, GL_BACK))
           {
             CubatariumLogInfo("FlightCapture",
                               "Unable to queue framebuffer capture index=" +
                                   std::to_string(frame_index) +
+                                  " source=GL_BACK" +
                                   " camera_x=" + std::to_string(camera_x));
           }
           else
           {
             CubatariumLogInfo("FlightCapture",
                               "queued index=" + std::to_string(frame_index) +
+                                  " source=GL_BACK" +
                                   " camera_x=" + std::to_string(camera_x) +
                                   " camera_y=" + std::to_string(camera_y) +
                                   " path=" + capture_path.string());
+            capture_front_after_swap =
+                flight_capture_front_after_swap;
+            if (capture_front_after_swap)
+            {
+              front_capture_path = capture_path.parent_path() /
+                                   (capture_path.stem().string() + "_front" +
+                                    capture_path.extension().string());
+              front_capture_index = frame_index;
+              front_capture_camera_x = camera_x;
+              front_capture_camera_y = camera_y;
+            }
           }
         }
       }
@@ -938,9 +970,34 @@ void UWindowManager::Run()
       UFrameStageWatchdog::Scope stage("window.swap_buffers");
       glfwSwapBuffers(Window);
     }
+    const auto swap_end = std::chrono::high_resolution_clock::now();
+    if (capture_front_after_swap && FlightCapture)
+    {
+      UFrameStageWatchdog::Scope stage("window.frame_capture_front");
+      if (!FlightCapture->QueueCapture(
+              Window, front_capture_path, front_capture_index,
+              front_capture_camera_x, front_capture_camera_y, GL_FRONT))
+      {
+        CubatariumLogInfo(
+            "FlightCapture",
+            "Unable to queue framebuffer capture index=" +
+                std::to_string(front_capture_index) + " source=GL_FRONT" +
+                " camera_x=" + std::to_string(front_capture_camera_x));
+      }
+      else
+      {
+        CubatariumLogInfo(
+            "FlightCapture",
+            "queued index=" + std::to_string(front_capture_index) +
+                " source=GL_FRONT" +
+                " camera_x=" + std::to_string(front_capture_camera_x) +
+                " camera_y=" + std::to_string(front_capture_camera_y) +
+                " path=" + front_capture_path.string());
+      }
+    }
     const auto frame_end = std::chrono::high_resolution_clock::now();
     const double swap_wait_ms =
-        std::chrono::duration<double, std::milli>(frame_end - swap_begin)
+        std::chrono::duration<double, std::milli>(swap_end - swap_begin)
             .count();
     const double frame_wall_ms =
         std::chrono::duration<double, std::milli>(frame_end - frame_begin)

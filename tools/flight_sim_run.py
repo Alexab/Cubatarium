@@ -2792,6 +2792,10 @@ def main() -> int:
                             "frame_capture_max_x": os.environ.get(
                                 "CUBA_FLIGHT_CAPTURE_MAX_X"
                             ),
+                            "frame_capture_front_after_swap": os.environ.get(
+                                "CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP", ""
+                            ).strip()
+                            == "1",
                             **_perf_runtime_identity,
                             "perf_jsonl": str(perf) if perf else None,
                             "schema_perf": "perf_jsonl.v2",
