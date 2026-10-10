@@ -2519,6 +2519,9 @@ def main() -> int:
             report_path = base_report
 
         t0 = time.time()
+        from a21_run_manifest import capture_source_identity
+
+        run_source_identity = capture_source_identity()
         if not args.skip_preflight:
             kill_cubatarium_orphans()
 
@@ -2747,6 +2750,7 @@ def main() -> int:
                                 separators=(",", ":"),
                             ).encode("utf-8")
                         ).hexdigest(),
+                        source_identity=run_source_identity,
                         extra={
                             "route": build_flight_route_identity(args),
                             "config_file_sha256_before": getattr(

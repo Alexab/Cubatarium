@@ -6219,8 +6219,8 @@ post-stop convergence: из 40 общих gate прошли 31, из 13 stop-gat
 пара `GL_BACK`/`GL_FRONT` полностью совпадает по RGBA. Кадры `007`–`010` около
 X=`−7263…−7294` показывают синюю текстурированную воду в нижней части сцены,
 и в них нет точного fog-navy цвета M495 `(13,38,89)`. В конечных кадрах
-`014` и `023` вода также видна; этот navy цвет занимает лишь 3 пикселя из
-921 600. Для сравнения: M495 имел 302 409 и 401 901 таких пикселей в кадрах
+`014` и `023` вода также видна; в каждом из этих кадров navy цвет занимает
+3 пикселя из 921 600. Для сравнения: M495 имел 302 409 и 401 901 таких пикселей в кадрах
 `097`/`098`, тогда как M500 и M522 около симптомной координаты имеют ноль.
 Большой navy-регион, связанный с прежним sampler alias, в этом долгом маршруте
 не воспроизвёлся.
@@ -6273,4 +6273,68 @@ $env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
 $env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
 $env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m522_world164_m335_water_recurrence_20261011 --report bin/suite_reports/engine_refactor/m522_world164_m335_water_recurrence_20261011.json --process-timeout 7200
+```
+
+### M523 — M335 повтор и проверка расхождения окна с framebuffer (2026-10-11)
+
+M523 повторил тот же видимый/no-teleport маршрут `World_164` на том же Release
+EXE (SHA-256 `d78da45f4d1dc8ec60dc77c533f594f461c45bcca806bd05813004fa9739648d`).
+Камера прошла 7 456 блоков, приложение завершилось штатно, маршрутный gate
+прошёл. Скорость полёта — около 5,2 блока/с, `effective_fps_fly=47,10`,
+`wall_ms_fly_med=21,23`. Строгий общий analyzer вернул `pass=false` (32/40 общих
+gate и 7/13 stop-gate); post-stop convergence не прошёл. При этом
+`post_stop_mesh_missing_max=0`, `post_stop_visual_holes_rate=0`, readiness debt
+max `34`, а near-focus holes proxy пересёкся в 20 периодах по всему маршруту,
+но в corridor — в 0. Эти сигналы не являются water-pixel измерением.
+
+Получено 24 пары `GL_BACK`/`GL_FRONT`, все пары совпали по RGBA. В кадрах у
+прежней symptom-coordinate (`frame_008`/`009`) точный navy цвет M495 отсутствует;
+в проверенных endpoint `frame_014`/`023` он занимает по 1 пикселю из 921 600.
+В обоих кадрах видна синяя текстурированная вода. Значит, известный большой
+fog-navy участок повторно не проявился в app framebuffer. Это не опровергает
+операторское наблюдение: независимый снимок окна не получен. Во время активного
+пролёта CUA возвращал `apps=[]`; `cua.listWindows` и `cua.listApps` в данном
+сеансе не доступны, хотя у процесса игры было видимое окно.
+
+M523 стартовал на commit `561a1c47` в 01:35, затем в 01:41 был закоммичен
+analyzer fix `33eb149a`, пока полёт продолжался. Итоговый отчёт записал
+`run_manifest.git_sha=33eb149a`, то есть HEAD во время позднего annotation, а не
+код scorer, загруженный в начале. Его eye-proxy поля поэтому пересчитаны новой
+версией вручную: cumulative `mesh_apply_stale_visual` median `16` не является
+rate; точный `mesh_apply_stale_delta` median равен `3` на семи mid-corridor
+samples при пороге `1,5`, `near_focus_holes=0`, `visual_holes=0`. Eye-proxy
+остаётся FAIL по реальной stale-apply активности без hole proxy, а не из-за
+cumulative total. В последующем run manifest теперь будет сохранять исходные
+git/dirty identity и SHA-256 runner/analyzer до старта, отдельно от HEAD во
+время генерации отчёта.
+
+Артефакты:
+
+- [report](../../bin/suite_reports/engine_refactor/m523_world164_m335_live_window_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-013509_5384.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-013505.5384)
+- [symptom coordinate frame 008](../../bin/flight_captures/m523_world164_m335_live_window_20261011/frame_008.png)
+- [endpoint frame 023](../../bin/flight_captures/m523_world164_m335_live_window_20261011/frame_023.png)
+- [capture directory](../../bin/flight_captures/m523_world164_m335_live_window_20261011)
+
+### Exact M523 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m523_world164_m335_live_window_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m523_world164_m335_live_window_20261011 --report bin/suite_reports/engine_refactor/m523_world164_m335_live_window_20261011.json --process-timeout 7200
 ```
