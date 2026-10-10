@@ -6202,3 +6202,64 @@ Artifacts:
 - M518 captures: `bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010`
 - M516 manifest: clean Release, commit `d0567510`, EXE SHA-256 `541475ac68d4552c880b323b5d6a4df22278177b22f892616272e725868540f0`
 - M517 manifest: clean Release, commit `d712b9b3`, EXE SHA-256 `eaa8dc7bf996f01b9d57dd50fa31d8b21a84ce1bd91ca86535c0987884b15452`
+
+### M522 — повтор M335 после сообщения о порче воды (2026-10-11)
+
+M522 выполнил полный маршрут `World_164` без teleport на том же Release EXE
+(SHA-256 `d78da45f4d1dc8ec60dc77c533f594f461c45bcca806bd05813004fa9739648d`).
+Старт `(120,56,56)`, eye Y=70, yaw=180°, pitch=−30°, движение 1455 секунд,
+остановка 20 секунд и idle 15 секунд. Камера прошла 7 456 блоков; приложение
+завершилось штатно (`process_rc=0`, `hang_killed=false`), маршрутный gate
+прошёл. Строгий analyzer вернул `pass=false` по readiness/performance и
+post-stop convergence: из 40 общих gate прошли 31, из 13 stop-gate прошли 9.
+Это не свидетельство пропажи воды: mesh/near-focus счётчики в этом отчёте —
+прокси, а не оценка water pixels.
+
+В capture window попали 24 кадра между X=`−7190,08` и `−7334,41`; каждая
+пара `GL_BACK`/`GL_FRONT` полностью совпадает по RGBA. Кадры `007`–`010` около
+X=`−7263…−7294` показывают синюю текстурированную воду в нижней части сцены,
+и в них нет точного fog-navy цвета M495 `(13,38,89)`. В конечных кадрах
+`014` и `023` вода также видна; этот navy цвет занимает лишь 3 пикселя из
+921 600. Для сравнения: M495 имел 302 409 и 401 901 таких пикселей в кадрах
+`097`/`098`, тогда как M500 и M522 около симптомной координаты имеют ноль.
+Большой navy-регион, связанный с прежним sampler alias, в этом долгом маршруте
+не воспроизвёлся.
+
+Это не закрывает новое сообщение оператора о «испорченной» воде у конца
+пролёта. M522 сохранил внутренние app framebuffer, но не получил независимый
+desktop/window frame во время активной сцены. Предыдущие попытки M520/M521
+потеряли окно до получения снимка. В кадрах заметны туманные силуэты дальних
+объектов, но их наличие само по себе не классифицируется как потеря водной
+поверхности. Повтор M335 стоит делать после подготовки live-window capture,
+чтобы тот же видимый момент сравнивался между окном и app framebuffer.
+
+Артефакты:
+
+- [report](../../bin/suite_reports/engine_refactor/m522_world164_m335_water_recurrence_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-010343_23224.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-010340.23224)
+- [symptom coordinate frame 008](../../bin/flight_captures/m522_world164_m335_water_recurrence_20261011/frame_008.png)
+- [endpoint frame 023](../../bin/flight_captures/m522_world164_m335_water_recurrence_20261011/frame_023.png)
+- [capture directory](../../bin/flight_captures/m522_world164_m335_water_recurrence_20261011)
+
+### Exact M522 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m522_world164_m335_water_recurrence_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m522_world164_m335_water_recurrence_20261011 --report bin/suite_reports/engine_refactor/m522_world164_m335_water_recurrence_20261011.json --process-timeout 7200
+```
