@@ -1607,6 +1607,17 @@ void CaptureTransparentPixelProbe(
           (static_cast<float>(local_y) + 0.5f) / static_cast<float>(height) *
               2.0f -
           1.0f;
+      // Match UCamera::TryGetViewRayAtScreen: the sampled ray originates at
+      // the unprojected near plane. GetPosition() is the player's eye anchor
+      // and may differ from the render camera position in third person.
+      const glm::vec4 voxel_ray_near_h =
+          inverse_view_projection * glm::vec4(ndc_x, ndc_y, -1.0f, 1.0f);
+      glm::vec3 voxel_ray_origin = camera_position;
+      if (std::abs(voxel_ray_near_h.w) > 1e-6f)
+      {
+        voxel_ray_origin =
+            glm::vec3(voxel_ray_near_h) / voxel_ray_near_h.w;
+      }
       const float opaque_depth = opaque_capture.depth[sample];
       float opaque_hit_distance = -1.0f;
       if (std::isfinite(opaque_depth) && opaque_depth >= 0.0f &&
@@ -1618,7 +1629,7 @@ void CaptureTransparentPixelProbe(
         if (std::abs(opaque_h.w) > 1e-6f)
         {
           const glm::vec3 opaque_point = glm::vec3(opaque_h) / opaque_h.w;
-          opaque_hit_distance = glm::length(opaque_point - camera_position);
+          opaque_hit_distance = glm::length(opaque_point - voxel_ray_origin);
           record.renderer_pixel_opaque_hit_distance = opaque_hit_distance;
           const glm::ivec3 opaque_cell(
               static_cast<int>(std::floor(opaque_point.x)),
@@ -1855,9 +1866,9 @@ void CaptureTransparentPixelProbe(
         const glm::vec3 voxel_ray_far =
             glm::vec3(voxel_ray_far_h) / voxel_ray_far_h.w;
         const glm::vec3 voxel_ray_direction =
-            glm::normalize(voxel_ray_far - camera_position);
+            glm::normalize(voxel_ray_far - voxel_ray_origin);
         const OpaqueVoxelRayWitness voxel_witness = TraceOpaqueVoxelRay(
-            world, camera_position, voxel_ray_direction,
+            world, voxel_ray_origin, voxel_ray_direction,
             cache.MaxCullDistance());
         record.renderer_pixel_voxel_ray_state = voxel_witness.state;
         record.renderer_pixel_voxel_known_air_steps =
@@ -1945,7 +1956,7 @@ void CaptureTransparentPixelProbe(
                 {
                   RayTriangleHit ray_hit{};
                   if (IntersectRayTriangle(
-                          camera_position, voxel_ray_direction,
+                          voxel_ray_origin, voxel_ray_direction,
                           glm::vec3(vertex_a.px, vertex_a.py, vertex_a.pz),
                           glm::vec3(vertex_b.px, vertex_b.py, vertex_b.pz),
                           glm::vec3(vertex_c.px, vertex_c.py, vertex_c.pz),
@@ -2020,7 +2031,7 @@ void CaptureTransparentPixelProbe(
               record.renderer_pixel_voxel_mesh_ray_distance =
                   voxel_mesh_ray_distance;
               const glm::vec3 mesh_ray_hit_point =
-                  camera_position +
+                  voxel_ray_origin +
                   voxel_ray_direction * voxel_mesh_ray_distance;
               const glm::vec4 projected_hit =
                   view_projection * glm::vec4(mesh_ray_hit_point, 1.0f);
