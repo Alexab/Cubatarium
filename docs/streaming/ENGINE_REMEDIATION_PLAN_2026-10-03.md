@@ -6852,15 +6852,58 @@ it does not yet distinguish a bad opaque-depth comparison from stencil/state,
 GPU command visibility, or a separate fluid-surface path. Do not change fog or
 liquid-neighbor policy yet.
 
-Next perform one controlled local A/B at the symptom coordinates on
-`World_164`, with the same eye height, heading, pitch, default desktop-shell
-transparent path, and marker. Disable only `CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD`
-in the comparison run. If the marker returns, audit opaque-depth capture,
-coordinate mapping, and bias; if it remains absent, inspect stencil/color-pass
-state, indirect command visibility, and whether the GPU fluid surface bypasses
-the instrumented greedy shader. Then repeat the unchanged full M335 baseline
-after the responsible stage is fixed. Keep readiness debt, M335 pixel evidence,
-and periodic cold/new-world coverage as separate acceptance lanes.
+M497–M499 classified and fixed this rejection; details and commands are in the
+flight log. M497 disabled only the opaque-depth guard and recovered magenta
+coverage at the symptom coordinate. M498 disabled the guard and used the
+single-pass `GL_LESS` reference; it recovered the same coverage, showing that
+the water fragments pass the live opaque depth buffer. Source inspection then
+found the actual alias: opaque depth was bound to texture unit 3, and
+underwater fog later rebound `uFluidBottomBlockMap` to the same unit on the same
+shader. M499 moved opaque depth to the shared allocation's unit 5 while leaving
+the guard enabled; the marker returned at the symptom coordinate with 58.88%
+frame coverage, matching the two reference runs. This confirms the sampler
+collision as the cause of the missing fluid fragments.
+
+Next repeat the unchanged full M335 Release route with the marker disabled and
+sparse captures enabled. Confirm the normal water appearance through the same
+tail coordinates, then continue the separate streaming/readiness work. Keep
+readiness debt, M335 pixels, and periodic cold/new-world coverage as distinct
+acceptance lanes.
 
 M496 details, exact command, and raw artifact links are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m496--fluid-framebuffer-witness-on-m335-2026-10-10).
+
+#### M497–M499 checkpoint — sampler collision diagnosis and fix (2026-10-10)
+
+The local no-teleport A/Bs started at the M335 symptom approach coordinate on
+`World_164`, preserving eye Y=70, yaw 180°, pitch −30°, and speed `5.18555`
+blocks/s. Each run traveled 240 blocks and exited normally. At camera X
+`-7283.71`, M497 with the guard disabled rendered 547,553 marker pixels (59.41%).
+M498 at X `-7284.23` used the live hardware `GL_LESS` depth test with the shader
+guard disabled and rendered 552,734 marker pixels (59.98%). This ruled out
+normal opaque geometry occlusion as the reason M496's marker vanished there.
+
+Source order exposed the root cause: `UOpaqueDepthCapture` and
+`uFluidBottomBlockMap` both occupied texture unit 3. In transparent greedy
+draws, the opaque-depth texture was bound first, then `UUnderwaterFogPass`
+bound the fluid-bottom map to unit 3 on the same shader. The shader's
+`uOpaqueDepthMap` sampler therefore read fluid map data as depth whenever that
+fog map was active, rejecting valid surface fragments. Commit `60be076b`
+moves all fixed sampler assignments into `RenderTextureUnits.h`: fluid maps
+use units 1–3, weather depth uses 4, and opaque depth uses 5. A compile-time
+ordering assertion prevents those fixed indices from overlapping.
+
+M499 rebuilt Release and reran the same local segment with the default
+desktop-shell path and opaque-depth guard enabled. At camera X `-7283.71`, the
+post-fix marker covered 542,596 pixels (58.88%), close to both hardware-depth
+references. The process exited normally and the short-run A24 gate passed;
+the report's aggregate `pass=false` is the separate eye-proxy coverage gate.
+This is a strong local confirmation of the fix. The full long M335 route with
+the marker disabled is still required to verify the operator-visible image.
+
+The following saved-world long run must use the same M335 route, sparse capture,
+and fixed-day setup. Do not change fog, water face policy, or depth thresholds;
+the collision is corrected at sampler allocation.
+
+M497–M499 artifacts and exact invocations are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m497m499--sampler-collision-diagnosis-and-fix-2026-10-10).

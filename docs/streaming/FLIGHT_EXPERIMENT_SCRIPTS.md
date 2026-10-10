@@ -5347,3 +5347,78 @@ $env:CUBA_FLUID_RENDER_MAX_X='-7190'
 Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m496_world164_m335_fluid_witness_20261010 --report bin/suite_reports/engine_refactor/m496_world164_m335_fluid_witness_20261010.json --process-timeout 7200
 ```
+
+### M497–M499 — sampler collision diagnosis and fix (2026-10-10)
+
+These were short, visible, no-teleport diagnostic segments centered on the
+M335 late-route water view. All kept `World_164`, eye Y=70, yaw 180°, pitch
+−30°, fixed-day weather, and the same `product-174657-far` controller. The
+start was camera/player X `-7215`, with 45 seconds of forward flight and 8
+seconds at the stop pose. Each run traveled about 240 blocks at `5.18555`
+blocks/s; the full M335 route remains the acceptance route.
+
+M497 disabled only the shader opaque-depth guard. At X `-7283.708496`, frame
+014 had 547,553 magenta pixels (59.41%). M498 disabled the same guard and
+selected the transparent single-pass path, so the live framebuffer's `GL_LESS`
+test provided the opaque-depth reference. At X `-7284.227051`, frame 014 had
+552,734 magenta pixels (59.98%). That result shows fluid fragments in this
+view pass the live depth buffer; M496's missing marker was not normal opaque
+geometry occlusion.
+
+The code audit found why the shader guard disagreed: `UOpaqueDepthCapture`
+bound its depth map at texture unit 3, and `UUnderwaterFogPass::ApplyUniforms`
+later bound `uFluidBottomBlockMap` to the same unit on the same greedy shader.
+When the underwater fog map was active, the opaque-depth sampler read fluid
+map data and discarded otherwise visible water. M499 moved fixed sampler
+allocations to shared `RenderTextureUnits.h` (fluid maps 1–3, weather depth 4,
+opaque depth 5) while keeping the depth guard enabled and using the default
+desktop-shell path. At X `-7283.708496`, frame 014 again had 542,596 magenta
+pixels (58.88%), close to the two independent references. Release build passed
+static dependency verification; executable SHA-256 was
+`22f81a904c3686ef66d0e36a1eeb16800d3d7fb584a74c75ce7743dcda4e1cc7`, source
+commit `60be076b`.
+
+The analyzer reports for these short routes are not full M335 acceptance
+results. M497 completed normally; M498 and M499 also exited normally, while
+short-run eye-proxy coverage can make aggregate `pass=false`. M499's A24 gate
+passed. The runner restored `World_164/world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344` after
+each run.
+
+Artifacts:
+
+- M497: [report](../../bin/suite_reports/engine_refactor/m497_world164_water_depth_guard_ab_20261010.json), [perf](../../bin/logs/perf_20261010-181842_48940.jsonl), [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-181838.48940), [frame 014](../../bin/flight_captures/m497_world164_water_depth_guard_ab_20261010/frame_014.png)
+- M498: [report](../../bin/suite_reports/engine_refactor/m498_world164_water_hardware_depth_reference_20261010.json), [perf](../../bin/logs/perf_20261010-182531_40832.jsonl), [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-182528.40832), [frame 014](../../bin/flight_captures/m498_world164_water_hardware_depth_reference_20261010/frame_014.png)
+- M499: [report](../../bin/suite_reports/engine_refactor/m499_world164_water_sampler_fix_20261010.json), [perf](../../bin/logs/perf_20261010-183547_46456.jsonl), [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-183542.46456), [frame 014](../../bin/flight_captures/m499_world164_water_sampler_fix_20261010/frame_014.png)
+
+Exact invocations:
+
+```powershell
+# M497: guard disabled, desktop-shell retained
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m497_world164_water_depth_guard_ab_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7440'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='1'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 8 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m497_world164_water_depth_guard_ab_20261010 --report bin/suite_reports/engine_refactor/m497_world164_water_depth_guard_ab_20261010.json --process-timeout 900
+
+# M498: guard disabled; single-pass GL_LESS is the live-depth reference
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m498_world164_water_hardware_depth_reference_20261010'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 8 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m498_world164_water_hardware_depth_reference_20261010 --report bin/suite_reports/engine_refactor/m498_world164_water_hardware_depth_reference_20261010.json --process-timeout 900
+
+# M499: post-fix, guard enabled, default desktop-shell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m499_world164_water_sampler_fix_20261010'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 8 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m499_world164_water_sampler_fix_20261010 --report bin/suite_reports/engine_refactor/m499_world164_water_sampler_fix_20261010.json --process-timeout 900
+```
+
+M497, M498, and M499 also set the capture interval and camera-X limits above;
+M499 used Release source commit `60be076b`. The long post-fix M335 run must use
+the established start `[120,56,56]`, 1,455-second flight, and no marker.
