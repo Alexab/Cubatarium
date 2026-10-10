@@ -5143,3 +5143,80 @@ $env:CUBA_FLIGHT_CAPTURE_DIR=''
 Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m493_world164_m335_attachment_stencil_column_miss_20261010 --report bin/suite_reports/engine_refactor/m493_world164_m335_attachment_stencil_column_miss_20261010.json --process-timeout 7200
 ```
+
+## M494 — frame-aligned proxy lifecycle and west-frontier profile (2026-10-10)
+
+M494 used the same visible fixed-day M335 route with all high-volume traces and
+framebuffer capture disabled. It ran Release executable SHA-256
+`0B6E259CCA3701052E8A2375BC166C893529C2040CFFCE09B5E1957D2415583D`, built
+from commit `47304efdc7175f6c014a05221330cb1bf31f64bf`. The app exited normally
+(`process_rc=0`, `hang_killed=false`) and covered 7,456 blocks at 5.19287
+blocks/s. Eye height remained 70. The trace has 742 periods (740 steady) and
+54 spike periods; median wall time was 16.5688 ms. The fixed-day runner restored
+`world_data.json` byte-for-byte to SHA-256
+`0ADE40413AD4172777A59C2573809ED415AC19DEE2F30C8500C737AC5EC2D344`.
+
+The analyzer still reports `pass=false`: A24 found 14 near-focus mesh-proxy
+periods (zero in the control corridor), and post-stop convergence failed on
+readiness/pending-work conditions. `visual_holes_rate=1.8919%` had complete
+sample coverage, but it is not pixel evidence. The diagnostic symptom gate
+also lacked sufficient focus-missing/visible-black samples. In the new
+frame-aligned `visual_holes_enter` events, 129 proxy rises were recorded: 127
+selected a drawable mesh (125 with no build in flight, two during a build),
+one had no drawable while a GPU apply was pending, and one had neither a
+drawable mesh nor an active build. The two no-drawable witnesses were at focus
+`cx=-24` and `cx=-34`. The selected drawable cases are stale-geometry/remesh
+debt candidates, not proof of empty chunks; the radius-wide proxy can also be
+raised by another resident missing slice. Split these states in future A24
+reporting before interpreting its count as visible holes. No scheduler policy
+change is justified from this run alone.
+
+M494 found three independent far-west cost centers. At `cx=-396`, one frame
+spent 133.838 ms in `TickAsyncChunkIo` (145.246 ms in the enclosing async
+systems phase); 130.832 ms was attributed to `light_flags_save_ms`, with nine
+terrain-save results drained. A separate frame at the same focus spent
+129.316 ms in rendering, of which 121.654 ms was scene work and 111.391 ms was
+the transparent pass across 2,601 transparent batches. At `cx=-353`,
+`UpdateStreaming` reached 129.733 ms, almost all of it in the post-core interval
+(129.123 ms). These are separate observations; none identifies a single
+root cause. The transparent-pass scaling lead from M493 reproduced.
+
+There was also a 168.632 ms total render at `cx=-145` while the measured scene
+was 6.052 ms, frame setup 0.014 ms, preparation 0.105 ms, FP viewmodel 0.0002
+ms, post-scene 0.976 ms, and GUI 0.003 ms. Most of this render duration is not
+assigned by the current render subphase timers. At the `cx=-396` async-IO peak,
+the tick's unattributed remainder was only 0.764 ms, but the earlier
+`cx=-142` async-IO spike contained a 114.963 ms unattributed gap. More timing
+boundaries are needed in both subsystems.
+
+The INFO log reports two failed replacements of `column_light.json`:
+revisions 1513 and 6769 returned `MoveFileExW: Access is denied`; their worker
+service times were 11.066 and 9.164 ms. After the run the file parsed as format
+1 with 8,425 completed columns, but the success/retry sequence was not logged,
+so persistence of the latest revision is not established. The failed replace
+does not prove a cause for in-flight visual state; it does warrant checking
+save completion and Windows file-sharing/replace behavior.
+
+Artifacts: [report](../../bin/suite_reports/engine_refactor/m494_world164_m335_proxy_edge_fp_viewmodel_20261010.json),
+[perf trace](../../bin/logs/perf_20261010-141813_37940.jsonl), and app INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-141810.37940`.
+Capture stayed disabled, so M494 says nothing about screenshot fidelity or
+operator-visible water at its west endpoint.
+
+Exact M494 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m494_world164_m335_proxy_edge_fp_viewmodel_20261010 --report bin/suite_reports/engine_refactor/m494_world164_m335_proxy_edge_fp_viewmodel_20261010.json --process-timeout 7200
+```

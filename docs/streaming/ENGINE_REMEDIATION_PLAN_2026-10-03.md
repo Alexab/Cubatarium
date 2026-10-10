@@ -6681,3 +6681,83 @@ needs the next change.**
 
 M491–M493 artifacts and exact invocations are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m493--attachment-stencil-and-focus-miss-lifecycle-on-quiet-m335-2026-10-10).
+
+#### M494 checkpoint — proxy classification and three west-frontier cost centers (2026-10-10)
+
+M494 completed the matched visible M335 route at the intended 5.19 blocks/s
+and eye Y=70. Route completion passed (7,456 blocks); A24 and post-stop
+convergence remain red. The report recorded 14 near-focus mesh-proxy periods,
+all outside the control corridor, and `visual_holes_rate=1.8919%`. The new
+same-frame witness removes the timing ambiguity from M493: of 129 proxy rises,
+127 selected an already drawable mesh, while two selected a coordinate with
+no drawable mesh (one had GPU apply pending). This shows that the current
+proxy combines stale-drawable remesh debt with first-mesh absence. It does not
+establish a visible hole for either case. Keep the existing user observation
+that the world currently looks good separate from this readiness metric.
+
+M494's west-frontier timing identifies three distinct leads:
+
+1. At `cx=-396`, `TickAsyncChunkIo` took 133.838 ms and the enclosing async
+   chunk systems phase 145.246 ms. `light_flags_save_ms` accounted for
+   130.832 ms while nine save results were drained. The INFO log separately
+   records two `column_light.json` atomic-replace failures (`Access is denied`)
+   at revisions 1513 and 6769. The file is valid after the run, but successful
+   retry of the latest revision is not logged. Split light-flag snapshot,
+   enqueue/lock wait, and worker replace timing; log successful revision and
+   completed-column count before deciding whether the disk path blocks render
+   readiness.
+2. At `cx=-353`, `UpdateStreaming` took 129.733 ms; 129.123 ms was outside its
+   measured pre-core interval. Add a bounded post-core phase breakdown before
+   changing streaming budgets.
+3. At `cx=-396`, the render took 129.316 ms, with 111.391 ms in transparent
+   scene work and 2,601 transparent batches. This reproduces M493's
+   transparent-throughput lead. Break the pass into sort/refresh, state setup,
+   submission, and measured GPU-wait portions, and retain fluid-specific draw
+   evidence. Do not infer that water caused a generic transparent spike.
+
+A separate `render_total_ms=168.632` frame at `cx=-145` had only 6.052 ms of
+scene time and under 1.1 ms across the measured setup, prepare, viewmodel,
+post-scene, and GUI fields. The render wrapper and app bridge are not fully
+timed. Add a window preflight timer and total `Geometry->Paint` timer, then
+re-run Release M335 to localize the remainder. M494 also had an earlier
+114.963 ms unattributed part inside an async-IO tick, so retain an outer
+pre-selection/setup timer there.
+
+The user reported that saved images do not match the live view and may contain
+text from another application. There are two capture paths: in-app `GL_BACK`
+readback (which cannot include desktop composition) and the PowerShell
+`CopyFromScreen` helper (which reads the composed desktop and does not verify
+that the game is foreground after activation). M494 disabled both. For M495,
+keep the M335 route unchanged, capture sparse in-app frames, and compare one
+of them with a desktop capture at the stationary stop pose. Make the desktop
+helper verify foreground-window ownership and wait for composition before
+saving; otherwise reject that image. The comparison can isolate the capture
+path but does not replace the user's live visual assessment.
+
+Remaining work, in execution order:
+
+1. Separate A24's first-mesh absence and pending first publication from
+   drawable geometry debt; retain the current readiness and pixel metrics as
+   distinct signals. Re-evaluate the 14 failed periods against those classes.
+2. Add the render and async-IO timing boundaries above, plus the post-core
+   `UpdateStreaming` split. Log light-flag save revision/count and successful
+   completion so a transient replacement error cannot silently obscure state.
+3. Profile transparent sorting/submission/GPU wait on a west-frontier M335
+   run. Keep water-specific evidence distinct from generic transparency.
+4. Run M495 on the same M335 conditions with sparse internal captures and a
+   verified desktop capture at stop; use M494 as the quiet performance
+   baseline, not as image evidence.
+5. After repeated-world findings stabilize, run the scheduled periodic
+   cold/new-world lane on the same route. Preserve persistence dirty-tracking
+   and restart-equivalence work as a separate storage change.
+
+Plan status: **M494 confirms the route speed and eye-height controls and
+provides same-frame proxy lifecycle. Most proxy rises are drawable remesh
+debt, while a small number are actual first-mesh misses. A24's rate is not a
+visual-hole count. The far-west run has independent async-IO, streaming, and
+transparent-render costs; replacement failures for the light-completion sidecar
+need verification. M495 will first localize render/streaming costs and test
+capture fidelity without changing the established flight route.**
+
+M494 artifacts and exact invocation are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m494--frame-aligned-proxy-lifecycle-and-west-frontier-profile-2026-10-10).
