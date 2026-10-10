@@ -7281,4 +7281,29 @@ framebuffer sampling and do not treat desktop captures as equivalent.
 The route passed input adequacy at the established `5.18555 blocks/s`; process
 exit was 0. The product analyzer exited 1 on its eye-proxy/readiness and other
 strict gates, so this is a diagnostic result, not product acceptance. Artifact
-and command details are in [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m511--water-endpoint-direct-framebuffer-probe-2026-10-10).
+
+#### M512 checkpoint — post-stop water is present in the renderer framebuffer (2026-10-10)
+
+M512 repeated M511's exact local flight and stop phases, extending only the
+trace/readback/capture bounds to `[-7500,-7190]` so the stop camera at X
+`-7448` was included. In the post-stop window, ten repeated probes at camera
+X `-7448` each found the same 34 screen sample positions intersecting water
+block `575` triangles. All 340 of those direct framebuffer samples changed
+color after the transparent stage. Adjacent per-period telemetry at player X
+`-7447` showed 98 fluid refs, 3,216 fluid indices, and 132 submissions across
+the shell-depth and two color passes (44 + 88). This did not reproduce a
+missing water surface in the engine's framebuffer after stop.
+
+The same 34 sample positions stayed covered across all ten probes. Seven
+positions alternated between values separated by one low-order color step;
+the selected `minetest_default_16` water definition is animated with four
+frames at six ticks per frame. This is compatible with the expected animated
+texture, but the probe does not record the selected animation frame and cannot
+rule on the user's precise visual complaint. No fluid-render code change is
+justified from M511/M512. Preserve the symptom as operator-reported and
+unreproduced in direct engine readback, while continuing the separate tree
+opaque-raster investigation.
+
+M512 passed route adequacy at `5.18555 blocks/s` for 240 blocks and the process
+exited 0. The strict product analyzer returned 1 because readiness, eye-proxy,
+performance, and stop-recovery gates remain open. See the [M512 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m512--water-endpoint-post-stop-direct-framebuffer-probe-2026-10-10).

@@ -5859,3 +5859,55 @@ position were 105 total (35 shell-depth, 70 color). The configured diagnostic
 minimum was `-7445`, while the post-flight camera ended at `-7448`; values
 outside the bound are not measurements. Extend the same bounds for the next
 run to include the post-stop endpoint.
+
+### M512 — water endpoint post-stop direct framebuffer probe (2026-10-10)
+
+Visible local no-teleport Release replay of M511 on `World_164`, source
+`4350f0af`, executable SHA-256
+`EDAA57E843974A260492F91EA9AA5868AE61E5A025317FF243A82DFAE34B2DEA`.
+Camera profile and phases were unchanged; only the diagnostic and capture X
+bounds were extended to `[-7500,-7190]`. It passed route adequacy at
+`5.18555 blocks/s` over 240 blocks; process exit was 0. The strict product
+analyzer returned 1 on readiness, eye-proxy, performance, and stop-recovery
+gates.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m512_world164_water_endpoint_poststop_20261010.json)
+- [perf JSONL, 164.8 MiB](../../bin/logs/perf_20261010-224706_27008.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-224702.27008)
+- [40 captures](../../bin/flight_captures/m512_world164_water_endpoint_poststop_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m512_world164_water_endpoint_poststop_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m512_world164_water_endpoint_poststop_20261010 --report bin/suite_reports/engine_refactor/m512_world164_water_endpoint_poststop_20261010.json --process-timeout 900
+```
+
+At camera X `-7448`, the 15,608-row bounded trace had 2,094 pixel rows; 340
+intersected fluid block `575` triangles. Ten repeated probes each reported
+the same 34 water-covered sample positions, and every matched sample changed
+color after transparency. The adjacent period rows at player X `-7447` showed
+98 fluid refs / 3,216 indices and 132 fluid submissions (44 shell-depth,
+88 color). Across the full capture, 2,550 pixel rows matched fluid triangles
+and 2,534 changed color. Seven of the 34 terminal sample positions varied by
+one low-order color step between probes; the active resource pack defines
+water as a four-frame animation at six ticks per frame, consistent with that
+small variation. The direct readback did not reproduce a missing surface;
+these engine-buffer metrics do not establish that the desktop image matched
+the user-visible symptom.
