@@ -5462,3 +5462,57 @@ Remove-Item Env:CUBA_FLIGHT_CAPTURE_MIN_X -ErrorAction SilentlyContinue
 Remove-Item Env:CUBA_FLIGHT_CAPTURE_MAX_X -ErrorAction SilentlyContinue
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m500_world164_m335_water_sampler_fix_verify_20261010 --report bin/suite_reports/engine_refactor/m500_world164_m335_water_sampler_fix_verify_20261010.json --process-timeout 7200
 ```
+
+## M501–M503 — readiness-debt trace and stop drain (2026-10-10)
+
+These visible Release runs used the established local no-teleport tail segment
+on `World_164`, with start `(-7215,56,56)`, eye Y=70, yaw 180°, pitch -30°,
+and movement scale 1. They are diagnostic segments, not substitutes for the
+full 1,455-second M335 acceptance route.
+
+M501 used a 45-second flight, an 8-second stop phase, and 15 seconds of
+pre-flight idle. It traveled 240 blocks at `5.18555` blocks/s and exited 0.
+The final focus-slice trace contained 17 unresolved radius-4 shell slices;
+each had overlay face debt with absent peers. The last five periods had zero
+visual holes while broad unfinished/readiness counts remained 26–28.
+
+M502 was intended to test a 120-second post-flight drain, but used
+`--idle-sec 120`. That flag controls pre-flight idle; M502 therefore waited
+before flying and did not provide the intended stop-drain measurement. It still
+completed its 45-second/240-block local segment normally.
+
+M503 corrected the phase placement with a 120-second stop phase. It traveled
+240 blocks at `5.18555` blocks/s and exited 0. All 60 stop periods had zero
+`visual_holes`, but broad not-ready counts stayed near 27–28 and pending GPU
+applies ended at 11 (10 queued, 1 kicked). The aggregate report remained
+`pass=false` because the post-stop convergence gates failed.
+
+M503's demand trace recorded 519 `PriorityWorldCoreRepair` revision bumps.
+Three slices accounted for 517 of them: `(-456,1,2)` had 198, `(-456,1,3)` had
+187, and `(-456,1,4)` had 132. Every one carried peer-face debt bit 1, no
+overlay debt, and only a Dirty queue owner; the builder and GPU ownership
+fields were all zero when bumped. This identifies repeated generic repair
+admission over a stable peer dependency. The following code change broadens
+the no-owner debt guard from overlay-only to all face debt; M504 is the paired
+validation run.
+
+The previous capture X minimum was `-7440`, while M503 reached about `-7455`.
+Frames 009–011 show blue water, but the exact stopped endpoint was outside the
+capture window. The operator's end-of-run water report remains open.
+
+Artifacts:
+
+- M501: [report](../../bin/suite_reports/engine_refactor/m501_world164_tail_demand_trace_20261010.json), [perf](../../bin/logs/perf_20261010-191710_4668.jsonl), [captures](../../bin/flight_captures/m501_world164_tail_demand_trace_20261010)
+- M502: [report](../../bin/suite_reports/engine_refactor/m502_world164_tail_idle_convergence_20261010.json), [perf](../../bin/logs/perf_20261010-192745_49524.jsonl), [captures](../../bin/flight_captures/m502_world164_tail_idle_convergence_20261010)
+- M503: [report](../../bin/suite_reports/engine_refactor/m503_world164_tail_stop_drain_20261010.json), [perf](../../bin/logs/perf_20261010-193307_29392.jsonl), [frame 011](../../bin/flight_captures/m503_world164_tail_stop_drain_20261010/frame_011.png), [captures](../../bin/flight_captures/m503_world164_tail_stop_drain_20261010)
+
+M503 route and capture invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m503_world164_tail_stop_drain_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='5'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7440'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m503_world164_tail_stop_drain_20261010 --report bin/suite_reports/engine_refactor/m503_world164_tail_stop_drain_20261010.json --process-timeout 900
+```

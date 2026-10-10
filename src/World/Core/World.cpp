@@ -4309,21 +4309,16 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       !active_demand ||
       (active_demand->world_epoch == world_epoch && chunk &&
        active_demand->incarnation == chunk->GetIncarnation());
-  const bool coverage_waits_only_on_overlay_debt =
+  const bool coverage_waits_on_face_debt =
       active_demand &&
       (active_demand->desired_coverage_gen ==
            active_demand->published_coverage_gen ||
        (active_demand->desired_coverage_gen >
             active_demand->published_coverage_gen &&
-        active_demand->overlay_face_debt_mask != 0 &&
-        active_demand->face_debt_mask ==
-            active_demand->overlay_face_debt_mask));
+        active_demand->face_debt_mask != 0));
   if (chunk && active_demand && demand_identity_matches &&
-      active_demand->overlay_face_debt_mask != 0 &&
-      active_demand->peer_face_debt_mask == 0 &&
-      active_demand->face_debt_mask ==
-          active_demand->overlay_face_debt_mask &&
-      coverage_waits_only_on_overlay_debt &&
+      active_demand->face_debt_mask != 0 &&
+      coverage_waits_on_face_debt &&
       !active_demand->retained_awaiting_successor &&
       !MeshService->IsSoftDeferHeld(coord) &&
       MeshService->HasGreedyMesh(coord) &&
@@ -4339,10 +4334,9 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       active_demand->published_light_rev == published.light_rev &&
       chunk->GetLightFieldRevision() == published.light_rev)
   {
-    // The demand record carries a target-local missing-neighbor obligation;
-    // RepairFaceDebt reconciles it against the published cache overlay and peer
-    // state. A current published mesh (drawable or not) with coverage lag caused
-    // only by overlay debt has no changed mesh input to consume. Re-admitting it
+    // RepairFaceDebt owns both target-local overlay debt and peer-face debt. A
+    // current published mesh (drawable or not) with coverage lag caused only by
+    // unresolved face debt has no changed mesh input to consume. Re-admitting it
     // through generic FirstMesh repair cannot close that dependency while peer
     // inputs are unchanged. A lifecycle stage such as Admitted is not itself a
     // concrete mesh owner; the Dirty, in-flight, capture, and GPU checks above

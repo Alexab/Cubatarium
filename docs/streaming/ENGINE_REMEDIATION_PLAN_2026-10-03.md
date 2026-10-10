@@ -6942,3 +6942,56 @@ overall M335 renderer acceptance and cold/new-world coverage remain open.
 
 Artifacts and the exact M500 command are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m500--full-m335-normal-view-verification-after-sampler-fix-2026-10-10).
+
+#### M501–M503 checkpoint — peer-face repair churn and stop drain (2026-10-10)
+
+M501 added demand and visual lifecycle tracing to the established local tail
+segment on `World_164`. It traveled 240 blocks at `5.18555` blocks/s and exited
+normally. At the final focus, the 17 unresolved sampled slices all sat exactly
+on the horizontal radius-4 shell and had overlay-only face debt; their loaded
+peer masks were empty. The final periods had no visual-hole samples, while
+readiness debt remained around 26–28 slices. This is evidence that outer-ring
+face obligations can remain dormant when the relevant peers are outside the
+active ring; it is not a framebuffer-hole finding.
+
+M502 was intended to add a 120-second post-flight drain, but `--idle-sec 120`
+configures the pre-flight idle. It therefore did not test a long stop phase.
+M503 corrected this with a 120-second `--stop-phase-sec` on the same local
+no-teleport segment. The app exited normally after traveling 240 blocks at
+`5.18555` blocks/s. All 60 stop periods reported `visual_holes=0`, but the
+post-stop convergence gate still failed: `focus_not_render_ready` stayed near
+27–28, global face debt stayed near 243–244, and `demand_stop_converged` stayed
+false. Pending GPU applies were 5 near the start and 11 at the final sample;
+the final queue contained 10 queued and 1 kicked apply. This is a sustained
+work/admission issue even though the visual-hole proxy was clear during stop.
+
+The trace isolates an additional repeatable producer loop. Of M503's 519
+`PriorityWorldCoreRepair` revision bumps, 517 came from three lower slices at
+`(-456,1,2)`, `(-456,1,3)`, and `(-456,1,4)`. Their only face debt was peer debt
+(mask 1); overlay debt was zero. On every bump there was no mesh builder, GPU
+extract, pending apply, or queued/kicked GPU owner. The current geometry had
+just been published, yet generic FirstMesh repair kept advancing the target
+revision. This is distinct from the remaining overlay-only work at the final
+focus shell, and from a GPU extraction that is individually stuck.
+
+`EnsureVisualRepairDirtyPriority` previously suppressed only stable
+overlay-only debt. It now also leaves a current mesh alone while any face debt
+is the sole unresolved coverage obligation and no concrete mesh/GPU owner
+exists. `RepairFaceDebt` remains responsible for requeueing the target when a
+peer becomes present and satisfying; local geometry/light revision changes
+still bypass the guard. The Release target compiled successfully. M504 must
+confirm that peer-debt revision churn falls without changing visible geometry.
+
+The M503 framebuffer capture range ended at X `-7440`, while the route reached
+about X `-7455`; its final stopped view was therefore outside the capture
+window. Frames 009–011 show a rendered blue water surface, but they do not
+capture the exact stopped endpoint where the operator reported the renewed
+water defect. Keep that symptom open and repeat the same route with the capture
+range extended through the endpoint; do not infer that M503 disproves it.
+
+Artifacts and M501–M503 invocations are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m501m503--readiness-debt-trace-and-stop-drain-2026-10-10).
+Next work: verify the peer-debt guard on the same local segment, capture its
+last stopped frames, then preserve the established full M335 route for
+long-distance rendering/streaming acceptance. Keep outer-shell face debt and
+camera-band presentation as separate readiness measures.
