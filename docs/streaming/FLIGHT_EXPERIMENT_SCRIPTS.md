@@ -4760,3 +4760,99 @@ Report: [M487 flight/analyzer report](../../bin/suite_reports/engine_refactor/m4
 perf trace: [JSONL](../../bin/logs/perf_20261010-093825_33492.jsonl);
 runner output: `bin/logs/m487_world164_m335_low_trace_20261010.stdout.log`.
 Raw artifacts remain local and out of Git.
+
+### M488 — forced single-pass transparent M335 A/B (2026-10-10)
+
+M488 repeated the M335 Release/no-teleport route on `World_164` with the same
+executable and fixed-day world/configuration as M487. The only intentional
+render-path change was `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=1`; the run also
+saved a GL framebuffer image every 30 seconds. It completed normally
+(`process_rc=0`), traveled 7,472 blocks at 5.19287 blocks/s, held eye Y=70,
+and used executable SHA-256
+`474753D80FAD94BED46B64CE3920FDBDE8757FF7FC7EBF8C2E2C0150231A7C20`.
+The analyzer remained red (`31/40` gates), including A24 near-focus-hole and
+post-stop-convergence failures. Median fly wall time was 13.95 ms (71.69 FPS).
+The route/streaming proxies do not establish water mesh or pixel visibility.
+
+The operator later clarified that the water surface was already absent at the
+beginning of this run; the late M488 frame is not evidence that the problem
+starts only after a long flight. The exact onset position is therefore not
+known. The direct operator observation is more useful than the saved PNGs here.
+
+M488's forced branch bypasses the normal stencil-shell sequence and draws the
+transparent color pass with stencil disabled. The ordinary path performs a
+shell-depth prepass followed by behind-shell and shell-surface color passes.
+This makes the toggle a meaningful water-rendering A/B, but it is diagnostic
+only and must not be used as a product visual baseline.
+
+### M489 — default transparent-path M335 repeat (2026-10-10)
+
+M489 repeated the same `World_164` route and Release executable with
+`CUBA_DEBUG_TRANSPARENT_SINGLE_PASS` unset. Tracing stayed disabled as in M487;
+the existing asynchronous GL framebuffer capture saved one image every 30
+seconds. It completed normally (`process_rc=0`), traveled 7,456 blocks at
+5.19287 blocks/s, held eye Y=70, and used the same executable SHA-256,
+effective config hash, world seed, and route hash as M488. The fixed-day runner
+restored `world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415AC19DEE2F30C8500C737AC5EC2D344`.
+
+The operator reported that the water surface was present during M489. The
+analyzer remained red (`29/40` gates); A24 still found near-focus mesh-coverage
+proxy samples in 12 periods and post-stop convergence failed. Median fly wall
+time was 15.41 ms (64.88 FPS). Both runs therefore had similar route and
+readiness-proxy failures despite the different live water observations. These
+proxies cannot adjudicate the visible water result.
+
+This operator-visible A/B strongly correlates missing water with the forced
+single-pass branch and present water with the default stencil-shell branch.
+It does not implicate streaming yet: both runs used the same world/config,
+route, and binary, and no fluid-specific mesh-to-draw counter was collected.
+Prioritize review of transparent depth/stencil state and the fluid draw path;
+keep `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS` unset in normal visual runs.
+
+The operator also reported that the saved images darken the distant world more
+than the live display and appear to mix text from another application into the
+scene. The capture implementation reads only the game's `GL_BACK` framebuffer
+after render and before swap, then flips/writes those pixels asynchronously;
+it does not capture desktop composition. The yellow telemetry panel visible
+in the PNGs is drawn by the game. A separate Windows Graphics Capture attempt
+timed out twice, so there is no independent live-window screenshot to compare.
+Treat the M488/M489 PNGs as diagnostic framebuffer readbacks, not as a trusted
+visual oracle; the reported extra external text remains unverified.
+
+Exact M488 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m488_world164_m335_stencil_singlepass_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='30'
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m488_world164_m335_stencil_singlepass_20261010 --report bin/suite_reports/engine_refactor/m488_world164_m335_stencil_singlepass_20261010.json --process-timeout 7200
+```
+
+Exact M489 invocation (same tracing settings; capture directory changed and
+the single-pass variable was unset):
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\logs\m489_world164_m335_baseline_repeat_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='30'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m489_world164_m335_baseline_repeat_20261010 --report bin/suite_reports/engine_refactor/m489_world164_m335_baseline_repeat_20261010.json --process-timeout 7200
+```
+
+Reports: [M488](../../bin/suite_reports/engine_refactor/m488_world164_m335_stencil_singlepass_20261010.json),
+[M489](../../bin/suite_reports/engine_refactor/m489_world164_m335_baseline_repeat_20261010.json).
+Runner logs and PNGs are in their corresponding `bin/logs/<phase>/` directories;
+raw artifacts remain local and out of Git.

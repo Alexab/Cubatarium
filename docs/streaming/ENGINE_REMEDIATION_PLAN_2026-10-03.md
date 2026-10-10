@@ -6454,44 +6454,53 @@ but it cannot be labeled as the newly introduced regression. No evidence yet
 distinguishes a world/chunk state issue, a transparent GL/stencil state fault,
 or a GPU/driver-specific fault.
 
-#### Updated remaining work after M487
+#### Updated remaining work after M489
 
-1. Run M488 on the unchanged M335 route and Release binary with
-   `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=1`; capture a full game-window frame
-   every 30 seconds through the existing asynchronous capture path. Compare
-   water presence across route locations with the operator's default-pass
-   observation. The switch bypasses stencil-shell passes but retains the same
-   transparent batches, shader, and opaque-depth guard.
-2. If single-pass restores water, trace stencil availability/state and inspect
-   GL state restoration on the AMD Radeon/OpenGL 3.3 path. If it does not,
-   instrument fluid separately at source occupancy, emitted mesh faces,
-   publication/residency, transparent batch inclusion, and submitted draw.
-   Then replay the same route with a CPU-backend override if needed. Do not
-   conflate `gpu_fluid_surface` (the waterline/fog map) with water mesh drawing.
-3. Revisit the `Unknown`-neighbor liquid-face policy against vertical as well
+1. Treat the M488/M489 operator-visible result as a strong lead: inspect why
+   the forced single-pass branch in `GreedyTransparentPipeline.cpp` loses water
+   while the default shell-depth/behind-shell/shell-surface sequence retains
+   it. Add a focused fluid render diagnostic that proves occupancy, emitted
+   faces, transparent batch inclusion, depth/stencil state, submitted draw,
+   and resulting framebuffer coverage. Do not enable the diagnostic single-
+   pass override in ordinary visual runs.
+2. Replace or validate the visual evidence path. Compare the GL backbuffer
+   readback against an OS/window capture without raising or focusing the game;
+   verify gamma/color transforms, image orientation, and whether any apparent
+   foreign text is from the game's telemetry overlay or desktop composition.
+   Until then, treat operator live observations as the visual oracle and PNGs
+   as auxiliary artifacts only.
+3. Keep streaming/residency hypotheses open but secondary to the pass A/B:
+   inspect the fluid-specific mesh/publication path and `Unknown`-neighbor
+   face handling before changing culling policy. Do not conflate
+   `gpu_fluid_surface` (the waterline/fog map) with water mesh drawing.
+4. Revisit the `Unknown`-neighbor liquid-face policy against vertical as well
    as side seams. The Aug-05 missing-water fix emitted liquid toward unloaded
    neighbors; the Sep-20 distant-water-wall fix hid all faces for `Unknown`;
    the Sep-29 provisional +Y exception currently applies to missing terrain
    slices. Use a fluid-specific seam test and an operator-visible capture
    before changing policy.
-4. Keep M487 as the timing control: its 16.20 ms median fly frame and 22.58 ms
-   p95 are materially better than M486's high-load run but are not an A/B for
-   visual correctness. Preserve the unresolved 312 ms spike and stop-tail
-   non-convergence in the report.
-5. Continue to treat the Oct-09 daytime observation as the current visual
-   baseline until its build/world/run can be identified. The next saved-frame
-   run should report the first route coordinate/frame where water is absent,
-   then separate mesh omission from transparent-pipeline/GPU draw failure.
-6. Finish the camera-band versus lower-band readiness interpretation and the
+5. Keep M487 as the quiet timing control. M488/M489 both reached about 7.4k
+   blocks at 5.19 blocks/s on the same fixed-day world and binary; M489's
+   default pass was slower (15.41 ms median fly frame) than M488's forced
+   single-pass run (13.95 ms), but neither metric explains water visibility.
+   Both reports fail A24 and post-stop convergence. Preserve those failures;
+   do not turn similar mesh proxies into a visual pass.
+6. Continue to treat the Oct-09 daytime observation as an unpinned historical
+   baseline. On the next live visual check, note the route coordinate/phase
+   where the surface differs; use a validated screen capture only after its
+   color/composition path is understood.
+7. Finish the camera-band versus lower-band readiness interpretation and the
    planned periodic cold/new-world lane only after water surface behavior is
    classified on the repeatable M335 lane.
 
 Plan status: **the quiet low-trace timing control is complete and route/speed
-remain correct. The new missing-water report is not yet captured in a frame
-and is not explained by a new fluid-rendering commit. The GPU/driver and
-chunk-residency hypotheses remain open; M488's stencil single-pass A/B and
-water-specific draw evidence are next. Stop-tail convergence and periodic
-cold/new-world coverage remain open.**
+remain correct. The operator-visible A/B now points to a failure in the
+diagnostic single-pass transparent path: water was absent from the start of
+M488 but present in the default-path M489. This is a strong correlation, not a
+completed root-cause fix. The saved PNG path is not a visual oracle until its
+mismatch with the live display is resolved. Stop-tail convergence, A24 holes,
+fluid-specific draw evidence, and periodic cold/new-world coverage remain
+open.**
 
-M487 artifacts and exact invocation are recorded in
+M487–M489 artifacts and exact invocations are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m487--low-instrumentation-m335-timing-control-2026-10-10).
