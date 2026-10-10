@@ -34,6 +34,7 @@
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
+#include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/IUMeshGpuStore.h"
@@ -379,6 +380,18 @@ struct GpuOpaqueDrawStateWitness
   int32_t array_buffer{0};
   int32_t element_buffer{0};
   int32_t texture_2d{0};
+  uint8_t vertex_layout_checked{0};
+  uint8_t vertex_layout_match{0};
+  uint8_t mvp_matrix_valid{0};
+  uint8_t texture_alpha_valid{0};
+  uint8_t texture_alpha_min{0};
+  uint8_t texture_alpha_max{0};
+  uint8_t alpha_cutout{0};
+  int32_t greedy_mode{0};
+  int32_t anim_frame{0};
+  int32_t anim_frame_count{0};
+  int32_t active_texture{0};
+  float mvp_matrix_max_delta{-1.0f};
   int32_t stencil_func{0};
   int32_t stencil_ref{0};
   int32_t stencil_value_mask{0};
@@ -415,7 +428,8 @@ bool IsM483DrawStateTarget(const GreedyGpuBatch &batch, size_t command_slot,
 }
 
 void CaptureGpuOpaqueDrawState(const GreedyGpuPassCache &pass,
-                               size_t batch_index, uint8_t path)
+                               size_t batch_index, uint8_t path,
+                               const glm::mat4 &expected_mvp)
 {
   if (batch_index >= pass.batches.size())
   {
@@ -472,6 +486,7 @@ void CaptureGpuOpaqueDrawState(const GreedyGpuPassCache &pass,
   glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &witness.array_buffer);
   glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &witness.element_buffer);
   glGetIntegerv(GL_TEXTURE_BINDING_2D, &witness.texture_2d);
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &witness.active_texture);
   glGetIntegerv(GL_STENCIL_FUNC, &witness.stencil_func);
   glGetIntegerv(GL_STENCIL_REF, &witness.stencil_ref);
   glGetIntegerv(GL_STENCIL_VALUE_MASK, &witness.stencil_value_mask);
@@ -482,6 +497,124 @@ void CaptureGpuOpaqueDrawState(const GreedyGpuPassCache &pass,
   witness.depth_range_far = static_cast<float>(depth_range[1]);
   glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &witness.polygon_offset_factor);
   glGetFloatv(GL_POLYGON_OFFSET_UNITS, &witness.polygon_offset_units);
+  const GLint mvp_location =
+      glGetUniformLocation(static_cast<GLuint>(witness.program), "mvp_matrix");
+  if (mvp_location >= 0)
+  {
+    GLfloat actual_mvp[16]{};
+    glGetUniformfv(static_cast<GLuint>(witness.program), mvp_location,
+                   actual_mvp);
+    const GLfloat *expected = glm::value_ptr(expected_mvp);
+    float max_delta = 0.0f;
+    for (size_t index = 0; index < 16u; ++index)
+    {
+      max_delta = std::max(max_delta,
+                           std::abs(actual_mvp[index] - expected[index]));
+    }
+    witness.mvp_matrix_valid = 1u;
+    witness.mvp_matrix_max_delta = max_delta;
+  }
+  const auto get_uniform_int = [&](const char *name, int32_t &value)
+  {
+    const GLint location =
+        glGetUniformLocation(static_cast<GLuint>(witness.program), name);
+    if (location >= 0)
+    {
+      glGetUniformiv(static_cast<GLuint>(witness.program), location, &value);
+    }
+  };
+  int32_t alpha_cutout_uniform = 0;
+  get_uniform_int("uAlphaCutout", alpha_cutout_uniform);
+  witness.alpha_cutout = alpha_cutout_uniform != 0 ? 1u : 0u;
+  get_uniform_int("uGreedyShaderMode", witness.greedy_mode);
+  get_uniform_int("uAnimFrame", witness.anim_frame);
+  get_uniform_int("uAnimFrameCount", witness.anim_frame_count);
+
+  if (path == 1u || path == 2u)
+  {
+    witness.vertex_layout_checked = 1u;
+    witness.vertex_layout_match = 1u;
+    constexpr std::array<GLint, 7> expected_sizes = {3, 1, 2, 1, 1, 1, 1};
+    constexpr std::array<size_t, 7> expected_offsets = {
+        0u, offsetof(GreedyMeshVertex, faceIndex),
+        offsetof(GreedyMeshVertex, u), offsetof(GreedyMeshVertex, skyLight),
+        offsetof(GreedyMeshVertex, blockLight),
+        offsetof(GreedyMeshVertex, wetness),
+        offsetof(GreedyMeshVertex, lightPreview)};
+    const GLint expected_stride = static_cast<GLint>(sizeof(GreedyMeshVertex));
+    const GLint expected_buffer = static_cast<GLint>(pass.poolVbo);
+    for (GLuint location = 0; location < expected_sizes.size(); ++location)
+    {
+      GLint enabled_attrib = 0;
+      GLint size = 0;
+      GLint type = 0;
+      GLint normalized = 0;
+      GLint stride = 0;
+      GLint buffer = 0;
+      GLint integer = 0;
+      GLint divisor = 0;
+      void *pointer = nullptr;
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_ENABLED,
+                          &enabled_attrib);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_SIZE, &size);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_TYPE, &type);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_NORMALIZED,
+                          &normalized);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &stride);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
+                          &buffer);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_INTEGER, &integer);
+      glGetVertexAttribiv(location, GL_VERTEX_ATTRIB_ARRAY_DIVISOR, &divisor);
+      glGetVertexAttribPointerv(location, GL_VERTEX_ATTRIB_ARRAY_POINTER,
+                                &pointer);
+      const std::uintptr_t actual_offset =
+          reinterpret_cast<std::uintptr_t>(pointer);
+      const bool matches =
+          enabled_attrib == GL_TRUE && size == expected_sizes[location] &&
+          type == GL_FLOAT && normalized == GL_FALSE &&
+          stride == expected_stride && buffer == expected_buffer &&
+          integer == GL_FALSE && divisor == 0 &&
+          actual_offset == expected_offsets[location];
+      if (!matches)
+      {
+        witness.vertex_layout_match = 0u;
+        break;
+      }
+    }
+  }
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (witness.texture_2d != 0 && witness.active_texture == GL_TEXTURE0)
+  {
+    GLint texture_width = 0;
+    GLint texture_height = 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,
+                             &texture_width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT,
+                             &texture_height);
+    const uint64_t texel_count =
+        texture_width > 0 && texture_height > 0
+            ? static_cast<uint64_t>(texture_width) *
+                  static_cast<uint64_t>(texture_height)
+            : 0u;
+    if (texel_count > 0u && texel_count <= 4u * 1024u * 1024u)
+    {
+      std::vector<GLubyte> texture_rgba(
+          static_cast<size_t>(texel_count) * 4u);
+      glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                    texture_rgba.data());
+      uint8_t min_alpha = 255u;
+      uint8_t max_alpha = 0u;
+      for (size_t offset = 3u; offset < texture_rgba.size(); offset += 4u)
+      {
+        min_alpha = std::min(min_alpha, texture_rgba[offset]);
+        max_alpha = std::max(max_alpha, texture_rgba[offset]);
+      }
+      witness.texture_alpha_valid = 1u;
+      witness.texture_alpha_min = min_alpha;
+      witness.texture_alpha_max = max_alpha;
+    }
+  }
+#endif
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
   GLint polygon_mode[2] = {0, 0};
   glGetIntegerv(GL_POLYGON_MODE, polygon_mode);
@@ -586,6 +719,30 @@ void CopyGpuOpaqueDrawStateWitness(const GpuOpaqueDrawStateWitness &witness,
       witness.element_buffer;
   record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_2d =
       witness.texture_2d;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_checked =
+      witness.vertex_layout_checked;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_match =
+      witness.vertex_layout_match;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_valid =
+      witness.mvp_matrix_valid;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_valid =
+      witness.texture_alpha_valid;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_min =
+      witness.texture_alpha_min;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_max =
+      witness.texture_alpha_max;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_alpha_cutout =
+      witness.alpha_cutout;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_greedy_mode =
+      witness.greedy_mode;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame =
+      witness.anim_frame;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame_count =
+      witness.anim_frame_count;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_active_texture =
+      witness.active_texture;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_max_delta =
+      witness.mvp_matrix_max_delta;
   record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_func =
       witness.stencil_func;
   record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_stencil_ref =
@@ -4851,7 +5008,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           witness_batch_index < cache.batches.size();
       if (has_draw_witness_batch)
       {
-        CaptureGpuOpaqueDrawState(cache, witness_batch_index, 1);
+        CaptureGpuOpaqueDrawState(cache, witness_batch_index, 1, vp);
       }
       const bool capture_generic_draw_state =
           generic_gpu_draw_state_window &&
@@ -4859,7 +5016,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       GpuOpaqueDrawStateWitness generic_draw_state{};
       if (capture_generic_draw_state)
       {
-        CaptureGpuOpaqueDrawState(cache, i, 1);
+        CaptureGpuOpaqueDrawState(cache, i, 1, vp);
         generic_draw_state = g_gpu_opaque_draw_state_witness;
       }
       const bool gpu_range_submitted =
@@ -4888,11 +5045,11 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         {
           if (has_draw_witness_batch)
           {
-            CaptureGpuOpaqueDrawState(cache, witness_batch_index, 2);
+            CaptureGpuOpaqueDrawState(cache, witness_batch_index, 2, vp);
           }
           if (capture_generic_draw_state)
           {
-            CaptureGpuOpaqueDrawState(cache, i, 2);
+            CaptureGpuOpaqueDrawState(cache, i, 2, vp);
             generic_draw_state = g_gpu_opaque_draw_state_witness;
           }
           cpu_range_submitted = store.SubmitIndirectCommands(cmds);
@@ -4933,12 +5090,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 #else
             if (has_draw_witness_batch && k == witness_batch_index)
             {
-              CaptureGpuOpaqueDrawState(cache, k, 3);
+              CaptureGpuOpaqueDrawState(cache, k, 3, vp);
             }
             GpuOpaqueDrawStateWitness single_draw_state{};
             if (capture_generic_draw_state)
             {
-              CaptureGpuOpaqueDrawState(cache, k, 3);
+              CaptureGpuOpaqueDrawState(cache, k, 3, vp);
               single_draw_state = g_gpu_opaque_draw_state_witness;
             }
             glDrawElementsBaseVertex(
@@ -5029,7 +5186,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       const bool witness_target = is_m483_draw_witness_batch(gpu_index);
       if (witness_target)
       {
-        CaptureGpuOpaqueDrawState(cache, gpu_index, 4);
+        CaptureGpuOpaqueDrawState(cache, gpu_index, 4, vp);
       }
       glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
       note_fluid_single_submit(gpu);
@@ -5120,7 +5277,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       const bool witness_target = is_m483_draw_witness_batch(gpu_index);
       if (witness_target)
       {
-        CaptureGpuOpaqueDrawState(cache, gpu_index, 4);
+        CaptureGpuOpaqueDrawState(cache, gpu_index, 4, vp);
       }
       glDrawElements(
           GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,

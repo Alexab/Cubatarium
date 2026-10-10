@@ -543,6 +543,18 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_front{0};
   int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_mode_back{0};
   uint32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_indirect_buffer{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_checked{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_match{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_valid{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_valid{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_min{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_max{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_alpha_cutout{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_greedy_mode{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame_count{0};
+  int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_active_texture{0};
+  float renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_max_delta{-1.0f};
   float renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_near{0.0f};
   float renderer_pixel_voxel_mesh_ray_gpu_draw_state_depth_range_far{1.0f};
   float renderer_pixel_voxel_mesh_ray_gpu_draw_state_polygon_offset_factor{0.0f};

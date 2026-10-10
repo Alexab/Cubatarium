@@ -4195,6 +4195,37 @@ void WriteGpuDrawStateJson(std::ostream &out,
       << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_element_buffer
       << ",\"texture_2d\":"
       << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_2d
+      << ",\"active_texture\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_active_texture
+      << ",\"alpha_cutout\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_alpha_cutout)
+      << ",\"greedy_mode\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_greedy_mode
+      << ",\"anim_frame\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame
+      << ",\"anim_frame_count\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame_count
+      << ",\"vertex_layout_checked\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_checked)
+      << ",\"vertex_layout_match\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_vertex_layout_match)
+      << ",\"mvp_matrix_valid\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_valid)
+      << ",\"mvp_matrix_max_delta\":"
+      << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_mvp_matrix_max_delta
+      << ",\"texture_alpha_valid\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_valid)
+      << ",\"texture_alpha_min\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_min)
+      << ",\"texture_alpha_max\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_max)
       << ",\"indirect_buffer\":"
       << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_indirect_buffer
       << ",\"polygon_mode\":["
