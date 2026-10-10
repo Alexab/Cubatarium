@@ -5911,3 +5911,82 @@ water as a four-frame animation at six ticks per frame, consistent with that
 small variation. The direct readback did not reproduce a missing surface;
 these engine-buffer metrics do not establish that the desktop image matched
 the user-visible symptom.
+
+## M513–M517 — camera-space ray witness and opaque-pixel autopsy (2026-10-10)
+
+These were bounded, visible, no-teleport Release flights on the established
+`World_164` `product-174657-far` profile. The route was held constant: start
+`-5500 56 56`, eye Y=70, yaw 180°, pitch −30°, 45 s fly, 20 s stop, 15 s
+idle, minimum travel 150 blocks. Actual movement remained `5.18555 blocks/s`
+and covered 224 blocks. Diagnostics/captures were bounded to camera X
+`[-5750,-5480]`. The application process completed successfully; the strict
+product analyzer returned 1 on readiness/eye-proxy/performance gates.
+
+The sequence was intended to locate a reported source-mesh-to-depth gap:
+
+- [M513 report](../../bin/suite_reports/engine_refactor/m513_world164_hotspot_mvp_vao_texture_alpha_20261010.json), [perf log](../../bin/logs/perf_20261010-231257_24048.jsonl): two block-573 rows. GPU command/index/vertex payload matched the source; VAO layout and MVP matched, alpha was 255, and cutout was enabled.
+- [M514 report](../../bin/suite_reports/engine_refactor/m514_world164_hotspot_screen_projection_20261010.json), [perf log](../../bin/logs/perf_20261010-232440_34060.jsonl): three block-573 rows. Projected hits sat about 0.3–1.8 pixels from the sample, which was taken as evidence that the source surface should cover it.
+- [M515 report](../../bin/suite_reports/engine_refactor/m515_world164_nearplane_ray_alignment_20261010.json), [perf log](../../bin/logs/perf_20261010-232950_47712.jsonl): four rows remained after moving the ray origin to the inverse-VP near plane; over 2,611 projected ray rows, screen delta p50 was ~1.03 px, p95 ~3.69 px, max ~6.03 px.
+- [M516 report](../../bin/suite_reports/engine_refactor/m516_world164_ray_origin_direction_20261010.json), [perf log](../../bin/logs/perf_20261010-233954_37952.jsonl): added projection of the near-plane origin and a point along the ray. Six gap rows across four pixels exposed up to ~3.5 px round-trip error in `inverse(Projection * View)` near-plane reconstruction at world X around −5,600.
+- [M517 report](../../bin/suite_reports/engine_refactor/m517_world164_camera_space_ray_20261010.json), [perf log](../../bin/logs/perf_20261010-234640_28224.jsonl): built ray direction in view space and camera origin from inverse view. There were 13,903 pixel-probe rows, 2,205 source mesh intersections, and zero `mesh_ray_gap` rows. Projected hit delta for intersections was p50 0.005 px, p95 0.018 px, max 0.129 px.
+
+M513–M517 correspond to diagnostic commits `bb9adb3f`, `43a86538`,
+`02fcd01d`, `d0567510`, and `d712b9b3`. M515/M516 demonstrate why the earlier
+CPU-ray gaps were not reliable proof of a rendering fault: converting an
+inverse-VP near-plane point back to single-precision world coordinates at a
+large world offset caused a measurable screen shift. M517 only corrected the
+diagnostic witness; it made no change to mesh generation, streaming, GPU draw
+submission, or water rendering. Since M517 left zero corrected-ray gap rows,
+repeat M510's same-frame GPU-range/alpha witness only if a corrected-ray run or
+operator observation reproduces an actual pixel mismatch.
+
+Readiness metrics stayed red in all five reports. They remain readiness and
+coverage signals, not direct black framebuffer pixels. The most recent report
+also had `post_stop_mesh_missing_max=0` and `post_stop_visual_holes_rate=0`
+alongside `readiness_debt_rate=0.842` and `post_stop_effective_holes_rate=1`.
+The operator's report that water looked corrupted at the end of a visible run
+remains open despite M512 detecting fluid geometry and framebuffer color
+changes in its selected endpoint samples.
+
+### Exact M516 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-5750'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-5480'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m516_world164_ray_origin_direction_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-5750'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-5480'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -5500 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m516_world164_ray_origin_direction_20261010 --report bin/suite_reports/engine_refactor/m516_world164_ray_origin_direction_20261010.json --process-timeout 900
+```
+
+### Exact M517 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-5750'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-5480'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m517_world164_camera_space_ray_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-5750'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-5480'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -5500 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m517_world164_camera_space_ray_20261010 --report bin/suite_reports/engine_refactor/m517_world164_camera_space_ray_20261010.json --process-timeout 900
+```
+
+Artifacts:
+
+- M516 captures: `bin/flight_captures/m516_world164_ray_origin_direction_20261010`
+- M517 captures: `bin/flight_captures/m517_world164_camera_space_ray_20261010`
+- M516 manifest: clean Release, commit `d0567510`, EXE SHA-256 `541475ac68d4552c880b323b5d6a4df22278177b22f892616272e725868540f0`
+- M517 manifest: clean Release, commit `d712b9b3`, EXE SHA-256 `eaa8dc7bf996f01b9d57dd50fa31d8b21a84ce1bd91ca86535c0987884b15452`
