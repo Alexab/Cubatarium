@@ -829,6 +829,7 @@ public:
   void SetLastWorldTickMs(double ms) { LastWorldTickMs = ms; }
   void SetLastPrepareFrameMs(double ms) { LastPrepareFrameMs = ms; }
   void SetLastRenderFrameSetupMs(double ms) { LastRenderFrameSetupMs = ms; }
+  void SetLastFpViewmodelMs(double ms) { LastFpViewmodelMs = ms; }
   void SetLastPostSceneMs(double ms) { LastPostSceneMs = ms; }
   void SetLastGuiOverlayMs(double ms) { LastGuiOverlayMs = ms; }
   void SetLastAutosaveMs(double ms) { LastAutosaveMs = ms; }
@@ -840,6 +841,7 @@ public:
   double GetLastWorldTickMs() const { return LastWorldTickMs; }
   double GetLastPrepareFrameMs() const { return LastPrepareFrameMs; }
   double GetLastRenderFrameSetupMs() const { return LastRenderFrameSetupMs; }
+  double GetLastFpViewmodelMs() const { return LastFpViewmodelMs; }
   double GetLastPostSceneMs() const { return LastPostSceneMs; }
   double GetLastGuiOverlayMs() const { return LastGuiOverlayMs; }
 
@@ -1732,6 +1734,7 @@ private:
   double LastWorldTickMs{0.0};
   double LastPrepareFrameMs{0.0};
   double LastRenderFrameSetupMs{0.0};
+  double LastFpViewmodelMs{0.0};
   double LastPostSceneMs{0.0};
   double LastGuiOverlayMs{0.0};
   double LastAutosaveMs{0.0};

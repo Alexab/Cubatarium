@@ -1790,6 +1790,45 @@ void UWorldStreaming::RefreshStreamingPressure(
   const int miss_horiz = world.PhysicsTelemetryData.MissHoriz;
   in.visual_holes =
       missing_near && (missing_underfeet || miss_horiz <= 2);
+  pt.FocusProxyMissCx = -1;
+  pt.FocusProxyMissCy = -1;
+  pt.FocusProxyMissCz = -1;
+  pt.FocusProxyFlowTicketKind = -1;
+  pt.FocusProxyFlowTicketPriority = 0;
+  pt.FocusProxyColumnJobStage = -1;
+  pt.FocusProxyMeshDirty = 0;
+  pt.FocusProxyBuildInFlight = 0;
+  pt.FocusProxyPendingGpuApply = 0;
+  pt.FocusProxyDrawableMesh = 0;
+  pt.FocusProxySatisfyingMesh = 0;
+  if (in.visual_holes)
+  {
+    const glm::ivec3 miss_chunk(pt.MissCx, pt.MissCy, pt.MissCz);
+    const glm::ivec2 miss_column(pt.MissCx, pt.MissCz);
+    pt.FocusProxyMissCx = miss_chunk.x;
+    pt.FocusProxyMissCy = miss_chunk.y;
+    pt.FocusProxyMissCz = miss_chunk.z;
+    ColumnWorkItem ticket{};
+    const auto &flow = GetColumnFlowExecutor();
+    if (flow.Scheduler().GetLiveTicket(miss_column, ticket))
+    {
+      pt.FocusProxyFlowTicketKind = static_cast<int>(ticket.kind);
+      pt.FocusProxyFlowTicketPriority = ticket.priority;
+    }
+    pt.FocusProxyColumnJobStage =
+        static_cast<int>(flow.GetColumnJobStage(miss_column));
+    const UWorldMeshService &mesh_service = world.GetMeshService();
+    pt.FocusProxyMeshDirty =
+        mesh_service.IsChunkMeshDirty(miss_chunk) ? 1 : 0;
+    pt.FocusProxyBuildInFlight =
+        mesh_service.HasInflightMeshBuild(miss_chunk) ? 1 : 0;
+    pt.FocusProxyPendingGpuApply =
+        mesh_service.IsPendingGpuApply(miss_chunk) ? 1 : 0;
+    pt.FocusProxyDrawableMesh =
+        mesh_service.HasDrawableGreedyMesh(miss_chunk) ? 1 : 0;
+    pt.FocusProxySatisfyingMesh =
+        mesh_service.HasMeshSatisfyingColumnReady(miss_chunk) ? 1 : 0;
+  }
   in.underfeet_need = FeetColumnUnderfeetNeed(
       incomplete_camera_column, missing_underfeet_mesh, pending_underfeet);
   in.pending_light_focus = pending_light_focus;

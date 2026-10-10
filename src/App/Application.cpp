@@ -2264,6 +2264,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   if (World)
   {
     World->SetLastRenderFrameSetupMs(0.0);
+    World->SetLastFpViewmodelMs(0.0);
   }
 
   const auto notifyViewport = [&](UGuiScreenBase *screen)
@@ -2337,6 +2338,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     }
   }
 
+  const auto fp_viewmodel_begin = std::chrono::high_resolution_clock::now();
   if (State == AppState::InGame && World && !MinimalOverlayForBench &&
       !PaletteOpen && FpViewmodelRenderer)
   {
@@ -2356,6 +2358,13 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         FpViewmodelRenderer->DrawWorldOverlay(fpParams);
       }
     }
+  }
+  if (World)
+  {
+    World->SetLastFpViewmodelMs(
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - fp_viewmodel_begin)
+            .count());
   }
 
   const auto gui_begin = std::chrono::high_resolution_clock::now();

@@ -6642,24 +6642,25 @@ changing scheduling policy.
 
 Next steps:
 
-1. Add `fp_viewmodel_ms` around `FpViewmodelRenderer::DrawWorldOverlay`, which
-   runs between the measured scene and GUI passes. That path remains unmeasured
-   and is a plausible interval for M492's large unexplained `RenderFrame` time.
-   Keep `render_frame_setup_ms`; do not infer a driver stall from the wall clock.
-2. Capture the selected miss column's ticket, job stage, dirty/build/GPU state,
-   drawable status, and satisfying status in the same update epoch/frame that
-   evaluates `VisualHoles`. Compare that snapshot with the current terminal
-   snapshot. Only after a same-frame mismatch is understood should FirstMesh
-   admission or queue policy change; keep remesh/relight protection floors.
+1. M494 adds `fp_viewmodel_ms` around `FpViewmodelRenderer::DrawWorldOverlay`,
+   between the measured scene and GUI passes. This will test whether that path
+   accounts for any part of M492's large unexplained `RenderFrame` time. Keep
+   `render_frame_setup_ms`; do not infer a driver stall from wall time alone.
+2. M494 captures the selected miss column's ticket, job stage, dirty/build/GPU
+   state, drawable status, and satisfying status in the same update frame that
+   evaluates `VisualHoles`. A `visual_holes_enter` JSONL event stores the first
+   frame of each rising edge; period rows retain the later terminal snapshot.
+   Compare both before considering FirstMesh policy changes, and keep
+   remesh/relight protection floors.
 3. Use the M493 scene substage evidence to profile the transparent pass at the
    large-batch west frontier. Separate batch sorting/refresh, command issue,
    and any GPU wait; retain water-specific occupancy, emitted-face, batch,
    selected-pass, depth/stencil, submitted-draw, and pixel-coverage evidence.
    Do not conflate generic transparent batches with water.
-4. Build Release and repeat the visible fixed-day M335 route with high-volume
-   traces and framebuffer capture disabled. Validate the frame-aligned focus
-   snapshot and viewmodel timer at the far-west segment. Keep the operator's
-   live display separate from saved-image evidence.
+4. Run M494 as a Release build on the same visible fixed-day M335 route, with
+   high-volume traces and framebuffer capture disabled. Validate the new event,
+   focus snapshot, and viewmodel timer through the far-west segment. Keep the
+   operator's live display separate from saved-image evidence.
 5. Keep source/save attribution runs separate from timing runs. If provenance
    work resumes, log to file without stderr mirroring and quantify trace cost.
 6. Add persistence-specific dirty tracking before reducing unload saves; verify
@@ -6672,9 +6673,11 @@ the desktop-shell path, while route speed and eye height remain controlled.
 A24 and post-stop convergence gates still fail. Terminal focus-miss snapshots
 show satisfying meshes for every proxy period but are not frame-aligned with
 proxy evaluation, so no queue-policy change is justified yet. The M492 extreme
-render stall did not reproduce; M493 exposed transparent-pass hitches and left
-the FP viewmodel interval unmeasured. Next is same-frame proxy lifecycle data
-and per-stage render timing, followed by another matched M335 release flight.**
+render stall did not reproduce; M493 exposed transparent-pass hitches. The
+frame-aligned proxy snapshot and FP viewmodel timer are implemented and the
+Release build succeeds. M494 is the next matched M335 flight; its result will
+decide whether streaming, transparent rendering, or a separate render stage
+needs the next change.**
 
 M491–M493 artifacts and exact invocations are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m493--attachment-stencil-and-focus-miss-lifecycle-on-quiet-m335-2026-10-10).

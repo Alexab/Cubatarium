@@ -862,6 +862,18 @@ struct PhysicsTelemetry
   int FocusMissPendingGpuApply{0};
   int FocusMissDrawableMesh{0};
   int FocusMissSatisfyingMesh{0};
+  /// Same-frame focus miss lifecycle when the near-focus visual proxy is set.
+  int FocusProxyMissCx{-1};
+  int FocusProxyMissCy{-1};
+  int FocusProxyMissCz{-1};
+  int FocusProxyFlowTicketKind{-1};
+  int FocusProxyFlowTicketPriority{0};
+  int FocusProxyColumnJobStage{-1};
+  int FocusProxyMeshDirty{0};
+  int FocusProxyBuildInFlight{0};
+  int FocusProxyPendingGpuApply{0};
+  int FocusProxyDrawableMesh{0};
+  int FocusProxySatisfyingMesh{0};
   /// Current miss witness came from a camera screen-ray opaque voxel hit.
   int MissScreenRayCandidate{0};
   /// Count of focus columns with mesh but no sky light sample.

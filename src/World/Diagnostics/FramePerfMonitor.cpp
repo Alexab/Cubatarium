@@ -187,6 +187,7 @@ struct Session
   uint64_t SoftDeferCaptureFloorHitsAtPeriodStart{0};
   uint64_t SoftDeferWitnessRetargetAtPeriodStart{0};
   int LastPeriodUnfinishedVisual{0};
+  bool LastFrameVisualHoles{false};
   std::chrono::steady_clock::time_point LastEmit{
       std::chrono::steady_clock::now()};
   double LastRssMb{0.0};
@@ -339,6 +340,7 @@ struct FrameNumbers
   double edit_to_first_mesh_ms{0.0};
   double fast_relight_ms{0.0};
   double render_frame_setup_ms{0.0};
+  double fp_viewmodel_ms{0.0};
   double prepare_frame_ms{0.0};
   double post_scene_ms{0.0};
   double gui_overlay_ms{0.0};
@@ -883,6 +885,17 @@ struct FrameNumbers
   int focus_miss_pending_gpu_apply{0};
   int focus_miss_drawable_mesh{0};
   int focus_miss_satisfying_mesh{0};
+  int focus_proxy_miss_cx{-1};
+  int focus_proxy_miss_cy{-1};
+  int focus_proxy_miss_cz{-1};
+  int focus_proxy_flow_ticket_kind{-1};
+  int focus_proxy_flow_ticket_priority{0};
+  int focus_proxy_column_job_stage{-1};
+  int focus_proxy_mesh_dirty{0};
+  int focus_proxy_build_in_flight{0};
+  int focus_proxy_pending_gpu_apply{0};
+  int focus_proxy_drawable_mesh{0};
+  int focus_proxy_satisfying_mesh{0};
   int miss_screen_ray_candidate{0};
   int post_load_ring_not_ready{0};
   int enter_game_warmup_missing_greedy{0};
@@ -1241,6 +1254,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
       (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0) ? phys.FastRelightMs
                                                             : 0.0;
   n.render_frame_setup_ms = world.GetLastRenderFrameSetupMs();
+  n.fp_viewmodel_ms = world.GetLastFpViewmodelMs();
   n.prepare_frame_ms = world.GetLastPrepareFrameMs();
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
@@ -1768,6 +1782,17 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_miss_pending_gpu_apply = phys.FocusMissPendingGpuApply;
   n.focus_miss_drawable_mesh = phys.FocusMissDrawableMesh;
   n.focus_miss_satisfying_mesh = phys.FocusMissSatisfyingMesh;
+  n.focus_proxy_miss_cx = phys.FocusProxyMissCx;
+  n.focus_proxy_miss_cy = phys.FocusProxyMissCy;
+  n.focus_proxy_miss_cz = phys.FocusProxyMissCz;
+  n.focus_proxy_flow_ticket_kind = phys.FocusProxyFlowTicketKind;
+  n.focus_proxy_flow_ticket_priority = phys.FocusProxyFlowTicketPriority;
+  n.focus_proxy_column_job_stage = phys.FocusProxyColumnJobStage;
+  n.focus_proxy_mesh_dirty = phys.FocusProxyMeshDirty;
+  n.focus_proxy_build_in_flight = phys.FocusProxyBuildInFlight;
+  n.focus_proxy_pending_gpu_apply = phys.FocusProxyPendingGpuApply;
+  n.focus_proxy_drawable_mesh = phys.FocusProxyDrawableMesh;
+  n.focus_proxy_satisfying_mesh = phys.FocusProxySatisfyingMesh;
   n.miss_screen_ray_candidate = phys.MissScreenRayCandidate;
   n.focus_dark_mesh = phys.FocusDarkMesh;
   n.focus_provisional_light_preview = phys.FocusProvisionalLightPreview;
@@ -2249,6 +2274,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"edit_to_first_mesh_ms\":" << n.edit_to_first_mesh_ms
           << ",\"fast_relight_ms\":" << n.fast_relight_ms
           << ",\"render_frame_setup_ms\":" << n.render_frame_setup_ms
+          << ",\"fp_viewmodel_ms\":" << n.fp_viewmodel_ms
           << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
           << ",\"post_scene_ms\":" << n.post_scene_ms
           << ",\"gui_overlay_ms\":" << n.gui_overlay_ms
@@ -2901,6 +2927,24 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.focus_miss_drawable_mesh
           << ",\"focus_miss_satisfying_mesh\":"
           << n.focus_miss_satisfying_mesh
+          << ",\"focus_proxy_miss_cx\":" << n.focus_proxy_miss_cx
+          << ",\"focus_proxy_miss_cy\":" << n.focus_proxy_miss_cy
+          << ",\"focus_proxy_miss_cz\":" << n.focus_proxy_miss_cz
+          << ",\"focus_proxy_flow_ticket_kind\":"
+          << n.focus_proxy_flow_ticket_kind
+          << ",\"focus_proxy_flow_ticket_priority\":"
+          << n.focus_proxy_flow_ticket_priority
+          << ",\"focus_proxy_column_job_stage\":"
+          << n.focus_proxy_column_job_stage
+          << ",\"focus_proxy_mesh_dirty\":" << n.focus_proxy_mesh_dirty
+          << ",\"focus_proxy_build_in_flight\":"
+          << n.focus_proxy_build_in_flight
+          << ",\"focus_proxy_pending_gpu_apply\":"
+          << n.focus_proxy_pending_gpu_apply
+          << ",\"focus_proxy_drawable_mesh\":"
+          << n.focus_proxy_drawable_mesh
+          << ",\"focus_proxy_satisfying_mesh\":"
+          << n.focus_proxy_satisfying_mesh
           << ",\"miss_screen_ray_candidate\":"
           << n.miss_screen_ray_candidate
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
@@ -4042,6 +4086,14 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - collect_begin)
           .count();
+  const bool frame_visual_holes = n.visual_holes != 0;
+  if (frame_visual_holes && !s.LastFrameVisualHoles)
+  {
+    // Keep one frame-aligned lifecycle witness at each proxy rising edge.
+    // This distinguishes it from the terminal snapshot in the interval row.
+    WriteJsonl(s, n, "visual_holes_enter", /*flush=*/false);
+  }
+  s.LastFrameVisualHoles = frame_visual_holes;
   Accumulate(s, n);
 
   // Cap spike disk writes: cheap in-memory accumulate always; at most a few
