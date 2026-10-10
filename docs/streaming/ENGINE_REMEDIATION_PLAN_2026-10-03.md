@@ -6864,11 +6864,19 @@ the guard enabled; the marker returned at the symptom coordinate with 58.88%
 frame coverage, matching the two reference runs. This confirms the sampler
 collision as the cause of the missing fluid fragments.
 
-Next repeat the unchanged full M335 Release route with the marker disabled and
-sparse captures enabled. Confirm the normal water appearance through the same
-tail coordinates, then continue the separate streaming/readiness work. Keep
-readiness debt, M335 pixels, and periodic cold/new-world coverage as distinct
-acceptance lanes.
+M500 completed the unchanged full M335 Release route with the marker disabled
+and sparse framebuffer captures enabled. At camera X `-7292.84`, the ordinary
+water texture was visible in frames 098–099; the exact fog-navy pixel count was
+zero in both. The pre-fix M495 frames at nearby tail coordinates contained
+302,409 and 401,901 pixels of that exact color. This confirms the sampler fix
+in the normal rendered image at the reported end-of-flight location.
+
+M500's route completed 7,408 blocks at `5.19287` blocks/s and exited normally.
+The aggregate report still has `pass=false`: post-stop demand/readiness did not
+converge, and independent frame-time, emergence, and readiness gates failed.
+Do not count that as a full renderer acceptance pass. Continue the separate
+streaming/readiness work while preserving M335 pixels and periodic cold/new-
+world coverage as distinct acceptance lanes.
 
 M496 details, exact command, and raw artifact links are in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m496--fluid-framebuffer-witness-on-m335-2026-10-10).
@@ -6907,3 +6915,30 @@ the collision is corrected at sampler allocation.
 
 M497–M499 artifacts and exact invocations are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m497m499--sampler-collision-diagnosis-and-fix-2026-10-10).
+
+#### M500 checkpoint — full-route water confirmation after sampler fix (2026-10-10)
+
+M500 used the same cold `World_164` M335 route, visible Release application,
+start `[120,56,56]`, eye Y=70, yaw 180°, pitch −30°, 1,455-second no-teleport
+flight, and 15-second captures. The Release executable hash remained
+`22f81a904c3686ef66d0e36a1eeB16800D3D7FB584A74C75CE7743DCDA4E1CC7` from
+source `bed894df`. It traveled 7,408 blocks at `5.19287` blocks/s and exited
+with process code 0.
+
+At the reported tail location, M500 frames 098 and 099 were both at camera X
+`-7292.84`. They showed the blue water texture with no solid fog-navy region;
+an exact RGB `(13,38,89)` count returned zero pixels in each frame. Nearby
+pre-fix M495 frames 097 and 098 had 302,409 and 401,901 pixels of that color.
+The captures are readbacks of the game's default OpenGL framebuffer before
+swap, so they represent the rendered game image rather than desktop-composited
+window contents.
+
+The route and proxy adequacy gates passed, as did the visual-hole rate gate
+(3.93%, longest run 3 periods, full sample coverage). The report's aggregate
+`pass=false` is still material: post-stop demand convergence failed, the
+median not-ready count was 26.5, and separate frame-time/emergence/scheduling
+gates remain open. Water appearance is confirmed for this reproduction point;
+overall M335 renderer acceptance and cold/new-world coverage remain open.
+
+Artifacts and the exact M500 command are in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m500--full-m335-normal-view-verification-after-sampler-fix-2026-10-10).

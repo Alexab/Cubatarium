@@ -5420,5 +5420,45 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 ```
 
 M497, M498, and M499 also set the capture interval and camera-X limits above;
-M499 used Release source commit `60be076b`. The long post-fix M335 run must use
-the established start `[120,56,56]`, 1,455-second flight, and no marker.
+M499 used Release source commit `60be076b`. M500 is the full post-fix M335
+normal-view run documented below.
+
+### M500 — full M335 normal-view verification after sampler fix (2026-10-10)
+
+M500 repeated the established visible no-teleport M335 Release route on cold
+`World_164`, with the fragment marker and A/B overrides disabled. It traveled
+7,408 blocks at `5.19287` blocks/s and exited normally. The report marks the
+route and proxy adequacy as passed, but aggregate `pass=false` because of
+post-stop demand/readiness non-convergence and separate performance/scheduling
+gates.
+
+At the tail, frames 098 and 099 were captured at camera X `-7292.84`. The water
+texture was visible in both normal-view frames, with zero exact fog-navy
+`(13,38,89)` pixels. For comparison, M495 frames 097 and 098 near the same tail
+had 302,409 and 401,901 pixels of that color. The `FlightCapture` path reads
+back the default OpenGL framebuffer through a PBO before swap; these images do
+not include desktop windows composited over the game.
+
+Artifacts:
+
+- [M500 report](../../bin/suite_reports/engine_refactor/m500_world164_m335_water_sampler_fix_verify_20261010.json)
+- [M500 perf](../../bin/logs/perf_20261010-183955_49524.jsonl)
+- [M500 app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-183951.49524)
+- [M500 frame 098](../../bin/flight_captures/m500_world164_m335_water_sampler_fix_verify_20261010/frame_098.png), [frame 099](../../bin/flight_captures/m500_world164_m335_water_sampler_fix_verify_20261010/frame_099.png)
+- [M495 pre-fix frame 097](../../bin/flight_captures/m495_world164_capture_compare_20261010/frame_097.png), [frame 098](../../bin/flight_captures/m495_world164_capture_compare_20261010/frame_098.png)
+
+Exact standalone invocation:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m500_world164_m335_water_sampler_fix_verify_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='15'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FLIGHT_CAPTURE_MIN_X -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FLIGHT_CAPTURE_MAX_X -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m500_world164_m335_water_sampler_fix_verify_20261010 --report bin/suite_reports/engine_refactor/m500_world164_m335_water_sampler_fix_verify_20261010.json --process-timeout 7200
+```
