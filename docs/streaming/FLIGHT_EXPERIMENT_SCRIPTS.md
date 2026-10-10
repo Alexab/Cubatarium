@@ -4684,3 +4684,79 @@ Report: [M486 flight/analyzer report](../../bin/suite_reports/engine_refactor/m4
 perf trace: [JSONL](../../bin/logs/perf_20261009-204326_40832.jsonl);
 runner output: `bin/logs/m486_world164_m335_draw_state_20261009.stdout.log`.
 Raw artifacts remain local and out of Git.
+
+### M487 — low-instrumentation M335 timing control (2026-10-10)
+
+M487 repeated the established visible Release/no-teleport M335 route on
+`World_164` with the M486 executable and no dense pixels, screen-ray probes,
+GPU range witness, world-source traces, or screenshot capture. It completed
+normally (`process_rc=0`, no teleport), covered 7,456 blocks at 5.19287
+blocks/s, and held eye Y=70. The executable SHA-256 was
+`474753D80FAD94BED46B64CE3920FDBDE8757FF7FC7EBF8C2E2C0150231A7C20`; source
+tree was clean at `624856ee`. `world_data.json` was restored byte-for-byte to
+SHA-256 `0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`,
+and the fixed-day backup was removed.
+
+The analyzer remains red (`30/40` gates; post-stop demand convergence failed).
+It reports median fly wall time 16.20 ms (61.73 FPS), 5.27% red pressure, and
+one 312.47 ms maximum spike. The raw 742 period rows have median/p95 wall time
+16.20/22.58 ms, median/p95 streaming phase 6.55/11.15 ms, and median/p95
+transparent pass 2.97/5.92 ms. This is a useful quiet, low-instrumentation
+timing baseline, not evidence that all draw work is correct. The `visual_holes`
+mesh-coverage proxy was nonzero in 8 periods (1.08%); none were in the sampled
+corridor window, and post-stop camera-band mesh/visual-hole proxies were zero.
+The wider readiness stop-line still ended with two unresolved items and did
+not converge. These metrics are not framebuffer-pixel evidence.
+
+During M487 the operator reported that the visible scene had no water surface.
+M487 had no screenshot and no fluid-specific visible-draw counter, so the
+position and exact frame are unknown. `backend_fluid=gpu_fluid_surface`,
+nonzero transparent batches, and `scene_transparent_ms` only prove that the
+fluid-map provider and transparent pass were active; they do not prove that
+water faces were present in those batches or reached the framebuffer. A
+no-focus screenshot attempt was skipped because the game was not the foreground
+window; the capture helper that raises/focuses the window was not used.
+
+The user clarified that water looked normal during the day on 2026-10-09, but
+did not identify M486 as that known-good run. Therefore the visual regression
+window is not pinned to M486 or to a specific commit. Git history for
+2026-10-09 contains diagnostic/capture changes but no direct fluid-face or
+transparent-pass change. A conditional risk remains in `d706e401` (2026-09-20):
+all faces toward an `Unknown` neighbor, including fluid faces, are suppressed.
+That reverses `aa1b54d4` (2026-08-05), which fixed missing water sides by
+emitting liquid faces toward unloaded neighbors. Treat this as a testable
+residency/seam hypothesis, not as the established cause of today's report.
+
+M488 should repeat the same route and Release executable with
+`CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=1`, saving one frame every 30 seconds via
+the asynchronous capture path. This bypasses the desktop stencil-shell passes
+while keeping the transparent batches, shader, and opaque-depth guard. If water
+appears only in that run, investigate stencil/GL state and driver behavior; if
+not, add fluid-specific mesh/publish/transparent-command counts and inspect
+Unknown-neighbor face culling. This A/B distinguishes a transparent-pass state
+fault from a mesh/residency fault; it is not by itself a GPU-vendor comparison.
+
+Exact M487 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+$env:CUBA_GPU_PROCESS_PROFILE='0'
+$env:CUBA_GPU_PROCESS_PROFILE_PATH=''
+$env:CUBA_STAGE_WATCHDOG_PATH=''
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m487_world164_m335_low_trace_20261010 --report bin/suite_reports/engine_refactor/m487_world164_m335_low_trace_20261010.json --process-timeout 7200
+```
+
+Report: [M487 flight/analyzer report](../../bin/suite_reports/engine_refactor/m487_world164_m335_low_trace_20261010.json);
+perf trace: [JSONL](../../bin/logs/perf_20261010-093825_33492.jsonl);
+runner output: `bin/logs/m487_world164_m335_low_trace_20261010.stdout.log`.
+Raw artifacts remain local and out of Git.
