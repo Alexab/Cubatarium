@@ -7254,3 +7254,31 @@ from desktop screenshots.
 
 Artifacts and the exact M510 command are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m510--same-frame-mdi-draw-state-witness-at-hotspot-2026-10-10).
+
+#### M511 checkpoint — water source, submission, and framebuffer probe (2026-10-10)
+
+M511 used the established visible/no-teleport local route from X `-7215` to
+the western ocean tail. During the last measured flight frame at camera X
+`-7442`, the fluid source was block `575`; its normal transparent geometry
+was being submitted (105 fluid range draw calls in the corresponding period
+sample, including 35 shell-depth and 70 color-pass submissions). In that
+same-frame direct engine-framebuffer probe, 57 of 100 selected pixels
+intersected fluid triangles and all 57 had a final color different from the
+pre-transparent color. Across the bounded trace, 1,788 pixel rows intersected
+fluid triangles; 1,782 changed color after the transparent stage. This shows
+that water geometry and the transparent passes were active in the final
+measured flight frame; it does not prove that the user-reported appearance was
+correct.
+
+The diagnostic X minimum was `-7445`, but the post-flight camera settled at X
+`-7448`. Fluid telemetry and pixel probes are deliberately disabled outside
+their configured bounds, so the subsequent zeros at `-7448` are unmeasured
+state, not evidence of a rendering failure. M511 therefore covers the end of
+flight but misses the post-stop view where the symptom was reported. Repeat
+the exact segment with the bounds extended through `-7500`; retain direct
+framebuffer sampling and do not treat desktop captures as equivalent.
+
+The route passed input adequacy at the established `5.18555 blocks/s`; process
+exit was 0. The product analyzer exited 1 on its eye-proxy/readiness and other
+strict gates, so this is a diagnostic result, not product acceptance. Artifact
+and command details are in [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m511--water-endpoint-direct-framebuffer-probe-2026-10-10).

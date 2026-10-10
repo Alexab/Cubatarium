@@ -5812,3 +5812,50 @@ rules out a missing or stale mesh range and disabled depth state for the
 sampled rows; it does not establish fragment coverage or actual sampled atlas
 alpha. The analyzer's visual-hole proxy rate was 3/38 (0.07895), readiness
 debt 1.0, and near-black proxy rate 0. Water was outside this local segment.
+
+### M511 — water endpoint direct framebuffer probe (2026-10-10)
+
+Visible local no-teleport Release diagnostic on `World_164`, source `4350f0af`,
+executable SHA-256
+`EDAA57E843974A260492F91EA9AA5868AE61E5A025317FF243A82DFAE34B2DEA`.
+Start `-7215 56 56`, eye Y=70, yaw 180, pitch -30; 45 s flight, 20 s stop,
+15 s idle, minimum travel 150 blocks. It passed route adequacy at
+`5.18555 blocks/s` and 240 blocks of travel. Process exit was 0; the analyzer
+returned 1 because strict eye-proxy/readiness and other product gates failed.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m511_world164_water_endpoint_pixel_probe_20261010.json)
+- [perf JSONL, 147.5 MiB](../../bin/logs/perf_20261010-224031_3928.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-224027.3928)
+- [captures](../../bin/flight_captures/m511_world164_water_endpoint_pixel_probe_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7445'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7445'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m511_world164_water_endpoint_pixel_probe_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7445'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m511_world164_water_endpoint_pixel_probe_20261010 --report bin/suite_reports/engine_refactor/m511_world164_water_endpoint_pixel_probe_20261010.json --process-timeout 900
+```
+
+The trace contained 13,624 direct pixel rows; 1,788 intersected fluid block
+575 triangles and 1,782 of those changed color after the transparent stage.
+At the last pixel-probed flight position, camera X `-7442`, 57/100 samples
+hit fluid geometry and all 57 changed color. Fluid submissions at that
+position were 105 total (35 shell-depth, 70 color). The configured diagnostic
+minimum was `-7445`, while the post-flight camera ended at `-7448`; values
+outside the bound are not measurements. Extend the same bounds for the next
+run to include the post-stop endpoint.
