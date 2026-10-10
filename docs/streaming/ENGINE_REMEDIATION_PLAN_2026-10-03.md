@@ -7073,3 +7073,40 @@ route.
 
 Artifacts and exact route/capture settings are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m505--full-m335-after-the-worldcore-peer-debt-guard-2026-10-10).
+
+#### M506–M507 checkpoint — coordinator peer-debt retry guard (2026-10-10)
+
+M506 paired the first shared guard against the same visible local segment. It
+traveled 240 blocks at `5.18555` blocks/s, but still emitted 276
+`PriorityChunkEmergeRepair` revision bumps; 231 were peer-only debt. That
+failure showed that gating only the SoftDefer-empty ownership loop did not
+cover the coordinator's nearest-miss, carve, underfeet, and stuck-witness
+repair paths.
+
+M507 applied the same current-publication predicate to those remaining generic
+repair admissions. The paired trace fell to 41 `PriorityChunkEmergeRepair`
+bumps, and all 41 had zero face-debt mask; peer-only bumps fell from 231 to
+zero. `PriorityWorldCoreRepair` also fell from 5 to 1. The remaining bumps
+target slices with no recorded face debt and are not suppressed by this
+specific guard; they need their own geometry/ownership diagnosis before being
+classified as redundant. Route speed and travel stayed correct at 240 blocks
+and `5.18555` blocks/s.
+
+M507's stop segment had zero missing-mesh and visual-hole samples, but broad
+readiness did not converge: `focus_not_render_ready` ended at 34 and pending
+light idle debt at 10. The suite still failed independent scheduling, frame
+time, and readiness gates. Its final framebuffer capture shows a blue water
+surface around an island; this remains a readback, not a direct comparison to
+the operator's live window. The patch fixes the measured stable peer-debt
+revision loop, not the whole streaming/rendering backlog.
+
+Next: run the unchanged full M335 route on this revision with the opt-in
+occupancy census and sparse captures across the route. Join every
+`visual_holes` period to its missing-slice witness, solid/air census, demand
+owner and GPU publication state. Keep the water report open if the saved
+framebuffer still differs from the live display. Separately profile the
+remaining 24.6-ms full-flight wall median and emergence-classified spikes; do
+not trade the peer-debt fix for lower counters without preserving geometry.
+
+M506 and M507 reports, traces, captures, and exact commands are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m506m507--coordinator-peer-debt-retry-guard-2026-10-10).
