@@ -852,6 +852,16 @@ struct PhysicsTelemetry
   int MissCy{0};
   int MissCz{0};
   int MissHoriz{0};
+  /// Exact nearest-miss column owner/state snapshot for renderer triage.
+  /// Ticket kind and job stage are -1 when no focus miss was sampled.
+  int FocusMissFlowTicketKind{-1};
+  int FocusMissFlowTicketPriority{0};
+  int FocusMissColumnJobStage{-1};
+  int FocusMissMeshDirty{0};
+  int FocusMissBuildInFlight{0};
+  int FocusMissPendingGpuApply{0};
+  int FocusMissDrawableMesh{0};
+  int FocusMissSatisfyingMesh{0};
   /// Current miss witness came from a camera screen-ray opaque voxel hit.
   int MissScreenRayCandidate{0};
   /// Count of focus columns with mesh but no sky light sample.

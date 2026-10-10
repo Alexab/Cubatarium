@@ -4986,10 +4986,16 @@ path; the trace itself remains intrusive, so provenance runs must still be
 compared separately from quiet timing runs.
 
 The app INFO log recorded `framebuffer_stencil_bits=-1` and selected the
-single-pass fallback. Since a negative bit count is not a valid stencil-plane
-count, M492's one-time diagnostic now records query errors, draw framebuffer,
-and framebuffer status, and runs only once even when the result is invalid.
-This is diagnostic evidence only; no M491 water observation was recorded.
+single-pass fallback. M492 proved the query itself was invalid:
+`glGetIntegerv(GL_STENCIL_BITS)` returned `GL_INVALID_ENUM` (1280) in the
+OpenGL Core context, while draw framebuffer 0 reported complete status
+36053 and no prior GL errors. This is a removed context-framebuffer query in
+Core, not evidence that the framebuffer lacks a stencil plane. The pipeline
+now queries the default framebuffer's `GL_STENCIL` attachment (or an FBO's
+`GL_STENCIL_ATTACHMENT`) and reads its attachment stencil size. M493 must verify
+that the corrected query returns a valid attachment size before interpreting
+the selected transparent path. The probe remains diagnostic; water visibility
+still requires a fluid-specific draw chain and live observation.
 
 Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m491_world164_m335_column_source_20261010.json),
 [source analysis](../../bin/suite_reports/engine_refactor/m491_source_trace_20261010.json),
@@ -5015,4 +5021,59 @@ $env:CUBATARIUM_RELIGHT_AUDIT='0'
 $env:CUBA_FLIGHT_CAPTURE_DIR=''
 Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m491_world164_m335_column_source_20261010 --report bin/suite_reports/engine_refactor/m491_world164_m335_column_source_20261010.json --process-timeout 7200
+```
+
+### M492 — quiet M335 with invalid Core stencil query isolated (2026-10-10)
+
+M492 used the same visible fixed-day, no-teleport M335 route as M490/M491, with
+all high-volume source, save, visual, GPU-range, and unload traces disabled.
+The Release binary was the committed `f3039eba412ab3d5f6d53d14b31c911af4ba600a`
+build (SHA256
+`FF7F6C2EA6C3D253D97CC15DC1527B268DE00AE17005EE5BED8558B8B265A7FF`). The
+flight process exited normally and reached 7,408 blocks at 5.19287 blocks/s;
+741 periods were recorded (739 steady), with a 16.033 ms median wall frame.
+Route completion and the empty-world stop line passed. The A24 mesh-coverage
+proxy failed in 8 periods, all outside the control corridor; the eye-proxy
+stop line passed. Post-stop convergence failed because readiness debt, pending
+work, and focus dirty work did not converge. These remain readiness/mesh
+proxies, not direct evidence of a blank framebuffer. The report's overall gate
+therefore failed even though the route completed.
+
+The far-west segment exposed a separate severe frame-time anomaly. Near focus
+`cx=-439`, one sample had `render_total_ms=925.402`, `wall_ms=1006.92`, but
+`swap_wait_ms=0.125`, `scene_ms=4.175`, `prepare_frame_ms=0.479`,
+`post_scene_ms=0.609`, and `gui_overlay_ms=0.002`. Similar render stalls
+occurred around `cx=-436..-447`, despite little measured streaming work in
+several of those samples. This does not identify a driver, GPU, or scene root
+cause. The existing render timers leave the early `RenderFrame` setup
+(framebuffer/viewport/depth state and camera viewport update) unaccounted, so
+the next run adds `render_frame_setup_ms` to isolate that interval.
+
+The live operator reported the water surface was present in the current run;
+this is kept separate from automated evidence because captured images have
+previously disagreed with the live display.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m492_world164_m335_quiet_stderr_stencil_diag_20261010.json),
+[perf trace](../../bin/logs/perf_20261010-130132_9848.jsonl), and app INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-130130.9848`.
+The report records the M492 binary hash and source revision. `world_data.json`
+was restored byte-for-byte to SHA
+`0ade40413ad4172777a59c2573809ed415AC19DEE2F30C8500C737AC5EC2D344`.
+
+Exact M492 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m492_world164_m335_quiet_stderr_stencil_diag_20261010 --report bin/suite_reports/engine_refactor/m492_world164_m335_quiet_stderr_stencil_diag_20261010.json --process-timeout 7200
 ```

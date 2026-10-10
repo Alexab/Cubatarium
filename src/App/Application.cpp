@@ -2260,6 +2260,12 @@ void UApplication::NotifyAllScreensMetricsChanged(const GuiMetrics &metrics)
 
 void UApplication::RenderFrame(int width, int height, double viewDuration)
 {
+  const auto render_frame_begin = std::chrono::high_resolution_clock::now();
+  if (World)
+  {
+    World->SetLastRenderFrameSetupMs(0.0);
+  }
+
   const auto notifyViewport = [&](UGuiScreenBase *screen)
   {
     if (screen)
@@ -2299,6 +2305,10 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     {
       camera->SetViewportSize(width, height);
     }
+    World->SetLastRenderFrameSetupMs(
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - render_frame_begin)
+            .count());
     const auto prepare_begin = std::chrono::high_resolution_clock::now();
     Geometry->PrepareFrameRendering();
     const glm::vec4 clearColor = Geometry->GetSkyColor();

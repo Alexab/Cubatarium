@@ -7476,6 +7476,38 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Phase 5.3.0: latch empty backlog / abort drip + DetectEmptyBatchEvent.
   {
     auto &pt = world.GetPhysicsTelemetryMutable();
+    pt.FocusMissFlowTicketKind = -1;
+    pt.FocusMissFlowTicketPriority = 0;
+    pt.FocusMissColumnJobStage = -1;
+    pt.FocusMissMeshDirty = 0;
+    pt.FocusMissBuildInFlight = 0;
+    pt.FocusMissPendingGpuApply = 0;
+    pt.FocusMissDrawableMesh = 0;
+    pt.FocusMissSatisfyingMesh = 0;
+    if (pt.FocusMissingMesh > 0)
+    {
+      const glm::ivec3 miss_chunk(pt.MissCx, pt.MissCy, pt.MissCz);
+      const glm::ivec2 miss_column(pt.MissCx, pt.MissCz);
+      auto &column_flow = GetColumnFlowExecutor();
+      ColumnWorkItem ticket{};
+      if (column_flow.Scheduler().GetLiveTicket(miss_column, ticket))
+      {
+        pt.FocusMissFlowTicketKind = static_cast<int>(ticket.kind);
+        pt.FocusMissFlowTicketPriority = ticket.priority;
+      }
+      pt.FocusMissColumnJobStage = static_cast<int>(
+          column_flow.GetColumnJobStage(miss_column));
+      pt.FocusMissMeshDirty =
+          mesh_service.IsChunkMeshDirty(miss_chunk) ? 1 : 0;
+      pt.FocusMissBuildInFlight =
+          mesh_service.HasInflightMeshBuild(miss_chunk) ? 1 : 0;
+      pt.FocusMissPendingGpuApply =
+          mesh_service.IsPendingGpuApply(miss_chunk) ? 1 : 0;
+      pt.FocusMissDrawableMesh =
+          mesh_service.HasDrawableGreedyMesh(miss_chunk) ? 1 : 0;
+      pt.FocusMissSatisfyingMesh =
+          mesh_service.HasMeshSatisfyingColumnReady(miss_chunk) ? 1 : 0;
+    }
     pt.EmptyBacklogN = EmptyBacklogN(pt);
     pt.PhaseAbortHeavy = phase_abort_heavy ? 1 : 0;
     pt.AbortScheduleFinal = mesh_schedule;

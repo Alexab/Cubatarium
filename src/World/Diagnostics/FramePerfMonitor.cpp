@@ -338,6 +338,7 @@ struct FrameNumbers
   int edit_light_emission{0};
   double edit_to_first_mesh_ms{0.0};
   double fast_relight_ms{0.0};
+  double render_frame_setup_ms{0.0};
   double prepare_frame_ms{0.0};
   double post_scene_ms{0.0};
   double gui_overlay_ms{0.0};
@@ -874,6 +875,14 @@ struct FrameNumbers
   int miss_cy{0};
   int miss_cz{0};
   int miss_horiz{0};
+  int focus_miss_flow_ticket_kind{-1};
+  int focus_miss_flow_ticket_priority{0};
+  int focus_miss_column_job_stage{-1};
+  int focus_miss_mesh_dirty{0};
+  int focus_miss_build_in_flight{0};
+  int focus_miss_pending_gpu_apply{0};
+  int focus_miss_drawable_mesh{0};
+  int focus_miss_satisfying_mesh{0};
   int miss_screen_ray_candidate{0};
   int post_load_ring_not_ready{0};
   int enter_game_warmup_missing_greedy{0};
@@ -1231,6 +1240,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.fast_relight_ms =
       (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0) ? phys.FastRelightMs
                                                             : 0.0;
+  n.render_frame_setup_ms = world.GetLastRenderFrameSetupMs();
   n.prepare_frame_ms = world.GetLastPrepareFrameMs();
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
@@ -1750,6 +1760,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.miss_cy = phys.MissCy;
   n.miss_cz = phys.MissCz;
   n.miss_horiz = phys.MissHoriz;
+  n.focus_miss_flow_ticket_kind = phys.FocusMissFlowTicketKind;
+  n.focus_miss_flow_ticket_priority = phys.FocusMissFlowTicketPriority;
+  n.focus_miss_column_job_stage = phys.FocusMissColumnJobStage;
+  n.focus_miss_mesh_dirty = phys.FocusMissMeshDirty;
+  n.focus_miss_build_in_flight = phys.FocusMissBuildInFlight;
+  n.focus_miss_pending_gpu_apply = phys.FocusMissPendingGpuApply;
+  n.focus_miss_drawable_mesh = phys.FocusMissDrawableMesh;
+  n.focus_miss_satisfying_mesh = phys.FocusMissSatisfyingMesh;
   n.miss_screen_ray_candidate = phys.MissScreenRayCandidate;
   n.focus_dark_mesh = phys.FocusDarkMesh;
   n.focus_provisional_light_preview = phys.FocusProvisionalLightPreview;
@@ -2230,6 +2248,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"edit_light_emission\":" << n.edit_light_emission
           << ",\"edit_to_first_mesh_ms\":" << n.edit_to_first_mesh_ms
           << ",\"fast_relight_ms\":" << n.fast_relight_ms
+          << ",\"render_frame_setup_ms\":" << n.render_frame_setup_ms
           << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
           << ",\"post_scene_ms\":" << n.post_scene_ms
           << ",\"gui_overlay_ms\":" << n.gui_overlay_ms
@@ -2866,6 +2885,22 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"miss_cy\":" << n.miss_cy
           << ",\"miss_cz\":" << n.miss_cz
           << ",\"miss_horiz\":" << n.miss_horiz
+          << ",\"focus_miss_flow_ticket_kind\":"
+          << n.focus_miss_flow_ticket_kind
+          << ",\"focus_miss_flow_ticket_priority\":"
+          << n.focus_miss_flow_ticket_priority
+          << ",\"focus_miss_column_job_stage\":"
+          << n.focus_miss_column_job_stage
+          << ",\"focus_miss_mesh_dirty\":"
+          << n.focus_miss_mesh_dirty
+          << ",\"focus_miss_build_in_flight\":"
+          << n.focus_miss_build_in_flight
+          << ",\"focus_miss_pending_gpu_apply\":"
+          << n.focus_miss_pending_gpu_apply
+          << ",\"focus_miss_drawable_mesh\":"
+          << n.focus_miss_drawable_mesh
+          << ",\"focus_miss_satisfying_mesh\":"
+          << n.focus_miss_satisfying_mesh
           << ",\"miss_screen_ray_candidate\":"
           << n.miss_screen_ray_candidate
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh

@@ -100,28 +100,80 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
     GLint draw_framebuffer = -1;
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
     const GLenum framebuffer_binding_error = glGetError();
-    glGetIntegerv(GL_STENCIL_BITS, &stencil_bits);
-    const GLenum stencil_query_error = glGetError();
     const GLenum framebuffer_status =
         glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
     const GLenum framebuffer_status_error = glGetError();
+    const GLenum stencil_attachment =
+        draw_framebuffer == 0 ? GL_STENCIL : GL_STENCIL_ATTACHMENT;
+    GLint stencil_attachment_object_type = GL_NONE;
+    GLenum stencil_object_type_query_error = GL_NO_ERROR;
+    GLenum stencil_query_error = GL_NO_ERROR;
+    if (framebuffer_status_error == GL_NO_ERROR &&
+        framebuffer_status == GL_FRAMEBUFFER_COMPLETE)
+    {
+      // GL_STENCIL_BITS is a removed context-framebuffer query in the core
+      // profile. Query the bound framebuffer attachment instead; the default
+      // framebuffer uses GL_STENCIL while FBOs use GL_STENCIL_ATTACHMENT.
+      glGetFramebufferAttachmentParameteriv(
+          GL_DRAW_FRAMEBUFFER, stencil_attachment,
+          GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+          &stencil_attachment_object_type);
+      stencil_object_type_query_error = glGetError();
+      if (stencil_object_type_query_error == GL_NO_ERROR)
+      {
+        if (stencil_attachment_object_type == GL_NONE)
+        {
+          stencil_bits = 0;
+        }
+        else
+        {
+          glGetFramebufferAttachmentParameteriv(
+              GL_DRAW_FRAMEBUFFER, stencil_attachment,
+              GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE, &stencil_bits);
+          stencil_query_error = glGetError();
+        }
+      }
+    }
 
     const bool query_ok =
         prior_gl_errors < kMaxPriorGlErrorsToDrain &&
         framebuffer_binding_error == GL_NO_ERROR &&
+        stencil_object_type_query_error == GL_NO_ERROR &&
         stencil_query_error == GL_NO_ERROR &&
         framebuffer_status_error == GL_NO_ERROR &&
         framebuffer_status == GL_FRAMEBUFFER_COMPLETE && stencil_bits >= 0;
     framebuffer_has_stencil = query_ok && stencil_bits > 0;
-    const char *reason =
-        !query_ok
-            ? "query_invalid_or_framebuffer_incomplete"
-            : (stencil_bits == 0 ? "no_stencil_attachment" : "stencil_available");
+    const char *reason = "stencil_available";
+    if (framebuffer_binding_error != GL_NO_ERROR ||
+        framebuffer_status_error != GL_NO_ERROR ||
+        stencil_object_type_query_error != GL_NO_ERROR ||
+        stencil_query_error != GL_NO_ERROR ||
+        prior_gl_errors >= kMaxPriorGlErrorsToDrain)
+    {
+      reason = "stencil_query_invalid";
+    }
+    else if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE)
+    {
+      reason = "framebuffer_incomplete";
+    }
+    else if (stencil_bits < 0)
+    {
+      reason = "stencil_query_invalid";
+    }
+    else if (stencil_bits == 0)
+    {
+      reason = "no_stencil_attachment";
+    }
 
     CubatariumLogInfo(
         "Transparent",
         "framebuffer_stencil_bits=" + std::to_string(stencil_bits) +
             " draw_framebuffer=" + std::to_string(draw_framebuffer) +
+            " stencil_attachment=" +
+            (draw_framebuffer == 0 ? "default" : "fbo") +
+            " stencil_attachment_object_type=" +
+            std::to_string(static_cast<unsigned int>(
+                stencil_attachment_object_type)) +
             " framebuffer_status=" +
             std::to_string(static_cast<unsigned int>(framebuffer_status)) +
             " prior_gl_errors=" + std::to_string(prior_gl_errors) +
@@ -129,6 +181,9 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
             std::to_string(static_cast<unsigned int>(framebuffer_binding_error)) +
             " stencil_query_error=" +
             std::to_string(static_cast<unsigned int>(stencil_query_error)) +
+            " stencil_object_type_query_error=" +
+            std::to_string(static_cast<unsigned int>(
+                stencil_object_type_query_error)) +
             " framebuffer_status_error=" +
             std::to_string(static_cast<unsigned int>(framebuffer_status_error)) +
             " path=" +
