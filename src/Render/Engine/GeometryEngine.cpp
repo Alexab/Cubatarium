@@ -4442,19 +4442,72 @@ bool EnvironmentFlagEnabled(const char *name)
   return value != nullptr && value[0] != '\0' && value[0] != '0';
 }
 
-bool FluidRenderTraceEnabled()
+struct FluidRenderDiagnosticWindow
+{
+  bool enabled = false;
+  bool valid = true;
+  float min_x = -std::numeric_limits<float>::infinity();
+  float max_x = std::numeric_limits<float>::infinity();
+};
+
+const FluidRenderDiagnosticWindow &GetFluidRenderDiagnosticWindow()
+{
+  static const FluidRenderDiagnosticWindow window = []
+  {
+    FluidRenderDiagnosticWindow result{};
+    const auto read_bound = [&](const char *name, float &bound)
+    {
+      const char *value = std::getenv(name);
+      if (value == nullptr || value[0] == '\0')
+      {
+        return false;
+      }
+      char *end = nullptr;
+      bound = std::strtof(value, &end);
+      if (end == value || *end != '\0' || !std::isfinite(bound))
+      {
+        result.valid = false;
+      }
+      return true;
+    };
+    const bool has_min = read_bound("CUBA_FLUID_RENDER_MIN_X", result.min_x);
+    const bool has_max = read_bound("CUBA_FLUID_RENDER_MAX_X", result.max_x);
+    result.enabled = has_min || has_max;
+    if (result.min_x > result.max_x)
+    {
+      result.valid = false;
+    }
+    return result;
+  }();
+  return window;
+}
+
+bool FluidRenderDiagnosticWindowContains(const glm::vec3 &camera_position)
+{
+  const FluidRenderDiagnosticWindow &window =
+      GetFluidRenderDiagnosticWindow();
+  if (!window.enabled)
+  {
+    return true;
+  }
+  return window.valid && std::isfinite(camera_position.x) &&
+         camera_position.x >= window.min_x &&
+         camera_position.x <= window.max_x;
+}
+
+bool FluidRenderTraceEnabled(const glm::vec3 &camera_position)
 {
   static const bool enabled = EnvironmentFlagEnabled("CUBA_FLUID_RENDER_TRACE") ||
                               EnvironmentFlagEnabled(
                                   "CUBA_DEBUG_FLUID_FRAGMENT_MARKER");
-  return enabled;
+  return enabled && FluidRenderDiagnosticWindowContains(camera_position);
 }
 
-bool DebugFluidFragmentMarkerEnabled()
+bool DebugFluidFragmentMarkerEnabled(const glm::vec3 &camera_position)
 {
   static const bool enabled =
       EnvironmentFlagEnabled("CUBA_DEBUG_FLUID_FRAGMENT_MARKER");
-  return enabled;
+  return enabled && FluidRenderDiagnosticWindowContains(camera_position);
 }
 
 } // namespace
@@ -4498,12 +4551,14 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   }
   greedyShader->SetFloat("uLightPreviewOverride", 0.0f);
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
+  glm::vec3 camera_position(0.0f);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
+    camera_position = camera->GetPosition();
     // alphaCutout here is shader discard mode (GPF5 merges solid+cutout), not
     // a dedicated cutout-only pass — still apply underwater fog to opaque.
     ApplyFogUniforms(
-        greedyShader, camera->GetPosition(),
+        greedyShader, camera_position,
         cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass,
                                                 /*alpha_cutout=*/false));
   }
@@ -4515,11 +4570,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   uint64_t draw_cmds = 0;
   uint64_t fluid_draw_calls = 0;
   uint64_t fluid_draw_indices = 0;
-  const bool fluid_trace = transparentPass && FluidRenderTraceEnabled() &&
+  const bool fluid_trace = transparentPass &&
+                           FluidRenderTraceEnabled(camera_position) &&
                            WorldInstance != nullptr;
   const bool fluid_marker =
       transparentPass && mode == GreedyShaderMode::TransparentColor &&
-      DebugFluidFragmentMarkerEnabled() && WorldInstance != nullptr;
+      DebugFluidFragmentMarkerEnabled(camera_position) &&
+      WorldInstance != nullptr;
   const auto is_fluid_block = [&](BlockId block_id)
   {
     return fluid_trace && WorldInstance->GetBlockRegistry().GetRenderStyle(
@@ -5907,12 +5964,14 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     OpaqueDepthCapture.Bind();
   }
   OpaqueDepthCapture.ApplyShaderUniforms(packedGreedyShader, opaque_depth_guard);
+  glm::vec3 camera_position(0.0f);
   if (WorldInstance)
   {
     if (auto camera = WorldInstance->GetCurrentUserCamera())
     {
+      camera_position = camera->GetPosition();
       ApplyFogUniforms(
-          packedGreedyShader, camera->GetPosition(),
+          packedGreedyShader, camera_position,
           cutum::ShouldApplyBelowSurfaceFogToPass(transparent_pass, false));
     }
     ApplyGreedyEnvironmentUniforms(packedGreedyShader);
@@ -5927,10 +5986,12 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   uint64_t fluid_draw_calls = 0;
   uint64_t fluid_draw_indices = 0;
   const bool fluid_trace =
-      transparent_pass && FluidRenderTraceEnabled() && WorldInstance != nullptr;
+      transparent_pass && FluidRenderTraceEnabled(camera_position) &&
+      WorldInstance != nullptr;
   const bool fluid_marker =
       transparent_pass && mode == GreedyShaderMode::TransparentColor &&
-      DebugFluidFragmentMarkerEnabled() && WorldInstance != nullptr;
+      DebugFluidFragmentMarkerEnabled(camera_position) &&
+      WorldInstance != nullptr;
   for (const GpuPackedChunkRef &chunk : chunk_refs)
   {
     PackedOpaqueDrawTrace *trace =
@@ -6097,7 +6158,7 @@ void UGeometryEngine::PrepareTransparent(
     const GreedyTransparentDrawContext &ctx)
 {
   PreparedTransparentCache = &ctx.cache;
-  const bool fluid_trace = FluidRenderTraceEnabled();
+  const bool fluid_trace = FluidRenderTraceEnabled(ctx.cameraPos);
   if (WorldInstance)
   {
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
