@@ -5,9 +5,11 @@
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Pipeline/TransparentPass.h"
 
+#include "App/Platform/Log.h"
 #include "Render/GlIncludes.h"
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 namespace cutum
 {
@@ -89,10 +91,11 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
   if (!logged_stencil_path)
   {
     logged_stencil_path = true;
-    std::clog << "[Transparent] framebuffer_stencil_bits=" << stencil_bits
-              << " path="
-              << (stencil_bits > 0 ? "desktop-shell" : "single-pass-fallback")
-              << std::endl;
+    CubatariumLogInfo(
+        "Transparent",
+        "framebuffer_stencil_bits=" + std::to_string(stencil_bits) +
+            " path=" +
+            (stencil_bits > 0 ? "desktop-shell" : "single-pass-fallback"));
   }
 
   // The desktop shell algorithm relies on the first pass writing stencil=1

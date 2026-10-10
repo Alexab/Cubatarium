@@ -4861,3 +4861,68 @@ Reports: [M488](../../bin/suite_reports/engine_refactor/m488_world164_m335_stenc
 [M489](../../bin/suite_reports/engine_refactor/m489_world164_m335_baseline_repeat_20261010.json).
 Runner logs and PNGs are in their corresponding `bin/logs/<phase>/` directories;
 raw artifacts remain local and out of Git.
+
+### M490 — low-trace M335 with framebuffer-stencil fallback guard (2026-10-10)
+
+M490 repeated the established visible Release/no-teleport M335 route on
+`World_164`, using the build from `002787fc` (`Cubatarium.exe` SHA-256
+`50cb2a0fb7e41bfbe2815092d75203c192d3fe126878f5b074605e9f2889430b`). It kept
+renderer/source/save tracing and frame capture disabled. The run used the
+default desktop transparent path; the code queried `GL_STENCIL_BITS` and
+selected the existing single-pass fallback only when the active framebuffer
+reported zero stencil bits. This fallback is defensive behavior, not an
+established cause or fix for the intermittent water observation.
+
+The application exited normally (`process_rc=0`, `hang_killed=false`), reached
+7,456 blocks at 5.19287 blocks/s with eye Y=70, and passed route completion.
+Median fly-frame time was 14.8833 ms. The analyzer reported 742 periods (740
+steady, 18 spikes). Its mesh-coverage proxy `visual_holes_rate` was 1.49% with
+full sample coverage; 11 periods had nonzero near-focus mesh holes, including
+one in the control corridor, so the A24 safety line failed. This is a mesh
+readiness/coverage proxy and does not establish that the operator saw a blank
+framebuffer area. The empty-world stop line passed (`opaque_cmd_on` median 212,
+minimum 60), which argues against an actually empty opaque draw set. The
+post-stop convergence gate failed: the ending readiness/missing count reached
+6 and several debt/trend counters did not settle. No full-dark no-ticket stop
+samples were reported. The report's water visibility remains unclassified:
+there was no fluid-specific draw counter and no captured visual evidence.
+
+Other failed analyzer gates were `post_load_ring_not_ready_eq_0`,
+`miss_stuck_max_run_sec_le_4`, `opaque_idle_churn_max_le_120`,
+`emerge_spike_frac_le_0_05`, `mesh_schedule_retry_after_capture_gt_0`,
+`witness_latch_diet_share_ge_0_70`, `effective_holes_blink_rate_le_0_05`,
+`policy_headers_have_budget`, `attribution_scene_self_ratio_le_0_10`, and
+`stream_phase_ms_le_5`. These include instrumentation/policy gates; they are
+not all independent correctness failures.
+
+M490 did not enable `CUBA_WORLD_COLUMN_SOURCE_TRACE`, so its manifest does not
+classify columns as disk-loaded versus procedural misses. The initial legacy
+chunk-file scan found no legacy chunk files, but that is not evidence that the
+column store was cold or that the whole route generated from scratch. The run
+also generated terrain at its far-west edge, which confirms procedural work
+occurred there but does not identify the source for every traversed column.
+The runtime stencil-bit value did not land in the structured app INFO log; the
+follow-up change routes that one-time diagnostic through `CubatariumLogInfo`
+so the next run records it with the normal app log.
+
+Exact M490 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m490_world164_m335_stencil_guard_20261010 --report bin/suite_reports/engine_refactor/m490_world164_m335_stencil_guard_20261010.json --process-timeout 7200
+```
+
+Report: [M490 flight/analyzer report](../../bin/suite_reports/engine_refactor/m490_world164_m335_stencil_guard_20261010.json).
+The perf stream and app INFO log are in `bin/logs/`; raw artifacts remain local
+and out of Git.

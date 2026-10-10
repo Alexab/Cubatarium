@@ -6506,3 +6506,60 @@ remain open.**
 
 M487–M489 artifacts and exact invocations are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m487--low-instrumentation-m335-timing-control-2026-10-10).
+
+#### Updated remaining work after M490
+
+1. Keep M335 as the repeatable visual/streaming lane. M490 reached 7,456 blocks
+   at the established 5.19 blocks/s and passed route completion, but A24 found
+   near-focus mesh-coverage proxy holes in 11 periods (one in the control
+   corridor), and post-stop convergence ended with a missing/readiness count of
+   6. The empty-world stop line passed, with a median of 212 opaque commands on
+   and a minimum of 60. These readings indicate intermittent mesh/readiness
+   debt, not a confirmed visually blank chunk. Keep operator observation
+   separate from proxy gates.
+2. Run M491 on the same fixed-day `World_164` route and same camera/profile with
+   `CUBA_WORLD_COLUMN_SOURCE_TRACE=1` and
+   `CUBA_WORLD_COLUMN_SAVE_TRACE=1`. Use the source lifecycle analyzer on every
+   INFO log part for that PID, plus its x/z-binned comparison tool. Determine
+   disk-hit, disk-miss/procedural, cancellation, worker queue, apply, and save
+   outcomes along the route. This is a provenance experiment; compare its
+   performance separately from quiet M490 because verbose tracing adds cost.
+   Keep framebuffer captures disabled until their color/composition mismatch is
+   explained.
+3. Record the framebuffer's actual `GL_STENCIL_BITS` and chosen transparent
+   path from the app INFO log. The fallback guard exists only for a framebuffer
+   with no stencil attachment. M490's metric report did not carry the queried
+   value, so the one-time diagnostic now goes through the structured app
+   logger. Do not infer the intermittent water symptom from this guard; no
+   water-specific mesh-to-draw evidence was collected.
+4. Investigate stop-tail readiness debt independently of flight-route
+   completion. M490 passed the route but failed the convergence gates
+   (`post_stop_missing_zero`, effective-debt zero/trend, not-ready trend, focus
+   dirty trend, and demand stop convergence). Identify the exact owners and
+   ages of the ending six misses before changing scheduling or unload policy.
+5. Preserve the A24 near-focus failures in the report. Separate whole-route
+   proxy hits from the control-corridor subset and require direct live visual
+   confirmation before labeling them as framebuffer holes. M490 had one
+   corridor period with a nonzero proxy; the final app log had
+   `visual_holes=0` while six chunks remained `unfinished/not_ready`.
+6. Continue the water investigation with a focused counter chain: fluid
+   occupancy, emitted faces, transparent batch membership, selected pass,
+   depth/stencil state, submitted fluid draw, and framebuffer coverage. The
+   M487–M490 runs still do not classify missing versus present water at the
+   fluid-draw level. Do not use generic transparent batch totals as a proxy for
+   water.
+7. After the repeatable lane classifies source provenance and has a stable
+   stop-tail interpretation, resume the periodic cold/new-world lane to check
+   whether storage/cache history changes the behavior. Keep it secondary to
+   matched M335 repeats.
+
+Plan status: **the M335 route/speed is still repeatable and M490 completed
+normally, but A24 mesh-coverage proxy and stop-tail convergence gates remain
+open. The current evidence does not establish a visually blank chunk, a cold
+procedural-only route, or a stencil cause for water disappearance. Next run is
+M491, with column source/save lifecycle tracing and a structured stencil-path
+diagnostic. Water-specific draw evidence and a later cold/new-world check
+remain outstanding.**
+
+M490 artifacts and exact invocation are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m490--low-trace-m335-with-framebuffer-stencil-fallback-guard-2026-10-10).
