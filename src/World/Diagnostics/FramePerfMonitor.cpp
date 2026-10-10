@@ -5157,6 +5157,14 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_voxel_mesh_ray_projected_delta_x
                  << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_y\":"
                  << r.renderer_pixel_voxel_mesh_ray_projected_delta_y
+                 << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_x\":"
+                 << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x
+                 << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_y\":"
+                 << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y
+                 << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_x\":"
+                 << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x
+                 << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_y\":"
+                 << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y
                  << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_delta\":"
                  << r.renderer_pixel_voxel_mesh_ray_projected_depth_delta
                  << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_would_pass\":"
@@ -5684,6 +5692,14 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_voxel_mesh_ray_projected_delta_x
                << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_y\":"
                << r.renderer_pixel_voxel_mesh_ray_projected_delta_y
+               << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_x\":"
+               << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x
+               << ",\"renderer_pixel_voxel_mesh_ray_origin_projected_delta_y\":"
+               << r.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y
+               << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_x\":"
+               << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x
+               << ",\"renderer_pixel_voxel_mesh_ray_direction_projected_delta_y\":"
+               << r.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y
                << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_delta\":"
                << r.renderer_pixel_voxel_mesh_ray_projected_depth_delta
                << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_would_pass\":"

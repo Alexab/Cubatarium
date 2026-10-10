@@ -2030,6 +2030,41 @@ void CaptureTransparentPixelProbe(
               record.renderer_pixel_voxel_mesh_ray_intersects = 1;
               record.renderer_pixel_voxel_mesh_ray_distance =
                   voxel_mesh_ray_distance;
+              const float sample_x =
+                  static_cast<float>(viewport[0] + local_x) + 0.5f;
+              const float sample_y =
+                  static_cast<float>(viewport[1] + local_y) + 0.5f;
+              const auto record_ray_projection_delta =
+                  [&](const glm::vec3 &point, float &delta_x,
+                      float &delta_y) {
+                    const glm::vec4 clip =
+                        view_projection * glm::vec4(point, 1.0f);
+                    if (std::abs(clip.w) <= 1e-6f)
+                    {
+                      return;
+                    }
+                    const float inverse_w = 1.0f / clip.w;
+                    const float projected_ndc_x = clip.x * inverse_w;
+                    const float projected_ndc_y = clip.y * inverse_w;
+                    const float projected_x =
+                        static_cast<float>(viewport[0]) +
+                        (projected_ndc_x + 1.0f) *
+                            static_cast<float>(width) * 0.5f;
+                    const float projected_y =
+                        static_cast<float>(viewport[1]) +
+                        (projected_ndc_y + 1.0f) *
+                            static_cast<float>(height) * 0.5f;
+                    delta_x = projected_x - sample_x;
+                    delta_y = projected_y - sample_y;
+                  };
+              record_ray_projection_delta(
+                  voxel_ray_origin,
+                  record.renderer_pixel_voxel_mesh_ray_origin_projected_delta_x,
+                  record.renderer_pixel_voxel_mesh_ray_origin_projected_delta_y);
+              record_ray_projection_delta(
+                  voxel_ray_origin + voxel_ray_direction,
+                  record.renderer_pixel_voxel_mesh_ray_direction_projected_delta_x,
+                  record.renderer_pixel_voxel_mesh_ray_direction_projected_delta_y);
               const glm::vec3 mesh_ray_hit_point =
                   voxel_ray_origin +
                   voxel_ray_direction * voxel_mesh_ray_distance;

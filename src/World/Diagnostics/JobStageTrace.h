@@ -490,6 +490,10 @@ struct VisualBlackTraceRecord
   float renderer_pixel_voxel_mesh_ray_projected_delta_y{-1.0f};
   float renderer_pixel_voxel_mesh_ray_projected_depth_delta{-1.0f};
   uint8_t renderer_pixel_voxel_mesh_ray_projected_depth_would_pass{0};
+  float renderer_pixel_voxel_mesh_ray_origin_projected_delta_x{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_origin_projected_delta_y{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_direction_projected_delta_x{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_direction_projected_delta_y{-1.0f};
   float renderer_pixel_voxel_mesh_ray_edge_margin{-1.0f};
   /// Optional, gap-only readback validating the exact source triangle against
   /// the pooled GPU bytes and authoritative indirect command slot.
