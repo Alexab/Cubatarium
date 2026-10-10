@@ -174,6 +174,7 @@ class UWorldMeshService;
 class UChunkStorageService;
 class UWorldPersistence;
 class UWorldStreaming;
+class UChunkEmergeCoordinator;
 class IUPhysicsScheduler;
 class UWorldBlockPhysicsService;
 class UWorldMovementPhysicsService;
@@ -1465,11 +1466,13 @@ private:
   void AdjustColumnEmergeTelemetryCount(ColumnEmergeState state, int delta);
 
   /// Requeue a live per-slice visual demand without minting another mesh revision.
+  bool HasStablePublishedFaceDebt(glm::ivec3 coord) const;
   void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
 
   friend class UWorldCooperativeSession;
   friend class UWorldStreaming;
   friend class UWorldPersistence;
+  friend class UChunkEmergeCoordinator;
   bool CheckRayIntersection(
       const glm::vec3 &position, const glm::vec3 &front,
       std::map<float, std::tuple<int, glm::vec3, glm::vec3, size_t, size_t>>

@@ -4291,13 +4291,13 @@ FocusRingVisualCensus UWorld::GetFocusRingVisualCensus() const
   return UnfinishedVisualCache.readiness;
 }
 
-void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
+bool UWorld::HasStablePublishedFaceDebt(glm::ivec3 coord) const
 {
   if (!MeshService)
   {
-    return;
+    return false;
   }
-  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
   const ChunkRenderDemandRecord *active_demand = demand.Find(coord);
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
   const uint64_t mesh_revision = MeshService->GetChunkMeshRevision(coord);
@@ -4334,6 +4334,15 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
       active_demand->published_light_rev == published.light_rev &&
       chunk->GetLightFieldRevision() == published.light_rev)
   {
+    return true;
+  }
+  return false;
+}
+
+void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
+{
+  if (!MeshService || HasStablePublishedFaceDebt(coord))
+  {
     // RepairFaceDebt owns both target-local overlay debt and peer-face debt. A
     // current published mesh (drawable or not) with coverage lag caused only by
     // unresolved face debt has no changed mesh input to consume. Re-admitting it
@@ -4347,6 +4356,18 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
     // rebuild.
     return;
   }
+  UChunkRenderDemandStore &demand = UChunkRenderDemandStore::Get();
+  const ChunkRenderDemandRecord *active_demand = demand.Find(coord);
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+  const uint64_t mesh_revision = MeshService->GetChunkMeshRevision(coord);
+  const uint64_t world_epoch =
+      MeshService->GetCache().GetCaptureStore().WorldEpoch();
+  const MeshPublishRevs published =
+      MeshService->GetCache().GetMeshPublishRevs(coord);
+  const bool demand_identity_matches =
+      !active_demand ||
+      (active_demand->world_epoch == world_epoch && chunk &&
+       active_demand->incarnation == chunk->GetIncarnation());
   const bool requeue_existing_target =
       chunk && demand_identity_matches && mesh_revision != 0 &&
       mesh_revision > published.geom_rev;

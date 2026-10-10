@@ -2395,11 +2395,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             mesh_service.IsPendingGpuKickedOrDispatched(coord);
         const bool already_dirty = mesh_service.IsChunkMeshDirty(coord);
         const bool sticky_owned = SoftDeferEmptyOwned.count(coord) > 0;
+        // A current published mesh waiting only for peer-face coverage is not
+        // an empty placeholder that FirstMesh can repair. Peer changes are
+        // observed by RepairFaceDebt; do not repeatedly create generic owners
+        // for an unchanged target revision.
+        const bool stable_face_debt =
+            world.HasStablePublishedFaceDebt(coord);
         // CheapRemesh C4: FirstMesh enqueue XOR MarkDirty — not both same frame.
         const bool will_enqueue_fm =
-            allow_own && !has_fm && empty_fm_enqueue_n < kEmptyOwnershipCap;
+            allow_own && !stable_face_debt && !has_fm &&
+            empty_fm_enqueue_n < kEmptyOwnershipCap;
         // Do not re-MarkDirtyPriority every scan on sticky Owned / already Dirty.
-        if (allow_own && !sticky_owned && !already_dirty && !will_enqueue_fm &&
+        if (allow_own && !stable_face_debt && !sticky_owned && !already_dirty &&
+            !will_enqueue_fm &&
             !BlockParallelMarkDirtyForColumnFlow(
                 GetColumnFlowExecutor().GetColumnJobStage(col),
                 will_enqueue_fm || has_fm) &&
@@ -2420,7 +2428,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           item.cy = coord.y;
           exec.Enqueue(item);
         }
-        if (allow_own)
+        if (allow_own && !stable_face_debt)
         {
           SoftDeferEmptyOwned.insert(coord);
           bool fully_dark_or_void =
