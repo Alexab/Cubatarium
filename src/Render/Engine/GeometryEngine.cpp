@@ -4436,6 +4436,27 @@ bool DebugDisableOpaqueDepthGuard()
   return value != nullptr && value[0] != '\0' && value[0] != '0';
 }
 
+bool EnvironmentFlagEnabled(const char *name)
+{
+  const char *value = std::getenv(name);
+  return value != nullptr && value[0] != '\0' && value[0] != '0';
+}
+
+bool FluidRenderTraceEnabled()
+{
+  static const bool enabled = EnvironmentFlagEnabled("CUBA_FLUID_RENDER_TRACE") ||
+                              EnvironmentFlagEnabled(
+                                  "CUBA_DEBUG_FLUID_FRAGMENT_MARKER");
+  return enabled;
+}
+
+bool DebugFluidFragmentMarkerEnabled()
+{
+  static const bool enabled =
+      EnvironmentFlagEnabled("CUBA_DEBUG_FLUID_FRAGMENT_MARKER");
+  return enabled;
+}
+
 } // namespace
 
 void UGeometryEngine::DrawGreedyGpuBatches(
@@ -4467,6 +4488,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
               DebugTransparentFragmentMarkerEnabled()
           ? 1.0f
           : 0.0f);
+  greedyShader->SetFloat("uDebugFluidFragmentMarker", 0.0f);
   const bool opaqueDepthGuard =
       transparentPass && mode != GreedyShaderMode::ShellDepthPrepass &&
       !DebugDisableOpaqueDepthGuard();
@@ -4491,6 +4513,42 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   glBindVertexArray(greedyMeshVAO);
   const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
   uint64_t draw_cmds = 0;
+  uint64_t fluid_draw_calls = 0;
+  uint64_t fluid_draw_indices = 0;
+  const bool fluid_trace = transparentPass && FluidRenderTraceEnabled() &&
+                           WorldInstance != nullptr;
+  const bool fluid_marker =
+      transparentPass && mode == GreedyShaderMode::TransparentColor &&
+      DebugFluidFragmentMarkerEnabled() && WorldInstance != nullptr;
+  const auto is_fluid_block = [&](BlockId block_id)
+  {
+    return fluid_trace && WorldInstance->GetBlockRegistry().GetRenderStyle(
+                              block_id) == BlockRenderStyle::Fluid;
+  };
+  const auto note_fluid_single_submit = [&](const GreedyGpuBatch &batch)
+  {
+    if (!is_fluid_block(batch.blockId))
+    {
+      return;
+    }
+    ++fluid_draw_calls;
+    fluid_draw_indices +=
+        static_cast<uint64_t>(std::max(batch.indexCountGl, 0));
+  };
+  const auto note_fluid_group_submit = [&](BlockId block_id, size_t begin,
+                                           size_t end)
+  {
+    if (!is_fluid_block(block_id))
+    {
+      return;
+    }
+    ++fluid_draw_calls;
+    for (size_t index = begin; index < end; ++index)
+    {
+      fluid_draw_indices += static_cast<uint64_t>(
+          std::max(cache.batches[index].indexCountGl, 0));
+    }
+  };
 
   IUMeshGpuStore &store = MeshStore();
   const bool use_mdi = store.SupportsMultiDrawIndirect() &&
@@ -4623,6 +4681,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       }
 
       SetBlockAnimUniforms(greedyShader, head.blockId, textures);
+      greedyShader->SetFloat(
+          "uDebugFluidFragmentMarker",
+          fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
+                              head.blockId) == BlockRenderStyle::Fluid
+              ? 1.0f
+              : 0.0f);
       greedyShader->SetFloat("uLightPreviewOverride",
                              light_preview ? 1.0f : 0.0f);
       glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
@@ -4654,6 +4718,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       if (gpu_range_submitted)
       {
         ++draw_cmds;
+        note_fluid_group_submit(head.blockId, i, j);
       }
       else
       {
@@ -4676,6 +4741,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         {
           NoteGpuHotPathFallback();
           ++draw_cmds;
+          note_fluid_group_submit(head.blockId, i, j);
         }
         else
         {
@@ -4702,6 +4768,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
             glDrawElementsBaseVertex(
                 GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
                 reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
+            note_fluid_single_submit(gpu);
             if (has_draw_witness_batch && k == witness_batch_index)
             {
               g_gpu_opaque_draw_state_witness.submitted = true;
@@ -4742,6 +4809,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
               ? 1.0f
               : 0.0f);
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      greedyShader->SetFloat(
+          "uDebugFluidFragmentMarker",
+          fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
+                              gpu.blockId) == BlockRenderStyle::Fluid
+              ? 1.0f
+              : 0.0f);
       glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
       glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
@@ -4777,6 +4850,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         CaptureGpuOpaqueDrawState(cache, gpu_index, 4);
       }
       glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+      note_fluid_single_submit(gpu);
       if (witness_target)
       {
         g_gpu_opaque_draw_state_witness.submitted = true;
@@ -4792,6 +4866,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     {
       const GreedyGpuBatch &gpu = cache.batches[gpu_index];
       SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      greedyShader->SetFloat(
+          "uDebugFluidFragmentMarker",
+          fluid_marker && WorldInstance->GetBlockRegistry().GetRenderStyle(
+                              gpu.blockId) == BlockRenderStyle::Fluid
+              ? 1.0f
+              : 0.0f);
       if (gpu.indexCountGl <= 0)
       {
         continue;
@@ -4863,6 +4943,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       glDrawElements(
           GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
           reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+      note_fluid_single_submit(gpu);
       if (witness_target)
       {
         g_gpu_opaque_draw_state_witness.submitted = true;
@@ -4882,6 +4963,19 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   {
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
     phys.GpuDrawCmds += draw_cmds;
+    if (fluid_trace)
+    {
+      phys.FluidDrawCallN += fluid_draw_calls;
+      phys.FluidSubmittedIndexCapacityN += fluid_draw_indices;
+      if (mode == GreedyShaderMode::ShellDepthPrepass)
+      {
+        phys.FluidShellDepthCallN += fluid_draw_calls;
+      }
+      else if (mode == GreedyShaderMode::TransparentColor)
+      {
+        phys.FluidColorPassCallN += fluid_draw_calls;
+      }
+    }
     phys.GpuCullMs = WorldInstance->GetMeshService().GetLastGpuCullMs();
     if (RenderBackends.Mesher)
     {
@@ -5804,6 +5898,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
               DebugTransparentFragmentMarkerEnabled()
           ? 1.0f
           : 0.0f);
+  packedGreedyShader->SetFloat("uDebugFluidFragmentMarker", 0.0f);
   const bool opaque_depth_guard =
       transparent_pass && mode != GreedyShaderMode::ShellDepthPrepass &&
       !DebugDisableOpaqueDepthGuard();
@@ -5829,6 +5924,13 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   glBindVertexArray(greedyMeshVAO);
 
   size_t packed_draw_chunks = 0;
+  uint64_t fluid_draw_calls = 0;
+  uint64_t fluid_draw_indices = 0;
+  const bool fluid_trace =
+      transparent_pass && FluidRenderTraceEnabled() && WorldInstance != nullptr;
+  const bool fluid_marker =
+      transparent_pass && mode == GreedyShaderMode::TransparentColor &&
+      DebugFluidFragmentMarkerEnabled() && WorldInstance != nullptr;
   for (const GpuPackedChunkRef &chunk : chunk_refs)
   {
     PackedOpaqueDrawTrace *trace =
@@ -5924,6 +6026,13 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
         ++trace->texture_ready_range_count;
       }
       SetBlockAnimUniforms(packedGreedyShader, range.blockId, textures);
+      const bool fluid_range =
+          (fluid_trace || fluid_marker) && WorldInstance &&
+          WorldInstance->GetBlockRegistry().GetRenderStyle(range.blockId) ==
+              BlockRenderStyle::Fluid;
+      packedGreedyShader->SetFloat(
+          "uDebugFluidFragmentMarker",
+          fluid_marker && fluid_range ? 1.0f : 0.0f);
       glBindTexture(GL_TEXTURE_2D, texture_id);
       const GLint first =
           static_cast<GLint>((slot->OffsetQuads + range.quadOffset) * 6u);
@@ -5933,6 +6042,11 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
         continue;
       }
       glDrawArrays(GL_TRIANGLES, first, count);
+      if (fluid_trace && fluid_range)
+      {
+        ++fluid_draw_calls;
+        fluid_draw_indices += static_cast<uint64_t>(count);
+      }
       if (trace)
       {
         ++trace->draw_call_count;
@@ -5944,6 +6058,20 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
 
   glBindVertexArray(0);
   packedGreedyShader->Unuse();
+  if (fluid_trace)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.FluidDrawCallN += fluid_draw_calls;
+    phys.FluidSubmittedIndexCapacityN += fluid_draw_indices;
+    if (mode == GreedyShaderMode::ShellDepthPrepass)
+    {
+      phys.FluidShellDepthCallN += fluid_draw_calls;
+    }
+    else if (mode == GreedyShaderMode::TransparentColor)
+    {
+      phys.FluidColorPassCallN += fluid_draw_calls;
+    }
+  }
   return packed_draw_chunks;
 }
 
@@ -5969,6 +6097,21 @@ void UGeometryEngine::PrepareTransparent(
     const GreedyTransparentDrawContext &ctx)
 {
   PreparedTransparentCache = &ctx.cache;
+  const bool fluid_trace = FluidRenderTraceEnabled();
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.FluidTransparentRefN = 0;
+    phys.FluidTransparentIndexN = 0;
+    phys.FluidGpuBatchN = 0;
+    phys.FluidGpuIndexN = 0;
+    phys.FluidPackedRangeN = 0;
+    phys.FluidPackedQuadN = 0;
+    phys.FluidDrawCallN = 0;
+    phys.FluidSubmittedIndexCapacityN = 0;
+    phys.FluidShellDepthCallN = 0;
+    phys.FluidColorPassCallN = 0;
+  }
   std::vector<GreedyBatchRef> filtered;
   filtered.reserve(ctx.transparentRefs.size());
   for (const GreedyBatchRef &ref : ctx.transparentRefs)
@@ -5982,6 +6125,15 @@ void UGeometryEngine::PrepareTransparent(
         BlockRenderStyle::Cross)
     {
       continue;
+    }
+    if (fluid_trace &&
+        ctx.blockRegistry.GetRenderStyle(batch->blockId) ==
+            BlockRenderStyle::Fluid &&
+        WorldInstance)
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      ++phys.FluidTransparentRefN;
+      phys.FluidTransparentIndexN += batch->indices.size();
     }
     filtered.push_back(ref);
   }
@@ -6065,6 +6217,35 @@ void UGeometryEngine::PrepareTransparent(
     phys.TransparentBatchN =
         static_cast<int>(GreedyGpuTransparent.batches.size());
     CachedTransparentPrevCmdReorderN = refresh_telem.CmdReorderN;
+    if (fluid_trace)
+    {
+      for (const GreedyGpuBatch &batch : GreedyGpuTransparent.batches)
+      {
+        if (ctx.blockRegistry.GetRenderStyle(batch.blockId) !=
+            BlockRenderStyle::Fluid)
+        {
+          continue;
+        }
+        ++phys.FluidGpuBatchN;
+        phys.FluidGpuIndexN +=
+            static_cast<uint64_t>(std::max(batch.indexCountGl, 0));
+      }
+      for (const GpuPackedChunkRef &chunk :
+           ctx.cache.GetGpuPackedTransparentRefs())
+      {
+        for (const GpuBlockDrawRange &range : chunk.blockRanges)
+        {
+          if (!range.Transparent ||
+              ctx.blockRegistry.GetRenderStyle(range.blockId) !=
+                  BlockRenderStyle::Fluid)
+          {
+            continue;
+          }
+          ++phys.FluidPackedRangeN;
+          phys.FluidPackedQuadN += range.quadCount;
+        }
+      }
+    }
   }
   if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
   {

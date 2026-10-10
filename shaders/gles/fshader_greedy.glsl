@@ -58,6 +58,7 @@ uniform float uOpaqueDepthGuard;
 uniform vec2 uOpaqueDepthScreenSize;
 uniform float uOpaqueDepthBias;
 uniform float uDebugTransparentFragmentMarker;
+uniform float uDebugFluidFragmentMarker;
 
 const int kCrossFaceIndex = 127;
 
@@ -278,6 +279,11 @@ void main()
         }
     }
     if (uDebugTransparentFragmentMarker > 0.5) {
+        FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        return;
+    }
+    if (uDebugFluidFragmentMarker > 0.5 &&
+        uGreedyShaderMode == kGreedyModeColor) {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0);
         return;
     }

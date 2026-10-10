@@ -1165,6 +1165,20 @@ struct PhysicsTelemetry
   int TransparentOrderOnlyFailReason{0};
   /// S1: transparent GPU batch count after prepare.
   int TransparentBatchN{0};
+  /// Optional fluid-render trace: CPU fluid refs/indices before GPU publication.
+  uint64_t FluidTransparentRefN{0};
+  uint64_t FluidTransparentIndexN{0};
+  /// Optional fluid-render trace: published greedy fluid batches/indices.
+  uint64_t FluidGpuBatchN{0};
+  uint64_t FluidGpuIndexN{0};
+  /// Optional fluid-render trace: packed transparent ranges and quads.
+  uint64_t FluidPackedRangeN{0};
+  uint64_t FluidPackedQuadN{0};
+  /// Optional fluid-render trace: submitted GL calls/index capacity by mode.
+  uint64_t FluidDrawCallN{0};
+  uint64_t FluidSubmittedIndexCapacityN{0};
+  uint64_t FluidShellDepthCallN{0};
+  uint64_t FluidColorPassCallN{0};
   /// Focus column split: meshed-but-culled vs not ready / unlit preview.
   uint64_t ChunkMeshedCulled0{0};
   uint64_t ChunkMeshedUnlit{0};

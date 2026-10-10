@@ -1099,6 +1099,16 @@ struct FrameNumbers
   int transparent_cmd_reorder_n{0};
   int transparent_order_only_fail_reason{0};
   int transparent_batch_n{0};
+  uint64_t fluid_transparent_ref_n{0};
+  uint64_t fluid_transparent_index_n{0};
+  uint64_t fluid_gpu_batch_n{0};
+  uint64_t fluid_gpu_index_n{0};
+  uint64_t fluid_packed_range_n{0};
+  uint64_t fluid_packed_quad_n{0};
+  uint64_t fluid_draw_call_n{0};
+  uint64_t fluid_submitted_index_capacity_n{0};
+  uint64_t fluid_shell_depth_call_n{0};
+  uint64_t fluid_color_pass_call_n{0};
   uint64_t chunk_meshed_culled0{0};
   uint64_t chunk_meshed_unlit{0};
   uint64_t chunk_meshed_unlit_hidden{0};
@@ -2165,6 +2175,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.transparent_cmd_reorder_n = phys.TransparentCmdReorderN;
   n.transparent_order_only_fail_reason = phys.TransparentOrderOnlyFailReason;
   n.transparent_batch_n = phys.TransparentBatchN;
+  n.fluid_transparent_ref_n = phys.FluidTransparentRefN;
+  n.fluid_transparent_index_n = phys.FluidTransparentIndexN;
+  n.fluid_gpu_batch_n = phys.FluidGpuBatchN;
+  n.fluid_gpu_index_n = phys.FluidGpuIndexN;
+  n.fluid_packed_range_n = phys.FluidPackedRangeN;
+  n.fluid_packed_quad_n = phys.FluidPackedQuadN;
+  n.fluid_draw_call_n = phys.FluidDrawCallN;
+  n.fluid_submitted_index_capacity_n = phys.FluidSubmittedIndexCapacityN;
+  n.fluid_shell_depth_call_n = phys.FluidShellDepthCallN;
+  n.fluid_color_pass_call_n = phys.FluidColorPassCallN;
   n.chunk_meshed_culled0 = phys.ChunkMeshedCulled0;
   n.chunk_meshed_unlit = phys.ChunkMeshedUnlit;
   n.chunk_meshed_unlit_hidden = phys.ChunkMeshedUnlitHidden;
@@ -3433,6 +3453,17 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"transparent_order_only_fail_reason\":"
           << n.transparent_order_only_fail_reason
           << ",\"transparent_batch_n\":" << n.transparent_batch_n
+          << ",\"fluid_transparent_ref_n\":" << n.fluid_transparent_ref_n
+          << ",\"fluid_transparent_index_n\":" << n.fluid_transparent_index_n
+          << ",\"fluid_gpu_batch_n\":" << n.fluid_gpu_batch_n
+          << ",\"fluid_gpu_index_n\":" << n.fluid_gpu_index_n
+          << ",\"fluid_packed_range_n\":" << n.fluid_packed_range_n
+          << ",\"fluid_packed_quad_n\":" << n.fluid_packed_quad_n
+          << ",\"fluid_draw_call_n\":" << n.fluid_draw_call_n
+          << ",\"fluid_submitted_index_capacity_n\":"
+          << n.fluid_submitted_index_capacity_n
+          << ",\"fluid_shell_depth_call_n\":" << n.fluid_shell_depth_call_n
+          << ",\"fluid_color_pass_call_n\":" << n.fluid_color_pass_call_n
           << ",\"chunk_meshed_culled0\":" << n.chunk_meshed_culled0
           << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
           << ",\"chunk_meshed_unlit_hidden\":" << n.chunk_meshed_unlit_hidden
