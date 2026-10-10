@@ -5679,3 +5679,47 @@ Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
 Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 120 --idle-sec 15 --stop-after-blocked-sec 8 --minimum-travel-blocks 150 --phase-id m507_world164_tail_all_peer_debt_guard_20261010 --report bin/suite_reports/engine_refactor/m507_world164_tail_all_peer_debt_guard_20261010.json --process-timeout 900
 ```
+
+### M508 — full M335 occupancy and framebuffer probe (2026-10-10)
+
+Cold, visible, no-teleport `World_164` M335 route on Release source
+`e900af9e`, executable SHA-256
+`b0308dd3bce71a04c6c7aebbd38620ef5da84df67c1d335e73b9a09e3e5921ca`.
+Route: start `120 56 56`, eye Y=70, yaw 180, pitch -30, 1,455 s flight,
+20 s stop, 15 s idle, minimum travel 6,400 blocks. GUI remained visible.
+Captures covered the full route every 10 seconds. Pixel/framebuffer probes and
+fluid-render telemetry were enabled; debug fragment markers and altered
+transparent/depth-guard modes were unset. The high-volume pixel trace produced
+a 1.18 GB perf JSONL; the next targeted probe should set
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X/MAX_X`.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m508_world164_m335_occupancy_census_20261010.json)
+- [perf JSONL, 1.18 GB](../../bin/logs/perf_20261010-211737_40528.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-211732.40528)
+- [149 captures](../../bin/flight_captures/m508_world164_m335_occupancy_census_20261010)
+- [last stopped frame 148](../../bin/flight_captures/m508_world164_m335_occupancy_census_20261010/frame_148.png)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7440'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m508_world164_m335_occupancy_census_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='10'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m508_world164_m335_occupancy_census_20261010 --report bin/suite_reports/engine_refactor/m508_world164_m335_occupancy_census_20261010.json --process-timeout 7200
+```
+
+The perf JSONL contains 112,540 direct framebuffer pixel probes and 9,475
+screen-ray candidate rows. M508's analyzer passed route execution but failed
+performance, readiness, scheduling, and stop-recovery gates. Keep the report's
+metric semantics with the artifacts: `visual_holes` is a near-focus
+mesh-coverage proxy; legacy `holes_rate` is readiness debt.

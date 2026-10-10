@@ -7110,3 +7110,62 @@ not trade the peer-debt fix for lower counters without preserving geometry.
 
 M506 and M507 reports, traces, captures, and exact commands are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m506m507--coordinator-peer-debt-retry-guard-2026-10-10).
+
+#### M508 checkpoint — full M335 occupancy and framebuffer probe (2026-10-10)
+
+M508 completed the cold, visible, no-teleport M335 route on `World_164` with
+the M507 Release executable (source `e900af9e`, SHA-256
+`b0308dd3bce71a04c6c7aebbd38620ef5da84df67c1d335e73b9a09e3e5921ca`). The
+app exited 0 after 7,376 traveled blocks; the analyzer returned
+`pass=false`. It recorded 739 periods, 737 steady periods, and 222 spikes.
+The measured flight median was 23.40 ms, but emergence-classified spikes were
+22.97% against a 5% gate, and the median `chunk_not_ready` count was 31
+against a gate of 4. Stop recovery also failed: visual-hole proxy was zero,
+but not-ready ended at 31 and pending work did not fall.
+
+The actual `visual_holes` proxy was present in 27/737 steady periods (3.66%),
+each as a one-period pulse; M505 had 29/738. The M508 positions were
+`-1203,-1443,-2403,-2712,-2742,-2760,-2785,-2806,-2836,-2867,-3042,
+-4068,-4099,-4118,-4147,-4197,-4693,-4739,-4758,-4789,-4850,-5091,
+-5555,-5666,-5717,-6213,-6324`. The two early misses at `-1203` and
+`-1443` had invalid occupancy census and no screen-ray candidate. This
+reinforces that the broad readiness debt and the screen-facing geometry signal
+must remain separate. In this report, legacy `holes_rate` and
+`effective_holes_rate` alias readiness debt; they are not framebuffer-hole
+rates.
+
+The old M505 hotspot did not clear. At `-5091` and `-5555`, valid census
+reported 1 and 4 missing drawable slices in the camera-height band; at
+`-5666` the census was invalid. The selected miss witness still reported a
+drawable, satisfying mesh, so it does not name the missing slice. The direct
+`glReadPixels` probes add stronger but still sampled evidence: in the
+`-5500..-5700` camera interval, 3,200 pixel samples contained 12
+CPU-voxel-to-depth gaps and 4 camera-facing source-mesh-to-depth gaps. None of
+those sampled final colors was near black (RGB channels `<=24`). The face-gap
+samples were at `-5522`, `-5537`, `-5557`, and `-5642`, including the
+`-5557` sample next to the `-5555` hole period. Their color is fog-blue, so
+the present evidence is consistent with a real geometry gap hidden by
+distance fog; it does not yet
+identify which GPU command or publication state dropped the face. GPU-range
+witnessing was disabled in M508. M509 should replay this short established
+segment with `CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS=1` and pixel probes
+restricted to the hotspot.
+
+Water was present in the engine framebuffer throughout the tail diagnostic
+window from `X=-7198` through `X=-7255`: all 16 periods had fluid draw calls
+(57–117), fluid batches (2,291–2,328), and both shell-depth and color passes.
+Of 880 selected
+tail pixels, 469 intersected source fluid triangles and 517 changed between
+the pre-transparent and final framebuffer samples. This run did not reproduce
+the reported water disappearance inside the renderer. PNGs remain a separate
+readback path from the live desktop image.
+
+The full-route pixel trace wrote 112,540 `renderer_pixel_probe` rows and grew
+the perf JSONL to 1.18 GB; reading that trace drove the analyzer to roughly
+3.3 GB peak working set. Do not repeat unbounded pixel readback on a full route.
+For the next GPU-range investigation, use the pixel-probe X bounds and the
+existing local no-teleport route, retaining the full-route low-volume
+performance run as the baseline.
+
+Artifacts and exact M508 settings are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m508--full-m335-occupancy-and-framebuffer-probe-2026-10-10).
