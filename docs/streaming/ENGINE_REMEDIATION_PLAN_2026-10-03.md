@@ -6563,3 +6563,89 @@ remain outstanding.**
 
 M490 artifacts and exact invocation are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m490--low-trace-m335-with-framebuffer-stencil-fallback-guard-2026-10-10).
+
+#### Updated remaining work after M491
+
+M491 closes the source-provenance question for its sampled camera corridor:
+all 13 exact focus columns associated with a near-focus missing-mesh proxy
+were disk-complete, while all 91 procedural misses were in lateral bands and
+none were at camera `z=3`. The long flight crossed a new procedural frontier
+in its final far-west section. Disk file reads were fast in this run; waiting
+for async results and waiting for lateral procedural readiness were much
+larger contributors to end-to-end source latency. This does not rule out
+storage pressure elsewhere, but it does not support raw disk-read throughput as
+the primary explanation for the sampled focus proxy.
+
+The strongest new renderer/streaming lead is a repeatable association between
+focus mesh-coverage proxy periods and mesh-output backpressure: M490 was 11/11
+versus 32/731 control periods, and M491 was 11/13 versus 32/729. A proxy
+period usually requested 16 mesh schedules while the effective FirstMesh lane
+cap ranged from 4 to 11. Treat this as a scheduler hypothesis, not a root-cause
+finding. M491 has two proxy periods without backpressure, and aggregate frame
+telemetry does not identify whether the exact missing focus column was queued,
+admitted, built, extracted, or published. Add or derive per-column lifecycle
+evidence before changing lane policy. In particular, inspect FirstMesh ticket
+age/ownership and whether the camera's missing column was admitted ahead of
+remesh, relight, or fringe work. If that evidence confirms starvation, make a
+small change that increases urgent focus FirstMesh service only while a focus
+mesh is absent, then compare identical quiet M335 runs and retain a no-hole
+control corridor.
+
+M491's source trace is not a timing baseline. The save trace produced
+main-thread INFO logging while `--flight-sim` mirrored INFO to stderr, and one
+period spent 156.494 ms draining eight save results; the maximum drain was
+about 277 ms. `main.cpp` now disables this INFO mirror for flight-sim unless
+`--console` or `--log-stderr` explicitly requests it. Source/save trace runs
+remain attribution runs, not performance runs. Quiet M490 is the timing
+control until a quiet post-change M492 is collected.
+
+M491 queued 6,881 full-column saves, 6,871 of them for disk-loaded coordinates,
+and wrote 28,006 slices. Do not cut this churn by checking `ModifiedChunks`
+until a persistence-specific block-data revision is introduced and verified;
+mesh remesh touches can also set that flag. A later persistence change should
+measure bytes and write counts and verify restart/load equivalence.
+
+The stencil query returned `-1` in M491, a value that cannot be interpreted as
+a valid plane count. The transparent pipeline now performs a one-time guarded
+probe, logs the draw-FBO binding, query errors, framebuffer status, and reason,
+and enables the desktop stencil shell only after a valid positive count. The
+conservative fallback remains useful when the query is invalid, but this
+diagnostic does not establish a cause for water visibility. Continue using the
+operator's live display as the visual oracle until the saved-image composition
+path has been validated.
+
+Next steps:
+
+1. Build Release and run M492 on the unchanged visible, fixed-day, no-teleport
+   M335 route with all high-volume traces disabled. Compare its frame spikes,
+   output queue, proxy periods, route speed, stop-tail convergence, and stencil
+   diagnostic with quiet M490. The run validates logging behavior and query
+   context but does not itself prove water visibility.
+2. For every recurring proxy region, inspect per-column ticket/mesh lifecycle
+   data. Distinguish: no FirstMesh ticket, ticket not admitted, builder queue
+   delay, GPU extraction delay, and a completed mesh not published. Only then
+   adjust urgent FirstMesh lane allocation or publication ownership. Keep
+   remesh/relight floors when they protect already-visible terrain.
+3. Keep source/save attribution runs separate from timing runs. If another
+   provenance pass is needed, log to the file without stderr mirroring and
+   quantify logging overhead before interpreting latency.
+4. Add persistence-specific dirty tracking before reducing unload saves; verify
+   edited terrain survives save/restart and unchanged terrain avoids rewrites.
+5. Continue the focused fluid draw chain after M492: fluid occupancy, emitted
+   faces, transparent batch membership, selected pass, depth/stencil state,
+   submitted fluid draw, and framebuffer coverage. Preserve the current live
+   water observation as a separate operator note.
+6. Once the repeatable M335 route has interpretable proxy and stop-tail results,
+   resume the periodic cold/new-world lane as a secondary check for storage
+   history effects.
+
+Plan status: **M491 establishes that the sampled focus proxy columns were
+disk-loaded and exposes a strong association with bounded mesh scheduling.
+The procedural frontier exists only in lateral bands in this run; raw file
+read is not the dominant measured disk stage. The backpressure/root-cause
+relationship remains unproven, M491 timing is contaminated by trace logging,
+and the invalid stencil-bit query needs M492 diagnostics. No proxy is promoted
+to a claim of visible blank terrain without live visual confirmation.**
+
+M491 artifacts and exact invocation are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m491--column-sourcesave-trace-on-the-fixed-m335-route-2026-10-10).

@@ -4926,3 +4926,93 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 Report: [M490 flight/analyzer report](../../bin/suite_reports/engine_refactor/m490_world164_m335_stencil_guard_20261010.json).
 The perf stream and app INFO log are in `bin/logs/`; raw artifacts remain local
 and out of Git.
+
+### M491 — column source/save trace on the fixed M335 route (2026-10-10)
+
+M491 repeated the visible, no-teleport World_164 M335 route with source and
+save lifecycle traces enabled. It reached 7,440 blocks at `5.19287 blocks/s`
+with eye Y=70, `process_rc=0`, and no hang kill. The flight runner still
+returned failure because A24 found 13 near-focus missing-mesh proxy periods
+(none in its control corridor) and the post-stop convergence gate ended with
+readiness debt up to 4. These are mesh/readiness signals, not direct
+framebuffer-pixel evidence. The empty-world line passed (median opaque commands
+196.5, minimum 24). The visual-hole proxy rate was 1.7568% with full sample
+coverage.
+
+Source provenance: 7,023 unique columns completed from disk and 91 unique
+columns were procedural disk misses. All 91 procedural columns were lateral
+bands (`z=-4..-1` and `z=8..10`); none were at the camera's `z=3` focus column.
+77 of the 91 misses were in the final far-west x bin `-464..-448`, after the
+run moved beyond the previously persisted fringe. For each of the 13
+near-focus proxy periods, the exact focus column at `z=3` was in the
+disk-complete set. Thus this trace does not support a claim that the recurrent
+focus proxy came from an on-camera disk miss. It does show that a long route
+eventually reaches a procedural frontier outside the persisted corridor.
+
+Disk reads themselves were usually quick: `file_read_ms` median/p95/max
+`0.574/0.896/8.531 ms`, and deserialize/apply median/p95/max
+`3.826/6.109/35.634 ms`. The full disk-result elapsed time had a 15.685 ms
+median and 47.946 ms p95, while result wait was `35.765/150.769 ms` median/p95
+with a 2,002 ms maximum. Procedural generation on the lateral frontier took
+`45.560 ms` median, `68.996 ms` p95, and `82.708 ms` maximum; ready wait added
+`11.175/20.993/29.881 ms` median/p95/max. This points more toward queued-result
+wait and mesh/readiness publication than raw file-read speed.
+
+The recurrent focus proxy also tracked mesh-output backpressure. M490 had
+backpressure in all 11 proxy periods and 32/731 periods without the proxy;
+M491 had it in 11/13 proxy periods and 32/729 periods without the proxy.
+During proxy periods, requested mesh schedules were usually 16 while the
+backpressured FirstMesh cap ranged from 4 to 11. This is a strong correlation,
+not proof of causality: M491 also had two proxy periods without the fence, and
+the metric does not prove which specific column missed its queue slot. The
+next scheduler change must be based on per-column ownership/selection evidence,
+not on this aggregate correlation alone.
+
+Save trace: 6,881 columns were queued for full-column saves, 28,006 slices
+were written, and 54 incomplete-save requests were discarded. 6,871 of the
+6,881 queued coordinates intersected disk-loaded columns, so the current unload
+path rewrites almost every disk-loaded column. Do not use `ModifiedChunks`
+alone as a persistence-dirty test: it is also touched by visual remesh paths.
+First establish a block-data revision or equivalent persistence-specific dirty
+signal before removing these saves.
+
+M491 is not a performance baseline. Its verbose save trace logs each completed
+result from the main-thread drain, while `main.cpp` mirrored all Glog INFO
+messages to stderr for any command line. In M491, eight drained results took
+156.494 ms in one period and save-drain max reached about 277 ms; quiet M490
+drained eight in 0.139 ms. M491 had 83 frame spikes versus M490's 18. The
+newly disabled INFO mirror for `--flight-sim` removes one synchronous output
+path; the trace itself remains intrusive, so provenance runs must still be
+compared separately from quiet timing runs.
+
+The app INFO log recorded `framebuffer_stencil_bits=-1` and selected the
+single-pass fallback. Since a negative bit count is not a valid stencil-plane
+count, M492's one-time diagnostic now records query errors, draw framebuffer,
+and framebuffer status, and runs only once even when the result is invalid.
+This is diagnostic evidence only; no M491 water observation was recorded.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m491_world164_m335_column_source_20261010.json),
+[source analysis](../../bin/suite_reports/engine_refactor/m491_source_trace_20261010.json),
+[x-binned source/save analysis](../../bin/suite_reports/engine_refactor/m491_source_by_x_20261010.json),
+[perf trace](../../bin/logs/perf_20261010-122102_5672.jsonl), and the app INFO
+log `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-122100.5672`.
+`world_data.json` was restored byte-for-byte to SHA
+`0ade40413ad4172777a59c2573809ed415AC19DEE2F30C8500C737AC5EC2D344`.
+
+Exact M491 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='1'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m491_world164_m335_column_source_20261010 --report bin/suite_reports/engine_refactor/m491_world164_m335_column_source_20261010.json --process-timeout 7200
+```

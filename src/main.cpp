@@ -23,8 +23,25 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
   cutum::CubatariumInstallWindowsDiagnostics();
 #endif
-  const bool also_stderr =
-      argc > 1; // CLI / console modes also get ERROR+ on stderr via wrappers
+  bool flight_sim_mode = false;
+  bool explicit_console = false;
+  bool explicit_log_stderr = false;
+  for (int i = 1; i < argc; ++i)
+  {
+    flight_sim_mode = flight_sim_mode ||
+                      std::strcmp(argv[i], "--flight-sim") == 0;
+    explicit_console = explicit_console ||
+                       std::strcmp(argv[i], "--console") == 0;
+    explicit_log_stderr = explicit_log_stderr ||
+                          std::strcmp(argv[i], "--log-stderr") == 0;
+  }
+  // flight-sim writes periodic INFO diagnostics to the app log already.
+  // Mirroring every INFO line to a captured stderr pipe can block the main
+  // thread during verbose column/save traces. Keep stderr mirroring opt-in for
+  // flight-sim while preserving it for the other CLI modes.
+  const bool also_stderr = argc > 1 &&
+                           (!flight_sim_mode || explicit_console ||
+                            explicit_log_stderr);
   cutum::CubatariumInitLogging(argc > 0 ? argv[0] : "Cubatarium", also_stderr);
 
   for (int i = 1; i < argc; ++i)

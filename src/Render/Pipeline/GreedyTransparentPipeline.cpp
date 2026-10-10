@@ -82,28 +82,68 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
     return;
   }
 
-  static int stencil_bits = -1;
-  if (stencil_bits < 0)
+  static bool stencil_probe_complete = false;
+  static GLint stencil_bits = -1;
+  static bool framebuffer_has_stencil = false;
+  if (!stencil_probe_complete)
   {
+    // Drain and report pre-existing GL errors so they cannot be mistaken for
+    // errors raised by these diagnostic queries.
+    int prior_gl_errors = 0;
+    constexpr int kMaxPriorGlErrorsToDrain = 16;
+    while (prior_gl_errors < kMaxPriorGlErrorsToDrain &&
+           glGetError() != GL_NO_ERROR)
+    {
+      ++prior_gl_errors;
+    }
+
+    GLint draw_framebuffer = -1;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
+    const GLenum framebuffer_binding_error = glGetError();
     glGetIntegerv(GL_STENCIL_BITS, &stencil_bits);
-  }
-  static bool logged_stencil_path = false;
-  if (!logged_stencil_path)
-  {
-    logged_stencil_path = true;
+    const GLenum stencil_query_error = glGetError();
+    const GLenum framebuffer_status =
+        glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+    const GLenum framebuffer_status_error = glGetError();
+
+    const bool query_ok =
+        prior_gl_errors < kMaxPriorGlErrorsToDrain &&
+        framebuffer_binding_error == GL_NO_ERROR &&
+        stencil_query_error == GL_NO_ERROR &&
+        framebuffer_status_error == GL_NO_ERROR &&
+        framebuffer_status == GL_FRAMEBUFFER_COMPLETE && stencil_bits >= 0;
+    framebuffer_has_stencil = query_ok && stencil_bits > 0;
+    const char *reason =
+        !query_ok
+            ? "query_invalid_or_framebuffer_incomplete"
+            : (stencil_bits == 0 ? "no_stencil_attachment" : "stencil_available");
+
     CubatariumLogInfo(
         "Transparent",
         "framebuffer_stencil_bits=" + std::to_string(stencil_bits) +
+            " draw_framebuffer=" + std::to_string(draw_framebuffer) +
+            " framebuffer_status=" +
+            std::to_string(static_cast<unsigned int>(framebuffer_status)) +
+            " prior_gl_errors=" + std::to_string(prior_gl_errors) +
+            " binding_query_error=" +
+            std::to_string(static_cast<unsigned int>(framebuffer_binding_error)) +
+            " stencil_query_error=" +
+            std::to_string(static_cast<unsigned int>(stencil_query_error)) +
+            " framebuffer_status_error=" +
+            std::to_string(static_cast<unsigned int>(framebuffer_status_error)) +
             " path=" +
-            (stencil_bits > 0 ? "desktop-shell" : "single-pass-fallback"));
+            (framebuffer_has_stencil ? "desktop-shell" : "single-pass-fallback") +
+            " reason=" + reason);
+    stencil_probe_complete = true;
   }
 
   // The desktop shell algorithm relies on the first pass writing stencil=1
   // and the color passes testing against it. With no stencil attachment,
   // OpenGL treats stencil tests as passing and ignores stencil writes, so the
-  // shell mask is unavailable and the multipass blend is not meaningful. Use
-  // the explicit no-stencil path instead.
-  if (stencil_bits <= 0)
+  // shell mask is unavailable and the multipass blend is not meaningful. An
+  // invalid query is also treated conservatively as unknown and uses the
+  // single-pass path; only a verified positive bit count enables the shell.
+  if (!framebuffer_has_stencil)
   {
     DrawTransparentSinglePass(backend, settings);
     return;
