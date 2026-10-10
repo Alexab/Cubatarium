@@ -5932,9 +5932,13 @@ The sequence was intended to locate a reported source-mesh-to-depth gap:
 
 M513–M517 correspond to diagnostic commits `bb9adb3f`, `43a86538`,
 `02fcd01d`, `d0567510`, and `d712b9b3`. M515/M516 demonstrate why the earlier
-CPU-ray gaps were not reliable proof of a rendering fault: converting an
-inverse-VP near-plane point back to single-precision world coordinates at a
-large world offset caused a measurable screen shift. M517 only corrected the
+CPU-ray gaps, including M508's four face-gap candidates and M509/M510's
+source-triangle associations, were not reliable proof of a rendering fault:
+converting an inverse-VP near-plane point back to single-precision world
+coordinates at a large world offset caused a measurable screen shift. The same
+pixel-attribution caveat applies to M508–M512's fluid-triangle hit counts;
+their color readbacks and fluid submission counters remain valid, and M518
+repeated the endpoint with the corrected ray. M517 only corrected the
 diagnostic witness; it made no change to mesh generation, streaming, GPU draw
 submission, or water rendering. Since M517 left zero corrected-ray gap rows,
 repeat M510's same-frame GPU-range/alpha witness only if a corrected-ray run or

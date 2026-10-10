@@ -7143,13 +7143,14 @@ drawable, satisfying mesh, so it does not name the missing slice. The direct
 CPU-voxel-to-depth gaps and 4 camera-facing source-mesh-to-depth gaps. None of
 those sampled final colors was near black (RGB channels `<=24`). The face-gap
 samples were at `-5522`, `-5537`, `-5557`, and `-5642`, including the
-`-5557` sample next to the `-5555` hole period. Their color is fog-blue, so
-the present evidence is consistent with a real geometry gap hidden by
-distance fog; it does not yet
-identify which GPU command or publication state dropped the face. GPU-range
-witnessing was disabled in M508. M509 should replay this short established
-segment with `CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS=1` and pixel probes
-restricted to the hotspot.
+`-5557` sample next to the `-5555` hole period. **This interpretation is
+superseded by M516–M517:** those rows used the full inverse-VP near-plane ray,
+which later showed up to several pixels of round-trip error at this world
+offset. The fog-blue samples and GPU census remain observations, but the
+CPU-ray gaps no longer support a claim of missing geometry. M517's corrected
+ray produced no mesh-ray gaps in the same bounded X interval. Do not use the
+M508 gap rows as a renderer/streaming defect until they reproduce with the
+corrected camera-space ray.
 
 Water was present in the engine framebuffer throughout the tail diagnostic
 window from `X=-7198` through `X=-7255`: all 16 periods had fluid draw calls
@@ -7157,8 +7158,10 @@ window from `X=-7198` through `X=-7255`: all 16 periods had fluid draw calls
 Of 880 selected
 tail pixels, 469 intersected source fluid triangles and 517 changed between
 the pre-transparent and final framebuffer samples. This run did not reproduce
-the reported water disappearance inside the renderer. PNGs remain a separate
-readback path from the live desktop image.
+the reported water disappearance inside the renderer. M508 flight PNGs were
+queued from `GL_BACK` before swap by `UFlightCaptureService`; they are rendered
+framebuffer readbacks, not desktop composition captures. This still does not
+prove what the operator saw on the display.
 
 The full-route pixel trace wrote 112,540 `renderer_pixel_probe` rows and grew
 the perf JSONL to 1.18 GB; reading that trace drove the analyzer to roughly
@@ -7180,18 +7183,19 @@ analyzer remained red (38 steady periods, 4 visual-hole-proxy periods, and
 readiness debt 1.0). This run is an instrumented diagnostic, not an acceptance
 or performance baseline.
 
-The GPU-range witness resolved four source-mesh-to-depth gap samples. Every
+The GPU-range witness read back four candidate source-mesh-to-depth rows. Every
 hit was block `573` (`tree_log`) with a ready texture, a pooled MDI command,
 and `instanceCount=1`. For each sample the active indirect command matched
 the cache command, the GPU EBO indices matched the source triple, and GPU
-vertex positions matched the source positions. Thus the four observations do
-not point to missing world data, an unpublished mesh, or a stale uploaded
-range. The hit faces covered entry-face indices 0, 1, and 4, so this is not
-limited to one face orientation. The pre-transparent framebuffer color equals
-the post-transparent color at each sample; fluid was not the occluder in
-these four rays. The depth buffer instead resolves to a farther surface than
-the source-mesh ray intersection, while the color is dark/fog blue rather
-than near-black.
+vertex positions matched the source positions. The hit faces covered
+entry-face indices 0, 1, and 4. M516–M517 later established that the full
+inverse-VP CPU ray used to select these rows can shift several pixels at this
+world position. The GPU command/index/vertex facts remain valid for the named
+source batches, but their attribution to the sampled pixel is unproven; do not
+infer from these rows that the actual pixel's draw range was present or absent.
+The pre-transparent color, depth, and fluid-triangle fields describe the
+actual sample, but the computed source-triangle intersection may refer to a
+nearby pixel.
 
 The run's world and global resource-pack selection both used
 `minetest_default_16`; its `tree_side` and `tree_top` PNG alpha is fully
@@ -7201,21 +7205,24 @@ submitted with the exact draw state in the same frame: M509's draw-state
 field is null. M483 had one earlier exact tree-log event with depth test and
 depth writes enabled, culling and scissor disabled, and a successful GPU MDI
 submission, but that state sample did not share an epoch with its pixel event.
-These observations narrow the next boundary to same-frame draw submission and
-pixel/raster correspondence; they do not justify a streaming change or a
-renderer fix yet.
+At the time, these observations pointed to same-frame draw submission and
+pixel/raster correspondence. M516–M517 later showed that the CPU ray used to
+select the rows could shift by several pixels, so this does not narrow the
+renderer fault boundary. The source-batch facts remain useful only if joined
+to a new mismatch measured with the corrected ray.
 
-The user's report of water disappearing at the end of the preceding visible
-run remains open. M508's direct engine-framebuffer probes showed fluid draws
-and color changes in its selected ocean tail, but M509 covered a tree/land
-segment and cannot confirm the reported endpoint. Repeat a bounded endpoint
-probe before concluding the water path is healthy.
+The user's report of water looking corrupted at the end of a visible run
+remains open. M508's raw engine-framebuffer probes showed fluid draws and color
+changes in its selected ocean tail; M518 later repeated the endpoint using the
+corrected ray and a `GL_BACK` frame readback. M509 covered a tree/land segment
+and its CPU-ray pixel attribution is now provisional.
 
-Next: add a low-volume same-frame witness that joins the exact pixel-ray
-source batch to the submitted MDI range, command slot, and GL draw state. Then
-replay only the short hotspot. In parallel, retain a separate endpoint-water
-check using the established route. Do not extend pixel tracing to the full
-M335 route; the M508 1.18-GB trace and analyzer memory use make that wasteful.
+At the time, the next step was a low-volume same-frame GPU-range witness. That
+step is now conditional: M517 reported zero gaps with the corrected ray, so do
+not repeat the opaque hotspot witness unless a new corrected-ray run or live
+operator observation identifies a real pixel mismatch. Do not extend pixel
+tracing to the full M335 route; the M508 1.18-GB trace and analyzer memory use
+make that wasteful.
 
 Artifacts and the exact M509 command are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m509--bounded-gpu-range-replay-at-the-m508-hotspot-2026-10-10).
@@ -7229,28 +7236,29 @@ profile. It joined five source-mesh-to-depth gap pixels for block `573`
 the source command, EBO indices, and GPU vertex positions matched; the MDI
 command was submitted with `instanceCount=1`, depth test and depth writes
 enabled (`GL_LESS`), culling/scissor/stencil/rasterizer discard disabled, and
-the expected 1280×720 viewport/framebuffer. Thus these samples are not
-explained by missing chunk data, an unpublished mesh, a stale pooled range, or
-disabled depth state. They still do not prove that the fragment shader
-generated a fragment at the pixel center; alpha sampling, interpolated UV,
-clip/raster coverage, and disagreement between the CPU ray and actual sample
-remain to be separated.
+the expected 1280×720 viewport/framebuffer. Those GL-state and buffer facts
+remain valid for the named source batches. However, M516–M517 later showed
+that the old inverse-VP CPU ray could shift several pixels, so the association
+between those batches and the sampled pixel is unproven. Do not infer that the
+actual sample's draw range was present or missing from M510. M517 produced no
+source-mesh-to-depth gaps using the corrected ray.
 
 M510 had six source-mesh-to-depth gap rows total: five tree logs and one
-different block (`549`) whose sample matched a fluid triangle. Restrict any
-opaque-geometry conclusion to the five tree-log rows; do not attribute the
-sixth row to the tree mesh. The tree texture PNGs remain fully opaque, but
-runtime atlas sampling is not yet witnessed. A narrowly gated shader coverage
-marker or actual atlas readback is the next decisive diagnostic. No renderer
-fix is justified from this run alone.
+different block (`549`) which the old CPU ray associated with a fluid triangle.
+Treat that sixth source association as provisional too; the saved pixel/depth
+values remain framebuffer measurements. The tree texture PNGs remain fully
+opaque, but runtime atlas sampling is not witnessed. Shader/atlas coverage
+work is conditional on a corrected-ray mismatch; M517 did not provide one. No
+renderer fix is justified from M510 alone.
 
 The local analyzer reported 3/38 visual-hole-proxy periods, readiness debt
 1.0, and zero near-black proxy rate. The route and process succeeded, while
 performance, scheduling, and stop-recovery gates remained red. M510 did not
-cover the ocean tail and does not address the user's report that water looked
-corrupted at the end of the preceding run. Run the bounded endpoint-water
-probe as a separate lane, keeping direct engine-framebuffer evidence distinct
-from desktop screenshots.
+cover the ocean tail. M512 and M518 later sampled the post-stop endpoint; M518
+used the corrected ray and raw `GL_BACK` capture, and found fluid intersections
+and color changes at its selected pixels. This does not settle the operator's
+report of corrupted water because the live view and exact reported moment were
+not synchronized with the readback.
 
 Artifacts and the exact M510 command are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m510--same-frame-mdi-draw-state-witness-at-hotspot-2026-10-10).
@@ -7264,25 +7272,27 @@ was being submitted (105 fluid range draw calls in the corresponding period
 sample, including 35 shell-depth and 70 color-pass submissions). In that
 same-frame direct engine-framebuffer probe, 57 of 100 selected pixels
 intersected fluid triangles and all 57 had a final color different from the
-pre-transparent color. Across the bounded trace, 1,788 pixel rows intersected
-fluid triangles; 1,782 changed color after the transparent stage. This shows
-that water geometry and the transparent passes were active in the final
-measured flight frame; it does not prove that the user-reported appearance was
-correct.
+pre-transparent color. Across the bounded trace, 1,788 pixel rows were
+associated with fluid triangles by the old CPU ray; 1,782 changed color after
+the transparent stage. M516–M517 later showed that this full inverse-VP ray can
+be offset, so the triangle-to-pixel association is provisional. The per-pixel
+color changes and fluid submissions are actual framebuffer/runtime facts; they
+do not prove that the user-reported appearance was correct.
 
 The diagnostic X minimum was `-7445`, but the post-flight camera settled at X
 `-7448`. Fluid telemetry and pixel probes are deliberately disabled outside
 their configured bounds, so the subsequent zeros at `-7448` are unmeasured
-state, not evidence of a rendering failure. M511 therefore covers the end of
-flight but misses the post-stop view where the symptom was reported. Repeat
-the exact segment with the bounds extended through `-7500`; retain direct
-framebuffer sampling and do not treat desktop captures as equivalent.
+state, not evidence of a rendering failure. M511 covered the end of flight but
+missed the post-stop view where the symptom was reported. M512 subsequently
+repeated the segment with bounds extended through `-7500`, and M518 repeated
+the endpoint with the corrected ray. Preserve the distinction between direct
+framebuffer samples and desktop captures.
 
 The route passed input adequacy at the established `5.18555 blocks/s`; process
 exit was 0. The product analyzer exited 1 on its eye-proxy/readiness and other
 strict gates, so this is a diagnostic result, not product acceptance. Artifact
 
-#### M512 checkpoint — post-stop water is present in the renderer framebuffer (2026-10-10)
+#### M512 checkpoint — post-stop fluid and framebuffer probe (2026-10-10)
 
 M512 repeated M511's exact local flight and stop phases, extending only the
 trace/readback/capture bounds to `[-7500,-7190]` so the stop camera at X
@@ -7291,8 +7301,12 @@ X `-7448` each found the same 34 screen sample positions intersecting water
 block `575` triangles. All 340 of those direct framebuffer samples changed
 color after the transparent stage. Adjacent per-period telemetry at player X
 `-7447` showed 98 fluid refs, 3,216 fluid indices, and 132 submissions across
-the shell-depth and two color passes (44 + 88). This did not reproduce a
-missing water surface in the engine's framebuffer after stop.
+the shell-depth and two color passes (44 + 88). M516–M517 later showed that
+M512's source-triangle intersections used the inaccurate full inverse-VP ray,
+so the 34-pixel water-coverage attribution is provisional. The color changes
+at those actual framebuffer pixels and fluid submissions remain valid. M518
+repeated the endpoint with the corrected ray and confirmed fluid-triangle hits
+and transparent color changes in its selected samples.
 
 The same 34 sample positions stayed covered across all ten probes. Seven
 positions alternated between values separated by one low-order color step;
@@ -7300,9 +7314,8 @@ the selected `minetest_default_16` water definition is animated with four
 frames at six ticks per frame. This is compatible with the expected animated
 texture, but the probe does not record the selected animation frame and cannot
 rule on the user's precise visual complaint. No fluid-render code change is
-justified from M511/M512. Preserve the symptom as operator-reported and
-unreproduced in direct engine readback, while continuing the separate tree
-opaque-raster investigation.
+justified from M511/M512. Preserve the symptom as operator-reported; M518
+provides the corrected endpoint ray and raw GL_BACK capture.
 
 M512 passed route adequacy at `5.18555 blocks/s` for 240 blocks and the process
 exited 0. The strict product analyzer returned 1 because readiness, eye-proxy,
@@ -7325,9 +7338,17 @@ M513–M517 продолжили ограниченный видимый no-tele
 gap-строках; всего анализатор отметил 6 строк на четырёх экранных позициях.
 Это выявило дефект измерителя: близкая к камере точка в больших мировых
 координатах теряет точность при обратной матрице float и повторном projection.
-Следовательно, M510/M513–M516 CPU ray-gap строки нельзя считать доказательством
-недостающего фрагмента или ошибкой стриминга; особенно важный M510 draw-state
-witness нужно повторить после исправления луча.
+Следовательно, M508–M516 CPU ray-gap строки и source-triangle associations
+нельзя считать доказательством недостающего фрагмента или ошибкой стриминга.
+Показания M510 о состоянии MDI и GPU bytes достоверны для named source batches,
+но их привязка к sample pixel не доказана. M517 не нашёл gap с исправленным
+лучом; повторять draw-state witness следует только после нового corrected-ray
+mismatch или подтверждённого оператором pixel-дефекта.
+
+Та же ошибка затрагивает source-triangle attribution в water probes M508–M512:
+пиксельные цвета и fluid submission counters остаются реальными измерениями,
+но факт, что прежний CPU ray пересекал именно водный треугольник этого sample,
+нужно перепроверять новым лучом. M518 это сделал для остановочного endpoint.
 
 В M517 построили луч иначе: направление восстанавливается в view space через
 `inverse(Projection)`, а rendered camera origin — через `inverse(View)`. В
