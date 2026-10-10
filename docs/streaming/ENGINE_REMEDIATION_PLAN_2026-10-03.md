@@ -6607,64 +6607,74 @@ measure bytes and write counts and verify restart/load equivalence.
 
 M492 isolated the invalid stencil query: `glGetIntegerv(GL_STENCIL_BITS)`
 raised `GL_INVALID_ENUM` (1280) on the OpenGL Core context. Draw framebuffer 0
-was complete (36053) and had no prior GL errors. This is a removed Core query,
-not evidence that the default framebuffer lacks stencil. The pipeline now
-queries `GL_STENCIL` on the default framebuffer or `GL_STENCIL_ATTACHMENT` on
-an FBO, then reads the attachment's stencil size. Verify this path in M493;
-water remains unclassified because a valid stencil size alone cannot prove
-that fluid geometry was emitted or drawn. Continue using live operator display
-as the visual oracle until saved-image composition is validated.
+was complete (36053) and had no prior GL errors. This was a removed Core query,
+not evidence that the default framebuffer lacks stencil. M493 verified the
+replacement attachment query: 8 bits, object type `GL_FRAMEBUFFER_DEFAULT`,
+complete status, and no query errors. The desktop-shell path is now selected.
+This validates stencil availability, but not water occupancy or draw coverage;
+the fluid-specific chain and live operator observation remain necessary.
 
-M492 completed 7,408 blocks at 5.19287 blocks/s and passed route completion and
-the empty-world stop line. A24 still found 8 near-focus mesh-proxy periods
-(none in the control corridor), and post-stop convergence failed. The route
-report failed overall. This maintains the distinction between readiness debt,
-the mesh-coverage proxy, and confirmed pixels.
+M493 completed 7,456 blocks at 5.18555 blocks/s with stable eye height and
+passed route completion, eye-proxy, empty-world, enter-dirty, and dual-lane
+stop lines. A24 found 13 near-focus mesh-proxy periods, one in the control
+corridor; post-stop convergence failed and the report failed overall. The
+mesh proxy is not a pixel oracle.
 
-The far-west route also produced a separate unexplained render stall: a sample
-at `cx=-439` reported 925.4 ms in the full `RenderFrame`, while swap was 0.125
-ms, measured scene 4.175 ms, preparation 0.479 ms, post-scene 0.609 ms, and GUI
-overlay 0.002 ms. Several similar stalls occurred near `cx=-436..-447`. The
-unmeasured early setup in `RenderFrame` (framebuffer/viewport/depth state and
-camera viewport update) is now timed separately as `render_frame_setup_ms`.
-Do not label this as a GPU-driver stall until that partition identifies where
-the time lands.
+The M492 far-west sample at `cx=-439` still has an unexplained 925.4 ms inside
+`RenderFrame`, while swap was 0.125 ms, scene 4.175 ms, preparation 0.479 ms,
+post-scene 0.609 ms, and GUI overlay 0.002 ms. M493 added
+`render_frame_setup_ms`; it stayed below 0.037 ms on spike frames, so early
+framebuffer/viewport setup does not explain the M492 stall. The 400+ ms
+render-frame anomaly did not recur in M493's far-west segment; its largest
+far-west render spike was 83.1 ms at `cx=-418`, mostly scene/transparent work.
+M493 did expose other render hitches: at `cx=-357`, scene was 249.0 ms and the
+transparent pass 217.0 ms with 4,386 GPU transparent batches. The transparent
+batch counter does not identify water or measure GPU time; treat this as a
+separate rendering-throughput lead.
+
+M493's 13 proxy periods all had terminal miss-column snapshots with a drawable
+and satisfying mesh; 10 of those columns were dirty, and all 13 periods had
+mesh backpressure. Because the lifecycle snapshot is taken at the end of the
+update while the proxy can have been raised earlier within a perf period, this
+does not prove either a false proxy or queue starvation. Capture the miss
+lifecycle in the same frame/epoch where `VisualHoles` is evaluated before
+changing scheduling policy.
 
 Next steps:
 
-1. Build Release and run M493 on the same visible, fixed-day, no-teleport M335
-   route with high-volume traces disabled. Verify the corrected stencil
-   attachment query and record the new per-column focus-miss ownership fields.
-   Read `render_frame_setup_ms` beside `render_total_ms`, scene, GUI, prepare,
-   and swap timings to locate the unexplained far-west stalls.
-2. For every proxy period, classify the exact nearest missing column: live
-   ColumnFlow ticket kind/priority, column job stage, dirty/build-in-flight/GPU
-   apply state, drawable mesh, and satisfying mesh. Distinguish scheduling,
-   build, extraction, and publication failures before adjusting lane policy.
-   Keep remesh/relight floors when they protect visible terrain.
-3. If M493 confirms time in the early GL setup, split timing around the exact
-   GL state calls and correlate with vendor/driver activity. If setup stays
-   short, instrument the remaining rendering subpasses. Keep this analysis
-   separate from streaming mesh backlog until causality is measured.
-4. Keep source/save attribution runs separate from timing runs. If another
-   provenance pass is needed, log to file without stderr mirroring and quantify
-   logging overhead before interpreting latency.
-5. Add persistence-specific dirty tracking before reducing unload saves; verify
+1. Add `fp_viewmodel_ms` around `FpViewmodelRenderer::DrawWorldOverlay`, which
+   runs between the measured scene and GUI passes. That path remains unmeasured
+   and is a plausible interval for M492's large unexplained `RenderFrame` time.
+   Keep `render_frame_setup_ms`; do not infer a driver stall from the wall clock.
+2. Capture the selected miss column's ticket, job stage, dirty/build/GPU state,
+   drawable status, and satisfying status in the same update epoch/frame that
+   evaluates `VisualHoles`. Compare that snapshot with the current terminal
+   snapshot. Only after a same-frame mismatch is understood should FirstMesh
+   admission or queue policy change; keep remesh/relight protection floors.
+3. Use the M493 scene substage evidence to profile the transparent pass at the
+   large-batch west frontier. Separate batch sorting/refresh, command issue,
+   and any GPU wait; retain water-specific occupancy, emitted-face, batch,
+   selected-pass, depth/stencil, submitted-draw, and pixel-coverage evidence.
+   Do not conflate generic transparent batches with water.
+4. Build Release and repeat the visible fixed-day M335 route with high-volume
+   traces and framebuffer capture disabled. Validate the frame-aligned focus
+   snapshot and viewmodel timer at the far-west segment. Keep the operator's
+   live display separate from saved-image evidence.
+5. Keep source/save attribution runs separate from timing runs. If provenance
+   work resumes, log to file without stderr mirroring and quantify trace cost.
+6. Add persistence-specific dirty tracking before reducing unload saves; verify
    edited terrain survives save/restart and unchanged terrain avoids rewrites.
-6. Continue the focused fluid draw chain: fluid occupancy, emitted faces,
-   transparent batch membership, selected pass, depth/stencil state, submitted
-   fluid draw, and framebuffer coverage. Preserve live operator observation
-   separately from capture artifacts.
-7. After M335 proxy ownership and stop-tail behavior are interpretable, resume
+7. Once M335 proxy ownership and stop-tail behavior are interpretable, resume
    the periodic cold/new-world lane as a secondary check for storage history.
 
-Plan status: **M492 establishes normal route speed and exposes two unresolved
-classes: near-focus mesh readiness/convergence and rare, very long render-frame
-stalls at the far-west frontier. The old stencil fallback was triggered by an
-invalid Core-profile query; the attachment query is corrected in source but
-still needs a Release run. Exact per-column focus ownership and render setup
-timing are being added for M493. The report's proxy counts are not direct pixel
-evidence, and live water observation remains separate from saved-image capture.**
+Plan status: **M493 validates the Core-profile stencil attachment query and
+the desktop-shell path, while route speed and eye height remain controlled.
+A24 and post-stop convergence gates still fail. Terminal focus-miss snapshots
+show satisfying meshes for every proxy period but are not frame-aligned with
+proxy evaluation, so no queue-policy change is justified yet. The M492 extreme
+render stall did not reproduce; M493 exposed transparent-pass hitches and left
+the FP viewmodel interval unmeasured. Next is same-frame proxy lifecycle data
+and per-stage render timing, followed by another matched M335 release flight.**
 
-M491 and M492 artifacts and exact invocations are recorded in
-[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m492--quiet-m335-with-invalid-core-stencil-query-isolated-2026-10-10).
+M491–M493 artifacts and exact invocations are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m493--attachment-stencil-and-focus-miss-lifecycle-on-quiet-m335-2026-10-10).

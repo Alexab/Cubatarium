@@ -4992,10 +4992,11 @@ OpenGL Core context, while draw framebuffer 0 reported complete status
 36053 and no prior GL errors. This is a removed context-framebuffer query in
 Core, not evidence that the framebuffer lacks a stencil plane. The pipeline
 now queries the default framebuffer's `GL_STENCIL` attachment (or an FBO's
-`GL_STENCIL_ATTACHMENT`) and reads its attachment stencil size. M493 must verify
-that the corrected query returns a valid attachment size before interpreting
-the selected transparent path. The probe remains diagnostic; water visibility
-still requires a fluid-specific draw chain and live observation.
+`GL_STENCIL_ATTACHMENT`) and reads its attachment stencil size. M493 verified
+8 stencil bits on the default framebuffer (`GL_FRAMEBUFFER_DEFAULT`, status
+36053, no GL query errors) and selected the desktop-shell path. The probe is
+valid, but water visibility still requires a fluid-specific draw chain and
+live observation.
 
 Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m491_world164_m335_column_source_20261010.json),
 [source analysis](../../bin/suite_reports/engine_refactor/m491_source_trace_20261010.json),
@@ -5076,4 +5077,69 @@ $env:CUBATARIUM_RELIGHT_AUDIT='0'
 $env:CUBA_FLIGHT_CAPTURE_DIR=''
 Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m492_world164_m335_quiet_stderr_stencil_diag_20261010 --report bin/suite_reports/engine_refactor/m492_world164_m335_quiet_stderr_stencil_diag_20261010.json --process-timeout 7200
+```
+
+### M493 — attachment stencil and focus-miss lifecycle on quiet M335 (2026-10-10)
+
+M493 reused the visible fixed-day no-teleport M335 route and disabled all
+high-volume traces and framebuffer capture. It used Release binary SHA256
+`E945D9A2197FEF8A8C29F5446F9924D20715157650B1EF4E854ABB38C34033C6`, built
+from commit `7c2dd93e9a9b8dfe6abd95f9a74496c2c72b327e`. The app exited normally
+and the route completed 7,456 blocks at 5.18555 blocks/s; camera eye height
+stayed at 70. The analyzer recorded 742 periods, 740 steady, and 37 spike
+frames. Overall report gates failed: A24 found 13 periods with the near-focus
+mesh-coverage proxy (one in the control corridor), and post-stop convergence
+did not reach its readiness/pending-work conditions. Route completion, the
+eye-proxy stop line, empty-world stop line, enter-dirty stop line, and dual-lane
+stop line passed. `visual_holes_rate=1.7568%` is a mesh/readiness proxy, not
+pixel coverage or proof of a visually blank chunk.
+
+The new focus-miss lifecycle fields are terminal snapshots for each perf
+period, not a frame-aligned snapshot of the exact instant that raised its
+proxy. In all 13 proxy periods, the chosen miss column was already reported as
+drawable and satisfying at the terminal sample; 10 were dirty, 9 had job stage
+`Meshing`, and all 13 coincided with mesh-pipeline backpressure. These values
+are insufficient to establish that the queue caused a visible gap: the proxy
+and lifecycle fields may describe different moments in the period. Capture the
+same state at the instant `VisualHoles` is evaluated before changing scheduler
+policy.
+
+M493 verified the corrected stencil query: 8 bits, default framebuffer object
+type `GL_FRAMEBUFFER_DEFAULT` (33304), complete status 36053, and zero GL query
+errors. The transparent pipeline now uses the desktop-shell path. This confirms
+the attachment and path selection only; operator pixel observation was not
+recorded for M493, and no framebuffer captures were used.
+
+The `render_frame_setup_ms` field stayed below 0.037 ms on spike frames, so the
+early framebuffer/viewport setup did not explain M492's 925 ms render sample.
+That M492 anomaly did not recur as a 400+ ms render stall in M493. The largest
+far-west spike was at `cx=-418`: wall 135.438 ms, render 83.051 ms, scene
+80.498 ms, transparent 75.924 ms, swap 0.110 ms. Elsewhere, the largest render
+spike was at `cx=-357`: render 250.317 ms, scene 249.041 ms, including
+transparent pass 216.972 ms and 4,386 transparent GPU batches. These CPU-side
+pass timings point to a separate transparent-rendering throughput concern;
+the batch counter does not isolate water or prove GPU time.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m493_world164_m335_attachment_stencil_column_miss_20261010.json),
+[perf trace](../../bin/logs/perf_20261010-133921_27964.jsonl), and app INFO
+log `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-133919.27964`.
+The runner restored `bin/worlds/World_164/world_data.json` byte-for-byte to SHA
+`0ade40413ad4172777a59c2573809ed415AC19DEE2F30C8500C737AC5EC2D344`.
+
+Exact M493 invocation:
+
+```powershell
+$env:CUBA_STREAMING_DETAIL_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='0'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='0'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'
+$env:CUBA_WORLD_COLUMN_SAVE_TRACE='0'
+$env:CUBA_STREAMER_UNLOAD_TRACE='0'
+$env:CUBATARIUM_RELIGHT_AUDIT='0'
+$env:CUBA_FLIGHT_CAPTURE_DIR=''
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m493_world164_m335_attachment_stencil_column_miss_20261010 --report bin/suite_reports/engine_refactor/m493_world164_m335_attachment_stencil_column_miss_20261010.json --process-timeout 7200
 ```
