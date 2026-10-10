@@ -7169,3 +7169,53 @@ performance run as the baseline.
 
 Artifacts and exact M508 settings are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m508--full-m335-occupancy-and-framebuffer-probe-2026-10-10).
+
+#### M509 checkpoint — bounded GPU-range replay at the M508 hotspot (2026-10-10)
+
+M509 replayed the local no-teleport segment around X `-5500..-5724` on the
+same Release executable and `World_164`, with pixel readbacks bounded to
+`[-5750,-5480]`. It completed 224 blocks at the established flight speed;
+the application exited 0 and the route outcome was success. The strict local
+analyzer remained red (38 steady periods, 4 visual-hole-proxy periods, and
+readiness debt 1.0). This run is an instrumented diagnostic, not an acceptance
+or performance baseline.
+
+The GPU-range witness resolved four source-mesh-to-depth gap samples. Every
+hit was block `573` (`tree_log`) with a ready texture, a pooled MDI command,
+and `instanceCount=1`. For each sample the active indirect command matched
+the cache command, the GPU EBO indices matched the source triple, and GPU
+vertex positions matched the source positions. Thus the four observations do
+not point to missing world data, an unpublished mesh, or a stale uploaded
+range. The hit faces covered entry-face indices 0, 1, and 4, so this is not
+limited to one face orientation. The pre-transparent framebuffer color equals
+the post-transparent color at each sample; fluid was not the occluder in
+these four rays. The depth buffer instead resolves to a farther surface than
+the source-mesh ray intersection, while the color is dark/fog blue rather
+than near-black.
+
+The run's world and global resource-pack selection both used
+`minetest_default_16`; its `tree_side` and `tree_top` PNG alpha is fully
+opaque. That removes transparent texels as the likely explanation for this
+specific replay. It still does not establish that the matching MDI range was
+submitted with the exact draw state in the same frame: M509's draw-state
+field is null. M483 had one earlier exact tree-log event with depth test and
+depth writes enabled, culling and scissor disabled, and a successful GPU MDI
+submission, but that state sample did not share an epoch with its pixel event.
+These observations narrow the next boundary to same-frame draw submission and
+pixel/raster correspondence; they do not justify a streaming change or a
+renderer fix yet.
+
+The user's report of water disappearing at the end of the preceding visible
+run remains open. M508's direct engine-framebuffer probes showed fluid draws
+and color changes in its selected ocean tail, but M509 covered a tree/land
+segment and cannot confirm the reported endpoint. Repeat a bounded endpoint
+probe before concluding the water path is healthy.
+
+Next: add a low-volume same-frame witness that joins the exact pixel-ray
+source batch to the submitted MDI range, command slot, and GL draw state. Then
+replay only the short hotspot. In parallel, retain a separate endpoint-water
+check using the established route. Do not extend pixel tracing to the full
+M335 route; the M508 1.18-GB trace and analyzer memory use make that wasteful.
+
+Artifacts and the exact M509 command are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m509--bounded-gpu-range-replay-at-the-m508-hotspot-2026-10-10).

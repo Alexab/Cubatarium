@@ -5723,3 +5723,47 @@ screen-ray candidate rows. M508's analyzer passed route execution but failed
 performance, readiness, scheduling, and stop-recovery gates. Keep the report's
 metric semantics with the artifacts: `visual_holes` is a near-focus
 mesh-coverage proxy; legacy `holes_rate` is readiness debt.
+
+### M509 — bounded GPU-range replay at the M508 hotspot (2026-10-10)
+
+Visible, local, no-teleport Release diagnostic on `World_164`, source
+`ca6a56aa`, executable SHA-256
+`b0308dd3bce71a04c6c7aebbd38620ef5da84df67c1d335e73b9a09e3e5921ca`.
+Start `-5500 56 56`, eye Y=70, yaw 180, pitch -30, 45 s flight, 20 s stop,
+15 s idle, minimum travel 150 blocks. The route completed 224 blocks at about
+5 blocks/s; process exit was 0 and run outcome was success. The local analyzer
+failed its strict visual, readiness, scheduling, and stop-convergence gates.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m509_world164_hotspot_gpu_range_witness_20261010.json)
+- [perf JSONL, about 161 MB](../../bin/logs/perf_20261010-220058_40188.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-220052.40188)
+- [40 captures](../../bin/flight_captures/m509_world164_hotspot_gpu_range_witness_20261010)
+
+Exact invocation:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-5750'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-5480'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m509_world164_hotspot_gpu_range_witness_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-5750'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-5480'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -5500 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m509_world164_hotspot_gpu_range_witness_20261010 --report bin/suite_reports/engine_refactor/m509_world164_hotspot_gpu_range_witness_20261010.json --process-timeout 900
+```
+
+The report recorded 40 periods, 38 steady periods, 4 visual-hole-proxy
+periods, and readiness debt 1.0. The 4 GPU-range witnessed pixel gaps all
+traced to tree-log source triangles with ready textures and matching pooled
+GPU command/index/vertex data. Their exact same-frame draw-state join was
+missing, so this run narrows the problem to the draw/submission/raster boundary
+without identifying the failure. `World_164` and `bin/config.json` both select
+`minetest_default_16`; its tree side/top textures have alpha 255 throughout,
+so alpha cutout is not a plausible cause for these four samples. M509 did not
+cover the ocean endpoint and therefore does not settle the user's latest water
+report. The run is diagnostic, not a clean performance baseline.
