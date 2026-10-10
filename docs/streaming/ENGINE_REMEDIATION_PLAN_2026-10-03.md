@@ -6456,13 +6456,14 @@ or a GPU/driver-specific fault.
 
 #### Updated remaining work after M489
 
-1. Treat the M488/M489 operator-visible result as a strong lead: inspect why
-   the forced single-pass branch in `GreedyTransparentPipeline.cpp` loses water
-   while the default shell-depth/behind-shell/shell-surface sequence retains
-   it. Add a focused fluid render diagnostic that proves occupancy, emitted
-   faces, transparent batch inclusion, depth/stencil state, submitted draw,
-   and resulting framebuffer coverage. Do not enable the diagnostic single-
-   pass override in ordinary visual runs.
+1. Treat the transparent-pass mode as a lead, not a root cause: water was
+   reported absent in default-path M487, absent from the beginning of
+   single-pass M488, and present during default-path M489. Explain this mixed
+   result by reviewing run initialization/render state and the stencil-shell
+   versus single-pass behavior. Add a focused fluid render diagnostic that
+   proves occupancy, emitted faces, transparent batch inclusion, depth/stencil
+   state, submitted draw, and resulting framebuffer coverage. Do not enable
+   the diagnostic single-pass override in ordinary visual runs.
 2. Replace or validate the visual evidence path. Compare the GL backbuffer
    readback against an OS/window capture without raising or focusing the game;
    verify gamma/color transforms, image orientation, and whether any apparent
@@ -6494,13 +6495,14 @@ or a GPU/driver-specific fault.
    classified on the repeatable M335 lane.
 
 Plan status: **the quiet low-trace timing control is complete and route/speed
-remain correct. The operator-visible A/B now points to a failure in the
-diagnostic single-pass transparent path: water was absent from the start of
-M488 but present in the default-path M489. This is a strong correlation, not a
-completed root-cause fix. The saved PNG path is not a visual oracle until its
-mismatch with the live display is resolved. Stop-tail convergence, A24 holes,
-fluid-specific draw evidence, and periodic cold/new-world coverage remain
-open.**
+remain correct. Water visibility is inconsistent across runs: the operator
+reported no surface in default-path M487 and single-pass M488, then a present
+surface in default-path M489. M488/M489 alone suggest a possible mode effect,
+but M487 contradicts a single-pass-only cause; flight duration is not
+established as the trigger. The saved PNG path is not a visual oracle until
+its mismatch with the live display is resolved. Stop-tail convergence, A24
+holes, fluid-specific draw evidence, and periodic cold/new-world coverage
+remain open.**
 
 M487–M489 artifacts and exact invocations are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m487--low-instrumentation-m335-timing-control-2026-10-10).

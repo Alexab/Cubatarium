@@ -4803,12 +4803,17 @@ time was 15.41 ms (64.88 FPS). Both runs therefore had similar route and
 readiness-proxy failures despite the different live water observations. These
 proxies cannot adjudicate the visible water result.
 
-This operator-visible A/B strongly correlates missing water with the forced
-single-pass branch and present water with the default stencil-shell branch.
-It does not implicate streaming yet: both runs used the same world/config,
-route, and binary, and no fluid-specific mesh-to-draw counter was collected.
-Prioritize review of transparent depth/stencil state and the fluid draw path;
-keep `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS` unset in normal visual runs.
+The M488/M489 operator-visible pair is consistent with the forced single-pass
+branch contributing to missing water. However, M487 also used the default
+stencil-shell path and the operator reported no water there, while M489 used
+that default path and the operator reported water present. The observations
+therefore contradict a single-pass-only cause. Treat the mode difference as a
+lead, with run-to-run/render-state intermittency still open; there is no basis
+to attribute this to flight duration. Both paired runs used the same
+world/config, route, and binary, and no fluid-specific mesh-to-draw counter was
+collected. Prioritize review of transparent depth/stencil state and the fluid
+draw path; keep `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS` unset in normal visual
+runs.
 
 The operator also reported that the saved images darken the distant world more
 than the live display and appear to mix text from another application into the
