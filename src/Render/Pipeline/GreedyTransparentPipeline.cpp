@@ -85,6 +85,26 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
   {
     glGetIntegerv(GL_STENCIL_BITS, &stencil_bits);
   }
+  static bool logged_stencil_path = false;
+  if (!logged_stencil_path)
+  {
+    logged_stencil_path = true;
+    std::clog << "[Transparent] framebuffer_stencil_bits=" << stencil_bits
+              << " path="
+              << (stencil_bits > 0 ? "desktop-shell" : "single-pass-fallback")
+              << std::endl;
+  }
+
+  // The desktop shell algorithm relies on the first pass writing stencil=1
+  // and the color passes testing against it. If the active framebuffer has no
+  // stencil attachment, those color passes reject every fragment. Keep water
+  // visible with the same no-stencil path used on GLES instead of silently
+  // drawing nothing.
+  if (stencil_bits <= 0)
+  {
+    DrawTransparentSinglePass(backend, settings);
+    return;
+  }
 
   glEnable(GL_STENCIL_TEST);
   glStencilMask(0xFF);
