@@ -6761,3 +6761,60 @@ capture fidelity without changing the established flight route.**
 
 M494 artifacts and exact invocation are recorded in
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m494--frame-aligned-proxy-lifecycle-and-west-frontier-profile-2026-10-10).
+
+#### M495 checkpoint — final-segment water appearance and capture comparison (2026-10-10)
+
+M495 completed the unchanged visible Release/no-teleport M335 route on
+`World_164`: 7,456 blocks at 5.19287 blocks/s, eye Y=70, normal exit. The
+report has 742 periods, 34 spikes, median fly wall time 16.741 ms, and
+`pass=false`. The A24 safety line found near-focus mesh-coverage proxy samples
+in 15 periods (one in the control corridor). Post-stop readiness debt reached
+28 and did not converge. These counters do not identify the water symptom.
+
+The operator reported that water looked broken at the very end of the flight.
+The last two internal GL images, at camera X≈−7,270 and −7,340, show the
+water/shore view becoming dominated by a flat navy region; an earlier image at
+X≈−7,193 still shows the textured blue surface. The dominant navy pixel value
+in the first changed frame is exactly `(13,38,89)`, the configured fog color.
+This is objective evidence of a late visual change, but not proof that the
+water mesh itself disappeared: full fog can hide the surface or underwater
+terrain, while a water draw/pass defect can produce a similar view. The
+foreground-verified OS screenshot near focus `cx=-456` also shows the navy
+region in the game window, so this is not solely an artifact of saving the
+internal GL frame. It was captured several seconds apart from the nearest GL
+frame, however, and the exact stop-pose OS capture was rejected because the
+game was no longer foreground; this is not a same-frame pixel comparison.
+
+M495's generic transparent batch count rose from about 3,200 to 3,600 and
+`scene_transparent_ms` remained around 3–6 ms near the endpoint. The
+`gpu_fluid_scan_on` flag and sub-millisecond fluid-map work describe the
+waterline/fog map, not water mesh occupancy or draw. The log has no count of
+fluid faces, fluid batches, actual fluid submissions, pass coverage, or
+framebuffer pixels attributable to water. The stencil query succeeded with 8
+bits and selected `desktop-shell`; this verifies capability detection, not
+correct water output. The current evidence therefore cannot distinguish a
+fluid surface mesh/publication gap, transparent ordering/state, or intended
+fog saturation at the far/underwater view.
+
+Next work is to add a bounded fluid-specific diagnostic chain on the same M335
+route: resident fluid occupancy and neighbor provenance; emitted fluid faces
+per mesh revision; fluid refs/index counts after filtering and culling; actual
+per-pass fluid draw submission and depth/stencil/blend state; and a water-only
+framebuffer coverage witness paired to camera position and timestamp. Record
+fog start/end/color and the pixel's contributing surface so exact fog-color
+pixels are not mislabeled as absent water. Keep the normal visual run on the
+default desktop-shell path and unchanged fog/camera settings; diagnostic
+overrides may be used only in a separate, explicitly labeled A/B run. Do not
+change `Unknown`-neighbor liquid-face policy or fog pull-in based on this one
+endpoint observation. After classifying the owning stage, fix that stage and
+repeat M335; keep periodic cold/new-world coverage secondary.
+
+Plan status: **route speed and completion remain controlled. M495 confirms a
+late, operator-visible water/shore appearance change accompanied by a large
+exact-fog-color region in both internal and near-end window captures. It does
+not yet prove water geometry is missing. The next blocker is the missing
+fluid-specific mesh-to-pixel evidence; A24 and stop-tail convergence remain
+separate open items.**
+
+M495 artifacts and exact invocation are recorded in
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m495--final-segment-water-appearance-and-capture-comparison-2026-10-10).

@@ -5220,3 +5220,69 @@ $env:CUBA_FLIGHT_CAPTURE_DIR=''
 Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m494_world164_m335_proxy_edge_fp_viewmodel_20261010 --report bin/suite_reports/engine_refactor/m494_world164_m335_proxy_edge_fp_viewmodel_20261010.json --process-timeout 7200
 ```
+
+### M495 — final-segment water appearance and capture comparison (2026-10-10)
+
+M495 ran the established visible Release/no-teleport M335 on `World_164` with
+the same start, eye height, heading, pitch, speed, and 1,455-second flight.
+The only capture changes were sparse in-app GL frames every 15 seconds and a
+foreground-verified OS screenshot watcher at focus `cx=-448`, `-456`, and
+`-459`. Capture did not change camera input. The default transparent path was
+used (`CUBA_DEBUG_TRANSPARENT_SINGLE_PASS` unset); all detailed visual/source
+traces were disabled. The window helper rejected the exact `cx=-459` stop
+capture after the game stopped being the foreground window.
+
+The route completed normally (`process_rc=0`, no hang kill), traveled 7,456
+blocks at 5.19287 blocks/s, and held eye Y=70. The run manifest records Release
+binary SHA-256
+`1286e9c5ca16d5c90995c21a2fb7588f25e98eb839b2f709cbc7da3256c80b06`, source
+commit `214d71bba2121f22c6c7fcf1f61017173b207bad`, World_164 seed/hash
+`3650471197`, desktop GL 3.3 Core on AMD Radeon(TM) Graphics, and route hash
+`6a2bd434307148c4412d3663a45140efeeefef98978faa2adb5815a61575faeb`.
+`fog_pull_in_enabled=false`, render distance 4, and the established start
+ratio were preserved. The analyzer failed overall: 742 periods, 34 spikes,
+near-focus mesh proxy in 15 periods (one in the control corridor), and
+post-stop readiness debt up to 28 without convergence. These are not water
+draw counts.
+
+The operator reported that water looked broken at the very end. Internal
+frames `frame_096.png` and `frame_097.png` bracket the observed transition:
+the former at camera X≈−7,193 retains a textured blue water view; the latter
+at X≈−7,270 has a large flat navy region. The navy value is exactly fog RGB
+`(13,38,89)` and grows in `frame_098.png`/`frame_099.png` through the stop.
+`desktop/approach_cx-456.png` also shows this region inside the game window.
+It was taken about eight seconds after `frame_097`, so it corroborates the
+in-window appearance but is not a same-frame comparison. The exact stop OS
+capture was rejected because the app was no longer foreground. Do not infer
+from the fog-color pixels alone that water geometry is absent: distance fog,
+underwater fog, a missing/occluded surface, and transparent-pass behavior
+remain possible. `backend_fluid=gpu_fluid_surface` and generic transparent
+batch totals describe neither water mesh faces nor water draws. The stencil
+diagnostic recorded 8 default-framebuffer stencil bits and selected
+`desktop-shell`.
+
+Artifacts:
+
+- [M495 analyzer/report](../../bin/suite_reports/engine_refactor/m495_world164_m335_capture_compare_20261010.json)
+- [M495 perf JSONL](../../bin/logs/perf_20261010-151232_20528.jsonl)
+- [M495 app INFO log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-151230.20528)
+- [Internal frame 097 at X≈−7,270](../../bin/flight_captures/m495_world164_capture_compare_20261010/frame_097.png)
+- [Window capture near focus `cx=-456`](../../bin/flight_captures/m495_world164_capture_compare_20261010/desktop/approach_cx-456.png)
+
+The runner restored `World_164/world_data.json` byte-for-byte to SHA-256
+`0ade40413ad4172777a59c2573809ed415ac19dee2f30c8500c737ac5ec2d344`.
+Raw images/logs remain local and out of Git.
+
+Exact invocation:
+
+```powershell
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m495_world164_capture_compare_20261010'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='15'
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --stop-after-blocked-sec 8 --minimum-travel-blocks 6400 --phase-id m495_world164_m335_capture_compare_20261010 --report bin/suite_reports/engine_refactor/m495_world164_m335_capture_compare_20261010.json --process-timeout 7200
+```
+
+Next run: add fluid-specific occupancy → mesh faces/revision → transparent
+batch → per-pass submitted draw/state → framebuffer-coverage evidence before
+changing water, fog, or `Unknown`-neighbor rules. Keep the same M335 route and
+default desktop-shell path for the visual baseline.
