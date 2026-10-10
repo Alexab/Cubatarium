@@ -93,7 +93,8 @@ void UOpaqueDepthCapture::ApplyShaderUniforms(
   {
     return;
   }
-  shader->SetInt("uOpaqueDepthMap", static_cast<int>(kTextureUnit - GL_TEXTURE0));
+  shader->SetInt("uOpaqueDepthMap",
+                 RenderTextureUnitIndex(RenderTextureUnit::OpaqueDepth));
   shader->SetVec2("uOpaqueDepthScreenSize",
                   glm::vec2(static_cast<float>(Width),
                             static_cast<float>(Height)));

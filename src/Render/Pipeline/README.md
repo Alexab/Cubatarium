@@ -31,6 +31,24 @@ flowchart TD
 
 **FBO-иконки prefab** обязаны использовать `GlStateScope(kGlMaskIconFbo)` — иначе сломается мир в следующем кадре.
 
+## Фиксированные fragment sampler units
+
+Распределение задаётся в [`RenderTextureUnits.h`](RenderTextureUnits.h). Эти
+sampler-ы могут одновременно использовать greedy shader, поэтому unit нельзя
+повторно назначать другой карте в том же проходе.
+
+| Unit | Назначение |
+|---:|---|
+| 0 | Атлас текстур блоков |
+| 1 | Высота поверхности жидкости |
+| 2 | Индекс жидкости |
+| 3 | Нижний блок столба жидкости |
+| 4 | Глубина сцены для погоды |
+| 5 | Opaque depth для прозрачного прохода |
+
+Opaque depth остаётся на unit 5, потому что underwater-fog привязывает карту
+нижнего блока к unit 3 при настройке того же greedy shader.
+
 ## Четыре прохода прозрачности
 
 Реализация: [`GreedyTransparentPipeline.cpp`](GreedyTransparentPipeline.cpp), таблица: [`TransparentPass.cpp`](TransparentPass.cpp).
