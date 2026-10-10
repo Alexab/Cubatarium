@@ -4200,6 +4200,9 @@ void WriteGpuDrawStateJson(std::ostream &out,
       << ",\"alpha_cutout\":"
       << static_cast<int>(
              r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_alpha_cutout)
+      << ",\"opaque_depth_guard\":"
+      << static_cast<int>(
+             r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_opaque_depth_guard)
       << ",\"greedy_mode\":"
       << r.renderer_pixel_voxel_mesh_ray_gpu_draw_state_greedy_mode
       << ",\"anim_frame\":"
@@ -5140,7 +5143,26 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
                  << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
                  << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
-                 << r.renderer_pixel_voxel_mesh_ray_distance;
+                 << r.renderer_pixel_voxel_mesh_ray_distance
+                 << ",\"renderer_pixel_voxel_mesh_ray_projected_valid\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_voxel_mesh_ray_projected_valid)
+                 << ",\"renderer_pixel_voxel_mesh_ray_projected_x\":"
+                 << r.renderer_pixel_voxel_mesh_ray_projected_x
+                 << ",\"renderer_pixel_voxel_mesh_ray_projected_y\":"
+                 << r.renderer_pixel_voxel_mesh_ray_projected_y
+                 << ",\"renderer_pixel_voxel_mesh_ray_projected_depth\":"
+                 << r.renderer_pixel_voxel_mesh_ray_projected_depth
+                 << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_x\":"
+                 << r.renderer_pixel_voxel_mesh_ray_projected_delta_x
+                 << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_y\":"
+                 << r.renderer_pixel_voxel_mesh_ray_projected_delta_y
+                 << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_delta\":"
+                 << r.renderer_pixel_voxel_mesh_ray_projected_depth_delta
+                 << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_would_pass\":"
+                 << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_projected_depth_would_pass)
+                 << ",\"renderer_pixel_voxel_mesh_ray_edge_margin\":"
+                 << r.renderer_pixel_voxel_mesh_ray_edge_margin;
           WriteGpuDrawStateJson(*out, r);
           (*out) << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
                  << static_cast<int>(
@@ -5648,7 +5670,26 @@ void UFramePerfMonitor::Shutdown()
                << ",\"renderer_pixel_voxel_mesh_ray_gap\":"
                << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_gap)
                << ",\"renderer_pixel_voxel_mesh_ray_distance\":"
-               << r.renderer_pixel_voxel_mesh_ray_distance;
+               << r.renderer_pixel_voxel_mesh_ray_distance
+               << ",\"renderer_pixel_voxel_mesh_ray_projected_valid\":"
+               << static_cast<int>(
+                      r.renderer_pixel_voxel_mesh_ray_projected_valid)
+               << ",\"renderer_pixel_voxel_mesh_ray_projected_x\":"
+               << r.renderer_pixel_voxel_mesh_ray_projected_x
+               << ",\"renderer_pixel_voxel_mesh_ray_projected_y\":"
+               << r.renderer_pixel_voxel_mesh_ray_projected_y
+               << ",\"renderer_pixel_voxel_mesh_ray_projected_depth\":"
+               << r.renderer_pixel_voxel_mesh_ray_projected_depth
+               << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_x\":"
+               << r.renderer_pixel_voxel_mesh_ray_projected_delta_x
+               << ",\"renderer_pixel_voxel_mesh_ray_projected_delta_y\":"
+               << r.renderer_pixel_voxel_mesh_ray_projected_delta_y
+               << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_delta\":"
+               << r.renderer_pixel_voxel_mesh_ray_projected_depth_delta
+               << ",\"renderer_pixel_voxel_mesh_ray_projected_depth_would_pass\":"
+               << static_cast<int>(r.renderer_pixel_voxel_mesh_ray_projected_depth_would_pass)
+               << ",\"renderer_pixel_voxel_mesh_ray_edge_margin\":"
+               << r.renderer_pixel_voxel_mesh_ray_edge_margin;
           WriteGpuDrawStateJson(*out, r);
           (*out) << ",\"renderer_pixel_voxel_mesh_ray_gpu_witness_attempted\":"
                << static_cast<int>(

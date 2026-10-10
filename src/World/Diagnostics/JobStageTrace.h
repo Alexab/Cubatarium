@@ -482,6 +482,15 @@ struct VisualBlackTraceRecord
   uint8_t renderer_pixel_voxel_mesh_ray_interior{0};
   uint8_t renderer_pixel_voxel_mesh_ray_gap{0};
   float renderer_pixel_voxel_mesh_ray_distance{-1.0f};
+  uint8_t renderer_pixel_voxel_mesh_ray_projected_valid{0};
+  float renderer_pixel_voxel_mesh_ray_projected_x{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_y{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_depth{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_delta_x{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_delta_y{-1.0f};
+  float renderer_pixel_voxel_mesh_ray_projected_depth_delta{-1.0f};
+  uint8_t renderer_pixel_voxel_mesh_ray_projected_depth_would_pass{0};
+  float renderer_pixel_voxel_mesh_ray_edge_margin{-1.0f};
   /// Optional, gap-only readback validating the exact source triangle against
   /// the pooled GPU bytes and authoritative indirect command slot.
   uint8_t renderer_pixel_voxel_mesh_ray_gpu_witness_attempted{0};
@@ -550,6 +559,7 @@ struct VisualBlackTraceRecord
   uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_min{0};
   uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_texture_alpha_max{0};
   uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_alpha_cutout{0};
+  uint8_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_opaque_depth_guard{0};
   int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_greedy_mode{0};
   int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame{0};
   int32_t renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame_count{0};

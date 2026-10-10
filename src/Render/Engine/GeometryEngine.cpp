@@ -387,6 +387,7 @@ struct GpuOpaqueDrawStateWitness
   uint8_t texture_alpha_min{0};
   uint8_t texture_alpha_max{0};
   uint8_t alpha_cutout{0};
+  uint8_t opaque_depth_guard{0};
   int32_t greedy_mode{0};
   int32_t anim_frame{0};
   int32_t anim_frame_count{0};
@@ -526,6 +527,16 @@ void CaptureGpuOpaqueDrawState(const GreedyGpuPassCache &pass,
   int32_t alpha_cutout_uniform = 0;
   get_uniform_int("uAlphaCutout", alpha_cutout_uniform);
   witness.alpha_cutout = alpha_cutout_uniform != 0 ? 1u : 0u;
+  const GLint opaque_depth_guard_location =
+      glGetUniformLocation(static_cast<GLuint>(witness.program),
+                           "uOpaqueDepthGuard");
+  if (opaque_depth_guard_location >= 0)
+  {
+    GLfloat opaque_depth_guard_uniform = 0.0f;
+    glGetUniformfv(static_cast<GLuint>(witness.program),
+                   opaque_depth_guard_location, &opaque_depth_guard_uniform);
+    witness.opaque_depth_guard = opaque_depth_guard_uniform > 0.5f ? 1u : 0u;
+  }
   get_uniform_int("uGreedyShaderMode", witness.greedy_mode);
   get_uniform_int("uAnimFrame", witness.anim_frame);
   get_uniform_int("uAnimFrameCount", witness.anim_frame_count);
@@ -733,6 +744,8 @@ void CopyGpuOpaqueDrawStateWitness(const GpuOpaqueDrawStateWitness &witness,
       witness.texture_alpha_max;
   record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_alpha_cutout =
       witness.alpha_cutout;
+  record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_opaque_depth_guard =
+      witness.opaque_depth_guard;
   record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_greedy_mode =
       witness.greedy_mode;
   record.renderer_pixel_voxel_mesh_ray_gpu_draw_state_anim_frame =
@@ -2006,6 +2019,48 @@ void CaptureTransparentPixelProbe(
               record.renderer_pixel_voxel_mesh_ray_intersects = 1;
               record.renderer_pixel_voxel_mesh_ray_distance =
                   voxel_mesh_ray_distance;
+              const glm::vec3 mesh_ray_hit_point =
+                  camera_position +
+                  voxel_ray_direction * voxel_mesh_ray_distance;
+              const glm::vec4 projected_hit =
+                  view_projection * glm::vec4(mesh_ray_hit_point, 1.0f);
+              if (std::abs(projected_hit.w) > 1e-6f)
+              {
+                const float inverse_w = 1.0f / projected_hit.w;
+                const float projected_ndc_x = projected_hit.x * inverse_w;
+                const float projected_ndc_y = projected_hit.y * inverse_w;
+                const float projected_ndc_z = projected_hit.z * inverse_w;
+                const float projected_x =
+                    static_cast<float>(viewport[0]) +
+                    (projected_ndc_x + 1.0f) *
+                        static_cast<float>(width) * 0.5f;
+                const float projected_y =
+                    static_cast<float>(viewport[1]) +
+                    (projected_ndc_y + 1.0f) *
+                        static_cast<float>(height) * 0.5f;
+                const float projected_depth =
+                    projected_ndc_z * 0.5f + 0.5f;
+                record.renderer_pixel_voxel_mesh_ray_projected_valid = 1u;
+                record.renderer_pixel_voxel_mesh_ray_projected_x = projected_x;
+                record.renderer_pixel_voxel_mesh_ray_projected_y = projected_y;
+                record.renderer_pixel_voxel_mesh_ray_projected_depth =
+                    projected_depth;
+                record.renderer_pixel_voxel_mesh_ray_projected_delta_x =
+                    projected_x - (static_cast<float>(viewport[0] + local_x) +
+                                    0.5f);
+                record.renderer_pixel_voxel_mesh_ray_projected_delta_y =
+                    projected_y - (static_cast<float>(viewport[1] + local_y) +
+                                    0.5f);
+                if (std::isfinite(opaque_depth))
+                {
+                  record.renderer_pixel_voxel_mesh_ray_projected_depth_delta =
+                      projected_depth - opaque_depth;
+                  record.renderer_pixel_voxel_mesh_ray_projected_depth_would_pass =
+                      projected_depth < opaque_depth ? 1u : 0u;
+                }
+              }
+              record.renderer_pixel_voxel_mesh_ray_edge_margin =
+                  voxel_mesh_ray_edge_margin;
               const glm::ivec3 face_normal =
                   GreedyFaceNormal(voxel_witness.entry_face);
               const bool camera_facing =
