@@ -5912,7 +5912,7 @@ small variation. The direct readback did not reproduce a missing surface;
 these engine-buffer metrics do not establish that the desktop image matched
 the user-visible symptom.
 
-## M513–M518 — camera-space ray witness and opaque-pixel autopsy (2026-10-10)
+## M513–M519 — camera-space ray witness and framebuffer-pair capture (2026-10-10–11)
 
 These were bounded, visible, no-teleport Release flights on the established
 `World_164` `product-174657-far` profile. The route was held constant: start
@@ -5990,6 +5990,59 @@ Artifacts:
 - [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261010-235406.47764)
 - [endpoint frame 038](../../bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010/frame_038.png)
 - [all flight captures](../../bin/flight_captures/m518_world164_camera_space_water_endpoint_20261010)
+
+### M519 — compare GL_BACK before swap with GL_FRONT after swap
+
+M519 repeated M518's visible/no-teleport `World_164` route and capture bounds,
+with the same start, camera, speed, and phase durations. The Release app exited
+0 and completed the 240-block route at `5.18555 blocks/s`; the strict product
+analyzer returned `pass=false` on readiness/performance gates. A24 safety and
+the post-stop visual-hole proxy passed, while readiness debt remained 1.0
+(35 post-stop) and the eye-proxy gate remained open. This diagnostic run is
+not an acceptance or clean performance baseline.
+
+The new opt-in `CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP=1` path paired each
+pre-swap `GL_BACK` readback with a `GL_FRONT` readback immediately after
+`glfwSwapBuffers`. All 40 available pairs at 1280×720 had identical decoded
+RGBA pixels, including the endpoint frames. The endpoint water surface is
+visible in both buffers. This rules out a difference between the application's
+pre-swap back buffer and its post-swap front buffer for these sampled frames;
+it does not capture desktop composition or prove what was visible through the
+monitor/compositor.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m519_world164_front_back_water_endpoint_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-001535_47980.jsonl)
+- [app log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-001531.47980)
+- [endpoint GL_BACK frame 039](../../bin/flight_captures/m519_world164_front_back_water_endpoint_20261011/frame_039.png)
+- [endpoint GL_FRONT frame 039](../../bin/flight_captures/m519_world164_front_back_water_endpoint_20261011/frame_039_front.png)
+
+Diagnostic commits: code `d4ad0f8f` (Release EXE SHA-256
+`b2e218b486493973841201392f504df9099c18ffed3869a2f29051aed106a57f`),
+documentation `857e3ce0` qualifies the M508–M512 ray-attribution claims.
+
+### Exact M519 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m519_world164_front_back_water_endpoint_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+Remove-Item Env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position -7215 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 45 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 150 --phase-id m519_world164_front_back_water_endpoint_20261011 --report bin/suite_reports/engine_refactor/m519_world164_front_back_water_endpoint_20261011.json --process-timeout 900
+```
 
 ### Exact M518 invocation
 

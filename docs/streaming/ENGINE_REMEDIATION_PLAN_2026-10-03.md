@@ -7321,7 +7321,7 @@ M512 passed route adequacy at `5.18555 blocks/s` for 240 blocks and the process
 exited 0. The strict product analyzer returned 1 because readiness, eye-proxy,
 performance, and stop-recovery gates remain open. See the [M512 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m512--water-endpoint-post-stop-direct-framebuffer-probe-2026-10-10).
 
-#### M513–M518 checkpoint — ray witness и повторная проверка воды (2026-10-10)
+#### M513–M519 checkpoint — ray witness, readiness census и framebuffer pair (2026-10-10–11)
 
 M513–M517 продолжили ограниченный видимый no-teleport маршрут по `World_164`:
 старт `(-5500,56,56)`, eye Y=70, yaw 180°, pitch −30°, 45 секунд полёта,
@@ -7389,23 +7389,54 @@ refs / 2 982 source indices и 75 fluid draw calls (25 shell-depth, 50 color).
 водой, и не проверяет каждый пиксель/анимационный кадр; дефект пока нельзя
 закрыть или приписать renderer.
 
+M519 повторил тот же 240-блочный endpoint-пролёт и добавил парный readback:
+`GL_BACK` до `glfwSwapBuffers` и `GL_FRONT` сразу после него. Все 40 пар
+размера 1280×720 совпали по декодированным RGBA пикселям, включая последние
+кадры; в обоих endpoint-буферах поверхность воды видна. Это исключает
+расхождение между двумя буферами приложения на сохранённых кадрах. Оно не
+проверяет desktop compositor/monitor и не разрешает случай, когда live-вид
+оператора отличался от содержимого GLFW window.
+
+M519 прошёл маршрут и завершил приложение с кодом 0 на Release SHA
+`b2e218b486493973841201392f504df9099c18ffed3869a2f29051aed106a57f`, но
+строгий анализатор вернул `pass=false`. A24 safety и post-stop
+`visual_holes`-proxy прошли; readiness debt остался `1.0` (`35` после stop),
+eye-proxy остался открытым. В последнем period sample focus census разбил
+11×11 столбцов так: 61 Ready, 25 TerrainIncomplete, 32 MissingMesh и 3
+FaceDebt; `unfinished_visual=35` равен MissingMesh+FaceDebt. При этом в
+camera band было 111 solid slices и 0 solid slices без drawable/satisfying
+mesh; в более широкой воде/visual band 101 solid slices не имели drawable.
+Последние 19 focus-slice trace rows были только для `cy=0,1`, тогда как при
+camera Y=70 camera band начинается с `cy=2`. Это объясняет, почему высокий
+`not_ready`/readiness debt не является доказательством пустоты текущей
+картинки: сигнал считает вертикальные chunk-срезы в квадратном focus ring,
+а `focus_not_render_ready` присваивается тому же `unfinished_visual`.
+Незакрытые срезы вне camera band нужно отдельно сопоставить с видимой геометрией
+перед любыми изменениями приоритетов и квот.
+
 **Обновлённый порядок работ:**
 
-1. Если оператор снова наблюдает повреждённую воду, синхронизировать её точную
-   позицию/момент с raw `GL_BACK` capture и fluid sample; M518 уже подтвердил
-   surface draws на прежнем post-stop endpoint, поэтому не менять fluid pipeline
-   без нового несовпадения. Уточнить provenance старых кадров с чужим текстом.
+1. Не менять water/fluid pipeline по прежнему сообщению: M518/M519 показывают
+   поверхность в endpoint `GL_BACK`, а M519 дополнительно доказал равенство
+   `GL_BACK`/`GL_FRONT` на 40 кадрах. Если оператор снова видит отличие от
+   обоих буферов, зафиксировать точный кадр/время и отдельно установить путь
+   screenshot/desktop composition; старые PNG с чужим текстом не относятся к
+   `CUBA_FLIGHT_CAPTURE` без подтверждённой provenance.
 2. Считать прежний opaque-raster GPU-range анализ условным. M517 не оставил
    исправленных ray-gap событий; повторять M510 GPU-range/alpha witness только
-   если новый corrected-ray или синхронное наблюдение оператора даст реальный
-   pixel mismatch.
-3. После отделения ошибок измерителя от реальных pixel mismatches вернуться к
-   streaming/readiness debt: определить, почему `not_ready` не убывает после
-   stop при нулевом focus-mesh-missing proxy. Использовать короткие causal traces;
-   не менять квоты очередей по одному корреляционному отчёту.
-4. Сохранить длинный M335 как неизменную повторяемую линию. После закрытия
-   конкретных дефектов повторить длинный Release-пролёт и периодический
-   короткий прогон на новом seed с source-generation/save trace.
+   если новый corrected-ray run или операторская привязка к конкретному
+   framebuffer pixel даст реальное несовпадение.
+3. Перед изменениями квот стриминга отделять camera-band coverage от debt в
+   нижних Y-срезах/внешних частях focus ring. M519 на post-stop показал 0
+   camera-band solid slices без drawable при `unfinished_visual=35`; получить
+   короткую причинную трассу именно для среза, который пересекает видимый луч.
+4. Сохранить длинный M335 как холодный повторяемый маршрут приёмки. M508 уже
+   прошёл его на текущей gameplay-ветке, а M517–M519 меняли только диагностику;
+   новый 24-минутный run не нужен до изменения gameplay-кода или подтверждённой
+   дальней проблемы. Следующий полный M335 запуск оставить с малым объёмом
+   инструментирования (редкие captures, без полного pixel trace), а короткие
+   прогоны на новых мирах делать периодически после конкретного изменения
+   renderer/streaming.
 
-Подробные команды, manifests и артефакты M513–M518 добавлены в
-[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md#m513m518--camera-space-ray-witness-и-opaque-pixel-autopsy-2026-10-10).
+Подробные команды, manifests и артефакты M513–M519 добавлены в
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).
