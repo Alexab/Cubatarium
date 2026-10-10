@@ -6010,6 +6010,16 @@ pre-swap back buffer and its post-swap front buffer for these sampled frames;
 it does not capture desktop composition or prove what was visible through the
 monitor/compositor.
 
+There are eight `renderer_pixel_voxel_ray_gap` rows among 4,840 M519 pixel
+probes. All eight hit sand (`549`) behind a transparent-fluid candidate and
+reported `renderer_pixel_voxel_mesh_ray_gap=0`. Six mapped exactly to a nearby
+water top-face triangle (`575`); two more had a nearest top-face point within
+0.5 blocks but did not pass the exact-match threshold. All eight final RGBA
+samples differed from their pre-transparent values. The gap flag compares the
+voxel ray with depth captured before transparent rendering, so these rows are
+not proof of missing opaque geometry or empty pixels. The two non-exact fluid
+associations still need a sample-aligned transparent-coverage witness.
+
 Artifacts:
 
 - [report](../../bin/suite_reports/engine_refactor/m519_world164_front_back_water_endpoint_20261011.json)

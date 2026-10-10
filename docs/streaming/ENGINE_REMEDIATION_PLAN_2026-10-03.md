@@ -7414,6 +7414,28 @@ camera Y=70 camera band начинается с `cy=2`. Это объясняе�
 Незакрытые срезы вне camera band нужно отдельно сопоставить с видимой геометрией
 перед любыми изменениями приоритетов и квот.
 
+Отдельная перепроверка 4 840 M519 screen-ray probes уточнила смысл ray-gap
+счётчика. Восемь строк имели `voxel_ray_gap=1`, но у всех
+`voxel_mesh_ray_gap=0`; voxel DDA находил sand (`549`) за жидкостью. Две строки
+на пикселе `(480,90)` имели exact ближайшее совпадение с верхней гранью water
+(`575`) и opaque depth лишь на расстоянии `81,28/81,53` при DDA-hit на `25,97`.
+В остальных шести строках opaque depth был clear; четыре имели exact fluid
+surface match, ещё две — ближайшую грань в `0,453/0,486` блока. Во всех восьми
+RGBA после transparent pass отличался от pre-transparent RGBA. Это согласуется
+с водой перед sand и не является свидетельством пропущенного opaque mesh.
+При этом две ближайшие, но не exact, fluid associations сами по себе не
+доказывают покрытие конкретного пикселя.
+
+Причина ограничения подтверждена порядком в `GeometryEngine`: opaque
+color/depth снимается до transparent pipeline, а цветовые transparent passes
+не пишут depth. Поэтому `renderer_pixel_voxel_ray_gap` сейчас означает
+«DDA-hit не согласуется с opaque-only depth», а не «пиксель геометрически пуст».
+Этот флаг нельзя использовать как hole count без отдельной проверки
+transparent coverage; соответствующий комментарий возле вычисления флага
+уточнён. Для настоящего water-hole oracle нужны sample-aligned triangle/ray
+coverage или depth/coverage capture прозрачной поверхности, а не одна лишь
+близость к sea-plane или изменение цвета.
+
 **Обновлённый порядок работ:**
 
 1. Не менять water/fluid pipeline по прежнему сообщению: M518/M519 показывают

@@ -2363,10 +2363,11 @@ void CaptureTransparentPixelProbe(
               cache.IsDeferMeshUntilLit(voxel_chunk) ? 1u : 0u;
           record.renderer_pixel_voxel_chunk_soft_defer_held =
               cache.IsSoftDeferHeld(voxel_chunk) ? 1u : 0u;
-          // A nearer world-space opaque cube with no corresponding depth
-          // sample is direct evidence of a screen-facing geometry gap. A
-          // nearer rendered surface (terrain, entity, or another occluder)
-          // is expected and does not count as a gap.
+          // Compare the voxel witness against the opaque depth snapshot only.
+          // Transparent surfaces are drawn after that snapshot and may cover
+          // the pixel without appearing in opaque_hit_distance, so this flag
+          // is only an opaque-depth mismatch candidate until transparent
+          // coverage (or another nearer surface) has been ruled out.
           record.renderer_pixel_voxel_ray_gap =
               opaque_hit_distance < 0.0f ||
                       opaque_hit_distance > voxel_witness.distance + 0.75f
