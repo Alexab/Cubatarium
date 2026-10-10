@@ -57,6 +57,14 @@ struct AsyncChunkIoTickMetrics
   double load_result_push_mutex_held_max_ms{0.0};
   double save_drain_ms{0.0};
   double light_flags_save_ms{0.0};
+  double light_flags_snapshot_ms{0.0};
+  double light_flags_enqueue_ms{0.0};
+  std::size_t light_flags_complete_columns_n{0};
+  uint64_t light_flags_saved_revision{0};
+  uint64_t light_flags_last_result_revision{0};
+  int light_flags_last_result_success{-1};
+  double light_flags_worker_queue_wait_ms{0.0};
+  double light_flags_worker_service_ms{0.0};
   uint64_t load_result_push_n{0};
   std::size_t cancelled_discard_n{0};
   std::size_t ready_loads_before_n{0};
@@ -212,7 +220,10 @@ public:
   void SetColumnLightComplete(glm::ivec2 ground_xz, bool complete);
   void ClearColumnLightComplete(glm::ivec2 ground_xz);
   void LoadColumnLightFlags();
-  void SaveColumnLightFlagsIfDirty();
+  void SaveColumnLightFlagsIfDirty(
+      double *snapshot_ms = nullptr, double *enqueue_ms = nullptr,
+      std::size_t *complete_columns_n = nullptr,
+      uint64_t *saved_revision = nullptr);
 
 private:
   struct PendingAsyncColumnLoadState
@@ -260,7 +271,8 @@ private:
   void ProcessColumnLightFlagSaveResults(
       double *queue_mutex_wait_ms = nullptr,
       double *queue_mutex_held_ms = nullptr,
-      std::size_t *result_count = nullptr);
+      std::size_t *result_count = nullptr,
+      AsyncChunkIoTickMetrics *tick_metrics = nullptr);
   bool FlushColumnLightFlagsForWorldSwitch();
 
   // Storage outlives AsyncChunkIo's worker pool: warmup jobs retain its

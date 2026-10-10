@@ -3547,6 +3547,28 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                    io_metrics.load_result_push_mutex_held_max_ms);
     io_telem.AsyncChunkIoSaveDrainMs += io_metrics.save_drain_ms;
     io_telem.AsyncChunkIoLightFlagsSaveMs += io_metrics.light_flags_save_ms;
+    io_telem.AsyncChunkIoLightFlagsSnapshotMs +=
+        io_metrics.light_flags_snapshot_ms;
+    io_telem.AsyncChunkIoLightFlagsEnqueueMs +=
+        io_metrics.light_flags_enqueue_ms;
+    if (io_metrics.light_flags_saved_revision != 0)
+    {
+      io_telem.AsyncChunkIoLightFlagsCompleteColumnsN =
+          static_cast<int>(io_metrics.light_flags_complete_columns_n);
+      io_telem.AsyncChunkIoLightFlagsSavedRevision =
+          io_metrics.light_flags_saved_revision;
+    }
+    if (io_metrics.light_flags_result_count > 0)
+    {
+      io_telem.AsyncChunkIoLightFlagsLastResultRevision =
+          io_metrics.light_flags_last_result_revision;
+      io_telem.AsyncChunkIoLightFlagsLastResultSuccess =
+          io_metrics.light_flags_last_result_success;
+      io_telem.AsyncChunkIoLightFlagsWorkerQueueWaitMs =
+          io_metrics.light_flags_worker_queue_wait_ms;
+      io_telem.AsyncChunkIoLightFlagsWorkerServiceMs =
+          io_metrics.light_flags_worker_service_ms;
+    }
     io_telem.AsyncChunkIoLoadResultPushN +=
         static_cast<int>(io_metrics.load_result_push_n);
     io_telem.AsyncChunkIoCancelledDiscardN +=
@@ -5452,12 +5474,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   CUBA_ZONE("UpdateStreaming");
   world.PhysicsTelemetryData.UpdateStreamingPreCoreMs = 0.0;
   world.PhysicsTelemetryData.UpdateStreamingPostCoreMs = 0.0;
+  world.PhysicsTelemetryData.UpdateStreamingPostCoreTelemetryMs = 0.0;
   if (!Streamer || !StreamingEnabled)
   {
     return;
   }
   const auto update_pre_core_t0 = std::chrono::high_resolution_clock::now();
   auto update_post_core_t0 = update_pre_core_t0;
+  auto post_core_telemetry_t0 = update_pre_core_t0;
   bool update_core_ran = false;
   Streamer->BeginFrameStats();
   world.PhysicsTelemetryData.VisibilityDebtProbeMs = 0.0;
@@ -6493,6 +6517,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - prefetch_t0)
             .count();
+    post_core_telemetry_t0 = std::chrono::high_resolution_clock::now();
     world.PhysicsTelemetryData.PrefetchVisualOps = prefetch_visual_ops;
     world.PhysicsTelemetryData.PrefetchKeepOps = prefetch_keep_ops;
     world.PhysicsTelemetryData.GenBacklogTotal = gen_backlog_total;
@@ -6568,6 +6593,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   }
   if (update_core_ran)
   {
+    world.PhysicsTelemetryData.UpdateStreamingPostCoreTelemetryMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() -
+            post_core_telemetry_t0)
+            .count();
     world.PhysicsTelemetryData.UpdateStreamingPostCoreMs =
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - update_post_core_t0)

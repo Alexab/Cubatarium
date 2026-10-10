@@ -60,6 +60,13 @@ struct Session
   double AccumPrepareMs{0.0};
   double AccumPostSceneMs{0.0};
   double AccumGuiMs{0.0};
+  double AccumRenderWindowSetupMs{0.0};
+  double AccumRenderFrameSetupMs{0.0};
+  double AccumRenderEquipmentSetupMs{0.0};
+  double AccumGeometryPaintMs{0.0};
+  double AccumFpViewmodelMs{0.0};
+  double AccumRenderTotalMs{0.0};
+  double AccumRenderUnattributedMs{0.0};
   double AccumResidualMs{0.0};
   double AccumFluidCpuMs{0.0};
   double AccumFluidGpuMs{0.0};
@@ -69,12 +76,15 @@ struct Session
   double AccumUpdateStreamingMs{0.0};
   double AccumUpdateStreamingPreCoreMs{0.0};
   double AccumUpdateStreamingPostCoreMs{0.0};
+  double AccumUpdateStreamingPostCoreTelemetryMs{0.0};
   double AccumAltitudeSurfaceQueryMs{0.0};
   double AccumAsyncChunkSystemsMs{0.0};
   double AccumAsyncChunkPreSchedulerMs{0.0};
   double AccumAsyncChunkSchedulerTickMs{0.0};
   double AccumAsyncChunkPostSchedulerMs{0.0};
   double AccumAsyncChunkIoDrainMs{0.0};
+  double AccumAsyncChunkIoLightFlagsSnapshotMs{0.0};
+  double AccumAsyncChunkIoLightFlagsEnqueueMs{0.0};
   double AccumRelightCaptureLockWaitMs{0.0};
   double AccumRelightSnapshotCopyMs{0.0};
   double AccumRelightDependencyStampMs{0.0};
@@ -339,7 +349,10 @@ struct FrameNumbers
   int edit_light_emission{0};
   double edit_to_first_mesh_ms{0.0};
   double fast_relight_ms{0.0};
+  double render_window_setup_ms{0.0};
   double render_frame_setup_ms{0.0};
+  double render_equipment_setup_ms{0.0};
+  double geometry_paint_ms{0.0};
   double fp_viewmodel_ms{0.0};
   double prepare_frame_ms{0.0};
   double post_scene_ms{0.0};
@@ -353,6 +366,7 @@ struct FrameNumbers
   int stand_rim_dirty_n{0};
   int stand_rim_imm_n{0};
   double render_total_ms{0.0};
+  double render_unattributed_ms{0.0};
   double residual_ms{0.0};
   double perf_collect_ms{0.0};
   double perf_emit_ms{0.0};
@@ -370,6 +384,7 @@ struct FrameNumbers
   double update_streaming_ms{0.0};
   double update_streaming_pre_core_ms{0.0};
   double update_streaming_post_core_ms{0.0};
+  double update_streaming_post_core_telemetry_ms{0.0};
   double altitude_surface_query_ms{0.0};
   double visibility_debt_probe_ms{0.0};
   double spawn_catchup_probe_ms{0.0};
@@ -382,11 +397,19 @@ struct FrameNumbers
   double async_chunk_io_unattributed_ms{0.0};
   double async_chunk_io_light_flags_result_drain_ms{0.0};
   double async_chunk_io_queue_snapshot_ms{0.0};
-   double async_chunk_io_discard_cancelled_ms{0.0};
-   double async_chunk_io_result_selection_ms{0.0};
-   double async_chunk_io_result_selection_mutex_wait_ms{0.0};
-   double async_chunk_io_result_selection_mutex_held_ms{0.0};
-   double async_chunk_io_result_processing_ms{0.0};
+  double async_chunk_io_light_flags_snapshot_ms{0.0};
+  double async_chunk_io_light_flags_enqueue_ms{0.0};
+  int async_chunk_io_light_flags_complete_columns_n{0};
+  uint64_t async_chunk_io_light_flags_saved_revision{0};
+  uint64_t async_chunk_io_light_flags_last_result_revision{0};
+  int async_chunk_io_light_flags_last_result_success{-1};
+  double async_chunk_io_light_flags_worker_queue_wait_ms{0.0};
+  double async_chunk_io_light_flags_worker_service_ms{0.0};
+  double async_chunk_io_discard_cancelled_ms{0.0};
+  double async_chunk_io_result_selection_ms{0.0};
+  double async_chunk_io_result_selection_mutex_wait_ms{0.0};
+  double async_chunk_io_result_selection_mutex_held_ms{0.0};
+  double async_chunk_io_result_processing_ms{0.0};
   double async_chunk_io_world_apply_ms{0.0};
    double async_chunk_io_column_finalize_ms{0.0};
    double async_chunk_io_result_requeue_ms{0.0};
@@ -1253,7 +1276,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.fast_relight_ms =
       (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0) ? phys.FastRelightMs
                                                             : 0.0;
+  n.render_window_setup_ms = world.GetLastRenderWindowSetupMs();
   n.render_frame_setup_ms = world.GetLastRenderFrameSetupMs();
+  n.render_equipment_setup_ms = world.GetLastRenderEquipmentSetupMs();
+  n.geometry_paint_ms = world.GetLastGeometryPaintMs();
   n.fp_viewmodel_ms = world.GetLastFpViewmodelMs();
   n.prepare_frame_ms = world.GetLastPrepareFrameMs();
   n.post_scene_ms = world.GetLastPostSceneMs();
@@ -1267,6 +1293,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.stand_rim_dirty_n = phys.StandRimDirtyN;
   n.stand_rim_imm_n = phys.StandRimImmN;
   n.render_total_ms = world.GetLastRenderTotalMs();
+  const double render_phases_ms =
+      n.render_window_setup_ms + n.render_frame_setup_ms +
+      n.prepare_frame_ms + n.render_equipment_setup_ms + n.geometry_paint_ms +
+      n.fp_viewmodel_ms + n.gui_overlay_ms;
+  n.render_unattributed_ms =
+      (std::max)(0.0, n.render_total_ms - render_phases_ms);
   // sim_ms = main-loop work excluding swap. Era14: do_movement is locomotion;
   // stream/emerge are in world_streaming_phase_ms (also mirrored as stream_ms /
   // mesh_emerge_ms — do not add those again).
@@ -1296,6 +1328,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.update_streaming_ms = phys.UpdateStreamingMs;
   n.update_streaming_pre_core_ms = phys.UpdateStreamingPreCoreMs;
   n.update_streaming_post_core_ms = phys.UpdateStreamingPostCoreMs;
+  n.update_streaming_post_core_telemetry_ms =
+      phys.UpdateStreamingPostCoreTelemetryMs;
   n.altitude_surface_query_ms = phys.AltitudeSurfaceQueryMs;
   n.visibility_debt_probe_ms = phys.VisibilityDebtProbeMs;
   n.spawn_catchup_probe_ms = phys.SpawnCatchUpProbeMs;
@@ -1309,6 +1343,22 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.async_chunk_io_light_flags_result_drain_ms =
       phys.AsyncChunkIoLightFlagsResultDrainMs;
   n.async_chunk_io_queue_snapshot_ms = phys.AsyncChunkIoQueueSnapshotMs;
+  n.async_chunk_io_light_flags_snapshot_ms =
+      phys.AsyncChunkIoLightFlagsSnapshotMs;
+  n.async_chunk_io_light_flags_enqueue_ms =
+      phys.AsyncChunkIoLightFlagsEnqueueMs;
+  n.async_chunk_io_light_flags_complete_columns_n =
+      phys.AsyncChunkIoLightFlagsCompleteColumnsN;
+  n.async_chunk_io_light_flags_saved_revision =
+      phys.AsyncChunkIoLightFlagsSavedRevision;
+  n.async_chunk_io_light_flags_last_result_revision =
+      phys.AsyncChunkIoLightFlagsLastResultRevision;
+  n.async_chunk_io_light_flags_last_result_success =
+      phys.AsyncChunkIoLightFlagsLastResultSuccess;
+  n.async_chunk_io_light_flags_worker_queue_wait_ms =
+      phys.AsyncChunkIoLightFlagsWorkerQueueWaitMs;
+  n.async_chunk_io_light_flags_worker_service_ms =
+      phys.AsyncChunkIoLightFlagsWorkerServiceMs;
   n.async_chunk_io_discard_cancelled_ms =
       phys.AsyncChunkIoDiscardCancelledMs;
    n.async_chunk_io_result_selection_ms =
@@ -2273,7 +2323,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"edit_light_emission\":" << n.edit_light_emission
           << ",\"edit_to_first_mesh_ms\":" << n.edit_to_first_mesh_ms
           << ",\"fast_relight_ms\":" << n.fast_relight_ms
+          << ",\"render_window_setup_ms\":" << n.render_window_setup_ms
           << ",\"render_frame_setup_ms\":" << n.render_frame_setup_ms
+          << ",\"render_equipment_setup_ms\":"
+          << n.render_equipment_setup_ms
+          << ",\"geometry_paint_ms\":" << n.geometry_paint_ms
           << ",\"fp_viewmodel_ms\":" << n.fp_viewmodel_ms
           << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
           << ",\"post_scene_ms\":" << n.post_scene_ms
@@ -2287,6 +2341,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"stand_rim_dirty_n\":" << n.stand_rim_dirty_n
           << ",\"stand_rim_imm_n\":" << n.stand_rim_imm_n
           << ",\"render_total_ms\":" << n.render_total_ms
+          << ",\"render_unattributed_ms\":" << n.render_unattributed_ms
           << ",\"residual_ms\":" << n.residual_ms
           << ",\"perf_collect_ms\":" << n.perf_collect_ms
           << ",\"perf_emit_ms\":" << n.perf_emit_ms
@@ -2307,6 +2362,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.update_streaming_pre_core_ms
           << ",\"update_streaming_post_core_ms\":"
           << n.update_streaming_post_core_ms
+          << ",\"update_streaming_post_core_telemetry_ms\":"
+          << n.update_streaming_post_core_telemetry_ms
           << ",\"visibility_debt_probe_ms\":"
           << n.visibility_debt_probe_ms
           << ",\"spawn_catchup_probe_ms\":"
@@ -2327,6 +2384,22 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.async_chunk_io_light_flags_result_drain_ms
           << ",\"async_chunk_io_queue_snapshot_ms\":"
           << n.async_chunk_io_queue_snapshot_ms
+          << ",\"async_chunk_io_light_flags_snapshot_ms\":"
+          << n.async_chunk_io_light_flags_snapshot_ms
+          << ",\"async_chunk_io_light_flags_enqueue_ms\":"
+          << n.async_chunk_io_light_flags_enqueue_ms
+          << ",\"async_chunk_io_light_flags_complete_columns_n\":"
+          << n.async_chunk_io_light_flags_complete_columns_n
+          << ",\"async_chunk_io_light_flags_saved_revision\":"
+          << n.async_chunk_io_light_flags_saved_revision
+          << ",\"async_chunk_io_light_flags_last_result_revision\":"
+          << n.async_chunk_io_light_flags_last_result_revision
+          << ",\"async_chunk_io_light_flags_last_result_success\":"
+          << n.async_chunk_io_light_flags_last_result_success
+          << ",\"async_chunk_io_light_flags_last_result_worker_queue_wait_ms\":"
+          << n.async_chunk_io_light_flags_worker_queue_wait_ms
+          << ",\"async_chunk_io_light_flags_last_result_worker_service_ms\":"
+          << n.async_chunk_io_light_flags_worker_service_ms
           << ",\"async_chunk_io_discard_cancelled_ms\":"
           << n.async_chunk_io_discard_cancelled_ms
           << ",\"async_chunk_io_result_selection_ms\":"
@@ -3541,6 +3614,13 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumPrepareMs += n.prepare_frame_ms;
   s.AccumPostSceneMs += n.post_scene_ms;
   s.AccumGuiMs += n.gui_overlay_ms;
+  s.AccumRenderWindowSetupMs += n.render_window_setup_ms;
+  s.AccumRenderFrameSetupMs += n.render_frame_setup_ms;
+  s.AccumRenderEquipmentSetupMs += n.render_equipment_setup_ms;
+  s.AccumGeometryPaintMs += n.geometry_paint_ms;
+  s.AccumFpViewmodelMs += n.fp_viewmodel_ms;
+  s.AccumRenderTotalMs += n.render_total_ms;
+  s.AccumRenderUnattributedMs += n.render_unattributed_ms;
   s.AccumResidualMs += n.residual_ms;
   s.AccumFluidCpuMs += n.fluid_map_cpu_ms;
   s.AccumFluidGpuMs += n.fluid_map_gpu_ms;
@@ -3569,12 +3649,18 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumUpdateStreamingMs += n.update_streaming_ms;
   s.AccumUpdateStreamingPreCoreMs += n.update_streaming_pre_core_ms;
   s.AccumUpdateStreamingPostCoreMs += n.update_streaming_post_core_ms;
+  s.AccumUpdateStreamingPostCoreTelemetryMs +=
+      n.update_streaming_post_core_telemetry_ms;
   s.AccumAltitudeSurfaceQueryMs += n.altitude_surface_query_ms;
   s.AccumAsyncChunkSystemsMs += n.async_chunk_systems_ms;
   s.AccumAsyncChunkPreSchedulerMs += n.async_chunk_pre_scheduler_ms;
   s.AccumAsyncChunkSchedulerTickMs += n.async_chunk_scheduler_tick_ms;
   s.AccumAsyncChunkPostSchedulerMs += n.async_chunk_post_scheduler_ms;
   s.AccumAsyncChunkIoDrainMs += n.async_chunk_io_drain_ms;
+  s.AccumAsyncChunkIoLightFlagsSnapshotMs +=
+      n.async_chunk_io_light_flags_snapshot_ms;
+  s.AccumAsyncChunkIoLightFlagsEnqueueMs +=
+      n.async_chunk_io_light_flags_enqueue_ms;
   s.AccumRelightCaptureLockWaitMs += n.relight_capture_lock_wait_ms;
   s.AccumRelightSnapshotCopyMs += n.relight_snapshot_copy_ms;
   s.AccumRelightDependencyStampMs += n.relight_dependency_stamp_ms;
@@ -3689,6 +3775,13 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.prepare_frame_ms = s.AccumPrepareMs * inv;
   avg.post_scene_ms = s.AccumPostSceneMs * inv;
   avg.gui_overlay_ms = s.AccumGuiMs * inv;
+  avg.render_window_setup_ms = s.AccumRenderWindowSetupMs * inv;
+  avg.render_frame_setup_ms = s.AccumRenderFrameSetupMs * inv;
+  avg.render_equipment_setup_ms = s.AccumRenderEquipmentSetupMs * inv;
+  avg.geometry_paint_ms = s.AccumGeometryPaintMs * inv;
+  avg.fp_viewmodel_ms = s.AccumFpViewmodelMs * inv;
+  avg.render_total_ms = s.AccumRenderTotalMs * inv;
+  avg.render_unattributed_ms = s.AccumRenderUnattributedMs * inv;
   avg.residual_ms = s.AccumResidualMs * inv;
   avg.fluid_map_cpu_ms = s.AccumFluidCpuMs * inv;
   avg.fluid_map_gpu_ms = s.AccumFluidGpuMs * inv;
@@ -3734,6 +3827,8 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
       s.AccumUpdateStreamingPreCoreMs * inv;
   avg.update_streaming_post_core_ms =
       s.AccumUpdateStreamingPostCoreMs * inv;
+  avg.update_streaming_post_core_telemetry_ms =
+      s.AccumUpdateStreamingPostCoreTelemetryMs * inv;
   avg.altitude_surface_query_ms = s.AccumAltitudeSurfaceQueryMs * inv;
   avg.async_chunk_systems_ms = s.AccumAsyncChunkSystemsMs * inv;
   avg.async_chunk_pre_scheduler_ms =
@@ -3743,6 +3838,10 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.async_chunk_post_scheduler_ms =
       s.AccumAsyncChunkPostSchedulerMs * inv;
   avg.async_chunk_io_drain_ms = s.AccumAsyncChunkIoDrainMs * inv;
+  avg.async_chunk_io_light_flags_snapshot_ms =
+      s.AccumAsyncChunkIoLightFlagsSnapshotMs * inv;
+  avg.async_chunk_io_light_flags_enqueue_ms =
+      s.AccumAsyncChunkIoLightFlagsEnqueueMs * inv;
   avg.relight_capture_lock_wait_ms =
       s.AccumRelightCaptureLockWaitMs * inv;
   avg.relight_snapshot_copy_ms = s.AccumRelightSnapshotCopyMs * inv;
@@ -3851,6 +3950,13 @@ void ResetAccum(Session &s)
   s.AccumPrepareMs = 0.0;
   s.AccumPostSceneMs = 0.0;
   s.AccumGuiMs = 0.0;
+  s.AccumRenderWindowSetupMs = 0.0;
+  s.AccumRenderFrameSetupMs = 0.0;
+  s.AccumRenderEquipmentSetupMs = 0.0;
+  s.AccumGeometryPaintMs = 0.0;
+  s.AccumFpViewmodelMs = 0.0;
+  s.AccumRenderTotalMs = 0.0;
+  s.AccumRenderUnattributedMs = 0.0;
   s.AccumResidualMs = 0.0;
   s.AccumFluidCpuMs = 0.0;
   s.AccumFluidGpuMs = 0.0;
@@ -3877,12 +3983,15 @@ void ResetAccum(Session &s)
   s.AccumUpdateStreamingMs = 0.0;
   s.AccumUpdateStreamingPreCoreMs = 0.0;
   s.AccumUpdateStreamingPostCoreMs = 0.0;
+  s.AccumUpdateStreamingPostCoreTelemetryMs = 0.0;
   s.AccumAltitudeSurfaceQueryMs = 0.0;
   s.AccumAsyncChunkSystemsMs = 0.0;
   s.AccumAsyncChunkPreSchedulerMs = 0.0;
   s.AccumAsyncChunkSchedulerTickMs = 0.0;
   s.AccumAsyncChunkPostSchedulerMs = 0.0;
   s.AccumAsyncChunkIoDrainMs = 0.0;
+  s.AccumAsyncChunkIoLightFlagsSnapshotMs = 0.0;
+  s.AccumAsyncChunkIoLightFlagsEnqueueMs = 0.0;
   s.AccumRelightCaptureLockWaitMs = 0.0;
   s.AccumRelightSnapshotCopyMs = 0.0;
   s.AccumRelightDependencyStampMs = 0.0;

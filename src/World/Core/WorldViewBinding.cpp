@@ -817,6 +817,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.AsyncChunkIoLoadResultPushMutexHeldMaxMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoSaveDrainMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoLightFlagsSaveMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsSnapshotMs = 0.0;
+  PhysicsTelemetryData.AsyncChunkIoLightFlagsEnqueueMs = 0.0;
   PhysicsTelemetryData.AsyncChunkIoLoadResultPushN = 0;
   PhysicsTelemetryData.AsyncChunkIoCancelledDiscardN = 0;
   PhysicsTelemetryData.AsyncChunkIoReadyLoadsBeforeN = 0;

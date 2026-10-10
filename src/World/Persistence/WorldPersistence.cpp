@@ -349,7 +349,9 @@ void UWorldPersistence::LoadColumnLightFlags()
   }
 }
 
-void UWorldPersistence::SaveColumnLightFlagsIfDirty()
+void UWorldPersistence::SaveColumnLightFlagsIfDirty(
+    double *snapshot_ms, double *enqueue_ms,
+    std::size_t *complete_columns_n, uint64_t *saved_revision)
 {
   if (!LightCompleteDirty || WorldFolderPath.empty() ||
       LightCompleteSaveInFlight ||
@@ -364,23 +366,45 @@ void UWorldPersistence::SaveColumnLightFlagsIfDirty()
     return;
   }
 
+  const auto snapshot_started = std::chrono::steady_clock::now();
   std::vector<glm::ivec2> complete_columns;
   complete_columns.reserve(LightCompleteColumns.size());
   for (const glm::ivec2 &col : LightCompleteColumns)
   {
     complete_columns.push_back(col);
   }
+  if (snapshot_ms)
+  {
+    *snapshot_ms = std::chrono::duration<double, std::milli>(
+                       std::chrono::steady_clock::now() - snapshot_started)
+                       .count();
+  }
+  if (complete_columns_n)
+  {
+    *complete_columns_n = complete_columns.size();
+  }
   LightCompleteSaveWorldFolder = WorldFolderPath;
   LightCompleteSaveRevision = LightCompleteRevision;
+  if (saved_revision)
+  {
+    *saved_revision = LightCompleteSaveRevision;
+  }
   LightCompleteSaveInFlight = true;
+  const auto enqueue_started = std::chrono::steady_clock::now();
   AsyncChunkIo->RequestSaveColumnLightFlags(
       LightCompleteSaveWorldFolder, LightCompleteSaveRevision,
       std::move(complete_columns));
+  if (enqueue_ms)
+  {
+    *enqueue_ms = std::chrono::duration<double, std::milli>(
+                      std::chrono::steady_clock::now() - enqueue_started)
+                      .count();
+  }
 }
 
 void UWorldPersistence::ProcessColumnLightFlagSaveResults(
     double *queue_mutex_wait_ms, double *queue_mutex_held_ms,
-    std::size_t *result_count)
+    std::size_t *result_count, AsyncChunkIoTickMetrics *tick_metrics)
 {
   if (queue_mutex_wait_ms)
   {
@@ -407,6 +431,14 @@ void UWorldPersistence::ProcessColumnLightFlagSaveResults(
   }
   for (AsyncColumnLightFlagsSaveResult &result : results)
   {
+    if (tick_metrics)
+    {
+      tick_metrics->light_flags_last_result_revision = result.revision;
+      tick_metrics->light_flags_last_result_success = result.success ? 1 : 0;
+      tick_metrics->light_flags_worker_queue_wait_ms =
+          result.worker_queue_wait_ms;
+      tick_metrics->light_flags_worker_service_ms = result.worker_service_ms;
+    }
     LightCompleteSaveInFlight = false;
     LightCompleteSaveWorldFolder.clear();
     LightCompleteSaveRevision = 0;
@@ -3690,7 +3722,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
   ProcessColumnLightFlagSaveResults(
       &metrics.light_flags_result_queue_mutex_wait_ms,
       &metrics.light_flags_result_queue_mutex_held_ms,
-      &metrics.light_flags_result_count);
+      &metrics.light_flags_result_count, &metrics);
   metrics.light_flags_result_drain_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - light_flags_result_drain_started)
@@ -4039,7 +4071,10 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
             .count();
   }
   const auto light_flags_save_started = std::chrono::steady_clock::now();
-  SaveColumnLightFlagsIfDirty();
+  SaveColumnLightFlagsIfDirty(
+      &metrics.light_flags_snapshot_ms, &metrics.light_flags_enqueue_ms,
+      &metrics.light_flags_complete_columns_n,
+      &metrics.light_flags_saved_revision);
   metrics.light_flags_save_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - light_flags_save_started)

@@ -828,7 +828,13 @@ public:
   void SetLastAppUpdateMs(double ms) { LastAppUpdateMs = ms; }
   void SetLastWorldTickMs(double ms) { LastWorldTickMs = ms; }
   void SetLastPrepareFrameMs(double ms) { LastPrepareFrameMs = ms; }
+  void SetLastRenderWindowSetupMs(double ms) { LastRenderWindowSetupMs = ms; }
   void SetLastRenderFrameSetupMs(double ms) { LastRenderFrameSetupMs = ms; }
+  void SetLastRenderEquipmentSetupMs(double ms)
+  {
+    LastRenderEquipmentSetupMs = ms;
+  }
+  void SetLastGeometryPaintMs(double ms) { LastGeometryPaintMs = ms; }
   void SetLastFpViewmodelMs(double ms) { LastFpViewmodelMs = ms; }
   void SetLastPostSceneMs(double ms) { LastPostSceneMs = ms; }
   void SetLastGuiOverlayMs(double ms) { LastGuiOverlayMs = ms; }
@@ -840,7 +846,13 @@ public:
   double GetLastAppUpdateMs() const { return LastAppUpdateMs; }
   double GetLastWorldTickMs() const { return LastWorldTickMs; }
   double GetLastPrepareFrameMs() const { return LastPrepareFrameMs; }
+  double GetLastRenderWindowSetupMs() const { return LastRenderWindowSetupMs; }
   double GetLastRenderFrameSetupMs() const { return LastRenderFrameSetupMs; }
+  double GetLastRenderEquipmentSetupMs() const
+  {
+    return LastRenderEquipmentSetupMs;
+  }
+  double GetLastGeometryPaintMs() const { return LastGeometryPaintMs; }
   double GetLastFpViewmodelMs() const { return LastFpViewmodelMs; }
   double GetLastPostSceneMs() const { return LastPostSceneMs; }
   double GetLastGuiOverlayMs() const { return LastGuiOverlayMs; }
@@ -1733,7 +1745,10 @@ private:
   double LastAppUpdateMs{0.0};
   double LastWorldTickMs{0.0};
   double LastPrepareFrameMs{0.0};
+  double LastRenderWindowSetupMs{0.0};
   double LastRenderFrameSetupMs{0.0};
+  double LastRenderEquipmentSetupMs{0.0};
+  double LastGeometryPaintMs{0.0};
   double LastFpViewmodelMs{0.0};
   double LastPostSceneMs{0.0};
   double LastGuiOverlayMs{0.0};

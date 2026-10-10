@@ -2264,6 +2264,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   if (World)
   {
     World->SetLastRenderFrameSetupMs(0.0);
+    World->SetLastRenderEquipmentSetupMs(0.0);
+    World->SetLastGeometryPaintMs(0.0);
     World->SetLastFpViewmodelMs(0.0);
   }
 
@@ -2324,6 +2326,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
             std::chrono::high_resolution_clock::now() - prepare_begin)
             .count());
     {
+      const auto equipment_setup_begin =
+          std::chrono::high_resolution_clock::now();
       const WorldViewSettings &view = World->GetViewSettings();
       WornEquipmentDrawer::SetHidePossessedWield(ShouldDrawFpViewmodel(view));
       if (Core)
@@ -2333,7 +2337,18 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
           WornEquipmentDrawer::SetItemDefinitions(items.get());
         }
       }
+      World->SetLastRenderEquipmentSetupMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() -
+              equipment_setup_begin)
+              .count());
+      const auto geometry_paint_begin =
+          std::chrono::high_resolution_clock::now();
       Geometry->Paint(width, height, viewDuration);
+      World->SetLastGeometryPaintMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - geometry_paint_begin)
+              .count());
       WornEquipmentDrawer::SetHidePossessedWield(false);
     }
   }

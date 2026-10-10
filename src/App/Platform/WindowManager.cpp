@@ -1346,8 +1346,13 @@ void UWindowManager::TickBudgetedAutosave()
 
 void UWindowManager::Render()
 {
+  if (World)
+  {
+    World->SetLastRenderWindowSetupMs(0.0);
+  }
   if (Application)
   {
+    const auto setup_begin = std::chrono::high_resolution_clock::now();
     Application->SetWindow(Window);
     int fb_w = WindowWidth;
     int fb_h = WindowHeight;
@@ -1366,6 +1371,13 @@ void UWindowManager::Render()
       platform.ContentScaleX = content_scale_x;
       platform.ContentScaleY = content_scale_y;
       Application->UpdateUiScale(fb_w, fb_h, platform);
+    }
+    if (World)
+    {
+      World->SetLastRenderWindowSetupMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - setup_begin)
+              .count());
     }
     Application->RenderFrame(fb_w, fb_h,
                              Views ? Views->GetDurationUpdateMks() : 0.0);

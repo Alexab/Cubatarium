@@ -265,6 +265,7 @@ struct PhysicsTelemetry
   /// Coarse disjoint wall partitions around Streamer::Update and its cancels.
   double UpdateStreamingPreCoreMs{0.0};
   double UpdateStreamingPostCoreMs{0.0};
+  double UpdateStreamingPostCoreTelemetryMs{0.0};
   /// Time spent finding the terrain surface for altitude-adaptive fog.
   double AltitudeSurfaceQueryMs{0.0};
   /// Main-thread duration of the full TickAsyncChunkSystems phase.
@@ -303,6 +304,14 @@ struct PhysicsTelemetry
   double AsyncChunkIoLoadResultPushMutexHeldMaxMs{0.0};
   double AsyncChunkIoSaveDrainMs{0.0};
   double AsyncChunkIoLightFlagsSaveMs{0.0};
+  double AsyncChunkIoLightFlagsSnapshotMs{0.0};
+  double AsyncChunkIoLightFlagsEnqueueMs{0.0};
+  int AsyncChunkIoLightFlagsCompleteColumnsN{0};
+  uint64_t AsyncChunkIoLightFlagsSavedRevision{0};
+  uint64_t AsyncChunkIoLightFlagsLastResultRevision{0};
+  int AsyncChunkIoLightFlagsLastResultSuccess{-1};
+  double AsyncChunkIoLightFlagsWorkerQueueWaitMs{0.0};
+  double AsyncChunkIoLightFlagsWorkerServiceMs{0.0};
   int AsyncChunkIoLoadResultPushN{0};
   int AsyncChunkIoCancelledDiscardN{0};
   int AsyncChunkIoReadyLoadsBeforeN{0};
