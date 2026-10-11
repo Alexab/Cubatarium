@@ -7212,6 +7212,41 @@ Artifacts: [M539 invalid attempt](../../bin/suite_reports/engine_refactor/m539_w
 [camera-band join](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_camera_band_pixel_join.json),
 [target framebuffer](../../bin/flight_captures/m539b_world164_miss294_20261011/frame_012_front.png).
 
-Next: clean capture-disabled M335 baseline versus M534, including a fresh stop
-VB scan and explicit accounting of global readiness debt. Then run the planned
-short new-seed load/generation lane.
+Next: instrument the synchronous capture sub-stages behind the M540 stall and
+repeat the M335 route. Then run the planned short new-seed load/generation
+lane.
+
+### M540 clean M335 performance baseline
+
+M540 used the established visible no-teleport route on `World_164` with the
+Release build and no image/pixel tracing. It completed 4,992 blocks / 312
+chunks at the normal route speed. The app exited successfully; the report's
+acceptance gates remain false because global readiness debt did not converge.
+Fly median wall was 21.368 ms versus 25.941 ms in M534, although M540 had 82
+spikes versus 59.
+
+The largest frame took 904.213 ms at `x=-1898` (`cx=-119`). It reported
+`mesh_emerge_ms=854.790`, `mesh_emerge_coordinator_ms=854.758`,
+`mesh_dirty_tick_ms=852.835`, and `mesh_snapshot_ms=852.564`. Another frame at
+`x=-1539` reported a 100.327 ms snapshot acquisition. The production capture
+worker is compile-time disabled; `TryAcquireSnapshotForSchedule` therefore
+captures synchronously via `CaptureAndCommitOnMain` and
+`ReadChunkBandForCapture`. The long snapshot attempt occurs in the priority
+remesh pass before the schedule-stage timer reset, explaining why its duration
+is absent from `mesh_dirty_schedule_ms`. Current data cannot distinguish the
+band read/copy from dependency checks, store operations, or a process pause.
+
+M540's last five stop-tail periods have fresh VB refresh timings and zero
+focus-missing mesh, visual-hole proxy, and dirty-focus counts. Global readiness
+debt ends at 31, so stop convergence is still open. This capture-disabled run
+has no pixel evidence and does not establish a visual hole.
+
+Artifacts: report `bin/suite_reports/engine_refactor/m540_world164_clean_perf_baseline_20261011.json`,
+perf `bin/logs/perf_20261011-211506_45660.jsonl`, and M534 comparison
+`bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json`.
+
+Next: add low-overhead timing around each synchronous capture sub-stage and
+repeat the same M335 route. Use the measured call stack/stage before choosing
+between optimizing capture, reducing capture admission during hitches, or
+redesigning snapshots into resumable per-frame work. Then return to the planned
+new-seed load/generation lane.

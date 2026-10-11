@@ -8260,12 +8260,20 @@ Next steps:
    pixel-correlated rendering-hole investigation is therefore **unconfirmed**;
    preserve mesh-freshness/readiness debt as a separate open signal and do not
    chase further proxy coordinates without new pixel evidence.
-3. Run a clean capture-disabled M335 performance baseline under quiet system
-   load and compare it with M534. Verify that stop-mode VB census samples are
-   fresh and reconcile global `unfinished_visual` debt with ownership and
-   demand evidence.
-4. Run the planned short new-seed load/generation lane to compare persisted
-   reads with procedural generation. Keep M335 as the primary repeatable route.
+3. M540 completed the clean capture-disabled M335 baseline and refreshed the
+   stop-mode VB census. Stop-tail census is fresh and near-focus visual-hole
+   counters clear, but global readiness debt remains 31 and convergence stays
+   false. The baseline also exposed a severe main-thread mesh-capture stall:
+   one frame took 904 ms, with 852.6 ms attributed to snapshot acquisition and
+   852.8 ms to the dirty tick; a separate frame spent 100.3 ms there. The
+   capture worker is disabled in production, so the normal path performs
+   `ReadChunkBandForCapture` synchronously. The current metrics do not identify
+   which sub-operation caused the stall. Instrument and repeat this exact
+   M335 route before changing the capture architecture. Do not classify this
+   timing result as a proven renderer hole.
+4. After isolating the capture stall, run the planned short new-seed
+   load/generation lane to compare persisted reads with procedural generation.
+   Keep M335 as the primary repeatable route.
 
 ### M539 / M539b targeted `cx=-294` pixel audit (2026-10-11)
 
@@ -8320,9 +8328,10 @@ HUD, and is not a capture of the desktop composition.
 
 Conclusion: close the current **pixel-correlated hole** question as
 unconfirmed, not the broader streaming/readiness refactor. Do not make a
-render, lighting or scheduler code change from this capture alone. The
-remaining planned work is the clean M335 baseline/stop-census audit followed
-by the short new-seed load/generation lane.
+render, lighting or scheduler code change from this capture alone. The clean
+M335 baseline is documented in M540 below; the new priority is to instrument
+its synchronous capture stall, then run the short new-seed load/generation
+lane.
 
 Artifacts: initial [M539 report](../../bin/suite_reports/engine_refactor/m539_world164_miss294_20261011.json)
 and [perf log](../../bin/logs/perf_20261011-202007_31532.jsonl); corrected
@@ -8334,3 +8343,38 @@ and [perf log](../../bin/logs/perf_20261011-202007_31532.jsonl); corrected
 [ray parity](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_ray_parity.json),
 [perf log](../../bin/logs/perf_20261011-204021_16468.jsonl),
 [target framebuffer](../../bin/flight_captures/m539b_world164_miss294_20261011/frame_012_front.png).
+
+### M540 capture-disabled M335 baseline (2026-10-11)
+
+M540 used the visible no-teleport M335 route on `World_164`, Release, with
+capture and pixel probes disabled. It travelled 4,992 blocks across 312 chunks
+at the established speed. `process_rc=0`; the runner report is `pass=false`
+because readiness and stop-convergence gates remain open. Fly median wall time
+was 21.368 ms versus 25.941 ms in M534. M540 recorded 82 spikes versus 59 in
+M534, including a 904.213 ms frame at `x=-1898` (`cx=-119`):
+`mesh_emerge_ms=854.790`, `mesh_emerge_coordinator_ms=854.758`,
+`mesh_dirty_tick_ms=852.835`, and `mesh_snapshot_ms=852.564`. A second frame at
+`x=-1539` recorded 100.327 ms in snapshot acquisition. These are real
+single-frame pauses in the perf JSONL, not interval averages.
+
+The source path is synchronous: `UMeshCaptureWorker::kWorkerCaptureEnabled`
+is false, and a remesh miss in `TryAcquireSnapshotForSchedule` falls through
+`CaptureAndCommitOnMain` to `ReadChunkBandForCapture`. The first priority-remesh
+pass runs before the dirty-schedule segment timer is reset, so the 852 ms is
+visible in `mesh_snapshot_ms` and `mesh_dirty_tick_ms` but not in the later
+`mesh_dirty_schedule_ms` field. The budget is checked between snapshot
+attempts; it cannot interrupt a single `ReadChunkBandForCapture` already in
+progress. No capture sub-stage timing was recorded, so whether time is spent in
+band capture, dependency validation, store access, or an external scheduling
+pause remains unconfirmed.
+
+The final five stop-tail periods have nonzero `prep_refresh_vb_ms`,
+`focus_missing_mesh=0`, `visual_holes=0`, and `focus_dirty=0`; this verifies a
+fresh stop census. The global readiness debt still ends at 31, while post-stop
+mesh-missing and visual-hole proxies are zero. Treat the outstanding debt and
+the capture stall as separate open work items. M540 did not enable pixel
+probes, and its performance report is not evidence of a blank framebuffer.
+
+Artifacts: [M540 report](../../bin/suite_reports/engine_refactor/m540_world164_clean_perf_baseline_20261011.json),
+[perf JSONL](../../bin/logs/perf_20261011-211506_45660.jsonl),
+[M534 comparison report](../../bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json).
