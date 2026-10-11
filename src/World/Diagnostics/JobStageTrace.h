@@ -435,6 +435,16 @@ struct VisualBlackTraceRecord
   float renderer_pixel_camera_pos_x{0.0f};
   float renderer_pixel_camera_pos_y{0.0f};
   float renderer_pixel_camera_pos_z{0.0f};
+  /// sample_kind=9: 0=unspecified, bit 0=periodic, bit 1=focus change,
+  /// bit 2=screen ray, bit 3=camera-band peak (bounded event capture).
+  uint8_t renderer_pixel_probe_trigger_flags{0};
+  /// sample_kind=9: origin and direction of the renderer's exact DDA ray.
+  float renderer_pixel_ray_origin_x{0.0f};
+  float renderer_pixel_ray_origin_y{0.0f};
+  float renderer_pixel_ray_origin_z{0.0f};
+  float renderer_pixel_ray_direction_x{0.0f};
+  float renderer_pixel_ray_direction_y{0.0f};
+  float renderer_pixel_ray_direction_z{-1.0f};
   float renderer_pixel_fog_start{0.0f};
   float renderer_pixel_fog_end{1000.0f};
   float renderer_pixel_fog_min_blend{0.0f};

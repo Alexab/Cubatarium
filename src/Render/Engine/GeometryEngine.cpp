@@ -201,6 +201,7 @@ struct OpaquePixelProbeCapture
   uint64_t probe_id{0};
   int rows{0};
   bool screen_ray_aligned_rows{false};
+  uint8_t trigger_flags{0};
   std::array<uint32_t, kPixelProbeSampleCount> rgba{};
   std::array<float, kPixelProbeSampleCount> depth{};
 };
@@ -1513,6 +1514,8 @@ void CaptureTransparentPixelProbe(
       record.sample_kind = 9;
       record.frame_epoch = frame_epoch;
       record.renderer_pixel_probe_id = opaque_capture.probe_id;
+      record.renderer_pixel_probe_trigger_flags =
+          opaque_capture.trigger_flags;
       record.renderer_pixel_x = viewport[0] + local_x;
       record.renderer_pixel_y = viewport[1] + local_y;
       record.renderer_pixel_rgba = (red << 24u) | (green << 16u) |
@@ -1621,6 +1624,12 @@ void CaptureTransparentPixelProbe(
       }
       const glm::vec3 voxel_ray_origin = camera_ray.origin;
       const glm::vec3 voxel_ray_direction = camera_ray.direction;
+      record.renderer_pixel_ray_origin_x = voxel_ray_origin.x;
+      record.renderer_pixel_ray_origin_y = voxel_ray_origin.y;
+      record.renderer_pixel_ray_origin_z = voxel_ray_origin.z;
+      record.renderer_pixel_ray_direction_x = voxel_ray_direction.x;
+      record.renderer_pixel_ray_direction_y = voxel_ray_direction.y;
+      record.renderer_pixel_ray_direction_z = voxel_ray_direction.z;
       const float voxel_ray_near_distance = camera_ray.near_distance;
       const float opaque_depth = opaque_capture.depth[sample];
       float opaque_hit_distance = -1.0f;
@@ -4252,6 +4261,10 @@ void UGeometryEngine::DrawCubeGeometry()
       static glm::ivec2 last_probe_focus(0);
       static uint64_t last_camera_band_peak_probe_epoch = 0;
       static uint64_t last_screen_ray_probe_epoch = 0;
+      // Capture a bounded framebuffer sample for transient camera-band peaks
+      // even when the operator's fixed X window does not include the event.
+      static uint32_t camera_band_peak_pixel_probe_count = 0;
+      constexpr uint32_t kMaxCameraBandPeakPixelProbes = 24;
       const bool probe_on_focus_change = PixelProbeOnFocusChangeEnabled();
       const bool probe_on_screen_ray = PixelProbeOnScreenRayEnabled();
       // Optional camera-space bounds limit framebuffer readback without
@@ -4282,22 +4295,41 @@ void UGeometryEngine::DrawCubeGeometry()
            (probe_camera_x >= -210.0f && probe_camera_x <= -120.0f))
               ? 60u
               : 120u;
-      if (pixel_probe_in_x_range &&
-          (render_probe_count % probe_stride == 0u ||
-           (probe_on_focus_change && focus_changed) || camera_band_peak_probe ||
-           screen_ray_probe))
+      const bool periodic_pixel_probe =
+          pixel_probe_in_x_range && render_probe_count % probe_stride == 0u;
+      const bool focus_change_pixel_probe = pixel_probe_in_x_range &&
+                                            probe_on_focus_change &&
+                                            focus_changed;
+      const bool screen_ray_pixel_probe =
+          pixel_probe_in_x_range && screen_ray_probe;
+      const bool camera_band_peak_pixel_probe =
+          camera_band_peak_probe &&
+          camera_band_peak_pixel_probe_count <
+              kMaxCameraBandPeakPixelProbes;
+      const bool screen_ray_aligned_capture =
+          screen_ray_probe &&
+          (pixel_probe_in_x_range || camera_band_peak_pixel_probe);
+      if (periodic_pixel_probe || focus_change_pixel_probe ||
+          screen_ray_pixel_probe || camera_band_peak_pixel_probe)
       {
         pixel_probe_capture.probe_id = render_probe_count;
-        pixel_probe_capture.rows = screen_ray_probe
+        pixel_probe_capture.trigger_flags = static_cast<uint8_t>(
+            (periodic_pixel_probe ? 1u << 0 : 0u) |
+            (focus_change_pixel_probe ? 1u << 1 : 0u) |
+            (screen_ray_aligned_capture ? 1u << 2 : 0u) |
+            (camera_band_peak_pixel_probe ? 1u << 3 : 0u));
+        pixel_probe_capture.rows = screen_ray_aligned_capture
                                        ? std::max(kScreenRayAlignedPixelRows,
                                                   PixelProbeRows())
                                        : PixelProbeRows();
-        pixel_probe_capture.screen_ray_aligned_rows = screen_ray_probe;
-        if (camera_band_peak_probe)
+        pixel_probe_capture.screen_ray_aligned_rows =
+            screen_ray_aligned_capture;
+        if (camera_band_peak_pixel_probe)
         {
           last_camera_band_peak_probe_epoch = pixel_probe_frame_epoch;
+          ++camera_band_peak_pixel_probe_count;
         }
-        if (screen_ray_probe)
+        if (screen_ray_aligned_capture)
         {
           last_screen_ray_probe_epoch = pixel_probe_frame_epoch;
         }

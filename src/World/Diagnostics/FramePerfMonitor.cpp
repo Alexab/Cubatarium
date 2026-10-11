@@ -5035,6 +5035,8 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"incarnation\":" << r.incarnation
                  << ",\"renderer_pixel_probe_id\":"
                  << r.renderer_pixel_probe_id
+                 << ",\"renderer_pixel_probe_trigger_flags\":"
+                 << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
                  << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
                  << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
                  << ",\"renderer_pixel_rgba\":"
@@ -5075,6 +5077,18 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_camera_pos_y
                  << ",\"renderer_pixel_camera_pos_z\":"
                  << r.renderer_pixel_camera_pos_z
+                 << ",\"renderer_pixel_ray_origin_x\":"
+                 << r.renderer_pixel_ray_origin_x
+                 << ",\"renderer_pixel_ray_origin_y\":"
+                 << r.renderer_pixel_ray_origin_y
+                 << ",\"renderer_pixel_ray_origin_z\":"
+                 << r.renderer_pixel_ray_origin_z
+                 << ",\"renderer_pixel_ray_direction_x\":"
+                 << r.renderer_pixel_ray_direction_x
+                 << ",\"renderer_pixel_ray_direction_y\":"
+                 << r.renderer_pixel_ray_direction_y
+                 << ",\"renderer_pixel_ray_direction_z\":"
+                 << r.renderer_pixel_ray_direction_z
                  << ",\"renderer_pixel_fog_start\":"
                  << r.renderer_pixel_fog_start
                  << ",\"renderer_pixel_fog_end\":"
@@ -5603,6 +5617,8 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_fluid_wetness
                << ",\"renderer_pixel_probe_id\":"
                << r.renderer_pixel_probe_id
+               << ",\"renderer_pixel_probe_trigger_flags\":"
+               << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
                << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
                << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
                << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba
