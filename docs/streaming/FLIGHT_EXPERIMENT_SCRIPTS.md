@@ -7032,3 +7032,46 @@ pixel `depth_surface` and `source_face` light/revision state, then join each
 fresh VB trace coordinate to relight/flow ownership and queue age. A valid
 streaming/render defect requires a dark or missing pixel mapped to the same
 target chunk; a nearby black census row alone is insufficient.
+
+### M536 result
+
+M536 completed with `process_rc=0`, 4,976 blocks traveled, median speed
+5.19653 blocks/s, and eye Y 70. It used commit `a819fe1e` and the Release
+executable with SHA-256
+`5cf19acf1589ba73033be3a37d0e6a8479d540765f9d84f769932896ea4ce458`. The
+route stopped 24 blocks short of the 5,000-block proxy; its route and flight
+speed were otherwise the established M335 profile.
+
+The renderer-pixel analyzer saw 2,140 pixel probes overall and 128 pixels
+below luminance 32. In the target x interval, 80 of 1,260 renderer pixels were
+below that threshold. All 80 had valid depth, drawable/draw-ready geometry and
+visible opaque MDI; none of their voxel rays reported a gap. Seventy-four had
+valid live-face light samples with sky light 1 and matching revisions. Six
+had no valid live-face sample but still had draw-ready geometry and matching
+chunk light revisions. Treat these as unexplained dim pixels, not evidence of
+blank chunks or stale light. The 75 exact-coordinate screen-ray joins had zero
+origin difference and at most `1.48e-6` degrees direction difference; 51 had
+the same opaque block hit. All 17 GL_BACK/pre-swap and GL_FRONT/post-swap PNG
+pairs were pixel-identical.
+
+The more actionable M536 anomaly was around `focus_cx=-262`: peak period
+streaming was 198.851 ms, mesh emergence 43.759 ms, and wall time 221.023 ms.
+Nearby counters reached 153 dirty focus chunks and 72 unfinished visual items,
+with a short run of `focus_missing_mesh=1`. The census did not report a
+fully-dark no-ticket or stale-lit column there, and the M536 far-end capture
+window did not include this hotspot. M536 did not tie the temporary mesh miss
+to a visible pixel. Its final stationary VB scans refreshed, focus mesh miss
+and stop visual-hole proxy were zero; broad readiness debt remained 33–34.
+
+Artifacts: report
+`bin/suite_reports/engine_refactor/m536_world164_far_end_20261011.json`, perf
+`bin/logs/perf_20261011-190815_25028.jsonl`, visual coverage and pixel/ray
+reports with the same `m536_world164_far_end_20261011` prefix, and 17 paired
+frames in `bin/flight_captures/m536_world164_far_end_20261011`.
+
+Next diagnostic run: repeat the exact M335 profile with the same tracing and
+paired captures bounded to `x=-4320..-4048`, so the transient
+`focus_cx=-262` period is directly joined to renderer pixels. Keep
+`--fly-phase-sec 980`, start position, eye height, heading, pitch, stop, and
+idle durations unchanged. Only the diagnostic capture window and `m537` output
+names change.

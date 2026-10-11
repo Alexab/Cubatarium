@@ -8073,20 +8073,77 @@ They do not cover the last 80 blocks of the route and do not rule out a separate
 far-end defect. The low-luminance pixels are therefore not treated as a proven
 streaming/rendering regression.
 
+The planned far-end pass was completed by M536 below. Its results did not
+justify changing geometry admission or lighting policy. The next targeted
+correctness pass should instead cover the transient streaming/mesh-emerge
+hotspot around focus chunk `cx=-262`, where M536 recorded a short focus-mesh
+miss but had no pixel probes or captures.
+
+### M536 far-end evidence and hotspot discovery (2026-10-11)
+
+M536 used the same visible, no-teleport M335 profile and completed with
+`process_rc=0`, 4,976 blocks traveled, 5.19653 blocks/s median, and eye Y 70.
+It stopped 24 blocks short of the 5,000-block far-flight proxy. The run used
+bounded pixel/trace diagnostics and paired front-after-swap captures, so its
+timings are diagnostic rather than a clean performance baseline. The M536
+manifest used commit `a819fe1e` and the Release executable SHA-256
+`5cf19acf1589ba73033be3a37d0e6a8479d540765f9d84f769932896ea4ce458`.
+
+In the selected far-end window `x=-4900..-4800`, 80 of 1,260 renderer pixel
+samples had luminance below 32. Every one had valid opaque depth, a draw-ready
+surface, and a visible opaque MDI command; the voxel-ray samples had no gaps.
+For 74 of the 80 samples, the opaque-face light sample was valid with sky light
+1 and matching field/published light revisions. The remaining six had no valid
+live-face light sample, but their chunks were still draw-ready with matching
+field/published revisions. These low-luminance samples do not demonstrate an
+empty chunk, missing geometry, stale baked light, or a streaming hole. Their
+visual cause remains unclassified; do not tune lighting from this evidence
+alone. Across the target interval the renderer and streaming rays matched in
+all 75 exact-coordinate joins (origin delta 0, max direction delta
+`1.48e-6` degrees); 51 had the same opaque hit block. All 17 saved
+`GL_BACK`/post-swap `GL_FRONT` image pairs were pixel-identical. The inspected
+endpoint image shows terrain, coast, and water rather than a blank chunk.
+
+The run exposed a better diagnostic target earlier in the same route. Near
+`focus_cx=-262`, one period reached 198.851 ms in the streaming phase,
+43.759 ms in mesh emergence, and 221.023 ms wall time. Nearby periods reported
+up to 153 dirty focus chunks and `unfinished_visual=72`; `focus_missing_mesh`
+was 1 for a short sequence. The visible-black census at these samples had no
+fully-dark no-ticket or stale-lit columns; reported no-ticket cases were zero
+or equal-revision legal-dark columns. Since M536's pixel and image capture
+window was restricted to the far endpoint, this transient focus-mesh signal is
+not yet tied to a visible framebuffer hole. Worker lifecycle rows around the
+area show matching Started/Built/Published sequences, so the remaining question
+is whether the short coverage dip reaches pixels while the stream catches up.
+
+At the end of M536, the stationary visible-black scan ran repeatedly
+(`prep_refresh_vb_ms` stayed nonzero). Focus mesh-missing and post-stop visual
+hole proxies were zero in the final tail. Broad readiness debt stayed around
+33–34 and is still a separate incomplete-work signal. The product report
+remains `pass=false` because readiness and other gates remain open; this run
+does not establish a user-visible far-end defect.
+
+Artifacts: [M536 report](../../bin/suite_reports/engine_refactor/m536_world164_far_end_20261011.json),
+[visual coverage](../../bin/suite_reports/engine_refactor/m536_world164_far_end_20261011_visual_coverage.json),
+[camera-band/pixel join](../../bin/suite_reports/engine_refactor/m536_world164_far_end_20261011_camera_band_pixel_join.json),
+[renderer pixel trace](../../bin/suite_reports/engine_refactor/m536_world164_far_end_20261011_renderer_pixel.json),
+[target ray parity](../../bin/suite_reports/engine_refactor/m536_world164_far_end_20261011_ray_parity_target.json),
+[perf JSONL](../../bin/logs/perf_20261011-190815_25028.jsonl),
+[endpoint capture](../../bin/flight_captures/m536_world164_far_end_20261011/frame_016_front.png).
+
 Next steps:
 
-1. Run a targeted M335 forensic pass over the established far-end interval
-   `x=-4900..-4800`, with `visual_black_trace`, camera-band pixel/ray probes and
-   sparse front-after-swap captures. Preserve the same route parameters; wait
-   for cloud-sync CPU load to subside before using the run as a performance
-   sample.
-2. Join any dark/stalled census columns to their exact owner/revision records
-   and target pixels. Only stale-lit or missing camera-band surfaces with a
-   matching pixel witness justify a repair-policy change.
-3. Keep broad `unfinished_visual` debt and raw legal-dark counts in reports,
-   but do not use them alone to fail visible completeness. Revisit a separate
-   bounded readiness target for non-camera-band water/terrain only if the
-   targeted evidence shows those slices enter the rendered view.
-4. After the visible correctness lane is green, run the clean capture-disabled
-   M335 performance baseline under quiet system load, then the planned short
-   new-seed persistence/generation lane.
+1. Repeat the established M335 route with capture/pixel probes bounded to
+   `x=-4320..-4048`, covering the M536 hotspot around `focus_cx=-262`. Join
+   missing-mesh and visible-black samples to same-frame renderer pixels and
+   column owner/revision traces. Do not alter scheduling unless a missing or
+   stale surface is tied to a visible pixel.
+2. If the hotspot has no pixel-level defect, close the visible far-flight
+   correctness investigation as unconfirmed rather than continuing to chase
+   readiness debt as if it were a hole.
+3. Run a capture-disabled M335 baseline under quiet system load and compare
+   with M534; the forensic M536 timings are not suitable for performance
+   acceptance.
+4. After that comparison, run the planned short new-seed load/generation lane
+   to check persisted-load versus procedural-generation costs. Keep M335 as the
+   primary repeatable correctness route.
