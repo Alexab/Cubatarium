@@ -17,15 +17,22 @@ except ImportError as exc:  # pragma: no cover - depends on local runtime
     raise SystemExit("psutil is required for host CPU sampling") from exc
 
 
-def _find_target_processes(target_name: str) -> dict[int, psutil.Process]:
+def _find_target_processes(
+    target_name: str, command_pid: int
+) -> dict[int, psutil.Process]:
     target = target_name.casefold().removesuffix(".exe")
     found: dict[int, psutil.Process] = {}
-    for process in psutil.process_iter(["pid", "name"]):
+    try:
+        command = psutil.Process(command_pid)
+        candidates = [command, *command.children(recursive=True)]
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return found
+    for process in candidates:
         try:
-            name = process.info.get("name") or ""
+            name = process.name()
             if name.casefold().removesuffix(".exe") == target:
                 process.cpu_percent(interval=None)  # prime this process counter
-                found[int(process.info["pid"])] = process
+                found[process.pid] = process
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
     return found
@@ -69,7 +76,7 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--interval-sec", type=float, default=2.0)
     parser.add_argument("--process-name", default="Cubatarium.exe")
-    parser.add_argument("--process-scan-interval-sec", type=float, default=10.0)
+    parser.add_argument("--process-scan-interval-sec", type=float, default=2.0)
     parser.add_argument(
         "--top-processes-interval-sec",
         type=float,
@@ -108,7 +115,7 @@ def main() -> int:
             machine_cpu_pct = psutil.cpu_percent(interval=args.interval_sec)
             sampled_at = time.monotonic()
             if sampled_at >= next_process_scan:
-                discovered = _find_target_processes(args.process_name)
+                discovered = _find_target_processes(args.process_name, child.pid)
                 target_processes.update(discovered)
                 next_process_scan = sampled_at + args.process_scan_interval_sec
             target_rows, target_cpu_cores = _target_snapshot(target_processes)
