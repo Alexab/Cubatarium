@@ -8131,19 +8131,74 @@ Artifacts: [M536 report](../../bin/suite_reports/engine_refactor/m536_world164_f
 [perf JSONL](../../bin/logs/perf_20261011-190815_25028.jsonl),
 [endpoint capture](../../bin/flight_captures/m536_world164_far_end_20261011/frame_016_front.png).
 
+The first follow-up, the M537 pixel/capture pass over
+`x=-4320..-4048`, is complete below. M537 found no pixel-level hole in that
+window, but its aggregate report also recorded a separate six-second
+near-focus mesh-missing run at `cx=-175`, outside its capture window. That
+second location needs direct evidence before closing the remaining correctness
+lane.
+
+### M537 hotspot pixel and paired-frame follow-up (2026-10-11)
+
+M537 completed the same visible, no-teleport M335 route with `process_rc=0`:
+313 chunks (5,008 blocks), median speed 5.19653 blocks/s, eye Y 70. The
+manifest confirms Release, `World_164`, the established start/heading/pitch,
+and all bounded diagnostics enabled. The executable hash matches M536. The
+run report remains `pass=false`; instrumentation was enabled, so use it for
+correctness evidence rather than performance acceptance.
+
+Across `x=-4320..-4048`, the analyzer recorded 4,220 renderer pixel probes;
+157 had luma below 32. Every one had valid opaque depth, draw-ready geometry,
+and a visible MDI command, and none had a voxel-ray gap. All 157 had settled,
+matching field/published light revisions. Of those, 149 had a valid live-face
+sample with sky light 1, one had sky light 0.933, and seven did not resolve a
+live face from the pixel ray. The latter samples' depth surfaces were still
+drawn; the depth point was nearer than the opaque voxel-DDA hit, so the live
+face lookup did not identify that rasterized face. This is inconclusive light
+attribution, not evidence of an empty chunk.
+
+Thirty-one of the 157 dim samples were drawn from an older published geometry
+revision than the current desired revision (30 were one revision behind, one
+was three revisions behind). Those surfaces were still draw-ready and had
+visible MDI commands, with no ray gap. This is evidence of in-flight mesh
+replacement, but does not establish missing visible geometry. Keep it as a
+streaming freshness signal; do not treat it as a framebuffer hole without a
+same-pixel missing-surface witness. The 475 exact-coordinate renderer/stream
+ray joins had zero origin error and maximum direction error `1.48e-6` degrees;
+277 resolved to the same opaque hit block. All 28 `GL_BACK`/post-swap
+`GL_FRONT` PNG pairs were pixel-identical. Reviewed frames show continuous
+near terrain and the coast/water crossing; distant silhouettes remain within
+the already known fog behavior.
+
+In 41 periods around `cx=-275..-250`, peak streaming/emerge/wall costs were
+29.466/16.539/46.283 ms. `focus_missing_mesh` was 1 in 8 periods, and dirty
+focus chunks peaked at 141. No period had stale-lit or fully-dark no-ticket
+columns; no-ticket counts were fully accounted for by equal-revision legal
+dark geometry. The extreme M536 198.851 ms streaming spike did not recur here.
+M537 did record a separate maximum six-second `focus_missing_mesh` run at
+`cx=-175`, with up to 176 dirty chunks, beyond the targeted capture bounds.
+The target images therefore close neither that location nor the full
+near-focus proxy. At stop, mesh-missing and visual-hole proxies were zero,
+readiness debt remained 34, and one stalled census column kept the stop gates
+open. No renderer or lighting code change is justified by this run.
+
+Artifacts: [M537 report](../../bin/suite_reports/engine_refactor/m537_world164_hotspot_20261011.json),
+[visual coverage](../../bin/suite_reports/engine_refactor/m537_world164_hotspot_20261011_visual_coverage.json),
+[camera-band/pixel join](../../bin/suite_reports/engine_refactor/m537_world164_hotspot_20261011_camera_band_pixel_join.json),
+[renderer pixel trace](../../bin/suite_reports/engine_refactor/m537_world164_hotspot_20261011_renderer_pixel.json),
+[target ray parity](../../bin/suite_reports/engine_refactor/m537_world164_hotspot_20261011_ray_parity.json),
+[perf JSONL](../../bin/logs/perf_20261011-193429_39596.jsonl),
+[hotspot capture frame](../../bin/flight_captures/m537_world164_hotspot_20261011/frame_007_front.png).
+
 Next steps:
 
-1. Repeat the established M335 route with capture/pixel probes bounded to
-   `x=-4320..-4048`, covering the M536 hotspot around `focus_cx=-262`. Join
-   missing-mesh and visible-black samples to same-frame renderer pixels and
-   column owner/revision traces. Do not alter scheduling unless a missing or
-   stale surface is tied to a visible pixel.
-2. If the hotspot has no pixel-level defect, close the visible far-flight
-   correctness investigation as unconfirmed rather than continuing to chase
-   readiness debt as if it were a hole.
-3. Run a capture-disabled M335 baseline under quiet system load and compare
-   with M534; the forensic M536 timings are not suitable for performance
-   acceptance.
-4. After that comparison, run the planned short new-seed load/generation lane
-   to check persisted-load versus procedural-generation costs. Keep M335 as the
-   primary repeatable correctness route.
+1. Run the established M335 route with pixel probes and paired captures only
+   around `x=-2864..-2720`, covering M537's six-second focus-mesh-missing
+   location near `cx=-175`. Tie the missing-mesh periods to same-frame pixels
+   and owner/revision traces. Keep the route and camera parameters fixed.
+2. If M538 has no matching missing or stale visible surface, close the current
+   correctness investigation as unconfirmed, and run a clean capture-disabled
+   M335 performance baseline under quiet system load. Compare against M534.
+3. Run the planned short new-seed load/generation lane to compare persisted
+   reads with procedural generation; retain the deterministic M335 route as
+   the primary streaming correctness check.

@@ -7075,3 +7075,43 @@ paired captures bounded to `x=-4320..-4048`, so the transient
 `--fly-phase-sec 980`, start position, eye height, heading, pitch, stop, and
 idle durations unchanged. Only the diagnostic capture window and `m537` output
 names change.
+
+### M537 result
+
+M537 completed the same visible no-teleport M335 route with `process_rc=0`,
+313 chunks / 5,008 blocks traveled, median speed 5.19653 blocks/s, and eye Y
+70. Its manifest confirms Release and the same executable SHA-256 as M536.
+
+In the captured hotspot window, 157 of 4,220 renderer pixel probes had luma
+below 32. All 157 had valid opaque depth, draw-ready geometry, visible MDI,
+settled matching light-field revisions, and no voxel-ray gap. There were 149
+valid live-face light samples at sky 1, one at sky 0.933, and seven pixel rays
+whose depth surface was nearer than the voxel DDA hit, so the live-face lookup
+could not identify the rasterized face. Thirty-one samples were rendered from
+an older geometry revision while a replacement revision was pending, but the
+old mesh remained drawable and no pixel showed a ray gap. Keep this as mesh
+freshness evidence; it does not prove a blank chunk.
+
+The target ray parity pass joined 475 renderer/stream rays with zero origin
+error and max direction error `1.48e-6` degrees; 277 had the same opaque block
+hit. All 28 GL_BACK/pre-swap and GL_FRONT/post-swap image pairs were
+byte-identical. Reviewed frames show continuous nearby terrain and coast/water.
+
+Across 41 periods around `cx=-275..-250`, peak streaming/emerge/wall were
+29.466/16.539/46.283 ms. `focus_missing_mesh=1` appeared in 8 periods,
+`focus_dirty_chunks` peaked at 141, and no stale-lit or fully-dark no-ticket
+columns appeared. The extreme M536 198.851 ms stream spike did not recur.
+M537 nevertheless recorded a separate six-second focus-missing run around
+`cx=-175` (dirty peak 176), outside the capture window. At stop, mesh-missing
+and visual-hole proxies were zero; readiness debt was 34 and one stalled
+visible-black census column kept stop gates open.
+
+Artifacts: report `bin/suite_reports/engine_refactor/m537_world164_hotspot_20261011.json`,
+perf `bin/logs/perf_20261011-193429_39596.jsonl`, analyzer outputs with the
+same prefix, and paired captures in
+`bin/flight_captures/m537_world164_hotspot_20261011`.
+
+The next M335 correctness pass should target only `x=-2864..-2720`, the
+`cx=-175` miss run. If a same-frame pixel confirms a missing or stale visible
+surface, fix and repeat that specific path. Otherwise proceed to the clean
+capture-disabled performance baseline and then the short new-seed load test.
