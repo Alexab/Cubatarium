@@ -8248,13 +8248,89 @@ Artifacts: [M538 report](../../bin/suite_reports/engine_refactor/m538_world164_m
 
 Next steps:
 
-1. Run one final targeted M335 pixel/capture pass around the route-wide
-   `cx=-294` miss, using `x=-4800..-4580`. Tie any missing-mesh period to
-   same-frame depth, MDI and light/revision evidence; retain the established
-   route/camera parameters.
-2. If that interval also has no missing visible surface, close the current
-   streaming/rendering correctness investigation as unconfirmed. Then run a
-   clean capture-disabled M335 performance baseline under quiet system load
-   and compare it with M534.
-3. Run the planned short new-seed load/generation lane to compare persisted
+1. M539's first attempt was not a valid pixel-correlation run: its capture
+   bounds were active, but the pixel-probe environment variable names were
+   wrong, and the 980-second route ended at `x=-4642` before the `cx=-294`
+   location. Do not use it as evidence for or against a visible hole.
+2. M539b completed the targeted pass with the correct pixel-probe variables
+   and a 45-second longer flight phase. At `cx=-298`, `focus_missing_mesh`
+   recurred for four seconds, but every sampled low-luma pixel in the target
+   band still had valid depth and drawable opaque MDI, including at luma `<96`.
+   The camera-band candidate slices had no same-frame pixel hit. The current
+   pixel-correlated rendering-hole investigation is therefore **unconfirmed**;
+   preserve mesh-freshness/readiness debt as a separate open signal and do not
+   chase further proxy coordinates without new pixel evidence.
+3. Run a clean capture-disabled M335 performance baseline under quiet system
+   load and compare it with M534. Verify that stop-mode VB census samples are
+   fresh and reconcile global `unfinished_visual` debt with ownership and
+   demand evidence.
+4. Run the planned short new-seed load/generation lane to compare persisted
    reads with procedural generation. Keep M335 as the primary repeatable route.
+
+### M539 / M539b targeted `cx=-294` pixel audit (2026-10-11)
+
+The initial M539 run used the established visible no-teleport M335 camera and
+route, but set `CUBA_VISUAL_PIXEL_PROBE_ON_SCREEN_RAY` and
+`CUBA_VISUAL_PIXEL_PROBE_MIN_X/MAX_X`; the runner reads
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY` and
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X/MAX_X`. Its manifest consequently says
+the pixel probe was disabled and the pixel bounds were unset. The capture
+bounds were correct, but the 980-second flight ended at `x=-4642` before the
+`cx=-294` target at about `x=-4704`. It returned `process_rc=0`, but the
+acceptance report failed and this run cannot support a pixel-level conclusion.
+It did reproduce a separate eight-second `focus_missing_mesh` run at
+`cx=-173`. Preserve it as a harness-configuration incident, not a valid target
+capture.
+
+M539b corrected the variable names, checked the resulting manifest, and kept
+the same world, start, yaw, pitch, height, speed scale, GUI and no-teleport
+route. The flight phase was extended from 980 to 1,025 seconds solely to reach
+the target despite accumulated slow frames; all renderer and camera parameters
+remained M335. It completed normally (`process_rc=0`, `run_outcome=success`),
+travelled from `x=120` through `x=-4966`, and the executable hash matched the
+previous Release runs. The report still has `pass=false` because readiness and
+stop-convergence gates remain open; that is not a process failure.
+
+At the target (`cx=-295..-301`, 11 periods), `focus_missing_mesh` was nonzero
+in six periods, `visual_holes` in five, and dirty focus reached 166 chunks.
+Streaming/emerge/wall maxima were 32.905/19.009/48.221 ms, while
+`unfinished_visual` reached 82. Raw no-ticket counts were fully accounted for
+by legal-dark columns; stale-lit and fully-dark no-ticket counts stayed zero.
+The route-wide report selected a four-second missing-mesh run at `cx=-298`.
+
+The target pixel probes show no sampled blank surface. Of 3,500 renderer pixel
+probes within the requested camera window, 172 had luma `<32` (21 frame
+epochs), at camera X `-4792..-4692`. Every one had valid opaque depth,
+draw-ready geometry, visible MDI, matching light-field revisions and zero
+voxel-ray gap. 161 resolved a live face and 159 of those had sky light 1; 34
+were still drawn from an older geometry revision. At the more inclusive luma
+`<96` threshold, 826 target probes across 38 frame epochs were dim, and all
+826 had valid depth, draw-ready MDI and no ray gap; 169 used an older geometry
+revision. This supports a real transient mesh-readiness/freshness signal, but
+does not demonstrate a black or empty framebuffer chunk at the sampled pixels.
+
+The exact-coordinate screen-ray join found 475 rays with zero origin error and
+maximum direction delta `1.48e-6` degrees; 313 had the same opaque block hit,
+and no pixel probe reported a voxel-ray gap. The camera-band join retained 13
+no-drawable and 8 unowned candidate slices, but none received a same-frame
+pixel hit, so these candidates are not proof of visible holes. All 22
+GL_BACK/GL_FRONT capture pairs were byte-identical. The inspected framebuffer
+at `x=-4792` shows continuous terrain and trees; it includes the in-game debug
+HUD, and is not a capture of the desktop composition.
+
+Conclusion: close the current **pixel-correlated hole** question as
+unconfirmed, not the broader streaming/readiness refactor. Do not make a
+render, lighting or scheduler code change from this capture alone. The
+remaining planned work is the clean M335 baseline/stop-census audit followed
+by the short new-seed load/generation lane.
+
+Artifacts: initial [M539 report](../../bin/suite_reports/engine_refactor/m539_world164_miss294_20261011.json)
+and [perf log](../../bin/logs/perf_20261011-202007_31532.jsonl); corrected
+[M539b report](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011.json),
+[visual coverage](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_visual_coverage.json),
+[camera-band/pixel join](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_camera_band_pixel_join.json),
+[renderer pixel trace `<32`](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_renderer_pixel.json),
+[renderer pixel trace `<96`](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_renderer_pixel_l96.json),
+[ray parity](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_ray_parity.json),
+[perf log](../../bin/logs/perf_20261011-204021_16468.jsonl),
+[target framebuffer](../../bin/flight_captures/m539b_world164_miss294_20261011/frame_012_front.png).

@@ -7157,3 +7157,61 @@ Next: one final targeted pass for `cx=-294` using capture/probe bounds
 `x=-4800..-4580`. If same-frame pixels are drawable there too, stop chasing
 the readiness proxy and move on to the clean capture-disabled baseline and
 new-seed load/generation lane.
+
+### M539 / M539b: corrected `cx=-294` target instrumentation
+
+M539 was a configuration miss. The capture interval was active, but the pixel
+probe uses these exact environment-variable names:
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4580'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m539b_world164_miss294_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4580'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+```
+
+M539 incorrectly used `CUBA_VISUAL_PIXEL_PROBE_ON_SCREEN_RAY` and
+`CUBA_VISUAL_PIXEL_PROBE_MIN_X/MAX_X`; its manifest proves pixel probing was
+off. It also stopped at `x=-4642`, short of `cx=-294`; do not use M539 as a
+target pixel result. It did record an eight-second route-wide miss at
+`cx=-173`.
+
+M539b used the names above and kept the established M335 world, start point,
+yaw, pitch, eye height, speed scale, visible window, and no-teleport route.
+The flight phase was increased from 980 to 1,025 seconds so the route crossed
+the full target interval despite the prior run's reduced net progress. The run
+completed at `x=-4966`, produced 22 matched capture pairs, and the manifest
+confirmed `visual_pixel_probe_on_screen_ray=true` with both target bounds.
+
+Results: the four-second route-wide focus-mesh-missing run selected `cx=-298`.
+Within the target band, 6/11 periods had `focus_missing_mesh`, 5/11 had the
+mesh-coverage `visual_holes` proxy, dirty focus peaked at 166 and
+`unfinished_visual` at 82. Yet all 172 target pixels below luma 32 had valid
+depth, drawable/draw-ready opaque MDI, matching light-field revisions and no
+voxel-ray gap. The same remained true for all 826 target samples below luma 96.
+The ray join had 475 exact-coordinate rows, zero origin error, max direction
+delta `1.48e-6` degrees and 313 matching opaque hits. Thirteen no-drawable and
+eight unowned camera-band candidates had zero same-frame pixel hits. All 22
+GL_BACK/GL_FRONT pairs were byte-identical. This closes the `cx=-294` pixel
+hole question as unconfirmed while retaining focus readiness/freshness debt as
+an open signal. The report returns `pass=false` because stop/readiness gates
+remain open; the app itself completed with `process_rc=0`.
+
+Artifacts: [M539 invalid attempt](../../bin/suite_reports/engine_refactor/m539_world164_miss294_20261011.json),
+[M539b report](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011.json),
+[perf log](../../bin/logs/perf_20261011-204021_16468.jsonl),
+[renderer pixels `<32`](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_renderer_pixel.json),
+[renderer pixels `<96`](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_renderer_pixel_l96.json),
+[ray parity](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_ray_parity.json),
+[camera-band join](../../bin/suite_reports/engine_refactor/m539b_world164_miss294_20261011_camera_band_pixel_join.json),
+[target framebuffer](../../bin/flight_captures/m539b_world164_miss294_20261011/frame_012_front.png).
+
+Next: clean capture-disabled M335 baseline versus M534, including a fresh stop
+VB scan and explicit accounting of global readiness debt. Then run the planned
+short new-seed load/generation lane.
