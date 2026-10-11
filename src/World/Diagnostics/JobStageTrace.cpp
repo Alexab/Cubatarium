@@ -6,7 +6,9 @@
 #include <cstdlib>
 #include <deque>
 #include <mutex>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace cutum
@@ -68,6 +70,26 @@ struct VisualChunkWatches
 VisualChunkWatches &GetVisualChunkWatches()
 {
   static VisualChunkWatches watches;
+  return watches;
+}
+
+struct CameraBandPeakWatch
+{
+  uint64_t expires_after_frame{0};
+  uint8_t peak_kind{0};
+};
+
+struct CameraBandPeakWatches
+{
+  std::unordered_map<VisualChunkKey, CameraBandPeakWatch,
+                     VisualChunkKeyHash>
+      chunks;
+  std::mutex mu;
+};
+
+CameraBandPeakWatches &GetCameraBandPeakWatches()
+{
+  static CameraBandPeakWatches watches;
   return watches;
 }
 
@@ -255,6 +277,16 @@ GetFirstMeshFrontierTraceRing()
   return r;
 }
 
+VisualBlackTraceRing<
+    UJobStageTrace::kCameraBandPeakScheduleTraceRingCapacity> &
+GetCameraBandPeakScheduleTraceRing()
+{
+  static VisualBlackTraceRing<
+      UJobStageTrace::kCameraBandPeakScheduleTraceRingCapacity>
+      r;
+  return r;
+}
+
 template <size_t Capacity>
 void PushVisualTrace(VisualBlackTraceRing<Capacity> &ring,
                      const VisualBlackTraceRecord &record)
@@ -380,6 +412,82 @@ void UJobStageTrace::WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz)
   {
     watches.chunks.erase(watches.order.front());
     watches.order.pop_front();
+  }
+}
+
+void UJobStageTrace::WatchCameraBandPeakChunk(int32_t cx, int32_t cy,
+                                              int32_t cz,
+                                              uint64_t frame_epoch,
+                                              uint8_t peak_kind)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0)
+  {
+    return;
+  }
+  WatchVisualChunk(cx, cy, cz);
+  constexpr uint64_t kWatchWindowFrames = 64;
+  auto &watches = GetCameraBandPeakWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  CameraBandPeakWatch &watch = watches.chunks[{cx, cy, cz}];
+  watch.expires_after_frame =
+      std::max(watch.expires_after_frame, frame_epoch + kWatchWindowFrames);
+  watch.peak_kind = peak_kind;
+}
+
+bool UJobStageTrace::IsCameraBandPeakChunkWatched(
+    int32_t cx, int32_t cy, int32_t cz, uint64_t frame_epoch,
+    uint8_t *peak_kind)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0)
+  {
+    return false;
+  }
+  auto &watches = GetCameraBandPeakWatches();
+  std::lock_guard<std::mutex> lock(watches.mu);
+  const auto it = watches.chunks.find({cx, cy, cz});
+  if (it == watches.chunks.end())
+  {
+    return false;
+  }
+  if (frame_epoch > it->second.expires_after_frame)
+  {
+    watches.chunks.erase(it);
+    return false;
+  }
+  if (peak_kind)
+  {
+    *peak_kind = it->second.peak_kind;
+  }
+  return true;
+}
+
+void UJobStageTrace::ForEachCameraBandPeakChunkWatched(
+    uint64_t frame_epoch,
+    void (*fn)(int32_t, int32_t, int32_t, uint8_t, void *), void *ctx)
+{
+  if (!VisualBlackTraceEnabled() || frame_epoch == 0 || !fn)
+  {
+    return;
+  }
+  std::vector<std::pair<VisualChunkKey, CameraBandPeakWatch>> active;
+  auto &watches = GetCameraBandPeakWatches();
+  {
+    std::lock_guard<std::mutex> lock(watches.mu);
+    for (auto it = watches.chunks.begin(); it != watches.chunks.end();)
+    {
+      if (frame_epoch > it->second.expires_after_frame)
+      {
+        it = watches.chunks.erase(it);
+        continue;
+      }
+      active.emplace_back(it->first, it->second);
+      ++it;
+    }
+  }
+  for (const auto &entry : active)
+  {
+    fn(entry.first.cx, entry.first.cy, entry.first.cz,
+       entry.second.peak_kind, ctx);
   }
 }
 
@@ -521,6 +629,8 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     LatestCameraBandPeakFrameEpoch.store(record.frame_epoch,
                                           std::memory_order_release);
+    WatchCameraBandPeakChunk(record.cx, record.cy, record.cz,
+                             record.frame_epoch, record.sample_kind);
   }
   if (record.sample_kind == 10 && record.frame_epoch != 0)
   {
@@ -585,6 +695,10 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetGpuDrawStateTraceRing(), record);
   }
+  else if (record.sample_kind == 18)
+  {
+    NoteCameraBandPeakSchedule(record);
+  }
   else if (record.sample_kind == 4 || record.sample_kind == 6)
   {
     PushVisualTrace(GetMeshScheduleTraceRing(), record);
@@ -593,6 +707,16 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     PushVisualTrace(GetVisualBlackTraceRing(), record);
   }
+}
+
+void UJobStageTrace::NoteCameraBandPeakSchedule(
+    const VisualBlackTraceRecord &record)
+{
+  if (!VisualBlackTraceEnabled() || record.frame_epoch == 0)
+  {
+    return;
+  }
+  PushVisualTrace(GetCameraBandPeakScheduleTraceRing(), record);
 }
 
 void UJobStageTrace::ResetCameraBandPeakTrace(uint8_t sample_kind)
@@ -638,6 +762,8 @@ void UJobStageTrace::ForEachVisualBlackNewest(
   ForEachVisualTraceNewest(GetCameraBandUnownedPeakTraceRing(), max_n, fn,
                            ctx);
   ForEachVisualTraceNewest(GetFirstMeshFrontierTraceRing(), max_n, fn, ctx);
+  ForEachVisualTraceNewest(GetCameraBandPeakScheduleTraceRing(), max_n, fn,
+                           ctx);
   ForEachVisualTraceNewest(GetGpuDrawStateTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetVisualPixelTraceRing(), max_n, fn, ctx);
   ForEachVisualTraceNewest(GetScreenRayTraceRing(), max_n, fn, ctx);

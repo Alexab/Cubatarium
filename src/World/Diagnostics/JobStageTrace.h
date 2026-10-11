@@ -314,6 +314,10 @@ struct VisualBlackTraceRecord
   uint16_t frustum_peak_unowned_in_view_count{0};
   /// sample_kind=16: bounded target-specific camera projection witness.
   uint8_t camera_band_peak_kind{0};
+  /// sample_kind=18: 0=end-of-tick target snapshot, 1=try_schedule outcome.
+  uint8_t camera_band_peak_schedule_phase{0};
+  /// sample_kind=18: renderer_target_resident reports whether the chunk is
+  /// loaded; flags bit 14 marks target admission during this scheduler tick.
   uint8_t renderer_target_resident{0};
   uint8_t renderer_exact_frustum_intersects{0};
   uint8_t renderer_projected_screen_rect_valid{0};
@@ -838,6 +842,8 @@ public:
   static constexpr size_t kCameraBandPeakTraceRingCapacity = 256;
   /// Retain enough opt-in frontier samples to cover a complete M335 route.
   static constexpr size_t kFirstMeshFrontierTraceRingCapacity = 4096;
+  /// Targeted scheduler history for active camera-band high-water slices.
+  static constexpr size_t kCameraBandPeakScheduleTraceRingCapacity = 4096;
   static constexpr size_t kVisualBlackTraceDumpCapacity =
       kVisualBlackTraceRingCapacity +
       kRendererGateTraceRingCapacity +
@@ -849,7 +855,9 @@ public:
       kPriorityRemeshTraceRingCapacity +
       kWatchedMeshScheduleTraceRingCapacity + kVisualPixelTraceRingCapacity +
       kScreenRayTraceRingCapacity + 2 * kCameraBandPeakTraceRingCapacity +
-      kFirstMeshFrontierTraceRingCapacity + kGpuDrawStateTraceRingCapacity;
+      kFirstMeshFrontierTraceRingCapacity +
+      kCameraBandPeakScheduleTraceRingCapacity +
+      kGpuDrawStateTraceRingCapacity;
 
   static void Note(const JobStageSpan &span);
   /// Record the final retirement/cancellation reason and elapsed job age.
@@ -858,6 +866,16 @@ public:
   /// Retain lifecycle events for a chunk selected by the opt-in frustum trace.
   static void WatchVisualChunk(int32_t cx, int32_t cy, int32_t cz);
   static bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz);
+  /// Retain peak chunks as scheduler targets for a bounded frame window.
+  static void WatchCameraBandPeakChunk(int32_t cx, int32_t cy, int32_t cz,
+                                       uint64_t frame_epoch,
+                                       uint8_t peak_kind);
+  static bool IsCameraBandPeakChunkWatched(int32_t cx, int32_t cy, int32_t cz,
+                                           uint64_t frame_epoch,
+                                           uint8_t *peak_kind = nullptr);
+  static void ForEachCameraBandPeakChunkWatched(
+      uint64_t frame_epoch,
+      void (*fn)(int32_t, int32_t, int32_t, uint8_t, void *), void *ctx);
   static void ForEachWatchedNewest(
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   /// Publish the world's current streaming frame for asynchronous demand traces.
@@ -882,6 +900,8 @@ public:
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
   static bool VisualBlackTraceEnabled();
   static void NoteVisualBlack(const VisualBlackTraceRecord &record);
+  static void NoteCameraBandPeakSchedule(
+      const VisualBlackTraceRecord &record);
   /// True when a camera-band peak was recorded during this render epoch.
   /// Lets the renderer take one synchronized sparse pixel/depth sample.
   static bool HasCameraBandPeakTraceForFrame(uint64_t frame_epoch);

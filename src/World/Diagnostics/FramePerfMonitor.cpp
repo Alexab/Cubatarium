@@ -4682,6 +4682,9 @@ void UFramePerfMonitor::Shutdown()
         case 17:
           trace_kind = "renderer_gpu_draw_state_probe";
           break;
+        case 18:
+          trace_kind = "camera_band_peak_scheduler_trace";
+          break;
         default:
           break;
         }
@@ -4808,6 +4811,91 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_voxel_mesh_ray_gpu_command_slot;
           WriteGpuDrawStateJson(*out, r);
           (*out) << "}\n";
+          return;
+        }
+        if (r.sample_kind == 18)
+        {
+          (*out) << "{\"kind\":\"camera_band_peak_scheduler_trace\""
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"world_epoch\":" << r.world_epoch
+                 << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
+                 << ",\"cz\":" << r.cz
+                 << ",\"peak_kind\":"
+                 << static_cast<int>(r.camera_band_peak_kind)
+                 << ",\"phase\":"
+                 << static_cast<int>(r.camera_band_peak_schedule_phase)
+                 << ",\"focus_cx\":" << r.focus_cx
+                 << ",\"focus_cz\":" << r.focus_cz
+                 << ",\"incarnation\":" << r.incarnation
+                 << ",\"non_air_blocks\":" << r.non_air_blocks
+                 << ",\"mesh_revision\":" << r.mesh_revision
+                 << ",\"published_geom_rev\":" << r.published_geom_rev
+                 << ",\"desired_geom_rev\":" << r.desired_geom_rev
+                 << ",\"attempt_id\":" << r.attempt_id
+                 << ",\"active_stage\":"
+                 << static_cast<int>(r.active_stage)
+                 << ",\"mesh_dirty_queue_kind\":"
+                 << static_cast<int>(r.mesh_dirty_queue_kind)
+                 << ",\"mesh_dirty_queue_index\":"
+                 << r.mesh_dirty_queue_index
+                 << ",\"mesh_dirty_queue_size\":"
+                 << r.mesh_dirty_queue_size
+                 << ",\"mesh_dirty_queue_age_frames\":"
+                 << r.mesh_dirty_queue_age_frames
+                 << ",\"mesh_work_owner_flags\":"
+                 << r.mesh_work_owner_flags
+                 << ",\"flags\":" << r.flags
+                 << ",\"cause\":" << static_cast<int>(r.cause)
+                 << ",\"mesh_snapshot_defer_reason\":"
+                 << static_cast<int>(r.mesh_snapshot_defer_reason)
+                 << ",\"mesh_enqueue_reject_reason\":"
+                 << static_cast<int>(r.mesh_enqueue_reject_reason)
+                 << ",\"frontier_horiz_distance_chunks\":"
+                 << r.frontier_horiz_distance_chunks
+                 << ",\"frontier_vertical_distance_chunks\":"
+                 << r.frontier_vertical_distance_chunks
+                 << ",\"frontier_max_schedule\":"
+                 << r.frontier_max_schedule
+                 << ",\"frontier_first_mesh_cap_base\":"
+                 << r.frontier_first_mesh_cap_base
+                 << ",\"frontier_first_mesh_cap\":"
+                 << r.frontier_first_mesh_cap
+                 << ",\"frontier_pre_first_mesh_limit\":"
+                 << r.frontier_pre_first_mesh_limit
+                 << ",\"frontier_scheduled_this_tick\":"
+                 << r.frontier_scheduled_this_tick
+                 << ",\"frontier_pipeline_inflight\":"
+                 << r.frontier_pipeline_inflight
+                 << ",\"frontier_pipeline_cap\":"
+                 << r.frontier_pipeline_cap
+                 << ",\"frontier_soft_defer\":"
+                 << r.frontier_soft_defer
+                 << ",\"frontier_snapshot_ms\":"
+                 << r.frontier_snapshot_ms
+                 << ",\"frontier_snapshot_budget_ms\":"
+                 << r.frontier_snapshot_budget_ms
+                 << ",\"frontier_tick_elapsed_ms\":"
+                 << r.frontier_tick_elapsed_ms
+                 << ",\"frontier_tick_budget_ms\":"
+                 << r.frontier_tick_budget_ms
+                 << ",\"frontier_snapshot_credits_left\":"
+                 << r.frontier_snapshot_credits_left
+                 << ",\"frontier_first_mesh_capture_reserve_left\":"
+                 << r.frontier_first_mesh_capture_reserve_left
+                 << ",\"frontier_snapshot_time_defers\":"
+                 << r.frontier_snapshot_time_defers
+                 << ",\"frontier_snapshot_refresh_defers\":"
+                 << r.frontier_snapshot_refresh_defers
+                 << ",\"frontier_snapshot_missing_band_defers\":"
+                 << r.frontier_snapshot_missing_band_defers
+                 << ",\"frontier_snapshot_dependency_defers\":"
+                 << r.frontier_snapshot_dependency_defers
+                 << ",\"frontier_snapshot_publication_defers\":"
+                 << r.frontier_snapshot_publication_defers
+                 << ",\"frontier_snapshot_store_commit_defers\":"
+                 << r.frontier_snapshot_store_commit_defers
+                 << ",\"renderer_target_resident\":"
+                 << static_cast<int>(r.renderer_target_resident) << "}\n";
           return;
         }
         if (r.sample_kind == 14)

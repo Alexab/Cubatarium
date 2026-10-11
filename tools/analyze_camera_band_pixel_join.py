@@ -26,7 +26,9 @@ PEAK_RENDER_KIND = "camera_band_peak_render_probe"
 DEMAND_TRANSITION_KIND = "demand_transition_trace"
 VISUAL_LIFECYCLE_KIND = "visual_lifecycle_trace"
 FIRST_MESH_FRONTIER_KIND = "first_mesh_frontier_trace"
+PEAK_SCHEDULER_KIND = "camera_band_peak_scheduler_trace"
 DEMAND_TRANSITION_FRAME_WINDOW = 32
+PEAK_SCHEDULER_FRAME_WINDOW = 64
 
 
 def key_for(frame_epoch: Any, cx: Any, cy: Any, cz: Any) -> tuple[int, int, int, int]:
@@ -322,6 +324,9 @@ def main() -> int:
     first_mesh_frontier_by_chunk: dict[
         tuple[int, int, int], list[dict[str, Any]]
     ] = defaultdict(list)
+    peak_scheduler_by_chunk: dict[
+        tuple[int, int, int], list[dict[str, Any]]
+    ] = defaultdict(list)
     pixel_frame_stats: dict[int, dict[str, Any]] = {}
     frustum_summaries: dict[int, dict[str, Any]] = {}
     pixel_probe_epochs: set[int] = set()
@@ -507,6 +512,111 @@ def main() -> int:
                     "frontier_snapshot_store_commit_defers": int(
                         record.get("frontier_snapshot_store_commit_defers", 0)
                     ),
+                })
+            elif kind == PEAK_SCHEDULER_KIND:
+                kind_counts[kind] += 1
+                scheduler_key = (
+                    int(record.get("cx", 0)), int(record.get("cy", 0)),
+                    int(record.get("cz", 0)),
+                )
+                peak_scheduler_by_chunk[scheduler_key].append({
+                    "frame_epoch": int(record.get("frame_epoch", 0)),
+                    "world_epoch": int(record.get("world_epoch", 0)),
+                    "incarnation": int(record.get("incarnation", 0)),
+                    "peak_kind": int(record.get("peak_kind", 0)),
+                    "phase": int(record.get("phase", 0)),
+                    "cause": int(record.get("cause", 0)),
+                    "attempt_id": int(record.get("attempt_id", 0)),
+                    "active_stage": int(record.get("active_stage", 0)),
+                    "mesh_dirty_queue_kind": int(
+                        record.get("mesh_dirty_queue_kind", 0)
+                    ),
+                    "mesh_dirty_queue_index": int(
+                        record.get("mesh_dirty_queue_index", -1)
+                    ),
+                    "mesh_dirty_queue_size": int(
+                        record.get("mesh_dirty_queue_size", 0)
+                    ),
+                    "mesh_dirty_queue_age_frames": int(
+                        record.get("mesh_dirty_queue_age_frames", 0)
+                    ),
+                    "mesh_work_owner_flags": int(
+                        record.get("mesh_work_owner_flags", 0)
+                    ),
+                    "flags": int(record.get("flags", 0)),
+                    "mesh_snapshot_defer_reason": int(
+                        record.get("mesh_snapshot_defer_reason", 0)
+                    ),
+                    "mesh_enqueue_reject_reason": int(
+                        record.get("mesh_enqueue_reject_reason", 0)
+                    ),
+                    "frontier_max_schedule": int(
+                        record.get("frontier_max_schedule", 0)
+                    ),
+                    "frontier_first_mesh_cap_base": int(
+                        record.get("frontier_first_mesh_cap_base", 0)
+                    ),
+                    "frontier_first_mesh_cap": int(
+                        record.get("frontier_first_mesh_cap", 0)
+                    ),
+                    "frontier_pre_first_mesh_limit": int(
+                        record.get("frontier_pre_first_mesh_limit", 0)
+                    ),
+                    "frontier_scheduled_this_tick": int(
+                        record.get("frontier_scheduled_this_tick", 0)
+                    ),
+                    "frontier_pipeline_inflight": int(
+                        record.get("frontier_pipeline_inflight", 0)
+                    ),
+                    "frontier_pipeline_cap": int(
+                        record.get("frontier_pipeline_cap", 0)
+                    ),
+                    "frontier_soft_defer": int(
+                        record.get("frontier_soft_defer", 0)
+                    ),
+                    "frontier_snapshot_ms": float(
+                        record.get("frontier_snapshot_ms", 0.0)
+                    ),
+                    "frontier_snapshot_budget_ms": float(
+                        record.get("frontier_snapshot_budget_ms", 0.0)
+                    ),
+                    "frontier_tick_elapsed_ms": float(
+                        record.get("frontier_tick_elapsed_ms", 0.0)
+                    ),
+                    "frontier_tick_budget_ms": float(
+                        record.get("frontier_tick_budget_ms", 0.0)
+                    ),
+                    "frontier_snapshot_credits_left": int(
+                        record.get("frontier_snapshot_credits_left", 0)
+                    ),
+                    "frontier_first_mesh_capture_reserve_left": int(
+                        record.get("frontier_first_mesh_capture_reserve_left", 0)
+                    ),
+                    "frontier_snapshot_time_defers": int(
+                        record.get("frontier_snapshot_time_defers", 0)
+                    ),
+                    "frontier_snapshot_refresh_defers": int(
+                        record.get("frontier_snapshot_refresh_defers", 0)
+                    ),
+                    "frontier_snapshot_pipeline_bytes_defers": int(
+                        record.get("frontier_snapshot_pipeline_bytes_defers", 0)
+                    ),
+                    "frontier_snapshot_missing_band_defers": int(
+                        record.get("frontier_snapshot_missing_band_defers", 0)
+                    ),
+                    "frontier_snapshot_dependency_defers": int(
+                        record.get("frontier_snapshot_dependency_defers", 0)
+                    ),
+                    "frontier_snapshot_publication_defers": int(
+                        record.get("frontier_snapshot_publication_defers", 0)
+                    ),
+                    "frontier_snapshot_store_commit_defers": int(
+                        record.get("frontier_snapshot_store_commit_defers", 0)
+                    ),
+                    "renderer_target_resident": int(
+                        record.get("renderer_target_resident", 0)
+                    ),
+                    "frame_epoch_delta": 0,
                 })
             elif kind == FRUSTUM_KIND:
                 frustum_probe_epochs.add(int(record.get("frame_epoch", 0)))
@@ -771,6 +881,16 @@ def main() -> int:
                 and abs(event["frame_epoch"] - target_key[0])
                 <= DEMAND_TRANSITION_FRAME_WINDOW
             ]
+            frame_window_peak_scheduler = [
+                {
+                    **event,
+                    "frame_epoch_delta": event["frame_epoch"] - target_key[0],
+                }
+                for event in peak_scheduler_by_chunk.get(target_key[1:], [])
+                if lifecycle_matches(event)
+                and abs(event["frame_epoch"] - target_key[0])
+                <= PEAK_SCHEDULER_FRAME_WINDOW
+            ]
             joined.append({
                 "frame_epoch": target_key[0],
                 "pixel_probe_frame_present": target_key[0] in pixel_probe_epochs,
@@ -824,6 +944,13 @@ def main() -> int:
                 "frame_window_first_mesh_frontier": (
                     frame_window_first_mesh_frontier
                 ),
+                "peak_scheduler_frame_window": PEAK_SCHEDULER_FRAME_WINDOW,
+                "frame_window_peak_scheduler_trace_count": len(
+                    frame_window_peak_scheduler
+                ),
+                "frame_window_peak_scheduler_trace": (
+                    frame_window_peak_scheduler
+                ),
                 "same_frame_voxel_pixel_hit_count": len(matched),
                 "pixel_hits": matched,
                 "route_voxel_pixel_hit_count": len(route_hits),
@@ -869,7 +996,7 @@ def main() -> int:
     )
 
     result = {
-        "schema": "camera_band_pixel_join.v13",
+        "schema": "camera_band_pixel_join.v14",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": (
             "exact hit joins use same frame_epoch and voxel-DDA chunk; "
@@ -878,7 +1005,9 @@ def main() -> int:
             "voxel-hit chunk coordinates across frames; demand transitions "
             "join by frame_epoch window, chunk, and incarnation (plus world_epoch when present); "
             "worker/GPU lifecycle and first-mesh frontier records join by "
-            "the same identity and frame window; "
+            "the same identity and frame window; targeted peak scheduler "
+            "phase 0 records end-of-tick target snapshots and phase 1 records "
+            "try_schedule outcomes within +/-64 streaming frame epochs; "
             "global/air distance fog factors use same-frame captured uniforms "
             "and opaque depth; "
             "pixel-to-fog-color distance compares output RGB with captured fog RGB"
@@ -936,6 +1065,14 @@ def main() -> int:
                 ),
                 "same_frame_peak_render_probe_records": sum(
                     row["same_frame_peak_render_probe_count"] for row in rows
+                ),
+                "matched_peak_scheduler_trace_rows": sum(
+                    row["frame_window_peak_scheduler_trace_count"] > 0
+                    for row in rows
+                ),
+                "peak_scheduler_trace_events": sum(
+                    row["frame_window_peak_scheduler_trace_count"]
+                    for row in rows
                 ),
                 "rows": rows,
             }

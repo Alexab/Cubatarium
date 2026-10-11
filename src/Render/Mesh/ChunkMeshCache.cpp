@@ -8793,6 +8793,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           std::max(std::abs(schedule_coord.x - MeshFocusGroundChunk.x),
                    std::abs(schedule_coord.z - MeshFocusGroundChunk.z)) <=
               std::max(2, MeshFocusRadiusChunks);
+      uint8_t camera_band_peak_kind = 0;
+      const bool trace_camera_band_peak =
+          UJobStageTrace::IsCameraBandPeakChunkWatched(
+              schedule_coord.x, schedule_coord.y, schedule_coord.z,
+              MeshFocusFrameEpoch, &camera_band_peak_kind);
       const bool trace_watched_visual =
           UJobStageTrace::VisualBlackTraceEnabled() &&
           UJobStageTrace::IsVisualChunkWatched(
@@ -8803,21 +8808,30 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           [&](uint8_t outcome, uint8_t detail,
               uint8_t enqueue_reject_reason = 0)
       {
-        if ((!trace_visible_repair && !trace_normal_focus_remesh &&
+        if ((!trace_camera_band_peak && !trace_visible_repair &&
+             !trace_normal_focus_remesh &&
              !trace_first_mesh && !trace_watched_visual) ||
             !UJobStageTrace::VisualBlackTraceEnabled())
         {
           return;
         }
         VisualBlackTraceRecord trace{};
-        trace.sample_kind = trace_watched_visual
-                                ? 11
-                                : (trace_visible_repair
-                                       ? 7
-                                       : (trace_first_mesh ? 6 : 4));
+        trace.sample_kind =
+            trace_camera_band_peak
+                ? 18
+                : (trace_watched_visual
+                       ? 11
+                       : (trace_visible_repair
+                              ? 7
+                              : (trace_first_mesh ? 6 : 4)));
         trace.cx = schedule_coord.x;
         trace.cy = schedule_coord.y;
         trace.cz = schedule_coord.z;
+        if (trace_camera_band_peak)
+        {
+          trace.camera_band_peak_kind = camera_band_peak_kind;
+          trace.camera_band_peak_schedule_phase = 1;
+        }
         trace.frame_epoch = MeshFocusFrameEpoch;
         trace.focus_cx = MeshFocusGroundChunk.x;
         trace.focus_cz = MeshFocusGroundChunk.z;
@@ -10383,6 +10397,174 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       scheduled += end_retry_scheduled;
       LastMeshDirtyScheduleOkN = scheduled;
       AgePendingCaptureEntries(&world, &registry);
+    }
+    if (MeshFocusValid && UJobStageTrace::VisualBlackTraceEnabled())
+    {
+      struct PeakScheduleCaptureContext
+      {
+        UChunkMeshCache *cache{nullptr};
+        UBlockWorld *world{nullptr};
+        int scheduled{0};
+        int max_schedule{0};
+        int pre_first_mesh_limit{0};
+        int max_pipeline{0};
+        double snapshot_budget_ms{0.0};
+        std::chrono::high_resolution_clock::time_point tick_started{};
+      } context{this,
+                &world,
+                scheduled,
+                max_schedule_per_frame,
+                pre_first_mesh_schedule_limit,
+                max_pipeline,
+                kSnapshotBudgetMs,
+                dirty_tick_t0};
+      const auto capture_peak_schedule =
+          [](int32_t cx, int32_t cy, int32_t cz, uint8_t peak_kind,
+             void *opaque)
+      {
+        auto *capture = static_cast<PeakScheduleCaptureContext *>(opaque);
+        if (!capture || !capture->cache || !capture->world)
+        {
+          return;
+        }
+        UChunkMeshCache &cache = *capture->cache;
+        const glm::ivec3 coord(cx, cy, cz);
+        const UChunk *chunk =
+            capture->world->GetChunkManager().GetChunk(coord);
+
+        VisualBlackTraceRecord trace{};
+        trace.sample_kind = 18;
+        trace.camera_band_peak_kind = peak_kind;
+        trace.camera_band_peak_schedule_phase = 0;
+        trace.cause = 255; // End-of-tick snapshot, no try_schedule result.
+        trace.cx = cx;
+        trace.cy = cy;
+        trace.cz = cz;
+        trace.focus_cx = cache.MeshFocusGroundChunk.x;
+        trace.focus_cz = cache.MeshFocusGroundChunk.z;
+        trace.frame_epoch = cache.MeshFocusFrameEpoch;
+        trace.renderer_target_resident = chunk ? 1 : 0;
+        trace.incarnation = chunk ? chunk->GetIncarnation() : 0;
+        trace.non_air_blocks = chunk ? chunk->GetNonAirCount() : 0;
+        trace.mesh_revision = cache.MeshRevisions.Current(coord);
+        const MeshPublishRevs published = cache.GetMeshPublishRevs(coord);
+        trace.published_geom_rev = published.geom_rev;
+        trace.published_light_rev = published.light_rev;
+        trace.meshed_light_rev = cache.GetMeshedLightRevision(coord);
+        trace.field_light_rev = chunk->GetLightFieldRevision();
+        trace.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
+            coord, trace.mesh_dirty_queue_index, trace.mesh_dirty_queue_size);
+        trace.mesh_dirty_queue_age_frames =
+            cache.Dirty.GetEnqueueAgeFrames(coord);
+
+        const bool drawable = cache.HasDrawableGreedyMesh(coord);
+        const bool builder_inflight = cache.AsyncBuilder &&
+                                      cache.AsyncBuilder->IsInFlight(coord);
+        const bool gpu_apply = cache.IsPendingGpuApply(coord);
+        const bool gpu_queued = cache.IsPendingGpuQueued(coord);
+        const bool gpu_kicked =
+            cache.IsPendingGpuKickedOrDispatched(coord);
+        const bool gpu_extract = cache.GpuExtractInFlight.find(coord) !=
+                                 cache.GpuExtractInFlight.end();
+        const bool soft_defer = cache.DeferMeshUntilLit &&
+                                cache.DeferMeshUntilLit(coord);
+        trace.mesh_work_owner_flags =
+            (cache.Dirty.Contains(coord) ? 1u << 0 : 0u) |
+            (builder_inflight ? 1u << 1 : 0u) |
+            (cache.IsRemeshAfterApplyPending(coord) ? 1u << 2 : 0u) |
+            (gpu_apply ? 1u << 3 : 0u) |
+            (gpu_queued ? 1u << 4 : 0u) |
+            (gpu_kicked ? 1u << 5 : 0u) |
+            (gpu_extract ? 1u << 6 : 0u) |
+            (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u);
+        trace.flags =
+            (drawable ? 1u << 0 : 0u) |
+            (cache.Dirty.IsPriorityRemesh(coord) ? 1u << 1 : 0u) |
+            (cache.Dirty.IsFirstMesh(coord) ? 1u << 2 : 0u) |
+            (cache.Dirty.Contains(coord) ? 1u << 3 : 0u) |
+            (builder_inflight ? 1u << 4 : 0u) |
+            (gpu_apply ? 1u << 5 : 0u) |
+            (gpu_queued ? 1u << 6 : 0u) |
+            (gpu_kicked ? 1u << 7 : 0u) |
+            (gpu_extract ? 1u << 8 : 0u) |
+            (soft_defer ? 1u << 9 : 0u) |
+            (cache.StarveRemeshForHoles ? 1u << 10 : 0u) |
+            (cache.EnterLitQuiesce ? 1u << 11 : 0u) |
+            (cache.EnterGpuQuiesceDrain ? 1u << 12 : 0u) |
+            (cache.AsyncBuilder &&
+                     cache.AsyncBuilder->GetInFlightCount() >=
+                         capture->max_pipeline
+                 ? 1u << 13
+                 : 0u);
+        trace.frontier_horiz_distance_chunks = std::max(
+            std::abs(cx - cache.MeshFocusGroundChunk.x),
+            std::abs(cz - cache.MeshFocusGroundChunk.z));
+        trace.frontier_vertical_distance_chunks =
+            std::abs(cy - cache.MeshFocusGroundChunk.y);
+        trace.frontier_max_schedule = capture->max_schedule;
+        trace.frontier_first_mesh_cap_base = cache.WorkAdmission.enforce_schedule_lanes
+            ? std::max(0, cache.WorkAdmission.first_mesh_schedule)
+            : cache.WorkAdmission.first_mesh_schedule;
+        trace.frontier_first_mesh_cap = cache.LastFirstMeshScheduleEffectiveCap_;
+        trace.frontier_pre_first_mesh_limit =
+            capture->pre_first_mesh_limit;
+        trace.frontier_scheduled_this_tick = capture->scheduled;
+        trace.frontier_pipeline_inflight =
+            cache.AsyncBuilder ? cache.AsyncBuilder->GetInFlightCount() : 0;
+        trace.frontier_pipeline_cap = capture->max_pipeline;
+        trace.frontier_soft_defer = soft_defer ? 1 : 0;
+        trace.frontier_snapshot_ms = cache.LastMeshSnapshotMs;
+        trace.frontier_snapshot_budget_ms = capture->snapshot_budget_ms;
+        trace.frontier_tick_elapsed_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() -
+                capture->tick_started)
+                .count();
+        trace.frontier_tick_budget_ms = cache.MeshEmergeTotalBudgetMs;
+        trace.frontier_snapshot_credits_left =
+            static_cast<int32_t>(cache.CaptureRefreshBudgetLeft);
+        trace.frontier_first_mesh_capture_reserve_left =
+            cache.FirstMeshCaptureReserveLeft;
+        trace.frontier_snapshot_time_defers =
+            cache.LastMeshSnapshotDeferStats.ScheduleTimeBudget;
+        trace.frontier_snapshot_refresh_defers =
+            cache.LastMeshSnapshotDeferStats.RefreshCountBudget;
+        trace.frontier_snapshot_pipeline_bytes_defers =
+            cache.LastMeshSnapshotDeferStats.PipelineBytes;
+        trace.frontier_snapshot_missing_band_defers =
+            cache.LastMeshSnapshotDeferStats.MissingCaptureBand;
+        trace.frontier_snapshot_dependency_defers =
+            cache.LastMeshSnapshotDeferStats.DependencyChanged;
+        trace.frontier_snapshot_publication_defers =
+            cache.LastMeshSnapshotDeferStats.PublicationRejected;
+        trace.frontier_snapshot_store_commit_defers =
+            cache.LastMeshSnapshotDeferStats.StoreCommitRejected;
+        if (cache.ScheduledThisFrame_.count(coord) != 0)
+        {
+          trace.flags |= 1u << 14;
+        }
+        if (const ChunkRenderDemandRecord *demand =
+                UChunkRenderDemandStore::Get().Find(coord))
+        {
+          trace.world_epoch = demand->world_epoch;
+          trace.demand_incarnation = demand->incarnation;
+          if (trace.incarnation == 0)
+          {
+            trace.incarnation = demand->incarnation;
+          }
+          trace.attempt_id = demand->has_active_attempt
+                                 ? demand->active_attempt_id
+                                 : 0;
+          trace.active_stage = static_cast<uint8_t>(demand->active_stage);
+          trace.desired_geom_rev = demand->desired_geom_rev;
+          trace.desired_light_rev = demand->desired_light_rev;
+          trace.demand_published_geom_rev = demand->published_geom_rev;
+          trace.demand_published_light_rev = demand->published_light_rev;
+        }
+        UJobStageTrace::NoteVisualBlack(trace);
+      };
+      UJobStageTrace::ForEachCameraBandPeakChunkWatched(
+          MeshFocusFrameEpoch, capture_peak_schedule, &context);
     }
     if (MeshFocusValid && UJobStageTrace::VisualBlackTraceEnabled())
     {
