@@ -44,6 +44,7 @@
 #include <cstdint>
 #include <fstream>
 #include <limits>
+#include <sstream>
 #include <tuple>
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
@@ -56,6 +57,23 @@ namespace
 {
 
 constexpr int kRemeshDeferredRingMax = 64;
+
+void LogSlowMeshCaptureStage(
+    const char *stage, glm::ivec3 coord,
+    std::chrono::steady_clock::time_point started_at)
+{
+  const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                std::chrono::steady_clock::now() - started_at)
+                                .count();
+  constexpr double kSlowCaptureLogThresholdMs = 25.0;
+  if (elapsed_ms >= kSlowCaptureLogThresholdMs)
+  {
+    std::ostringstream message;
+    message << "stage=" << stage << " coord=(" << coord.x << ","
+            << coord.y << "," << coord.z << ") elapsed_ms=" << elapsed_ms;
+    CubatariumLogInfo("MeshCaptureSlow", message.str());
+  }
+}
 
 class MeshApplyProfileRecorder
 {
@@ -4394,9 +4412,11 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
   work_token.chunk_incarnation = ChunkIncarnationAt(world, coord);
   const MeshCaptureToken token{work_token.world_epoch, source_revision,
                                work_token.generation};
+  const auto band_read_t0 = std::chrono::steady_clock::now();
   auto band = world.ReadChunkBandForCapture(
       coord, token, CaptureStore.GetNeighborDrawableFn(),
       CaptureStore.GetNeighborDrawableCtx());
+  LogSlowMeshCaptureStage("read_chunk_band", coord, band_read_t0);
   if (!band)
   {
     return deferred(SnapshotAcquireDeferReason::MissingCaptureBand);
@@ -4405,6 +4425,7 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
   deps.content_revision = source_revision;
   if (registry != nullptr)
   {
+    const auto dependency_check_t0 = std::chrono::steady_clock::now();
     deps = BuildMeshCaptureDependencyStamp(world, coord, source_revision,
                                            *registry);
     const DependencyStamp current = BuildMeshCaptureDependencyStamp(
@@ -4415,16 +4436,23 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
       {
         Dirty.MarkDirtyPriority(coord);
       }
+      LogSlowMeshCaptureStage("dependency_stamp_validation", coord,
+                              dependency_check_t0);
       return deferred(SnapshotAcquireDeferReason::DependencyChanged);
     }
+    LogSlowMeshCaptureStage("dependency_stamp_validation", coord,
+                            dependency_check_t0);
   }
   // Audit R12: move credit into Store entry (lifetime until eviction).
   auto owned = std::make_unique<UPipelineCreditGuard>(std::move(credit));
+  const auto store_commit_t0 = std::chrono::steady_clock::now();
   if (!CaptureStore.TryCommit(coord, source_revision, work_token.world_epoch,
                               std::move(*band), &deps, std::move(owned)))
   {
+    LogSlowMeshCaptureStage("store_commit", coord, store_commit_t0);
     return deferred(SnapshotAcquireDeferReason::StoreCommitRejected);
   }
+  LogSlowMeshCaptureStage("store_commit", coord, store_commit_t0);
   return true;
 }
 
@@ -4555,7 +4583,10 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
                                                uint64_t source_revision)
 {
   SnapshotAcquireResult out;
-  if (auto hit = CaptureStore.TryGet(world, coord, source_revision))
+  const auto store_lookup_t0 = std::chrono::steady_clock::now();
+  auto cached = CaptureStore.TryGet(world, coord, source_revision);
+  LogSlowMeshCaptureStage("store_lookup", coord, store_lookup_t0);
+  if (cached)
   {
     ++LastMeshCaptureStoreHitN;
     if (!Dirty.IsFirstMesh(coord) && HasDrawableGreedyMesh(coord))
@@ -4601,7 +4632,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
       }
     }
     out.kind = SnapshotAcquireKind::Ready;
-    out.snapshot = std::move(*hit);
+    out.snapshot = std::move(*cached);
     return out;
   }
   if (UMeshCaptureWorker::kWorkerCaptureEnabled)
@@ -4716,16 +4747,26 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     return out;
   }
   SnapshotAcquireDeferReason defer_reason = SnapshotAcquireDeferReason::None;
+  const auto main_capture_t0 = std::chrono::steady_clock::now();
   if (CaptureAndCommitOnMain(world, &registry, coord, source_revision,
                              &defer_reason))
   {
-    if (auto hit = CaptureStore.TryGet(world, coord, source_revision))
+    LogSlowMeshCaptureStage("main_capture_total", coord, main_capture_t0);
+    const auto committed_lookup_t0 = std::chrono::steady_clock::now();
+    auto committed = CaptureStore.TryGet(world, coord, source_revision);
+    LogSlowMeshCaptureStage("committed_store_lookup", coord,
+                            committed_lookup_t0);
+    if (committed)
     {
       out.kind = SnapshotAcquireKind::Ready;
-      out.snapshot = std::move(*hit);
+      out.snapshot = std::move(*committed);
       return out;
     }
     defer_reason = SnapshotAcquireDeferReason::DependencyChanged;
+  }
+  else
+  {
+    LogSlowMeshCaptureStage("main_capture_total", coord, main_capture_t0);
   }
   out.kind = SnapshotAcquireKind::Deferred;
   out.deferReason = defer_reason;
