@@ -7965,3 +7965,63 @@ scheduler instrumentation. Его материал/назначение здес
 
 Точные команды M533, manifest и новые анализаторы добавлены в
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+### M534–M535 checkpoint — stop-mode visible-black census cadence (2026-10-11)
+
+M534 is the capture-disabled, visible Release M335 baseline on the established
+`World_164` / `product-174657-far` route. It completed successfully: 5,008
+blocks, 5.20 blocks/s median, eye Y remained 70.0, 313 chunks traversed, and
+no teleport was used. The clean-build manifest points to commit `772e0679`,
+Release executable SHA256
+`352024386b4c67f24bf87ca3126a61c407a0b7b71694d8be28262739c37618ef`.
+
+Capture-disabled medians were 25.94 ms wall frame, 11.09 ms streaming phase,
+5.04 ms mesh emerge, and 12.07 ms total render. M533's forensic run had a
+similar wall median (26.11 ms) and streaming median (11.29 ms), but render
+median was 16.19 ms with framebuffer probes and tracing enabled. This is a
+two-run directional comparison, not a controlled A/B; retain M534 as the
+performance reference and do not infer a renderer regression from M533.
+
+The analyzer's post-stop `no-ticket=7` result was stale, not a fresh stop-tail
+census. In the final 10 M534 period rows, `visible_black_focus_raw_n` remained
+7 while `prep_refresh_vb_ms` was zero in every row. `WorldStreaming` armed a
+multi-frame cadence while cruising, then only decremented that cooldown in the
+cruise/diet branch. Once movement stopped, the cooldown froze and the cached
+visible-black counts were emitted indefinitely. The nearby dark-face probe is
+a separate 24-block camera-local scan; its zero result cannot invalidate the
+larger focus census, and it must not be used as a substitute for a fresh scan.
+Therefore M534's no-ticket stop gate is **INVALID / STALE SAMPLE**, not proof
+of seven persistent defects. It also does not prove the scene was clear at the
+end of the flight.
+
+The source now decrements the outstanding VB cooldown in stationary mode as
+well, preserving the existing cadence and forcing the next census to run.
+This is a narrow telemetry/control-flow fix; it does not change mesh scheduling,
+lighting policy, or the rendering path. Release rebuild and same-route M335
+validation are required before accepting the fix. On that repeat, confirm a
+nonzero `prep_refresh_vb_ms` after stopping, inspect the fresh raw/no-ticket
+values, and re-evaluate stop gates. `unfinished_visual=34` and the global
+readiness debt remained flat in M534 despite zero focus-missing meshes; their
+scope/ownership remains a separate open issue, not something this cadence fix
+resolves.
+
+Artifacts: M534 report
+[`m534_world164_capture_disabled_perf_baseline_20261011.json`](../../bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json)
+and perf log
+[`perf_20261011-181137_37304.jsonl`](../../bin/logs/perf_20261011-181137_37304.jsonl).
+
+Next steps:
+
+1. Build `Cubatarium` Release and run the same visible M335 route with capture
+   and forensic tracing disabled. Verify the stop-mode VB scan resumes and use
+   fresh stop-tail samples, rather than the frozen M534 values.
+2. Reconcile `unfinished_visual=34` / readiness debt with direct focus-miss,
+   pending-demand, camera-band scheduler, and renderer evidence. Keep these
+   signals separate; zero near-focus miss is not evidence that all global
+   readiness debt has drained.
+3. Only if the fresh census still reports dark columns, capture exact per-column
+   owner/revision evidence and correlate it with target pixels before changing
+   repair admission or scheduler policy.
+4. Keep the M335 deterministic route primary. After a confirmed correctness fix,
+   run the short new-seed lane to compare persisted-load and procedural-generation
+   costs; do not use that lane to replace the repeatable route.

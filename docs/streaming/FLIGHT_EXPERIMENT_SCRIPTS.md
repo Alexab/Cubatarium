@@ -6904,3 +6904,57 @@ python tools/analyze_renderer_pixel_trace.py $perf --json-out bin/suite_reports/
 python tools/analyze_screen_ray_parity.py $perf --viewport-width 1280 --viewport-height 720 --camera-x-min -4800 --camera-x-max -4700 --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_target.json
 python tools/analyze_screen_ray_parity.py $perf --viewport-width 1280 --viewport-height 720 --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_full_route.json
 ```
+
+## M534 capture-disabled performance baseline and M535 cadence validation
+
+M534 ran the established visible M335 route with capture and forensic trace
+environment variables unset. The report is
+`bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json`
+and its perf log is `bin/logs/perf_20261011-181137_37304.jsonl`. The clean
+manifest used Release commit `772e0679`, with executable SHA256
+`352024386b4c67f24bf87ca3126a61c407a0b7b71694d8be28262739c37618ef`.
+M534 completed 5,008 blocks at 5.20 blocks/s median. Its capture-disabled
+medians were wall 25.94 ms, streaming 11.09 ms, mesh emerge 5.04 ms, and total
+render 12.07 ms.
+
+M534 exposed a stop-mode counter bug: the last visible-black census cooldown
+was only decremented during cruise/diet mode. When the flight stopped with a
+cruise cooldown armed, the final raw/no-ticket value stayed frozen. The
+`WorldStreaming.cpp` change advances this remaining cooldown in stationary
+mode. The repeat must prove that `prep_refresh_vb_ms` becomes nonzero after
+stop and then use fresh counts to evaluate the stop gates.
+
+### M535 Release build
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --parallel 12 -- /p:CL_MPCount=12
+```
+
+### M535 visible M335, capture-disabled
+
+Remove M533 forensic capture/probe variables before invoking the runner. Keep
+the profile, world, start, eye height, heading, pitch, and phase lengths fixed:
+
+```powershell
+@(
+  'CUBA_VISUAL_BLACK_TRACE',
+  'CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X',
+  'CUBA_FLIGHT_CAPTURE_DIR',
+  'CUBA_FLIGHT_CAPTURE_INTERVAL_SEC',
+  'CUBA_FLIGHT_CAPTURE_MIN_X',
+  'CUBA_FLIGHT_CAPTURE_MAX_X',
+  'CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP'
+) | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m535_world164_stop_census_cadence_20261011 --report bin/suite_reports/engine_refactor/m535_world164_stop_census_cadence_20261011.json --process-timeout 1800
+```
+
+After the run, inspect the last stop-tail `period` rows in the reported perf
+JSONL for `movement_speed`, `visible_black_focus_raw_n`,
+`visible_black_no_ticket_n`, and `prep_refresh_vb_ms`. The fix is exercised only
+if a fresh scan occurs after stopping; an unchanged raw count with zero VB scan
+time means the validation failed. Preserve any remaining readiness debt as a
+separate finding from the visible-black scan result.

@@ -2293,6 +2293,13 @@ void UWorldStreaming::RefreshStreamingPressure(
         --rp.visible_black_sample_cd;
       }
     }
+    else
+    {
+      // A cruise cadence can still be armed on the frame movement stops.
+      // Advance it in stand mode too, or the last visible-black census remains
+      // frozen indefinitely after a flight and stop-tail gates read stale data.
+      --rp.visible_black_sample_cd;
+    }
     world.PhysicsTelemetryData.VisibleBlackFocusN = rp.vb_published;
     world.PhysicsTelemetryData.VisibleBlackNoTicketN =
         rp.last_visible_black_no_ticket;
