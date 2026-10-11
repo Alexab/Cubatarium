@@ -6783,3 +6783,63 @@ $env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
 $env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m531_world164_demand_frame_epoch_20261011 --report bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011.json --process-timeout 1800
 ```
+
+### M532 — demand to worker lifecycle frame join
+
+Повтор M335 на `World_164` после добавления `frame_epoch` в worker lifecycle
+и `world_epoch` в peak renderer probes. Manifest чистый: commit
+`00dda93090005761c8c85204959fe0ec8e6c2d2c`, Release, EXE SHA-256
+`98f530760a82de9c24b7d5a6772b2db1fa95466f088e115dcc2b67a17062c4b7`.
+Run завершился с `process_rc=0`, 1 015 игровыми секундами, 314 чанками и
+5 024 блоками. Collision stop не сработал; оба обхода препятствий завершились.
+Analyzer `pass=false`: stop-tail readiness debt 37, `chunk_not_ready` median/end
+36/37, при `post_stop_mesh_missing_max=0` и `post_stop_visual_holes_max=0`.
+`effective_holes_rate` использует unfinished-visual proxy и не является
+независимым framebuffer свидетельством.
+
+В 9 unowned peak slices найдено 98 demand transition и 33 lifecycle rows в
+окне ±32 frame epochs; same-frame demand transition не было. В 8 срезах
+связанный job стартовал через 8–20 epochs после peak; worker pool wait по
+`Started.elapsed_ms` составлял 0,02–0,04 ms, meshing занимал 2–8 ms. Это
+указывает на задержку до создания job в main-thread admission/snapshot пути.
+Frame epoch асинхронного события отражает последнее значение streaming tick,
+поэтому точный wall-time этим сравнением не задаётся. Общий schedule trace
+ring на 1 024 записи к завершению перезаписал события участка frame 23 562;
+first-mesh frontier не выбрал ни одного из 9 unowned peak targets. Следующий
+шаг — отдельная адресная scheduler trace по пиковым incarnation, затем
+повтор M335 перед изменением лимитов/очередей.
+
+Pixel trace записал 3 200 проб: 118 имели `luma < 32`, все 118 — валидный
+opaque depth и visible MDI pass, voxel DDA gaps — 0. В 87 sampled projected
+rectangles только 2 пробы попали в depth целевого чанка — прямого framebuffer
+доказательства дыры по-прежнему нет. На 275 exact target-window ray joins
+origin delta равен нулю; max direction delta — `1.48e-6°`. Fly wall/stream
+medians `23.53/10.17 ms` измерены с tracing/captures и не являются
+performance baseline.
+
+Артефакты:
+
+- [run report](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_visual_coverage.json)
+- [camera-band/lifecycle join v13](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_camera_band_join.json)
+- [ray parity, target band](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_ray_parity.json)
+- [ray parity, full route](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_ray_parity_full_route.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011_pixel.json)
+- [perf JSONL](../../bin/logs/perf_20261011-144151_11656.jsonl)
+- [sparse frames](../../bin/flight_captures/m532_world164_worker_lifecycle_frame_epoch_20261011)
+
+#### Exact M532 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m532_world164_worker_lifecycle_frame_epoch_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m532_world164_worker_lifecycle_frame_epoch_20261011 --report bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011.json --process-timeout 1800
+```

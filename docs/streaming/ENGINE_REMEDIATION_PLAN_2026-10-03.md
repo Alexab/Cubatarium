@@ -7737,7 +7737,7 @@ Instrumented performance M527: `wall_ms_fly_med=20,78` (`48,1 FPS`),
 Подробные команды, параметры probe windows, manifests и артефакты M524–M527
 добавлены в [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).
 
-### M528–M531 follow-up checkpoint — 2026-10-11
+### M528–M532 follow-up checkpoint — 2026-10-11
 
 Этот checkpoint supersedes статусы и очередность шагов выше, которые были
 составлены по M527.
@@ -7792,35 +7792,71 @@ M531 stop-tail оставил readiness debt 35 и `chunk_not_ready` median 36 �
 `23.42/9.92 ms`, но captures и forensic tracing включены; это не performance
 baseline.
 
-Актуальное состояние lanes после M531:
+M532 добавил `frame_epoch` и `world_epoch` в worker/GPU visual lifecycle и
+соединил их с demand и peak renderer probes. Видимый M335 на `World_164`
+завершился штатно: 1 015 игровых секунд, 314 чанков и 5 024 блока маршрута;
+оба обнаруженных препятствия обойдены. Manifest указывает commit `00dda930`,
+Release, EXE SHA-256
+`98f530760a82de9c24b7d5a6772b2db1fa95466f088e115dcc2b67a17062c4b7`.
+Analyzer завершил с `pass=false`: stop-tail сохранил readiness debt 37 и
+`chunk_not_ready` median/end 36/37, тогда как `post_stop_mesh_missing_max=0`
+и `post_stop_visual_holes_max=0`. `effective_holes_rate=1.0` здесь следует
+считать readiness proxy: отчет прямо связывает его с unfinished visual, а не
+с независимым framebuffer оракулом.
+
+Для 9 unowned peak slices (все resident и с non-air блоками) нашлось 98
+demand transitions и 33 worker lifecycle records в окне ±32 кадра; ни одно
+demand событие не совпало с peak epoch. У восьми срезов связанный worker job
+стартовал через 8–20 frame epochs после peak, а публиковался через 8–20;
+`Started.elapsed_ms` был около 0,02–0,04 ms, `Built.stage_ms` — 2–8 ms. Это
+локализует основную наблюдаемую задержку до создания mesh job, в main-thread
+admission/snapshot пути, а не в ожидании worker thread. Frame epoch у
+асинхронных событий — последний streaming tick, поэтому числа кадров задают
+временное окно, не точное измерение длительности. События из общей
+`mesh_schedule_trace` кольцевой очереди за участок frame 23 562 уже вытеснены
+к концу прогона; first-mesh frontier совпал только с 5 no-drawable rows и ни
+с одним unowned row. Причина внутри admission/snapshot path пока не доказана.
+
+Пиксельные пробы M532: 118/3 200 имели `luma < 32`, и у всех были валидный
+opaque depth и visible MDI pass; voxel DDA gaps — 0. В 87 sampled projected
+rectangles только 2 пробы попали в target depth, поэтому эти данные не
+доказывают пустую дыру в целевом чанке. На 275 exact ray/pixel joins в целевом
+X-окне origins совпали, max direction delta `1.48e-6°`. Stop-tail остаётся
+незавершённым, но визуальную регрессию этим прогоном подтвердить не удалось.
+M532 fly/stream medians `23.53/10.17 ms` собраны с включёнными forensic
+captures и tracing; они не являются performance baseline.
+
+Актуальное состояние lanes после M532:
 
 | Lane | Status | Evidence / remaining closure |
 |---|---|---|
-| M335 route repeatability | **PASS** | M527–M531 завершили 5 000+ блоков no-teleport примерно при 5.0–5.2 blocks/s. M530/M531 обошли обнаруженные препятствия и сохранили line tracking. |
-| Source/build manifest | **PASS** | M531 manifest чистый: commit `7da1052c`, Release, EXE SHA-256 `74c82d45e62e24dc20de50ec2d4d7258675e6eb32bc7e14fa76ced7cbec77687`, rc=0. |
-| Camera-band mesh coverage | **OPEN / FAIL** | M531: 11 no-drawable и 7 unowned peaks. Frame-stamped demand показал отсутствие owner и задержку первой attempt на 2–4 кадра, публикацию — на 7–22 кадра; точные worker/GPU stages ещё не имеют frame join. |
-| Pixel-level renderer defect | **UNPROVEN** | 140/2 740 dark M531 samples имели valid depth и visible MDI pass, voxel DDA gaps — 0; 68 projected rectangles с probes не имели target-depth sample. Sparse probes всё ещё не исключают несэмплированные пустоты. |
-| Ray/pose parity | **PASS (source ray)** | M531: 225 exact joins, origin delta равен нулю по всем осям; max direction delta `1.48e-6°`. Это проверяет геометрию source rays, но не равенство residency при выборке/отрисовке. |
+| M335 route repeatability | **PASS** | M527–M532 завершили 5 000+ блоков no-teleport примерно при 5.0–5.2 blocks/s. M530–M532 обошли обнаруженные препятствия и сохранили line tracking. |
+| Source/build manifest | **PASS** | M532 manifest чистый: commit `00dda930`, Release, EXE SHA-256 `98f530760a82de9c24b7d5a6772b2db1fa95466f088e115dcc2b67a17062c4b7`, rc=0. |
+| Camera-band mesh coverage | **OPEN / FAIL** | M532: 11 no-drawable и 9 unowned peaks. Для 8/9 unowned slices demand появился через 2–7 frame epochs, worker start — через 8–20, publication — через 8–20; worker wait около 0,02–0,04 ms, build 2–8 ms. Нужна адресная scheduler/admission трасса для пиков. |
+| Pixel-level renderer defect | **UNPROVEN** | 118/3 200 dark M532 samples имели valid depth и visible MDI pass, voxel DDA gaps — 0; только 2/87 sampled projected rectangles имели target-depth sample. Sparse probes пока не доказывают целевые дыры и не исключают несэмплированные пустоты. |
+| Ray/pose parity | **PASS (source ray)** | M532: 275 exact joins, origin delta равен нулю по всем осям; max direction delta `1.48e-6°`. Это проверяет source-ray геометрию, но не равенство residency между выборкой и отрисовкой. |
 | Water/fluid | **OPEN; not reproduced** | Текущий M335 профиль не был под водой; не менять fluid path по unrelated readiness counters. |
-| Stop-tail convergence | **FAIL** | M531 оставил readiness debt 35, `chunk_not_ready` median 36, при zero mesh-missing и zero visual-hole proxy; readiness пока не локализован как визуальный дефект. |
-| Performance | **OPEN** | M531 forensic run: median fly wall `23.42 ms`, stream phase `9.92 ms`, с tracing/captures; это не clean baseline. Нужен capture-disabled Release M335 после correctness fix. |
+| Stop-tail convergence | **FAIL** | M532 оставил readiness debt 37, `chunk_not_ready` median/end 36/37, при zero mesh-missing и zero visual-hole proxy; effective-holes gate использует unfinished-visual proxy. |
+| Performance | **OPEN** | M532 forensic run: median fly wall `23.53 ms`, stream phase `10.17 ms`, с tracing/captures; это не clean baseline. Нужен capture-disabled Release M335 после correctness fix. |
 | New-world lane | **SECONDARY / OPEN** | M525 short cold-world run оставил readiness/performance failure; повторять после подтверждённого значимого fix. |
 
 Новый порядок завершения:
 
-1. Проверить M531 в текущих рендерах/мире только по пиксельным свидетельствам:
-   dark samples имеют глубину и MDI pass, поэтому readiness и `luma < 32` сами
-   по себе не являются доказательством пустого чанка.
-2. Собрать Release с frame epoch для demand и worker/GPU lifecycle. Повторить
-   visible M335 на `World_164`; сопоставить попытку, queue ownership, worker
-   stage, upload/publication и first-mesh frontier по одному incarnation на
-   окне ±32 кадра. Отделить границу кадра от реальной admission/worker задержки.
-3. Для ownerless/no-mesh peak slices выбирать пиксели именно внутри
-   projected rect; проверять target depth в том же кадре и ближайших кадрах.
-   Учитывать, что streaming peak может быть снят раньше renderer probe внутри
-   того же кадра.
-4. Исправить подтверждённый owner/handoff invariant, не маскировать его
-   quota/gate. Повторить ограниченный same-X trace и полный M335.
+1. Добавить bounded peak-target scheduler trace: для каждого no-drawable /
+   unowned high-water slice сохранять queue ownership/index/age, admission cap,
+   snapshot credits/deferral, pipeline pressure и исход `try_schedule` в течение
+   32–64 frame epochs. Текущие общие schedule rings переписываются до конца
+   длинного M335, а frontier выбирает только один старейший элемент.
+2. Повторить visible M335 на `World_164` без изменения профиля. Привязать для
+   одних incarnation demand creation, dirty ticket, scheduler decision,
+   snapshot/job creation, worker start/build и publish. Разделить задержку
+   admission/snapshot от worker queue, build и GPU publication.
+3. Проверять экранные дыры только по пикселям в projected rect и target depth
+   того же кадра плюс ближайшие кадры. Readiness counters, `luma < 32` и
+   агрегат `effective_holes_rate` сами по себе не служат framebuffer oracle.
+4. По точной scheduler трассе исправить установленную причину задержки либо
+   потерю owner; сохранить single-flight/revision invariants. Повторить Release
+   M335 и сравнить same-X camera-band coverage и stop-tail.
 5. После correctness fix выполнить capture-disabled Release M335 как
    performance baseline; отдельно измерить streaming, meshing, publication и
    scene/render cost.
@@ -7832,7 +7868,7 @@ baseline.
 отдельно момент demand, появление конкретного queue/worker owner и фактическую
 видимость по depth/coverage.
 
-M528–M531 результаты и точные команды документированы в
+M528–M532 результаты и точные команды документированы в
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md). Frame stamps —
 диагностические; их epoch фиксирует последнее значение от main streaming tick,
 поэтому асинхронный event на границе кадра может попасть в соседний epoch.
