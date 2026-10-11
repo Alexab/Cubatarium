@@ -8429,3 +8429,71 @@ procedural-generation, and ready-result service costs. Do not fold that
 instrumented source run into a clean timing baseline. After source provenance
 is recorded, use its owner/queue evidence to choose a narrowly scoped fix;
 keep the periodic fresh-seed lane as secondary coverage.
+
+### M542 current-Release persisted-source replay (2026-10-11)
+
+M542 replayed the established 600-second visible no-teleport M335 camera path
+on the persisted `World_M435_Cold_20261007` seed (`3650479197`) using the
+current Release executable (`5e399a9e…a244ca`, source commit `37668c9b`).
+It completed 3,072 blocks / 192 westward chunks at the expected median
+`5.19653 blocks/s`; 316 periods / 314 steady periods were recorded.
+`process_rc=0` and `run_outcome=success`. The report remains `pass=false` for
+readiness and stop-convergence gates. Pixel capture/probes were disabled, and
+this 3,072-block lifecycle check is not the far-flight acceptance lane.
+The fixed-day wrapper restored the world metadata byte-for-byte.
+
+The source trace proves this was a mixed persisted/generation replay, despite
+the manifest's `cold_or_unspecified` label: 1,762 disk columns were queued and
+all 1,762 completed; 524 disk misses became 524 procedural commits. There were
+zero unmatched or out-of-range-cancelled disk owners at exit. Current first
+presentable was `135.9 ms`, consistent with this saved fixture, versus
+`28.9 s` in M435's fresh-generation entry session. The route did not leave a
+disk-load owner stranded, but the ready-result service queue still accumulated:
+its per-event depth was median 8, p95 124, maximum 469; pending disk columns
+were median 2, p95 31, maximum 114. The largest ready-queue samples occurred
+in the initial spawn/startup burst.
+
+Storage itself is comparatively fast. Disk discovery median/p95 was
+`0.019/0.034 ms`, file open `1.57/3.48 ms`, and physical read
+`2.94/6.44 ms`. The column-level end-to-end latency was `128/416 ms` median/p95;
+worker queue wait was `0.35/17.05 ms`. Result wait, summed across the column's
+vertical slices, was `427 ms` median and `1.70 s` p95 (maximum `3.42 s`).
+Deserialize plus main-thread apply was `7.21/15.53 ms` median/p95. Treat the
+summed result-wait value as service delay across slices, not one slice's
+latency. A one-off `format_detect_ms=494 ms` maximum is recorded for follow-up;
+format detection runs on the load worker and this value alone does not explain a
+main-thread hitch.
+
+The source also saw 524 genuinely new procedural columns. Generation was
+`125.7/224.3 ms` median/p95 (385.9 ms max); worker-pool queue was
+`0.03/142.3 ms` median/p95 (276.0 ms max), with four load workers and a
+generation-start cap of two per frame in the median event. Within the 316
+period records, 29 had more than four ready load results at tick start. All
+selected four in those periods; 24 applied all four, while five applied fewer
+under the existing time budget. The budget-hit flag appeared in 12 of those
+29 records. Across all periods, selection lock time was at most `0.019 ms` and
+result processing p95 was `3.69 ms` (maximum `19.50 ms`). This is evidence that
+the fixed four-result selection cap can leave ready work queued on otherwise
+budget-eligible ticks, while the existing adaptive slice limit and time check
+bound additional work on slower frames.
+
+The flight's wall median was `23.25 ms`; the largest wall frame was `514.7 ms`
+and the dominant wall stage was swap wait. Readiness debt was still nonzero
+(median 37, post-stop 42), while post-stop mesh-missing and near-focus
+visual-hole proxies were zero. These signals are separate, and no framebuffer
+pixels were sampled. The app completed; the false analyzer gates do not
+establish that the world looked blank.
+
+Artifacts: [M542 flight report](../../bin/suite_reports/engine_refactor/m542_world_m435_current_release_source_trace_20261011.json),
+[source report](../../bin/suite_reports/engine_refactor/m542_world_column_source_trace_20261011.json),
+[perf JSONL](../../bin/logs/perf_20261011-221531_1944.jsonl), and INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-221528.1944`.
+
+Next implementation candidate: let the ready-load ranker select up to the
+existing adaptive `max_slice_applies` limit (4/6/10 by frame time) instead of
+hard-capping every tick at four. Preserve the existing 4/5/6 ms apply budgets,
+focus/age ranking, cancellation, and requeue behavior. This should add service
+only when the current budget leaves room. Build Release and compare a matched
+source-trace replay before considering a larger quota or worker-count change.
+Then repeat the capture-disabled M335 lane under quiet host conditions and keep
+pixel evidence distinct from readiness proxies.

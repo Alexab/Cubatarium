@@ -7283,3 +7283,32 @@ queue waits and main-thread apply. Treat this as an instrumented lifecycle run,
 not a clean performance baseline. Repeat capture-disabled M335 separately
 under quiet host conditions before deciding whether the synchronous capture
 stall needs architectural work.
+
+### M542 - current-Release M435 persisted-source replay (2026-10-11)
+
+Command profile: `World_M435_Cold_20261007`, fixed-day wrapper, visible GUI,
+M335 start/camera/speed, 600-second no-teleport flight, 20-second stop, and
+`CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. Release executable SHA-256:
+`5e399a9e22c9d87d951ec48e4b4a4c2475b58f97ebf83034eea393c672a244ca`.
+The app exited normally and reached 3,072 blocks / 192 chunks at
+`5.19653 blocks/s`; the report is `pass=false` on readiness/stop gates. The
+fixed-day wrapper restored metadata byte-for-byte. This is an instrumented
+3,072-block lifecycle run, not the long-distance or clean-performance lane.
+
+Source trace: 1,762 disk queued/completed pairs, 524 procedural misses/commits,
+zero unmatched/cancelled disk owners. Disk discovery/open/read medians were
+`0.019/1.57/2.94 ms`; p95s were `0.034/3.48/6.44 ms`. Column latency was
+`128 ms` median / `416 ms` p95. Result wait summed over vertical slices was
+`427 ms` median / `1.70 s` p95. Ready-result depth reached median 8 / p95 124 /
+max 469, mostly in the initial request burst; it was drained before exit.
+Procedural generation was `125.7/224.3 ms` median/p95, with worker-pool queue
+`0.03/142.3 ms`. The 4/5/6 ms apply-time checks were preserved. Twenty-nine
+period records began with over four ready results; 24 applied the four-item
+batch, and five stopped earlier under the time check. This supports testing a
+batch limit that follows the existing 4/6/10 adaptive slice limit while
+keeping the time budget. It does not justify increasing worker count.
+
+Artifacts: [M542 flight report](../../bin/suite_reports/engine_refactor/m542_world_m435_current_release_source_trace_20261011.json),
+[source summary](../../bin/suite_reports/engine_refactor/m542_world_column_source_trace_20261011.json),
+[perf log](../../bin/logs/perf_20261011-221531_1944.jsonl), INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-221528.1944`.
