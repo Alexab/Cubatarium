@@ -8587,3 +8587,62 @@ quiet. If that clean run shows no regression, execute the
 full long-distance M335 route with current Release. Keep the capture-stall
 question open only for clean reproducibility; maintain the separate periodic
 fresh-seed lane for disk/procedural coverage.
+
+### M545 cold-world procedural source trace (2026-10-11)
+
+M545 used a new empty-chunk fixture, `World_M545_Cold_20261011`, seed
+`3650480197`, on the visible no-teleport M335 route for 600 seconds plus a
+20-second stop. It ran Release `9d3d4520…0635f4`, with source tracing enabled
+and pixel/frame capture disabled. The application exited normally
+(`process_rc=0`, `run_outcome=success`), travelling 3,008 blocks at the
+expected `5.19614 blocks/s` over 305 periods / 303 steady periods. The report
+is `pass=false`; this is a short cold-generation diagnostic, not the 8,192-
+block far-flight acceptance run.
+
+The source trace saw 2,021 `procedural/disk_miss` events and 2,014 procedural
+commits, with no disk-load requests. Seven misses had no matching commit event
+before the process log ended; the trace recorded no out-of-range cancellation
+for them, so treat this as incomplete end-of-run evidence rather than a
+proven owner leak. For the committed procedural columns, generation time was
+`160 ms` median / `483 ms` p95 / `8.54 s` max. Request-to-commit time was
+`319 ms` median / `3.48 s` p95 / `19.78 s` max. The worst event waited
+`16.98 s` in the scheduler before worker submission, then `1.98 s` in the
+worker pool; at submission 33 worker jobs were pending and all four workers
+were active. This identifies cold procedural queueing and service as the next
+source-path question. It does not yet justify raising concurrency or changing
+the per-frame start cap: the host was saturated throughout the run.
+
+Host CPU was `100%` for all 357 samples; the older sampler implementation had
+median sample spacing `2.29 s`, p95 `4.58 s`, max `10.48 s`. It was started
+before the process-tree sampling update in `ca990593`, so use the current
+helper for the next measurement. M545's `30.27 ms` median fly wall time and
+173 spikes are not a clean comparison. A one-second sample immediately after
+the application exited still read 100% host CPU; no new flight should be
+treated as a clean baseline until this load subsides.
+
+The entry diagnostic first recorded its presentable proxy at `204.6 s`, but
+`ttf_correct_proxy_ms` remained `-1` while the gate was still active at
+`279.5 s`. A later gate sample ended with `settle_reason=live_blockers`, with
+one near-focus mesh missing and one near GPU mesh pending. During the route,
+`unfinished_visual_rate` was `1.0`, near-focus mesh-coverage proxy rate was
+`0.066`, the unlit proxy peaked at `32`, and `fly_void_near_max` reached `704`.
+The analyzer failed readiness, eye-proxy and stop-convergence gates. These are
+readiness/mesh proxies, not framebuffer pixel proof; the operator did not
+report an observed visual hole for this run.
+
+Artifacts: [M545 report](../../bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_20261011.json),
+[source trace summary](../../bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_analysis_20261011.json),
+[perf JSONL](../../bin/logs/perf_20261011-232019_47996.jsonl),
+[host sampler](../../bin/logs/m545_host_cpu_20261011.jsonl),
+[entry-gate trace](../../bin/logs/enter_lit_20261011-232022.jsonl), and INFO
+source log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-232009.47996`.
+
+Updated order: (1) wait for the host to leave sustained saturation, then run
+the capture-disabled M335 control with the current sampler; (2) if its route
+speed and frame behavior are credible, run the unchanged full far-distance
+M335 checkpoint; (3) repeat a source-traced fresh-seed route under a quieter
+host to see whether M545's scheduler/worker queue tails reproduce; (4) only
+then adjust generation admission or worker concurrency against source and
+visual evidence. Keep the periodic new-seed lane alongside, not in place of,
+the repeated `World_164` control. Do not claim M545 proves a black-pixel defect.

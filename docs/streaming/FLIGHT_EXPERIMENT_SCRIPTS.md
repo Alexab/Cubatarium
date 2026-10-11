@@ -7374,3 +7374,52 @@ Artifacts: [M544 report](../../bin/suite_reports/engine_refactor/m544_world164_m
 
 Next: use the revised target-only sampler to repeat the capture-disabled M335
 baseline after host load falls, then run the full long-distance route.
+
+### M545 - cold-world source-trace diagnostic (2026-10-11)
+
+M545 used the visible M335 camera and speed on an empty-chunk world with unique
+seed `3650480197`: `World_M545_Cold_20261011`. Source trace was enabled;
+pixel and frame capture were disabled. Release SHA-256 was
+`9d3d45207ca33183998c7134b826be6235ede1bbe1da398c2ff108364c0635f4`.
+Command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m545_host_cpu_20261011.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_M545_Cold_20261011 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 600 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m545_world_m545_cold_source_trace --report bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_20261011.json --process-timeout 1200
+```
+
+The wrapper exited `0`; the game completed 3,008 blocks at `5.19614 blocks/s`
+(305 periods / 303 steady), but the analyzer returned `pass=false` on
+readiness and stop gates. Host CPU stayed at 100% for all 357 samples. The
+wrapper in this run predated the `ca990593` process-tree discovery improvement;
+its sample interval was median 2.29 s, p95 4.58 s, max 10.48 s. Do not compare
+the `30.27 ms` fly median or 173 spikes with a quiet-host M335 baseline.
+
+The source trace contained only procedural generation: 2,021 disk misses,
+2,014 commits, and zero disk-load queue/completion events. Generation was
+`160/483 ms` median/p95; request-to-commit was `319 ms` median, `3.48 s` p95,
+`19.78 s` max. The worst event spent `16.98 s` in scheduler queue and `1.98 s`
+in the worker pool with 33 jobs pending and four active workers. Seven disk
+misses lacked a matching procedural commit by log end; no cancel event
+establishes their final state. The cold entry gate first recorded its
+presentable proxy after `204.6 s`, while the correct-proxy timer remained
+unreached at a later `279.5 s` sample. A subsequent gate sample ended with
+`live_blockers` and near-focus mesh/GPU-pending work. These source and readiness
+signals motivate a quiet-host reproduction before tuning generation
+concurrency or per-frame admission.
+
+The analyzer reported readiness-debt rate `1.0`, mesh-coverage proxy rate
+`0.066`, unlit maximum `32`, and `fly_void_near_max=704`. Pixel/frame capture
+was off; none of these values alone confirms a blank framebuffer region.
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_20261011.json),
+[source summary](../../bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_analysis_20261011.json),
+[perf log](../../bin/logs/perf_20261011-232019_47996.jsonl),
+[CPU samples](../../bin/logs/m545_host_cpu_20261011.jsonl),
+[entry-gate log](../../bin/logs/enter_lit_20261011-232022.jsonl), and INFO
+trace `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-232009.47996`.
+
+Next: wait for host load to fall; run capture-disabled M335 using the current
+sampler; then the unchanged full far-distance M335 route if the control is
+credible. Repeat a fresh-seed source-trace route under quieter host conditions
+before making a generation queue/concurrency change. Keep the repeated-world
+M335 route as the primary acceptance path.
