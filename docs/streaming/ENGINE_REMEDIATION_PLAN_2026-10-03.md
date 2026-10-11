@@ -8190,15 +8190,71 @@ Artifacts: [M537 report](../../bin/suite_reports/engine_refactor/m537_world164_h
 [perf JSONL](../../bin/logs/perf_20261011-193429_39596.jsonl),
 [hotspot capture frame](../../bin/flight_captures/m537_world164_hotspot_20261011/frame_007_front.png).
 
+The planned `cx=-175` pass was completed by M538 below. It did not find a
+pixel-level hole there, but M538's route-wide proxy selected a new 8-second
+mesh-missing run at `cx=-294`, closer to the far endpoint. We will sample that
+last representative long-flight hotspot once before closing the visual
+correctness lane; repeated chasing of unsampled proxy coordinates is not a
+completion criterion.
+
+### M538 focus-missing pixel/capture pass near `cx=-175` (2026-10-11)
+
+M538 completed the visible no-teleport M335 route with `process_rc=0`, 312
+chunks / 4,992 blocks, and median speed 5.19653 blocks/s. The manifest confirms
+Release, the same `World_164` route and camera settings, and the expected
+`x=-2864..-2720` trace/capture bounds. It used the same executable hash as
+M536/M537.
+
+The target band contained 17 periods (`cx=-180..-170`). The M537 continuous
+six-second proxy miss at `cx=-175` did not recur as a continuous run. M538 did
+record `focus_missing_mesh=1` in six of those periods, with up to 156 dirty
+focus chunks and `unfinished_visual=78`; streaming/emerge/wall peaked at
+33.794/19.156/47.799 ms. No stale-lit or fully-dark no-ticket columns were
+reported. In every target-band period, the no-ticket count equaled the
+equal-revision legal-dark count. A brief stalled-ticket count reached one.
+
+Across the target band, 2,580 renderer pixels were probed and 278 had luma
+below 32. All 278 had valid opaque depth, draw-ready geometry, visible MDI,
+settled matching field/published light revisions, and no voxel-ray gap. Among
+these dim pixels, 257 had valid live-face samples with sky light 1; 21 had no
+resolved live-face sample (18 were geometrically revision-current and 3 were
+one revision behind in this subset); the depth surface still existed and was
+drawn. In total 62/278 dim samples used a mesh behind its desired geometry
+revision, but it remained render-ready. Treat this as in-flight mesh freshness,
+not as proof of an empty pixel. The 325 exact-coordinate renderer/stream ray
+joins had zero origin error and max direction error `1.48e-6` degrees; 256
+had the same opaque hit and none reported a ray gap. All 15 GL_BACK/GL_FRONT
+capture pairs were byte-identical. Reviewed frames show the camera passing
+through a dense tree crown; foliage occludes much of the view, explaining the
+dark green samples in this window.
+
+The camera-band join found 11 no-drawable and 7 unowned candidate slices. The
+same-frame probes did not land on those chunks' depth surfaces; some slices
+received drawable depth/pixel hits in later route samples. This does not prove
+the candidate slices are visible holes. The run-wide report instead selected
+a new eight-second `focus_missing_mesh` run at `cx=-294`, outside M538's pixel
+window. At stop, focus mesh-missing and visual-hole proxies were zero, but
+readiness debt was 37 and two stalled census columns remained; the report is
+`pass=false`. No render or scheduler code change is justified by the M538
+target pixel evidence.
+
+Artifacts: [M538 report](../../bin/suite_reports/engine_refactor/m538_world164_miss175_20261011.json),
+[visual coverage](../../bin/suite_reports/engine_refactor/m538_world164_miss175_20261011_visual_coverage.json),
+[camera-band/pixel join](../../bin/suite_reports/engine_refactor/m538_world164_miss175_20261011_camera_band_pixel_join.json),
+[renderer pixel trace](../../bin/suite_reports/engine_refactor/m538_world164_miss175_20261011_renderer_pixel.json),
+[target ray parity](../../bin/suite_reports/engine_refactor/m538_world164_miss175_20261011_ray_parity.json),
+[perf JSONL](../../bin/logs/perf_20261011-195724_49012.jsonl),
+[foliage capture frame](../../bin/flight_captures/m538_world164_miss175_20261011/frame_004_front.png).
+
 Next steps:
 
-1. Run the established M335 route with pixel probes and paired captures only
-   around `x=-2864..-2720`, covering M537's six-second focus-mesh-missing
-   location near `cx=-175`. Tie the missing-mesh periods to same-frame pixels
-   and owner/revision traces. Keep the route and camera parameters fixed.
-2. If M538 has no matching missing or stale visible surface, close the current
-   correctness investigation as unconfirmed, and run a clean capture-disabled
-   M335 performance baseline under quiet system load. Compare against M534.
+1. Run one final targeted M335 pixel/capture pass around the route-wide
+   `cx=-294` miss, using `x=-4800..-4580`. Tie any missing-mesh period to
+   same-frame depth, MDI and light/revision evidence; retain the established
+   route/camera parameters.
+2. If that interval also has no missing visible surface, close the current
+   streaming/rendering correctness investigation as unconfirmed. Then run a
+   clean capture-disabled M335 performance baseline under quiet system load
+   and compare it with M534.
 3. Run the planned short new-seed load/generation lane to compare persisted
-   reads with procedural generation; retain the deterministic M335 route as
-   the primary streaming correctness check.
+   reads with procedural generation. Keep M335 as the primary repeatable route.

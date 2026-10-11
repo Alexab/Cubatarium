@@ -7115,3 +7115,45 @@ The next M335 correctness pass should target only `x=-2864..-2720`, the
 `cx=-175` miss run. If a same-frame pixel confirms a missing or stale visible
 surface, fix and repeat that specific path. Otherwise proceed to the clean
 capture-disabled performance baseline and then the short new-seed load test.
+
+### M538 result
+
+M538 completed the same visible no-teleport M335 route with `process_rc=0`,
+312 chunks / 4,992 blocks, median speed 5.19653 blocks/s, and eye Y 70. The
+manifest confirms Release and the established route. It used the same
+executable as M537, with pixel probes and paired captures limited to
+`x=-2864..-2720`.
+
+In 17 periods from focus chunks `-180..-170`, `focus_missing_mesh=1` appeared
+in six periods, dirty focus peaked at 156, and `unfinished_visual` at 78.
+Streaming/emerge/wall peaked at 33.794/19.156/47.799 ms. The reported
+six-second M537 miss did not recur as a continuous run in this interval. No
+stale-lit or fully-dark no-ticket columns appeared; every target-band
+no-ticket count equaled the legal-dark count.
+
+There were 2,580 renderer pixel probes in the target window; 278 had luma
+below 32. Every one had opaque depth, draw-ready geometry, visible MDI,
+matching settled light-field revisions, and zero voxel-ray gaps. Sixty-two of
+those samples showed an older published geometry revision still being drawn;
+257 had valid live-face light samples at sky 1, while 21 did not resolve a
+live-face sample;
+they were render-ready, so this is freshness evidence rather than a blank
+pixel. The 325 ray joins had zero origin error and max direction error
+`1.48e-6` degrees, 256 matching opaque hits, and no gaps. All 15 GL_BACK/GL_FRONT
+capture pairs were byte-identical. The inspected frame shows dense tree leaves
+very close to camera and explains the dark-green screen samples.
+
+The run-wide report selected a different eight-second focus-mesh-missing run
+at `cx=-294`, outside M538's capture window. At stop, near-focus missing-mesh
+and visual-hole proxies were zero, readiness debt was 37, and two stalled
+census columns remained. No code fix is justified by M538's target window.
+
+Artifacts: report `bin/suite_reports/engine_refactor/m538_world164_miss175_20261011.json`,
+perf `bin/logs/perf_20261011-195724_49012.jsonl`, analyzer outputs with the
+same prefix, and paired captures in
+`bin/flight_captures/m538_world164_miss175_20261011`.
+
+Next: one final targeted pass for `cx=-294` using capture/probe bounds
+`x=-4800..-4580`. If same-frame pixels are drawable there too, stop chasing
+the readiness proxy and move on to the clean capture-disabled baseline and
+new-seed load/generation lane.
