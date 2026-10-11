@@ -7549,3 +7549,140 @@ M523 analyzer report собран после того, как в середин�
 
 Подробные команды, manifests и артефакты M513–M523 добавлены в
 [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+#### M524–M526 checkpoint — 2026-10-11
+
+**M524 закрыл проверку происхождения полного M335-прогона.** Видимый маршрут
+`World_164` прошёл 7 408 блоков при пороге 6 400, без teleport и с нормальным
+завершением процесса. `run_manifest.git_sha` совпал с
+`manifest_generated_git_sha` (`05bcfe3e`), рабочая копия была clean; совпали
+также SHA-256 runner, analyzer и helper. Release EXE имел SHA-256
+`d78da45f4d1dc8ec60dc77c533f594f461c45bcca806bd05813004fa9739648d`.
+Единственное пустое поле из явно разрешённого списка
+`manifest_required_empty` — `resolution`.
+Маршрутный gate прошёл, но analyzer дал `pass=false` (32/40 общих и 7/13
+stop-gates), поэтому этот результат не является завершением приёмки движка.
+
+M524 отделил readiness debt от coverage в области камеры. В глубоком corridor
+`focus_cx=-410…-456` 82 из 83 sample имели валидный census; в каждом из них
+121 solid camera-band slice имели satisfying drawable mesh, а no-drawable
+count был 0. В более широкой visual band долг оставался большим и относится
+также к вертикальным срезам вне камеры. Одновременно whole-route proxy
+`near_focus_holes` был ненулевым в 9 periods, но в глубоком corridor — в 0;
+после остановки `post_stop_mesh_missing_max=0` и
+`post_stop_visual_holes_rate=0`, тогда как readiness debt оставался 25 и
+stop convergence не прошёл.
+
+В `frame_epoch=45506`, `focus_cx=-299`, camera position около
+`(-4769,70,56)`, отдельный пик насчитывал 14 solid camera-band slices без
+drawable mesh, из них 12 без mesh-work owner. Эти 12 резидентных non-air
+срезов находились в основном в `cx=-304`, `cy=3/4`; у них были relight owner
+flags, но не было mesh dirty queue entry, ColumnFlow ticket или mesh-work
+owner. Ещё два среза `cx=-303, cy=4` имели mesh dirty queue owner. Это
+доказательство несогласованности владения readiness/mesh work, но не само по
+себе доказательство пиксельной дыры. В M524 framebuffer-probe window был
+настроен на водный симптом `X=-7500…-7190`, поэтому пик-срезы при `X≈-4769`
+не получили парного renderer/ray witness.
+
+**M525 проверил новый seed как вторичную cold-world полосу.** Release worldgen
+для seed `3650471311` создал `CI_3650471311`: 788 chunk-файлов, spawn Y
+`51,12`. Видимый no-teleport маршрут прошёл 912 блоков при пороге 700 и
+скорости `5,20 blocks/s`; приложение завершилось штатно. Это подтверждает
+создание мира и скорость движения, но короткая трасса не заменяет M335.
+Новый мир выявил startup debt: analyzer `pass=false`,
+`post_stop_readiness_debt_max=34`, `visual_holes_rate=0,0095`, один
+near-focus-hole period и post-stop convergence FAIL. При этом после остановки
+`post_stop_mesh_missing_max=0` и visual-hole proxy равен нулю. Эти counters —
+не pixel verdict. Конфиг мира и пользовательские настройки после flight runner
+восстановлены; `World_164/world_data.json` после M526 совпадает с исходным
+SHA-256 `0ade4041…d344`.
+
+**M526 дал привязанный к экранной точке trace в том же коридоре.** Это был
+неполный по дистанции, но непрерывный no-teleport маршрут от стандартного
+старта: 5 024 блока при пороге 4 500, скорость около `5,20 blocks/s`, процесс
+завершился с кодом 0. В targeted window `X=-4800…-4700` один period на
+`focus_cx=-302` зарегистрировал два camera-band solid slices без drawable
+mesh и `near_focus_holes=1`; следующий sample на том же focus уже был чистым.
+Текущие peak-slice coordinate records этот короткий эпизод не сохранили:
+peak-render trace содержит только стартовый максимум, а frustum summary в
+targeted окне показывает нулевое число peak targets. Поэтому для кратких
+провалов нужен event-triggered snapshot по каждому anomaly period, а не только
+по максимальному peak за процесс.
+
+M526 всё же связал screen-ray candidate и renderer depth для одной выборки:
+на `frame_epoch=44310`, focus `-299`, экранный sample `(352.5,269.5)` выбрал
+срез `(-303,3,6)` без satisfying mesh на расстоянии `80,05` блока. В
+соответствующем `GL_BACK` pixel `(352,450)` DDA не нашёл непрозрачный UCube,
+но pre-transparent depth указывал на drawable opaque mesh в chunk
+`(-301,3,5)` на расстоянии `55,15` блока. Следовательно, выбранный screen-ray
+срез находится за уже отрисованной передней геометрией и не доказывает
+отсутствующую поверхность в данном пикселе. В 200 точных screen-ray/pixel
+сопоставлениях 100 DDA-hit совпали до block, 40 имели разные block-hit, 44
+не дали DDA-hit ни в одном пути, а в 16 ray находил block при отсутствии
+pixel-DDA-hit. Ещё в 18 pixel samples имелась opaque depth surface при
+отсутствии UCube DDA-hit. Эти расхождения требуют учитывать render style и
+точность/состояние camera-ray при интерпретации streaming selector; до этого
+их нельзя сводить к реальным экранным дырам.
+
+История кода уточняет отдельный риск: M517 (`d712b9b3`) перевёл только
+renderer pixel witness на inverse-projection + inverse-view camera-space ray,
+потому что combined `inverse(Projection * View)` терял точность при больших
+мировых координатах. `UCamera::TryGetViewRayAtScreen`, которым пользуется
+streaming screen-ray probe, по-прежнему проходит через
+`ScreenPointToWorldRay`/`glm::unProject`. Это не доказывает причину каждой
+парной разницы M526: передний depth surface может относиться к renderable
+геометрии, которую opaque UCube DDA не классифицирует как hit. Но два пути
+теперь дают разные диагностические контракты и должны быть сведены к общей
+camera-space геометрии с явной политикой для всех opaque/cutout render styles.
+Изменять scheduler quota до этой унификации нельзя.
+
+В 11 targeted capture-позициях M526 пары `GL_BACK`/`GL_FRONT` совпали
+побайтно; это проверяет только app buffers, не desktop compositor. Измерение
+было instrumented: `wall_ms_fly_med=20,97`, около `47,7 FPS`, streaming
+phase `8,90 ms`. Не сравнивать эту wall-time с неинструментированным M487
+(`16,20 ms`) как чистую регрессию: M526 выполнял pixel readback, depth/ray и
+trace instrumentation.
+
+#### Статус acceptance lanes
+
+| Lane | Status | Evidence / remaining closure |
+|---|---|---|
+| M335 repeatability, speed, height, distance | **PASS** | M524: 7 408 блоков, no-teleport, clean Release provenance; сохранять полную дистанцию как primary route. |
+| Source/run manifest | **PASS** | M524–M526: стартовая и annotation-time source identity совпадают; Release EXE/SHA зафиксированы; заполнить `resolution` в будущей среде записи. |
+| Camera-band mesh coverage | **OPEN / FAIL** | Краткие no-drawable periods и 12 ownerless slices подтверждены; M526 не сохранил coordinate snapshot для двух transient slices. Нужен per-anomaly trace и исправление owner lifecycle. |
+| Pixel-level empty/dark renderer defect | **UNPROVEN** | M524/M526 не связали readiness counters с отсутствующим пикселем; M526 показывает передний drawable depth в одной выбранной точке. Операторское live-image расхождение остаётся открытым. |
+| Water/fluid rendering | **OPEN, not reproduced** | M522/M523 app framebuffer captures были нормальными; независимый desktop frame и точная операторская symptom frame отсутствуют. Не менять fluid pipeline по readiness proxy. |
+| Stop-tail convergence | **FAIL** | M524/M525 readiness debt не сошёлся; продолжать измерять видимый camera-band debt отдельно от всего focus-ring not-ready. |
+| Fresh/new-world lane | **SCREENED; acceptance FAIL** | M525 generation and motion passed; 912-block short run оставил readiness/performance failures. Повторять после значимого streaming/renderer fix как secondary cold-world check. |
+| Performance | **OPEN** | Только clean, capture-disabled Release M335 может закрыть целевой frame-time gate; instrumented M524/M526 не являются baseline. |
+
+**Пересмотренный порядок завершения:**
+
+1. Свести pixel witness и streaming screen-ray к общей camera-space функции
+   луча; проверить высокие координаты на детерминированных геометрических
+   случаях. Не использовать `glm::unProject` с combined view-projection для
+   world-space ray при больших координатах.
+2. Сделать screen-ray visibility renderer-aware: различать opaque cube,
+   cutout/non-cube и transparent геометрию, а также учитывать depth-tested
+   переднюю поверхность. Для кандидата сохранять frame epoch, screen pixel,
+   ray hit, depth hit и chunk owner-state в одной записи.
+3. Заменить process-wide maximum-only camera-band peak snapshot на bounded
+   event-triggered trace для каждого краткого miss-period. Для demanded,
+   resident non-air slice записывать owner flags, queue/ticket, desired и
+   published revisions, а также факт попадания в projected rect/frustum.
+4. По этой трассе найти переход, после которого видимый slice остаётся с
+   relight ownership, но теряет mesh-work ownership; исправить lifecycle/queue
+   handoff, затем повторить короткий trace на том же X. Не менять квоты, пока
+   проблема ownerless work не устранена и не доказана пикселем.
+5. После targeted проверки выполнить полный visible no-teleport M335 на
+   `World_164` в Release без коммитов во время полёта; одновременно сохранять
+   sparse app frames на target windows, а desktop/window presentation считать
+   отдельным oracle.
+6. Снимать capture-disabled M335 для производительности; принять frame-time
+   только по нему и отличать stream/mesh/scene cost от forensic readbacks.
+7. После каждого завершённого значимого renderer/streaming change set
+   выполнять secondary short cold-world run с новым seed; periodic new-world
+   lane дополняет, но не заменяет M335.
+
+Подробные команды, параметры probe windows, manifests и артефакты M524–M526
+добавлены в [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).

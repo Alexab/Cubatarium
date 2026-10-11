@@ -6338,3 +6338,130 @@ $env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
 $env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m523_world164_m335_live_window_20261011 --report bin/suite_reports/engine_refactor/m523_world164_m335_live_window_20261011.json --process-timeout 7200
 ```
+
+### M524 — полный M335 и проверка исходной identity в manifest (2026-10-11)
+
+Полный visible/no-teleport M335 на `World_164`, Release EXE SHA-256
+`d78da45f4d1dc8ec60dc77c533f594f461c45bcca806bd05813004fa9739648d`.
+Маршрут прошёл 7 408 блоков, `process_rc=0`; source SHA на старте совпал с
+SHA при создании отчёта (`05bcfe3e`, clean). Manifest зафиксировал SHA runner,
+analyzer, helper, EXE и точные route параметры. Незаданный `resolution` —
+единственное пустое поле из списка `manifest_required_empty`.
+
+Analyzer: 32/40 общих и 7/13 stop-gates, итоговый `pass=false`; это диагностический
+прогон, не visual acceptance. В corridor `focus_cx=-410…-456` 82/83 валидных
+census samples имели 121 drawable/satisfying camera-band solid slice и 0
+camera-band no-drawable. За пределами corridor были transient camera-band
+misses; на `frame_epoch=45506`, `focus_cx=-299` пик составил 14 no-drawable
+срезов, 12 без mesh-work owner. У последних оставались relight owner flags,
+но отсутствовали mesh queue entry/ColumnFlow ticket. Водный pixel window
+`X=-7500…-7190` не покрывал этот пик при `X≈-4769`, поэтому точной экранной
+привязки M524 нет.
+
+Артефакты:
+
+- [report](../../bin/suite_reports/engine_refactor/m524_world164_m335_manifest_debt_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-103048_5752.jsonl)
+- [capture directory](../../bin/flight_captures/m524_world164_m335_manifest_debt_20261011)
+
+#### Exact M524 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-7500'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-7190'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-7500'
+$env:CUBA_FLUID_RENDER_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m524_world164_m335_manifest_debt_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-7500'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-7190'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+$env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD='0'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1455 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 6400 --phase-id m524_world164_m335_manifest_debt_20261011 --report bin/suite_reports/engine_refactor/m524_world164_m335_manifest_debt_20261011.json --process-timeout 7200
+```
+
+### M525 — secondary new-world smoke and short visible flight (2026-10-11)
+
+Created and retained seed `3650471311` as `bin/worlds/CI_3650471311` with the
+Release executable. Worldgen succeeded with 788 chunk files and spawn Y
+`51.12`. Then the visible no-teleport route passed 912 blocks (minimum 700) at
+`5.20 blocks/s`, with normal process exit. This is a short cold-world screen,
+not a substitute for M335. Analyzer remained red: readiness debt 34 after
+stop, one near-focus-hole proxy period, and post-stop convergence failed;
+post-stop mesh-missing and visual-hole proxies were both zero.
+
+The run manifest had a matching clean source identity at start and report
+generation (`05bcfe3e`) and the same Release EXE hash as M524. No source build
+was needed. The fixed-day wrapper restored the newly created world's original
+metadata byte-for-byte.
+
+Artifacts:
+
+- [worldgen report](../../bin/create_world_3650471311.json)
+- [flight report](../../bin/suite_reports/engine_refactor/m525_ci3650471311_newworld_short_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-110019_42492.jsonl)
+
+#### Exact M525 invocations
+
+```powershell
+python tools/integration_test_worldgen.py --seeds 3650471311 --radius-chunks 5 --keep-worlds --skip-determinism --smoke
+python tools/flight_sim_fixed_day.py --world CI_3650471311 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 180 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 700 --phase-id m525_ci3650471311_newworld_short_20261011 --report bin/suite_reports/engine_refactor/m525_ci3650471311_newworld_short_20261011.json --process-timeout 1800
+```
+
+### M526 — targeted camera-band and paired ray/pixel trace (2026-10-11)
+
+This was a continuous no-teleport run from the standard M335 start, on the same
+Release EXE and `World_164`, ending after 5 024 blocks (minimum 4 500). It
+focused framebuffer and screen-ray probes on world X `-4800…-4700`, covering
+the M524 ownerless-slice peak near `X=-4769`. `process_rc=0`; configured flight
+speed remained about `5.20 blocks/s`. Eleven captured `GL_BACK`/`GL_FRONT`
+frame pairs were byte-identical. World metadata was restored to its pre-run
+SHA-256 `0ade4041…d344`.
+
+At `focus_cx=-302` one period had two solid camera-band slices without drawable
+mesh and `near_focus_holes=1`; its next same-focus sample was clear. The
+per-anomaly slice coordinate record did not retain that brief event (only the
+startup peak was stored), while target-window pixel probes and ray candidates
+were present. Thus the trace showed why the peak-only ring must become an
+event-triggered bounded snapshot.
+
+One exact sample joined `screen_ray_candidate_trace` and renderer depth at
+`frame_epoch=44310`: selected chunk `(-303,3,6)` was reported without a
+satisfying mesh at 80.05 blocks, while the corresponding `GL_BACK` pixel's
+pre-transparent depth pointed to a drawable surface in `(-301,3,5)` at 55.15
+blocks. The pixel's opaque-UCube DDA reported no hit. This candidate is behind
+depth-tested geometry for that pixel, so it is not evidence of a visible hole.
+The full trace also has ray/pixel DDA disagreements; see the M526 analysis in
+[`ENGINE_REMEDIATION_PLAN_2026-10-03.md`](ENGINE_REMEDIATION_PLAN_2026-10-03.md).
+
+The instrumented analyzer returned `pass=false` and stop convergence FAIL;
+`wall_ms_fly_med=20.97` / `47.7 FPS` includes pixel/depth readbacks and is not
+a clean performance baseline.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m526_world164_camera_band_ray_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-110619_42620.jsonl)
+- [targeted frames](../../bin/flight_captures/m526_world164_camera_band_ray_20261011)
+
+#### Exact M526 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m526_world164_camera_band_ray_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m526_world164_camera_band_ray_20261011 --report bin/suite_reports/engine_refactor/m526_world164_camera_band_ray_20261011.json --process-timeout 1800
+```
