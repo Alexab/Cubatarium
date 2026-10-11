@@ -5,7 +5,7 @@
 ## Поддерживаемый поток
 
 - [`tools/flight_sim_run.py`](../../tools/flight_sim_run.py) — единственный общий запускатель. Он настраивает flight-sim, сохраняет perf JSONL/manifest/report, восстанавливает временно изменённые `config.json` и исходный `users.json`, повторно выставляет контрольную позицию перед каждым `--repeat` и вызывает анализатор.
-- [`tools/run_with_host_cpu_sampler.py`](../../tools/run_with_host_cpu_sampler.py) — необязательная обёртка для запуска команды с периодической записью общей загрузки CPU и загрузки `Cubatarium.exe` в JSONL. Пример: `python tools/run_with_host_cpu_sampler.py --output bin/logs/m544_host_cpu.jsonl --interval-sec 2 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m544_world164_m335_clean_perf_host_sampled --report bin/suite_reports/engine_refactor/m544_world164_m335_clean_perf_host_sampled.json --process-timeout 1800`.
+- [`tools/run_with_host_cpu_sampler.py`](../../tools/run_with_host_cpu_sampler.py) — необязательная обёртка для записи общей загрузки CPU и загрузки `Cubatarium.exe` в JSONL. Частые отсчёты опрашивают только хост и найденный PID игры; список всех процессов выключен по умолчанию. Для разовой диагностики его можно включить редко через `--top-processes-interval-sec 60`. Пример: `python tools/run_with_host_cpu_sampler.py --output bin/logs/m545_host_cpu.jsonl --interval-sec 2 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m545_world164_m335_clean_perf_host_sampled --report bin/suite_reports/engine_refactor/m545_world164_m335_clean_perf_host_sampled.json --process-timeout 1800`.
 - [`tools/flight_sim_fixed_day.py`](../../tools/flight_sim_fixed_day.py) — контролируемый дневной запуск поверх общего runner. Временно задаёт `time_of_day=0.25`, `time_frozen=true`, clear weather, нулевую облачность и выключенную авто-погоду; в `finally` восстанавливает исходный `world_data.json` побайтно. Аргументы маршрута передаются после `--`. Пример: `python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m379_world164_m335_fixed_day --report bin/suite_reports/engine_refactor/m379_world164_m335_fixed_day.json`. Не менять профиль камеры ради «более красивого» кадра.
 - [`tools/flight_sim_analyze.py`](../../tools/flight_sim_analyze.py) — расчёт агрегатов и ворот из JSONL. `unfinished_visual` публикуется как readiness debt; `visual_holes` / `near_focus_holes` отдельно считаются mesh-coverage proxy и не являются доказательством пустого framebuffer-пикселя.
 - [`tools/analyze_renderer_pixel_trace.py`](../../tools/analyze_renderer_pixel_trace.py) — сводит pixel/ray witnesses, draw-state, pool OOM, screen-ray debt и для dark samples сохраняет отдельные DDA и framebuffer depth-hit evidence, включая mesh revisions, MDI draw state, dirty-queue ownership/age, work-owner flags и light/demand state; запускается как `python tools/analyze_renderer_pixel_trace.py bin/logs/perf_<run>.jsonl --threshold 96 --json-out bin/suite_reports/engine_refactor/<run>_renderer_pixel_trace.json`. M380 сохранил 32 768 pixel probes, 191 samples ниже luma 32; M388 сохранил 32 768 dense probes и связал sampled dark pixels с drawable MDI surface и low/provisional light: [M388 pixel/light analysis](../../bin/suite_reports/engine_refactor/m388_renderer_pixel_trace_20261004.json).
@@ -7341,3 +7341,36 @@ Artifacts: [M543 flight report](../../bin/suite_reports/engine_refactor/m543_wor
 Next: capture-disabled M335 with no source trace and host CPU sampling, then a
 long-distance M335 run if frame cost remains acceptable. Keep the current
 source-trace reports separate from clean performance measurements.
+
+### M544 - capture-disabled M335 under host saturation (2026-10-11)
+
+M544 ran the visible no-teleport M335 route on `World_164`, with a 980-second
+flight phase, source trace disabled, and no pixel/frame capture. It used the
+Release executable from `21cda2fc`, SHA-256
+`9d3d45207ca33183998c7134b826be6235ede1bbe1da398c2ff108364c0635f4`.
+The app exited normally and covered 4,928 blocks / 308 chunks at
+`5.19653 blocks/s`; the report remains `pass=false` on readiness/stop gates.
+
+The run is contaminated: host CPU was 100% in all 93 samples. Game usage was
+1.81 CPU cores median / 2.93 max; `cl.exe`, OneDrive, and Defender were also
+active. The wrapper's requested two-second sample interval became 9.58 seconds
+median / 20.94 p95 (29.06 max) because it enumerated every process each time.
+Do not compare M544's `36.53 ms` fly median and 417 spikes with M540's clean
+baseline. The sampler itself needs a low-overhead mode before the next clean
+measurement. The sampler now reads host CPU and the game PID on each interval;
+full process enumeration is opt-in and should be infrequent.
+
+The M540 capture stall did not repeat at `x=-1890`: wall `124.58 ms`,
+swap wait `0.12 ms`, snapshot `5.75 ms`, dirty tick `6.37 ms`. Across the run,
+snapshot max was `31.82 ms`; `MeshCaptureSlow` max was `43.86 ms` and read-band
+max `43.59 ms`. The largest overall frame was `941.28 ms`, of which `839.82 ms`
+was `glfwSwapBuffers`; another was `821.52/767.39 ms` wall/swap wait. This is
+separate from snapshot capture and does not prove a GPU fault.
+
+Artifacts: [M544 report](../../bin/suite_reports/engine_refactor/m544_world164_m335_clean_perf_host_sampled_20261011.json),
+[perf log](../../bin/logs/perf_20261011-225119_44060.jsonl), host CPU log
+`bin/logs/m544_host_cpu_20261011.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-225114.44060`.
+
+Next: use the revised target-only sampler to repeat the capture-disabled M335
+baseline after host load falls, then run the full long-distance route.

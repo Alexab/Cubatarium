@@ -8539,3 +8539,51 @@ Artifacts: [M543 flight report](../../bin/suite_reports/engine_refactor/m543_wor
 [source report](../../bin/suite_reports/engine_refactor/m543_world_column_source_trace_20261011.json),
 [perf JSONL](../../bin/logs/perf_20261011-223542_35856.jsonl), and INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-223537.35856`.
+
+### M544 capture-disabled M335 under saturated host load (2026-10-11)
+
+M544 repeated the 980-second visible no-teleport M335 route on `World_164`
+with capture/pixel probes and source tracing disabled, using Release
+`9d3d4520…0635f4` (adaptive load-batch change from `21cda2fc`). It completed
+normally (`process_rc=0`, 4,928 blocks / 308 chunks, 5.19653 blocks/s; 502
+periods, 500 steady). Analyzer `pass=false` remains due readiness and
+stop-convergence gates. The route is shorter than the 8,192-block far-flight
+acceptance checkpoint.
+
+This is not a clean performance comparison. Host sampling recorded 100% CPU
+for all 93 samples, with game median/max 1.81/2.93 CPU cores and concurrent
+`cl.exe`, OneDrive, and Defender activity. The sampler requested a two-second
+interval but actually produced a median interval of 9.58 seconds (p95 20.94,
+maximum 29.06): it enumerated every process on each sample and became slow under
+the saturated host. Its own Python process also used CPU. Use M544 only as a
+loaded-host diagnostic; do not compare its `36.53 ms` fly median or 417 spikes
+with M540's clean `21.37 ms` baseline. The sampler has since been changed to
+sample host plus target PID frequently; broad process enumeration is optional
+and infrequent. M544's irregular cadence came from the older full-scan sampler.
+
+The prior M540 synchronous snapshot stall did not recur at the same target
+band. At `x=-1890`, M544 recorded wall `124.58 ms`, swap wait `0.12 ms`,
+snapshot `5.75 ms`, and dirty tick `6.37 ms`. M541 also saw only ~3 ms snapshot
+there. Across the route, snapshot max was `31.82 ms`; the largest
+`MeshCaptureSlow` stage was `43.86 ms` (`read_chunk_band` max `43.59 ms`),
+with no 852 ms capture event. This makes M540's 852.6 ms event a non-repeated
+outlier so far; do not redesign capture around it without a new clean
+reproduction.
+
+M544's top wall frame was `941.28 ms` with `839.82 ms` inside
+`glfwSwapBuffers`; the next was `821.52/767.39 ms` wall/swap wait. The report's
+dominant stage is swap wait, distinct from the mesh capture timings. It does
+not establish a GPU fault. Readiness debt ended at 37, while post-stop
+near-focus mesh-missing and visual-hole proxies were zero. There was no pixel
+capture, so the remaining readiness/visual proxies are not framebuffer proof.
+
+Artifacts: [M544 report](../../bin/suite_reports/engine_refactor/m544_world164_m335_clean_perf_host_sampled_20261011.json),
+[perf JSONL](../../bin/logs/perf_20261011-225119_44060.jsonl), host sample
+`bin/logs/m544_host_cpu_20261011.jsonl`, and INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-225114.44060`.
+
+Next: use the revised sampler and repeat capture-disabled M335 when host CPU is
+quiet. If that clean run shows no regression, execute the
+full long-distance M335 route with current Release. Keep the capture-stall
+question open only for clean reproducibility; maintain the separate periodic
+fresh-seed lane for disk/procedural coverage.
