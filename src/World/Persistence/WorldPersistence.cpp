@@ -3811,12 +3811,11 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
           has_pending_column ? 0 : 1, (std::max)(0, distance - age_bonus),
           load.submittedAt};
     };
-    // The load queue can contain hundreds of ready results. Select a small
-    // near-focus batch once per tick, then apply under the existing time and
-    // slice limits instead of rescanning the full queue after each slice.
-    constexpr std::size_t kMaxRankedLoadsPerTick = 4;
-    const std::size_t max_ranked_loads =
-        std::min(max_slice_applies, kMaxRankedLoadsPerTick);
+    // Match the ranked batch to this tick's existing adaptive apply-count
+    // limit. The time budget can still stop application early and requeue the
+    // remainder, while budget-eligible ticks can drain beyond a fixed batch of
+    // four without rescanning the whole queue after every applied slice.
+    const std::size_t max_ranked_loads = max_slice_applies;
     auto completed_loads = AsyncChunkIo->DrainLoadsBestByKeyUpTo(
         max_ranked_loads, result_rank, &metrics.ready_loads_before_n,
         &metrics.result_selection_mutex_wait_ms,
