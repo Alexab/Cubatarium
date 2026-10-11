@@ -7250,3 +7250,36 @@ repeat the same M335 route. Use the measured call stack/stage before choosing
 between optimizing capture, reducing capture admission during hitches, or
 redesigning snapshots into resumable per-frame work. Then return to the planned
 new-seed load/generation lane.
+
+### M541 - capture-stage diagnostic repeat (2026-10-11)
+
+M541 used the visible no-teleport M335 `World_164` route with the capture-stage
+INFO diagnostics enabled. It exited normally and travelled 4,944 blocks / 309
+chunks. The report is `pass=false` because renderer readiness/performance and
+stop-convergence gates remain open. At the former M540 stall coordinate
+(`x≈−1890`, `cx≈−119`), snapshot was about 3.0 ms and dirty tick about 6.8 ms;
+the 852 ms event did not recur. Across the process, `MeshCaptureSlow` emitted
+673 events over 25 ms, with maximum main-capture/read-band stages around 64 ms.
+These log events are not frame-for-frame joins and do not establish a repeated
+M540 stall.
+
+The separate top wall spikes were presentation-call dominated: maximum
+wall/swap-wait was 1,245.8/1,178.6 ms, followed by 928.1/889.4 ms and
+875.5/819.0 ms. Swap interval was zero. This isolates a `glfwSwapBuffers`
+wait path from snapshot timing, without proving driver, compositor, scheduling,
+or GPU as the underlying cause. Machine CPU was heavily occupied during the
+run (median 77.8%, p95 89.3%, max 94.4%; game median 1.63 CPU cores), so M541
+is diagnostic only, not a clean performance acceptance run. Pixel probes and
+captures were disabled; no framebuffer-hole conclusion follows from this run.
+
+Artifacts: [M541 report](../../bin/suite_reports/engine_refactor/m541_world164_capture_stage_diagnostic_20261011.json),
+[perf log](../../bin/logs/perf_20261011-215214_25348.jsonl), host sampler
+`bin/logs/m541_host_cpu_20261011.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-215209.25348`.
+
+Next: replay the M435 seed with current Release and
+`CUBA_WORLD_COLUMN_SOURCE_TRACE=1` to compare disk reads, procedural generation,
+queue waits and main-thread apply. Treat this as an instrumented lifecycle run,
+not a clean performance baseline. Repeat capture-disabled M335 separately
+under quiet host conditions before deciding whether the synchronous capture
+stall needs architectural work.

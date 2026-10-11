@@ -8378,3 +8378,54 @@ probes, and its performance report is not evidence of a blank framebuffer.
 Artifacts: [M540 report](../../bin/suite_reports/engine_refactor/m540_world164_clean_perf_baseline_20261011.json),
 [perf JSONL](../../bin/logs/perf_20261011-211506_45660.jsonl),
 [M534 comparison report](../../bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json).
+
+### M541 instrumented repeat of the synchronous capture path (2026-10-11)
+
+M541 repeated the visible, no-teleport M335 route on `World_164` with the
+new low-frequency `MeshCaptureSlow` stage diagnostics enabled. The Release
+binary was built from `ab2632d9`; the app exited normally (`process_rc=0`),
+travelled 4,944 blocks / 309 chunks, and retained the established flight
+speed. Analyzer acceptance is `pass=false`: readiness debt and stop
+convergence remain open, and the frame-time and related renderer gates fail.
+This is a completed diagnostic run, not a passing renderer checkpoint.
+
+The M540 852.6 ms snapshot stall did **not** recur near its former location.
+At `x≈−1890` (`cx≈−119`), snapshot acquisition was about 3.0 ms and the dirty
+tick about 6.8 ms; nearby samples were lower. INFO diagnostics did record
+capture stages above the 25 ms logging threshold (673 events over the whole
+session), with maxima near 64 ms for `main_capture_total` and `read_chunk_band`.
+These INFO events are not one-to-one joins with the per-frame spike table, and
+none establishes a repeat of the M540 stall. Keep capture optimization
+conditional on a clean repeat or an attributable stage-level regression.
+
+M541 exposed a separate long-frame class. The largest samples were 1,245.8 ms
+wall with 1,178.6 ms in `glfwSwapBuffers`, and 928.1/889.4 ms and
+875.5/819.0 ms wall/swap-wait pairs. The app reports swap interval zero.
+`swap_wait_ms` measures the call around buffer presentation; this evidence
+separates these pauses from the synchronous snapshot path but does not prove
+whether the driver, compositor, OS scheduling, or GPU queue caused them.
+Do not attribute them to mesh capture or label them a GPU fault without a
+matched diagnostic.
+
+This was not a clean performance baseline. The external host sampler measured
+machine CPU median 77.8%, p95 89.3%, maximum 94.4%; the game used median 1.63
+and maximum 2.7 CPU cores. M541 also had fly median wall 33.83 ms and 169
+spikes. Retain its stage and present-path timings as forensic evidence only;
+repeat the capture-disabled M335 profile under quiet host conditions before
+making a performance comparison. No pixel capture/probes were enabled, so
+the run neither proves nor disproves a framebuffer hole. Its mesh coverage,
+visible-black, and readiness metrics remain separate proxies.
+
+Artifacts: [M541 report](../../bin/suite_reports/engine_refactor/m541_world164_capture_stage_diagnostic_20261011.json),
+[perf JSONL](../../bin/logs/perf_20261011-215214_25348.jsonl), host CPU sampler
+`bin/logs/m541_host_cpu_20261011.jsonl`, and INFO trace
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-215209.25348`.
+
+Next: keep M335 as the repeated-world control. Once host load is suitable,
+repeat capture-disabled M335 to decide whether M540's synchronous capture
+stall is reproducible. Separately replay the existing M435 cold-seed world
+with source tracing on the current Release to distinguish current disk-load,
+procedural-generation, and ready-result service costs. Do not fold that
+instrumented source run into a clean timing baseline. After source provenance
+is recorded, use its owner/queue evidence to choose a narrowly scoped fix;
+keep the periodic fresh-seed lane as secondary coverage.
