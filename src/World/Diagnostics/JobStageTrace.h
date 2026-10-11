@@ -387,7 +387,15 @@ struct VisualBlackTraceRecord
   /// vertical sample list (row 0 is topmost). Use screen_ray_y to join rows.
   float screen_ray_x{0.0f};
   float screen_ray_y{0.0f};
+  float screen_ray_origin_x{0.0f};
+  float screen_ray_origin_y{0.0f};
+  float screen_ray_origin_z{0.0f};
+  float screen_ray_direction_x{0.0f};
+  float screen_ray_direction_y{0.0f};
+  float screen_ray_direction_z{-1.0f};
   float screen_ray_distance{-1.0f};
+  float screen_ray_near_distance{0.0f};
+  uint8_t screen_ray_perspective{1};
   int32_t screen_ray_block_x{0};
   int32_t screen_ray_block_y{0};
   int32_t screen_ray_block_z{0};

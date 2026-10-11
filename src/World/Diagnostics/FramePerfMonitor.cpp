@@ -4964,8 +4964,24 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"frame_epoch\":" << r.frame_epoch
                  << ",\"screen_ray_x\":" << r.screen_ray_x
                  << ",\"screen_ray_y\":" << r.screen_ray_y
+                 << ",\"screen_ray_origin_x\":"
+                 << r.screen_ray_origin_x
+                 << ",\"screen_ray_origin_y\":"
+                 << r.screen_ray_origin_y
+                 << ",\"screen_ray_origin_z\":"
+                 << r.screen_ray_origin_z
+                 << ",\"screen_ray_direction_x\":"
+                 << r.screen_ray_direction_x
+                 << ",\"screen_ray_direction_y\":"
+                 << r.screen_ray_direction_y
+                 << ",\"screen_ray_direction_z\":"
+                 << r.screen_ray_direction_z
                  << ",\"screen_ray_distance\":"
                  << r.screen_ray_distance
+                 << ",\"screen_ray_near_distance\":"
+                 << r.screen_ray_near_distance
+                 << ",\"screen_ray_perspective\":"
+                 << static_cast<int>(r.screen_ray_perspective)
                  << ",\"screen_ray_block_x\":" << r.screen_ray_block_x
                  << ",\"screen_ray_block_y\":" << r.screen_ray_block_y
                  << ",\"screen_ray_block_z\":" << r.screen_ray_block_z
@@ -6084,8 +6100,24 @@ void UFramePerfMonitor::Shutdown()
         {
           (*out) << ",\"screen_ray_x\":" << r.screen_ray_x
                  << ",\"screen_ray_y\":" << r.screen_ray_y
+                 << ",\"screen_ray_origin_x\":"
+                 << r.screen_ray_origin_x
+                 << ",\"screen_ray_origin_y\":"
+                 << r.screen_ray_origin_y
+                 << ",\"screen_ray_origin_z\":"
+                 << r.screen_ray_origin_z
+                 << ",\"screen_ray_direction_x\":"
+                 << r.screen_ray_direction_x
+                 << ",\"screen_ray_direction_y\":"
+                 << r.screen_ray_direction_y
+                 << ",\"screen_ray_direction_z\":"
+                 << r.screen_ray_direction_z
                  << ",\"screen_ray_distance\":"
                  << r.screen_ray_distance
+                 << ",\"screen_ray_near_distance\":"
+                 << r.screen_ray_near_distance
+                 << ",\"screen_ray_perspective\":"
+                 << static_cast<int>(r.screen_ray_perspective)
                  << ",\"screen_ray_known_air_steps\":"
                  << r.screen_ray_known_air_steps
                  << ",\"screen_ray_block_x\":" << r.screen_ray_block_x

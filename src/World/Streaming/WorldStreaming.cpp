@@ -13,6 +13,7 @@
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Math/GridMath.h"
 #include "World/Raycast/BlockRaycast.h"
+#include "World/View/ViewRayMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
@@ -878,13 +879,17 @@ void UWorldStreaming::RefreshStreamingPressure(
           {
             glm::ivec3 coord{0};
             glm::ivec3 block{0};
+            glm::vec3 origin{0.0f};
+            glm::vec3 direction{0.0f, 0.0f, -1.0f};
             float screen_x{0.0f};
             float screen_y{0.0f};
             float distance{-1.0f};
+            float near_distance{0.0f};
             uint32_t known_air_steps{0};
             uint8_t column{0};
             uint8_t row{0};
             uint8_t state{0};
+            uint8_t perspective{1};
             uint8_t in_focus_radius{0};
             uint8_t in_height_band{0};
             uint8_t mesh_satisfying{0};
@@ -933,6 +938,12 @@ void UWorldStreaming::RefreshStreamingPressure(
           }
           const auto screen_ray_probe_t0 =
               std::chrono::high_resolution_clock::now();
+          ScreenRayTransform screen_ray_transform{};
+          const bool screen_ray_transform_ready = BuildScreenRayTransform(
+              probe_camera->GetViewMatrix(), probe_camera->GetProjection(),
+              screen_ray_transform);
+          const glm::ivec4 screen_ray_viewport(0, 0, viewport_width,
+                                                viewport_height);
           for (size_t row_index = 0; row_index < kScreenRows.size();
                ++row_index)
           {
@@ -956,16 +967,23 @@ void UWorldStreaming::RefreshStreamingPressure(
                   kScreenRows[row_index] *
                       static_cast<float>(viewport_height) -
                   0.5f;
-              glm::vec3 ray_origin(0.0f);
-              glm::vec3 ray_direction(0.0f);
-              if (!probe_camera->TryGetViewRayAtScreen(
-                      ray_trace.screen_x, ray_trace.screen_y,
-                      ray_origin, ray_direction))
+              CameraSpaceRay camera_ray{};
+              if (!screen_ray_transform_ready ||
+                  !ScreenPointToCameraSpaceRay(
+                      screen_ray_transform, screen_ray_viewport,
+                      ray_trace.screen_x,
+                      static_cast<float>(viewport_height) -
+                          ray_trace.screen_y,
+                      camera_ray))
               {
                 continue;
               }
+              ray_trace.origin = camera_ray.origin;
+              ray_trace.direction = camera_ray.direction;
+              ray_trace.near_distance = camera_ray.near_distance;
+              ray_trace.perspective = camera_ray.perspective ? 1u : 0u;
               const OpaqueVoxelRayWitness hit = TraceOpaqueVoxelRay(
-                  world, ray_origin, ray_direction, max_distance);
+                  world, camera_ray.origin, camera_ray.direction, max_distance);
               ray_trace.state = hit.state;
               ray_trace.known_air_steps = hit.known_air_unloaded_steps;
               if (hit.state != 1)
@@ -1138,7 +1156,15 @@ void UWorldStreaming::RefreshStreamingPressure(
               record.cz = ray_trace.coord.z;
               record.screen_ray_x = ray_trace.screen_x;
               record.screen_ray_y = ray_trace.screen_y;
+              record.screen_ray_origin_x = ray_trace.origin.x;
+              record.screen_ray_origin_y = ray_trace.origin.y;
+              record.screen_ray_origin_z = ray_trace.origin.z;
+              record.screen_ray_direction_x = ray_trace.direction.x;
+              record.screen_ray_direction_y = ray_trace.direction.y;
+              record.screen_ray_direction_z = ray_trace.direction.z;
               record.screen_ray_distance = ray_trace.distance;
+              record.screen_ray_near_distance = ray_trace.near_distance;
+              record.screen_ray_perspective = ray_trace.perspective;
               record.screen_ray_known_air_steps = ray_trace.known_air_steps;
               record.screen_ray_block_x = ray_trace.block.x;
               record.screen_ray_block_y = ray_trace.block.y;
