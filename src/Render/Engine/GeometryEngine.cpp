@@ -12,6 +12,7 @@
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/VisualObligationPolicy.h"
+#include "World/View/ViewRayMath.h"
 #include "Blocks/BlockRegistry.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
@@ -1451,9 +1452,11 @@ void CaptureTransparentPixelProbe(
                  GL_UNSIGNED_BYTE,
                  pixels.data() + static_cast<size_t>(row) * width * 4u);
   }
-  const glm::mat4 inverse_view_projection = glm::inverse(view_projection);
-  const glm::mat4 inverse_view = glm::inverse(view);
-  const glm::mat4 inverse_projection = glm::inverse(projection);
+  ScreenRayTransform ray_transform{};
+  if (!BuildScreenRayTransform(view, projection, ray_transform))
+  {
+    return;
+  }
   const float sea_plane_y =
       static_cast<float>(world.GetProceduralSettings().SeaLevel) + 0.5f;
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
@@ -1610,49 +1613,31 @@ void CaptureTransparentPixelProbe(
           (static_cast<float>(local_y) + 0.5f) / static_cast<float>(height) *
               2.0f -
           1.0f;
-      // Construct the actual witness ray in camera space. Inverting only the
-      // projection gives a well-conditioned view-space direction; inverse(view)
-      // supplies the rendered camera position (which differs from the player
-      // eye anchor in third-person mode). This avoids magnifying float
-      // cancellation at a near plane translated thousands of blocks from the
-      // world origin.
-      glm::vec3 voxel_ray_origin = camera_position;
-      const glm::vec4 camera_origin_h =
-          inverse_view * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-      if (std::abs(camera_origin_h.w) > 1e-6f)
+      CameraSpaceRay camera_ray{};
+      if (!ScreenNdcToCameraSpaceRay(ray_transform, ndc_x, ndc_y,
+                                     camera_ray))
       {
-        voxel_ray_origin =
-            glm::vec3(camera_origin_h) / camera_origin_h.w;
+        continue;
       }
-      glm::vec3 view_ray_direction(0.0f, 0.0f, -1.0f);
-      float voxel_ray_near_distance = 0.0f;
-      const glm::vec4 view_near_h =
-          inverse_projection * glm::vec4(ndc_x, ndc_y, -1.0f, 1.0f);
-      if (std::abs(view_near_h.w) > 1e-6f)
-      {
-        const glm::vec3 view_near_point =
-            glm::vec3(view_near_h) / view_near_h.w;
-        const float near_distance = glm::length(view_near_point);
-        if (near_distance > 1e-6f)
-        {
-          view_ray_direction = glm::normalize(view_near_point);
-          voxel_ray_near_distance = near_distance;
-        }
-      }
-      const glm::vec3 voxel_ray_direction = glm::normalize(
-          glm::mat3(inverse_view) * view_ray_direction);
+      const glm::vec3 voxel_ray_origin = camera_ray.origin;
+      const glm::vec3 voxel_ray_direction = camera_ray.direction;
+      const float voxel_ray_near_distance = camera_ray.near_distance;
       const float opaque_depth = opaque_capture.depth[sample];
       float opaque_hit_distance = -1.0f;
       if (std::isfinite(opaque_depth) && opaque_depth >= 0.0f &&
           opaque_depth < 0.999999f)
       {
-        const glm::vec4 opaque_h = inverse_view_projection *
-                                   glm::vec4(ndc_x, ndc_y,
-                                             opaque_depth * 2.0f - 1.0f, 1.0f);
-        if (std::abs(opaque_h.w) > 1e-6f)
+        glm::vec3 opaque_view_point{};
+        glm::vec3 opaque_point{};
+        if (ScreenNdcDepthToCameraSpacePoint(
+                ray_transform, ndc_x, ndc_y, opaque_depth, opaque_view_point,
+                opaque_point))
         {
-          const glm::vec3 opaque_point = glm::vec3(opaque_h) / opaque_h.w;
-          opaque_hit_distance = glm::length(opaque_point - voxel_ray_origin);
+          opaque_hit_distance = camera_ray.perspective
+                                    ? glm::length(opaque_view_point)
+                                    : glm::dot(opaque_view_point -
+                                                   camera_ray.view_near,
+                                               camera_ray.view_direction);
           record.renderer_pixel_opaque_hit_distance = opaque_hit_distance;
           const glm::ivec3 opaque_cell(
               static_cast<int>(std::floor(opaque_point.x)),
@@ -2375,15 +2360,11 @@ void CaptureTransparentPixelProbe(
                   : 0u;
         }
       }
-      glm::vec4 near_h =
-          inverse_view_projection * glm::vec4(ndc_x, ndc_y, -1.0f, 1.0f);
-      glm::vec4 far_h =
-          inverse_view_projection * glm::vec4(ndc_x, ndc_y, 1.0f, 1.0f);
-      if (std::abs(near_h.w) > 1e-6f && std::abs(far_h.w) > 1e-6f)
+      if (camera_ray.segment_distance > 0.0f)
       {
-        const glm::vec3 near_point = glm::vec3(near_h) / near_h.w;
-        const glm::vec3 far_point = glm::vec3(far_h) / far_h.w;
-        const glm::vec3 ray = far_point - near_point;
+        const glm::vec3 near_point = camera_ray.near_origin;
+        const glm::vec3 ray =
+            camera_ray.direction * camera_ray.segment_distance;
         if (std::abs(ray.y) > 1e-6f)
         {
           const float t = (sea_plane_y - near_point.y) / ray.y;
