@@ -7312,3 +7312,31 @@ Artifacts: [M542 flight report](../../bin/suite_reports/engine_refactor/m542_wor
 [source summary](../../bin/suite_reports/engine_refactor/m542_world_column_source_trace_20261011.json),
 [perf log](../../bin/logs/perf_20261011-221531_1944.jsonl), INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-221528.1944`.
+
+### M543 - adaptive ready-result batch validation (2026-10-11)
+
+M543 repeated the visible 600-second M335 path on the current Release after
+the fixed four-result selection cap was replaced by the current call's
+`max_slice_applies` bound. The 4/5/6 ms time budgets, ranking, and requeue
+behavior stayed in place. It reached 3,088 blocks / 193 chunks at
+`5.19653 blocks/s` and exited normally. The report remains `pass=false` on
+readiness/stop gates. This replay used the same M435 seed after M542 had saved
+additional columns, so its source/cache mix is warmer and not a controlled A/B.
+
+Source trace: 2,005 disk queued/completed pairs and 379 procedural
+miss/commit pairs, with no unmatched/cancelled disk owners. Disk result wait
+was `253 ms` median / `1.72 s` p95; ready-result depth p95 was 66 (M542 124).
+Of 31 periods starting with more than four ready results, five selected more
+than four and two applied six. Seventeen hit the existing time budget before
+finishing their selected batch. This confirms the adaptive limit is active
+without bypassing the frame budget, but the changed persistence/cache state
+prevents attributing the lower queue metrics to the patch alone.
+
+Artifacts: [M543 flight report](../../bin/suite_reports/engine_refactor/m543_world_m435_adaptive_ready_batch_validation_20261011.json),
+[source summary](../../bin/suite_reports/engine_refactor/m543_world_column_source_trace_20261011.json),
+[perf log](../../bin/logs/perf_20261011-223542_35856.jsonl), INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-223537.35856`.
+
+Next: capture-disabled M335 with no source trace and host CPU sampling, then a
+long-distance M335 run if frame cost remains acceptable. Keep the current
+source-trace reports separate from clean performance measurements.

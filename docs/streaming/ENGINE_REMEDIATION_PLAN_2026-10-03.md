@@ -8489,11 +8489,53 @@ Artifacts: [M542 flight report](../../bin/suite_reports/engine_refactor/m542_wor
 [perf JSONL](../../bin/logs/perf_20261011-221531_1944.jsonl), and INFO trace
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-221528.1944`.
 
-Next implementation candidate: let the ready-load ranker select up to the
-existing adaptive `max_slice_applies` limit (4/6/10 by frame time) instead of
-hard-capping every tick at four. Preserve the existing 4/5/6 ms apply budgets,
-focus/age ranking, cancellation, and requeue behavior. This should add service
-only when the current budget leaves room. Build Release and compare a matched
-source-trace replay before considering a larger quota or worker-count change.
-Then repeat the capture-disabled M335 lane under quiet host conditions and keep
-pixel evidence distinct from readiness proxies.
+Implemented in `21cda2fc`: let the ready-load ranker select up to the caller's
+existing adaptive `max_slice_applies` limit instead of hard-capping every tick
+at four. Preserve the existing 4/5/6 ms apply budgets, focus/age ranking,
+cancellation, and requeue behavior. M543 exercised the change; its warmed-world
+source results are recorded below. The comparison is suggestive, not
+controlled. Next repeat capture-disabled M335 under quieter host conditions,
+then decide whether the source-service gain carries through to long-distance
+streaming. Keep pixel evidence distinct from readiness proxies.
+
+### M543 adaptive ready-result batch validation (2026-10-11)
+
+M543 repeated the visible 600-second M335 path with the Release built from
+`21cda2fc` and `CUBA_WORLD_COLUMN_SOURCE_TRACE=1`. It exited normally
+(`process_rc=0`, 3,088 blocks / 193 westward chunks, 5.19653 blocks/s; 316
+periods, 314 steady). The analyzer still reports `pass=false` for open
+readiness/stop gates. The maximum frame was 622.2 ms; the run's dominant wall
+stage remained swap. No pixel/framebuffer capture was enabled.
+
+This was a warmer replay than M542: M542 had generated and saved additional
+columns to `World_M435_Cold_20261007`. Accordingly M543 saw 2,005 disk
+queued/completed columns and 379 procedural misses/commits (M542: 1,762/524).
+All disk requests completed, with zero unmatched or out-of-range cancellations.
+Disk result-wait median fell `427 -> 253 ms`, p95 remained approximately
+`1.7 s`; ready-result depth p95 fell `124 -> 66` and pending disk columns p95
+fell `31 -> 18`. The disk read p95 also fell `6.44 -> 1.19 ms`, consistent
+with the warmer file/page cache. Because both persistence state and cache
+warmth changed, do not assign the queue/latency difference solely to the code
+change.
+
+The new selection limit was exercised: among 31 periods with more than four
+ready loads, five selected more than four (three batches of eight and two of
+six); two periods applied six. Seventeen of these 31 periods hit the preserved
+time budget and stopped before the selected batch was fully applied. Thus the
+change raises the bounded opportunity for service where the existing count
+limit permits and the current time check allows it; it does not bypass the
+budget. Readiness debt remained (median 40, post-stop 43), while post-stop
+near-focus mesh-missing and visual-hole proxies were zero. This is still not
+pixel evidence or proof of visible correctness.
+
+M543's median fly wall time was `22.87 ms` versus M542's `23.25 ms`, and spike
+count was 17 versus 58, but the source mix, warm cache, and host load are not
+controlled. Treat these as diagnostic observations only. The next comparison
+is capture-disabled M335 without source tracing, with host CPU sampled, using
+the same `World_164` route and Release configuration as M540; the long far
+flight remains required after that check.
+
+Artifacts: [M543 flight report](../../bin/suite_reports/engine_refactor/m543_world_m435_adaptive_ready_batch_validation_20261011.json),
+[source report](../../bin/suite_reports/engine_refactor/m543_world_column_source_trace_20261011.json),
+[perf JSONL](../../bin/logs/perf_20261011-223542_35856.jsonl), and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-223537.35856`.
