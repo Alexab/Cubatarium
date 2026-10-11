@@ -7736,3 +7736,68 @@ Instrumented performance M527: `wall_ms_fly_med=20,78` (`48,1 FPS`),
 
 Подробные команды, параметры probe windows, manifests и артефакты M524–M527
 добавлены в [`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+### M528–M530 follow-up checkpoint — 2026-10-11
+
+Этот checkpoint supersedes статусы и очередность шагов выше, которые были
+составлены по M527.
+
+M528/M529 завершили source-side унификацию screen-ray геометрии и добавили
+bounded event-triggered pixel capture. M529 сохранил 11 no-drawable и 6
+unowned peak slices; все 17 имели same-frame renderer probes, а 11 кадров
+дали по 80 pixel samples с trigger bit 3. Sampled pixels внутри projected
+rect имели depth-tested foreground surface, а не target chunk. Это оставляет
+краткий mesh debt подтверждённым, но его видимость на экране — нет.
+
+M529 дал 250 exact ray/pixel joins на `X=-4800…-4700`: направления совпали до
+`1.5e-6°`, но ray origins расходились только по Y, максимум на `0.8578`
+блока. Найдена phase-skew причина в тестовом harness: `StopPredicate` одновременно
+меняет autopilot camera yaw/pitch и удерживает cruise Y. До M529 он вызывался
+после streaming и до render, поэтому streaming выбирал ремонтные кандидаты по
+иной pose, чем renderer. Коммит `dc2cf72d` перенёс единственный вызов в начало
+кадра, перед input, movement и streaming. M530 повторил visible Release M335
+на том же мире и маршруте: 1 015 игровых секунд, 314 чанков (около 5,13
+блока/с по проекции маршрута), без collision stop; оба обнаруженных препятствия
+были обойдены. В 325 exact joins camera-space origins совпали побитно, а
+максимальная разница направлений составила `1.48e-6°`. Stop-tail сохранил
+readiness debt 37 при нулевых mesh-missing и visual-hole proxy.
+
+Актуальное состояние lanes после M530:
+
+| Lane | Status | Evidence / remaining closure |
+|---|---|---|
+| M335 route repeatability | **PASS** | M527–M530 завершили 5 000+ блоков no-teleport примерно при 5.0–5.2 blocks/s. M530 обошёл оба препятствия и сохранил line tracking. |
+| Source/build manifest | **PASS** | M530 manifest указывает commit `dc2cf72d`, Release, EXE SHA-256 `d46a3bd053e10d8ba31cd44f5125f786666fbeda350166572642e0edcf566a3c`; приложение завершилось с rc=0. Checkout имел только документальные изменения. |
+| Camera-band mesh coverage | **OPEN / FAIL** | M530: 13 no-drawable и 9 unowned peak slices. Визуальные/жизненные трассы есть, но demand transitions не имели `frame_epoch`; следующий trace добавляет эту связь для проверки handoff на тех же кадрах. |
+| Pixel-level renderer defect | **UNPROVEN** | 120/2 900 dark M530 samples имели valid opaque depth и visible MDI pass, voxel DDA gaps — 0. В 76 sampled projected rectangles только один sample совпал с target depth; sparse probes не исключают несэмплированные пустоты. |
+| Ray/pose parity | **PASS (source ray)** | M530: 325 exact joins, origin delta равен нулю по всем осям; max direction delta `1.48e-6°`. Это проверяет геометрию source rays, но не равенство residency при выборке/отрисовке. |
+| Water/fluid | **OPEN; not reproduced** | Текущий M335 профиль не был под водой; не менять fluid path по unrelated readiness counters. |
+| Stop-tail convergence | **FAIL** | M530 оставил readiness debt 37, `chunk_not_ready` median/end 37, при zero mesh-missing и zero visual-hole proxy; readiness пока не локализован как визуальный дефект. |
+| Performance | **OPEN** | M530 forensic run: median fly wall `23.85 ms`, stream phase `10.21 ms`, с tracing/captures; это не clean baseline. Нужен capture-disabled Release M335 после correctness fix. |
+| New-world lane | **SECONDARY / OPEN** | M525 short cold-world run оставил readiness/performance failure; повторять после подтверждённого значимого fix. |
+
+Новый порядок завершения:
+
+1. Проверить M530 в текущих рендерах/мире только по пиксельным свидетельствам:
+   dark samples имеют глубину и MDI pass, поэтому readiness и `luma < 32` сами
+   по себе не являются доказательством пустого чанка.
+2. Собрать Release с `demand_transition_trace.frame_epoch`, затем повторить
+   visible M335 на `World_164`. Сопоставить demand transition, mesh lifecycle,
+   first-mesh frontier и peak slice в одном кадре для `cx=-172/-173`, `cy=3/4`
+   и новых peak координат M530. Проверить incarnation/revision при публикации
+   и наличие реального mesh-work owner в момент пика.
+3. Если текущая сетка probes оставляет двусмысленность, выбирать пиксели
+   целенаправленно внутри projected rect. Учитывать, что opaque UCube DDA не
+   моделирует cutout/non-cube и прозрачные поверхности.
+4. Исправить подтверждённый owner/handoff invariant, не маскировать его
+   quota/gate. Повторить ограниченный same-X trace и полный M335.
+5. После correctness fix выполнить capture-disabled Release M335 как
+   performance baseline; отдельно измерить streaming, meshing, publication и
+   scene/render cost.
+6. После значимых streaming/renderer changes повторять короткий cold-world
+   маршрут на новом seed как вторичную lane. M335 остаётся главным критерием.
+
+M528–M530 результаты и точные команды документированы в
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md). Новая
+frame-epoch demand-трасса — диагностическое средство; она не меняет streaming
+policy и не считается исправлением рендер-дефекта до подтверждения инварианта.

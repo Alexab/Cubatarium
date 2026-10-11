@@ -6530,3 +6530,185 @@ $env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
 $env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m527_world164_camera_space_ray_20261011 --report bin/suite_reports/engine_refactor/m527_world164_camera_space_ray_20261011.json --process-timeout 1800
 ```
+
+### M528 — renderer-origin streaming ray and camera-band follow-up (2026-10-11)
+
+M528 changed the streaming screen-ray selector to use the same
+`ScreenRayTransform`/`CameraSpaceRay` helper and camera-origin policy as the
+renderer. It records the streaming origin, direction, near distance, and
+perspective mode in the trace. The visible no-teleport M335 route completed
+5 008 blocks / 313 chunks at about `5.20 blocks/s`; `process_rc=0`, but the
+analyzer failed mesh-coverage, stale-visual-delta, and stop-convergence gates.
+This is a readiness result, not proof of an empty framebuffer region.
+
+At the two repeated frontier bands, `world_streaming_phase_ms` reached roughly
+38 ms and `mesh_emerge_prep_ms` roughly 16 ms. The unowned camera-band maximum
+was recorded at `X=-2754`, but the fixed pixel window was near `X=-4750`, so the
+two signals could not be joined in the same frame. The route also had 15
+whole-route near-focus mesh-miss periods, zero mid-corridor periods, zero
+stop-tail pixel-proxy holes, and readiness debt of 37 at stop. The stop debt
+does not establish visible geometry loss.
+
+At `X=-4750`, 300 exact coordinate joins compared streaming rays with pixel
+probes. M528 had no exact renderer camera-space ray fields yet; the fallback
+comparison used the raw camera position and depth line. Its 93 dark samples all
+had valid opaque depth and a visible MDI pass. Do not treat dark RGB or the
+whole-focus readiness counters as a hole verdict.
+
+Release source: commit `4c260eab`; executable SHA-256
+`FA28DBAF391F6BD006ED8ED706549B41BBAD0CD4327BAFB81A2C42B3FC728428`.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_visual_coverage_20261011.json)
+- [camera-band join](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_camera_band_join_20261011.json)
+- [ray parity](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_ray_parity_20261011.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_pixel_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-123113_44944.jsonl)
+- [targeted frames](../../bin/flight_captures/m528_world164_streaming_camera_origin_20261011)
+
+#### Exact M528 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m528_world164_streaming_camera_origin_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m528_world164_streaming_camera_origin_20261011 --report bin/suite_reports/engine_refactor/m528_world164_streaming_camera_origin_20261011.json --process-timeout 1800
+```
+
+### M529 — bounded peak pixels and exact renderer ray witness (2026-10-11)
+
+M529 added renderer `CameraSpaceRay` origin/direction to each pixel probe and
+bounded event-triggered pixel capture for camera-band peaks, with a process
+limit of 24 frames. This let the fixed `X=-4800…-4700` pixel window coexist
+with peak capture elsewhere on the route.
+
+M335 completed 5 008 blocks / 313 chunks at about `5.20 blocks/s`, with source
+commit `d8ccd4c6`, Release executable SHA-256
+`2F5F7F062FBBBB34373FCA00EA30F0C4FEE6730C20228BED73C261FEF5296911`, and
+`process_rc=0`. The report's route gate passed; the full analyzer was `pass=false`
+because stop-tail readiness/debt gates did not converge. Mid-corridor
+near-focus miss count was zero. `post_stop_visual_holes_max=0` while
+`post_stop_readiness_debt_max=37` and `post_stop_mesh_missing_max=0`; those
+readiness signals remain distinct from pixel evidence.
+
+The peak instrumentation worked: 11 no-drawable and 6 unowned peak-slice
+records, with same-frame peak render probes. Eleven peak frames triggered 880
+renderer pixel records (`trigger_flags` bit 3), despite lying outside the
+fixed capture X window. Sampled coordinates inside the missing slices'
+projected rectangles had depth-tested foreground surfaces; none of those
+sampled depths belonged to the target chunk. This leaves those transient
+mesh misses unproven as visible holes; sparse sample coverage cannot exclude
+an unsampled gap.
+
+In the target window, 250 ray/pixel coordinates joined. Renderer and streaming
+directions matched within `1.5e-6°` at worst. Their camera-space origins
+differed only in Y, with median `0.1273` block and maximum `0.8578` block. The
+flight harness explains this phase skew: `StopPredicate` also changes
+autopilot orientation and enforces cruise Y, and `WindowManager::Run` called it
+after streaming and before rendering (and again after the frame). Thus the
+streaming repair selector could see a previous camera pose while the renderer
+used the updated pose. Commit `dc2cf72d` moves that callback to one invocation
+at frame start, before input, movement, and streaming. M530 is validating this
+change on the same route.
+
+M529 instrumented timing is not a clean performance baseline. In the repeated
+`X=-2900…-2500` band, median wall time was 33.94 ms and median streaming phase
+20.76 ms. For `X=-4300…-3900`, those medians were 37.27 ms and 24.56 ms. The
+same bands in M528 were 32.59/19.51 ms and 33.44/18.99 ms, respectively; two
+runs are not enough to attribute this difference to code.
+
+Artifacts:
+
+- [report](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011_visual_coverage.json)
+- [camera-band join](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011_camera_band_join.json)
+- [ray parity](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011_ray_parity.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011_pixel.json)
+- [perf JSONL](../../bin/logs/perf_20261011-130700_43232.jsonl)
+- [targeted frames](../../bin/flight_captures/m529_world164_bounded_peak_capture_20261011)
+
+#### Exact M529 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m529_world164_bounded_peak_capture_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m529_world164_bounded_peak_capture_20261011 --report bin/suite_reports/engine_refactor/m529_world164_bounded_peak_capture_20261011.json --process-timeout 1800
+```
+
+### M530 — pre-streaming autopilot pose parity
+
+Visible no-teleport M335 повторил M529 после `dc2cf72d`, который вызывает
+stateful `StopPredicate` один раз в начале кадра, до input, movement и
+streaming. Параметры мира и маршрута оставлены прежними.
+
+Результат: `process_rc=0`, 1 015 игровых секунд и 314 чанков вдоль маршрута
+(около 5,13 блока/с по продольной проекции на 980-секундный fly phase).
+Столкновение не остановило полёт: obstacle avoidance выполнил два обхода из
+двух, без replans и plan failures. Line tracking закончил с боковым отклонением
+`0.0154` блока. Анализатор пометил run `pass=false` из-за stop-tail и ряда
+стриминговых/performance gates, а не из-за route/process failure.
+
+Исправление устранило фазовый сдвиг луча: на полном маршруте 325 exact
+renderer/streaming joins имели нулевое origin delta по X/Y/Z; максимальная
+разница направлений — `1.48e-6°`. В target band `X=-4850…-4650` было 275 exact
+joins. Это подтверждает совпадение геометрии ray origins, но не гарантирует
+одинаковую chunk residency между streaming и render.
+
+Сохранились 13 no-drawable и 9 unowned camera-band peak slices. Из 76 sampled
+projected rectangles с пиксельными пробами только одна проба совпала с target
+depth; поэтому transient mesh miss остаётся наблюдаемым, но видимая дыра не
+доказана. Среди 2 900 renderer pixels было 120 с luma `<32`; все 120 имели
+opaque depth и видимый MDI pass, а voxel DDA gaps были равны нулю. Это не
+похоже на пропуск самого draw call, но редкая сетка проб не исключает локальную
+ошибку между sample points. Stop-tail сохранил readiness debt 37 и
+`chunk_not_ready` median/end 37 при нулевых mesh-missing и visual-hole proxy.
+
+11 sparse capture snapshots представлены 22 PNG (`frame_NNN.png` и
+`frame_NNN_front.png`); пары идентичны побайтно. Это проверка буферов самого
+приложения, не desktop compositor. `wall_ms_fly_med=23.85` и
+`world_streaming_phase_ms=10.21` получены с активными forensic traces и
+captures, поэтому их нельзя считать performance baseline.
+
+Артефакты:
+
+- [run report](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_visual_coverage.json)
+- [camera-band join](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_camera_band_join.json)
+- [ray parity, target band](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_ray_parity.json)
+- [ray parity, full route](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_ray_parity_full_route.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011_pixel.json)
+- [perf JSONL](../../bin/logs/perf_20261011-133855_37916.jsonl)
+- [sparse frame pairs](../../bin/flight_captures/m530_world164_preupdate_autopilot_20261011)
+
+#### Exact M530 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m530_world164_preupdate_autopilot_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m530_world164_preupdate_autopilot_20261011 --report bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011.json --process-timeout 1800
+```

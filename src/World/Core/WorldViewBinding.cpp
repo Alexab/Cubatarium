@@ -19,6 +19,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -784,6 +785,7 @@ void UWorld::TickWorldStreamingPhase()
   }
 
   AdvanceStreamingFrameEpoch();
+  UJobStageTrace::SetStreamingFrameEpoch(StreamingFrameEpoch);
   Streaming->ResetFrameTiming();
 
   PhysicsTelemetryData.StreamMs = 0.0;

@@ -152,6 +152,9 @@ struct DemandTransitionSpan
   int32_t cx{0};
   int32_t cy{0};
   int32_t cz{0};
+  /// Streaming frame that was active when this lifecycle event was recorded.
+  /// This is separate from world_epoch, which identifies a world generation.
+  uint64_t frame_epoch{0};
   uint64_t world_epoch{0};
   uint64_t incarnation{0};
   uint64_t previous_attempt_id{0};
@@ -855,6 +858,8 @@ public:
   static bool IsVisualChunkWatched(int32_t cx, int32_t cy, int32_t cz);
   static void ForEachWatchedNewest(
       size_t max_n, void (*fn)(const JobStageSpan &, void *), void *ctx);
+  /// Publish the world's current streaming frame for asynchronous demand traces.
+  static void SetStreamingFrameEpoch(uint64_t frame_epoch);
   static void NoteDemandTransition(const DemandTransitionSpan &span);
   static void NoteMeshRevisionBump(DemandTransitionSpan span,
                                    uint64_t revision_before,

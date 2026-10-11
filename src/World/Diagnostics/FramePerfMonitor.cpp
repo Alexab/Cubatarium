@@ -4532,6 +4532,7 @@ void UFramePerfMonitor::Shutdown()
                << UJobStageTrace::DemandTransitionName(sp.kind) << "\""
                << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
                << ",\"cz\":" << sp.cz
+               << ",\"frame_epoch\":" << sp.frame_epoch
                << ",\"world_epoch\":" << sp.world_epoch
                << ",\"incarnation\":" << sp.incarnation
                << ",\"previous_attempt_id\":" << sp.previous_attempt_id

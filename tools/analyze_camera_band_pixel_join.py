@@ -23,6 +23,7 @@ TARGET_KINDS = {
 FRUSTUM_KIND = "view_frustum_coverage_trace"
 FRUSTUM_SUMMARY_KIND = "view_frustum_probe_summary"
 PEAK_RENDER_KIND = "camera_band_peak_render_probe"
+DEMAND_TRANSITION_KIND = "demand_transition_trace"
 
 
 def key_for(frame_epoch: Any, cx: Any, cy: Any, cz: Any) -> tuple[int, int, int, int]:
@@ -309,6 +310,9 @@ def main() -> int:
     pixel_hits_by_chunk: dict[tuple[int, int, int], list[dict[str, Any]]] = defaultdict(list)
     frustum_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     peak_render_probes: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
+    demand_transitions: dict[
+        tuple[int, int, int, int], list[dict[str, Any]]
+    ] = defaultdict(list)
     pixel_frame_stats: dict[int, dict[str, Any]] = {}
     frustum_summaries: dict[int, dict[str, Any]] = {}
     pixel_probe_epochs: set[int] = set()
@@ -325,6 +329,61 @@ def main() -> int:
             if kind in TARGET_KINDS:
                 kind_counts[kind] += 1
                 traces[kind].append(record)
+            elif kind == DEMAND_TRANSITION_KIND:
+                kind_counts[kind] += 1
+                demand_key = key_for(
+                    record.get("frame_epoch", 0), record.get("cx", 0),
+                    record.get("cy", 0), record.get("cz", 0),
+                )
+                demand_transitions[demand_key].append({
+                    "frame_epoch": demand_key[0],
+                    "world_epoch": int(record.get("world_epoch", 0)),
+                    "incarnation": int(record.get("incarnation", 0)),
+                    "event_ms": float(record.get("event_ms", 0.0)),
+                    "event": record.get("event", ""),
+                    "previous_stage": record.get("previous_stage", ""),
+                    "stage": record.get("stage", ""),
+                    "previous_attempt_id": int(
+                        record.get("previous_attempt_id", 0)
+                    ),
+                    "attempt_id": int(record.get("attempt_id", 0)),
+                    "had_active_attempt": bool(
+                        record.get("had_active_attempt", 0)
+                    ),
+                    "has_active_attempt": bool(
+                        record.get("has_active_attempt", 0)
+                    ),
+                    "retained_awaiting_successor": bool(
+                        record.get("retained_awaiting_successor", 0)
+                    ),
+                    "desired_geom_rev": int(record.get("desired_geom_rev", 0)),
+                    "published_geom_rev": int(
+                        record.get("published_geom_rev", 0)
+                    ),
+                    "desired_light_rev": int(
+                        record.get("desired_light_rev", 0)
+                    ),
+                    "published_light_rev": int(
+                        record.get("published_light_rev", 0)
+                    ),
+                    "mesh_revision_before": int(
+                        record.get("mesh_revision_before", 0)
+                    ),
+                    "mesh_revision_after": int(
+                        record.get("mesh_revision_after", 0)
+                    ),
+                    "mesh_owner_flags": int(record.get("mesh_owner_flags", 0)),
+                    "mesh_dirty_queue_kind": int(
+                        record.get("mesh_dirty_queue_kind", 0)
+                    ),
+                    "mesh_dirty_queue_index": int(
+                        record.get("mesh_dirty_queue_index", -1)
+                    ),
+                    "mesh_dirty_queue_size": int(
+                        record.get("mesh_dirty_queue_size", 0)
+                    ),
+                    "result": int(record.get("result", 0)),
+                })
             elif kind == FRUSTUM_KIND:
                 frustum_probe_epochs.add(int(record.get("frame_epoch", 0)))
                 frustum_key = key_for(
@@ -525,6 +584,13 @@ def main() -> int:
                 if same_frame_pixels is not None else None
             )
             same_frame_frustum_summary = frustum_summaries.get(target_key[0])
+            target_incarnation = int(trace.get("incarnation", 0))
+            target_world_epoch = int(trace.get("world_epoch", 0))
+            same_frame_demand_transitions = [
+                event for event in demand_transitions.get(target_key, [])
+                if event["incarnation"] == target_incarnation
+                and event["world_epoch"] == target_world_epoch
+            ]
             joined.append({
                 "frame_epoch": target_key[0],
                 "pixel_probe_frame_present": target_key[0] in pixel_probe_epochs,
@@ -543,10 +609,16 @@ def main() -> int:
                     int(trace.get("camera_z", 0)),
                 ],
                 "non_air_blocks": int(trace.get("non_air_blocks", 0)),
+                "incarnation": target_incarnation,
+                "world_epoch": target_world_epoch,
                 "mesh_dirty_queue_kind": int(trace.get("mesh_dirty_queue_kind", 0)),
                 "mesh_work_owner_flags": int(trace.get("mesh_work_owner_flags", 0)),
                 "demand_geom_rev": int(trace.get("desired_geom_rev", 0)),
                 "published_geom_rev": int(trace.get("published_geom_rev", 0)),
+                "same_frame_demand_transition_count": len(
+                    same_frame_demand_transitions
+                ),
+                "same_frame_demand_transitions": same_frame_demand_transitions,
                 "same_frame_voxel_pixel_hit_count": len(matched),
                 "pixel_hits": matched,
                 "route_voxel_pixel_hit_count": len(route_hits),
@@ -592,14 +664,16 @@ def main() -> int:
     )
 
     result = {
-        "schema": "camera_band_pixel_join.v10",
+        "schema": "camera_band_pixel_join.v11",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": (
             "exact hit joins use same frame_epoch and voxel-DDA chunk; "
             "screen coverage joins sparse pixels to same-frame projected "
             "top-left chunk-AABB rectangles; route hit summaries join exact "
-            "voxel-hit chunk coordinates across frames; global/air distance "
-            "fog factors use same-frame captured uniforms and opaque depth; "
+            "voxel-hit chunk coordinates across frames; demand transitions "
+            "join by same frame_epoch, chunk, world_epoch, and incarnation; "
+            "global/air distance fog factors use same-frame captured uniforms "
+            "and opaque depth; "
             "pixel-to-fog-color distance compares output RGB with captured fog RGB"
         ),
         "pixel_fog_model": {
@@ -661,6 +735,7 @@ def main() -> int:
             for kind, rows in joined_by_kind.items()
         },
         "limitations": [
+            "Demand-transition frame_epoch is the latest streaming epoch stamped by the main thread; asynchronous events near a frame boundary can be attributed to an adjacent epoch.",
             "A voxel DDA hit does not prove the sampled texel should be opaque; cutout geometry may intentionally reveal background.",
             "A nearer depth surface may occlude the target chunk; compare depth and voxel-hit distances and chunk coordinates.",
             "The pixel probes are sparse and only unmatched sampled rays are inconclusive.",

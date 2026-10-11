@@ -16,6 +16,7 @@ namespace
 
 std::atomic<uint64_t> LatestCameraBandPeakFrameEpoch{0};
 std::atomic<uint64_t> LatestScreenRayTraceFrameEpoch{0};
+std::atomic<uint64_t> LatestStreamingFrameEpoch{0};
 
 struct Ring
 {
@@ -662,14 +663,25 @@ void UJobStageTrace::NoteDemandTransition(const DemandTransitionSpan &span)
   {
     return;
   }
+  DemandTransitionSpan stamped_span = span;
+  if (stamped_span.frame_epoch == 0)
+  {
+    stamped_span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+  }
   auto &r = GetDemandTransitionRing();
   std::lock_guard<std::mutex> lock(r.mu);
-  r.slots[r.write % kDemandTransitionRingCapacity] = span;
+  r.slots[r.write % kDemandTransitionRingCapacity] = stamped_span;
   ++r.write;
   if (r.count < kDemandTransitionRingCapacity)
   {
     ++r.count;
   }
+}
+
+void UJobStageTrace::SetStreamingFrameEpoch(uint64_t frame_epoch)
+{
+  LatestStreamingFrameEpoch.store(frame_epoch, std::memory_order_relaxed);
 }
 
 void UJobStageTrace::NoteMeshRevisionBump(
@@ -687,6 +699,11 @@ void UJobStageTrace::NoteMeshRevisionBump(
   span.mesh_revision_after = revision_after;
   span.mesh_revision_bump_reason = reason;
   span.mesh_owner_flags = owner_flags;
+  if (span.frame_epoch == 0)
+  {
+    span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+  }
   span.event_ms = std::chrono::duration<double, std::milli>(
                       std::chrono::steady_clock::now().time_since_epoch())
                       .count();
