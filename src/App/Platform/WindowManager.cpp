@@ -791,6 +791,21 @@ void UWindowManager::Run()
       World->SetWallFrameDelta(DeltaTime);
     }
 
+    // Flight-sim callbacks also advance autopilot state (camera pose and
+    // synthetic key state). Apply that state before movement and streaming so
+    // the renderer and streaming probes observe the same camera for this
+    // frame. StopPredicate is therefore invoked once per frame, here.
+    bool stop_before_update = false;
+    {
+      UFrameStageWatchdog::Scope stage("window.stop_predicate");
+      stop_before_update = StopPredicate && StopPredicate();
+    }
+    if (stop_before_update)
+    {
+      IsRunning = false;
+      break;
+    }
+
     // Input processing
     const auto input_begin = std::chrono::high_resolution_clock::now();
     {
@@ -843,19 +858,6 @@ void UWindowManager::Run()
                 std::chrono::high_resolution_clock::now() - t_autosave)
                 .count());
       }
-    }
-
-    // Flight-sim stop: skip a final heavy render once the harness predicate
-    // fires.
-    bool stop_before_render = false;
-    {
-      UFrameStageWatchdog::Scope stage("window.stop_predicate");
-      stop_before_render = StopPredicate && StopPredicate();
-    }
-    if (stop_before_render)
-    {
-      IsRunning = false;
-      break;
     }
 
     // Rendering
@@ -1018,15 +1020,6 @@ void UWindowManager::Run()
                                        frame_wall_ms);
     }
 
-    bool stop_after_frame = false;
-    {
-      UFrameStageWatchdog::Scope stage("window.stop_predicate");
-      stop_after_frame = StopPredicate && StopPredicate();
-    }
-    if (stop_after_frame)
-    {
-      IsRunning = false;
-    }
   }
 
   UFramePerfMonitor::Shutdown();
