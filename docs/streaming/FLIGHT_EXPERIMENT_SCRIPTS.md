@@ -6958,3 +6958,77 @@ JSONL for `movement_speed`, `visible_black_focus_raw_n`,
 if a fresh scan occurs after stopping; an unchanged raw count with zero VB scan
 time means the validation failed. Preserve any remaining readiness debt as a
 separate finding from the visible-black scan result.
+
+### M535 result
+
+M535 completed with `process_rc=0`, 4,800 blocks traveled, and 5.19653
+blocks/s median. It ran with no forensic capture variables, so it is not pixel
+evidence. The final five period rows all had a nonzero `prep_refresh_vb_ms`,
+proving that the stop-mode cooldown no longer freezes. The final counts were
+`visible_black_focus_raw_n=6`, `visible_black_no_ticket_n=0`,
+`visible_black_stalled_n=3`, `visible_black_stale_lit_n=0`, and
+`focus_missing_mesh=0`. `unfinished_visual=37` remained; it is a broad
+readiness-debt count, not an observed framebuffer hole. The route did not
+reach the 5,000-block far-flight proxy. `nextcloud` and `OneDrive` were using
+about 4.4 CPU-seconds/second in a two-second system sample during this run, so
+do not compare its performance medians with the clean M534 baseline.
+
+M533's final fresh census had `no_ticket=6`, `legal_dark=6`,
+`stale_lit=0`, `fully_dark_no_ticket=0`, and `fully_dark_stalled=1`. Thus the
+raw no-ticket metric includes legal cave darkness. Current flight analysis
+also reports `post_stop_visible_black_no_ticket_excluding_legal_dark_max`;
+that is the field used by phase gates. M533's final focus-ring census had 128
+camera-band resident solid slices, all satisfying, with zero camera-band
+no-drawable, pending-work and unowned slices. Its broader focus/water band had
+127 solid slices with no drawable mesh, 23 unowned, while `unfinished_visual`
+was 33. Keep these scopes separate when reading reports.
+
+Artifacts:
+
+- M535 report: `bin/suite_reports/engine_refactor/m535_world164_stop_census_cadence_20261011.json`
+- M535 perf: `bin/logs/perf_20261011-183557_26004.jsonl`
+- M534 clean baseline: `bin/suite_reports/engine_refactor/m534_world164_capture_disabled_perf_baseline_20261011.json`
+- M533 camera-band/pixel/owner forensics are linked from the M533 checkpoint in the remediation plan.
+
+### M536 targeted far-end evidence pass
+
+Run only when the background sync load is quiet enough to reach the established
+far-flight endpoint. Keep the M335 route profile exactly the same; capture and
+trace only the final `x=-4900..-4800` window. Remove any prior experiment env
+vars first, then enable the following bounded diagnostics:
+
+```powershell
+@(
+  'CUBA_VISUAL_BLACK_TRACE',
+  'CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X',
+  'CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X',
+  'CUBA_FLIGHT_CAPTURE_DIR',
+  'CUBA_FLIGHT_CAPTURE_INTERVAL_SEC',
+  'CUBA_FLIGHT_CAPTURE_MIN_X',
+  'CUBA_FLIGHT_CAPTURE_MAX_X',
+  'CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP'
+) | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4900'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m536_world164_far_end_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4900'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m536_world164_far_end_20261011 --report bin/suite_reports/engine_refactor/m536_world164_far_end_20261011.json --process-timeout 1800
+```
+
+Analyze with the existing M533 tools, changing the perf/report prefix and
+window bounds to `-4900..-4800`: visual coverage, camera-band/pixel join,
+renderer pixel trace and target/full-route screen-ray parity. Inspect dark
+pixel `depth_surface` and `source_face` light/revision state, then join each
+fresh VB trace coordinate to relight/flow ownership and queue age. A valid
+streaming/render defect requires a dark or missing pixel mapped to the same
+target chunk; a nearby black census row alone is insufficient.

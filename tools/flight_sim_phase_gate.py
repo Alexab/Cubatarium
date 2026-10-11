@@ -372,8 +372,9 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("stop_dark_face_stale_near_end", "lt", 100.0),
         ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
-        # Era17 P1: hard heal — no orphan VisibleBlack; stalled queue=0.
-        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        # Exclude equal-revision legal dark geometry; raw no-ticket also counts
+        # unowned cave darkness, which is not orphan repair work.
+        ("post_stop_visible_black_no_ticket_excluding_legal_dark_max", "le", 0.0),
         # Stalled (=Contains without Dirty yet) is mid-queue; report-only.
         # ("post_stop_visible_black_stalled_max", "le", 0.0),
         # Soft 70: land density + remesh tax.
@@ -396,7 +397,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("stop_focus_dirty_delta", "le", 8.0),
         ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
-        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        ("post_stop_visible_black_no_ticket_excluding_legal_dark_max", "le", 0.0),
         # Era18: stalled (=Contains before Dirty/PendingLight lands) flickers
         # mid-heal on idle (stalled_max=9 with faces=0 / no_ticket=0) — report-only.
         # ("post_stop_visible_black_stalled_max", "le", 0.0),
@@ -612,7 +613,7 @@ PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("cruise_fifo_dropped_delta", "le", 12.0),
         ("cruise_admission_mode3_share", "le", 0.60),
         ("stop_dark_face_near_end", "lt", 500.0),
-        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        ("post_stop_visible_black_no_ticket_excluding_legal_dark_max", "le", 0.0),
         ("emerge_spike_frac", "le", 0.08),
         ("mesh_emerge_ms", "le", 25.0),
         ("prep_untagged_gap_med", "le", 35.0),

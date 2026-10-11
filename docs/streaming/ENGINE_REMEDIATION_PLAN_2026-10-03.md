@@ -8025,3 +8025,68 @@ Next steps:
 4. Keep the M335 deterministic route primary. After a confirmed correctness fix,
    run the short new-seed lane to compare persisted-load and procedural-generation
    costs; do not use that lane to replace the repeatable route.
+
+### M535 validation and correction of readiness gates (2026-10-11)
+
+M535 used the same visible, no-teleport M335 profile after the cooldown fix.
+The flight process completed successfully (`process_rc=0`), traveled 4,800
+blocks (the runner's 4,500-block minimum passed), and kept the median speed at
+5.20 blocks/s with eye Y fixed at 70. This was shorter than the 5,000-block
+far-flight proxy. During the run, `nextcloud` and `OneDrive` together consumed
+about 4.4 CPU-seconds per second in a two-second process sample, so its wall,
+streaming and render timings are **load-contaminated** and are not a valid
+performance comparison with M534.
+
+The cadence fix is validated: all five final stop periods ran a fresh VB census
+(`prep_refresh_vb_ms` was nonzero), and the raw count changed between 5 and 6.
+The final no-ticket count was zero, while three dark columns were classified
+as stalled tickets. The near-camera dark-face query and near-focus missing-mesh
+count were zero at stop. Since M535 ran without per-column trace or pixel
+capture, the three stalled columns still need owner and framebuffer attribution.
+The stop gate's prior `no-ticket=7` in M534 was a frozen old sample; it must not
+be interpreted as a terminal world state.
+
+M533's forensic stop sample explains a second gate error. At focus `cx=-305`,
+the fresh census counted 7 dark columns: 6 were `LegalDarkNoRepair`, 1 was
+`FullyDarkStalledTicket`, and both `StaleDarkWithLitField` and
+`FullyDarkNoTicket` were zero. Thus raw `visible_black_no_ticket_n=6` included
+six legal, equal-revision dark slices. The phase gate requiring raw no-ticket
+to reach zero conflates unowned legal darkness with missing repair work. A
+new reported metric, `post_stop_visible_black_no_ticket_excluding_legal_dark_max`,
+subtracts the equal-revision legal-dark subset and is now used by stop/phase
+gates; the original raw count remains available for continuity.
+
+M533 also measured the camera band's scope independently from the broader focus
+ring. At stop, all 128 resident solid slices in the camera band were satisfying,
+with zero camera-band no-drawable, pending-work or unowned slices. The broader
+vertical/water band had 398 resident solid slices, 127 without drawable meshes,
+23 unowned and 37 unresolved-without-mesh-work; `unfinished_visual` was 33.
+This confirms the global readiness-debt metric includes work outside the
+camera-height band and is not itself proof of a framebuffer hole. It remains a
+streaming-completeness/performance signal; stop-line correctness must use a
+camera-band or direct pixel witness.
+
+In the M533 pixel probe window, dark samples had valid depth and visible opaque
+MDI surfaces; inspected dark pixels had matching mesh/field light revisions and
+sky light 1. These samples do not show missing chunks or stale baked light.
+They do not cover the last 80 blocks of the route and do not rule out a separate
+far-end defect. The low-luminance pixels are therefore not treated as a proven
+streaming/rendering regression.
+
+Next steps:
+
+1. Run a targeted M335 forensic pass over the established far-end interval
+   `x=-4900..-4800`, with `visual_black_trace`, camera-band pixel/ray probes and
+   sparse front-after-swap captures. Preserve the same route parameters; wait
+   for cloud-sync CPU load to subside before using the run as a performance
+   sample.
+2. Join any dark/stalled census columns to their exact owner/revision records
+   and target pixels. Only stale-lit or missing camera-band surfaces with a
+   matching pixel witness justify a repair-policy change.
+3. Keep broad `unfinished_visual` debt and raw legal-dark counts in reports,
+   but do not use them alone to fail visible completeness. Revisit a separate
+   bounded readiness target for non-camera-band water/terrain only if the
+   targeted evidence shows those slices enter the rendered view.
+4. After the visible correctness lane is green, run the clean capture-disabled
+   M335 performance baseline under quiet system load, then the planned short
+   new-seed persistence/generation lane.

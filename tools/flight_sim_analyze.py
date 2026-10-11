@@ -971,6 +971,25 @@ def analyze(
     post_stop_visible_black_no_ticket_max = (
         max(vis_black_no_ticket_stop) if vis_black_no_ticket_stop else None
     )
+    # Legal, equal-revision dark geometry (for example an underground cave
+    # slice) is intentionally unowned. Do not fail the orphan-work gate for
+    # those columns. Older perf schemas without the attribution field retain
+    # the legacy raw count as a conservative fallback.
+    no_ticket_excluding_legal_dark = [
+        max(
+            0.0,
+            float(r.get("visible_black_no_ticket_n") or 0)
+            - float(r.get("visible_black_legal_dark_n") or 0),
+        )
+        for r in stop_tail
+        if "visible_black_no_ticket_n" in r
+        and "visible_black_legal_dark_n" in r
+    ]
+    post_stop_visible_black_no_ticket_excluding_legal_dark_max = (
+        max(no_ticket_excluding_legal_dark)
+        if no_ticket_excluding_legal_dark
+        else post_stop_visible_black_no_ticket_max
+    )
     post_stop_visible_black_progress_min = (
         min(vis_black_progress_stop) if vis_black_progress_stop else None
     )
@@ -1920,8 +1939,8 @@ def analyze(
         and post_stop_black_sticky_max <= 0.5,
         # Era16 TD-052: report-only in P0 (hard gate added in P1).
         "post_stop_visible_black_no_ticket_zero": (
-            post_stop_visible_black_no_ticket_max is None
-            or post_stop_visible_black_no_ticket_max <= 0.5
+            post_stop_visible_black_no_ticket_excluding_legal_dark_max is None
+            or post_stop_visible_black_no_ticket_excluding_legal_dark_max <= 0.5
         ),
         # Era17: report-only in P0 (hard stalled gate in P1).
         "post_stop_visible_black_stalled_zero": (
@@ -2130,6 +2149,10 @@ def analyze(
         },
         "stop_gate_signal_semantics": {
             "post_stop_missing_zero": "readiness-debt count is zero",
+            "post_stop_visible_black_no_ticket_zero": (
+                "visible-black no-ticket count excluding equal-revision legal "
+                "dark geometry is zero; older schemas fall back to raw count"
+            ),
             "post_stop_effective_holes_zero": (
                 "composite unresolved-state rate is at most 0.05"
             ),
@@ -2348,6 +2371,9 @@ def analyze(
             "demand_stop_converged": post_stop_demand_stop_converged,
             "post_stop_visible_black_max": post_stop_visible_black_max,
             "post_stop_visible_black_no_ticket_max": post_stop_visible_black_no_ticket_max,
+            "post_stop_visible_black_no_ticket_excluding_legal_dark_max": (
+                post_stop_visible_black_no_ticket_excluding_legal_dark_max
+            ),
             "post_stop_visible_black_progress_min": post_stop_visible_black_progress_min,
             "post_stop_visible_black_stalled_max": post_stop_visible_black_stalled_max,
             "post_stop_missing_max": post_stop_missing_max,
