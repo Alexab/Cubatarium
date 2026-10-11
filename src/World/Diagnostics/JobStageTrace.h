@@ -61,6 +61,8 @@ struct JobStageSpan
   int32_t cx{0};
   int32_t cy{0};
   int32_t cz{0};
+  /// Streaming frame active when this worker/GPU lifecycle event was recorded.
+  uint64_t frame_epoch{0};
   /// Internal async mesh job identity, distinct from render-demand attempt ID.
   uint64_t job_id{0};
   uint64_t incarnation{0};

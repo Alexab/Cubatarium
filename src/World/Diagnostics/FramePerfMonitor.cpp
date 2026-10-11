@@ -4484,6 +4484,7 @@ void UFramePerfMonitor::Shutdown()
         (*c->out) << "{\"kind\":\"" << c->kind << "\""
                   << ",\"cx\":" << sp.cx << ",\"cy\":" << sp.cy
                   << ",\"cz\":" << sp.cz
+                  << ",\"frame_epoch\":" << sp.frame_epoch
                   << ",\"job_id\":" << sp.job_id
                   << ",\"incarnation\":" << sp.incarnation
                   << ",\"attempt_id\":" << sp.attempt_id
@@ -4737,6 +4738,7 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"chunk_content_revision\":"
                  << r.chunk_content_revision
                  << ",\"incarnation\":" << r.incarnation
+                 << ",\"world_epoch\":" << r.world_epoch
                  << ",\"mesh_revision\":" << r.mesh_revision
                  << ",\"exact_frustum_intersects\":"
                  << static_cast<int>(r.renderer_exact_frustum_intersects)

@@ -24,6 +24,9 @@ FRUSTUM_KIND = "view_frustum_coverage_trace"
 FRUSTUM_SUMMARY_KIND = "view_frustum_probe_summary"
 PEAK_RENDER_KIND = "camera_band_peak_render_probe"
 DEMAND_TRANSITION_KIND = "demand_transition_trace"
+VISUAL_LIFECYCLE_KIND = "visual_lifecycle_trace"
+FIRST_MESH_FRONTIER_KIND = "first_mesh_frontier_trace"
+DEMAND_TRANSITION_FRAME_WINDOW = 32
 
 
 def key_for(frame_epoch: Any, cx: Any, cy: Any, cz: Any) -> tuple[int, int, int, int]:
@@ -310,8 +313,14 @@ def main() -> int:
     pixel_hits_by_chunk: dict[tuple[int, int, int], list[dict[str, Any]]] = defaultdict(list)
     frustum_hits: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
     peak_render_probes: dict[tuple[int, int, int, int], list[dict[str, Any]]] = defaultdict(list)
-    demand_transitions: dict[
-        tuple[int, int, int, int], list[dict[str, Any]]
+    demand_transitions_by_chunk: dict[
+        tuple[int, int, int], list[dict[str, Any]]
+    ] = defaultdict(list)
+    lifecycle_by_chunk: dict[
+        tuple[int, int, int], list[dict[str, Any]]
+    ] = defaultdict(list)
+    first_mesh_frontier_by_chunk: dict[
+        tuple[int, int, int], list[dict[str, Any]]
     ] = defaultdict(list)
     pixel_frame_stats: dict[int, dict[str, Any]] = {}
     frustum_summaries: dict[int, dict[str, Any]] = {}
@@ -335,7 +344,7 @@ def main() -> int:
                     record.get("frame_epoch", 0), record.get("cx", 0),
                     record.get("cy", 0), record.get("cz", 0),
                 )
-                demand_transitions[demand_key].append({
+                demand_event = {
                     "frame_epoch": demand_key[0],
                     "world_epoch": int(record.get("world_epoch", 0)),
                     "incarnation": int(record.get("incarnation", 0)),
@@ -383,6 +392,121 @@ def main() -> int:
                         record.get("mesh_dirty_queue_size", 0)
                     ),
                     "result": int(record.get("result", 0)),
+                }
+                demand_transitions_by_chunk[demand_key[1:]].append(demand_event)
+            elif kind == VISUAL_LIFECYCLE_KIND:
+                kind_counts[kind] += 1
+                lifecycle_key = (
+                    int(record.get("cx", 0)), int(record.get("cy", 0)),
+                    int(record.get("cz", 0)),
+                )
+                lifecycle_by_chunk[lifecycle_key].append({
+                    "frame_epoch": int(record.get("frame_epoch", 0)),
+                    "world_epoch": int(record.get("world_epoch", 0)),
+                    "incarnation": int(record.get("incarnation", 0)),
+                    "job_id": int(record.get("job_id", 0)),
+                    "attempt_id": int(record.get("attempt_id", 0)),
+                    "stage": record.get("stage", ""),
+                    "terminal_reason": record.get("terminal_reason", ""),
+                    "queue_reason": int(record.get("queue_reason", 0)),
+                    "created_ms": float(record.get("created_ms", 0.0)),
+                    "stage_ms": float(record.get("stage_ms", 0.0)),
+                    "elapsed_ms": float(record.get("elapsed_ms", 0.0)),
+                    "desired_geom_rev": int(
+                        record.get("desired_geom_rev", 0)
+                    ),
+                    "source_geom_rev": int(record.get("source_geom_rev", 0)),
+                    "published_geom_rev": int(
+                        record.get("published_geom_rev", 0)
+                    ),
+                    "source_light_rev": int(record.get("source_light_rev", 0)),
+                    "published_light_rev": int(
+                        record.get("published_light_rev", 0)
+                    ),
+                    "desired_coverage_gen": int(
+                        record.get("desired_coverage_gen", 0)
+                    ),
+                    "published_coverage_gen": int(
+                        record.get("published_coverage_gen", 0)
+                    ),
+                    "outcome": int(record.get("outcome", 0)),
+                })
+            elif kind == FIRST_MESH_FRONTIER_KIND:
+                kind_counts[kind] += 1
+                frontier_key = (
+                    int(record.get("cx", 0)), int(record.get("cy", 0)),
+                    int(record.get("cz", 0)),
+                )
+                first_mesh_frontier_by_chunk[frontier_key].append({
+                    "frame_epoch": int(record.get("frame_epoch", 0)),
+                    "world_epoch": int(record.get("world_epoch", 0)),
+                    "incarnation": int(record.get("incarnation", 0)),
+                    "attempt_id": int(record.get("attempt_id", 0)),
+                    "active_stage": int(record.get("active_stage", 0)),
+                    "mesh_work_owner_flags": int(
+                        record.get("mesh_work_owner_flags", 0)
+                    ),
+                    "mesh_dirty_queue_index": int(
+                        record.get("mesh_dirty_queue_index", -1)
+                    ),
+                    "mesh_dirty_queue_size": int(
+                        record.get("mesh_dirty_queue_size", 0)
+                    ),
+                    "mesh_dirty_queue_age_frames": int(
+                        record.get("mesh_dirty_queue_age_frames", 0)
+                    ),
+                    "mesh_revision": int(record.get("mesh_revision", 0)),
+                    "desired_geom_rev": int(
+                        record.get("desired_geom_rev", 0)
+                    ),
+                    "published_geom_rev": int(
+                        record.get("published_geom_rev", 0)
+                    ),
+                    "demand_published_geom_rev": int(
+                        record.get("demand_published_geom_rev", 0)
+                    ),
+                    "frontier_scheduled_this_tick": int(
+                        record.get("frontier_scheduled_this_tick", 0)
+                    ),
+                    "frontier_pipeline_inflight": int(
+                        record.get("frontier_pipeline_inflight", 0)
+                    ),
+                    "frontier_pipeline_cap": int(
+                        record.get("frontier_pipeline_cap", 0)
+                    ),
+                    "frontier_soft_defer": int(
+                        record.get("frontier_soft_defer", 0)
+                    ),
+                    "frontier_snapshot_ms": float(
+                        record.get("frontier_snapshot_ms", 0.0)
+                    ),
+                    "frontier_snapshot_budget_ms": float(
+                        record.get("frontier_snapshot_budget_ms", 0.0)
+                    ),
+                    "frontier_tick_elapsed_ms": float(
+                        record.get("frontier_tick_elapsed_ms", 0.0)
+                    ),
+                    "frontier_tick_budget_ms": float(
+                        record.get("frontier_tick_budget_ms", 0.0)
+                    ),
+                    "frontier_snapshot_time_defers": int(
+                        record.get("frontier_snapshot_time_defers", 0)
+                    ),
+                    "frontier_snapshot_refresh_defers": int(
+                        record.get("frontier_snapshot_refresh_defers", 0)
+                    ),
+                    "frontier_snapshot_missing_band_defers": int(
+                        record.get("frontier_snapshot_missing_band_defers", 0)
+                    ),
+                    "frontier_snapshot_dependency_defers": int(
+                        record.get("frontier_snapshot_dependency_defers", 0)
+                    ),
+                    "frontier_snapshot_publication_defers": int(
+                        record.get("frontier_snapshot_publication_defers", 0)
+                    ),
+                    "frontier_snapshot_store_commit_defers": int(
+                        record.get("frontier_snapshot_store_commit_defers", 0)
+                    ),
                 })
             elif kind == FRUSTUM_KIND:
                 frustum_probe_epochs.add(int(record.get("frame_epoch", 0)))
@@ -586,10 +710,66 @@ def main() -> int:
             same_frame_frustum_summary = frustum_summaries.get(target_key[0])
             target_incarnation = int(trace.get("incarnation", 0))
             target_world_epoch = int(trace.get("world_epoch", 0))
-            same_frame_demand_transitions = [
-                event for event in demand_transitions.get(target_key, [])
+            chunk_demand_transitions = [
+                event
+                for event in demand_transitions_by_chunk.get(target_key[1:], [])
                 if event["incarnation"] == target_incarnation
-                and event["world_epoch"] == target_world_epoch
+                and (
+                    target_world_epoch == 0
+                    or event["world_epoch"] == target_world_epoch
+                )
+            ]
+            same_frame_demand_transitions = [
+                event for event in chunk_demand_transitions
+                if event["frame_epoch"] == target_key[0]
+            ]
+            adjacent_frame_demand_transitions = [
+                {
+                    **event,
+                    "frame_epoch_delta": event["frame_epoch"] - target_key[0],
+                }
+                for event in chunk_demand_transitions
+                if 0 < abs(event["frame_epoch"] - target_key[0]) <= 1
+            ]
+            frame_window_demand_transitions = [
+                {
+                    **event,
+                    "frame_epoch_delta": event["frame_epoch"] - target_key[0],
+                }
+                for event in chunk_demand_transitions
+                if abs(event["frame_epoch"] - target_key[0])
+                <= DEMAND_TRANSITION_FRAME_WINDOW
+            ]
+            def lifecycle_matches(event: dict[str, Any]) -> bool:
+                return (
+                    event["incarnation"] == target_incarnation
+                    and (
+                        target_world_epoch == 0
+                        or event["world_epoch"] == target_world_epoch
+                    )
+                )
+
+            frame_window_lifecycle_events = [
+                {
+                    **event,
+                    "frame_epoch_delta": event["frame_epoch"] - target_key[0],
+                }
+                for event in lifecycle_by_chunk.get(target_key[1:], [])
+                if lifecycle_matches(event)
+                and abs(event["frame_epoch"] - target_key[0])
+                <= DEMAND_TRANSITION_FRAME_WINDOW
+            ]
+            frame_window_first_mesh_frontier = [
+                {
+                    **event,
+                    "frame_epoch_delta": event["frame_epoch"] - target_key[0],
+                }
+                for event in first_mesh_frontier_by_chunk.get(
+                    target_key[1:], []
+                )
+                if lifecycle_matches(event)
+                and abs(event["frame_epoch"] - target_key[0])
+                <= DEMAND_TRANSITION_FRAME_WINDOW
             ]
             joined.append({
                 "frame_epoch": target_key[0],
@@ -619,6 +799,31 @@ def main() -> int:
                     same_frame_demand_transitions
                 ),
                 "same_frame_demand_transitions": same_frame_demand_transitions,
+                "adjacent_frame_demand_transition_count": len(
+                    adjacent_frame_demand_transitions
+                ),
+                "adjacent_frame_demand_transitions": (
+                    adjacent_frame_demand_transitions
+                ),
+                "demand_transition_frame_window": (
+                    DEMAND_TRANSITION_FRAME_WINDOW
+                ),
+                "frame_window_demand_transition_count": len(
+                    frame_window_demand_transitions
+                ),
+                "frame_window_demand_transitions": (
+                    frame_window_demand_transitions
+                ),
+                "frame_window_visual_lifecycle_count": len(
+                    frame_window_lifecycle_events
+                ),
+                "frame_window_visual_lifecycle": frame_window_lifecycle_events,
+                "frame_window_first_mesh_frontier_count": len(
+                    frame_window_first_mesh_frontier
+                ),
+                "frame_window_first_mesh_frontier": (
+                    frame_window_first_mesh_frontier
+                ),
                 "same_frame_voxel_pixel_hit_count": len(matched),
                 "pixel_hits": matched,
                 "route_voxel_pixel_hit_count": len(route_hits),
@@ -664,14 +869,16 @@ def main() -> int:
     )
 
     result = {
-        "schema": "camera_band_pixel_join.v11",
+        "schema": "camera_band_pixel_join.v13",
         "perf_jsonl": str(args.perf_jsonl),
         "join_definition": (
             "exact hit joins use same frame_epoch and voxel-DDA chunk; "
             "screen coverage joins sparse pixels to same-frame projected "
             "top-left chunk-AABB rectangles; route hit summaries join exact "
             "voxel-hit chunk coordinates across frames; demand transitions "
-            "join by same frame_epoch, chunk, world_epoch, and incarnation; "
+            "join by frame_epoch window, chunk, and incarnation (plus world_epoch when present); "
+            "worker/GPU lifecycle and first-mesh frontier records join by "
+            "the same identity and frame window; "
             "global/air distance fog factors use same-frame captured uniforms "
             "and opaque depth; "
             "pixel-to-fog-color distance compares output RGB with captured fog RGB"
@@ -736,6 +943,7 @@ def main() -> int:
         },
         "limitations": [
             "Demand-transition frame_epoch is the latest streaming epoch stamped by the main thread; asynchronous events near a frame boundary can be attributed to an adjacent epoch.",
+            "Demand transitions in the +/-32-frame window are temporal context, not proof that the event caused the peak; inspect event_ms, attempt, revision, and owner transitions.",
             "A voxel DDA hit does not prove the sampled texel should be opaque; cutout geometry may intentionally reveal background.",
             "A nearer depth surface may occlude the target chunk; compare depth and voxel-hit distances and chunk coordinates.",
             "The pixel probes are sparse and only unmatched sampled rays are inconclusive.",

@@ -311,10 +311,16 @@ void DispatchCameraBandPeakFrameRecord(const VisualBlackTraceRecord &record,
 
 void UJobStageTrace::Note(const JobStageSpan &span)
 {
+  JobStageSpan stamped_span = span;
+  if (stamped_span.frame_epoch == 0)
+  {
+    stamped_span.frame_epoch =
+        LatestStreamingFrameEpoch.load(std::memory_order_relaxed);
+  }
   auto &r = GetRing();
   {
     std::lock_guard<std::mutex> lock(r.mu);
-    r.slots[r.write % kRingCapacity] = span;
+    r.slots[r.write % kRingCapacity] = stamped_span;
     ++r.write;
     if (r.count < kRingCapacity)
     {
@@ -322,14 +328,15 @@ void UJobStageTrace::Note(const JobStageSpan &span)
     }
   }
   if (!VisualBlackTraceEnabled() ||
-      !IsVisualChunkWatched(span.cx, span.cy, span.cz))
+      !IsVisualChunkWatched(stamped_span.cx, stamped_span.cy,
+                            stamped_span.cz))
   {
     return;
   }
 
   auto &watched = GetWatchedJobRing();
   std::lock_guard<std::mutex> lock(watched.mu);
-  watched.slots[watched.write % kVisualLifecycleRingCapacity] = span;
+  watched.slots[watched.write % kVisualLifecycleRingCapacity] = stamped_span;
   ++watched.write;
   if (watched.count < kVisualLifecycleRingCapacity)
   {

@@ -6712,3 +6712,74 @@ $env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
 $env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m530_world164_preupdate_autopilot_20261011 --report bin/suite_reports/engine_refactor/m530_world164_preupdate_autopilot_20261011.json --process-timeout 1800
 ```
+
+### M531 — demand transition frame correlation
+
+Повтор M335 на `World_164` проверил M530 без изменения маршрута и скорости.
+Manifest чистый: commit `7da1052c0e3cc580204b8062f31425381e8bd86f`, Release
+EXE SHA-256
+`74c82d45e62e24dc20de50ec2d4d7258675e6eb32bc7e14fa76ced7cbec77687`.
+Run завершился с `process_rc=0`, 1 015 игровыми секундами и 314 чанками по
+продольной проекции (около 5,13 блока/с за 980 секунд fly phase). Collision
+stop не сработал; obstacle avoidance завершил оба обнаруженных обхода.
+Маршрут прошёл, но analyzer `pass=false` из-за readiness/stop-tail и других
+стриминговых/performance gates.
+Manifest `cold_warm_mode=cold` означает отсутствие warm-up protocol, а не
+гарантированно пустой OS/disk cache; источник дальних чанков (disk load или
+new generation) этот прогон не определяет.
+
+Трасса записала 15 392 demand transition с ненулевым `frame_epoch` (2…40 787).
+Для 11 no-drawable peak rows нашлось 3 same-frame и 5 adjacent-frame demand
+events на той же координате/incarnation; для 7 unowned peaks — 0 same-frame и
+3 adjacent-frame events.
+В окне ±32 кадра analyzer присоединил 101 и 67 demand-transition rows к этим
+двум наборам пиков. У четырёх no-mesh/no-owner slices первая attempt появилась
+через 2–4 кадра; публикация геометрии в наблюдавшихся случаях заняла 7–22
+кадра. `cx=-176, cy=4, cz=-1` показывает фазовую разницу внутри кадра: после
+streaming no-drawable sample renderer probe того же кадра уже считал slice
+drawable. `visual_lifecycle_trace` rows не имели `frame_epoch`, поэтому их
+нельзя было связать с пиками по времени; first-mesh frontier дал ноль
+совпадений для этих incarnations в окне ±32 кадра. Следующий диагностический
+коммит добавляет frame epoch в worker/GPU lifecycle и world epoch в renderer
+peak probes.
+
+Pixel evidence не подтвердил чёрные дыры: 140 из 2 740 sampled pixels имели
+luma `<32`, но все имели opaque depth и visible MDI pass, а voxel DDA gaps
+равнялись нулю. У 68 sampled projected rectangles не было target-depth samples.
+Stop-tail оставил readiness debt 35 и `chunk_not_ready` median 36 при нулевых
+mesh-missing и visual-hole proxy. `wall_ms_fly_med=23.42 ms` и streaming phase
+`9.92 ms` измерены с активными forensic traces/captures, не использовать их
+как performance baseline.
+
+Ray parity повторно подтвердила нулевую разницу origins на 225 exact
+renderer/streaming joins; максимальная разница направлений — `1.48e-6°`.
+11 frame snapshots дали 22 PNG: каждый `frame_NNN.png` побайтно совпал с
+`frame_NNN_front.png`. Это только app-buffer check, не проверка desktop
+compositor.
+
+Артефакты:
+
+- [run report](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_visual_coverage.json)
+- [camera-band/lifecycle join v13](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_camera_band_join.json)
+- [ray parity, target band](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_ray_parity.json)
+- [ray parity, full route](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_ray_parity_full_route.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011_pixel.json)
+- [perf JSONL](../../bin/logs/perf_20261011-140644_17628.jsonl)
+- [sparse frames](../../bin/flight_captures/m531_world164_demand_frame_epoch_20261011)
+
+#### Exact M531 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m531_world164_demand_frame_epoch_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m531_world164_demand_frame_epoch_20261011 --report bin/suite_reports/engine_refactor/m531_world164_demand_frame_epoch_20261011.json --process-timeout 1800
+```
