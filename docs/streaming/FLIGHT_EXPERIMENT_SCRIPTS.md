@@ -6465,3 +6465,68 @@ $env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
 $env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m526_world164_camera_band_ray_20261011 --report bin/suite_reports/engine_refactor/m526_world164_camera_band_ray_20261011.json --process-timeout 1800
 ```
+
+### M527 — camera-space ray унификация и повтор camera-band участка (2026-10-11)
+
+После коммита `37334d92` screen-ray API и renderer pixel witness используют
+общую функцию inverse-projection + inverse-view. Восстановление opaque depth
+и ray до sea plane в pixel probe также переведены на раздельные матрицы.
+Сборка Release `Cubatarium.exe` имеет SHA-256
+`e5049608bd4a02513a00ee75794ebf0c7908916b528b206615471bf474f8ce6c`.
+
+Видимый no-teleport прогон M335 на `World_164` прошёл маршрутный gate:
+5 024 блока при минимуме 4 500, около `5,13 blocks/s`, `process_rc=0`.
+Manifest записал тот же clean commit `37334d92` на старте и при анализе;
+единственное незаполненное разрешённое поле — `resolution`. Analyzer завершил
+прогон с `pass=false`: A24 отметил 25 whole-route periods с ненулевым
+near-focus mesh-coverage proxy, но в mid-corridor их было 0; stop convergence
+также не сошёлся. Это counters готовности/mesh coverage, а не pixel verdict.
+`visible_black_focus_n=0`. Одиннадцать сохранённых `GL_BACK`/`GL_FRONT` пар
+побайтно совпали; это сравнение app buffers, не desktop compositor.
+
+В targeted окне `X=-4800…-4700` было 300 точных сопоставлений screen-ray grid
+и pixel-probe координат. В обоих путях UCube DDA hit совпал до block в 163
+случаях; в 45 случаях оба нашли блоки, но разные; 72 не нашли block ни в одном
+пути, а в 20 block был только у streaming ray. Оpaque depth присутствовал в
+233 из 300 pixel samples, и `renderer_pixel_voxel_ray_gap` был установлен
+только один раз. Эти результаты лучше объясняются разницей ray contract и
+состояния camera, чем видимым отсутствием поверхности: streaming API всё ещё
+возвращает near-plane origin, а renderer witness начинает DDA от camera origin.
+Следующий шаг — передавать общему streaming selector тот же `CameraSpaceRay`
+origin и записывать положение camera в trace для проверки frame-state parity.
+
+В `frame_epoch=44420`, около `X=-4770`, был сохранён новый high-water:
+7 solid camera-band slices без drawable и одновременно 7 unowned. Они лежали
+в `cx=-303`, `cy=3/4`, `cz=1…5`; `mesh_work_owner_flags=0`,
+`relight_owner_flags=96`, mesh dirty queue отсутствовал. Все семь chunk AABB
+пересекали exact frustum и имели projected screen rect; к render-probe frame
+две уже получили drawable, пять оставались без drawable. 14 pixel samples
+внутри пяти недостающих rect имели depth-tested поверхность в переднем chunk,
+и ray-gap для них был 0. Это подтверждает потерю mesh-work ownership, но не
+подтверждает, что именно эти slices создали экранную дыру.
+
+Instrumented performance: `wall_ms_fly_med=20.78` (`48,1 FPS`),
+`world_streaming_phase_ms=8.55`; было 57 spikes, максимум `283,27 ms`.
+Эти значения не заменяют capture-disabled performance M335.
+
+Артефакты:
+
+- [report](../../bin/suite_reports/engine_refactor/m527_world164_camera_space_ray_20261011.json)
+- [perf JSONL](../../bin/logs/perf_20261011-115526_33484.jsonl)
+- [11 targeted frame pairs](../../bin/flight_captures/m527_world164_camera_space_ray_20261011)
+
+#### Exact M527 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m527_world164_camera_space_ray_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m527_world164_camera_space_ray_20261011 --report bin/suite_reports/engine_refactor/m527_world164_camera_space_ray_20261011.json --process-timeout 1800
+```
