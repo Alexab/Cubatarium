@@ -6843,3 +6843,64 @@ $env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
 $env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
 python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m532_world164_worker_lifecycle_frame_epoch_20261011 --report bin/suite_reports/engine_refactor/m532_world164_worker_lifecycle_frame_epoch_20261011.json --process-timeout 1800
 ```
+
+### M533 — per-peak scheduler decisions and worker join
+
+M533 repeated the visible Release M335 profile on `World_164` after adding a
+bounded 64-epoch scheduler trace for camera-band peak coordinates. The run
+completed with `process_rc=0`, 312 chunks / 4 992 blocks, median speed 5.19653
+blocks/s, stable eye height 70, zero blocked movement substeps, and zero flight
+ground contacts. The suite summary still reports `pass=false`: stop-tail
+readiness debt and stale-visual safety lines remain separate from direct pixel
+evidence.
+
+All 19 traced no-drawable/unowned peak targets were joined to worker
+`Started/Built/Published` events. Scheduler pipeline occupancy peaked at 10 of
+42; no pipeline-full or pipeline-bytes defer was observed. Snapshot refresh
+defers and tick-budget skips occurred occasionally, while successful admission
+was the common outcome. This does not justify changing scheduler quotas.
+
+The run recorded 2 700 framebuffer samples; 152 had luma below 32 and all had
+valid opaque depth plus a visible MDI pass. Of 55 projected peak rectangles, 54
+contained sparse pixel samples and zero had target-chunk depth or DDA hits; the
+sampled depths belonged to nearer neighboring chunks. A visible hole is not
+established. Selected front-after-swap captures resemble M532 at the same route
+window; the same blue angular scene fragments appear in both.
+
+Artifacts:
+
+- [run report](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011.json)
+- [visual coverage](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_visual_coverage.json)
+- [camera-band/pixel/scheduler join v14](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_camera_band_pixel_join_v14.json)
+- [renderer pixel analysis](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_renderer_pixel.json)
+- [ray parity, target window](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_target.json)
+- [ray parity, full route](../../bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_full_route.json)
+- [perf JSONL](../../bin/logs/perf_20261011-174205_47172.jsonl)
+- [sparse frames](../../bin/flight_captures/m533_world164_peak_scheduler_trace_20261011)
+
+#### Exact M533 invocation
+
+```powershell
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4800'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_DIR='E:\Work\Home\Cubatarium\bin\flight_captures\m533_world164_peak_scheduler_trace_20261011'
+$env:CUBA_FLIGHT_CAPTURE_INTERVAL_SEC='2'
+$env:CUBA_FLIGHT_CAPTURE_MIN_X='-4800'
+$env:CUBA_FLIGHT_CAPTURE_MAX_X='-4700'
+$env:CUBA_FLIGHT_CAPTURE_FRONT_AFTER_SWAP='1'
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --idle-sec 15 --minimum-travel-blocks 4500 --phase-id m533_world164_peak_scheduler_trace_20261011 --report bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011.json --process-timeout 1800
+```
+
+#### M533 analysis commands
+
+```powershell
+$perf='bin/logs/perf_20261011-174205_47172.jsonl'
+python tools/analyze_visual_coverage_trace.py $perf --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_visual_coverage.json
+python tools/analyze_camera_band_pixel_join.py $perf --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_camera_band_pixel_join_v14.json
+python tools/analyze_renderer_pixel_trace.py $perf --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_renderer_pixel.json
+python tools/analyze_screen_ray_parity.py $perf --viewport-width 1280 --viewport-height 720 --camera-x-min -4800 --camera-x-max -4700 --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_target.json
+python tools/analyze_screen_ray_parity.py $perf --viewport-width 1280 --viewport-height 720 --json-out bin/suite_reports/engine_refactor/m533_world164_peak_scheduler_trace_20261011_ray_parity_full_route.json
+```

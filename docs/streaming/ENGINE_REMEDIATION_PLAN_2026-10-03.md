@@ -7873,3 +7873,95 @@ M528–M532 результаты и точные команды документ
 диагностические; их epoch фиксирует последнее значение от main streaming tick,
 поэтому асинхронный event на границе кадра может попасть в соседний epoch.
 Temporal join ±32 кадра — контекст, не доказательство причинности.
+
+### M533 checkpoint — scheduler target join and repeated M335, 2026-10-11
+
+M533 добавил отдельное 4 096-слотовое кольцо scheduler trace для координат,
+попавших в no-drawable/unowned camera-band peaks. Для каждого такого чанка
+трасса сохраняет residency, dirty queue kind/index/age, owner flags, demand
+attempt/revisions, snapshot credits/defer counters, tick/snapshot budgets,
+pipeline occupancy и результат `try_schedule`. Окно ограничено 64
+streaming epochs. Анализатор `camera_band_pixel_join.v14` связывает снимки с
+peak incarnation и `world_epoch`.
+
+Повторный видимый Release M335 завершился с `process_rc=0`: 312 чанков,
+4 992 блока, медианная скорость `5.19653` блока/с, высота в начале и конце
+70 блоков; `camera_move_blocked_substeps=0` и
+`camera_flight_ground_contacts=0`. Это подтверждает скорость и отсутствие
+столкновений в этом прогоне, но route оказался на 8 блоков короче
+5 000-блочного far-flight checkpoint. Run manifest чистый и указывает commit
+`09e9be38`, Release, EXE SHA-256
+`352024386b4c67f24bf87ca3126a61c407a0b7b71694d8be28262739c37618ef`.
+Сценарный analyzer завершился `pass=false`; эта оценка включает известные
+readiness/stale-visual stop-lines, а не только framebuffer-ошибки.
+
+Для 12 no-drawable и 7 unowned peak targets все 1 261 end-of-tick снимка
+показали resident chunks; в 2 914 scheduler trace rows записей нового кольца
+хватило без переполнения. По outcome-записям было 24 успешных admission
+(`cause=15`), 8 snapshot refresh-count defer (`cause=13`, reason 1) и 3
+превышения scheduler tick budget (`cause=3`). Pipeline occupancy не превышал
+10 при cap 42; pipeline-full и pipeline-bytes defers отсутствовали. По
+incarnation были связаны `Started/Built/Published` для всех 19 targets.
+Медиана от peak до первого worker start составляла 7 epochs (no-drawable) и
+6 (unowned); максимумы — 12 и 20. Публикация имела медиану 7.5 и 7 epochs,
+максимум 12 и 21 соответственно. Эти интервалы ограничивают локальную
+задержку, но сами по себе не доказывают, что целевой чанк в эти кадры был
+видим на экране. Повторно менять scheduler quotas/caps по этому прогону не
+обосновано.
+
+Из 2 700 pixel samples 152 имели `luma < 32`; все 152 имели валидные opaque
+depth и visible MDI pass, а у 145 depth-face совпал с voxel hit в пределах
+0.1 блока. На 250 exact target-window ray joins origin delta равен нулю,
+max direction delta `1.48e-6°`. В 54 из 55 sampled projected peak rectangles
+нашлись pixel samples, но ни одна не дала target-chunk depth или voxel hit.
+Depth samples в этих прямоугольниках относились к ближним соседним чанкам;
+поэтому эти точки показывают возможное перекрытие, но не классифицируют всю
+поверхность чанка. Pixel-level hole остаётся **UNPROVEN**.
+
+В stop-tail `post_stop_readiness_debt_max=33` и `post_stop_not_ready_end=33`,
+но `post_stop_mesh_missing_max=0` и `post_stop_visual_holes_max=0`.
+Одновременно остались `post_stop_visible_black_no_ticket_max=6` и
+`post_stop_visible_black_stalled_max=1`. Stop gate остаётся FAIL, а
+`effective_holes_rate` продолжает отражать readiness debt, не независимую
+оценку framebuffer. Fly wall median `26.11 ms` измерен с включёнными
+framebuffer probes, scheduler tracing и захватами; performance baseline из
+него не выводится.
+
+Выбранные front-after-swap кадры M533 визуально совпадают по сцене с кадрами
+M532 на том же X-окне, включая те же синие угловатые фрагменты поверхности.
+Следовательно, этот артефакт существовал до M533 и не объясняется новой
+scheduler instrumentation. Его материал/назначение здесь не классифицированы.
+
+| Lane после M533 | Status | Что подтверждено / осталось |
+|---|---|---|
+| M335 темп и управление | **PASS** | 5.20 блока/с, Y=70, без blocked movement/ground contacts; конкретный маршрут на 8 блоков короче 5 000-блочного checkpoint. |
+| Scheduler admission по peak targets | **NO SATURATION FOUND** | Все 19 targets дошли до worker start/build/publish; cap 42 не был близок к заполнению. Отдельную scheduler policy правку не делать без нового причинного свидетельства. |
+| Видимая дыра в framebuffer | **UNPROVEN** | В sampled rects нет depth целевого чанка; глубина чаще указывает на ближнюю геометрию. Sparse probes не покрывают весь экран/все ray paths. |
+| Stop-tail convergence | **FAIL / METRIC SCOPE OPEN** | Глобальный readiness debt 33 при нулевых near-focus mesh-missing и visual-hole proxy; требуется объяснить visible-black без ticket/stalled targets и scope readiness. |
+| Performance | **OPEN** | Нужен capture-disabled Release M335 без forensic env vars. |
+| New-world / disk-vs-generation | **OPEN** | Текущие manifests называют cache mode `cold_or_unspecified`; конкретная provenance source для чанка не записана. Secondary new-seed route остаётся обязательной после значимого fix. |
+| Fluid/water | **OPEN / NOT ISOLATED** | M335 идёт по суше; прежние M532/M533 кадры показывают одинаковые синие фрагменты, но не устанавливают, что это fluid. Не менять fluid renderer по этой серии. |
+
+Обновлённый порядок завершения:
+
+1. Снять capture-disabled видимый Release M335 на `World_164` и записать
+   performance baseline отдельно от трасс/readbacks. Сравнить median/p95
+   wall frame, streaming, mesh emerge и scene/render stages с M532/M533 только
+   как forensic ориентир.
+2. Разобрать `visible_black_no_ticket` и `visible_black_stalled` по точным
+   координатам/incarnation и demand/mesh/light owners. Проверить, почему они
+   остаются после stop при нулевых focus-miss и visual-hole proxies; исправлять
+   только подтверждённый потерянный owner или неверный gate.
+3. Если peak evidence повторится на видимом месте, дополнить pixel sampling
+   выборкой внутри projected rect с target DDA/depth в том же кадре. Текущие
+   sparse samples не дали target-depth точки.
+4. Добавить source provenance для чанков: disk load, procedural generation,
+   memory reuse и их queue/service timings. Отдельно измерить холодную загрузку
+   нового seed коротким secondary route; M335 остаётся главным повторяемым
+   маршрутом.
+5. Только после correctness fix повторить M335, затем выполнить clean
+   capture-disabled baseline и короткий new-world lane. Политику scheduler,
+   lighting и fluid не менять без причинных данных.
+
+Точные команды M533, manifest и новые анализаторы добавлены в
+[`FLIGHT_EXPERIMENT_SCRIPTS.md`](FLIGHT_EXPERIMENT_SCRIPTS.md).
