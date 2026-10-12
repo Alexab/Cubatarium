@@ -4,6 +4,14 @@
 
 ## Поддерживаемый поток
 
+### Схема диагностических ID
+
+Устанавливайте `CUBA_WORLD_COLUMN_SOURCE_TRACE=1` до запуска приложения: переключатель читается один раз при первом обращении, чтобы не опрашивать окружение на каждом чанке.
+
+В procedural-событиях `demand_id` обозначает отдельный streaming demand и проходит через disk lookup. `request_id` создаётся scheduler при принятии новой procedural-работы и остаётся с ней до commit/cancel/discard. `priority_refreshed` связывает новый demand с уже активным request. Повторные вызовы для уже принадлежащей scheduler координаты не пишутся отдельными строками, чтобы не раздувать лог на каждом кадре. При сбросе scheduler пишется `shutdown_snapshot` с числом запросов в каждом состоянии, очередью worker и очередью результатов.
+
+JSONL входного gate содержит `gate_id` и `gate_owner`; снимок решения об окончании gate и post-transition `gate_end=1` записываются отдельно.
+
 - [`tools/flight_sim_run.py`](../../tools/flight_sim_run.py) — единственный общий запускатель. Он настраивает flight-sim, сохраняет perf JSONL/manifest/report, восстанавливает временно изменённые `config.json` и исходный `users.json`, повторно выставляет контрольную позицию перед каждым `--repeat` и вызывает анализатор.
 - [`tools/run_with_host_cpu_sampler.py`](../../tools/run_with_host_cpu_sampler.py) — необязательная обёртка для записи общей загрузки CPU и загрузки `Cubatarium.exe` в JSONL. Частые отсчёты опрашивают только хост и дерево процессов запускающей команды; список всех процессов выключен по умолчанию. Для разовой диагностики его можно включить редко через `--top-processes-interval-sec 60`. Пример: `python tools/run_with_host_cpu_sampler.py --output bin/logs/m545_host_cpu.jsonl --interval-sec 2 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m545_world164_m335_clean_perf_host_sampled --report bin/suite_reports/engine_refactor/m545_world164_m335_clean_perf_host_sampled.json --process-timeout 1800`.
 - [`tools/flight_sim_fixed_day.py`](../../tools/flight_sim_fixed_day.py) — контролируемый дневной запуск поверх общего runner. Временно задаёт `time_of_day=0.25`, `time_frozen=true`, clear weather, нулевую облачность и выключенную авто-погоду; в `finally` восстанавливает исходный `world_data.json` побайтно. Аргументы маршрута передаются после `--`. Пример: `python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m379_world164_m335_fixed_day --report bin/suite_reports/engine_refactor/m379_world164_m335_fixed_day.json`. Не менять профиль камеры ради «более красивого» кадра.

@@ -35,6 +35,7 @@
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/WorldColumnRequestId.h"
 #include "World/Math/GridMath.h"
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
@@ -111,8 +112,7 @@ constexpr float kMinReasonablePlayerY = -32.0f;
 
 bool IsWorldColumnSourceTraceEnabled()
 {
-  const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
-  return value && value[0] == '1';
+  return WorldColumnSourceTraceEnabled();
 }
 
 bool IsWorldColumnSaveTraceEnabled()
@@ -3400,6 +3400,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
         "disk", "retry",
         ground_coord,
         "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+            " demand_id=" + std::to_string(state.demand_id) +
             " retry=" + std::to_string(state.retry_generation + 1) +
             " read_failed=" + (state.had_disk_read_failure ? "1" : "0") +
             " token_invalid=" + (state.had_invalid_token ? "1" : "0") +
@@ -3410,6 +3411,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     PendingAsyncColumnLoadState retry_state;
     const int load_to_cy = state.highest_cy_on_disk;
     retry_state.remaining_results = load_to_cy + 1;
+    retry_state.demand_id = state.demand_id;
     retry_state.highest_cy_on_disk = state.highest_cy_on_disk;
     retry_state.cancellation = state.cancellation;
     retry_state.requested_at = state.requested_at;
@@ -3481,6 +3483,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     LogWorldColumnSource(
         "disk", "incomplete", ground_coord,
         "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+            " demand_id=" + std::to_string(state.demand_id) +
             " retry=" + std::to_string(state.retry_generation) +
             " read_failed=" + (state.had_disk_read_failure ? "1" : "0") +
             " token_invalid=" + (state.had_invalid_token ? "1" : "0") +
@@ -3497,6 +3500,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   LogWorldColumnSource(
       has_disk ? "disk" : "empty-disk-column", "complete", ground_coord,
       "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+          " demand_id=" + std::to_string(state.demand_id) +
           " disk_light=" + (state.had_disk_light ? "1" : "0") +
           " retry=" + std::to_string(state.retry_generation) +
           " elapsed_ms=" + std::to_string(load_ms) +
@@ -4257,7 +4261,8 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
 }
 
 void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
-                                                      glm::ivec3 ground_coord)
+                                                      glm::ivec3 ground_coord,
+                                                      uint64_t demand_id)
 {
   EnsureChunkIoInitialized();
   if (!AsyncChunkIo || !ChunkStorage || !world.BlockRegistry)
@@ -4275,6 +4280,11 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   }
   PendingAsyncColumnLoadState state;
   const bool trace_async_io = IsWorldColumnSourceTraceEnabled();
+  if (trace_async_io && demand_id == 0)
+  {
+    demand_id = NextWorldColumnRequestId();
+  }
+  state.demand_id = demand_id;
   const auto disk_discovery_started =
       trace_async_io ? std::chrono::steady_clock::now()
                      : std::chrono::steady_clock::time_point{};
@@ -4290,7 +4300,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   if (state.highest_cy_on_disk < 0)
   {
     LogWorldColumnSource("procedural", "disk_miss", ground_coord,
-                         "highest_cy=-1 pending_save=0 discovery_ms=" +
+                         "demand_id=" + std::to_string(demand_id) +
+                             " highest_cy=-1 pending_save=0 discovery_ms=" +
                              std::to_string(state.disk_discovery_ms));
     return;
   }
@@ -4301,6 +4312,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   LogWorldColumnSource(
       "disk", "queued", ground_coord,
       "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
+          " demand_id=" + std::to_string(demand_id) +
           " slices=" + std::to_string(state.remaining_results) +
           " discovery_ms=" + std::to_string(state.disk_discovery_ms));
 
@@ -4521,7 +4533,8 @@ void UWorldPersistence::CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord)
                 .count();
   LogWorldColumnSource(
       "disk", "cancelled_unloaded", ground_coord,
-      "remaining_slices=" + std::to_string(state.remaining_results) +
+      "demand_id=" + std::to_string(state.demand_id) +
+          " remaining_slices=" + std::to_string(state.remaining_results) +
           " elapsed_ms=" + std::to_string(elapsed_ms));
 }
 
@@ -4561,7 +4574,8 @@ int UWorldPersistence::CancelAsyncTerrainColumnLoadsOutsideRadius(
                   .count();
     LogWorldColumnSource(
         "disk", "cancelled_out_of_range", ground,
-        "distance_chunks=" + std::to_string(distance) +
+        "demand_id=" + std::to_string(state.demand_id) +
+            " distance_chunks=" + std::to_string(distance) +
             " radius_chunks=" + std::to_string(radius) +
             " remaining_slices=" + std::to_string(state.remaining_results) +
             " elapsed_ms=" + std::to_string(elapsed_ms));

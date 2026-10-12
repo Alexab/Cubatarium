@@ -69,7 +69,7 @@ public:
       std::chrono::milliseconds worker_wait =
           std::chrono::milliseconds(10000));
   /// Cancel queued gen + bump tokens without waiting for in-flight populate.
-  void CancelChunkGeneration();
+  void CancelChunkGeneration(const char *reason = "cancelled_all");
   /// Process exit: cancel gen, brief wait, then drop or leak workers so
   /// Join never blocks forever on late ChunkPopulate/carve.
   void AbandonWorkersForProcessExit(

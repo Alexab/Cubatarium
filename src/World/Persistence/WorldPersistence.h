@@ -194,7 +194,8 @@ public:
   int TakeRelightFifoPriorityInsert();
   int TakeRelightFifoProtectBlock();
   void ClearPendingRelights();
-  void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
+  void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
+                                     uint64_t demand_id = 0);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   void CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord);
   int CancelAsyncTerrainColumnLoadsOutsideRadius(UWorld &world,
@@ -228,6 +229,7 @@ public:
 private:
   struct PendingAsyncColumnLoadState
   {
+    uint64_t demand_id{0};
     int remaining_results{0};
     int highest_cy_on_disk{-1};
     std::shared_ptr<std::atomic<bool>> cancellation;

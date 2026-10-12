@@ -10,6 +10,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Physics/CollisionReadiness.h"
 #include "World/Streaming/StreamerAmortizePolicy.h"
+#include "World/Streaming/WorldColumnRequestId.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -401,6 +402,7 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
 bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
                                        bool *out_async_queued)
 {
+  const uint64_t demand_id = NewWorldColumnRequestIdForTrace();
   if (out_async_queued)
   {
     *out_async_queued = false;
@@ -437,10 +439,12 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       {
         // The pending callback also refreshes a procedural request's priority
         // as the focus moves. Persistence I/O and saves ignore this request.
-        OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+        OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                            demand_id);
         return false;
       }
-      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
       note_queued();
       return false;
     }
@@ -450,7 +454,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
   {
     if (!forceSync && AsyncGeneration && OnRequestAsyncChunk)
     {
-      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
     }
     return IsTerrainChunkCompleteCached(chunkCoord);
   }
@@ -479,7 +484,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     InvalidateTerrainCompleteCache(chunkCoord);
     if (OnRequestAsyncChunk)
     {
-      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
       note_queued();
     }
     return false;
@@ -491,7 +497,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
 
   if (existing == nullptr)
   {
-    if (OnLoadChunk && OnLoadChunk(chunkCoord))
+    if (OnLoadChunk && OnLoadChunk(chunkCoord, demand_id))
     {
       if (IsTerrainChunkCompleteCached(chunkCoord))
       {
@@ -508,7 +514,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
       const int priority = ChunkLoadPriorityFor(chunkCoord);
-      OnRequestAsyncChunk(chunkCoord, priority);
+      OnRequestAsyncChunk(chunkCoord, priority, demand_id);
       note_queued();
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
              IsTerrainChunkCompleteCached(chunkCoord);
@@ -522,7 +528,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
   {
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
-      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
       note_queued();
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
              IsTerrainChunkCompleteCached(chunkCoord);
@@ -537,7 +544,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);
     InvalidateTerrainCompleteCache(chunkCoord);
     ColumnGenStates.erase(chunkCoord);
-    OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+    OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                        demand_id);
     note_queued();
     return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
            IsTerrainChunkCompleteCached(chunkCoord);
@@ -1174,7 +1182,8 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
     {
       return;
     }
-    OnRequestAsyncChunk(coord, ChunkLoadPriorityFor(coord));
+    OnRequestAsyncChunk(coord, ChunkLoadPriorityFor(coord),
+                        NewWorldColumnRequestIdForTrace());
     ++queued;
   };
 
@@ -1304,7 +1313,7 @@ void UChunkStreamer::PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
       }
       const int prio =
           ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
-      OnRequestAsyncChunk(coord, prio);
+      OnRequestAsyncChunk(coord, prio, NewWorldColumnRequestIdForTrace());
       ++queued;
       continue;
     }
@@ -1338,7 +1347,7 @@ void UChunkStreamer::PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
       }
       const int prio =
           ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
-      OnRequestAsyncChunk(coord, prio);
+      OnRequestAsyncChunk(coord, prio, NewWorldColumnRequestIdForTrace());
       ++queued;
     }
   }

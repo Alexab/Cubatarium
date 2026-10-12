@@ -296,7 +296,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
   // hang SaveMetadata ("Saving world...") via EnsureStreamingActiveAfter…
   if (ChunkScheduler)
   {
-    ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0));
+    ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0),
+                                     "scheduler_reinitialized");
     if (ChunkScheduler->WaitForWorkersIdle(std::chrono::milliseconds(500)))
     {
       ChunkScheduler.reset();
@@ -4801,14 +4802,14 @@ void UWorldStreaming::QuiesceBackgroundWork(
   }
 }
 
-void UWorldStreaming::CancelChunkGeneration()
+void UWorldStreaming::CancelChunkGeneration(const char *reason)
 {
   if (!ChunkScheduler)
   {
     return;
   }
   // Zero wait: clear queue + bump tokens so shouldCancel trips; do not join.
-  ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0));
+  ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0), reason);
 }
 
 void UWorldStreaming::AbandonWorkersForProcessExit(
@@ -4819,7 +4820,7 @@ void UWorldStreaming::AbandonWorkersForProcessExit(
     Streamer->SetEnabled(false);
   }
   SyncCoarseCacheGround = glm::ivec3(INT32_MAX, 0, INT32_MAX);
-  CancelChunkGeneration();
+  CancelChunkGeneration("process_exit");
   if (!ChunkScheduler)
   {
     ChunkPopulator.reset();
@@ -4845,7 +4846,7 @@ void UWorldStreaming::PauseChunkGeneration(
   {
     return;
   }
-  ChunkScheduler->CancelAllPending(worker_wait);
+  ChunkScheduler->CancelAllPending(worker_wait, "paused_for_quiesce");
   if (worker_wait.count() > 0)
   {
     (void)ChunkScheduler->WaitForWorkersIdle(worker_wait);
@@ -5073,7 +5074,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetEnabled(StreamingEnabled);
   Streamer->SetWorldFolder(world.GetWorldFolderPath());
   Streamer->SetCallbacks(
-      [this, &world](glm::ivec3 coord)
+      [this, &world](glm::ivec3 coord, uint64_t demand_id)
       {
         UWorldPersistence &persistence = *world.Persistence;
         if (persistence.GetChunkStorage().IsColumnSavePending(coord))
@@ -5087,7 +5088,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const ProceduralSettings &settings = world.GetProceduralSettings();
         if (settings.AsyncChunkIo)
         {
-          persistence.RequestAsyncTerrainColumnLoad(world, coord);
+          persistence.RequestAsyncTerrainColumnLoad(world, coord, demand_id);
           return false;
         }
         const auto t0 = std::chrono::high_resolution_clock::now();
@@ -5356,7 +5357,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       });
   Streamer->SetAsyncGeneration(procedural.AsyncChunkGeneration);
   Streamer->SetAsyncCallbacks(
-      [this, &world, &procedural](glm::ivec3 coord, int priority)
+      [this, &world, &procedural](glm::ivec3 coord, int priority,
+                                  uint64_t demand_id)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
         UWorldPersistence &persistence = *world.Persistence;
@@ -5374,7 +5376,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         // fall through so RequestLoad can refresh that request's priority.
         if (procedural.AsyncChunkIo && !generation_pending)
         {
-          persistence.RequestAsyncTerrainColumnLoad(world, ground);
+          persistence.RequestAsyncTerrainColumnLoad(world, ground,
+                                                    demand_id);
           if (persistence.IsTerrainColumnDiskLoadPending(ground))
           {
             return;
@@ -5394,8 +5397,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             column_origin = glm::ivec2(feet_block.x, feet_block.z);
             has_origin = true;
           }
-          ChunkScheduler->RequestLoad(ground, priority, procedural, column_origin,
-                                      has_origin);
+          ChunkScheduler->RequestLoad(ground, priority, procedural,
+                                      column_origin, has_origin, demand_id);
         }
       },
       [&world, this](glm::ivec3 coord)

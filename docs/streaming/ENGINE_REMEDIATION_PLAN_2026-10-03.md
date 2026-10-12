@@ -8692,3 +8692,33 @@ host to see whether M545's scheduler/worker queue tails reproduce; (4) only
 then adjust generation admission or worker concurrency against source and
 visual evidence. Keep the periodic new-seed lane alongside, not in place of,
 the repeated `World_164` control. Do not claim M545 proves a black-pixel defect.
+
+### M546 — static lifecycle instrumentation follow-up (2026-10-12)
+
+Static-only follow-up to the M545 audit; no flight was started because the
+host remained heavily loaded. Gate JSONL rows now identify a process-local
+`gate_id` and a fixed `gate_owner`. Cooperative completion and the application
+GPU-warmup path record the blocker sample used at the exit decision, then record
+the post-transition sample separately so `gate_end=1` does not overwrite the
+precondition evidence.
+
+Procedural trace IDs now have distinct meanings. `demand_id` identifies one
+streaming request attempt and is carried across disk lookup and the scheduler
+callback. `request_id` is allocated when the scheduler accepts ownership and
+follows that work through worker submission/completion, apply, cancellation,
+or discard. A `priority_refreshed` row can link a later demand to existing
+work. Repeated requests that find an already-owned/committed coordinate are
+silent, avoiding per-frame trace amplification. The source trace guide records
+this contract in `FLIGHT_EXPERIMENT_SCRIPTS.md`. Scheduler teardown also emits
+a state-count snapshot before cancellation, with separate worker-pending,
+worker-active, scheduler-queued, and ready-result counts; shutdown callers now
+label reinitialization, quiesce, and process-exit cancellation.
+
+Static call-site review and `git diff --check` passed. No test suite, flight,
+or build was run. Release-only build validation remains pending until CPU load
+falls; Debug builds and load-sensitive flights remain out of scope. After the
+host is quiet, validate this instrumentation in a Release build, then follow
+the M545 order above: unchanged capture-disabled M335 control, long-distance
+repeat only if the control is credible, and a source-traced cold-seed route to
+reconcile per-demand disk misses with accepted procedural requests and terminal
+outcomes. Do not tune concurrency based on M545's saturated-host timings.
