@@ -8599,18 +8599,40 @@ expected `5.19614 blocks/s` over 305 periods / 303 steady periods. The report
 is `pass=false`; this is a short cold-generation diagnostic, not the 8,192-
 block far-flight acceptance run.
 
-The source trace saw 2,021 `procedural/disk_miss` events and 2,014 procedural
-commits, with no disk-load requests. Seven misses had no matching commit event
-before the process log ended; the trace recorded no out-of-range cancellation
-for them, so treat this as incomplete end-of-run evidence rather than a
-proven owner leak. For the committed procedural columns, generation time was
-`160 ms` median / `483 ms` p95 / `8.54 s` max. Request-to-commit time was
+The source trace saw 2,021 `procedural/disk_miss` event rows and 2,014
+procedural commits, with no disk-load requests. Coordinate-level reconciliation
+finds 2,016 unique miss coordinates and 2,014 unique commit coordinates. Five
+coordinates emitted `disk_miss` twice but were committed; only `(-185,-1)` and
+`(-185,7)` have no matching coordinate-level commit before the source log ends.
+Thus the raw row-count difference of seven is not seven outstanding requests.
+Both unmatched coordinates have a `ChunkPopulate` completion log but no
+scheduler `committed` event. This is consistent with generation finishing at
+the end of the flight before the main-thread apply/commit tick, but the trace
+cannot establish their final scheduler state: it has no per-request identity or
+shutdown terminal record. No out-of-range cancellation was recorded for them;
+that is not evidence of a leak. For committed procedural columns, generation
+time was `160 ms` median / `483 ms` p95 / `8.54 s` max. Request-to-commit time was
 `319 ms` median / `3.48 s` p95 / `19.78 s` max. The worst event waited
 `16.98 s` in the scheduler before worker submission, then `1.98 s` in the
 worker pool; at submission 33 worker jobs were pending and all four workers
 were active. This identifies cold procedural queueing and service as the next
 source-path question. It does not yet justify raising concurrency or changing
 the per-frame start cap: the host was saturated throughout the run.
+
+Static lifecycle review explains why this trace cannot close the request
+ledger. `disk_miss` is emitted by the persistence lookup before the streaming
+callback calls `UChunkLoadScheduler::RequestLoad`; it has no scheduler request
+ID. `committed` is emitted only after `ChunkBuffer::ApplyTo` and `MarkDirty`.
+The scheduler logs `cancelled_out_of_range` only from
+`CancelPendingOutsideRadius`; `Cancel`, `CancelAllPending`, shutdown, stale
+worker results, and `result.discarded` clear or drop work without a matching
+terminal source event. The generation token is an invalidation/version token,
+not a unique attempt ID (the M545 commits report `token=0`). Consequently,
+coordinate matching is only a lower-confidence approximation when retries or
+cancellation/re-request occur. A conclusive follow-up needs a request/attempt
+ID carried from source lookup through scheduler enqueue, worker completion,
+apply, and every cancellation/discard/shutdown path, plus a shutdown snapshot
+of requested, generating, ready, and committed work.
 
 Host CPU was `100%` for all 357 samples; the older sampler implementation had
 median sample spacing `2.29 s`, p95 `4.58 s`, max `10.48 s`. It was started
@@ -8622,20 +8644,44 @@ treated as a clean baseline until this load subsides.
 
 The entry diagnostic first recorded its presentable proxy at `204.6 s`, but
 `ttf_correct_proxy_ms` remained `-1` while the gate was still active at
-`279.5 s`. A later gate sample ended with `settle_reason=live_blockers`, with
-one near-focus mesh missing and one near GPU mesh pending. During the route,
+`279.5 s`. These are separate predicates: `first_presentable_ms` means only
+underfeet-present plus spawn-mesh-ring-ready; `ttf_correct_proxy_ms` also
+requires zero visibility debt and zero unfinished visuals. The first JSONL
+session's last row still says `gate_active=1`: cooperative PrepareView ends the
+gate and closes the diagnostics session without sampling after `EndEnterLitGate`,
+so that file has no gate-end transition. A second, short gate session records
+`gate_end=1`. Immediately before that end, the runner logged
+`settle_reason=live_blockers` with underfeet/ring ready and visibility debt 0;
+the explicit JSONL end sample is taken after the gate has been disabled and
+reports visibility debt 1, ring-not-ready 60, one missing near-focus mesh, and
+one near GPU mesh pending. Do not interpret those post-end values as the
+precondition that authorized exit. Likewise, the first cooperative gate passed
+the live-blocker predicate with 50 global MeshService dirty items: that residual
+blocks soft-timeout exits, but is not itself part of the local live-blocker
+predicate. `live_blockers` therefore means that the selected gate predicate
+passed, not that every global queue was empty or that the final pixels were
+verified. During the route,
 `unfinished_visual_rate` was `1.0`, near-focus mesh-coverage proxy rate was
 `0.066`, the unlit proxy peaked at `32`, and `fly_void_near_max` reached `704`.
 The analyzer failed readiness, eye-proxy and stop-convergence gates. These are
 readiness/mesh proxies, not framebuffer pixel proof; the operator did not
 report an observed visual hole for this run.
 
+This exposes two gate-accounting gaps for the refactor: the cooperative and
+application GPU-warmup paths can own consecutive enter gates, yet they do not
+emit a uniform begin/settle/end record; and the recorded end sample is
+post-transition while the settle decision is based on pre-transition state.
+The next static/code step should give each gate an ID and owner, record the
+same blocker snapshot at decision and exit, and make the accepted exit policy
+explicit (full readiness, local readiness, or bounded fallback). Keep the
+post-exit sample separately as a convergence observation.
+
 Artifacts: [M545 report](../../bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_20261011.json),
 [source trace summary](../../bin/suite_reports/engine_refactor/m545_world_m545_cold_source_trace_analysis_20261011.json),
 [perf JSONL](../../bin/logs/perf_20261011-232019_47996.jsonl),
 [host sampler](../../bin/logs/m545_host_cpu_20261011.jsonl),
-[entry-gate trace](../../bin/logs/enter_lit_20261011-232022.jsonl), and INFO
-source log
+[first entry-gate trace](../../bin/logs/enter_lit_20261011-232022.jsonl),
+[second entry-gate trace](../../bin/logs/enter_lit_20261011-232502.jsonl), and INFO source log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261011-232009.47996`.
 
 Updated order: (1) wait for the host to leave sustained saturation, then run
