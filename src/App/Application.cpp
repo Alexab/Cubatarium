@@ -1976,7 +1976,7 @@ void UApplication::Update(double dt)
             // completion queues and presentation debt have been drained.
             if (!World->IsEnterLitGateActive() && drain_cpu)
             {
-              UEnterLitDiagnostics::BeginSession();
+              UEnterLitDiagnostics::BeginSession("application_gpu_warmup");
               World->BeginEnterLitGate();
             }
           }

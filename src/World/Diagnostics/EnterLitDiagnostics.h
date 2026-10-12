@@ -193,7 +193,7 @@ struct EnterWarmupStepSample
 class UEnterLitDiagnostics
 {
 public:
-  static void BeginSession();
+  static void BeginSession(const char *gate_owner = "unspecified");
   static void EndSession();
   static void Sample(UWorld &world, double elapsed_ms, EnterLitSample &out);
   static void MaybeLog(const EnterLitSample &sample, int frame_index,

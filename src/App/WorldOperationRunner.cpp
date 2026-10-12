@@ -503,6 +503,15 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   }
   if (World.IsEnterLitGateActive())
   {
+    // Preserve the blocker values which were used to authorize this exit.
+    // The post-End sample below intentionally records the transition result;
+    // fields such as visibility debt can change once the enter snapshot clears.
+    EnterLitSample gate_decision_sample{};
+    UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs,
+                                 gate_decision_sample);
+    UEnterLitDiagnostics::MaybeLog(gate_decision_sample,
+                                   /*frame_index=*/0,
+                                   /*every_n_frames=*/1);
     World.EndEnterLitGate();
     // 162400: sample after gate clears so enter_lit JSONL gets gate_end=1 and
     // settle_reason before EndSession closes the file (AnalyzeEnterLit SoT).
@@ -696,7 +705,18 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
   case Stage::EnterGameFinalize:
     if (World.IsEnterLitGateActive())
     {
+      EnterLitSample gate_decision_sample{};
+      UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs,
+                                   gate_decision_sample);
+      UEnterLitDiagnostics::MaybeLog(gate_decision_sample,
+                                     /*frame_index=*/0,
+                                     /*every_n_frames=*/1);
       World.EndEnterLitGate();
+      EnterLitSample gate_end_sample{};
+      UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs,
+                                   gate_end_sample);
+      UEnterLitDiagnostics::MaybeLog(gate_end_sample, /*frame_index=*/0,
+                                     /*every_n_frames=*/1);
       UEnterLitDiagnostics::EndSession();
     }
     Core.FinalizeEnterGameSession();

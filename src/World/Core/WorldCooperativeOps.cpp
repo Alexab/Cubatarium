@@ -1884,7 +1884,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         // skip BeginEnterLitGate (Era51 0ms PrepareView / second GpuWarmup).
         if (!world.IsEnterLitGateActive())
         {
-          UEnterLitDiagnostics::BeginSession();
+          UEnterLitDiagnostics::BeginSession("cooperative_finalize_only");
           world.BeginEnterLitGate();
         }
         BeginPrepareEnter();
@@ -1893,7 +1893,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       {
         if (!world.IsEnterLitGateActive())
         {
-          UEnterLitDiagnostics::BeginSession();
+          UEnterLitDiagnostics::BeginSession("cooperative_load_prepare");
           world.BeginEnterLitGate();
         }
         CurrentPhase = Phase::PostLoadAnalysis;
@@ -1931,7 +1931,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         {
           if (MeshWarmupFinalizeOnly && !world.IsEnterLitGateActive())
           {
-            UEnterLitDiagnostics::BeginSession();
+            UEnterLitDiagnostics::BeginSession("cooperative_timeout_finalize");
             world.BeginEnterLitGate();
           }
           BeginPrepareEnter();
@@ -2074,7 +2074,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         StreamingWarmupLitStallLogged = false;
         if (!world.IsEnterLitGateActive())
         {
-          UEnterLitDiagnostics::BeginSession();
+          UEnterLitDiagnostics::BeginSession("cooperative_create_prepare_view");
           world.BeginEnterLitGate();
         }
       }
@@ -2528,7 +2528,26 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     FinalizeCooperativeLoadForEnterGame(world, Kind);
     if (world.IsEnterLitGateActive())
     {
+      // Capture the exact pre-exit blockers before EndEnterLitGate changes the
+      // visibility snapshot and quiesce state. The following sample records
+      // the post-transition state and gate_end edge in the same session.
+      const double enter_elapsed_ms =
+          StreamingWarmupWallStart.time_since_epoch().count() == 0
+              ? world.GetEnterLitGateElapsedMs()
+              : std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - StreamingWarmupWallStart)
+                    .count();
+      EnterLitSample gate_decision_sample{};
+      UEnterLitDiagnostics::Sample(world, enter_elapsed_ms,
+                                   gate_decision_sample);
+      UEnterLitDiagnostics::MaybeLog(gate_decision_sample,
+                                     /*frame_index=*/0,
+                                     /*every_n_frames=*/1);
       world.EndEnterLitGate();
+      EnterLitSample gate_end_sample{};
+      UEnterLitDiagnostics::Sample(world, enter_elapsed_ms, gate_end_sample);
+      UEnterLitDiagnostics::MaybeLog(gate_end_sample, /*frame_index=*/0,
+                                     /*every_n_frames=*/1);
       UEnterLitDiagnostics::EndSession();
     }
     CurrentPhase = Phase::Done;

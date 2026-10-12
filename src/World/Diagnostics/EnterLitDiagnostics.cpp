@@ -20,6 +20,7 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
+#include <string>
 #include <vector>
 
 namespace cutum
@@ -30,6 +31,9 @@ namespace
 
 std::mutex g_session_mutex;
 std::ofstream g_jsonl;
+std::string g_session_owner;
+uint64_t g_session_id{0};
+uint64_t g_next_session_id{1};
 bool g_session_open{false};
 std::chrono::steady_clock::time_point g_session_start{};
 double g_last_heartbeat_elapsed_ms{-1.0};
@@ -114,7 +118,10 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
   {
     return;
   }
-  g_jsonl << "{\"elapsed_ms\":" << s.elapsed_ms << ",\"snapshot_debt\":"
+  g_jsonl << "{\"gate_id\":" << g_session_id << ",\"gate_owner\":\""
+          << g_session_owner
+          << "\",\"elapsed_ms\":" << s.elapsed_ms
+          << ",\"snapshot_debt\":"
           << s.snapshot_debt << ",\"snapshot_size\":" << s.snapshot_size
           << ",\"pending_global\":" << s.pending_global << ",\"fifo_n\":"
           << s.fifo_n << ",\"inflight\":" << s.inflight
@@ -364,10 +371,12 @@ void LogSampleGlog(const EnterLitSample &sample, int frame_index)
 
 } // namespace
 
-void UEnterLitDiagnostics::BeginSession()
+void UEnterLitDiagnostics::BeginSession(const char *gate_owner)
 {
   std::lock_guard<std::mutex> lock(g_session_mutex);
   EndSession();
+  g_session_id = g_next_session_id++;
+  g_session_owner = gate_owner ? gate_owner : "unspecified";
   g_session_start = std::chrono::steady_clock::now();
   g_last_heartbeat_elapsed_ms = -1.0;
   g_profile_logged = false;
@@ -390,6 +399,7 @@ void UEnterLitDiagnostics::EndSession()
     g_jsonl.close();
   }
   g_session_open = false;
+  g_session_owner.clear();
   g_last_heartbeat_elapsed_ms = -1.0;
   g_profile_logged = false;
   g_steps = {};
