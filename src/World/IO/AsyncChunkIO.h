@@ -28,6 +28,7 @@ class UChunkStorageService;
 struct AsyncChunkLoadResult
 {
   glm::ivec3 coord;
+  uint64_t demandId{0};
   ChunkGenerationToken token;
   std::shared_ptr<std::atomic<bool>> cancellation;
   std::vector<uint8_t> payload;
@@ -117,7 +118,8 @@ public:
   void RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                    UBlockRegistry &registry,
                    const std::string &worldFolder, ChunkGenerationToken token,
-                   std::shared_ptr<std::atomic<bool>> cancellation);
+                   std::shared_ptr<std::atomic<bool>> cancellation,
+                   uint64_t demandId);
   void RequestDiskIndexWarmup(UChunkStorageService &storage,
                               const std::string &worldFolder);
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,

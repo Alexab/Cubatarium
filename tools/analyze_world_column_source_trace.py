@@ -169,6 +169,8 @@ def summarize_disk_load_ledger(events: list[dict[str, str]]) -> dict[str, Any]:
                 multiple_terminal_demands.append(
                     {"demand_id": demand_id, "coord": rows[0].get("coord", "")}
                 )
+        elif any(row.get("outcome") == "stale_result" for row in rows):
+            terminal_counts["stale_result"] += 1
         elif queued is not None:
             open_demands.append(
                 {
@@ -190,8 +192,9 @@ def summarize_disk_load_ledger(events: list[dict[str, str]]) -> dict[str, Any]:
         "demand_id_event_count": len(demands),
         "note": (
             "A disk demand stays open across retry events and is terminal after "
-            "complete, final incomplete, or cancellation. Open demands may still "
-            "be running when the log ends."
+            "complete, final incomplete, or cancellation. A stale worker result "
+            "closes it only when no explicit terminal event was logged. Open "
+            "demands may still be running when the log ends."
         ),
     }
 
@@ -276,12 +279,13 @@ def summarize(
         grouped.get(("disk", "cancelled_unloaded"), [])
     )
     disk_cancelled_abort = coords(grouped.get(("disk", "cancelled_abort"), []))
+    disk_stale_result = coords(grouped.get(("disk", "stale_result"), []))
     disk_cancelled = (
         disk_cancelled_out_of_range
         | disk_cancelled_unloaded
         | disk_cancelled_abort
     )
-    disk_terminal = disk_complete | disk_incomplete | disk_cancelled
+    disk_terminal = disk_complete | disk_incomplete | disk_cancelled | disk_stale_result
     proc_cancelled = coords(grouped.get(("procedural", "cancelled_out_of_range"), []))
     procedural_commits = grouped.get(("procedural", "committed"), [])
     slow_procedural_queue_events: list[dict[str, Any]] = []
@@ -350,6 +354,7 @@ def summarize(
             "cancelled_out_of_range": len(disk_cancelled_out_of_range),
             "cancelled_unloaded": len(disk_cancelled_unloaded),
             "cancelled_abort": len(disk_cancelled_abort),
+            "stale_result": len(disk_stale_result),
             "queued_without_terminal_event": len(
                 disk_queued - disk_terminal
             ),

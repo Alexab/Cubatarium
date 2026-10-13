@@ -8811,3 +8811,25 @@ the `Cubatarium` Release target, then use that executable for the cold-seed
 source-traced route that validates disk and procedural demand ledgers. Keep
 flight capture disabled and do not tune generation budgets from loaded-host
 timing samples.
+
+### Static follow-up — reject stale disk slice owners (2026-10-13)
+
+The async disk result carried its coordinate, generation token, and cancellation
+pointer, but not the `demand_id` stored by the active column-load state. A
+cancelled worker can publish after the one-shot cancelled-result sweep; if the
+same coordinate is requested again, coordinate-only matching could associate
+that late result with the new state. `AsyncChunkLoadResult` now carries the
+request's demand ID through both the absent-file fast path and worker path.
+Before timing accumulation or world apply, the main-thread drain checks both
+the demand ID and cancellation-owner pointer against the active column state,
+and rejects results whose owner changed or whose cancellation flag is set.
+Rejected results emit `disk/stale_result` with old and active IDs. The analyzer
+uses that row as an old-demand terminal fallback when no explicit cancellation
+or abort row exists.
+
+This is a static lifecycle fix; no synthetic race was injected and no test was
+run. `git diff --check` passed. M548 uses the earlier executable and cannot
+validate this change. Once M548 exits, build only the Release `Cubatarium`
+target, then validate the owner check and per-demand ledgers during the planned
+source-traced cold-seed flight. If it produces a stale-result row, confirm its
+old demand closes exactly once and the new owner's result still completes.

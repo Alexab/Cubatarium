@@ -3472,8 +3472,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     {
       AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
                                 *ChunkStorage, *world.BlockRegistry,
-                                WorldFolderPath, token,
-                                retry_state.cancellation);
+                                WorldFolderPath, token, retry_state.cancellation,
+                                retry_state.demand_id);
     }
     return;
   }
@@ -3852,6 +3852,21 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       }
 
       PendingAsyncColumnLoadState &state = pending_it->second;
+      const bool same_demand = load.demandId == state.demand_id &&
+                               load.cancellation == state.cancellation;
+      const bool result_cancelled =
+          !load.cancellation ||
+          load.cancellation->load(std::memory_order_acquire);
+      if (!same_demand || result_cancelled)
+      {
+        LogWorldColumnSource(
+            "disk", "stale_result", ground,
+            "demand_id=" + std::to_string(load.demandId) +
+                " active_demand_id=" + std::to_string(state.demand_id) +
+                " same_owner=" + (same_demand ? "1" : "0") +
+                " cancelled=" + (result_cancelled ? "1" : "0"));
+        continue;
+      }
       if (trace_async_io)
       {
         ++state.timing_slice_count;
@@ -4369,7 +4384,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   {
     AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
                               *ChunkStorage, *world.BlockRegistry,
-                              WorldFolderPath, token, state.cancellation);
+                              WorldFolderPath, token, state.cancellation,
+                              state.demand_id);
   }
 }
 

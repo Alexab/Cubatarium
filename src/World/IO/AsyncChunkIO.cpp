@@ -238,7 +238,8 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                 UBlockRegistry &registry,
                                 const std::string &worldFolder,
                                 ChunkGenerationToken token,
-                                std::shared_ptr<std::atomic<bool>> cancellation)
+                                std::shared_ptr<std::atomic<bool>> cancellation,
+                                uint64_t demandId)
 {
   const auto is_cancelled = [&]()
   {
@@ -264,6 +265,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
   {
     AsyncChunkLoadResult result;
     result.coord = coord;
+    result.demandId = demandId;
     result.token = token;
     result.cancellation = cancellation;
     result.submittedAt = submitted_at;
@@ -281,7 +283,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
   const ChunkStorageSettings worker_storage_settings = storage.GetSettings();
   LoadPool.Enqueue(
       [this, coord, filePath, token, format, submitted_at,
-       format_detect_ms, trace_io, cancellation, &registry,
+       format_detect_ms, trace_io, cancellation, demandId, &registry,
        worker_storage_settings]()
       {
         const auto is_cancelled = [&]()
@@ -295,6 +297,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
         }
         AsyncChunkLoadResult result;
         result.coord = coord;
+        result.demandId = demandId;
         result.token = token;
         result.cancellation = cancellation;
         result.format = format;
