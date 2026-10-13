@@ -8783,6 +8783,31 @@ Artifacts: [M547 report](../../bin/suite_reports/engine_refactor/m547_world164_m
 
 Next: run the same visible M335 settings through the full 2,800-second flight
 phase. Keep capture/source tracing disabled for this repeated-world distance
-checkpoint. Then run a source-traced cold-seed route to validate the repaired
+checkpoint. Then run a source-traced cold-seed route to validate the new
 `demand_id` reconciliation and collect terminal scheduler outcomes. Do not use
 M547 to tune admission/concurrency or to claim a framebuffer defect.
+
+### Static follow-up — disk-load abort completion (2026-10-13)
+
+Review of persistence teardown found that `AbortAsyncChunkIoFor` marked pending
+load tokens cancelled and then cleared `PendingAsyncColumnLoadSlices` without
+logging each demand. `TraceAsyncChunkIoShutdownState` only recorded the pending
+column count, so an open disk demand could not be distinguished from a dropped
+trace row. Abort now emits `disk/cancelled_abort` with `demand_id`, remaining
+slices, elapsed time, and reason before clearing that state.
+
+The source-trace analyzer now emits a per-demand disk-load ledger. It carries a
+demand across `retry` rows and closes it on `complete`, final `incomplete`, or
+cancellation (`cancelled_out_of_range`, `cancelled_unloaded`, or
+`cancelled_abort`). Empty-disk-column completion is included. Coordinate-level
+totals remain explicitly coarse because a coordinate can be loaded repeatedly.
+The flight-tools guide documents that `disk_miss` is `source=procedural` by
+design. No trace analysis or tests were run against the incorrect intermediate
+analyzer edit from `1cd26252`.
+
+M548 full-distance M335 was already running on the prior Release executable
+when this static correction was made; it is unaffected. After it exits, build
+the `Cubatarium` Release target, then use that executable for the cold-seed
+source-traced route that validates disk and procedural demand ledgers. Keep
+flight capture disabled and do not tune generation budgets from loaded-host
+timing samples.

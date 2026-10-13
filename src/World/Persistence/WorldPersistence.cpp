@@ -4225,14 +4225,28 @@ void UWorldPersistence::AbortAsyncChunkIo()
 bool UWorldPersistence::AbortAsyncChunkIoFor(
     const std::chrono::milliseconds timeout)
 {
+  const auto abort_started = std::chrono::steady_clock::now();
   bool cancelled_loads = false;
-  for (auto &entry : PendingAsyncColumnLoadSlices)
+  for (const auto &entry : PendingAsyncColumnLoadSlices)
   {
-    if (entry.second.cancellation)
+    const PendingAsyncColumnLoadState &state = entry.second;
+    if (state.cancellation)
     {
-      entry.second.cancellation->store(true, std::memory_order_release);
+      state.cancellation->store(true, std::memory_order_release);
       cancelled_loads = true;
     }
+    const double elapsed_ms =
+        state.requested_at == std::chrono::steady_clock::time_point{}
+            ? 0.0
+            : std::chrono::duration<double, std::milli>(
+                  abort_started - state.requested_at)
+                  .count();
+    LogWorldColumnSource(
+        "disk", "cancelled_abort", entry.first,
+        "demand_id=" + std::to_string(state.demand_id) +
+            " reason=abort_async_io remaining_slices=" +
+            std::to_string(state.remaining_results) +
+            " elapsed_ms=" + std::to_string(elapsed_ms));
   }
   if (cancelled_loads && AsyncChunkIo)
   {

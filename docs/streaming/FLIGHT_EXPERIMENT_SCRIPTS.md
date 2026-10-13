@@ -10,6 +10,8 @@
 
 В procedural-событиях `demand_id` обозначает отдельный streaming demand и проходит через disk lookup. `request_id` создаётся scheduler при принятии новой procedural-работы и остаётся с ней до commit/cancel/discard. `priority_refreshed` связывает новый demand с уже активным request. Повторные вызовы для уже принадлежащей scheduler координаты не пишутся отдельными строками, чтобы не раздувать лог на каждом кадре. При сбросе scheduler пишется `shutdown_snapshot` с числом запросов в каждом состоянии, очередью worker и очередью результатов.
 
+Disk ledger анализатора группирует `disk/queued` и `disk/complete`, `disk/incomplete` либо cancellation по `demand_id`; `disk/retry` остаётся промежуточным событием. `disk_miss` намеренно классифицируется как `source=procedural`: это решение перейти от отсутствующего сохранённого столбца к генерации. Координатные итоги остаются более грубой сводкой, чем ledger по ID.
+
 JSONL входного gate содержит `gate_id` и `gate_owner`; снимок решения об окончании gate и post-transition `gate_end=1` записываются отдельно.
 
 - [`tools/flight_sim_run.py`](../../tools/flight_sim_run.py) — единственный общий запускатель. Он настраивает flight-sim, сохраняет perf JSONL/manifest/report, восстанавливает временно изменённые `config.json` и исходный `users.json`, повторно выставляет контрольную позицию перед каждым `--repeat` и вызывает анализатор.
