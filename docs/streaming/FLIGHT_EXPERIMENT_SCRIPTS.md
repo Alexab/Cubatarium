@@ -7677,7 +7677,51 @@ For M335 reports, A24's `corridor` means the start-locus band
 `focus_cx[-6,6]`; the eye-proxy `mid_corridor` means `focus_cx[2,5]`. Neither
 name denotes the temporal midpoint of a long flight. Preserve `World_164` as
 the repeated-condition control and continue periodic fresh-seed checks
-separately. M554 is now running the 600-second control on the new Release build
-with per-frame memo invalidation plus exact query-witness and memo-hit
-telemetry. Keep operator-visible observations separate from mesh/readiness
-proxies.
+separately. M554 ran the 600-second visible fixed-day control on the new
+Release build SHA256
+`EA65FD5F3CAACE8330FDF735B9E3DC031FFBC7AF7A44F437E4F20844480CF399`. It
+completed normally at `5.19653 blocks/s`, covering `3,088` blocks / `193`
+chunks (`focus_cx=7…-186`), with no blocked substeps or ground contacts. It
+was a start-corridor control, not a repeat of M553's far coordinates.
+
+M554 reported two period-end near-focus hole proxy samples and 48 moving
+rising-edge events; A24 remained `pass=false`. On the period samples, the raw
+radius query returned missing twice and clear zero times. Across rising-edge
+events, it returned missing 38 times and clear 10 times. Memo hits were zero
+among 129 sampled probe invocations and zero on those events. The raw query
+witness differed from the separately selected focus proxy on all 38 miss
+events; all 48 selected proxies were drawable and satisfying. This confirms
+the two coordinates come from different selection paths, not that either one
+matches a blank framebuffer pixel. M554 still lacks readiness/owner state for
+the raw query witness; the next Release diagnostic records that state.
+
+Median query time was `0.0174 ms` (p95 `0.0354 ms`, max `0.0726 ms`). Wall
+median was `13.20 ms`; streaming phase median `7.00 ms`. Host CPU median/p95/max
+was `33.9/58.3/95.6%`; Cubatarium used `1.92/2.94/3.42` cores (median/p95/max),
+so do not treat this as a quiet-host benchmark. The report's A24 gate failed;
+dual-lane and eye-proxy gates passed. These remain telemetry gates, not
+operator-confirmed image defects.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m554_world164_m335_query_witness_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-015725_2392.jsonl), and [host samples](../../bin/logs/m554_host_cpu_20261014.jsonl).
+Exact command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m554_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 600 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m554_world164_m335_query_witness --report bin/suite_reports/engine_refactor/m554_world164_m335_query_witness_20261014.json --process-timeout 1200
+```
+
+### M555 — full-distance exact-witness lifecycle trace (planned)
+
+M555 will repeat the full 2,800-second visible no-teleport M335 route on
+`World_164`, with the exact raw-query witness owner/revision fields from commit
+`be4fe1de`. Release SHA256 is
+`DBFE5C871FA03EEA502DA72982BFE079649EE0E21EAD0F69399EE2C4507CD4B2`.
+Capture and source tracing stay disabled; host CPU is sampled throughout.
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m555_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m555_world164_m335_full_distance_witness_owner --report bin/suite_reports/engine_refactor/m555_world164_m335_full_distance_witness_owner_20261014.json --process-timeout 3600
+```
+
+Keep operator-visible observations separate from mesh/readiness proxies.

@@ -9056,15 +9056,20 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
 
 ## Remaining work
 
-1. Finish M554, the 600-second visible M335 control on the newly built Release
-   executable. Compare event counts, memo-hit share, query-witness identity,
-   query timing, and host load against M553.
-2. If M554 shows a fresh exact near-camera miss, trace its owning
-   generation/light/mesh/apply stage and correct that stage. Keep visible-black
-   and framebuffer evidence separate from readiness proxies.
-3. If the short control is stable, repeat the full-distance M335 route with the
-   new executable before accepting the per-frame invalidation change at range.
-4. Retain `World_164` M335 as the repeated-condition acceptance route. Repeat
+1. Add readiness, dirty, in-flight, pending GPU, geometry-publication debt,
+   content/light/mesh revisions, and column-ticket state for the exact raw
+   radius-query witness. Keep that state separate from the independently
+   chosen focus proxy.
+2. Run M555: a full 2,800-second visible M335 repeat on the same persisted
+   world. Compare the exact raw witness lifecycle at the far coordinates
+   against M553, plus query cost, memo hits, and host load.
+3. If an exact raw witness remains unsatisfied without a valid owner, trace its
+   generation/light/mesh/apply path and fix that ownership gap. Keep
+   visible-black and framebuffer evidence separate from readiness proxies.
+4. Decide whether per-frame memo invalidation earns its cost from observed
+   memo hits and query timings; M554's sampled calls had zero memo hits, so that
+   short route has not demonstrated a memo-staleness fix.
+5. Retain `World_164` M335 as the repeated-condition acceptance route. Repeat
    a fresh-seed frontier check periodically, and only use quiet-host runs for
    performance conclusions.
 
@@ -9078,6 +9083,17 @@ exact query-witness or memo-hit telemetry. A24 has been recomputed into the
 saved report; full evidence and caveats are in
 [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
 
+M554 completed normally on the new Release build at `5.19653 blocks/s`,
+covering `3,088` blocks / `193` chunks. It recorded two period-end near-focus
+hole proxy samples and 48 moving rising edges. The raw radius query returned
+missing 38 times and clear 10 times on rising-edge rows; memo hits were zero.
+Its exact witness differed from the independently selected focus proxy on all
+38 miss events; all selected proxies were drawable+satisfying. Query time was
+`0.0174 ms` median, `0.0354 ms` p95. A24 failed, while dual-lane and eye-proxy
+gates passed. The route stopped at `cx=-186`, so it did not reach M553's far
+events. Full evidence is in
+[FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
 The Release change committed as `242d9585` advances the hole-query memo epoch
 once per streaming frame while keeping deferred-remesh requeue tied to focus
 movement. This preserves within-frame sharing while preventing cross-frame
@@ -9086,5 +9102,12 @@ radius query hit its memo and the exact missing coordinate returned by that
 same query. Release build succeeded with SHA256
 `EA65FD5F3CAACE8330FDF735B9E3DC031FFBC7AF7A44F437E4F20844480CF399`.
 The generated Release project has MSVC `MultiProcessorCompilation=true`; the
-build used CMake `--parallel 8`. M554 is running now; its command and artifacts
-are recorded in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+build used CMake `--parallel 8`. M554 found no memo hits among its sampled
+probe calls, so it does not prove the invalidation change fixed stale query
+answers; it also exposed that the query witness and pressure proxy refer to
+different candidate-selection paths. Next, capture lifecycle state for the
+query's exact witness and run M555 full-distance on the new Release build. The
+diagnostic changes are committed as `be4fe1de`; Release SHA256 is
+`DBFE5C871FA03EEA502DA72982BFE079649EE0E21EAD0F69399EE2C4507CD4B2`. The
+M555 command is recorded in
+[FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
