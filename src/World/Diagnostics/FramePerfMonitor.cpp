@@ -789,6 +789,11 @@ struct FrameNumbers
   int visual_holes{0};
   int near_focus_hole_probe_ran{0};
   int near_focus_hole_probe_result{-1};
+  int near_focus_hole_probe_memo_hit{0};
+  int near_focus_hole_probe_witness_valid{0};
+  int near_focus_hole_probe_witness_cx{-1};
+  int near_focus_hole_probe_witness_cy{-1};
+  int near_focus_hole_probe_witness_cz{-1};
   int near_focus_holes_latched{0};
   int unfinished_visual{0};
   int light_debt{0};
@@ -1832,6 +1837,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.visual_holes = phys.VisualHoles;
   n.near_focus_hole_probe_ran = phys.NearFocusHoleProbeRan;
   n.near_focus_hole_probe_result = phys.NearFocusHoleProbeResult;
+  n.near_focus_hole_probe_memo_hit = phys.NearFocusHoleProbeMemoHit;
+  n.near_focus_hole_probe_witness_valid =
+      phys.NearFocusHoleProbeWitnessValid;
+  n.near_focus_hole_probe_witness_cx = phys.NearFocusHoleProbeWitnessCx;
+  n.near_focus_hole_probe_witness_cy = phys.NearFocusHoleProbeWitnessCy;
+  n.near_focus_hole_probe_witness_cz = phys.NearFocusHoleProbeWitnessCz;
   n.near_focus_holes_latched = phys.NearFocusHolesLatched;
   n.unfinished_visual = phys.UnfinishedVisual;
   n.light_debt = phys.LightDebt;
@@ -3007,6 +3018,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.near_focus_hole_probe_ran
           << ",\"near_focus_hole_probe_result\":"
           << n.near_focus_hole_probe_result
+          << ",\"near_focus_hole_probe_memo_hit\":"
+          << n.near_focus_hole_probe_memo_hit
+          << ",\"near_focus_hole_probe_witness_valid\":"
+          << n.near_focus_hole_probe_witness_valid
+          << ",\"near_focus_hole_probe_witness_cx\":"
+          << n.near_focus_hole_probe_witness_cx
+          << ",\"near_focus_hole_probe_witness_cy\":"
+          << n.near_focus_hole_probe_witness_cy
+          << ",\"near_focus_hole_probe_witness_cz\":"
+          << n.near_focus_hole_probe_witness_cz
           << ",\"near_focus_holes_latched\":"
           << n.near_focus_holes_latched
           << ",\"unfinished_visual\":" << n.unfinished_visual

@@ -663,12 +663,14 @@ public:
   bool GpuPassDirtyHitsChunk(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
-                                              int radius_chunks) const;
+                                              int radius_chunks,
+                                              glm::ivec3 *missing_coord_out = nullptr,
+                                              bool *memo_hit_out = nullptr) const;
   bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
                                     glm::ivec3 &out_coord) const;
-  /// Invalidate per-frame hole-query memo when focus moves (ColdPL-3D).
+  /// Start a query frame and requeue deferred remesh when focus moves.
   void BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk);
   void SetPendingLightFocusPressure(int n) { PendingLightFocusPressure_ = n; }
   void SetVisibleBlackNoTicketPressure(int n)
@@ -1560,7 +1562,8 @@ private:
   mutable std::function<void(glm::ivec3, uint8_t)> OnFaceDebtMask;
   mutable std::function<void(glm::ivec3)> OnGpuPipelineProgress;
   std::function<void(glm::ivec3)> OnPackedRepresentationSwitch;
-  // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
+  // Per-streaming-update-frame memo: HasMissing/FindNearest are called many
+  // times during one movement/update cycle.
   mutable uint64_t HoleQueryEpoch{0};
   struct MissingQueryMemo
   {
@@ -1568,6 +1571,7 @@ private:
     glm::ivec3 center{0};
     int radius{-1};
     bool result{false};
+    glm::ivec3 missing_coord{0};
   };
   mutable MissingQueryMemo MissingMemo{};
   struct NearestQueryMemo

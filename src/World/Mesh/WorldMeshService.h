@@ -375,7 +375,9 @@ public:
   uint64_t GetInflightSourceRevision(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
-                                              int radius_chunks) const;
+                                              int radius_chunks,
+                                              glm::ivec3 *missing_coord_out = nullptr,
+                                              bool *memo_hit_out = nullptr) const;
   bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,

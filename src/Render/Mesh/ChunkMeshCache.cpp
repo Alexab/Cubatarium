@@ -1847,8 +1847,17 @@ uint64_t UChunkMeshCache::GetInflightSourceRevision(
 
 bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
     const UBlockWorld &world, glm::ivec3 center_ground_chunk,
-    int radius_chunks) const
+    int radius_chunks, glm::ivec3 *missing_coord_out,
+    bool *memo_hit_out) const
 {
+  if (missing_coord_out)
+  {
+    *missing_coord_out = glm::ivec3(0);
+  }
+  if (memo_hit_out)
+  {
+    *memo_hit_out = false;
+  }
   if (radius_chunks < 0)
   {
     return false;
@@ -1857,6 +1866,14 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
       MissingMemo.center == center_ground_chunk &&
       MissingMemo.radius == radius_chunks)
   {
+    if (memo_hit_out)
+    {
+      *memo_hit_out = true;
+    }
+    if (missing_coord_out && MissingMemo.result)
+    {
+      *missing_coord_out = MissingMemo.missing_coord;
+    }
     return MissingMemo.result;
   }
   // Presentable cy band — align with FindNearestMissingGreedyMesh / enter SoT
@@ -1870,6 +1887,7 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
     cy_scan_hi = std::min(kMissingScanMaxCy, center_ground_chunk.y + 1);
   }
   bool missing = false;
+  glm::ivec3 missing_coord{0};
   world.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
       {
@@ -1914,6 +1932,7 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
               if (chunk.GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
               {
                 missing = true;
+                missing_coord = coord;
                 return;
               }
             }
@@ -1924,6 +1943,11 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
   MissingMemo.center = center_ground_chunk;
   MissingMemo.radius = radius_chunks;
   MissingMemo.result = missing;
+  MissingMemo.missing_coord = missing_coord;
+  if (missing_coord_out && missing)
+  {
+    *missing_coord_out = missing_coord;
+  }
   return missing;
 }
 
@@ -1931,13 +1955,14 @@ void UChunkMeshCache::BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk)
 {
   if (focus_ground_chunk != LastHoleQueryFocus_)
   {
-    // Missing/nearest queries are memoized for this focus chunk. Mesh state can
-    // change asynchronously before the focus crosses into another chunk, so a
-    // query invocation alone does not promise a fresh scan of resident chunks.
-    ++HoleQueryEpoch;
     LastHoleQueryFocus_ = focus_ground_chunk;
     RequeueDeferredRemesh(static_cast<int>(RemeshDeferredRing_.size()));
   }
+  // Share expensive missing/nearest queries within one streaming update, but
+  // refresh their memo at the next frame. Mesh state can change asynchronously
+  // while the focus remains in the same chunk; focus-only invalidation could
+  // otherwise preserve a stale hole result until the player crossed a border.
+  ++HoleQueryEpoch;
 }
 
 void UChunkMeshCache::DeferRemeshCoord(const glm::ivec3 &coord)

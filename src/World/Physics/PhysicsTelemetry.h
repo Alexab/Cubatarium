@@ -855,6 +855,13 @@ struct PhysicsTelemetry
   /// Query result: 1 = missing mesh, 0 = no missing mesh, -1 = not sampled.
   /// An invoked query is not guaranteed to scan current mesh state.
   int NearFocusHoleProbeResult{-1};
+  /// The query returned its memoized answer (1) rather than scanning chunks.
+  int NearFocusHoleProbeMemoHit{0};
+  /// Coordinate returned by the same radius scan/memo as ProbeResult.
+  int NearFocusHoleProbeWitnessValid{0};
+  int NearFocusHoleProbeWitnessCx{-1};
+  int NearFocusHoleProbeWitnessCy{-1};
+  int NearFocusHoleProbeWitnessCz{-1};
   /// NearFocusHoles held true without a positive raw probe this frame.
   int NearFocusHolesLatched{0};
   /// Missing mesh or dark/unlit preview in focus (render contract).

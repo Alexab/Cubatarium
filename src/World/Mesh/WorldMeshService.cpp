@@ -753,10 +753,13 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
 
 bool UWorldMeshService::HasMissingGreedyMeshInHorizontalRadius(
     const UBlockWorld &world, glm::ivec3 center_ground_chunk,
-    int radius_chunks) const
+    int radius_chunks, glm::ivec3 *missing_coord_out,
+    bool *memo_hit_out) const
 {
   return Cache.HasMissingGreedyMeshInHorizontalRadius(world, center_ground_chunk,
-                                                      radius_chunks);
+                                                      radius_chunks,
+                                                      missing_coord_out,
+                                                      memo_hit_out);
 }
 
 bool UWorldMeshService::FindNearestMissingGreedyMesh(

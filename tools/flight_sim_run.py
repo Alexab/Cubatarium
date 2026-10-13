@@ -504,6 +504,23 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             except (TypeError, ValueError):
                 return -1
 
+        def event_probe_witness_matches_proxy(row: dict) -> bool:
+            if not event_flag(row, "near_focus_hole_probe_witness_valid"):
+                return False
+            keys = (
+                ("near_focus_hole_probe_witness_cx", "focus_proxy_miss_cx"),
+                ("near_focus_hole_probe_witness_cy", "focus_proxy_miss_cy"),
+                ("near_focus_hole_probe_witness_cz", "focus_proxy_miss_cz"),
+            )
+            try:
+                return all(
+                    int(float(row.get(query_key)))
+                    == int(float(row.get(proxy_key)))
+                    for query_key, proxy_key in keys
+                )
+            except (TypeError, ValueError):
+                return False
+
         event_focus_cx: list[float] = []
         for row in hole_events:
             try:
@@ -651,8 +668,15 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             "near_focus_hole_probe_returned_clear_periods": probe_returned_clear_n,
             "near_focus_hole_probe_result_semantics": (
                 "result from an invoked HasMissingGreedyMeshInHorizontalRadius "
-                "query; the query can hit its focus/radius memo, so invocation "
-                "does not guarantee a fresh world scan"
+                "query; it can hit a same-frame shared memo, so invocation "
+                "does not guarantee an uncached world scan"
+            ),
+            "near_focus_hole_probe_memo_hit_periods": sum(
+                event_flag(row, "near_focus_hole_probe_memo_hit")
+                for row in probe_rows
+            ),
+            "near_focus_hole_probe_witness_matches_proxy_periods": sum(
+                event_probe_witness_matches_proxy(row) for row in probe_rows
             ),
             "near_focus_hole_latched_periods": latched_hole_n,
             "near_focus_hole_proxy_drawable_periods": proxy_drawable_n,
@@ -673,6 +697,22 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             "visual_holes_enter_probe_returned_miss": event_probe_returned_miss_n,
             "visual_holes_enter_probe_returned_clear": event_probe_returned_clear_n,
             "visual_holes_enter_probe_unavailable": event_probe_unavailable_n,
+            "visual_holes_enter_probe_memo_hit": sum(
+                event_flag(row, "near_focus_hole_probe_memo_hit")
+                for row in hole_events
+            ),
+            "visual_holes_enter_probe_witness_valid": sum(
+                event_flag(row, "near_focus_hole_probe_witness_valid")
+                for row in hole_events
+            ),
+            "visual_holes_enter_probe_witness_matches_proxy": sum(
+                event_probe_witness_matches_proxy(row) for row in hole_events
+            ),
+            "visual_holes_enter_probe_witness_differs_from_proxy": sum(
+                event_flag(row, "near_focus_hole_probe_witness_valid")
+                and not event_probe_witness_matches_proxy(row)
+                for row in hole_events
+            ),
             "visual_holes_enter_probe_miss_and_proxy_drawable": sum(
                 event_flag(row, "near_focus_hole_probe_ran")
                 and event_probe_result(row) == 1

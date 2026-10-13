@@ -752,6 +752,8 @@ void UWorldStreaming::RefreshStreamingPressure(
       last_unfinished_hint <= 3;
   bool missing_near = rp.last_missing_near;
   bool missing_near_probe_result = false;
+  bool missing_near_probe_memo_hit = false;
+  glm::ivec3 missing_near_probe_coord{0};
   const bool run_miss_probe =
       enter_miss_probe || rp.miss_probe_cd <= 0 ||
       (rp.last_missing_near && !rim_probe_throttle) ||
@@ -762,7 +764,8 @@ void UWorldStreaming::RefreshStreamingPressure(
         std::chrono::high_resolution_clock::now();
     missing_near_probe_result =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_ground, miss_probe_radius);
+            world.GetBlockWorld(), focus_ground, miss_probe_radius,
+            &missing_near_probe_coord, &missing_near_probe_memo_hit);
     missing_near = missing_near_probe_result;
     pt.PrepRefreshMissRadiusQueryMs += lap_ms(miss_radius_query_t0);
     if ((moving_for_telemetry || rim_probe_throttle) && !enter_miss_probe)
@@ -2716,6 +2719,22 @@ void UWorldStreaming::RefreshStreamingPressure(
         run_miss_probe ? 1 : 0;
     world.PhysicsTelemetryData.NearFocusHoleProbeResult =
         run_miss_probe ? (missing_near_probe_result ? 1 : 0) : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeMemoHit =
+        run_miss_probe && missing_near_probe_memo_hit ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessValid =
+        run_miss_probe && missing_near_probe_result ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessCx =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_coord.x
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessCy =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_coord.y
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessCz =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_coord.z
+            : -1;
     world.PhysicsTelemetryData.NearFocusHolesLatched =
         (in.visual_holes &&
          !(run_miss_probe && missing_near_probe_result))
