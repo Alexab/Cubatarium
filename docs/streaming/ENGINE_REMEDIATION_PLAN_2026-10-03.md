@@ -8807,8 +8807,14 @@ analyzer edit from `1cd26252`.
 
 M548 full-distance M335 was already running on the prior Release executable
 when this static correction was made; it is unaffected. After it exits, build
-the `Cubatarium` Release target, then use that executable for the cold-seed
-source-traced route that validates disk and procedural demand ledgers. Keep
+the `Cubatarium` Release target. Validate disk ownership first with a
+source-traced repeat on persisted `World_164`, then use a separate fresh seed
+to validate procedural requests and disk-miss fallback. M545's new-world trace
+contained 2,021 `procedural/disk_miss` events and 2,014 procedural commits, but
+no disk-load requests; an empty seed alone cannot validate the disk ledger or
+the stale-result guard. Record each world's starting `chunk_files` count.
+The persisted-world trace also measures synchronous `format_detect_ms` and
+`disk_discovery_ms` before deciding whether those lookups need redesign. Keep
 flight capture disabled and do not tune generation budgets from loaded-host
 timing samples.
 
