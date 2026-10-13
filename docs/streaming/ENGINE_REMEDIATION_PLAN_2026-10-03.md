@@ -8747,3 +8747,42 @@ before opening the gate; cooperative completion and both application runner
 exit paths capture the pre-exit decision and post-transition end sample. The
 entry-gate instrumentation is structurally covered, but flight evidence is
 still needed to verify actual owner/ID sequences and settling decisions.
+
+### M547 — World_164 M335 control (2026-10-13)
+
+The Release application target was built and run visibly with the established
+no-teleport M335 route, capture and source tracing disabled. The 980-second
+fly phase covered 5,024 blocks (`focus_west_delta_cx=314`); median fly speed was
+`5.19653 blocks/s`, with zero blocked movement substeps and zero ground
+contacts. The process exited normally (`process_rc=0`, `run_outcome=success`)
+and restored `world_data.json` byte-for-byte. This covers the repeated-world
+control but is not the full far-flight checkpoint (`far_flight=false`).
+
+The report is `pass=false` because the proxy-based eye and A24 stop-lines did
+not pass: `unfinished_visual` was nonzero in 90.9% of samples; the near-focus
+mesh-hole proxy was nonzero in 11 periods overall and one period in the covered
+mid-corridor window. Its rate was 2.18% and the longest run was one period; the
+post-stop near-focus proxy returned to zero. These are mesh/readiness proxies,
+not direct framebuffer samples. This run saved no pixels, so it does not
+establish a visible black/empty chunk. The app remained responsive during the
+route.
+
+Frame wall time median was `15.09 ms` during flight. Host CPU median was
+`57.5%`, p95 `99.8%`, max `100%`; treat tail timings as load-contaminated. The
+last host sample after the app exited was `46.9%`. Two entry-gate sessions were
+captured: `gate_id=1 / cooperative_load_prepare` and `gate_id=2 /
+application_gpu_warmup`; each includes a pre-exit `live_blockers` decision row
+and a separate `gate_end=1` post-transition row. Thus M546 gate ownership and
+decision/end instrumentation is confirmed on a real launch.
+
+Artifacts: [M547 report](../../bin/suite_reports/engine_refactor/m547_world164_m335_clean_control_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-220407_27636.jsonl),
+[host sampler](../../bin/logs/m547_host_cpu_20261013.jsonl),
+[cooperative gate trace](../../bin/logs/enter_lit_20261013-220409.jsonl), and
+[application warmup gate trace](../../bin/logs/enter_lit_20261013-220410.jsonl).
+
+Next: run the same visible M335 settings through the full 2,800-second flight
+phase. Keep capture/source tracing disabled for this repeated-world distance
+checkpoint. Then run a source-traced cold-seed route to validate the repaired
+`demand_id` reconciliation and collect terminal scheduler outcomes. Do not use
+M547 to tune admission/concurrency or to claim a framebuffer defect.
