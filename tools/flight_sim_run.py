@@ -480,6 +480,8 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             if float(r.get("movement_speed") or 0) > 2.0
         ]
         use = fly if fly else rows
+        # M335's named product corridor is the start locus around cx=0; it is
+        # not the temporal midpoint of the long westbound flight.
         west = [
             r
             for r in use
@@ -551,6 +553,37 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
         stalled_xs = vals("visible_black_fully_dark_stalled_n", mid_third)
         holes_gt0_corridor = sum(1 for h in holes_xs if h > 0)
         holes_gt0_whole = sum(1 for h in whole_holes if h > 0)
+        whole_rows = use if use else rows
+        hole_rows = [
+            row
+            for row in whole_rows
+            if float(row.get("near_focus_holes") or row.get("visual_holes") or 0)
+            > 0
+        ]
+        probe_rows = [
+            row for row in hole_rows if "near_focus_hole_probe_ran" in row
+        ]
+        probe_fresh_miss_n = sum(
+            int(row.get("near_focus_hole_probe_ran", 0)) == 1
+            and int(row.get("near_focus_hole_probe_result", -1)) == 1
+            for row in probe_rows
+        )
+        probe_fresh_clear_n = sum(
+            int(row.get("near_focus_hole_probe_ran", 0)) == 1
+            and int(row.get("near_focus_hole_probe_result", -1)) == 0
+            for row in probe_rows
+        )
+        latched_hole_n = sum(
+            int(row.get("near_focus_holes_latched", 0)) > 0
+            for row in probe_rows
+        )
+        proxy_drawable_n = sum(
+            int(row.get("focus_proxy_drawable_mesh", 0)) > 0 for row in hole_rows
+        )
+        proxy_satisfying_n = sum(
+            int(row.get("focus_proxy_satisfying_mesh", 0)) > 0
+            for row in hole_rows
+        )
         dropped_per = median(corridor_deltas) if corridor_deltas else None
         # Admission breakdown (diagnostic; dirty_dropped alone ≠ correctness).
         def last_or_none(key: str) -> float | None:
@@ -561,6 +594,15 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             "near_focus_holes_periods_gt0": holes_gt0_whole,
             "near_focus_holes_periods_gt0_corridor": holes_gt0_corridor,
             "near_focus_holes_scope": "whole_route_mesh_telemetry",
+            "near_focus_holes_corridor_scope": (
+                "focus_cx[-6,6] around M335 start locus, not route midpoint"
+            ),
+            "near_focus_hole_probe_rows": len(probe_rows),
+            "near_focus_hole_probe_fresh_miss_periods": probe_fresh_miss_n,
+            "near_focus_hole_probe_fresh_clear_periods": probe_fresh_clear_n,
+            "near_focus_hole_latched_periods": latched_hole_n,
+            "near_focus_hole_proxy_drawable_periods": proxy_drawable_n,
+            "near_focus_hole_proxy_satisfying_periods": proxy_satisfying_n,
             "dirty_dropped_per_period": dropped_per,
             "dirty_dropped_per_period_mean": (
                 (sum(corridor_deltas) / float(len(corridor_deltas)))
@@ -928,6 +970,7 @@ def compute_eye_proxy_stop_line(perf_path: Path) -> dict:
             "perf_path": str(perf_path),
             "eye_proxy_segment": segment,
             "eye_proxy_coverage": coverage_status,
+            "eye_proxy_scope": "M335 spatial focus_cx[2,5], not temporal mid-flight",
             # Keep legacy keys for report readers, but document that these are
             # cumulative diagnostics and are no longer a quality gate.
             "mesh_apply_stale_visual_mid_med": stale_cumulative_med,

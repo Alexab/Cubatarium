@@ -850,6 +850,12 @@ struct PhysicsTelemetry
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).
   int VisualHoles{0};
+  /// Raw missing-mesh probe ran this frame (0 = probe was throttled).
+  int NearFocusHoleProbeRan{0};
+  /// Raw probe result: 1 = missing mesh, 0 = no missing mesh, -1 = not sampled.
+  int NearFocusHoleProbeResult{-1};
+  /// NearFocusHoles held true without a positive raw probe this frame.
+  int NearFocusHolesLatched{0};
   /// Missing mesh or dark/unlit preview in focus (render contract).
   int UnfinishedVisual{0};
   /// PendingLightBeforeMesh in focus (light debt, not visual holes).

@@ -751,6 +751,7 @@ void UWorldStreaming::RefreshStreamingPressure(
       rp.last_missing_near && prev_miss_horiz >= 3 && !pending_underfeet_early &&
       last_unfinished_hint <= 3;
   bool missing_near = rp.last_missing_near;
+  bool missing_near_probe_result = false;
   const bool run_miss_probe =
       enter_miss_probe || rp.miss_probe_cd <= 0 ||
       (rp.last_missing_near && !rim_probe_throttle) ||
@@ -759,9 +760,10 @@ void UWorldStreaming::RefreshStreamingPressure(
   {
     const auto miss_radius_query_t0 =
         std::chrono::high_resolution_clock::now();
-    missing_near =
+    missing_near_probe_result =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), focus_ground, miss_probe_radius);
+    missing_near = missing_near_probe_result;
     pt.PrepRefreshMissRadiusQueryMs += lap_ms(miss_radius_query_t0);
     if ((moving_for_telemetry || rim_probe_throttle) && !enter_miss_probe)
     {
@@ -2710,6 +2712,15 @@ void UWorldStreaming::RefreshStreamingPressure(
     // overwritten after UpdateStreaming's mesh-only write, then re-applied in
     // TickAsync and inflated nh_no_miss_rate with miss=0 (SoftDefer remesh).
     world.PhysicsTelemetryData.NearFocusHoles = in.visual_holes ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeRan =
+        run_miss_probe ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeResult =
+        run_miss_probe ? (missing_near_probe_result ? 1 : 0) : -1;
+    world.PhysicsTelemetryData.NearFocusHolesLatched =
+        (in.visual_holes &&
+         !(run_miss_probe && missing_near_probe_result))
+            ? 1
+            : 0;
     pt.PrepRefreshDietFlagsMs += lap_ms(diet_telem_t0);
   }
 

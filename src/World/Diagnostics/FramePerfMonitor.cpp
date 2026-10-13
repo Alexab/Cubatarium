@@ -787,6 +787,9 @@ struct FrameNumbers
   int prior_lit_hold_age_max{0};
   int near_focus_holes{0};
   int visual_holes{0};
+  int near_focus_hole_probe_ran{0};
+  int near_focus_hole_probe_result{-1};
+  int near_focus_holes_latched{0};
   int unfinished_visual{0};
   int light_debt{0};
   int focus_missing_mesh{0};
@@ -1827,6 +1830,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prior_lit_hold_age_max = phys.PriorLitHoldAgeMax;
   n.near_focus_holes = phys.NearFocusHoles;
   n.visual_holes = phys.VisualHoles;
+  n.near_focus_hole_probe_ran = phys.NearFocusHoleProbeRan;
+  n.near_focus_hole_probe_result = phys.NearFocusHoleProbeResult;
+  n.near_focus_holes_latched = phys.NearFocusHolesLatched;
   n.unfinished_visual = phys.UnfinishedVisual;
   n.light_debt = phys.LightDebt;
   n.focus_missing_mesh = phys.FocusMissingMesh;
@@ -2997,6 +3003,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prior_lit_hold_age_max\":" << n.prior_lit_hold_age_max
           << ",\"near_focus_holes\":" << n.near_focus_holes
           << ",\"visual_holes\":" << n.visual_holes
+          << ",\"near_focus_hole_probe_ran\":"
+          << n.near_focus_hole_probe_ran
+          << ",\"near_focus_hole_probe_result\":"
+          << n.near_focus_hole_probe_result
+          << ",\"near_focus_holes_latched\":"
+          << n.near_focus_holes_latched
           << ",\"unfinished_visual\":" << n.unfinished_visual
           << ",\"light_debt\":" << n.light_debt
           << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
