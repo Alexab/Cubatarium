@@ -7435,3 +7435,31 @@ sampler; then the unchanged full far-distance M335 route if the control is
 credible. Repeat a fresh-seed source-trace route under quieter host conditions
 before making a generation queue/concurrency change. Keep the repeated-world
 M335 route as the primary acceptance path.
+
+### M548 — full-distance M335 repeat (2026-10-13)
+
+M548 used the same visible, no-teleport M335 setup on `World_164`, with capture
+and source tracing disabled:
+
+```powershell
+python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m548_world164_m335_full_distance --report bin/suite_reports/engine_refactor/m548_world164_m335_full_distance_20261013.json --process-timeout 3600
+```
+
+The process exited normally and covered `14,368` blocks at `5.19653 blocks/s`,
+with no blocked substeps or ground contacts. Report acceptance is FAIL (`30/40`
+gates): near-focus mesh-hole proxy rate `1.984%`, longest run one period,
+28 affected whole-route periods and none in the mid-corridor; post-stop proxy
+was zero. M547 measured `2.18%` on 504 steady periods, so this is comparable
+coverage telemetry, not pixel evidence. Post-stop readiness debt reached 17
+while mesh-missing proxy stayed zero.
+
+One `visual_holes_enter` event recorded an `88.69 ms` frame, mostly a
+`70.33 ms` streamer core update. Four of 14 ready disk results were selected
+and applied; async I/O tick time was `1.54 ms`. With source tracing disabled,
+the event cannot be attributed to disk discovery, format probing, cancellation
+scans, or procedural admission. M548's Release binary predates the disk-owner
+guard; the follow-up source-traced persisted-world route must use the rebuilt
+executable. Artifacts: [report](../../bin/suite_reports/engine_refactor/m548_world164_m335_full_distance_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-222237_17364.jsonl), host sampler
+`bin/logs/m548_host_cpu_20261013.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-222235.17364`.

@@ -8806,17 +8806,17 @@ design. No trace analysis or tests were run against the incorrect intermediate
 analyzer edit from `1cd26252`.
 
 M548 full-distance M335 was already running on the prior Release executable
-when this static correction was made; it is unaffected. After it exits, build
-the `Cubatarium` Release target. Validate disk ownership first with a
-source-traced repeat on persisted `World_164`, then use a separate fresh seed
-to validate procedural requests and disk-miss fallback. M545's new-world trace
-contained 2,021 `procedural/disk_miss` events and 2,014 procedural commits, but
-no disk-load requests; an empty seed alone cannot validate the disk ledger or
-the stale-result guard. Record each world's starting `chunk_files` count.
-The persisted-world trace also measures synchronous `format_detect_ms` and
-`disk_discovery_ms` before deciding whether those lookups need redesign. Keep
-flight capture disabled and do not tune generation budgets from loaded-host
-timing samples.
+when this static correction was made; it is unaffected. After it exited, the
+`Cubatarium` Release target was rebuilt successfully with the guard. Validate
+disk ownership first with a source-traced repeat on persisted `World_164`, then
+use a separate fresh seed to validate procedural requests and disk-miss
+fallback. M545's new-world trace contained 2,021 `procedural/disk_miss` events
+and 2,014 procedural commits, but no disk-load requests; an empty seed alone
+cannot validate the disk ledger or the stale-result guard. Record each world's
+starting `chunk_files` count. The persisted-world trace also measures
+synchronous `format_detect_ms` and `disk_discovery_ms` before deciding whether
+those lookups need redesign. Keep flight capture disabled and do not tune
+generation budgets from loaded-host timing samples.
 
 ### Static follow-up — reject stale disk slice owners (2026-10-13)
 
@@ -8835,7 +8835,52 @@ or abort row exists.
 
 This is a static lifecycle fix; no synthetic race was injected and no test was
 run. `git diff --check` passed. M548 uses the earlier executable and cannot
-validate this change. Once M548 exits, build only the Release `Cubatarium`
-target, then validate the owner check and per-demand ledgers during the planned
-source-traced cold-seed flight. If it produces a stale-result row, confirm its
-old demand closes exactly once and the new owner's result still completes.
+validate this change. The `Cubatarium` Release target has now built successfully
+with this guard; the persisted-world source-traced route below is the next
+runtime validation. If it produces a stale-result row, confirm its old demand
+closes exactly once and the new owner's result still completes.
+
+### M548 — full-distance M335 repeat (2026-10-13)
+
+M548 ran the established visible no-teleport route on `World_164` for the full
+2,800-second fly phase with source tracing and frame capture disabled. It used
+the Release executable SHA-256
+`9a5813217eee346bafeafc60670ffdeee2c82ca8499beafa147e906ad3b9de00`, built
+before the stale-disk-owner guard. The process exited normally (`process_rc=0`,
+`run_outcome=success`), covered `14,368` blocks / `898` chunks, reached
+checkpoint `8,192`, held y=`70`, and flew at median `5.19653 blocks/s`; blocked
+substeps and ground contacts were zero.
+
+The report is `pass=false` (`30/40` gates). The near-focus missing-mesh proxy
+was nonzero in 28 whole-route periods (`1.984%`, longest run one period), but
+zero in the mid-corridor window and zero after stopping. M547 had 11 affected
+periods among 504 steady periods (`2.18%`), with one mid-corridor period, so
+the normalized M548 whole-route proxy rate did not regress. This remains mesh
+coverage telemetry, not framebuffer evidence. `unfinished_visual` remained a
+readiness debt signal; post-stop it reached 17 while mesh-missing and
+visual-hole proxies were both zero. The source-free run did not reproduce an
+observable blank-chunk defect.
+
+M548's fly wall median was `14.70 ms` (`68.0` effective FPS); streaming-phase
+median was `6.95 ms`. There was one `visual_holes_enter` sample at `88.69 ms`,
+mostly `streamer_core`/`update_streaming` (`70.33/71.08 ms`), with 14 ready disk
+results and four selected/applied; the async I/O tick itself was `1.54 ms`.
+Because source tracing was off, the synchronous request callback's disk-index
+lookup, format probes, and cancellation scans cannot be distinguished. A
+separate 112 ms spike was dominated by `app_update` (`68.87 ms`) with only
+`8.11 ms` streaming. These isolated samples motivate the persisted-world
+source trace, not a speculative I/O rewrite. Host CPU was median `38.9%`, p95
+`72.7%`, max `100%`; do not use the high tail to tune budgets.
+
+Artifacts: [M548 report](../../bin/suite_reports/engine_refactor/m548_world164_m335_full_distance_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-222237_17364.jsonl), [host sampler](../../bin/logs/m548_host_cpu_20261013.jsonl), and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-222235.17364`.
+
+After M548, the Release `Cubatarium` target was rebuilt successfully; executable
+SHA-256 is `8ab91683fdca4bb5d43217a1bd9c98031e6b97e9306859a44a558ee67e1a5a18`.
+The build emitted the existing C4335 source-format warning in
+`WorldBlockPhysicsService.h`, then passed the static-executable check. No tests
+or Debug targets were built. Next: source-trace the same M335 route on
+persisted `World_164` to validate disk-load owner IDs and time
+`disk_discovery_ms` / `format_detect_ms`; then run a separate fresh-seed route
+for the procedural ledger.
