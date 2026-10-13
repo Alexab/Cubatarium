@@ -9056,31 +9056,35 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
 
 ## Remaining work
 
-1. Complete M553, the 2,800-second visible M335 repeat on the same persisted
-   world and updated probe telemetry. Recompute A24 after the run so its report
-   includes the committed rising-edge analysis.
-2. Measure query memo hits, result age, and exact missing-slice identity. The
-   current Boolean radius query and separately selected witness do not prove
-   they refer to the same slice or mesh revision.
-3. Compare a bounded fresh query or state-change invalidation design against
-   the current memo on Release. Measure scan cost before changing the hot path;
-   do not run Debug or test targets.
-4. If a fresh, exact near-camera miss survives that change, trace its owning
+1. Finish M554, the 600-second visible M335 control on the newly built Release
+   executable. Compare event counts, memo-hit share, query-witness identity,
+   query timing, and host load against M553.
+2. If M554 shows a fresh exact near-camera miss, trace its owning
    generation/light/mesh/apply stage and correct that stage. Keep visible-black
    and framebuffer evidence separate from readiness proxies.
-5. Retain `World_164` M335 as the repeated-condition acceptance route. Repeat
+3. If the short control is stable, repeat the full-distance M335 route with the
+   new executable before accepting the per-frame invalidation change at range.
+4. Retain `World_164` M335 as the repeated-condition acceptance route. Repeat
    a fresh-seed frontier check periodically, and only use quiet-host runs for
    performance conclusions.
 
-M553 is currently running with the M552 Release binary. Its progress and exact
-command are recorded in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+M553 completed normally on the previous Release binary: `14,368` blocks /
+`898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.
+It recorded 39 period-end near-focus hole proxy samples and 318 rising-edge
+events over `focus_cx=-891…6`. The period query returned missing 28 times and
+clear 11 times, while 38/39 selected proxy witnesses were drawable+satisfying.
+These are proxy mismatches, not confirmed framebuffer holes. M553 did not have
+exact query-witness or memo-hit telemetry. A24 has been recomputed into the
+saved report; full evidence and caveats are in
+[FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
 
-The working-tree candidate now advances the hole-query memo epoch once per
-streaming frame while keeping deferred-remesh requeue tied to focus movement.
-This preserves same-frame reuse and prevents cross-frame stale results after
-asynchronous mesh changes; it is not yet built or flight-verified. The
-generated Release project already has MSVC `MultiProcessorCompilation=true`,
-and the configured build command uses CMake `--parallel 8`, so no build-setting
-change is needed. After M553 exits, build only the Release target, then run a
-600-second M335 control (M554) and compare event rates and query timing before
-deciding whether to keep the change for another full-distance run.
+The Release change committed as `242d9585` advances the hole-query memo epoch
+once per streaming frame while keeping deferred-remesh requeue tied to focus
+movement. This preserves within-frame sharing while preventing cross-frame
+stale results after asynchronous mesh changes. It also reports whether the
+radius query hit its memo and the exact missing coordinate returned by that
+same query. Release build succeeded with SHA256
+`EA65FD5F3CAACE8330FDF735B9E3DC031FFBC7AF7A44F437E4F20844480CF399`.
+The generated Release project has MSVC `MultiProcessorCompilation=true`; the
+build used CMake `--parallel 8`. M554 is running now; its command and artifacts
+are recorded in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).

@@ -7635,14 +7635,38 @@ Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m552_world164
 and INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261014-005039.2492`.
 
-### M553 — full-distance query-freshness control (running)
+### M553 — full-distance query-freshness control (2026-10-14)
 
-M553 is the visible 2,800-second M335 route on the same persisted `World_164`,
-with capture and source tracing off, using the M552 Release executable. Its
-purpose is to map period and rising-edge proxy signals across the entire
-westbound route. Because the runner process loaded its Python analyzer before
-the event-count update was committed, re-run A24 analysis from the saved perf
-JSONL after the flight exits. Command:
+M553 completed the visible 2,800-second M335 route on the same persisted
+`World_164`, with capture and source tracing off, using the M552 Release
+executable (`0ad5fe29…`). It covered `14,368` blocks / `898` chunks at a median
+`5.20019 blocks/s`; the process returned success, while the telemetry report
+remained `pass=false`. The analyzer was rerun against the saved JSONL so the
+report includes rising-edge event counts.
+
+The whole route had 39 period-end near-focus hole proxy samples, `2.77%` visual
+hole proxy rate, and 76 proxy transitions. Across those 39 samples, the invoked
+radius query returned missing 28 times and clear 11 times; 11 samples were
+latched. The selected proxy witness was drawable and satisfying on 38/39
+samples. Frame-aligned rising-edge events numbered 318; 260 recorded a query
+returning missing, 57 clear, one unavailable, and 58 latched. Events spanned
+`focus_cx=-891…6`. These are mesh/readiness telemetry proxies, not framebuffer
+evidence. M553 predates raw query-witness and memo-hit telemetry, so it cannot
+tell whether the radius-query slice matches the selected proxy witness or
+whether the query used the memo.
+
+Host CPU median/p95/max was `36.6/64.2/97.6%`. The sampler emitted one impossible
+`679`-core process sample at elapsed `1,895 s`; treat that as a sampler anomaly.
+The route is not a clean performance baseline. The report also recorded a
+`38` visible-black telemetry peak and `1,204` near-void proxy peak; neither is
+direct pixel evidence, and the operator had not reported a visible hole.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m553_world164_m335_full_distance_probe_latch_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-010258_25292.jsonl), [host samples](../../bin/logs/m553_host_cpu_20261014.jsonl),
+and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261014-010258.25292`.
+
+The exact invocation was:
 
 ```powershell
 $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
@@ -7653,6 +7677,7 @@ For M335 reports, A24's `corridor` means the start-locus band
 `focus_cx[-6,6]`; the eye-proxy `mid_corridor` means `focus_cx[2,5]`. Neither
 name denotes the temporal midpoint of a long flight. Preserve `World_164` as
 the repeated-condition control and continue periodic fresh-seed checks
-separately. Next, measure memo hit/staleness and the cost of a bounded fresh
-query before changing streaming or pressure policy. Keep operator-visible
-observations separate from mesh/readiness proxies.
+separately. M554 is now running the 600-second control on the new Release build
+with per-frame memo invalidation plus exact query-witness and memo-hit
+telemetry. Keep operator-visible observations separate from mesh/readiness
+proxies.
