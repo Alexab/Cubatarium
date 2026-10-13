@@ -514,12 +514,12 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
         event_probe_rows = [
             row for row in hole_events if "near_focus_hole_probe_ran" in row
         ]
-        event_probe_fresh_miss_n = sum(
+        event_probe_returned_miss_n = sum(
             event_flag(row, "near_focus_hole_probe_ran")
             and event_probe_result(row) == 1
             for row in event_probe_rows
         )
-        event_probe_fresh_clear_n = sum(
+        event_probe_returned_clear_n = sum(
             event_flag(row, "near_focus_hole_probe_ran")
             and event_probe_result(row) == 0
             for row in event_probe_rows
@@ -612,12 +612,12 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
         probe_rows = [
             row for row in hole_rows if "near_focus_hole_probe_ran" in row
         ]
-        probe_fresh_miss_n = sum(
+        probe_returned_miss_n = sum(
             int(row.get("near_focus_hole_probe_ran", 0)) == 1
             and int(row.get("near_focus_hole_probe_result", -1)) == 1
             for row in probe_rows
         )
-        probe_fresh_clear_n = sum(
+        probe_returned_clear_n = sum(
             int(row.get("near_focus_hole_probe_ran", 0)) == 1
             and int(row.get("near_focus_hole_probe_result", -1)) == 0
             for row in probe_rows
@@ -647,8 +647,13 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
                 "focus_cx[-6,6] around M335 start locus, not route midpoint"
             ),
             "near_focus_hole_probe_rows": len(probe_rows),
-            "near_focus_hole_probe_fresh_miss_periods": probe_fresh_miss_n,
-            "near_focus_hole_probe_fresh_clear_periods": probe_fresh_clear_n,
+            "near_focus_hole_probe_returned_miss_periods": probe_returned_miss_n,
+            "near_focus_hole_probe_returned_clear_periods": probe_returned_clear_n,
+            "near_focus_hole_probe_result_semantics": (
+                "result from an invoked HasMissingGreedyMeshInHorizontalRadius "
+                "query; the query can hit its focus/radius memo, so invocation "
+                "does not guarantee a fresh world scan"
+            ),
             "near_focus_hole_latched_periods": latched_hole_n,
             "near_focus_hole_proxy_drawable_periods": proxy_drawable_n,
             "near_focus_hole_proxy_satisfying_periods": proxy_satisfying_n,
@@ -665,9 +670,21 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             "visual_holes_enter_events_semantics": (
                 "mesh-coverage proxy events, not framebuffer evidence"
             ),
-            "visual_holes_enter_probe_fresh_miss": event_probe_fresh_miss_n,
-            "visual_holes_enter_probe_fresh_clear": event_probe_fresh_clear_n,
+            "visual_holes_enter_probe_returned_miss": event_probe_returned_miss_n,
+            "visual_holes_enter_probe_returned_clear": event_probe_returned_clear_n,
             "visual_holes_enter_probe_unavailable": event_probe_unavailable_n,
+            "visual_holes_enter_probe_miss_and_proxy_drawable": sum(
+                event_flag(row, "near_focus_hole_probe_ran")
+                and event_probe_result(row) == 1
+                and event_flag(row, "focus_proxy_drawable_mesh")
+                for row in hole_events
+            ),
+            "visual_holes_enter_probe_miss_and_proxy_satisfying": sum(
+                event_flag(row, "near_focus_hole_probe_ran")
+                and event_probe_result(row) == 1
+                and event_flag(row, "focus_proxy_satisfying_mesh")
+                for row in hole_events
+            ),
             "visual_holes_enter_latched": sum(
                 event_flag(row, "near_focus_holes_latched")
                 for row in hole_events

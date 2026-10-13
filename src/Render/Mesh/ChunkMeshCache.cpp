@@ -1931,6 +1931,9 @@ void UChunkMeshCache::BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk)
 {
   if (focus_ground_chunk != LastHoleQueryFocus_)
   {
+    // Missing/nearest queries are memoized for this focus chunk. Mesh state can
+    // change asynchronously before the focus crosses into another chunk, so a
+    // query invocation alone does not promise a fresh scan of resident chunks.
     ++HoleQueryEpoch;
     LastHoleQueryFocus_ = focus_ground_chunk;
     RequeueDeferredRemesh(static_cast<int>(RemeshDeferredRing_.size()));

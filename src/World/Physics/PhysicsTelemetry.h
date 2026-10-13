@@ -850,9 +850,10 @@ struct PhysicsTelemetry
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).
   int VisualHoles{0};
-  /// Raw missing-mesh probe ran this frame (0 = probe was throttled).
+  /// Missing-mesh radius query was invoked this frame; it may hit a memo.
   int NearFocusHoleProbeRan{0};
-  /// Raw probe result: 1 = missing mesh, 0 = no missing mesh, -1 = not sampled.
+  /// Query result: 1 = missing mesh, 0 = no missing mesh, -1 = not sampled.
+  /// An invoked query is not guaranteed to scan current mesh state.
   int NearFocusHoleProbeResult{-1};
   /// NearFocusHoles held true without a positive raw probe this frame.
   int NearFocusHolesLatched{0};
