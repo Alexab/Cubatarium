@@ -12,6 +12,8 @@
 
 Disk ledger анализатора группирует `disk/queued` и `disk/complete`, `disk/incomplete` либо cancellation по `demand_id`; `disk/retry` остаётся промежуточным событием. `disk_miss` намеренно классифицируется как `source=procedural`: это решение перейти от отсутствующего сохранённого столбца к генерации. Координатные итоги остаются более грубой сводкой, чем ledger по ID.
 
+Для периодического cold-seed прогона создавайте отдельный мир встроенным Release CLI после завершения текущего flight: из `bin` запустите `Cubatarium.exe --console --create-world --name <unique-world> --seed <uint32> --radius-chunks 4 --output worlds --report-json suite_reports/engine_refactor/<run>_world_create.json`. Перед полётом проверьте `success=true`, `world_path` и seed; запишите `chunk_files` как фактическое начальное покрытие диска. Если эксперимент требует строго пустую папку chunks, допускайте её только при `chunk_files=0`. Не переиспользуйте уже летавший cold-world как чистый seed.
+
 JSONL входного gate содержит `gate_id` и `gate_owner`; снимок решения об окончании gate и post-transition `gate_end=1` записываются отдельно.
 
 - [`tools/flight_sim_run.py`](../../tools/flight_sim_run.py) — единственный общий запускатель. Он настраивает flight-sim, сохраняет perf JSONL/manifest/report, восстанавливает временно изменённые `config.json` и исходный `users.json`, повторно выставляет контрольную позицию перед каждым `--repeat` и вызывает анализатор.
