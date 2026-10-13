@@ -468,18 +468,67 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
     """A24/A25: holes + DirtyAdmit thrash stop-lines (before end-debt cosmetics)."""
     try:
         rows: list[dict] = []
+        visual_holes_enter_rows: list[dict] = []
         for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
             if not line.startswith("{"):
                 continue
             row = json.loads(line)
             if row.get("kind") == "period":
                 rows.append(row)
+            elif row.get("kind") == "visual_holes_enter":
+                visual_holes_enter_rows.append(row)
         fly = [
             r
             for r in rows
             if float(r.get("movement_speed") or 0) > 2.0
         ]
         use = fly if fly else rows
+        fly_hole_events = [
+            r
+            for r in visual_holes_enter_rows
+            if float(r.get("movement_speed") or 0) > 2.0
+        ]
+        hole_events = (
+            fly_hole_events if fly_hole_events else visual_holes_enter_rows
+        )
+
+        def event_flag(row: dict, key: str) -> bool:
+            try:
+                return int(float(row.get(key) or 0)) > 0
+            except (TypeError, ValueError):
+                return False
+
+        def event_probe_result(row: dict) -> int:
+            try:
+                return int(float(row.get("near_focus_hole_probe_result", -1)))
+            except (TypeError, ValueError):
+                return -1
+
+        event_focus_cx: list[float] = []
+        for row in hole_events:
+            try:
+                if row.get("focus_cx") is not None:
+                    event_focus_cx.append(float(row["focus_cx"]))
+            except (TypeError, ValueError):
+                continue
+        event_probe_rows = [
+            row for row in hole_events if "near_focus_hole_probe_ran" in row
+        ]
+        event_probe_fresh_miss_n = sum(
+            event_flag(row, "near_focus_hole_probe_ran")
+            and event_probe_result(row) == 1
+            for row in event_probe_rows
+        )
+        event_probe_fresh_clear_n = sum(
+            event_flag(row, "near_focus_hole_probe_ran")
+            and event_probe_result(row) == 0
+            for row in event_probe_rows
+        )
+        event_probe_unavailable_n = sum(
+            not event_flag(row, "near_focus_hole_probe_ran")
+            or event_probe_result(row) < 0
+            for row in event_probe_rows
+        )
         # M335's named product corridor is the start locus around cx=0; it is
         # not the temporal midpoint of the long westbound flight.
         west = [
@@ -603,6 +652,55 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             "near_focus_hole_latched_periods": latched_hole_n,
             "near_focus_hole_proxy_drawable_periods": proxy_drawable_n,
             "near_focus_hole_proxy_satisfying_periods": proxy_satisfying_n,
+            "near_focus_holes_period_semantics": (
+                "one terminal frame sample per interval; transient rising edges "
+                "are reported separately below"
+            ),
+            "visual_holes_enter_events_in_analysis_scope": len(hole_events),
+            "visual_holes_enter_events_scope": (
+                "frame-aligned rising edges with movement_speed > 2"
+                if fly_hole_events
+                else "all frame-aligned rising edges (no moving event rows)"
+            ),
+            "visual_holes_enter_events_semantics": (
+                "mesh-coverage proxy events, not framebuffer evidence"
+            ),
+            "visual_holes_enter_probe_fresh_miss": event_probe_fresh_miss_n,
+            "visual_holes_enter_probe_fresh_clear": event_probe_fresh_clear_n,
+            "visual_holes_enter_probe_unavailable": event_probe_unavailable_n,
+            "visual_holes_enter_latched": sum(
+                event_flag(row, "near_focus_holes_latched")
+                for row in hole_events
+            ),
+            "visual_holes_enter_proxy_drawable": sum(
+                event_flag(row, "focus_proxy_drawable_mesh")
+                for row in hole_events
+            ),
+            "visual_holes_enter_proxy_satisfying": sum(
+                event_flag(row, "focus_proxy_satisfying_mesh")
+                for row in hole_events
+            ),
+            "visual_holes_enter_proxy_build_in_flight": sum(
+                event_flag(row, "focus_proxy_build_in_flight")
+                for row in hole_events
+            ),
+            "visual_holes_enter_proxy_pending_gpu_apply": sum(
+                event_flag(row, "focus_proxy_pending_gpu_apply")
+                for row in hole_events
+            ),
+            "visual_holes_enter_start_band_events": sum(
+                -6.0 <= cx <= 6.0 for cx in event_focus_cx
+            ),
+            "visual_holes_enter_outside_start_band_events": sum(
+                cx < -6.0 or cx > 6.0 for cx in event_focus_cx
+            ),
+            "visual_holes_enter_focus_cx_min": (
+                min(event_focus_cx) if event_focus_cx else None
+            ),
+            "visual_holes_enter_focus_cx_max": (
+                max(event_focus_cx) if event_focus_cx else None
+            ),
+            "visual_holes_enter_is_diagnostic_only": True,
             "dirty_dropped_per_period": dropped_per,
             "dirty_dropped_per_period_mean": (
                 (sum(corridor_deltas) / float(len(corridor_deltas)))
