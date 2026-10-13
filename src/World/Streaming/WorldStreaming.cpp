@@ -754,6 +754,29 @@ void UWorldStreaming::RefreshStreamingPressure(
   bool missing_near_probe_result = false;
   bool missing_near_probe_memo_hit = false;
   glm::ivec3 missing_near_probe_coord{0};
+  struct MissingNearProbeWitnessState
+  {
+    int resident{-1};
+    int has_mesh{-1};
+    int drawable{-1};
+    int satisfying{-1};
+    int dirty{-1};
+    int build_in_flight{-1};
+    int pending_gpu_apply{-1};
+    int pending_gpu_queued{-1};
+    int soft_defer_held{-1};
+    int geometry_debt{-1};
+    int repairable_debt{-1};
+    int flow_ticket_valid{-1};
+    int flow_ticket_kind{-1};
+    int flow_ticket_priority{-1};
+    int column_job_stage{-1};
+    uint64_t incarnation{0};
+    uint64_t content_revision{0};
+    uint64_t light_revision{0};
+    uint64_t mesh_revision{0};
+    uint64_t inflight_source_revision{0};
+  } missing_near_probe_witness_state;
   const bool run_miss_probe =
       enter_miss_probe || rp.miss_probe_cd <= 0 ||
       (rp.last_missing_near && !rim_probe_throttle) ||
@@ -768,6 +791,60 @@ void UWorldStreaming::RefreshStreamingPressure(
             &missing_near_probe_coord, &missing_near_probe_memo_hit);
     missing_near = missing_near_probe_result;
     pt.PrepRefreshMissRadiusQueryMs += lap_ms(miss_radius_query_t0);
+    if (missing_near_probe_result)
+    {
+      const glm::ivec3 coord = missing_near_probe_coord;
+      const UChunk *chunk =
+          world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+      const UWorldMeshService &mesh = world.GetMeshService();
+      missing_near_probe_witness_state.resident = chunk ? 1 : 0;
+      missing_near_probe_witness_state.has_mesh =
+          mesh.HasGreedyMesh(coord) ? 1 : 0;
+      missing_near_probe_witness_state.drawable =
+          mesh.HasDrawableGreedyMesh(coord) ? 1 : 0;
+      missing_near_probe_witness_state.satisfying =
+          mesh.HasMeshSatisfyingColumnReady(coord) ? 1 : 0;
+      missing_near_probe_witness_state.dirty =
+          mesh.IsChunkMeshDirty(coord) ? 1 : 0;
+      missing_near_probe_witness_state.build_in_flight =
+          mesh.HasInflightMeshBuild(coord) ? 1 : 0;
+      missing_near_probe_witness_state.pending_gpu_apply =
+          mesh.IsPendingGpuApply(coord) ? 1 : 0;
+      missing_near_probe_witness_state.pending_gpu_queued =
+          mesh.IsPendingGpuQueued(coord) ? 1 : 0;
+      missing_near_probe_witness_state.soft_defer_held =
+          mesh.IsSoftDeferHeld(coord) ? 1 : 0;
+      if (chunk)
+      {
+        const uint64_t incarnation = chunk->GetIncarnation();
+        missing_near_probe_witness_state.incarnation = incarnation;
+        missing_near_probe_witness_state.content_revision =
+            chunk->GetContentRevision();
+        missing_near_probe_witness_state.light_revision =
+            chunk->GetLightFieldRevision();
+        missing_near_probe_witness_state.mesh_revision =
+            mesh.GetChunkMeshRevision(coord);
+        missing_near_probe_witness_state.inflight_source_revision =
+            mesh.GetInflightSourceRevision(coord);
+        missing_near_probe_witness_state.geometry_debt =
+            mesh.HasGeometryPublicationDebt(coord, incarnation) ? 1 : 0;
+        missing_near_probe_witness_state.repairable_debt =
+            mesh.HasScreenRayRepairableGeometryDebt(coord, incarnation) ? 1
+                                                                        : 0;
+      }
+      const glm::ivec2 column(coord.x, coord.z);
+      auto &flow = GetColumnFlowExecutor();
+      ColumnWorkItem ticket{};
+      const bool has_ticket = flow.Scheduler().GetLiveTicket(column, ticket);
+      missing_near_probe_witness_state.flow_ticket_valid =
+          has_ticket ? 1 : 0;
+      missing_near_probe_witness_state.flow_ticket_kind =
+          has_ticket ? static_cast<int>(ticket.kind) : -1;
+      missing_near_probe_witness_state.flow_ticket_priority =
+          has_ticket ? ticket.priority : -1;
+      missing_near_probe_witness_state.column_job_stage =
+          static_cast<int>(flow.GetColumnJobStage(column));
+    }
     if ((moving_for_telemetry || rim_probe_throttle) && !enter_miss_probe)
     {
       rp.miss_probe_cd = missing_near ? 0 : 8;
@@ -2735,6 +2812,60 @@ void UWorldStreaming::RefreshStreamingPressure(
         run_miss_probe && missing_near_probe_result
             ? missing_near_probe_coord.z
             : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessResident =
+        run_miss_probe ? missing_near_probe_witness_state.resident : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessHasMesh =
+        run_miss_probe ? missing_near_probe_witness_state.has_mesh : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessDrawable =
+        run_miss_probe ? missing_near_probe_witness_state.drawable : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessSatisfying =
+        run_miss_probe ? missing_near_probe_witness_state.satisfying : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessDirty =
+        run_miss_probe ? missing_near_probe_witness_state.dirty : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessBuildInFlight =
+        run_miss_probe ? missing_near_probe_witness_state.build_in_flight : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessPendingGpuApply =
+        run_miss_probe ? missing_near_probe_witness_state.pending_gpu_apply : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessPendingGpuQueued =
+        run_miss_probe ? missing_near_probe_witness_state.pending_gpu_queued : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessSoftDeferHeld =
+        run_miss_probe ? missing_near_probe_witness_state.soft_defer_held : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessGeometryDebt =
+        run_miss_probe ? missing_near_probe_witness_state.geometry_debt : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessRepairableDebt =
+        run_miss_probe ? missing_near_probe_witness_state.repairable_debt : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessFlowTicketValid =
+        run_miss_probe ? missing_near_probe_witness_state.flow_ticket_valid : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessFlowTicketKind =
+        run_miss_probe ? missing_near_probe_witness_state.flow_ticket_kind : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessFlowTicketPriority =
+        run_miss_probe
+            ? missing_near_probe_witness_state.flow_ticket_priority
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessColumnJobStage =
+        run_miss_probe
+            ? missing_near_probe_witness_state.column_job_stage
+            : -1;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessIncarnation =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.incarnation
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessContentRevision =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.content_revision
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessLightRevision =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.light_revision
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessMeshRevision =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.mesh_revision
+            : 0;
+    world.PhysicsTelemetryData.NearFocusHoleProbeWitnessInflightSourceRevision =
+        run_miss_probe && missing_near_probe_result
+            ? missing_near_probe_witness_state.inflight_source_revision
+            : 0;
     world.PhysicsTelemetryData.NearFocusHolesLatched =
         (in.visual_holes &&
          !(run_miss_probe && missing_near_probe_result))

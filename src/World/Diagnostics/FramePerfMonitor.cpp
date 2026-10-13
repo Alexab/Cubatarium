@@ -794,6 +794,26 @@ struct FrameNumbers
   int near_focus_hole_probe_witness_cx{-1};
   int near_focus_hole_probe_witness_cy{-1};
   int near_focus_hole_probe_witness_cz{-1};
+  int near_focus_hole_probe_witness_resident{-1};
+  int near_focus_hole_probe_witness_has_mesh{-1};
+  int near_focus_hole_probe_witness_drawable{-1};
+  int near_focus_hole_probe_witness_satisfying{-1};
+  int near_focus_hole_probe_witness_dirty{-1};
+  int near_focus_hole_probe_witness_build_in_flight{-1};
+  int near_focus_hole_probe_witness_pending_gpu_apply{-1};
+  int near_focus_hole_probe_witness_pending_gpu_queued{-1};
+  int near_focus_hole_probe_witness_soft_defer_held{-1};
+  int near_focus_hole_probe_witness_geometry_debt{-1};
+  int near_focus_hole_probe_witness_repairable_debt{-1};
+  int near_focus_hole_probe_witness_flow_ticket_valid{-1};
+  int near_focus_hole_probe_witness_flow_ticket_kind{-1};
+  int near_focus_hole_probe_witness_flow_ticket_priority{-1};
+  int near_focus_hole_probe_witness_column_job_stage{-1};
+  uint64_t near_focus_hole_probe_witness_incarnation{0};
+  uint64_t near_focus_hole_probe_witness_content_revision{0};
+  uint64_t near_focus_hole_probe_witness_light_revision{0};
+  uint64_t near_focus_hole_probe_witness_mesh_revision{0};
+  uint64_t near_focus_hole_probe_witness_inflight_source_revision{0};
   int near_focus_holes_latched{0};
   int unfinished_visual{0};
   int light_debt{0};
@@ -1843,6 +1863,46 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.near_focus_hole_probe_witness_cx = phys.NearFocusHoleProbeWitnessCx;
   n.near_focus_hole_probe_witness_cy = phys.NearFocusHoleProbeWitnessCy;
   n.near_focus_hole_probe_witness_cz = phys.NearFocusHoleProbeWitnessCz;
+  n.near_focus_hole_probe_witness_resident =
+      phys.NearFocusHoleProbeWitnessResident;
+  n.near_focus_hole_probe_witness_has_mesh =
+      phys.NearFocusHoleProbeWitnessHasMesh;
+  n.near_focus_hole_probe_witness_drawable =
+      phys.NearFocusHoleProbeWitnessDrawable;
+  n.near_focus_hole_probe_witness_satisfying =
+      phys.NearFocusHoleProbeWitnessSatisfying;
+  n.near_focus_hole_probe_witness_dirty =
+      phys.NearFocusHoleProbeWitnessDirty;
+  n.near_focus_hole_probe_witness_build_in_flight =
+      phys.NearFocusHoleProbeWitnessBuildInFlight;
+  n.near_focus_hole_probe_witness_pending_gpu_apply =
+      phys.NearFocusHoleProbeWitnessPendingGpuApply;
+  n.near_focus_hole_probe_witness_pending_gpu_queued =
+      phys.NearFocusHoleProbeWitnessPendingGpuQueued;
+  n.near_focus_hole_probe_witness_soft_defer_held =
+      phys.NearFocusHoleProbeWitnessSoftDeferHeld;
+  n.near_focus_hole_probe_witness_geometry_debt =
+      phys.NearFocusHoleProbeWitnessGeometryDebt;
+  n.near_focus_hole_probe_witness_repairable_debt =
+      phys.NearFocusHoleProbeWitnessRepairableDebt;
+  n.near_focus_hole_probe_witness_flow_ticket_valid =
+      phys.NearFocusHoleProbeWitnessFlowTicketValid;
+  n.near_focus_hole_probe_witness_flow_ticket_kind =
+      phys.NearFocusHoleProbeWitnessFlowTicketKind;
+  n.near_focus_hole_probe_witness_flow_ticket_priority =
+      phys.NearFocusHoleProbeWitnessFlowTicketPriority;
+  n.near_focus_hole_probe_witness_column_job_stage =
+      phys.NearFocusHoleProbeWitnessColumnJobStage;
+  n.near_focus_hole_probe_witness_incarnation =
+      phys.NearFocusHoleProbeWitnessIncarnation;
+  n.near_focus_hole_probe_witness_content_revision =
+      phys.NearFocusHoleProbeWitnessContentRevision;
+  n.near_focus_hole_probe_witness_light_revision =
+      phys.NearFocusHoleProbeWitnessLightRevision;
+  n.near_focus_hole_probe_witness_mesh_revision =
+      phys.NearFocusHoleProbeWitnessMeshRevision;
+  n.near_focus_hole_probe_witness_inflight_source_revision =
+      phys.NearFocusHoleProbeWitnessInflightSourceRevision;
   n.near_focus_holes_latched = phys.NearFocusHolesLatched;
   n.unfinished_visual = phys.UnfinishedVisual;
   n.light_debt = phys.LightDebt;
@@ -3028,6 +3088,46 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.near_focus_hole_probe_witness_cy
           << ",\"near_focus_hole_probe_witness_cz\":"
           << n.near_focus_hole_probe_witness_cz
+          << ",\"near_focus_hole_probe_witness_resident\":"
+          << n.near_focus_hole_probe_witness_resident
+          << ",\"near_focus_hole_probe_witness_has_mesh\":"
+          << n.near_focus_hole_probe_witness_has_mesh
+          << ",\"near_focus_hole_probe_witness_drawable\":"
+          << n.near_focus_hole_probe_witness_drawable
+          << ",\"near_focus_hole_probe_witness_satisfying\":"
+          << n.near_focus_hole_probe_witness_satisfying
+          << ",\"near_focus_hole_probe_witness_dirty\":"
+          << n.near_focus_hole_probe_witness_dirty
+          << ",\"near_focus_hole_probe_witness_build_in_flight\":"
+          << n.near_focus_hole_probe_witness_build_in_flight
+          << ",\"near_focus_hole_probe_witness_pending_gpu_apply\":"
+          << n.near_focus_hole_probe_witness_pending_gpu_apply
+          << ",\"near_focus_hole_probe_witness_pending_gpu_queued\":"
+          << n.near_focus_hole_probe_witness_pending_gpu_queued
+          << ",\"near_focus_hole_probe_witness_soft_defer_held\":"
+          << n.near_focus_hole_probe_witness_soft_defer_held
+          << ",\"near_focus_hole_probe_witness_geometry_debt\":"
+          << n.near_focus_hole_probe_witness_geometry_debt
+          << ",\"near_focus_hole_probe_witness_repairable_debt\":"
+          << n.near_focus_hole_probe_witness_repairable_debt
+          << ",\"near_focus_hole_probe_witness_flow_ticket_valid\":"
+          << n.near_focus_hole_probe_witness_flow_ticket_valid
+          << ",\"near_focus_hole_probe_witness_flow_ticket_kind\":"
+          << n.near_focus_hole_probe_witness_flow_ticket_kind
+          << ",\"near_focus_hole_probe_witness_flow_ticket_priority\":"
+          << n.near_focus_hole_probe_witness_flow_ticket_priority
+          << ",\"near_focus_hole_probe_witness_column_job_stage\":"
+          << n.near_focus_hole_probe_witness_column_job_stage
+          << ",\"near_focus_hole_probe_witness_incarnation\":"
+          << n.near_focus_hole_probe_witness_incarnation
+          << ",\"near_focus_hole_probe_witness_content_revision\":"
+          << n.near_focus_hole_probe_witness_content_revision
+          << ",\"near_focus_hole_probe_witness_light_revision\":"
+          << n.near_focus_hole_probe_witness_light_revision
+          << ",\"near_focus_hole_probe_witness_mesh_revision\":"
+          << n.near_focus_hole_probe_witness_mesh_revision
+          << ",\"near_focus_hole_probe_witness_inflight_source_revision\":"
+          << n.near_focus_hole_probe_witness_inflight_source_revision
           << ",\"near_focus_holes_latched\":"
           << n.near_focus_holes_latched
           << ",\"unfinished_visual\":" << n.unfinished_visual

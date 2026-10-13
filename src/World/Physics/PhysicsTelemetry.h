@@ -862,6 +862,28 @@ struct PhysicsTelemetry
   int NearFocusHoleProbeWitnessCx{-1};
   int NearFocusHoleProbeWitnessCy{-1};
   int NearFocusHoleProbeWitnessCz{-1};
+  /// State sampled for the exact coordinate returned by the radius query.
+  /// -1 means no raw missing witness was returned this update.
+  int NearFocusHoleProbeWitnessResident{-1};
+  int NearFocusHoleProbeWitnessHasMesh{-1};
+  int NearFocusHoleProbeWitnessDrawable{-1};
+  int NearFocusHoleProbeWitnessSatisfying{-1};
+  int NearFocusHoleProbeWitnessDirty{-1};
+  int NearFocusHoleProbeWitnessBuildInFlight{-1};
+  int NearFocusHoleProbeWitnessPendingGpuApply{-1};
+  int NearFocusHoleProbeWitnessPendingGpuQueued{-1};
+  int NearFocusHoleProbeWitnessSoftDeferHeld{-1};
+  int NearFocusHoleProbeWitnessGeometryDebt{-1};
+  int NearFocusHoleProbeWitnessRepairableDebt{-1};
+  int NearFocusHoleProbeWitnessFlowTicketValid{-1};
+  int NearFocusHoleProbeWitnessFlowTicketKind{-1};
+  int NearFocusHoleProbeWitnessFlowTicketPriority{-1};
+  int NearFocusHoleProbeWitnessColumnJobStage{-1};
+  uint64_t NearFocusHoleProbeWitnessIncarnation{0};
+  uint64_t NearFocusHoleProbeWitnessContentRevision{0};
+  uint64_t NearFocusHoleProbeWitnessLightRevision{0};
+  uint64_t NearFocusHoleProbeWitnessMeshRevision{0};
+  uint64_t NearFocusHoleProbeWitnessInflightSourceRevision{0};
   /// NearFocusHoles held true without a positive raw probe this frame.
   int NearFocusHolesLatched{0};
   /// Missing mesh or dark/unlit preview in focus (render contract).

@@ -521,6 +521,21 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             except (TypeError, ValueError):
                 return False
 
+        def query_witness_has_identified_owner(row: dict) -> bool:
+            if not event_flag(row, "near_focus_hole_probe_witness_valid"):
+                return False
+            owner_keys = (
+                "near_focus_hole_probe_witness_dirty",
+                "near_focus_hole_probe_witness_build_in_flight",
+                "near_focus_hole_probe_witness_pending_gpu_apply",
+                "near_focus_hole_probe_witness_pending_gpu_queued",
+                "near_focus_hole_probe_witness_soft_defer_held",
+                "near_focus_hole_probe_witness_geometry_debt",
+                "near_focus_hole_probe_witness_repairable_debt",
+                "near_focus_hole_probe_witness_flow_ticket_valid",
+            )
+            return any(event_flag(row, key) for key in owner_keys)
+
         event_focus_cx: list[float] = []
         for row in hole_events:
             try:
@@ -629,6 +644,17 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
         probe_rows = [
             row for row in hole_rows if "near_focus_hole_probe_ran" in row
         ]
+        probe_scan_rows = [
+            row
+            for row in whole_rows
+            if event_flag(row, "near_focus_hole_probe_ran")
+        ]
+        probe_scan_miss_rows = [
+            row
+            for row in probe_scan_rows
+            if event_probe_result(row) == 1
+            and event_flag(row, "near_focus_hole_probe_witness_valid")
+        ]
         probe_returned_miss_n = sum(
             int(row.get("near_focus_hole_probe_ran", 0)) == 1
             and int(row.get("near_focus_hole_probe_result", -1)) == 1
@@ -677,6 +703,87 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             ),
             "near_focus_hole_probe_witness_matches_proxy_periods": sum(
                 event_probe_witness_matches_proxy(row) for row in probe_rows
+            ),
+            "near_focus_hole_probe_invocations_whole_route": len(
+                probe_scan_rows
+            ),
+            "near_focus_hole_probe_memo_hits_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_memo_hit")
+                for row in probe_scan_rows
+            ),
+            "near_focus_hole_probe_returned_miss_whole_route": sum(
+                event_probe_result(row) == 1 for row in probe_scan_rows
+            ),
+            "near_focus_hole_probe_witness_valid_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_valid")
+                for row in probe_scan_rows
+            ),
+            "near_focus_hole_probe_witness_mesh_present_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_has_mesh")
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_drawable_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_drawable")
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_satisfying_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_satisfying")
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_dirty_whole_route": sum(
+                event_flag(row, "near_focus_hole_probe_witness_dirty")
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_build_in_flight_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_build_in_flight"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_pending_gpu_apply_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_pending_gpu_apply"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_pending_gpu_queued_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_pending_gpu_queued"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_soft_defer_held_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_soft_defer_held"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_geometry_debt_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_geometry_debt"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_repairable_debt_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_repairable_debt"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_flow_ticket_whole_route": sum(
+                event_flag(
+                    row, "near_focus_hole_probe_witness_flow_ticket_valid"
+                )
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_no_identified_owner_whole_route": sum(
+                not query_witness_has_identified_owner(row)
+                for row in probe_scan_miss_rows
+            ),
+            "near_focus_hole_probe_witness_state_scope": (
+                "immediate state snapshot for the exact raw radius-query "
+                "coordinate; owner status covers reported dirty, build, GPU, "
+                "SoftDefer, publication-debt, and flow-ticket fields only"
             ),
             "near_focus_hole_latched_periods": latched_hole_n,
             "near_focus_hole_proxy_drawable_periods": proxy_drawable_n,
