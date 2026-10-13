@@ -1447,7 +1447,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             ground, world.BlockWorld, FolderPath, *world.BlockRegistry,
             world.ProceduralTemplate.MaxHeight);
         bool purged_incomplete_column = false;
-        if (!IsTerrainChunkComplete(world.BlockWorld, ground,
+        // LoadTerrainColumn returns -1 when a save still owns this column.
+        // That is a deferred read, not an absent or torn disk column. Keep the
+        // in-memory/save owner intact instead of clearing its chunks and files.
+        if (loaded_slices >= 0 &&
+            !IsTerrainChunkComplete(world.BlockWorld, ground,
                                     world.ProceduralTemplate.MaxHeight))
         {
           // Stale/torn column: drop disk + RAM so streaming regenerates.
@@ -1455,7 +1459,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                    world.ProceduralTemplate.MaxHeight);
           world.GetChunkStorage().RemoveTerrainColumnFromDisk(
               FolderPath, ground, world.ProceduralTemplate.MaxHeight);
-          purged_incomplete_column = true;
+          purged_incomplete_column = loaded_slices > 0;
         }
         if (IsWorldColumnSourceTraceEnabled())
         {
@@ -1464,9 +1468,20 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                   std::chrono::steady_clock::now() - column_load_started)
                   .count();
           const std::string source =
-              loaded_slices > 0 ? "disk" : "disk_miss";
-          const std::string outcome =
-              purged_incomplete_column ? "purged_incomplete" : "spatial_load";
+              loaded_slices == 0 ? "disk_miss" : "disk";
+          std::string outcome = "spatial_load";
+          if (loaded_slices < 0)
+          {
+            outcome = "deferred_save_pending";
+          }
+          else if (loaded_slices == 0)
+          {
+            outcome = "absent";
+          }
+          else if (purged_incomplete_column)
+          {
+            outcome = "purged_incomplete";
+          }
           const std::string message =
               "source=" + source + " outcome=" + outcome + " coord=(" +
               std::to_string(ground.x) + ",0," + std::to_string(ground.z) +
