@@ -7496,3 +7496,70 @@ Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m549_world164
 [perf JSONL](../../bin/logs/perf_20261013-231328_26936.jsonl), host sampler
 `bin/logs/m549_host_cpu_20261013.jsonl`, INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-231327.26936`.
+
+### M550 — fresh-seed procedural frontier trace (2026-10-13)
+
+Create the unique seed from `bin` using the Release CLI:
+
+```powershell
+.\Cubatarium.exe --console --create-world --name World_M550_Cold_20261013 --seed 3650481197 --radius-chunks 4 --output worlds --report-json suite_reports/engine_refactor/m550_world_create_20261013.json
+```
+
+The creation report was successful and recorded `603` `.cchunk` files before
+flight. This is a fresh seed with a pre-generated radius-4 start area, not an
+empty `chunks` directory. Then run the visible source-traced M335 frontier
+route from the repository root:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m550_host_cpu_20261013.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_M550_Cold_20261013 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 600 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m550_world_m550_cold_procedural_trace --report bin/suite_reports/engine_refactor/m550_world_m550_cold_procedural_trace_20261013.json --process-timeout 1200
+```
+
+The flight completed normally (`process_rc=0`, `run_outcome=success`) and
+covered `3,072` blocks / `192` chunks at `5.19653 blocks/s`, with no blocked
+substeps or ground contact. Telemetry acceptance was FAIL. The procedural
+ledger closed all `2,893` accepted demand IDs exactly once as committed, with
+no open IDs, duplicate terminal rows, cancellations, or demand mismatches.
+All `104` disk demands completed. Procedural generation p50/p95/max was
+`54.83/109.64/176.47 ms`; scheduler queue p95 was `5.48 ms`, worker-pool
+queue p95 `0.338 ms`, apply p95 `16.07 ms`, and total request p95 `157.77 ms`.
+The four-worker runtime handled the frontier. For disk loads, discovery max
+was `0.025 ms`, format-detect p95 `1.12 ms`, file-read p95 `0.95 ms`, and
+result-wait p95 `4.25 s`; the observed wait is dominated by queued readiness,
+not file-read time.
+
+The near-focus mesh-hole proxy rate was `0.317%` with a one-period longest
+run; a separate A24 counter saw two affected periods, one in the corridor.
+Median visible-black focus was zero and the symptom classifier was false.
+No framebuffer pixels were captured, so this is not proof of a visible blank
+chunk. `unfinished_visual` stayed nonzero and post-stop convergence failed,
+while post-stop mesh-missing and visual-hole proxies were zero. Red pressure
+was present in `240/317` total period rows (analyzer `red_rate=0.762` over
+315 steady periods), but global pending-light p50/p95/max was
+`40/68/79`, near-focus pending-light `0/0/7`, dirty max `140`, and streaming
+phase max `18.13 ms`. The Red threshold was crossed by the global pending-light
+count in 127 periods; 113 additional Red periods were hysteresis. This points
+to background work debt in the pressure signal, not a demonstrated focus
+rendering failure.
+
+The entry spatial-load trace had 89 `disk_miss/purged_incomplete` events with
+`slices=0`, meaning no file slices were present. Static review found the
+telemetry label was inaccurate and also found `LoadTerrainColumn() == -1`
+(`save pending`) was treated as purgeable. Commit `89b258e8` now preserves
+save-owned columns and logs `absent` / `deferred_save_pending` separately.
+M550 predates that correction. The new Release executable SHA-256 is
+`237e13caf0d636ca63ec42e5a6bc3b45853e805bb1bba856358945c4d5b63126`.
+
+Host CPU was median `48.9%`, p95 `83.5%`, max `99.8%`; Cubatarium used median
+`2.65` and p95 `3.88` CPU cores. Treat this as lifecycle/functional evidence,
+not an uncontended performance benchmark. Artifacts: [world creation report](../../bin/suite_reports/engine_refactor/m550_world_create_20261013.json),
+[flight report](../../bin/suite_reports/engine_refactor/m550_world_m550_cold_procedural_trace_20261013.json),
+[source ledger](../../bin/suite_reports/engine_refactor/m550_world_m550_cold_source_trace_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-233323_1840.jsonl), host sampler
+`bin/logs/m550_host_cpu_20261013.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-233321.1840`.
+
+Next: use the rebuilt Release binary for the full 2,800-second M335 control on
+persisted `World_164`, with capture and source tracing off. Keep the fresh-seed
+route as a periodic secondary check; inspect global pending-light pressure
+separately before considering governor changes.

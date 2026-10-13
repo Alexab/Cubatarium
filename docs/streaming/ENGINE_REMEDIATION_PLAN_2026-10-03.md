@@ -8921,7 +8921,71 @@ Host CPU was median `33.8%`, p95 `56.7%`, max `95.5%`; sampler interval p95 was
 [perf JSONL](../../bin/logs/perf_20261013-231328_26936.jsonl), [host sampler](../../bin/logs/m549_host_cpu_20261013.jsonl), and INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-231327.26936`.
 
-Next: create a genuinely fresh unique seed with Release CLI, record the
-resulting `chunk_files` count, then run a separate source-traced M335 route to
-measure procedural admission, generation, and commit closure. Keep M335 on
-`World_164` as the repeatable disk/render control.
+M550 below completes the separate fresh-seed trace. Keep M335 on `World_164`
+as the repeatable disk/render control; next run its full 2,800-second route on
+the rebuilt Release binary. The stale-owner mismatch branch remains a static
+fix without a runtime race reproduction.
+
+### M550 — fresh-seed procedural frontier trace (2026-10-13)
+
+The Release CLI created `World_M550_Cold_20261013` with seed `3650481197` and
+radius `4`. Its report says `success=true` and records `603` `.cchunk` files
+before flight, so this is a new seed with a pre-generated start region, not an
+empty-disk test. The visible, no-teleport M335 route used the same start,
+camera, fixed-day profile, and speed; source tracing was enabled, pixel/frame
+capture disabled. The 600-second fly phase covered `3,072` blocks / `192`
+chunks at median `5.19653 blocks/s`; blocked substeps and ground contacts were
+zero. The app exited normally (`process_rc=0`, `run_outcome=success`), while
+telemetry acceptance was `pass=false`.
+
+The source ledger contained `2,893` accepted procedural demand IDs, all
+terminally committed exactly once; there were no open requests, duplicate
+terminal outcomes, ID mismatches, or cancellations. It also recorded `104`
+disk demands, all completed. Generation time was p50/p95/max
+`54.83/109.64/176.47 ms`; scheduler queue was `2.13/5.48/328.40 ms`, worker
+queue `0.022/0.338/116.08 ms`, apply `3.30/16.07/27.74 ms`, and total request
+time `75.25/157.77/466.23 ms`. Four workers were active. For the 104 disk
+loads, discovery max was `0.025 ms`, format-detect p95 `1.12 ms`, file-read
+p95 `0.95 ms`, while result-wait p95 was `4.25 s`; these observations point
+to queued readiness rather than slow file reads on this sample.
+
+The flight report had a near-focus mesh-hole rate of `0.317%` with longest run
+one period; the separate A24 counter reported two whole-route periods and one
+mid-corridor period. The symptom classifier was false and median visible-black
+focus was zero. There was no framebuffer capture, so these are telemetry
+proxies, not evidence of user-visible empty or dark chunks. `unfinished_visual`
+was nonzero throughout and ended at `16`, but post-stop mesh-missing and
+visual-hole proxies were zero; post-stop convergence still failed. The run
+also had `stream_pressure=Red` in 240/317 total period rows; the analyzer's
+`red_rate=0.762` uses 315 steady periods. Global pending-light p50/p95/max was
+global pending-light p50/p95/max was `40/68/79`, focus pending-light was
+`0/0/7`, dirty max was `140`, and streaming-phase max was `18.13 ms`. In this
+trace all 127 samples above the Red pending-light threshold and 113 additional
+Red samples below it (hysteresis) explain the red rate; no sample crossed the
+dirty or streaming-phase Red threshold. This is a global backlog signal with
+little near-focus debt, and is not itself a visual defect.
+
+The sync spatial-load trace logged 89 `disk_miss/purged_incomplete` events,
+all with `slices=0`; those rows describe absent columns, not corrupt chunk
+files. Static review also found that `LoadTerrainColumn()` returns `-1` while a
+save owns the column, but the spatial gate treated every incomplete result as
+purgeable. Commit `89b258e8` now preserves that owner and distinguishes
+`absent` and `deferred_save_pending` outcomes in future traces. The M550 run
+predates this diagnostic/ownership correction.
+
+Artifacts: [world creation report](../../bin/suite_reports/engine_refactor/m550_world_create_20261013.json),
+[flight report](../../bin/suite_reports/engine_refactor/m550_world_m550_cold_procedural_trace_20261013.json),
+[source ledger](../../bin/suite_reports/engine_refactor/m550_world_m550_cold_source_trace_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-233323_1840.jsonl), [host sampler](../../bin/logs/m550_host_cpu_20261013.jsonl), and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-233321.1840`.
+Host CPU was median `48.9%`, p95 `83.5%`, max `99.8%`; Cubatarium used a
+median `2.65` and p95 `3.88` CPU cores. Do not treat these as an uncontended
+performance baseline.
+
+The cooperative spatial-load owner fix was rebuilt as Release target only;
+the executable SHA-256 is
+`237e13caf0d636ca63ec42e5a6bc3b45853e805bb1bba856358945c4d5b63126`. No
+tests or Debug targets were run. Next: repeat the full 2,800-second M335
+distance control on `World_164` with capture and source tracing off, then
+review the global-versus-focus pressure policy separately from visual-hole
+evidence. Keep a new seed as a periodic secondary check.
