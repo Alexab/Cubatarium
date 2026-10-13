@@ -8722,3 +8722,28 @@ the M545 order above: unchanged capture-disabled M335 control, long-distance
 repeat only if the control is credible, and a source-traced cold-seed route to
 reconcile per-demand disk misses with accepted procedural requests and terminal
 outcomes. Do not tune concurrency based on M545's saturated-host timings.
+
+### Static follow-up after M546 (2026-10-13)
+
+The Release `Cubatarium` target built successfully. A broader Release solution
+build also attempted utility/test executables and stopped at unresolved
+`cutum::CubatariumLogInfo` references from `ChunkMeshSnapshot.obj`; no tests
+were run. Continue using the application target for renderer flights and keep
+the test-link issue separate unless the selected validation path requires it.
+
+Review of `analyze_world_column_source_trace.py` found that its request ledger
+filtered events to `source=procedural` before collecting `outcome=disk_miss`.
+Disk misses are emitted as `source=disk`, so `disk_miss_demand_count` and the
+two demand reconciliation counts were always zero even when IDs were present.
+The analyzer now gathers disk-miss demand IDs from disk events and accepted
+demand IDs from procedural `requested` events. Existing coordinate summaries
+were unaffected. This is a static correction; the prior M545 trace predates the
+ID instrumentation, and the current capture-disabled M335 run cannot validate
+the demand ledger. Revalidate it on the planned source-traced cold-seed route.
+
+All `BeginEnterLitGate` call sites were checked against session ownership.
+Cooperative paths and application GPU warmup start a named diagnostics session
+before opening the gate; cooperative completion and both application runner
+exit paths capture the pre-exit decision and post-transition end sample. The
+entry-gate instrumentation is structurally covered, but flight evidence is
+still needed to verify actual owner/ID sequences and settling decisions.
