@@ -8835,10 +8835,10 @@ or abort row exists.
 
 This is a static lifecycle fix; no synthetic race was injected and no test was
 run. `git diff --check` passed. M548 uses the earlier executable and cannot
-validate this change. The `Cubatarium` Release target has now built successfully
-with this guard; the persisted-world source-traced route below is the next
-runtime validation. If it produces a stale-result row, confirm its old demand
-closes exactly once and the new owner's result still completes.
+validate this change. The `Cubatarium` Release target built successfully with
+this guard. M549 below exercises successful disk ownership and terminal
+accounting; it did not produce a stale-result row, so the mismatched-owner
+rejection branch remains unobserved at runtime.
 
 ### M548 — full-distance M335 repeat (2026-10-13)
 
@@ -8880,7 +8880,48 @@ After M548, the Release `Cubatarium` target was rebuilt successfully; executable
 SHA-256 is `8ab91683fdca4bb5d43217a1bd9c98031e6b97e9306859a44a558ee67e1a5a18`.
 The build emitted the existing C4335 source-format warning in
 `WorldBlockPhysicsService.h`, then passed the static-executable check. No tests
-or Debug targets were built. Next: source-trace the same M335 route on
-persisted `World_164` to validate disk-load owner IDs and time
-`disk_discovery_ms` / `format_detect_ms`; then run a separate fresh-seed route
-for the procedural ledger.
+or Debug targets were built. M549 below source-traces the persisted-world disk
+path. Next, run a separate fresh-seed route for procedural request/commit
+accounting; then decide whether any explicit stale-owner stress scenario is
+needed to cover the mismatch branch.
+
+### M549 — persisted World_164 disk-owner trace (2026-10-13)
+
+Before launch, `World_164/chunks` contained `83,882` `.cchunk` files. M549 used
+the rebuilt Release executable with the same visible no-teleport M335 start,
+camera, speed, and fixed-day profile; source tracing was enabled, while pixel
+and frame capture were disabled. The 980-second route covered `5,040` blocks /
+`315` chunks at median `5.19653 blocks/s`, with zero blocked substeps or ground
+contacts. It exited normally (`process_rc=0`, `run_outcome=success`) but was
+`pass=false` on telemetry acceptance (`31/40` gates).
+
+The mesh-hole proxy was nonzero in 13 whole-route periods (`2.579%`, longest
+run one period), zero in the mid-corridor and zero after stopping. M547 had 11
+such periods / `2.18%`, including one mid-corridor period. No frame was
+captured, and the M549 symptom-reproduction classifier remained false because
+focus-missing / visible-black signals were below its product threshold. These
+proxies do not establish a user-visible blank chunk. Post-stop visual-hole and
+mesh-missing proxies were zero; readiness debt ended at 12.
+
+The complete source trace contained `4,945` disk demands and `4,945` terminal
+`complete` outcomes. There were no retries, incomplete reads, cancellations,
+stale results, duplicate terminal events, or open/unmatched IDs. No procedural
+misses occurred: this route validates saved-world disk loading and result
+ownership, not the procedural path or the stale-result rejection branch.
+Timings were `disk_discovery_ms` p50/p95/max `0.0135/0.0253/0.0889 ms`,
+`format_detect_ms` `0.698/1.049/2.840 ms`, file-read p95 `1.04 ms`, and
+result-wait p50/p95/max `13.16/57.46/877.58 ms`. The earlier M548
+`streamer_core=70 ms` hitch did not recur as a disk-discovery or format-detect
+outlier in this same-start persisted route. This does not rule out a rare
+late-frontier or dirty-index path.
+
+Host CPU was median `33.8%`, p95 `56.7%`, max `95.5%`; sampler interval p95 was
+`2.015 s`. Artifacts: [M549 flight report](../../bin/suite_reports/engine_refactor/m549_world164_m335_disk_owner_trace_20261013.json),
+[source ledger](../../bin/suite_reports/engine_refactor/m549_world164_column_source_trace_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-231328_26936.jsonl), [host sampler](../../bin/logs/m549_host_cpu_20261013.jsonl), and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-231327.26936`.
+
+Next: create a genuinely fresh unique seed with Release CLI, record the
+resulting `chunk_files` count, then run a separate source-traced M335 route to
+measure procedural admission, generation, and commit closure. Keep M335 on
+`World_164` as the repeatable disk/render control.

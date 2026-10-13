@@ -7458,8 +7458,41 @@ One `visual_holes_enter` event recorded an `88.69 ms` frame, mostly a
 and applied; async I/O tick time was `1.54 ms`. With source tracing disabled,
 the event cannot be attributed to disk discovery, format probing, cancellation
 scans, or procedural admission. M548's Release binary predates the disk-owner
-guard; the follow-up source-traced persisted-world route must use the rebuilt
-executable. Artifacts: [report](../../bin/suite_reports/engine_refactor/m548_world164_m335_full_distance_20261013.json),
+guard; M549 below is the follow-up on the rebuilt executable. Artifacts: [report](../../bin/suite_reports/engine_refactor/m548_world164_m335_full_distance_20261013.json),
 [perf JSONL](../../bin/logs/perf_20261013-222237_17364.jsonl), host sampler
 `bin/logs/m548_host_cpu_20261013.jsonl`, INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-222235.17364`.
+
+### M549 — persisted World_164 disk-owner trace (2026-10-13)
+
+Starting coverage was `83,882` `.cchunk` files under `bin/worlds/World_164/chunks`.
+The Release binary was SHA-256
+`8ab91683fdca4bb5d43217a1bd9c98031e6b97e9306859a44a558ee67e1a5a18`. M549
+ran the visible M335 route with source tracing enabled and pixel/frame capture
+disabled:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m549_host_cpu_20261013.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 980 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m549_world164_m335_disk_owner_trace --report bin/suite_reports/engine_refactor/m549_world164_m335_disk_owner_trace_20261013.json --process-timeout 1500
+```
+
+The run covered `5,040` blocks at `5.19653 blocks/s`, with no blocked movement
+or ground contact. It exited normally; acceptance remains FAIL (`31/40` gates)
+because 13 whole-route periods reported a near-focus mesh-hole proxy (`2.579%`,
+longest run one period), with none in the mid-corridor and none after stop.
+No pixels were captured, so this is not proof of a visible blank chunk.
+
+The source analyzer found `4,945` disk queued demands and `4,945` complete
+terminal outcomes; no retry, incomplete, cancellation, stale-result,
+unmatched, duplicate-terminal, or open demands. There were no procedural
+misses, so this validates the saved-world path only. Discovery p50/p95/max was
+`0.0135/0.0253/0.0889 ms`, format detect `0.698/1.049/2.840 ms`, file-read
+p95 `1.04 ms`, and result-wait `13.16/57.46/877.58 ms`. M548's 70 ms
+streamer-core hitch did not recur as a disk discovery/format-detect outlier on
+this persisted route; keep the late-frontier/dirty-index possibility open.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m549_world164_m335_disk_owner_trace_20261013.json),
+[source ledger](../../bin/suite_reports/engine_refactor/m549_world164_column_source_trace_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-231328_26936.jsonl), host sampler
+`bin/logs/m549_host_cpu_20261013.jsonl`, INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-231327.26936`.
