@@ -93,9 +93,8 @@ def summarize_procedural_request_ledger(
 
     disk_miss_demands = {
         row["demand_id"]
-        for row in events
-        if row.get("source") == "disk"
-        and row.get("outcome") == "disk_miss"
+        for row in procedural
+        if row.get("outcome") == "disk_miss"
         and row.get("demand_id") not in (None, "", "0")
     }
     accepted_demands = {

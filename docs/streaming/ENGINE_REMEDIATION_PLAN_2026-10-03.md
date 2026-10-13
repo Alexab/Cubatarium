@@ -8731,15 +8731,15 @@ build also attempted utility/test executables and stopped at unresolved
 were run. Continue using the application target for renderer flights and keep
 the test-link issue separate unless the selected validation path requires it.
 
-Review of `analyze_world_column_source_trace.py` found that its request ledger
-filtered events to `source=procedural` before collecting `outcome=disk_miss`.
-Disk misses are emitted as `source=disk`, so `disk_miss_demand_count` and the
-two demand reconciliation counts were always zero even when IDs were present.
-The analyzer now gathers disk-miss demand IDs from disk events and accepted
-demand IDs from procedural `requested` events. Existing coordinate summaries
-were unaffected. This is a static correction; the prior M545 trace predates the
-ID instrumentation, and the current capture-disabled M335 run cannot validate
-the demand ledger. Revalidate it on the planned source-traced cold-seed route.
+Follow-up source review corrected an earlier mistaken analyzer finding. The
+persistence lookup intentionally emits `disk_miss` as `source=procedural`
+because it marks the procedural fallback decision; the M545 report already
+labels these as `procedural/disk_miss`. The analyzer's original filter against
+procedural events was correct. Commit `1cd26252` briefly changed that filter to
+`source=disk`; that incorrect edit has been reverted before the analyzer was
+run on any trace. M545 predates the new IDs, and the current capture-disabled
+M335 run cannot validate ID reconciliation. Confirm it on the planned
+source-traced cold-seed route.
 
 All `BeginEnterLitGate` call sites were checked against session ownership.
 Cooperative paths and application GPU warmup start a named diagnostics session
