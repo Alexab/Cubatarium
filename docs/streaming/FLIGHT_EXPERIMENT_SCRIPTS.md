@@ -7448,7 +7448,8 @@ python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174
 The process exited normally and covered `14,368` blocks at `5.19653 blocks/s`,
 with no blocked substeps or ground contacts. Report acceptance is FAIL (`30/40`
 gates): near-focus mesh-hole proxy rate `1.984%`, longest run one period,
-28 affected whole-route periods and none in the mid-corridor; post-stop proxy
+28 affected whole-route periods and none in the A24 start band
+(`focus_cx[-6,6]`); post-stop proxy
 was zero. M547 measured `2.18%` on 504 steady periods, so this is comparable
 coverage telemetry, not pixel evidence. Post-stop readiness debt reached 17
 while mesh-missing proxy stayed zero.
@@ -7479,7 +7480,8 @@ python tools/run_with_host_cpu_sampler.py --output bin/logs/m549_host_cpu_202610
 The run covered `5,040` blocks at `5.19653 blocks/s`, with no blocked movement
 or ground contact. It exited normally; acceptance remains FAIL (`31/40` gates)
 because 13 whole-route periods reported a near-focus mesh-hole proxy (`2.579%`,
-longest run one period), with none in the mid-corridor and none after stop.
+longest run one period), with none in the A24 start band (`focus_cx[-6,6]`)
+and none after stop.
 No pixels were captured, so this is not proof of a visible blank chunk.
 
 The source analyzer found `4,945` disk queued demands and `4,945` complete
@@ -7529,14 +7531,15 @@ result-wait p95 `4.25 s`; the observed wait is dominated by queued readiness,
 not file-read time.
 
 The near-focus mesh-hole proxy rate was `0.317%` with a one-period longest
-run; a separate A24 counter saw two affected periods, one in the corridor.
+run; a separate A24 counter saw two affected periods, one in the A24 start
+band (`focus_cx[-6,6]`).
 Median visible-black focus was zero and the symptom classifier was false.
 No framebuffer pixels were captured, so this is not proof of a visible blank
 chunk. `unfinished_visual` stayed nonzero and post-stop convergence failed,
 while post-stop mesh-missing and visual-hole proxies were zero. Red pressure
 was present in `240/317` total period rows (analyzer `red_rate=0.762` over
-315 steady periods), but global pending-light p50/p95/max was
-`40/68/79`, near-focus pending-light `0/0/7`, dirty max `140`, and streaming
+315 steady periods), but global pending-light p50/p95/max was `40/68/79`,
+near-focus pending-light `0/0/7`, dirty max `140`, and streaming
 phase max `18.13 ms`. The Red threshold was crossed by the global pending-light
 count in 127 periods; 113 additional Red periods were hysteresis. This points
 to background work debt in the pressure signal, not a demonstrated focus
@@ -7559,7 +7562,97 @@ not an uncontended performance benchmark. Artifacts: [world creation report](../
 `bin/logs/m550_host_cpu_20261013.jsonl`, INFO log
 `bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261013-233321.1840`.
 
-Next: use the rebuilt Release binary for the full 2,800-second M335 control on
-persisted `World_164`, with capture and source tracing off. Keep the fresh-seed
-route as a periodic secondary check; inspect global pending-light pressure
-separately before considering governor changes.
+### M551 — full-distance M335 on the disk-owner fix (2026-10-13 UTC)
+
+M551 repeated the established visible, no-teleport 2,800-second route on
+`World_164`, with pixel/frame and source tracing disabled. It used Release SHA
+`237e13caf0d636ca63ec42e5a6bc3b45853e805bb1bba856358945c4d5b63126`. It
+completed normally (`process_rc=0`, `run_outcome=success`) and covered
+`14,368` blocks / `898` chunks at median `5.20019 blocks/s`, with no blocked
+movement or ground contact. Telemetry acceptance remained FAIL.
+
+There were 27 whole-route near-focus mesh-coverage periods (`1.9135%`, longest
+run one period), all at `focus_cx=-171…-890`; none fell in A24's start band
+`focus_cx[-6,6]`. The product eye-proxy `mid_corridor` is the spatial band
+`focus_cx[2,5]`, also near the start, not the temporal middle of this flight.
+For all 27 A24 hole periods the recorded focus proxy was drawable and
+satisfying, with no build in flight or pending GPU apply; 25/27 were dirty.
+This is a mismatch between the hole query and the selected proxy witness, not
+pixel evidence. Capture was off; the run does not establish a visible hole.
+
+Fly wall time was `14.444 ms` median (`~69.2 FPS`), streaming phase `6.733 ms`,
+and Red pressure rate `0.0163`; dirty peaked at `185`, while focus pending
+light median was zero. Readiness debt rate was `73.3%` and post-stop debt ended
+at `29`, although post-stop mesh-missing and visual-hole proxies were zero and
+the convergence gate failed. Host CPU was median `32.9%`, p95 `74.1%`, max
+`99.6%`; Cubatarium reached `3.29` cores. Treat this as route/telemetry
+evidence, not a clean performance baseline. M551 grew the persisted
+`.cchunk` count from `83,882` to `84,187`; later repeats use this modified
+world state.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m551_world164_m335_full_distance_20261013.json),
+[perf JSONL](../../bin/logs/perf_20261013-235122_20852.jsonl), host samples
+`bin/logs/m551_host_cpu_20261013.jsonl`, and the runtime report. The current
+Release executable with hole-probe telemetry was rebuilt after M551.
+
+### M552 — M335 hole-probe/latch diagnostic (2026-10-14)
+
+M552 ran the visible, fixed-day, no-teleport M335 route for 600 seconds on the
+M551-modified `World_164`, using Release SHA
+`0ad5fe29430c59cf2408a593cc5d274c74668d05edf56a1a49e9936c2fb79536`.
+Capture and column-source tracing were disabled. It completed the flight
+normally at `5.19653 blocks/s`, covering `3,088` blocks / `193` chunks; the
+report is `pass=false` on telemetry gates. Wall median was `12.850 ms`,
+streaming phase `6.850 ms`, and readiness debt rate `50.79%`. Post-stop visual
+and mesh-missing proxies were zero, but readiness debt ended at `25` and
+convergence failed. Host CPU median/p95/max was `37/70.4/99.7%`; Cubatarium
+used median/p95/max `1.77/2.53/3.59` cores, so this is not a quiet-host
+performance baseline.
+
+The terminal sample in each interval produced two steady A24 near-focus
+hole periods: one query returned missing and one returned clear while the
+hole flag was latched. Both selected proxy witnesses were drawable and
+satisfying. The new frame-aligned `visual_holes_enter` analysis saw 52 rising
+edges during movement (40 query-returned-miss, 12 query-returned-clear; 12
+latched); all 52 witnesses were drawable and satisfying, with no build or GPU
+apply pending. Six events fell in the A24 start band `focus_cx[-6,6]`; 46 were
+outside it, down to `focus_cx=-181`. These are mesh-coverage proxy events, not
+confirmed framebuffer holes. No frame pixels were captured and the symptom
+classifier remained false.
+
+Static review explains why “query returned miss” is not necessarily a fresh
+scan: `HasMissingGreedyMeshInHorizontalRadius` memoizes by focus chunk and
+radius; `BeginHoleQueryFrame` advances its epoch only when the focus chunk
+changes. Mesh state can change after the query in `TickAsyncChunkSystems`,
+while the memo remains valid until the camera enters another chunk. A proxy
+probe may therefore report a stale missing result. A24 interval rows also
+sample the terminal frame only; the rising-edge events are now reported
+separately and remain diagnostic-only. This warrants fixing freshness and
+candidate identity before using the proxy as an acceptance gate.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m552_world164_m335_probe_latch_diagnostic_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-005042_2492.jsonl), [host sampler](../../bin/logs/m552_host_cpu_20261014.jsonl),
+and INFO log
+`bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261014-005039.2492`.
+
+### M553 — full-distance query-freshness control (running)
+
+M553 is the visible 2,800-second M335 route on the same persisted `World_164`,
+with capture and source tracing off, using the M552 Release executable. Its
+purpose is to map period and rising-edge proxy signals across the entire
+westbound route. Because the runner process loaded its Python analyzer before
+the event-count update was committed, re-run A24 analysis from the saved perf
+JSONL after the flight exits. Command:
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m553_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m553_world164_m335_full_distance_probe_latch --report bin/suite_reports/engine_refactor/m553_world164_m335_full_distance_probe_latch_20261014.json --process-timeout 3600
+```
+
+For M335 reports, A24's `corridor` means the start-locus band
+`focus_cx[-6,6]`; the eye-proxy `mid_corridor` means `focus_cx[2,5]`. Neither
+name denotes the temporal midpoint of a long flight. Preserve `World_164` as
+the repeated-condition control and continue periodic fresh-seed checks
+separately. Next, measure memo hit/staleness and the cost of a bounded fresh
+query before changing streaming or pressure policy. Keep operator-visible
+observations separate from mesh/readiness proxies.

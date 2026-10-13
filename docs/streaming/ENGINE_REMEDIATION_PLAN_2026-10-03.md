@@ -8760,8 +8760,9 @@ control but is not the full far-flight checkpoint (`far_flight=false`).
 
 The report is `pass=false` because the proxy-based eye and A24 stop-lines did
 not pass: `unfinished_visual` was nonzero in 90.9% of samples; the near-focus
-mesh-hole proxy was nonzero in 11 periods overall and one period in the covered
-mid-corridor window. Its rate was 2.18% and the longest run was one period; the
+mesh-hole proxy was nonzero in 11 periods overall and one period in A24's
+start band (`focus_cx[-6,6]`). Its rate was 2.18% and the longest run was one
+period; the
 post-stop near-focus proxy returned to zero. These are mesh/readiness proxies,
 not direct framebuffer samples. This run saved no pixels, so it does not
 establish a visible black/empty chunk. The app remained responsive during the
@@ -8853,8 +8854,9 @@ substeps and ground contacts were zero.
 
 The report is `pass=false` (`30/40` gates). The near-focus missing-mesh proxy
 was nonzero in 28 whole-route periods (`1.984%`, longest run one period), but
-zero in the mid-corridor window and zero after stopping. M547 had 11 affected
-periods among 504 steady periods (`2.18%`), with one mid-corridor period, so
+zero in A24's start band (`focus_cx[-6,6]`) and zero after stopping. M547 had
+11 affected periods among 504 steady periods (`2.18%`), with one A24 start-band
+period, so
 the normalized M548 whole-route proxy rate did not regress. This remains mesh
 coverage telemetry, not framebuffer evidence. `unfinished_visual` remained a
 readiness debt signal; post-stop it reached 17 while mesh-missing and
@@ -8896,8 +8898,9 @@ contacts. It exited normally (`process_rc=0`, `run_outcome=success`) but was
 `pass=false` on telemetry acceptance (`31/40` gates).
 
 The mesh-hole proxy was nonzero in 13 whole-route periods (`2.579%`, longest
-run one period), zero in the mid-corridor and zero after stopping. M547 had 11
-such periods / `2.18%`, including one mid-corridor period. No frame was
+run one period), zero in A24's start band (`focus_cx[-6,6]`) and zero after
+stopping. M547 had 11 such periods / `2.18%`, including one A24 start-band
+period. No frame was
 captured, and the M549 symptom-reproduction classifier remained false because
 focus-missing / visible-black signals were below its product threshold. These
 proxies do not establish a user-visible blank chunk. Post-stop visual-hole and
@@ -8951,14 +8954,14 @@ to queued readiness rather than slow file reads on this sample.
 
 The flight report had a near-focus mesh-hole rate of `0.317%` with longest run
 one period; the separate A24 counter reported two whole-route periods and one
-mid-corridor period. The symptom classifier was false and median visible-black
-focus was zero. There was no framebuffer capture, so these are telemetry
+period in its start band (`focus_cx[-6,6]`). The symptom classifier was false
+and median visible-black focus was zero. There was no framebuffer capture, so these are telemetry
 proxies, not evidence of user-visible empty or dark chunks. `unfinished_visual`
 was nonzero throughout and ended at `16`, but post-stop mesh-missing and
 visual-hole proxies were zero; post-stop convergence still failed. The run
 also had `stream_pressure=Red` in 240/317 total period rows; the analyzer's
 `red_rate=0.762` uses 315 steady periods. Global pending-light p50/p95/max was
-global pending-light p50/p95/max was `40/68/79`, focus pending-light was
+`40/68/79`, focus pending-light was
 `0/0/7`, dirty max was `140`, and streaming-phase max was `18.13 ms`. In this
 trace all 127 samples above the Red pending-light threshold and 113 additional
 Red samples below it (hysteresis) explain the red rate; no sample crossed the
@@ -8985,7 +8988,89 @@ performance baseline.
 The cooperative spatial-load owner fix was rebuilt as Release target only;
 the executable SHA-256 is
 `237e13caf0d636ca63ec42e5a6bc3b45853e805bb1bba856358945c4d5b63126`. No
-tests or Debug targets were run. Next: repeat the full 2,800-second M335
-distance control on `World_164` with capture and source tracing off, then
-review the global-versus-focus pressure policy separately from visual-hole
-evidence. Keep a new seed as a periodic secondary check.
+tests or Debug targets were run.
+
+## Update 2026-10-14 — full-route proxy investigation
+
+### M551 — full-distance M335 on the disk-owner fix
+
+M551 used the established visible, no-teleport 2,800-second route on
+`World_164`, with source trace and capture disabled. It completed normally and
+covered `14,368` blocks / `898` chunks at median `5.20019 blocks/s`, without
+blocked movement or ground contact. Release SHA was
+`237e13caf0d636ca63ec42e5a6bc3b45853e805bb1bba856358945c4d5b63126`.
+
+The report had 27 whole-route near-focus mesh-coverage periods (`1.9135%`,
+longest run one period). They occurred at `focus_cx=-171…-890`, with zero in
+A24's start band `focus_cx[-6,6]`. The eye-proxy `mid_corridor` is the spatial
+band `focus_cx[2,5]`, not the temporal middle. In all 27 periods the recorded
+proxy witness was drawable and satisfying, with no build or GPU apply pending;
+25 were dirty. No pixels were captured. This is diagnostic disagreement
+between the radius query and its selected witness, not proof of a visible
+hole. Readiness-debt rate was `73.3%`, post-stop debt `29`, and convergence
+failed, despite zero post-stop mesh-missing and visual-hole proxies.
+
+The host was not idle: machine CPU median/p95/max was `32.9/74.1/99.6%`, and
+the application reached `3.29` cores. Do not use M551 to tune performance
+budgets. It grew the saved `.cchunk` count from `83,882` to `84,187`, so later
+World_164 repeats are warmer and have mutated persistence state. See the
+[report](../../bin/suite_reports/engine_refactor/m551_world164_m335_full_distance_20261013.json)
+and [perf log](../../bin/logs/perf_20261013-235122_20852.jsonl).
+
+### M552 — query/latch diagnostic
+
+M552 ran the same visible M335 profile for 600 seconds on the M551-modified
+world, using Release SHA
+`0ad5fe29430c59cf2408a593cc5d274c74668d05edf56a1a49e9936c2fb79536`. It
+covered `3,088` blocks / `193` chunks at `5.19653 blocks/s`; process outcome
+was success, but telemetry gates failed. Fly wall median was `12.850 ms`,
+streaming phase `6.850 ms`, readiness debt rate `50.79%`, and post-stop debt
+`25`; post-stop visual and missing-mesh proxies were zero, but convergence
+failed. Machine CPU median/p95/max was `37/70.4/99.7%`; this was not a clean
+performance baseline.
+
+The period-end A24 sample contained two steady near-focus mesh-hole periods:
+one query returned missing, one returned clear while the hole flag was
+latched; both selected witnesses were drawable and satisfying. These period
+rows sample the final frame of each interval and miss shorter transitions.
+The frame-aligned `visual_holes_enter` diagnostics recorded 52 rising edges
+during movement: 40 query-returned-miss, 12 query-returned-clear, 12 latched.
+All 52 witnesses were drawable and satisfying, with no active build or GPU
+apply; six events were in the A24 start band, and 46 were outside it down to
+`focus_cx=-181`. Capture was disabled; these remain proxies, not framebuffer
+observations.
+
+Static inspection found a cache-freshness hole in the telemetry contract.
+`HasMissingGreedyMeshInHorizontalRadius` memoizes by focus chunk and radius;
+`BeginHoleQueryFrame` advances its epoch only when the focus chunk changes.
+`TickAsyncChunkSystems` runs after `UpdateStreaming`, so mesh state can change
+while the memo remains valid. Therefore `near_focus_hole_probe_ran` means a
+query was invoked, not that it scanned current state; the returned miss can be
+stale, and the separately chosen `MissCx/Cy/Cz` witness can already be
+drawable. Commits `d3e01bf1` and `c8593fe4` add rising-edge diagnostics and
+document these semantics. The gate still uses period-end samples and is not
+reinterpreted as pixel evidence.
+
+See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335_probe_latch_diagnostic_20261014.json),
+[perf log](../../bin/logs/perf_20261014-005042_2492.jsonl), and [host samples](../../bin/logs/m552_host_cpu_20261014.jsonl).
+
+## Remaining work
+
+1. Complete M553, the 2,800-second visible M335 repeat on the same persisted
+   world and updated probe telemetry. Recompute A24 after the run so its report
+   includes the committed rising-edge analysis.
+2. Measure query memo hits, result age, and exact missing-slice identity. The
+   current Boolean radius query and separately selected witness do not prove
+   they refer to the same slice or mesh revision.
+3. Compare a bounded fresh query or state-change invalidation design against
+   the current memo on Release. Measure scan cost before changing the hot path;
+   do not run Debug or test targets.
+4. If a fresh, exact near-camera miss survives that change, trace its owning
+   generation/light/mesh/apply stage and correct that stage. Keep visible-black
+   and framebuffer evidence separate from readiness proxies.
+5. Retain `World_164` M335 as the repeated-condition acceptance route. Repeat
+   a fresh-seed frontier check periodically, and only use quiet-host runs for
+   performance conclusions.
+
+M553 is currently running with the M552 Release binary. Its progress and exact
+command are recorded in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
