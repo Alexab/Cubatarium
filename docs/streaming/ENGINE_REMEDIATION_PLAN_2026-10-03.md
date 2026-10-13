@@ -9074,3 +9074,13 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
 
 M553 is currently running with the M552 Release binary. Its progress and exact
 command are recorded in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+The working-tree candidate now advances the hole-query memo epoch once per
+streaming frame while keeping deferred-remesh requeue tied to focus movement.
+This preserves same-frame reuse and prevents cross-frame stale results after
+asynchronous mesh changes; it is not yet built or flight-verified. The
+generated Release project already has MSVC `MultiProcessorCompilation=true`,
+and the configured build command uses CMake `--parallel 8`, so no build-setting
+change is needed. After M553 exits, build only the Release target, then run a
+600-second M335 control (M554) and compare event rates and query timing before
+deciding whether to keep the change for another full-distance run.
