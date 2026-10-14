@@ -8344,7 +8344,48 @@ performance baseline. Artifacts: [run report](../../bin/suite_reports/engine_ref
 Commit `eb992259` moves event-marker publication into the exact
 `FramePerfMonitor` branch that writes `visual_holes_enter`. The updated Release
 SHA256 is `54834F4E4BABBB30E8E3C1D1C403DC85E6B2F6E4E9927E842547CB3CAEDC3659`.
-M568 repeats the exact M335 route with the same environment and pixel window:
+
+### M568 — capture-epoch ray/pixel join (2026-10-14)
+
+M568 completed on that Release build with `process_rc=0`,
+`run_outcome=success`, and no excluded clock gap. It followed the same visible,
+no-teleport M335 route, reaching `focus_cx=-567`, `9,184` blocks / `574`
+chunks at `5.18555 blocks/s` (911 total periods / 909 steady). The diagnostic
+wrapper still failed gates. A24 was positive in 45 periods (`4.95%`, longest
+run two), with none in the start corridor. All 79 exact query-miss witnesses
+and all 238 moving event-query miss witnesses were outside the configured fog
+horizon. The stop-tail visual-hole proxy was zero; broad readiness debt peaked
+at 30 and demand-stop convergence failed.
+
+M568 logged 318 moving `visual_holes_enter` events. All nine events in the
+unchanged `[-8512,-8416]` camera-X window received a 100-pixel grid, each at
+source epoch + 1. Across the 900 samples, RGB<=8 count was zero, luma<=32 was
+eight, luma<=64 was 45, and grid minima ranged from 26 to 83. The darkest
+sample in every grid had valid opaque depth and a voxel-ray hit with no gap.
+Three capture epochs had screen-ray traces; two had a selected ray for the
+exact candidate chunk; three ray/pixel matches were produced. Matched colors
+were `(139,173,216)`, `(63,90,41)`, and `(68,72,81)`, with opaque depth and
+voxel hits. These local samples do not establish that every pixel/frame is
+complete or explain the dark-green surfaces.
+
+Fog fields are separate shader controls. Those rows recorded
+`uFogEnabled=0`, `uAirFogEnabled=1`, underwater fog disabled, and horizontal
+air fog over 16–32 blocks; the master fog field being zero does not mean air
+fog was off. Shader environment fields were day factor `1.0`, moon/night factor
+`0.22`, and minimum ambient `0.12`. The pixel probe lacks interpolated
+per-fragment sky/block-light values, so lighting origin remains unclassified.
+The next static pass should map the hit block IDs and compare published mesh
+lighting against authoritative chunk/light state before considering runtime
+policy changes.
+
+The event-pixel analyzer was extended in commit `b5747de0` to join ray rows at
+the actual framebuffer capture epoch and include fog, opaque-surface, and
+voxel-ray context for the darkest samples. M568 host CPU averaged `87.6%`
+(p95 `100%`) and the app averaged `1.75` cores, so treat it as a correctness
+trace, not a performance baseline. Run a capture-disabled performance pass
+only when the host is quiet.
+
+Exact M568 command and analysis:
 
 ```powershell
 $env:CUBA_FLIGHT_FOG_ON='1'
@@ -8355,13 +8396,13 @@ $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'
 $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416'
 $env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m568_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m568_world164_a24_same_source_event_pixels --report bin/suite_reports/engine_refactor/m568_world164_a24_same_source_event_pixels_20261014.json --process-timeout 2600
-python tools/analyze_hole_event_pixels.py bin/logs/perf_<actual>.jsonl --json-out bin/suite_reports/engine_refactor/m568_a24_pixel_join_20261014.json
+python tools/analyze_hole_event_pixels.py bin/logs/perf_20261014-145813_25512.jsonl --json-out bin/suite_reports/engine_refactor/m568_a24_pixel_join_20261014.json
 ```
 
-The analysis must compare every M568 in-window `visual_holes_enter` edge with
-its event-triggered grid by source epoch, report the actual capture epoch, and
-retain exact-frame ray matches separately. Do not treat a dark pixel by itself
-as missing terrain: join opaque depth, ray hit/gap, fog state, draw state, and
-pre-/post-transparent color. If the grids remain normally colored, proceed to
-the quiet-host, capture-disabled M335 performance baseline before changing
-runtime policy.
+Artifacts: [run report](../../bin/suite_reports/engine_refactor/m568_world164_a24_same_source_event_pixels_20261014.json),
+[pixel/ray join](../../bin/suite_reports/engine_refactor/m568_a24_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-145813_25512.jsonl), and
+[host samples](../../bin/logs/m568_host_cpu_20261014.jsonl). Keep A24,
+readiness debt, framebuffer samples, and stop convergence separate. Continue
+with the static block/light provenance audit; do not change mesh admission or
+scheduler policy based on the proxy counters alone.

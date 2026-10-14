@@ -9292,10 +9292,47 @@ from the edge written by `FramePerfMonitor`. Commit `eb992259` moves marker
 publication into the logger branch and builds Release SHA256
 `54834F4E4BABBB30E8E3C1D1C403DC85E6B2F6E4E9927E842547CB3CAEDC3659`.
 
-Next, run M568 with the exact M335 profile and existing pixel window. Verify
-that all in-window logger edges join event-triggered grids using their source
-epoch, while ray/pixel color matching remains limited to identical capture
-epochs. Keep A24, broad readiness debt, actual pixel evidence, and stop
-convergence separate. Run the capture-disabled performance baseline only
-under quiet host conditions; do not change renderer or scheduling policy from
-these proxy counters alone.
+M568 completed on Release SHA256
+`54834F4E4BABBB30E8E3C1D1C403DC85E6B2F6E4E9927E842547CB3CAEDC3659` with
+`process_rc=0`, `run_outcome=success`, no excluded clock gap, and the unchanged
+M335 route. It reached `focus_cx=-567`, `9,184` blocks / `574` chunks at
+`5.18555 blocks/s`. The run had 911 periods / 909 steady periods. Host CPU
+averaged `87.6%` (p95 `100%`) and Cubatarium averaged `1.75` CPU cores, so it
+is not a performance baseline. The wrapper still failed diagnostic gates:
+A24 was positive in 45 periods (`4.95%`, longest run two), broad readiness
+debt peaked at 30, and demand-stop convergence failed. No period-end A24 was
+positive in the start corridor; all 79 exact query-miss witnesses and all 238
+moving event-query miss witnesses were beyond the configured fog horizon.
+The stop-tail visual-hole proxy remained zero.
+
+M568 recorded 318 moving `visual_holes_enter` events; all nine in the existing
+`[-8512,-8416]` camera-X window received a 100-pixel grid. Each grid was
+captured one streaming epoch after the source event. Across the 900 samples,
+RGB<=8 count was zero, luma<=32 count was eight, and luma<=64 count was 45;
+the per-grid luma minimum ranged from 26 to 83. The darkest sample in each
+grid had valid opaque depth and a voxel-ray hit with no ray gap. This proves
+those sampled points contain opaque voxel surfaces; it does not prove the
+whole view is hole-free or classify the dark materials/light. Three capture
+epochs had screen-ray traces, two included the exact candidate chunk, and
+three ray centers matched grid pixels. Those matched colors were
+`(139,173,216)`, `(63,90,41)`, and `(68,72,81)`, all with valid opaque depth
+and ray hits.
+
+The fog telemetry must be read as separate shader controls: M568 samples had
+`uFogEnabled=0`, `uAirFogEnabled=1`, and underwater fog disabled, with the
+horizontal air-fog range at 16–32 blocks. The dark pixel rows also carried
+day factor `1.0`, moon/night factor `0.22`, and minimum ambient `0.12`. The
+pixel probe does not capture interpolated per-fragment sky/block light, so
+the dark green values cannot yet be assigned to normal material shading,
+stale chunk lighting, or fog contribution. The next static audit should map
+the sampled voxel IDs to block definitions and compare published mesh light
+data with the authoritative chunk/light state. Keep render and scheduler
+policy unchanged until that evidence distinguishes lighting from coverage.
+
+The analyzer now joins rays at the actual pixel capture epoch and carries
+fog, opaque-depth, and voxel-ray context for the darkest samples; this change
+is commit `b5747de0`. Keep A24, broad readiness debt, direct framebuffer
+samples, and stop convergence as separate signals. Run the capture-disabled
+performance baseline only under quiet host conditions. M568 artifacts and
+the exact M335 command are recorded in
+[FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
