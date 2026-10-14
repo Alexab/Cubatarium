@@ -140,6 +140,7 @@ def analyze(path: Path) -> dict[str, Any]:
     events: list[dict[str, Any]] = []
     rays_by_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
     event_pixels_by_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    event_pixels_by_capture_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for row in iter_rows(path):
         kind = row.get("kind")
         if kind == "visual_holes_enter":
@@ -172,12 +173,16 @@ def analyze(path: Path) -> dict[str, Any]:
                 except (TypeError, ValueError):
                     source_epoch = epoch
                 event_pixels_by_epoch[source_epoch].append(row)
+                event_pixels_by_capture_epoch[epoch].append(row)
 
     output_events: list[dict[str, Any]] = []
     matched_samples: list[dict[str, Any]] = []
     pixel_event_epochs: set[int] = set()
     exact_selected_ray_events = 0
     selected_ray_count = 0
+    capture_selected_ray_events = 0
+    capture_selected_ray_count = 0
+    capture_ray_events = 0
     event_frame_count = 0
     missing_query_but_screen_ray_candidate = 0
     for event in events:
@@ -195,16 +200,32 @@ def analyze(path: Path) -> dict[str, Any]:
             and (ray.get("cx"), ray.get("cy"), ray.get("cz")) == coords
         ]
         event_pixels = event_pixels_by_epoch.get(epoch, [])
-        same_frame_event_pixels = [
-            pixel
-            for pixel in event_pixels
-            if int(pixel.get("frame_epoch", -1) or -1) == epoch
+        capture_epochs = sorted(
+            {
+                int(pixel.get("frame_epoch", epoch) or epoch)
+                for pixel in event_pixels
+            }
+        )
+        capture_ray_rows = [
+            ray
+            for capture_epoch in capture_epochs
+            for ray in rays_by_epoch.get(capture_epoch, [])
+        ]
+        capture_exact_selected = [
+            ray
+            for ray in capture_ray_rows
+            if ray.get("screen_ray_selected") == 1
+            and (ray.get("cx"), ray.get("cy"), ray.get("cz")) == coords
         ]
         if event_pixels:
             event_frame_count += 1
             pixel_event_epochs.add(epoch)
         if exact_selected:
             exact_selected_ray_events += 1
+        if capture_ray_rows:
+            capture_ray_events += 1
+        if capture_exact_selected:
+            capture_selected_ray_events += 1
         if event.get("near_focus_hole_probe_result") == 1 and event.get(
             "miss_screen_ray_candidate"
         ) == 1:
@@ -213,30 +234,41 @@ def analyze(path: Path) -> dict[str, Any]:
         samples = []
         for ray in exact_selected:
             selected_ray_count += 1
-            pixel = selected_pixel_for_ray(ray, same_frame_event_pixels)
-            if pixel is None:
-                continue
-            sample = {
-                "frame_epoch": epoch,
-                "focus_cx": event.get("focus_cx"),
-                "candidate_chunk": list(coords),
-                "screen_ray_column": ray.get("screen_ray_column"),
-                "screen_ray_row": ray.get("screen_ray_row"),
-                "screen_ray_block": [
-                    ray.get("screen_ray_block_x"),
-                    ray.get("screen_ray_block_y"),
-                    ray.get("screen_ray_block_z"),
-                ],
-                "selection_mesh_satisfying": ray.get(
-                    "screen_ray_mesh_satisfying"
-                ),
-                "selection_repairable_geometry_debt": ray.get(
-                    "screen_ray_repairable_geometry_debt"
-                ),
-                **pixel,
-            }
-            samples.append(sample)
-            matched_samples.append(sample)
+        for capture_epoch in capture_epochs:
+            capture_pixels = event_pixels_by_capture_epoch.get(
+                capture_epoch, []
+            )
+            for ray in rays_by_epoch.get(capture_epoch, []):
+                if ray.get("screen_ray_selected") != 1 or (
+                    ray.get("cx"), ray.get("cy"), ray.get("cz")
+                ) != coords:
+                    continue
+                capture_selected_ray_count += 1
+                pixel = selected_pixel_for_ray(ray, capture_pixels)
+                if pixel is None:
+                    continue
+                sample = {
+                    "event_source_frame_epoch": epoch,
+                    "frame_epoch": capture_epoch,
+                    "focus_cx": event.get("focus_cx"),
+                    "candidate_chunk": list(coords),
+                    "screen_ray_column": ray.get("screen_ray_column"),
+                    "screen_ray_row": ray.get("screen_ray_row"),
+                    "screen_ray_block": [
+                        ray.get("screen_ray_block_x"),
+                        ray.get("screen_ray_block_y"),
+                        ray.get("screen_ray_block_z"),
+                    ],
+                    "selection_mesh_satisfying": ray.get(
+                        "screen_ray_mesh_satisfying"
+                    ),
+                    "selection_repairable_geometry_debt": ray.get(
+                        "screen_ray_repairable_geometry_debt"
+                    ),
+                    **pixel,
+                }
+                samples.append(sample)
+                matched_samples.append(sample)
         output_events.append(
             {
                 "frame_epoch": epoch,
@@ -257,13 +289,12 @@ def analyze(path: Path) -> dict[str, Any]:
                 else None,
                 "screen_ray_trace_rows": len(ray_rows),
                 "selected_ray_rows_for_miss_chunk": len(exact_selected),
-                "event_pixel_rows": len(event_pixels),
-                "pixel_capture_frame_epochs": sorted(
-                    {
-                        int(pixel.get("frame_epoch", epoch) or epoch)
-                        for pixel in event_pixels
-                    }
+                "pixel_capture_screen_ray_rows": len(capture_ray_rows),
+                "pixel_capture_selected_ray_rows_for_miss_chunk": len(
+                    capture_exact_selected
                 ),
+                "event_pixel_rows": len(event_pixels),
+                "pixel_capture_frame_epochs": capture_epochs,
                 "pixel_capture_epoch_deltas": sorted(
                     {
                         int(pixel.get("frame_epoch", epoch) or epoch) - epoch
@@ -287,6 +318,9 @@ def analyze(path: Path) -> dict[str, Any]:
             ),
             "events_with_selected_ray_for_exact_miss_chunk": exact_selected_ray_events,
             "exact_selected_screen_ray_rows": selected_ray_count,
+            "events_with_pixel_capture_frame_screen_ray_trace": capture_ray_events,
+            "events_with_pixel_capture_frame_selected_ray_for_miss_chunk": capture_selected_ray_events,
+            "pixel_capture_frame_selected_ray_rows_for_miss_chunk": capture_selected_ray_count,
             "events_with_event_triggered_pixel_capture": event_frame_count,
             "exact_selected_ray_pixel_matches": len(matched_samples),
             "near_black_matched_pixels_rgb_le_8": sum(
