@@ -8456,3 +8456,41 @@ visible-black maxima. This supports separating the broad column-ring and
 global-demand gates from current-view coverage. Static follow-up should find
 why ownerless Created attempts persist and determine whether boundary overlay
 debt is expected at unloaded stream edges before changing scheduler policy.
+
+#### M569 preparation — focus mesh cache-state trace (2026-10-14)
+
+Commit `e5dbfcbb` adds these fields to the bounded `focus_slice_trace` rows:
+`focus_mesh_cache_entry_present`, `focus_mesh_cpu_vertex_count`,
+`focus_mesh_gpu_resident`, `focus_mesh_gpu_quad_count`, and
+`focus_mesh_boundary_overlay_mask`. A clean Release build succeeded; binary
+SHA-256 is
+`895D757ECC741152348C5166649892660637F7CF351DD86F35F8748691226381`.
+
+Build command:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --clean-first --parallel 8 -- /p:CL_MPCount=8
+```
+
+The CMake Visual Studio generator otherwise passed `/p:CL_MPCount=1` despite
+`--parallel 8`. The command above overrides it; process inspection observed
+eight simultaneous `cl.exe` workers. Keep this override for Release builds.
+
+The M569 flight was not started after the build: host CPU samples were 88.7%
+and then 83.5% over five-second windows, with `nextcloud` using 13.3 CPU-seconds
+in the second sample. These are contaminated conditions for a long comparison.
+When host load settles, rerun the fixed M335 profile and collect cache fields
+for the off-horizon state-1 candidates. Do not change the route or speed.
+
+Prepared M569 command:
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m569_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m569_world164_m335_cache_empty_state --report bin/suite_reports/engine_refactor/m569_world164_m335_cache_empty_state_20261014.json --process-timeout 2600
+```
+
+Keep the new trace focused on the original question: distinguish no CPU cache
+entry, a present zero-vertex cache result, and GPU-resident quads, alongside
+boundary-overlay debt. This run has not yet been executed.

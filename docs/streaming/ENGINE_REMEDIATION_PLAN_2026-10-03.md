@@ -9408,3 +9408,32 @@ split global readiness debt from current-view and trajectory-lookahead debt.
 Only use a new M335 run on the same route to validate these joins when host
 load is suitable. Keep actual framebuffer/pixel evidence as the renderer
 acceptance signal.
+
+### 2026-10-14 checkpoint — cache-state trace built; M335 deferred on host load
+
+Commit `e5dbfcbb` adds point-sample fields to `focus_slice_trace`: CPU mesh
+cache-entry presence and vertex count, GPU residency and quad count, plus the
+active boundary-overlay face mask. This is observational only; no mesh
+readiness, render, or scheduling predicate changed. A clean Release build
+completed with SHA-256
+`895D757ECC741152348C5166649892660637F7CF351DD86F35F8748691226381`.
+
+Build concurrency inspection found that `cmake --build ... --parallel 8`
+invoked MSBuild with `/m:8` but also `/p:CL_MPCount=1`, leaving only one
+compiler worker. The project already enables MSVC `/MP`; the effective build
+command is `cmake --build bin --config Release --target Cubatarium
+--clean-first --parallel 8 -- /p:CL_MPCount=8`. During that build, process
+inspection confirmed eight child `cl.exe` workers. Use this explicit override
+for subsequent Release builds on this host.
+
+The initial post-build host sample was 88.7% CPU, and a second sample remained
+83.5%; `nextcloud` alone consumed 13.3 CPU-seconds during the latter five
+seconds. M569's same-route diagnostic flight is therefore deferred until the
+host settles. Do not interpret these measurements as game performance.
+
+Next: run the prepared M569 M335 trace with the new cache fields once host load
+is low, then join cache presence/zero CPU vertices/GPU quad count to each
+ownerless terminal state-1 candidate from M568. Confirm whether these are
+legitimate zero-quad meshes with open boundary coverage or absent/non-drawable
+mesh publications before changing the global readiness contract. Continue
+separating global obligations from current-view and lookahead visibility.
