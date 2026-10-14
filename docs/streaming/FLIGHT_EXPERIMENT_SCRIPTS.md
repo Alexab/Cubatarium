@@ -8788,3 +8788,56 @@ grid does not contain rays over visible water at the operator-reported
 location, record it as inconclusive and design the next capture bounds from
 an observed route coordinate; do not infer water correctness from aggregate
 GPU-fluid mode counters.
+
+#### M573 result
+
+The route exited normally, but its suite gate failed on the A24
+`near_focus_holes_periods_gt0` condition. The operator's first missing-water
+report was near the `focus_cx=-289` section. There, one sparse sample over
+saved water (`water` ID 575 at Y=48, air above) had no matching top-fluid
+triangle in the current transparent mesh references and showed blue
+background color with no pre-transparent depth. Across that sampled frame,
+33 of 48 sea-plane ray positions over saved water had a top triangle; 15 did
+not. A nearby disk load for column `(-294,0,-3)` was queued and completed at
+22:31:17, adjacent to the operator report. Treat this as a far-water
+mesh-availability candidate, not proof of a particular missing stage. M573
+host CPU median/p95 was 91.1/100%, and a leftover
+`analyze_world_chunks.py --help` world scan used about one CPU core during
+most of the flight; that process was stopped after exit. Do not use M573 as a
+clean performance result.
+
+#### M574 — repeat the persisted route with pixel samples bounded to the reported section
+
+Run the full, same no-teleport M335 route and keep column-source tracing on.
+Bound periodic sparse framebuffer readbacks to camera X `[-4710,-4550]`,
+which includes the approximate M573 observation at camera X=-4614. The
+renderer may still capture up to 24 camera-band peaks elsewhere in the route.
+Leave the pixel grid at its default 20 by 4 samples. Keep focus-change,
+screen-ray, stalled-census, event-pixel, and dense probes disabled. This preserves the
+route and streaming data while limiting the pixel log to the water-frontier
+section. Confirm no world-analysis helper is running before launch; do not
+pass `--help` to `tools/analyze_world_chunks.py`, which has no CLI help parser
+and proceeds into its full-world scan.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m574_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m574_m572_clear_cpu_replay --report bin/suite_reports/engine_refactor/m574_m572_clear_cpu_replay_20261014.json --process-timeout 2600
+```
+
+After normal exit, analyze the bounded pixel grid and full INFO source trace.
+Join each valid sea-plane position to its saved water block and current fluid
+top triangle, then compare M573's `(-4689,48,-47)` sample. If that water voxel
+has a triangle and the pixel changes under lower host load, CPU contention is
+a likely contributor. If it still lacks a triangle after the disk column and
+mesh have settled, inspect fluid mesh selection/upload and transparency for
+that chunk before changing water lighting.
