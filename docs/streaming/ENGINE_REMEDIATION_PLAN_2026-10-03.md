@@ -9479,6 +9479,21 @@ but `CUBA_DEMAND_SHADOW=1` disables those writers. The M569 recipe pins the
 setting to `0` so the cleanup fix is active regardless of inherited shell
 environment.
 
+A source-level sweep of `TickAsyncChunkSystems` found one function-level early
+return: this shared-budget path. Other `return` statements in its body belong
+to local lambdas, so ordinary completion still reaches `finish_telemetry` and
+its upkeep call. One residual behavior needs explicit interpretation in M569:
+`AdmitUnfinishedVisualDemand` calls `NoteDemand` before testing/performing the
+concrete dirty admission. If admission is repeatedly rejected, maintenance can
+cancel an aged ownerless attempt and a later refresh can mint another. Treat a
+shorter orphan lifetime as confirmation of the cleanup fix; require eventual
+dirty-queue/worker/GPU ownership and stage progress for user-visible recovery.
+If M569 instead shows repeated `Created → InstallCancelled` cycles with no
+owner transition, the next refactor should separate persistent desired
+obligation from an executable active attempt, or move attempt creation to
+successful owner admission. Do not lengthen the orphan grace or relax
+readiness/stop gates to hide that case.
+
 History narrows the regression window: the streaming budget return dates to
 `e8258f45` (2026-09-05), but demand upkeep still ran from the post-emerge
 `SampleColumnEmergeStageTelemetry` path. Commit `c390532d` (2026-10-07,
