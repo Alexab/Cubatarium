@@ -7,6 +7,7 @@ import argparse
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 
@@ -89,6 +90,49 @@ def selected_pixel_for_ray(
             rgba is not None and rgba["r"] <= 8 and rgba["g"] <= 8 and rgba["b"] <= 8
         ),
         "probe_trigger_flags": pixel.get("renderer_pixel_probe_trigger_flags"),
+    }
+
+
+def summarize_pixel_grid(pixels: list[dict[str, Any]]) -> dict[str, Any] | None:
+    samples: list[dict[str, Any]] = []
+    for pixel in pixels:
+        rgba = unpack_rgba(pixel.get("renderer_pixel_rgba"))
+        if rgba is None:
+            continue
+        luma = round(
+            0.2126 * rgba["r"] + 0.7152 * rgba["g"] + 0.0722 * rgba["b"]
+        )
+        samples.append(
+            {
+                "pixel_x": pixel.get("renderer_pixel_x"),
+                "pixel_y_gl": pixel.get("renderer_pixel_y"),
+                "luma": luma,
+                "rgba": rgba,
+                "pretransparent_rgba": unpack_rgba(
+                    pixel.get("renderer_pixel_pretransparent_rgba")
+                ),
+                "pretransparent_depth": pixel.get(
+                    "renderer_pixel_pretransparent_depth"
+                ),
+            }
+        )
+    if not samples:
+        return None
+    return {
+        "sample_count": len(samples),
+        "luma_min": min(sample["luma"] for sample in samples),
+        "luma_median": median(sample["luma"] for sample in samples),
+        "rgb_le_8_count": sum(
+            sample["rgba"]["r"] <= 8
+            and sample["rgba"]["g"] <= 8
+            and sample["rgba"]["b"] <= 8
+            for sample in samples
+        ),
+        "luma_le_32_count": sum(sample["luma"] <= 32 for sample in samples),
+        "luma_le_64_count": sum(sample["luma"] <= 64 for sample in samples),
+        "darkest_samples": sorted(samples, key=lambda sample: sample["luma"])[
+            :6
+        ],
     }
 
 
@@ -200,6 +244,7 @@ def analyze(path: Path) -> dict[str, Any]:
                 "screen_ray_trace_rows": len(ray_rows),
                 "selected_ray_rows_for_miss_chunk": len(exact_selected),
                 "event_pixel_rows": len(event_pixels),
+                "event_pixel_grid": summarize_pixel_grid(event_pixels),
                 "matched_pixel_samples": samples,
             }
         )

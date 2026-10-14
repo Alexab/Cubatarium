@@ -4294,9 +4294,9 @@ void UGeometryEngine::DrawCubeGeometry()
           UJobStageTrace::HasCameraBandPeakTraceForFrame(
               pixel_probe_frame_epoch) &&
           last_camera_band_peak_probe_epoch != pixel_probe_frame_epoch;
-      const bool screen_ray_visual_hole_event =
+      const bool visual_hole_edge_pixel_probe =
           pixel_probe_in_x_range && probe_on_screen_ray &&
-          UJobStageTrace::HasVisualHoleScreenRayEventForFrame(
+          UJobStageTrace::HasVisualHoleEventForFrame(
               pixel_probe_frame_epoch);
       const bool screen_ray_probe =
           probe_on_screen_ray &&
@@ -4332,7 +4332,7 @@ void UGeometryEngine::DrawCubeGeometry()
           stalled_census_pixel_probe;
       if (periodic_pixel_probe || focus_change_pixel_probe ||
           screen_ray_pixel_probe || camera_band_peak_pixel_probe ||
-          stalled_census_pixel_probe)
+          stalled_census_pixel_probe || visual_hole_edge_pixel_probe)
       {
         pixel_probe_capture.probe_id = render_probe_count;
         pixel_probe_capture.trigger_flags = static_cast<uint8_t>(
@@ -4341,13 +4341,18 @@ void UGeometryEngine::DrawCubeGeometry()
             (screen_ray_aligned_capture ? 1u << 2 : 0u) |
             (camera_band_peak_pixel_probe ? 1u << 3 : 0u) |
             (stalled_census_pixel_probe ? 1u << 4 : 0u) |
-            (screen_ray_visual_hole_event ? 1u << 5 : 0u));
+            (visual_hole_edge_pixel_probe ? 1u << 5 : 0u));
+        const bool ray_grid_row_layout = screen_ray_aligned_capture ||
+                                         visual_hole_edge_pixel_probe;
         pixel_probe_capture.rows = screen_ray_aligned_capture
                                        ? std::max(kScreenRayAlignedPixelRows,
                                                   PixelProbeRows())
-                                       : PixelProbeRows();
-        pixel_probe_capture.screen_ray_aligned_rows =
-            screen_ray_aligned_capture;
+                                       : (visual_hole_edge_pixel_probe
+                                              ? std::max(
+                                                    kScreenRayAlignedPixelRows,
+                                                    PixelProbeRows())
+                                              : PixelProbeRows());
+        pixel_probe_capture.screen_ray_aligned_rows = ray_grid_row_layout;
         if (camera_band_peak_pixel_probe)
         {
           last_camera_band_peak_probe_epoch = pixel_probe_frame_epoch;

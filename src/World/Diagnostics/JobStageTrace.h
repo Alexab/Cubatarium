@@ -908,10 +908,10 @@ public:
   /// True when the streaming screen-ray grid was recorded during this render
   /// epoch. Lets an opt-in diagnostic pixel probe sample the same coordinates.
   static bool HasScreenRayTraceForFrame(uint64_t frame_epoch);
-  /// Mark and query a screen-ray sample captured on a near-focus visual-hole
-  /// rising edge. The renderer uses it to sample pixels in the same epoch.
-  static void MarkVisualHoleScreenRayEventForFrame(uint64_t frame_epoch);
-  static bool HasVisualHoleScreenRayEventForFrame(uint64_t frame_epoch);
+  /// Mark and query a near-focus visual-hole rising edge so the renderer can
+  /// sample its bounded pixel grid in the same epoch, even without a ray hit.
+  static void MarkVisualHoleEventForFrame(uint64_t frame_epoch);
+  static bool HasVisualHoleEventForFrame(uint64_t frame_epoch);
   /// True when the focus census found a FullyDarkStalledTicket slice during
   /// this render epoch. Lets an opt-in pixel probe capture that exact frame.
   static bool HasStalledVisualBlackTraceForFrame(uint64_t frame_epoch);

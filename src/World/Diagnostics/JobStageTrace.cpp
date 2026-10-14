@@ -19,7 +19,7 @@ namespace
 
 std::atomic<uint64_t> LatestCameraBandPeakFrameEpoch{0};
 std::atomic<uint64_t> LatestScreenRayTraceFrameEpoch{0};
-std::atomic<uint64_t> LatestVisualHoleScreenRayEventFrameEpoch{0};
+std::atomic<uint64_t> LatestVisualHoleEventFrameEpoch{0};
 std::atomic<uint64_t> LatestStalledVisualBlackFrameEpoch{0};
 std::atomic<uint64_t> LatestStreamingFrameEpoch{0};
 
@@ -604,22 +604,20 @@ bool UJobStageTrace::HasScreenRayTraceForFrame(uint64_t frame_epoch)
              frame_epoch;
 }
 
-void UJobStageTrace::MarkVisualHoleScreenRayEventForFrame(
-    uint64_t frame_epoch)
+void UJobStageTrace::MarkVisualHoleEventForFrame(uint64_t frame_epoch)
 {
   if (frame_epoch != 0)
   {
-    LatestVisualHoleScreenRayEventFrameEpoch.store(
+    LatestVisualHoleEventFrameEpoch.store(
         frame_epoch, std::memory_order_release);
   }
 }
 
-bool UJobStageTrace::HasVisualHoleScreenRayEventForFrame(
-    uint64_t frame_epoch)
+bool UJobStageTrace::HasVisualHoleEventForFrame(uint64_t frame_epoch)
 {
   return frame_epoch != 0 &&
-         LatestVisualHoleScreenRayEventFrameEpoch.load(
-             std::memory_order_acquire) == frame_epoch;
+         LatestVisualHoleEventFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
 }
 
 bool UJobStageTrace::HasStalledVisualBlackTraceForFrame(

@@ -1521,12 +1521,11 @@ void UWorldStreaming::RefreshStreamingPressure(
             if (UJobStageTrace::VisualBlackTraceEnabled() &&
                 telem.VisualHoles == 0 && selected_horiz <= 2)
             {
-              // The sparse screen-ray trace cadence can miss a near-focus
-              // visual-hole rising edge. Capture the bounded ray grid now so
-              // GeometryEngine can sample its matching pixels in this epoch.
+              // Capture the bounded ray grid when the selected screen-hit
+              // candidate is already available. The pixel capture itself is
+              // marked from the near-focus proxy edge below, whether or not
+              // this grid has a selected candidate.
               capture_screen_ray_trace = true;
-              UJobStageTrace::MarkVisualHoleScreenRayEventForFrame(
-                  screen_ray_frame_epoch);
             }
           }
           if (capture_screen_ray_trace)
@@ -6639,6 +6638,16 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool visual_holes =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), feet_chunk, focus_radius);
+    if (UJobStageTrace::VisualBlackTraceEnabled() && visual_holes &&
+        !LastVisualHolesForCapture)
+    {
+      // This is the same raw focus-radius signal used by FramePerfMonitor's
+      // visual_holes_enter edge. Mark it after the final mesh query so GUI
+      // pixel capture does not depend on a selected screen-ray repair hit.
+      UJobStageTrace::MarkVisualHoleEventForFrame(
+          world.GetStreamingFrameEpoch());
+    }
+    LastVisualHolesForCapture = visual_holes;
     const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
     const bool incomplete_camera_column = [&]() -> bool
     {
