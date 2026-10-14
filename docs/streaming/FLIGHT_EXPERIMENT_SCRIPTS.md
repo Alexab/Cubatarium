@@ -8356,27 +8356,44 @@ run two), with none in the start corridor. All 79 exact query-miss witnesses
 and all 238 moving event-query miss witnesses were outside the configured fog
 horizon. The stop-tail visual-hole proxy was zero; broad readiness debt peaked
 at 30 and demand-stop convergence failed.
+Across all ten calm stop periods, `chunk_not_ready` stayed at 30 while
+`visible_black_focus_n`, `near_focus_holes`, `pending_light_focus`, and dirty
+count stayed at zero. Thus the stop gate failed on persistent broad readiness
+debt, without a matching black-pixel or near-focus mesh-hole signal.
 
 M568 logged 318 moving `visual_holes_enter` events. All nine events in the
 unchanged `[-8512,-8416]` camera-X window received a 100-pixel grid, each at
 source epoch + 1. Across the 900 samples, RGB<=8 count was zero, luma<=32 was
 eight, luma<=64 was 45, and grid minima ranged from 26 to 83. The darkest
-sample in every grid had valid opaque depth and a voxel-ray hit with no gap.
-Three capture epochs had screen-ray traces; two had a selected ray for the
-exact candidate chunk; three ray/pixel matches were produced. Matched colors
-were `(139,173,216)`, `(63,90,41)`, and `(68,72,81)`, with opaque depth and
-voxel hits. These local samples do not establish that every pixel/frame is
-complete or explain the dark-green surfaces.
+sample in every grid had valid opaque depth. Its exact depth-to-mesh face
+match was valid in all nine: sky light `1.0` (level 15), block light `0`,
+preview off, and face-air packed light `15`; published/current light-field
+revision were both `1`, and every opaque chunk was drawable and render-ready.
+The matched face IDs were `572` seven times and `377` twice. Repository
+definitions in `minetest_default_16` map these to `tree_leaves` and `grass`;
+active pack identity is not stored in the run manifest. This makes the sampled
+dark-green values more consistent with textured leaf/grass surfaces than with
+stale or missing face lighting, while leaving other pixels and other flights
+open.
+
+Do not substitute the DDA `voxel_hit_block_id` for the surface visible at a
+pixel. For eight of the nine darkest samples, the DDA candidate's projected
+depth would fail against the framebuffer depth; the direct depth-to-mesh
+match was within `0.05` blocks. Three capture epochs had screen-ray traces;
+two had a selected ray for the exact candidate chunk; three ray/pixel matches
+were produced. Matched colors were `(139,173,216)`, `(63,90,41)`, and
+`(68,72,81)`, all with valid opaque depth and voxel hits. These local samples
+do not establish that every pixel/frame is complete.
 
 Fog fields are separate shader controls. Those rows recorded
 `uFogEnabled=0`, `uAirFogEnabled=1`, underwater fog disabled, and horizontal
 air fog over 16–32 blocks; the master fog field being zero does not mean air
 fog was off. Shader environment fields were day factor `1.0`, moon/night factor
-`0.22`, and minimum ambient `0.12`. The pixel probe lacks interpolated
-per-fragment sky/block-light values, so lighting origin remains unclassified.
-The next static pass should map the hit block IDs and compare published mesh
-lighting against authoritative chunk/light state before considering runtime
-policy changes.
+`0.22`, and minimum ambient `0.12`. The pixel context now carries shader,
+fog, opaque-depth, face-light, and revision fields; analyzer commits
+`b5747de0` and `782914a7` added capture-epoch ray matching and those per-pixel
+details. This M568 window provides no basis to change lighting, render, or
+scheduler policy.
 
 The event-pixel analyzer was extended in commit `b5747de0` to join ray rows at
 the actual framebuffer capture epoch and include fog, opaque-surface, and

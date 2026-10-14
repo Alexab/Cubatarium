@@ -5428,3 +5428,36 @@ dominated frames are inconclusive. This agrees with the operator's current
 visual assessment without closing the internal readiness-debt investigation.
 Continue from the [M464 plan checkpoint](ENGINE_REMEDIATION_PLAN_2026-10-03.md#m464-checkpoint--worker-logging-isolated-screen-ray-debt-reclassified-2026-10-08)
 and [M464 run record](FLIGHT_EXPERIMENT_SCRIPTS.md#m464--m335-worker-side-light-flag-result-logging-2026-10-08).
+
+### M568 targeted framebuffer follow-up (2026-10-14)
+
+M568's 45 positive A24 periods and 238 moving query-miss witnesses are still
+mesh/query telemetry, not observed empty pixels; all query witnesses were
+outside the configured fog horizon, and stop-tail `visual_holes` was zero. The
+run sampled every one of the nine edge events in the existing camera-X window
+with a 100-pixel OpenGL readback grid. None of the 900 points was RGB<=8.
+Across the ten calm stop periods, broad `chunk_not_ready` debt stayed at 30,
+while `visible_black_focus_n`, `near_focus_holes`, `pending_light_focus`, and
+dirty count all stayed at zero. Demand-stop convergence therefore failed on
+the broad readiness debt, without a matching stop-tail black-pixel or near-
+focus mesh-hole signal.
+The darkest sample in each grid had valid opaque depth and a depth-to-greedy-
+face match within `0.05` blocks. All nine matched mesh faces had sky light at
+level 15, block light zero, no provisional light preview, and current face-air
+light packed as 15; published and field light revisions matched. Seven face
+IDs map to `tree_leaves` (572) and two to `grass` (377) in the repository's
+`minetest_default_16` pack. The run manifest does not name the active pack, so
+this is a source-definition mapping, not registry-name telemetry.
+
+For eight of those nine samples, the independent DDA voxel candidate projected
+behind the framebuffer opaque depth. Pixel material attribution must use the
+depth-matched mesh face rather than that DDA ID. The sampled dark-green values
+are consistent with lit leaf/grass texture samples and do not support stale or
+missing light on those exact surfaces. They do not explain every dim region or
+prove full-frame completeness. The event-pixel analyzer now retains opaque
+face light, revision, fog, and shader context so later M335 traces can make the
+same distinction without manually joining raw rows. M568 ran with host CPU
+mean `87.6%` / p95 `100%`; do not use its frame times as a clean performance
+baseline. The refactor remains open on broad readiness debt and failed
+demand-stop convergence; see the [M568 plan record](ENGINE_REMEDIATION_PLAN_2026-10-03.md)
+and [raw flight analysis](FLIGHT_EXPERIMENT_SCRIPTS.md).

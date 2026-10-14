@@ -9303,7 +9303,11 @@ A24 was positive in 45 periods (`4.95%`, longest run two), broad readiness
 debt peaked at 30, and demand-stop convergence failed. No period-end A24 was
 positive in the start corridor; all 79 exact query-miss witnesses and all 238
 moving event-query miss witnesses were beyond the configured fog horizon.
-The stop-tail visual-hole proxy remained zero.
+The stop-tail visual-hole proxy remained zero. During all ten stop periods,
+`chunk_not_ready` stayed at 30 while `visible_black_focus_n`,
+`near_focus_holes`, `pending_light_focus`, and dirty count stayed at zero. The
+convergence failure is real for the broad readiness-debt gate, but these stop
+rows do not show black pixels or a near-focus mesh-hole proxy.
 
 M568 recorded 318 moving `visual_holes_enter` events; all nine in the existing
 `[-8512,-8416]` camera-X window received a 100-pixel grid. Each grid was
@@ -9320,19 +9324,34 @@ and ray hits.
 
 The fog telemetry must be read as separate shader controls: M568 samples had
 `uFogEnabled=0`, `uAirFogEnabled=1`, and underwater fog disabled, with the
-horizontal air-fog range at 16–32 blocks. The dark pixel rows also carried
-day factor `1.0`, moon/night factor `0.22`, and minimum ambient `0.12`. The
-pixel probe does not capture interpolated per-fragment sky/block light, so
-the dark green values cannot yet be assigned to normal material shading,
-stale chunk lighting, or fog contribution. The next static audit should map
-the sampled voxel IDs to block definitions and compare published mesh light
-data with the authoritative chunk/light state. Keep render and scheduler
-policy unchanged until that evidence distinguishes lighting from coverage.
+horizontal air-fog range at 16–32 blocks. The pixel context also records the
+actual opaque-depth hit and its nearest greedy face light. For the darkest
+sample in each of the nine grids, the face match was valid, sky light was
+`1.0` (level 15), block light was `0`, light preview was off, and current
+face-air packed light was `15`. Published and current light-field revisions
+both equaled `1`; all nine opaque chunks were drawable and render-ready.
+Seven depth-mapped faces used block ID `572` and two used `377`. The repository
+`minetest_default_16` definitions map those IDs to `tree_leaves` and `grass`;
+the run manifest does not record active pack identity, so retain that mapping
+as a source-based identification. These samples strongly favor normal leaf /
+grass texture color over stale or missing face lighting for the sampled dark
+pixels, but do not classify other pixels or the user's distant-flight visual
+observation.
 
-The analyzer now joins rays at the actual pixel capture epoch and carries
-fog, opaque-depth, and voxel-ray context for the darkest samples; this change
-is commit `b5747de0`. Keep A24, broad readiness debt, direct framebuffer
-samples, and stop convergence as separate signals. Run the capture-disabled
-performance baseline only under quiet host conditions. M568 artifacts and
-the exact M335 command are recorded in
+The independent voxel DDA hit is not always the pixel-visible material: for
+eight of the nine darkest samples its projected depth would fail against the
+framebuffer opaque depth, while the depth-to-mesh face match was within 0.05
+blocks. Use the depth-mapped face for pixel material/light attribution and
+keep the DDA candidate as separate world-ray evidence. Analyzer commits
+`b5747de0` and `782914a7` now join rays at the actual pixel capture epoch and
+preserve shader, fog, depth-hit, mesh-light, and revision context for the
+darkest samples.
+
+The M568 pixel window therefore does not justify a lighting, rendering, or
+scheduler policy change. Keep A24, broad readiness debt, direct framebuffer
+samples, and stop convergence as separate signals. The remaining acceptance
+work is a quiet-host capture-disabled M335 performance baseline, the still
+failing demand-stop readiness/convergence analysis, and periodic new-world
+checks after the repeatable control is stable. M568 artifacts and the exact
+M335 command are recorded in
 [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
