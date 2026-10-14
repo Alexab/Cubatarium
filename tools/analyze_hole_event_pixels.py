@@ -232,6 +232,11 @@ def analyze(path: Path) -> dict[str, Any]:
             {
                 "frame_epoch": epoch,
                 "focus_cx": event.get("focus_cx"),
+                "player_xyz": [
+                    event.get("player_x"),
+                    event.get("player_y"),
+                    event.get("player_z"),
+                ],
                 "miss_chunk": list(coords),
                 "query_probe_result": event.get("near_focus_hole_probe_result"),
                 "query_witness": [
