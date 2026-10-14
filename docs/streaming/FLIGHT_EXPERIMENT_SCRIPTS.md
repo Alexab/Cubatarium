@@ -8139,3 +8139,32 @@ producer requested it. If this scheduler attribution remains actionable,
 instrument ticket generation/age and requestor, then repeat the controlled
 route before policy changes. Continue to require a positive camera/pixel
 witness for any claim of a rendering defect.
+
+M561 stop-tail readiness debt is now decomposed by the already-emitted
+`focus_visual_*_n` class counters. All five final period rows had
+`unfinished_visual=20` and `focus_visual_missing_mesh_n=20`; every other
+unfinished class was zero, while `focus_visual_ready_n=101`. At the same time,
+`visual_holes=0` and `focus_missing_mesh=0`. Thus the unresolved count is 20
+XZ columns classified as `MissingMesh` in the broader streaming focus ring,
+not 20 demonstrated blank pixels or camera-near mesh gaps. In the latest
+captured `focus_slice_trace` epoch (`130410`), 11 sampled XZ coordinates were
+in this class; their sampled slices were non-air, had no drawable mesh, and
+were marked unresolved/no-owner. One example was `(-575,1,2)` with the camera
+at block `(-9114,70,56)`: the chunk center is about 80 blocks away horizontally
+and 92 in 3D, and the nearest point of its AABB is about 72 blocks away
+horizontally. This exceeds the 32–36 block effective fog horizon measured on
+the active-fog M335 repeat, but it does not classify all 20 columns or provide
+a frustum witness. The focus-ring `MissingMesh` census and
+the near-focus mesh-coverage proxy therefore answer different questions.
+
+The analyzer now reports stop-tail max/end/sample-count for each emitted
+`focus_visual_*_n` class. Use this breakdown together with the fog-horizon A24
+classification and exact frustum/pixel witnesses before changing the demand
+stop rule. The next useful audit is to identify which of the 20 unowned
+columns fall inside the effective visibility horizon; do not increase mesh
+admission for out-of-horizon debt based on the aggregate count alone.
+Reanalysis of the saved M561 log reports
+`post_stop_focus_visual_missing_mesh_max/end=20/20` and
+`post_stop_focus_visual_ready_max/end=101/101` across five stop samples; the
+full supplemental output is
+[`m561_readiness_class_reanalysis_20261014.json`](../../bin/suite_reports/engine_refactor/m561_readiness_class_reanalysis_20261014.json).

@@ -9175,6 +9175,23 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
     IDs are explicitly marked unverified by the analyzer. If ticket
     attribution is still needed to close the audit, add requestor and enqueue-
     age evidence and repeat the controlled route.
+12. **Done: M561 readiness-debt class decomposition; open: classify the exact
+    unowned columns against visibility before changing demand-stop policy.** The
+    last five stop samples all had 20 `MissingMesh` columns, 101 `Ready`
+    columns, and zero in every other unfinished class; `visual_holes` and
+    `focus_missing_mesh` were both zero. The class counters describe XZ columns
+    in the broad streaming focus ring, while the mesh-hole signals use narrower
+    coverage paths. Eleven latest-epoch slice samples in `MissingMesh` were
+    solid and unresolved/no-owner; one sample's chunk AABB was at least 72
+    blocks horizontally from the camera, beyond the active-fog horizon measured
+    on the M335 repeat. This is real wide-ring readiness debt, not demonstrated
+    framebuffer absence. Extend the existing fog/frustum correlation to these
+    exact coordinates, then decide whether convergence should require repair
+    only inside the effective visibility horizon. Do not widen mesh admission
+    from the aggregate readiness count alone. The analyzer now exports per-
+    class post-stop max/end/sample counts. M561's separate exact radius-query
+    miss witnesses were all beyond the configured fog horizon, but those
+    coordinates are not interchangeable with the 20 missing-mesh columns.
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.

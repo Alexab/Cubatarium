@@ -241,9 +241,9 @@ def analyze(
         )
     )
     readiness_signal_semantics = (
-        "unfinished_visual is a visual-readiness/debt count; a nonzero value "
-        "does not by itself mean a blank or dark framebuffer pixel; this key "
-        "is used for readiness-debt diagnostics, not the visual-hole rate"
+        "unfinished_visual classifies XZ columns in the streaming focus ring; "
+        "a nonzero value does not by itself mean a blank or dark framebuffer "
+        "pixel; post-stop class counts are emitted separately when available"
         if readiness_key == "unfinished_visual"
         else "legacy mesh-readiness counter; correlate with mesh and framebuffer evidence"
     )
@@ -1067,6 +1067,35 @@ def analyze(
         if post_stop_readiness_flags
         else None
     )
+    # Keep broad focus-ring readiness debt actionable by showing which column
+    # class contributes it. These are XZ-column classifications, not pixel or
+    # camera-frustum visibility measurements.
+    focus_visual_class_names = (
+        "terrain_incomplete",
+        "pending_light",
+        "sticky_remesh",
+        "stale_dark",
+        "missing_mesh",
+        "gpu_in_flight",
+        "not_loaded",
+        "not_ready_state",
+        "face_debt",
+        "ready",
+    )
+    post_stop_focus_visual_class_metrics = {}
+    for class_name in focus_visual_class_names:
+        field = f"focus_visual_{class_name}_n"
+        values = col(stop_tail, field)
+        if values:
+            post_stop_focus_visual_class_metrics[
+                f"post_stop_focus_visual_{class_name}_max"
+            ] = max(values)
+            post_stop_focus_visual_class_metrics[
+                f"post_stop_focus_visual_{class_name}_end"
+            ] = values[-1]
+            post_stop_focus_visual_class_metrics[
+                f"post_stop_focus_visual_{class_name}_samples"
+            ] = len(values)
     (
         post_stop_effective_holes_blink_transitions,
         post_stop_effective_holes_blink_rate,
@@ -2379,6 +2408,7 @@ def analyze(
             "post_stop_missing_max": post_stop_missing_max,
             "post_stop_readiness_debt_max": post_stop_readiness_debt_max,
             "post_stop_readiness_debt_rate": post_stop_readiness_debt_rate,
+            **post_stop_focus_visual_class_metrics,
             "post_stop_mesh_missing_max": post_stop_mesh_missing_max,
             "post_stop_visual_holes_rate": post_stop_visual_holes_rate,
             "post_stop_visual_holes_sample_coverage": (
