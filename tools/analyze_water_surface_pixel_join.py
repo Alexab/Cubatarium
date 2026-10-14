@@ -28,7 +28,7 @@ def classify_fragment_probe(rgba: int) -> str | None:
         (255, 0, 0): "alpha_cutout_candidate",
         (0, 0, 255): "opaque_depth_guard_candidate",
         (255, 255, 0): "both_discard_candidates",
-        (255, 0, 255): "shader_reached_color_output",
+        (255, 0, 255): "magenta_fluid_or_generic_transparent_marker",
     }.get(rgb)
 
 

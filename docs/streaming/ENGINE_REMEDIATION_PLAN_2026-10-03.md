@@ -10093,11 +10093,16 @@ samples were fully black (RGB <=16).
 
 M578 adds a fluid-only pre-discard classifier: red marks a candidate alpha
 cutout, blue an opaque-depth-guard candidate, yellow both, and magenta a
-fragment that reaches color output. It uses the existing single-pass override
-to remove the stencil-shell passes from the diagnosis while keeping the M335
-world, path, speed, and diagnostic X window unchanged. The GPU buffer-size
-witness now uses the 64-bit query already used by the mesh-ray witness. If
-M578 has shader-classification colors, fix the corresponding discard condition
-only after validating its sampled inputs; if water pixels remain unmarked,
-compare valid in-bounds GPU payload bytes and actual framebuffer depth before
-changing water meshing or streaming.
+candidate marker output. Because this run also enables the generic transparent
+marker, magenta can be an overdraw from another transparent material and is
+not a fluid-specific proof. The run uses the existing single-pass override to
+remove stencil-shell state from this one diagnosis while keeping the M335
+world, path, speed, and diagnostic X window unchanged. This is a controlled
+branch check, not a presumption that stencil is the root cause: the operator
+reported no water in single-pass M488, but water present in default-path M489.
+The GPU buffer-size witness now uses the 64-bit query already used by the
+mesh-ray witness. If M578 has red/blue/yellow shader-classification colors, fix
+the corresponding discard condition only after validating its sampled inputs;
+otherwise compare valid in-bounds GPU payload bytes and actual framebuffer
+depth before changing water meshing or streaming. Any magenta-only result may
+need a focused repeat with the generic transparent marker disabled.

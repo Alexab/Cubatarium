@@ -9060,8 +9060,12 @@ python tools/run_with_host_cpu_sampler.py --output bin/logs/m578_host_cpu_202610
 ```
 
 In the joined pixel report, red means the alpha cutout would discard the
-fragment, blue means the opaque-depth guard would discard it, yellow means
-both conditions hold, and magenta means shader output was reached. An unchanged
-pixel with no marker after forcing single-pass no longer implicates stencil;
-check framebuffer depth, GPU payload readback validity, and submitted vertex
-state. Buffer sizes in the M578 payload witness use `glGetBufferParameteri64v`.
+fragment, blue means the opaque-depth guard would discard it, and yellow means
+both conditions hold. Those colors are emitted only by the fluid-specific
+pre-discard branch. Magenta is ambiguous in this run: it can be the fluid
+branch reaching color output or an overdraw from another transparent material,
+because the generic transparent marker remains enabled for backward
+comparison. An unchanged pixel with no marker after forcing single-pass no
+longer implicates stencil; check framebuffer depth, GPU payload readback
+validity, and submitted vertex state. Buffer sizes in the M578 payload witness
+use `glGetBufferParameteri64v`.
