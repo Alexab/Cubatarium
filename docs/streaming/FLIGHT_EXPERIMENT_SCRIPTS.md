@@ -8420,6 +8420,39 @@ Artifacts: [run report](../../bin/suite_reports/engine_refactor/m568_world164_a2
 [pixel/ray join](../../bin/suite_reports/engine_refactor/m568_a24_pixel_join_20261014.json),
 [perf JSONL](../../bin/logs/perf_20261014-145813_25512.jsonl), and
 [host samples](../../bin/logs/m568_host_cpu_20261014.jsonl). Keep A24,
-readiness debt, framebuffer samples, and stop convergence separate. Continue
-with the static block/light provenance audit; do not change mesh admission or
-scheduler policy based on the proxy counters alone.
+readiness debt, framebuffer samples, and stop convergence separate. The
+block/light provenance audit is complete for the sampled pixels; next capture
+the exact CPU-cache/zero-quad state of the ownerless terminal focus slices
+before considering any mesh-admission or scheduler-policy change.
+
+#### M568 terminal readiness classification
+
+The terminal focus trace was epoch `70190`, camera `(-9065,70,56)`, focus
+`(-567,3)`. Across its 121 focus columns, readiness classes were 60 ready, 31
+terrain-incomplete, 26 missing-mesh, and four face-debt. The broad
+`unfinished_visual=chunk_not_ready=30` is the last two classes summed; terrain
+incomplete is excluded by `IsUnfinishedFocusColumnVisual`. Direct stop-tail
+`focus_missing_mesh`, `near_focus_holes`, `visual_holes`, and the
+`visible_black_focus_n` renderer proxy were all zero; no pixel readback was
+collected at the stop point.
+
+Twenty-five traced missing-mesh slices were state-1/no-owner candidates. Each
+was a full non-air chunk at Y=1 (4,096 blocks), with geometry revision already
+published, an active `Created` demand 20.8–28.4 s old, and zero mesh-work and
+ColumnFlow owner flags. Their overlay face debts (`1/16/17/32/33`) target
+unloaded horizontal neighbors; peer face debt is zero. Chunk-AABB geometry
+places all these samples at least 56 blocks horizontally from the camera,
+outside the 32-block end of configured air fog. One additional missing-mesh
+slice was classified as owned/pending. Treat this as unresolved background
+ownership and boundary-coverage work, not as proof of a visible hole. The
+global demand store still had 62 geometry, 4 light, 213 face, 213 coverage,
+and 1 retained unsatisfied obligations, so global demand-stop correctly
+remained false under its current all-record contract.
+
+Across preceding M335 controls, broad stop-tail not-ready counts varied:
+M562 `34` (34 missing-mesh, 0 face-debt), M563 `27` (24 + 3), M564 `23` (23
++ 0), and M568 `30` (26 + 4). Each had zero stop-tail visual-hole and
+visible-black maxima. This supports separating the broad column-ring and
+global-demand gates from current-view coverage. Static follow-up should find
+why ownerless Created attempts persist and determine whether boundary overlay
+debt is expected at unloaded stream edges before changing scheduler policy.

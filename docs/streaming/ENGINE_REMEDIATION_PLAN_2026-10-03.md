@@ -9355,3 +9355,56 @@ failing demand-stop readiness/convergence analysis, and periodic new-world
 checks after the repeatable control is stable. M568 artifacts and the exact
 M335 command are recorded in
 [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+### M568 stop-tail census: unresolved work is outside the visible horizon
+
+The terminal `focus_slice_trace` sample is epoch `70190`, at camera
+`(-9065,70,56)` and focus chunk `(-567,3)`. Its 121-column readiness census
+classified 60 columns as ready, 31 as terrain-incomplete, 26 as missing-mesh,
+and four as face-debt. This explains the stable `unfinished_visual` /
+`chunk_not_ready=30`: it is exactly the 26 missing-mesh plus four face-debt
+columns; terrain-incomplete columns are intentionally excluded. Stop-tail
+direct `focus_missing_mesh`, `near_focus_holes`, and black-pixel counters were
+zero; `visible_black_focus_n` is a renderer proxy, not a framebuffer pixel
+readback. Earlier same-route stop tails M562/M563/M564 had 34/27/23 broad
+not-ready items (34/24/23 missing-mesh and 0/3/0 face-debt respectively),
+also with zero visual-hole and visible-black maxima. The broad debt has
+fluctuated; it is not a newly monotonic regression.
+
+The trace contains 25 of the 26 missing-mesh slices as state-1 candidates:
+all have 4,096 non-air blocks at chunk Y=1, published geometry revision equal
+to current mesh revision, an active `Created` demand aged 20.8–28.4 s, and no
+mesh-work or ColumnFlow ticket owner. Their overlay face-debt masks are
+`1/16/17/32/33`; peer face debt is zero, and each sampled debt corresponds to
+an unloaded horizontal neighbor. The 26th slice has an active demand at stage
+`Admitted` and a persistence relight owner, but no mesh-work or ColumnFlow
+owner. These are lifecycle/coverage questions, but their location matters:
+the recorded chunk AABBs are at least 56 blocks horizontally from the camera,
+beyond the configured air-fog end of 32 blocks. They are below or to the side
+of the camera, not measured on-screen holes.
+
+The same distinction applies to `demand_stop_converged`: the demand-store
+breakdown is global (`62` geometry, `4` light, `213` face, `213` coverage,
+`1` retained obligation), while the visual census is a broad horizontal
+column ring. Its false result identifies outstanding obligations, not whether
+they can affect this frame. Keep those obligations visible in diagnostics;
+do not relax or delete them until their owner and visibility relevance are
+understood.
+
+Source inspection offers a concrete hypothesis for the persistent debt.
+`ChunkMeshSnapshot::GetNeighborLoadState` intentionally hides unknown side and
+bottom faces at an unloaded boundary to avoid distant closing walls, while
+`HasMeshSatisfyingColumnReady` refuses to accept a zero-quad cached mesh if
+coverage or face debt is still open. A fully occluded underground slice at a
+stream boundary can therefore be visually empty by design yet remain
+unsatisfied until a neighbor loads. The M568 trace did not record whether
+these exact chunks had a zero-quad cache entry, so confirm that before
+changing the predicate.
+
+Next static work: trace how these off-horizon Created attempts are minted,
+reconciled, and re-admitted despite lacking concrete queue/worker owners; check
+whether missing-neighbor overlay debt is expected at the stream boundary; and
+split global readiness debt from current-view and trajectory-lookahead debt.
+Only use a new M335 run on the same route to validate these joins when host
+load is suitable. Keep actual framebuffer/pixel evidence as the renderer
+acceptance signal.

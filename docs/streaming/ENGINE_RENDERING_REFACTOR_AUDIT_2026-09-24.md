@@ -5461,3 +5461,22 @@ mean `87.6%` / p95 `100%`; do not use its frame times as a clean performance
 baseline. The refactor remains open on broad readiness debt and failed
 demand-stop convergence; see the [M568 plan record](ENGINE_REMEDIATION_PLAN_2026-10-03.md)
 and [raw flight analysis](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+The terminal census narrows the meaning of that failed gate. At camera
+`(-9065,70,56)`, the 121 focus columns were 60 ready, 31 terrain-incomplete,
+26 missing-mesh, and four face-debt. `unfinished_visual=30` is the sum of the
+last two classes; terrain-incomplete is excluded. Stop-tail direct
+`focus_missing_mesh`, `near_focus_holes`, `visual_holes`, and the
+`visible_black_focus_n` renderer proxy were zero; no pixel readback was
+collected at the stop point. Twenty-five traced no-owner missing-mesh slices were
+full-solid Y=1 chunks with active `Created` demands aged 20.8–28.4 s, no
+mesh/ColumnFlow owner, published geometry already current, and overlay debt to
+unloaded horizontal neighbors. Their chunk AABBs were at least 56 blocks
+horizontally from the camera, beyond the 32-block air-fog end. This is a real
+background ownership/boundary lifecycle debt, but not evidence those slices
+caused an on-screen hole. The global demand store's outstanding
+`62/4/213/213/1` geometry/light/face/coverage/retained counts explain why its
+all-record stop predicate remains false. Continue by separating global work
+completion from current-view and lookahead coverage, while tracing the
+ownerless Created attempts and preserving actual framebuffer evidence as the
+visual verdict.
