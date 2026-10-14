@@ -9463,6 +9463,16 @@ set, so their later demand transitions were absent from the dump. Commit
 `53d1681b` now watches unresolved state-1 focus samples, allowing the next run
 to retain their cancellation/re-admission and worker transitions.
 
+History narrows the regression window: the streaming budget return dates to
+`e8258f45` (2026-09-05), but demand upkeep still ran from the post-emerge
+`SampleColumnEmergeStageTelemetry` path. Commit `c390532d` (2026-10-07,
+“avoid duplicate demand upkeep”) removed upkeep from that post-emerge path and
+made `TickAsyncChunkSystems`'s `finish_telemetry` the sole owner. The existing
+budget return precedes that block, so a performance optimization silently
+removed cleanup on exactly that path. `38dbc516` later bounded reconciliation
+to 128 records; it did not restore the skipped call. Commit `feb5b271` restores
+the guarantee without reviving the logger-only census.
+
 The host remained busy immediately after builds (88.7%, 83.5%, then 41.1%
 CPU in five-second samples). Do not use this session as a performance baseline.
 M569 should first verify whether aged `Created` attempts now cancel and whether

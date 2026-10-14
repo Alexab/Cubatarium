@@ -8506,4 +8506,6 @@ boundary-overlay debt. It will also include lifecycle transitions because
 `53d1681b` watches each bounded state-1 focus sample. Commit `feb5b271` adds the
 bounded demand maintenance to the 5 ms streaming-budget early-return path;
 check whether old `Created` attempts now cancel rather than remaining active.
-This run has not yet been executed.
+History points to `c390532d` (2026-10-07) as the likely regression: it moved
+demand upkeep out of the post-emerge telemetry call and left the budget-exit
+path without maintenance. This run has not yet been executed.
