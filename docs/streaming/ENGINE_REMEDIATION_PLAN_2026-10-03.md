@@ -9473,7 +9473,11 @@ It does not admit additional mesh work or relax stop convergence. The M568
 state-1 focus samples also were not automatically added to the watched-chunk
 set, so their later demand transitions were absent from the dump. Commit
 `53d1681b` now watches unresolved state-1 focus samples, allowing the next run
-to retain their cancellation/re-admission and worker transitions.
+to retain their cancellation/re-admission and worker transitions. Demand-store
+maintenance is gated by `ChunkDemandAuthorityEnabled()`; it is on by default,
+but `CUBA_DEMAND_SHADOW=1` disables those writers. The M569 recipe pins the
+setting to `0` so the cleanup fix is active regardless of inherited shell
+environment.
 
 History narrows the regression window: the streaming budget return dates to
 `e8258f45` (2026-09-05), but demand upkeep still ran from the post-emerge
