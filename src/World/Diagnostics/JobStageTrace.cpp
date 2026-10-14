@@ -613,11 +613,9 @@ void UJobStageTrace::MarkVisualHoleEventForFrame(uint64_t frame_epoch)
   }
 }
 
-bool UJobStageTrace::HasVisualHoleEventForFrame(uint64_t frame_epoch)
+uint64_t UJobStageTrace::GetLatestVisualHoleEventFrameEpoch()
 {
-  return frame_epoch != 0 &&
-         LatestVisualHoleEventFrameEpoch.load(std::memory_order_acquire) ==
-             frame_epoch;
+  return LatestVisualHoleEventFrameEpoch.load(std::memory_order_acquire);
 }
 
 bool UJobStageTrace::HasStalledVisualBlackTraceForFrame(

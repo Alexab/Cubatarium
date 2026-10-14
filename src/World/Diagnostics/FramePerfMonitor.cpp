@@ -5435,6 +5435,8 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_probe_id
                  << ",\"renderer_pixel_probe_trigger_flags\":"
                  << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
+                 << ",\"renderer_pixel_probe_event_frame_epoch\":"
+                 << r.renderer_pixel_probe_event_frame_epoch
                  << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
                  << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
                  << ",\"renderer_pixel_rgba\":"
@@ -6017,6 +6019,8 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_probe_id
                << ",\"renderer_pixel_probe_trigger_flags\":"
                << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
+               << ",\"renderer_pixel_probe_event_frame_epoch\":"
+               << r.renderer_pixel_probe_event_frame_epoch
                << ",\"renderer_pixel_x\":" << r.renderer_pixel_x
                << ",\"renderer_pixel_y\":" << r.renderer_pixel_y
                << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba

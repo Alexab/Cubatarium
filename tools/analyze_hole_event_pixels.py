@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Join near-focus visual-hole edges to same-epoch screen rays and pixels."""
+"""Join near-focus visual-hole edges to frame-aligned rays and pixel samples."""
 
 from __future__ import annotations
 
@@ -139,7 +139,7 @@ def summarize_pixel_grid(pixels: list[dict[str, Any]]) -> dict[str, Any] | None:
 def analyze(path: Path) -> dict[str, Any]:
     events: list[dict[str, Any]] = []
     rays_by_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    pixels_by_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    event_pixels_by_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for row in iter_rows(path):
         kind = row.get("kind")
         if kind == "visual_holes_enter":
@@ -162,7 +162,16 @@ def analyze(path: Path) -> dict[str, Any]:
         if kind == "screen_ray_candidate_trace":
             rays_by_epoch[epoch].append(row)
         else:
-            pixels_by_epoch[epoch].append(row)
+            flags = int(row.get("renderer_pixel_probe_trigger_flags", 0) or 0)
+            if flags & EVENT_PIXEL_FLAG:
+                source_epoch = row.get(
+                    "renderer_pixel_probe_event_frame_epoch", epoch
+                )
+                try:
+                    source_epoch = int(source_epoch or epoch)
+                except (TypeError, ValueError):
+                    source_epoch = epoch
+                event_pixels_by_epoch[source_epoch].append(row)
 
     output_events: list[dict[str, Any]] = []
     matched_samples: list[dict[str, Any]] = []
@@ -185,11 +194,11 @@ def analyze(path: Path) -> dict[str, Any]:
             if ray.get("screen_ray_selected") == 1
             and (ray.get("cx"), ray.get("cy"), ray.get("cz")) == coords
         ]
-        event_pixels = [
+        event_pixels = event_pixels_by_epoch.get(epoch, [])
+        same_frame_event_pixels = [
             pixel
-            for pixel in pixels_by_epoch.get(epoch, [])
-            if int(pixel.get("renderer_pixel_probe_trigger_flags", 0) or 0)
-            & EVENT_PIXEL_FLAG
+            for pixel in event_pixels
+            if int(pixel.get("frame_epoch", -1) or -1) == epoch
         ]
         if event_pixels:
             event_frame_count += 1
@@ -204,7 +213,7 @@ def analyze(path: Path) -> dict[str, Any]:
         samples = []
         for ray in exact_selected:
             selected_ray_count += 1
-            pixel = selected_pixel_for_ray(ray, event_pixels)
+            pixel = selected_pixel_for_ray(ray, same_frame_event_pixels)
             if pixel is None:
                 continue
             sample = {
@@ -249,6 +258,18 @@ def analyze(path: Path) -> dict[str, Any]:
                 "screen_ray_trace_rows": len(ray_rows),
                 "selected_ray_rows_for_miss_chunk": len(exact_selected),
                 "event_pixel_rows": len(event_pixels),
+                "pixel_capture_frame_epochs": sorted(
+                    {
+                        int(pixel.get("frame_epoch", epoch) or epoch)
+                        for pixel in event_pixels
+                    }
+                ),
+                "pixel_capture_epoch_deltas": sorted(
+                    {
+                        int(pixel.get("frame_epoch", epoch) or epoch) - epoch
+                        for pixel in event_pixels
+                    }
+                ),
                 "event_pixel_grid": summarize_pixel_grid(event_pixels),
                 "matched_pixel_samples": samples,
             }

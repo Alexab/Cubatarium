@@ -209,6 +209,7 @@ struct OpaquePixelProbeCapture
 {
   bool active{false};
   uint64_t probe_id{0};
+  uint64_t visual_hole_event_frame_epoch{0};
   int rows{0};
   bool screen_ray_aligned_rows{false};
   uint8_t trigger_flags{0};
@@ -1526,6 +1527,8 @@ void CaptureTransparentPixelProbe(
       record.renderer_pixel_probe_id = opaque_capture.probe_id;
       record.renderer_pixel_probe_trigger_flags =
           opaque_capture.trigger_flags;
+      record.renderer_pixel_probe_event_frame_epoch =
+          opaque_capture.visual_hole_event_frame_epoch;
       record.renderer_pixel_x = viewport[0] + local_x;
       record.renderer_pixel_y = viewport[1] + local_y;
       record.renderer_pixel_rgba = (red << 24u) | (green << 16u) |
@@ -4271,6 +4274,7 @@ void UGeometryEngine::DrawCubeGeometry()
       static glm::ivec2 last_probe_focus(0);
       static uint64_t last_camera_band_peak_probe_epoch = 0;
       static uint64_t last_screen_ray_probe_epoch = 0;
+      static uint64_t last_visual_hole_event_probe_epoch = 0;
       // Capture a bounded framebuffer sample for transient camera-band peaks
       // even when the operator's fixed X window does not include the event.
       static uint32_t camera_band_peak_pixel_probe_count = 0;
@@ -4290,14 +4294,27 @@ void UGeometryEngine::DrawCubeGeometry()
       const bool pixel_probe_in_x_range =
           probe_camera_x >= pixel_probe_min_x &&
           probe_camera_x <= pixel_probe_max_x;
+      const uint64_t latest_visual_hole_event_epoch =
+          UJobStageTrace::GetLatestVisualHoleEventFrameEpoch();
+      const bool new_visual_hole_event =
+          latest_visual_hole_event_epoch >
+              last_visual_hole_event_probe_epoch &&
+          latest_visual_hole_event_epoch <= pixel_probe_frame_epoch;
+      // A stream update and its render can land on adjacent frame epochs.
+      // Consume the marker once the renderer catches up, instead of requiring
+      // exact epoch equality and silently missing the event after one update.
+      if (new_visual_hole_event)
+      {
+        last_visual_hole_event_probe_epoch =
+            latest_visual_hole_event_epoch;
+      }
       const bool camera_band_peak_probe =
           UJobStageTrace::HasCameraBandPeakTraceForFrame(
               pixel_probe_frame_epoch) &&
           last_camera_band_peak_probe_epoch != pixel_probe_frame_epoch;
       const bool visual_hole_edge_pixel_probe =
           pixel_probe_in_x_range && probe_on_screen_ray &&
-          UJobStageTrace::HasVisualHoleEventForFrame(
-              pixel_probe_frame_epoch);
+          new_visual_hole_event;
       const bool screen_ray_probe =
           probe_on_screen_ray &&
           UJobStageTrace::HasScreenRayTraceForFrame(
@@ -4335,6 +4352,10 @@ void UGeometryEngine::DrawCubeGeometry()
           stalled_census_pixel_probe || visual_hole_edge_pixel_probe)
       {
         pixel_probe_capture.probe_id = render_probe_count;
+        pixel_probe_capture.visual_hole_event_frame_epoch =
+            visual_hole_edge_pixel_probe
+                ? latest_visual_hole_event_epoch
+                : 0;
         pixel_probe_capture.trigger_flags = static_cast<uint8_t>(
             (periodic_pixel_probe ? 1u << 0 : 0u) |
             (focus_change_pixel_probe ? 1u << 1 : 0u) |

@@ -447,6 +447,9 @@ struct VisualBlackTraceRecord
   /// sample_kind=9: bit 0=periodic, bit 1=focus change, bit 2=screen ray,
   /// bit 3=camera-band peak, bit 4=stalled census, bit 5=visual-hole edge.
   uint8_t renderer_pixel_probe_trigger_flags{0};
+  /// Source epoch for a visual-hole edge probe; frame_epoch is the render
+  /// epoch whose framebuffer was actually sampled.
+  uint64_t renderer_pixel_probe_event_frame_epoch{0};
   /// sample_kind=9: origin and direction of the renderer's exact DDA ray.
   float renderer_pixel_ray_origin_x{0.0f};
   float renderer_pixel_ray_origin_y{0.0f};
@@ -908,10 +911,11 @@ public:
   /// True when the streaming screen-ray grid was recorded during this render
   /// epoch. Lets an opt-in diagnostic pixel probe sample the same coordinates.
   static bool HasScreenRayTraceForFrame(uint64_t frame_epoch);
-  /// Mark and query a near-focus visual-hole rising edge so the renderer can
-  /// sample its bounded pixel grid in the same epoch, even without a ray hit.
+  /// Mark a near-focus visual-hole rising edge. The renderer may observe it
+  /// after the streaming frame advances, so keep the source epoch available
+  /// until its next pixel-probe decision.
   static void MarkVisualHoleEventForFrame(uint64_t frame_epoch);
-  static bool HasVisualHoleEventForFrame(uint64_t frame_epoch);
+  static uint64_t GetLatestVisualHoleEventFrameEpoch();
   /// True when the focus census found a FullyDarkStalledTicket slice during
   /// this render epoch. Lets an opt-in pixel probe capture that exact frame.
   static bool HasStalledVisualBlackTraceForFrame(uint64_t frame_epoch);
