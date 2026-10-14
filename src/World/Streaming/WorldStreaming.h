@@ -145,7 +145,6 @@ private:
   int LastPendingLightFocus{0};
   UMemoryBudgetController MemoryBudget{};
   int StreamingFrameCounter{0};
-  bool LastVisualHolesForCapture{false};
   int LastUnderfeetSyncFrame{-1};
   MemoryBudgetDecision LastMemoryDecision{};
   uint64_t LastMeshCompletedDiscarded{0};

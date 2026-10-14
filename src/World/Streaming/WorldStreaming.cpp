@@ -6638,16 +6638,6 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool visual_holes =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), feet_chunk, focus_radius);
-    if (UJobStageTrace::VisualBlackTraceEnabled() && visual_holes &&
-        !LastVisualHolesForCapture)
-    {
-      // This is the same raw focus-radius signal used by FramePerfMonitor's
-      // visual_holes_enter edge. Mark it after the final mesh query so GUI
-      // pixel capture does not depend on a selected screen-ray repair hit.
-      UJobStageTrace::MarkVisualHoleEventForFrame(
-          world.GetStreamingFrameEpoch());
-    }
-    LastVisualHolesForCapture = visual_holes;
     const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
     const bool incomplete_camera_column = [&]() -> bool
     {

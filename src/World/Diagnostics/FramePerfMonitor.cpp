@@ -4550,7 +4550,9 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   if (frame_visual_holes && !s.LastFrameVisualHoles)
   {
     // Keep one frame-aligned lifecycle witness at each proxy rising edge.
-    // This distinguishes it from the terminal snapshot in the interval row.
+    // Publish the pixel-probe marker from the same sampled edge and epoch so
+    // the renderer cannot drift from the event written to the perf log.
+    UJobStageTrace::MarkVisualHoleEventForFrame(n.frame_epoch);
     WriteJsonl(s, n, "visual_holes_enter", /*flush=*/false);
   }
   switch (n.near_focus_tracked_witness_outcome_event)
