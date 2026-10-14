@@ -8673,3 +8673,71 @@ $env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
 Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m571_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1880 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m571_world164_m335_exact_lifecycle --report bin/suite_reports/engine_refactor/m571_world164_m335_exact_lifecycle_20261014.json --process-timeout 2700
 ```
+
+#### M571 result
+
+M571 exited normally (`process_rc=0`) after 1,955.05 wall seconds / 72,088
+frames, covering 9,584 blocks / 599 chunks from `[7,3]` to `[-592,3]`.
+There were no clock gaps, teleports, collision stops, or heading deviation;
+both obstacle detours completed. Movement speed median was 5.19287 blocks/s,
+and altitude remained 70. The runner returned `pass=false` (29/40 gates),
+including A24, eye-proxy, and post-stop convergence. Host CPU
+median/p95/max was `75.8/99.9/100%`, so timings are diagnostic only.
+
+The sparse framebuffer grid contains 620 frames × 80 samples = 49,600 RGBA /
+depth samples. None had RGB channels all ≤8 or ≤16; minimum luminance was
+24.476. Six mesh-ray gaps and the single unloaded-ray witness were beyond
+fog. A24 counted 38 whole-route near-focus periods and none in the start
+corridor. All 68 period and 237 event raw query misses were beyond fog; all
+674 tracked witnesses resolved before fog, with zero entering fog unready.
+Of 315 edges with a screen-ray-selected candidate, each selected mesh was
+drawable/satisfying and matched the proxy coordinate.
+
+The watched coordinate `(-571,1,6)` was reached. Its previous attempt ID
+`182634` was process-local to M568; M571 recorded new attempt `188003` with
+incarnation `21753` / job `100267`. It progressed through mesh build and GPU
+publication in about 51 ms. A later no-owner attempt `188028` was cancelled
+after about 4.82 s, by then published coverage generation had caught up. There
+was no repeated create/cancel cycle. A zero-ID `install_published` row is
+unverified and excluded. M571 did not sample cache vertices/quads for this
+exact coordinate.
+
+The terminal full focus census had 46 ready, 26 terrain-incomplete, 41
+missing-mesh, and eight face-debt columns. The bounded terminal slice trace
+sampled 42 solid chunks; every one was at least 47 blocks from the camera,
+outside the 32-block fog end. Forty had a cache entry and GPU residency but
+zero CPU vertices/GPU quads; two had no cache entry. Most carried overlay
+boundary debt. Keep these off-horizon readiness records distinct from the
+near-focus visual-hole and framebuffer results. The pixel-grid output and
+report are linked from the remediation plan.
+
+#### M572 — periodic fresh-seed frontier route
+
+M572 keeps the M335 route conditions exactly and changes only the world to a
+new seed. Create a new world with the Release executable and a radius-four
+pre-generated start region; then fly 1,800 seconds west with source tracing
+enabled. Deep focus-census and event-pixel readbacks remain off so procedural
+source and the normal sparse renderer pixel grid can be evaluated together.
+This is the secondary fresh-seed lane; World_164 remains the primary
+repeatable control.
+
+```powershell
+# Run from the bin directory; use a unique name and seed.
+.\Cubatarium.exe --console --create-world --name World_M572_Cold_20261014 --seed 3650482197 --radius-chunks 4 --output worlds --report-json suite_reports/engine_refactor/m572_world_create_20261014.json
+
+# Run from the repository root.
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='0'
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m572_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m572_world_m572_cold_frontier --report bin/suite_reports/engine_refactor/m572_world_m572_cold_frontier_20261014.json --process-timeout 2600
+```
+
+After completion, run `tools/analyze_framebuffer_pixel_grid.py` on the perf
+JSONL. Use the INFO log recorded by the flight report with
+`tools/analyze_world_column_source_trace.py --focus-z 3 --z-radius 5` to
+summarize procedural and disk-source latency separately. Record world-create
+time/column count, unique source attempts and terminal outcomes, route speed,
+fog-scoped pixel evidence, and host load. Do not compare its timing against a
+quiet-host performance baseline.

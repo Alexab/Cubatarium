@@ -9530,12 +9530,15 @@ the guarantee without reviving the logger-only census.
 
 The host was busy immediately after builds (88.7%, 83.5%, then 41.1% CPU in
 five-second samples); do not use those measurements as a performance
-baseline. M569 and M570 have now checked the rendered-pixel and lifecycle
-proxies under the accepted load. M571 should first reach the prior exact
-ownerless attempt coordinate and inspect whether aged `Created` attempts now
-cancel and whether their cache entries contain vertices/quads. Schedule a
-performance pass only after a quiet-host window and without diagnostic
-framebuffer readbacks.
+baseline. M569–M571 have now checked the repeated-world rendered pixels and
+lifecycle proxies under the accepted load. M571 reached the prior exact
+ownerless coordinate and showed a mesh attempt reach GPU publication and a
+later ownerless coverage retry cancel after the coverage revision caught up.
+It did not capture that coordinate's cache vertex/quads. Next, retain the
+repeatable World_164 route as the primary lane and run the planned periodic
+fresh-seed frontier check with the same start, camera, speed, altitude, and
+no-teleport controls. Schedule a performance conclusion only from a
+capture-disabled run with host-load context.
 
 ### M569 execution result — no sampled black pixels; broad readiness is not view evidence
 
@@ -9640,3 +9643,63 @@ flight duration enough to cross x=`-571`, and keep the bounded focus-slice and
 lifecycle trace. Leave event-pixel readbacks off for that run to contain I/O
 and post-processing overhead. Do not weaken readiness or convergence gates
 to make off-view obligations disappear.
+
+### M571 execution result — exact lifecycle coordinate reached; sparse grid clean (2026-10-14)
+
+M571 used Release executable SHA-256
+`E893A39836DA4CCFAAF91C16E9642B4B6896A4D8B148FF327CA27E5633328B6C` with
+the same M335 world/start/speed/altitude/heading and no-teleport flight; only
+the flight phase was extended to 1,880 seconds to cross the M568 candidate.
+The process returned `0`, requested 1,915 in-game seconds, ran 1,955.05 wall
+seconds / 72,088 frames, and covered 9,584 blocks / 599 chunks from focus
+`[7,3]` to `[-592,3]`. There were no clock gaps, collision stops, or heading
+deviation; both obstacle detours completed. The suite remained `pass=false`
+(29/40 gates). Median movement speed was 5.19287 blocks/s and player Y stayed
+70. The host sampler measured CPU median/p95/max `75.8/99.9/100%` and game
+use `2.22/2.86/3.65` cores; do not use M571's timings as a quiet-host
+performance baseline.
+
+The route-wide framebuffer analyzer found 620 sparse 80-pixel captures
+(49,600 samples). None had RGB channels all ≤8 or ≤16; minimum Rec.709
+luminance was 24.476. Six opaque mesh-ray gaps and one unloaded-ray witness
+were all beyond fog. This is direct evidence about the samples, not every
+pixel/frame. A24 still counted 38 whole-route near-focus proxy periods but
+zero in the named M335 start corridor. All 68 period and 237 event raw query
+misses were beyond fog; all 674 tracked witness lifecycles resolved before
+fog, and none entered it unready. In 315 event edges with a selected
+screen-ray candidate, the candidate matched the proxy coordinate and was
+drawable/satisfying. The mesh-proxy gate remains diagnostic and does not
+contradict the sampled framebuffer colors.
+
+M571 did reach `(-571,1,6)`. The old M568 attempt ID `182634` is run-local and
+did not carry over. At that coordinate, new attempt `188003` (incarnation
+`21753`, job `100267`) changed geometry revision 2→3 with a dirty-queue owner,
+built, passed GPU queue/kick/readiness, and published at frame epoch `68711`
+about 51 ms after creation. A later attempt `188028` was created without a
+mesh-work owner while desired coverage generation was 1 and published
+coverage was 0; it was cancelled about 4.82 seconds later after published
+coverage reached 1. There was no repeated create/cancel loop for this
+coordinate. One transition row with zero world/incarnation/attempt IDs is
+unverified and excluded from this join. This supports the budget-exit cleanup
+fix at the formerly orphaned coordinate, while the exact cache vertex/quads
+state there remains unmeasured.
+
+The terminal 121-column focus census decomposed to 46 ready, 26
+terrain-incomplete, 41 missing-mesh, and eight face-debt columns; the direct
+near-focus visual-hole and mesh-missing stop proxies were zero. The bounded
+terminal slice trace sampled 42 solid chunks (4,096 non-air blocks each),
+all at least 47 blocks from the camera and beyond the 32-block fog end. Of
+these, 40 had a CPU cache entry/GPU residency but zero CPU vertices and zero
+GPU quads, and two had no cache entry; overlay boundary debt was present in
+most. The sample explains why global readiness can stay red while no visible
+hole is established. It does not prove every zero-quad chunk is harmless;
+keep exact in-fog pixel evidence as the rendering acceptance signal.
+
+The pixel summary is
+[`m571_pixel_grid_20261014.json`](../../bin/suite_reports/engine_refactor/m571_pixel_grid_20261014.json),
+the suite report is
+[`m571_world164_m335_exact_lifecycle_20261014.json`](../../bin/suite_reports/engine_refactor/m571_world164_m335_exact_lifecycle_20261014.json),
+and the perf trace is
+[`perf_20261014-205418_31876.jsonl`](../../bin/logs/perf_20261014-205418_31876.jsonl).
+The post-stop debt and eye-proxy gates still fail, so keep their global
+readiness and current-view semantics separate.
