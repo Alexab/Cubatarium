@@ -9530,14 +9530,19 @@ the guarantee without reviving the logger-only census.
 
 The host was busy immediately after builds (88.7%, 83.5%, then 41.1% CPU in
 five-second samples); do not use those measurements as a performance
-baseline. M569–M571 have now checked the repeated-world rendered pixels and
-lifecycle proxies under the accepted load. M571 reached the prior exact
-ownerless coordinate and showed a mesh attempt reach GPU publication and a
-later ownerless coverage retry cancel after the coverage revision caught up.
-It did not capture that coordinate's cache vertex/quads. Next, retain the
-repeatable World_164 route as the primary lane and run the planned periodic
-fresh-seed frontier check with the same start, camera, speed, altitude, and
-no-teleport controls. Schedule a performance conclusion only from a
+baseline. M569–M571 checked repeated-world rendered pixels and lifecycle
+proxies. M571 reached the prior exact ownerless coordinate and showed a mesh
+attempt reach GPU publication and a later ownerless coverage retry cancel
+after the coverage revision caught up. It did not capture that coordinate's
+cache vertex/quads. M572 completed the periodic fresh-seed frontier route,
+but the launch set `CUBA_VISUAL_BLACK_TRACE=0`; that disables the renderer
+pixel probes as well as the broader visual trace. The expected sparse
+framebuffer grid was therefore absent, and the user's report that water
+disappeared during the run cannot be localized to generation, disk load, or
+rendering from M572. The next M573 run should replay the now-persisted M572
+world under the same M335 route, with visual tracing enabled, sparse pixels
+only, and event-pixel/focus-slice readbacks disabled. Keep World_164 as the
+repeatable primary lane. Schedule a performance conclusion only from a
 capture-disabled run with host-load context.
 
 ### M569 execution result — no sampled black pixels; broad readiness is not view evidence
@@ -9703,3 +9708,71 @@ and the perf trace is
 [`perf_20261014-205418_31876.jsonl`](../../bin/logs/perf_20261014-205418_31876.jsonl).
 The post-stop debt and eye-proxy gates still fail, so keep their global
 readiness and current-view semantics separate.
+
+### M572 execution result — fresh-seed source trace; water observation not pixel-verified (2026-10-14)
+
+M572 used Release SHA-256
+`E893A39836DA4CCFAAF91C16E9642B4B6896A4D8B148FF327CA27E5633328B6C` on a
+new seed (`3650482197`) and the M335 no-teleport westbound route. World
+creation reported 597 initial chunk files. The flight process exited
+normally (`process_rc=0`, `run_outcome=success`) after 1,873.8 wall seconds
+of host sampling and covered 9,072 blocks; focus X went from 2 to -565. The
+suite analyzer returned `pass=false` (26/40 gates; stop convergence 6/13).
+Host CPU median/p95/max was 90.4/100/100%; the game used 3.124/4.181/5.34
+cores at median/p95/max, so these timings are diagnostic only.
+
+The operator reported that the water surface was absent during this run and
+could not identify when it disappeared. This is a direct user observation,
+but M572 did not save a framebuffer pixel grid: its launch set
+`CUBA_VISUAL_BLACK_TRACE=0`, and the renderer treats `0` as disabled. Running
+`tools/analyze_framebuffer_pixel_grid.py` consequently failed with “no
+renderer_pixel_probe rows found.” The metrics say `backend_fluid_mode` was
+`gpu_fluid_surface` and `gpu_fluid_scan_on_med` was 1, but neither value
+proves that water geometry was present or drawn. There is no pixel/depth
+evidence to tell whether the water blocks, surface map, draw submission, or
+transparency caused the reported appearance. Do not classify the observation
+as resolved or as a verified framebuffer defect from this log alone.
+
+The INFO source trace recorded 80 disk requests, all completed, and 5,141
+procedural requests, all committed with no open or duplicate terminal
+requests at log end. In the focus-Z band it summarized 4,553 procedural
+columns: total latency median/p95 343/683 ms, including generation 177/360
+ms, scheduler queue 39/154 ms, worker-pool queue 7/215 ms, ready wait
+33/134 ms, and apply 10/27 ms. The 80 disk loads had median total latency
+230 ms and p95 2,015 ms; file-open and file-read medians were 1.25 and
+0.91 ms, while result-wait median/p95 was 875/8,120 ms. This points to
+queue/readiness waits rather than raw file I/O as the main measured disk
+latency, but is not water-specific. At the end of the run the world directory
+contained 21,278 `.cchunk` files, making it suitable for a persisted-world
+replay to separate source path from rendering.
+
+Streaming proxies also remained unhealthy: route `visual_holes_rate` was
+0.098 and `readiness_debt_rate` was 1.0; post-stop readiness debt peaked at
+34 columns, with 31 terrain-incomplete/missing-mesh focus columns and three
+face-debt columns. The post-stop near-focus `visual_holes` proxy was zero.
+These are not water-specific and cannot override the operator observation.
+
+The flight report is
+[`m572_world_m572_cold_frontier_20261014.json`](../../bin/suite_reports/engine_refactor/m572_world_m572_cold_frontier_20261014.json),
+the source ledger is
+[`m572_world_column_source_trace_20261014.json`](../../bin/suite_reports/engine_refactor/m572_world_column_source_trace_20261014.json),
+the perf trace is
+[`perf_20261014-214011_31172.jsonl`](../../bin/logs/perf_20261014-214011_31172.jsonl),
+the host sampler is
+[`m572_host_cpu_20261014.jsonl`](../../bin/logs/m572_host_cpu_20261014.jsonl),
+and the world-create report is
+[`m572_world_create_20261014.json`](../../bin/suite_reports/engine_refactor/m572_world_create_20261014.json).
+
+### M573 plan — replay the persisted M572 world with sparse framebuffer pixels
+
+Replay `World_M572_Cold_20261014` from the same M335 start and route. This
+world now contains the columns generated by M572, so the source trace can
+show whether those coordinates load from disk while the route revisits them.
+Set `CUBA_VISUAL_BLACK_TRACE=1` to enable the sparse framebuffer pixel
+sampling; leave dense, focus-change, screen-ray, stalled-census, and event
+pixel triggers disabled, and do not enable focus-slice traces. Analyze pixel
+color, depth, ray hit, and sea-plane surface fields separately from readiness
+proxies. Compare the exact route sections with the user's prior
+water-absent observation only if a coordinate/time can be recovered; that
+location is currently unknown. Keep timings diagnostic because the M572 host
+sampler observed heavy CPU load.

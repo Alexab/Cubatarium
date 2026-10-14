@@ -8716,10 +8716,11 @@ report are linked from the remediation plan.
 M572 keeps the M335 route conditions exactly and changes only the world to a
 new seed. Create a new world with the Release executable and a radius-four
 pre-generated start region; then fly 1,800 seconds west with source tracing
-enabled. Deep focus-census and event-pixel readbacks remain off so procedural
-source and the normal sparse renderer pixel grid can be evaluated together.
-This is the secondary fresh-seed lane; World_164 remains the primary
-repeatable control.
+enabled. This is the secondary fresh-seed lane; World_164 remains the primary
+repeatable control. The command below is the exact M572 invocation. Its
+`CUBA_VISUAL_BLACK_TRACE='0'` setting disabled the renderer pixel probes, so
+the original expectation of a sparse framebuffer grid was incorrect; the
+run is valid for source tracing but has no direct pixel evidence.
 
 ```powershell
 # Run from the bin directory; use a unique name and seed.
@@ -8741,3 +8742,49 @@ summarize procedural and disk-source latency separately. Record world-create
 time/column count, unique source attempts and terminal outcomes, route speed,
 fog-scoped pixel evidence, and host load. Do not compare its timing against a
 quiet-host performance baseline.
+
+#### M572 result and evidence limit
+
+The M572 flight exited normally, covered 9,072 blocks, and recorded a user
+observation that the water surface was absent at an unknown point in the run.
+The suite returned `pass=false` (26/40 gates). The pixel analyzer found no
+`renderer_pixel_probe` rows because `CUBA_VISUAL_BLACK_TRACE=0` disables the
+visual/pixel trace; backend fluid mode and scan counters cannot establish
+whether the surface was generated or drawn. The source ledger found 80/80
+disk demands complete and 5,141/5,141 procedural requests committed. The
+M572 world was subsequently persisted with 21,278 `.cchunk` files.
+
+#### M573 — persisted-world water replay with sparse pixels
+
+Replay the same M335 route in the now-persisted M572 world. Enable the default
+sparse renderer pixel grid with `CUBA_VISUAL_BLACK_TRACE=1`; do not enable
+`CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS`, focus-change probes, screen-ray
+readbacks, stalled-census readbacks, event-pixel readbacks, or focus-slice
+traces. Keep world-column source tracing enabled so this repeat records disk
+load lifecycle and timing. The key distinction is whether sampled rays over
+water see a valid sea-plane surface, what the post-transparent framebuffer
+color/depth contains, and whether that differs from the M572 operator report.
+Treat sparse pixels as sampled evidence, not full-frame coverage.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m573_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m573_m572_persisted_water_replay --report bin/suite_reports/engine_refactor/m573_m572_persisted_water_replay_20261014.json --process-timeout 2600
+```
+
+After exit, run `tools/analyze_framebuffer_pixel_grid.py` and
+`tools/analyze_world_column_source_trace.py` against the recorded perf and
+INFO logs. Record whether the route loaded M572's generated columns from disk,
+the number of actual pixel samples, sea-plane-ray-valid counts, opaque-depth
+and voxel-ray witnesses, and color/luminance distributions. If the sparse
+grid does not contain rays over visible water at the operator-reported
+location, record it as inconclusive and design the next capture bounds from
+an observed route coordinate; do not infer water correctness from aggregate
+GPU-fluid mode counters.
