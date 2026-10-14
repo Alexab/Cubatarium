@@ -7711,13 +7711,60 @@ $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m554_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 600 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m554_world164_m335_query_witness --report bin/suite_reports/engine_refactor/m554_world164_m335_query_witness_20261014.json --process-timeout 1200
 ```
 
-### M555 — full-distance exact-witness lifecycle trace (planned)
+### M555 — full-distance exact-witness lifecycle trace (2026-10-14)
 
-M555 will repeat the full 2,800-second visible no-teleport M335 route on
-`World_164`, with the exact raw-query witness owner/revision fields from commit
-`be4fe1de`. Release SHA256 is
-`DBFE5C871FA03EEA502DA72982BFE079649EE0E21EAD0F69399EE2C4507CD4B2`.
-Capture and source tracing stay disabled; host CPU is sampled throughout.
+M555 completed the full 2,800-second visible no-teleport M335 route on the
+persisted `World_164`, using the Release executable from commit `be4fe1de`
+(SHA256 `DBFE5C871FA03EEA502DA72982BFE079649EE0E21EAD0F69399EE2C4507CD4B2`).
+The process returned `0` with `run_outcome=success`, no hang, and covered
+`14,352` blocks / `897` chunks (`focus_cx=7…-890`). Median movement speed was
+`5.19653 blocks/s`; median fly wall time was `14.47 ms` (`69.1` effective FPS).
+This is a warmed/persisted-world repeat, not the periodic fresh-seed check.
+
+The analyzer recorded 31 of 1,410 steady period samples with
+`near_focus_holes=1` (`visual_holes_rate=2.20%`, 62 transitions); none were in
+the A24 start corridor. The A24 gate remains `pass=false` on the whole-route
+mesh-readiness signal. There were 284 moving rising-edge events; 213 exact raw
+radius-query misses had valid witnesses, and the separately selected focus
+proxy was satisfying on 210 of those misses. This mismatch does not identify a
+blank framebuffer pixel.
+
+The new fog-scope analysis classifies all 37 whole-route exact-witness misses
+and all 213 rising-edge miss witnesses as beyond the configured fog horizon.
+For M555, `fog_pull_in_rd=4` and end margin `28` give
+`max(32, 4*16-28)=36` fog-horizon blocks. The nearest possible horizontal
+distance from any point in the focus chunk to each witness chunk's AABB was at
+least `48` blocks (chunk deltas were 4 or 5), so the witnesses were outside
+that fog horizon. This is a conservative geometric lower bound: it establishes
+that those exact witnesses were beyond configured fog range, not that all
+near-focus debt is harmless or that the renderer had no visible artifacts.
+The `near_focus_holes` query spans the streaming focus radius, which is wider
+than the fog horizon; retain A24 as a mesh-readiness stop-line while reporting
+this frontier class separately from pixel/eye evidence.
+
+Among the 37 exact misses, 26 snapshots reported repairable geometry debt, 18
+dirty state, three a flow ticket, and two had no identified owner among the
+reported fields; there were no build/GPU/SoftDefer owners in those miss
+snapshots. These are immediate snapshots, not proof of persistent ownership
+or abandonment. The period-level `visible_black_focus_n` is also a census, not
+a framebuffer measurement. No screenshot or pixel probe was collected, so
+operator-visible appearance remains unmeasured by M555.
+
+The host sampler recorded CPU median/p95/max of `37.8/83.5/100%`; the app used
+`1.94/2.66/4.14` CPU cores. Keep these measurements out of quiet-host
+performance comparisons. Post-stop convergence also failed (`post_stop_missing_max=3`),
+so this run does not demonstrate full settlement after the flight.
+
+The A24 analyzer now reports witness scope using the nearest possible horizontal
+distance from the focus-chunk AABB to the witness-chunk AABB. A witness whose
+lower bound exceeds the configured fog horizon is labeled `beyond_fog`; an
+intersection is only a visibility candidate. This classification does not
+change the A24 pass/fail gate.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m555_world164_m335_full_distance_witness_owner_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-021651_24024.jsonl), and [host samples](../../bin/logs/m555_host_cpu_20261014.jsonl).
+
+Exact invocation:
 
 ```powershell
 $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';

@@ -9056,22 +9056,41 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
 
 ## Remaining work
 
-1. Add readiness, dirty, in-flight, pending GPU, geometry-publication debt,
-   content/light/mesh revisions, and column-ticket state for the exact raw
-   radius-query witness. Keep that state separate from the independently
-   chosen focus proxy.
-2. Run M555: a full 2,800-second visible M335 repeat on the same persisted
-   world. Compare the exact raw witness lifecycle at the far coordinates
-   against M553, plus query cost, memo hits, and host load.
-3. If an exact raw witness remains unsatisfied without a valid owner, trace its
-   generation/light/mesh/apply path and fix that ownership gap. Keep
-   visible-black and framebuffer evidence separate from readiness proxies.
-4. Decide whether per-frame memo invalidation earns its cost from observed
-   memo hits and query timings; M554's sampled calls had zero memo hits, so that
-   short route has not demonstrated a memo-staleness fix.
-5. Retain `World_164` M335 as the repeated-condition acceptance route. Repeat
-   a fresh-seed frontier check periodically, and only use quiet-host runs for
-   performance conclusions.
+1. **Done:** record readiness, dirty, in-flight, pending GPU, geometry debt,
+   revisions, and column-ticket state for the exact raw query witness. M555
+   found 37 exact query misses over the whole route: 26 reported repairable
+   geometry debt, 18 dirty state, three flow tickets, and two snapshots with no
+   identified owner among those fields. No build/GPU/SoftDefer owner was
+   reported in those miss snapshots. Keep this as immediate state, not proof of
+   persistent ownership.
+2. **Done:** M555 completed the full visible 2,800-second M335 route on the
+   persisted `World_164`: process success, `14,352` blocks / `897` chunks,
+   median `5.19653 blocks/s`. Its A24 gate still failed on 31 whole-route
+   near-focus mesh-hole periods; the start corridor had zero. The exact raw
+   witnesses were all beyond the configured fog horizon, so this run does not
+   establish that an operator-visible hole occurred. Full results are in
+   [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+3. **Next:** track a selected raw witness across frames until it is repaired,
+   discarded, or enters the actual fog horizon. M555 only captures the
+   witness's immediate state; its witness moved with the outer focus frontier,
+   so we do not yet know whether a specific debt clears before becoming
+   render-relevant. If a candidate remains unsatisfied inside the fog horizon,
+   trace its generation/light/mesh/apply request and repair that ownership path.
+4. **Done for interpretation:** A24 now classifies exact query witnesses by a
+   conservative chunk-AABB-to-fog lower bound. At M555's
+   `fog_pull_in_rd=4`, `margin=28`, the configured fog horizon is 36 blocks;
+   every raw miss witness had a lower bound of at least 48 blocks. Keep the
+   original A24 readiness gate unchanged. It detects mesh debt in the wider
+   streaming focus radius; it is not a pixel-visibility verdict.
+5. **Open:** sampled query memo-hit counts were zero in M554 and M555. The
+   per-frame invalidation change is not demonstrated to fix the observed
+   symptom, although no regression has been attributed to it. Review query
+   cost and within-frame sharing before considering a revert.
+6. Keep `World_164` M335 as the repeated-condition route, repeat a fresh-seed
+   frontier check periodically, and use quiet-host runs for performance
+   conclusions. M555's host CPU median/p95/max was `37.8/83.5/100%`, so it is
+   not a clean performance baseline. Post-stop convergence also failed with
+   `post_stop_missing_max=3`.
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.
@@ -9109,5 +9128,8 @@ different candidate-selection paths. Next, capture lifecycle state for the
 query's exact witness and run M555 full-distance on the new Release build. The
 diagnostic changes are committed as `be4fe1de`; Release SHA256 is
 `DBFE5C871FA03EEA502DA72982BFE079649EE0E21EAD0F69399EE2C4507CD4B2`. The
-M555 command is recorded in
-[FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+M555 command and completed result are recorded in
+[FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md). A24's Python
+analyzer now reports whether each exact radius-query miss is geometrically
+beyond the configured fog horizon. It leaves the readiness gate unchanged and
+keeps `beyond_fog` separate from framebuffer evidence.

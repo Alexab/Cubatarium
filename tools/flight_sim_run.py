@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -504,6 +505,52 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             except (TypeError, ValueError):
                 return -1
 
+        def probe_witness_fog_scope(row: dict) -> str | None:
+            """Classify a raw miss by a conservative chunk-AABB fog bound.
+
+            Focus and witness coordinates are horizontal chunk coordinates. The
+            focus chunk may contain the camera anywhere, so subtract one whole
+            chunk from each axis delta before computing the nearest possible
+            horizontal distance to the witness chunk. A lower bound beyond the
+            fog horizon proves that the witness is outside the current fog
+            radius; an intersecting bound is only a candidate for visibility.
+            """
+            if (
+                event_probe_result(row) != 1
+                or not event_flag(row, "near_focus_hole_probe_witness_valid")
+            ):
+                return None
+            try:
+                focus_cx = int(float(row["focus_cx"]))
+                focus_cz = int(float(row["focus_cz"]))
+                witness_cx = int(
+                    float(row["near_focus_hole_probe_witness_cx"])
+                )
+                witness_cz = int(
+                    float(row["near_focus_hole_probe_witness_cz"])
+                )
+                fog_rd = float(row["fog_pull_in_rd"])
+                fog_margin = max(0.0, float(row["fog_pull_in_margin"]))
+            except (KeyError, TypeError, ValueError):
+                return None
+            if fog_rd <= 0:
+                return None
+            dx_blocks = max(
+                0, abs(witness_cx - focus_cx) - 1
+            ) * CHUNK_SIZE_BLOCKS
+            dz_blocks = max(
+                0, abs(witness_cz - focus_cz) - 1
+            ) * CHUNK_SIZE_BLOCKS
+            nearest_horizontal_blocks = math.hypot(dx_blocks, dz_blocks)
+            fog_horizon_blocks = max(
+                32.0, fog_rd * CHUNK_SIZE_BLOCKS - fog_margin
+            )
+            return (
+                "beyond_fog"
+                if nearest_horizontal_blocks > fog_horizon_blocks
+                else "intersects_fog"
+            )
+
         def event_probe_witness_matches_proxy(row: dict) -> bool:
             if not event_flag(row, "near_focus_hole_probe_witness_valid"):
                 return False
@@ -655,6 +702,19 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             if event_probe_result(row) == 1
             and event_flag(row, "near_focus_hole_probe_witness_valid")
         ]
+        probe_scan_fog_scopes = [
+            probe_witness_fog_scope(row) for row in probe_scan_miss_rows
+        ]
+        event_probe_miss_rows = [
+            row
+            for row in hole_events
+            if event_flag(row, "near_focus_hole_probe_ran")
+            and event_probe_result(row) == 1
+            and event_flag(row, "near_focus_hole_probe_witness_valid")
+        ]
+        event_probe_fog_scopes = [
+            probe_witness_fog_scope(row) for row in event_probe_miss_rows
+        ]
         probe_returned_miss_n = sum(
             int(row.get("near_focus_hole_probe_ran", 0)) == 1
             and int(row.get("near_focus_hole_probe_result", -1)) == 1
@@ -784,6 +844,30 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
                 "immediate state snapshot for the exact raw radius-query "
                 "coordinate; owner status covers reported dirty, build, GPU, "
                 "SoftDefer, publication-debt, and flow-ticket fields only"
+            ),
+            "near_focus_hole_probe_witness_fog_scope_model": (
+                "classify raw miss witness using the nearest possible horizontal "
+                "distance from anywhere in the focus chunk to the witness chunk "
+                "AABB; beyond_fog proves the chunk lies outside the configured "
+                "fog horizon, while intersects_fog is only a visibility candidate"
+            ),
+            "near_focus_hole_probe_miss_witness_beyond_fog_horizon_whole_route": sum(
+                scope == "beyond_fog" for scope in probe_scan_fog_scopes
+            ),
+            "near_focus_hole_probe_miss_witness_intersects_fog_horizon_whole_route": sum(
+                scope == "intersects_fog" for scope in probe_scan_fog_scopes
+            ),
+            "near_focus_hole_probe_miss_witness_fog_scope_unavailable_whole_route": sum(
+                scope is None for scope in probe_scan_fog_scopes
+            ),
+            "visual_holes_enter_probe_miss_witness_beyond_fog_horizon": sum(
+                scope == "beyond_fog" for scope in event_probe_fog_scopes
+            ),
+            "visual_holes_enter_probe_miss_witness_intersects_fog_horizon": sum(
+                scope == "intersects_fog" for scope in event_probe_fog_scopes
+            ),
+            "visual_holes_enter_probe_miss_witness_fog_scope_unavailable": sum(
+                scope is None for scope in event_probe_fog_scopes
             ),
             "near_focus_hole_latched_periods": latched_hole_n,
             "near_focus_hole_proxy_drawable_periods": proxy_drawable_n,
