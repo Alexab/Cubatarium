@@ -2603,10 +2603,17 @@ void CaptureTransparentPixelProbe(
                 {
                   continue;
                 }
+                const float prior_triangle_distance =
+                    fluid_vertex_light.distance;
                 ConsiderGreedyVertexLightTriangle(
                     surface_point, *source, source->vertices[ia],
                     source->vertices[ib], source->vertices[ic],
                     fluid_vertex_light, /*required_face_index=*/4);
+                if (fluid_vertex_light.distance < prior_triangle_distance)
+                {
+                  record.renderer_pixel_fluid_source_batch_index =
+                      static_cast<int32_t>(ref.batchIndex);
+                }
               }
               const auto texture_it =
                   textures.find(static_cast<size_t>(source->blockId));
@@ -2712,33 +2719,16 @@ void CaptureTransparentPixelProbe(
                 payload_checked_chunks.insert(surface_chunk).second)
             {
               record.renderer_pixel_fluid_mdi_probe_checked = 1;
-              const BlockId source_block = static_cast<BlockId>(
-                  record.renderer_mdi_first_block_id);
+              const BlockId source_block =
+                  record.renderer_pixel_fluid_block_id >= 0
+                      ? static_cast<BlockId>(
+                            record.renderer_pixel_fluid_block_id)
+                      : static_cast<BlockId>(record.renderer_mdi_first_block_id);
               const GreedyMeshBatch *source_batch = nullptr;
-              for (const GreedyBatchRef &ref : transparent_refs)
-              {
-                if (ref.chunkCoord == surface_chunk &&
-                    ref.blockId == source_block &&
-                    world.GetBlockRegistry().GetRenderStyle(ref.blockId) ==
-                        BlockRenderStyle::Fluid)
-                {
-                  source_batch = cache.TryGetGreedyBatch(ref);
-                  if (source_batch)
-                  {
-                    break;
-                  }
-                }
-              }
-              if (source_batch)
-              {
-                record.renderer_pixel_fluid_source_vertex_count =
-                    static_cast<uint32_t>(source_batch->vertices.size());
-                record.renderer_pixel_fluid_source_index_count =
-                    static_cast<uint32_t>(source_batch->indices.size());
-              }
-
               const GreedyGpuBatch *gpu_batch = nullptr;
               size_t gpu_batch_index = 0;
+              const GreedyGpuBatch *fallback_gpu_batch = nullptr;
+              size_t fallback_gpu_batch_index = 0;
               for (size_t i = 0; i < mdi_transparent_pass.batches.size(); ++i)
               {
                 const GreedyGpuBatch &candidate =
@@ -2749,9 +2739,48 @@ void CaptureTransparentPixelProbe(
                 {
                   continue;
                 }
-                gpu_batch = &candidate;
-                gpu_batch_index = i;
-                break;
+                if (fallback_gpu_batch == nullptr)
+                {
+                  fallback_gpu_batch = &candidate;
+                  fallback_gpu_batch_index = i;
+                }
+                for (const GreedyBatchRef &ref : transparent_refs)
+                {
+                  if (ref.chunkCoord != surface_chunk ||
+                      ref.batchIndex != candidate.batchIndex ||
+                      ref.blockId != source_block ||
+                      world.GetBlockRegistry().GetRenderStyle(ref.blockId) !=
+                          BlockRenderStyle::Fluid)
+                  {
+                    continue;
+                  }
+                  source_batch = cache.TryGetGreedyBatch(ref);
+                  if (!source_batch)
+                  {
+                    continue;
+                  }
+                  record.renderer_pixel_fluid_source_batch_index =
+                      static_cast<int32_t>(ref.batchIndex);
+                  gpu_batch = &candidate;
+                  gpu_batch_index = i;
+                  break;
+                }
+                if (gpu_batch != nullptr)
+                {
+                  break;
+                }
+              }
+              if (gpu_batch == nullptr && fallback_gpu_batch != nullptr)
+              {
+                gpu_batch = fallback_gpu_batch;
+                gpu_batch_index = fallback_gpu_batch_index;
+              }
+              if (source_batch)
+              {
+                record.renderer_pixel_fluid_source_vertex_count =
+                    static_cast<uint32_t>(source_batch->vertices.size());
+                record.renderer_pixel_fluid_source_index_count =
+                    static_cast<uint32_t>(source_batch->indices.size());
               }
 
               if (gpu_batch)
@@ -2763,6 +2792,16 @@ void CaptureTransparentPixelProbe(
                 record.renderer_pixel_fluid_gpu_index_count_gl =
                     static_cast<uint32_t>(
                         std::max(gpu_batch->indexCountGl, 0));
+                record.renderer_pixel_fluid_gpu_batch_index =
+                    static_cast<int32_t>(gpu_batch->batchIndex);
+                record.renderer_pixel_fluid_gpu_batch_vector_index =
+                    static_cast<int32_t>(gpu_batch_index);
+                record.renderer_pixel_fluid_gpu_vbo_byte_offset =
+                    static_cast<uint64_t>(gpu_batch->vboByteOffset);
+                record.renderer_pixel_fluid_gpu_ebo_byte_offset =
+                    static_cast<uint64_t>(gpu_batch->eboByteOffset);
+                record.renderer_pixel_fluid_gpu_compact_active =
+                    mdi_transparent_pass.GpuCompactActive ? 1u : 0u;
                 record.renderer_mdi_resident_pass_flags |= 1u << 2;
                 record.renderer_mdi_command_count = 1;
                 record.renderer_mdi_index_count =
@@ -2814,18 +2853,55 @@ void CaptureTransparentPixelProbe(
                                                              gpu_batch->vboByteOffset)
                                                        : 0;
                     glBindBuffer(GL_COPY_READ_BUFFER, vertex_buffer);
-                    glGetBufferSubData(
-                        GL_COPY_READ_BUFFER, vertex_offset,
-                        static_cast<GLsizeiptr>(gpu_vertices.size() *
-                                                sizeof(GreedyMeshVertex)),
-                        gpu_vertices.data());
-                    if (std::memcmp(gpu_vertices.data(),
-                                    source_batch->vertices.data(),
-                                    gpu_vertices.size() *
-                                        sizeof(GreedyMeshVertex)) == 0)
+                    GLint vertex_buffer_size = 0;
+                    glGetBufferParameteriv(GL_COPY_READ_BUFFER,
+                                           GL_BUFFER_SIZE,
+                                           &vertex_buffer_size);
+                    record.renderer_pixel_fluid_gpu_vbo_buffer_bytes =
+                        static_cast<uint64_t>(
+                            std::max(vertex_buffer_size, 0));
+                    const size_t vertex_read_bytes =
+                        gpu_vertices.size() * sizeof(GreedyMeshVertex);
+                    const bool vertex_readback_in_bounds =
+                        vertex_offset >= 0 && vertex_buffer_size >= 0 &&
+                        static_cast<uint64_t>(vertex_offset) <=
+                            static_cast<uint64_t>(vertex_buffer_size) &&
+                        vertex_read_bytes <=
+                            static_cast<uint64_t>(vertex_buffer_size) -
+                                static_cast<uint64_t>(vertex_offset);
+                    if (vertex_readback_in_bounds)
                     {
-                      record.renderer_pixel_fluid_vertex_payload_matches = 1;
-                      record.renderer_mdi_payload_flags |= 1u << 3;
+                      glGetBufferSubData(
+                          GL_COPY_READ_BUFFER, vertex_offset,
+                          static_cast<GLsizeiptr>(vertex_read_bytes),
+                          gpu_vertices.data());
+                      record.renderer_pixel_fluid_vertex_payload_readback_valid =
+                          1;
+                      if (std::memcmp(gpu_vertices.data(),
+                                      source_batch->vertices.data(),
+                                      vertex_read_bytes) == 0)
+                      {
+                        record.renderer_pixel_fluid_vertex_payload_matches = 1;
+                        record.renderer_mdi_payload_flags |= 1u << 3;
+                      }
+                      else
+                      {
+                        const auto *gpu_bytes =
+                            reinterpret_cast<const unsigned char *>(
+                                gpu_vertices.data());
+                        const auto *source_bytes =
+                            reinterpret_cast<const unsigned char *>(
+                                source_batch->vertices.data());
+                        for (size_t byte = 0; byte < vertex_read_bytes; ++byte)
+                        {
+                          if (gpu_bytes[byte] != source_bytes[byte])
+                          {
+                            record.renderer_pixel_fluid_vertex_payload_first_mismatch_byte =
+                                static_cast<int32_t>(byte);
+                            break;
+                          }
+                        }
+                      }
                     }
                   }
                   if (index_count_matches && index_buffer != 0 &&
@@ -2838,17 +2914,54 @@ void CaptureTransparentPixelProbe(
                                                             gpu_batch->eboByteOffset)
                                                       : 0;
                     glBindBuffer(GL_COPY_READ_BUFFER, index_buffer);
-                    glGetBufferSubData(
-                        GL_COPY_READ_BUFFER, index_offset,
-                        static_cast<GLsizeiptr>(gpu_indices.size() *
-                                                sizeof(uint32_t)),
-                        gpu_indices.data());
-                    if (std::memcmp(gpu_indices.data(),
-                                    source_batch->indices.data(),
-                                    gpu_indices.size() * sizeof(uint32_t)) == 0)
+                    GLint index_buffer_size = 0;
+                    glGetBufferParameteriv(GL_COPY_READ_BUFFER,
+                                           GL_BUFFER_SIZE,
+                                           &index_buffer_size);
+                    record.renderer_pixel_fluid_gpu_ebo_buffer_bytes =
+                        static_cast<uint64_t>(
+                            std::max(index_buffer_size, 0));
+                    const size_t index_read_bytes =
+                        gpu_indices.size() * sizeof(uint32_t);
+                    const bool index_readback_in_bounds =
+                        index_offset >= 0 && index_buffer_size >= 0 &&
+                        static_cast<uint64_t>(index_offset) <=
+                            static_cast<uint64_t>(index_buffer_size) &&
+                        index_read_bytes <=
+                            static_cast<uint64_t>(index_buffer_size) -
+                                static_cast<uint64_t>(index_offset);
+                    if (index_readback_in_bounds)
                     {
-                      record.renderer_pixel_fluid_index_payload_matches = 1;
-                      record.renderer_mdi_payload_flags |= 1u << 4;
+                      glGetBufferSubData(
+                          GL_COPY_READ_BUFFER, index_offset,
+                          static_cast<GLsizeiptr>(index_read_bytes),
+                          gpu_indices.data());
+                      record.renderer_pixel_fluid_index_payload_readback_valid =
+                          1;
+                      if (std::memcmp(gpu_indices.data(),
+                                      source_batch->indices.data(),
+                                      index_read_bytes) == 0)
+                      {
+                        record.renderer_pixel_fluid_index_payload_matches = 1;
+                        record.renderer_mdi_payload_flags |= 1u << 4;
+                      }
+                      else
+                      {
+                        for (size_t index = 0; index < gpu_indices.size(); ++index)
+                        {
+                          if (gpu_indices[index] !=
+                              source_batch->indices[index])
+                          {
+                            record.renderer_pixel_fluid_index_payload_first_mismatch =
+                                static_cast<int32_t>(index);
+                            record.renderer_pixel_fluid_index_payload_source_value =
+                                source_batch->indices[index];
+                            record.renderer_pixel_fluid_index_payload_gpu_value =
+                                gpu_indices[index];
+                            break;
+                          }
+                        }
+                      }
                     }
                   }
                   glBindBuffer(GL_COPY_READ_BUFFER,

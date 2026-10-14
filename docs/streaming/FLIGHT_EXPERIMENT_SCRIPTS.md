@@ -8966,3 +8966,59 @@ color output at that sample; combine them with the per-sample MDI probe flag,
 source/GPU vertex and index counts, payload equality results, opaque depth,
 and `renderer_pixel_marker_mode`. Do not treat unchecked MDI fields as zero
 commands.
+
+
+#### M576 result and M577 telemetry correction
+
+M576 completed the full established M335 route with `process_rc=0`, 9,136
+blocks, median speed 5.18555 blocks/s, and 913 periods. In 10 captures inside
+camera X `[-4710,-4550]`, the framebuffer probe joined 529/600 samples to
+saved water blocks and 342 to CPU top-fluid triangles; none changed RGB after
+the transparent pass and none of those 342 outputs was exact magenta. The
+payload byte comparison found 30 mismatches, but M576 selected the source
+batch by chunk and material only. Those mismatches are not conclusive until
+source and GPU `batchIndex` are proven equal. The compact pixel-row serializer
+also omitted the marker mode/visible/coverage fields. M577 adds both identity
+and serializer fixes plus bounded GPU-buffer readback metadata.
+
+Do not infer buffer corruption from M576's byte mismatches. The other logged
+evidence is stronger but still path-level: pixel samples joined saved water
+and CPU source triangles; candidate transparent MDI command readbacks had
+matching counts/offsets/instance state; sampled RGB did not change. Use M577's
+explicit marker fields and exact batch identity before choosing a renderer
+fix.
+
+#### M577 — exact water source/GPU payload identity
+
+Build the `Cubatarium` app target in Release, then repeat M335 on the same
+world, route, camera and bounded diagnostic interval:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m577_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m577_m572_water_payload_identity --report bin/suite_reports/engine_refactor/m577_m572_water_payload_identity_20261015.json --process-timeout 2600
+```
+
+Analyze the resulting perf JSONL with `analyze_framebuffer_pixel_grid.py`,
+`analyze_renderer_pixel_trace.py`, and
+`analyze_water_surface_pixel_join.py`; analyze the INFO log with
+`analyze_world_column_source_trace.py`. M577 records marker mode/visibility,
+exact source/GPU batch indexes, compact-cull state, buffer offsets/capacities,
+readback bounds, and first payload mismatch. Treat `mdi_visible_pass_flags`
+as the CPU draw-instance proxy. For actual MDI readback require command flag
+bit 0 (readback), bit 1 (command matches batch), and bit 2 (instance count
+matches the submitted GPU command state).

@@ -9996,3 +9996,75 @@ sampled water pixel proves that a transparent fragment reached the color
 output; no marker despite a checked, visible MDI command shifts attention to
 payload, opaque-depth guard, or the final draw/target state. This is a
 controlled diagnostic visual change, not a route or world change.
+
+
+### M576 result — water still produces no sampled transparent fragments; payload witness requires exact batch identity (2026-10-15)
+
+M576 completed the same visible, no-teleport M335 route in
+`World_M572_Cold_20261014`: 913 periods (911 steady), 9,136 blocks,
+`process_rc=0`, and median movement speed 5.18555 blocks/s. The suite returned
+`pass=false`; near-focus visual mesh holes drained to zero after stop, while
+the distinct readiness-debt signal remained 1.0. No post-stop visible-black
+no-ticket/stalled signal remained. Streaming/performance gates still fail and
+host CPU briefly reached 100%, so this is not a clean performance baseline.
+
+The target camera-X interval `[-4710,-4550]` yielded 10 captures and 600
+sea-plane samples. Saved water ID 575 was present at 529 positions, and the
+CPU source mesh matched a top-fluid triangle at 342 positions. None of the 600
+pixels changed RGB across the transparent pass; all 342 source-triangle pixels
+were unchanged. None of those 342 output pixels was the exact magenta debug
+marker color, including the 30 pixels with an MDI payload probe. The 30 sampled
+water commands had matching CPU/GPU vertex/index counts and command readbacks;
+their surface distances were nearer than the matched opaque hits where those
+hits existed. This localizes the observed disappearance past saved world data
+and CPU geometry, but does not yet prove whether the actual draw reached the
+fragment shader.
+
+Do **not** interpret M576's 30/30 VBO/EBO byte mismatches as proven GPU-buffer
+corruption. The first implementation selected the CPU reference batch by
+chunk+block ID, not the exact `batchIndex`, so multiple same-material batches
+could be mismatched in the witness. The sample-kind-9 compact JSON serializer
+also omitted the transparent-fragment marker fields even though the generic
+serializer emitted them. M577 fixes both telemetry defects, matches source and
+GPU batch indexes, records pool offsets/capacities and readback bounds, and
+reports the first differing byte/index. M576's recorded output RGB still
+shows no magenta at the water sample pixels, but M577 will carry the explicit
+marker flags needed for a definitive fragment-path decision.
+
+M576's separate framebuffer grid contained 1,280 samples across 16 captures;
+940 rays reached the sea plane, 59 pixels had luminance <=32, and six had all
+RGB channels <=16. M576's source ledger closed all 4,501/4,501 disk demands
+and 1,125/1,125 procedural requests, with no open or duplicate terminal
+requests. Disk file-read median/p95 was 0.96/3.44 ms, while result-wait
+median/p95 was 403/1,493 ms (max 68.3 s). Procedural total time median/p95
+was 137/498 ms, with queue median/p95 4.18/217 ms and generation median/p95
+105/204 ms. The ledger suggests queue/result waits dominate file I/O; host load
+prevents attributing all latency to the engine.
+
+M576 artifacts: [suite report](../../bin/suite_reports/engine_refactor/m576_m572_water_fragment_marker_20261015.json),
+[pixel grid](../../bin/suite_reports/engine_refactor/m576_pixel_grid_20261015.json),
+[renderer pixel trace](../../bin/suite_reports/engine_refactor/m576_renderer_pixel_trace_20261015.json),
+[source ledger](../../bin/suite_reports/engine_refactor/m576_world_column_source_trace_20261015.json),
+[water pixel join](../../bin/suite_reports/engine_refactor/m576_water_surface_pixel_join_20261015.json),
+[perf log](../../bin/logs/perf_20261015-010539_36184.jsonl),
+[host samples](../../bin/logs/m576_host_cpu_20261015.jsonl), and
+[INFO source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261015-010535.36184).
+
+### M577 plan — repeat M335 with exact source/GPU batch and explicit fragment witness
+
+After building the `Cubatarium` Release target, repeat the established M335
+flight and same persisted world with the transparent fragment marker scoped to
+camera X `[-4710,-4550]`. Keep the route, camera, weather, and world unchanged.
+The pixel record now includes explicit marker mode/visibility, exact matched
+source/GPU batch indexes, MDI compact state, vertex/index byte offsets and
+buffer sizes, bounded readback validity, and first payload difference.
+
+Interpretation order: require `source_batch_index == gpu_batch_index` and both
+payload readbacks to be in bounds before comparing bytes; require all three
+MDI-command-readback flags before calling a command visible; then use the
+explicit marker visible/mode fields and sampled RGB. A payload mismatch with
+matching batch identity and valid in-bounds reads is evidence of stale or
+overwritten pool contents, while a marker miss with matching payload and a
+visible checked command shifts attention to vertex setup, clipping, depth, or
+render-target state. Keep user-visible water changes out of this diagnostic
+patch until M577 resolves that fork.

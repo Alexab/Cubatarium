@@ -5451,6 +5451,16 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_pretransparent_rgba
                  << ",\"renderer_pixel_pretransparent_depth\":"
                  << r.renderer_pixel_pretransparent_depth
+                 << ",\"renderer_pixel_marker_mode\":"
+                 << (r.renderer_pixel_marker_visible != 2 ? "true" : "false")
+                 << ",\"renderer_pixel_marker_visible\":"
+                 << (r.renderer_pixel_marker_visible == 1 ? "true" : "false")
+                 << ",\"renderer_pixel_marker_coverage\":"
+                 << (r.renderer_pixel_marker_visible != 2
+                         ? static_cast<double>(
+                               r.renderer_pixel_surface_valid >> 1u) /
+                               127.0
+                         : -1.0)
                  << ",\"renderer_pixel_shader_min_ambient\":"
                  << r.renderer_pixel_shader_min_ambient
                  << ",\"renderer_pixel_shader_day_factor\":"
@@ -5518,7 +5528,7 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"renderer_pixel_underwater_fog_min_blend\":"
                  << r.renderer_pixel_underwater_fog_min_blend
                  << ",\"renderer_pixel_surface_valid\":"
-                 << static_cast<int>(r.renderer_pixel_surface_valid)
+                 << static_cast<int>(r.renderer_pixel_surface_valid & 1u)
                  << ",\"renderer_pixel_surface_x\":"
                  << r.renderer_pixel_surface_x
                  << ",\"renderer_pixel_surface_y\":"
@@ -5793,6 +5803,23 @@ void UFramePerfMonitor::Shutdown()
                   << ",\"renderer_pixel_fluid_payload_check_attempted\":"
                   << static_cast<int>(
                          r.renderer_pixel_fluid_payload_check_attempted)
+                  << ",\"renderer_pixel_fluid_source_batch_index\":"
+                  << r.renderer_pixel_fluid_source_batch_index
+                  << ",\"renderer_pixel_fluid_gpu_batch_index\":"
+                  << r.renderer_pixel_fluid_gpu_batch_index
+                  << ",\"renderer_pixel_fluid_gpu_batch_vector_index\":"
+                  << r.renderer_pixel_fluid_gpu_batch_vector_index
+                  << ",\"renderer_pixel_fluid_gpu_compact_active\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_gpu_compact_active)
+                  << ",\"renderer_pixel_fluid_gpu_vbo_byte_offset\":"
+                  << r.renderer_pixel_fluid_gpu_vbo_byte_offset
+                  << ",\"renderer_pixel_fluid_gpu_ebo_byte_offset\":"
+                  << r.renderer_pixel_fluid_gpu_ebo_byte_offset
+                  << ",\"renderer_pixel_fluid_gpu_vbo_buffer_bytes\":"
+                  << r.renderer_pixel_fluid_gpu_vbo_buffer_bytes
+                  << ",\"renderer_pixel_fluid_gpu_ebo_buffer_bytes\":"
+                  << r.renderer_pixel_fluid_gpu_ebo_buffer_bytes
                   << ",\"renderer_pixel_fluid_source_vertex_count\":"
                   << r.renderer_pixel_fluid_source_vertex_count
                   << ",\"renderer_pixel_fluid_source_index_count\":"
@@ -5815,6 +5842,20 @@ void UFramePerfMonitor::Shutdown()
                   << ",\"renderer_pixel_fluid_index_payload_matches\":"
                   << static_cast<int>(
                          r.renderer_pixel_fluid_index_payload_matches)
+                  << ",\"renderer_pixel_fluid_vertex_payload_readback_valid\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_vertex_payload_readback_valid)
+                  << ",\"renderer_pixel_fluid_index_payload_readback_valid\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_index_payload_readback_valid)
+                  << ",\"renderer_pixel_fluid_vertex_payload_first_mismatch_byte\":"
+                  << r.renderer_pixel_fluid_vertex_payload_first_mismatch_byte
+                  << ",\"renderer_pixel_fluid_index_payload_first_mismatch\":"
+                  << r.renderer_pixel_fluid_index_payload_first_mismatch
+                  << ",\"renderer_pixel_fluid_index_payload_source_value\":"
+                  << r.renderer_pixel_fluid_index_payload_source_value
+                  << ",\"renderer_pixel_fluid_index_payload_gpu_value\":"
+                  << r.renderer_pixel_fluid_index_payload_gpu_value
                   << ",\"renderer_pixel_fluid_chunk_gate_flags\":"
                   << r.renderer_gate_flags
                   << ",\"renderer_pixel_fluid_chunk_gpu_resident\":"
@@ -5843,6 +5884,12 @@ void UFramePerfMonitor::Shutdown()
                   << static_cast<int>(r.renderer_mdi_payload_flags)
                   << ",\"renderer_pixel_fluid_chunk_mdi_command_flags\":"
                   << static_cast<int>(r.renderer_mdi_command_flags)
+                  << ",\"renderer_mdi_command_instance_count\":"
+                  << r.renderer_mdi_command_instance_count
+                  << ",\"renderer_mdi_command_first_index\":"
+                  << r.renderer_mdi_command_first_index
+                  << ",\"renderer_mdi_command_base_vertex\":"
+                  << r.renderer_mdi_command_base_vertex
                  << ",\"renderer_pixel_fluid_sky_light\":"
                  << r.renderer_pixel_fluid_sky_light
                  << ",\"renderer_pixel_fluid_block_light\":"

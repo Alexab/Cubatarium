@@ -129,6 +129,63 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 "index_payload_matches": row_int_optional(
                     row, "renderer_pixel_fluid_index_payload_matches"
                 ),
+                "vertex_payload_readback_valid": row_int_optional(
+                    row, "renderer_pixel_fluid_vertex_payload_readback_valid"
+                ),
+                "index_payload_readback_valid": row_int_optional(
+                    row, "renderer_pixel_fluid_index_payload_readback_valid"
+                ),
+                "source_batch_index": row_int_optional(
+                    row, "renderer_pixel_fluid_source_batch_index"
+                ),
+                "gpu_batch_index": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_batch_index"
+                ),
+                "gpu_batch_vector_index": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_batch_vector_index"
+                ),
+                "gpu_compact_active": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_compact_active"
+                ),
+                "gpu_vbo_byte_offset": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_vbo_byte_offset"
+                ),
+                "gpu_ebo_byte_offset": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_ebo_byte_offset"
+                ),
+                "gpu_vbo_buffer_bytes": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_vbo_buffer_bytes"
+                ),
+                "gpu_ebo_buffer_bytes": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_ebo_buffer_bytes"
+                ),
+                "vertex_payload_first_mismatch_byte": row_int_optional(
+                    row,
+                    "renderer_pixel_fluid_vertex_payload_first_mismatch_byte",
+                ),
+                "index_payload_first_mismatch": row_int_optional(
+                    row, "renderer_pixel_fluid_index_payload_first_mismatch"
+                ),
+                "index_payload_source_value": row_int_optional(
+                    row, "renderer_pixel_fluid_index_payload_source_value"
+                ),
+                "index_payload_gpu_value": row_int_optional(
+                    row, "renderer_pixel_fluid_index_payload_gpu_value"
+                ),
+                "mdi_command_instance_count": row_int_optional(
+                    row, "renderer_mdi_command_instance_count"
+                ),
+                "mdi_command_first_index": row_int_optional(
+                    row, "renderer_mdi_command_first_index"
+                ),
+                "mdi_command_base_vertex": row_int_optional(
+                    row, "renderer_mdi_command_base_vertex"
+                ),
+                "marker_mode": row.get("renderer_pixel_marker_mode"),
+                "marker_visible": row.get("renderer_pixel_marker_visible"),
+                "marker_coverage": row_float(
+                    row, "renderer_pixel_marker_coverage", default=-1.0
+                ),
                 "chunk_render_ready": int(
                     row.get("renderer_pixel_fluid_chunk_render_ready", 0) or 0
                 ),
@@ -228,6 +285,35 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                     None if fluid_state["index_payload_matches"] is None
                     else bool(fluid_state["index_payload_matches"])
                 ),
+                "vertex_payload_readback_valid": (
+                    None if fluid_state["vertex_payload_readback_valid"] is None
+                    else bool(fluid_state["vertex_payload_readback_valid"])
+                ),
+                "index_payload_readback_valid": (
+                    None if fluid_state["index_payload_readback_valid"] is None
+                    else bool(fluid_state["index_payload_readback_valid"])
+                ),
+                "gpu_compact_active": (
+                    None if fluid_state["gpu_compact_active"] is None
+                    else bool(fluid_state["gpu_compact_active"])
+                ),
+                "transparent_mdi_command_readback_checked": bool(
+                    fluid_state["mdi_command_flags"] & (1 << 0)
+                ),
+                "transparent_mdi_command_matches_batch": bool(
+                    fluid_state["mdi_command_flags"] & (1 << 1)
+                ),
+                "transparent_mdi_gpu_command_instance_visible": bool(
+                    fluid_state["mdi_command_flags"] & (1 << 2)
+                ),
+                "transparent_fragment_marker_mode": (
+                    None if fluid_state["marker_mode"] is None
+                    else bool(fluid_state["marker_mode"])
+                ),
+                "transparent_fragment_marker_visible": (
+                    None if fluid_state["marker_visible"] is None
+                    else bool(fluid_state["marker_visible"])
+                ),
             }
 
             key = (probe_id, frame_epoch)
@@ -245,6 +331,8 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 "rgb_changed_after_transparent": 0,
                 "water_triangle_rgb_changed": 0,
                 "opaque_depth_written": 0,
+                "transparent_fragment_marker_mode_samples": 0,
+                "transparent_fragment_marker_visible_samples": 0,
                 "gpu_state_counts": {name: 0 for name in state_checks},
                 "water_gpu_state_counts": {name: 0 for name in state_checks},
                 "water_source_triangle_gpu_state_counts": {
@@ -262,6 +350,14 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             capture["rgb_changed_after_transparent"] += rgb_changed
             capture["water_triangle_rgb_changed"] += is_water and source_triangle and rgb_changed
             capture["opaque_depth_written"] += depth < 0.99999
+            capture["transparent_fragment_marker_mode_samples"] += (
+                fluid_state["marker_mode"] is not None
+                and bool(fluid_state["marker_mode"])
+            )
+            capture["transparent_fragment_marker_visible_samples"] += (
+                fluid_state["marker_visible"] is not None
+                and bool(fluid_state["marker_visible"])
+            )
             for name, present in state_checks.items():
                 if present is None:
                     continue
@@ -301,6 +397,13 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 ),
                 "fluid_surface_renderer_state": fluid_state,
                 "fluid_surface_renderer_state_checks": state_checks,
+                "transparent_fragment_marker_mode": fluid_state["marker_mode"],
+                "transparent_fragment_marker_visible": fluid_state[
+                    "marker_visible"
+                ],
+                "transparent_fragment_marker_coverage": fluid_state[
+                    "marker_coverage"
+                ],
             })
 
     if not samples:
@@ -313,6 +416,8 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             "water_with_source_triangle", "water_without_source_triangle",
             "triangle_without_water_block", "rgb_changed_after_transparent",
             "water_triangle_rgb_changed", "opaque_depth_written",
+            "transparent_fragment_marker_mode_samples",
+            "transparent_fragment_marker_visible_samples",
         ):
             totals[field] += int(capture[field])
 
@@ -325,7 +430,7 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
         }
 
     return {
-        "schema": "water_surface_pixel_join.v2",
+        "schema": "water_surface_pixel_join.v3",
         "perf_jsonl": str(perf_path),
         "world_dir": str(world_dir),
         "water_block_id": water_id,
@@ -352,6 +457,8 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             "A missing .cchunk file is unknown, not proof that the runtime column lacked data.",
             "A source fluid triangle match is not proof of a ready/visible GPU draw command.",
             "Transparent MDI pass flags use bit 2; no matching MDI batch may also mean the sample lies outside the submitted/cull range, so compare camera-to-surface distance and fluid draw telemetry before calling it a missing upload.",
+            "The CPU drawInstanceCount proxy in mdi_visible_pass_flags is not the post-cull GPU command. Use renderer_mdi_command_flags bits 0-2 for checked/readback-matched GPU command state.",
+            "Payload comparison is only meaningful when source and GPU batch indexes match, the readback-valid bit is set, and the byte/index offsets lie within the backing buffer size.",
             "RGB change compares the sampled framebuffer before and after the transparent pass; sparse probes do not cover the full frame.",
         ],
     }
