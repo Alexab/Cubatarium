@@ -20,6 +20,16 @@ CAUSE_KIND = "visual_black_trace"
 PIXEL_KIND = "renderer_pixel_probe"
 STALLED_CAUSE = 3
 STALLED_PIXEL_TRIGGER = 1 << 4
+LIFECYCLE_KINDS = {
+    "demand_transition_trace",
+    "visual_lifecycle_trace",
+    "mesh_repair_trace",
+    "mesh_schedule_trace",
+    "mesh_watched_schedule_trace",
+    "view_draw_gate_trace",
+    "view_frustum_coverage_trace",
+    "screen_ray_candidate_trace",
+}
 
 
 def int3(row: dict[str, Any], prefix: str) -> tuple[int, int, int]:
@@ -122,17 +132,61 @@ def ray_summary(pixel: dict[str, Any], target: tuple[int, int, int], chunk_size:
     }
 
 
+def lifecycle_summary(row: dict[str, Any]) -> dict[str, Any]:
+    kind = str(row.get("kind", ""))
+    common = {
+        key: row[key]
+        for key in (
+            "kind", "frame_epoch", "world_epoch", "incarnation", "cx", "cy", "cz"
+        )
+        if key in row
+    }
+    if kind == "demand_transition_trace":
+        fields = (
+            "event", "result", "attempt_id", "previous_attempt_id", "stage",
+            "previous_stage", "desired_geom_rev", "published_geom_rev",
+            "has_active_attempt", "mesh_dirty_queue_kind", "mesh_dirty_queue_size",
+            "mesh_owner_flags", "async_builder_inflight", "gpu_extract_inflight",
+            "pending_gpu_apply", "pending_gpu_queued",
+        )
+    elif kind == "visual_lifecycle_trace":
+        fields = (
+            "stage", "terminal_reason", "attempt_id", "desired_geom_rev",
+            "source_geom_rev", "published_geom_rev", "source_light_rev",
+            "published_light_rev", "outcome", "elapsed_ms",
+        )
+    elif kind == "screen_ray_candidate_trace":
+        fields = (
+            "screen_ray_x", "screen_ray_y", "screen_ray_state", "screen_ray_gap",
+            "screen_ray_block_x", "screen_ray_block_y", "screen_ray_block_z",
+        )
+    else:
+        fields = (
+            "cause", "active_stage", "attempt_id", "desired_geom_rev",
+            "published_geom_rev", "demand_published_geom_rev", "mesh_revision",
+            "mesh_dirty_queue_kind", "mesh_dirty_queue_index", "mesh_dirty_queue_size",
+            "mesh_dirty_queue_age_frames", "mesh_work_owner_flags", "flags",
+            "relight_owner_flags", "column_flow_ticket_flags",
+        )
+    common.update({key: row[key] for key in fields if key in row})
+    return common
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("perf_jsonl", type=Path)
     parser.add_argument("--chunk-size", type=int, default=16)
+    parser.add_argument("--lifecycle-frame-window", type=int, default=512)
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
     if args.chunk_size <= 0:
         parser.error("--chunk-size must be positive")
+    if args.lifecycle_frame_window < 0:
+        parser.error("--lifecycle-frame-window must be nonnegative")
 
     census: dict[tuple[int, tuple[int, int, int]], dict[str, Any]] = {}
     pixels: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    lifecycle: dict[tuple[int, int, int], list[dict[str, Any]]] = defaultdict(list)
     with args.perf_jsonl.open("r", encoding="utf-8") as source:
         for line_number, line in enumerate(source, 1):
             try:
@@ -145,6 +199,8 @@ def main() -> int:
                     "line": line_number,
                     "frame_epoch": epoch,
                     "chunk": list(int3(row, "")),
+                    "world_epoch": row.get("world_epoch"),
+                    "incarnation": row.get("incarnation"),
                     "attempt_id": row.get("attempt_id"),
                     "active_stage": row.get("active_stage"),
                     "desired_geom_rev": row.get("desired_geom_rev"),
@@ -160,6 +216,9 @@ def main() -> int:
                 trigger_flags = int(row.get("renderer_pixel_probe_trigger_flags", 0))
                 if trigger_flags & STALLED_PIXEL_TRIGGER:
                     pixels[epoch].append(row)
+            elif row.get("kind") in LIFECYCLE_KINDS:
+                coord = int3(row, "")
+                lifecycle[coord].append(lifecycle_summary(row))
 
     result_rows: list[dict[str, Any]] = []
     classifications: Counter[str] = Counter()
@@ -169,6 +228,25 @@ def main() -> int:
             ray_summary(pixel, chunk, args.chunk_size)
             for pixel in pixels.get(epoch, ())
         ]
+        incarnation = sample.get("incarnation")
+        world_epoch = sample.get("world_epoch")
+        lifecycle_rows = [
+            event
+            for event in lifecycle.get(chunk, ())
+            if epoch <= int(event.get("frame_epoch", 0))
+            <= epoch + args.lifecycle_frame_window
+            and (
+                not incarnation
+                or not event.get("incarnation")
+                or int(event["incarnation"]) == int(incarnation)
+            )
+            and (
+                not world_epoch
+                or not event.get("world_epoch")
+                or int(event["world_epoch"]) == int(world_epoch)
+            )
+        ]
+        lifecycle_rows.sort(key=lambda event: int(event.get("frame_epoch", 0)))
         per_sample = Counter(str(witness["classification"]) for witness in witnesses)
         classifications.update(per_sample)
         result_rows.append(
@@ -176,6 +254,9 @@ def main() -> int:
                 **sample,
                 "event_pixel_count": len(pixels.get(epoch, ())),
                 "ray_classification_counts": dict(sorted(per_sample.items())),
+                "lifecycle_window_frames": args.lifecycle_frame_window,
+                "lifecycle_event_count": len(lifecycle_rows),
+                "lifecycle_events": lifecycle_rows,
                 "intersecting_rays": [
                     witness
                     for witness in witnesses
