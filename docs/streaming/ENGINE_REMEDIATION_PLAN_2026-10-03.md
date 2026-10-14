@@ -9099,6 +9099,17 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    per-frame invalidation change is not demonstrated to fix the symptom,
    although no regression has been attributed to it. Review query cost and
    within-frame sharing before considering a revert.
+   Static source review (2026-10-14) narrows what this metric means:
+   `UChunkMeshCache` keeps one `MissingMemo` key, and `BeginHoleQueryFrame`
+   advances its epoch before both `UpdateStreaming` and
+   `TickAsyncChunkSystems`. The JSON field is populated only by the sampled
+   `run_miss_probe` call; it does not count cache lookups made by the other
+   callers. The update phases also query different centers/radii (focus radius,
+   radius 0, and radius 1), so these accesses can replace one another's memo.
+   Thus the observed zeros do not establish that the cache never hits. Keep
+   the per-frame invalidation; before changing the cache shape, add aggregate
+   cache-owned hit/miss/scan counters and compare them with the existing
+   combined query-wall fields on a Release run.
 7. Keep `World_164` M335 as the repeated-condition route, repeat a fresh-seed
    frontier check periodically, and use quiet-host runs for performance
    conclusions. M557 host CPU median/p95/max was `37.3/83.5/100%` and app use
