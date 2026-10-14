@@ -262,6 +262,12 @@ struct VisualBlackTraceRecord
   uint64_t published_light_rev{0};
   uint64_t meshed_light_rev{0};
   uint64_t field_light_rev{0};
+  /// sample_kind=1: distinguish absent, zero-quad, and non-drawable cache data.
+  uint8_t focus_mesh_cache_entry_present{0};
+  uint8_t focus_mesh_gpu_resident{0};
+  uint8_t focus_mesh_boundary_overlay_mask{0};
+  uint32_t focus_mesh_cpu_vertex_count{0};
+  uint32_t focus_mesh_gpu_quad_count{0};
   int32_t stale_sample_x{0};
   int32_t stale_sample_y{0};
   int32_t stale_sample_z{0};

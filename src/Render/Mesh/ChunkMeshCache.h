@@ -459,6 +459,11 @@ public:
                             int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  size_t GetGreedyVertexCount(glm::ivec3 chunk_coord) const
+  {
+    const auto it = GreedyVertexCountByChunk.find(chunk_coord);
+    return it != GreedyVertexCountByChunk.end() ? it->second : 0;
+  }
   /// True only when the cache entry has GPU quads or non-empty CPU batches.
   /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
   /// (manual 215919: place-block remesh instantly fills "invisible" chunk).

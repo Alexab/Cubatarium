@@ -6446,6 +6446,16 @@ void UFramePerfMonitor::Shutdown()
                << r.mesh_dirty_queue_size
                << ",\"mesh_dirty_queue_age_frames\":"
                << r.mesh_dirty_queue_age_frames
+               << ",\"focus_mesh_cache_entry_present\":"
+               << static_cast<int>(r.focus_mesh_cache_entry_present)
+               << ",\"focus_mesh_cpu_vertex_count\":"
+               << r.focus_mesh_cpu_vertex_count
+               << ",\"focus_mesh_gpu_resident\":"
+               << static_cast<int>(r.focus_mesh_gpu_resident)
+               << ",\"focus_mesh_gpu_quad_count\":"
+               << r.focus_mesh_gpu_quad_count
+               << ",\"focus_mesh_boundary_overlay_mask\":"
+               << static_cast<int>(r.focus_mesh_boundary_overlay_mask)
                << ",\"mesh_work_owner_flags\":"
                << r.mesh_work_owner_flags
                << ",\"relight_owner_flags\":"

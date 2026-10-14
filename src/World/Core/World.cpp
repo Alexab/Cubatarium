@@ -3875,6 +3875,23 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       trace.published_geom_rev = published.geom_rev;
       trace.published_light_rev = published.light_rev;
       trace.meshed_light_rev = mesh_cache.GetMeshedLightRevision(coord);
+      trace.focus_mesh_cache_entry_present =
+          mesh_cache.HasGreedyMesh(coord) ? 1 : 0;
+      trace.focus_mesh_cpu_vertex_count = static_cast<uint32_t>(
+          std::min<size_t>(mesh_cache.GetGreedyVertexCount(coord), UINT32_MAX));
+      trace.focus_mesh_gpu_resident =
+          mesh_cache.QueryGreedyGpuResident(coord) ? 1 : 0;
+      trace.focus_mesh_gpu_quad_count = static_cast<uint32_t>(
+          std::max(0, mesh_cache.QueryGreedyGpuQuadCount(coord)));
+      for (int face = 0; face < 6; ++face)
+      {
+        if (mesh_cache.HasActiveBoundaryOverlayFace(coord, face))
+        {
+          trace.focus_mesh_boundary_overlay_mask = static_cast<uint8_t>(
+              trace.focus_mesh_boundary_overlay_mask |
+              static_cast<uint8_t>(1u << face));
+        }
+      }
       const ChunkRenderDemandRecord *focus_demand =
           UChunkRenderDemandStore::Get().Find(coord);
       if (focus_demand)
