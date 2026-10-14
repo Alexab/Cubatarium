@@ -8605,13 +8605,37 @@ outside the configured fog horizon. The exact prior candidate
 lies eight chunks beyond that endpoint. M569 therefore cannot confirm the
 budget-exit cleanup fix for that exact lifecycle.
 
-#### M570 — same M335 flight with event-aligned framebuffer capture (running)
+#### M570 result — same M335 flight with event-aligned framebuffer capture (2026-10-14)
 
-M570 started after M569 using the same Release executable and unchanged M335
-world/start/speed/altitude/heading/duration. It sets
+M570 used the same Release executable and unchanged M335 world/start/speed/
+altitude/heading/duration. It set
 `CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY=1` to capture pixels in frames
-with screen-ray traces and visual-hole edges. This is a diagnostic correctness
-run, not a performance baseline.
+with screen-ray traces and visual-hole edges. The no-teleport route completed
+normally: 1,835 requested seconds / 1,944.73 wall seconds, 558 chunks from
+`[7,3]` to `[-551,3]`, no clock gap or collision stop, and two completed
+obstacle detours. The flight process returned 0; the suite returned
+`pass=false` with 29/40 gates. A24, eye-proxy stale-apply, and post-stop
+convergence gates failed.
+
+The event join found 318 rising edges and an event-triggered pixel capture for
+each. It matched 46 pixels to the exact selected miss-chunk screen ray; none
+was near-black (`RGB ≤8`; minimum channel max 33). In the full event grids,
+31,800 samples included no `RGB ≤8` pixels and had minimum luminance 24.
+There were darker samples (`luminance ≤32`), but retained darkest samples had
+opaque depth and valid surfaces, consistent with dim textured/illuminated
+geometry rather than absent geometry. This is sparse framebuffer evidence,
+not a guarantee for every pixel or frame.
+
+The A24 gate counted 71 whole-route periods with a near-focus mesh proxy, but
+only one in the M335 start corridor. All 81 periodic and 232 event-level raw
+miss witnesses were beyond configured fog; all 642 tracked witnesses
+resolved before fog and none entered it unready. In 300 visual-hole events,
+the selected screen-ray candidate matched the proxy coordinate and had a
+drawable/satisfying mesh even while the independent radius query returned a
+miss. That points to a telemetry/query-scope mismatch; it does not prove the
+entire view was clean. The ray/pixel join and aggregate grid summary are linked
+in the plan document above. Event readbacks expanded the perf JSONL to 1.73 GB
+and contaminated timing, so M570 is not a performance run.
 
 ```powershell
 $env:CUBA_DEMAND_SHADOW='0'
@@ -8622,8 +8646,30 @@ $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m570_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m570_world164_m335_event_aligned_pixels --report bin/suite_reports/engine_refactor/m570_world164_m335_event_aligned_pixels_20261014.json --process-timeout 2600
 ```
 
-After M570 closes its perf log, run both pixel analyzers above. Retain
-separate outcomes for exact event-pixel joins, the sparse route-wide grid,
-mesh/readiness proxies, and post-stop convergence. Do not call a proxy-only
-FAIL a verified framebuffer hole, and do not call a sparse-grid clean result
-a proof that every frame was clean.
+The analyzer outputs are
+[`m570_hole_pixel_join_20261014.json`](../../bin/suite_reports/engine_refactor/m570_hole_pixel_join_20261014.json)
+and [`m570_pixel_grid_20261014.json`](../../bin/suite_reports/engine_refactor/m570_pixel_grid_20261014.json).
+Retain separate outcomes for exact event-pixel joins, the sparse route-wide
+grid, mesh/readiness proxies, and post-stop convergence. Do not call a
+proxy-only FAIL a verified framebuffer hole, or a clean sparse grid proof
+that every frame was clean.
+
+#### M571 — reach the prior exact lifecycle candidate
+
+M571 keeps the established M335 world, start, speed, altitude, heading, and
+no-teleport route. Extend the fly phase from 1,800 to 1,880 seconds, only to
+cross the prior westbound candidate at x=`-571`. Keep the bounded focus-slice
+trace and visual lifecycle trace; leave event-pixel readbacks off to reduce
+the 1.73 GB I/O/post-processing overhead observed in M570. After the run,
+check attempt `182634` at `(-571,1,6)` for cancellation, re-admission, cache
+vertices/quads, and concrete dirty-queue/worker/GPU ownership. A shorter
+orphan lifetime alone is not recovery; require ownership and stage progress.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m571_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1880 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m571_world164_m335_exact_lifecycle --report bin/suite_reports/engine_refactor/m571_world164_m335_exact_lifecycle_20261014.json --process-timeout 2700
+```

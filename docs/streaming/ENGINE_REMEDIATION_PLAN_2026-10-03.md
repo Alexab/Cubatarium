@@ -9530,9 +9530,12 @@ the guarantee without reviving the logger-only census.
 
 The host was busy immediately after builds (88.7%, 83.5%, then 41.1% CPU in
 five-second samples); do not use those measurements as a performance
-baseline. M569 should first verify whether aged `Created` attempts now cancel
-and whether their cache entries contain vertices/quads; schedule a performance
-pass only after a quiet-host window.
+baseline. M569 and M570 have now checked the rendered-pixel and lifecycle
+proxies under the accepted load. M571 should first reach the prior exact
+ownerless attempt coordinate and inspect whether aged `Created` attempts now
+cancel and whether their cache entries contain vertices/quads. Schedule a
+performance pass only after a quiet-host window and without diagnostic
+framebuffer readbacks.
 
 ### M569 execution result — no sampled black pixels; broad readiness is not view evidence
 
@@ -9593,10 +9596,47 @@ substitute for that lifecycle join.
 
 M569 is a lifecycle and sparse-pixel correctness probe, not a clean
 performance baseline: deep visual tracing and framebuffer readbacks were
-enabled, and the host sampler recorded substantial background CPU load. The
-next M335 repeat, M570, adds pixel capture aligned to screen-ray events while
-keeping world, start, speed, altitude, direction, and route unchanged. If the
-exact ownerless attempt remains a required acceptance case after M570, extend
-the same westbound segment only far enough to cross x=`-571`; preserve its
-no-teleport motion and all other M335 parameters. Do not weaken readiness or
-convergence gates to make these off-view obligations disappear.
+enabled, and the host sampler recorded substantial background CPU load. M570
+repeated the M335 route with event-aligned framebuffer sampling. Its Release
+flight completed successfully: 1,835 requested seconds / 1,944.73 wall
+seconds, 558 chunks from focus `[7,3]` to `[-551,3]`, no clock gap, teleport,
+or collision stop, and two completed obstacle detours. The suite analyzer
+returned `pass=false` (29/40 gates passed): A24 reported 71 periods with a
+whole-route near-focus mesh proxy and one in the named start corridor; the
+eye-proxy stale-apply gates and post-stop convergence also failed.
+
+M570's diagnostic framebuffer trace contains 1,573 captures / 148,400 pixel
+samples, including one grid for each of 318 moving `visual_holes_enter`
+edges. No sampled pixel had all RGB channels ≤8 or ≤16; minimum Rec.709
+luminance was 24.48. Across the 318 event grids (31,800 pixels), no pixel had
+RGB ≤8; 822 samples had luminance ≤32, and the darkest sample had luminance
+24. In the retained darkest samples, opaque depth and a valid surface were
+present; 1,898/1,908 also had a solid voxel-ray hit. The 46 pixels matched to
+an exact selected miss-chunk screen ray were non-black (minimum channel max
+33, luminance 30.58). These measurements are sparse and do not prove every
+pixel or frame was correct, but they provide no direct evidence of a black
+hole during the sampled proxy events; the low-luminance samples depict valid
+surfaces.
+
+The event/lifecycle joins explain why mesh counters still fail independently
+of those pixels. All 81 whole-route periodic miss witnesses and all 232
+event-level miss witnesses classified by the configured fog horizon were
+beyond fog; none intersected it. All 642 tracked witness lifecycles resolved
+before entering fog, and none entered fog unready. For 300 event edges, the
+screen-ray-selected candidate matched the proxy coordinate and its sampled
+mesh was drawable/satisfying, despite the separate radius query returning a
+miss; this is a query-scope mismatch, not a pixel-level empty-chunk finding.
+The M570 ray/pixel join is
+[`m570_hole_pixel_join_20261014.json`](../../bin/suite_reports/engine_refactor/m570_hole_pixel_join_20261014.json),
+and the route-wide framebuffer summary is
+[`m570_pixel_grid_20261014.json`](../../bin/suite_reports/engine_refactor/m570_pixel_grid_20261014.json).
+
+M570 is not a performance baseline: event framebuffer readbacks inflated the
+perf log to 1.73 GB and the measured flight median was 30.49 ms. It also ended
+20 chunks short of the prior exact candidate at x=`-571`, so it does not
+resolve the M568 lifecycle question. M571 should preserve the established
+world, start, speed, altitude, heading, and no-teleport route, extend only the
+flight duration enough to cross x=`-571`, and keep the bounded focus-slice and
+lifecycle trace. Leave event-pixel readbacks off for that run to contain I/O
+and post-processing overhead. Do not weaken readiness or convergence gates
+to make off-view obligations disappear.
