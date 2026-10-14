@@ -9907,3 +9907,16 @@ per-sample fields should distinguish an unready chunk, zero ready transparent
 refs, missing MDI resident/visible transparent pass or command, and a ready,
 visible command whose fragments still do not change the sampled pixel. Do not
 treat raw triangle matches as proof of GPU visibility.
+
+
+### Release build note — app target versus aggregate targets (2026-10-15)
+
+`build.ps1 -Config Release -Jobs 8 -ClMpCount 8` invokes CMake's aggregate
+`ALL_BUILD`. It built and verified `bin/Cubatarium.exe`, but returned exit code
+1 because several test executable targets failed to link: `ChunkMeshSnapshot.obj`
+references unresolved `cutum::CubatariumLogInfo` (`LNK2019`/`LNK1120`). No tests
+were executed. The app-only Release target succeeds with:
+
+```powershell
+& 'C:\Program Files\CMake\bin\cmake.exe' --build bin --config Release --target Cubatarium --parallel 8 -- /p:CL_MPCount=8
+```

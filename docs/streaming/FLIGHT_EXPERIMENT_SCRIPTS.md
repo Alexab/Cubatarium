@@ -8893,3 +8893,15 @@ gating; ready refs without a resident/visible MDI command point to upload,
 culling, or submission; a resident visible command with no pixel change moves
 the investigation to shader, blend, depth, and target state. These are
 branches to test, not assumed fixes.
+
+
+#### Release build used for M575
+
+Build only the application target in Release; the aggregate `build.ps1` target
+also links test executables and currently returns 1 for unresolved
+`cutum::CubatariumLogInfo` references in `ChunkMeshSnapshot.obj`. No tests were
+run. The successful application build command is:
+
+```powershell
+& 'C:\Program Files\CMake\bin\cmake.exe' --build bin --config Release --target Cubatarium --parallel 8 -- /p:CL_MPCount=8
+```
