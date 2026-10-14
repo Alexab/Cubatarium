@@ -8497,6 +8497,15 @@ same-route confirmation of the budget-exit fix, not a performance baseline.
 When host load settles, rerun the fixed M335 profile and collect cache fields
 for the off-horizon state-1 candidates. Do not change the route or speed.
 
+The zero-tick windows are also affected by diagnostic overhead. In those same
+nine rows, `PrepRefreshUnfinishedMs` consumed 3.409–3.737 ms of
+`PrepRefreshPressureMs` 4.417–4.916 ms (about 76–77%). M568 ran with
+`CUBA_VISUAL_BLACK_TRACE=1`; that flag enables a resident-slice data-mesh census
+inside `CountUnfinishedVisualNear`, including cache-hit calls. Treat M569 as a
+lifecycle probe only. Before using a traced flight for performance conclusions,
+decouple or cadence this census and expose the sample age, then compare the
+fixed route with capture disabled.
+
 Prepared M569 command:
 
 ```powershell

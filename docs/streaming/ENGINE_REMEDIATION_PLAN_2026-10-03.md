@@ -9468,6 +9468,19 @@ frame rate. This is strong temporal and code-path evidence that skipped
 maintenance allowed the ownerless attempt to persist; M569 must confirm the
 fix cancels it and identify the associated cache/GPU state.
 
+The same nine rows expose an instrumentation confound: `PrepRefreshUnfinishedMs`
+was 3.409–3.737 ms of `PrepRefreshPressureMs` 4.417–4.916 ms (about 76–77%).
+M568 explicitly enabled `CUBA_VISUAL_BLACK_TRACE=1`. In
+`CountUnfinishedVisualNear`, that flag enables `refresh_data_mesh_census`,
+which walks resident slices across the full focus ring and vertical world band;
+the census is called on cache-hit and incremental paths as well as full scans.
+Therefore the repeated zero-scheduler windows are confirmed for the diagnostic
+configuration, but do not establish scheduler starvation in an uninstrumented
+Release flight. M569 remains a lifecycle/correctness probe, not a performance
+baseline. Add a follow-up to decouple or cadence the expensive data-mesh census
+from general visual tracing, report its sample age, then compare traced and
+capture-disabled M335 runs on a quiet host.
+
 Commit `feb5b271` runs that same bounded maintenance before the early return.
 It does not admit additional mesh work or relax stop convergence. The M568
 state-1 focus samples also were not automatically added to the watched-chunk
