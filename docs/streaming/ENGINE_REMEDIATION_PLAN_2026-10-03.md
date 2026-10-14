@@ -9241,3 +9241,29 @@ confirmed that all tracked exact misses remained beyond that sample's modeled
 horizon. The M556 Release build adds a persistent single-witness lifecycle
 probe and event rows; completed results and the next exact dark-census trace
 are recorded in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+
+## Progress update (2026-10-14): raw hole-edge pixels
+
+The cap-64 readiness repeat is complete (M563); the prior “repeat with cap 64”
+item above is closed. M563 found seven period-end near-focus mesh-hole proxy
+samples, none in the start corridor, while its stop-tail mesh-hole proxy was
+zero. M564 then showed that 202 rising-edge screen-ray selections were
+still drawable and satisfying despite repairable geometry debt. The sparse
+pixel schedule did not overlap those events. M565 captured one exact
+same-frame framebuffer pixel at candidate chunk `(-531,3,3)`: RGB
+`(81,118,148)`, with matching pre-transparent color. That sample is visibly
+non-black, but four other raw rising edges occurred inside the same camera-X
+window without a corresponding pixel capture. A24 is still a conservative
+mesh/query proxy and remains a failing diagnostic gate; it is not pixel proof.
+
+M566 now marks the raw focus-radius rising edge at its final `UpdateStreaming`
+query and captures the bounded 20x5 pixel grid in the unchanged X window,
+independent of screen-ray candidate selection. Its output will report each
+frame's pixel luma distribution and darkest samples, and join any available
+same-epoch rays. Review this evidence before any renderer or scheduling-policy
+change. If the samples remain normally colored, close the stale-proxy
+classification without calling it a rendering fix; if dark samples occur,
+join their depth, ray, fog, opaque draw state, and transparency composition.
+Performance conclusions remain open until a capture-disabled M335 run is
+repeated under quiet host conditions; M565's sampler recorded material
+background activity.

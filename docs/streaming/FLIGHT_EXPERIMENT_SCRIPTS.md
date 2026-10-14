@@ -8218,3 +8218,67 @@ $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416'
 $env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='32'
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m562_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m562_world164_m335_readiness_classes --report bin/suite_reports/engine_refactor/m562_world164_m335_readiness_classes_20261014.json --process-timeout 2600
 ```
+
+### M563 — readiness trace cap 64 repeat (2026-10-14)
+
+M563 repeated the visible, no-teleport `World_164` M335 route on Release SHA256
+`1493F0FA3D06536685019E29CA3C362BA8FDAB7BEB60F9DE229B6CD63C89B12E`, with
+active fog, the established `-8512..-8416` pixel window, and
+`CUBA_FOCUS_SLICE_TRACE_PER_STATE=64`. The app completed successfully and the
+route reached `focus_cx=-570` / `9,232` blocks (`577` chunks). Period-end
+near-focus mesh-hole proxy was positive in 7 periods (`0.767%`, longest run
+one; none in the start corridor). A24 therefore remained a proxy-gate failure,
+not framebuffer evidence. Stop-tail mesh-missing and visual-hole proxies were
+zero; readiness debt max was 27 and stop convergence still failed. Exact
+artifacts: [report](../../bin/suite_reports/engine_refactor/m563_world164_m335_readiness_classes_cap64_20261014.json),
+[stalled-census join](../../bin/suite_reports/engine_refactor/m563_stalled_census_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-102438_8648.jsonl), and
+[host samples](../../bin/logs/m563_host_cpu_20261014.jsonl).
+
+### M564 — frame-aligned proxy transition snapshot (2026-10-14)
+
+M564 kept the same Release M335 conditions and added a snapshot of the exact
+screen-ray-selected mesh/debt state at each `visual_holes_enter` transition.
+The run covered `9,200` blocks (`575` chunks), with 26 positive A24 periods
+(`2.854%`, longest run two); the start corridor had one. All 202 correlated
+screen-ray selections were drawable and satisfying with repairable geometry
+debt, and the later same-coordinate state did not change. The trace therefore
+identified stale-but-drawable proxy geometry; it did not establish a missing
+framebuffer pixel. Only 14 event epochs had a same-epoch screen-ray trace and
+none had a same-epoch pixel row. Two events near the edge of the established X
+window also missed the sparse pixel schedule. Stop-tail mesh-missing and
+visual-hole proxies were zero; readiness debt max was 23 and demand-stop
+convergence failed. See [report](../../bin/suite_reports/engine_refactor/m564_world164_m335_proxy_transition_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-111052_28296.jsonl), and
+[host samples](../../bin/logs/m564_host_cpu_20261014.jsonl).
+
+### M565 — first same-frame proxy pixel witness (2026-10-14)
+
+M565 used Release SHA256
+`EE05A62355B34A5A0ED97A4E87813904DA3CE50E23E9555857EDBA08CDFA4742` and the
+same route/window. The app completed successfully and reached `focus_cx=-565`
+/ `9,152` blocks (`572` chunks) at median `5.18555 blocks/s`. A24 had 50
+positive periods (one in the start corridor); the mesh-hole proxy rate was
+`5.501%` with longest run three. Stop-tail visual holes were zero, readiness
+debt max was 36, and convergence failed.
+
+The transition logger emitted 388 moving rising edges. For one edge at epoch
+67413, the selected ray hit block `(-8481,48,58)` in candidate chunk
+`(-531,3,3)`, and the matching framebuffer pixel at `(608,315)` was RGB
+`(81,118,148)`, alpha 255, depth `0.996891`; pre-transparent and final colors
+matched. This is a normal visible pixel at that exact candidate sample, not a
+black/empty pixel. Four other rising edges inside the same camera-X window had
+no same-epoch screen-ray trace and were not captured because the first pixel
+trigger required that trace. The single positive color sample cannot establish
+that all proxy events are false positives or rule out another defect. Details:
+[M565 report](../../bin/suite_reports/engine_refactor/m565_world164_a24_pixel_witness_20261014.json),
+[event/pixel join](../../bin/suite_reports/engine_refactor/m565_a24_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-115947_33272.jsonl), and
+[host samples](../../bin/logs/m565_host_cpu_20261014.jsonl).
+
+M565's host sampler observed strong and varying host load, including
+Nextcloud/OneDrive and Defender activity. Do not treat its frame-time values as
+a clean performance baseline. M566 changes only the diagnostics so the exact
+raw focus-radius `visual_holes_enter` edge triggers the bounded 20x5 pixel grid
+inside the same established X window even when no screen-ray repair candidate
+is selected; the event report also summarizes grid luma and darkest samples.
