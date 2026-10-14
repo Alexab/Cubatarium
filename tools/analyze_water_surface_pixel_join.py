@@ -21,6 +21,16 @@ def unpack_rgb(rgba: int) -> int:
     return (rgba >> 8) & 0xFFFFFF
 
 
+def row_float(row: dict[str, Any], key: str, default: float = -1.0) -> float:
+    value = row.get(key)
+    return default if value is None else float(value)
+
+
+def row_int_optional(row: dict[str, Any], key: str) -> int | None:
+    value = row.get(key)
+    return None if value is None else int(value)
+
+
 def summarize(perf_path: Path, world_dir: Path, water_id: int,
               min_camera_x: float, max_camera_x: float) -> dict[str, Any]:
     # worldgen_metrics_lib is kept in tools/ beside this script.
@@ -75,6 +85,150 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             source_triangle = bool(int(row.get("renderer_pixel_fluid_triangle_match", 0)))
             rgb_changed = unpack_rgb(rgba) != unpack_rgb(before_rgba)
             depth = float(row.get("renderer_pixel_pretransparent_depth", 1.0))
+            fluid_state = {
+                "surface_chunk": [
+                    row.get("renderer_pixel_fluid_chunk_x"),
+                    row.get("renderer_pixel_fluid_chunk_y"),
+                    row.get("renderer_pixel_fluid_chunk_z"),
+                ],
+                "source_block_id": int(
+                    row.get("renderer_pixel_fluid_block_id", -1)
+                    if row.get("renderer_pixel_fluid_block_id") is not None
+                    else -1
+                ),
+                "mdi_probe_checked": row_int_optional(
+                    row, "renderer_pixel_fluid_mdi_probe_checked"
+                ),
+                "payload_check_attempted": row_int_optional(
+                    row, "renderer_pixel_fluid_payload_check_attempted"
+                ),
+                "source_vertex_count": row_int_optional(
+                    row, "renderer_pixel_fluid_source_vertex_count"
+                ),
+                "source_index_count": row_int_optional(
+                    row, "renderer_pixel_fluid_source_index_count"
+                ),
+                "gpu_vertex_count": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_vertex_count"
+                ),
+                "gpu_index_count": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_index_count"
+                ),
+                "gpu_index_count_gl": row_int_optional(
+                    row, "renderer_pixel_fluid_gpu_index_count_gl"
+                ),
+                "vertex_count_matches": row_int_optional(
+                    row, "renderer_pixel_fluid_vertex_count_matches"
+                ),
+                "index_count_matches": row_int_optional(
+                    row, "renderer_pixel_fluid_index_count_matches"
+                ),
+                "vertex_payload_matches": row_int_optional(
+                    row, "renderer_pixel_fluid_vertex_payload_matches"
+                ),
+                "index_payload_matches": row_int_optional(
+                    row, "renderer_pixel_fluid_index_payload_matches"
+                ),
+                "chunk_render_ready": int(
+                    row.get("renderer_pixel_fluid_chunk_render_ready", 0) or 0
+                ),
+                "raw_ref_count": int(
+                    row.get("renderer_pixel_fluid_raw_ref_count", 0) or 0
+                ),
+                "ready_ref_count": int(
+                    row.get("renderer_pixel_fluid_ready_ref_count", 0) or 0
+                ),
+                "ready_triangle_match": int(
+                    row.get("renderer_pixel_ready_fluid_triangle_match", 0) or 0
+                ),
+                "gate_flags": int(
+                    row.get("renderer_pixel_fluid_chunk_gate_flags", 0) or 0
+                ),
+                "gpu_resident": int(
+                    row.get("renderer_pixel_fluid_chunk_gpu_resident", 0) or 0
+                ),
+                "gpu_slot_quad_count": int(
+                    row.get("renderer_pixel_fluid_chunk_gpu_slot_quad_count", 0) or 0
+                ),
+                "mdi_resident_pass_flags": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_resident_pass_flags", 0) or 0
+                ),
+                "mdi_visible_pass_flags": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_visible_pass_flags", 0) or 0
+                ),
+                "mdi_command_count": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_command_count", 0) or 0
+                ),
+                "mdi_visible_command_count": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_visible_command_count", 0) or 0
+                ),
+                "mdi_first_block_id": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_first_block_id", 0) or 0
+                ),
+                "mdi_index_count": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_index_count", 0) or 0
+                ),
+                "mdi_visible_index_count": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_visible_index_count", 0) or 0
+                ),
+                "source_top_face_quads": int(
+                    row.get("renderer_pixel_fluid_chunk_source_top_face_quads", 0) or 0
+                ),
+                "texture_ready": int(
+                    row.get("renderer_pixel_fluid_chunk_texture_ready", 0) or 0
+                ),
+                "mdi_payload_flags": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_payload_flags", 0) or 0
+                ),
+                "mdi_command_flags": int(
+                    row.get("renderer_pixel_fluid_chunk_mdi_command_flags", 0) or 0
+                ),
+            }
+            transparent_bit = 1 << 2
+            state_checks = {
+                "chunk_render_ready": bool(fluid_state["chunk_render_ready"]),
+                "raw_ref_present": fluid_state["raw_ref_count"] > 0,
+                "ready_ref_present": fluid_state["ready_ref_count"] > 0,
+                "ready_triangle_match": bool(fluid_state["ready_triangle_match"]),
+                "transparent_mdi_resident": bool(
+                    fluid_state["mdi_resident_pass_flags"] & transparent_bit
+                ),
+                "transparent_mdi_visible": bool(
+                    fluid_state["mdi_visible_pass_flags"] & transparent_bit
+                ),
+                "transparent_mdi_command": fluid_state["mdi_command_count"] > 0,
+                "transparent_mdi_visible_command":
+                    fluid_state["mdi_visible_command_count"] > 0,
+                "transparent_mdi_indexed": fluid_state["mdi_index_count"] > 0,
+                "transparent_mdi_visible_indexed":
+                    fluid_state["mdi_visible_index_count"] > 0,
+                "source_top_face_present": fluid_state["source_top_face_quads"] > 0,
+                "texture_ready": bool(fluid_state["texture_ready"]),
+                "mdi_probe_checked": (
+                    None if fluid_state["mdi_probe_checked"] is None
+                    else bool(fluid_state["mdi_probe_checked"])
+                ),
+                "payload_check_attempted": (
+                    None if fluid_state["payload_check_attempted"] is None
+                    else bool(fluid_state["payload_check_attempted"])
+                ),
+                "vertex_count_matches": (
+                    None if fluid_state["vertex_count_matches"] is None
+                    else bool(fluid_state["vertex_count_matches"])
+                ),
+                "index_count_matches": (
+                    None if fluid_state["index_count_matches"] is None
+                    else bool(fluid_state["index_count_matches"])
+                ),
+                "vertex_payload_matches": (
+                    None if fluid_state["vertex_payload_matches"] is None
+                    else bool(fluid_state["vertex_payload_matches"])
+                ),
+                "index_payload_matches": (
+                    None if fluid_state["index_payload_matches"] is None
+                    else bool(fluid_state["index_payload_matches"])
+                ),
+            }
 
             key = (probe_id, frame_epoch)
             capture = captures.setdefault(key, {
@@ -91,6 +245,11 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 "rgb_changed_after_transparent": 0,
                 "water_triangle_rgb_changed": 0,
                 "opaque_depth_written": 0,
+                "gpu_state_counts": {name: 0 for name in state_checks},
+                "water_gpu_state_counts": {name: 0 for name in state_checks},
+                "water_source_triangle_gpu_state_counts": {
+                    name: 0 for name in state_checks
+                },
             })
             capture["samples"] += 1
             capture["block_file_present"] += chunk_blocks is not None
@@ -103,6 +262,14 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             capture["rgb_changed_after_transparent"] += rgb_changed
             capture["water_triangle_rgb_changed"] += is_water and source_triangle and rgb_changed
             capture["opaque_depth_written"] += depth < 0.99999
+            for name, present in state_checks.items():
+                if present is None:
+                    continue
+                capture["gpu_state_counts"][name] += present
+                if is_water:
+                    capture["water_gpu_state_counts"][name] += present
+                    if source_triangle:
+                        capture["water_source_triangle_gpu_state_counts"][name] += present
 
             samples.append({
                 "probe_id": probe_id,
@@ -120,6 +287,20 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 "rgba_before": before_rgba,
                 "rgba_after": rgba,
                 "pretransparent_depth": depth,
+                "fluid_triangle_distance": row_float(
+                    row, "renderer_pixel_fluid_triangle_distance"
+                ),
+                "opaque_hit_distance": row_float(
+                    row, "renderer_pixel_opaque_hit_distance"
+                ),
+                "camera_to_surface_distance": math.dist(
+                    (float(row.get("camera_x", 0.0)),
+                     float(row.get("camera_y", 0.0)),
+                     float(row.get("camera_z", 0.0))),
+                    point,
+                ),
+                "fluid_surface_renderer_state": fluid_state,
+                "fluid_surface_renderer_state_checks": state_checks,
             })
 
     if not samples:
@@ -135,8 +316,16 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
         ):
             totals[field] += int(capture[field])
 
+    state_names = next(iter(captures.values()))["gpu_state_counts"]
+
+    def aggregate_state_counts(key: str) -> dict[str, int]:
+        return {
+            name: sum(capture[key][name] for capture in captures.values())
+            for name in state_names
+        }
+
     return {
-        "schema": "water_surface_pixel_join.v1",
+        "schema": "water_surface_pixel_join.v2",
         "perf_jsonl": str(perf_path),
         "world_dir": str(world_dir),
         "water_block_id": water_id,
@@ -144,6 +333,15 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
         "capture_count": len(captures),
         "totals": dict(totals),
         "captures": [captures[k] for k in sorted(captures)],
+        "gpu_state_totals": aggregate_state_counts("gpu_state_counts"),
+        "water_gpu_state_totals": aggregate_state_counts("water_gpu_state_counts"),
+        "water_source_triangle_gpu_state_totals": aggregate_state_counts(
+            "water_source_triangle_gpu_state_counts"
+        ),
+        "mdi_probe_check_known_sample_count": sum(
+            sample["fluid_surface_renderer_state"]["mdi_probe_checked"] is not None
+            for sample in samples
+        ),
         "samples": samples,
         "decoded_chunks": {
             "%d,%d,%d" % key: None if value is None else len(value)
@@ -153,6 +351,7 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
         "interpretation_limits": [
             "A missing .cchunk file is unknown, not proof that the runtime column lacked data.",
             "A source fluid triangle match is not proof of a ready/visible GPU draw command.",
+            "Transparent MDI pass flags use bit 2; no matching MDI batch may also mean the sample lies outside the submitted/cull range, so compare camera-to-surface distance and fluid draw telemetry before calling it a missing upload.",
             "RGB change compares the sampled framebuffer before and after the transparent pass; sparse probes do not cover the full frame.",
         ],
     }

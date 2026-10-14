@@ -5787,6 +5787,34 @@ void UFramePerfMonitor::Shutdown()
                   << r.renderer_pixel_fluid_raw_ref_count
                   << ",\"renderer_pixel_fluid_ready_ref_count\":"
                   << r.renderer_pixel_fluid_ready_ref_count
+                  << ",\"renderer_pixel_fluid_mdi_probe_checked\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_mdi_probe_checked)
+                  << ",\"renderer_pixel_fluid_payload_check_attempted\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_payload_check_attempted)
+                  << ",\"renderer_pixel_fluid_source_vertex_count\":"
+                  << r.renderer_pixel_fluid_source_vertex_count
+                  << ",\"renderer_pixel_fluid_source_index_count\":"
+                  << r.renderer_pixel_fluid_source_index_count
+                  << ",\"renderer_pixel_fluid_gpu_vertex_count\":"
+                  << r.renderer_pixel_fluid_gpu_vertex_count
+                  << ",\"renderer_pixel_fluid_gpu_index_count\":"
+                  << r.renderer_pixel_fluid_gpu_index_count
+                  << ",\"renderer_pixel_fluid_gpu_index_count_gl\":"
+                  << r.renderer_pixel_fluid_gpu_index_count_gl
+                  << ",\"renderer_pixel_fluid_vertex_count_matches\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_vertex_count_matches)
+                  << ",\"renderer_pixel_fluid_index_count_matches\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_index_count_matches)
+                  << ",\"renderer_pixel_fluid_vertex_payload_matches\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_vertex_payload_matches)
+                  << ",\"renderer_pixel_fluid_index_payload_matches\":"
+                  << static_cast<int>(
+                         r.renderer_pixel_fluid_index_payload_matches)
                   << ",\"renderer_pixel_fluid_chunk_gate_flags\":"
                   << r.renderer_gate_flags
                   << ",\"renderer_pixel_fluid_chunk_gpu_resident\":"

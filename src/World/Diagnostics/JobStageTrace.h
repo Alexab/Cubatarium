@@ -402,6 +402,17 @@ struct VisualBlackTraceRecord
   uint32_t renderer_pixel_fluid_ready_ref_count{0};
   uint8_t renderer_pixel_fluid_chunk_render_ready{0};
   uint8_t renderer_pixel_ready_fluid_triangle_match{0};
+  uint8_t renderer_pixel_fluid_mdi_probe_checked{0};
+  uint8_t renderer_pixel_fluid_payload_check_attempted{0};
+  uint8_t renderer_pixel_fluid_vertex_count_matches{0};
+  uint8_t renderer_pixel_fluid_index_count_matches{0};
+  uint8_t renderer_pixel_fluid_vertex_payload_matches{0};
+  uint8_t renderer_pixel_fluid_index_payload_matches{0};
+  uint32_t renderer_pixel_fluid_source_vertex_count{0};
+  uint32_t renderer_pixel_fluid_source_index_count{0};
+  uint32_t renderer_pixel_fluid_gpu_vertex_count{0};
+  uint32_t renderer_pixel_fluid_gpu_index_count{0};
+  uint32_t renderer_pixel_fluid_gpu_index_count_gl{0};
   uint64_t renderer_pixel_probe_id{0};
   /// sample_kind=10: exact streaming screen-ray sample and selector decision.
   /// Screen coordinates use top-left pixel space. Columns map to the

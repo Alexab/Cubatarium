@@ -9920,3 +9920,79 @@ were executed. The app-only Release target succeeds with:
 ```powershell
 & 'C:\Program Files\CMake\bin\cmake.exe' --build bin --config Release --target Cubatarium --parallel 8 -- /p:CL_MPCount=8
 ```
+
+
+### M575 result — saved water, CPU meshes, and sampled visible MDI commands still produce no sampled RGB change (2026-10-15)
+
+M575 completed the full visible, no-teleport M335 route in
+`World_M572_Cold_20261014`: 9,136 blocks, median movement speed 5.18555
+blocks/s, eye height 70, 913 periods, and `process_rc=0`. The suite result was
+`pass=false` on `near_focus_holes_periods_gt0` and
+`unlit_max_above_dual_lane`; these are renderer/readiness gates, not a crash.
+The `unfinished_visual` readiness-debt rate was 1.0, while the separate
+near-focus `visual_holes_rate` was 0.0384 and its post-stop maximum was zero.
+The counters retain different meanings and neither is a direct measurement of
+all water pixels.
+
+The host was not isolated: CPU ranged about 65–100%, with OneDrive Sync
+reaching roughly two cores in sampled intervals. Do not use M575 as a clean
+performance comparison. The source ledger nevertheless closed 5,429/5,429
+disk demands and 282/282 procedural requests, with no open or duplicate
+terminal requests. Disk file-read time was median 2.86 ms / p95 4.57 ms, while
+result-wait time was median 444 ms / p95 1,522 ms (max 89.9 s). Procedural
+request total time was median 131 ms / p95 591 ms. This points to time spent
+outside the file read itself, but the loaded host prevents attributing the
+wait to a single subsystem.
+
+In the pixel-trace camera window `[-4710,-4550]`, 11 captures supplied 660
+sea-plane samples. The saved chunks contained water block ID 575 at 564
+positions; 576 positions had a saved chunk file, with absent files treated as
+unknown. Raw CPU geometry matched a top-fluid triangle for 428 water pixels.
+All 428 had a render-ready surface chunk, a ready transparent ref, and a
+matching ready fluid ref. Another 136 saved-water positions had no raw
+triangle match. **No sample changed RGB after the transparent pass**,
+including all 428 saved-water-plus-triangle samples. 435 samples had opaque
+depth. For the 30 selected samples with a visible transparent MDI command, the
+water surface was nearer than the matched opaque hit; none changed RGB.
+
+Across the 16 target-zone period rows, the fluid pass was active (128–184
+color-pass draw calls per period), `fluid_map_dirty=0`, and packed fluid ranges
+were zero. The per-pixel MDI witness was intentionally limited to at most
+three unique chunks per capture. M575 lacked an explicit `probe_checked` bit,
+so the other pixel rows' zero MDI fields are **unknown**, not proof that those
+chunks had no GPU batch. The 30 selected rows had resident and visible
+transparent-pass flag bit 2, plus command flags `7` (the indirect command
+readback matched the expected index/offset/base-vertex and instance-count
+state). Payload flags alone cannot say whether CPU/GPU vertex and index counts
+matched or whether the byte comparisons ran. M576 adds explicit probe and
+payload-check status and count results.
+
+The broad 14-capture pixel grid had 1,120 samples, 820 sea-plane-valid rays,
+and no RGB samples with every channel at or below 16; 16 samples had luminance
+at or below 32 and 203 at or below 64. Sparse grids do not establish full-frame
+water coverage. The underwater/fog fluid map was clean, but that provider is
+separate from the visible water draw.
+
+M575 artifacts: [suite report](../../bin/suite_reports/engine_refactor/m575_m572_water_mdi_trace_20261015.json),
+[pixel grid](../../bin/suite_reports/engine_refactor/m575_pixel_grid_20261015.json),
+[source ledger](../../bin/suite_reports/engine_refactor/m575_world_column_source_trace_20261015.json),
+[water pixel/MDI join](../../bin/suite_reports/engine_refactor/m575_water_surface_pixel_join_20261015.json),
+[reusable analyzer](../../tools/analyze_water_surface_pixel_join.py),
+[perf log](../../bin/logs/perf_20261015-001612_37632.jsonl),
+[host samples](../../bin/logs/m575_host_cpu_20261015.jsonl), and
+[INFO source log](../../bin/logs/Cubatarium.exe.TIMLENOVO.Bakhshiev.log.INFO.20261015-001609.37632).
+
+### M576 plan — mark transparent shader fragments in the same route window
+
+Repeat the full established M335 route and same persisted world with the
+Release build carrying two diagnostic refinements: the marker is limited to
+the existing camera-X bounds, and each pixel row states whether its MDI probe
+and payload comparison actually ran. Set
+`CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS=1` and keep
+`CUBA_FLUID_RENDER_MIN_X/MAX_X` and pixel-trace bounds at `[-4710,-4550]`.
+The fragment shader paints transparent fragments magenta only inside that
+camera window. The pixel trace already counts this marker. A marker at a
+sampled water pixel proves that a transparent fragment reached the color
+output; no marker despite a checked, visible MDI command shifts attention to
+payload, opaque-depth guard, or the final draw/target state. This is a
+controlled diagnostic visual change, not a route or world change.

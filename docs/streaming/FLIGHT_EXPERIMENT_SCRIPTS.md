@@ -8905,3 +8905,64 @@ run. The successful application build command is:
 ```powershell
 & 'C:\Program Files\CMake\bin\cmake.exe' --build bin --config Release --target Cubatarium --parallel 8 -- /p:CL_MPCount=8
 ```
+
+
+#### M575 result
+
+The full visible M335 route completed normally (`process_rc=0`), covered
+9,136 blocks at median 5.18555 blocks/s, and returned `pass=false` on
+`near_focus_holes_periods_gt0` and `unlit_max_above_dual_lane`. These gates do
+not mean the process failed. In the bounded water window, 11 captures yielded
+660 samples: 564 hit saved water ID 575; 428 had a raw top-fluid triangle and
+all 428 had a ready chunk and ready fluid ref. None of the 660 samples changed
+RGB after transparency, including all 428 water-plus-triangle samples. There
+were 435 opaque-depth samples.
+
+The trace's MDI probe is capped at three unique chunks per capture. Only the
+selected rows have MDI fields populated; other rows with zero-valued MDI
+fields are unknown. The 30 selected rows had transparent MDI resident and
+visible flags, and valid indirect command readbacks, yet still had no RGB
+change. Their surface was nearer than the matched opaque hit. M575 did not
+record whether the payload equality comparison was attempted or whether
+source/GPU counts matched, so the payload bit field alone is inconclusive.
+The MDI telemetry now includes explicit check and count fields for M576.
+
+The source ledger closed 5,429/5,429 disk demands and 282/282 procedural
+requests with no open or duplicate terminal requests. Host CPU ranged about
+65–100%; OneDrive Sync reached roughly two cores, so do not use this run for a
+clean performance comparison. Full details are in the remediation plan's M575
+result section and the linked M575 artifacts there.
+
+#### M576 — transparent fragment marker
+
+Build the `Cubatarium` application target in Release, then repeat the same
+visible no-teleport M335 route in `World_M572_Cold_20261014`. The marker is
+scoped by the fluid-render camera-X bounds, so the magenta debug output only
+appears in `[-4710,-4550]`.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m576_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m576_m572_water_fragment_marker --report bin/suite_reports/engine_refactor/m576_m572_water_fragment_marker_20261015.json --process-timeout 2600
+```
+
+After shutdown, run the pixel-grid, world-column source, and water pixel/MDI
+join analyzers. Treat magenta pixel markers as proof of transparent fragment
+color output at that sample; combine them with the per-sample MDI probe flag,
+source/GPU vertex and index counts, payload equality results, opaque depth,
+and `renderer_pixel_marker_mode`. Do not treat unchecked MDI fields as zero
+commands.

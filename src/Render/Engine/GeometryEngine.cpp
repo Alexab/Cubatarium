@@ -98,14 +98,17 @@ namespace
 
 constexpr int kPackedNearHoriz = 4;
 
-bool DebugTransparentFragmentMarkerEnabled()
+bool FluidRenderDiagnosticWindowContains(const glm::vec3 &camera_position);
+
+bool DebugTransparentFragmentMarkerEnabled(
+    const glm::vec3 &camera_position)
 {
   static const bool enabled = []() {
     const char *value =
         std::getenv("CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS");
     return value != nullptr && value[0] != '\0' && value[0] != '0';
   }();
-  return enabled;
+  return enabled && FluidRenderDiagnosticWindowContains(camera_position);
 }
 
 constexpr int kPixelProbeColumns = 20;
@@ -1440,7 +1443,8 @@ void CaptureTransparentPixelProbe(
     uint64_t frame_epoch, const OpaquePixelProbeCapture &opaque_capture,
     const std::vector<PackedOpaqueDrawTrace> &packed_draw_trace)
 {
-  const bool marker_mode = DebugTransparentFragmentMarkerEnabled();
+  const bool marker_mode =
+      DebugTransparentFragmentMarkerEnabled(camera_position);
 
   GLint viewport[4] = {0, 0, 0, 0};
   glGetIntegerv(GL_VIEWPORT, viewport);
@@ -1477,8 +1481,9 @@ void CaptureTransparentPixelProbe(
   const auto &voxel_chunks = world.GetBlockWorld().GetChunkManager();
   // This is an opt-in forensic probe. Limit GPU payload readbacks to three
   // unique ray-mapped fluid chunks per capture; selection is based on CPU fluid
-  // surface geometry, not framebuffer color, so missing commands can be seen
-  // even when the sampled pixel is not near-black.
+  // surface geometry, not framebuffer color. The explicit checked bit is
+  // required because zero MDI fields on an unselected row mean "not sampled",
+  // not "no command".
   std::unordered_set<glm::ivec3, IVec3Hash> payload_checked_chunks;
   payload_checked_chunks.reserve(12);
   std::unordered_set<glm::ivec3, IVec3Hash> opaque_ref_chunks;
@@ -2706,6 +2711,7 @@ void CaptureTransparentPixelProbe(
                 payload_checked_chunks.size() < 3u &&
                 payload_checked_chunks.insert(surface_chunk).second)
             {
+              record.renderer_pixel_fluid_mdi_probe_checked = 1;
               const BlockId source_block = static_cast<BlockId>(
                   record.renderer_mdi_first_block_id);
               const GreedyMeshBatch *source_batch = nullptr;
@@ -2722,6 +2728,13 @@ void CaptureTransparentPixelProbe(
                     break;
                   }
                 }
+              }
+              if (source_batch)
+              {
+                record.renderer_pixel_fluid_source_vertex_count =
+                    static_cast<uint32_t>(source_batch->vertices.size());
+                record.renderer_pixel_fluid_source_index_count =
+                    static_cast<uint32_t>(source_batch->indices.size());
               }
 
               const GreedyGpuBatch *gpu_batch = nullptr;
@@ -2743,6 +2756,13 @@ void CaptureTransparentPixelProbe(
 
               if (gpu_batch)
               {
+                record.renderer_pixel_fluid_gpu_vertex_count =
+                    gpu_batch->vertexCount;
+                record.renderer_pixel_fluid_gpu_index_count =
+                    gpu_batch->indexCount;
+                record.renderer_pixel_fluid_gpu_index_count_gl =
+                    static_cast<uint32_t>(
+                        std::max(gpu_batch->indexCountGl, 0));
                 record.renderer_mdi_resident_pass_flags |= 1u << 2;
                 record.renderer_mdi_command_count = 1;
                 record.renderer_mdi_index_count =
@@ -2763,6 +2783,7 @@ void CaptureTransparentPixelProbe(
                 }
                 if (source_batch)
                 {
+                  record.renderer_pixel_fluid_payload_check_attempted = 1;
                   record.renderer_mdi_payload_flags |= 1u << 2;
                   const bool vertex_count_matches =
                       gpu_batch->vertexCount == source_batch->vertices.size();
@@ -2770,6 +2791,10 @@ void CaptureTransparentPixelProbe(
                       gpu_batch->indexCount == source_batch->indices.size() &&
                       gpu_batch->indexCountGl == static_cast<GLsizei>(
                                                      source_batch->indices.size());
+                  record.renderer_pixel_fluid_vertex_count_matches =
+                      vertex_count_matches ? 1u : 0u;
+                  record.renderer_pixel_fluid_index_count_matches =
+                      index_count_matches ? 1u : 0u;
                   const GLuint vertex_buffer = gpu_batch->pooled
                                                    ? mdi_transparent_pass.poolVbo
                                                    : gpu_batch->vbo;
@@ -2799,6 +2824,7 @@ void CaptureTransparentPixelProbe(
                                     gpu_vertices.size() *
                                         sizeof(GreedyMeshVertex)) == 0)
                     {
+                      record.renderer_pixel_fluid_vertex_payload_matches = 1;
                       record.renderer_mdi_payload_flags |= 1u << 3;
                     }
                   }
@@ -2821,6 +2847,7 @@ void CaptureTransparentPixelProbe(
                                     source_batch->indices.data(),
                                     gpu_indices.size() * sizeof(uint32_t)) == 0)
                     {
+                      record.renderer_pixel_fluid_index_payload_matches = 1;
                       record.renderer_mdi_payload_flags |= 1u << 4;
                     }
                   }
@@ -4978,6 +5005,14 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     return;
   }
 
+  glm::vec3 camera_position(0.0f);
+  if (WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      camera_position = camera->GetPosition();
+    }
+  }
   greedyShader->Use();
   greedyShader->SetMat4("mvp_matrix", vp);
   greedyShader->SetInt("texture0", 0);
@@ -4986,7 +5021,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   greedyShader->SetFloat(
       "uDebugTransparentFragmentMarker",
       transparentPass && mode == GreedyShaderMode::TransparentColor &&
-              DebugTransparentFragmentMarkerEnabled()
+              DebugTransparentFragmentMarkerEnabled(camera_position)
           ? 1.0f
           : 0.0f);
   greedyShader->SetFloat("uDebugFluidFragmentMarker", 0.0f);
@@ -4999,7 +5034,6 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   }
   greedyShader->SetFloat("uLightPreviewOverride", 0.0f);
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
-  glm::vec3 camera_position(0.0f);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     camera_position = camera->GetPosition();
@@ -6433,6 +6467,14 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     }
   }
 
+  glm::vec3 camera_position(0.0f);
+  if (WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      camera_position = camera->GetPosition();
+    }
+  }
   packedGreedyShader->Use();
   packedGreedyShader->SetMat4("mvp_matrix", vp);
   packedGreedyShader->SetInt("texture0", 0);
@@ -6441,7 +6483,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   packedGreedyShader->SetFloat(
       "uDebugTransparentFragmentMarker",
       transparent_pass && mode == GreedyShaderMode::TransparentColor &&
-              DebugTransparentFragmentMarkerEnabled()
+              DebugTransparentFragmentMarkerEnabled(camera_position)
           ? 1.0f
           : 0.0f);
   packedGreedyShader->SetFloat("uDebugFluidFragmentMarker", 0.0f);
@@ -6453,7 +6495,6 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
     OpaqueDepthCapture.Bind();
   }
   OpaqueDepthCapture.ApplyShaderUniforms(packedGreedyShader, opaque_depth_guard);
-  glm::vec3 camera_position(0.0f);
   if (WorldInstance)
   {
     if (auto camera = WorldInstance->GetCurrentUserCamera())
