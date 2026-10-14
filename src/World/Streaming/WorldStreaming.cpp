@@ -3354,6 +3354,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         !world.IsEnterLitGateActive() && !world.IsEnterSessionActive() &&
         !protect_near)
     {
+      // RefreshStreamingPressure may have admitted a render demand before this
+      // budget exit. Run the bounded orphan reconciliation on the short path
+      // too; otherwise repeated early returns leave ownerless Created attempts
+      // active indefinitely because finish_telemetry is below this return.
+      world.MaintainChunkRenderDemandStore();
       world.PhysicsTelemetryData.AsyncChunkPreSchedulerMs = elapsed_main_ms();
       return;
     }
