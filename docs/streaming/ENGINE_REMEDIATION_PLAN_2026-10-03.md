@@ -9426,6 +9426,11 @@ command is `cmake --build bin --config Release --target Cubatarium
 inspection confirmed eight child `cl.exe` workers. Use this explicit override
 for subsequent Release builds on this host.
 
+After the lifecycle-watch and budget-exit changes, the incremental Release
+build also succeeded with the same `/p:CL_MPCount=8` override. The executable
+for the next flight has SHA-256
+`80A7F65F0800AF49B49BAF92BEB16F4701A93657CF10F8810BCE7A749A30560D`.
+
 The initial post-build host sample was 88.7% CPU, and a second sample remained
 83.5%; `nextcloud` alone consumed 13.3 CPU-seconds during the latter five
 seconds. M569's same-route diagnostic flight is therefore deferred until the
@@ -9437,3 +9442,29 @@ ownerless terminal state-1 candidate from M568. Confirm whether these are
 legitimate zero-quad meshes with open boundary coverage or absent/non-drawable
 mesh publications before changing the global readiness contract. Continue
 separating global obligations from current-view and lookahead visibility.
+
+### 2026-10-14 static lifecycle follow-up
+
+`AdmitUnfinishedVisualDemand` calls `NoteDemand` before its Dirty-admission
+check, so it can create a `Created` attempt before any concrete queue or worker
+owns that slice. `RefreshStreamingPressure` runs before the shared-budget exit
+in `TickAsyncChunkSystems`. When the elapsed stream budget is exhausted and
+near-view protection is clear, that function returns before its normal
+`finish_telemetry` block, where `MaintainChunkRenderDemandStore` previously
+ran. Thus the budget short path skipped the bounded 128-record orphan
+reconciliation entirely. This matches M568's long-lived ownerless `Created`
+records as a plausible source; the exact M568 early-return rate was not
+recorded, so confirm the effect in a new flight.
+
+Commit `feb5b271` runs that same bounded maintenance before the early return.
+It does not admit additional mesh work or relax stop convergence. The M568
+state-1 focus samples also were not automatically added to the watched-chunk
+set, so their later demand transitions were absent from the dump. Commit
+`53d1681b` now watches unresolved state-1 focus samples, allowing the next run
+to retain their cancellation/re-admission and worker transitions.
+
+The host remained busy immediately after builds (88.7%, 83.5%, then 41.1%
+CPU in five-second samples). Do not use this session as a performance baseline.
+M569 should first verify whether aged `Created` attempts now cancel and whether
+their cache entries contain vertices/quads; schedule a performance pass only
+after a quiet-host window.

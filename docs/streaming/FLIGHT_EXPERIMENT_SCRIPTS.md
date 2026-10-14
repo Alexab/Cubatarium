@@ -8464,7 +8464,9 @@ Commit `e5dbfcbb` adds these fields to the bounded `focus_slice_trace` rows:
 `focus_mesh_gpu_resident`, `focus_mesh_gpu_quad_count`, and
 `focus_mesh_boundary_overlay_mask`. A clean Release build succeeded; binary
 SHA-256 is
-`895D757ECC741152348C5166649892660637F7CF351DD86F35F8748691226381`.
+`80A7F65F0800AF49B49BAF92BEB16F4701A93657CF10F8810BCE7A749A30560D`
+after commits `53d1681b` and `feb5b271` added watched lifecycle transitions
+for state-1 samples and cleanup on the streaming budget exit.
 
 Build command:
 
@@ -8476,11 +8478,13 @@ The CMake Visual Studio generator otherwise passed `/p:CL_MPCount=1` despite
 `--parallel 8`. The command above overrides it; process inspection observed
 eight simultaneous `cl.exe` workers. Keep this override for Release builds.
 
-The M569 flight was not started after the build: host CPU samples were 88.7%
-and then 83.5% over five-second windows, with `nextcloud` using 13.3 CPU-seconds
-in the second sample. These are contaminated conditions for a long comparison.
-When host load settles, rerun the fixed M335 profile and collect cache fields
-for the off-horizon state-1 candidates. Do not change the route or speed.
+The M569 flight was not started after the build: host CPU samples were 88.7%,
+83.5%, and then 41.1% over five-second windows. The earlier high samples had
+`nextcloud` using about 13 CPU-seconds per five seconds; after the incremental
+build, multiple ChatGPT processes were still active. These are contaminated
+conditions for a long comparison. When host load settles, rerun the fixed M335
+profile and collect cache fields for the off-horizon state-1 candidates. Do
+not change the route or speed.
 
 Prepared M569 command:
 
@@ -8493,4 +8497,8 @@ python tools/run_with_host_cpu_sampler.py --output bin/logs/m569_host_cpu_202610
 
 Keep the new trace focused on the original question: distinguish no CPU cache
 entry, a present zero-vertex cache result, and GPU-resident quads, alongside
-boundary-overlay debt. This run has not yet been executed.
+boundary-overlay debt. It will also include lifecycle transitions because
+`53d1681b` watches each bounded state-1 focus sample. Commit `feb5b271` adds the
+bounded demand maintenance to the 5 ms streaming-budget early-return path;
+check whether old `Created` attempts now cancel rather than remaining active.
+This run has not yet been executed.
