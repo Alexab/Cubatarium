@@ -172,6 +172,19 @@ def lifecycle_summary(row: dict[str, Any]) -> dict[str, Any]:
     return common
 
 
+def lifecycle_identity(sample: dict[str, Any], event: dict[str, Any]) -> str:
+    """Classify lifecycle correlation without treating missing IDs as a match."""
+    missing = False
+    for key in ("world_epoch", "incarnation"):
+        sample_id = int(sample.get(key) or 0)
+        event_id = int(event.get(key) or 0)
+        if sample_id <= 0 or event_id <= 0:
+            missing = True
+        elif sample_id != event_id:
+            return "mismatch"
+    return "unverified" if missing else "exact"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("perf_jsonl", type=Path)
@@ -230,23 +243,23 @@ def main() -> int:
         ]
         incarnation = sample.get("incarnation")
         world_epoch = sample.get("world_epoch")
-        lifecycle_rows = [
+        lifecycle_candidates = [
             event
             for event in lifecycle.get(chunk, ())
             if epoch <= int(event.get("frame_epoch", 0))
             <= epoch + args.lifecycle_frame_window
-            and (
-                not incarnation
-                or not event.get("incarnation")
-                or int(event["incarnation"]) == int(incarnation)
-            )
-            and (
-                not world_epoch
-                or not event.get("world_epoch")
-                or int(event["world_epoch"]) == int(world_epoch)
-            )
         ]
+        identity_groups: dict[str, list[dict[str, Any]]] = {
+            "exact": [],
+            "unverified": [],
+            "mismatch": [],
+        }
+        for event in lifecycle_candidates:
+            identity_groups[lifecycle_identity(sample, event)].append(event)
+        lifecycle_rows = identity_groups["exact"]
         lifecycle_rows.sort(key=lambda event: int(event.get("frame_epoch", 0)))
+        for rows in identity_groups.values():
+            rows.sort(key=lambda event: int(event.get("frame_epoch", 0)))
         per_sample = Counter(str(witness["classification"]) for witness in witnesses)
         classifications.update(per_sample)
         result_rows.append(
@@ -257,6 +270,18 @@ def main() -> int:
                 "lifecycle_window_frames": args.lifecycle_frame_window,
                 "lifecycle_event_count": len(lifecycle_rows),
                 "lifecycle_events": lifecycle_rows,
+                "lifecycle_identity_unverified_count": len(
+                    identity_groups["unverified"]
+                ),
+                "lifecycle_identity_unverified_events": identity_groups[
+                    "unverified"
+                ],
+                "lifecycle_identity_mismatch_count": len(
+                    identity_groups["mismatch"]
+                ),
+                "lifecycle_identity_mismatch_events": identity_groups[
+                    "mismatch"
+                ],
                 "intersecting_rays": [
                     witness
                     for witness in witnesses
@@ -279,6 +304,8 @@ def main() -> int:
             "Pixel rays are a sparse screen sample; misses do not imply frustum exclusion.",
             "A census cause is a streaming/repair attribution, not proof of a visible framebuffer hole.",
             "An opaque surface before a chunk AABB entry only establishes occlusion for that sampled ray.",
+            "Ray classifications are per census-slice comparison; a pixel row repeats when multiple slices share its frame.",
+            "Lifecycle events with missing IDs or a mismatched incarnation/world epoch are reported separately from exact matches.",
         ],
         "samples": result_rows,
     }
