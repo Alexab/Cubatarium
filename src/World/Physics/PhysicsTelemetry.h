@@ -884,6 +884,35 @@ struct PhysicsTelemetry
   uint64_t NearFocusHoleProbeWitnessLightRevision{0};
   uint64_t NearFocusHoleProbeWitnessMeshRevision{0};
   uint64_t NearFocusHoleProbeWitnessInflightSourceRevision{0};
+  /// One raw missing-mesh witness tracked until ready or past fog range.
+  int NearFocusTrackedWitnessValid{0};
+  int NearFocusTrackedWitnessCx{-1};
+  int NearFocusTrackedWitnessCy{-1};
+  int NearFocusTrackedWitnessCz{-1};
+  int NearFocusTrackedWitnessAgeFrames{0};
+  float NearFocusTrackedWitnessDistanceBlocks{-1.0f};
+  float NearFocusTrackedWitnessFogHorizonBlocks{-1.0f};
+  int NearFocusTrackedWitnessInsideFog{0};
+  /// 0 inactive, 1 tracked outside fog, 2 tracked inside fog while unready.
+  int NearFocusTrackedWitnessOutcome{0};
+  int NearFocusTrackedWitnessResident{-1};
+  int NearFocusTrackedWitnessHasMesh{-1};
+  int NearFocusTrackedWitnessDrawable{-1};
+  int NearFocusTrackedWitnessSatisfying{-1};
+  int NearFocusTrackedWitnessDirty{-1};
+  int NearFocusTrackedWitnessBuildInFlight{-1};
+  int NearFocusTrackedWitnessPendingGpuApply{-1};
+  int NearFocusTrackedWitnessGeometryDebt{-1};
+  int NearFocusTrackedWitnessFlowTicketValid{-1};
+  int NearFocusTrackedWitnessColumnJobStage{-1};
+  /// Event pulse: 1 entered fog unready, 2 resolved before fog, 3 resolved
+  /// after entering fog, 4 left fog unready.
+  int NearFocusTrackedWitnessOutcomeEvent{0};
+  uint64_t NearFocusTrackedWitnessResolvedBeforeFogTotal{0};
+  uint64_t NearFocusTrackedWitnessEnteredFogUnreadyTotal{0};
+  uint64_t NearFocusTrackedWitnessResolvedAfterFogTotal{0};
+  uint64_t NearFocusTrackedWitnessExitedFogUnreadyTotal{0};
+  double NearFocusTrackedWitnessSampleMs{0.0};
   /// NearFocusHoles held true without a positive raw probe this frame.
   int NearFocusHolesLatched{0};
   /// Missing mesh or dark/unlit preview in focus (render contract).

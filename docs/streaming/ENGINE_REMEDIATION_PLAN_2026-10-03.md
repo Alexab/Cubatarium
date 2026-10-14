@@ -9070,11 +9070,13 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    witnesses were all beyond the configured fog horizon, so this run does not
    establish that an operator-visible hole occurred. Full results are in
    [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
-3. **Next:** track a selected raw witness across frames until it is repaired,
-   discarded, or enters the actual fog horizon. M555 only captures the
-   witness's immediate state; its witness moved with the outer focus frontier,
-   so we do not yet know whether a specific debt clears before becoming
-   render-relevant. If a candidate remains unsatisfied inside the fog horizon,
+3. **Implemented, awaiting M556 evidence:** track a selected raw witness across
+   frames until it becomes drawable+satisfying, enters the configured fog
+   horizon unready, or leaves it unready. This retains candidate identity,
+   owner state, age, distance, and lifecycle counters/events. M555 only captured
+   immediate state; its witness moved with the outer focus frontier, so it did
+   not show whether a particular debt clears before becoming render-relevant.
+   M556 repeats the route with the tracker; if a candidate enters fog unready,
    trace its generation/light/mesh/apply request and repair that ownership path.
 4. **Done for interpretation:** A24 now classifies exact query witnesses by a
    conservative chunk-AABB-to-fog lower bound. At M555's
@@ -9132,4 +9134,6 @@ M555 command and completed result are recorded in
 [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md). A24's Python
 analyzer now reports whether each exact radius-query miss is geometrically
 beyond the configured fog horizon. It leaves the readiness gate unchanged and
-keeps `beyond_fog` separate from framebuffer evidence.
+keeps `beyond_fog` separate from framebuffer evidence. The M556 Release build
+adds a persistent single-witness lifecycle probe and event rows; its route
+command is recorded in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).

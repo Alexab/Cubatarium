@@ -814,6 +814,31 @@ struct FrameNumbers
   uint64_t near_focus_hole_probe_witness_light_revision{0};
   uint64_t near_focus_hole_probe_witness_mesh_revision{0};
   uint64_t near_focus_hole_probe_witness_inflight_source_revision{0};
+  int near_focus_tracked_witness_valid{0};
+  int near_focus_tracked_witness_cx{-1};
+  int near_focus_tracked_witness_cy{-1};
+  int near_focus_tracked_witness_cz{-1};
+  int near_focus_tracked_witness_age_frames{0};
+  float near_focus_tracked_witness_distance_blocks{-1.0f};
+  float near_focus_tracked_witness_fog_horizon_blocks{-1.0f};
+  int near_focus_tracked_witness_inside_fog{0};
+  int near_focus_tracked_witness_outcome{0};
+  int near_focus_tracked_witness_resident{-1};
+  int near_focus_tracked_witness_has_mesh{-1};
+  int near_focus_tracked_witness_drawable{-1};
+  int near_focus_tracked_witness_satisfying{-1};
+  int near_focus_tracked_witness_dirty{-1};
+  int near_focus_tracked_witness_build_in_flight{-1};
+  int near_focus_tracked_witness_pending_gpu_apply{-1};
+  int near_focus_tracked_witness_geometry_debt{-1};
+  int near_focus_tracked_witness_flow_ticket_valid{-1};
+  int near_focus_tracked_witness_column_job_stage{-1};
+  int near_focus_tracked_witness_outcome_event{0};
+  uint64_t near_focus_tracked_witness_resolved_before_fog_total{0};
+  uint64_t near_focus_tracked_witness_entered_fog_unready_total{0};
+  uint64_t near_focus_tracked_witness_resolved_after_fog_total{0};
+  uint64_t near_focus_tracked_witness_exited_fog_unready_total{0};
+  double near_focus_tracked_witness_sample_ms{0.0};
   int near_focus_holes_latched{0};
   int unfinished_visual{0};
   int light_debt{0};
@@ -1903,6 +1928,52 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
       phys.NearFocusHoleProbeWitnessMeshRevision;
   n.near_focus_hole_probe_witness_inflight_source_revision =
       phys.NearFocusHoleProbeWitnessInflightSourceRevision;
+  n.near_focus_tracked_witness_valid = phys.NearFocusTrackedWitnessValid;
+  n.near_focus_tracked_witness_cx = phys.NearFocusTrackedWitnessCx;
+  n.near_focus_tracked_witness_cy = phys.NearFocusTrackedWitnessCy;
+  n.near_focus_tracked_witness_cz = phys.NearFocusTrackedWitnessCz;
+  n.near_focus_tracked_witness_age_frames =
+      phys.NearFocusTrackedWitnessAgeFrames;
+  n.near_focus_tracked_witness_distance_blocks =
+      phys.NearFocusTrackedWitnessDistanceBlocks;
+  n.near_focus_tracked_witness_fog_horizon_blocks =
+      phys.NearFocusTrackedWitnessFogHorizonBlocks;
+  n.near_focus_tracked_witness_inside_fog =
+      phys.NearFocusTrackedWitnessInsideFog;
+  n.near_focus_tracked_witness_outcome =
+      phys.NearFocusTrackedWitnessOutcome;
+  n.near_focus_tracked_witness_resident =
+      phys.NearFocusTrackedWitnessResident;
+  n.near_focus_tracked_witness_has_mesh =
+      phys.NearFocusTrackedWitnessHasMesh;
+  n.near_focus_tracked_witness_drawable =
+      phys.NearFocusTrackedWitnessDrawable;
+  n.near_focus_tracked_witness_satisfying =
+      phys.NearFocusTrackedWitnessSatisfying;
+  n.near_focus_tracked_witness_dirty =
+      phys.NearFocusTrackedWitnessDirty;
+  n.near_focus_tracked_witness_build_in_flight =
+      phys.NearFocusTrackedWitnessBuildInFlight;
+  n.near_focus_tracked_witness_pending_gpu_apply =
+      phys.NearFocusTrackedWitnessPendingGpuApply;
+  n.near_focus_tracked_witness_geometry_debt =
+      phys.NearFocusTrackedWitnessGeometryDebt;
+  n.near_focus_tracked_witness_flow_ticket_valid =
+      phys.NearFocusTrackedWitnessFlowTicketValid;
+  n.near_focus_tracked_witness_column_job_stage =
+      phys.NearFocusTrackedWitnessColumnJobStage;
+  n.near_focus_tracked_witness_outcome_event =
+      phys.NearFocusTrackedWitnessOutcomeEvent;
+  n.near_focus_tracked_witness_resolved_before_fog_total =
+      phys.NearFocusTrackedWitnessResolvedBeforeFogTotal;
+  n.near_focus_tracked_witness_entered_fog_unready_total =
+      phys.NearFocusTrackedWitnessEnteredFogUnreadyTotal;
+  n.near_focus_tracked_witness_resolved_after_fog_total =
+      phys.NearFocusTrackedWitnessResolvedAfterFogTotal;
+  n.near_focus_tracked_witness_exited_fog_unready_total =
+      phys.NearFocusTrackedWitnessExitedFogUnreadyTotal;
+  n.near_focus_tracked_witness_sample_ms =
+      phys.NearFocusTrackedWitnessSampleMs;
   n.near_focus_holes_latched = phys.NearFocusHolesLatched;
   n.unfinished_visual = phys.UnfinishedVisual;
   n.light_debt = phys.LightDebt;
@@ -3128,6 +3199,56 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.near_focus_hole_probe_witness_mesh_revision
           << ",\"near_focus_hole_probe_witness_inflight_source_revision\":"
           << n.near_focus_hole_probe_witness_inflight_source_revision
+          << ",\"near_focus_tracked_witness_valid\":"
+          << n.near_focus_tracked_witness_valid
+          << ",\"near_focus_tracked_witness_cx\":"
+          << n.near_focus_tracked_witness_cx
+          << ",\"near_focus_tracked_witness_cy\":"
+          << n.near_focus_tracked_witness_cy
+          << ",\"near_focus_tracked_witness_cz\":"
+          << n.near_focus_tracked_witness_cz
+          << ",\"near_focus_tracked_witness_age_frames\":"
+          << n.near_focus_tracked_witness_age_frames
+          << ",\"near_focus_tracked_witness_distance_blocks\":"
+          << n.near_focus_tracked_witness_distance_blocks
+          << ",\"near_focus_tracked_witness_fog_horizon_blocks\":"
+          << n.near_focus_tracked_witness_fog_horizon_blocks
+          << ",\"near_focus_tracked_witness_inside_fog\":"
+          << n.near_focus_tracked_witness_inside_fog
+          << ",\"near_focus_tracked_witness_outcome\":"
+          << n.near_focus_tracked_witness_outcome
+          << ",\"near_focus_tracked_witness_resident\":"
+          << n.near_focus_tracked_witness_resident
+          << ",\"near_focus_tracked_witness_has_mesh\":"
+          << n.near_focus_tracked_witness_has_mesh
+          << ",\"near_focus_tracked_witness_drawable\":"
+          << n.near_focus_tracked_witness_drawable
+          << ",\"near_focus_tracked_witness_satisfying\":"
+          << n.near_focus_tracked_witness_satisfying
+          << ",\"near_focus_tracked_witness_dirty\":"
+          << n.near_focus_tracked_witness_dirty
+          << ",\"near_focus_tracked_witness_build_in_flight\":"
+          << n.near_focus_tracked_witness_build_in_flight
+          << ",\"near_focus_tracked_witness_pending_gpu_apply\":"
+          << n.near_focus_tracked_witness_pending_gpu_apply
+          << ",\"near_focus_tracked_witness_geometry_debt\":"
+          << n.near_focus_tracked_witness_geometry_debt
+          << ",\"near_focus_tracked_witness_flow_ticket_valid\":"
+          << n.near_focus_tracked_witness_flow_ticket_valid
+          << ",\"near_focus_tracked_witness_column_job_stage\":"
+          << n.near_focus_tracked_witness_column_job_stage
+          << ",\"near_focus_tracked_witness_outcome_event\":"
+          << n.near_focus_tracked_witness_outcome_event
+          << ",\"near_focus_tracked_witness_resolved_before_fog_total\":"
+          << n.near_focus_tracked_witness_resolved_before_fog_total
+          << ",\"near_focus_tracked_witness_entered_fog_unready_total\":"
+          << n.near_focus_tracked_witness_entered_fog_unready_total
+          << ",\"near_focus_tracked_witness_resolved_after_fog_total\":"
+          << n.near_focus_tracked_witness_resolved_after_fog_total
+          << ",\"near_focus_tracked_witness_exited_fog_unready_total\":"
+          << n.near_focus_tracked_witness_exited_fog_unready_total
+          << ",\"near_focus_tracked_witness_sample_ms\":"
+          << n.near_focus_tracked_witness_sample_ms
           << ",\"near_focus_holes_latched\":"
           << n.near_focus_holes_latched
           << ",\"unfinished_visual\":" << n.unfinished_visual
@@ -4399,6 +4520,27 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
     // Keep one frame-aligned lifecycle witness at each proxy rising edge.
     // This distinguishes it from the terminal snapshot in the interval row.
     WriteJsonl(s, n, "visual_holes_enter", /*flush=*/false);
+  }
+  switch (n.near_focus_tracked_witness_outcome_event)
+  {
+  case 1:
+    WriteJsonl(s, n, "near_focus_witness_entered_fog_unready",
+               /*flush=*/false);
+    break;
+  case 2:
+    WriteJsonl(s, n, "near_focus_witness_resolved_before_fog",
+               /*flush=*/false);
+    break;
+  case 3:
+    WriteJsonl(s, n, "near_focus_witness_resolved_after_fog",
+               /*flush=*/false);
+    break;
+  case 4:
+    WriteJsonl(s, n, "near_focus_witness_exited_fog_unready",
+               /*flush=*/false);
+    break;
+  default:
+    break;
   }
   s.LastFrameVisualHoles = frame_visual_holes;
   Accumulate(s, n);

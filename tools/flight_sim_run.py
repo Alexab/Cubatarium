@@ -470,6 +470,7 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
     try:
         rows: list[dict] = []
         visual_holes_enter_rows: list[dict] = []
+        tracked_witness_event_rows: list[dict] = []
         for line in perf_path.read_text(encoding="utf-8", errors="replace").splitlines():
             if not line.startswith("{"):
                 continue
@@ -478,6 +479,10 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
                 rows.append(row)
             elif row.get("kind") == "visual_holes_enter":
                 visual_holes_enter_rows.append(row)
+            elif str(row.get("kind", "")).startswith(
+                "near_focus_witness_"
+            ):
+                tracked_witness_event_rows.append(row)
         fly = [
             r
             for r in rows
@@ -868,6 +873,29 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             ),
             "visual_holes_enter_probe_miss_witness_fog_scope_unavailable": sum(
                 scope is None for scope in event_probe_fog_scopes
+            ),
+            "near_focus_tracked_witness_lifecycle_events": len(
+                tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_resolved_before_fog_events": sum(
+                row.get("kind") == "near_focus_witness_resolved_before_fog"
+                for row in tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_entered_fog_unready_events": sum(
+                row.get("kind") == "near_focus_witness_entered_fog_unready"
+                for row in tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_resolved_after_fog_events": sum(
+                row.get("kind") == "near_focus_witness_resolved_after_fog"
+                for row in tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_exited_fog_unready_events": sum(
+                row.get("kind") == "near_focus_witness_exited_fog_unready"
+                for row in tracked_witness_event_rows
+            ),
+            "near_focus_tracked_witness_event_scope": (
+                "one exact radius-query witness followed across frames; fog is "
+                "the configured distance horizon, not camera-frustum or pixel proof"
             ),
             "near_focus_hole_latched_periods": latched_hole_n,
             "near_focus_hole_proxy_drawable_periods": proxy_drawable_n,

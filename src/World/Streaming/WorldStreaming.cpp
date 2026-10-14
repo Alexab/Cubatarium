@@ -27,6 +27,7 @@
 #include "Core/Jobs/PipelineAdmission.h"
 #include "World/Lighting/LightingSeedBackendFactory.h"
 #include "Render/Backend/RenderBackendCaps.h"
+#include "Render/Engine/DistanceFog.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
@@ -246,6 +247,19 @@ void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
   {
     return;
   }
+
+  // The candidate tracker is diagnostic session state, not scheduler state.
+  RefreshProbe.near_focus_tracked_witness_valid = false;
+  RefreshProbe.near_focus_tracked_witness_coord = glm::ivec3(-1);
+  RefreshProbe.near_focus_tracked_witness_age_frames = 0;
+  RefreshProbe.near_focus_tracked_witness_sample_cd = 0;
+  RefreshProbe.near_focus_tracked_witness_entered_fog = false;
+  RefreshProbe.near_focus_tracked_witness_last_distance = -1.0f;
+  RefreshProbe.near_focus_tracked_witness_resolved_before_fog_total = 0;
+  RefreshProbe.near_focus_tracked_witness_entered_fog_unready_total = 0;
+  RefreshProbe.near_focus_tracked_witness_resolved_after_fog_total = 0;
+  RefreshProbe.near_focus_tracked_witness_exited_fog_unready_total = 0;
+  RefreshProbe.near_focus_tracked_witness_terminal_coords.clear();
 
   if (auto user = world.GetCurrentUser())
   {
@@ -777,6 +791,45 @@ void UWorldStreaming::RefreshStreamingPressure(
     uint64_t mesh_revision{0};
     uint64_t inflight_source_revision{0};
   } missing_near_probe_witness_state;
+  auto capture_missing_near_probe_witness_state =
+      [&](const glm::ivec3 &coord)
+  {
+    MissingNearProbeWitnessState state{};
+    const UChunk *chunk =
+        world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+    const UWorldMeshService &mesh = world.GetMeshService();
+    state.resident = chunk ? 1 : 0;
+    state.has_mesh = mesh.HasGreedyMesh(coord) ? 1 : 0;
+    state.drawable = mesh.HasDrawableGreedyMesh(coord) ? 1 : 0;
+    state.satisfying = mesh.HasMeshSatisfyingColumnReady(coord) ? 1 : 0;
+    state.dirty = mesh.IsChunkMeshDirty(coord) ? 1 : 0;
+    state.build_in_flight = mesh.HasInflightMeshBuild(coord) ? 1 : 0;
+    state.pending_gpu_apply = mesh.IsPendingGpuApply(coord) ? 1 : 0;
+    state.pending_gpu_queued = mesh.IsPendingGpuQueued(coord) ? 1 : 0;
+    state.soft_defer_held = mesh.IsSoftDeferHeld(coord) ? 1 : 0;
+    if (chunk)
+    {
+      const uint64_t incarnation = chunk->GetIncarnation();
+      state.incarnation = incarnation;
+      state.content_revision = chunk->GetContentRevision();
+      state.light_revision = chunk->GetLightFieldRevision();
+      state.mesh_revision = mesh.GetChunkMeshRevision(coord);
+      state.inflight_source_revision = mesh.GetInflightSourceRevision(coord);
+      state.geometry_debt =
+          mesh.HasGeometryPublicationDebt(coord, incarnation) ? 1 : 0;
+      state.repairable_debt =
+          mesh.HasScreenRayRepairableGeometryDebt(coord, incarnation) ? 1 : 0;
+    }
+    const glm::ivec2 column(coord.x, coord.z);
+    auto &flow = GetColumnFlowExecutor();
+    ColumnWorkItem ticket{};
+    const bool has_ticket = flow.Scheduler().GetLiveTicket(column, ticket);
+    state.flow_ticket_valid = has_ticket ? 1 : 0;
+    state.flow_ticket_kind = has_ticket ? static_cast<int>(ticket.kind) : -1;
+    state.flow_ticket_priority = has_ticket ? ticket.priority : -1;
+    state.column_job_stage = static_cast<int>(flow.GetColumnJobStage(column));
+    return state;
+  };
   const bool run_miss_probe =
       enter_miss_probe || rp.miss_probe_cd <= 0 ||
       (rp.last_missing_near && !rim_probe_throttle) ||
@@ -793,57 +846,8 @@ void UWorldStreaming::RefreshStreamingPressure(
     pt.PrepRefreshMissRadiusQueryMs += lap_ms(miss_radius_query_t0);
     if (missing_near_probe_result)
     {
-      const glm::ivec3 coord = missing_near_probe_coord;
-      const UChunk *chunk =
-          world.GetBlockWorld().GetChunkManager().GetChunk(coord);
-      const UWorldMeshService &mesh = world.GetMeshService();
-      missing_near_probe_witness_state.resident = chunk ? 1 : 0;
-      missing_near_probe_witness_state.has_mesh =
-          mesh.HasGreedyMesh(coord) ? 1 : 0;
-      missing_near_probe_witness_state.drawable =
-          mesh.HasDrawableGreedyMesh(coord) ? 1 : 0;
-      missing_near_probe_witness_state.satisfying =
-          mesh.HasMeshSatisfyingColumnReady(coord) ? 1 : 0;
-      missing_near_probe_witness_state.dirty =
-          mesh.IsChunkMeshDirty(coord) ? 1 : 0;
-      missing_near_probe_witness_state.build_in_flight =
-          mesh.HasInflightMeshBuild(coord) ? 1 : 0;
-      missing_near_probe_witness_state.pending_gpu_apply =
-          mesh.IsPendingGpuApply(coord) ? 1 : 0;
-      missing_near_probe_witness_state.pending_gpu_queued =
-          mesh.IsPendingGpuQueued(coord) ? 1 : 0;
-      missing_near_probe_witness_state.soft_defer_held =
-          mesh.IsSoftDeferHeld(coord) ? 1 : 0;
-      if (chunk)
-      {
-        const uint64_t incarnation = chunk->GetIncarnation();
-        missing_near_probe_witness_state.incarnation = incarnation;
-        missing_near_probe_witness_state.content_revision =
-            chunk->GetContentRevision();
-        missing_near_probe_witness_state.light_revision =
-            chunk->GetLightFieldRevision();
-        missing_near_probe_witness_state.mesh_revision =
-            mesh.GetChunkMeshRevision(coord);
-        missing_near_probe_witness_state.inflight_source_revision =
-            mesh.GetInflightSourceRevision(coord);
-        missing_near_probe_witness_state.geometry_debt =
-            mesh.HasGeometryPublicationDebt(coord, incarnation) ? 1 : 0;
-        missing_near_probe_witness_state.repairable_debt =
-            mesh.HasScreenRayRepairableGeometryDebt(coord, incarnation) ? 1
-                                                                        : 0;
-      }
-      const glm::ivec2 column(coord.x, coord.z);
-      auto &flow = GetColumnFlowExecutor();
-      ColumnWorkItem ticket{};
-      const bool has_ticket = flow.Scheduler().GetLiveTicket(column, ticket);
-      missing_near_probe_witness_state.flow_ticket_valid =
-          has_ticket ? 1 : 0;
-      missing_near_probe_witness_state.flow_ticket_kind =
-          has_ticket ? static_cast<int>(ticket.kind) : -1;
-      missing_near_probe_witness_state.flow_ticket_priority =
-          has_ticket ? ticket.priority : -1;
-      missing_near_probe_witness_state.column_job_stage =
-          static_cast<int>(flow.GetColumnJobStage(column));
+      missing_near_probe_witness_state =
+          capture_missing_near_probe_witness_state(missing_near_probe_coord);
     }
     if ((moving_for_telemetry || rim_probe_throttle) && !enter_miss_probe)
     {
@@ -867,6 +871,238 @@ void UWorldStreaming::RefreshStreamingPressure(
     }
   }
   rp.last_missing_near = missing_near;
+  // Follow one exact raw miss across frames. The radius query usually selects
+  // the outer frontier; this probe answers whether that same chunk becomes
+  // render-ready before it reaches the configured fog horizon.
+  int tracked_witness_outcome_event = 0;
+  float tracked_witness_distance_blocks = -1.0f;
+  float tracked_witness_fog_horizon_blocks = -1.0f;
+  const auto tracked_witness_sample_t0 =
+      std::chrono::high_resolution_clock::now();
+  const bool tracked_witness_terminal_seen = std::any_of(
+      rp.near_focus_tracked_witness_terminal_coords.begin(),
+      rp.near_focus_tracked_witness_terminal_coords.end(),
+      [&](const glm::ivec3 &coord)
+      {
+        return coord.x == missing_near_probe_coord.x &&
+               coord.y == missing_near_probe_coord.y &&
+               coord.z == missing_near_probe_coord.z;
+      });
+  if (!rp.near_focus_tracked_witness_valid && run_miss_probe &&
+      missing_near_probe_result && !tracked_witness_terminal_seen)
+  {
+    rp.near_focus_tracked_witness_valid = true;
+    rp.near_focus_tracked_witness_coord = missing_near_probe_coord;
+    rp.near_focus_tracked_witness_age_frames = 0;
+    rp.near_focus_tracked_witness_sample_cd = 0;
+    rp.near_focus_tracked_witness_entered_fog = false;
+    rp.near_focus_tracked_witness_last_distance = -1.0f;
+  }
+  if (rp.near_focus_tracked_witness_valid)
+  {
+    ++rp.near_focus_tracked_witness_age_frames;
+    const glm::ivec3 tracked_coord = rp.near_focus_tracked_witness_coord;
+    const int fog_rd = world.GetEffectiveFogRenderDistance();
+    const int fog_margin = world.GetEffectiveFogEndMarginBlocks(0);
+    tracked_witness_fog_horizon_blocks =
+        FogHorizonBlocks(fog_rd, fog_margin);
+    const auto axis_distance_to_chunk = [](int block, int chunk)
+    {
+      const int min_block = chunk * CHUNK_SIZE;
+      const int max_block_exclusive = min_block + CHUNK_SIZE;
+      if (block < min_block)
+      {
+        return min_block - block;
+      }
+      if (block >= max_block_exclusive)
+      {
+        return block - (max_block_exclusive - 1);
+      }
+      return 0;
+    };
+    const int dx = axis_distance_to_chunk(focus_block.x, tracked_coord.x);
+    const int dy = axis_distance_to_chunk(focus_block.y, tracked_coord.y);
+    const int dz = axis_distance_to_chunk(focus_block.z, tracked_coord.z);
+    tracked_witness_distance_blocks = static_cast<float>(std::sqrt(
+        static_cast<double>(dx) * dx + static_cast<double>(dy) * dy +
+        static_cast<double>(dz) * dz));
+    const bool within_fog =
+        tracked_witness_distance_blocks <= tracked_witness_fog_horizon_blocks;
+    const bool near_fog = tracked_witness_distance_blocks <=
+                          tracked_witness_fog_horizon_blocks +
+                              2.0f * static_cast<float>(CHUNK_SIZE);
+    const bool sample_due = rp.near_focus_tracked_witness_sample_cd <= 0;
+    if (sample_due)
+    {
+      MissingNearProbeWitnessState tracked_state{};
+      if (run_miss_probe && missing_near_probe_result &&
+          missing_near_probe_coord.x == tracked_coord.x &&
+          missing_near_probe_coord.y == tracked_coord.y &&
+          missing_near_probe_coord.z == tracked_coord.z)
+      {
+        tracked_state = missing_near_probe_witness_state;
+      }
+      else
+      {
+        tracked_state = capture_missing_near_probe_witness_state(tracked_coord);
+      }
+      rp.near_focus_tracked_witness_resident = tracked_state.resident;
+      rp.near_focus_tracked_witness_has_mesh = tracked_state.has_mesh;
+      rp.near_focus_tracked_witness_drawable = tracked_state.drawable;
+      rp.near_focus_tracked_witness_satisfying = tracked_state.satisfying;
+      rp.near_focus_tracked_witness_dirty = tracked_state.dirty;
+      rp.near_focus_tracked_witness_build_in_flight =
+          tracked_state.build_in_flight;
+      rp.near_focus_tracked_witness_pending_gpu_apply =
+          tracked_state.pending_gpu_apply;
+      rp.near_focus_tracked_witness_geometry_debt =
+          tracked_state.geometry_debt;
+      rp.near_focus_tracked_witness_flow_ticket_valid =
+          tracked_state.flow_ticket_valid;
+      rp.near_focus_tracked_witness_column_job_stage =
+          tracked_state.column_job_stage;
+      rp.near_focus_tracked_witness_sample_cd = near_fog ? 3 : 7;
+    }
+    else
+    {
+      --rp.near_focus_tracked_witness_sample_cd;
+    }
+    const bool tracked_ready = rp.near_focus_tracked_witness_drawable > 0 &&
+                               rp.near_focus_tracked_witness_satisfying > 0;
+    if (tracked_ready)
+    {
+      if (rp.near_focus_tracked_witness_entered_fog || within_fog)
+      {
+        tracked_witness_outcome_event = 3;
+        ++rp.near_focus_tracked_witness_resolved_after_fog_total;
+      }
+      else
+      {
+        tracked_witness_outcome_event = 2;
+        ++rp.near_focus_tracked_witness_resolved_before_fog_total;
+      }
+      rp.near_focus_tracked_witness_valid = false;
+    }
+    else if (within_fog && !rp.near_focus_tracked_witness_entered_fog)
+    {
+      rp.near_focus_tracked_witness_entered_fog = true;
+      tracked_witness_outcome_event = 1;
+      ++rp.near_focus_tracked_witness_entered_fog_unready_total;
+    }
+    else if (rp.near_focus_tracked_witness_entered_fog &&
+             rp.near_focus_tracked_witness_last_distance >= 0.0f &&
+             tracked_witness_distance_blocks >
+                 tracked_witness_fog_horizon_blocks +
+                     static_cast<float>(CHUNK_SIZE) &&
+             tracked_witness_distance_blocks >
+                 rp.near_focus_tracked_witness_last_distance &&
+             movement_speed > 2.0f)
+    {
+      tracked_witness_outcome_event = 4;
+      ++rp.near_focus_tracked_witness_exited_fog_unready_total;
+      rp.near_focus_tracked_witness_valid = false;
+    }
+    if (tracked_witness_outcome_event == 2 ||
+        tracked_witness_outcome_event == 3 ||
+        tracked_witness_outcome_event == 4)
+    {
+      rp.near_focus_tracked_witness_terminal_coords.push_back(tracked_coord);
+      constexpr size_t kTrackedWitnessTerminalHistory = 32;
+      while (rp.near_focus_tracked_witness_terminal_coords.size() >
+             kTrackedWitnessTerminalHistory)
+      {
+        rp.near_focus_tracked_witness_terminal_coords.pop_front();
+      }
+    }
+    rp.near_focus_tracked_witness_last_distance =
+        tracked_witness_distance_blocks;
+  }
+  const bool tracked_witness_emitted = tracked_witness_outcome_event != 0;
+  pt.NearFocusTrackedWitnessValid =
+      (rp.near_focus_tracked_witness_valid || tracked_witness_emitted) ? 1 : 0;
+  pt.NearFocusTrackedWitnessCx =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_coord.x
+          : -1;
+  pt.NearFocusTrackedWitnessCy =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_coord.y
+          : -1;
+  pt.NearFocusTrackedWitnessCz =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_coord.z
+          : -1;
+  pt.NearFocusTrackedWitnessAgeFrames =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_age_frames
+          : 0;
+  pt.NearFocusTrackedWitnessDistanceBlocks =
+      pt.NearFocusTrackedWitnessValid ? tracked_witness_distance_blocks : -1.0f;
+  pt.NearFocusTrackedWitnessFogHorizonBlocks =
+      pt.NearFocusTrackedWitnessValid ? tracked_witness_fog_horizon_blocks
+                                      : -1.0f;
+  pt.NearFocusTrackedWitnessInsideFog =
+      pt.NearFocusTrackedWitnessValid &&
+              tracked_witness_distance_blocks <=
+                  tracked_witness_fog_horizon_blocks
+          ? 1
+          : 0;
+  pt.NearFocusTrackedWitnessOutcome =
+      pt.NearFocusTrackedWitnessValid
+          ? (rp.near_focus_tracked_witness_entered_fog ? 2 : 1)
+          : tracked_witness_outcome_event;
+  pt.NearFocusTrackedWitnessResident =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_resident
+          : -1;
+  pt.NearFocusTrackedWitnessHasMesh =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_has_mesh
+          : -1;
+  pt.NearFocusTrackedWitnessDrawable =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_drawable
+          : -1;
+  pt.NearFocusTrackedWitnessSatisfying =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_satisfying
+          : -1;
+  pt.NearFocusTrackedWitnessDirty =
+      pt.NearFocusTrackedWitnessValid ? rp.near_focus_tracked_witness_dirty : -1;
+  pt.NearFocusTrackedWitnessBuildInFlight =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_build_in_flight
+          : -1;
+  pt.NearFocusTrackedWitnessPendingGpuApply =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_pending_gpu_apply
+          : -1;
+  pt.NearFocusTrackedWitnessGeometryDebt =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_geometry_debt
+          : -1;
+  pt.NearFocusTrackedWitnessFlowTicketValid =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_flow_ticket_valid
+          : -1;
+  pt.NearFocusTrackedWitnessColumnJobStage =
+      pt.NearFocusTrackedWitnessValid
+          ? rp.near_focus_tracked_witness_column_job_stage
+          : -1;
+  pt.NearFocusTrackedWitnessOutcomeEvent = tracked_witness_outcome_event;
+  pt.NearFocusTrackedWitnessResolvedBeforeFogTotal =
+      rp.near_focus_tracked_witness_resolved_before_fog_total;
+  pt.NearFocusTrackedWitnessEnteredFogUnreadyTotal =
+      rp.near_focus_tracked_witness_entered_fog_unready_total;
+  pt.NearFocusTrackedWitnessResolvedAfterFogTotal =
+      rp.near_focus_tracked_witness_resolved_after_fog_total;
+  pt.NearFocusTrackedWitnessExitedFogUnreadyTotal =
+      rp.near_focus_tracked_witness_exited_fog_unready_total;
+  pt.NearFocusTrackedWitnessSampleMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() -
+          tracked_witness_sample_t0)
+          .count();
   const int prev_miss_cx = world.PhysicsTelemetryData.MissCx;
   const int prev_miss_cz = world.PhysicsTelemetryData.MissCz;
   const int prev_hold_n = world.PhysicsTelemetryData.RelightWitnessHoldN;

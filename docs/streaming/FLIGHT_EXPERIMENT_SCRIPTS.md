@@ -7772,3 +7772,21 @@ python tools/run_with_host_cpu_sampler.py --output bin/logs/m555_host_cpu_202610
 ```
 
 Keep operator-visible observations separate from mesh/readiness proxies.
+
+### M556 — track one raw witness into the fog horizon (planned)
+
+M556 will repeat the visible, no-teleport 2,800-second M335 route on the same
+persisted `World_164` using Release SHA256
+`0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`. The
+candidate tracker follows one exact raw radius-query miss until it becomes
+drawable+satisfying, enters the configured fog horizon while unready, or exits
+the horizon still unready. Its distance is from the preferred-load focus block
+to the chunk AABB; this is a streaming/fog-range diagnostic, not camera-frustum
+or framebuffer evidence. It samples every eight frames outside a 32-block
+approach band and every four frames inside it. Each lifecycle transition also
+gets a separate JSONL event row; A24 readiness pass/fail is unchanged.
+
+```powershell
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m556_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m556_world164_m335_witness_to_fog --report bin/suite_reports/engine_refactor/m556_world164_m335_witness_to_fog_20261014.json --process-timeout 3600
+```

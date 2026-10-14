@@ -203,6 +203,28 @@ private:
     int last_visible_black_fully_dark_no_ticket{0};
     int last_visible_black_fully_dark_stalled{0};
     int last_visible_black_legal_dark{0};
+    /// Diagnostic only: follow the first raw mesh miss until ready or past fog.
+    bool near_focus_tracked_witness_valid{false};
+    glm::ivec3 near_focus_tracked_witness_coord{-1};
+    int near_focus_tracked_witness_age_frames{0};
+    int near_focus_tracked_witness_sample_cd{0};
+    bool near_focus_tracked_witness_entered_fog{false};
+    float near_focus_tracked_witness_last_distance{-1.0f};
+    int near_focus_tracked_witness_resident{-1};
+    int near_focus_tracked_witness_has_mesh{-1};
+    int near_focus_tracked_witness_drawable{-1};
+    int near_focus_tracked_witness_satisfying{-1};
+    int near_focus_tracked_witness_dirty{-1};
+    int near_focus_tracked_witness_build_in_flight{-1};
+    int near_focus_tracked_witness_pending_gpu_apply{-1};
+    int near_focus_tracked_witness_geometry_debt{-1};
+    int near_focus_tracked_witness_flow_ticket_valid{-1};
+    int near_focus_tracked_witness_column_job_stage{-1};
+    uint64_t near_focus_tracked_witness_resolved_before_fog_total{0};
+    uint64_t near_focus_tracked_witness_entered_fog_unready_total{0};
+    uint64_t near_focus_tracked_witness_resolved_after_fog_total{0};
+    uint64_t near_focus_tracked_witness_exited_fog_unready_total{0};
+    std::deque<glm::ivec3> near_focus_tracked_witness_terminal_coords;
     int oldest_missing_resident_age_frames{0};
     int oldest_stale_vertex_light_age_frames{0};
     int prev_oracle_missing_resident_n{0};
