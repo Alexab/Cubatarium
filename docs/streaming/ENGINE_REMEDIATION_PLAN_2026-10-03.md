@@ -9109,13 +9109,17 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    Thus the observed zeros do not establish that the cache never hits. Keep
    the per-frame invalidation; before changing the cache shape, add aggregate
    cache-owned hit/miss/scan counters and compare them with the existing
-   combined query-wall fields on a Release run.
+   combined query-wall fields on a Release run. M561 made 100 sampled
+   `run_miss_probe` calls and still reported zero hits; that is the same
+   narrow counter and does not answer the aggregate question.
 7. Keep `World_164` M335 as the repeated-condition route, repeat a fresh-seed
    frontier check periodically, and use quiet-host runs for performance
    conclusions. M557 host CPU median/p95/max was `37.3/83.5/100%` and app use
    `1.91/2.73/4.12` cores; this is not a clean performance baseline. Post-stop
    readiness debt was 5 (`post_stop_mesh_missing_max=0`), and demand-stop
-   convergence still failed.
+   convergence still failed. M561 host CPU was `36.6/67.0/95.0%`, with app
+   use `2.053/2.468/3.186` cores; lower than M560 but still too bursty for a
+   clean baseline. Its route speed and camera movement remained in profile.
 8. **Done: M558 exact census attribution; open: camera/view correlation.** M558
    captured four stalled-ticket slice coordinates in the late zone. They had
    matching mesh/field light revisions, renderer-column `draw_ok=1`, and a
@@ -9133,21 +9137,33 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    evidence still cannot establish camera visibility. A24 found six proxy
    periods, while post-stop readiness debt was 2 and convergence failed.
    Details are in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
-10. **Done: M560 event-synchronized pixel witness; open: lifecycle and quiet-host
-    correlation.** All three retained `FullyDarkStalledTicket` slices were
-    sampled in their census epochs. Eleven of 400 sparse rays intersected
-    `(-529,2,2)`; all hit opaque terrain before entering the target box. The
-    other slice `(-526,2,5)` had no intersecting sampled ray. These are sparse
-    camera samples, not full-frustum proof. M560's `1.314%` near-focus visual
-    hole metric is a mesh-coverage proxy; host CPU reached 99.2%, so its timing
-    is not a clean performance baseline. The census-selected coordinates were
-    not lifecycle watched, and mesh scheduling could occur at a different
-    point within the same frame epoch. A diagnostic-only change now watches
-    those coordinates after a stalled census row. Repeat M335 on the now-quiet
-    host as M561 and join the captured transitions, screen rays, and gates.
-    Keep A24, framebuffer visibility, and stop convergence as separate checks.
-    Details and command are in
+10. **Done: M560/M561 synchronized sparse-pixel correlation.** M560 sampled
+    all three retained stalled-census rows in their epochs; 11 of 400 rays
+    intersected `(-529,2,2)` and were occluded before target entry. M561 added
+    watched lifecycle data and captured 105 cause-3 trace rows across seven
+    slice identities. Ninety shared an epoch with event pixels; 25 of 9,000
+    per-slice ray comparisons intersected `(-528,2,2)`, all occluded by upper
+    terrain. Other rays missed their target AABBs. This still does not prove
+    full-frustum exclusion or absence of visual defects. M561's near-focus
+    mesh-coverage proxy remained `1.314%` with longest run one period; A24 and
+    post-stop demand convergence failed, while post-stop mesh-missing was
+    zero and readiness debt reached 20. Keep framebuffer, A24, readiness, and
+    convergence signals separate. Full evidence is in
     [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+11. **Open: audit cause-3 ticket scope and stale attribution.** For
+    `(-528,2,2)`, M561 attempt `150691` completed through GPU publication at
+    frames 118603–118604, with exact geometry/light revisions `9/9` and `1/1`,
+    draw gate 1, and no dirty queue or mesh owner. The same slice was still
+    counted `FullyDarkStalledTicket` 45 more times through frame 118895 while
+    a column-level `PromoteRelight` ticket (flag 8) was live and no active
+    attempt/progress was reported. `CountVisibleBlackFocusMeshes` classifies
+    fully dark + ticket + no progress as stalled without requiring a stale
+    slice revision, and its ticket is XZ-column scoped while the trace selects
+    a Y slice. This may be a census attribution/stale-ticket issue; the sparse
+    rays do not show an unoccluded hit to the target. Audit ticket producers,
+    kind transitions, age, and dispatch before changing scheduler or renderer
+    policy. Preserve exact world-epoch/incarnation joins; rows with missing IDs
+    are now explicitly marked unverified by the analyzer.
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.

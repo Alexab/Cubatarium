@@ -8054,17 +8054,17 @@ coordinates were retained because census-selected slices were not added to
 the lifecycle watch set. A follow-up diagnostic now watches cause-3 slices so
 their subsequent transitions can be captured directly.
 
-### M561 — repeat M335 on the now-quiet host and retain cause-3 lifecycle (next)
+### M561 — repeat M335 and retain cause-3 lifecycle (2026-10-14)
 
-The user reports that machine CPU is available again. Repeat the same persisted
-`World_164` M335 route and fog/pixel bounds, so route conditions remain
-comparable. This Release diagnostic build additionally watches each
+The user reported that machine CPU is available again. M561 repeated the same
+persisted `World_164` M335 route and fog/pixel bounds, so route conditions
+remain comparable. This Release diagnostic build additionally watches each
 `FullyDarkStalledTicket` census slice for later demand and worker/GPU lifecycle
 transitions. It was built with `cmake --build bin --config Release --target
 Cubatarium --parallel 8`, SHA256
 `3753D4F78C29FEB84A02A4961FAA2C348E771AC2637F6894863F6317945E6910`. Capture
-host CPU continuously, then run the AABB analyzer and compare M561 with M560.
-Keep proxy gates and framebuffer evidence separate.
+host CPU continuously, then join the census, pixels, and lifecycle with the
+AABB analyzer. Keep proxy gates and framebuffer evidence separate.
 
 ```powershell
 $env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416';
@@ -8072,3 +8072,56 @@ python tools/run_with_host_cpu_sampler.py --output bin/logs/m561_host_cpu_202610
 $m561Report = Get-Content bin/suite_reports/engine_refactor/m561_world164_m335_cause3_lifecycle_20261014.json -Raw | ConvertFrom-Json
 python tools/analyze_stalled_census_pixels.py $m561Report.perf_jsonl --json-out bin/suite_reports/engine_refactor/m561_stalled_census_pixel_join_20261014.json
 ```
+
+M561 completed normally (`process_rc=0`, `run_outcome=success`) and covered
+`9,232` blocks / `577` chunks at median `5.18555 blocks/s`. The analyzer
+reported 915 periods / 913 steady periods and median fly wall time
+`13.7909 ms`. Its quality gates did not pass: near-focus `visual_holes_rate`
+was `1.314%` with a longest run of one period, A24 failed on
+`near_focus_holes_periods_gt0`, post-stop mesh-missing was zero but readiness
+debt reached 20, and demand-stop convergence failed. These are mesh/readiness
+proxies; they do not report a blank framebuffer pixel. The detailed report is
+[`m561_world164_m335_cause3_lifecycle_20261014.json`](../../bin/suite_reports/engine_refactor/m561_world164_m335_cause3_lifecycle_20261014.json).
+
+The host sampler recorded CPU median/p95/max `36.6/67.0/95.0%`; Cubatarium
+used `2.053/2.468/3.186` cores at median/p95/max. This is lower than M560 but
+still has substantial host spikes, so it is not a quiet performance baseline.
+See [`m561_host_cpu_20261014.jsonl`](../../bin/logs/m561_host_cpu_20261014.jsonl)
+and [`perf_20261014-070809_15064.jsonl`](../../bin/logs/perf_20261014-070809_15064.jsonl).
+
+The lifecycle-aware join found 105 cause-3 trace rows on seven exact slice
+identities. Ninety rows shared an epoch with one of 60 event-pixel frames
+(6,000 unique pixel rows). There are 9,000 ray-to-slice comparisons because a
+pixel frame can be compared against more than one census slice: 8,975 rays
+missed the target AABBs, and 25 intersected only `(-528,2,2)`. Every one of
+those 25 had an opaque surface in the upper slices `(-528,3,2)` or `(-528,3,3)`
+before target-box entry. The samples do not show an unoccluded ray into a
+cause-3 target; they still do not prove full-frustum exclusion or visual
+absence. The compact join is saved at
+[`m561_stalled_census_pixel_join_20261014.json`](../../bin/suite_reports/engine_refactor/m561_stalled_census_pixel_join_20261014.json).
+
+For `(-528,2,2)`, world epoch 4 / incarnation 28529 / attempt 150691 completed
+`started → built → GPU queued/ready → published` at frames 118603–118604. Its
+geometry revision reached `9/9`, light revision was `1/1`, draw gate was 1,
+and the dirty queue and mesh owner flags were zero. The census nevertheless
+repeated the stalled-ticket attribution 45 more times through frame 118895.
+Those later rows had no active attempt, `column_flow_ticket_flags=8`
+(`PromoteRelight`), `relight_owner_flags=224`, and still had draw gate 1. This
+is consistent with a column-level ticket keeping a fully dark slice in the
+diagnostic debt census after its exact geometry demand completed; it is not
+evidence of a black pixel. For `(-521,2,3)`, attempt 149666 was cancelled at
+frame 118671 while the census continued through 118736. For
+`(-525,2,8)`, attempt 151417 remained an admitted FirstMesh request with
+desired/published geometry `7/1` in the census sample; its watched schedule
+row then advanced desired geometry to 8 and showed queue size 1, but no
+terminal event was captured before the route ended. Lifecycle rows without a
+matching nonzero world epoch and incarnation are now reported separately as
+unverified, not joined as exact ownership.
+
+Static follow-up: `CountVisibleBlackFocusMeshes` classifies any fully dark
+column with a live repair ticket and no column-level progress as
+`FullyDarkStalledTicket`; it does not require a stale slice revision. A flow
+ticket is column-level, while the selected census coordinate is a chunk slice.
+Audit the ticket producers and dispatch/refresh lifecycle, and add generation,
+age, and requestor evidence before considering a policy change. Continue to
+require a positive camera/pixel witness for any claim of a rendering defect.
