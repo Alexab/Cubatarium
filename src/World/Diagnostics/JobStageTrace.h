@@ -395,6 +395,13 @@ struct VisualBlackTraceRecord
   float renderer_pixel_fluid_block_light{-1.0f};
   float renderer_pixel_fluid_light_preview{-1.0f};
   float renderer_pixel_fluid_wetness{-1.0f};
+  /// sample_kind=9 distinguishes CPU fluid geometry in the raw mesh snapshot
+  /// from the ready transparent refs and resident/visible transparent MDI
+  /// command for the exact sea-plane surface chunk.
+  uint32_t renderer_pixel_fluid_raw_ref_count{0};
+  uint32_t renderer_pixel_fluid_ready_ref_count{0};
+  uint8_t renderer_pixel_fluid_chunk_render_ready{0};
+  uint8_t renderer_pixel_ready_fluid_triangle_match{0};
   uint64_t renderer_pixel_probe_id{0};
   /// sample_kind=10: exact streaming screen-ray sample and selector decision.
   /// Screen coordinates use top-left pixel space. Columns map to the

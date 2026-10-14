@@ -9845,3 +9845,65 @@ unlocalized, so do not claim M574 explains every occurrence unless that
 appearance is independently observed during the corresponding route segment.
 Use host samples to determine whether M574 actually ran with less CPU load;
 do not presume that stopping the analyzer made the rest of the machine idle.
+
+
+### M574 result — water geometry exists in source but sampled pixels do not change (2026-10-14)
+
+M574 completed the same visible, no-teleport M335 route in persisted
+`World_M572_Cold_20261014` and exited normally. The suite returned `pass=false`;
+this is not a renderer pass. The source ledger completed 5,314/5,314 disk
+demands and committed 436/436 procedural requests, with no open or duplicate
+terminal requests. At the operator's disappearance observation,
+`fluid_map_dirty=0` and no full fluid-map rebuild was active. These signals do
+not prove that the visible water draw completed.
+
+The operator reported water visible around 20:08:36 UTC and absent around
+20:13:19 UTC. At the nearest absent-water sample, host CPU use was 99.5–100%,
+27 focus chunks were not render-ready, and 11 GPU mesh extractions were still
+in flight with none completed. This makes render-readiness pressure a
+candidate, but the host remained busy across the flight and the evidence
+cannot isolate CPU as the cause. Readiness debt remained near the route end
+even when `visual_holes` was zero; that counter is a near-focus mesh-coverage
+proxy, not a direct framebuffer verdict.
+
+A persisted-world join against the bounded framebuffer probe found 13
+captures with 780 sea-plane-valid samples in camera X `[-4710,-4550]`. Those
+positions joined to saved water block ID 575 in 674 cases. Raw CPU transparent
+mesh geometry had a matching top-fluid triangle in 539 samples, 537 of them
+over saved water; 137 saved-water positions had no raw triangle match. **No
+sampled pixel changed RGB after the transparent pass**, including all 537
+samples where both saved water and a raw water triangle were present. 515
+samples had opaque depth from the scene below. At a representative frame near
+camera `(-4605,69,28)`, 46 of 60 positions contained saved water, 33 matched a
+raw top-face triangle, 40 had opaque depth, and none changed color. This moves
+the investigation toward transparent-chunk readiness/filtering, MDI residency
+or visibility, and the fragment/blend path. A raw CPU triangle does not prove
+that a ready GPU command was submitted or that its fragment reached the target.
+
+The compact pixel trace omitted the exact fluid surface chunk's ready
+transparent refs and MDI resident/visible command state. The diagnostic trace
+now records that state, source face quads, and texture/payload flags beside
+the sampled pixel. M575 should identify the stage that drops water before any
+functional renderer change. The latest report that water is absent is not
+localized to a route coordinate and is not attributed to a specific cause.
+
+M574 artifacts: [flight report](../../bin/suite_reports/engine_refactor/m574_m572_clear_cpu_replay_20261014.json),
+[pixel grid](../../bin/suite_reports/engine_refactor/m574_pixel_grid_20261014.json),
+[source trace](../../bin/suite_reports/engine_refactor/m574_world_column_source_trace_20261014.json),
+[renderer pixel trace](../../bin/suite_reports/engine_refactor/m574_renderer_pixel_trace_20261014.json),
+[camera-band join](../../bin/suite_reports/engine_refactor/m574_camera_band_pixel_join_20261014.json),
+[water surface join](../../bin/suite_reports/engine_refactor/m574_water_surface_pixel_join_20261014.json),
+[reusable analyzer](../../tools/analyze_water_surface_pixel_join.py),
+[perf log](../../bin/logs/perf_20261014-230350_25512.jsonl), and
+[host samples](../../bin/logs/m574_host_cpu_20261014.jsonl).
+
+### M575 plan — capture the exact transparent submission state
+
+Repeat the established full M335 route in the same persisted world with the
+new Release diagnostics. Keep periodic pixel capture and GPU draw witnesses
+bounded to camera X `[-4710,-4550]`; bound `CUBA_FLUID_RENDER_TRACE` to that
+range. Keep the world-column source trace enabled across the full route. The
+per-sample fields should distinguish an unready chunk, zero ready transparent
+refs, missing MDI resident/visible transparent pass or command, and a ready,
+visible command whose fragments still do not change the sampled pixel. Do not
+treat raw triangle matches as proof of GPU visibility.

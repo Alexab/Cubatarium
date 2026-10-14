@@ -1430,6 +1430,7 @@ void CaptureTransparentPixelProbe(
     const UChunkMeshCache &cache,
     const std::vector<GreedyBatchRef> &opaque_refs,
     const std::vector<GreedyBatchRef> &transparent_refs,
+    const std::vector<GreedyBatchRef> &ready_transparent_refs,
     const GreedyGpuPassCache &mdi_opaque_pass,
     const GreedyGpuPassCache &mdi_cutout_pass,
     const GreedyGpuPassCache &mdi_transparent_pass,
@@ -2406,6 +2407,8 @@ void CaptureTransparentPixelProbe(
             record.cx = surface_chunk.x;
             record.cy = surface_chunk.y;
             record.cz = surface_chunk.z;
+            record.renderer_pixel_fluid_chunk_render_ready =
+                world.IsChunkSliceRenderReady(surface_chunk) ? 1u : 0u;
 
             // Snapshot the exact ray-mapped slice lifecycle beside its pixel
             // color. This makes a transient dark sample useful: it can be
@@ -2577,6 +2580,7 @@ void CaptureTransparentPixelProbe(
               {
                 continue;
               }
+              ++record.renderer_pixel_fluid_raw_ref_count;
               const GreedyMeshBatch *source = cache.TryGetGreedyBatch(ref);
               if (!source)
               {
@@ -2635,6 +2639,21 @@ void CaptureTransparentPixelProbe(
                     std::min(source_block_min, vertex.blockLight);
                 source_block_max =
                     std::max(source_block_max, vertex.blockLight);
+              }
+            }
+            for (const GreedyBatchRef &ref : ready_transparent_refs)
+            {
+              if (ref.chunkCoord != surface_chunk ||
+                  world.GetBlockRegistry().GetRenderStyle(ref.blockId) !=
+                      BlockRenderStyle::Fluid)
+              {
+                continue;
+              }
+              ++record.renderer_pixel_fluid_ready_ref_count;
+              if (fluid_vertex_light.valid &&
+                  ref.blockId == fluid_vertex_light.block_id)
+              {
+                record.renderer_pixel_ready_fluid_triangle_match = 1;
               }
             }
             if (record.renderer_source_vertex_count > 0)
@@ -2895,7 +2914,7 @@ void NoteFrustumCoverageGaps(
     mdi_store->SyncCompactVisToCpu(mdi_transparent_pass);
   }
   CaptureTransparentPixelProbe(world, fog_pass, cache, opaque_refs,
-                               transparent_refs,
+                               transparent_refs, ready_transparent_refs,
                                mdi_opaque_pass, mdi_cutout_pass,
                                mdi_transparent_pass, textures,
                                view_projection, view, projection,
