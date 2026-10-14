@@ -9175,25 +9175,17 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
     IDs are explicitly marked unverified by the analyzer. If ticket
     attribution is still needed to close the audit, add requestor and enqueue-
     age evidence and repeat the controlled route.
-12. **Done: M561/M562 readiness-debt decomposition; open: classify five
-    uncaptured columns and resolve two horizon-boundary candidates.** M561's
-    last five stop samples had 20 `MissingMesh` and 101 `Ready` columns. M562
-    repeated M335 with active fog and widened the per-state trace cap to 32; its
-    last five rows had 34 `MissingMesh`, 87 `Ready`, and zero in every other
-    unfinished class. Both runs had zero stop-tail `visual_holes` and
-    `focus_missing_mesh`. The counters describe XZ columns in the broad
-    streaming focus ring, while the mesh-hole signals use narrower coverage
-    paths. M562 captured 29 exact far-focus `MissingMesh` coordinates, all
-    solid and unresolved/no-owner: the conservative fog AABB bound puts 27
-    beyond the 32-block horizon and two exactly at the horizon. Five columns
-    remain outside the bounded trace selection. A24 still failed on 14 M562
-    periods, but all 92 exact event-query miss witnesses were beyond fog and
-    all paired proxy columns were drawable+satisfying; no framebuffer defect
-    was proven. The same-epoch pixel join had 100 rays, all missing its one
-    stalled-census target AABB. Next repeat the exact route with trace cap 64,
-    then correlate all 34 coordinates with effective fog/frustum evidence.
-    Do not widen mesh admission or relax demand-stop based on aggregate debt
-    alone. The analyzer now emits per-class post-stop max/end/sample counts.
+12. **Done: cap-64 readiness repeat (M563); open: link broad stop-tail debt to
+    actual view and finish demand-stop convergence.** M563 found seven
+    period-end near-focus mesh-hole proxies, none in the start corridor, with
+    zero stop-tail mesh-hole proxy. M566/M567 also ended with zero stop-tail
+    `visual_holes`, but broad post-stop readiness debt was 34/36 and
+    demand-stop convergence failed. M566's terminal readiness trace classified
+    terrain-incomplete/missing-mesh/face-debt columns, while exact query-miss
+    witnesses in both M566 and M567 were beyond the modeled fog horizon. The
+    broad XZ focus-ring readiness classes are still not joined to frustum or
+    framebuffer visibility. Keep mesh admission and demand-stop policy
+    unchanged until those exact coordinates are classified.
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.
@@ -9280,10 +9272,30 @@ render epoch. Commit `0be1f224` changes this to a one-shot pending event and
 logs both source and framebuffer epochs; the updated Release SHA is
 `1ED0DA755B018C759B869C24336419C5918619D8E7606A90D9C1CBE4BC6FAA54`.
 
-Next, repeat the exact M335 profile as M567 to verify all in-window rising
-edges receive a grid and correlate the pixels with same-frame ray/depth/fog
-state. Do not change render or scheduling policy on proxy counters alone.
-The host sampler saw mean machine CPU `61.7%`, including Nextcloud at about
-`2.51` cores and Cubatarium at `2.11` cores, so this is not a clean performance
-baseline. Keep the capture-disabled M335 performance repeat open for a quiet
-host window.
+M567 repeated the same M335 profile on Release SHA256
+`1ED0DA755B018C759B869C24336419C5918619D8E7606A90D9C1CBE4BC6FAA54`. It
+completed with `process_rc=0`, no excluded clock gap, and reached
+`focus_cx=-565` / `9,152` blocks (`572` chunks) at `5.18555 blocks/s`. A24 was
+positive in 44 periods (`4.846%`, longest run two; one in the start corridor).
+All 250 event-query miss witnesses were beyond the configured fog horizon;
+334 same-epoch screen-ray candidates were drawable and satisfying. The
+stop-tail visual-hole proxy was zero, but readiness debt reached 36 and
+demand-stop convergence failed. The host sampler mean was `77.2%` CPU (p95
+`99.9%`) with `2.31` app cores, so this is not a performance baseline.
+
+M567 recorded 356 moving `visual_holes_enter` events and seven in the X window;
+only one received a grid, at source and capture epoch `59335`. Its 100 samples
+had median luma 158, minimum 53, no RGB<=8 pixels, and one luma<=64 pixel. No
+same-epoch ray was captured for that event. The previous pending-edge latch
+did not close the gap because its marker came from `UpdateStreaming`, separate
+from the edge written by `FramePerfMonitor`. Commit `eb992259` moves marker
+publication into the logger branch and builds Release SHA256
+`54834F4E4BABBB30E8E3C1D1C403DC85E6B2F6E4E9927E842547CB3CAEDC3659`.
+
+Next, run M568 with the exact M335 profile and existing pixel window. Verify
+that all in-window logger edges join event-triggered grids using their source
+epoch, while ray/pixel color matching remains limited to identical capture
+epochs. Keep A24, broad readiness debt, actual pixel evidence, and stop
+convergence separate. Run the capture-disabled performance baseline only
+under quiet host conditions; do not change renderer or scheduling policy from
+these proxy counters alone.

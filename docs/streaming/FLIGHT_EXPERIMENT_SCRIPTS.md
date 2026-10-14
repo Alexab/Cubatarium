@@ -8320,10 +8320,31 @@ proxy results. Artifacts: [run report](../../bin/suite_reports/engine_refactor/m
 
 ### M567 — pending-edge latch validation (2026-10-14)
 
-M567 repeats the exact M335 route after the pending-edge capture change in
-Release SHA256
-`1ED0DA755B018C759B869C24336419C5918619D8E7606A90D9C1CBE4BC6FAA54`. The
-flight settings and pixel window are unchanged from M566:
+M567 completed on Release SHA256
+`1ED0DA755B018C759B869C24336419C5918619D8E7606A90D9C1CBE4BC6FAA54` with
+`process_rc=0`, no excluded clock gap, and the unchanged M335 route/window. It
+reached `focus_cx=-565`, `9,152` blocks / `572` chunks at `5.18555 blocks/s`.
+A24 was positive in 44 periods (`4.846%`, longest run two; one in the start
+corridor); all 250 event-query miss witnesses were beyond the configured fog
+horizon. Stop-tail visual holes were zero, readiness debt max was 36, and
+demand-stop convergence failed.
+
+The perf log contained 356 moving `visual_holes_enter` events, seven inside
+`[-8512,-8416]`. Only one received a 100-pixel grid, at source/capture epoch
+`59335`. Its luma median/minimum were `158/53`, with no RGB<=8 pixels and one
+sample at luma<=64; no same-epoch screen-ray trace accompanied it. The latch
+did not fix the six missed grids because the event marker was still published
+by an independent `UpdateStreaming` edge detector. Host mean CPU was `77.2%`
+(p95 `99.9%`) and app usage averaged `2.31` cores, so M567 is not a clean
+performance baseline. Artifacts: [run report](../../bin/suite_reports/engine_refactor/m567_world164_a24_latched_event_pixels_20261014.json),
+[pixel join](../../bin/suite_reports/engine_refactor/m567_a24_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-141855_29876.jsonl), and
+[host samples](../../bin/logs/m567_host_cpu_20261014.jsonl).
+
+Commit `eb992259` moves event-marker publication into the exact
+`FramePerfMonitor` branch that writes `visual_holes_enter`. The updated Release
+SHA256 is `54834F4E4BABBB30E8E3C1D1C403DC85E6B2F6E4E9927E842547CB3CAEDC3659`.
+M568 repeats the exact M335 route with the same environment and pixel window:
 
 ```powershell
 $env:CUBA_FLIGHT_FOG_ON='1'
@@ -8333,13 +8354,14 @@ $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'
 $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'
 $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416'
 $env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
-python tools/run_with_host_cpu_sampler.py --output bin/logs/m567_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m567_world164_a24_latched_event_pixels --report bin/suite_reports/engine_refactor/m567_world164_a24_latched_event_pixels_20261014.json --process-timeout 2600
-python tools/analyze_hole_event_pixels.py bin/logs/perf_<actual>.jsonl --json-out bin/suite_reports/engine_refactor/m567_a24_pixel_join_20261014.json
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m568_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m568_world164_a24_same_source_event_pixels --report bin/suite_reports/engine_refactor/m568_world164_a24_same_source_event_pixels_20261014.json --process-timeout 2600
+python tools/analyze_hole_event_pixels.py bin/logs/perf_<actual>.jsonl --json-out bin/suite_reports/engine_refactor/m568_a24_pixel_join_20261014.json
 ```
 
-The analysis must compare the five M566 in-window edge count against event-
-triggered grids, report both source and capture epochs, and retain exact-frame
-ray matches separately. Do not treat a dark pixel by itself as missing terrain:
-join its opaque depth, ray hit or gap, fog state, draw state, and pre-/post-
-transparent color. If this sample remains normal, proceed to the quiet-host,
-capture-disabled M335 performance baseline before changing runtime policy.
+The analysis must compare every M568 in-window `visual_holes_enter` edge with
+its event-triggered grid by source epoch, report the actual capture epoch, and
+retain exact-frame ray matches separately. Do not treat a dark pixel by itself
+as missing terrain: join opaque depth, ray hit/gap, fog state, draw state, and
+pre-/post-transparent color. If the grids remain normally colored, proceed to
+the quiet-host, capture-disabled M335 performance baseline before changing
+runtime policy.
