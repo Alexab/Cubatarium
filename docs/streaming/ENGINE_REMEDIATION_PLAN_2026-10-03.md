@@ -9114,15 +9114,21 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    this does not prove the candidates were outside the view. The 1.062 GB log
    also showed that default periodic pixel probes dominate trace volume. See
    M558 in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
-9. **Next:** M559 repeats the fixed no-teleport M335 route with active fog,
-   screen-ray-aligned framebuffer captures, and pixel readback bounded to the
-   late census corridor. Join exact chunk-slice coordinates to same-frame ray
-   candidates and view/frustum evidence. Only treat a census owner as a
-   renderer defect if it intersects the view or an aligned pixel shows the
-   symptom; then trace why its repair ticket did not advance. Keep A24 and
-   post-stop convergence as separate readiness signals, not substitutes for
-   pixel-visible failure. M559 command and settings are in
-   [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+9. **Done: M559 bounded screen-ray pixel capture.** It kept the full route,
+   reduced the trace from `1.062 GB` to `221 MiB`, and found 13 stalled census
+   rows on two exact slices in eight frames. Only one screen-ray-aligned pixel
+   frame was retained; neither slice matched a ray row or sampled opaque hit,
+   and the census frames did not overlap periodic pixel frames. The sparse
+   evidence still cannot establish camera visibility. A24 found six proxy
+   periods, while post-stop readiness debt was 2 and convergence failed.
+   Details are in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+10. **Next: M560 event-synchronized pixel witness.** A Release-only diagnostic
+    hook now triggers an aligned framebuffer sample in the same streaming
+    epoch as a `FullyDarkStalledTicket` census row, with pixel readback limited
+    to the late corridor. Join exact slice/chunk identity, sampled framebuffer
+    color, and renderer state before changing streaming or lighting behavior.
+    Keep A24 and stop convergence as separate readiness checks. The command is
+    in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.

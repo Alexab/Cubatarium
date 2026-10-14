@@ -7937,29 +7937,74 @@ untested. Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m55
 [host samples](../../bin/logs/m558_host_cpu_20261014.jsonl).
 
 M558 exposed a trace-volume issue: the default periodic pixel probe generated
-86,640 wide JSON records even with dense pixels disabled. For M559, bound
-framebuffer readback to the late census corridor and enable pixel captures on
-screen-ray frames. Keep the same route and speed; use the captured ray/hit
-coordinates to decide whether the stalled candidates actually intersect the
-view.
+86,640 wide JSON records even with dense pixels disabled. M559 bounded
+framebuffer readback to the late census corridor and enabled pixel captures on
+screen-ray frames while retaining the same route and speed.
 
 ```powershell
 $env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0';
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m558_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m558_world164_m335_dark_census_trace --report bin/suite_reports/engine_refactor/m558_world164_m335_dark_census_trace_20261014.json --process-timeout 2600
 ```
 
-### M559 — correlate the late stalled census with camera rays (next)
+### M559 — correlate the late stalled census with camera rays (2026-10-14)
 
-Repeat the same M335 course with active fog and black-state attribution. Restrict
-pixel readback to camera X `-8512…-8416` blocks (the late `focus_cx≈-530…-527`
-zone), and set `CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY=1` so framebuffer
-samples align with the streaming selector's five scanlines. This retains the
-no-teleport route and records the approach to the target zone while avoiding
-whole-route periodic pixel readback. Check exact slice coordinates against
-ray hits and frustum evidence; a matched ray hit is evidence of geometric
-intersection, while unmatched sparse pixel samples remain inconclusive.
+M559 repeated the visible, no-teleport, active-fog M335 route on persisted
+`World_164` using Release executable SHA256
+`0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`. The app
+exited normally with `process_rc=0` and `run_outcome=success`; the analyzer
+returned 1 because acceptance gates failed. It reached `cx=7…-570`
+(`9,232` blocks / `577` chunks) at median `5.18921 blocks/s`. Manifest values
+confirm fog enabled, effective configuration hash equal to the pre-run hash,
+screen-ray pixel probes enabled, and camera-X bounds `-8512…-8416`; resolution
+remains untested.
+
+The perf log is `231,814,660` bytes (about `221 MiB`), down from M558's `1.062`
+GB. The full attribution ring retained 955 `LegalDarkNoRepair`, 56
+`FullyDarkPendingRepair`, and 13 `FullyDarkStalledTicket` samples. The 13
+stalled records cover eight frames and two slice coordinates:
+`(-530,2,2)` and `(-523,2,0)`. They all had matching light revisions,
+renderer-column `draw_ok=1` / reason `0`, and a `PromoteRelight` flow ticket;
+the owner mask indicated column-lit, lit-gate, and repair-ticket bits, with
+the `(-530,2,2)` samples additionally marked deferred-far. This again finds
+repair ownership without establishing that the ticket is eligible to advance
+or that the slice is visible.
+
+Within camera focus `cx=-532…-526`, M559 retained 900 framebuffer samples from
+11 probe frames. Of these, 680 hit a surface and 547 had an opaque surface;
+surface luma ranged `26.1…210` with median `158.3`. Only one frame had the
+screen-ray-aligned trigger. The streaming trace retained 50 ray rows across
+two frames, with four candidates selected, but neither target stalled slice
+matched a same-frame pixel hit or any captured ray coordinate. The census
+frames also did not coincide with the sparse pixel-probe frames. These
+unmatched sparse samples do not prove the chunks lie outside the full camera
+frustum; they show the periodic/on-ray sampling cadence is still too sparse to
+join a brief census event reliably.
+
+The route had six whole-route near-focus mesh-proxy periods (zero in the start
+corridor); `visual_holes_rate=0.657%`, with 12 transitions and longest run one
+sample. The eye-proxy gate failed because stale-visual delta median was `2` and
+stale activity occurred without hole counters; dual-lane passed. Post-stop
+readiness debt was `2`, mesh-missing and near-focus visual-hole proxies were
+zero, but demand-stop convergence still failed. Median fly frame wall time was
+`13.40 ms` (`74.64` effective FPS). Host CPU median/p95/max was `35.0/57.5/97%`
+and app use `2.06/2.47/3.59` cores, so this is not a clean performance
+baseline. Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m559_world164_m335_screen_ray_aligned_pixels_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-054612_15308.jsonl), and
+[host samples](../../bin/logs/m559_host_cpu_20261014.jsonl).
+
+### M560 — synchronize a pixel probe to stalled census (next)
+
+The screen-ray cadence did not overlap the eight stalled-census frames in
+M559. The Release diagnostic change now publishes the epoch of a
+`FullyDarkStalledTicket` census sample; when enabled, the renderer takes one
+five-row screen-aligned framebuffer sample in that exact epoch and sets
+trigger bit 4. Pixel readback stays bounded to camera X `-8512…-8416` blocks.
+The ordinary screen-ray trigger remains enabled to retain its independent
+cadence. Join same-frame census coordinates to pixel hit chunks, colors,
+revisions, and draw state. If no dark census occurs in the bounded corridor,
+the run still measures route/stop proxies but cannot validate this join.
 
 ```powershell
-$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416';
-python tools/run_with_host_cpu_sampler.py --output bin/logs/m559_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m559_world164_m335_screen_ray_aligned_pixels --report bin/suite_reports/engine_refactor/m559_world164_m335_screen_ray_aligned_pixels_20261014.json --process-timeout 2600
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m560_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m560_world164_m335_stalled_census_pixel_sync --report bin/suite_reports/engine_refactor/m560_world164_m335_stalled_census_pixel_sync_20261014.json --process-timeout 2600
 ```

@@ -1,4 +1,5 @@
 #include "World/Diagnostics/JobStageTrace.h"
+#include "World/Streaming/VisibleBlackAttribution.h"
 
 #include <array>
 #include <atomic>
@@ -18,6 +19,7 @@ namespace
 
 std::atomic<uint64_t> LatestCameraBandPeakFrameEpoch{0};
 std::atomic<uint64_t> LatestScreenRayTraceFrameEpoch{0};
+std::atomic<uint64_t> LatestStalledVisualBlackFrameEpoch{0};
 std::atomic<uint64_t> LatestStreamingFrameEpoch{0};
 
 struct Ring
@@ -601,6 +603,14 @@ bool UJobStageTrace::HasScreenRayTraceForFrame(uint64_t frame_epoch)
              frame_epoch;
 }
 
+bool UJobStageTrace::HasStalledVisualBlackTraceForFrame(
+    uint64_t frame_epoch)
+{
+  return frame_epoch != 0 &&
+         LatestStalledVisualBlackFrameEpoch.load(std::memory_order_acquire) ==
+             frame_epoch;
+}
+
 void UJobStageTrace::ForEachCameraBandPeakTraceForFrame(
     uint64_t frame_epoch,
     void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx)
@@ -636,6 +646,13 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     LatestScreenRayTraceFrameEpoch.store(record.frame_epoch,
                                          std::memory_order_release);
+  }
+  if (record.sample_kind == 0 && record.frame_epoch != 0 &&
+      record.cause == static_cast<uint8_t>(
+                          VisibleBlackCause::FullyDarkStalledTicket))
+  {
+    LatestStalledVisualBlackFrameEpoch.store(record.frame_epoch,
+                                             std::memory_order_release);
   }
   if (record.sample_kind == 0)
   {

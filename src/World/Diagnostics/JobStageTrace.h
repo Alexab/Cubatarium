@@ -908,6 +908,9 @@ public:
   /// True when the streaming screen-ray grid was recorded during this render
   /// epoch. Lets an opt-in diagnostic pixel probe sample the same coordinates.
   static bool HasScreenRayTraceForFrame(uint64_t frame_epoch);
+  /// True when the focus census found a FullyDarkStalledTicket slice during
+  /// this render epoch. Lets an opt-in pixel probe capture that exact frame.
+  static bool HasStalledVisualBlackTraceForFrame(uint64_t frame_epoch);
   static void ForEachCameraBandPeakTraceForFrame(
       uint64_t frame_epoch,
       void (*fn)(const VisualBlackTraceRecord &, void *), void *ctx);

@@ -153,6 +153,16 @@ bool PixelProbeOnFocusChangeEnabled()
   return enabled;
 }
 
+bool PixelProbeOnStalledCensusEnabled()
+{
+  static const bool enabled = []() {
+    const char *value = std::getenv(
+        "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS");
+    return value != nullptr && value[0] != '\0' && value[0] != '0';
+  }();
+  return enabled;
+}
+
 bool PixelProbeOnScreenRayEnabled()
 {
   static const bool enabled = []() {
@@ -4267,6 +4277,8 @@ void UGeometryEngine::DrawCubeGeometry()
       constexpr uint32_t kMaxCameraBandPeakPixelProbes = 24;
       const bool probe_on_focus_change = PixelProbeOnFocusChangeEnabled();
       const bool probe_on_screen_ray = PixelProbeOnScreenRayEnabled();
+      const bool probe_on_stalled_census =
+          PixelProbeOnStalledCensusEnabled();
       // Optional camera-space bounds limit framebuffer readback without
       // changing the world streaming trace or its screen-ray scheduling.
       static const float pixel_probe_min_x = ReadPixelProbeEnvFloat(
@@ -4302,22 +4314,29 @@ void UGeometryEngine::DrawCubeGeometry()
                                             focus_changed;
       const bool screen_ray_pixel_probe =
           pixel_probe_in_x_range && screen_ray_probe;
+      const bool stalled_census_pixel_probe =
+          pixel_probe_in_x_range && probe_on_stalled_census &&
+          UJobStageTrace::HasStalledVisualBlackTraceForFrame(
+              pixel_probe_frame_epoch);
       const bool camera_band_peak_pixel_probe =
           camera_band_peak_probe &&
           camera_band_peak_pixel_probe_count <
               kMaxCameraBandPeakPixelProbes;
       const bool screen_ray_aligned_capture =
-          screen_ray_probe &&
-          (pixel_probe_in_x_range || camera_band_peak_pixel_probe);
+          (screen_ray_probe &&
+           (pixel_probe_in_x_range || camera_band_peak_pixel_probe)) ||
+          stalled_census_pixel_probe;
       if (periodic_pixel_probe || focus_change_pixel_probe ||
-          screen_ray_pixel_probe || camera_band_peak_pixel_probe)
+          screen_ray_pixel_probe || camera_band_peak_pixel_probe ||
+          stalled_census_pixel_probe)
       {
         pixel_probe_capture.probe_id = render_probe_count;
         pixel_probe_capture.trigger_flags = static_cast<uint8_t>(
             (periodic_pixel_probe ? 1u << 0 : 0u) |
             (focus_change_pixel_probe ? 1u << 1 : 0u) |
             (screen_ray_aligned_capture ? 1u << 2 : 0u) |
-            (camera_band_peak_pixel_probe ? 1u << 3 : 0u));
+            (camera_band_peak_pixel_probe ? 1u << 3 : 0u) |
+            (stalled_census_pixel_probe ? 1u << 4 : 0u));
         pixel_probe_capture.rows = screen_ray_aligned_capture
                                        ? std::max(kScreenRayAlignedPixelRows,
                                                   PixelProbeRows())

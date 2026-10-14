@@ -3199,6 +3199,10 @@ def main() -> int:
                                 "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY", ""
                             ).strip()
                             not in ("", "0"),
+                            "visual_pixel_probe_on_stalled_census": os.environ.get(
+                                "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS", ""
+                            ).strip()
+                            not in ("", "0"),
                             "visual_pixel_probe_min_x": os.environ.get(
                                 "CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X"
                             ),
