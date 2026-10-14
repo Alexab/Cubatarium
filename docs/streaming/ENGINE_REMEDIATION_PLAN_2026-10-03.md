@@ -9426,15 +9426,23 @@ count through `/p:CL_MPCount=8`. During the clean build, process inspection
 confirmed eight child `cl.exe` workers. Use this Release-only wrapper for
 subsequent builds on this host.
 
-After the lifecycle-watch and budget-exit changes, the incremental Release
-build also succeeded with the same `/p:CL_MPCount=8` override. The executable
-for the next flight has SHA-256
+After the lifecycle-watch and budget-exit changes, the pre-census-cadence
+incremental Release build also succeeded with `/p:CL_MPCount=8`. That earlier
+executable had SHA-256
 `80A7F65F0800AF49B49BAF92BEB16F4701A93657CF10F8810BCE7A749A30560D`.
 
 The initial post-build host sample was 88.7% CPU, and a second sample remained
 83.5%; `nextcloud` alone consumed 13.3 CPU-seconds during the latter five
 seconds. M569's same-route diagnostic flight is therefore deferred until the
 host settles. Do not interpret these measurements as game performance.
+
+After commit `f070d9c1` rate-limited the expensive diagnostic census to once
+per 24 frames and added a census-age field, `tools/build_release.ps1 -Jobs 2`
+rebuilt Release successfully. The static executable check passed with seven
+system DLL dependencies; current M569 binary SHA-256 is
+`E893A39836DA4CCFAAF91C16E9642B4B6896A4D8B148FF327CA27E5633328B6C`. The
+latest five-second host sample was 47.7% CPU, dominated by OneDrive, ChatGPT,
+and Grok processes. Keep M569 deferred until that background load settles.
 
 Next: run the prepared M569 M335 trace with the new cache fields once host load
 is low, then join cache presence/zero CPU vertices/GPU quad count to each

@@ -8462,8 +8462,8 @@ debt is expected at unloaded stream edges before changing scheduler policy.
 Commit `e5dbfcbb` adds these fields to the bounded `focus_slice_trace` rows:
 `focus_mesh_cache_entry_present`, `focus_mesh_cpu_vertex_count`,
 `focus_mesh_gpu_resident`, `focus_mesh_gpu_quad_count`, and
-`focus_mesh_boundary_overlay_mask`. A clean Release build succeeded; binary
-SHA-256 is
+`focus_mesh_boundary_overlay_mask`. The earlier pre-census-cadence Release
+build had SHA-256
 `80A7F65F0800AF49B49BAF92BEB16F4701A93657CF10F8810BCE7A749A30560D`
 after commits `53d1681b` and `feb5b271` added watched lifecycle transitions
 for state-1 samples and cleanup on the streaming budget exit.
@@ -8496,6 +8496,14 @@ This strongly supports the cleanup bypass identified in code; M569 is the
 same-route confirmation of the budget-exit fix, not a performance baseline.
 When host load settles, rerun the fixed M335 profile and collect cache fields
 for the off-horizon state-1 candidates. Do not change the route or speed.
+
+Current binary update: commit `f070d9c1` rate-limits the heavy data-mesh census
+to one sample per 24 streaming frames and adds its age to JSONL. The Release
+rebuild used `tools/build_release.ps1 -Jobs 2`; static executable verification
+passed with seven system DLL dependencies. SHA-256:
+`E893A39836DA4CCFAAF91C16E9642B4B6896A4D8B148FF327CA27E5633328B6C`. A fresh
+five-second host sample was 47.7% CPU, led by OneDrive, ChatGPT, and Grok, so
+M569 remains deferred. This binary supersedes the earlier hash below.
 
 The zero-tick windows are also affected by diagnostic overhead. In those same
 nine rows, `PrepRefreshUnfinishedMs` consumed 3.409–3.737 ms of
