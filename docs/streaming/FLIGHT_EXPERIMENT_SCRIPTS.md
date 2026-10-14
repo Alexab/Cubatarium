@@ -7830,16 +7830,80 @@ $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m556_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m556_world164_m335_witness_to_fog --report bin/suite_reports/engine_refactor/m556_world164_m335_witness_to_fog_20261014.json --process-timeout 3600
 ```
 
-### M557 — repeat lifecycle trace with active fog (next)
+### M557 — full M335 lifecycle trace with active fog (2026-10-14)
 
-Repeat M335 on the same `World_164` and current Release build, changing only
-the explicit fog setting. This removes the ambiguity in M555/M556 between the
-configured 36-block horizon and the actual presentation state. Keep GUI visible
-and capture the same performance/readiness metrics; any screenshot or pixel
-capture must be treated as separate evidence because the compositor capture
-path has previously mixed other-window content into saved frames.
+M557 repeated the visible, no-teleport 2,800-second M335 route on persisted
+`World_164`, using the same Release executable as M556 (SHA256
+`0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`) and
+`CUBA_FLIGHT_FOG_ON=1`. The manifest records `fog_on=true` and
+`route.fog_pull_in_enabled=true`; the app exited normally (`process_rc=0`,
+`run_outcome=success`, no hang), covering `14,368` blocks / `898` chunks
+(`focus_cx=7…-891`) at median `5.19653 blocks/s`. The analyzer process returned
+1 because the route acceptance gates failed; this is not an application crash.
+
+The Windows console could not encode the Unicode arrow in the fog-pin status
+line. The runner caught the encoding error after the configuration file was
+read; `bin/config.json` was observed with `fog_pull_in_enabled=true` while the
+app was running, but the report consequently has `effective_settings=null`, no
+effective config hash, and lists `light_distance_settings` as untested. The
+route/environment flags and live config agree, but this metadata gap weakens
+the run manifest. The runner now uses ASCII `->` for that message so later runs
+can persist those fields.
+
+The fog horizon was dynamic: of 1,411 steady samples, 1,045 used RD3 with a
+pull-in margin large enough to clamp the modeled horizon to 32 blocks; 368
+used RD4/margin28 and a 36-block horizon. At debt zones such as `cx=-353` and
+`-519…-528`, the pull-in held RD3 and margin up to 123. `unfinished_visual`
+was 42 at the `-353` dark-census sample and 31–36 on the cited stalled-census
+samples at `-519…-528` (the full band peaked at 70). This confirms that
+unfinished outer-ring work can hold a shorter fog horizon well after an
+individual near-focus signal clears.
+
+The A24 stop-line failed on 24 of 1,411 periods with `near_focus_holes=1`, one
+in the start corridor. The near-focus mesh proxy was nonzero in `1.70%` of
+samples (48 transitions, longest run one sample). The exact query returned 32
+valid whole-route miss witnesses: 23 reported geometry debt, 11 dirty state,
+four flow tickets, and five with no owner among the fields sampled; categories
+overlap. All 32 conservative AABB lower bounds were beyond the *then-active*
+fog horizon. The lifecycle tracker emitted 563 terminal events, all
+`resolved_before_fog`, with none entering the active horizon unready. Their
+preferred-focus/AABB distances were 62–108.53 blocks (median 95.47); every
+terminal event had an active modeled horizon of 32 blocks. This does not prove
+camera-frustum or framebuffer visibility.
+
+At `cx=-353`, the focus census reached 36 fully-dark candidates, including up
+to six stalled-ticket columns; the reported dark-face distance was about 21.4
+blocks while active fog ended at 32. In `cx=-519…-528`, near-focus missing-mesh
+was zero while the census again saw up to six fully-dark stalled columns and
+`unfinished_visual=31…36`. These are light/remesh-owner candidates, not proof
+of a visible dark patch: M557 had no visual-black source trace, screenshot, or
+pixel probe. The visible-black census is a focus-radius scan and can include
+underground geometry outside the camera frustum.
+
+The stop tail ended with readiness debt 5, although
+`post_stop_mesh_missing_max=0` and `post_stop_visual_holes_max=0`; demand-stop
+convergence failed. The eye-proxy and dual-lane gates passed. Median fly wall
+time was `13.76 ms` (`72.65` effective FPS), but host CPU median/p95/max was
+`37.3/83.5/100%` (app `1.91/2.73/4.12` cores), so this is not a clean
+performance baseline.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m557_world164_m335_fog_on_witness_lifecycle_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-041640_26656.jsonl), and [host samples](../../bin/logs/m557_host_cpu_20261014.jsonl).
 
 ```powershell
 $env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m557_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m557_world164_m335_fog_on_witness_lifecycle --report bin/suite_reports/engine_refactor/m557_world164_m335_fog_on_witness_lifecycle_20261014.json --process-timeout 3600
+```
+
+### M558 — capture exact dark-census owners on the repeated route (next)
+
+Run the same visible no-teleport route through the recurring `cx≈-353` and
+`cx≈-521` census zones with the black-state trace enabled, active fog pinned,
+and pixel-density capture disabled. This is an attribution run, not a frame-time
+baseline. Join trace coordinates/revisions/tickets to focus and active fog
+state; do not treat the census as proof that those chunks intersect the view.
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m558_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m558_world164_m335_dark_census_trace --report bin/suite_reports/engine_refactor/m558_world164_m335_dark_census_trace_20261014.json --process-timeout 2600
 ```
