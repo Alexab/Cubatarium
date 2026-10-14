@@ -649,6 +649,14 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   // repair admission, repair scans, general mesh scheduling, and priority
   // remesh scheduling in separate rings so one workload cannot overwrite
   // another class of evidence.
+  if (record.sample_kind == 1 && record.focus_state == 1)
+  {
+    // These focus slices have neither a satisfying mesh nor a concrete work
+    // owner. Watch their subsequent lifecycle transitions so a bounded
+    // focus-state sample can be joined to any later demand cancellation,
+    // re-admission, mesh schedule, or worker/GPU handoff.
+    WatchVisualChunk(record.cx, record.cy, record.cz);
+  }
   if ((record.sample_kind == 12 || record.sample_kind == 13) &&
       record.frame_epoch != 0)
   {
