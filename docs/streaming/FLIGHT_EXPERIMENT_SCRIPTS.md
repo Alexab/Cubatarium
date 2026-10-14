@@ -8487,9 +8487,15 @@ The M569 flight was not started after the build: host CPU samples were 88.7%,
 83.5%, and then 41.1% over five-second windows. The earlier high samples had
 `nextcloud` using about 13 CPU-seconds per five seconds; after the incremental
 build, multiple ChatGPT processes were still active. These are contaminated
-conditions for a long comparison. When host load settles, rerun the fixed M335
-profile and collect cache fields for the off-horizon state-1 candidates. Do
-not change the route or speed.
+conditions for a long comparison. The M568 reread shows 16/911 period rows
+with zero scheduler and post-scheduler time, including nine consecutive
+terminal windows (epochs 69248–70090) whose 4.42–4.92 ms pre-scheduler time
+exceeded the 3 ms shared budget. The terminal ownerless `Created` attempt
+182634 was about 20.7 seconds old, matching the 942-frame short-path span.
+This strongly supports the cleanup bypass identified in code; M569 is the
+same-route confirmation of the budget-exit fix, not a performance baseline.
+When host load settles, rerun the fixed M335 profile and collect cache fields
+for the off-horizon state-1 candidates. Do not change the route or speed.
 
 Prepared M569 command:
 

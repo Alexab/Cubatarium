@@ -9452,9 +9452,21 @@ in `TickAsyncChunkSystems`. When the elapsed stream budget is exhausted and
 near-view protection is clear, that function returns before its normal
 `finish_telemetry` block, where `MaintainChunkRenderDemandStore` previously
 ran. Thus the budget short path skipped the bounded 128-record orphan
-reconciliation entirely. This matches M568's long-lived ownerless `Created`
-records as a plausible source; the exact M568 early-return rate was not
-recorded, so confirm the effect in a new flight.
+reconciliation entirely. A period-level reread of M568 confirms the path was
+active: 16 of 911 period rows had both scheduler and post-scheduler time at
+zero, including nine consecutive terminal windows from frame epochs 69248
+through 70090. In those nine windows, pre-scheduler time was 4.42–4.92 ms and
+stream time was 6.27–7.04 ms, while `focus_missing_mesh=0` and
+`underfeet_has_mesh=1`. With the configured default 5 ms streaming phase
+budget, `TickAsyncChunkSystems` caps the shared budget to 3 ms; those measured
+pre-scheduler values satisfy the short-return condition without near-view
+protection. At epoch 70190, candidate `(-571,1,6)` still had attempt 182634 in
+`Created`, age about 20.7 s, no mesh-work owner or dirty-queue entry, desired
+coverage 1 versus published 0, and one unresolved overlay face. The preceding
+nine short-path windows span 942 frames, about 20.7 s at the flight's observed
+frame rate. This is strong temporal and code-path evidence that skipped
+maintenance allowed the ownerless attempt to persist; M569 must confirm the
+fix cancels it and identify the associated cache/GPU state.
 
 Commit `feb5b271` runs that same bounded maintenance before the early return.
 It does not admit additional mesh work or relax stop convergence. The M568
@@ -9473,8 +9485,8 @@ removed cleanup on exactly that path. `38dbc516` later bounded reconciliation
 to 128 records; it did not restore the skipped call. Commit `feb5b271` restores
 the guarantee without reviving the logger-only census.
 
-The host remained busy immediately after builds (88.7%, 83.5%, then 41.1%
-CPU in five-second samples). Do not use this session as a performance baseline.
-M569 should first verify whether aged `Created` attempts now cancel and whether
-their cache entries contain vertices/quads; schedule a performance pass only
-after a quiet-host window.
+The host was busy immediately after builds (88.7%, 83.5%, then 41.1% CPU in
+five-second samples); do not use those measurements as a performance
+baseline. M569 should first verify whether aged `Created` attempts now cancel
+and whether their cache entries contain vertices/quads; schedule a performance
+pass only after a quiet-host window.
