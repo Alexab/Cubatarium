@@ -741,6 +741,24 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             int(row.get("focus_proxy_satisfying_mesh", 0)) > 0
             for row in hole_rows
         )
+        screen_ray_hole_events = [
+            row for row in hole_events
+            if row.get("miss_screen_ray_candidate") == 1
+        ]
+        screen_ray_selection_state_rows = [
+            row for row in screen_ray_hole_events
+            if row.get("miss_screen_ray_selected_state_valid") == 1
+        ]
+        screen_ray_selection_proxy_pairs = [
+            row for row in screen_ray_selection_state_rows
+            if (
+                row.get("miss_cx"), row.get("miss_cy"), row.get("miss_cz")
+            ) == (
+                row.get("focus_proxy_miss_cx"),
+                row.get("focus_proxy_miss_cy"),
+                row.get("focus_proxy_miss_cz"),
+            )
+        ]
         dropped_per = median(corridor_deltas) if corridor_deltas else None
         # Admission breakdown (diagnostic; dirty_dropped alone ≠ correctness).
         def last_or_none(key: str) -> float | None:
@@ -963,6 +981,47 @@ def compute_a24_safety_stop_line(perf_path: Path) -> dict:
             "visual_holes_enter_proxy_pending_gpu_apply": sum(
                 event_flag(row, "focus_proxy_pending_gpu_apply")
                 for row in hole_events
+            ),
+            "visual_holes_enter_screen_ray_candidate_events": len(
+                screen_ray_hole_events
+            ),
+            "visual_holes_enter_screen_ray_selection_state_known": len(
+                screen_ray_selection_state_rows
+            ),
+            "visual_holes_enter_screen_ray_selection_drawable": sum(
+                row.get("miss_screen_ray_selected_drawable") == 1
+                for row in screen_ray_selection_state_rows
+            ),
+            "visual_holes_enter_screen_ray_selection_satisfying": sum(
+                row.get("miss_screen_ray_selected_satisfying") == 1
+                for row in screen_ray_selection_state_rows
+            ),
+            "visual_holes_enter_screen_ray_selection_repairable_geometry_debt": sum(
+                row.get("miss_screen_ray_selected_repairable_geometry_debt") == 1
+                for row in screen_ray_selection_state_rows
+            ),
+            "visual_holes_enter_screen_ray_selection_proxy_coordinate_match": len(
+                screen_ray_selection_proxy_pairs
+            ),
+            "visual_holes_enter_screen_ray_selection_drawable_changed_before_snapshot": sum(
+                row.get("miss_screen_ray_selected_drawable")
+                != row.get("focus_proxy_drawable_mesh")
+                for row in screen_ray_selection_proxy_pairs
+            ),
+            "visual_holes_enter_screen_ray_selection_satisfying_changed_before_snapshot": sum(
+                row.get("miss_screen_ray_selected_satisfying")
+                != row.get("focus_proxy_satisfying_mesh")
+                for row in screen_ray_selection_proxy_pairs
+            ),
+            "visual_holes_enter_screen_ray_selection_repairable_debt_changed_before_snapshot": sum(
+                row.get("miss_screen_ray_selected_repairable_geometry_debt")
+                != row.get("focus_proxy_repairable_geometry_debt")
+                for row in screen_ray_selection_proxy_pairs
+            ),
+            "visual_holes_enter_screen_ray_selection_state_scope": (
+                "selection-time mesh/debt sample from the chosen screen-ray "
+                "candidate; focus_proxy fields are sampled later in the same "
+                "streaming refresh, joined by the exact miss coordinates"
             ),
             "visual_holes_enter_start_band_events": sum(
                 -6.0 <= cx <= 6.0 for cx in event_focus_cx

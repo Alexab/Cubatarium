@@ -948,8 +948,16 @@ struct PhysicsTelemetry
   int FocusProxyPendingGpuApply{0};
   int FocusProxyDrawableMesh{0};
   int FocusProxySatisfyingMesh{0};
+  int FocusProxyGeometryDebt{0};
+  int FocusProxyRepairableGeometryDebt{0};
   /// Current miss witness came from a camera screen-ray opaque voxel hit.
   int MissScreenRayCandidate{0};
+  /// Selection-time mesh state for the exact screen-ray candidate. -1 means
+  /// no candidate or inconsistent ray samples for that chunk in this frame.
+  int MissScreenRaySelectedStateValid{0};
+  int MissScreenRaySelectedDrawable{-1};
+  int MissScreenRaySelectedSatisfying{-1};
+  int MissScreenRaySelectedRepairableGeometryDebt{-1};
   /// Count of focus columns with mesh but no sky light sample.
   int FocusDarkMesh{0};
   /// Era39 A4: pending-dark (hidden until lit) vs sticky remesh (preview class).

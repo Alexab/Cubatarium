@@ -274,6 +274,7 @@ void OpenSessionLocked(Session &s)
 
 struct FrameNumbers
 {
+  uint64_t frame_epoch{0};
   double wall_ms{0.0};
   double sim_ms{0.0};
   double swap_wait_ms{0.0};
@@ -972,7 +973,13 @@ struct FrameNumbers
   int focus_proxy_pending_gpu_apply{0};
   int focus_proxy_drawable_mesh{0};
   int focus_proxy_satisfying_mesh{0};
+  int focus_proxy_geometry_debt{0};
+  int focus_proxy_repairable_geometry_debt{0};
   int miss_screen_ray_candidate{0};
+  int miss_screen_ray_selected_state_valid{0};
+  int miss_screen_ray_selected_drawable{-1};
+  int miss_screen_ray_selected_satisfying{-1};
+  int miss_screen_ray_selected_repairable_geometry_debt{-1};
   int post_load_ring_not_ready{0};
   int enter_game_warmup_missing_greedy{0};
   uint64_t softdefer_capture_floor_hits{0};
@@ -1256,6 +1263,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
 {
   FrameNumbers n;
   const PhysicsTelemetry &phys = world.GetPhysicsTelemetry();
+  n.frame_epoch = world.GetStreamingFrameEpoch();
   n.wall_ms = frame_wall_ms > 0.0 ? frame_wall_ms
                                   : world.GetWallFrameDelta() * 1000.0;
   n.phys_ms = phys.PhysicsStepMs;
@@ -2001,7 +2009,18 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_proxy_pending_gpu_apply = phys.FocusProxyPendingGpuApply;
   n.focus_proxy_drawable_mesh = phys.FocusProxyDrawableMesh;
   n.focus_proxy_satisfying_mesh = phys.FocusProxySatisfyingMesh;
+  n.focus_proxy_geometry_debt = phys.FocusProxyGeometryDebt;
+  n.focus_proxy_repairable_geometry_debt =
+      phys.FocusProxyRepairableGeometryDebt;
   n.miss_screen_ray_candidate = phys.MissScreenRayCandidate;
+  n.miss_screen_ray_selected_state_valid =
+      phys.MissScreenRaySelectedStateValid;
+  n.miss_screen_ray_selected_drawable =
+      phys.MissScreenRaySelectedDrawable;
+  n.miss_screen_ray_selected_satisfying =
+      phys.MissScreenRaySelectedSatisfying;
+  n.miss_screen_ray_selected_repairable_geometry_debt =
+      phys.MissScreenRaySelectedRepairableGeometryDebt;
   n.focus_dark_mesh = phys.FocusDarkMesh;
   n.focus_provisional_light_preview = phys.FocusProvisionalLightPreview;
   n.focus_pending_dark = phys.FocusPendingDark;
@@ -2431,6 +2450,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
         return false;
       }();
   s.Jsonl << "{\"kind\":\"" << kind << "\""
+          << ",\"frame_epoch\":" << n.frame_epoch
           << (warm_stamp ? ",\"warm\":1" : "")
           << ",\"wall_ms\":" << n.wall_ms << ",\"sim_ms\":" << n.sim_ms
           << ",\"swap_wait_ms\":" << n.swap_wait_ms
@@ -3292,8 +3312,20 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.focus_proxy_drawable_mesh
           << ",\"focus_proxy_satisfying_mesh\":"
           << n.focus_proxy_satisfying_mesh
+          << ",\"focus_proxy_geometry_debt\":"
+          << n.focus_proxy_geometry_debt
+          << ",\"focus_proxy_repairable_geometry_debt\":"
+          << n.focus_proxy_repairable_geometry_debt
           << ",\"miss_screen_ray_candidate\":"
           << n.miss_screen_ray_candidate
+          << ",\"miss_screen_ray_selected_state_valid\":"
+          << n.miss_screen_ray_selected_state_valid
+          << ",\"miss_screen_ray_selected_drawable\":"
+          << n.miss_screen_ray_selected_drawable
+          << ",\"miss_screen_ray_selected_satisfying\":"
+          << n.miss_screen_ray_selected_satisfying
+          << ",\"miss_screen_ray_selected_repairable_geometry_debt\":"
+          << n.miss_screen_ray_selected_repairable_geometry_debt
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
           << ",\"focus_provisional_light_preview\":"
           << n.focus_provisional_light_preview

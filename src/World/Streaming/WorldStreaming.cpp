@@ -1106,6 +1106,11 @@ void UWorldStreaming::RefreshStreamingPressure(
   const int prev_miss_cx = world.PhysicsTelemetryData.MissCx;
   const int prev_miss_cz = world.PhysicsTelemetryData.MissCz;
   const int prev_hold_n = world.PhysicsTelemetryData.RelightWitnessHoldN;
+  world.PhysicsTelemetryData.MissScreenRaySelectedStateValid = 0;
+  world.PhysicsTelemetryData.MissScreenRaySelectedDrawable = -1;
+  world.PhysicsTelemetryData.MissScreenRaySelectedSatisfying = -1;
+  world.PhysicsTelemetryData.MissScreenRaySelectedRepairableGeometryDebt =
+      -1;
   if (missing_near)
   {
     glm::ivec3 miss_coord{0};
@@ -1124,7 +1129,8 @@ void UWorldStreaming::RefreshStreamingPressure(
     auto slice_still_missing = [&](glm::ivec3 coord,
                                    uint8_t *geometry_debt_out = nullptr,
                                    uint8_t *repairable_geometry_debt_out = nullptr,
-                                   uint8_t *mesh_satisfying_out = nullptr)
+                                   uint8_t *mesh_satisfying_out = nullptr,
+                                   uint8_t *drawable_mesh_out = nullptr)
         -> bool
     {
       const UWorldMeshService &mesh = world.GetMeshService();
@@ -1144,6 +1150,7 @@ void UWorldStreaming::RefreshStreamingPressure(
           mesh.HasScreenRayRepairableGeometryDebt(coord,
                                                   ch->GetIncarnation());
       const bool mesh_satisfying = mesh.HasMeshSatisfyingColumnReady(coord);
+      const bool drawable_mesh = mesh.HasDrawableGreedyMesh(coord);
       if (geometry_debt_out)
       {
         *geometry_debt_out = geometry_debt ? 1u : 0u;
@@ -1156,6 +1163,10 @@ void UWorldStreaming::RefreshStreamingPressure(
       {
         *repairable_geometry_debt_out =
             repairable_geometry_debt ? 1u : 0u;
+      }
+      if (drawable_mesh_out)
+      {
+        *drawable_mesh_out = drawable_mesh ? 1u : 0u;
       }
       if (mesh_satisfying && !repairable_geometry_debt)
       {
@@ -1193,6 +1204,11 @@ void UWorldStreaming::RefreshStreamingPressure(
             float nearest_distance{std::numeric_limits<float>::max()};
             bool geometry_debt{false};
             bool needs_first_mesh{false};
+            bool snapshot_state_initialized{false};
+            bool snapshot_state_consistent{true};
+            bool snapshot_drawable{false};
+            bool snapshot_satisfying{false};
+            bool snapshot_repairable_geometry_debt{false};
           };
           struct ScreenRaySampleTrace
           {
@@ -1212,6 +1228,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             uint8_t in_focus_radius{0};
             uint8_t in_height_band{0};
             uint8_t mesh_satisfying{0};
+            uint8_t drawable_mesh{0};
             uint8_t geometry_debt{0};
             uint8_t repairable_geometry_debt{0};
             uint8_t needs_light_repair{0};
@@ -1328,7 +1345,8 @@ void UWorldStreaming::RefreshStreamingPressure(
               ray_trace.needs_refresh =
                   slice_still_missing(coord, &ray_trace.geometry_debt,
                                        &ray_trace.repairable_geometry_debt,
-                                       &ray_trace.mesh_satisfying)
+                                       &ray_trace.mesh_satisfying,
+                                       &ray_trace.drawable_mesh)
                       ? 1u
                       : 0u;
               if (!ray_trace.needs_refresh)
@@ -1349,6 +1367,25 @@ void UWorldStreaming::RefreshStreamingPressure(
               }
               Candidate &candidate = candidates[candidate_index];
               ++candidate.sample_count;
+              const bool sample_drawable = ray_trace.drawable_mesh != 0;
+              const bool sample_satisfying = ray_trace.mesh_satisfying != 0;
+              const bool sample_repairable_debt =
+                  ray_trace.repairable_geometry_debt != 0;
+              if (!candidate.snapshot_state_initialized)
+              {
+                candidate.snapshot_state_initialized = true;
+                candidate.snapshot_drawable = sample_drawable;
+                candidate.snapshot_satisfying = sample_satisfying;
+                candidate.snapshot_repairable_geometry_debt =
+                    sample_repairable_debt;
+              }
+              else if (candidate.snapshot_drawable != sample_drawable ||
+                       candidate.snapshot_satisfying != sample_satisfying ||
+                       candidate.snapshot_repairable_geometry_debt !=
+                           sample_repairable_debt)
+              {
+                candidate.snapshot_state_consistent = false;
+              }
               candidate.geometry_debt =
                   candidate.geometry_debt ||
                   ray_trace.repairable_geometry_debt != 0;
@@ -1457,9 +1494,27 @@ void UWorldStreaming::RefreshStreamingPressure(
           screen_ray_repair_count = selected_candidate_count;
           if (selected_candidate_count > 0)
           {
-            miss_coord = candidates[candidate_order[0]].coord;
+            const Candidate &pressure_candidate =
+                candidates[candidate_order[0]];
+            miss_coord = pressure_candidate.coord;
             found = true;
             screen_ray_candidate = true;
+            auto &telem = world.PhysicsTelemetryData;
+            telem.MissScreenRaySelectedStateValid =
+                pressure_candidate.snapshot_state_initialized &&
+                        pressure_candidate.snapshot_state_consistent
+                    ? 1
+                    : 0;
+            if (telem.MissScreenRaySelectedStateValid)
+            {
+              telem.MissScreenRaySelectedDrawable =
+                  pressure_candidate.snapshot_drawable ? 1 : 0;
+              telem.MissScreenRaySelectedSatisfying =
+                  pressure_candidate.snapshot_satisfying ? 1 : 0;
+              telem.MissScreenRaySelectedRepairableGeometryDebt =
+                  pressure_candidate.snapshot_repairable_geometry_debt ? 1
+                                                                        : 0;
+            }
           }
           if (capture_screen_ray_trace)
           {
@@ -1521,6 +1576,14 @@ void UWorldStreaming::RefreshStreamingPressure(
     }
     world.PhysicsTelemetryData.MissScreenRayCandidate =
         screen_ray_candidate ? 1 : 0;
+    if (!screen_ray_candidate)
+    {
+      world.PhysicsTelemetryData.MissScreenRaySelectedStateValid = 0;
+      world.PhysicsTelemetryData.MissScreenRaySelectedDrawable = -1;
+      world.PhysicsTelemetryData.MissScreenRaySelectedSatisfying = -1;
+      world.PhysicsTelemetryData.MissScreenRaySelectedRepairableGeometryDebt =
+          -1;
+    }
     if (!found &&
         ShouldHoldNearMissWitness(prev_horiz, slice_still_missing(pinned)))
     {
@@ -2146,6 +2209,8 @@ void UWorldStreaming::RefreshStreamingPressure(
   pt.FocusProxyPendingGpuApply = 0;
   pt.FocusProxyDrawableMesh = 0;
   pt.FocusProxySatisfyingMesh = 0;
+  pt.FocusProxyGeometryDebt = 0;
+  pt.FocusProxyRepairableGeometryDebt = 0;
   if (in.visual_holes)
   {
     const glm::ivec3 miss_chunk(pt.MissCx, pt.MissCy, pt.MissCz);
@@ -2173,6 +2238,20 @@ void UWorldStreaming::RefreshStreamingPressure(
         mesh_service.HasDrawableGreedyMesh(miss_chunk) ? 1 : 0;
     pt.FocusProxySatisfyingMesh =
         mesh_service.HasMeshSatisfyingColumnReady(miss_chunk) ? 1 : 0;
+    const UChunk *proxy_chunk =
+        world.GetBlockWorld().GetChunkManager().GetChunk(miss_chunk);
+    if (proxy_chunk)
+    {
+      const uint64_t incarnation = proxy_chunk->GetIncarnation();
+      pt.FocusProxyGeometryDebt =
+          mesh_service.HasGeometryPublicationDebt(miss_chunk, incarnation) ? 1
+                                                                           : 0;
+      pt.FocusProxyRepairableGeometryDebt =
+          mesh_service.HasScreenRayRepairableGeometryDebt(miss_chunk,
+                                                         incarnation)
+              ? 1
+              : 0;
+    }
   }
   in.underfeet_need = FeetColumnUnderfeetNeed(
       incomplete_camera_column, missing_underfeet_mesh, pending_underfeet);
