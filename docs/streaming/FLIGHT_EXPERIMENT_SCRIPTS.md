@@ -7721,6 +7721,12 @@ The process returned `0` with `run_outcome=success`, no hang, and covered
 `5.19653 blocks/s`; median fly wall time was `14.47 ms` (`69.1` effective FPS).
 This is a warmed/persisted-world repeat, not the periodic fresh-seed check.
 
+Important run-condition correction: the M555 manifest records both
+`fog_on=false` and `route.fog_pull_in_enabled=false`. The 36-block value below
+is therefore the configured fog-distance model, not active fog in this run.
+"Beyond fog" classifications from M555/M556 must not be read as proof that a
+witness was hidden from the operator or outside the no-fog render range.
+
 The analyzer recorded 31 of 1,410 steady period samples with
 `near_focus_holes=1` (`visual_holes_rate=2.20%`, 62 transitions); none were in
 the A24 start corridor. The A24 gate remains `pass=false` on the whole-route
@@ -7773,20 +7779,67 @@ python tools/run_with_host_cpu_sampler.py --output bin/logs/m555_host_cpu_202610
 
 Keep operator-visible observations separate from mesh/readiness proxies.
 
-### M556 — track one raw witness into the fog horizon (planned)
+### M556 — full-distance raw-witness lifecycle trace (2026-10-14)
 
-M556 will repeat the visible, no-teleport 2,800-second M335 route on the same
-persisted `World_164` using Release SHA256
-`0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`. The
-candidate tracker follows one exact raw radius-query miss until it becomes
-drawable+satisfying, enters the configured fog horizon while unready, or exits
-the horizon still unready. Its distance is from the preferred-load focus block
-to the chunk AABB; this is a streaming/fog-range diagnostic, not camera-frustum
-or framebuffer evidence. It samples every eight frames outside a 32-block
-approach band and every four frames inside it. Each lifecycle transition also
-gets a separate JSONL event row; A24 readiness pass/fail is unchanged.
+M556 repeated the visible, no-teleport 2,800-second M335 route on persisted
+`World_164` using the Release executable from `1f307b48` (SHA256
+`0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`). The
+process returned `0`, `run_outcome=success`, and covered `14,368` blocks / `898`
+chunks (`focus_cx=7…-891`). Median movement speed was `5.19653 blocks/s`;
+median fly wall time was `14.05 ms` (`71.18` effective FPS). This is a warmed
+persisted-world repeat, not the periodic fresh-seed check or a clean host
+performance baseline.
+
+The A24 stop-line still failed: 27 of 1,411 steady periods had
+`near_focus_holes=1`, with none in the start corridor. The near-focus mesh
+coverage proxy was nonzero in `1.91%` of samples, with 54 transitions and a
+longest run of one sample. The exact raw radius query returned 25 valid miss
+witnesses over its sampled whole-route calls; those snapshots reported 14
+repairable geometry-debt owners, nine dirty states, one flow ticket, and four
+cases with no owner among the fields captured. These categories can overlap.
+The separate focus proxy was drawable+satisfying in all 27 periods flagged by
+the near-focus signal. This disagreement keeps the gate diagnostic; it does
+not establish a blank framebuffer pixel.
+
+The lifecycle tracker emitted 533 terminal events, all
+`resolved_before_fog`; it emitted no `entered_fog_unready`,
+`resolved_after_fog`, or `exited_fog_unready` events. The event distances were
+58–108.53 blocks (median 96.61) from the preferred-load focus block to the
+witness chunk AABB. However, M556 also records `fog_on=false` and
+`route.fog_pull_in_enabled=false`. With render distance 4, the configured fog
+horizon was 36 blocks while the no-fog render horizon was 64 blocks. Some
+resolved witnesses were therefore inside the no-fog render-distance bound;
+the 533 outcomes do not prove they cleared before becoming potentially
+visible. The tracker uses preferred-load focus and chunk-AABB distance, not
+camera frustum, occlusion, or framebuffer pixels. A follow-up with explicitly
+enabled fog is required to interpret the fog-entry lifecycle against active
+presentation.
+
+At the end of the flight, `post_stop_mesh_missing_max=0` and
+`post_stop_visual_holes_max=0`, but readiness debt remained at 8 and the
+post-stop convergence gate failed. `visible_black_focus_n` peaked at 38; this
+is a focus census, not pixel evidence. The host sampler reported machine CPU
+median/p95/max `36.2/69.9/98%` and app use `1.9/2.6/3.5` cores, so these are not
+quiet-host performance results.
+
+Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m556_world164_m335_witness_to_fog_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-032651_25908.jsonl), and [host samples](../../bin/logs/m556_host_cpu_20261014.jsonl).
 
 ```powershell
 $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m556_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m556_world164_m335_witness_to_fog --report bin/suite_reports/engine_refactor/m556_world164_m335_witness_to_fog_20261014.json --process-timeout 3600
+```
+
+### M557 — repeat lifecycle trace with active fog (next)
+
+Repeat M335 on the same `World_164` and current Release build, changing only
+the explicit fog setting. This removes the ambiguity in M555/M556 between the
+configured 36-block horizon and the actual presentation state. Keep GUI visible
+and capture the same performance/readiness metrics; any screenshot or pixel
+capture must be treated as separate evidence because the compositor capture
+path has previously mixed other-window content into saved frames.
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='0';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m557_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m557_world164_m335_fog_on_witness_lifecycle --report bin/suite_reports/engine_refactor/m557_world164_m335_fog_on_witness_lifecycle_20261014.json --process-timeout 3600
 ```

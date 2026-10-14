@@ -9065,34 +9065,41 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    persistent ownership.
 2. **Done:** M555 completed the full visible 2,800-second M335 route on the
    persisted `World_164`: process success, `14,352` blocks / `897` chunks,
-   median `5.19653 blocks/s`. Its A24 gate still failed on 31 whole-route
-   near-focus mesh-hole periods; the start corridor had zero. The exact raw
-   witnesses were all beyond the configured fog horizon, so this run does not
-   establish that an operator-visible hole occurred. Full results are in
+   median `5.19653 blocks/s`. Its A24 gate failed on 31 whole-route near-focus
+   mesh-hole periods; the start corridor had zero. M555's manifest had both
+   `fog_on=false` and `fog_pull_in_enabled=false`; its configured-horizon
+   classification is not evidence that the misses were hidden by active fog.
+3. **Done:** M556 added a persistent selected-witness lifecycle tracker and
+   completed the full M335 route. It emitted 533 terminal events, all
+   `resolved_before_fog`, with no tracked witness entering the configured
+   36-block horizon unready. This is not proof of readiness before visibility:
+   M556 also ran with fog disabled, and its render-distance bound was 64
+   blocks. The tracker uses preferred-load focus and chunk-AABB distance, not
+   camera-frustum or framebuffer visibility. A24 still failed on 27 of 1,411
+   period samples; post-stop mesh/visual-hole proxies were zero, but readiness
+   debt remained 8 and convergence failed. Full findings are in
    [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
-3. **Implemented, awaiting M556 evidence:** track a selected raw witness across
-   frames until it becomes drawable+satisfying, enters the configured fog
-   horizon unready, or leaves it unready. This retains candidate identity,
-   owner state, age, distance, and lifecycle counters/events. M555 only captured
-   immediate state; its witness moved with the outer focus frontier, so it did
-   not show whether a particular debt clears before becoming render-relevant.
-   M556 repeats the route with the tracker; if a candidate enters fog unready,
-   trace its generation/light/mesh/apply request and repair that ownership path.
-4. **Done for interpretation:** A24 now classifies exact query witnesses by a
-   conservative chunk-AABB-to-fog lower bound. At M555's
-   `fog_pull_in_rd=4`, `margin=28`, the configured fog horizon is 36 blocks;
-   every raw miss witness had a lower bound of at least 48 blocks. Keep the
-   original A24 readiness gate unchanged. It detects mesh debt in the wider
-   streaming focus radius; it is not a pixel-visibility verdict.
-5. **Open:** sampled query memo-hit counts were zero in M554 and M555. The
-   per-frame invalidation change is not demonstrated to fix the observed
-   symptom, although no regression has been attributed to it. Review query
-   cost and within-frame sharing before considering a revert.
+4. **Done for geometric classification:** A24 reports a conservative
+   chunk-AABB-to-configured-fog-horizon lower bound. At `fog_pull_in_rd=4`,
+   `margin=28`, the modeled horizon is 36 blocks. Keep `beyond_fog` as a
+   geometric label only while fog is disabled; it does not imply occlusion or
+   invisibility. Keep the original A24 readiness gate unchanged: it measures
+   debt in the wider streaming focus radius, not framebuffer visibility.
+5. **Open:** sampled query memo-hit counts remain zero in M554–M556. The
+   per-frame invalidation change is not demonstrated to fix the symptom,
+   although no regression has been attributed to it. Review query cost and
+   within-frame sharing before considering a revert.
 6. Keep `World_164` M335 as the repeated-condition route, repeat a fresh-seed
    frontier check periodically, and use quiet-host runs for performance
-   conclusions. M555's host CPU median/p95/max was `37.8/83.5/100%`, so it is
-   not a clean performance baseline. Post-stop convergence also failed with
-   `post_stop_missing_max=3`.
+   conclusions. M556 host CPU median/p95/max was `36.2/69.9/98%` and the app
+   used `1.9/2.6/3.5` cores; this is not a clean performance baseline.
+   Post-stop readiness debt was 8 (`post_stop_mesh_missing_max=0`), so full
+   demand convergence remains unresolved.
+7. **Next:** repeat M335 with `CUBA_FLIGHT_FOG_ON=1`, changing no other route
+   inputs. This will align witness lifecycle data with active distance fog,
+   while still treating the preferred-focus/AABB model as distinct from
+   camera-frustum and pixel evidence. Then inspect the owner state of any
+   witness that enters the active horizon unready.
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.
@@ -9133,7 +9140,10 @@ diagnostic changes are committed as `be4fe1de`; Release SHA256 is
 M555 command and completed result are recorded in
 [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md). A24's Python
 analyzer now reports whether each exact radius-query miss is geometrically
-beyond the configured fog horizon. It leaves the readiness gate unchanged and
-keeps `beyond_fog` separate from framebuffer evidence. The M556 Release build
-adds a persistent single-witness lifecycle probe and event rows; its route
-command is recorded in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+beyond the configured fog-distance horizon. It leaves the readiness gate
+unchanged and keeps `beyond_fog` separate from framebuffer evidence. Both M555
+and M556 ran with fog disabled, so their 36-block horizon labels are geometric
+classifications rather than active presentation state. The M556 Release build
+adds a persistent single-witness lifecycle probe and event rows; its completed
+results and the active-fog follow-up command are recorded in
+[FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
