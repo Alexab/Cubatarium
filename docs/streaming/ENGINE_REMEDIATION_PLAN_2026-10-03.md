@@ -10068,3 +10068,36 @@ overwritten pool contents, while a marker miss with matching payload and a
 visible checked command shifts attention to vertex setup, clipping, depth, or
 render-target state. Keep user-visible water changes out of this diagnostic
 patch until M577 resolves that fork.
+
+### M577 result and M578 diagnostic fork — 2026-10-15
+
+M577 completed the full visible no-teleport M335 route on the persisted M572
+world (`process_rc=0`, 913 periods, 9,152 covered blocks). In camera X
+`[-4710,-4550]`, the water join found 696 saved-water pixel locations and 454
+CPU top-fluid triangle matches. For all 39 pixel rows with an exact source/GPU
+batch payload probe, source and GPU `batchIndex`, vertex/index counts, and the
+read-back MDI command matched; the command instance count was one. Where an
+opaque hit existed for those 39 samples, the water surface was closer to the
+camera. Yet no sampled RGB changed and no transparent-fragment marker appeared.
+
+This excludes absent saved water, absent CPU top geometry, a mismatched CPU/GPU
+batch identity, and a missing checked indirect command for those samples. It
+does **not** yet establish that VBO/EBO bytes were correct: M577's 32-bit
+`glGetBufferParameteriv` size queries returned zero, leaving both payload
+readbacks invalid. The renderer marker also executes after alpha cutout and
+opaque depth guard, so its absence alone cannot distinguish those discards
+from missing rasterization. All 780 checked rows had marker mode enabled; none
+showed marker coverage. M577's low-luminance samples are separate from the
+water issue: they had opaque depth and visible depth-surface MDI joins, and no
+samples were fully black (RGB <=16).
+
+M578 adds a fluid-only pre-discard classifier: red marks a candidate alpha
+cutout, blue an opaque-depth-guard candidate, yellow both, and magenta a
+fragment that reaches color output. It uses the existing single-pass override
+to remove the stencil-shell passes from the diagnosis while keeping the M335
+world, path, speed, and diagnostic X window unchanged. The GPU buffer-size
+witness now uses the 64-bit query already used by the mesh-ray witness. If
+M578 has shader-classification colors, fix the corresponding discard condition
+only after validating its sampled inputs; if water pixels remain unmarked,
+compare valid in-bounds GPU payload bytes and actual framebuffer depth before
+changing water meshing or streaming.

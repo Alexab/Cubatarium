@@ -21,6 +21,17 @@ def unpack_rgb(rgba: int) -> int:
     return (rgba >> 8) & 0xFFFFFF
 
 
+def classify_fragment_probe(rgba: int) -> str | None:
+    """Decode the opt-in shader marker colors used by the M578 probe."""
+    rgb = ((rgba >> 24) & 0xFF, (rgba >> 16) & 0xFF, (rgba >> 8) & 0xFF)
+    return {
+        (255, 0, 0): "alpha_cutout_candidate",
+        (0, 0, 255): "opaque_depth_guard_candidate",
+        (255, 255, 0): "both_discard_candidates",
+        (255, 0, 255): "shader_reached_color_output",
+    }.get(rgb)
+
+
 def row_float(row: dict[str, Any], key: str, default: float = -1.0) -> float:
     value = row.get(key)
     return default if value is None else float(value)
@@ -84,6 +95,7 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             block_id = chunk_blocks.get(block, 0) if chunk_blocks is not None else None
             source_triangle = bool(int(row.get("renderer_pixel_fluid_triangle_match", 0)))
             rgb_changed = unpack_rgb(rgba) != unpack_rgb(before_rgba)
+            fragment_probe_class = classify_fragment_probe(rgba)
             depth = float(row.get("renderer_pixel_pretransparent_depth", 1.0))
             fluid_state = {
                 "surface_chunk": [
@@ -404,6 +416,7 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 "transparent_fragment_marker_coverage": fluid_state[
                     "marker_coverage"
                 ],
+                "fluid_fragment_probe_class": fragment_probe_class,
             })
 
     if not samples:
@@ -443,6 +456,12 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
         "water_source_triangle_gpu_state_totals": aggregate_state_counts(
             "water_source_triangle_gpu_state_counts"
         ),
+        "fluid_fragment_probe_class_counts": dict(Counter(
+            sample["fluid_fragment_probe_class"]
+            for sample in samples
+            if sample["source_fluid_triangle_match"] and
+            sample["fluid_fragment_probe_class"] is not None
+        )),
         "mdi_probe_check_known_sample_count": sum(
             sample["fluid_surface_renderer_state"]["mdi_probe_checked"] is not None
             for sample in samples

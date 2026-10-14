@@ -2853,13 +2853,13 @@ void CaptureTransparentPixelProbe(
                                                              gpu_batch->vboByteOffset)
                                                        : 0;
                     glBindBuffer(GL_COPY_READ_BUFFER, vertex_buffer);
-                    GLint vertex_buffer_size = 0;
-                    glGetBufferParameteriv(GL_COPY_READ_BUFFER,
-                                           GL_BUFFER_SIZE,
-                                           &vertex_buffer_size);
+                    GLint64 vertex_buffer_size = 0;
+                    glGetBufferParameteri64v(GL_COPY_READ_BUFFER,
+                                             GL_BUFFER_SIZE,
+                                             &vertex_buffer_size);
                     record.renderer_pixel_fluid_gpu_vbo_buffer_bytes =
                         static_cast<uint64_t>(
-                            std::max(vertex_buffer_size, 0));
+                            std::max<GLint64>(vertex_buffer_size, 0));
                     const size_t vertex_read_bytes =
                         gpu_vertices.size() * sizeof(GreedyMeshVertex);
                     const bool vertex_readback_in_bounds =
@@ -2914,13 +2914,13 @@ void CaptureTransparentPixelProbe(
                                                             gpu_batch->eboByteOffset)
                                                       : 0;
                     glBindBuffer(GL_COPY_READ_BUFFER, index_buffer);
-                    GLint index_buffer_size = 0;
-                    glGetBufferParameteriv(GL_COPY_READ_BUFFER,
-                                           GL_BUFFER_SIZE,
-                                           &index_buffer_size);
+                    GLint64 index_buffer_size = 0;
+                    glGetBufferParameteri64v(GL_COPY_READ_BUFFER,
+                                             GL_BUFFER_SIZE,
+                                             &index_buffer_size);
                     record.renderer_pixel_fluid_gpu_ebo_buffer_bytes =
                         static_cast<uint64_t>(
-                            std::max(index_buffer_size, 0));
+                            std::max<GLint64>(index_buffer_size, 0));
                     const size_t index_read_bytes =
                         gpu_indices.size() * sizeof(uint32_t);
                     const bool index_readback_in_bounds =

@@ -9022,3 +9022,46 @@ readback bounds, and first payload mismatch. Treat `mdi_visible_pass_flags`
 as the CPU draw-instance proxy. For actual MDI readback require command flag
 bit 0 (readback), bit 1 (command matches batch), and bit 2 (instance count
 matches the submitted GPU command state).
+
+#### M578 — classify water fragment rejection
+
+M577 found matching CPU/GPU batch IDs and visible indirect commands for sampled
+water tops, with water closer to the camera than the opaque hit, but its
+fragment marker remained absent. The marker ran after alpha cutout and opaque
+depth-guard discards, so it did not distinguish a discard from a fragment that
+never rasterized. M578 moves a fluid-only forensic branch before those
+discards, uses marker colors for alpha/depth-guard candidates, and forces the
+existing single-pass transparent path to remove stencil-shell state from this
+diagnostic. The marker changes only fluid in camera X `[-4710,-4550]`.
+
+Build the Release app target and repeat the exact M335 route/world:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='1'
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m578_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m578_m572_water_discard_probe --report bin/suite_reports/engine_refactor/m578_m572_water_discard_probe_20261015.json --process-timeout 2600
+```
+
+In the joined pixel report, red means the alpha cutout would discard the
+fragment, blue means the opaque-depth guard would discard it, yellow means
+both conditions hold, and magenta means shader output was reached. An unchanged
+pixel with no marker after forcing single-pass no longer implicates stencil;
+check framebuffer depth, GPU payload readback validity, and submitted vertex
+state. Buffer sizes in the M578 payload witness use `glGetBufferParameteri64v`.
