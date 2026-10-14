@@ -1515,6 +1515,19 @@ void UWorldStreaming::RefreshStreamingPressure(
                   pressure_candidate.snapshot_repairable_geometry_debt ? 1
                                                                         : 0;
             }
+            const int selected_horiz =
+                std::max(std::abs(miss_coord.x - focus_ground.x),
+                         std::abs(miss_coord.z - focus_ground.z));
+            if (UJobStageTrace::VisualBlackTraceEnabled() &&
+                telem.VisualHoles == 0 && selected_horiz <= 2)
+            {
+              // The sparse screen-ray trace cadence can miss a near-focus
+              // visual-hole rising edge. Capture the bounded ray grid now so
+              // GeometryEngine can sample its matching pixels in this epoch.
+              capture_screen_ray_trace = true;
+              UJobStageTrace::MarkVisualHoleScreenRayEventForFrame(
+                  screen_ray_frame_epoch);
+            }
           }
           if (capture_screen_ray_trace)
           {

@@ -4294,6 +4294,10 @@ void UGeometryEngine::DrawCubeGeometry()
           UJobStageTrace::HasCameraBandPeakTraceForFrame(
               pixel_probe_frame_epoch) &&
           last_camera_band_peak_probe_epoch != pixel_probe_frame_epoch;
+      const bool screen_ray_visual_hole_event =
+          pixel_probe_in_x_range && probe_on_screen_ray &&
+          UJobStageTrace::HasVisualHoleScreenRayEventForFrame(
+              pixel_probe_frame_epoch);
       const bool screen_ray_probe =
           probe_on_screen_ray &&
           UJobStageTrace::HasScreenRayTraceForFrame(
@@ -4336,7 +4340,8 @@ void UGeometryEngine::DrawCubeGeometry()
             (focus_change_pixel_probe ? 1u << 1 : 0u) |
             (screen_ray_aligned_capture ? 1u << 2 : 0u) |
             (camera_band_peak_pixel_probe ? 1u << 3 : 0u) |
-            (stalled_census_pixel_probe ? 1u << 4 : 0u));
+            (stalled_census_pixel_probe ? 1u << 4 : 0u) |
+            (screen_ray_visual_hole_event ? 1u << 5 : 0u));
         pixel_probe_capture.rows = screen_ray_aligned_capture
                                        ? std::max(kScreenRayAlignedPixelRows,
                                                   PixelProbeRows())
