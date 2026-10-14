@@ -8543,4 +8543,87 @@ user-visible recovery requires concrete queue/worker/GPU ownership and
 progress.
 History points to `c390532d` (2026-10-07) as the likely regression: it moved
 demand upkeep out of the post-emerge telemetry call and left the budget-exit
-path without maintenance. This run has not yet been executed.
+path without maintenance. M569 has now completed; its route and findings are
+recorded below. The exact M568 terminal attempt at `(-571,1,6)` was not reached
+by the 1,800-second M335 duration, so this does not yet close its lifecycle
+question.
+
+#### M569 result — cache-state and sparse framebuffer trace (2026-10-14)
+
+M569 ran with the exact M335 world/start/speed/altitude/heading and completed
+normally on Release commit `0a13572c` (executable SHA-256
+`E893A39836DA4CCFAAF91C16E9642B4B6896A4D8B148FF327CA27E5633328B6C`). It ran
+1,835 requested seconds / 1,870.14 wall seconds, moved 570 chunks
+(`[7,3]`→`[-563,3]`), had no clock gap or collision stop, and completed both
+obstacle detours. Artifacts:
+
+- [flight report](../../bin/flight_sim_report.json)
+- [suite report](../../bin/suite_reports/engine_refactor/m569_world164_m335_cache_empty_state_20261014.json)
+- [perf JSONL](../../bin/logs/perf_20261014-192505_20640.jsonl)
+- [host CPU samples](../../bin/logs/m569_host_cpu_20261014.jsonl)
+- [hole/pixel event join](../../bin/suite_reports/engine_refactor/m569_hole_pixel_join_20261014.json)
+- [framebuffer grid summary](../../bin/suite_reports/engine_refactor/m569_pixel_grid_20261014.json)
+
+Although the process returned zero, the suite report is not green: A24,
+eye-proxy, and post-stop convergence failed. Readiness scopes explain much of
+that result. All 77 period-level and 260 event-level classified raw misses
+were beyond their recorded fog horizon; all 669 tracked-witness events
+resolved before fog and none entered fog unready. The A24 counter reported 50
+whole-route periods but only one in the named M335 start corridor (`focus_cx`
+2–5). In that seven-period corridor, six samples had zero mesh-hole proxies;
+one had a transient count of one. The final 12 stop periods had zero visual
+holes, near-focus holes, and direct missing-mesh counts, while global
+`unfinished_visual` remained 29–31 and the post-stop focus missing-mesh
+maximum was 28. These readiness numbers are not framebuffer proof.
+
+M569 also captured 620 sparse renderer-framebuffer grids, 80 pixels each
+(49,600 direct color/depth samples): 611 periodic and nine camera-band peak
+captures. Sampled pixels had no RGB channel maximum ≤8 or ≤16; minimum
+Rec.709 luminance was 24.48. All five in-fog solid-ray samples with clear
+opaque depth had a valid sea-plane surface and blue pixel color, consistent
+with transparent water. The five unloaded-ray witnesses were past fog end.
+This is direct evidence about those samples, not a complete-frame guarantee.
+
+The event join found 358 moving `visual_holes_enter` events; 89 had a
+same-epoch screen-ray trace and 87 had a selected ray for the exact miss
+chunk, but none had an event-triggered pixel capture. M569 did not enable
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY`; it therefore did not resolve
+whether those edge events changed the rendered pixel. Use the analyzer pair
+below for future traces:
+
+```powershell
+python tools/analyze_framebuffer_pixel_grid.py bin/logs/perf_<run>.jsonl --json-out bin/suite_reports/engine_refactor/<run>_pixel_grid.json
+python tools/analyze_hole_event_pixels.py bin/logs/perf_<run>.jsonl --json-out bin/suite_reports/engine_refactor/<run>_hole_pixel_join.json
+```
+
+The age field was median 10 frames, p95 23, max 33; 31/911 samples were older
+than 23 frames. This indicates the census cadence is mostly met, not a strict
+24-frame maximum. All 992 retained `focus_slice_trace` state-1 rows described
+non-air zero-vertex/zero-quad slices 4–6.4 chunks from the terminal focus,
+outside the configured fog horizon. The exact prior candidate
+`(-571,1,6)` / attempt `182634` was absent because M335 ended at x=`-563`; it
+lies eight chunks beyond that endpoint. M569 therefore cannot confirm the
+budget-exit cleanup fix for that exact lifecycle.
+
+#### M570 — same M335 flight with event-aligned framebuffer capture (running)
+
+M570 started after M569 using the same Release executable and unchanged M335
+world/start/speed/altitude/heading/duration. It sets
+`CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY=1` to capture pixels in frames
+with screen-ray traces and visual-hole edges. This is a diagnostic correctness
+run, not a performance baseline.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m570_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m570_world164_m335_event_aligned_pixels --report bin/suite_reports/engine_refactor/m570_world164_m335_event_aligned_pixels_20261014.json --process-timeout 2600
+```
+
+After M570 closes its perf log, run both pixel analyzers above. Retain
+separate outcomes for exact event-pixel joins, the sparse route-wide grid,
+mesh/readiness proxies, and post-stop convergence. Do not call a proxy-only
+FAIL a verified framebuffer hole, and do not call a sparse-grid clean result
+a proof that every frame was clean.

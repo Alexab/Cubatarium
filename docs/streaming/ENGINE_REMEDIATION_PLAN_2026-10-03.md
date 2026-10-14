@@ -9533,3 +9533,70 @@ five-second samples); do not use those measurements as a performance
 baseline. M569 should first verify whether aged `Created` attempts now cancel
 and whether their cache entries contain vertices/quads; schedule a performance
 pass only after a quiet-host window.
+
+### M569 execution result — no sampled black pixels; broad readiness is not view evidence
+
+M569 completed on the Release executable whose SHA-256 is
+`E893A39836DA4CCFAAF91C16E9642B4B6896A4D8B148FF327CA27E5633328B6C` and whose
+manifest identifies commit `0a13572c`. The flight process returned `0`, ran
+1,835 requested seconds / 1,870.14 wall seconds, and advanced 570 chunks from
+focus `[7,3]` to `[-563,3]`. No clock gap or collision stop was recorded;
+heading remained stable, two obstacle detours completed, and maximum lateral
+route deviation was 2.315 blocks. The suite's analyzer still returned
+`pass=false`: A24, eye-proxy, and post-stop convergence gates failed, while the
+flight itself completed normally.
+
+The perf trace contains 620 in-renderer framebuffer captures of 80 pixels each
+(49,600 samples): 611 periodic captures and nine camera-band peak captures.
+These are actual RGBA/depth reads from the renderer framebuffer, but they are
+sparse grids rather than screenshots or full-frame coverage. None was aligned
+to a `visual_holes_enter` event: the existing event-pixel join found 358
+moving hole-edge events, 89 same-epoch screen-ray traces, and zero event-pixel
+captures. Across the sampled pixels there were no RGB samples with all channels
+at most 8 or 16; minimum Rec.709 luminance was 24.48. The five solid-voxel rays
+inside the recorded fog end with clear opaque depth also had a valid sea-plane
+surface sample and blue framebuffer color, consistent with transparent water.
+All five unloaded-ray witnesses and all 12 geometric mesh-ray gaps were beyond
+their recorded fog end. Thus M569 found no direct pixel evidence of a black
+hole in its sample grid, but it did not pixel-join the reported transient
+proxy events.
+
+The reusable streaming analysis is
+[`tools/analyze_framebuffer_pixel_grid.py`](../../tools/analyze_framebuffer_pixel_grid.py);
+its M569 output is
+[`m569_pixel_grid_20261014.json`](../../bin/suite_reports/engine_refactor/m569_pixel_grid_20261014.json).
+
+The broad counters still need to be kept distinct from visible defects. Of 77
+period-level raw radius-query misses and 260 event-level raw misses, every
+classified witness was beyond the active fog horizon; none intersected it.
+All 669 tracked witness events resolved before fog and none entered fog
+unready. In the named M335 start corridor (`focus_cx` 2–5), six of seven
+periods had zero `near_focus_holes` and `visual_holes`; one period had a
+single-sample proxy. The eye-proxy stop line therefore failed on stale-apply
+delta/blink diagnostics despite zero median hole proxies. At the route end,
+the final 12 periods had zero visual holes, near-focus holes, and direct
+missing-mesh counters, while broad `unfinished_visual` readiness debt stayed
+at 29–31 and post-stop mesh-missing reached 28. The global demand-stop gate
+remained false. These are unresolved global/off-view obligations, not proof
+that the rendered view was empty.
+
+The focus census age was median 10 frames, p95 23, max 33; 31/911 samples
+(3.4%) were older than the intended 23-frame observation interval. Treat this
+as evidence that the cadence is mostly being met, not a hard 24-frame bound.
+The state-1 cache trace sampled non-air, zero-vertex/zero-quad slices 4–6.4
+chunks from the endpoint focus, outside the recorded fog horizon. The exact
+M568 candidate `(-571,1,6)` / attempt `182634` does not occur in M569's trace:
+the fixed 1,800-second route ended at focus x=`-563`, eight chunks short of
+that westbound location. Consequently M569 does not validate cancellation or
+re-admission of that exact attempt, and its broad state-1 samples cannot
+substitute for that lifecycle join.
+
+M569 is a lifecycle and sparse-pixel correctness probe, not a clean
+performance baseline: deep visual tracing and framebuffer readbacks were
+enabled, and the host sampler recorded substantial background CPU load. The
+next M335 repeat, M570, adds pixel capture aligned to screen-ray events while
+keeping world, start, speed, altitude, direction, and route unchanged. If the
+exact ownerless attempt remains a required acceptance case after M570, extend
+the same westbound segment only far enough to cross x=`-571`; preserve its
+no-teleport motion and all other M335 parameters. Do not weaken readiness or
+convergence gates to make these off-view obligations disappear.
