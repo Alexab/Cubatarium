@@ -9477,9 +9477,12 @@ the census is called on cache-hit and incremental paths as well as full scans.
 Therefore the repeated zero-scheduler windows are confirmed for the diagnostic
 configuration, but do not establish scheduler starvation in an uninstrumented
 Release flight. M569 remains a lifecycle/correctness probe, not a performance
-baseline. Add a follow-up to decouple or cadence the expensive data-mesh census
-from general visual tracing, report its sample age, then compare traced and
-capture-disabled M335 runs on a quiet host.
+baseline. The current source change now caps this detailed census at one scan
+per 24 streaming frames, while forcing a fresh scan when world, horizontal
+focus/radius, or camera vertical band changes. It exports
+`focus_data_sample_age_frames` so consumers can see staleness. A Release build
+and M569 run still need to validate the CPU reduction and trace continuity;
+then compare traced and capture-disabled M335 runs on a quiet host.
 
 Commit `feb5b271` runs that same bounded maintenance before the early return.
 It does not admit additional mesh work or relax stop convergence. The M568

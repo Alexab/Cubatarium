@@ -8502,9 +8502,12 @@ nine rows, `PrepRefreshUnfinishedMs` consumed 3.409–3.737 ms of
 `PrepRefreshPressureMs` 4.417–4.916 ms (about 76–77%). M568 ran with
 `CUBA_VISUAL_BLACK_TRACE=1`; that flag enables a resident-slice data-mesh census
 inside `CountUnfinishedVisualNear`, including cache-hit calls. Treat M569 as a
-lifecycle probe only. Before using a traced flight for performance conclusions,
-decouple or cadence this census and expose the sample age, then compare the
-fixed route with capture disabled.
+lifecycle probe only. The current source change limits this full census to one
+scan per 24 streaming frames and forces refresh on world/focus/radius/camera
+band changes. JSONL now records `focus_data_sample_age_frames`; the Release
+build and M569 run must still verify the reduction and preserve lifecycle
+transitions. Compare the fixed route with capture disabled before drawing
+performance conclusions.
 
 Prepared M569 command:
 

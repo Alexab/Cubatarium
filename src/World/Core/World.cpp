@@ -3509,44 +3509,80 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   auto refresh_data_mesh_census = [&]()
   {
     FocusRingVisualCensus &census = cache.readiness;
-    census.data_mesh_valid =
-        UJobStageTrace::VisualBlackTraceEnabled() && MeshService != nullptr;
-    census.resident_solid_slice_n = 0;
-    census.resident_air_slice_n = 0;
-    census.absent_slice_n = 0;
-    census.non_air_voxel_n = 0;
-    census.band_solid_slice_n = 0;
-    census.band_solid_mesh_n = 0;
-    census.band_solid_no_drawable_n = 0;
-    census.band_solid_satisfying_n = 0;
-    census.band_solid_accepted_empty_n = 0;
-    census.band_solid_pending_mesh_n = 0;
-    census.band_solid_pending_work_n = 0;
-    census.band_solid_dirty_n = 0;
-    census.band_solid_unowned_n = 0;
-    census.camera_band_solid_slice_n = 0;
-    census.camera_band_solid_no_drawable_n = 0;
-    census.camera_band_solid_satisfying_n = 0;
-    census.camera_band_solid_pending_work_n = 0;
-    census.camera_band_solid_dirty_n = 0;
-    census.camera_band_solid_oldest_dirty_age_frames = 0;
-    census.camera_band_oldest_dirty_cx = 0;
-    census.camera_band_oldest_dirty_cy = 0;
-    census.camera_band_oldest_dirty_cz = 0;
-    census.camera_band_solid_unowned_n = 0;
-    census.band_solid_unresolved_no_work_n = 0;
-    census.band_solid_draw_gate_closed_n = 0;
-    census.band_solid_draw_ready_n = 0;
-    census.band_solid_gpu_live_n = 0;
-    if (!census.data_mesh_valid)
+    const auto clear_data_mesh_counts = [&]()
     {
+      census.resident_solid_slice_n = 0;
+      census.resident_air_slice_n = 0;
+      census.absent_slice_n = 0;
+      census.non_air_voxel_n = 0;
+      census.band_solid_slice_n = 0;
+      census.band_solid_mesh_n = 0;
+      census.band_solid_no_drawable_n = 0;
+      census.band_solid_satisfying_n = 0;
+      census.band_solid_accepted_empty_n = 0;
+      census.band_solid_pending_mesh_n = 0;
+      census.band_solid_pending_work_n = 0;
+      census.band_solid_dirty_n = 0;
+      census.band_solid_unowned_n = 0;
+      census.camera_band_solid_slice_n = 0;
+      census.camera_band_solid_no_drawable_n = 0;
+      census.camera_band_solid_satisfying_n = 0;
+      census.camera_band_solid_pending_work_n = 0;
+      census.camera_band_solid_dirty_n = 0;
+      census.camera_band_solid_oldest_dirty_age_frames = 0;
+      census.camera_band_oldest_dirty_cx = 0;
+      census.camera_band_oldest_dirty_cy = 0;
+      census.camera_band_oldest_dirty_cz = 0;
+      census.camera_band_solid_unowned_n = 0;
+      census.band_solid_unresolved_no_work_n = 0;
+      census.band_solid_draw_gate_closed_n = 0;
+      census.band_solid_draw_ready_n = 0;
+      census.band_solid_gpu_live_n = 0;
+    };
+    if (!UJobStageTrace::VisualBlackTraceEnabled() || !MeshService)
+    {
+      census.data_mesh_valid = false;
+      census.data_mesh_sample_age_frames = 0;
+      clear_data_mesh_counts();
       return;
     }
+    constexpr uint64_t kDataMeshCensusIntervalFrames = 24;
+    const glm::ivec3 camera_block = GetPreferredLoadFocusBlock();
+    const int camera_cy = FloorDiv(camera_block.y, CHUNK_SIZE);
+    const uint64_t world_epoch =
+        MeshService->GetCache().GetCaptureStore().WorldEpoch();
+    const bool same_context =
+        cache.data_mesh_sample_world_epoch == world_epoch &&
+        cache.data_mesh_sample_focus.x == cache.focus.x &&
+        cache.data_mesh_sample_focus.y == cache.focus.y &&
+        cache.data_mesh_sample_focus.z == cache.focus.z &&
+        cache.data_mesh_sample_radius == cache.radius &&
+        cache.data_mesh_sample_camera_cy == camera_cy;
+    const uint64_t frame_epoch = StreamingFrameEpoch;
+    const bool recent_sample =
+        census.data_mesh_valid && same_context &&
+        frame_epoch >= cache.data_mesh_sample_frame_epoch &&
+        (frame_epoch - cache.data_mesh_sample_frame_epoch) <
+            kDataMeshCensusIntervalFrames;
+    if (recent_sample)
+    {
+      census.data_mesh_sample_age_frames =
+          frame_epoch - cache.data_mesh_sample_frame_epoch;
+      return;
+    }
+    cache.data_mesh_sample_frame_epoch = frame_epoch;
+    cache.data_mesh_sample_world_epoch = world_epoch;
+    cache.data_mesh_sample_focus = cache.focus;
+    cache.data_mesh_sample_radius = cache.radius;
+    cache.data_mesh_sample_camera_cy = camera_cy;
+    census.data_mesh_valid = true;
+    census.data_mesh_sample_age_frames = 0;
+    clear_data_mesh_counts();
 
     const int max_height = std::max(0, ProceduralTemplate.MaxHeight);
     const int max_cy =
         std::max(0, FloorDiv(max_height, CHUNK_SIZE));
-    const int focus_y = GetPreferredLoadFocusBlock().y;
+    const int focus_y = camera_block.y;
     const int camera_band_min = std::max(0, focus_y - CHUNK_SIZE);
     const int camera_band_max =
         std::min(max_height, focus_y + CHUNK_SIZE * 2);
@@ -3580,8 +3616,6 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     };
     std::vector<FocusSliceCandidate> focus_slice_candidates;
     focus_slice_candidates.reserve(128);
-    const glm::ivec3 camera_block = GetPreferredLoadFocusBlock();
-    const int camera_cy = FloorDiv(camera_block.y, CHUNK_SIZE);
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
     {
       for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
@@ -4277,7 +4311,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   }
   int unfinished = 0;
   cache.unfinished_keys.clear();
-  cache.readiness = {};
+  cache.readiness.counts = {};
   cache.readiness_by_column.clear();
   cache.readiness_by_column.reserve(static_cast<size_t>(
       (2 * radius_chunks + 1) * (2 * radius_chunks + 1)));
@@ -4318,7 +4352,16 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
 
 FocusRingVisualCensus UWorld::GetFocusRingVisualCensus() const
 {
-  return UnfinishedVisualCache.readiness;
+  FocusRingVisualCensus census = UnfinishedVisualCache.readiness;
+  if (census.data_mesh_valid &&
+      StreamingFrameEpoch >=
+          UnfinishedVisualCache.data_mesh_sample_frame_epoch)
+  {
+    census.data_mesh_sample_age_frames =
+        StreamingFrameEpoch -
+        UnfinishedVisualCache.data_mesh_sample_frame_epoch;
+  }
+  return census;
 }
 
 bool UWorld::HasStablePublishedFaceDebt(glm::ivec3 coord) const
@@ -5635,7 +5678,7 @@ void UWorld::InvalidateUnfinishedVisualCache() const
   UnfinishedVisualCache.dirty_cols.clear();
   UnfinishedVisualCache.unfinished_keys.clear();
   UnfinishedVisualCache.readiness_by_column.clear();
-  UnfinishedVisualCache.readiness = {};
+  UnfinishedVisualCache.readiness.counts = {};
   UnfinishedVisualCache.count = 0;
   LastUnfinishedVisualSampleValid = false;
   // Phase 5.7R: do not InvalidateVisibleBlackFocusSample here — unfinished

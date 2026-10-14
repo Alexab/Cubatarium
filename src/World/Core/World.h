@@ -117,8 +117,9 @@ struct FocusRingVisualCensus
   std::array<int, static_cast<size_t>(FocusColumnVisualClass::Count)> counts{};
 
   /// Bounded diagnostic census of actual voxel occupancy and mesh readiness.
-  /// Populated only when CUBA_VISUAL_BLACK_TRACE is enabled for a flight.
+  /// Sampled at a bounded cadence when CUBA_VISUAL_BLACK_TRACE is enabled.
   bool data_mesh_valid{false};
+  uint64_t data_mesh_sample_age_frames{0};
   int resident_solid_slice_n{0};
   int resident_air_slice_n{0};
   int absent_slice_n{0};
@@ -1792,6 +1793,11 @@ private:
     int prep_hit_n{0};
     int prep_overflow_n{0};
     int prep_calls_n{0};
+    uint64_t data_mesh_sample_frame_epoch{0};
+    uint64_t data_mesh_sample_world_epoch{0};
+    glm::ivec3 data_mesh_sample_focus{0};
+    int data_mesh_sample_radius{-1};
+    int data_mesh_sample_camera_cy{-1};
     /// Run-wide maxima for the opt-in visible camera-band diagnostic. They
     /// persist as focus moves so a peak snapshot is not lost on the next ring.
     int camera_band_peak_no_drawable_n{0};

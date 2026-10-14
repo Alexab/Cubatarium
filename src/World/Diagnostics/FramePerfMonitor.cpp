@@ -690,6 +690,7 @@ struct FrameNumbers
   int focus_visual_face_debt_n{0};
   int focus_visual_ready_n{0};
   int focus_data_census_valid{0};
+  uint64_t focus_data_sample_age_frames{0};
   int focus_data_solid_slice_n{0};
   int focus_data_air_slice_n{0};
   int focus_data_absent_slice_n{0};
@@ -1752,6 +1753,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_visual_face_debt_n = phys.FocusVisualFaceDebtN;
   n.focus_visual_ready_n = phys.FocusVisualReadyN;
   n.focus_data_census_valid = phys.FocusDataCensusValid;
+  n.focus_data_sample_age_frames = phys.FocusDataSampleAgeFrames;
   n.focus_data_solid_slice_n = phys.FocusDataSolidSliceN;
   n.focus_data_air_slice_n = phys.FocusDataAirSliceN;
   n.focus_data_absent_slice_n = phys.FocusDataAbsentSliceN;
@@ -3014,6 +3016,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.focus_visual_face_debt_n
           << ",\"focus_visual_ready_n\":" << n.focus_visual_ready_n
           << ",\"focus_data_census_valid\":" << n.focus_data_census_valid
+          << ",\"focus_data_sample_age_frames\":"
+          << n.focus_data_sample_age_frames
           << ",\"focus_data_solid_slice_n\":"
           << n.focus_data_solid_slice_n
           << ",\"focus_data_air_slice_n\":" << n.focus_data_air_slice_n

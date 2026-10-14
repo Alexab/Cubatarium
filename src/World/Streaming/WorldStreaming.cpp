@@ -2848,6 +2848,8 @@ void UWorldStreaming::RefreshStreamingPressure(
       focus_visual.Get(FocusColumnVisualClass::Ready);
   world.PhysicsTelemetryData.FocusDataCensusValid =
       focus_visual.data_mesh_valid ? 1 : 0;
+  world.PhysicsTelemetryData.FocusDataSampleAgeFrames =
+      focus_visual.data_mesh_sample_age_frames;
   world.PhysicsTelemetryData.FocusDataSolidSliceN =
       focus_visual.resident_solid_slice_n;
   world.PhysicsTelemetryData.FocusDataAirSliceN =

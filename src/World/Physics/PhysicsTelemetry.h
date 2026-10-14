@@ -735,8 +735,9 @@ struct PhysicsTelemetry
   int FocusVisualNotReadyStateN{0};
   int FocusVisualFaceDebtN{0};
   int FocusVisualReadyN{0};
-  /// Diagnostic voxel/mesh census; populated with CUBA_VISUAL_BLACK_TRACE.
+  /// Diagnostic voxel/mesh census; sampled every 24 frames with visual trace.
   int FocusDataCensusValid{0};
+  uint64_t FocusDataSampleAgeFrames{0};
   int FocusDataSolidSliceN{0};
   int FocusDataAirSliceN{0};
   int FocusDataAbsentSliceN{0};
