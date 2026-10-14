@@ -9420,11 +9420,11 @@ completed with SHA-256
 
 Build concurrency inspection found that `cmake --build ... --parallel 8`
 invoked MSBuild with `/m:8` but also `/p:CL_MPCount=1`, leaving only one
-compiler worker. The project already enables MSVC `/MP`; the effective build
-command is `cmake --build bin --config Release --target Cubatarium
---clean-first --parallel 8 -- /p:CL_MPCount=8`. During that build, process
-inspection confirmed eight child `cl.exe` workers. Use this explicit override
-for subsequent Release builds on this host.
+compiler worker. The project already enables MSVC `/MP`; the persistent entry
+point is `tools/build_release.ps1 -Jobs 8 -CleanFirst`, which forwards the same
+count through `/p:CL_MPCount=8`. During the clean build, process inspection
+confirmed eight child `cl.exe` workers. Use this Release-only wrapper for
+subsequent builds on this host.
 
 After the lifecycle-watch and budget-exit changes, the incremental Release
 build also succeeded with the same `/p:CL_MPCount=8` override. The executable

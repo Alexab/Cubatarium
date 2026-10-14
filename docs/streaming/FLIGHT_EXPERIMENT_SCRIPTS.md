@@ -8468,15 +8468,20 @@ SHA-256 is
 after commits `53d1681b` and `feb5b271` added watched lifecycle transitions
 for state-1 samples and cleanup on the streaming budget exit.
 
-Build command:
+Release-only build entry point:
 
 ```powershell
-cmake --build bin --config Release --target Cubatarium --clean-first --parallel 8 -- /p:CL_MPCount=8
+tools/build_release.ps1 -Jobs 8 -CleanFirst
 ```
 
 The CMake Visual Studio generator otherwise passed `/p:CL_MPCount=1` despite
 `--parallel 8`. The command above overrides it; process inspection observed
-eight simultaneous `cl.exe` workers. Keep this override for Release builds.
+eight simultaneous `cl.exe` workers. The script preserves that override for
+future Release builds. Its exact underlying CMake command is:
+
+```powershell
+cmake --build bin --config Release --target Cubatarium --clean-first --parallel 8 -- /p:CL_MPCount=8
+```
 
 The M569 flight was not started after the build: host CPU samples were 88.7%,
 83.5%, and then 41.1% over five-second windows. The earlier high samples had
