@@ -9122,6 +9122,9 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    convergence still failed. M561 host CPU was `36.6/67.0/95.0%`, with app
    use `2.053/2.468/3.186` cores; lower than M560 but still too bursty for a
    clean baseline. Its route speed and camera movement remained in profile.
+   M561 did not collect the optional top-process list, so the source of the
+   remaining host load is unknown; enable `--top-processes-interval-sec 60`
+   if a later clean-host run needs process attribution.
 8. **Done: M558 exact census attribution; open: camera/view correlation.** M558
    captured four stalled-ticket slice coordinates in the late zone. They had
    matching mesh/field light revisions, renderer-column `draw_ok=1`, and a

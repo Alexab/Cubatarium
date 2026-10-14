@@ -8086,6 +8086,9 @@ proxies; they do not report a blank framebuffer pixel. The detailed report is
 The host sampler recorded CPU median/p95/max `36.6/67.0/95.0%`; Cubatarium
 used `2.053/2.468/3.186` cores at median/p95/max. This is lower than M560 but
 still has substantial host spikes, so it is not a quiet performance baseline.
+The sampler's optional process list was disabled; the source of aggregate host
+spikes is therefore unknown. Enable `--top-processes-interval-sec 60` on a
+future performance-baseline run if process attribution is needed.
 See [`m561_host_cpu_20261014.jsonl`](../../bin/logs/m561_host_cpu_20261014.jsonl)
 and [`perf_20261014-070809_15064.jsonl`](../../bin/logs/perf_20261014-070809_15064.jsonl).
 
