@@ -2332,7 +2332,7 @@ def main() -> int:
                             json.dumps(cfg, indent=4) + "\n", encoding="utf-8"
                         )
                     print(
-                        f"INFO: {args.scenario} CUBA_FLIGHT_FOG_ON=1 → "
+                        f"INFO: {args.scenario} CUBA_FLIGHT_FOG_ON=1 -> "
                         f"fog_pull_in_enabled=true (was {prev_fog})",
                         flush=True,
                     )
