@@ -8282,3 +8282,64 @@ a clean performance baseline. M566 changes only the diagnostics so the exact
 raw focus-radius `visual_holes_enter` edge triggers the bounded 20x5 pixel grid
 inside the same established X window even when no screen-ray repair candidate
 is selected; the event report also summarizes grid luma and darkest samples.
+
+### M566 — raw edge pixel grid (2026-10-14)
+
+M566 used Release SHA256
+`0A9C9D82FAF3B9C802C9F4727204269BA036DF17E16C6A37A77F84F3555FD27E` with the
+unchanged visible, no-teleport M335 route and pixel window `[-8512,-8416]`.
+The app returned `process_rc=0` / `run_outcome=success` and reached
+`focus_cx=-562`, `9,104` blocks / `569` chunks at median `5.18555 blocks/s`.
+Active elapsed time was `1,852.64s`; the run excluded one `2,242.08s` clock
+gap from its `4,094.71s` wall duration. The route itself therefore ran at its
+normal established speed. The host sampler mean was `61.7%` CPU; top samples
+included Nextcloud (`251.2%`) and Cubatarium (`211.2%`), so timing is not a
+quiet-host performance baseline.
+
+The route logged 345 moving `visual_holes_enter` edges, of which five had
+player X inside the pixel window. Only one edge received the requested 100-pixel
+grid. That grid had RGB<=8 count zero, median luma 158, and minimum luma 26;
+three samples had luma<=32. The darkest samples had alpha 255 and identical
+pre-transparent/final colors, but this grid had no same-frame ray trace and
+does not identify the sampled geometry. Four in-window edges had no grid, so
+the capture is incomplete and proves neither a hole nor a clean view. The
+one-shot trigger previously required exact equality between the streaming and
+render epochs. Commit `0be1f224` keeps the edge pending until a later render
+observes it and records the edge-source epoch separately from the framebuffer
+epoch.
+
+M566 had 46 positive A24 periods (`5.061%`, longest run two), none in the start
+corridor. All 262 `visual_holes_enter` query-miss witnesses were beyond the
+configured fog horizon; all 327 same-epoch selected ray candidates were
+drawable and satisfying. Stop-tail visual-hole proxy was zero, but readiness
+debt max was 34 and demand-stop convergence failed. These remain diagnostic
+proxy results. Artifacts: [run report](../../bin/suite_reports/engine_refactor/m566_world164_a24_full_edge_pixels_20261014.json),
+[pixel join](../../bin/suite_reports/engine_refactor/m566_a24_pixel_join_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-125056_18136.jsonl), and
+[host samples](../../bin/logs/m566_host_cpu_20261014.jsonl).
+
+### M567 — pending-edge latch validation (2026-10-14)
+
+M567 repeats the exact M335 route after the pending-edge capture change in
+Release SHA256
+`1ED0DA755B018C759B869C24336419C5918619D8E7606A90D9C1CBE4BC6FAA54`. The
+flight settings and pixel window are unchanged from M566:
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='64'
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m567_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m567_world164_a24_latched_event_pixels --report bin/suite_reports/engine_refactor/m567_world164_a24_latched_event_pixels_20261014.json --process-timeout 2600
+python tools/analyze_hole_event_pixels.py bin/logs/perf_<actual>.jsonl --json-out bin/suite_reports/engine_refactor/m567_a24_pixel_join_20261014.json
+```
+
+The analysis must compare the five M566 in-window edge count against event-
+triggered grids, report both source and capture epochs, and retain exact-frame
+ray matches separately. Do not treat a dark pixel by itself as missing terrain:
+join its opaque depth, ray hit or gap, fog state, draw state, and pre-/post-
+transparent color. If this sample remains normal, proceed to the quiet-host,
+capture-disabled M335 performance baseline before changing runtime policy.

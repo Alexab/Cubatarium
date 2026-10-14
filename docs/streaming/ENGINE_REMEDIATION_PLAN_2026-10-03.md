@@ -9256,14 +9256,34 @@ non-black, but four other raw rising edges occurred inside the same camera-X
 window without a corresponding pixel capture. A24 is still a conservative
 mesh/query proxy and remains a failing diagnostic gate; it is not pixel proof.
 
-M566 now marks the raw focus-radius rising edge at its final `UpdateStreaming`
-query and captures the bounded 20x5 pixel grid in the unchanged X window,
-independent of screen-ray candidate selection. Its output will report each
-frame's pixel luma distribution and darkest samples, and join any available
-same-epoch rays. Review this evidence before any renderer or scheduling-policy
-change. If the samples remain normally colored, close the stale-proxy
-classification without calling it a rendering fix; if dark samples occur,
-join their depth, ray, fog, opaque draw state, and transparency composition.
-Performance conclusions remain open until a capture-disabled M335 run is
-repeated under quiet host conditions; M565's sampler recorded material
-background activity.
+M566 completed on Release SHA256
+`0A9C9D82FAF3B9C802C9F4727204269BA036DF17E16C6A37A77F84F3555FD27E` and
+reached `focus_cx=-562` / `9,104` blocks (`569` chunks) at the established
+median speed of `5.18555 blocks/s`. `process_rc=0` and `run_outcome=success`;
+the wrapper still failed diagnostic gates. The report separated an excluded
+clock gap of `2,242.08s` from `1,852.64s` active time, close to the requested
+`1,835s`; do not interpret the wall duration as a slow flight. A24 was
+positive in 46 periods (`5.061%`, longest run two), none in the start corridor.
+All 262 event-query miss witnesses were beyond the configured fog horizon and
+all 327 same-epoch selected screen-ray candidates were drawable and satisfying.
+The stop-tail visual-hole proxy returned to zero, but readiness debt peaked at
+34 and demand-stop convergence failed.
+
+M566 logged 345 moving `visual_holes_enter` edges; five landed in the unchanged
+camera-X window. The renderer captured one 100-pixel grid: RGB<=8 count zero,
+median luma 158, minimum luma 26, with three samples at luma<=32. The darkest
+samples had opaque alpha and matching pre-transparent/final colors, but no
+same-frame screen-ray trace, so their terrain/material identity is unknown.
+Four of the five window events had no pixel grid. Source inspection found that
+the trigger required exact equality between the streaming epoch and the later
+render epoch. Commit `0be1f224` changes this to a one-shot pending event and
+logs both source and framebuffer epochs; the updated Release SHA is
+`1ED0DA755B018C759B869C24336419C5918619D8E7606A90D9C1CBE4BC6FAA54`.
+
+Next, repeat the exact M335 profile as M567 to verify all in-window rising
+edges receive a grid and correlate the pixels with same-frame ray/depth/fog
+state. Do not change render or scheduling policy on proxy counters alone.
+The host sampler saw mean machine CPU `61.7%`, including Nextcloud at about
+`2.51` cores and Cubatarium at `2.11` cores, so this is not a clean performance
+baseline. Keep the capture-disabled M335 performance repeat open for a quiet
+host window.
