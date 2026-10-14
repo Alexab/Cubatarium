@@ -8168,3 +8168,53 @@ Reanalysis of the saved M561 log reports
 `post_stop_focus_visual_ready_max/end=101/101` across five stop samples; the
 full supplemental output is
 [`m561_readiness_class_reanalysis_20261014.json`](../../bin/suite_reports/engine_refactor/m561_readiness_class_reanalysis_20261014.json).
+
+### M562 — extend readiness-class coordinate capture (2026-10-14)
+
+M562 repeated the visible, no-teleport `World_164` M335 route and fog/pixel
+bounds on Release SHA256
+`1493F0FA3D06536685019E29CA3C362BA8FDAB7BEB60F9DE229B6CD63C89B12E`. The
+only diagnostic change was `CUBA_FOCUS_SLICE_TRACE_PER_STATE=32` (bounded to
+64 by the engine); the flight runner records this setting in its manifest.
+The run completed normally (`process_rc=0`, `run_outcome=success`), reached
+`focus_cx=-570`, and covered `9,232` blocks / `577` chunks at median
+`5.19287 blocks/s`. The run still failed A24: the mesh-coverage proxy was
+positive in 14 period samples (`visual_holes_rate=1.533%`, longest run one),
+but all 92 exact event-query miss witnesses were outside the configured fog
+horizon and all 92 paired proxy columns were drawable and satisfying. This is
+not a positive framebuffer-hole witness. Stop-tail mesh-hole proxies and
+`focus_missing_mesh` were zero, while readiness debt reached 34 and demand-stop
+convergence failed. The visible flight had no framebuffer capture enabled.
+
+The five final period rows decomposed readiness as 34 `MissingMesh` columns,
+87 `Ready`, and zero in the other unfinished classes. The widened slice trace
+captured 29 distinct unresolved/no-owner `MissingMesh` coordinates at the far
+focus (`cy=1`, 4,096 non-air blocks each). Using the same conservative AABB
+bound as the fog classifier, 27 were beyond the 32-block effective horizon;
+two were exactly at the horizon and remain visibility candidates, not proven
+visible pixels. Five of the 34 columns were not present in the bounded trace
+sample, so the next exact repeat uses cap 64. The pixel join found one
+same-epoch stalled-census slice; 100 sampled rays all missed its target AABB.
+No positive camera/pixel witness was captured. See
+[`m562_world164_m335_readiness_classes_20261014.json`](../../bin/suite_reports/engine_refactor/m562_world164_m335_readiness_classes_20261014.json),
+[`m562_stalled_census_pixel_join_20261014.json`](../../bin/suite_reports/engine_refactor/m562_stalled_census_pixel_join_20261014.json),
+[`perf_20261014-094858_31504.jsonl`](../../bin/logs/perf_20261014-094858_31504.jsonl),
+and [`m562_host_cpu_20261014.jsonl`](../../bin/logs/m562_host_cpu_20261014.jsonl).
+
+The host sampler recorded CPU median/p95/max `45.1/76.2/100%`; the app used
+`1.975/2.515` cores at median/p95 after excluding one invalid `507`-core sample.
+Minute process scans repeatedly showed `CompatTelRunner.exe`, with additional
+`MsMpEng.exe` and OneDrive load. This is not a clean performance baseline.
+
+Exact command:
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416'
+$env:CUBA_FOCUS_SLICE_TRACE_PER_STATE='32'
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m562_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m562_world164_m335_readiness_classes --report bin/suite_reports/engine_refactor/m562_world164_m335_readiness_classes_20261014.json --process-timeout 2600
+```

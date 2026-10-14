@@ -9175,23 +9175,25 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
     IDs are explicitly marked unverified by the analyzer. If ticket
     attribution is still needed to close the audit, add requestor and enqueue-
     age evidence and repeat the controlled route.
-12. **Done: M561 readiness-debt class decomposition; open: classify the exact
-    unowned columns against visibility before changing demand-stop policy.** The
-    last five stop samples all had 20 `MissingMesh` columns, 101 `Ready`
-    columns, and zero in every other unfinished class; `visual_holes` and
-    `focus_missing_mesh` were both zero. The class counters describe XZ columns
-    in the broad streaming focus ring, while the mesh-hole signals use narrower
-    coverage paths. Eleven latest-epoch slice samples in `MissingMesh` were
-    solid and unresolved/no-owner; one sample's chunk AABB was at least 72
-    blocks horizontally from the camera, beyond the active-fog horizon measured
-    on the M335 repeat. This is real wide-ring readiness debt, not demonstrated
-    framebuffer absence. Extend the existing fog/frustum correlation to these
-    exact coordinates, then decide whether convergence should require repair
-    only inside the effective visibility horizon. Do not widen mesh admission
-    from the aggregate readiness count alone. The analyzer now exports per-
-    class post-stop max/end/sample counts. M561's separate exact radius-query
-    miss witnesses were all beyond the configured fog horizon, but those
-    coordinates are not interchangeable with the 20 missing-mesh columns.
+12. **Done: M561/M562 readiness-debt decomposition; open: classify five
+    uncaptured columns and resolve two horizon-boundary candidates.** M561's
+    last five stop samples had 20 `MissingMesh` and 101 `Ready` columns. M562
+    repeated M335 with active fog and widened the per-state trace cap to 32; its
+    last five rows had 34 `MissingMesh`, 87 `Ready`, and zero in every other
+    unfinished class. Both runs had zero stop-tail `visual_holes` and
+    `focus_missing_mesh`. The counters describe XZ columns in the broad
+    streaming focus ring, while the mesh-hole signals use narrower coverage
+    paths. M562 captured 29 exact far-focus `MissingMesh` coordinates, all
+    solid and unresolved/no-owner: the conservative fog AABB bound puts 27
+    beyond the 32-block horizon and two exactly at the horizon. Five columns
+    remain outside the bounded trace selection. A24 still failed on 14 M562
+    periods, but all 92 exact event-query miss witnesses were beyond fog and
+    all paired proxy columns were drawable+satisfying; no framebuffer defect
+    was proven. The same-epoch pixel join had 100 rays, all missing its one
+    stalled-census target AABB. Next repeat the exact route with trace cap 64,
+    then correlate all 34 coordinates with effective fog/frustum evidence.
+    Do not widen mesh admission or relax demand-stop based on aggregate debt
+    alone. The analyzer now emits per-class post-stop max/end/sample counts.
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.
