@@ -20,8 +20,7 @@ SCREEN_ROW_FRACTIONS = {
 EVENT_PIXEL_FLAG = 1 << 5
 
 
-def load_rows(path: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
+def iter_rows(path: Path):
     with path.open("r", encoding="utf-8") as stream:
         for line in stream:
             try:
@@ -31,8 +30,7 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
                 # was interrupted; it cannot be joined to a complete event.
                 continue
             if isinstance(row, dict):
-                rows.append(row)
-    return rows
+                yield row
 
 
 def unpack_rgba(value: Any) -> dict[str, int] | None:
@@ -95,24 +93,31 @@ def selected_pixel_for_ray(
 
 
 def analyze(path: Path) -> dict[str, Any]:
-    rows = load_rows(path)
-    events = [
-        row
-        for row in rows
-        if row.get("kind") == "visual_holes_enter"
-        and float(row.get("movement_speed", 0.0) or 0.0) > 2.0
-        and row.get("frame_epoch") is not None
-    ]
+    events: list[dict[str, Any]] = []
     rays_by_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
     pixels_by_epoch: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for row in rows:
+    for row in iter_rows(path):
+        kind = row.get("kind")
+        if kind == "visual_holes_enter":
+            try:
+                moving = float(row.get("movement_speed", 0.0) or 0.0) > 2.0
+            except (TypeError, ValueError):
+                moving = False
+            if moving and row.get("frame_epoch") is not None:
+                events.append(row)
+            continue
+        if kind not in ("screen_ray_candidate_trace", "renderer_pixel_probe"):
+            continue
         epoch = row.get("frame_epoch")
         if epoch is None:
             continue
-        epoch = int(epoch)
-        if row.get("kind") == "screen_ray_candidate_trace":
+        try:
+            epoch = int(epoch)
+        except (TypeError, ValueError):
+            continue
+        if kind == "screen_ray_candidate_trace":
             rays_by_epoch[epoch].append(row)
-        elif row.get("kind") == "renderer_pixel_probe":
+        else:
             pixels_by_epoch[epoch].append(row)
 
     output_events: list[dict[str, Any]] = []
