@@ -9105,12 +9105,24 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    `1.91/2.73/4.12` cores; this is not a clean performance baseline. Post-stop
    readiness debt was 5 (`post_stop_mesh_missing_max=0`), and demand-stop
    convergence still failed.
-8. **Next:** trace the exact fully-dark stalled census columns around
-   `cx≈-353` and `cx≈-521` with `CUBA_VISUAL_BLACK_TRACE=1` on the repeated
-   active-fog route. M557 found up to six stalled columns in those zones while
-   near-focus missing-mesh was often zero. Capture their coordinates, light
-   revisions, flow tickets, and renderer-column state, then check whether any
-   lie in the camera frustum before changing lighting or streaming behavior.
+8. **Done: M558 exact census attribution; open: camera/view correlation.** M558
+   captured four stalled-ticket slice coordinates in the late zone. They had
+   matching mesh/field light revisions, renderer-column `draw_ok=1`, and a
+   `PromoteRelight` flow ticket, but no same-frame sampled opaque pixel hit
+   matched any of the 122 stalled-census rows. Sparse pixel samples had
+   non-black surface colors, but were not aligned to the screen-ray selector;
+   this does not prove the candidates were outside the view. The 1.062 GB log
+   also showed that default periodic pixel probes dominate trace volume. See
+   M558 in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+9. **Next:** M559 repeats the fixed no-teleport M335 route with active fog,
+   screen-ray-aligned framebuffer captures, and pixel readback bounded to the
+   late census corridor. Join exact chunk-slice coordinates to same-frame ray
+   candidates and view/frustum evidence. Only treat a census owner as a
+   renderer defect if it intersects the view or an aligned pixel shows the
+   symptom; then trace why its repair ticket did not advance. Keep A24 and
+   post-stop convergence as separate readiness signals, not substitutes for
+   pixel-visible failure. M559 command and settings are in
+   [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.

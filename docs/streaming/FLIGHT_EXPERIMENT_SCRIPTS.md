@@ -7895,15 +7895,71 @@ $env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m557_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 2800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m557_world164_m335_fog_on_witness_lifecycle --report bin/suite_reports/engine_refactor/m557_world164_m335_fog_on_witness_lifecycle_20261014.json --process-timeout 3600
 ```
 
-### M558 — capture exact dark-census owners on the repeated route (next)
+### M558 — trace dark-census owners and framebuffer samples (2026-10-14)
 
-Run the same visible no-teleport route through the recurring `cx≈-353` and
-`cx≈-521` census zones with the black-state trace enabled, active fog pinned,
-and pixel-density capture disabled. This is an attribution run, not a frame-time
-baseline. Join trace coordinates/revisions/tickets to focus and active fog
-state; do not treat the census as proof that those chunks intersect the view.
+M558 ran the visible, no-teleport M335 route through both recurring dark-census
+zones on persisted `World_164`, with active fog and the Release executable
+(SHA256 `0BF0D7751DA134D622DF3976A3D497D693E6091D3A71F6CD9CC3DF4EB478999E`).
+It reached `focus_cx=-570` (`9,232` blocks / `577` chunks) at median
+`5.18555 blocks/s`; the application exited normally. The analyzer returned 1
+because acceptance gates failed. The manifest records fog and effective
+settings correctly, and before/effective config hashes match.
+
+The 1.062 GB perf log retained the full 1,024-entry visual-black attribution
+ring. Cause ordinals are `0=StaleDarkWithLitField`,
+`1=FullyDarkPendingRepair`, `2=FullyDarkNoTicket`,
+`3=FullyDarkStalledTicket`, and `4=LegalDarkNoRepair`; the retained histogram
+was `18/13/0/122/871`. In the late zone, 122 stalled-ticket records span 78
+frame epochs and four exact slice coordinates: `(-529,2,2)`, `(-521,2,3)`,
+`(-520,2,2)`, and `(-520,2,3)`. Every one also had a `PromoteRelight` flow
+ticket; renderer-column draw state said `draw_ok=1`, reason `0`, and the
+meshed/field light revisions matched. Some records additionally had a keyed
+or deferred-far persistence relight owner. This describes census ownership
+without progress/sticky evidence; it does not establish that the ticket was
+eligible to run or that its slice was visible.
+
+There were 1,440 framebuffer pixel samples at each target zone (18 probe
+frames per zone). Surface-hit samples numbered 1,080 in each zone; the median
+sampled luma was `147.8` near `cx=-353` and `158.3` near `cx=-521`, with minima
+near `25`. However, pixel probes were not aligned to screen-ray selection and
+none of the 122 stalled-census slice coordinates matched a same-frame sampled
+opaque hit. The captures therefore do not confirm or disprove a visible
+artifact. Camera position and focus coordinates alone do not establish view
+membership; check exact frustum/ray intersection before changing lighting or
+scheduler policy. Pixel sampling was not a performance baseline.
+
+Other gates: A24 saw nine near-focus mesh-proxy periods (none in the start
+corridor), while `visual_holes_rate=0.9858%` and post-stop mesh-missing and
+near-focus visual-hole proxies were zero. Post-stop readiness debt remained
+10 and demand-stop convergence failed. The manifest's resolution remains
+untested. Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m558_world164_m335_dark_census_trace_20261014.json),
+[1.062 GB perf JSONL](../../bin/logs/perf_20261014-050719_25220.jsonl), and
+[host samples](../../bin/logs/m558_host_cpu_20261014.jsonl).
+
+M558 exposed a trace-volume issue: the default periodic pixel probe generated
+86,640 wide JSON records even with dense pixels disabled. For M559, bound
+framebuffer readback to the late census corridor and enable pixel captures on
+screen-ray frames. Keep the same route and speed; use the captured ray/hit
+coordinates to decide whether the stalled candidates actually intersect the
+view.
 
 ```powershell
 $env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0';
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m558_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m558_world164_m335_dark_census_trace --report bin/suite_reports/engine_refactor/m558_world164_m335_dark_census_trace_20261014.json --process-timeout 2600
+```
+
+### M559 — correlate the late stalled census with camera rays (next)
+
+Repeat the same M335 course with active fog and black-state attribution. Restrict
+pixel readback to camera X `-8512…-8416` blocks (the late `focus_cx≈-530…-527`
+zone), and set `CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY=1` so framebuffer
+samples align with the streaming selector's five scanlines. This retains the
+no-teleport route and records the approach to the target zone while avoiding
+whole-route periodic pixel readback. Check exact slice coordinates against
+ray hits and frustum evidence; a matched ray hit is evidence of geometric
+intersection, while unmatched sparse pixel samples remain inconclusive.
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m559_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m559_world164_m335_screen_ray_aligned_pixels --report bin/suite_reports/engine_refactor/m559_world164_m335_screen_ray_aligned_pixels_20261014.json --process-timeout 2600
 ```
