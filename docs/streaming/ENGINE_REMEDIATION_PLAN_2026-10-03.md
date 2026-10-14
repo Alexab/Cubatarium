@@ -9095,23 +9095,25 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    labeled as geometric-only comparisons. The original A24 readiness gate is
    unchanged: it measures debt in the wider streaming focus radius, not
    framebuffer visibility.
-6. **Open:** sampled query memo-hit counts remain zero in M554–M557. The
-   per-frame invalidation change is not demonstrated to fix the symptom,
-   although no regression has been attributed to it. Review query cost and
-   within-frame sharing before considering a revert.
-   Static source review (2026-10-14) narrows what this metric means:
+6. **Done: query memo semantics and current cost review; sharing frequency
+   remains unmeasured.** Sampled query memo-hit counts remain zero in
+   M554–M557 and M561, but this does not justify a cache or invalidation
+   change. Static source review (2026-10-14) narrows what the metric means:
    `UChunkMeshCache` keeps one `MissingMemo` key, and `BeginHoleQueryFrame`
    advances its epoch before both `UpdateStreaming` and
    `TickAsyncChunkSystems`. The JSON field is populated only by the sampled
    `run_miss_probe` call; it does not count cache lookups made by the other
    callers. The update phases also query different centers/radii (focus radius,
    radius 0, and radius 1), so these accesses can replace one another's memo.
-   Thus the observed zeros do not establish that the cache never hits. Keep
-   the per-frame invalidation; before changing the cache shape, add aggregate
-   cache-owned hit/miss/scan counters and compare them with the existing
-   combined query-wall fields on a Release run. M561 made 100 sampled
-   `run_miss_probe` calls and still reported zero hits; that is the same
-   narrow counter and does not answer the aggregate question.
+   Thus the observed zeros do not establish that the cache never hits. M561's
+   moving-route analysis counted 100 sampled `run_miss_probe` rows and zero
+   hits; the raw log has 308 probe-positive period rows across all phases.
+   M561's `PrepRefreshHasMissingMs` was `0.192/0.215/0.307 ms` median/p95/max,
+   while `PrepRefreshMissRadiusQueryMs` was `0.0096/0.0159/0.0507 ms`. These
+   timers do not cover every caller, but they show no material cost in the
+   measured path. Keep per-frame invalidation and the one-key memo for now;
+   aggregate cache-owned counters are only needed if query cost becomes a
+   measured optimization target.
 7. Keep `World_164` M335 as the repeated-condition route, repeat a fresh-seed
    frontier check periodically, and use quiet-host runs for performance
    conclusions. M557 host CPU median/p95/max was `37.3/83.5/100%` and app use
@@ -9150,7 +9152,7 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
     zero and readiness debt reached 20. Keep framebuffer, A24, readiness, and
     convergence signals separate. Full evidence is in
     [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
-11. **Open: audit cause-3 ticket scope and stale attribution.** For
+11. **Done: static cause-3 scope audit; open: ticket provenance only if needed.** For
     `(-528,2,2)`, M561 attempt `150691` completed through GPU publication at
     frames 118603–118604, with exact geometry/light revisions `9/9` and `1/1`,
     draw gate 1, and no dirty queue or mesh owner. The same slice was still
@@ -9159,11 +9161,17 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
     attempt/progress was reported. `CountVisibleBlackFocusMeshes` classifies
     fully dark + ticket + no progress as stalled without requiring a stale
     slice revision, and its ticket is XZ-column scoped while the trace selects
-    a Y slice. This may be a census attribution/stale-ticket issue; the sparse
-    rays do not show an unoccluded hit to the target. Audit ticket producers,
-    kind transitions, age, and dispatch before changing scheduler or renderer
-    policy. Preserve exact world-epoch/incarnation joins; rows with missing IDs
-    are now explicitly marked unverified by the analyzer.
+    a Y slice. For `PromoteRelight`, dispatch promotes near-terrain/pending-
+    light queues; it only requeues `RelightThenMesh` when pending light remains
+    without a queue or async owner. Several focus-ingress, missing-hole, and
+    admission paths can request this work, but the live ticket has no requestor
+    provenance. M561's sparse rays show no unoccluded hit to the target. Treat
+    this as a census-precision/scheduler-provenance issue, not a confirmed
+    renderer defect. Do not change render or scheduling policy from these
+    samples. Preserve exact world-epoch/incarnation joins; rows with missing
+    IDs are explicitly marked unverified by the analyzer. If ticket
+    attribution is still needed to close the audit, add requestor and enqueue-
+    age evidence and repeat the controlled route.
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.

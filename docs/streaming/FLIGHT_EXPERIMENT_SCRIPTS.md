@@ -8120,8 +8120,19 @@ unverified, not joined as exact ownership.
 
 Static follow-up: `CountVisibleBlackFocusMeshes` classifies any fully dark
 column with a live repair ticket and no column-level progress as
-`FullyDarkStalledTicket`; it does not require a stale slice revision. A flow
-ticket is column-level, while the selected census coordinate is a chunk slice.
-Audit the ticket producers and dispatch/refresh lifecycle, and add generation,
-age, and requestor evidence before considering a policy change. Continue to
-require a positive camera/pixel witness for any claim of a rendering defect.
+`FullyDarkStalledTicket`; this branch runs before the equal-light-revision
+`LegalDarkNoRepair` fallback. `HasRepairTicket` is only live scheduler
+membership for the XZ column. `ColumnHasRepairProgress` checks pending light,
+eligible SoftDefer ownership, dirty mesh, GPU apply/queue/kick, and mesh-build
+in-flight states; it does not mean that the selected Y slice owns this ticket.
+For `PromoteRelight`, `AdvanceColumn` promotes near-terrain and pending-light
+queues, then requeues `RelightThenMesh` only if that column still has pending
+light without a persistence queue or async owner. It is not itself a mesh
+publication operation. M561's bit-8 PromoteRelight ticket can therefore be a
+column scheduling request alongside an already-published fully dark slice.
+The source has several producers (focus ingress, missing-hole recovery, and
+admission/pending-light paths), but `ColumnWorkItem` does not retain which
+producer requested it. If this scheduler attribution remains actionable,
+instrument ticket generation/age and requestor, then repeat the controlled
+route before policy changes. Continue to require a positive camera/pixel
+witness for any claim of a rendering defect.
