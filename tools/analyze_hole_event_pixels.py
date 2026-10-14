@@ -19,6 +19,29 @@ SCREEN_ROW_FRACTIONS = {
     4: 0.875,
 }
 EVENT_PIXEL_FLAG = 1 << 5
+PIXEL_CONTEXT_FIELDS = {
+    "shader_min_ambient": "renderer_pixel_shader_min_ambient",
+    "shader_day_factor": "renderer_pixel_shader_day_factor",
+    "shader_night_factor": "renderer_pixel_shader_night_factor",
+    "fog_state_valid": "renderer_pixel_fog_state_valid",
+    "fog_enabled": "renderer_pixel_fog_enabled",
+    "air_fog_enabled": "renderer_pixel_air_fog_enabled",
+    "fog_horizontal": "renderer_pixel_fog_horizontal",
+    "underwater_fog_enabled": "renderer_pixel_underwater_fog_enabled",
+    "underwater_fog_submerged": "renderer_pixel_underwater_fog_submerged",
+    "fog_start": "renderer_pixel_fog_start",
+    "fog_end": "renderer_pixel_fog_end",
+    "fog_density": "renderer_pixel_fog_density",
+    "fog_env_multiplier": "renderer_pixel_fog_env_multiplier",
+    "opaque_surface_valid": "renderer_pixel_opaque_surface_valid",
+    "opaque_surface_x": "renderer_pixel_opaque_surface_x",
+    "opaque_surface_y": "renderer_pixel_opaque_surface_y",
+    "opaque_surface_z": "renderer_pixel_opaque_surface_z",
+    "voxel_ray_state": "renderer_pixel_voxel_ray_state",
+    "voxel_ray_gap": "renderer_pixel_voxel_ray_gap",
+    "voxel_hit_block_id": "renderer_pixel_voxel_hit_block_id",
+    "voxel_hit_distance": "renderer_pixel_voxel_hit_distance",
+}
 
 
 def iter_rows(path: Path):
@@ -44,6 +67,14 @@ def unpack_rgba(value: Any) -> dict[str, int] | None:
         "g": (packed >> 16) & 0xFF,
         "b": (packed >> 8) & 0xFF,
         "a": packed & 0xFF,
+    }
+
+
+def pixel_context(pixel: dict[str, Any]) -> dict[str, Any]:
+    return {
+        output_key: pixel[source_key]
+        for output_key, source_key in PIXEL_CONTEXT_FIELDS.items()
+        if source_key in pixel
     }
 
 
@@ -90,6 +121,7 @@ def selected_pixel_for_ray(
             rgba is not None and rgba["r"] <= 8 and rgba["g"] <= 8 and rgba["b"] <= 8
         ),
         "probe_trigger_flags": pixel.get("renderer_pixel_probe_trigger_flags"),
+        "pixel_context": pixel_context(pixel),
     }
 
 
@@ -114,6 +146,7 @@ def summarize_pixel_grid(pixels: list[dict[str, Any]]) -> dict[str, Any] | None:
                 "pretransparent_depth": pixel.get(
                     "renderer_pixel_pretransparent_depth"
                 ),
+                "pixel_context": pixel_context(pixel),
             }
         )
     if not samples:
