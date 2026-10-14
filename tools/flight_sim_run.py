@@ -3187,6 +3187,9 @@ def main() -> int:
                                 "CUBA_VISUAL_BLACK_TRACE", ""
                             ).strip()
                             not in ("", "0"),
+                            "focus_slice_trace_per_state": os.environ.get(
+                                "CUBA_FOCUS_SLICE_TRACE_PER_STATE", "12"
+                            ),
                             "visual_black_trace_focus_probes": os.environ.get(
                                 "CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES", ""
                             ).strip()

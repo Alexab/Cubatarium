@@ -3831,13 +3831,26 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                 return a.vertical_distance < b.vertical_distance;
               });
     int recorded_by_state[4]{};
-    constexpr int kFocusSliceTracePerState = 12;
+    constexpr int kDefaultFocusSliceTracePerState = 12;
+    constexpr long kMaxFocusSliceTracePerState = 64;
+    int focus_slice_trace_per_state = kDefaultFocusSliceTracePerState;
+    if (const char *trace_cap_env =
+            std::getenv("CUBA_FOCUS_SLICE_TRACE_PER_STATE"))
+    {
+      char *end = nullptr;
+      const long requested = std::strtol(trace_cap_env, &end, 10);
+      if (end != trace_cap_env && *end == '\0')
+      {
+        focus_slice_trace_per_state = static_cast<int>(
+            std::clamp(requested, 1L, kMaxFocusSliceTracePerState));
+      }
+    }
     for (const FocusSliceCandidate &candidate : focus_slice_candidates)
     {
       const int state = candidate.record.focus_state;
       const bool record_focus_slice =
           state > 0 && state < 4 &&
-          recorded_by_state[state] < kFocusSliceTracePerState;
+          recorded_by_state[state] < focus_slice_trace_per_state;
       const bool record_no_drawable_peak =
           camera_band_no_drawable_peak && candidate.in_visual_band &&
           candidate.camera_band_no_drawable;
