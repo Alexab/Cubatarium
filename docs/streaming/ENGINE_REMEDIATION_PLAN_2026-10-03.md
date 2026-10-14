@@ -9122,13 +9122,21 @@ See the [M552 report](../../bin/suite_reports/engine_refactor/m552_world164_m335
    evidence still cannot establish camera visibility. A24 found six proxy
    periods, while post-stop readiness debt was 2 and convergence failed.
    Details are in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
-10. **Next: M560 event-synchronized pixel witness.** A Release-only diagnostic
-    hook now triggers an aligned framebuffer sample in the same streaming
-    epoch as a `FullyDarkStalledTicket` census row, with pixel readback limited
-    to the late corridor. Join exact slice/chunk identity, sampled framebuffer
-    color, and renderer state before changing streaming or lighting behavior.
-    Keep A24 and stop convergence as separate readiness checks. The command is
-    in [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
+10. **Done: M560 event-synchronized pixel witness; open: lifecycle and quiet-host
+    correlation.** All three retained `FullyDarkStalledTicket` slices were
+    sampled in their census epochs. Eleven of 400 sparse rays intersected
+    `(-529,2,2)`; all hit opaque terrain before entering the target box. The
+    other slice `(-526,2,5)` had no intersecting sampled ray. These are sparse
+    camera samples, not full-frustum proof. M560's `1.314%` near-focus visual
+    hole metric is a mesh-coverage proxy; host CPU reached 99.2%, so its timing
+    is not a clean performance baseline. The census-selected coordinates were
+    not lifecycle watched, and mesh scheduling could occur at a different
+    point within the same frame epoch. A diagnostic-only change now watches
+    those coordinates after a stalled census row. Repeat M335 on the now-quiet
+    host as M561 and join the captured transitions, screen rays, and gates.
+    Keep A24, framebuffer visibility, and stop convergence as separate checks.
+    Details and command are in
+    [FLIGHT_EXPERIMENT_SCRIPTS.md](FLIGHT_EXPERIMENT_SCRIPTS.md).
 
 M553 completed normally on the previous Release binary: `14,368` blocks /
 `898` chunks at `5.20019 blocks/s`; the report still failed telemetry gates.

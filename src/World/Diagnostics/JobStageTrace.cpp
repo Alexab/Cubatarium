@@ -653,6 +653,11 @@ void UJobStageTrace::NoteVisualBlack(const VisualBlackTraceRecord &record)
   {
     LatestStalledVisualBlackFrameEpoch.store(record.frame_epoch,
                                              std::memory_order_release);
+    // Census samples are selected before the downstream renderer/scheduler
+    // traces are drained. Keep their exact slices watched so later demand and
+    // worker/GPU transitions can explain whether this was a persistent owner
+    // gap or a short handoff within the same rendered frame.
+    WatchVisualChunk(record.cx, record.cy, record.cz);
   }
   if (record.sample_kind == 0)
   {

@@ -7992,7 +7992,7 @@ baseline. Artifacts: [flight report](../../bin/suite_reports/engine_refactor/m55
 [perf JSONL](../../bin/logs/perf_20261014-054612_15308.jsonl), and
 [host samples](../../bin/logs/m559_host_cpu_20261014.jsonl).
 
-### M560 — synchronize a pixel probe to stalled census (next)
+### M560 — synchronize a pixel probe to stalled census (2026-10-14)
 
 The screen-ray cadence did not overlap the eight stalled-census frames in
 M559. The Release diagnostic change now publishes the epoch of a
@@ -8007,4 +8007,68 @@ the run still measures route/stop proxies but cannot validate this join.
 ```powershell
 $env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416';
 python tools/run_with_host_cpu_sampler.py --output bin/logs/m560_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m560_world164_m335_stalled_census_pixel_sync --report bin/suite_reports/engine_refactor/m560_world164_m335_stalled_census_pixel_sync_20261014.json --process-timeout 2600
+```
+
+M560 used Release executable SHA256
+`C641D10BDC1257A04DA1625574A80A4CE0C0A4312F6C7E8F90CEFF67B51C0069` and
+completed the full `9,232`-block / `577`-chunk route at normal cruise speed
+(`5.19 blocks/s`) with fog on and exited normally. The analyzer still
+returned `pass=false`: A24 had 12 whole-route periods and a `1.314%` near-focus
+mesh-coverage proxy rate, post-stop readiness debt was 30, and demand-stop
+convergence failed. This proxy rate does not establish blank pixels. The run
+was not a quiet-host performance baseline: host CPU median/p95/max was
+`42/83.2/99.2%`, with application use `2.08/2.61/3.98` cores. The perf JSONL
+was `238,520,599` bytes (`227.5 MiB`); the report and logs are
+[flight report](../../bin/suite_reports/engine_refactor/m560_world164_m335_stalled_census_pixel_sync_20261014.json),
+[perf JSONL](../../bin/logs/perf_20261014-062722_24772.jsonl), and
+[host samples](../../bin/logs/m560_host_cpu_20261014.jsonl).
+
+The synchronized trigger produced 400 framebuffer rows in four frames. All
+three late `FullyDarkStalledTicket` samples overlapped event pixels: one at
+`(-526,2,5)` and two at `(-529,2,2)`. The reproducible AABB join is:
+
+```powershell
+python tools/analyze_stalled_census_pixels.py bin/logs/perf_20261014-062722_24772.jsonl
+```
+
+Of 400 sampled rays, 289 missed those target slice boxes. Eleven rays
+intersected `(-529,2,2)`; all eleven had an opaque depth surface before box
+entry, in the upper terrain slice `(-529,3,2)` (ten rays) or adjacent
+`(-529,2,3)` (one ray). All 100 rays in the `(-526,2,5)` event frame missed
+that box. Thus the samples show occlusion for the intersecting rays and are
+inconclusive for the third slice; they do not certify the full camera frustum.
+The matching frustum summaries retained 217–259 candidates but only sampled
+6–9 candidates, and did not identify these exact slices.
+
+The census records themselves had no dirty queue or mesh work owner. The
+`(-529,2,2)` demand was at stage `Admitted`, attempt `154414`, with desired
+geometry revision 10 and published revision 9. `(-526,2,5)` had a cancelled
+demand stage and desired/published geometry revisions 12/8. A mesh-repair
+trace for `(-526,2,5)` in that frame has outcome 15, which source maps to an
+accepted asynchronous enqueue; it is a scheduler trace, not a draw-gate
+measurement. The zero-valued `renderer_column_draw_ok` field in that trace is
+unset and must not be compared to the populated census field. This exposes a
+same-frame ordering/window ambiguity, rather than a confirmed disagreement in
+the renderer. No demand-transition or worker/GPU lifecycle records for these
+coordinates were retained because census-selected slices were not added to
+the lifecycle watch set. A follow-up diagnostic now watches cause-3 slices so
+their subsequent transitions can be captured directly.
+
+### M561 — repeat M335 on the now-quiet host and retain cause-3 lifecycle (next)
+
+The user reports that machine CPU is available again. Repeat the same persisted
+`World_164` M335 route and fog/pixel bounds, so route conditions remain
+comparable. This Release diagnostic build additionally watches each
+`FullyDarkStalledTicket` census slice for later demand and worker/GPU lifecycle
+transitions. It was built with `cmake --build bin --config Release --target
+Cubatarium --parallel 8`, SHA256
+`3753D4F78C29FEB84A02A4961FAA2C348E771AC2637F6894863F6317945E6910`. Capture
+host CPU continuously, then run the AABB analyzer and compare M561 with M560.
+Keep proxy gates and framebuffer evidence separate.
+
+```powershell
+$env:CUBA_FLIGHT_FOG_ON='1'; $env:CUBA_WORLD_COLUMN_SOURCE_TRACE='0'; $env:CUBA_VISUAL_BLACK_TRACE='1'; $env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS='1'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-8512'; $env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-8416';
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m561_host_cpu_20261014.jsonl --interval-sec 2 --process-scan-interval-sec 10 -- python tools/flight_sim_fixed_day.py --world World_164 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m561_world164_m335_cause3_lifecycle --report bin/suite_reports/engine_refactor/m561_world164_m335_cause3_lifecycle_20261014.json --process-timeout 2600
+$m561Report = Get-Content bin/suite_reports/engine_refactor/m561_world164_m335_cause3_lifecycle_20261014.json -Raw | ConvertFrom-Json
+python tools/analyze_stalled_census_pixels.py $m561Report.perf_jsonl --json-out bin/suite_reports/engine_refactor/m561_stalled_census_pixel_join_20261014.json
 ```
