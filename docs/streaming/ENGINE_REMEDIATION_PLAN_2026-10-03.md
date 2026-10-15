@@ -10552,3 +10552,65 @@ with short targeted captures; the aggregate readiness signal is not evidence
 that the operator saw blank pixels. No further long operator-monitoring flight
 is planned. Use a short target-lane only if a new, locatable visual symptom
 needs operator confirmation.
+
+### M592–M593: transient provisional-light chunks (2026-10-15)
+
+The operator confirmed that water remained visible for all of M592. This is a
+separate observation from M593's lighting capture and should not be used to
+infer that lighting was correct. M592 used the first opaque-pixel preview
+instrumentation; review found that its bit-22 field described the sea-plane
+sample rather than the opaque depth-hit chunk. The M593 follow-up therefore
+used schema 2, which records surface and opaque-hit preview state separately.
+
+M593 was a 90-second no-teleport target lane in the same persisted world and
+probe corridor. It travelled 464 blocks at median 5.18555 blocks/s and ended
+normally. The flight report's overall `pass=false` is due to existing near-focus
+readiness/visual-hole gates; it is not pixel-level proof of a dark-light defect
+or a water failure. Its 6,800 pixel probes contained 34 exact opaque depth-hit
+samples with both the vertex preview marker and the opaque shader override
+active, across nine chunks. The separate surface override occurred in 30
+samples and must not be merged into that opaque count. Of the 34 opaque preview
+samples, 29 had no current per-slice settled-light proof. The other five came
+from three chunks whose demand was settled; for all five samples, field,
+published, and meshed light revisions were equal at revision 1, and no relight
+attempt was active. Three of those chunks were later sampled with the preview
+off. The camera had advanced 51–69 blocks (about 10–13 seconds at route speed),
+so this bounds the observed transition along the moving ray; it does not give
+an exact per-chunk transition time.
+
+Source tracing explains why column readiness and this per-slice evidence can
+differ. `IsColumnLitReady` deliberately unlocks `LitReady`/`Meshing` columns
+while a pending-light obligation may remain. A first mesh without exact slice
+settlement is published as a provisional preview. The cache preserves that
+marker through a later light settlement; it clears only when a successor mesh
+is accepted. `DrainStaleLightRemeshDebt` discovers settled provisional meshes
+inside the active visual ring, then admits bounded repair work (one repair per
+frame, with a reserved slot every fourth scheduler frame when shared admission
+is exhausted). This is a progressive-visibility policy that avoids blocking
+terrain presentation or flooding far-flight queues. It explains the temporary
+fallback appearance, but the current capture does not yet partition its delay
+between late light settlement, stale-debt admission, mesh build, and GPU apply.
+The 29 unsettled samples and five already-settled preview samples show that
+both stages matter.
+
+Commit `0b63f564` makes trace schema 2 explicit and separates opaque-hit light
+revisions, shader override, and demand ages from sea-plane fields. M593 was
+captured after that change. One instrumentation limitation remains: the pixel
+row does not expose membership/age in `PendingStaleLightRemeshes_`, so a settled
+provisional sample with no ordinary dirty/in-flight owner cannot yet be assigned
+to “not discovered” versus “queued but waiting for admission.”
+
+Next bounded work:
+
+1. Add a per-slice lifecycle witness for light-settled → stale-remesh queued →
+   dirty admitted → mesh published, with queue age and exact opaque coordinates.
+2. Use one short repeatable lane to split the delay between lighting and mesh
+   handoff. Keep the existing fallback so an incoming chunk does not become a
+   black hole while the final mesh is built.
+3. If settled previews wait on admission, prioritize settled provisional
+   chunks in the near camera-visible ring with a bounded/fair repair budget;
+   do not enqueue every far preview. If most wait for settlement, move the
+   light-work horizon/budget earlier instead of increasing mesh churn.
+4. Set a measured visual SLA for provisional-light age at the active ring and
+   check it on short target lanes. Keep long M335 runs for questions that
+   cannot be answered by the short corridor, not for operator monitoring.
