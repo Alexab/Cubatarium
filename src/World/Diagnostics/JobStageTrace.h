@@ -465,6 +465,9 @@ struct VisualBlackTraceRecord
   int32_t renderer_pixel_y{0};
   uint32_t renderer_pixel_rgba{0};
   uint32_t renderer_pixel_pretransparent_rgba{0};
+  /// sample_kind=9: stencil value left at this pixel by the transparent path.
+  /// 255 is reserved for a probe path that did not capture stencil.
+  uint8_t renderer_pixel_stencil_index{255};
   float renderer_pixel_pretransparent_depth{1.0f};
   float renderer_pixel_shader_min_ambient{0.12f};
   float renderer_pixel_shader_day_factor{1.0f};

@@ -9069,3 +9069,62 @@ comparison. An unchanged pixel with no marker after forcing single-pass no
 longer implicates stencil; check framebuffer depth, GPU payload readback
 validity, and submitted vertex state. Buffer sizes in the M578 payload witness
 use `glGetBufferParameteri64v`.
+
+#### M578 result and M579 plan
+
+M578 completed the full visible no-teleport M335 route (`process_rc=0`, 913
+periods, 911 steady periods, 572 chunks traveled); collision stop did not
+trigger. The streaming suite remains `pass=false`, with post-stop readiness
+debt/stall gates still open. The host reached 99.9% CPU, so this run is not a
+quiet performance baseline. The app emitted a shutdown summary with no
+pending disk saves.
+
+The route-wide framebuffer grid contained 1,360 samples across 17 captures,
+including 1,000 valid sea-plane rays. There were 20 samples with luminance
+<=32 and none with all RGB <=16. In the target X interval, the water join found
+715 saved-water samples and 467 CPU fluid triangles. Of those, 464 water
+triangle samples changed RGB after the transparent pass and showed the marker.
+All 39 exact GPU payload probes had valid in-bounds VBO/EBO readback, matching
+CPU/GPU batch indexes and vertex/index bytes, and matching MDI commands. None
+of the 464 water samples was classified as an alpha-cutout or opaque-depth-
+guard candidate. This verifies water geometry and upload in this run's forced
+single-pass path; it does not explain the unchanged pixels under M577's default
+desktop-shell path. The marker is still ambiguous with generic transparent
+overdraw, although the CPU water triangle and exact GPU batch joins strongly
+associate the changed samples with water.
+
+Run M579 on the same M335 route/world, with the exact M578 environment and
+diagnostic shader, but set `CUBA_DEBUG_TRANSPARENT_SINGLE_PASS=0` so the normal
+desktop stencil-shell path is active. M579 additionally records the final
+stencil index at each sampled pixel. Interpret `0` as not marked by the shell
+depth pass and `1` as marked; `255` means stencil was not captured. Keep all
+other route and diagnostic bounds unchanged:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m579_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m579_m572_water_shell_stencil_probe --report bin/suite_reports/engine_refactor/m579_m572_water_shell_stencil_probe_20261015.json --process-timeout 2600
+```
+
+Join the `renderer_pixel_stencil_index` with water/source-triangle matches,
+payload-valid bits, exact MDI command flags, and fluid-call counts. A zero
+stencil value at a water sample would localize the shell-depth/stencil mark
+stage; value one with no color marker would move the investigation to the
+subsequent shell color passes and framebuffer state.

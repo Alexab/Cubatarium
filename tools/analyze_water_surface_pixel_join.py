@@ -198,6 +198,9 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 "marker_coverage": row_float(
                     row, "renderer_pixel_marker_coverage", default=-1.0
                 ),
+                "stencil_index": row_int_optional(
+                    row, "renderer_pixel_stencil_index"
+                ),
                 "chunk_render_ready": int(
                     row.get("renderer_pixel_fluid_chunk_render_ready", 0) or 0
                 ),
@@ -461,6 +464,13 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             for sample in samples
             if sample["source_fluid_triangle_match"] and
             sample["fluid_fragment_probe_class"] is not None
+        )),
+        "water_source_triangle_stencil_counts": dict(Counter(
+            str(sample["fluid_surface_renderer_state"]["stencil_index"])
+            if sample["fluid_surface_renderer_state"]["stencil_index"] is not None
+            else "unknown"
+            for sample in samples
+            if sample["is_water"] and sample["source_fluid_triangle_match"]
         )),
         "mdi_probe_check_known_sample_count": sum(
             sample["fluid_surface_renderer_state"]["mdi_probe_checked"] is not None

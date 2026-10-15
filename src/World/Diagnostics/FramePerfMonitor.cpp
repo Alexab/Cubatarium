@@ -5449,6 +5449,8 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_rgba
                  << ",\"renderer_pixel_pretransparent_rgba\":"
                  << r.renderer_pixel_pretransparent_rgba
+                 << ",\"renderer_pixel_stencil_index\":"
+                 << static_cast<int>(r.renderer_pixel_stencil_index)
                  << ",\"renderer_pixel_pretransparent_depth\":"
                  << r.renderer_pixel_pretransparent_depth
                  << ",\"renderer_pixel_marker_mode\":"
@@ -6148,6 +6150,8 @@ void UFramePerfMonitor::Shutdown()
                << ",\"renderer_pixel_rgba\":" << r.renderer_pixel_rgba
                << ",\"renderer_pixel_pretransparent_rgba\":"
                << r.renderer_pixel_pretransparent_rgba
+               << ",\"renderer_pixel_stencil_index\":"
+               << static_cast<int>(r.renderer_pixel_stencil_index)
                << ",\"renderer_pixel_pretransparent_depth\":"
                << r.renderer_pixel_pretransparent_depth
                << ",\"renderer_pixel_shader_min_ambient\":"

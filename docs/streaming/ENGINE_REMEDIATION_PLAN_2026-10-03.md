@@ -10106,3 +10106,34 @@ the corresponding discard condition only after validating its sampled inputs;
 otherwise compare valid in-bounds GPU payload bytes and actual framebuffer
 depth before changing water meshing or streaming. Any magenta-only result may
 need a focused repeat with the generic transparent marker disabled.
+
+### M578 result and M579 default-shell stencil witness — 2026-10-15
+
+M578 completed the visible no-teleport M335 route (`process_rc=0`, 913 periods,
+911 steady periods, 572 chunks); the collision stop did not trigger. The
+streaming suite remains red on post-stop readiness debt/stall gates, and the
+host reached 99.9% CPU, so its timings are not a quiet-host baseline. Shutdown
+reported no pending disk saves.
+
+The 17-capture framebuffer grid held 1,360 samples and 1,000 sea-plane rays;
+20 samples had luminance <=32, and none had all RGB <=16. In the target window
+`[-4710,-4550]`, 715 samples joined saved water and 467 joined CPU top-fluid
+triangles. A transparent draw changed RGB at 464 of those triangle samples;
+all 464 showed a marker output. No sampled water fragment was classified as
+discarded by alpha cutout or the opaque-depth guard. Most importantly, 39/39
+exact GPU payload probes now have valid bounded VBO/EBO readback, matching
+source/GPU batch indexes, byte-identical vertices/indices, and matching MDI
+commands. This establishes that the sampled water meshes and uploads were
+sound in M578's forced single-pass path, and that the zero-byte M577 payload
+result was a measurement defect fixed by the 64-bit GL size query.
+
+M578 does not close the rendering issue: M577's default desktop-shell pass had
+zero changed water samples, while M578's forced single-pass probe produced
+them. Historical M488/M489 reported the opposite mode association, so the
+transparent mode alone is not a complete explanation. M579 repeats the exact
+M335 world/path and shader instrumentation with the default desktop-shell
+path, adding the per-pixel stencil value left after the passes. If water
+samples have stencil 0, investigate why ShellDepth fails to mark those
+fragments; if stencil is 1 but the color marker is absent, inspect the shell
+color passes and framebuffer/depth state. Keep user-visible rendering changes
+out until this default-path comparison identifies the failing stage.

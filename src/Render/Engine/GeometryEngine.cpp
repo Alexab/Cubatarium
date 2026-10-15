@@ -1461,6 +1461,8 @@ void CaptureTransparentPixelProbe(
 
   // Match the opaque-depth probe's active scanlines across the view.
   std::vector<GLubyte> pixels(static_cast<size_t>(width) * rows * 4u);
+  std::vector<GLubyte> stencil_values(static_cast<size_t>(width) * rows,
+                                      255u);
   for (int row = 0; row < rows; ++row)
   {
     const int local_y =
@@ -1468,6 +1470,9 @@ void CaptureTransparentPixelProbe(
     glReadPixels(viewport[0], viewport[1] + local_y, width, 1, GL_RGBA,
                  GL_UNSIGNED_BYTE,
                  pixels.data() + static_cast<size_t>(row) * width * 4u);
+    glReadPixels(viewport[0], viewport[1] + local_y, width, 1,
+                 GL_STENCIL_INDEX, GL_UNSIGNED_BYTE,
+                 stencil_values.data() + static_cast<size_t>(row) * width);
   }
   ScreenRayTransform ray_transform{};
   if (!BuildScreenRayTransform(view, projection, ray_transform))
@@ -1545,6 +1550,9 @@ void CaptureTransparentPixelProbe(
           opaque_capture.rgba[sample];
       record.renderer_pixel_pretransparent_depth =
           opaque_capture.depth[sample];
+      record.renderer_pixel_stencil_index = stencil_values[
+          static_cast<size_t>(row) * static_cast<size_t>(width) +
+          static_cast<size_t>(local_x)];
       const bool center_marker_visible =
           red >= 240u && green <= 15u && blue >= 240u && alpha >= 240u;
       // 2 is an internal sentinel for the normal-color sample: zero and one
