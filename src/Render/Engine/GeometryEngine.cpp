@@ -1704,6 +1704,8 @@ void CaptureTransparentPixelProbe(
               world.IsChunkSliceRenderReady(opaque_chunk) ? 1u : 0u;
           record.renderer_pixel_opaque_live_gpu =
               cache.HasLiveGpuDraw(opaque_chunk) ? 1u : 0u;
+          record.renderer_pixel_opaque_stale_light_remesh_pending =
+              cache.HasPendingStaleLightRemesh(opaque_chunk) ? 1u : 0u;
           record.renderer_pixel_opaque_mesh_revision =
               cache.GetChunkMeshRevision(opaque_chunk);
           const MeshPublishRevs opaque_published =

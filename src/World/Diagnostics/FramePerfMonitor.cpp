@@ -6114,6 +6114,11 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_opaque_mdi_index_count
                  << ",\"renderer_pixel_opaque_mdi_visible_index_count\":"
                  << r.renderer_pixel_opaque_mdi_visible_index_count
+                 << ",\"renderer_pixel_opaque_column_flow_ticket_flags\":"
+                 << static_cast<int>(r.column_flow_ticket_flags)
+                 << ",\"renderer_pixel_opaque_stale_light_remesh_pending\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_stale_light_remesh_pending)
                  << "}\n";
           return;
         }
@@ -6677,6 +6682,11 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_opaque_mdi_index_count
                << ",\"renderer_pixel_opaque_mdi_visible_index_count\":"
                << r.renderer_pixel_opaque_mdi_visible_index_count
+               << ",\"renderer_pixel_opaque_column_flow_ticket_flags\":"
+               << static_cast<int>(r.column_flow_ticket_flags)
+               << ",\"renderer_pixel_opaque_stale_light_remesh_pending\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_stale_light_remesh_pending)
                << ",\"renderer_column_reason\":"
                << static_cast<int>(r.renderer_column_reason)
                << ",\"renderer_column_draw_ok\":"

@@ -805,6 +805,7 @@ struct VisualBlackTraceRecord
   uint8_t renderer_pixel_opaque_mdi_visible_pass_flags{0};
   uint32_t renderer_pixel_opaque_mdi_index_count{0};
   uint32_t renderer_pixel_opaque_mdi_visible_index_count{0};
+  uint8_t renderer_pixel_opaque_stale_light_remesh_pending{0};
   /// sample_kind=3: 1=settled field needs mesh-only repair; 0=relight target.
   uint8_t draw_gate_repair_mode{0};
   /// Persistence relight queue location/band for renderer, focus, and

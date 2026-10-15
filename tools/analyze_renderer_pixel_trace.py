@@ -171,6 +171,27 @@ def main() -> int:
                             "demand_progress_age_ms": row.get(
                                 "renderer_pixel_opaque_demand_progress_age_ms"
                             ),
+                            "mesh_work_owner_flags": row.get(
+                                "renderer_pixel_opaque_mesh_work_owner_flags"
+                            ),
+                            "column_flow_ticket_flags": row.get(
+                                "renderer_pixel_opaque_column_flow_ticket_flags"
+                            ),
+                            "relight_owner_flags": row.get(
+                                "renderer_pixel_opaque_relight_owner_flags"
+                            ),
+                            "stale_light_remesh_pending": bool(
+                                row.get(
+                                    "renderer_pixel_opaque_stale_light_remesh_pending",
+                                    0,
+                                )
+                            ),
+                            "mesh_dirty_queue_kind": row.get(
+                                "renderer_pixel_opaque_mesh_dirty_queue_kind"
+                            ),
+                            "relight_queue_kind": row.get(
+                                "renderer_pixel_opaque_relight_queue_kind"
+                            ),
                         }
 
                     elif (
