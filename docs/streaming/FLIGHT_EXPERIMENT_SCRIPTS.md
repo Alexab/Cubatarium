@@ -9293,7 +9293,7 @@ byte-for-byte and restores its process environment in `finally`; it does not
 build. Use the Release binary already built for M581–M583:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
   -EndMarginBlocks 0 `
   -World World_M572_Cold_20261014 `
   -Report bin/suite_reports/engine_refactor/m584_m572_water_fog_margin0_20261015.json
