@@ -9209,3 +9209,50 @@ world directory. Expect separate witness rows for shell depth, behind shell,
 and shell surface submissions. The suite may remain red on its existing
 streaming stop-line gates; judge the water question from matched RGB/stencil
 samples and retained GL state.
+
+#### M581 result and M582 ordinary-water capture
+
+M581 completed the full visible no-teleport M335 route (`process_rc=0`, 913
+periods, 911 steady, 572 chunks; 5.18555 blocks/s median). Pixel join: 13
+captures/780 samples, 508 water/source-triangle matches, 506 RGB changes and
+final stencil `1` (two samples had stencil `0`). Its marker intentionally
+replaced the normal water color. All 39 new draw witnesses survived: 13 each
+for pass ordinal 0/1/2, all MDI GPU-range submits, VBO/EBO live and 48/16 MiB,
+no GL or buffer-query errors, and the expected stencil/depth/color-mask state
+for ShellDepth, BehindShell, and ShellSurface. All 39 sampled GPU payloads and
+indirect commands matched CPU source data. This verifies that the default
+shell can render water in sampled frames but does not answer why M579 failed
+or how the ordinary color appears.
+
+M582 is the same exact M335 route with only the two fragment markers disabled.
+It measures the unmodified color output while retaining pixel sampling and
+the new draw witnesses. Set up the same M581 environment, with these marker
+values and new run names:
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='0'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='0'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m582_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m582_m572_water_natural_color --report bin/suite_reports/engine_refactor/m582_m572_water_natural_color_20261015.json --process-timeout 2600
+```
+
+Run the usual water pixel join on the resulting perf JSONL and same persisted
+world, with X bounds `[-4710,-4550]`. Interpret pre/post RGB alongside final
+stencil and the three `pass_ordinal` witness rows; no marker coverage is
+expected in this run.

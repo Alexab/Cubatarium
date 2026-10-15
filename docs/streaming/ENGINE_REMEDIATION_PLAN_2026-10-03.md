@@ -10211,3 +10211,36 @@ states cannot be confused. Rebuild Release and rerun the exact M335 route.
 Then compare M581 buffer IDs/liveness/sizes, submit paths, GL errors and pass
 state against the pixel/stencil join. Treat M580 as evidence of intermittent
 render success, not as a fix or a final verification.
+
+### M581 result and M582 natural-color verification — 2026-10-15
+
+M581 completed the full visible no-teleport M335 route normally (913 periods,
+911 steady periods, 572 chunks at the established 5.18555 blocks/s median).
+The suite remained red on its separate streaming/readiness stop lines. In the
+water window, 13 captures/780 samples produced 508 water/source-triangle
+matches; 506 samples changed RGB and ended with stencil 1, while two ended
+with stencil 0. The run's magenta diagnostic marker intentionally replaces
+the ordinary water color, so this verifies coverage and shell state, not
+natural-color appearance.
+
+All 39 retained draw witnesses survived the dedicated ring: 13 each for
+ShellDepth, BehindShell, and ShellSurface. Each used MDI GPU indirect-range
+submission, live pooled buffers (VBO 82, 48 MiB; EBO 83, 16 MiB), successful
+buffer queries, and no GL error. The shell depth pass had stencil ALWAYS/ref 1,
+full write mask/REPLACE, depth LESS/write enabled, and no color writes; the two
+color passes had stencil EQUAL/ref 1 and the expected GREATER and LEQUAL depth
+functions with color writes enabled. Independently, all 39 exact GPU payload
+probes and MDI commands matched the CPU source bytes/commands. This shows the
+default shell path can render the sampled water correctly; it does not explain
+why M579 failed or establish what the unmodified water shader displays.
+
+M582 repeats M335 with identical world, route, and draw witnesses but disables
+both fragment-marker shaders. Compare normal pre/post-transparent RGB at
+matched water/source triangles while retaining final stencil and GL-state
+evidence. If unmarked color changes while the user still sees no surface,
+investigate natural water color/blending and the distinction between window
+presentation and backbuffer readback. If unmarked RGB does not change despite
+stencil 1 and valid payload, trace alpha/blending and shader output next. If
+the shell witness/stencil fails again, use that captured pass state and live
+buffer evidence to find the changing runtime input. Keep the M335 route and
+desktop-shell path unchanged.
