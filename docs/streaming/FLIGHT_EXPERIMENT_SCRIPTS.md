@@ -9138,7 +9138,10 @@ those 479 changed RGB or showed the transparent fragment marker; all had final
 stencil zero. The desktop framebuffer had 8 stencil bits. Although 39 sampled
 MDI commands matched their batch command and were marked resident/visible,
 M579 did not have valid VBO/EBO byte witnesses and therefore did not prove
-submitted mesh data. M578 forced single pass with 464/467 source-fluid pixels
+submitted mesh data. The CPU opaque-depth ray proxy found a closer opaque hit
+for only 3/479 samples (32 had no opaque hit), so foreground geometry cannot
+account for the missing result at most sampled water pixels. M578 forced
+single pass with 464/467 source-fluid pixels
 changing RGB and 39/39 valid byte-identical GPU payload probes. Continue with
 M580 before changing rendering behavior.
 

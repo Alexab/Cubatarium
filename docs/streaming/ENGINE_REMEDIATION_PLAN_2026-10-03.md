@@ -10157,6 +10157,11 @@ state query had no reported GL error. This places the visible failure before
 the shell color result, but stencil zero alone does not establish why the
 depth shell failed to write.
 
+The CPU opaque-depth ray proxy found a positive opaque hit closer than the
+water surface for only 3/479 such samples; 32 had no opaque hit at all. Thus
+foreground opaque geometry does not explain the missing shell/color result at
+most sampled water pixels (the CPU ray is still a proxy for GPU raster depth).
+
 The source/GPU bookkeeping still reports 39/39 sampled indirect commands as
 resident, visible, indexed, and matching their batch command. The newer
 post-submit witness instrumentation was not in the M579 executable. Its
