@@ -5278,6 +5278,13 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
           within_first_mesh_relight_horizon &&
           !slice_light_settled &&
           (!IsColumnLitReady(ground) || desired_light == 0);
+      // A drawable provisional image is already visible, but it must not be
+      // mistaken for a completed light obligation. Column LitReady and equal
+      // mesh/field revisions can coexist with a missing exact-slice settlement
+      // proof; ensure such a visible preview has executable relight ownership.
+      const bool provisional_preview_needs_lighting =
+          RequiresLightingLitGate() && !slice_light_settled &&
+          ShouldDrawProvisionalLightPreview(coord);
       const glm::ivec2 slice_column(cx, cz);
       const glm::ivec2 slice_block_key(cx * CHUNK_SIZE, cz * CHUNK_SIZE);
       const auto ensure_slice_relight =
@@ -5367,13 +5374,16 @@ int UWorld::AdmitUnfinishedVisualDemand(int max_n)
                             desired_coverage, demand_now_ms,
                             MeshService->GetCache().GetCaptureStore().WorldEpoch(),
                             ch->GetIncarnation());
-      if (defer_until_lit || first_mesh_needs_lighting)
+      if (defer_until_lit || first_mesh_needs_lighting ||
+          provisional_preview_needs_lighting)
       {
-        // Lighting owns this visible first-mesh slice. An unsettled slice may
-        // not yet have a PendingLight/defer owner, so create that
-        // debt only after a queue, in-flight relight, or pending-light owner
-        // confirms that real relight work exists.
-        const bool relight_enqueued = ensure_slice_relight();
+        // Lighting owns this visible slice until it has an exact settlement
+        // proof. An unsettled preview may have no PendingLight/defer owner, so
+        // admit relight directly instead of treating its drawable fallback as
+        // satisfying demand. Create PendingLight debt only after a queue,
+        // in-flight relight, or pending-light owner confirms executable work.
+        const bool relight_enqueued = ensure_slice_relight(
+            provisional_preview_needs_lighting);
         note_unowned_geometry_retry_attempt("defer_relight");
         if (relight_enqueued && first_mesh_needs_lighting &&
             !IsPendingLightBeforeMesh(slice_column))
