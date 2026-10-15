@@ -30,6 +30,11 @@ def main() -> int:
     ray_states: Counter[str] = Counter()
     dark_light_states: Counter[str] = Counter()
     dark_pixels: list[dict[str, Any]] = []
+    provisional_preview_sample_n = 0
+    provisional_preview_chunks: dict[tuple[int, int, int], dict[int, dict[str, Any]]] = {}
+    settled_nonpreview_chunks: dict[tuple[int, int, int], dict[int, dict[str, Any]]] = {}
+    provisional_preview_seen: set[tuple[int, int, int, int, int, int]] = set()
+    opaque_unsettled_seen: set[tuple[int, int, int, int, int, int]] = set()
     screen_rays_by_epoch: dict[int, Counter[str]] = {}
     max_oom_period: dict[str, Any] | None = None
     max_pool_period: dict[str, Any] | None = None
@@ -49,6 +54,140 @@ def main() -> int:
                 luma = luminance(rgb)
                 ray_state = int(row.get("renderer_pixel_voxel_ray_state", 0))
                 ray_states[str(ray_state)] += 1
+
+                if (
+                    row.get("renderer_pixel_opaque_surface_valid")
+                    and row.get("renderer_pixel_opaque_vertex_light_valid")
+                ):
+                    chunk = (
+                        int(row.get("renderer_pixel_opaque_chunk_x", 0)),
+                        int(row.get("renderer_pixel_opaque_chunk_y", 0)),
+                        int(row.get("renderer_pixel_opaque_chunk_z", 0)),
+                    )
+                    probe_id = int(row.get("renderer_pixel_probe_id", 0))
+                    pixel_x = int(row.get("renderer_pixel_x", 0))
+                    pixel_y = int(row.get("renderer_pixel_y", 0))
+                    capture_key = (probe_id, pixel_x, pixel_y, *chunk)
+                    vertex_preview = bool(
+                        row.get("renderer_pixel_opaque_vertex_light_preview", 0)
+                    )
+                    shader_override_value = row.get(
+                        "renderer_pixel_opaque_preview_shader_override"
+                    )
+                    shader_override = (
+                        bool(shader_override_value)
+                        if shader_override_value is not None
+                        else vertex_preview
+                    )
+                    preview_active = vertex_preview or shader_override
+                    demand_present = bool(
+                        row.get("renderer_pixel_opaque_demand_present", 0)
+                    )
+                    demand_settled = bool(
+                        row.get("renderer_pixel_opaque_demand_has_settled_light", 0)
+                    )
+
+                    if demand_present and not demand_settled:
+                        opaque_unsettled_seen.add(capture_key)
+
+                    if (
+                        preview_active
+                        and capture_key not in provisional_preview_seen
+                    ):
+                        provisional_preview_seen.add(capture_key)
+                        provisional_preview_sample_n += 1
+                        camera_x = row.get("camera_x")
+                        camera_y = row.get("camera_y")
+                        camera_z = row.get("camera_z")
+                        capture = provisional_preview_chunks.setdefault(
+                            chunk, {}
+                        ).setdefault(
+                            probe_id,
+                            {
+                                "probe_id": probe_id,
+                                "frame_epoch": int(row.get("frame_epoch", 0)),
+                                "camera": [camera_x, camera_y, camera_z],
+                                "preview_pixel_count": 0,
+                                "settled_nonpreview_pixel_count": 0,
+                            },
+                        )
+                        capture["preview_pixel_count"] += 1
+                        capture["shader_override_pixel_count"] = capture.get(
+                            "shader_override_pixel_count", 0
+                        ) + int(shader_override)
+                        capture["vertex_marker_pixel_count"] = capture.get(
+                            "vertex_marker_pixel_count", 0
+                        ) + int(vertex_preview)
+                        capture["demand_unsettled_pixel_count"] = capture.get(
+                            "demand_unsettled_pixel_count", 0
+                        ) + int(demand_present and not demand_settled)
+                        capture["sample"] = {
+                            "pixel": [pixel_x, pixel_y],
+                            "rgb": rgb,
+                            "sky_light": row.get(
+                                "renderer_pixel_opaque_vertex_sky_light"
+                            ),
+                            "block_light": row.get(
+                                "renderer_pixel_opaque_vertex_block_light"
+                            ),
+                            "live_face_light_packed": row.get(
+                                "renderer_pixel_opaque_live_face_light_packed"
+                            ),
+                            "published_light_revision": row.get(
+                                "renderer_pixel_opaque_published_light_rev"
+                            ),
+                            "field_light_revision": row.get(
+                                "renderer_pixel_opaque_field_light_rev"
+                            ),
+                            "demand_settled": demand_settled,
+                            "demand_active_attempt": bool(
+                                row.get(
+                                    "renderer_pixel_opaque_demand_has_active_attempt",
+                                    0,
+                                )
+                            ),
+                            "demand_attempt_age_ms": row.get(
+                                "renderer_pixel_opaque_demand_attempt_age_ms"
+                            ),
+                            "demand_progress_age_ms": row.get(
+                                "renderer_pixel_opaque_demand_progress_age_ms"
+                            ),
+                        }
+
+                    elif (
+                        not preview_active
+                        and demand_present
+                        and demand_settled
+                    ):
+                        settled_capture = settled_nonpreview_chunks.setdefault(
+                            chunk, {}
+                        ).setdefault(
+                            probe_id,
+                            {
+                                "probe_id": probe_id,
+                                "frame_epoch": int(row.get("frame_epoch", 0)),
+                                "camera": [
+                                    row.get("camera_x"),
+                                    row.get("camera_y"),
+                                    row.get("camera_z"),
+                                ],
+                                "settled_nonpreview_pixel_count": 0,
+                            },
+                        )
+                        settled_capture["settled_nonpreview_pixel_count"] += 1
+                        settled_capture["settled_sample"] = {
+                            "pixel": [pixel_x, pixel_y],
+                            "rgb": rgb,
+                            "sky_light": row.get(
+                                "renderer_pixel_opaque_vertex_sky_light"
+                            ),
+                            "block_light": row.get(
+                                "renderer_pixel_opaque_vertex_block_light"
+                            ),
+                            "live_face_light_packed": row.get(
+                                "renderer_pixel_opaque_live_face_light_packed"
+                            ),
+                        }
                 if luma >= args.threshold:
                     continue
 
@@ -366,6 +505,58 @@ def main() -> int:
         ray_summary = screen_rays_by_epoch.get(pixel["frame_epoch"], Counter())
         pixel["same_frame_screen_rays"] = dict(ray_summary)
 
+    preview_chunk_rows: list[dict[str, Any]] = []
+    for chunk, captures_by_probe in sorted(provisional_preview_chunks.items()):
+        captures = sorted(captures_by_probe.values(), key=lambda item: item["probe_id"])
+        preview_captures = [
+            item for item in captures if item["preview_pixel_count"] > 0
+        ]
+        if not preview_captures:
+            continue
+        first_preview = preview_captures[0]
+        last_preview = preview_captures[-1]
+        settled_after = next(
+            (
+                item
+                for item in sorted(
+                    settled_nonpreview_chunks.get(chunk, {}).values(),
+                    key=lambda capture: capture["probe_id"],
+                )
+                if item["probe_id"] > last_preview["probe_id"]
+                and item["settled_nonpreview_pixel_count"] > 0
+            ),
+            None,
+        )
+        preview_chunk_rows.append(
+            {
+                "chunk": list(chunk),
+                "preview_capture_count": len(preview_captures),
+                "preview_pixel_count": sum(
+                    item["preview_pixel_count"] for item in preview_captures
+                ),
+                "shader_override_pixel_count": sum(
+                    item.get("shader_override_pixel_count", 0)
+                    for item in preview_captures
+                ),
+                "vertex_marker_pixel_count": sum(
+                    item.get("vertex_marker_pixel_count", 0)
+                    for item in preview_captures
+                ),
+                "demand_unsettled_pixel_count": sum(
+                    item.get("demand_unsettled_pixel_count", 0)
+                    for item in preview_captures
+                ),
+                "first_preview": first_preview,
+                "last_preview": last_preview,
+                "first_settled_nonpreview_after": settled_after,
+                "probe_id_delta_to_settled": (
+                    settled_after["probe_id"] - last_preview["probe_id"]
+                    if settled_after
+                    else None
+                ),
+            }
+        )
+
     distance_deltas = [
         float(pixel["voxel_depth_distance_delta"])
         for pixel in dark_pixels
@@ -398,6 +589,10 @@ def main() -> int:
         "pixel_probe_count": probe_count,
         "dark_threshold_luma": args.threshold,
         "dark_pixel_count": len(dark_pixels),
+        "opaque_unsettled_demand_sample_count": len(opaque_unsettled_seen),
+        "provisional_light_preview_sample_count": provisional_preview_sample_n,
+        "provisional_light_preview_chunk_count": len(preview_chunk_rows),
+        "provisional_light_preview_chunks": preview_chunk_rows,
         "voxel_ray_state_counts": dict(ray_states),
         "dark_pixel_light_state_counts": dict(dark_light_states),
         "screen_ray_frame_count": len(screen_rays_by_epoch),
