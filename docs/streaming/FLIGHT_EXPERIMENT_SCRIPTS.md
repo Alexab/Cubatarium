@@ -9299,8 +9299,44 @@ pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
   -Report bin/suite_reports/engine_refactor/m584_m572_water_fog_margin0_20261015.json
 ```
 
-After completion, run the same water join command used for M582/M583 with
-X bounds `[-4710,-4550]`. Compare the measured fog end, water RGB changes,
-source-triangle coverage, and stencil. This is a temporary config A/B, not a
-permanent rendering change; use its result before changing fog policy or
-default settings.
+M584 completed the visible, no-teleport M335 route normally (913 periods,
+`process_rc=0`, no hang kill). The runner restored the original config
+(`distance_fog_end_margin_blocks=28`, pull-in enabled) after the run. The
+actual horizontal air-fog range was 30.63–64 blocks. In 14 captures/840
+samples, 765 were water blocks and 502 also matched a source fluid triangle;
+469/502 (93.4%) changed framebuffer RGB after transparency, versus 74.5% in
+M583 and 72.2% in M582. Of the 33 unchanged source-triangle samples, 32 had
+stencil 1, all were farther than 64 blocks, and all were within one 8-bit
+channel of the fog color (21 exactly matched); the single remaining sample
+had stencil 0 at 38.5 blocks. All 469 RGB-changing samples were within
+59.1 blocks. The 42 retained fluid draw witnesses had matching GPU payloads
+and indirect commands.
+
+This supports fog/render-horizon convergence as the cause of the *far-field*
+water blending into the sky: with the fog end aligned to the 64-block render
+radius, matched water inside that radius changed the framebuffer in 93.4% of
+samples. It does not prove the whole surface is always visible. The user
+reported seeing no water during this investigation, while these sparse probes
+did see the surface in the selected X window; the remaining 86/263
+water-block samples without a source-triangle match were in render-ready
+chunks, so this discrepancy remains open. A source-triangle ray miss is a
+proxy, not proof that the actual GPU surface is absent. The suite still had
+its separate post-stop streaming gates red.
+
+M585 checks the same route with margin 0 and normal fog pull-in enabled. The
+helper accepts `-EnableFogPullIn` for this control and still restores config
+bytes and environment in `finally`:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 `
+  -EnableFogPullIn `
+  -World World_M572_Cold_20261014 `
+  -Report bin/suite_reports/engine_refactor/m585_m572_water_margin0_pullin_20261015.json
+```
+
+Join M585 with the same X bounds `[-4710,-4550]`. Compare actual fog end,
+unchanged water pixels, source-triangle coverage, and the dynamic pull-in
+margin/debt. The M584 result is a strong far-field diagnosis, not yet a
+permanent rendering change; keep the in-range source-triangle misses and the
+user-reported full disappearance in the remaining investigation.

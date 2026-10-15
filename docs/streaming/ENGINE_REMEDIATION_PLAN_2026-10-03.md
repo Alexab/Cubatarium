@@ -10293,13 +10293,36 @@ render coverage: 157 had no render-ready chunk, 160 lay beyond 64 horizontal
 blocks, and the source-triangle ray test remains a proxy. Do not classify
 these far-field samples as near-focus mesh loss.
 
-M584 is a controlled config-only A/B: keep the full M335 route and all render
-settings fixed, disable pull-in as in M583, and set only
-`distance_fog_end_margin_blocks=0` for the duration of the run. The
-64-block fog end should align with the four-chunk render radius. The helper
-`tools/run_m335_water_visibility_ab.ps1` saves/restores `bin/config.json`
-byte-for-byte and restores process environment even after a runner error.
-Compare actual fog uniforms, RGB/stencil joins, and render-ready coverage
-before deciding whether the production fix belongs in fog policy, render
-distance, or streaming readiness. Keep water meshing and shell passes
-unchanged until that A/B is measured.
+M584 completed the full visible, no-teleport M335 route (913 periods,
+`process_rc=0`, no hang kill) with pull-in disabled and
+`distance_fog_end_margin_blocks=0`; the helper restored the prior config
+(margin 28, pull-in enabled) byte-for-byte. Pixel probes measured horizontal
+air fog start 30.63–30.72 and end 64, matching RD=4's render horizon. Of 502
+water/source-triangle matches, 469 (93.4%) changed framebuffer RGB after the
+transparent pass, up from M583's 74.5% and M582's 72.2%. Every changed sample
+was at a camera-to-surface distance no greater than 59.1 blocks. Of the 33
+unchanged matches, 32 had stencil 1, were all beyond 64 blocks, and were
+within one 8-bit channel of fog color (21 exact); one was stencil 0 at 38.5
+blocks. All 42 retained fluid draw witnesses had matching GPU payloads and
+indirect commands. This is strong evidence that margin 28 was hiding water
+near the M335 center-ray intersection by ending fog at 36 blocks, and that
+margin 0 exposes in-range water up to the render horizon.
+
+This does not close the water issue. During the investigation the user
+reported seeing no water, while the sparse M584 probes showed framebuffer
+changes for most matched water pixels in the selected X window. In addition,
+263/765 sampled water-block rays had no matching source triangle; 182 were
+beyond 64 blocks, but 86 were in render-ready chunks. The ray/triangle join
+is only a proxy and does not prove the whole visible surface is present.
+The run's separate post-stop streaming gates also remained red. Do not yet
+claim a permanent fix.
+
+Next, M585 keeps the M335 route and margin 0 but turns the normal runtime fog
+pull-in back on. This checks whether active readiness debt widens the margin
+again or pulls fog inside the water-plane intersection. The helper
+`tools/run_m335_water_visibility_ab.ps1 -EnableFogPullIn` preserves/restores
+the config and environment. After M585, compare actual fog end, dynamic
+margin/debt, RGB/stencil, and the 86 in-radius source-triangle misses. Only
+then choose a production policy: likely align the ordinary water fog end to
+the drawable radius while keeping a bounded near-hole mask, without changing
+the shell passes until draw evidence requires it.

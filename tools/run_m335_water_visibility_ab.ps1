@@ -2,6 +2,7 @@
 param(
     [ValidateRange(0, 512)]
     [int]$EndMarginBlocks = 0,
+    [switch]$EnableFogPullIn,
     [string]$World = "World_M572_Cold_20261014",
     [string]$Report = "bin/suite_reports/engine_refactor/m584_m572_water_fog_margin0_20261015.json"
 )
@@ -66,18 +67,26 @@ try {
     foreach ($entry in $environmentValues.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, "Process")
     }
-    foreach ($name in @(
+    if ($EnableFogPullIn) {
+        [Environment]::SetEnvironmentVariable("CUBA_FLIGHT_FOG_ON", "1", "Process")
+    }
+    $environmentToClear = @(
         "CUBA_FLIGHT_FOG_ON",
         "CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD",
         "CUBA_FOCUS_SLICE_TRACE_PER_STATE",
         "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY",
         "CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS",
         "CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES"
-    )) {
+    )
+    if ($EnableFogPullIn) {
+        $environmentToClear = $environmentToClear | Where-Object { $_ -ne "CUBA_FLIGHT_FOG_ON" }
+    }
+    foreach ($name in $environmentToClear) {
         [Environment]::SetEnvironmentVariable($name, $null, "Process")
     }
 
-    $phaseId = "m335_water_endmargin_{0}" -f $EndMarginBlocks
+    $pullInTag = if ($EnableFogPullIn) { "pullin_on" } else { "pullin_off" }
+    $phaseId = "m335_water_endmargin_{0}_{1}" -f $EndMarginBlocks, $pullInTag
     & python -X utf8 tools\flight_sim_run.py `
         --scenario product-174657-far `
         --world $World `
