@@ -425,6 +425,7 @@ thread_local GpuOpaqueDrawStateWitness g_gpu_opaque_draw_state_witness;
 thread_local std::vector<GpuOpaqueDrawStateWitness>
     g_gpu_opaque_draw_state_frame_witnesses;
 thread_local bool g_capture_gpu_draw_state_for_pixel_probe{false};
+thread_local bool g_capture_fluid_draw_witness_for_pixel_probe{false};
 
 void CopyGpuOpaqueDrawStateWitness(const GpuOpaqueDrawStateWitness &witness,
                                    VisualBlackTraceRecord &record);
@@ -4285,6 +4286,7 @@ void UGeometryEngine::DrawCubeGeometry()
   g_gpu_opaque_draw_state_witness = {};
   g_gpu_opaque_draw_state_frame_witnesses.clear();
   g_capture_gpu_draw_state_for_pixel_probe = false;
+  g_capture_fluid_draw_witness_for_pixel_probe = false;
   auto t_begin = std::chrono::high_resolution_clock::now();
   double filter_ms = 0.0;
   double opaque_ms = 0.0;
@@ -4602,7 +4604,10 @@ void UGeometryEngine::DrawCubeGeometry()
                                         camera->GetPosition(),
                                         WorldInstance->GetBlockRegistry(),
                                         textures};
+      g_capture_fluid_draw_witness_for_pixel_probe =
+          pixel_probe_capture.probe_id != 0;
       UGreedyTransparentPipeline::Draw(*this, tctx);
+      g_capture_fluid_draw_witness_for_pixel_probe = false;
     }
     if (UJobStageTrace::VisualBlackTraceEnabled())
     {
@@ -5106,6 +5111,137 @@ bool DebugFluidFragmentMarkerEnabled(const glm::vec3 &camera_position)
   return enabled && FluidRenderDiagnosticWindowContains(camera_position);
 }
 
+void NoteFluidGpuDrawWitness(const GreedyGpuPassCache &cache,
+                             const GreedyGpuBatch &batch,
+                             const glm::vec3 &camera_position,
+                             uint64_t frame_epoch, GreedyShaderMode mode,
+                             uint8_t submit_path, bool mdi_eligible)
+{
+  if (!g_capture_fluid_draw_witness_for_pixel_probe ||
+      !UJobStageTrace::VisualBlackTraceEnabled() ||
+      !FluidRenderDiagnosticWindowContains(camera_position) ||
+      (mode != GreedyShaderMode::ShellDepthPrepass &&
+       mode != GreedyShaderMode::TransparentColor))
+  {
+    return;
+  }
+
+  static thread_local std::array<uint64_t, 2> last_epoch{
+      std::numeric_limits<uint64_t>::max(),
+      std::numeric_limits<uint64_t>::max()};
+  const size_t pass_slot = mode == GreedyShaderMode::ShellDepthPrepass ? 0u : 1u;
+  if (last_epoch[pass_slot] == frame_epoch)
+  {
+    return;
+  }
+  last_epoch[pass_slot] = frame_epoch;
+
+  VisualBlackTraceRecord record{};
+  record.sample_kind = 19;
+  record.frame_epoch = frame_epoch;
+  record.camera_x = static_cast<int32_t>(std::floor(camera_position.x));
+  record.camera_y = static_cast<int32_t>(std::floor(camera_position.y));
+  record.camera_z = static_cast<int32_t>(std::floor(camera_position.z));
+  record.cx = batch.chunkCoord.x;
+  record.cy = batch.chunkCoord.y;
+  record.cz = batch.chunkCoord.z;
+  record.renderer_fluid_draw_witness_valid = 1;
+  record.renderer_fluid_draw_witness_pass = static_cast<uint8_t>(mode);
+  record.renderer_fluid_draw_witness_submit_path = submit_path;
+  record.renderer_fluid_draw_witness_use_mdi = mdi_eligible ? 1u : 0u;
+  record.renderer_fluid_draw_witness_pooled = batch.pooled ? 1u : 0u;
+  record.renderer_fluid_draw_witness_block_id = batch.blockId;
+  record.renderer_fluid_draw_witness_pool_vbo = cache.poolVbo;
+  record.renderer_fluid_draw_witness_pool_ebo = cache.poolEbo;
+  const GLuint vertex_buffer = batch.pooled ? cache.poolVbo : batch.vbo;
+  const GLuint index_buffer = batch.pooled ? cache.poolEbo : batch.ebo;
+  record.renderer_fluid_draw_witness_vbo = vertex_buffer;
+  record.renderer_fluid_draw_witness_ebo = index_buffer;
+  record.renderer_fluid_draw_witness_vbo_is_buffer =
+      vertex_buffer != 0 && glIsBuffer(vertex_buffer) == GL_TRUE ? 1u : 0u;
+  record.renderer_fluid_draw_witness_ebo_is_buffer =
+      index_buffer != 0 && glIsBuffer(index_buffer) == GL_TRUE ? 1u : 0u;
+  record.renderer_fluid_draw_witness_gl_error_after_submit =
+      static_cast<int32_t>(glGetError());
+
+  GLboolean enabled = GL_FALSE;
+  glGetBooleanv(GL_STENCIL_TEST, &enabled);
+  record.renderer_fluid_draw_witness_stencil_test =
+      enabled == GL_TRUE ? 1u : 0u;
+  glGetIntegerv(GL_STENCIL_FUNC,
+                &record.renderer_fluid_draw_witness_stencil_func);
+  glGetIntegerv(GL_STENCIL_REF,
+                &record.renderer_fluid_draw_witness_stencil_ref);
+  glGetIntegerv(GL_STENCIL_VALUE_MASK,
+                &record.renderer_fluid_draw_witness_stencil_value_mask);
+  glGetIntegerv(GL_STENCIL_WRITEMASK,
+                &record.renderer_fluid_draw_witness_stencil_write_mask);
+  glGetIntegerv(GL_STENCIL_FAIL,
+                &record.renderer_fluid_draw_witness_stencil_fail);
+  glGetIntegerv(GL_STENCIL_PASS_DEPTH_FAIL,
+                &record.renderer_fluid_draw_witness_stencil_depth_fail);
+  glGetIntegerv(GL_STENCIL_PASS_DEPTH_PASS,
+                &record.renderer_fluid_draw_witness_stencil_depth_pass);
+  glGetBooleanv(GL_DEPTH_TEST, &enabled);
+  record.renderer_fluid_draw_witness_depth_test =
+      enabled == GL_TRUE ? 1u : 0u;
+  glGetBooleanv(GL_DEPTH_WRITEMASK, &enabled);
+  record.renderer_fluid_draw_witness_depth_write =
+      enabled == GL_TRUE ? 1u : 0u;
+  glGetIntegerv(GL_DEPTH_FUNC,
+                &record.renderer_fluid_draw_witness_depth_func);
+  GLboolean color_mask[4] = {GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE};
+  glGetBooleanv(GL_COLOR_WRITEMASK, color_mask);
+  for (size_t channel = 0; channel < 4; ++channel)
+  {
+    if (color_mask[channel] == GL_TRUE)
+    {
+      record.renderer_fluid_draw_witness_color_write_mask |=
+          static_cast<uint8_t>(1u << channel);
+    }
+  }
+  GLint state_value = 0;
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &state_value);
+  record.renderer_fluid_draw_witness_vao =
+      static_cast<uint32_t>(std::max(state_value, 0));
+  glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &state_value);
+  record.renderer_fluid_draw_witness_array_buffer =
+      static_cast<uint32_t>(std::max(state_value, 0));
+  glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &state_value);
+  record.renderer_fluid_draw_witness_element_buffer =
+      static_cast<uint32_t>(std::max(state_value, 0));
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &state_value);
+  record.renderer_fluid_draw_witness_draw_framebuffer =
+      static_cast<uint32_t>(std::max(state_value, 0));
+
+  GLint old_copy_read_buffer = 0;
+  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy_read_buffer);
+  const auto query_buffer = [&](GLuint buffer, uint64_t &size_out,
+                                int32_t &bind_error_out,
+                                int32_t &query_error_out)
+  {
+    if (buffer == 0)
+    {
+      return;
+    }
+    glBindBuffer(GL_COPY_READ_BUFFER, buffer);
+    bind_error_out = static_cast<int32_t>(glGetError());
+    GLint64 size = 0;
+    glGetBufferParameteri64v(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &size);
+    query_error_out = static_cast<int32_t>(glGetError());
+    size_out = static_cast<uint64_t>(std::max<GLint64>(size, 0));
+  };
+  query_buffer(vertex_buffer, record.renderer_fluid_draw_witness_vbo_bytes,
+               record.renderer_fluid_draw_witness_vbo_bind_error,
+               record.renderer_fluid_draw_witness_vbo_query_error);
+  query_buffer(index_buffer, record.renderer_fluid_draw_witness_ebo_bytes,
+               record.renderer_fluid_draw_witness_ebo_bind_error,
+               record.renderer_fluid_draw_witness_ebo_query_error);
+  glBindBuffer(GL_COPY_READ_BUFFER,
+               static_cast<GLuint>(std::max(old_copy_read_buffer, 0)));
+  UJobStageTrace::NoteVisualBlack(record);
+}
+
 } // namespace
 
 void UGeometryEngine::DrawGreedyGpuBatches(
@@ -5180,12 +5316,17 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       transparentPass && mode == GreedyShaderMode::TransparentColor &&
       DebugFluidFragmentMarkerEnabled(camera_position) &&
       WorldInstance != nullptr;
+  IUMeshGpuStore &store = MeshStore();
+  const bool use_mdi = store.SupportsMultiDrawIndirect() &&
+                       cache.usesVertexPool && cache.poolVbo != 0 &&
+                       cache.poolEbo != 0;
   const auto is_fluid_block = [&](BlockId block_id)
   {
     return fluid_trace && WorldInstance->GetBlockRegistry().GetRenderStyle(
                               block_id) == BlockRenderStyle::Fluid;
   };
-  const auto note_fluid_single_submit = [&](const GreedyGpuBatch &batch)
+  const auto note_fluid_single_submit = [&](const GreedyGpuBatch &batch,
+                                             uint8_t submit_path)
   {
     if (!is_fluid_block(batch.blockId))
     {
@@ -5194,9 +5335,15 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     ++fluid_draw_calls;
     fluid_draw_indices +=
         static_cast<uint64_t>(std::max(batch.indexCountGl, 0));
+    if (WorldInstance)
+    {
+      NoteFluidGpuDrawWitness(cache, batch, camera_position,
+                              WorldInstance->GetStreamingFrameEpoch(), mode,
+                              submit_path, use_mdi);
+    }
   };
   const auto note_fluid_group_submit = [&](BlockId block_id, size_t begin,
-                                           size_t end)
+                                           size_t end, uint8_t submit_path)
   {
     if (!is_fluid_block(block_id))
     {
@@ -5208,12 +5355,22 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       fluid_draw_indices += static_cast<uint64_t>(
           std::max(cache.batches[index].indexCountGl, 0));
     }
+    if (WorldInstance)
+    {
+      for (size_t index = begin; index < end; ++index)
+      {
+        const GreedyGpuBatch &batch = cache.batches[index];
+        if (!is_fluid_block(batch.blockId))
+        {
+          continue;
+        }
+        NoteFluidGpuDrawWitness(cache, batch, camera_position,
+                                WorldInstance->GetStreamingFrameEpoch(), mode,
+                                submit_path, use_mdi);
+        break;
+      }
+    }
   };
-
-  IUMeshGpuStore &store = MeshStore();
-  const bool use_mdi = store.SupportsMultiDrawIndirect() &&
-                       cache.usesVertexPool && cache.poolVbo != 0 &&
-                       cache.poolEbo != 0;
   const bool generic_gpu_draw_state_window =
       !transparentPass && mode == GreedyShaderMode::TransparentColor &&
       g_capture_gpu_draw_state_for_pixel_probe && WorldInstance != nullptr;
@@ -5396,7 +5553,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
               WorldInstance->GetStreamingFrameEpoch(), 1, true);
         }
         ++draw_cmds;
-        note_fluid_group_submit(head.blockId, i, j);
+        note_fluid_group_submit(head.blockId, i, j, 1u);
       }
       else
       {
@@ -5430,7 +5587,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           }
           NoteGpuHotPathFallback();
           ++draw_cmds;
-          note_fluid_group_submit(head.blockId, i, j);
+          note_fluid_group_submit(head.blockId, i, j, 2u);
         }
         else
         {
@@ -5469,7 +5626,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
                   single_draw_state, cache, k, k + 1u,
                   WorldInstance->GetStreamingFrameEpoch(), 3, true);
             }
-            note_fluid_single_submit(gpu);
+            note_fluid_single_submit(gpu, 3u);
             if (has_draw_witness_batch && k == witness_batch_index)
             {
               g_gpu_opaque_draw_state_witness.submitted = true;
@@ -5551,7 +5708,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         CaptureGpuOpaqueDrawState(cache, gpu_index, 4, vp);
       }
       glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
-      note_fluid_single_submit(gpu);
+      note_fluid_single_submit(gpu, 4u);
       if (witness_target)
       {
         g_gpu_opaque_draw_state_witness.submitted = true;
@@ -5644,7 +5801,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       glDrawElements(
           GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
           reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
-      note_fluid_single_submit(gpu);
+      note_fluid_single_submit(gpu, 5u);
       if (witness_target)
       {
         g_gpu_opaque_draw_state_witness.submitted = true;

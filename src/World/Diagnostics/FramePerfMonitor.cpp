@@ -5126,6 +5126,89 @@ void UFramePerfMonitor::Shutdown()
           (*out) << "}\n";
           return;
         }
+        if (r.sample_kind == 19)
+        {
+          (*out) << "{\"kind\":\"fluid_draw_witness\""
+                 << ",\"frame_epoch\":" << r.frame_epoch
+                 << ",\"camera_x\":" << r.camera_x
+                 << ",\"camera_y\":" << r.camera_y
+                 << ",\"camera_z\":" << r.camera_z
+                 << ",\"chunk\":[" << r.cx << ',' << r.cy << ',' << r.cz
+                 << ']'
+                 << ",\"valid\":"
+                 << static_cast<int>(r.renderer_fluid_draw_witness_valid)
+                 << ",\"pass\":"
+                 << static_cast<int>(r.renderer_fluid_draw_witness_pass)
+                 << ",\"submit_path\":"
+                 << static_cast<int>(
+                        r.renderer_fluid_draw_witness_submit_path)
+                 << ",\"use_mdi\":"
+                 << static_cast<int>(r.renderer_fluid_draw_witness_use_mdi)
+                 << ",\"pooled\":"
+                 << static_cast<int>(r.renderer_fluid_draw_witness_pooled)
+                 << ",\"block_id\":"
+                 << r.renderer_fluid_draw_witness_block_id
+                 << ",\"pool_vbo\":"
+                 << r.renderer_fluid_draw_witness_pool_vbo
+                 << ",\"pool_ebo\":"
+                 << r.renderer_fluid_draw_witness_pool_ebo
+                 << ",\"vbo\":" << r.renderer_fluid_draw_witness_vbo
+                 << ",\"ebo\":" << r.renderer_fluid_draw_witness_ebo
+                 << ",\"vbo_is_buffer\":"
+                 << static_cast<int>(
+                        r.renderer_fluid_draw_witness_vbo_is_buffer)
+                 << ",\"ebo_is_buffer\":"
+                 << static_cast<int>(
+                        r.renderer_fluid_draw_witness_ebo_is_buffer)
+                 << ",\"vbo_bytes\":"
+                 << r.renderer_fluid_draw_witness_vbo_bytes
+                 << ",\"ebo_bytes\":"
+                 << r.renderer_fluid_draw_witness_ebo_bytes
+                 << ",\"vbo_bind_error\":"
+                 << r.renderer_fluid_draw_witness_vbo_bind_error
+                 << ",\"ebo_bind_error\":"
+                 << r.renderer_fluid_draw_witness_ebo_bind_error
+                 << ",\"vbo_query_error\":"
+                 << r.renderer_fluid_draw_witness_vbo_query_error
+                 << ",\"ebo_query_error\":"
+                 << r.renderer_fluid_draw_witness_ebo_query_error
+                 << ",\"gl_error_after_submit\":"
+                 << r.renderer_fluid_draw_witness_gl_error_after_submit
+                 << ",\"vao\":" << r.renderer_fluid_draw_witness_vao
+                 << ",\"array_buffer\":"
+                 << r.renderer_fluid_draw_witness_array_buffer
+                 << ",\"element_buffer\":"
+                 << r.renderer_fluid_draw_witness_element_buffer
+                 << ",\"draw_framebuffer\":"
+                 << r.renderer_fluid_draw_witness_draw_framebuffer
+                 << ",\"stencil_test\":"
+                 << static_cast<int>(r.renderer_fluid_draw_witness_stencil_test)
+                 << ",\"stencil_func\":"
+                 << r.renderer_fluid_draw_witness_stencil_func
+                 << ",\"stencil_ref\":"
+                 << r.renderer_fluid_draw_witness_stencil_ref
+                 << ",\"stencil_value_mask\":"
+                 << r.renderer_fluid_draw_witness_stencil_value_mask
+                 << ",\"stencil_write_mask\":"
+                 << r.renderer_fluid_draw_witness_stencil_write_mask
+                 << ",\"stencil_fail\":"
+                 << r.renderer_fluid_draw_witness_stencil_fail
+                 << ",\"stencil_depth_fail\":"
+                 << r.renderer_fluid_draw_witness_stencil_depth_fail
+                 << ",\"stencil_depth_pass\":"
+                 << r.renderer_fluid_draw_witness_stencil_depth_pass
+                 << ",\"depth_test\":"
+                 << static_cast<int>(r.renderer_fluid_draw_witness_depth_test)
+                 << ",\"depth_func\":"
+                 << r.renderer_fluid_draw_witness_depth_func
+                 << ",\"depth_write\":"
+                 << static_cast<int>(r.renderer_fluid_draw_witness_depth_write)
+                 << ",\"color_write_mask\":"
+                 << static_cast<int>(
+                        r.renderer_fluid_draw_witness_color_write_mask)
+                 << "}\n";
+          return;
+        }
         if (r.sample_kind == 18)
         {
           (*out) << "{\"kind\":\"camera_band_peak_scheduler_trace\""

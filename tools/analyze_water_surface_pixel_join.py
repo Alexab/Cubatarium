@@ -52,6 +52,7 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
     decoded: dict[tuple[int, int, int], dict[tuple[int, int, int], int] | None] = {}
     captures: dict[tuple[int, int], dict[str, Any]] = {}
     samples: list[dict[str, Any]] = []
+    draw_witnesses: list[dict[str, Any]] = []
     skipped: Counter[str] = Counter()
 
     with perf_path.open("r", encoding="utf-8", errors="replace") as stream:
@@ -62,6 +63,15 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 row = json.loads(line)
             except json.JSONDecodeError:
                 skipped["malformed_json"] += 1
+                continue
+            if row.get("kind") == "fluid_draw_witness":
+                try:
+                    witness_camera_x = float(row["camera_x"])
+                except (KeyError, TypeError, ValueError):
+                    skipped["fluid_draw_witness_missing_camera"] += 1
+                    continue
+                if min_camera_x <= witness_camera_x <= max_camera_x:
+                    draw_witnesses.append(row)
                 continue
             if row.get("kind") != "renderer_pixel_probe":
                 continue
@@ -422,6 +432,18 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
                 "fluid_fragment_probe_class": fragment_probe_class,
             })
 
+    witnesses_by_epoch: dict[int, list[dict[str, Any]]] = {}
+    for witness in draw_witnesses:
+        try:
+            witness_epoch = int(witness.get("frame_epoch", -1))
+        except (TypeError, ValueError):
+            continue
+        witnesses_by_epoch.setdefault(witness_epoch, []).append(witness)
+    for sample in samples:
+        sample["fluid_draw_witnesses"] = witnesses_by_epoch.get(
+            int(sample["frame_epoch"]), []
+        )
+
     if not samples:
         raise ValueError(f"no valid sea-plane pixel probes found in {perf_path}")
 
@@ -472,6 +494,8 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             for sample in samples
             if sample["is_water"] and sample["source_fluid_triangle_match"]
         )),
+        "fluid_draw_witness_count": len(draw_witnesses),
+        "fluid_draw_witnesses": draw_witnesses,
         "mdi_probe_check_known_sample_count": sum(
             sample["fluid_surface_renderer_state"]["mdi_probe_checked"] is not None
             for sample in samples
@@ -488,6 +512,7 @@ def summarize(perf_path: Path, world_dir: Path, water_id: int,
             "Transparent MDI pass flags use bit 2; no matching MDI batch may also mean the sample lies outside the submitted/cull range, so compare camera-to-surface distance and fluid draw telemetry before calling it a missing upload.",
             "The CPU drawInstanceCount proxy in mdi_visible_pass_flags is not the post-cull GPU command. Use renderer_mdi_command_flags bits 0-2 for checked/readback-matched GPU command state.",
             "Payload comparison is only meaningful when source and GPU batch indexes match, the readback-valid bit is set, and the byte/index offsets lie within the backing buffer size.",
+            "fluid_draw_witness rows are captured after a successful fluid draw submission at the selected pass and frame; they record live GL bindings/state and the selected CPU or MDI submission route, but cannot alone prove a particular sample pixel was covered.",
             "RGB change compares the sampled framebuffer before and after the transparent pass; sparse probes do not cover the full frame.",
         ],
     }

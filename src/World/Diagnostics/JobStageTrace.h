@@ -418,6 +418,45 @@ struct VisualBlackTraceRecord
   uint64_t renderer_pixel_fluid_gpu_ebo_byte_offset{0};
   uint64_t renderer_pixel_fluid_gpu_vbo_buffer_bytes{0};
   uint64_t renderer_pixel_fluid_gpu_ebo_buffer_bytes{0};
+  /// sample_kind=18: state at a successful fluid draw submission in a
+  /// transparent pass. The pass/path identify the actual GL submission path;
+  /// names, object validity, and sizes distinguish live pool storage from a
+  /// stale/empty backing buffer.
+  uint8_t renderer_fluid_draw_witness_valid{0};
+  uint8_t renderer_fluid_draw_witness_pass{255};
+  uint8_t renderer_fluid_draw_witness_submit_path{0};
+  uint8_t renderer_fluid_draw_witness_use_mdi{0};
+  uint8_t renderer_fluid_draw_witness_pooled{0};
+  uint8_t renderer_fluid_draw_witness_vbo_is_buffer{0};
+  uint8_t renderer_fluid_draw_witness_ebo_is_buffer{0};
+  uint8_t renderer_fluid_draw_witness_stencil_test{0};
+  uint8_t renderer_fluid_draw_witness_depth_test{0};
+  uint8_t renderer_fluid_draw_witness_depth_write{0};
+  uint8_t renderer_fluid_draw_witness_color_write_mask{0};
+  uint32_t renderer_fluid_draw_witness_block_id{0};
+  uint32_t renderer_fluid_draw_witness_pool_vbo{0};
+  uint32_t renderer_fluid_draw_witness_pool_ebo{0};
+  uint32_t renderer_fluid_draw_witness_vbo{0};
+  uint32_t renderer_fluid_draw_witness_ebo{0};
+  uint32_t renderer_fluid_draw_witness_vao{0};
+  uint32_t renderer_fluid_draw_witness_array_buffer{0};
+  uint32_t renderer_fluid_draw_witness_element_buffer{0};
+  uint32_t renderer_fluid_draw_witness_draw_framebuffer{0};
+  uint64_t renderer_fluid_draw_witness_vbo_bytes{0};
+  uint64_t renderer_fluid_draw_witness_ebo_bytes{0};
+  int32_t renderer_fluid_draw_witness_vbo_query_error{-1};
+  int32_t renderer_fluid_draw_witness_ebo_query_error{-1};
+  int32_t renderer_fluid_draw_witness_vbo_bind_error{-1};
+  int32_t renderer_fluid_draw_witness_ebo_bind_error{-1};
+  int32_t renderer_fluid_draw_witness_gl_error_after_submit{-1};
+  int32_t renderer_fluid_draw_witness_stencil_func{-1};
+  int32_t renderer_fluid_draw_witness_stencil_ref{-1};
+  int32_t renderer_fluid_draw_witness_stencil_value_mask{-1};
+  int32_t renderer_fluid_draw_witness_stencil_write_mask{-1};
+  int32_t renderer_fluid_draw_witness_stencil_fail{-1};
+  int32_t renderer_fluid_draw_witness_stencil_depth_fail{-1};
+  int32_t renderer_fluid_draw_witness_stencil_depth_pass{-1};
+  int32_t renderer_fluid_draw_witness_depth_func{-1};
   int32_t renderer_pixel_fluid_vertex_payload_first_mismatch_byte{-1};
   int32_t renderer_pixel_fluid_index_payload_first_mismatch{-1};
   int64_t renderer_pixel_fluid_index_payload_source_value{-1};

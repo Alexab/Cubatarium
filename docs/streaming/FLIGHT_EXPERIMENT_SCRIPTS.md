@@ -9128,3 +9128,52 @@ payload-valid bits, exact MDI command flags, and fluid-call counts. A zero
 stencil value at a water sample would localize the shell-depth/stencil mark
 stage; value one with no color marker would move the investigation to the
 subsequent shell color passes and framebuffer state.
+
+#### M579 result and M580 actual draw witness
+
+M579 completed the visible no-teleport M335 route (`process_rc=0`, 913 periods,
+911 steady, 572 chunks; about 5.19 blocks/s). In its target window, 759 samples
+joined persisted water and 479 also joined source fluid triangles. None of
+those 479 changed RGB or showed the transparent fragment marker; all had final
+stencil zero. The desktop framebuffer had 8 stencil bits. Although 39 sampled
+MDI commands matched their batch command and were marked resident/visible,
+M579 did not have valid VBO/EBO byte witnesses and therefore did not prove
+submitted mesh data. M578 forced single pass with 464/467 source-fluid pixels
+changing RGB and 39/39 valid byte-identical GPU payload probes. Continue with
+M580 before changing rendering behavior.
+
+M580 repeats the same route, persisted world, diagnostic pixel window, and
+default desktop-shell path. It adds actual successful-draw witnesses for both
+ShellDepth and TransparentColor: submission path, buffer IDs and liveness,
+buffer byte sizes and query errors, VAO/bindings, framebuffer, stencil/depth/
+color-write state, and GL error after submit.
+
+```powershell
+$env:CUBA_DEMAND_SHADOW='0'
+$env:CUBA_FLIGHT_FOG_ON='1'
+$env:CUBA_WORLD_COLUMN_SOURCE_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE='1'
+$env:CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS='0'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MIN_X='-4710'
+$env:CUBA_VISUAL_BLACK_TRACE_PIXEL_MAX_X='-4550'
+$env:CUBA_VISUAL_BLACK_TRACE_GPU_RANGE_WITNESS='1'
+$env:CUBA_FLUID_RENDER_TRACE='1'
+$env:CUBA_FLUID_RENDER_MIN_X='-4710'
+$env:CUBA_FLUID_RENDER_MAX_X='-4550'
+$env:CUBA_DEBUG_MARK_TRANSPARENT_FRAGMENTS='1'
+$env:CUBA_DEBUG_FLUID_FRAGMENT_MARKER='1'
+$env:CUBA_DEBUG_TRANSPARENT_SINGLE_PASS='0'
+Remove-Item Env:CUBA_DEBUG_DISABLE_OPAQUE_DEPTH_GUARD -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_FOCUS_SLICE_TRACE_PER_STATE -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_SCREEN_RAY -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_PIXEL_ON_STALLED_CENSUS -ErrorAction SilentlyContinue
+Remove-Item Env:CUBA_VISUAL_BLACK_TRACE_FOCUS_PROBES -ErrorAction SilentlyContinue
+python tools/run_with_host_cpu_sampler.py --output bin/logs/m580_host_cpu_20261015.jsonl --interval-sec 2 --process-scan-interval-sec 10 --top-processes-interval-sec 60 -- python tools/flight_sim_fixed_day.py --world World_M572_Cold_20261014 -- --scenario product-174657-far --visible --product-start-position 120 56 56 --cruise-eye-y 70 --yaw 180 --pitch -30 --fly-phase-sec 1800 --stop-phase-sec 20 --stop-after-blocked-sec 8 --phase-id m580_m572_water_draw_witness --report bin/suite_reports/engine_refactor/m580_m572_water_draw_witness_20261015.json --process-timeout 2600
+```
+
+After the route, run `tools/analyze_water_surface_pixel_join.py` against its
+performance JSONL and the same world directory, restricting camera X to
+`[-4710,-4550]`. Compare witness rows by `frame_epoch` and pass; check whether
+the successful draw used live, nonempty buffers and whether its depth/stencil
+state can write the shell. A captured submit and state are not by themselves
+proof that a particular sample pixel was covered.

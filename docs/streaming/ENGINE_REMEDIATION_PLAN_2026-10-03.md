@@ -10137,3 +10137,44 @@ samples have stencil 0, investigate why ShellDepth fails to mark those
 fragments; if stencil is 1 but the color marker is absent, inspect the shell
 color passes and framebuffer/depth state. Keep user-visible rendering changes
 out until this default-path comparison identifies the failing stage.
+
+### M579 result and M580 draw-state witness — 2026-10-15
+
+M579 reproduced the current missing-water report on the visible, no-teleport
+M335 route in the persisted M572 world. The app exited normally (`process_rc=0`,
+`run_outcome=success`), completing 913 periods (911 steady) and 572 chunks at
+about 5.19 blocks/s. The flight suite still reports quality-gate failures
+around post-stop readiness and convergence; host CPU was heavily loaded, so
+performance timing is not a clean baseline. This does not invalidate the
+framebuffer evidence.
+
+In the target X window `[-4710,-4550]`, the join found 759 saved-water pixel
+samples out of 840 and 481 CPU fluid triangles. Of the 479 water pixels that
+also intersected source fluid triangles, none changed RGB across the
+transparent draw, none displayed the fragment marker, and all 479 retained
+stencil value zero. The default framebuffer exposes 8 stencil bits and its
+state query had no reported GL error. This places the visible failure before
+the shell color result, but stencil zero alone does not establish why the
+depth shell failed to write.
+
+The source/GPU bookkeeping still reports 39/39 sampled indirect commands as
+resident, visible, indexed, and matching their batch command. The newer
+post-submit witness instrumentation was not in the M579 executable. Its
+predecessor's payload readback reported zero bytes, so this does not prove the
+actual submitted VBO/EBO contained valid mesh data. M578 provides a useful
+same-world control: in forced single-pass mode 464 of 467 sampled source-fluid
+pixels changed RGB, and all 39 bounded payload probes were valid and
+byte-identical. Therefore neither source water absence nor a universally bad
+water mesh explains the result. The default shell path remains the failing
+case, with stale/empty GL buffers and shell depth/stencil/depth-test state both
+still open.
+
+M580 adds one live GL-state witness per successful shell-depth and shell-color
+submission during the already selected pixel-probe frames. It records actual
+submission path, pool and batch buffer names, `glIsBuffer`, queried buffer
+sizes/errors, VAO and buffer bindings, framebuffer, stencil/depth/color-write
+state, and post-submit GL error. Repeat the exact M335 route in the default
+desktop-shell mode. If the buffers are live and nonempty, inspect shell
+depth/depth-test/stencil transition and fragment coverage next; if missing or
+empty, follow the pool/VAO publication and lifetime path and fix that defect
+before changing the shader or falling back globally to single pass.
