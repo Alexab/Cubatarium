@@ -9428,6 +9428,48 @@ correct live/cached pool handles, and no GL errors. All 477 exact MDI/payload
 checks matched, including 468 water samples. Of 1,703 unchanged water matches,
 1,681 were beyond fog end and 1,660 were within one 8-bit channel of fog RGB.
 The broad streaming suite still returned `pass=false` because of readiness and
-stop-line debt; this short render lane is not a replacement for final full-M335
-acceptance. M589/M590 direct data and remaining caveats are recorded in the
-plan and diagnostic runbook.
+stop-line debt. M591 below completed the full-distance post-fix check. M589/M590
+direct data and remaining caveats are recorded in the plan and diagnostic
+runbook.
+
+## M591 full-distance post-fix water check (2026-10-15)
+
+M591 repeated the established M335 route after `c478286f`, using the same
+persisted world, fog-pull-in policy, and target X corridor. This was the final
+long operator-visible route; no further long flights should be started merely
+for operator visual confirmation. If a new visual symptom needs confirmation,
+use the 300-second target-lane from M590.
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M572_Cold_20261014 `
+  -ProbeMinCameraX -6800 -ProbeMaxCameraX -5500 `
+  -PhaseId m591_m572_pool_fix_full_m335 `
+  -Report bin/suite_reports/engine_refactor/m591_m572_pool_fix_full_m335_20261015.json
+```
+
+The route completed normally (`process_rc=0`, no hang kill, no teleport),
+travelled 9,184 blocks to the 8,192-block checkpoint, and maintained the
+expected 5.18555 blocks/s median. The operator confirmed that water remained
+visible throughout the route. Pixel join:
+
+```powershell
+python -X utf8 tools/analyze_water_surface_pixel_join.py `
+  bin/logs/perf_20261015-212358_30076.jsonl `
+  bin/worlds/World_M572_Cold_20261014 `
+  --min-camera-x -6800 --max-camera-x -5500 `
+  --json-out bin/suite_reports/engine_refactor/m591_m572_water_pixel_join_20261015.json
+```
+
+It processed 162 captures / 9,720 probes: 8,344 water blocks, 8,068 source
+fluid triangles, and 8,031 water/triangle matches. RGB changed after
+transparency for 6,025 matches; all 2,640 matched samples closer than 32 blocks
+changed RGB. All 256 fluid draw witnesses reported live pooled VBO/EBO handles
+and `GL error=0`; all 486 MDI/payload checks matched (481 water samples).
+The broad analyzer remains `pass=false`: post-stop mesh-missing and visual-hole
+metrics were zero, but readiness debt remained (`post_stop_readiness_debt_max`
+16, median `chunk_not_ready` 30) and the streaming-phase median was 7.86 ms
+against a 5 ms gate. Treat those as separate streaming/scheduler debt, not as
+evidence of missing water. Full metrics and limits are in the engine plan and
+the diagnostic runbook.

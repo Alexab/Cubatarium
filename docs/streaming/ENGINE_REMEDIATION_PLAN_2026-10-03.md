@@ -10512,9 +10512,43 @@ probes do not establish whether these are individually visible defects. If
 the operator still sees a missing near-field surface, record that location
 and use the same short target-lane before changing fog policy.
 
-The current water evidence closes the reproduced shared-pool deletion path,
-not all renderer work. Keep fog-horizon smoothing as a separate issue. Do not
-repeat a full M335 immediately: first confirm the operator view, then reserve
-one full M335 as the post-fix distance/streaming acceptance run. Run a cold
-seed only at the next significant milestone to check dependence on persisted
-chunk history.
+The M589→M590 evidence closed the reproduced shared-pool deletion path on a
+short target-lane. M591 below adds the full-distance check. Keep fog-horizon
+smoothing and streaming readiness debt as separate issues. Do not use another
+long M335 merely to obtain operator confirmation; any future operator-visible
+check should use the short target-lane. A cold-seed diagnostic remains a
+separate milestone for checking dependence on persisted chunk history.
+
+### M591: full-distance post-fix water and streaming check (2026-10-15)
+
+M591 ran the established no-teleport M335 route in
+`World_M572_Cold_20261014`, with the same fog-pull-in policy and the pixel
+probe window X=-6800…-5500. The route completed normally (`process_rc=0`,
+`run_outcome=success`, `teleport_cruise=false`, no hang kill); it travelled
+9,184 blocks, reached the 8,192-block checkpoint, and had median cruise speed
+5.18555 blocks/s. The operator reported that water remained visible throughout
+the flight.
+
+The post-run pixel join contains 162 captures / 9,720 samples. It found 8,344
+water-block samples, 8,068 source-fluid triangles, and 8,031 water/triangle
+matches. RGB changed after transparency for 6,025/8,031 matches (75.0%). Of
+2,640 matched samples within 32 blocks, all changed RGB. There were 93
+stencil-zero samples; the residual unchanged far samples remain sparse and
+must be interpreted with their depth/fog context rather than as missing water
+by themselves. All 256 fluid draw witnesses showed live shared pool VBO/EBO
+handles and `GL error=0`; all 486 checked MDI/payload command samples matched,
+including 481 water samples. This confirms the pool-lifetime repair across the
+long route's target corridor as well as in M590's short lane.
+
+The flight analyzer still reports `pass=false`, which is separate from the
+operator-confirmed water image and the post-fix pixel evidence. The safety
+report found zero post-stop mesh-missing samples and zero post-stop visual-hole
+rate, but readiness debt remained (`post_stop_readiness_debt_max=16`,
+`chunk_not_ready_med=30`, `unfinished_visual_rate=1.0`); the measured streaming
+phase median was 7.86 ms against a 5 ms gate. The report also records 16
+spikes, `cruise_fifo_dropped_delta=828`, and `cruise_false_clear_delta=119`.
+These are remaining streaming/scheduler debts to investigate statically or
+with short targeted captures; the aggregate readiness signal is not evidence
+that the operator saw blank pixels. No further long operator-monitoring flight
+is planned. Use a short target-lane only if a new, locatable visual symptom
+needs operator confirmation.
