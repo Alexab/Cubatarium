@@ -5523,6 +5523,7 @@ void UFramePerfMonitor::Shutdown()
           // write hundreds of MiB. Keep the pixel oracle's render, voxel,
           // fluid, draw, revision, and light witnesses in a compact row.
           (*out) << "{\"kind\":\"renderer_pixel_probe\""
+                 << ",\"renderer_pixel_light_trace_schema\":2"
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                  << ",\"cz\":" << r.cz
                  << ",\"sample_kind\":"
@@ -6012,6 +6013,8 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_opaque_published_geom_rev
                  << ",\"renderer_pixel_opaque_published_light_rev\":"
                  << r.renderer_pixel_opaque_published_light_rev
+                 << ",\"renderer_pixel_opaque_meshed_light_rev\":"
+                 << r.renderer_pixel_opaque_meshed_light_rev
                  << ",\"renderer_pixel_opaque_field_light_rev\":"
                  << r.renderer_pixel_opaque_field_light_rev
                  << ",\"renderer_pixel_opaque_source_index_count\":"
@@ -6030,8 +6033,11 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_opaque_vertex_block_light
                  << ",\"renderer_pixel_opaque_vertex_light_preview\":"
                  << r.renderer_pixel_opaque_vertex_light_preview
-                 << ",\"renderer_pixel_opaque_preview_shader_override\":"
+                 << ",\"renderer_pixel_surface_preview_shader_override\":"
                  << ((r.renderer_gate_flags & (1u << 22)) != 0 ? 1 : 0)
+                 << ",\"renderer_pixel_opaque_preview_shader_override\":"
+                 << static_cast<int>(
+                        r.renderer_pixel_opaque_preview_shader_override)
                  << ",\"renderer_pixel_opaque_live_face_light_valid\":"
                  << static_cast<int>(
                         r.renderer_pixel_opaque_live_face_light_valid)
@@ -6062,10 +6068,14 @@ void UFramePerfMonitor::Shutdown()
                  << r.renderer_pixel_opaque_demand_published_light_rev
                  << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
                  << r.renderer_pixel_opaque_demand_settled_light_rev
-                 << ",\"renderer_pixel_opaque_demand_attempt_age_ms\":"
+                 << ",\"renderer_pixel_surface_demand_attempt_age_ms\":"
                  << r.demand_attempt_age_ms
-                 << ",\"renderer_pixel_opaque_demand_progress_age_ms\":"
+                 << ",\"renderer_pixel_surface_demand_progress_age_ms\":"
                  << r.demand_progress_age_ms
+                 << ",\"renderer_pixel_opaque_demand_attempt_age_ms\":"
+                 << r.renderer_pixel_opaque_demand_attempt_age_ms
+                 << ",\"renderer_pixel_opaque_demand_progress_age_ms\":"
+                 << r.renderer_pixel_opaque_demand_progress_age_ms
                  << ",\"renderer_pixel_opaque_mesh_dirty_queue_kind\":"
                  << static_cast<int>(r.mesh_dirty_queue_kind)
                  << ",\"renderer_pixel_opaque_mesh_dirty_queue_index\":"
@@ -6589,6 +6599,8 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_opaque_published_geom_rev
                << ",\"renderer_pixel_opaque_published_light_rev\":"
                << r.renderer_pixel_opaque_published_light_rev
+               << ",\"renderer_pixel_opaque_meshed_light_rev\":"
+               << r.renderer_pixel_opaque_meshed_light_rev
                << ",\"renderer_pixel_opaque_field_light_rev\":"
                << r.renderer_pixel_opaque_field_light_rev
                << ",\"renderer_pixel_opaque_source_index_count\":"
@@ -6608,8 +6620,11 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_opaque_vertex_block_light
                << ",\"renderer_pixel_opaque_vertex_light_preview\":"
                << r.renderer_pixel_opaque_vertex_light_preview
-               << ",\"renderer_pixel_opaque_preview_shader_override\":"
+               << ",\"renderer_pixel_surface_preview_shader_override\":"
                << ((r.renderer_gate_flags & (1u << 22)) != 0 ? 1 : 0)
+               << ",\"renderer_pixel_opaque_preview_shader_override\":"
+               << static_cast<int>(
+                      r.renderer_pixel_opaque_preview_shader_override)
                << ",\"renderer_pixel_opaque_live_face_light_valid\":"
                << static_cast<int>(
                       r.renderer_pixel_opaque_live_face_light_valid)
@@ -6636,10 +6651,14 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_opaque_demand_published_light_rev
                << ",\"renderer_pixel_opaque_demand_settled_light_rev\":"
                << r.renderer_pixel_opaque_demand_settled_light_rev
-               << ",\"renderer_pixel_opaque_demand_attempt_age_ms\":"
+               << ",\"renderer_pixel_surface_demand_attempt_age_ms\":"
                << r.demand_attempt_age_ms
-               << ",\"renderer_pixel_opaque_demand_progress_age_ms\":"
+               << ",\"renderer_pixel_surface_demand_progress_age_ms\":"
                << r.demand_progress_age_ms
+               << ",\"renderer_pixel_opaque_demand_attempt_age_ms\":"
+               << r.renderer_pixel_opaque_demand_attempt_age_ms
+               << ",\"renderer_pixel_opaque_demand_progress_age_ms\":"
+               << r.renderer_pixel_opaque_demand_progress_age_ms
                << ",\"renderer_pixel_opaque_ref_flags\":"
                << static_cast<int>(r.renderer_pixel_opaque_ref_flags)
                << ",\"renderer_pixel_opaque_drawable\":"

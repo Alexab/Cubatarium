@@ -777,6 +777,10 @@ struct VisualBlackTraceRecord
   float renderer_pixel_opaque_vertex_sky_light{0.0f};
   float renderer_pixel_opaque_vertex_block_light{0.0f};
   float renderer_pixel_opaque_vertex_light_preview{0.0f};
+  /// Exact depth-hit chunk's mesh-gate preview, separate from the sea-plane
+  /// sample stored in renderer_gate_flags bit 22.
+  uint8_t renderer_pixel_opaque_preview_shader_override{0};
+  uint64_t renderer_pixel_opaque_meshed_light_rev{0};
   uint8_t renderer_pixel_opaque_live_face_light_valid{0};
   uint8_t renderer_pixel_opaque_live_face_light_packed{0};
   uint8_t renderer_pixel_opaque_live_face_light_source{2};
@@ -789,6 +793,8 @@ struct VisualBlackTraceRecord
   uint64_t renderer_pixel_opaque_demand_desired_light_rev{0};
   uint64_t renderer_pixel_opaque_demand_published_light_rev{0};
   uint64_t renderer_pixel_opaque_demand_settled_light_rev{0};
+  double renderer_pixel_opaque_demand_attempt_age_ms{0.0};
+  double renderer_pixel_opaque_demand_progress_age_ms{0.0};
   /// Ref bits: opaque CPU, transparent CPU, packed opaque, packed transparent.
   uint8_t renderer_pixel_opaque_ref_flags{0};
   uint8_t renderer_pixel_opaque_drawable{0};

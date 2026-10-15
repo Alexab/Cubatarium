@@ -1712,6 +1712,10 @@ void CaptureTransparentPixelProbe(
               opaque_published.geom_rev;
           record.renderer_pixel_opaque_published_light_rev =
               opaque_published.light_rev;
+          record.renderer_pixel_opaque_meshed_light_rev =
+              cache.GetMeshedLightRevision(opaque_chunk);
+          record.renderer_pixel_opaque_preview_shader_override =
+              world.ShouldDrawProvisionalLightPreview(opaque_chunk) ? 1u : 0u;
           if (const UChunk *opaque_chunk_data =
                   world.GetBlockWorld().GetChunkManager().GetChunk(
                       opaque_chunk))
@@ -1820,6 +1824,20 @@ void CaptureTransparentPixelProbe(
                 opaque_demand->published_light_rev;
             record.renderer_pixel_opaque_demand_settled_light_rev =
                 opaque_demand->settled_light_rev;
+            const double demand_now_ms = VisualObligationNowMs();
+            if (opaque_demand->has_active_attempt &&
+                opaque_demand->attempt_created_ms > 0.0)
+            {
+              record.renderer_pixel_opaque_demand_attempt_age_ms =
+                  std::max(0.0, demand_now_ms -
+                                    opaque_demand->attempt_created_ms);
+            }
+            if (opaque_demand->has_active_attempt &&
+                opaque_demand->last_progress_ms > 0.0)
+            {
+              record.renderer_pixel_opaque_demand_progress_age_ms =
+                  std::max(0.0, demand_now_ms - opaque_demand->last_progress_ms);
+            }
           }
 
           // Reuse the renderer-owner fields for the exact opaque depth-hit

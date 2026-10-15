@@ -31,6 +31,8 @@ def main() -> int:
     dark_light_states: Counter[str] = Counter()
     dark_pixels: list[dict[str, Any]] = []
     provisional_preview_sample_n = 0
+    surface_preview_sample_n = 0
+    surface_preview_seen: set[tuple[int, int, int, int, int, int]] = set()
     provisional_preview_chunks: dict[tuple[int, int, int], dict[int, dict[str, Any]]] = {}
     settled_nonpreview_chunks: dict[tuple[int, int, int], dict[int, dict[str, Any]]] = {}
     provisional_preview_seen: set[tuple[int, int, int, int, int, int]] = set()
@@ -71,15 +73,23 @@ def main() -> int:
                     vertex_preview = bool(
                         row.get("renderer_pixel_opaque_vertex_light_preview", 0)
                     )
-                    shader_override_value = row.get(
-                        "renderer_pixel_opaque_preview_shader_override"
+                    trace_schema = int(
+                        row.get("renderer_pixel_light_trace_schema", 0)
+                    )
+                    shader_override_value = (
+                        row.get("renderer_pixel_opaque_preview_shader_override")
+                        if trace_schema >= 2
+                        else None
                     )
                     shader_override = (
                         bool(shader_override_value)
                         if shader_override_value is not None
-                        else vertex_preview
+                        else False
                     )
                     preview_active = vertex_preview or shader_override
+                    surface_override = bool(
+                        row.get("renderer_pixel_surface_preview_shader_override", 0)
+                    )
                     demand_present = bool(
                         row.get("renderer_pixel_opaque_demand_present", 0)
                     )
@@ -89,6 +99,12 @@ def main() -> int:
 
                     if demand_present and not demand_settled:
                         opaque_unsettled_seen.add(capture_key)
+                    if (
+                        surface_override
+                        and capture_key not in surface_preview_seen
+                    ):
+                        surface_preview_seen.add(capture_key)
+                        surface_preview_sample_n += 1
 
                     if (
                         preview_active
@@ -135,6 +151,9 @@ def main() -> int:
                             ),
                             "published_light_revision": row.get(
                                 "renderer_pixel_opaque_published_light_rev"
+                            ),
+                            "meshed_light_revision": row.get(
+                                "renderer_pixel_opaque_meshed_light_rev"
                             ),
                             "field_light_revision": row.get(
                                 "renderer_pixel_opaque_field_light_rev"
@@ -186,6 +205,9 @@ def main() -> int:
                             ),
                             "live_face_light_packed": row.get(
                                 "renderer_pixel_opaque_live_face_light_packed"
+                            ),
+                            "meshed_light_revision": row.get(
+                                "renderer_pixel_opaque_meshed_light_rev"
                             ),
                         }
                 if luma >= args.threshold:
@@ -590,6 +612,7 @@ def main() -> int:
         "dark_threshold_luma": args.threshold,
         "dark_pixel_count": len(dark_pixels),
         "opaque_unsettled_demand_sample_count": len(opaque_unsettled_seen),
+        "surface_preview_shader_override_sample_count": surface_preview_sample_n,
         "provisional_light_preview_sample_count": provisional_preview_sample_n,
         "provisional_light_preview_chunk_count": len(preview_chunk_rows),
         "provisional_light_preview_chunks": preview_chunk_rows,
