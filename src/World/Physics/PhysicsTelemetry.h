@@ -846,6 +846,8 @@ struct PhysicsTelemetry
   int FogPullInRd{0};
   int FogPullInMargin{0};
   float FogPullInStartRatio{0.0f};
+  float FogPresentedStartBlocks{-1.0f};
+  float FogPresentedHorizonBlocks{-1.0f};
   int FogHoleDebt{0};
   /// Missing mesh in focus (alias of VisualHoles). Dark/light debt are separate.
   int NearFocusHoles{0};

@@ -784,6 +784,8 @@ struct FrameNumbers
   int fog_pull_in_rd{0};
   int fog_pull_in_margin{0};
   float fog_pull_in_start_ratio{0.0f};
+  float fog_presented_start_blocks{-1.0f};
+  float fog_presented_horizon_blocks{-1.0f};
   int fog_hole_debt{0};
   uint64_t prior_lit_hold_n{0};
   int prior_lit_hold_age_max{0};
@@ -1885,6 +1887,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.fog_pull_in_rd = phys.FogPullInRd;
   n.fog_pull_in_margin = phys.FogPullInMargin;
   n.fog_pull_in_start_ratio = phys.FogPullInStartRatio;
+  n.fog_presented_start_blocks = phys.FogPresentedStartBlocks;
+  n.fog_presented_horizon_blocks = phys.FogPresentedHorizonBlocks;
   n.fog_hole_debt = phys.FogHoleDebt;
   n.prior_lit_hold_n = phys.PriorLitHoldN;
   n.prior_lit_hold_age_max = phys.PriorLitHoldAgeMax;
@@ -3164,6 +3168,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
           << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin
           << ",\"fog_pull_in_start_ratio\":" << n.fog_pull_in_start_ratio
+          << ",\"fog_presented_start_blocks\":"
+          << n.fog_presented_start_blocks
+          << ",\"fog_presented_horizon_blocks\":"
+          << n.fog_presented_horizon_blocks
           << ",\"fog_hole_debt\":" << n.fog_hole_debt
           << ",\"prior_lit_hold_n\":" << n.prior_lit_hold_n
           << ",\"prior_lit_hold_age_max\":" << n.prior_lit_hold_age_max

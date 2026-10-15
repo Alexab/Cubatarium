@@ -5926,7 +5926,9 @@ void UGeometryEngine::ResetWorldRenderState()
           Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio(),
           Render.DistanceFogDensity,
           WorldInstance->GetEffectiveFogEndMarginBlocks(
-              Render.DistanceFogEndMarginBlocks));
+              Render.DistanceFogEndMarginBlocks),
+          WorldInstance->GetPresentedFogHorizonBlocks(),
+          WorldInstance->GetPresentedFogStartBlocks());
       fog_color = distance_fog.Color;
     }
   }

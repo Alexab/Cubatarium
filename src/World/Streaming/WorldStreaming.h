@@ -137,8 +137,12 @@ private:
   /// Hole-debt latch: hold pull-in after holes clear so fog End / start_ratio
   /// do not thrash every period (manual 084551 opaque 1037↔223).
   int FogPullInHoleHoldFrames{0};
+  std::chrono::steady_clock::time_point FogPullInLastDebtSeen{};
   int FogPullInMarginHeld{-1};
   float FogPullInStartRatioHeld{-1.0f};
+  float FogPresentedHorizonBlocks{-1.0f};
+  float FogPresentedStartBlocks{-1.0f};
+  std::chrono::steady_clock::time_point FogPresentationLastUpdate{};
   StreamingPressureState PressureState{};
   StreamingPressureCaps LastPressureCaps{};
   /// Cached once per RefreshStreamingPressure — safe for commit callback.

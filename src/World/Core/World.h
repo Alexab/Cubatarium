@@ -996,6 +996,17 @@ public:
   {
     EffectiveFogEndMarginBlocks = std::max(0, margin);
   }
+  /// Smoothed fog range actually sent to the renderer; negative means unset.
+  float GetPresentedFogHorizonBlocks() const
+  {
+    return PresentedFogHorizonBlocks;
+  }
+  float GetPresentedFogStartBlocks() const { return PresentedFogStartBlocks; }
+  void SetPresentedFogRange(float start_blocks, float horizon_blocks)
+  {
+    PresentedFogStartBlocks = start_blocks;
+    PresentedFogHorizonBlocks = horizon_blocks;
+  }
   /// Unfinished/holes while near water — stronger fog + wider sky horizon.
   bool GetNearWaterUnfinishedFog() const { return NearWaterUnfinishedFog; }
   void SetNearWaterUnfinishedFog(bool enabled)
@@ -1714,6 +1725,8 @@ private:
   int EffectiveFogRenderDistance{0};
   /// Dynamic fog end margin (pull-in boost); 0 → RenderSettings default.
   int EffectiveFogEndMarginBlocks{0};
+  float PresentedFogHorizonBlocks{-1.0f};
+  float PresentedFogStartBlocks{-1.0f};
   /// Hole/unfinished debt while near fluid / sea — fog A+B boost.
   bool NearWaterUnfinishedFog{false};
   float EffectiveFogStartRatio{0.85f};

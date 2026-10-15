@@ -182,7 +182,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
           render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
           render.DistanceFogDensity,
           world.GetEffectiveFogEndMarginBlocks(
-              render.DistanceFogEndMarginBlocks));
+              render.DistanceFogEndMarginBlocks),
+          world.GetPresentedFogHorizonBlocks(),
+          world.GetPresentedFogStartBlocks());
       FogStart = distance_fog.Start;
       FogEnd = distance_fog.End;
       FogDensity = distance_fog.Density;
@@ -221,7 +223,9 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
         render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
         render.DistanceFogDensity,
         world.GetEffectiveFogEndMarginBlocks(
-            render.DistanceFogEndMarginBlocks));
+            render.DistanceFogEndMarginBlocks),
+        world.GetPresentedFogHorizonBlocks(),
+        world.GetPresentedFogStartBlocks());
     AirFogEnabled = 1.0f;
     FogStart = distance_fog.Start;
     FogEnd = distance_fog.End;

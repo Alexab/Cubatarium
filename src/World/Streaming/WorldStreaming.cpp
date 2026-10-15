@@ -96,6 +96,18 @@ constexpr int kRelightBacklogStuckWindowMs = 1500;
 constexpr int kRelightBgClampCooldownMs = 400;
 constexpr int kAdaptiveRdMin = 3;
 constexpr double kAdaptiveRdHysteresisSec = 2.5;
+constexpr double kFogDebtClearGraceSec = 0.9;
+constexpr float kFogHorizonContractBlocksPerSec = 72.0f;
+constexpr float kFogHorizonExpandBlocksPerSec = 28.0f;
+
+float MoveFogRangeToward(float current, float target, float max_delta)
+{
+  if (current < target)
+  {
+    return std::min(target, current + max_delta);
+  }
+  return std::max(target, current - max_delta);
+}
 
 bool IsWorldColumnSourceTraceEnabled()
 {
@@ -904,8 +916,11 @@ void UWorldStreaming::RefreshStreamingPressure(
     const glm::ivec3 tracked_coord = rp.near_focus_tracked_witness_coord;
     const int fog_rd = world.GetEffectiveFogRenderDistance();
     const int fog_margin = world.GetEffectiveFogEndMarginBlocks(0);
+    const float presented_fog_horizon = world.GetPresentedFogHorizonBlocks();
     tracked_witness_fog_horizon_blocks =
-        FogHorizonBlocks(fog_rd, fog_margin);
+        presented_fog_horizon >= 0.0f
+            ? presented_fog_horizon
+            : FogHorizonBlocks(fog_rd, fog_margin);
     const auto axis_distance_to_chunk = [](int block, int chunk)
     {
       const int min_block = chunk * CHUNK_SIZE;
@@ -6431,6 +6446,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       int fog_margin = render.DistanceFogEndMarginBlocks;
       float fog_start_ratio = effectiveFogStartRatio;
       bool near_water_unfinished = false;
+      const auto now = std::chrono::steady_clock::now();
       if (render.FogPullInEnabled)
       {
         if (FogPullInRd < 0)
@@ -6456,19 +6472,27 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const bool hole_debt_now = ShouldLatchFogHoleDebtNow(
             phys.FocusMissingMesh, phys.MissHoriz, unfinished_ahead,
             phys.VisibleBlackFullyDarkStalledN, phys.VisibleBlackFocusN);
+        const bool clear_conditions = ShouldClearFogHoleDebtLatch(
+            phys.FocusMissingMesh, phys.VisualHoles, unfinished_ahead,
+            phys.VisibleBlackFullyDarkStalledN, phys.VisibleBlackFocusN);
+        const double debt_quiet_sec =
+            FogPullInLastDebtSeen.time_since_epoch().count() == 0
+                ? std::numeric_limits<double>::infinity()
+                : std::chrono::duration<double>(now - FogPullInLastDebtSeen)
+                      .count();
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
+          FogPullInLastDebtSeen = now;
         }
-        else if (ShouldClearFogHoleDebtLatch(
-                     phys.FocusMissingMesh, phys.VisualHoles, unfinished_ahead,
-                     phys.VisibleBlackFullyDarkStalledN,
-                     phys.VisibleBlackFocusN))
+        else if (clear_conditions && debt_quiet_sec >= kFogDebtClearGraceSec)
         {
-          // Clear when near-focus/facing debt and fully-dark stalls are gone.
+          // Keep a short wall-clock grace after the last local-debt sample so
+          // intermittent probes cannot toggle the rendered fog target.
           FogPullInHoleHoldFrames = 0;
         }
-        else if (ShouldDecayFogHoleDebtHold(phys.FocusMissingMesh,
+        else if (debt_quiet_sec >= kFogDebtClearGraceSec &&
+                 ShouldDecayFogHoleDebtHold(phys.FocusMissingMesh,
                                             FogPullInHoleHoldFrames))
         {
           FogPullInHoleHoldFrames =
@@ -6535,7 +6559,6 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           const int fog_rd_min =
               std::min(fog_rd_max, std::max(1, render.FogRdMin));
           target = std::clamp(target, fog_rd_min, fog_rd_max);
-          const auto now = std::chrono::steady_clock::now();
           const double since_shrink =
               FogPullInLastShrink.time_since_epoch().count() == 0
                   ? kFogPullInShrinkSec
@@ -6578,6 +6601,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       {
         FogPullInRd = -1;
         FogPullInHoleHoldFrames = 0;
+        FogPullInLastDebtSeen = {};
         FogPullInMarginHeld = -1;
         FogPullInStartRatioHeld = -1.0f;
         world.PhysicsTelemetryData.FogHoleDebt = 0;
@@ -6589,9 +6613,59 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       world.SetEffectiveFogEndMarginBlocks(fog_margin);
       world.SetNearWaterUnfinishedFog(near_water_unfinished);
       effectiveFogStartRatio = fog_start_ratio;
+      const float target_horizon = std::min(
+          FogHorizonBlocks(fog_rd, fog_margin),
+          RenderHorizonBlocks(effectiveRenderDistance));
+      const float target_start_max = std::max(16.0f, target_horizon * 0.85f);
+      const float target_start = std::clamp(
+          std::max(16.0f, target_horizon *
+                                std::clamp(fog_start_ratio, 0.0f, 1.0f)),
+          16.0f, target_start_max);
+      if (FogPresentedHorizonBlocks < 0.0f ||
+          FogPresentedStartBlocks < 0.0f)
+      {
+        FogPresentedHorizonBlocks = target_horizon;
+        FogPresentedStartBlocks = target_start;
+      }
+      else
+      {
+        double delta_sec =
+            FogPresentationLastUpdate.time_since_epoch().count() == 0
+                ? 0.0
+                : std::chrono::duration<double>(now - FogPresentationLastUpdate)
+                      .count();
+        // A suspend/resume or debugger pause must not cause a fog teleport.
+        delta_sec = std::clamp(delta_sec, 0.0, 0.1);
+        const float horizon_rate = target_horizon < FogPresentedHorizonBlocks
+                                       ? kFogHorizonContractBlocksPerSec
+                                       : kFogHorizonExpandBlocksPerSec;
+        const float start_rate = target_start < FogPresentedStartBlocks
+                                     ? kFogHorizonContractBlocksPerSec
+                                     : kFogHorizonExpandBlocksPerSec;
+        FogPresentedHorizonBlocks = MoveFogRangeToward(
+            FogPresentedHorizonBlocks, target_horizon,
+            horizon_rate * static_cast<float>(delta_sec));
+        FogPresentedStartBlocks = MoveFogRangeToward(
+            FogPresentedStartBlocks, target_start,
+            start_rate * static_cast<float>(delta_sec));
+      }
+      // Never fog past geometry that the current visual render radius can draw.
+      FogPresentedHorizonBlocks = std::min(
+          FogPresentedHorizonBlocks,
+          RenderHorizonBlocks(effectiveRenderDistance));
+      FogPresentedStartBlocks = std::clamp(
+          FogPresentedStartBlocks, 16.0f,
+          std::max(16.0f, FogPresentedHorizonBlocks * 0.85f));
+      FogPresentationLastUpdate = now;
+      world.SetPresentedFogRange(FogPresentedStartBlocks,
+                                 FogPresentedHorizonBlocks);
       world.PhysicsTelemetryData.FogPullInRd = fog_rd;
       world.PhysicsTelemetryData.FogPullInMargin = fog_margin;
       world.PhysicsTelemetryData.FogPullInStartRatio = fog_start_ratio;
+      world.PhysicsTelemetryData.FogPresentedStartBlocks =
+          FogPresentedStartBlocks;
+      world.PhysicsTelemetryData.FogPresentedHorizonBlocks =
+          FogPresentedHorizonBlocks;
     }
 
     const size_t dirty_for_unload = meshService.GetDirtyCount();
