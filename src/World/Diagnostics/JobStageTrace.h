@@ -109,7 +109,10 @@ enum class DemandTransitionKind : uint8_t
   PublishedRevisionAdvanced,
   AttemptReminted,
   MeshRevisionBumped,
-  IdentityReset
+  IdentityReset,
+  LightCalculationSettled,
+  StaleLightRemeshQueued,
+  StaleLightRemeshDirtyAdmitted
 };
 
 enum class MeshRevisionBumpReason : uint8_t
@@ -171,6 +174,8 @@ struct DemandTransitionSpan
   uint64_t published_geom_rev{0};
   uint64_t previous_published_light_rev{0};
   uint64_t published_light_rev{0};
+  uint64_t settled_light_rev{0};
+  uint8_t has_settled_light{0};
   uint64_t previous_published_coverage_gen{0};
   uint64_t published_coverage_gen{0};
   uint64_t mesh_revision_before{0};
@@ -472,6 +477,8 @@ struct VisualBlackTraceRecord
   uint64_t renderer_pixel_probe_id{0};
   /// Process-local monotonic time when the framebuffer pixel was sampled.
   double renderer_pixel_sample_time_ms{0.0};
+  /// Absolute steady-clock milliseconds, aligned with event_ms lifecycle traces.
+  double renderer_pixel_sample_steady_ms{0.0};
   /// sample_kind=10: exact streaming screen-ray sample and selector decision.
   /// Screen coordinates use top-left pixel space. Columns map to the
   /// renderer's 20-tile X centers; row is an index in the selector's ordered

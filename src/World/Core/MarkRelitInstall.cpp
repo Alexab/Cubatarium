@@ -268,7 +268,15 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
           (provisional_preview || revision_stale);
       if (stale_drawable && (revision_stale || horiz <= 4))
       {
+        const bool had_stale_remesh_debt =
+            mesh->GetCache().HasPendingStaleLightRemesh(coord);
         mesh->QueueStaleLightRemesh(coord);
+        if (!had_stale_remesh_debt &&
+            mesh->GetCache().HasPendingStaleLightRemesh(coord))
+        {
+          UChunkRenderDemandStore::Get().NoteLifecycleEvent(
+              coord, DemandTransitionKind::StaleLightRemeshQueued);
+        }
       }
 
       // Sysreset v5: hinterland drops when admit dry; focus horiz≤4 always
@@ -373,6 +381,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
       {
         visible_remesh_priority =
             mesh->GetCache().PrioritizeVisibleLightRepairRemesh(coord);
+        UChunkRenderDemandStore::Get().NoteLifecycleEvent(
+            coord, DemandTransitionKind::StaleLightRemeshDirtyAdmitted);
       }
       ++PhysicsTelemetryData.MarkRelitScheduleN;
       ++dirty_admitted_n;

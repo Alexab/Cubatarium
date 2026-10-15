@@ -1538,6 +1538,10 @@ void CaptureTransparentPixelProbe(
       record.sample_kind = 9;
       record.frame_epoch = frame_epoch;
       record.renderer_pixel_sample_time_ms = VisualObligationNowMs();
+      record.renderer_pixel_sample_steady_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now().time_since_epoch())
+              .count();
       record.renderer_pixel_probe_id = opaque_capture.probe_id;
       record.renderer_pixel_probe_trigger_flags =
           opaque_capture.trigger_flags;

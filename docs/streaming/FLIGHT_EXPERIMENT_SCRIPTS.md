@@ -9473,3 +9473,64 @@ metrics were zero, but readiness debt remained (`post_stop_readiness_debt_max`
 against a 5 ms gate. Treat those as separate streaming/scheduler debt, not as
 evidence of missing water. Full metrics and limits are in the engine plan and
 the diagnostic runbook.
+
+## M596C/M596D — cold-frontier provisional-light lifecycle (2026-10-15)
+
+Create a new world with a unique name, seed `3650482197`, and radius 4. Invoke
+the GUI-subsystem Release executable with PowerShell `Start-Process -Wait
+-PassThru -WindowStyle Hidden`, then validate the create report before starting
+the flight. A radius-4 world only guarantees its initial spawn coverage; keep
+the no-teleport route start at X=-32 inside that area, then let the route reach
+the procedural frontier. A far start override such as X=-6070 falls back to
+spawn and is not a valid cold-frontier run. The failed pre-wait create attempt
+also is not evidence: the wrapper returned before world creation completed and
+the runner cleaned up the orphan process.
+
+M596D's flight invocation (visible GUI, 35-second route, then a short stopped
+tail) was:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M596C_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m596d_cold_world_west_frontier `
+  -Report bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_20261015.json
+```
+
+M596D moved from X=-32 to -214 (12 chunk columns), with no collision and
+`process_rc=0`; the composite suite still returned `pass=false` on readiness
+debt. Its 4,800 pixel probes had no dark-threshold pixels and captured 29
+provisional-preview chunks. The same-camera pixel report found 35 full
+preview-to-settled observations: 34 at the stationary spawn view, median
+2.728 s and maximum 9.269 s; only one was at the cold frontier. At that frontier
+chunk `(-20,2,2)`, the first preview sample already reported settled light and
+mesh/publish revision 0; 1.539 s later the identical view saw revision 1 with
+preview off. This one observation bounds a mesh/first-publication interval; it
+does not identify its queue stage. The startup-ring observations are warmup and
+must not be counted as cold-frontier service latency.
+
+Analyzer command:
+
+```powershell
+python -X utf8 tools/analyze_renderer_pixel_trace.py `
+  bin/logs/perf_20261015-230556_21480.jsonl `
+  --json-out bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_pixels_20261015.json
+```
+
+The diagnostic trace has now been extended to stamp an absolute steady-clock
+time on each pixel, plus watched-slice transition events for light settlement,
+stale-light-remesh queue insertion, dirty admission, and existing mesh
+started/built/published events. After the Release build, make one fresh world
+with the same seed under a new name and repeat the same short route. Check
+`absolute_steady_clock_pixel_probe_count`, demand lifecycle event counts, and
+per-pixel `stage_timeline` before changing any scheduler budget. Older traces
+only have flight-relative pixel time and cannot be joined to absolute event
+timestamps. M596 reports: [create](../../bin/suite_reports/engine_refactor/m596c_world_create_20261015.json),
+[flight](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_20261015.json),
+[pixel analysis](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_pixels_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-230556_21480.jsonl).

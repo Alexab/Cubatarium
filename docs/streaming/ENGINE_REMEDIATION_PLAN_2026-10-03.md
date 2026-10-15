@@ -10657,8 +10657,61 @@ M595: [flight report](../../bin/suite_reports/engine_refactor/m595_m572_provisio
 [pixel trace](../../bin/suite_reports/engine_refactor/m594_m572_light_trace_20261015.json),
 [perf JSONL](../../bin/logs/perf_20261015-224256_13996.jsonl).
 
-Next: make a cold-but-repeatable short baseline without another long operator
-route; confirm that visible unsettled previews acquire an owner, settle, and
-leave preview. Then measure the separate post-settlement remesh queue latency
-using the new queue-membership and ColumnFlow pixel fields. Do not declare the
-streaming debt closed from these small samples.
+M596C/M596D completed the short cold-world baseline; the distinction between
+startup-ring warmup and the actual cold frontier is recorded below. The next
+bounded action is to build the event-timestamp witness and repeat this same
+short lane once in a fresh radius-4 world. Do not declare streaming debt closed
+from the small M596 sample.
+
+### M596C–M596D: cold-world provisional-light handoff (2026-10-15)
+
+M596C created `World_M596C_Cold_20261015` with seed `3650482197` and generation
+radius 4. The Release create-world report confirms success and 597 chunk files.
+For a new radius-4 world, start the camera inside the generated spawn region;
+the attempted far start at X=-6070 was outside it, fell back to spawn and made
+no meaningful movement, so that attempt is not evidence. The GUI-subsystem
+create-world executable must be launched with `Start-Process -Wait -PassThru`;
+a direct non-waiting invocation can return before it finishes and cause the
+flight harness to clean up the orphan.
+
+M596D used the established yaw/pitch and a 35-second visible, no-teleport
+segment, starting at X=-32 and ending at X=-214 (12 chunk columns). It exited
+normally without a collision. The suite returned `pass=false` on its composite
+readiness gates (`readiness_debt_rate=1`, `post_stop_readiness_debt_max=15`),
+while `visual_holes_rate=0` and `post_stop_mesh_missing_max=0`. The pixel trace
+has 4,800 probes, zero pixels below the dark threshold, and 29 chunks with a
+provisional preview. These aggregate gates are not evidence of black holes.
+
+Per-pixel same-camera analysis separates the launch warmup from the cold edge.
+Thirty-four of the 35 repeated-pixel preview-to-settled observations were at
+the stationary spawn view (X=-32), where light revisions advanced from 1 to 2;
+their observed interval had median 2.728 s and maximum 9.269 s. At the actual
+cold frontier, one repeated view of chunk `(-20,2,2)` showed its light demand
+already settled on the first preview sample while meshed/published light
+revisions were still 0; 1.539 s later the same pixel/camera sampled revision 1
+with preview off. This points to a first-mesh publication interval for that
+sample, not delayed light calculation. It is one cold-frontier sample and does
+not establish a general latency distribution or a stale-remesh queue stall.
+
+The M596 source trace still cannot split events reliably: its pixel sample
+clock is flight-relative while lifecycle events use the absolute steady clock,
+and light settlement/stale-remesh transitions have no dedicated marks. The
+current code adds opt-in, watched-slice events for `light_calculation_settled`,
+`stale_light_remesh_queued`, `stale_light_remesh_dirty_admitted`, and existing
+mesh lifecycle publication, plus an absolute steady-clock pixel timestamp.
+The analyzer joins these events by chunk incarnation and the identical camera
+pixel trajectory. This is diagnostic-only; it does not change preview policy
+or scheduler budgets.
+
+Next bounded action: Release-build the timestamp instrumentation, create a
+second radius-4 world with the same seed under a unique name, and run the same
+short lane once. Use event intervals to decide whether the remaining visible
+transition is in light settlement, queue admission, CPU mesh work, or install.
+Only then change a bounded scheduler policy. Keep the 8,192-block M335 as a
+later acceptance check after a causal fix; do not use it for operator
+monitoring.
+
+Artifacts: [M596C create report](../../bin/suite_reports/engine_refactor/m596c_world_create_20261015.json),
+[M596D flight report](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_20261015.json),
+[pixel lifecycle report](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_pixels_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-230556_21480.jsonl).

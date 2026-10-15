@@ -177,6 +177,9 @@ public:
   void NoteLightCalculationSettled(glm::ivec3 coord, uint64_t world_epoch,
                                    uint64_t incarnation,
                                    uint64_t light_field_rev);
+  /// Emit a watched, timestamped marker for a visual-work lifecycle event
+  /// owned outside this store (for example stale-remesh queue/admission).
+  void NoteLifecycleEvent(glm::ivec3 coord, DemandTransitionKind kind);
   /// Invalidate settlement when a new relight obligation covers this slice.
   void InvalidateLightCalculationSettlement(glm::ivec3 coord,
                                             uint64_t world_epoch,

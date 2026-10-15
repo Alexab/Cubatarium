@@ -988,6 +988,12 @@ const char *UJobStageTrace::DemandTransitionName(DemandTransitionKind kind)
     return "mesh_revision_bumped";
   case DemandTransitionKind::IdentityReset:
     return "identity_reset";
+  case DemandTransitionKind::LightCalculationSettled:
+    return "light_calculation_settled";
+  case DemandTransitionKind::StaleLightRemeshQueued:
+    return "stale_light_remesh_queued";
+  case DemandTransitionKind::StaleLightRemeshDirtyAdmitted:
+    return "stale_light_remesh_dirty_admitted";
   }
   return "unknown";
 }

@@ -4876,6 +4876,9 @@ void UFramePerfMonitor::Shutdown()
                << sp.previous_published_light_rev
                << ",\"published_light_rev\":"
                << sp.published_light_rev
+               << ",\"settled_light_rev\":" << sp.settled_light_rev
+               << ",\"has_settled_light\":"
+               << static_cast<int>(sp.has_settled_light)
                << ",\"previous_published_coverage_gen\":"
                << sp.previous_published_coverage_gen
                << ",\"published_coverage_gen\":"
@@ -5523,7 +5526,7 @@ void UFramePerfMonitor::Shutdown()
           // write hundreds of MiB. Keep the pixel oracle's render, voxel,
           // fluid, draw, revision, and light witnesses in a compact row.
           (*out) << "{\"kind\":\"renderer_pixel_probe\""
-                 << ",\"renderer_pixel_light_trace_schema\":3"
+                 << ",\"renderer_pixel_light_trace_schema\":4"
                  << ",\"cx\":" << r.cx << ",\"cy\":" << r.cy
                  << ",\"cz\":" << r.cz
                  << ",\"sample_kind\":"
@@ -5536,6 +5539,8 @@ void UFramePerfMonitor::Shutdown()
                  << ",\"frame_epoch\":" << r.frame_epoch
                  << ",\"renderer_pixel_sample_time_ms\":"
                  << r.renderer_pixel_sample_time_ms
+                 << ",\"renderer_pixel_sample_steady_ms\":"
+                 << r.renderer_pixel_sample_steady_ms
                  << ",\"world_epoch\":" << r.world_epoch
                  << ",\"incarnation\":" << r.incarnation
                  << ",\"renderer_pixel_probe_id\":"
@@ -6264,6 +6269,8 @@ void UFramePerfMonitor::Shutdown()
                << r.renderer_pixel_probe_id
                << ",\"renderer_pixel_sample_time_ms\":"
                << r.renderer_pixel_sample_time_ms
+               << ",\"renderer_pixel_sample_steady_ms\":"
+               << r.renderer_pixel_sample_steady_ms
                << ",\"renderer_pixel_probe_trigger_flags\":"
                << static_cast<int>(r.renderer_pixel_probe_trigger_flags)
                << ",\"renderer_pixel_probe_event_frame_epoch\":"

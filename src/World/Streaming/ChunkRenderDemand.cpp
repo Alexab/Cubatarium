@@ -124,6 +124,8 @@ void UChunkRenderDemandStore::TraceDemandTransition(
   span.published_geom_rev = after.published_geom_rev;
   span.previous_published_light_rev = before.published_light_rev;
   span.published_light_rev = after.published_light_rev;
+  span.settled_light_rev = after.settled_light_rev;
+  span.has_settled_light = after.has_settled_light ? 1 : 0;
   span.previous_published_coverage_gen = before.published_coverage_gen;
   span.published_coverage_gen = after.published_coverage_gen;
   span.previous_stage = before.stage;
@@ -426,8 +428,28 @@ void UChunkRenderDemandStore::NoteLightCalculationSettled(
   {
     return;
   }
+  const bool settlement_changed =
+      !rec.has_settled_light || rec.settled_light_rev != light_field_rev;
+  const DemandSnapshot before = SnapshotDemand(rec);
   rec.settled_light_rev = light_field_rev;
   rec.has_settled_light = true;
+  if (settlement_changed)
+  {
+    TraceDemandTransition(coord, before, rec,
+                          DemandTransitionKind::LightCalculationSettled);
+  }
+}
+
+void UChunkRenderDemandStore::NoteLifecycleEvent(
+    glm::ivec3 coord, DemandTransitionKind kind)
+{
+  ChunkRenderDemandRecord *rec = Find(coord);
+  if (!rec)
+  {
+    return;
+  }
+  const DemandSnapshot snapshot = SnapshotDemand(*rec);
+  TraceDemandTransition(coord, snapshot, *rec, kind);
 }
 
 void UChunkRenderDemandStore::InvalidateLightCalculationSettlement(

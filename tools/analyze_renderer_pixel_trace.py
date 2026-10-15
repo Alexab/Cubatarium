@@ -7,6 +7,7 @@ import argparse
 import json
 from collections import Counter
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 
@@ -27,6 +28,7 @@ def main() -> int:
     args = parser.parse_args()
 
     probe_count = 0
+    absolute_timestamp_probe_count = 0
     ray_states: Counter[str] = Counter()
     dark_light_states: Counter[str] = Counter()
     dark_pixels: list[dict[str, Any]] = []
@@ -36,10 +38,28 @@ def main() -> int:
     provisional_preview_chunks: dict[tuple[int, int, int], dict[int, dict[str, Any]]] = {}
     settled_nonpreview_chunks: dict[tuple[int, int, int], dict[int, dict[str, Any]]] = {}
     provisional_preview_seen: set[tuple[int, int, int, int, int, int]] = set()
+    settled_nonpreview_seen: set[tuple[int, int, int, int, int, int]] = set()
+    preview_pixel_events: dict[tuple[int, int, int], list[dict[str, Any]]] = {}
+    settled_nonpreview_pixel_events: dict[
+        tuple[int, int, int], list[dict[str, Any]]
+    ] = {}
+    demand_lifecycle_events: dict[
+        tuple[int, int, int], list[dict[str, Any]]
+    ] = {}
+    mesh_job_stage_events: dict[
+        tuple[int, int, int], list[dict[str, Any]]
+    ] = {}
     opaque_unsettled_seen: set[tuple[int, int, int, int, int, int]] = set()
     screen_rays_by_epoch: dict[int, Counter[str]] = {}
     max_oom_period: dict[str, Any] | None = None
     max_pool_period: dict[str, Any] | None = None
+
+    def sample_monotonic_ms(row: dict[str, Any]) -> float | None:
+        steady_ms = row.get("renderer_pixel_sample_steady_ms")
+        if steady_ms is not None:
+            return float(steady_ms)
+        relative_ms = row.get("renderer_pixel_sample_time_ms")
+        return float(relative_ms) if relative_ms is not None else None
 
     with args.perf_jsonl.open("r", encoding="utf-8") as source:
         for line_number, line in enumerate(source, 1):
@@ -51,6 +71,9 @@ def main() -> int:
             kind = row.get("kind")
             if kind == "renderer_pixel_probe":
                 probe_count += 1
+                absolute_timestamp_probe_count += int(
+                    row.get("renderer_pixel_sample_steady_ms") is not None
+                )
                 rgba = int(row.get("renderer_pixel_rgba", 0))
                 rgb = unpack_rgb(rgba)
                 luma = luminance(rgb)
@@ -115,6 +138,68 @@ def main() -> int:
                         camera_x = row.get("camera_x")
                         camera_y = row.get("camera_y")
                         camera_z = row.get("camera_z")
+                        preview_pixel_events.setdefault(chunk, []).append(
+                            {
+                                "probe_id": probe_id,
+                                "sample_time_ms": sample_monotonic_ms(row),
+                                "sample_clock_aligned": (
+                                    row.get("renderer_pixel_sample_steady_ms")
+                                    is not None
+                                ),
+                                "world_epoch": row.get("world_epoch"),
+                                "incarnation": row.get("incarnation"),
+                                "camera_world_pos": [
+                                    row.get("renderer_pixel_camera_pos_x"),
+                                    row.get("renderer_pixel_camera_pos_y"),
+                                    row.get("renderer_pixel_camera_pos_z"),
+                                ],
+                                "pixel": [pixel_x, pixel_y],
+                                "demand_present": demand_present,
+                                "demand_settled": demand_settled,
+                                "demand_active_attempt": bool(
+                                    row.get(
+                                        "renderer_pixel_opaque_demand_has_active_attempt",
+                                        0,
+                                    )
+                                ),
+                                "demand_attempt_age_ms": row.get(
+                                    "renderer_pixel_opaque_demand_attempt_age_ms"
+                                ),
+                                "demand_progress_age_ms": row.get(
+                                    "renderer_pixel_opaque_demand_progress_age_ms"
+                                ),
+                                "field_light_revision": row.get(
+                                    "renderer_pixel_opaque_field_light_rev"
+                                ),
+                                "meshed_light_revision": row.get(
+                                    "renderer_pixel_opaque_meshed_light_rev"
+                                ),
+                                "published_light_revision": row.get(
+                                    "renderer_pixel_opaque_published_light_rev"
+                                ),
+                                "stale_light_remesh_pending": bool(
+                                    row.get(
+                                        "renderer_pixel_opaque_stale_light_remesh_pending",
+                                        0,
+                                    )
+                                ),
+                                "mesh_dirty_queue_kind": row.get(
+                                    "renderer_pixel_opaque_mesh_dirty_queue_kind"
+                                ),
+                                "relight_queue_kind": row.get(
+                                    "renderer_pixel_opaque_relight_queue_kind"
+                                ),
+                                "mesh_work_owner_flags": row.get(
+                                    "renderer_pixel_opaque_mesh_work_owner_flags"
+                                ),
+                                "relight_owner_flags": row.get(
+                                    "renderer_pixel_opaque_relight_owner_flags"
+                                ),
+                                "column_flow_ticket_flags": row.get(
+                                    "renderer_pixel_opaque_column_flow_ticket_flags"
+                                ),
+                            }
+                        )
                         capture = provisional_preview_chunks.setdefault(
                             chunk, {}
                         ).setdefault(
@@ -122,11 +207,15 @@ def main() -> int:
                             {
                                 "probe_id": probe_id,
                                 "frame_epoch": int(row.get("frame_epoch", 0)),
-                                "sample_time_ms": row.get(
-                                    "renderer_pixel_sample_time_ms"
-                                ),
+                                "sample_time_ms": sample_monotonic_ms(row),
+                                "camera_world_pos": [
+                                    row.get("renderer_pixel_camera_pos_x"),
+                                    row.get("renderer_pixel_camera_pos_y"),
+                                    row.get("renderer_pixel_camera_pos_z"),
+                                ],
                                 "camera": [camera_x, camera_y, camera_z],
                                 "preview_pixel_count": 0,
+                                "demand_settled_preview_pixel_count": 0,
                                 "settled_nonpreview_pixel_count": 0,
                             },
                         )
@@ -140,6 +229,10 @@ def main() -> int:
                         capture["demand_unsettled_pixel_count"] = capture.get(
                             "demand_unsettled_pixel_count", 0
                         ) + int(demand_present and not demand_settled)
+                        capture["demand_settled_preview_pixel_count"] = (
+                            capture.get("demand_settled_preview_pixel_count", 0)
+                            + int(demand_present and demand_settled)
+                        )
                         capture["sample"] = {
                             "pixel": [pixel_x, pixel_y],
                             "rgb": rgb,
@@ -202,6 +295,66 @@ def main() -> int:
                         and demand_present
                         and demand_settled
                     ):
+                        if capture_key not in settled_nonpreview_seen:
+                            settled_nonpreview_seen.add(capture_key)
+                            settled_nonpreview_pixel_events.setdefault(
+                                chunk, []
+                            ).append(
+                                {
+                                    "probe_id": probe_id,
+                                    "sample_time_ms": sample_monotonic_ms(row),
+                                    "sample_clock_aligned": (
+                                        row.get(
+                                            "renderer_pixel_sample_steady_ms"
+                                        )
+                                        is not None
+                                    ),
+                                    "world_epoch": row.get("world_epoch"),
+                                    "incarnation": row.get("incarnation"),
+                                    "camera_world_pos": [
+                                        row.get(
+                                            "renderer_pixel_camera_pos_x"
+                                        ),
+                                        row.get(
+                                            "renderer_pixel_camera_pos_y"
+                                        ),
+                                        row.get(
+                                            "renderer_pixel_camera_pos_z"
+                                        ),
+                                    ],
+                                    "pixel": [pixel_x, pixel_y],
+                                    "field_light_revision": row.get(
+                                        "renderer_pixel_opaque_field_light_rev"
+                                    ),
+                                    "meshed_light_revision": row.get(
+                                        "renderer_pixel_opaque_meshed_light_rev"
+                                    ),
+                                    "published_light_revision": row.get(
+                                        "renderer_pixel_opaque_published_light_rev"
+                                    ),
+                                    "stale_light_remesh_pending": bool(
+                                        row.get(
+                                            "renderer_pixel_opaque_stale_light_remesh_pending",
+                                            0,
+                                        )
+                                    ),
+                                    "mesh_dirty_queue_kind": row.get(
+                                        "renderer_pixel_opaque_mesh_dirty_queue_kind"
+                                    ),
+                                    "relight_queue_kind": row.get(
+                                        "renderer_pixel_opaque_relight_queue_kind"
+                                    ),
+                                    "mesh_work_owner_flags": row.get(
+                                        "renderer_pixel_opaque_mesh_work_owner_flags"
+                                    ),
+                                    "relight_owner_flags": row.get(
+                                        "renderer_pixel_opaque_relight_owner_flags"
+                                    ),
+                                    "column_flow_ticket_flags": row.get(
+                                        "renderer_pixel_opaque_column_flow_ticket_flags"
+                                    ),
+                                }
+                            )
                         settled_capture = settled_nonpreview_chunks.setdefault(
                             chunk, {}
                         ).setdefault(
@@ -209,9 +362,12 @@ def main() -> int:
                             {
                                 "probe_id": probe_id,
                                 "frame_epoch": int(row.get("frame_epoch", 0)),
-                                "sample_time_ms": row.get(
-                                    "renderer_pixel_sample_time_ms"
-                                ),
+                                "sample_time_ms": sample_monotonic_ms(row),
+                                "camera_world_pos": [
+                                    row.get("renderer_pixel_camera_pos_x"),
+                                    row.get("renderer_pixel_camera_pos_y"),
+                                    row.get("renderer_pixel_camera_pos_z"),
+                                ],
                                 "camera": [
                                     row.get("camera_x"),
                                     row.get("camera_y"),
@@ -520,6 +676,52 @@ def main() -> int:
                 counts["candidates"] += int(row.get("screen_ray_candidate", 0))
                 counts["selected"] += int(row.get("screen_ray_selected", 0))
 
+            elif kind == "demand_transition_trace":
+                coord = (
+                    int(row.get("cx", 0)),
+                    int(row.get("cy", 0)),
+                    int(row.get("cz", 0)),
+                )
+                event_ms = row.get("event_ms")
+                if event_ms is not None:
+                    demand_lifecycle_events.setdefault(coord, []).append(
+                        {
+                            "event": row.get("event"),
+                            "event_ms": float(event_ms),
+                            "world_epoch": row.get("world_epoch"),
+                            "incarnation": row.get("incarnation"),
+                            "attempt_id": row.get("attempt_id"),
+                            "settled_light_rev": row.get("settled_light_rev"),
+                            "has_settled_light": row.get("has_settled_light"),
+                            "mesh_dirty_queue_kind": row.get(
+                                "mesh_dirty_queue_kind"
+                            ),
+                        }
+                    )
+
+            elif kind == "visual_lifecycle_trace":
+                created_ms = row.get("created_ms")
+                elapsed_ms = row.get("elapsed_ms")
+                if created_ms is not None and elapsed_ms is not None:
+                    coord = (
+                        int(row.get("cx", 0)),
+                        int(row.get("cy", 0)),
+                        int(row.get("cz", 0)),
+                    )
+                    mesh_job_stage_events.setdefault(coord, []).append(
+                        {
+                            "event": f"mesh_job_{row.get('stage', 'unknown')}",
+                            "event_ms": float(created_ms) + float(elapsed_ms),
+                            "world_epoch": row.get("world_epoch"),
+                            "incarnation": row.get("incarnation"),
+                            "job_id": row.get("job_id"),
+                            "attempt_id": row.get("attempt_id"),
+                            "source_geom_rev": row.get("source_geom_rev"),
+                            "source_light_rev": row.get("source_light_rev"),
+                            "terminal_reason": row.get("terminal_reason"),
+                        }
+                    )
+
             elif kind == "period":
                 oom = int(row.get("publication_oom_retain_n", 0))
                 pool_used = float(row.get("gpu_pool_used_mb", 0.0))
@@ -587,6 +789,33 @@ def main() -> int:
             and float(settled_time_ms) >= float(last_preview_time_ms)
             else None
         )
+        first_preview_time_ms = first_preview.get("sample_time_ms")
+        first_to_settled_ms = (
+            round(float(settled_time_ms) - float(first_preview_time_ms), 3)
+            if first_preview_time_ms is not None
+            and settled_time_ms is not None
+            and float(settled_time_ms) >= float(first_preview_time_ms)
+            else None
+        )
+        first_camera = first_preview.get("camera_world_pos")
+        settled_camera = (
+            settled_after.get("camera_world_pos") if settled_after else None
+        )
+        same_camera = bool(
+            first_camera
+            and settled_camera
+            and all(value is not None for value in first_camera + settled_camera)
+            and all(
+                abs(float(a) - float(b)) <= 0.01
+                for a, b in zip(first_camera, settled_camera)
+            )
+        )
+        same_pixel = bool(
+            first_preview.get("sample", {}).get("pixel")
+            == (settled_after or {}).get("settled_sample", {}).get("pixel")
+        )
+        same_view = same_camera and same_pixel
+
         preview_chunk_rows.append(
             {
                 "chunk": list(chunk),
@@ -606,10 +835,19 @@ def main() -> int:
                     item.get("demand_unsettled_pixel_count", 0)
                     for item in preview_captures
                 ),
+                "demand_settled_preview_pixel_count": sum(
+                    item.get("demand_settled_preview_pixel_count", 0)
+                    for item in preview_captures
+                ),
                 "first_preview": first_preview,
                 "last_preview": last_preview,
                 "first_settled_nonpreview_after": settled_after,
                 "observed_preview_to_settled_interval_ms": elapsed_ms_to_settled,
+                "observed_first_preview_to_settled_ms": first_to_settled_ms,
+                "settled_sample_same_view_as_first_preview": same_view,
+                "same_view_unsettled_observed_ms": (
+                    first_to_settled_ms if same_view else None
+                ),
                 "probe_id_delta_to_settled": (
                     settled_after["probe_id"] - last_preview["probe_id"]
                     if settled_after
@@ -617,6 +855,326 @@ def main() -> int:
                 ),
             }
         )
+
+    def same_camera_position(left: dict[str, Any], right: dict[str, Any]) -> bool:
+        left_camera = left.get("camera_world_pos")
+        right_camera = right.get("camera_world_pos")
+        return bool(
+            left_camera
+            and right_camera
+            and len(left_camera) == len(right_camera)
+            and all(value is not None for value in left_camera + right_camera)
+            and all(
+                abs(float(a) - float(b)) <= 0.01
+                for a, b in zip(left_camera, right_camera)
+            )
+        )
+
+    def interval_ms(start: dict[str, Any], end: dict[str, Any]) -> float | None:
+        start_ms = start.get("sample_time_ms")
+        end_ms = end.get("sample_time_ms")
+        if (
+            start_ms is None
+            or end_ms is None
+            or float(end_ms) < float(start_ms)
+        ):
+            return None
+        return round(float(end_ms) - float(start_ms), 3)
+
+    lifecycle_by_chunk: list[dict[str, Any]] = []
+    all_preview_to_nonpreview_intervals: list[float] = []
+    all_light_intervals: list[float] = []
+    all_handoff_intervals: list[float] = []
+    for chunk in sorted(preview_pixel_events):
+        events_by_pixel: dict[
+            tuple[int, int], dict[str, list[dict[str, Any]]]
+        ] = {}
+        for event in preview_pixel_events[chunk]:
+            pixel = tuple(event["pixel"])
+            events_by_pixel.setdefault(
+                pixel, {"preview": [], "settled_nonpreview": []}
+            )["preview"].append(event)
+        for event in settled_nonpreview_pixel_events.get(chunk, []):
+            pixel = tuple(event["pixel"])
+            events_by_pixel.setdefault(
+                pixel, {"preview": [], "settled_nonpreview": []}
+            )["settled_nonpreview"].append(event)
+
+        light_intervals: list[float] = []
+        handoff_intervals: list[float] = []
+        full_preview_intervals: list[float] = []
+        pixel_lifecycle_rows: list[dict[str, Any]] = []
+        light_view_candidates = 0
+        handoff_view_candidates = 0
+        full_view_candidates = 0
+        for pixel_events in events_by_pixel.values():
+            previews = sorted(
+                pixel_events["preview"], key=lambda item: item["probe_id"]
+            )
+            nonpreviews = sorted(
+                pixel_events["settled_nonpreview"],
+                key=lambda item: item["probe_id"],
+            )
+            if not previews:
+                continue
+
+            first_preview = previews[0]
+            first_light_settled_preview = next(
+                (
+                    event
+                    for event in previews
+                    if event["demand_present"] and event["demand_settled"]
+                ),
+                None,
+            )
+            if first_light_settled_preview is not None and same_camera_position(
+                first_preview, first_light_settled_preview
+            ):
+                light_view_candidates += 1
+                elapsed = interval_ms(first_preview, first_light_settled_preview)
+                if elapsed is not None:
+                    light_intervals.append(elapsed)
+                    all_light_intervals.append(elapsed)
+
+            last_preview = previews[-1]
+            last_light_settled_preview = next(
+                (
+                    event
+                    for event in reversed(previews)
+                    if event["demand_present"] and event["demand_settled"]
+                ),
+                None,
+            )
+            first_nonpreview_after = next(
+                (
+                    event
+                    for event in nonpreviews
+                    if event["probe_id"] > last_preview["probe_id"]
+                ),
+                None,
+            )
+            if (
+                first_nonpreview_after is not None
+                and same_camera_position(first_preview, first_nonpreview_after)
+            ):
+                full_view_candidates += 1
+                elapsed = interval_ms(first_preview, first_nonpreview_after)
+                if elapsed is not None:
+                    full_preview_intervals.append(elapsed)
+                    all_preview_to_nonpreview_intervals.append(elapsed)
+                light_elapsed = (
+                    interval_ms(first_preview, first_light_settled_preview)
+                    if first_light_settled_preview is not None
+                    and same_camera_position(
+                        first_preview, first_light_settled_preview
+                    )
+                    else None
+                )
+                handoff_elapsed = (
+                    interval_ms(
+                        last_light_settled_preview, first_nonpreview_after
+                    )
+                    if last_light_settled_preview is not None
+                    and same_camera_position(
+                        last_light_settled_preview, first_nonpreview_after
+                    )
+                    else None
+                )
+
+                stage_timeline: list[dict[str, Any]] = []
+                stage_intervals: dict[str, float | None] = {}
+                aligned_clock = bool(
+                    first_preview.get("sample_clock_aligned")
+                    and first_nonpreview_after.get("sample_clock_aligned")
+                )
+                start_ms = first_preview.get("sample_time_ms")
+                end_ms = first_nonpreview_after.get("sample_time_ms")
+                if (
+                    aligned_clock
+                    and start_ms is not None
+                    and end_ms is not None
+                    and first_preview.get("world_epoch")
+                    == first_nonpreview_after.get("world_epoch")
+                    and first_preview.get("incarnation")
+                    == first_nonpreview_after.get("incarnation")
+                ):
+                    identity_world = first_preview.get("world_epoch")
+                    identity_incarnation = first_preview.get("incarnation")
+                    candidates = (
+                        demand_lifecycle_events.get(chunk, [])
+                        + mesh_job_stage_events.get(chunk, [])
+                    )
+                    stage_timeline = [
+                        {
+                            **event,
+                            "relative_to_first_preview_ms": round(
+                                float(event["event_ms"]) - float(start_ms), 3
+                            ),
+                        }
+                        for event in candidates
+                        if event.get("world_epoch") == identity_world
+                        and event.get("incarnation") == identity_incarnation
+                        and float(start_ms)
+                        <= float(event["event_ms"])
+                        <= float(end_ms)
+                    ]
+                    stage_timeline.sort(key=lambda event: event["event_ms"])
+
+                    def first_stage_time(name: str) -> float | None:
+                        return next(
+                            (
+                                float(event["event_ms"])
+                                for event in stage_timeline
+                                if event["event"] == name
+                            ),
+                            None,
+                        )
+
+                    milestone_names = (
+                        "light_calculation_settled",
+                        "stale_light_remesh_queued",
+                        "stale_light_remesh_dirty_admitted",
+                        "mesh_job_started",
+                        "mesh_job_built",
+                        "mesh_job_published",
+                        "install_published",
+                    )
+                    milestone_times = {
+                        name: first_stage_time(name) for name in milestone_names
+                    }
+
+                    def stage_interval(left: str, right: str) -> float | None:
+                        left_ms = milestone_times[left]
+                        right_ms = milestone_times[right]
+                        if left_ms is None or right_ms is None or right_ms < left_ms:
+                            return None
+                        return round(right_ms - left_ms, 3)
+
+                    stage_intervals = {
+                        "preview_to_light_settlement_ms": (
+                            round(
+                                milestone_times["light_calculation_settled"]
+                                - float(start_ms),
+                                3,
+                            )
+                            if milestone_times["light_calculation_settled"]
+                            is not None
+                            else None
+                        ),
+                        "light_settlement_to_stale_queue_ms": stage_interval(
+                            "light_calculation_settled",
+                            "stale_light_remesh_queued",
+                        ),
+                        "stale_queue_to_dirty_admit_ms": stage_interval(
+                            "stale_light_remesh_queued",
+                            "stale_light_remesh_dirty_admitted",
+                        ),
+                        "dirty_admit_to_mesh_start_ms": stage_interval(
+                            "stale_light_remesh_dirty_admitted",
+                            "mesh_job_started",
+                        ),
+                        "mesh_build_ms": stage_interval(
+                            "mesh_job_started", "mesh_job_built"
+                        ),
+                        "mesh_build_to_publish_ms": stage_interval(
+                            "mesh_job_built", "mesh_job_published"
+                        ),
+                        "publish_to_nonpreview_ms": (
+                            round(
+                                float(end_ms)
+                                - milestone_times["mesh_job_published"],
+                                3,
+                            )
+                            if milestone_times["mesh_job_published"]
+                            is not None
+                            else None
+                        ),
+                    }
+
+                def stage_snapshot(event: dict[str, Any]) -> dict[str, Any]:
+                    keys = (
+                        "probe_id",
+                        "sample_time_ms",
+                        "demand_present",
+                        "demand_settled",
+                        "demand_active_attempt",
+                        "demand_attempt_age_ms",
+                        "demand_progress_age_ms",
+                        "field_light_revision",
+                        "meshed_light_revision",
+                        "published_light_revision",
+                        "stale_light_remesh_pending",
+                        "mesh_dirty_queue_kind",
+                        "relight_queue_kind",
+                        "mesh_work_owner_flags",
+                        "relight_owner_flags",
+                        "column_flow_ticket_flags",
+                    )
+                    return {key: event.get(key) for key in keys}
+
+                pixel_lifecycle_rows.append(
+                    {
+                        "pixel": list(pixel_events["preview"][0]["pixel"]),
+                        "camera_world_pos": first_preview.get(
+                            "camera_world_pos"
+                        ),
+                        "observed_preview_to_nonpreview_ms": elapsed,
+                        "observed_preview_to_light_settlement_ms": light_elapsed,
+                        "observed_light_settlement_to_nonpreview_ms": (
+                            handoff_elapsed
+                        ),
+                        "stage_clock_aligned": aligned_clock,
+                        "stage_timeline": stage_timeline,
+                        "stage_intervals_ms": stage_intervals,
+                        "first_preview_state": stage_snapshot(first_preview),
+                        "first_light_settled_preview_state": (
+                            stage_snapshot(first_light_settled_preview)
+                            if first_light_settled_preview is not None
+                            else None
+                        ),
+                        "last_preview_state": stage_snapshot(last_preview),
+                        "settled_nonpreview_state": stage_snapshot(
+                            first_nonpreview_after
+                        ),
+                    }
+                )
+            if (
+                last_light_settled_preview is not None
+                and first_nonpreview_after is not None
+                and same_camera_position(
+                    last_light_settled_preview, first_nonpreview_after
+                )
+            ):
+                handoff_view_candidates += 1
+                elapsed = interval_ms(
+                    last_light_settled_preview, first_nonpreview_after
+                )
+                if elapsed is not None:
+                    handoff_intervals.append(elapsed)
+                    all_handoff_intervals.append(elapsed)
+
+        lifecycle_by_chunk.append(
+            {
+                "chunk": list(chunk),
+                "screen_pixel_trajectory_count": len(events_by_pixel),
+                "same_view_preview_to_nonpreview_candidate_count": full_view_candidates,
+                "same_view_preview_to_nonpreview_intervals_ms": full_preview_intervals,
+                "same_view_pixel_lifecycles": pixel_lifecycle_rows,
+                "same_view_light_interval_candidate_count": light_view_candidates,
+                "same_view_light_settlement_intervals_ms": light_intervals,
+                "same_view_preview_handoff_candidate_count": handoff_view_candidates,
+                "same_view_preview_to_nonpreview_intervals_ms": handoff_intervals,
+            }
+        )
+
+    def summarize_intervals(values: list[float]) -> dict[str, Any]:
+        ordered = sorted(values)
+        return {
+            "count": len(ordered),
+            "min_ms": ordered[0] if ordered else None,
+            "median_ms": round(median(ordered), 3) if ordered else None,
+            "max_ms": ordered[-1] if ordered else None,
+        }
 
     distance_deltas = [
         float(pixel["voxel_depth_distance_delta"])
@@ -648,6 +1206,7 @@ def main() -> int:
     report = {
         "perf_jsonl": str(args.perf_jsonl),
         "pixel_probe_count": probe_count,
+        "absolute_steady_clock_pixel_probe_count": absolute_timestamp_probe_count,
         "dark_threshold_luma": args.threshold,
         "dark_pixel_count": len(dark_pixels),
         "opaque_unsettled_demand_sample_count": len(opaque_unsettled_seen),
@@ -655,6 +1214,30 @@ def main() -> int:
         "provisional_light_preview_sample_count": provisional_preview_sample_n,
         "provisional_light_preview_chunk_count": len(preview_chunk_rows),
         "provisional_light_preview_chunks": preview_chunk_rows,
+        "provisional_light_lifecycle_by_chunk": lifecycle_by_chunk,
+        "demand_lifecycle_trace_event_counts": dict(
+            Counter(
+                event["event"]
+                for events in demand_lifecycle_events.values()
+                for event in events
+            )
+        ),
+        "mesh_job_stage_trace_event_counts": dict(
+            Counter(
+                event["event"]
+                for events in mesh_job_stage_events.values()
+                for event in events
+            )
+        ),
+        "same_view_preview_to_nonpreview_summary": summarize_intervals(
+            all_preview_to_nonpreview_intervals
+        ),
+        "same_view_preview_to_light_settlement_summary": summarize_intervals(
+            all_light_intervals
+        ),
+        "same_view_settled_preview_to_nonpreview_summary": summarize_intervals(
+            all_handoff_intervals
+        ),
         "voxel_ray_state_counts": dict(ray_states),
         "dark_pixel_light_state_counts": dict(dark_light_states),
         "screen_ray_frame_count": len(screen_rays_by_epoch),
@@ -667,9 +1250,15 @@ def main() -> int:
             "framebuffer depth-hit surface (for example, with cutout geometry). The depth "
             "surface has separate chunk, MDI, source-light, dirty-queue, and work-owner "
             "witnesses. These joins localize mismatches but do not by themselves prove the "
-            "responsible draw path. renderer_pixel_sample_time_ms is process-local monotonic "
-            "time. Preview-to-settled intervals are observation bounds from sparse route "
-            "samples, not exact transition timestamps."
+            "responsible draw path. New traces use renderer_pixel_sample_steady_ms to align "
+            "pixel observations with absolute steady-clock lifecycle events; older traces "
+            "fall back to renderer_pixel_sample_time_ms, which cannot join absolute event_ms. "
+            "Preview-to-settled intervals are observation bounds from sparse route "
+            "samples, not exact transition timestamps. The lifecycle stage intervals group "
+            "one exact screen pixel in one chunk and require camera positions within 0.01 "
+            "world units; light settlement means the demand reports settled while its "
+            "preview remains active, and handoff ends at the first settled nonpreview sample "
+            "after the last preview observation."
         ),
     }
     rendered = json.dumps(report, ensure_ascii=False, indent=2)

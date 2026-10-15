@@ -297,8 +297,82 @@ M594: [flight report](../../bin/suite_reports/engine_refactor/m594_m572_light_ow
 [pixel trace](../../bin/suite_reports/engine_refactor/m595_m572_light_trace_20261015.json),
 [perf JSONL](../../bin/logs/perf_20261015-224636_36248.jsonl).
 
-Дальше проверьте эту ветку на cold-but-repeatable коротком baseline и отдельно
-измерьте время от settlement до stale-remesh queue/admission/publication. Не
-запускайте длинный операторский M335 для подтверждения этого локального
-исправления; сначала достаточно target-lane, затем — только при необходимости
-ещё одного короткого повтора.
+M596C/M596D выполнили cold-but-repeatable короткую проверку. Следующий шаг —
+повторить её после Release-сборки событийных меток; временные интервалы из
+новой трассы должны разделить settlement, stale-remesh queue, dirty admission и
+mesh publication. Длинный операторский M335 для подтверждения этого локального
+пути не запускайте.
+
+### M596C–M596D: короткий холодный фронтир и осторожная интерпретация
+
+Создан `World_M596C_Cold_20261015` (seed `3650482197`, radius 4, 597 chunk
+files). Create-world выполняйте из Release `bin` через PowerShell
+`Start-Process -PassThru -Wait -WindowStyle Hidden` и проверяйте его report,
+`world_path`, seed и число файлов до полёта. Прямой запуск GUI-subsystem exe
+без ожидания преждевременно возвращает управление; harness может удалить такой
+процесс как orphan. Стартовая позиция для radius-4 мира должна находиться в
+сгенерированной spawn области. Попытка начать на X=-6070 откатилась к spawn и
+не создала осмысленного движения.
+
+M596D повторил известную камеру на 35 секунд с no-teleport: X=-32 → -214,
+12 chunk columns, без столкновения. `run_outcome=success`, `process_rc=0`, но
+composite `pass=false`: readiness debt равен 1, `post_stop_readiness_debt_max=15`;
+при этом `visual_holes_rate=0`, `post_stop_mesh_missing_max=0`, и pixel analyzer
+не нашёл ни одного пикселя ниже dark threshold. Это не следует трактовать как
+обнаруженную пустую или чёрную дыру.
+
+Сырые 35 same-camera/same-pixel переходов нужно разделять по позиции. 34 были
+на неподвижном spawn view X=-32: median 2.728 s, maximum 9.269 s, на старте
+срезы имели unsettled demand и позднее field/meshed/published revisions
+дошли до 2. Единственный такой переход на холодной границе — chunk `(-20,2,2)`
+при X=-213.784; первый pixel sample уже видел settled light, но mesh/publish
+revision был 0, а через 1.539 s тот же pixel/camera увидел revision 1 без
+preview. Это ограниченное наблюдение указывает на mesh handoff в данном случае,
+но не находит его очередь-виновника.
+
+В старой трассе pixel time относительный, а demand/job события используют
+абсолютный steady-clock. Коммит с текущей трассировкой переводит новые pixel
+пробы на `renderer_pixel_sample_steady_ms` для event join и добавляет события
+`light_calculation_settled`, `stale_light_remesh_queued` и
+`stale_light_remesh_dirty_admitted` только для уже watched slices. Analyzer
+дополнительно сопоставляет их с mesh job `started/built/published` по chunk,
+world epoch и incarnation. M596 artifacts: [create report](../../bin/suite_reports/engine_refactor/m596c_world_create_20261015.json),
+[flight](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_20261015.json),
+[pixel lifecycle analysis](../../bin/suite_reports/engine_refactor/m596d_cold_world_west_frontier_pixels_20261015.json),
+[perf JSONL](../../bin/logs/perf_20261015-230556_21480.jsonl).
+
+Для следующего холодного повтора используйте новый уникальный world name с тем
+же seed/radius и дождитесь завершения Release create-world процесса:
+
+```powershell
+$exe = (Resolve-Path .\bin\Cubatarium.exe).Path
+$proc = Start-Process -FilePath $exe -ArgumentList @(
+  '--console', '--create-world', '--name', 'World_M597A_Cold_20261015',
+  '--seed', '3650482197', '--radius-chunks', '4', '--output', 'worlds',
+  '--report-json', 'suite_reports/engine_refactor/m597a_world_create_20261015.json'
+) -WorkingDirectory (Resolve-Path .\bin).Path -WindowStyle Hidden -PassThru -Wait
+if ($proc.ExitCode -ne 0) { throw "create-world failed: $($proc.ExitCode)" }
+```
+
+Проверьте report (`success=true`, правильный seed/path, ненулевой `chunk_files`),
+затем повторите ту же short lane, начиная с X=-32; дальний spawn override не
+задавайте:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tools/run_m335_water_visibility_ab.ps1 `
+  -EndMarginBlocks 0 -EnableFogPullIn `
+  -World World_M597A_Cold_20261015 `
+  -ProbeMinCameraX -300 -ProbeMaxCameraX 0 `
+  -StartX -32 -StartY 56 -StartZ 56 `
+  -CruiseEyeY 70 -Yaw 180 -Pitch -30 `
+  -FlyPhaseSeconds 35 -StopPhaseSeconds 20 `
+  -StopAfterBlockedSeconds 8 -IdleSeconds 15 `
+  -PhaseId m597b_cold_light_handoff `
+  -Report bin/suite_reports/engine_refactor/m597b_cold_light_handoff_20261015.json
+```
+
+После run снова вызовите `tools/analyze_renderer_pixel_trace.py` для указанного
+perf JSONL. Сначала проверьте ненулевой
+`absolute_steady_clock_pixel_probe_count` и наличие нужных lifecycle event
+counts. Если событие settlement predates первую видимую пробу, стадия света
+получает левую границу “уже settled”; не приписывайте этот интервал relight.
